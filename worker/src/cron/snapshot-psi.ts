@@ -40,7 +40,11 @@ export async function snapshotPsiDaily(db: D1Database, _signal?: AbortSignal): P
   }
 
   if (!row || !row.cnt || row.avg_score == null) {
-    return { status: "ok", itemCount: 0, metadata: "skipped: no samples for yesterday" };
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({ reason: "no-samples-for-yesterday", sampleCount: row?.cnt ?? 0 }),
+    };
   }
 
   const score = Math.round(row.avg_score * 10) / 10;

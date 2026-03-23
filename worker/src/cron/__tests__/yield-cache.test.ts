@@ -19,6 +19,8 @@ describe("parseRiskFreeRateCache", () => {
     expect(result!.rate).toBe(4.25);
     expect(result!.source).toBe("fred");
     expect(result!.ageSeconds).toBe(3600);
+    expect(result!.lastMarketRate).toBe(4.25);
+    expect(result!.lastMarketSource).toBe("fred");
   });
 
   it("returns null for malformed JSON", () => {

@@ -340,7 +340,7 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 | `stability-index`        | `computeAndStoreStabilityIndex()`       | `worker/src/cron/stability-index.ts`                                  | [Pharos Stability Index](./stability-index.md)       |
 | `sync-yield-data`        | `syncYieldData()`                       | `worker/src/cron/sync-yield-data.ts` + `worker/src/cron/yield-sync/*` | [Yield Intelligence](./yield-intelligence.md)        |
 
-**Execution model:** Five jobs are chained sequentially: charts → dex-liquidity → compute-dews → stability-index → yield-data. Charts is a single lightweight DL fetch (~2s) that completes quickly and frees the pool. `compute-dews` and `stability-index` are DB-only (0 external connections) and benefit from running after dex-liquidity provides fresh liquidity scores. `sync-stablecoin-charts` enforces a 1-hour cooldown via `stablecoin-charts:last-write` — on the alternate 30-min run, it returns immediately with `cooldown_active`. `sync-yield-data` is chained after `stability-index` for safety-score dependencies. The slot shares the Workers 6-connection limit, so fetch-heavy additions must account for total in-slot concurrency. `sync-dex-liquidity` launches direct API fetchers (Fluid, Balancer, Raydium, Orca) only after Curve response bodies are consumed, keeping peak connections at max(4 Curve, 4 direct API) = 4. UniV3 subgraph queries run in parallel across chains (4 concurrent) for reduced wall-clock time.
+**Execution model:** The slot still runs in the same sequential order for connection control: charts → dex-liquidity → compute-dews → stability-index → yield-data. Charts is a single lightweight DL fetch (~2s) that completes quickly and frees the pool. `compute-dews` and `stability-index` are DB-only (0 external connections) and benefit from running after dex-liquidity provides fresh liquidity scores. `sync-stablecoin-charts` enforces a 1-hour cooldown via `stablecoin-charts:last-write` — on the alternate 30-min run, it returns immediately with `cooldown_active`. `sync-yield-data` still runs after `stability-index` for safety-score dependencies. The reliability change is failure containment: `sync-dex-liquidity` no longer suppresses downstream DEWS / PSI / yield execution for the whole slot when it throws. Downstream jobs still run and make their own degraded/no-write decisions against the latest available tables. The slot shares the Workers 6-connection limit, so fetch-heavy additions must account for total in-slot concurrency. `sync-dex-liquidity` launches direct API fetchers (Fluid, Balancer, Raydium, Orca) only after Curve response bodies are consumed, keeping peak connections at max(4 Curve, 4 direct API) = 4. UniV3 subgraph queries run in parallel across chains (4 concurrent) for reduced wall-clock time.
 
 `sync-dex-liquidity` metadata now tracks both row coverage and value coverage. In addition to `currentCoverage` / `previousCoverage`, the cron records `currentGlobalTvl`, `previousGlobalTvl`, top-10 covered TVL, row/value guard flags, and current/previous coverage-class distribution. `/status` surfaces this through the Liquidity Health card.
 
@@ -350,8 +350,9 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 | --------------------------- | --------------------------- | ---------------------------------------------- | ------------------------------------------------- |
 | `sync-live-reserves`        | `syncLiveReserves()`        | `worker/src/cron/sync-live-reserves.ts`        | This doc (below)                                  |
 | `sync-redemption-backstops` | `syncRedemptionBackstops()` | `worker/src/cron/sync-redemption-backstops.ts` | [Redemption Backstops](./redemption-backstops.md) |
+| `sync-kinesis-supply`       | `syncKinesisSupply()`       | `worker/src/cron/sync-kinesis-supply.ts`       | This doc (below)                                  |
 
-**Connection budget:** dedicated hourly trigger for reserve and redemption tuning. Jobs run sequentially so live reserve adapters finish before redemption backstop sync consumes reserve metadata.
+**Connection budget:** dedicated hourly trigger for reserve and redemption tuning. Jobs run sequentially so live reserve adapters finish before redemption backstop sync consumes reserve metadata. Kinesis supply sync adds 2 sequential HTTP fetches (1 connection peak).
 
 ### Trigger 8: `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` (Telegram dispatch — dedicated, every 5 min)
 
@@ -371,7 +372,7 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 | `sync-usds-status`              | `syncUsdsStatus()`             | `worker/src/cron/sync-usds-status.ts`              | This doc (below)                                 |
 | `fetch-tbill-rate`              | `fetchTbillRate()`             | `worker/src/cron/fetch-tbill-rate.ts`              | [Yield Intelligence](./yield-intelligence.md)    |
 
-**Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (FRED) and `sync-usds-status` (Etherscan) use ≤2 concurrent external connections on this trigger.
+**Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (FRED) and `sync-usds-status` (Etherscan) are still executed sequentially on the external-fetch branch to keep this trigger conservative on connection use, but a failed `fetch-tbill-rate` run no longer suppresses `sync-usds-status`.
 
 ### Trigger 10: `5 8 * * *` (daily at 08:05 UTC — heavy external fetchers)
 
@@ -449,22 +450,25 @@ These files are called internally by `syncStablecoins()`, not registered as stan
 
 **File:** `worker/src/lib/cron-logger.ts`
 
-Every cron job is wrapped with `runCronWithLease(...)` + `logCronRun(...)`:
+Every scheduled trigger now runs as one fenced slot in `worker/src/handlers/scheduled.ts`, keyed by shared schedule metadata plus the normalized scheduled timestamp. Inside that slot, each cron job is still wrapped with `runCronWithLease(...)` + `logCronRun(...)` via `runLeasedCron(...)` from the scheduled runtime context.
 
-`ctx.waitUntil(logCronRun(db, "job-name", (signal, reportProgress) => runCronWithLease(db, "job-name", async () => fn(db, signal, reportProgress))))`
+`ctx.waitUntil(runScheduledSlotWithFence(db, scheduleKey, () => runner(runtime), { slotStartedAt }))`
 
 ```typescript
 async function logCronRun(
   db: D1Database,
   job: string,
   fn: (signal: AbortSignal, reportProgress: CronProgressReporter) => Promise<CronResult | void>,
+  alertFn?: (title: string, message: string) => Promise<unknown> | void,
+  options?: { slotStartedAt?: number | null },
 ): Promise<void>;
 ```
 
 **Behavior:**
 
 - Records start time (Unix seconds)
-- Exposes a lazy `reportProgress(...)` callback that writes/updates `cron_run_progress` only after a job explicitly reports in-flight state
+- Records the normalized slot timestamp (`slot_started_at`) alongside per-job history/progress rows
+- Exposes a `reportProgress(...)` callback; leased jobs now emit wrapper-owned milestones (`started`, `lease-acquired`, `completed`, timeout/skip states when applicable) before any cron-specific progress stages
 - Executes the job function
 - On success: inserts row into `cron_runs` with `status='ok'`, `item_count`, and `metadata`
 - On lease contention: inserts row with `status='skipped_locked'` and lease metadata
@@ -472,16 +476,19 @@ async function logCronRun(
 - On completion/error of a progress-reporting job: clears the corresponding `cron_run_progress` row
 - After each run: prunes rows older than 7 days (`started_at < now - 604800`); if prune fails, falls back to keeping only the top 5000 rows by rowid DESC
 
-**Schema:** `cron_runs(job, started_at, duration_ms, status, item_count, metadata, error)`
+**Schema:** `cron_runs(job, started_at, duration_ms, status, item_count, metadata, error, slot_started_at)`
 
 ### In-flight Cron Progress
 
 Long-running leased jobs can now surface active progress through `cron_run_progress`, which powers `/api/status` while the run is still live. The status handler now cross-checks that progress row against an active matching `cron_leases` entry before exposing it as `crons[*].inFlight`, so orphaned progress from a hard-killed invocation no longer masquerades as a live run.
 
+`sync-stablecoins` now uses those cron-specific progress stages to expose its major pipeline boundaries (`intake`, `price-enrichment`, `price-validation`, `staleness-check`, `cache-write`, `depeg-pipeline`, plus fallback equivalents) instead of remaining opaque for the full quarter-hourly wall-clock.
+
 ```sql
 CREATE TABLE cron_run_progress (
   job TEXT PRIMARY KEY,
   started_at INTEGER NOT NULL,
+  slot_started_at INTEGER,
   updated_at INTEGER NOT NULL,
   stage TEXT,
   items_done INTEGER,
@@ -558,12 +565,15 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `GECKO_TERMINAL_PROBE`               | `geckoterminal-probe`         | `enrich-prices` GeckoTerminal price probe fallback                           |
 | `TWITTER_API`                        | `twitter-api`                 | `daily-digest` social posting                                                |
 | `TELEGRAM_API`                       | `telegram-api`                | `daily-digest` social posting, `dispatch-telegram-alerts` subscriber fan-out |
+| `KINESIS_KAU`                        | `kinesis-kau-horizon`         | `sync-kinesis-supply` KAU chain circulation fetch                            |
+| `KINESIS_KAG`                        | `kinesis-kag-horizon`         | `sync-kinesis-supply` KAG chain circulation fetch                            |
 | Dynamic `live-reserves:<scope>` keys | e.g. `live-reserves:infinifi` | `sync-live-reserves` per configured breaker scope; some adapters also opt into source-invariant within-run result sharing |
 
 Primary-oracle implementation notes:
 
 - `PYTH_PRICES` only counts as a healthy outcome when at least one requested feed resolves into a usable price; Hermes feed IDs are normalized by lowercasing and stripping an optional leading `0x`.
 - `REDSTONE_PRICES` only counts as healthy when it returns at least one usable symbol. The worker queries an exact-case tracked-symbol allowlist in sequential batches of 10 and retries batch-dropped symbols individually once.
+- Scheduled handlers that write breaker state from cron outcomes now treat `degraded` and `skipped_locked` as neutral by default; only explicit `ok` heals a breaker and only thrown/error outcomes count as failures unless a source-specific handler opts into stricter semantics.
 
 ---
 
@@ -637,7 +647,7 @@ Chunks statements into batches of 100 (D1's batch limit) and executes sequential
 ### Cron Lease Primitives (Phase C)
 
 Lease primitives are implemented in `worker/src/lib/cron-lease.ts` and backed by migration `0034_cron_leases.sql`.
-These are infrastructure primitives only; scheduler-wide wiring is handled separately in later phases.
+Scheduled slot fencing is backed by migration `0074_cron_slot_executions.sql`.
 
 ```sql
 CREATE TABLE IF NOT EXISTS cron_leases (
@@ -649,23 +659,45 @@ CREATE TABLE IF NOT EXISTS cron_leases (
 );
 ```
 
+```sql
+CREATE TABLE IF NOT EXISTS cron_slot_executions (
+  slot_key TEXT NOT NULL,
+  slot_started_at INTEGER NOT NULL,
+  state TEXT NOT NULL,
+  result_status TEXT,
+  execution_owner TEXT NOT NULL,
+  started_at INTEGER NOT NULL,
+  finished_at INTEGER,
+  updated_at INTEGER NOT NULL,
+  metadata TEXT,
+  PRIMARY KEY (slot_key, slot_started_at)
+);
+```
+
 | Function                                   | Description                                                                                                                       |
 | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
 | `acquireCronLease(db, job, owner, ttlSec)` | Acquires lease for a job, or takes over when expired. Returns `true` on success, `false` if another active owner holds the lease. |
 | `renewCronLease(db, job, owner, ttlSec)`   | Extends `lease_until` for the current owner. Returns `false` if ownership was lost.                                               |
 | `releaseCronLease(db, job, owner)`         | Deletes lease row only when caller still owns it.                                                                                 |
 | `runCronWithLease(db, job, fn, opts)`      | Wrapper primitive: acquire → heartbeat renewals → run fn → release; returns `ok` or `skipped_locked` with metadata.               |
+| `runScheduledSlotWithFence(db, slotKey, fn, opts)` | Deduplicates and heartbeats an entire trigger slot before any slot runner work begins.                                    |
 
 Default behavior in `runCronWithLease`:
 
 - Lease TTL defaults to `jobTimeout + 60s`
 - Heartbeat defaults to `max(15s, ttl/3)`
 - Owner defaults to `crypto.randomUUID()` when available
+- Successful renewals reset the lease-failure counter, so only consecutive heartbeat misses can lose the lease
+- The outer cron timeout now aborts the lease wrapper itself instead of only the inner job signal
 
 ### Lease Integration Status
 
-Lease primitives are now wired into scheduled cron execution through `worker/src/handlers/scheduled/context.ts`, which is shared by all slot runners.
-When a lease cannot be acquired, the run is skipped (non-fatal) and recorded as `status='skipped_locked'` in `cron_runs`.
+Scheduled execution is now wired in two layers:
+
+- `worker/src/handlers/scheduled.ts` normalizes `event.scheduledTime` into a durable slot timestamp and fences the whole slot with `runScheduledSlotWithFence(...)`
+- `worker/src/handlers/scheduled/context.ts` keeps per-job `runLeasedCron(...)` for job-level overlap protection, timeout logging, and progress
+
+This means duplicate trigger deliveries for the same slot are skipped before shared-slot fan-out can reorder downstream jobs, while individual jobs inside the accepted slot still use their existing per-job leases.
 
 ### Block Tracking (Blacklist)
 
@@ -707,7 +739,8 @@ The three crons below were previously only listed by filename in [Architecture](
    - Last 90 days: daily (86,400s intervals)
    - 90 days to 2 years: weekly (604,800s intervals)
    - Older than 2 years: monthly (2,592,000s intervals)
-6. Write to cache via `setCacheIfNewer()` (CAS — won't overwrite newer data) and update `stablecoin-charts:last-write`
+6. If the downsampled payload has fewer than 10 points, return `status: "degraded"` and skip publication
+7. Write to cache via `setCacheIfNewer()` (CAS — won't overwrite newer data) and update `stablecoin-charts:last-write`
 
 **Cooldown guard:** alternate half-hourly runs skip the upstream fetch entirely when the 1-hour write cooldown is still active.
 
@@ -739,6 +772,7 @@ The three crons below were previously only listed by filename in [Architecture](
    - If call reverts: no freeze function (`freezeActive = false`)
    - If probe fails entirely: preserve cached status, don't update
 5. Store `{ freezeActive, implementationAddress, lastChecked }` via `setCacheIfNewer()`
+6. If the cache write fails after provider checks succeeded, return `status: "degraded"` with `reason: "cache-write-failed"` instead of recording a clean success
 
 ### sync-live-reserves
 
@@ -828,6 +862,20 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 
 Current dynamic reserve-metadata support covers `usdo-openeden`, `gho-aave`, `wsrusd-reservoir`, and `iusd-infinifi` for immediate-capacity inputs, plus fresh live fee telemetry on reviewed routes such as `gho-aave`, `bold-liquity`, and `lusd-liquity`. These routes now require a fresh authoritative reserve snapshot; stale reserve metadata no longer stays resolved indefinitely and instead falls back conservatively or leaves the route unrated.
 
+### sync-kinesis-supply
+
+**File:** `worker/src/cron/sync-kinesis-supply.ts`
+**Schedule:** `11 * * * *` (hourly at :11 UTC, after `sync-redemption-backstops`)
+**Data source:** Kinesis Horizon `/coin_in_circulation` endpoint (KAU and KAG chains)
+
+**Purpose:** Fetches circulation, cumulative mint, and cumulative redemption totals from the two Kinesis Stellar-fork blockchains. Writes circulation to the `onchain_supply` table for independent supply verification against DefiLlama/CoinGecko. Caches full totals in the `cache` table under `kinesis-kinesis-kau-totals` / `kinesis-kinesis-kag-totals` for future flow-delta computation.
+
+**Endpoints:**
+- KAU: `https://kau-mainnet.kinesisgroup.io/coin_in_circulation`
+- KAG: `https://kag-mainnet.kinesisgroup.io/coin_in_circulation`
+
+**Circuit breakers:** `KINESIS_KAU` and `KINESIS_KAG` (independent per chain).
+
 ### sync-bluechip
 
 **File:** `worker/src/cron/sync-bluechip.ts`
@@ -858,8 +906,10 @@ Current dynamic reserve-metadata support covers `usdo-openeden`, `gho-aave`, `ws
    - `smartContractAudit` (boolean)
    - `dateOfRating`, `dateLastChange`
    - `smidge`: 6 category summaries (stability, management, implementation, decentralization, governance, externals) — HTML stripped via regex
-4. If zero ratings fetched: preserve existing cache, don't overwrite
-5. Store `Record<string, BluechipRating>` (keyed by canonical Pharos ID) via `setCacheIfNewer()`
+4. Merge any freshly fetched rows onto the previous cache map so missed slugs do not disappear from the published payload
+5. If zero ratings fetched: preserve existing cache, don't overwrite
+6. If only a subset of slugs succeeded: store the merged map and return `status: "degraded"` with `fallbackMode: "partial-cache-merge"`
+7. Store `Record<string, BluechipRating>` (keyed by canonical Pharos ID) via `setCacheIfNewer()`
 
 **Tracked coins:** USDC, USDT, DAI, LUSD, BOLD, PYUSD, PAXG, XAUT, GUSD, USDP, EURC, FDUSD, FRAX, GHO, TUSD, RLUSD, XSGD, OUSD, CETES.
 
@@ -913,6 +963,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `sync-usds-status`              | 86,400s (24h)  | `0 8 * * *`                                 |
 | `sync-live-reserves`            | 3,600s (1h)    | `11 * * * *`                                |
 | `sync-redemption-backstops`     | 3,600s (1h)    | `11 * * * *`                                |
+| `sync-kinesis-supply`           | 3,600s (1h)    | `11 * * * *`                                |
 | `sync-bluechip`                 | 86,400s (24h)  | `5 8 * * *`                                 |
 | `daily-digest`                  | 86,400s (24h)  | `5 8 * * *`                                 |
 | `weekly-recap`                  | 604,800s (7d)  | `5 8 * * *`                                 |
@@ -983,6 +1034,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/cron/sync-stablecoin-charts.ts`        | Chart sync: DefiLlama charts, FX fix, downsampling                                                                                                                  |
 | `worker/src/cron/sync-mint-burn.ts`                | Mint/burn flow sync: Alchemy log scanning (Transfer + custom topics), hourly aggregation                                                                            |
 | `worker/src/cron/sync-redemption-backstops.ts`     | Hourly redemption-route snapshot sync used by detail pages and report cards                                                                                         |
+| `worker/src/cron/sync-kinesis-supply.ts`           | Hourly Kinesis Horizon supply sync: KAU/KAG circulation, mint, and redemption totals                                                                               |
 | `worker/src/cron/sync-usds-status.ts`              | USDS freeze monitor: ERC-1967 proxy inspection                                                                                                                      |
 | `worker/src/cron/sync-bluechip.ts`                 | Bluechip ratings: batch fetch from bluechip.org                                                                                                                     |
 | `worker/src/cron/snapshot-safety-grade-history.ts` | Daily Safety Score grade history snapshot writer (seed + grade-change events)                                                                                       |

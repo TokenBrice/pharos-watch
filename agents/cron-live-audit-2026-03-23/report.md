@@ -1,0 +1,611 @@
+# Exhaustive Cron Audit — Live Window 2026-03-23
+
+Status: completed
+
+Observation window:
+- Start: 2026-03-22 23:56:39 UTC
+- Planned end: 2026-03-23 05:56:39 UTC
+- Observed end: 2026-03-23 05:56:42 UTC
+
+Artifacts:
+- `agents/cron-live-audit-2026-03-23/report.md`
+- `agents/cron-live-audit-2026-03-23/events.jsonl`
+- `agents/cron-live-audit-2026-03-23/wrangler-tail.jsonl`
+- `agents/cron-live-audit-2026-03-23/monitor.log`
+
+## Scope
+
+- Exhaustive audit of all worker cron jobs declared in `worker/wrangler.toml` / `shared/lib/cron-jobs.ts`
+- Reliability review covers slot orchestration, leases, timeout behavior, cache writes, degraded-mode semantics, idempotency, and observability
+- Live validation window watches production cron activity for six hours starting at the UTC timestamp above
+
+## Initial Baseline
+
+### Historical reliability snapshot (7d)
+
+- `status-self-check`: 387 ok / 285 degraded / 1 error out of 673 runs
+- `sync-live-reserves`: 101 ok / 67 degraded out of 168 runs
+- `sync-dex-discovery`: 235 ok / 1 degraded / 52 skipped_locked out of 288 runs
+- `sync-yield-data`: 278 ok / 48 degraded out of 326 runs
+- `sync-dex-liquidity`: 303 ok / 20 degraded / 12 error / 3 skipped_locked out of 338 runs
+- `sync-stablecoins`: 665 ok / 8 error / 1 skipped_locked out of 674 runs
+- `sync-fx-rates`: 642 ok / 31 degraded out of 673 runs
+
+### Immediate production state at window start
+
+- `sync-stablecoins` timed out on the 2026-03-22 23:15:21 UTC, 23:30:22 UTC, and 23:45:21 UTC runs. Each failure terminated at exactly `480000 ms`.
+- The last successful `sync-stablecoins` run before the incident started at 2026-03-22 23:00:23 UTC and completed in `66866 ms`.
+- Worker version `1570` (`scriptVersion.id = 6ac476a1-3819-41be-a75e-510b6ca81272`) was uploaded at 2026-03-22 23:46:22 UTC, after the first two timeouts and just after the 23:45 UTC slot started.
+- `sync-yield-data` is presently degrading behind the retained `risk_free_rate` fallback written by `fetch-tbill-rate` on 2026-03-22 08:00 UTC.
+- `status-self-check` is degrading in the same window, consistent with it reflecting platform health rather than being the root cause.
+- `sync-fx-rates` is oscillating between healthy live runs and `cadence-valid-carry-forward` fallback mode within the last six hours.
+- `sync-dex-liquidity` remains long-running but currently completes successfully in roughly `199s` to `206s`.
+- `sync-live-reserves` and `sync-redemption-backstops` are currently completing successfully despite weak 7-day reliability averages.
+
+## Hypotheses Under Live Validation
+
+1. `sync-stablecoins` still has an under-instrumented wall-clock sink after enrichment, despite the recent GeckoTerminal probe budget cap.
+2. `status-self-check` degradation in this window is primarily symptom propagation from upstream data/cron failures.
+3. `sync-yield-data` degradation is currently driven by the retained risk-free-rate fallback rather than fresh yield-path failures.
+4. `sync-fx-rates` fallback bursts correlate with upstream source availability, not scheduler or lease faults.
+5. The half-hourly lane is healthy-but-tight: `sync-dex-liquidity` runtime leaves enough headroom today, but any regression can spill into lease skips or stale downstream datasets.
+6. The hourly reserve lane is materially healthier tonight than its 7-day average, which points to adapter/source-specific instability rather than persistent slot-level design failure.
+
+## Interim Code Audit Findings
+
+- `sync-stablecoins` is effectively opaque while running. Live `cron_run_progress` shows only `stage=lease-acquired`, and repo search confirms the job never reports later stages. That makes eight-minute timeouts hard to localize in production.
+- The lease system prevents overlap but not duplicate slot delivery. Because leases are keyed only by `job` and are deleted immediately on completion, a second delivery for the same schedule window can rerun the job after the first invocation finishes.
+- The half-hourly slot has a failure domino: if `sync-dex-liquidity` throws, the scheduler never reaches `compute-dews`, `stability-index`, or `sync-yield-data` for that slot.
+- Shared-slot chaining has the same structural risk in the daily `08:00 UTC` lane, where `fetch-tbill-rate` failure prevents `sync-usds-status` even though they are not tightly coupled.
+- Blacklist and mint/burn circuit-breaker outcomes are too optimistic: `skipped_locked` / non-error completions can count as upstream success, and those writes currently omit webhook delivery for breaker transitions.
+- Lease renewal loss is cumulative rather than consecutive. Two separated transient heartbeat failures can still abort a long-running job later, even if renewals succeeded in between.
+- Timeout handling is not fully cancellable end-to-end. The outer cron can time out and log an error while the losing lease/acquire/release path is still unwinding in the background.
+- `computeAndStoreStabilityIndex()` can publish a falsely calm PSI sample when the `depeg_events` read fails, because it substitutes `[]` and only degrades on DEWS failure.
+- `computeAndStoreDEWS()` appears to keep bootstrap grace alive indefinitely because it keys the grace window off the frequently refreshed stablecoins cache timestamp.
+- `syncBluechip()` rebuilds and overwrites the cache from only fulfilled fetches, so partial upstream success can silently drop ratings for missing slugs while the cron still returns healthy.
+- `generateDailyDigest()` advances appendix success state before Telegram delivery, so a failed Telegram send can permanently lose queued cemetery/tracking notices.
+- `sync-usds-status` records Etherscan success before the freeze probe completes and swallows cache-write failures, so provider health and user-facing freshness can diverge.
+- `fetch-tbill-rate` appears to retain the last real rate only once; a second consecutive degraded day can fall through to the hardcoded fallback even when a better retained market rate exists.
+- `snapshot-psi` returns `ok` when yesterday has no PSI samples, which can hide a full-day upstream PSI ingest outage as a benign skip.
+- `sync-stablecoins` can mark DefiLlama unhealthy for local schema/validation failures, conflating upstream availability with downstream normalization bugs.
+
+## Current 24h Reliability Snapshot
+
+- `sync-stablecoins`: 92 `ok` / 4 `error` out of 96 runs. `max_ms=480000`. Errors were three consecutive 480s timeouts at `23:15`, `23:30`, `23:45` UTC plus an earlier `00:30` UTC DefiLlama body-parse failure.
+- `sync-yield-data`: 15 `ok` / 34 `degraded` out of 49 runs. This is the single noisiest daily cron. Most degraded metadata points at `fallbackMode="risk-free-rate:all-sources-failed-retained"`. Some runs also lost all on-chain rate resolution (`onChainRatesResolved=0/13`).
+- `sync-dex-liquidity`: 33 `ok` / 15 `degraded` / 1 `skipped_locked` out of 49 runs. `avg_ms=227287`, `max_ms=412636`. The slot is still landing, but the runtime budget is materially tight.
+- `sync-dex-discovery`: 36 `ok` / 1 `degraded` / 6 `skipped_locked` out of 43 runs. `max_ms=722484`. Historical overlap pressure is real; tonight's live run was healthy.
+- `sync-fx-rates`: 93 `ok` / 3 `degraded` out of 96 runs. Degraded windows map to source outages and cached carry-forward, not scheduler faults.
+- `status-self-check`: 93 `ok` / 3 `degraded` out of 96 runs. Recent degraded metadata consistently shows `probeStatus="stale"` / `effectiveStatus="stale"`, so it is mostly reflecting upstream freshness issues.
+- `sync-live-reserves`: 24 `ok` out of 24 runs. `sync-redemption-backstops`: 22 `ok` / 2 `degraded` out of 24 runs. The hourly reserve lane is materially healthier than its 7-day baseline.
+- `sync-blacklist`: 24 `ok` out of 24 runs, but still `avg_ms=73656` and `max_ms=202990`. It is reliable tonight, not cheap.
+- `sync-mint-burn`: 72 `ok` out of 72 runs. `sync-mint-burn-extended`: 72 `ok` / 1 `skipped_locked` out of 73 runs. The isolated Alchemy lanes are operationally strong.
+- `dispatch-telegram-alerts`: 288 `ok` out of 288 runs. `avg_ms=1279`, `max_ms=4774`. This is currently the cleanest cron lane in production.
+- Daily jobs were all `ok` in the last 24h except `fetch-tbill-rate`, which ran `degraded` at `2026-03-22 08:00:18 UTC` and has kept yield on the retained risk-free-rate fallback since then.
+
+## Hypotheses Status After Live Validation
+
+- Hypothesis 1 (`sync-stablecoins` still hides a long wall-clock sink): partially confirmed. The current build recovered the job after version `1570`, but live progress telemetry is still only `lease-acquired`, so production still cannot localize where a future timeout is spent.
+- Two consecutive post-deploy quarter-hourly lanes are now validated end-to-end. The `00:00 UTC` and `00:15 UTC` `sync-stablecoins` runs both completed in about `195s`, each followed by safe snapshot behavior, `sync-fx-rates` completion, and an `ok` `status-self-check`. That strongly narrows the live incident to the pre-`1570` stablecoin path rather than a still-active systemic slot failure.
+- Hypothesis 2 (`status-self-check` is mostly symptom propagation): confirmed so far. Live degraded runs align with stale platform state, and the next self-check recovered without code or config changes to the self-check path itself.
+- Hypothesis 3 (`sync-yield-data` degradation is mainly the retained T-bill fallback): confirmed. Every observed degraded run in this window points to `risk-free-rate:all-sources-failed-retained`, and the degraded streak traces back to the `2026-03-22 08:00 UTC` `fetch-tbill-rate` run.
+- Hypothesis 4 (`sync-fx-rates` fallback bursts are upstream-source driven): confirmed. Degraded metadata explicitly names failing upstream sources while the slot itself keeps executing on schedule.
+- Hypothesis 5 (half-hourly lane is healthy-but-tight): confirmed. Under the current build, `sync-dex-liquidity` still leaves enough headroom for `compute-dews`, `stability-index`, and `sync-yield-data`, but there is not much spare budget.
+- Hypothesis 6 (hourly reserve lane is healthier tonight than its 7-day average): confirmed. Both hourly runs observed in this window completed cleanly and much better than the historical baseline implied.
+
+## Verified Findings With Evidence
+
+- Duplicate schedule delivery can rerun the same cron window. Leases are keyed only by `job`, and `releaseCronLease()` deletes the row immediately after success instead of retaining a slot/window key. Evidence: `worker/src/lib/cron-lease.ts:85-123`, `worker/src/lib/cron-lease.ts:131-198`.
+- Lease-heartbeat failure counting is cumulative, not consecutive. A success does not reset `renewFailures`, so separated transient renew misses can still trip `CronLeaseLostError` later. Evidence: `worker/src/lib/cron-lease.ts:152-170`.
+- Timeout logging is outer-layer only. `logCronRun()` aborts and records the timeout, but the lease path may still be unwinding afterward. Evidence: `worker/src/lib/cron-logger.ts:117-162`, `worker/src/lib/cron-lease.ts:194-201`.
+- The half-hourly lane has a real failure domino. `sync-dex-liquidity` failure prevents `compute-dews`, `stability-index`, and `sync-yield-data` from starting because the slot is a single `.then()` chain. Evidence: `worker/src/handlers/scheduled/half-hourly.ts:25-50`.
+- The daily `08:00 UTC` lane has the same structural issue for independent external jobs. `sync-usds-status` is chained behind `fetch-tbill-rate`, so a T-bill fetch failure suppresses the USDS probe even though it does not consume its output. Evidence: `worker/src/handlers/scheduled/daily-0800.ts:24-31`.
+- `sync-stablecoins` remains under-instrumented. The runtime layer reports `lease-acquired`, but the cron implementation itself never publishes stage progress, and live `cron_run_progress` during observed runs never advanced beyond acquisition. Evidence: `worker/src/handlers/scheduled/context.ts:104-116` plus live `events.jsonl` entries from `2026-03-23 00:00 UTC` and `00:15 UTC`.
+- `sync-stablecoins` conflates upstream health with downstream validation. A blocked cache write due to local validation failure records `DL_STABLECOINS=false`, even though the upstream fetch already succeeded. Evidence: `worker/src/cron/sync-stablecoins.ts:463-499`. Intake-level parse/shape failures also mark the same breaker path false. Evidence: `worker/src/cron/sync-stablecoins/intake.ts:93-126`.
+- `sync-stablecoins` only warns on price staleness. If many prices are identical to the previous cache, the job still publishes and only adds a warning bit in metadata. Evidence: `worker/src/cron/sync-stablecoins.ts:444-457`.
+- PSI can publish a falsely calm sample if the open-depeg read fails. The `depeg_events` query falls back to `[]`, and the result only degrades when DEWS is unavailable, not when depegs are unavailable. Evidence: `worker/src/cron/stability-index.ts:46-55`, `worker/src/cron/stability-index.ts:217-228`.
+- DEWS bootstrap grace appears too permissive. `bootstrapWindowActive` is keyed off the fresh stablecoins cache timestamp, which refreshes every quarter hour, so missing-table bootstrap allowances can remain effectively live. Evidence: `worker/src/cron/compute-dews.ts:109-127`, especially `:112-113`.
+- `sync-bluechip` can destructively overwrite a good cache with a partial dataset while still reporting success. It writes whatever fulfilled rows it got as long as `count > 0`. Evidence: `worker/src/cron/sync-bluechip.ts:79-158`.
+- `daily-digest` commits Telegram appendix state before sending Telegram. That prevents duplicates, but a send failure permanently consumes queued appendix content. Evidence: `worker/src/cron/daily-digest.ts:758-787`.
+- `sync-usds-status` records provider success too early and hides publication failures. Etherscan is marked healthy immediately after the implementation-slot read; later freeze-probe failures or cache-write failures do not reverse that health signal, and cache-write failure still returns success. Evidence: `worker/src/cron/sync-usds-status.ts:86-130`.
+- `fetch-tbill-rate` only preserves the last non-fallback rate for one degraded day. Once the cache itself is marked fallback, the next degraded run drops to the hardcoded constant. Evidence: `worker/src/cron/fetch-tbill-rate.ts:92-130`.
+- `snapshot-psi` treats "no samples for yesterday" as `ok`. That can hide a full-day PSI ingest outage behind a benign-looking skip. Evidence: `worker/src/cron/snapshot-psi.ts:42-44`.
+- `discovery-scan` returns `ok` when CoinGecko discovery is circuit-open and no fetch happened. That makes "no work attempted" operationally indistinguishable from a healthy no-op Monday. Evidence: `worker/src/cron/discovery-scan.ts:151-193`.
+- Blacklist and mint/burn breaker bookkeeping is optimistic. Blacklist records Etherscan success on any resolved cron completion; mint/burn records Alchemy success for anything except explicit `"error"`, including `skipped_locked`. Evidence: `worker/src/handlers/scheduled/hourly-blacklist.ts:28-32`, `worker/src/handlers/scheduled/mint-burn-slot.ts:34-42`.
+
+## Priority Improvement Program
+
+- P0: add a slot-scoped idempotency key to leases and `cron_runs`. Prevent duplicate scheduler delivery from rerunning a completed slot. `job + scheduled_at_bucket` is the minimum viable key.
+- P0: add stage telemetry to all long jobs, starting with `sync-stablecoins` and `sync-dex-liquidity`. Production should know whether time is spent in intake, price enrichment, validation, cache write, or depeg follow-up.
+- P1: break brittle slot chains into failure-contained stages. Half-hourly should let `compute-dews` / `stability-index` / `sync-yield-data` make an explicit degraded decision instead of disappearing when `sync-dex-liquidity` throws. The same applies to `fetch-tbill-rate` versus `sync-usds-status`.
+- P1: separate upstream-provider health from local normalization/publication health. `recordOutcome()` should only reflect actual upstream failure, not downstream validation bugs or safe no-write decisions.
+- P1: fail closed for PSI input loss. A failed `depeg_events` read should degrade or skip publishing the PSI sample rather than silently compute against zero active depegs.
+- P1: replace DEWS bootstrap grace with a true bootstrap sentinel or table-age check. Keying grace off the stablecoins cache age is not coherent once the stablecoins cron is healthy.
+- P1: preserve prior cache when a job only gets partial upstream coverage. `sync-bluechip` is the clearest case, but the same publication principle should be reviewed across chart/yield/rankings caches.
+- P1: make daily-digest appendix delivery replay-safe instead of "commit first". A small outbox or sent-marker keyed by digest edition would avoid both duplication and silent loss.
+- P2: promote large stale-data or zero-row outputs to `degraded` with no-write semantics where downstream freshness matters materially.
+- P2: add explicit tests for breaker accounting, duplicate slot delivery, appendix replay, second-day T-bill fallback, PSI no-sample days, and half-hourly slot continuation after upstream degradation.
+
+## Test Coverage Assessment
+
+- Direct cron implementation tests exist for 24 of the 25 registered jobs. The only registered cron without a direct cron test is `weekly-recap`.
+- Scheduler routing is covered at a shallow level. `worker/src/__tests__/index.scheduled.test.ts` covers 8 of the 10 scheduled expressions and mostly verifies fan-out plus happy-path ordering.
+- Lease primitives are partially covered. `worker/src/lib/__tests__/cron-leases.test.ts` covers `skipped_locked` and lease-loss behavior, but not duplicate delivery for the same schedule window after an early release.
+- Cron logging is partially covered. `worker/src/lib/__tests__/log-cron-run.test.ts` covers custom statuses and progress upsert/clear, but not the timeout-plus-background-unwind scenario.
+- Missing scheduler tests:
+  - No scheduled-handler coverage for the daily `0 8 * * *` or `5 8 * * *` slots.
+  - No test that `sync-dex-liquidity` failure still allows downstream half-hourly jobs to make a controlled degraded decision.
+  - No test that `fetch-tbill-rate` failure still runs `sync-usds-status`.
+  - No test that `skipped_locked` does not count as circuit-breaker success for blacklist or mint/burn.
+  - No test for duplicate cron delivery against the same slot.
+- Missing cron behavior tests:
+  - No direct test for `weekly-recap` Monday gating, dedupe, malformed-response fallback, or Telegram outcome handling.
+  - No regression for `sync-bluechip` partial-success cache overwrite.
+  - No regression for `daily-digest` appendix state being consumed before Telegram send succeeds.
+  - No regression for the second consecutive `fetch-tbill-rate` degraded day falling to the hardcoded fallback.
+  - No regression for `snapshot-psi` returning `ok` when a full day has no PSI samples.
+  - No regression for PSI publishing against `[]` active depegs when the `depeg_events` query fails.
+
+### Targeted Verification Run
+
+- Executed locally at approximately `2026-03-23 00:21 UTC`:
+  - `npm test -- worker/src/__tests__/index.scheduled.test.ts worker/src/lib/__tests__/cron-leases.test.ts worker/src/lib/__tests__/log-cron-run.test.ts worker/src/lib/__tests__/circuit-breaker.test.ts`
+- Result: `4` test files passed, `49` tests passed.
+- Interpretation: the existing targeted suite is green, but it mainly validates current routing and primitive behavior. It does not cover several of the reliability risks identified above, so a green result here does not materially lower the audit severity.
+
+## Observation Log
+
+- [2026-03-22 23:56:39 UTC] Monitoring window opened. Baseline captured from remote `cron_runs`.
+- [2026-03-23T00:01:52.552Z] Detached monitor armed. Initial cursor set to `cron_runs.id > 33631`. Poll interval=30000ms.
+- [2026-03-23T00:00:28Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T00:02:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=382ms | items=0
+- [2026-03-23T00:03:27Z] progress `sync-blacklist` | stage=`scan-config` | items=3/16 | Scanning XAUT on Ethereum
+- [2026-03-23T00:03:41Z] progress `sync-blacklist` | stage=`scan-config` | items=7/16 | Scanning USDC on Polygon
+- [2026-03-23T00:03:46Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T00:00:28Z] `sync-stablecoins` | status=`ok` | duration=195843ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=51
+- [2026-03-23T00:00:28Z] First post-deploy quarter-hourly stablecoin sync on version `1570` completed successfully. This strongly suggests the three 480s timeouts belong to the pre-1570 build or the in-flight 23:45 UTC rollout boundary, not the currently deployed code path.
+- [2026-03-23T00:03:44Z] `snapshot-supply` | status=`ok` | duration=453ms | items=161
+- [2026-03-23T00:03:45Z] `snapshot-chain-supply` | status=`ok` | duration=988ms | items=5
+- [2026-03-23T00:04:26Z] progress `status-self-check` | stage=`lease-acquired` | Lease acquired for status-self-check
+- [2026-03-23T00:04:21Z] `sync-mint-burn` | status=`ok` | duration=2509ms | items=26
+- [2026-03-23T00:03:21Z] `sync-blacklist` | status=`ok` | duration=62901ms | items=0
+- [2026-03-23T00:03:46Z] `sync-fx-rates` | status=`ok` | duration=40246ms | items=20 | fallback=cadence-valid-carry-forward
+- [2026-03-23T00:04:26Z] `status-self-check` | status=`ok` | duration=16179ms | items=29 | samples=28/29
+- [2026-03-23T00:06:39Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=5/41 | Crawling usdd-tron-dao-reserve (t2) | coinsCrawled=5; poolsDiscovered=175
+- [2026-03-23T00:07:17Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=10/41 | Crawling frax-frax (t2) | coinsCrawled=10; poolsDiscovered=175
+- [2026-03-23T00:07:37Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=12/41 | Crawling ausd-agora (t2) | coinsCrawled=12; poolsDiscovered=175
+- [2026-03-23T00:07:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=919ms | items=4
+- [2026-03-23T00:08:23Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=20/41 | Crawling usdq-quantoz (t2) | coinsCrawled=20; poolsDiscovered=175
+- [2026-03-23T00:08:54Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=29/41 | Crawling eusd-electronic-usd (t2) | coinsCrawled=29; poolsDiscovered=175
+- [2026-03-23T00:09:21Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=35/41 | Crawling sbc-brale (t2) | coinsCrawled=35; poolsDiscovered=175
+- [2026-03-23T00:06:21Z] `sync-dex-discovery` | status=`ok` | duration=215984ms | items=41 | coinsCrawled=41; poolsDiscovered=175
+- [2026-03-23T00:10:22Z] progress `sync-dex-liquidity` | stage=`lease-acquired` | Lease acquired for sync-dex-liquidity
+- [2026-03-23T00:10:21Z] `sync-stablecoin-charts` | status=`ok` | duration=290ms | items=258
+- [2026-03-23T00:11:21Z] progress `sync-live-reserves` | stage=`lease-acquired` | Lease acquired for sync-live-reserves
+- [2026-03-23T00:11:21Z] `sync-live-reserves` | status=`ok` | duration=32185ms | items=113 | warnings=26; failed=1
+- [2026-03-23T00:11:54Z] `sync-redemption-backstops` | status=`ok` | duration=4234ms | items=137
+- [2026-03-23T00:12:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=423ms | items=0
+- [2026-03-23T00:13:24Z] progress `sync-mint-burn-extended` | stage=`scan-config` | items=20/77 | Scanning MUSD on Ethereum
+- [2026-03-23T00:13:59Z] progress `sync-yield-data` | stage=`lease-acquired` | Lease acquired for sync-yield-data
+- [2026-03-23T00:13:21Z] `sync-mint-burn-extended` | status=`ok` | duration=12144ms | items=8
+- [2026-03-23T00:10:22Z] `sync-dex-liquidity` | status=`ok` | duration=215450ms | items=125 | fallback=
+- [2026-03-23T00:13:57Z] `compute-dews` | status=`ok` | duration=918ms | items=143
+- [2026-03-23T00:13:58Z] `stability-index` | status=`ok` | duration=282ms | items=1
+- [2026-03-23T00:13:59Z] `sync-yield-data` | status=`degraded` | duration=3092ms | items=96 | fallback=risk-free-rate:all-sources-failed-retained
+- [2026-03-23T00:15:21Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T00:17:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=365ms | items=0
+- [2026-03-23T00:18:37Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T00:15:21Z] `sync-stablecoins` | status=`ok` | duration=195444ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=50
+- [2026-03-23T00:18:37Z] `snapshot-supply` | status=`ok` | duration=143ms | items=0 | reason=cooldown_active
+- [2026-03-23T00:18:37Z] `snapshot-chain-supply` | status=`ok` | duration=165ms | items=0 | reason=cooldown_active
+- [2026-03-23T00:18:37Z] `sync-fx-rates` | status=`ok` | duration=100925ms | items=20 | fallback=cadence-valid-carry-forward
+- [2026-03-23T00:20:18Z] `status-self-check` | status=`ok` | duration=16320ms | items=29 | samples=28/29
+- [2026-03-23T00:22:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=361ms | items=0
+- [2026-03-23T00:24:21Z] `sync-mint-burn` | status=`ok` | duration=3190ms | items=55
+- [2026-03-23T00:27:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=461ms | items=0
+- [2026-03-23T00:30:23Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T00:32:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=359ms | items=0
+- [2026-03-23T00:33:47Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T00:33:21Z] `sync-mint-burn-extended` | status=`ok` | duration=11353ms | items=2
+- [2026-03-23T00:30:23Z] `sync-stablecoins` | status=`ok` | duration=202962ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=51
+- [2026-03-23T00:33:46Z] `snapshot-supply` | status=`ok` | duration=175ms | items=0 | reason=cooldown_active
+- [2026-03-23T00:33:47Z] `snapshot-chain-supply` | status=`ok` | duration=159ms | items=0 | reason=cooldown_active
+- [2026-03-23T00:33:47Z] `sync-fx-rates` | status=`ok` | duration=40235ms | items=20 | fallback=cadence-valid-carry-forward
+- [2026-03-23T00:34:27Z] `status-self-check` | status=`ok` | duration=15792ms | items=29 | samples=28/29
+- [2026-03-23T00:36:21Z] `sync-dex-discovery` | status=`ok` | duration=3427ms | items=1 | coinsCrawled=1; poolsDiscovered=2
+- [2026-03-23T00:37:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=348ms | items=0
+- [2026-03-23T00:40:22Z] progress `sync-dex-liquidity` | stage=`lease-acquired` | Lease acquired for sync-dex-liquidity
+- [2026-03-23T00:40:21Z] `sync-stablecoin-charts` | status=`ok` | duration=114ms | items=0 | reason=cooldown_active
+- [2026-03-23T00:42:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=398ms | items=0
+- [2026-03-23T00:40:22Z] `sync-dex-liquidity` | status=`ok` | duration=211039ms | items=125 | fallback=
+- [2026-03-23T00:43:53Z] `compute-dews` | status=`ok` | duration=821ms | items=143
+- [2026-03-23T00:43:54Z] `stability-index` | status=`ok` | duration=274ms | items=1
+- [2026-03-23T00:43:54Z] `sync-yield-data` | status=`degraded` | duration=3465ms | items=96 | fallback=risk-free-rate:all-sources-failed-retained
+- [2026-03-23T00:44:21Z] `sync-mint-burn` | status=`ok` | duration=2563ms | items=38
+- [2026-03-23T00:45:21Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T00:47:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=328ms | items=0
+- [2026-03-23T00:48:37Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T00:45:21Z] `sync-stablecoins` | status=`ok` | duration=195198ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=50
+- [2026-03-23T00:48:37Z] `snapshot-supply` | status=`ok` | duration=170ms | items=0 | reason=cooldown_active
+- [2026-03-23T00:48:37Z] `snapshot-chain-supply` | status=`ok` | duration=140ms | items=0 | reason=cooldown_active
+- [2026-03-23T00:49:19Z] progress `status-self-check` | stage=`lease-acquired` | Lease acquired for status-self-check
+- [2026-03-23T00:48:37Z] `sync-fx-rates` | status=`ok` | duration=41207ms | items=20 | fallback=cadence-valid-carry-forward
+- [2026-03-23T00:49:19Z] `status-self-check` | status=`ok` | duration=16452ms | items=29 | samples=28/29
+- [2026-03-23T00:52:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=479ms | items=0
+- [2026-03-23T00:53:24Z] progress `sync-mint-burn-extended` | stage=`scan-config` | items=20/77 | Scanning SUSD on Ethereum
+- [2026-03-23T00:53:21Z] `sync-mint-burn-extended` | status=`ok` | duration=11232ms | items=3
+- [2026-03-23T00:57:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=356ms | items=0
+- [2026-03-23T01:00:28Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T01:02:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=438ms | items=0
+- [2026-03-23T01:03:35Z] progress `sync-blacklist` | stage=`scan-config` | items=9/16 | Scanning USDT on Polygon
+- [2026-03-23T01:03:40Z] progress `sync-blacklist` | stage=`scan-config` | items=14/16 | Scanning USDC on Arbitrum
+- [2026-03-23T01:03:51Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T01:00:28Z] `sync-stablecoins` | status=`ok` | duration=201287ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=51
+- [2026-03-23T01:03:50Z] `snapshot-supply` | status=`ok` | duration=286ms | items=161
+- [2026-03-23T01:03:50Z] `snapshot-chain-supply` | status=`ok` | duration=208ms | items=5
+- [2026-03-23T01:03:21Z] `sync-blacklist` | status=`ok` | duration=56816ms | items=0
+- [2026-03-23T01:04:21Z] `sync-mint-burn` | status=`ok` | duration=2811ms | items=36
+- [2026-03-23T01:05:31Z] progress `status-self-check` | stage=`lease-acquired` | Lease acquired for status-self-check
+- [2026-03-23T01:03:50Z] `sync-fx-rates` | status=`ok` | duration=100404ms | items=20 | fallback=cadence-valid-carry-forward
+- [2026-03-23T01:05:31Z] `status-self-check` | status=`ok` | duration=16480ms | items=29 | samples=28/29
+- [2026-03-23T01:06:46Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=2/120 | Crawling usdc-circle (t3) | coinsCrawled=2; poolsDiscovered=197
+- [2026-03-23T01:07:11Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=3/120 | Crawling usde-ethena (t3) | coinsCrawled=3; poolsDiscovered=197
+- [2026-03-23T01:07:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=774ms | items=3
+- [2026-03-23T01:07:55Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=8/120 | Crawling gho-aave (t3) | coinsCrawled=8; poolsDiscovered=197
+- [2026-03-23T01:08:25Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=11/120 | Crawling eurc-circle (t3) | coinsCrawled=11; poolsDiscovered=197
+- [2026-03-23T01:08:58Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=17/120 | Crawling usdf-astherus (t3) | coinsCrawled=17; poolsDiscovered=197
+- [2026-03-23T01:09:26Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=21/120 | Crawling frxusd-frax (t3) | coinsCrawled=21; poolsDiscovered=197
+- [2026-03-23T01:09:59Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=24/120 | Crawling reusd-re-protocol (t3) | coinsCrawled=24; poolsDiscovered=197
+- [2026-03-23T01:10:23Z] progress `sync-dex-liquidity` | stage=`lease-acquired` | Lease acquired for sync-dex-liquidity
+- [2026-03-23T01:10:37Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=33/120 | Crawling susd-synthetix (t3) | coinsCrawled=33; poolsDiscovered=197
+- [2026-03-23T01:10:22Z] `sync-stablecoin-charts` | status=`ok` | duration=250ms | items=258
+- [2026-03-23T01:11:01Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=36/120 | Crawling mim-abracadabra (t3) | coinsCrawled=36; poolsDiscovered=197
+- [2026-03-23T01:11:21Z] progress `sync-live-reserves` | stage=`lease-acquired` | Lease acquired for sync-live-reserves
+- [2026-03-23T01:11:41Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=44/120 | Crawling nusd-neutrl (t3) | coinsCrawled=44; poolsDiscovered=197
+- [2026-03-23T01:12:08Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=52/120 | Crawling thbill-theo (t3) | coinsCrawled=52; poolsDiscovered=197
+- [2026-03-23T01:11:21Z] `sync-live-reserves` | status=`ok` | duration=26634ms | items=113 | warnings=27; failed=1
+- [2026-03-23T01:11:48Z] `sync-redemption-backstops` | status=`ok` | duration=3952ms | items=137
+- [2026-03-23T01:12:45Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=57/120 | Crawling xaut-tether (t3) | coinsCrawled=57; poolsDiscovered=197
+- [2026-03-23T01:12:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=412ms | items=0
+- [2026-03-23T01:13:13Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=64/120 | Crawling europ-schuman (t3) | coinsCrawled=64; poolsDiscovered=197
+- [2026-03-23T01:13:46Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=69/120 | Crawling zarp-zarp (t3) | coinsCrawled=69; poolsDiscovered=197
+- [2026-03-23T01:13:21Z] `sync-mint-burn-extended` | status=`ok` | duration=11357ms | items=12
+- [2026-03-23T01:14:21Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=76/120 | Crawling usds-sky (t3) | coinsCrawled=76; poolsDiscovered=197
+- [2026-03-23T01:10:23Z] `sync-dex-liquidity` | status=`ok` | duration=213410ms | items=125 | fallback=
+- [2026-03-23T01:13:56Z] `compute-dews` | status=`ok` | duration=804ms | items=143
+- [2026-03-23T01:13:57Z] `stability-index` | status=`ok` | duration=278ms | items=1
+- [2026-03-23T01:13:57Z] `sync-yield-data` | status=`degraded` | duration=3442ms | items=96 | fallback=risk-free-rate:all-sources-failed-retained
+- [2026-03-23T01:14:53Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=81/120 | Crawling buck-bucket-protocol (t3) | coinsCrawled=81; poolsDiscovered=197
+- [2026-03-23T01:15:22Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T01:15:27Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=90/120 | Crawling pyusd-paypal (t3) | coinsCrawled=90; poolsDiscovered=197
+- [2026-03-23T01:15:58Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=94/120 | Crawling crvusd-curve (t3) | coinsCrawled=94; poolsDiscovered=197
+- [2026-03-23T01:16:30Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=97/120 | Crawling ausd-agora (t3) | coinsCrawled=97; poolsDiscovered=197
+- [2026-03-23T01:17:02Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=102/120 | Crawling usdq-quantoz (t3) | coinsCrawled=102; poolsDiscovered=197
+- [2026-03-23T01:17:33Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=110/120 | Crawling msusd-metronome (t3) | coinsCrawled=110; poolsDiscovered=197
+- [2026-03-23T01:17:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=641ms | items=2
+- [2026-03-23T01:18:06Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=116/120 | Crawling xsgd-straitsx (t3) | coinsCrawled=116; poolsDiscovered=197
+- [2026-03-23T01:18:38Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T01:06:21Z] `sync-dex-discovery` | status=`degraded` | duration=721003ms | items=119 | coinsCrawled=119; poolsDiscovered=197; budgetExhausted=true
+- [2026-03-23T01:15:22Z] `sync-stablecoins` | status=`ok` | duration=195145ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=49
+- [2026-03-23T01:18:37Z] `snapshot-supply` | status=`ok` | duration=164ms | items=0 | reason=cooldown_active
+- [2026-03-23T01:18:37Z] `snapshot-chain-supply` | status=`ok` | duration=149ms | items=0 | reason=cooldown_active
+- [2026-03-23T01:18:38Z] `sync-fx-rates` | status=`ok` | duration=40243ms | items=20 | fallback=cadence-valid-carry-forward
+- [2026-03-23T01:19:18Z] `status-self-check` | status=`ok` | duration=16662ms | items=29 | samples=28/29
+- [2026-03-23T01:22:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=331ms | items=0
+- [2026-03-23T01:24:21Z] `sync-mint-burn` | status=`ok` | duration=2727ms | items=37
+- [2026-03-23T01:27:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=467ms | items=0
+- [2026-03-23T01:30:25Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T01:32:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=444ms | items=0
+- [2026-03-23T01:33:21Z] `sync-mint-burn-extended` | status=`ok` | duration=14271ms | items=8
+- [2026-03-23T01:33:48Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T01:30:25Z] `sync-stablecoins` | status=`ok` | duration=202037ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=49
+- [2026-03-23T01:33:48Z] `snapshot-supply` | status=`ok` | duration=158ms | items=0 | reason=cooldown_active
+- [2026-03-23T01:33:48Z] `snapshot-chain-supply` | status=`ok` | duration=139ms | items=0 | reason=cooldown_active
+- [2026-03-23T01:33:48Z] `sync-fx-rates` | status=`ok` | duration=40223ms | items=20 | fallback=cadence-valid-carry-forward
+- [2026-03-23T01:34:28Z] `status-self-check` | status=`ok` | duration=16964ms | items=29 | samples=28/29
+- [2026-03-23T01:36:21Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=0/21 | Crawling cgusd-cygnus-finance (t1) | coinsCrawled=0; poolsDiscovered=0
+- [2026-03-23T01:36:40Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=10/21 | Crawling usdc-circle (t2) | coinsCrawled=10; poolsDiscovered=38
+- [2026-03-23T01:37:28Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=14/21 | Crawling tusd-trueusd (t2) | coinsCrawled=14; poolsDiscovered=218
+- [2026-03-23T01:37:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=666ms | items=0
+- [2026-03-23T01:37:58Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=17/21 | Crawling dusd-standx (t2) | coinsCrawled=17; poolsDiscovered=218
+- [2026-03-23T01:36:21Z] `sync-dex-discovery` | status=`ok` | duration=126795ms | items=21 | coinsCrawled=21; poolsDiscovered=218
+- [2026-03-23T01:40:23Z] progress `sync-dex-liquidity` | stage=`lease-acquired` | Lease acquired for sync-dex-liquidity
+- [2026-03-23T01:40:22Z] `sync-stablecoin-charts` | status=`ok` | duration=122ms | items=0 | reason=cooldown_active
+- [2026-03-23T01:42:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=407ms | items=0
+- [2026-03-23T01:40:23Z] `sync-dex-liquidity` | status=`ok` | duration=216822ms | items=124 | fallback=
+- [2026-03-23T01:44:00Z] `compute-dews` | status=`ok` | duration=887ms | items=143
+- [2026-03-23T01:44:01Z] `stability-index` | status=`ok` | duration=262ms | items=1
+- [2026-03-23T01:44:01Z] `sync-yield-data` | status=`degraded` | duration=3382ms | items=97 | fallback=risk-free-rate:all-sources-failed-retained
+- [2026-03-23T01:44:21Z] `sync-mint-burn` | status=`ok` | duration=2745ms | items=52
+- [2026-03-23T01:45:21Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T01:47:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=718ms | items=2
+- [2026-03-23T01:48:39Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T01:45:21Z] `sync-stablecoins` | status=`ok` | duration=197021ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=50
+- [2026-03-23T01:48:39Z] `snapshot-supply` | status=`ok` | duration=151ms | items=0 | reason=cooldown_active
+- [2026-03-23T01:48:39Z] `snapshot-chain-supply` | status=`ok` | duration=157ms | items=0 | reason=cooldown_active
+- [2026-03-23T01:50:20Z] progress `status-self-check` | stage=`lease-acquired` | Lease acquired for status-self-check
+- [2026-03-23T01:48:39Z] `sync-fx-rates` | status=`ok` | duration=100470ms | items=20 | fallback=cadence-valid-carry-forward
+- [2026-03-23T01:50:20Z] `status-self-check` | status=`ok` | duration=16913ms | items=29 | samples=28/29
+- [2026-03-23T01:52:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=913ms | items=4
+- [2026-03-23T01:53:21Z] `sync-mint-burn-extended` | status=`ok` | duration=11754ms | items=25
+- [2026-03-23T01:57:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=452ms | items=0
+- [2026-03-23T02:00:28Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T02:02:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=443ms | items=0
+- [2026-03-23T02:03:40Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T02:00:28Z] `sync-stablecoins` | status=`ok` | duration=190637ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=53
+- [2026-03-23T02:03:39Z] `snapshot-supply` | status=`ok` | duration=142ms | items=0 | reason=cooldown_active
+- [2026-03-23T02:03:39Z] `snapshot-chain-supply` | status=`ok` | duration=139ms | items=0 | reason=cooldown_active
+- [2026-03-23T02:03:21Z] `sync-blacklist` | status=`ok` | duration=27890ms | items=0
+- [2026-03-23T02:04:20Z] progress `status-self-check` | stage=`lease-acquired` | Lease acquired for status-self-check
+- [2026-03-23T02:04:22Z] progress `sync-mint-burn` | stage=`scan-config` | items=4/7 | Scanning USDC on Ethereum
+- [2026-03-23T02:03:40Z] `sync-fx-rates` | status=`ok` | duration=40234ms | items=20 | fallback=cadence-valid-carry-forward
+- [2026-03-23T02:04:21Z] `sync-mint-burn` | status=`ok` | duration=2316ms | items=20
+- [2026-03-23T02:04:20Z] `status-self-check` | status=`ok` | duration=16391ms | items=29 | samples=28/29
+- [2026-03-23T02:06:21Z] `sync-dex-discovery` | status=`ok` | duration=3389ms | items=1 | coinsCrawled=1; poolsDiscovered=2
+- [2026-03-23T02:07:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=364ms | items=0
+- [2026-03-23T02:10:23Z] progress `sync-dex-liquidity` | stage=`lease-acquired` | Lease acquired for sync-dex-liquidity
+- [2026-03-23T02:10:22Z] `sync-stablecoin-charts` | status=`ok` | duration=220ms | items=259
+- [2026-03-23T02:11:51Z] progress `sync-redemption-backstops` | stage=`lease-acquired` | Lease acquired for sync-redemption-backstops
+- [2026-03-23T02:11:21Z] `sync-live-reserves` | status=`ok` | duration=29953ms | items=113 | warnings=26; failed=1
+- [2026-03-23T02:11:51Z] `sync-redemption-backstops` | status=`ok` | duration=3927ms | items=137
+- [2026-03-23T02:12:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=331ms | items=0
+- [2026-03-23T02:13:30Z] progress `sync-mint-burn-extended` | stage=`scan-config` | items=61/77 | Scanning USDG on Ethereum
+- [2026-03-23T02:13:21Z] `sync-mint-burn-extended` | status=`ok` | duration=11575ms | items=26
+- [2026-03-23T02:10:23Z] `sync-dex-liquidity` | status=`ok` | duration=201411ms | items=124 | fallback=
+- [2026-03-23T02:13:44Z] `compute-dews` | status=`ok` | duration=806ms | items=143
+- [2026-03-23T02:13:45Z] `stability-index` | status=`ok` | duration=265ms | items=1
+- [2026-03-23T02:13:46Z] `sync-yield-data` | status=`degraded` | duration=3267ms | items=97 | fallback=risk-free-rate:all-sources-failed-retained
+- [2026-03-23T02:15:22Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T02:17:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=500ms | items=0
+- [2026-03-23T02:18:35Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T02:15:22Z] `sync-stablecoins` | status=`ok` | duration=191486ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=50
+- [2026-03-23T02:18:34Z] `snapshot-supply` | status=`ok` | duration=297ms | items=161
+- [2026-03-23T02:18:34Z] `snapshot-chain-supply` | status=`ok` | duration=234ms | items=5
+- [2026-03-23T02:19:15Z] progress `status-self-check` | stage=`lease-acquired` | Lease acquired for status-self-check
+- [2026-03-23T02:18:35Z] `sync-fx-rates` | status=`ok` | duration=40233ms | items=20 | fallback=cadence-valid-carry-forward
+- [2026-03-23T02:19:15Z] `status-self-check` | status=`ok` | duration=16677ms | items=29 | samples=28/29
+- [2026-03-23T02:22:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=450ms | items=0
+- [2026-03-23T02:24:21Z] `sync-mint-burn` | status=`ok` | duration=2695ms | items=49
+- [2026-03-23T02:27:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=478ms | items=0
+- [2026-03-23T02:30:26Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T02:32:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=427ms | items=0
+- [2026-03-23T02:33:25Z] progress `sync-mint-burn-extended` | stage=`scan-config` | items=27/77 | Scanning WUSD on Ethereum
+- [2026-03-23T02:33:50Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T02:33:21Z] `sync-mint-burn-extended` | status=`ok` | duration=11662ms | items=23
+- [2026-03-23T02:30:26Z] `sync-stablecoins` | status=`ok` | duration=202626ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=50
+- [2026-03-23T02:33:49Z] `snapshot-supply` | status=`ok` | duration=148ms | items=0 | reason=cooldown_active
+- [2026-03-23T02:33:49Z] `snapshot-chain-supply` | status=`ok` | duration=163ms | items=0 | reason=cooldown_active
+- [2026-03-23T02:35:30Z] progress `status-self-check` | stage=`lease-acquired` | Lease acquired for status-self-check
+- [2026-03-23T02:33:50Z] `sync-fx-rates` | status=`ok` | duration=100388ms | items=20 | fallback=cadence-valid-carry-forward
+- [2026-03-23T02:35:30Z] `status-self-check` | status=`ok` | duration=6550ms | items=29 | samples=28/29
+- [2026-03-23T02:36:21Z] `sync-dex-discovery` | status=`ok` | duration=3350ms | items=1 | coinsCrawled=1; poolsDiscovered=2
+- [2026-03-23T02:37:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=314ms | items=0
+- [2026-03-23T02:40:23Z] progress `sync-dex-liquidity` | stage=`lease-acquired` | Lease acquired for sync-dex-liquidity
+- [2026-03-23T02:40:23Z] `sync-stablecoin-charts` | status=`ok` | duration=115ms | items=0 | reason=cooldown_active
+- [2026-03-23T02:42:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=457ms | items=0
+- [2026-03-23T02:40:23Z] `sync-dex-liquidity` | status=`ok` | duration=213464ms | items=124 | fallback=
+- [2026-03-23T02:43:57Z] `compute-dews` | status=`ok` | duration=834ms | items=143
+- [2026-03-23T02:43:58Z] `stability-index` | status=`ok` | duration=274ms | items=1
+- [2026-03-23T02:43:58Z] `sync-yield-data` | status=`degraded` | duration=3513ms | items=97 | fallback=risk-free-rate:all-sources-failed-retained
+- [2026-03-23T02:44:21Z] `sync-mint-burn` | status=`ok` | duration=2482ms | items=36
+- [2026-03-23T02:45:22Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T02:47:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=478ms | items=0
+- [2026-03-23T02:48:43Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T02:45:22Z] `sync-stablecoins` | status=`ok` | duration=200618ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=51
+- [2026-03-23T02:48:43Z] `snapshot-supply` | status=`ok` | duration=150ms | items=0 | reason=cooldown_active
+- [2026-03-23T02:48:43Z] `snapshot-chain-supply` | status=`ok` | duration=274ms | items=0 | reason=cooldown_active
+- [2026-03-23T02:48:43Z] `sync-fx-rates` | status=`ok` | duration=40363ms | items=20 | fallback=cadence-valid-carry-forward
+- [2026-03-23T02:49:24Z] `status-self-check` | status=`ok` | duration=5894ms | items=29 | samples=28/29
+- [2026-03-23T02:52:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=438ms | items=0
+- [2026-03-23T02:53:21Z] `sync-mint-burn-extended` | status=`ok` | duration=11083ms | items=12
+- [2026-03-23T02:57:39.722Z] monitor-error | Error: Command failed: npx --no-install wrangler d1 execute stablecoin-db --remote --json --command SELECT job, started_at, updated_at, stage, items_done, items_total, message, lease_owner, metadata FROM cron_run_progress ORDER BY updated_at ASC, job ASC; at genericNodeError (node:internal/errors:983:15) at wrappedFn (node:internal/errors:537:14) at ChildProcess.exithandler (node:child_process:41…
+- [2026-03-23T02:57:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=332ms | items=0
+- [2026-03-23T03:00:34Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T03:02:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=472ms | items=0
+- [2026-03-23T03:03:32Z] progress `sync-blacklist` | stage=`scan-config` | items=6/16 | Scanning USDC on Avalanche
+- [2026-03-23T03:03:40Z] progress `sync-blacklist` | stage=`scan-config` | items=14/16 | Scanning USDC on Arbitrum
+- [2026-03-23T03:03:54Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T03:00:34Z] `sync-stablecoins` | status=`ok` | duration=199086ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=51
+- [2026-03-23T03:03:54Z] `snapshot-supply` | status=`ok` | duration=142ms | items=0 | reason=cooldown_active
+- [2026-03-23T03:03:54Z] `snapshot-chain-supply` | status=`ok` | duration=152ms | items=0 | reason=cooldown_active
+- [2026-03-23T03:04:34Z] progress `status-self-check` | stage=`lease-acquired` | Lease acquired for status-self-check
+- [2026-03-23T03:04:21Z] `sync-mint-burn` | status=`ok` | duration=2303ms | items=21
+- [2026-03-23T03:03:54Z] `sync-fx-rates` | status=`ok` | duration=40234ms | items=20 | fallback=cadence-valid-carry-forward
+- [2026-03-23T03:03:21Z] `sync-blacklist` | status=`ok` | duration=78505ms | items=0
+- [2026-03-23T03:04:34Z] `status-self-check` | status=`ok` | duration=16889ms | items=29 | samples=28/29
+- [2026-03-23T03:06:43Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=9/20 | Crawling usr-resolv (t2) | coinsCrawled=9; poolsDiscovered=119
+- [2026-03-23T03:07:16Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=15/20 | Crawling gusd-gemini (t2) | coinsCrawled=15; poolsDiscovered=149
+- [2026-03-23T03:07:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=459ms | items=0
+- [2026-03-23T03:06:21Z] `sync-dex-discovery` | status=`ok` | duration=78242ms | items=20 | coinsCrawled=20; poolsDiscovered=149
+- [2026-03-23T03:10:26Z] progress `sync-dex-liquidity` | stage=`lease-acquired` | Lease acquired for sync-dex-liquidity
+- [2026-03-23T03:10:25Z] `sync-stablecoin-charts` | status=`ok` | duration=228ms | items=259
+- [2026-03-23T03:11:21Z] progress `sync-live-reserves` | stage=`lease-acquired` | Lease acquired for sync-live-reserves
+- [2026-03-23T03:11:21Z] `sync-live-reserves` | status=`ok` | duration=51917ms | items=111 | warnings=25; failed=3
+- [2026-03-23T03:12:13Z] `sync-redemption-backstops` | status=`ok` | duration=4005ms | items=137
+- [2026-03-23T03:12:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=336ms | items=0
+- [2026-03-23T03:13:21Z] `sync-mint-burn-extended` | status=`ok` | duration=11217ms | items=11
+- [2026-03-23T03:10:26Z] `sync-dex-liquidity` | status=`ok` | duration=203459ms | items=124 | fallback=
+- [2026-03-23T03:13:49Z] `compute-dews` | status=`ok` | duration=770ms | items=143
+- [2026-03-23T03:13:50Z] `stability-index` | status=`ok` | duration=280ms | items=1
+- [2026-03-23T03:13:50Z] `sync-yield-data` | status=`degraded` | duration=3625ms | items=97 | fallback=risk-free-rate:all-sources-failed-retained
+- [2026-03-23T03:15:24Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T03:17:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=431ms | items=0
+- [2026-03-23T03:18:44Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T03:15:24Z] `sync-stablecoins` | status=`ok` | duration=199604ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=52
+- [2026-03-23T03:18:44Z] `snapshot-supply` | status=`ok` | duration=317ms | items=161
+- [2026-03-23T03:18:44Z] `snapshot-chain-supply` | status=`ok` | duration=202ms | items=5
+- [2026-03-23T03:18:44Z] `sync-fx-rates` | status=`ok` | duration=100396ms | items=20 | fallback=cadence-valid-carry-forward
+- [2026-03-23T03:20:25Z] `status-self-check` | status=`ok` | duration=6123ms | items=29 | samples=28/29
+- [2026-03-23T03:22:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=451ms | items=0
+- [2026-03-23T03:24:21Z] `sync-mint-burn` | status=`ok` | duration=2705ms | items=30
+- [2026-03-23T03:27:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=504ms | items=0
+- [2026-03-23T03:30:29Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T03:32:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=507ms | items=0
+- [2026-03-23T03:33:21Z] `sync-mint-burn-extended` | status=`ok` | duration=11045ms | items=11
+- [2026-03-23T03:33:49Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T03:30:29Z] `sync-stablecoins` | status=`ok` | duration=199601ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=53
+- [2026-03-23T03:33:49Z] `snapshot-supply` | status=`ok` | duration=156ms | items=0 | reason=cooldown_active
+- [2026-03-23T03:33:49Z] `snapshot-chain-supply` | status=`ok` | duration=159ms | items=0 | reason=cooldown_active
+- [2026-03-23T03:33:49Z] `sync-fx-rates` | status=`ok` | duration=40233ms | items=20 | fallback=cadence-valid-carry-forward
+- [2026-03-23T03:34:30Z] `status-self-check` | status=`ok` | duration=6275ms | items=29 | samples=28/29
+- [2026-03-23T03:36:21Z] `sync-dex-discovery` | status=`ok` | duration=3396ms | items=1 | coinsCrawled=1; poolsDiscovered=2
+- [2026-03-23T03:37:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=440ms | items=0
+- [2026-03-23T03:40:25Z] progress `sync-dex-liquidity` | stage=`lease-acquired` | Lease acquired for sync-dex-liquidity
+- [2026-03-23T03:40:25Z] `sync-stablecoin-charts` | status=`ok` | duration=114ms | items=0 | reason=cooldown_active
+- [2026-03-23T03:42:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=442ms | items=0
+- [2026-03-23T03:40:25Z] `sync-dex-liquidity` | status=`ok` | duration=177425ms | items=124 | fallback=
+- [2026-03-23T03:43:23Z] `compute-dews` | status=`ok` | duration=726ms | items=143
+- [2026-03-23T03:43:23Z] `stability-index` | status=`ok` | duration=276ms | items=1
+- [2026-03-23T03:43:24Z] `sync-yield-data` | status=`degraded` | duration=3772ms | items=97 | fallback=risk-free-rate:all-sources-failed-retained
+- [2026-03-23T03:44:21Z] `sync-mint-burn` | status=`ok` | duration=2724ms | items=44
+- [2026-03-23T03:45:24Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T03:47:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=410ms | items=0
+- [2026-03-23T03:48:42Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T03:45:24Z] `sync-stablecoins` | status=`ok` | duration=197581ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=51
+- [2026-03-23T03:48:42Z] `snapshot-supply` | status=`ok` | duration=147ms | items=0 | reason=cooldown_active
+- [2026-03-23T03:48:42Z] `snapshot-chain-supply` | status=`ok` | duration=137ms | items=0 | reason=cooldown_active
+- [2026-03-23T03:48:42Z] `sync-fx-rates` | status=`ok` | duration=40309ms | items=20 | fallback=cadence-valid-carry-forward
+- [2026-03-23T03:49:22Z] `status-self-check` | status=`ok` | duration=16503ms | items=29 | samples=28/29
+- [2026-03-23T03:52:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=367ms | items=0
+- [2026-03-23T03:53:26Z] progress `sync-mint-burn-extended` | stage=`scan-config` | items=33/77 | Scanning AUDD on Ethereum
+- [2026-03-23T03:53:21Z] `sync-mint-burn-extended` | status=`ok` | duration=14304ms | items=10
+- [2026-03-23T03:57:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=394ms | items=0
+- [2026-03-23T04:00:39Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T04:02:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=425ms | items=0
+- [2026-03-23T04:03:41Z] progress `sync-blacklist` | stage=`complete` | items=16/16 | Completed blacklist sync
+- [2026-03-23T04:03:21Z] `sync-blacklist` | status=`ok` | duration=19896ms | items=0
+- [2026-03-23T04:03:59Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T04:00:39Z] `sync-stablecoins` | status=`ok` | duration=199421ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=52
+- [2026-03-23T04:03:59Z] `snapshot-supply` | status=`ok` | duration=370ms | items=0 | reason=cooldown_active
+- [2026-03-23T04:03:59Z] `snapshot-chain-supply` | status=`ok` | duration=158ms | items=0 | reason=cooldown_active
+- [2026-03-23T04:04:21Z] `sync-mint-burn` | status=`ok` | duration=2967ms | items=59
+- [2026-03-23T04:03:59Z] `sync-fx-rates` | status=`ok` | duration=100402ms | items=20 | fallback=cadence-valid-carry-forward
+- [2026-03-23T04:05:40Z] `status-self-check` | status=`ok` | duration=6473ms | items=29 | samples=28/29
+- [2026-03-23T04:06:21Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=0/1 | Crawling cgusd-cygnus-finance (t1) | coinsCrawled=0; poolsDiscovered=0
+- [2026-03-23T04:06:21Z] `sync-dex-discovery` | status=`ok` | duration=3384ms | items=1 | coinsCrawled=1; poolsDiscovered=2
+- [2026-03-23T04:07:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=323ms | items=0
+- [2026-03-23T04:10:26Z] progress `sync-dex-liquidity` | stage=`lease-acquired` | Lease acquired for sync-dex-liquidity
+- [2026-03-23T04:10:26Z] `sync-stablecoin-charts` | status=`ok` | duration=225ms | items=259
+- [2026-03-23T04:11:21Z] progress `sync-live-reserves` | stage=`lease-acquired` | Lease acquired for sync-live-reserves
+- [2026-03-23T04:11:21Z] `sync-live-reserves` | status=`ok` | duration=32065ms | items=113 | warnings=26; failed=1
+- [2026-03-23T04:11:54Z] `sync-redemption-backstops` | status=`ok` | duration=3853ms | items=137
+- [2026-03-23T04:12:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=419ms | items=0
+- [2026-03-23T04:13:22Z] progress `sync-mint-burn-extended` | stage=`scan-config` | items=1/77 | Scanning USDO on Ethereum
+- [2026-03-23T04:13:52Z] progress `sync-yield-data` | stage=`lease-acquired` | Lease acquired for sync-yield-data
+- [2026-03-23T04:13:21Z] `sync-mint-burn-extended` | status=`ok` | duration=11440ms | items=9
+- [2026-03-23T04:10:26Z] `sync-dex-liquidity` | status=`ok` | duration=204590ms | items=124 | fallback=
+- [2026-03-23T04:13:51Z] `compute-dews` | status=`ok` | duration=768ms | items=143
+- [2026-03-23T04:13:52Z] `stability-index` | status=`ok` | duration=244ms | items=1
+- [2026-03-23T04:13:52Z] `sync-yield-data` | status=`degraded` | duration=3520ms | items=97 | fallback=risk-free-rate:all-sources-failed-retained
+- [2026-03-23T04:15:24Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T04:17:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=303ms | items=0
+- [2026-03-23T04:18:46Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T04:15:24Z] `sync-stablecoins` | status=`ok` | duration=200504ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=53
+- [2026-03-23T04:18:45Z] `snapshot-supply` | status=`ok` | duration=283ms | items=161
+- [2026-03-23T04:18:45Z] `snapshot-chain-supply` | status=`ok` | duration=213ms | items=5
+- [2026-03-23T04:19:16Z] progress `status-self-check` | stage=`lease-acquired` | Lease acquired for status-self-check
+- [2026-03-23T04:18:46Z] `sync-fx-rates` | status=`ok` | duration=30181ms | items=20 | fallback=cached-fx-rates
+- [2026-03-23T04:19:16Z] `status-self-check` | status=`ok` | duration=6493ms | items=29 | samples=28/29
+- [2026-03-23T04:22:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=615ms | items=0
+- [2026-03-23T04:24:21Z] `sync-mint-burn` | status=`ok` | duration=2548ms | items=41
+- [2026-03-23T04:27:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=445ms | items=0
+- [2026-03-23T04:30:28Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T04:32:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=348ms | items=0
+- [2026-03-23T04:33:49Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T04:33:21Z] `sync-mint-burn-extended` | status=`ok` | duration=10783ms | items=12
+- [2026-03-23T04:30:28Z] `sync-stablecoins` | status=`ok` | duration=200398ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=51
+- [2026-03-23T04:33:49Z] `snapshot-supply` | status=`ok` | duration=141ms | items=0 | reason=cooldown_active
+- [2026-03-23T04:33:49Z] `snapshot-chain-supply` | status=`ok` | duration=139ms | items=0 | reason=cooldown_active
+- [2026-03-23T04:34:20Z] progress `status-self-check` | stage=`lease-acquired` | Lease acquired for status-self-check
+- [2026-03-23T04:33:49Z] `sync-fx-rates` | status=`ok` | duration=30257ms | items=20 | fallback=cached-fx-rates
+- [2026-03-23T04:34:20Z] `status-self-check` | status=`ok` | duration=16917ms | items=29 | samples=28/29
+- [2026-03-23T04:36:31Z] progress `sync-dex-discovery` | stage=`crawl-coin` | items=5/14 | Crawling brz-transfero (t2) | coinsCrawled=5; poolsDiscovered=16
+- [2026-03-23T04:36:21Z] `sync-dex-discovery` | status=`ok` | duration=34816ms | items=14 | coinsCrawled=14; poolsDiscovered=74
+- [2026-03-23T04:37:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=334ms | items=0
+- [2026-03-23T04:40:27Z] progress `sync-dex-liquidity` | stage=`lease-acquired` | Lease acquired for sync-dex-liquidity
+- [2026-03-23T04:40:27Z] `sync-stablecoin-charts` | status=`ok` | duration=102ms | items=0 | reason=cooldown_active
+- [2026-03-23T04:42:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=344ms | items=0
+- [2026-03-23T04:40:27Z] `sync-dex-liquidity` | status=`ok` | duration=184681ms | items=124 | fallback=
+- [2026-03-23T04:43:32Z] `compute-dews` | status=`ok` | duration=814ms | items=143
+- [2026-03-23T04:43:33Z] `stability-index` | status=`ok` | duration=258ms | items=1
+- [2026-03-23T04:43:34Z] `sync-yield-data` | status=`degraded` | duration=6083ms | items=97 | fallback=risk-free-rate:all-sources-failed-retained
+- [2026-03-23T04:44:21Z] `sync-mint-burn` | status=`ok` | duration=2175ms | items=26
+- [2026-03-23T04:45:26Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T04:47:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=386ms | items=0
+- [2026-03-23T04:48:47Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T04:45:26Z] `sync-stablecoins` | status=`ok` | duration=200015ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=50
+- [2026-03-23T04:48:46Z] `snapshot-supply` | status=`ok` | duration=128ms | items=0 | reason=cooldown_active
+- [2026-03-23T04:48:47Z] `snapshot-chain-supply` | status=`ok` | duration=124ms | items=0 | reason=cooldown_active
+- [2026-03-23T04:48:47Z] `sync-fx-rates` | status=`ok` | duration=41911ms | items=20 | fallback=cached-fx-rates
+- [2026-03-23T04:49:29Z] `status-self-check` | status=`ok` | duration=16124ms | items=29 | samples=28/29
+- [2026-03-23T04:52:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=327ms | items=0
+- [2026-03-23T04:53:21Z] `sync-mint-burn-extended` | status=`ok` | duration=10426ms | items=4
+- [2026-03-23T04:57:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=319ms | items=0
+- [2026-03-23T05:00:34Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T05:02:21Z] `sync-stablecoins` | status=`skipped_locked` | duration=166ms | reason=lease-locked
+- [2026-03-23T05:02:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=986ms | items=0
+- [2026-03-23T05:02:22Z] `sync-fx-rates` | status=`ok` | duration=1606ms | items=20 | fallback=secondary-live-fallback
+- [2026-03-23T05:02:23Z] `status-self-check` | status=`ok` | duration=6562ms | items=29 | samples=28/29
+- [2026-03-23T05:03:24Z] progress `sync-blacklist` | stage=`scan-config` | items=1/16 | Scanning USDT on Ethereum
+- [2026-03-23T05:03:42Z] progress `sync-blacklist` | stage=`scan-config` | items=14/16 | Scanning USDC on Arbitrum
+- [2026-03-23T05:04:21Z] `sync-mint-burn` | status=`ok` | duration=2370ms | items=24
+- [2026-03-23T05:06:21Z] `sync-dex-discovery` | status=`ok` | duration=3349ms | items=1 | coinsCrawled=1; poolsDiscovered=2
+- [2026-03-23T05:03:21Z] `sync-blacklist` | status=`ok` | duration=192263ms | items=339
+- [2026-03-23T05:07:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=506ms | items=0
+- [2026-03-23T05:10:30Z] progress `sync-dex-liquidity` | stage=`lease-acquired` | Lease acquired for sync-dex-liquidity
+- [2026-03-23T05:10:30Z] `sync-stablecoin-charts` | status=`ok` | duration=247ms | items=259
+- [2026-03-23T05:11:21Z] progress `sync-live-reserves` | stage=`lease-acquired` | Lease acquired for sync-live-reserves
+- [2026-03-23T05:11:21Z] `sync-live-reserves` | status=`ok` | duration=29588ms | items=113 | warnings=27; failed=1
+- [2026-03-23T05:11:51Z] `sync-redemption-backstops` | status=`ok` | duration=4201ms | items=137
+- [2026-03-23T05:12:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=495ms | items=0
+- [2026-03-23T05:13:21Z] `sync-mint-burn-extended` | status=`ok` | duration=10799ms | items=14
+- [2026-03-23T05:10:30Z] `sync-dex-liquidity` | status=`ok` | duration=211071ms | items=124 | fallback=
+- [2026-03-23T05:14:01Z] `compute-dews` | status=`ok` | duration=780ms | items=143
+- [2026-03-23T05:14:02Z] `stability-index` | status=`ok` | duration=376ms | items=1
+- [2026-03-23T05:14:03Z] `sync-yield-data` | status=`degraded` | duration=3551ms | items=97 | fallback=risk-free-rate:all-sources-failed-retained
+- [2026-03-23T05:15:28Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T05:17:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=405ms | items=0
+- [2026-03-23T05:18:49Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T05:15:28Z] `sync-stablecoins` | status=`ok` | duration=200542ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=52
+- [2026-03-23T05:18:48Z] `snapshot-supply` | status=`ok` | duration=289ms | items=161
+- [2026-03-23T05:18:49Z] `snapshot-chain-supply` | status=`ok` | duration=198ms | items=5
+- [2026-03-23T05:20:19Z] progress `status-self-check` | stage=`lease-acquired` | Lease acquired for status-self-check
+- [2026-03-23T05:18:49Z] `sync-fx-rates` | status=`ok` | duration=90262ms | items=20 | fallback=cadence-valid-carry-forward
+- [2026-03-23T05:20:19Z] `status-self-check` | status=`ok` | duration=17418ms | items=29 | samples=29/29
+- [2026-03-23T05:22:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=337ms | items=0
+- [2026-03-23T05:24:23Z] progress `sync-mint-burn` | stage=`scan-config` | items=2/7 | Scanning DAI on Ethereum
+- [2026-03-23T05:24:22Z] `sync-mint-burn` | status=`ok` | duration=2684ms | items=41
+- [2026-03-23T05:27:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=441ms | items=0
+- [2026-03-23T05:30:31Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T05:32:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=455ms | items=0
+- [2026-03-23T05:33:32Z] progress `sync-mint-burn-extended` | stage=`scan-config` | items=74/77 | Scanning USDO on Ethereum
+- [2026-03-23T05:33:21Z] `sync-mint-burn-extended` | status=`ok` | duration=11069ms | items=11
+- [2026-03-23T05:33:50Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T05:30:31Z] `sync-stablecoins` | status=`ok` | duration=197942ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=51
+- [2026-03-23T05:33:49Z] `snapshot-supply` | status=`ok` | duration=159ms | items=0 | reason=cooldown_active
+- [2026-03-23T05:33:50Z] `snapshot-chain-supply` | status=`ok` | duration=183ms | items=0 | reason=cooldown_active
+- [2026-03-23T05:35:30Z] progress `status-self-check` | stage=`lease-acquired` | Lease acquired for status-self-check
+- [2026-03-23T05:33:50Z] `sync-fx-rates` | status=`ok` | duration=100346ms | items=20 | fallback=cadence-valid-carry-forward
+- [2026-03-23T05:35:30Z] `status-self-check` | status=`ok` | duration=17319ms | items=29 | samples=29/29
+- [2026-03-23T05:36:22Z] `sync-dex-discovery` | status=`ok` | duration=3351ms | items=1 | coinsCrawled=1; poolsDiscovered=2
+- [2026-03-23T05:37:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=312ms | items=0
+- [2026-03-23T05:40:29Z] progress `sync-dex-liquidity` | stage=`lease-acquired` | Lease acquired for sync-dex-liquidity
+- [2026-03-23T05:40:29Z] `sync-stablecoin-charts` | status=`ok` | duration=121ms | items=0 | reason=cooldown_active
+- [2026-03-23T05:42:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=332ms | items=0
+- [2026-03-23T05:40:29Z] `sync-dex-liquidity` | status=`ok` | duration=215514ms | items=124 | fallback=
+- [2026-03-23T05:44:05Z] `compute-dews` | status=`ok` | duration=866ms | items=143
+- [2026-03-23T05:44:06Z] `stability-index` | status=`ok` | duration=277ms | items=1
+- [2026-03-23T05:44:06Z] `sync-yield-data` | status=`degraded` | duration=3608ms | items=97 | fallback=risk-free-rate:all-sources-failed-retained
+- [2026-03-23T05:44:21Z] `sync-mint-burn` | status=`ok` | duration=2334ms | items=33
+- [2026-03-23T05:45:28Z] progress `sync-stablecoins` | stage=`lease-acquired` | Lease acquired for sync-stablecoins
+- [2026-03-23T05:47:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=326ms | items=0
+- [2026-03-23T05:48:45Z] progress `sync-fx-rates` | stage=`lease-acquired` | Lease acquired for sync-fx-rates
+- [2026-03-23T05:45:28Z] `sync-stablecoins` | status=`ok` | duration=195743ms | items=379 | gtProbeBudgetExhausted=true; gtProbeBudgetSkipped=51
+- [2026-03-23T05:48:44Z] `snapshot-supply` | status=`ok` | duration=147ms | items=0 | reason=cooldown_active
+- [2026-03-23T05:48:45Z] `snapshot-chain-supply` | status=`ok` | duration=131ms | items=0 | reason=cooldown_active
+- [2026-03-23T05:48:45Z] `sync-fx-rates` | status=`ok` | duration=90271ms | items=20 | fallback=cadence-valid-carry-forward
+- [2026-03-23T05:50:15Z] `status-self-check` | status=`ok` | duration=17066ms | items=29 | samples=28/29
+- [2026-03-23T05:52:21Z] `dispatch-telegram-alerts` | status=`ok` | duration=406ms | items=0
+- [2026-03-23T05:53:28Z] progress `sync-mint-burn-extended` | stage=`scan-config` | items=52/77 | Scanning USDf on Ethereum
+- [2026-03-23T05:53:21Z] `sync-mint-burn-extended` | status=`ok` | duration=11201ms | items=9
+- [2026-03-23T05:56:42.607Z] Monitor stopping. reason=window-complete; lastRunId=33946; observedJobs=17

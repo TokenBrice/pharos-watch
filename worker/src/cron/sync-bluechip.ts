@@ -1,6 +1,6 @@
 import { BLUECHIP_SLUG_MAP } from "../lib/bluechip-slugs";
 import type { BluechipGrade, BluechipRating, BluechipSmidge } from "@shared/types";
-import { shouldSkipFreshCache, setCacheIfNewer } from "../lib/db-cache";
+import { getCache, shouldSkipFreshCache, setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { validatePayloadWithSchema } from "../lib/api-utils";
@@ -64,6 +64,17 @@ function extractSmidge(coin: Record<string, unknown>): BluechipSmidge {
   return smidge;
 }
 
+function parseExistingRatings(raw: string | null | undefined): Record<string, BluechipRating> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return {};
+    return parsed as Record<string, BluechipRating>;
+  } catch {
+    return {};
+  }
+}
+
 export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
 
@@ -77,6 +88,8 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
   }
 
   const entries = Object.entries(BLUECHIP_SLUG_MAP);
+  const existingCache = await getCache(db, CACHE_KEY);
+  const existingRatings = parseExistingRatings(existingCache?.value);
 
   // Process in batches of 3 with 500ms delay to avoid flooding backend.bluechip.org
   const BATCH_SIZE = 3;
@@ -127,18 +140,25 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
     results.push(...batchResults);
   }
 
-  const ratingsMap: Record<string, BluechipRating> = {};
-  let count = 0;
+  const freshRatingsMap: Record<string, BluechipRating> = {};
+  let freshCount = 0;
   for (const result of results) {
     if (result.status === "fulfilled" && result.value) {
-      ratingsMap[result.value.pharosId] = result.value.rating;
-      count++;
+      freshRatingsMap[result.value.pharosId] = result.value.rating;
+      freshCount++;
     }
   }
 
-  await recordOutcomeSafe(db, CIRCUIT_SOURCE.BLUECHIP, count > 0);
+  const totalEntries = entries.length;
+  const partialCoverage = freshCount > 0 && freshCount < totalEntries;
+  const ratingsMap: Record<string, BluechipRating> = {
+    ...existingRatings,
+    ...freshRatingsMap,
+  };
 
-  if (count === 0) {
+  await recordOutcomeSafe(db, CIRCUIT_SOURCE.BLUECHIP, freshCount === totalEntries);
+
+  if (freshCount === 0) {
     console.warn("[bluechip] No ratings fetched, preserving cache");
     return {
       status: "degraded",
@@ -148,11 +168,16 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
   }
 
   await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(ratingsMap), syncStartSec);
-  console.log(`[bluechip] Cache updated with ${count} ratings`);
+  console.log(`[bluechip] Cache updated with ${Object.keys(ratingsMap).length} ratings (${freshCount} fresh)`);
   return {
-    itemCount: count,
+    ...(partialCoverage ? { status: "degraded" as const } : {}),
+    itemCount: freshCount,
     metadata: JSON.stringify({
-      ratingsFetched: count,
+      ratingsFetched: freshCount,
+      ratingsPublished: Object.keys(ratingsMap).length,
+      totalMappedRatings: totalEntries,
+      retainedFromCache: Math.max(0, Object.keys(ratingsMap).length - freshCount),
+      fallbackMode: partialCoverage ? "partial-cache-merge" : null,
       invalidPayloads,
     }),
   };

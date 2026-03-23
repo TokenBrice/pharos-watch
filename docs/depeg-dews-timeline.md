@@ -1,6 +1,16 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v4.8` (2026-02-18 -> 2026-03-22).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v4.9` (2026-02-18 -> 2026-03-23).
+
+---
+
+## v4.9 — Bootstrap sentinel and core-liquidity freshness gating (Mar 23, 2026)
+
+**Commit:** `unreleased`
+
+- DEWS bootstrap grace is now a one-time state transition, persisted via a dedicated `dews:bootstrap-complete` sentinel after the first successful publication
+- Only explicitly optional missing tables are bootstrap-allowed before that first success; core dependencies no longer inherit stablecoins-cache freshness as a proxy for readiness
+- `dex_liquidity` freshness is now enforced as a hard publication prerequisite, with rows older than 2 hours degrading the run and blocking writes
 
 ---
 

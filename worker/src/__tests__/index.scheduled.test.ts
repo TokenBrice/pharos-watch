@@ -23,14 +23,21 @@ const cronMocks = vi.hoisted(() => ({
   dispatchTelegramAlerts: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runStatusSelfCheck: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotSupply: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  snapshotSafetyGradeHistory: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  fetchTbillRate: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  snapshotPsiDaily: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  syncUsdsStatus: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncLiveReserves: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncRedemptionBackstops: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  syncKinesisSupply: vi.fn(async () => ({ status: "ok", itemCount: 2, metadata: "{}" })),
   syncDexLiquidity: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncYieldData: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   logCronRun: vi.fn(async (
     _db: D1Database,
     _job: string,
     fn: (signal: AbortSignal, reportProgress: (update: Record<string, unknown>) => Promise<void>) => Promise<unknown>,
+    _alertFn?: (title: string, message: string) => Promise<unknown> | void,
+    _options?: { slotStartedAt?: number | null },
   ) => (
     fn(new AbortController().signal, async () => undefined)
   )),
@@ -38,12 +45,27 @@ const cronMocks = vi.hoisted(() => ({
     _db: D1Database,
     _job: string,
     fn: (ctx: { signal: AbortSignal }) => Promise<unknown>,
+    _opts?: { abortSignal?: AbortSignal },
   ) => ({
     status: "ok",
     leaseOwner: "test-lease",
     renewFailures: 0,
     result: await fn({ signal: new AbortController().signal }),
   })),
+  runScheduledSlotWithFence: vi.fn(async (
+    _db: D1Database,
+    slotKey: string,
+    fn: () => Promise<void>,
+    opts: { slotStartedAt: number },
+  ) => {
+    await fn();
+    return {
+      status: "ok",
+      slotKey,
+      slotStartedAt: opts.slotStartedAt,
+      owner: "slot-owner",
+    };
+  }),
   getCache: vi.fn(async () => null),
   setCache: vi.fn(async () => undefined),
   sendAlert: vi.fn(async () => true),
@@ -62,8 +84,15 @@ vi.mock("../cron/compute-dews", () => ({ computeAndStoreDEWS: cronMocks.computeA
 vi.mock("../cron/dispatch-telegram-alerts", () => ({ dispatchTelegramAlerts: cronMocks.dispatchTelegramAlerts }));
 vi.mock("../cron/status-self-check", () => ({ runStatusSelfCheck: cronMocks.runStatusSelfCheck }));
 vi.mock("../cron/snapshot-supply", () => ({ snapshotSupply: cronMocks.snapshotSupply }));
+vi.mock("../cron/snapshot-safety-grade-history", () => ({
+  snapshotSafetyGradeHistory: cronMocks.snapshotSafetyGradeHistory,
+}));
+vi.mock("../cron/fetch-tbill-rate", () => ({ fetchTbillRate: cronMocks.fetchTbillRate }));
+vi.mock("../cron/snapshot-psi", () => ({ snapshotPsiDaily: cronMocks.snapshotPsiDaily }));
+vi.mock("../cron/sync-usds-status", () => ({ syncUsdsStatus: cronMocks.syncUsdsStatus }));
 vi.mock("../cron/sync-live-reserves", () => ({ syncLiveReserves: cronMocks.syncLiveReserves }));
 vi.mock("../cron/sync-redemption-backstops", () => ({ syncRedemptionBackstops: cronMocks.syncRedemptionBackstops }));
+vi.mock("../cron/sync-kinesis-supply", () => ({ syncKinesisSupply: cronMocks.syncKinesisSupply }));
 vi.mock("../cron/dex-liquidity", () => ({ syncDexLiquidity: cronMocks.syncDexLiquidity }));
 vi.mock("../cron/sync-yield-data", () => ({ syncYieldData: cronMocks.syncYieldData }));
 
@@ -89,6 +118,7 @@ vi.mock("../lib/cron-lease", async (importOriginal) => {
   return {
     ...original,
     runCronWithLease: cronMocks.runCronWithLease,
+    runScheduledSlotWithFence: cronMocks.runScheduledSlotWithFence,
   };
 });
 
@@ -168,6 +198,44 @@ describe("worker.scheduled", () => {
     expect(cronMocks.dispatchTelegramAlerts).not.toHaveBeenCalled();
     // Charts now on the half-hourly offset trigger
     expect(cronMocks.syncStablecoinCharts).not.toHaveBeenCalled();
+  });
+
+  it("derives slot identity from scheduledTime and threads it through slot fencing and cron logging", async () => {
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+      TELEGRAM_BOT_TOKEN: "bot-token",
+    } as const;
+    const scheduledTime = Date.parse("2026-03-23T00:15:00Z");
+    const expectedSlotStartedAt = Math.floor(scheduledTime / 1000);
+
+    await worker.scheduled(
+      { cron: "*/15 * * * *", scheduledTime } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(cronMocks.runScheduledSlotWithFence).toHaveBeenCalledWith(
+      expect.anything(),
+      "quarterHourly",
+      expect.any(Function),
+      expect.objectContaining({ slotStartedAt: expectedSlotStartedAt }),
+    );
+    expect(cronMocks.logCronRun).toHaveBeenCalledWith(
+      expect.anything(),
+      "sync-stablecoins",
+      expect.any(Function),
+      expect.any(Function),
+      expect.objectContaining({ slotStartedAt: expectedSlotStartedAt }),
+    );
+    expect(cronMocks.runCronWithLease).toHaveBeenCalledWith(
+      expect.anything(),
+      "sync-stablecoins",
+      expect.any(Function),
+      expect.objectContaining({ abortSignal: expect.any(AbortSignal) }),
+    );
   });
 
   it("skips downstream-safe dependent jobs when sync-stablecoins finishes degraded without safe cache write", async () => {
@@ -265,6 +333,52 @@ describe("worker.scheduled", () => {
     );
   });
 
+  it("continues half-hourly downstream jobs when sync-dex-liquidity throws", async () => {
+    cronMocks.syncDexLiquidity.mockRejectedValueOnce(new Error("dex failed"));
+
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "10,40 * * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(cronMocks.syncDexLiquidity).toHaveBeenCalledTimes(1);
+    expect(cronMocks.computeAndStoreDEWS).toHaveBeenCalledTimes(1);
+    expect(cronMocks.computeAndStoreStabilityIndex).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncYieldData).toHaveBeenCalledTimes(1);
+  });
+
+  it("continues sync-usds-status when fetch-tbill-rate throws in the daily 08:00 slot", async () => {
+    cronMocks.fetchTbillRate.mockRejectedValueOnce(new Error("tbill failed"));
+
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+      ETHERSCAN_API_KEY: "etherscan",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "0 8 * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(cronMocks.fetchTbillRate).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncUsdsStatus).toHaveBeenCalledTimes(1);
+    expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
+    expect(cronMocks.snapshotSafetyGradeHistory).toHaveBeenCalledTimes(1);
+    expect(cronMocks.snapshotPsiDaily).toHaveBeenCalledTimes(1);
+  });
+
   it("runs live reserve sync on the dedicated hourly trigger", async () => {
     const { ctx, waits } = makeCtx();
     const env = {
@@ -283,6 +397,7 @@ describe("worker.scheduled", () => {
 
     expect(cronMocks.syncLiveReserves).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncRedemptionBackstops).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncKinesisSupply).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotSupply).not.toHaveBeenCalled();
     expect(cronMocks.syncStablecoinCharts).not.toHaveBeenCalled();
   });

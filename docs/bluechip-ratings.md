@@ -43,7 +43,7 @@ Current map covers:
 
 Failure behavior:
 - If zero ratings are fetched, the cron returns `status: "degraded"` and preserves the previous cache.
-- Partial success is accepted; only fulfilled slug fetches are written.
+- Partial success is accepted, but fresh rows are now merged onto the previous cache instead of replacing it wholesale. When only a subset of slugs succeeds, the cron returns `status: "degraded"` with `fallbackMode: "partial-cache-merge"` and preserves the last good values for missed slugs.
 
 ---
 

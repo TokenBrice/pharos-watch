@@ -10,6 +10,7 @@ import { SECONDS } from "../lib/time-constants";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
 import { getConditionBand } from "../lib/stability-index";
+import { getCache, setCache } from "../lib/db-cache";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import {
   prepareTelegramDigestAppendices,
@@ -33,6 +34,12 @@ import {
   type CollectorResult,
   type CollectorContext,
 } from "./daily-digest/collectors";
+
+const TELEGRAM_SENT_MARKER_PREFIX = "daily-digest:telegram-sent:";
+
+function getTelegramSentMarkerKey(date: string): string {
+  return `${TELEGRAM_SENT_MARKER_PREFIX}${date}`;
+}
 
 const SYSTEM_PROMPT =
   // 1. Voice directives
@@ -757,10 +764,33 @@ export async function generateDailyDigest(
 
       try {
         const date = new Date(now * 1000).toISOString().slice(0, 10);
-        // Design tradeoff: commit appendix state BEFORE sending the Telegram message.
-        // If commit succeeds but send fails, appendix content is "consumed" and won't retry.
-        // This is intentionally the safer failure mode (missing appendix < duplicate appendix).
-        if (telegramAppendices) {
+        const markerKey = getTelegramSentMarkerKey(date);
+        const sentMarker = await getCache(db, markerKey);
+
+        if (!sentMarker) {
+          await postDigestToTelegram(
+            digestTitle,
+            digestExtended,
+            date,
+            telegramCreds,
+            editionNumber,
+            telegramAppendices?.appendixHtml ?? null,
+          );
+          await recordOutcomeSafe(db, CIRCUIT_SOURCE.TELEGRAM_API, true);
+          try {
+            await setCache(
+              db,
+              markerKey,
+              JSON.stringify({ sentAt: now, editionNumber }),
+            );
+          } catch (err) {
+            degradedReasons.push("telegram-send-marker");
+            console.error("[daily-digest] Failed to persist Telegram send marker:", err);
+          }
+        } else {
+          telegramStatus = "skipped: already-sent";
+        }
+        if (telegramAppendices?.metadata.hasAppendix) {
           try {
             await telegramAppendices.commitSuccess();
           } catch (err) {
@@ -768,19 +798,12 @@ export async function generateDailyDigest(
             console.error("[daily-digest] Failed to commit Telegram digest appendix state:", err);
           }
         }
-        await postDigestToTelegram(
-          digestTitle,
-          digestExtended,
-          date,
-          telegramCreds,
-          editionNumber,
-          telegramAppendices?.appendixHtml ?? null,
-        );
-        await recordOutcomeSafe(db, CIRCUIT_SOURCE.TELEGRAM_API, true);
-        const appendixSuffix = telegramAppendices?.metadata.hasAppendix
-          ? `+appendix(cemetery=${telegramAppendices.metadata.cemeteryDetected},tracked=${telegramAppendices.metadata.trackedDetected},prelaunch=${telegramAppendices.metadata.preLaunchDetected})`
-          : "";
-        telegramStatus = `ok${appendixSuffix}`;
+        if (telegramStatus !== "skipped: already-sent") {
+          const appendixSuffix = telegramAppendices?.metadata.hasAppendix
+            ? `+appendix(cemetery=${telegramAppendices.metadata.cemeteryDetected},tracked=${telegramAppendices.metadata.trackedDetected},prelaunch=${telegramAppendices.metadata.preLaunchDetected})`
+            : "";
+          telegramStatus = `ok${appendixSuffix}`;
+        }
       } catch (err) {
         await recordOutcomeSafe(db, CIRCUIT_SOURCE.TELEGRAM_API, false);
         console.error("[daily-digest] Failed to post to Telegram (non-fatal):", err);

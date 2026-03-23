@@ -1,6 +1,16 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v4.4` (2026-03-01 -> 2026-03-20).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v4.5` (2026-03-01 -> 2026-03-23).
+
+---
+
+## v4.5 - Fail-closed source validation and retained-market benchmark continuity (Mar 23, 2026)
+
+**Commit:** `unreleased`
+
+- Direct DeFiLlama yield fetches now degrade when the payload shape is invalid or when the response contains zero relevant stablecoin pools
+- Yield sync now surfaces full deterministic Tier 1 outages as degraded runs instead of quietly publishing as if on-chain coverage were optional for that cycle
+- Retained Treasury benchmark fallbacks preserve the last market-derived benchmark fields across degraded streaks, and rankings-cache publication blocks on severe shrink relative to the previous cache
 
 ---
 

@@ -4,7 +4,7 @@ Composite ecosystem health score (0–100) measuring how stable the stablecoin m
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.1`
+- **Current methodology version:** `v3.2`
 - **Public changelog page:** `/methodology/stability-index-changelog/`
 - **Canonical source:** `shared/lib/stability-index-version.ts`
 
@@ -113,12 +113,12 @@ The API surfaces this array in `current.contributors` (not in history). The fron
 | 7-day market cap change | Current vs previous week total from stablecoins cache |
 | DEWS stress breadth | Latest `stress_signals` rows in warning bands (`ALERT`, `WARNING`, `DANGER`) |
 
-If `totalMcapUsd` is missing or `<= 0`, `computeStabilityIndex()` returns `null` (insufficient data) and no new score is produced for that cycle.
+If the active-depeg query is unavailable, the cron fails closed and does not publish a fresh PSI sample for that cycle. If `totalMcapUsd` is missing or `<= 0`, `computeStabilityIndex()` returns `null` (insufficient data) and no new score is produced for that cycle.
 
 ## Cron & Storage
 
-- **30-min samples**: `computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` — runs every **30 minutes** (`10,40 * * * *`) after `compute-dews` on the shared half-hourly lane. Computes severity/breadth from active depegs, stress breadth from DEWS, and trend from 7-day market cap change. If DEWS input is unavailable, the run records `dewsUnavailable=true` in `input_snapshot`, defaults stress breadth to 0 for continuity, and returns cron `status: "degraded"`. For already-open depegs whose current stablecoins snapshot price is temporarily missing, the cron can reuse a replay-safe positive `price_cache` price if it is at most 6 hours old; otherwise that coin is skipped for that sample. If total market cap input is missing/zero, PSI compute returns `null`, the cron skips writing that sample, and the API continues serving the last valid stored value. Samples are stored in `stability_index_samples` (migration 0026) and pruned after 90 days.
-- **Daily aggregation**: `snapshotPsiDaily()` in `worker/src/cron/snapshot-psi.ts` — runs daily at **08:00 UTC**. Averages all 30-minute samples from the previous UTC day and stores one row in the `stability_index` table using `INSERT OR REPLACE` on the midnight-keyed `computed_at`.
+- **30-min samples**: `computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` — runs every **30 minutes** (`10,40 * * * *`) after `compute-dews` on the shared half-hourly lane. Computes severity/breadth from active depegs, stress breadth from DEWS, and trend from 7-day market cap change. If DEWS input is unavailable, the run records `dewsUnavailable=true` in `input_snapshot`, defaults stress breadth to 0 for continuity, and returns cron `status: "degraded"`. If the active-depeg query itself is unavailable, the run records that dependency loss in metadata, skips the sample entirely, and leaves the last valid stored PSI untouched. For already-open depegs whose current stablecoins snapshot price is temporarily missing, the cron can reuse a replay-safe positive `price_cache` price if it is at most 6 hours old; otherwise that coin is skipped for that sample. If total market cap input is missing/zero, PSI compute returns `null`, the cron skips writing that sample, and the API continues serving the last valid stored value. Samples are stored in `stability_index_samples` (migration 0026) and pruned after 90 days.
+- **Daily aggregation**: `snapshotPsiDaily()` in `worker/src/cron/snapshot-psi.ts` — runs daily at **08:00 UTC**. Averages all 30-minute samples from the previous UTC day and stores one row in the `stability_index` table using `INSERT OR REPLACE` on the midnight-keyed `computed_at`. If the prior UTC day has zero samples, the cron returns `status: "degraded"` with `reason: "no-samples-for-yesterday"` and skips the write.
 - **Pure compute**: `computeStabilityIndex()` in `worker/src/lib/stability-index.ts` — stateless, deterministic
 - **Tables**: `stability_index_samples` (migration 0026, columns added by 0035) — per-sample: `stored_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON), `methodology_version`. `stability_index` (migration 0022, columns added by 0035) — daily averages: `computed_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON), `methodology_version`
 

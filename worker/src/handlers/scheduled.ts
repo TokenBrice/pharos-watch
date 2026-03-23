@@ -1,5 +1,6 @@
-import { CRON_SCHEDULES } from "@shared/lib/cron-jobs";
+import { CRON_SCHEDULES, getCronScheduleKey, getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
 import type { Env } from "../lib/env";
+import { runScheduledSlotWithFence } from "../lib/cron-lease";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./scheduled/context";
 import { runQuarterHourlySlot } from "./scheduled/quarter-hourly";
 import { runHourlyBlacklistSlot } from "./scheduled/hourly-blacklist";
@@ -32,11 +33,35 @@ export async function handleScheduledEvent(
   env: Env,
   ctx: ExecutionContext,
 ): Promise<void> {
-  const runtime = createScheduledRuntimeContext(env, ctx);
   const runner = SLOT_RUNNER_BY_SCHEDULE[event.cron];
-  if (!runner) {
+  const scheduleKey = getCronScheduleKey(event.cron);
+  if (!runner || !scheduleKey) {
     return;
   }
 
-  await runner(runtime);
+  const scheduledTimeMs = typeof event.scheduledTime === "number" ? event.scheduledTime : null;
+  const slotStartedAt = getCronSlotStartedAtForSchedule(scheduleKey, scheduledTimeMs);
+  const runtime = createScheduledRuntimeContext(env, ctx, {
+    cron: event.cron,
+    scheduleKey,
+    scheduledTimeMs,
+    slotStartedAt,
+  });
+
+  ctx.waitUntil((async () => {
+    const slotResult = await runScheduledSlotWithFence(
+      env.DB,
+      scheduleKey,
+      () => Promise.resolve(runner(runtime)),
+      { slotStartedAt },
+    );
+
+    if (slotResult.status === "skipped_duplicate") {
+      console.info(`[cron-slot] Skipping duplicate slot ${scheduleKey}@${slotStartedAt}`);
+      return;
+    }
+    if (slotResult.status === "skipped_running") {
+      console.info(`[cron-slot] Slot already running ${scheduleKey}@${slotStartedAt}`);
+    }
+  })());
 }

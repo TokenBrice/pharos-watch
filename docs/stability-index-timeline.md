@@ -1,6 +1,14 @@
 # Stability Index Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers PSI `v1.0` through `v3.1` (2026-02-25 -> 2026-03-23).
+Internal changelog reconstructed from git history. Covers PSI `v1.0` through `v3.2` (2026-02-25 -> 2026-03-23).
+
+---
+
+## v3.2 — Fail-closed depeg input availability (Mar 23, 2026)
+
+- PSI now skips publication when the active-depeg input query is unavailable instead of treating that outage as an empty depeg set
+- Replay-safe `price_cache` fallback remains limited to already-open depegs whose current stablecoins snapshot price is temporarily missing
+- Prevents fresh PSI samples from being published off incomplete core depeg inputs; the API continues serving the last valid stored value
 
 ---
 

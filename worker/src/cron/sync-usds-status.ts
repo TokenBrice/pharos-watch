@@ -84,8 +84,8 @@ export async function syncUsdsStatus(
   }
 
   const implementationAddress = await readImplementationSlot(etherscanApiKey, signal);
-  await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, implementationAddress != null);
   if (!implementationAddress) {
+    await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, false);
     console.warn("[usds-status] Failed to read implementation slot");
     return {
       status: "degraded",
@@ -99,6 +99,7 @@ export async function syncUsdsStatus(
     // Implementation changed — probe for freeze function
     const probeResult = await probeFreeze(etherscanApiKey, signal);
     if (probeResult === null) {
+      await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, false);
       console.warn("[usds-status] Probe failed, preserving cached status");
       return {
         status: "degraded",
@@ -121,8 +122,15 @@ export async function syncUsdsStatus(
   try {
     await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(status), syncStartSec);
   } catch (err) {
+    await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, true);
     console.error("[sync-usds-status] Cache write failed:", err);
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({ reason: "cache-write-failed", implementationAddress, freezeActive }),
+    };
   }
+  await recordOutcomeSafe(db, CIRCUIT_SOURCE.ETHERSCAN, true);
   console.log("[usds-status] Cache updated");
   return {
     itemCount: 1,

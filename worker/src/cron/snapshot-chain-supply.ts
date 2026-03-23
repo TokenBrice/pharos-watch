@@ -64,6 +64,15 @@ export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal):
     );
   }
 
+  if (stmts.length === 0) {
+    console.warn("[snapshot-chain-supply] No valid chain rows produced, preserving previous snapshot");
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({ reason: "no-valid-chain-rows", assetCount: cache.payload.peggedAssets.length }),
+    };
+  }
+
   if (stmts.length > 0) {
     try {
       await batchExecute(db, stmts);

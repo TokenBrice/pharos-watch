@@ -1,7 +1,7 @@
 import { YieldRankingsResponseSchema, type AltYieldSource, type YieldBenchmarkMeta, type YieldSafetySnapshotMeta, type YieldSourceInputMeta } from "@shared/types";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { batchExecute } from "../../lib/db";
-import { setCache } from "../../lib/db-cache";
+import { getCache, setCache } from "../../lib/db-cache";
 import { validatePayloadWithSchema } from "../../lib/api-utils";
 import { PYS_SCALING_FACTOR } from "../../lib/constants";
 import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
@@ -269,7 +269,7 @@ export async function buildYieldRankingsPayload(
 export async function writeYieldRankingsCache(
   db: D1Database,
   rankingsPayload: unknown,
-): Promise<{ ok: boolean; validationFailures: number }> {
+): Promise<{ ok: boolean; validationFailures: number; reason?: string }> {
   const validation = validatePayloadWithSchema(
     YieldRankingsResponseSchema,
     rankingsPayload,
@@ -278,7 +278,30 @@ export async function writeYieldRankingsCache(
 
   if (!validation.ok) {
     console.warn("[sync-yield-data] Skipped yield-rankings cache write due to schema validation failure");
-    return { ok: false, validationFailures: 1 };
+    return { ok: false, validationFailures: 1, reason: "schema-validation-failed" };
+  }
+
+  const currentRankings = validation.data.rankings.length;
+  const previousCache = await getCache(db, "yield-rankings");
+  let previousRankings = 0;
+  if (previousCache) {
+    try {
+      const parsed = JSON.parse(previousCache.value) as { rankings?: unknown[] };
+      if (Array.isArray(parsed.rankings)) previousRankings = parsed.rankings.length;
+    } catch {
+      previousRankings = 0;
+    }
+  }
+  const severeShrink =
+    previousRankings >= 5 &&
+    currentRankings < Math.ceil(previousRankings * 0.4);
+  if (previousRankings > 0 && (currentRankings === 0 || severeShrink)) {
+    console.warn("[sync-yield-data] Skipped yield-rankings cache write due to publish guard");
+    return {
+      ok: false,
+      validationFailures: 1,
+      reason: currentRankings === 0 ? "empty-rankings-payload" : "rankings-payload-shrunk",
+    };
   }
 
   await setCache(db, "yield-rankings", JSON.stringify(validation.data));

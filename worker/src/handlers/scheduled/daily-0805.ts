@@ -15,13 +15,9 @@ import { runDiscoveryScan } from "../../cron/discovery-scan";
 import { buildTelegramCreds } from "../../lib/runtime-credentials";
 import type { ScheduledRuntimeContext } from "./context";
 
-export function runDaily0805Slot(runtime: ScheduledRuntimeContext): void {
-  runtime.ctx.waitUntil(runtime.runLeasedCron("sync-bluechip", (signal) => syncBluechip(runtime.db, signal)));
-
-  // Chain weekly recap after daily — sequential to share connection pool.
-  // Uses .finally() so weekly runs even if daily fails (it reads from D1, not daily result).
-  // The weekly-recap function checks if today is Monday and returns immediately on other days.
-  runtime.ctx.waitUntil(
+export async function runDaily0805Slot(runtime: ScheduledRuntimeContext): Promise<void> {
+  await Promise.all([
+    runtime.runLeasedCron("sync-bluechip", (signal) => syncBluechip(runtime.db, signal)),
     runtime.runLeasedCron("daily-digest", (signal) => {
       return generateDailyDigest(
         runtime.db,
@@ -41,7 +37,6 @@ export function runDaily0805Slot(runtime: ScheduledRuntimeContext): void {
         );
       }),
     ),
-  );
-
-  runtime.ctx.waitUntil(runtime.runLeasedCron("discovery-scan", (signal) => runDiscoveryScan(runtime.db, signal, runtime.coingeckoApiKey)));
+    runtime.runLeasedCron("discovery-scan", (signal) => runDiscoveryScan(runtime.db, signal, runtime.coingeckoApiKey)),
+  ]);
 }

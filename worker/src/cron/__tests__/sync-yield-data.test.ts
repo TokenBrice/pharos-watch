@@ -780,6 +780,20 @@ describe("syncYieldData", () => {
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), "defillama-yields", false);
   });
 
+  it("marks the run degraded when the direct DL yields fetch returns an invalid payload", async () => {
+    const db = makeDb();
+
+    vi.mocked(getCache).mockResolvedValue(null);
+    mockFetch([{ match: "yields.llama.fi", body: { nope: [] }, status: 200 }]);
+
+    const result = await syncYieldData(db);
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as { fallbackMode: string | null };
+    expect(metadata.fallbackMode ?? "").toContain("dl-pools:direct-fetch-invalid-payload");
+    expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), "defillama-yields", false);
+  });
+
   it("skips DL yields fetch when circuit breaker is open", async () => {
     const db = makeDb();
 
@@ -1214,6 +1228,40 @@ describe("syncYieldData", () => {
     );
     expect(onChainRow).toBeDefined();
     expect(Number(onChainRow?.boundValues?.[3])).toBeGreaterThan(0);
+
+    onChainConfigs.length = 0;
+  });
+
+  it("marks the run degraded when all deterministic on-chain sources fail", async () => {
+    const onChainConfigs = yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+    onChainConfigs.push({
+      stablecoinId: "100",
+      chain: "ethereum",
+      contract: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+      selector: "0x07a2d13a",
+      decimals: 18,
+      inputAmount: "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+    });
+
+    const db = makeDb();
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    const result = await syncYieldData(db);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      fallbackMode?: string | null;
+      sourceCoverage?: {
+        onChainAttempted?: number;
+        onChainAllDeterministicFailed?: boolean;
+        onChainFailures?: Record<string, number> | null;
+      };
+    };
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.fallbackMode ?? "").toContain("onchain-rates:all-deterministic-failed");
+    expect(metadata.sourceCoverage?.onChainAttempted).toBe(1);
+    expect(metadata.sourceCoverage?.onChainAllDeterministicFailed).toBe(true);
+    expect(metadata.sourceCoverage?.onChainFailures).toEqual({ "no-chain-rpcs": 1 });
 
     onChainConfigs.length = 0;
   });

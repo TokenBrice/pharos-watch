@@ -4,6 +4,16 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ---
 
+## Methodology Versioning
+
+- **Current methodology version:** `v4.5`
+- **Public changelog page:** `/methodology/yield-changelog/`
+- **Canonical source:** `shared/lib/yield-methodology-version.ts`
+
+Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+---
+
 ## Tracked Coins
 
 Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins/index.ts` enters the yield pipeline. That loader validates the checked-in metadata assets under `shared/data/stablecoins/*.json` before exporting the tracked set. The sync also supports deterministic custom sources for select non-yield-bearing coins, plus automatic lending pool discovery for tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), including coins already flagged `yieldBearing`. `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows synthesize protocol-derived labels when the source is `defillama-auto`.
@@ -390,9 +400,9 @@ CREATE TABLE yield_history (
 11. Batch upsert `yield_data` (all sources) + insert `yield_history` points for every resolved source with `is_best` markers
 12. Purge stale rows for refreshed coins so obsolete primary/alt sources are removed together, then scan `yield_data` for orphan coin IDs and delete those in chunked `IN (...)` batches instead of a single large `NOT IN (...)`
 13. Prune `yield_history` older than 365 days
-14. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, add read-time `data-stale` warning decoration from `updated_at` age, and include top-level + per-row provenance in the cached rankings payload whenever the payload passes schema validation. Safety-degraded runs still publish fresh rankings but skip `report_card_cache`.
+14. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, add read-time `data-stale` warning decoration from `updated_at` age, and include top-level + per-row provenance in the cached rankings payload whenever the payload passes schema validation and the new payload has not collapsed severely versus the previous cache. Safety-degraded runs still publish fresh rankings when the payload is valid but skip `report_card_cache`.
 
-**Degraded semantics:** If `computeSafetyScoresSnapshot()` returns a degraded result, safety coverage is below the minimum ratio (0.75), the benchmark is on a true fallback path (`isFallback === true`), the `fallbackMode` contains `"retained"` (indicating FRED fetch failure with last-known-good retention), the retained last-known-good benchmark is older than 48 hours, DeFiLlama pool inputs are unavailable, or rankings schema validation fails, `sync-yield-data` returns `status: "degraded"`. Retained benchmark metadata still appears in rankings provenance via `provenance.benchmark.fallbackMode`. Schema-invalid runs still skip cache overwrite. Safety-degraded runs continue to publish a fresh `yield-rankings` cache when the rankings payload is valid, but they still skip `report_card_cache` writes so the degraded condition remains visible without taking the public API offline.
+**Degraded semantics:** If `computeSafetyScoresSnapshot()` returns a degraded result, safety coverage is below the minimum ratio (0.75), the benchmark is on a true fallback path (`isFallback === true`), the `fallbackMode` contains `"retained"` (indicating FRED fetch failure with last-known-good retention), the retained last-known-good benchmark is older than 48 hours, DeFiLlama pool inputs are unavailable, the direct DeFiLlama fetch payload is invalid or yields zero relevant stablecoin pools, all configured deterministic on-chain sources fail in the same cycle, or rankings publication fails schema/severe-shrink guards, `sync-yield-data` returns `status: "degraded"`. Retained benchmark metadata still appears in rankings provenance via `provenance.benchmark.fallbackMode`, including the last market-derived rate/date/source preserved across fallback streaks. Schema-invalid or severe-shrink runs skip cache overwrite. Safety-degraded runs continue to publish a fresh `yield-rankings` cache when the rankings payload is valid, but they still skip `report_card_cache` writes so the degraded condition remains visible without taking the public API offline.
 
 Implementation stages:
 - `yield-sync/sources.ts` + `yield-sync/pool-filter.ts`: DL pool loading, wrapper-relevant pool filtering, on-chain reads, risk-free rate cache, price-derived and B.Protocol helpers
@@ -412,6 +422,8 @@ Implementation stages:
 **File:** `worker/src/cron/fetch-tbill-rate.ts`
 
 Fetches the latest T-bill proxy rate from FRED (`DGS3MO`). Validates the rate (must be 0–20%), stores in cache. Falls back to `RISK_FREE_RATE_FALLBACK` on any failure.
+
+When FRED fails but a prior benchmark exists, the cache now preserves the last market-derived benchmark fields (`lastMarketRate`, `lastMarketRecordDate`, `lastMarketFetchedAt`, `lastMarketSource`) across retained fallback streaks. That lets downstream yield provenance distinguish "still carrying the last market rate" from a hardcoded benchmark floor.
 
 ---
 

@@ -159,7 +159,12 @@ export const CIRCUIT_SOURCE = {
   TRONGRID: "trongrid",
   ANTHROPIC: "anthropic-api",
   BLUECHIP: "bluechip-api",
+  KINESIS_KAU: "kinesis-kau-horizon",
+  KINESIS_KAG: "kinesis-kag-horizon",
 } as const;
+
+export const KINESIS_KAU_HORIZON = "https://kau-mainnet.kinesisgroup.io";
+export const KINESIS_KAG_HORIZON = "https://kag-mainnet.kinesisgroup.io";
 
 /** Minimum per-pool TVL for DEX pool challenge and pool-level depeg confirmation */
 export const POOL_CHALLENGE_MIN_TVL = 100_000; // $100K

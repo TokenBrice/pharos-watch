@@ -16,36 +16,39 @@ import { computeAndStoreStabilityIndex } from "../../cron/stability-index";
 import { syncYieldData } from "../../cron/sync-yield-data";
 import type { ScheduledRuntimeContext } from "./context";
 
-export function runHalfHourlySlot(runtime: ScheduledRuntimeContext): void {
-  const chartsSync = runtime.runLeasedCron("sync-stablecoin-charts", (signal) =>
+export async function runHalfHourlySlot(runtime: ScheduledRuntimeContext): Promise<void> {
+  const runHalfHourlyJob = async (
+    job: string,
+    fn: Parameters<ScheduledRuntimeContext["runLeasedCron"]>[1],
+  ) => {
+    try {
+      return (await runtime.runLeasedCron(job, fn)) ?? null;
+    } catch (err) {
+      console.error(`[cron] ${job} failed in half-hour slot:`, err);
+      return null;
+    }
+  };
+
+  await runHalfHourlyJob("sync-stablecoin-charts", (signal) =>
     syncStablecoinCharts(runtime.db, signal),
   );
-  runtime.ctx.waitUntil(chartsSync);
 
-  const dexSync = chartsSync.then(() =>
-    runtime.runLeasedCron("sync-dex-liquidity", (signal) =>
-      syncDexLiquidity(
-        runtime.db,
-        runtime.env.GRAPH_API_KEY ?? null,
-        signal,
-        runtime.coingeckoApiKey,
-        runtime.chainRpcs,
-      ),
+  const dexResult = await runHalfHourlyJob("sync-dex-liquidity", (signal) =>
+    syncDexLiquidity(
+      runtime.db,
+      runtime.env.GRAPH_API_KEY ?? null,
+      signal,
+      runtime.coingeckoApiKey,
+      runtime.chainRpcs,
     ),
   );
-  runtime.ctx.waitUntil(dexSync);
+  if (dexResult?.status === "error" || dexResult == null) {
+    console.warn("[cron] sync-dex-liquidity did not complete cleanly — continuing with downstream degraded paths");
+  }
 
-  const dewsSync = dexSync.then(() =>
-    runtime.runLeasedCron("compute-dews", (signal) => computeAndStoreDEWS(runtime.db, signal)),
+  await runHalfHourlyJob("compute-dews", (signal) => computeAndStoreDEWS(runtime.db, signal));
+  await runHalfHourlyJob("stability-index", (signal) => computeAndStoreStabilityIndex(runtime.db, signal));
+  await runHalfHourlyJob("sync-yield-data", (signal) =>
+    syncYieldData(runtime.db, signal, runtime.chainRpcs, runtime.coingeckoApiKey),
   );
-  runtime.ctx.waitUntil(dewsSync);
-
-  const stabilitySync = dewsSync.then(() =>
-    runtime.runLeasedCron("stability-index", (signal) => computeAndStoreStabilityIndex(runtime.db, signal)),
-  );
-  runtime.ctx.waitUntil(stabilitySync);
-
-  runtime.ctx.waitUntil(stabilitySync.then(() =>
-    runtime.runLeasedCron("sync-yield-data", (signal) => syncYieldData(runtime.db, signal, runtime.chainRpcs, runtime.coingeckoApiKey)),
-  ));
 }

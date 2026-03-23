@@ -180,6 +180,8 @@ Active tracked additions are queued earlier by `worker/src/cron/sync-stablecoins
 
 Appendix snapshots advance only after Telegram accepts the digest post, so a failed channel delivery does not lose pending additions.
 
+Telegram delivery is also replay-safe per UTC date. `daily-digest.ts` writes a `daily-digest:telegram-sent:YYYY-MM-DD` marker only after Telegram accepts the post; if the digest later re-runs the same day, Telegram delivery is skipped as `already-sent` while appendix state can still be committed. This prevents duplicate channel posts without dropping pending appendix changes on a failed earlier attempt.
+
 **Required secrets:**
 
 | Variable | Description |

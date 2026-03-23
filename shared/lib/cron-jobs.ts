@@ -24,6 +24,31 @@ export type CronScheduleKey = keyof typeof CRON_SCHEDULES;
 export type CronScheduleExpression = (typeof CRON_SCHEDULES)[CronScheduleKey];
 export type CronTriggerMode = "shared" | "isolated";
 
+const CRON_SCHEDULE_BUCKETS = {
+  quarterHourly: { intervalSec: 900, offsetSec: 0 },
+  hourlyBlacklist: { intervalSec: 3600, offsetSec: 3 * 60 },
+  twentyMinuteMintBurn: { intervalSec: 1200, offsetSec: 4 * 60 },
+  thirtyMinuteDexDiscovery: { intervalSec: 1800, offsetSec: 6 * 60 },
+  twentyMinuteExtendedOffset: { intervalSec: 1200, offsetSec: 13 * 60 },
+  halfHourlyOffset: { intervalSec: 1800, offsetSec: 10 * 60 },
+  hourlyReserveSync: { intervalSec: 3600, offsetSec: 11 * 60 },
+  fiveMinuteTelegramAlerts: { intervalSec: 300, offsetSec: 2 * 60 },
+  daily0800Utc: { intervalSec: 86400, offsetSec: 8 * 3600 },
+  daily0805Utc: { intervalSec: 86400, offsetSec: 8 * 3600 + 5 * 60 },
+} as const satisfies Record<CronScheduleKey, { intervalSec: number; offsetSec: number }>;
+
+const CRON_SCHEDULE_INTERVALS = Object.freeze(
+  Object.fromEntries(
+    Object.entries(CRON_SCHEDULE_BUCKETS).map(([scheduleKey, bucket]) => [scheduleKey, bucket.intervalSec]),
+  ) as Record<CronScheduleKey, number>,
+);
+
+const CRON_SCHEDULE_BUCKET_OFFSETS = Object.freeze(
+  Object.fromEntries(
+    Object.entries(CRON_SCHEDULE_BUCKETS).map(([scheduleKey, bucket]) => [scheduleKey, bucket.offsetSec]),
+  ) as Record<CronScheduleKey, number>,
+);
+
 export interface CronGroupDefinition {
   key: CronGroupKey;
   title: string;
@@ -285,6 +310,15 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     maxConnections: 0, // DB-only computation from cached stablecoins + liquidity data
   },
   {
+    job: "sync-kinesis-supply",
+    label: "Kinesis supply",
+    group: "hourly",
+    intervalSec: 3600,
+    scheduleKey: "hourlyReserveSync",
+    triggerMode: "shared",
+    maxConnections: 1, // 2 sequential Kinesis Horizon fetches (KAU + KAG)
+  },
+  {
     job: "sync-bluechip",
     label: "Bluechip sync",
     group: "daily",
@@ -335,7 +369,44 @@ export const CRON_INTERVALS = Object.freeze(
 const CRON_JOB_META_BY_ID = new Map(
   CRON_JOB_DEFINITIONS.map((definition) => [definition.job, definition]),
 );
+const CRON_SCHEDULE_KEY_BY_EXPRESSION = new Map<string, CronScheduleKey>(
+  Object.entries(CRON_SCHEDULES).map(([scheduleKey, expression]) => [expression, scheduleKey as CronScheduleKey]),
+);
 
 export function getCronJobMeta(job: string): CronJobMeta | null {
   return CRON_JOB_META_BY_ID.get(job) ?? null;
+}
+
+export function getCronScheduleKey(expression: string): CronScheduleKey | null {
+  return CRON_SCHEDULE_KEY_BY_EXPRESSION.get(expression) ?? null;
+}
+
+function normalizeCronSlotStartedAt(
+  timestampSec: number,
+  intervalSec: number,
+  offsetSec = 0,
+): number {
+  if (!Number.isFinite(timestampSec) || !Number.isFinite(intervalSec) || intervalSec <= 0) {
+    return Math.floor(Date.now() / 1000);
+  }
+
+  const shifted = timestampSec - offsetSec;
+  return Math.floor(shifted / intervalSec) * intervalSec + offsetSec;
+}
+
+export function getCronSlotStartedAtForSchedule(
+  scheduleKey: CronScheduleKey | null | undefined,
+  scheduledTimeMs?: number | null,
+): number {
+  const intervalSec = scheduleKey ? CRON_SCHEDULE_INTERVALS[scheduleKey] : null;
+  const offsetSec = scheduleKey ? CRON_SCHEDULE_BUCKET_OFFSETS[scheduleKey] : 0;
+  const rawTimestampSec = Number.isFinite(scheduledTimeMs)
+    ? Math.floor(Number(scheduledTimeMs) / 1000)
+    : Math.floor(Date.now() / 1000);
+
+  if (!intervalSec) {
+    return rawTimestampSec;
+  }
+
+  return normalizeCronSlotStartedAt(rawTimestampSec, intervalSec, offsetSec);
 }

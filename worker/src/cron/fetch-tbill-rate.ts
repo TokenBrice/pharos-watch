@@ -90,22 +90,26 @@ async function handleDegradedFallback(
   extraMeta?: Record<string, unknown>,
 ): Promise<CronResult> {
   const previous = await loadPreviousBenchmark(db);
-  if (previous && !previous.isFallback) {
+  if (previous?.lastMarketRate != null && previous.lastMarketSource && previous.lastMarketSource !== "hardcoded-fallback") {
     console.log(`[fetch-tbill-rate] ${fallbackMode}, retaining last known good rate`);
     await writeStructuredBenchmark(db, {
-      rate: previous.rate,
-      recordDate: previous.recordDate,
-      fetchedAt: previous.fetchedAt,
-      source: previous.source,
+      rate: previous.lastMarketRate,
+      recordDate: previous.lastMarketRecordDate,
+      fetchedAt: previous.lastMarketFetchedAt,
+      source: previous.lastMarketSource,
       isFallback: true,
       fallbackMode: `${fallbackMode}-retained`,
+      lastMarketRate: previous.lastMarketRate,
+      lastMarketRecordDate: previous.lastMarketRecordDate,
+      lastMarketFetchedAt: previous.lastMarketFetchedAt,
+      lastMarketSource: previous.lastMarketSource,
     });
     return {
       status: "degraded",
       metadata: buildMetadata({
         fallbackMode: `${fallbackMode}-retained`,
-        wroteRate: previous.rate,
-        recordDate: previous.recordDate,
+        wroteRate: previous.lastMarketRate,
+        recordDate: previous.lastMarketRecordDate,
         ...extraMeta,
       }),
     };
@@ -119,6 +123,10 @@ async function handleDegradedFallback(
     source: "hardcoded-fallback",
     isFallback: true,
     fallbackMode,
+    lastMarketRate: previous?.lastMarketRate ?? null,
+    lastMarketRecordDate: previous?.lastMarketRecordDate ?? null,
+    lastMarketFetchedAt: previous?.lastMarketFetchedAt ?? null,
+    lastMarketSource: previous?.lastMarketSource ?? null,
   });
   return {
     status: "degraded",
@@ -186,13 +194,18 @@ export async function fetchTbillRate(db: D1Database, signal?: AbortSignal): Prom
     return handleDegradedFallback(db, "all-sources-failed");
   }
 
+  const fetchedAt = Math.floor(Date.now() / 1000);
   await writeStructuredBenchmark(db, {
     rate: parsed.rate,
     recordDate: parsed.recordDate,
-    fetchedAt: Math.floor(Date.now() / 1000),
+    fetchedAt,
     source: effectiveSource,
     isFallback: false,
     fallbackMode: null,
+    lastMarketRate: parsed.rate,
+    lastMarketRecordDate: parsed.recordDate,
+    lastMarketFetchedAt: fetchedAt,
+    lastMarketSource: effectiveSource,
   });
   await recordOutcome(db, CIRCUIT_SOURCE.TREASURY_RATES, true);
   console.log(`[fetch-tbill-rate] ${effectiveSource}: ${parsed.rate}% (as of ${parsed.recordDate})`);

@@ -20,6 +20,10 @@ export interface CronProgressUpdate {
 
 export type CronProgressReporter = (update: CronProgressUpdate) => Promise<void>;
 
+export interface CronRunLoggerOptions {
+  slotStartedAt?: number | null;
+}
+
 // --- Internal helpers ---
 
 function serializeProgressMetadata(metadata: Record<string, unknown> | null | undefined): string | null {
@@ -31,6 +35,7 @@ async function upsertCronProgress(
   db: D1Database,
   job: string,
   startedAt: number,
+  slotStartedAt: number | null,
   progress: Required<Omit<CronProgressUpdate, "metadata">> & { metadata: Record<string, unknown> | null },
 ): Promise<void> {
   const updatedAt = Math.floor(Date.now() / 1000);
@@ -38,10 +43,11 @@ async function upsertCronProgress(
     db
       .prepare(
         `INSERT INTO cron_run_progress
-           (job, started_at, updated_at, stage, items_done, items_total, message, lease_owner, metadata)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           (job, started_at, slot_started_at, updated_at, stage, items_done, items_total, message, lease_owner, metadata)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(job) DO UPDATE SET
            started_at = excluded.started_at,
+           slot_started_at = excluded.slot_started_at,
            updated_at = excluded.updated_at,
            stage = excluded.stage,
            items_done = excluded.items_done,
@@ -53,6 +59,7 @@ async function upsertCronProgress(
       .bind(
         job,
         startedAt,
+        slotStartedAt,
         updatedAt,
         progress.stage,
         progress.itemsDone,
@@ -81,9 +88,11 @@ export async function logCronRun(
   job: string,
   fn: (signal: AbortSignal, reportProgress: CronProgressReporter) => Promise<CronResult | void>,
   alertFn?: (title: string, message: string) => Promise<unknown> | void,
+  options?: CronRunLoggerOptions,
 ): Promise<CronResult | void> {
   const startMs = Date.now();
   const startSec = Math.floor(startMs / 1000);
+  const slotStartedAt = options?.slotStartedAt ?? null;
   const timeoutMs = CRON_TIMEOUT_MS[job] ?? DEFAULT_CRON_TIMEOUT_MS;
   const ac = new AbortController();
   const timeoutError = new CronTimeoutError(job, timeoutMs);
@@ -109,7 +118,7 @@ export async function logCronRun(
       metadata: update.metadata === undefined ? progressState.metadata : (update.metadata ?? null),
     };
     try {
-      await upsertCronProgress(db, job, startSec, progressState);
+      await upsertCronProgress(db, job, startSec, slotStartedAt, progressState);
     } catch (err) {
       console.warn(`[db] Failed to upsert cron progress for ${job}:`, err);
     }
@@ -127,7 +136,9 @@ export async function logCronRun(
     await runWithOverloadRetry(() =>
       db
         .prepare(
-          "INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata) VALUES (?, ?, ?, ?, ?, ?)",
+          `INSERT INTO cron_runs
+             (job, started_at, duration_ms, status, item_count, metadata, slot_started_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           job,
@@ -136,6 +147,7 @@ export async function logCronRun(
           resultStatus,
           resolvedResult?.itemCount ?? null,
           resolvedResult?.metadata ?? null,
+          slotStartedAt,
         )
         .run(),
     );
@@ -148,8 +160,12 @@ export async function logCronRun(
     try {
       await runWithOverloadRetry(() =>
         db
-          .prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, error) VALUES (?, ?, ?, ?, ?)")
-          .bind(job, startSec, Date.now() - startMs, "error", String(e))
+          .prepare(
+            `INSERT INTO cron_runs
+               (job, started_at, duration_ms, status, error, slot_started_at)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+          )
+          .bind(job, startSec, Date.now() - startMs, "error", String(e), slotStartedAt)
           .run(),
       );
     } catch (logErr) {

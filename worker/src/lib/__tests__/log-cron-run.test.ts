@@ -126,6 +126,48 @@ describe("logCronRun", () => {
     expect(operations).toContain("cron-run");
   });
 
+  it("persists slot_started_at into cron_runs and cron_run_progress when provided", async () => {
+    let runSlotStartedAt: number | null = null;
+    let progressSlotStartedAt: number | null = null;
+    const dbWithSlotCapture = {
+      prepare: (sql: string) => ({
+        bind: (...args: unknown[]) => ({
+          run: async () => {
+            if (sql.includes("INSERT INTO cron_run_progress")) {
+              progressSlotStartedAt = Number(args[2] ?? null);
+            }
+            if (sql.includes("INSERT INTO cron_runs")) {
+              runSlotStartedAt = Number(args[6] ?? null);
+            }
+            return { success: true, meta: { changes: 1 } };
+          },
+          all: async () => ({ results: [], success: true, meta: {} }),
+          first: async () => null,
+        }),
+        run: async () => ({ success: true, meta: { changes: 1 } }),
+        all: async () => ({ results: [], success: true, meta: {} }),
+        first: async () => null,
+      }),
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    await logCronRun(
+      dbWithSlotCapture,
+      "test-job",
+      async (_signal, reportProgress) => {
+        await reportProgress({ stage: "started" });
+        return { itemCount: 1 };
+      },
+      undefined,
+      { slotStartedAt: 1_772_495_700 },
+    );
+
+    expect(runSlotStartedAt).toBe(1_772_495_700);
+    expect(progressSlotStartedAt).toBe(1_772_495_700);
+  });
+
   it("falls back to safety-valve prune when time-based prune fails", async () => {
     let safetyValvePruneCalled = false;
     const dbWithPruneFallback = {

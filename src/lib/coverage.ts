@@ -140,7 +140,12 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     key: "redemption",
     label: "Redemption Backstop",
     shortLabel: "Backstop",
-    description: "Modeled issuer or protocol exit routes beyond secondary-market DEX liquidity.",
+    description:
+      "Modeled issuer or protocol exit routes beyond secondary-market DEX liquidity. Heuristic supply-based routes are broken out separately below.",
+    headlineCountLabel: "Strong coverage",
+    headlineCoverageLabel: (coveragePct) =>
+      `${coveragePct.toFixed(0)}% with strong redemption coverage`,
+    headlineShareLabel: "Strong redemption market-cap reach",
     href: "/methodology/#safety-scores-methodology",
   },
   {
@@ -664,7 +669,7 @@ function buildCoverageBreakdown(
     return `live ${breakdownMap.get("live") ?? 0} · curated ${breakdownMap.get("curated") ?? 0} · estimated ${breakdownMap.get("estimated") ?? 0}`;
   }
   if (featureKey === "redemption") {
-    return `configured ${breakdownMap.get("configured-unrated") ?? 0} · issuer ${breakdownMap.get("offchain-issuer") ?? 0} · psm ${breakdownMap.get("psm-swap") ?? 0} · queue ${breakdownMap.get("queue-redeem") ?? 0} · collateral ${breakdownMap.get("collateral-redeem") ?? 0} · stable ${breakdownMap.get("stablecoin-redeem") ?? 0} · basket ${breakdownMap.get("basket-redeem") ?? 0}`;
+    return `heuristic ${breakdownMap.get("modeled-heuristic") ?? 0} · configured ${breakdownMap.get("configured-unrated") ?? 0} · issuer ${breakdownMap.get("offchain-issuer") ?? 0} · psm ${breakdownMap.get("psm-swap") ?? 0} · queue ${breakdownMap.get("queue-redeem") ?? 0} · collateral ${breakdownMap.get("collateral-redeem") ?? 0} · stable ${breakdownMap.get("stablecoin-redeem") ?? 0} · basket ${breakdownMap.get("basket-redeem") ?? 0}`;
   }
   if (featureKey === "flows") {
     return `full ${breakdownMap.get("full") ?? 0} · partial ${breakdownMap.get("partial-history") ?? 0} · bootstrapping ${breakdownMap.get("bootstrapping") ?? 0}`;

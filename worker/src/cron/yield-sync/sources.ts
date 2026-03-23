@@ -68,8 +68,38 @@ export async function loadDlStablecoinPools(
         signal,
       });
       if (res?.ok) {
-        const body = (await res.json()) as { data: DlPool[] };
-        dlPools = (body.data ?? []).filter(isYieldRelevantDlPool);
+        const body = (await res.json()) as { data?: unknown };
+        if (!Array.isArray(body.data)) {
+          console.warn("[sync-yield-data] DL yields direct fetch returned invalid payload shape");
+          await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
+          fallbackMode = "direct-fetch-invalid-payload";
+          return {
+            pools: [],
+            meta: {
+              mode: "unavailable",
+              updatedAt: cachedPools?.updatedAt ?? null,
+              ageSeconds: cachedPools ? Math.max(0, nowSec - cachedPools.updatedAt) : null,
+              poolCount: 0,
+              fallbackMode,
+            },
+          };
+        }
+        dlPools = (body.data as DlPool[]).filter(isYieldRelevantDlPool);
+        if (dlPools.length === 0) {
+          console.warn("[sync-yield-data] DL yields direct fetch returned no relevant stablecoin pools");
+          await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
+          fallbackMode = "direct-fetch-empty";
+          return {
+            pools: [],
+            meta: {
+              mode: "unavailable",
+              updatedAt: cachedPools?.updatedAt ?? null,
+              ageSeconds: cachedPools ? Math.max(0, nowSec - cachedPools.updatedAt) : null,
+              poolCount: 0,
+              fallbackMode,
+            },
+          };
+        }
         await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, true);
         return {
           pools: dlPools,
@@ -109,6 +139,8 @@ export async function loadDlStablecoinPools(
 export interface OnChainRateResult {
   rates: Map<string, { rate: number }>;
   failureBreakdown: Record<string, number> | null;
+  attemptedCount?: number;
+  allDeterministicFailed?: boolean;
 }
 
 export async function fetchOnChainRates(
@@ -117,7 +149,13 @@ export async function fetchOnChainRates(
 ): Promise<OnChainRateResult> {
   if (!chainRpcs) {
     console.warn("[yield] No chain RPCs configured, skipping all on-chain rate fetches");
-    return { rates: new Map(), failureBreakdown: { "no-chain-rpcs": ON_CHAIN_RATE_CONFIGS.length } };
+    const attemptedCount = ON_CHAIN_RATE_CONFIGS.length;
+    return {
+      rates: new Map(),
+      failureBreakdown: { "no-chain-rpcs": attemptedCount },
+      attemptedCount,
+      allDeterministicFailed: attemptedCount > 0,
+    };
   }
 
   // Fetch vault exchange rates in batches of 4 to stay within the 6-connection
@@ -169,7 +207,13 @@ export async function fetchOnChainRates(
     console.warn(`[yield] On-chain rates: ${rates.size}/${ON_CHAIN_RATE_CONFIGS.length} ok (${breakdown})`);
   }
 
-  return { rates, failureBreakdown: totalFailures > 0 ? failureCounts : null };
+  const attemptedCount = ON_CHAIN_RATE_CONFIGS.length;
+  return {
+    rates,
+    failureBreakdown: totalFailures > 0 ? failureCounts : null,
+    attemptedCount,
+    allDeterministicFailed: attemptedCount > 0 && rates.size === 0 && totalFailures >= attemptedCount,
+  };
 }
 
 async function fetchEthCallUint256(

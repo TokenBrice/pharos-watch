@@ -8,7 +8,13 @@ vi.mock("../alerts", () => ({
 }));
 
 // Import after mocking
-import { getCircuitRecord, shouldAttemptFetch, recordOutcome, getCircuitStates } from "../circuit-breaker";
+import {
+  getCircuitRecord,
+  shouldAttemptFetch,
+  recordOutcome,
+  getCircuitStates,
+  mapCronStatusToCircuitOutcome,
+} from "../circuit-breaker";
 import { sendAlert } from "../alerts";
 import { CIRCUIT_SOURCE } from "../constants";
 
@@ -41,6 +47,22 @@ describe("circuit-breaker", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  describe("mapCronStatusToCircuitOutcome", () => {
+    it("maps ok and undefined statuses to success", () => {
+      expect(mapCronStatusToCircuitOutcome("ok")).toBe("success");
+      expect(mapCronStatusToCircuitOutcome(undefined)).toBe("success");
+    });
+
+    it("maps degraded and skipped statuses to neutral", () => {
+      expect(mapCronStatusToCircuitOutcome("degraded")).toBe("neutral");
+      expect(mapCronStatusToCircuitOutcome("skipped_locked")).toBe("neutral");
+    });
+
+    it("maps error to failure", () => {
+      expect(mapCronStatusToCircuitOutcome("error")).toBe("failure");
+    });
   });
 
   // --- getCircuitRecord ---

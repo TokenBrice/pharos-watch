@@ -101,7 +101,8 @@ describe("snapshotPsiDaily", () => {
 
     const result = await snapshotPsiDaily(db);
 
-    expect(result.metadata).toBe("skipped: no samples for yesterday");
+    expect(result.status).toBe("degraded");
+    expect(result.metadata).toBe(JSON.stringify({ reason: "no-samples-for-yesterday", sampleCount: 0 }));
     const insert = db
       .getHistory()
       .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO stability_index"));

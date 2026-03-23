@@ -1,5 +1,5 @@
 import { createRateLimiter } from "../../lib/evm-logs";
-import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
+import { mapCronStatusToCircuitOutcome, recordOutcomeDecision, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { syncBlacklist } from "../../cron/sync-blacklist";
 import type { ScheduledRuntimeContext } from "./context";
@@ -25,9 +25,20 @@ export async function runHourlyBlacklistSlot(runtime: ScheduledRuntimeContext): 
       chainRpcs: runtime.chainRpcs,
     }),
   );
-  runtime.ctx.waitUntil(blacklistJob);
-  runtime.ctx.waitUntil(blacklistJob.then(
-    () => recordOutcome(runtime.db, CIRCUIT_SOURCE.ETHERSCAN, true),
-    () => recordOutcome(runtime.db, CIRCUIT_SOURCE.ETHERSCAN, false),
-  ));
+
+  try {
+    const result = await blacklistJob;
+    await recordOutcomeDecision(
+      runtime.db,
+      CIRCUIT_SOURCE.ETHERSCAN,
+      mapCronStatusToCircuitOutcome(result?.status),
+    ).catch((err) => {
+      console.error("[cron] Failed to record Etherscan success outcome:", err);
+    });
+  } catch (err) {
+    await recordOutcomeDecision(runtime.db, CIRCUIT_SOURCE.ETHERSCAN, "failure").catch((outcomeErr) => {
+      console.error("[cron] Failed to record Etherscan failure outcome:", outcomeErr);
+    });
+    throw err;
+  }
 }

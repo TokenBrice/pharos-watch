@@ -146,6 +146,10 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 32. **Stage-structured mint/burn run-state**: `syncMintBurn()` now delegates disabled-config normalization, lane rotation, and run-state persistence to `worker/src/cron/mint-burn/run-state.ts`; the two 20-minute scheduled handlers already share `worker/src/handlers/scheduled/mint-burn-slot.ts` for slot-specific dispatch.
 33. **Stage-structured blacklist EVM ingestion**: `syncBlacklist()` now delegates EVM event fetch/parsing, RPC fallback target selection, and shared explorer URL helpers to `worker/src/cron/blacklist/{evm-source,shared}.ts`, isolating the Tron path and downstream balance enrichment from the source-ingest stage.
 34. **Shared DEX-source normalization**: DEX discovery and DEX liquidity now keep GeckoTerminal parsing in `worker/src/cron/dex-liquidity/geckoterminal-shared.ts`, CoinGecko onchain parsing/classification in `worker/src/cron/dex-liquidity/coingecko-onchain-shared.ts`, CoinGecko tickers aggregation in `worker/src/cron/dex-liquidity/coingecko-tickers-shared.ts`, and GT/CG token-batch observation mapping in `worker/src/cron/dex-liquidity/token-price-observations.ts`.
+35. **Stablecoins stale-publication guard**: `syncStablecoins()` now emits stage-level progress and compares fresh prices against the previous published cache before writing. If at least 50 comparable prices exist and >=98% are identical, the run returns `status: "degraded"`, records `staleWriteBlocked=true`, and skips the canonical `stablecoins` cache write instead of republishing a stale snapshot as fresh.
+36. **Fail-closed PSI dependency handling**: `computeAndStoreStabilityIndex()` no longer treats an unavailable `depeg_events` query as "no active depegs". The run now degrades and skips publication so PSI remains anchored to the last valid sample.
+37. **DEWS bootstrap + freshness guard**: `computeAndStoreDEWS()` now uses a dedicated `dews:bootstrap-complete` sentinel to end bootstrap grace after the first successful publication, and stale `dex_liquidity` inputs (>2 hours old) now count as a hard degraded source failure.
+38. **Yield publication guardrails**: `syncYieldData()` now degrades on invalid/empty direct DeFiLlama payloads, on total deterministic on-chain failure, and blocks `yield-rankings` cache writes when the new rankings payload shrinks severely versus the last published cache.
 
 ## Gold & Silver Spot Prices (gold-api.com)
 
@@ -181,7 +185,7 @@ The live `/price/` endpoint requires no API key and is called every 15-minute sy
 
 ## Stability Index (PSI) Computation
 
-`computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` runs every 30 minutes on the half-hourly lane and computes a composite ecosystem health score (0–100). Formula: `Score = 100 − severity − breadth − stressBreadth + trend`. If the DEWS dependency query is unavailable, the run stores `dewsUnavailable=true` in `input_snapshot` and returns `status: "degraded"` (stress breadth is defaulted to 0 for continuity). See [Pharos Stability Index](./stability-index.md) for the full algorithm, calibration examples, and band definitions.
+`computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` runs every 30 minutes on the half-hourly lane and computes a composite ecosystem health score (0–100). Formula: `Score = 100 − severity − breadth − stressBreadth + trend`. If the DEWS dependency query is unavailable, the run stores `dewsUnavailable=true` in `input_snapshot` and returns `status: "degraded"` (stress breadth is defaulted to 0 for continuity). If the active-depeg query is unavailable, the run fails closed and skips publication entirely instead of treating that outage as an empty depeg set. See [Pharos Stability Index](./stability-index.md) for the full algorithm, calibration examples, and band definitions.
 
 **Band classification:** `BEDROCK` (90–100), `STEADY` (75–89), `TREMOR` (60–74), `FRACTURE` (40–59), `CRISIS` (20–39), `MELTDOWN` (0–19)
 
@@ -246,6 +250,8 @@ Untracked coins with market cap > $5M are upserted. Coins found by both sources 
 ### Circuit Breaker
 
 Uses `CG_DISCOVERY` — independent from `CG_PRICES`, but it still follows the shared circuit-breaker defaults: open after 3 consecutive failures and probe again after 30 minutes.
+
+If the breaker is open when the Monday CoinGecko scan would have run, `discovery-scan` now returns `status: "degraded"` with `reason: "circuit-open-no-attempt"` instead of looking like a clean no-op.
 
 ### Candidate Lifecycle
 

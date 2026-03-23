@@ -45,6 +45,8 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
 
   // Active depegs — use current price to compute live deviation
   let activeDepegs: D1Result<{ stablecoin_id: string; peg_reference: number; started_at: number }>;
+  let depegEventsUnavailable = false;
+  let depegEventsFailureReason: string | null = null;
   try {
     activeDepegs = await db
       .prepare("SELECT stablecoin_id, peg_reference, started_at FROM depeg_events WHERE ended_at IS NULL")
@@ -52,6 +54,22 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   } catch (err) {
     console.warn("[stability-index] depeg query failed:", err);
     activeDepegs = { results: [], success: true, meta: { duration: 0, last_row_id: 0, changes: 0, changed_db: false, size_after: 0, rows_read: 0, rows_written: 0 } };
+    depegEventsUnavailable = true;
+    depegEventsFailureReason = String(err);
+  }
+
+  if (depegEventsUnavailable) {
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        fallbackMode: "depeg-events-unavailable",
+        depegEventsUnavailable,
+        depegEventsFailureReason,
+        totalMcapUsd,
+        mcap7dChangePct,
+      }),
+    };
   }
 
   const now = Math.floor(Date.now() / 1000);
@@ -200,6 +218,8 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
         dewsStressBreadth,
         dewsUnavailable,
         dewsFailureReason,
+        depegEventsUnavailable,
+        depegEventsFailureReason,
         replayPriceFallbackCount,
         contributors,
         methodologyVersion: PSI_METHODOLOGY_VERSION,
@@ -223,6 +243,8 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       dewsStressBreadth,
       dewsUnavailable,
       dewsFailureReason,
+      depegEventsUnavailable,
+      depegEventsFailureReason,
       replayPriceFallbackCount,
     }),
   };

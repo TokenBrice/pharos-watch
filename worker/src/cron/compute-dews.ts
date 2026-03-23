@@ -12,6 +12,7 @@ import type { DEWSInput, PoolEntry } from "../lib/dews";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../lib/constants";
 import { chunkArray } from "../lib/collections";
+import { getCache, setCache } from "../lib/db-cache";
 
 // Map blacklist symbol → stablecoin IDs
 const BLACKLIST_SYMBOL_TO_IDS: Record<string, string[]> = {
@@ -26,11 +27,20 @@ for (const [sym, ids] of Object.entries(BLACKLIST_SYMBOL_TO_IDS)) {
   for (const id of ids) BLACKLIST_ID_TO_SYMBOL.set(id, sym);
 }
 
-const BOOTSTRAP_GRACE_SEC = 24 * 3600;
 const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
+const DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY = "dews:bootstrap-complete";
+const DEWS_STALE_DEX_LIQUIDITY_SEC = 2 * 3600;
 const DEWS_TABLES = new Set([
   "stress_signals",
   "stress_signal_history",
+]);
+const BOOTSTRAP_ALLOWED_MISSING_TABLE_SOURCES = new Set([
+  "dex-prices",
+  "dex-liquidity-history",
+  "blacklist-events",
+  "mint-burn-hourly",
+  "yield-data",
+  "stability-index-samples",
 ]);
 
 interface SourceFailure {
@@ -41,6 +51,10 @@ interface SourceFailure {
 
 function isMissingTableError(error: unknown): boolean {
   return String(error).toLowerCase().includes("no such table");
+}
+
+function isBootstrapAllowedMissingTableSource(source: string): boolean {
+  return BOOTSTRAP_ALLOWED_MISSING_TABLE_SOURCES.has(source);
 }
 
 async function deleteOrphansForTable(
@@ -109,8 +123,7 @@ export async function computeAndStoreDEWS(
   const assets = stablecoinsCache.payload.peggedAssets;
   sourceCoverage.stablecoins = assets.length;
   const assetById = new Map(assets.map((a) => [a.id, a]));
-  const bootstrapWindowActive =
-    stablecoinsCache.updatedAt != null && (nowSec - stablecoinsCache.updatedAt) <= BOOTSTRAP_GRACE_SEC;
+  const bootstrapPending = (await getCache(db, DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY)) == null;
 
   const registerSourceFailure = (
     source: string,
@@ -138,12 +151,13 @@ export async function computeAndStoreDEWS(
       top_pools_json: string | null;
       liquidity_score: number | null;
       total_tvl_usd: number | null;
+      updated_at: number | null;
     }>,
   };
   try {
     dexLiqRows = await db
       .prepare(
-        "SELECT stablecoin_id, weighted_balance_ratio, avg_pool_stress, top_pools_json, liquidity_score, total_tvl_usd FROM dex_liquidity",
+        "SELECT stablecoin_id, weighted_balance_ratio, avg_pool_stress, top_pools_json, liquidity_score, total_tvl_usd, updated_at FROM dex_liquidity",
       )
       .all<{
         stablecoin_id: string;
@@ -152,12 +166,31 @@ export async function computeAndStoreDEWS(
         top_pools_json: string | null;
         liquidity_score: number | null;
         total_tvl_usd: number | null;
+        updated_at: number | null;
       }>();
   } catch (error) {
     registerSourceFailure("dex-liquidity", error);
   }
   sourceCoverage.dexLiquidity = dexLiqRows.results.length;
   const dexLiqMap = new Map(dexLiqRows.results.map((r) => [r.stablecoin_id, r]));
+  const dexLiquidityUpdatedAt = dexLiqRows.results.reduce<number | null>(
+    (latest, row) => {
+      if (row.updated_at == null || !Number.isFinite(row.updated_at)) return latest;
+      if (latest == null || row.updated_at > latest) return row.updated_at;
+      return latest;
+    },
+    null,
+  );
+  const dexLiquidityAgeSec = dexLiquidityUpdatedAt != null ? Math.max(0, nowSec - dexLiquidityUpdatedAt) : null;
+  if (dexLiquidityAgeSec != null) {
+    sourceCoverage.dexLiquidityAgeSec = dexLiquidityAgeSec;
+    if (dexLiquidityAgeSec > DEWS_STALE_DEX_LIQUIDITY_SEC) {
+      registerSourceFailure(
+        "dex-liquidity-freshness",
+        `dex_liquidity age ${dexLiquidityAgeSec}s exceeds ${DEWS_STALE_DEX_LIQUIDITY_SEC}s`,
+      );
+    }
+  }
 
   // 3. Read dex_prices
   let dexPriceMap = new Map<string, number>();
@@ -173,7 +206,10 @@ export async function computeAndStoreDEWS(
     sourceCoverage.dexPrices = dexPriceMap.size;
   } catch (error) {
     registerSourceFailure("dex-prices", error, {
-      bootstrapAllowed: isMissingTableError(error) && bootstrapWindowActive,
+      bootstrapAllowed:
+        bootstrapPending &&
+        isMissingTableError(error) &&
+        isBootstrapAllowedMissingTableSource("dex-prices"),
     });
     sourceCoverage.dexPrices = 0;
   }
@@ -209,7 +245,10 @@ export async function computeAndStoreDEWS(
     }
   } catch (error) {
     registerSourceFailure("dex-liquidity-history", error, {
-      bootstrapAllowed: isMissingTableError(error) && bootstrapWindowActive,
+      bootstrapAllowed:
+        bootstrapPending &&
+        isMissingTableError(error) &&
+        isBootstrapAllowedMissingTableSource("dex-liquidity-history"),
     });
   }
   sourceCoverage.dexLiquidityHistory = liqHistRowsRead;
@@ -243,7 +282,10 @@ export async function computeAndStoreDEWS(
     }
   } catch (error) {
     registerSourceFailure("blacklist-events", error, {
-      bootstrapAllowed: isMissingTableError(error) && bootstrapWindowActive,
+      bootstrapAllowed:
+        bootstrapPending &&
+        isMissingTableError(error) &&
+        isBootstrapAllowedMissingTableSource("blacklist-events"),
     });
   }
   sourceCoverage.blacklistEvents = blacklistRowsRead;
@@ -271,9 +313,7 @@ export async function computeAndStoreDEWS(
       }
     }
   } catch (error) {
-    registerSourceFailure("stress-signals", error, {
-      bootstrapAllowed: isMissingTableError(error) && bootstrapWindowActive,
-    });
+    registerSourceFailure("stress-signals", error);
   }
   sourceCoverage.previousStressSignals = prevSignalRowsRead;
 
@@ -332,7 +372,10 @@ export async function computeAndStoreDEWS(
     }
   } catch (error) {
     registerSourceFailure("mint-burn-hourly", error, {
-      bootstrapAllowed: isMissingTableError(error) && bootstrapWindowActive,
+      bootstrapAllowed:
+        bootstrapPending &&
+        isMissingTableError(error) &&
+        isBootstrapAllowedMissingTableSource("mint-burn-hourly"),
     });
   }
   sourceCoverage.mintBurnHourly = mintBurnRowsRead;
@@ -355,7 +398,10 @@ export async function computeAndStoreDEWS(
     }
   } catch (error) {
     registerSourceFailure("yield-data", error, {
-      bootstrapAllowed: isMissingTableError(error) && bootstrapWindowActive,
+      bootstrapAllowed:
+        bootstrapPending &&
+        isMissingTableError(error) &&
+        isBootstrapAllowedMissingTableSource("yield-data"),
     });
   }
   sourceCoverage.yieldWarnings = yieldWarningRowsRead;
@@ -369,7 +415,10 @@ export async function computeAndStoreDEWS(
     if (psiRow) latestPsiScore = psiRow.score;
   } catch (error) {
     registerSourceFailure("stability-index-samples", error, {
-      bootstrapAllowed: isMissingTableError(error) && bootstrapWindowActive,
+      bootstrapAllowed:
+        bootstrapPending &&
+        isMissingTableError(error) &&
+        isBootstrapAllowedMissingTableSource("stability-index-samples"),
     });
   }
 
@@ -543,6 +592,13 @@ export async function computeAndStoreDEWS(
   sourceCoverage.coinsSkippedInsufficientData = insufficientDataCount;
 
   console.log(`[dews] Computed DEWS for ${results.length} coins`);
+  if (bootstrapPending) {
+    await setCache(
+      db,
+      DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY,
+      JSON.stringify({ completedAt: nowSec }),
+    );
+  }
   return {
     itemCount: results.length,
     ...(hardFailures.length > 0 ? { status: "degraded" as const } : {}),
@@ -555,6 +611,7 @@ export async function computeAndStoreDEWS(
       sourceFailures,
       fallbackMode: hardFailures.length > 0 ? "degraded-inputs" : null,
       validationFailures,
+      bootstrapPending,
     }),
   };
 }

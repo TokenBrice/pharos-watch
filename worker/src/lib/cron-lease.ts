@@ -49,6 +49,7 @@ export interface CronLeaseOptions {
   heartbeatSec?: number;
   owner?: string;
   maxRenewFailures?: number;
+  abortSignal?: AbortSignal;
 }
 
 export interface CronLeaseRunResult<T> {
@@ -57,6 +58,20 @@ export interface CronLeaseRunResult<T> {
   renewFailures: number;
   leaseLost?: boolean;
   result?: T;
+}
+
+export interface ScheduledSlotExecutionOptions {
+  slotStartedAt: number;
+  owner?: string;
+  heartbeatSec?: number;
+  staleAfterSec?: number;
+}
+
+export interface ScheduledSlotExecutionResult {
+  status: "ok" | "skipped_duplicate" | "skipped_running";
+  slotKey: string;
+  slotStartedAt: number;
+  owner: string;
 }
 
 export class CronLeaseLostError extends Error {
@@ -77,6 +92,233 @@ export function createLeaseOwner(job: string): string {
   const cryptoObj = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
   if (cryptoObj?.randomUUID) return cryptoObj.randomUUID();
   return `${job}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+const SLOT_EXECUTION_RUNNING_STALE_SEC = 20 * 60;
+const SLOT_EXECUTION_HEARTBEAT_SEC = 30;
+const SLOT_EXECUTION_RETENTION_SEC = 14 * 24 * 60 * 60;
+
+type SlotExecutionRow = {
+  state: string;
+  execution_owner: string;
+  updated_at: number;
+};
+
+function normalizeAbortError(reason: unknown, fallback: Error): Error {
+  return reason instanceof Error ? reason : fallback;
+}
+
+function createAbortPromise(signal: AbortSignal, fallback: Error): Promise<never> {
+  return new Promise<never>((_resolve, reject) => {
+    const rejectReason = () => reject(normalizeAbortError(signal.reason, fallback));
+    if (signal.aborted) {
+      rejectReason();
+      return;
+    }
+    signal.addEventListener("abort", rejectReason, { once: true });
+  });
+}
+
+async function getScheduledSlotExecution(
+  db: D1Database,
+  slotKey: string,
+  slotStartedAt: number,
+): Promise<SlotExecutionRow | null> {
+  return runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT state, execution_owner, updated_at
+           FROM cron_slot_executions
+           WHERE slot_key = ? AND slot_started_at = ?`,
+      )
+      .bind(slotKey, slotStartedAt)
+      .first<SlotExecutionRow>(),
+  );
+}
+
+async function claimScheduledSlotExecution(
+  db: D1Database,
+  slotKey: string,
+  slotStartedAt: number,
+  owner: string,
+  staleAfterSec: number,
+): Promise<"claimed" | "duplicate" | "running"> {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const inserted = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `INSERT OR IGNORE INTO cron_slot_executions
+           (slot_key, slot_started_at, state, result_status, execution_owner, started_at, finished_at, updated_at, metadata)
+         VALUES (?, ?, 'running', NULL, ?, ?, NULL, ?, NULL)`,
+      )
+      .bind(slotKey, slotStartedAt, owner, nowSec, nowSec)
+      .run(),
+  );
+  if ((inserted.meta.changes ?? 0) > 0) {
+    return "claimed";
+  }
+
+  const existing = await getScheduledSlotExecution(db, slotKey, slotStartedAt);
+  if (!existing) {
+    return "running";
+  }
+  if (existing.state === "finished") {
+    return "duplicate";
+  }
+  if (existing.execution_owner === owner) {
+    return "claimed";
+  }
+
+  const staleBefore = nowSec - staleAfterSec;
+  if (existing.updated_at < staleBefore) {
+    const takeover = await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `UPDATE cron_slot_executions
+           SET execution_owner = ?,
+               started_at = ?,
+               updated_at = ?,
+               finished_at = NULL,
+               result_status = NULL,
+               metadata = NULL
+           WHERE slot_key = ?
+             AND slot_started_at = ?
+             AND state = 'running'
+             AND updated_at < ?`,
+        )
+        .bind(owner, nowSec, nowSec, slotKey, slotStartedAt, staleBefore)
+        .run(),
+    );
+    if ((takeover.meta.changes ?? 0) > 0) {
+      return "claimed";
+    }
+  }
+
+  return "running";
+}
+
+async function touchScheduledSlotExecution(
+  db: D1Database,
+  slotKey: string,
+  slotStartedAt: number,
+  owner: string,
+): Promise<void> {
+  const nowSec = Math.floor(Date.now() / 1000);
+  await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `UPDATE cron_slot_executions
+         SET updated_at = ?
+         WHERE slot_key = ?
+           AND slot_started_at = ?
+           AND execution_owner = ?
+           AND state = 'running'`,
+      )
+      .bind(nowSec, slotKey, slotStartedAt, owner)
+      .run(),
+  );
+}
+
+async function finishScheduledSlotExecution(
+  db: D1Database,
+  slotKey: string,
+  slotStartedAt: number,
+  owner: string,
+  resultStatus: "ok" | "error",
+  metadata: string | null,
+): Promise<void> {
+  const nowSec = Math.floor(Date.now() / 1000);
+  await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `UPDATE cron_slot_executions
+         SET state = 'finished',
+             result_status = ?,
+             finished_at = ?,
+             updated_at = ?,
+             metadata = ?
+         WHERE slot_key = ?
+           AND slot_started_at = ?
+           AND execution_owner = ?`,
+      )
+      .bind(resultStatus, nowSec, nowSec, metadata, slotKey, slotStartedAt, owner)
+      .run(),
+  );
+}
+
+async function pruneScheduledSlotExecutions(db: D1Database): Promise<void> {
+  const cutoffSec = Math.floor(Date.now() / 1000) - SLOT_EXECUTION_RETENTION_SEC;
+  await runWithOverloadRetry(() =>
+    db
+      .prepare("DELETE FROM cron_slot_executions WHERE slot_started_at < ?")
+      .bind(cutoffSec)
+      .run(),
+  );
+}
+
+export async function runScheduledSlotWithFence(
+  db: D1Database,
+  slotKey: string,
+  fn: () => Promise<void>,
+  opts: ScheduledSlotExecutionOptions,
+): Promise<ScheduledSlotExecutionResult> {
+  const owner = opts.owner ?? createLeaseOwner(slotKey);
+  const heartbeatSec = Math.max(15, opts.heartbeatSec ?? SLOT_EXECUTION_HEARTBEAT_SEC);
+  const staleAfterSec = Math.max(heartbeatSec * 2, opts.staleAfterSec ?? SLOT_EXECUTION_RUNNING_STALE_SEC);
+  const claimResult = await claimScheduledSlotExecution(db, slotKey, opts.slotStartedAt, owner, staleAfterSec);
+
+  if (claimResult === "duplicate") {
+    return {
+      status: "skipped_duplicate",
+      slotKey,
+      slotStartedAt: opts.slotStartedAt,
+      owner,
+    };
+  }
+  if (claimResult === "running") {
+    return {
+      status: "skipped_running",
+      slotKey,
+      slotStartedAt: opts.slotStartedAt,
+      owner,
+    };
+  }
+
+  const timer = setInterval(() => {
+    void touchScheduledSlotExecution(db, slotKey, opts.slotStartedAt, owner).catch((err) => {
+      console.warn(`[cron-slot] Failed to heartbeat slot ${slotKey}@${opts.slotStartedAt}:`, err);
+    });
+  }, heartbeatSec * 1000);
+
+  try {
+    await fn();
+    await finishScheduledSlotExecution(db, slotKey, opts.slotStartedAt, owner, "ok", null);
+    return {
+      status: "ok",
+      slotKey,
+      slotStartedAt: opts.slotStartedAt,
+      owner,
+    };
+  } catch (err) {
+    await finishScheduledSlotExecution(
+      db,
+      slotKey,
+      opts.slotStartedAt,
+      owner,
+      "error",
+      JSON.stringify({
+        error: err instanceof Error ? err.message : String(err),
+      }),
+    ).catch((finishErr) => {
+      console.warn(`[cron-slot] Failed to finish slot ${slotKey}@${opts.slotStartedAt}:`, finishErr);
+    });
+    throw err;
+  } finally {
+    clearInterval(timer);
+    void pruneScheduledSlotExecutions(db).catch((err) => {
+      console.warn("[cron-slot] Failed to prune old slot execution rows:", err);
+    });
+  }
 }
 
 // --- Cron lease primitives ---
@@ -134,13 +376,14 @@ export async function runCronWithLease<T>(
   fn: (ctx: { leaseOwner: string; signal: AbortSignal }) => Promise<T>,
   opts?: CronLeaseOptions,
 ): Promise<CronLeaseRunResult<T>> {
+  const timeoutMs = CRON_TIMEOUT_MS[job] ?? DEFAULT_CRON_TIMEOUT_MS;
   const timeoutSec = Math.ceil((CRON_TIMEOUT_MS[job] ?? DEFAULT_CRON_TIMEOUT_MS) / 1000);
   const ttlSec = opts?.ttlSec ?? timeoutSec + 60;
   const heartbeatSec = opts?.heartbeatSec ?? Math.max(15, Math.floor(ttlSec / 3));
   const maxRenewFailures = opts?.maxRenewFailures ?? 2;
   const owner = opts?.owner ?? createLeaseOwner(job);
 
-  const acquired = await runWithOverloadRetry(() => acquireCronLease(db, job, owner, ttlSec));
+  const acquired = await runWithOverloadRetry(() => acquireCronLease(db, job, owner, ttlSec), 3, opts?.abortSignal);
   if (!acquired) {
     return {
       status: "skipped_locked",
@@ -163,27 +406,36 @@ export async function runCronWithLease<T>(
   const timer = setInterval(() => {
     void renewCronLease(db, job, owner, ttlSec)
       .then((ok) => {
-        if (!ok) markLeaseFailure();
+        if (!ok) {
+          markLeaseFailure();
+          return;
+        }
+        renewFailures = 0;
       })
       .catch(() => {
         markLeaseFailure();
       });
   }, heartbeatSec * 1000);
 
-  const leaseLossPromise = new Promise<never>((_resolve, reject) => {
-    const rejectReason = () => {
-      const reason = leaseController.signal.reason;
-      reject(reason instanceof Error ? reason : new CronLeaseLostError(job, renewFailures));
-    };
-    if (leaseController.signal.aborted) {
-      rejectReason();
-      return;
-    }
-    leaseController.signal.addEventListener("abort", rejectReason, { once: true });
-  });
+  const stopSignals = [leaseController.signal, opts?.abortSignal].filter((signal): signal is AbortSignal => signal != null);
+  const combinedSignal = stopSignals.length <= 1
+    ? (stopSignals[0] ?? new AbortController().signal)
+    : AbortSignal.any(stopSignals);
+  const stopPromise = Promise.race(
+    stopSignals.map((signal) =>
+      createAbortPromise(
+        signal,
+        signal === opts?.abortSignal
+          ? new CronTimeoutError(job, timeoutMs)
+          : new CronLeaseLostError(job, renewFailures),
+      )
+    ),
+  );
 
   try {
-    const result = await Promise.race([fn({ leaseOwner: owner, signal: leaseController.signal }), leaseLossPromise]);
+    const jobPromise = Promise.resolve().then(() => fn({ leaseOwner: owner, signal: combinedSignal }));
+    void jobPromise.catch(() => {});
+    const result = await Promise.race([jobPromise, stopPromise]);
     return {
       status: "ok",
       leaseOwner: owner,

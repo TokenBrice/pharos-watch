@@ -123,6 +123,29 @@ describe("syncStablecoinCharts", () => {
     expect(getCacheInsert(db as MockD1Database)).toBeUndefined();
   });
 
+  it("returns degraded and preserves cache when downsampled output is too small", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    mockFetch([
+      {
+        match: "stablecoincharts/all",
+        body: Array.from({ length: 120 }, () => ({
+          date: nowSec - 60,
+          totalCirculating: { peggedUSD: 1_000_000 },
+          totalCirculatingUSD: { peggedUSD: 1_000_000 },
+        })),
+      },
+    ]);
+
+    const db = mockD1();
+    const result = await syncStablecoinCharts(db);
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as { reason: string; downsampledPoints: number };
+    expect(metadata.reason).toBe("downsampled-payload-too-small");
+    expect(metadata.downsampledPoints).toBeLessThan(10);
+    expect(getCacheInsert(db as MockD1Database)).toBeUndefined();
+  });
+
   it("skips FX-based repair when the source freshness is stale even if usable sync is fresh", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     mockFetch([

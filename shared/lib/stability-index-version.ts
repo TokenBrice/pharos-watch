@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const psi = createMethodologyVersion({
-  currentVersion: "3.1",
+  currentVersion: "3.2",
   changelogPath: "/methodology/stability-index-changelog/",
   changelog: [
+  {
+    version: "3.2",
+    title: "Fail-closed depeg input availability",
+    date: "2026-03-23",
+    effectiveAt: 1774256400,
+    summary:
+      "PSI no longer publishes a fresh sample when the active-depeg input query is unavailable, preventing false continuity from an incomplete core dependency.",
+    impact: [
+      "The 30-minute cron now returns degraded and skips the sample when `depeg_events` cannot be queried",
+      "Only already-open depegs missing a current stablecoins price may use the replay-safe `price_cache` fallback; table-level depeg input loss is no longer treated as an empty event set",
+      "Public PSI remains anchored to the last valid stored sample instead of silently publishing from partial core inputs",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.1",
     title: "Open-depeg replay-price fallback",

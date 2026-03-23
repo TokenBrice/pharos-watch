@@ -161,6 +161,8 @@ When the checkout itself lives under `/.worktrees/`, Vitest now drops those glob
 - `worker/src/cron/dex-discovery/__tests__/` — DEX discovery module tests
 - `worker/src/cron/dex-liquidity/__tests__/` — DEX liquidity scoring module tests
 
+Recent cron reliability coverage explicitly exercises slot-fencing and no-write guardrails as well: stablecoins stale-publication blocking, PSI fail-closed dependency loss, DEWS bootstrap/freshness degradation, digest Telegram replay safety, bluechip partial-cache merge, and yield deterministic-source outage handling all live in the worker cron suites above.
+
 **Pattern:** `*.test.ts` / `*.test.tsx` — Vitest discovers files matching `**/*.{test,spec}.?(c|m)[jt]s?(x)`.
 
 ## Test Infrastructure

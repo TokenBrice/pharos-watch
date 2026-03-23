@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "4.8",
+  currentVersion: "4.9",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
+  {
+    version: "4.9",
+    title: "Bootstrap sentinel and core-liquidity freshness gating",
+    date: "2026-03-23",
+    effectiveAt: 1774260000,
+    summary:
+      "DEWS bootstrap is now a one-time state transition, and stale or missing core liquidity inputs no longer masquerade as acceptable startup conditions.",
+    impact: [
+      "Bootstrap grace now ends after the first successful DEWS publication via a dedicated `dews:bootstrap-complete` sentinel instead of piggybacking on stablecoins-cache freshness",
+      "Only explicitly optional missing tables remain bootstrap-allowed before first success; core dependencies no longer inherit that grace",
+      "Fresh `dex_liquidity` is now required for publication, with rows older than 2 hours treated as a hard degraded source failure",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.8",
     title: "Contradicted live depegs now retire into pending confirmation",

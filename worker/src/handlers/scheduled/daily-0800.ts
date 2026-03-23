@@ -12,21 +12,35 @@ import { snapshotPsiDaily } from "../../cron/snapshot-psi";
 import { syncUsdsStatus } from "../../cron/sync-usds-status";
 import type { ScheduledRuntimeContext } from "./context";
 
-export function runDaily0800Slot(runtime: ScheduledRuntimeContext): void {
-  // DB-only snapshot jobs (no external fetch) — safe to parallelize
-  runtime.ctx.waitUntil(runtime.runLeasedCron("snapshot-supply", (signal) => snapshotSupply(runtime.db, signal)));
-  runtime.ctx.waitUntil(runtime.runLeasedCron(
-    "snapshot-safety-grade-history",
-    (signal) => snapshotSafetyGradeHistory(runtime.db, signal),
-  ));
-  runtime.ctx.waitUntil(runtime.runLeasedCron("snapshot-psi", (signal) => snapshotPsiDaily(runtime.db, signal)));
+export async function runDaily0800Slot(runtime: ScheduledRuntimeContext): Promise<void> {
+  const runDailyJob = async (
+    job: string,
+    fn: Parameters<ScheduledRuntimeContext["runLeasedCron"]>[1],
+  ) => {
+    try {
+      return (await runtime.runLeasedCron(job, fn)) ?? null;
+    } catch (err) {
+      console.error(`[cron] ${job} failed in daily 08:00 slot:`, err);
+      return null;
+    }
+  };
 
-  // External-fetch jobs — chained to avoid concurrent connection contention
-  runtime.ctx.waitUntil(
-    runtime.runLeasedCron("fetch-tbill-rate", (signal) => fetchTbillRate(runtime.db, signal))
-      .then(() => runtime.runLeasedCron(
+  await Promise.all([
+    runDailyJob("snapshot-supply", (signal) => snapshotSupply(runtime.db, signal)),
+    runDailyJob(
+      "snapshot-safety-grade-history",
+      (signal) => snapshotSafetyGradeHistory(runtime.db, signal),
+    ),
+    runDailyJob("snapshot-psi", (signal) => snapshotPsiDaily(runtime.db, signal)),
+    (async () => {
+      const tbillResult = await runDailyJob("fetch-tbill-rate", (signal) => fetchTbillRate(runtime.db, signal));
+      if (tbillResult?.status === "error" || tbillResult == null) {
+        console.warn("[cron] fetch-tbill-rate did not complete cleanly — continuing to sync-usds-status");
+      }
+      await runDailyJob(
         "sync-usds-status",
         (signal) => syncUsdsStatus(runtime.db, runtime.env.ETHERSCAN_API_KEY ?? null, signal),
-      )),
-  );
+      );
+    })(),
+  ]);
 }

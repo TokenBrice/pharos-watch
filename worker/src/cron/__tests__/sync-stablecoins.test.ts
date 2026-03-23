@@ -890,9 +890,40 @@ describe("syncStablecoins", () => {
       "Stablecoins schema validation warning",
       expect.stringContaining("forced-test-validation-failure"),
     );
+    expect(recordOutcome).toHaveBeenCalledWith(
+      expect.anything(),
+      "defillama-stablecoins",
+      true,
+    );
     const cacheKeys = cacheWrites.map((write) => write.key);
     expect(cacheKeys).toContain("stablecoins:invalid-last");
     expect(cacheKeys).not.toContain("stablecoins");
+  });
+
+  it("emits stage progress updates during the main sync path", async () => {
+    const db = makeDb();
+    const dlData = makeDlResponse(60);
+    const reportProgress = vi.fn(async () => undefined);
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    await syncStablecoins(db, undefined, undefined, null, null, undefined, reportProgress);
+
+    const stages = reportProgress.mock.calls.map((call) => {
+      const [update] = call as unknown as Array<{ stage?: string } | undefined>;
+      return update?.stage;
+    });
+    expect(stages).toContain("intake");
+    expect(stages).toContain("price-enrichment");
+    expect(stages).toContain("price-validation");
+    expect(stages).toContain("cache-validation");
+    expect(stages).toContain("cache-write");
+    expect(stages).toContain("depeg-pipeline");
+    expect(stages).toContain("complete");
   });
 
   it("writes diagnostic cache and returns degraded when fallback payload fails schema validation", async () => {
@@ -1035,8 +1066,40 @@ describe("syncStablecoins", () => {
     const result = await syncStablecoins(db);
 
     expect(result.itemCount).toBe(60);
+    expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.stalenessWarning).toBe(true);
+    expect(metadata.staleWriteBlocked).toBe(true);
+  });
+
+  it("preserves the stablecoins cache when severe price staleness is detected", async () => {
+    const dlData = makeDlResponse(60);
+    const previousPayload = JSON.stringify({
+      peggedAssets: dlData.peggedAssets.map((a) => ({ id: a.id, price: a.price })),
+    });
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [{ value: previousPayload, updated_at: Math.floor(Date.now() / 1000) - (8 * 3600) }],
+        first: { value: previousPayload, updated_at: Math.floor(Date.now() / 1000) - (8 * 3600) },
+      },
+      { match: "supply_history", rows: [] },
+      { match: "price_cache", rows: [] },
+      { match: "circuit", rows: [] },
+      { match: "cache", rows: [] },
+    ]);
+    const cacheWrites = trackCacheWrites(db);
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.status).toBe("degraded");
+    expect(cacheWrites.map((write) => write.key)).not.toContain("stablecoins");
   });
 
   it("fills missing circulatingPrev buckets from supply_history snapshots", async () => {

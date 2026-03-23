@@ -8,6 +8,7 @@ import { getCache, setCache } from "./db-cache";
 import { sendAlert } from "./alerts";
 
 export type CircuitState = "closed" | "open" | "half-open";
+export type CircuitOutcomeDecision = "success" | "failure" | "neutral";
 
 export interface CircuitRecord {
   state: CircuitState;
@@ -140,6 +141,28 @@ export async function recordOutcome(db: D1Database, source: string, success: boo
   }
 
   await setCache(db, cacheKey(source), JSON.stringify(record));
+}
+
+export function mapCronStatusToCircuitOutcome(status: string | null | undefined): CircuitOutcomeDecision {
+  if (status === "error") {
+    return "failure";
+  }
+  if (status === "ok" || status == null) {
+    return "success";
+  }
+  return "neutral";
+}
+
+export async function recordOutcomeDecision(
+  db: D1Database,
+  source: string,
+  outcome: CircuitOutcomeDecision,
+  webhookUrl?: string | null,
+): Promise<void> {
+  if (outcome === "neutral") {
+    return;
+  }
+  await recordOutcome(db, source, outcome === "success", webhookUrl);
 }
 
 /** Non-blocking circuit telemetry write for best-effort callers. */

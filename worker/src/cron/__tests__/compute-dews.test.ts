@@ -51,6 +51,7 @@ vi.mock("../../lib/db-cache", () => ({
     }),
     updatedAt: Math.floor(Date.now() / 1000),
   })),
+  setCache: vi.fn(async () => {}),
 }));
 
 vi.mock("../../lib/dews", () => ({
@@ -67,6 +68,7 @@ import { computeAndStoreDEWS } from "../compute-dews";
 
 interface MakeDbOptions {
   failDexLiquidity?: boolean;
+  failDexPricesMissingTable?: boolean;
   dexPriceRows?: Array<{ stablecoin_id: string; dex_price_usd: number; updated_at: number }>;
   signalIds?: string[];
   historyIds?: string[];
@@ -105,6 +107,9 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
         };
       }
       if (sql.includes("FROM dex_prices")) {
+        if (opts.failDexPricesMissingTable) {
+          throw new Error("no such table: dex_prices");
+        }
         return {
           results: (opts.dexPriceRows ?? []) as T[],
         };
@@ -156,22 +161,25 @@ describe("computeAndStoreDEWS", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-03T12:00:00Z"));
     vi.mocked(computeDEWS).mockClear();
-    vi.mocked(getCache).mockResolvedValue({
-      value: JSON.stringify({
-        peggedAssets: [
-          {
-            id: "usdt-tether",
-            symbol: "USDT",
-            pegType: "peggedUSD",
-            price: 1,
-            priceConfidence: "high",
-            circulating: { peggedUSD: 100_000_000 },
-            circulatingPrevDay: { peggedUSD: 99_000_000 },
-            circulatingPrevWeek: { peggedUSD: 98_000_000 },
-          },
-        ],
-      }),
-      updatedAt: Math.floor(Date.now() / 1000),
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dews:bootstrap-complete") return null;
+      return {
+        value: JSON.stringify({
+          peggedAssets: [
+            {
+              id: "usdt-tether",
+              symbol: "USDT",
+              pegType: "peggedUSD",
+              price: 1,
+              priceConfidence: "high",
+              circulating: { peggedUSD: 100_000_000 },
+              circulatingPrevDay: { peggedUSD: 99_000_000 },
+              circulatingPrevWeek: { peggedUSD: 98_000_000 },
+            },
+          ],
+        }),
+        updatedAt: Math.floor(Date.now() / 1000),
+      } as never;
     });
   });
 
@@ -203,6 +211,48 @@ describe("computeAndStoreDEWS", () => {
       sourceFailures: Array<{ source: string; bootstrapAllowed: boolean }>;
     };
     expect(metadata.sourceFailures.some((failure) => failure.source === "dex-liquidity")).toBe(true);
+  });
+
+  it("stops bootstrap-allowing missing optional tables after the DEWS bootstrap sentinel exists", async () => {
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dews:bootstrap-complete") {
+        return {
+          value: JSON.stringify({ completedAt: Math.floor(Date.now() / 1000) - 3600 }),
+          updatedAt: Math.floor(Date.now() / 1000) - 3600,
+        } as never;
+      }
+      return {
+        value: JSON.stringify({
+          peggedAssets: [
+            {
+              id: "usdt-tether",
+              symbol: "USDT",
+              pegType: "peggedUSD",
+              price: 1,
+              priceConfidence: "high",
+              circulating: { peggedUSD: 100_000_000 },
+              circulatingPrevDay: { peggedUSD: 99_000_000 },
+              circulatingPrevWeek: { peggedUSD: 98_000_000 },
+            },
+          ],
+        }),
+        updatedAt: Math.floor(Date.now() / 1000),
+      } as never;
+    });
+    const sqlSeen: string[] = [];
+    const db = makeDb(sqlSeen, { failDexPricesMissingTable: true });
+
+    const result = await computeAndStoreDEWS(db);
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      bootstrapPending: boolean;
+      sourceFailures: Array<{ source: string; bootstrapAllowed: boolean }>;
+    };
+    expect(metadata.bootstrapPending).toBe(false);
+    expect(
+      metadata.sourceFailures.find((failure) => failure.source === "dex-prices")?.bootstrapAllowed,
+    ).toBe(false);
   });
 
   it("ignores stale dex price rows when building the DEWS divergence input", async () => {

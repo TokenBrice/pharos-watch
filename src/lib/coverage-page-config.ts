@@ -13,6 +13,7 @@ import type { CoverageFeatureKey } from "@/lib/coverage";
 
 export type CoverageFilterKey =
   | "all"
+  | "redemption"
   | "live-reserves"
   | "yield"
   | "flows"
@@ -132,6 +133,7 @@ export const FILTER_OPTIONS: ReadonlyArray<{
   label: string;
 }> = [
   { key: "all", label: "All coins" },
+  { key: "redemption", label: "Redemption" },
   { key: "live-reserves", label: "Live reserves" },
   { key: "yield", label: "Yield" },
   { key: "flows", label: "Flows" },
@@ -153,6 +155,16 @@ export const LEGEND_ITEMS = [
   {
     term: "—",
     description: "Pharos does not currently expose that feature for the asset.",
+  },
+  {
+    term: "Heur.",
+    description:
+      "A redemption route is modeled, but the current capacity evidence is still heuristic / low-confidence and does not count as strong coverage.",
+  },
+  {
+    term: "Config.",
+    description:
+      "A redemption route is configured, but the current snapshot could not resolve a usable score.",
   },
   {
     term: "Bootstr.",

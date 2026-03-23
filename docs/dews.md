@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) estimating depeg probability. Com
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/depeg-dews-version.ts`.
 
-- **Current methodology version:** `v4.8`
+- **Current methodology version:** `v4.9`
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/depeg-dews-version.ts`
 
@@ -156,7 +156,7 @@ Score = `min(100, sum of active signal points)`.
 
 **Cron name:** `compute-dews`
 
-**Run health semantics:** DEWS records upstream read problems as structured cron metadata (`sourceFailures`, `sourceCoverage`, `validationFailures`). The cron returns `status: "degraded"` when non-bootstrap source dependencies fail. Missing optional tables during the bootstrap grace window are tagged `bootstrapAllowed=true` and do not force degraded status.
+**Run health semantics:** DEWS records upstream read problems as structured cron metadata (`sourceFailures`, `sourceCoverage`, `validationFailures`). The cron returns `status: "degraded"` when non-bootstrap source dependencies fail. Bootstrap grace is now a one-time state transition, tracked by the `dews:bootstrap-complete` cache sentinel after the first successful publication. Before that first success, only explicitly optional missing tables are tagged `bootstrapAllowed=true`; once the sentinel exists, those same failures degrade the run normally. Fresh `dex_liquidity` is now treated as a core dependency, and rows older than 2 hours block publication as a hard source-freshness failure.
 
 **Data flow:**
 
@@ -184,12 +184,12 @@ When a coin has insufficient data in a cycle (`computeDEWS() === null`), that ru
 ```json
 {
   "signals": {
-    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "4.8" },
+    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "4.9" },
     ...
   },
   "updatedAt": 1740000000,
   "malformedRows": 0,
-  "methodology": { "version": "4.8", "versionLabel": "...", "currentVersion": "4.8", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "4.9", "versionLabel": "...", "currentVersion": "4.9", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
@@ -199,13 +199,13 @@ Unknown IDs and tracked-but-non-active IDs both return `404` (`Stablecoin not tr
 
 ```json
 {
-  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "4.8" },
+  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "4.9" },
   "history": [
-    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "4.8" },
+    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "4.9" },
     ...
   ],
   "malformedRows": 0,
-  "methodology": { "version": "4.8", "versionLabel": "...", "currentVersion": "4.8", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "4.9", "versionLabel": "...", "currentVersion": "4.9", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 

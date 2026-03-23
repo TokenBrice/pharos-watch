@@ -54,6 +54,36 @@ describe("snapshotChainSupply", () => {
     expect(result.itemCount).toBe(2); // ethereum + bsc
   });
 
+  it("returns degraded when the stablecoins cache produces no valid chain rows", async () => {
+    const payload = {
+      peggedAssets: [
+        {
+          id: "usdt-tether",
+          symbol: "USDT",
+          name: "Tether",
+          price: 1.0,
+          pegType: "peggedUSD",
+          circulating: { peggedUSD: 100 },
+          chainCirculating: {},
+          chains: [],
+        },
+      ],
+    };
+    const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
+    const db = mockD1([{
+      match: "cache",
+      matchBinds: ["stablecoins"],
+      rows: [],
+      first: { key: "stablecoins", value: JSON.stringify(payload), updated_at: freshUpdatedAt },
+    }]);
+
+    const result = await snapshotChainSupply(db);
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as { reason: string };
+    expect(metadata.reason).toBe("no-valid-chain-rows");
+  });
+
   it("returns degraded when aborted", async () => {
     const db = mockD1();
     const controller = new AbortController();

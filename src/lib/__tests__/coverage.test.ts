@@ -393,8 +393,23 @@ describe("coverage helpers", () => {
         hasDependencyCoverage: false,
       }),
       buildCoverageRow({
+        coin: makeCoin({ id: "heuristic", symbol: "HEUR" }),
+        marketCapUsd: 150,
+        hasPegCoverage: true,
+        safetyScore: 82,
+        dexCoverageClass: "primary",
+        redemptionEntry: makeRedemptionEntry({
+          routeFamily: "stablecoin-redeem",
+          modelConfidence: "low",
+          capacityConfidence: "heuristic",
+        }),
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        hasDependencyCoverage: false,
+      }),
+      buildCoverageRow({
         coin: makeCoin({ id: "none", symbol: "NON" }),
-        marketCapUsd: 200,
+        marketCapUsd: 50,
         hasPegCoverage: true,
         safetyScore: 82,
         dexCoverageClass: "primary",
@@ -411,11 +426,14 @@ describe("coverage helpers", () => {
       1_000,
     );
 
+    expect(summary.countLabel).toBe("Strong coverage");
     expect(summary.availableCount).toBe(2);
-    expect(summary.coveragePct).toBeCloseTo(66.6666666667, 4);
+    expect(summary.coveragePct).toBe(50);
     expect(summary.mcapSharePct).toBe(80);
+    expect(summary.coverageLabel).toBe("50% with strong redemption coverage");
+    expect(summary.shareLabel).toBe("Strong redemption market-cap reach");
     expect(summary.breakdown).toBe(
-      "configured 0 · issuer 1 · psm 1 · queue 0 · collateral 0 · stable 0 · basket 0",
+      "heuristic 1 · configured 0 · issuer 1 · psm 1 · queue 0 · collateral 0 · stable 0 · basket 0",
     );
   });
 });

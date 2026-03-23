@@ -1,3 +1,4 @@
+import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { createLeaseOwner, runCronWithLease } from "../../lib/cron-lease";
 import { logCronRun, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { sendAlert, normalizeWebhookUrl } from "../../lib/alerts";
@@ -13,6 +14,10 @@ export interface ScheduledRuntimeContext {
   db: D1Database;
   env: Env;
   ctx: ExecutionContext;
+  cron: string;
+  scheduleKey: CronScheduleKey;
+  scheduledTimeMs: number | null;
+  slotStartedAt: number;
   mintBurnDisabledIds: string[];
   mintBurnDisabledSymbols: string[];
   mintBurnFreshnessConfig: MintBurnFreshnessConfig;
@@ -78,9 +83,17 @@ function normalizeCronMetadata(result: CronResult): string | undefined {
   });
 }
 
+export interface ScheduledRuntimeInit {
+  cron: string;
+  scheduleKey: CronScheduleKey;
+  scheduledTimeMs: number | null;
+  slotStartedAt: number;
+}
+
 export function createScheduledRuntimeContext(
   env: Env,
   ctx: ExecutionContext,
+  scheduled: ScheduledRuntimeInit,
 ): ScheduledRuntimeContext {
   const db = env.DB;
   const mintBurnDisabledIds = parseCsvEnv(env.MINT_BURN_DISABLED_IDS);
@@ -94,6 +107,10 @@ export function createScheduledRuntimeContext(
     db,
     env,
     ctx,
+    cron: scheduled.cron,
+    scheduleKey: scheduled.scheduleKey,
+    scheduledTimeMs: scheduled.scheduledTimeMs,
+    slotStartedAt: scheduled.slotStartedAt,
     mintBurnDisabledIds,
     mintBurnDisabledSymbols,
     mintBurnFreshnessConfig,
@@ -102,27 +119,46 @@ export function createScheduledRuntimeContext(
     chainRpcs,
     runLeasedCron: (job, fn) =>
       logCronRun(db, job, async (signal, reportProgress): Promise<CronResult> => {
+        await reportProgress({
+          stage: "started",
+          message: `Starting ${job}`,
+          metadata: {
+            slotStartedAt: scheduled.slotStartedAt,
+            scheduleKey: scheduled.scheduleKey,
+          },
+        });
         const leaseOwner = createLeaseOwner(job);
         const lease = await runCronWithLease(db, job, async ({ signal: leaseSignal }) => {
-          if (typeof AbortSignal.any !== "function") {
-            throw new Error("AbortSignal.any is required (available since Workers runtime 2023)");
-          }
-          const mergedSignal = AbortSignal.any([signal, leaseSignal]);
           await reportProgress({
             stage: "lease-acquired",
             message: `Lease acquired for ${job}`,
             leaseOwner,
+            metadata: {
+              slotStartedAt: scheduled.slotStartedAt,
+              scheduleKey: scheduled.scheduleKey,
+            },
           });
-          return fn(mergedSignal, reportProgress);
-        }, { owner: leaseOwner });
+          return fn(leaseSignal, reportProgress);
+        }, { owner: leaseOwner, abortSignal: signal });
 
         if (lease.status === "skipped_locked") {
+          await reportProgress({
+            stage: "skipped-locked",
+            message: `Lease already held for ${job}`,
+            leaseOwner: lease.leaseOwner,
+            metadata: {
+              slotStartedAt: scheduled.slotStartedAt,
+              scheduleKey: scheduled.scheduleKey,
+            },
+          });
           return {
             status: "skipped_locked",
             metadata: JSON.stringify({
               reason: "lease-locked",
               leaseOwner: lease.leaseOwner,
               renewFailures: lease.renewFailures,
+              slotStartedAt: scheduled.slotStartedAt,
+              scheduleKey: scheduled.scheduleKey,
             }),
           };
         }
@@ -133,6 +169,8 @@ export function createScheduledRuntimeContext(
             metadata: JSON.stringify({
               leaseOwner: lease.leaseOwner,
               renewFailures: lease.renewFailures,
+              slotStartedAt: scheduled.slotStartedAt,
+              scheduleKey: scheduled.scheduleKey,
             }),
           };
         }
@@ -140,6 +178,8 @@ export function createScheduledRuntimeContext(
         const leaseMeta = {
           leaseOwner: lease.leaseOwner,
           renewFailures: lease.renewFailures,
+          slotStartedAt: scheduled.slotStartedAt,
+          scheduleKey: scheduled.scheduleKey,
         };
 
         const normalized = normalizeCronMetadata(result);
@@ -155,7 +195,19 @@ export function createScheduledRuntimeContext(
           }
         }
 
+        await reportProgress({
+          stage: "completed",
+          message: `Completed ${job}`,
+          leaseOwner: lease.leaseOwner,
+          metadata: {
+            slotStartedAt: scheduled.slotStartedAt,
+            scheduleKey: scheduled.scheduleKey,
+          },
+        });
+
         return { ...result, metadata };
-      }, (title, message) => sendAlert(alertWebhookUrl, title, message)),
+      }, (title, message) => sendAlert(alertWebhookUrl, title, message), {
+        slotStartedAt: scheduled.slotStartedAt,
+      }),
   };
 }

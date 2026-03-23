@@ -186,9 +186,17 @@ export async function runDiscoveryScan(
     `upserted: ${upserted}, cleaned: ${cleaned}`,
   );
 
+  const circuitOpenNoAttempt = !cgAllowed && !cgFetched;
   return {
     itemCount: upserted,
-    status: cgFetched || !cgAllowed ? "ok" : "degraded",
-    metadata: JSON.stringify({ cgCandidates: cgCandidates.length, upserted, cleaned, cgFetched }),
+    ...(!cgFetched ? { status: "degraded" as const } : {}),
+    metadata: JSON.stringify({
+      reason: circuitOpenNoAttempt ? "circuit-open-no-attempt" : (!cgFetched ? "fetch-failed" : null),
+      cgCandidates: cgCandidates.length,
+      upserted,
+      cleaned,
+      cgFetched,
+      cgAllowed,
+    }),
   };
 }

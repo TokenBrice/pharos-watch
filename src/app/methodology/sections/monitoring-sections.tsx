@@ -302,7 +302,7 @@ export function MonitoringMethodologySections() {
           </div>
           <p className="text-xs text-muted-foreground">
             Version increments when depeg thresholds, confirmation policy, peg-score formula terms, or DEWS signal
-            composition changes.
+            composition or score-affecting input semantics change.
           </p>
         </CardHeader>
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
@@ -352,7 +352,7 @@ export function MonitoringMethodologySections() {
                 {
                   label: "Minimum data",
                   value:
-                    "PegScore requires >=30 tracking days; DEWS requires >=2 available signals (total weight >=0.30)",
+                    "PegScore requires >=7 tracking days; DEWS requires >=2 available signals (total weight >=0.30) plus fresh core source tables",
                 },
                 {
                   label: "Required sources",
@@ -361,7 +361,7 @@ export function MonitoringMethodologySections() {
                 },
                 {
                   label: "Failure behavior",
-                  value: "PegScore can be null; DEWS also returns null when signal coverage is below threshold",
+                  value: "PegScore can be null; DEWS returns null when signal coverage is below threshold, and the cron degrades/no-writes when core source reads fail or dex liquidity is stale",
                 },
               ]}
             />
@@ -513,6 +513,11 @@ export function MonitoringMethodologySections() {
                 DEWS is a per-coin, forward-looking stress score (0&ndash;100) estimating depeg probability. It is
                 computed every 30 minutes from 8 sub-signals. Only signals with available data participate; weights are
                 redistributed proportionally across available signals.
+              </p>
+              <p>
+                Bootstrap tolerance is one-time only. Missing optional tables can be ignored before the first
+                successful publication, but once DEWS has published, stale or missing core liquidity inputs block fresh
+                writes instead of being treated as startup noise.
               </p>
             </div>
 

@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS chain_supply_history (
 - **Write pattern:** `INSERT OR REPLACE` — idempotent, re-runs on the same day refresh the row.
 - **Volume:** ~50 rows/day (one row per active chain per UTC day).
 - **Primary use:** future trend charts on chain profile pages (`/chains/[chain]/`). The live `/api/chains` leaderboard does not read this table — it computes aggregates on-the-fly from the stablecoins cache.
+- **Publication guard:** if a fresh stablecoins cache produces zero valid per-chain rows, the cron returns `status: "degraded"` with `reason: "no-valid-chain-rows"` and skips the write instead of overwriting the historical series with an empty snapshot.
 
 ---
 

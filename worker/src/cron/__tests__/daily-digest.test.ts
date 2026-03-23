@@ -356,7 +356,7 @@ describe("generateDailyDigest", () => {
 
     expect(postDigestTweet).toHaveBeenCalledTimes(1);
     expect(postDigestToTelegram).toHaveBeenCalledTimes(1);
-    expect(commitTelegramAppendices).toHaveBeenCalledTimes(1);
+    expect(commitTelegramAppendices).toHaveBeenCalledTimes(0);
     expect(fetchWithRetry).toHaveBeenCalledWith(
       "https://api.anthropic.com/v1/messages",
       expect.objectContaining({
@@ -713,8 +713,7 @@ describe("generateDailyDigest", () => {
     expect(result.itemCount).toBe(1);
     expect(result.metadata).toContain("tweet: failed:");
     expect(result.metadata).toContain("telegram: failed:");
-    // commit-before-send: commit is called before sending, no rollback needed
-    expect(commitTelegramAppendices).toHaveBeenCalledTimes(1);
+    expect(commitTelegramAppendices).toHaveBeenCalledTimes(0);
     expect(getInsertDigestBinds(db as MockD1Database)).toBeDefined();
   });
 
@@ -790,8 +789,7 @@ describe("generateDailyDigest", () => {
     );
 
     expect(result.metadata).toContain("telegram: failed:");
-    // commit-before-send: commit is called before sending, no rollback needed
-    expect(commitTelegramAppendices).toHaveBeenCalledTimes(1);
+    expect(commitTelegramAppendices).toHaveBeenCalledTimes(0);
   });
 });
 

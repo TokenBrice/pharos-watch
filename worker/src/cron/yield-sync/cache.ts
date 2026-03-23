@@ -10,6 +10,17 @@ interface RiskFreeRateCachePayload {
   source: string;
   isFallback: boolean;
   fallbackMode: string | null;
+  lastMarketRate: number | null;
+  lastMarketRecordDate: string | null;
+  lastMarketFetchedAt: number | null;
+  lastMarketSource: string | null;
+}
+
+export interface ParsedRiskFreeRateCache extends YieldBenchmarkMeta {
+  lastMarketRate: number | null;
+  lastMarketRecordDate: string | null;
+  lastMarketFetchedAt: number | null;
+  lastMarketSource: string | null;
 }
 
 interface DlStablecoinPoolsCachePayload {
@@ -30,6 +41,18 @@ function toNullableString(value: unknown): string | null {
 export function buildRiskFreeRateCachePayload(
   fields: Partial<RiskFreeRateCachePayload> & Pick<RiskFreeRateCachePayload, "rate" | "source">,
 ): RiskFreeRateCachePayload {
+  const inferredLastMarketRate =
+    fields.lastMarketRate ??
+    (fields.isFallback === true || fields.source === "hardcoded-fallback" ? null : fields.rate);
+  const inferredLastMarketRecordDate =
+    fields.lastMarketRecordDate ??
+    (inferredLastMarketRate != null ? fields.recordDate ?? null : null);
+  const inferredLastMarketFetchedAt =
+    fields.lastMarketFetchedAt ??
+    (inferredLastMarketRate != null ? fields.fetchedAt ?? null : null);
+  const inferredLastMarketSource =
+    fields.lastMarketSource ??
+    (inferredLastMarketRate != null ? fields.source : null);
   return {
     rate: fields.rate,
     recordDate: fields.recordDate ?? null,
@@ -37,6 +60,10 @@ export function buildRiskFreeRateCachePayload(
     source: fields.source,
     isFallback: fields.isFallback ?? false,
     fallbackMode: fields.fallbackMode ?? null,
+    lastMarketRate: inferredLastMarketRate,
+    lastMarketRecordDate: inferredLastMarketRecordDate,
+    lastMarketFetchedAt: inferredLastMarketFetchedAt,
+    lastMarketSource: inferredLastMarketSource,
   };
 }
 
@@ -48,7 +75,7 @@ export function parseRiskFreeRateCache(
   raw: string,
   cacheUpdatedAt: number,
   nowSec = Math.floor(Date.now() / 1000),
-): YieldBenchmarkMeta | null {
+): ParsedRiskFreeRateCache | null {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (isRecord(parsed)) {
@@ -56,14 +83,29 @@ export function parseRiskFreeRateCache(
       const fetchedAt = toFiniteNumber(parsed.fetchedAt);
       if (rate != null && rate >= 0) {
         const effectiveFetchedAt = fetchedAt ?? cacheUpdatedAt;
+        const isFallback = parsed.isFallback === true;
+        const source = toNullableString(parsed.source) ?? "unknown";
+        const lastMarketRate =
+          toFiniteNumber(parsed.lastMarketRate) ??
+          (!isFallback && source !== "hardcoded-fallback" ? rate : null);
         return {
           rate,
           recordDate: toNullableString(parsed.recordDate),
           fetchedAt: effectiveFetchedAt,
           ageSeconds: effectiveFetchedAt != null ? Math.max(0, nowSec - effectiveFetchedAt) : null,
-          source: toNullableString(parsed.source) ?? "unknown",
-          isFallback: parsed.isFallback === true,
+          source,
+          isFallback,
           fallbackMode: toNullableString(parsed.fallbackMode),
+          lastMarketRate,
+          lastMarketRecordDate:
+            toNullableString(parsed.lastMarketRecordDate) ??
+            (lastMarketRate != null ? toNullableString(parsed.recordDate) : null),
+          lastMarketFetchedAt:
+            toFiniteNumber(parsed.lastMarketFetchedAt) ??
+            (lastMarketRate != null ? effectiveFetchedAt : null),
+          lastMarketSource:
+            toNullableString(parsed.lastMarketSource) ??
+            (lastMarketRate != null ? source : null),
         };
       }
     }
@@ -80,6 +122,10 @@ export function parseRiskFreeRateCache(
     source: "legacy-scalar",
     isFallback: legacyRate === RISK_FREE_RATE_FALLBACK,
     fallbackMode: legacyRate === RISK_FREE_RATE_FALLBACK ? "legacy-scalar-fallback" : null,
+    lastMarketRate: legacyRate === RISK_FREE_RATE_FALLBACK ? null : legacyRate,
+    lastMarketRecordDate: null,
+    lastMarketFetchedAt: legacyRate === RISK_FREE_RATE_FALLBACK ? null : cacheUpdatedAt,
+    lastMarketSource: legacyRate === RISK_FREE_RATE_FALLBACK ? null : "legacy-scalar",
   };
 }
 

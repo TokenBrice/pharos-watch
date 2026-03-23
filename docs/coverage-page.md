@@ -48,7 +48,7 @@ Status semantics are intentionally user-facing:
 - `Safety Score`: `Rated` or `NR`
 - `DEX Price`: `Primary`, `Mixed`, `Fallback`, `Legacy`, `NR`, or `Unknown`
 - `Live Reserves Sync`: `Live`, `Curated`, `Estimated`, or `None`
-- `Redemption Backstop`: `Issuer`, `PSM`, `Queue`, `Collat.`, `Stable`, `Basket`, `Config.`, or `—`
+- `Redemption Backstop`: `Issuer`, `PSM`, `Queue`, `Collat.`, `Stable`, `Basket`, `Heur.`, `Config.`, or `—`
 - `Yield`: `Ranked` or `—`
 - `Flows`: `Full`, `Partial`, `Lagging`, `Bootstr.` , `Disabled`, or `—`
 - `Blacklist`: `Tracked` or `—`
@@ -66,7 +66,7 @@ The page deliberately mixes structural coverage and live dataset coverage. The i
 | `Safety Score`        | `useReportCards().data.cards[].overallScore`                                                                               | Coverage is `Rated` only when the report card has a non-null overall score.                                                                                                                                                                          |
 | `DEX Price`           | `useDexLiquidity().data[id].coverageClass`                                                                                 | User-facing badge labels are mapped from liquidity `coverageClass`.                                                                                                                                                                                  |
 | `Live Reserves Sync`  | `ACTIVE_STABLECOINS[*].liveReservesConfig` first, otherwise `getReserves(coin)` from `@shared/lib/reserve-templates`       | Live reserve adapters outrank curated or estimated reserve metadata.                                                                                                                                                                                 |
-| `Redemption Backstop` | `useRedemptionBackstops().data.coins[id]`                                                                                  | The matrix reflects the live redemption-backstop snapshot exposed by the worker dataset, not static coin metadata alone. Configured-but-unrated routes render as `Config.` and do not count as covered.                                              |
+| `Redemption Backstop` | `useRedemptionBackstops().data.coins[id]`                                                                                  | The matrix reflects the live redemption-backstop snapshot exposed by the worker dataset, not static coin metadata alone. Configured-but-unrated routes render as `Config.`; low-confidence heuristic routes render as `Heur.`; neither counts as covered in the headline metric. |
 | `Yield`               | `useYieldRankings().data.rankings[].id`                                                                                    | Coverage reflects current inclusion in the yield rankings, not theoretical yield-bearing eligibility.                                                                                                                                                |
 | `Flows`               | `useMintBurnFlows().data.coins[].coverage.status`                                                                          | Mirrors the Ethereum mint/burn coverage state exposed on `/flows`.                                                                                                                                                                                   |
 | `Blacklist`           | `BLACKLIST_STABLECOINS` from `@shared/types`                                                                               | Structural support flag, matching the shared filter enum used by the blacklist route and worker handlers. Current enum values are `USDC`, `USDT`, `EURC`, `PAXG`, and `XAUT`, although only four of those currently emit cron-backed blacklist rows. |
@@ -98,11 +98,13 @@ Every row shows:
 
 For `Live Reserves Sync`, the headline metric intentionally emphasizes `Live` reserve tracking. Curated and estimated reserve views still appear in the breakdown so the row distinguishes true live coverage from metadata-only reserve composition.
 
+For `Redemption Backstop`, the headline metric intentionally emphasizes strong redemption coverage only. Low-confidence heuristic routes and configured-but-unrated routes still appear in the breakdown so the row does not imply the modeled registry disappeared.
+
 Breakdowns are intentionally dense and should stay short:
 
 - DEX: `primary / mixed / fallback`
 - Live reserves: `live / curated / estimated`
-- Redemption: `configured / issuer / psm / queue / collateral / stable / basket`
+- Redemption: `heuristic / configured / issuer / psm / queue / collateral / stable / basket`
 - Flows: `full / partial / bootstrapping`
 - Price: `tracked / price-only`
 
@@ -118,7 +120,7 @@ If a feature gains richer user-facing states, update both `src/lib/coverage.ts` 
 
 - The feature snapshot comes first and answers the breadth question before the page shifts into per-coin inspection.
 - Search filters by name and ticker.
-- Quick filters narrow the table to one major feature slice (`Live reserves`, `Yield`, `Flows`, `Blacklist`).
+- Quick filters narrow the table to one major feature slice (`Redemption`, `Live reserves`, `Yield`, `Flows`, `Blacklist`).
 - Default sort is descending live market cap.
 - On small screens, the matrix adapts into scan-first per-coin cards that preview the highest-signal statuses and expand for the remaining states.
 - From `md` upward, the full comparison table renders with the first column sticky.

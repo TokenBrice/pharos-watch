@@ -8,18 +8,16 @@
 import { dispatchTelegramAlerts } from "../../cron/dispatch-telegram-alerts";
 import type { ScheduledRuntimeContext } from "./context";
 
-export function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext): void {
+export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext): Promise<void> {
   if (!runtime.env.TELEGRAM_BOT_TOKEN) {
     return;
   }
 
-  runtime.ctx.waitUntil((async () => {
-    try {
-      await runtime.runLeasedCron("dispatch-telegram-alerts", (signal) =>
-        dispatchTelegramAlerts(runtime.db, runtime.env.TELEGRAM_BOT_TOKEN!, signal),
-      );
-    } catch (err) {
-      console.error("[cron] dispatch-telegram-alerts failed:", err);
-    }
-  })());
+  try {
+    await runtime.runLeasedCron("dispatch-telegram-alerts", (signal) =>
+      dispatchTelegramAlerts(runtime.db, runtime.env.TELEGRAM_BOT_TOKEN!, signal),
+    );
+  } catch (err) {
+    console.error("[cron] dispatch-telegram-alerts failed:", err);
+  }
 }

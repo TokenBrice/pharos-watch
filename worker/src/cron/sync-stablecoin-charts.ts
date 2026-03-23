@@ -8,6 +8,7 @@ import { getFxReferenceTypeFromState, loadFxRateState } from "../lib/fx-rate-sta
  *  3x tolerates multi-year FX drift (e.g. ARS ~10x over 4 years won't hit
  *  recent points) while easily catching corruption like the RUB 22,000x bug. */
 const RATE_TOLERANCE = 3;
+const MIN_DOWNSAMPLED_POINTS = 10;
 
 interface RawChartPoint {
   date: number;
@@ -130,6 +131,18 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
   }
 
   const downsampled = downsample(raw);
+  if (downsampled.length < MIN_DOWNSAMPLED_POINTS) {
+    console.error(`[sync-charts] Downsampled payload too small (${downsampled.length}), preserving existing cache`);
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: "downsampled-payload-too-small",
+        rawPoints: raw.length,
+        downsampledPoints: downsampled.length,
+      }),
+    };
+  }
 
   await setCacheIfNewer(db, "stablecoin-charts", JSON.stringify(downsampled), syncStartSec);
   await setCache(db, "stablecoin-charts:last-write", "1");

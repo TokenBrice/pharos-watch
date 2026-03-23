@@ -356,19 +356,17 @@ function FeatureSnapshotInsight({
   );
 }
 
+const FILTER_MATCHERS: Record<CoverageFilterKey, (row: CoverageRow) => boolean> = {
+  all: () => true,
+  redemption: (row) => row.statuses.redemption.kind !== "none",
+  "live-reserves": (row) => row.statuses.reserves.kind === "live",
+  yield: (row) => row.statuses.yield.available,
+  flows: (row) => row.statuses.flows.available,
+  blacklist: (row) => row.statuses.blacklist.available,
+};
+
 function matchesFilter(row: CoverageRow, filter: CoverageFilterKey): boolean {
-  switch (filter) {
-    case "live-reserves":
-      return row.statuses.reserves.kind === "live";
-    case "yield":
-      return row.statuses.yield.available;
-    case "flows":
-      return row.statuses.flows.available;
-    case "blacklist":
-      return row.statuses.blacklist.available;
-    default:
-      return true;
-  }
+  return FILTER_MATCHERS[filter](row);
 }
 
 function sortRows(rows: CoverageRow[], sort: CoverageSortKey): CoverageRow[] {

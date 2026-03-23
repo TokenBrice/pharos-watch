@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "4.4",
+  currentVersion: "4.5",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "4.5",
+    title: "Fail-closed source validation and retained-market benchmark continuity",
+    date: "2026-03-23",
+    effectiveAt: 1774263600,
+    summary:
+      "Yield sync now treats broken direct-source payloads and total deterministic on-chain outages as degraded inputs, while retained Treasury benchmarks preserve the last market-derived rate across fallback streaks.",
+    impact: [
+      "Direct DeFiLlama yield fetches now degrade on invalid payloads or zero relevant stablecoin pools instead of being treated as a benign empty set",
+      "Runs now degrade when all configured deterministic on-chain sources fail in the same cycle, exposing that outage in rankings provenance",
+      "Retained `risk_free_rate` fallbacks preserve the last market-derived benchmark fields across degraded streaks, and rankings-cache publication now blocks on severe shrink versus the prior cache",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.4",
     title: "On-chain rate bootstrapping and pipeline hardening",

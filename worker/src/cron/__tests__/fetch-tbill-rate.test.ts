@@ -195,6 +195,44 @@ describe("fetchTbillRate", () => {
       recordDate: "2026-03-07",
     });
   });
+
+  it("retains the last market-derived rate across consecutive degraded fallback days", async () => {
+    mockByUrl({
+      "fred.stlouisfed.org": null,
+      "home.treasury.gov": null,
+    });
+    vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
+    vi.mocked(getCache).mockResolvedValueOnce({
+      value: JSON.stringify({
+        rate: 3.91,
+        recordDate: "2026-03-07",
+        fetchedAt: 1773100800,
+        source: "fred-dgs3mo",
+        isFallback: true,
+        fallbackMode: "all-sources-failed-retained",
+        lastMarketRate: 3.91,
+        lastMarketRecordDate: "2026-03-07",
+        lastMarketFetchedAt: 1773100800,
+        lastMarketSource: "fred-dgs3mo",
+      }),
+      updatedAt: 1773104400,
+    } as never);
+
+    const result = await fetchTbillRate(db);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.fallbackMode).toBe("all-sources-failed-retained");
+    expect(latestCachePayload()).toMatchObject({
+      rate: 3.91,
+      source: "fred-dgs3mo",
+      fallbackMode: "all-sources-failed-retained",
+      isFallback: true,
+      recordDate: "2026-03-07",
+      lastMarketRate: 3.91,
+      lastMarketSource: "fred-dgs3mo",
+    });
+  });
 });
 
 describe("parseTreasuryYieldXml", () => {

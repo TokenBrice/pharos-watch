@@ -39,6 +39,7 @@ interface TestDb extends D1Database {
 
 function makeDb(opts: {
   dewsUnavailable?: boolean;
+  depegQueryFails?: boolean;
   depegRows?: Array<{ stablecoin_id: string; peg_reference: number; started_at: number }>;
   priceCacheRows?: Array<{ asset_id: string; price: number; updated_at: number }>;
 } = {}): TestDb {
@@ -47,6 +48,9 @@ function makeDb(opts: {
   const stmt = (sql: string, binds: unknown[] = []) => {
     const all = async <T>() => {
       if (sql.includes("FROM depeg_events")) {
+        if (opts.depegQueryFails) {
+          throw new Error("no such table: depeg_events");
+        }
         return {
           results: (opts.depegRows ?? [
             {
@@ -160,6 +164,25 @@ describe("computeAndStoreStabilityIndex", () => {
     };
     expect(metadata.dewsUnavailable).toBe(true);
     expect(metadata.dewsFailureReason).toContain("stress_signals");
+  });
+
+  it("fails closed when the active depeg query is unavailable", async () => {
+    const db = makeDb({ depegQueryFails: true });
+
+    const result = await computeAndStoreStabilityIndex(db);
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      fallbackMode: string;
+      depegEventsUnavailable: boolean;
+      depegEventsFailureReason: string | null;
+    };
+    expect(metadata.fallbackMode).toBe("depeg-events-unavailable");
+    expect(metadata.depegEventsUnavailable).toBe(true);
+    expect(metadata.depegEventsFailureReason).toContain("depeg_events");
+    expect(
+      db.runHistory.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO stability_index_samples")),
+    ).toBe(false);
   });
 
   it("keeps run ok when DEWS dependency query succeeds", async () => {

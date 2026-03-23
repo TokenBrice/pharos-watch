@@ -100,6 +100,76 @@ describe("syncBluechip", () => {
     expect(getCacheInsert(db as MockD1Database)).toBeUndefined();
   });
 
+  it("merges fresh ratings into the existing cache when only a subset of slugs succeeds", async () => {
+    mockFetch([
+      {
+        match: "/coin-data/tether",
+        body: {
+          data: [
+            {
+              grade: "A",
+              collateralization: 95,
+              smart_contract_audit: true,
+              date_of_rating: "2026-03-01",
+              date_last_change: "2026-02-15",
+            },
+          ],
+        },
+      },
+      {
+        match: "/coin-data/usdc",
+        body: { error: "down" },
+        status: 500,
+      },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["bluechip-ratings"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            "usdc-circle": {
+              grade: "B",
+              slug: "usdc",
+              collateralization: 88,
+              smartContractAudit: true,
+              dateOfRating: "2026-02-20",
+              dateLastChange: null,
+              smidge: {
+                stability: null,
+                management: "managed",
+                implementation: null,
+                decentralization: null,
+                governance: null,
+                externals: null,
+              },
+            },
+          }),
+          updated_at: Math.floor(Date.now() / 1000) - 30_000,
+        },
+      },
+    ]);
+
+    const result = await syncBluechip(db);
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      ratingsFetched: number;
+      ratingsPublished: number;
+      fallbackMode: string | null;
+    };
+    expect(metadata.ratingsFetched).toBe(1);
+    expect(metadata.ratingsPublished).toBe(2);
+    expect(metadata.fallbackMode).toBe("partial-cache-merge");
+
+    const insert = getCacheInsert(db as MockD1Database);
+    const cached = JSON.parse(String(insert?.binds[1])) as Record<string, { grade: string }>;
+    expect(cached["usdt-tether"]?.grade).toBe("A");
+    expect(cached["usdc-circle"]?.grade).toBe("B");
+  });
+
   it("returns degraded on invalid response shape", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     mockFetch([

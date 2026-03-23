@@ -1,4 +1,4 @@
-import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
+import { mapCronStatusToCircuitOutcome, recordOutcomeDecision, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { syncMintBurn, type MintBurnLane } from "../../cron/sync-mint-burn";
 import type { ScheduledRuntimeContext } from "./context";
@@ -30,18 +30,24 @@ export async function runMintBurnSlot(
       onProgress: reportProgress,
     }),
   );
-
-  runtime.ctx.waitUntil(job);
-  runtime.ctx.waitUntil(job.then(
-    (result) => recordOutcome(
+  try {
+    const result = await job;
+    await recordOutcomeDecision(
       runtime.db,
       CIRCUIT_SOURCE.ALCHEMY,
-      (result?.status ?? "ok") !== "error",
-    ),
-    () => recordOutcome(runtime.db, CIRCUIT_SOURCE.ALCHEMY, false),
-  ));
-
-  if (options.onSettledSuccess) {
-    runtime.ctx.waitUntil(job.then(() => options.onSettledSuccess?.(runtime)));
+      mapCronStatusToCircuitOutcome(result?.status),
+    ).catch((err) => {
+      console.error("[cron] Failed to record Alchemy success outcome:", err);
+    });
+    if (options.onSettledSuccess) {
+      await options.onSettledSuccess(runtime).catch(() => {
+        // Non-blocking alert/freshness path.
+      });
+    }
+  } catch (err) {
+    await recordOutcomeDecision(runtime.db, CIRCUIT_SOURCE.ALCHEMY, "failure").catch((outcomeErr) => {
+      console.error("[cron] Failed to record Alchemy failure outcome:", outcomeErr);
+    });
+    throw err;
   }
 }

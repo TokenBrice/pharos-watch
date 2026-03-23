@@ -94,6 +94,7 @@ export async function loadStablecoinsIntake(
     llamaData = await llamaRes!.json() as typeof llamaData;
   } catch (parseErr) {
     console.error("[sync-stablecoins] DL response body parse failed:", parseErr);
+    await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
     return {
       kind: "fallback",
       result: await input.fallbackToCoingecko(cgData),

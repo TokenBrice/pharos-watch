@@ -42,7 +42,12 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainR
   }
 
   const { pools: dlPools, meta: dlPoolsMeta } = await loadDlStablecoinPools(db, signal);
-  const { rates: onChainRates, failureBreakdown: onChainFailures } = await fetchOnChainRates(signal, chainRpcs);
+  const {
+    rates: onChainRates,
+    failureBreakdown: onChainFailures,
+    attemptedCount: onChainAttemptedCount = 0,
+    allDeterministicFailed = false,
+  } = await fetchOnChainRates(signal, chainRpcs);
   const riskFreeRateMeta = await loadRiskFreeRateSnapshot(db);
   const riskFreeRate = riskFreeRateMeta.rate;
 
@@ -276,10 +281,13 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainR
   if (dlPoolsMeta.mode === "unavailable" || dlPoolsMeta.fallbackMode === "cache-parse-failed") {
     degradationReasons.push(`dl-pools:${dlPoolsMeta.fallbackMode ?? dlPoolsMeta.mode}`);
   }
+  if (allDeterministicFailed) {
+    degradationReasons.push("onchain-rates:all-deterministic-failed");
+  }
 
   const cacheWrite = await writeYieldRankingsCache(db, rankingsPayload);
   if (!cacheWrite.ok) {
-    degradationReasons.push("schema-validation-failed");
+    degradationReasons.push(cacheWrite.reason ?? "schema-validation-failed");
   }
   const validationFailures = cacheWrite.validationFailures;
 
@@ -303,6 +311,8 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainR
         dlPoolCount: dlPoolsMeta.poolCount,
         onChainRatesResolved: onChainRates.size,
         onChainRatesConfigured: ON_CHAIN_RATE_CONFIGS.length,
+        onChainAttempted: onChainAttemptedCount,
+        onChainAllDeterministicFailed: allDeterministicFailed,
         onChainFailures: onChainFailures,
       },
       fallbackMode: degradationReasons.length > 0 ? degradationReasons.join(",") : null,

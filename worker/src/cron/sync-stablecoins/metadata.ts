@@ -81,9 +81,14 @@ export function buildStablecoinsSyncResult(input: {
   priceValidationStats: unknown;
   rejectedCount: number;
   stalenessWarning: boolean;
+  stalenessSummary?: { compared: number; identical: number; identicalRatio: number } | null;
   gtProbe: { updatedCount: number; stats: GtProbeStats };
   depegErrorCount: number;
   depegErrors: string[];
+  upstreamFetchOk?: boolean;
+  payloadAccepted?: boolean;
+  cacheWriteSucceeded?: boolean;
+  depegPipelineSucceeded?: boolean;
 }): CronResult {
   const finalMissing = input.assets.filter(hasMissingPrice).length;
   const priceSourceHealth = buildPriceSourceHealth(input.assets);
@@ -107,8 +112,13 @@ export function buildStablecoinsSyncResult(input: {
     rejectedPrices: input.rejectedCount,
     missingPrices: finalMissing,
     priceSourceHealth,
+    upstreamFetchOk: input.upstreamFetchOk ?? true,
+    payloadAccepted: input.payloadAccepted ?? true,
+    cacheWriteSucceeded: input.cacheWriteSucceeded ?? true,
+    depegPipelineSucceeded: input.depegPipelineSucceeded ?? input.depegErrorCount === 0,
   };
   if (input.stalenessWarning) metadata.stalenessWarning = true;
+  if (input.stalenessSummary) metadata.priceStaleness = input.stalenessSummary;
   if (input.depegErrorCount > 0) {
     metadata.depegErrorCount = input.depegErrorCount;
     metadata.depegErrors = input.depegErrors;
@@ -121,7 +131,7 @@ export function buildStablecoinsSyncResult(input: {
       cacheWriteMode: "main-write",
       capabilities: {
         stablecoinsCache: true,
-        depegPipeline: input.depegErrorCount === 0,
+        depegPipeline: input.depegPipelineSucceeded ?? input.depegErrorCount === 0,
       },
     }),
   };

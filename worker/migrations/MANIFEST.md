@@ -81,6 +81,7 @@
 | 0071     | `0071_live_reserve_snapshot_metadata_and_history.sql` | Add live reserve snapshot metadata columns and sync history tables                         |
 | 0072     | `0072_telegram_launch_alerts.sql`               | Add launch alert flags to telegram subscribers and subscriptions                                |
 | 0073     | `0073_price_cache_provenance.sql`               | Add price-cache provenance and timestamp metadata columns                                        |
+| 0074     | `0074_cron_slot_executions.sql`                 | Add durable scheduled-slot execution fencing and slot timestamps to cron history/progress        |
 
 ## Known Anomalies
 

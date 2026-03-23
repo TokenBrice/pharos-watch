@@ -528,10 +528,10 @@ Peg deviation events (≥ 100 bps for USD-pegged, ≥ 150 bps for non-USD pegs).
   "events": [DepegEvent, ...],
   "total": 4080,
   "methodology": {
-    "version": "4.8",
-    "versionLabel": "v4.8",
-    "currentVersion": "4.8",
-    "currentVersionLabel": "v4.8",
+    "version": "4.9",
+    "versionLabel": "v4.9",
+    "currentVersion": "4.9",
+    "currentVersionLabel": "v4.9",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -564,7 +564,7 @@ Results are ordered by `startedAt` descending (most recent first).
 | Field                 | Type      | Description                                                             |
 | --------------------- | --------- | ----------------------------------------------------------------------- |
 | `version`             | `string`  | Methodology version attributed from the latest returned event timestamp |
-| `versionLabel`        | `string`  | Display label (e.g. `"v4.8"`)                                           |
+| `versionLabel`        | `string`  | Display label (e.g. `"v4.9"`)                                           |
 | `currentVersion`      | `string`  | Latest methodology version                                              |
 | `currentVersionLabel` | `string`  | Display label for latest methodology version                            |
 | `changelogPath`       | `string`  | Relative URL to the methodology changelog page                          |
@@ -586,10 +586,10 @@ Composite peg scores and aggregate statistics for all tracked stablecoins. Score
   "coins": [PegSummaryCoin, ...],
   "summary": PegSummaryStats,
   "methodology": {
-    "version": "4.8",
-    "versionLabel": "v4.8",
-    "currentVersion": "4.8",
-    "currentVersionLabel": "v4.8",
+    "version": "4.9",
+    "versionLabel": "v4.9",
+    "currentVersion": "4.9",
+    "currentVersionLabel": "v4.9",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -1128,14 +1128,14 @@ Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a comp
     "band": "STEADY",
     "components": { "severity": 4.59, "breadth": 15, "stressBreadth": 1.8, "trend": 0.65 },
     "computedAt": 1771977600,
-    "methodologyVersion": "3.0"
+    "methodologyVersion": "3.2"
   },
   "history": [{ "date": 1771891200, "score": 81.0, "band": "STEADY", "methodologyVersion": "2.1" }],
   "methodology": {
-    "version": "3.0",
-    "versionLabel": "v3.0",
-    "currentVersion": "3.0",
-    "currentVersionLabel": "v3.0",
+    "version": "3.2",
+    "versionLabel": "v3.2",
+    "currentVersion": "3.2",
+    "currentVersionLabel": "v3.2",
     "changelogPath": "/methodology/stability-index-changelog/",
     "asOf": 1771977600,
     "isCurrent": true
@@ -1760,16 +1760,16 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
         "price": { "value": 1, "available": true }
       },
       "computedAt": 1740000000,
-      "methodologyVersion": "4.8"
+      "methodologyVersion": "4.9"
     }
   },
   "updatedAt": 1740000000,
   "malformedRows": 0,
   "methodology": {
-    "version": "4.8",
-    "versionLabel": "v4.8",
-    "currentVersion": "4.8",
-    "currentVersionLabel": "v4.8",
+    "version": "4.9",
+    "versionLabel": "v4.9",
+    "currentVersion": "4.9",
+    "currentVersionLabel": "v4.9",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true
@@ -1789,7 +1789,7 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
       "price": { "value": 1, "available": true }
     },
     "computedAt": 1740000000,
-    "methodologyVersion": "4.8"
+    "methodologyVersion": "4.9"
   },
   "history": [
     {
@@ -1805,10 +1805,10 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
   ],
   "malformedRows": 0,
   "methodology": {
-    "version": "4.8",
-    "versionLabel": "v4.8",
-    "currentVersion": "4.8",
-    "currentVersionLabel": "v4.8",
+    "version": "4.9",
+    "versionLabel": "v4.9",
+    "currentVersion": "4.9",
+    "currentVersionLabel": "v4.9",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true

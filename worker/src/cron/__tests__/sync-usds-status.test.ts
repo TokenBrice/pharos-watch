@@ -107,4 +107,28 @@ describe("syncUsdsStatus", () => {
     expect(warnSpy).toHaveBeenCalledWith("[usds-status] Failed to read implementation slot");
     expect(getCacheInsert(db as MockD1Database)).toBeUndefined();
   });
+
+  it("returns degraded when the cache write fails after a successful probe", async () => {
+    mockFetch([
+      {
+        match: "action=eth_getStorageAt",
+        body: {
+          result: "0x0000000000000000000000001923dfee706a8e78157416c29cbccfde7cdf4102",
+        },
+      },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "INSERT INTO cache",
+        rows: [],
+        throwError: new Error("cache down"),
+      },
+    ]);
+    const result = await syncUsdsStatus(db, "etherscan-key");
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as { reason: string };
+    expect(metadata.reason).toBe("cache-write-failed");
+  });
 });
