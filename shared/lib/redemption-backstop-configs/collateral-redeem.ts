@@ -55,7 +55,15 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "fxusd-f-x-protocol": {
     ...collateralRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(50, "Protocol docs list a 50 bps redemption fee"),
+    docs: [
+      sourceRef("f(x) docs", "https://fxprotocol.gitbook.io/fx-docs", ["route", "capacity", "fees"]),
+      sourceRef("f(x) app", "https://fx.aladdin.club", ["capacity"]),
+    ],
+    notes: [
+      "Tracked metadata describes direct oracle-priced collateral redemption when fxUSD trades below peg; current model scores that primary onchain redemption rail rather than Curve secondary liquidity",
+    ],
   },
   "usdaf-asymmetry": {
     ...collateralRedeemBase,
@@ -88,24 +96,46 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "cusd-celo": {
     ...collateralRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
     outputAssetType: "mixed-collateral",
-    capacityModel: { kind: "supply-ratio", ratio: 0.5 },
     costModel: documentedVariableFee(
       "Mento AMM burn-to-redeem against reserve assets at oracle rate; circuit breakers enforce safety bounds",
     ),
+    docs: [
+      sourceRef("Mento reserve docs", "https://docs.mento.org/mento/overview/core-concepts/the-reserve", ["route", "capacity"]),
+      sourceRef("Mento reserve dashboard", "https://reserve.mento.org/", ["capacity"]),
+    ],
+    notes: [
+      "Mento docs describe cUSD as mintable by depositing reserve collateral and burnable back into reserve assets at oracle value, with overcollateralization and circuit breakers governing the reserve",
+    ],
   },
   "ceur-celo": {
     ...collateralRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
     outputAssetType: "mixed-collateral",
-    capacityModel: { kind: "supply-ratio", ratio: 0.5 },
     costModel: documentedVariableFee(
       "BiPoolManager virtual AMM on Celo; mint/burn against reserve assets at oracle-enforced EUR rate; circuit breaker limits",
     ),
+    docs: [
+      sourceRef("Mento reserve docs", "https://docs.mento.org/mento/overview/core-concepts/the-reserve", ["route", "capacity"]),
+      sourceRef("Mento reserve dashboard", "https://reserve.mento.org/", ["capacity"]),
+    ],
+    notes: [
+      "Mento docs describe cEUR as mintable by depositing reserve collateral and burnable back into reserve assets at oracle value, with overcollateralization and circuit breakers governing the reserve",
+    ],
   },
   "gyd-gyroscope": {
     ...collateralRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
     outputAssetType: "mixed-collateral",
     costModel: documentedVariableFee("Primary-market AMM (PAMM) adjusts redemption prices based on reserve ratio"),
+    docs: [
+      sourceRef("Gyroscope docs", "https://docs.gyro.finance/", ["route", "capacity"]),
+      sourceRef("Gyroscope website", "https://www.gyro.finance/", ["route"]),
+    ],
+    notes: [
+      "Tracked metadata describes GYD as mintable and burnable against the reserve basket through the primary-market AMM, with redemption price determined by reserve-ratio-aware PAMM mechanics",
+    ],
   },
   "usdp-parallel": {
     ...collateralRedeemBase,
@@ -143,9 +173,17 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "fpi-frax": {
     ...collateralRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
     outputAssetType: "mixed-collateral",
     costModel: documentedVariableFee(
       "CPI-indexed redemption price grows on-chain per second at 12-month US CPI-U rate; 100% collateral ratio maintained via AMOs",
     ),
+    docs: [
+      sourceRef("Frax Price Index overview", "https://docs.frax.finance/frax-price-index/overview-cpi-peg-and-mechanics", ["route", "capacity"]),
+      sourceRef("Frax website", "https://frax.com/", ["route"]),
+    ],
+    notes: [
+      "Tracked metadata describes FPI as redeemable against a fully collateralized FRAX-backed system with the redemption price moving on-chain with CPI rather than staying fixed at $1",
+    ],
   },
 };

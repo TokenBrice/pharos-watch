@@ -108,15 +108,31 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "usdf-astherus": {
     ...stablecoinRedeemBase,
-    capacityModel: { kind: "supply-ratio", ratio: 0.15 },
+    capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "documented-bound" },
     costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
-    notes: ["Estimated 15% capacity ratio pending protocol-specific liquidity research"],
+    reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
+    docs: [
+      sourceRef("Aster docs", "https://docs.asterdex.com/", ["route", "capacity"]),
+      sourceRef("Aster USDF page", "https://www.asterdex.com/en/usdf", ["route"]),
+    ],
+    notes: [
+      "Tracked metadata describes 1:1 USDT mint and redeem semantics for USDF",
+      "The reviewed 50% bound matches the tracked USDT custody share rather than assuming the strategy-deployed delta-neutral book is instantly withdrawable",
+    ],
   },
   "usr-resolv": {
     ...stablecoinRedeemBase,
-    capacityModel: { kind: "supply-ratio", ratio: 0.15 },
+    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound" },
     costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
-    notes: ["Estimated 15% capacity ratio pending protocol-specific liquidity research"],
+    reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
+    docs: [
+      sourceRef("Resolv docs", "https://docs.resolv.xyz/", ["route", "capacity"]),
+      sourceRef("Resolv Apostro reserves", "https://info.apostro.xyz/resolv-reserves", ["capacity"]),
+    ],
+    notes: [
+      "Resolv docs describe USR as mintable and redeemable 1:1 by users against collateral",
+      "The reviewed 10% bound matches the tracked USD stablecoin buffer rather than assuming the full delta-neutral reserve stack is immediately withdrawable",
+    ],
   },
   "yusd-aegis": {
     ...stablecoinRedeemBase,
@@ -281,7 +297,15 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "msusd-main-street": {
     ...stablecoinRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+    docs: [
+      sourceRef("Main Street docs", "https://mainstreet-finance.gitbook.io/mainstreet.finance/", ["route", "capacity"]),
+      sourceRef("Main Street website", "https://mainstreet.finance/", ["route"]),
+    ],
+    notes: [
+      "Tracked metadata describes direct 1:1 USDC redemption with msUSD held fully against USDC reserves, while yield generation sits in the separate msY staking layer",
+    ],
   },
   "apxusd-apyx": {
     ...stablecoinRedeemBase,

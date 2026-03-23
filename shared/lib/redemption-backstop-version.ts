@@ -1,9 +1,69 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "1.16",
+  currentVersion: "1.20",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "1.20",
+      title: "Issuer and route-review medium-confidence tranche",
+      date: "2026-03-24",
+      effectiveAt: 1774368000,
+      summary:
+        "A final low-effort tranche upgrades the remaining easy issuer-style and route-reviewed assets from heuristic defaults to documented-bound redemption coverage.",
+      impact: [
+        "EURS, GYEN, CADC, the reviewed VNX fiat tokens, TRYB, tGBP, JPYC, AxCNH, IDRT, EUROP, and EURAU now use reviewed documented-bound issuer redemption semantics instead of generic heuristic issuer defaults",
+        "FPI and GYD now use reviewed documented-bound collateral-redemption semantics rather than remaining low-confidence placeholder routes",
+        "This tranche adds medium-confidence coverage without introducing new adapter work or changing the route bar for the harder semantics-blocked assets",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
+      version: "1.19",
+      title: "Semantics correction for non-deterministic HOLLAR exit",
+      date: "2026-03-24",
+      effectiveAt: 1774364400,
+      summary:
+        "A route-semantics review removes one overstated redemption path and explicitly leaves several harder assets outside medium-confidence coverage until a credible holder backstop is established.",
+      impact: [
+        "HOLLAR is no longer modeled as a `psm-swap` redemption route because the Hydration Stability Module only guarantees buying HOLLAR from the facility, while protocol buybacks of HOLLAR remain opportunistic rather than holder-deterministic",
+        "The harder follow-up set led to no new medium-confidence additions for crvUSD, sUSD, MIM, or USDU Finance because current public materials still do not establish a primary redemption rail comparable to the existing modeled route families",
+        "This keeps redemption coverage honest by preferring uncovered or low-coverage states over overstated direct-exit semantics",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
+      version: "1.18",
+      title: "Second medium-confidence redemption cleanup tranche",
+      date: "2026-03-24",
+      effectiveAt: 1774360800,
+      summary:
+        "A second cleanup tranche upgrades the best non-top-100 low-confidence routes where Pharos already had sufficient issuer, reserve, or queue-redemption evidence to stop relying on heuristics.",
+      impact: [
+        "cUSD, cEUR, ALUSD, and AZND now use reviewed eventual or reserve-backed redemption semantics instead of heuristic capacity ratios",
+        "USDA now carries a reviewed issuer-redemption route, while pUSD Plume now uses live reserve metadata with a documented 1:1 USDC fallback instead of a generic low-confidence issuer assumption",
+        "Names whose route semantics are still genuinely unresolved, such as crvUSD, sUSD, MIM, and HOLLAR, remain outside this tranche rather than being promoted on weak evidence",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
+      version: "1.17",
+      title: "Buffer-backed medium-confidence redemption tranche",
+      date: "2026-03-24",
+      effectiveAt: 1774353600,
+      summary:
+        "A follow-up tranche promotes the remaining cleanest heuristic routes by tying their capacity bounds to already-curated stable redemption buffers or direct full-reserve rails.",
+      impact: [
+        "USDD, LISUSD, reUSD, USR, USDF, DUSD, USP, and BUCK now use reviewed documented-bound capacity instead of generic heuristic ratios because Pharos already tracks explicit stable redemption buffers for those routes",
+        "msUSD and fxUSD now carry reviewed direct-redemption semantics rather than unresolved low-confidence defaults, reflecting Main Street's full USDC reserve rail and f(x)'s documented collateral redemption path",
+        "Routes whose reserve stack still lacks a clearly bounded redeemable stable buffer, such as YUSD, USN, and UTY, intentionally remain low-confidence until the evidence improves",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "1.16",
       title: "Moderate-effort redemption confidence tranche",

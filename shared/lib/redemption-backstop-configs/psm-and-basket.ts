@@ -4,7 +4,6 @@ import {
   documentedBoundSupplyFull,
   documentedVariableFee,
   fixedFee,
-  NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
   psmSwapBase,
   sourceRef,
 } from "./shared";
@@ -87,8 +86,16 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "usdd-tron-dao-reserve": {
     ...psmSwapBase,
-    capacityModel: { kind: "supply-ratio", ratio: 0.16 },
+    capacityModel: { kind: "supply-ratio", ratio: 0.16, confidence: "documented-bound" },
     costModel: fixedFee(0, "USDD docs describe 1:1 PSM conversions between USDD and USDT/USDC/TUSD"),
+    reviewedAt: REVIEWED_BASKET_REDEMPTION_AT,
+    docs: [
+      sourceRef("USDD documentation", "https://docs.usdd.io", ["route", "capacity", "fees"]),
+      sourceRef("USDD website", "https://usdd.io/", ["capacity"]),
+    ],
+    notes: [
+      "The reviewed 16% bound matches the tracked USDT PSM reserve share and does not claim the full collateralized USDD system is instantly redeemable through the PSM",
+    ],
   },
   "dola-inverse-finance": {
     ...psmSwapBase,
@@ -109,22 +116,32 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "buck-bucket-protocol": {
     ...psmSwapBase,
-    capacityModel: { kind: "supply-ratio", ratio: 0.25 },
+    capacityModel: { kind: "supply-ratio", ratio: 0.25, confidence: "documented-bound" },
     costModel: fixedFee(30, "Modeled route uses PSM OUT at 30 bps; collateral redemptions use a separate dynamic fee"),
-  },
-  "hollar-hydrated": {
-    ...psmSwapBase,
-    capacityModel: { kind: "supply-ratio", ratio: 0.15 },
-    costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+    reviewedAt: REVIEWED_BASKET_REDEMPTION_AT,
+    docs: [
+      sourceRef("Bucket Protocol docs", "https://docs.bucketprotocol.io/", ["route", "capacity", "fees"]),
+    ],
+    notes: [
+      "The reviewed 25% bound matches the tracked USDC/USDT PSM reserve share rather than assuming the full BUCK supply is instantly redeemable through the stablecoin module",
+    ],
   },
   "lisusd-lista": {
     ...psmSwapBase,
-    capacityModel: { kind: "supply-ratio", ratio: 0.15 },
+    capacityModel: { kind: "supply-ratio", ratio: 0.15, confidence: "documented-bound" },
     costModel: fixedFee(
       200,
       "Lista docs list a 2% fee on lisUSD -> centralized stablecoin conversions and a 500,000 lisUSD daily redemption limit",
     ),
-    notes: ["Docs also publish a 500,000 lisUSD daily redemption limit for PSM exits"],
+    reviewedAt: REVIEWED_BASKET_REDEMPTION_AT,
+    docs: [
+      sourceRef("Lista docs", "https://docs.bsc.lista.org", ["route", "capacity", "fees"]),
+      sourceRef("Lista website", "https://lista.org/", ["route"]),
+    ],
+    notes: [
+      "Docs also publish a 500,000 lisUSD daily redemption limit for PSM exits",
+      "The reviewed 15% bound matches the tracked centralized-stablecoin PSM share rather than assuming the CDP-backed portion is instantly redeemable through the PSM",
+    ],
   },
   "dusd-alto": {
     ...psmSwapBase,

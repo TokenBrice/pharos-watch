@@ -16,9 +16,16 @@ const reviewedQueueRedemptionSupplyFull = documentedBoundSupplyFull(
 export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "alusd-alchemix": {
     ...queueRedeemBase,
+    ...reviewedQueueRedemptionSupplyFull,
     settlementModel: "days",
-    capacityModel: { kind: "supply-ratio", ratio: 0.3 },
     costModel: documentedVariableFee("1:1 via the Transmuter; no separate redemption fee is disclosed"),
+    docs: [
+      sourceRef("Alchemix Transmuter docs", "https://v2-docs.alchemix.fi/alchemix-ecosystem/transmuter", ["route", "capacity", "settlement"]),
+      sourceRef("Alchemix protocol docs", "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemist", ["capacity"]),
+    ],
+    notes: [
+      "Alchemix documents the Transmuter as the 1:1 alUSD redemption rail, with claims settling as underlying collateral is repaid and harvested from yield strategies rather than as an instant stablecoin buffer",
+    ],
   },
   "iusd-infinifi": {
     ...queueRedeemBase,
@@ -106,8 +113,17 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "reusd-re-protocol": {
     ...queueRedeemBase,
-    capacityModel: { kind: "supply-ratio", ratio: 0.2 },
+    capacityModel: { kind: "supply-ratio", ratio: 0.2, confidence: "documented-bound" },
     costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+    reviewedAt: REVIEWED_QUEUE_REDEMPTION_AT,
+    docs: [
+      sourceRef("Re Protocol docs", "https://docs.re.xyz/", ["route", "settlement", "capacity"]),
+      sourceRef("Re Protocol transparency", "https://app.re.xyz/transparency", ["capacity"]),
+    ],
+    notes: [
+      "Tracked metadata describes atomic redemption when instant liquidity is available and queue settlement otherwise",
+      "The reviewed 20% bound matches the tracked USDC instant-redemption buffer rather than assuming the full reUSD reserve stack is immediately withdrawable",
+    ],
   },
   "cgusd-cygnus-finance": {
     ...queueRedeemBase,
@@ -155,15 +171,31 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ...queueRedeemBase,
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
-    capacityModel: { kind: "supply-ratio", ratio: 0.1 },
+    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound" },
     costModel: fixedFee(20, "Piku docs list a 20 bps redemption fee"),
+    reviewedAt: REVIEWED_QUEUE_REDEMPTION_AT,
+    docs: [
+      sourceRef("Piku docs", "https://docs.piku.co/piku", ["route", "capacity", "access", "fees", "settlement"]),
+      sourceRef("Piku website", "https://piku.co/", ["route"]),
+    ],
+    notes: [
+      "Piku materials describe KYC-gated FIFO redemptions with settlement inside roughly 24 hours",
+      "The reviewed 10% bound matches the tracked USDC/USDT cash buffer rather than assuming the full strategy book is immediately redeemable",
+    ],
   },
   "aznd-mu-digital": {
     ...queueRedeemBase,
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
-    capacityModel: { kind: "supply-ratio", ratio: 0.1 },
+    ...reviewedQueueRedemptionSupplyFull,
     costModel: fixedFee(0, "Mu Digital docs describe minting and redemption as fee-free"),
+    docs: [
+      sourceRef("Mu Digital docs", "https://docs.mudigital.net", ["route", "capacity", "access", "fees", "settlement"]),
+      sourceRef("Mu Accountable dashboard", "https://mu.accountable.capital/", ["capacity"]),
+    ],
+    notes: [
+      "Tracked metadata describes KYC-gated weekly AZND redemptions against the full reserve book rather than an always-live stablecoin hot-wallet buffer",
+    ],
   },
   "avusd-avant": {
     ...queueRedeemBase,

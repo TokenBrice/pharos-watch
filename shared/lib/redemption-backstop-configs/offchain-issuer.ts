@@ -298,7 +298,12 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "eurs-stasis": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee("1:1 redemption through STSS (Malta) Limited; public fee schedule not disclosed"),
+    docs: [
+      sourceRef("STASIS transparency", "https://stasis.net/transparency", ["route", "capacity"]),
+      sourceRef("STASIS website", "https://stasis.net/", ["route"]),
+    ],
   },
   "brz-transfero": {
     ...issuerBase,
@@ -321,7 +326,157 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "pusd-plume": {
     ...issuerBase,
+    capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 1 },
     costModel: fixedFee(0, "Zero-fee mint/redeem at 1:1 for USDC per Plume documentation"),
+    reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
+    docs: [
+      sourceRef("Plume pUSD docs", "https://docs.plume.org/plume/tokens/plume-usd", ["route", "capacity", "fees"]),
+      sourceRef("Plume pUSD page", "https://plume.org/pusd", ["route"]),
+    ],
+    notes: [
+      "Fresh live reserve metadata can score against the tracked single-asset USDC BoringVault backing; the 100% fallback reflects the documented 1:1 USDC redemption rail when live metadata is unavailable",
+    ],
+  },
+  "gyen-gyen": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "Direct 1:1 redemption through GMO Trust; public fee schedule not disclosed",
+    ),
+    docs: [
+      sourceRef("GMO Trust stablecoin docs", "https://stablecoin.z.com/what-are-gyen-and-zusd/", ["route", "capacity"]),
+      sourceRef("GMO Trust attestation", "https://stablecoin.z.com/attestation/", ["capacity"]),
+    ],
+  },
+  "cadc-cad-coin": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "Direct 1:1 redemption for CAD through Loon / PayTrie; public fee schedule not disclosed",
+    ),
+    docs: [
+      sourceRef("CADC FAQ", "https://faq.paytrie.com/col/cadc-faqs", ["route", "capacity"]),
+      sourceRef("Loon website", "https://loon.finance/", ["route"]),
+    ],
+  },
+  "veur-vnx": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "Direct 1:1 redemption through VNX Commodities AG for verified users; public fee schedule not disclosed",
+    ),
+    docs: [
+      sourceRef("VNX transparency", "https://vnx.li/transparency/", ["route", "capacity"]),
+      sourceRef("VNX website", "https://vnx.li/", ["route"]),
+    ],
+  },
+  "vchf-vnx": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "Direct 1:1 redemption through VNX Commodities AG for verified users; public fee schedule not disclosed",
+    ),
+    docs: [
+      sourceRef("VNX docs", "https://vnx.gitbook.io/vnx-platform/", ["route", "capacity"]),
+      sourceRef("VNX website", "https://vnx.li/", ["route"]),
+    ],
+  },
+  "vgbp-vnx": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "Direct 1:1 redemption through VNX Commodities AG for verified users; public fee schedule not disclosed",
+    ),
+    docs: [
+      sourceRef("VNX docs", "https://vnx.gitbook.io/vnx-platform/", ["route", "capacity"]),
+      sourceRef("VNX website", "https://vnx.li/", ["route"]),
+    ],
+  },
+  "tryb-bilira": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "Direct 1:1 issuance and redemption through BiLira; public fee schedule not disclosed",
+    ),
+    docs: [
+      sourceRef("BiLira TRYB page", "https://www.bilira.co/en/product/tryb-stablecoin", ["route", "capacity"]),
+    ],
+  },
+  "tgbp-tokenised": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    settlementModel: "days",
+    costModel: documentedVariableFee(
+      "Direct 1:1 redemption through BCP Technologies Ltd; public fee schedule not disclosed",
+    ),
+    docs: [
+      sourceRef("Tokenised GBP website", "https://www.tokenisedgbp.com/", ["route", "capacity", "settlement"]),
+      sourceRef("tGBP audit", "https://www.openzeppelin.com/news/tgbp-audit", ["route"]),
+    ],
+  },
+  "jpyc-jpyc": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "Direct 1:1 redemption through JPYC EX after KYC and bank transfer verification; public fee schedule not disclosed",
+    ),
+    docs: [
+      sourceRef("JPYC website", "https://jpyc.co.jp/", ["route", "capacity"]),
+    ],
+  },
+  "axcnh-anchorx": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "Direct 1:1 issuance and redemption through AnchorX for CNH transfers; public fee schedule not disclosed",
+    ),
+    docs: [
+      sourceRef("AnchorX website", "https://www.anchorx.org/", ["route", "capacity"]),
+    ],
+  },
+  "idrt-rupiah-token": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "Direct 1:1 issuance and redemption through PT Rupiah Token Indonesia after KYC; public fee schedule not disclosed",
+    ),
+    docs: [
+      sourceRef("Rupiah Token website", "https://www.rupiahtoken.com/", ["route", "capacity"]),
+    ],
+  },
+  "europ-schuman": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "Direct 1:1 redemption through Schuman Financial; public fee schedule not disclosed",
+    ),
+    docs: [
+      sourceRef("EUROP white paper", "https://schuman.io/wp-content/uploads/2025/02/EUROP-White-Paper_1.3.pdf", ["route", "capacity"]),
+      sourceRef("Schuman reserve audits", "https://schuman.io/reserve-audits/", ["capacity"]),
+    ],
+  },
+  "eurau-allunity": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "Direct 1:1 redemption through AllUnity; public fee schedule not disclosed",
+    ),
+    docs: [
+      sourceRef("AllUnity whitepaper", "https://allunity.com/whitepaper/", ["route", "capacity"]),
+      sourceRef("AllUnity trust center", "https://allunity.com/trust-center/", ["capacity"]),
+    ],
+  },
+  "usda-anzens": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    settlementModel: "days",
+    costModel: documentedVariableFee(
+      "Tracked issuer materials describe direct 1:1 USDA redemption into USD through KYC-verified banking rails; public fee schedule not disclosed",
+    ),
+    docs: [
+      sourceRef("Anzens website", "https://www.anzens.com/", ["route", "capacity", "settlement"]),
+    ],
+    notes: ["Tracked metadata describes redemption through bank transfers rather than an instant onchain stablecoin withdrawal rail"],
   },
   "pusd-pleasing": {
     ...issuerBase,
@@ -651,11 +806,19 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "dusd-standx": {
     ...issuerBase,
-    capacityModel: { kind: "supply-ratio", ratio: 0.15 },
+    capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound" },
     costModel: documentedVariableFee(
       "Delta-neutral hedging on centralized exchanges; 1:1 USDT/USDC redemption; public fee schedule not disclosed",
     ),
-    notes: ["Estimated 15% capacity ratio pending protocol-specific liquidity research"],
+    reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
+    docs: [
+      sourceRef("StandX docs", "https://docs.standx.com/", ["route", "capacity"]),
+      sourceRef("StandX website", "https://www.standx.com/", ["route"]),
+    ],
+    notes: [
+      "Tracked metadata describes 1:1 USDT and USDC redemption from a delta-neutral strategy wrapper",
+      "The reviewed 5% bound matches the tracked stability-reserve stablecoin fund rather than assuming the full hedged book is instantly withdrawable",
+    ],
   },
   "usat-tether": {
     ...issuerBase,

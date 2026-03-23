@@ -32,6 +32,9 @@ describe("getRedemptionBackstopConfig", () => {
       ["sbc-brale", "offchain-issuer"],
       ["usda-anzens", "offchain-issuer"],
       ["frxusd-frax", "stablecoin-redeem"],
+      ["msusd-main-street", "stablecoin-redeem"],
+      ["usp-pikudao", "queue-redeem"],
+      ["pusd-plume", "offchain-issuer"],
     ] as const;
 
     for (const [id, routeFamily] of expectedRouteFamilies) {
@@ -84,10 +87,188 @@ describe("getRedemptionBackstopConfig", () => {
       costModel: { kind: "fee-bps", feeBps: 0 },
     });
 
+    expect(getRedemptionBackstopConfig("msusd-main-street")).toMatchObject({
+      routeFamily: "stablecoin-redeem",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
     expect(getRedemptionBackstopConfig("eusd-electronic-usd")).toMatchObject({
       routeFamily: "basket-redeem",
       executionModel: "deterministic-basket",
       outputAssetType: "stable-basket",
+    });
+  });
+
+  it("promotes reviewed stable-buffer routes out of the heuristic bucket", () => {
+    expect(getRedemptionBackstopConfig("usdd-tron-dao-reserve")).toMatchObject({
+      routeFamily: "psm-swap",
+      capacityModel: { kind: "supply-ratio", ratio: 0.16, confidence: "documented-bound" },
+      costModel: { kind: "fee-bps", feeBps: 0 },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("lisusd-lista")).toMatchObject({
+      routeFamily: "psm-swap",
+      capacityModel: { kind: "supply-ratio", ratio: 0.15, confidence: "documented-bound" },
+      costModel: { kind: "fee-bps", feeBps: 200 },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("reusd-re-protocol")).toMatchObject({
+      routeFamily: "queue-redeem",
+      capacityModel: { kind: "supply-ratio", ratio: 0.2, confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("usr-resolv")).toMatchObject({
+      routeFamily: "stablecoin-redeem",
+      capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("usdf-astherus")).toMatchObject({
+      routeFamily: "stablecoin-redeem",
+      capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("dusd-standx")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("usp-pikudao")).toMatchObject({
+      routeFamily: "queue-redeem",
+      accessModel: "whitelisted-onchain",
+      settlementModel: "days",
+      capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound" },
+      costModel: { kind: "fee-bps", feeBps: 20 },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("buck-bucket-protocol")).toMatchObject({
+      routeFamily: "psm-swap",
+      capacityModel: { kind: "supply-ratio", ratio: 0.25, confidence: "documented-bound" },
+      costModel: { kind: "fee-bps", feeBps: 30 },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("fxusd-f-x-protocol")).toMatchObject({
+      routeFamily: "collateral-redeem",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "fee-bps", feeBps: 50 },
+      reviewedAt: "2026-03-23",
+    });
+  });
+
+  it("promotes the next non-top-100 tranche to reviewed medium-confidence routes", () => {
+    expect(getRedemptionBackstopConfig("cusd-celo")).toMatchObject({
+      routeFamily: "collateral-redeem",
+      outputAssetType: "mixed-collateral",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("ceur-celo")).toMatchObject({
+      routeFamily: "collateral-redeem",
+      outputAssetType: "mixed-collateral",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("alusd-alchemix")).toMatchObject({
+      routeFamily: "queue-redeem",
+      settlementModel: "days",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("aznd-mu-digital")).toMatchObject({
+      routeFamily: "queue-redeem",
+      accessModel: "whitelisted-onchain",
+      settlementModel: "days",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "fee-bps", feeBps: 0 },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("usda-anzens")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      settlementModel: "days",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("pusd-plume")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 1 },
+      costModel: { kind: "fee-bps", feeBps: 0 },
+      reviewedAt: "2026-03-23",
+    });
+  });
+
+  it("does not model HOLLAR as a deterministic redemption backstop", () => {
+    expect(getRedemptionBackstopConfig("hollar-hydrated")).toBeNull();
+  });
+
+  it("promotes the remaining issuer-style tranche to reviewed documented-bound", () => {
+    const reviewedIssuerIds = [
+      "eurs-stasis",
+      "gyen-gyen",
+      "cadc-cad-coin",
+      "veur-vnx",
+      "vchf-vnx",
+      "vgbp-vnx",
+      "tryb-bilira",
+      "tgbp-tokenised",
+      "jpyc-jpyc",
+      "axcnh-anchorx",
+      "idrt-rupiah-token",
+      "europ-schuman",
+      "eurau-allunity",
+    ] as const;
+
+    for (const id of reviewedIssuerIds) {
+      const config = getRedemptionBackstopConfig(id);
+      expect(config).toMatchObject({
+        routeFamily: "offchain-issuer",
+        capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+        reviewedAt: "2026-03-23",
+      });
+      expect(config?.docs?.length).toBeGreaterThan(0);
+    }
+
+    expect(getRedemptionBackstopConfig("tgbp-tokenised")).toMatchObject({
+      settlementModel: "days",
+    });
+  });
+
+  it("promotes FPI and GYD to reviewed collateral-redemption routes", () => {
+    expect(getRedemptionBackstopConfig("fpi-frax")).toMatchObject({
+      routeFamily: "collateral-redeem",
+      outputAssetType: "mixed-collateral",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("gyd-gyroscope")).toMatchObject({
+      routeFamily: "collateral-redeem",
+      outputAssetType: "mixed-collateral",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
     });
   });
 
