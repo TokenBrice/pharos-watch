@@ -1,39 +1,174 @@
 "use client";
 
+import { useMemo, useState } from "react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { GradeBadge } from "@/components/grade-badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { useSafetyScoreHistory } from "@/hooks/api-hooks";
-import type { SafetyScoreHistoryPoint } from "@shared/types";
-import { formatChartDate } from "@shared/lib/format";
+import {
+  formatChartDate,
+  formatDuration,
+  formatTrackingSpanDays,
+} from "@shared/lib/format";
+import {
+  GRADE_RADAR_COLORS,
+  GRADE_THRESHOLDS,
+  gradeRange,
+} from "@shared/lib/report-cards";
+import type { ReportCardGrade, SafetyScoreHistoryPoint } from "@shared/types";
 
-export function describeSafetyScoreTransition(point: SafetyScoreHistoryPoint): string {
-  if (point.prevGrade == null) {
-    return "Initial grade";
-  }
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const VISIBLE_CAP = 3;
+const NOW_SEC = Math.floor(Date.now() / 1000);
+
+/** Rank a grade by position in GRADE_THRESHOLDS (0 = A+ = best). NR = worst. */
+function gradeRank(grade: ReportCardGrade): number {
+  if (grade === "NR") return Infinity;
+  const idx = GRADE_THRESHOLDS.findIndex((t) => t.grade === grade);
+  return idx >= 0 ? idx : Infinity;
+}
+
+/** Kept exported for backward-compatible test coverage. */
+export function describeSafetyScoreTransition(
+  point: SafetyScoreHistoryPoint,
+): string {
+  if (point.prevGrade == null) return "Initial grade";
   return `${point.prevGrade} -> ${point.grade}`;
 }
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+function StatBox({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-border/60 bg-background/45 px-3.5 py-3">
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+function TransitionIndicator({ point }: { point: SafetyScoreHistoryPoint }) {
+  if (point.prevGrade == null) {
+    return <p className="mt-1 text-sm text-muted-foreground">Initial grade</p>;
+  }
+
+  const prev = gradeRank(point.prevGrade);
+  const curr = gradeRank(point.grade);
+
+  if (curr < prev) {
+    return (
+      <p className="mt-1 flex items-center gap-1 text-sm text-green-700 dark:text-green-400">
+        <ArrowUp className="h-3.5 w-3.5" />
+        Upgraded from {point.prevGrade}
+      </p>
+    );
+  }
+
+  if (curr > prev) {
+    return (
+      <p className="mt-1 flex items-center gap-1 text-sm text-red-700 dark:text-red-400">
+        <ArrowDown className="h-3.5 w-3.5" />
+        Downgraded from {point.prevGrade}
+      </p>
+    );
+  }
+
+  return (
+    <p className="mt-1 text-sm text-muted-foreground">
+      {point.prevGrade} to {point.grade}
+    </p>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
 
 interface SafetyScoreHistorySectionProps {
   stablecoinId: string;
 }
 
-export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySectionProps) {
+export function SafetyScoreHistorySection({
+  stablecoinId,
+}: SafetyScoreHistorySectionProps) {
   const { data, isLoading, error } = useSafetyScoreHistory(stablecoinId, 3650);
+  const [expanded, setExpanded] = useState(false);
 
-  if (isLoading) {
-    return null;
-  }
+  // --- derived data --------------------------------------------------------
 
-  if (error) {
-    return <QueryErrorNotice error={error} />;
-  }
+  const history = useMemo(() => data ?? [], [data]);
 
-  const history = data ?? [];
-  if (history.length === 0) {
-    return null;
-  }
+  const stats = useMemo(() => {
+    if (history.length === 0) return null;
+
+    const graded = history.filter((p) => p.grade !== "NR");
+    const pool = graded.length > 0 ? graded : history;
+
+    let best = pool[0];
+    let worst = pool[0];
+    for (const p of pool) {
+      if (gradeRank(p.grade) < gradeRank(best.grade)) best = p;
+      if (gradeRank(p.grade) > gradeRank(worst.grade)) worst = p;
+    }
+
+    const lastEntry = history[history.length - 1];
+    const streakDays = Math.max(0, Math.floor((NOW_SEC - lastEntry.date) / 86400));
+
+    return { best, worst, lastEntry, streakDays };
+  }, [history]);
+
+  const segments = useMemo(() => {
+    if (history.length === 0) return [];
+    const totalSpan = NOW_SEC - history[0].date;
+    if (totalSpan <= 0) return [];
+
+    return history.map((entry, i) => {
+      const start = entry.date;
+      const end = i < history.length - 1 ? history[i + 1].date : NOW_SEC;
+      const duration = end - start;
+      const pct = (duration / totalSpan) * 100;
+      const range = gradeRange(entry.grade);
+      const color =
+        GRADE_RADAR_COLORS[range] ?? GRADE_RADAR_COLORS.NR ?? "#71717a";
+      return { grade: entry.grade, start, end, duration, pct, color, isLast: i === history.length - 1 };
+    });
+  }, [history]);
+
+  const reversed = useMemo(() => [...history].reverse(), [history]);
+  const visibleEntries = expanded
+    ? reversed
+    : reversed.slice(0, VISIBLE_CAP);
+  const hiddenCount = reversed.length - VISIBLE_CAP;
+
+  // --- early returns -------------------------------------------------------
+
+  if (isLoading) return null;
+  if (error) return <QueryErrorNotice error={error} />;
+  if (history.length === 0) return null;
+
+  // --- render --------------------------------------------------------------
 
   return (
     <Card className="rounded-xl">
@@ -43,20 +178,98 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ol className="space-y-3">
-          {history.map((point) => (
+        {/* Summary stats strip */}
+        {stats && (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <StatBox label="Best Grade">
+              <GradeBadge grade={stats.best.grade} score={stats.best.score} />
+            </StatBox>
+            <StatBox label="Lowest Grade">
+              <GradeBadge grade={stats.worst.grade} score={stats.worst.score} />
+            </StatBox>
+            <StatBox label="Current Streak">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-semibold tabular-nums">
+                  {formatTrackingSpanDays(stats.streakDays)}
+                </span>
+                <span className="text-sm text-muted-foreground">at</span>
+                <GradeBadge
+                  grade={stats.lastEntry.grade}
+                  score={stats.lastEntry.score}
+                />
+              </div>
+            </StatBox>
+          </div>
+        )}
+
+        {/* Mini grade timeline bar */}
+        {segments.length > 0 && (
+          <TooltipProvider>
+            <div className="mt-4 flex h-2 overflow-hidden rounded-full bg-muted">
+              {segments.map((seg, i) => (
+                <Tooltip key={i}>
+                  <TooltipTrigger asChild>
+                    <div
+                      className="h-full first:rounded-l-full last:rounded-r-full"
+                      style={{
+                        width: `${seg.pct}%`,
+                        backgroundColor: seg.color,
+                        minWidth: "2px",
+                      }}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent className="text-xs">
+                    <p className="font-semibold">{seg.grade}</p>
+                    <p>
+                      {formatChartDate(seg.start * 1000, "long")}
+                      {" — "}
+                      {seg.isLast
+                        ? "Now"
+                        : formatChartDate(seg.end * 1000, "long")}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {formatDuration(seg.start, seg.end)}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          </TooltipProvider>
+        )}
+
+        {/* Transition list */}
+        <ol className="mt-4 space-y-3">
+          {visibleEntries.map((point) => (
             <li
               key={`${point.date}-${point.grade}`}
               className="rounded-lg border px-3 py-3"
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium">{formatChartDate(point.date * 1000, "long")}</span>
+                <span className="text-sm font-medium">
+                  {formatChartDate(point.date * 1000, "long")}
+                </span>
                 <GradeBadge grade={point.grade} score={point.score} />
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">{describeSafetyScoreTransition(point)}</p>
+              <TransitionIndicator point={point} />
             </li>
           ))}
         </ol>
+
+        {/* Show more / show less */}
+        {hiddenCount > 0 && (
+          <div className="pt-2 text-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setExpanded((v) => !v)}
+              className="text-xs"
+            >
+              {expanded
+                ? "Show less"
+                : `Show ${hiddenCount} more`}
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
