@@ -8,7 +8,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import type { ReportCard, ReportCardGrade } from "@shared/types";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { ReportCardRadar } from "./radar-chart";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -34,7 +34,7 @@ interface ReportCardMiniProps {
 
 function TrendIndicator({ trend, score }: { trend?: "up" | "down" | "stable" | null; score?: number | null }) {
   if (!trend || trend === "stable") {
-    return <Minus className="h-3 w-3 text-muted-foreground/50" />;
+    return null;
   }
 
   const isPositive = trend === "up";
