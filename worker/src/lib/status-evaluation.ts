@@ -3,8 +3,6 @@ import {
   STATUS_BLACKLIST_THRESHOLDS,
   STATUS_CACHE_RATIO_THRESHOLDS,
   STATUS_MISSING_PRICE_THRESHOLDS,
-  STATUS_ONCHAIN_THRESHOLDS,
-  hasRepresentativeOnchainRatioSample,
 } from "@shared/lib/status-thresholds";
 import type {
   CronInFlight,
@@ -28,6 +26,7 @@ import {
   reconcileStatusState,
   type StatusLevel,
 } from "./status-reliability";
+import { assessOnchainDataQuality } from "./status/onchain-data-quality";
 
 const STATUS_SEVERITY: Record<StatusLevel, number> = {
   healthy: 0,
@@ -403,11 +402,14 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
   const blacklistRecentMissing = dataQuality.blacklistRecentMissingAmounts;
   const hasActiveOnchainMonitor = dataQuality.onchainSupplyMonitoring === "active";
   const trackedOnchainCoins = hasActiveOnchainMonitor ? dataQuality.onchainSupplyTrackedCoins : 0;
-  const staleOnchainSupply = hasActiveOnchainMonitor ? dataQuality.staleOnchainSupply : 0;
-  const onchainSupplyDivergences = hasActiveOnchainMonitor ? dataQuality.onchainSupplyDivergences : 0;
-  const staleOnchainRatio = trackedOnchainCoins > 0 ? staleOnchainSupply / trackedOnchainCoins : 0;
-  const onchainDivergenceRatio = trackedOnchainCoins > 0 ? onchainSupplyDivergences / trackedOnchainCoins : 0;
-  const onchainRatioRepresentative = hasRepresentativeOnchainRatioSample(trackedOnchainCoins);
+  const onchainAssessment = assessOnchainDataQuality({
+    monitoring: dataQuality.onchainSupplyMonitoring,
+    trackedCoins: trackedOnchainCoins,
+    staleSupply: hasActiveOnchainMonitor ? dataQuality.staleOnchainSupply : 0,
+    staleRatio: hasActiveOnchainMonitor ? dataQuality.onchainStaleRatio : 0,
+    divergences: hasActiveOnchainMonitor ? dataQuality.onchainSupplyDivergences : 0,
+    divergenceRatio: hasActiveOnchainMonitor ? dataQuality.onchainDivergenceRatio : 0,
+  });
   const reserveIssueCount = reserveComposition.missingCoins
     + reserveComposition.staleCoins
     + reserveComposition.degradedCoins
@@ -435,10 +437,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioStale ||
     blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale ||
     blacklistRecentMissing >= STATUS_BLACKLIST_THRESHOLDS.missingRecentStale ||
-    staleOnchainSupply >= STATUS_ONCHAIN_THRESHOLDS.staleAbsoluteStale ||
-    onchainSupplyDivergences >= STATUS_ONCHAIN_THRESHOLDS.divergenceAbsoluteStale ||
-    (onchainRatioRepresentative && staleOnchainRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale) ||
-    (onchainRatioRepresentative && onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale) ||
+    onchainAssessment.status === "stale" ||
     reserveCompositionCritical
       ? "stale"
       : dataQuality.stablecoinsCacheStatus === "degraded" ||
@@ -446,8 +445,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
           missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded ||
           blacklistRecentMissing > 0 ||
           blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded ||
-          (onchainRatioRepresentative && staleOnchainRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded) ||
-          (onchainRatioRepresentative && onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded) ||
+          onchainAssessment.status === "degraded" ||
           reserveCompositionWarning ||
           reserveCompositionQueryFailed
         ? "degraded"
@@ -685,62 +683,8 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
       threshold: STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded,
     });
   }
-  if (hasActiveOnchainMonitor) {
-    if (
-      onchainRatioRepresentative &&
-      staleOnchainRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale ||
-      onchainRatioRepresentative &&
-      onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale
-    ) {
-      pushCause(dataQualityCauses, {
-        code: "onchain_integrity_stale",
-        layer: "data-quality",
-        severity: "critical",
-        message: `On-chain integrity stale (stale=${formatRatio(staleOnchainRatio)}, divergence=${formatRatio(onchainDivergenceRatio)}).`,
-        metric: "onchainStaleRatio",
-        value: staleOnchainRatio,
-        threshold: STATUS_ONCHAIN_THRESHOLDS.ratioStale,
-      });
-    } else if (
-      onchainRatioRepresentative &&
-      staleOnchainRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded ||
-      onchainRatioRepresentative &&
-      onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded
-    ) {
-      pushCause(dataQualityCauses, {
-        code: "onchain_integrity_degraded",
-        layer: "data-quality",
-        severity: "warning",
-        message: `On-chain integrity degraded (stale=${formatRatio(staleOnchainRatio)}, divergence=${formatRatio(onchainDivergenceRatio)}).`,
-        metric: "onchainStaleRatio",
-        value: staleOnchainRatio,
-        threshold: STATUS_ONCHAIN_THRESHOLDS.ratioDegraded,
-      });
-    } else if (
-      !onchainRatioRepresentative &&
-      trackedOnchainCoins > 0 &&
-      (staleOnchainSupply > 0 || onchainSupplyDivergences > 0)
-    ) {
-      pushCause(dataQualityCauses, {
-        code: "onchain_monitor_low_sample",
-        layer: "data-quality",
-        severity: "info",
-        message:
-          `On-chain monitor has only ${trackedOnchainCoins} recently refreshed coin(s); ratio-based stale/degraded thresholds stay inactive until ` +
-          `${STATUS_ONCHAIN_THRESHOLDS.ratioMinTrackedCoins} coins are live.`,
-        metric: "onchainSupplyTrackedCoins",
-        value: trackedOnchainCoins,
-        threshold: STATUS_ONCHAIN_THRESHOLDS.ratioMinTrackedCoins,
-      });
-    }
-  }
-  if (!hasActiveOnchainMonitor && dataQuality.onchainSupplyMonitoring === "unavailable") {
-    pushCause(dataQualityCauses, {
-      code: "onchain_monitor_unavailable",
-      layer: "data-quality",
-      severity: "info",
-      message: "On-chain supply monitor has no active producer. On-chain integrity checks are skipped.",
-    });
+  for (const cause of onchainAssessment.causes) {
+    pushCause(dataQualityCauses, cause);
   }
   if (reserveCompositionCritical) {
     pushCause(dataQualityCauses, {
