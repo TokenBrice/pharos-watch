@@ -1,6 +1,7 @@
 import type { RedemptionBackstopConfig } from "./shared";
 import {
   basketRedeemBase,
+  documentedBoundSupplyFull,
   documentedVariableFee,
   fixedFee,
   NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
@@ -8,19 +9,42 @@ import {
   sourceRef,
 } from "./shared";
 
+const REVIEWED_BASKET_REDEMPTION_AT = "2026-03-23";
+const reviewedBasketRedemptionSupplyFull = documentedBoundSupplyFull(
+  REVIEWED_BASKET_REDEMPTION_AT,
+);
+
 export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "cusd-cap": {
     ...basketRedeemBase,
+    ...reviewedBasketRedemptionSupplyFull,
     costModel: documentedVariableFee("Fixed redemption fee, but public docs do not publish the current rate"),
+    docs: [
+      sourceRef("Cap introduction", "https://docs.cap.app/", ["route", "capacity"]),
+      sourceRef(
+        "Cap cUSD mechanics",
+        "https://docs.cap.app/protocol-overview/cusd-mechanics",
+        ["route", "capacity"],
+      ),
+      sourceRef("Cap vault", "https://docs.cap.app/concepts/vault", ["route", "capacity", "fees"]),
+      sourceRef("Cap risks", "https://docs.cap.app/risks", ["capacity", "settlement"]),
+    ],
+    notes: [
+      "Cap docs describe cUSD as always redeemable against the underlying reserve basket, with dynamic interest rates preventing full utilization so withdrawals remain atomic",
+    ],
   },
   "honey-berachain": {
     ...basketRedeemBase,
+    ...reviewedBasketRedemptionSupplyFull,
     costModel: documentedVariableFee(
       "Normal redemptions are asset-specific: 0 bps for USDT/byUSD and 5 bps for USDC/USDe; stress Basket Mode returns a proportional collateral basket instead",
     ),
-    reviewedAt: "2026-03-22",
     docs: [
-      sourceRef("Berachain Honey docs", "https://docs.berachain.com/general/tokens/honey", ["route", "fees"]),
+      sourceRef(
+        "Berachain Honey docs",
+        "https://docs.berachain.com/general/tokens/honey",
+        ["route", "capacity", "fees"],
+      ),
     ],
     notes: [
       "Modeled against Basket Mode because the stress-state redemption path turns exits into proportional basket withdrawals when collateral becomes unstable",
@@ -99,9 +123,23 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "eusd-electronic-usd": {
     ...basketRedeemBase,
+    ...reviewedBasketRedemptionSupplyFull,
     costModel: documentedVariableFee(
       "Reserve Index docs describe mint and TVL fees, but do not document a separate redemption fee",
     ),
+    docs: [
+      sourceRef(
+        "Reserve Index minting & redeeming",
+        "https://docs.reserve.org/reserve-index/mint-redeem",
+        ["route", "capacity", "access"],
+      ),
+      sourceRef("Reserve Index fees", "https://docs.reserve.org/reserve-index/fees", ["fees"]),
+      sourceRef(
+        "Reserve Electronic USD overview",
+        "https://app.reserve.org/ethereum/token/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f/overview",
+        ["capacity"],
+      ),
+    ],
     notes: [
       "Redemption requires receiving the underlying basket composition rather than selecting a single stablecoin output",
     ],

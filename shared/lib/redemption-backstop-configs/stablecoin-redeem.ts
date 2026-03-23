@@ -23,7 +23,25 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "ousd-origin-protocol": {
     ...stablecoinRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(25, "Origin docs list a 0.25% exit fee on OUSD redemptions"),
+    docs: [
+      sourceRef(
+        "Origin Dollar (OUSD)",
+        "https://docs.originprotocol.com/yield-bearing-tokens/origin-dollar-ousd",
+        ["route", "capacity"],
+      ),
+      sourceRef(
+        "Origin March 2023 token holder update",
+        "https://www.originprotocol.com/blog/march-2023-token-holder-update?lang=en",
+        ["route", "fees"],
+      ),
+      sourceRef(
+        "Origin pricing and peg management",
+        "https://docs.originprotocol.com/security-and-risk/price-oracles",
+        ["route", "capacity"],
+      ),
+    ],
     notes: ["Origin docs still describe pro-rata basket redemption semantics; current OUSD collateral is USDC only"],
   },
   "ousg-ondo-finance": {
@@ -114,7 +132,27 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "aid-gaib": {
     ...stablecoinRedeemBase,
-    costModel: documentedVariableFee("1:1 mint and burn against accepted stablecoins; no separate fee disclosed"),
+    ...reviewedDirectRedemptionSupplyFull,
+    accessModel: "whitelisted-onchain",
+    costModel: fixedFee(
+      10,
+      "GAIB docs currently show a 10 bps sell fee in the dApp, while direct AID minting and redemption are reserved for whitelisted users and partners",
+    ),
+    docs: [
+      sourceRef(
+        "GAIB AI Dollar (AID)",
+        "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid",
+        ["route", "capacity", "access", "fees"],
+      ),
+      sourceRef(
+        "GAIB economy",
+        "https://docs.gaib.ai/gaib-overview/gaib-economy",
+        ["route", "capacity"],
+      ),
+    ],
+    notes: [
+      "Regular users typically exit AID through the GAIB app or DEX liquidity, while the modeled primary redemption rail is the whitelisted direct burn-and-withdraw contract path",
+    ],
   },
   "u-united-stables": {
     ...stablecoinRedeemBase,

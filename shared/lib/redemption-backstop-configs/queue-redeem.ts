@@ -111,9 +111,29 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "cgusd-cygnus-finance": {
     ...queueRedeemBase,
+    ...reviewedQueueRedemptionSupplyFull,
     settlementModel: "days",
-    capacityModel: { kind: "supply-ratio", ratio: 0.15 },
-    costModel: documentedVariableFee("Docs describe 1:1 redemption if fees are excluded; current fee is not disclosed"),
+    costModel: fixedFee(35, "Cygnus docs list a 35 bps withdrawal fee on cgUSD / wcgUSD -> USDC withdrawals"),
+    docs: [
+      sourceRef(
+        "Cygnus cgUSD redemption",
+        "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/protocol-mechanics/redemption",
+        ["route", "settlement", "capacity"],
+      ),
+      sourceRef(
+        "Cygnus cgUSD withdrawals FAQ",
+        "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/faq/withdrawals",
+        ["route", "settlement", "fees", "capacity"],
+      ),
+      sourceRef(
+        "Cygnus cgUSD mechanics",
+        "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/token-and-contract/cgusd/how-it-works",
+        ["capacity"],
+      ),
+    ],
+    notes: [
+      "Cygnus docs describe a request-and-claim withdrawal queue represented by NFTs, with normal completion in 5-7 days and no published min/max withdrawal size",
+    ],
   },
   "uty-xsy": {
     ...queueRedeemBase,
@@ -137,16 +157,47 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "avusd-avant": {
     ...queueRedeemBase,
+    ...reviewedQueueRedemptionSupplyFull,
     settlementModel: "days",
-    capacityModel: { kind: "supply-ratio", ratio: 0.1 },
     costModel: documentedVariableFee("Avant docs say the redemption fee is shown in-app before confirmation"),
+    docs: [
+      sourceRef(
+        "Avant redeeming avAssets",
+        "https://docs.avantprotocol.com/overview/using-the-avant-protocol/redeeming-avassets",
+        ["route", "settlement", "fees", "capacity"],
+      ),
+      sourceRef(
+        "Avant core tokens",
+        "https://docs.avantprotocol.com/overview/core-tokens",
+        ["route", "capacity"],
+      ),
+    ],
+    notes: [
+      "Avant docs describe redeeming avUSD back into USDC through an onchain request flow that usually completes within hours but can take up to 7 days depending on liquidity",
+    ],
   },
   "usdu-unitas": {
     ...queueRedeemBase,
-    accessModel: "issuer-api",
+    ...reviewedQueueRedemptionSupplyFull,
+    accessModel: "whitelisted-onchain",
     settlementModel: "same-day",
-    capacityModel: { kind: "supply-ratio", ratio: 0.05 },
     costModel: fixedFee(0, "Unitas docs list a 0% redemption fee"),
+    docs: [
+      sourceRef(
+        "Unitas minting USDu",
+        "https://docs.unitas.so/solution-design/minting-usdu",
+        ["route", "capacity", "access"],
+      ),
+      sourceRef("Unitas overview", "https://docs.unitas.so/", ["route", "fees"]),
+      sourceRef(
+        "Unitas off-exchange settlement",
+        "https://docs.unitas.so/off-exchange-settlement",
+        ["settlement"],
+      ),
+    ],
+    notes: [
+      "Direct USDu minting and redemption are restricted to whitelisted participants, while docs describe on-demand redemption flows supported by Unitas's OES settlement rails",
+    ],
   },
   "yzusd-yuzu": {
     ...queueRedeemBase,

@@ -381,4 +381,89 @@ describe("getRedemptionBackstopConfig", () => {
       expect(getRedemptionBackstopConfig(id)?.notes?.some((note) => note.includes("FIFO"))).toBe(true);
     }
   });
+
+  it("marks the requested quick-win tranche as reviewed documented-bound", () => {
+    expect(getRedemptionBackstopConfig("avusd-avant")).toMatchObject({
+      routeFamily: "queue-redeem",
+      settlementModel: "days",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("cusd-cap")).toMatchObject({
+      routeFamily: "basket-redeem",
+      executionModel: "deterministic-basket",
+      outputAssetType: "stable-basket",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("usdu-unitas")).toMatchObject({
+      routeFamily: "queue-redeem",
+      accessModel: "whitelisted-onchain",
+      settlementModel: "same-day",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "fee-bps", feeBps: 0 },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("cgusd-cygnus-finance")).toMatchObject({
+      routeFamily: "queue-redeem",
+      settlementModel: "days",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "fee-bps", feeBps: 35 },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("honey-berachain")).toMatchObject({
+      routeFamily: "basket-redeem",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("eusd-electronic-usd")).toMatchObject({
+      routeFamily: "basket-redeem",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("aid-gaib")).toMatchObject({
+      routeFamily: "stablecoin-redeem",
+      accessModel: "whitelisted-onchain",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "fee-bps", feeBps: 10 },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("ousd-origin-protocol")).toMatchObject({
+      routeFamily: "stablecoin-redeem",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "fee-bps", feeBps: 25 },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("usbd-bima")).toMatchObject({
+      routeFamily: "collateral-redeem",
+      outputAssetType: "mixed-collateral",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear", confidence: "formula" },
+      reviewedAt: "2026-03-23",
+    });
+
+    for (const id of [
+      "avusd-avant",
+      "cusd-cap",
+      "usdu-unitas",
+      "cgusd-cygnus-finance",
+      "honey-berachain",
+      "eusd-electronic-usd",
+      "aid-gaib",
+      "ousd-origin-protocol",
+      "usbd-bima",
+    ] as const) {
+      expect(getRedemptionBackstopConfig(id)?.docs?.length).toBeGreaterThan(0);
+    }
+  });
 });

@@ -1,6 +1,6 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.12 (2026-02-25 → 2026-03-23).
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.13 (2026-02-25 → 2026-03-23).
 
 ---
 
@@ -384,6 +384,16 @@ Safety Score structure is unchanged, but the liquidity dimension now recognizes 
 
 Weights and grade thresholds are unchanged from v6.10.
 
+## v6.13 - Docs-backed redemption quick-win tranche (2026-03-23)
+
+Safety Score structure is unchanged, but the liquidity dimension now recognizes a higher-impact docs-only batch among already-modeled low-confidence redemption routes:
+
+- avUSD, cUSD, USDu, cgUSD, HONEY, EUSD, AID, OUSD, and USBD now use reviewed `documented-bound` redemption capacity instead of staying low-confidence under heuristic supply models
+- USDu and AID now reflect whitelist-gated direct redemption access, while cgUSD and AID also disclose reviewed fee assumptions from official docs instead of generic unknown-fee handling
+- These routes still do not expose separate live instant-buffer telemetry, but they now contribute medium-confidence redemption evidence rather than remaining visible-only heuristics
+
+Weights and grade thresholds are unchanged from v6.12.
+
 ## v6.12 - Maple queue-route correction (2026-03-23)
 
 Safety Score structure is unchanged, but the liquidity dimension now treats Maple's syrup withdrawal rail as a reviewed queued exit instead of an overstated instant-buffer assumption:
@@ -437,7 +447,7 @@ Weights and grade thresholds are unchanged from v6.1.
 | v4.0       | multiplier | 25%       | —       | 25%        | 10%              | 30%      |
 | v4.1       | multiplier | 30%       | —       | 20%        | 15%              | 25%      |
 | v5.0–5.8 | multiplier | 30% | — | 20%  | 15%          | 25%  |
-| **v6.0–6.12** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
+| **v6.0–6.13** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
 
 ## Quick Reference: Grade Thresholds
 

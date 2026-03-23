@@ -123,11 +123,20 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "usbd-bima": {
     ...collateralRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
     outputAssetType: "mixed-collateral",
     costModel: documentedVariableFee(
       "Redemption fee = coreRate + 75 bps; coreRate rises with redeemed supply and decays with a 24-hour half-life",
       "formula",
     ),
+    docs: [
+      sourceRef("BIMA redeeming USBD", "https://docs.bima.money/redeeming-usbd", ["route", "capacity", "fees"]),
+      sourceRef(
+        "BIMA risk management + liquidations",
+        "https://docs.bima.money/risk-management-+-liquidations",
+        ["capacity"],
+      ),
+    ],
     notes: [
       "Docs also describe a PSM against USDC, USDP, and GUSD, but the primary modeled exit is direct redemption into BTC-derivative vault collateral",
     ],

@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "1.14",
+  currentVersion: "1.15",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "1.15",
+      title: "Reviewed docs-backed quick-win redemption tranche",
+      date: "2026-03-23",
+      effectiveAt: 1774306800,
+      summary:
+        "A docs-backed quick-win tranche upgrades nine existing low-confidence redemption routes where the remaining blocker was heuristic capacity or stale access and fee assumptions rather than missing telemetry.",
+      impact: [
+        "avUSD, cUSD, USDu, cgUSD, HONEY, EUSD, AID, OUSD, and USBD now use reviewed documented-bound redemption capacity instead of staying low-confidence under heuristic supply models",
+        "USDu and AID now reflect whitelist-gated direct redemption access, while cgUSD and AID also disclose reviewed live fee assumptions from official docs",
+        "These routes still do not claim a separately measured live instant buffer, but they now contribute medium-confidence redemption evidence across roughly half a billion dollars of additional tracked market cap",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "1.14",
       title: "Maple syrup withdrawal route correction",
