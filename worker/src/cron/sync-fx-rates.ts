@@ -8,14 +8,12 @@ import { fetchChainlinkReferenceQuoteSnapshot } from "../lib/chainlink-feeds";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import type { FxRateSourceMode, FxRateSyncMode, FxSourceCadence } from "../lib/fx-rate-state";
 import { getFxSourceStatus, loadFxRateState, persistFxRateState } from "../lib/fx-rate-state";
-import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { loadCommodityPeerMedianReference, resolveMetalReferenceRates } from "../lib/fx-metals";
 import {
   applyRealtimeOverlaySourceMetadata,
   canCarryForwardFxRates,
   inheritFxSourceMetadata,
 } from "../lib/fx-source-metadata";
-import { derivePegRates } from "@shared/lib/peg-rates";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { z } from "zod";
 
 /**
@@ -139,26 +137,6 @@ const ExchangeRateApiResponseSchema = z.object({
 });
 
 type ExchangeRateApiPayload = z.infer<typeof ExchangeRateApiResponseSchema>;
-
-const MetalPriceSchema = z.object({
-  price: z.number(),
-});
-
-function deriveCommodityPeerMedianRates(
-  peggedAssets: Parameters<typeof derivePegRates>[0],
-): Partial<Record<"peggedGOLD" | "peggedSILVER", number>> {
-  const { rates } = derivePegRates(peggedAssets, TRACKED_META_BY_ID);
-  const commodityRates: Partial<Record<"peggedGOLD" | "peggedSILVER", number>> = {};
-
-  for (const pegKey of ["peggedGOLD", "peggedSILVER"] as const) {
-    const rate = rates[pegKey];
-    if (typeof rate === "number" && Number.isFinite(rate) && rate > 0) {
-      commodityRates[pegKey] = Number(rate.toFixed(6));
-    }
-  }
-
-  return commodityRates;
-}
 
 function resolveDatedSourceUpdatedAt(
   dateText: string | null | undefined,
@@ -294,21 +272,7 @@ export async function syncFxRates(
   try {
     const prevState = await loadFxRateState(db);
     const prevRates = prevState?.rates ?? {};
-    const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient" });
-    const usableStablecoinsCache = hasUsableStablecoinsPayload(stablecoinsCacheResult)
-      ? stablecoinsCacheResult
-      : null;
-    const commodityPeerMedianRates = usableStablecoinsCache
-      ? deriveCommodityPeerMedianRates(usableStablecoinsCache.payload.peggedAssets)
-      : {};
-    const stablecoinsPeerMedianUpdatedAt =
-      usableStablecoinsCache && typeof usableStablecoinsCache.updatedAt === "number"
-        ? usableStablecoinsCache.updatedAt
-        : null;
-    const commodityPeerMedianUpdatedAt =
-      stablecoinsPeerMedianUpdatedAt != null && stablecoinsPeerMedianUpdatedAt > 0
-        ? Math.min(syncStartSec, stablecoinsPeerMedianUpdatedAt)
-        : null;
+    const commodityPeerMedian = await loadCommodityPeerMedianReference(db, syncStartSec);
     const sourceUpdatedAtByPeg: Record<string, number | null> = {};
     const sourceModeByPeg: Record<string, FxRateSourceMode> = {};
     const sourceCadenceByPeg: Record<string, FxSourceCadence> = {};
@@ -702,95 +666,25 @@ export async function syncFxRates(
       console.log(`[sync-fx-rates] Using cached CNH rate: ${usableRates["peggedCNH"]}`);
     }
 
-    const applyCommodityPeerMedian = (pegKey: "peggedGOLD" | "peggedSILVER"): boolean => {
-      const peerMedianRate = commodityPeerMedianRates[pegKey];
-      if (typeof peerMedianRate !== "number" || peerMedianRate <= 0) {
-        return false;
-      }
-      if (!isValidRate(pegKey, peerMedianRate, prevRates[pegKey])) {
-        return false;
-      }
-      usableRates[pegKey] = peerMedianRate;
-      markLive(pegKey, commodityPeerMedianUpdatedAt ?? syncStartSec);
-      return true;
-    };
-    let goldApiApplied = 0;
-    let commodityPeerMedianApplied = 0;
-    try {
-      const [goldRes, silverRes] = await Promise.all([
-        fetchWithRetry("https://api.gold-api.com/price/XAU", { headers: { "User-Agent": USER_AGENT }, signal }),
-        fetchWithRetry("https://api.gold-api.com/price/XAG", { headers: { "User-Agent": USER_AGENT }, signal }),
-      ]);
-      const goldPayload = goldRes?.ok ? await goldRes.json() : null;
-      const silverPayload = silverRes?.ok ? await silverRes.json() : null;
-      const goldValidation = goldPayload == null
-        ? { ok: false as const, issues: "missing gold payload" }
-        : validatePayloadWithSchema(MetalPriceSchema, goldPayload, "sync-fx-rates:gold");
-      const silverValidation = silverPayload == null
-        ? { ok: false as const, issues: "missing silver payload" }
-        : validatePayloadWithSchema(MetalPriceSchema, silverPayload, "sync-fx-rates:silver");
-      if (!goldValidation.ok) {
-        console.warn(`[sync-fx-rates] Gold payload invalid: ${goldValidation.issues}`);
-      }
-      if (!silverValidation.ok) {
-        console.warn(`[sync-fx-rates] Silver payload invalid: ${silverValidation.issues}`);
-      }
-      const goldPrice = goldValidation.ok ? goldValidation.data.price : undefined;
-      const silverPrice = silverValidation.ok ? silverValidation.data.price : undefined;
-
-      if (typeof goldPrice === "number" && goldPrice > 0) {
-        if (isValidRate("peggedGOLD", goldPrice, prevRates["peggedGOLD"])) {
-          usableRates["peggedGOLD"] = goldPrice;
-          markLive("peggedGOLD", syncStartSec);
-          goldApiApplied++;
-        } else if (applyCommodityPeerMedian("peggedGOLD")) {
-          commodityPeerMedianApplied++;
-        } else if (prevRates["peggedGOLD"]) {
-          usableRates["peggedGOLD"] = prevRates["peggedGOLD"];
-          inheritPrevious("peggedGOLD");
-        }
-      } else if (applyCommodityPeerMedian("peggedGOLD")) {
-        commodityPeerMedianApplied++;
-      } else if (prevRates["peggedGOLD"]) {
-        usableRates["peggedGOLD"] = prevRates["peggedGOLD"];
-        inheritPrevious("peggedGOLD");
-      }
-
-      if (typeof silverPrice === "number" && silverPrice > 0) {
-        if (isValidRate("peggedSILVER", silverPrice, prevRates["peggedSILVER"])) {
-          usableRates["peggedSILVER"] = silverPrice;
-          markLive("peggedSILVER", syncStartSec);
-          goldApiApplied++;
-        } else if (applyCommodityPeerMedian("peggedSILVER")) {
-          commodityPeerMedianApplied++;
-        } else if (prevRates["peggedSILVER"]) {
-          usableRates["peggedSILVER"] = prevRates["peggedSILVER"];
-          inheritPrevious("peggedSILVER");
-        }
-      } else if (applyCommodityPeerMedian("peggedSILVER")) {
-        commodityPeerMedianApplied++;
-      } else if (prevRates["peggedSILVER"]) {
-        usableRates["peggedSILVER"] = prevRates["peggedSILVER"];
-        inheritPrevious("peggedSILVER");
-      }
-    } catch (e) {
-      console.warn("[sync-fx-rates] Gold/silver API failed, falling back to peer median or cached values:", e);
-      if (applyCommodityPeerMedian("peggedGOLD")) {
-        commodityPeerMedianApplied++;
-      } else if (prevRates["peggedGOLD"]) {
-        usableRates["peggedGOLD"] = prevRates["peggedGOLD"];
-        inheritPrevious("peggedGOLD");
-      }
-      if (applyCommodityPeerMedian("peggedSILVER")) {
-        commodityPeerMedianApplied++;
-      } else if (prevRates["peggedSILVER"]) {
-        usableRates["peggedSILVER"] = prevRates["peggedSILVER"];
-        inheritPrevious("peggedSILVER");
+    const metals = await resolveMetalReferenceRates({
+      prevRates,
+      commodityPeerMedian,
+      syncStartSec,
+      signal,
+      validateRate: (pegKey, rate, prevRate) => isValidRate(pegKey, rate, prevRate),
+    });
+    for (const pegKey of ["peggedGOLD", "peggedSILVER"] as const) {
+      const resolved = metals.resolvedByPeg[pegKey];
+      if (!resolved) continue;
+      usableRates[pegKey] = resolved.rate;
+      if (resolved.source === "cached") {
+        inheritPrevious(pegKey);
+      } else {
+        markLive(pegKey, resolved.updatedAt ?? syncStartSec);
       }
     }
-    sources["gold-api.com"] = goldApiApplied === 2 ? "ok" : goldApiApplied > 0 ? "partial" : "error";
-    sources["commodity-peer-median"] =
-      commodityPeerMedianApplied === 2 ? "ok" : commodityPeerMedianApplied > 0 ? "partial" : "unavailable";
+    sources["gold-api.com"] = metals.sources["gold-api.com"];
+    sources["commodity-peer-median"] = metals.sources["commodity-peer-median"];
 
     let chainlinkSource: "ok" | "partial" | "unavailable" = "unavailable";
     const chainlinkAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS);
