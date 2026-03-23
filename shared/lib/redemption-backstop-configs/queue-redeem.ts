@@ -14,7 +14,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       kind: "reserve-sync-metadata",
       fallbackRatio: 0.15,
     },
-    costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+    costModel: fixedFee(0, "Tracked protocol metadata describes 1:1 mint/redeem against USDC with no fees"),
   },
   "reusd-re-protocol": {
     ...queueRedeemBase,

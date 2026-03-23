@@ -1,11 +1,17 @@
 import type { RedemptionBackstopConfig } from "./shared";
 import {
+  documentedBoundSupplyFull,
   documentedVariableFee,
   fixedFee,
   NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
   sourceRef,
   stablecoinRedeemBase,
 } from "./shared";
+
+const REVIEWED_DIRECT_REDEMPTION_AT = "2026-03-23";
+const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
+  REVIEWED_DIRECT_REDEMPTION_AT,
+);
 
 export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "dusd-dtrinity": {
@@ -22,6 +28,7 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "ousg-ondo-finance": {
     ...stablecoinRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
     accessModel: "whitelisted-onchain",
     executionModel: "rules-based-nav",
     costModel: documentedVariableFee(
@@ -96,6 +103,7 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "u-united-stables": {
     ...stablecoinRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
     accessModel: "whitelisted-onchain",
     costModel: documentedVariableFee(
       "Smart contract mint/burn 1:1 against whitelisted stablecoins (USDC, USDT, USD1); on-chain oracles enforce collateral backing",
@@ -103,6 +111,7 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "usd0-usual": {
     ...stablecoinRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
     outputAssetType: "mixed-collateral",
     costModel: documentedVariableFee(
       "Redeemable 1:1 for underlying RWA assets via DaoCollateral contract; minting accepts USYC or USDC via gateway",

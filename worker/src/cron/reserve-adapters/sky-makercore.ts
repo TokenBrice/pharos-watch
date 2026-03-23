@@ -27,6 +27,12 @@ function bucketForToken(token: string): SkyBucket {
   return "other";
 }
 
+export function resolveSkyImmediateRedeemableUsd(tokens: Record<string, number>): number {
+  // DefiLlama's Maker methodology explicitly includes PSM USDC balance.
+  const usdcUsd = tokens.USDC;
+  return Number.isFinite(usdcUsd) && usdcUsd > 0 ? usdcUsd : 0;
+}
+
 export function listUnexpectedTokens(tokens: Record<string, number>): string[] {
   return Object.keys(tokens).filter((t) => !KNOWN_TOKENS.has(t.toUpperCase()));
 }
@@ -99,6 +105,7 @@ export async function fetchSkyMakercoreReserves(
   }
 
   const totalUsd = Object.values(tokens).reduce((sum, v) => sum + (Number.isFinite(v) ? v : 0), 0);
+  const immediateRedeemableUsd = resolveSkyImmediateRedeemableUsd(tokens);
   const unknown = listUnexpectedTokens(tokens);
   const unknownExposureUsd = unknown.reduce((sum, token) => {
     const value = tokens[token];
@@ -114,6 +121,7 @@ export async function fetchSkyMakercoreReserves(
     metadata: {
       tokenCount: Object.keys(tokens).length,
       totalCollateralUsd: Math.round(totalUsd),
+      immediateRedeemableUsd,
       snapshotDate: latest.date,
       sourceTimestamp: latest.date,
       unknownExposurePct: totalUsd > 0 ? (unknownExposureUsd / totalUsd) * 100 : 0,

@@ -1,9 +1,39 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "1.5",
+  currentVersion: "1.7",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "1.7",
+      title: "Sky LitePSM routes now use live PSM capacity",
+      date: "2026-03-23",
+      effectiveAt: 1774270800,
+      summary:
+        "Sky DAI/USDS routes now score against fresh live PSM USDC capacity from reserve telemetry, and infiniFi IUSD now carries a fixed zero-fee redemption model.",
+      impact: [
+        "DAI and USDS use current Sky PSM USDC balance as dynamic immediate redemption capacity when fresh live reserve metadata is available",
+        "When Sky live metadata is unavailable or stale, those routes fall back to the prior reviewed 33% heuristic instead of becoming unrated",
+        "IUSD now uses a fixed zero-fee redemption model, allowing its existing dynamic-capacity queue route to resolve high confidence",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
+      version: "1.6",
+      title: "Reviewed full-supply redemption routes can now be documented-bound",
+      date: "2026-03-23",
+      effectiveAt: 1774267200,
+      summary:
+        "Reviewed issuer and direct-redeem routes can now use documented-bound eventual-only capacity when official terms establish full-supply redeemability without a separately measured immediate buffer.",
+      impact: [
+        "Multiple issuer and direct-redeem routes now resolve capacity confidence as documented-bound instead of heuristic after source review",
+        "These routes stay eventual-only and do not claim a separately measured immediate redeemable buffer",
+        "Dynamic immediate-capacity telemetry is still required for high-confidence uplift on routes where current buffer size matters operationally",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "1.5",
       title: "Fresh live-metadata gating and clearer route provenance",

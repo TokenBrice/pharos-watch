@@ -65,6 +65,15 @@ export function fixedFee(feeBps: number, feeDescription?: string): RedemptionCos
     : { kind: "fee-bps", feeBps, confidence: "fixed" };
 }
 
+export function documentedBoundSupplyFull(
+  reviewedAt: string,
+): Pick<RedemptionBackstopConfig, "capacityModel" | "reviewedAt"> {
+  return {
+    capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+    reviewedAt,
+  };
+}
+
 export function documentedVariableFee(
   feeDescription: string,
   confidence: Exclude<RedemptionFeeConfidence, "fixed"> = "undisclosed-reviewed",

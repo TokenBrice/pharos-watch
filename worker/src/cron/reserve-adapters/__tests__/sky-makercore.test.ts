@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { adaptSkyCollateral, listUnexpectedTokens } from "../sky-makercore";
+import { adaptSkyCollateral, listUnexpectedTokens, resolveSkyImmediateRedeemableUsd } from "../sky-makercore";
 
 describe("adaptSkyCollateral", () => {
   it("buckets tokens into stablecoins, eth/lsd, btc, and other", () => {
@@ -45,6 +45,11 @@ describe("adaptSkyCollateral", () => {
     const slices = adaptSkyCollateral({ USDC: 1_000_000, WETH: 500_000 });
     expect(slices.length).toBe(2);
     expect(slices.every((s) => s.pct > 0)).toBe(true);
+  });
+
+  it("uses the current PSM USDC bucket as immediate redeemable capacity", () => {
+    expect(resolveSkyImmediateRedeemableUsd({ USDC: 5_000_000, WETH: 500_000 })).toBe(5_000_000);
+    expect(resolveSkyImmediateRedeemableUsd({ WETH: 500_000, DAI: 1_000 })).toBe(0);
   });
 });
 

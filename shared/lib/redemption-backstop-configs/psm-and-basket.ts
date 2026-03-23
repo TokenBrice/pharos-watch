@@ -28,17 +28,21 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "dai-makerdao": {
     ...psmSwapBase,
-    capacityModel: { kind: "supply-ratio", ratio: 0.33 },
+    capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.33 },
     costModel: fixedFee(0, "LitePSM docs show fees are not activated for DAI <-> USDC"),
+    notes: [
+      "Fresh Sky reserve telemetry uses current PSM USDC balance as immediate capacity; fallback retains the reviewed 33% heuristic when live metadata is unavailable",
+    ],
   },
   "usds-sky": {
     ...psmSwapBase,
-    capacityModel: { kind: "supply-ratio", ratio: 0.33 },
+    capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.33 },
     costModel: fixedFee(
       0,
       "USDS uses the LitePSMWrapper-USDS-USDC route, and Sky docs show LitePSM fees are not activated for the underlying DAI <-> USDC leg",
     ),
     notes: [
+      "Fresh Sky reserve telemetry uses current PSM USDC balance as immediate capacity; fallback retains the reviewed 33% heuristic when live metadata is unavailable",
       "USDS <-> USDC routes through LitePSMWrapper-USDS-USDC and the fee-free DAI <-> USDS converter, so it shares the same LitePSM liquidity path as DAI",
     ],
   },

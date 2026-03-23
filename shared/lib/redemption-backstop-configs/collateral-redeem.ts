@@ -1,6 +1,7 @@
 import type { RedemptionBackstopConfig } from "./shared";
 import {
   collateralRedeemBase,
+  documentedBoundSupplyFull,
   documentedVariableFee,
   expandIds,
   fixedFee,
@@ -8,6 +9,11 @@ import {
   NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
   sourceRef,
 } from "./shared";
+
+const REVIEWED_DIRECT_REDEMPTION_AT = "2026-03-23";
+const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
+  REVIEWED_DIRECT_REDEMPTION_AT,
+);
 
 export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   ...expandIds(
@@ -34,14 +40,17 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "feusd-felix": {
     ...collateralRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(0, "Felix docs describe redemption as fee-free"),
   },
   "meusd-mezo": {
     ...collateralRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(75, "75 bps standard; 0 bps when redeeming against your own debt"),
   },
   "nect-beraborrow": {
     ...collateralRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
   },
   "fxusd-f-x-protocol": {
@@ -50,16 +59,19 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "usdaf-asymmetry": {
     ...collateralRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
     outputAssetType: "mixed-collateral",
     costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
   },
   "usnd-nerite": {
     ...collateralRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
     outputAssetType: "mixed-collateral",
     costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
   },
   "ebusd-ebisu": {
     ...collateralRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
     outputAssetType: "mixed-collateral",
     costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
   },
@@ -70,6 +82,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "reusd-resupply": {
     ...collateralRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
     outputAssetType: "mixed-collateral",
     costModel: fixedFee(100, "Communal redemption model with 1% fee establishing a price floor"),
   },
@@ -103,6 +116,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "satusd-river": {
     ...collateralRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee(
       "Omni-CDP with $1-of-collateral redemption arbitrage; public fee schedule not disclosed",
     ),

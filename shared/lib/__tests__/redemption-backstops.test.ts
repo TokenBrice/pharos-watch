@@ -41,10 +41,10 @@ describe("getRedemptionBackstopConfig", () => {
       settlementModel: "atomic",
       executionModel: "deterministic-onchain",
       outputAssetType: "stable-single",
-      capacityModel: { kind: "supply-ratio", ratio: 0.33 },
+      capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.33 },
       costModel: { kind: "fee-bps", feeBps: 0 },
     });
-    expect(usds?.notes?.[0]).toContain("LitePSMWrapper-USDS-USDC");
+    expect(usds?.notes?.some((note) => note.includes("LitePSMWrapper-USDS-USDC"))).toBe(true);
 
     expect(dai).not.toBeNull();
     expect(usds?.capacityModel).toEqual(dai?.capacityModel);
@@ -68,6 +68,12 @@ describe("getRedemptionBackstopConfig", () => {
       routeFamily: "stablecoin-redeem",
       outputAssetType: "stable-single",
       costModel: { kind: "fee-bps", feeBps: 25 },
+    });
+
+    expect(getRedemptionBackstopConfig("iusd-infinifi")).toMatchObject({
+      routeFamily: "queue-redeem",
+      capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.15 },
+      costModel: { kind: "fee-bps", feeBps: 0 },
     });
 
     expect(getRedemptionBackstopConfig("eusd-electronic-usd")).toMatchObject({

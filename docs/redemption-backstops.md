@@ -6,7 +6,7 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v1.5`
+- **Current methodology version:** `v1.7`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
@@ -123,6 +123,8 @@ Capacity resolution happens in `worker/src/lib/redemption-backstop-sources.ts`.
 | `supply-ratio`          | Immediate modeled capacity equals `supplyUsd * ratio`; this is heuristic unless the config explicitly opts into stronger confidence |
 | `reserve-sync-metadata` | Reads `reserve_composition.metadata.immediateRedeemableUsd` / `immediateRedeemableRatio` from the latest successful authoritative live snapshot while it is fresh; otherwise falls back to a configured ratio when provided or leaves the route unrated |
 
+Sky `DAI` and `USDS` now use the live `sky-makercore` PSM `USDC` balance as their immediate redeemable bound when that telemetry is fresh, with the prior 33% reviewed heuristic retained only as fallback.
+
 The resulting row is tagged with one `sourceMode`:
 
 - `dynamic` when fresh latest-success authoritative live reserve snapshot metadata is available
@@ -138,9 +140,9 @@ Each row also carries:
   - `failed` when a route-specific resolver failed
 - `capacityConfidence`:
   - `dynamic` for live reserve-sync backed capacity
-  - `documented-bound` only when a bounded model is explicitly configured that way after source review
+  - `documented-bound` when a bounded model is explicitly configured that way after source review, including reviewed full-supply redeemability where official issuer or protocol terms establish eventual redemption of outstanding supply
   - `heuristic` by default for `supply-full`, `supply-ratio`, and inferred legacy rows without stronger evidence
-- Immutable fully on-chain systems can still use `documented-bound` with `eventual-only` semantics when the protocol mechanics establish full-system redeemability directly, even if no separate immediate buffer is measured (current examples: LUSD and BOLD)
+- Immutable fully on-chain systems and reviewed direct issuer / direct redeem routes can use `documented-bound` with `eventual-only` semantics when protocol mechanics or issuer terms establish full-system redeemability directly, even if no separate immediate buffer is measured
 - `capacitySemantics`:
   - `immediate-bounded` when the model is intended to represent a current redeemable buffer
   - `eventual-only` when the route is scored as eventual redeemability rather than immediate same-size liquidity

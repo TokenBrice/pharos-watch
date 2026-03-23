@@ -1,6 +1,7 @@
 import type { RedemptionBackstopConfig } from "./shared";
 import {
   commodityIssuerBase,
+  documentedBoundSupplyFull,
   documentedVariableFee,
   expandIds,
   fixedFee,
@@ -8,6 +9,11 @@ import {
   NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
   sourceRef,
 } from "./shared";
+
+const REVIEWED_DIRECT_REDEMPTION_AT = "2026-03-23";
+const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
+  REVIEWED_DIRECT_REDEMPTION_AT,
+);
 
 export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   ...expandIds(
@@ -79,16 +85,26 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
     ],
     issuerBase,
   ),
+  ...expandIds(
+    ["usyc-hashnote", "ustb-superstate", "a7a5-old-vector", "gusd-gate"],
+    {
+      ...issuerBase,
+      ...reviewedDirectRedemptionSupplyFull,
+    },
+  ),
   "usdt-tether": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee("0.10% with a $1,000 minimum"),
   },
   "usdc-circle": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee("1:1 via Circle Mint; EEA burn fee is 0 bps, other Circle fees may vary"),
   },
   "pyusd-paypal": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(
       0,
       "Paxos states it does not charge a PYUSD redemption fee; bank or network fees may still apply",
@@ -96,14 +112,17 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "fdusd-first-digital": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee("Redeemable 1:1; public fee schedule not disclosed"),
   },
   "rlusd-ripple": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee("Redeemable 1:1 less fees; public fee schedule not disclosed"),
   },
   "eurc-circle": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee("EEA burn fee is 0 bps; other Circle redemption fees may vary"),
   },
   "usdp-paxos": {
@@ -116,6 +135,7 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "usdg-paxos": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(0, "Paxos states it does not charge a USDG redemption fee"),
   },
   "usdx-hex-trust": {
@@ -144,10 +164,12 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "usd1-world-liberty-financial": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
   },
   "ausd-agora": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee("Fees may apply; public docs do not publish a fixed redemption rate"),
   },
   "usdo-openeden": {
@@ -165,6 +187,7 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "buidl-blackrock": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee(
       "Redeemable at NAV through Securitize; public docs do not publish a separate redemption fee (50 bps annual management fee is charged separately)",
     ),
@@ -172,6 +195,7 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "tusd-trueusd": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee("Redeemable 1:1 through Techteryx; minting gated by Chainlink Proof of Reserve"),
   },
   "frxusd-frax": {
@@ -186,16 +210,19 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "brz-transfero": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(100, "Transfero documents a 1% redemption fee in Brazil"),
   },
   "ylds-figure": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee(
       "Fixed $1.00 face-amount certificate; 1:1 mint/redeem through Figure Certificate Company; registered security",
     ),
   },
   "usdtb-ethena": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee(
       "Direct 1:1 mint and redemption; BUIDL shares redeemable 24/7 via atomic swap with Securitize",
     ),
@@ -214,6 +241,7 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "usdy-ondo-finance": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     settlementModel: "days",
     costModel: documentedVariableFee("Bank wire redemption at NAV-based price; public fee schedule not disclosed"),
   },
@@ -233,12 +261,14 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "paxg-paxos": {
     ...commodityIssuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee(
       "1:1 physical gold or cash equivalent through Paxos Trust Company; public fee schedule not disclosed",
     ),
   },
   "xaut-tether": {
     ...commodityIssuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee(
       "Physical gold through TG Commodities; minimum 430 XAUt for a full bar; physical delivery to Switzerland only",
     ),
@@ -249,7 +279,13 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       "Physical gold through Matrixdock; minimum 32.148 XAUm (1 kg bar); KYC-verified accredited investors only",
     ),
   },
-  ...expandIds(["kau-kinesis", "kag-kinesis"], commodityIssuerBase),
+  ...expandIds(
+    ["kau-kinesis", "kag-kinesis"],
+    {
+      ...commodityIssuerBase,
+      ...reviewedDirectRedemptionSupplyFull,
+    },
+  ),
   "cgo-comtech": {
     ...commodityIssuerBase,
     costModel: documentedVariableFee("Physical gold coins via ComTech Gold app; minimum 10 grams in 1-gram multiples"),
