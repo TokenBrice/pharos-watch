@@ -404,7 +404,7 @@ describe("getRedemptionBackstopConfig", () => {
       routeFamily: "queue-redeem",
       accessModel: "whitelisted-onchain",
       settlementModel: "same-day",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound" },
       costModel: { kind: "fee-bps", feeBps: 0 },
       reviewedAt: "2026-03-23",
     });

@@ -178,10 +178,11 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "usdu-unitas": {
     ...queueRedeemBase,
-    ...reviewedQueueRedemptionSupplyFull,
     accessModel: "whitelisted-onchain",
     settlementModel: "same-day",
+    capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound" },
     costModel: fixedFee(0, "Unitas docs list a 0% redemption fee"),
+    reviewedAt: REVIEWED_QUEUE_REDEMPTION_AT,
     docs: [
       sourceRef(
         "Unitas minting USDu",
@@ -197,6 +198,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ],
     notes: [
       "Direct USDu minting and redemption are restricted to whitelisted participants, while docs describe on-demand redemption flows supported by Unitas's OES settlement rails",
+      "Because USDu relies on a delta-neutral collateral stack rather than a pure cash-equivalent reserve bucket, the route keeps a conservative reviewed 5% immediate-capacity bound instead of scoring against full supply",
     ],
   },
   "yzusd-yuzu": {
