@@ -324,6 +324,16 @@ Safety Score structure is unchanged, but the collateral-quality live reserve pas
 
 Weights and grade thresholds are unchanged from v6.4.
 
+## v6.6 - Reviewed lower-cap redemption coverage expansion (2026-03-23)
+
+Safety Score structure is unchanged, but the liquidity dimension now recognizes a broader reviewed issuer-backed redemption set outside the largest stablecoins:
+
+- CASH, MNEE, USDP, GUSD, XUSD, XSGD, USDQ, EURQ, EURe, EURI, TBILL, EURCV, and USDCV now use reviewed `documented-bound` eventual redemption capacity instead of generic heuristic `supply-full` modeling
+- TBILL, EURI, EURCV, and USDCV also now disclose reviewed non-instant settlement constraints, so their routes are more defensible without pretending same-size cash is immediately available
+- These routes still render as eventual-only issuer exits and do not claim a separately measured immediate redemption buffer, but they can now contribute medium-confidence redemption evidence instead of remaining low-confidence by default
+
+Weights and grade thresholds are unchanged from v6.5.
+
 ## v6.4 - Live Liquity redemption fee telemetry (2026-03-22)
 
 Safety Score structure is unchanged, but Liquity-style formula routes can now use current on-chain redemption fees when live reserve telemetry is available:

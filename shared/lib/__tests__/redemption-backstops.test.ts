@@ -82,4 +82,60 @@ describe("getRedemptionBackstopConfig", () => {
       outputAssetType: "stable-basket",
     });
   });
+
+  it("marks reviewed lower-cap issuer routes as documented-bound", () => {
+    const reviewedIssuerIds = [
+      "cash-phantom",
+      "mnee-mnee",
+      "usdp-paxos",
+      "gusd-gemini",
+      "xusd-straitsx",
+      "xsgd-straitsx",
+      "usdq-quantoz",
+      "eurq-quantoz",
+      "eure-monerium",
+    ] as const;
+
+    for (const id of reviewedIssuerIds) {
+      const config = getRedemptionBackstopConfig(id);
+      expect(config).toMatchObject({
+        routeFamily: "offchain-issuer",
+        capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+        reviewedAt: "2026-03-23",
+      });
+      expect(config?.docs?.length).toBeGreaterThan(0);
+    }
+
+    expect(getRedemptionBackstopConfig("euri-banking-circle")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      settlementModel: "days",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "fee-bps", feeBps: 0 },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("tbill-openeden")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      settlementModel: "days",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "fee-bps", feeBps: 5 },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("usdcv-societe-generale-forge")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      settlementModel: "days",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("eurcv-societe-generale-forge")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      settlementModel: "days",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+  });
 });

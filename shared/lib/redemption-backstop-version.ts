@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "1.7",
+  currentVersion: "1.8",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "1.8",
+      title: "Expanded reviewed lower-cap issuer redemption coverage",
+      date: "2026-03-23",
+      effectiveAt: 1774274400,
+      summary:
+        "A lower-cap review tranche now upgrades multiple issuer-backed and tokenized-cash routes from heuristic supply-full modeling to reviewed documented-bound redemption capacity.",
+      impact: [
+        "CASH, MNEE, USDP, GUSD, XUSD, XSGD, USDQ, EURQ, EURe, EURI, TBILL, EURCV, and USDCV now carry reviewed documented-bound eventual redemption capacity instead of generic heuristic supply-full modeling",
+        "TBILL, EURI, EURCV, and USDCV now also disclose reviewed non-instant settlement constraints from issuer documentation",
+        "These routes remain eventual-only and do not claim a separately measured immediate redeemable buffer, but they can now resolve medium confidence instead of low",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "1.7",
       title: "Sky LitePSM routes now use live PSM capacity",

@@ -127,11 +127,24 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "usdp-paxos": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(0, "Paxos states it does not charge a USDP redemption fee"),
+    docs: [
+      sourceRef("Paxos mint and redeem", "https://www.paxos.com/mint-and-redeem", ["route", "capacity", "fees"]),
+    ],
   },
   "gusd-gemini": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(0, "Gemini describes GUSD conversion and redemption as fee-free"),
+    docs: [
+      sourceRef("Gemini Dollar overview", "https://www.gemini.com/dollar", ["route", "capacity"]),
+      sourceRef(
+        "Gemini GUSD buy and sell guide",
+        "https://support.gemini.com/hc/en-us/articles/360001352466-How-do-I-buy-or-sell-my-Gemini-dollar-GUSD",
+        ["route", "fees"],
+      ),
+    ],
   },
   "usdg-paxos": {
     ...issuerBase,
@@ -144,23 +157,59 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "xusd-straitsx": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee("No platform conversion fee; bank or network fees may apply"),
+    docs: [
+      sourceRef(
+        "StraitsX XUSD overview",
+        "https://support.straitsx.com/hc/en-us/articles/40297191431961-What-is-XUSD",
+        ["route", "capacity", "fees"],
+      ),
+    ],
   },
   "xsgd-straitsx": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee("No platform conversion fee; bank or network fees may apply"),
+    docs: [
+      sourceRef(
+        "StraitsX XSGD overview",
+        "https://support.straitsx.com/support/solutions/articles/157000363433-what-is-xsgd-",
+        ["route", "capacity", "fees"],
+      ),
+    ],
   },
   "euri-banking-circle": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    settlementModel: "days",
     costModel: fixedFee(0, "Issuer docs describe EURI redemption as fee-free at par"),
+    docs: [
+      sourceRef(
+        "EURI white paper",
+        "https://www.eurite.com/wp-content/uploads/2024/08/EURI-white-paper.html",
+        ["route", "capacity", "fees"],
+      ),
+    ],
+    notes: ["Banking Circle documents redemption at par within five business days after the request and required checks"],
   },
   "usdq-quantoz": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(0, "Issuer docs describe redemption as free of charge; bank fees may still apply"),
+    docs: [
+      sourceRef("Quantoz transparency", "https://www.quantoz.com/transparency", ["route", "capacity"]),
+      sourceRef("Quantoz fees", "https://www.quantoz.com/fees", ["fees"]),
+    ],
   },
   "eurq-quantoz": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(0, "Issuer docs describe redemption as free of charge; bank fees may still apply"),
+    docs: [
+      sourceRef("Quantoz transparency", "https://www.quantoz.com/transparency", ["route", "capacity"]),
+      sourceRef("Quantoz fees", "https://www.quantoz.com/fees", ["fees"]),
+    ],
   },
   "usd1-world-liberty-financial": {
     ...issuerBase,
@@ -184,6 +233,23 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   "usdm-moneta": {
     ...issuerBase,
     costModel: documentedVariableFee("Redeemable 1:1; public fee schedule not disclosed"),
+  },
+  "usdcv-societe-generale-forge": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    settlementModel: "days",
+    costModel: documentedVariableFee(
+      "Redeemable 1:1 in USD directly with SG-FORGE; public fee schedule not disclosed",
+    ),
+    docs: [
+      sourceRef("SG-FORGE CoinVertible", "https://www.sgforge.com/product/coinvertible/", ["route", "capacity"]),
+      sourceRef(
+        "USDCV white paper",
+        "https://www.sgforge.com/wp-content/uploads/2025/06/USDCV-White-Paper_iXBRL-1.html",
+        ["route", "capacity"],
+      ),
+    ],
+    notes: ["White paper describes issuer-side redemption subject to KYC/AML and permitted-transferee checks"],
   },
   "buidl-blackrock": {
     ...issuerBase,
@@ -231,6 +297,27 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
     ...issuerBase,
     costModel: fixedFee(0, "Zero-fee mint/redeem at 1:1 for USDC per Plume documentation"),
   },
+  "cash-phantom": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "CASH is minted 1:1 from USD deposits via Bridge and redeemed into USD or supported stablecoins; public issuer fee schedule not disclosed",
+    ),
+    docs: [
+      sourceRef("CASH overview", "https://www.usecash.xyz/", ["route", "capacity"]),
+      sourceRef("Bridge issuance FAQ", "https://apidocs.bridge.xyz/platform/issuance/faq", ["route", "capacity", "fees"]),
+    ],
+  },
+  "mnee-mnee": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "Fiat and in-kind redemptions require at least US$100,000 and charge the greater of US$5,000 or 0.5%, with additional bank or network fees possible",
+    ),
+    docs: [
+      sourceRef("MNEE terms", "https://www.mnee.io/terms", ["route", "capacity", "fees"]),
+    ],
+  },
   "mtbill-midas": {
     ...issuerBase,
     capacityModel: { kind: "supply-ratio", ratio: 0.11 },
@@ -258,6 +345,43 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
     costModel: documentedVariableFee(
       "NAV-based valuation; KYB-gated 1:1 minting and redemption restricted to verified institutional counterparties",
     ),
+  },
+  "eurcv-societe-generale-forge": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    settlementModel: "days",
+    costModel: documentedVariableFee(
+      "Redeemable 1:1 in EUR directly with SG-FORGE; public fee schedule not disclosed",
+    ),
+    docs: [
+      sourceRef("SG-FORGE CoinVertible", "https://www.sgforge.com/product/coinvertible/", ["route", "capacity"]),
+      sourceRef(
+        "EURCV white paper",
+        "https://www.sgforge.com/wp-content/uploads/2025/06/EURCV-White-Paper_iXBRL-2.html",
+        ["route", "capacity"],
+      ),
+    ],
+    notes: ["White paper describes issuer-side redemption subject to KYC/AML and permitted-transferee checks"],
+  },
+  "tbill-openeden": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    settlementModel: "days",
+    costModel: fixedFee(5, "OpenEden TBILL FAQ lists a 5 bps redemption transaction fee"),
+    docs: [
+      sourceRef("OpenEden TBILL redemptions", "https://docs.openeden.com/tbill/redemptions", ["route", "capacity"]),
+      sourceRef("OpenEden TBILL FAQ", "https://docs.openeden.com/tbill/faq", ["fees"]),
+    ],
+    notes: ["Redemptions are queued FIFO and are typically processed on the next 1 U.S. business day"],
+  },
+  "eure-monerium": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: fixedFee(0, "Monerium currently states minting and burning EURe are free of charge"),
+    docs: [
+      sourceRef("EURe MiCA white paper", "https://monerium.com/whitepapers/eure-whitepaper/", ["route", "capacity"]),
+      sourceRef("Monerium fee schedule", "https://monerium.com/fee-schedule/", ["fees"]),
+    ],
   },
   "paxg-paxos": {
     ...commodityIssuerBase,
