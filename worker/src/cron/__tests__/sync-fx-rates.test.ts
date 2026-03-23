@@ -101,6 +101,121 @@ describe("syncFxRates", () => {
     expect(cachedMeta.sourceDateByPeg.peggedCNH).toBe("2025-06-15");
   });
 
+  it("uses fresh commodity peer medians from the stablecoins cache when gold-api.com is unavailable", async () => {
+    mockFetch([
+      {
+        match: "frankfurter.app",
+        body: {
+          base: "USD",
+          date: "2025-06-15",
+          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
+        },
+      },
+      {
+        match: "currency-api",
+        body: { date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } },
+      },
+      {
+        match: "gold-api.com/price/XAU",
+        body: { error: "blocked" },
+        status: 503,
+      },
+      {
+        match: "gold-api.com/price/XAG",
+        body: { error: "blocked" },
+        status: 503,
+      },
+    ]);
+
+    const stablecoinsUpdatedAt = Math.floor(Date.now() / 1000) - 90;
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            peggedAssets: [
+              {
+                id: "xaut-tether",
+                name: "Tether Gold",
+                symbol: "XAUT",
+                pegType: "peggedGOLD",
+                pegMechanism: "rwa-backed",
+                price: 2910,
+                priceSource: "defillama",
+                circulating: { peggedGOLD: 100_000_000 },
+                chainCirculating: {},
+                chains: ["Ethereum"],
+              },
+              {
+                id: "paxg-paxos",
+                name: "Pax Gold",
+                symbol: "PAXG",
+                pegType: "peggedGOLD",
+                pegMechanism: "rwa-backed",
+                price: 2900,
+                priceSource: "defillama",
+                circulating: { peggedGOLD: 80_000_000 },
+                chainCirculating: {},
+                chains: ["Ethereum"],
+              },
+              {
+                id: "kag-kinesis",
+                name: "Kinesis Silver",
+                symbol: "KAG",
+                pegType: "peggedSILVER",
+                pegMechanism: "rwa-backed",
+                price: 31.5,
+                priceSource: "defillama",
+                circulating: { peggedSILVER: 2_000_000 },
+                chainCirculating: {},
+                chains: ["Ethereum"],
+              },
+            ],
+          }),
+          updated_at: stablecoinsUpdatedAt,
+        },
+      },
+    ]);
+
+    const result = await syncFxRates(db);
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.mode).toBe("live");
+    expect(metadata.sources["gold-api.com"]).toBe("error");
+    expect(metadata.sources["commodity-peer-median"]).toBe("ok");
+
+    const write = findCacheWrite(db, "fx-rates");
+    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    expect(cachedRates.peggedGOLD).toBeCloseTo(2905, 6);
+    expect(cachedRates.peggedSILVER).toBeCloseTo(31.5, 6);
+
+    const metaWrite = findCacheWrite(db, "fx-rates-meta");
+    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+      sourceUpdatedAtByPeg: Record<string, number>;
+      sourceCadenceByPeg: Record<string, string>;
+      sourceDateByPeg: Record<string, string | null>;
+    };
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedGOLD).toBe(stablecoinsUpdatedAt);
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBe(stablecoinsUpdatedAt);
+    expect(cachedMeta.sourceCadenceByPeg.peggedGOLD).toBe("intraday");
+    expect(cachedMeta.sourceCadenceByPeg.peggedSILVER).toBe("intraday");
+    expect(cachedMeta.sourceDateByPeg.peggedGOLD).toBeNull();
+    expect(cachedMeta.sourceDateByPeg.peggedSILVER).toBeNull();
+  });
+
   it("falls back to cached rates when frankfurter.app is unavailable", async () => {
     mockFetch([
       {
