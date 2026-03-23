@@ -36,7 +36,7 @@ function getNaturalFxCadence(pegKey: string): FxSourceCadence | null {
   return null;
 }
 
-export function normalizeFiatCarryForwardMetadata(
+function normalizeFiatCarryForwardMetadata(
   pegKey: string,
   updatedAt: number | null | undefined,
   mode: FxRateSourceMode | undefined,
@@ -113,7 +113,7 @@ export function canCarryForwardFxRates(
   });
 }
 
-export function shouldPreserveDailyOverlayProvenance(
+function shouldPreserveDailyOverlayProvenance(
   pegKey: string,
   syncStartSec: number,
   sourceUpdatedAtByPeg: Record<string, number | null>,
