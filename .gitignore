@@ -68,6 +68,18 @@ worktrees
 # internal planning docs
 improvement.plan.md
 
+# agent artifacts: keep markdown/docs, ignore runtime spillover
+agents/agents/
+agents/cron-live-20*/
+agents/**/events.jsonl
+agents/**/cron-runs*.jsonl
+agents/**/wrangler-tail*.jsonl
+agents/**/last-rowid
+agents/**/monitor.log
+agents/**/monitor.mjs
+agents/**/*.pid
+agents/**/state.json
+
 # worker
 /worker/node_modules
 /worker/.wrangler
