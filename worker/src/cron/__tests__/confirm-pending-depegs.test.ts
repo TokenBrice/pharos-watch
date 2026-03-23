@@ -32,6 +32,7 @@ interface PendingRow {
   first_seen_at: number;
   first_price: number;
   peg_reference: number;
+  reason?: "large-cap" | "low-confidence" | "extreme-move";
 }
 
 interface PreparedStatementWithMeta extends D1PreparedStatement {
@@ -346,6 +347,7 @@ describe("confirmPendingDepegs", () => {
             first_seen_bps: -240,
             first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
             first_price: 0.976,
+            reason: "large-cap",
           }),
         ],
       }),
@@ -390,6 +392,58 @@ describe("confirmPendingDepegs", () => {
       1,
     ]);
     expect(deletes).toEqual([31]);
+  });
+
+  it("does not promote a low-confidence pending event on circular off-chain agreement alone", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    // DL→CG returns a price that "agrees" with the depeg — but it's the same
+    // underlying CoinGecko source, so the agreement is circular.
+    vi.mocked(fetchWithRetry).mockImplementation(async (url: string) => {
+      if (url.includes("coins.llama.fi/prices/current/coingecko:kinesis-gold")) {
+        return new Response(JSON.stringify({
+          coins: { "coingecko:kinesis-gold": { price: 133.81 } },
+        }), { status: 200 });
+      }
+      return null;
+    });
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 50,
+            stablecoin_id: "kau-kinesis",
+            symbol: "KAU",
+            peg_type: "peggedGOLD",
+            first_seen_bps: -225,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 133.81,
+            peg_reference: 136.77,
+            reason: "low-confidence",
+          }),
+        ],
+        // No DEX data — KAU has zero on-chain liquidity
+      }),
+      [
+        makeAsset({
+          id: "kau-kinesis",
+          name: "Kinesis Gold",
+          symbol: "KAU",
+          geckoId: "kinesis-gold",
+          price: 133.81,
+          priceSource: "coingecko+defillama-list",
+          priceConfidence: "single-source",
+        }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    // Off-chain (DL→CG) agrees, but with reason "low-confidence" this is
+    // circular — the event should NOT be promoted without a hard source.
+    expect(batchExecute).not.toHaveBeenCalled();
   });
 
   it("does not let a thin DEX row promote a pending event without CoinGecko support", async () => {

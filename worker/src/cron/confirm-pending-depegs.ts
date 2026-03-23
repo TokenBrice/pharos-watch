@@ -254,7 +254,13 @@ export async function confirmPendingDepegs(
     }
 
     // 5. Decision
-    if (offchainAgrees === true || dexAgrees === true || cexAgrees === true || poolAgrees === true) {
+    // For "low-confidence" pending events, the off-chain check alone is not
+    // sufficient for promotion because the primary (CG/DL) and secondary
+    // (DL→CG or CG) sources often share the same underlying data, making the
+    // confirmation circular rather than independent.  Require at least one
+    // hard secondary source (DEX, CEX, or individual pool) to promote.
+    const hasHardConfirmation = dexAgrees === true || cexAgrees === true || poolAgrees === true;
+    if (hasHardConfirmation || (offchainAgrees === true && row.reason !== "low-confidence")) {
       // At least one secondary source confirms -- promote to real event (INSERT + DELETE atomically)
       const authoritativePrice =
         asset != null &&
