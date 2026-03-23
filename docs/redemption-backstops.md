@@ -6,7 +6,7 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v1.13`
+- **Current methodology version:** `v1.14`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
@@ -19,7 +19,7 @@ There is no standalone changelog page yet. The public methodology link currently
 Configured coverage is defined statically behind the thin facade in `shared/lib/redemption-backstops.ts`, with route-family modules under `shared/lib/redemption-backstop-configs/`.
 
 - **Configured coins:** 142
-- **Route families:** 78 `offchain-issuer`, 22 `stablecoin-redeem`, 18 `collateral-redeem`, 12 `queue-redeem`, 9 `psm-swap`, 3 `basket-redeem`
+- **Route families:** 78 `offchain-issuer`, 20 `stablecoin-redeem`, 18 `collateral-redeem`, 14 `queue-redeem`, 9 `psm-swap`, 3 `basket-redeem`
 - **No discovery layer:** only coins present in `REDEMPTION_BACKSTOP_CONFIGS` are modeled
 
 The config registry is validated at module load time against `TRACKED_META_BY_ID`, so unknown IDs fail fast during build/test/runtime startup.

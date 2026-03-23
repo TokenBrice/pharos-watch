@@ -56,6 +56,54 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ],
     notes: ["Fresh live reserve metadata scores against Falcon's current stablecoin reserve bucket; redeemed assets are still credited only after the documented 7-day cooldown"],
   },
+  "syrupusdc-maple": {
+    ...queueRedeemBase,
+    ...reviewedQueueRedemptionSupplyFull,
+    accessModel: "whitelisted-onchain",
+    costModel: documentedVariableFee(
+      "Maple docs describe FIFO queued withdrawal requests for syrupUSDC and do not publish a separate protocol redemption fee",
+    ),
+    docs: [
+      sourceRef(
+        "Maple syrupUSDC / syrupUSDT withdrawals",
+        "https://docs.maple.finance/syrupusdc-usdt-for-lenders/risk",
+        ["route", "settlement", "fees"],
+      ),
+      sourceRef(
+        "Maple Pools technical reference",
+        "https://docs.maple.finance/technical-resources/pools/pools",
+        ["route", "access", "settlement"],
+      ),
+    ],
+    notes: [
+      "Maple docs describe onchain `requestRedeem` withdrawals entering FIFO queues, with most withdrawals processed in under 24 hours but potentially taking up to 30 days as liquidity becomes available",
+      "Modeled route excludes secondary-market exits on Uniswap or Balancer and instead scores the documented protocol withdrawal rail",
+    ],
+  },
+  "syrupusdt-maple": {
+    ...queueRedeemBase,
+    ...reviewedQueueRedemptionSupplyFull,
+    accessModel: "whitelisted-onchain",
+    costModel: documentedVariableFee(
+      "Maple docs describe FIFO queued withdrawal requests for syrupUSDT and do not publish a separate protocol redemption fee",
+    ),
+    docs: [
+      sourceRef(
+        "Maple syrupUSDC / syrupUSDT withdrawals",
+        "https://docs.maple.finance/syrupusdc-usdt-for-lenders/risk",
+        ["route", "settlement", "fees"],
+      ),
+      sourceRef(
+        "Maple Pools technical reference",
+        "https://docs.maple.finance/technical-resources/pools/pools",
+        ["route", "access", "settlement"],
+      ),
+    ],
+    notes: [
+      "Maple docs describe onchain `requestRedeem` withdrawals entering FIFO queues, with most withdrawals processed in under 24 hours but potentially taking up to 30 days as liquidity becomes available",
+      "Modeled route excludes secondary-market exits and instead scores the documented protocol withdrawal rail",
+    ],
+  },
   "reusd-re-protocol": {
     ...queueRedeemBase,
     capacityModel: { kind: "supply-ratio", ratio: 0.2 },

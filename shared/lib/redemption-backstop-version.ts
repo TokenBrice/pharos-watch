@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "1.13",
+  currentVersion: "1.14",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "1.14",
+      title: "Maple syrup withdrawal route correction",
+      date: "2026-03-23",
+      effectiveAt: 1774303200,
+      summary:
+        "Maple's syrupUSDC and syrupUSDT routes now model the documented withdrawal queue instead of an overstated near-instant redemption buffer.",
+      impact: [
+        "syrupUSDC and syrupUSDT now use reviewed queue-redemption semantics with documented-bound eventual capacity rather than a heuristic 30% immediate buffer assumption",
+        "Access is now modeled as whitelisted onchain, reflecting Maple's PoolPermissionManager gating for `requestRedeem` and `redeem` calls",
+        "These routes now contribute medium-confidence redemption evidence while preserving Maple's documented FIFO processing and potential multi-day settlement delay",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "1.13",
       title: "Reviewed lower-cap redemption cleanup tranche",

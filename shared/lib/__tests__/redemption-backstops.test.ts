@@ -364,4 +364,21 @@ describe("getRedemptionBackstopConfig", () => {
       expect(getRedemptionBackstopConfig(id)?.docs?.length).toBeGreaterThan(0);
     }
   });
+
+  it("corrects Maple syrup routes onto reviewed queue redemption semantics", () => {
+    for (const id of ["syrupusdc-maple", "syrupusdt-maple"] as const) {
+      expect(getRedemptionBackstopConfig(id)).toMatchObject({
+        routeFamily: "queue-redeem",
+        accessModel: "whitelisted-onchain",
+        settlementModel: "queued",
+        executionModel: "rules-based-nav",
+        outputAssetType: "stable-single",
+        capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+        costModel: { kind: "dynamic-or-unclear" },
+        reviewedAt: "2026-03-23",
+      });
+      expect(getRedemptionBackstopConfig(id)?.docs?.length).toBeGreaterThan(0);
+      expect(getRedemptionBackstopConfig(id)?.notes?.some((note) => note.includes("FIFO"))).toBe(true);
+    }
+  });
 });

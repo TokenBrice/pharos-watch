@@ -1,6 +1,6 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.2 (2026-02-25 → 2026-03-22).
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.12 (2026-02-25 → 2026-03-23).
 
 ---
 
@@ -384,6 +384,16 @@ Safety Score structure is unchanged, but the liquidity dimension now recognizes 
 
 Weights and grade thresholds are unchanged from v6.10.
 
+## v6.12 - Maple queue-route correction (2026-03-23)
+
+Safety Score structure is unchanged, but the liquidity dimension now treats Maple's syrup withdrawal rail as a reviewed queued exit instead of an overstated instant-buffer assumption:
+
+- syrupUSDC and syrupUSDT now model Maple's documented `requestRedeem` FIFO withdrawal queue rather than a generic near-instant `stablecoin-redeem` route with a heuristic 30% capacity ratio
+- Access is now treated as whitelist-gated onchain because Maple's PoolPermissionManager gates `requestRedeem` and `redeem`, and the routes use reviewed `documented-bound` eventual capacity instead of pretending a measurable live instant buffer exists
+- These routes can now contribute medium-confidence redemption evidence while preserving Maple's documented under-24-hour typical servicing target and up-to-30-day tail risk
+
+Weights and grade thresholds are unchanged from v6.11.
+
 ## v6.4 - Live Liquity redemption fee telemetry (2026-03-22)
 
 Safety Score structure is unchanged, but Liquity-style formula routes can now use current on-chain redemption fees when live reserve telemetry is available:
@@ -427,7 +437,7 @@ Weights and grade thresholds are unchanged from v6.1.
 | v4.0       | multiplier | 25%       | —       | 25%        | 10%              | 30%      |
 | v4.1       | multiplier | 30%       | —       | 20%        | 15%              | 25%      |
 | v5.0–5.8 | multiplier | 30% | — | 20%  | 15%          | 25%  |
-| **v6.0–6.11** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
+| **v6.0–6.12** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
 
 ## Quick Reference: Grade Thresholds
 

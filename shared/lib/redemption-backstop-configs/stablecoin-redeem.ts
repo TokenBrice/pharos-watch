@@ -69,24 +69,6 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       "Fresh live reserve metadata scores against Ethena's current Liquid Cash bucket, while the 0.5% fallback ratio reflects the smaller hot-contract stable buffer documented for on-demand redemptions",
     ],
   },
-  "syrupusdc-maple": {
-    ...stablecoinRedeemBase,
-    settlementModel: "immediate",
-    executionModel: "rules-based-nav",
-    capacityModel: { kind: "supply-ratio", ratio: 0.3 },
-    costModel: documentedVariableFee(
-      "ERC-4626 vault; near-instant redemptions via dynamic liquidity buffer; no separate fee disclosed",
-    ),
-  },
-  "syrupusdt-maple": {
-    ...stablecoinRedeemBase,
-    settlementModel: "immediate",
-    executionModel: "rules-based-nav",
-    capacityModel: { kind: "supply-ratio", ratio: 0.3 },
-    costModel: documentedVariableFee(
-      "ERC-4626 vault; near-instant redemptions via dynamic liquidity buffer; no separate fee disclosed",
-    ),
-  },
   "yousd-yield-optimizer": {
     ...stablecoinRedeemBase,
     settlementModel: "immediate",
