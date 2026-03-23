@@ -4,6 +4,7 @@ import {
   STATUS_CACHE_RATIO_THRESHOLDS,
   STATUS_MISSING_PRICE_THRESHOLDS,
   STATUS_ONCHAIN_THRESHOLDS,
+  hasRepresentativeOnchainRatioSample,
 } from "@shared/lib/status-thresholds";
 import type {
   CronInFlight,
@@ -406,6 +407,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
   const onchainSupplyDivergences = hasActiveOnchainMonitor ? dataQuality.onchainSupplyDivergences : 0;
   const staleOnchainRatio = trackedOnchainCoins > 0 ? staleOnchainSupply / trackedOnchainCoins : 0;
   const onchainDivergenceRatio = trackedOnchainCoins > 0 ? onchainSupplyDivergences / trackedOnchainCoins : 0;
+  const onchainRatioRepresentative = hasRepresentativeOnchainRatioSample(trackedOnchainCoins);
   const reserveIssueCount = reserveComposition.missingCoins
     + reserveComposition.staleCoins
     + reserveComposition.degradedCoins
@@ -435,8 +437,8 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     blacklistRecentMissing >= STATUS_BLACKLIST_THRESHOLDS.missingRecentStale ||
     staleOnchainSupply >= STATUS_ONCHAIN_THRESHOLDS.staleAbsoluteStale ||
     onchainSupplyDivergences >= STATUS_ONCHAIN_THRESHOLDS.divergenceAbsoluteStale ||
-    staleOnchainRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale ||
-    onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale ||
+    (onchainRatioRepresentative && staleOnchainRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale) ||
+    (onchainRatioRepresentative && onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale) ||
     reserveCompositionCritical
       ? "stale"
       : dataQuality.stablecoinsCacheStatus === "degraded" ||
@@ -444,8 +446,8 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
           missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded ||
           blacklistRecentMissing > 0 ||
           blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded ||
-          staleOnchainRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded ||
-          onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded ||
+          (onchainRatioRepresentative && staleOnchainRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded) ||
+          (onchainRatioRepresentative && onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded) ||
           reserveCompositionWarning ||
           reserveCompositionQueryFailed
         ? "degraded"
@@ -685,7 +687,9 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
   }
   if (hasActiveOnchainMonitor) {
     if (
+      onchainRatioRepresentative &&
       staleOnchainRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale ||
+      onchainRatioRepresentative &&
       onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale
     ) {
       pushCause(dataQualityCauses, {
@@ -698,7 +702,9 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
         threshold: STATUS_ONCHAIN_THRESHOLDS.ratioStale,
       });
     } else if (
+      onchainRatioRepresentative &&
       staleOnchainRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded ||
+      onchainRatioRepresentative &&
       onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded
     ) {
       pushCause(dataQualityCauses, {
@@ -709,6 +715,22 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
         metric: "onchainStaleRatio",
         value: staleOnchainRatio,
         threshold: STATUS_ONCHAIN_THRESHOLDS.ratioDegraded,
+      });
+    } else if (
+      !onchainRatioRepresentative &&
+      trackedOnchainCoins > 0 &&
+      (staleOnchainSupply > 0 || onchainSupplyDivergences > 0)
+    ) {
+      pushCause(dataQualityCauses, {
+        code: "onchain_monitor_low_sample",
+        layer: "data-quality",
+        severity: "info",
+        message:
+          `On-chain monitor has only ${trackedOnchainCoins} recently refreshed coin(s); ratio-based stale/degraded thresholds stay inactive until ` +
+          `${STATUS_ONCHAIN_THRESHOLDS.ratioMinTrackedCoins} coins are live.`,
+        metric: "onchainSupplyTrackedCoins",
+        value: trackedOnchainCoins,
+        threshold: STATUS_ONCHAIN_THRESHOLDS.ratioMinTrackedCoins,
       });
     }
   }

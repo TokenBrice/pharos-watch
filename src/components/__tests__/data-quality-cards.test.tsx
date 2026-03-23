@@ -69,4 +69,39 @@ describe("DataQualityCards", () => {
 
     expect(html).toContain("informational only; active depegs do not change /status health");
   });
+
+  it("treats low-sample on-chain ratios as informational instead of status-severity colors", () => {
+    const html = renderToStaticMarkup(
+      <DataQualityCards
+        dq={{
+          nowSeconds: 1_772_100_000,
+          stablecoinsCacheStatus: "ok",
+          stablecoinsCacheReason: null,
+          blacklistGapStatus: "ok",
+          activeDepegStatus: "ok",
+          onchainSupplyQueryStatus: "ok",
+          sourceFailures: [],
+          totalStablecoins: 156,
+          missingPrices: 0,
+          blacklistMissingAmounts: 0,
+          blacklistRecentMissingAmounts: 0,
+          blacklistRecentWindowSec: 86_400,
+          blacklistMissingRatio: 0,
+          blacklistTotal: 1000,
+          onchainSupplyDivergences: 1,
+          onchainDivergenceRatio: 0.5,
+          onchainSupplyMonitoring: "active",
+          onchainSupplyLatestAt: 1_772_099_000,
+          onchainSupplyTrackedCoins: 2,
+          activeDepegs: 0,
+          staleOnchainSupply: 0,
+          onchainStaleRatio: 0,
+        }}
+      />,
+    );
+
+    expect(html).toContain("ratio gates inactive until 10 monitored coins");
+    expect(html).not.toContain("text-red-600");
+    expect(html).not.toContain("text-amber-600");
+  });
 });

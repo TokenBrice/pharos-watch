@@ -205,16 +205,16 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor:
   - `blacklistRecentMissingAmounts >= 25` (last 24h)
   - `staleOnchainSupply >= 10`
   - `onchainSupplyDivergences >= 25`
-  - `onchainStaleRatio >= 0.25`
-  - `onchainDivergenceRatio >= 0.25`
+  - `onchainStaleRatio >= 0.25` when `onchainSupplyTrackedCoins >= 10`
+  - `onchainDivergenceRatio >= 0.25` when `onchainSupplyTrackedCoins >= 10`
 - `degraded` if any of:
   - stablecoins cache is degraded but still usable (`dataQuality.stablecoinsCacheStatus === "degraded"`, currently legacy-array payloads only)
   - any critical data-quality subquery failed (`dataQuality.sourceFailures.length > 0`)
   - `missingPriceRatio > 0.15`
   - `blacklistRecentMissingAmounts > 0` (last 24h)
   - `blacklistMissingRatio >= 0.01` (1%)
-  - `onchainStaleRatio >= 0.1`
-  - `onchainDivergenceRatio >= 0.1`
+  - `onchainStaleRatio >= 0.1` when `onchainSupplyTrackedCoins >= 10`
+  - `onchainDivergenceRatio >= 0.1` when `onchainSupplyTrackedCoins >= 10`
 - else `healthy`
 
 Mint/burn freshness uses shared defaults from `worker/src/lib/mint-burn-health-config.ts`:
@@ -226,6 +226,10 @@ Mint/burn freshness uses shared defaults from `worker/src/lib/mint-burn-health-c
 The public `/api/health` lane now keys mint/burn freshness to the critical-lane sync timestamp / latest run status rather than raw event timestamps, matching the `/flows` semantics and avoiding quiet-period false stale alerts.
 
 `dataQuality.onchainSupplyMonitoring === "unavailable"` renders in the quality cards and emits an info-level `onchain_monitor_unavailable` cause. This cause appears in the blocker list but does not affect health status.
+
+`onchainSupplyTrackedCoins` now counts only stablecoins with at least one `onchain_supply` update inside the active monitoring window (`3d`). Older historical rows stay in D1 for audit/debug use, but they no longer count toward `staleOnchainSupply` or `onchainStaleRatio`.
+
+Ratio-based on-chain stale/degraded thresholds are also gated until the active monitor has at least `10` tracked coins. Below that floor, the admin still shows the live divergence/staleness counts, but those ratios are informational and do not by themselves escalate global status.
 
 ### Overall status
 

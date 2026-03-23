@@ -2,6 +2,7 @@ import {
   STATUS_BLACKLIST_THRESHOLDS,
   STATUS_MISSING_PRICE_THRESHOLDS,
   STATUS_ONCHAIN_THRESHOLDS,
+  hasRepresentativeOnchainRatioSample,
 } from "@shared/lib/status-thresholds";
 import { Card, CardContent } from "@/components/ui/card";
 import { HOUR_SECONDS } from "@/lib/constants";
@@ -52,6 +53,8 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
   const onchainLatestAge = dq.onchainSupplyLatestAt != null
     ? Math.max(0, dq.nowSeconds - dq.onchainSupplyLatestAt)
     : null;
+  const onchainRatioRepresentative = hasRepresentativeOnchainRatioSample(dq.onchainSupplyTrackedCoins);
+  const onchainLowSampleDetail = `ratio gates inactive until ${STATUS_ONCHAIN_THRESHOLDS.ratioMinTrackedCoins} monitored coins`;
 
   const cards: Array<{ label: string; value: number | string; detail: string; severity: Severity }> = [
     {
@@ -93,12 +96,22 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
         ? `query failed: ${dq.sourceFailures.find((failure) => failure.source === "onchain-supply")?.message ?? "on-chain supply unavailable"}`
         : onchainUnavailable
         ? "monitor unavailable"
-        : `${dq.onchainSupplyDivergences}/${dq.onchainSupplyTrackedCoins} (${(dq.onchainDivergenceRatio * 100).toFixed(1)}%) >5% off · warn >=${(STATUS_ONCHAIN_THRESHOLDS.ratioDegraded * 100).toFixed(0)}%, stale >=${(STATUS_ONCHAIN_THRESHOLDS.ratioStale * 100).toFixed(0)}%`,
+        : `${dq.onchainSupplyDivergences}/${dq.onchainSupplyTrackedCoins} (${(dq.onchainDivergenceRatio * 100).toFixed(1)}%) >5% off · ${
+            onchainRatioRepresentative
+              ? `warn >=${(STATUS_ONCHAIN_THRESHOLDS.ratioDegraded * 100).toFixed(0)}%, stale >=${(STATUS_ONCHAIN_THRESHOLDS.ratioStale * 100).toFixed(0)}%`
+              : onchainLowSampleDetail
+          }`,
       severity: onchainQueryFailed
         ? "red"
         : onchainUnavailable
         ? "neutral"
-        : dq.onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale ? "red" : dq.onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded ? "amber" : "green",
+        : !onchainRatioRepresentative
+          ? "neutral"
+          : dq.onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale
+            ? "red"
+            : dq.onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded
+              ? "amber"
+              : "green",
     },
     {
       label: "Active Depegs",
@@ -115,12 +128,24 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
         ? `query failed: ${dq.sourceFailures.find((failure) => failure.source === "onchain-supply")?.message ?? "on-chain freshness unavailable"}`
         : onchainUnavailable
         ? onchainStalenessDetail
-        : `${onchainStalenessDetail} · ${(dq.onchainStaleRatio * 100).toFixed(1)}% · latest sample ${onchainLatestAge != null ? `${Math.round(onchainLatestAge / HOUR_SECONDS)}h ago` : "—"} · warn >=${(STATUS_ONCHAIN_THRESHOLDS.ratioDegraded * 100).toFixed(0)}%, stale >=${(STATUS_ONCHAIN_THRESHOLDS.ratioStale * 100).toFixed(0)}%`,
+        : `${onchainStalenessDetail} · ${(dq.onchainStaleRatio * 100).toFixed(1)}% · latest sample ${
+            onchainLatestAge != null ? `${Math.round(onchainLatestAge / HOUR_SECONDS)}h ago` : "—"
+          } · ${
+            onchainRatioRepresentative
+              ? `warn >=${(STATUS_ONCHAIN_THRESHOLDS.ratioDegraded * 100).toFixed(0)}%, stale >=${(STATUS_ONCHAIN_THRESHOLDS.ratioStale * 100).toFixed(0)}%`
+              : onchainLowSampleDetail
+          }`,
       severity: onchainQueryFailed
         ? "red"
         : onchainUnavailable
         ? "neutral"
-        : dq.onchainStaleRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale ? "red" : dq.onchainStaleRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded ? "amber" : "green",
+        : !onchainRatioRepresentative
+          ? "neutral"
+          : dq.onchainStaleRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale
+            ? "red"
+            : dq.onchainStaleRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded
+              ? "amber"
+              : "green",
     },
   ];
 

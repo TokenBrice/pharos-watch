@@ -1379,6 +1379,163 @@ describe("handleStatus", () => {
     expect(body.causes.overall.some((cause) => cause.code === "onchain_monitor_unavailable")).toBe(true);
   });
 
+  it("counts only recently refreshed on-chain rows as actively monitored", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const onchainActiveWindowStart = now - 3 * 24 * 3600;
+    const onchainFreshWindowStart = now - 2 * 3600;
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "kau-kinesis", symbol: "KAU", price: 3000, circulating: { peggedXAU: 90_000_000 } }],
+    });
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      { match: "dex_liquidity", rows: [], first: { age: 60 } },
+      { match: "yield_data", rows: [], first: { age: 60 } },
+      { match: "stress_signals", rows: [], first: { age: 60 } },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+      {
+        match: "cache",
+        rows: [],
+        first: { value: stablecoinsCache, updated_at: now - 60 },
+      },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      // Overall latest row is fresh, but only 2 coins are inside the active monitoring window.
+      {
+        match: "MAX(updated_at) as latest",
+        matchBinds: [onchainActiveWindowStart],
+        rows: [],
+        first: { latest: now - 60, tracked: 2 },
+      },
+      // No stale coins inside the active monitoring window.
+      {
+        match: "HAVING latest_update < ?",
+        matchBinds: [onchainActiveWindowStart, onchainFreshWindowStart],
+        rows: [],
+        first: { cnt: 0 },
+      },
+      {
+        match: "onchain_supply WHERE updated_at >",
+        matchBinds: [onchainFreshWindowStart],
+        rows: [],
+        first: null,
+      },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request);
+    const body = (await res.json()) as {
+      dataQualityStatus: string;
+      dataQuality: {
+        onchainSupplyMonitoring: string;
+        onchainSupplyTrackedCoins: number;
+        staleOnchainSupply: number;
+        onchainStaleRatio: number;
+      };
+    };
+
+    expect(body.dataQuality.onchainSupplyMonitoring).toBe("active");
+    expect(body.dataQuality.onchainSupplyTrackedCoins).toBe(2);
+    expect(body.dataQuality.staleOnchainSupply).toBe(0);
+    expect(body.dataQuality.onchainStaleRatio).toBe(0);
+    expect(body.dataQualityStatus).toBe("healthy");
+
+    const seenSql = db.getHistory().map((entry) => entry.sql.replace(/\s+/g, " ").trim());
+    expect(
+      seenSql.some((sql) =>
+        sql.includes("COUNT(DISTINCT CASE WHEN updated_at >= ? THEN stablecoin_id END) as tracked FROM onchain_supply"),
+      ),
+    ).toBe(true);
+    expect(
+      seenSql.some((sql) =>
+        sql.includes("FROM onchain_supply WHERE updated_at >= ? GROUP BY stablecoin_id HAVING latest_update < ?"),
+      ),
+    ).toBe(true);
+  });
+
+  it("does not let a tiny on-chain monitor population escalate data quality via ratios alone", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const onchainActiveWindowStart = now - 3 * 24 * 3600;
+    const onchainFreshWindowStart = now - 2 * 3600;
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "kau-kinesis", symbol: "KAU", price: 3000, circulating: { peggedXAU: 90_000_000 } }],
+    });
+    const jobs = Object.keys(CRON_INTERVALS);
+    const cronRows = [
+      ...jobs.map((job) => makeCronRow(job, "ok", 30)),
+      makeCronRow("sync-redemption-backstops", "ok", 30),
+    ];
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          makeCacheRow("stablecoins"),
+          makeCacheRow("stablecoin-charts"),
+          makeCacheRow("usds-status"),
+          {
+            key: "fx-rates",
+            updated_at: now - 60,
+            value: JSON.stringify({ peggedEUR: 1.08 }),
+          },
+          makeCacheRow("bluechip-ratings"),
+        ],
+      },
+      { match: "dex_liquidity", rows: [], first: { age: 60 } },
+      { match: "yield_data", rows: [], first: { age: 60 } },
+      { match: "stress_signals", rows: [], first: { age: 60 } },
+      { match: "cron_runs", rows: cronRows },
+      {
+        match: "cache",
+        rows: [],
+        first: { value: stablecoinsCache, updated_at: now - 60 },
+      },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      {
+        match: "MAX(updated_at) as latest",
+        matchBinds: [onchainActiveWindowStart],
+        rows: [],
+        first: { latest: now - 60, tracked: 2 },
+      },
+      {
+        match: "HAVING latest_update < ?",
+        matchBinds: [onchainActiveWindowStart, onchainFreshWindowStart],
+        rows: [],
+        first: { cnt: 0 },
+      },
+      {
+        match: "onchain_supply WHERE updated_at >",
+        matchBinds: [onchainFreshWindowStart],
+        rows: [{ stablecoin_id: "kau-kinesis", total_supply: 1 }, { stablecoin_id: "kag-kinesis", total_supply: 2 }],
+        first: null,
+      },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request);
+    const body = (await res.json()) as {
+      dataQualityStatus: string;
+      rawOverallStatus: string;
+      causes: {
+        dataQuality: Array<{ code: string }>;
+      };
+      dataQuality: {
+        onchainSupplyMonitoring: string;
+        onchainSupplyTrackedCoins: number;
+        onchainSupplyDivergences: number;
+        onchainDivergenceRatio: number;
+      };
+    };
+
+    expect(body.dataQuality.onchainSupplyMonitoring).toBe("active");
+    expect(body.dataQuality.onchainSupplyTrackedCoins).toBe(2);
+    expect(body.dataQuality.onchainSupplyDivergences).toBe(1);
+    expect(body.dataQuality.onchainDivergenceRatio).toBe(0.5);
+    expect(body.dataQualityStatus).toBe("healthy");
+    expect(body.rawOverallStatus).toBe("healthy");
+    expect(body.causes.dataQuality.some((cause) => cause.code === "onchain_monitor_low_sample")).toBe(true);
+    expect(body.causes.dataQuality.some((cause) => cause.code === "onchain_integrity_stale")).toBe(false);
+  });
+
   it("keeps availability degraded and emits FX fallback causes when usable FX sync is fresh but source data is old", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({

@@ -105,14 +105,22 @@ export async function getDataQuality(db: D1Database, now: number): Promise<DataQ
   let onchainSupplyQueryStatus: DataQuality["onchainSupplyQueryStatus"] = "unavailable";
   let onchainSupplyLatestAt: number | null = null;
   let onchainSupplyTrackedCoins = 0;
+  const onchainActiveWindowStart = now - STATUS_ONCHAIN_MONITORING_ACTIVE_WINDOW_SEC;
   try {
     const monitor = await db
-      .prepare("SELECT MAX(updated_at) as latest, COUNT(DISTINCT stablecoin_id) as tracked FROM onchain_supply")
+      .prepare(
+        "SELECT MAX(updated_at) as latest, COUNT(DISTINCT CASE WHEN updated_at >= ? THEN stablecoin_id END) as tracked FROM onchain_supply",
+      )
+      .bind(onchainActiveWindowStart)
       .first<{ latest: number | null; tracked: number }>();
     onchainSupplyLatestAt = monitor?.latest ?? null;
     onchainSupplyTrackedCoins = monitor?.tracked ?? 0;
 
-    if (onchainSupplyLatestAt != null && now - onchainSupplyLatestAt <= STATUS_ONCHAIN_MONITORING_ACTIVE_WINDOW_SEC) {
+    if (
+      onchainSupplyLatestAt != null
+      && now - onchainSupplyLatestAt <= STATUS_ONCHAIN_MONITORING_ACTIVE_WINDOW_SEC
+      && onchainSupplyTrackedCoins > 0
+    ) {
       onchainSupplyMonitoring = "active";
       onchainSupplyQueryStatus = "ok";
     }
@@ -130,11 +138,12 @@ export async function getDataQuality(db: D1Database, now: number): Promise<DataQ
            FROM (
              SELECT stablecoin_id, MAX(updated_at) as latest_update
              FROM onchain_supply
+             WHERE updated_at >= ?
              GROUP BY stablecoin_id
              HAVING latest_update < ?
            )`,
         )
-        .bind(now - STATUS_ONCHAIN_FRESH_WINDOW_SEC)
+        .bind(onchainActiveWindowStart, now - STATUS_ONCHAIN_FRESH_WINDOW_SEC)
         .first<{ cnt: number }>();
       if (stale) staleOnchainSupply = stale.cnt;
     } catch (e) {

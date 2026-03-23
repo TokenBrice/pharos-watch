@@ -45,10 +45,15 @@ export const STATUS_ONCHAIN_THRESHOLDS = {
   ratioStale: 0.25,
   staleAbsoluteStale: 10,
   divergenceAbsoluteStale: 25,
+  ratioMinTrackedCoins: 10,
 } as const;
 export const STATUS_ONCHAIN_MONITORING_ACTIVE_WINDOW_SEC = 3 * 24 * 3600;
 export const STATUS_ONCHAIN_FRESH_WINDOW_SEC = 2 * 3600;
 export const STATUS_ONCHAIN_DIVERGENCE_PER_COIN_THRESHOLD = 0.05;
+
+export function hasRepresentativeOnchainRatioSample(trackedCoins: number): boolean {
+  return trackedCoins >= STATUS_ONCHAIN_THRESHOLDS.ratioMinTrackedCoins;
+}
 
 // --- Missing price thresholds ---
 export const STATUS_MISSING_PRICE_THRESHOLDS = {
