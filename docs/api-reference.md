@@ -35,6 +35,8 @@ Endpoints backed by the cron cache include these additional headers:
 | `X-Data-Age` | Seconds elapsed since the cron last wrote this data to D1                             |
 | `Warning`    | RFC 7234 stale-data warning, present when `X-Data-Age` exceeds the endpoint's max age |
 
+When a cache-backed response is stale (`X-Data-Age > max age`), the worker also downgrades `Cache-Control` to `no-store` for that response so edge/browser caches do not keep serving a stale payload after the underlying cron data recovers.
+
 ---
 
 ## Response Body Freshness (`_meta`)
@@ -76,6 +78,8 @@ The frontend `apiFetchWithMeta()` helper (in `src/lib/api.ts`) reads `_meta` fro
 ---
 
 ## Cache-Control Profiles
+
+These profiles apply while the dataset is within its endpoint freshness budget. Once a cache-backed response becomes stale, the worker overrides that response to `Cache-Control: no-store` until a fresh response is generated.
 
 | Profile  | `Cache-Control`                      | Used by                                                                                                                                                                                                                                                                              |
 | -------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -2132,6 +2136,8 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
   }
 }
 ```
+
+`dataQuality.onchainSupplyTrackedCoins` counts only coins with at least one `onchain_supply` row inside the current 3-day active monitoring window. Older historical rows are excluded from `staleOnchainSupply` and `onchainStaleRatio`.
 
 `itemCount` and `dataQuality.totalStablecoins` are illustrative example values. In the live handler they reflect the current cached stablecoin payload size, not `TRACKED_STABLECOINS.length`.
 

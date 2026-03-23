@@ -166,5 +166,6 @@ describe("handleDexLiquidity", () => {
     const age = Number(res.headers.get("X-Data-Age"));
     expect(age).toBeGreaterThanOrEqual(before - latestCronStartedAt);
     expect(age).toBeLessThanOrEqual(after - latestCronStartedAt);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 });

@@ -70,6 +70,7 @@ describe("cache-passthrough: handleStablecoins", () => {
     expect(body._meta.ageSeconds).toBe(4000);
     expect(res.headers.get("X-Data-Age")).toBe("4000");
     expect(res.headers.get("Warning")).toContain("Response is stale");
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 });
 

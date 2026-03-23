@@ -588,6 +588,9 @@ export function addFreshnessHeaders(
   const result: Record<string, string> = { ...headers, "X-Data-Age": String(age) };
   if (age > maxAgeSec) {
     result["Warning"] = `110 - "Response is stale (${age}s old, max ${maxAgeSec}s)"`;
+    // Do not let edge/browser caches continue serving a stale object after the
+    // underlying cron data recovers.
+    result["Cache-Control"] = "no-store";
   }
   return result;
 }
