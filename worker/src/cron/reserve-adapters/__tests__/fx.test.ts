@@ -20,4 +20,20 @@ describe("adaptFx", () => {
       unknownKeys: [],
     });
   });
+
+  it("surfaces unknown positive collateral keys so the fetch path can fail closed", () => {
+    const result = adaptFx({
+      data: {
+        poolInfo: {
+          wstETH: { collateralBalance: "1000000000000000000" },
+          unexpectedAsset: { collateralBalance: "250000000000000000" },
+        },
+      },
+    });
+
+    expect(result).toEqual({
+      balances: [{ key: "wstETH", amount: 1 }],
+      unknownKeys: ["unexpectedAsset"],
+    });
+  });
 });

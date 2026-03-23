@@ -1,6 +1,7 @@
 import type { LiveReservesConfig, LiveReserveWarning, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
 import { fetchJsonWithRetry, getAdapterTimeout, isHttpJsonInput, normalizeSlices, reserveDegradedWarning } from "./helpers";
+import { wrapperAssetMeta } from "./wrapper-assets";
 
 interface InfiniFiFarm {
   name: string;
@@ -38,21 +39,21 @@ const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
   "fasanara-rwa-farm":       { risk: "high" },
   "fasanara-gdaf":           { risk: "high" },
   "falconx-farm":            { risk: "high" },
-  "morpho-v2-sentora-pyusd": { risk: "high", coinId: "pyusd-paypal", depType: "wrapper" },
+  "morpho-v2-sentora-pyusd": { risk: "high", ...wrapperAssetMeta("pyusd") },
   "maple-farm-institutional": { risk: "high" },
-  "maple-farm-syrup":        { risk: "high", coinId: "usdc-circle", depType: "wrapper" },
-  "spark-sUSDC-refcode":     { risk: "low", coinId: "usdc-circle", depType: "wrapper" },
-  "fluid-fUSDC":             { risk: "low", coinId: "usdc-circle", depType: "wrapper" },
-  "aavev3":                  { risk: "low", coinId: "usdc-circle", depType: "wrapper" },
-  "aavev3-horizon-usdc":     { risk: "low", coinId: "usdc-circle", depType: "wrapper" },
-  "aavev3-rlusd-farm":       { risk: "low", coinId: "usdc-circle", depType: "wrapper" },
-  "euler-sentora-usdc":      { risk: "low", coinId: "usdc-circle", depType: "wrapper" },
-  "morpho-steakUSDCinfinifi": { risk: "medium", coinId: "usdc-circle", depType: "wrapper" },
+  "maple-farm-syrup":        { risk: "high", ...wrapperAssetMeta("usdc") },
+  "spark-sUSDC-refcode":     { risk: "low", ...wrapperAssetMeta("usdc") },
+  "fluid-fUSDC":             { risk: "low", ...wrapperAssetMeta("usdc") },
+  "aavev3":                  { risk: "low", ...wrapperAssetMeta("usdc") },
+  "aavev3-horizon-usdc":     { risk: "low", ...wrapperAssetMeta("usdc") },
+  "aavev3-rlusd-farm":       { risk: "low", ...wrapperAssetMeta("usdc") },
+  "euler-sentora-usdc":      { risk: "low", ...wrapperAssetMeta("usdc") },
+  "morpho-steakUSDCinfinifi": { risk: "medium", ...wrapperAssetMeta("usdc") },
   "capfarm":                 { risk: "medium" },
   "tokemak-autoUSD":         { risk: "medium" },
   "gauntlet-alpha-farm":     { risk: "medium" },
   "reservoir-wsrUSD":        { risk: "medium" },
-  "sGHO":                    { risk: "medium", coinId: "gho-aave", depType: "wrapper" },
+  "sGHO":                    { risk: "medium", ...wrapperAssetMeta("gho") },
 };
 
 export interface AdaptInfiniFiResult {

@@ -3,6 +3,7 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchTextWithRetry,
   getAdapterTimeout,
+  htmlLayoutChangedError,
   parseTimestampLikeToUnixSeconds,
   requireHtmlInput,
   slicesFromPercentages,
@@ -46,7 +47,7 @@ function parseFdusdEntries(html: string): Array<{ name: string; value: number }>
 export function adaptFdusdTransparency(html: string): AdapterResult {
   const entries = parseFdusdEntries(html);
   if (entries.length === 0) {
-    throw new Error("fdusd-transparency: no reserve composition entries found in HTML");
+    throw htmlLayoutChangedError("fdusd-transparency", "no reserve composition entries found in HTML");
   }
 
   const asOf = parseFdusdAsOf(html);

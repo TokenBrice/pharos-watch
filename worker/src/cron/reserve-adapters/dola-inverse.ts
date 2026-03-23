@@ -1,7 +1,14 @@
 import type { LiveReserveWarning, LiveReservesConfig, StablecoinMeta } from "@shared/types";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, reserveDegradedWarning, slicesFromValues } from "./helpers";
+import {
+  accumulateBucketedExposure,
+  fetchJsonWithRetry,
+  getAdapterTimeout,
+  requireJsonInputFromConfig,
+  reserveDegradedWarning,
+  slicesFromValues,
+} from "./helpers";
 
 export interface FirmMarket {
   name: string;
@@ -55,22 +62,16 @@ export function resolveBaseSymbol(market: FirmMarket): string {
 }
 
 export function adaptFirmMarkets(payload: FirmMarketsResponse): AdapterResult {
-  const bucketTotals = new Map<DolaBucket, number>();
-  const seenSymbols = new Set<string>();
-  let totalDebt = 0;
-  let unknownDebt = 0;
-
-  for (const market of payload.markets) {
-    if (!Number.isFinite(market.totalDebt) || market.totalDebt <= 0) continue;
-    const baseSymbol = resolveBaseSymbol(market);
-    seenSymbols.add(baseSymbol);
-    totalDebt += market.totalDebt;
-    if (!KNOWN_ASSETS.has(baseSymbol)) {
-      unknownDebt += market.totalDebt;
-    }
-    const bucket = bucketForAsset(baseSymbol);
-    bucketTotals.set(bucket, (bucketTotals.get(bucket) ?? 0) + market.totalDebt);
-  }
+  const {
+    bucketTotals,
+    totalValue: totalDebt,
+    unknownValue: unknownDebt,
+  } = accumulateBucketedExposure({
+    items: payload.markets,
+    getValue: (market) => market.totalDebt,
+    getBucket: (market) => bucketForAsset(resolveBaseSymbol(market)),
+    isUnknown: (market) => !KNOWN_ASSETS.has(resolveBaseSymbol(market)),
+  });
 
   const slices = slicesFromValues([
     {
@@ -115,13 +116,15 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse): AdapterResult {
 }
 
 export function listUnexpectedDolaAssets(payload: FirmMarketsResponse): string[] {
-  const unknown = new Set<string>();
-  for (const market of payload.markets) {
-    if (market.totalDebt <= 0) continue;
-    const baseSymbol = resolveBaseSymbol(market);
-    if (!KNOWN_ASSETS.has(baseSymbol)) unknown.add(baseSymbol);
-  }
-  return Array.from(unknown);
+  return Array.from(
+    accumulateBucketedExposure({
+      items: payload.markets,
+      getValue: (market) => market.totalDebt,
+      getBucket: (market) => bucketForAsset(resolveBaseSymbol(market)),
+      isUnknown: (market) => !KNOWN_ASSETS.has(resolveBaseSymbol(market)),
+      getUnknownKey: (market) => resolveBaseSymbol(market),
+    }).unknownValuesByKey.keys(),
+  );
 }
 
 export async function fetchDolaInverseReserves(

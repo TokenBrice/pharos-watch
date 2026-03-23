@@ -24,5 +24,11 @@ describe("adaptAsymmetry", () => {
       { name: "sfrxUSD", pct: 1.9, risk: "medium", coinId: "frax-frax", depType: "wrapper" },
       { name: "WBTC", pct: 0.5, risk: "medium" },
     ]);
+    expect(slices.metadata).toMatchObject({
+      branchCount: 6,
+      activeBranchCount: 6,
+      unknownBranchCount: 0,
+      freshnessMode: "unverified",
+    });
   });
 });

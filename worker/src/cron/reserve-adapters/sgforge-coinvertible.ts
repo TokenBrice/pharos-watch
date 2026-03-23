@@ -4,6 +4,8 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchTextWithRetry,
   getAdapterTimeout,
+  htmlLayoutChangedError,
+  htmlParseError,
   parseTimestampLikeToUnixSeconds,
   requireHtmlInput,
 } from "./helpers";
@@ -17,7 +19,7 @@ function normalizeLocalizedNumber(raw: string): number {
     : compact;
   const value = Number.parseFloat(normalized);
   if (!Number.isFinite(value) || value <= 0) {
-    throw new Error(`sgforge-coinvertible: could not parse localized number "${raw}"`);
+    throw htmlParseError("sgforge-coinvertible", `could not parse localized number "${raw}"`);
   }
   return value;
 }
@@ -38,7 +40,10 @@ function extractDisclosureBlock(html: string, coinType: SgForgeCoinType): string
   const headingNeedle = getHeadingNeedle(coinType);
   const start = html.indexOf(headingNeedle);
   if (start === -1) {
-    throw new Error(`sgforge-coinvertible: missing ${coinType.toUpperCase()} CoinVertible disclosure block`);
+    throw htmlLayoutChangedError(
+      "sgforge-coinvertible",
+      `missing ${coinType.toUpperCase()} CoinVertible disclosure block`,
+    );
   }
 
   const nextBlockStart = html.indexOf('class="coinvertible_eur_usd"', start + headingNeedle.length);
@@ -56,7 +61,7 @@ export function adaptSgForgeCoinvertible(html: string, coinType: SgForgeCoinType
   );
 
   if (!numberMatch || !bankMatch || !cashMatch) {
-    throw new Error("sgforge-coinvertible: incomplete reserve-bank metadata");
+    throw htmlLayoutChangedError("sgforge-coinvertible", "incomplete reserve-bank metadata");
   }
 
   const circulationAmount = normalizeLocalizedNumber(numberMatch[1]);
@@ -67,7 +72,7 @@ export function adaptSgForgeCoinvertible(html: string, coinType: SgForgeCoinType
   const sourceTimestamp = parseTimestampLikeToUnixSeconds(lastUpdate ?? null);
 
   if (!bankName || !Number.isFinite(bankPct) || bankPct <= 0) {
-    throw new Error("sgforge-coinvertible: incomplete reserve-bank metadata");
+    throw htmlLayoutChangedError("sgforge-coinvertible", "incomplete reserve-bank metadata");
   }
 
   return {

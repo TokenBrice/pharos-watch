@@ -331,6 +331,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
         },
       ],
       signal,
+      undefined,
     );
   });
 

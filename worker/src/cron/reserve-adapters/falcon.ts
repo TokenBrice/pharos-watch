@@ -1,6 +1,13 @@
 import type { LiveReserveWarning, LiveReservesConfig, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, reserveDegradedWarning, slicesFromValues } from "./helpers";
+import {
+  accumulateBucketedExposure,
+  fetchJsonWithRetry,
+  getAdapterTimeout,
+  requireJsonInputFromConfig,
+  reserveDegradedWarning,
+  slicesFromValues,
+} from "./helpers";
 
 interface FalconBreakdownAsset {
   label: string;
@@ -93,30 +100,27 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
   }
 
   const warnings: LiveReserveWarning[] = [];
-  const bucketTotals = new Map<FalconBucket, number>();
-  let unknownExposureUsd = 0;
-  const valuedAssets = assets
-    .map((asset) => ({ asset, value: sumFalconAssetValue(asset) }))
-    .filter(({ value }) => Number.isFinite(value) && value > 0);
-  const totalAssetUsd = valuedAssets.reduce((sum, { value }) => sum + value, 0);
-  for (const { asset, value } of valuedAssets) {
-    if (!Number.isFinite(value) || value <= 0) continue;
-    const bucket = bucketForFalconAsset(asset.label);
+  const {
+    bucketTotals,
+    totalValue: totalAssetUsd,
+    unknownValue: unknownExposureUsd,
+    unknownValuesByKey,
+  } = accumulateBucketedExposure({
+    items: assets,
+    getValue: sumFalconAssetValue,
+    getBucket: (asset) => bucketForFalconAsset(asset.label),
+    isUnknown: (asset, bucket) => bucket === "other" && !FALCON_OTHER_KNOWN.has(asset.label),
+    getUnknownKey: (asset) => asset.label,
+  });
+
+  for (const [label, value] of unknownValuesByKey) {
     const sharePct = totalAssetUsd > 0 ? (value / totalAssetUsd) * 100 : 0;
-    const isUnmappedOther = bucket === "other" && !FALCON_OTHER_KNOWN.has(asset.label);
-    if (isUnmappedOther) {
-      unknownExposureUsd += value;
-    }
-    if (
-      isUnmappedOther
-      && (value > FALCON_UNKNOWN_WARN_THRESHOLD || sharePct >= 0.25)
-    ) {
+    if (value > FALCON_UNKNOWN_WARN_THRESHOLD || sharePct >= 0.25) {
       warnings.push(reserveDegradedWarning(
         "unknown-asset",
-        `Unmapped Falcon asset: ${asset.label} ($${value.toFixed(0)}, ${sharePct.toFixed(2)}%)`,
+        `Unmapped Falcon asset: ${label} ($${value.toFixed(0)}, ${sharePct.toFixed(2)}%)`,
       ));
     }
-    bucketTotals.set(bucket, (bucketTotals.get(bucket) ?? 0) + value);
   }
 
   const insuranceFund =

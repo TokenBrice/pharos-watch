@@ -1,7 +1,7 @@
-import type { LiveReserveWarning, LiveReservesConfig, StablecoinMeta } from "@shared/types";
+import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchDefiLlamaPrices, fetchJsonWithRetry, getAdapterTimeout, requireJsonInput, reserveDegradedWarning, slicesFromValues } from "./helpers";
+import { fetchDefiLlamaPrices, fetchJsonWithRetry, getAdapterTimeout, requireJsonInput, slicesFromValues } from "./helpers";
 
 interface FxPoolInfo {
   collateralBalance?: string;
@@ -52,6 +52,11 @@ export async function fetchFxReserves(
   const input = requireJsonInput(config.inputs.primary, "fx");
   const payload = await fetchJsonWithRetry<FxPayload>(input.url, signal, getAdapterTimeout(config, 12_000), ctx);
   const { balances, unknownKeys } = adaptFx(payload);
+  if (unknownKeys.length > 0) {
+    // The payload does not provide decimals/price metadata for unmapped keys, so
+    // treating them as a quantified reserve slice would fabricate precision.
+    throw new Error(`fx returned unmapped positive collateral keys: ${unknownKeys.join(", ")}`);
+  }
   const priceMap = await fetchDefiLlamaPrices(
     balances.map(({ key }) => ({
       key,
@@ -59,30 +64,24 @@ export async function fetchFxReserves(
       address: TOKEN_META[key].address,
     })),
     signal,
+    ctx,
   );
 
+  const knownValues = balances.map(({ key, amount }) => {
+    const price = priceMap.get(key);
+    if (price == null) {
+      throw new Error(`Missing DefiLlama price for ${key}`);
+    }
+    return {
+      value: amount * price,
+      name: TOKEN_META[key].name,
+      risk: TOKEN_META[key].risk,
+    };
+  });
   return {
-    slices: slicesFromValues(
-      balances.map(({ key, amount }) => {
-        const price = priceMap.get(key);
-        if (price == null) {
-          throw new Error(`Missing DefiLlama price for ${key}`);
-        }
-        return {
-          value: amount * price,
-          name: TOKEN_META[key].name,
-          risk: TOKEN_META[key].risk,
-        };
-      }),
-    ),
-    ...(unknownKeys.length > 0
-      ? {
-          warnings: unknownKeys.map((key): LiveReserveWarning => reserveDegradedWarning(
-            "unknown-collateral-key",
-            `fx collateral key bucketed into other: ${key}`,
-          )),
-        }
-      : {}),
-    metadata: { freshnessMode: "unverified" },
+    slices: slicesFromValues(knownValues),
+    metadata: {
+      freshnessMode: "unverified",
+    },
   };
 }

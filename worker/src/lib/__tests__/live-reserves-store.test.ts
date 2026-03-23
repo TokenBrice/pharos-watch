@@ -269,6 +269,44 @@ describe("live-reserves-store", () => {
     expect(overview.missingCoins).toBe(emptyOverview.missingCoins - 1);
   });
 
+  it("prioritizes active sync errors over stale classification in the overview", async () => {
+    const now = 10_000;
+    const db = mockD1([
+      {
+        match: "reserve_sync_state",
+        rows: [
+          {
+            stablecoin_id: "iusd-infinifi",
+            adapter_key: "infinifi",
+            breaker_key: "live-reserves:infinifi",
+            last_attempted_at: now,
+            last_success_at: 1_000,
+            last_status: "error",
+            warning_count: 0,
+            warnings: null,
+            last_error: "HTTP 503",
+            metadata: "{}",
+          },
+        ],
+      },
+      {
+        match: "reserve_composition",
+        rows: [
+          {
+            stablecoin_id: "iusd-infinifi",
+            slices: JSON.stringify(LIVE_SLICES),
+            fetched_at: 1_000,
+            source: "infinifi",
+          },
+        ],
+      },
+    ]);
+
+    const overview = await computeReserveCompositionOverview(db, now);
+    expect(overview.errorCoins).toBeGreaterThanOrEqual(1);
+    expect(overview.staleCoins).toBe(0);
+  });
+
   it("includes lastError in sync view when sync state has an error", async () => {
     const db = mockD1([
       {
@@ -477,5 +515,89 @@ describe("live-reserves-store", () => {
     const scoringMap = await loadFreshIndependentLiveReserveMap(db, now + 100);
     expect(scoringMap.has("iusd-infinifi")).toBe(false);
     expect(scoringMap.has("pyusd-paypal")).toBe(false);
+  });
+
+  it("requires timestamp-backed or explicitly on-chain freshness metadata for scoring passthrough", async () => {
+    const now = 10_000;
+    const db = mockD1([
+      {
+        match: "reserve_sync_state",
+        rows: [
+          {
+            stablecoin_id: "iusd-infinifi",
+            adapter_key: "infinifi",
+            breaker_key: "live-reserves:infinifi",
+            last_attempted_at: now,
+            last_success_at: now,
+            last_status: "ok",
+            warning_count: 0,
+            warnings: null,
+            last_error: null,
+            metadata: "{}",
+          },
+          {
+            stablecoin_id: "gho-aave",
+            adapter_key: "gho",
+            breaker_key: "live-reserves:gho",
+            last_attempted_at: now,
+            last_success_at: now,
+            last_status: "ok",
+            warning_count: 0,
+            warnings: null,
+            last_error: null,
+            metadata: "{}",
+          },
+          {
+            stablecoin_id: "usds-sky",
+            adapter_key: "sky-makercore",
+            breaker_key: "live-reserves:sky-makercore",
+            last_attempted_at: now,
+            last_success_at: now,
+            last_status: "ok",
+            warning_count: 0,
+            warnings: null,
+            last_error: null,
+            metadata: "{}",
+          },
+        ],
+      },
+      {
+        match: "reserve_composition",
+        rows: [
+          {
+            stablecoin_id: "iusd-infinifi",
+            slices: JSON.stringify([{ name: "Known Farm", pct: 100, risk: "low" }]),
+            fetched_at: now,
+            source: "infinifi",
+            metadata: JSON.stringify({ freshnessMode: "unverified" }),
+            adapter_source_model: "dynamic-mix",
+            adapter_evidence_class: "independent",
+          },
+          {
+            stablecoin_id: "gho-aave",
+            slices: JSON.stringify([{ name: "Tracked GSM", pct: 100, risk: "low" }]),
+            fetched_at: now,
+            source: "gho",
+            metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
+            adapter_source_model: "dynamic-mix",
+            adapter_evidence_class: "independent",
+          },
+          {
+            stablecoin_id: "usds-sky",
+            slices: JSON.stringify([{ name: "PSM USDC", pct: 100, risk: "low" }]),
+            fetched_at: now,
+            source: "sky-makercore",
+            metadata: JSON.stringify({ sourceTimestamp: now }),
+            adapter_source_model: "dynamic-mix",
+            adapter_evidence_class: "independent",
+          },
+        ],
+      },
+    ]);
+
+    const scoringMap = await loadFreshIndependentLiveReserveMap(db, now + 100);
+    expect(scoringMap.has("iusd-infinifi")).toBe(false);
+    expect(scoringMap.get("gho-aave")).toEqual([{ name: "Tracked GSM", pct: 100, risk: "low" }]);
+    expect(scoringMap.get("usds-sky")).toEqual([{ name: "PSM USDC", pct: 100, risk: "low" }]);
   });
 });

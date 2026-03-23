@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  accumulateBucketedExposure,
   getAdapterTimeout,
   isReserveRisk,
   normalizeSlices,
   parsePositiveNumericLike,
   parseTimestampLikeToUnixSeconds,
   slicesFromValues,
+  unverifiedFreshnessMetadata,
 } from "../helpers";
 import type { LiveReservesConfig, ReserveSlice } from "@shared/types";
 
@@ -69,6 +71,29 @@ describe("normalizeSlices", () => {
     ];
     const result = normalizeSlices(slices);
     expect(result.map((s) => s.name)).toEqual(["Large", "Mid", "Small"]);
+  });
+});
+
+describe("accumulateBucketedExposure", () => {
+  it("accumulates bucket totals and unknown exposure for positive values only", () => {
+    const result = accumulateBucketedExposure({
+      items: [
+        { symbol: "USDC", value: 50 },
+        { symbol: "ETH", value: 25 },
+        { symbol: "MYSTERY", value: 15 },
+        { symbol: "ZERO", value: 0 },
+      ],
+      getValue: (item) => item.value,
+      getBucket: (item) => (item.symbol === "USDC" ? "stable" : "other"),
+      isUnknown: (item) => item.symbol === "MYSTERY",
+      getUnknownKey: (item) => item.symbol,
+    });
+
+    expect(result.totalValue).toBe(90);
+    expect(result.bucketTotals.get("stable")).toBe(50);
+    expect(result.bucketTotals.get("other")).toBe(40);
+    expect(result.unknownValue).toBe(15);
+    expect(Array.from(result.unknownValuesByKey.entries())).toEqual([["MYSTERY", 15]]);
   });
 });
 
@@ -153,10 +178,6 @@ describe("getAdapterTimeout", () => {
     inputs: { primary: { kind: "http-json" as const, url: "https://example.com" } },
   } satisfies LiveReservesConfig;
 
-  it("returns params.timeoutMs when set", () => {
-    expect(getAdapterTimeout({ ...baseConfig, params: { timeoutMs: 15_000 } })).toBe(15_000);
-  });
-
   it("returns fallback when params.timeoutMs is not set", () => {
     expect(getAdapterTimeout(baseConfig, 12_000)).toBe(12_000);
   });
@@ -164,15 +185,17 @@ describe("getAdapterTimeout", () => {
   it("returns default 10s when no fallback specified", () => {
     expect(getAdapterTimeout(baseConfig)).toBe(10_000);
   });
+});
 
-  it("ignores non-positive or oversized timeoutMs", () => {
-    expect(getAdapterTimeout({ ...baseConfig, params: { timeoutMs: -1 } })).toBe(10_000);
-    expect(getAdapterTimeout({ ...baseConfig, params: { timeoutMs: 60_000 } })).toBe(10_000);
-    expect(getAdapterTimeout({ ...baseConfig, params: { timeoutMs: 0 } })).toBe(10_000);
-  });
-
-  it("ignores non-numeric timeoutMs", () => {
-    expect(getAdapterTimeout({ ...baseConfig, params: { timeoutMs: "fast" } })).toBe(10_000);
+describe("unverifiedFreshnessMetadata", () => {
+  it("standardizes unverified freshness semantics with explicit detail fields", () => {
+    expect(unverifiedFreshnessMetadata("issuer-api", "timestamp missing")).toEqual({
+      freshnessMode: "unverified",
+      details: {
+        freshnessSource: "issuer-api",
+        freshnessReason: "timestamp missing",
+      },
+    });
   });
 });
 

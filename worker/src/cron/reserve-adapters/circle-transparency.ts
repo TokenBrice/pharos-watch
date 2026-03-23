@@ -1,11 +1,14 @@
 import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchTextWithRetry,
   getAdapterTimeout,
+  htmlLayoutChangedError,
   requireHtmlInput,
   slicesFromPercentages,
   slicesFromValues,
+  unverifiedFreshnessMetadata,
 } from "./helpers";
 
 interface CircleSliceConfig {
@@ -70,8 +73,9 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
   }
 
   if (missingAttrs.length > 0) {
-    throw new Error(
-      `circle-transparency: missing reserve attributes for ${coinType}: ${missingAttrs.join(", ")}`,
+    throw htmlLayoutChangedError(
+      "circle-transparency",
+      `missing reserve attributes for ${coinType}: ${missingAttrs.join(", ")}`,
     );
   }
 
@@ -105,7 +109,10 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
       coinType,
       sliceCount: entries.length,
       expectedSliceCount: sliceConfigs.length,
-      freshnessMode: "unverified",
+      ...unverifiedFreshnessMetadata(
+        "html-disclosure",
+        "Circle reserve page does not expose a parseable upstream disclosure timestamp in the adapter payload",
+      ),
       valueMode: useAbsoluteValues ? "absolute" : "percentage",
       rawValueSum,
       ...(displayAmount != null ? { displayAmount } : {}),
@@ -126,10 +133,6 @@ export async function fetchCircleReserves(
     getAdapterTimeout(config, 15_000),
     ctx,
   );
-  const params = config.params as Record<string, unknown> | undefined;
-  const coinType = String(params?.coinType ?? "usdc");
-  if (coinType !== "usdc" && coinType !== "eurc") {
-    throw new Error(`circle-transparency: invalid coinType "${coinType}", expected "usdc" or "eurc"`);
-  }
+  const { coinType } = parseLiveReserveAdapterParams("circle-transparency", config.params);
   return adaptCircleTransparency(html, coinType);
 }

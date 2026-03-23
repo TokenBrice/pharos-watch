@@ -15,6 +15,16 @@ import {
 const CONFIGURED_COINS = ACTIVE_STABLECOINS.filter((c) => c.liveReservesConfig);
 type ConfiguredCoin = (typeof CONFIGURED_COINS)[number];
 type LiveReserveConfig = NonNullable<ConfiguredCoin["liveReservesConfig"]>;
+type ReserveFailureCategory =
+  | "adapter-config"
+  | "circuit-open"
+  | "network"
+  | "upstream-http"
+  | "parser-drift"
+  | "parse-failure"
+  | "validation"
+  | "storage-write"
+  | "unknown";
 
 function breakerKeyForConfig(config: LiveReserveConfig): string {
   return `live-reserves:${config.breakerScope ?? config.adapter}`;
@@ -70,6 +80,29 @@ function buildReserveSyncStateRecord(args: {
     lastError: args.lastError ?? null,
     metadata: args.metadata ?? {},
   };
+}
+
+function classifyFailure(reason: string, lastError: string | null): ReserveFailureCategory {
+  if (reason === "unknown-adapter") return "adapter-config";
+  if (reason === "circuit-open") return "circuit-open";
+  if (reason === "validation-failed" || reason === "fatal-warning" || reason === "empty-slices") return "validation";
+
+  const message = (lastError ?? "").toLowerCase();
+  if (message.includes("layout-changed")) return "parser-drift";
+  if (message.includes("parse-failed")) return "parse-failure";
+  if (message.includes("d1 write timeout") || message.includes("sqlite") || message.includes("database")) return "storage-write";
+  if (/\bhttp\s+[45]\d{2}\b/.test(message)) return "upstream-http";
+  if (
+    message.includes("fetch failed")
+    || message.includes("no-response")
+    || message.includes("adapter-timeout")
+    || message.includes("timed out")
+    || message.includes("aborted")
+    || message.includes("network")
+  ) {
+    return "network";
+  }
+  return "unknown";
 }
 
 const ADAPTER_TIMEOUT_MS = 20_000;
@@ -192,7 +225,10 @@ export async function syncLiveReserves(
       status,
       lastError,
       warnings,
-      metadata: { reason },
+      metadata: {
+        reason,
+        failureCategory: classifyFailure(reason, lastError),
+      },
     }));
 
     const canFetch = breakerCanFetch.has(breakerKey)

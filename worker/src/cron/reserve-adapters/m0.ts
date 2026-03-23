@@ -1,6 +1,12 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchJsonPostWithRetry, getAdapterTimeout, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
+import {
+  fetchJsonPostWithRetry,
+  getAdapterTimeout,
+  requireJsonInputFromConfig,
+  slicesFromValues,
+  unverifiedFreshnessMetadata,
+} from "./helpers";
 
 interface M0GraphQlResponse {
   data?: {
@@ -35,7 +41,13 @@ const M0_COLLATERAL_QUERY = `
   }
 `;
 
-function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
+const M0_CASH_SCALE = 1_000;
+
+function scaleM0CashToReserveUnits(rawCash: number): number {
+  return rawCash * M0_CASH_SCALE;
+}
+
+export function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
   const current = payload.data?.CollateralCurrent;
   if (!current) {
     throw new Error("M0 GraphQL response missing CollateralCurrent");
@@ -57,10 +69,11 @@ function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
     throw new Error("M0 GraphQL token collateral subtotals do not reconcile to totalTokenCollateral");
   }
 
-  // The M0 dashboard renders treasury and token collateral fields in micro-USD,
-  // while `totalCash` is surfaced in milli-USD. Upscale cash so the mix matches
-  // the dashboard's reserve totals before converting to percentages.
-  const cashValue = current.totalCash * 1_000;
+  // The live dashboard currently exposes `totalCash` three decimal orders below the
+  // treasury/token collateral fields. Normalize it into the same reserve unit
+  // before composing the mix, and keep the applied scale explicit in metadata/tests.
+  const cashValue = scaleM0CashToReserveUnits(current.totalCash);
+  const normalizedReserveTotal = current.totalTreasuries + tokenCollateralTotal + cashValue;
   const slices = slicesFromValues([
     {
       name: "Eligible U.S. Treasuries",
@@ -92,12 +105,17 @@ function adaptM0Collateral(payload: M0GraphQlResponse): AdapterResult {
   return {
     slices,
     metadata: {
-      freshnessMode: "unverified",
-      cashScaleApplied: 1_000,
+      ...unverifiedFreshnessMetadata(
+        "dashboard-graphql",
+        "M0 CollateralCurrent does not expose a trustworthy upstream disclosure timestamp",
+      ),
+      cashScaleApplied: M0_CASH_SCALE,
+      cashUnits: "milli-usd-to-micro-usd",
       remainingTermDays: current.remainingTerm,
       totalCashScaled: cashValue,
       totalTokenCollateral: tokenCollateralTotal,
       totalTreasuries: current.totalTreasuries,
+      normalizedReserveTotal,
       yieldToMaturity: current.yieldToMaturity,
     },
   };

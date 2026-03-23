@@ -23,6 +23,12 @@ describe("adaptCrvUsd", () => {
       { name: "ETH", pct: 8, risk: "very-low" },
     ]);
     expect(result.warnings).toEqual([]);
+    expect(result.metadata).toMatchObject({
+      marketCount: 4,
+      activeMarketCount: 4,
+      bucketCount: 4,
+      freshnessMode: "unverified",
+    });
   });
 
   it("uses worst risk when multiple symbols share a bucket", () => {

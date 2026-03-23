@@ -1,6 +1,12 @@
 import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, slicesFromValues } from "./helpers";
+import {
+  fetchJsonWithRetry,
+  getAdapterTimeout,
+  requireJsonInputFromConfig,
+  slicesFromValues,
+  unverifiedFreshnessMetadata,
+} from "./helpers";
 
 interface OpenEdenReserveCompositionResponse {
   usdoAmount: number;
@@ -83,7 +89,10 @@ function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResp
   return {
     slices,
     metadata: {
-      freshnessMode: "unverified",
+      ...unverifiedFreshnessMetadata(
+        "issuer-api",
+        "OpenEden reserve composition payload does not include a trustworthy source timestamp",
+      ),
       reserveAssetsInUsd: payload.reserveAssetsInUsd,
       reserveRatio: normalizedRatio,
       supplyUsd: payload.usdoAmount,

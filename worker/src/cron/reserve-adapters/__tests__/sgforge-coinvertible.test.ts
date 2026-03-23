@@ -34,8 +34,24 @@ describe("adaptSgForgeCoinvertible", () => {
   });
 
   it("throws when the expected disclosure block is missing", () => {
-    expect(() => adaptSgForgeCoinvertible("<html></html>", "eur")).toThrow(
-      "missing EUR CoinVertible disclosure block",
-    );
+    expect(() => adaptSgForgeCoinvertible("<html></html>", "eur")).toThrow("layout-changed");
+  });
+
+  it("throws parse-failed when localized amounts become unreadable", () => {
+    const malformedAmountHtml = `
+<div class="coinvertible_eur_usd">
+  <h5><span>EUR CoinVertible in circulation</span></h5>
+  <div class="coinvertible_number">
+    not-a-number <span class="ft-small c-secondary">Last update 20/03/26</span>
+  </div>
+  <div class="coinvertible_clt" style="--sg-percent: 100%;">
+    <div class="bank">Societe Generale : 100%</div>
+  </div>
+  <div class="coinvertible_cash">
+    <div class="number">92 476 840,64 €</div>
+  </div>
+</div>
+`;
+    expect(() => adaptSgForgeCoinvertible(malformedAmountHtml, "eur")).toThrow("parse-failed");
   });
 });

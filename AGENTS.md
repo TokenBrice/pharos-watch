@@ -77,6 +77,10 @@ If the merge gate fails, fix the issue locally and re-run. Do not push hoping CI
 - For design work, use `docs/design-context.md`, `docs/design-language.md`, and `docs/design-tokens.md`.
 - For methodology work, use the specific methodology doc plus its timeline doc.
 
+## Browser Automation
+
+`cmux browser` is available in the terminal for interacting with web pages — use it when `WebFetch` returns a 403 or when you need DOM interaction, visual verification, or form submission. Full command reference: [`agents/process/cmux-browser.md`](agents/process/cmux-browser.md). Upstream docs: https://cmux.com/docs/browser-automation.
+
 ## Design Summary
 
 - Pharos is a data-dense, dark-first, crypto-native analytics product for power users.

@@ -108,6 +108,7 @@ export async function fetchEvmBranchBalancesReserves(
       address: branch.token.address,
     })),
     signal,
+    ctx,
   );
 
   const slices = slicesFromValues(

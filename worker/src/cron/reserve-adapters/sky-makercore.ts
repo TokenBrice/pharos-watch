@@ -1,6 +1,13 @@
 import type { LiveReservesConfig, LiveReserveWarning, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, reserveDegradedWarning, slicesFromValues } from "./helpers";
+import {
+  accumulateBucketedExposure,
+  fetchJsonWithRetry,
+  getAdapterTimeout,
+  requireJsonInputFromConfig,
+  reserveDegradedWarning,
+  slicesFromValues,
+} from "./helpers";
 
 interface DefiLlamaProtocolResponse {
   tokensInUsd: Array<{
@@ -38,13 +45,11 @@ export function listUnexpectedTokens(tokens: Record<string, number>): string[] {
 }
 
 export function adaptSkyCollateral(tokens: Record<string, number>): AdapterResult["slices"] {
-  const bucketTotals = new Map<SkyBucket, number>();
-
-  for (const [token, value] of Object.entries(tokens)) {
-    if (!Number.isFinite(value) || value <= 0) continue;
-    const bucket = bucketForToken(token);
-    bucketTotals.set(bucket, (bucketTotals.get(bucket) ?? 0) + value);
-  }
+  const { bucketTotals } = accumulateBucketedExposure({
+    items: Object.entries(tokens),
+    getValue: ([, value]) => value,
+    getBucket: ([token]) => bucketForToken(token),
+  });
 
   return slicesFromValues([
     {
@@ -106,11 +111,14 @@ export async function fetchSkyMakercoreReserves(
 
   const totalUsd = Object.values(tokens).reduce((sum, v) => sum + (Number.isFinite(v) ? v : 0), 0);
   const immediateRedeemableUsd = resolveSkyImmediateRedeemableUsd(tokens);
-  const unknown = listUnexpectedTokens(tokens);
-  const unknownExposureUsd = unknown.reduce((sum, token) => {
-    const value = tokens[token];
-    return sum + (Number.isFinite(value) && value > 0 ? value : 0);
-  }, 0);
+  const { unknownValue: unknownExposureUsd, unknownValuesByKey } = accumulateBucketedExposure({
+    items: Object.entries(tokens),
+    getValue: ([, value]) => value,
+    getBucket: ([token]) => bucketForToken(token),
+    isUnknown: ([token]) => !KNOWN_TOKENS.has(token.toUpperCase()),
+    getUnknownKey: ([token]) => token,
+  });
+  const unknown = Array.from(unknownValuesByKey.keys());
   const warnings: LiveReserveWarning[] = unknown.map((token) => reserveDegradedWarning(
     "unknown-asset",
     `Sky collateral token bucketed into other: ${token}`,

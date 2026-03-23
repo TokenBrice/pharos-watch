@@ -92,6 +92,7 @@ export function adaptCollateralPositions(
   const values: Array<{ name: string; usd: number; risk: ReserveSlice["risk"]; coinId?: string }> = [];
   const missingPriceSymbols = new Set<string>();
   let unknownExposureUsd = 0;
+  let activePositionCount = 0;
 
   for (const entry of Object.values(details)) {
     const totalBalance = entry.positions.reduce((acc, position) => {
@@ -101,6 +102,11 @@ export function adaptCollateralPositions(
     }, 0);
 
     if (totalBalance <= 0) continue;
+    activePositionCount += entry.positions.filter((position) => {
+      if (position.closed || position.denied) return false;
+      const raw = Number(position.collateralBalance ?? "0");
+      return Number.isFinite(raw) && raw > 0;
+    }).length;
 
     const priceInfo = prices[entry.address.toLowerCase()];
     const usdPrice = priceInfo?.price?.usd;
@@ -164,8 +170,12 @@ export function adaptCollateralPositions(
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       assetCount: values.length,
+      collateralAssetCount: Object.keys(details).length,
+      activePositionCount,
+      missingPriceCount: missingPriceSymbols.size,
       unknownAssetCount: warnings.length,
       unknownExposurePct: total > 0 ? (unknownExposureUsd / total) * 100 : 0,
+      freshnessMode: "unverified",
     },
   };
 }

@@ -306,6 +306,14 @@ function hasConsistentSnapshotState(
     && syncState.lastSuccessAt === fetchedAt;
 }
 
+function hasScoringEligibleFreshness(metadata: LiveReserveSnapshotMetadata): boolean {
+  if (typeof metadata.sourceTimestamp === "number" && Number.isFinite(metadata.sourceTimestamp) && metadata.sourceTimestamp > 0) {
+    return true;
+  }
+
+  return metadata.freshnessMode === "verified" || metadata.freshnessMode === "not-applicable";
+}
+
 function canUseLegacySnapshotFallback(
   syncState: ReserveSyncStateRecord | null,
   fetchedAt: number | null | undefined,
@@ -765,11 +773,6 @@ export async function computeReserveCompositionOverview(
     const ageSec = Math.max(0, now - parsed.record.fetchedAt);
     lastSuccessAt = lastSuccessAt == null ? parsed.record.fetchedAt : Math.max(lastSuccessAt, parsed.record.fetchedAt);
 
-    if (ageSec > freshnessSec) {
-      staleCoins++;
-      continue;
-    }
-
     if (syncState?.lastStatus === "error") {
       errorCoins++;
       continue;
@@ -777,6 +780,11 @@ export async function computeReserveCompositionOverview(
 
     if (syncState && syncState.lastStatus !== "ok") {
       degradedCoins++;
+      continue;
+    }
+
+    if (ageSec > freshnessSec) {
+      staleCoins++;
       continue;
     }
 
@@ -866,32 +874,22 @@ async function loadFreshAuthoritativeReserveSnapshots(
   return snapshots;
 }
 
-async function loadFreshLiveReserveMap(
-  db: D1Database,
-  now = Math.floor(Date.now() / 1000),
-  freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
-  options?: {
-    minSlices?: number;
-    sourceModels?: readonly LiveReserveSourceModel[];
-    evidenceClasses?: readonly LiveReserveEvidenceClass[];
-    requireOkStatus?: boolean;
-  },
-): Promise<Map<string, ReserveSlice[]>> {
-  const snapshots = await loadFreshAuthoritativeReserveSnapshots(db, now, freshnessSec, options);
-  return new Map(Array.from(snapshots.entries()).map(([coinId, snapshot]) => [coinId, snapshot.slices]));
-}
-
 export async function loadFreshIndependentLiveReserveMap(
   db: D1Database,
   now = Math.floor(Date.now() / 1000),
   freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
   minSlices = 1,
 ): Promise<Map<string, ReserveSlice[]>> {
-  return loadFreshLiveReserveMap(db, now, freshnessSec, {
+  const snapshots = await loadFreshAuthoritativeReserveSnapshots(db, now, freshnessSec, {
     minSlices,
     evidenceClasses: SCORING_LIVE_RESERVE_EVIDENCE_CLASSES,
     requireOkStatus: true,
   });
+  return new Map(
+    Array.from(snapshots.entries())
+      .filter(([, snapshot]) => hasScoringEligibleFreshness(snapshot.metadata))
+      .map(([coinId, snapshot]) => [coinId, snapshot.slices]),
+  );
 }
 
 export async function getLatestSuccessfulReserveSnapshotMetadata(

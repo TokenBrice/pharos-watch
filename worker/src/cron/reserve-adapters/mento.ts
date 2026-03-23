@@ -1,7 +1,17 @@
 import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchTextWithRetry, getAdapterTimeout, requireHtmlInput, reserveDegradedWarning, reserveInfoWarning, slicesFromPercentages } from "./helpers";
+import {
+  fetchTextWithRetry,
+  getAdapterTimeout,
+  htmlLayoutChangedError,
+  htmlParseError,
+  requireHtmlInput,
+  reserveDegradedWarning,
+  reserveInfoWarning,
+  slicesFromPercentages,
+  unverifiedFreshnessMetadata,
+} from "./helpers";
 
 interface MentoReserveEntry {
   symbol: string;
@@ -31,12 +41,12 @@ const TOKEN_CONFIG: Record<string, TokenConfig> = {
 function extractEscapedArray(html: string, startNeedle: string, endNeedle: string): string {
   const start = html.indexOf(startNeedle);
   if (start === -1) {
-    throw new Error("Mento reserve payload is missing reserveComposition");
+    throw htmlLayoutChangedError("mento", "reserve payload is missing reserveComposition");
   }
   const contentStart = start + startNeedle.length;
   const end = html.indexOf(endNeedle, contentStart);
   if (end === -1) {
-    throw new Error("Mento reserve payload is missing reserveHoldings delimiter");
+    throw htmlLayoutChangedError("mento", "reserve payload is missing reserveHoldings delimiter");
   }
   return `${html.slice(contentStart, end)}]`;
 }
@@ -51,10 +61,13 @@ export function parseMentoReserveComposition(html: string): MentoReserveEntry[] 
         .replace(/\\"/g, '"'),
     );
   } catch (e) {
-    throw new Error(`Mento reserve composition JSON is malformed: ${e instanceof Error ? e.message : String(e)}`);
+    throw htmlParseError(
+      "mento",
+      `reserve composition JSON is malformed: ${e instanceof Error ? e.message : String(e)}`,
+    );
   }
   if (!Array.isArray(parsed)) {
-    throw new Error("Mento reserveComposition was not an array");
+    throw htmlLayoutChangedError("mento", "reserveComposition was not an array");
   }
 
   return parsed
@@ -98,7 +111,14 @@ export function adaptMentoReserveComposition(html: string): AdapterResult {
   return {
     slices,
     ...(warnings.length > 0 ? { warnings } : {}),
-    metadata: { entryCount: entries.length, totalPct, freshnessMode: "unverified" },
+    metadata: {
+      entryCount: entries.length,
+      totalPct,
+      ...unverifiedFreshnessMetadata(
+        "nextjs-embedded-payload",
+        "Mento reserve page embeds composition percentages without a trustworthy source timestamp",
+      ),
+    },
   };
 }
 

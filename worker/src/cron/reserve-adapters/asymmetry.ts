@@ -31,6 +31,7 @@ const BRANCH_RISK_MAP: Record<string, BranchRiskConfig> = {
 export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
   const branches = payload.usdaf?.branch ?? {};
   const warnings: LiveReserveWarning[] = [];
+  let unknownExposureUsd = 0;
   const entries = Object.entries(branches)
     .map(([name, stats]) => ({
       name,
@@ -46,6 +47,7 @@ export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
       entries.map((entry) => {
         const config = BRANCH_RISK_MAP[entry.name] ?? { risk: "medium" as const };
         if (!(entry.name in BRANCH_RISK_MAP)) {
+          unknownExposureUsd += entry.usd;
           warnings.push({
             ...reserveDegradedWarning("unknown-branch", `Asymmetry branch defaulted to medium risk: ${entry.name}`),
           });
@@ -60,6 +62,13 @@ export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
       }),
     ),
     ...(warnings.length > 0 ? { warnings } : {}),
+    metadata: {
+      branchCount: Object.keys(branches).length,
+      activeBranchCount: entries.length,
+      unknownBranchCount: warnings.length,
+      unknownExposurePct: total > 0 ? (unknownExposureUsd / total) * 100 : 0,
+      freshnessMode: "unverified",
+    },
   };
 }
 

@@ -52,11 +52,13 @@ export function adaptCrvUsd(payload: CurveMarketsPayload): AdapterResult {
   const buckets = new Map<string, { usd: number; risk: ReserveSlice["risk"] }>();
   const warnings: LiveReserveWarning[] = [];
   let unknownUsd = 0;
+  let activeMarkets = 0;
 
   for (const market of markets) {
     const symbol = market.collateral_token?.symbol;
     const usd = market.collateral_amount_usd ?? 0;
     if (!symbol || !Number.isFinite(usd) || usd <= 0) continue;
+    activeMarkets++;
 
     const bucket = classifySymbol(symbol);
     if (!bucket) {
@@ -99,7 +101,10 @@ export function adaptCrvUsd(payload: CurveMarketsPayload): AdapterResult {
     warnings,
     metadata: {
       marketCount: markets.length,
+      activeMarketCount: activeMarkets,
+      bucketCount: buckets.size,
       unknownExposurePct: totalWithUnknown > 0 ? (unknownUsd / totalWithUnknown) * 100 : 0,
+      freshnessMode: "unverified",
     },
   };
 }

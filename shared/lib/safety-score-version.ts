@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const safetyScore = createMethodologyVersion({
-  currentVersion: "6.5",
+  currentVersion: "6.6",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "6.6",
+      title: "Timestamp-backed live reserve scoring gate",
+      date: "2026-03-24",
+      effectiveAt: 1774368000,
+      summary:
+        "Collateral-quality passthrough now excludes timestamp-less or explicitly unverified live reserve feeds unless the feed carries verified freshness or is intrinsically on-chain.",
+      impact: [
+        "Independent live reserve feeds now need scoring-eligible freshness evidence in addition to fresh authoritative ok-status snapshots",
+        "Snapshots with freshnessMode=unverified no longer override curated collateral quality in report-card scoring",
+        "Direct on-chain reserve adapters can still qualify when freshness is marked not-applicable",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "6.5",
       title: "Clean independent live reserve passthrough",

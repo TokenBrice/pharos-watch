@@ -65,7 +65,7 @@ If the merge gate fails, fix the issue locally and re-run — do not push hoping
 ## Web Fetching
 
 - **APIs first**: When fetching data from CoinGecko, Etherscan, DefiLlama, etc., always prefer their API endpoints over scraping web pages. APIs are structured, reliable, and rarely return 403s.
-- **agent-browser for everything else**: For websites, docs pages, and any URL that returns a 403 with `WebFetch`, use `agent-browser` (headless browser CLI, globally installed). It bypasses bot detection and renders JS-heavy pages.
+- **cmux browser for everything else**: For websites, docs pages, visual verification, form interaction, and any URL that returns a 403 with `WebFetch`, use `cmux browser` (built into the terminal session). It provides full browser automation: navigation, DOM interaction, JS eval, screenshots, and session persistence. See [`agents/process/cmux-browser.md`](agents/process/cmux-browser.md) for the full command reference and [upstream docs](https://cmux.com/docs/browser-automation).
 
 ## Key Gotchas
 

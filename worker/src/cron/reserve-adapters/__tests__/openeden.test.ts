@@ -22,6 +22,10 @@ describe("adaptOpenEdenUsdo", () => {
       { name: "USDC buffer", pct: 7.6, risk: "low", coinId: "usdc-circle" },
     ]);
     expect(result.metadata).toMatchObject({
+      freshnessMode: "unverified",
+      details: {
+        freshnessSource: "issuer-api",
+      },
       reserveAssetsInUsd: 62_539_444.54,
       supplyUsd: 62_283_070,
       immediateRedeemableUsd: 4_767_161.22,

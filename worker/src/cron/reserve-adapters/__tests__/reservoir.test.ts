@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adaptReservoirReserves, type ReservoirReservesResponse } from "../reservoir";
+import { adaptReservoirReserves, fetchReservoirReserves, type ReservoirReservesResponse } from "../reservoir";
 
 const SAMPLE_RESPONSE: ReservoirReservesResponse = {
   assets: [
@@ -81,5 +81,30 @@ describe("adaptReservoirReserves", () => {
     const total = slices.reduce((acc, s) => acc + s.pct, 0);
     expect(total).toBeCloseTo(100, 10);
     expect(slices).toHaveLength(3);
+  });
+
+  it("emits explicit unverified freshness details on fetched results", async () => {
+    const result = await fetchReservoirReserves(
+      { id: "r" } as never,
+      {
+        adapter: "reservoir",
+        version: 1,
+        semantics: "protocol-reserve",
+        inputs: { primary: { kind: "http-json", url: "https://example.com/reservoir" } },
+      },
+      new AbortController().signal,
+      {
+        requestCache: new Map([
+          ["json-get:https://example.com/reservoir:12000", Promise.resolve(SAMPLE_RESPONSE)],
+        ]),
+      } as never,
+    );
+
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "unverified",
+      details: {
+        freshnessSource: "protocol-balance-sheet-api",
+      },
+    });
   });
 });

@@ -220,6 +220,8 @@ const redemptionRateProbeSchema = z.object({
 
 const erc4626SingleAssetParamsSchema = z.object({
   slice: reserveSliceDescriptorSchema,
+  rpcUrl: z.string().optional(),
+  fallbackRpcUrl: z.string().optional(),
 }).strict();
 
 const evmBranchBalanceBranchSchema = z.object({

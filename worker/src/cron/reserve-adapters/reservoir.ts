@@ -1,6 +1,14 @@
 import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, isHttpJsonInput, normalizeSlices, reserveDegradedWarning } from "./helpers";
+import {
+  fetchJsonWithRetry,
+  getAdapterTimeout,
+  isHttpJsonInput,
+  normalizeSlices,
+  reserveDegradedWarning,
+  unverifiedFreshnessMetadata,
+} from "./helpers";
+import { wrapperAssetMeta } from "./wrapper-assets";
 
 interface ReservoirBalanceItem {
   label: string;
@@ -29,48 +37,42 @@ const RESERVOIR_BUCKETS: ReservoirBucketConfig[] = [
     key: "usd1",
     label: "USD1 lending markets",
     risk: "medium",
-    coinId: "usd1-world-liberty-financial",
-    depType: "wrapper",
+    ...wrapperAssetMeta("usd1"),
     match: (item) => item.label.includes("USD1"),
   },
   {
     key: "pyusd",
     label: "PYUSD lending markets",
     risk: "medium",
-    coinId: "pyusd-paypal",
-    depType: "wrapper",
+    ...wrapperAssetMeta("pyusd"),
     match: (item) => item.label.includes("PYUSD"),
   },
   {
     key: "rlusd",
     label: "RLUSD lending markets",
     risk: "medium",
-    coinId: "rlusd-ripple",
-    depType: "wrapper",
+    ...wrapperAssetMeta("rlusd"),
     match: (item) => item.label.includes("RLUSD"),
   },
   {
     key: "gho",
     label: "GHO lending markets",
     risk: "medium",
-    coinId: "gho-aave",
-    depType: "wrapper",
+    ...wrapperAssetMeta("gho"),
     match: (item) => item.label.includes("GHO"),
   },
   {
     key: "usdt",
     label: "USDT / USDT0 positions",
     risk: "medium",
-    coinId: "usdt-tether",
-    depType: "wrapper",
+    ...wrapperAssetMeta("usdt"),
     match: (item) => item.label.includes("USDT0") || item.label === "USDT",
   },
   {
     key: "usdc",
     label: "USDC positions",
     risk: "medium",
-    coinId: "usdc-circle",
-    depType: "wrapper",
+    ...wrapperAssetMeta("usdc"),
     match: (item) => item.label.includes("USDC"),
   },
   {
@@ -185,7 +187,10 @@ export async function fetchReservoirReserves(
       totalLiabilities: payload.totalLiabilities,
       equity: payload.equity,
       unknownAssetCount: adapted.unknownAssets.length,
-      freshnessMode: "unverified",
+      ...unverifiedFreshnessMetadata(
+        "protocol-balance-sheet-api",
+        "Reservoir balance-sheet payload does not include a trustworthy source timestamp",
+      ),
       unknownExposurePct:
         Number(payload.totalAssets) > 0
           ? adapted.slices

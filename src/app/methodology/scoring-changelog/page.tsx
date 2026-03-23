@@ -124,6 +124,39 @@ const route = createMethodologyChangelogRoute({
   })),
   renderContent: () => (
     <>
+      {/* ──────────── v6.6 ──────────── */}
+      <VersionCard
+        version="v6.6"
+        title="Timestamp-backed live reserve scoring gate"
+        date="Mar 24, 2026"
+        accent="border-l-amber-500"
+      >
+        <p>
+          Safety Score structure is unchanged, but collateral-quality live reserve passthrough now
+          requires stronger freshness evidence before a live feed can override curated collateral scoring.
+        </p>
+        <ul className="list-disc list-inside space-y-1">
+          <li>
+            Independent live reserve feeds still need a{" "}
+            <span className="text-foreground font-medium">fresh authoritative snapshot</span>{" "}
+            whose latest <code className="text-xs bg-muted px-1 py-0.5 rounded">reserve_sync_state.last_status</code>{" "}
+            is <code className="text-xs bg-muted px-1 py-0.5 rounded">ok</code>.
+          </li>
+          <li>
+            In addition, collateral passthrough now requires scoring-eligible freshness evidence:
+            either a verified timestamp path or a{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">freshnessMode</code>{" "}
+            of <code className="text-xs bg-muted px-1 py-0.5 rounded">verified</code> or{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">not-applicable</code>.
+          </li>
+          <li>
+            Feeds marked <code className="text-xs bg-muted px-1 py-0.5 rounded">unverified</code>{" "}
+            remain available on reserve detail/status surfaces, but they no longer override curated
+            collateral quality in report-card scoring.
+          </li>
+        </ul>
+      </VersionCard>
+
       {/* ──────────── v6.5 ──────────── */}
       <VersionCard
         version="v6.5"

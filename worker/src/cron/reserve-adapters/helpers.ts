@@ -42,6 +42,14 @@ interface OnchainRateProbe {
   decimals?: number;
 }
 
+interface BucketedExposureOptions<Item, Bucket extends string> {
+  items: Item[];
+  getValue: (item: Item) => number;
+  getBucket: (item: Item) => Bucket;
+  isUnknown?: (item: Item, bucket: Bucket) => boolean;
+  getUnknownKey?: (item: Item) => string;
+}
+
 const ADAPTER_USER_AGENT = "Mozilla/5.0";
 
 function getRequestCache(ctx?: AdapterContext): Map<string, Promise<unknown>> | null {
@@ -79,11 +87,69 @@ export function reserveDegradedWarning(code: string, message: string): LiveReser
   return { code, message, severity: "warning", effect: "degraded" };
 }
 
+export function unverifiedFreshnessMetadata(
+  source: string,
+  reason: string,
+): { freshnessMode: "unverified"; details: { freshnessSource: string; freshnessReason: string } } {
+  return {
+    freshnessMode: "unverified",
+    details: {
+      freshnessSource: source,
+      freshnessReason: reason,
+    },
+  };
+}
+
+export function htmlLayoutChangedError(adapterName: string, detail: string): Error {
+  return new Error(`${adapterName}: layout-changed: ${detail}`);
+}
+
+export function htmlParseError(adapterName: string, detail: string): Error {
+  return new Error(`${adapterName}: parse-failed: ${detail}`);
+}
+
+export function accumulateBucketedExposure<Item, Bucket extends string>({
+  items,
+  getValue,
+  getBucket,
+  isUnknown,
+  getUnknownKey,
+}: BucketedExposureOptions<Item, Bucket>): {
+  bucketTotals: Map<Bucket, number>;
+  totalValue: number;
+  unknownValue: number;
+  unknownValuesByKey: Map<string, number>;
+} {
+  const bucketTotals = new Map<Bucket, number>();
+  const unknownValuesByKey = new Map<string, number>();
+  let totalValue = 0;
+  let unknownValue = 0;
+
+  for (const item of items) {
+    const value = getValue(item);
+    if (!Number.isFinite(value) || value <= 0) continue;
+
+    totalValue += value;
+    const bucket = getBucket(item);
+    bucketTotals.set(bucket, (bucketTotals.get(bucket) ?? 0) + value);
+
+    if (isUnknown?.(item, bucket)) {
+      unknownValue += value;
+      const key = getUnknownKey?.(item);
+      if (key) {
+        unknownValuesByKey.set(key, (unknownValuesByKey.get(key) ?? 0) + value);
+      }
+    }
+  }
+
+  return { bucketTotals, totalValue, unknownValue, unknownValuesByKey };
+}
+
 export function isHttpJsonInput(input: LiveReserveInput): input is JsonInput {
   return input.kind === "http-json";
 }
 
-export function isOnchainEvmInput(input: LiveReserveInput): input is EvmInput {
+function isOnchainEvmInput(input: LiveReserveInput): input is EvmInput {
   return input.kind === "onchain-evm";
 }
 
@@ -113,14 +179,9 @@ export function requireOnchainInput(input: LiveReserveInput, adapterName: string
 }
 
 const DEFAULT_ADAPTER_TIMEOUT_MS = 10_000;
-const MAX_ADAPTER_TIMEOUT_MS = 30_000;
-
-/** Reads timeout from config.params.timeoutMs, falling back to the adapter's default or 10s. */
+/** Returns the adapter's explicit fallback timeout or the shared 10s default. */
 export function getAdapterTimeout(config: LiveReservesConfig, fallbackMs = DEFAULT_ADAPTER_TIMEOUT_MS): number {
-  const paramTimeout = (config.params as Record<string, unknown> | undefined)?.timeoutMs;
-  if (typeof paramTimeout === "number" && paramTimeout > 0 && paramTimeout <= MAX_ADAPTER_TIMEOUT_MS) {
-    return paramTimeout;
-  }
+  void config;
   return fallbackMs;
 }
 
@@ -223,29 +284,45 @@ export async function fetchTextWithRetry(
 export async function fetchDefiLlamaPrices(
   assets: Array<{ key: string; chain: string; address: string }>,
   signal: AbortSignal,
+  ctx?: AdapterContext,
 ): Promise<Map<string, number>> {
   if (assets.length === 0) return new Map();
 
   const assetKeys = assets.map(({ chain, address }) => `${chain}:${address.toLowerCase()}`);
-  const res = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${assetKeys.join(",")}`, { signal }, 2, { timeoutMs: 10_000 });
-  if (!res || !res.ok) {
-    throw new Error(`DefiLlama price fetch failed (${res?.status ?? "no-response"})`);
-  }
+  return getCachedRequest(
+    `defillama-prices:${assetKeys.join(",")}`,
+    async () => {
+      const res = await fetchWithRetry(
+        `${DEFILLAMA_COINS}/prices/current/${assetKeys.join(",")}`,
+        { signal },
+        2,
+        { timeoutMs: 10_000 },
+      );
+      if (!res) {
+        throw new Error("DefiLlama price fetch failed (no-response)");
+      }
+      if (!res.ok) {
+        await res.body?.cancel();
+        throw new Error(`DefiLlama price fetch failed (${res.status})`);
+      }
 
-  const body = (await res.json()) as {
-    coins?: Record<string, { price?: number }>;
-  };
-  const priceMap = new Map<string, number>();
+      const body = (await res.json()) as {
+        coins?: Record<string, { price?: number }>;
+      };
+      const priceMap = new Map<string, number>();
 
-  for (const asset of assets) {
-    const lookupKey = `${asset.chain}:${asset.address.toLowerCase()}`;
-    const price = body.coins?.[lookupKey]?.price;
-    if (typeof price === "number" && price > 0) {
-      priceMap.set(asset.key, price);
-    }
-  }
+      for (const asset of assets) {
+        const lookupKey = `${asset.chain}:${asset.address.toLowerCase()}`;
+        const price = body.coins?.[lookupKey]?.price;
+        if (typeof price === "number" && price > 0) {
+          priceMap.set(asset.key, price);
+        }
+      }
 
-  return priceMap;
+      return priceMap;
+    },
+    ctx,
+  );
 }
 
 export async function fetchOnchainUint256(options: EvmCallOptions): Promise<bigint | null> {

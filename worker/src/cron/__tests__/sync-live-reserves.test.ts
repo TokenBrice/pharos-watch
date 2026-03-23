@@ -168,4 +168,22 @@ describe("syncLiveReserves", () => {
     );
     expect(recordOutcomeSafeMock).toHaveBeenCalledTimes(uniqueBreakerKeys.size);
   });
+
+  it("classifies parser drift in sync attempt metadata", async () => {
+    mockAdapterRegistry(async () => {
+      throw new Error("circle-transparency: layout-changed: missing reserve attributes");
+    });
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1();
+    await syncLiveReserves(db, new AbortController().signal, {});
+
+    const attemptInsert = db.getHistory().find((entry) => entry.sql.includes("reserve_sync_attempt_history"));
+    expect(attemptInsert).toBeDefined();
+    const metadataJson = attemptInsert!.binds[8] as string;
+    expect(JSON.parse(metadataJson)).toMatchObject({
+      reason: "adapter-exception",
+      failureCategory: "parser-drift",
+    });
+  });
 });

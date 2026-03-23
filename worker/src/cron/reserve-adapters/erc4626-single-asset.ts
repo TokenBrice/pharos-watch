@@ -1,52 +1,44 @@
 import type {
   LiveReserveWarning,
   LiveReservesConfig,
-  ReserveRisk,
   ReserveSlice,
   StablecoinMeta,
 } from "@shared/types";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
+import { parseEvmAddressResult, resolveCoinContractAddress } from "./evm";
 import {
-  fetchEvmCallHex,
-  parseEvmAddressResult,
-  resolveCoinContractAddress,
-} from "./evm";
-import { getAdapterTimeout, isOnchainEvmInput, isReserveRisk, reserveDegradedWarning } from "./helpers";
+  fetchOnchainRawCall,
+  getAdapterTimeout,
+  requireOnchainInput,
+  reserveDegradedWarning,
+} from "./helpers";
 
 const ERC4626_TOTAL_ASSETS_SELECTOR = "0x01e1d114";
 const ERC4626_ASSET_SELECTOR = "0x38d52e0f";
 
 interface SingleAssetSliceConfig {
-  name: string;
-  risk: ReserveRisk;
+  name: ReserveSlice["name"];
+  risk: ReserveSlice["risk"];
   coinId?: string;
   depType?: ReserveSlice["depType"];
   expectedAssetAddress?: string;
+  rpcUrl?: string;
+  fallbackRpcUrl?: string;
 }
 
 function parseSliceConfig(config: LiveReservesConfig): SingleAssetSliceConfig {
-  const slice = config.params?.slice;
-  if (!slice || typeof slice !== "object") {
-    throw new Error("erc4626-single-asset adapter requires params.slice");
-  }
-
-  const name = "name" in slice && typeof slice.name === "string"
-    ? slice.name.trim()
-    : "";
-  const risk = "risk" in slice ? slice.risk : undefined;
-
-  if (!name || !isReserveRisk(risk)) {
-    throw new Error("erc4626-single-asset params.slice must include a valid name and risk");
-  }
-
+  const params = parseLiveReserveAdapterParams("erc4626-single-asset", config.params);
   return {
-    name,
-    risk,
-    ...("coinId" in slice && typeof slice.coinId === "string" ? { coinId: slice.coinId } : {}),
-    ...("depType" in slice && typeof slice.depType === "string" ? { depType: slice.depType as ReserveSlice["depType"] } : {}),
-    ...("expectedAssetAddress" in slice && typeof slice.expectedAssetAddress === "string"
-      ? { expectedAssetAddress: slice.expectedAssetAddress.toLowerCase() }
+    name: params.slice.name,
+    risk: params.slice.risk,
+    ...(params.slice.coinId ? { coinId: params.slice.coinId } : {}),
+    ...(params.slice.depType ? { depType: params.slice.depType } : {}),
+    ...(params.slice.expectedAssetAddress
+      ? { expectedAssetAddress: params.slice.expectedAssetAddress.toLowerCase() }
       : {}),
+    ...(params.rpcUrl ? { rpcUrl: params.rpcUrl } : {}),
+    ...(params.fallbackRpcUrl ? { fallbackRpcUrl: params.fallbackRpcUrl } : {}),
   };
 }
 
@@ -56,11 +48,7 @@ export async function fetchErc4626SingleAssetReserves(
   signal: AbortSignal,
   _ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const primaryInput = config.inputs.primary;
-  if (!isOnchainEvmInput(primaryInput)) {
-    throw new Error("erc4626-single-asset adapter requires an onchain-evm primary input");
-  }
-
+  const primaryInput = requireOnchainInput(config.inputs.primary, "erc4626-single-asset");
   const sliceConfig = parseSliceConfig(config);
   const contractAddress = resolveCoinContractAddress(coin, primaryInput.chain);
   if (!contractAddress) {
@@ -69,8 +57,28 @@ export async function fetchErc4626SingleAssetReserves(
 
   const timeout = getAdapterTimeout(config, 12_000);
   const [assetResult, totalAssetsResult] = await Promise.all([
-    fetchEvmCallHex(primaryInput.chain, contractAddress, ERC4626_ASSET_SELECTOR, signal, _ctx?.chainRpcs, timeout),
-    fetchEvmCallHex(primaryInput.chain, contractAddress, ERC4626_TOTAL_ASSETS_SELECTOR, signal, _ctx?.chainRpcs, timeout),
+    fetchOnchainRawCall({
+      contract: contractAddress,
+      data: ERC4626_ASSET_SELECTOR,
+      signal,
+      ctx: _ctx,
+      rpcMode: primaryInput.rpcMode,
+      chain: primaryInput.chain,
+      rpcUrl: sliceConfig.rpcUrl,
+      fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
+      timeoutMs: timeout,
+    }),
+    fetchOnchainRawCall({
+      contract: contractAddress,
+      data: ERC4626_TOTAL_ASSETS_SELECTOR,
+      signal,
+      ctx: _ctx,
+      rpcMode: primaryInput.rpcMode,
+      chain: primaryInput.chain,
+      rpcUrl: sliceConfig.rpcUrl,
+      fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
+      timeoutMs: timeout,
+    }),
   ]);
 
   if (!totalAssetsResult) {
@@ -82,7 +90,7 @@ export async function fetchErc4626SingleAssetReserves(
   }
 
   const warnings: LiveReserveWarning[] = [];
-  const assetAddress = assetResult ? parseEvmAddressResult(assetResult) : null;
+  const assetAddress = assetResult ? parseEvmAddressResult(assetResult as `0x${string}`) : null;
   if (
     assetAddress
     && sliceConfig.expectedAssetAddress

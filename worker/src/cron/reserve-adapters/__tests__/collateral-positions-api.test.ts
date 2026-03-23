@@ -45,6 +45,13 @@ describe("adaptCollateralPositions", () => {
       { name: "WBTC (Wrapped BTC)", pct: 55.6, risk: "medium" },
       { name: "WETH (Wrapped Ether)", pct: 44.4, risk: "very-low" },
     ]);
+    expect(result.metadata).toMatchObject({
+      assetCount: 3,
+      collateralAssetCount: 3,
+      activePositionCount: 3,
+      missingPriceCount: 0,
+      freshnessMode: "unverified",
+    });
   });
 
   it("emits a warning for symbols not in canonical or protocol-specific risk maps", () => {

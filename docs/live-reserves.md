@@ -80,6 +80,7 @@ Common metadata fields:
 |-------|---------|
 | `sourceTimestamp` | Upstream disclosure timestamp, when independently verified |
 | `freshnessMode` | `verified`, `unverified`, or `not-applicable` |
+| `details.freshnessSource` / `details.freshnessReason` | Adapter-supplied explanation when freshness is explicitly unverified |
 | `unknownExposurePct` | Share of reserve value that could not be mapped cleanly |
 | `supplyUsd`, `totalReserveUsd` | Adapter-level balance-sheet totals when exposed |
 | `immediateRedeemableUsd`, `immediateRedeemableRatio` | Current redeemable-capacity telemetry reused by redemption backstops |
@@ -118,7 +119,8 @@ Adapters can also declare shared validation policy in the registry:
 
 - `maxSourceAgeSec`: if adapter metadata includes `sourceTimestamp` and the upstream disclosure is older than the policy allows, the sync is marked `degraded`
 - `maxUnknownExposurePct`: if adapter metadata includes `unknownExposurePct` and unmapped reserve exposure is material, the sync is marked `degraded`
-- when `maxSourceAgeSec` exists but the adapter can only attest freshness heuristically, `freshnessMode = "unverified"` produces an informational `freshness-unverified` warning instead of forcing a degraded status
+- when `maxSourceAgeSec` exists but the adapter can only attest freshness heuristically, `freshnessMode = "unverified"` produces an informational `freshness-unverified` warning instead of forcing a degraded status on the sync itself
+- timestamp-less dashboard/API feeds should also populate `details.freshnessSource` / `details.freshnessReason` so the lack of verified recency is explicit in stored metadata
 
 These policy warnings still preserve the last-known live snapshot for detail/status surfaces, but they keep the snapshot out of report-card collateral passthrough because scoring only accepts independent snapshots whose latest sync state is `ok`.
 
@@ -188,8 +190,9 @@ Freshness and consistency rules live in `worker/src/lib/live-reserves-store.ts`:
 - A live snapshot only counts as consistent when `reserve_sync_state.last_success_at === reserve_composition.fetched_at`
 - Stored snapshots are parsed strictly: unreadable JSON, invalid payloads, empty slice arrays, invalid slices, or materially invalid sums are rejected instead of being partially served
 - `loadFreshAuthoritativeReserveSnapshots()` is the canonical resolver used by `GET /api/stablecoin-reserves/:id` and reserve-sync status surfaces
-- `loadFreshIndependentLiveReserveMap()` further filters authoritative snapshots to `evidenceClass = independent` **and** `reserve_sync_state.last_status = "ok"` for report-card collateral quality, reserve drift, and fallback tracking
+- `loadFreshIndependentLiveReserveMap()` further filters authoritative snapshots to `evidenceClass = independent`, `reserve_sync_state.last_status = "ok"`, **and** scoring-eligible freshness evidence. In practice that means the snapshot must either carry a verified `sourceTimestamp` path or explicitly mark freshness as `not-applicable` / `verified`; `freshnessMode = "unverified"` no longer qualifies for collateral passthrough.
 - `getLatestSuccessfulReserveSnapshotMetadata()` is the canonical accessor for downstream consumers that need snapshot telemetry such as redeemable capacity or live redemption fees
+- failed `reserve_sync_state` / `reserve_sync_attempt_history` rows now also retain `metadata.failureCategory` so parser drift, network issues, upstream HTTP failures, validation failures, and storage write failures are distinguishable without log grep
 
 `computeReserveCompositionOverview()` aggregates the status-card summary used by `/status`:
 
@@ -205,6 +208,7 @@ Freshness and consistency rules live in `worker/src/lib/live-reserves-store.ts`:
 
 `errorCoins` includes active adapter failures even before a coin has ever produced a successful live snapshot; those rows no longer remain hidden inside `missingCoins`.
 `corruptCoins` counts rows where a matching latest-success snapshot exists in D1 but fails strict integrity validation, so the system fails closed to fallback presentation instead of serving truncated or malformed live data.
+When a coin has both an old latest-success snapshot and a newer failing attempt state, the overview now prioritizes the active `error` / `degraded` attempt classification over generic `stale` labeling so status surfaces better reflect live incidents.
 
 ---
 
@@ -304,6 +308,9 @@ the `gho` adapter now values reviewed mainnet GSM backing directly from live onc
 Adapter helpers are centralized in `worker/src/cron/reserve-adapters/helpers.ts`:
 
 - HTTP JSON / HTML fetch wrappers (`fetchJsonWithRetry`, `fetchTextWithRetry`)
+- HTML parser failure helpers that distinguish upstream layout drift (`layout-changed`) from content decoding failures (`parse-failed`) so attempt logs are more actionable for scraped disclosures
+- Shared bucketed-composition accumulation for adapters that classify many raw assets into a smaller reserve-bucket surface while tracking unknown exposure consistently
+- Shared unverified-freshness metadata helper so timestamp-less dashboard feeds explain why they remain non-scoring
 - DefiLlama spot-price loading for valuation (`fetchDefiLlamaPrices`), with fixed-price overrides supported for wrapper branches in `evm-branch-balances`
 - EVM balance, total-supply, and hex-call reads (`fetchErc20Balance`, `fetchErc20TotalSupply`)
 - Input-kind type guards and validators (`requireJsonInput`, `requireJsonInputFromConfig`, etc.)
@@ -326,7 +333,7 @@ Adapter helpers are centralized in `worker/src/cron/reserve-adapters/helpers.ts`
 ## Scope Boundaries
 
 - Live reserve sync is detail-page and status-surface infrastructure, not a replacement for curated reserve metadata everywhere else.
-- [Risk Lab](./report-cards.md) uses fresh authoritative independent live reserve snapshots for collateral quality scoring when available. In practice this now means: `dynamic-mix` adapters can qualify when their latest sync state is `ok`, only a subset of `single-bucket` adapters carry `evidenceClass = independent`, and `validated-static` / `weak-live-probe` feeds remain detail-card/status data only. Dependency inference, blacklist-inherited checks, and all other scoring dimensions still use curated reserve metadata.
+- [Risk Lab](./report-cards.md) uses fresh authoritative independent live reserve snapshots for collateral quality scoring when available. In practice this now means: `dynamic-mix` adapters can qualify when their latest sync state is `ok` **and** the snapshot carries scoring-eligible freshness evidence, only a subset of `single-bucket` adapters carry `evidenceClass = independent`, and `validated-static` / `weak-live-probe` feeds remain detail-card/status data only. Dependency inference, blacklist-inherited checks, and all other scoring dimensions still use curated reserve metadata.
 - `isBlacklistable()` inherited detection still uses curated `meta.reserves` (which carry `coinId` links). Most live adapter slices lack `coinId`, so inherited blacklist scoring cannot use live data even when collateral quality is using an independent live snapshot. The collateral drift alert flags when live collateral quality diverges materially from curated metadata.
 - [Dependency Map](./dependency-map.md) remains authoritative for graph behavior; dependency edges still derive from curated/static reserve metadata plus manual dependencies.
 

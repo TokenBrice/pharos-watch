@@ -1,6 +1,13 @@
 import type { LiveReservesConfig, LiveReserveWarning, StablecoinMeta } from "@shared/types";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig, reserveDegradedWarning, slicesFromValues } from "./helpers";
+import {
+  accumulateBucketedExposure,
+  fetchJsonWithRetry,
+  getAdapterTimeout,
+  requireJsonInputFromConfig,
+  reserveDegradedWarning,
+  slicesFromValues,
+} from "./helpers";
 
 interface EthenaCollateralRow {
   asset: string;
@@ -41,9 +48,6 @@ export function listUnexpectedEthenaAssets(payload: EthenaCollateralResponse): s
 }
 
 export function adaptEthenaCollateral(payload: EthenaCollateralResponse): AdapterResult {
-  const bucketTotals = new Map<EthenaBucket, number>();
-  let computedTotalBackingAssetsInUsd = 0;
-  let unknownExposureUsd = 0;
   const knownAssets = new Set([
     ...ETHENA_STABLE_ASSETS,
     ...ETHENA_BTC_ASSETS,
@@ -51,15 +55,16 @@ export function adaptEthenaCollateral(payload: EthenaCollateralResponse): Adapte
     ...ETHENA_OTHER_ASSETS,
   ]);
 
-  for (const row of payload.collateral) {
-    if (!Number.isFinite(row.usdAmount) || row.usdAmount <= 0) continue;
-    computedTotalBackingAssetsInUsd += row.usdAmount;
-    const bucket = bucketForEthenaAsset(row.asset);
-    if (!knownAssets.has(row.asset)) {
-      unknownExposureUsd += row.usdAmount;
-    }
-    bucketTotals.set(bucket, (bucketTotals.get(bucket) ?? 0) + row.usdAmount);
-  }
+  const {
+    bucketTotals,
+    totalValue: computedTotalBackingAssetsInUsd,
+    unknownValue: unknownExposureUsd,
+  } = accumulateBucketedExposure({
+    items: payload.collateral,
+    getValue: (row) => row.usdAmount,
+    getBucket: (row) => bucketForEthenaAsset(row.asset),
+    isUnknown: (row) => !knownAssets.has(row.asset),
+  });
 
   if (
     payload.totalBackingAssetsInUsd > 0

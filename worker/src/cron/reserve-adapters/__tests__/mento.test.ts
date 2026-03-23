@@ -54,12 +54,18 @@ describe("mento adapter", () => {
   });
 
   it("throws on missing reserveComposition marker", () => {
-    expect(() => parseMentoReserveComposition("no data here")).toThrow("missing reserveComposition");
+    expect(() => parseMentoReserveComposition("no data here")).toThrow("layout-changed");
   });
 
   it("throws on missing reserveHoldings delimiter", () => {
     const broken = `\\"reserveComposition\\":[{"symbol":"USDC","percent":40}]`;
-    expect(() => parseMentoReserveComposition(broken)).toThrow("missing reserveHoldings delimiter");
+    expect(() => parseMentoReserveComposition(broken)).toThrow("layout-changed");
+  });
+
+  it("throws parse-failed when the embedded reserve JSON is malformed", () => {
+    const malformed = `<html><body><script>self.__next_f.push([1,"...\\"reserveComposition\\":[{\\"symbol\\":\\"USDC\\",\\"percent\\":40},bad-json],\\"reserveHoldings\\":{}..."]);
+</script></body></html>`;
+    expect(() => parseMentoReserveComposition(malformed)).toThrow("parse-failed");
   });
 
   it("emits an unknown-asset warning for symbols not in TOKEN_CONFIG", () => {

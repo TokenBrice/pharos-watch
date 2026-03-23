@@ -1,4 +1,5 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
@@ -38,47 +39,11 @@ interface AccountableParams {
 const VALID_BUCKETS = new Set(["type", "reserves_split", "deployment", "type_split", "stablecoin_split", "exposure_split"]);
 
 function parseAccountableParams(config: LiveReservesConfig): AccountableParams {
-  const params = config.params;
-  if (!params || typeof params !== "object" || Array.isArray(params)) return {};
-
-  if (params.bucket != null && !VALID_BUCKETS.has(params.bucket as string)) {
-    throw new Error(`accountable: invalid bucket "${params.bucket as string}", expected one of: ${[...VALID_BUCKETS].join(", ")}`);
+  const params = parseLiveReserveAdapterParams("accountable", config.params);
+  if (params.bucket != null && !VALID_BUCKETS.has(params.bucket)) {
+    throw new Error(`accountable: invalid bucket "${params.bucket}", expected one of: ${[...VALID_BUCKETS].join(", ")}`);
   }
-  const bucket = VALID_BUCKETS.has(params.bucket as string)
-    ? (params.bucket as AccountableParams["bucket"])
-    : undefined;
-  const rawRiskMap = params.riskMap;
-  const rawRenameMap = params.renameMap;
-  const riskMap: Record<string, ReserveSlice["risk"]> = {};
-  const renameMap: Record<string, string> = {};
-
-  if (rawRiskMap && typeof rawRiskMap === "object" && !Array.isArray(rawRiskMap)) {
-    for (const [key, value] of Object.entries(rawRiskMap)) {
-      if (
-        value === "very-low"
-        || value === "low"
-        || value === "medium"
-        || value === "high"
-        || value === "very-high"
-      ) {
-        riskMap[key] = value;
-      }
-    }
-  }
-
-  if (rawRenameMap && typeof rawRenameMap === "object" && !Array.isArray(rawRenameMap)) {
-    for (const [key, value] of Object.entries(rawRenameMap)) {
-      if (typeof value === "string" && value.trim()) {
-        renameMap[key] = value.trim();
-      }
-    }
-  }
-
-  return {
-    bucket,
-    ...(Object.keys(riskMap).length > 0 ? { riskMap } : {}),
-    ...(Object.keys(renameMap).length > 0 ? { renameMap } : {}),
-  };
+  return params;
 }
 
 function extractNestedNumericValue(value: unknown, depth = 0): number | null {
@@ -163,12 +128,16 @@ function adaptAccountableDashboard(
     slices,
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
+      bucket,
+      breakdownCount: breakdown.length,
       collateralization: payload.data.collateralization,
       interval: payload.data.reserves.interval,
       verifiability: payload.data.reserves.verifiability,
       totalReserves,
       dashboardTimestamp: payload.data.ts,
-      ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
+      ...(sourceTimestamp != null
+        ? { sourceTimestamp, freshnessMode: "verified" as const }
+        : { freshnessMode: "unverified" as const }),
     },
   };
 }

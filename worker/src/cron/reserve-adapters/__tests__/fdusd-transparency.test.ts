@@ -49,6 +49,6 @@ describe("adaptFdusdTransparency", () => {
   });
 
   it("throws when the page no longer exposes any reserve badges", () => {
-    expect(() => adaptFdusdTransparency("<html></html>")).toThrow("no reserve composition entries");
+    expect(() => adaptFdusdTransparency("<html></html>")).toThrow("layout-changed");
   });
 });

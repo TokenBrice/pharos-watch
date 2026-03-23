@@ -41,6 +41,12 @@ describe("adaptCircleTransparency", () => {
     expect(result.slices.length).toBe(4);
     const total = result.slices.reduce((sum, s) => sum + s.pct, 0);
     expect(total).toBe(100);
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "unverified",
+      details: {
+        freshnessSource: "html-disclosure",
+      },
+    });
   });
 
   it("maps USDC slices to very-low risk", () => {
@@ -78,6 +84,6 @@ describe("adaptCircleTransparency", () => {
   });
 
   it("throws when no matching canvas found", () => {
-    expect(() => adaptCircleTransparency("<html></html>", "usdc")).toThrow();
+    expect(() => adaptCircleTransparency("<html></html>", "usdc")).toThrow("layout-changed");
   });
 });
