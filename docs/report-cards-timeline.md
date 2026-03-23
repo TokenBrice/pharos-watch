@@ -1,6 +1,6 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.13 (2026-02-25 → 2026-03-23).
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.5 (2026-02-25 → 2026-03-22).
 
 ---
 
@@ -324,96 +324,6 @@ Safety Score structure is unchanged, but the collateral-quality live reserve pas
 
 Weights and grade thresholds are unchanged from v6.4.
 
-## v6.6 - Reviewed lower-cap redemption coverage expansion (2026-03-23)
-
-Safety Score structure is unchanged, but the liquidity dimension now recognizes a broader reviewed issuer-backed redemption set outside the largest stablecoins:
-
-- CASH, MNEE, USDP, GUSD, XUSD, XSGD, USDQ, EURQ, EURe, EURI, TBILL, EURCV, and USDCV now use reviewed `documented-bound` eventual redemption capacity instead of generic heuristic `supply-full` modeling
-- TBILL, EURI, EURCV, and USDCV also now disclose reviewed non-instant settlement constraints, so their routes are more defensible without pretending same-size cash is immediately available
-- These routes still render as eventual-only issuer exits and do not claim a separately measured immediate redemption buffer, but they can now contribute medium-confidence redemption evidence instead of remaining low-confidence by default
-
-Weights and grade thresholds are unchanged from v6.5.
-
-## v6.7 - Second lower-cap redemption review tranche (2026-03-23)
-
-Safety Score structure is unchanged, but the liquidity dimension now recognizes an additional issuer-style batch outside the largest stablecoins:
-
-- USDH, FIDD, AEUR, USDX, USDM, SBC, EURR, USDR, WUSD, and AUDD now use reviewed `documented-bound` eventual redemption capacity instead of generic heuristic `supply-full` modeling
-- USDM and AEUR now also disclose reviewed non-instant settlement expectations from issuer materials, while USDH carries an explicit reviewed fee-free redemption path and SBC now uses reviewed pricing language instead of an undocumented fee assumption
-- These routes still render as eventual-only issuer exits and do not claim a separately measured immediate redeemable buffer, but they now contribute medium-confidence redemption evidence instead of staying low-confidence by default
-
-Weights and grade thresholds are unchanged from v6.6.
-
-## v6.8 - Third lower-cap redemption review tranche (2026-03-23)
-
-Safety Score structure is unchanged, but the liquidity dimension now recognizes another small group of reviewed lower-cap redemption routes and a corrected frxUSD route family:
-
-- thBILL, XAUm, USDGO, and USA₮ now use reviewed `documented-bound` eventual redemption capacity instead of generic heuristic `supply-full` modeling
-- XAUm now discloses a reviewed 25 bps redemption fee and T+3 settlement expectations, while USDGO now uses the reviewed zero-fee StableHub exchange rail documented by OSL
-- frxUSD now models the direct onchain USDC mint/redeem contract path as a reviewed `stablecoin-redeem` route instead of remaining in a generic issuer bucket
-
-Weights and grade thresholds are unchanged from v6.7.
-
-## v6.9 - Mid-cap redemption route correction tranche (2026-03-23)
-
-Safety Score structure is unchanged, but the liquidity dimension now recognizes a higher-cap batch of corrected or newly covered redemption routes:
-
-- USX, USDa, and M now have reviewed redemption configs instead of remaining uncovered, while NUSD now uses reviewed `documented-bound` queue semantics instead of a generic heuristic capacity ratio
-- USD.AI now models the base token's direct stablecoin burn-and-withdraw path instead of inheriting slower sUSDai unstaking assumptions
-- These routes still do not expose a separately measured live instant redemption buffer, but they now contribute medium-confidence evidence instead of staying missing or low-confidence by default
-
-Weights and grade thresholds are unchanged from v6.8.
-
-## v6.10 - Live-buffer synthetic-dollar redemption tranche (2026-03-23)
-
-Safety Score structure is unchanged, but the liquidity dimension now recognizes two larger synthetic-dollar redemption routes with live reserve-backed capacity inputs:
-
-- USDe now models Ethena's whitelisted direct stablecoin redemption rail with fresh live `Liquid Cash` telemetry as the current buffer and a conservative documented 0.5% fallback bound when telemetry is unavailable
-- USDf now models Falcon's KYC-only queued redemption route with fresh live stablecoin-buffer telemetry from Falcon's transparency feed and a reviewed zero protocol-fee assumption
-- These routes materially expand medium-confidence redemption evidence, while still preserving Falcon's 7-day cooldown and Ethena's documented ability to suspend or delay transactions
-
-Weights and grade thresholds are unchanged from v6.9.
-
-## v6.11 - Reviewed lower-cap redemption cleanup tranche (2026-03-23)
-
-Safety Score structure is unchanged, but the liquidity dimension now recognizes a final small docs-only redemption cleanup batch before the remaining queue turns mostly telemetry-heavy:
-
-- PUSD and PGOLD now use reviewed Pleasing redemption semantics instead of generic heuristic issuer assumptions, with PUSD mapped to the documented screened USDT off-ramp and PGOLD mapped to the KYC-gated physical-delivery rail
-- apxUSD now reflects Apyx's documented whitelist-gated mint/redeem route rather than a generic permissionless stablecoin redemption assumption
-- These routes still do not expose separate live buffer telemetry, but they now contribute medium-confidence redemption evidence instead of remaining low-confidence heuristics
-
-Weights and grade thresholds are unchanged from v6.10.
-
-## v6.14 - Moderate-effort redemption confidence tranche (2026-03-23)
-
-Safety Score structure is unchanged, but the liquidity dimension now recognizes the next group of already-modeled lower-confidence routes where Pharos has reviewed redemption semantics without yet adding protocol-native live buffer telemetry across the full set:
-
-- DOLA and JupUSD now treat their published stable-buffer bounds as reviewed `documented-bound` capacity instead of leaving those ratios in the heuristic bucket
-- rwaUSDi, mTBILL, MUSD, USDN, and YZUSD now use reviewed redemption semantics with `documented-bound` capacity, while YUSD, USN, and UTY keep conservative bounded-capacity assumptions because their delta-neutral collateral stacks still lack explicit published live buffers
-- The documented-bound subset now contributes medium-confidence redemption evidence, while the reviewed delta-neutral routes remain visible-only until Pharos has explicit buffer bounds or live telemetry
-
-Weights and grade thresholds are unchanged from v6.13.
-
-## v6.13 - Docs-backed redemption quick-win tranche (2026-03-23)
-
-Safety Score structure is unchanged, but the liquidity dimension now recognizes a higher-impact docs-only batch among already-modeled low-confidence redemption routes:
-
-- avUSD, cUSD, USDu, cgUSD, HONEY, EUSD, AID, OUSD, and USBD now use reviewed `documented-bound` redemption capacity instead of staying low-confidence under heuristic supply models
-- USDu and AID now reflect whitelist-gated direct redemption access, while cgUSD and AID also disclose reviewed fee assumptions from official docs instead of generic unknown-fee handling
-- These routes still do not expose separate live instant-buffer telemetry, but they now contribute medium-confidence redemption evidence rather than remaining visible-only heuristics
-
-Weights and grade thresholds are unchanged from v6.12.
-
-## v6.12 - Maple queue-route correction (2026-03-23)
-
-Safety Score structure is unchanged, but the liquidity dimension now treats Maple's syrup withdrawal rail as a reviewed queued exit instead of an overstated instant-buffer assumption:
-
-- syrupUSDC and syrupUSDT now model Maple's documented `requestRedeem` FIFO withdrawal queue rather than a generic near-instant `stablecoin-redeem` route with a heuristic 30% capacity ratio
-- Access is now treated as whitelist-gated onchain because Maple's PoolPermissionManager gates `requestRedeem` and `redeem`, and the routes use reviewed `documented-bound` eventual capacity instead of pretending a measurable live instant buffer exists
-- These routes can now contribute medium-confidence redemption evidence while preserving Maple's documented under-24-hour typical servicing target and up-to-30-day tail risk
-
-Weights and grade thresholds are unchanged from v6.11.
-
 ## v6.4 - Live Liquity redemption fee telemetry (2026-03-22)
 
 Safety Score structure is unchanged, but Liquity-style formula routes can now use current on-chain redemption fees when live reserve telemetry is available:
@@ -457,7 +367,7 @@ Weights and grade thresholds are unchanged from v6.1.
 | v4.0       | multiplier | 25%       | —       | 25%        | 10%              | 30%      |
 | v4.1       | multiplier | 30%       | —       | 20%        | 15%              | 25%      |
 | v5.0–5.8 | multiplier | 30% | — | 20%  | 15%          | 25%  |
-| **v6.0–6.13** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
+| **v6.0–6.5** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
 
 ## Quick Reference: Grade Thresholds
 
