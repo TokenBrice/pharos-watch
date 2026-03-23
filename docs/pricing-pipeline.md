@@ -170,6 +170,7 @@ The enrichment path is intentionally narrower than primary pricing:
 - fallback results are validated before they enter `price_cache`
 - replay cache only stores replay-safe prices (no `low`, no `fallback`, no fragile search-derived sources), expires after 6 hours, and now preserves source/confidence/timestamp/source-list provenance
 - previous-trusted continuity now merges the last authoritative stablecoins publication with fresh replay-safe `price_cache` rows, so a temporarily `low` or unusable publication does not make an already-confirmed severe depeg forget its prior corroborated state on the next run
+- replay-safe cached fallback is applied to any asset that is still missing after post-validation, including assets that became missing later in the same sync run because a current-run candidate was rejected
 - invalid or severely depegged single-source fallback prints are dropped instead of poisoning later runs
 
 ### Timestamp Semantics

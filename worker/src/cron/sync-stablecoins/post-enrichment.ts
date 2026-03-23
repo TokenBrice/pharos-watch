@@ -4,6 +4,7 @@
  *
  * Extracted to eliminate code duplication (Q-002, Q-011, CC-001).
  */
+import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { setCacheIfNewer, getPriceCache, savePriceCache } from "../../lib/db-cache";
 import { validatePayloadWithSchema } from "../../lib/api-utils";
 import { sendAlert } from "../../lib/alerts";
@@ -16,6 +17,7 @@ import {
   type PriceValidationReferences,
 } from "../../lib/price-validation";
 import {
+  clearPriceMetadata,
   StablecoinListResponseSchema,
   normalizeStablecoinsPayload,
   stampPriceMetadata,
@@ -92,7 +94,6 @@ export async function runPostEnrichmentPricePipeline(
 ): Promise<PriceValidationResult | CronResult> {
   const {
     assets,
-    missingBefore,
     db,
     signal,
     validationReferences,
@@ -122,10 +123,7 @@ export async function runPostEnrichmentPricePipeline(
         `[sync-stablecoins] Rejected unreasonable price for ${asset.symbol} (id=${asset.id}): ` +
         `$${asset.price} (${decision.reason})`,
       );
-      asset.price = null;
-      asset.priceUpdatedAt = null;
-      asset.priceObservedAt = null;
-      asset.priceSyncedAt = null;
+      clearPriceMetadata(asset);
       rejectedCount++;
     }
   }
@@ -158,7 +156,7 @@ export async function runPostEnrichmentPricePipeline(
   // --- Apply cached fallback prices for assets still missing ---
   const now = Math.floor(Date.now() / 1000);
   const stillMissing = assets.filter(
-    (asset) => missingBefore.has(asset.id) && hasMissingPrice(asset),
+    (asset) => hasMissingPrice(asset),
   );
   let cachedFallbackCount = 0;
   if (stillMissing.length > 0) {
@@ -168,11 +166,19 @@ export async function runPostEnrichmentPricePipeline(
     for (const asset of stillMissing) {
       const cached = priceCache.get(asset.id);
       if (!cached || (now - cached.updatedAt) >= PRICE_CACHE_TTL) continue;
+      const cachedAgreeSources =
+        cached.agreeSources && cached.agreeSources.length > 0
+          ? cached.agreeSources
+          : cached.consensusSources && cached.consensusSources.length > 0
+            ? cached.consensusSources
+            : cached.source
+              ? splitCompositePriceSource(cached.source)
+              : [];
       const decision = validatePublishablePrice({
         price: cached.price,
-        source: "cached",
-        confidence: "fallback",
-        agreeSources: ["cached"],
+        source: cached.source ?? "cached",
+        confidence: cached.confidence ?? "fallback",
+        agreeSources: cachedAgreeSources,
         mode: "fallback_enrichment",
         validationContext: validationContexts.get(asset),
         validationReferences,

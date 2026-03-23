@@ -7,7 +7,7 @@ import {
 } from "../../lib/price-validation";
 import { FIXED_PEG_SEVERE_DOWNSIDE_RATIO } from "../../lib/pricing-source-policy";
 import type { PeggedAsset, PrimaryPriceResult } from "../enrich-prices";
-import { stampPriceMetadata } from "./shared";
+import { clearPriceMetadata, stampPriceMetadata } from "./shared";
 import { classifyPrimaryDepegTrust } from "../../lib/depeg-helpers";
 import { hasDepegAuthoritativeSource } from "../../lib/pricing-source-policy";
 import type { PriceCacheEntry } from "../../lib/db-cache";
@@ -384,8 +384,7 @@ export function prevalidatePrices(input: {
         `[sync-stablecoins] ${logLabel} for ${asset.symbol} (id=${asset.id}): ` +
         `$${asset.price} (${decision.reason})`,
       );
-      asset.price = 0;
-      stampPriceMetadata(asset, asset.priceSource || "unknown", null, null);
+      clearPriceMetadata(asset);
     }
   }
 }

@@ -720,6 +720,114 @@ describe("syncStablecoins", () => {
     });
   });
 
+  it("rehydrates a replay-safe cached price when a same-run rejection leaves the asset missing", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT asset_id, price, updated_at FROM price_cache",
+        rows: [
+          {
+            asset_id: "usdt-tether",
+            price: 0.25580214,
+            updated_at: nowSec - 3600,
+          },
+        ],
+      },
+      {
+        match: "SELECT asset_id, source, confidence, observed_at, synced_at, agree_sources_json, consensus_sources_json FROM price_cache",
+        rows: [
+          {
+            asset_id: "usdt-tether",
+            source: "defillama-list+pyth",
+            confidence: "high",
+            observed_at: nowSec - 3600,
+            synced_at: nowSec - 3615,
+            agree_sources_json: JSON.stringify(["defillama-list", "pyth"]),
+            consensus_sources_json: JSON.stringify(["coingecko", "defillama-list", "pyth"]),
+          },
+        ],
+      },
+      { match: "cache", rows: [] },
+      { match: "supply_history", rows: [] },
+      { match: "circuit", rows: [] },
+    ]);
+    const writes = trackCacheWrites(db);
+
+    const dlData = makeDlResponse(60);
+    dlData.peggedAssets[0] = {
+      ...dlData.peggedAssets[0],
+      id: "usdt-tether",
+      name: "Tether",
+      symbol: "USDT",
+      geckoId: "tether",
+      price: 0.24,
+      priceSource: "defillama",
+      priceConfidence: "single-source",
+      circulating: { peggedUSD: 100_000_000 },
+    } as unknown as (typeof dlData.peggedAssets)[0];
+
+    vi.mocked(enrichMissingPrices).mockImplementationOnce(async (assets) => {
+      const target = assets.find((asset) => asset.id === "usdt-tether");
+      if (target) {
+        target.price = 0.24;
+        target.priceSource = "coinmarketcap";
+        target.priceConfidence = "fallback";
+        target.priceUpdatedAt = nowSec;
+        target.priceObservedAt = nowSec;
+        target.priceSyncedAt = nowSec;
+        target.consensusSources = ["coinmarketcap"];
+        target.agreeSources = ["coinmarketcap"];
+      }
+
+      return {
+        totalMissing: 1,
+        pass1: 0,
+        pass1b: 0,
+        passCmc: 1,
+        passJupiter: 0,
+        passDex: 0,
+        finalMissing: 0,
+        failedPasses: [],
+      };
+    });
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.status).toBe("ok");
+    const stablecoinsWrite = writes.find((entry) => entry.key === "stablecoins");
+    const cached = JSON.parse(stablecoinsWrite!.value) as {
+      peggedAssets: Array<{
+        id: string;
+        price: number | null;
+        priceSource?: string;
+        priceConfidence: string | null;
+        priceObservedAt: number | null;
+        priceSyncedAt: number | null;
+      }>;
+    };
+    const usdt = cached.peggedAssets.find((asset) => asset.id === "usdt-tether");
+    expect(usdt).toMatchObject({
+      id: "usdt-tether",
+      priceSource: "cached",
+      priceConfidence: "fallback",
+      priceObservedAt: nowSec - 3600,
+      priceSyncedAt: nowSec - 3615,
+    });
+    expect(usdt?.price).toBeCloseTo(0.25580214, 8);
+  });
+
   it("fails the run when DL payload is structurally invalid and fallback is insufficient", async () => {
     const db = makeDb();
     const prepareSpy = vi.fn();

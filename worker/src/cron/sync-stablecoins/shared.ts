@@ -175,6 +175,17 @@ export function stampPriceMetadata(
   }
 }
 
+export function clearPriceMetadata(asset: PeggedAsset): void {
+  asset.price = null;
+  asset.priceSource = undefined;
+  asset.priceConfidence = null;
+  asset.priceUpdatedAt = null;
+  asset.priceObservedAt = null;
+  asset.priceSyncedAt = null;
+  asset.consensusSources = [];
+  asset.agreeSources = [];
+}
+
 export function sumPegBuckets(buckets: Record<string, number> | undefined | null): number {
   if (!buckets) return 0;
   return Object.values(buckets).reduce(
