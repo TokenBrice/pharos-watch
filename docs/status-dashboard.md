@@ -59,6 +59,7 @@ The active frontend operator mode is now:
     - a live-watch side panel for health sample time, public-query sync floor, browser probe summary, circuit-breaker posture, refresh control, and operator-handoff note
 - The public `Overview` lane now uses flatter signal cards for mint/burn sync, blacklist ingestion, and a dedicated impacted-surfaces card that translates raw health flags into the public routes most likely to mislead readers
 - The public blacklist-ingestion card keeps historical low-ratio amount gaps visible, but only recent or threshold-crossing gaps inherit warning/stale treatment; this matches the shared blacklist gap thresholds instead of flagging any non-zero backlog as degraded
+- Public cache freshness and impacted-surface tones now follow the shared cache-ratio thresholds exactly: `>1.5x` is `degraded`, `>2.0x` is `stale`; a cache no longer renders as stale solely because `healthy=false`
 - Public `Overview` and `Reliability` lane shells use theme-aware tinted gradients with elevated inner cards so light mode keeps the same hierarchy without inheriting the dark-only monitor slabs
 
 ### Data hooks

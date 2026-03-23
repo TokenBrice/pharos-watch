@@ -2,6 +2,7 @@ import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import type { CacheStatus } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@/lib/status/cache-health";
 
 interface CacheFreshnessTableProps {
   caches: Record<string, CacheStatus>;
@@ -9,13 +10,13 @@ interface CacheFreshnessTableProps {
 
 export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
   const sorted = Object.entries(caches).sort(([, a], [, b]) => {
-    const ratioA = a.ageSeconds != null ? a.ageSeconds / a.maxAge : Infinity;
-    const ratioB = b.ageSeconds != null ? b.ageSeconds / b.maxAge : Infinity;
+    const ratioA = getCacheFreshnessRatio(a) ?? Infinity;
+    const ratioB = getCacheFreshnessRatio(b) ?? Infinity;
     return ratioB - ratioA;
   });
 
   const describeBand = (cache: CacheStatus) => {
-    const { ageSeconds, maxAge } = cache;
+    const { ageSeconds } = cache;
     if (ageSeconds == null) {
       return {
         label: "missing",
@@ -24,15 +25,16 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
       };
     }
 
-    const ratio = ageSeconds / maxAge;
-    if (!cache.healthy || ratio > STATUS_CACHE_RATIO_THRESHOLDS.stale) {
+    const ratio = getCacheFreshnessRatio(cache);
+    const status = getCacheFreshnessStatus(cache);
+    if (status === "stale") {
       return {
         label: `stale (>${STATUS_CACHE_RATIO_THRESHOLDS.stale.toFixed(2)}x)`,
         ratio,
         className: "bg-red-500/15 text-red-700 dark:text-red-400",
       };
     }
-    if (ratio > STATUS_CACHE_RATIO_THRESHOLDS.degraded) {
+    if (status === "degraded") {
       return {
         label: `degraded (>${STATUS_CACHE_RATIO_THRESHOLDS.degraded.toFixed(2)}x)`,
         ratio,

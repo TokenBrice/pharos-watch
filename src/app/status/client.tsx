@@ -13,6 +13,7 @@ import { NoticeRail, StatusSection, SummaryBadge } from "@/components/status/pag
 import { useHealth } from "@/hooks/api-hooks";
 import { usePublicEndpointProbes } from "@/hooks/use-endpoint-probes";
 import { buildBrowserProbeSummary, formatTimestampSeconds, getStatusTone } from "@/lib/status-dashboard-model";
+import { getCacheImpactStatus } from "@/lib/status/cache-health";
 
 function getWorstCacheRatio(caches: Record<string, { ageSeconds: number | null; maxAge: number }>): number | null {
   let worst: number | null = null;
@@ -75,9 +76,7 @@ const CACHE_IMPACT_COPY: Partial<Record<string, { title: string; detail: string 
 };
 
 function getImpactedSurfaceStatus(cache: HealthResponse["caches"][string]): "healthy" | "degraded" | "stale" {
-  if (!cache.healthy || cache.sourceStatus === "stale") return "stale";
-  if (cache.mode === "cached-fallback" || cache.sourceStatus === "degraded") return "degraded";
-  return "healthy";
+  return getCacheImpactStatus(cache);
 }
 
 function getImpactedPublicSurfaces(healthData: HealthResponse) {
