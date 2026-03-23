@@ -36,6 +36,12 @@ Investigate `/admin/` reporting `chainlink-feeds` circuit breaker open and deter
   - `fallbackMode=cached-fx-rates`
   - `consecutiveFallbackRuns=19`
   - same source state as above
+- `sync-fx-rates` at `2026-03-23 12:04:05 UTC`
+  - `status=degraded`
+  - `fallbackMode=cached-fx-rates`
+  - `consecutiveFallbackRuns=20`
+  - same source state as above
+  - important timing detail: this run started `15s` before the Frankfurter breaker was eligible to move from `open` to `half-open`, so it was not a real re-probe
 - `fx-frankfurter` breaker timeline:
   - open before observation window
   - half-open at `2026-03-23 11:34:10 UTC`
@@ -61,15 +67,24 @@ Investigate `/admin/` reporting `chainlink-feeds` circuit breaker open and deter
 
 ## Current read
 
-- This no longer looks like a self-healing upstream outage.
-- The worker performed a real post-breaker Frankfurter re-probe at `11:34 UTC` and still failed.
-- Because the same endpoints are healthy from outside the worker, the likely failure domain is:
+- This no longer looks like a clean self-healing upstream outage.
+- The worker performed one confirmed real post-breaker Frankfurter re-probe at `11:34 UTC` and failed.
+- The `12:00 UTC` quarter-hour slot did not give us a second real probe because `sync-fx-rates` started at `12:04:05 UTC`, while the breaker only became probe-eligible at `12:04:20 UTC`.
+- A second production issue is now interfering with recovery:
+  - the `12:15 UTC` quarter-hour slot started at `12:15:18 UTC`
+  - `sync-stablecoins` remained stuck in `price-enrichment`
+  - its lease stopped heartbeating after the initial write
+  - the slot stayed `running` past the `8 min` app timeout boundary, so `sync-fx-rates` never got a chance to run
+- Because the same FX endpoints are healthy from outside the deployed worker, the likely failure domain is still one of:
   - Cloudflare Worker egress / transport behavior for this lane
-  - provider-side blocking specific to Cloudflare Worker traffic
-  - an interaction in our fetch path that is visible only from the worker runtime
+  - provider-side blocking specific to deployed Worker traffic
+  - a worker-only interaction in our fetch path
+  - quarter-hour slot instability preventing timely FX recovery attempts
 
 ## Next debugging steps
 
-1. Capture the exact worker-side fetch error during a live `sync-fx-rates` run.
-2. Determine whether failures are transport, DNS/TLS, timeout, or non-2xx response based.
-3. If needed, harden `sync-fx-rates` so the tertiary fallback and Chainlink overlay are still attempted even when the primary Frankfurter path fails from the worker environment.
+1. Capture the exact worker-side fetch error during the next real `sync-fx-rates` Frankfurter probe.
+2. Confirm whether the `12:15 UTC` quarter-hour slot writes a late timeout/error row for `sync-stablecoins` or remains orphaned in `cron_slot_executions`.
+3. Determine whether the FX failures are transport, DNS/TLS, timeout, or non-2xx response based.
+4. If needed, harden `sync-fx-rates` so tertiary fallback and Chainlink overlay are still attempted when the primary Frankfurter path fails from the worker environment.
+5. Separately harden the quarter-hour slot so a hung `sync-stablecoins` run cannot starve the next eligible FX breaker probe.

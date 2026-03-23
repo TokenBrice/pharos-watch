@@ -138,14 +138,18 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "uty-xsy": {
     ...queueRedeemBase,
     settlementModel: "days",
-    ...reviewedQueueRedemptionSupplyFull,
+    capacityModel: { kind: "supply-ratio", ratio: 0.3 },
     costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+    reviewedAt: REVIEWED_QUEUE_REDEMPTION_AT,
     docs: [
       sourceRef("XSY documentation", "https://xsy-1.gitbook.io/xsy-main", ["route", "capacity"]),
       sourceRef("XSY website", "https://xsy.fi/about", ["route", "settlement"]),
       sourceRef("XSY Accountable dashboard", "https://accountable.xsy.fi/", ["capacity"]),
     ],
-    notes: ["XSY documents a 7-day unbonding redemption path for UTY back into USDC; current model scores the reviewed queued exit rather than a separately measured live liquid buffer"],
+    notes: [
+      "XSY documents a 7-day unbonding redemption path for UTY back into USDC; current model scores the reviewed queued exit rather than a separately measured live liquid buffer",
+      "Because UTY relies on a delta-neutral AVAX hedge rather than a pure cash-equivalent reserve bucket, the reviewed route keeps a conservative 30% immediate-capacity bound instead of scoring against full supply",
+    ],
   },
   "usp-pikudao": {
     ...queueRedeemBase,

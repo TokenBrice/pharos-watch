@@ -10,11 +10,11 @@ const redemptionBackstop = createMethodologyVersion({
       date: "2026-03-23",
       effectiveAt: 1774314000,
       summary:
-        "A moderate-effort tranche upgrades a final group of already-modeled low-confidence routes where Pharos now has reviewed primary redemption semantics, but not yet protocol-native live instant-buffer telemetry.",
+        "A moderate-effort tranche reviews a final group of already-modeled lower-confidence routes where Pharos now has stronger primary redemption semantics, but not yet protocol-native live instant-buffer telemetry across the full set.",
       impact: [
         "DOLA and JupUSD now treat their published stable-buffer bounds as reviewed documented-capacity inputs instead of leaving those ratios in the heuristic bucket",
-        "rwaUSDi, mTBILL, MUSD, USDN, YUSD, USN, UTY, and YZUSD now use reviewed redemption semantics and documented-bound capacity instead of generic low-confidence placeholders",
-        "These routes still avoid claiming a separately measured live instant buffer unless the issuer or protocol publishes one, but they now contribute medium-confidence redemption evidence across another moderate-cap tranche",
+        "rwaUSDi, mTBILL, MUSD, USDN, and YZUSD now use reviewed redemption semantics with documented-bound capacity instead of generic low-confidence placeholders, while YUSD, USN, and UTY keep conservative bounded-capacity assumptions because their delta-neutral collateral stacks still lack explicit published live buffers",
+        "The documented-bound subset now contributes medium-confidence redemption evidence, while the reviewed delta-neutral routes stay visible-only until Pharos has explicit buffer bounds or live telemetry",
       ],
       commits: [],
       reconstructed: false,

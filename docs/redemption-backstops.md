@@ -125,6 +125,7 @@ Capacity resolution happens in `worker/src/lib/redemption-backstop-sources.ts`.
 
 Sky `DAI` and `USDS` now use the live `sky-makercore` PSM `USDC` balance as their immediate redeemable bound when that telemetry is fresh, with the prior 33% reviewed heuristic retained only as fallback.
 Reviewed bounded primary-market liquidity buffers published by protocols or issuers, such as DOLA's USDS PSM share or JupUSD's USDC buffer, can also use `documented-bound` ratio semantics when the underlying source is explicit enough to avoid pretending the ratio is merely a blind heuristic.
+Reviewed route docs alone are not enough to promote delta-neutral or strategy-backed rails into `documented-bound` full-supply semantics; those routes still need either an explicitly published immediate buffer bound or fresh live reserve telemetry.
 
 The resulting row is tagged with one `sourceMode`:
 

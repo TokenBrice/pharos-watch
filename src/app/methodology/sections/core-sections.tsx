@@ -58,8 +58,9 @@ export function CoreMethodologySections() {
             reference rates, and the dated secondary FX mirror can temporarily carry the wider fiat reference stack when
             Frankfurter is unavailable, with ExchangeRate-API as a tertiary daily fallback if both primary FX paths are down.
             If those live FX fetches still fail but the last published daily references remain within cadence, Pharos
-            carries those dated references forward as a healthy refresh. A 5-pass enrichment pipeline fills gaps for
-            long-tail coins. Each asset is tagged with a confidence level
+            carries those dated references forward as a healthy refresh. Even cached-fallback FX runs keep probing the independent
+            OXR, Chainlink, and metals paths, so a recovered intraday subset can promote the lane back to live without waiting for the full Frankfurter stack.
+            A 5-pass enrichment pipeline fills gaps for long-tail coins. Each asset is tagged with a confidence level
             so downstream systems can react to data quality, and severe fixed-peg downside publication now requires corroboration unless it comes from an explicit protocol redemption or pool-challenge replacement mark. When a confirmed severe depeg briefly loses corroboration, the pipeline now preserves trusted continuity from fresh replay-safe `price_cache` rows instead of letting the asset flap to `N/A`.
           </p>
           <div className="grid gap-2 sm:grid-cols-3">
@@ -889,7 +890,7 @@ export function CoreMethodologySections() {
                 quality, and cost. Queue-based and offchain issuer routes are capped so they do not look unrealistically
                 liquid. Low-confidence redemption routes stay visible on the site but do not uplift the Safety Score
                 liquidity dimension, stale DEX inputs are not blended into effective exit, stale live reserve metadata ages out instead of staying resolved indefinitely, fresh live fee telemetry can replace reviewed fallback fee buckets when available, and eventual issuer redemption is reported separately from immediate redeemable buffer capacity.
-                Reviewed `documented-bound` eventual redemption routes can still count as medium-confidence evidence even when no separate live instant buffer is measured, and explicitly published primary-market liquidity-buffer ratios can also graduate out of the heuristic bucket when the underlying source is strong enough.
+                Reviewed `documented-bound` eventual redemption routes can still count as medium-confidence evidence even when no separate live instant buffer is measured, and explicitly published primary-market liquidity-buffer ratios can also graduate out of the heuristic bucket when the underlying source is strong enough. Strategy-backed delta-neutral rails still need an explicit published buffer or live telemetry before they stop being treated as heuristic capacity.
               </p>
             </div>
             {/* Peg multiplier */}

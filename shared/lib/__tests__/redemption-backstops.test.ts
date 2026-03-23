@@ -508,7 +508,7 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("yusd-aegis")).toMatchObject({
       routeFamily: "stablecoin-redeem",
       accessModel: "whitelisted-onchain",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      capacityModel: { kind: "supply-ratio", ratio: 0.15 },
       costModel: { kind: "dynamic-or-unclear" },
       reviewedAt: "2026-03-23",
     });
@@ -516,7 +516,7 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("usn-noon")).toMatchObject({
       routeFamily: "stablecoin-redeem",
       accessModel: "whitelisted-onchain",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      capacityModel: { kind: "supply-ratio", ratio: 0.15 },
       costModel: { kind: "dynamic-or-unclear" },
       reviewedAt: "2026-03-23",
     });
@@ -524,7 +524,7 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("uty-xsy")).toMatchObject({
       routeFamily: "queue-redeem",
       settlementModel: "days",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      capacityModel: { kind: "supply-ratio", ratio: 0.3 },
       costModel: { kind: "dynamic-or-unclear" },
       reviewedAt: "2026-03-23",
     });

@@ -386,11 +386,11 @@ Weights and grade thresholds are unchanged from v6.10.
 
 ## v6.14 - Moderate-effort redemption confidence tranche (2026-03-23)
 
-Safety Score structure is unchanged, but the liquidity dimension now recognizes the next group of already-modeled low-confidence routes where Pharos has reviewed redemption semantics without yet adding protocol-native live buffer telemetry:
+Safety Score structure is unchanged, but the liquidity dimension now recognizes the next group of already-modeled lower-confidence routes where Pharos has reviewed redemption semantics without yet adding protocol-native live buffer telemetry across the full set:
 
 - DOLA and JupUSD now treat their published stable-buffer bounds as reviewed `documented-bound` capacity instead of leaving those ratios in the heuristic bucket
-- rwaUSDi, mTBILL, MUSD, USDN, YUSD, USN, UTY, and YZUSD now use reviewed redemption semantics and documented-bound capacity instead of generic low-confidence placeholders
-- These routes still avoid claiming a separately measured live instant buffer unless the issuer or protocol publishes one, but they now contribute medium-confidence redemption evidence across another moderate-cap tranche
+- rwaUSDi, mTBILL, MUSD, USDN, and YZUSD now use reviewed redemption semantics with `documented-bound` capacity, while YUSD, USN, and UTY keep conservative bounded-capacity assumptions because their delta-neutral collateral stacks still lack explicit published live buffers
+- The documented-bound subset now contributes medium-confidence redemption evidence, while the reviewed delta-neutral routes remain visible-only until Pharos has explicit buffer bounds or live telemetry
 
 Weights and grade thresholds are unchanged from v6.13.
 

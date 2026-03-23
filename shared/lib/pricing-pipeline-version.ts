@@ -3,9 +3,26 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "2.14",
+  currentVersion: "2.15",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "2.15",
+      title: "Independent FX recovery during cached fallback",
+      date: "2026-03-23",
+      effectiveAt: 1774279800,
+      summary:
+        "Kept the independent FX recovery paths alive even after the full-set fiat stack drops into cached fallback, " +
+        "so Open Exchange Rates, Chainlink overlays, and metals probes can still refresh stale pegs and promote the run back to live once fresh full-set coverage is restored.",
+      impact: [
+        "Cached-fallback FX runs now keep probing Open Exchange Rates, Chainlink reference feeds, and gold-api.com instead of freezing their last known state until Frankfurter recovers",
+        "A single stale intraday peg can no longer pin the whole FX lane in repeated cached fallback when OXR or Chainlink can refresh that subset independently",
+        "If those independent probes restore fresh coverage for the expected fiat reference set, the run now exits cached fallback immediately and resets the fallback streak",
+        "Operator metadata remains explicit about the failed Frankfurter / mirror path while no longer overstating the duration of an otherwise recovered FX incident",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "2.14",
       title: "Replay-safe trusted-price continuity for confirmed depegs",

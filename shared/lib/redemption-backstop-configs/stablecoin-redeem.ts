@@ -121,26 +121,34 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   "yusd-aegis": {
     ...stablecoinRedeemBase,
     accessModel: "whitelisted-onchain",
-    ...reviewedDirectRedemptionSupplyFull,
+    capacityModel: { kind: "supply-ratio", ratio: 0.15 },
     costModel: documentedVariableFee("Aegis documents 1:1 minting and redemption for approved users, but does not publish a fixed redemption fee"),
+    reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
     docs: [
       sourceRef("Aegis liquidity", "https://docs.aegis.im/overview/liquidity", ["route", "capacity", "access"]),
       sourceRef("Aegis FAQ", "https://docs.aegis.im/aegis-faq/how-can-i-get-my-earned-yusd", ["route"]),
       sourceRef("Aegis Accountable dashboard", "https://aegis.accountable.capital/", ["capacity"]),
     ],
-    notes: ["Direct mint and redemption are reserved for approved primary-market users, while most secondary users access YUSD via DEX liquidity or supported venues"],
+    notes: [
+      "Direct mint and redemption are reserved for approved primary-market users, while most secondary users access YUSD via DEX liquidity or supported venues",
+      "Because YUSD relies on a delta-neutral BTC hedge rather than a pure cash-equivalent reserve bucket, the reviewed route keeps a conservative 15% immediate-capacity bound instead of scoring against full supply",
+    ],
   },
   "usn-noon": {
     ...stablecoinRedeemBase,
     accessModel: "whitelisted-onchain",
-    ...reviewedDirectRedemptionSupplyFull,
+    capacityModel: { kind: "supply-ratio", ratio: 0.15 },
     costModel: documentedVariableFee("Noon documents 1:1 minting and redemption for approved users, but does not publish a fixed redemption fee"),
+    reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
     docs: [
       sourceRef("Noon USN documentation", "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/return-generation", ["route", "capacity"]),
       sourceRef("Noon smart contract audits", "https://docs.noon.capital/built-for-safety/smart-contract-audits", ["route", "access"]),
       sourceRef("Noon Accountable dashboard", "https://noon.accountable.capital/", ["capacity"]),
     ],
-    notes: ["Direct mint and redemption are reserved for approved primary-market users; current model does not treat Noon strategy collateral as a separately measured instant stablecoin buffer"],
+    notes: [
+      "Direct mint and redemption are reserved for approved primary-market users; current model does not treat Noon strategy collateral as a separately measured instant stablecoin buffer",
+      "Because USN relies on delta-neutral exchange strategies rather than a pure cash-equivalent reserve bucket, the reviewed route keeps a conservative 15% immediate-capacity bound instead of scoring against full supply",
+    ],
   },
   "aid-gaib": {
     ...stablecoinRedeemBase,

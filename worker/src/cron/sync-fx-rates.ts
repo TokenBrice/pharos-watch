@@ -334,6 +334,22 @@ export async function syncFxRates(
         ) === "fresh";
       });
     };
+    const hasFreshFullFxCoverage = (): boolean => EXPECTED_FX_PEG_KEYS.every((pegKey) => {
+      const rate = usableRates[pegKey];
+      return typeof rate === "number"
+        && Number.isFinite(rate)
+        && rate > 0
+        && getFxSourceStatus(sourceUpdatedAtByPeg[pegKey] ?? null, sourceModeByPeg[pegKey], syncStartSec, {
+          pegKey,
+          cadence: sourceCadenceByPeg[pegKey],
+          sourceDate: sourceDateByPeg[pegKey] ?? null,
+        }) === "fresh";
+    });
+    const seedCachedFallbackFromPrevious = () => {
+      usableRates = { ...prevRates };
+      Object.keys(usableRates).forEach(inheritPrevious);
+      ecbDate = prevState?.ecbDate ?? null;
+    };
     const applySecondaryRates = (
       candidate: SecondaryCurrencyCandidate,
       mappings: SecondaryFxMappings,
@@ -483,7 +499,7 @@ export async function syncFxRates(
         console.warn(
           `[sync-fx-rates] frankfurter.app unavailable (${res?.status ?? "no response"}), using ${cachedRateCount} cached rates`,
         );
-        usableRates = { ...prevRates };
+        seedCachedFallbackFromPrevious();
         mode = "cached-fallback";
         fallbackMode = "cached-fx-rates";
         sources = {
@@ -512,7 +528,7 @@ export async function syncFxRates(
             console.warn("[sync-fx-rates] Invalid Frankfurter payload, using live FX fallback");
           } else if (cachedRateCount > 0) {
             console.warn(`[sync-fx-rates] Invalid frankfurter payload, using ${cachedRateCount} cached rates`);
-            usableRates = { ...prevRates };
+            seedCachedFallbackFromPrevious();
             mode = "cached-fallback";
             fallbackMode = "cached-fx-rates";
             sources = {
@@ -565,226 +581,208 @@ export async function syncFxRates(
           }
         }
       }
+    }
 
-      if (mode !== "cached-fallback") {
-        let oxrSource: "ok" | "partial" | "rate-limited" | "unavailable" = "unavailable";
-        if (openExchangeRatesKey) {
-          const OXR_LAST_ATTEMPT_KEY = "fx-oxr-last-attempt";
-          const OXR_LAST_SUCCESS_KEY = "fx-oxr-last-success";
-          const OXR_LEGACY_LAST_FETCH_KEY = "fx-oxr-last-fetch";
-          const [lastAttempt, legacyLastFetch] = await Promise.all([
-            db.prepare("SELECT value FROM cache WHERE key = ?").bind(OXR_LAST_ATTEMPT_KEY).first<{ value: string }>(),
-            db.prepare("SELECT value FROM cache WHERE key = ?").bind(OXR_LEGACY_LAST_FETCH_KEY).first<{ value: string }>(),
-          ]);
-          const lastFetchTime = lastAttempt
-            ? parseInt(lastAttempt.value, 10)
-            : legacyLastFetch
-              ? parseInt(legacyLastFetch.value, 10)
-              : 0;
-          const elapsedMinutes = (Math.floor(Date.now() / 1000) - lastFetchTime) / 60;
+    let oxrSource: "ok" | "partial" | "rate-limited" | "unavailable" = "unavailable";
+    if (openExchangeRatesKey) {
+      const OXR_LAST_ATTEMPT_KEY = "fx-oxr-last-attempt";
+      const OXR_LAST_SUCCESS_KEY = "fx-oxr-last-success";
+      const OXR_LEGACY_LAST_FETCH_KEY = "fx-oxr-last-fetch";
+      const [lastAttempt, legacyLastFetch] = await Promise.all([
+        db.prepare("SELECT value FROM cache WHERE key = ?").bind(OXR_LAST_ATTEMPT_KEY).first<{ value: string }>(),
+        db.prepare("SELECT value FROM cache WHERE key = ?").bind(OXR_LEGACY_LAST_FETCH_KEY).first<{ value: string }>(),
+      ]);
+      const lastFetchTime = lastAttempt
+        ? parseInt(lastAttempt.value, 10)
+        : legacyLastFetch
+          ? parseInt(legacyLastFetch.value, 10)
+          : 0;
+      const elapsedMinutes = (Math.floor(Date.now() / 1000) - lastFetchTime) / 60;
 
-          if (elapsedMinutes >= 55) {
-            try {
-              const completedAt = Math.floor(Date.now() / 1000);
-              const realtimeFetch = await fetchRealtimeFxRates(openExchangeRatesKey, signal);
-              const realtimeRates = realtimeFetch.rates;
-              if (realtimeFetch.completed) {
-                await runBestEffort("fx-oxr-last-fetch-write", async () => {
-                  await db.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-                    .bind(OXR_LAST_ATTEMPT_KEY, String(completedAt), completedAt).run();
-                });
-              }
-              let realtimeApplied = 0;
-              for (const [pegKey, realtimeRate] of realtimeRates) {
-                const frankfurterRate = usableRates[pegKey];
-                if (frankfurterRate != null) {
-                  const delta = Math.abs(realtimeRate - frankfurterRate) / frankfurterRate;
-                  if (delta <= 0.05) {
-                    if (isValidRate(pegKey, realtimeRate, prevRates[pegKey])) {
-                      usableRates[pegKey] = realtimeRate;
-                      markLive(pegKey, syncStartSec);
-                      realtimeApplied++;
-                    }
-                  } else {
-                    console.warn(`[sync-fx-rates] ${pegKey} diverges: frankfurter=${frankfurterRate}, realtime=${realtimeRate} (${(delta * 100).toFixed(1)}%)`);
-                  }
-                } else if (isValidRate(pegKey, realtimeRate, prevRates[pegKey])) {
+      if (elapsedMinutes >= 55) {
+        try {
+          const completedAt = Math.floor(Date.now() / 1000);
+          const realtimeFetch = await fetchRealtimeFxRates(openExchangeRatesKey, signal);
+          const realtimeRates = realtimeFetch.rates;
+          if (realtimeFetch.completed) {
+            await runBestEffort("fx-oxr-last-fetch-write", async () => {
+              await db.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+                .bind(OXR_LAST_ATTEMPT_KEY, String(completedAt), completedAt).run();
+            });
+          }
+          let realtimeApplied = 0;
+          for (const [pegKey, realtimeRate] of realtimeRates) {
+            const currentRate = usableRates[pegKey];
+            if (currentRate != null) {
+              const delta = Math.abs(realtimeRate - currentRate) / currentRate;
+              if (delta <= 0.05) {
+                if (isValidRate(pegKey, realtimeRate, prevRates[pegKey])) {
                   usableRates[pegKey] = realtimeRate;
                   markLive(pegKey, syncStartSec);
                   realtimeApplied++;
                 }
+              } else {
+                console.warn(`[sync-fx-rates] ${pegKey} diverges: current=${currentRate}, realtime=${realtimeRate} (${(delta * 100).toFixed(1)}%)`);
               }
-              if (realtimeRates.size > 0) {
-                await runBestEffort("fx-oxr-last-success-write", async () => {
-                  await db.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-                    .bind(OXR_LAST_SUCCESS_KEY, String(completedAt), completedAt).run();
-                });
-              }
-              console.log(`[sync-fx-rates] Applied ${realtimeApplied}/${realtimeRates.size} real-time FX rates`);
-              oxrSource = realtimeRates.size > 0 ? (realtimeApplied === realtimeRates.size ? "ok" : "partial") : "unavailable";
-              await runBestEffort("recordOutcome:fx-realtime", async () => {
-                await recordOutcome(db, CIRCUIT_SOURCE.FX_REALTIME, realtimeFetch.completed);
-              });
-            } catch (err) {
-              if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-              console.warn("[sync-fx-rates] OXR real-time fetch failed:", err);
-              await runBestEffort("recordOutcome:fx-realtime-failure", async () => {
-                await recordOutcome(db, CIRCUIT_SOURCE.FX_REALTIME, false);
-              });
-              oxrSource = "unavailable";
+            } else if (isValidRate(pegKey, realtimeRate, prevRates[pegKey])) {
+              usableRates[pegKey] = realtimeRate;
+              markLive(pegKey, syncStartSec);
+              realtimeApplied++;
             }
-          } else {
-            console.log(`[sync-fx-rates] Skipping OXR fetch (last fetch ${Math.round(elapsedMinutes)}min ago, rate limit: 55min)`);
-            oxrSource = "rate-limited";
           }
-        }
-        sources.openExchangeRates = oxrSource;
-
-        if (!usableRates["peggedRUB"]) {
-          if (typeof prevRates["peggedRUB"] === "number" && prevRates["peggedRUB"] > 0) {
-            usableRates["peggedRUB"] = prevRates["peggedRUB"];
-            inheritPrevious("peggedRUB");
-            console.log(`[sync-fx-rates] Using cached RUB rate: ${usableRates["peggedRUB"]}`);
-          }
-          if (!usableRates["peggedRUB"]) {
-            usableRates["peggedRUB"] = RUB_FALLBACK;
-            setHardcoded("peggedRUB");
-            console.log(`[sync-fx-rates] Using hardcoded RUB fallback: ${RUB_FALLBACK}`);
-          }
-        }
-
-        if (!usableRates["peggedCNH"] && typeof prevRates["peggedCNH"] === "number" && prevRates["peggedCNH"] > 0) {
-          usableRates["peggedCNH"] = prevRates["peggedCNH"];
-          inheritPrevious("peggedCNH");
-          console.log(`[sync-fx-rates] Using cached CNH rate: ${usableRates["peggedCNH"]}`);
-        }
-
-        let metalsSource: "ok" | "cached" = "cached";
-        try {
-          const [goldRes, silverRes] = await Promise.all([
-            fetchWithRetry("https://api.gold-api.com/price/XAU", { headers: { "User-Agent": USER_AGENT }, signal }),
-            fetchWithRetry("https://api.gold-api.com/price/XAG", { headers: { "User-Agent": USER_AGENT }, signal }),
-          ]);
-          const goldPayload = goldRes?.ok ? await goldRes.json() : null;
-          const silverPayload = silverRes?.ok ? await silverRes.json() : null;
-          const goldValidation = goldPayload == null
-            ? { ok: false as const, issues: "missing gold payload" }
-            : validatePayloadWithSchema(MetalPriceSchema, goldPayload, "sync-fx-rates:gold");
-          const silverValidation = silverPayload == null
-            ? { ok: false as const, issues: "missing silver payload" }
-            : validatePayloadWithSchema(MetalPriceSchema, silverPayload, "sync-fx-rates:silver");
-          const goldPrice = goldValidation.ok ? goldValidation.data.price : undefined;
-          const silverPrice = silverValidation.ok ? silverValidation.data.price : undefined;
-
-          if (typeof goldPrice === "number" && goldPrice > 0) {
-            if (isValidRate("peggedGOLD", goldPrice, prevRates["peggedGOLD"])) {
-              usableRates["peggedGOLD"] = goldPrice;
-              markLive("peggedGOLD", syncStartSec);
-              metalsSource = "ok";
-            } else if (prevRates["peggedGOLD"]) {
-              usableRates["peggedGOLD"] = prevRates["peggedGOLD"];
-              inheritPrevious("peggedGOLD");
-            }
-          } else if (prevRates["peggedGOLD"]) {
-            usableRates["peggedGOLD"] = prevRates["peggedGOLD"];
-            inheritPrevious("peggedGOLD");
-          }
-
-          if (typeof silverPrice === "number" && silverPrice > 0) {
-            if (isValidRate("peggedSILVER", silverPrice, prevRates["peggedSILVER"])) {
-              usableRates["peggedSILVER"] = silverPrice;
-              markLive("peggedSILVER", syncStartSec);
-              metalsSource = "ok";
-            } else if (prevRates["peggedSILVER"]) {
-              usableRates["peggedSILVER"] = prevRates["peggedSILVER"];
-              inheritPrevious("peggedSILVER");
-            }
-          } else if (prevRates["peggedSILVER"]) {
-            usableRates["peggedSILVER"] = prevRates["peggedSILVER"];
-            inheritPrevious("peggedSILVER");
-          }
-        } catch (e) {
-          console.warn("[sync-fx-rates] Gold/silver API failed, using cached values:", e);
-          if (prevRates["peggedGOLD"]) {
-            usableRates["peggedGOLD"] = prevRates["peggedGOLD"];
-            inheritPrevious("peggedGOLD");
-          }
-          if (prevRates["peggedSILVER"]) {
-            usableRates["peggedSILVER"] = prevRates["peggedSILVER"];
-            inheritPrevious("peggedSILVER");
-          }
-        }
-        sources["gold-api.com"] = metalsSource;
-
-        let chainlinkSource: "ok" | "partial" | "unavailable" = "unavailable";
-        const chainlinkAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS);
-        if (chainlinkAllowed) {
-          try {
-            const snapshot = await fetchChainlinkReferenceQuoteSnapshot(signal, chainRpcs, syncStartSec);
-            const quotes = snapshot.quotes;
-            let applied = 0;
-            for (const [pegKey, quote] of quotes) {
-              const existing = usableRates[pegKey];
-              if (existing != null && existing > 0) {
-                const delta = Math.abs(quote.price - existing) / existing;
-                if (delta > 0.05) {
-                  console.warn(
-                    `[sync-fx-rates] Chainlink ${pegKey} diverges from current reference: ` +
-                    `current=${existing}, chainlink=${quote.price} (${(delta * 100).toFixed(1)}%)`,
-                  );
-                  continue;
-                }
-              }
-
-              const normalized = Number(quote.price.toFixed(6));
-              if (isValidRate(pegKey, normalized, prevRates[pegKey])) {
-                usableRates[pegKey] = normalized;
-                markLive(pegKey, quote.updatedAt);
-                applied++;
-              } else if (prevRates[pegKey]) {
-                usableRates[pegKey] = prevRates[pegKey];
-                inheritPrevious(pegKey);
-              }
-            }
-
-            chainlinkSource = quotes.size > 0 ? (applied === quotes.size ? "ok" : "partial") : "unavailable";
-            await runBestEffort("recordOutcome:chainlink-feeds", async () => {
-              await recordOutcome(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS, quotes.size > 0);
-            });
-          } catch (err) {
-            if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-            console.warn("[sync-fx-rates] Chainlink reference feeds failed:", err);
-            await runBestEffort("recordOutcome:chainlink-feeds-failure", async () => {
-              await recordOutcome(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS, false);
+          if (realtimeRates.size > 0) {
+            await runBestEffort("fx-oxr-last-success-write", async () => {
+              await db.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+                .bind(OXR_LAST_SUCCESS_KEY, String(completedAt), completedAt).run();
             });
           }
-        } else {
-          console.warn("[sync-fx-rates] Chainlink reference-feed circuit open — skipping overlay");
+          console.log(`[sync-fx-rates] Applied ${realtimeApplied}/${realtimeRates.size} real-time FX rates`);
+          oxrSource = realtimeRates.size > 0 ? (realtimeApplied === realtimeRates.size ? "ok" : "partial") : "unavailable";
+          await runBestEffort("recordOutcome:fx-realtime", async () => {
+            await recordOutcome(db, CIRCUIT_SOURCE.FX_REALTIME, realtimeFetch.completed);
+          });
+        } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+          console.warn("[sync-fx-rates] OXR real-time fetch failed:", err);
+          await runBestEffort("recordOutcome:fx-realtime-failure", async () => {
+            await recordOutcome(db, CIRCUIT_SOURCE.FX_REALTIME, false);
+          });
+          oxrSource = "unavailable";
         }
-        sources.chainlink = chainlinkSource;
+      } else {
+        console.log(`[sync-fx-rates] Skipping OXR fetch (last fetch ${Math.round(elapsedMinutes)}min ago, rate limit: 55min)`);
+        oxrSource = "rate-limited";
+      }
+    }
+    sources.openExchangeRates = oxrSource;
+
+    if (!usableRates["peggedRUB"]) {
+      if (typeof prevRates["peggedRUB"] === "number" && prevRates["peggedRUB"] > 0) {
+        usableRates["peggedRUB"] = prevRates["peggedRUB"];
+        inheritPrevious("peggedRUB");
+        console.log(`[sync-fx-rates] Using cached RUB rate: ${usableRates["peggedRUB"]}`);
+      }
+      if (!usableRates["peggedRUB"]) {
+        usableRates["peggedRUB"] = RUB_FALLBACK;
+        setHardcoded("peggedRUB");
+        console.log(`[sync-fx-rates] Using hardcoded RUB fallback: ${RUB_FALLBACK}`);
       }
     }
 
-    if (mode === "cached-fallback") {
-      for (const pegKey of Object.keys(usableRates)) {
-        inheritPrevious(pegKey);
+    if (!usableRates["peggedCNH"] && typeof prevRates["peggedCNH"] === "number" && prevRates["peggedCNH"] > 0) {
+      usableRates["peggedCNH"] = prevRates["peggedCNH"];
+      inheritPrevious("peggedCNH");
+      console.log(`[sync-fx-rates] Using cached CNH rate: ${usableRates["peggedCNH"]}`);
+    }
+
+    let metalsSource: "ok" | "cached" = "cached";
+    try {
+      const [goldRes, silverRes] = await Promise.all([
+        fetchWithRetry("https://api.gold-api.com/price/XAU", { headers: { "User-Agent": USER_AGENT }, signal }),
+        fetchWithRetry("https://api.gold-api.com/price/XAG", { headers: { "User-Agent": USER_AGENT }, signal }),
+      ]);
+      const goldPayload = goldRes?.ok ? await goldRes.json() : null;
+      const silverPayload = silverRes?.ok ? await silverRes.json() : null;
+      const goldValidation = goldPayload == null
+        ? { ok: false as const, issues: "missing gold payload" }
+        : validatePayloadWithSchema(MetalPriceSchema, goldPayload, "sync-fx-rates:gold");
+      const silverValidation = silverPayload == null
+        ? { ok: false as const, issues: "missing silver payload" }
+        : validatePayloadWithSchema(MetalPriceSchema, silverPayload, "sync-fx-rates:silver");
+      const goldPrice = goldValidation.ok ? goldValidation.data.price : undefined;
+      const silverPrice = silverValidation.ok ? silverValidation.data.price : undefined;
+
+      if (typeof goldPrice === "number" && goldPrice > 0) {
+        if (isValidRate("peggedGOLD", goldPrice, prevRates["peggedGOLD"])) {
+          usableRates["peggedGOLD"] = goldPrice;
+          markLive("peggedGOLD", syncStartSec);
+          metalsSource = "ok";
+        } else if (prevRates["peggedGOLD"]) {
+          usableRates["peggedGOLD"] = prevRates["peggedGOLD"];
+          inheritPrevious("peggedGOLD");
+        }
+      } else if (prevRates["peggedGOLD"]) {
+        usableRates["peggedGOLD"] = prevRates["peggedGOLD"];
+        inheritPrevious("peggedGOLD");
       }
-      if (sources.openExchangeRates === "unavailable") {
-        sources.openExchangeRates = prevState?.sources?.openExchangeRates ?? "unavailable";
+
+      if (typeof silverPrice === "number" && silverPrice > 0) {
+        if (isValidRate("peggedSILVER", silverPrice, prevRates["peggedSILVER"])) {
+          usableRates["peggedSILVER"] = silverPrice;
+          markLive("peggedSILVER", syncStartSec);
+          metalsSource = "ok";
+        } else if (prevRates["peggedSILVER"]) {
+          usableRates["peggedSILVER"] = prevRates["peggedSILVER"];
+          inheritPrevious("peggedSILVER");
+        }
+      } else if (prevRates["peggedSILVER"]) {
+        usableRates["peggedSILVER"] = prevRates["peggedSILVER"];
+        inheritPrevious("peggedSILVER");
       }
-      if (sources.chainlink === "unavailable") {
-        sources.chainlink = prevState?.sources?.chainlink ?? "unavailable";
+    } catch (e) {
+      console.warn("[sync-fx-rates] Gold/silver API failed, using cached values:", e);
+      if (prevRates["peggedGOLD"]) {
+        usableRates["peggedGOLD"] = prevRates["peggedGOLD"];
+        inheritPrevious("peggedGOLD");
       }
-      if (sources["gold-api.com"] === "cached") {
-        sources["gold-api.com"] = prevState?.sources?.["gold-api.com"] ?? "cached";
+      if (prevRates["peggedSILVER"]) {
+        usableRates["peggedSILVER"] = prevRates["peggedSILVER"];
+        inheritPrevious("peggedSILVER");
       }
-      if (sources["fawazahmed0"] === "fallback") {
-        sources["fawazahmed0"] = prevState?.sources?.["fawazahmed0"] ?? "fallback";
+    }
+    sources["gold-api.com"] = metalsSource;
+
+    let chainlinkSource: "ok" | "partial" | "unavailable" = "unavailable";
+    const chainlinkAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS);
+    if (chainlinkAllowed) {
+      try {
+        const snapshot = await fetchChainlinkReferenceQuoteSnapshot(signal, chainRpcs, syncStartSec);
+        const quotes = snapshot.quotes;
+        let applied = 0;
+        for (const [pegKey, quote] of quotes) {
+          const existing = usableRates[pegKey];
+          if (existing != null && existing > 0) {
+            const delta = Math.abs(quote.price - existing) / existing;
+            if (delta > 0.05) {
+              console.warn(
+                `[sync-fx-rates] Chainlink ${pegKey} diverges from current reference: ` +
+                `current=${existing}, chainlink=${quote.price} (${(delta * 100).toFixed(1)}%)`,
+              );
+              continue;
+            }
+          }
+
+          const normalized = Number(quote.price.toFixed(6));
+          if (isValidRate(pegKey, normalized, prevRates[pegKey])) {
+            usableRates[pegKey] = normalized;
+            markLive(pegKey, quote.updatedAt);
+            applied++;
+          } else if (prevRates[pegKey]) {
+            usableRates[pegKey] = prevRates[pegKey];
+            inheritPrevious(pegKey);
+          }
+        }
+
+        chainlinkSource = quotes.size > 0 ? (applied === quotes.size ? "ok" : "partial") : "unavailable";
+        await runBestEffort("recordOutcome:chainlink-feeds", async () => {
+          await recordOutcome(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS, quotes.size > 0);
+        });
+      } catch (err) {
+        if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+        console.warn("[sync-fx-rates] Chainlink reference feeds failed:", err);
+        await runBestEffort("recordOutcome:chainlink-feeds-failure", async () => {
+          await recordOutcome(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS, false);
+        });
       }
-      if (sources.exchangeRateApi === "unavailable") {
-        sources.exchangeRateApi = prevState?.sources?.exchangeRateApi ?? "unavailable";
-      }
-      ecbDate = prevState?.ecbDate ?? null;
+    } else {
+      console.warn("[sync-fx-rates] Chainlink reference-feed circuit open — skipping overlay");
+    }
+    sources.chainlink = chainlinkSource;
+    if (mode === "cached-fallback" && hasFreshFullFxCoverage()) {
+      mode = "live";
+      fallbackMode = "independent-live-recovery";
+      if (sources.cache === "ok") sources.cache = "recovered";
+      console.log("[sync-fx-rates] Independent sources restored fresh full-set coverage after cached fallback");
     }
 
     const missing = EXPECTED_FX_PEG_KEYS.filter((k) => !(k in usableRates));

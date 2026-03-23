@@ -1,6 +1,17 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v2.14` (2026-02-01 -> 2026-03-23).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v2.15` (2026-02-01 -> 2026-03-23).
+
+---
+
+## v2.15 - Independent FX recovery during cached fallback (Mar 23, 2026)
+
+**Commit:** `unreleased`
+
+- Cached-fallback FX runs now keep probing Open Exchange Rates, Chainlink reference feeds, and gold-api.com instead of freezing those recovery paths until Frankfurter recovers
+- A single stale intraday peg can no longer trap the whole FX lane in repeated cached fallback when an independent overlay source can refresh it
+- If those independent probes restore fresh full-set fiat coverage, the run exits cached fallback immediately and resets the fallback streak
+- Operator metadata still records the failed Frankfurter / mirror transport path, but no longer exaggerates the duration of a recovered subset outage
 
 ---
 

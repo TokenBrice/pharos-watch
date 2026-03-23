@@ -637,6 +637,234 @@ describe("syncFxRates", () => {
     expect(cachedRates.peggedEUR).toBeCloseTo(1.08101, 4);
   });
 
+  it("promotes cached fallback back to live when OXR restores fresh full-set FX coverage", async () => {
+    const fullPrevRates: Record<string, number> = {
+      peggedEUR: 1 / 0.925,
+      peggedGBP: 1 / 0.79,
+      peggedCHF: 1 / 0.88,
+      peggedREAL: 1 / 5.0,
+      peggedJPY: 1 / 149.5,
+      peggedIDR: 1 / 15800,
+      peggedSGD: 1 / 1.35,
+      peggedTRY: 1 / 36,
+      peggedAUD: 1 / 1.55,
+      peggedZAR: 1 / 18.3,
+      peggedCAD: 1 / 1.37,
+      peggedCNY: 1 / 7.25,
+      peggedPHP: 1 / 56,
+      peggedMXN: 1 / 17.2,
+      peggedCNH: 1 / 7.28,
+      peggedRUB: 1 / 90,
+      peggedUAH: 1 / 41,
+      peggedARS: 1 / 1400,
+    };
+    const staleUpdatedAt = Math.floor(Date.now() / 1000) - (8 * 3600);
+    const sourceUpdatedAtByPeg = Object.fromEntries(
+      Object.keys(fullPrevRates).map((pegKey) => [pegKey, staleUpdatedAt]),
+    );
+    const sourceModeByPeg = Object.fromEntries(
+      Object.keys(fullPrevRates).map((pegKey) => [pegKey, "live"]),
+    );
+    const sourceCadenceByPeg = Object.fromEntries(
+      Object.keys(fullPrevRates).map((pegKey) => [pegKey, "intraday"]),
+    );
+    const sourceDateByPeg = Object.fromEntries(
+      Object.keys(fullPrevRates).map((pegKey) => [pegKey, null]),
+    );
+
+    mockFetch([
+      { match: "frankfurter.app", body: { error: "Service unavailable" }, status: 503 },
+      { match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api", body: { error: "Service unavailable" }, status: 503 },
+      { match: "latest.currency-api.pages.dev", body: { error: "Service unavailable" }, status: 503 },
+      { match: "open.er-api.com/v6/latest/USD", body: { error: "Service unavailable" }, status: 503 },
+      {
+        match: "openexchangerates.org",
+        body: {
+          rates: {
+            EUR: 0.925, GBP: 0.79, CHF: 0.88, BRL: 5.0, JPY: 149.5, IDR: 15800, SGD: 1.35, TRY: 36,
+            AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, CNH: 7.28, PHP: 56, MXN: 17.2, RUB: 90, UAH: 41, ARS: 1400,
+          },
+        },
+      },
+      { match: "gold-api.com/price/XAU", body: { price: 2900 } },
+      { match: "gold-api.com/price/XAG", body: { price: 32 } },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: {
+          value: JSON.stringify(fullPrevRates),
+          updated_at: Math.floor(Date.now() / 1000) - 60,
+        },
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            usableSyncAt: Math.floor(Date.now() / 1000) - 60,
+            mode: "cached-fallback",
+            sourceUpdatedAtByPeg,
+            sourceModeByPeg,
+            sourceCadenceByPeg,
+            sourceDateByPeg,
+            consecutiveFallbackRuns: 6,
+          }),
+          updated_at: Math.floor(Date.now() / 1000) - 60,
+        },
+      },
+      {
+        match: "SELECT value FROM cache WHERE key = ?",
+        matchBinds: ["fx-oxr-last-attempt"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value FROM cache WHERE key = ?",
+        matchBinds: ["fx-oxr-last-fetch"],
+        rows: [],
+        first: null,
+      },
+      { match: "circuit", rows: [], first: null },
+    ]);
+
+    const result = await syncFxRates(db, undefined, "oxr-key");
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(result.status).toBeUndefined();
+    expect(metadata.mode).toBe("live");
+    expect(metadata.fallbackMode).toBe("independent-live-recovery");
+    expect(metadata.consecutiveFallbackRuns).toBe(0);
+    expect(metadata.sources.openExchangeRates).toBe("ok");
+    expect(metadata.sources.cache).toBe("recovered");
+    expect(findCacheWrite(db, "fx-oxr-last-attempt")).toBeDefined();
+    expect(findCacheWrite(db, "fx-oxr-last-success")).toBeDefined();
+
+    const metaWrite = findCacheWrite(db, "fx-rates-meta");
+    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+      mode: string;
+      sourceUpdatedAtByPeg: Record<string, number>;
+      consecutiveFallbackRuns: number;
+    };
+    expect(cachedMeta.mode).toBe("live");
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedJPY).toBe(Math.floor(Date.now() / 1000));
+    expect(cachedMeta.consecutiveFallbackRuns).toBe(0);
+  });
+
+  it("preserves refreshed per-peg source metadata during cached fallback when recovery is only partial", async () => {
+    const fullPrevRates: Record<string, number> = {
+      peggedEUR: 1 / 0.925,
+      peggedGBP: 1 / 0.79,
+      peggedCHF: 1 / 0.88,
+      peggedREAL: 1 / 5.0,
+      peggedJPY: 1 / 149.5,
+      peggedIDR: 1 / 15800,
+      peggedSGD: 1 / 1.35,
+      peggedTRY: 1 / 36,
+      peggedAUD: 1 / 1.55,
+      peggedZAR: 1 / 18.3,
+      peggedCAD: 1 / 1.37,
+      peggedCNY: 1 / 7.25,
+      peggedPHP: 1 / 56,
+      peggedMXN: 1 / 17.2,
+      peggedCNH: 1 / 7.28,
+      peggedRUB: 1 / 90,
+      peggedUAH: 1 / 41,
+      peggedARS: 1 / 1400,
+    };
+    const staleUpdatedAt = Math.floor(Date.now() / 1000) - (8 * 3600);
+    const sourceUpdatedAtByPeg = Object.fromEntries(
+      Object.keys(fullPrevRates).map((pegKey) => [pegKey, staleUpdatedAt]),
+    );
+    const sourceModeByPeg = Object.fromEntries(
+      Object.keys(fullPrevRates).map((pegKey) => [pegKey, "live"]),
+    );
+    const sourceCadenceByPeg = Object.fromEntries(
+      Object.keys(fullPrevRates).map((pegKey) => [pegKey, "intraday"]),
+    );
+    const sourceDateByPeg = Object.fromEntries(
+      Object.keys(fullPrevRates).map((pegKey) => [pegKey, null]),
+    );
+
+    mockFetch([
+      { match: "frankfurter.app", body: { error: "Service unavailable" }, status: 503 },
+      { match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api", body: { error: "Service unavailable" }, status: 503 },
+      { match: "latest.currency-api.pages.dev", body: { error: "Service unavailable" }, status: 503 },
+      { match: "open.er-api.com/v6/latest/USD", body: { error: "Service unavailable" }, status: 503 },
+      {
+        match: "openexchangerates.org",
+        body: {
+          rates: { EUR: 0.925 },
+        },
+      },
+      { match: "gold-api.com/price/XAU", body: { price: 2900 } },
+      { match: "gold-api.com/price/XAG", body: { price: 32 } },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: {
+          value: JSON.stringify(fullPrevRates),
+          updated_at: Math.floor(Date.now() / 1000) - 60,
+        },
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            usableSyncAt: Math.floor(Date.now() / 1000) - 60,
+            mode: "cached-fallback",
+            sourceUpdatedAtByPeg,
+            sourceModeByPeg,
+            sourceCadenceByPeg,
+            sourceDateByPeg,
+            consecutiveFallbackRuns: 2,
+          }),
+          updated_at: Math.floor(Date.now() / 1000) - 60,
+        },
+      },
+      {
+        match: "SELECT value FROM cache WHERE key = ?",
+        matchBinds: ["fx-oxr-last-attempt"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value FROM cache WHERE key = ?",
+        matchBinds: ["fx-oxr-last-fetch"],
+        rows: [],
+        first: null,
+      },
+      { match: "circuit", rows: [], first: null },
+    ]);
+
+    const result = await syncFxRates(db, undefined, "oxr-key");
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.mode).toBe("cached-fallback");
+    expect(metadata.fallbackMode).toBe("cached-fx-rates");
+    expect(metadata.consecutiveFallbackRuns).toBe(3);
+    expect(metadata.sources.openExchangeRates).toBe("ok");
+
+    const metaWrite = findCacheWrite(db, "fx-rates-meta");
+    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+      mode: string;
+      sourceUpdatedAtByPeg: Record<string, number>;
+      consecutiveFallbackRuns: number;
+    };
+    expect(cachedMeta.mode).toBe("cached-fallback");
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedEUR).toBe(Math.floor(Date.now() / 1000));
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedGBP).toBe(staleUpdatedAt);
+    expect(cachedMeta.consecutiveFallbackRuns).toBe(3);
+  });
+
   it("keeps syncing when the OXR telemetry write fails", async () => {
     mockFetch([
       {
