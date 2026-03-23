@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "1.15",
+  currentVersion: "1.16",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "1.16",
+      title: "Moderate-effort redemption confidence tranche",
+      date: "2026-03-23",
+      effectiveAt: 1774314000,
+      summary:
+        "A moderate-effort tranche upgrades a final group of already-modeled low-confidence routes where Pharos now has reviewed primary redemption semantics, but not yet protocol-native live instant-buffer telemetry.",
+      impact: [
+        "DOLA and JupUSD now treat their published stable-buffer bounds as reviewed documented-capacity inputs instead of leaving those ratios in the heuristic bucket",
+        "rwaUSDi, mTBILL, MUSD, USDN, YUSD, USN, UTY, and YZUSD now use reviewed redemption semantics and documented-bound capacity instead of generic low-confidence placeholders",
+        "These routes still avoid claiming a separately measured live instant buffer unless the issuer or protocol publishes one, but they now contribute medium-confidence redemption evidence across another moderate-cap tranche",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "1.15",
       title: "Reviewed docs-backed quick-win redemption tranche",

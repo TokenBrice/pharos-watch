@@ -466,4 +466,99 @@ describe("getRedemptionBackstopConfig", () => {
       expect(getRedemptionBackstopConfig(id)?.docs?.length).toBeGreaterThan(0);
     }
   });
+
+  it("upgrades the moderate-effort reviewed queue out of heuristic redemption semantics", () => {
+    expect(getRedemptionBackstopConfig("dola-inverse-finance")).toMatchObject({
+      routeFamily: "psm-swap",
+      capacityModel: { kind: "supply-ratio", ratio: 0.08, confidence: "documented-bound" },
+      costModel: { kind: "fee-bps", feeBps: 20 },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("rwausdi-multipli")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      settlementModel: "days",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("mtbill-midas")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      settlementModel: "days",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "fee-bps", feeBps: 7 },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("musd-metamask")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("usdn-noble")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("yusd-aegis")).toMatchObject({
+      routeFamily: "stablecoin-redeem",
+      accessModel: "whitelisted-onchain",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("usn-noon")).toMatchObject({
+      routeFamily: "stablecoin-redeem",
+      accessModel: "whitelisted-onchain",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("uty-xsy")).toMatchObject({
+      routeFamily: "queue-redeem",
+      settlementModel: "days",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("yzusd-yuzu")).toMatchObject({
+      routeFamily: "queue-redeem",
+      accessModel: "issuer-api",
+      settlementModel: "days",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("jupusd-jupiter")).toMatchObject({
+      routeFamily: "stablecoin-redeem",
+      accessModel: "whitelisted-onchain",
+      capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    for (const id of [
+      "dola-inverse-finance",
+      "rwausdi-multipli",
+      "mtbill-midas",
+      "musd-metamask",
+      "usdn-noble",
+      "yusd-aegis",
+      "usn-noon",
+      "uty-xsy",
+      "yzusd-yuzu",
+      "jupusd-jupiter",
+    ] as const) {
+      expect(getRedemptionBackstopConfig(id)?.docs?.length).toBeGreaterThan(0);
+    }
+  });
 });

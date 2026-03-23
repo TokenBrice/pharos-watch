@@ -120,15 +120,27 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "yusd-aegis": {
     ...stablecoinRedeemBase,
-    capacityModel: { kind: "supply-ratio", ratio: 0.15 },
-    costModel: documentedVariableFee("1:1 redemption via Aegis Mint contract; no separate fee disclosed"),
-    notes: ["Estimated 15% capacity ratio pending protocol-specific liquidity research"],
+    accessModel: "whitelisted-onchain",
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee("Aegis documents 1:1 minting and redemption for approved users, but does not publish a fixed redemption fee"),
+    docs: [
+      sourceRef("Aegis liquidity", "https://docs.aegis.im/overview/liquidity", ["route", "capacity", "access"]),
+      sourceRef("Aegis FAQ", "https://docs.aegis.im/aegis-faq/how-can-i-get-my-earned-yusd", ["route"]),
+      sourceRef("Aegis Accountable dashboard", "https://aegis.accountable.capital/", ["capacity"]),
+    ],
+    notes: ["Direct mint and redemption are reserved for approved primary-market users, while most secondary users access YUSD via DEX liquidity or supported venues"],
   },
   "usn-noon": {
     ...stablecoinRedeemBase,
-    capacityModel: { kind: "supply-ratio", ratio: 0.15 },
-    costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
-    notes: ["Estimated 15% capacity ratio pending protocol-specific liquidity research"],
+    accessModel: "whitelisted-onchain",
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee("Noon documents 1:1 minting and redemption for approved users, but does not publish a fixed redemption fee"),
+    docs: [
+      sourceRef("Noon USN documentation", "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/return-generation", ["route", "capacity"]),
+      sourceRef("Noon smart contract audits", "https://docs.noon.capital/built-for-safety/smart-contract-audits", ["route", "access"]),
+      sourceRef("Noon Accountable dashboard", "https://noon.accountable.capital/", ["capacity"]),
+    ],
+    notes: ["Direct mint and redemption are reserved for approved primary-market users; current model does not treat Noon strategy collateral as a separately measured instant stablecoin buffer"],
   },
   "aid-gaib": {
     ...stablecoinRedeemBase,
@@ -247,10 +259,17 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   },
   "jupusd-jupiter": {
     ...stablecoinRedeemBase,
-    capacityModel: { kind: "supply-ratio", ratio: 0.1 },
+    accessModel: "whitelisted-onchain",
+    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound" },
     costModel: documentedVariableFee(
-      "Reserve-backed 1:1 mint and redeem on Solana against USDC; Ethena manages reserve operations",
+      "JupUSD's primary mint and redeem rail is benefactor-gated and settles against USDC; public materials do not publish one universal fixed redemption fee",
     ),
+    reviewedAt: "2026-03-23",
+    docs: [
+      sourceRef("JupUSD homepage", "https://jupusd.money/", ["route", "capacity"]),
+      sourceRef("Offside Labs JupUSD audit", "https://jupusd.money/homepage/audits/offsidelabs.pdf", ["route", "capacity", "access", "fees"]),
+    ],
+    notes: ["Current model keeps the reviewed 10% USDC liquidity buffer disclosed in public materials as the immediate bound rather than assuming the full reserve stack is always user-accessible through the primary mint/redeem rail"],
   },
   "msusd-main-street": {
     ...stablecoinRedeemBase,

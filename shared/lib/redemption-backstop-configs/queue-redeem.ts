@@ -138,8 +138,14 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "uty-xsy": {
     ...queueRedeemBase,
     settlementModel: "days",
-    capacityModel: { kind: "supply-ratio", ratio: 0.3 },
+    ...reviewedQueueRedemptionSupplyFull,
     costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+    docs: [
+      sourceRef("XSY documentation", "https://xsy-1.gitbook.io/xsy-main", ["route", "capacity"]),
+      sourceRef("XSY website", "https://xsy.fi/about", ["route", "settlement"]),
+      sourceRef("XSY Accountable dashboard", "https://accountable.xsy.fi/", ["capacity"]),
+    ],
+    notes: ["XSY documents a 7-day unbonding redemption path for UTY back into USDC; current model scores the reviewed queued exit rather than a separately measured live liquid buffer"],
   },
   "usp-pikudao": {
     ...queueRedeemBase,
@@ -205,8 +211,13 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ...queueRedeemBase,
     accessModel: "issuer-api",
     settlementModel: "days",
-    capacityModel: { kind: "supply-ratio", ratio: 0.1 },
+    ...reviewedQueueRedemptionSupplyFull,
     costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+    docs: [
+      sourceRef("Yuzu Money documentation", "https://yuzu-money.gitbook.io/yuzu-money", ["route", "capacity", "access"]),
+      sourceRef("Yuzu Accountable dashboard", "https://yuzu.accountable.capital/", ["capacity"]),
+    ],
+    notes: ["Yuzu documents primary minting and redemption for eligible KYC / AML-cleared investors; current model treats that rail as a reviewed queued exit rather than assuming continuously available public stablecoin liquidity"],
   },
   "nusd-neutrl": {
     ...queueRedeemBase,

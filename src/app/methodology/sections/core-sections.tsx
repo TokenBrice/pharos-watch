@@ -889,7 +889,7 @@ export function CoreMethodologySections() {
                 quality, and cost. Queue-based and offchain issuer routes are capped so they do not look unrealistically
                 liquid. Low-confidence redemption routes stay visible on the site but do not uplift the Safety Score
                 liquidity dimension, stale DEX inputs are not blended into effective exit, stale live reserve metadata ages out instead of staying resolved indefinitely, fresh live fee telemetry can replace reviewed fallback fee buckets when available, and eventual issuer redemption is reported separately from immediate redeemable buffer capacity.
-                Reviewed `documented-bound` eventual redemption routes can still count as medium-confidence evidence even when no separate live instant buffer is measured.
+                Reviewed `documented-bound` eventual redemption routes can still count as medium-confidence evidence even when no separate live instant buffer is measured, and explicitly published primary-market liquidity-buffer ratios can also graduate out of the heuristic bucket when the underlying source is strong enough.
               </p>
             </div>
             {/* Peg multiplier */}

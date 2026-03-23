@@ -92,8 +92,20 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "dola-inverse-finance": {
     ...psmSwapBase,
-    capacityModel: { kind: "supply-ratio", ratio: 0.08 },
+    capacityModel: { kind: "supply-ratio", ratio: 0.08, confidence: "documented-bound" },
     costModel: fixedFee(20, "Inverse FiRM docs list a 20 bps DOLA -> USDS exit fee"),
+    reviewedAt: "2026-03-23",
+    docs: [
+      sourceRef(
+        "Inverse Peg Stability Module",
+        "https://docs.inverse.finance/inverse-finance/inverse-finance/products/peg-stability-module",
+        ["route", "capacity", "fees"],
+      ),
+      sourceRef("Inverse Finance transparency", "https://www.inverse.finance/transparency", ["capacity"]),
+    ],
+    notes: [
+      "Modeled against the documented USDS PSM floor rather than full-system FiRM debt unwinds; the reviewed 8% bound matches the currently published PSM share of reserves and does not claim full DOLA supply is instantly redeemable",
+    ],
   },
   "buck-bucket-protocol": {
     ...psmSwapBase,

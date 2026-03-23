@@ -388,12 +388,32 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
     ],
     notes: ["Base $M liquidity is institution-facing; most end users access M0 liquidity through branded extensions and integrations rather than direct M redemption"],
   },
+  "musd-metamask": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "MetaMask USD is issued 1:1 by Bridge on top of M0 reserve infrastructure; public redemption fees are not disclosed",
+    ),
+    docs: [
+      sourceRef("MetaMask USD introduction", "https://musd.to/blog", ["route", "capacity"]),
+      sourceRef("Bridge issuance FAQ", "https://apidocs.bridge.xyz/platform/issuance/faq", ["route", "capacity", "fees"]),
+      sourceRef("M0 FAQ", "https://www.m0.org/faq", ["capacity", "access"]),
+    ],
+    notes: ["Modeled as MetaMask's documented Bridge issuer rail on top of M0 reserve infrastructure rather than as a continuously measured live cash-buffer route"],
+  },
   "mtbill-midas": {
     ...issuerBase,
-    capacityModel: { kind: "supply-ratio", ratio: 0.11 },
+    ...reviewedDirectRedemptionSupplyFull,
+    settlementModel: "days",
     costModel: fixedFee(7, "Midas documents a 0.07% redemption fee"),
+    docs: [
+      sourceRef("Midas mTBILL atomic redemptions", "https://docs.midas.app/tokens/mtbill/atomic-redemptions", ["route", "capacity", "settlement"]),
+      sourceRef("Midas prospectus documents", "https://docs.midas.app/resources/legal-documents/prospectus-documents", ["fees"]),
+      sourceRef("Midas transparency", "https://midas.app/transparency", ["capacity"]),
+    ],
     notes: [
-      "Instant USDC redemption limited to on-chain liquidity buffer (~11% of supply per transparency page); overflow enters 1–7 business day queue with up to 3 business days to replenish",
+      "Midas documents atomic USDC redemptions when protocol liquidity is available, while standard processing completes within two business days in normal conditions and up to seven business days in stressed cases",
+      "Current model scores reviewed eventual redeemability rather than claiming a separately measured live instant buffer from the transparency page",
     ],
   },
   "usdy-ondo-finance": {
@@ -420,10 +440,30 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "rwausdi-multipli": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     settlementModel: "days",
     costModel: documentedVariableFee(
       "NAV-based valuation; KYB-gated 1:1 minting and redemption restricted to verified institutional counterparties",
     ),
+    docs: [
+      sourceRef("Multipli unwind and peg module", "https://docs.multipli.fi/technical-architecture/unwind-and-peg-module", ["route", "capacity"]),
+      sourceRef("Multipli issuer, custody & operational risk", "https://docs.multipli.fi/risks/issuer-custody-and-operational-risk", ["access", "settlement", "capacity"]),
+      sourceRef("AFI verification", "https://verification.afiprotocol.xyz/multipli", ["capacity"]),
+    ],
+    notes: ["Multipli documents an institution-only primary redemption rail into underlying liquidity-class assets, so the route remains a delayed issuer exit rather than an instant public stablecoin off-ramp"],
+  },
+  "usdn-noble": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "USDN users mint and redeem via USDC through Noble Express; public redemption fees are not disclosed",
+    ),
+    docs: [
+      sourceRef("USDN overview", "https://docs.noble.xyz/learn/usdn/overview/", ["route", "capacity"]),
+      sourceRef("USDN architecture", "https://docs.noble.xyz/learn/usdn/architecture/", ["route", "capacity"]),
+      sourceRef("M0 Dashboard", "https://dashboard.m0.org/", ["capacity"]),
+    ],
+    notes: ["Current model scores the documented Noble Express USDC mint-and-redeem rail as eventual issuer redemption rather than a separately measured live cash buffer"],
   },
   "aeur-anchored-coins": {
     ...issuerBase,
