@@ -60,7 +60,7 @@ export function CoreMethodologySections() {
             If those live FX fetches still fail but the last published daily references remain within cadence, Pharos
             carries those dated references forward as a healthy refresh. A 5-pass enrichment pipeline fills gaps for
             long-tail coins. Each asset is tagged with a confidence level
-            so downstream systems can react to data quality, and severe fixed-peg downside publication now requires corroboration unless it comes from an explicit protocol redemption or pool-challenge replacement mark.
+            so downstream systems can react to data quality, and severe fixed-peg downside publication now requires corroboration unless it comes from an explicit protocol redemption or pool-challenge replacement mark. When a confirmed severe depeg briefly loses corroboration, the pipeline now preserves trusted continuity from fresh replay-safe `price_cache` rows instead of letting the asset flap to `N/A`.
           </p>
           <div className="grid gap-2 sm:grid-cols-3">
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">

@@ -19,7 +19,7 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, `priceObserv
 
 ## Versioning
 
-- **Current methodology version:** `v2.13`
+- **Current methodology version:** `v2.14`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -169,6 +169,7 @@ The enrichment path is intentionally narrower than primary pricing:
 - it exists to fill holes, not overrule good consensus
 - fallback results are validated before they enter `price_cache`
 - replay cache only stores replay-safe prices (no `low`, no `fallback`, no fragile search-derived sources), expires after 6 hours, and now preserves source/confidence/timestamp/source-list provenance
+- previous-trusted continuity now merges the last authoritative stablecoins publication with fresh replay-safe `price_cache` rows, so a temporarily `low` or unusable publication does not make an already-confirmed severe depeg forget its prior corroborated state on the next run
 - invalid or severely depegged single-source fallback prints are dropped instead of poisoning later runs
 
 ### Timestamp Semantics

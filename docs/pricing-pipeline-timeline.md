@@ -1,6 +1,17 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v2.13` (2026-02-01 -> 2026-03-22).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v2.14` (2026-02-01 -> 2026-03-23).
+
+---
+
+## v2.14 - Replay-safe trusted-price continuity for confirmed depegs (Mar 23, 2026)
+
+**Commit:** `unreleased`
+
+- Previous-trusted severe-depeg continuity now also consults fresh replay-safe `price_cache` rows instead of relying only on the immediately previous stablecoins publication
+- A temporarily `low` or unusable stablecoins run no longer causes the next fallback-validation pass to forget an already corroborated open depeg
+- Cached replay can therefore keep publishing the last fresh authoritative depeg price through brief corroboration gaps instead of flapping to `N/A` on detail surfaces
+- This specifically closes the intermittent USR-style gap where PSI could still explain the depeg from replay-safe state while the detail page lost its current price
 
 ---
 

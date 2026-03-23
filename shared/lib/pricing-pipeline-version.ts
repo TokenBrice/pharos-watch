@@ -3,9 +3,26 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "2.13",
+  currentVersion: "2.14",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "2.14",
+      title: "Replay-safe trusted-price continuity for confirmed depegs",
+      date: "2026-03-23",
+      effectiveAt: 1774267200,
+      summary:
+        "Extended previous-trusted severe-depeg continuity to reuse fresh replay-safe price-cache rows, " +
+        "so a transient low or unusable stablecoins publication cannot make the next validation pass forget a recently corroborated open depeg.",
+      impact: [
+        "Previous-trusted price lookup now merges the last authoritative stablecoins publication with fresh replay-safe `price_cache` metadata",
+        "Cached replay can keep publishing the last fresh corroborated depeg price through brief single-run corroboration gaps instead of dropping the asset to `N/A`",
+        "Confirmed severe depegs no longer lose continuity just because an intervening stablecoins run published a `low` or unusable price state",
+        "This closes the intermittent USR-style divergence where PSI could still explain the open depeg while detail surfaces lost the current price",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "2.13",
       title: "Source-aware trust, observed-time freshness, and weak-price jump quarantine",

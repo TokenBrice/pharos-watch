@@ -10,6 +10,7 @@ import type { PeggedAsset, PrimaryPriceResult } from "../enrich-prices";
 import { stampPriceMetadata } from "./shared";
 import { classifyPrimaryDepegTrust } from "../../lib/depeg-helpers";
 import { hasDepegAuthoritativeSource } from "../../lib/pricing-source-policy";
+import type { PriceCacheEntry } from "../../lib/db-cache";
 
 export interface ValidationContextResolver {
   get: (asset: PeggedAsset) => PriceValidationContext;
@@ -211,19 +212,79 @@ function stampExistingSingleSource(asset: PeggedAsset, syncStartSec: number): vo
 export function buildPreviousTrustedPriceLookup(
   previousAssetsById: Map<string, PeggedAsset>,
   nowSec: number,
+  replayPriceCache?: Map<string, PriceCacheEntry>,
 ): Map<string, PreviousTrustedPrice> {
   const lookup = new Map<string, PreviousTrustedPrice>();
-  for (const [assetId, asset] of previousAssetsById) {
-    if (classifyPrimaryDepegTrust(asset, nowSec) !== "authoritative") continue;
-    if (asset.price == null || typeof asset.price !== "number" || !Number.isFinite(asset.price) || asset.price <= 0) continue;
+
+  const maybeStoreCandidate = (
+    assetId: string,
+    candidate: {
+      price: number | null | undefined;
+      source: string | null | undefined;
+      confidence: PeggedAsset["priceConfidence"] | undefined;
+      observedAt: number | null | undefined;
+      updatedAt: number | null | undefined;
+      agreeSources: string[] | null | undefined;
+    },
+  ) => {
+    if (classifyPrimaryDepegTrust({
+      price: candidate.price,
+      priceSource: candidate.source ?? null,
+      priceConfidence: candidate.confidence ?? null,
+      priceObservedAt: candidate.observedAt ?? candidate.updatedAt ?? null,
+      priceUpdatedAt: candidate.updatedAt ?? candidate.observedAt ?? null,
+      agreeSources: candidate.agreeSources ?? [],
+    }, nowSec) !== "authoritative") {
+      return;
+    }
+
+    if (candidate.price == null || typeof candidate.price !== "number" || !Number.isFinite(candidate.price) || candidate.price <= 0) {
+      return;
+    }
+
+    const nextObservedAt = candidate.observedAt ?? candidate.updatedAt ?? null;
+    const existingObservedAt = lookup.get(assetId)?.observedAt ?? null;
+    if (
+      existingObservedAt != null &&
+      nextObservedAt != null &&
+      existingObservedAt >= nextObservedAt
+    ) {
+      return;
+    }
+
     lookup.set(assetId, {
+      price: candidate.price,
+      source: candidate.source ?? null,
+      confidence: candidate.confidence ?? null,
+      observedAt: nextObservedAt,
+      agreeSources: candidate.agreeSources ?? [],
+    });
+  };
+
+  for (const [assetId, asset] of previousAssetsById) {
+    maybeStoreCandidate(assetId, {
       price: asset.price,
       source: asset.priceSource ?? null,
       confidence: asset.priceConfidence ?? null,
       observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
+      updatedAt: asset.priceUpdatedAt ?? asset.priceObservedAt ?? null,
       agreeSources: asset.agreeSources ?? [],
     });
   }
+
+  if (replayPriceCache) {
+    for (const [assetId, cached] of replayPriceCache) {
+      maybeStoreCandidate(assetId, {
+        price: cached.price,
+        source: cached.source ?? null,
+        confidence: cached.confidence ?? null,
+        observedAt: cached.observedAt ?? cached.updatedAt,
+        updatedAt: cached.updatedAt,
+        agreeSources: cached.agreeSources ?? [],
+      });
+    }
+  }
+
   return lookup;
 }
 
