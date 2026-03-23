@@ -213,14 +213,14 @@ function AboutFeatureSection({
 export const metadata: Metadata = {
   title: "About Pharos: Shining a Light on Every Peg",
   description:
-    "About Pharos, an open stablecoin analytics dashboard by TokenBrice, Claude, Codex, and Kimi. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
+    "About Pharos, an open stablecoin analytics dashboard by TokenBrice, Ike, Claude, and Codex. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
   alternates: {
     canonical: "/about/",
   },
   openGraph: {
     title: "About Pharos: Shining a Light on Every Peg",
     description:
-      "About Pharos, an open stablecoin analytics dashboard by TokenBrice, Claude, Codex, and Kimi. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
+      "About Pharos, an open stablecoin analytics dashboard by TokenBrice, Ike, Claude, and Codex. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
     url: "/about/",
     type: "website",
     images: [{ url: "/og-card.png", width: 1200, height: 628 }],
@@ -368,7 +368,7 @@ export default function AboutPage() {
                   name: "Why does Pharos exist?",
                   acceptedAnswer: {
                     "@type": "Answer",
-                    text: "Pharos is a project by TokenBrice, Claude, Codex, and Kimi. It puts the stablecoin data you want to monitor in one place: honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
+                    text: "Pharos is a project by TokenBrice, Ike, Claude, and Codex. It puts the stablecoin data you want to monitor in one place: honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
                   },
                 },
                 {
@@ -410,6 +410,32 @@ export default function AboutPage() {
             </div>
             <CardTitle as="h2">Why Pharos?</CardTitle>
           </CardHeader>
+          <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+            <p>
+              Stablecoins are the backbone of on-chain finance, yet the data to evaluate them is scattered,
+              inconsistent, or buried behind paywalls. Pharos changes that. It tracks {ACTIVE_STABLECOINS.length} live
+              stablecoins, {PRE_LAUNCH_STABLECOINS.length} upcoming launches,
+              and {DEAD_STABLECOINS.length} dead ones across every major chain, scoring each on peg
+              integrity, liquidity depth, resilience, and contagion risk. Real-time depeg detection, freeze monitoring,
+              safety grades, mint-and-burn flow analysis, and an ecosystem-wide stability index give you the full
+              picture before a crisis makes the headlines. You can also plug in your own holdings to see your effective
+              stablecoin exposure, concentration risks, and blended safety profile in one view.
+            </p>
+            <p>
+              Pharos is a public good, a resource. It&apos;s a mission-driven project made to elevate the understanding
+              of stablecoin market participants: free, open source, and with no plan to monetize. Make the most of it!
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-xl border-l-[3px] border-l-frost-blue">
+          <CardHeader className="space-y-2">
+            <div className="flex items-center gap-3">
+              <p className="pharos-kicker text-sky-700 dark:text-frost-blue/82">The team</p>
+              <div className="h-px flex-1 bg-gradient-to-r from-frost-blue/35 to-transparent" />
+            </div>
+            <CardTitle as="h2">Who Is Building Pharos?</CardTitle>
+          </CardHeader>
           <CardContent className="grid gap-4 text-sm leading-relaxed text-muted-foreground lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-5">
             <div className="flex items-start gap-4">
               <div className="flex flex-col items-center gap-1.5">
@@ -427,6 +453,18 @@ export default function AboutPage() {
               <div className="flex flex-col items-center gap-1.5">
                 <div className="rounded-xl border border-border/60 bg-background/50 p-1">
                   <Image
+                    src="/ike.jpg"
+                    alt="Ike"
+                    width={72}
+                    height={72}
+                    className="h-14 w-14 rounded-lg sm:h-16 sm:w-16"
+                  />
+                </div>
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Champion</span>
+              </div>
+              <div className="flex flex-col items-center gap-1.5">
+                <div className="rounded-xl border border-border/60 bg-background/50 p-1">
+                  <Image
                     src="/claude.png"
                     alt="Claude"
                     width={72}
@@ -434,7 +472,7 @@ export default function AboutPage() {
                     className="h-14 w-14 rounded-lg sm:h-16 sm:w-16"
                   />
                 </div>
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">AI 1</span>
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">AI Brainstormer</span>
               </div>
               <div className="flex flex-col items-center gap-1.5">
                 <div className="rounded-xl border border-border/60 bg-background/50 p-1">
@@ -446,24 +484,11 @@ export default function AboutPage() {
                     className="h-14 w-14 rounded-lg sm:h-16 sm:w-16"
                   />
                 </div>
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">AI 2</span>
-              </div>
-              <div className="flex flex-col items-center gap-1.5">
-                <div className="rounded-xl border border-border/60 bg-background/50 p-1">
-                  <Image
-                    src="/kimi.png"
-                    alt="Kimi"
-                    width={72}
-                    height={72}
-                    className="h-14 w-14 rounded-lg sm:h-16 sm:w-16"
-                  />
-                </div>
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">AI 3</span>
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">AI Engineer</span>
               </div>
             </div>
             <div className="space-y-3">
               <p>
-                Pharos is a project by{" "}
                 <a
                   href="https://tokenbrice.xyz/"
                   target="_blank"
@@ -472,8 +497,19 @@ export default function AboutPage() {
                 >
                   TokenBrice
                   <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-                ,{" "}
+                </a>{" "}
+                created Pharos and leads product direction, scoring methodology, and the data pipeline.{" "}
+                <a
+                  href="https://x.com/Ikebillion_"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={INLINE_EXTERNAL_LINK_CLASS}
+                >
+                  Ike
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>{" "}
+                drives growth and communications, getting Pharos in front of the people who need it.
+                The engineering is AI-native: most of the codebase is written and maintained by{" "}
                 <a
                   href="https://www.anthropic.com/claude-code"
                   target="_blank"
@@ -482,8 +518,8 @@ export default function AboutPage() {
                 >
                   Claude
                   <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-                ,{" "}
+                </a>{" "}
+                and{" "}
                 <a
                   href="https://openai.com/codex/"
                   target="_blank"
@@ -493,22 +529,7 @@ export default function AboutPage() {
                   Codex
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
-                , and{" "}
-                <a
-                  href="https://www.kimi.com/en"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={INLINE_EXTERNAL_LINK_CLASS}
-                >
-                  Kimi
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-                . It puts the stablecoin picture you actually need in one place: honest classification, peg and freeze
-                tracking, liquidity depth, systemic spillovers, and a graveyard for the ones that did not make it.
-              </p>
-              <p>
-                Pharos is a public good, and designed as a resource to increase transparency for stablecoins: free, open
-                source, and with no plan to monetize. Make the most of it!
+                , from the worker pipeline and scoring engine to the frontend and daily digest.
               </p>
             </div>
           </CardContent>
