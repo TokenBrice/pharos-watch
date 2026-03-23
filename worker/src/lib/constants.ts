@@ -159,6 +159,7 @@ export const CIRCUIT_SOURCE = {
   TRONGRID: "trongrid",
   ANTHROPIC: "anthropic-api",
   BLUECHIP: "bluechip-api",
+  CG_TICKER: "coingecko-ticker",
   KINESIS_KAU: "kinesis-kau-horizon",
   KINESIS_KAG: "kinesis-kag-horizon",
 } as const;

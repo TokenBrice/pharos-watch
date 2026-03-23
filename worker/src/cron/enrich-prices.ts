@@ -1,4 +1,5 @@
 import { USER_AGENT, CIRCUIT_SOURCE, DEX_FRESHNESS_SEC, POOL_CHALLENGE_MIN_TVL, getDepegThresholdBps } from "../lib/constants";
+import { CG_TICKER_COINS, fetchCgTickerPrices } from "../lib/cg-ticker";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
@@ -195,6 +196,8 @@ export async function fetchPrimaryPrices(
   const redstonePrices = new Map<string, { price: number; venueCount: number; venueAgreementPct: number; timestamp: number }>();
   const curvePrices = new Map<string, number>();
   let curveOraclePrice: number | null = null; // crvUSD PriceAggregator TWAP
+  const cgTickerPrices = new Map<string, number>();
+  let cgTickerObservedAt: number | null = null;
   let cgObservedAt: number | null = null;
   let binanceObservedAt: number | null = null;
   let krakenObservedAt: number | null = null;
@@ -250,6 +253,27 @@ export async function fetchPrimaryPrices(
           if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
           console.warn("[primary-prices] CG price API failed:", err);
           await recordOutcome(db, CIRCUIT_SOURCE.CG_PRICES, false);
+        }
+      })(),
+    );
+  }
+
+  // CG per-exchange ticker extraction for coins with noisy aggregated prices
+  // (e.g. KAU/KAG on Kinesis Money).  Uses a separate circuit breaker since
+  // the /coins/{id}/tickers endpoint has different rate limits.
+  const cgTickerAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_TICKER);
+  if (cgTickerAllowed && CG_TICKER_COINS.length > 0) {
+    fetches.push(
+      (async () => {
+        try {
+          const prices = await fetchCgTickerPrices(CG_TICKER_COINS, coingeckoApiKey ?? null, signal);
+          for (const [coinId, price] of prices) cgTickerPrices.set(coinId, price);
+          if (prices.size > 0) cgTickerObservedAt = Math.floor(Date.now() / 1000);
+          await recordOutcome(db, CIRCUIT_SOURCE.CG_TICKER, prices.size > 0);
+        } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+          console.warn("[primary-prices] CG ticker API failed:", err);
+          await recordOutcome(db, CIRCUIT_SOURCE.CG_TICKER, false);
         }
       })(),
     );
@@ -409,6 +433,8 @@ export async function fetchPrimaryPrices(
 
     const sources: SourcePrice[] = [];
     if (cg != null) sources.push({ source: "coingecko", price: cg, weight: 2, observedAt: cgObservedAt });
+    const cgTickerPrice = cgTickerPrices.get(asset.id);
+    if (cgTickerPrice != null) sources.push({ source: "cg-ticker", price: cgTickerPrice, weight: 2, observedAt: cgTickerObservedAt });
     const dlListPrice = dlListPrices?.get(asset.id);
     if (dlListPrice != null && dlListPrice > 0) {
       sources.push({
