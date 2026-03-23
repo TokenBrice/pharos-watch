@@ -1008,6 +1008,38 @@ describe("syncStablecoins", () => {
     expect(cacheKeys).not.toContain("stablecoins");
   });
 
+  it("serializes missing-price assets with a sentinel price source so cache writes stay valid", async () => {
+    const db = makeDb();
+    const cacheWrites = trackCacheWrites(db);
+    const dlData = makeDlResponse(60);
+
+    const missingPriceAsset = dlData.peggedAssets[12] as unknown as PeggedAsset;
+    missingPriceAsset.price = null;
+    missingPriceAsset.priceSource = undefined;
+    missingPriceAsset.priceConfidence = null;
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.status).toBe("ok");
+    const stablecoinsWrite = cacheWrites.find((entry) => entry.key === "stablecoins");
+    expect(stablecoinsWrite).toBeDefined();
+
+    const cached = JSON.parse(stablecoinsWrite!.value) as {
+      peggedAssets: Array<{ id: string; price: number | null; priceSource: string }>;
+    };
+    expect(cached.peggedAssets[12]).toMatchObject({
+      id: "13",
+      price: null,
+      priceSource: "missing",
+    });
+  });
+
   it("emits stage progress updates during the main sync path", async () => {
     const db = makeDb();
     const dlData = makeDlResponse(60);

@@ -195,7 +195,7 @@ Full stablecoin list with current supply, price, chain breakdown, and FX rates. 
 | `geckoId`              | `string \| null`                   | CoinGecko ID (normalized output key; upstream DefiLlama uses `gecko_id`)                                                                          |
 | `pegType`              | `string`                           | DefiLlama peg type (e.g. `"peggedUSD"`, `"peggedEUR"`)                                                                                            |
 | `pegMechanism`         | `string`                           | `"fiat-backed"`, `"crypto-backed-algorithmic"`, etc.                                                                                              |
-| `priceSource`          | `string`                           | Source of the current price (`"defillama"`, `"coingecko"`, `"coingecko+defillama-list"`, `"geckoterminal"`, `"protocol-redeem"`, `"dexscreener"`) |
+| `priceSource`          | `string`                           | Source of the current price (`"defillama"`, `"coingecko"`, `"coingecko+defillama-list"`, `"geckoterminal"`, `"protocol-redeem"`, `"dexscreener"`). When no usable current price survives validation, the cache keeps `price = null` and serializes `priceSource = "missing"` for contract stability. |
 | `priceConfidence`      | `string \| null`                   | Price confidence level: `"high"` (cross-validated agreement), `"single-source"`, `"low"` (sources diverge), `"fallback"` (enrichment pipeline)    |
 | `priceObservedAt`      | `number \| null`                   | Unix seconds when the selected source price was actually observed upstream (or locally observed when no upstream timestamp exists)                  |
 | `priceSyncedAt`        | `number \| null`                   | Unix seconds when Pharos selected and wrote the current price during the sync                                                                   |
@@ -305,7 +305,7 @@ Lightweight per-coin snapshot sourced from cached `stablecoins` data. Designed f
 | `pegType`         | `string`                 | Peg type key (`peggedUSD`, `peggedEUR`, etc.)                                                                               |
 | `pegMechanism`    | `string`                 | Backing/mechanism classification                                                                                            |
 | `priceUsd`        | `number \| null`         | Current price in USD                                                                                                        |
-| `priceSource`     | `string`                 | Price source identifier                                                                                                     |
+| `priceSource`     | `string`                 | Price source identifier. When `priceUsd` is `null`, this may be `"missing"` to indicate that no usable current price survived validation. |
 | `priceConfidence` | `string \| null`         | Price confidence label                                                                                                      |
 | `supplySource`    | `string \| null`         | Supply source identifier                                                                                                    |
 | `supplyByPegUsd`  | `Record<string, number>` | Current supply by peg bucket (USD)                                                                                          |

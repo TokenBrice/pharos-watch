@@ -15,6 +15,8 @@ Pharos uses a two-stage pricing system:
 
 The output is the cached `price`, `priceSource`, `priceConfidence`, `priceObservedAt`, `priceSyncedAt`, and compatibility `priceUpdatedAt` fields served through `/api/stablecoins`.
 
+When an asset still has no usable current price after validation and fallback recovery, Pharos keeps `price = null`, `priceConfidence = null`, and serializes `priceSource = "missing"` so the cache payload stays structurally valid while still making the missing-price state explicit.
+
 ---
 
 ## Versioning

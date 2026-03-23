@@ -10,6 +10,7 @@ import { loadFxRateState, getFxReferenceTypeFromState } from "../../lib/fx-rate-
 const INVALID_STABLECOINS_CACHE_KEY = "stablecoins:invalid-last";
 const VALIDATION_ISSUES_MAX_CHARS = 400;
 const FX_REFERENCE_MAX_AGE_SEC = 6 * 3600;
+const MISSING_PRICE_SOURCE = "missing";
 const SUPPLEMENTAL_TRACKED_IDS = new Set(
   ACTIVE_STABLECOINS
     .filter(
@@ -80,6 +81,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload): Stable
       return {
         ...rest,
         geckoId: resolveGeckoId(asset),
+        priceSource: asset.priceSource ?? MISSING_PRICE_SOURCE,
         priceConfidence: normalizedConfidence,
         priceUpdatedAt: priceObservedAt ?? priceUpdatedAt,
         priceObservedAt,
