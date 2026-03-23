@@ -20,8 +20,20 @@ describe("classifyPrimaryDepegTrust", () => {
       priceSource: "pyth",
       priceConfidence: "single-source",
       priceObservedAt: nowSec - 60,
+      priceObservedAtMode: "upstream",
       agreeSources: ["pyth"],
     }, nowSec)).toBe("authoritative");
+  });
+
+  it("requires confirmation for hard single-source prices with local-fetch freshness", () => {
+    expect(classifyPrimaryDepegTrust({
+      price: 0.999,
+      priceSource: "kraken",
+      priceConfidence: "single-source",
+      priceObservedAt: nowSec - 60,
+      priceObservedAtMode: "local_fetch",
+      agreeSources: ["kraken"],
+    }, nowSec)).toBe("confirm_required");
   });
 
   it("requires confirmation for soft-only high-confidence agreement", () => {

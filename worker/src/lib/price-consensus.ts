@@ -1,12 +1,18 @@
-import type { PriceConfidence } from "@shared/types";
+import type { PriceConfidence, PriceObservedAtMode } from "@shared/types";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
-import { buildObservedAtRecord, pickConservativeObservedAt } from "./pricing-types";
+import {
+  buildObservedAtModeRecord,
+  buildObservedAtRecord,
+  pickConservativeObservedAt,
+  pickConservativeObservedAtMode,
+} from "./pricing-types";
 
 export interface SourcePrice {
   source: string;
   price: number;
   weight: number;
   observedAt?: number | null;
+  observedAtMode?: PriceObservedAtMode | null;
   metadata?: Record<string, unknown>;
 }
 
@@ -19,7 +25,9 @@ export interface ConsensusResult {
   disagreeSources: string[];
   allPrices: Record<string, number>;
   observedAt: number | null;
+  observedAtMode: PriceObservedAtMode | null;
   observedAtBySource: Record<string, number | null>;
+  observedAtModeBySource: Record<string, PriceObservedAtMode | null>;
 }
 
 export interface ConsensusOptions {
@@ -48,6 +56,7 @@ export function computePriceConsensus(
   const allPrices: Record<string, number> = {};
   for (const s of sources) allPrices[s.source] = s.price;
   const observedAtBySource = buildObservedAtRecord(sources);
+  const observedAtModeBySource = buildObservedAtModeRecord(sources);
 
   if (sources.length === 1) {
     const s = sources[0];
@@ -60,7 +69,9 @@ export function computePriceConsensus(
       disagreeSources: [],
       allPrices,
       observedAt: observedAtBySource[s.source] ?? null,
+      observedAtMode: observedAtModeBySource[s.source] ?? null,
       observedAtBySource,
+      observedAtModeBySource,
     };
   }
 
@@ -89,7 +100,9 @@ export function computePriceConsensus(
       disagreeSources,
       allPrices,
       observedAt: pickConservativeObservedAt(agreeSources, observedAtBySource),
+      observedAtMode: pickConservativeObservedAtMode(agreeSources, observedAtModeBySource),
       observedAtBySource,
+      observedAtModeBySource,
     };
   }
 
@@ -104,7 +117,9 @@ export function computePriceConsensus(
     disagreeSources: sources.filter((s) => s !== chosen).map((s) => s.source),
     allPrices,
     observedAt: observedAtBySource[chosen.source] ?? null,
+    observedAtMode: observedAtModeBySource[chosen.source] ?? null,
     observedAtBySource,
+    observedAtModeBySource,
   };
 }
 

@@ -19,11 +19,9 @@ import {
 } from "./post-enrichment";
 import {
   applyProtocolPriceOverrides,
-  priceValidationModeForAsset,
   buildPreviousTrustedPriceLookup,
   createValidationContextResolver,
   prevalidatePrices,
-  validatePublishablePrice,
 } from "./pricing";
 import { queueTrackedAdditionsNotice } from "./telegram-tracked-additions";
 import {
@@ -73,6 +71,9 @@ export async function syncViaCoingeckoFallback(
       priceSource: "coingecko",
       priceConfidence: "single-source",
       priceUpdatedAt: syncStartSec,
+      priceObservedAt: syncStartSec,
+      priceObservedAtMode: "local_fetch",
+      priceSyncedAt: syncStartSec,
       supplySource: "coingecko-fallback",
       circulating: { [pKey]: mcap },
       circulatingPrevDay: null,
@@ -137,7 +138,6 @@ export async function syncViaCoingeckoFallback(
     validationContexts,
     validationReferences,
     syncStartSec,
-    validatePublishablePrice,
   });
 
   for (const asset of assets) {
@@ -151,8 +151,6 @@ export async function syncViaCoingeckoFallback(
     previousTrustedPrices,
     validationContexts,
     validationReferences,
-    validatePublishablePrice,
-    modeResolver: () => "primary_authoritative",
     logLabel: "Pre-rejected fallback price",
   });
 
@@ -183,8 +181,6 @@ export async function syncViaCoingeckoFallback(
     fxFallbackRates,
     validationReferences,
     validationContexts,
-    priceValidationModeForAsset,
-    validatePublishablePrice,
     previousTrustedPrices,
     returnIfAborted,
     abortResult,

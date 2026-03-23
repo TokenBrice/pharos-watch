@@ -54,7 +54,6 @@ export const REDSTONE_TRACKED_SYMBOL_ALLOWLIST = [
   "XSGD",
   "crvUSD",
   "fxUSD",
-  "sUSDe",
 ] as const;
 
 /**

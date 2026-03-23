@@ -20,6 +20,7 @@ import {
   PRICING_PIPELINE_CHANGELOG_PATH,
   PRICING_PIPELINE_VERSION_LABEL,
 } from "@shared/lib/pricing-pipeline-version";
+import { CollateralQualityMethodologyCopy } from "./core-sections-fragments";
 import { MethodologyDetails, MethodologyFacts, WorkedExample } from "../methodology-shared";
 
 export function CoreMethodologySections() {
@@ -60,6 +61,9 @@ export function CoreMethodologySections() {
             If those live FX fetches still fail but the last published daily references remain within cadence, Pharos
             carries those dated references forward as a healthy refresh. Even cached-fallback FX runs keep probing the independent
             OXR, Chainlink, and metals paths, so a recovered intraday subset can promote the lane back to live without waiting for the full Frankfurter stack.
+            The live payload now also distinguishes true upstream observation timestamps from locally stamped fetch-time freshness via
+            <code className="mx-1 text-xs">priceObservedAtMode</code>, so a hard single-source print only becomes depeg-authoritative when
+            its freshness is source-native rather than inferred from local collection time.
             A 5-pass enrichment pipeline fills gaps for long-tail coins. Each asset is tagged with a confidence level
             so downstream systems can react to data quality, and severe fixed-peg downside publication now requires corroboration unless it comes from an explicit protocol redemption or pool-challenge replacement mark. When a confirmed severe depeg briefly loses corroboration, the pipeline now preserves trusted continuity from fresh replay-safe `price_cache` rows instead of letting the asset flap to `N/A`.
           </p>
@@ -143,7 +147,7 @@ export function CoreMethodologySections() {
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="rounded-lg border border-orange-500/40 p-3 text-center w-80">
                 <p className="text-foreground font-medium">Pool Challenge</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Soft-only consensus challenged; price replaced by TVL-weighted pools</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Soft-only consensus challenged; replacement uses protocol-aware weighted medians</p>
               </div>
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="rounded-lg border border-blue-500/40 p-3 text-center w-80">
@@ -190,7 +194,7 @@ export function CoreMethodologySections() {
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="w-full rounded-lg border border-orange-500/40 p-3 text-center">
                 <p className="text-foreground font-medium">Pool Challenge</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Soft-only &rarr; replace with TVL-weighted pools</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Soft-only &rarr; replace with protocol-aware weighted medians</p>
               </div>
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="w-full rounded-lg border border-blue-500/40 p-3 text-center">
@@ -953,15 +957,7 @@ export function CoreMethodologySections() {
                   </tbody>
                 </table>
               </div>
-              <p>
-                Collateral quality is derived from reserve compositions when available &mdash; curated metadata by
-                default, or a fresh authoritative independent live reserve snapshot for coins covered by the live
-                reserve sync. Each reserve slice is classified into one of five risk tiers and the score is their
-                weighted average. Direct ETH and canonical WETH slices share the same Very Low tier, while ETH liquid
-                staking tokens remain Low. For coins without usable reserve compositions, a coarser enum-based
-                fallback is used. Explicit overrides exist for coins where defaults are incorrect (e.g., protocols on
-                Solana, coins with CEX custody).
-              </p>
+              <CollateralQualityMethodologyCopy />
             </div>
 
             {/* Decentralization scoring */}

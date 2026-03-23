@@ -145,7 +145,63 @@ describe("extractPoolPrice", () => {
     const result = extractPoolPrice(pools, baseAddress);
     expect(result).not.toBeNull();
     expect(result!.price).toBe(0.80);
-    expect(result!.tvlUsd).toBe(800000);
+    expect(result!.tvlUsd).toBe(850000);
+  });
+
+  it("collapses multiple pools from the same protocol via TVL-weighted median", () => {
+    const pools = [
+      makePool({
+        reserveUsd: "300000",
+        basePriceUsd: "0.98",
+        quotePriceUsd: "1.00",
+        baseTokenId: `eth_${baseAddress}`,
+        quoteTokenId: "eth_0xquote",
+        dexId: "curve",
+      }),
+      makePool({
+        reserveUsd: "700000",
+        basePriceUsd: "0.80",
+        quotePriceUsd: "1.00",
+        baseTokenId: `eth_${baseAddress}`,
+        quoteTokenId: "eth_0xquote2",
+        dexId: "curve",
+      }),
+    ];
+
+    const result = extractPoolPrice(pools, baseAddress);
+
+    expect(result).not.toBeNull();
+    expect(result!.price).toBe(0.80);
+    expect(result!.tvlUsd).toBe(1_000_000);
+    expect(result!.protocolCount).toBe(1);
+  });
+
+  it("aggregates across protocols via TVL-weighted median of protocol groups", () => {
+    const pools = [
+      makePool({
+        reserveUsd: "600000",
+        basePriceUsd: "0.99",
+        quotePriceUsd: "1.00",
+        baseTokenId: `eth_${baseAddress}`,
+        quoteTokenId: "eth_0xquote",
+        dexId: "curve",
+      }),
+      makePool({
+        reserveUsd: "500000",
+        basePriceUsd: "0.80",
+        quotePriceUsd: "1.00",
+        baseTokenId: `eth_${baseAddress}`,
+        quoteTokenId: "eth_0xquote2",
+        dexId: "uniswap",
+      }),
+    ];
+
+    const result = extractPoolPrice(pools, baseAddress);
+
+    expect(result).not.toBeNull();
+    expect(result!.price).toBe(0.99);
+    expect(result!.tvlUsd).toBe(1_100_000);
+    expect(result!.protocolCount).toBe(2);
   });
 
   it("returns null for empty pool list", () => {
@@ -271,6 +327,7 @@ describe("probeGeckoTerminalPrices", () => {
             quotePriceUsd: "1.002",
             baseTokenId: "eth_0xassetcg",
             quoteTokenId: "eth_0xquote",
+            dexId: "curve",
           }),
         ],
       }), { status: 200 }),
@@ -288,6 +345,7 @@ describe("probeGeckoTerminalPrices", () => {
     expect(result.prices.get("asset-cg")?.metadata).toMatchObject({
       transport: "coingecko-onchain",
       poolAddress: "0xpool",
+      protocolCount: 1,
     });
     expect(result.stats.publicFallbacks).toBe(0);
     expect(result.stats.transports.coingeckoOnchain.attempted).toBe(1);
@@ -307,6 +365,7 @@ describe("probeGeckoTerminalPrices", () => {
               quotePriceUsd: "1.001",
               baseTokenId: "eth_0xassetcg",
               quoteTokenId: "eth_0xquote",
+              dexId: "curve",
             }),
           ],
         }), { status: 200 }),
@@ -325,6 +384,7 @@ describe("probeGeckoTerminalPrices", () => {
     expect(result.prices.get("asset-cg")?.metadata).toMatchObject({
       transport: "geckoterminal-public",
       poolAddress: "0xpool",
+      protocolCount: 1,
     });
     expect(result.stats.lookupMisses).toBe(0);
     expect(result.stats.publicFallbacks).toBe(1);
@@ -400,6 +460,7 @@ function makePool(opts: {
   quotePriceUsd: string;
   baseTokenId: string;
   quoteTokenId: string;
+  dexId?: string;
 }): GtPool {
   return {
     id: "pool_1",
@@ -416,7 +477,7 @@ function makePool(opts: {
     relationships: {
       base_token: { data: { id: opts.baseTokenId, type: "token" } },
       quote_token: { data: { id: opts.quoteTokenId, type: "token" } },
-      dex: { data: { id: "curve", type: "dex" } },
+      dex: { data: { id: opts.dexId ?? "curve", type: "dex" } },
     },
   };
 }

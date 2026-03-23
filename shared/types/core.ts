@@ -433,9 +433,11 @@ export function gradeMatchesFilter(grade: string | undefined, filterTag: FilterT
 }
 
 export type PriceConfidence = "high" | "single-source" | "low" | "fallback";
+export type PriceObservedAtMode = "upstream" | "local_fetch" | "unknown";
 export type DepegPrimaryTrust = "authoritative" | "confirm_required" | "unusable";
 
 export const PriceConfidenceSchema = z.enum(["high", "single-source", "low", "fallback"]);
+export const PriceObservedAtModeSchema = z.enum(["upstream", "local_fetch", "unknown"]);
 export const DepegPrimaryTrustSchema = z.enum(["authoritative", "confirm_required", "unusable"]);
 
 export interface PegAssetBase {
@@ -446,6 +448,7 @@ export interface PegAssetBase {
   priceConfidence?: PriceConfidence | null;
   priceUpdatedAt?: number | null;
   priceObservedAt?: number | null;
+  priceObservedAtMode?: PriceObservedAtMode | null;
   priceSyncedAt?: number | null;
   consensusSources?: string[];
   agreeSources?: string[];

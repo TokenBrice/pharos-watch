@@ -24,6 +24,10 @@ const BINANCE_PAIR_TO_SYMBOL: Record<string, string> = {
   USDCUSD: "USDC",
 };
 
+export const BINANCE_KNOWN_SYMBOLS: readonly string[] = [
+  ...new Set(Object.values(BINANCE_PAIR_TO_SYMBOL)),
+].sort() as readonly string[];
+
 /**
  * Explicit list of stablecoin symbols with confirmed active Coinbase Exchange
  * USD trading pairs. Verified 2026-03-14 against /products endpoint.

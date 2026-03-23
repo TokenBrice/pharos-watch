@@ -16,6 +16,7 @@ import { CG_CHAIN_MAP, GT_CHAIN_MAP } from "@shared/lib/chain-provider-registry"
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { GtPool } from "../cron/dex-liquidity/types";
 import type { SourcePrice } from "./price-consensus";
+import { aggregateProtocolPrices, computeWeightedMedianPrice } from "./dex-price-estimators";
 
 export interface GtProbeResult {
   price: number;
@@ -23,6 +24,7 @@ export interface GtProbeResult {
   side: "base" | "quote";
   chain: string;
   poolAddress: string;
+  protocolCount: number;
 }
 
 type ProbeTransport = "coingecko-onchain" | "geckoterminal-public";
@@ -35,8 +37,10 @@ interface GtProbeTransportStats {
 }
 
 /**
- * Extract the best price from a GeckoTerminal pools response for a given token address.
- * Picks the highest-TVL pool where the token matches base or quote, with a TVL gate.
+ * Extract a robust protocol-aware price from a GeckoTerminal pools response for a
+ * given token address. Pools are first collapsed to one price per protocol via a
+ * TVL-weighted median, then the final cross-protocol price is chosen as the
+ * TVL-weighted median across those protocol groups.
  */
 export function extractPoolPrice(
   pools: GtPool[],
@@ -44,7 +48,13 @@ export function extractPoolPrice(
   minTvlUsd = GT_PROBE_MIN_TVL_USD,
 ): GtProbeResult | null {
   const normalized = tokenAddress.toLowerCase();
-  let best: GtProbeResult | null = null;
+  const observations: Array<{
+    protocol: string;
+    price: number;
+    tvl: number;
+    poolAddress: string;
+    side: "base" | "quote";
+  }> = [];
 
   for (const pool of pools) {
     const a = pool.attributes;
@@ -66,12 +76,36 @@ export function extractPoolPrice(
     }
 
     if (side == null || price == null || !Number.isFinite(price) || price <= 0) continue;
-    if (best == null || tvl > best.tvlUsd) {
-      best = { price, tvlUsd: tvl, side, chain: "", poolAddress: a.address };
-    }
+    observations.push({
+      protocol: pool.relationships.dex.data.id,
+      price,
+      tvl,
+      poolAddress: a.address,
+      side,
+    });
   }
 
-  return best;
+  const protocolGroups = aggregateProtocolPrices(observations);
+  if (protocolGroups.length === 0) return null;
+
+  const price = computeWeightedMedianPrice(
+    protocolGroups.map((group) => ({
+      price: group.price,
+      weight: group.tvl,
+    })),
+  );
+  if (price == null) return null;
+
+  const representativeGroup = protocolGroups[0]!;
+  const totalTvl = protocolGroups.reduce((sum, group) => sum + group.tvl, 0);
+  return {
+    price,
+    tvlUsd: totalTvl,
+    side: representativeGroup.representativeSide ?? "base",
+    chain: "",
+    poolAddress: representativeGroup.representativePoolAddress ?? "",
+    protocolCount: protocolGroups.length,
+  };
 }
 
 export interface GtProbeStats {
@@ -364,11 +398,13 @@ export async function probeGeckoTerminalPrices(
           price: result.price,
           weight: 1,
           observedAt: Math.floor(Date.now() / 1000),
+          observedAtMode: "local_fetch",
           metadata: {
             tvlUsd: result.tvlUsd,
             chain: result.chain,
             poolAddress: result.poolAddress,
             side: result.side,
+            protocolCount: result.protocolCount,
             transport: pricedOutcome.transport,
           },
         });

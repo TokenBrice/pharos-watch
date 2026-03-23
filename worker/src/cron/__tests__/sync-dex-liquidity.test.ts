@@ -115,6 +115,7 @@ function makeTrackedStablecoin(id: string, symbol: string, price: number): Stabl
     priceConfidence: "single-source",
     priceUpdatedAt: nowSec,
     priceObservedAt: nowSec,
+    priceObservedAtMode: "upstream",
     priceSyncedAt: nowSec,
     consensusSources: ["pyth"],
     agreeSources: ["pyth"],

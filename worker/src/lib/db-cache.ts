@@ -1,5 +1,5 @@
 import { batchExecute } from "./db";
-import type { PriceConfidence } from "@shared/types";
+import type { PriceConfidence, PriceObservedAtMode } from "@shared/types";
 
 export async function getCache(db: D1Database, key: string): Promise<{ value: string; updatedAt: number } | null> {
   const row = await db
@@ -47,6 +47,7 @@ export interface PriceCacheEntry {
   source?: string | null;
   confidence?: PriceConfidence | null;
   observedAt?: number | null;
+  observedAtMode?: PriceObservedAtMode | null;
   syncedAt?: number | null;
   agreeSources?: string[];
   consensusSources?: string[];
@@ -74,6 +75,7 @@ export async function getPriceCache(db: D1Database): Promise<Map<string, PriceCa
       source: null,
       confidence: null,
       observedAt: row.updated_at,
+      observedAtMode: null,
       syncedAt: row.updated_at,
       agreeSources: [],
       consensusSources: [],
@@ -83,13 +85,14 @@ export async function getPriceCache(db: D1Database): Promise<Map<string, PriceCa
   try {
     const metadataResult = await db
       .prepare(
-        "SELECT asset_id, source, confidence, observed_at, synced_at, agree_sources_json, consensus_sources_json FROM price_cache",
+        "SELECT asset_id, source, confidence, observed_at, observed_at_mode, synced_at, agree_sources_json, consensus_sources_json FROM price_cache",
       )
       .all<{
         asset_id: string;
         source: string | null;
         confidence: PriceConfidence | null;
         observed_at: number | null;
+        observed_at_mode: PriceObservedAtMode | null;
         synced_at: number | null;
         agree_sources_json: string | null;
         consensus_sources_json: string | null;
@@ -100,6 +103,7 @@ export async function getPriceCache(db: D1Database): Promise<Map<string, PriceCa
       existing.source = row.source ?? null;
       existing.confidence = row.confidence ?? null;
       existing.observedAt = row.observed_at ?? existing.updatedAt;
+      existing.observedAtMode = row.observed_at_mode ?? null;
       existing.syncedAt = row.synced_at ?? existing.updatedAt;
       existing.agreeSources = parseJsonStringArray(row.agree_sources_json);
       existing.consensusSources = parseJsonStringArray(row.consensus_sources_json);
@@ -119,6 +123,7 @@ export async function savePriceCache(db: D1Database, entries: Array<{
   source?: string | null;
   confidence?: PriceConfidence | null;
   observedAt?: number | null;
+  observedAtMode?: PriceObservedAtMode | null;
   syncedAt?: number | null;
   agreeSources?: string[];
   consensusSources?: string[];
@@ -128,7 +133,7 @@ export async function savePriceCache(db: D1Database, entries: Array<{
   const stmts = entries.map((e) =>
     db
       .prepare(
-        "INSERT OR REPLACE INTO price_cache (asset_id, price, updated_at, source, confidence, observed_at, synced_at, agree_sources_json, consensus_sources_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT OR REPLACE INTO price_cache (asset_id, price, updated_at, source, confidence, observed_at, observed_at_mode, synced_at, agree_sources_json, consensus_sources_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       )
       .bind(
         e.id,
@@ -137,6 +142,7 @@ export async function savePriceCache(db: D1Database, entries: Array<{
         e.source ?? null,
         e.confidence ?? null,
         e.observedAt ?? null,
+        e.observedAtMode ?? null,
         e.syncedAt ?? now,
         JSON.stringify(e.agreeSources ?? []),
         JSON.stringify(e.consensusSources ?? []),

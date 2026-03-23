@@ -1,15 +1,17 @@
-import type { PriceConfidence } from "@shared/types";
+import type { PriceConfidence, PriceObservedAtMode } from "@shared/types";
 
 export interface PriceSourceDiagnostics {
   allPrices?: Record<string, number>;
   disagreeSources?: string[];
   observedAtBySource?: Record<string, number | null>;
+  observedAtModeBySource?: Record<string, PriceObservedAtMode | null>;
 }
 
 export interface PriceMetadata {
   source: string;
   confidence: PriceConfidence | null;
   observedAt: number | null;
+  observedAtMode: PriceObservedAtMode | null;
   syncedAt: number | null;
   consensusSources?: string[];
   agreeSources?: string[];
@@ -39,4 +41,37 @@ export function buildObservedAtRecord(
         : null;
   }
   return record;
+}
+
+export function buildObservedAtModeRecord(
+  entries: Array<{ source: string; observedAtMode?: PriceObservedAtMode | null }>,
+): Record<string, PriceObservedAtMode | null> {
+  const record: Record<string, PriceObservedAtMode | null> = {};
+  for (const entry of entries) {
+    record[entry.source] = entry.observedAtMode ?? null;
+  }
+  return record;
+}
+
+const OBSERVED_AT_MODE_PRIORITY: Record<PriceObservedAtMode, number> = {
+  upstream: 0,
+  local_fetch: 1,
+  unknown: 2,
+};
+
+export function pickConservativeObservedAtMode(
+  sourceKeys: string[] | undefined,
+  observedAtModeBySource: Record<string, PriceObservedAtMode | null> | undefined,
+): PriceObservedAtMode | null {
+  if (!sourceKeys || sourceKeys.length === 0 || !observedAtModeBySource) return null;
+
+  let selected: PriceObservedAtMode | null = null;
+  for (const sourceKey of sourceKeys) {
+    const mode = observedAtModeBySource[sourceKey];
+    if (!mode) continue;
+    if (!selected || OBSERVED_AT_MODE_PRIORITY[mode] > OBSERVED_AT_MODE_PRIORITY[selected]) {
+      selected = mode;
+    }
+  }
+  return selected;
 }

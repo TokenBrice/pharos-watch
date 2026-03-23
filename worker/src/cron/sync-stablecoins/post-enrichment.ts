@@ -17,6 +17,11 @@ import {
   type PriceValidationReferences,
 } from "../../lib/price-validation";
 import {
+  type TrustedPriceReference,
+  validateFallbackPriceCandidate,
+  validatePublishedAssetPrice,
+} from "../../lib/price-publish-policy";
+import {
   clearPriceMetadata,
   StablecoinListResponseSchema,
   normalizeStablecoinsPayload,
@@ -28,7 +33,6 @@ import {
   type CronResult,
 } from "./shared";
 import { isReplaySafePriceSource } from "../../lib/pricing-source-policy";
-import type { PreviousTrustedPrice } from "./pricing";
 
 const PRICE_CACHE_TTL = 6 * 60 * 60;
 
@@ -45,18 +49,7 @@ export interface PostEnrichmentInput {
   fxFallbackRates?: Record<string, number>;
   validationReferences?: PriceValidationReferences;
   validationContexts: { get: (asset: PeggedAsset) => PriceValidationContext };
-  previousTrustedPrices?: Map<string, PreviousTrustedPrice>;
-  priceValidationModeForAsset: (asset: PeggedAsset) => "primary_authoritative" | "fallback_enrichment";
-  validatePublishablePrice: (input: {
-    price: number;
-    source: string | null | undefined;
-    confidence: PeggedAsset["priceConfidence"];
-    agreeSources?: string[];
-    mode: "primary_authoritative" | "fallback_enrichment";
-    validationContext: PriceValidationContext;
-    validationReferences?: PriceValidationReferences;
-    previousTrustedPrice?: PreviousTrustedPrice | null;
-  }) => { accepted: boolean; reason: string };
+  previousTrustedPrices?: Map<string, TrustedPriceReference>;
   returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
   abortResult: (signal: AbortSignal | undefined, stage: string) => CronResult;
 }
@@ -99,8 +92,6 @@ export async function runPostEnrichmentPricePipeline(
     validationReferences,
     validationContexts,
     previousTrustedPrices,
-    priceValidationModeForAsset,
-    validatePublishablePrice,
     returnIfAborted,
   } = input;
 
@@ -108,12 +99,8 @@ export async function runPostEnrichmentPricePipeline(
   let rejectedCount = 0;
   for (const asset of assets) {
     if (asset.price == null || typeof asset.price !== "number") continue;
-    const decision = validatePublishablePrice({
-      price: asset.price,
-      source: asset.priceSource,
-      confidence: asset.priceConfidence ?? null,
-      agreeSources: asset.agreeSources,
-      mode: priceValidationModeForAsset(asset),
+    const decision = validatePublishedAssetPrice({
+      asset,
       validationContext: validationContexts.get(asset),
       validationReferences,
       previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
@@ -147,6 +134,7 @@ export async function runPostEnrichmentPricePipeline(
       source: asset.priceSource ?? null,
       confidence: asset.priceConfidence ?? null,
       observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
+      observedAtMode: asset.priceObservedAtMode ?? null,
       syncedAt: asset.priceSyncedAt ?? input.syncStartSec,
       agreeSources: asset.agreeSources ?? [],
       consensusSources: asset.consensusSources ?? [],
@@ -174,12 +162,11 @@ export async function runPostEnrichmentPricePipeline(
             : cached.source
               ? splitCompositePriceSource(cached.source)
               : [];
-      const decision = validatePublishablePrice({
+      const decision = validateFallbackPriceCandidate({
         price: cached.price,
         source: cached.source ?? "cached",
         confidence: cached.confidence ?? "fallback",
         agreeSources: cachedAgreeSources,
-        mode: "fallback_enrichment",
         validationContext: validationContexts.get(asset),
         validationReferences,
         previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
@@ -192,6 +179,7 @@ export async function runPostEnrichmentPricePipeline(
         "cached",
         "fallback",
         cached.observedAt ?? cached.updatedAt,
+        cached.observedAtMode ?? null,
         cached.consensusSources,
         cached.agreeSources,
         cached.syncedAt ?? cached.updatedAt,

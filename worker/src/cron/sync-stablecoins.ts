@@ -31,8 +31,6 @@ import {
   buildPreviousTrustedPriceLookup,
   createValidationContextResolver,
   prevalidatePrices,
-  priceValidationModeForAsset,
-  validatePublishablePrice,
 } from "./sync-stablecoins/pricing";
 import { queueTrackedAdditionsNotice } from "./sync-stablecoins/telegram-tracked-additions";
 import {
@@ -135,15 +133,12 @@ export async function syncStablecoins(
     validationContexts,
     validationReferences,
     syncStartSec,
-    validatePublishablePrice,
   });
   prevalidatePrices({
     assets,
     previousTrustedPrices,
     validationContexts,
     validationReferences,
-    validatePublishablePrice,
-    modeResolver: () => "primary_authoritative",
     logLabel: "Pre-rejected bad price",
   });
   const missingBefore = new Set(
@@ -173,7 +168,6 @@ export async function syncStablecoins(
         validationContexts,
         validationReferences,
         syncStartSec,
-        validatePublishablePrice,
       });
       console.log(`[sync-stablecoins] GT probe updated ${gtUpdated} asset prices`);
     }
@@ -189,7 +183,6 @@ export async function syncStablecoins(
     validationContexts,
     validationReferences,
     syncStartSec,
-    validatePublishablePrice,
   });
   if (protocolOverrideCount > 0) {
     console.log(`[sync-stablecoins] Applied ${protocolOverrideCount} protocol-backed price override${protocolOverrideCount === 1 ? "" : "s"}`);
@@ -204,8 +197,6 @@ export async function syncStablecoins(
     fxFallbackRates,
     validationReferences,
     validationContexts,
-    priceValidationModeForAsset,
-    validatePublishablePrice,
     previousTrustedPrices,
     returnIfAborted,
     abortResult,

@@ -69,6 +69,10 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload): Stable
         typeof asset.priceObservedAt === "number" && Number.isFinite(asset.priceObservedAt)
           ? asset.priceObservedAt
           : priceUpdatedAt;
+      const priceObservedAtMode =
+        asset.priceObservedAtMode === "upstream" || asset.priceObservedAtMode === "local_fetch" || asset.priceObservedAtMode === "unknown"
+          ? asset.priceObservedAtMode
+          : null;
       const priceSyncedAt =
         typeof asset.priceSyncedAt === "number" && Number.isFinite(asset.priceSyncedAt)
           ? asset.priceSyncedAt
@@ -85,6 +89,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload): Stable
         priceConfidence: normalizedConfidence,
         priceUpdatedAt: priceObservedAt ?? priceUpdatedAt,
         priceObservedAt,
+        priceObservedAtMode,
         priceSyncedAt,
         circulatingPrevDay: toPegBuckets(asset.circulatingPrevDay),
         circulatingPrevWeek: toPegBuckets(asset.circulatingPrevWeek),
@@ -160,6 +165,7 @@ export function stampPriceMetadata(
   source: string,
   confidence: PeggedAsset["priceConfidence"],
   observedAt: number | null,
+  observedAtMode?: PeggedAsset["priceObservedAtMode"],
   consensusSources?: string[],
   agreeSources?: string[],
   syncedAt?: number | null,
@@ -167,6 +173,7 @@ export function stampPriceMetadata(
   asset.priceSource = source;
   asset.priceConfidence = confidence ?? null;
   asset.priceObservedAt = observedAt;
+  asset.priceObservedAtMode = observedAtMode ?? null;
   asset.priceSyncedAt = syncedAt ?? observedAt ?? null;
   asset.priceUpdatedAt = observedAt ?? syncedAt ?? null;
   if (consensusSources !== undefined) {
@@ -183,6 +190,7 @@ export function clearPriceMetadata(asset: PeggedAsset): void {
   asset.priceConfidence = null;
   asset.priceUpdatedAt = null;
   asset.priceObservedAt = null;
+  asset.priceObservedAtMode = null;
   asset.priceSyncedAt = null;
   asset.consensusSources = [];
   asset.agreeSources = [];
@@ -246,6 +254,7 @@ export function mergeSupplementalLastKnownGood(
         merged.priceConfidence = asset.priceConfidence ?? null;
         merged.priceUpdatedAt = asset.priceUpdatedAt ?? null;
         merged.priceObservedAt = asset.priceObservedAt ?? asset.priceUpdatedAt ?? null;
+        merged.priceObservedAtMode = asset.priceObservedAtMode ?? null;
         merged.priceSyncedAt = asset.priceSyncedAt ?? null;
         merged.consensusSources = asset.consensusSources;
         merged.agreeSources = asset.agreeSources;

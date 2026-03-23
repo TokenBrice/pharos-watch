@@ -6,7 +6,7 @@ import {
   DEX_PRICE_CHECK_FRESHNESS_SEC,
   DEX_PRICE_CHECK_UI_MIN_TVL_USD,
 } from "./constants";
-import type { DepegPrimaryTrust, PriceConfidence } from "@shared/types";
+import type { DepegPrimaryTrust, PriceConfidence, PriceObservedAtMode } from "@shared/types";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { hasDepegAuthoritativeSource } from "./pricing-source-policy";
 import {
@@ -49,6 +49,7 @@ interface PrimaryPriceTrustInput {
   priceConfidence?: PriceConfidence | null;
   priceUpdatedAt?: number | null;
   priceObservedAt?: number | null;
+  priceObservedAtMode?: PriceObservedAtMode | null;
   agreeSources?: string[] | null;
 }
 
@@ -205,6 +206,13 @@ export function classifyPrimaryDepegTrust(
     (input.priceConfidence === "high" || input.priceConfidence === "single-source") &&
     hasDepegAuthoritativeSource(trustSources)
   ) {
+    if (
+      input.priceConfidence === "single-source" &&
+      input.priceObservedAtMode != null &&
+      input.priceObservedAtMode !== "upstream"
+    ) {
+      return "confirm_required";
+    }
     return "authoritative";
   }
 

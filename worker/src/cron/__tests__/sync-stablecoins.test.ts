@@ -740,7 +740,7 @@ describe("syncStablecoins", () => {
         ],
       },
       {
-        match: "SELECT asset_id, source, confidence, observed_at, synced_at, agree_sources_json, consensus_sources_json FROM price_cache",
+        match: "SELECT asset_id, source, confidence, observed_at, observed_at_mode, synced_at, agree_sources_json, consensus_sources_json FROM price_cache",
         rows: [
           {
             asset_id: "usdt-tether",
@@ -1384,7 +1384,7 @@ describe("syncStablecoins", () => {
         rows: [{ asset_id: "usdt-tether", price: 0.3, updated_at: nowSec - 120 }],
       },
       {
-        match: "SELECT asset_id, source, confidence, observed_at, synced_at, agree_sources_json, consensus_sources_json FROM price_cache",
+        match: "SELECT asset_id, source, confidence, observed_at, observed_at_mode, synced_at, agree_sources_json, consensus_sources_json FROM price_cache",
         rows: [{
           asset_id: "usdt-tether",
           source: "coingecko+pyth",
@@ -1884,7 +1884,7 @@ describe("stampPriceMetadata", () => {
   it("stamps consensusSources when provided", () => {
     const asset = { id: "test", name: "Test", symbol: "T", circulating: {}, chains: [] } as PeggedAsset;
 
-    stampPriceMetadata(asset, "coingecko+defillama-list", "high", 1234, ["coingecko", "defillama-list"]);
+    stampPriceMetadata(asset, "coingecko+defillama-list", "high", 1234, null, ["coingecko", "defillama-list"]);
 
     expect(asset.priceSource).toBe("coingecko+defillama-list");
     expect(asset.priceConfidence).toBe("high");
@@ -1905,7 +1905,7 @@ describe("stampPriceMetadata", () => {
 
   it("stamps agreeSources when provided", () => {
     const asset = { id: "test", name: "Test", symbol: "T", circulating: {}, chains: [] } as PeggedAsset;
-    stampPriceMetadata(asset, "coingecko+defillama-list", "high", 100, ["coingecko", "defillama-list"], ["coingecko", "defillama-list"]);
+    stampPriceMetadata(asset, "coingecko+defillama-list", "high", 100, null, ["coingecko", "defillama-list"], ["coingecko", "defillama-list"]);
     expect(asset.agreeSources).toEqual(["coingecko", "defillama-list"]);
   });
 

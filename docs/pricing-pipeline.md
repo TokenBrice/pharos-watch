@@ -13,7 +13,7 @@ Pharos uses a two-stage pricing system:
 1. **Primary consensus** in `fetchPrimaryPrices()` (`worker/src/cron/enrich-prices.ts`)
 2. **Fallback enrichment** in `enrichMissingPrices()` (`worker/src/cron/enrich-prices.ts`)
 
-The output is the cached `price`, `priceSource`, `priceConfidence`, `priceObservedAt`, `priceSyncedAt`, and compatibility `priceUpdatedAt` fields served through `/api/stablecoins`.
+The output is the cached `price`, `priceSource`, `priceConfidence`, `priceObservedAt`, `priceObservedAtMode`, `priceSyncedAt`, and compatibility `priceUpdatedAt` fields served through `/api/stablecoins`.
 
 When an asset still has no usable current price after validation and fallback recovery, Pharos keeps `price = null`, `priceConfidence = null`, and serializes `priceSource = "missing"` so the cache payload stays structurally valid while still making the missing-price state explicit.
 
@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v2.15`
+- **Current methodology version:** `v2.17`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -84,7 +84,7 @@ Source labels list all agreeing sources alphabetically:
 After consensus, weak soft-source results where all relevant sources are **pool-challenge eligible** are challenged against current individual priced pools from the published challenger snapshot (`dex_price_challenger_snapshots` + `dex_price_challengers`) that meet the live $100K TVL minimum and are fresh within `DEX_FRESHNESS_SEC`. Eligible source families include CoinGecko, DefiLlama-list, `dex-promoted`, and promoted protocol-level DEX sources (`fluid-dex`, `balancer-dex`, `raydium-dex`, `orca-dex`) as long as no exempt hard source is present. The divergence threshold is **peg-type-aware**: 500 bps for USD pegs, `min(2× depeg threshold, 500)` for non-USD pegs (e.g., 300 bps for JPY/EUR). If ANY qualifying pool diverges from the weak result beyond the threshold:
 
 1. Confidence is always downgraded to `low`.
-2. The price is **replaced** with the TVL-weighted mean only when diverging pools span **≥2 independent protocols** — a single protocol's pools may share data-quality issues (vault-token counterparties, misconfigured pairs). When only one protocol diverges, the original price is preserved but confidence stays `low`.
+2. The price is **replaced** only when diverging pools span **≥2 independent protocols** — a single protocol's pools may share data-quality issues (vault-token counterparties, misconfigured pairs). When replacement fires, Pharos first collapses each protocol to a TVL-weighted median price, then takes the TVL-weighted median across those corroborating protocol groups. When only one protocol diverges, the original price is preserved but confidence stays `low`.
 
 The DEX bridge and the pool challenge now deliberately read from different storage views:
 
@@ -105,7 +105,7 @@ Several live providers need normalization before their prices can safely enter c
 - **Kraken symbols:** Kraken uses explicit request-pair and response-key maps in `worker/src/lib/cex-tickers.ts`; `USDT/USD` returns `USDTZUSD`, so the integration does not rely on naive string slicing.
 - **Bitstamp ticker surface:** Bitstamp is fetched from the exchange-wide all-tickers endpoint and then filtered through an explicit tracked-pair allowlist so venue coverage stays deterministic.
 - **Coinbase symbols:** `fetchPrimaryPrices()` uppercases symbols before Coinbase lookup. Active pairs: USDT, DAI, PAXG, USDS, USD1, HONEY.
-- **RedStone symbols:** `worker/src/lib/redstone.ts` only queries the exact-case tracked subset in `REDSTONE_TRACKED_SYMBOL_ALLOWLIST` (36 symbols including `USDe`, `crvUSD`, `fxUSD`, `sUSDe`). Unsupported symbols are filtered out before transport. Where metadata symbols differ from RedStone API symbols (e.g., `FRXUSD` → `frxUSD`, `EURC` → `EUROC`, `XAUT` → `XAUt`), the module translates via `REDSTONE_API_SYMBOL_MAP` and keys results by metadata symbol so callers don't need to know the mapping.
+- **RedStone symbols:** `worker/src/lib/redstone.ts` only queries the exact-case tracked subset in `REDSTONE_TRACKED_SYMBOL_ALLOWLIST` (35 symbols including `USDe`, `crvUSD`, and `fxUSD`). Unsupported symbols are filtered out before transport, and test coverage now guards the allowlist against stale untracked entries. Where metadata symbols differ from RedStone API symbols (e.g., `FRXUSD` → `frxUSD`, `EURC` → `EUROC`, `XAUT` → `XAUt`), the module translates via `REDSTONE_API_SYMBOL_MAP` and keys results by metadata symbol so callers don't need to know the mapping.
 - **RedStone request shape:** RedStone requests are sent in sequential batches of 10 symbols; any symbol missing from a batch response is retried once as a single-symbol request.
 - **RedStone freshness + transparency gate:** RedStone entries are only admitted when they carry a timestamp newer than 5 minutes and a usable per-venue price breakdown. Timestamp-less or opaque aggregate-only responses are rejected.
 - **RedStone multi-venue gate:** RedStone prices now need at least 2 venues and at least 50% venue agreement before they can enter primary consensus; a single venue is treated as insufficient corroboration, and the published RedStone price is derived from the venue median instead of the provider aggregate.
@@ -113,7 +113,8 @@ Several live providers need normalization before their prices can safely enter c
 - **Chainlink reference overlay:** `worker/src/cron/sync-fx-rates.ts` overlays curated Chainlink EUR/USD, GBP/USD, JPY/USD, XAU/USD, and XAG/USD feeds onto the shared `fx-rates` cache when their on-chain quotes are fresh and within 5% of the current reference stack. Frankfurter / secondary FX APIs and `gold-api.com` remain fallback sources for uncovered or divergent feeds, and commodity pegs now also have a stablecoins-cache peer-median recovery path when the anonymous metals endpoint is unavailable from Workers. These independent recovery probes still run during cached-fallback FX runs so a stale intraday subset can recover without waiting for the full Frankfurter stack.
 - **Secondary + tertiary FX fallbacks:** `sync-fx-rates.ts` compares the jsDelivr `@fawazahmed0/currency-api` mirror with the direct `latest.currency-api.pages.dev` endpoint and persists the fresher valid dated snapshot. CNH/RUB/UAH/ARS always use this daily secondary path, and when Frankfurter is unavailable the same feed can temporarily backstop the wider fiat FX set. If both Frankfurter and the secondary mirrors are unavailable, the worker falls through to ExchangeRate-API's daily USD snapshot before dropping into cached-fallback mode.
 - **FX freshness semantics:** `fx-rates-meta` tracks usable cache freshness (`usableSyncAt`) separately from per-peg source freshness metadata (`sourceUpdatedAtByPeg`, `sourceCadenceByPeg`, `sourceDateByPeg`). Intraday sources (`gold-api.com`, stablecoins-cache commodity peer medians, pure realtime recoveries) still age on wall-clock seconds, while daily sources (ECB/Frankfurter and the secondary CNH/RUB/UAH/ARS feed) are evaluated against their expected publish cadence instead of a naive 6-hour clock. When OXR or Chainlink overlays refine an already-fresh daily fiat reference, the worker now preserves that daily cadence/date metadata instead of downgrading the peg to synthetic intraday-only provenance. When the live FX fetches fail, same-day live fiat references can therefore be carried forward against their daily publish cadence rather than aging immediately into false intraday staleness, and commodity references can recover from the fresh `stablecoins` cache instead of inheriting stale metals timestamps. Cached fallback runs are reserved for cases where the job cannot refresh a live source and the carried-forward daily references are no longer cadence-valid, so non-USD and commodity validation cannot silently look fresh after a real upstream aging event. If a cached-fallback run later refreshes fresh full-set fiat coverage through OXR or Chainlink-backed overlays, the job now promotes itself back to `live` immediately instead of continuing to accumulate fallback streaks on already-recovered rates.
-- **GeckoTerminal probe transport:** `worker/src/lib/geckoterminal-price-probe.ts` now prefers authenticated CoinGecko `/onchain/networks/.../tokens/.../pools` when `COINGECKO_API_KEY` is configured and the chain has a CoinGecko on-chain network mapping. If that path yields no usable pool, the worker falls back to the public GeckoTerminal token-pools endpoint. The resulting cross-check still enters consensus as the `geckoterminal` source because the pool-selection and weighting semantics are unchanged.
+- **GeckoTerminal probe transport:** `worker/src/lib/geckoterminal-price-probe.ts` now prefers authenticated CoinGecko `/onchain/networks/.../tokens/.../pools` when `COINGECKO_API_KEY` is configured and the chain has a CoinGecko on-chain network mapping. If that path yields no usable pool, the worker falls back to the public GeckoTerminal token-pools endpoint.
+- **GeckoTerminal probe estimator:** GT no longer trusts a single highest-TVL pool. It collapses usable pools to one TVL-weighted-median price per protocol, then uses the TVL-weighted median across those protocol groups as the injected `geckoterminal` source. This reduces estimator noise from repeated same-protocol pools.
 - **GeckoTerminal probe breaker semantics:** `worker/src/lib/geckoterminal-price-probe.ts` treats token-level lookup misses (`404` / `422`) as expected coverage gaps, not source outages. The `geckoterminal-probe` circuit breaker only trips on hard upstream failures such as transport errors, rate limits, or server-side failures, and each serialized probe request now gets one retry before a hard failure is recorded. Thin assets without indexed GT pools therefore do not poison the source-wide breaker state, and a single transient `429` no longer guarantees another 30-minute open interval.
 - **GeckoTerminal probe self-budget:** the serialized GT cross-check now enforces a `3 minute` wall-clock budget per `sync-stablecoins` run and skips any remaining probeable candidates once that window is exhausted. This keeps weak soft-source days from consuming the full quarter-hour sync timeout.
 - **GeckoTerminal probe observability:** `sync-stablecoins` now persists a `gtProbe` block into cron metadata, including `updatedCount`, coverage misses, upstream errors, public fallbacks, per-transport attempt counts for CoinGecko on-chain vs public GeckoTerminal, and budget flags (`budgetExhausted`, `budgetSkipped`). Operators can inspect those fields in `cron_runs.metadata` without relying on live Wrangler tails.
@@ -177,7 +178,11 @@ The enrichment path is intentionally narrower than primary pricing:
 
 ### Timestamp Semantics
 
-- `priceObservedAt`: upstream source observation time when available, otherwise the local observation time for that source
+- `priceObservedAt`: effective observation time attached to the selected source price
+- `priceObservedAtMode`: freshness provenance for `priceObservedAt`
+- `priceObservedAtMode = "upstream"`: `priceObservedAt` came from source-native freshness metadata
+- `priceObservedAtMode = "local_fetch"`: the source exposed no trustworthy upstream observation timestamp, so Pharos uses local fetch time instead
+- `priceObservedAtMode = "unknown"`: legacy or carried-forward metadata did not preserve freshness provenance explicitly
 - `priceSyncedAt`: when Pharos selected and wrote the price during the current sync
 - `priceUpdatedAt`: compatibility alias for the effective observation timestamp, preserved so existing consumers do not interpret sync-write time as source freshness
 
@@ -185,6 +190,7 @@ The enrichment path is intentionally narrower than primary pricing:
 
 - Soft single-source prices are never depeg-authoritative
 - Soft-only multi-source agreement can still publish, but it remains `confirm_required` downstream unless a hard authoritative source is present
+- Hard single-source prices are only depeg-authoritative when their freshness is source-native (`priceObservedAtMode = "upstream"`); local-fetch hard single-source prices remain `confirm_required`
 - Weak fixed-peg price jumps versus the previous trusted price are quarantined until corroboration arrives
 
 ---

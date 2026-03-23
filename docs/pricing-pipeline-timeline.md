@@ -1,6 +1,30 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v2.15` (2026-02-01 -> 2026-03-23).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v2.17` (2026-02-01 -> 2026-03-24).
+
+---
+
+## v2.17 - Protocol-aware DEX hardening estimators and provider-config cleanup (Mar 24, 2026)
+
+**Commit:** `unreleased`
+
+- GeckoTerminal probing now collapses pools to one TVL-weighted-median price per protocol before taking the cross-protocol weighted median
+- Pool challenge replacement now uses corroborating divergent protocol groups instead of a raw all-pool weighted mean
+- This makes DEX hardening less sensitive to repeated same-protocol pools and easier to explain operationally
+- Provider-config audit tests now guard CEX and RedStone allowlists against duplicate or stale untracked entries
+- The stale untracked `sUSDe` RedStone allowlist entry was removed
+
+---
+
+## v2.16 - Explicit source freshness provenance for live prices (Mar 24, 2026)
+
+**Commit:** `unreleased`
+
+- Stablecoin payloads, peg-summary outputs, and `price_cache` rows now preserve `priceObservedAtMode` alongside `priceObservedAt`
+- Primary consensus now carries freshness provenance per source and resolves a conservative effective mode for the selected price
+- Hard single-source prices remain depeg-authoritative only when they retain source-native freshness provenance
+- Hard single-source prices whose freshness is only local fetch time now stay `confirm_required` downstream
+- Older cached rows remain backward-compatible and do not automatically lose authority just because they predate explicit freshness-mode storage
 
 ---
 

@@ -1,4 +1,4 @@
-import type { PriceConfidence } from "@shared/types";
+import type { PriceConfidence, PriceObservedAtMode } from "@shared/types";
 
 export interface PeggedAsset {
   id: string;
@@ -16,6 +16,7 @@ export interface PeggedAsset {
   priceConfidence?: PriceConfidence | null;
   priceUpdatedAt?: number | null;
   priceObservedAt?: number | null;
+  priceObservedAtMode?: PriceObservedAtMode | null;
   priceSyncedAt?: number | null;
   supplySource?: string;
   pegType?: string;
@@ -40,12 +41,14 @@ export function applyResolvedPrice(
   source: string,
   confidence: PriceConfidence,
   updatedAtSec = Math.floor(Date.now() / 1000),
+  observedAtMode: PriceObservedAtMode = "local_fetch",
 ): void {
   asset.price = price;
   asset.priceSource = source;
   asset.priceConfidence = confidence;
   asset.priceUpdatedAt = updatedAtSec;
   asset.priceObservedAt = updatedAtSec;
+  asset.priceObservedAtMode = observedAtMode;
   asset.priceSyncedAt = updatedAtSec;
   asset.consensusSources = [source];
 }

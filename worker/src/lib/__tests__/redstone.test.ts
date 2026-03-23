@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchRedstonePrices, REDSTONE_TRACKED_SYMBOL_ALLOWLIST } from "../redstone";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -139,5 +140,16 @@ describe("fetchRedstonePrices", () => {
     const results = await fetchRedstonePrices(["USDT"]);
 
     expect(results.size).toBe(0);
+  });
+});
+
+describe("REDSTONE_TRACKED_SYMBOL_ALLOWLIST", () => {
+  it("contains unique symbols that all exist in the tracked registry", () => {
+    const trackedSymbols = new Set(TRACKED_STABLECOINS.map((stablecoin) => stablecoin.symbol));
+
+    expect(new Set(REDSTONE_TRACKED_SYMBOL_ALLOWLIST).size).toBe(REDSTONE_TRACKED_SYMBOL_ALLOWLIST.length);
+    for (const symbol of REDSTONE_TRACKED_SYMBOL_ALLOWLIST) {
+      expect(trackedSymbols.has(symbol)).toBe(true);
+    }
   });
 });

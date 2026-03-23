@@ -1,3 +1,5 @@
+import type { PriceObservedAtMode } from "../types";
+
 export type PricingSourceTrustTier =
   | "hard_oracle"
   | "hard_market"
@@ -20,6 +22,7 @@ export interface PricingSourceRegistryEntry {
   canBeDepegAuthoritative: boolean;
   requiresObservedAt: boolean;
   isSearchDerived: boolean;
+  defaultObservedAtMode: PriceObservedAtMode | null;
 }
 
 const REGISTRY = [
@@ -36,6 +39,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: false,
     requiresObservedAt: false,
     isSearchDerived: false,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "defillama",
@@ -50,6 +54,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: false,
     requiresObservedAt: false,
     isSearchDerived: false,
+    defaultObservedAtMode: null,
   },
   {
     key: "defillama-list",
@@ -64,6 +69,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: false,
     requiresObservedAt: false,
     isSearchDerived: false,
+    defaultObservedAtMode: null,
   },
   {
     key: "cg-ticker",
@@ -78,6 +84,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: true,
     requiresObservedAt: false,
     isSearchDerived: false,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "geckoterminal",
@@ -92,6 +99,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: false,
     requiresObservedAt: false,
     isSearchDerived: false,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "pyth",
@@ -106,6 +114,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: true,
     requiresObservedAt: true,
     isSearchDerived: false,
+    defaultObservedAtMode: "upstream",
   },
   {
     key: "binance",
@@ -120,6 +129,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: true,
     requiresObservedAt: false,
     isSearchDerived: false,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "kraken",
@@ -134,6 +144,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: true,
     requiresObservedAt: false,
     isSearchDerived: false,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "bitstamp",
@@ -148,6 +159,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: true,
     requiresObservedAt: false,
     isSearchDerived: false,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "coinbase",
@@ -162,6 +174,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: true,
     requiresObservedAt: false,
     isSearchDerived: false,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "redstone",
@@ -176,6 +189,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: true,
     requiresObservedAt: true,
     isSearchDerived: false,
+    defaultObservedAtMode: "upstream",
   },
   {
     key: "curve-onchain",
@@ -190,6 +204,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: true,
     requiresObservedAt: false,
     isSearchDerived: false,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "curve-oracle",
@@ -204,6 +219,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: true,
     requiresObservedAt: false,
     isSearchDerived: false,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "dex-promoted",
@@ -218,6 +234,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: false,
     requiresObservedAt: true,
     isSearchDerived: false,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "fluid-dex",
@@ -232,6 +249,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: false,
     requiresObservedAt: true,
     isSearchDerived: false,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "balancer-dex",
@@ -246,6 +264,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: false,
     requiresObservedAt: true,
     isSearchDerived: false,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "raydium-dex",
@@ -260,6 +279,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: false,
     requiresObservedAt: true,
     isSearchDerived: false,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "orca-dex",
@@ -274,6 +294,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: false,
     requiresObservedAt: true,
     isSearchDerived: false,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "jupiter",
@@ -288,6 +309,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: false,
     requiresObservedAt: false,
     isSearchDerived: true,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "coinmarketcap",
@@ -302,6 +324,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: false,
     requiresObservedAt: false,
     isSearchDerived: true,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "dexscreener",
@@ -316,6 +339,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: false,
     requiresObservedAt: false,
     isSearchDerived: true,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "defillama-contract",
@@ -330,6 +354,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: false,
     requiresObservedAt: false,
     isSearchDerived: false,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "protocol-redeem",
@@ -344,6 +369,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: true,
     requiresObservedAt: false,
     isSearchDerived: false,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "pool-tvl-weighted",
@@ -358,6 +384,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: false,
     requiresObservedAt: true,
     isSearchDerived: false,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "cached",
@@ -372,6 +399,7 @@ const REGISTRY = [
     canBeDepegAuthoritative: false,
     requiresObservedAt: true,
     isSearchDerived: false,
+    defaultObservedAtMode: null,
   },
 ] as const satisfies readonly PricingSourceRegistryEntry[];
 

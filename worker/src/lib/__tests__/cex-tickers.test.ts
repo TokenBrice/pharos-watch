@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import {
+  BINANCE_KNOWN_SYMBOLS,
   BITSTAMP_KNOWN_SYMBOLS,
   COINBASE_KNOWN_SYMBOLS,
   KRAKEN_KNOWN_SYMBOLS,
@@ -8,6 +9,7 @@ import {
   fetchCoinbasePrices,
   fetchKrakenPrices,
 } from "../cex-tickers";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -159,15 +161,37 @@ describe("COINBASE_KNOWN_SYMBOLS", () => {
 });
 
 describe("exchange symbol allowlists", () => {
+  const trackedSymbols = new Set(ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.symbol.toUpperCase()));
+
+  it("keeps Binance symbols uppercase and tracked", () => {
+    expect(new Set(BINANCE_KNOWN_SYMBOLS).size).toBe(BINANCE_KNOWN_SYMBOLS.length);
+    for (const symbol of BINANCE_KNOWN_SYMBOLS) {
+      expect(symbol).toBe(symbol.toUpperCase());
+      expect(trackedSymbols.has(symbol)).toBe(true);
+    }
+  });
+
   it("keeps Kraken symbols uppercase", () => {
+    expect(new Set(KRAKEN_KNOWN_SYMBOLS).size).toBe(KRAKEN_KNOWN_SYMBOLS.length);
     for (const symbol of KRAKEN_KNOWN_SYMBOLS) {
       expect(symbol).toBe(symbol.toUpperCase());
+      expect(trackedSymbols.has(symbol)).toBe(true);
     }
   });
 
   it("keeps Bitstamp symbols uppercase", () => {
+    expect(new Set(BITSTAMP_KNOWN_SYMBOLS).size).toBe(BITSTAMP_KNOWN_SYMBOLS.length);
     for (const symbol of BITSTAMP_KNOWN_SYMBOLS) {
       expect(symbol).toBe(symbol.toUpperCase());
+      expect(trackedSymbols.has(symbol)).toBe(true);
+    }
+  });
+
+  it("keeps Coinbase symbols uppercase, unique, and tracked", () => {
+    expect(new Set(COINBASE_KNOWN_SYMBOLS).size).toBe(COINBASE_KNOWN_SYMBOLS.length);
+    for (const symbol of COINBASE_KNOWN_SYMBOLS) {
+      expect(symbol).toBe(symbol.toUpperCase());
+      expect(trackedSymbols.has(symbol)).toBe(true);
     }
   });
 });

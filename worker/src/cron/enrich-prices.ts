@@ -7,7 +7,7 @@ import { getCache } from "../lib/db-cache";
 import { throwIfAborted } from "../lib/abort";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices-shared";
 import { runDlContractPasses, runCmcPass, runDexScreenerPass, runJupiterPass } from "./enrich-prices-passes";
-import type { PriceConfidence } from "@shared/types";
+import type { PriceConfidence, PriceObservedAtMode } from "@shared/types";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import {
   buildPriceValidationContext,
@@ -40,6 +40,8 @@ import {
   isPoolChallengeEligibleConsensus,
 } from "../lib/pricing-source-policy";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { buildPrimarySourceCandidates, type PrimaryCollectedQuotes } from "../lib/primary-price-collector";
+import { aggregateProtocolPrices, computeWeightedMedianPrice } from "../lib/dex-price-estimators";
 
 export { buildPriceReasonablenessOptions, isReasonablePrice, PRICE_BOUNDS };
 
@@ -74,7 +76,9 @@ export interface PrimaryPriceResult {
   disagreeSources?: string[];
   allPrices?: Record<string, number>;
   observedAt?: number | null;
+  observedAtMode?: PriceObservedAtMode | null;
   observedAtBySource?: Record<string, number | null>;
+  observedAtModeBySource?: Record<string, PriceObservedAtMode | null>;
   softOnly?: boolean;
 }
 
@@ -93,12 +97,6 @@ function sumCirculatingUsd(asset: Pick<PeggedAsset, "circulating">): number {
     (sum, value) => sum + (typeof value === "number" && Number.isFinite(value) ? value : 0),
     0,
   );
-}
-
-function pricesAgreeWithinBps(left: number, right: number, thresholdBps: number): boolean {
-  const mid = (left + right) / 2;
-  if (mid <= 0) return false;
-  return (Math.abs(left - right) / mid) * 10000 <= thresholdBps;
 }
 
 const INVALID_GECKO_ID_SENTINEL = "wrong";
@@ -424,104 +422,44 @@ export async function fetchPrimaryPrices(
 
   // N-source consensus per asset
   const DIVERGENCE_THRESHOLD_BPS = 50;
-  const DEX_API_WEIGHTS: Record<string, number> = { fluid: 3, balancer: 3, raydium: 2, orca: 2 };
-
   for (const asset of candidates) {
     const gId = isUsableGeckoId(asset.geckoId) ? asset.geckoId : null;
     const cg = gId ? (cgPrices.get(gId) ?? null) : null;
-    const pyth = pythPrices.get(asset.id);
+    const collectedQuotes: PrimaryCollectedQuotes = {
+      cgPrice: cg,
+      cgObservedAt,
+      cgTickerPrice: cgTickerPrices.get(asset.id) ?? null,
+      cgTickerObservedAt,
+      dlListPrice: dlListPrices?.get(asset.id) ?? null,
+      pythQuote: pythPrices.get(asset.id),
+      binancePrice: binancePrices.get(asset.symbol.toUpperCase()) ?? null,
+      binanceObservedAt,
+      krakenPrice: krakenPrices.get(asset.symbol.toUpperCase()) ?? null,
+      krakenObservedAt,
+      bitstampPrice: bitstampPrices.get(asset.symbol.toUpperCase()) ?? null,
+      bitstampObservedAt,
+      coinbasePrice: coinbasePrices.get(asset.symbol.toUpperCase()) ?? null,
+      coinbaseObservedAt,
+      redstoneQuote: redstonePrices.get(asset.symbol),
+      curvePrice: curvePrices.get(asset.id) ?? null,
+      curveObservedAt,
+      curveOraclePrice,
+      curveOracleObservedAt,
+      protocolSources: dexPriceSources.get(asset.id),
+      dexAggregateQuote: (() => {
+        const dexRow = dexRows.get(asset.id);
+        return dexRow && isTrustedDexPriceRow(dexRow, nowSec, "depeg") ? dexRow : undefined;
+      })(),
+    };
 
-    const sources: SourcePrice[] = [];
-    if (cg != null) sources.push({ source: "coingecko", price: cg, weight: 2, observedAt: cgObservedAt });
-    const cgTickerPrice = cgTickerPrices.get(asset.id);
-    if (cgTickerPrice != null) sources.push({ source: "cg-ticker", price: cgTickerPrice, weight: 2, observedAt: cgTickerObservedAt });
-    const dlListPrice = dlListPrices?.get(asset.id);
-    if (dlListPrice != null && dlListPrice > 0) {
-      sources.push({
-        source: "defillama-list",
-        price: dlListPrice,
-        weight: 1,
-        observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
-      });
-    }
-    if (pyth != null) {
-      const pythWeight = pyth.confidenceBps > 200 ? 0 : pyth.confidenceBps > 100 ? 1 : 2;
-      if (pythWeight > 0) {
-        sources.push({
-          source: "pyth",
-          price: pyth.price,
-          weight: pythWeight,
-          observedAt: pyth.publishTime,
-          metadata: { confidenceBps: pyth.confidenceBps },
-        });
-      }
-    }
-    const binancePrice = binancePrices.get(asset.symbol.toUpperCase());
-    if (binancePrice != null) sources.push({ source: "binance", price: binancePrice, weight: 2, observedAt: binanceObservedAt });
-    const krakenPrice = krakenPrices.get(asset.symbol.toUpperCase());
-    if (krakenPrice != null) sources.push({ source: "kraken", price: krakenPrice, weight: 2, observedAt: krakenObservedAt });
-    const bitstampPrice = bitstampPrices.get(asset.symbol.toUpperCase());
-    if (bitstampPrice != null) sources.push({ source: "bitstamp", price: bitstampPrice, weight: 1, observedAt: bitstampObservedAt });
-    const coinbasePrice = coinbasePrices.get(asset.symbol.toUpperCase());
-    if (coinbasePrice != null) sources.push({ source: "coinbase", price: coinbasePrice, weight: 2, observedAt: coinbaseObservedAt });
-    const redstoneResult = redstonePrices.get(asset.symbol);
-    if (redstoneResult != null && redstoneResult.venueCount >= 2 && redstoneResult.venueAgreementPct >= 50) {
-      sources.push({
-        source: "redstone",
-        price: redstoneResult.price,
-        weight: 1,
-        observedAt: redstoneResult.timestamp,
-        metadata: { venueCount: redstoneResult.venueCount, venueAgreementPct: redstoneResult.venueAgreementPct },
-      });
-    }
-    const curvePrice = curvePrices.get(asset.id);
-    if (curvePrice != null) sources.push({ source: "curve-onchain", price: curvePrice, weight: 3, observedAt: curveObservedAt });
-    if (asset.id === "crvusd-curve" && curveOraclePrice != null) {
-      sources.push({ source: "curve-oracle", price: curveOraclePrice, weight: 3, observedAt: curveOracleObservedAt });
-    }
-    const protocolSources = dexPriceSources.get(asset.id);
-    const promotedDexProtocolSources: SourcePrice[] = [];
-    if (protocolSources) {
-      for (const ps of protocolSources) {
-        const w = DEX_API_WEIGHTS[ps.protocol];
-        if (w == null) continue; // only inject for protocols with elevated weights
-        if (ps.tvl < 50_000) continue; // min TVL for pricing
-        if (!Number.isFinite(ps.price) || ps.price <= 0) continue;
-        promotedDexProtocolSources.push({
-          source: `${ps.protocol}-dex`,
-          price: ps.price,
-          weight: w,
-          observedAt: ps.updatedAt,
-          metadata: { tvl: ps.tvl, chain: ps.chain },
-        });
-      }
-    }
-    const hasPromotedDexProtocolSource = promotedDexProtocolSources.length > 0;
-    const hasDexCorroboration =
-      promotedDexProtocolSources.length > 1 ||
-      sources.length === 0 ||
-      promotedDexProtocolSources.some((dexSource) =>
-        sources.some((source) => pricesAgreeWithinBps(dexSource.price, source.price, DIVERGENCE_THRESHOLD_BPS))
-      );
-    if (hasPromotedDexProtocolSource && hasDexCorroboration) {
-      sources.push(...promotedDexProtocolSources);
-    } else if (hasPromotedDexProtocolSource) {
+    const { sources, hasPromotedDexProtocolSource } = buildPrimarySourceCandidates(asset, collectedQuotes, {
+      divergenceThresholdBps: DIVERGENCE_THRESHOLD_BPS,
+    });
+
+    if (hasPromotedDexProtocolSource && !sources.some((source) => source.source.endsWith("-dex"))) {
       console.log(
-        `[primary-prices] ${asset.symbol}: suppressed ${promotedDexProtocolSources.length} uncorroborated promoted DEX source(s)`,
+        `[primary-prices] ${asset.symbol}: suppressed promoted DEX source(s) that lacked corroboration`,
       );
-    }
-
-    // Keep the aggregate DEX bridge only when it is not overlapping with a promoted
-    // per-protocol source from the same dex_prices observation family.
-    const dexRow = dexRows.get(asset.id);
-    if (dexRow && isTrustedDexPriceRow(dexRow, nowSec, "depeg") && !hasPromotedDexProtocolSource) {
-      sources.push({
-        source: "dex-promoted",
-        price: dexRow.dex_price_usd,
-        weight: 1,
-        observedAt: dexRow.updated_at,
-        metadata: { poolCount: dexRow.source_pool_count, tvl: dexRow.source_total_tvl },
-      });
     }
 
     stats.attempted++;
@@ -551,7 +489,9 @@ export async function fetchPrimaryPrices(
       disagreeSources: consensus.disagreeSources,
       allPrices: consensus.allPrices,
       observedAt: consensus.observedAt,
+      observedAtMode: consensus.observedAtMode,
       observedAtBySource: consensus.observedAtBySource,
+      observedAtModeBySource: consensus.observedAtModeBySource,
     });
 
     if (consensus.confidence === "high") stats.high++;
@@ -675,24 +615,38 @@ export function applyPoolChallenge(
 
       // Only replace the price when ≥2 independent protocols corroborate
       // the divergence — a single protocol's pools may share the same
-      // data-quality issue (vault tokens, misconfigured pairs).
+      // data-quality issue (vault tokens, misconfigured pairs). Build the
+      // replacement from protocol-group medians rather than all raw pools so
+      // one noisy protocol with many similar pools cannot dominate the mark.
       if (divergingProtocols.size >= 2) {
-        let tvlWeightedSum = 0;
-        let tvlSum = 0;
-        for (const pool of pools) {
-          tvlWeightedSum += pool.price * pool.tvlUsd;
-          tvlSum += pool.tvlUsd;
-        }
-        if (tvlSum > 0) {
-          result.price = tvlWeightedSum / tvlSum;
+        const divergentPoolGroups = aggregateProtocolPrices(
+          pools
+            .filter((pool) => divergingProtocols.has(pool.protocol))
+            .map((pool) => ({
+              protocol: pool.protocol,
+              price: pool.price,
+              tvl: pool.tvlUsd,
+              chain: pool.chain,
+              observedAt: pool.observedAt,
+            })),
+        );
+        const replacementPrice = computeWeightedMedianPrice(
+          divergentPoolGroups.map((group) => ({
+            price: group.price,
+            weight: group.tvl,
+          })),
+        );
+        if (replacementPrice != null) {
+          result.price = replacementPrice;
           result.source = "pool-tvl-weighted";
           result.selectedSource = "pool-tvl-weighted";
-          const poolObservedAts = pools
-            .map((pool) => pool.observedAt)
+          const poolObservedAts = divergentPoolGroups
+            .map((group) => group.observedAt)
             .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
           result.observedAt = poolObservedAts.length > 0
             ? Math.min(...poolObservedAts)
             : result.observedAt;
+          result.observedAtMode = "local_fetch";
         }
       }
     }
@@ -763,6 +717,7 @@ export async function runGtProbePass(
         price,
         weight: getSourceDefaultWeight(source),
         observedAt: primary.observedAtBySource?.[source] ?? null,
+        observedAtMode: primary.observedAtModeBySource?.[source] ?? null,
       });
     }
     sources.push(gtSource);
@@ -790,7 +745,9 @@ export async function runGtProbePass(
     primary.disagreeSources = consensus.disagreeSources;
     primary.allPrices = consensus.allPrices;
     primary.observedAt = consensus.observedAt;
+    primary.observedAtMode = consensus.observedAtMode;
     primary.observedAtBySource = consensus.observedAtBySource;
+    primary.observedAtModeBySource = consensus.observedAtModeBySource;
     updatedCount++;
   }
 

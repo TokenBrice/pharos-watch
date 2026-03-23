@@ -5,6 +5,7 @@ import {
   DepegPrimaryTrustSchema,
   MethodologyEnvelopeSchema,
   PriceConfidenceSchema,
+  PriceObservedAtModeSchema,
 } from "./core";
 
 const PegBucketsSchema = z.record(z.string(), z.number());
@@ -31,6 +32,7 @@ const StablecoinDataRawSchema = z.object({
   priceConfidence: PriceConfidenceSchema.nullable().optional(),
   priceUpdatedAt: z.number().nullable().optional(),
   priceObservedAt: z.number().nullable().optional(),
+  priceObservedAtMode: PriceObservedAtModeSchema.nullable().optional(),
   priceSyncedAt: z.number().nullable().optional(),
   consensusSources: z.array(z.string()).optional(),
   agreeSources: z.array(z.string()).optional(),
@@ -55,6 +57,7 @@ const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) => ({
   priceConfidence: asset.priceConfidence ?? null,
   priceUpdatedAt: asset.priceUpdatedAt ?? null,
   priceObservedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
+  priceObservedAtMode: asset.priceObservedAtMode ?? null,
   priceSyncedAt: asset.priceSyncedAt ?? null,
   consensusSources: asset.consensusSources ?? [],
   agreeSources: asset.agreeSources ?? [],
@@ -317,6 +320,7 @@ const PegSummaryCoinSchema = z.object({
   priceConfidence: PriceConfidenceSchema.nullable().optional(),
   priceUpdatedAt: z.number().nullable().optional(),
   priceObservedAt: z.number().nullable().optional(),
+  priceObservedAtMode: PriceObservedAtModeSchema.nullable().optional(),
   priceSyncedAt: z.number().nullable().optional(),
   consensusSources: z.array(z.string()).optional(),
   agreeSources: z.array(z.string()).optional(),

@@ -1323,10 +1323,10 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
     expect(stats.low).toBe(1);
     expect(stats.high).toBe(0);
 
-    // ≥2 protocols (curve + balancer) diverge → price replaced with TVL-weighted mean
-    // (1.00*1480000 + 0.80*849000 + 0.82*967000) / (1480000 + 849000 + 967000) ≈ 0.8959
+    // ≥2 protocols (curve + balancer) diverge → price replaced with the
+    // protocol-aware weighted median of corroborating divergent groups.
     expect(result.source).toBe("pool-tvl-weighted");
-    expect(result.price).toBeCloseTo(0.8959, 3);
+    expect(result.price).toBeCloseTo(0.82, 6);
   });
 
   it("downgrades but preserves price when only single protocol diverges", async () => {
@@ -1530,8 +1530,8 @@ describe("applyPoolChallenge", () => {
     expect(downgrades).toBe(1);
     expect(results.get("dusd-test")!.confidence).toBe("low");
     expect(results.get("dusd-test")!.source).toBe("pool-tvl-weighted");
-    // TVL-weighted: (0.80*500000 + 0.82*300000) / (500000+300000) = 0.8075
-    expect(results.get("dusd-test")!.price).toBeCloseTo(0.8075, 3);
+    // Protocol-aware weighted median across corroborating divergent protocols.
+    expect(results.get("dusd-test")!.price).toBeCloseTo(0.80, 6);
   });
 
   it("does NOT replace price when multiple pools from SAME protocol diverge", () => {
@@ -1584,6 +1584,31 @@ describe("applyPoolChallenge", () => {
     expect(downgrades).toBe(1);
     expect(results.get("dusd-test")!.confidence).toBe("low");
     expect(results.get("dusd-test")!.source).toBe("pool-tvl-weighted");
+  });
+
+  it("uses protocol-level medians before cross-protocol replacement", () => {
+    const results = new Map<string, PrimaryPriceResult>([
+      ["dusd-test", {
+        price: 1.0, source: "coingecko+defillama-list",
+        confidence: "high", dlPrice: 1.0, cgPrice: 1.0,
+        candidateSources: ["coingecko", "defillama-list"],
+        agreeSources: ["coingecko", "defillama-list"],
+      }],
+    ]);
+    const pools = new Map([
+      ["dusd-test", [
+        { price: 0.79, tvlUsd: 200_000, protocol: "curve", chain: "ethereum" },
+        { price: 0.81, tvlUsd: 600_000, protocol: "curve", chain: "ethereum" },
+        { price: 0.84, tvlUsd: 300_000, protocol: "uniswap", chain: "ethereum" },
+      ]],
+    ]);
+    const pegTypes = new Map<string, string | undefined>([["dusd-test", "peggedUSD"]]);
+    const stats = makeStats();
+
+    applyPoolChallenge(results, pools, pegTypes, stats);
+
+    expect(results.get("dusd-test")!.source).toBe("pool-tvl-weighted");
+    expect(results.get("dusd-test")!.price).toBeCloseTo(0.81, 6);
   });
 
   it("skips results with hard sources in agreeSources", () => {

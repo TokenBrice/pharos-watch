@@ -3,9 +3,43 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "2.15",
+  currentVersion: "2.17",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "2.17",
+      title: "Protocol-aware DEX hardening estimators and provider-config cleanup",
+      date: "2026-03-24",
+      effectiveAt: 1774353600,
+      summary:
+        "Made the GeckoTerminal probe and pool-challenge replacement estimators protocol-aware, " +
+        "so repeated same-protocol pools no longer dominate soft-source hardening marks, and cleaned stale provider configuration drift in the RedStone tracked-symbol allowlist.",
+      impact: [
+        "GeckoTerminal probing now collapses pools to one TVL-weighted-median price per protocol before injecting a cross-protocol weighted-median mark",
+        "Pool challenge replacement now uses corroborating divergent protocol groups rather than a raw all-pool weighted mean, making replacement marks less sensitive to repeated same-protocol pools",
+        "Provider-config audit tests now guard CEX and RedStone coverage allowlists against duplicate or stale untracked entries",
+        "The stale untracked `sUSDe` RedStone allowlist entry was removed so the runtime config matches the tracked registry again",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
+      version: "2.16",
+      title: "Explicit source freshness provenance for live prices",
+      date: "2026-03-24",
+      effectiveAt: 1774350000,
+      summary:
+        "Made source freshness provenance explicit in live-price payloads and replay metadata, " +
+        "so Pharos can distinguish true upstream observation time from locally stamped fetch time without overstating downstream authority.",
+      impact: [
+        "Stablecoin payloads, peg-summary outputs, and `price_cache` rows now preserve `priceObservedAtMode` alongside `priceObservedAt`",
+        "Primary consensus now carries freshness provenance per source and resolves a conservative effective mode for the selected price",
+        "Hard single-source prices remain depeg-authoritative only when they retain source-native freshness provenance; local-fetch hard single-source prices now stay `confirm_required`",
+        "Older rows remain backward-compatible: cached data that predates explicit freshness-mode storage does not automatically lose authority just because the mode is absent",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "2.15",
       title: "Independent FX recovery during cached fallback",
