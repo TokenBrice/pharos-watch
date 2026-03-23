@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { FeedbackModal } from "@/components/feedback-modal";
@@ -20,6 +20,8 @@ import {
   useStablecoinDetailViewModel,
   type StablecoinDetailSummary,
 } from "@/hooks/use-stablecoin-detail-view-model";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { deriveDependencies } from "@shared/lib/reserve-templates";
 import type { StablecoinMeta } from "@shared/types";
 
 function DetailSectionSkeleton({ className }: { className: string }) {
@@ -56,6 +58,13 @@ const DexLiquidityCard = dynamic(
   },
 );
 
+const CollateralUsageSection = dynamic(
+  () => import("@/components/stablecoin-detail/collateral-usage-section").then((mod) => mod.CollateralUsageSection),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[200px] w-full rounded-xl" />,
+  },
+);
+
 const SafetyScoreHistorySection = dynamic(
   () => import("@/components/stablecoin-detail/safety-score-history-section").then((mod) => mod.SafetyScoreHistorySection),
   {
@@ -69,6 +78,7 @@ const DETAIL_SECTIONS = [
   { id: "price-transparency", label: "Price Sources" },
   { id: "chart", label: "Chart" },
   { id: "info", label: "Info" },
+  { id: "collateral-usage", label: "Collateral Usage" },
   { id: "yield", label: "Yield" },
   { id: "flows", label: "Flows" },
   { id: "liquidity", label: "Liquidity" },
@@ -85,6 +95,12 @@ interface StablecoinDetailClientProps {
 export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: StablecoinDetailClientProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const viewModel = useStablecoinDetailViewModel({ id, summary, coin, logoSrc });
+  const hasCollateralUsage = useMemo(() => {
+    return TRACKED_STABLECOINS.some((c) => {
+      if (c.id === id) return false;
+      return deriveDependencies(c).some((dep) => dep.id === id);
+    });
+  }, [id]);
   const {
     data: depegHistoryData,
   } = useInfiniteDepegEvents({
@@ -124,9 +140,9 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
     );
   }
 
-  const detailSections = viewModel.hasFlows
-    ? DETAIL_SECTIONS
-    : DETAIL_SECTIONS.filter((section) => section.id !== "flows");
+  const detailSections = DETAIL_SECTIONS
+    .filter((section) => section.id !== "flows" || viewModel.hasFlows)
+    .filter((section) => section.id !== "collateral-usage" || hasCollateralUsage);
 
   return (
     <div className="space-y-6">
@@ -204,6 +220,8 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
       <section id="info" className="space-y-6">
         <KeyInfoCard meta={viewModel.coin} />
       </section>
+
+      {hasCollateralUsage && <CollateralUsageSection stablecoinId={viewModel.id} />}
 
       {detailSections.some((section) => section.id === "yield") ? <YieldDetailSection stablecoinId={viewModel.id} /> : null}
 
