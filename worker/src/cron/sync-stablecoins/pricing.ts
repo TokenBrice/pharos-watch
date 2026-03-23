@@ -87,6 +87,7 @@ function allowsSevereDownsidePublication(input: {
   agreeSources?: string[];
   context: PriceValidationContext;
   references?: PriceValidationReferences;
+  previousTrustedPrice?: PreviousTrustedPrice | null;
 }): boolean {
   if (!isSevereFixedPegDownside(input.price, input.context, input.references, FIXED_PEG_SEVERE_DOWNSIDE_RATIO)) {
     return true;
@@ -96,7 +97,28 @@ function allowsSevereDownsidePublication(input: {
     return true;
   }
 
-  return input.confidence === "high" && (input.agreeSources?.length ?? 0) >= 2;
+  // Strong corroboration: multiple authoritative sources agree
+  if (input.confidence === "high" && (input.agreeSources?.length ?? 0) >= 2) {
+    return true;
+  }
+
+  // Previously confirmed depeg: if the last trusted price was also severely
+  // depegged, the current candidate is consistent with a confirmed ongoing depeg.
+  // Accept it to prevent price data gaps for genuinely depegged assets (e.g. USR
+  // flapping between N/A and a valid price when source corroboration is intermittent).
+  if (
+    input.previousTrustedPrice &&
+    isSevereFixedPegDownside(
+      input.previousTrustedPrice.price,
+      input.context,
+      input.references,
+      FIXED_PEG_SEVERE_DOWNSIDE_RATIO,
+    )
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 function isFixedPegValidationContext(context: PriceValidationContext): boolean {
@@ -146,6 +168,7 @@ export function validatePublishablePrice(input: ValidatePublishablePriceInput): 
     agreeSources: input.agreeSources,
     context: input.validationContext,
     references: input.validationReferences,
+    previousTrustedPrice: input.previousTrustedPrice,
   })) {
     return { accepted: false, reason: "severe_downside_requires_corroboration" };
   }
