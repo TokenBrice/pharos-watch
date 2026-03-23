@@ -43,6 +43,7 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       "usdgo-osl",
       "wusd-worldwide",
       "sbc-brale",
+      "m-m0",
       "usda-anzens",
       "eurcv-societe-generale-forge",
       "aeur-anchored-coins",
@@ -322,6 +323,27 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
     ...issuerBase,
     costModel: fixedFee(0, "Zero-fee mint/redeem at 1:1 for USDC per Plume documentation"),
   },
+  "pusd-pleasing": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    settlementModel: "days",
+    costModel: documentedVariableFee(
+      "Pleasing docs describe PUSD as redeemable 1:1 into USDT after security screening, with quote-based trading fees embedded in the spot flow and gas charged separately",
+    ),
+    docs: [
+      sourceRef(
+        "Pleasing spot trading",
+        "https://pleasing.gitbook.io/docs/solutions/interactive-blocks",
+        ["route", "settlement", "fees"],
+      ),
+      sourceRef(
+        "Pleasing AML/CFT policy",
+        "https://pleasing.gitbook.io/docs/legal/aml-cft-and-sanctions-policy",
+        ["access"],
+      ),
+    ],
+    notes: ["The modeled backstop is Pleasing's documented PUSD-to-USDT off-ramp, which settles only after source-of-funds and compliance screening rather than as an instant onchain swap"],
+  },
   "cash-phantom": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
@@ -353,6 +375,18 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       sourceRef("SBC stablecoin page", "https://brale.xyz/stablecoins/SBC", ["route", "capacity"]),
       sourceRef("Brale pricing", "https://brale.xyz/pricing", ["fees"]),
     ],
+  },
+  "m-m0": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "M0 docs describe $M as fully backed and redeemable 1:1, but direct mint and redemption access is restricted to permissioned minters and no public fee schedule is disclosed",
+    ),
+    docs: [
+      sourceRef("M0 FAQ", "https://www.m0.org/faq", ["route", "capacity", "access"]),
+      sourceRef("M0 Dashboard", "https://dashboard.m0.org/", ["capacity"]),
+    ],
+    notes: ["Base $M liquidity is institution-facing; most end users access M0 liquidity through branded extensions and integrations rather than direct M redemption"],
   },
   "mtbill-midas": {
     ...issuerBase,
@@ -556,8 +590,24 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "pgold-pleasing": {
     ...commodityIssuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     executionModel: "opaque",
-    costModel: documentedVariableFee("Physical gold via Pleasing platform; subject to KYC and size requirements"),
+    costModel: documentedVariableFee(
+      "Physical gold redemption requires KYC and compliance checks, with additional fees, minimums, and logistics that vary by jurisdiction and program terms",
+    ),
+    docs: [
+      sourceRef(
+        "PGOLD token features",
+        "https://pleasing.gitbook.io/docs/pleasing-gold-pgold/token-features",
+        ["route", "capacity", "access", "fees"],
+      ),
+      sourceRef(
+        "Pleasing AML/CFT policy",
+        "https://pleasing.gitbook.io/docs/legal/aml-cft-and-sanctions-policy",
+        ["access"],
+      ),
+    ],
+    notes: ["The modeled backstop is the documented physical-delivery redemption rail; spot trading and secondary transfers remain separate, faster paths that do not exercise issuer redemption"],
   },
   "dusd-standx": {
     ...issuerBase,

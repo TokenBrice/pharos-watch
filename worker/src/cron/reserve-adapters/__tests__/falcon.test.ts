@@ -33,7 +33,10 @@ describe("adaptFalconTransparency", () => {
     expect(result.metadata).toMatchObject({
       snapshotDate: 1773316982,
       supply: "100",
+      supplyUsd: 100,
       insuranceFund: "5",
+      immediateRedeemableUsd: 30,
+      immediateRedeemableRatio: 0.3,
       assetCount: 5,
     });
     // AVAX is a known altcoin — no warning emitted

@@ -25,6 +25,8 @@ describe("adaptEthenaCollateral", () => {
     expect(result.metadata).toMatchObject({
       assetCount: 5,
       totalBackingAssetsInUsd: 100,
+      immediateRedeemableUsd: 35,
+      immediateRedeemableRatio: 0.35,
       lastUpdatedAt: 1,
     });
   });

@@ -354,6 +354,36 @@ Safety Score structure is unchanged, but the liquidity dimension now recognizes 
 
 Weights and grade thresholds are unchanged from v6.7.
 
+## v6.9 - Mid-cap redemption route correction tranche (2026-03-23)
+
+Safety Score structure is unchanged, but the liquidity dimension now recognizes a higher-cap batch of corrected or newly covered redemption routes:
+
+- USX, USDa, and M now have reviewed redemption configs instead of remaining uncovered, while NUSD now uses reviewed `documented-bound` queue semantics instead of a generic heuristic capacity ratio
+- USD.AI now models the base token's direct stablecoin burn-and-withdraw path instead of inheriting slower sUSDai unstaking assumptions
+- These routes still do not expose a separately measured live instant redemption buffer, but they now contribute medium-confidence evidence instead of staying missing or low-confidence by default
+
+Weights and grade thresholds are unchanged from v6.8.
+
+## v6.10 - Live-buffer synthetic-dollar redemption tranche (2026-03-23)
+
+Safety Score structure is unchanged, but the liquidity dimension now recognizes two larger synthetic-dollar redemption routes with live reserve-backed capacity inputs:
+
+- USDe now models Ethena's whitelisted direct stablecoin redemption rail with fresh live `Liquid Cash` telemetry as the current buffer and a conservative documented 0.5% fallback bound when telemetry is unavailable
+- USDf now models Falcon's KYC-only queued redemption route with fresh live stablecoin-buffer telemetry from Falcon's transparency feed and a reviewed zero protocol-fee assumption
+- These routes materially expand medium-confidence redemption evidence, while still preserving Falcon's 7-day cooldown and Ethena's documented ability to suspend or delay transactions
+
+Weights and grade thresholds are unchanged from v6.9.
+
+## v6.11 - Reviewed lower-cap redemption cleanup tranche (2026-03-23)
+
+Safety Score structure is unchanged, but the liquidity dimension now recognizes a final small docs-only redemption cleanup batch before the remaining queue turns mostly telemetry-heavy:
+
+- PUSD and PGOLD now use reviewed Pleasing redemption semantics instead of generic heuristic issuer assumptions, with PUSD mapped to the documented screened USDT off-ramp and PGOLD mapped to the KYC-gated physical-delivery rail
+- apxUSD now reflects Apyx's documented whitelist-gated mint/redeem route rather than a generic permissionless stablecoin redemption assumption
+- These routes still do not expose separate live buffer telemetry, but they now contribute medium-confidence redemption evidence instead of remaining low-confidence heuristics
+
+Weights and grade thresholds are unchanged from v6.10.
+
 ## v6.4 - Live Liquity redemption fee telemetry (2026-03-22)
 
 Safety Score structure is unchanged, but Liquity-style formula routes can now use current on-chain redemption fees when live reserve telemetry is available:
@@ -397,7 +427,7 @@ Weights and grade thresholds are unchanged from v6.1.
 | v4.0       | multiplier | 25%       | —       | 25%        | 10%              | 30%      |
 | v4.1       | multiplier | 30%       | —       | 20%        | 15%              | 25%      |
 | v5.0–5.8 | multiplier | 30% | — | 20%  | 15%          | 25%  |
-| **v6.0–6.8** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
+| **v6.0–6.11** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
 
 ## Quick Reference: Grade Thresholds
 

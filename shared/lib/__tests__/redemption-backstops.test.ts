@@ -10,6 +10,13 @@ describe("getRedemptionBackstopConfig", () => {
       ["honey-berachain", "basket-redeem"],
       ["ousd-origin-protocol", "stablecoin-redeem"],
       ["eusd-electronic-usd", "basket-redeem"],
+      ["m-m0", "offchain-issuer"],
+      ["usx-solstice", "stablecoin-redeem"],
+      ["usda-avalon", "stablecoin-redeem"],
+      ["usdai-usd-ai", "stablecoin-redeem"],
+      ["nusd-neutrl", "queue-redeem"],
+      ["usde-ethena", "stablecoin-redeem"],
+      ["usdf-falcon", "queue-redeem"],
       ["usdcv-societe-generale-forge", "offchain-issuer"],
       ["eurcv-societe-generale-forge", "offchain-issuer"],
       ["aeur-anchored-coins", "offchain-issuer"],
@@ -237,5 +244,124 @@ describe("getRedemptionBackstopConfig", () => {
       reviewedAt: "2026-03-23",
     });
     expect(getRedemptionBackstopConfig("frxusd-frax")?.docs?.length).toBeGreaterThan(0);
+  });
+
+  it("marks the mid-cap route-correction tranche as reviewed documented-bound", () => {
+    expect(getRedemptionBackstopConfig("m-m0")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+    expect(getRedemptionBackstopConfig("m-m0")?.docs?.length).toBeGreaterThan(0);
+
+    expect(getRedemptionBackstopConfig("usx-solstice")).toMatchObject({
+      routeFamily: "stablecoin-redeem",
+      accessModel: "whitelisted-onchain",
+      settlementModel: "atomic",
+      executionModel: "deterministic-onchain",
+      outputAssetType: "stable-single",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("usda-avalon")).toMatchObject({
+      routeFamily: "stablecoin-redeem",
+      settlementModel: "days",
+      executionModel: "rules-based-nav",
+      outputAssetType: "stable-single",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("usdai-usd-ai")).toMatchObject({
+      routeFamily: "stablecoin-redeem",
+      accessModel: "permissionless-onchain",
+      settlementModel: "atomic",
+      executionModel: "deterministic-onchain",
+      outputAssetType: "stable-single",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("nusd-neutrl")).toMatchObject({
+      routeFamily: "queue-redeem",
+      accessModel: "whitelisted-onchain",
+      settlementModel: "queued",
+      executionModel: "rules-based-nav",
+      outputAssetType: "stable-single",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    for (const id of ["usx-solstice", "usda-avalon", "usdai-usd-ai", "nusd-neutrl"] as const) {
+      expect(getRedemptionBackstopConfig(id)?.docs?.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("models the telemetry-backed synthetic-dollar tranche with reviewed live-buffer routes", () => {
+    expect(getRedemptionBackstopConfig("usde-ethena")).toMatchObject({
+      routeFamily: "stablecoin-redeem",
+      accessModel: "whitelisted-onchain",
+      settlementModel: "immediate",
+      executionModel: "deterministic-onchain",
+      outputAssetType: "stable-single",
+      capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.005 },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+    expect(getRedemptionBackstopConfig("usde-ethena")?.docs?.length).toBeGreaterThan(0);
+
+    expect(getRedemptionBackstopConfig("usdf-falcon")).toMatchObject({
+      routeFamily: "queue-redeem",
+      accessModel: "whitelisted-onchain",
+      settlementModel: "queued",
+      executionModel: "rules-based-nav",
+      outputAssetType: "stable-single",
+      capacityModel: { kind: "reserve-sync-metadata" },
+      costModel: { kind: "fee-bps", feeBps: 0 },
+      reviewedAt: "2026-03-23",
+    });
+    expect(getRedemptionBackstopConfig("usdf-falcon")?.docs?.length).toBeGreaterThan(0);
+  });
+
+  it("marks the remaining lower-cap docs tranche as reviewed documented-bound", () => {
+    expect(getRedemptionBackstopConfig("pusd-pleasing")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      accessModel: "issuer-api",
+      settlementModel: "days",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("pgold-pleasing")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      settlementModel: "days",
+      executionModel: "opaque",
+      outputAssetType: "bluechip-collateral",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("apxusd-apyx")).toMatchObject({
+      routeFamily: "stablecoin-redeem",
+      accessModel: "whitelisted-onchain",
+      settlementModel: "atomic",
+      executionModel: "deterministic-onchain",
+      outputAssetType: "stable-single",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    for (const id of ["pusd-pleasing", "pgold-pleasing", "apxusd-apyx"] as const) {
+      expect(getRedemptionBackstopConfig(id)?.docs?.length).toBeGreaterThan(0);
+    }
   });
 });

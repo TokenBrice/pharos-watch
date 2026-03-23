@@ -1,5 +1,17 @@
 import type { RedemptionBackstopConfig } from "./shared";
-import { documentedVariableFee, fixedFee, NO_PUBLIC_NUMERIC_REDEMPTION_FEE, queueRedeemBase } from "./shared";
+import {
+  documentedBoundSupplyFull,
+  documentedVariableFee,
+  fixedFee,
+  NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
+  queueRedeemBase,
+  sourceRef,
+} from "./shared";
+
+const REVIEWED_QUEUE_REDEMPTION_AT = "2026-03-23";
+const reviewedQueueRedemptionSupplyFull = documentedBoundSupplyFull(
+  REVIEWED_QUEUE_REDEMPTION_AT,
+);
 
 export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "alusd-alchemix": {
@@ -15,6 +27,34 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       fallbackRatio: 0.15,
     },
     costModel: fixedFee(0, "Tracked protocol metadata describes 1:1 mint/redeem against USDC with no fees"),
+  },
+  "usdf-falcon": {
+    ...queueRedeemBase,
+    accessModel: "whitelisted-onchain",
+    capacityModel: { kind: "reserve-sync-metadata" },
+    costModel: fixedFee(
+      0,
+      "Falcon docs state users bear gas and execution costs while Falcon does not charge a separate protocol-specific redemption fee",
+    ),
+    reviewedAt: "2026-03-23",
+    docs: [
+      sourceRef(
+        "Falcon redeem guide",
+        "https://docs.falcon.finance/resources/quick-app-guide/navigating-the-swap-tab/redeem",
+        ["route", "settlement", "access"],
+      ),
+      sourceRef(
+        "Falcon FAQ",
+        "https://docs.falcon.finance/resources/frequently-asked-questions-faq",
+        ["route", "fees", "access", "settlement"],
+      ),
+      sourceRef(
+        "Falcon transparency API",
+        "https://api.falcon.finance/api/v1/transparency",
+        ["capacity"],
+      ),
+    ],
+    notes: ["Fresh live reserve metadata scores against Falcon's current stablecoin reserve bucket; redeemed assets are still credited only after the documented 7-day cooldown"],
   },
   "reusd-re-protocol": {
     ...queueRedeemBase,
@@ -69,13 +109,16 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "nusd-neutrl": {
     ...queueRedeemBase,
-    capacityModel: { kind: "supply-ratio", ratio: 0.2 },
-    costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
-  },
-  "usdai-usd-ai": {
-    ...queueRedeemBase,
+    ...reviewedQueueRedemptionSupplyFull,
+    accessModel: "whitelisted-onchain",
     costModel: documentedVariableFee(
-      "Redeemable 1:1 in fixed 30-day processing windows; QEV auction mechanism manages redemptions against illiquid collateral",
+      "Neutrl redemption is available to whitelisted KYC participants and supports instant or queued execution depending on AssetReserve liquidity; public fee schedule is not disclosed",
     ),
+    docs: [
+      sourceRef("Neutrl minting", "https://docs.neutrl.fi/protocol-mechanics/minting", ["route", "capacity"]),
+      sourceRef("Neutrl redemption", "https://docs.neutrl.fi/protocol-mechanics/redemption", ["route", "capacity", "access"]),
+      sourceRef("Neutrl transparency", "https://docs.neutrl.fi/protocol-design/transparency", ["capacity"]),
+    ],
+    notes: ["Neutrl docs establish a dual-path redemption system with instant execution when AssetReserve liquidity is available and an onchain queued fallback when it is not; current model scores eventual redeemability rather than a separately measured live instant buffer"],
   },
 };

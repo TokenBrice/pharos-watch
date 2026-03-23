@@ -1,9 +1,54 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "1.10",
+  currentVersion: "1.13",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "1.13",
+      title: "Reviewed lower-cap redemption cleanup tranche",
+      date: "2026-03-23",
+      effectiveAt: 1774296000,
+      summary:
+        "A small lower-cap cleanup tranche upgrades Pleasing and Apyx routes from generic heuristics to reviewed redemption semantics without adding new live telemetry assumptions.",
+      impact: [
+        "PUSD and PGOLD now use reviewed documented-bound redemption routes tied to Pleasing's published off-ramp and physical-delivery docs instead of generic heuristic issuer assumptions",
+        "apxUSD now reflects the documented whitelist-gated mint/redeem rail rather than a generic permissionless stablecoin-redeem assumption",
+        "These routes still do not claim a separately measured live instant buffer, but they now contribute medium-confidence redemption evidence instead of remaining low-confidence heuristics",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
+      version: "1.12",
+      title: "Live-buffer routes for Ethena and Falcon synthetics",
+      date: "2026-03-23",
+      effectiveAt: 1774292400,
+      summary:
+        "USDe and USDf now reuse live reserve telemetry for current redeemable stable buffers, turning two large synthetic-dollar gaps into reviewed route coverage.",
+      impact: [
+        "USDe now models the whitelisted direct mint-and-redeem rail documented by Ethena, with fresh live Liquid Cash telemetry used as the current redeemable stable buffer and a conservative 0.5% fallback bound when telemetry is unavailable",
+        "USDf now models Falcon's KYC-only queued redemption route with a live stablecoin-buffer input from Falcon's transparency feed and a reviewed zero protocol-fee assumption based on Falcon docs",
+        "These routes materially expand medium-confidence redemption coverage without pretending either protocol has a permanently fixed instant-exit buffer",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
+      version: "1.11",
+      title: "Mid-cap route correction and review tranche",
+      date: "2026-03-23",
+      effectiveAt: 1774288800,
+      summary:
+        "A mid-cap tranche adds missing USX, USDa, and M redemption configs while correcting USD.AI and NUSD onto reviewed routes that better match their protocol docs.",
+      impact: [
+        "USX, USDa, and M now carry reviewed redemption routes instead of remaining uncovered, and NUSD now uses reviewed documented-bound queue semantics rather than a generic 20% heuristic",
+        "USD.AI now models the base token's direct burn-and-withdraw stablecoin rail instead of inheriting the slower sUSDai unstaking assumptions",
+        "These routes still do not claim a separately measured live instant buffer, but they materially expand medium-confidence redemption coverage across the mid-cap queue",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "1.10",
       title: "Third lower-cap redemption review tranche",

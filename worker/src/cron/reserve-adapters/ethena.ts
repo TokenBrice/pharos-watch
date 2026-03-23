@@ -70,10 +70,11 @@ export function adaptEthenaCollateral(payload: EthenaCollateralResponse): Adapte
     );
   }
 
+  const stableBucketUsd = bucketTotals.get("stable") ?? 0;
   const slices = slicesFromValues([
     {
       name: "Liquid stables / cash equivalents",
-      value: bucketTotals.get("stable") ?? 0,
+      value: stableBucketUsd,
       risk: "low",
     },
     {
@@ -105,6 +106,10 @@ export function adaptEthenaCollateral(payload: EthenaCollateralResponse): Adapte
       assetCount,
       computedTotalBackingAssetsInUsd,
       totalBackingAssetsInUsd: payload.totalBackingAssetsInUsd,
+      immediateRedeemableUsd: stableBucketUsd,
+      ...(computedTotalBackingAssetsInUsd > 0
+        ? { immediateRedeemableRatio: stableBucketUsd / computedTotalBackingAssetsInUsd }
+        : {}),
       lastUpdatedAt,
       sourceTimestamp: lastUpdatedAt,
       unknownExposurePct:

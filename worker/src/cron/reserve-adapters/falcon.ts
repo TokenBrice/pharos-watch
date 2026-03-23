@@ -123,11 +123,16 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
     typeof payload.usdf?.insurance_fund === "string"
       ? Number(payload.usdf.insurance_fund)
       : NaN;
+  const supplyUsd =
+    typeof payload.usdf?.supply === "string"
+      ? Number(payload.usdf.supply)
+      : NaN;
+  const stableBucketUsd = bucketTotals.get("stable") ?? 0;
 
   const slices = slicesFromValues([
     {
       name: "Stablecoins / cash equivalents",
-      value: bucketTotals.get("stable") ?? 0,
+      value: stableBucketUsd,
       risk: "low",
     },
     {
@@ -164,6 +169,11 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
       snapshotDate: payload.snapshot_date,
       supply: payload.usdf?.supply,
       insuranceFund: payload.usdf?.insurance_fund,
+      ...(Number.isFinite(supplyUsd) && supplyUsd > 0 ? { supplyUsd } : {}),
+      immediateRedeemableUsd: stableBucketUsd,
+      ...(Number.isFinite(supplyUsd) && supplyUsd > 0
+        ? { immediateRedeemableRatio: stableBucketUsd / supplyUsd }
+        : {}),
       assetCount: assets.length,
       sourceTimestamp: payload.snapshot_date,
       unknownExposurePct: totalAssetUsd > 0 ? (unknownExposureUsd / totalAssetUsd) * 100 : 0,
