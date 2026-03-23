@@ -52,7 +52,6 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       "europ-schuman",
       "eurau-allunity",
       "tusd-trueusd",
-      "frxusd-frax",
       "eurs-stasis",
       "gyen-gyen",
       "brz-transfero",
@@ -153,7 +152,12 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "usdx-hex-trust": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee("Redeemable through approved parties; public fee schedule not disclosed"),
+    docs: [
+      sourceRef("HT Digital Assets USDX", "https://www.htdigitalassets.com/", ["route", "capacity"]),
+      sourceRef("HT Digital Assets disclaimer", "https://www.htdigitalassets.com/disclaimer", ["route", "access"]),
+    ],
   },
   "xusd-straitsx": {
     ...issuerBase,
@@ -232,7 +236,34 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "usdm-moneta": {
     ...issuerBase,
-    costModel: documentedVariableFee("Redeemable 1:1; public fee schedule not disclosed"),
+    ...reviewedDirectRedemptionSupplyFull,
+    settlementModel: "days",
+    costModel: documentedVariableFee("Eligible users can redeem USDM 1:1 for USD; public fee schedule not disclosed"),
+    docs: [
+      sourceRef("USDM litepaper", "https://moneta.global/resources/litepaper/", ["route", "capacity"]),
+      sourceRef("USDM retail launch", "https://moneta.global/retail-launch/", ["route", "settlement"]),
+    ],
+    notes: ["Retail exchange documentation describes 1-3 business day processing driven by bank-transfer timing"],
+  },
+  "usdh-native-markets": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: fixedFee(0, "USDH docs state onboarded institutions can mint and redeem 1:1 with no fees"),
+    docs: [
+      sourceRef("USDH minting and redeeming", "https://docs.usdh.com/usdh/minting", ["route", "capacity", "fees"]),
+      sourceRef("USDH transparency", "https://www.usdh.com/transparency", ["capacity"]),
+    ],
+  },
+  "fidd-fidelity": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "Eligible Fidelity clients can buy, sell, and redeem FIDD at a guaranteed $1 price; public fee schedule not disclosed",
+    ),
+    docs: [
+      sourceRef("Fidelity Digital Dollar overview", "https://www.fidelitydigitalassets.com/stablecoin", ["route", "capacity"]),
+      sourceRef("FIDD terms and conditions", "https://www.fidelitydigitalassets.com/fidd-terms", ["route", "capacity", "access"]),
+    ],
   },
   "usdcv-societe-generale-forge": {
     ...issuerBase,
@@ -263,12 +294,6 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee("Redeemable 1:1 through Techteryx; minting gated by Chainlink Proof of Reserve"),
-  },
-  "frxusd-frax": {
-    ...issuerBase,
-    costModel: documentedVariableFee(
-      "1:1 mint and redemption through governance-approved enshrined custodians; public fee schedule not disclosed",
-    ),
   },
   "eurs-stasis": {
     ...issuerBase,
@@ -318,6 +343,17 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       sourceRef("MNEE terms", "https://www.mnee.io/terms", ["route", "capacity", "fees"]),
     ],
   },
+  "sbc-brale": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "Brale pricing lists stablecoin offramp as included with API plans, while wire and ACH payout rails can still carry transfer fees",
+    ),
+    docs: [
+      sourceRef("SBC stablecoin page", "https://brale.xyz/stablecoins/SBC", ["route", "capacity"]),
+      sourceRef("Brale pricing", "https://brale.xyz/pricing", ["fees"]),
+    ],
+  },
   "mtbill-midas": {
     ...issuerBase,
     capacityModel: { kind: "supply-ratio", ratio: 0.11 },
@@ -334,10 +370,19 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "thbill-theo": {
     ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee(
       "KYC-gated mint/redemption processed instantly in USDC; underlying collateral settled within T+4 business days",
     ),
-    notes: ["Restricted to institutional and non-U.S. accredited investors"],
+    docs: [
+      sourceRef("Theo thBILL overview", "https://docs.theo.xyz/thbill", ["route", "capacity", "settlement", "access"]),
+      sourceRef(
+        "Theo minting service",
+        "https://docs.theo.xyz/technical-reference/ttokens-and-itokens/ttokens/minting-service",
+        ["route", "settlement"],
+      ),
+    ],
+    notes: ["Direct minting and redemption require KYC; Theo describes optimistic issuance against USDC while issuer settlement completes asynchronously"],
   },
   "rwausdi-multipli": {
     ...issuerBase,
@@ -345,6 +390,23 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
     costModel: documentedVariableFee(
       "NAV-based valuation; KYB-gated 1:1 minting and redemption restricted to verified institutional counterparties",
     ),
+  },
+  "aeur-anchored-coins": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    settlementModel: "days",
+    costModel: documentedVariableFee(
+      "Direct redemption is available through Anchored Coins AG for amounts of at least AEUR 250,000; public fee schedule not disclosed",
+    ),
+    docs: [
+      sourceRef("Anchored Coins AEUR redemption", "https://www.anchoredcoins.com/en/landing/aeur", ["route", "capacity"]),
+      sourceRef(
+        "Anchored Coins white paper",
+        "https://static.anchoredcoins.com/static/cloud/anchoredcoins/static/images/admin_mgs_image_upload/whitepaper_for_launch.pdf",
+        ["route", "capacity"],
+      ),
+    ],
+    notes: ["Redemption timing depends on customer due diligence, banking-partner review, and payment-processing timelines"],
   },
   "eurcv-societe-generale-forge": {
     ...issuerBase,
@@ -383,6 +445,15 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       sourceRef("Monerium fee schedule", "https://monerium.com/fee-schedule/", ["fees"]),
     ],
   },
+  "eurr-stablr": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: fixedFee(0, "StablR docs state qualified businesses can onramp and offramp EURR at no additional cost"),
+    docs: [
+      sourceRef("What is EURR", "https://docs.stablr.com/docs/what-is-eurr", ["route", "capacity", "fees"]),
+      sourceRef("StablR overview", "https://docs.stablr.com/docs/overview", ["route", "capacity"]),
+    ],
+  },
   "paxg-paxos": {
     ...commodityIssuerBase,
     ...reviewedDirectRedemptionSupplyFull,
@@ -399,9 +470,23 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "xaum-matrixdock": {
     ...commodityIssuerBase,
-    costModel: documentedVariableFee(
-      "Physical gold through Matrixdock; minimum 32.148 XAUm (1 kg bar); KYC-verified accredited investors only",
-    ),
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: fixedFee(25, "Matrixdock FAQ lists a 0.25% redemption fee"),
+    docs: [
+      sourceRef(
+        "XAUm token features",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/token-features",
+        ["route", "capacity", "access"],
+      ),
+      sourceRef(
+        "XAUm FAQ",
+        "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/faq",
+        ["route", "capacity", "fees", "settlement"],
+      ),
+    ],
+    notes: [
+      "Primary minting and redemption into USDC or USD fiat require KYC, settle within T+3 days, and physical gold redemption currently starts at one 1 kg LBMA bar (32.148 XAUm)",
+    ],
   },
   ...expandIds(
     ["kau-kinesis", "kag-kinesis"],
@@ -418,6 +503,57 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
     ...commodityIssuerBase,
     costModel: fixedFee(0, "No custody or transfer fees per Gold Token SA; minimum 1 gram"),
   },
+  "wusd-worldwide": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "Corporate-account redemptions convert WUSD to USD at a 1:1 rate; WSPN docs say the platform conversion has no handling fee, while bank or network fees may still apply",
+    ),
+    docs: [
+      sourceRef("About WUSD", "https://developer.wspn.io/5768563m0", ["route", "capacity"]),
+      sourceRef("WSPN getting started", "https://developer.wspn.io/5778215m0", ["route", "fees"]),
+    ],
+  },
+  "usdgo-osl": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: fixedFee(
+      0,
+      "OSL StableHub launch states USDGO/USD and USDGO/USDC 1:1 exchange rails are zero-fee on platform",
+    ),
+    docs: [
+      sourceRef(
+        "OSL StableHub launch",
+        "https://www.osl.com/en/announcement/osl-stablehub-grand-launch-multi-stablecoin-and-usd-seamless-1-1-exchange",
+        ["route", "capacity", "fees"],
+      ),
+      sourceRef(
+        "OSL USDGO launch",
+        "https://www.osl.com/hk-en/press-release/osl-group-officially-launches-regulated-enterprise-stablecoin-usdgo",
+        ["route", "capacity"],
+      ),
+    ],
+  },
+  "audd-novatti": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "AUDC redeems AUDD 1:1; the issuer says minting and redemption are fee-free, but distributors or external bank-account payouts can impose additional charges",
+    ),
+    docs: [
+      sourceRef("AUDD home", "https://www.audd.digital/", ["route", "capacity"]),
+      sourceRef("AUDD product disclosure statement", "https://www.audd.digital/wp-content/uploads/2026/02/202602_AUDD-PDS.pdf", ["route", "capacity", "fees"]),
+    ],
+  },
+  "usdr-stablr": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: fixedFee(0, "StablR docs state qualified businesses can onramp and offramp USDR at no additional cost"),
+    docs: [
+      sourceRef("What is USDR", "https://docs.stablr.com/docs/what-is-eurr-copy", ["route", "capacity", "fees"]),
+      sourceRef("StablR overview", "https://docs.stablr.com/docs/overview", ["route", "capacity"]),
+    ],
+  },
   "pgold-pleasing": {
     ...commodityIssuerBase,
     executionModel: "opaque",
@@ -430,5 +566,21 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       "Delta-neutral hedging on centralized exchanges; 1:1 USDT/USDC redemption; public fee schedule not disclosed",
     ),
     notes: ["Estimated 15% capacity ratio pending protocol-specific liquidity research"],
+  },
+  "usat-tether": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "USA₮ issuer materials state issued tokens are redeemable 1:1 in U.S. dollars pursuant to Anchorage Digital Bank's terms; public redemption fee schedule is not disclosed",
+    ),
+    docs: [
+      sourceRef("USA₮ homepage", "https://usat.io/", ["route", "capacity"]),
+      sourceRef(
+        "USA₮ first reserve report",
+        "https://usat.io/news/usat-establishes-transparency-benchmark-with-first-reserve-report/",
+        ["route", "capacity", "access"],
+      ),
+      sourceRef("USA₮ website terms", "https://usat.io/terms/", ["access"]),
+    ],
   },
 };

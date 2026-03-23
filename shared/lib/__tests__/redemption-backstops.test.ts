@@ -24,6 +24,7 @@ describe("getRedemptionBackstopConfig", () => {
       ["wusd-worldwide", "offchain-issuer"],
       ["sbc-brale", "offchain-issuer"],
       ["usda-anzens", "offchain-issuer"],
+      ["frxusd-frax", "stablecoin-redeem"],
     ] as const;
 
     for (const [id, routeFamily] of expectedRouteFamilies) {
@@ -137,5 +138,104 @@ describe("getRedemptionBackstopConfig", () => {
       costModel: { kind: "dynamic-or-unclear" },
       reviewedAt: "2026-03-23",
     });
+  });
+
+  it("marks the second lower-cap issuer tranche as reviewed documented-bound", () => {
+    const reviewedIssuerIds = [
+      "usdh-native-markets",
+      "fidd-fidelity",
+      "usdx-hex-trust",
+      "sbc-brale",
+      "eurr-stablr",
+      "usdr-stablr",
+      "wusd-worldwide",
+      "audd-novatti",
+    ] as const;
+
+    for (const id of reviewedIssuerIds) {
+      const config = getRedemptionBackstopConfig(id);
+      expect(config).toMatchObject({
+        routeFamily: "offchain-issuer",
+        capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+        reviewedAt: "2026-03-23",
+      });
+      expect(config?.docs?.length).toBeGreaterThan(0);
+    }
+
+    expect(getRedemptionBackstopConfig("usdh-native-markets")).toMatchObject({
+      costModel: { kind: "fee-bps", feeBps: 0 },
+    });
+
+    expect(getRedemptionBackstopConfig("sbc-brale")).toMatchObject({
+      costModel: { kind: "dynamic-or-unclear" },
+    });
+
+    expect(getRedemptionBackstopConfig("usdm-moneta")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      settlementModel: "days",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+
+    expect(getRedemptionBackstopConfig("aeur-anchored-coins")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      settlementModel: "days",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+  });
+
+  it("marks the third lower-cap redemption tranche as reviewed documented-bound", () => {
+    const reviewedIssuerIds = [
+      "thbill-theo",
+      "xaum-matrixdock",
+      "usdgo-osl",
+      "usat-tether",
+    ] as const;
+
+    for (const id of reviewedIssuerIds) {
+      const config = getRedemptionBackstopConfig(id);
+      expect(config).toMatchObject({
+        capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+        reviewedAt: "2026-03-23",
+      });
+      expect(config?.docs?.length).toBeGreaterThan(0);
+    }
+
+    expect(getRedemptionBackstopConfig("thbill-theo")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      settlementModel: "same-day",
+      costModel: { kind: "dynamic-or-unclear" },
+    });
+
+    expect(getRedemptionBackstopConfig("xaum-matrixdock")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      settlementModel: "days",
+      costModel: { kind: "fee-bps", feeBps: 25 },
+    });
+
+    expect(getRedemptionBackstopConfig("usdgo-osl")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      costModel: { kind: "fee-bps", feeBps: 0 },
+    });
+
+    expect(getRedemptionBackstopConfig("usat-tether")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      costModel: { kind: "dynamic-or-unclear" },
+    });
+
+    expect(getRedemptionBackstopConfig("frxusd-frax")).toMatchObject({
+      routeFamily: "stablecoin-redeem",
+      accessModel: "permissionless-onchain",
+      settlementModel: "atomic",
+      executionModel: "deterministic-onchain",
+      outputAssetType: "stable-single",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-03-23",
+    });
+    expect(getRedemptionBackstopConfig("frxusd-frax")?.docs?.length).toBeGreaterThan(0);
   });
 });

@@ -1,9 +1,39 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "1.8",
+  currentVersion: "1.10",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "1.10",
+      title: "Third lower-cap redemption review tranche",
+      date: "2026-03-23",
+      effectiveAt: 1774285200,
+      summary:
+        "A third lower-cap review tranche upgrades more issuer-style routes from heuristic supply-full modeling to reviewed documented-bound capacity and corrects frxUSD onto its direct onchain stablecoin redemption rail.",
+      impact: [
+        "thBILL, XAUm, USDGO, and USA₮ now carry reviewed documented-bound eventual redemption capacity instead of generic heuristic supply-full modeling",
+        "XAUm now discloses a reviewed 25 bps redemption fee and T+3 settlement expectations, while USDGO now uses the reviewed zero-fee StableHub exchange rail documented by OSL",
+        "frxUSD now models the direct onchain USDC mint/redeem contract path as a reviewed stablecoin-redeem route instead of sitting in a generic offchain issuer bucket",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
+      version: "1.9",
+      title: "Second lower-cap issuer review tranche",
+      date: "2026-03-23",
+      effectiveAt: 1774281600,
+      summary:
+        "A second lower-cap review tranche upgrades more issuer-backed routes from heuristic supply-full modeling to reviewed documented-bound redemption capacity, with targeted fee and settlement corrections.",
+      impact: [
+        "USDH, FIDD, AEUR, USDX, USDM, SBC, EURR, USDR, WUSD, and AUDD now carry reviewed documented-bound eventual redemption capacity instead of generic heuristic supply-full modeling",
+        "USDM and AEUR now disclose reviewed non-instant settlement expectations from issuer materials, while USDH now carries an explicit fee-free reviewed route and SBC now uses reviewed pricing language instead of an undocumented fee assumption",
+        "These routes remain eventual-only issuer exits without a separately measured immediate redeemable buffer, but they now qualify as medium-confidence redemption evidence instead of low-confidence heuristics",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "1.8",
       title: "Expanded reviewed lower-cap issuer redemption coverage",

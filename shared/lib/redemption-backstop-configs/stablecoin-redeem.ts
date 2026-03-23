@@ -117,6 +117,31 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       "Redeemable 1:1 for underlying RWA assets via DaoCollateral contract; minting accepts USYC or USDC via gateway",
     ),
   },
+  "frxusd-frax": {
+    ...stablecoinRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "Direct Ethereum mint and redeem contracts support 1:1 conversion between frxUSD and USDC; public docs do not publish a fixed redemption fee",
+    ),
+    docs: [
+      sourceRef(
+        "frxUSD mint and redeem overview",
+        "https://docs.frax.com/frxusd/mint-and-redeem-overview",
+        ["route", "capacity"],
+      ),
+      sourceRef(
+        "frxUSD USDC quickstart",
+        "https://docs.frax.com/frxusd/mint-and-redeem-quickstarts/usdc",
+        ["route"],
+      ),
+      sourceRef(
+        "FraxNetDeposit contract",
+        "https://docs.frax.com/fraxnet/contracts/fraxnetDeposit",
+        ["route", "capacity"],
+      ),
+    ],
+    notes: ["Cross-chain and fiat off-ramp flows exist too, but the modeled backstop focuses on the direct onchain USDC redemption rail"],
+  },
   "jupusd-jupiter": {
     ...stablecoinRedeemBase,
     capacityModel: { kind: "supply-ratio", ratio: 0.1 },

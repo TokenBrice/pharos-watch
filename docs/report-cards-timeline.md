@@ -334,6 +334,26 @@ Safety Score structure is unchanged, but the liquidity dimension now recognizes 
 
 Weights and grade thresholds are unchanged from v6.5.
 
+## v6.7 - Second lower-cap redemption review tranche (2026-03-23)
+
+Safety Score structure is unchanged, but the liquidity dimension now recognizes an additional issuer-style batch outside the largest stablecoins:
+
+- USDH, FIDD, AEUR, USDX, USDM, SBC, EURR, USDR, WUSD, and AUDD now use reviewed `documented-bound` eventual redemption capacity instead of generic heuristic `supply-full` modeling
+- USDM and AEUR now also disclose reviewed non-instant settlement expectations from issuer materials, while USDH carries an explicit reviewed fee-free redemption path and SBC now uses reviewed pricing language instead of an undocumented fee assumption
+- These routes still render as eventual-only issuer exits and do not claim a separately measured immediate redeemable buffer, but they now contribute medium-confidence redemption evidence instead of staying low-confidence by default
+
+Weights and grade thresholds are unchanged from v6.6.
+
+## v6.8 - Third lower-cap redemption review tranche (2026-03-23)
+
+Safety Score structure is unchanged, but the liquidity dimension now recognizes another small group of reviewed lower-cap redemption routes and a corrected frxUSD route family:
+
+- thBILL, XAUm, USDGO, and USA₮ now use reviewed `documented-bound` eventual redemption capacity instead of generic heuristic `supply-full` modeling
+- XAUm now discloses a reviewed 25 bps redemption fee and T+3 settlement expectations, while USDGO now uses the reviewed zero-fee StableHub exchange rail documented by OSL
+- frxUSD now models the direct onchain USDC mint/redeem contract path as a reviewed `stablecoin-redeem` route instead of remaining in a generic issuer bucket
+
+Weights and grade thresholds are unchanged from v6.7.
+
 ## v6.4 - Live Liquity redemption fee telemetry (2026-03-22)
 
 Safety Score structure is unchanged, but Liquity-style formula routes can now use current on-chain redemption fees when live reserve telemetry is available:
@@ -377,7 +397,7 @@ Weights and grade thresholds are unchanged from v6.1.
 | v4.0       | multiplier | 25%       | —       | 25%        | 10%              | 30%      |
 | v4.1       | multiplier | 30%       | —       | 20%        | 15%              | 25%      |
 | v5.0–5.8 | multiplier | 30% | — | 20%  | 15%          | 25%  |
-| **v6.0–6.5** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
+| **v6.0–6.8** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
 
 ## Quick Reference: Grade Thresholds
 
