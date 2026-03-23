@@ -30,12 +30,27 @@ function makeDb() {
   };
 }
 
+function horizonResponse(
+  circulation: number,
+  mint: number,
+  redemption: number,
+  date = "2026-03-23T00:00:00Z",
+) {
+  return new Response(
+    JSON.stringify({
+      history_latest_ledger: 42_691_026,
+      records: [{ circulation: String(circulation), mint: String(mint), redemption: String(redemption), date }],
+    }),
+    { status: 200 },
+  );
+}
+
 function kauResponse(circulation = 2_586_388, mint = 131_051_834, redemption = 128_465_446) {
-  return new Response(JSON.stringify({ circulation, mint, redemption }), { status: 200 });
+  return horizonResponse(circulation, mint, redemption);
 }
 
 function kagResponse(circulation = 3_742_495, mint = 10_523_270, redemption = 6_780_775) {
-  return new Response(JSON.stringify({ circulation, mint, redemption }), { status: 200 });
+  return horizonResponse(circulation, mint, redemption);
 }
 
 describe("parseKinesisResponse", () => {
@@ -53,6 +68,18 @@ describe("parseKinesisResponse", () => {
       { date: "2026-03-23", circulation: 100, mint: 200, redemption: 100 },
     ];
     expect(parseKinesisResponse(data)).toEqual({ circulation: 100, mint: 200, redemption: 100 });
+  });
+
+  it("parses a Horizon envelope and takes the last record", () => {
+    expect(
+      parseKinesisResponse({
+        history_latest_ledger: 42_691_026,
+        records: [
+          { date: "2026-03-22T00:00:00Z", circulation: "90", mint: "190", redemption: "100" },
+          { date: "2026-03-23T00:00:00Z", circulation: "100", mint: "200", redemption: "100" },
+        ],
+      }),
+    ).toEqual({ circulation: 100, mint: 200, redemption: 100 });
   });
 
   it("returns null for an empty array", () => {

@@ -38,11 +38,18 @@ interface KinesisCirculationData {
   redemption: number;
 }
 
-/** Parse the `/coin_in_circulation` response (single object or array of daily records). */
+/** Parse the `/coin_in_circulation` response (single object, raw record array, or Horizon envelope). */
 export function parseKinesisResponse(data: unknown): KinesisCirculationData | null {
   if (Array.isArray(data)) {
     if (data.length === 0) return null;
     return extractFields(data[data.length - 1]);
+  }
+  if (data && typeof data === "object") {
+    const records = (data as { records?: unknown }).records;
+    if (Array.isArray(records)) {
+      if (records.length === 0) return null;
+      return extractFields(records[records.length - 1]);
+    }
   }
   return extractFields(data);
 }
