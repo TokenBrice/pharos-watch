@@ -51,6 +51,8 @@ const SECONDARY_CURRENCY_TO_PEG = {
 } as const;
 
 const EXPECTED_FX_PEG_KEYS = [...Object.values(CURRENCY_TO_PEG), ...Object.values(SECONDARY_CURRENCY_TO_PEG)];
+const BUSINESS_DAILY_FX_PEG_KEYS = new Set<string>(Object.values(CURRENCY_TO_PEG));
+const CALENDAR_DAILY_FX_PEG_KEYS = new Set<string>(Object.values(SECONDARY_CURRENCY_TO_PEG));
 
 const SECONDARY_FX_PRIMARY_URL = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.min.json";
 const SECONDARY_FX_FALLBACK_URL = "https://latest.currency-api.pages.dev/v1/currencies/usd.min.json";
@@ -154,6 +156,39 @@ function rankIsoDate(dateText: string | null | undefined): number {
   if (!dateText) return Number.NEGATIVE_INFINITY;
   const parsed = Date.parse(`${dateText}T00:00:00Z`);
   return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+}
+
+function formatIsoDateFromTimestamp(updatedAt: number | null | undefined): string | null {
+  if (updatedAt == null || !Number.isFinite(updatedAt) || updatedAt <= 0) return null;
+  return new Date(updatedAt * 1000).toISOString().slice(0, 10);
+}
+
+function getNaturalFxCadence(pegKey: string): FxSourceCadence | null {
+  if (BUSINESS_DAILY_FX_PEG_KEYS.has(pegKey)) return "business-daily";
+  if (CALENDAR_DAILY_FX_PEG_KEYS.has(pegKey)) return "calendar-daily";
+  return null;
+}
+
+function normalizeFiatCarryForwardMetadata(
+  pegKey: string,
+  updatedAt: number | null | undefined,
+  mode: FxRateSourceMode | undefined,
+  cadence: FxSourceCadence | undefined,
+  sourceDate: string | null | undefined,
+): { cadence: FxSourceCadence; sourceDate: string | null } {
+  if (mode === "hardcoded") {
+    return { cadence: cadence ?? "intraday", sourceDate: null };
+  }
+
+  const naturalCadence = getNaturalFxCadence(pegKey);
+  if (!naturalCadence) {
+    return { cadence: cadence ?? "intraday", sourceDate: sourceDate ?? null };
+  }
+
+  return {
+    cadence: naturalCadence,
+    sourceDate: sourceDate ?? formatIsoDateFromTimestamp(updatedAt),
+  };
 }
 
 async function fetchSecondaryCurrencyCandidate(
@@ -299,15 +334,46 @@ export async function syncFxRates(
       sourceCadenceByPeg[pegKey] = cadence;
       sourceDateByPeg[pegKey] = sourceDate;
     };
-    const inheritPrevious = (pegKey: string) => {
-      if (prevState?.sourceModeByPeg[pegKey]) {
-        sourceModeByPeg[pegKey] = prevState.sourceModeByPeg[pegKey];
-      } else {
-        sourceModeByPeg[pegKey] = "cached";
+    const markRealtimeOverlay = (pegKey: string, updatedAt: number) => {
+      const normalized = normalizeFiatCarryForwardMetadata(
+        pegKey,
+        sourceUpdatedAtByPeg[pegKey] ?? null,
+        sourceModeByPeg[pegKey],
+        sourceCadenceByPeg[pegKey],
+        sourceDateByPeg[pegKey] ?? null,
+      );
+      const preserveDailyCadence = normalized.sourceDate != null
+        && getNaturalFxCadence(pegKey) != null
+        && getFxSourceStatus(
+          sourceUpdatedAtByPeg[pegKey] ?? null,
+          sourceModeByPeg[pegKey],
+          syncStartSec,
+          {
+            pegKey,
+            cadence: normalized.cadence,
+            sourceDate: normalized.sourceDate,
+          },
+        ) === "fresh";
+      if (preserveDailyCadence) {
+        markLive(pegKey, updatedAt, normalized.cadence, normalized.sourceDate);
+        return;
       }
-      sourceUpdatedAtByPeg[pegKey] = prevState?.sourceUpdatedAtByPeg[pegKey] ?? null;
-      sourceCadenceByPeg[pegKey] = prevState?.sourceCadenceByPeg[pegKey] ?? "intraday";
-      sourceDateByPeg[pegKey] = prevState?.sourceDateByPeg[pegKey] ?? null;
+      markLive(pegKey, updatedAt);
+    };
+    const inheritPrevious = (pegKey: string) => {
+      const previousMode = prevState?.sourceModeByPeg[pegKey] ?? "cached";
+      const previousUpdatedAt = prevState?.sourceUpdatedAtByPeg[pegKey] ?? null;
+      const normalized = normalizeFiatCarryForwardMetadata(
+        pegKey,
+        previousUpdatedAt,
+        previousMode,
+        prevState?.sourceCadenceByPeg[pegKey],
+        prevState?.sourceDateByPeg[pegKey] ?? null,
+      );
+      sourceModeByPeg[pegKey] = previousMode;
+      sourceUpdatedAtByPeg[pegKey] = previousUpdatedAt;
+      sourceCadenceByPeg[pegKey] = normalized.cadence;
+      sourceDateByPeg[pegKey] = normalized.sourceDate;
     };
     const setHardcoded = (pegKey: string) => {
       sourceModeByPeg[pegKey] = "hardcoded";
@@ -328,8 +394,13 @@ export async function syncFxRates(
           syncStartSec,
           {
             pegKey,
-            cadence: prevState.sourceCadenceByPeg[pegKey],
-            sourceDate: prevState.sourceDateByPeg[pegKey] ?? null,
+            ...normalizeFiatCarryForwardMetadata(
+              pegKey,
+              prevState.sourceUpdatedAtByPeg[pegKey] ?? null,
+              prevState.sourceModeByPeg[pegKey],
+              prevState.sourceCadenceByPeg[pegKey],
+              prevState.sourceDateByPeg[pegKey] ?? null,
+            ),
           },
         ) === "fresh";
       });
@@ -618,7 +689,7 @@ export async function syncFxRates(
               if (delta <= 0.05) {
                 if (isValidRate(pegKey, realtimeRate, prevRates[pegKey])) {
                   usableRates[pegKey] = realtimeRate;
-                  markLive(pegKey, syncStartSec);
+                  markRealtimeOverlay(pegKey, syncStartSec);
                   realtimeApplied++;
                 }
               } else {
@@ -626,7 +697,7 @@ export async function syncFxRates(
               }
             } else if (isValidRate(pegKey, realtimeRate, prevRates[pegKey])) {
               usableRates[pegKey] = realtimeRate;
-              markLive(pegKey, syncStartSec);
+              markRealtimeOverlay(pegKey, syncStartSec);
               realtimeApplied++;
             }
           }
@@ -755,7 +826,7 @@ export async function syncFxRates(
           const normalized = Number(quote.price.toFixed(6));
           if (isValidRate(pegKey, normalized, prevRates[pegKey])) {
             usableRates[pegKey] = normalized;
-            markLive(pegKey, quote.updatedAt);
+            markRealtimeOverlay(pegKey, quote.updatedAt);
             applied++;
           } else if (prevRates[pegKey]) {
             usableRates[pegKey] = prevRates[pegKey];

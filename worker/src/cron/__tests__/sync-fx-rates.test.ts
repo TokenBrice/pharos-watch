@@ -635,6 +635,111 @@ describe("syncFxRates", () => {
     const write = findCacheWrite(db, "fx-rates");
     const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
     expect(cachedRates.peggedEUR).toBeCloseTo(1.08101, 4);
+
+    const metaWrite = findCacheWrite(db, "fx-rates-meta");
+    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+      sourceCadenceByPeg: Record<string, string>;
+      sourceDateByPeg: Record<string, string | null>;
+    };
+    expect(cachedMeta.sourceCadenceByPeg.peggedEUR).toBe("business-daily");
+    expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-15");
+  });
+
+  it("reconstructs daily fiat provenance from same-day live timestamps during carry-forward", async () => {
+    mockFetch([
+      { match: "frankfurter.app", body: { error: "Service unavailable" }, status: 503 },
+      { match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api", body: { error: "Service unavailable" }, status: 503 },
+      { match: "latest.currency-api.pages.dev", body: { error: "Service unavailable" }, status: 503 },
+      { match: "open.er-api.com/v6/latest/USD", body: { error: "Service unavailable" }, status: 503 },
+      { match: "gold-api.com/price/XAU", body: { price: 2900 }, status: 200 },
+      { match: "gold-api.com/price/XAG", body: { price: 32 }, status: 200 },
+    ]);
+
+    const fullPrevRates: Record<string, number> = {
+      peggedEUR: 1 / 0.925,
+      peggedGBP: 1 / 0.79,
+      peggedCHF: 1 / 0.88,
+      peggedREAL: 1 / 5.0,
+      peggedJPY: 1 / 149.5,
+      peggedIDR: 1 / 15800,
+      peggedSGD: 1 / 1.35,
+      peggedTRY: 1 / 36,
+      peggedAUD: 1 / 1.55,
+      peggedZAR: 1 / 18.3,
+      peggedCAD: 1 / 1.37,
+      peggedCNY: 1 / 7.25,
+      peggedPHP: 1 / 56,
+      peggedMXN: 1 / 17.2,
+      peggedCNH: 1 / 7.28,
+      peggedRUB: 1 / 90,
+      peggedUAH: 1 / 41,
+      peggedARS: 1 / 1400,
+    };
+    const sameDayUpdatedAt = Math.floor(Date.parse("2025-06-15T05:02:23Z") / 1000);
+    const sourceUpdatedAtByPeg = Object.fromEntries(
+      Object.keys(fullPrevRates).map((pegKey) => [pegKey, sameDayUpdatedAt]),
+    );
+    const sourceModeByPeg = Object.fromEntries(
+      Object.keys(fullPrevRates).map((pegKey) => [pegKey, "live"]),
+    );
+    const sourceCadenceByPeg = Object.fromEntries(
+      Object.keys(fullPrevRates).map((pegKey) => [pegKey, "intraday"]),
+    );
+    const sourceDateByPeg = Object.fromEntries(
+      Object.keys(fullPrevRates).map((pegKey) => [pegKey, null]),
+    );
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: {
+          value: JSON.stringify(fullPrevRates),
+          updated_at: Math.floor(Date.now() / 1000) - 60,
+        },
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            usableSyncAt: Math.floor(Date.now() / 1000) - 60,
+            mode: "cached-fallback",
+            sourceUpdatedAtByPeg,
+            sourceModeByPeg,
+            sourceCadenceByPeg,
+            sourceDateByPeg,
+            consecutiveFallbackRuns: 12,
+          }),
+          updated_at: Math.floor(Date.now() / 1000) - 60,
+        },
+      },
+      { match: "circuit", rows: [] },
+    ]);
+
+    const result = await syncFxRates(db);
+    expect(result.status).toBeUndefined();
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.mode).toBe("live");
+    expect(metadata.fallbackMode).toBe("cadence-valid-carry-forward");
+    expect(metadata.consecutiveFallbackRuns).toBe(0);
+    expect(metadata.sources.cache).toBe("carry-forward");
+
+    const metaWrite = findCacheWrite(db, "fx-rates-meta");
+    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+      mode: string;
+      sourceCadenceByPeg: Record<string, string>;
+      sourceDateByPeg: Record<string, string | null>;
+      consecutiveFallbackRuns: number;
+    };
+    expect(cachedMeta.mode).toBe("live");
+    expect(cachedMeta.sourceCadenceByPeg.peggedEUR).toBe("business-daily");
+    expect(cachedMeta.sourceCadenceByPeg.peggedCNH).toBe("calendar-daily");
+    expect(cachedMeta.sourceDateByPeg.peggedEUR).toBe("2025-06-15");
+    expect(cachedMeta.sourceDateByPeg.peggedCNH).toBe("2025-06-15");
+    expect(cachedMeta.consecutiveFallbackRuns).toBe(0);
   });
 
   it("promotes cached fallback back to live when OXR restores fresh full-set FX coverage", async () => {
@@ -658,7 +763,7 @@ describe("syncFxRates", () => {
       peggedUAH: 1 / 41,
       peggedARS: 1 / 1400,
     };
-    const staleUpdatedAt = Math.floor(Date.now() / 1000) - (8 * 3600);
+    const staleUpdatedAt = Math.floor(Date.parse("2025-06-12T12:00:00Z") / 1000);
     const sourceUpdatedAtByPeg = Object.fromEntries(
       Object.keys(fullPrevRates).map((pegKey) => [pegKey, staleUpdatedAt]),
     );
@@ -775,7 +880,7 @@ describe("syncFxRates", () => {
       peggedUAH: 1 / 41,
       peggedARS: 1 / 1400,
     };
-    const staleUpdatedAt = Math.floor(Date.now() / 1000) - (8 * 3600);
+    const staleUpdatedAt = Math.floor(Date.parse("2025-06-12T12:00:00Z") / 1000);
     const sourceUpdatedAtByPeg = Object.fromEntries(
       Object.keys(fullPrevRates).map((pegKey) => [pegKey, staleUpdatedAt]),
     );
