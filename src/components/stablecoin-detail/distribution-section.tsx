@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { PieChart, Pie, Cell, Tooltip, Label } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, Label, Sector } from "recharts";
+import type { PieSectorDataItem } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
@@ -77,28 +78,61 @@ function buildDonutData(
 
 /* ── Donut card ── */
 
-function CenterLabel({ cx, cy, text }: { cx: number; cy: number; text: string }) {
+function CenterLabel({ cx, cy, total, subtitle }: { cx: number; cy: number; total: number; subtitle: string }) {
   return (
-    <text
-      x={cx}
-      y={cy}
-      textAnchor="middle"
-      dominantBaseline="central"
-      className="fill-foreground"
-      style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}
-    >
-      {text}
-    </text>
+    <g>
+      <text
+        x={cx}
+        y={cy - 9}
+        textAnchor="middle"
+        dominantBaseline="central"
+        className="fill-muted-foreground"
+        style={{ fontFamily: "var(--font-sans)", fontSize: 10, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}
+      >
+        {subtitle}
+      </text>
+      <text
+        x={cx}
+        y={cy + 10}
+        textAnchor="middle"
+        dominantBaseline="central"
+        className="fill-foreground"
+        style={{ fontFamily: "var(--font-mono)", fontSize: 16, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}
+      >
+        {formatCurrency(total)}
+      </text>
+    </g>
   );
 }
 
+function renderActiveShape(props: PieSectorDataItem) {
+  return (
+    <Sector
+      cx={props.cx}
+      cy={props.cy}
+      innerRadius={props.innerRadius}
+      outerRadius={(props.outerRadius ?? 0) + 4}
+      startAngle={props.startAngle}
+      endAngle={props.endAngle}
+      fill={props.fill}
+      cornerRadius={props.cornerRadius}
+      opacity={1}
+    />
+  );
+}
+
+const DONUT_INNER = 55;
+const DONUT_OUTER = 95;
+
 function DonutCard({
   title,
+  subtitle,
   ariaLabel,
   data,
   total,
 }: {
   title: string;
+  subtitle: string;
   ariaLabel: string;
   data: DonutDatum[];
   total: number;
@@ -113,22 +147,23 @@ function DonutCard({
       <CardContent className="space-y-3">
         <div
           ref={ref}
-          className="pharos-chart-stage h-[200px] sm:h-[250px]"
+          className="h-[200px] sm:h-[250px]"
           role="figure"
           aria-label={ariaLabel}
         >
           {ready ? (
-            <PieChart width={width} height={height}>
+            <PieChart width={width} height={height} className="cursor-pointer">
               <Pie
                 data={data}
                 cx="50%"
                 cy="50%"
-                innerRadius={50}
-                outerRadius={85}
+                innerRadius={DONUT_INNER}
+                outerRadius={DONUT_OUTER}
                 dataKey="value"
                 nameKey="name"
                 paddingAngle={3}
                 strokeWidth={0}
+                activeShape={renderActiveShape}
               >
                 {data.map((d, i) => (
                   <Cell key={i} fill={d.hex} />
@@ -137,7 +172,7 @@ function DonutCard({
                   content={(props) => {
                     const vb = props.viewBox;
                     if (!vb || !("cx" in vb)) return null;
-                    return <CenterLabel cx={vb.cx} cy={vb.cy} text={formatCurrency(total)} />;
+                    return <CenterLabel cx={vb.cx} cy={vb.cy} total={total} subtitle={subtitle} />;
                   }}
                   position="center"
                 />
@@ -175,7 +210,7 @@ function DonutCard({
               )}
               <span>{d.name}</span>
               <span className="font-mono tabular-nums">
-                {total > 0 ? `${((d.value / total) * 100).toFixed(0)}%` : "—"}
+                {total > 0 ? `${formatCurrency(d.value)} · ${((d.value / total) * 100).toFixed(0)}%` : "—"}
               </span>
             </span>
           ))}
@@ -227,7 +262,8 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
   return (
     <DonutCard
       title="Chain Distribution"
-      ariaLabel={`Supply distribution across ${data.length} chains`}
+      subtitle="Supply"
+      ariaLabel={`Circulating supply distribution across ${data.length} chains`}
       data={data}
       total={total}
     />
@@ -282,7 +318,8 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
   return (
     <DonutCard
       title="DEX Liquidity Distribution"
-      ariaLabel={`DEX liquidity distribution across ${data.length} protocols`}
+      subtitle="TVL"
+      ariaLabel={`DEX liquidity TVL distribution across ${data.length} protocols`}
       data={data}
       total={total}
     />
@@ -290,8 +327,18 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 }
 
 export function DistributionSection({ stablecoinId }: { stablecoinId: string }) {
+  const { data: listData } = useStablecoins();
+  const { data: liquidityMap } = useDexLiquidity();
+
+  const coin = listData?.peggedAssets.find((a) => a.id === stablecoinId);
+  const hasChainData = coin?.chainCirculating && Object.keys(coin.chainCirculating).length > 0;
+  const hasDexData = liquidityMap?.[stablecoinId]?.protocolTvl && Object.keys(liquidityMap[stablecoinId].protocolTvl).length > 0;
+
+  // When only one chart has data, let it span full width
+  const singleCard = (hasChainData && !hasDexData) || (!hasChainData && hasDexData);
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+    <div className={singleCard ? "grid grid-cols-1" : "grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4"}>
       <ChainDistributionCard stablecoinId={stablecoinId} />
       <DexDistributionCard stablecoinId={stablecoinId} />
     </div>
