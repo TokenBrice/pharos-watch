@@ -538,12 +538,6 @@
     background-color: var(--border-strong);
   }
   
-  /* Hide horizontal scrollbar on large screens where table fits */
-  @media (min-width: 1024px) {
-    .scroll-shadow {
-      overflow-x: hidden !important;
-    }
-  }
   .dark .scroll-shadow {
     background:
       linear-gradient(to right, var(--background) 30%, transparent) left center,

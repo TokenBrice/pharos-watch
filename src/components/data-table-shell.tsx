@@ -60,7 +60,7 @@ export function DataTableShell<K extends string>({
 }: DataTableShellProps<K>) {
   return (
     <div className={cn(
-      "rounded-xl border overflow-x-auto scroll-shadow lg:overflow-x-hidden",
+      "rounded-xl border overflow-x-auto scroll-shadow",
       containerClassName
     )}>
       {topSlot}

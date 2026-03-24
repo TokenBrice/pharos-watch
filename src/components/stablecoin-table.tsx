@@ -309,7 +309,7 @@ export function StablecoinTable({
       />
 
       {/* Scroll container — handles both horizontal and vertical overflow */}
-      <div ref={scrollRef} className="scroll-shadow max-h-[50vh] overflow-y-auto overflow-x-auto xl:overflow-x-hidden px-0 pb-3 pr-2 sm:max-h-[70vh] sm:pr-0">
+      <div ref={scrollRef} className="scroll-shadow max-h-[50vh] overflow-y-auto overflow-x-auto px-0 pb-3 pr-2 sm:max-h-[70vh] sm:pr-0">
         <table className={`min-w-[420px] sm:min-w-[820px] w-full caption-bottom text-sm pharos-table-striped pharos-density-${density}`}>
           <TableCaption className="sr-only">Stablecoin data table</TableCaption>
           <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">

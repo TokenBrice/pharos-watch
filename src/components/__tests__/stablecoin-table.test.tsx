@@ -58,4 +58,22 @@ describe("StablecoinTable", () => {
     expect(screen.getByText("Market Cap")).toBeTruthy();
     expect(screen.queryByText("Price")).toBeNull();
   });
+
+  it("keeps horizontal scrolling enabled on the table viewport", () => {
+    render(
+      <StablecoinTable
+        data={[coin]}
+        isLoading={false}
+        activeFilters={[]}
+        pegRates={{}}
+      />,
+    );
+
+    const table = screen.getAllByRole("table")[0];
+    const scrollContainer = table?.parentElement;
+
+    expect(scrollContainer?.className).toContain("overflow-x-auto");
+    expect(scrollContainer?.className).not.toContain("overflow-x-hidden");
+    expect(scrollContainer?.className).not.toContain("xl:overflow-x-hidden");
+  });
 });
