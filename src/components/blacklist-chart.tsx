@@ -9,7 +9,7 @@ import { formatCurrency } from "@shared/lib/format";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { isGoldStablecoin, extractGoldPrices } from "@/lib/blacklist-helpers";
 import { BLACKLIST_CHART_COLORS } from "@shared/lib/classification";
-import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
+import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import type { BlacklistEvent, BlacklistStablecoin } from "@shared/types";
 
 const STABLECOINS_ORDER = ["USDT", "USDC", "EURC", "PAXG", "XAUT"] as const satisfies readonly BlacklistStablecoin[];
@@ -229,41 +229,22 @@ function BlacklistTooltip({
   payload?: Array<{ dataKey: string; value: number; color: string }>;
   label?: string;
 }) {
-  if (!active || !payload) return null;
-
-  const nonZero = payload.filter((p) => p.value > 0);
-  if (nonZero.length === 0) return null;
+  const nonZero = payload?.filter((p) => p.value > 0);
+  if (!nonZero?.length) return null;
 
   const total = nonZero.reduce((s, p) => s + p.value, 0);
 
   return (
-    <div
-      className="rounded-lg border px-3 py-2 shadow-md text-sm"
-      style={{
-        backgroundColor: RECHARTS_TOOLTIP_STYLES.contentStyle.backgroundColor,
-        borderColor: "var(--color-border)",
-        borderRadius: RECHARTS_TOOLTIP_STYLES.contentStyle.borderRadius,
-        fontFamily: RECHARTS_TOOLTIP_STYLES.contentStyle.fontFamily,
-      }}
-    >
-      <p className="font-semibold mb-1" style={{ fontFamily: RECHARTS_TOOLTIP_STYLES.labelStyle.fontFamily }}>
-        {label}
-      </p>
+    <PharosChartTooltip active={active}>
+      <TooltipLabel>{label}</TooltipLabel>
       {nonZero.map((p) => (
-        <div key={p.dataKey} className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-1.5">
-            <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: p.color }} />
-            <span>{p.dataKey}</span>
-          </div>
-          <span className="font-mono tabular-nums">{formatCurrency(p.value)}</span>
-        </div>
+        <TooltipRow key={p.dataKey} color={p.color} label={p.dataKey} value={formatCurrency(p.value)} />
       ))}
       {nonZero.length > 1 && (
-        <div className="flex items-center justify-between gap-4 border-t mt-1 pt-1 font-semibold">
-          <span>Total</span>
-          <span className="font-mono tabular-nums">{formatCurrency(total)}</span>
+        <div className="border-t border-border/50 mt-1.5 pt-1.5">
+          <TooltipRow label="Total" value={formatCurrency(total)} bold />
         </div>
       )}
-    </div>
+    </PharosChartTooltip>
   );
 }
