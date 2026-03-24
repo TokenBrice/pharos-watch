@@ -1988,10 +1988,12 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 **Commands handled:**
 
 - `/start` — Welcome message
-- `/subscribe <types> <tickers>` — Subscribe to alerts (types: dews, depeg, safety)
+- `/subscribe <types> <tickers>` — Subscribe to alerts (types: dews, depeg, safety, launch)
+- `/subscribe <types> all` — Enable one or more alert types across all tracked stablecoins
 - `/unsubscribe <tickers>` — Remove coin subscriptions
-- `/unsubscribe all` — Remove all subscriptions
+- `/unsubscribe all` — Remove all per-coin subscriptions and disable the current DEWS/depeg/safety flags; launch flags are not reset by this path today
 - `/set <ticker> <setting> <value>` — Tune per-coin thresholds and modes
+- `/set all <setting> <value>` — Toggle global all-stablecoin alert types
 - `/mute <start>-<end>` — Enable UTC quiet hours
 - `/unmutehours` — Disable quiet hours
 - `/cancel` — Cancel a pending disambiguation flow
