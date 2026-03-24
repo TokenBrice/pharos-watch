@@ -32,8 +32,10 @@ No new API endpoints or data pipeline changes required.
 The component fetches data internally via `useStablecoins()` and `useDexLiquidity()` (same pattern as `DexLiquidityCard`).
 
 ### Layout
-- `<section id="distribution">` wrapping a `grid grid-cols-1 md:grid-cols-2 gap-4`
-- Each cell is a `<Card>` with a section kicker title and the donut chart + legend
+- `<section id="distribution">` wrapping a `grid grid-cols-1 md:grid-cols-2 gap-4` (follows "Common Grids" rhythm from design language)
+- Each cell is a `<Card>` (`rounded-xl`) with:
+  - `CardHeader` (tight, `pb-2`) containing `CardTitle as="h2"` using `DETAIL_SECTION_TITLE_CLASS` (`text-lg font-semibold tracking-tight`) — matching every other detail section card
+  - `CardContent` with the donut chart inside a `pharos-chart-stage` container + legend below
 
 ### Chart Specifications
 
@@ -59,19 +61,19 @@ Both charts use Recharts `PieChart` + `Pie` (donut style, matching `cemetery-cha
 Note: `CHAIN_COLORS` and `PROTOCOL_COLORS` use Tailwind classes (`bg-blue-600`). These must be mapped to hex values for SVG `fill` attributes since Recharts renders SVG directly. A small lookup map will convert the class names to hex.
 
 ### Legend
-- Positioned below each chart
-- Inline-wrapped layout: `flex flex-wrap gap-x-4 gap-y-1.5`
-- Each entry: color dot (or logo if available) + name + percentage in monospace
+- Positioned below each chart, outside the `pharos-chart-stage`
+- Inline-wrapped layout: `flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground`
+- Each entry: color dot (or logo if available) + name + percentage in `font-mono tabular-nums` (numeric language rule)
 - Chain logos from `CHAIN_META[key].logoPath`, protocol logos from `PROTOCOL_LOGOS`
 
 ### Tooltip
-- Uses `PharosChartTooltip` + `TooltipRow` pattern (existing components)
-- Shows: colored dot, name, USD value (formatted), percentage
+- Uses `PharosChartTooltip` + `TooltipRow` pattern (existing components) — uppercase label, mono values
+- Shows: colored dot, name, USD value (via `formatCurrency`), percentage
 
 ### Empty / Edge States
-- **Single chain:** Show the section with only the chain chart; DEX chart shows "No DEX liquidity data available" muted message
+- **Single chain:** Show the section with only the chain chart; DEX chart card shows a muted data-availability banner: `rounded-md border px-4 py-2.5 text-sm border-border/60 bg-muted/40 text-muted-foreground` with "No DEX liquidity data available" (matches Data Availability Banner pattern from design language)
 - **No chain data:** Hide the entire section (shouldn't happen for tracked coins)
-- **Loading:** Skeleton matching existing detail section pattern
+- **Loading:** Skeleton matching existing detail section pattern (`animate-pulse rounded-xl`)
 
 ## Integration
 
