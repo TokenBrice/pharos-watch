@@ -35,6 +35,7 @@ Historical-reference note:
 - Line 1133: Source: Solstice docs, StablecoinInsider Sep-Dec 2025. Confidence: Medium
 - Line 1139: ── Rank 31-40 ───────────────────────────────────────────────────────
 - Line 1165: Source: Avalon docs, Decrypt, Wu Blockchain late 2024-2025. Confidence: Low
+- Line 1179: USDD liveReservesConfig now uses app-api.usdd.io `latest-collateral` + `collateral-history` for the Tron collateral mix shown on `usdd.io/data`.
 ## usd-minor.ts
 - Line 7: Binance Peg BUSD (id 153) removed — BUSD discontinued (see cemetery)
 - Line 46: Source: LlamaRisk Jul 2025, Chaos Labs, Frax docs. Confidence: Medium
@@ -84,10 +85,12 @@ Historical-reference note:
 - Line 469: PAR (id 56) removed — abandoned by Mimo Protocol, pivoted to KUMA (see cemetery)
 - Line 470: IBEUR removed — liquidity drain Dec 2023 (see cemetery)
 - Line 471: EUROe (id 98) removed — acquired by Paxos, wound down May 2025 (see cemetery)
+- Line 502: FPI reserve view now uses curated 100% FRAX backing from Frax CPI-peg docs (maintained 100% collateral ratio against FRAX).
 - Line 633: ── Additional CHF-pegged ────────────────────────────────────────────
 - Line 654: ── GBP-pegged ───────────────────────────────────────────────────────
 - Line 691: ── Additional non-USD/non-EUR pegs ──────────────────────────────────
 - Line 729: ── CAD / CNY / CNH / PHP / MXN / UAH / ARS pegs ─────────────────────
+- Line 730: ISC reserve view now uses the issuer's published five-bucket RWA basket framing (gold, bonds, T-bills, equity, cash) instead of the generic template fallback.
 - Line 799: Option A: ERC-20 total-supply probe on Base confirms on-chain liveness.
 - Line 800: Option C (future): custom etherfuse adapter against their reserves API
 - Line 801: once Etherfuse publishes a public JSON endpoint for reserve composition.

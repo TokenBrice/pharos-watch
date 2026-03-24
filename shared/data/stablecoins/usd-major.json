@@ -2021,6 +2021,28 @@
     "chainTier": "established-alt-l1",
     "deploymentModel": "native-multichain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "liveReservesConfig": {
+      "adapter": "usdd-data-platform",
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "usdd-tron-dao-reserve",
+      "display": {
+        "url": "https://usdd.io/data",
+        "label": "USDD Data"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://app-api.usdd.io/data-platform/latest-collateral?chain=tron"
+        },
+        "fallbacks": [
+          {
+            "kind": "http-json",
+            "url": "https://app-api.usdd.io/data-platform/latest-collateral?chain=ethereum"
+          }
+        ]
+      }
+    },
     "reserves": [
       {
         "name": "Smart Allocator (stablecoin DeFi via Aave/JustLend)",

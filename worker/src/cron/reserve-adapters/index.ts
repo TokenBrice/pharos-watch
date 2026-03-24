@@ -23,12 +23,14 @@ import { fetchInfiniFiReserves } from "./infinifi";
 import { fetchM0Reserves } from "./m0";
 import { fetchMentoReserves } from "./mento";
 import { fetchOpenEdenUsdoReserves } from "./openeden";
+import { fetchReMetricsReserves } from "./re-metrics";
 import { fetchReservoirReserves } from "./reservoir";
 import { fetchErc4626SingleAssetReserves } from "./erc4626-single-asset";
 import { fetchSgForgeCoinvertibleReserves } from "./sgforge-coinvertible";
 import { fetchSingleAssetReserves } from "./single-asset";
 import { fetchSkyMakercoreReserves } from "./sky-makercore";
 import { fetchTetherReserves } from "./tether";
+import { fetchUsddDataPlatformReserves } from "./usdd-data-platform";
 import type { AdapterFn, ReserveAdapterDefinition } from "./types";
 
 export type { AdapterContext, AdapterResult, AdapterFn, ReserveAdapterDefinition } from "./types";
@@ -56,11 +58,13 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   m0: fetchM0Reserves,
   mento: fetchMentoReserves,
   "openeden-usdo": fetchOpenEdenUsdoReserves,
+  "re-metrics": fetchReMetricsReserves,
   reservoir: fetchReservoirReserves,
   "sgforge-coinvertible": fetchSgForgeCoinvertibleReserves,
   "single-asset": fetchSingleAssetReserves,
   "sky-makercore": fetchSkyMakercoreReserves,
   tether: fetchTetherReserves,
+  "usdd-data-platform": fetchUsddDataPlatformReserves,
 };
 
 const ADAPTERS = Object.fromEntries(

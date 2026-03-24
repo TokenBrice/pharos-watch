@@ -23,11 +23,13 @@ const LIVE_RESERVE_ADAPTER_KEYS = [
   "m0",
   "mento",
   "openeden-usdo",
+  "re-metrics",
   "reservoir",
   "sgforge-coinvertible",
   "single-asset",
   "sky-makercore",
   "tether",
+  "usdd-data-platform",
 ] as const;
 
 const _LIVE_RESERVE_SOURCE_MODEL_VALUES = [
@@ -312,11 +314,13 @@ const adapterParamsSchemas = {
   m0: noParamsSchema,
   mento: noParamsSchema,
   "openeden-usdo": noParamsSchema,
+  "re-metrics": noParamsSchema,
   reservoir: noParamsSchema,
   "sgforge-coinvertible": sgForgeCoinvertibleParamsSchema,
   "single-asset": singleAssetParamsSchema,
   "sky-makercore": noParamsSchema,
   tether: noParamsSchema,
+  "usdd-data-platform": noParamsSchema,
 } as const satisfies Record<LiveReserveAdapterKey, z.ZodTypeAny>;
 
 export type LiveReserveAdapterParamsByKey = {
@@ -431,6 +435,12 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sharedSourceMode: "none",
     validation: { maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC },
   },
+  "re-metrics": {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "static-validated",
+    sharedSourceMode: "none",
+    validation: { maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC },
+  },
   reservoir: {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
@@ -461,6 +471,12 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     evidenceClass: "weak-live-probe",
     sharedSourceMode: "none",
     validation: { maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC },
+  },
+  "usdd-data-platform": {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "static-validated",
+    sharedSourceMode: "none",
+    validation: { maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC },
   },
 } as const satisfies Record<LiveReserveAdapterKey, {
   sourceModel: LiveReserveSourceModel;

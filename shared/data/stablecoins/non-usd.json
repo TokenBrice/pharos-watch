@@ -330,11 +330,13 @@
         "decimals": 18
       }
     ],
-    "dependencies": [
+    "reserves": [
       {
-        "id": "frax-frax",
-        "weight": 1,
-        "type": "wrapper"
+        "name": "FRAX stablecoin reserves",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "frax-frax",
+        "depType": "wrapper"
       }
     ],
     "collateralQuality": "rwa",
@@ -2558,10 +2560,31 @@
         "decimals": 6
       }
     ],
-    "dependencies": [
+    "reserves": [
       {
-        "id": "usdc-circle",
-        "weight": 0.2
+        "name": "Physical gold holdings",
+        "pct": 20,
+        "risk": "low"
+      },
+      {
+        "name": "Investment-grade bonds",
+        "pct": 20,
+        "risk": "low"
+      },
+      {
+        "name": "Short-term Treasury bills",
+        "pct": 20,
+        "risk": "very-low"
+      },
+      {
+        "name": "Global equity exposure",
+        "pct": 20,
+        "risk": "medium"
+      },
+      {
+        "name": "Cash reserves",
+        "pct": 20,
+        "risk": "very-low"
       }
     ],
     "chainTier": "established-alt-l1",

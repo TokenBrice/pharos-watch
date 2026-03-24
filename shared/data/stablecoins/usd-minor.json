@@ -1428,6 +1428,22 @@
     ],
     "deploymentModel": "native-multichain",
     "collateralQuality": "exotic",
+    "liveReservesConfig": {
+      "adapter": "re-metrics",
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "reusd-re-protocol",
+      "display": {
+        "url": "https://app.re.xyz/metrics",
+        "label": "Re Metrics"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "http-html",
+          "url": "https://app.re.xyz/metrics"
+        }
+      }
+    },
     "reserves": [
       {
         "name": "Delta-neutral ETH basis trade positions (via sUSDe/USDe)",
