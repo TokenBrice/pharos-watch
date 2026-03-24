@@ -74,13 +74,13 @@ export function PriorityLaneLink({ section, index }: { section: DashboardSection
     <a
       href={`#${section.id}`}
       className={cn(
-        "pharos-focus-ring group flex items-start justify-between gap-4 border-t border-white/10 py-3.5 first:border-t-0",
+        "pharos-focus-ring group flex items-start justify-between gap-4 border-t border-border/60 py-3.5 first:border-t-0",
         "transition-colors hover:text-foreground",
       )}
     >
       <div className="min-w-0 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-base leading-none text-white/35">{String(index + 1).padStart(2, "0")}</span>
+          <span className="font-mono text-base leading-none text-muted-foreground/80 dark:text-white/35">{String(index + 1).padStart(2, "0")}</span>
           <p className="pharos-kicker">{section.label}</p>
         </div>
         <div className="text-base font-semibold tracking-tight text-foreground">{section.title}</div>

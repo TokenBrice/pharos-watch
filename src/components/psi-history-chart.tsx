@@ -132,6 +132,9 @@ export const PSI_EVENTS = [
   },
 ];
 
+const PSI_EVENT_LABEL_CLASS =
+  "[fill:var(--text-secondary)] [paint-order:stroke] [stroke:var(--surface-overlay)] [stroke-width:4px] font-medium";
+
 /* ─── ScoreChart (reusable, data passed in) ────────────────────── */
 
 export function ScoreChart({
@@ -273,7 +276,7 @@ export function ScoreChart({
                                 value: evt.label,
                                 position: evt.position === "top" ? "insideTop" : "insideBottomLeft",
                                 fontSize: 11,
-                                fill: CHART_SLATE,
+                                className: PSI_EVENT_LABEL_CLASS,
                                 ...(evt.position === "top" ? { dy: -20 } : {}),
                               }
                         }
@@ -291,7 +294,7 @@ export function ScoreChart({
                                 value: evt.label,
                                 position: evt.position,
                                 fontSize: 11,
-                                fill: CHART_SLATE,
+                                className: PSI_EVENT_LABEL_CLASS,
                               }
                         }
                       />
