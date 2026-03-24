@@ -84,6 +84,56 @@ describe("syncBluechip", () => {
     expect(cached["usdc-circle"].slug).toBe("usdc");
   });
 
+  it("accepts null category blocks from the Bluechip payload", async () => {
+    mockFetch([
+      {
+        match: "/coin-data/tether",
+        body: {
+          data: [
+            {
+              grade: "A",
+              collateralization: 95,
+              smart_contract_audit: true,
+              date_of_rating: "2026-03-01",
+              date_last_change: "2026-02-15",
+              implementation: null,
+              externals: null,
+            },
+          ],
+        },
+      },
+      {
+        match: "/coin-data/usdc",
+        body: {
+          data: [
+            {
+              grade: "B+",
+              collateralization: 100,
+              smart_contract_audit: true,
+              date_of_rating: "2026-03-24",
+              date_last_change: null,
+              implementation: null,
+              externals: null,
+              management: { translations: [{ summary: "<p>managed</p>" }] },
+            },
+          ],
+        },
+      },
+    ]);
+
+    const db = mockD1();
+    const result = await syncBluechip(db);
+
+    expect(result.status).toBeUndefined();
+    expect(result.itemCount).toBe(2);
+
+    const insert = getCacheInsert(db as MockD1Database);
+    const cached = JSON.parse(String(insert?.binds[1])) as Record<string, { grade: string; smidge: Record<string, string | null> }>;
+    expect(cached["usdc-circle"].grade).toBe("B+");
+    expect(cached["usdc-circle"].smidge.implementation).toBeNull();
+    expect(cached["usdc-circle"].smidge.externals).toBeNull();
+  });
+
   it("returns degraded when bluechip API requests fail", async () => {
     mockFetch([
       { match: "/coin-data/tether", body: { error: "down" }, status: 500 },

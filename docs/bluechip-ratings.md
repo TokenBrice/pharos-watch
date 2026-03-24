@@ -37,7 +37,7 @@ Current map covers:
 2. Iterates the 19 slug mappings in batches of 3, with a 500ms inter-batch delay.
 3. Fetches `backend.bluechip.org/coin-data/{slug}` with the shared Worker `USER_AGENT`.
 4. Discards 404s, empty payloads, and rows without a `grade`.
-5. Normalizes each successful row into `BluechipRating`.
+5. Normalizes each successful row into `BluechipRating`, accepting Bluechip category blocks that are omitted or explicitly `null`.
 6. Strips HTML from SMIDGE category summaries before persistence.
 7. Writes the merged map back with `setCacheIfNewer()`.
 
@@ -80,7 +80,7 @@ See [API Reference](./api-reference.md) for the exact response shape.
 ## Frontend Usage
 
 - `src/hooks/api-hooks.ts` exposes `useBluechipRatings()` with `CRON_24H`.
-- `src/components/bluechip-header-badge.tsx` renders the external Bluechip badge/link on stablecoin detail pages.
+- `src/components/bluechip-header-badge.tsx` renders the external `Bluechip: <grade>` badge/link in the stablecoin detail hero so the grade is clearly separate from Pharos-owned scores.
 - `src/app/compare/client.tsx` includes Bluechip data in compare-page fetch orchestration and freshness tracking.
 - `worker/src/lib/report-cards-snapshot.ts` copies the fetched grade into report-card `rawInputs.bluechipGrade` for client-side analysis surfaces.
 

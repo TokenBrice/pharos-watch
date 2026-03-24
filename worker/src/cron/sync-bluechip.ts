@@ -23,7 +23,7 @@ const SMIDGE_CATEGORIES = [
 
 const BluechipCategorySchema = z.object({
   translations: z.array(z.object({ summary: z.string().optional() })).optional(),
-});
+}).nullable().optional();
 
 const BluechipCoinSchema = z.object({
   grade: z.string(),

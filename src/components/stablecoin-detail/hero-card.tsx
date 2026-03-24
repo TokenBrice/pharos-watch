@@ -107,9 +107,9 @@ function HeroIdentityHeader({
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="min-w-0 text-2xl font-extrabold tracking-tighter">{coin.name}</h2>
             <span className="text-base font-mono text-muted-foreground">{coin.symbol}</span>
-            <BluechipHeaderBadge stablecoinId={coin.id} />
           </div>
           <HeroClassificationLine coin={coin} />
+          <BluechipHeaderBadge stablecoinId={coin.id} />
         </div>
       </div>
     );
@@ -121,9 +121,9 @@ function HeroIdentityHeader({
         <StablecoinLogo src={logoSrc} name={coin.name} size={48} />
         <h2 className="text-2xl font-extrabold tracking-tighter">{coin.name}</h2>
         <span className="text-lg text-muted-foreground font-mono">{coin.symbol}</span>
-        <BluechipHeaderBadge stablecoinId={coin.id} />
       </div>
       <HeroClassificationLine coin={coin} />
+      <BluechipHeaderBadge stablecoinId={coin.id} />
     </>
   );
 }

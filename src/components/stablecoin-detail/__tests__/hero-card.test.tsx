@@ -10,7 +10,7 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("@/components/bluechip-header-badge", () => ({
-  BluechipHeaderBadge: ({ stablecoinId }: { stablecoinId: string }) => <span>bluechip:{stablecoinId}</span>,
+  BluechipHeaderBadge: ({ stablecoinId }: { stablecoinId: string }) => <span>Bluechip: B ({stablecoinId})</span>,
 }));
 
 vi.mock("@/components/peg-gauge", () => ({
@@ -134,6 +134,7 @@ describe("HeroCard", () => {
     expect(html).toContain("USD Coin");
     expect(html).toContain("major");
     expect(html).toContain("fiat-backed");
+    expect(html).toContain("Bluechip: B");
     expect(html).toContain("peg-gauge:2");
     expect(html).toContain("Report data issue");
     expect(html).toContain("Active depeg");
