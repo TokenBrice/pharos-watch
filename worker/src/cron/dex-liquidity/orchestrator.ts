@@ -43,7 +43,7 @@ import { CIRCUIT_SOURCE, POOL_CHALLENGE_MIN_TVL } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../../lib/circuit-breaker";
 import {
   buildPoolIdentity,
-  countDerivedMatchKeys,
+  countPoolIdentityKeys,
   createKnownPoolIdentityIndex,
   getIdentityDedupReason,
   registerKnownPoolIdentity,
@@ -119,6 +119,7 @@ export function filterPrimaryPoolsPreferDirectApi(
   filteredPools: LlamaPool[];
   skippedByExactIdentity: number;
   skippedByUniqueDerivedIdentity: number;
+  skippedByOptionalWildcardIdentity: number;
 } {
   const eligibleDirectApiPools = directApiPools.filter((pool) => isPreferredDirectApiPool(pool));
   const directApiKnown = createKnownPoolIdentityIndex();
@@ -136,19 +137,29 @@ export function filterPrimaryPoolsPreferDirectApi(
       isStable: pool.stablecoin,
     }),
   );
-  const primaryDerivedCounts = countDerivedMatchKeys(primaryIdentities);
+  const primaryIdentityCounts = countPoolIdentityKeys(primaryIdentities);
 
   const filteredPools: LlamaPool[] = [];
   let skippedByExactIdentity = 0;
   let skippedByUniqueDerivedIdentity = 0;
+  let skippedByOptionalWildcardIdentity = 0;
 
   for (let index = 0; index < pools.length; index++) {
     const pool = pools[index]!;
     const identity = primaryIdentities[index]!;
-    const incomingDerivedCount = identity.derivedMatchKey
-      ? (primaryDerivedCounts.get(identity.derivedMatchKey) ?? 0)
-      : 0;
-    const dedupReason = getIdentityDedupReason(identity, directApiKnown, incomingDerivedCount);
+    const dedupReason = getIdentityDedupReason(
+      identity,
+      directApiKnown,
+      {
+        derived: identity.derivedMatchKey
+          ? (primaryIdentityCounts.derived.get(identity.derivedMatchKey) ?? 0)
+          : 0,
+        wildcard: identity.optionalWildcardKey
+          ? (primaryIdentityCounts.wildcard.get(identity.optionalWildcardKey) ?? 0)
+          : 0,
+      },
+      { allowOptionalWildcard: true },
+    );
 
     if (dedupReason === "exact") {
       skippedByExactIdentity++;
@@ -158,11 +169,20 @@ export function filterPrimaryPoolsPreferDirectApi(
       skippedByUniqueDerivedIdentity++;
       continue;
     }
+    if (dedupReason === "derived_optional_wildcard") {
+      skippedByOptionalWildcardIdentity++;
+      continue;
+    }
 
     filteredPools.push(pool);
   }
 
-  return { filteredPools, skippedByExactIdentity, skippedByUniqueDerivedIdentity };
+  return {
+    filteredPools,
+    skippedByExactIdentity,
+    skippedByUniqueDerivedIdentity,
+    skippedByOptionalWildcardIdentity,
+  };
 }
 
 export async function syncDexLiquidity(
@@ -388,11 +408,17 @@ export async function syncDexLiquidity(
     filteredPools: preferredPrimaryPools,
     skippedByExactIdentity: primarySkippedByDirectApiExactIdentity,
     skippedByUniqueDerivedIdentity: primarySkippedByDirectApiDerivedIdentity,
+    skippedByOptionalWildcardIdentity: primarySkippedByDirectApiWildcardIdentity,
   } = filterPrimaryPoolsPreferDirectApi(dataSources.pools, directApiPools);
-  if (primarySkippedByDirectApiExactIdentity > 0 || primarySkippedByDirectApiDerivedIdentity > 0) {
+  if (
+    primarySkippedByDirectApiExactIdentity > 0 ||
+    primarySkippedByDirectApiDerivedIdentity > 0 ||
+    primarySkippedByDirectApiWildcardIdentity > 0
+  ) {
     console.log(
       `[dex-liquidity] Preferred direct API over DL for ${primarySkippedByDirectApiExactIdentity} exact matches and ` +
-      `${primarySkippedByDirectApiDerivedIdentity} unique derived matches`,
+      `${primarySkippedByDirectApiDerivedIdentity} unique derived matches and ` +
+      `${primarySkippedByDirectApiWildcardIdentity} optional wildcard matches`,
     );
   }
 
@@ -415,22 +441,32 @@ export async function syncDexLiquidity(
 
   let directApiDedupSkippedByAddress = 0;
   let directApiDedupSkippedByDerivedIdentity = 0;
+  let directApiDedupSkippedByOptionalWildcardIdentity = 0;
   if (directApiPools.length > 0) {
     console.log(`[dex-liquidity] Fetched ${directApiPools.length} direct API pools total`);
     hydrateDirectApiPoolMetadata(directApiPools, contractMetaByChainAddress);
 
     const eligibleDirectApiPools = directApiPools.filter((pool) => isEligibleDirectApiPool(pool));
     const directApiIdentities = eligibleDirectApiPools.map(buildDirectApiPoolIdentity);
-    const directApiDerivedCounts = countDerivedMatchKeys(directApiIdentities);
+    const directApiIdentityCounts = countPoolIdentityKeys(directApiIdentities);
 
     const retainedDirectApiPools: DexApiPool[] = [];
     for (let index = 0; index < eligibleDirectApiPools.length; index++) {
       const pool = eligibleDirectApiPools[index]!;
       const identity = directApiIdentities[index]!;
-      const incomingDerivedCount = identity.derivedMatchKey
-        ? (directApiDerivedCounts.get(identity.derivedMatchKey) ?? 0)
-        : 0;
-      const dedupReason = getIdentityDedupReason(identity, knownPoolIndex, incomingDerivedCount);
+      const dedupReason = getIdentityDedupReason(
+        identity,
+        knownPoolIndex,
+        {
+          derived: identity.derivedMatchKey
+            ? (directApiIdentityCounts.derived.get(identity.derivedMatchKey) ?? 0)
+            : 0,
+          wildcard: identity.optionalWildcardKey
+            ? (directApiIdentityCounts.wildcard.get(identity.optionalWildcardKey) ?? 0)
+            : 0,
+        },
+        { allowOptionalWildcard: true },
+      );
       if (dedupReason === "exact") {
         directApiDedupSkippedByAddress++;
         continue;
@@ -439,9 +475,25 @@ export async function syncDexLiquidity(
         directApiDedupSkippedByDerivedIdentity++;
         continue;
       }
+      if (dedupReason === "derived_optional_wildcard") {
+        directApiDedupSkippedByOptionalWildcardIdentity++;
+        continue;
+      }
 
       registerKnownPoolIdentity(knownPoolIndex, identity);
       retainedDirectApiPools.push(pool);
+    }
+
+    if (
+      directApiDedupSkippedByAddress > 0 ||
+      directApiDedupSkippedByDerivedIdentity > 0 ||
+      directApiDedupSkippedByOptionalWildcardIdentity > 0
+    ) {
+      console.log(
+        `[dex-liquidity] Skipped ${directApiDedupSkippedByAddress} exact, ` +
+        `${directApiDedupSkippedByDerivedIdentity} unique derived, and ` +
+        `${directApiDedupSkippedByOptionalWildcardIdentity} optional wildcard direct API duplicates`,
+      );
     }
 
     if (retainedDirectApiPools.length > 0) {

@@ -207,9 +207,10 @@ Dedup rules are intentionally conservative:
 
 - exact ids always win when both sides expose the same real pool id
 - derived matches only deduplicate when the match is unique on both sides
+- direct-API vs DeFiLlama precedence also allows a narrowly scoped optional-metadata wildcard when the incoming identity-poor side is missing fee-tier and/or stable-flag metadata but still matches on chain, normalized protocol, token set, and pool-shape family
 - ambiguous same-pair pools stay separate, so legitimate parallel pools are not collapsed
 
-The scoring cron applies the same identity logic during staged-pool merge and DexScreener fallback intake. `/status` exposes the split directly via `stagedPoolsSkippedByExactIdentity` versus `stagedPoolsSkippedByUniqueDerivedIdentity`.
+That wildcard path is intentionally not used for staged-pool or fallback-source merges. The scoring cron keeps those paths on exact or full-derived identity only, so partial-coverage discovery sources do not collapse legitimate parallel pools through a broader relaxed key. `/status` exposes the split directly via `stagedPoolsSkippedByExactIdentity` versus `stagedPoolsSkippedByUniqueDerivedIdentity`.
 
 ### Coverage Confidence
 

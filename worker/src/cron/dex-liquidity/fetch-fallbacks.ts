@@ -18,7 +18,7 @@ import {
 } from "./coingecko-tickers-shared";
 import {
   buildPoolIdentity,
-  countDerivedMatchKeys,
+  countPoolIdentityKeys,
   getIdentityDedupReason,
   registerKnownPoolIdentity,
   type KnownPoolIdentityIndex,
@@ -224,12 +224,16 @@ export async function fetchDsFallbackPools(
     }
   }
 
-  const derivedCounts = countDerivedMatchKeys(candidates.map((candidate) => candidate.identity));
+  const identityCounts = countPoolIdentityKeys(candidates.map((candidate) => candidate.identity));
   for (const candidate of candidates) {
-    const incomingDerivedCount = candidate.identity.derivedMatchKey
-      ? (derivedCounts.get(candidate.identity.derivedMatchKey) ?? 0)
-      : 0;
-    const dedupReason = getIdentityDedupReason(candidate.identity, knownPoolIndex, incomingDerivedCount);
+    const dedupReason = getIdentityDedupReason(candidate.identity, knownPoolIndex, {
+      derived: candidate.identity.derivedMatchKey
+        ? (identityCounts.derived.get(candidate.identity.derivedMatchKey) ?? 0)
+        : 0,
+      wildcard: candidate.identity.optionalWildcardKey
+        ? (identityCounts.wildcard.get(candidate.identity.optionalWildcardKey) ?? 0)
+        : 0,
+    });
     if (dedupReason) continue;
 
     registerKnownPoolIdentity(knownPoolIndex, candidate.identity);

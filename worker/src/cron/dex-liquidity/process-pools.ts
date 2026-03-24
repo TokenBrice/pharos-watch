@@ -219,7 +219,7 @@ export function processPoolMetrics(
       // Pool entry with enriched extra
       m.topPools.push({
         poolId: `${pool.chain.toLowerCase()}:${pool.pool.toLowerCase()}`,
-        project: pool.project,
+        project: protocol,
         chain: pool.chain,
         tvlUsd: pool.tvlUsd,
         symbol: pool.symbol,

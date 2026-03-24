@@ -25,6 +25,8 @@ vi.mock("../dex-liquidity/fetch-primary", () => ({
     exactKeys: new Set<string>(),
     derivedKeyCounts: new Map<string, number>(),
     derivedToExactKeys: new Map<string, Set<string>>(),
+    wildcardKeyCounts: new Map<string, number>(),
+    wildcardToExactKeys: new Map<string, Set<string>>(),
   })),
 }));
 
@@ -559,5 +561,105 @@ describe("filterPrimaryPoolsPreferDirectApi", () => {
     expect(result.filteredPools).toHaveLength(1);
     expect(result.skippedByExactIdentity).toBe(0);
     expect(result.skippedByUniqueDerivedIdentity).toBe(0);
+    expect(result.skippedByOptionalWildcardIdentity).toBe(0);
+  });
+
+  it("deduplicates an Orca DL pool via optional wildcard identity when only fee metadata is missing", () => {
+    const pools: LlamaPool[] = [{
+      pool: "4f44c5d5-b1c2-4b1c-a111-123456789abc",
+      chain: "Solana",
+      project: "orca-dex",
+      symbol: "SOL-USDC",
+      tvlUsd: 29_000_000,
+      volumeUsd1d: 2_500_000,
+      volumeUsd7d: 17_000_000,
+      stablecoin: false,
+      underlyingTokens: ["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1"],
+      apyBase: null,
+      apyReward: null,
+      apy: 0,
+      sigma: 0,
+      exposure: "multi",
+      count: 20,
+    }];
+    const directApiPools: DexApiPool[] = [{
+      source: "orca",
+      chain: "solana",
+      poolAddress: "9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc",
+      poolType: "orca-whirlpool",
+      tokens: [
+        { address: "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1", symbol: "USDC", decimals: 6 },
+        { address: "So11111111111111111111111111111111111111112", symbol: "SOL", decimals: 9 },
+      ],
+      price: 150,
+      tvlUsd: 29_000_000,
+      volume24hUsd: 2_500_000,
+      feeRate: 0.0001,
+      balances: [100_000, 200_000],
+    }];
+
+    const result = filterPrimaryPoolsPreferDirectApi(pools, directApiPools);
+
+    expect(result.filteredPools).toHaveLength(0);
+    expect(result.skippedByExactIdentity).toBe(0);
+    expect(result.skippedByUniqueDerivedIdentity).toBe(0);
+    expect(result.skippedByOptionalWildcardIdentity).toBe(1);
+  });
+
+  it("does not use optional wildcard dedup when multiple direct API Orca pools share the same pair", () => {
+    const pools: LlamaPool[] = [{
+      pool: "4f44c5d5-b1c2-4b1c-a111-123456789abc",
+      chain: "Solana",
+      project: "orca-dex",
+      symbol: "SOL-USDC",
+      tvlUsd: 29_000_000,
+      volumeUsd1d: 2_500_000,
+      volumeUsd7d: 17_000_000,
+      stablecoin: false,
+      underlyingTokens: ["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1"],
+      apyBase: null,
+      apyReward: null,
+      apy: 0,
+      sigma: 0,
+      exposure: "multi",
+      count: 20,
+    }];
+    const directApiPools: DexApiPool[] = [
+      {
+        source: "orca",
+        chain: "solana",
+        poolAddress: "9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc",
+        poolType: "orca-whirlpool",
+        tokens: [
+          { address: "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1", symbol: "USDC", decimals: 6 },
+          { address: "So11111111111111111111111111111111111111112", symbol: "SOL", decimals: 9 },
+        ],
+        price: 150,
+        tvlUsd: 29_000_000,
+        volume24hUsd: 2_500_000,
+        feeRate: 0.0001,
+        balances: [100_000, 200_000],
+      },
+      {
+        source: "orca",
+        chain: "solana",
+        poolAddress: "8k6N7m5b4V3c2X1z9Y8w7u6T5r4e3W2q1P9o8i7u6Y5",
+        poolType: "orca-whirlpool",
+        tokens: [
+          { address: "So11111111111111111111111111111111111111112", symbol: "SOL", decimals: 9 },
+          { address: "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1", symbol: "USDC", decimals: 6 },
+        ],
+        price: 150,
+        tvlUsd: 500_000,
+        volume24hUsd: 50_000,
+        feeRate: 0.0005,
+        balances: [10_000, 20_000],
+      },
+    ];
+
+    const result = filterPrimaryPoolsPreferDirectApi(pools, directApiPools);
+
+    expect(result.filteredPools).toHaveLength(1);
+    expect(result.skippedByOptionalWildcardIdentity).toBe(0);
   });
 });

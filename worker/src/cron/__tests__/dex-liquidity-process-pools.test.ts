@@ -402,4 +402,41 @@ describe("processPoolMetrics", () => {
     // apyBase is finite and positive → else-if branch sets organicFraction=1.0
     expect(m!.totalTvlForOrganic).toBe(100_000);
   });
+
+  it("normalizes top-pool project labels for DeFiLlama Orca rows", () => {
+    const metrics = processPoolMetrics(
+      [
+        makePool({
+          chain: "Solana",
+          project: "orca-dex",
+          symbol: "USDC-USDT",
+          underlyingTokens: ["EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1", "Es9vMFrzaCERmJfrF4H2FY6q2JvE4YJzS83p2wM8wus"],
+          tvlUsd: 500_000,
+          volumeUsd1d: 100_000,
+          volumeUsd7d: 700_000,
+        }),
+      ],
+      new Set(["orca-dex"]),
+      new Map([
+        ["USDC", ["usdc-circle"]],
+        ["USDT", ["usdt-tether"]],
+      ]),
+      buildSymbolToChainScopedIds(new Map([
+        ["USDC", ["usdc-circle"]],
+        ["USDT", ["usdt-tether"]],
+      ]), ["solana"]),
+      new Map(),
+      new Map([
+        ["solana:epjfwdd5aufqssqem2qa5n8y7w5a4d8nqv1f6p5a6x1", "usdc-circle"],
+        ["solana:es9vmfrzacermjfrf4h2fy6q2jve4yjzs83p2wm8wus", "usdt-tether"],
+      ]),
+      new Map(),
+      new Map(),
+      new Map(),
+      new Map(),
+    );
+
+    expect(metrics.get("usdc-circle")?.topPools[0]?.project).toBe("orca");
+    expect(metrics.get("usdt-tether")?.topPools[0]?.project).toBe("orca");
+  });
 });

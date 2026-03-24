@@ -2,10 +2,13 @@ import { normalizeProtocol } from "./pool-helpers";
 
 export type PoolIdentityConfidence = "exact" | "derived_unique" | "derived_ambiguous" | "none";
 export type PoolIdentitySource = "address" | "native-id" | "token-shape-heuristic" | "none";
+export type PoolDedupReason = "exact" | "derived_unique" | "derived_optional_wildcard";
 
 export interface PoolIdentity {
   exactPoolKey: string | null;
   derivedMatchKey: string | null;
+  optionalWildcardKey: string | null;
+  hasMissingOptionalIdentityFields: boolean;
   identitySource: PoolIdentitySource;
 }
 
@@ -13,6 +16,8 @@ export interface KnownPoolIdentityIndex {
   exactKeys: Set<string>;
   derivedKeyCounts: Map<string, number>;
   derivedToExactKeys: Map<string, Set<string>>;
+  wildcardKeyCounts: Map<string, number>;
+  wildcardToExactKeys: Map<string, Set<string>>;
 }
 
 export function createKnownPoolIdentityIndex(): KnownPoolIdentityIndex {
@@ -20,6 +25,8 @@ export function createKnownPoolIdentityIndex(): KnownPoolIdentityIndex {
     exactKeys: new Set<string>(),
     derivedKeyCounts: new Map<string, number>(),
     derivedToExactKeys: new Map<string, Set<string>>(),
+    wildcardKeyCounts: new Map<string, number>(),
+    wildcardToExactKeys: new Map<string, Set<string>>(),
   };
 }
 
@@ -83,24 +90,38 @@ export function buildPoolIdentity(input: {
     .map((token) => normalizeTokenAddress(token))
     .filter(Boolean)
     .sort();
+  const poolShapeFamily = resolvePoolShapeFamily(input.poolType);
+  const feeTierBucket = resolveFeeTierBucket(input.feeTierBps);
+  const stabilityBucket = input.isStable == null ? "na" : input.isStable ? "stable" : "volatile";
+  const hasMissingOptionalIdentityFields = feeTierBucket === "na" || input.isStable == null;
 
   const derivedMatchKey = normalizedTokens.length >= 2
     ? [
         chain,
         normalizeProtocol(input.protocol),
         normalizedTokens.join(":"),
-        resolvePoolShapeFamily(input.poolType),
-        resolveFeeTierBucket(input.feeTierBps),
-        input.isStable == null ? "na" : input.isStable ? "stable" : "volatile",
+        poolShapeFamily,
+        feeTierBucket,
+        stabilityBucket,
+      ].join("|")
+    : null;
+  const optionalWildcardKey = normalizedTokens.length >= 2
+    ? [
+        chain,
+        normalizeProtocol(input.protocol),
+        normalizedTokens.join(":"),
+        poolShapeFamily,
       ].join("|")
     : null;
 
   return {
     exactPoolKey,
     derivedMatchKey,
+    optionalWildcardKey,
+    hasMissingOptionalIdentityFields,
     identitySource: exactPoolKey
       ? exactPoolId.startsWith("orderbook") ? "native-id" : "address"
-      : derivedMatchKey
+      : derivedMatchKey || optionalWildcardKey
         ? "token-shape-heuristic"
         : "none",
   };
@@ -133,34 +154,66 @@ export function registerKnownPoolIdentity(
     existing.add(identity.exactPoolKey);
     known.derivedToExactKeys.set(identity.derivedMatchKey, existing);
   }
+  if (!identity.optionalWildcardKey) return;
+  known.wildcardKeyCounts.set(
+    identity.optionalWildcardKey,
+    (known.wildcardKeyCounts.get(identity.optionalWildcardKey) ?? 0) + 1,
+  );
+  if (identity.exactPoolKey) {
+    const existing = known.wildcardToExactKeys.get(identity.optionalWildcardKey) ?? new Set<string>();
+    existing.add(identity.exactPoolKey);
+    known.wildcardToExactKeys.set(identity.optionalWildcardKey, existing);
+  }
 }
 
-export function countDerivedMatchKeys(identities: PoolIdentity[]): Map<string, number> {
-  const counts = new Map<string, number>();
+export function countPoolIdentityKeys(identities: PoolIdentity[]): {
+  derived: Map<string, number>;
+  wildcard: Map<string, number>;
+} {
+  const derived = new Map<string, number>();
+  const wildcard = new Map<string, number>();
   for (const identity of identities) {
-    if (!identity.derivedMatchKey) continue;
-    counts.set(identity.derivedMatchKey, (counts.get(identity.derivedMatchKey) ?? 0) + 1);
+    if (identity.derivedMatchKey) {
+      derived.set(identity.derivedMatchKey, (derived.get(identity.derivedMatchKey) ?? 0) + 1);
+    }
+    if (identity.optionalWildcardKey) {
+      wildcard.set(identity.optionalWildcardKey, (wildcard.get(identity.optionalWildcardKey) ?? 0) + 1);
+    }
   }
-  return counts;
+  return { derived, wildcard };
 }
 
 export function getIdentityDedupReason(
   identity: PoolIdentity,
   known: KnownPoolIdentityIndex,
-  incomingDerivedCount: number,
-): "exact" | "derived_unique" | null {
+  incomingCounts: { derived: number; wildcard: number },
+  options?: { allowOptionalWildcard?: boolean },
+): PoolDedupReason | null {
   if (identity.exactPoolKey && known.exactKeys.has(identity.exactPoolKey)) {
     return "exact";
   }
-  if (!identity.derivedMatchKey || incomingDerivedCount !== 1) return null;
+  if (identity.derivedMatchKey && incomingCounts.derived === 1) {
+    const knownCount = known.derivedKeyCounts.get(identity.derivedMatchKey) ?? 0;
+    if (knownCount === 1) {
+      const knownExactCount = known.derivedToExactKeys.get(identity.derivedMatchKey)?.size ?? 0;
+      if (!(identity.exactPoolKey && knownExactCount > 0)) {
+        return "derived_unique";
+      }
+    }
+  }
 
-  const knownCount = known.derivedKeyCounts.get(identity.derivedMatchKey) ?? 0;
-  if (knownCount !== 1) return null;
+  if (!options?.allowOptionalWildcard) return null;
+  if (!identity.optionalWildcardKey || !identity.hasMissingOptionalIdentityFields || incomingCounts.wildcard !== 1) {
+    return null;
+  }
 
-  const knownExactCount = known.derivedToExactKeys.get(identity.derivedMatchKey)?.size ?? 0;
+  const knownWildcardCount = known.wildcardKeyCounts.get(identity.optionalWildcardKey) ?? 0;
+  if (knownWildcardCount !== 1) return null;
+
+  const knownExactCount = known.wildcardToExactKeys.get(identity.optionalWildcardKey)?.size ?? 0;
   if (identity.exactPoolKey && knownExactCount > 0) {
     return null;
   }
 
-  return "derived_unique";
+  return "derived_optional_wildcard";
 }

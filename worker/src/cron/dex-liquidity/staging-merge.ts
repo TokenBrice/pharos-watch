@@ -10,7 +10,7 @@ import { isPlausibleDexObservationPrice } from "./price-sanity";
 import type { CgNewPool, GtNewPool, LiquidityMetrics, DexPriceObs } from "./types";
 import {
   buildPoolIdentity,
-  countDerivedMatchKeys,
+  countPoolIdentityKeys,
   getIdentityDedupReason,
   registerKnownPoolIdentity,
   type KnownPoolIdentityIndex,
@@ -198,7 +198,7 @@ export async function mergeStagedPools(
       };
     })
     .filter((entry): entry is NonNullable<typeof entry> => entry != null);
-  const stagedDerivedCounts = countDerivedMatchKeys(stagedEntries.map((entry) => entry.identity));
+  const stagedIdentityCounts = countPoolIdentityKeys(stagedEntries.map((entry) => entry.identity));
 
   for (const entry of stagedEntries) {
     const { stagedPool, dexId, poolType, qualityMultiplier, identity } = entry;
@@ -235,10 +235,14 @@ export async function mergeStagedPools(
       stagedPriceObs.set(stagedPool.stablecoinId, obs);
     }
 
-    const incomingDerivedCount = identity.derivedMatchKey
-      ? (stagedDerivedCounts.get(identity.derivedMatchKey) ?? 0)
-      : 0;
-    const dedupReason = getIdentityDedupReason(identity, knownPoolIndex, incomingDerivedCount);
+    const dedupReason = getIdentityDedupReason(identity, knownPoolIndex, {
+      derived: identity.derivedMatchKey
+        ? (stagedIdentityCounts.derived.get(identity.derivedMatchKey) ?? 0)
+        : 0,
+      wildcard: identity.optionalWildcardKey
+        ? (stagedIdentityCounts.wildcard.get(identity.optionalWildcardKey) ?? 0)
+        : 0,
+    });
     if (dedupReason) {
       skippedCount++;
       if (dedupReason === "exact") exactIdentitySkipped++;
