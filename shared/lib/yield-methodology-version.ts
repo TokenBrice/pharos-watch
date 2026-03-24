@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "4.10",
+  currentVersion: "4.11",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "4.11",
+    title: "Protocol-native BIMA savings fallback for USBD",
+    date: "2026-03-24",
+    effectiveAt: 1774418400,
+    summary:
+      "USBD now resolves through BIMA's public earn API when DeFiLlama has no usable sUSBD wrapper pool, closing the remaining native-yield coverage gap without introducing a hand-set rate.",
+    impact: [
+      "usbd-bima now emits a protocol-native `BIMA savings (sUSBD)` source row sourced from BIMA's published `/api/earn/pools` feed",
+      "Yield arbitration treats protocol-owned earn APIs as curated sources rather than misclassifying them as on-chain or DeFiLlama data",
+      "The about page and source-link registry now expose BIMA's earn surface as an official yield-source reference",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.10",
     title: "Richer freshness provenance and curated lending source links",

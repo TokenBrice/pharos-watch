@@ -23,6 +23,16 @@ describe("resolveYieldSourceUrl", () => {
     ).toBe("https://app.bprotocol.org/liquity");
   });
 
+  it("resolves curated protocol-native yield links before metadata fallbacks", () => {
+    expect(
+      resolveYieldSourceUrl({
+        stablecoinId: "usbd-bima",
+        sourceKey: "protocol-api:bima-susbd",
+        yieldSource: "BIMA savings (sUSBD)",
+      }),
+    ).toBe("https://bima.money/earn");
+  });
+
   it("falls back to an app link from stablecoin metadata when present", () => {
     expect(
       resolveYieldSourceUrl({

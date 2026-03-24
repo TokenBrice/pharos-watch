@@ -30,8 +30,24 @@ const LIQUITY_STABILITY_POOL = "0x66017D22b0f8556afDd19FC67041899Eb65a21bb";
 const LIQUITY_TOTAL_LQTY_ISSUED_SELECTOR = "0xb140384b";
 const LIQUITY_TOTAL_LUSD_DEPOSITS_SELECTOR = "0x9bf2f1ac";
 const LIQUITY_LQTY_GECKO_ID = "liquity";
+const BIMA_SUSBD_SOURCE_KEY = "protocol-api:bima-susbd";
+const BIMA_SUSBD_SOURCE_LABEL = "BIMA savings (sUSBD)";
+const BIMA_SUSBD_SOURCE_TYPE = "lending-vault";
+const BIMA_EARN_POOLS_URL =
+  "https://bima.money/api/earn/pools?network=Ethereum&user=0x0000000000000000000000000000000000000000";
 
 const MAX_DL_CACHE_AGE_SEC = 6 * 3600; // 6 hours (3× the expected 2-hour DEX sync refresh)
+
+interface BimaEarnPool {
+  id?: string;
+  amountTVL?: number;
+  unboostedAPR?: number;
+  boostedAPR?: number;
+  token?: {
+    title?: string;
+    label?: string;
+  };
+}
 
 export async function loadDlStablecoinPools(
   db: D1Database,
@@ -332,6 +348,73 @@ export async function fetchBprotocolLqtyOnlySource(
       throw error instanceof Error ? error : new Error(String(error));
     }
     console.warn("[yield] B.Protocol LQTY-only source failed:", error);
+    return null;
+  }
+}
+
+export async function fetchBimaSusbdSource(signal?: AbortSignal): Promise<ResolvedYield | null> {
+  try {
+    const res = await fetchWithRetry(
+      BIMA_EARN_POOLS_URL,
+      {
+        headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+        signal,
+      },
+      1,
+    );
+    if (!res?.ok) return null;
+
+    const body = (await res.json()) as { success?: boolean; data?: unknown };
+    if (!body.success || !Array.isArray(body.data) || body.data.length === 0) return null;
+
+    const pool = (body.data as BimaEarnPool[]).find((entry) => {
+      const title = entry.token?.title?.toUpperCase();
+      const label = entry.token?.label?.toUpperCase();
+      return title === "USBD" || label === "USBD";
+    });
+    if (!pool) return null;
+
+    const unboostedApr =
+      typeof pool.unboostedAPR === "number" && Number.isFinite(pool.unboostedAPR)
+        ? pool.unboostedAPR
+        : null;
+    const boostedApr =
+      typeof pool.boostedAPR === "number" && Number.isFinite(pool.boostedAPR)
+        ? pool.boostedAPR
+        : null;
+    const currentApy =
+      unboostedApr != null && boostedApr != null
+        ? Math.max(unboostedApr, boostedApr)
+        : (unboostedApr ?? boostedApr);
+    if (currentApy == null || currentApy < 0) return null;
+
+    const sourceTvlUsd =
+      typeof pool.amountTVL === "number" && Number.isFinite(pool.amountTVL) && pool.amountTVL >= 0
+        ? pool.amountTVL
+        : null;
+
+    return {
+      currentApy,
+      apyBase: unboostedApr ?? currentApy,
+      apyReward:
+        boostedApr != null && unboostedApr != null
+          ? Math.max(0, boostedApr - unboostedApr)
+          : null,
+      sourcePool: typeof pool.id === "string" ? pool.id : null,
+      sourceTvlUsd,
+      dataSource: "protocol-api",
+      exchangeRate: null,
+      sourceKey: BIMA_SUSBD_SOURCE_KEY,
+      yieldSource: BIMA_SUSBD_SOURCE_LABEL,
+      yieldType: BIMA_SUSBD_SOURCE_TYPE,
+      sourceObservedAt: Math.floor(Date.now() / 1000),
+      comparisonAnchorObservedAt: null,
+    };
+  } catch (error) {
+    if (signal?.aborted) {
+      throw error instanceof Error ? error : new Error(String(error));
+    }
+    console.warn("[yield] BIMA sUSBD source failed:", error);
     return null;
   }
 }

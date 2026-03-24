@@ -23,10 +23,11 @@ import {
   YIELD_VARIANT_MAP,
 } from "../yield-config";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { fetchBprotocolLqtyOnlySource, getPriceDerivedApy } from "./sources";
+import { fetchBimaSusbdSource, fetchBprotocolLqtyOnlySource, getPriceDerivedApy } from "./sources";
 import type { DlPool, ResolvedYieldEntry } from "./types";
 
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
+const BIMA_USBD_ID = "usbd-bima";
 
 interface SafetyScoreSnapshot {
   score: number;
@@ -255,6 +256,21 @@ export async function resolveYieldSources({
         },
       });
       hasAnySource = true;
+    }
+
+    if (
+      id === BIMA_USBD_ID &&
+      !resolved.some((entry) => entry.id === id && entry.yield?.sourceKey === "protocol-api:bima-susbd")
+    ) {
+      const bimaYield = await fetchBimaSusbdSource(signal);
+      if (bimaYield) {
+        resolved.push({
+          id,
+          symbol,
+          yield: bimaYield,
+        });
+        hasAnySource = true;
+      }
     }
 
     if (hasAnySource) continue;

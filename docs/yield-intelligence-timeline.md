@@ -1,8 +1,16 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v4.10` (2026-03-01 -> 2026-03-24).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v4.11` (2026-03-01 -> 2026-03-24).
 
 ---
+
+## v4.11 - Protocol-native BIMA savings fallback for USBD (Mar 24, 2026)
+
+**Commit:** `unreleased`
+
+- `usbd-bima` now resolves through BIMA's public `earn/pools` feed when no usable DeFiLlama `sUSBD` wrapper pool is available
+- Protocol-owned earn APIs are now treated as curated yield sources in the arbitration layer
+- The source-link registry and public about-page data-source copy now include BIMA's earn surface
 
 ## v4.10 - Richer freshness provenance and curated lending source links (Mar 24, 2026)
 

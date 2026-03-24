@@ -7,6 +7,7 @@ const APP_LIKE_DISPLAY_LABEL = /\b(app|earn|mint|portal|stake|vault)\b/i;
 const YIELD_SOURCE_URLS: Record<string, string> = {
   "Aave v3": "https://app.aave.com/",
   "B.Protocol Stability Pool (LQTY only)": "https://app.bprotocol.org/liquity",
+  "BIMA savings (sUSBD)": "https://bima.money/earn",
   BENQI: "https://app.benqi.fi/",
   "Compound v2": "https://app.compound.finance/",
   "Compound v3": "https://app.compound.finance/",

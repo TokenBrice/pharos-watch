@@ -100,6 +100,7 @@ function getConfidenceTier(dataSource: string): ConfidenceTier {
     case "rate-derived":
       return "deterministic";
     case "defillama":
+    case "protocol-api":
       return "curated";
     case "defillama-auto":
       return "discovered";

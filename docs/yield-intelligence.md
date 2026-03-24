@@ -1,12 +1,12 @@
 # Yield Intelligence
 
-Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curated lending opportunities. Computes APY from deterministic on-chain reads, curated DeFiLlama pools, price history, and benchmark-derived fallbacks; scores each coin via the Pharos Yield Score (PYS); and serves a dedicated `/yield` page plus a stablecoin-detail yield section.
+Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curated lending opportunities. Computes APY from deterministic on-chain reads, curated DeFiLlama pools, protocol-native yield APIs, price history, and benchmark-derived fallbacks; scores each coin via the Pharos Yield Score (PYS); and serves a dedicated `/yield` page plus a stablecoin-detail yield section.
 
 ---
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.10`
+- **Current methodology version:** `v4.11`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -161,6 +161,18 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 
 APY, base/reward split, pool TVL, and pool UUID are all taken directly from the DL response.
 
+### Tier 2.5: Protocol-Native Yield APIs
+
+For coins whose native savings path is published by the protocol itself but is not exposed as a usable DeFiLlama pool, the sync can ingest a curated protocol-owned earn endpoint directly.
+
+**Current adapter:**
+
+| Coin ID | Source | Endpoint |
+| ------- | ------ | -------- |
+| `usbd-bima` | `BIMA savings (sUSBD)` | `https://bima.money/api/earn/pools?network=Ethereum&user=0x0000000000000000000000000000000000000000` |
+
+The BIMA adapter uses the protocol's published Ethereum earn feed, selects the USBD savings row, maps `amountTVL` to `sourceTvlUsd`, and uses the higher of `unboostedAPR` / `boostedAPR` as the current APY. These rows are source-keyed as `protocol-api:bima-susbd` and participate in the same confidence-weighted arbitration as other curated sources.
+
 ### Tier 3: Price-Derived APY
 
 For `navToken` coins and explicit `PRICE_DERIVED_FALLBACK_IDS`. Derives APY from price appreciation in the existing `supply_history` table using the oldest available anchor between 7 and 45 days.
@@ -303,7 +315,7 @@ At rankings cache-build time, `sync-yield-data` decorates rows with the read-tim
 
 The sync also performs a confidence-aware cross-source arbitration pass before `is_best` is chosen:
 
-- deterministic sources (`onchain`, `rate-derived`) outrank curated DeFiLlama rows
+- deterministic sources (`onchain`, `rate-derived`) outrank curated protocol-native and DeFiLlama rows
 - curated DeFiLlama rows outrank discovered lending opportunities and fallback-derived rows
 - non-positive APY rows cannot outrank positive rows
 - materially divergent discovered or fallback rows can be rejected when a higher-confidence canonical source disagrees by more than 35%
