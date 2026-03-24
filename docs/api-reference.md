@@ -89,7 +89,9 @@ These profiles apply while the dataset is within its endpoint freshness budget. 
 | per-coin | `public, s-maxage=300, max-age=10`   | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                           |
 | slow     | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history                                                                                                                                                                                         |
 | archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot                                                                                                                                                                                                                                                                     |
-| no-store | `no-store`                           | health, feedback, telegram-webhook, plus admin GET routes after router override (`status`, `status-history`, `debug-sync-state`, `backfill-dews`, `audit-depeg-history?dry-run=true`, `discovery-candidates`). All admin POST endpoints also bypass cache by virtue of being non-GET |
+| no-store | `no-store`                           | health plus admin GET routes after router override (`status`, `status-history`, `debug-sync-state`, `backfill-dews`, `audit-depeg-history?dry-run=true`, `discovery-candidates`) |
+
+`POST /api/feedback`, `POST /api/telegram-webhook`, and admin POST endpoints bypass edge caching because they are non-GET request paths. They are not part of a cacheable `Cache-Control` profile and do not currently rely on an emitted `Cache-Control: no-store` header.
 
 ---
 

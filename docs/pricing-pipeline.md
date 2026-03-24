@@ -161,7 +161,7 @@ Assets still missing prices after primary consensus run through `enrichMissingPr
 
 1. **Pass 1:** DefiLlama `coins.llama.fi` by current contract address
 2. **Pass 1b:** alternate tracked deployment fallback via DefiLlama; only known tracked deployments are probed, never synthetic same-address cross-chain identities
-3. **Pass 2:** CoinMarketCap `listings/latest` batch — prefers `cmcSlug`-based matching over symbol, and symbol fallback is only allowed when the tracked symbol is unique. Rate-limited to 1 call/hour via D1 cache (see data-pipeline.md)
+3. **Pass 2:** CoinMarketCap stablecoins category batch (`v1/cryptocurrency/category?id=604f2753ebccdd50cd175fc1&limit=300&convert=USD`) — prefers `cmcSlug`-based matching over symbol, and symbol fallback is only allowed when the tracked symbol is unique. Rate-limited to 1 call/hour via D1 cache (see data-pipeline.md)
 4. **Pass 3:** Jupiter Price API for tracked Solana mints — liquidity-gated and still subject to peg-aware validation
 5. **Pass 4:** DexScreener exact token-address pool lookup when chain+address are available, falling back to symbol search only for unique tracked symbols under the same liquidity and peg-aware validation gates
 

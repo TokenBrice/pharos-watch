@@ -49,8 +49,8 @@ export default createClientFeaturePage({
       changelogPath: PSI_METHODOLOGY_CHANGELOG_PATH,
     },
     leadParagraphs: [
-      "Historical stablecoin market health scores, component breakdowns, and condition band analysis.",
-      "The Pharos Stability Index (PSI) is a composite 0–100 score that combines peg deviation severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend into a single market health reading. Scores fall into six condition bands, from BEDROCK (90+) to MELTDOWN (below 20), so you can gauge market stress at a glance.",
+      "Read the market regime first, then drill into the component drivers and historical shock points that pushed the stablecoin market there.",
+      "PSI is a composite 0–100 market-health score built from peg deviation severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend. The six condition bands turn that composite into a usable regime read rather than a raw number.",
     ],
   },
   afterClient: <FaqSection items={FAQ_ITEMS} includeJsonLd />,

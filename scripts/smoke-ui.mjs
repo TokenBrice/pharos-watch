@@ -123,15 +123,16 @@ function readNonNegativeIntEnv(key, fallback) {
 function buildUiEval(waitTimeoutMs) {
   return `async () => {
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const matchesAny = (text, values) => values.some((value) => text.includes(value));
   const timeoutAt = Date.now() + ${waitTimeoutMs};
   while (Date.now() < timeoutAt) {
     const text = document.body?.innerText ?? "";
     const rows = document.querySelectorAll("table tbody tr").length;
-    const hasFailedToLoad = text.includes("Failed to load data");
+    const hasFailedToLoad = matchesAny(text, ["Failed to load data", "Failed to load this dataset"]);
     const hasStablecoins404 = text.includes("stablecoins:404");
-    const hasDataNotYetAvailable = text.includes("Data not yet available");
-    const hasConnectionIssue = text.includes("Connection issue");
-    const hasLiveRefreshDelayed = text.includes("Live refresh delayed");
+    const hasDataNotYetAvailable = matchesAny(text, ["Data not yet available", "Waiting for first sync"]);
+    const hasConnectionIssue = matchesAny(text, ["Connection issue", "Unable to reach the Pharos data API right now."]);
+    const hasLiveRefreshDelayed = matchesAny(text, ["Live refresh delayed", "Live refresh is running behind"]);
     const hasNoStablecoinData = text.includes("No stablecoin data available");
     const hasTerminalError = hasFailedToLoad || hasStablecoins404 || hasDataNotYetAvailable || hasConnectionIssue || hasNoStablecoinData;
     if (rows > 0 || hasTerminalError) {
@@ -155,11 +156,11 @@ function buildUiEval(waitTimeoutMs) {
   const text = document.body?.innerText ?? "";
   return {
     rows: document.querySelectorAll("table tbody tr").length,
-    hasFailedToLoad: text.includes("Failed to load data"),
+    hasFailedToLoad: matchesAny(text, ["Failed to load data", "Failed to load this dataset"]),
     hasStablecoins404: text.includes("stablecoins:404"),
-    hasDataNotYetAvailable: text.includes("Data not yet available"),
-    hasConnectionIssue: text.includes("Connection issue"),
-    hasLiveRefreshDelayed: text.includes("Live refresh delayed"),
+    hasDataNotYetAvailable: matchesAny(text, ["Data not yet available", "Waiting for first sync"]),
+    hasConnectionIssue: matchesAny(text, ["Connection issue", "Unable to reach the Pharos data API right now."]),
+    hasLiveRefreshDelayed: matchesAny(text, ["Live refresh delayed", "Live refresh is running behind"]),
     hasNoStablecoinData: text.includes("No stablecoin data available"),
     hasKnownTicker: /\\bUSDT\\b|\\bUSDC\\b/.test(text),
     title: document.title,
@@ -292,11 +293,11 @@ async function runOverflowCheck(sessionId, waitMs, settleSamples, sampleInterval
 
 function formatUiSummary(summary) {
   const markers = [];
-  if (summary.hasFailedToLoad) markers.push("Failed to load data");
+  if (summary.hasFailedToLoad) markers.push("Failed to load data / Failed to load this dataset");
   if (summary.hasStablecoins404) markers.push("stablecoins:404");
-  if (summary.hasDataNotYetAvailable) markers.push("Data not yet available");
-  if (summary.hasConnectionIssue) markers.push("Connection issue");
-  if (summary.hasLiveRefreshDelayed) markers.push("Live refresh delayed");
+  if (summary.hasDataNotYetAvailable) markers.push("Data not yet available / Waiting for first sync");
+  if (summary.hasConnectionIssue) markers.push("Connection issue / Unable to reach the Pharos data API right now.");
+  if (summary.hasLiveRefreshDelayed) markers.push("Live refresh delayed / Live refresh is running behind");
   if (summary.hasNoStablecoinData) markers.push("No stablecoin data available");
   const markerSummary = markers.length > 0 ? markers.join(", ") : "none";
   const preview =
@@ -411,16 +412,16 @@ async function run() {
       !summary.timedOut,
       `Timed out waiting for homepage table data after ${summary.waitTimeoutMs}ms (${formatUiSummary(summary)})`,
     );
-    assert(!summary.hasFailedToLoad, "Found 'Failed to load data' UI banner");
+    assert(!summary.hasFailedToLoad, "Found generic dataset-load failure UI banner");
     assert(!summary.hasStablecoins404, "Found '/api/stablecoins:404' style UI error");
-    assert(!summary.hasDataNotYetAvailable, "Found 'Data not yet available' UI banner");
-    assert(!summary.hasConnectionIssue, "Found 'Connection issue' UI banner");
+    assert(!summary.hasDataNotYetAvailable, "Found first-sync unavailable UI banner");
+    assert(!summary.hasConnectionIssue, "Found API-connection failure UI banner");
     assert(!summary.hasNoStablecoinData, "Found 'No stablecoin data available' empty state");
     assert(summary.rows > 0, "Expected at least one stablecoin row in the homepage table");
     assert(summary.hasKnownTicker, "Could not find a known ticker (USDT/USDC) in homepage text");
 
     if (summary.hasLiveRefreshDelayed) {
-      console.log(`[smoke-ui] WARN homepage shows 'Live refresh delayed' (${formatUiSummary(summary)})`);
+      console.log(`[smoke-ui] WARN homepage shows a stale-data banner (${formatUiSummary(summary)})`);
     }
     console.log(`[smoke-ui] OK ${summary.title}`);
     console.log(`[smoke-ui] OK table rows=${summary.rows}, knownTicker=${summary.hasKnownTicker}`);

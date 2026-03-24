@@ -19,6 +19,13 @@ const STATE_STYLES = {
   error: "border-destructive/50 bg-destructive/10 text-destructive",
 } as const;
 
+function formatAffectedLabels(labels: string[]): string {
+  if (labels.length === 0) return "datasets";
+  if (labels.length === 1) return labels[0];
+  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
+  return `${labels[0]}, ${labels[1]}, and ${labels.length - 2} more datasets`;
+}
+
 export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHealthBannerProps) {
   if (entries.length === 0) return null;
 
@@ -32,8 +39,7 @@ export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHe
     );
   }
 
-  const affected =
-    merged.affectedLabels.length > 0 ? merged.affectedLabels.join(", ") : "data";
+  const affected = formatAffectedLabels(merged.affectedLabels);
   const worstAge = entries
     .filter((e) => e.state !== "fresh" && e.ageMs != null)
     .reduce<number | null>((max, item) => {
@@ -42,21 +48,40 @@ export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHe
       return Math.max(max, item.ageMs);
     }, null);
 
+  let title = "";
   let message = "";
   if (merged.state === "degraded") {
-    message = `Data may be delayed (${affected}).`;
+    title = "Live refresh is running behind";
+    message = `${affected} refreshed later than expected.`;
   } else if (merged.state === "stale") {
     const age = formatHealthAge(worstAge);
-    message = `Data may be stale (${affected}). Last successful update was over ${age} ago.`;
+    title = "Showing an older snapshot";
+    message = `${affected} last refreshed over ${age} ago.`;
   } else if (merged.state === "unavailable") {
-    message = `Some data is not yet available (${affected}).`;
+    title = "Waiting for initial data";
+    message = `${affected} has not populated yet.`;
   } else {
-    message = `Failed to refresh ${affected}.`;
+    title = "Refresh failed";
+    message = `Could not refresh ${affected}.`;
   }
 
+  const lastSuccessfulText =
+    merged.latestUpdatedAt != null
+      ? `Last successful update: ${formatDataHealthTimestamp(merged.latestUpdatedAt)}`
+      : null;
+
   return (
-    <div role="status" aria-live="polite" className={`rounded-lg border px-4 py-2.5 text-sm leading-relaxed shadow-sm ${STATE_STYLES[merged.state]}`}>
-      {message}
+    <div
+      role="status"
+      aria-live="polite"
+      className={`rounded-lg border px-4 py-3 text-sm leading-relaxed shadow-sm ${STATE_STYLES[merged.state]}`}
+    >
+      <p className="font-medium">{title}</p>
+      <p className="mt-1">{message}</p>
+      <div className="mt-1.5 text-xs opacity-85">
+        <span>Affected: {affected}.</span>
+        {lastSuccessfulText ? <span> {lastSuccessfulText}.</span> : null}
+      </div>
     </div>
   );
 }

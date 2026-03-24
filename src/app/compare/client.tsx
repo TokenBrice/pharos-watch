@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useLogos } from "@/hooks/use-logos";
 import { useCompareSelection } from "@/hooks/use-compare-selection";
@@ -12,9 +14,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { Share2, Twitter, Download } from "lucide-react";
 import { DIMENSION_ORDER, DIMENSION_SHORT_LABELS } from "@shared/lib/report-cards";
+import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { CompareEmptyState } from "@/components/compare-empty-state";
+import { buildStablecoinUrl } from "@/lib/urls";
 import {
   COMPARISON_PRESETS,
   MAX_COMPARE_COINS,
@@ -94,6 +98,63 @@ export function CompareClient() {
     dimensionOrder: DIMENSION_ORDER,
     dimensionLabels: DIMENSION_SHORT_LABELS,
   });
+  const activeSelectionLabel = selectedCoins
+    .filter((coin): coin is NonNullable<(typeof selectedCoins)[number]> => coin !== null)
+    .map((coin) => coin.symbol)
+    .join(" vs ");
+  const selectionInsights = useMemo(() => {
+    if (selectedIds.length < 2) return null;
+
+    const peerCoins =
+      comparisonCoins.length >= 2
+        ? comparisonCoins
+        : selectedCoins.filter((coin): coin is NonNullable<(typeof selectedCoins)[number]> => coin !== null);
+
+    if (peerCoins.length < 2) {
+      return {
+        lens: "Build the peer set first, then read peg behavior, liquidity, and safety in the same frame instead of hopping between detail pages.",
+        cohort: "Live metadata is still loading for the selected set.",
+        structure: "The comparison panels below will sharpen once the full dataset lands.",
+        links: selectedCoins.filter((coin): coin is NonNullable<(typeof selectedCoins)[number]> => coin !== null),
+      };
+    }
+
+    const comparisonMeta = comparisonCoins.length >= 2 ? comparisonCoins : null;
+    if (!comparisonMeta) {
+      return {
+        lens: "Build the peer set first, then read peg behavior, liquidity, and safety in the same frame instead of hopping between detail pages.",
+        cohort: "Live metadata is still loading for the selected set.",
+        structure: "The comparison panels below will sharpen once the full dataset lands.",
+        links: peerCoins,
+      };
+    }
+
+    const pegSet = new Set(comparisonMeta.map((coin) => coin.meta.flags.pegCurrency));
+    const governanceSet = new Set(comparisonMeta.map((coin) => coin.meta.flags.governance));
+    const backingSet = new Set(comparisonMeta.map((coin) => coin.meta.flags.backing));
+
+    const lens =
+      pegSet.size === 1
+        ? "Same-peg peer set. Read this screen as a true substitution decision: who keeps the peg cleaner, stays more liquid, and carries the cleaner structural risk profile."
+        : "Cross-peg set. Structural differences matter more here than raw deviation, so use the panels below to separate currency exposure from stablecoin design risk.";
+
+    const cohort =
+      governanceSet.size === 1
+        ? `Shared governance model across the set: ${GOVERNANCE_LABELS[comparisonMeta[0].meta.flags.governance] ?? comparisonMeta[0].meta.flags.governance}.`
+        : "Mixed governance models across the selected assets.";
+
+    const structure =
+      backingSet.size === 1
+        ? `Shared backing profile: ${BACKING_LABELS[comparisonMeta[0].meta.flags.backing] ?? comparisonMeta[0].meta.flags.backing}.`
+        : "Mixed backing structures across the set.";
+
+    const pegContext =
+      pegSet.size === 1
+        ? `Common peg target: ${PEG_LABELS_SHORT[comparisonMeta[0].meta.flags.pegCurrency] ?? comparisonMeta[0].meta.flags.pegCurrency}.`
+        : "Multiple peg targets are represented in the selected set.";
+
+    return { lens, cohort, structure: `${structure} ${pegContext}`, links: comparisonMeta };
+  }, [comparisonCoins, selectedCoins, selectedIds]);
 
   // Render selector slots (filled slots + empty slots up to MAX_COINS)
   const slots = [];
@@ -129,6 +190,48 @@ export function CompareClient() {
           { preset: "bluechip", dataUpdatedAt: bcUpdatedAt, error: bluechipError, hasData: !!bluechipData },
         ]}
       />
+      {selectedIds.length >= 2 ? (
+        <div className="rounded-2xl border border-border/60 bg-background/45 px-4 py-3">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="pharos-kicker">Active Comparison</p>
+                <p className="truncate text-sm text-foreground">
+                  {activeSelectionLabel}
+                </p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                URL-backed selection · up to {MAX_COMPARE_COINS} assets · live dataset mix
+              </p>
+            </div>
+            {selectionInsights ? (
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+                <div className="rounded-2xl border border-border/60 bg-background/50 px-3.5 py-3">
+                  <p className="pharos-kicker">How To Read This Set</p>
+                  <p className="mt-1 text-sm text-foreground">{selectionInsights.lens}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {selectionInsights.cohort} {selectionInsights.structure}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-border/60 bg-background/50 px-3.5 py-3">
+                  <p className="pharos-kicker">Jump To Detail</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {selectionInsights.links.map((coin) => (
+                      <Link
+                        key={coin.id}
+                        href={buildStablecoinUrl(coin.id)}
+                        className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:border-foreground/20 hover:bg-accent lg:min-h-9"
+                      >
+                        {coin.symbol} detail
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       {selectedIds.length >= 2 && (
         <div className="flex items-center justify-end gap-2">
           {toast && <span className="text-xs text-muted-foreground animate-in fade-in duration-300">{toast}</span>}

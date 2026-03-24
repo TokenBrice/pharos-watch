@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 25 scheduled runtime jobs across 10 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track the same 25 jobs; cemetery and tracking appendices are now folded into daily digest delivery instead of a separate cron.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 26 scheduled runtime jobs across 10 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track the same 26 jobs; cemetery and tracking appendices are now folded into daily digest delivery instead of a separate cron.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -223,6 +223,7 @@ These router-dispatched admin routes honor an optional `Idempotency-Key` header:
 - `POST /api/audit-depeg-history`
 - `POST /api/trigger-digest`
 - `POST /api/reset-blacklist-sync`
+- `POST /api/remediate-blacklist-amount-gaps`
 
 The worker fingerprints method + path + sorted query + body for a given action key. Replays return the stored response with `X-Idempotent-Replay: true`; conflicting reuse returns `409`.
 
@@ -425,7 +426,7 @@ All cron jobs follow a 4-tier error classification:
 ## Telegram Alert Bot
 
 - Webhook ingress (`POST /api/telegram-webhook`) receives Telegram commands and writes subscriber/subscription state into D1.
-- `dispatch-telegram-alerts` diffs DEWS/depeg/safety state against cached snapshots before fan-out on a dedicated 5-minute cron slot.
+- `dispatch-telegram-alerts` diffs DEWS/depeg/safety state plus launch promotions against cached snapshots before fan-out on a dedicated 5-minute cron slot.
 - `daily-digest` now appends pending cemetery additions and newly tracked coins to the next Telegram digest post after a deploy.
 - Telegram sends are gated by the `telegram-api` circuit breaker to avoid hammering the Bot API during upstream issues.
 - Each dispatch run sends up to 200 Telegram message attempts in parallel batches of 5. Overflow and retryable fresh-send failures are enqueued to `telegram_pending_alerts` for subsequent runs.
@@ -938,7 +939,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 25 cron jobs across 10 triggers via `CRON_INTERVALS` in `shared/lib/cron-jobs.ts`:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 26 cron jobs across 10 triggers via `CRON_INTERVALS` in `shared/lib/cron-jobs.ts`:
 
 | Job                             | Interval       | Trigger                                     |
 | ------------------------------- | -------------- | ------------------------------------------- |
@@ -1046,7 +1047,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 
 ### Migration Squash Strategy
 
-Currently at 76 D1 SQL migrations. When the count approaches ~150, perform a one-time squash:
+Currently at 83 D1 SQL migrations. When the count approaches ~150, perform a one-time squash:
 
 1. Export current schema: `wrangler d1 export stablecoin-db --remote --output=baseline.sql`
 2. Replace all migration files with a single `0001_baseline.sql`

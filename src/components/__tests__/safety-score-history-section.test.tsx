@@ -84,7 +84,7 @@ describe("SafetyScoreHistorySection", () => {
     });
 
     const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
-    expect(html).toContain("Failed to load data");
+    expect(html).toContain("Failed to load this dataset");
     expect(html).toContain("boom");
   });
 

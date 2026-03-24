@@ -241,6 +241,10 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
           <span className="text-sm text-muted-foreground">No data processed by Pharos yet</span>
           {coin.launchPhase && <LaunchPhaseBadge phase={coin.launchPhase} />}
         </div>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Pharos can still tell you how this asset is supposed to work, when it expects to launch, and what sources to watch.
+          Live market, peg, liquidity, and safety surfaces activate only after the first post-launch data sync.
+        </p>
         {coin.launchPhaseDetail && <p className="mt-2 text-sm text-muted-foreground">{coin.launchPhaseDetail}</p>}
       </div>
 

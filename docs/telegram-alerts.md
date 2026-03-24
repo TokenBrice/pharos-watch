@@ -46,8 +46,8 @@ The delivery system is worker-owned. The frontend exposes a static `/telegram/` 
 
 | Table | Purpose | Key fields |
 |-------|---------|------------|
-| `telegram_subscribers` | Per-chat state and defaults | `chat_id`, `username`, legacy default flags, `global_alert_dews`, `global_alert_depeg`, `global_alert_safety`, `quiet_hours_enabled`, `quiet_hours_start_utc`, `quiet_hours_end_utc`, `created_at`, `last_active_at` |
-| `telegram_subscriptions` | Per-chat per-coin alert preferences | composite PK `chat_id, stablecoin_id`, `alert_dews`, `alert_depeg`, `alert_safety`, `dews_min_band`, `safety_mode`, `depeg_worsening_bps_step` |
+| `telegram_subscribers` | Per-chat state and defaults | `chat_id`, `username`, legacy default flags, `global_alert_dews`, `global_alert_depeg`, `global_alert_safety`, `global_alert_launch`, `quiet_hours_enabled`, `quiet_hours_start_utc`, `quiet_hours_end_utc`, `created_at`, `last_active_at` |
+| `telegram_subscriptions` | Per-chat per-coin alert preferences | composite PK `chat_id, stablecoin_id`, `alert_dews`, `alert_depeg`, `alert_safety`, `alert_launch`, `dews_min_band`, `safety_mode`, `depeg_worsening_bps_step` |
 | `telegram_pending_disambiguation` | Short-lived state for ambiguous ticker replies | `chat_id`, `action_type`, `action_payload`, `resolved_ids`, `ambiguous_ticker`, `candidates`, `remaining_tickers`, `expires_at` |
 | `telegram_pending_alerts` | Overflow delivery queue | `id`, `chat_id`, `message_html`, `disable_notification`, `created_at`, `attempts` |
 
@@ -81,7 +81,7 @@ The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Toke
 | `/subscribe <types> <tickers>` | Enables one or more alert types and subscribes the chat to one or more coins |
 | `/subscribe <types> all` | Enables one or more alert types across all tracked stablecoins |
 | `/unsubscribe <tickers>` | Removes specific coin subscriptions |
-| `/unsubscribe all` | Clears all subscriptions and disables all alert-type flags |
+| `/unsubscribe all` | Clears all per-coin subscriptions and disables the current DEWS/depeg/safety flags; launch flags are not reset by this path today |
 | `/set <ticker> <setting> <value>` | Tunes per-coin settings such as DEWS floor, safety direction mode, or depeg worsening step |
 | `/set all <setting> <value>` | Enables or disables global all-stablecoin alert types (`dews`, `depeg`, `safety`) |
 | `/mute <start>-<end>` | Enables quiet hours in UTC (messages still deliver, notifications are silenced) |
@@ -93,14 +93,17 @@ The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Toke
 - `dews`
 - `depeg`
 - `safety`
+- `launch`
 
 Additional alert controls:
 
 - `dews_min_band`: optional per-coin floor (`ALERT` default, or `WARNING` / `DANGER`)
 - `safety_mode`: `all`, `downgrade-only`, or `upgrade-only`
 - `depeg_worsening_bps_step`: optional per-coin worsening follow-up step (`100`, `250`, `500`)
-- `global_alert_*`: subscriber-level flags that subscribe the chat to every tracked stablecoin for that alert type
+- `global_alert_*`: subscriber-level flags that subscribe the chat to every tracked stablecoin for that alert type, including `launch`
 - quiet hours: subscriber-level UTC hour window that forces `disable_notification = true`
+
+`launch` alerts have no additional per-coin tuning beyond on/off subscription state.
 
 Global subscriptions are additive, but explicit per-coin rows take precedence for that coin and alert type. That means a per-coin DEWS threshold or safety mode overrides the global default fan-out for the same chat/coin pair.
 

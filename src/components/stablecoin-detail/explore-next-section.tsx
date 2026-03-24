@@ -4,6 +4,7 @@ import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/secti
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import type { StablecoinMeta } from "@shared/types";
+import { buildLiveCompareUrl } from "@/lib/compare-pages";
 import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
 import { PEG_SLUGS } from "@/lib/peg-landing";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -14,6 +15,8 @@ interface ExploreNextSectionProps {
   staticComparisonPages: Array<{
     href: string;
     shortTitle: string;
+    leftId: string;
+    rightId: string;
   }>;
   logos: Record<string, string>;
 }
@@ -70,7 +73,7 @@ export function ExploreNextSection({
           Explore Next
         </h2>
         <p className="max-w-3xl text-sm text-muted-foreground">
-          Move from this coin into its taxonomy pages, tracker surfaces, or side-by-side comparison routes without leaving the Pharos graph.
+          Move from this coin into the next useful surface: peer benchmarks, taxonomy cohorts, or live trackers that add context to what you just read.
         </p>
       </div>
 
@@ -100,15 +103,28 @@ export function ExploreNextSection({
           {staticComparisonPages.length > 0 ? (
             <div className="pharos-card-shell space-y-3 p-4">
               <p className="pharos-kicker">Compare From Here</p>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid gap-2">
                 {staticComparisonPages.map((page) => (
-                  <Link
+                  <div
                     key={page.href}
-                    href={page.href}
-                    className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background/50 px-3 py-2 text-sm text-foreground transition-colors hover:border-foreground/20 hover:bg-accent"
+                    className="rounded-2xl border border-border/60 bg-background/50 px-3 py-3"
                   >
-                    {page.shortTitle}
-                  </Link>
+                    <p className="text-sm font-medium text-foreground">{page.shortTitle}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Link
+                        href={page.href}
+                        className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:border-foreground/20 hover:bg-accent"
+                      >
+                        Review brief
+                      </Link>
+                      <Link
+                        href={buildLiveCompareUrl([page.leftId, page.rightId])}
+                        className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background px-3 py-2 text-xs font-medium text-foreground transition-colors hover:border-foreground/20 hover:bg-accent"
+                      >
+                        Open live compare
+                      </Link>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>

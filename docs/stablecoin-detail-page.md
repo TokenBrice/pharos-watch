@@ -17,6 +17,7 @@ Route contract for `/stablecoin/[id]/`, the central per-asset analytics surface.
 - builds metadata through `buildStablecoinDetailMetadata(...)`
 - injects static logo data from `data/logos.json`
 - injects static AI summaries from `data/ai-summaries.json`
+- renders a visible dossier-style `Suspense` fallback with coin identity, classification, section rail placeholders, and score-card scaffolding while the full client boots
 - renders `ExploreNextSection` after the interactive client
 - emits `BreadcrumbJsonLd` plus a Dataset JSON-LD payload
 
@@ -56,6 +57,8 @@ The builder returns one of four states:
 
 `ready` contains the fully derived detail payload: supply numbers, peg reference context, deviation metrics, report card, liquidity row, redemption backstop, reserve presentation, supply history, stale-query inputs, and convenience flags like `isNavToken`, `hasFlows`, and `usesFallbackPegRate`.
 
+The client `loading` state now mirrors the server fallback more closely: it keeps the coin identity, classification line, and dossier framing visible instead of dropping back to anonymous skeleton blocks.
+
 ---
 
 ## Section Order
@@ -71,11 +74,12 @@ The builder returns one of four states:
 7. `NoticesAndSummarySection` (wraps `OverviewSection`, `CoinNotices`, and the nested `PriceTransparencyCard` anchor)
 8. `McapChart`
 9. `KeyInfoCard`
-10. `YieldDetailSection`
-11. `DexLiquidityCard`
-12. `FlowsSection`
-13. `DepegHistory` (suppressed for NAV tokens)
-14. `FeedbackModal`
+10. `CollateralUsageSection`
+11. `YieldDetailSection`
+12. `DexLiquidityCard`
+13. `FlowsSection`
+14. `DepegHistory` (suppressed for NAV tokens)
+15. `FeedbackModal`
 
 The server shell then appends `ExploreNextSection` after the client-rendered analytics stack.
 
@@ -83,6 +87,7 @@ The server shell then appends `ExploreNextSection` after the client-rendered ana
 
 - `FlowsSection` stays in the rail only when the coin currently appears in the aggregate flows payload, or while that payload is still loading.
 - `FlowsSection` emits both `#flows` (summary card) and `#flow-history` (event feed) sections when flow coverage exists.
+- `CollateralUsageSection` and the `collateral-usage` scrollspy entry render only when at least one other tracked stablecoin derives a dependency on the current coin.
 - `DepegHistory` is omitted for NAV tokens.
 - `YieldDetailSection` decides its own empty/loading/null behavior from the cached yield rankings plus static coin metadata.
 - `PriceTransparencyCard` lives inside `OverviewSection` under the `price-transparency` anchor and is hidden when `coinData.price == null`.

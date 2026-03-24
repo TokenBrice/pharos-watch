@@ -43,50 +43,50 @@ interface NavGroup {
   items: NavItem[];
 }
 
-export const DASHBOARD_NAV_ITEM: NavItem = { href: "/", label: "Dashboard", icon: LayoutDashboard, description: "Market overview and KPIs" };
+export const DASHBOARD_NAV_ITEM: NavItem = { href: "/", label: "Dashboard", icon: LayoutDashboard, description: "Live triage surface for market stress, rankings, and first-pass research" };
 
 export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Risk Lab",
     items: [
-      { href: "/stability-index", label: "Stability Index", icon: LighthouseIcon, description: "Pharos Stability Index" },
-      { href: "/safety-scores", label: "Safety Scores", icon: FlaskConical, description: "Safety grades and contagion simulation" },
-      { href: "/yield", label: "Risk-Adjusted Yield", icon: TrendingUp, description: "Risk-adjusted yield rankings" },
+      { href: "/stability-index", label: "Stability Index", icon: LighthouseIcon, description: "Market-regime read for the stablecoin system" },
+      { href: "/safety-scores", label: "Safety Scores", icon: FlaskConical, description: "Cross-market safety grades and contagion scenarios" },
+      { href: "/yield", label: "Risk-Adjusted Yield", icon: TrendingUp, description: "Yield ranked after adjusting for stablecoin risk" },
     ],
   },
   {
     label: "Data",
     items: [
-      { href: "/chains/", label: "Stable per Chain", icon: Layers, description: "Stablecoin activity per chain" },
-      { href: "/liquidity", label: "Liquidity Tracker", icon: Droplets, description: "DEX liquidity analysis" },
-      { href: "/depeg", label: "Depeg Tracker", icon: Activity, description: "Live peg monitoring & early warnings" },
-      { href: "/flows", label: "Mint/Burn Flows", icon: ArrowUpDown, description: "Mint and burn flow tracker" },
-      { href: "/blacklist", label: "Blacklist Tracker", icon: ShieldBan, description: "Frozen address events" },
+      { href: "/chains/", label: "Stable per Chain", icon: Layers, description: "Chain-by-chain stablecoin share, mix, and health" },
+      { href: "/liquidity", label: "Liquidity Tracker", icon: Droplets, description: "DEX depth, durability, and market support" },
+      { href: "/depeg", label: "Depeg Tracker", icon: Activity, description: "Live incident board for peg stress and early warnings" },
+      { href: "/flows", label: "Mint/Burn Flows", icon: ArrowUpDown, description: "Ethereum issuance and redemption pressure" },
+      { href: "/blacklist", label: "Blacklist Tracker", icon: ShieldBan, description: "Freeze activity and issuer control events" },
     ],
   },
   {
     label: "Tools",
     items: [
-      { href: "/portfolio", label: "Portfolio Audit", icon: Wallet, description: "Personal stablecoin risk view" },
-      { href: "/compare", label: "Compare", icon: ArrowLeftRight, description: "Side-by-side comparison" },
-      { href: "/dependency-map", label: "Dependency Map", icon: Network, description: "Stablecoin collateral dependency graph" },
-      { href: "/telegram", label: "Telegram Alerts", icon: Send, description: "Bot commands & digest channel" },
+      { href: "/portfolio", label: "Portfolio Audit", icon: Wallet, description: "Look through your holdings as one combined stablecoin book" },
+      { href: "/compare", label: "Compare", icon: ArrowLeftRight, description: "Build a live peer set and judge substitutes side by side" },
+      { href: "/dependency-map", label: "Dependency Map", icon: Network, description: "Collateral graph for hidden upstream stablecoin risk" },
+      { href: "/telegram", label: "Telegram Alerts", icon: Send, description: "Push alerts for depegs, DEWS shifts, and the daily digest" },
     ],
   },
   {
     label: "Info",
     items: [
-      { href: "/upcoming", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins" },
-      { href: "/cemetery", label: "Cemetery", icon: Skull, description: "Dead stablecoins" },
-      { href: "/digest", label: "Digest", icon: Newspaper, description: "Daily market digest" },
+      { href: "/upcoming", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch-watch context" },
+      { href: "/cemetery", label: "Cemetery", icon: Skull, description: "Failed stablecoins and the lessons they left behind" },
+      { href: "/digest", label: "Digest", icon: Newspaper, description: "Daily editorial recap of the stablecoin market" },
     ],
   },
   {
     label: "About Pharos",
     items: [
-      { href: "/about", label: "About", icon: Info, description: "About Pharos" },
-      { href: "/methodology", label: "Methodology", icon: BookOpen, description: "How Pharos grades stablecoins" },
-      { href: "/coverage", label: "Coverage", icon: TableProperties, description: "Per-coin feature coverage matrix" },
+      { href: "/about", label: "About", icon: Info, description: "Scope, data sources, and why Pharos exists" },
+      { href: "/methodology", label: "Methodology", icon: BookOpen, description: "Reference manual for the scoring and monitoring models" },
+      { href: "/coverage", label: "Coverage", icon: TableProperties, description: "Truth surface for what each route can show per coin" },
     ],
   },
 ];
@@ -96,5 +96,5 @@ export const NAV_ITEMS: NavItem[] = [DASHBOARD_NAV_ITEM, ...NAV_GROUPS.flatMap((
 
 /** Bottom items (always shown at sidebar bottom) */
 export const BOTTOM_NAV_ITEMS: NavItem[] = [
-  { href: "/start", label: "Start Here", icon: Compass, description: "Orientation for new users" },
+  { href: "/start", label: "Start Here", icon: Compass, description: "Shortest route into the product for new or returning users" },
 ];

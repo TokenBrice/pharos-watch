@@ -102,6 +102,10 @@
   --interactive-active:  oklch(0.91 0.005 260);
   --interactive-focus:   var(--p-blue-400);
   --interactive-disabled: var(--p-neutral-200);
+  --control-pill-bg:     oklch(1 0 0 / 0.78);
+  --control-pill-border: oklch(0.87 0.01 255 / 0.78);
+  --control-pill-active-bg: oklch(0.19 0.01 255);
+  --control-pill-active-text: var(--p-neutral-50);
 
   /* ── Chart ────────────────────────────────────────────────────── */
   --chart-grid-opacity: 0.12;
@@ -110,6 +114,9 @@
   --chart-secondary: var(--p-green-400);
   --chart-tertiary:  var(--p-teal-400);
   --chart-negative:  var(--p-red-500);
+  --chart-stage-bg:      oklch(0.995 0.003 260 / 0.78);
+  --chart-stage-border:  oklch(0.9 0.008 255 / 0.82);
+  --chart-stage-shadow:  inset 0 1px 0 oklch(1 0 0 / 0.78);
 
   /* ── Chart hex values (for Recharts) ──────────────────────────── */
   --chart-primary-hex:   #3b82f6;
@@ -127,12 +134,18 @@
   --card-border:     var(--border-default);
   --card-shadow:     var(--elevation-rest);
   --card-shadow-hover: var(--elevation-raised);
+  --card-shell-bg: linear-gradient(180deg, oklch(0.998 0.002 260 / 0.96), oklch(0.985 0.004 255 / 0.9));
+  --card-shell-highlight: radial-gradient(140% 140% at 0% 0%, oklch(0.76 0.06 248 / 0.12), transparent 48%);
+  --panel-header-bg: oklch(0.985 0.004 255 / 0.7);
 
   /* ── Component: Table ─────────────────────────────────────────── */
   --table-header-bg:    var(--surface-raised);
   --table-row-hover:    var(--interactive-hover);
   --table-row-stripe:   oklch(0.97 0.003 260 / 60%);
   --table-border:       var(--border-subtle);
+  --table-header-shadow: inset 0 -1px 0 oklch(0.85 0.008 255 / 0.78);
+  --table-sticky-column-bg: oklch(0.995 0.003 260 / 0.95);
+  --table-sticky-column-shadow: 10px 0 20px oklch(0 0 0 / 0.05);
 
   /* ── Component: Sidebar ───────────────────────────────────────── */
   --sidebar-bg:        var(--surface-overlay);
@@ -204,6 +217,10 @@
   --interactive-active:  oklch(0.30 0.016 260);
   --interactive-focus:   var(--p-blue-500);
   --interactive-disabled: var(--p-neutral-800);
+  --control-pill-bg:     oklch(1 0 0 / 0.05);
+  --control-pill-border: oklch(1 0 0 / 0.10);
+  --control-pill-active-bg: oklch(0.92 0.01 255);
+  --control-pill-active-text: var(--p-neutral-950);
 
   /* ── Chart ────────────────────────────────────────────────────── */
   --chart-grid-opacity: 0.08;
@@ -212,6 +229,9 @@
   --chart-secondary: var(--p-green-400);
   --chart-tertiary:  var(--p-teal-400);
   --chart-negative:  var(--p-red-400);
+  --chart-stage-bg:      oklch(1 0 0 / 0.03);
+  --chart-stage-border:  oklch(1 0 0 / 0.08);
+  --chart-stage-shadow:  inset 0 1px 0 oklch(1 0 0 / 0.05);
   --psi-band-opacity: 0.06;
   --dews-radar-spoke:              oklch(1 0 0 / 0.12);
   --dews-radar-calm-boundary:      oklch(1 0 0 / 0.16);
@@ -230,12 +250,18 @@
   --card-border:     var(--border-default);
   --card-shadow:     var(--elevation-rest);
   --card-shadow-hover: var(--elevation-raised);
+  --card-shell-bg: linear-gradient(180deg, oklch(0.23 0.01 255 / 0.9), oklch(0.19 0.01 255 / 0.94));
+  --card-shell-highlight: radial-gradient(140% 140% at 0% 0%, oklch(0.72 0.14 248 / 0.12), transparent 48%);
+  --panel-header-bg: oklch(1 0 0 / 0.04);
 
   /* ── Component: Table ─────────────────────────────────────────── */
   --table-header-bg:    var(--surface-raised);
   --table-row-hover:    var(--interactive-hover);
   --table-row-stripe:   oklch(1 0 0 / 4%);
   --table-border:       var(--border-subtle);
+  --table-header-shadow: inset 0 -1px 0 oklch(1 0 0 / 0.08);
+  --table-sticky-column-bg: oklch(0.205 0.01 255 / 0.96);
+  --table-sticky-column-shadow: 12px 0 24px oklch(0 0 0 / 0.28);
 
   /* ── Component: Sidebar ───────────────────────────────────────── */
   --sidebar-bg:        var(--surface-overlay);

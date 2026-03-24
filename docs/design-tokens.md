@@ -39,8 +39,8 @@ Purpose-driven aliases that map primitives to meaning. These switch between ligh
 | DEWS Threat Bands   | `--dews-calm` through `--dews-danger`                                                                   | DEWS threat level zones                 |
 | DEWS Radar Contrast | `--dews-radar-spoke`, `--dews-radar-calm-boundary`, `--dews-radar-*-opacity`, `--dews-radar-calm-dot-*` | Theme-aware radar ring/spoke visibility |
 | Score Tiers         | `--score-green`, `--score-blue`, `--score-amber`, `--score-red`                                         | Liquidity/durability                    |
-| Interactive         | `--interactive-hover`, `--interactive-active`, `--interactive-focus`                                    | UI states                               |
-| Chart               | `--chart-grid-opacity`, `--chart-fill-opacity`, `--chart-primary`                                       | Chart-specific theming                  |
+| Interactive         | `--interactive-hover`, `--interactive-active`, `--interactive-focus`, `--control-pill-*`               | UI states and dense control pills       |
+| Chart               | `--chart-grid-opacity`, `--chart-fill-opacity`, `--chart-primary`, `--chart-stage-*`                   | Chart-specific theming and chart stages |
 | Motion              | `--motion-duration-fast`, `--motion-duration-base`, `--motion-ease-standard`                            | Shared transition timing                |
 
 #### Light-Mode Contrast Baseline (March 2026)
@@ -51,6 +51,8 @@ Purpose-driven aliases that map primitives to meaning. These switch between ligh
   - `text-*-700 dark:text-*-400`
 - Avoid unscoped `text-*-300` / `text-*-400` in app code unless the element only renders on dark-only surfaces.
 - DEWS radar guide lines should stay theme-tuned via tokens (`--dews-radar-spoke`, `--dews-radar-calm-boundary`); dark mode requires visibly higher alpha than `0.04` to keep axis spokes readable.
+- Dense interactive controls should use the `--control-pill-*` token family rather than ad-hoc translucent button backgrounds.
+- Dedicated chart stages should use the `--chart-stage-*` token family so chart canvases stay visually distinct from the outer card shell.
 
 #### Hex Companion Variables
 
@@ -67,8 +69,8 @@ The JS-side token maps in `chart-colors.ts` and `severity-colors.ts` use the sam
 
 Scoped to specific UI components. Optional — use when a component needs tokens that don't map cleanly to general semantic categories.
 
-- **Card** — `--card-bg`, `--card-border`, `--card-shadow`, `--card-shadow-hover`
-- **Table** — `--table-header-bg`, `--table-row-hover`, `--table-row-stripe`, `--table-border`
+- **Card** — `--card-bg`, `--card-border`, `--card-shadow`, `--card-shadow-hover`, `--card-shell-bg`, `--card-shell-highlight`, `--panel-header-bg`
+- **Table** — `--table-header-bg`, `--table-row-hover`, `--table-row-stripe`, `--table-border`, `--table-header-shadow`, `--table-sticky-column-*`
 - **Sidebar** — `--sidebar-bg`, `--sidebar-border`, `--sidebar-item-hover`
 
 ## Bridge Layer (`src/app/globals.css`)

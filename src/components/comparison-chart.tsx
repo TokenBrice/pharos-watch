@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
-import { DateTooltip, MonoYAxis, TimeXAxis } from "@/components/chart-primitives";
+import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { formatChartDate } from "@shared/lib/format";
 import { mergeSeriesByTimestamp } from "@/lib/chart-utils";
 
@@ -105,19 +105,25 @@ export function ComparisonChart({
     : valueFormatter;
 
   return (
-    <Card className="rounded-xl animate-in fade-in duration-300">
-      <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
-        <CardTitle as="h2">{title}</CardTitle>
-        <div className="flex items-center gap-2">
+    <Card className="pharos-card-shell animate-in fade-in duration-300">
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1.5">
+          <p className="pharos-kicker">Comparison Chart</p>
+          <CardTitle as="h2" className="pharos-section-title">
+            {title}
+          </CardTitle>
+          <p className="pharos-meta">
+            Read absolute scale first, then switch to normalized mode to compare trajectory instead of raw size.
+          </p>
+        </div>
+        <div className="flex flex-col items-stretch gap-2 sm:items-end">
           {normalizable && (
             <div className="flex gap-1">
               <button
                 onClick={() => setNormalized(false)}
                 aria-pressed={!normalized}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
-                  !normalized
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                className={`pharos-focus-ring pharos-control-pill px-2.5 py-1 ${
+                  !normalized ? "pharos-control-pill-active" : ""
                 }`}
               >
                 Absolute
@@ -125,10 +131,8 @@ export function ComparisonChart({
               <button
                 onClick={() => setNormalized(true)}
                 aria-pressed={normalized}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
-                  normalized
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                className={`pharos-focus-ring pharos-control-pill px-2.5 py-1 ${
+                  normalized ? "pharos-control-pill-active" : ""
                 }`}
               >
                 Normalized %
@@ -140,59 +144,62 @@ export function ComparisonChart({
       </CardHeader>
       <CardContent>
         {series.length > 0 && (
-          <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1">
+          <div className="mb-3 flex flex-wrap gap-2">
             {series.map((s) => (
-              <div key={s.id} className="flex items-center gap-1.5 text-sm">
+              <div key={s.id} className="pharos-chart-legend-chip">
                 <span
                   className="inline-block h-0.5 w-4 rounded-full"
                   style={{ backgroundColor: s.color }}
                 />
-                <span className="text-muted-foreground">{s.label}</span>
+                <span>{s.label}</span>
               </div>
             ))}
           </div>
         )}
         {displayData.length > 0 ? (
-          <div
-            className="h-[300px] sm:h-[400px]"
-            role="figure"
-            aria-label={`${title} comparison chart with ${series.length} series`}
-          >
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-              <LineChart
-                data={displayData}
-                margin={{ top: 5, right: 5, bottom: 20, left: 5 }}
-              >
-                <TimeXAxis
-                  dataKey="ts"
-                  minTickGap={72}
-                  tickFormatter={formatTimestamp}
-                />
-                <MonoYAxis tickFormatter={activeFormatter} />
-                <DateTooltip
-                  formatter={(value, name) => {
-                    const match = series.find((s) => s.id === name);
-                    return [activeFormatter(Number(value)), match?.label ?? String(name ?? "")];
-                  }}
-                />
-                {series.map((s) => (
-                  <Line
-                    key={s.id}
-                    type="monotone"
-                    dataKey={s.id}
-                    name={s.id}
-                    stroke={s.color}
-                    strokeWidth={2}
-                    dot={false}
-                    connectNulls
+          <div className="pharos-chart-stage">
+            <div
+              className="h-[300px] sm:h-[400px]"
+              role="figure"
+              aria-label={`${title} comparison chart with ${series.length} series`}
+            >
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                <LineChart
+                  data={displayData}
+                  margin={{ top: 8, right: 8, bottom: 16, left: 0 }}
+                >
+                  <TimeGrid />
+                  <TimeXAxis
+                    dataKey="ts"
+                    minTickGap={72}
+                    tickFormatter={formatTimestamp}
                   />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
+                  <MonoYAxis tickFormatter={activeFormatter} />
+                  <DateTooltip
+                    formatter={(value, name) => {
+                      const match = series.find((s) => s.id === name);
+                      return [activeFormatter(Number(value)), match?.label ?? String(name ?? "")];
+                    }}
+                  />
+                  {series.map((s) => (
+                    <Line
+                      key={s.id}
+                      type="monotone"
+                      dataKey={s.id}
+                      name={s.id}
+                      stroke={s.color}
+                      strokeWidth={2}
+                      dot={false}
+                      connectNulls
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         ) : (
-          <div className="flex h-[300px] sm:h-[400px] items-center justify-center text-muted-foreground">
-            No data available
+          <div className="pharos-empty-note flex h-[300px] sm:h-[400px] items-center justify-center text-center">
+            No comparison data is available for the current set and time window.
           </div>
         )}
       </CardContent>

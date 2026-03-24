@@ -12,11 +12,11 @@ export function PharosChartTooltip({ active, children, className }: PharosChartT
   return (
     <div
       className={cn(
-        "rounded-xl border border-border/70 bg-card/95 px-3.5 py-3 backdrop-blur-sm",
+        "rounded-xl border border-border/70 bg-card/95 px-3.5 py-3 backdrop-blur-md",
         "text-sm",
         className,
       )}
-      style={{ boxShadow: "var(--elevation-rest)" }}
+      style={{ boxShadow: "var(--elevation-raised)" }}
     >
       {children}
     </div>
@@ -24,7 +24,7 @@ export function PharosChartTooltip({ active, children, className }: PharosChartT
 }
 
 export function TooltipLabel({ children }: { children: ReactNode }) {
-  return <p className="mb-2 text-xs font-medium text-foreground">{children}</p>;
+  return <p className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-foreground/88">{children}</p>;
 }
 
 export function TooltipRow({
@@ -39,7 +39,7 @@ export function TooltipRow({
   bold?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4">
+    <div className="flex items-center justify-between gap-4 text-xs">
       <span className="flex items-center gap-1.5 text-muted-foreground">
         {color && (
           <span

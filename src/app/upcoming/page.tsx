@@ -20,7 +20,7 @@ export default function UpcomingPage() {
       path="/upcoming/"
       title="Upcoming Stablecoins"
       leadParagraphs={[
-        "Pre-launch stablecoins tracked by Pharos, from announced to launching soon. Click any coin for the full profile.",
+        "Track upcoming launches before they enter the live stablecoin universe, then open any coin for the full pre-launch dossier.",
       ]}
     >
       <UpcomingClient />

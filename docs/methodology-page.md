@@ -9,7 +9,7 @@
 - **Route shell:** `src/app/methodology/page.tsx` (metadata, breadcrumb JSON-LD, FAQ JSON-LD, hero/reader-guide shell)
 - **Shared helpers + section metadata:** `src/app/methodology/methodology-shared.tsx`
 - **Section composition module:** `src/app/methodology/methodology-sections.tsx`
-- **Section content groups:** `src/app/methodology/sections/core-sections.tsx` and `src/app/methodology/sections/monitoring-sections.tsx`
+- **Section content groups:** `src/app/methodology/sections/core-sections.tsx`, `src/app/methodology/sections/core-sections-pricing.tsx`, and `src/app/methodology/sections/monitoring-sections.tsx`
 - **Navigation model:** `METHODOLOGY_SECTIONS` + `LongformScrollspyNav`
 - **Mode switching:** `MethodologyModeToggle`; mobile renders the toggle inside the hero guide card, `md+` renders it in the jump rail
 - **Mode persistence contract:** `MethodologyModeToggle` stores `pharos.methodology.mode` in `localStorage` and opens/closes authored `details` blocks via the `data-methodology-details` / `data-methodology-worked-example` attributes emitted by `MethodologyDetails` and `WorkedExample`
@@ -19,7 +19,7 @@
 - **Public changelog routes:** pricing pipeline, stability index, scoring, liquidity score, mint/burn flow, yield, depeg, blacklist tracker, and chain health all live under `src/app/methodology/*-changelog/page.tsx`
 - **Changelog wrappers:** most changelog routes use `src/app/methodology/changelog-route-factory.tsx`; the shared shell is `src/components/methodology-changelog-page.tsx`
 - **Scoring changelog special case:** `src/app/methodology/scoring-changelog/page.tsx` uses the shared route factory for metadata + shell wiring while still authoring its nav entries and version cards locally
-- **Cross-app methodology links:** `src/lib/methodology-context.ts` and `src/components/methodology-hint.tsx` hard-code the anchors and changelog paths used by cards/tooltips across the app
+- **Cross-app methodology links:** `src/lib/methodology-context.ts` hard-codes methodology anchors and imports shared changelog-path constants from `shared/lib/*-version.ts`; `src/components/methodology-hint.tsx` renders those resolved links for cards/tooltips across the app
 
 ---
 
@@ -46,7 +46,7 @@ When changing any methodology surface, update the runtime implementation, the de
 
 1. Runtime implementation (source file above).
 2. Detailed methodology doc (`docs/*.md` for that system).
-3. `/methodology` page copy and worked examples in `src/app/methodology/sections/core-sections.tsx` or `src/app/methodology/sections/monitoring-sections.tsx`. Use `src/app/methodology/methodology-sections.tsx` only when changing section composition or order.
+3. `/methodology` page copy and worked examples in the relevant section module under `src/app/methodology/sections/` (`core-sections.tsx`, `core-sections-pricing.tsx`, or `monitoring-sections.tsx`). Use `src/app/methodology/methodology-sections.tsx` only when changing section composition or order.
 
 If a versioned methodology changes, bump the corresponding version module in `shared/lib/*-version.ts` so badges/changelog links stay consistent.
 
@@ -93,10 +93,11 @@ For the safety-score changelog specifically, update both:
 
 ## Changelog
 
+- **v3.10** (2026-03-24): Corrected the methodology route contract to include the dedicated pricing-section source file, clarified that `src/lib/methodology-context.ts` owns hard-coded methodology anchors while changelog paths come from shared version modules, and fixed the stale liquidity-discovery cadence/budget note.
 - **v3.9** (2026-03-22): Corrected the update contract so authored methodology copy points to the grouped section modules under `src/app/methodology/sections/`, not the thin `methodology-sections.tsx` composition wrapper.
 - **v3.8** (2026-03-21): Split the authored long-form methodology body out of the single 2.8k-line hotspot into grouped section modules under `src/app/methodology/sections/`, while keeping `methodology-sections.tsx` as the composition root.
 - **v3.7** (2026-03-16): Corrected the Chain Health source mapping to the live v1.1 implementation, added the missing `chain-health-changelog` route to the methodology route inventory, and linked the chain analytics docs update contract.
 - **v3.6** (2026-03-14): Documented the remaining route-shell contract in `page.tsx` (FAQ/metadata/reader-guide copy), the persisted Reader/Analyst mode toggle behavior, the shared changelog factory, and the cross-app anchor/path dependency in `src/lib/methodology-context.ts`.
 - **v3.5** (2026-03-14): Added Pricing Pipeline section (first position) with 8-source consensus diagram, source weights table, enrichment pipeline, confidence levels, and validation modes. Created `shared/lib/pricing-pipeline-version.ts` and `src/app/methodology/pricing-pipeline-changelog/page.tsx`.
 - **v3.4** (2026-03-12): Corrected the update contract so methodology-copy edits point to `methodology-sections.tsx`, which is where the authored long-form content and worked examples now live.
-- **v3.3** (2026-03-09): Separated discovery pipeline with staged pool confidence decay. Discovery sources (CG Onchain, GeckoTerminal, DexScreener, CG Tickers) now run on a dedicated 30-minute cron with a 20-minute crawl budget. Staged pools merge into scoring with freshness confidence decay (`max(0.5, 1 - ageHours/48)`) and explicit defaults contract. Chain-aware source routing reduces wasted API calls. Tiered priority with exponential backoff prevents looping on pool-less coins.
+- **v3.3** (2026-03-09): Separated discovery pipeline with staged pool confidence decay. Discovery sources now run on a dedicated half-hourly trigger (`6,36 * * * *`) with a 12-minute shared run budget and 25-second per-coin crawl budget. Staged pools merge into scoring with freshness confidence decay (`max(0.5, 1 - ageHours/48)`) and explicit defaults contract. Chain-aware source routing reduces wasted API calls. Tiered priority with exponential backoff prevents looping on pool-less coins.

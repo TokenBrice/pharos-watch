@@ -27,7 +27,7 @@ export function FilterBar({
   hasFilters,
 }: FilterBarProps) {
   return (
-    <div id="filter-bar" className="space-y-3.5 border-t border-border/60 pt-4 pb-3">
+    <div id="filter-bar" className="pharos-panel-header space-y-3.5 border-b border-t-0 pb-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3 flex-wrap">
           <p className="pharos-kicker">
@@ -84,7 +84,7 @@ export function FilterBar({
                   value={opt}
                   variant="outline"
                   size="sm"
-                  className="min-h-11 border-border/65 bg-background/55 px-2.5 py-1.5 text-xs sm:min-h-8 sm:py-1"
+                  className="pharos-toggle-pill min-h-11 px-3 sm:min-h-8 sm:py-1"
                 >
                   {FILTER_TAG_LABELS[opt]}
                 </ToggleGroupItem>

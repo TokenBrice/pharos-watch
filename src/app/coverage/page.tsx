@@ -51,11 +51,11 @@ export default createClientFeaturePage({
   shell: {
     breadcrumbName: "Coverage",
     path: "/coverage/",
-    title: "Coverage",
+    title: "Coverage Matrix",
     statusBadge: { status: "mature" },
     leadParagraphs: [
-      `Feature breadth across ${ACTIVE_STABLECOINS.length} tracked stablecoins.`,
-      "Start with the feature snapshot to see how wide each Pharos surface reaches by coin count and market-cap share. Then drop into the matrix to inspect what is available on a specific asset.",
+      `Use this page to answer two questions fast across ${ACTIVE_STABLECOINS.length} tracked stablecoins: what Pharos can show for a coin right now, and how much of the tracked market each surface actually reaches.`,
+      "Start with the feature snapshot for breadth by coin count and market-cap share, then drop into the matrix when you need the asset-level truth.",
     ],
     preface: (
       <script

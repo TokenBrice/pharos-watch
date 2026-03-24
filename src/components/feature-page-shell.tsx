@@ -60,15 +60,15 @@ export function FeaturePageShell({
           <span>/</span>
           <span className="text-foreground">{breadcrumbLabel ?? breadcrumbName}</span>
         </nav>
-        <div className="flex max-w-full flex-wrap items-start justify-between gap-x-3 gap-y-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
-            <h1 className="min-w-0 text-3xl font-extrabold tracking-tight leading-[1.08] sm:text-4xl">{title}</h1>
+        <div className="flex max-w-full flex-wrap items-start justify-between gap-x-3 gap-y-3">
+          <div className="flex min-w-0 max-w-4xl flex-wrap items-center gap-x-3 gap-y-2">
+            <h1 className="pharos-page-title">{title}</h1>
             {statusBadge && <FeatureStatusBadge status={statusBadge.status} version={statusBadge.version} />}
           </div>
           {headerActions}
         </div>
         {methodology && (
-          <p className="text-xs leading-relaxed text-muted-foreground">
+          <p className="pharos-meta">
             Methodology {methodology.version}.{" "}
             <Link
               href={methodology.changelogPath}
@@ -78,11 +78,15 @@ export function FeaturePageShell({
             </Link>
           </p>
         )}
-        {leadParagraphs.map((paragraph, index) => (
-          <p key={index} className="text-sm leading-relaxed text-muted-foreground">
-            {paragraph}
-          </p>
-        ))}
+        {leadParagraphs.length > 0 ? (
+          <div className="max-w-4xl space-y-2">
+            {leadParagraphs.map((paragraph, index) => (
+              <p key={index} className="pharos-lead">
+                {paragraph}
+              </p>
+            ))}
+          </div>
+        ) : null}
       </div>
       {children}
     </div>

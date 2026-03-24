@@ -53,6 +53,7 @@ The route does not call the Worker API directly. It is a metadata-driven surface
 
 `src/components/upcoming-client.tsx` exposes:
 
+- a top overview band summarizing tracked pre-launch coverage by phase
 - multi-select `Phase` filters over `announced`, `testnet`, `auditing`, `beta`, and `launching-soon`
 - multi-select `Peg` filters, shown only when the current pre-launch set contains more than one peg currency
 - multi-select `Backing` filters, shown only when the current pre-launch set contains more than one backing class
@@ -61,6 +62,7 @@ The route does not call the Worker API directly. It is a metadata-driven surface
   - `Announced Date`
   - `Name`
 - `Clear filters`, shown only while any filter set is active
+- the filter surface now uses the shared Pharos card/pill treatment instead of standalone flat chip rows, so dark mode stays visually consistent with the rest of the product
 
 Filtering always starts from the full `PRE_LAUNCH_STABLECOINS` set. Sorting is then applied to the filtered result.
 
@@ -71,6 +73,7 @@ Filtering always starts from the full `PRE_LAUNCH_STABLECOINS` set. Sorting is t
 Each card:
 
 - links to the canonical stablecoin detail route via `buildStablecoinUrl(coin.id)`
+- uses the shared `pharos-card-shell` / `pharos-interactive-card` surface treatment so the route matches the rest of the product in dark mode
 - shows logo, name, symbol, peg/backing/governance badges, and launch-phase badge when present
 - shows teaser copy only when `data/ai-summaries.json` has text for that coin
 - shows `Expected <date>` when `expectedLaunchDate` exists

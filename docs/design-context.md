@@ -36,3 +36,4 @@ Crypto-native DeFi participants who actively monitor stablecoin health — check
 4. **Semantic color only** — color communicates state (health, risk, trend), never decoration
 5. **Crypto-native, not mass-market** — simplify navigation when needed, but do not sand off the power-user edge
 6. **Distinctive, not generic** — Pharos should feel authored and memorable, never like a template or a clone
+7. **Consistency is polish** — premium feel comes from repeated precision in spacing, shell treatment, controls, and empty/error states, not from adding decorative novelty

@@ -94,6 +94,7 @@ The current proxy trusts the Cloudflare Access-protected `ops.pharos.watch` host
   - `404` for non-ops origins or non-allowlisted paths
   - `405` for method mismatch
   - `500` when the Pages-side service token pair is not configured
+  - `504` when the upstream fetch hits the proxy timeout budget
   - `502` when the upstream fetch fails or Cloudflare Access responds with an auth redirect from `ops-api`
 
 ### Pages project bindings needed now

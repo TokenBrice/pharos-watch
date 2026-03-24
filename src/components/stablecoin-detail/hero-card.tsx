@@ -301,6 +301,11 @@ export function HeroCard({
   const chainCount = coinData?.chains?.length ?? 0;
   const primaryComparisonPage = getPrimaryStaticComparisonPageForCoin(coin.id);
   const compareHref = primaryComparisonPage?.href ?? buildLiveCompareUrl([coin.id]);
+  const benchmarkSymbol = primaryComparisonPage
+    ? primaryComparisonPage.left.id === coin.id
+      ? primaryComparisonPage.right.symbol
+      : primaryComparisonPage.left.symbol
+    : null;
   const hasPrevDay = typeof prevDay === "number" && prevDay > 0;
   const hasPrevWeek = typeof prevWeek === "number" && prevWeek > 0;
   const hasPrevMonth = typeof prevMonth === "number" && prevMonth > 0;
@@ -435,7 +440,7 @@ export function HeroCard({
             className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground lg:min-h-9 lg:rounded-md lg:px-2 lg:py-1"
           >
             <ArrowLeftRight className="h-3.5 w-3.5" />
-            {primaryComparisonPage ? `Compare ${coin.symbol}` : "Compare"}
+            {benchmarkSymbol ? `Compare vs ${benchmarkSymbol}` : "Compare"}
           </Link>
           <ShareButton ogPath={`/api/og/stablecoin/${coin.id}`} label="Share" />
         </div>

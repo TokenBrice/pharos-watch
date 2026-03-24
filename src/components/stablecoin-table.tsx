@@ -102,6 +102,8 @@ interface StablecoinTableProps {
   data: StablecoinData[] | undefined;
   isLoading: boolean;
   activeFilters: FilterTag[];
+  toolbarActions?: React.ReactNode;
+  filterPanel?: React.ReactNode;
   logos?: Record<string, string>;
   pegRates?: Record<string, number>;
   searchQuery?: string;
@@ -170,6 +172,8 @@ export function StablecoinTable({
   data,
   isLoading,
   activeFilters,
+  toolbarActions,
+  filterPanel,
   logos,
   pegRates = {},
   searchQuery,
@@ -193,6 +197,7 @@ export function StablecoinTable({
   // Density mode
   const [density, setDensity] = useTableDensity();
   const densityConfig = DENSITY_CONFIGS[density];
+  const isListDensity = density === "list";
 
   // Column visibility — mobile gets a reduced default (hiddenMobile columns start off)
   const deviceDefault = useMemo(
@@ -276,7 +281,7 @@ export function StablecoinTable({
 
   if (isLoading) {
     return (
-      <div className="pharos-card-shell overflow-hidden">
+      <div className="pharos-table-shell">
         <div className="bg-muted/50 h-10" />
         {SKELETON_ROWS.map((i) => (
           <div key={i} className="flex items-center gap-3 px-4 py-2 border-t">
@@ -296,7 +301,7 @@ export function StablecoinTable({
   }
 
   return (
-    <div ref={tableRef} className="pharos-card-shell animate-in fade-in duration-300 overflow-hidden">
+    <div ref={tableRef} className="pharos-table-shell animate-in fade-in duration-300">
       <TableToolbar
         density={density}
         onDensityChange={setDensity}
@@ -306,13 +311,15 @@ export function StablecoinTable({
         defaultColumns={deviceDefault}
         onExport={handleCsvExport}
         exportDisabled={sorted.length === 0}
+        additionalActions={toolbarActions}
       />
+      {filterPanel}
 
       {/* Scroll container — handles both horizontal and vertical overflow */}
-      <div ref={scrollRef} className="scroll-shadow max-h-[50vh] overflow-y-auto overflow-x-auto px-0 pb-3 pr-2 sm:max-h-[70vh] sm:pr-0">
+      <div ref={scrollRef} className="scroll-shadow max-h-[50vh] overflow-y-auto overflow-x-auto px-0 pb-2 pr-2 sm:max-h-[70vh] sm:pr-0">
         <table className={`min-w-[420px] sm:min-w-[820px] w-full caption-bottom text-sm pharos-table-striped pharos-density-${density}`}>
           <TableCaption className="sr-only">Stablecoin data table</TableCaption>
-          <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
+          <TableHeader className="sticky top-0 z-10 bg-muted/70 backdrop-blur-sm">
             <TableRow>
               {STABLECOIN_HEADER_DEFS.filter((column) => isVisible(column.id)).map((column) =>
                 column.sortKey ? (
@@ -385,14 +392,22 @@ export function StablecoinTable({
                     <TableCell>
                       <Link
                         href={buildStablecoinUrl(coin.id)}
-                        className="pharos-focus-ring flex items-center gap-2 rounded-sm font-medium hover:underline"
+                        className={`pharos-focus-ring flex items-center rounded-md px-1 py-1 font-medium hover:bg-muted/35 ${
+                          isListDensity ? "gap-1.5" : "gap-2"
+                        }`}
                         onClick={(e) => e.stopPropagation()}
                         onMouseEnter={() => prefetch(coin.id)}
                       >
-                        <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={24} />
-                        <span className="font-medium">{coin.symbol}</span>
-                        <span className="truncate max-w-[180px] text-xs text-muted-foreground hidden xl:inline">
-                          {coin.name}
+                        <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={densityConfig.iconSize} />
+                        <span className="min-w-0">
+                          <span className="block font-medium text-foreground">{coin.symbol}</span>
+                          <span
+                            className={`max-w-[180px] truncate text-xs text-muted-foreground ${
+                              isListDensity ? "hidden" : "hidden xl:block"
+                            }`}
+                          >
+                            {coin.name}
+                          </span>
                         </span>
                       </Link>
                     </TableCell>
@@ -571,9 +586,14 @@ export function StablecoinTable({
               <TableRow>
                 <TableCell colSpan={99} className="py-8">
                   <EmptyStateIllustration variant={searchQuery ? "search" : "data"} />
-                  <p className="text-center text-muted-foreground">
-                    {searchQuery ? `No results for "${searchQuery}"` : "No stablecoin data available"}
-                  </p>
+                  <div className="mx-auto mt-4 max-w-xl pharos-empty-note text-center">
+                    <p className="text-foreground">
+                      {searchQuery ? `No results for "${searchQuery}"` : "No stablecoin data available"}
+                    </p>
+                    <p className="mt-2">
+                      Adjust the current lens or clear it entirely to return to the broader tracked universe.
+                    </p>
+                  </div>
                   {(searchQuery || activeFilters.length > 0) && (
                     <p className="mt-4 text-center text-sm">
                       {searchQuery && onClearSearch && (
@@ -607,12 +627,13 @@ export function StablecoinTable({
       {/* Scroll position footer */}
       {sorted.length > 0 && (
         <div
-          className="flex items-center justify-between border-t border-border/60 px-4 py-2 text-sm text-muted-foreground"
+          className="flex flex-col gap-1 border-t border-border/60 px-4 py-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between"
           aria-label="Table pagination"
         >
           <span aria-live="polite">
             Showing {rangeStart}–{rangeEnd} of {sorted.length} stablecoins
           </span>
+          <span className="pharos-meta">Rows open the detail dossier. Green and red deltas reflect supply expansion and contraction, not price return.</span>
         </div>
       )}
     </div>

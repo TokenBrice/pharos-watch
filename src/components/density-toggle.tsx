@@ -1,6 +1,6 @@
 "use client";
 
-import { List, ListCollapse, ListStart } from "lucide-react";
+import { List, ListCollapse, ListStart, Rows3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TableDensity } from "@/hooks/use-table-density";
 
@@ -11,6 +11,7 @@ interface DensityToggleProps {
 }
 
 const options: { value: TableDensity; label: string; icon: typeof List }[] = [
+  { value: "list", label: "List", icon: Rows3 },
   { value: "compact", label: "Compact", icon: ListCollapse },
   { value: "comfortable", label: "Comfortable", icon: List },
   { value: "spacious", label: "Spacious", icon: ListStart },
@@ -20,7 +21,7 @@ export function DensityToggle({ value, onChange, className }: DensityToggleProps
   return (
     <div
       className={cn(
-        "inline-flex items-center rounded-lg border border-border/60 bg-background/50 p-0.5",
+        "grid grid-cols-1 gap-1 rounded-2xl border border-border/60 p-1 sm:grid-cols-2",
         className
       )}
       role="radiogroup"
@@ -37,15 +38,15 @@ export function DensityToggle({ value, onChange, className }: DensityToggleProps
             aria-checked={isActive}
             onClick={() => onChange(option.value)}
             className={cn(
-              "pharos-focus-ring flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all duration-200",
+              "pharos-focus-ring pharos-control-pill flex w-full items-center justify-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium transition-all duration-200",
               isActive
-                ? "bg-foreground text-background shadow-sm"
-                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                ? "pharos-control-pill-active"
+                : "border-transparent shadow-none"
             )}
             title={`${option.label} view`}
           >
             <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="hidden sm:inline">{option.label}</span>
+            <span>{option.label}</span>
           </button>
         );
       })}

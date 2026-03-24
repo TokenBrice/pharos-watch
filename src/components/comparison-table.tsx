@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo } from "react";
 import type { StablecoinData, StablecoinMeta, ReportCardGrade } from "@shared/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
@@ -23,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MethodologyLabel } from "@/components/methodology-hint";
+import { buildStablecoinUrl } from "@/lib/urls";
 
 interface ComparisonCoin {
   id: string;
@@ -163,23 +165,30 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
 
   if (coins.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground py-8 text-center">
+      <div className="pharos-empty-note py-8 text-center">
         Select stablecoins above to compare them side-by-side.
-      </p>
+      </div>
     );
   }
 
   return (
     <>
+      <div className="pharos-subtle-band">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <p className="pharos-kicker">At A Glance</p>
+          <p className="pharos-meta">Green highlights mark the strongest relative read inside this selected set, not an absolute endorsement.</p>
+        </div>
+      </div>
+
       {/* Mobile: stacked cards per coin */}
       <div className="sm:hidden space-y-4">
         {coins.map((coin, i) => (
-          <div key={coin.id} className="rounded-lg border p-4 space-y-3">
+          <div key={coin.id} className="pharos-card-shell space-y-3 p-4">
             <div className="flex items-center gap-2">
               <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={28} />
-              <div>
-                <span className="font-semibold text-sm">{coin.symbol}</span>
-                <span className="text-xs text-muted-foreground ml-1.5">{coin.name}</span>
+              <div className="min-w-0">
+                <span className="block text-sm font-semibold">{coin.symbol}</span>
+                <span className="block truncate text-xs text-muted-foreground">{coin.name}</span>
               </div>
               {detailErrors?.[coin.id] && (
                 <span className="text-xs text-destructive ml-auto">Chart unavailable</span>
@@ -227,14 +236,14 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
 
       {/* Desktop: side-by-side table */}
       <div className="hidden sm:block">
-        <div className="overflow-x-auto">
+        <div className="pharos-table-shell overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead scope="col" className="min-w-[80px]">Metric</TableHead>
+                <TableHead scope="col" className="pharos-table-sticky-metric min-w-[110px]">Metric</TableHead>
                 {coins.map((coin) => (
                 <TableHead scope="col" key={coin.id} className="text-center min-w-[120px]">
-                    <div className="flex flex-col items-center gap-1">
+                    <Link href={buildStablecoinUrl(coin.id)} className="pharos-focus-ring inline-flex w-full flex-col items-center gap-1 rounded-xl px-2 py-2">
                       <StablecoinLogo
                         src={logos?.[coin.id]}
                         name={coin.name}
@@ -245,7 +254,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
                       {detailErrors?.[coin.id] && (
                         <span className="text-xs text-destructive">Chart data unavailable</span>
                       )}
-                    </div>
+                    </Link>
                   </TableHead>
                 ))}
               </TableRow>
@@ -253,7 +262,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
             <TableBody>
               {/* Price */}
               <TableRow>
-                <TableCell className="font-medium">Price</TableCell>
+                <TableCell className="pharos-table-sticky-metric font-medium">Price</TableCell>
                 {coins.map((coin, i) => (
                   <TableCell
                     key={coin.id}
@@ -266,7 +275,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
 
               {/* Peg Score */}
               <TableRow>
-                <TableCell className="font-medium"><MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel></TableCell>
+                <TableCell className="pharos-table-sticky-metric font-medium"><MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel></TableCell>
                 {coins.map((coin, i) => (
                   <TableCell
                     key={coin.id}
@@ -281,7 +290,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
 
             {/* Market Cap */}
             <TableRow>
-              <TableCell className="font-medium">Market Cap</TableCell>
+              <TableCell className="pharos-table-sticky-metric font-medium">Market Cap</TableCell>
               {coins.map((coin, i) => (
                 <TableCell
                   key={coin.id}
@@ -294,7 +303,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
 
             {/* 7d Change */}
             <TableRow>
-              <TableCell className="font-medium">7d Change</TableCell>
+              <TableCell className="pharos-table-sticky-metric font-medium">7d Change</TableCell>
               {coins.map((coin, i) => {
                 const change = rowData.weeklyChanges[i];
                 const sign = change != null && change >= 0 ? "+" : "";
@@ -311,7 +320,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
 
             {/* Liquidity Score */}
             <TableRow>
-              <TableCell className="font-medium"><MethodologyLabel topic="liquidityScore">Liquidity Score</MethodologyLabel></TableCell>
+              <TableCell className="pharos-table-sticky-metric font-medium"><MethodologyLabel topic="liquidityScore">Liquidity Score</MethodologyLabel></TableCell>
               {coins.map((coin, i) => (
                 <TableCell
                   key={coin.id}
@@ -326,7 +335,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
 
             {/* Governance */}
             <TableRow>
-              <TableCell className="font-medium">Governance</TableCell>
+              <TableCell className="pharos-table-sticky-metric font-medium">Governance</TableCell>
               {coins.map((coin, i) => (
                 <TableCell key={coin.id} className="text-center">
                   {rowData.governanceLabels[i]}
@@ -336,7 +345,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
 
             {/* Backing */}
             <TableRow>
-              <TableCell className="font-medium">Backing</TableCell>
+              <TableCell className="pharos-table-sticky-metric font-medium">Backing</TableCell>
               {coins.map((coin, i) => (
                 <TableCell key={coin.id} className="text-center">
                   {rowData.backingLabels[i]}
@@ -346,7 +355,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
 
             {/* Peg Currency */}
             <TableRow>
-              <TableCell className="font-medium">Peg Currency</TableCell>
+              <TableCell className="pharos-table-sticky-metric font-medium">Peg Currency</TableCell>
               {coins.map((coin, i) => (
                 <TableCell key={coin.id} className="text-center">
                   {rowData.pegCurrencies[i]}
@@ -356,7 +365,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
 
             {/* Safety Rating */}
             <TableRow>
-              <TableCell className="font-medium"><MethodologyLabel topic="safetyScore">Safety Rating</MethodologyLabel></TableCell>
+              <TableCell className="pharos-table-sticky-metric font-medium"><MethodologyLabel topic="safetyScore">Safety Rating</MethodologyLabel></TableCell>
               {coins.map((coin, i) => (
                 <TableCell
                   key={coin.id}
@@ -369,7 +378,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
 
             {/* Net Flow 30D */}
             <TableRow>
-              <TableCell className="font-medium">Net Flow 30D</TableCell>
+              <TableCell className="pharos-table-sticky-metric font-medium">Net Flow 30D</TableCell>
               {coins.map((coin, i) => {
                 const val = rowData.netFlow30dValues[i];
                 return (

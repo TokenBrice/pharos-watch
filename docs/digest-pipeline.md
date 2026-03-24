@@ -119,13 +119,13 @@ The `digest_meta` column stores structured metadata about editorial choices (lea
 
 ## API Endpoints
 
-Read endpoints are public with standard/slow cache headers (5-min or 60-min edge, depending on route). The manual trigger endpoint is admin-only. See [API Reference](./api-reference.md) for the full response shapes.
+Read endpoints are public, but they do not all share the same cache profile: `GET /api/daily-digest` and `GET /api/digest-archive` use the standard 5-minute edge profile, while `GET /api/digest-snapshot` is treated as archive data and uses `s-maxage=86400, max-age=3600`. The manual trigger endpoint is admin-only. See [API Reference](./api-reference.md) for the full response shapes.
 
 | Endpoint | Description |
 |----------|-------------|
 | `GET /api/daily-digest` | Latest digest only |
 | `GET /api/digest-archive` | All digests, newest first (up to 365) |
-| `GET /api/digest-snapshot?date=YYYY-MM-DD` | Input data + depeg/blacklist context for a specific date — used by SSG detail pages |
+| `GET /api/digest-snapshot?date=YYYY-MM-DD` | Input data + depeg/blacklist context for a specific date — used by SSG detail pages; cached as archive data (`s-maxage=86400, max-age=3600`) |
 | `POST /api/trigger-digest` *(admin)* | Force-regenerate digest and post to all distribution channels; requires Access service-token headers on `ops-api.pharos.watch` |
 
 ---

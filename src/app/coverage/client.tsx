@@ -10,6 +10,7 @@ import {
 import { formatCurrency } from "@shared/lib/format";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { StaleDataBanner } from "@/components/stale-data-banner";
+import { CoverageLensSummary } from "@/components/coverage-lens-summary";
 import {
   TableBody,
   TableCaption,
@@ -425,7 +426,6 @@ export default function CoveragePageClient() {
       ),
     [deferredSearch, filter, rows, sort],
   );
-
   const hasActiveFilters = filter !== "all" || search.trim().length > 0;
 
   return (
@@ -576,7 +576,6 @@ export default function CoveragePageClient() {
           </div>
 
           <div className="flex flex-col gap-3">
-            {/* Row 1: Search + Sort */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative min-w-0 flex-1 sm:max-w-sm">
                 <Search
@@ -606,8 +605,6 @@ export default function CoveragePageClient() {
                 </select>
               </label>
             </div>
-
-            {/* Row 2: Filter Pills */}
             <div
               role="toolbar"
               aria-label="Coverage filters"
@@ -650,6 +647,8 @@ export default function CoveragePageClient() {
               </button>
             ) : null}
           </div>
+
+          <CoverageLensSummary rows={rows} filteredRows={filteredRows} search={search} filter={filter} />
 
           <details className="group rounded-2xl border border-border/60 bg-background/35">
             <summary className="pharos-focus-ring flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-foreground [&::-webkit-details-marker]:hidden">

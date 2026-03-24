@@ -50,7 +50,7 @@ The active frontend operator mode is now:
   - a `Follow this order` lane list that mirrors the priority-ranked section order
   - a sticky `LongformScrollspyNav` rail for section-level navigation while scrolling
 - `/admin/` disables indexing (`robots: { index: false, follow: false }`)
-- `/status/` stays read-only and uses only public read endpoints
+- `/status/` stays read-only, uses only public read endpoints, and also disables indexing (`robots: { index: false, follow: false }`)
 - The public `/status/` top fold now keeps browser-sync metadata inside a dedicated `Live watch` side panel instead of the page-title row, so the page title stays stable at narrow and medium widths
 - `src/components/status/public-status-hero.tsx`
   - Renders the public-monitor hero with:
@@ -88,7 +88,7 @@ The active frontend operator mode is now:
   - Allows only admin routes from the shared endpoint registry, plus discovery-dismiss
   - Forwards only `Accept`, `Content-Type`, and `Idempotency-Key` from the browser request; browser callers never send Access service-token headers directly
   - Reflects a narrowed response-header set (`Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, `X-Idempotent-Replay`) back into the app shell
-  - Converts upstream fetch failures or Access redirect responses into operator-visible `502` JSON errors
+  - Converts upstream timeouts into operator-visible `504` JSON errors; non-timeout fetch failures and Access redirect responses still return `502`
 - `src/hooks/use-status-dashboard-model.ts`
   - Owns the polling orchestration for `useStatus`, `useHealth`, `useEndpointProbes`, and `useStatusHistory`
   - Derives the operational lane summaries, severity-ranked section order, notice rail entries, cross-surface status deltas, and the sync-floor freshness view used by the page shell

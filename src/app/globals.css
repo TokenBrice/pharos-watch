@@ -158,6 +158,8 @@
   /* Theme-aware card elevation shadows */
   [data-slot="card"] {
     border-color: var(--card-border);
+    background-color: var(--card-bg);
+    background-image: var(--card-shell-highlight), var(--card-shell-bg);
     box-shadow: var(--elevation-rest);
     transition:
       box-shadow var(--motion-duration-base) var(--motion-ease-standard),
@@ -257,6 +259,11 @@
     padding: 0.25rem 0.5rem !important;
     font-size: 0.75rem !important;
   }
+
+  .pharos-density-list [data-slot="table-cell"] {
+    padding: 0.125rem 0.5rem !important;
+    font-size: 0.75rem !important;
+  }
   
   .pharos-density-comfortable [data-slot="table-cell"] {
     padding: 0.5rem 0.75rem !important;
@@ -273,7 +280,8 @@
       0 6px 18px oklch(0 0 0 / 16%);
   }
   [data-slot="button"][data-variant="outline"] {
-    background-color: oklch(1 0 0 / 72%);
+    background-color: var(--control-pill-bg);
+    border-color: var(--control-pill-border);
   }
   [data-slot="input"],
   [data-slot="textarea"] {
@@ -290,6 +298,9 @@
       border-color var(--motion-duration-fast) var(--motion-ease-standard);
   }
   [data-slot="table-head"] {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 600;
     letter-spacing: 0.01em;
   }
   [data-slot="table-head"][aria-sort],
@@ -316,9 +327,41 @@
       transform var(--motion-duration-fast) var(--motion-ease-standard);
   }
 
+  .pharos-page-title {
+    @apply min-w-0 text-3xl font-extrabold tracking-tight sm:text-4xl;
+    line-height: 1.05;
+  }
+
+  .pharos-lead {
+    @apply max-w-4xl text-sm leading-relaxed text-muted-foreground;
+  }
+
+  .pharos-section-title {
+    @apply text-lg font-semibold tracking-tight text-foreground;
+    line-height: 1.18;
+  }
+
+  .pharos-meta {
+    @apply text-xs leading-relaxed text-muted-foreground;
+  }
+
   .pharos-card-shell {
     @apply rounded-xl border border-border/70 bg-card/78 shadow-sm;
+    background-image: var(--card-shell-highlight), var(--card-shell-bg);
     backdrop-filter: saturate(1.08);
+    box-shadow: var(--card-shadow);
+  }
+
+  .pharos-panel-header {
+    @apply border-b border-border/60 px-4 py-3 sm:px-5;
+    background: var(--panel-header-bg);
+    box-shadow: var(--table-header-shadow);
+  }
+
+  .pharos-subtle-band {
+    @apply rounded-2xl border border-border/60 px-4 py-3;
+    background: var(--panel-header-bg);
+    box-shadow: var(--elevation-rest);
   }
 
   .pharos-mobile-utility-safe {
@@ -342,6 +385,106 @@
     transform: translateY(0);
   }
 
+  .pharos-control-pill {
+    @apply inline-flex items-center justify-center rounded-full border px-3 py-2 text-xs font-medium text-muted-foreground;
+    min-height: 2.25rem;
+    background: var(--control-pill-bg);
+    border-color: var(--control-pill-border);
+    box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.08);
+    transition:
+      color var(--motion-duration-fast) var(--motion-ease-standard),
+      border-color var(--motion-duration-fast) var(--motion-ease-standard),
+      background-color var(--motion-duration-fast) var(--motion-ease-standard),
+      box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
+      transform var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+
+  .pharos-control-pill:hover {
+    color: var(--text-primary);
+    background: color-mix(in oklab, var(--control-pill-bg) 82%, var(--interactive-hover));
+  }
+
+  .pharos-control-pill-active {
+    color: var(--control-pill-active-text);
+    background: var(--control-pill-active-bg);
+    border-color: transparent;
+    box-shadow:
+      inset 0 1px 0 oklch(1 0 0 / 0.1),
+      0 8px 20px oklch(0 0 0 / 0.18);
+  }
+
+  .pharos-toggle-pill {
+    @apply inline-flex items-center rounded-xl border px-3 py-1.5 text-xs font-medium text-muted-foreground;
+    min-height: 2.25rem;
+    background: color-mix(in oklab, var(--control-pill-bg) 84%, transparent);
+    border-color: color-mix(in oklab, var(--control-pill-border) 92%, transparent);
+    box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.05);
+    transition:
+      color var(--motion-duration-fast) var(--motion-ease-standard),
+      border-color var(--motion-duration-fast) var(--motion-ease-standard),
+      background-color var(--motion-duration-fast) var(--motion-ease-standard),
+      box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+
+  .pharos-toggle-pill:hover {
+    color: var(--text-primary);
+    background: color-mix(in oklab, var(--control-pill-bg) 76%, var(--interactive-hover));
+    border-color: color-mix(in oklab, var(--control-pill-border) 76%, var(--border-strong));
+  }
+
+  .pharos-toggle-pill[data-state="on"] {
+    color: var(--control-pill-active-text);
+    background: var(--control-pill-active-bg);
+    border-color: transparent;
+    box-shadow:
+      inset 0 1px 0 oklch(1 0 0 / 0.08),
+      0 8px 20px oklch(0 0 0 / 0.22);
+  }
+
+  .pharos-chart-stage {
+    @apply rounded-2xl border p-3 sm:p-4;
+    background: var(--chart-stage-bg);
+    border-color: var(--chart-stage-border);
+    box-shadow: var(--chart-stage-shadow);
+  }
+
+  .pharos-chart-legend-chip {
+    @apply inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs text-muted-foreground;
+    background: var(--control-pill-bg);
+    border-color: var(--control-pill-border);
+  }
+
+  .pharos-table-shell {
+    @apply overflow-hidden rounded-2xl border border-border/70;
+    background-image: var(--card-shell-highlight), var(--card-shell-bg);
+    box-shadow: var(--card-shadow);
+  }
+
+  .pharos-table-toolbar {
+    @apply flex flex-col gap-3 border-b border-border/60 px-4 py-3 sm:px-5;
+    background: var(--panel-header-bg);
+  }
+
+  .pharos-table-sticky-primary {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--table-sticky-column-bg);
+    box-shadow: var(--table-sticky-column-shadow);
+  }
+
+  .pharos-table-sticky-metric {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--table-sticky-column-bg);
+    box-shadow: var(--table-sticky-column-shadow);
+  }
+
+  .pharos-empty-note {
+    @apply rounded-2xl border border-dashed border-border/70 bg-muted/10 px-4 py-4 text-sm text-muted-foreground;
+  }
+
   .pharos-stagger-entrance > * {
     animation: pharos-fade-in-up var(--motion-duration-entrance) var(--motion-ease-standard) both;
     animation-delay: calc(var(--stagger-index, 0) * 60ms);
@@ -353,10 +496,10 @@
 
   /* Table striping for better horizontal scanning */
   .pharos-table-striped tbody tr:nth-child(even) {
-    background-color: oklch(0.97 0.003 260 / 40%);
+    background-color: var(--table-row-stripe);
   }
   .dark .pharos-table-striped tbody tr:nth-child(even) {
-    background-color: oklch(1 0 0 / 3%);
+    background-color: var(--table-row-stripe);
   }
   .pharos-table-striped tbody tr:nth-child(even):hover {
     background-color: var(--table-row-hover);
@@ -492,7 +635,9 @@
     z-index: 10;
   }
   .table-header-sticky thead tr {
-    @apply bg-muted/80 backdrop-blur-sm;
+    backdrop-filter: blur(10px);
+    background: color-mix(in oklab, var(--table-header-bg) 88%, transparent);
+    box-shadow: var(--table-header-shadow);
   }
   /* Shadow appears when header is sticky (scrolled) */
   .table-header-sticky:has(tbody tr:first-child) thead {
@@ -517,6 +662,22 @@
     /* Hide horizontal scrollbar when not needed */
     scrollbar-width: thin;
     scrollbar-color: var(--border-default) transparent;
+  }
+
+  .scroll-shadow::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
+  }
+
+  .scroll-shadow::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--border-default) 72%, transparent);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .scroll-shadow::-webkit-scrollbar-track {
+    background: transparent;
   }
   
   /* Webkit scrollbar styling */
@@ -699,7 +860,7 @@
   }
 
   .dark [data-slot="button"][data-variant="outline"] {
-    background-color: oklch(1 0 0 / 6%);
+    background-color: var(--control-pill-bg);
   }
 
   .dark [data-slot="input"],
@@ -710,6 +871,10 @@
   /* Theme-aware chart grid opacity — targets Recharts CartesianGrid */
   .recharts-cartesian-grid {
     opacity: var(--chart-grid-opacity);
+  }
+
+  .recharts-tooltip-wrapper {
+    outline: none;
   }
 
   /* Theme-aware PSI band fill opacity */
@@ -734,6 +899,7 @@
 
   [data-slot="table-row"]:hover {
     border-left-color: var(--brand-accent);
+    background-color: var(--table-row-hover);
   }
 
   /* Override for risk rows - keep their color on hover */

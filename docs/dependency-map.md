@@ -26,7 +26,7 @@ Market-cap map construction lives in `src/app/dependency-map/client.tsx` and use
 Graph construction logic lives in `src/lib/contagion-layout.ts` (called via `useMemo` from `ContagionGraph`):
 
 - Filters out `isDefunct` report cards.
-- Builds a live dependency edge set from `TRACKED_STABLECOINS` + `deriveDependencies(meta)` (live source and live target only).
+- Builds a live dependency edge set from `ACTIVE_STABLECOINS` + `deriveDependencies(meta)` (live source and live target only).
 - Removes coins with no incoming and no outgoing live dependency edges.
 - Sorts remaining coins by market cap descending.
 - Takes top `MAX_NODES = 50`, then iteratively prunes coins that are isolated inside the displayed subset and backfills from lower-ranked candidates.

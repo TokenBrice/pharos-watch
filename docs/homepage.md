@@ -147,8 +147,8 @@ The `/start/` route is documented in [Start Page](./start-page.md).
 3. `CampaignCallout` while `CAMPAIGN_END_AT` is still in the future on the client
 4. `StartHereCallout` when `useStartHereCallout()` says it should show
 5. `MarketHighlights`
-6. `DailyDigest` in `preview` mode
-7. `Key Stablecoin Data` section
+6. `Key Stablecoin Data` section
+7. `DailyDigest` in `preview` mode
 8. `UpcomingStablecoinsSection` (includes "View all" link to `/upcoming`)
 9. `Core Monitoring` band
 10. `Research Surfaces` band

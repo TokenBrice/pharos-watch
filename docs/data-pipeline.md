@@ -19,10 +19,10 @@ All external data sources are protected by per-source circuit breakers (`worker/
 
 - **Open threshold**: 3 consecutive failures
 - **Probe interval**: 30 minutes (one request allowed to test recovery)
-- **Alerts**: Webhook alert fires on open and close transitions
+- **Alerts**: Open/close transition alerts are sent when the caller provides a webhook URL to `recordOutcome(...)`
 - **Health impact**: Any open circuit triggers `degraded` status on `/api/health`
 
-Sources tracked: `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coinmarketcap-prices`, `dexscreener-prices`, `pyth-prices`, `binance-prices`, `coinbase-prices`, `redstone-prices`, `curve-onchain`, `curve-liquidity-api`, `fluid-dex-api`, `balancer-api`, `raydium-api`, `orca-api`, `fx-realtime`, `geckoterminal-probe`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api`.
+The source-name registry is maintained in `worker/src/lib/constants.ts` under `CIRCUIT_SOURCE`. Current keys span the main data and delivery lanes, including DefiLlama (`defillama-*`), CoinGecko (`coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coingecko-ticker`), CoinMarketCap, DexScreener, Jupiter, Pyth, Binance, Kraken, Bitstamp, Coinbase, RedStone, Curve, Fluid/Balancer/Raydium/Orca, FX (`fx-frankfurter`, `fx-realtime`, `chainlink-feeds`), treasury rates, Etherscan, Alchemy, Bluechip, Anthropic, Twitter, Telegram, DRPC, TronGrid, and the Kinesis Horizon sources.
 
 ### DefiLlama list vs detail API
 
@@ -117,7 +117,7 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 3. **Concurrent cron guard**: `setCacheIfNewer()` uses a compare-and-swap pattern — a slow sync run can't overwrite a newer run's data. Uses `syncStartSec` as CAS guard. Applied to cache-writing crons such as stablecoins, stablecoin-charts, FX rates, bluechip ratings, and USDS status.
 4. **Detail JSON validation**: `stablecoin-detail.ts` parses response JSON before caching; skips cache on parse failure
 5. **Detail history freshness guard**: `/api/stablecoin/:id` rejects CoinGecko-derived history whose latest point is more than 72 hours old and falls back to D1 `supply_history` instead of caching stale chart data
-6. **fetchWithRetry**: Default 15s timeout prevents hanging Workers. Retries on 404 by default (configurable via `{ passthrough404: true }`, `{ timeoutMs: N }`)
+6. **fetchWithRetry**: Default 15s timeout prevents hanging Workers. `404` is not passed through by default; callers must opt in via `{ passthrough404: true }`. Timeout and passthrough behavior are configurable per call (`{ timeoutMs: N }`, `{ passthroughStatuses: [...] }`)
 7. **Depeg dedup**: `UNIQUE INDEX (stablecoin_id, started_at, source)` prevents duplicate depeg events. Partial index on `ended_at IS NULL` speeds up open-event queries
 8. **Depeg interval merge**: `computePegScore()` and `computePegStability()` merge overlapping depeg intervals before summing duration
 9. **Depeg direction handling**: If a coin flips from below-peg to above-peg (or vice versa) without recovering, the old event is closed and a new one opened with the correct direction

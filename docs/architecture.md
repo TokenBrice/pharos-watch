@@ -72,7 +72,7 @@ The subscription/disambiguation tables are created in `worker/migrations/0054_te
 
 | Job                        | Description                                                                                                                               |
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `dispatch-telegram-alerts` | Detects DEWS/depeg/safety changes and fans out alerts to subscribers on the dedicated `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` trigger |
+| `dispatch-telegram-alerts` | Detects DEWS/depeg/safety/launch changes and fans out alerts to subscribers on the dedicated `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` trigger |
 
 ## File Tree Guide
 
@@ -418,7 +418,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migration files (76) plus MANIFEST.md
+├── migrations/                   # D1 SQL migration files (83) plus MANIFEST.md
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
     ├── route-registry.ts         # Static route binding registry keyed by shared endpoint metadata + dependency descriptors
@@ -483,7 +483,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── weekly-recap.ts      # AI-generated weekly market recap via Claude API (Mondays, 08:05 UTC)
     │   ├── discovery-scan.ts     # Weekly stablecoin coverage discovery → D1 (Mondays, 08:05 UTC)
     │   ├── compute-dews.ts       # DEWS computation cron (every 30 min, after sync-dex-liquidity)
-    │   ├── dispatch-telegram-alerts.ts # Subscriber alert fan-out for DEWS/depeg/safety transitions (dedicated every-5-minute trigger)
+    │   ├── dispatch-telegram-alerts.ts # Subscriber alert fan-out for DEWS/depeg/safety shifts plus launch promotions (dedicated every-5-minute trigger)
     │   ├── yield-config.ts       # Yield source configs: pool UUIDs, source types, scoring params
     │   ├── yield-helpers.ts      # Pure yield computation helpers: Pharos Yield Score, excess yield, stability
     │   ├── fetch-tbill-rate.ts   # T-bill proxy fetcher (FRED DGS3MO)

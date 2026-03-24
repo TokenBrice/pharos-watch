@@ -1,6 +1,6 @@
 # Design Language Reference (Live Baseline)
 
-This document reflects the current UI baseline in the codebase and was re-verified on **March 22, 2026**.
+This document reflects the current UI baseline in the codebase and was re-verified on **March 24, 2026**.
 
 Use this as the visual source of truth for product-facing design decisions. For token definitions (primitive, semantic, component), see [`design-tokens.md`](design-tokens.md). The bridge layer lives in `src/app/globals.css`.
 
@@ -169,6 +169,7 @@ This is a **one-off artistic treatment** — the patterns are not intended for r
 | Role                      | Live class pattern                                                                           |
 | ------------------------- | -------------------------------------------------------------------------------------------- |
 | Standard page title       | `min-w-0 text-3xl sm:text-4xl font-extrabold tracking-tight leading-[1.08]`                  |
+| Shared page title utility | `pharos-page-title`                                                                           |
 | Digest article title      | `text-3xl font-extrabold tracking-tighter`                                                   |
 | Homepage digest hero      | `Newsreader`, `font-semibold`, `text-[clamp(2.8rem,6vw,5rem)]`, `leading-[0.88]`, `tracking-[-0.045em]` |
 | Home logotype label       | `text-[1.02rem] font-mono font-semibold uppercase tracking-[0.16em]`                         |
@@ -182,7 +183,9 @@ This is a **one-off artistic treatment** — the patterns are not intended for r
 | Role               | Live class pattern                             |
 | ------------------ | ---------------------------------------------- |
 | Standard body copy | `text-sm text-muted-foreground`                |
+| Shared lead copy   | `pharos-lead`                                 |
 | Small metadata     | `text-xs text-muted-foreground`                |
+| Shared metadata    | `pharos-meta`                                 |
 | Card micro-labels  | `text-xs uppercase tracking-wide`              |
 | Footer disclaimer  | `text-center text-xs text-muted-foreground/60` |
 
@@ -237,18 +240,28 @@ The dedicated `/start/` route extends the same language into a full-page onboard
 
 ## Shared Utility Classes
 
-Live production uses all four shared utility classes:
+Live production now leans on a broader shared utility layer for finish-level consistency:
 
 - `pharos-kicker`
 - `pharos-focus-ring`
 - `pharos-card-shell`
 - `pharos-interactive-card`
+- `pharos-page-title`
+- `pharos-lead`
+- `pharos-section-title`
+- `pharos-meta`
+- `pharos-control-pill`
+- `pharos-chart-stage`
+- `pharos-table-shell`
+- `pharos-table-toolbar`
 
 Current high-use areas:
 
 - Homepage snapshot and explore cards
 - Peg filter pills
 - CTA links with custom focus treatment
+- chart legends, chart stages, and comparison controls
+- stablecoin/comparison table wrappers and toolbars
 
 ---
 
@@ -281,12 +294,15 @@ Default card composition in production:
 
 - `data-slot="card"`
 - `bg-card text-card-foreground flex flex-col gap-4 rounded-xl border py-4 shadow-sm`
+- card surfaces now inherit a subtle shell gradient plus top-left highlight through the global token bridge instead of relying on flat fills alone
+- `pharos-card-shell` is the promoted authored-surface wrapper for major route modules, tables, and feature cards
 
 ### Card Header + Title
 
 - Header: `@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-4 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-4`
 - Tight variants add `pb-1`, `pb-1.5`, or `pb-2`
 - Titles: mostly `leading-none font-semibold`
+- Shared route and chart surfaces increasingly use `pharos-panel-header` for a restrained header band instead of ad-hoc muted strips
 
 ### Accent Border Palette (Live)
 
@@ -347,6 +363,15 @@ Common chip form:
 
 - `inline-flex items-center rounded-full border bg-background px-2.5 py-1 text-xs font-medium hover:bg-accent transition-colors`
 
+### Control Pills
+
+The preferred finish-level control language is now the shared pill system:
+
+- base: `pharos-control-pill`
+- selected: `pharos-control-pill pharos-control-pill-active`
+- used on time-range controls, density toggles, lens pills, and lightweight route context summaries
+- pills should feel dense and precise, not marketing-chip playful
+
 ---
 
 ## Tables
@@ -354,18 +379,22 @@ Common chip form:
 ### Base Table Styling
 
 - Table: `w-full caption-bottom text-sm`
+- Major table surfaces should prefer `pharos-table-shell` over a plain rounded border wrapper
+- Toolbars should prefer `pharos-table-toolbar` with a brief explanatory line rather than a bare row of buttons
 - Row: `hover:bg-muted/40 data-[state=selected]:bg-muted border-b transition-colors`
+- Table rows now also take a subtle left-edge accent and a small horizontal nudge on hover; risk rows preserve their own semantic border color on hover
 
 ### Header Variants
 
-- Standard header: `[&_tr]:border-b bg-muted/80`
-- Sticky directory header (peg pages): `[&_tr]:border-b bg-muted/80 sticky top-0 z-10 backdrop-blur-sm`
+- Standard header: `[&_tr]:border-b` with a theme-aware header band and token-driven shadow
+- Sticky directory header (peg pages): sticky top header with restrained blur and `--table-header-shadow`
 - Stablecoin detail history tables (depeg + mint/burn) use a rounded bordered shell (`rounded-xl border overflow-hidden`) with the muted header treatment and a footer row pairing mono range copy with outline `Previous` / `Next` controls
 
 ### Mobile Directory Table Handling
 
 - Toolbar becomes a vertical stack on mobile instead of a cramped inline row
-- `Columns` and `Export CSV` go full-width on mobile
+- `Columns` and `Export CSV` keep large tap targets on mobile; density and range controls also stay pill-based instead of collapsing into tiny tabs
+- Density controls now include a true `List` mode for ticker-first scanning; in that mode the stablecoin table suppresses the expanded coin name and keeps only the ticker lockup
 - Table keeps a deliberate horizontal-scroll affordance via helper copy and `min-w-[820px]`
 - Bottom spacing is preserved so the mobile utility dock never sits on the last visible rows
 
@@ -394,19 +423,23 @@ Interactive rows use:
 - Height: `h-[250px] sm:h-[350px]`
 - Recharts container keeps `min-width: 0; min-height: 0`
 - Chart-heavy home modules now reserve height through matching skeletons or client-ready mount guards before `ResponsiveContainer` renders
+- Premium chart framing now uses `pharos-chart-stage`: a dedicated bordered stage inside the card, rather than letting charts float directly on the card background
+- Legends should prefer compact chips (`pharos-chart-legend-chip`) when the chart needs persistent series context outside the tooltip
 
 ### Axis + Grid (Observed)
 
 From production rendered charts:
 
 - Tick text: `font-size: 12`, `font-family: var(--font-mono, monospace)`, `fill: var(--color-muted-foreground)`
-- Grid lines: `stroke="var(--color-border)"`, `strokeDasharray="3 3"`
+- X axis keeps extra breathing room through `tickMargin={10}`
+- Y axis defaults to `width={64}` and `tickMargin={8}` for cleaner number alignment
+- Grid lines: `stroke="var(--color-border)"`, `strokeDasharray="2 6"`, verticals off by default
 
 ### Area Chart Styling (Observed)
 
 - Areas use gradient fills (e.g. `fill="url(#psiScoreGradient)"`)
 - Stroke widths are typically `1.5` or `2`
-- Tooltips are present (`.recharts-tooltip-wrapper` appears on interaction)
+- Tooltips should use the shared elevated card treatment (`PharosChartTooltip`) with uppercase label treatment and mono values
 
 ### Loading Fallbacks
 
@@ -454,7 +487,11 @@ When data streams are missing:
 
 - `rounded-md border px-4 py-2.5 text-sm border-border/60 bg-muted/40 text-muted-foreground`
 
-Used with copy like: `Some data is not yet available (...)`.
+The current pattern is a titled trust banner with dataset-specific copy, for example:
+
+- `Waiting for initial data`
+- `Affected: report cards.`
+- `Last successful update: Mar 24, 1:01 PM GMT+1.`
 
 ---
 

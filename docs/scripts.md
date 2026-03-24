@@ -93,7 +93,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - Uses Playwright CLI in a temporary session.
 - In CI deploys, the browser now targets a locally served `out/` export before Pages production deploy; `scripts/serve-static-export.mjs` proxies `/api/*` to the configured public API base so the smoke still exercises live API responses against the exact built frontend artifact.
 - The shared Pages release workflow also runs the same smoke script against `https://pharos.watch` after `deploy-pages`, so the pipeline checks both the pre-publish artifact and the real public host.
-- Verifies homepage is not in outage/empty state (`Failed to load data`, `stablecoins:404`, `Data not yet available`, `Connection issue`, `No stablecoin data available`, missing rows/ticker).
+- Verifies homepage is not in outage/empty state (`Failed to load data` or `Failed to load this dataset`, `stablecoins:404`, `Data not yet available` or `Waiting for first sync`, `Connection issue` or `Unable to reach the Pharos data API right now.`, `No stablecoin data available`, missing rows/ticker).
 - Homepage data wait retries once on timeout by default (configurable via `SMOKE_UI_RETRY_COUNT` / `SMOKE_UI_RETRY_DELAY_MS`) and includes a compact DOM text preview in timeout diagnostics.
 - Runs mobile overflow checks at `390x844` on a default critical route set:
   - `/`, `/dependency-map/`, `/flows/`, `/yield/`, `/liquidity/`, `/depeg/`, `/blacklist/`, `/stability-index/`, `/safety-scores/`

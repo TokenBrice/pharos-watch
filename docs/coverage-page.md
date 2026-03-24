@@ -125,7 +125,8 @@ If a feature gains richer user-facing states, update both `src/lib/coverage.ts` 
 - On small screens, the matrix adapts into scan-first per-coin cards that preview the highest-signal statuses and expand for the remaining states.
 - From `md` upward, the full comparison table renders with the first column sticky.
 - The per-coin matrix comes second and is explicitly positioned as the asset-level drill-down surface.
-- Coverage notes and the status legend live in an inline disclosure above the matrix, not in a separate explainer block.
+- A compact `CoverageLensSummary` block sits above the matrix to show the active search/filter lens and the tracked market-cap share currently in view.
+- The status legend remains an inline disclosure above the matrix; there is no separate full-page explainer block.
 - Shared stale-data banners surface freshness problems from the stablecoins, peg-summary, dex-liquidity, redemption-backstops, yield-rankings, mint-burn-flows, and report-cards queries without collapsing the structural coverage view.
 
 The page should continue to render meaningfully when some live datasets are temporarily unavailable. In that case, the matrix still renders with structural coverage where possible and uses the shared stale-data banner to surface data-health issues.

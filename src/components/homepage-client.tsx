@@ -23,7 +23,8 @@ import { UpcomingStablecoinsSection } from "@/components/upcoming-stablecoins-se
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { ACTIVE_PEGS, PEG_LABELS_SHORT, PEG_SLUGS, pegCoinCount } from "@/lib/peg-landing";
 import { derivePegRates } from "@shared/lib/peg-rates";
-import type { PegSummaryCoin } from "@shared/types";
+import { FILTER_TAG_LABELS, type PegSummaryCoin } from "@shared/types";
+import { buildTrackedIdSet, filterStablecoins } from "@/components/stablecoin-table-logic";
 
 function SectionSkeleton({ className }: { className: string }) {
   return <Skeleton className={className} />;
@@ -317,7 +318,7 @@ function HomepageSectionBand({
 
 export function HomepageClient() {
   const { isReady: startHereReady, shouldShow: shouldShowStartHereCallout, retireCallout } = useStartHereCallout();
-  const [showCampaignCallout, setShowCampaignCallout] = useState(true);
+  const [showCampaignCallout, setShowCampaignCallout] = useState(() => Date.now() < CAMPAIGN_END_AT);
   const [showFilters, setShowFilters] = useState(false);
   const { data, isLoading, error: pricesError, dataUpdatedAt, refetch: refetchPrices } = useStablecoins();
   const { data: logos } = useLogos();
@@ -367,6 +368,24 @@ export function HomepageClient() {
     [data, metaById],
   );
   const filters = useHomepageFilters();
+  const filteredRowCount = useMemo(() => {
+    const trackedIds = buildTrackedIdSet(filters.activeFilters, reportCardMap);
+    return filterStablecoins(data?.peggedAssets, trackedIds, filters.searchQuery).length;
+  }, [data?.peggedAssets, filters.activeFilters, filters.searchQuery, reportCardMap]);
+  const activeScopeSummary = useMemo(() => {
+    const parts: string[] = [];
+    const trimmedSearch = filters.searchQuery.trim();
+    if (trimmedSearch) {
+      parts.push(`Search: "${trimmedSearch}"`);
+    }
+    if (filters.activeFilters.length > 0) {
+      const labels = filters.activeFilters.map((filter) => FILTER_TAG_LABELS[filter]);
+      const preview = labels.slice(0, 3).join(" · ");
+      const remaining = labels.length - 3;
+      parts.push(remaining > 0 ? `Filters: ${preview} +${remaining}` : `Filters: ${preview}`);
+    }
+    return parts.join("  ");
+  }, [filters.activeFilters, filters.searchQuery]);
   const globalError = pricesError ?? pegError ?? liquidityError ?? reportCardsError;
   const handleRetry = useCallback(() => {
     void Promise.allSettled([refetchPrices(), refetchPeg(), refetchLiquidity(), refetchReportCards()]);
@@ -419,39 +438,65 @@ export function HomepageClient() {
 
       <SectionErrorBoundary name="table">
         <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold tracking-tight text-foreground">Key Stablecoin Data</h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowFilters((prev) => !prev)}
-              className="gap-1.5 text-xs text-muted-foreground"
-            >
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-              {showFilters ? "Hide filters" : "Filters"}
-              {filters.hasFilters && (
-                <span className="inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold size-4">
-                  {filters.activeFilters.length}
-                </span>
-              )}
-            </Button>
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-1.5">
+              <p className="pharos-kicker">Tracked Universe</p>
+              <div className="space-y-1">
+                <h2 className="text-xl font-semibold tracking-tight text-foreground">Key Stablecoin Data</h2>
+                <p className="max-w-3xl text-sm text-muted-foreground">
+                  Scan the tracked market first, then narrow by peg, structure, backing, or grade without leaving the
+                  live ranking surface.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 sm:items-end">
+              {activeScopeSummary ? (
+                <p className="max-w-md rounded-2xl border border-border/60 bg-background/45 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+                  {activeScopeSummary}
+                </p>
+              ) : null}
+            </div>
           </div>
-          {showFilters && <FilterBar {...filters} />}
-          <div className={showFilters ? "mt-6" : ""}>
-            <StablecoinTable
-              data={data?.peggedAssets}
-              isLoading={isLoading}
-              activeFilters={filters.activeFilters}
-              logos={logos}
-              pegRates={pegRates}
-              searchQuery={filters.searchQuery}
-              pegScores={pegScores}
-              dexLiquidity={dexLiquidity ?? undefined}
-              reportCards={reportCardMap}
-              onClearSearch={() => filters.setSearchQuery("")}
-              onClearFilters={filters.clearAll}
-            />
-          </div>
+          <StablecoinTable
+            data={data?.peggedAssets}
+            isLoading={isLoading}
+            activeFilters={filters.activeFilters}
+            toolbarActions={
+              <>
+                {filters.activeFilters.length > 0 ? (
+                  <>
+                    <span className="pharos-control-pill">
+                      {filters.activeFilters.length} active filter{filters.activeFilters.length === 1 ? "" : "s"}
+                    </span>
+                    <span className="pharos-control-pill">{filteredRowCount} rows</span>
+                  </>
+                ) : null}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowFilters((prev) => !prev)}
+                  className="gap-1.5 text-xs text-muted-foreground"
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  {showFilters ? "Hide filters" : "Filters"}
+                  {filters.hasFilters && (
+                    <span className="inline-flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                      {filters.activeFilters.length}
+                    </span>
+                  )}
+                </Button>
+              </>
+            }
+            filterPanel={showFilters ? <FilterBar {...filters} /> : null}
+            logos={logos}
+            pegRates={pegRates}
+            searchQuery={filters.searchQuery}
+            pegScores={pegScores}
+            dexLiquidity={dexLiquidity ?? undefined}
+            reportCards={reportCardMap}
+            onClearSearch={() => filters.setSearchQuery("")}
+            onClearFilters={filters.clearAll}
+          />
           <PegBrowseSection pegs={ACTIVE_PEGS} pegCoinCount={pegCoinCount} />
         </section>
       </SectionErrorBoundary>
@@ -561,13 +606,14 @@ export function HomepageClient() {
 
       <section className="space-y-2 border-t border-border/50 pt-6">
         <p className="mx-auto max-w-5xl text-center text-xs leading-loose text-muted-foreground">
-          Pharos tracks {ACTIVE_STABLECOINS.length} stablecoins across {PEG_CURRENCY_COUNT} peg currencies (USD, EUR,
-          GBP, gold, silver, and more) with honest governance classification:{" "}
+          Pharos tracks {ACTIVE_STABLECOINS.length} stablecoins across {PEG_CURRENCY_COUNT} peg currencies with honest
+          governance classification:{" "}
           {ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized").length} CeFi,{" "}
           {ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").length} CeFi-Dependent, and{" "}
-          {ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "decentralized").length} DeFi. Live market caps, peg
-          deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of fallen stablecoins. Updated
-          every 15 minutes for core market data, with slower diagnostics on their own cadences.
+          {ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "decentralized").length} DeFi. Use the dashboard
+          for live market ranking, then drill into peg stress, safety, liquidity, blacklist risk, flows, and dead-coin
+          history on the specialist routes. Core market data refreshes every 15 minutes; slower diagnostics run on
+          their own cadences.
         </p>
         {dataUpdatedAt > 0 && (
           <p className="text-center text-xs text-muted-foreground">

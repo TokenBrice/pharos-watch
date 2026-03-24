@@ -131,6 +131,6 @@ describe("FlowsPage", () => {
     const html = renderToStaticMarkup(<FlowsPage />);
 
     expect(html).not.toContain("Mint/burn sync freshness is degraded");
-    expect(html).toContain("Data may be delayed");
+    expect(html).toContain("Live refresh is running behind");
   });
 });

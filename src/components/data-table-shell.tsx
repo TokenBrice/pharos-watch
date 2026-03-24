@@ -60,12 +60,12 @@ export function DataTableShell<K extends string>({
 }: DataTableShellProps<K>) {
   return (
     <div className={cn(
-      "rounded-xl border overflow-x-auto scroll-shadow",
+      "pharos-table-shell overflow-x-auto scroll-shadow",
       containerClassName
     )}>
       {topSlot}
       <Table className={cn(tableClassName, striped && "pharos-table-striped", `pharos-density-${density}`)}>
-        <TableHeader className={cn("bg-muted/80", headerClassName)}>
+        <TableHeader className={cn("bg-muted/50 backdrop-blur-sm", headerClassName)}>
           <TableRow>
             {columns.map((column) =>
               column.sortKey && sort ? (

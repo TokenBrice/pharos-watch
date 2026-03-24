@@ -16,10 +16,8 @@ export function TimeRangeButtons({ options, value, onChange }: TimeRangeButtonsP
           key={r}
           onClick={() => onChange(r)}
           aria-pressed={value === r}
-          className={`px-3 sm:px-2.5 py-2 sm:py-1 min-h-11 sm:min-h-0 rounded-full text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
-            value === r
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+          className={`pharos-focus-ring pharos-control-pill shrink-0 px-3 sm:px-2.5 sm:py-1 ${
+            value === r ? "pharos-control-pill-active" : ""
           }`}
         >
           {r === "all" ? "All" : r.toUpperCase()}

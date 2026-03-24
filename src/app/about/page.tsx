@@ -34,12 +34,12 @@ const DATA_SOURCE_GROUPS = [
   {
     label: "Supply & Price",
     sources:
-      "DefiLlama, CoinGecko, GeckoTerminal, CoinMarketCap, DexScreener, Jupiter Price API, Pyth Network, Binance, Kraken, Bitstamp, Coinbase, RedStone, Curve on-chain, Fluid, Balancer, Raydium, Orca, and direct protocol redemption quotes for selected redeemable assets",
+      "DefiLlama, CoinGecko, GeckoTerminal, CoinMarketCap, DexScreener, Jupiter Price API, Pyth Network, Binance, Kraken, Bitstamp, Coinbase, RedStone, Curve on-chain, Fluid, Balancer, Raydium, Orca, and direct protocol redemption quotes for selected redeemable assets such as Cap cUSD and infiniFi iUSD",
   },
   {
     label: "Reserve Transparency",
     sources:
-      "Issuer and protocol reserve APIs, dashboards, proof-of-reserve portals, and direct on-chain vault/accounting reads (including live reserve composition feeds from providers such as Ethena, Falcon, infiniFi, M0, Mento Reserve, OpenEden, Accountable, Tether, Frax, Circle, First Digital Labs, SG-FORGE, Paxos, Origin Protocol, Sky/MakerDAO, Chainlink PoR/NAV oracles, and Aave GHO where available)",
+      "Issuer and protocol reserve APIs, dashboards, proof-of-reserve portals, and direct on-chain vault/accounting reads (including live reserve composition feeds from providers such as Ethena, Falcon, infiniFi, M0, Mento Reserve, OpenEden, Accountable, Tether, Frax, Circle, First Digital Labs, SG-FORGE, Paxos, Sky/MakerDAO, Chainlink PoR/NAV oracles, and Aave GHO where available)",
   },
   {
     label: "On-chain Reads & Events",
@@ -260,10 +260,10 @@ export default function AboutPage() {
     },
     {
       title: "Peg Tracker",
-      description: "Composite peg scores, depeg event detection, heatmaps, and four years of history on the dashboard.",
+      description: "Composite peg scores, depeg event detection, heatmaps, and four years of depeg history on the dedicated tracker.",
       icon: Activity,
-      href: "/",
-      linkLabel: "Open dashboard",
+      href: "/depeg/",
+      linkLabel: "Open depeg tracker",
     },
     {
       title: "Bluechip safety ratings",
@@ -310,7 +310,7 @@ export default function AboutPage() {
     {
       title: "Pharos Stability Index (PSI)",
       description:
-        "A daily ecosystem health score that rolls peg integrity, supply growth, and liquidity depth into a 0-100 signal.",
+        "A 30-minute ecosystem health score that combines active-depeg severity, market-cap breadth, DEWS stress breadth, and 7-day market-cap trend into a 0-100 signal.",
       icon: Gauge,
       href: "/stability-index/",
       linkLabel: "Open stability index",
@@ -376,7 +376,7 @@ export default function AboutPage() {
                   name: "What does Pharos track?",
                   acceptedAnswer: {
                     "@type": "Answer",
-                    text: `Pharos tracks ${ACTIVE_STABLECOINS.length} stablecoins across every major chain, classified by governance, backing, and peg currency. It documents ${DEAD_STABLECOINS.length} dead stablecoins in the cemetery, monitors USDC/USDT/PAXG/XAUT freeze events on-chain, provides composite peg scores with depeg detection and heatmaps, integrates independent Bluechip SMIDGE safety ratings, scores DEX liquidity depth 0–100 across decentralized exchanges, computes a daily Pharos Stability Index for ecosystem health, and issues report cards grading each stablecoin across 5 dimensions, including an exit-liquidity dimension that now blends DEX liquidity with protocol or issuer redemption backstops when a direct exit path exists.`,
+                    text: `Pharos tracks ${ACTIVE_STABLECOINS.length} stablecoins across every major chain, classified by governance, backing, and peg currency. It documents ${DEAD_STABLECOINS.length} dead stablecoins in the cemetery, monitors USDC/USDT/PAXG/XAUT freeze events on-chain, provides composite peg scores with depeg detection and heatmaps, integrates independent Bluechip SMIDGE safety ratings, scores DEX liquidity depth 0–100 across decentralized exchanges, computes a 30-minute Pharos Stability Index for ecosystem health, and issues report cards grading each stablecoin across 5 dimensions, including an exit-liquidity dimension that now blends DEX liquidity with protocol or issuer redemption backstops when a direct exit path exists.`,
                   },
                 },
                 {
@@ -392,7 +392,7 @@ export default function AboutPage() {
                   name: "Where does Pharos get its data?",
                   acceptedAnswer: {
                     "@type": "Answer",
-                    text: "All data is fetched server-side by a Cloudflare Worker and cached in D1. Sources include DefiLlama for supply, price, and chain distribution; CoinGecko for logos and fallback prices; CoinMarketCap and DexScreener as further price fallbacks; direct protocol redemption quotes for selected redeemable assets; issuer and protocol reserve APIs, dashboards, proof-of-reserve portals, and direct on-chain vault/accounting reads for live reserve composition and redemption-backstop capacity where available, including Ethena, Falcon, infiniFi, M0, Mento Reserve, OpenEden, Accountable, Tether, Frax, Circle, First Digital Labs, SG-FORGE, Paxos, Origin Protocol, Sky/MakerDAO, Chainlink PoR/NAV oracles, and Aave GHO reserve feeds; Etherscan v2 and TronGrid for freeze-event tracking; Alchemy, dRPC, and selected public chain RPCs for EVM reads including Ethereum mint/burn flow tracking and direct contract calls such as Cap and infiniFi redemption quotes, Liquity/B.Protocol, ERC-4626 vault reads, and Fluid DexReservesResolver reads; Bluechip for safety ratings; ECB via Frankfurter plus fawazahmed0/exchange-api for live FX rates including CNH and other non-ECB coverage, with ExchangeRate-API as a tertiary full-set FX fallback; gold-api.com for gold and silver spot prices; FRED DGS3MO for T-bill rates; DeFiLlama Yields &amp; Protocols, Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, and GeckoTerminal for DEX liquidity data; and Anthropic Claude for daily digest generation.",
+                    text: "All data is fetched server-side by a Cloudflare Worker and cached in D1. Sources include DefiLlama for supply, price, and chain distribution; CoinGecko for logos and fallback prices; CoinMarketCap and DexScreener as further price fallbacks; direct protocol redemption quotes for selected redeemable assets such as Cap cUSD and infiniFi iUSD; issuer and protocol reserve APIs, dashboards, proof-of-reserve portals, and direct on-chain vault/accounting reads for live reserve composition and redemption-backstop capacity where available, including Ethena, Falcon, infiniFi, M0, Mento Reserve, OpenEden, Accountable, Tether, Frax, Circle, First Digital Labs, SG-FORGE, Paxos, Sky/MakerDAO, Chainlink PoR/NAV oracles, and Aave GHO reserve feeds; Etherscan v2 and TronGrid for freeze-event tracking; Alchemy, dRPC, and selected public chain RPCs for EVM reads including Ethereum mint/burn flow tracking and direct contract calls such as Cap and infiniFi redemption quotes, Liquity/B.Protocol, ERC-4626 vault reads, and Fluid DexReservesResolver reads; Bluechip for safety ratings; ECB via Frankfurter plus fawazahmed0/exchange-api for live FX rates including CNH and other non-ECB coverage, with ExchangeRate-API as a tertiary full-set FX fallback; gold-api.com for gold and silver spot prices; FRED DGS3MO for T-bill rates; DeFiLlama Yields &amp; Protocols, Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, and GeckoTerminal for DEX liquidity data; and Anthropic Claude for daily digest generation.",
                   },
                 },
               ],
@@ -417,7 +417,7 @@ export default function AboutPage() {
               stablecoins, {PRE_LAUNCH_STABLECOINS.length} upcoming launches,
               and {DEAD_STABLECOINS.length} dead ones across every major chain, scoring each on peg
               integrity, liquidity depth, resilience, and contagion risk. Real-time depeg detection, freeze monitoring,
-              safety grades, mint-and-burn flow analysis, and an ecosystem-wide stability index give you the full
+              safety grades, mint-and-burn flow analysis, and a 30-minute ecosystem-wide stability index give you the full
               picture before a crisis makes the headlines. You can also plug in your own holdings to see your effective
               stablecoin exposure, concentration risks, and blended safety profile in one view.
             </p>

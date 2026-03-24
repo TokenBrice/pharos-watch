@@ -46,6 +46,7 @@ export function TimeXAxis({
       tick={MONO_AXIS_TICK}
       tickLine={false}
       axisLine={false}
+      tickMargin={10}
       tickFormatter={resolvedTickFormatter}
       {...props}
     />
@@ -54,12 +55,14 @@ export function TimeXAxis({
 
 type MonoYAxisProps = ComponentProps<typeof YAxis>;
 
-export function MonoYAxis({ tick = MONO_AXIS_TICK, tickLine = false, axisLine = false, ...props }: MonoYAxisProps) {
+export function MonoYAxis({ tick = MONO_AXIS_TICK, tickLine = false, axisLine = false, width = 64, tickMargin = 8, ...props }: MonoYAxisProps) {
   return (
     <YAxis
       tick={tick}
       tickLine={tickLine}
       axisLine={axisLine}
+      width={width}
+      tickMargin={tickMargin}
       {...props}
     />
   );
@@ -91,6 +94,11 @@ export function DateTooltip({
 
 type TimeGridProps = ComponentProps<typeof CartesianGrid>;
 
-export function TimeGrid({ strokeDasharray = "3 3", stroke = "var(--color-border)", ...props }: TimeGridProps) {
-  return <CartesianGrid strokeDasharray={strokeDasharray} stroke={stroke} {...props} />;
+export function TimeGrid({
+  strokeDasharray = "2 6",
+  stroke = "var(--color-border)",
+  vertical = false,
+  ...props
+}: TimeGridProps) {
+  return <CartesianGrid strokeDasharray={strokeDasharray} stroke={stroke} vertical={vertical} {...props} />;
 }

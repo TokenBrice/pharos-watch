@@ -76,9 +76,12 @@ export function TotalMcapChart() {
 
   if (isLoading) {
     return (
-      <Card className="rounded-xl">
+      <Card className="pharos-card-shell">
         <CardHeader>
-          <CardTitle as="h2">Stablecoin Total Marketcap</CardTitle>
+          <div className="space-y-1.5">
+            <p className="pharos-kicker">Market Structure</p>
+            <CardTitle as="h2" className="pharos-section-title">Stablecoin Total Marketcap</CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
           <ChartSkeleton className="h-[250px] sm:h-[350px] w-full" />
@@ -88,11 +91,18 @@ export function TotalMcapChart() {
   }
 
   return (
-    <Card className="rounded-xl animate-in fade-in duration-300">
+    <Card className="pharos-card-shell animate-in fade-in duration-300">
       <CardHeader className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle as="h2" className="min-w-0">
-          Stablecoin Total Marketcap{latest ? `: ${formatBillions(latest.total)}` : ""}
-        </CardTitle>
+        <div className="space-y-1.5">
+          <p className="pharos-kicker">Market Structure</p>
+          <CardTitle as="h2" className="pharos-section-title min-w-0">
+            Stablecoin Total Marketcap{latest ? `: ${formatBillions(latest.total)}` : ""}
+          </CardTitle>
+          <p className="pharos-meta">
+            Stacked cohort framing keeps concentration visible instead of flattening the market into a single
+            aggregate line.
+          </p>
+        </div>
         <CardAction className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
           <TimeRangeButtons options={options} value={range} onChange={setRange} />
           <Button
@@ -109,37 +119,38 @@ export function TotalMcapChart() {
       <CardContent>
         {filteredData.length > 0 ? (
           <div ref={chartRef}>
-            <div className="flex flex-wrap gap-4 mb-4">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div className="mb-4 flex flex-wrap gap-2">
+              <div className="pharos-chart-legend-chip">
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: USDT_GREEN }} />
                 USDT{latest ? `: ${formatBillions(latest.usdt)}` : ""}
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <div className="pharos-chart-legend-chip">
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: USDC_BLUE }} />
                 USDC{latest ? `: ${formatBillions(latest.usdc)}` : ""}
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <div className="pharos-chart-legend-chip">
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: SKY_YELLOW }} />
                 USDS + DAI{latest ? `: ${formatBillions(latest.sky)}` : ""}
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <div className="pharos-chart-legend-chip">
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: OTHERS_SLATE }} />
                 Others{latest ? `: ${formatBillions(latest.others)}` : ""}
               </div>
             </div>
-            <div
-              ref={chartContainerRef}
-              className="h-[250px] sm:h-[350px]"
-              role="figure"
-              aria-label={`Total stablecoin market cap chart showing ${filteredData.length} data points`}
-            >
-              {isChartReady ? (
-                <AreaChart
-                  width={width}
-                  height={height}
-                  data={filteredData}
-                  margin={{ top: 5, right: 20, bottom: 20, left: 5 }}
-                >
+            <div className="pharos-chart-stage">
+              <div
+                ref={chartContainerRef}
+                className="h-[250px] sm:h-[350px]"
+                role="figure"
+                aria-label={`Total stablecoin market cap chart showing ${filteredData.length} data points`}
+              >
+                {isChartReady ? (
+                  <AreaChart
+                    width={width}
+                    height={height}
+                    data={filteredData}
+                    margin={{ top: 8, right: 16, bottom: 16, left: 0 }}
+                  >
                   <defs>
                     <linearGradient id="usdtGrad" x1={0} y1={0} x2={0} y2={1}>
                       <stop offset="5%" stopColor={USDT_GREEN} stopOpacity={0.5} />
@@ -214,15 +225,16 @@ export function TotalMcapChart() {
                     onAnimationEnd={handleAnimationEnd}
                     {...animProps}
                   />
-                </AreaChart>
-              ) : (
-                <ChartSkeleton className="h-full w-full" />
-              )}
+                  </AreaChart>
+                ) : (
+                  <ChartSkeleton className="h-full w-full" />
+                )}
+              </div>
             </div>
           </div>
         ) : (
-          <div className="flex h-[250px] sm:h-[350px] items-center justify-center text-muted-foreground">
-            No market cap data available
+          <div className="pharos-empty-note flex h-[250px] sm:h-[350px] items-center justify-center text-center">
+            No market-cap history is available for the current time window.
           </div>
         )}
       </CardContent>

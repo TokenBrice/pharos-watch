@@ -10,7 +10,7 @@ This map links each major Pharos data domain from upstream source to frontend co
 
 | Domain | External Sources | Worker Ingest / Compute | Storage Layer | API Surface | Frontend Hook(s) | Primary UI |
 |-------|------------------|--------------------------|---------------|-------------|------------------|------------|
-| Stablecoin core list + prices | DefiLlama, CoinGecko, CMC, DexScreener, Pyth Network, Binance, Coinbase, RedStone, Curve on-chain, protocol redemption quotes, FX sources (Frankfurter, Open Exchange Rates, `fawazahmed0/exchange-api`, ExchangeRate-API) | `worker/src/cron/sync-fx-rates.ts`, `worker/src/cron/sync-stablecoins.ts` (+ `worker/src/cron/sync-stablecoins/{intake,stages,post-enrichment,metadata,supplemental-assets}.ts`, `worker/src/cron/enrich-prices.ts`, `worker/src/lib/authoritative-price-sources.ts`, `worker/src/lib/price-consensus.ts`, `worker/src/lib/price-validation.ts`) | `cache` keys: `fx-rates`, `stablecoins` | `GET /api/stablecoins` | `useStablecoins` | Homepage, Compare, Dependency Map, many cards |
+| Stablecoin core list + prices | DefiLlama, CoinGecko, CMC, DexScreener, Pyth Network, Binance, Coinbase, RedStone, Curve on-chain, protocol redemption quotes, FX sources (Frankfurter, Open Exchange Rates, `fawazahmed0/currency-api`, ExchangeRate-API) | `worker/src/cron/sync-fx-rates.ts`, `worker/src/cron/sync-stablecoins.ts` (+ `worker/src/cron/sync-stablecoins/{intake,stages,post-enrichment,metadata,supplemental-assets}.ts`, `worker/src/cron/enrich-prices.ts`, `worker/src/lib/authoritative-price-sources.ts`, `worker/src/lib/price-consensus.ts`, `worker/src/lib/price-validation.ts`) | `cache` keys: `fx-rates`, `stablecoins` | `GET /api/stablecoins` | `useStablecoins` | Homepage, Compare, Dependency Map, many cards |
 | Stablecoin detail summaries + market-cap charts | DefiLlama detail/chart, CoinGecko fallback | `worker/src/cron/sync-stablecoin-charts.ts` + on-demand detail handler | `cache` key: `stablecoin-charts` + handler-computed detail payload | `GET /api/stablecoin/:id`, `GET /api/stablecoin-charts` | `usePrefetchStablecoin`, `useStablecoinCharts` | Stablecoin detail shell, homepage charts |
 | Per-coin supply history | Cached stablecoins payload snapshot, CoinGecko or DefiLlama backfills | `worker/src/cron/snapshot-supply.ts`, `worker/src/api/backfill-supply-history.ts` | `supply_history` | `GET /api/supply-history` | `useSupplyHistory`, `useCompareDataModel` | Stablecoin detail page, Compare |
 | Depeg events + peg summary | Stablecoin cache prices + DEX corroboration | `worker/src/cron/detect-depegs.ts` (+ pending confirmation) | `depeg_events`, `depeg_pending` | `GET /api/depeg-events`, `GET /api/peg-summary` | `useInfiniteDepegEvents`, `usePegSummary` | Depeg page, homepage peg columns, detail cards |
@@ -39,7 +39,7 @@ Cron schedules are declared in `worker/wrangler.toml` and orchestrated by `worke
 - `13,33,53 * * * *`: mint/burn extended lane
 - `10,40 * * * *`: stablecoin charts, then DEX liquidity, then DEWS, then PSI, then yield sync
 - `11 * * * *`: live reserve sync, then redemption backstop sync
-- `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`: Telegram subscriber alerts + cemetery announcements
+- `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`: Telegram subscriber alerts (DEWS, depeg, safety, and launch promotions)
 - `0 8 * * *`: supply snapshot, safety-grade snapshot, T-bill rate, PSI daily snapshot, USDS status
 - `5 8 * * *`: bluechip sync, daily digest, weekly recap (Mondays), discovery scan (Mondays)
 

@@ -2,7 +2,7 @@
 
 import { usePreference } from "./use-preferences";
 
-export type TableDensity = "compact" | "comfortable" | "spacious";
+export type TableDensity = "list" | "compact" | "comfortable" | "spacious";
 
 interface DensityConfig {
   rowHeight: number;
@@ -12,6 +12,12 @@ interface DensityConfig {
 }
 
 export const DENSITY_CONFIGS: Record<TableDensity, DensityConfig> = {
+  list: {
+    rowHeight: 28,
+    cellPadding: "px-2 py-0.5",
+    fontSize: "text-xs",
+    iconSize: 18,
+  },
   compact: {
     rowHeight: 32,
     cellPadding: "px-2 py-1",

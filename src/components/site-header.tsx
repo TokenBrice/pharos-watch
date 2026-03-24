@@ -59,9 +59,9 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
     <div className="pharos-card-shell hidden lg:flex items-end justify-between gap-6 px-5 py-5">
       <div className="flex min-w-0 items-center gap-4">
         <PharosLogo size={40} className="rounded-xl shadow-sm" priority />
-        <div className="min-w-0">
+        <div className="min-w-0 space-y-1.5">
           <p className="text-[1.06rem] font-mono font-semibold uppercase tracking-[0.16em] text-foreground">Pharos</p>
-          <p className="mt-1 max-w-xl text-sm tracking-[0.01em] text-muted-foreground/85">
+          <p className="max-w-2xl text-sm leading-relaxed tracking-[0.01em] text-muted-foreground/88">
             Live market intelligence for stablecoins: peg stress, liquidity analysis, blacklist tracking, risk-adjusted-yield and hidden dependencies
             in one research surface.
           </p>
@@ -81,6 +81,9 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
             </span>
           ))}
         </div>
+        <p className="text-right text-[11px] leading-relaxed text-muted-foreground/80">
+          Watch live conditions first, then move deeper into dossier pages, comparisons, and route-specific risk surfaces.
+        </p>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";
 import {
   BACKING_LABELS_SHORT,
@@ -20,6 +21,13 @@ import {
   formatFuzzyDate,
   truncateTeaser,
 } from "@/lib/pre-launch";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { LaunchPhase } from "@shared/types";
 import logos from "../../data/logos.json";
 import aiSummaries from "../../data/ai-summaries.json";
@@ -57,6 +65,27 @@ function toggleSet<T>(set: Set<T>, value: T): Set<T> {
   if (next.has(value)) next.delete(value);
   else next.add(value);
   return next;
+}
+
+function neutralToggleClass(active: boolean): string {
+  return active ? "pharos-control-pill pharos-control-pill-active" : "pharos-toggle-pill";
+}
+
+function phaseToggleClass(phase: LaunchPhase, active: boolean): string {
+  if (!active) return "pharos-toggle-pill";
+
+  switch (phase) {
+    case "announced":
+      return "pharos-toggle-pill border-amber-400/20 bg-amber-500/12 text-amber-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(245,158,11,0.12)]";
+    case "testnet":
+      return "pharos-toggle-pill border-indigo-400/20 bg-indigo-500/12 text-indigo-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(99,102,241,0.12)]";
+    case "auditing":
+      return "pharos-toggle-pill border-violet-400/20 bg-violet-500/12 text-violet-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(139,92,246,0.12)]";
+    case "beta":
+      return "pharos-toggle-pill border-emerald-400/20 bg-emerald-500/12 text-emerald-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(16,185,129,0.12)]";
+    case "launching-soon":
+      return "pharos-toggle-pill border-sky-400/20 bg-sky-500/12 text-sky-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(14,165,233,0.12)]";
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -109,121 +138,130 @@ export function UpcomingClient() {
   const hasActiveFilters = phaseFilter.size > 0 || pegFilter.size > 0 || backingFilter.size > 0;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* ── KPI bar ──────────────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-        <span>
-          <span className="font-semibold text-foreground">{PRE_LAUNCH_STABLECOINS.length}</span>{" "}
-          tracked
-        </span>
-        {ALL_PHASES.map(
-          (phase) =>
-            phaseCounts[phase] && (
-              <span key={phase}>
-                <span className="font-semibold text-foreground">{phaseCounts[phase]}</span>{" "}
-                {LAUNCH_PHASE_LABELS[phase].toLowerCase()}
-              </span>
-            ),
-        )}
+      <div className="pharos-subtle-band">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="pharos-kicker">Pre-Launch Universe</p>
+            <p className="pharos-meta">Track announced, testing, and launch-approaching stablecoins without mixing them into the live market table.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <span className="pharos-control-pill">{PRE_LAUNCH_STABLECOINS.length} tracked</span>
+            {ALL_PHASES.map(
+              (phase) =>
+                phaseCounts[phase] ? (
+                  <span
+                    key={phase}
+                    className={`inline-flex items-center rounded-full border px-3 py-2 text-xs font-medium ${PHASE_BADGE[phase]}`}
+                  >
+                    {phaseCounts[phase]} {LAUNCH_PHASE_LABELS[phase].toLowerCase()}
+                  </span>
+                ) : null,
+            )}
+          </div>
+        </div>
       </div>
 
       {/* ── Filters ──────────────────────────────────────────────── */}
-      <div className="space-y-3">
-        {/* Phase */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-muted-foreground">Phase</span>
-          {ALL_PHASES.map((phase) => (
+      <div className="pharos-card-shell overflow-hidden">
+        <div className="pharos-panel-header flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="pharos-kicker">Filters</p>
+            <p className="pharos-meta">Narrow the tracked pre-launch set by launch phase, peg, backing, and sort order.</p>
+          </div>
+          {hasActiveFilters ? (
             <button
-              key={phase}
-              onClick={() => setPhaseFilter(toggleSet(phaseFilter, phase))}
-              className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
-                phaseFilter.has(phase)
-                  ? PHASE_BADGE[phase]
-                  : "border-border/50 bg-transparent text-muted-foreground hover:bg-muted/50"
-              }`}
+              onClick={() => {
+                setPhaseFilter(new Set());
+                setPegFilter(new Set());
+                setBackingFilter(new Set());
+              }}
+              className="pharos-focus-ring self-start rounded-full border border-border/60 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground sm:self-auto"
             >
-              {LAUNCH_PHASE_LABELS[phase]}
+              Clear filters
             </button>
-          ))}
+          ) : null}
         </div>
 
-        {/* Peg & Backing (only show if >1 option) */}
-        {ALL_PEGS.length > 1 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground">Peg</span>
-            {ALL_PEGS.map((peg) => (
-              <button
-                key={peg}
-                onClick={() => setPegFilter(toggleSet(pegFilter, peg))}
-                className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
-                  pegFilter.has(peg)
-                    ? "border-foreground/20 bg-foreground/5 text-foreground"
-                    : "border-border/50 bg-transparent text-muted-foreground hover:bg-muted/50"
-                }`}
-              >
-                {PEG_LABELS_SHORT[peg] ?? peg}
-              </button>
-            ))}
+        <div className="grid gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1.05fr)_minmax(0,1fr)_minmax(0,1.45fr)] xl:items-start">
+          <div className="min-w-0 space-y-2">
+            <p className="pharos-kicker">Phase</p>
+            <div className="flex flex-wrap gap-2">
+              {ALL_PHASES.map((phase) => (
+                <button
+                  key={phase}
+                  onClick={() => setPhaseFilter(toggleSet(phaseFilter, phase))}
+                  className={phaseToggleClass(phase, phaseFilter.has(phase))}
+                >
+                  {LAUNCH_PHASE_LABELS[phase]}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
 
-        {ALL_BACKINGS.length > 1 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground">Backing</span>
-            {ALL_BACKINGS.map((backing) => (
-              <button
-                key={backing}
-                onClick={() => setBackingFilter(toggleSet(backingFilter, backing))}
-                className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
-                  backingFilter.has(backing)
-                    ? "border-foreground/20 bg-foreground/5 text-foreground"
-                    : "border-border/50 bg-transparent text-muted-foreground hover:bg-muted/50"
-                }`}
-              >
-                {BACKING_LABELS_SHORT[backing] ?? backing}
-              </button>
-            ))}
+          {ALL_PEGS.length > 1 && (
+            <div className="min-w-0 space-y-2">
+              <p className="pharos-kicker">Peg</p>
+              <div className="flex flex-wrap gap-2">
+                {ALL_PEGS.map((peg) => (
+                  <button
+                    key={peg}
+                    onClick={() => setPegFilter(toggleSet(pegFilter, peg))}
+                    className={neutralToggleClass(pegFilter.has(peg))}
+                  >
+                    {PEG_LABELS_SHORT[peg] ?? peg}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {ALL_BACKINGS.length > 1 && (
+            <div className="min-w-0 space-y-2">
+              <p className="pharos-kicker">Backing</p>
+              <div className="flex flex-wrap gap-2">
+                {ALL_BACKINGS.map((backing) => (
+                  <button
+                    key={backing}
+                    onClick={() => setBackingFilter(toggleSet(backingFilter, backing))}
+                    className={neutralToggleClass(backingFilter.has(backing))}
+                  >
+                    {BACKING_LABELS_SHORT[backing] ?? backing}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="min-w-0 space-y-2">
+            <p className="pharos-kicker">Sort By</p>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="pharos-focus-ring pharos-toggle-pill inline-flex min-h-11 w-full items-center justify-between gap-2 rounded-xl px-3 sm:min-h-9">
+                  <span className="truncate">{SORT_OPTIONS.find((opt) => opt.key === sortKey)?.label}</span>
+                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-[14rem]">
+                <DropdownMenuRadioGroup value={sortKey} onValueChange={(value) => setSortKey(value as SortKey)}>
+                  {SORT_OPTIONS.map((opt) => (
+                    <DropdownMenuRadioItem key={opt.key} value={opt.key}>
+                      {opt.label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        )}
-
-        {/* Sort */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-muted-foreground">Sort</span>
-          {SORT_OPTIONS.map((opt) => (
-            <button
-              key={opt.key}
-              onClick={() => setSortKey(opt.key)}
-              className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
-                sortKey === opt.key
-                  ? "border-foreground/20 bg-foreground/5 text-foreground"
-                  : "border-border/50 bg-transparent text-muted-foreground hover:bg-muted/50"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
         </div>
-
-        {/* Clear filters */}
-        {hasActiveFilters && (
-          <button
-            onClick={() => {
-              setPhaseFilter(new Set());
-              setPegFilter(new Set());
-              setBackingFilter(new Set());
-            }}
-            className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
-          >
-            Clear filters
-          </button>
-        )}
       </div>
 
       {/* ── Card grid ────────────────────────────────────────────── */}
       {filtered.length === 0 ? (
-        <p className="py-12 text-center text-sm text-muted-foreground">
+        <div className="pharos-empty-note py-12 text-center">
           No pre-launch stablecoins match the current filters.
-        </p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((coin) => {
@@ -234,7 +272,7 @@ export function UpcomingClient() {
               <Link
                 key={coin.id}
                 href={buildStablecoinUrl(coin.id)}
-                className="pharos-focus-ring pharos-interactive-card group flex flex-col rounded-xl border border-border/60 bg-card/50 p-4 transition-colors"
+                className="pharos-card-shell pharos-focus-ring pharos-interactive-card group flex flex-col p-4"
               >
                 {/* Header */}
                 <div className="flex items-center gap-3">
@@ -251,18 +289,18 @@ export function UpcomingClient() {
                 <div className="mt-3 flex flex-wrap gap-1">
                   {coin.launchPhase && (
                     <span
-                      className={`inline-flex rounded-full border px-1.5 py-0.5 text-[10px] font-medium leading-none ${PHASE_BADGE[coin.launchPhase]}`}
+                      className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-medium leading-none ${PHASE_BADGE[coin.launchPhase]}`}
                     >
                       {LAUNCH_PHASE_LABELS[coin.launchPhase]}
                     </span>
                   )}
-                  <span className="inline-flex rounded-full border border-border/50 bg-muted/50 px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground">
+                  <span className="inline-flex rounded-full border border-border/50 bg-muted/40 px-2 py-1 text-[10px] leading-none text-muted-foreground">
                     {PEG_LABELS_SHORT[coin.flags.pegCurrency]}
                   </span>
-                  <span className="inline-flex rounded-full border border-border/50 bg-muted/50 px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground">
+                  <span className="inline-flex rounded-full border border-border/50 bg-muted/40 px-2 py-1 text-[10px] leading-none text-muted-foreground">
                     {BACKING_LABELS_SHORT[coin.flags.backing]}
                   </span>
-                  <span className="inline-flex rounded-full border border-border/50 bg-muted/50 px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground">
+                  <span className="inline-flex rounded-full border border-border/50 bg-muted/40 px-2 py-1 text-[10px] leading-none text-muted-foreground">
                     {GOVERNANCE_LABELS_SHORT[coin.flags.governance]}
                   </span>
                 </div>

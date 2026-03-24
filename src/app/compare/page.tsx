@@ -25,8 +25,8 @@ export default createClientFeaturePage({
     title: "Compare Stablecoins",
     statusBadge: { status: "mature" },
     leadParagraphs: [
-      "Use the live compare tool for custom side-by-side analysis.",
-      "Select up to five tracked assets to compare supply, peg stability, liquidity, safety scores, and structural differences in one view.",
+      "Build a live peer set, then read peg behavior, liquidity, safety scores, and structural differences without bouncing between detail pages.",
+      "Select two to five tracked assets. Presets are starting angles, not canned answers: the useful work starts once the comparison is on screen.",
     ],
   },
 });

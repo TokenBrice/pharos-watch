@@ -12,7 +12,7 @@ import {
 } from "@shared/lib/depeg-dews-version";
 import { safeJsonLd } from "@/lib/json-ld";
 
-const depegDescription = `Live peg monitoring for ${ACTIVE_STABLECOINS.length} stablecoins. Track peg scores, DEWS early warning signals, real-time deviation heatmaps, and a full history of depeg events — all in one place.`;
+const depegDescription = `Use the Depeg Tracker as the live incident board for peg stress across ${ACTIVE_STABLECOINS.length} stablecoins: active deviations, DEWS early warnings, heatmaps, and depeg history in one surface.`;
 
 export const metadata = buildPageMetadata({
   title: "Depeg Tracker: Live Peg Monitoring & Early Warnings",
@@ -72,7 +72,7 @@ export default createClientFeaturePage({
       />
     ),
     leadParagraphs: [
-      `Real-time peg monitoring across ${ACTIVE_STABLECOINS.length} stablecoins. Peg scores, DEWS early warning signals, live deviation heatmaps, and a full history of depeg events — all in one place.`,
+      `Use this as the live incident board for peg stress across ${ACTIVE_STABLECOINS.length} stablecoins: active deviations, DEWS early warnings, heatmaps, and depeg history in one surface.`,
     ],
   },
   beforeClient: (
