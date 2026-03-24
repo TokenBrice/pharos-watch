@@ -446,6 +446,36 @@
   .pharos-toast-exit {
     animation: pharos-toast-exit 200ms var(--motion-ease-standard) both;
   }
+
+  /* Confidence typography — visual weight reflects data confidence */
+  .pharos-confidence-high {
+    /* No modification — full rendering is the default */
+  }
+  .pharos-confidence-single-source {
+    opacity: 0.78;
+    text-decoration: underline;
+    text-decoration-style: dashed;
+    text-decoration-color: var(--border-default);
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+  }
+  .pharos-confidence-low {
+    opacity: 0.62;
+    text-decoration: underline;
+    text-decoration-style: dashed;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+  }
+  .pharos-confidence-fallback {
+    opacity: 0.50;
+    text-decoration: underline;
+    text-decoration-style: dashed;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+    font-style: italic;
+  }
 }
 
 @media (max-width: 767px) {
