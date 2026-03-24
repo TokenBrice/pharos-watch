@@ -193,7 +193,9 @@ export interface DigestSnapshotResponse {
     chainName: string;
     eventType: string;
     address: string;
-    amount: number | null;
+    amountNative: number | null;
+    amountUsdAtEvent: number | null;
+    amountStatus: string;
     timestamp: number;
   }>;
 }

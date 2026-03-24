@@ -15,18 +15,26 @@ export interface ChainConfig {
 }
 
 export interface ContractEventConfig {
+  configKey: string;
   chain: ChainConfig;
   stablecoinId: string;
   stablecoin: BlacklistStablecoin;
   contractAddress: string;
   decimals: number;        // Token decimals (6 for USDC/USDT/XAUT, 18 for PAXG)
   startBlock?: number;     // Optional deployment/start block for initial sync bootstrapping
-  events: {
-    signature: string;     // Human-readable event signature
-    topicHash: string;     // Keccak256 of the event signature
-    eventType: BlacklistEventType;
-    hasAmount: boolean;
-  }[];
+  events: BlacklistEventDef[];
+}
+
+export interface BlacklistEventDef {
+  signature: string;     // Human-readable event signature
+  topicHash: string;     // Keccak256 of the event signature
+  eventType: BlacklistEventType;
+  hasAmount: boolean;
+}
+
+export interface BlacklistEventFamily {
+  key: string;
+  events: readonly BlacklistEventDef[];
 }
 
 interface ContractEventConfigSpec {
@@ -37,7 +45,7 @@ interface ContractEventConfigSpec {
   contractAddressOverride?: string;
   decimalsOverride?: number;
   startBlock?: number;
-  events: ContractEventConfig["events"];
+  events: readonly BlacklistEventDef[];
 }
 
 // --- Chain configurations (derived from shared CHAIN_META) ---
@@ -81,7 +89,11 @@ const USDT0_DESTROYED_FUNDS_TOPIC = "0x6a2859ae7902313752498feb80a014e6e7275fe96
 
 // --- USDC event definitions ---
 
-const USDC_EVENTS: ContractEventConfig["events"] = [
+function defineEventFamily(key: string, events: readonly BlacklistEventDef[]): BlacklistEventFamily {
+  return { key, events };
+}
+
+const USDC_EVENT_FAMILY = defineEventFamily("circle-blacklist", [
   {
     signature: "Blacklisted(address)",
     topicHash: USDC_BLACKLISTED_TOPIC,
@@ -94,11 +106,11 @@ const USDC_EVENTS: ContractEventConfig["events"] = [
     eventType: "unblacklist",
     hasAmount: false,
   },
-];
+]);
 
 // --- USDT event definitions ---
 
-const USDT_EVENTS: ContractEventConfig["events"] = [
+const USDT_EVENT_FAMILY = defineEventFamily("tether-legacy-blacklist", [
   {
     signature: "AddedBlackList(address)",
     topicHash: USDT_ADDED_BLACKLIST_TOPIC,
@@ -117,12 +129,12 @@ const USDT_EVENTS: ContractEventConfig["events"] = [
     eventType: "destroy",
     hasAmount: true,
   },
-];
+]);
 
 // --- USDT0 event definitions (Arbitrum and other USDT0-upgraded L2s) ---
 // These use indexed address params, so the address is in topics[1] not data.
 
-const USDT0_EVENTS: ContractEventConfig["events"] = [
+const USDT0_EVENT_FAMILY = defineEventFamily("tether-indexed-blacklist", [
   {
     signature: "BlockPlaced(address)",
     topicHash: USDT0_BLOCK_PLACED_TOPIC,
@@ -141,14 +153,14 @@ const USDT0_EVENTS: ContractEventConfig["events"] = [
     eventType: "destroy",
     hasAmount: true,
   },
-];
+]);
 
 // Combined: listen for both legacy and USDT0 events on chains where
 // the old bridged USDT was upgraded in-place to USDT0 (Arbitrum, Polygon)
-const USDT_UPGRADED_EVENTS: ContractEventConfig["events"] = [
-  ...USDT_EVENTS,
-  ...USDT0_EVENTS,
-];
+const USDT_UPGRADED_EVENT_FAMILY = defineEventFamily("tether-upgraded-blacklist", [
+  ...USDT_EVENT_FAMILY.events,
+  ...USDT0_EVENT_FAMILY.events,
+]);
 
 // --- PAXG event definitions ---
 // AddressFrozen/AddressUnfrozen/FrozenAddressWiped — address is indexed (in topics[1])
@@ -157,7 +169,7 @@ const PAXG_FROZEN_TOPIC = "0x90811a8edd3b3c17eeaefffc17f639cc69145d41a359c984399
 const PAXG_UNFROZEN_TOPIC = "0xc3776b472ebf54114339eec9e4dc924e7ce307a97f5c1ee72b6d474e6e5e8b7c"; // AddressUnfrozen(address)
 const PAXG_WIPED_TOPIC = "0xfc5960f1c5a5d2b60f031bf534af053b1bf7d9881989afaeb8b1d164db23aede"; // FrozenAddressWiped(address)
 
-const PAXG_EVENTS: ContractEventConfig["events"] = [
+const PAXG_EVENT_FAMILY = defineEventFamily("paxos-freeze", [
   {
     signature: "AddressFrozen(address)",
     topicHash: PAXG_FROZEN_TOPIC,
@@ -176,7 +188,7 @@ const PAXG_EVENTS: ContractEventConfig["events"] = [
     eventType: "destroy",
     hasAmount: false, // Amount not in event; fetched via balanceOf at blockNumber-1
   },
-];
+]);
 
 const BLACKLIST_STABLECOIN_SET = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
 
@@ -210,13 +222,14 @@ function resolveBlacklistContractConfig(
   }
 
   return {
+    configKey: `${spec.chain.chainId}-${resolvedContract.contractAddress.toLowerCase()}`,
     chain: spec.chain,
     stablecoinId: spec.stablecoinId,
     stablecoin: resolveBlacklistStablecoinSymbol(spec.stablecoinId, spec.stablecoin),
     contractAddress: resolvedContract.contractAddress,
     decimals: resolvedContract.decimals,
     startBlock: spec.startBlock,
-    events: spec.events,
+    events: [...spec.events],
   };
 }
 
@@ -224,32 +237,81 @@ function resolveBlacklistContractConfig(
 
 const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   // USDC
-  { chain: ETHEREUM, stablecoinId: "usdc-circle", events: USDC_EVENTS },
-  { chain: ARBITRUM, stablecoinId: "usdc-circle", events: USDC_EVENTS },
-  { chain: BASE, stablecoinId: "usdc-circle", events: USDC_EVENTS },
-  { chain: OPTIMISM, stablecoinId: "usdc-circle", events: USDC_EVENTS },
-  { chain: POLYGON, stablecoinId: "usdc-circle", events: USDC_EVENTS },
-  { chain: AVALANCHE, stablecoinId: "usdc-circle", startBlock: 7_388_829, events: USDC_EVENTS },
+  { chain: ETHEREUM, stablecoinId: "usdc-circle", events: USDC_EVENT_FAMILY.events },
+  { chain: ARBITRUM, stablecoinId: "usdc-circle", events: USDC_EVENT_FAMILY.events },
+  { chain: BASE, stablecoinId: "usdc-circle", events: USDC_EVENT_FAMILY.events },
+  { chain: OPTIMISM, stablecoinId: "usdc-circle", events: USDC_EVENT_FAMILY.events },
+  { chain: POLYGON, stablecoinId: "usdc-circle", events: USDC_EVENT_FAMILY.events },
+  { chain: AVALANCHE, stablecoinId: "usdc-circle", startBlock: 7_388_829, events: USDC_EVENT_FAMILY.events },
 
   // USDT (EVM)
-  { chain: ETHEREUM, stablecoinId: "usdt-tether", events: USDT_EVENTS },
-  { chain: ARBITRUM, stablecoinId: "usdt-tether", events: USDT_UPGRADED_EVENTS },
-  { chain: OPTIMISM, stablecoinId: "usdt-tether", events: USDT_EVENTS },
-  { chain: OPTIMISM, stablecoinId: "usdt-tether", contractSource: "traded", events: USDT0_EVENTS },
-  { chain: POLYGON, stablecoinId: "usdt-tether", events: USDT_UPGRADED_EVENTS },
-  { chain: AVALANCHE, stablecoinId: "usdt-tether", startBlock: 4_663_628, events: USDT_EVENTS },
-  { chain: BSC, stablecoinId: "usdt-tether", startBlock: 176_416, events: USDT_EVENTS },
+  { chain: ETHEREUM, stablecoinId: "usdt-tether", events: USDT_EVENT_FAMILY.events },
+  { chain: ARBITRUM, stablecoinId: "usdt-tether", events: USDT_UPGRADED_EVENT_FAMILY.events },
+  { chain: OPTIMISM, stablecoinId: "usdt-tether", events: USDT_EVENT_FAMILY.events },
+  { chain: OPTIMISM, stablecoinId: "usdt-tether", contractSource: "traded", events: USDT0_EVENT_FAMILY.events },
+  { chain: POLYGON, stablecoinId: "usdt-tether", events: USDT_UPGRADED_EVENT_FAMILY.events },
+  { chain: AVALANCHE, stablecoinId: "usdt-tether", startBlock: 4_663_628, events: USDT_EVENT_FAMILY.events },
+  { chain: BSC, stablecoinId: "usdt-tether", startBlock: 176_416, events: USDT_EVENT_FAMILY.events },
 
   // USDT (Tron)
-  { chain: TRON, stablecoinId: "usdt-tether", events: USDT_EVENTS },
+  { chain: TRON, stablecoinId: "usdt-tether", events: USDT_EVENT_FAMILY.events },
 
   // PAXG (Ethereum only)
-  { chain: ETHEREUM, stablecoinId: "paxg-paxos", events: PAXG_EVENTS },
+  { chain: ETHEREUM, stablecoinId: "paxg-paxos", events: PAXG_EVENT_FAMILY.events },
 
   // XAUT (Ethereum only — same event pattern as USDT0: BlockPlaced/BlockReleased/DestroyedBlockedFunds)
-  { chain: ETHEREUM, stablecoinId: "xaut-tether", events: USDT0_EVENTS },
+  { chain: ETHEREUM, stablecoinId: "xaut-tether", events: USDT0_EVENT_FAMILY.events },
 ];
 
 export const CONTRACT_CONFIGS: ContractEventConfig[] = CONTRACT_CONFIG_SPECS.map(
   resolveBlacklistContractConfig,
 );
+
+const CONTRACT_CONFIG_BY_KEY = new Map(CONTRACT_CONFIGS.map((config) => [config.configKey, config]));
+const CONTRACT_CONFIG_BY_CHAIN_AND_ADDRESS = new Map(
+  CONTRACT_CONFIGS.map((config) => [`${config.chain.chainId}-${config.contractAddress.toLowerCase()}`, config]),
+);
+
+function buildBlacklistConfigKey(chainId: string, contractAddress: string): string {
+  return `${chainId}-${contractAddress.toLowerCase()}`;
+}
+
+export function getBlacklistConfigByKey(configKey: string): ContractEventConfig | undefined {
+  return CONTRACT_CONFIG_BY_KEY.get(configKey.toLowerCase());
+}
+
+export function getBlacklistConfigByContract(
+  chainId: string,
+  contractAddress: string,
+): ContractEventConfig | undefined {
+  return CONTRACT_CONFIG_BY_CHAIN_AND_ADDRESS.get(buildBlacklistConfigKey(chainId, contractAddress));
+}
+
+export function getBlacklistConfigsForSymbolAndChain(
+  stablecoin: BlacklistStablecoin,
+  chainId: string,
+): ContractEventConfig[] {
+  return CONTRACT_CONFIGS.filter((config) => config.stablecoin === stablecoin && config.chain.chainId === chainId);
+}
+
+export function getBlacklistEventByTopic(
+  config: Pick<ContractEventConfig, "events">,
+  topicHash: string | null | undefined,
+): BlacklistEventDef | undefined {
+  if (!topicHash) return undefined;
+  return config.events.find((event) => event.topicHash.toLowerCase() === topicHash.toLowerCase());
+}
+
+export function getBlacklistEventBySignature(
+  config: Pick<ContractEventConfig, "events">,
+  signature: string | null | undefined,
+): BlacklistEventDef | undefined {
+  if (!signature) return undefined;
+  return config.events.find((event) => event.signature === signature || event.signature.split("(")[0] === signature);
+}
+
+export function getBlacklistTopicHashes(
+  config: Pick<ContractEventConfig, "events">,
+): string[] {
+  return [...new Set(config.events.map((event) => event.topicHash))];
+}

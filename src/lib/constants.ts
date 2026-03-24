@@ -5,7 +5,6 @@ export {
   HOUR_MS,
   DAY_MS,
   WEEK_MS,
-  THIRTY_DAYS_SECONDS,
 } from "@shared/lib/time-constants";
 
 // Derived constants unique to frontend (not worth sharing — no worker consumers)

@@ -213,7 +213,7 @@ export function DigestSnapshot({ date }: { date: string }) {
                 <span className="font-medium">{blacklistEvents.length}</span>{" "}
                 event{blacklistEvents.length !== 1 ? "s" : ""} on this day
                 {(() => {
-                  const total = blacklistEvents.reduce((sum, e) => sum + (e.amount ?? 0), 0);
+                  const total = blacklistEvents.reduce((sum, e) => sum + (e.amountUsdAtEvent ?? 0), 0);
                   return total > 0 ? (
                     <span className="text-muted-foreground"> totaling {formatCurrency(total)}</span>
                   ) : null;
@@ -223,9 +223,11 @@ export function DigestSnapshot({ date }: { date: string }) {
                 {blacklistEvents.slice(0, 5).map((e) => (
                   <li key={`${e.timestamp}-${e.address}`} className="text-xs text-muted-foreground">
                     {e.stablecoin} on {e.chainName} &mdash; {e.eventType}
-                    {e.amount != null && (
-                      <span> ({formatCurrency(e.amount)})</span>
-                    )}
+                    {e.amountUsdAtEvent != null ? (
+                      <span> ({formatCurrency(e.amountUsdAtEvent)})</span>
+                    ) : e.amountNative != null ? (
+                      <span> ({e.amountNative.toLocaleString(undefined, { maximumFractionDigits: 4 })} native)</span>
+                    ) : null}
                     <span className="ml-1">{formatAddress(e.address)}</span>
                   </li>
                 ))}

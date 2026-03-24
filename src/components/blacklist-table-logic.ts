@@ -1,8 +1,6 @@
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import { createTableComparator } from "@/lib/table-comparator";
-import type { BlacklistEvent } from "@shared/types";
-
-export type BlacklistSortKey = "date" | "stablecoin" | "chain" | "event";
+import type { BlacklistEvent, BlacklistSortKey } from "@shared/types";
 
 export const compareBlacklistRows: (
   a: BlacklistEvent,

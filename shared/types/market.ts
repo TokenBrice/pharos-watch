@@ -382,6 +382,8 @@ export const BLACKLIST_STABLECOINS = ["USDC", "USDT", "PAXG", "XAUT"] as const;
 
 export type BlacklistStablecoin = (typeof BLACKLIST_STABLECOINS)[number];
 export type BlacklistEventType = "blacklist" | "unblacklist" | "destroy";
+export type BlacklistSortKey = "date" | "stablecoin" | "chain" | "event";
+export type BlacklistSortDirection = "asc" | "desc";
 export type BlacklistAmountSource = "event" | "historical_balance" | "derived" | "unavailable";
 export type BlacklistAmountStatus =
   | "resolved"
@@ -448,6 +450,39 @@ export const BlacklistResponseSchema = z.object({
   methodology: MethodologyEnvelopeSchema.optional(),
 });
 export type BlacklistResponse = z.infer<typeof BlacklistResponseSchema>;
+
+const BlacklistChartPointSchema = z.object({
+  quarter: z.string(),
+  USDT: z.number(),
+  USDC: z.number(),
+  PAXG: z.number(),
+  XAUT: z.number(),
+  total: z.number(),
+});
+
+const BlacklistSummaryStatsSchema = z.object({
+  usdcBlacklisted: z.number(),
+  usdtBlacklisted: z.number(),
+  goldBlacklisted: z.number(),
+  frozenAddresses: z.number(),
+  destroyedTotal: z.number(),
+  recentCount: z.number(),
+  recoverableGapCount: z.number(),
+});
+
+const BlacklistChainOptionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+
+export const BlacklistSummaryResponseSchema = z.object({
+  stats: BlacklistSummaryStatsSchema,
+  chart: z.array(BlacklistChartPointSchema),
+  chains: z.array(BlacklistChainOptionSchema),
+  totalEvents: z.number(),
+  methodology: MethodologyEnvelopeSchema.optional(),
+});
+export type BlacklistSummaryResponse = z.infer<typeof BlacklistSummaryResponseSchema>;
 
 const SignalDetailSchema = z
   .object({

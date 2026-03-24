@@ -16,6 +16,7 @@ import { handleStablecoinDetail } from "./api/stablecoin-detail";
 import { handleStablecoinSummary } from "./api/stablecoin-summary";
 import { handleStablecoinReserves } from "./api/stablecoin-reserves";
 import { handleBlacklist } from "./api/blacklist";
+import { handleBlacklistSummary } from "./api/blacklist-summary";
 import { handleDepegEvents } from "./api/depeg-events";
 import { handleBackfillDepegs } from "./api/backfill-depegs";
 import { handleBackfillSupplyHistory } from "./api/backfill-supply-history";
@@ -122,6 +123,7 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
   "stablecoin-reserves-canary": ({ db }) => handleStablecoinReserves(db, "iusd-infinifi"),
   "stablecoin-charts": ({ db }) => handleStablecoinCharts(db),
   blacklist: ({ db, url }) => handleBlacklist(db, url),
+  "blacklist-summary": ({ db }) => handleBlacklistSummary(db),
   "depeg-events": ({ db, url }) => handleDepegEvents(db, url),
   "backfill-depegs": withErrorHandler("backfill-depegs", ({ db, url, trustedAdmin, request }) =>
     runIdempotentAdminAction(db, "backfill-depegs", request, () =>

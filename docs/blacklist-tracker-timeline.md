@@ -1,6 +1,15 @@
 # Blacklist Tracker Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.1` (2026-02-09 -> 2026-02-25).
+Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.2` (2026-02-09 -> 2026-03-24).
+
+---
+
+## v3.2 — Provenance-aware rows and explicit amount semantics (Mar 24, 2026)
+
+- `blacklist_events` rows began storing contract/config provenance (`contract_address`, `config_key`, event signature/topic metadata)
+- Public API moved from overloaded `amount` semantics to explicit token-native plus USD-at-event fields
+- Amount health now tracks recoverable attribution gaps explicitly instead of treating every null-like case the same
+- `EURC` was removed from the live-supported filter set pending a reliable mirrored-zero-noise suppression model
 
 ---
 

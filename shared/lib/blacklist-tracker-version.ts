@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const blacklistTracker = createMethodologyVersion({
-  currentVersion: "3.1",
+  currentVersion: "3.2",
   changelogPath: "/methodology/blacklist-tracker-changelog/",
   changelog: [
+  {
+    version: "3.2",
+    title: "Provenance-aware rows and explicit amount semantics",
+    date: "2026-03-24",
+    effectiveAt: 1774310400,
+    summary:
+      "Blacklist rows now persist emitting-contract provenance and explicit native/USD amount status fields so reprocessing and public consumers no longer rely on implicit inference.",
+    impact: [
+      "Rows now store config/contract provenance plus event signature metadata",
+      "Amount semantics split into token-native and USD-at-event fields with explicit source/status flags",
+      "Gap monitoring now tracks recoverable attribution failures rather than nullable amounts alone",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.1",
     title: "API-error-aware sync cursor protection",

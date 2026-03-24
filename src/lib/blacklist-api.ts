@@ -1,86 +1,43 @@
+import { apiFetch } from "@/lib/api";
 import { API_PATHS } from "@shared/lib/api-endpoints";
-import { ApiFetchError, apiFetch } from "@/lib/api";
-import { BlacklistResponseSchema, type BlacklistEvent, type BlacklistResponse } from "@shared/types";
+import {
+  BlacklistResponseSchema,
+  BlacklistSummaryResponseSchema,
+  type BlacklistEventType,
+  type BlacklistResponse,
+  type BlacklistSortDirection,
+  type BlacklistSortKey,
+  type BlacklistStablecoin,
+  type BlacklistSummaryResponse,
+} from "@shared/types";
 
-export const BLACKLIST_API_PAGE_SIZE = 1000;
-const BLACKLIST_API_BATCH_SIZE = 3;
-const BLACKLIST_API_MAX_RETRIES = 2;
-const BLACKLIST_API_RETRY_BASE_MS = 750;
-
-function buildBlacklistPath(offset = 0): string {
-  return offset > 0
-    ? `${API_PATHS.blacklist()}?limit=${BLACKLIST_API_PAGE_SIZE}&offset=${offset}`
-    : `${API_PATHS.blacklist()}?limit=${BLACKLIST_API_PAGE_SIZE}`;
+export interface FetchBlacklistEventsParams {
+  stablecoin?: BlacklistStablecoin | "all";
+  chainName?: string | "all";
+  eventType?: BlacklistEventType | "all";
+  query?: string;
+  sortBy?: BlacklistSortKey;
+  sortDirection?: BlacklistSortDirection;
+  limit?: number;
+  offset?: number;
 }
 
-function dedupeBlacklistEvents(events: BlacklistEvent[]): BlacklistEvent[] {
-  const seen = new Set<string>();
-  const deduped: BlacklistEvent[] = [];
-
-  for (const event of events) {
-    if (seen.has(event.id)) continue;
-    seen.add(event.id);
-    deduped.push(event);
-  }
-
-  return deduped;
+export function fetchBlacklistEvents(params: FetchBlacklistEventsParams): Promise<BlacklistResponse> {
+  return apiFetch(
+    API_PATHS.blacklist({
+      stablecoin: params.stablecoin && params.stablecoin !== "all" ? params.stablecoin : undefined,
+      chain: params.chainName && params.chainName !== "all" ? params.chainName : undefined,
+      eventType: params.eventType && params.eventType !== "all" ? params.eventType : undefined,
+      q: params.query?.trim() ? params.query.trim() : undefined,
+      sortBy: params.sortBy,
+      sortDirection: params.sortDirection,
+      limit: params.limit,
+      offset: params.offset,
+    }),
+    BlacklistResponseSchema,
+  );
 }
 
-function isRetryableBlacklistError(error: unknown): boolean {
-  if (error instanceof ApiFetchError) {
-    return error.status === 408 || error.status === 429 || error.status >= 500;
-  }
-
-  return error instanceof TypeError;
-}
-
-async function sleep(ms: number): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function fetchBlacklistPage(offset = 0): Promise<BlacklistResponse> {
-  const path = buildBlacklistPath(offset);
-
-  for (let attempt = 0; ; attempt += 1) {
-    try {
-      return await apiFetch(path, BlacklistResponseSchema);
-    } catch (error) {
-      if (!isRetryableBlacklistError(error) || attempt >= BLACKLIST_API_MAX_RETRIES) {
-        throw error;
-      }
-
-      await sleep(BLACKLIST_API_RETRY_BASE_MS * 2 ** attempt);
-    }
-  }
-}
-
-/**
- * Hydrates the full blacklist history by walking the API's capped pagination.
- * Remaining pages are fetched in small batches so transient rate limits do not
- * take down the entire page.
- */
-export async function fetchAllBlacklistEvents(): Promise<BlacklistResponse> {
-  const firstPage = await fetchBlacklistPage();
-
-  if (firstPage.total <= BLACKLIST_API_PAGE_SIZE) {
-    return firstPage;
-  }
-
-  const offsets: number[] = [];
-  for (let offset = BLACKLIST_API_PAGE_SIZE; offset < firstPage.total; offset += BLACKLIST_API_PAGE_SIZE) {
-    offsets.push(offset);
-  }
-
-  const remainingPages: BlacklistResponse[] = [];
-  for (let index = 0; index < offsets.length; index += BLACKLIST_API_BATCH_SIZE) {
-    const batchOffsets = offsets.slice(index, index + BLACKLIST_API_BATCH_SIZE);
-    const batchPages = await Promise.all(batchOffsets.map((offset) => fetchBlacklistPage(offset)));
-    remainingPages.push(...batchPages);
-  }
-
-  return {
-    ...firstPage,
-    events: dedupeBlacklistEvents([...firstPage.events, ...remainingPages.flatMap((page) => page.events)]),
-    total: Math.max(firstPage.total, ...remainingPages.map((page) => page.total)),
-  };
+export function fetchBlacklistSummary(): Promise<BlacklistSummaryResponse> {
+  return apiFetch(API_PATHS.blacklistSummary(), BlacklistSummaryResponseSchema);
 }

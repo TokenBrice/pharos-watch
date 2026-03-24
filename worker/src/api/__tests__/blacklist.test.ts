@@ -93,6 +93,12 @@ describe("handleBlacklist", () => {
     expect(event).toHaveProperty("eventType");
     expect(event).toHaveProperty("txHash");
     expect(event).toHaveProperty("blockNumber");
+    expect(event).toHaveProperty("amountNative");
+    expect(event).toHaveProperty("amountUsdAtEvent");
+    expect(event).toHaveProperty("amountSource");
+    expect(event).toHaveProperty("amountStatus");
+    expect(event).toHaveProperty("contractAddress");
+    expect(event).toHaveProperty("configKey");
     expect(event).toHaveProperty("explorerTxUrl");
     expect(event).toHaveProperty("explorerAddressUrl");
     expect(event).toHaveProperty("methodologyVersion");
@@ -129,13 +135,10 @@ describe("handleBlacklist", () => {
     expect(res.status).toBe(200);
   });
 
-  it("accepts EURC stablecoin filter", async () => {
-    const db = mockD1([
-      { match: "COUNT", rows: [{ total: 1 }] },
-      { match: "blacklist_events", rows: [makeBlacklistRow({ stablecoin: "EURC" })] },
-    ]);
+  it("rejects EURC stablecoin filter because EURC is not currently live-supported", async () => {
+    const db = mockD1([]);
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?stablecoin=eurc"));
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
   });
 
   it("normalizes stablecoin filters before binding", async () => {
@@ -144,10 +147,10 @@ describe("handleBlacklist", () => {
       dataBinds = args;
     });
 
-    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?stablecoin=eurc"));
+    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?stablecoin=usdt"));
     expect(res.status).toBe(200);
-    expect(dataBinds).toContain("EURC");
-    expect(dataBinds).not.toContain("eurc");
+    expect(dataBinds).toContain("USDT");
+    expect(dataBinds).not.toContain("usdt");
   });
 
   it("rejects invalid chain parameter with 400", async () => {
@@ -160,6 +163,29 @@ describe("handleBlacklist", () => {
     const db = mockD1([]);
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?eventType=hack"));
     expect(res.status).toBe(400);
+  });
+
+  it("rejects invalid sortBy with 400", async () => {
+    const db = mockD1([]);
+    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?sortBy=amount"));
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects invalid sortDirection with 400", async () => {
+    const db = mockD1([]);
+    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?sortDirection=sideways"));
+    expect(res.status).toBe(400);
+  });
+
+  it("binds address search filters case-insensitively", async () => {
+    let dataBinds: unknown[] = [];
+    const db = makeDbWithDataBindCapture((args) => {
+      dataBinds = args;
+    });
+
+    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?q=0xAbC"));
+    expect(res.status).toBe(200);
+    expect(dataBinds).toContain("%0xabc%");
   });
 
   it("includes X-Data-Age header", async () => {

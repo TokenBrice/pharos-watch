@@ -78,15 +78,15 @@ export async function collectBlacklistActivity(
   try {
     const blRows = await ctx.db
       .prepare(
-        "SELECT stablecoin AS symbol, chain_name, event_type, amount FROM blacklist_events WHERE timestamp >= ? AND timestamp < ? ORDER BY amount DESC",
+        "SELECT stablecoin AS symbol, chain_name, event_type, amount_usd_at_event FROM blacklist_events WHERE timestamp >= ? AND timestamp < ? ORDER BY amount_usd_at_event DESC",
       )
       .bind(ctx.todayTs - SECONDS.ONE_DAY, ctx.todayTs)
-      .all<{ symbol: string; chain_name: string; event_type: string; amount: number | null }>();
+      .all<{ symbol: string; chain_name: string; event_type: string; amount_usd_at_event: number | null }>();
     const blEvents = blRows.results ?? [];
     if (blEvents.length > 0) {
       const eventCount = blEvents.length;
-      const totalAmountUsd = blEvents.reduce((s, e) => s + (e.amount ?? 0), 0);
-      const hasLargeEvent = blEvents.some((e) => (e.amount ?? 0) > 10_000_000);
+      const totalAmountUsd = blEvents.reduce((s, e) => s + (e.amount_usd_at_event ?? 0), 0);
+      const hasLargeEvent = blEvents.some((e) => (e.amount_usd_at_event ?? 0) > 10_000_000);
       if (eventCount >= 2 || hasLargeEvent) {
         return collectorOk({
           eventCount,
@@ -98,7 +98,7 @@ export async function collectBlacklistActivity(
               symbol: e.symbol,
               chain: e.chain_name,
               type: e.event_type as "blacklist" | "destroy",
-              amountUsd: e.amount ?? 0,
+              amountUsd: e.amount_usd_at_event ?? 0,
             })),
         });
       }

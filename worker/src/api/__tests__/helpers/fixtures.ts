@@ -13,10 +13,18 @@ type BlacklistRow = {
   event_type: "blacklist" | "unblacklist" | "destroy";
   address: string;
   amount: number | null;
+  amount_native: number | null;
+  amount_usd_at_event: number | null;
+  amount_source: "event" | "historical_balance" | "derived" | "unavailable";
+  amount_status: "resolved" | "recoverable_pending" | "permanently_unavailable" | "provider_failed" | "ambiguous";
   tx_hash: string;
   block_number: number;
   timestamp: number;
   methodology_version: string | null;
+  contract_address: string | null;
+  config_key: string | null;
+  event_signature: string | null;
+  event_topic0: string | null;
   explorer_tx_url: string;
   explorer_address_url: string;
 };
@@ -175,10 +183,18 @@ export function makeBlacklistRow(overrides: Partial<BlacklistRow> = {}): Blackli
     event_type: "blacklist",
     address: "0xabc123",
     amount: 1000,
+    amount_native: 1000,
+    amount_usd_at_event: 1000,
+    amount_source: "historical_balance",
+    amount_status: "resolved",
     tx_hash: "0xtx1",
     block_number: 19000000,
     timestamp: Math.floor(Date.now() / 1000) - 3600,
     methodology_version: "3.1",
+    contract_address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    config_key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
+    event_signature: "AddedBlackList(address)",
+    event_topic0: "0x42e160154868087d6bfdc0ca23d96a1c1cfa32f1b72ba9ba27b69b98a0d819dc",
     explorer_tx_url: "https://etherscan.io/tx/0xtx1",
     explorer_address_url: "https://etherscan.io/address/0xabc123",
   };

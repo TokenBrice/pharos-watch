@@ -65,7 +65,8 @@ export const API_PATHS = {
   stablecoinCharts: () => "/api/stablecoin-charts",
   pegSummary: () => "/api/peg-summary",
   health: () => "/api/health",
-  blacklist: () => "/api/blacklist",
+  blacklist: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/blacklist", params),
+  blacklistSummary: () => "/api/blacklist-summary",
   depegEvents: (params?: { stablecoinId?: string; limit?: number; offset?: number }) =>
     buildQueryPath("/api/depeg-events", {
       stablecoin: params?.stablecoinId,
@@ -176,6 +177,15 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
   {
     key: "blacklist",
     path: API_PATHS.blacklist(),
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+    probeGroup: "public",
+  },
+  {
+    key: "blacklist-summary",
+    path: API_PATHS.blacklistSummary(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,

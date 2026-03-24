@@ -20,7 +20,9 @@ interface BlacklistRow {
   chain_name: string;
   event_type: string;
   address: string;
-  amount: number | null;
+  amount_native: number | null;
+  amount_usd_at_event: number | null;
+  amount_status: string;
   timestamp: number;
 }
 
@@ -123,7 +125,7 @@ export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
   // Blacklist events on that date
   const blacklistResult = await db
     .prepare(
-      `SELECT stablecoin, chain_name, event_type, address, amount, timestamp
+      `SELECT stablecoin, chain_name, event_type, address, amount_native, amount_usd_at_event, amount_status, timestamp
        FROM blacklist_events
        WHERE timestamp >= ? AND timestamp < ?
        ORDER BY timestamp DESC
@@ -137,7 +139,9 @@ export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
     chainName: r.chain_name,
     eventType: r.event_type,
     address: r.address,
-    amount: r.amount,
+    amountNative: r.amount_native,
+    amountUsdAtEvent: r.amount_usd_at_event,
+    amountStatus: r.amount_status,
     timestamp: r.timestamp,
   }));
 

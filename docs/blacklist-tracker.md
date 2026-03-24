@@ -4,9 +4,9 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain ev
 
 **Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT.
 
-**Shared API/UI enum:** USDC, USDT, EURC, PAXG, XAUT via `BLACKLIST_STABLECOINS` in `shared/types/index.ts`.
+**Live API/UI filter enum:** USDC, USDT, PAXG, XAUT via `BLACKLIST_STABLECOINS` in `shared/types/index.ts`.
 
-Implementation note: `worker/src/lib/blacklist-contracts.ts` currently defines no dedicated EURC contract configuration, so live `blacklist_events` rows come from the four cron-backed assets above even though the shared enum still accepts `EURC`.
+Implementation note: `EURC` is intentionally not live-supported right now. Circle often mirrors the same blacklist action across both USDC and EURC, which creates many zero-balance EURC rows. Pharos will only re-enable EURC if those mirrored no-balance events can be classified without hiding genuine EURC signal.
 
 ---
 
@@ -196,7 +196,7 @@ FrozenAddressWiped(address indexed)
 
 ### blacklist_events table
 
-**Migrations:** `0001_initial.sql`, `0028_blacklist_indexes.sql`, `0037_blacklist_methodology_version.sql`, `0049_audit_blacklist_index.sql`
+**Migrations:** `0001_initial.sql`, `0028_blacklist_indexes.sql`, `0037_blacklist_methodology_version.sql`, `0049_audit_blacklist_index.sql`, `0076_blacklist_provenance_and_amount_semantics.sql`
 
 ```sql
 CREATE TABLE blacklist_events (
@@ -207,10 +207,18 @@ CREATE TABLE blacklist_events (
   event_type TEXT NOT NULL,
   address TEXT NOT NULL,
   amount REAL,
+  amount_native REAL,
+  amount_usd_at_event REAL,
+  amount_source TEXT NOT NULL DEFAULT 'unavailable',
+  amount_status TEXT NOT NULL DEFAULT 'recoverable_pending',
   tx_hash TEXT NOT NULL,
   block_number INTEGER NOT NULL,
   timestamp INTEGER NOT NULL,
   methodology_version TEXT NOT NULL DEFAULT '3.1',
+  contract_address TEXT,
+  config_key TEXT,
+  event_signature TEXT,
+  event_topic0 TEXT,
   explorer_tx_url TEXT NOT NULL,
   explorer_address_url TEXT NOT NULL
 );
@@ -220,11 +228,20 @@ CREATE INDEX idx_be_stablecoin ON blacklist_events(stablecoin);
 CREATE INDEX idx_be_chain_name ON blacklist_events(chain_name);
 CREATE INDEX idx_be_event_type ON blacklist_events(event_type);
 CREATE INDEX idx_blacklist_events_chain_ts ON blacklist_events(chain_name, timestamp DESC);
+CREATE INDEX idx_blacklist_events_config_key ON blacklist_events(config_key);
+CREATE INDEX idx_blacklist_events_amount_status ON blacklist_events(amount_status);
 ```
 
 **Row ID format:** `{chainId}-{txHash}-{logIndex}` -- ensures uniqueness via `INSERT OR IGNORE`.
 
 **event_type values:** `"blacklist"`, `"unblacklist"`, `"destroy"`
+
+**Amount semantics**
+
+- `amount_native` is the canonical token-native quantity for the event
+- `amount_usd_at_event` is populated only when Pharos can justify an event-time USD valuation
+- `amount_source` records where the value came from (`event`, `historical_balance`, `derived`, `unavailable`)
+- `amount_status` records whether the amount is resolved, recoverable, or intentionally unavailable
 
 ### blacklist_sync_state table
 
@@ -339,11 +356,14 @@ For destroy events, try fetching from transaction receipt first (`eth_getTransac
 | ------------ | ------ | ------- | -------------------------------------------------------------------- |
 | `limit`      | number | 1000    | Max results (1-1000; `0` maps to default `1000`)                     |
 | `offset`     | number | 0       | Pagination offset                                                    |
-| `stablecoin` | string | --      | Filter by name (`"USDC"`, `"USDT"`, `"EURC"`, `"PAXG"`, `"XAUT"`)    |
+| `stablecoin` | string | --      | Filter by name (`"USDC"`, `"USDT"`, `"PAXG"`, `"XAUT"`)              |
 | `chain`      | string | --      | Filter by `chain_name`                                               |
 | `eventType`  | string | --      | Filter by `event_type` (`"blacklist"`, `"unblacklist"`, `"destroy"`) |
+| `q`          | string | --      | Case-insensitive address substring search                            |
+| `sortBy`     | string | date    | Sort field (`"date"`, `"stablecoin"`, `"chain"`, `"event"`)          |
+| `sortDirection` | string | desc | Sort direction (`"asc"`, `"desc"`)                                   |
 
-`"EURC"` is accepted here because the shared API schema includes it, but current cron-backed event rows are produced only for USDC, USDT, PAXG, and XAUT until an EURC contract config is added.
+The handler now exposes only the live-supported symbols: USDC, USDT, PAXG, and XAUT.
 
 **Response:**
 
@@ -357,17 +377,40 @@ For destroy events, try fetching from transaction receipt first (`eth_getTransac
       "chainName": "Ethereum",
       "eventType": "blacklist",
       "address": "0x...",
-      "amount": 12345.67,
+      "amountNative": 12345.67,
+      "amountUsdAtEvent": 12345.67,
+      "amountSource": "historical_balance",
+      "amountStatus": "resolved",
       "txHash": "0x...",
       "blockNumber": 20000000,
       "timestamp": 1704067200,
+      "contractAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "configKey": "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "eventSignature": "Blacklisted(address)",
+      "eventTopic0": "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855",
       "explorerTxUrl": "https://etherscan.io/tx/0x...",
       "explorerAddressUrl": "https://etherscan.io/address/0x..."
     }
   ],
-  "total": 12345
+  "total": 12345,
+  "methodology": {
+    "version": "3.2",
+    "versionLabel": "v3.2",
+    "currentVersion": "3.2",
+    "currentVersionLabel": "v3.2",
+    "changelogPath": "/methodology/blacklist-tracker-changelog/",
+    "asOf": 1704067200,
+    "isCurrent": true
+  }
 }
 ```
+
+### GET /api/blacklist-summary
+
+**File:** `worker/src/api/blacklist-summary.ts`
+**Cache:** realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers with 900s TTL.
+
+Returns server-side aggregate stats, quarterly chart buckets, supported chain filters, and total event count for the blacklist UI.
 
 ---
 
@@ -394,10 +437,10 @@ Both admin endpoints are routed in `worker/src/route-registry.ts` and executed v
 ### Hook
 
 **File:** `src/hooks/use-blacklist-events.ts`
-**Endpoint:** `GET /api/blacklist` (hydrated client-side via paginated 1000-row requests until `total` is reached)
+**Endpoints:** `GET /api/blacklist-summary` + `GET /api/blacklist`
 **Cache:** `staleTime: 20 min`, `refetchInterval: 40 min`
 
-The hook delegates to `src/lib/blacklist-api.ts`, which fetches the first page, reads `total`, and then hydrates the remaining offsets in small client-side batches (3 requests at a time) with retry/backoff for `429` and transient upstream errors. This keeps the public API cap at 1000 rows while avoiding bursty request fan-out that can blank the page when one follow-up page is rate-limited.
+The summary hook loads aggregate cards/chart/filter metadata from the dedicated summary endpoint. The page hook fetches only the currently requested table slice, including server-side filtering, sorting, search, and pagination.
 
 ### Page: /blacklist
 
@@ -406,8 +449,8 @@ The hook delegates to `src/lib/blacklist-api.ts`, which fetches the first page, 
 | Component        | File                                   | Description                                                                                     |
 | ---------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | BlacklistFilters | `src/components/blacklist-filters.tsx` | Stablecoin, chain, event type dropdowns                                                         |
-| Search           | (inline)                               | Client-side search by address or stablecoin                                                     |
-| BlacklistTable   | `src/components/blacklist-table.tsx`   | Sortable by date/stablecoin/chain/event type, 50 rows per page                                  |
+| Search           | (inline)                               | Server-backed address search                                                                    |
+| BlacklistTable   | `src/components/blacklist-table.tsx`   | Server-sorted, 50 rows per page                                                                 |
 | BlacklistStats   | `src/components/blacklist-stats.tsx`   | USDC/USDT unique blacklisted addresses, gold frozen, total destroyed funds, recent events (30d) |
 | BlacklistChart   | `src/components/blacklist-chart.tsx`   | Quarterly stacked bar chart of blacklisted funds by stablecoin                                  |
 | CSV export       | (inline)                               | Download filtered events as CSV                                                                 |

@@ -1,16 +1,14 @@
 "use client";
 
-import { useMemo } from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   BLACKLIST_STABLECOINS,
-  type BlacklistEvent,
   type BlacklistStablecoin,
   type BlacklistEventType,
 } from "@shared/types";
 
 interface BlacklistFiltersProps {
-  events: BlacklistEvent[] | undefined;
+  chains: Array<{ id: string; name: string }>;
   stablecoinFilter: BlacklistStablecoin | "all";
   chainFilter: string;
   eventTypeFilter: BlacklistEventType | "all";
@@ -20,7 +18,7 @@ interface BlacklistFiltersProps {
 }
 
 export function BlacklistFilters({
-  events,
+  chains,
   stablecoinFilter,
   chainFilter,
   eventTypeFilter,
@@ -28,17 +26,6 @@ export function BlacklistFilters({
   onChainChange,
   onEventTypeChange,
 }: BlacklistFiltersProps) {
-  const chains = useMemo(() => {
-    if (!events) return [];
-    const seen = new Map<string, string>();
-    for (const evt of events) {
-      if (!seen.has(evt.chainId)) {
-        seen.set(evt.chainId, evt.chainName);
-      }
-    }
-    return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
-  }, [events]);
-
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:gap-6">
       <div className="space-y-1.5">

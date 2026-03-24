@@ -7,6 +7,7 @@ import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 vi.mock("../../lib/blacklist-contracts", () => ({
   CONTRACT_CONFIGS: [
     {
+      configKey: "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       chain: {
         chainId: "ethereum",
         chainName: "Ethereum",
@@ -27,6 +28,7 @@ vi.mock("../../lib/blacklist-contracts", () => ({
       ],
     },
     {
+      configKey: "base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
       chain: {
         chainId: "base",
         chainName: "Base",
@@ -47,6 +49,7 @@ vi.mock("../../lib/blacklist-contracts", () => ({
       ],
     },
     {
+      configKey: "tron-tr7nhqjekqxgtci8q8zy4pl8otszgjlj6t",
       chain: {
         chainId: "tron",
         chainName: "Tron",
@@ -67,6 +70,16 @@ vi.mock("../../lib/blacklist-contracts", () => ({
       ],
     },
   ],
+  getBlacklistTopicHashes: (config: { events: Array<{ topicHash: string }> }) =>
+    [...new Set(config.events.map((event) => event.topicHash))],
+  getBlacklistEventByTopic: (
+    config: { events: Array<{ topicHash: string; signature: string; eventType: string; hasAmount: boolean }> },
+    topicHash: string | null | undefined,
+  ) => topicHash ? config.events.find((event) => event.topicHash.toLowerCase() === topicHash.toLowerCase()) : undefined,
+  getBlacklistEventBySignature: (
+    config: { events: Array<{ signature: string; eventType: string; hasAmount: boolean }> },
+    signature: string | null | undefined,
+  ) => signature ? config.events.find((event) => event.signature === signature || event.signature.split("(")[0] === signature) : undefined,
 }));
 
 vi.mock("../../lib/alchemy-logs", () => ({
@@ -509,7 +522,7 @@ describe("syncBlacklist", () => {
 
     const backfillQuery = db.getHistory().find((entry) =>
       entry.sql.includes("FROM blacklist_events")
-      && entry.sql.includes("amount IS NULL")
+      && entry.sql.includes("amount_status IN")
       && entry.sql.includes("LIMIT ?"),
     );
     expect(backfillQuery?.sql).toContain("ORDER BY timestamp DESC");

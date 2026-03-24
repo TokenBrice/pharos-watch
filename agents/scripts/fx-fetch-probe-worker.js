@@ -46,7 +46,7 @@ async function probeUrl(target) {
   }
 }
 
-export default {
+const worker = {
   async fetch(request) {
     const url = new URL(request.url);
     const parallel = url.searchParams.get("parallel") === "1";
@@ -98,3 +98,5 @@ export default {
     });
   },
 };
+
+export default worker;

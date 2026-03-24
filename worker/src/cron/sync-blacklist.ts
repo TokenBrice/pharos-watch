@@ -1,7 +1,13 @@
-import { CONTRACT_CONFIGS, type ContractEventConfig } from "../lib/blacklist-contracts";
+import {
+  CONTRACT_CONFIGS,
+  getBlacklistConfigByContract,
+  getBlacklistConfigByKey,
+  getBlacklistConfigsForSymbolAndChain,
+  getBlacklistEventByTopic,
+  type ContractEventConfig,
+} from "../lib/blacklist-contracts";
 import { ETHERSCAN_V2_BASE, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
-import type { BlacklistEventType } from "@shared/types";
 import { getLastBlock, setLastBlock, batchExecute } from "../lib/db";
 import {
   type SubrequestBudget,
@@ -15,19 +21,14 @@ import {
 } from "../lib/evm-logs";
 import { type ChainRpcConfig } from "../lib/chain-registry";
 import { fetchEvmTokenBalance } from "./blacklist/balance-providers";
-import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
+import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { TronEventsResponseSchema } from "../lib/external-api-schemas";
-import { bigIntToDecimal } from "../lib/bigint";
 import { throwIfAborted } from "../lib/abort";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress, withBudgetMetadata } from "../lib/cron-progress";
 import { fetchEvmEventsIncremental } from "./blacklist/evm-source";
-import {
-  buildExplorerAddressUrl,
-  buildExplorerTxUrl,
-  type BlacklistRow,
-} from "./blacklist/shared";
+import { fetchTronEventsIncremental } from "./blacklist/tron-source";
+import { type BlacklistRow } from "./blacklist/shared";
 
 const EVM_SCANNED_TO_LATEST = 99999999;
 const BACKFILL_BATCH_SIZE = 50;
@@ -69,128 +70,6 @@ function shouldStopBeforeNextConfig(deadlineMs: number): boolean {
   return Date.now() + SYNC_BLACKLIST_MIN_CONFIG_WINDOW_MS >= deadlineMs;
 }
 
-// --- Tron fetching ---
-
-interface TronEventResult {
-  block_number: number;
-  block_timestamp: number;
-  transaction_id: string;
-  event_index: number;
-  event_name: string;
-  result: Record<string, string>;
-}
-
-interface TronEventsResponse {
-  data: TronEventResult[];
-  meta?: { links?: { next?: string } };
-  success: boolean;
-}
-
-const TRON_EVENT_NAME_MAP: Record<string, BlacklistEventType> = {
-  AddedBlackList: "blacklist",
-  RemovedBlackList: "unblacklist",
-  DestroyedBlackFunds: "destroy",
-};
-
-const TRON_EVENT_NAMES = Object.keys(TRON_EVENT_NAME_MAP);
-
-/**
- * Fetch Tron events incrementally.
- * NOTE: `lastTimestampMs` is a millisecond timestamp (stored in `blacklist_sync_state.last_block`).
- * For EVM chains, `last_block` stores actual block numbers. This semantic difference is
- * intentional: Tron events are ordered by timestamp, not block number.
- */
-async function fetchTronEventsIncremental(
-  config: ContractEventConfig,
-  apiKey: string | null,
-  lastTimestampMs: number,
-  deadlineMs: number,
-  rateLimit: RateLimitedFetch,
-  budget: SubrequestBudget,
-  signal?: AbortSignal,
-): Promise<{ rows: BlacklistRow[]; maxBlock: number; incomplete: boolean }> {
-  const rows: BlacklistRow[] = [];
-  let maxBlock = 0;
-  let incomplete = false;
-  const headers: Record<string, string> = {};
-  if (apiKey) headers["TRON-PRO-API-KEY"] = apiKey;
-
-  for (const eventName of TRON_EVENT_NAMES) {
-    throwIfAborted(signal);
-    if (runtimeBudgetReached(deadlineMs)) {
-      incomplete = true;
-      break;
-    }
-    if (budgetExhausted(budget)) break;
-
-    const tsFilter = lastTimestampMs > 0 ? `&min_block_timestamp=${lastTimestampMs}` : "";
-    let url: string | null =
-      `https://api.trongrid.io/v1/contracts/${config.contractAddress}/events?event_name=${eventName}&limit=200&order_by=block_timestamp,asc${tsFilter}`;
-
-    while (url) {
-      throwIfAborted(signal);
-      if (runtimeBudgetReached(deadlineMs)) {
-        incomplete = true;
-        break;
-      }
-      if (budgetExhausted(budget)) break;
-
-      budget.count++;
-      const json: TronEventsResponse | null = await rateLimit(async () => {
-        const res = await fetchWithRetry(url!, { headers, signal });
-        if (!res) return null;
-        const raw = await res.json();
-        const parsed = TronEventsResponseSchema.safeParse(raw);
-        if (!parsed.success) {
-          console.warn("[blacklist] TronGrid response validation failed:", parsed.error.message);
-          return null;
-        }
-        return parsed.data as TronEventsResponse;
-      });
-
-      if (!json?.success || !Array.isArray(json.data)) break;
-
-      for (const evt of json.data) {
-        const eventType = TRON_EVENT_NAME_MAP[evt.event_name];
-        if (!eventType) continue;
-
-        const affectedAddress = evt.result._user || evt.result._blackListedUser || evt.result["0"] || "";
-        const rawAmountStr = evt.result._balance || evt.result._value || evt.result["1"];
-        const amount =
-          eventType === "destroy" && rawAmountStr
-            ? bigIntToDecimal(BigInt(rawAmountStr), config.decimals)
-            : null;
-        const timestamp = Math.floor(evt.block_timestamp / 1000);
-        const methodologyVersion = getBlacklistTrackerMethodologyVersionAt(timestamp);
-
-        if (evt.block_timestamp > maxBlock) maxBlock = evt.block_timestamp;
-
-        rows.push({
-          id: `${config.chain.chainId}-${evt.transaction_id}-${evt.event_index}`,
-          stablecoin: config.stablecoin,
-          chain_id: config.chain.chainId,
-          chain_name: config.chain.chainName,
-          event_type: eventType,
-          address: affectedAddress,
-          amount,
-          tx_hash: evt.transaction_id,
-          block_number: evt.block_number,
-          timestamp,
-          methodology_version: methodologyVersion,
-          explorer_tx_url: buildExplorerTxUrl(config.chain, evt.transaction_id),
-          explorer_address_url: buildExplorerAddressUrl(config.chain, affectedAddress),
-        });
-      }
-
-      url = json.meta?.links?.next || null;
-    }
-
-    if (incomplete) break;
-  }
-
-  return { rows, maxBlock, incomplete };
-}
-
 // --- Enrichment: fetch balances for blacklist/unblacklist events ---
 
 async function enrichRowBalances(
@@ -209,7 +88,7 @@ async function enrichRowBalances(
     throwIfAborted(signal);
     if (runtimeBudgetReached(deadlineMs)) break;
     if (budgetExhausted(budget)) break;
-    if (row.amount != null) continue;
+    if (row.amount_native != null || row.amount_status === "permanently_unavailable") continue;
     if (row.event_type !== "blacklist" && row.event_type !== "unblacklist" && row.event_type !== "destroy") continue;
 
     // Fetch balance at previous block: for destroy events this captures pre-wipe balance,
@@ -236,7 +115,10 @@ async function enrichRowBalances(
           signal,
           chainRpcs,
         );
-        row.amount = amount;
+        row.amount_native = amount;
+        row.amount_usd_at_event = computeBlacklistAmountUsdAtEvent(config.stablecoin, amount);
+        row.amount_source = "historical_balance";
+        row.amount_status = amount != null ? "resolved" : "provider_failed";
         if (amount != null) {
           counters.succeeded++;
         } else {
@@ -286,11 +168,10 @@ async function fetchDestroyAmountFromLog(
     if (!json?.result?.logs) return null;
 
     // Find the destroy event log in the receipt
-    const destroyEvents = config.events.filter((e) => e.eventType === "destroy" && e.hasAmount);
     for (const log of json.result.logs) {
       if (log.address.toLowerCase() !== contractAddress.toLowerCase()) continue;
-      const matchingEvent = destroyEvents.find((e) => log.topics[0] === e.topicHash);
-      if (!matchingEvent) continue;
+      const matchingEvent = getBlacklistEventByTopic(config, log.topics[0]);
+      if (matchingEvent?.eventType !== "destroy" || !matchingEvent.hasAmount) continue;
 
       // Parse amount from the log data
       const addressIndexed = log.topics.length > 1;
@@ -323,10 +204,10 @@ async function backfillAmounts(
 
   const result = await db
     .prepare(
-      `SELECT id, chain_id, event_type, address, block_number, stablecoin, tx_hash
-       FROM blacklist_events
+      `SELECT id, chain_id, event_type, address, block_number, stablecoin, tx_hash, config_key, contract_address
+      FROM blacklist_events
        WHERE event_type IN ('blacklist', 'unblacklist', 'destroy')
-         AND amount IS NULL
+         AND amount_status IN ('recoverable_pending', 'provider_failed', 'ambiguous')
        ORDER BY timestamp DESC
        LIMIT ?`,
     )
@@ -339,6 +220,8 @@ async function backfillAmounts(
       block_number: number;
       stablecoin: string;
       tx_hash: string;
+      config_key: string | null;
+      contract_address: string | null;
     }>();
 
   if (!result.results?.length) return { runtimeBudgetReached: false };
@@ -354,10 +237,19 @@ async function backfillAmounts(
     }
     if (budgetExhausted(budget)) break;
 
-    const config = CONTRACT_CONFIGS.find((c) => c.chain.chainId === row.chain_id && c.stablecoin === row.stablecoin);
+    const symbol = row.stablecoin as ContractEventConfig["stablecoin"];
+    const config = row.config_key
+      ? getBlacklistConfigByKey(row.config_key)
+      : row.contract_address
+        ? getBlacklistConfigByContract(row.chain_id, row.contract_address)
+        : (() => {
+            const matches = getBlacklistConfigsForSymbolAndChain(symbol, row.chain_id);
+            return matches.length === 1 ? matches[0] : undefined;
+          })();
     if (!config) continue;
 
     let amount: number | null = null;
+    let amountSource: "event" | "historical_balance" | "derived" | "unavailable" = "unavailable";
 
     if (row.event_type === "destroy" && config.chain.type === "evm" && config.chain.evmChainId != null) {
       // For destroy events, re-fetch the event log to get the amount from event data.
@@ -372,6 +264,7 @@ async function backfillAmounts(
         budget,
         signal,
       );
+      if (amount != null) amountSource = "event";
       // Fall back to balanceOf at block-1 only if log parsing failed
       if (amount == null) {
         amount = await fetchEvmTokenBalance(
@@ -385,6 +278,7 @@ async function backfillAmounts(
           signal,
           chainRpcs,
         );
+        if (amount != null) amountSource = "historical_balance";
       }
     } else if (config.chain.type === "tron") {
       // Skip Tron amount backfill for non-event-native amounts. Current-balance based
@@ -402,10 +296,28 @@ async function backfillAmounts(
         signal,
         chainRpcs,
       );
+      if (amount != null) amountSource = "historical_balance";
     }
 
     if (amount != null) {
-      stmts.push(db.prepare("UPDATE blacklist_events SET amount = ? WHERE id = ?").bind(amount, row.id));
+      stmts.push(
+        db.prepare(
+          `UPDATE blacklist_events
+           SET amount = ?,
+               amount_native = ?,
+               amount_usd_at_event = ?,
+               amount_source = ?,
+               amount_status = ?
+           WHERE id = ?`,
+        ).bind(
+          amount,
+          amount,
+          computeBlacklistAmountUsdAtEvent(config.stablecoin, amount),
+          amountSource,
+          "resolved",
+          row.id,
+        ),
+      );
     }
   }
 
@@ -426,8 +338,8 @@ async function insertRows(db: D1Database, rows: BlacklistRow[]): Promise<number>
     db
       .prepare(
         `INSERT OR IGNORE INTO blacklist_events
-         (id, stablecoin, chain_id, chain_name, event_type, address, amount, tx_hash, block_number, timestamp, methodology_version, explorer_tx_url, explorer_address_url)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, stablecoin, chain_id, chain_name, event_type, address, amount, amount_native, amount_usd_at_event, amount_source, amount_status, tx_hash, block_number, timestamp, methodology_version, contract_address, config_key, event_signature, event_topic0, explorer_tx_url, explorer_address_url)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         row.id,
@@ -436,11 +348,19 @@ async function insertRows(db: D1Database, rows: BlacklistRow[]): Promise<number>
         row.chain_name,
         row.event_type,
         row.address,
-        row.amount,
+        row.amount_native,
+        row.amount_native,
+        row.amount_usd_at_event,
+        row.amount_source,
+        row.amount_status,
         row.tx_hash,
         row.block_number,
         row.timestamp,
         row.methodology_version,
+        row.contract_address,
+        row.config_key,
+        row.event_signature,
+        row.event_topic0,
         row.explorer_tx_url,
         row.explorer_address_url,
       ),
@@ -491,7 +411,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
 
   const configStates = await Promise.all(
     CONTRACT_CONFIGS.map(async (config) => {
-      const configKey = `${config.chain.chainId}-${config.contractAddress}`;
+      const configKey = config.configKey;
       const lastBlock = await getLastBlock(db, configKey);
       return { config, configKey, lastBlock };
     }),

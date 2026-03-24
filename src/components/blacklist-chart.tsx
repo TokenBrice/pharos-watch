@@ -6,93 +6,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { formatCurrency } from "@shared/lib/format";
-import { useStablecoins } from "@/hooks/use-stablecoins";
-import { isGoldStablecoin, extractGoldPrices } from "@/lib/blacklist-helpers";
 import { BLACKLIST_CHART_COLORS } from "@shared/lib/classification";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
-import type { BlacklistEvent, BlacklistStablecoin } from "@shared/types";
+import type { BlacklistSummaryResponse, BlacklistStablecoin } from "@shared/types";
 
-const STABLECOINS_ORDER = ["USDT", "USDC", "EURC", "PAXG", "XAUT"] as const satisfies readonly BlacklistStablecoin[];
+const STABLECOINS_ORDER = ["USDT", "USDC", "PAXG", "XAUT"] as const satisfies readonly BlacklistStablecoin[];
 const CHART_HEIGHT = "h-[220px] sm:h-[280px]";
 
-function quarterToSortKey(timestamp: number): number {
-  const d = new Date(timestamp * 1000);
-  return d.getFullYear() * 4 + Math.floor(d.getMonth() / 3);
-}
-
-function sortKeyToLabel(sortKey: number): string {
-  const year = Math.floor(sortKey / 4);
-  const q = (sortKey % 4) + 1;
-  return `Q${q} '${(year % 100).toString().padStart(2, "0")}`;
-}
-
 interface BlacklistChartProps {
-  events: BlacklistEvent[] | undefined;
+  chart: BlacklistSummaryResponse["chart"] | undefined;
   isLoading: boolean;
 }
 
-export function BlacklistChart({ events, isLoading }: BlacklistChartProps) {
-  const { data: stablecoins } = useStablecoins();
+export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
-
-  const goldPrices = useMemo(() => {
-    if (!stablecoins) return {};
-    return extractGoldPrices(stablecoins.peggedAssets);
-  }, [stablecoins]);
-
-  const chartData = useMemo(() => {
-    if (!events) return [];
-
-    // Bucket blacklist events by quarter and stablecoin
-    const buckets = new Map<number, Record<BlacklistStablecoin, number>>();
-
-    for (const evt of events) {
-      if (evt.eventType !== "blacklist" || evt.amount == null) continue;
-
-      const gold = isGoldStablecoin(evt.stablecoin);
-      const usdMultiplier = gold ? (goldPrices[evt.stablecoin] ?? 0) : 1;
-      const usdValue = evt.amount * usdMultiplier;
-      if (usdValue <= 0) continue;
-
-      const sk = quarterToSortKey(evt.timestamp);
-      const bucket = buckets.get(sk) ?? { USDT: 0, USDC: 0, EURC: 0, PAXG: 0, XAUT: 0 };
-      bucket[evt.stablecoin] = (bucket[evt.stablecoin] ?? 0) + usdValue;
-      buckets.set(sk, bucket);
-    }
-
-    if (buckets.size === 0) return [];
-
-    // Fill gaps between first and last quarter
-    const sortKeys = Array.from(buckets.keys()).sort((a, b) => a - b);
-    const min = sortKeys[0];
-    const max = sortKeys[sortKeys.length - 1];
-
-    const result: Array<{
-      quarter: string;
-      USDT: number;
-      USDC: number;
-      EURC: number;
-      PAXG: number;
-      XAUT: number;
-      total: number;
-    }> = [];
-    for (let sk = min; sk <= max; sk++) {
-      const bucket = buckets.get(sk);
-      const total =
-        (bucket?.USDT ?? 0) + (bucket?.USDC ?? 0) + (bucket?.EURC ?? 0) + (bucket?.PAXG ?? 0) + (bucket?.XAUT ?? 0);
-      result.push({
-        quarter: sortKeyToLabel(sk),
-        USDT: bucket?.USDT ?? 0,
-        USDC: bucket?.USDC ?? 0,
-        EURC: bucket?.EURC ?? 0,
-        PAXG: bucket?.PAXG ?? 0,
-        XAUT: bucket?.XAUT ?? 0,
-        total,
-      });
-    }
-
-    return result;
-  }, [events, goldPrices]);
+  const chartData = useMemo(() => chart ?? [], [chart]);
 
   const peakQuarters = useMemo(() => {
     return [...chartData]
@@ -122,7 +50,7 @@ export function BlacklistChart({ events, isLoading }: BlacklistChartProps) {
           <div className="space-y-1">
             <CardTitle as="h2" className="pharos-kicker">Blacklisted Funds Over Time</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Frozen balances at time of blacklisting, per quarter, in USD value
+              Historical USD-at-event value for blacklist actions, per quarter, where valuation is available
             </p>
           </div>
           {peakQuarters.length > 0 && (

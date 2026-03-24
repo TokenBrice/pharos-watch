@@ -1,32 +1,17 @@
 "use client";
 
-import { useMemo } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MetricStatCard } from "@/components/metric-stat-card";
 import { formatCurrency } from "@shared/lib/format";
-import { useStablecoins } from "@/hooks/use-stablecoins";
-import { extractGoldPrices, computeBlacklistStats } from "@/lib/blacklist-helpers";
-import type { BlacklistEvent } from "@shared/types";
+import type { BlacklistSummaryResponse } from "@shared/types";
 
 interface BlacklistStatsProps {
-  events: BlacklistEvent[] | undefined;
+  stats: BlacklistSummaryResponse["stats"] | undefined;
   isLoading: boolean;
 }
 
-export function BlacklistStats({ events, isLoading }: BlacklistStatsProps) {
-  const { data: stablecoins } = useStablecoins();
-
-  const goldPrices = useMemo(() => {
-    if (!stablecoins) return {};
-    return extractGoldPrices(stablecoins.peggedAssets);
-  }, [stablecoins]);
-
-  const stats = useMemo(() => {
-    if (!events) return null;
-    return computeBlacklistStats(events, goldPrices);
-  }, [events, goldPrices]);
-
+export function BlacklistStats({ stats, isLoading }: BlacklistStatsProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-6">
@@ -60,9 +45,9 @@ export function BlacklistStats({ events, isLoading }: BlacklistStatsProps) {
       />
       <MetricStatCard
         borderColorClass="border-l-emerald-500"
-        title="EURC Blacklisted"
-        value={stats?.eurcBlacklisted ?? 0}
-        subtext="unique addresses"
+        title="Attribution Gaps"
+        value={stats?.recoverableGapCount ?? 0}
+        subtext="recoverable events"
       />
       <MetricStatCard
         borderColorClass="border-l-yellow-500"

@@ -20,6 +20,7 @@ describe("api endpoint registry", () => {
       "/api/peg-summary",
       "/api/health",
       "/api/blacklist",
+      "/api/blacklist-summary",
       "/api/depeg-events",
       "/api/usds-status",
       "/api/bluechip-ratings",

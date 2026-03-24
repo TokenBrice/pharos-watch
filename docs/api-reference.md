@@ -456,6 +456,9 @@ Freeze, blacklist, and token-destruction events currently ingested for USDC, USD
 | `stablecoin` | `string`  | —       | Filter by token symbol: `USDC`, `USDT`, `PAXG`, `XAUT`         |
 | `chain`      | `string`  | —       | Filter by chain name (e.g. `Ethereum`, `Tron`)                 |
 | `eventType`  | `string`  | —       | Filter by type: `blacklist`, `unblacklist`, `destroy`          |
+| `q`          | `string`  | —       | Case-insensitive address substring search                      |
+| `sortBy`     | `string`  | `date`  | Sort field: `date`, `stablecoin`, `chain`, `event`            |
+| `sortDirection` | `string` | `desc` | Sort direction: `asc`, `desc`                                 |
 | `limit`      | `integer` | `1000`  | Max results (1–1000; `0` maps to default `1000`)               |
 | `offset`     | `integer` | `0`     | Pagination offset                                              |
 
@@ -513,6 +516,47 @@ Freeze, blacklist, and token-destruction events currently ingested for USDC, USD
 | `changelogPath`       | `string`  | Relative URL to the methodology changelog page                    |
 | `asOf`                | `number`  | Unix timestamp of latest event used for freshness                 |
 | `isCurrent`           | `boolean` | Whether `version` matches `currentVersion`                        |
+
+---
+
+### `GET /api/blacklist-summary`
+
+Server-side aggregates for the Blacklist Tracker overview cards, chart, and filter options. This lets the frontend render summary state without hydrating the full blacklist history first.
+
+**Cache:** realtime
+
+**Response**
+
+```json
+{
+  "stats": {
+    "usdcBlacklisted": 1204,
+    "usdtBlacklisted": 3881,
+    "goldBlacklisted": 19,
+    "frozenAddresses": 5071,
+    "destroyedTotal": 158938221.19,
+    "recentCount": 42,
+    "recoverableGapCount": 17
+  },
+  "chart": [
+    { "quarter": "Q1 '24", "USDT": 1200000, "USDC": 850000, "PAXG": 0, "XAUT": 0, "total": 2050000 }
+  ],
+  "chains": [
+    { "id": "ethereum", "name": "Ethereum" },
+    { "id": "tron", "name": "Tron" }
+  ],
+  "totalEvents": 13422,
+  "methodology": {
+    "version": "3.2",
+    "versionLabel": "v3.2",
+    "currentVersion": "3.2",
+    "currentVersionLabel": "v3.2",
+    "changelogPath": "/methodology/blacklist-tracker-changelog/",
+    "asOf": 1772606400,
+    "isCurrent": true
+  }
+}
+```
 
 ---
 

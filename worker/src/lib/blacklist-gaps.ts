@@ -1,4 +1,5 @@
 import { BLACKLIST_RECENT_WINDOW_SEC } from "@shared/lib/status-thresholds";
+import { isBlacklistAmountGapStatus } from "@shared/lib/blacklist";
 
 export interface BlacklistGapMetrics {
   totalEvents: number;
@@ -13,22 +14,26 @@ export async function queryBlacklistGapMetrics(
   now: number,
   recentWindowSec = BLACKLIST_RECENT_WINDOW_SEC,
 ): Promise<BlacklistGapMetrics> {
+  const gapStatuses = [
+    "recoverable_pending",
+    "provider_failed",
+    "ambiguous",
+  ].filter((status) => isBlacklistAmountGapStatus(status as Parameters<typeof isBlacklistAmountGapStatus>[0]));
+  const gapStatusSql = gapStatuses.map((status) => `'${status}'`).join(", ");
   const row = await db
     .prepare(
       `SELECT
          COUNT(*) as total,
          SUM(
            CASE
-             WHEN amount IS NULL
-               AND NOT (chain_id = 'tron' AND event_type IN ('blacklist', 'unblacklist'))
+             WHEN amount_status IN (${gapStatusSql})
              THEN 1
              ELSE 0
            END
          ) as missing,
          SUM(
            CASE
-             WHEN amount IS NULL
-               AND NOT (chain_id = 'tron' AND event_type IN ('blacklist', 'unblacklist'))
+             WHEN amount_status IN (${gapStatusSql})
                AND timestamp >= ?
              THEN 1
              ELSE 0

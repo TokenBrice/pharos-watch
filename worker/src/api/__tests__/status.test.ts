@@ -1670,8 +1670,7 @@ describe("handleStatus", () => {
     expect(res.status).toBe(200);
 
     const blacklistSql = seenSql.find((sql) => sql.includes("FROM blacklist_events")) ?? "";
-    expect(blacklistSql).toContain("chain_id = 'tron'");
-    expect(blacklistSql).toContain("event_type IN ('blacklist', 'unblacklist')");
+    expect(blacklistSql).toContain("amount_status IN ('recoverable_pending', 'provider_failed', 'ambiguous')");
   });
 
   it("returns a degraded fallback payload when the DB health sentinel fails", async () => {

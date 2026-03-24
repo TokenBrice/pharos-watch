@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import {
   TableCell,
   TableRow,
@@ -16,18 +16,20 @@ import { Download, ExternalLink } from "lucide-react";
 import { downloadCsv } from "@/lib/csv-export";
 import { formatAddress, formatEventDate, formatCurrency } from "@shared/lib/format";
 import { isGoldStablecoin } from "@/lib/blacklist-helpers";
-import type { BlacklistEvent } from "@shared/types";
+import type { BlacklistEvent, BlacklistSortDirection, BlacklistSortKey } from "@shared/types";
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
+import { getNextSortState, shouldToggleSortOnKeyDown } from "@/hooks/use-sort";
 
 const SKELETON_ROWS = Array.from({ length: 10 }, (_, i) => i);
-import { useSortedTableRows } from "@/hooks/use-sorted-table-rows";
-import { compareBlacklistRows, type BlacklistSortKey } from "@/components/blacklist-table-logic";
 
 interface BlacklistTableProps {
   events: BlacklistEvent[];
   isLoading: boolean;
   page: number;
   pageSize: number;
+  sortKey: BlacklistSortKey;
+  sortDirection: BlacklistSortDirection;
+  onSortChange: (sortKey: BlacklistSortKey, sortDirection: BlacklistSortDirection) => void;
 }
 
 const BLACKLIST_COLUMNS: readonly DataTableColumn<BlacklistSortKey>[] = [
@@ -37,25 +39,38 @@ const BLACKLIST_COLUMNS: readonly DataTableColumn<BlacklistSortKey>[] = [
   { id: "chain", label: "Chain", sortKey: "chain" },
   { id: "event", label: "Event", sortKey: "event" },
   { id: "address", label: "Address", className: "hidden md:table-cell" },
-  { id: "amount", label: "Amount", className: "hidden sm:table-cell text-right" },
+  { id: "amount", label: "Amount / Value", className: "hidden sm:table-cell text-right" },
   { id: "tx", label: "Tx", className: "hidden sm:table-cell text-center" },
 ] as const;
 
-export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistTableProps) {
-  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown, sortedRows: sorted } =
-    useSortedTableRows<BlacklistEvent, BlacklistSortKey>(
-      events,
-      { defaultKey: "date", defaultDirection: "desc" },
-      compareBlacklistRows,
-    );
+export function BlacklistTable({
+  events,
+  isLoading,
+  page,
+  pageSize,
+  sortKey,
+  sortDirection,
+  onSortChange,
+}: BlacklistTableProps) {
+  const toggleSort = useCallback((key: BlacklistSortKey) => {
+    const next = getNextSortState({ key: sortKey, direction: sortDirection }, key);
+    onSortChange(next.key, next.direction);
+  }, [onSortChange, sortDirection, sortKey]);
 
-  const paged = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return sorted.slice(start, start + pageSize);
-  }, [sorted, page, pageSize]);
+  const getAriaSortValue = useCallback((columnKey: BlacklistSortKey): "ascending" | "descending" | "none" => {
+    if (sortKey !== columnKey) return "none";
+    return sortDirection === "asc" ? "ascending" : "descending";
+  }, [sortDirection, sortKey]);
+
+  const handleSortKeyDown = useCallback((e: React.KeyboardEvent, key: BlacklistSortKey) => {
+    if (shouldToggleSortOnKeyDown(e.key)) {
+      e.preventDefault();
+      toggleSort(key);
+    }
+  }, [toggleSort]);
 
   const handleCsvExport = useCallback(() => {
-    downloadCsv(sorted, [
+    downloadCsv(events, [
       { header: "Date", accessor: (row) => formatEventDate(row.timestamp) },
       { header: "Stablecoin", accessor: (row) => row.stablecoin },
       { header: "Chain", accessor: (row) => row.chainName },
@@ -64,13 +79,15 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
       {
         header: "Amount",
         accessor: (row) =>
-          row.amount != null && !(row.amount === 0 && row.eventType !== "destroy")
-            ? row.amount
+          row.amountNative != null && !(row.amountNative === 0 && row.eventType !== "destroy")
+            ? row.amountNative
             : null,
       },
+      { header: "Amount USD At Event", accessor: (row) => row.amountUsdAtEvent },
+      { header: "Amount Status", accessor: (row) => row.amountStatus },
       { header: "Tx URL", accessor: (row) => row.explorerTxUrl },
     ], "pharos-freeze-events");
-  }, [sorted]);
+  }, [events]);
 
   if (isLoading) {
     return (
@@ -109,14 +126,14 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
       topSlot={
         <div className="flex items-center justify-end px-3 py-1.5 border-b bg-muted/30">
           <span className="mr-auto text-xs text-muted-foreground sm:hidden">Swipe table for more</span>
-          <Button variant="outline" size="sm" className="pharos-focus-ring min-h-11 sm:min-h-8" onClick={handleCsvExport} disabled={sorted.length === 0}>
+          <Button variant="outline" size="sm" className="pharos-focus-ring min-h-11 sm:min-h-8" onClick={handleCsvExport} disabled={events.length === 0}>
             <Download className="h-3.5 w-3.5" />
             Export CSV
           </Button>
         </div>
       }
     >
-      {paged.map((evt, index) => (
+      {events.map((evt, index) => (
             <TableRow key={evt.id}>
               <TableCell className="text-right text-muted-foreground text-xs tabular-nums">
                 {(page - 1) * pageSize + index + 1}
@@ -140,11 +157,15 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
                 </a>
               </TableCell>
               <TableCell className="hidden sm:table-cell text-right font-mono">
-                {evt.amount != null && !(evt.amount === 0 && evt.eventType !== "destroy")
-                  ? isGoldStablecoin(evt.stablecoin)
-                    ? `${evt.amount.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${evt.stablecoin}`
-                    : formatCurrency(evt.amount)
-                  : "\u2014"}
+                {evt.amountUsdAtEvent != null
+                  ? formatCurrency(evt.amountUsdAtEvent)
+                  : evt.amountNative != null && !(evt.amountNative === 0 && evt.eventType !== "destroy")
+                    ? isGoldStablecoin(evt.stablecoin)
+                      ? `${evt.amountNative.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${evt.stablecoin}`
+                      : `${evt.amountNative.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${evt.stablecoin}`
+                    : evt.amountStatus === "permanently_unavailable"
+                      ? "N/A"
+                      : "\u2014"}
               </TableCell>
               <TableCell className="hidden sm:table-cell text-center">
                 <a
@@ -160,7 +181,7 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
               </TableCell>
             </TableRow>
           ))}
-      {paged.length === 0 && (
+      {events.length === 0 && (
         <TableRow>
           <TableCell colSpan={BLACKLIST_COLUMNS.length} className="text-center text-muted-foreground py-12">
             No blacklist events match your filters.

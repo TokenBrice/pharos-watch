@@ -17,11 +17,36 @@ import {
   getBlacklistTrackerMethodologyVersionAt,
 } from "@shared/lib/blacklist-tracker-version";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
-import { BLACKLIST_STABLECOINS, type BlacklistStablecoin } from "@shared/types";
+import {
+  BLACKLIST_STABLECOINS,
+  type BlacklistSortDirection,
+  type BlacklistSortKey,
+  type BlacklistStablecoin,
+} from "@shared/types";
 
 const VALID_STABLECOINS = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
 const VALID_CHAIN_NAMES = new Set(Object.values(CHAIN_META).map((m) => m.name));
 const VALID_EVENT_TYPES = new Set(["blacklist", "unblacklist", "destroy"]);
+const VALID_SORT_KEYS = new Set<BlacklistSortKey>(["date", "stablecoin", "chain", "event"]);
+const VALID_SORT_DIRECTIONS = new Set<BlacklistSortDirection>(["asc", "desc"]);
+const BLACKLIST_ORDER_BY: Record<BlacklistSortKey, Record<BlacklistSortDirection, string>> = {
+  date: {
+    asc: "timestamp ASC, id ASC",
+    desc: "timestamp DESC, id DESC",
+  },
+  stablecoin: {
+    asc: "stablecoin ASC, timestamp DESC, id DESC",
+    desc: "stablecoin DESC, timestamp DESC, id DESC",
+  },
+  chain: {
+    asc: "chain_name ASC, timestamp DESC, id DESC",
+    desc: "chain_name DESC, timestamp DESC, id DESC",
+  },
+  event: {
+    asc: "event_type ASC, timestamp DESC, id DESC",
+    desc: "event_type DESC, timestamp DESC, id DESC",
+  },
+};
 
 function isBlacklistStablecoin(value: string): value is BlacklistStablecoin {
   return VALID_STABLECOINS.has(value as BlacklistStablecoin);
@@ -34,11 +59,18 @@ type BlacklistRow = {
   chain_name: string;
   event_type: string;
   address: string;
-  amount: number | null;
+  amount_native: number | null;
+  amount_usd_at_event: number | null;
+  amount_source: "event" | "historical_balance" | "derived" | "unavailable";
+  amount_status: "resolved" | "recoverable_pending" | "permanently_unavailable" | "provider_failed" | "ambiguous";
   tx_hash: string;
   block_number: number;
   timestamp: number;
   methodology_version: string | null;
+  contract_address: string | null;
+  config_key: string | null;
+  event_signature: string | null;
+  event_topic0: string | null;
   explorer_tx_url: string;
   explorer_address_url: string;
 };
@@ -57,6 +89,17 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
   const stablecoin = params.get("stablecoin");
   const chain = params.get("chain");
   const eventType = params.get("eventType");
+  const query = params.get("q")?.trim().toLowerCase() ?? "";
+  const sortByParam = params.get("sortBy") ?? "date";
+  const sortDirectionParam = params.get("sortDirection") ?? "desc";
+  if (!VALID_SORT_KEYS.has(sortByParam as BlacklistSortKey)) {
+    return errorResponse(400, "Invalid sortBy parameter");
+  }
+  if (!VALID_SORT_DIRECTIONS.has(sortDirectionParam as BlacklistSortDirection)) {
+    return errorResponse(400, "Invalid sortDirection parameter");
+  }
+  const sortBy = sortByParam as BlacklistSortKey;
+  const sortDirection = sortDirectionParam as BlacklistSortDirection;
 
   const conditions: string[] = [];
   const filterBindings: (string | number)[] = [];
@@ -83,6 +126,10 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
     conditions.push("event_type = ?");
     filterBindings.push(eventType);
   }
+  if (query) {
+    conditions.push("LOWER(address) LIKE ?");
+    filterBindings.push(`%${query}%`);
+  }
 
   const { events, total } = await fetchPaginatedEvents<
     BlacklistRow,
@@ -94,16 +141,23 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
       chainName: string;
       eventType: string;
       address: string;
-      amount: number | null;
+      amountNative: number | null;
+      amountUsdAtEvent: number | null;
+      amountSource: BlacklistRow["amount_source"];
+      amountStatus: BlacklistRow["amount_status"];
       txHash: string;
       blockNumber: number;
       timestamp: number;
       explorerTxUrl: string;
       explorerAddressUrl: string;
+      contractAddress: string | null;
+      configKey: string | null;
+      eventSignature: string | null;
+      eventTopic0: string | null;
     }
   >(db, {
     tableName: "blacklist_events",
-    orderBy: "timestamp DESC",
+    orderBy: BLACKLIST_ORDER_BY[sortBy][sortDirection],
     conditions,
     filterBindings,
     limit,
@@ -116,10 +170,17 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
       chainName: row.chain_name,
       eventType: row.event_type,
       address: row.address,
-      amount: row.amount,
+      amountNative: row.amount_native,
+      amountUsdAtEvent: row.amount_usd_at_event,
+      amountSource: row.amount_source,
+      amountStatus: row.amount_status,
       txHash: row.tx_hash,
       blockNumber: row.block_number,
       timestamp: row.timestamp,
+      contractAddress: row.contract_address,
+      configKey: row.config_key,
+      eventSignature: row.event_signature,
+      eventTopic0: row.event_topic0,
       explorerTxUrl: row.explorer_tx_url,
       explorerAddressUrl: row.explorer_address_url,
     }),

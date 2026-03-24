@@ -8,11 +8,18 @@ export interface BlacklistRow {
   chain_name: string;
   event_type: string;
   address: string;
-  amount: number | null;
+  amount_native: number | null;
+  amount_usd_at_event: number | null;
+  amount_source: string;
+  amount_status: string;
   tx_hash: string;
   block_number: number;
   timestamp: number;
   methodology_version: string;
+  contract_address: string | null;
+  config_key: string | null;
+  event_signature: string | null;
+  event_topic0: string | null;
   explorer_tx_url: string;
   explorer_address_url: string;
 }

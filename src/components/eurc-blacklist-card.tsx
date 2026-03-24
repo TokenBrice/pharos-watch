@@ -26,8 +26,9 @@ export function EurcBlacklistCard() {
             className="size-12 sm:size-14 shrink-0 rounded-full opacity-60 saturate-50"
           />
           <p className="text-sm text-muted-foreground">
-            Circle can freeze the same address across both USDC and EURC. EURC events may appear alongside USDC actions,
-            and many of those linked freezes carry zero EURC balance at the time of blacklisting.
+            EURC is not currently included in the live tracker. Circle often mirrors the same blacklist action across
+            USDC and EURC, which produces many zero-balance EURC events. Pharos will only re-enable EURC once those
+            mirrored no-balance rows can be classified without hiding real EURC signal.
           </p>
         </div>
       </CardContent>

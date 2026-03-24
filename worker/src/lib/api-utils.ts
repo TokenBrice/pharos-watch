@@ -58,6 +58,10 @@ const PAGINATED_ORDER_COLS = new Set([
   "created_at",
   "detected_at",
   "started_at",
+  "stablecoin",
+  "chain_name",
+  "event_type",
+  "id",
 ]);
 
 const PAGINATED_ORDER_DIRECTIONS = new Set([
@@ -447,11 +451,15 @@ export async function fetchPaginatedEvents<TRow, TEvent>(
   if (!PAGINATED_TABLES.has(config.tableName)) throw new Error(`Invalid table: ${config.tableName}`);
 
   const normalizedOrderBy = config.orderBy.trim().replace(/\s+/g, " ");
-  const [orderColumn, orderDirection, ...extraOrderTokens] = normalizedOrderBy.split(" ");
-  if (!PAGINATED_ORDER_COLS.has(orderColumn)) throw new Error(`Invalid orderBy column: ${orderColumn}`);
-  if (extraOrderTokens.length > 0) throw new Error(`Invalid orderBy: ${config.orderBy}`);
-  if (orderDirection && !PAGINATED_ORDER_DIRECTIONS.has(orderDirection)) {
-    throw new Error(`Invalid orderBy direction: ${orderDirection}`);
+  const orderClauses = normalizedOrderBy.split(",").map((clause) => clause.trim()).filter(Boolean);
+  if (orderClauses.length === 0) throw new Error(`Invalid orderBy: ${config.orderBy}`);
+  for (const clause of orderClauses) {
+    const [orderColumn, orderDirection, ...extraOrderTokens] = clause.split(" ");
+    if (!PAGINATED_ORDER_COLS.has(orderColumn)) throw new Error(`Invalid orderBy column: ${orderColumn}`);
+    if (extraOrderTokens.length > 0) throw new Error(`Invalid orderBy: ${config.orderBy}`);
+    if (orderDirection && !PAGINATED_ORDER_DIRECTIONS.has(orderDirection)) {
+      throw new Error(`Invalid orderBy direction: ${orderDirection}`);
+    }
   }
 
   const { where, limitClause, offsetClause, paginationBindings } = buildPaginatedQuery({

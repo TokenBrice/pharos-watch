@@ -1,5 +1,5 @@
-import type { BlacklistEventType } from "@shared/types";
 import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
+import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
 import {
   fetchAlchemyLogs,
   getAlchemyBlockNumber,
@@ -7,7 +7,11 @@ import {
   type AlchemyLogEntry,
 } from "../../lib/alchemy-logs";
 import { throwIfAborted } from "../../lib/abort";
-import type { ContractEventConfig } from "../../lib/blacklist-contracts";
+import {
+  getBlacklistEventByTopic,
+  getBlacklistTopicHashes,
+  type ContractEventConfig,
+} from "../../lib/blacklist-contracts";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import {
   budgetExhausted,
@@ -61,16 +65,16 @@ function runtimeBudgetReached(deadlineMs: number): boolean {
 
 export function parseEvmLogs(
   config: ContractEventConfig,
-  eventType: BlacklistEventType,
-  hasAmount: boolean,
   logs: EvmLogLike[],
   blockTimestamps?: Map<number, number>,
 ): BlacklistRow[] {
   const rows: BlacklistRow[] = [];
   for (const log of logs) {
+    const eventDef = getBlacklistEventByTopic(config, log.topics[0]);
+    if (!eventDef) continue;
     const addressIndexed = log.topics.length > 1;
     const affectedAddress = addressIndexed ? decodeAddress(log.topics[1]) : decodeAddress(log.data.slice(0, 66));
-    const amount = hasAmount
+    const amount = eventDef.hasAmount
       ? addressIndexed
         ? log.data.length >= 66
           ? decodeUint256(log.data, config.decimals)
@@ -90,13 +94,20 @@ export function parseEvmLogs(
       stablecoin: config.stablecoin,
       chain_id: config.chain.chainId,
       chain_name: config.chain.chainName,
-      event_type: eventType,
+      event_type: eventDef.eventType,
       address: affectedAddress,
-      amount,
+      amount_native: amount,
+      amount_usd_at_event: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount),
+      amount_source: amount != null ? "event" : "unavailable",
+      amount_status: amount != null ? "resolved" : "recoverable_pending",
       tx_hash: log.transactionHash,
       block_number: blockNumber,
       timestamp,
       methodology_version: methodologyVersion,
+      contract_address: config.contractAddress,
+      config_key: config.configKey,
+      event_signature: eventDef.signature,
+      event_topic0: log.topics[0] ?? null,
       explorer_tx_url: buildExplorerTxUrl(config.chain, log.transactionHash),
       explorer_address_url: buildExplorerAddressUrl(config.chain, affectedAddress),
     });
@@ -175,7 +186,7 @@ export async function fetchEvmEventsIncremental(
     return rpcTargetPromise;
   };
 
-  for (const eventDef of config.events) {
+  for (const topicHash of getBlacklistTopicHashes(config)) {
     throwIfAborted(signal);
     if (runtimeBudgetReached(deadlineMs)) {
       incomplete = true;
@@ -192,7 +203,7 @@ export async function fetchEvmEventsIncremental(
       const logs = await fetchEvmLogsForTopic(
         evmChainId,
         config.contractAddress,
-        eventDef.topicHash,
+        topicHash,
         apiKey,
         fromBlock,
         99999999,
@@ -202,7 +213,7 @@ export async function fetchEvmEventsIncremental(
         signal,
       );
       if (logs !== null) {
-        rows = parseEvmLogs(config, eventDef.eventType, eventDef.hasAmount, logs);
+        rows = parseEvmLogs(config, logs);
         fetched = true;
       }
     }
@@ -217,12 +228,12 @@ export async function fetchEvmEventsIncremental(
           : rpcTarget.chainHead;
 
         const fetchedLogs =
-          fromBlock > scanToBlock
+              fromBlock > scanToBlock
             ? { logs: [], complete: true, scannedToBlock: scanToBlock, calls: 0, maxDepth: 0 }
             : await fetchAlchemyLogs(
                 rpcTarget.rpcUrl,
                 config.contractAddress,
-                [{ index: 0, value: eventDef.topicHash }],
+                [{ index: 0, value: topicHash }],
                 fromBlock,
                 scanToBlock,
                 budget,
@@ -257,13 +268,7 @@ export async function fetchEvmEventsIncremental(
           }
           scannedToBlock = scannedToBlock == null ? eventScannedToBlock : Math.min(scannedToBlock, eventScannedToBlock);
 
-          rows = parseEvmLogs(
-            config,
-            eventDef.eventType,
-            eventDef.hasAmount,
-            fetchedLogs.logs as Array<AlchemyLogEntry>,
-            blockTimestamps,
-          );
+          rows = parseEvmLogs(config, fetchedLogs.logs as Array<AlchemyLogEntry>, blockTimestamps);
           fetched = true;
           sourceHadGap =
             !fetchedLogs.complete || (uniqueBlocks.length > 0 && blockTimestamps.size < uniqueBlocks.length);
