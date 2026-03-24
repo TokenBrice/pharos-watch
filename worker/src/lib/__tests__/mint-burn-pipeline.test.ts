@@ -571,53 +571,48 @@ describe("mint-burn shared pipeline modules", () => {
       }),
     } as unknown as D1Database;
 
-    const results = await readMintBurnSyncStateBatch(db, [
-      {
-        chain: {
-          chainId: "ethereum",
-          chainName: "Ethereum",
-          evmChainId: 1,
-          explorerUrl: "https://etherscan.io",
-          type: "evm",
-        },
-        stablecoinId: "usdc-circle",
-        symbol: "USDC",
-        contractAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        decimals: 6,
-        dustThreshold: 10_000,
-        startBlock: 21_900_000,
-        adapterKind: "transfer-zero-address",
-        startBlockSource: "reviewed-contract-specific",
-        startBlockConfidence: "high",
-        events: [],
+    const makeConfig = (stablecoinId: string, symbol: string, contractAddress: string) => ({
+      chain: {
+        chainId: "ethereum",
+        chainName: "Ethereum",
+        evmChainId: 1,
+        explorerUrl: "https://etherscan.io",
+        type: "evm" as const,
       },
-      {
-        chain: {
-          chainId: "ethereum",
-          chainName: "Ethereum",
-          evmChainId: 1,
-          explorerUrl: "https://etherscan.io",
-          type: "evm",
-        },
-        stablecoinId: "usdt-tether",
-        symbol: "USDT",
-        contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-        decimals: 6,
-        dustThreshold: 10_000,
-        startBlock: 21_900_000,
-        adapterKind: "transfer-zero-address",
-        startBlockSource: "reviewed-contract-specific",
-        startBlockConfidence: "high",
-        events: [],
-      },
-    ]);
+      stablecoinId,
+      symbol,
+      contractAddress,
+      decimals: 6,
+      dustThreshold: 10_000,
+      startBlock: 21_900_000,
+      adapterKind: "transfer-zero-address" as const,
+      startBlockSource: "reviewed-contract-specific" as const,
+      startBlockConfidence: "high" as const,
+      events: [],
+    });
 
-    expect(history).toHaveLength(1);
+    const configs = [
+      makeConfig("usdc-circle", "USDC", "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"),
+      ...Array.from({ length: 99 }, (_, index) =>
+        makeConfig(
+          `synthetic-${index + 1}`,
+          `S${index + 1}`,
+          `0x${(index + 1).toString(16).padStart(40, "0")}`,
+        )
+      ),
+      makeConfig("usdt-tether", "USDT", "0xdac17f958d2ee523a2206206994597c13d831ec7"),
+    ];
+
+    const results = await readMintBurnSyncStateBatch(db, configs);
+
+    expect(history).toHaveLength(2);
     expect(history[0]?.sql).toContain("WHERE config_key IN");
-    expect(history[0]?.binds).toEqual([
-      "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    expect(history[0]?.binds).toHaveLength(90);
+    expect(history[1]?.binds).toHaveLength(11);
+    expect(history[0]?.binds?.[0]).toBe("ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
+    expect(history[1]?.binds?.[history[1].binds.length - 1]).toBe(
       "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
-    ]);
+    );
     expect(results.get("ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")).toBe(22_345_678);
     expect(results.get("ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7")).toBe(21_899_999);
   });

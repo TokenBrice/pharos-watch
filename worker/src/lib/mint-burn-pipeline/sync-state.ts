@@ -2,7 +2,9 @@ import { batchExecute, buildInClause } from "../db";
 import type { MintBurnContractConfig } from "../mint-burn-contracts";
 import type { MintBurnSyncStateMode } from "./types";
 
-const READ_SYNC_STATE_BATCH_SIZE = 200;
+// D1 allows at most 100 bound parameters per statement, so keep config-key
+// reads below that ceiling with a small safety margin.
+const READ_SYNC_STATE_BATCH_SIZE = 90;
 
 export function mintBurnConfigKey(config: MintBurnContractConfig): string {
   return `${config.chain.chainId}-${config.contractAddress}`;
