@@ -46,10 +46,12 @@ export const CHART_HEIGHT = "h-[250px] sm:h-[350px]";
 export const RECHARTS_TOOLTIP_STYLES = {
   contentStyle: {
     backgroundColor: "var(--color-card)",
-    border: "1px solid var(--color-border)",
-    borderRadius: "var(--radius-lg, 0.5rem)",
+    border: "1px solid color-mix(in oklch, var(--color-border) 70%, transparent)",
+    borderRadius: "var(--radius-xl, 0.75rem)",
     fontFamily: "var(--font-mono)",
+    boxShadow: "var(--elevation-rest)",
+    padding: "0.75rem 0.875rem",
   },
-  labelStyle: { color: "var(--color-foreground)", fontFamily: "var(--font-sans)" },
-  itemStyle: { color: "var(--color-muted-foreground)", fontFamily: "var(--font-mono)" },
+  labelStyle: { color: "var(--color-foreground)", fontFamily: "var(--font-sans)", fontWeight: 500, fontSize: "0.75rem", marginBottom: "0.5rem" },
+  itemStyle: { color: "var(--color-muted-foreground)", fontFamily: "var(--font-mono)", fontSize: "0.875rem" },
 } as const;
