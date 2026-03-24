@@ -21,6 +21,7 @@ import {
   GOVERNANCE_LABELS_SHORT,
 } from "@shared/lib/classification";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
+import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { DeviationIcon } from "@/components/severity-icon";
@@ -398,10 +399,12 @@ export function StablecoinTable({
                   )}
                   {isVisible("price") && (
                     <TableCell className="text-right font-mono tabular-nums">
-                      {(() => {
-                        const ref = getPegReference(coin.pegType, pegRates, meta?.commodityOunces);
-                        return formatNativePrice(coin.price, meta?.flags.pegCurrency ?? "USD", ref);
-                      })()}
+                      <span className={confidenceClass(coin.priceConfidence)}>
+                        {(() => {
+                          const ref = getPegReference(coin.pegType, pegRates, meta?.commodityOunces);
+                          return formatNativePrice(coin.price, meta?.flags.pegCurrency ?? "USD", ref);
+                        })()}
+                      </span>
                     </TableCell>
                   )}
                   {isVisible("peg") && (
