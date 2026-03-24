@@ -11,7 +11,8 @@ import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { useStablecoinCharts } from "@/hooks/api-hooks";
 import { PEG_CHART_COLORS } from "@shared/lib/classification";
-import { CHART_HEIGHT, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
+import { CHART_HEIGHT } from "@/lib/chart-colors";
+import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { computeChartYDomain } from "@/lib/chart-utils";
 
@@ -36,7 +37,7 @@ interface PegTooltipProps {
 }
 
 function PegTooltip({ active, payload, label, pegKeys }: PegTooltipProps) {
-  if (!active || !payload?.length || !label) return null;
+  if (!payload?.length || !label) return null;
 
   // Show in reverse order (top of stack first)
   const items = [...pegKeys]
@@ -53,34 +54,15 @@ function PegTooltip({ active, payload, label, pegKeys }: PegTooltipProps) {
   const total = items.reduce((sum, i) => sum + i.value, 0);
 
   return (
-    <div
-      className="rounded-lg border p-3 shadow-md text-sm"
-      style={{
-        backgroundColor: RECHARTS_TOOLTIP_STYLES.contentStyle.backgroundColor,
-        borderColor: "var(--color-border)",
-        fontFamily: RECHARTS_TOOLTIP_STYLES.contentStyle.fontFamily,
-      }}
-    >
-      <p
-        className="font-bold text-card-foreground mb-1.5"
-        style={{ fontFamily: RECHARTS_TOOLTIP_STYLES.labelStyle.fontFamily }}
-      >
-        {formatChartDate(label, "long")}
-      </p>
+    <PharosChartTooltip active={active}>
+      <TooltipLabel>{formatChartDate(label, "long")}</TooltipLabel>
       {items.map((item) => (
-        <div key={item.key} className="flex items-center justify-between gap-4 py-0.5">
-          <span className="flex items-center gap-1.5 text-card-foreground">
-            <span className="inline-block h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-            {pegKeyToLabel(item.key)}
-          </span>
-          <span className="font-medium text-card-foreground tabular-nums">{formatCurrency(item.value)}</span>
-        </div>
+        <TooltipRow key={item.key} color={item.color} label={pegKeyToLabel(item.key)} value={formatCurrency(item.value)} />
       ))}
-      <div className="border-t mt-1.5 pt-1.5 flex items-center justify-between text-card-foreground font-semibold">
-        <span>Total</span>
-        <span className="tabular-nums">{formatCurrency(total)}</span>
+      <div className="border-t border-border/50 mt-1.5 pt-1.5">
+        <TooltipRow label="Total" value={formatCurrency(total)} bold />
       </div>
-    </div>
+    </PharosChartTooltip>
   );
 }
 
