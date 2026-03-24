@@ -52,6 +52,7 @@ export default createClientFeaturePage({
     breadcrumbName: "Coverage",
     path: "/coverage/",
     title: "Coverage",
+    accent: "border-t-purple-500",
     statusBadge: { status: "mature" },
     leadParagraphs: [
       `Feature breadth across ${ACTIVE_STABLECOINS.length} tracked stablecoins.`,

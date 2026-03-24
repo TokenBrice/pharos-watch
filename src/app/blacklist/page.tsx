@@ -149,6 +149,7 @@ function BlacklistPageInner() {
       breadcrumbName="Blacklist Tracker"
       path="/blacklist/"
       title="Blacklist Tracker"
+      accent="border-t-orange-500"
       statusBadge={{
         status: "mature",
         version: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,

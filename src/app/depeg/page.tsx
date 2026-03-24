@@ -59,6 +59,7 @@ export default createClientFeaturePage({
     breadcrumbName: "Depeg Tracker",
     path: "/depeg/",
     title: "Depeg Tracker",
+    accent: "border-t-red-500",
     statusBadge: { status: "mature", version: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL },
     methodology: {
       version: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
