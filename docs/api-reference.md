@@ -159,6 +159,7 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/audit-depeg-history`
 - `POST /api/trigger-digest`
 - `POST /api/reset-blacklist-sync`
+- `POST /api/remediate-blacklist-amount-gaps`
 
 When an `Idempotency-Key` is supplied on one of those routes, successful responses echo `Idempotency-Key` plus `X-Idempotent-Replay`, and conflicting reuse returns `409`.
 
@@ -821,6 +822,9 @@ DEX liquidity scores, pool breakdowns, source-confidence metadata, and on-chain 
 | `durabilityScore`       | `number \| null`                                                 | Score for pool maturity and reliability                                                                                                              |
 | `coverageClass`         | `"primary" \| "mixed" \| "fallback" \| "legacy" \| "unobserved"` | Coverage-confidence classification for the retained pool set; `primary` includes pure `dl` and pure `direct_api` rows                                |
 | `coverageConfidence`    | `number`                                                         | Evidence-weighted confidence (`0-1`) derived from retained-pool breadth, measured TVL share, and synthetic/decayed dependence                         |
+| `liquidityEvidenceClass`| `"unobserved" \| "measured" \| "partial_measured" \| "observed_unmeasured"` | Explicit classification of whether liquidity is balance-measured versus only observed from TVL / price evidence                          |
+| `hasMeasuredLiquidityEvidence` | `boolean`                                                | Whether any retained liquidity evidence for the row includes measured pool balances                                                                   |
+| `trendworthy`           | `boolean`                                                        | Whether this row is suitable for trend baselines (`coverageConfidence >= 0.75`, positive TVL, and `primary`/`mixed` coverage)                        |
 | `sourceMix`             | `Record<string, { poolCount: number; tvlUsd: number }>`          | TVL/pool-count mix across source families (`dl`, `direct_api`, `cg_onchain`, `gecko_terminal`, `dexscreener`, `cg_tickers`)                          |
 | `balanceMeasuredTvlUsd` | `number`                                                         | TVL denominator actually used for `weightedBalanceRatio`                                                                                             |
 | `organicMeasuredTvlUsd` | `number`                                                         | TVL denominator actually used for `organicFraction`                                                                                                  |
@@ -901,6 +905,9 @@ Per-coin historical DEX liquidity snapshots. Snapshots are recorded daily (UTC m
     "date": 1771500000,
     "coverageClass": "mixed",
     "coverageConfidence": 0.85,
+    "liquidityEvidenceClass": "partial_measured",
+    "hasMeasuredLiquidityEvidence": true,
+    "trendworthy": true,
     "methodologyVersion": "3.1"
   }
 ]
@@ -914,6 +921,9 @@ Per-coin historical DEX liquidity snapshots. Snapshots are recorded daily (UTC m
 | `date`               | `number`         | Unix seconds                                                                       |
 | `coverageClass`      | `string`         | Snapshot confidence class (`primary`, `mixed`, `fallback`, `legacy`, `unobserved`) |
 | `coverageConfidence` | `number`         | Snapshot confidence score                                                          |
+| `liquidityEvidenceClass` | `string`     | Snapshot evidence class (`measured`, `partial_measured`, `observed_unmeasured`, `unobserved`) |
+| `hasMeasuredLiquidityEvidence` | `boolean` | Whether the snapshot qualifies as balance-measured liquidity evidence            |
+| `trendworthy`        | `boolean`        | Whether the snapshot is suitable for trend baselines rather than informational use |
 | `methodologyVersion` | `string`         | Methodology version attributed to this snapshot                                    |
 
 ---
@@ -2071,6 +2081,9 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "blacklistRecentWindowSec": 86400,
     "blacklistMissingRatio": 0,
     "blacklistTotal": 13422,
+    "blacklistOldestRecoverableAgeSec": 0,
+    "blacklistNeverAttemptedCount": 0,
+    "blacklistRepeatedFailureCount": 0,
     "onchainSupplyDivergences": 0,
     "onchainDivergenceRatio": 0,
     "onchainSupplyMonitoring": "active",
@@ -2480,6 +2493,56 @@ Returns current blacklist sync state for all configured chains. Useful for diagn
   { "config_key": "ethereum-usdc", "last_block": 19500000 },
   { "config_key": "tron-usdt", "last_block": 1740000000000 }
 ]
+```
+
+### `POST /api/remediate-blacklist-amount-gaps`
+
+Admin-only bounded remediation endpoint for recoverable blacklist rows.
+
+**Authentication:** same admin auth as other ops endpoints.
+
+**Idempotency:** supported via optional `Idempotency-Key`.
+
+**Inputs**
+
+- `chainId?: string`
+- `stablecoin?: "USDC" | "USDT" | "PAXG" | "XAUT"`
+- `limit?: number` default `25`, max `200`
+- `dryRun?: boolean` default `true`
+- `onlyMissingProvenance?: boolean` default `true`
+- `maxAttempts?: number` default `25`
+
+**Dry-run response**
+
+```json
+{
+  "ok": true,
+  "dryRun": true,
+  "candidateCount": 26,
+  "resolutionCounts": {
+    "resolved": 26,
+    "missing_config": 0,
+    "ambiguous_config": 0
+  }
+}
+```
+
+**Write-enabled response**
+
+```json
+{
+  "ok": true,
+  "dryRun": false,
+  "applied": {
+    "resolved": 26,
+    "resolvedZero": 26,
+    "providerFailed": 0,
+    "configMissing": 0,
+    "configAmbiguous": 0,
+    "budgetUsed": 26,
+    "budgetLimit": 900
+  }
+}
 ```
 
 ### `GET /api/discovery-candidates`

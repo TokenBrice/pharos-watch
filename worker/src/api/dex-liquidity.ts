@@ -130,12 +130,13 @@ function selectTrendBaseline(
 
 function buildDexLiquidityWarning(latestCron: DexLiquidityCronRow | null): string | null {
   if (!latestCron) return null;
-  if (latestCron.status !== "degraded" && latestCron.status !== "error") return null;
 
   let failedSources: string[] = [];
   let nearCoverageGuard = false;
   let nearValueGuard = false;
   let nearMajorCoverageGuard = false;
+  let qualityDriftSeverity: "none" | "medium" | "high" = "none";
+  let qualityDriftFlags: string[] = [];
   if (latestCron.metadata) {
     try {
       const raw = JSON.parse(latestCron.metadata);
@@ -144,22 +145,72 @@ function buildDexLiquidityWarning(latestCron: DexLiquidityCronRow | null): strin
       nearCoverageGuard = parsed.sourceCoverage.nearCoverageGuard;
       nearValueGuard = parsed.sourceCoverage.nearValueGuard;
       nearMajorCoverageGuard = parsed.sourceCoverage.nearMajorCoverageGuard;
+      qualityDriftSeverity = parsed.sourceCoverage.qualityDriftSeverity ?? "none";
+      qualityDriftFlags = parsed.sourceCoverage.qualityDriftFlags ?? [];
     } catch (err) {
       console.info("[dex-liquidity] Malformed cron metadata:", err instanceof Error ? err.message : String(err));
     }
   }
+
+  if (latestCron.status !== "degraded" && latestCron.status !== "error" && qualityDriftSeverity === "none") return null;
 
   const details: string[] = [];
   if (failedSources.length > 0) details.push(`failedSources=${failedSources.join(",")}`);
   if (nearCoverageGuard) details.push("nearCoverageGuard");
   if (nearValueGuard) details.push("nearValueGuard");
   if (nearMajorCoverageGuard) details.push("nearMajorCoverageGuard");
+  if (qualityDriftSeverity !== "none") details.push(`qualityDrift=${qualityDriftSeverity}`);
+  if (qualityDriftFlags.length > 0) details.push(`qualityDriftFlags=${qualityDriftFlags.join(",")}`);
 
   const suffix = details.length > 0 ? ` (${details.join("; ")})` : "";
   if (latestCron.status === "error") {
     return `199 - "Latest sync-dex-liquidity run failed; serving last successful dataset${suffix}"`;
   }
+  if (latestCron.status === "ok" && qualityDriftSeverity !== "none") {
+    return `199 - "Latest sync-dex-liquidity run shows ${qualityDriftSeverity} quality drift${suffix}"`;
+  }
   return `199 - "Latest sync-dex-liquidity run degraded${suffix}"`;
+}
+
+function classifyLiquidityEvidence(
+  totalTvlUsd: number,
+  balanceMeasuredTvlUsd: number,
+): {
+  liquidityEvidenceClass: "unobserved" | "measured" | "partial_measured" | "observed_unmeasured";
+  hasMeasuredLiquidityEvidence: boolean;
+} {
+  if (totalTvlUsd <= 0) {
+    return {
+      liquidityEvidenceClass: "unobserved",
+      hasMeasuredLiquidityEvidence: false,
+    };
+  }
+  if (balanceMeasuredTvlUsd <= 0) {
+    return {
+      liquidityEvidenceClass: "observed_unmeasured",
+      hasMeasuredLiquidityEvidence: false,
+    };
+  }
+  if (balanceMeasuredTvlUsd >= totalTvlUsd * 0.8) {
+    return {
+      liquidityEvidenceClass: "measured",
+      hasMeasuredLiquidityEvidence: true,
+    };
+  }
+  return {
+    liquidityEvidenceClass: "partial_measured",
+    hasMeasuredLiquidityEvidence: true,
+  };
+}
+
+function isTrendworthySnapshot(
+  totalTvlUsd: number,
+  coverageClass: string | null,
+  coverageConfidence: number | null,
+): boolean {
+  if (totalTvlUsd <= 0) return false;
+  if ((coverageConfidence ?? 0) < 0.75) return false;
+  return coverageClass === "primary" || coverageClass === "mixed";
 }
 
 export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D1Database): Promise<Response> => {
@@ -227,6 +278,14 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
 
     // Merge DEX price data if available
     const dexPrice = dexPriceById.get(id);
+    const coverageClass = row.coverage_class ?? "legacy";
+    const coverageConfidence = row.coverage_confidence ?? 0.5;
+    const balanceMeasuredTvlUsd = row.balance_measured_tvl_usd ?? 0;
+    const { liquidityEvidenceClass, hasMeasuredLiquidityEvidence } = classifyLiquidityEvidence(
+      currentTvl,
+      balanceMeasuredTvlUsd,
+    );
+    const trendworthy = isTrendworthySnapshot(currentTvl, coverageClass, coverageConfidence);
 
     map[id] = {
       totalTvlUsd: currentTvl,
@@ -255,10 +314,13 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       weightedBalanceRatio: row.weighted_balance_ratio ?? null,
       organicFraction: row.organic_fraction ?? null,
       durabilityScore: row.durability_score ?? null,
-      coverageClass: row.coverage_class ?? "legacy",
-      coverageConfidence: row.coverage_confidence ?? 0.5,
+      coverageClass,
+      coverageConfidence,
+      liquidityEvidenceClass,
+      hasMeasuredLiquidityEvidence,
+      trendworthy,
       sourceMix: safeJsonParse<Record<string, { poolCount: number; tvlUsd: number }>>(row.source_mix_json, {}),
-      balanceMeasuredTvlUsd: row.balance_measured_tvl_usd ?? 0,
+      balanceMeasuredTvlUsd,
       organicMeasuredTvlUsd: row.organic_measured_tvl_usd ?? 0,
       scoreComponents: safeJsonParse<unknown>(row.score_components_json, null),
       lockedLiquidityPct: row.locked_liquidity_pct ?? null,

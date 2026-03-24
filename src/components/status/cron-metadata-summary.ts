@@ -142,9 +142,20 @@ function summarizeDexLiquidity(metadata: Record<string, unknown>): string[] {
   const coverageRecoveredCoins = readNumber(sourceCoverage?.coverageRecoveredCoins);
   const measuredBalanceCoveragePct = readNumber(sourceCoverage?.measuredBalanceCoveragePct);
   const syntheticOnlyCoins = readNumber(sourceCoverage?.syntheticOnlyCoins);
+  const coinsWithoutMeasuredBalances = readNumber(sourceCoverage?.coinsWithoutMeasuredBalances);
+  const coinsGtOnly = readNumber(sourceCoverage?.coinsGtOnly);
+  const coinsCrawlerOnly = readNumber(sourceCoverage?.coinsCrawlerOnly);
+  const coinsPriceOnlyNoMeasuredLiquidity = readNumber(sourceCoverage?.coinsPriceOnlyNoMeasuredLiquidity);
+  const qualityDriftSeverity = readString(sourceCoverage?.qualityDriftSeverity);
+  const qualityDriftFlags = formatStringList(sourceCoverage?.qualityDriftFlags);
+  const qualityDriftMetrics = readRecord(sourceCoverage?.qualityDriftMetrics);
+  const priceObservationPctDelta = readNumber(qualityDriftMetrics?.priceObservationPctDelta);
+  const measuredBalanceCoverageDelta = readNumber(qualityDriftMetrics?.measuredBalanceCoverageDelta);
+  const topAssetCoverageDeltas = readArray(sourceCoverage?.topAssetCoverageDeltas);
   const protocolCapReductions = readRecord(sourceCoverage?.protocolCapReductions);
   const cappedPoolCount = readNumber(protocolCapReductions?.cappedPoolCount);
   const reducedTvlUsd = readNumber(protocolCapReductions?.reducedTvlUsd);
+  const topProtocols = readArray(protocolCapReductions?.topProtocols);
   const nearCoverageGuard = readBoolean(sourceCoverage?.nearCoverageGuard);
   const skipBreakdown =
     stagedPoolsSkippedByExactIdentity != null || stagedPoolsSkippedByUniqueDerivedIdentity != null
@@ -168,9 +179,56 @@ function summarizeDexLiquidity(metadata: Record<string, unknown>): string[] {
       ? `weak coverage ${weakCoverageCoins}${coverageRecoveredCoins != null ? `, recovered ${coverageRecoveredCoins}` : ""}`
       : null,
     measuredBalanceCoveragePct != null ? `measured balance coverage ${(measuredBalanceCoveragePct * 100).toFixed(1)}%` : null,
+    coinsWithoutMeasuredBalances != null && coinsWithoutMeasuredBalances > 0
+      ? `rows without measured balances ${coinsWithoutMeasuredBalances}`
+      : null,
+    coinsGtOnly != null && coinsGtOnly > 0 ? `GT-only rows ${coinsGtOnly}` : null,
+    coinsCrawlerOnly != null && coinsCrawlerOnly > 0 ? `crawler-only rows ${coinsCrawlerOnly}` : null,
+    coinsPriceOnlyNoMeasuredLiquidity != null && coinsPriceOnlyNoMeasuredLiquidity > 0
+      ? `price-only/no-measured-liquidity rows ${coinsPriceOnlyNoMeasuredLiquidity}`
+      : null,
     syntheticOnlyCoins != null && syntheticOnlyCoins > 0 ? `synthetic-only rows ${syntheticOnlyCoins}` : null,
     cappedPoolCount != null && reducedTvlUsd != null && cappedPoolCount > 0
       ? `protocol caps ${cappedPoolCount} pools, ${Math.round(reducedTvlUsd).toLocaleString()} TVL reduced`
+      : null,
+    topProtocols && topProtocols.length > 0
+      ? (() => {
+        const parts = topProtocols
+          .slice(0, 2)
+          .map((entry) => {
+            const record = readRecord(entry);
+            const protocol = readString(record?.protocol);
+            const reduction = readNumber(record?.reducedTvlUsd);
+            return protocol && reduction != null ? `${protocol} ${Math.round(reduction).toLocaleString()}` : null;
+          })
+          .filter((part): part is string => part != null);
+        return parts.length > 0 ? `top capped protocols ${parts.join(", ")}` : null;
+      })()
+      : null,
+    qualityDriftSeverity && qualityDriftSeverity !== "none"
+      ? `quality drift ${qualityDriftSeverity}${qualityDriftFlags ? ` (${qualityDriftFlags})` : ""}`
+      : null,
+    priceObservationPctDelta != null && priceObservationPctDelta <= -0.1
+      ? `price observations ${(priceObservationPctDelta * 100).toFixed(1)}% vs previous`
+      : null,
+    measuredBalanceCoverageDelta != null && measuredBalanceCoverageDelta <= -0.05
+      ? `measured coverage ${(measuredBalanceCoverageDelta * 100).toFixed(1)}pp vs previous`
+      : null,
+    topAssetCoverageDeltas && topAssetCoverageDeltas.length > 0
+      ? (() => {
+        const flagged = topAssetCoverageDeltas
+          .map((entry) => readRecord(entry))
+          .map((record) => {
+            const stablecoinId = readString(record?.stablecoinId);
+            const poolCountPctDelta = readNumber(record?.poolCountPctDelta);
+            return stablecoinId && poolCountPctDelta != null && poolCountPctDelta <= -0.2
+              ? `${stablecoinId} ${(poolCountPctDelta * 100).toFixed(1)}%`
+              : null;
+          })
+          .filter((part): part is string => part != null)
+          .slice(0, 2);
+        return flagged.length > 0 ? `watchlist pool drops ${flagged.join(", ")}` : null;
+      })()
       : null,
     failedSources ? `failed sources ${failedSources}` : null,
     fallbackMode ? `fallback mode ${fallbackMode}` : null,

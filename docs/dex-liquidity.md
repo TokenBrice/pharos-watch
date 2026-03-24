@@ -327,13 +327,24 @@ Every source family now uses the same minimum liquidity rule for DEX prices: a p
 
 **API exposure:**
 
-- `/api/dex-liquidity`: adds `dexPriceUsd`, `dexDeviationBps`, `priceSourceCount`, `priceSourceTvl`, `priceSources`, `coverageClass`, `coverageConfidence`, `sourceMix`, `balanceMeasuredTvlUsd`, `organicMeasuredTvlUsd`
-- `/api/dex-liquidity`: adds a `Warning` header when the latest `sync-dex-liquidity` run was degraded or failed and the endpoint is serving the last successful dataset
+- `/api/dex-liquidity`: adds `dexPriceUsd`, `dexDeviationBps`, `priceSourceCount`, `priceSourceTvl`, `priceSources`, `coverageClass`, `coverageConfidence`, `liquidityEvidenceClass`, `hasMeasuredLiquidityEvidence`, `trendworthy`, `sourceMix`, `balanceMeasuredTvlUsd`, `organicMeasuredTvlUsd`
+- `/api/dex-liquidity`: adds a `Warning` header when the latest `sync-dex-liquidity` run was degraded or failed and the endpoint is serving the last successful dataset; high-severity quality drift in an otherwise `ok` run now also emits a warning
+- `/api/dex-liquidity-history`: now returns `liquidityEvidenceClass`, `hasMeasuredLiquidityEvidence`, and `trendworthy` so history consumers can separate baseline-worthy periods from informational low-confidence snapshots
 - `/api/peg-summary`: adds optional `dexPriceCheck` per coin when the row passes a UI trust gate (fresh within 60 minutes and aggregate source TVL `>= $250K`)
 
 **Frontend:**
 
 - `dex-liquidity-card.tsx`: shows DEX-implied price section when available plus coverage badges (`Primary`, `Mixed`, `Fallback`, `NR`)
+- `dex-liquidity-card.tsx`: surfaces whether liquidity is measured, partially measured, or only observed without measured pool balances
 - `/liquidity`: shows coverage badges and a separate unrated/unobserved section instead of silently dropping NR assets
 - Detail and overview liquidity surfaces now attach contextual methodology hints to the score label, `Effective TVL`, and key summary stats, with score-card footer links back to `/methodology/#liquidity-methodology`
 - `peg-heatmap.tsx`: amber "!" badge on tiles where DEX disagrees with primary
+
+**Operator metadata:**
+
+- `sync-dex-liquidity` cron metadata now records run-over-run drift and evidence-gap diagnostics including:
+  - `qualityDriftSeverity` / `qualityDriftFlags`
+  - `coinsWithoutMeasuredBalances`, `coinsGtOnly`, `coinsCrawlerOnly`
+  - per-source-family retained pool counts, measured TVL, and price-observation coin counts
+  - protocol-cap breakdowns by top protocol and top affected stablecoin
+  - watchlist deltas for major assets such as USDC, USDT, DAI, USDS, and USDe

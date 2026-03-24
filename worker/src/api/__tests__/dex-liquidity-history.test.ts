@@ -26,6 +26,9 @@ describe("handleDexLiquidityHistory", () => {
     expect(body[0]).toHaveProperty("date");
     expect(body[0]).toHaveProperty("coverageClass");
     expect(body[0]).toHaveProperty("coverageConfidence");
+    expect(body[0]).toHaveProperty("liquidityEvidenceClass");
+    expect(body[0]).toHaveProperty("hasMeasuredLiquidityEvidence");
+    expect(body[0]).toHaveProperty("trendworthy");
     expect(body[0]).toHaveProperty("methodologyVersion");
   });
 
@@ -72,5 +75,24 @@ describe("handleDexLiquidityHistory", () => {
     const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"));
     const body = (await res.json()) as Array<{ methodologyVersion: string }>;
     expect(body[0]?.methodologyVersion).toBe("2.2");
+  });
+
+  it("marks low-confidence snapshots as informational rather than trendworthy", async () => {
+    const db = mockD1([{
+      match: "dex_liquidity_history",
+      rows: [makeDexLiquidityHistoryRow({
+        coverage_class: "fallback",
+        coverage_confidence: 0.5,
+      })],
+    }]);
+    const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"));
+    const body = (await res.json()) as Array<{
+      liquidityEvidenceClass: string;
+      hasMeasuredLiquidityEvidence: boolean;
+      trendworthy: boolean;
+    }>;
+    expect(body[0]?.liquidityEvidenceClass).toBe("observed_unmeasured");
+    expect(body[0]?.hasMeasuredLiquidityEvidence).toBe(false);
+    expect(body[0]?.trendworthy).toBe(false);
   });
 });

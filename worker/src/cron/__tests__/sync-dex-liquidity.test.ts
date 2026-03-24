@@ -215,6 +215,9 @@ describe("syncDexLiquidity", () => {
         nearCoverageGuard?: boolean;
         weakCoverageCoins?: number;
         coverageRecoveredCoins?: number;
+        qualityDriftSeverity?: string;
+        qualityDriftFlags?: string[];
+        coinsWithoutMeasuredBalances?: number;
         protocolCapReductions?: { reducedTvlUsd?: number };
       };
     };
@@ -224,6 +227,9 @@ describe("syncDexLiquidity", () => {
     expect(metadata.sourceCoverage?.nearCoverageGuard).toBe(false);
     expect(metadata.sourceCoverage?.weakCoverageCoins).toBe(0);
     expect(metadata.sourceCoverage?.coverageRecoveredCoins).toBe(0);
+    expect(metadata.sourceCoverage?.qualityDriftSeverity).toBe("none");
+    expect(metadata.sourceCoverage?.qualityDriftFlags).toEqual([]);
+    expect(metadata.sourceCoverage?.coinsWithoutMeasuredBalances).toBe(0);
     expect(metadata.sourceCoverage?.protocolCapReductions?.reducedTvlUsd).toBe(0);
   });
 

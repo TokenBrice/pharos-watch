@@ -110,6 +110,15 @@ describe("CronCard", () => {
                 minExpectedCoverage: 78,
                 nearCoverageGuard: true,
                 priceObservationCoins: 93,
+                qualityDriftSeverity: "high",
+                qualityDriftFlags: ["price-observation-drop", "watchlist-pool-drop:usdc-circle"],
+                measuredBalanceCoveragePct: 0.53,
+                coinsWithoutMeasuredBalances: 22,
+                protocolCapReductions: {
+                  cappedPoolCount: 12,
+                  reducedTvlUsd: 1_250_000,
+                  topProtocols: [{ protocol: "curve", reducedTvlUsd: 900_000 }],
+                },
               },
             },
           },
@@ -125,6 +134,11 @@ describe("CronCard", () => {
     expect(html).toContain("staged pools merged 41, skipped 9 (derived 7, exact 2)");
     expect(html).toContain("coverage 126 vs 131 previous, floor 78");
     expect(html).toContain("dex price observations 93 coins");
+    expect(html).toContain("measured balance coverage 53.0%");
+    expect(html).toContain("rows without measured balances 22");
+    expect(html).toContain("protocol caps 12 pools, 1,250,000 TVL reduced");
+    expect(html).toContain("top capped protocols curve 900,000");
+    expect(html).toContain("quality drift high (price-observation-drop, watchlist-pool-drop:usdc-circle)");
     expect(html).toContain("failed sources defillama-yields");
     expect(html).toContain("fallback mode dl-yields-unavailable");
     expect(html).toContain("coverage near guardrail band");

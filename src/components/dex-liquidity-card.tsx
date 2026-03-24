@@ -82,6 +82,19 @@ function formatBalanceDetails(balanceDetails: PoolBalanceDetails | undefined): s
     .join(", ");
 }
 
+function getLiquidityEvidenceLabel(liq: DexLiquidityData): string | null {
+  switch (liq.liquidityEvidenceClass) {
+    case "measured":
+      return "Measured liquidity evidence";
+    case "partial_measured":
+      return `Measured balances cover ${Math.round((liq.balanceMeasuredTvlUsd / Math.max(liq.totalTvlUsd, 1)) * 100)}% of observed TVL`;
+    case "observed_unmeasured":
+      return "Observed liquidity without measured pool balances";
+    default:
+      return null;
+  }
+}
+
 function ProtocolBar({ protocolTvl }: { protocolTvl: Record<string, number> }) {
   const { entries, total } = buildBreakdownEntries(protocolTvl, {
     labelForKey: prettifyProtocol,
@@ -438,6 +451,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
   const tier = getScoreTier(score);
   const coverageBadge = getLiquidityCoverageBadge(liq.coverageClass);
   const isRated = liq.liquidityScore != null;
+  const evidenceLabel = getLiquidityEvidenceLabel(liq);
 
   return (
     <Card className="rounded-xl border-l-[3px] border-l-cyan-500 animate-in fade-in duration-300">
@@ -497,6 +511,9 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
                   <MethodologyLabel topic="effectiveTvl">Effective</MethodologyLabel>: {formatCurrency(liq.effectiveTvlUsd)}
                 </span>
               </div>
+            )}
+            {evidenceLabel && (
+              <div className="text-xs text-muted-foreground mt-0.5">{evidenceLabel}</div>
             )}
           </div>
           <div>

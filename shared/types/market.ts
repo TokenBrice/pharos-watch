@@ -209,6 +209,14 @@ const DexPriceSourceSchema = z.object({
   tvl: z.number(),
 });
 
+export const LiquidityEvidenceClassSchema = z.enum([
+  "unobserved",
+  "measured",
+  "partial_measured",
+  "observed_unmeasured",
+]);
+export type LiquidityEvidenceClass = z.infer<typeof LiquidityEvidenceClassSchema>;
+
 const DexLiquidityDataSchema = z.object({
   totalTvlUsd: z.number(),
   totalVolume24hUsd: z.number(),
@@ -237,6 +245,9 @@ const DexLiquidityDataSchema = z.object({
   durabilityScore: z.number().min(0).max(100).nullable(),
   coverageClass: LiquidityCoverageClassSchema,
   coverageConfidence: z.number().min(0).max(1),
+  liquidityEvidenceClass: LiquidityEvidenceClassSchema,
+  hasMeasuredLiquidityEvidence: z.boolean(),
+  trendworthy: z.boolean(),
   sourceMix: LiquiditySourceMixSchema,
   balanceMeasuredTvlUsd: z.number(),
   organicMeasuredTvlUsd: z.number(),
@@ -262,6 +273,9 @@ export interface DexLiquidityHistoryPoint {
   date: number;
   coverageClass: LiquidityCoverageClass;
   coverageConfidence: number;
+  liquidityEvidenceClass: LiquidityEvidenceClass;
+  hasMeasuredLiquidityEvidence: boolean;
+  trendworthy: boolean;
   methodologyVersion: string;
 }
 

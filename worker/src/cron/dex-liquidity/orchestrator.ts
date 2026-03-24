@@ -25,6 +25,7 @@ import { fetchBalancerPools } from "./fetch-balancer";
 import { fetchRaydiumPools } from "./fetch-raydium";
 import { fetchOrcaPools } from "./fetch-orca";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
 import {
   convertToGtNewPools,
   extractPriceObservations,
@@ -60,6 +61,51 @@ function buildDirectApiPoolIdentity(pool: DexApiPool): PoolIdentity {
     feeTierBps: deriveDirectApiFeeTierBps(pool),
     isStable: pool.poolType.includes("stable") || pool.poolType.includes("fluid"),
   });
+}
+
+const DRIFT_WATCHLIST = [
+  "usdc-circle",
+  "usdt-tether",
+  "dai-makerdao",
+  "usds-sky",
+  "usde-ethena",
+] as const;
+
+type PreviousDexLiquiditySummary = {
+  stagedPoolsMerged: number;
+  stagedPoolsSkipped: number;
+  priceObservationCoins: number;
+  measuredBalanceCoveragePct: number;
+  weakCoverageCoins: number;
+};
+
+function round4(value: number): number {
+  return Math.round(value * 10_000) / 10_000;
+}
+
+function pctDelta(current: number, previous: number): number | null {
+  if (!Number.isFinite(current) || !Number.isFinite(previous) || previous === 0) return null;
+  return round4((current - previous) / previous);
+}
+
+function readPreviousDexLiquiditySummary(metadata: string | null): PreviousDexLiquiditySummary | null {
+  if (!metadata) return null;
+  try {
+    const parsed = DexLiquidityCronMetadataSchema.parse(JSON.parse(metadata));
+    return {
+      stagedPoolsMerged: parsed.stagedPoolsMerged ?? 0,
+      stagedPoolsSkipped: parsed.stagedPoolsSkipped ?? 0,
+      priceObservationCoins: parsed.sourceCoverage.priceObservationCoins ?? 0,
+      measuredBalanceCoveragePct: parsed.sourceCoverage.measuredBalanceCoveragePct ?? 0,
+      weakCoverageCoins: parsed.sourceCoverage.weakCoverageCoins ?? 0,
+    };
+  } catch (err) {
+    console.warn(
+      "[dex-liquidity] Failed to parse previous cron metadata:",
+      err instanceof Error ? err.message : String(err),
+    );
+    return null;
+  }
 }
 
 export function filterPrimaryPoolsPreferDirectApi(
@@ -483,6 +529,8 @@ export async function syncDexLiquidity(
     previousGlobalRow,
     previousCoverageClassRows,
     previousTopCoverageRows,
+    previousCronRow,
+    previousWatchlistRows,
   ] = await Promise.all([
     db
       .prepare("SELECT COUNT(*) as cnt FROM dex_liquidity WHERE stablecoin_id != '__global__' AND liquidity_score IS NOT NULL")
@@ -511,6 +559,40 @@ export async function syncDexLiquidity(
       )
       .all<{ stablecoin_id: string; total_tvl_usd: number }>()
       .catch((e) => { console.warn("[dex-liquidity] Failed to read previous top coverage:", e); return { results: [] as Array<{ stablecoin_id: string; total_tvl_usd: number }> }; }),
+    db
+      .prepare(
+        `SELECT metadata
+         FROM cron_runs
+         WHERE job = 'sync-dex-liquidity'
+         ORDER BY started_at DESC
+         LIMIT 1`
+      )
+      .first<{ metadata: string | null }>()
+      .catch((e) => { console.warn("[dex-liquidity] Failed to read previous cron metadata:", e); return null; }),
+    db
+      .prepare(
+        `SELECT stablecoin_id, pool_count, coverage_confidence, total_tvl_usd, balance_measured_tvl_usd
+         FROM dex_liquidity
+         WHERE stablecoin_id IN (${DRIFT_WATCHLIST.map(() => "?").join(", ")})`
+      )
+      .bind(...DRIFT_WATCHLIST)
+      .all<{
+        stablecoin_id: string;
+        pool_count: number;
+        coverage_confidence: number | null;
+        total_tvl_usd: number;
+        balance_measured_tvl_usd: number;
+      }>()
+      .catch((e) => {
+        console.warn("[dex-liquidity] Failed to read previous watchlist rows:", e);
+        return { results: [] as Array<{
+          stablecoin_id: string;
+          pool_count: number;
+          coverage_confidence: number | null;
+          total_tvl_usd: number;
+          balance_measured_tvl_usd: number;
+        }> };
+      }),
   ]);
   const previousCoverage = previousCoverageRow?.cnt ?? 0;
   // M1: First-run bootstrap — when previousCoverage is 0, the minimum threshold
@@ -575,6 +657,152 @@ export async function syncDexLiquidity(
       previousCoverageClasses[key as keyof typeof previousCoverageClasses] = row.cnt;
     }
   }
+
+  const previousSummary = readPreviousDexLiquiditySummary(previousCronRow?.metadata ?? null);
+  const watchlistPreviousById = new Map(
+    (previousWatchlistRows.results ?? []).map((row) => [row.stablecoin_id, row]),
+  );
+  const currentWatchlistDeltas = DRIFT_WATCHLIST.map((stablecoinId) => {
+    const previous = watchlistPreviousById.get(stablecoinId);
+    const currentScore = scoreResults.get(stablecoinId);
+    const currentPools = retainedPoolsByStablecoin.get(stablecoinId)?.length ?? 0;
+    const currentMeasuredShare = currentScore && currentScore.tvl > 0
+      ? Math.max(0, Math.min(1, currentScore.balanceMeasuredTvlUsd / currentScore.tvl))
+      : 0;
+    const previousMeasuredShare = previous && previous.total_tvl_usd > 0
+      ? Math.max(0, Math.min(1, (previous.balance_measured_tvl_usd ?? 0) / previous.total_tvl_usd))
+      : 0;
+    return {
+      stablecoinId,
+      previousPoolCount: previous?.pool_count ?? 0,
+      currentPoolCount: currentPools,
+      poolCountPctDelta: pctDelta(currentPools, previous?.pool_count ?? 0),
+      previousCoverageConfidence: previous?.coverage_confidence ?? null,
+      currentCoverageConfidence: currentScore?.coverageConfidence ?? null,
+      previousMeasuredShare: previous ? round4(previousMeasuredShare) : null,
+      currentMeasuredShare: currentScore ? round4(currentMeasuredShare) : null,
+    };
+  });
+
+  const priceObservationPctDelta = previousSummary
+    ? pctDelta(priceObservations.size, previousSummary.priceObservationCoins)
+    : null;
+  const stagedPoolsMergedPctDelta = previousSummary
+    ? pctDelta(stagedMergedCount, previousSummary.stagedPoolsMerged)
+    : null;
+  const stagedPoolsSkippedPctDelta = previousSummary
+    ? pctDelta(stagedSkippedCount, previousSummary.stagedPoolsSkipped)
+    : null;
+  const measuredBalanceCoverageDelta = previousSummary
+    ? round4(measuredBalanceCoveragePct - previousSummary.measuredBalanceCoveragePct)
+    : null;
+  const weakCoverageDelta = previousSummary
+    ? weakCoverageTargetIdsBeforeFallback.size - previousSummary.weakCoverageCoins
+    : null;
+
+  const qualityDriftFlags: string[] = [];
+  if (priceObservationPctDelta != null && priceObservationPctDelta <= -0.1) {
+    qualityDriftFlags.push("price-observation-drop");
+  }
+  if (stagedPoolsMergedPctDelta != null && stagedPoolsMergedPctDelta <= -0.1) {
+    qualityDriftFlags.push("staged-merge-drop");
+  }
+  if (measuredBalanceCoverageDelta != null && measuredBalanceCoverageDelta <= -0.08) {
+    qualityDriftFlags.push("measured-balance-drop");
+  }
+  if (weakCoverageDelta != null && weakCoverageDelta >= 5) {
+    qualityDriftFlags.push("weak-coverage-rise");
+  }
+  for (const delta of currentWatchlistDeltas) {
+    if (delta.poolCountPctDelta != null && delta.poolCountPctDelta <= -0.2) {
+      qualityDriftFlags.push(`watchlist-pool-drop:${delta.stablecoinId}`);
+    }
+  }
+  const qualityDriftSeverity =
+    qualityDriftFlags.length === 0
+      ? "none"
+      : qualityDriftFlags.some((flag) => flag === "measured-balance-drop" || flag.startsWith("watchlist-pool-drop:"))
+        ? "high"
+        : "medium";
+
+  const retainedPoolCountBySourceFamily: Record<string, number> = {};
+  const measuredBalanceTvlBySourceFamily: Record<string, number> = {};
+  const priceObservationCoinsBySourceFamily: Record<string, number> = {};
+  const preCapProtocolTvl: Record<string, number> = {};
+  const preCapStablecoinProtocolTvl = new Map<string, Record<string, number>>();
+  let coinsWithoutMeasuredBalances = 0;
+  let coinsCrawlerOnly = 0;
+  let coinsGtOnly = 0;
+  let coinsPriceOnlyNoMeasuredLiquidity = 0;
+
+  for (const [stablecoinId, pools] of retainedPoolsByStablecoin) {
+    const sourceFamilies = new Set<string>();
+    let hasPrimaryLiquidity = false;
+    let hasGeckoTerminalLiquidity = false;
+    let hasMeasuredBalanceLiquidity = false;
+    const stablecoinProtocolTvl: Record<string, number> = {};
+    for (const pool of pools) {
+      retainedPoolCountBySourceFamily[pool.source] = (retainedPoolCountBySourceFamily[pool.source] ?? 0) + 1;
+      sourceFamilies.add(pool.source);
+      if (pool.source === "dl" || pool.source === "direct_api") hasPrimaryLiquidity = true;
+      if (pool.source === "gecko_terminal") hasGeckoTerminalLiquidity = true;
+      if (pool.extra?.measurement?.balanceMeasured) {
+        hasMeasuredBalanceLiquidity = true;
+        measuredBalanceTvlBySourceFamily[pool.source] = round4(
+          (measuredBalanceTvlBySourceFamily[pool.source] ?? 0) + pool.tvlUsd,
+        );
+      }
+      const protocol = pool.project;
+      preCapProtocolTvl[protocol] = (preCapProtocolTvl[protocol] ?? 0) + pool.tvlUsd;
+      stablecoinProtocolTvl[protocol] = (stablecoinProtocolTvl[protocol] ?? 0) + pool.tvlUsd;
+    }
+    preCapStablecoinProtocolTvl.set(stablecoinId, stablecoinProtocolTvl);
+    if (pools.length > 0 && !hasMeasuredBalanceLiquidity) coinsWithoutMeasuredBalances++;
+    if (pools.length > 0 && !hasPrimaryLiquidity) coinsCrawlerOnly++;
+    if (pools.length > 0 && sourceFamilies.size === 1 && hasGeckoTerminalLiquidity) coinsGtOnly++;
+    if (pools.length > 0 && !hasMeasuredBalanceLiquidity && (priceObservations.get(stablecoinId)?.length ?? 0) > 0) {
+      coinsPriceOnlyNoMeasuredLiquidity++;
+    }
+  }
+  for (const [_stablecoinId, observations] of priceObservations) {
+    const families = new Set(
+      observations
+        .map((obs) => (typeof obs.sourceFamily === "string" && obs.sourceFamily.length > 0 ? obs.sourceFamily : null))
+        .filter((family): family is string => family != null),
+    );
+    for (const family of families) {
+      priceObservationCoinsBySourceFamily[family] = (priceObservationCoinsBySourceFamily[family] ?? 0) + 1;
+    }
+  }
+
+  const cappedProtocolBreakdown = Object.entries(preCapProtocolTvl)
+    .map(([protocol, preCapTvl]) => {
+      const cap = dataSources.protocolTvlCaps.get(protocol);
+      if (cap == null || cap <= 0 || preCapTvl <= cap) return null;
+      return {
+        protocol,
+        preCapTvlUsd: Math.round(preCapTvl),
+        postCapTvlUsd: Math.round(cap),
+        reducedTvlUsd: Math.round(preCapTvl - cap),
+      };
+    })
+    .filter((item): item is { protocol: string; preCapTvlUsd: number; postCapTvlUsd: number; reducedTvlUsd: number } => item != null)
+    .sort((a, b) => b.reducedTvlUsd - a.reducedTvlUsd)
+    .slice(0, 6);
+  const cappedStablecoinBreakdown = Array.from(preCapStablecoinProtocolTvl.entries())
+    .map(([stablecoinId, protocolTvl]) => {
+      let reducedTvlUsd = 0;
+      for (const [protocol, stablecoinTvl] of Object.entries(protocolTvl)) {
+        const cap = dataSources.protocolTvlCaps.get(protocol);
+        const protocolPreCapTvl = preCapProtocolTvl[protocol] ?? 0;
+        if (cap == null || cap <= 0 || protocolPreCapTvl <= cap || stablecoinTvl <= 0) continue;
+        reducedTvlUsd += ((protocolPreCapTvl - cap) * stablecoinTvl) / protocolPreCapTvl;
+      }
+      return { stablecoinId, reducedTvlUsd: Math.round(reducedTvlUsd) };
+    })
+    .filter((item) => item.reducedTvlUsd > 0)
+    .sort((a, b) => b.reducedTvlUsd - a.reducedTvlUsd)
+    .slice(0, 6);
 
   if (previousCoverage >= 10 && currentCoverage < minExpectedCoverage) {
     throw new Error(
@@ -663,8 +891,39 @@ export async function syncDexLiquidity(
         cgTickerFallbackCoins,
         measuredBalanceCoveragePct,
         syntheticOnlyCoins,
+        coinsWithoutMeasuredBalances,
+        coinsGtOnly,
+        coinsCrawlerOnly,
+        coinsPriceOnlyNoMeasuredLiquidity,
+        retainedPoolCountBySourceFamily,
+        measuredBalanceTvlBySourceFamily,
+        priceObservationCoinsBySourceFamily,
         sourceDegradedFamilies: [...new Set(criticalSourceFailures)],
-        protocolCapReductions: diagnostics.protocolCapReductions,
+        protocolCapReductions: {
+          ...diagnostics.protocolCapReductions,
+          topProtocols: cappedProtocolBreakdown,
+          topStablecoins: cappedStablecoinBreakdown,
+        },
+        qualityDriftFlags,
+        qualityDriftSeverity,
+        qualityDriftMetrics: {
+          previousPriceObservationCoins: previousSummary?.priceObservationCoins ?? null,
+          currentPriceObservationCoins: priceObservations.size,
+          priceObservationPctDelta,
+          previousMeasuredBalanceCoveragePct: previousSummary?.measuredBalanceCoveragePct ?? null,
+          currentMeasuredBalanceCoveragePct: measuredBalanceCoveragePct,
+          measuredBalanceCoverageDelta,
+          previousStagedPoolsMerged: previousSummary?.stagedPoolsMerged ?? null,
+          currentStagedPoolsMerged: stagedMergedCount,
+          stagedPoolsMergedPctDelta,
+          previousStagedPoolsSkipped: previousSummary?.stagedPoolsSkipped ?? null,
+          currentStagedPoolsSkipped: stagedSkippedCount,
+          stagedPoolsSkippedPctDelta,
+          previousWeakCoverageCoins: previousSummary?.weakCoverageCoins ?? null,
+          currentWeakCoverageCoins: weakCoverageTargetIdsBeforeFallback.size,
+          weakCoverageDelta,
+        },
+        topAssetCoverageDeltas: currentWatchlistDeltas,
         challengerSnapshotsPublished: challengerPublication.publishedStablecoins,
         challengerSnapshotsSkipped: challengerPublication.skippedStablecoins,
         challengerSnapshotTablesMissing: challengerPublication.missingTables,

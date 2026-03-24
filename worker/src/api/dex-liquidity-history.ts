@@ -12,6 +12,44 @@ interface LiquidityHistoryRow {
   methodology_version: string | null;
 }
 
+function classifyLiquidityEvidence(
+  totalTvlUsd: number,
+  coverageClass: string | null,
+  coverageConfidence: number | null,
+): {
+  liquidityEvidenceClass: "unobserved" | "measured" | "partial_measured" | "observed_unmeasured";
+  hasMeasuredLiquidityEvidence: boolean;
+  trendworthy: boolean;
+} {
+  if (totalTvlUsd <= 0) {
+    return {
+      liquidityEvidenceClass: "unobserved",
+      hasMeasuredLiquidityEvidence: false,
+      trendworthy: false,
+    };
+  }
+  const trendworthy = (coverageConfidence ?? 0) >= 0.75 && (coverageClass === "primary" || coverageClass === "mixed");
+  if (trendworthy && coverageClass === "primary") {
+    return {
+      liquidityEvidenceClass: "measured",
+      hasMeasuredLiquidityEvidence: true,
+      trendworthy,
+    };
+  }
+  if (trendworthy) {
+    return {
+      liquidityEvidenceClass: "partial_measured",
+      hasMeasuredLiquidityEvidence: true,
+      trendworthy,
+    };
+  }
+  return {
+    liquidityEvidenceClass: "observed_unmeasured",
+    hasMeasuredLiquidityEvidence: false,
+    trendworthy,
+  };
+}
+
 export const handleDexLiquidityHistory = withErrorHandler("dex-liquidity-history", async (
   db: D1Database,
   url: URL
@@ -36,14 +74,26 @@ export const handleDexLiquidityHistory = withErrorHandler("dex-liquidity-history
         .all<LiquidityHistoryRow>();
       return result.results ?? [];
     },
-    mapRow: (row) => ({
-      tvl: row.total_tvl_usd,
-      volume24h: row.total_volume_24h_usd,
-      score: row.liquidity_score,
-      date: row.snapshot_date,
-      coverageClass: row.coverage_class ?? "legacy",
-      coverageConfidence: row.coverage_confidence ?? 0.5,
-      methodologyVersion: row.methodology_version ?? getLiquidityMethodologyVersionAt(row.snapshot_date),
-    }),
+    mapRow: (row) => {
+      const coverageClass = row.coverage_class ?? "legacy";
+      const coverageConfidence = row.coverage_confidence ?? 0.5;
+      const { liquidityEvidenceClass, hasMeasuredLiquidityEvidence, trendworthy } = classifyLiquidityEvidence(
+        row.total_tvl_usd,
+        coverageClass,
+        coverageConfidence,
+      );
+      return {
+        tvl: row.total_tvl_usd,
+        volume24h: row.total_volume_24h_usd,
+        score: row.liquidity_score,
+        date: row.snapshot_date,
+        coverageClass,
+        coverageConfidence,
+        liquidityEvidenceClass,
+        hasMeasuredLiquidityEvidence,
+        trendworthy,
+        methodologyVersion: row.methodology_version ?? getLiquidityMethodologyVersionAt(row.snapshot_date),
+      };
+    },
   });
 });
