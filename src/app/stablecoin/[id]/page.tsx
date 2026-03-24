@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,6 +10,7 @@ import { safeJsonLd } from "@/lib/json-ld";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { Skeleton } from "@/components/ui/skeleton";
 import StablecoinDetailClient from "./client";
 import { ExploreNextSection } from "@/components/stablecoin-detail/explore-next-section";
 import { PreLaunchDetail } from "@/components/pre-launch-detail";
@@ -91,7 +93,21 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
           {BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing} · {GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} · Pegged to {PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}
         </p>
       </div>
-      <StablecoinDetailClient id={id} summary={typedSummaries[id] ?? null} coin={coin} logoSrc={typedLogos[coin.id]} />
+      <Suspense fallback={
+        <div className="space-y-6" aria-hidden="true">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="pharos-card-shell px-4 py-3">
+                <Skeleton className="h-3 w-16 mb-2" />
+                <Skeleton className="h-6 w-24" />
+              </div>
+            ))}
+          </div>
+          <div className="pharos-card-shell h-[300px]" />
+        </div>
+      }>
+        <StablecoinDetailClient id={id} summary={typedSummaries[id] ?? null} coin={coin} logoSrc={typedLogos[coin.id]} />
+      </Suspense>
       <ExploreNextSection
         coin={coin}
         related={related}
