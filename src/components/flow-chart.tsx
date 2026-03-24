@@ -13,6 +13,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { CHART_GREEN, CHART_RED, CHART_BLUE, CHART_HEIGHT } from "@/lib/chart-colors";
 import type { MintBurnHourlyBucket } from "@shared/types";
@@ -189,7 +190,7 @@ function FlowTooltip({
   payload?: Array<{ dataKey: string; value: number; color: string; name: string }>;
   label?: number;
 }) {
-  if (!active || !payload || !label) return null;
+  if (!payload || !label) return null;
 
   const time = new Date(label).toLocaleString("en-US", {
     month: "short",
@@ -205,21 +206,20 @@ function FlowTooltip({
   });
 
   return (
-    <div className="rounded-lg border bg-card px-3 py-2 shadow-md text-sm" style={{ fontFamily: "var(--font-mono)" }}>
-      <p className="font-semibold mb-1" style={{ fontFamily: "var(--font-sans)" }}>{time}</p>
+    <PharosChartTooltip active={active}>
+      <TooltipLabel>{time}</TooltipLabel>
       {ordered.map((p) => (
-        <div key={p.dataKey} className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-1.5">
-            <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: p.color }} />
-            <span style={{ fontFamily: "var(--font-sans)" }}>{p.name}</span>
-          </div>
-          <span className="tabular-nums">
-            {p.dataKey === "net"
+        <TooltipRow
+          key={p.dataKey}
+          color={p.color}
+          label={p.name}
+          value={
+            p.dataKey === "net"
               ? `${p.value >= 0 ? "+" : "-"}${formatCurrency(Math.abs(p.value))}`
-              : formatCurrency(Math.abs(p.value))}
-          </span>
-        </div>
+              : formatCurrency(Math.abs(p.value))
+          }
+        />
       ))}
-    </div>
+    </PharosChartTooltip>
   );
 }

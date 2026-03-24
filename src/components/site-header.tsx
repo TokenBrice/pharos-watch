@@ -14,7 +14,7 @@ interface SiteHeaderProps {
 }
 
 const METRIC_PILL_CLASS =
-  "inline-flex items-center rounded-full border px-2.5 py-1 font-mono tabular-nums text-[oklch(0.43_0.01_255)] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-sm border-border/65 bg-background/78 dark:border-white/10 dark:bg-white/[0.035] dark:text-slate-200/90 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_18px_rgba(0,0,0,0.18)]";
+  "inline-flex items-center rounded-full border px-2.5 py-1 font-mono tabular-nums text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-sm border-border/65 bg-background/78 dark:border-white/10 dark:bg-white/[0.035] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_18px_rgba(0,0,0,0.18)]";
 
 export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
   const { data: health } = useHealth();

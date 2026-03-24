@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
@@ -8,6 +9,7 @@ import { safeJsonLd } from "@/lib/json-ld";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { Skeleton } from "@/components/ui/skeleton";
 import StablecoinDetailClient from "./client";
 import { ExploreNextSection } from "@/components/stablecoin-detail/explore-next-section";
 import { PreLaunchDetail } from "@/components/pre-launch-detail";
@@ -67,13 +69,21 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
 
   return (
     <>
-      <div className="sr-only">
-        <h1>{`${coin.name} (${coin.symbol}) Stablecoin Analytics`}</h1>
-        <p>
-          {`Live price, market cap, supply trends, chain distribution, peg score, and depeg history for ${coin.name}.`}
-        </p>
-      </div>
-      <StablecoinDetailClient id={id} summary={typedSummaries[id] ?? null} coin={coin} logoSrc={typedLogos[coin.id]} />
+      <Suspense fallback={
+        <div className="space-y-6" aria-hidden="true">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="pharos-card-shell px-4 py-3">
+                <Skeleton className="h-3 w-16 mb-2" />
+                <Skeleton className="h-6 w-24" />
+              </div>
+            ))}
+          </div>
+          <div className="pharos-card-shell h-[300px]" />
+        </div>
+      }>
+        <StablecoinDetailClient id={id} summary={typedSummaries[id] ?? null} coin={coin} logoSrc={typedLogos[coin.id]} />
+      </Suspense>
       <ExploreNextSection
         coin={coin}
         related={related}

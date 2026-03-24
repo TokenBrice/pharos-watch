@@ -50,7 +50,7 @@ export function Header() {
   }
 
   return (
-    <header className="md:hidden sticky top-0 z-50 border-b border-border/80 bg-background/88 shadow-[0_6px_20px_oklch(0_0_0_/0.08)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/72">
+    <header className="md:hidden sticky top-0 z-50 border-b border-border/80 bg-background/88 backdrop-blur-xl supports-[backdrop-filter]:bg-background/72" style={{ boxShadow: "var(--elevation-rest)" }}>
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
         <Link href="/" className="pharos-focus-ring flex items-center gap-3 rounded-md font-semibold">
           <PharosLogo size={32} priority />

@@ -20,6 +20,7 @@ import {
   PRICING_PIPELINE_CHANGELOG_PATH,
   PRICING_PIPELINE_VERSION_LABEL,
 } from "@shared/lib/pricing-pipeline-version";
+import { SafetyScoreCalculator } from "@/components/methodology/safety-score-calculator";
 import { CollateralQualityMethodologyCopy } from "./core-sections-fragments";
 import { MethodologyDetails, MethodologyFacts, WorkedExample } from "../methodology-shared";
 
@@ -52,20 +53,50 @@ export function CoreMethodologySections() {
           <p>
             Every score Pharos computes starts with a price. The pricing pipeline collects quotes from more than a dozen
             live voices, requires fully pairwise agreement inside each cluster, and selects the highest-confidence result.
-            Kraken and Bitstamp extend the direct venue set, a pool challenge
-            guard downgrades confidence and replaces the price with a TVL-weighted pool average when large DEX pools
-            diverge from aggregator consensus, including DEX-inclusive soft clusters unless an exempt hard source is present. DEX bridge identity is now canonical-only at runtime, so addressed unknown tokens are dropped instead of being reinterpreted by symbol, promoted protocol DEX prices only enter consensus when they are corroborated or no non-DEX voices exist, and direct-API quote legs prefer tracked live stablecoin prices instead of unconditional `$1` symbol assumptions. Fresh RedStone prices need timestamped multi-venue breakdowns. Protocol-level
-            redemption prices override market data for wrapper assets, Chainlink refreshes supported FX and commodity
-            reference rates, and the dated secondary FX mirror can temporarily carry the wider fiat reference stack when
-            Frankfurter is unavailable, with ExchangeRate-API as a tertiary daily fallback if both primary FX paths are down.
-            If those live FX fetches still fail but the last published daily references remain within cadence, Pharos
-            carries those dated references forward as a healthy refresh. Even cached-fallback FX runs keep probing the independent
-            OXR, Chainlink, and metals paths, so a recovered intraday subset can promote the lane back to live without waiting for the full Frankfurter stack.
-            The live payload now also distinguishes true upstream observation timestamps from locally stamped fetch-time freshness via
-            <code className="mx-1 text-xs">priceObservedAtMode</code>, so a hard single-source print only becomes depeg-authoritative when
-            its freshness is source-native rather than inferred from local collection time.
-            A 5-pass enrichment pipeline fills gaps for long-tail coins. Each asset is tagged with a confidence level
-            so downstream systems can react to data quality, and severe fixed-peg downside publication now requires corroboration unless it comes from an explicit protocol redemption or pool-challenge replacement mark. When a confirmed severe depeg briefly loses corroboration, the pipeline now preserves trusted continuity from fresh replay-safe `price_cache` rows instead of letting the asset flap to `N/A`.
+          </p>
+
+          <p>
+            <strong className="text-foreground">Source diversity.</strong>{" "}
+            Kraken and Bitstamp extend the direct venue set. Fresh RedStone prices need timestamped multi-venue breakdowns.
+            DEX bridge identity is now canonical-only at runtime, so addressed unknown tokens are dropped instead of being
+            reinterpreted by symbol, promoted protocol DEX prices only enter consensus when they are corroborated or no
+            non-DEX voices exist, and direct-API quote legs prefer tracked live stablecoin prices instead of unconditional{" "}
+            <code className="mx-1 text-xs">$1</code> symbol assumptions.
+          </p>
+
+          <p>
+            <strong className="text-foreground">Pool challenge.</strong>{" "}
+            A pool challenge guard downgrades confidence and replaces the price with a TVL-weighted pool average when large
+            DEX pools diverge from aggregator consensus, including DEX-inclusive soft clusters unless an exempt hard source
+            is present.
+          </p>
+
+          <p>
+            <strong className="text-foreground">Overrides &amp; FX.</strong>{" "}
+            Protocol-level redemption prices override market data for wrapper assets. Chainlink refreshes supported FX and
+            commodity reference rates, and the dated secondary FX mirror can temporarily carry the wider fiat reference stack
+            when Frankfurter is unavailable, with ExchangeRate-API as a tertiary daily fallback if both primary FX paths are
+            down. If those live FX fetches still fail but the last published daily references remain within cadence, Pharos
+            carries those dated references forward as a healthy refresh. Even cached-fallback FX runs keep probing the
+            independent OXR, Chainlink, and metals paths, so a recovered intraday subset can promote the lane back to live
+            without waiting for the full Frankfurter stack.
+          </p>
+
+          <p>
+            <strong className="text-foreground">Freshness tracking.</strong>{" "}
+            The live payload distinguishes true upstream observation timestamps from locally stamped fetch-time freshness via{" "}
+            <code className="mx-1 text-xs">priceObservedAtMode</code>, so a hard single-source print only becomes
+            depeg-authoritative when its freshness is source-native rather than inferred from local collection time.
+          </p>
+
+          <p>
+            <strong className="text-foreground">Enrichment &amp; confidence.</strong>{" "}
+            A 5-pass enrichment pipeline fills gaps for long-tail coins. Each asset is tagged with a confidence level so
+            downstream systems can react to data quality, and severe fixed-peg downside publication now requires corroboration
+            unless it comes from an explicit protocol redemption or pool-challenge replacement mark. When a confirmed severe
+            depeg briefly loses corroboration, the pipeline preserves trusted continuity from fresh replay-safe{" "}
+            <code className="mx-1 text-xs">price_cache</code> rows instead of letting the asset flap to{" "}
+            <code className="mx-1 text-xs">N/A</code>.
           </p>
           <div className="grid gap-2 sm:grid-cols-3">
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
@@ -744,6 +775,10 @@ export function CoreMethodologySections() {
               Result: <span className="text-foreground">Score 64 (grade C+)</span>.
             </p>
           </WorkedExample>
+
+          <MethodologyDetails summary="Interactive calculator: explore how weights and thresholds shape the grade">
+            <SafetyScoreCalculator />
+          </MethodologyDetails>
 
           <MethodologyDetails summary="Technical details: full pipeline, dimension formulas, thresholds, and caveats">
             {/* Scoring pipeline diagram — desktop: horizontal dimension row then vertical flow */}

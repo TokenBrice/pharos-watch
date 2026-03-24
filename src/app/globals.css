@@ -446,6 +446,36 @@
   .pharos-toast-exit {
     animation: pharos-toast-exit 200ms var(--motion-ease-standard) both;
   }
+
+  /* Confidence typography — visual weight reflects data confidence */
+  .pharos-confidence-high {
+    /* No modification — full rendering is the default */
+  }
+  .pharos-confidence-single-source {
+    opacity: 0.78;
+    text-decoration: underline;
+    text-decoration-style: dashed;
+    text-decoration-color: var(--border-default);
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+  }
+  .pharos-confidence-low {
+    opacity: 0.62;
+    text-decoration: underline;
+    text-decoration-style: dashed;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+  }
+  .pharos-confidence-fallback {
+    opacity: 0.50;
+    text-decoration: underline;
+    text-decoration-style: dashed;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+    font-style: italic;
+  }
 }
 
 @media (max-width: 767px) {
@@ -591,6 +621,11 @@
   @keyframes pharos-risk-pulse {
     0%, 100% { box-shadow: 0 0 0 0 oklch(0.7 0.2 25 / 0.25); }
     50% { box-shadow: 0 0 0 4px oklch(0.7 0.2 25 / 0); }
+  }
+
+  @keyframes pharos-regime-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
   }
 
   .animate-risk-pulse {

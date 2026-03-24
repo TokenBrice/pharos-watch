@@ -57,10 +57,7 @@ function ComparePreview({
               <span className="text-xs text-muted-foreground">Normalized overlays</span>
             </div>
             <div className="flex h-24 items-end gap-2">
-              <div className="h-12 flex-1 rounded-t-xl bg-cyan-500/35" />
-              <div className="h-20 flex-1 rounded-t-xl bg-blue-500/35" />
-              <div className="h-16 flex-1 rounded-t-xl bg-emerald-500/30" />
-              <div className="h-10 flex-1 rounded-t-xl bg-amber-500/30" />
+              <div className="h-24 flex-1 rounded-lg border-2 border-dashed border-border/40" />
             </div>
           </div>
 

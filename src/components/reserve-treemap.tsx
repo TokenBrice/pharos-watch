@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
+import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import type { ReserveSlice, ReserveRisk } from "@shared/types";
 
 interface ReserveTreemapProps {
@@ -106,17 +107,13 @@ function ReserveTooltip({
   active?: boolean;
   payload?: Array<{ payload: { name: string; pct: number; risk: ReserveRisk } }>;
 }) {
-  if (!active || !payload?.[0]) return null;
+  if (!payload?.[0]) return null;
   const { name, pct, risk } = payload[0].payload;
   return (
-    <div className="rounded-lg border bg-card px-3 py-2 shadow-md text-sm">
-      <p className="font-semibold">{name}</p>
-      <div className="flex items-center gap-2 mt-1">
-        <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: RISK_COLORS[risk] }} />
-        <span className="font-mono tabular-nums">{pct}%</span>
-        <span className="text-muted-foreground text-xs">({RISK_LABELS[risk]})</span>
-      </div>
-    </div>
+    <PharosChartTooltip active={active}>
+      <TooltipLabel>{name}</TooltipLabel>
+      <TooltipRow color={RISK_COLORS[risk]} label={RISK_LABELS[risk]} value={`${pct}%`} />
+    </PharosChartTooltip>
   );
 }
 

@@ -20,25 +20,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { DEAD_STABLECOINS, CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
-import { CHART_RED, CHART_BLUE, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
+import { CHART_RED, CHART_BLUE } from "@/lib/chart-colors";
+import { PharosChartTooltip } from "@/components/pharos-chart-tooltip";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import type { CauseOfDeath } from "@shared/types";
 
 /* ── Custom tooltip shell ── */
 
-function ChartTooltip({ children }: { children: ReactNode }) {
+function ChartTooltip({ active, children }: { active?: boolean; children: ReactNode }) {
   return (
-    <div
-      className="rounded-lg border px-3 py-2 shadow-md text-sm"
-      style={{
-        backgroundColor: RECHARTS_TOOLTIP_STYLES.contentStyle.backgroundColor,
-        borderColor: "var(--color-border)",
-        borderRadius: RECHARTS_TOOLTIP_STYLES.contentStyle.borderRadius,
-        fontFamily: RECHARTS_TOOLTIP_STYLES.contentStyle.fontFamily,
-      }}
-    >
+    <PharosChartTooltip active={active}>
       {children}
-    </div>
+    </PharosChartTooltip>
   );
 }
 
@@ -101,10 +94,10 @@ function CauseOfDeathDonutChart({
           </Pie>
           <Tooltip
             content={({ active, payload }) => {
-              if (!active || !payload?.[0]) return null;
+              if (!payload?.[0]) return null;
               const datum = payload[0].payload as CauseOfDeathDonutDatum;
               return (
-                <ChartTooltip>
+                <ChartTooltip active={active}>
                   <p className="font-semibold" style={{ color: CAUSE_HEX[datum.cause] }}>
                     {datum.name}
                   </p>
@@ -253,9 +246,9 @@ function DeathsByYearChart() {
           />
           <Tooltip
             content={({ active, payload, label }) => {
-              if (!active || !payload?.length) return null;
+              if (!payload?.length) return null;
               return (
-                <ChartTooltip>
+                <ChartTooltip active={active}>
                   <p className="font-semibold mb-1">{label}</p>
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-1.5">
@@ -326,10 +319,10 @@ function TopFailuresChart() {
           />
           <Tooltip
             content={({ active, payload }) => {
-              if (!active || !payload?.[0]) return null;
+              if (!payload?.[0]) return null;
               const d = payload[0].payload as (typeof data)[0];
               return (
-                <ChartTooltip>
+                <ChartTooltip active={active}>
                   <p className="font-semibold">{d.name}</p>
                   <p className="font-mono tabular-nums">{formatCurrency(d.mcap, 1)}</p>
                   <p style={{ color: CAUSE_HEX[d.cause] }}>{CAUSE_META[d.cause].label}</p>
@@ -403,10 +396,10 @@ function CumulativeDestroyedChart() {
           />
           <Tooltip
             content={({ active, payload }) => {
-              if (!active || !payload?.[0]) return null;
+              if (!payload?.[0]) return null;
               const d = payload[0].payload as (typeof data)[0];
               return (
-                <ChartTooltip>
+                <ChartTooltip active={active}>
                   <p className="font-semibold">{d.symbol}</p>
                   <p className="text-muted-foreground text-xs">{d.date}</p>
                   <p className="font-mono tabular-nums">+{formatCurrency(d.added, 1)}</p>
