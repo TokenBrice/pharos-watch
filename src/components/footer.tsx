@@ -95,33 +95,18 @@ export function Footer() {
           </nav>
         </details>
 
-        <div className="hidden flex-wrap items-center justify-between gap-4 border-t border-border/50 pt-4 sm:flex">
-          <nav aria-label="Browse by category" className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        <div className="flex flex-col gap-4 border-t border-border/50 pt-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <nav aria-label="Browse by category" className="hidden flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground sm:flex">
             {CATEGORY_LINKS.map((cat) => (
-              <Link
-                key={cat.href}
-                href={cat.href}
-                className="pharos-focus-ring hover:text-foreground transition-colors"
-              >
+              <Link key={cat.href} href={cat.href} className="pharos-focus-ring hover:text-foreground transition-colors">
                 {cat.label}
               </Link>
             ))}
           </nav>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
-            <Link href="/privacy/" className="pharos-focus-ring rounded-sm hover:text-foreground">
-              Privacy
-            </Link>
+            <Link href="/privacy/" className="pharos-focus-ring rounded-sm hover:text-foreground">Privacy</Link>
             <p>Not financial advice. Data is provided as-is for informational purposes only.</p>
           </div>
-        </div>
-
-        <div className="space-y-2 border-t border-border/50 pt-4 text-xs text-muted-foreground sm:hidden">
-          <div className="flex flex-wrap gap-3">
-            <Link href="/privacy/" className="pharos-focus-ring rounded-sm hover:text-foreground">
-              Privacy
-            </Link>
-          </div>
-          <p>Not financial advice. Data is provided as-is for informational purposes only.</p>
         </div>
       </div>
     </footer>
