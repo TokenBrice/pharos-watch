@@ -106,8 +106,6 @@ function isValidRate(pegKey: string, rate: number, prevRate: number | undefined)
   }
   return true;
 }
-
-
 const FrankfurterResponseSchema = z.object({
   base: z.string(),
   date: z.string(),
@@ -259,6 +257,8 @@ export async function syncFxRates(
   signal?: AbortSignal,
   openExchangeRatesKey?: string,
   chainRpcs?: Map<string, ChainRpcConfig>,
+  drpcApiKey?: string | null,
+  etherscanApiKey?: string | null,
 ): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
   const runBestEffort = async (label: string, fn: () => Promise<void>) => {
@@ -665,7 +665,6 @@ export async function syncFxRates(
       inheritPrevious("peggedCNH");
       console.log(`[sync-fx-rates] Using cached CNH rate: ${usableRates["peggedCNH"]}`);
     }
-
     const metals = await resolveMetalReferenceRates({
       prevRates,
       commodityPeerMedian,
@@ -685,12 +684,17 @@ export async function syncFxRates(
     }
     sources["gold-api.com"] = metals.sources["gold-api.com"];
     sources["commodity-peer-median"] = metals.sources["commodity-peer-median"];
-
     let chainlinkSource: "ok" | "partial" | "unavailable" = "unavailable";
     const chainlinkAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS);
     if (chainlinkAllowed) {
       try {
-        const snapshot = await fetchChainlinkReferenceQuoteSnapshot(signal, chainRpcs, syncStartSec);
+        const snapshot = await fetchChainlinkReferenceQuoteSnapshot(
+          signal,
+          chainRpcs,
+          syncStartSec,
+          drpcApiKey,
+          etherscanApiKey,
+        );
         const quotes = snapshot.quotes;
         let applied = 0;
         for (const [pegKey, quote] of quotes) {
@@ -705,7 +709,6 @@ export async function syncFxRates(
               continue;
             }
           }
-
           const normalized = Number(quote.price.toFixed(6));
           if (isValidRate(pegKey, normalized, prevRates[pegKey])) {
             usableRates[pegKey] = normalized;
@@ -724,7 +727,6 @@ export async function syncFxRates(
             inheritPrevious(pegKey);
           }
         }
-
         chainlinkSource = quotes.size > 0 ? (applied === quotes.size ? "ok" : "partial") : "unavailable";
         await runBestEffort("recordOutcome:chainlink-feeds", async () => {
           await recordOutcome(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS, quotes.size > 0);
@@ -746,7 +748,6 @@ export async function syncFxRates(
       if (sources.cache === "ok") sources.cache = "recovered";
       console.log("[sync-fx-rates] Independent sources restored fresh full-set coverage after cached fallback");
     }
-
     const missing = EXPECTED_FX_PEG_KEYS.filter((k) => !(k in usableRates));
     if (Object.keys(usableRates).length === 0) {
       throw new Error("sync-fx-rates produced zero usable rates");
@@ -772,10 +773,8 @@ export async function syncFxRates(
             : 1
           : 0,
     };
-
     await persistFxRateState(db, usableRates, meta, syncStartSec);
     console.log(`[sync-fx-rates] Cached FX rates: ${JSON.stringify(usableRates)}`);
-
     const metadata = {
       rateCount: Object.keys(usableRates).length,
       mode,

@@ -2,9 +2,11 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 
 vi.mock("../evm-rpc", () => ({
   fetchEvmCallHexAtBlock: vi.fn(),
+  fetchEtherscanProxyHex: vi.fn(),
+  fetchJsonRpcHexAtUrl: vi.fn(),
 }));
 
-import { fetchEvmCallHexAtBlock } from "../evm-rpc";
+import { fetchEtherscanProxyHex, fetchEvmCallHexAtBlock, fetchJsonRpcHexAtUrl } from "../evm-rpc";
 import {
   CHAINLINK_REFERENCE_FEEDS,
   fetchChainlinkReferenceQuoteSnapshot,
@@ -14,6 +16,8 @@ import {
 } from "../chainlink-feeds";
 
 const mockFetchEvmCallHexAtBlock = vi.mocked(fetchEvmCallHexAtBlock);
+const mockFetchEtherscanProxyHex = vi.mocked(fetchEtherscanProxyHex);
+const mockFetchJsonRpcHexAtUrl = vi.mocked(fetchJsonRpcHexAtUrl);
 
 function encodeWord(value: bigint): string {
   return value.toString(16).padStart(64, "0");
@@ -36,7 +40,9 @@ function buildLatestRoundDataHex(answer: bigint, updatedAt: number): `0x${string
 }
 
 afterEach(() => {
-  vi.clearAllMocks();
+  mockFetchEvmCallHexAtBlock.mockReset();
+  mockFetchEtherscanProxyHex.mockReset();
+  mockFetchJsonRpcHexAtUrl.mockReset();
 });
 
 describe("parseSignedInt256Word", () => {
@@ -75,6 +81,63 @@ describe("fetchChainlinkReferenceQuotes", () => {
 
     const quotes = await fetchChainlinkReferenceQuotes(undefined, undefined, 1_763_888_000);
     expect(quotes.get("peggedEUR")?.price).toBeCloseTo(1.1582, 4);
+  });
+
+  it("falls back to the Etherscan proxy when RPC calls return null", async () => {
+    const eurFeed = CHAINLINK_REFERENCE_FEEDS.find((feed) => feed.pegKey === "peggedEUR");
+    expect(eurFeed).toBeDefined();
+
+    mockFetchEvmCallHexAtBlock.mockResolvedValue(null);
+    mockFetchJsonRpcHexAtUrl.mockResolvedValue(null);
+    mockFetchEtherscanProxyHex.mockImplementation(async ({ evmChainId, to, data }) => {
+      expect(evmChainId).toBe(8453);
+      if (to === eurFeed!.proxyAddress && data === "0x313ce567") {
+        return "0x0000000000000000000000000000000000000000000000000000000000000008";
+      }
+      if (to === eurFeed!.proxyAddress && data === "0xfeaf968c") {
+        return buildLatestRoundDataHex(115_820_000n, 1_763_887_900);
+      }
+      return null;
+    });
+
+    const quotes = await fetchChainlinkReferenceQuotes(undefined, undefined, 1_763_888_000, undefined, "etherscan-key");
+    expect(quotes.get("peggedEUR")?.price).toBeCloseTo(1.1582, 4);
+    expect(mockFetchEtherscanProxyHex).toHaveBeenCalled();
+  });
+
+  it("prefers dRPC before shared RPC and Etherscan fallbacks", async () => {
+    const eurFeed = CHAINLINK_REFERENCE_FEEDS.find((feed) => feed.pegKey === "peggedEUR");
+    expect(eurFeed).toBeDefined();
+
+    mockFetchJsonRpcHexAtUrl.mockImplementation(async (_url, _method, params) => {
+      const [callObj] = params as [{ to: string; data: string }];
+      if (callObj.to === eurFeed!.proxyAddress && callObj.data === "0x313ce567") {
+        return "0x0000000000000000000000000000000000000000000000000000000000000008";
+      }
+      if (callObj.to === eurFeed!.proxyAddress && callObj.data === "0xfeaf968c") {
+        return buildLatestRoundDataHex(115_820_000n, 1_763_887_900);
+      }
+      return null;
+    });
+
+    const quotes = await fetchChainlinkReferenceQuotes(undefined, undefined, 1_763_888_000, "drpc-key");
+    expect(quotes.get("peggedEUR")?.price).toBeCloseTo(1.1582, 4);
+    expect(mockFetchJsonRpcHexAtUrl).toHaveBeenCalled();
+    expect(mockFetchEvmCallHexAtBlock).not.toHaveBeenCalledWith(
+      "base",
+      eurFeed!.proxyAddress,
+      "0x313ce567",
+      "latest",
+      expect.anything(),
+    );
+    expect(mockFetchEvmCallHexAtBlock).not.toHaveBeenCalledWith(
+      "base",
+      eurFeed!.proxyAddress,
+      "0xfeaf968c",
+      "latest",
+      expect.anything(),
+    );
+    expect(mockFetchEtherscanProxyHex).not.toHaveBeenCalled();
   });
 
   it("skips stale quotes", async () => {

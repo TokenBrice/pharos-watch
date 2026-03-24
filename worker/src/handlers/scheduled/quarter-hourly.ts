@@ -1,10 +1,11 @@
 /**
  * Quarter-hourly trigger (every 15 min):
- *   sync-stablecoins (3) → snapshot-supply (0) → sync-fx-rates (2)
+ *   sync-fx-rates (2) → sync-stablecoins (3) → snapshot-supply (0)
  *   → status-self-check (1)
  *
  * All jobs run sequentially in-slot to avoid cross-job connection spikes.
- * Connection budget: 3/6 peak (sync-stablecoins phase)
+ * Run FX first so Chainlink gets a clean RPC window before the heavier
+ * stablecoin pricing pipeline consumes the slot's shared fetch budget.
  */
 import { getCache } from "../../lib/db-cache";
 import { sendAlert } from "../../lib/alerts";
@@ -28,6 +29,17 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
       return null;
     }
   };
+
+  await runQuarterHourlyJob("sync-fx-rates", (signal) =>
+    syncFxRates(
+      runtime.db,
+      signal,
+      runtime.env.OPENEXCHANGERATES_API_KEY,
+      runtime.chainRpcs,
+      runtime.env.DRPC_API_KEY ?? null,
+      runtime.env.ETHERSCAN_API_KEY ?? null,
+    ),
+  );
 
   const stablecoinsResult = await runQuarterHourlyJob(
     "sync-stablecoins",
@@ -54,10 +66,6 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
   if (stablecoinsCacheSafe) {
     await runQuarterHourlyJob("snapshot-chain-supply", (signal) => snapshotChainSupply(runtime.db, signal));
   }
-
-  await runQuarterHourlyJob("sync-fx-rates", (signal) =>
-    syncFxRates(runtime.db, signal, runtime.env.OPENEXCHANGERATES_API_KEY, runtime.chainRpcs),
-  );
 
   await runQuarterHourlyJob(
     "status-self-check",

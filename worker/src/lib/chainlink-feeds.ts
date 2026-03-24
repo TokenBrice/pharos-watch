@@ -1,8 +1,23 @@
+import { CHAIN_META } from "@shared/lib/chains";
 import type { ChainRpcConfig } from "./chain-registry";
-import { fetchEvmCallHexAtBlock } from "./evm-rpc";
+import { fetchEtherscanProxyHex, fetchEvmCallHexAtBlock, fetchJsonRpcHexAtUrl } from "./evm-rpc";
 
 const DECIMALS_SELECTOR = "0x313ce567";
 const LATEST_ROUND_DATA_SELECTOR = "0xfeaf968c";
+const DRPC_NETWORK: Partial<Record<string, string>> = {
+  arbitrum: "arbitrum",
+  base: "base",
+  ethereum: "ethereum",
+};
+const DRPC_PUBLIC_RPC_URL: Partial<Record<string, string>> = {
+  arbitrum: "https://arbitrum.drpc.org",
+  base: "https://base.drpc.org",
+  ethereum: "https://eth.drpc.org",
+};
+type DrpcRpcTarget = {
+  label: string;
+  url: string;
+};
 
 export interface ChainlinkReferenceFeed {
   pegKey: string;
@@ -98,21 +113,104 @@ async function fetchFeedDecimals(
   feed: ChainlinkReferenceFeed,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
+  drpcApiKey?: string | null,
+  etherscanApiKey?: string | null,
 ): Promise<number | null> {
-  const hex = await fetchEvmCallHexAtBlock(feed.chainId, feed.proxyAddress, DECIMALS_SELECTOR, "latest", {
+  const hex = await fetchChainlinkFeedCallHex(feed, DECIMALS_SELECTOR, signal, chainRpcs, drpcApiKey, etherscanApiKey);
+  if (!hex) return null;
+  return Number(BigInt(hex));
+}
+
+function getEvmChainId(chainId: string): number | null {
+  const meta = CHAIN_META[chainId];
+  if (!meta || meta.type !== "evm" || meta.evmChainId == null) {
+    return null;
+  }
+  return meta.evmChainId;
+}
+
+async function fetchChainlinkDrpcHex(
+  feed: ChainlinkReferenceFeed,
+  data: string,
+  signal?: AbortSignal,
+  drpcApiKey?: string | null,
+): Promise<`0x${string}` | null> {
+  const network = DRPC_NETWORK[feed.chainId];
+  if (!network) return null;
+
+  const targets: DrpcRpcTarget[] = [
+    drpcApiKey ? { label: "premium", url: `https://lb.drpc.live/${network}/${drpcApiKey}` } : null,
+    DRPC_PUBLIC_RPC_URL[feed.chainId] ? { label: "public", url: DRPC_PUBLIC_RPC_URL[feed.chainId]! } : null,
+    drpcApiKey ? { label: "legacy", url: `https://lb.drpc.org/ogrpc?network=${network}&dkey=${drpcApiKey}` } : null,
+  ].filter((value): value is DrpcRpcTarget => value != null);
+
+  for (const target of targets) {
+    const result = await fetchJsonRpcHexAtUrl(
+      target.url,
+      "eth_call",
+      [{ to: feed.proxyAddress, data }, "latest"],
+      { signal, timeoutMs: 10_000 },
+    );
+    if (!result) continue;
+    const methodLabel = data === DECIMALS_SELECTOR ? "decimals()" : "latestRoundData()";
+    console.log(`[chainlink-feeds] ${feed.pegKey} recovered ${methodLabel} via dRPC (${target.label})`);
+    return result;
+  }
+
+  return null;
+}
+
+async function fetchChainlinkFeedCallHex(
+  feed: ChainlinkReferenceFeed,
+  data: string,
+  signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+  drpcApiKey?: string | null,
+  etherscanApiKey?: string | null,
+): Promise<`0x${string}` | null> {
+  const drpcHex = await fetchChainlinkDrpcHex(feed, data, signal, drpcApiKey);
+  if (drpcHex) {
+    return drpcHex;
+  }
+
+  const rpcHex = await fetchEvmCallHexAtBlock(feed.chainId, feed.proxyAddress, data, "latest", {
     signal,
     chainRpcs,
   });
-  if (!hex) return null;
-  return Number(BigInt(hex));
+  if (rpcHex) {
+    return rpcHex;
+  }
+
+  const evmChainId = getEvmChainId(feed.chainId);
+  if (!etherscanApiKey || evmChainId == null) {
+    return null;
+  }
+
+  const proxyHex = await fetchEtherscanProxyHex({
+    evmChainId,
+    action: "eth_call",
+    to: feed.proxyAddress,
+    data,
+    blockNumberOrTag: "latest",
+    apiKey: etherscanApiKey,
+    signal,
+    timeoutMs: 10_000,
+  });
+  if (proxyHex) {
+    const methodLabel = data === DECIMALS_SELECTOR ? "decimals()" : "latestRoundData()";
+    console.log(`[chainlink-feeds] ${feed.pegKey} recovered ${methodLabel} via Etherscan proxy`);
+  }
+  return proxyHex;
 }
 
 export async function fetchChainlinkReferenceQuotes(
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
   nowSec = Math.floor(Date.now() / 1000),
+  drpcApiKey?: string | null,
+  etherscanApiKey?: string | null,
 ): Promise<Map<string, ChainlinkReferenceQuote>> {
-  const snapshot = await fetchChainlinkReferenceQuoteSnapshot(signal, chainRpcs, nowSec);
+  const snapshot = await fetchChainlinkReferenceQuoteSnapshot(signal, chainRpcs, nowSec, drpcApiKey, etherscanApiKey);
   return snapshot.quotes;
 }
 
@@ -120,6 +218,8 @@ export async function fetchChainlinkReferenceQuoteSnapshot(
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
   nowSec = Math.floor(Date.now() / 1000),
+  drpcApiKey?: string | null,
+  etherscanApiKey?: string | null,
 ): Promise<ChainlinkReferenceQuoteSnapshot> {
   const quotes = new Map<string, ChainlinkReferenceQuote>();
   const summary: ChainlinkReferenceQuoteSummary = {
@@ -136,7 +236,7 @@ export async function fetchChainlinkReferenceQuoteSnapshot(
 
   for (const feed of CHAINLINK_REFERENCE_FEEDS) {
     try {
-      const decimals = await fetchFeedDecimals(feed, signal, chainRpcs);
+      const decimals = await fetchFeedDecimals(feed, signal, chainRpcs, drpcApiKey, etherscanApiKey);
       if (decimals == null) {
         summary.decimalsUnavailable++;
         continue;
@@ -146,12 +246,13 @@ export async function fetchChainlinkReferenceQuoteSnapshot(
         continue;
       }
 
-      const roundHex = await fetchEvmCallHexAtBlock(
-        feed.chainId,
-        feed.proxyAddress,
+      const roundHex = await fetchChainlinkFeedCallHex(
+        feed,
         LATEST_ROUND_DATA_SELECTOR,
-        "latest",
-        { signal, chainRpcs },
+        signal,
+        chainRpcs,
+        drpcApiKey,
+        etherscanApiKey,
       );
       if (!roundHex) {
         summary.roundDataUnavailable++;

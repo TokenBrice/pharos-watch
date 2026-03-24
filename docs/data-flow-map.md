@@ -32,7 +32,7 @@ This map links each major Pharos data domain from upstream source to frontend co
 
 Cron schedules are declared in `worker/wrangler.toml` and orchestrated by `worker/src/handlers/scheduled.ts`:
 
-- `*/15 * * * *`: sync-stablecoins (including depeg detection + pending confirmation), then downstream-safe snapshot-supply retry / snapshot-chain-supply / FX / status self-check
+- `*/15 * * * *`: sync-fx-rates first, then sync-stablecoins (including depeg detection + pending confirmation), then downstream-safe snapshot-supply retry / snapshot-chain-supply / status self-check
 - `3 * * * *`: blacklist sync
 - `4,24,44 * * * *`: mint/burn critical lane
 - `6,36 * * * *`: DEX discovery staging (every 30 minutes)

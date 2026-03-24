@@ -187,6 +187,9 @@ describe("worker.scheduled", () => {
     );
     await Promise.all(waits);
 
+    expect(cronMocks.syncFxRates.mock.invocationCallOrder[0]).toBeLessThan(
+      cronMocks.syncStablecoins.mock.invocationCallOrder[0],
+    );
     expect(cronMocks.syncStablecoins).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncFxRates).toHaveBeenCalledTimes(1);
