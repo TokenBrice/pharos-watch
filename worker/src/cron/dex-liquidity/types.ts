@@ -111,7 +111,19 @@ export interface PoolEntry {
       balancePct: number;
       isTracked: boolean;
     }[];
+    measurement?: PoolMeasurementFlags;
   };
+}
+
+export interface PoolMeasurementFlags {
+  tvlMeasured?: boolean;
+  volumeMeasured?: boolean;
+  balanceMeasured?: boolean;
+  maturityMeasured?: boolean;
+  priceMeasured?: boolean;
+  synthetic?: boolean;
+  decayed?: boolean;
+  capped?: boolean;
 }
 
 export interface DexPriceObs {
@@ -268,6 +280,10 @@ export interface GtNewPool {
     balancePct: number;
     isTracked: boolean;
   }[];
+  /** Optional pair-quality override for synthetic/non-AMM liquidity families. */
+  pairQualityOverride?: number | null;
+  /** Measurement/provenance flags for downstream confidence accounting. */
+  measurement?: PoolMeasurementFlags;
 }
 
 export interface CgNewPool extends GtNewPool {

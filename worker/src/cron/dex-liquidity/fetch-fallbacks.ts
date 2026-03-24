@@ -25,6 +25,32 @@ import {
   type PoolIdentity,
 } from "./pool-identity";
 
+const WEAK_COVERAGE_MIN_POOL_COUNT = 3;
+const WEAK_COVERAGE_MIN_PROTOCOL_COUNT = 2;
+const WEAK_COVERAGE_MIN_TVL_USD = 250_000;
+const WEAK_COVERAGE_MIN_MEASURED_BALANCE_SHARE = 0.25;
+
+function needsCoverageEnrichment(
+  metric: LiquidityMetrics | undefined,
+  observations: DexPriceObs[],
+): boolean {
+  if (!metric) return true;
+  if ((metric.poolCount ?? 0) === 0) return true;
+  if (observations.length === 0) return true;
+
+  const protocolCount = new Set(observations.map((observation) => observation.protocol)).size;
+  const measuredBalanceShare = metric.totalTvlUsd > 0
+    ? metric.totalTvlForBalance / metric.totalTvlUsd
+    : 0;
+
+  if (metric.poolCount < WEAK_COVERAGE_MIN_POOL_COUNT) return true;
+  if (protocolCount < WEAK_COVERAGE_MIN_PROTOCOL_COUNT) return true;
+  if (metric.totalTvlUsd < WEAK_COVERAGE_MIN_TVL_USD) return true;
+  if (measuredBalanceShare < WEAK_COVERAGE_MIN_MEASURED_BALANCE_SHARE) return true;
+
+  return false;
+}
+
 export function getFallbackTargets(
   metrics: Map<string, LiquidityMetrics>,
   priceObservations: Map<string, DexPriceObs[]>,
@@ -37,9 +63,8 @@ export function getFallbackTargets(
     if (options.requireGeckoId && !meta.geckoId) return false;
     if (options.requireTrackedContracts && getTrackedContracts(meta).length === 0) return false;
     const metric = metrics.get(meta.id);
-    const hasPools = (metric?.poolCount ?? 0) > 0;
-    const hasDexPrice = (priceObservations.get(meta.id)?.length ?? 0) > 0;
-    return !hasPools || !hasDexPrice;
+    const observations = priceObservations.get(meta.id) ?? [];
+    return needsCoverageEnrichment(metric, observations);
   });
 }
 
@@ -139,7 +164,7 @@ export async function fetchDsFallbackPools(
             protocol: pair.dexId,
             poolKey: identity.exactPoolKey ?? undefined,
             derivedMatchKey: identity.derivedMatchKey ?? undefined,
-            identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
+            identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_ambiguous" : "none",
             sourceFamily: "dexscreener",
           });
           priceObs.set(meta.id, obs);
@@ -185,6 +210,14 @@ export async function fetchDsFallbackPools(
           price: priceUsd ?? 0,
           symbol: symbolStr,
           sourceFamily: "dexscreener",
+          measurement: {
+            tvlMeasured: true,
+            volumeMeasured: true,
+            balanceMeasured: false,
+            maturityMeasured: pair.pairCreatedAt != null,
+            priceMeasured: priceUsd != null && priceUsd > 0,
+            synthetic: false,
+          },
           },
         });
       }
@@ -282,12 +315,20 @@ export async function fetchCgTickersFallback(
           tvlUsd: summary.syntheticTvlUsd,
           volume24hUsd: summary.volumeUsd,
           qualityMultiplier: QUALITY_MULTIPLIERS["orderbook"],
-          maturityDays: 365,
+          maturityDays: 30,
           poolType: "orderbook",
           price: summary.priceUsd,
-          // Use "USDC" as quote symbol so computePoolPairQuality returns 1.0
-          symbol: `${meta.symbol} / USDC`,
+          symbol: `${meta.symbol} / ORDERBOOK-USD`,
           sourceFamily: "cg_tickers",
+          pairQualityOverride: 0.85,
+          measurement: {
+            tvlMeasured: false,
+            volumeMeasured: true,
+            balanceMeasured: false,
+            maturityMeasured: false,
+            priceMeasured: true,
+            synthetic: true,
+          },
         });
       }
 

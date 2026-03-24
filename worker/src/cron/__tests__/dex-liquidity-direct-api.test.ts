@@ -51,10 +51,10 @@ describe("fetchFluidPools", () => {
     ]);
 
     const pools = await fetchFluidPools();
-    expect(pools.length).toBeGreaterThan(0);
+    expect(pools.pools.length).toBeGreaterThan(0);
     expect(pools.ok).toBe(true);
     expect(pools.degraded).toBe(false);
-    const pool = pools[0];
+    const pool = pools.pools[0];
     expect(pool.source).toBe("fluid");
     expect(pool.poolType).toBe("fluid-dex");
     expect(pool.tvlUsd).toBe(500000);
@@ -99,8 +99,8 @@ describe("fetchFluidPools", () => {
     });
 
     const pools = await fetchFluidPools();
-    expect(pools[0].balances).toEqual([2000000, 3000000]);
-    expect(pools[0].feeRate).toBeCloseTo(0.0001);
+    expect(pools.pools[0].balances).toEqual([2000000, 3000000]);
+    expect(pools.pools[0].feeRate).toBeCloseTo(0.0001);
   });
 
   it("uses provided chain RPCs for resolver enrichment", async () => {
@@ -151,7 +151,7 @@ describe("fetchFluidPools", () => {
 
     const pools = await fetchFluidPools(undefined, chainRpcs);
 
-    expect(pools[0].balances).toEqual([2000000, 3000000]);
+    expect(pools.pools[0].balances).toEqual([2000000, 3000000]);
     expect(mockFetch.mock.calls.some(([input]) => String(input) === "https://rpc.example")).toBe(true);
   });
 
@@ -171,10 +171,10 @@ describe("fetchFluidPools", () => {
     ]);
 
     const pools = await fetchFluidPools();
-    expect(pools[0].tokens[0].symbol).toBe("");
-    expect(pools[0].tokens[0].decimals).toBe(0);
-    expect(pools[0].tokens[1].symbol).toBe("");
-    expect(pools[0].tokens[1].decimals).toBe(0);
+    expect(pools.pools[0].tokens[0].symbol).toBe("");
+    expect(pools.pools[0].tokens[0].decimals).toBe(0);
+    expect(pools.pools[0].tokens[1].symbol).toBe("");
+    expect(pools.pools[0].tokens[1].decimals).toBe(0);
   });
 
   it("approximates volume as sum of base and target volumes", async () => {
@@ -193,7 +193,7 @@ describe("fetchFluidPools", () => {
     ]);
 
     const pools = await fetchFluidPools();
-    expect(pools[0].volume24hUsd).toBe(100000);
+    expect(pools.pools[0].volume24hUsd).toBe(100000);
   });
 
   it("handles chain failure gracefully with Promise.allSettled", async () => {
@@ -204,7 +204,7 @@ describe("fetchFluidPools", () => {
 
     const pools = await fetchFluidPools();
     // Should not throw — partial failure is OK
-    expect(Array.isArray(pools)).toBe(true);
+    expect(Array.isArray(pools.pools)).toBe(true);
     expect(pools.ok).toBe(true);
     expect(pools.degraded).toBe(true);
   });
@@ -213,7 +213,7 @@ describe("fetchFluidPools", () => {
     const { fetchFluidPools } = await import("../dex-liquidity/fetch-fluid");
     mockFetch.mockRejectedValue(new Error("all chains down"));
     const pools = await fetchFluidPools();
-    expect(pools).toHaveLength(0);
+    expect(pools.pools).toHaveLength(0);
     expect(pools.ok).toBe(false);
     expect(pools.degraded).toBe(true);
   });
@@ -244,7 +244,7 @@ describe("fetchFluidPools", () => {
     ]);
 
     const pools = await fetchFluidPools();
-    expect(pools).toHaveLength(0);
+    expect(pools.pools).toHaveLength(0);
     expect(pools.ok).toBe(true);
     expect(pools.degraded).toBe(false);
   });
@@ -265,7 +265,7 @@ describe("fetchFluidPools", () => {
     ]);
 
     const pools = await fetchFluidPools();
-    expect(pools[0].price).toBeNull();
+    expect(pools.pools[0].price).toBeNull();
   });
 
   it("sets feeRate to null (Fluid API does not provide fee data)", async () => {
@@ -284,8 +284,8 @@ describe("fetchFluidPools", () => {
     ]);
 
     const pools = await fetchFluidPools();
-    expect(pools[0].feeRate).toBeNull();
-    expect(pools[0].balances).toBeNull();
+    expect(pools.pools[0].feeRate).toBeNull();
+    expect(pools.pools[0].balances).toBeNull();
   });
 
   it("handles non-array response body", async () => {
@@ -293,7 +293,7 @@ describe("fetchFluidPools", () => {
     mockJsonFetch({ error: "bad request" });
 
     const pools = await fetchFluidPools();
-    expect(pools).toHaveLength(0);
+    expect(pools.pools).toHaveLength(0);
     expect(pools.ok).toBe(false);
     expect(pools.degraded).toBe(true);
   });
@@ -303,7 +303,7 @@ describe("fetchFluidPools", () => {
     mockTextFetch("Server Error", 500);
 
     const pools = await fetchFluidPools();
-    expect(pools).toHaveLength(0);
+    expect(pools.pools).toHaveLength(0);
     expect(pools.ok).toBe(false);
     expect(pools.degraded).toBe(true);
   });
@@ -331,12 +331,12 @@ describe("fetchBalancerPools", () => {
     });
 
     const pools = await fetchBalancerPools();
-    expect(pools.length).toBe(1);
-    expect(pools[0].source).toBe("balancer");
-    expect(pools[0].poolType).toBe("balancer-stable");
-    expect(pools[0].tvlUsd).toBe(1000000);
-    expect(pools[0].feeRate).toBeCloseTo(0.0001);
-    expect(pools[0].balances).toEqual([500000, 500000]);
+    expect(pools.pools.length).toBe(1);
+    expect(pools.pools[0].source).toBe("balancer");
+    expect(pools.pools[0].poolType).toBe("balancer-stable");
+    expect(pools.pools[0].tvlUsd).toBe(1000000);
+    expect(pools.pools[0].feeRate).toBeCloseTo(0.0001);
+    expect(pools.pools[0].balances).toEqual([500000, 500000]);
   });
 
   it("classifies WEIGHTED pools correctly", async () => {
@@ -355,7 +355,7 @@ describe("fetchBalancerPools", () => {
     });
 
     const pools = await fetchBalancerPools();
-    expect(pools[0].poolType).toBe("balancer-weighted");
+    expect(pools.pools[0].poolType).toBe("balancer-weighted");
   });
 
   it("classifies all stable pool variants as balancer-stable", async () => {
@@ -375,8 +375,8 @@ describe("fetchBalancerPools", () => {
     mockJsonFetch({ data: { poolGetPools: poolData } });
 
     const pools = await fetchBalancerPools();
-    expect(pools).toHaveLength(stableTypes.length);
-    for (const pool of pools) {
+    expect(pools.pools).toHaveLength(stableTypes.length);
+    for (const pool of pools.pools) {
       expect(pool.poolType).toBe("balancer-stable");
     }
   });
@@ -397,8 +397,8 @@ describe("fetchBalancerPools", () => {
     });
 
     const pools = await fetchBalancerPools();
-    expect(pools[0].tokens[0].priceUsd).toBeCloseTo(100050 / 100000);
-    expect(pools[0].tokens[1].priceUsd).toBeCloseTo(99950 / 99950);
+    expect(pools.pools[0].tokens[0].priceUsd).toBeCloseTo(100050 / 100000);
+    expect(pools.pools[0].tokens[1].priceUsd).toBeCloseTo(99950 / 99950);
   });
 
   it("sets token priceUsd to null when balance is zero", async () => {
@@ -417,8 +417,8 @@ describe("fetchBalancerPools", () => {
     });
 
     const pools = await fetchBalancerPools();
-    expect(pools[0].tokens[0].priceUsd).toBeNull();
-    expect(pools[0].tokens[1].priceUsd).toBeCloseTo(1.0);
+    expect(pools.pools[0].tokens[0].priceUsd).toBeNull();
+    expect(pools.pools[0].tokens[1].priceUsd).toBeCloseTo(1.0);
   });
 
   it("paginates through multiple pages", async () => {
@@ -451,7 +451,7 @@ describe("fetchBalancerPools", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: { poolGetPools: page2 } })));
 
     const pools = await fetchBalancerPools();
-    expect(pools.length).toBe(1001);
+    expect(pools.pools.length).toBe(1001);
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
@@ -470,7 +470,7 @@ describe("fetchBalancerPools", () => {
     });
 
     const pools = await fetchBalancerPools();
-    expect(pools).toHaveLength(0);
+    expect(pools.pools).toHaveLength(0);
     expect(pools.ok).toBe(true);
     expect(pools.degraded).toBe(false);
   });
@@ -490,7 +490,7 @@ describe("fetchBalancerPools", () => {
     });
 
     const pools = await fetchBalancerPools();
-    expect(pools).toHaveLength(0);
+    expect(pools.pools).toHaveLength(0);
     expect(pools.ok).toBe(true);
     expect(pools.degraded).toBe(false);
   });
@@ -499,7 +499,7 @@ describe("fetchBalancerPools", () => {
     const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
     mockTextFetch("Internal Server Error", 500);
     const pools = await fetchBalancerPools();
-    expect(pools).toHaveLength(0);
+    expect(pools.pools).toHaveLength(0);
     expect(pools.ok).toBe(false);
     expect(pools.degraded).toBe(true);
   });
@@ -508,7 +508,7 @@ describe("fetchBalancerPools", () => {
     const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
     mockJsonFetch({ data: {} });
     const pools = await fetchBalancerPools();
-    expect(pools).toHaveLength(0);
+    expect(pools.pools).toHaveLength(0);
     expect(pools.ok).toBe(false);
     expect(pools.degraded).toBe(true);
   });
@@ -531,8 +531,8 @@ describe("fetchBalancerPools", () => {
     });
 
     const pools = await fetchBalancerPools();
-    expect(pools[0].chain).toBe("ethereum");
-    expect(pools[1].chain).toBe("polygon");
+    expect(pools.pools[0].chain).toBe("ethereum");
+    expect(pools.pools[1].chain).toBe("polygon");
   });
 });
 
@@ -566,12 +566,12 @@ describe("fetchRaydiumPools", () => {
       }));
 
     const pools = await fetchRaydiumPools();
-    expect(pools.length).toBe(1);
-    expect(pools[0].source).toBe("raydium");
-    expect(pools[0].poolType).toBe("raydium-clmm");
-    expect(pools[0].tvlUsd).toBe(42000000);
-    expect(pools[0].price).toBeCloseTo(0.9999);
-    expect(pools[0].balances).toEqual([20000000, 22000000]);
+    expect(pools.pools.length).toBe(1);
+    expect(pools.pools[0].source).toBe("raydium");
+    expect(pools.pools[0].poolType).toBe("raydium-clmm");
+    expect(pools.pools[0].tvlUsd).toBe(42000000);
+    expect(pools.pools[0].price).toBeCloseTo(0.9999);
+    expect(pools.pools[0].balances).toEqual([20000000, 22000000]);
   });
 
   it("classifies standard pools as raydium-amm", async () => {
@@ -596,7 +596,7 @@ describe("fetchRaydiumPools", () => {
       })));
 
     const pools = await fetchRaydiumPools();
-    const std = pools.find((p) => p.poolType === "raydium-amm");
+    const std = pools.pools.find((p) => p.poolType === "raydium-amm");
     expect(std).toBeDefined();
   });
 
@@ -619,7 +619,7 @@ describe("fetchRaydiumPools", () => {
     });
 
     const pools = await fetchRaydiumPools();
-    expect(pools[0].chain).toBe("solana");
+    expect(pools.pools[0].chain).toBe("solana");
   });
 
   it("stops pagination when TVL drops below threshold", async () => {
@@ -647,7 +647,7 @@ describe("fetchRaydiumPools", () => {
     const pools = await fetchRaydiumPools();
     // Only the first pool (50K TVL >= 10K threshold) is included;
     // second pool (5K) triggers the threshold break
-    const clmm = pools.filter((p) => p.poolType === "raydium-clmm");
+    const clmm = pools.pools.filter((p) => p.poolType === "raydium-clmm");
     expect(clmm).toHaveLength(1);
     expect(clmm[0].tvlUsd).toBe(50000);
   });
@@ -656,7 +656,7 @@ describe("fetchRaydiumPools", () => {
     const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
     mockFetch.mockRejectedValue(new Error("network error"));
     const pools = await fetchRaydiumPools();
-    expect(pools).toHaveLength(0);
+    expect(pools.pools).toHaveLength(0);
     expect(pools.ok).toBe(false);
     expect(pools.degraded).toBe(true);
   });
@@ -665,7 +665,7 @@ describe("fetchRaydiumPools", () => {
     const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
     mockTextFetch("error", 503);
     const pools = await fetchRaydiumPools();
-    expect(pools).toHaveLength(0);
+    expect(pools.pools).toHaveLength(0);
     expect(pools.ok).toBe(false);
     expect(pools.degraded).toBe(true);
   });
@@ -674,7 +674,7 @@ describe("fetchRaydiumPools", () => {
     const { fetchRaydiumPools } = await import("../dex-liquidity/fetch-raydium");
     mockJsonFetch({ success: true, data: null });
     const pools = await fetchRaydiumPools();
-    expect(pools).toHaveLength(0);
+    expect(pools.pools).toHaveLength(0);
     expect(pools.ok).toBe(false);
     expect(pools.degraded).toBe(true);
   });
@@ -693,7 +693,7 @@ describe("fetchRaydiumPools", () => {
     });
 
     const pools = await fetchRaydiumPools();
-    expect(pools[0].price).toBeNull();
+    expect(pools.pools[0].price).toBeNull();
   });
 });
 
@@ -721,19 +721,19 @@ describe("fetchOrcaPools", () => {
     });
 
     const pools = await fetchOrcaPools();
-    expect(pools.length).toBe(1);
-    expect(pools[0].source).toBe("orca");
-    expect(pools[0].poolType).toBe("orca-whirlpool");
-    expect(pools[0].price).toBeCloseTo(0.9999184);
-    expect(pools[0].tvlUsd).toBeCloseTo(29901161.14);
-    expect(pools[0].feeRate).toBeCloseTo(0.0001); // 100 / 1_000_000
+    expect(pools.pools.length).toBe(1);
+    expect(pools.pools[0].source).toBe("orca");
+    expect(pools.pools[0].poolType).toBe("orca-whirlpool");
+    expect(pools.pools[0].price).toBeCloseTo(0.9999184);
+    expect(pools.pools[0].tvlUsd).toBeCloseTo(29901161.14);
+    expect(pools.pools[0].feeRate).toBeCloseTo(0.0001); // 100 / 1_000_000
   });
 
   it("handles 429 rate limit gracefully", async () => {
     const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
     mockTextFetch("rate limited", 429);
     const pools = await fetchOrcaPools();
-    expect(pools).toHaveLength(0);
+    expect(pools.pools).toHaveLength(0);
     expect(pools.ok).toBe(false);
     expect(pools.degraded).toBe(true);
   });
@@ -756,7 +756,7 @@ describe("fetchOrcaPools", () => {
     });
 
     const pools = await fetchOrcaPools();
-    expect(pools[0].feeRate).toBeCloseTo(0.003);
+    expect(pools.pools[0].feeRate).toBeCloseTo(0.003);
   });
 
   it("sets chain to solana for all pools", async () => {
@@ -777,7 +777,7 @@ describe("fetchOrcaPools", () => {
     });
 
     const pools = await fetchOrcaPools();
-    expect(pools[0].chain).toBe("solana");
+    expect(pools.pools[0].chain).toBe("solana");
   });
 
   it("follows cursor-based pagination", async () => {
@@ -805,7 +805,7 @@ describe("fetchOrcaPools", () => {
       }));
 
     const pools = await fetchOrcaPools();
-    expect(pools).toHaveLength(2);
+    expect(pools.pools).toHaveLength(2);
     expect(mockFetch).toHaveBeenCalledTimes(2);
     // Second call should include the cursor
     const secondCallUrl = mockFetch.mock.calls[1][0] as string;
@@ -835,8 +835,8 @@ describe("fetchOrcaPools", () => {
       .mockResolvedValueOnce(new Response("rate limited", { status: 429 }));
 
     const pools = await fetchOrcaPools();
-    expect(pools).toHaveLength(1);
-    expect(pools[0].poolAddress).toBe("pool1");
+    expect(pools.pools).toHaveLength(1);
+    expect(pools.pools[0].poolAddress).toBe("pool1");
     expect(pools.ok).toBe(true);
     expect(pools.degraded).toBe(true);
   });
@@ -859,7 +859,7 @@ describe("fetchOrcaPools", () => {
     });
 
     const pools = await fetchOrcaPools();
-    expect(pools).toHaveLength(0);
+    expect(pools.pools).toHaveLength(0);
     expect(pools.ok).toBe(true);
     expect(pools.degraded).toBe(false);
   });
@@ -868,7 +868,7 @@ describe("fetchOrcaPools", () => {
     const { fetchOrcaPools } = await import("../dex-liquidity/fetch-orca");
     mockTextFetch("error", 500);
     const pools = await fetchOrcaPools();
-    expect(pools).toHaveLength(0);
+    expect(pools.pools).toHaveLength(0);
     expect(pools.ok).toBe(false);
     expect(pools.degraded).toBe(true);
   });
@@ -880,7 +880,7 @@ describe("fetchOrcaPools", () => {
       meta: { cursor: { next: null } },
     });
     const pools = await fetchOrcaPools();
-    expect(pools).toHaveLength(0);
+    expect(pools.pools).toHaveLength(0);
     expect(pools.ok).toBe(true);
     expect(pools.degraded).toBe(false);
   });
@@ -903,7 +903,7 @@ describe("fetchOrcaPools", () => {
     });
 
     const pools = await fetchOrcaPools();
-    expect(pools[0].balances).toEqual([250000.5, 249999.5]);
+    expect(pools.pools[0].balances).toEqual([250000.5, 249999.5]);
   });
 
   it("sets price to null for invalid price strings", async () => {
@@ -924,6 +924,6 @@ describe("fetchOrcaPools", () => {
     });
 
     const pools = await fetchOrcaPools();
-    expect(pools[0].price).toBeNull();
+    expect(pools.pools[0].price).toBeNull();
   });
 });

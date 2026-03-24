@@ -33,19 +33,19 @@ Four DEX protocols are fetched directly during the scoring cron (`syncDexLiquidi
 | **Raydium** | `GET https://api-v3.raydium.io/pools/info/list` | Solana | `raydium-clmm`, `raydium-amm` | clmm 0.85x, amm 0.4x | TVL (`tvl`), volume (`day.volume`), price (`price`), balances (`mintAmountA/B`), fees (`feeRate`) |
 | **Orca** | `GET https://api.orca.so/v2/solana/pools` | Solana | `orca-whirlpool` | 0.85x | TVL (`tvlUsdc`), volume (`stats.24h.volume`), price (`price`), balances (`tokenBalanceA/B`), fees (`feeRate`) |
 
-All four fetchers now surface partial/total upstream failure explicitly to the cron, use circuit breakers (`CIRCUIT_SOURCE.FLUID_DEX_API`, `BALANCER_API`, `RAYDIUM_API`, `ORCA_API`), and apply min TVL thresholds ($10K for liquidity inclusion, $50K for price observations). Runtime parsing no longer learns new token ownership from DeFiLlama or subgraph symbol strings, so the canonical tracked-token registry is immutable during a run. When both DL and a direct API cover the same physical pool, the direct API data is preferred only when the identity match is exact or uniquely derived; ambiguous same-pair pools remain separate instead of being collapsed.
+All four fetchers now surface partial/total upstream failure explicitly to the cron, use circuit breakers (`CIRCUIT_SOURCE.FLUID_DEX_API`, `BALANCER_API`, `RAYDIUM_API`, `ORCA_API`), and apply min TVL thresholds ($10K for liquidity inclusion, $50K for price observations). Runtime parsing no longer learns new token ownership from DeFiLlama or subgraph symbol strings, so the canonical tracked-token registry is immutable during a run. When both DL and a direct API cover the same physical pool, the direct API data is preferred only when the identity match is exact or uniquely derived; ambiguous same-pair pools remain separate instead of being collapsed. Direct-API pools now use a conservative default maturity of `30` days unless the source provides stronger evidence.
 
 During the scoring cron, UniV3/Aerodrome subgraph enrichment completes before the direct API stage begins so those fetch families do not overlap inside Cloudflare's per-trigger connection budget. Fluid resolver enrichment uses the scheduled runtime's configured `chainRpcs` map (Alchemy/dRPC when configured) instead of relying on module-level public RPC defaults.
 
 Balancer, Raydium, Orca, and resolver-backed Fluid pools now preserve richer metadata through `top_pools_json`: measured `balanceRatio`, per-token `balanceDetails`, and normalized `feeTier` badges in basis points. Balancer weighted pools compare actual USD composition versus target token weights before deriving balance health; Raydium and Orca derive inventory balance from token balances plus per-token USD prices; Fluid derives inventory from the official DexReservesResolver by summing collateral and debt real reserves per token. Fluid pools on chains without that resolver deployment, or on any chain where token decimals cannot be resolved safely, fall back to neutral balance.
 
-After pool filtering and protocol-level TVL caps are applied, the scorer rebuilds every aggregate (`total_tvl_usd`, `total_volume_24h_usd`, `total_volume_7d_usd`, `effective_tvl_usd`, balance/organic/stress weights, protocol/chain breakdowns, and source-family mix) from the retained pool set before computing the final score. Filtered or capped pools cannot continue influencing the score through stale pre-filter aggregates.
+After pool filtering and protocol-level TVL caps are applied, the scorer rebuilds every aggregate (`total_tvl_usd`, `total_volume_24h_usd`, `total_volume_7d_usd`, `effective_tvl_usd`, balance/organic/stress weights, protocol/chain breakdowns, and source-family mix) from the retained pool set before computing the final score. Filtered or capped pools cannot continue influencing the score through stale pre-filter aggregates. The strict cap now targets the inflation-prone secondary discovery families (`cg_onchain`, `gecko_terminal`, `dexscreener`, `cg_tickers`) rather than clipping `direct_api` pools by default, so legitimate protocol-native liquidity is less likely to be suppressed by stale DefiLlama protocol ceilings.
 
 `dex_pool_staging` is the handoff point for discovery-only sources (CoinGecko Onchain, GeckoTerminal, DexScreener, CoinGecko Tickers). The scoring cron does not call those discovery APIs directly anymore; it consumes staged rows refreshed within the last 24 hours and gracefully falls back to primary-only scoring when the staging table is absent or empty.
 
 Shared source-specific helpers now own the duplicate discovery/liquidity normalization rules:
 
-- GeckoTerminal request construction, pool parsing, and pool-type normalization: `worker/src/cron/dex-liquidity/geckoterminal-shared.ts`
+- GeckoTerminal request construction, bounded pagination, pool parsing, and pool-type normalization: `worker/src/cron/dex-liquidity/geckoterminal-shared.ts`
 - CoinGecko onchain parsing, fee-bucket classification, balance-ratio inference, and locked-liquidity parsing: `worker/src/cron/dex-liquidity/coingecko-onchain-shared.ts`
 - CoinGecko tickers filtering, exchange aggregation, synthetic orderbook TVL, and price-observation gating: `worker/src/cron/dex-liquidity/coingecko-tickers-shared.ts`
 - GT/CG token-batch observation mapping: `worker/src/cron/dex-liquidity/token-price-observations.ts`
@@ -93,7 +93,7 @@ For direct APIs, balance health is no longer uniformly neutral. Balancer, Raydiu
 
 ### CoinGecko Onchain Integration
 
-CoinGecko Onchain is now a discovery-stage source rather than a direct scoring-cron fetch. Its outputs are written into `dex_pool_staging` and later merged by `syncDexLiquidity()` if the staged rows are fresh. Pool parsing, fee-tier classification, balance-ratio inference, and locked-liquidity parsing are shared between discovery and liquidity through `worker/src/cron/dex-liquidity/coingecko-onchain-shared.ts`.
+CoinGecko Onchain is now a discovery-stage source rather than a direct scoring-cron fetch. Its outputs are written into `dex_pool_staging` and later merged by `syncDexLiquidity()` if the staged rows are fresh. Pool parsing, fee-tier classification, balance-ratio inference, and locked-liquidity parsing are shared between discovery and liquidity through `worker/src/cron/dex-liquidity/coingecko-onchain-shared.ts`. CoinGecko Onchain and GeckoTerminal token crawls now read multiple bounded pages (`3 x 20` rows max) before declaring discovery exhausted, which reduces false partial-coverage outcomes on fragmented assets.
 
 Chain resolution is registry-backed in `worker/src/lib/chain-registry.ts`: the worker keeps one canonical internal chain id per deployment (`bob`, `worldchain`, `plasma`, etc.) and maps it to provider-specific network slugs (`bob-network`, `world-chain`, `plasma`, ...). When `COINGECKO_API_KEY` is configured, pool discovery uses CoinGecko `/onchain` for chains with a `coingecko` mapping and still runs GeckoTerminal for chains that only have a `geckoTerminal` mapping. This avoids the old all-or-nothing mode switch where enabling CoinGecko could silently drop GT-only chains.
 
@@ -116,7 +116,7 @@ The CG integration extracts three signals unavailable from GeckoTerminal:
 DexScreener runs in two complementary paths:
 
 1. **Discovery cron** (`sync-dex-discovery`): Populates `dex_pool_staging` with pool data for later merge during scoring.
-2. **Scoring-cron fallback** (`sync-dex-liquidity`, step 5b): After primary sources and staged-pool merge, any tracked stablecoin that still has zero pools or no usable DEX price observation is queried directly via DexScreener's `/tokens/v1/{chainId}/{address}` endpoint. This covers 30+ chains including Solana, Berachain, Monad, MegaETH, Plume, and other exotic chains. The fallback shares a 2-minute time budget with the CG tickers fallback.
+2. **Scoring-cron fallback** (`sync-dex-liquidity`, step 5b): After primary sources and staged-pool merge, any tracked stablecoin that still has zero pools, no usable DEX price observation, or materially weak partial coverage is queried directly via DexScreener's `/tokens/v1/{chainId}/{address}` endpoint. Weak coverage currently keys off retained-pool guardrails for pool count, protocol breadth, TVL, and measured-balance share. This covers 30+ chains including Solana, Berachain, Monad, MegaETH, Plume, and other exotic chains. The fallback shares a 2-minute time budget with the CG tickers fallback.
 
 The discovery cron is intentionally best-effort rather than all-or-nothing. It now runs with a 12-minute shared wall-clock budget, a 25-second per-coin cap, and short no-retry request timeouts for late-stage fallback sources so heavier tier-2 passes return `status="degraded"` with `budgetExhausted=true` instead of drifting into a hard timeout and leaving stale in-flight telemetry behind.
 
@@ -131,14 +131,14 @@ Quality gates:
 - Pools already discovered by the primary pipeline are deduplicated by exact or uniquely derived pool identity
 - Generic quality multiplier (0.3x) unless the DEX ID matches a known protocol (same `GT_DEX_QUALITY` lookup)
 
-DexScreener pools are merged using the same `mergeGtPools()` logic — no balance ratio data, neutral organic fraction default (0.5).
+DexScreener pools are merged through the shared secondary-pool contribution path — no balance ratio data, neutral organic fraction default (0.5).
 
 ### CoinGecko Tickers Fallback (Orderbook DEXes)
 
 CoinGecko Tickers runs in two complementary paths:
 
 1. **Discovery cron** (`sync-dex-discovery`): Synthetic orderbook pools enter scoring through `dex_pool_staging`.
-2. **Scoring-cron fallback** (`sync-dex-liquidity`, step 5b): After DexScreener fallback, any coin that still has zero pools or no usable DEX price observation and has a `geckoId` is queried via CoinGecko's `/coins/{id}/tickers` endpoint. This covers coins whose primary liquidity lives on orderbook exchanges not tracked by DeFiLlama or DexScreener (e.g. KAG and KAU on Kinesis Exchange). Shares the 2-minute fallback time budget.
+2. **Scoring-cron fallback** (`sync-dex-liquidity`, step 5b): After DexScreener fallback, any coin that still has zero pools, no usable DEX price observation, or materially weak partial coverage and has a `geckoId` is queried via CoinGecko's `/coins/{id}/tickers` endpoint. This covers coins whose primary liquidity lives on orderbook exchanges not tracked by DeFiLlama or DexScreener (e.g. KAG and KAU on Kinesis Exchange). Shares the 2-minute fallback time budget.
 
 Ticker filtering: `!is_stale && !is_anomaly && trust_score !== null && convertedVolumeUsd >= 1,000`. Only USD-equivalent quote assets are accepted (USD, USDT, USDC, DAI, C1USD, etc.). Filtering, exchange aggregation, synthetic TVL construction, and orderbook price-observation gating are shared between discovery and liquidity through `worker/src/cron/dex-liquidity/coingecko-tickers-shared.ts`.
 
@@ -147,11 +147,13 @@ Per-exchange aggregation: all valid tickers from the same exchange are combined 
 - `syntheticTvl = totalVolume × 3` (assumes ~33% daily turnover — conservative for precious-metals orderbooks)
 - `poolType: "orderbook"`, quality multiplier 0.6x
 - `priceUsd = volume-weighted average` across accepted tickers on that exchange
-- Maturity defaults to 365 days (established exchange)
+- Maturity defaults to 30 days unless later refreshed through repeated discovery
 
 The 0.6x quality multiplier reflects that orderbook exchanges are legitimate but centralized (not fully on-chain), placing them between Aerodrome volatile (0.4x) and Balancer stable (0.85x).
 
-Uses the same `mergeGtPools()` merge path — no new data structures required.
+These rows are explicitly marked synthetic in persisted pool metadata. They no longer present themselves as faux `USDC` pools; the quote side is labeled as an orderbook USD proxy so downstream consumers can distinguish centralized synthetic liquidity from measured AMM inventory.
+
+Uses the shared secondary-pool contribution path used by GT/CG/staged fallback merges, so aggregate math and metadata propagation stay aligned across sources.
 
 ### Pool Stress Index (0-100)
 
@@ -200,15 +202,26 @@ The scoring cron applies the same identity logic during staged-pool merge and De
 Every scored row now persists:
 
 - `coverage_class`: `primary`, `mixed`, `fallback`, `legacy`, or `unobserved`
-- `coverage_confidence`: current trust score for the row (`1.0`, `0.85`, `0.55`, `0.5`, or `0`)
+- `coverage_confidence`: current trust score for the row (`0-1`) derived from retained-pool evidence quality
 - `source_mix_json`: compact source-family composition for the retained pool set
 
 `primary` coverage now includes both pure-`dl` rows and pure-`direct_api` rows. `fallback` is reserved for rows built entirely from staged / DexScreener / CoinGecko-tickers style recovery sources.
+
+Coverage confidence is no longer a fixed ladder by source family alone. The scorer now blends:
+
+- protocol breadth and source-family breadth across the retained pool set
+- measured-balance and measured-price TVL share
+- organic measured TVL share
+- penalties for synthetic and freshness-decayed TVL share
+
+This keeps `coverage_class` stable for broad bucket semantics while making `coverage_confidence` more honest about partially measured rows.
 
 Current rows also persist:
 
 - `balance_measured_tvl_usd`
 - `organic_measured_tvl_usd`
+
+Top-pool JSON now also preserves per-pool measurement flags (`tvlMeasured`, `volumeMeasured`, `balanceMeasured`, `maturityMeasured`, `priceMeasured`, `synthetic`, `decayed`, `capped`) so downstream consumers can distinguish measured inventory from inferred fallback liquidity.
 
 These measurement-denominator fields let the frontend weight balance/organic aggregates only by TVL that actually had measured inputs.
 

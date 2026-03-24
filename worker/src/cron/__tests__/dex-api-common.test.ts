@@ -163,7 +163,7 @@ describe("convertToGtNewPools", () => {
     expect(gtPool.name).toContain("fluid:");
     expect(gtPool.tvlUsd).toBe(500_000);
     expect(gtPool.volume24hUsd).toBe(100_000);
-    expect(gtPool.maturityDays).toBe(90);
+    expect(gtPool.maturityDays).toBe(30);
     expect(gtPool.symbol).toContain("USDC");
   });
 

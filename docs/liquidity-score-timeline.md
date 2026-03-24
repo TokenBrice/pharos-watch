@@ -1,6 +1,19 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v4.4` (2026-02-19 -> 2026-03-19).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v4.5` (2026-02-19 -> 2026-03-24).
+
+---
+
+## v4.5 - Coverage recall hardening and measurement-aware confidence (Mar 24, 2026)
+
+**Commit:** `unreleased`
+
+- GeckoTerminal and CoinGecko Onchain token crawls now read multiple bounded pages instead of truncating after page 1
+- DexScreener and CoinGecko tickers fallback now trigger for weak partial coverage, not only for pure zero-pool / no-price rows
+- Synthetic orderbook fallback rows now keep explicit provenance and no longer spoof themselves as organic `USDC` pairs
+- Coverage confidence is now derived from retained-pool measurement quality, protocol breadth, source breadth, and synthetic/decayed TVL share instead of the old fixed `1.0 / 0.85 / 0.55` ladder
+- Direct-API pools now default to a shorter maturity assumption (`30` days) and Fluid reserve normalization records whether balances were safely measured
+- Shared GT/CG/staged/fallback pool-contribution logic was centralized to reduce merge-path drift
 
 ---
 
@@ -44,7 +57,7 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 
 - Direct API pools now replace overlapping DeFiLlama pools before scoring via address/fingerprint dedup, instead of being appended after fallback sources
 - Direct API sources now merge before staged discovery and DexScreener/CG-ticker recovery paths, preventing lower-confidence sources from claiming the same pool first
-- direct_api-only rows now classify as `primary` coverage with confidence `1.0`, rather than falling into the generic fallback bucket
+- direct_api-only rows now classify as `primary` coverage, but confidence is no longer forced to `1.0`; it now depends on measured-vs-synthetic retained TVL quality
 - Raydium and Orca fetchers were hardened against live API drift (Raydium lowercase `poolType`, Orca cursor pagination / retry handling)
 - Fluid pool volume is now normalized to one-sided USD volume instead of summing both raw token legs
 - Balancer intake is now constrained to supported stable/weighted pool families on mapped chains only

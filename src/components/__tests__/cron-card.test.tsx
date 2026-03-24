@@ -122,7 +122,7 @@ describe("CronCard", () => {
 
     expect(html).toContain("DEX liquidity scoring");
     expect(html).toContain("sync-dex-liquidity");
-    expect(html).toContain("staged pools merged 41, skipped 9 (fp 7, addr 2)");
+    expect(html).toContain("staged pools merged 41, skipped 9 (derived 7, exact 2)");
     expect(html).toContain("coverage 126 vs 131 previous, floor 78");
     expect(html).toContain("dex price observations 93 coins");
     expect(html).toContain("failed sources defillama-yields");

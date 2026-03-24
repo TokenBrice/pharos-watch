@@ -9,6 +9,7 @@ import { fetchWithRetry } from "./fetch-retry";
 import { USER_AGENT } from "./constants";
 import { RATE_LIMITS } from "./rate-limit";
 import { sleepWithSignal } from "./abort";
+import { CG_ONCHAIN_TOKEN_POOLS_MAX_PAGES, CG_ONCHAIN_TOKEN_POOLS_PAGE_SIZE } from "../cron/dex-liquidity/constants";
 
 export { CG_CHAIN_MAP, CG_CHAIN_REVERSE } from "@shared/lib/chain-provider-registry";
 
@@ -92,14 +93,24 @@ export async function fetchCgTokenPools(
   apiKey: string | null = null,
   options?: CgFetchOptions,
 ): Promise<CgPool[]> {
-  const url = cgUrl(`/onchain/networks/${network}/tokens/${address}/pools?include=base_token,quote_token&page=1`, apiKey);
-  const res = await fetchWithRetry(url, {
-    headers: cgHeaders({ "User-Agent": USER_AGENT, Accept: "application/json" }, apiKey),
-    signal,
-  }, options?.maxRetries ?? 1, { timeoutMs: options?.timeoutMs });
-  if (!res?.ok) return [];
-  const json = (await res.json()) as { data?: unknown };
-  return Array.isArray(json.data) ? (json.data as CgPool[]) : [];
+  const pools: CgPool[] = [];
+  for (let page = 1; page <= CG_ONCHAIN_TOKEN_POOLS_MAX_PAGES; page++) {
+    const url = cgUrl(
+      `/onchain/networks/${network}/tokens/${address}/pools?include=base_token,quote_token&page=${page}`,
+      apiKey,
+    );
+    const res = await fetchWithRetry(url, {
+      headers: cgHeaders({ "User-Agent": USER_AGENT, Accept: "application/json" }, apiKey),
+      signal,
+    }, options?.maxRetries ?? 1, { timeoutMs: options?.timeoutMs });
+    if (!res?.ok) break;
+    const json = (await res.json()) as { data?: unknown };
+    const pagePools = Array.isArray(json.data) ? (json.data as CgPool[]) : [];
+    if (pagePools.length === 0) break;
+    pools.push(...pagePools);
+    if (pagePools.length < CG_ONCHAIN_TOKEN_POOLS_PAGE_SIZE) break;
+  }
+  return pools;
 }
 
 /**

@@ -20,12 +20,14 @@ export interface DexApiPool {
   volume24hUsd: number;
   feeRate: number | null;
   balances: number[] | null;
+  balancesNormalized?: boolean;
   /** Optional per-token raw 24h volumes in native token units. */
   tokenVolumes24h?: number[] | null;
 }
 
-export type DexApiFetchResult = DexApiPool[] & {
+export interface DexApiFetchResult {
+  pools: DexApiPool[];
   ok: boolean;
   degraded: boolean;
   errors: string[];
-};
+}

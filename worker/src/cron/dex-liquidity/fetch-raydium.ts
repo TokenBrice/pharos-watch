@@ -117,7 +117,7 @@ export async function fetchRaydiumPools(signal?: AbortSignal): Promise<DexApiFet
   let degraded = false;
 
   if (concentrated.status === "fulfilled") {
-    results.push(...concentrated.value);
+    results.push(...concentrated.value.pools);
     ok = ok || concentrated.value.ok;
     degraded = degraded || concentrated.value.degraded;
     errors.push(...concentrated.value.errors);
@@ -128,7 +128,7 @@ export async function fetchRaydiumPools(signal?: AbortSignal): Promise<DexApiFet
   }
 
   if (standard.status === "fulfilled") {
-    results.push(...standard.value);
+    results.push(...standard.value.pools);
     ok = ok || standard.value.ok;
     degraded = degraded || standard.value.degraded;
     errors.push(...standard.value.errors);

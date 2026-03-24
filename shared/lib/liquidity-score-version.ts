@@ -3,9 +3,27 @@ import {
 } from "./methodology-version";
 
 const liquidity = createMethodologyVersion({
-  currentVersion: "4.4",
+  currentVersion: "4.5",
   changelogPath: "/methodology/liquidity-score-changelog/",
   changelog: [
+  {
+    version: "4.5",
+    title: "Coverage recall hardening and measurement-aware confidence",
+    date: "2026-03-24",
+    effectiveAt: 1774346400,
+    summary:
+      "DEX liquidity now paginates deeper through GeckoTerminal and CoinGecko Onchain discovery, enriches weak partial coverage instead of only zero-coverage rows, and scores coverage confidence from measured-vs-synthetic retained TVL rather than a fixed source-family ladder.",
+    impact: [
+      "GeckoTerminal and CoinGecko Onchain token crawls now read multiple bounded pages instead of stopping after page 1",
+      "DexScreener and CoinGecko tickers fallback now trigger for weak partial coverage, not only coins with zero pools or no DEX price",
+      "Fallback orderbook rows now preserve explicit synthetic/decayed/provenance flags instead of masquerading as organic USDC pools",
+      "Coverage confidence now incorporates protocol breadth, source-family breadth, measured balance share, measured price share, and synthetic or decayed TVL share",
+      "Direct-API pools default to a shorter maturity assumption and Fluid reserve normalization now marks whether balances were safely measured",
+      "Shared secondary-pool contribution logic centralizes GT/CG/staged/fallback aggregate handling to reduce drift across merge paths",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.4",
     title: "Chain-aware pool identity dedupe and challenger snapshot publishing",

@@ -20,7 +20,7 @@ export function makeDexApiFetchResult(
   pools: DexApiPool[],
   meta: { ok: boolean; degraded: boolean; errors: string[] },
 ): DexApiFetchResult {
-  return Object.assign(pools, meta);
+  return { pools, ...meta };
 }
 
 /** Min TVL for a pool's price to be considered as a price observation */
@@ -71,7 +71,12 @@ export function hydrateDirectApiPoolMetadata(
       }
     }
 
-    if (pool.source !== "fluid" || !pool.balances || pool.balances.length !== pool.tokens.length) {
+    if (
+      pool.source !== "fluid" ||
+      pool.balancesNormalized === true ||
+      !pool.balances ||
+      pool.balances.length !== pool.tokens.length
+    ) {
       continue;
     }
 
@@ -89,6 +94,7 @@ export function hydrateDirectApiPoolMetadata(
     }
 
     pool.balances = normalizationComplete ? normalizedBalances : null;
+    pool.balancesNormalized = normalizationComplete;
   }
 }
 
@@ -395,7 +401,7 @@ export function convertToGtNewPools(
         tvlUsd: pool.tvlUsd,
         volume24hUsd,
         qualityMultiplier,
-        maturityDays: 90, // conservative default for established DEXes
+        maturityDays: 30,
         price: tokenPrice ?? 0,
         symbol: symbolStr,
         poolType: pool.poolType,
@@ -405,6 +411,14 @@ export function convertToGtNewPools(
           balanceDetails: balanceMetrics.balanceDetails,
         } : {}),
         ...(feeTierBps != null ? { feeTierBps } : {}),
+        measurement: {
+          tvlMeasured: true,
+          volumeMeasured: pool.tokenVolumes24h != null || (Number.isFinite(pool.volume24hUsd) && pool.volume24hUsd > 0),
+          balanceMeasured: balanceMetrics != null,
+          maturityMeasured: false,
+          priceMeasured: tokenPrice != null && tokenPrice > 0,
+          synthetic: false,
+        },
       };
 
       const existing = result.get(stablecoinId) ?? [];
@@ -469,7 +483,7 @@ export function extractPriceObservations(
         protocol: pool.source,
         poolKey: identity.exactPoolKey ?? undefined,
         derivedMatchKey: identity.derivedMatchKey ?? undefined,
-        identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
+        identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_ambiguous" : "none",
         sourceFamily: "direct_api",
       };
 

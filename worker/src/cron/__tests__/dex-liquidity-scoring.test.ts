@@ -349,7 +349,7 @@ describe("dex-liquidity scoring", () => {
     expect(result.globalAgg.totalTvl).toBe(25_000);
   });
 
-  it("treats direct_api-only coverage as primary-confidence coverage", async () => {
+  it("treats direct_api-only coverage as primary but not maximum-confidence coverage", async () => {
     const db = makeQueryDb([
       { match: "FROM dex_liquidity_history", all: [] },
     ]);
@@ -378,7 +378,55 @@ describe("dex-liquidity scoring", () => {
 
     expect(result.scores.get("usdc-circle")).toMatchObject({
       coverageClass: "primary",
-      coverageConfidence: 1,
+      coverageConfidence: 0.6,
+    });
+  });
+
+  it("does not clip direct_api pools with the strict secondary-source protocol cap", async () => {
+    const db = makeQueryDb([
+      { match: "FROM dex_liquidity_history", all: [] },
+    ]);
+
+    const metrics = initMetrics("usdc-circle", "USDC");
+    metrics.totalVolume24hUsd = 20_000;
+    metrics.totalVolume7dUsd = 140_000;
+    metrics.topPools = [
+      {
+        poolId: "base:orca-direct",
+        project: "orca",
+        chain: "solana",
+        tvlUsd: 150_000,
+        symbol: "USDC / USDT",
+        volumeUsd1d: 20_000,
+        poolType: "orca-whirlpool",
+        source: "direct_api",
+      },
+      {
+        poolId: "base:orca-gt",
+        project: "orca",
+        chain: "solana",
+        tvlUsd: 80_000,
+        symbol: "USDC / USDT",
+        volumeUsd1d: 15_000,
+        poolType: "orca-whirlpool",
+        source: "gecko_terminal",
+        extra: { effectiveTvl: 80_000 },
+      },
+    ];
+
+    const result = await computeStablecoinScores(
+      db,
+      new Map([["usdc-circle", metrics]]),
+      new Map([["orca", 180_000]]),
+    );
+
+    expect(metrics.totalTvlUsd).toBe(180_000);
+    expect(metrics.topPools[0]?.tvlUsd).toBe(150_000);
+    expect(metrics.topPools[1]?.tvlUsd).toBe(30_000);
+    expect(result.diagnostics.protocolCapReductions).toMatchObject({
+      cappedPoolCount: 1,
+      cappedProtocols: 1,
+      reducedTvlUsd: 50_000,
     });
   });
 

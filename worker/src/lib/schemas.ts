@@ -37,6 +37,22 @@ export const DexLiquidityCronMetadataSchema = z.object({
   failedSources: z.array(z.string()).optional().default([]),
   sourceCoverage: z
     .object({
+      currentCoverage: z.number().optional(),
+      previousCoverage: z.number().optional(),
+      minExpectedCoverage: z.number().optional(),
+      priceObservationCoins: z.number().optional(),
+      weakCoverageCoins: z.number().optional(),
+      coverageRecoveredCoins: z.number().optional(),
+      dsFallbackCoins: z.number().optional(),
+      cgTickerFallbackCoins: z.number().optional(),
+      measuredBalanceCoveragePct: z.number().optional(),
+      syntheticOnlyCoins: z.number().optional(),
+      sourceDegradedFamilies: z.array(z.string()).optional(),
+      protocolCapReductions: z.object({
+        cappedPoolCount: z.number().optional(),
+        cappedProtocols: z.number().optional(),
+        reducedTvlUsd: z.number().optional(),
+      }).optional(),
       nearCoverageGuard: z.boolean().optional().default(false),
       nearValueGuard: z.boolean().optional().default(false),
       nearMajorCoverageGuard: z.boolean().optional().default(false),

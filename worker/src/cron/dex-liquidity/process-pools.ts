@@ -247,6 +247,14 @@ export function processPoolMetrics(
           pairQuality: Math.round(coinPairQuality * 100) / 100,
           stressIndex: stressIdx,
           maturityDays: poolMaturityDays,
+          measurement: {
+            tvlMeasured: true,
+            volumeMeasured: vol1d > 0 || vol7d > 0,
+            balanceMeasured: curveData != null,
+            maturityMeasured: poolMaturityDays > 0,
+            priceMeasured: poolPrice != null && poolPrice > 0,
+            synthetic: false,
+          },
         },
       });
     }

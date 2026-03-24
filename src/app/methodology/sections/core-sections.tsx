@@ -1242,6 +1242,11 @@ export function CoreMethodologySections() {
             replace overlapping DeFiLlama pools before staged or fallback discovery sources are merged.
           </p>
           <p>
+            Discovery coverage is less page-fragile now: CoinGecko Onchain and GeckoTerminal token crawls read
+            multiple bounded pages, and fallback enrichment can activate for weak partial coverage instead of waiting
+            for a strict zero-pool outcome.
+          </p>
+          <p>
             Matching is chain-aware: `chain + address` resolves first, and symbol fallback is only allowed when it is unique on that chain for addressless tokens. If an upstream token already supplies an unknown address, it is dropped instead of being remapped by symbol. Pool dedupe uses exact ids plus conservative derived identity keys, so legitimate same-pair pools are not collapsed just because their token set matches.
           </p>
           <p>
@@ -1260,6 +1265,11 @@ export function CoreMethodologySections() {
             After bad pools are filtered and secondary-source TVL caps are applied, every exported aggregate and score
             input is rebuilt from the retained pool set. That keeps filtered or downscaled pools from lingering in the
             final score through stale pre-filter totals.
+          </p>
+          <p>
+            Coverage confidence is measurement-aware. Instead of a fixed score by source family, Pharos now weights how
+            much retained TVL has measured balances and prices, how broad the protocol mix is, and how much of the row
+            depends on synthetic or freshness-decayed fallback liquidity.
           </p>
           <div className="grid gap-2 sm:grid-cols-3">
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">

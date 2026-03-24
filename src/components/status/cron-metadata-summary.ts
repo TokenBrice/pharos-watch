@@ -127,8 +127,10 @@ function summarizeDexDiscovery(metadata: Record<string, unknown>): string[] {
 function summarizeDexLiquidity(metadata: Record<string, unknown>): string[] {
   const stagedPoolsMerged = readNumber(metadata.stagedPoolsMerged);
   const stagedPoolsSkipped = readNumber(metadata.stagedPoolsSkipped);
-  const stagedPoolsSkippedByAddress = readNumber(metadata.stagedPoolsSkippedByAddress);
-  const stagedPoolsSkippedByFingerprint = readNumber(metadata.stagedPoolsSkippedByFingerprint);
+  const stagedPoolsSkippedByExactIdentity =
+    readNumber(metadata.stagedPoolsSkippedByExactIdentity) ?? readNumber(metadata.stagedPoolsSkippedByAddress);
+  const stagedPoolsSkippedByUniqueDerivedIdentity =
+    readNumber(metadata.stagedPoolsSkippedByUniqueDerivedIdentity) ?? readNumber(metadata.stagedPoolsSkippedByFingerprint);
   const failedSources = formatStringList(metadata.failedSources);
   const fallbackMode = formatStringList(metadata.fallbackMode);
   const sourceCoverage = readRecord(metadata.sourceCoverage);
@@ -136,12 +138,19 @@ function summarizeDexLiquidity(metadata: Record<string, unknown>): string[] {
   const previousCoverage = readNumber(sourceCoverage?.previousCoverage);
   const minExpectedCoverage = readNumber(sourceCoverage?.minExpectedCoverage);
   const priceObservationCoins = readNumber(sourceCoverage?.priceObservationCoins);
+  const weakCoverageCoins = readNumber(sourceCoverage?.weakCoverageCoins);
+  const coverageRecoveredCoins = readNumber(sourceCoverage?.coverageRecoveredCoins);
+  const measuredBalanceCoveragePct = readNumber(sourceCoverage?.measuredBalanceCoveragePct);
+  const syntheticOnlyCoins = readNumber(sourceCoverage?.syntheticOnlyCoins);
+  const protocolCapReductions = readRecord(sourceCoverage?.protocolCapReductions);
+  const cappedPoolCount = readNumber(protocolCapReductions?.cappedPoolCount);
+  const reducedTvlUsd = readNumber(protocolCapReductions?.reducedTvlUsd);
   const nearCoverageGuard = readBoolean(sourceCoverage?.nearCoverageGuard);
   const skipBreakdown =
-    stagedPoolsSkippedByAddress != null || stagedPoolsSkippedByFingerprint != null
+    stagedPoolsSkippedByExactIdentity != null || stagedPoolsSkippedByUniqueDerivedIdentity != null
       ? [
-          stagedPoolsSkippedByFingerprint != null ? `fp ${stagedPoolsSkippedByFingerprint}` : null,
-          stagedPoolsSkippedByAddress != null ? `addr ${stagedPoolsSkippedByAddress}` : null,
+          stagedPoolsSkippedByUniqueDerivedIdentity != null ? `derived ${stagedPoolsSkippedByUniqueDerivedIdentity}` : null,
+          stagedPoolsSkippedByExactIdentity != null ? `exact ${stagedPoolsSkippedByExactIdentity}` : null,
         ]
           .filter((part): part is string => part != null)
           .join(", ")
@@ -155,6 +164,14 @@ function summarizeDexLiquidity(metadata: Record<string, unknown>): string[] {
       ? `coverage ${currentCoverage}${previousCoverage != null ? ` vs ${previousCoverage} previous` : ""}${minExpectedCoverage != null ? `, floor ${minExpectedCoverage}` : ""}`
       : null,
     priceObservationCoins != null ? `dex price observations ${priceObservationCoins} coins` : null,
+    weakCoverageCoins != null
+      ? `weak coverage ${weakCoverageCoins}${coverageRecoveredCoins != null ? `, recovered ${coverageRecoveredCoins}` : ""}`
+      : null,
+    measuredBalanceCoveragePct != null ? `measured balance coverage ${(measuredBalanceCoveragePct * 100).toFixed(1)}%` : null,
+    syntheticOnlyCoins != null && syntheticOnlyCoins > 0 ? `synthetic-only rows ${syntheticOnlyCoins}` : null,
+    cappedPoolCount != null && reducedTvlUsd != null && cappedPoolCount > 0
+      ? `protocol caps ${cappedPoolCount} pools, ${Math.round(reducedTvlUsd).toLocaleString()} TVL reduced`
+      : null,
     failedSources ? `failed sources ${failedSources}` : null,
     fallbackMode ? `fallback mode ${fallbackMode}` : null,
     nearCoverageGuard ? "coverage near guardrail band" : null,

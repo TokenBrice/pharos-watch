@@ -3,7 +3,7 @@ import { getFallbackTargets } from "../dex-liquidity/fetch-fallbacks";
 import { initMetrics } from "../dex-liquidity/pool-helpers";
 
 describe("getFallbackTargets", () => {
-  it("targets coins with zero pools or missing dex price observations", () => {
+  it("targets coins with zero pools, missing dex price observations, or weak partial coverage", () => {
     const metrics = new Map<string, ReturnType<typeof initMetrics>>();
     const zeroPools = initMetrics("usdt-tether", "USDT");
     zeroPools.poolCount = 0;
@@ -14,12 +14,17 @@ describe("getFallbackTargets", () => {
     metrics.set("usdc-circle", missingPrice);
 
     const covered = initMetrics("dai-makerdao", "DAI");
-    covered.poolCount = 2;
+    covered.poolCount = 4;
+    covered.totalTvlUsd = 500_000;
+    covered.totalTvlForBalance = 200_000;
     metrics.set("dai-makerdao", covered);
 
     const priceObservations = new Map([
       ["usdt-tether", [{ price: 1, tvl: 100_000, chain: "ethereum", protocol: "curve" }]],
-      ["dai-makerdao", [{ price: 1, tvl: 100_000, chain: "ethereum", protocol: "curve" }]],
+      ["dai-makerdao", [
+        { price: 1, tvl: 150_000, chain: "ethereum", protocol: "curve" },
+        { price: 1, tvl: 100_000, chain: "base", protocol: "uniswap-v3" },
+      ]],
     ]);
 
     const targetIds = new Set(

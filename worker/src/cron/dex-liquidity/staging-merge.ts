@@ -229,7 +229,7 @@ export async function mergeStagedPools(
         protocol: dexId,
         poolKey: identity.exactPoolKey ?? undefined,
         derivedMatchKey: identity.derivedMatchKey ?? undefined,
-        identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
+        identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_ambiguous" : "none",
         sourceFamily: stagedPool.source,
       });
       stagedPriceObs.set(stagedPool.stablecoinId, obs);
@@ -268,6 +268,15 @@ export async function mergeStagedPools(
         balanceRatio: stagedPool.balanceRatio,
         lockedLiquidityPct: stagedPool.lockedLiqPct,
         feePercentage: stagedPool.feeTier ? stagedPool.feeTier / 100 : null,
+        measurement: {
+          tvlMeasured: true,
+          volumeMeasured: stagedPool.volume24h != null && Number.isFinite(stagedPool.volume24h),
+          balanceMeasured: stagedPool.balanceRatio != null,
+          maturityMeasured: false,
+          priceMeasured: stagedPool.priceUsd != null && stagedPool.priceUsd > 0,
+          synthetic: false,
+          decayed: confidence < 1,
+        },
       });
       continue;
     }
@@ -290,6 +299,30 @@ export async function mergeStagedPools(
           : stagedPool.source === "cg_tickers"
             ? "cg_tickers"
             : "gecko_terminal",
+      ...(stagedPool.source === "cg_tickers"
+        ? {
+            pairQualityOverride: 0.85,
+            measurement: {
+              tvlMeasured: true,
+              volumeMeasured: stagedPool.volume24h != null && Number.isFinite(stagedPool.volume24h),
+              balanceMeasured: false,
+              maturityMeasured: false,
+              priceMeasured: stagedPool.priceUsd != null && stagedPool.priceUsd > 0,
+              synthetic: true,
+              decayed: confidence < 1,
+            },
+          }
+        : {
+            measurement: {
+              tvlMeasured: true,
+              volumeMeasured: stagedPool.volume24h != null && Number.isFinite(stagedPool.volume24h),
+              balanceMeasured: stagedPool.balanceRatio != null,
+              maturityMeasured: false,
+              priceMeasured: stagedPool.priceUsd != null && stagedPool.priceUsd > 0,
+              synthetic: false,
+              decayed: confidence < 1,
+            },
+          }),
     });
   }
 

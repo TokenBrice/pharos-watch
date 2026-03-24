@@ -445,7 +445,7 @@ Aggregate historical supply chart data across all stablecoins, broken down by pe
 
 ### `GET /api/blacklist`
 
-Freeze, blacklist, and token-destruction events currently ingested for USDC, USDT, PAXG, and XAUT. The shared filter enum still includes `EURC`, but the live sync contract registry does not yet define an EURC ingestion path. Data is sourced from on-chain logs via Etherscan, Tron, and EVM RPCs.
+Freeze, blacklist, and token-destruction events currently ingested for USDC, USDT, PAXG, and XAUT. `EURC` is intentionally excluded from the live filter set for now because Circle frequently mirrors the same blacklist actions on both USDC and EURC, which creates many zero-balance EURC rows. Data is sourced from on-chain logs via Etherscan, Tron, and EVM RPCs.
 
 **Cache:** realtime
 
@@ -453,13 +453,11 @@ Freeze, blacklist, and token-destruction events currently ingested for USDC, USD
 
 | Param        | Type      | Default | Description                                                    |
 | ------------ | --------- | ------- | -------------------------------------------------------------- |
-| `stablecoin` | `string`  | —       | Filter by token symbol: `USDC`, `USDT`, `EURC`, `PAXG`, `XAUT` |
+| `stablecoin` | `string`  | —       | Filter by token symbol: `USDC`, `USDT`, `PAXG`, `XAUT`         |
 | `chain`      | `string`  | —       | Filter by chain name (e.g. `Ethereum`, `Tron`)                 |
 | `eventType`  | `string`  | —       | Filter by type: `blacklist`, `unblacklist`, `destroy`          |
 | `limit`      | `integer` | `1000`  | Max results (1–1000; `0` maps to default `1000`)               |
 | `offset`     | `integer` | `0`     | Pagination offset                                              |
-
-`stablecoin=EURC` remains a valid query value because the shared blacklist enum still includes it, but the current sync contract registry (`worker/src/lib/blacklist-contracts.ts`) only ingests USDC, USDT, PAXG, and XAUT rows.
 
 **Response**
 
@@ -468,10 +466,10 @@ Freeze, blacklist, and token-destruction events currently ingested for USDC, USD
   "events": [BlacklistEvent, ...],
   "total": 13422,
   "methodology": {
-    "version": "3.1",
-    "versionLabel": "v3.1",
-    "currentVersion": "3.1",
-    "currentVersionLabel": "v3.1",
+    "version": "3.2",
+    "versionLabel": "v3.2",
+    "currentVersion": "3.2",
+    "currentVersionLabel": "v3.2",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -489,11 +487,18 @@ Freeze, blacklist, and token-destruction events currently ingested for USDC, USD
 | `chainName`          | `string`         | Human-readable chain name (e.g. `"Ethereum"`)                                           |
 | `eventType`          | `string`         | `"blacklist"`, `"unblacklist"`, or `"destroy"`                                          |
 | `address`            | `string`         | Affected address (EVM `0x…` or Tron `T…`)                                               |
-| `amount`             | `number \| null` | Token-native amount recovered from event data or `balanceOf()`; `null` when unavailable |
+| `amountNative`       | `number \| null` | Canonical token-native amount recovered from event data or historical balance lookup      |
+| `amountUsdAtEvent`   | `number \| null` | Event-time USD value when Pharos can justify one                                          |
+| `amountSource`       | `string`         | `event`, `historical_balance`, `derived`, or `unavailable`                                |
+| `amountStatus`       | `string`         | `resolved`, `recoverable_pending`, `permanently_unavailable`, `provider_failed`, `ambiguous` |
 | `txHash`             | `string`         | Transaction hash                                                                        |
 | `blockNumber`        | `number`         | Block number                                                                            |
 | `timestamp`          | `number`         | Unix seconds                                                                            |
 | `methodologyVersion` | `string`         | Methodology version attributed to this event row                                        |
+| `contractAddress`    | `string \| null` | Emitting token contract when known                                                      |
+| `configKey`          | `string \| null` | Internal tracker config identity (`{chainId}-{contract}`)                               |
+| `eventSignature`     | `string \| null` | Human-readable event signature/name when known                                          |
+| `eventTopic0`        | `string \| null` | Raw EVM topic0 when applicable                                                          |
 | `explorerTxUrl`      | `string`         | Block explorer URL for the transaction                                                  |
 | `explorerAddressUrl` | `string`         | Block explorer URL for the address                                                      |
 
@@ -502,7 +507,7 @@ Freeze, blacklist, and token-destruction events currently ingested for USDC, USD
 | Field                 | Type      | Description                                                       |
 | --------------------- | --------- | ----------------------------------------------------------------- |
 | `version`             | `string`  | Methodology version of the latest returned event in this response |
-| `versionLabel`        | `string`  | Display label (e.g. `"v3.1"`)                                     |
+| `versionLabel`        | `string`  | Display label (e.g. `"v3.2"`)                                     |
 | `currentVersion`      | `string`  | Latest methodology version                                        |
 | `currentVersionLabel` | `string`  | Display label for latest methodology version                      |
 | `changelogPath`       | `string`  | Relative URL to the methodology changelog page                    |
@@ -771,7 +776,7 @@ DEX liquidity scores, pool breakdowns, source-confidence metadata, and on-chain 
 | `organicFraction`       | `number \| null`                                                 | Fraction of TVL from organic (non-incentivized) pools                                                                                                |
 | `durabilityScore`       | `number \| null`                                                 | Score for pool maturity and reliability                                                                                                              |
 | `coverageClass`         | `"primary" \| "mixed" \| "fallback" \| "legacy" \| "unobserved"` | Coverage-confidence classification for the retained pool set; `primary` includes pure `dl` and pure `direct_api` rows                                |
-| `coverageConfidence`    | `number`                                                         | Confidence attached to the row (`1.0`, `0.85`, `0.55`, `0.5`, `0`)                                                                                   |
+| `coverageConfidence`    | `number`                                                         | Evidence-weighted confidence (`0-1`) derived from retained-pool breadth, measured TVL share, and synthetic/decayed dependence                         |
 | `sourceMix`             | `Record<string, { poolCount: number; tvlUsd: number }>`          | TVL/pool-count mix across source families (`dl`, `direct_api`, `cg_onchain`, `gecko_terminal`, `dexscreener`, `cg_tickers`)                          |
 | `balanceMeasuredTvlUsd` | `number`                                                         | TVL denominator actually used for `weightedBalanceRatio`                                                                                             |
 | `organicMeasuredTvlUsd` | `number`                                                         | TVL denominator actually used for `organicFraction`                                                                                                  |
@@ -800,7 +805,7 @@ DEX liquidity scores, pool breakdowns, source-confidence metadata, and on-chain 
 | `volumeUsd1d` | `number`              | 24 h volume (USD)                                              |
 | `poolType`    | `string`              | Pool type (e.g. `"curve-stableswap"`, `"uniswap-v3-5bp"`)      |
 | `source`      | `string \| undefined` | Canonical source family for this retained pool                 |
-| `extra`       | `object \| undefined` | Optional detailed pool metrics (A-factor, balance ratio, etc.) |
+| `extra`       | `object \| undefined` | Optional detailed pool metrics (A-factor, balance ratio, measurement flags, etc.) |
 
 `extra` may include:
 
@@ -810,6 +815,7 @@ DEX liquidity scores, pool breakdowns, source-confidence metadata, and on-chain 
 | `balanceRatio`             | `number \| undefined`                                                            | Measured pool balance ratio from 0 to 1; Balancer weighted pools normalize against weights and Fluid uses official DexReservesResolver balances where deployed |
 | `feeTier`                  | `number \| undefined`                                                            | Normalized fee tier in basis points                                                                                                                            |
 | `balanceDetails`           | `Array<{ symbol: string; balancePct: number; isTracked: boolean }> \| undefined` | Per-token USD composition shares used for balance tooltips/detail                                                                                              |
+| `measurement`             | `object \| undefined`                                                            | Per-pool provenance flags such as `tvlMeasured`, `volumeMeasured`, `balanceMeasured`, `maturityMeasured`, `priceMeasured`, `synthetic`, `decayed`, and `capped` |
 
 **`DexPriceSource`**
 

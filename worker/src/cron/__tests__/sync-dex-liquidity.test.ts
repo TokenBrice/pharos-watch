@@ -5,7 +5,7 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { LlamaPool } from "../dex-liquidity/types";
 
 function makeDirectApiResult() {
-  return Object.assign([], { ok: true, degraded: false, errors: [] as string[] });
+  return { pools: [], ok: true, degraded: false, errors: [] as string[] };
 }
 
 function deferred<T>() {
@@ -38,6 +38,9 @@ vi.mock("../dex-liquidity/scoring", () => ({
     globalAgg: { totalTvl: 0 },
     retainedPoolsByStablecoin: new Map(),
     tvlStabilityMap: new Map(),
+    diagnostics: {
+      protocolCapReductions: { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 },
+    },
   })),
   computeDepthStability: vi.fn(async () => {}),
   computeDexPrices: vi.fn(async () => {}),
@@ -51,6 +54,7 @@ vi.mock("../dex-liquidity/persistence", () => ({
 vi.mock("../dex-liquidity/fetch-fallbacks", () => ({
   fetchDsFallbackPools: vi.fn(async () => ({ newPools: new Map(), priceObs: new Map() })),
   fetchCgTickersFallback: vi.fn(async () => ({ newPools: new Map(), priceObs: new Map() })),
+  getFallbackTargets: vi.fn(() => []),
 }));
 
 vi.mock("../dex-liquidity/fetch-fluid", () => ({ fetchFluidPools: vi.fn(async () => makeDirectApiResult()) }));
@@ -207,17 +211,25 @@ describe("syncDexLiquidity", () => {
       failedSources?: string[];
       stagedPoolsSkippedByExactIdentity?: number;
       stagedPoolsSkippedByUniqueDerivedIdentity?: number;
-      sourceCoverage?: { nearCoverageGuard?: boolean };
+      sourceCoverage?: {
+        nearCoverageGuard?: boolean;
+        weakCoverageCoins?: number;
+        coverageRecoveredCoins?: number;
+        protocolCapReductions?: { reducedTvlUsd?: number };
+      };
     };
     expect(metadata.failedSources).toEqual([]);
     expect(metadata.stagedPoolsSkippedByExactIdentity).toBe(0);
     expect(metadata.stagedPoolsSkippedByUniqueDerivedIdentity).toBe(0);
     expect(metadata.sourceCoverage?.nearCoverageGuard).toBe(false);
+    expect(metadata.sourceCoverage?.weakCoverageCoins).toBe(0);
+    expect(metadata.sourceCoverage?.coverageRecoveredCoins).toBe(0);
+    expect(metadata.sourceCoverage?.protocolCapReductions?.reducedTvlUsd).toBe(0);
   });
 
   it("returns degraded when a direct API source is unavailable", async () => {
     vi.mocked(fetchRaydiumPools).mockResolvedValueOnce(
-      Object.assign([], { ok: false, degraded: true, errors: ["query poolType type error"] }),
+      { pools: [], ok: false, degraded: true, errors: ["query poolType type error"] },
     );
 
     const result = await syncDexLiquidity(db, "graph-key");
@@ -291,7 +303,7 @@ describe("syncDexLiquidity", () => {
         ],
       },
     });
-    vi.mocked(fetchFluidPools).mockResolvedValueOnce(Object.assign([fluidPool], { ok: true, degraded: false, errors: [] as string[] }));
+    vi.mocked(fetchFluidPools).mockResolvedValueOnce({ pools: [fluidPool], ok: true, degraded: false, errors: [] as string[] });
     vi.mocked(convertToGtNewPools).mockReturnValueOnce(new Map([
       ["usdc-circle", []],
     ]));

@@ -17,7 +17,7 @@ import { publishDexPriceChallengerSnapshots } from "./challenger-persistence";
 import { processPoolMetrics } from "./process-pools";
 import { mergeStagedPools } from "./staging-merge";
 import { mergeGtPools } from "./fetch-crawlers";
-import { fetchDsFallbackPools, fetchCgTickersFallback } from "./fetch-fallbacks";
+import { fetchDsFallbackPools, fetchCgTickersFallback, getFallbackTargets } from "./fetch-fallbacks";
 import { computeStablecoinScores, computeDepthStability, computeDexPrices } from "./scoring";
 import { persistScores, writeHistoricalSnapshots } from "./persistence";
 import { fetchFluidPools } from "./fetch-fluid";
@@ -304,7 +304,7 @@ export async function syncDexLiquidity(
   }
   console.log(`[dex-liquidity] Total: ${priceObservations.size} coins with price observations across all sources`);
 
-  const directApiPools = directApiResults.flatMap((entry) => entry.result);
+  const directApiPools = directApiResults.flatMap((entry) => entry.result.pools);
 
   const {
     filteredPools: preferredPrimaryPools,
@@ -413,7 +413,11 @@ export async function syncDexLiquidity(
     priceObservations.set(id, existing);
   }
 
-  // 5b. Fallback crawlers: fill price observation gaps for coins with missing coverage
+  const weakCoverageTargetIdsBeforeFallback = new Set(
+    getFallbackTargets(metrics, priceObservations, { requireTrackedContracts: true }).map((meta) => meta.id),
+  );
+
+  // 5b. Fallback crawlers: fill price observation gaps for coins with missing or weak coverage
   const fallbackDeadlineMs = Date.now() + CRAWL_BUDGETS.FALLBACK_MS;
   let dsFallbackCoins = 0;
   let cgTickerFallbackCoins = 0;
@@ -457,12 +461,21 @@ export async function syncDexLiquidity(
     `(DS fallback: ${dsFallbackCoins} coins, CG tickers: ${cgTickerFallbackCoins} coins)`,
   );
 
+  const weakCoverageTargetIdsAfterFallback = new Set(
+    getFallbackTargets(metrics, priceObservations, { requireTrackedContracts: true }).map((meta) => meta.id),
+  );
+  let coverageRecoveredCoins = 0;
+  for (const stablecoinId of weakCoverageTargetIdsBeforeFallback) {
+    if (!weakCoverageTargetIdsAfterFallback.has(stablecoinId)) coverageRecoveredCoins++;
+  }
+
   // 6. Compute composite scores per stablecoin
   const {
     scores: scoreResults,
     globalAgg,
     retainedPoolsByStablecoin = new Map<string, LiquidityMetrics["topPools"]>(),
     tvlStabilityMap = new Map<string, number>(),
+    diagnostics,
   } = await computeStablecoinScores(db, metrics, dataSources.protocolTvlCaps);
   const currentCoverage = scoreResults.size;
   const [
@@ -535,6 +548,19 @@ export async function syncDexLiquidity(
   for (const row of scoreResults.values()) {
     currentCoverageClasses[row.coverageClass] += 1;
   }
+  const measuredBalanceCoveragePct = scoreResults.size > 0
+    ? Math.round(
+      (Array.from(scoreResults.values()).reduce((sum, row) => {
+        if (row.tvl <= 0) return sum;
+        return sum + Math.max(0, Math.min(1, (row.balanceMeasuredTvlUsd ?? 0) / row.tvl));
+      }, 0) / scoreResults.size) * 10000,
+    ) / 10000
+    : 0;
+  const syntheticOnlyCoins = Array.from(scoreResults.values()).filter((row) => {
+    const totalTvl = Object.values(row.sourceMix ?? {}).reduce((sum, entry) => sum + (entry?.tvlUsd ?? 0), 0);
+    const primaryTvl = (row.sourceMix?.dl?.tvlUsd ?? 0) + (row.sourceMix?.direct_api?.tvlUsd ?? 0);
+    return totalTvl > 0 && primaryTvl <= 0 && row.coverageClass === "fallback";
+  }).length;
 
   const previousCoverageClasses = {
     primary: 0,
@@ -631,8 +657,14 @@ export async function syncDexLiquidity(
         currentCoverageClasses,
         previousCoverageClasses,
         priceObservationCoins: priceObservations.size,
+        weakCoverageCoins: weakCoverageTargetIdsBeforeFallback.size,
+        coverageRecoveredCoins,
         dsFallbackCoins,
         cgTickerFallbackCoins,
+        measuredBalanceCoveragePct,
+        syntheticOnlyCoins,
+        sourceDegradedFamilies: [...new Set(criticalSourceFailures)],
+        protocolCapReductions: diagnostics.protocolCapReductions,
         challengerSnapshotsPublished: challengerPublication.publishedStablecoins,
         challengerSnapshotsSkipped: challengerPublication.skippedStablecoins,
         challengerSnapshotTablesMissing: challengerPublication.missingTables,

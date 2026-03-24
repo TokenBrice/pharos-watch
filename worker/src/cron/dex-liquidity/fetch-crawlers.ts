@@ -1,11 +1,9 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import { STAGED_POOL_DEFAULTS } from "../dex-discovery/types";
 import {
   onchainRateLimit, fetchCgTokenPools, CG_CHAIN_MAP,
 } from "../../lib/coingecko-onchain";
 import { GT_CHAIN_MAP } from "../../lib/chain-registry";
 import { RATE_LIMITS, CRAWL_BUDGETS } from "../../lib/rate-limit";
-import { CHAIN_META } from "@shared/lib/chains";
 import { sleepWithSignal } from "../../lib/abort";
 import type {
   LiquidityMetrics, DexPriceObs, GtCrawlResult, GtNewPool, CgNewPool,
@@ -13,11 +11,12 @@ import type {
 import { fetchGtTokenPools, getGtPoolType, parseGtPool } from "./geckoterminal-shared";
 import { classifyCgPool, parseCgPool } from "./coingecko-onchain-shared";
 import {
-  normalizeProtocol, getGtDexQuality,
-  computePoolPairQuality, computePoolStress, initMetrics,
+  getGtDexQuality,
+  initMetrics,
 } from "./pool-helpers";
 import { buildChainAddresses, type ProviderChainAddress } from "./fetch-primary";
 import { crawlTokenPools, type CrawlStats, type CrawlToken } from "./crawl-helpers";
+import { addSecondaryPoolContribution } from "./pool-contribution";
 
 function buildCrawlTokens(chainAddresses: Map<string, ProviderChainAddress[]>): CrawlToken[] {
   const tokens: CrawlToken[] = [];
@@ -99,6 +98,14 @@ export async function fetchCgPools(
         balanceRatio,
         lockedLiquidityPct,
         feePercentage,
+        measurement: {
+          tvlMeasured: true,
+          volumeMeasured: true,
+          balanceMeasured: balanceRatio != null,
+          maturityMeasured: maturityDays > 0,
+          priceMeasured: price > 0,
+          synthetic: false,
+        },
       };
     },
   });
@@ -130,73 +137,9 @@ export function mergeCgPools(
     }
 
     for (const pool of pools) {
-      const balanceRatio = pool.balanceRatio ?? STAGED_POOL_DEFAULTS.balanceRatioFallback;
-      const balanceHealth = Math.pow(balanceRatio, 1.5);
-      const organicFraction = STAGED_POOL_DEFAULTS.organicFraction;
-      const lockedLiquidityPct = pool.lockedLiquidityPct ?? STAGED_POOL_DEFAULTS.lockedLiquidityFallback;
-      const coinPairQuality = computePoolPairQuality(
-        (pool.symbol ?? "").split(/\s*\/\s*/).map((s) => s.trim()),
-        meta.symbol,
-      );
-      const combinedQuality = pool.qualityMultiplier * balanceHealth * coinPairQuality;
-      const qualityAdjustedTvl = pool.tvlUsd * pool.qualityMultiplier * balanceHealth;
-      const poolEffTvl = pool.tvlUsd * combinedQuality;
-      const stressIdx = computePoolStress(balanceRatio, organicFraction, pool.maturityDays, coinPairQuality);
-
-      m.totalTvlUsd += pool.tvlUsd;
-      m.totalVolume24hUsd += pool.volume24hUsd;
-      m.poolCount++;
-      m.chains.add(pool.chain);
-      m.pairs.add(pool.symbol);
-      m.qualityAdjustedTvl += qualityAdjustedTvl;
-      m.effectiveTvl += poolEffTvl;
-      m.stressWeightedSum += pool.tvlUsd * stressIdx;
-      m.oldestPoolDays = Math.max(m.oldestPoolDays, pool.maturityDays);
-
-      // Locked liquidity tracking (CG pools only)
-      if (lockedLiquidityPct != null && lockedLiquidityPct > 0) {
-        m.lockedLiqWeightedSum += pool.tvlUsd * (lockedLiquidityPct / 100);
-        m.totalTvlForLocked += pool.tvlUsd;
-      }
-
-      // CG pools with real balance ratios contribute to balance tracking
-      if (pool.balanceRatio != null) {
-        m.balanceRatioWeightedSum += pool.tvlUsd * balanceRatio;
-        m.totalTvlForBalance += pool.tvlUsd;
-        withBalance++;
-      }
-
-      // Protocol and chain TVL
-      const protocol = normalizeProtocol(pool.dexId);
-      m.protocolTvl[protocol] = (m.protocolTvl[protocol] ?? 0) + pool.tvlUsd;
-      m.chainTvl[pool.chain] = (m.chainTvl[pool.chain] ?? 0) + pool.tvlUsd;
-
-      // Add to top pools
-      m.topPools.push({
-        poolId: `${pool.chain.toLowerCase()}:${pool.address.toLowerCase()}`,
-        project: pool.dexId,
-        chain: pool.chain,
-        tvlUsd: pool.tvlUsd,
-        symbol: pool.symbol,
-        volumeUsd1d: pool.volume24hUsd,
-        volumeUsd7d: pool.volume7dUsd ?? null,
-        poolType: pool.poolType,
-        source: "cg_onchain",
-        ...(pool.price > 0 ? { price: pool.price } : {}),
-        extra: {
-          ...(pool.balanceRatio != null ? { balanceRatio: Math.round(pool.balanceRatio * 100) / 100 } : {}),
-          ...(pool.feePercentage != null ? { feeTier: Math.round(pool.feePercentage * 100) } : {}),
-          qualityAdjustedTvl: Math.round(qualityAdjustedTvl),
-          effectiveTvl: Math.round(poolEffTvl),
-          organicFraction,
-          hasMeasuredOrganicFraction: false,
-          pairQuality: Math.round(coinPairQuality * 100) / 100,
-          stressIndex: stressIdx,
-          maturityDays: pool.maturityDays,
-          lockedLiquidityPct,
-        },
-      });
-
+      addSecondaryPoolContribution(metrics, stablecoinId, meta.symbol, pool);
+      m = metrics.get(stablecoinId)!;
+      if (pool.balanceRatio != null) withBalance++;
       merged++;
     }
   }
@@ -272,6 +215,14 @@ export async function fetchGtPools(
         price,
         symbol: parsed.poolName,
         sourceFamily: "gecko_terminal",
+        measurement: {
+          tvlMeasured: true,
+          volumeMeasured: true,
+          balanceMeasured: false,
+          maturityMeasured: maturityDays > 0,
+          priceMeasured: price > 0,
+          synthetic: false,
+        },
       };
     },
   });
@@ -305,72 +256,8 @@ export function mergeGtPools(
     }
 
     for (const pool of pools) {
-      const organicFraction = STAGED_POOL_DEFAULTS.organicFraction;
-      const hasMeasuredBalance = pool.balanceRatio != null && Number.isFinite(pool.balanceRatio);
-      const balanceRatio = hasMeasuredBalance ? pool.balanceRatio! : STAGED_POOL_DEFAULTS.balanceRatioFallback;
-      const balanceHealth = hasMeasuredBalance ? Math.pow(balanceRatio, 1.5) : 1;
-      // Note: GT pools intentionally excluded from balanceRatioWeightedSum and
-      // organicTvlWeightedSum to avoid diluting those signals with neutral defaults.
-      // Only Curve (balance) and DeFiLlama-APY (organic) pools contribute real data.
-      const coinPairQuality = computePoolPairQuality(
-        (pool.symbol ?? "").split(/\s*\/\s*/).map((s) => s.trim()),
-        meta.symbol,
-      );
-      const combinedQuality = pool.qualityMultiplier * balanceHealth * coinPairQuality;
-      const qualityAdjustedTvl = pool.tvlUsd * pool.qualityMultiplier * balanceHealth;
-      const poolEffTvl = pool.tvlUsd * combinedQuality;
-      const stressIdx = computePoolStress(balanceRatio, organicFraction, pool.maturityDays, coinPairQuality);
-
-      // Normalize chain name to display form (e.g., "solana" → "Solana") for consistent aggregation
-      const chainDisplay = CHAIN_META[pool.chain.toLowerCase()]?.name ?? pool.chain;
-
-      m.totalTvlUsd += pool.tvlUsd;
-      m.totalVolume24hUsd += pool.volume24hUsd;
-      m.poolCount++;
-      m.chains.add(chainDisplay);
-      m.pairs.add(pool.symbol);
-      m.qualityAdjustedTvl += qualityAdjustedTvl;
-      m.effectiveTvl += poolEffTvl;
-      m.stressWeightedSum += pool.tvlUsd * stressIdx;
-      m.oldestPoolDays = Math.max(m.oldestPoolDays, pool.maturityDays);
-      if (hasMeasuredBalance) {
-        m.balanceRatioWeightedSum += pool.tvlUsd * balanceRatio;
-        m.totalTvlForBalance += pool.tvlUsd;
-      }
-
-      // Protocol and chain TVL (use same normalizer as processPoolMetrics)
-      const protocol = normalizeProtocol(pool.dexId);
-      m.protocolTvl[protocol] = (m.protocolTvl[protocol] ?? 0) + pool.tvlUsd;
-      m.chainTvl[chainDisplay] = (m.chainTvl[chainDisplay] ?? 0) + pool.tvlUsd;
-
-      // Add to top pools
-      m.topPools.push({
-        poolId: `${pool.chain.toLowerCase()}:${pool.address.toLowerCase()}`,
-        project: protocol,
-        chain: chainDisplay,
-        tvlUsd: pool.tvlUsd,
-        symbol: pool.symbol,
-        volumeUsd1d: pool.volume24hUsd,
-        volumeUsd7d: pool.volume7dUsd ?? null,
-        poolType: pool.poolType,
-        source: pool.sourceFamily,
-        ...(pool.price > 0 ? { price: pool.price } : {}),
-        extra: {
-          ...(hasMeasuredBalance ? {
-            balanceRatio: Math.round(balanceRatio * 100) / 100,
-            balanceDetails: pool.balanceDetails,
-          } : {}),
-          ...(pool.feeTierBps != null ? { feeTier: pool.feeTierBps } : {}),
-          qualityAdjustedTvl: Math.round(qualityAdjustedTvl),
-          effectiveTvl: Math.round(poolEffTvl),
-          organicFraction,
-          hasMeasuredOrganicFraction: false,
-          pairQuality: Math.round(coinPairQuality * 100) / 100,
-          stressIndex: stressIdx,
-          maturityDays: pool.maturityDays,
-        },
-      });
-
+      addSecondaryPoolContribution(metrics, stablecoinId, meta.symbol, pool);
+      m = metrics.get(stablecoinId)!;
       merged++;
     }
   }

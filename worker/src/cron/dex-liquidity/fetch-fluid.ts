@@ -43,6 +43,18 @@ interface FluidTicker {
   liquidity_in_usd: string;
 }
 
+function bigintToDecimalNumber(value: bigint, decimals: number): number {
+  if (decimals <= 0) return Number(value);
+  const negative = value < 0n;
+  const absolute = negative ? -value : value;
+  const base = 10n ** BigInt(decimals);
+  const whole = absolute / base;
+  const fraction = absolute % base;
+  const fractionDigits = fraction.toString().padStart(decimals, "0").slice(0, 12);
+  const asString = `${negative ? "-" : ""}${whole.toString()}.${fractionDigits}`.replace(/\.$/, "");
+  return Number(asString);
+}
+
 function encodeFluidAddressCall(selector: string, address: string): string {
   return `${selector}${address.toLowerCase().replace(/^0x/, "").padStart(64, "0")}`;
 }
@@ -104,8 +116,19 @@ async function enrichFluidPool(
 
   const token0Balance = (collateralReserves?.[0] ?? 0n) + (debtReserves?.[2] ?? 0n);
   const token1Balance = (collateralReserves?.[1] ?? 0n) + (debtReserves?.[3] ?? 0n);
+  const token0Decimals = pool.tokens[0]?.decimals ?? 0;
+  const token1Decimals = pool.tokens[1]?.decimals ?? 0;
   if (token0Balance > 0n || token1Balance > 0n) {
-    pool.balances = [Number(token0Balance), Number(token1Balance)];
+    if (Number.isFinite(token0Decimals) && token0Decimals > 0 && Number.isFinite(token1Decimals) && token1Decimals > 0) {
+      pool.balances = [
+        bigintToDecimalNumber(token0Balance, token0Decimals),
+        bigintToDecimalNumber(token1Balance, token1Decimals),
+      ];
+      pool.balancesNormalized = true;
+    } else {
+      pool.balances = [Number(token0Balance), Number(token1Balance)];
+      pool.balancesNormalized = false;
+    }
   }
 
   const fee = feeWords?.[0] ?? 0n;

@@ -78,6 +78,10 @@ for (const meta of ACTIVE_STABLECOINS) {
 }
 
 export const CG_TICKERS_RATE_MS = 2500; // conservative: ~24 req/min well under free-tier limit
+export const GT_TOKEN_POOLS_PAGE_SIZE = 20;
+export const GT_TOKEN_POOLS_MAX_PAGES = 3;
+export const CG_ONCHAIN_TOKEN_POOLS_PAGE_SIZE = 20;
+export const CG_ONCHAIN_TOKEN_POOLS_MAX_PAGES = 3;
 
 /**
  * Synthetic TVL factor for orderbook exchanges.

@@ -14,6 +14,16 @@ import { computeDurabilityScore, computeLiquidityScore, normalizeProtocol } from
 
 const HISTORY_CONFIDENCE_MIN = 0.75;
 
+interface ProtocolCapDiagnostics {
+  cappedPoolCount: number;
+  cappedProtocols: number;
+  reducedTvlUsd: number;
+}
+
+interface ScoreDiagnostics {
+  protocolCapReductions: ProtocolCapDiagnostics;
+}
+
 function getPoolExtraNumber(
   extra: LiquidityMetrics["topPools"][number]["extra"] | undefined,
   key: string,
@@ -50,6 +60,9 @@ function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
   let oldestPoolDays = 0;
   let lockedLiqWeightedSum = 0;
   let totalTvlForLocked = 0;
+  let syntheticTvlUsd = 0;
+  let decayedTvlUsd = 0;
+  let measuredPriceTvlUsd = 0;
 
   for (const pool of pools) {
     const proto = normalizeProtocol(pool.project);
@@ -96,6 +109,11 @@ function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
       lockedLiqWeightedSum += pool.tvlUsd * (lockedLiquidityPct / 100);
       totalTvlForLocked += pool.tvlUsd;
     }
+
+    const measurement = pool.extra?.measurement;
+    if (measurement?.synthetic) syntheticTvlUsd += pool.tvlUsd;
+    if (measurement?.decayed) decayedTvlUsd += pool.tvlUsd;
+    if (measurement?.priceMeasured) measuredPriceTvlUsd += pool.tvlUsd;
   }
 
   let hhi = 0;
@@ -132,7 +150,134 @@ function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
     totalTvlForLocked,
     hhi,
     visiblePools,
+    sourceFamilyCount: Object.keys(sourceMix).length,
+    protocolCount: Object.keys(protocolTvl).length,
+    syntheticTvlUsd,
+    decayedTvlUsd,
+    measuredPriceTvlUsd,
   };
+}
+
+function filterRetainedPools(pools: LiquidityMetrics["topPools"]): LiquidityMetrics["topPools"] {
+  return pools.filter((p) => {
+    const vol = p.volumeUsd1d || 0;
+    if (p.tvlUsd > 0 && vol / p.tvlUsd > 50) return false;
+    if (p.tvlUsd > 100_000_000 && vol < 50_000) return false;
+    return true;
+  });
+}
+
+function shouldStrictlyCapSource(source: LiquidityMetrics["topPools"][number]["source"]): boolean {
+  return source === "cg_onchain" ||
+    source === "gecko_terminal" ||
+    source === "dexscreener" ||
+    source === "cg_tickers";
+}
+
+function applyProtocolCaps(
+  pools: LiquidityMetrics["topPools"],
+  protocolTvlCaps: Map<string, number>,
+): ProtocolCapDiagnostics {
+  if (protocolTvlCaps.size === 0 || pools.length === 0) {
+    return { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 };
+  }
+
+  const cappedTvlByProto = new Map<string, number>();
+  const trustedTvlByProto = new Map<string, number>();
+
+  for (const p of pools) {
+    const proto = normalizeProtocol(p.project);
+    if (shouldStrictlyCapSource(p.source)) {
+      cappedTvlByProto.set(proto, (cappedTvlByProto.get(proto) ?? 0) + p.tvlUsd);
+      continue;
+    }
+    trustedTvlByProto.set(proto, (trustedTvlByProto.get(proto) ?? 0) + p.tvlUsd);
+  }
+
+  let cappedPoolCount = 0;
+  let cappedProtocols = 0;
+  let reducedTvlUsd = 0;
+
+  for (const [proto, cappedTvl] of cappedTvlByProto) {
+    const cap = protocolTvlCaps.get(proto);
+    if (cap == null || cap <= 0 || cappedTvl <= 0) continue;
+    const trustedTvl = trustedTvlByProto.get(proto) ?? 0;
+    const headroom = Math.max(0, cap - trustedTvl);
+    if (cappedTvl <= headroom) continue;
+
+    cappedProtocols++;
+    const scale = headroom / cappedTvl;
+    for (const p of pools) {
+      if (!shouldStrictlyCapSource(p.source) || normalizeProtocol(p.project) !== proto) continue;
+      const previousTvl = p.tvlUsd;
+      p.tvlUsd = Math.round(p.tvlUsd * scale);
+      reducedTvlUsd += Math.max(0, previousTvl - p.tvlUsd);
+      if (p.extra) {
+        const ex = p.extra as Record<string, number | unknown>;
+        if (typeof ex.qualityAdjustedTvl === "number") ex.qualityAdjustedTvl = Math.round(ex.qualityAdjustedTvl * scale);
+        if (typeof ex.effectiveTvl === "number") ex.effectiveTvl = Math.round(ex.effectiveTvl * scale);
+        const measurement = p.extra.measurement ?? {};
+        measurement.capped = true;
+        p.extra.measurement = measurement;
+      }
+      cappedPoolCount++;
+    }
+  }
+
+  return { cappedPoolCount, cappedProtocols, reducedTvlUsd: Math.round(reducedTvlUsd) };
+}
+
+function applyRebuiltMetrics(metric: LiquidityMetrics, rebuilt: ReturnType<typeof rebuildMetricsFromPools>): void {
+  metric.protocolTvl = rebuilt.protocolTvl;
+  metric.chainTvl = rebuilt.chainTvl;
+  metric.totalTvlUsd = rebuilt.totalTvlUsd;
+  metric.totalVolume24hUsd = rebuilt.totalVolume24hUsd;
+  metric.totalVolume7dUsd = rebuilt.totalVolume7dUsd;
+  metric.poolCount = rebuilt.poolCount;
+  metric.chains = rebuilt.chains;
+  metric.pairs = rebuilt.pairs;
+  metric.qualityAdjustedTvl = rebuilt.qualityAdjustedTvl;
+  metric.effectiveTvl = rebuilt.effectiveTvl;
+  metric.balanceRatioWeightedSum = rebuilt.balanceRatioWeightedSum;
+  metric.totalTvlForBalance = rebuilt.totalTvlForBalance;
+  metric.organicTvlWeightedSum = rebuilt.organicTvlWeightedSum;
+  metric.totalTvlForOrganic = rebuilt.totalTvlForOrganic;
+  metric.stressWeightedSum = rebuilt.stressWeightedSum;
+  metric.oldestPoolDays = rebuilt.oldestPoolDays;
+  metric.lockedLiqWeightedSum = rebuilt.lockedLiqWeightedSum;
+  metric.totalTvlForLocked = rebuilt.totalTvlForLocked;
+  metric.topPools = rebuilt.visiblePools;
+}
+
+function accumulateGlobalAggregate(
+  pools: LiquidityMetrics["topPools"],
+  globalSeenPools: Set<string>,
+  globalProtocolTvl: Record<string, number>,
+  globalChainTvl: Record<string, number>,
+  globalProtoChainTvl: Record<string, number>,
+  globalChains: Set<string>,
+): { totalTvl: number; totalVol24h: number; totalVol7d: number; poolCount: number } {
+  let totalTvl = 0;
+  let totalVol24h = 0;
+  let totalVol7d = 0;
+  let poolCount = 0;
+
+  for (const p of pools) {
+    if (globalSeenPools.has(p.poolId)) continue;
+    globalSeenPools.add(p.poolId);
+    totalTvl += p.tvlUsd;
+    totalVol24h += p.volumeUsd1d;
+    totalVol7d += p.volumeUsd7d ?? 0;
+    poolCount++;
+    const chainKey = p.chain.toLowerCase();
+    globalChains.add(chainKey);
+    const proto = normalizeProtocol(p.project);
+    globalProtocolTvl[proto] = (globalProtocolTvl[proto] ?? 0) + p.tvlUsd;
+    globalChainTvl[chainKey] = (globalChainTvl[chainKey] ?? 0) + p.tvlUsd;
+    globalProtoChainTvl[`${proto}:${chainKey}`] = (globalProtoChainTvl[`${proto}:${chainKey}`] ?? 0) + p.tvlUsd;
+  }
+
+  return { totalTvl, totalVol24h, totalVol7d, poolCount };
 }
 
 /** @internal Exported for testing only. */
@@ -201,25 +346,65 @@ async function loadConfidentHistoryStability(db: D1Database): Promise<{
   return { tvlStabilityMap, volumeStabilityMap };
 }
 
-function classifyCoverage(sourceMix: LiquiditySourceMix, totalTvlUsd: number): {
+function classifyCoverage(input: {
+  sourceMix: LiquiditySourceMix;
+  totalTvlUsd: number;
+  protocolCount: number;
+  sourceFamilyCount: number;
+  balanceMeasuredTvlUsd: number;
+  organicMeasuredTvlUsd: number;
+  syntheticTvlUsd: number;
+  decayedTvlUsd: number;
+  measuredPriceTvlUsd: number;
+}): {
   coverageClass: LiquidityCoverageClass;
   coverageConfidence: number;
 } {
+  const {
+    sourceMix,
+    totalTvlUsd,
+    protocolCount,
+    sourceFamilyCount,
+    balanceMeasuredTvlUsd,
+    organicMeasuredTvlUsd,
+    syntheticTvlUsd,
+    decayedTvlUsd,
+    measuredPriceTvlUsd,
+  } = input;
   if (totalTvlUsd <= 0 || Object.keys(sourceMix).length === 0) {
     return { coverageClass: "unobserved", coverageConfidence: 0 };
   }
 
   const primaryTvl = (sourceMix.dl?.tvlUsd ?? 0) + (sourceMix.direct_api?.tvlUsd ?? 0);
   const fallbackTvl = Math.max(0, totalTvlUsd - primaryTvl);
+  const balanceMeasuredShare = totalTvlUsd > 0 ? balanceMeasuredTvlUsd / totalTvlUsd : 0;
+  const organicMeasuredShare = totalTvlUsd > 0 ? organicMeasuredTvlUsd / totalTvlUsd : 0;
+  const syntheticShare = totalTvlUsd > 0 ? syntheticTvlUsd / totalTvlUsd : 0;
+  const decayedShare = totalTvlUsd > 0 ? decayedTvlUsd / totalTvlUsd : 0;
+  const measuredPriceShare = totalTvlUsd > 0 ? measuredPriceTvlUsd / totalTvlUsd : 0;
+
+  let confidence = 0.35;
+  confidence += Math.min(0.2, protocolCount * 0.05);
+  confidence += Math.min(0.15, sourceFamilyCount * 0.05);
+  confidence += Math.min(0.1, balanceMeasuredShare * 0.1);
+  confidence += Math.min(0.05, organicMeasuredShare * 0.05);
+  confidence += Math.min(0.1, measuredPriceShare * 0.1);
+  confidence -= Math.min(0.25, syntheticShare * 0.35);
+  confidence -= Math.min(0.15, decayedShare * 0.2);
 
   if (primaryTvl > 0 && fallbackTvl <= 0) {
-    return { coverageClass: "primary", coverageConfidence: 1 };
+    confidence += 0.15;
+    return { coverageClass: "primary", coverageConfidence: Math.max(0, Math.min(1, Number(confidence.toFixed(2)))) };
   }
   if (primaryTvl > 0 && fallbackTvl > 0) {
-    return { coverageClass: "mixed", coverageConfidence: 0.85 };
+    confidence += 0.05;
+    return { coverageClass: "mixed", coverageConfidence: Math.max(0, Math.min(1, Number(confidence.toFixed(2)))) };
   }
 
-  return { coverageClass: "fallback", coverageConfidence: 0.55 };
+  return {
+    coverageClass: "fallback",
+    coverageConfidence: Math.max(0, Math.min(1, Number((confidence - 0.05).toFixed(2)))),
+  };
 }
 
 function getObservationIdentityKey(observation: DexPriceObs): string | null {
@@ -322,6 +507,7 @@ export async function computeStablecoinScores(
   globalAgg: GlobalAgg;
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>;
   tvlStabilityMap: Map<string, number>;
+  diagnostics: ScoreDiagnostics;
 }> {
   let tvlStabilityMap = new Map<string, number>();
   let volumeStabilityMap = new Map<string, number>();
@@ -344,58 +530,14 @@ export async function computeStablecoinScores(
   let globalTotalVol7d = 0;
   let globalPoolCount = 0;
   const globalChains = new Set<string>();
+  const protocolCapDiagnostics: ProtocolCapDiagnostics = { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 };
 
   for (const [id, m] of metrics) {
-    // Filter pools with absurd volume/TVL ratios (e.g. $183M vol on $52K TVL)
-    // before sorting — bad data from any source (DL, GT) gets dropped.
-    // 50x is generous: legit concentrated AMMs (Maverick, Uni V4) hit 15-25x.
-    // Also filter fake TVL: >$100M with <$50K daily volume is not a real pool.
-    m.topPools = m.topPools.filter((p) => {
-      const vol = p.volumeUsd1d || 0;
-      if (p.tvlUsd > 0 && vol / p.tvlUsd > 50) return false;
-      if (p.tvlUsd > 100_000_000 && vol < 50_000) return false;
-      return true;
-    });
-
-    // Protocol-level TVL cap: CG/GT CLMM pools systematically report inflated
-    // virtual reserves. Scale down non-DL pools per protocol when their aggregate
-    // exceeds the DL protocol TVL. DL pools are trusted and kept as-is.
-    if (protocolTvlCaps.size > 0) {
-      // Sum secondary-source TVL per normalized protocol
-      const secondaryTvlByProto = new Map<string, number>();
-      for (const p of m.topPools) {
-        if (p.source === "dl") continue;
-        const proto = normalizeProtocol(p.project);
-        secondaryTvlByProto.set(proto, (secondaryTvlByProto.get(proto) ?? 0) + p.tvlUsd);
-      }
-      // Sum DL-source TVL per protocol (to know remaining cap headroom)
-      const dlTvlByProto = new Map<string, number>();
-      for (const p of m.topPools) {
-        if (p.source !== "dl") continue;
-        const proto = normalizeProtocol(p.project);
-        dlTvlByProto.set(proto, (dlTvlByProto.get(proto) ?? 0) + p.tvlUsd);
-      }
-      // Scale down secondary pools where they exceed cap headroom
-      for (const [proto, secTvl] of secondaryTvlByProto) {
-        const cap = protocolTvlCaps.get(proto);
-        if (cap == null || cap <= 0) continue;
-        const dlTvl = dlTvlByProto.get(proto) ?? 0;
-        const headroom = Math.max(0, cap - dlTvl);
-        if (secTvl > headroom && secTvl > 0) {
-          const scale = headroom / secTvl;
-          for (const p of m.topPools) {
-            if (p.source === "dl") continue;
-            if (normalizeProtocol(p.project) !== proto) continue;
-            p.tvlUsd = Math.round(p.tvlUsd * scale);
-            if (p.extra) {
-              const ex = p.extra as Record<string, number>;
-              if (ex.qualityAdjustedTvl != null) ex.qualityAdjustedTvl = Math.round(ex.qualityAdjustedTvl * scale);
-              if (ex.effectiveTvl != null) ex.effectiveTvl = Math.round(ex.effectiveTvl * scale);
-            }
-          }
-        }
-      }
-    }
+    m.topPools = filterRetainedPools(m.topPools);
+    const capResult = applyProtocolCaps(m.topPools, protocolTvlCaps);
+    protocolCapDiagnostics.cappedPoolCount += capResult.cappedPoolCount;
+    protocolCapDiagnostics.cappedProtocols += capResult.cappedProtocols;
+    protocolCapDiagnostics.reducedTvlUsd += capResult.reducedTvlUsd;
 
     const retainedPools = [...m.topPools];
     retainedPoolsByStablecoin.set(id, retainedPools.map((pool) => ({
@@ -404,47 +546,14 @@ export async function computeStablecoinScores(
     })));
     const rebuilt = rebuildMetricsFromPools(retainedPools);
 
-    // Recompute aggregates from retained pools so filtered/capped pools cannot
-    // continue influencing score inputs through stale pre-filter metrics.
-    m.protocolTvl = rebuilt.protocolTvl;
-    m.chainTvl = rebuilt.chainTvl;
-    m.totalTvlUsd = rebuilt.totalTvlUsd;
-    m.totalVolume24hUsd = rebuilt.totalVolume24hUsd;
-    m.totalVolume7dUsd = rebuilt.totalVolume7dUsd;
-    m.poolCount = rebuilt.poolCount;
-    m.chains = rebuilt.chains;
-    m.pairs = rebuilt.pairs;
-    m.qualityAdjustedTvl = rebuilt.qualityAdjustedTvl;
-    m.effectiveTvl = rebuilt.effectiveTvl;
-    m.balanceRatioWeightedSum = rebuilt.balanceRatioWeightedSum;
-    m.totalTvlForBalance = rebuilt.totalTvlForBalance;
-    m.organicTvlWeightedSum = rebuilt.organicTvlWeightedSum;
-    m.totalTvlForOrganic = rebuilt.totalTvlForOrganic;
-    m.stressWeightedSum = rebuilt.stressWeightedSum;
-    m.oldestPoolDays = rebuilt.oldestPoolDays;
-    m.lockedLiqWeightedSum = rebuilt.lockedLiqWeightedSum;
-    m.totalTvlForLocked = rebuilt.totalTvlForLocked;
-
-    // Global dedup: accumulate from ALL pools (pre-truncation) so every physical
-    // pool is counted once even when shared by multiple stablecoins.
-    for (const p of retainedPools) {
-      if (globalSeenPools.has(p.poolId)) continue;
-      globalSeenPools.add(p.poolId);
-      globalTotalTvl += p.tvlUsd;
-      globalTotalVol24h += p.volumeUsd1d;
-      globalTotalVol7d += p.volumeUsd7d ?? 0;
-      globalPoolCount++;
-      const chainKey = p.chain.toLowerCase();
-      globalChains.add(chainKey);
-      const proto = normalizeProtocol(p.project);
-      globalProtocolTvl[proto] = (globalProtocolTvl[proto] ?? 0) + p.tvlUsd;
-      globalChainTvl[chainKey] = (globalChainTvl[chainKey] ?? 0) + p.tvlUsd;
-      // Track protocol→chain TVL for proportional chain cap reduction
-      const pcKey = `${proto}:${chainKey}`;
-      globalProtoChainTvl[pcKey] = (globalProtoChainTvl[pcKey] ?? 0) + p.tvlUsd;
-    }
-
-    m.topPools = rebuilt.visiblePools;
+    applyRebuiltMetrics(m, rebuilt);
+    const globalDelta = accumulateGlobalAggregate(
+      retainedPools, globalSeenPools, globalProtocolTvl, globalChainTvl, globalProtoChainTvl, globalChains,
+    );
+    globalTotalTvl += globalDelta.totalTvl;
+    globalTotalVol24h += globalDelta.totalVol24h;
+    globalTotalVol7d += globalDelta.totalVol7d;
+    globalPoolCount += globalDelta.poolCount;
 
     // v2: Compute durability score
     const tvlStab = tvlStabilityMap.get(id) ?? null;
@@ -467,7 +576,17 @@ export async function computeStablecoinScores(
     const lockedLiqPct = m.totalTvlForLocked > 0
       ? Math.round((m.lockedLiqWeightedSum / m.totalTvlForLocked) * 10000) / 10000
       : null;
-    const { coverageClass, coverageConfidence } = classifyCoverage(rebuilt.sourceMix, m.totalTvlUsd);
+    const { coverageClass, coverageConfidence } = classifyCoverage({
+      sourceMix: rebuilt.sourceMix,
+      totalTvlUsd: m.totalTvlUsd,
+      protocolCount: rebuilt.protocolCount,
+      sourceFamilyCount: rebuilt.sourceFamilyCount,
+      balanceMeasuredTvlUsd: m.totalTvlForBalance,
+      organicMeasuredTvlUsd: m.totalTvlForOrganic,
+      syntheticTvlUsd: rebuilt.syntheticTvlUsd,
+      decayedTvlUsd: rebuilt.decayedTvlUsd,
+      measuredPriceTvlUsd: rebuilt.measuredPriceTvlUsd,
+    });
 
     results.set(id, {
       tvl: m.totalTvlUsd,
@@ -527,7 +646,19 @@ export async function computeStablecoinScores(
     chainTvl: globalChainTvl,
   };
 
-  return { scores: results, globalAgg, retainedPoolsByStablecoin, tvlStabilityMap };
+  return {
+    scores: results,
+    globalAgg,
+    retainedPoolsByStablecoin,
+    tvlStabilityMap,
+    diagnostics: {
+      protocolCapReductions: {
+        cappedPoolCount: protocolCapDiagnostics.cappedPoolCount,
+        cappedProtocols: protocolCapDiagnostics.cappedProtocols,
+        reducedTvlUsd: protocolCapDiagnostics.reducedTvlUsd + Math.round(globalCapReduction),
+      },
+    },
+  };
 }
 
 /** Compute depth stability (CV-based) and persist to D1. Accepts pre-loaded data to avoid redundant DB scan. */

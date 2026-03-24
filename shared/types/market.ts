@@ -185,6 +185,18 @@ const DexLiquidityPoolSchema = z.object({
           }),
         )
         .optional(),
+      measurement: z
+        .object({
+          tvlMeasured: z.boolean().optional(),
+          volumeMeasured: z.boolean().optional(),
+          balanceMeasured: z.boolean().optional(),
+          maturityMeasured: z.boolean().optional(),
+          priceMeasured: z.boolean().optional(),
+          synthetic: z.boolean().optional(),
+          decayed: z.boolean().optional(),
+          capped: z.boolean().optional(),
+        })
+        .optional(),
     })
     .optional(),
 });
@@ -366,10 +378,17 @@ export const PegSummaryResponseSchema = z.object({
 });
 export type PegSummaryResponse = z.infer<typeof PegSummaryResponseSchema>;
 
-export const BLACKLIST_STABLECOINS = ["USDC", "USDT", "EURC", "PAXG", "XAUT"] as const;
+export const BLACKLIST_STABLECOINS = ["USDC", "USDT", "PAXG", "XAUT"] as const;
 
 export type BlacklistStablecoin = (typeof BLACKLIST_STABLECOINS)[number];
 export type BlacklistEventType = "blacklist" | "unblacklist" | "destroy";
+export type BlacklistAmountSource = "event" | "historical_balance" | "derived" | "unavailable";
+export type BlacklistAmountStatus =
+  | "resolved"
+  | "recoverable_pending"
+  | "permanently_unavailable"
+  | "provider_failed"
+  | "ambiguous";
 
 export interface BlacklistEvent {
   id: string;
@@ -378,11 +397,18 @@ export interface BlacklistEvent {
   chainName: string;
   eventType: BlacklistEventType;
   address: string;
-  amount: number | null;
+  amountNative: number | null;
+  amountUsdAtEvent: number | null;
+  amountSource: BlacklistAmountSource;
+  amountStatus: BlacklistAmountStatus;
   txHash: string;
   blockNumber: number;
   timestamp: number;
   methodologyVersion: string;
+  contractAddress: string | null;
+  configKey: string | null;
+  eventSignature: string | null;
+  eventTopic0: string | null;
   explorerTxUrl: string;
   explorerAddressUrl: string;
 }
@@ -394,11 +420,24 @@ const BlacklistEventSchema = z.object({
   chainName: z.string(),
   eventType: z.enum(["blacklist", "unblacklist", "destroy"]),
   address: z.string(),
-  amount: z.number().nullable(),
+  amountNative: z.number().nullable(),
+  amountUsdAtEvent: z.number().nullable(),
+  amountSource: z.enum(["event", "historical_balance", "derived", "unavailable"]),
+  amountStatus: z.enum([
+    "resolved",
+    "recoverable_pending",
+    "permanently_unavailable",
+    "provider_failed",
+    "ambiguous",
+  ]),
   txHash: z.string(),
   blockNumber: z.number(),
   timestamp: z.number(),
   methodologyVersion: z.string(),
+  contractAddress: z.string().nullable(),
+  configKey: z.string().nullable(),
+  eventSignature: z.string().nullable(),
+  eventTopic0: z.string().nullable(),
   explorerTxUrl: z.string(),
   explorerAddressUrl: z.string(),
 });
