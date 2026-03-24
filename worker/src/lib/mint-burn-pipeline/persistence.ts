@@ -2,6 +2,8 @@ import { batchExecute } from "../db";
 import { detectAtomicRoundtrips } from "./roundtrip-detection";
 import type { MintBurnAffectedHour, MintBurnRow } from "./types";
 
+const MINT_BURN_EVENT_INSERT_BATCH_SIZE = 50;
+
 export async function insertMintBurnRows(
   db: D1Database,
   rows: MintBurnRow[],
@@ -36,7 +38,8 @@ export async function insertMintBurnRows(
     ),
   );
 
-  const inserted = await batchExecute(db, insertStmts);
+  // Each insert binds 18 values; keep D1 batch writes well below the bind-variable ceiling.
+  const inserted = await batchExecute(db, insertStmts, MINT_BURN_EVENT_INSERT_BATCH_SIZE);
   const ignored = Math.max(0, rows.length - inserted);
   return { inserted, ignored };
 }

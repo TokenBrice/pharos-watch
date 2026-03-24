@@ -68,6 +68,7 @@ The same rule applies to Worker-side integration clients. Telegram delivery, X p
 | Mint/burn per-config budget (extended) | `25`                | `worker/src/cron/sync-mint-burn.ts`                               | Lower ceiling for long-tail backlog drain                                   |
 | Mint/burn max scan range               | `50,000` blocks     | `worker/src/cron/sync-mint-burn.ts`                               | Keeps per-request log scans bounded                                         |
 | Mint/burn SQL `IN` chunk size          | `90` ids            | `worker/src/cron/sync-mint-burn.ts`                               | Current safeguard for large batched SQL                                     |
+| Mint/burn event insert batch size      | `50` statements     | `worker/src/lib/mint-burn-pipeline/persistence.ts`                | Each insert binds 18 values; chunked to stay below D1 batch bind ceilings   |
 
 ---
 

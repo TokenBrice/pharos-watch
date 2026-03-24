@@ -279,6 +279,17 @@ describe("mint-burn shared pipeline modules", () => {
     expect(result.ignored).toBe(1);
   });
 
+  it("chunks event inserts below the D1 bind-variable ceiling", async () => {
+    const db = makeDb();
+
+    await insertMintBurnRows(
+      db,
+      Array.from({ length: 56 }, (_, index) => makeRow({ id: `id-${index + 1}`, tx_hash: `0xtx-${index + 1}` })),
+    );
+
+    expect(vi.mocked(batchExecute)).toHaveBeenCalledWith(db, expect.any(Array), 50);
+  });
+
   it("returns bridge/review/effective burn counters", async () => {
     const db = makeDb();
     const rows: MintBurnRow[] = [
