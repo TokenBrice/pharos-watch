@@ -3,8 +3,8 @@ import { USER_AGENT } from "../../lib/constants";
 import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
 import { classifyClPoolType } from "./direct-source-helpers";
 
-const PAGE_SIZE = 500;
-const MAX_PAGES = 4;
+const PAGE_SIZE = 250;
+const MAX_PAGES = 8;
 const SUBGRAPH_TIMEOUT_MS = 15_000;
 
 const PANCAKESWAP_V3_SUBGRAPHS: Record<string, { chain: string; subgraphId: string }> = {
@@ -114,19 +114,25 @@ export async function fetchPancakeSwapPools(
         const pagePools = data.pools ?? [];
         if (pagePools.length === 0) break;
 
-        const cutoff = Math.floor(Date.now() / 1000) - 86400;
-        const dayData = await fetchSubgraphJson<{ poolDayDatas?: PoolDayData[] }>(
-          subgraphUrl,
-          buildPoolDayDataQuery(pagePools.map((pool) => pool.id), cutoff),
-          signal,
-        );
-
         const latestVolumeByPool = new Map<string, number>();
-        for (const row of dayData.poolDayDatas ?? []) {
-          const poolId = row.pool.id.toLowerCase();
-          if (latestVolumeByPool.has(poolId)) continue;
-          const volume = parseFloat(row.volumeUSD);
-          latestVolumeByPool.set(poolId, Number.isFinite(volume) ? volume : 0);
+        try {
+          const cutoff = Math.floor(Date.now() / 1000) - 86400;
+          const dayData = await fetchSubgraphJson<{ poolDayDatas?: PoolDayData[] }>(
+            subgraphUrl,
+            buildPoolDayDataQuery(pagePools.map((pool) => pool.id), cutoff),
+            signal,
+          );
+
+          for (const row of dayData.poolDayDatas ?? []) {
+            const poolId = row.pool.id.toLowerCase();
+            if (latestVolumeByPool.has(poolId)) continue;
+            const volume = parseFloat(row.volumeUSD);
+            latestVolumeByPool.set(poolId, Number.isFinite(volume) ? volume : 0);
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          errors.push(`${chain} page ${page + 1} dayData: ${message}`);
+          console.warn("[fetch-pancakeswap]", chain, "poolDayDatas", message);
         }
 
         for (const pool of pagePools) {

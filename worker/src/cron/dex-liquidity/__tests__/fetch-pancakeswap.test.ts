@@ -58,4 +58,35 @@ describe("fetchPancakeSwapPools", () => {
     expect(pool.volume24hUsd).toBe(50000);
     expect(pool.feeRate).toBeCloseTo(0.0001);
   });
+
+  it("keeps pool coverage when the dayData query fails for a page", async () => {
+    vi.mocked(fetchWithRetry)
+      .mockImplementationOnce(async () => response({
+        data: {
+          pools: [{
+            id: "0xpool",
+            feeTier: "500",
+            totalValueLockedUSD: "125000",
+            totalValueLockedToken0: "62500",
+            totalValueLockedToken1: "62500",
+            token0Price: "1",
+            token1Price: "1",
+            token0: { id: "0xusdc", symbol: "USDC", decimals: "6" },
+            token1: { id: "0xusdt", symbol: "USDT", decimals: "6" },
+          }],
+        },
+      }))
+      .mockImplementationOnce(async () => {
+        throw new Error("daydata timeout");
+      })
+      .mockImplementation(async () => response({ data: { pools: [] } }));
+
+    const result = await fetchPancakeSwapPools("graph-key");
+
+    expect(result.ok).toBe(true);
+    expect(result.degraded).toBe(true);
+    expect(result.errors.some((entry) => entry.includes("dayData"))).toBe(true);
+    expect(result.pools).toHaveLength(1);
+    expect(result.pools[0]?.volume24hUsd).toBe(0);
+  });
 });
