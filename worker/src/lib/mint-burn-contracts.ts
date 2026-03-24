@@ -7,6 +7,8 @@ import { getTrackedStablecoin, resolveTrackedContractConfig } from "@shared/lib/
 export type MintBurnDirection = "mint" | "burn";
 export type MintBurnTier = "critical" | "extended";
 export type MintBurnType = "effective_burn" | "bridge_burn" | "review_required";
+export type MintBurnAdapterKind = "transfer-zero-address" | "custom-events" | "mixed";
+export type MintBurnStartBlockConfidence = "high" | "medium" | "low";
 
 export interface MintBurnBridgeDetectionConfig {
   protocol: "ccip";
@@ -40,6 +42,9 @@ export interface MintBurnContractConfig {
   enabled?: boolean;
   tier?: MintBurnTier;
   bridgeDetection?: MintBurnBridgeDetectionConfig;
+  adapterKind: MintBurnAdapterKind;
+  startBlockSource: string;
+  startBlockConfidence: MintBurnStartBlockConfidence;
 }
 
 interface MintBurnContractConfigSpec {
@@ -54,6 +59,9 @@ interface MintBurnContractConfigSpec {
   enabled?: boolean;
   tier?: MintBurnTier;
   bridgeDetection?: MintBurnBridgeDetectionConfig;
+  adapterKind?: MintBurnAdapterKind;
+  startBlockSource?: string;
+  startBlockConfidence?: MintBurnStartBlockConfidence;
 }
 
 // --- Constants ---
@@ -125,6 +133,11 @@ function resolveMintBurnContractConfig(
     throw new Error(`Missing tracked contract for ${spec.stablecoinId} on ${spec.chain.chainId}`);
   }
 
+  const adapterKind = spec.adapterKind ?? inferAdapterKind(spec.events);
+  const defaultedStartBlock = spec.startBlock === 21_900_000
+    && spec.tier === "extended"
+    && adapterKind === "transfer-zero-address";
+
   return {
     chain: spec.chain,
     stablecoinId: spec.stablecoinId,
@@ -137,7 +150,28 @@ function resolveMintBurnContractConfig(
     enabled: spec.enabled,
     tier: spec.tier,
     bridgeDetection: spec.bridgeDetection,
+    adapterKind,
+    startBlockSource: spec.startBlockSource ?? (
+      defaultedStartBlock ? "default-coverage-floor-2026-03-24" : "reviewed-contract-specific"
+    ),
+    startBlockConfidence: spec.startBlockConfidence ?? (defaultedStartBlock ? "low" : "high"),
   };
+}
+
+function inferAdapterKind(events: MintBurnEventDef[]): MintBurnAdapterKind {
+  const hasTransferZeroAddressOnly = events.length === 2
+    && events.every((event) =>
+      event.signature === "Transfer(address,address,uint256)"
+      && event.amountEncoding === "transfer-value"
+      && (
+        (event.direction === "mint" && event.filterTopic?.index === 1 && event.filterTopic.value === ZERO_ADDRESS_PADDED)
+        || (event.direction === "burn" && event.filterTopic?.index === 2 && event.filterTopic.value === ZERO_ADDRESS_PADDED)
+      ),
+    );
+  if (hasTransferZeroAddressOnly) return "transfer-zero-address";
+
+  const hasTransfer = events.some((event) => event.signature === "Transfer(address,address,uint256)");
+  return hasTransfer ? "mixed" : "custom-events";
 }
 
 // --- reUSD (Re Protocol) event topic hashes ---
@@ -773,8 +807,3 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = MINT_BURN_CONFIG_SPEC
  * when the report_card_cache is unavailable or stale (>2h).
  * Prefer grade-based classification from report card scores when available.
  */
-export const SAFE_HAVEN_IDS = new Set(
-  MINT_BURN_CONFIGS.filter((c) =>
-    ["USDT", "USDC", "FDUSD", "PYUSD"].includes(c.symbol)
-  ).map((c) => c.stablecoinId)
-);

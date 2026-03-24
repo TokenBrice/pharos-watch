@@ -39,6 +39,9 @@ describe("parseMintBurnLogs — custom event encodings", () => {
     decimals: 6,
     dustThreshold: 10_000,
     startBlock: 21_900_000,
+    adapterKind: "custom-events",
+    startBlockSource: "reviewed-contract-specific",
+    startBlockConfidence: "high",
     tier: "critical",
     events: [usdtIssueEventDef, usdtRedeemEventDef],
   });
@@ -177,6 +180,9 @@ describe("parseMintBurnLogs — custom event encodings", () => {
     decimals: 18,
     dustThreshold: 10_000,
     startBlock: 21_675_000,
+    adapterKind: "custom-events",
+    startBlockSource: "reviewed-contract-specific",
+    startBlockConfidence: "high",
     tier: "extended",
     events: [eventDef],
   });

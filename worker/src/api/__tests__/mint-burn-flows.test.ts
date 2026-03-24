@@ -788,8 +788,8 @@ describe("handleMintBurnFlows contract tests", () => {
       },
       { match: "FROM mint_burn_events", rows: [] },
       {
-        match: "SELECT last_block FROM mint_burn_sync_state",
-        rows: [{ key: "ethereum:usdt-tether", last_block: 22_345_678 }],
+        match: "FROM mint_burn_sync_state",
+        rows: [{ config_key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7", last_block: 22_345_678 }],
       },
       {
         match: "SELECT started_at, status, metadata",
@@ -813,8 +813,12 @@ describe("handleMintBurnFlows contract tests", () => {
 
     const body = MintBurnFlowsResponseSchema.parse(await res.json());
     const sync = body.sync!;
+    const usdt = body.coins.find((coin) => coin.stablecoinId === "usdt-tether");
     expect(sync.freshnessStatus).toBe("fresh");
     expect(sync.warning).toBeNull();
+    expect(usdt?.coverage?.adapterKinds).toEqual(["mixed"]);
+    expect(usdt?.coverage?.startBlockSource).toBe("reviewed-contract-specific");
+    expect(usdt?.coverage?.startBlockConfidence).toBe("high");
     expect(res.headers.get("Warning")).toBeNull();
     expect(res.headers.get("X-Data-Age")).toBe(String(30 * 60));
   });
@@ -859,8 +863,8 @@ describe("handleMintBurnFlows contract tests", () => {
       },
       { match: "FROM mint_burn_events", rows: [] },
       {
-        match: "SELECT last_block FROM mint_burn_sync_state",
-        rows: [{ key: "ethereum:usdt-tether", last_block: 22_345_678 }],
+        match: "FROM mint_burn_sync_state",
+        rows: [{ config_key: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7", last_block: 22_345_678 }],
       },
       {
         match: "SELECT started_at, status, metadata",

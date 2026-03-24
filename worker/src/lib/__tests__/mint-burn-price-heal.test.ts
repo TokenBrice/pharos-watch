@@ -90,4 +90,18 @@ describe("healNullPrices", () => {
     const result = await healNullPrices(db, NOW);
     expect(result.affectedHours.size).toBe(2);
   });
+
+  it("queries recent NULL-price events in deterministic newest-first order", async () => {
+    const prepare = vi.fn().mockReturnValue({
+      bind: vi.fn().mockReturnValue({
+        all: vi.fn().mockResolvedValue({ results: [] }),
+      }),
+    });
+    const db = { prepare } as unknown as D1Database;
+
+    await healNullPrices(db, NOW);
+
+    const sql = prepare.mock.calls[0]?.[0] as string;
+    expect(sql).toContain("ORDER BY e.timestamp DESC, e.id DESC");
+  });
 });

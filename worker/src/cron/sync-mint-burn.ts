@@ -23,12 +23,9 @@ import { parseMintBurnLogs } from "../lib/mint-burn-pipeline/parse";
 import { getNullPriceBacklog, healNullPrices } from "../lib/mint-burn-pipeline/price-heal";
 import { sweepRecentRoundtrips } from "../lib/mint-burn-pipeline/roundtrip-sweep";
 import {
-  collectAffectedHours,
-  insertMintBurnRows,
+  persistMintBurnRows,
   recalcAffectedHours,
-  updateBurnClassifications,
 } from "../lib/mint-burn-pipeline/persistence";
-import { detectAtomicRoundtrips } from "../lib/mint-burn-pipeline/roundtrip-detection";
 import {
   ensureMintBurnSyncStateRows,
   mintBurnConfigKey,
@@ -556,26 +553,16 @@ export async function syncMintBurn(
 
     // Phase 2: Detect atomic roundtrips across ALL eventDefs for this config.
     // Must see all rows to find mint+burn pairs in the same transaction.
-    const roundtripsDetected = detectAtomicRoundtrips(allParsedRows);
-    atomicRoundtripsTotal += roundtripsDetected;
-
     // Phase 3: Track, collect, insert.
     for (const row of allParsedRows) {
       summary.maxBlockSeen = Math.max(summary.maxBlockSeen, row.block_number);
     }
-    collectAffectedHours(allParsedRows, affectedHours);
-
-    if (allParsedRows.length > 0) {
-      const insertResult = await insertMintBurnRows(db, allParsedRows);
-
-      rowsInserted += insertResult.inserted;
-      rowsIgnored += insertResult.ignored;
-
-      summary.rowsInserted += insertResult.inserted;
-      summary.rowsIgnored += insertResult.ignored;
-
-      await updateBurnClassifications(db, allParsedRows);
-    }
+    const persistResult = await persistMintBurnRows(db, allParsedRows, affectedHours);
+    atomicRoundtripsTotal += persistResult.roundtripsDetected;
+    rowsInserted += persistResult.inserted;
+    rowsIgnored += persistResult.ignored;
+    summary.rowsInserted += persistResult.inserted;
+    summary.rowsIgnored += persistResult.ignored;
 
     const fullEventCoverage =
       summary.eventCoverage.length === config.events.length &&

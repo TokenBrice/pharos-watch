@@ -32,6 +32,7 @@ export async function handleReclassifyAtomicRoundtrips(
        WHERE flow_type = 'standard'
        GROUP BY tx_hash, stablecoin_id, chain_id
        HAVING COUNT(DISTINCT direction) > 1
+       ORDER BY MIN(timestamp) ASC, stablecoin_id ASC, tx_hash ASC
        LIMIT ?`,
     )
     .bind(BATCH_SIZE)

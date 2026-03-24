@@ -28,6 +28,7 @@ export async function sweepRecentRoundtrips(
      WHERE flow_type = 'standard' AND timestamp >= ?
      GROUP BY tx_hash, stablecoin_id, chain_id
      HAVING COUNT(DISTINCT direction) > 1
+     ORDER BY MIN(timestamp) ASC, stablecoin_id ASC, tx_hash ASC
      LIMIT ?`,
   ).bind(cutoff, SWEEP_LIMIT).all<{
     tx_hash: string;

@@ -389,3 +389,21 @@ describe("mint-burn-contracts top-200 Ethereum additions", () => {
     }
   });
 });
+
+describe("mint-burn-contracts provenance metadata", () => {
+  it("marks blanket transfer-wave start blocks as low-confidence defaults", () => {
+    const cfg = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "u-united-stables");
+    expect(cfg).toBeDefined();
+    expect(cfg?.adapterKind).toBe("transfer-zero-address");
+    expect(cfg?.startBlockSource).toBe("default-coverage-floor-2026-03-24");
+    expect(cfg?.startBlockConfidence).toBe("low");
+  });
+
+  it("marks reviewed custom-event adapters as high-confidence", () => {
+    const cfg = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "usdt-tether");
+    expect(cfg).toBeDefined();
+    expect(cfg?.adapterKind).toBe("mixed");
+    expect(cfg?.startBlockSource).toBe("reviewed-contract-specific");
+    expect(cfg?.startBlockConfidence).toBe("high");
+  });
+});

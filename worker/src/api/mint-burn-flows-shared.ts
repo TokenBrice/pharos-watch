@@ -234,6 +234,9 @@ export function buildCoinCoverageMap(
     has30dWindow: boolean;
     has90dWindow: boolean;
     isPartial: boolean;
+    adapterKinds: string[];
+    startBlockSource: string;
+    startBlockConfidence: "high" | "medium" | "low";
     status: "full" | "partial-history" | "lagging" | "bootstrapping" | "disabled";
   }>();
 
@@ -245,6 +248,13 @@ export function buildCoinCoverageMap(
     const historyStartAt = firstSeenMap.get(stablecoinId) ?? null;
     const disabled = configs.every((config) => config.enabled === false);
     const lagBlocks = effectiveHead != null ? Math.max(0, effectiveHead - lastSyncedBlock) : null;
+    const adapterKinds = [...new Set(configs.map((config) => config.adapterKind))].sort();
+    const startBlockSources = [...new Set(configs.map((config) => config.startBlockSource))].sort();
+    const startBlockConfidence = configs.some((config) => config.startBlockConfidence === "low")
+      ? "low"
+      : configs.some((config) => config.startBlockConfidence === "medium")
+      ? "medium"
+      : "high";
 
     const has24hWindow = effectiveHead != null
       ? startBlock <= effectiveHead - WINDOW_24H_BLOCKS && lastSyncedBlock >= effectiveHead - COVERAGE_LAG_GRACE_BLOCKS
@@ -272,6 +282,9 @@ export function buildCoinCoverageMap(
       has30dWindow,
       has90dWindow,
       isPartial: status !== "full",
+      adapterKinds,
+      startBlockSource: startBlockSources.length === 1 ? startBlockSources[0]! : "mixed",
+      startBlockConfidence,
       status,
     });
   }

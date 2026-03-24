@@ -323,6 +323,9 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
           has30dWindow: boolean;
           has90dWindow: boolean;
           isPartial: boolean;
+          adapterKinds?: string[];
+          startBlockSource?: string;
+          startBlockConfidence?: "high" | "medium" | "low";
           status: "full" | "partial-history" | "lagging" | "bootstrapping" | "disabled";
         };
     }> = [];

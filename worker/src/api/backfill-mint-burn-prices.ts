@@ -1,6 +1,30 @@
 import { requireAdmin } from "../lib/auth";
 import { jsonResponse } from "../lib/api-utils";
-import { getPriceCache } from "../lib/db-cache";
+import { batchExecute } from "../lib/db";
+import { loadMintBurnPriceHistoryBatch, findMintBurnHistoricalPrice } from "../lib/mint-burn-pipeline/context";
+import { rebuildHourlyForStablecoinIds } from "../lib/mint-burn-pipeline/persistence";
+
+interface CoinRepairSummary {
+  id: string;
+  updated: number;
+  valued: number;
+  audited: number;
+  stillUnpriced: number;
+  stillMissingAudit: number;
+}
+
+function hasMissingAudit(row: {
+  price_used: number | null;
+  price_timestamp: number | null;
+  price_source: string | null;
+}): boolean {
+  return row.price_used == null || row.price_timestamp == null || row.price_source == null;
+}
+
+function approxEqual(a: number, b: number): boolean {
+  const tolerance = Math.max(1e-9, Math.max(Math.abs(a), Math.abs(b)) * 1e-9);
+  return Math.abs(a - b) <= tolerance;
+}
 
 export async function handleBackfillMintBurnPrices(
   db: D1Database,
@@ -11,76 +35,165 @@ export async function handleBackfillMintBurnPrices(
   const authErr = await requireAdmin(request, trustedAdmin);
   if (authErr) return authErr;
 
-  // 1. Load current prices
-  const priceCache = await getPriceCache(db);
   // SAFETY: needsRepairWhere is a compile-time constant, not derived from user input.
   const needsRepairWhere =
     "(amount_usd IS NULL OR price_used IS NULL OR price_timestamp IS NULL OR price_source IS NULL)" as const;
 
-  // 2. Find distinct stablecoin_ids with incomplete valuation/audit fields
-  const nullRows = await db
-    .prepare(`SELECT DISTINCT stablecoin_id FROM mint_burn_events WHERE ${needsRepairWhere}`)
-    .all<{ stablecoin_id: string }>();
+  const incompleteRowsResult = await db
+    .prepare(
+      `SELECT id, stablecoin_id, chain_id, amount, amount_usd, timestamp, price_used, price_timestamp, price_source
+       FROM mint_burn_events
+       WHERE ${needsRepairWhere}
+       ORDER BY stablecoin_id ASC, timestamp DESC, id DESC`,
+    )
+    .all<{
+      id: string;
+      stablecoin_id: string;
+      chain_id: string;
+      amount: number;
+      amount_usd: number | null;
+      timestamp: number;
+      price_used: number | null;
+      price_timestamp: number | null;
+      price_source: string | null;
+    }>();
+  const incompleteRows = incompleteRowsResult.results ?? [];
+  if (incompleteRows.length === 0) {
+    return jsonResponse({
+      totalUpdated: 0,
+      rowsValued: 0,
+      rowsAudited: 0,
+      rowsStillUnpriced: 0,
+      rowsStillMissingAudit: 0,
+      coins: [],
+    });
+  }
 
-  let totalUpdated = 0;
-  const coinResults: Array<{ id: string; updated: number }> = [];
+  const stablecoinIds = [...new Set(incompleteRows.map((row) => row.stablecoin_id))];
+  const priceHistory = await loadMintBurnPriceHistoryBatch(db, stablecoinIds);
+  const updates = [];
+  const affectedCoinsForHourlyRebuild = new Set<string>();
+  const coinStats = new Map<string, CoinRepairSummary>();
+  let rowsValued = 0;
+  let rowsAudited = 0;
+  let rowsStillUnpriced = 0;
+  let rowsStillMissingAudit = 0;
 
-  for (const { stablecoin_id } of nullRows.results ?? []) {
-    const cached = priceCache.get(stablecoin_id);
-    if (!cached) {
-      coinResults.push({ id: stablecoin_id, updated: 0 });
+  for (const row of incompleteRows) {
+    const coin = coinStats.get(row.stablecoin_id) ?? {
+      id: row.stablecoin_id,
+      updated: 0,
+      valued: 0,
+      audited: 0,
+      stillUnpriced: 0,
+      stillMissingAudit: 0,
+    };
+
+    const historical = findMintBurnHistoricalPrice(priceHistory, row.stablecoin_id, row.timestamp);
+    const derivedPriceUsed = row.amount_usd != null && row.amount > 0
+      ? row.amount_usd / row.amount
+      : null;
+
+    if (row.amount_usd == null) {
+      if (historical) {
+        updates.push(
+          db.prepare(
+            `UPDATE mint_burn_events
+             SET amount_usd = ?, price_used = ?, price_timestamp = ?, price_source = ?
+             WHERE id = ?`,
+          ).bind(
+            row.amount * historical.price,
+            historical.price,
+            historical.snapshotDate,
+            "backfill-supply-history-daily",
+            row.id,
+          ),
+        );
+        rowsValued++;
+        coin.updated++;
+        coin.valued++;
+        affectedCoinsForHourlyRebuild.add(row.stablecoin_id);
+      } else {
+        rowsStillUnpriced++;
+        coin.stillUnpriced++;
+      }
+      coinStats.set(row.stablecoin_id, coin);
       continue;
     }
 
-    // 3. Repair valuation and audit fields for rows missing any required value
-    const result = await db
-      .prepare(
+    let auditUpdate: D1PreparedStatement | null = null;
+    if (historical && derivedPriceUsed != null && approxEqual(derivedPriceUsed, historical.price)) {
+      auditUpdate = db.prepare(
         `UPDATE mint_burn_events
-           SET amount_usd = COALESCE(amount_usd, amount * ?),
-               price_used = COALESCE(price_used, ?),
-               price_timestamp = COALESCE(price_timestamp, ?),
-               price_source = COALESCE(price_source, 'backfill-price-cache')
-           WHERE stablecoin_id = ? AND ${needsRepairWhere}`,
-      )
-      .bind(cached.price, cached.price, cached.updatedAt, stablecoin_id)
-      .run();
-
-    const updated = result.meta?.changes ?? 0;
-    totalUpdated += updated;
-    coinResults.push({ id: stablecoin_id, updated });
-  }
-
-  // 4. Recalculate ALL hourly buckets for affected coins
-  if (totalUpdated > 0) {
-    const affectedIds = coinResults.filter((c) => c.updated > 0).map((c) => c.id);
-
-    // Rebuild each coin atomically (delete + insert in one batch).
-    for (const id of affectedIds) {
-      await db.batch([
-        db.prepare("DELETE FROM mint_burn_hourly WHERE stablecoin_id = ?").bind(id),
-        db
-          .prepare(
-            `
-            INSERT OR REPLACE INTO mint_burn_hourly
-              (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
-               mint_volume_usd, burn_volume_usd, net_flow_usd)
-            SELECT
-              stablecoin_id, chain_id,
-              (timestamp / 3600) * 3600 AS hour_ts,
-              SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN 1 ELSE 0 END),
-              SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN 1 ELSE 0 END),
-              COALESCE(SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN amount_usd ELSE 0 END), 0),
-              COALESCE(SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN amount_usd ELSE 0 END), 0),
-              COALESCE(SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN amount_usd WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN -amount_usd ELSE 0 END), 0)
-            FROM mint_burn_events
-            WHERE stablecoin_id = ?
-            GROUP BY stablecoin_id, chain_id, hour_ts
-          `,
-          )
-          .bind(id),
-      ]);
+         SET price_used = ?, price_timestamp = ?, price_source = ?
+         WHERE id = ?`,
+      ).bind(
+        historical.price,
+        historical.snapshotDate,
+        "backfill-supply-history-daily",
+        row.id,
+      );
+    } else if (derivedPriceUsed != null && row.price_source == null) {
+      auditUpdate = db.prepare(
+        `UPDATE mint_burn_events
+         SET price_used = ?, price_source = ?
+         WHERE id = ?`,
+      ).bind(
+        derivedPriceUsed,
+        "backfill-derived-amount-usd",
+        row.id,
+      );
+    } else if (derivedPriceUsed != null && row.price_used == null) {
+      auditUpdate = db.prepare(
+        `UPDATE mint_burn_events
+         SET price_used = ?
+         WHERE id = ?`,
+      ).bind(
+        derivedPriceUsed,
+        row.id,
+      );
     }
+
+    if (auditUpdate) {
+      updates.push(auditUpdate);
+      rowsAudited++;
+      coin.updated++;
+      coin.audited++;
+      const missingAfterAudit = hasMissingAudit({
+        price_used: derivedPriceUsed ?? row.price_used,
+        price_timestamp: historical && derivedPriceUsed != null && approxEqual(derivedPriceUsed, historical.price)
+          ? historical.snapshotDate
+          : row.price_timestamp,
+        price_source: row.price_source
+          ?? (derivedPriceUsed != null ? (historical && approxEqual(derivedPriceUsed, historical.price)
+            ? "backfill-supply-history-daily"
+            : "backfill-derived-amount-usd") : null),
+      });
+      if (missingAfterAudit) {
+        rowsStillMissingAudit++;
+        coin.stillMissingAudit++;
+      }
+    } else if (hasMissingAudit(row)) {
+      rowsStillMissingAudit++;
+      coin.stillMissingAudit++;
+    }
+
+    coinStats.set(row.stablecoin_id, coin);
   }
 
-  return jsonResponse({ totalUpdated, coins: coinResults });
+  const totalUpdated = updates.length > 0 ? await batchExecute(db, updates) : 0;
+
+  // Recalculate hourly buckets only for coins whose amount_usd changed.
+  if (affectedCoinsForHourlyRebuild.size > 0) {
+    await rebuildHourlyForStablecoinIds(db, affectedCoinsForHourlyRebuild);
+  }
+
+  return jsonResponse({
+    totalUpdated,
+    rowsValued,
+    rowsAudited,
+    rowsStillUnpriced,
+    rowsStillMissingAudit,
+    coins: [...coinStats.values()].sort((a, b) => a.id.localeCompare(b.id)),
+  });
 }

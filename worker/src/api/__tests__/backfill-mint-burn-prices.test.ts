@@ -13,21 +13,48 @@ type QueryRecord = {
 function makeBackfillDb() {
   const queries: QueryRecord[] = [];
 
+  const incompleteRows = [
+    {
+      id: "missing-usd",
+      stablecoin_id: "usdt-tether",
+      chain_id: "ethereum",
+      amount: 100,
+      amount_usd: null,
+      timestamp: 1_710_000_123,
+      price_used: null,
+      price_timestamp: null,
+      price_source: null,
+    },
+    {
+      id: "missing-audit",
+      stablecoin_id: "usdt-tether",
+      chain_id: "ethereum",
+      amount: 100,
+      amount_usd: 100.2,
+      timestamp: 1_710_000_456,
+      price_used: null,
+      price_timestamp: null,
+      price_source: null,
+    },
+  ];
+
   const invokeAll = async <T>(sql: string, args: unknown[]) => {
     queries.push({ kind: "all", sql, args });
 
-    if (sql.includes("FROM price_cache")) {
+    if (sql.includes("SELECT id, stablecoin_id, chain_id, amount, amount_usd")) {
       return {
         success: true,
         meta: {},
-        results: [{ asset_id: "usdt-tether", price: 1.002, updated_at: 1_710_000_000 }] as T[],
+        results: incompleteRows as T[],
       };
     }
-    if (sql.includes("SELECT DISTINCT stablecoin_id FROM mint_burn_events")) {
+    if (sql.includes("SELECT stablecoin_id, snapshot_date, price FROM supply_history")) {
       return {
         success: true,
         meta: {},
-        results: [{ stablecoin_id: "usdt-tether" }] as T[],
+        results: [
+          { stablecoin_id: "usdt-tether", snapshot_date: 1_709_942_400, price: 1.002 },
+        ] as T[],
       };
     }
     return { success: true, meta: {}, results: [] as T[] };
@@ -42,7 +69,7 @@ function makeBackfillDb() {
     queries.push({ kind: "run", sql, args });
 
     if (sql.includes("UPDATE mint_burn_events")) {
-      return { success: true, meta: { changes: 2 } };
+      return { success: true, meta: { changes: 1 } };
     }
     return { success: true, meta: { changes: 0 } };
   };
@@ -61,10 +88,11 @@ function makeBackfillDb() {
   const db = {
     prepare: (sql: string) => stmt(sql),
     batch: async (stmts: Array<{ run: () => Promise<unknown> }>) => {
+      const results = [];
       for (const statement of stmts) {
-        await statement.run();
+        results.push(await statement.run());
       }
-      return [];
+      return results;
     },
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
@@ -74,7 +102,7 @@ function makeBackfillDb() {
 }
 
 describe("handleBackfillMintBurnPrices", () => {
-  it("repairs rows missing valuation audit fields, not only NULL amount_usd rows", async () => {
+  it("uses historical supply prices for NULL amount_usd rows and only derives audit fields for already-valued rows", async () => {
     const { db, queries } = makeBackfillDb();
     const request = makeApiRequest("/api/backfill-mint-burn-prices", { adminKey: "secret" });
 
@@ -88,30 +116,59 @@ describe("handleBackfillMintBurnPrices", () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
       totalUpdated: number;
-      coins: Array<{ id: string; updated: number }>;
+      rowsValued: number;
+      rowsAudited: number;
+      rowsStillUnpriced: number;
+      rowsStillMissingAudit: number;
+      coins: Array<{
+        id: string;
+        updated: number;
+        valued: number;
+        audited: number;
+        stillUnpriced: number;
+        stillMissingAudit: number;
+      }>;
     };
+
     expect(body.totalUpdated).toBe(2);
-    expect(body.coins).toEqual([{ id: "usdt-tether", updated: 2 }]);
+    expect(body.rowsValued).toBe(1);
+    expect(body.rowsAudited).toBe(1);
+    expect(body.rowsStillUnpriced).toBe(0);
+    expect(body.rowsStillMissingAudit).toBe(0);
+    expect(body.coins).toEqual([
+      {
+        id: "usdt-tether",
+        updated: 2,
+        valued: 1,
+        audited: 1,
+        stillUnpriced: 0,
+        stillMissingAudit: 0,
+      },
+    ]);
 
     const selectSql = queries.find(
-      (q) => q.kind === "all" && q.sql.includes("SELECT DISTINCT stablecoin_id FROM mint_burn_events"),
+      (q) => q.kind === "all" && q.sql.includes("SELECT id, stablecoin_id, chain_id, amount, amount_usd"),
     )?.sql;
     expect(selectSql).toContain("amount_usd IS NULL");
     expect(selectSql).toContain("price_used IS NULL");
     expect(selectSql).toContain("price_timestamp IS NULL");
     expect(selectSql).toContain("price_source IS NULL");
+    expect(selectSql).toContain("ORDER BY stablecoin_id ASC, timestamp DESC, id DESC");
 
-    const updateSql = queries.find(
-      (q) => q.kind === "run" && q.sql.includes("UPDATE mint_burn_events"),
+    const historySql = queries.find(
+      (q) => q.kind === "all" && q.sql.includes("SELECT stablecoin_id, snapshot_date, price FROM supply_history"),
     )?.sql;
-    expect(updateSql).toContain("amount_usd = COALESCE(amount_usd, amount * ?)");
-    expect(updateSql).toContain("price_used = COALESCE(price_used, ?)");
-    expect(updateSql).toContain("price_timestamp = COALESCE(price_timestamp, ?)");
-    expect(updateSql).toContain("price_source = COALESCE(price_source, 'backfill-price-cache')");
-    expect(updateSql).toContain("amount_usd IS NULL");
-    expect(updateSql).toContain("price_used IS NULL");
-    expect(updateSql).toContain("price_timestamp IS NULL");
-    expect(updateSql).toContain("price_source IS NULL");
+    expect(historySql).toContain("price IS NOT NULL");
+
+    const updateStatements = queries.filter(
+      (q) => q.kind === "run" && q.sql.includes("UPDATE mint_burn_events"),
+    );
+    expect(updateStatements).toHaveLength(2);
+
+    expect(updateStatements[0]?.sql).toContain("SET amount_usd = ?, price_used = ?, price_timestamp = ?, price_source = ?");
+    expect(updateStatements[1]?.sql).toContain("SET price_used = ?, price_timestamp = ?, price_source = ?");
+    expect(updateStatements.some((q) => q.sql.includes("amount * ?"))).toBe(false);
+    expect(queries.some((q) => q.sql.includes("FROM price_cache"))).toBe(false);
   });
 
   it("requires admin auth", async () => {

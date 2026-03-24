@@ -17,7 +17,7 @@ Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intention
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.8`
+- **Current methodology version:** `v4.9`
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Internal reconstructed timeline:** [Mint/Burn Flow Methodology Timeline](./mint-burn-flows-timeline.md)
 
@@ -162,9 +162,14 @@ March 24, 2026 expansion: an additional 40 Ethereum transfer-only configs were a
 | apxUSD | apxusd-apyx | 18 | Extended | Transfer |
 | reUSD | reusd-re-protocol | 18 | Risky | Deposited + InstantRedemptionProcessed (2 configs, Ethereum) |
 
-Public `/api/mint-burn-flows` flight-to-quality classification is **report-card-cache driven**. Coins with report-card score `>= 65` are treated as `safe`, scores `< 50` are treated as `risky`, and the middle band is ignored for FTQ. When `report_card_cache` is missing, stale, or malformed, the API marks FTQ classification unavailable in the response (`gauge.classificationSource = "unavailable"`, `sync.classificationWarning != null`) instead of silently falling back to a hardcoded safe-haven list.
+Public `/api/mint-burn-flows` and the daily digest collector now use the same **report-card-cache driven** FTQ classification. Coins with report-card score `>= 65` are treated as `safe`, scores `< 50` are treated as `risky`, and the middle band is ignored for FTQ. When `report_card_cache` is missing, stale, or malformed, FTQ classification is treated as unavailable instead of silently falling back to a hardcoded safe-haven list.
 
-The daily digest collector is still a separate path: `worker/src/cron/daily-digest/collectors.ts` currently computes FTQ with hardcoded `SAFE_HAVEN_IDS` from `worker/src/lib/mint-burn-contracts.ts`. Keep that distinction documented until the digest path is moved onto the same classification source.
+Per-config adapter provenance is now surfaced through coin `coverage` metadata:
+- `adapterKinds` — active decoding families for the coin (`transfer-zero-address`, `custom-events`, `mixed`)
+- `startBlockSource` — whether the earliest tracked block is a reviewed contract-specific bound or a blanket default coverage floor
+- `startBlockConfidence` — qualitative confidence on historical completeness (`high`, `medium`, `low`)
+
+Current rule: the March 24 long-tail transfer wave that inherited the blanket `21_900_000` Ethereum floor is labeled `startBlockSource = default-coverage-floor-2026-03-24` and `startBlockConfidence = low`, so the public API no longer implies contract-specific historical certainty where none exists.
 
 Events are also classified by `flow_type` (`standard` or `atomic_roundtrip`) to exclude flash loan / atomic arb noise from aggregation.
 
@@ -343,7 +348,7 @@ CREATE TABLE mint_burn_events (
   amount_usd REAL,                     -- NULL if price unavailable at sync time
   price_used REAL,                     -- Price at resolution time
   price_timestamp INTEGER,             -- When the price was sourced (cache update time), NOT the event's block timestamp
-  price_source TEXT,                   -- "supply-history-daily", "price-cache-current", or "price_cache_heal"
+  price_source TEXT,                   -- "supply-history-daily", "price-cache-current", "price_cache_heal", "backfill-supply-history-daily", or "backfill-derived-amount-usd"
   flow_type TEXT DEFAULT 'standard',   -- "standard" or "atomic_roundtrip"
   counterparty TEXT,                   -- Address that received/sent tokens
   tx_hash TEXT NOT NULL,
@@ -463,15 +468,18 @@ Product note: stablecoin detail-page "Mint & Burn Flow History" uses the counted
 
 ### POST /api/backfill-mint-burn-prices (admin)
 
-Backfills `amount_usd` for events that were synced without price data. Requires Access service-token headers on `ops-api.pharos.watch`. 
+Repairs incomplete mint/burn valuation metadata for historical rows. Requires Access service-token headers on `ops-api.pharos.watch`.
 
 Note: cron now auto-heals recent NULL-price events (48h lookback). This endpoint remains the operator tool for broader historical backfills.
 
-1. Finds all `mint_burn_events` rows with `amount_usd IS NULL`.
-2. Applies current price from `price_cache`: `amount_usd = amount * price`.
-3. Deletes and re-aggregates all `mint_burn_hourly` rows for affected coins.
+1. Finds all `mint_burn_events` rows with incomplete valuation or audit fields (`amount_usd`, `price_used`, `price_timestamp`, `price_source`).
+2. For rows with `amount_usd IS NULL`, tries to value them from event-day `supply_history` prices.
+3. For rows that already have `amount_usd`, derives audit fields conservatively where possible without rewriting historical USD valuation from current spot prices.
+4. Rebuilds `mint_burn_hourly` only for coins whose `amount_usd` actually changed.
 
-Returns: `{ totalUpdated, coins: [{ id, updated }] }`
+Important constraint: this endpoint no longer bulk-fills historical `amount_usd` from the current `price_cache` snapshot. Rows without a time-appropriate historical price remain unresolved and are reported as still unpriced.
+
+Returns: `{ totalUpdated, rowsValued, rowsAudited, rowsStillUnpriced, rowsStillMissingAudit, coins: [{ id, updated, valued, audited, stillUnpriced, stillMissingAudit }] }`
 
 ### POST /api/backfill-mint-burn (admin)
 

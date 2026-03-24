@@ -1,6 +1,7 @@
 import type { AlchemyLogEntry } from "../alchemy-logs";
 import { decodeAddress, decodeUint256AtSlot } from "../evm-logs";
 import type { MintBurnContractConfig, MintBurnEventDef } from "../mint-burn-contracts";
+import { findMintBurnHistoricalPrice } from "./context";
 import type { MintBurnPriceHistoryPoint, MintBurnRow } from "./types";
 
 interface EventPriceResolution {
@@ -16,26 +17,11 @@ function resolveEventPrice(
   priceHistory: Map<string, MintBurnPriceHistoryPoint[]>,
   runTimestamp: number,
 ): EventPriceResolution {
-  const eventDay = Math.floor(timestamp / 86400) * 86400;
-  const history = priceHistory.get(stablecoinId) ?? [];
-
-  let bestIdx = -1;
-  let lo = 0;
-  let hi = history.length - 1;
-  while (lo <= hi) {
-    const mid = Math.floor((lo + hi) / 2);
-    if (history[mid].snapshotDate <= eventDay) {
-      bestIdx = mid;
-      lo = mid + 1;
-    } else {
-      hi = mid - 1;
-    }
-  }
-  if (bestIdx >= 0) {
-    const hit = history[bestIdx];
+  const historical = findMintBurnHistoricalPrice(priceHistory, stablecoinId, timestamp);
+  if (historical) {
     return {
-      price: hit.price,
-      priceTimestamp: hit.snapshotDate,
+      price: historical.price,
+      priceTimestamp: historical.snapshotDate,
       priceSource: "supply-history-daily",
     };
   }

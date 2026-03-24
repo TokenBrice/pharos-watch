@@ -48,6 +48,7 @@ export async function healNullPrices(
     `SELECT e.id, e.stablecoin_id, e.chain_id, e.amount, e.timestamp
      FROM mint_burn_events e
      WHERE e.amount_usd IS NULL AND e.timestamp >= ?
+     ORDER BY e.timestamp DESC, e.id DESC
      LIMIT 500`,
   ).bind(cutoff).all<{
     id: string;

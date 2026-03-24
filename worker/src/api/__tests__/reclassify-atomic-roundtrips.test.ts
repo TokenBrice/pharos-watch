@@ -50,4 +50,21 @@ describe("reclassify-atomic-roundtrips", () => {
     );
     expect(selectQueries).toHaveLength(0);
   });
+
+  it("orders candidate discovery deterministically oldest-first", async () => {
+    const db = mockD1([
+      { match: "GROUP BY tx_hash", rows: [] },
+    ]);
+
+    await handleReclassifyAtomicRoundtrips(
+      db,
+      new URL("https://api.pharos.watch/api/reclassify-atomic-roundtrips"),
+      true,
+    );
+
+    const discoverySql = db.getHistory().find((entry) =>
+      entry.sql.includes("GROUP BY tx_hash, stablecoin_id, chain_id"),
+    )?.sql;
+    expect(discoverySql).toContain("ORDER BY MIN(timestamp) ASC, stablecoin_id ASC, tx_hash ASC");
+  });
 });

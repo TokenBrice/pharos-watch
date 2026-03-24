@@ -10,12 +10,9 @@ import { classifyBridgeBurnRows } from "../lib/mint-burn-pipeline/classification
 import { loadMintBurnPriceContext } from "../lib/mint-burn-pipeline/context";
 import { parseMintBurnLogs } from "../lib/mint-burn-pipeline/parse";
 import {
-  collectAffectedHours,
-  insertMintBurnRows,
+  persistMintBurnRows,
   recalcAffectedHours,
-  updateBurnClassifications,
 } from "../lib/mint-burn-pipeline/persistence";
-import { detectAtomicRoundtrips } from "../lib/mint-burn-pipeline/roundtrip-detection";
 import {
   ensureMintBurnSyncStateRows,
   mintBurnConfigKey,
@@ -291,15 +288,10 @@ export async function handleBackfillMintBurn(
       allParsedRows.push(...parsed.rows);
     }
 
-    detectAtomicRoundtrips(allParsedRows);
-    collectAffectedHours(allParsedRows, affectedHours);
-
-    if (allParsedRows.length > 0) {
-      const insertResult = await insertMintBurnRows(db, allParsedRows);
-      rowsInserted += insertResult.inserted;
-      rowsIgnored += insertResult.ignored;
-      rowsReclassified += await updateBurnClassifications(db, allParsedRows);
-    }
+    const persistResult = await persistMintBurnRows(db, allParsedRows, affectedHours);
+    rowsInserted += persistResult.inserted;
+    rowsIgnored += persistResult.ignored;
+    rowsReclassified += persistResult.burnRowsUpdated;
 
     await recalcAffectedHours(db, affectedHours);
 

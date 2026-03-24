@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const mintBurnFlow = createMethodologyVersion({
-  currentVersion: "4.8",
+  currentVersion: "4.9",
   changelogPath: "/methodology/mint-burn-flow-changelog/",
   changelog: [
+  {
+    version: "4.9",
+    title: "Deterministic repair loops and adapter provenance disclosures",
+    date: "2026-03-24",
+    effectiveAt: 1774351800,
+    summary:
+      "Mint/burn repair and coverage semantics were tightened through historical-first valuation repair, deterministic cleanup backlogs, aligned FTQ classification, and explicit adapter provenance on public coverage metadata.",
+    impact: [
+      "Historical price repair now values events from event-day `supply_history` instead of current `price_cache` snapshots",
+      "NULL-price healing and atomic-roundtrip sweeping now use deterministic ordered backlog queries",
+      "The daily digest now shares the same report-card-cache FTQ classification semantics as `/api/mint-burn-flows`",
+      "Per-coin coverage now exposes `adapterKinds`, `startBlockSource`, and `startBlockConfidence` so blanket start-block defaults are visible in the API",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.8",
     title: "Ethereum coverage wave for long-tail mint/burn tracking",

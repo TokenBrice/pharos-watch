@@ -21,6 +21,9 @@ vi.mock("../../lib/mint-burn-contracts", () => ({
       decimals: 6,
       dustThreshold: 10_000,
       startBlock: 21_900_000,
+      adapterKind: "mixed",
+      startBlockSource: "reviewed-contract-specific",
+      startBlockConfidence: "high",
       tier: "critical",
       events: [
         {
@@ -66,6 +69,9 @@ vi.mock("../../lib/mint-burn-contracts", () => ({
       decimals: 6,
       dustThreshold: 10_000,
       startBlock: 21_900_000,
+      adapterKind: "transfer-zero-address",
+      startBlockSource: "default-coverage-floor-2026-03-24",
+      startBlockConfidence: "low",
       tier: "extended",
       events: [
         {

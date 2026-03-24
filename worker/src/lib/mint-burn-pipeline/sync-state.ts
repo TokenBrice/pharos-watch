@@ -1,6 +1,8 @@
-import { batchExecute } from "../db";
+import { batchExecute, buildInClause } from "../db";
 import type { MintBurnContractConfig } from "../mint-burn-contracts";
 import type { MintBurnSyncStateMode } from "./types";
+
+const READ_SYNC_STATE_BATCH_SIZE = 200;
 
 export function mintBurnConfigKey(config: MintBurnContractConfig): string {
   return `${config.chain.chainId}-${config.contractAddress}`;
@@ -37,18 +39,30 @@ export async function readMintBurnSyncStateBatch(
   const lastBlocks = new Map<string, number>();
   if (configs.length === 0) return lastBlocks;
 
-  const stateRows = await db.batch(
-    configs.map((config) =>
-      db
-        .prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?")
-        .bind(mintBurnConfigKey(config)),
-    ),
-  );
+  const configKeys = [...new Set(configs.map((config) => mintBurnConfigKey(config)))];
+  const fetchedLastBlocks = new Map<string, number>();
 
-  configs.forEach((config, idx) => {
-    const row = stateRows[idx]?.results?.[0] as { last_block: number } | undefined;
-    lastBlocks.set(mintBurnConfigKey(config), row?.last_block ?? (config.startBlock - 1));
-  });
+  for (let i = 0; i < configKeys.length; i += READ_SYNC_STATE_BATCH_SIZE) {
+    const keyChunk = configKeys.slice(i, i + READ_SYNC_STATE_BATCH_SIZE);
+    const inClause = buildInClause(keyChunk);
+    const rows = await db
+      .prepare(
+        `SELECT config_key, last_block
+         FROM mint_burn_sync_state
+         WHERE config_key IN (${inClause.sql})`,
+      )
+      .bind(...inClause.binds)
+      .all<{ config_key: string; last_block: number }>();
+
+    for (const row of rows.results ?? []) {
+      fetchedLastBlocks.set(row.config_key, row.last_block);
+    }
+  }
+
+  for (const config of configs) {
+    const key = mintBurnConfigKey(config);
+    lastBlocks.set(key, fetchedLastBlocks.get(key) ?? (config.startBlock - 1));
+  }
 
   return lastBlocks;
 }

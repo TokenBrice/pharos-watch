@@ -46,4 +46,18 @@ describe("sweepRecentRoundtrips", () => {
     expect(result.reclassified).toBe(2);
     expect(result.affectedHours.size).toBe(1);
   });
+
+  it("selects roundtrip candidates in deterministic oldest-first order", async () => {
+    const prepare = vi.fn().mockReturnValue({
+      bind: vi.fn().mockReturnValue({
+        all: vi.fn().mockResolvedValue({ results: [] }),
+      }),
+    });
+    const db = { prepare } as unknown as D1Database;
+
+    await sweepRecentRoundtrips(db, 1700001000);
+
+    const sql = prepare.mock.calls[0]?.[0] as string;
+    expect(sql).toContain("ORDER BY MIN(timestamp) ASC, stablecoin_id ASC, tx_hash ASC");
+  });
 });

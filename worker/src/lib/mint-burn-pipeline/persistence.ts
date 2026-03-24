@@ -1,4 +1,5 @@
 import { batchExecute } from "../db";
+import { detectAtomicRoundtrips } from "./roundtrip-detection";
 import type { MintBurnAffectedHour, MintBurnRow } from "./types";
 
 export async function insertMintBurnRows(
@@ -116,4 +117,73 @@ export async function recalcAffectedHours(
     aggStmt.bind(hour.stablecoinId, hour.chainId, hour.hourTs, hour.hourTs + 3600),
   );
   await batchExecute(db, aggStmts);
+}
+
+export async function rebuildHourlyForStablecoinIds(
+  db: D1Database,
+  stablecoinIds: Iterable<string>,
+): Promise<void> {
+  const ids = [...new Set(stablecoinIds)].sort();
+  if (ids.length === 0) return;
+
+  const deleteStmt = db.prepare("DELETE FROM mint_burn_hourly WHERE stablecoin_id = ?");
+  await batchExecute(
+    db,
+    ids.map((id) => deleteStmt.bind(id)),
+  );
+
+  const rebuildStmt = db.prepare(
+    `INSERT OR REPLACE INTO mint_burn_hourly
+      (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+       mint_volume_usd, burn_volume_usd, net_flow_usd)
+     SELECT
+      stablecoin_id,
+      chain_id,
+      (timestamp / 3600) * 3600 AS hour_ts,
+      SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN 1 ELSE 0 END),
+      SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN 1 ELSE 0 END),
+      COALESCE(SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN amount_usd ELSE 0 END), 0),
+      COALESCE(SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN amount_usd ELSE 0 END), 0),
+      COALESCE(SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN amount_usd WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN -amount_usd ELSE 0 END), 0)
+     FROM mint_burn_events
+     WHERE stablecoin_id = ?
+     GROUP BY stablecoin_id, chain_id, hour_ts`,
+  );
+  await batchExecute(
+    db,
+    ids.map((id) => rebuildStmt.bind(id)),
+  );
+}
+
+export async function persistMintBurnRows(
+  db: D1Database,
+  rows: MintBurnRow[],
+  affectedHours?: Map<string, MintBurnAffectedHour>,
+): Promise<{
+  inserted: number;
+  ignored: number;
+  burnRowsUpdated: number;
+  roundtripsDetected: number;
+}> {
+  const roundtripsDetected = detectAtomicRoundtrips(rows);
+  if (affectedHours) {
+    collectAffectedHours(rows, affectedHours);
+  }
+  if (rows.length === 0) {
+    return {
+      inserted: 0,
+      ignored: 0,
+      burnRowsUpdated: 0,
+      roundtripsDetected,
+    };
+  }
+
+  const insertResult = await insertMintBurnRows(db, rows);
+  const burnRowsUpdated = await updateBurnClassifications(db, rows);
+  return {
+    inserted: insertResult.inserted,
+    ignored: insertResult.ignored,
+    burnRowsUpdated,
+    roundtripsDetected,
+  };
 }

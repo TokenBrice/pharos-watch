@@ -1,8 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../db", () => ({
-  batchExecute: vi.fn(async (_db: D1Database, stmts: D1PreparedStatement[]) => stmts.length),
-}));
+vi.mock("../db", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../db")>();
+  return {
+    ...actual,
+    batchExecute: vi.fn(async (_db: D1Database, stmts: D1PreparedStatement[]) => stmts.length),
+  };
+});
 
 vi.mock("../alchemy-logs", () => ({
   getAlchemyTransactionByHash: vi.fn(async (_url: string, txHash: string) => ({
@@ -43,9 +47,10 @@ import {
   collectAffectedHours,
   insertMintBurnRows,
   recalcAffectedHours,
+  rebuildHourlyForStablecoinIds,
   updateBurnClassifications,
 } from "../mint-burn-pipeline/persistence";
-import { upsertMintBurnSyncState } from "../mint-burn-pipeline/sync-state";
+import { readMintBurnSyncStateBatch, upsertMintBurnSyncState } from "../mint-burn-pipeline/sync-state";
 import type { MintBurnRow } from "../mint-burn-pipeline/types";
 
 function makeDb(): D1Database {
@@ -120,12 +125,69 @@ function makeAggregationDb(): D1Database & { hourlyRows: Map<string, HourlyRow>;
           }
 
           if (sql.includes("DELETE FROM mint_burn_hourly")) {
+            if (args.length === 1) {
+              const [stablecoinId] = args as [string];
+              for (const key of [...hourlyRows.keys()]) {
+                if (key.startsWith(`${stablecoinId}-`)) {
+                  hourlyRows.delete(key);
+                }
+              }
+              return { success: true, meta: { changes: 1 } };
+            }
+
             const [stablecoinId, chainId, hourTs] = args as [string, string, number];
             hourlyRows.delete(`${stablecoinId}-${chainId}-${hourTs}`);
             return { success: true, meta: { changes: 1 } };
           }
 
           if (sql.includes("INSERT OR REPLACE INTO mint_burn_hourly")) {
+            if (args.length === 1) {
+              const [stablecoinId] = args as [string];
+              const grouped = new Map<string, MintBurnRow[]>();
+              for (const row of events.filter((event) => event.stablecoin_id === stablecoinId)) {
+                const hourTs = Math.floor(row.timestamp / 3600) * 3600;
+                grouped.set(`${row.chain_id}-${hourTs}`, [...(grouped.get(`${row.chain_id}-${hourTs}`) ?? []), row]);
+              }
+
+              for (const [groupKey, relevant] of grouped) {
+                const [chainId, hourTsRaw] = groupKey.split("-");
+                const hourTs = Number(hourTsRaw);
+                hourlyRows.set(`${stablecoinId}-${chainId}-${hourTs}`, {
+                  stablecoin_id: stablecoinId,
+                  chain_id: chainId!,
+                  hour_ts: hourTs,
+                  mint_count: relevant.filter((row) => row.direction === "mint" && row.flow_type === "standard").length,
+                  burn_count: relevant.filter((row) =>
+                    row.direction === "burn" &&
+                    (row.burn_type ?? "effective_burn") === "effective_burn" &&
+                    row.flow_type === "standard",
+                  ).length,
+                  mint_volume_usd: relevant.reduce((sum, row) =>
+                    row.direction === "mint" && row.flow_type === "standard"
+                      ? sum + (row.amount_usd ?? 0)
+                      : sum,
+                  0),
+                  burn_volume_usd: relevant.reduce((sum, row) =>
+                    row.direction === "burn" &&
+                    (row.burn_type ?? "effective_burn") === "effective_burn" &&
+                    row.flow_type === "standard"
+                      ? sum + (row.amount_usd ?? 0)
+                      : sum,
+                  0),
+                  net_flow_usd: relevant.reduce((sum, row) => {
+                    if (row.flow_type !== "standard") return sum;
+                    if (row.direction === "mint") return sum + (row.amount_usd ?? 0);
+                    if (row.direction === "burn" && (row.burn_type ?? "effective_burn") === "effective_burn") {
+                      return sum - (row.amount_usd ?? 0);
+                    }
+                    return sum;
+                  }, 0),
+                });
+              }
+
+              return { success: true, meta: { changes: grouped.size } };
+            }
+
             const [stablecoinId, chainId, startTs, endTs] = args as [string, string, number, number];
             const relevant = events.filter((row) =>
               row.stablecoin_id === stablecoinId &&
@@ -242,6 +304,9 @@ describe("mint-burn shared pipeline modules", () => {
         decimals: 6,
         dustThreshold: 10_000,
         startBlock: 21_900_000,
+        adapterKind: "transfer-zero-address",
+        startBlockSource: "reviewed-contract-specific",
+        startBlockConfidence: "high",
         events: [],
         bridgeDetection: {
           protocol: "ccip",
@@ -282,6 +347,63 @@ describe("mint-burn shared pipeline modules", () => {
     expect(vi.mocked(batchExecute)).toHaveBeenCalledTimes(2);
     expect(vi.mocked(batchExecute).mock.calls[0]?.[1]).toHaveLength(2);
     expect(vi.mocked(batchExecute).mock.calls[1]?.[1]).toHaveLength(2);
+  });
+
+  it("rebuilds hourly buckets for whole coins after valuation repair", async () => {
+    const db = makeAggregationDb();
+    vi.mocked(batchExecute).mockImplementation(async (_db, stmts) => {
+      for (const stmt of stmts) {
+        await stmt.run();
+      }
+      return stmts.length;
+    });
+
+    const rows = [
+      makeRow({
+        id: "mint-1",
+        stablecoin_id: "usdt-tether",
+        chain_id: "ethereum",
+        direction: "mint",
+        amount_usd: 100,
+        timestamp: 3_605,
+        tx_hash: "0xmint-1",
+      }),
+      makeRow({
+        id: "burn-1",
+        stablecoin_id: "usdt-tether",
+        chain_id: "ethereum",
+        direction: "burn",
+        burn_type: "effective_burn",
+        amount_usd: 20,
+        timestamp: 3_610,
+        tx_hash: "0xburn-1",
+      }),
+      makeRow({
+        id: "mint-2",
+        stablecoin_id: "usdc-circle",
+        symbol: "USDC",
+        chain_id: "ethereum",
+        direction: "mint",
+        amount_usd: 55,
+        timestamp: 7_205,
+        tx_hash: "0xmint-2",
+      }),
+    ];
+
+    await insertMintBurnRows(db, rows);
+    await rebuildHourlyForStablecoinIds(db, ["usdt-tether", "usdc-circle"]);
+
+    const usdtHourTs = Math.floor(rows[0]!.timestamp / 3600) * 3600;
+    const usdcHourTs = Math.floor(rows[2]!.timestamp / 3600) * 3600;
+    const usdtHour = db.hourlyRows.get(`usdt-tether-ethereum-${usdtHourTs}`);
+    expect(usdtHour?.mint_count).toBe(1);
+    expect(usdtHour?.burn_count).toBe(1);
+    expect(usdtHour?.net_flow_usd).toBe(80);
+
+    const usdcHour = db.hourlyRows.get(`usdc-circle-ethereum-${usdcHourTs}`);
+    expect(usdcHour?.mint_count).toBe(1);
+    expect(usdcHour?.burn_count).toBe(0);
+    expect(usdcHour?.net_flow_usd).toBe(55);
   });
 
   it("excludes atomic roundtrip rows from hourly aggregation", async () => {
@@ -416,5 +538,76 @@ describe("mint-burn shared pipeline modules", () => {
       ["ethereum-0xabc", 123],
       ["ethereum-0xabc", 456],
     ]);
+  });
+
+  it("reads sync state in chunked IN-clause queries instead of one select per config", async () => {
+    const history: Array<{ sql: string; binds: unknown[] }> = [];
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...binds: unknown[]) => ({
+          all: async <T>() => {
+            history.push({ sql, binds });
+            return {
+              results: [{
+                config_key: "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                last_block: 22_345_678,
+              }] as T[],
+              success: true,
+              meta: {},
+            };
+          },
+        }),
+      }),
+    } as unknown as D1Database;
+
+    const results = await readMintBurnSyncStateBatch(db, [
+      {
+        chain: {
+          chainId: "ethereum",
+          chainName: "Ethereum",
+          evmChainId: 1,
+          explorerUrl: "https://etherscan.io",
+          type: "evm",
+        },
+        stablecoinId: "usdc-circle",
+        symbol: "USDC",
+        contractAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        decimals: 6,
+        dustThreshold: 10_000,
+        startBlock: 21_900_000,
+        adapterKind: "transfer-zero-address",
+        startBlockSource: "reviewed-contract-specific",
+        startBlockConfidence: "high",
+        events: [],
+      },
+      {
+        chain: {
+          chainId: "ethereum",
+          chainName: "Ethereum",
+          evmChainId: 1,
+          explorerUrl: "https://etherscan.io",
+          type: "evm",
+        },
+        stablecoinId: "usdt-tether",
+        symbol: "USDT",
+        contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+        decimals: 6,
+        dustThreshold: 10_000,
+        startBlock: 21_900_000,
+        adapterKind: "transfer-zero-address",
+        startBlockSource: "reviewed-contract-specific",
+        startBlockConfidence: "high",
+        events: [],
+      },
+    ]);
+
+    expect(history).toHaveLength(1);
+    expect(history[0]?.sql).toContain("WHERE config_key IN");
+    expect(history[0]?.binds).toEqual([
+      "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
+    ]);
+    expect(results.get("ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")).toBe(22_345_678);
+    expect(results.get("ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7")).toBe(21_899_999);
   });
 });

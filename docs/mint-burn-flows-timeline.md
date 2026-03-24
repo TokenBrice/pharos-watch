@@ -1,6 +1,17 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v4.8` (2026-03-01 -> 2026-03-24).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v4.9` (2026-03-01 -> 2026-03-24).
+
+---
+
+## v4.9 - Deterministic repair loops and adapter provenance disclosures (Mar 24, 2026)
+
+**Commit:** `unreleased`
+
+- Historical price repair now values unpriced rows from event-day `supply_history` instead of reusing current `price_cache` snapshots
+- NULL-price healing and atomic-roundtrip sweeping now process deterministic ordered backlogs instead of relying on implicit D1 row order
+- Daily digest FTQ classification now matches the public mint/burn API by using report-card score buckets instead of a separate hardcoded safe-haven list
+- Coin `coverage` metadata now exposes adapter kinds plus `startBlockSource` and `startBlockConfidence` so blanket start-block defaults are visible to users
 
 ---
 

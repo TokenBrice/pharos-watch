@@ -50,6 +50,9 @@ const MintBurnCoinCoverageSchema = z.object({
   has30dWindow: z.boolean(),
   has90dWindow: z.boolean(),
   isPartial: z.boolean(),
+  adapterKinds: z.array(z.string()).optional(),
+  startBlockSource: z.string().optional(),
+  startBlockConfidence: z.enum(["high", "medium", "low"]).optional(),
   status: MintBurnCoverageStatusSchema,
 });
 export type MintBurnCoinCoverage = z.infer<typeof MintBurnCoinCoverageSchema>;

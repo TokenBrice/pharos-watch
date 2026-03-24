@@ -112,6 +112,13 @@ vi.mock("../../lib/safety-scores", () => ({
   computeSafetyScoresSnapshot: vi.fn(),
 }));
 
+vi.mock("../../lib/flight-to-quality-classification", () => ({
+  buildFlightToQualityClassification: vi.fn(() => ({
+    safeIds: new Set(["usdt-tether", "usdc-circle"]),
+    riskyIds: new Set(["paxg-paxos", "xaut-tether"]),
+  })),
+}));
+
 vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: vi.fn(),
 }));
@@ -132,10 +139,6 @@ vi.mock("../../lib/circuit-breaker", () => ({
   shouldAttemptFetch: vi.fn(async () => true),
   recordOutcome: vi.fn(async () => {}),
   recordOutcomeSafe: vi.fn(async () => {}),
-}));
-
-vi.mock("../../lib/mint-burn-contracts", () => ({
-  SAFE_HAVEN_IDS: new Set(["usdt-tether", "usdc-circle"]),
 }));
 
 import { generateDailyDigest, classifyRegime } from "../daily-digest";
@@ -233,6 +236,23 @@ function makeBaseTables(): MockTableConfig[] {
     {
       match: "WHERE ended_at IS NOT NULL AND ended_at >= ?",
       rows: [],
+    },
+    {
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: ["report_card_cache"],
+      rows: [],
+      first: {
+        value: JSON.stringify({
+          scores: {
+            "usdt-tether": { score: 80, grade: "A" },
+            "usdc-circle": { score: 78, grade: "A" },
+            "paxg-paxos": { score: 45, grade: "D" },
+            "xaut-tether": { score: 48, grade: "D" },
+          },
+          updatedAt: nowSec,
+        }),
+        updated_at: nowSec,
+      },
     },
   ];
 }

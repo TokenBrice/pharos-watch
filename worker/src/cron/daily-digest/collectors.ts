@@ -13,7 +13,7 @@ import { buildInClause } from "../../lib/db";
 import { SECONDS } from "../../lib/time-constants";
 import { computeSafetyScoresSnapshot, type SafetyGradeRow } from "../../lib/safety-scores";
 import { computeFlowIntensity, computeGaugeScore, getGaugeBand, detectFlightToQuality } from "../../lib/mint-burn-scoring";
-import { SAFE_HAVEN_IDS } from "../../lib/mint-burn-contracts";
+import { computeDigestMintBurnFtqFlows } from "./mint-burn-ftq";
 
 // ---------------------------------------------------------------------------
 // Shared context passed from the orchestrator to every collector
@@ -361,13 +361,7 @@ export async function collectMintBurnFlows(
 
     const gaugeScore = computeGaugeScore(coinIntensities.map((c) => ({ intensity: c.intensity, mcap: c.mcap })));
     if (gaugeScore !== null) {
-      // FTQ: sum net flows for safe vs risky
-      let safeNet24h = 0;
-      let riskyNet24h = 0;
-      for (const c of coinIntensities) {
-        if (SAFE_HAVEN_IDS.has(c.id)) safeNet24h += c.net24h;
-        else riskyNet24h += c.net24h;
-      }
+      const { safeNet24h, riskyNet24h } = await computeDigestMintBurnFtqFlows(ctx.db, coinIntensities);
       const ftq = detectFlightToQuality({ safeNet24h, riskyNet24h });
 
       // Top pressure: coins with |intensity| > 20, sorted by |intensity|
