@@ -29,6 +29,8 @@ npm run test:smoke-ops # Private ops-host and ops-api smoke checks through Cloud
 npm run test:smoke-ui -- --url https://pharos.watch # Browser-level UI smoke check + mobile overflow route checks
 ```
 
+When `SMOKE_UI_EXPECT_GA_ID` is set, `npm run test:smoke-ui` also verifies that the homepage HTML includes the expected GA script tag and `gtag('config', ...)` initialization before it runs the browser checks.
+
 ## CI Pipeline
 
 Defined across `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/rebuild-pages.yml`, and `.github/workflows/codeql.yml`.
@@ -78,13 +80,15 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - waits for `smoke-api` only when worker/API work was also required for that push
    - executes `prepare-digests -> build-pages -> smoke-ui -> deploy-pages -> smoke-ui-live` as one shared Pages release path
    - `prepare-digests` fetches `/api/digest-archive` once from the target API environment into a normalized artifact
-   - `build-pages` downloads that artifact into `data/`, then runs `npm run build` and `npm run seo:check`, and uploads `out/`
+   - `build-pages` downloads that artifact into `data/`, forwards `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`, and uploads `out/`
    - `smoke-ui` still serves that exact artifact locally and runs `npm run test:smoke-ui -- --url http://127.0.0.1:4173`
+   - when `SMOKE_UI_EXPECT_GA_ID` is configured, that smoke step also verifies the built homepage HTML still contains the expected GA snippet
    - `deploy-pages` still publishes the verified artifact with the Wrangler retry loop
    - `smoke-ui-live` then verifies the real public host with `npm run test:smoke-ui -- --url https://pharos.watch`
 7. `smoke-ui-live` (worker-only push path):
    - Runs only when `worker_changed=true` and `pages_changed=false`
    - Runs `npm run test:smoke-ui -- --url https://pharos.watch`
+   - when `SMOKE_UI_EXPECT_GA_ID` is configured, also verifies the live homepage HTML still contains the expected GA snippet
    - Verifies that the unchanged live Pages frontend still works against the newly deployed worker/API
 8. `smoke-ops`:
 
@@ -107,7 +111,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 - runs on pushes to `main`, pull requests to `main`, and a weekly Monday schedule
 - analyzes the JavaScript/TypeScript codebase separately from the deploy pipeline
 
-This arrangement gives pull requests the same validate gate the push/manual deploy workflow depends on, proves the static export build and SEO gate before merge, skips worker deploy/API smoke for Pages-only pushes, skips Pages build/deploy for worker-only pushes, fetches digest data once before the Pages build so the build itself is network-independent with respect to digest data, prevents a frontend deploy if the newly built static export fails browser smoke before Pages production deploy, verifies the real `pharos.watch` host after each Pages publish, keeps the scheduled digest rebuild off the worker deploy path, and still runs the post-deploy ops-surface smoke after each production-changing workflow.
+This arrangement gives pull requests the same validate gate the push/manual deploy workflow depends on, proves the static export build and SEO gate before merge, skips worker deploy/API smoke for Pages-only pushes, skips Pages build/deploy for worker-only pushes, fetches digest data once before the Pages build so the build itself is network-independent with respect to digest data, forwards the configured GA measurement ID into CI builds so the static artifact matches production analytics posture, prevents a frontend deploy if the newly built static export fails browser smoke before Pages production deploy, verifies the real `pharos.watch` host after each Pages publish, keeps the scheduled digest rebuild off the worker deploy path, and still runs the post-deploy ops-surface smoke after each production-changing workflow.
 
 The workflows pin `actions/checkout@v6` and `actions/setup-node@v6` by commit SHA and run project tooling on Node 22 (`node-version: 22`). Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler with `npx --no-install`. `npm run audit:deps` also runs in the validate job so high-severity advisories fail the push/manual deploy pipeline before deploy. The production-changing workflows also share a `concurrency` group (`production-deploy-${{ github.ref }}`): push/manual deploys cancel superseded in-flight runs, while the scheduled/manual Pages rebuild queues behind an active production deploy instead of interrupting it.
 

@@ -99,6 +99,11 @@ function getUiRetryDelayMs() {
   return readPositiveIntEnv("SMOKE_UI_RETRY_DELAY_MS", DEFAULT_UI_RETRY_DELAY_MS);
 }
 
+function getExpectedGaId() {
+  const configured = (process.env.SMOKE_UI_EXPECT_GA_ID ?? "").trim();
+  return configured || null;
+}
+
 function readPositiveIntEnv(key, fallback) {
   const parsed = Number.parseInt(process.env[key] ?? "", 10);
   if (Number.isFinite(parsed) && parsed > 0) {
@@ -331,6 +336,25 @@ async function navigateWithRetry(sessionId, targetUrl, label, retryCount, retryD
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
+async function verifyAnalyticsSnippet(url, expectedGaId) {
+  if (!expectedGaId) {
+    return;
+  }
+
+  const response = await fetch(url);
+  assert(response.ok, `Failed to fetch ${url} while checking analytics snippet (${response.status})`);
+  const html = await response.text();
+
+  assert(
+    html.includes(`https://www.googletagmanager.com/gtag/js?id=${expectedGaId}`),
+    `Expected GA script tag for ${expectedGaId} in ${url}`,
+  );
+  assert(
+    html.includes(`gtag('config', '${expectedGaId}')`),
+    `Expected GA config init for ${expectedGaId} in ${url}`,
+  );
+}
+
 async function run() {
   const { url: rawUrl, skipOverflow } = parseArgs(process.argv.slice(2));
   const url = ensureUrl(rawUrl);
@@ -351,10 +375,16 @@ async function run() {
     "SMOKE_UI_STYLE_READY_TIMEOUT_MS",
     DEFAULT_STYLE_READY_TIMEOUT_MS,
   );
+  const expectedGaId = getExpectedGaId();
 
   console.log(`[smoke-ui] Running browser smoke checks against ${url}`);
 
   try {
+    await verifyAnalyticsSnippet(url, expectedGaId);
+    if (expectedGaId) {
+      console.log(`[smoke-ui] OK analytics snippet ${expectedGaId}`);
+    }
+
     const openOutput = await runPlaywrightCli(sessionId, ["open", url]);
     ensureNoCliError("open", openOutput);
 

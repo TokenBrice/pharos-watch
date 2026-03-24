@@ -128,13 +128,13 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - waits for `smoke-api` only when worker/API work was also required for the push
    - executes the shared Pages path:
      - `prepare-digests` fetches `/api/digest-archive` once from the target API environment and uploads a normalized digest artifact
-     - `build-pages` downloads that artifact into `data/`, then runs `npm run build` and `npm run seo:check`, and uploads `out/`
-     - `smoke-ui` downloads the same artifact, serves it locally with `scripts/serve-static-export.mjs`, and proxies `/api/*` to the configured public API base
+     - `build-pages` downloads that artifact into `data/`, forwards `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`, and uploads `out/`
+     - `smoke-ui` downloads the same artifact, serves it locally with `scripts/serve-static-export.mjs`, proxies `/api/*` to the configured public API base, and verifies the expected GA snippet when `SMOKE_UI_EXPECT_GA_ID` is configured
      - `deploy-pages` publishes that verified artifact through Wrangler with the existing retry loop
-     - `smoke-ui-live` then runs `npm run test:smoke-ui -- --url https://pharos.watch` against the real public host
+     - `smoke-ui-live` then runs `npm run test:smoke-ui -- --url https://pharos.watch` against the real public host, including the same GA snippet check when configured
 6. `smoke-ui-live`
    - worker-only deploy path that runs `npm run test:smoke-ui -- --url https://pharos.watch`
-   - verifies the live Pages frontend still works against the newly deployed worker/API when no static rebuild is needed
+   - verifies the live Pages frontend still works against the newly deployed worker/API when no static rebuild is needed, including the expected GA snippet when configured
 7. `smoke-ops`
    - private post-deploy ops smoke against `ops.pharos.watch/admin/` and `ops-api.pharos.watch`
    - requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
