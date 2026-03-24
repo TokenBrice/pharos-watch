@@ -12,6 +12,7 @@ Add a "Distribution" section to the stablecoin detail page featuring two donut c
 
 ### Chain Distribution (left chart)
 - **Source:** `StablecoinData.chainCirculating` from `useStablecoins()` hook
+- **Access:** `useStablecoins()` returns `StablecoinListResponse` with a `peggedAssets: StablecoinData[]` array. The component must find the coin via `peggedAssets.find(a => a.id === stablecoinId)` then read `.chainCirculating`.
 - **Shape:** `Record<string, { current: number, circulatingPrevDay: number, circulatingPrevWeek: number, circulatingPrevMonth: number }>`
 - **Values:** Already in USD, no conversion needed
 - **Refresh:** Every 15 minutes (existing cron)
@@ -32,10 +33,10 @@ No new API endpoints or data pipeline changes required.
 The component fetches data internally via `useStablecoins()` and `useDexLiquidity()` (same pattern as `DexLiquidityCard`).
 
 ### Layout
-- `<section id="distribution">` wrapping a `grid grid-cols-1 md:grid-cols-2 gap-4` (follows "Common Grids" rhythm from design language)
+- `<section id="distribution">` wrapping a `grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4`
 - Each cell is a `<Card>` (`rounded-xl`) with:
   - `CardHeader` (tight, `pb-2`) containing `CardTitle as="h2"` using `DETAIL_SECTION_TITLE_CLASS` (`text-lg font-semibold tracking-tight`) — matching every other detail section card
-  - `CardContent` with the donut chart inside a `pharos-chart-stage` container + legend below
+  - `CardContent` with the donut chart inside a `pharos-chart-stage` container (with `role="figure"` and `aria-label`) + legend below
 
 ### Chart Specifications
 
@@ -43,7 +44,7 @@ Both charts use Recharts `PieChart` + `Pie` (donut style, matching `cemetery-cha
 
 | Property | Value |
 |---|---|
-| Chart height | `h-[200px] sm:h-[250px]` |
+| Chart height | `h-[200px] sm:h-[250px]` (intentionally smaller than the standard `h-[250px] sm:h-[350px]` — donuts are simpler charts in a half-width column) |
 | Inner radius | 50 |
 | Outer radius | 85 |
 | Padding angle | 3 |
@@ -51,14 +52,15 @@ Both charts use Recharts `PieChart` + `Pie` (donut style, matching `cemetery-cha
 | Grouping threshold | Segments < 2% of total grouped into "Other" |
 | Sort order | Descending by value |
 
-**Center label:** Total value (circulating supply or DEX TVL) displayed in the donut hole using a custom Recharts label.
+**Center label:** Total value (circulating supply or DEX TVL) displayed in the donut hole using a custom Recharts `<Label>`. Formatted via `formatCurrency` (compact notation), rendered in `font-mono tabular-nums text-sm font-semibold`.
 
 ### Colors
 
-- **Chains:** `CHAIN_COLORS` from `src/lib/dex-constants.ts`, mapped to hex for SVG fill. Unmapped chains fall back to `CHART_PALETTE`. "Other" segment uses `CHART_SLATE`.
-- **Protocols:** `PROTOCOL_COLORS` from `src/lib/dex-constants.ts`, mapped to hex. Unmapped protocols fall back to `EXTRA_COLORS`. "Other" uses `CHART_SLATE`.
+Recharts renders raw SVG — `fill` attributes need hex strings, not Tailwind classes. The existing `CHAIN_COLORS` / `PROTOCOL_COLORS` in `src/lib/dex-constants.ts` are Tailwind class strings (`bg-blue-600`). Two parallel hex maps (`CHAIN_HEX` and `PROTOCOL_HEX`) will be added to `dex-constants.ts`, following the same pattern as `CAUSE_HEX` in `shared/lib/dead-stablecoins.ts`.
 
-Note: `CHAIN_COLORS` and `PROTOCOL_COLORS` use Tailwind classes (`bg-blue-600`). These must be mapped to hex values for SVG `fill` attributes since Recharts renders SVG directly. A small lookup map will convert the class names to hex.
+- **Chains:** `CHAIN_HEX` for SVG fills. Unmapped chains fall back to `CHART_PALETTE` from `@/lib/chart-colors`. "Other" segment uses `CHART_SLATE`.
+- **Protocols:** `PROTOCOL_HEX` for SVG fills. Unmapped protocols fall back to `CHART_PALETTE`. "Other" uses `CHART_SLATE`.
+- **Legend dots:** Continue using the existing Tailwind class maps (`CHAIN_COLORS`, `PROTOCOL_COLORS`) for `bg-*` legend markers, since those render as HTML, not SVG.
 
 ### Legend
 - Positioned below each chart, outside the `pharos-chart-stage`
@@ -73,7 +75,7 @@ Note: `CHAIN_COLORS` and `PROTOCOL_COLORS` use Tailwind classes (`bg-blue-600`).
 ### Empty / Edge States
 - **Single chain:** Show the section with only the chain chart; DEX chart card shows a muted data-availability banner: `rounded-md border px-4 py-2.5 text-sm border-border/60 bg-muted/40 text-muted-foreground` with "No DEX liquidity data available" (matches Data Availability Banner pattern from design language)
 - **No chain data:** Hide the entire section (shouldn't happen for tracked coins)
-- **Loading:** Skeleton matching existing detail section pattern (`animate-pulse rounded-xl`)
+- **Loading:** Each card renders independently — if one hook has loaded and the other hasn't, the loaded chart renders while the other shows a skeleton (`animate-pulse rounded-xl`). This avoids blocking both charts when only one data source is slow.
 
 ## Integration
 
@@ -87,12 +89,15 @@ Note: `CHAIN_COLORS` and `PROTOCOL_COLORS` use Tailwind classes (`bg-blue-600`).
      { loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" /> }
    );
    ```
-3. Render between the chart section and info section:
+3. Render between the chart section (`<section id="chart">`, line ~283) and info section (`<section id="info">`, line ~287) in `client.tsx`:
    ```tsx
    <section id="distribution">
-     <DistributionSection stablecoinId={viewModel.id} />
+     <SectionErrorBoundary name="distribution">
+       <DistributionSection stablecoinId={viewModel.id} />
+     </SectionErrorBoundary>
    </section>
    ```
+   `SectionErrorBoundary` is already imported in `client.tsx` and used for the liquidity section — same pattern.
 
 ### No View Model Changes
 Both `useStablecoins()` and `useDexLiquidity()` are already available as standalone hooks. The component calls them directly, matching the pattern used by `DexLiquidityCard`.
@@ -102,7 +107,8 @@ Both `useStablecoins()` and `useDexLiquidity()` are already available as standal
 | File | Change |
 |---|---|
 | `src/components/stablecoin-detail/distribution-section.tsx` | **New** — distribution donut charts component |
-| `src/app/stablecoin/[id]/client.tsx` | Add section entry, dynamic import, render in layout |
+| `src/lib/dex-constants.ts` | Add `CHAIN_HEX` and `PROTOCOL_HEX` maps (hex equivalents for SVG fills) |
+| `src/app/stablecoin/[id]/client.tsx` | Add section entry, dynamic import, render in layout with `SectionErrorBoundary` |
 
 ## Testing
 
