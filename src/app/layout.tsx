@@ -9,6 +9,7 @@ import { Footer } from "@/components/footer";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { FeedbackButton } from "@/components/feedback-button";
 import { MobileUtilityDock } from "@/components/mobile-utility-dock";
+import { RegimeBar } from "@/components/regime-bar";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
@@ -107,6 +108,7 @@ export default function RootLayout({
           Skip to main content
         </a>
         <Providers>
+          <RegimeBar />
           <Header />
           <SidebarProvider>
             <div className="flex min-h-screen">
