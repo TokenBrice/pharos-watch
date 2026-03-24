@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
@@ -67,10 +68,27 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
 
   return (
     <>
-      <div className="sr-only">
-        <h1>{`${coin.name} (${coin.symbol}) Stablecoin Analytics`}</h1>
-        <p>
-          {`Live price, market cap, supply trends, chain distribution, peg score, and depeg history for ${coin.name}.`}
+      <div className="space-y-2">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
+          <Link
+            href="/"
+            className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background/60 px-3 text-foreground hover:text-foreground sm:min-h-0 sm:rounded-sm sm:border-0 sm:bg-transparent sm:px-0 sm:text-inherit"
+          >
+            Dashboard
+          </Link>
+          <span>/</span>
+          <span className="text-foreground">{coin.name}</span>
+        </nav>
+        <div className="flex items-center gap-3">
+          {typedLogos[coin.id] && (
+            <Image src={typedLogos[coin.id]} alt="" width={40} height={40} className="rounded-lg" />
+          )}
+          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+            {coin.name} <span className="text-muted-foreground font-semibold">({coin.symbol})</span>
+          </h1>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing} · {GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} · Pegged to {PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}
         </p>
       </div>
       <StablecoinDetailClient id={id} summary={typedSummaries[id] ?? null} coin={coin} logoSrc={typedLogos[coin.id]} />
