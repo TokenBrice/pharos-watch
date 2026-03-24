@@ -478,10 +478,12 @@ export interface RateDerivedConfig {
 
 export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
   { stablecoinId: "buidl-blackrock", spreadBps: 20, label: "T-bill proxy (net of 0.20% fee)" },
+  { stablecoinId: "usyc-hashnote", spreadBps: 50, label: "T-bill proxy (net of 0.50% performance fee)" },
   { stablecoinId: "ylds-figure", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)" },
   { stablecoinId: "ustb-superstate", spreadBps: 15, label: "T-bill proxy (net of 0.15% fee)" },
   { stablecoinId: "mtbill-midas", spreadBps: 0, label: "T-bill proxy" },
   { stablecoinId: "ousg-ondo-finance", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)" },
+  { stablecoinId: "thbill-theo", spreadBps: 0, label: "T-bill proxy" },
 ];
 
 /**
@@ -538,6 +540,13 @@ export const LENDING_PROTOCOL_ALLOWLIST = new Set([
   "sturdy-v2",
   "goldfinch",
   "truefi",
+  "lagoon",
+  "liqwid",
+  "lista-lending",
+  "loopscale",
+  "navi-lending",
+  "overnight-finance",
+  "vesper",
 ]);
 
 /** Human-readable display names for DeFiLlama lending protocol slugs. */
@@ -577,6 +586,13 @@ export const LENDING_PROTOCOL_LABELS: Record<string, string> = {
   "sturdy-v2": "Sturdy v2",
   "goldfinch": "Goldfinch",
   "truefi": "TrueFi",
+  "lagoon": "Lagoon",
+  "liqwid": "Liqwid",
+  "lista-lending": "Lista Lending",
+  "loopscale": "Loopscale",
+  "navi-lending": "NAVI Lending",
+  "overnight-finance": "Overnight",
+  "vesper": "Vesper",
 };
 
 /**

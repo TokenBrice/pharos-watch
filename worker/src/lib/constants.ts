@@ -117,7 +117,7 @@ export const MIN_SAFETY_SCORE_FOR_YIELD = 50;
 /** Minimum APY (%) for auto-discovered lending pools to be eligible. */
 export const MIN_LENDING_POOL_APY = 0.5;
 /** Minimum TVL (USD) for auto-discovered lending pools to be eligible. */
-export const MIN_LENDING_POOL_TVL_USD = 1_000_000;
+export const MIN_LENDING_POOL_TVL_USD = 500_000;
 
 // --- Circuit breaker source names ---
 

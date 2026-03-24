@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.5`
+- **Current methodology version:** `v4.6`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -185,10 +185,12 @@ Uses the structured `risk_free_rate` cache already refreshed daily by `fetch-tbi
 | Token | Spread (bps) | Rationale |
 | ----- | ------------ | --------- |
 | BUIDL | 20 | BlackRock fund, 0.20% management fee |
+| USYC | 50 | Hashnote fund, modeled as ~10% performance fee at a 5% T-bill baseline |
 | YLDS  | 50 | Figure Markets, T-bill rate - 50 bps formula |
 | USTB  | 15 | Superstate, 0.15% management fee |
 | mTBILL | 0 | Midas, tracks T-bill rate directly |
 | OUSG  | 50 | Ondo US Government Bond fund, 0.50% management fee |
+| thBILL | 0 | Theo thBILL, modeled as Treasury-rate passthrough |
 
 Rate-derived runs after Tier 3 in the resolution loop and participates in the `is_best` selection like any other source. For tokens that also have price-derived or DL sources, the highest-APY source wins.
 
@@ -203,9 +205,9 @@ For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), 
 | Tier 1 | aave-v3, compound-v2, compound-v3, dolomite, sparklend, spark-savings, maple, yearn-finance |
 | Tier 2 | fluid-lending, euler-v2, venus-core-pool, kamino-lend, morpho-v1, morpho-blue, pendle, curve-llamalend, exactly, flux-finance, gains-network, lazy-summer-protocol, moonwell-lending, silo-v2 |
 | Tier 3 | justlend, openeden-usdo, multipli.fi, jupiter-lend, stables-labs-usdx, benqi-lending |
-| Tier 4 | radiant-v2, fraxlend-v2, clearpool, centrifuge, sturdy-v2, goldfinch, truefi |
+| Tier 4 | radiant-v2, fraxlend-v2, clearpool, centrifuge, sturdy-v2, goldfinch, truefi, lagoon, liqwid, lista-lending, loopscale, navi-lending, overnight-finance, vesper |
 
-**Discovery logic:** Filters DL pools by `exposure === "single"`, `stablecoin === true`, project in allowlist, exact symbol match (case-insensitive). Picks highest TVL.
+**Discovery logic:** Filters DL pools by `exposure === "single"`, `stablecoin === true`, project in allowlist, exact symbol match (case-insensitive). Picks highest TVL. Current quality gates require `apy >= 0.5` and `tvlUsd >= 500_000`.
 
 **Yield type:** `lending-opportunity` — distinguishes these from native yield coins on the frontend.
 

@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "4.5",
+  currentVersion: "4.6",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "4.6",
+    title: "Rate-derived treasury expansion and broader lending discovery",
+    date: "2026-03-24",
+    effectiveAt: 1774346400,
+    summary:
+      "Yield coverage widened through new deterministic Treasury fallbacks plus a broader but still curated lending auto-discovery set for long-tail safe assets.",
+    impact: [
+      "USYC and thBILL now participate in rate-derived Treasury fallback coverage alongside the existing BUIDL/USTB/YLDS/mTBILL/OUSG set",
+      "Auto-discovered lending coverage now recognizes additional curated protocol slugs already present in live DeFiLlama data, including Loopscale, Vesper, Lista Lending, Liqwid, Overnight, Lagoon, and NAVI Lending",
+      "The lending auto-discovery TVL floor was reduced from $1.0M to $0.5M to capture still-meaningful long-tail lending markets without opening the door to dust pools",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.5",
     title: "Fail-closed source validation and retained-market benchmark continuity",

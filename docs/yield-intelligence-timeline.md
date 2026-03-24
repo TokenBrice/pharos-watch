@@ -1,6 +1,16 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v4.5` (2026-03-01 -> 2026-03-23).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v4.6` (2026-03-01 -> 2026-03-24).
+
+---
+
+## v4.6 - Rate-derived treasury expansion and broader lending discovery (Mar 24, 2026)
+
+**Commit:** `unreleased`
+
+- Added rate-derived Treasury fallback coverage for `usyc-hashnote` and `thbill-theo`
+- Expanded the curated lending allowlist with live-observed protocols including Loopscale, Vesper, Lista Lending, Liqwid, Overnight, Lagoon, and NAVI Lending
+- Lowered the lending auto-discovery TVL floor from `$1.0M` to `$0.5M` to capture still-meaningful long-tail markets without admitting dust pools
 
 ---
 
