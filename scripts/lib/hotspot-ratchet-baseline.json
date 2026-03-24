@@ -15,19 +15,19 @@
     "branchCount": 6
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 621,
-    "maxFunctionLines": 303,
-    "branchCount": 82
+    "fileLines": 373,
+    "maxFunctionLines": 292,
+    "branchCount": 29
   },
   "src/app/methodology/sections/core-sections.tsx": {
-    "fileLines": 1743,
-    "maxFunctionLines": 1718,
+    "fileLines": 1774,
+    "maxFunctionLines": 1747,
     "branchCount": 0
   },
   "src/app/coverage/client.tsx": {
-    "fileLines": 825,
+    "fileLines": 809,
     "maxFunctionLines": 413,
-    "branchCount": 32
+    "branchCount": 27
   },
   "worker/src/cron/daily-digest/collectors.ts": {
     "fileLines": 918,
@@ -35,13 +35,13 @@
     "branchCount": 85
   },
   "worker/src/cron/sync-fx-rates.ts": {
-    "fileLines": 841,
-    "maxFunctionLines": 586,
-    "branchCount": 122
+    "fileLines": 800,
+    "maxFunctionLines": 543,
+    "branchCount": 99
   },
   "worker/src/lib/status-evaluation.ts": {
-    "fileLines": 776,
-    "maxFunctionLines": 611,
-    "branchCount": 86
+    "fileLines": 742,
+    "maxFunctionLines": 577,
+    "branchCount": 83
   }
 }
