@@ -2,7 +2,8 @@
 
 import { useMemo, useCallback } from "react";
 import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ReferenceArea, ReferenceLine } from "recharts";
-import { RECHARTS_TOOLTIP_STYLES, CHART_BLUE, CHART_GREEN, CHART_ORANGE, CHART_RED } from "@/lib/chart-colors";
+import { CHART_BLUE, CHART_GREEN, CHART_ORANGE, CHART_RED } from "@/lib/chart-colors";
+import { PharosChartTooltip } from "@/components/pharos-chart-tooltip";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -108,16 +109,10 @@ function LogoScatterPoint({ cx, cy, payload, emphasized = false, compact = false
 }
 
 function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: ScatterDataPoint }> }) {
-  if (!active || !payload || payload.length === 0) return null;
+  if (!payload || payload.length === 0) return null;
   const d = payload[0].payload;
   return (
-    <div
-      style={{
-        ...RECHARTS_TOOLTIP_STYLES.contentStyle,
-        padding: "8px 12px",
-        fontSize: "12px",
-      }}
-    >
+    <PharosChartTooltip active={active} className="text-xs">
       <div className="mb-2 flex items-center gap-2">
         <StablecoinLogo src={d.logoSrc} name={d.name} size={18} />
         <div className="min-w-0">
@@ -141,7 +136,7 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<
         PYS: <span className="font-mono">{d.pharosYieldScore !== null ? d.pharosYieldScore.toFixed(1) : "—"}</span>
       </p>
       <p className="text-muted-foreground">Source: {d.yieldSource}</p>
-    </div>
+    </PharosChartTooltip>
   );
 }
 
