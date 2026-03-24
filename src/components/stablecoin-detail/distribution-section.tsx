@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { PieChart, Pie, Cell, Tooltip, Label, Sector } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, Sector } from "recharts";
 import type { PieSectorDataItem } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -78,30 +78,16 @@ function buildDonutData(
 
 /* ── Donut card ── */
 
-function CenterLabel({ cx, cy, total, subtitle }: { cx: number; cy: number; total: number; subtitle: string }) {
+function CenterOverlay({ total, subtitle }: { total: number; subtitle: string }) {
   return (
-    <g>
-      <text
-        x={cx}
-        y={cy - 9}
-        textAnchor="middle"
-        dominantBaseline="central"
-        className="fill-muted-foreground"
-        style={{ fontFamily: "var(--font-sans)", fontSize: 10, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}
-      >
+    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+      <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
         {subtitle}
-      </text>
-      <text
-        x={cx}
-        y={cy + 10}
-        textAnchor="middle"
-        dominantBaseline="central"
-        className="fill-foreground"
-        style={{ fontFamily: "var(--font-mono)", fontSize: 16, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}
-      >
+      </span>
+      <span className="text-base font-semibold font-mono tabular-nums text-foreground">
         {formatCurrency(total)}
-      </text>
-    </g>
+      </span>
+    </div>
   );
 }
 
@@ -147,73 +133,69 @@ function DonutCard({
       <CardContent className="space-y-3">
         <div
           ref={ref}
-          className="h-[200px] sm:h-[250px]"
+          className="relative h-[200px] sm:h-[250px]"
           role="figure"
           aria-label={ariaLabel}
         >
           {ready ? (
-            <PieChart width={width} height={height} className="cursor-pointer">
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={DONUT_INNER}
-                outerRadius={DONUT_OUTER}
-                dataKey="value"
-                nameKey="name"
-                paddingAngle={3}
-                strokeWidth={0}
-                activeShape={renderActiveShape}
-              >
-                {data.map((d, i) => (
-                  <Cell key={i} fill={d.hex} />
-                ))}
-                <Label
-                  content={(props) => {
-                    const vb = props.viewBox;
-                    if (!vb || !("cx" in vb)) return null;
-                    return <CenterLabel cx={vb.cx} cy={vb.cy} total={total} subtitle={subtitle} />;
+            <>
+              <PieChart width={width} height={height} className="cursor-pointer">
+                <Pie
+                  data={data}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={DONUT_INNER}
+                  outerRadius={DONUT_OUTER}
+                  dataKey="value"
+                  nameKey="name"
+                  paddingAngle={3}
+                  strokeWidth={0}
+                  activeShape={renderActiveShape}
+                >
+                  {data.map((d, i) => (
+                    <Cell key={i} fill={d.hex} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.[0]) return null;
+                    const d = payload[0].payload as DonutDatum;
+                    const pct = total > 0 ? ((d.value / total) * 100).toFixed(1) : "0";
+                    return (
+                      <PharosChartTooltip active={active}>
+                        <TooltipRow color={d.hex} label={d.name} value={`${formatCurrency(d.value)} (${pct}%)`} />
+                      </PharosChartTooltip>
+                    );
                   }}
-                  position="center"
                 />
-              </Pie>
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload?.[0]) return null;
-                  const d = payload[0].payload as DonutDatum;
-                  const pct = total > 0 ? ((d.value / total) * 100).toFixed(1) : "0";
-                  return (
-                    <PharosChartTooltip active={active}>
-                      <TooltipRow color={d.hex} label={d.name} value={`${formatCurrency(d.value)} (${pct}%)`} />
-                    </PharosChartTooltip>
-                  );
-                }}
-              />
-            </PieChart>
+              </PieChart>
+              <CenterOverlay total={total} subtitle={subtitle} />
+            </>
           ) : null}
         </div>
 
         {/* Legend */}
-        <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
-          {data.map((d) => (
-            <span key={d.name} className="flex items-center gap-1.5">
-              {d.logoPath ? (
-                <img
-                  src={d.logoPath}
-                  alt=""
-                  width={14}
-                  height={14}
-                  className={`h-3.5 w-3.5 rounded-full object-contain shrink-0${d.darkInvert ? " dark:invert" : ""}`}
-                />
-              ) : (
-                <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: d.hex }} />
-              )}
-              <span>{d.name}</span>
-              <span className="font-mono tabular-nums">
-                {total > 0 ? `${formatCurrency(d.value)} · ${((d.value / total) * 100).toFixed(0)}%` : "—"}
+        <div className="flex flex-wrap gap-x-3.5 gap-y-1.5 text-xs text-muted-foreground">
+          {data.map((d) => {
+            const pct = total > 0 ? ((d.value / total) * 100).toFixed(0) : "0";
+            return (
+              <span key={d.name} className="inline-flex items-center gap-1.5">
+                {d.logoPath ? (
+                  <img
+                    src={d.logoPath}
+                    alt=""
+                    width={14}
+                    height={14}
+                    className={`h-3.5 w-3.5 rounded-full object-contain shrink-0${d.darkInvert ? " dark:invert" : ""}`}
+                  />
+                ) : (
+                  <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: d.hex }} />
+                )}
+                <span>{d.name}</span>
+                <span className="font-mono tabular-nums">{pct}%</span>
               </span>
-            </span>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>
@@ -327,18 +309,8 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 }
 
 export function DistributionSection({ stablecoinId }: { stablecoinId: string }) {
-  const { data: listData } = useStablecoins();
-  const { data: liquidityMap } = useDexLiquidity();
-
-  const coin = listData?.peggedAssets.find((a) => a.id === stablecoinId);
-  const hasChainData = coin?.chainCirculating && Object.keys(coin.chainCirculating).length > 0;
-  const hasDexData = liquidityMap?.[stablecoinId]?.protocolTvl && Object.keys(liquidityMap[stablecoinId].protocolTvl).length > 0;
-
-  // When only one chart has data, let it span full width
-  const singleCard = (hasChainData && !hasDexData) || (!hasChainData && hasDexData);
-
   return (
-    <div className={singleCard ? "grid grid-cols-1" : "grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4"}>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
       <ChainDistributionCard stablecoinId={stablecoinId} />
       <DexDistributionCard stablecoinId={stablecoinId} />
     </div>
