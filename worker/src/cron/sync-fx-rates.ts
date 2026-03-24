@@ -257,8 +257,7 @@ export async function syncFxRates(
   signal?: AbortSignal,
   openExchangeRatesKey?: string,
   chainRpcs?: Map<string, ChainRpcConfig>,
-  drpcApiKey?: string | null,
-  etherscanApiKey?: string | null,
+  drpcApiKey?: string | null, etherscanApiKey?: string | null,
 ): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
   const runBestEffort = async (label: string, fn: () => Promise<void>) => {
