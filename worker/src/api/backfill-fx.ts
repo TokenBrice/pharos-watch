@@ -59,7 +59,7 @@ interface SecondaryFxResponse {
 }
 
 /**
- * Fetch daily historical FX rates from frankfurter.app (ECB data).
+ * Fetch daily historical FX rates from api.frankfurter.dev (ECB data).
  * Returns USD-per-unit time series keyed by currency code.
  * On failure, returns {} — callers fall back to current rates.
  */
@@ -70,12 +70,12 @@ export async function fetchHistoricalFxRates(
 ): Promise<Record<string, FxTimeSeries[]>> {
   if (currencies.length === 0) return {};
   try {
-    const url = `https://api.frankfurter.app/${startDate}..${endDate}?from=USD&to=${currencies.join(",")}`;
+    const url = `https://api.frankfurter.dev/v1/${startDate}..${endDate}?base=USD&symbols=${currencies.join(",")}`;
     const res = await fetch(url, {
       headers: { "User-Agent": USER_AGENT },
     });
     if (!res.ok) {
-      console.error(`[backfill-depegs] frankfurter.app returned ${res.status}`);
+      console.error(`[backfill-depegs] Frankfurter API returned ${res.status}`);
       return {};
     }
     const raw = await res.json();

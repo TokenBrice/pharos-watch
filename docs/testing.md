@@ -206,7 +206,7 @@ Stubs global `fetch` for testing cron jobs that make HTTP requests.
 import { mockFetch } from "./helpers/mock-fetch";
 
 const spy = mockFetch([
-  { match: "frankfurter.app", body: { rates: { EUR: 0.925 } } },
+  { match: "frankfurter.dev", body: { rates: { EUR: 0.925 } } },
   { match: "gold-api.com", body: { price: 2900 }, status: 200 },
 ]);
 ```
@@ -640,8 +640,8 @@ describe("syncFxRates", () => {
     vi.restoreAllMocks();
   });
 
-  it("falls back gracefully when frankfurter.app returns 503", async () => {
-    mockFetch([{ match: "frankfurter.app", body: {}, status: 503 }]);
+  it("falls back gracefully when frankfurter.dev returns 503", async () => {
+    mockFetch([{ match: "frankfurter.dev", body: {}, status: 503 }]);
     const db = mockD1([{ match: "cache", rows: [], first: null }]);
     const result = await syncFxRates(db);
     expect(result).toBeDefined(); // no throw

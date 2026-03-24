@@ -31,10 +31,10 @@ describe("syncFxRates", () => {
     vi.restoreAllMocks();
   });
 
-  it("caches FX rates from frankfurter.app when API succeeds", async () => {
+  it("caches FX rates from frankfurter.dev when API succeeds", async () => {
     mockFetch([
       {
-        match: "frankfurter.app",
+        match: "frankfurter.dev",
         body: {
           base: "USD",
           date: "2025-06-15",
@@ -70,9 +70,16 @@ describe("syncFxRates", () => {
       },
     ]);
 
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
     const result = await syncFxRates(db);
     expect(result.itemCount).toBeGreaterThan(0);
     expect(result.metadata).toBeDefined();
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining("https://api.frankfurter.dev/v1/latest?base=USD&symbols="),
+      expect.objectContaining({
+        headers: { "User-Agent": expect.any(String) },
+      }),
+    );
 
     const metadata = JSON.parse(result.metadata!);
     expect(metadata.rateCount).toBeGreaterThan(5);
@@ -104,7 +111,7 @@ describe("syncFxRates", () => {
   it("uses fresh commodity peer medians from the stablecoins cache when gold-api.com is unavailable", async () => {
     mockFetch([
       {
-        match: "frankfurter.app",
+        match: "frankfurter.dev",
         body: {
           base: "USD",
           date: "2025-06-15",
@@ -216,10 +223,10 @@ describe("syncFxRates", () => {
     expect(cachedMeta.sourceDateByPeg.peggedSILVER).toBeNull();
   });
 
-  it("falls back to cached rates when frankfurter.app is unavailable", async () => {
+  it("falls back to cached rates when frankfurter.dev is unavailable", async () => {
     mockFetch([
       {
-        match: "frankfurter.app",
+        match: "frankfurter.dev",
         body: { error: "Service unavailable" },
         status: 503,
       },
@@ -295,10 +302,10 @@ describe("syncFxRates", () => {
     expect(cachedMeta.consecutiveFallbackRuns).toBe(1);
   });
 
-  it("uses the secondary FX mirror as a live full-set fallback when frankfurter.app is unavailable", async () => {
+  it("uses the secondary FX mirror as a live full-set fallback when frankfurter.dev is unavailable", async () => {
     mockFetch([
       {
-        match: "frankfurter.app",
+        match: "frankfurter.dev",
         body: { error: "Service unavailable" },
         status: 503,
       },
@@ -376,7 +383,7 @@ describe("syncFxRates", () => {
 
     mockFetch([
       {
-        match: "frankfurter.app",
+        match: "frankfurter.dev",
         body: { error: "Service unavailable" },
         status: 503,
       },
@@ -453,7 +460,7 @@ describe("syncFxRates", () => {
   it("treats cadence-valid carry-forward rates as a live run when live FX fetches fail", async () => {
     mockFetch([
       {
-        match: "frankfurter.app",
+        match: "frankfurter.dev",
         body: { error: "Service unavailable" },
         status: 503,
       },
@@ -579,7 +586,7 @@ describe("syncFxRates", () => {
   it("uses secondary API for CNH/RUB/UAH/ARS rates", async () => {
     mockFetch([
       {
-        match: "frankfurter.app",
+        match: "frankfurter.dev",
         body: {
           base: "USD",
           date: "2025-06-15",
@@ -625,7 +632,7 @@ describe("syncFxRates", () => {
   it("prefers the fresher secondary FX mirror when the CDN payload lags a day behind", async () => {
     mockFetch([
       {
-        match: "frankfurter.app",
+        match: "frankfurter.dev",
         body: {
           base: "USD",
           date: "2025-06-15",
@@ -689,7 +696,7 @@ describe("syncFxRates", () => {
       "0000000000000000000000000000000000000000000000000000000000000001";
 
     vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
-      if (url.includes("frankfurter.app")) {
+      if (url.includes("frankfurter.dev")) {
         return new Response(JSON.stringify({
           base: "USD",
           date: "2025-06-15",
@@ -762,7 +769,7 @@ describe("syncFxRates", () => {
 
   it("reconstructs daily fiat provenance from same-day live timestamps during carry-forward", async () => {
     mockFetch([
-      { match: "frankfurter.app", body: { error: "Service unavailable" }, status: 503 },
+      { match: "frankfurter.dev", body: { error: "Service unavailable" }, status: 503 },
       { match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api", body: { error: "Service unavailable" }, status: 503 },
       { match: "latest.currency-api.pages.dev", body: { error: "Service unavailable" }, status: 503 },
       { match: "open.er-api.com/v6/latest/USD", body: { error: "Service unavailable" }, status: 503 },
@@ -893,7 +900,7 @@ describe("syncFxRates", () => {
     );
 
     mockFetch([
-      { match: "frankfurter.app", body: { error: "Service unavailable" }, status: 503 },
+      { match: "frankfurter.dev", body: { error: "Service unavailable" }, status: 503 },
       { match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api", body: { error: "Service unavailable" }, status: 503 },
       { match: "latest.currency-api.pages.dev", body: { error: "Service unavailable" }, status: 503 },
       { match: "open.er-api.com/v6/latest/USD", body: { error: "Service unavailable" }, status: 503 },
@@ -1010,7 +1017,7 @@ describe("syncFxRates", () => {
     );
 
     mockFetch([
-      { match: "frankfurter.app", body: { error: "Service unavailable" }, status: 503 },
+      { match: "frankfurter.dev", body: { error: "Service unavailable" }, status: 503 },
       { match: "cdn.jsdelivr.net/npm/@fawazahmed0/currency-api", body: { error: "Service unavailable" }, status: 503 },
       { match: "latest.currency-api.pages.dev", body: { error: "Service unavailable" }, status: 503 },
       { match: "open.er-api.com/v6/latest/USD", body: { error: "Service unavailable" }, status: 503 },
@@ -1088,7 +1095,7 @@ describe("syncFxRates", () => {
   it("keeps syncing when the OXR telemetry write fails", async () => {
     mockFetch([
       {
-        match: "frankfurter.app",
+        match: "frankfurter.dev",
         body: {
           base: "USD",
           date: "2025-06-15",
@@ -1152,7 +1159,7 @@ describe("syncFxRates", () => {
   it("records the OXR cooldown after a completed response with zero usable rates", async () => {
     mockFetch([
       {
-        match: "frankfurter.app",
+        match: "frankfurter.dev",
         body: {
           base: "USD",
           date: "2025-06-15",

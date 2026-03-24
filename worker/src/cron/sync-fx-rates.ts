@@ -17,7 +17,7 @@ import {
 import { z } from "zod";
 
 /**
- * Fetches live FX rates from the European Central Bank (via frankfurter.app)
+ * Fetches live FX rates from the European Central Bank (via api.frankfurter.dev)
  * and stores them in D1 cache as fallback rates for thin peg groups.
  *
  * Format matches FALLBACK_RATES in peg-rates.ts: { peggedEUR: 1.08, ... }
@@ -455,7 +455,7 @@ export async function syncFxRates(
     };
 
     const frankfurterAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.FX_FRANKFURTER);
-    const url = `https://api.frankfurter.app/latest?from=USD&to=${CURRENCIES.join(",")}`;
+    const url = `https://api.frankfurter.dev/v1/latest?base=USD&symbols=${CURRENCIES.join(",")}`;
     const res = frankfurterAllowed
       ? await fetchWithRetry(url, {
           headers: { "User-Agent": USER_AGENT },
@@ -473,7 +473,7 @@ export async function syncFxRates(
       const appliedLiveFallback = await tryLiveFullSetFallback("error");
       if (!appliedLiveFallback && cachedRateCount > 0) {
         console.warn(
-          `[sync-fx-rates] frankfurter.app unavailable (${res?.status ?? "no response"}), using ${cachedRateCount} cached rates`,
+          `[sync-fx-rates] Frankfurter API unavailable (${res?.status ?? "no response"}), using ${cachedRateCount} cached rates`,
         );
         seedCachedFallbackFromPrevious();
         mode = "cached-fallback";
@@ -485,7 +485,7 @@ export async function syncFxRates(
         };
       }
       if (mode !== "cached-fallback" && Object.keys(usableRates).length === 0) {
-        throw new Error(`frankfurter.app returned ${res?.status ?? "no response"}`);
+        throw new Error(`Frankfurter API returned ${res?.status ?? "no response"}`);
       }
     }
     if (mode !== "cached-fallback") {
@@ -513,7 +513,7 @@ export async function syncFxRates(
               cache: "ok",
             };
           } else {
-            throw new Error(`frankfurter.app payload validation failed: ${frankfurterValidation.issues}`);
+            throw new Error(`Frankfurter API payload validation failed: ${frankfurterValidation.issues}`);
           }
         } else {
           await runBestEffort("recordOutcome:fx-frankfurter-success", async () => {
