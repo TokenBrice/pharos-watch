@@ -69,6 +69,9 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
 
   return (
     <>
+      <h1 className="sr-only">
+        {coin.name} ({coin.symbol}) stablecoin analytics
+      </h1>
       <Suspense fallback={
         <div className="space-y-6" aria-hidden="true">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
