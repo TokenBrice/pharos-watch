@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
@@ -70,26 +69,6 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
 
   return (
     <>
-      <div className="space-y-2">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
-          <Link
-            href="/"
-            className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background/60 px-3 text-foreground hover:text-foreground sm:min-h-0 sm:rounded-sm sm:border-0 sm:bg-transparent sm:px-0 sm:text-inherit"
-          >
-            Dashboard
-          </Link>
-          <span>/</span>
-          <span className="text-foreground">{coin.name}</span>
-        </nav>
-        <div className="flex items-center gap-3">
-          {typedLogos[coin.id] && (
-            <Image src={typedLogos[coin.id]} alt="" width={40} height={40} className="rounded-lg" />
-          )}
-          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-            {coin.name} <span className="text-muted-foreground font-semibold">({coin.symbol})</span>
-          </h1>
-        </div>
-      </div>
       <Suspense fallback={
         <div className="space-y-6" aria-hidden="true">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
