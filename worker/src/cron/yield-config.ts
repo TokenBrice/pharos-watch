@@ -612,6 +612,8 @@ export const LENDING_PROTOCOL_LABELS: Record<string, string> = {
 export const AUTO_LENDING_POOL_MAP: Record<string, string> = {
   // U (United Stables) - venus-core-pool on BSC, ~$15M TVL, ~2.4% APY
   "u-united-stables": "d8e9bb79-79d3-4897-8a4f-8d489040097d",
+  // pUSD - silo-v2 on Sonic, yield-bearing coin with missing report-card row
+  "pusd-polaris": "add30093-8fb6-4972-bb6a-a0f3add8bfe8",
   // pmUSD - yearn-finance (symbol drift: PMFRXUSD), Ethereum
   "pmusd-precious-metals": "099fab49-5103-4c85-b5e6-fff734eb1691",
   // USDH - morpho-v1 (symbol drift: FEUSDH), HyperEVM
@@ -620,6 +622,12 @@ export const AUTO_LENDING_POOL_MAP: Record<string, string> = {
   "eurcv-societe-generale-forge": "d3b28212-a46b-4db8-8bb7-2c946b3cbe76",
   // EUSD - morpho-v1 (symbol drift: MEUSD), Base
   "eusd-electronic-usd": "44a4e84a-4ad1-4783-ac83-3d7e432220ea",
+  // USDX - stables-labs-usdx native single-asset market
+  "usdx-hex-trust": "e7ac1a5f-f141-4c00-9a5d-2e2c505a800c",
+  // USDO - OpenEden native single-asset market
+  "usdo-openeden": "f083596e-032d-4d6b-a7a8-1836d3f99bcd",
+  // USDM - Liqwid single-asset market on Cardano
+  "usdm-moneta": "ce3021c9-af52-46b0-a61a-3e92acdfd79b",
 };
 
 /**
@@ -629,4 +637,7 @@ export const AUTO_LENDING_POOL_MAP: Record<string, string> = {
 export const AUTO_LENDING_SAFETY_BYPASS_IDS = new Set([
   "u-united-stables", // U: explicitly requested inclusion despite D-grade score
   "pusd-polaris", // Yield-bearing coin with missing report-card coverage; vetted Silo market keeps native yield visibility intact.
+  "usdx-hex-trust", // Large protocol-native USDX market; keep visible despite D-grade issuer risk.
+  "usdo-openeden", // OpenEden's native USDO market remains meaningful despite sub-C safety.
+  "usdm-moneta", // Exact single-asset Liqwid market; explicit edge-case inclusion for yield coverage.
 ]);

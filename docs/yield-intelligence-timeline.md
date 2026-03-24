@@ -1,6 +1,16 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v4.7` (2026-03-01 -> 2026-03-24).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v4.8` (2026-03-01 -> 2026-03-24).
+
+---
+
+## v4.8 - Explicit edge-case overrides for remaining high-signal lending markets (Mar 24, 2026)
+
+**Commit:** `unreleased`
+
+- Polaris pUSD now resolves through a deterministic Silo v2 lending override, fixing the prior bypass-only configuration gap
+- Added deterministic exact-symbol lending overrides for USDX, USDO, and USDM
+- These overrides bypass the generic C- safety gate only for a short named list of high-signal edge cases rather than lowering the global discovery threshold
 
 ---
 

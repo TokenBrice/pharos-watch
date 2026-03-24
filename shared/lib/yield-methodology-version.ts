@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "4.7",
+  currentVersion: "4.8",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "4.8",
+    title: "Explicit edge-case overrides for remaining high-signal lending markets",
+    date: "2026-03-24",
+    effectiveAt: 1774360200,
+    summary:
+      "A final selective pass added deterministic lending overrides for the remaining high-signal exact-symbol markets that were still blocked only by report-card coverage gaps or sub-C safety gating.",
+    impact: [
+      "Polaris pUSD now resolves through a deterministic Silo v2 lending market override, fixing the prior bypass-only configuration gap",
+      "USDX, USDO, and USDM now use deterministic exact-symbol lending overrides rather than waiting on the generic dynamic discovery path",
+      "These explicit overrides bypass the normal C- safety gate only for a short named list of high-TVL or protocol-native edge cases, preserving the broader global discovery standard",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.7",
     title: "Early NAV fallback support and deeper long-tail lending coverage",
