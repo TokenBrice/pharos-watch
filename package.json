@@ -64,6 +64,7 @@
     "react-tweet": "3.3.0",
     "recharts": "^3.8.0",
     "tailwind-merge": "^3.5.0",
+    "viem": "^2.38.2",
     "zod": "^4.3.6"
   },
   "devDependencies": {

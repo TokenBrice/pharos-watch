@@ -9,7 +9,15 @@ export interface DexApiPoolToken {
 }
 
 export interface DexApiPool {
-  source: "fluid" | "balancer" | "raydium" | "orca";
+  source:
+    | "fluid"
+    | "balancer"
+    | "raydium"
+    | "orca"
+    | "meteora"
+    | "pancakeswap"
+    | "aerodrome-slipstream"
+    | "velodrome-slipstream";
   chain: string;
   poolAddress: string;
   poolType: string;

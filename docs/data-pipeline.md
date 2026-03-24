@@ -22,7 +22,7 @@ All external data sources are protected by per-source circuit breakers (`worker/
 - **Alerts**: Open/close transition alerts are sent when the caller provides a webhook URL to `recordOutcome(...)`
 - **Health impact**: Any open circuit triggers `degraded` status on `/api/health`
 
-The source-name registry is maintained in `worker/src/lib/constants.ts` under `CIRCUIT_SOURCE`. Current keys span the main data and delivery lanes, including DefiLlama (`defillama-*`), CoinGecko (`coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coingecko-ticker`), CoinMarketCap, DexScreener, Jupiter, Pyth, Binance, Kraken, Bitstamp, Coinbase, RedStone, Curve, Fluid/Balancer/Raydium/Orca, FX (`fx-frankfurter`, `fx-realtime`, `chainlink-feeds`), treasury rates, Etherscan, Alchemy, Bluechip, Anthropic, Twitter, Telegram, DRPC, TronGrid, and the Kinesis Horizon sources.
+The source-name registry is maintained in `worker/src/lib/constants.ts` under `CIRCUIT_SOURCE`. Current keys span the main data and delivery lanes, including DefiLlama (`defillama-*`), CoinGecko (`coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coingecko-ticker`), CoinMarketCap, DexScreener, Jupiter, Pyth, Binance, Kraken, Bitstamp, Coinbase, RedStone, Curve, the protocol-native DEX lanes (Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, Velodrome Slipstream), FX (`fx-frankfurter`, `fx-realtime`, `chainlink-feeds`), treasury rates, Etherscan, Alchemy, Bluechip, Anthropic, Twitter, Telegram, DRPC, TronGrid, and the Kinesis Horizon sources.
 
 ### DefiLlama list vs detail API
 

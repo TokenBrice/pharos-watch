@@ -44,6 +44,13 @@ export function isEligibleDirectApiPool(
   return pool.tvlUsd >= minTvlUsd && pool.tvlUsd <= DIRECT_API_MAX_POOL_TVL_USD;
 }
 
+export function isPreferredDirectApiPool(
+  pool: Pick<DexApiPool, "tvlUsd" | "volume24hUsd">,
+  minTvlUsd = DIRECT_API_POOL_MIN_TVL_USD,
+): boolean {
+  return isEligibleDirectApiPool(pool, minTvlUsd) && Number.isFinite(pool.volume24hUsd) && pool.volume24hUsd > 0;
+}
+
 function getDisplayTokenSymbol(token: DexApiPoolToken): string {
   return normalizeDexSymbol(token.symbol) || token.address.slice(0, 10);
 }

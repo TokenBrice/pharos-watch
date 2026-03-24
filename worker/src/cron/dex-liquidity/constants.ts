@@ -125,7 +125,9 @@ export const SUBGRAPH_PER_CHAIN_TIMEOUT_MS = 15_000;
 export function dexPriceConfidenceForProtocol(protocol: string): number {
   if (
     protocol === "curve" || protocol === "uniswap-v3" || protocol === "aerodrome" ||
-    protocol === "fluid" || protocol === "balancer" || protocol === "raydium" || protocol === "orca"
+    protocol === "fluid" || protocol === "balancer" || protocol === "raydium" || protocol === "orca" ||
+    protocol === "meteora" || protocol === "pancakeswap" ||
+    protocol === "aerodrome-slipstream" || protocol === "velodrome-slipstream"
   ) return 1.0;
   if (
     protocol.startsWith("staged-cg_onchain") ||

@@ -3,9 +3,26 @@ import {
 } from "./methodology-version";
 
 const liquidity = createMethodologyVersion({
-  currentVersion: "4.5",
+  currentVersion: "4.6",
   changelogPath: "/methodology/liquidity-score-changelog/",
   changelog: [
+  {
+    version: "4.6",
+    title: "Protocol-native DEX coverage expansion",
+    date: "2026-03-24",
+    effectiveAt: 1774352400,
+    summary:
+      "Liquidity scoring now ingests Meteora DLMM, PancakeSwap V3, and Aerodrome/Velodrome Slipstream pool-state data as protocol-native direct sources, expanding primary-grade coverage across Solana, BSC, Base, and Optimism.",
+    impact: [
+      "Meteora DLMM pools now enter the direct-API merge path with measured TVL, volume, balances, and fee data",
+      "PancakeSwap V3 pools now add protocol-native primary coverage across BSC and supported EVM chains through official Graph subgraphs",
+      "Aerodrome Slipstream and Velodrome Slipstream pools now contribute pool-state TVL, balances, fees, and DEX-price observations via the on-chain Sugar view contracts",
+      "Direct-source precedence over overlapping DeFiLlama rows now requires measured non-zero 24h volume, so Slipstream pool-state rows expand coverage without displacing stronger DL rows when volume telemetry is absent",
+      "New concentrated-liquidity quality buckets now score PancakeSwap and Slipstream fee tiers consistently with existing Uni V3 logic",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.5",
     title: "Coverage recall hardening and measurement-aware confidence",

@@ -1,6 +1,18 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v4.5` (2026-02-19 -> 2026-03-24).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v4.6` (2026-02-19 -> 2026-03-24).
+
+---
+
+## v4.6 - Protocol-native DEX coverage expansion (Mar 24, 2026)
+
+**Commit:** `unreleased`
+
+- Meteora DLMM now enters the direct-API merge path with measured TVL, 24h volume, balances, and fee data
+- PancakeSwap V3 now adds protocol-native primary coverage across BSC and supported EVM chains through official Graph subgraphs
+- Aerodrome Slipstream and Velodrome Slipstream now contribute pool-state TVL, balances, fee tiers, and DEX-price observations via the on-chain Sugar view contracts
+- Direct-source precedence over overlapping DeFiLlama rows now requires measured non-zero 24h volume, so Slipstream rows expand coverage without displacing stronger DL rows when volume telemetry is absent
+- New concentrated-liquidity quality buckets score PancakeSwap and Slipstream fee tiers consistently with existing Uni V3 logic
 
 ---
 

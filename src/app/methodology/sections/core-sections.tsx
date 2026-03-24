@@ -819,8 +819,9 @@ export function CoreMethodologySections() {
             Aggregates pool data across all major DEXes and chains.
           </p>
           <p>
-            Dedicated direct-API sources (Fluid, Balancer, Raydium, Orca) are treated as primary-grade inputs and
-            replace overlapping DeFiLlama pools before staged or fallback discovery sources are merged.
+            Dedicated protocol-native sources (Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap V3, Aerodrome
+            Slipstream, and Velodrome Slipstream) are treated as primary-grade inputs and enter scoring before staged
+            or fallback discovery sources are merged.
           </p>
           <p>
             Discovery coverage is less page-fragile now: CoinGecko Onchain and GeckoTerminal token crawls read
@@ -831,11 +832,17 @@ export function CoreMethodologySections() {
             Matching is chain-aware: `chain + address` resolves first, and symbol fallback is only allowed when it is unique on that chain for addressless tokens. If an upstream token already supplies an unknown address, it is dropped instead of being remapped by symbol. Pool dedupe uses exact ids plus conservative derived identity keys, so legitimate same-pair pools are not collapsed just because their token set matches.
           </p>
           <p>
-            When direct APIs expose pool-inventory metadata, Balancer, Raydium, and Orca now contribute measured
-            balance health and fee detail instead of neutral placeholders. Balancer weighted pools are normalized
-            against target token weights before the balance ratio is computed. Fluid now reads reserves and fee detail
-            from the official DexReservesResolver on Ethereum, Arbitrum, Base, and Polygon; unsupported Fluid chains
-            such as BSC and Plasma still fall back to neutral balance.
+            Direct-source precedence is also measurement-aware now. A protocol-native pool only replaces an overlapping
+            DeFiLlama row when it has measured non-zero 24h volume, which means Slipstream pool-state rows can expand
+            Base and Optimism coverage without displacing stronger overlapping DL rows when volume telemetry is absent.
+          </p>
+          <p>
+            When protocol-native sources expose pool inventory, Balancer, Raydium, Orca, Meteora, PancakeSwap V3, and
+            the Slipstream integrations now contribute measured balances and fee detail instead of neutral placeholders.
+            Balancer weighted pools are normalized against target token weights before the balance ratio is computed.
+            Fluid reads reserves and fee detail from the official DexReservesResolver on Ethereum, Arbitrum, Base, and
+            Polygon, while Aerodrome and Velodrome Slipstream read pool state from the on-chain Sugar view contracts on
+            Base and Optimism.
           </p>
           <p>
             Repeated sightings of the same physical pool across direct API, staged, and fallback sources are collapsed
@@ -992,8 +999,8 @@ export function CoreMethodologySections() {
                       <td className="py-2 pr-4">22.5%</td>
                       <td className="py-2">
                         Quality-adjusted TVL using pool mechanism multiplier &times; balance health &times; pair
-                        quality. Curve StableSwap (A&ge;500) = 1.0&times;, Uni V3 1bp = 1.1&times;, Fluid/
-                        Balancer/Raydium/Orca direct APIs now feed measured balance health when available, and generic
+                        quality. Curve StableSwap (A&ge;500) = 1.0&times;, Uni V3 and Pancake/Slipstream 1bp pools =
+                        1.1&times;, Meteora and other concentrated-liquidity direct sources = 0.85&times;, and generic
                         AMM = 0.3&times;
                       </td>
                     </tr>

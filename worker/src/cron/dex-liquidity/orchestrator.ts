@@ -24,6 +24,9 @@ import { fetchFluidPools } from "./fetch-fluid";
 import { fetchBalancerPools } from "./fetch-balancer";
 import { fetchRaydiumPools } from "./fetch-raydium";
 import { fetchOrcaPools } from "./fetch-orca";
+import { fetchMeteoraPools } from "./fetch-meteora";
+import { fetchPancakeSwapPools } from "./fetch-pancakeswap";
+import { fetchSlipstreamPools } from "./fetch-slipstream";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
 import {
@@ -31,6 +34,7 @@ import {
   extractPriceObservations,
   hydrateDirectApiPoolMetadata,
   isEligibleDirectApiPool,
+  isPreferredDirectApiPool,
   makeDexApiFetchResult,
   type DexApiFetchResult,
   type DexApiPool,
@@ -116,7 +120,7 @@ export function filterPrimaryPoolsPreferDirectApi(
   skippedByExactIdentity: number;
   skippedByUniqueDerivedIdentity: number;
 } {
-  const eligibleDirectApiPools = directApiPools.filter((pool) => isEligibleDirectApiPool(pool));
+  const eligibleDirectApiPools = directApiPools.filter((pool) => isPreferredDirectApiPool(pool));
   const directApiKnown = createKnownPoolIdentityIndex();
   for (const pool of eligibleDirectApiPools) {
     registerKnownPoolIdentity(directApiKnown, buildDirectApiPoolIdentity(pool));
@@ -240,8 +244,36 @@ export async function syncDexLiquidity(
   const directApiFetchers: Array<{ name: string; circuitKey: string; fn: (s?: AbortSignal) => Promise<DexApiFetchResult> }> = [
     { name: "Fluid", circuitKey: CIRCUIT_SOURCE.FLUID_DEX_API, fn: (fetchSignal) => fetchFluidPools(fetchSignal, chainRpcs) },
     { name: "Balancer", circuitKey: CIRCUIT_SOURCE.BALANCER_API, fn: fetchBalancerPools },
+    { name: "PancakeSwap", circuitKey: CIRCUIT_SOURCE.PANCAKESWAP_API, fn: (fetchSignal) => fetchPancakeSwapPools(graphApiKey, fetchSignal) },
+    { name: "Meteora", circuitKey: CIRCUIT_SOURCE.METEORA_API, fn: fetchMeteoraPools },
     { name: "Raydium", circuitKey: CIRCUIT_SOURCE.RAYDIUM_API, fn: fetchRaydiumPools },
     { name: "Orca", circuitKey: CIRCUIT_SOURCE.ORCA_API, fn: fetchOrcaPools },
+    {
+      name: "Aerodrome Slipstream",
+      circuitKey: CIRCUIT_SOURCE.AERODROME_SLIPSTREAM_API,
+      fn: (fetchSignal) =>
+        fetchSlipstreamPools(
+          "aerodrome-slipstream",
+          chainAddressToId,
+          symbolToChainScopedIds,
+          stablecoinPriceById,
+          fetchSignal,
+          chainRpcs,
+        ),
+    },
+    {
+      name: "Velodrome Slipstream",
+      circuitKey: CIRCUIT_SOURCE.VELODROME_SLIPSTREAM_API,
+      fn: (fetchSignal) =>
+        fetchSlipstreamPools(
+          "velodrome-slipstream",
+          chainAddressToId,
+          symbolToChainScopedIds,
+          stablecoinPriceById,
+          fetchSignal,
+          chainRpcs,
+        ),
+    },
   ];
 
   // 4. Fetch Uniswap V3 subgraph data for fee tier enrichment + price observations

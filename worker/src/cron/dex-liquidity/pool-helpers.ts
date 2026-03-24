@@ -27,11 +27,15 @@ export function classifyPoolType(project: string): string {
   const proj = project.toLowerCase();
   if (proj.includes("curve")) return "curve-stableswap"; // refined later via registryId
   if (proj.includes("fluid")) return "fluid-dex";
+  if (proj.includes("meteora")) return "meteora-dlmm";
   if (proj.includes("aerodrome")) return "aerodrome-volatile"; // refined to aerodrome-stable via subgraph isStable flag
+  if (proj.includes("velodrome-slipstream")) return "velodrome-slipstream-5bp";
+  if (proj.includes("aerodrome-slipstream")) return "aerodrome-slipstream-5bp";
   if (proj.includes("balancer") && proj.includes("stable")) return "balancer-stable";
   if (proj.includes("balancer")) return "balancer-weighted";
   if (proj.includes("raydium")) return "raydium-amm";
   if (proj.includes("orca")) return "orca-whirlpool";
+  if (proj.includes("pancakeswap")) return "pancakeswap-v3-5bp";
   if (proj.includes("uniswap-v3") || proj === "uniswap-v3") return "uniswap-v3-5bp";
   return "generic";
 }
@@ -167,6 +171,7 @@ export function normalizeProtocol(project: string): string {
   if (p.includes("uniswap-v3") || p === "uniswap-v3") return "uniswap-v3";
   if (p.includes("uniswap")) return "uniswap";
   if (p.includes("fluid")) return "fluid";
+  if (p.includes("meteora")) return "meteora";
   if (p.includes("balancer")) return "balancer";
   if (p.includes("aerodrome")) return "aerodrome";
   if (p.includes("velodrome")) return "velodrome";

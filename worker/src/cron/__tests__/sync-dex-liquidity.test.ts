@@ -61,6 +61,9 @@ vi.mock("../dex-liquidity/fetch-fluid", () => ({ fetchFluidPools: vi.fn(async ()
 vi.mock("../dex-liquidity/fetch-balancer", () => ({ fetchBalancerPools: vi.fn(async () => makeDirectApiResult()) }));
 vi.mock("../dex-liquidity/fetch-raydium", () => ({ fetchRaydiumPools: vi.fn(async () => makeDirectApiResult()) }));
 vi.mock("../dex-liquidity/fetch-orca", () => ({ fetchOrcaPools: vi.fn(async () => makeDirectApiResult()) }));
+vi.mock("../dex-liquidity/fetch-meteora", () => ({ fetchMeteoraPools: vi.fn(async () => makeDirectApiResult()) }));
+vi.mock("../dex-liquidity/fetch-pancakeswap", () => ({ fetchPancakeSwapPools: vi.fn(async () => makeDirectApiResult()) }));
+vi.mock("../dex-liquidity/fetch-slipstream", () => ({ fetchSlipstreamPools: vi.fn(async () => makeDirectApiResult()) }));
 vi.mock("../../lib/stablecoins-cache", async () => {
   const actual = await vi.importActual<typeof import("../../lib/stablecoins-cache")>("../../lib/stablecoins-cache");
   return {
