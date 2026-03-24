@@ -85,7 +85,7 @@ function CenterLabel({ cx, cy, text }: { cx: number; cy: number; text: string })
       textAnchor="middle"
       dominantBaseline="central"
       className="fill-foreground"
-      style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600 }}
+      style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}
     >
       {text}
     </text>
