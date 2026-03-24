@@ -29,8 +29,8 @@ function trendDirection(value: number): TrendDirection {
 }
 
 function trendTextClass(value: number): string {
-  if (value > 0) return "text-green-700 dark:text-green-400";
-  if (value < 0) return "text-red-700 dark:text-red-400";
+  if (value > 0) return "text-[var(--severity-healthy)]";
+  if (value < 0) return "text-[var(--severity-severe)]";
   return "text-muted-foreground";
 }
 
