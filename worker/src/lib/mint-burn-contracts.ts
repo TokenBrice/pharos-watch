@@ -152,6 +152,52 @@ const REUSD_INSTANT_REDEEM_TOPIC = "0xa58dba63852b106a5b3bbc558fa3fbcfe606497cbc
 
 const ETHEREUM = chainConfig("ethereum");
 
+const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
+  stablecoinId: string;
+  dustThreshold: number;
+}> = [
+  { stablecoinId: "u-united-stables", dustThreshold: 10_000 },
+  { stablecoinId: "a7a5-old-vector", dustThreshold: 10_000 },
+  { stablecoinId: "usdai-usd-ai", dustThreshold: 10_000 },
+  { stablecoinId: "usda-avalon", dustThreshold: 10_000 },
+  { stablecoinId: "brz-transfero", dustThreshold: 10_000 },
+  { stablecoinId: "kag-kinesis", dustThreshold: 10 },
+  { stablecoinId: "satusd-river", dustThreshold: 10_000 },
+  { stablecoinId: "rwausdi-multipli", dustThreshold: 10_000 },
+  { stablecoinId: "fpi-frax", dustThreshold: 10_000 },
+  { stablecoinId: "aeur-anchored-coins", dustThreshold: 10_000 },
+  { stablecoinId: "usdq-quantoz", dustThreshold: 10_000 },
+  { stablecoinId: "usdx-hex-trust", dustThreshold: 10_000 },
+  { stablecoinId: "mim-abracadabra", dustThreshold: 10_000 },
+  { stablecoinId: "usat-tether", dustThreshold: 10_000 },
+  { stablecoinId: "zeusd-zoth", dustThreshold: 10_000 },
+  { stablecoinId: "gyd-gyroscope", dustThreshold: 10_000 },
+  { stablecoinId: "ggbr-goldfish-gold", dustThreshold: 10 },
+  { stablecoinId: "xsgd-straitsx", dustThreshold: 10_000 },
+  { stablecoinId: "idrt-rupiah-token", dustThreshold: 10_000 },
+  { stablecoinId: "tryb-bilira", dustThreshold: 10_000 },
+  { stablecoinId: "eurs-stasis", dustThreshold: 10_000 },
+  { stablecoinId: "pusd-plume", dustThreshold: 10_000 },
+  { stablecoinId: "usbd-bima", dustThreshold: 10_000 },
+  { stablecoinId: "dgld-gold-token-sa", dustThreshold: 10 },
+  { stablecoinId: "axcnh-anchorx", dustThreshold: 10_000 },
+  { stablecoinId: "eurq-quantoz", dustThreshold: 10_000 },
+  { stablecoinId: "gyen-gyen", dustThreshold: 10_000 },
+  { stablecoinId: "usdu-usdu-finance", dustThreshold: 10_000 },
+  { stablecoinId: "zarp-zarp", dustThreshold: 10_000 },
+  { stablecoinId: "usdp-parallel", dustThreshold: 10_000 },
+  { stablecoinId: "pht-pht", dustThreshold: 10_000 },
+  { stablecoinId: "vchf-vnx", dustThreshold: 10_000 },
+  { stablecoinId: "ussd-sonic-labs", dustThreshold: 10_000 },
+  { stablecoinId: "cadc-cad-coin", dustThreshold: 10_000 },
+  { stablecoinId: "veur-vnx", dustThreshold: 10_000 },
+  { stablecoinId: "dusd-dtrinity", dustThreshold: 10_000 },
+  { stablecoinId: "usdaf-asymmetry", dustThreshold: 10_000 },
+  { stablecoinId: "eurau-allunity", dustThreshold: 10_000 },
+  { stablecoinId: "dusd-alto", dustThreshold: 10_000 },
+  { stablecoinId: "ebusd-ebisu", dustThreshold: 10_000 },
+];
+
 const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
   // --- Safe havens ---
   {
@@ -677,6 +723,16 @@ const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     tier: "extended",
     events: transferMintBurn(),
   },
+  ...EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS.map(
+    ({ stablecoinId, dustThreshold }): MintBurnContractConfigSpec => ({
+      chain: ETHEREUM,
+      stablecoinId,
+      dustThreshold,
+      startBlock: 21_900_000,
+      tier: "extended",
+      events: transferMintBurn(),
+    }),
+  ),
 
   // --- reUSD (Re Protocol, ID 339) — Ethereum only ---
   {

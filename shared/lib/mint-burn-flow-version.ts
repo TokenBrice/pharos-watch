@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const mintBurnFlow = createMethodologyVersion({
-  currentVersion: "4.7",
+  currentVersion: "4.8",
   changelogPath: "/methodology/mint-burn-flow-changelog/",
   changelog: [
+  {
+    version: "4.8",
+    title: "Ethereum coverage wave for long-tail mint/burn tracking",
+    date: "2026-03-24",
+    effectiveAt: 1774348200,
+    summary:
+      "Mint/burn flow coverage expanded materially by restoring and adding long-tail Ethereum ERC-20 configs that can be tracked with the standard zero-address Transfer path.",
+    impact: [
+      "Added 40 additional Ethereum transfer-based configs for previously uncovered tracked assets",
+      "Extended flow coverage now includes more long-tail fiat, non-USD, commodity, and yield-bearing assets where shared metadata already exposes an Ethereum contract",
+      "Coverage scope increased from 84 contract configs / 83 stablecoin IDs to 124 contract configs / 123 stablecoin IDs while preserving the existing critical-lane set",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.7",
     title: "Closed-day baseline, fixed aggregate 24h semantics, and coverage disclosures",

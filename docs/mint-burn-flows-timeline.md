@@ -1,6 +1,16 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v4.7` (2026-03-01 -> 2026-03-10).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v4.8` (2026-03-01 -> 2026-03-24).
+
+---
+
+## v4.8 - Ethereum coverage wave for long-tail mint/burn tracking (Mar 24, 2026)
+
+**Commit:** `unreleased`
+
+- Added 40 new Ethereum transfer-based contract configs for tracked assets that already had shared Ethereum metadata
+- Restored several previously removed long-tail assets now judged worth tracking again given current market-cap and product relevance
+- Expanded potential public `/flows` coverage from the low 80s into the low 120s once the extended lane backfills the added assets
 
 ---
 
