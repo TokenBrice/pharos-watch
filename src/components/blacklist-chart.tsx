@@ -18,6 +18,19 @@ interface BlacklistChartProps {
   isLoading: boolean;
 }
 
+type BlacklistTooltipEntry = {
+  dataKey: string;
+  value: number;
+  color: string;
+};
+
+export function getBlacklistTooltipSummary(payload?: ReadonlyArray<BlacklistTooltipEntry>) {
+  const rows = (payload ?? []).filter((p) => p.dataKey !== "total" && p.value > 0);
+  const total = payload?.find((p) => p.dataKey === "total")?.value ?? rows.reduce((sum, p) => sum + p.value, 0);
+
+  return { rows, total };
+}
+
 export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const chartData = useMemo(() => chart ?? [], [chart]);
@@ -154,21 +167,19 @@ function BlacklistTooltip({
   label,
 }: {
   active?: boolean;
-  payload?: Array<{ dataKey: string; value: number; color: string }>;
+  payload?: Array<BlacklistTooltipEntry>;
   label?: string;
 }) {
-  const nonZero = payload?.filter((p) => p.value > 0);
-  if (!nonZero?.length) return null;
-
-  const total = nonZero.reduce((s, p) => s + p.value, 0);
+  const { rows, total } = getBlacklistTooltipSummary(payload);
+  if (!rows.length && total <= 0) return null;
 
   return (
     <PharosChartTooltip active={active}>
       <TooltipLabel>{label}</TooltipLabel>
-      {nonZero.map((p) => (
+      {rows.map((p) => (
         <TooltipRow key={p.dataKey} color={p.color} label={p.dataKey} value={formatCurrency(p.value)} />
       ))}
-      {nonZero.length > 1 && (
+      {total > 0 && (
         <div className="border-t border-border/50 mt-1.5 pt-1.5">
           <TooltipRow label="Total" value={formatCurrency(total)} bold />
         </div>
