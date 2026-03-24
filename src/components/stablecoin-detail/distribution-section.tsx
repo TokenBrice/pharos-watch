@@ -236,7 +236,7 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
     return (
       <Card className="rounded-xl">
         <CardHeader className="pb-2">
-          <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>Chain Distribution</CardTitle>
+          <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>Supply by Chain</CardTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-[200px] sm:h-[250px] rounded-xl" />
@@ -249,8 +249,8 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 
   return (
     <DonutCard
-      title="Chain Distribution"
-      subtitle="Supply"
+      title="Supply by Chain"
+      subtitle="Circulating"
       ariaLabel={`Circulating supply distribution across ${data.length} chains`}
       data={data}
       total={total}
@@ -279,7 +279,7 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
     return (
       <Card className="rounded-xl">
         <CardHeader className="pb-2">
-          <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>DEX Liquidity Distribution</CardTitle>
+          <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>Liquidity by Protocol</CardTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-[200px] sm:h-[250px] rounded-xl" />
@@ -292,11 +292,11 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
     return (
       <Card className="rounded-xl">
         <CardHeader className="pb-2">
-          <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>DEX Liquidity Distribution</CardTitle>
+          <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>Liquidity by Protocol</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border px-4 py-2.5 text-sm border-border/60 bg-muted/40 text-muted-foreground">
-            No DEX liquidity data available
+            No observed DEX liquidity pools for this stablecoin
           </div>
         </CardContent>
       </Card>
@@ -305,8 +305,8 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 
   return (
     <DonutCard
-      title="DEX Liquidity Distribution"
-      subtitle="TVL"
+      title="Liquidity by Protocol"
+      subtitle="DEX TVL"
       ariaLabel={`DEX liquidity TVL distribution across ${data.length} protocols`}
       data={data}
       total={total}
