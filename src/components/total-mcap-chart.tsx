@@ -14,8 +14,9 @@ import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@shared/lib/format";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { useStablecoinCharts } from "@/hooks/api-hooks";
-import { useSupplyHistory } from "@/hooks/use-stablecoins";
+import { useStablecoinDetailHistory } from "@/hooks/use-stablecoin-detail-history";
 import { computeChartYDomain } from "@/lib/chart-utils";
+import { buildTotalMcapChartRows } from "@/lib/total-mcap-chart";
 
 /** Format a value as billions with $ prefix, e.g. "$142.5 B" */
 function formatBillions(value: number): string {
@@ -40,35 +41,20 @@ export function TotalMcapChart() {
     downloadChartPng(chartRef, "pharos-total-mcap");
   }, []);
   const { data, isLoading } = useStablecoinCharts();
-  const { data: usdtHistory } = useSupplyHistory("usdt-tether");
-  const { data: usdcHistory } = useSupplyHistory("usdc-circle");
-  const { data: usdsHistory } = useSupplyHistory("usds-sky");
-  const { data: daiHistory } = useSupplyHistory("dai-makerdao");
+  const { data: usdtHistory } = useStablecoinDetailHistory("usdt-tether");
+  const { data: usdcHistory } = useStablecoinDetailHistory("usdc-circle");
+  const { data: usdsHistory } = useStablecoinDetailHistory("usds-sky");
+  const { data: daiHistory } = useStablecoinDetailHistory("dai-makerdao");
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
 
-    // Build lookup maps keyed by date (unix seconds)
-    const usdtByDate = new Map<number, number>();
-    for (const p of usdtHistory) usdtByDate.set(p.date, p.circulatingUsd);
-    const usdcByDate = new Map<number, number>();
-    for (const p of usdcHistory) usdcByDate.set(p.date, p.circulatingUsd);
-    const usdsByDate = new Map<number, number>();
-    for (const p of usdsHistory) usdsByDate.set(p.date, p.circulatingUsd);
-    const daiByDate = new Map<number, number>();
-    for (const p of daiHistory) daiByDate.set(p.date, p.circulatingUsd);
-
-    return data.map((point) => {
-      const total = Object.values(point.totalCirculatingUSD).reduce((sum, v) => sum + (v ?? 0), 0);
-      // Coerce date to number — stablecoin-charts API returns string dates
-      // while detail API returns numeric dates, causing Map lookup mismatch
-      const ts = Number(point.date);
-      const usdt = usdtByDate.get(ts) ?? 0;
-      const usdc = usdcByDate.get(ts) ?? 0;
-      const sky = (usdsByDate.get(ts) ?? 0) + (daiByDate.get(ts) ?? 0);
-      const others = Math.max(0, total - usdt - usdc - sky);
-      return { ts: ts * 1000, usdt, usdc, sky, others, total };
+    return buildTotalMcapChartRows(data, {
+      usdtHistory,
+      usdcHistory,
+      usdsHistory,
+      daiHistory,
     });
   }, [data, usdtHistory, usdcHistory, usdsHistory, daiHistory]);
 

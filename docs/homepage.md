@@ -214,5 +214,8 @@ When changing homepage behavior, update this doc if any of these contracts move:
 - Start Here retirement behavior or storage keys
 - top-fold SEO structure (`h1`, JSON-LD, canonical metadata)
 - major data-source composition for the homepage-wide stale/error surfaces
+- homepage chart source-alignment rules for `TotalMcapChart`
+
+`TotalMcapChart` uses `GET /api/stablecoin-charts` for the aggregate total and cached `GET /api/stablecoin/:id` history for the named USDT / USDC / USDS + DAI stacks. The named series are aligned by "latest point at or before chart date" so the breakdown stays valid against the downsampled total history.
 
 For visual/layout-specific changes, also update [Design Language](./design-language.md). For end-to-end source-to-hook mapping, see [Data Flow Map](./data-flow-map.md).

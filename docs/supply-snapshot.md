@@ -220,7 +220,7 @@ Individual stablecoin market cap history. Area chart with time range filtering (
 
 **File:** `src/components/total-mcap-chart.tsx`
 
-Aggregated market cap breakdown. Stacked chart showing USDT, USDC, USDS, DAI individually with "Other" as the remainder.
+Aggregated market cap breakdown. The total series comes from the downsampled `stablecoin-charts` cache. The named buckets use each coin's cached detail history (`GET /api/stablecoin/:id`) so the homepage breakdown has full-history coverage instead of the shorter `supply_history` window. Those per-coin histories are aligned to the latest point at or before each total-chart date before computing `Others`. The visible stacks are USDT, USDC, `USDS + DAI`, and `Others`.
 
 ### Compare page
 
