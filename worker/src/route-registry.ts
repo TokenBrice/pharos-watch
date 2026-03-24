@@ -42,6 +42,7 @@ import { handleMintBurnFlows } from "./api/mint-burn-flows";
 import { handleMintBurnEvents } from "./api/mint-burn-events";
 import { handleBackfillMintBurnPrices } from "./api/backfill-mint-burn-prices";
 import { handleBackfillMintBurn } from "./api/backfill-mint-burn";
+import { handleRemediateBlacklistAmountGaps } from "./api/remediate-blacklist-amount-gaps";
 import { handleReclassifyAtomicRoundtrips } from "./api/reclassify-atomic-roundtrips";
 import { handleStressSignals } from "./api/stress-signals";
 import { handleChains } from "./api/chains";
@@ -232,6 +233,13 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
     const rows = await db.prepare("SELECT config_key, last_block FROM blacklist_sync_state ORDER BY config_key").all();
     return jsonResponse(rows.results);
   }),
+  "remediate-blacklist-amount-gaps": withErrorHandler(
+    "route-remediate-blacklist-amount-gaps",
+    ({ db, url, trustedAdmin, request, chainRpcs }) =>
+      runIdempotentAdminAction(db, "remediate-blacklist-amount-gaps", request, () =>
+        handleRemediateBlacklistAmountGaps(db, url, trustedAdmin, request, chainRpcs),
+      ),
+  ),
   "discovery-candidates": ({ db, url, trustedAdmin, request }) =>
     withAdmin(request, () => handleDiscoveryCandidates(db, url), trustedAdmin),
 } satisfies StaticRouteHandlerMap;

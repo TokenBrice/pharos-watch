@@ -1,5 +1,6 @@
 import type { EndpointDependency } from "@shared/lib/api-endpoints";
 import type { FullRouteContext } from "../../route-registry";
+import { buildChainRpcs } from "../../lib/chain-registry";
 import { normalizeCgApiKey } from "../../lib/coingecko";
 import { resolveMintBurnFreshnessConfig } from "../../lib/mint-burn-health-config";
 import { buildTelegramCreds } from "../../lib/runtime-credentials";
@@ -28,6 +29,9 @@ export function buildRouteContext(config: {
         break;
       case "anthropicApiKey":
         routeCtx.anthropicApiKey = config.env.ANTHROPIC_API_KEY ?? null;
+        break;
+      case "chainRpcs":
+        routeCtx.chainRpcs = buildChainRpcs(config.env.ALCHEMY_API_KEY, config.env.DRPC_API_KEY);
         break;
       case "coingeckoApiKey":
         routeCtx.coingeckoApiKey = normalizeCgApiKey(config.env.COINGECKO_API_KEY);

@@ -196,7 +196,7 @@ FrozenAddressWiped(address indexed)
 
 ### blacklist_events table
 
-**Migrations:** `0001_initial.sql`, `0028_blacklist_indexes.sql`, `0037_blacklist_methodology_version.sql`, `0049_audit_blacklist_index.sql`, `0076_blacklist_provenance_and_amount_semantics.sql`
+**Migrations:** `0001_initial.sql`, `0028_blacklist_indexes.sql`, `0037_blacklist_methodology_version.sql`, `0049_audit_blacklist_index.sql`, `0076_blacklist_provenance_and_amount_semantics.sql`, `0077_blacklist_amount_recovery_telemetry.sql`
 
 ```sql
 CREATE TABLE blacklist_events (
@@ -219,6 +219,10 @@ CREATE TABLE blacklist_events (
   config_key TEXT,
   event_signature TEXT,
   event_topic0 TEXT,
+  amount_attempt_count INTEGER NOT NULL DEFAULT 0,
+  amount_last_attempted_at INTEGER,
+  amount_last_error_class TEXT,
+  amount_last_provider TEXT,
   explorer_tx_url TEXT NOT NULL,
   explorer_address_url TEXT NOT NULL
 );
@@ -242,6 +246,8 @@ CREATE INDEX idx_blacklist_events_amount_status ON blacklist_events(amount_statu
 - `amount_usd_at_event` is populated only when Pharos can justify an event-time USD valuation
 - `amount_source` records where the value came from (`event`, `historical_balance`, `derived`, `unavailable`)
 - `amount_status` records whether the amount is resolved, recoverable, or intentionally unavailable
+- `amount_attempt_count` records how many historical-recovery attempts Pharos has made for the row
+- `amount_last_attempted_at`, `amount_last_error_class`, and `amount_last_provider` are operator diagnostics for unresolved rows
 
 ### blacklist_sync_state table
 
@@ -428,7 +434,26 @@ Requires Access service-token headers on `ops-api.pharos.watch`.  Rolls back syn
 
 Requires Access service-token headers on `ops-api.pharos.watch`.  Returns all sync state rows.
 
-Both admin endpoints are routed in `worker/src/route-registry.ts` and executed via `worker/src/handlers/http.ts`.
+### POST /api/remediate-blacklist-amount-gaps
+
+Requires Access service-token headers on `ops-api.pharos.watch`. Runs a bounded admin remediation pass for recoverable blacklist rows.
+
+Recommended flow:
+
+1. run with `dryRun=true`
+2. target a narrow cohort such as Avalanche `USDC`
+3. then execute a small write-enabled batch
+
+Supported inputs:
+
+- `chainId`
+- `stablecoin`
+- `limit`
+- `dryRun`
+- `onlyMissingProvenance`
+- `maxAttempts`
+
+All blacklist admin endpoints are routed in `worker/src/route-registry.ts` and executed via `worker/src/handlers/http.ts`.
 
 ---
 
@@ -497,6 +522,7 @@ The summary hook loads aggregate cards/chart/filter metadata from the dedicated 
 12. **Circle actions can hit USDC + EURC together** -- expect matching addresses across both tickers, and many EURC rows may show zero balance at blacklist time.
 13. **Legacy mixed-case cursor rows:** older runs may have stored checksum-cased EVM addresses in `blacklist_sync_state`; current reads merge those with lowercase canonical keys to avoid duplicate cursors and redundant rescans.
 14. **RPC bootstrap guards:** Avalanche USDC, Avalanche USDT, and BSC USDT now start from known deployment blocks, and RPC-log scans use bounded per-run block windows. This prevents empty zero-cursor configs from repeatedly attempting impractical genesis-to-head scans.
+15. **Recoverable-gap telemetry is row-level:** use `amount_attempt_count`, `amount_last_error_class`, and `amount_last_provider` to diagnose stranded historical rows instead of inferring from null amounts alone.
 
 ---
 
@@ -508,7 +534,7 @@ The summary hook loads aggregate cards/chart/filter metadata from the dedicated 
 | `worker/src/lib/blacklist-contracts.ts`                    | Blacklist event configs: chains, event signatures, and shared-contract resolution rules    |
 | `worker/src/lib/evm-logs.ts`                               | Etherscan v2 log fetching, recursive splitting, rate limiting, `decodeUint256`             |
 | `worker/src/api/blacklist.ts`                              | `GET /api/blacklist` handler                                                               |
-| `worker/src/route-registry.ts`                             | API route dispatch, including admin endpoints (`reset-blacklist-sync`, `debug-sync-state`) |
+| `worker/src/route-registry.ts`                             | API route dispatch, including admin endpoints (`reset-blacklist-sync`, `debug-sync-state`, `remediate-blacklist-amount-gaps`) |
 | `worker/src/handlers/scheduled.ts`                         | Cron scheduling orchestration for `sync-blacklist`                                         |
 | `worker/src/lib/db.ts`                                     | `getLastBlock()`, `setLastBlock()`, `batchExecute()`                                       |
 | `worker/migrations/0001_initial.sql`                       | `blacklist_events` + `blacklist_sync_state` tables                                         |

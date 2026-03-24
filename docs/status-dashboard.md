@@ -229,6 +229,14 @@ The public `/api/health` lane now keys mint/burn freshness to the critical-lane 
 
 `onchainSupplyTrackedCoins` now counts only stablecoins with at least one `onchain_supply` update inside the active monitoring window (`3d`). Older historical rows stay in D1 for audit/debug use, but they no longer count toward `staleOnchainSupply` or `onchainStaleRatio`.
 
+Blacklist gap telemetry now also exposes operator diagnostics for historical recovery work:
+
+- `blacklistOldestRecoverableAgeSec`
+- `blacklistNeverAttemptedCount`
+- `blacklistRepeatedFailureCount`
+
+These fields do not currently change the health thresholds by themselves, but they make stranded historical gap cohorts visible in `/api/status`.
+
 Ratio-based on-chain stale/degraded thresholds are also gated until the active monitor has at least `10` tracked coins. Below that floor, the admin still shows the live divergence/staleness counts, but those ratios are informational and do not by themselves escalate global status.
 
 ### Overall status
@@ -401,6 +409,7 @@ Status-page manual actions are router-dispatched from shared endpoint metadata (
 - `POST /api/trigger-digest`
 - `POST /api/reset-blacklist-sync`
 - `GET /api/debug-sync-state`
+- `POST /api/remediate-blacklist-amount-gaps`
 - `POST /api/backfill-depegs`
 - `POST /api/backfill-supply-history`
 - `POST /api/backfill-cg-prices`

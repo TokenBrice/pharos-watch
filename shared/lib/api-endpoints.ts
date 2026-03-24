@@ -3,6 +3,7 @@ export type EndpointProbeGroup = "public" | "admin" | "manual";
 export type EndpointDependency =
   | "alchemyApiKey"
   | "anthropicApiKey"
+  | "chainRpcs"
   | "feedbackEnv"
   | "mintBurnFreshnessConfig"
   | "coingeckoApiKey"
@@ -456,6 +457,21 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
       label: "Debug Sync State",
       confirm: "Fetch sync state debug dump?",
       method: "GET",
+    },
+  },
+  {
+    key: "remediate-blacklist-amount-gaps",
+    path: "/api/remediate-blacklist-amount-gaps",
+    methods: ["POST"],
+    adminRequired: true,
+    mutatingAdmin: true,
+    cacheBypass: true,
+    routeDependencies: ["chainRpcs"],
+    probeGroup: "manual",
+    statusPageAction: {
+      label: "Remediate Blacklist Gaps",
+      confirm: "Run targeted blacklist amount-gap remediation? Prefer dry-run first.",
+      method: "POST",
     },
   },
   {

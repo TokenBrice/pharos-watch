@@ -35,6 +35,24 @@ const BACKFILL_BATCH_SIZE = 50;
 const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 7 * 60_000;
 const SYNC_BLACKLIST_MIN_CONFIG_WINDOW_MS = 60_000;
 
+type BlacklistRecoveryErrorClass =
+  | "provider_null"
+  | "provider_timeout"
+  | "provider_http_error"
+  | "provider_unsupported"
+  | "config_missing"
+  | "ambiguous_config"
+  | "runtime_budget"
+  | "budget_exhausted";
+
+type BlacklistRecoveryProvider =
+  | "etherscan"
+  | "drpc"
+  | "chain_rpc"
+  | "trongrid"
+  | "event_receipt"
+  | "none";
+
 type SyncBlacklistResult = {
   itemCount: number;
   metadata: string;
@@ -70,6 +88,28 @@ function shouldStopBeforeNextConfig(deadlineMs: number): boolean {
   return Date.now() + SYNC_BLACKLIST_MIN_CONFIG_WINDOW_MS >= deadlineMs;
 }
 
+function markRecoveryAttempt(
+  row: Pick<
+    BlacklistRow,
+    "amount_attempt_count" | "amount_last_attempted_at" | "amount_last_error_class" | "amount_last_provider"
+  >,
+  provider: BlacklistRecoveryProvider,
+  errorClass: BlacklistRecoveryErrorClass | null,
+  nowSec = Math.floor(Date.now() / 1000),
+): void {
+  row.amount_attempt_count = (row.amount_attempt_count ?? 0) + 1;
+  row.amount_last_attempted_at = nowSec;
+  row.amount_last_provider = provider;
+  row.amount_last_error_class = errorClass;
+}
+
+function inferErrorClass(error: unknown): BlacklistRecoveryErrorClass {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  if (message.includes("timeout")) return "provider_timeout";
+  if (message.includes("http")) return "provider_http_error";
+  return "provider_null";
+}
+
 // --- Enrichment: fetch balances for blacklist/unblacklist events ---
 
 async function enrichRowBalances(
@@ -86,8 +126,18 @@ async function enrichRowBalances(
   const counters = { attempted: 0, succeeded: 0, failed: 0 };
   for (const row of rows) {
     throwIfAborted(signal);
-    if (runtimeBudgetReached(deadlineMs)) break;
-    if (budgetExhausted(budget)) break;
+    if (runtimeBudgetReached(deadlineMs)) {
+      if (row.amount_native == null && row.amount_status !== "permanently_unavailable") {
+        markRecoveryAttempt(row, "none", "runtime_budget");
+      }
+      break;
+    }
+    if (budgetExhausted(budget)) {
+      if (row.amount_native == null && row.amount_status !== "permanently_unavailable") {
+        markRecoveryAttempt(row, "none", "budget_exhausted");
+      }
+      break;
+    }
     if (row.amount_native != null || row.amount_status === "permanently_unavailable") continue;
     if (row.event_type !== "blacklist" && row.event_type !== "unblacklist" && row.event_type !== "destroy") continue;
 
@@ -104,6 +154,7 @@ async function enrichRowBalances(
     } else if (config.chain.evmChainId != null) {
       counters.attempted++;
       try {
+        markRecoveryAttempt(row, "chain_rpc", null);
         const amount = await fetchEvmTokenBalance(
           config,
           row.address,
@@ -119,12 +170,15 @@ async function enrichRowBalances(
         row.amount_usd_at_event = computeBlacklistAmountUsdAtEvent(config.stablecoin, amount);
         row.amount_source = "historical_balance";
         row.amount_status = amount != null ? "resolved" : "provider_failed";
+        row.amount_last_error_class = amount != null ? null : "provider_null";
         if (amount != null) {
           counters.succeeded++;
         } else {
           counters.failed++;
         }
-      } catch { /* retryable: transient RPC / balance-provider failure */
+      } catch (error) {
+        row.amount_status = "provider_failed";
+        row.amount_last_error_class = inferErrorClass(error);
         counters.failed++;
       }
     }
@@ -204,7 +258,8 @@ async function backfillAmounts(
 
   const result = await db
     .prepare(
-      `SELECT id, chain_id, event_type, address, block_number, stablecoin, tx_hash, config_key, contract_address
+      `SELECT id, chain_id, event_type, address, block_number, stablecoin, tx_hash, config_key, contract_address,
+              amount_attempt_count, amount_last_attempted_at, amount_last_error_class, amount_last_provider
       FROM blacklist_events
        WHERE event_type IN ('blacklist', 'unblacklist', 'destroy')
          AND amount_status IN ('recoverable_pending', 'provider_failed', 'ambiguous')
@@ -222,6 +277,10 @@ async function backfillAmounts(
       tx_hash: string;
       config_key: string | null;
       contract_address: string | null;
+      amount_attempt_count: number | null;
+      amount_last_attempted_at: number | null;
+      amount_last_error_class: string | null;
+      amount_last_provider: string | null;
     }>();
 
   if (!result.results?.length) return { runtimeBudgetReached: false };
@@ -246,14 +305,36 @@ async function backfillAmounts(
             const matches = getBlacklistConfigsForSymbolAndChain(symbol, row.chain_id);
             return matches.length === 1 ? matches[0] : undefined;
           })();
-    if (!config) continue;
+    if (!config) {
+      stmts.push(
+        db.prepare(
+          `UPDATE blacklist_events
+           SET amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
+               amount_last_attempted_at = ?,
+               amount_last_error_class = ?,
+               amount_last_provider = ?
+           WHERE id = ?`,
+        ).bind(
+          Math.floor(Date.now() / 1000),
+          row.contract_address == null && row.config_key == null ? "config_missing" : "ambiguous_config",
+          "none",
+          row.id,
+        ),
+      );
+      continue;
+    }
 
     let amount: number | null = null;
     let amountSource: "event" | "historical_balance" | "derived" | "unavailable" = "unavailable";
+    let amountStatus: "resolved" | "provider_failed" | "recoverable_pending" | "ambiguous" = "provider_failed";
+    let lastErrorClass: BlacklistRecoveryErrorClass | null = "provider_null";
+    let lastProvider: BlacklistRecoveryProvider = "chain_rpc";
+    const attemptAt = Math.floor(Date.now() / 1000);
 
     if (row.event_type === "destroy" && config.chain.type === "evm" && config.chain.evmChainId != null) {
       // For destroy events, re-fetch the event log to get the amount from event data.
       // This is more reliable than balanceOf, especially on L2s without archive state.
+      lastProvider = "event_receipt";
       amount = await fetchDestroyAmountFromLog(
         config.chain.evmChainId,
         config.contractAddress,
@@ -264,9 +345,13 @@ async function backfillAmounts(
         budget,
         signal,
       );
-      if (amount != null) amountSource = "event";
+      if (amount != null) {
+        amountSource = "event";
+        lastErrorClass = null;
+      }
       // Fall back to balanceOf at block-1 only if log parsing failed
       if (amount == null) {
+        lastProvider = "chain_rpc";
         amount = await fetchEvmTokenBalance(
           config,
           row.address,
@@ -278,13 +363,17 @@ async function backfillAmounts(
           signal,
           chainRpcs,
         );
-        if (amount != null) amountSource = "historical_balance";
+        if (amount != null) {
+          amountSource = "historical_balance";
+          lastErrorClass = null;
+        }
       }
     } else if (config.chain.type === "tron") {
       // Skip Tron amount backfill for non-event-native amounts. Current-balance based
       // reconstruction is not event-time accurate.
       continue;
     } else if (config.chain.evmChainId != null) {
+      lastProvider = "chain_rpc";
       amount = await fetchEvmTokenBalance(
         config,
         row.address,
@@ -296,9 +385,13 @@ async function backfillAmounts(
         signal,
         chainRpcs,
       );
-      if (amount != null) amountSource = "historical_balance";
+      if (amount != null) {
+        amountSource = "historical_balance";
+        lastErrorClass = null;
+      }
     }
 
+    amountStatus = amount != null ? "resolved" : "provider_failed";
     if (amount != null) {
       stmts.push(
         db.prepare(
@@ -307,14 +400,43 @@ async function backfillAmounts(
                amount_native = ?,
                amount_usd_at_event = ?,
                amount_source = ?,
-               amount_status = ?
+               amount_status = ?,
+               contract_address = COALESCE(contract_address, ?),
+               config_key = COALESCE(config_key, ?),
+               amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
+               amount_last_attempted_at = ?,
+               amount_last_error_class = ?,
+               amount_last_provider = ?
            WHERE id = ?`,
         ).bind(
           amount,
           amount,
           computeBlacklistAmountUsdAtEvent(config.stablecoin, amount),
           amountSource,
-          "resolved",
+          amountStatus,
+          config.contractAddress,
+          config.configKey,
+          attemptAt,
+          lastErrorClass,
+          lastProvider,
+          row.id,
+        ),
+      );
+    } else {
+      stmts.push(
+        db.prepare(
+          `UPDATE blacklist_events
+           SET amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
+               amount_last_attempted_at = ?,
+               amount_last_error_class = ?,
+               amount_last_provider = ?,
+               amount_status = ?
+           WHERE id = ?`,
+        ).bind(
+          attemptAt,
+          lastErrorClass,
+          lastProvider,
+          amountStatus,
           row.id,
         ),
       );
@@ -338,8 +460,8 @@ async function insertRows(db: D1Database, rows: BlacklistRow[]): Promise<number>
     db
       .prepare(
         `INSERT OR IGNORE INTO blacklist_events
-         (id, stablecoin, chain_id, chain_name, event_type, address, amount, amount_native, amount_usd_at_event, amount_source, amount_status, tx_hash, block_number, timestamp, methodology_version, contract_address, config_key, event_signature, event_topic0, explorer_tx_url, explorer_address_url)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, stablecoin, chain_id, chain_name, event_type, address, amount, amount_native, amount_usd_at_event, amount_source, amount_status, tx_hash, block_number, timestamp, methodology_version, contract_address, config_key, event_signature, event_topic0, amount_attempt_count, amount_last_attempted_at, amount_last_error_class, amount_last_provider, explorer_tx_url, explorer_address_url)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         row.id,
@@ -361,6 +483,10 @@ async function insertRows(db: D1Database, rows: BlacklistRow[]): Promise<number>
         row.config_key,
         row.event_signature,
         row.event_topic0,
+        row.amount_attempt_count,
+        row.amount_last_attempted_at,
+        row.amount_last_error_class,
+        row.amount_last_provider,
         row.explorer_tx_url,
         row.explorer_address_url,
       ),

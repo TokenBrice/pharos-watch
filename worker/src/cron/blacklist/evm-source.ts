@@ -108,6 +108,10 @@ export function parseEvmLogs(
       config_key: config.configKey,
       event_signature: eventDef.signature,
       event_topic0: log.topics[0] ?? null,
+      amount_attempt_count: 0,
+      amount_last_attempted_at: null,
+      amount_last_error_class: null,
+      amount_last_provider: null,
       explorer_tx_url: buildExplorerTxUrl(config.chain, log.transactionHash),
       explorer_address_url: buildExplorerAddressUrl(config.chain, affectedAddress),
     });

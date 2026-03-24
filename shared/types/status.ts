@@ -144,6 +144,9 @@ export interface DataQuality {
   blacklistRecentWindowSec: number;
   blacklistMissingRatio: number;
   blacklistTotal: number;
+  blacklistOldestRecoverableAgeSec: number | null;
+  blacklistNeverAttemptedCount: number;
+  blacklistRepeatedFailureCount: number;
   onchainSupplyDivergences: number;
   onchainDivergenceRatio: number;
   onchainSupplyMonitoring: "active" | "unavailable";

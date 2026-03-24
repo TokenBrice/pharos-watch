@@ -20,6 +20,10 @@ export interface BlacklistRow {
   config_key: string | null;
   event_signature: string | null;
   event_topic0: string | null;
+  amount_attempt_count: number;
+  amount_last_attempted_at: number | null;
+  amount_last_error_class: string | null;
+  amount_last_provider: string | null;
   explorer_tx_url: string;
   explorer_address_url: string;
 }

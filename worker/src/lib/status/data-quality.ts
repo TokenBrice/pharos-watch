@@ -39,6 +39,9 @@ export function emptyDataQuality(): DataQuality {
     blacklistRecentWindowSec: BLACKLIST_RECENT_WINDOW_SEC,
     blacklistMissingRatio: 0,
     blacklistTotal: 0,
+    blacklistOldestRecoverableAgeSec: null,
+    blacklistNeverAttemptedCount: 0,
+    blacklistRepeatedFailureCount: 0,
     onchainSupplyDivergences: 0,
     onchainDivergenceRatio: 0,
     onchainSupplyMonitoring: "unavailable",
@@ -74,12 +77,18 @@ export async function getDataQuality(db: D1Database, now: number): Promise<DataQ
   let blacklistTotal = 0;
   let blacklistMissingAmounts = 0;
   let blacklistRecentMissingAmounts = 0;
+  let blacklistOldestRecoverableAgeSec: number | null = null;
+  let blacklistNeverAttemptedCount = 0;
+  let blacklistRepeatedFailureCount = 0;
   let blacklistGapStatus: DataQuality["blacklistGapStatus"] = "ok";
   try {
     const gaps = await queryBlacklistGapMetrics(db, now, BLACKLIST_RECENT_WINDOW_SEC);
     blacklistTotal = gaps.totalEvents;
     blacklistMissingAmounts = gaps.missingAmounts;
     blacklistRecentMissingAmounts = gaps.recentMissingAmounts;
+    blacklistOldestRecoverableAgeSec = gaps.oldestRecoverableAgeSec;
+    blacklistNeverAttemptedCount = gaps.neverAttemptedCount;
+    blacklistRepeatedFailureCount = gaps.repeatedFailureCount;
   } catch (e) {
     blacklistGapStatus = "failed";
     recordDataQualityFailure(sourceFailures, "blacklist-gaps", e);
@@ -194,6 +203,9 @@ export async function getDataQuality(db: D1Database, now: number): Promise<DataQ
     blacklistRecentWindowSec: BLACKLIST_RECENT_WINDOW_SEC,
     blacklistMissingRatio: blacklistTotal > 0 ? blacklistMissingAmounts / blacklistTotal : 0,
     blacklistTotal,
+    blacklistOldestRecoverableAgeSec,
+    blacklistNeverAttemptedCount,
+    blacklistRepeatedFailureCount,
     onchainSupplyDivergences,
     onchainDivergenceRatio:
       onchainSupplyMonitoring === "active" && onchainSupplyTrackedCoins > 0
