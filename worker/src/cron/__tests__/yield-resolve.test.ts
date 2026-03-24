@@ -44,7 +44,7 @@ vi.mock("@shared/lib/stablecoins", () => {
       },
       yieldConfig: {
         yieldSource: "Ethena Staking",
-        yieldType: "staking-reward",
+        yieldType: "governance-set",
       },
     },
     {
@@ -114,7 +114,7 @@ vi.mock("@shared/lib/stablecoins", () => {
         },
         yieldConfig: {
           yieldSource: "Ethena Staking",
-          yieldType: "staking-reward",
+          yieldType: "governance-set",
         },
       },
     ],

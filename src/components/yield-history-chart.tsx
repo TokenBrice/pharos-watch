@@ -31,6 +31,10 @@ interface YieldHistoryChartProps {
   medianApy: number;
   defaultDays?: number;
   compact?: boolean;
+  availableSources?: Array<{
+    sourceKey: string;
+    yieldSource: string;
+  }>;
 }
 
 interface YieldHistoryChartPoint {
@@ -323,15 +327,25 @@ export function YieldHistoryChart({
   medianApy,
   defaultDays = DEFAULT_DAYS,
   compact = false,
+  availableSources = [],
 }: YieldHistoryChartProps) {
   const [days, setDays] = useState(() => normalizeDefaultDays(defaultDays));
   const [showBreakdown, setShowBreakdown] = useState(false);
+  const [selectedSourceKey, setSelectedSourceKey] = useState<string>("best");
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
+  const effectiveSelectedSourceKey =
+    selectedSourceKey === "best" || availableSources.some((source) => source.sourceKey === selectedSourceKey)
+      ? selectedSourceKey
+      : "best";
 
-  const historyQuery = useYieldHistory(stablecoinId, days);
+  const historyQuery = useYieldHistory(stablecoinId, {
+    days,
+    mode: effectiveSelectedSourceKey === "best" ? "best" : "source",
+    sourceKey: effectiveSelectedSourceKey === "best" ? null : effectiveSelectedSourceKey,
+  });
 
   const chartData = useMemo<YieldHistoryChartPoint[]>(() => {
-    return (historyQuery.data ?? [])
+    return (historyQuery.data?.history ?? [])
       .map((point: YieldHistoryPoint) => {
         const date = toTimestampMs(point.date as unknown);
         return {
@@ -426,14 +440,17 @@ export function YieldHistoryChart({
   if (chartData.length === 0) {
     return (
       <div className="space-y-3">
-        <Controls
-          compact={compact}
-          days={days}
-          onDaysChange={setDays}
-          hasBreakdown={false}
-          showBreakdown={effectiveShowBreakdown}
-          onShowBreakdownChange={setShowBreakdown}
-        />
+      <Controls
+        compact={compact}
+        days={days}
+        onDaysChange={setDays}
+        hasBreakdown={false}
+        showBreakdown={effectiveShowBreakdown}
+        onShowBreakdownChange={setShowBreakdown}
+        availableSources={availableSources}
+        selectedSourceKey={effectiveSelectedSourceKey}
+        onSourceChange={setSelectedSourceKey}
+      />
         <ChartShell compact={compact}>
           <div className={cn("flex items-center justify-center text-center", chartHeightClass)}>
             <p className="text-sm text-muted-foreground">No yield history available</p>
@@ -457,6 +474,9 @@ export function YieldHistoryChart({
         hasBreakdown={hasBreakdown}
         showBreakdown={effectiveShowBreakdown}
         onShowBreakdownChange={setShowBreakdown}
+        availableSources={availableSources}
+        selectedSourceKey={effectiveSelectedSourceKey}
+        onSourceChange={setSelectedSourceKey}
       />
       <ChartShell compact={compact}>
         <div
@@ -618,6 +638,9 @@ function Controls({
   hasBreakdown,
   showBreakdown,
   onShowBreakdownChange,
+  availableSources,
+  selectedSourceKey,
+  onSourceChange,
 }: {
   compact: boolean;
   days: number;
@@ -625,34 +648,58 @@ function Controls({
   hasBreakdown: boolean;
   showBreakdown: boolean;
   onShowBreakdownChange: (pressed: boolean) => void;
+  availableSources: Array<{ sourceKey: string; yieldSource: string }>;
+  selectedSourceKey: string;
+  onSourceChange: (sourceKey: string) => void;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <ToggleGroup
-        type="single"
-        value={String(days)}
-        onValueChange={(value) => {
-          if (!value) return;
-          onDaysChange(Number(value));
-        }}
-        variant="outline"
-        size={compact ? "sm" : "default"}
-        className="rounded-full border border-border/60 bg-background/60 p-1"
-        aria-label="Select yield history time range"
-      >
-        {PRESET_DAYS.map((preset) => (
-          <ToggleGroupItem
-            key={preset}
-            value={String(preset)}
-            className={cn(
-              "rounded-full border-0 font-mono text-xs text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground",
-              compact ? "h-7 px-2.5" : "h-8 px-3",
-            )}
-          >
-            {preset === 365 ? "1y" : `${preset}d`}
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
+      <div className="flex flex-wrap items-center gap-2">
+        <ToggleGroup
+          type="single"
+          value={String(days)}
+          onValueChange={(value) => {
+            if (!value) return;
+            onDaysChange(Number(value));
+          }}
+          variant="outline"
+          size={compact ? "sm" : "default"}
+          className="rounded-full border border-border/60 bg-background/60 p-1"
+          aria-label="Select yield history time range"
+        >
+          {PRESET_DAYS.map((preset) => (
+            <ToggleGroupItem
+              key={preset}
+              value={String(preset)}
+              className={cn(
+                "rounded-full border-0 font-mono text-xs text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground",
+                compact ? "h-7 px-2.5" : "h-8 px-3",
+              )}
+            >
+              {preset === 365 ? "1y" : `${preset}d`}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+
+        {availableSources.length > 0 ? (
+          <label className="flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1.5 text-xs text-muted-foreground">
+            <span className="uppercase tracking-[0.12em]">History</span>
+            <select
+              aria-label="Select yield history source"
+              className="bg-transparent font-medium text-foreground outline-none"
+              value={selectedSourceKey}
+              onChange={(event) => onSourceChange(event.target.value)}
+            >
+              <option value="best">Best source</option>
+              {availableSources.map((source) => (
+                <option key={source.sourceKey} value={source.sourceKey}>
+                  {source.yieldSource}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+      </div>
 
       {hasBreakdown ? (
         <Toggle

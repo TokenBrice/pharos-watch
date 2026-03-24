@@ -343,15 +343,6 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
       "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
   },
   {
-    stablecoinId: "dusd-dtrinity", // dUSD — reads sdUSD vault exchange rate to derive APY
-    chain: "ethereum",
-    contract: "0x4aCBcFa29fb085097c5f31783403EF7A7930F6Fe",
-    selector: "0x07a2d13a", // convertToAssets(uint256)
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-  },
-  {
     stablecoinId: "iusd-infinifi", // iUSD — reads siUSD vault exchange rate to derive APY
     chain: "ethereum",
     contract: "0xDBDC1Ef57537E34680B898E1FEBD3D68c7389bCB",
@@ -365,15 +356,6 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
     chain: "base",
     contract: "0x472ed57b376fe400259fb28e5c46eb53f0e3e7e7",
     selector: "0x07a2d13a", // convertToAssets(uint256)
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-  },
-  {
-    stablecoinId: "reusd-re-protocol",
-    chain: "ethereum",
-    contract: "0x1202f5c7B4b9E47a1A9837B26881B7C20112BD51",
-    selector: "0x07a2d13a",
     decimals: 18,
     inputAmount:
       "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
@@ -453,6 +435,15 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
 ];
 
 /**
+ * Known deterministic candidates intentionally excluded from ON_CHAIN_RATE_CONFIGS.
+ *
+ * These remain yield-bearing assets with other source paths, but are quarantined
+ * from the generic ERC-4626 reader until they have protocol-specific adapters:
+ * - dusd-dtrinity: current convertToAssets probe reverts
+ * - reusd-re-protocol: current convertToAssets probe returns empty data
+ */
+
+/**
  * Deterministic price-derived fallback for yield-bearing coins that have no
  * usable on-chain rate source and no DeFiLlama pool.
  */
@@ -489,115 +480,60 @@ export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
 /**
  * Curated protocol allowlist for automatic lending pool discovery (Wave 2).
  * Only pools from these protocols are considered for non-yield-bearing coins.
- *
- * Tier 1 (battle-tested, $1B+ historical TVL):
- *   aave-v3, compound-v2, compound-v3, dolomite, sparklend, spark-savings, maple, yearn-finance
- *
- * Tier 2 (established, well-audited):
- *   fluid-lending, euler-v2, venus-core-pool, kamino-lend, morpho-v1, morpho-blue, pendle,
- *   curve-llamalend, exactly, flux-finance, gains-network, lazy-summer-protocol, moonwell-lending, silo-v2
- *
- * Tier 3 (targeted additions to expand coverage):
- *   justlend, openeden-usdo, multipli.fi, jupiter-lend, stables-labs-usdx, benqi-lending
  */
-export const LENDING_PROTOCOL_ALLOWLIST = new Set([
-  // Tier 1
-  "aave-v3",
-  "compound-v3",
-  "sparklend",
-  "spark-savings",
-  "maple",
-  "yearn-finance",
-  "compound-v2", // $112M TVL, ETH stablecoin markets (USDT $20M, DAI $5.8M, USDC $3.1M)
-  "dolomite", // $284M TVL, ETH+ARB stablecoin markets (USD1 $64M, USDC $15M)
-  // Tier 2
-  "fluid-lending",
-  "euler-v2",
-  "venus-core-pool",
-  "kamino-lend",
-  "morpho-v1",
-  "morpho-blue", // $1B+ TVL, modular lending with curated vaults
-  "pendle",
-  "curve-llamalend", // $59M TVL, crvUSD lending on ETH ($32.5M top pool)
-  "exactly", // $32M TVL, USDC lending on Optimism (6 pools, $1.7M each)
-  "flux-finance", // $43M TVL, USDT/USDC on ETH (Ondo ecosystem)
-  "gains-network", // $21M TVL, USDC vaults on ARB ($12.2M) + Base ($1.9M)
-  "lazy-summer-protocol", // $45M TVL, USDC vaults on ETH ($14.8M) + Base ($3.6M)
-  "moonwell-lending", // $46M TVL, USDC on Base ($7.4M)
-  "silo-v2", // $46M TVL, multi-chain isolated lending (ETH, ARB, AVAX)
-  // Tier 3
-  "justlend",
-  "openeden-usdo",
-  "multipli.fi",
-  "jupiter-lend",
-  "stables-labs-usdx",
-  "benqi-lending", // $133M total TVL, $8M stablecoin; USDC/USDT on Avalanche
-  // Tier 4 (expansion — targeted coverage additions)
-  "radiant-v2",
-  "fraxlend-v2",
-  "clearpool",
-  "centrifuge",
-  "sturdy-v2",
-  "goldfinch",
-  "truefi",
-  "lagoon",
-  "liqwid",
-  "lista-lending",
-  "loopscale",
-  "more-markets",
-  "navi-lending",
-  "overnight-finance",
-  "smardex-usdn",
-  "vesper",
-]);
+const LENDING_PROTOCOLS = {
+  "aave-v3": { label: "Aave v3" },
+  "compound-v3": { label: "Compound v3" },
+  "sparklend": { label: "SparkLend" },
+  "spark-savings": { label: "Spark Savings" },
+  "maple": { label: "Maple Finance" },
+  "yearn-finance": { label: "Yearn" },
+  "compound-v2": { label: "Compound v2" },
+  "dolomite": { label: "Dolomite" },
+  "fluid-lending": { label: "Fluid" },
+  "euler-v2": { label: "Euler v2" },
+  "venus-core-pool": { label: "Venus" },
+  "kamino-lend": { label: "Kamino" },
+  "morpho-v1": { label: "Morpho" },
+  "morpho-blue": { label: "Morpho Blue" },
+  "pendle": { label: "Pendle" },
+  "curve-llamalend": { label: "Curve LlamaLend" },
+  "exactly": { label: "Exactly" },
+  "flux-finance": { label: "Flux Finance" },
+  "gains-network": { label: "Gains Network" },
+  "lazy-summer-protocol": { label: "Lazy Summer" },
+  "moonwell-lending": { label: "Moonwell" },
+  "silo-v2": { label: "Silo v2" },
+  "justlend": { label: "JustLend" },
+  "openeden-usdo": { label: "OpenEden" },
+  "multipli.fi": { label: "Multipli" },
+  "jupiter-lend": { label: "Jupiter Lend" },
+  "stables-labs-usdx": { label: "Stables Labs" },
+  "benqi-lending": { label: "BENQI" },
+  "radiant-v2": { label: "Radiant v2" },
+  "fraxlend-v2": { label: "Fraxlend" },
+  "clearpool": { label: "Clearpool" },
+  "centrifuge": { label: "Centrifuge" },
+  "sturdy-v2": { label: "Sturdy v2" },
+  "goldfinch": { label: "Goldfinch" },
+  "truefi": { label: "TrueFi" },
+  "lagoon": { label: "Lagoon" },
+  "liqwid": { label: "Liqwid" },
+  "lista-lending": { label: "Lista Lending" },
+  "loopscale": { label: "Loopscale" },
+  "more-markets": { label: "More Markets" },
+  "navi-lending": { label: "NAVI Lending" },
+  "overnight-finance": { label: "Overnight" },
+  "smardex-usdn": { label: "SmarDex USDN" },
+  "vesper": { label: "Vesper" },
+} as const;
+
+export const LENDING_PROTOCOL_ALLOWLIST = new Set(Object.keys(LENDING_PROTOCOLS));
 
 /** Human-readable display names for DeFiLlama lending protocol slugs. */
-export const LENDING_PROTOCOL_LABELS: Record<string, string> = {
-  "aave-v3": "Aave v3",
-  "compound-v3": "Compound v3",
-  "compound-v2": "Compound v2",
-  "sparklend": "SparkLend",
-  "spark-savings": "Spark Savings",
-  "maple": "Maple Finance",
-  "yearn-finance": "Yearn",
-  "dolomite": "Dolomite",
-  "fluid-lending": "Fluid",
-  "euler-v2": "Euler v2",
-  "venus-core-pool": "Venus",
-  "kamino-lend": "Kamino",
-  "morpho-v1": "Morpho",
-  "morpho-blue": "Morpho Blue",
-  "pendle": "Pendle",
-  "curve-llamalend": "Curve LlamaLend",
-  "exactly": "Exactly",
-  "flux-finance": "Flux Finance",
-  "gains-network": "Gains Network",
-  "lazy-summer-protocol": "Lazy Summer",
-  "moonwell-lending": "Moonwell",
-  "silo-v2": "Silo v2",
-  "justlend": "JustLend",
-  "openeden-usdo": "OpenEden",
-  "multipli.fi": "Multipli",
-  "jupiter-lend": "Jupiter Lend",
-  "stables-labs-usdx": "Stables Labs",
-  "benqi-lending": "BENQI",
-  "radiant-v2": "Radiant v2",
-  "fraxlend-v2": "Fraxlend",
-  "clearpool": "Clearpool",
-  "centrifuge": "Centrifuge",
-  "sturdy-v2": "Sturdy v2",
-  "goldfinch": "Goldfinch",
-  "truefi": "TrueFi",
-  "lagoon": "Lagoon",
-  "liqwid": "Liqwid",
-  "lista-lending": "Lista Lending",
-  "loopscale": "Loopscale",
-  "more-markets": "More Markets",
-  "navi-lending": "NAVI Lending",
-  "overnight-finance": "Overnight",
-  "smardex-usdn": "SmarDex USDN",
-  "vesper": "Vesper",
-};
+export const LENDING_PROTOCOL_LABELS: Record<string, string> = Object.fromEntries(
+  Object.entries(LENDING_PROTOCOLS).map(([slug, config]) => [slug, config.label]),
+);
 
 /**
  * Deterministic auto-discovery overrides for non-yield-bearing coins.
@@ -641,3 +577,40 @@ export const AUTO_LENDING_SAFETY_BYPASS_IDS = new Set([
   "usdo-openeden", // OpenEden's native USDO market remains meaningful despite sub-C safety.
   "usdm-moneta", // Exact single-asset Liqwid market; explicit edge-case inclusion for yield coverage.
 ]);
+
+export interface YieldAdapterManifestEntry {
+  stablecoinId: string;
+  variant?: YieldVariant;
+  nativePoolId?: string;
+  onChainRate?: OnChainRateConfig;
+  priceDerivedFallback?: boolean;
+  rateDerived?: RateDerivedConfig;
+  autoLendingPoolId?: string;
+  bypassesAutoLendingSafety?: boolean;
+  deterministicQuarantineReason?: string;
+}
+
+const QUARANTINED_DETERMINISTIC_ADAPTERS: Record<string, string> = {
+  "dusd-dtrinity": "generic convertToAssets probe reverts; requires protocol-specific deterministic reader",
+  "reusd-re-protocol": "generic convertToAssets probe returns empty data; requires protocol-specific deterministic reader",
+};
+
+export const YIELD_ADAPTER_MANIFEST: YieldAdapterManifestEntry[] = Array.from(new Set([
+  ...Object.keys(YIELD_VARIANT_MAP),
+  ...Object.keys(YIELD_POOL_MAP),
+  ...ON_CHAIN_RATE_CONFIGS.map((config) => config.stablecoinId),
+  ...RATE_DERIVED_CONFIGS.map((config) => config.stablecoinId),
+  ...PRICE_DERIVED_FALLBACK_IDS,
+  ...Object.keys(AUTO_LENDING_POOL_MAP),
+  ...Object.keys(QUARANTINED_DETERMINISTIC_ADAPTERS),
+])).sort().map((stablecoinId) => ({
+  stablecoinId,
+  variant: YIELD_VARIANT_MAP[stablecoinId],
+  nativePoolId: YIELD_POOL_MAP[stablecoinId],
+  onChainRate: ON_CHAIN_RATE_CONFIGS.find((config) => config.stablecoinId === stablecoinId),
+  priceDerivedFallback: PRICE_DERIVED_FALLBACK_IDS.has(stablecoinId) || undefined,
+  rateDerived: RATE_DERIVED_CONFIGS.find((config) => config.stablecoinId === stablecoinId),
+  autoLendingPoolId: AUTO_LENDING_POOL_MAP[stablecoinId],
+  bypassesAutoLendingSafety: AUTO_LENDING_SAFETY_BYPASS_IDS.has(stablecoinId) || undefined,
+  deterministicQuarantineReason: QUARANTINED_DETERMINISTIC_ADAPTERS[stablecoinId],
+}));

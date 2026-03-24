@@ -252,6 +252,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import * as safetyScoresModule from "../../lib/safety-scores";
 import * as yieldConfigModule from "../yield-config";
 import * as yieldHelpersModule from "../yield-helpers";
+import * as publicationModule from "../yield-sync/publication";
 
 // --- Helpers ---
 
@@ -287,6 +288,26 @@ function makeBrokenYieldRankingsDb() {
     { match: "depeg_events", rows: [] },
     { match: "dex_liquidity", rows: [] },
   ]);
+}
+
+function mockHealthyRiskFreeRateCache() {
+  const nowSec = Math.floor(Date.now() / 1000);
+  vi.mocked(getCache).mockImplementation(async (_db, key) => {
+    if (key === "risk_free_rate") {
+      return {
+        value: JSON.stringify({
+          rate: 4.0,
+          source: "fred",
+          fetchedAt: nowSec - 3600,
+          recordDate: "2025-06-15",
+          isFallback: false,
+          fallbackMode: null,
+        }),
+        updatedAt: nowSec - 3600,
+      };
+    }
+    return null;
+  });
 }
 
 describe("syncYieldData", () => {
@@ -369,6 +390,7 @@ describe("syncYieldData", () => {
 
   it("purges stale yield rows for refreshed coins after writing the current source set", async () => {
     const db = makeDb();
+    mockHealthyRiskFreeRateCache();
 
     mockFetch([
       {
@@ -409,6 +431,7 @@ describe("syncYieldData", () => {
 
   it("purges orphan yield rows for coins outside the tracked stablecoin set", async () => {
     const db = makeYieldOrphanDb(["orphan-coin", "legacy-coin"]);
+    mockHealthyRiskFreeRateCache();
 
     mockFetch([
       {
@@ -458,6 +481,7 @@ describe("syncYieldData", () => {
   it("chunks stale-yield cleanup under the D1 bind limit", async () => {
     const db = makeDb();
     const originalLength = ACTIVE_STABLECOINS.length;
+    mockHealthyRiskFreeRateCache();
 
     for (let i = 0; i < 120; i++) {
       ACTIVE_STABLECOINS.push({
@@ -834,19 +858,25 @@ describe("syncYieldData", () => {
     const db = makeBrokenYieldRankingsDb();
     vi.mocked(getCache).mockResolvedValue(null);
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    vi.spyOn(publicationModule, "validateYieldRankingsPayloadForPublish").mockResolvedValue({
+      ok: false,
+      validationFailures: 1,
+      reason: "schema-validation-failed",
+    });
     mockFetch([]);
 
     const result = await syncYieldData(db);
 
     expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      fallbackMode: string | null;
+      reason: string | null;
+      publishFailure: string | null;
       validationFailures: number;
-      cacheWriteSkipped: boolean;
     };
-    expect(metadata.fallbackMode ?? "").toContain("schema-validation-failed");
+    expect(metadata.reason).toBe("yield-rankings-preflight-failed");
+    expect(metadata.publishFailure).toBe("schema-validation-failed");
     expect(metadata.validationFailures).toBe(1);
-    expect(metadata.cacheWriteSkipped).toBe(true);
+    expect(batchExecute).not.toHaveBeenCalled();
     const cacheCalls = vi.mocked(setCache).mock.calls;
     const wroteYieldRankings = cacheCalls.some((call) => call[1] === "yield-rankings");
     expect(wroteYieldRankings).toBe(false);
@@ -920,6 +950,24 @@ describe("syncYieldData", () => {
     expect(priceDerivedRow?.boundValues?.[12]).toBe("price-derived");
     // price-derived should be is_best (higher APY than DL's 0%)
     expect(priceDerivedRow?.boundValues?.[25]).toBe(1);
+
+    const rankingsCacheCall = vi.mocked(setCache).mock.calls.find((call) => call[1] === "yield-rankings");
+    const rankingsPayload = JSON.parse(String(rankingsCacheCall?.[2])) as {
+      rankings: Array<{
+        id: string;
+        provenance?: {
+          sourceObservedAt: number;
+          sourceAgeSeconds: number;
+          comparisonAnchorObservedAt?: number | null;
+          comparisonAnchorAgeSeconds?: number | null;
+        } | null;
+      }>;
+    };
+    const ranking = rankingsPayload.rankings.find((entry) => entry.id === "100");
+    expect(ranking?.provenance?.sourceObservedAt).toBe(nowSec);
+    expect(ranking?.provenance?.sourceAgeSeconds).toBe(0);
+    expect(ranking?.provenance?.comparisonAnchorObservedAt).toBe(nowSec - 30 * 86400);
+    expect(ranking?.provenance?.comparisonAnchorAgeSeconds).toBe(30 * 86400);
   });
 
   it("uses the oldest available 7-45 day price anchor for young navToken coverage", async () => {
@@ -1295,6 +1343,24 @@ describe("syncYieldData", () => {
     );
     expect(onChainRow).toBeDefined();
     expect(Number(onChainRow?.boundValues?.[3])).toBeGreaterThan(0);
+
+    const rankingsCacheCall = vi.mocked(setCache).mock.calls.find((call) => call[1] === "yield-rankings");
+    const rankingsPayload = JSON.parse(String(rankingsCacheCall?.[2])) as {
+      rankings: Array<{
+        id: string;
+        provenance?: {
+          sourceObservedAt: number;
+          sourceAgeSeconds: number;
+          comparisonAnchorObservedAt?: number | null;
+          comparisonAnchorAgeSeconds?: number | null;
+        } | null;
+      }>;
+    };
+    const ranking = rankingsPayload.rankings.find((entry) => entry.id === "100");
+    expect(ranking?.provenance?.sourceObservedAt).toBe(nowSec);
+    expect(ranking?.provenance?.sourceAgeSeconds).toBe(0);
+    expect(ranking?.provenance?.comparisonAnchorObservedAt).toBe(nowSec - 8 * 86400);
+    expect(ranking?.provenance?.comparisonAnchorAgeSeconds).toBe(8 * 86400);
 
     onChainConfigs.length = 0;
   });
@@ -1847,5 +1913,68 @@ describe("syncYieldData", () => {
     const cacheCalls = vi.mocked(setCache).mock.calls;
     expect(cacheCalls.some((call) => call[1] === "yield-rankings")).toBe(true);
     expect(cacheCalls.some((call) => call[1] === "report_card_cache")).toBe(false);
+  });
+
+  it("skips destructive yield row cleanup on degraded runs", async () => {
+    const db = makeYieldOrphanDb(["orphan-coin"]);
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dl-stablecoin-pools") {
+        return {
+          value: JSON.stringify([
+            {
+              pool: "pool-sdai-cached",
+              chain: "Ethereum",
+              project: "maker",
+              symbol: "sDAI",
+              tvlUsd: 900_000_000,
+              apy: 4.8,
+              apyBase: 4.8,
+              apyReward: null,
+              apyMean30d: 4.7,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ]),
+          updatedAt: nowSec,
+        };
+      }
+      if (key === "risk_free_rate") {
+        return {
+          value: JSON.stringify({
+            rate: 4.0,
+            source: "fred",
+            fetchedAt: nowSec - 50 * 3600,
+            recordDate: "2026-03-20",
+            isFallback: true,
+            fallbackMode: "fred-api-error-retained",
+          }),
+          updatedAt: nowSec - 50 * 3600,
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    const result = await syncYieldData(db);
+
+    expect(result.status).toBe("degraded");
+    const staleDeleteCall = db.getHistory().find(
+      (entry) =>
+        entry.sql.includes("DELETE FROM yield_data") &&
+        entry.sql.includes("updated_at <"),
+    );
+    const orphanDeleteCall = db.getHistory().find(
+      (entry) =>
+        entry.sql.includes("DELETE FROM yield_data") &&
+        entry.sql.includes("stablecoin_id IN") &&
+        !entry.sql.includes("updated_at <"),
+    );
+
+    expect(staleDeleteCall).toBeUndefined();
+    expect(orphanDeleteCall).toBeUndefined();
   });
 });

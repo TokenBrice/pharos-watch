@@ -7140,6 +7140,10 @@
         "risk": "medium"
       }
     ],
+    "yieldConfig": {
+      "yieldSource": "dTRINITY dStake (sdUSD)",
+      "yieldType": "lending-vault"
+    },
     "notices": [
       {
         "type": "danger",

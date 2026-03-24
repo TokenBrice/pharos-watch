@@ -16,6 +16,7 @@ import {
   type YieldHistorySnapshotRow,
 } from "./yield-sync/history";
 import {
+  buildSelectionReason,
   evaluateYieldSources,
   buildHistoryKey,
   isLegacyDeterministicOnChainSourceKey,
@@ -23,9 +24,10 @@ import {
   shouldDegradeForRiskFreeRate,
 } from "./yield-sync/evaluation";
 import {
-  buildYieldRankingsPayload,
+  buildYieldRankingsPayloadFromEvaluatedSources,
   persistEvaluatedYieldSources,
   pruneYieldTables,
+  validateYieldRankingsPayloadForPublish,
   writeYieldRankingsCache,
 } from "./yield-sync/publication";
 
@@ -239,33 +241,74 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainR
     };
   }
 
-  const {
-    updatedCount,
-    rankingProvenanceByKey,
-  } = await persistEvaluatedYieldSources(db, {
+  const safetySnapshotMeta = {
+    kind: safetySnapshot.kind,
+    coverageRatio: Number(safetyCoverageRatio.toFixed(4)),
+    coveredCount: safetySnapshot.coveredCount,
+    trackedCount: safetySnapshot.trackedCount,
+    reason: safetySnapshot.reason ?? null,
+  } as const;
+
+  const previewRankingProvenanceByKey = new Map<string, Record<string, unknown>>();
+  for (const source of evaluatedSources) {
+    const sourceObservedAt =
+      source.sourceObservedAt
+      ?? (source.dataSource === "defillama" || source.dataSource === "defillama-auto"
+        ? (dlPoolsMeta.updatedAt ?? startSec)
+        : source.dataSource === "rate-derived"
+          ? (riskFreeRateMeta.fetchedAt ?? startSec)
+          : startSec);
+    const sourceAgeSeconds =
+      source.dataSource === "defillama" || source.dataSource === "defillama-auto"
+        ? (dlPoolsMeta.ageSeconds ?? Math.max(0, startSec - sourceObservedAt))
+        : source.dataSource === "rate-derived"
+          ? (riskFreeRateMeta.ageSeconds ?? Math.max(0, startSec - sourceObservedAt))
+          : Math.max(0, startSec - sourceObservedAt);
+    const comparisonAnchorObservedAt = source.comparisonAnchorObservedAt ?? null;
+    const comparisonAnchorAgeSeconds =
+      comparisonAnchorObservedAt != null
+        ? Math.max(0, startSec - comparisonAnchorObservedAt)
+        : null;
+    const rejectedPeers = evaluatedSources.filter((candidate) => candidate.id === source.id && candidate.rejected).length;
+    previewRankingProvenanceByKey.set(buildHistoryKey(source.id, source.sourceKey), {
+      sourceKey: source.sourceKey,
+      sourceObservedAt,
+      sourceAgeSeconds,
+      comparisonAnchorObservedAt,
+      comparisonAnchorAgeSeconds,
+      confidenceTier: source.confidenceTier,
+      selectionMethod: "confidence-weighted",
+      selectionReason:
+        bestSourceKeyByCoin.get(source.id) === source.sourceKey
+          ? buildSelectionReason(source, rejectedPeers)
+          : "Alternative source retained for comparison",
+      sourceSwitch:
+        bestSourceKeyByCoin.get(source.id) === source.sourceKey &&
+        source.previousBestSourceKey != null &&
+        source.previousBestSourceKey !== "legacy-best" &&
+        source.previousBestSourceKey !== source.sourceKey,
+      previousBestSourceKey:
+        source.previousBestSourceKey != null && source.previousBestSourceKey !== "legacy-best"
+          ? source.previousBestSourceKey
+          : null,
+      usedLegacyHistory: source.usedLegacyHistory,
+      usedDefaultSafety: source.usedDefaultSafety,
+      benchmarkRecordDate: riskFreeRateMeta.recordDate,
+      benchmarkIsFallback: riskFreeRateMeta.isFallback,
+      benchmarkFallbackMode: riskFreeRateMeta.fallbackMode,
+      anomalies: source.anomalies,
+    });
+  }
+
+  const previewRankingsPayload = buildYieldRankingsPayloadFromEvaluatedSources({
     evaluatedSources,
     bestSourceKeyByCoin,
-    startSec,
-    medianApy,
-    riskFreeRateMeta,
-    dlPoolsMeta,
-  });
-
-  await pruneYieldTables(db, startSec);
-
-  const rankingsPayload = await buildYieldRankingsPayload(db, {
-    startSec,
-    rankingProvenanceByKey,
+    rankingProvenanceByKey: previewRankingProvenanceByKey,
     riskFreeRate,
     riskFreeRateMeta,
     dlPoolsMeta,
-    safetySnapshot: {
-      kind: safetySnapshot.kind,
-      coverageRatio: Number(safetyCoverageRatio.toFixed(4)),
-      coveredCount: safetySnapshot.coveredCount,
-      trackedCount: safetySnapshot.trackedCount,
-      reason: safetySnapshot.reason ?? null,
-    },
+    safetySnapshot: safetySnapshotMeta,
+    startSec,
   });
 
   const degradationReasons: string[] = [];
@@ -285,11 +328,44 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainR
     degradationReasons.push("onchain-rates:all-deterministic-failed");
   }
 
-  const cacheWrite = await writeYieldRankingsCache(db, rankingsPayload);
+  const previewPublishability = await validateYieldRankingsPayloadForPublish(db, previewRankingsPayload);
+  if (!previewPublishability.ok) {
+    degradationReasons.push(previewPublishability.reason ?? "schema-validation-failed");
+    return {
+      status: "degraded" as const,
+      itemCount: resolvedIds.length,
+      metadata: JSON.stringify({
+        reason: "yield-rankings-preflight-failed",
+        publishFailure: previewPublishability.reason ?? "schema-validation-failed",
+        validationFailures: previewPublishability.validationFailures,
+        rowsRejected,
+        divergenceFlags,
+        sourceSwitches,
+      }),
+    };
+  }
+
+  const {
+    updatedCount,
+  } = await persistEvaluatedYieldSources(db, {
+    evaluatedSources,
+    bestSourceKeyByCoin,
+    startSec,
+    medianApy,
+    riskFreeRateMeta,
+    dlPoolsMeta,
+  });
+
+  const cacheWrite = await writeYieldRankingsCache(db, previewRankingsPayload);
   if (!cacheWrite.ok) {
     degradationReasons.push(cacheWrite.reason ?? "schema-validation-failed");
   }
   const validationFailures = cacheWrite.validationFailures;
+
+  const shouldRetainPreviousRows = degradationReasons.length > 0;
+  await pruneYieldTables(db, startSec, {
+    allowDestructiveCleanup: !shouldRetainPreviousRows,
+  });
 
   console.log(`[sync-yield-data] Updated ${updatedCount} source rows (${yieldCoins.length} yield-bearing + auto-discovered)`);
   const status = degradationReasons.length > 0 ? "degraded" : "ok";

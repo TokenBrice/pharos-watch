@@ -197,6 +197,18 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
   const stabilityValue = ranking.yieldStability !== null ? `${(ranking.yieldStability * 100).toFixed(0)}%` : "—";
   const dataSourceMeta = DATA_SOURCE_BADGES[ranking.dataSource] ?? DATA_SOURCE_BADGES.defillama;
   const singleWarning = ranking.warningSignals.length === 1 ? ranking.warningSignals[0] : null;
+  const historySources = [
+    ...(ranking.provenance?.sourceKey
+      ? [{
+        sourceKey: ranking.provenance.sourceKey,
+        yieldSource: ranking.yieldSource,
+      }]
+      : []),
+    ...ranking.altSources.map((source) => ({
+      sourceKey: source.sourceKey,
+      yieldSource: source.yieldSource,
+    })),
+  ];
 
   return (
     <section id="yield" aria-labelledby="yield-intelligence-heading">
@@ -356,6 +368,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
               stablecoinId={stablecoinId}
               riskFreeRate={riskFreeRate}
               medianApy={medianApy}
+              availableSources={historySources}
             />
           </div>
 

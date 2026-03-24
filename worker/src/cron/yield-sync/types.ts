@@ -25,6 +25,8 @@ export interface ResolvedYield {
   yieldSource?: string;
   yieldType?: string;
   project?: string;
+  sourceObservedAt?: number | null;
+  comparisonAnchorObservedAt?: number | null;
 }
 
 export interface ResolvedYieldEntry {

@@ -22,6 +22,7 @@ const YIELD_SOURCE_URLS: Record<string, string> = {
   "Maple Finance lending": "https://app.maple.finance/earn",
   Moonwell: "https://app.moonwell.fi/",
   Morpho: "https://app.morpho.org/",
+  "Morpho Blue": "https://app.morpho.org/",
   Multipli: "https://multipli.fi/",
   OpenEden: "https://openeden.com/usdo",
   Pendle: "https://app.pendle.finance/",
@@ -41,6 +42,15 @@ const YIELD_SOURCE_URLS: Record<string, string> = {
   "Sturdy v2": "https://v2.sturdy.finance/",
   Goldfinch: "https://app.goldfinch.finance/",
   TrueFi: "https://app.truefi.io/",
+  Lagoon: "https://app.lagoon.finance/",
+  Liqwid: "https://app.liqwid.finance/",
+  "Lista Lending": "https://lista.org/",
+  Loopscale: "https://loopscale.com/",
+  "More Markets": "https://app.moremarkets.xyz/",
+  "NAVI Lending": "https://naviprotocol.io/",
+  Overnight: "https://app.overnight.fi/",
+  "SmarDex USDN": "https://smardex.io/",
+  Vesper: "https://app.vesper.finance/",
 };
 
 function pickMetaYieldUrl(stablecoinId: string): string | null {

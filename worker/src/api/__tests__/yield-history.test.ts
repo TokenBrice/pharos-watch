@@ -6,40 +6,38 @@ import { handleYieldHistory } from "../yield-history";
 describe("handleYieldHistory", () => {
   const row = makeYieldHistoryRow();
 
-  it("returns 200 with history array", async () => {
+  it("returns 200 with history envelope", async () => {
     const db = mockD1([{ match: "yield_history", rows: [row] }]);
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
     expect(res.status).toBe(200);
-    const body = (await res.json()) as Array<{
-      date: number; apy: number; apyBase: number | null;
-      apyReward: number | null; exchangeRate: number | null;
-      sourceTvlUsd: number | null;
-      sourceKey: string | null;
-      yieldSourceUrl: string | null;
-      dataSource: string | null;
-      isBest: boolean;
-      sourceSwitch: boolean;
-    }>;
-    expect(body).toHaveLength(1);
-    expect(body[0]).toHaveProperty("date");
-    expect(body[0]).toHaveProperty("apy");
-    expect(body[0]).toHaveProperty("apyBase");
-    expect(body[0]).toHaveProperty("apyReward");
-    expect(body[0]).toHaveProperty("exchangeRate");
-    expect(body[0]).toHaveProperty("sourceTvlUsd");
-    expect(body[0]).toHaveProperty("sourceKey");
-    expect(body[0]).toHaveProperty("yieldSourceUrl");
-    expect(body[0]).toHaveProperty("dataSource");
-    expect(body[0]).toHaveProperty("isBest");
-    expect(body[0]).toHaveProperty("sourceSwitch");
+    const body = (await res.json()) as {
+      current: Record<string, unknown> | null;
+      history: Array<Record<string, unknown>>;
+      methodology: Record<string, unknown>;
+    };
+    expect(body.history).toHaveLength(1);
+    expect(body.current).toEqual(body.history[0]);
+    expect(body.history[0]).toHaveProperty("date");
+    expect(body.history[0]).toHaveProperty("apy");
+    expect(body.history[0]).toHaveProperty("apyBase");
+    expect(body.history[0]).toHaveProperty("apyReward");
+    expect(body.history[0]).toHaveProperty("exchangeRate");
+    expect(body.history[0]).toHaveProperty("sourceTvlUsd");
+    expect(body.history[0]).toHaveProperty("sourceKey");
+    expect(body.history[0]).toHaveProperty("yieldSourceUrl");
+    expect(body.history[0]).toHaveProperty("dataSource");
+    expect(body.history[0]).toHaveProperty("isBest");
+    expect(body.history[0]).toHaveProperty("sourceSwitch");
+    expect(body.methodology).toHaveProperty("version");
   });
 
-  it("returns 200 with empty array when no data", async () => {
+  it("returns 200 with empty history when no data", async () => {
     const db = mockD1([{ match: "yield_history", rows: [] }]);
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
     expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body).toEqual([]);
+    const body = await res.json() as { current: null; history: unknown[] };
+    expect(body.current).toBeNull();
+    expect(body.history).toEqual([]);
   });
 
   it("returns 400 when stablecoin param is missing", async () => {
@@ -59,12 +57,12 @@ describe("handleYieldHistory", () => {
   it("maps snake_case to camelCase", async () => {
     const db = mockD1([{ match: "yield_history", rows: [row] }]);
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
-    const body = (await res.json()) as Array<Record<string, unknown>>;
-    expect(body[0]).not.toHaveProperty("recorded_at");
-    expect(body[0]).not.toHaveProperty("apy_base");
-    expect(body[0]).not.toHaveProperty("apy_reward");
-    expect(body[0]).not.toHaveProperty("exchange_rate");
-    expect(body[0]).not.toHaveProperty("source_tvl_usd");
+    const body = (await res.json()) as { history: Array<Record<string, unknown>> };
+    expect(body.history[0]).not.toHaveProperty("recorded_at");
+    expect(body.history[0]).not.toHaveProperty("apy_base");
+    expect(body.history[0]).not.toHaveProperty("apy_reward");
+    expect(body.history[0]).not.toHaveProperty("exchange_rate");
+    expect(body.history[0]).not.toHaveProperty("source_tvl_usd");
   });
 
   it("supports source-specific history mode", async () => {
@@ -74,8 +72,8 @@ describe("handleYieldHistory", () => {
       new URL(`https://x/api/yield-history?stablecoin=usdt-tether&sourceKey=${encodeURIComponent("aave-v3:usdt")}`),
     );
     expect(res.status).toBe(200);
-    const body = await res.json() as Array<{ sourceKey: string }>;
-    expect(body[0]?.sourceKey).toBe("aave-v3:usdt");
+    const body = await res.json() as { history: Array<{ sourceKey: string }> };
+    expect(body.history[0]?.sourceKey).toBe("aave-v3:usdt");
   });
 
   it("marks the transition from legacy-best to a source-aware row as a source switch", async () => {
@@ -97,9 +95,9 @@ describe("handleYieldHistory", () => {
 
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
     expect(res.status).toBe(200);
-    const body = await res.json() as Array<{ sourceKey: string; sourceSwitch: boolean }>;
-    expect(body[0]).toMatchObject({ sourceKey: "legacy-best", sourceSwitch: false });
-    expect(body[1]).toMatchObject({ sourceKey: "rate-derived", sourceSwitch: true });
+    const body = await res.json() as { history: Array<{ sourceKey: string; sourceSwitch: boolean }> };
+    expect(body.history[0]).toMatchObject({ sourceKey: "legacy-best", sourceSwitch: false });
+    expect(body.history[1]).toMatchObject({ sourceKey: "rate-derived", sourceSwitch: true });
   });
 
   it("normalizes legacy LUSD deterministic keys in best-mode history without a synthetic switch", async () => {
@@ -121,9 +119,9 @@ describe("handleYieldHistory", () => {
 
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=lusd-liquity"));
     expect(res.status).toBe(200);
-    const body = await res.json() as Array<{ sourceKey: string; sourceSwitch: boolean }>;
-    expect(body[0]).toMatchObject({ sourceKey: "onchain:lusd-liquity", sourceSwitch: false });
-    expect(body[1]).toMatchObject({ sourceKey: "onchain:lusd-liquity", sourceSwitch: false });
+    const body = await res.json() as { history: Array<{ sourceKey: string; sourceSwitch: boolean }> };
+    expect(body.history[0]).toMatchObject({ sourceKey: "onchain:lusd-liquity", sourceSwitch: false });
+    expect(body.history[1]).toMatchObject({ sourceKey: "onchain:lusd-liquity", sourceSwitch: false });
   });
 
   it("falls back to an empty warning list when warning_signals is malformed JSON", async () => {
@@ -133,7 +131,7 @@ describe("handleYieldHistory", () => {
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
 
     expect(res.status).toBe(200);
-    const body = await res.json() as Array<{ warningSignals: string[] }>;
-    expect(body[0]?.warningSignals).toEqual([]);
+    const body = await res.json() as { history: Array<{ warningSignals: string[] }> };
+    expect(body.history[0]?.warningSignals).toEqual([]);
   });
 });

@@ -1,13 +1,19 @@
 import {
   withErrorHandler,
+  buildMethodologyEnvelope,
   parseStablecoinHistoryQuery,
   jsonFreshResponse,
   getLatestSuccessfulCronTimestamp,
   errorResponse,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
+import { buildOnChainSourceKey, parseYieldWarningSignals } from "../lib/yield-utils";
 import { resolveYieldSourceUrl } from "../lib/yield-source-links";
-import { z } from "zod";
+import {
+  YIELD_METHODOLOGY_CHANGELOG_PATH,
+  YIELD_METHODOLOGY_VERSION,
+  YIELD_METHODOLOGY_VERSION_LABEL,
+} from "@shared/lib/yield-methodology-version";
 
 interface YieldHistoryRow {
   recorded_at: number;
@@ -26,10 +32,6 @@ interface YieldHistoryRow {
 
 const LEGACY_LUSD_BPROTOCOL_SOURCE_KEY = "bprotocol-lqty-only";
 
-function buildOnChainSourceKey(stablecoinId: string): string {
-  return `onchain:${stablecoinId}`;
-}
-
 function normalizeHistorySourceKey(
   stablecoinId: string,
   row: YieldHistoryRow,
@@ -45,15 +47,6 @@ function normalizeHistorySourceKey(
     return buildOnChainSourceKey(stablecoinId);
   }
   return sourceKey;
-}
-
-function parseWarningSignals(raw: string | null): string[] {
-  if (!raw) return [];
-  try {
-    return z.array(z.string()).catch([]).parse(JSON.parse(raw));
-  } catch {
-    return [];
-  }
 }
 
 /**
@@ -116,7 +109,7 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
       apyReward: row.apy_reward,
       exchangeRate: row.exchange_rate,
       sourceTvlUsd: row.source_tvl_usd,
-      warningSignals: parseWarningSignals(row.warning_signals),
+      warningSignals: parseYieldWarningSignals(row.warning_signals),
       sourceKey: normalizedSourceKey,
       yieldSource: row.yield_source,
       yieldSourceUrl: resolveYieldSourceUrl({
@@ -135,7 +128,20 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
     ? Math.max(...history.map((row) => (typeof row.date === "number" ? row.date : 0)))
     : await getLatestSuccessfulCronTimestamp(db, "sync-yield-data", Math.floor(Date.now() / 1000));
 
-  return jsonFreshResponse(history, {
+  const current = history.length > 0 ? history[history.length - 1] ?? null : null;
+
+  return jsonFreshResponse({
+    current,
+    history,
+    methodology: buildMethodologyEnvelope({
+      version: YIELD_METHODOLOGY_VERSION,
+      versionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
+      currentVersion: YIELD_METHODOLOGY_VERSION,
+      currentVersionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
+      changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
+      asOf: latestHistoryTimestamp,
+    }),
+  }, {
     cacheControl: CACHE_PROFILES.slow,
     updatedAt: latestHistoryTimestamp,
     maxAgeSec: 1800,

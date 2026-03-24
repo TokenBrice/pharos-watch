@@ -12,6 +12,7 @@ import {
   StabilityIndexResponseSchema,
   StressSignalsAllResponseSchema,
   StressSignalDetailResponseSchema,
+  YieldHistoryResponseSchema,
   YieldRankingsResponseSchema,
   type BluechipRatingsMap,
   type DailyDigestResponse,
@@ -30,7 +31,7 @@ import {
   type StressSignalsAllResponse,
   type StressSignalDetailResponse,
   type UsdsStatusResponse,
-  type YieldHistoryPoint,
+  type YieldHistoryResponse,
   type YieldRankingsResponse,
 } from "@shared/types";
 import {
@@ -156,12 +157,23 @@ export function useUsdsStatus() {
   return useApiQuery<UsdsStatusResponse | null>(["usds-status"], API_PATHS.usdsStatus(), CRON_15MIN);
 }
 
-export function useYieldHistory(stablecoinId: string, days = 90) {
-  return useApiQueryWithMeta<YieldHistoryPoint[]>(
-    ["yield-history", stablecoinId, days],
-    API_PATHS.yieldHistory(stablecoinId, days),
+export function useYieldHistory(
+  stablecoinId: string,
+  options?: {
+    days?: number;
+    mode?: "best" | "source";
+    sourceKey?: string | null;
+    enabled?: boolean;
+  },
+) {
+  const days = options?.days ?? 90;
+  const mode = options?.sourceKey ? "source" : (options?.mode ?? "best");
+  const sourceKey = options?.sourceKey ?? null;
+  return useApiQueryWithMeta<YieldHistoryResponse>(
+    ["yield-history", stablecoinId, days, mode, sourceKey],
+    API_PATHS.yieldHistory(stablecoinId, days, mode, sourceKey ?? undefined),
     CRON_30MIN,
-    { metaMaxAgeSec: 1800 },
+    { metaMaxAgeSec: 1800, enabled: options?.enabled ?? !!stablecoinId, schema: YieldHistoryResponseSchema },
   );
 }
 

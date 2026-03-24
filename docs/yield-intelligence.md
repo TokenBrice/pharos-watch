@@ -6,11 +6,16 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.8`
+- **Current methodology version:** `v4.10`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Rankings provenance now carries source-native freshness for derived sources:
+
+- `sourceObservedAt` / `sourceAgeSeconds` reflect the actual latest observation backing the ranking, not just the cron run time
+- `comparisonAnchorObservedAt` / `comparisonAnchorAgeSeconds` are included when APY is derived from a prior anchor, such as price-derived and on-chain exchange-rate calculations
 
 ---
 
@@ -60,15 +65,13 @@ interface OnChainRateConfig {
 }
 ```
 
-Currently configured for 13 vaults (all use selector `0x07a2d13a` — `convertToAssets(uint256)`):
+Currently configured for 11 vaults (all use selector `0x07a2d13a` — `convertToAssets(uint256)`):
 
 | Coin ID | Wrapper | Contract | Chain |
 |---------|---------|----------|-------|
 | `usde-ethena` | sUSDe | `0x9D39...7497` | Ethereum |
-| `dusd-dtrinity` | sdUSD | `0x4aCB...F6Fe` | Ethereum |
 | `iusd-infinifi` | siUSD | `0xDBDC...bCB` | Ethereum |
 | `usdp-parallel` | sUSDp | `0x472e...7e7` | Base |
-| `reusd-re-protocol` | stUSR | `0x1202...d51` | Ethereum |
 | `usds-sky` | sUSDS | `0xa393...fbD` | Ethereum |
 | `dai-makerdao` | sDAI | `0x83F2...BEeA` | Ethereum |
 | `crvusd-curve` | scrvUSD | `0x0655...0367` | Ethereum |
@@ -77,6 +80,8 @@ Currently configured for 13 vaults (all use selector `0x07a2d13a` — `convertTo
 | `bold-liquity` | yBOLD | `0x9F43...a3d8` | Ethereum |
 | `usdf-falcon` | sUSDf | `0xc8cf...4b0` | Ethereum |
 | `usn-noon` | sUSN | `0xE24a...B91D` | Ethereum |
+
+`dusd-dtrinity` and `reusd-re-protocol` are intentionally quarantined from this generic Tier 1 reader for now. Their current `convertToAssets(1e18)` probes do not return a usable value, so they continue to rely on non-deterministic source paths until protocol-specific deterministic adapters are added.
 
 **APY formula:**
 
@@ -515,7 +520,13 @@ Historical APY data points for a single coin. Reads from `yield_history` directl
 | `mode`       | string  | best     | —      | `best` for historically selected best-source rows |
 | `sourceKey`  | string  | —        | —      | When present, returns source-specific history for that source key |
 
-**Response:** Array sorted by `date` ASC. Each row includes:
+**Response:** Envelope with:
+
+- `current`: latest row in the returned window, or `null`
+- `history`: array sorted by `date` ASC
+- `methodology`: standard methodology envelope for Yield Intelligence
+
+Each `history` row includes:
 
 - `date`
 - `apy`
@@ -554,7 +565,7 @@ Historical APY data points for a single coin. Reads from `yield_history` directl
 
 Yield intelligence section for stablecoin detail pages. Shows stat cards (Current APY, 30d APY, PYS with breakdown, Stability, Excess Yield), source info, source links, alt sources, warning callouts, embedded `YieldHistoryChart`, and contextual methodology hints / footer links for PYS and yield stability. Conditional: only renders for coins with yield data.
 
-It reuses the cached `/api/yield-rankings` payload to find the coin's best-source row, surfaces row-level provenance (selection reason, source age, benchmark state, source-switch state), and passes the shared risk-free rate and peer median into `YieldHistoryChart`.
+It reuses the cached `/api/yield-rankings` payload to find the coin's best-source row, surfaces row-level provenance (selection reason, source age, benchmark state, source-switch state), and passes the shared risk-free rate, peer median, and source list into `YieldHistoryChart`.
 
 **Layout (top to bottom):**
 
@@ -610,9 +621,16 @@ Stability display multiplies the raw 0–1 value by 100 for both the bar width a
 
 **Alt-sources badge:** When a coin has `altSources.length > 0`, a `+N` pill badge appears next to the source name in the Source column. Clicking it opens a small inline popover listing each alternative source name, clickable source link, and current APY.
 
-**Inline expansion:** Clicking a leaderboard row toggles an inline `YieldHistoryChart` panel directly beneath that row. The expanded panel repeats the selected source as a clickable link above the chart, passes the page-level `riskFreeRate` and `medianApy` benchmarks into compact mode, and only one row can remain expanded at a time.
+**Inline expansion:** Clicking a leaderboard row toggles an inline `YieldHistoryChart` panel directly beneath that row. The expanded panel repeats the selected source as a clickable link above the chart, passes the page-level `riskFreeRate`, `medianApy`, and available source list into compact mode, and only one row can remain expanded at a time.
 
 ### `YieldHistoryChart` (`src/components/yield-history-chart.tsx`)
+
+The chart now supports source-aware inspection. When alternative sources exist, users can switch between:
+
+- `Best source`: historically selected best-source rows (`mode=best`)
+- a specific retained source row (`sourceKey=<key>`)
+
+This lets the detail page and leaderboard inspect the actual history of an alternative source instead of only showing its current snapshot.
 
 Recharts line chart. Primary APY line with optional base/reward breakdown toggle. Two reference lines: T-bill rate and peer median APY. Warning signal markers on data points. Time presets: 7d / 30d / 90d / 1y.
 

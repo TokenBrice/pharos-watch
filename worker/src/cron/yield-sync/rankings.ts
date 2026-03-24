@@ -8,6 +8,7 @@
  */
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { AltYieldSource } from "@shared/types";
+import { parseYieldWarningSignals } from "../../lib/yield-utils";
 import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
 
 function toNum(val: unknown): number | null {
@@ -47,7 +48,7 @@ export function rowToRanking(row: Record<string, unknown>) {
     apyVariance30d: toNum(row.apy_variance_30d),
     apyMin30d: toNum(row.apy_min_30d),
     apyMax30d: toNum(row.apy_max_30d),
-    warningSignals: parseWarningSignals(row.warning_signals),
+    warningSignals: parseYieldWarningSignals(row.warning_signals),
     altSources: [] as AltYieldSource[],
   };
 }
@@ -94,20 +95,7 @@ export function dedupeLatestBestRows(rows: Record<string, unknown>[]) {
   return [...deduped.values()];
 }
 
-export function parseWarningSignals(raw: unknown): string[] {
-  if (typeof raw !== "string" || raw.trim() === "") return [];
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) {
-      console.warn("[yield-sync] warning_signals is not an array:", typeof parsed);
-      return [];
-    }
-    return parsed.filter((value): value is string => typeof value === "string");
-  } catch (e) {
-    console.warn("[yield-sync] failed to parse warning_signals:", e instanceof Error ? e.message : String(e));
-    return [];
-  }
-}
+export const parseWarningSignals = parseYieldWarningSignals;
 
 export function computeTvlWeightedMedianApy(
   rows: Array<{ apy_30d: number; source_tvl_usd: number | null }>,

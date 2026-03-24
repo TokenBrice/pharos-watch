@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MethodologyEnvelope, YieldType, YieldTypeSchema } from "./core";
+import { MethodologyEnvelope, MethodologyEnvelopeSchema, YieldType, YieldTypeSchema } from "./core";
 import { ReportCardGrade, ReportCardGradeSchema } from "./report-cards";
 
 export interface AltYieldSource {
@@ -43,6 +43,8 @@ export interface YieldRankingProvenance {
   sourceKey: string;
   sourceObservedAt: number;
   sourceAgeSeconds: number;
+  comparisonAnchorObservedAt?: number | null;
+  comparisonAnchorAgeSeconds?: number | null;
   confidenceTier: "deterministic" | "curated" | "discovered" | "fallback";
   selectionMethod: "confidence-weighted";
   selectionReason: string;
@@ -79,6 +81,23 @@ export interface YieldHistoryPoint {
   isBest?: boolean;
   sourceSwitch?: boolean;
 }
+
+const YieldHistoryPointSchema: z.ZodType<YieldHistoryPoint> = z.object({
+  date: z.union([z.number(), z.string()]),
+  apy: z.number(),
+  apyBase: z.number().nullable(),
+  apyReward: z.number().nullable(),
+  exchangeRate: z.number().nullable(),
+  sourceTvlUsd: z.number().nullable(),
+  warningSignals: z.array(z.string()),
+  sourceKey: z.string().nullable().optional(),
+  yieldSource: z.string().nullable().optional(),
+  yieldSourceUrl: z.string().url().nullable().optional(),
+  yieldType: YieldTypeSchema.nullable().optional(),
+  dataSource: z.string().nullable().optional(),
+  isBest: z.boolean().optional(),
+  sourceSwitch: z.boolean().optional(),
+});
 
 const AltYieldSourceSchema = z.object({
   sourceKey: z.string(),
@@ -121,6 +140,8 @@ const YieldRankingProvenanceSchema = z.object({
   sourceKey: z.string(),
   sourceObservedAt: z.number(),
   sourceAgeSeconds: z.number(),
+  comparisonAnchorObservedAt: z.number().nullable().optional(),
+  comparisonAnchorAgeSeconds: z.number().nullable().optional(),
   confidenceTier: z.enum(["deterministic", "curated", "discovered", "fallback"]),
   selectionMethod: z.literal("confidence-weighted"),
   selectionReason: z.string(),
@@ -220,3 +241,9 @@ export interface YieldHistoryResponse {
   history: YieldHistoryPoint[];
   methodology: MethodologyEnvelope;
 }
+
+export const YieldHistoryResponseSchema: z.ZodType<YieldHistoryResponse> = z.object({
+  current: YieldHistoryPointSchema.nullable(),
+  history: z.array(YieldHistoryPointSchema),
+  methodology: MethodologyEnvelopeSchema,
+});

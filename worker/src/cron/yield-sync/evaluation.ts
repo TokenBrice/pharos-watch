@@ -33,6 +33,8 @@ export interface EvaluatedYieldSource {
   sourceTvlUsd: number | null;
   dataSource: string;
   exchangeRate: number | null;
+  sourceObservedAt: number | null;
+  comparisonAnchorObservedAt: number | null;
   apy7d: number;
   apy30d: number;
   apyVarianceScore: number;
@@ -391,6 +393,8 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         sourceTvlUsd: y.sourceTvlUsd,
         dataSource: y.dataSource,
         exchangeRate: y.exchangeRate,
+        sourceObservedAt: y.sourceObservedAt ?? null,
+        comparisonAnchorObservedAt: y.comparisonAnchorObservedAt ?? null,
         apy7d,
         apy30d,
         apyVarianceScore,

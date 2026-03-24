@@ -3,9 +3,39 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "4.8",
+  currentVersion: "4.10",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "4.10",
+    title: "Richer freshness provenance and curated lending source links",
+    date: "2026-03-24",
+    effectiveAt: 1774407600,
+    summary:
+      "Yield rankings provenance now carries source-observation and comparison-anchor timing for derived sources, and the lending allowlist now has curated source-link coverage for all supported protocols.",
+    impact: [
+      "Price-derived and on-chain rankings now expose the age of their actual observation inputs instead of always presenting as fresh at sync time",
+      "Derived-source provenance now includes comparison-anchor timing so older anchors are visible to downstream consumers",
+      "All allowlisted lending protocols now resolve to curated source links instead of falling back to coin-level websites or nulls",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "4.9",
+    title: "Publish-safe retention and deterministic adapter quarantine",
+    date: "2026-03-24",
+    effectiveAt: 1774404000,
+    summary:
+      "Yield publication now preflights rankings payloads before mutating live rows, degraded runs retain prior rows instead of destructively pruning, and the two known-bad generic deterministic vault probes were quarantined from Tier 1 coverage.",
+    impact: [
+      "Rankings publication is now validated before live row mutation, reducing DB/cache divergence risk on schema or publish-guard failures",
+      "Degraded runs retain prior current rows by skipping destructive cleanup instead of deleting rows while upstream inputs are impaired",
+      "dUSD and reUSD were removed from the generic ERC-4626 deterministic adapter set until protocol-specific readers exist, reducing false confidence in Tier 1 coverage",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.8",
     title: "Explicit edge-case overrides for remaining high-signal lending markets",
@@ -268,6 +298,9 @@ const yieldMethodology = createMethodologyVersion({
   },
   ],
 });
+
+/** Display-ready Yield Intelligence methodology version (with "v" prefix). */
+export const YIELD_METHODOLOGY_VERSION = yieldMethodology.currentVersion;
 
 /** Display-ready Yield Intelligence methodology version (with "v" prefix). */
 export const YIELD_METHODOLOGY_VERSION_LABEL = yieldMethodology.versionLabel;

@@ -130,6 +130,8 @@ export async function resolveYieldSources({
             dataSource: "onchain",
             exchangeRate: rate,
             sourceKey: buildOnChainSourceKey(id),
+            sourceObservedAt: startSec,
+            comparisonAnchorObservedAt: prevRow.recordedAt,
           },
         });
         hasAnySource = true;
@@ -150,6 +152,8 @@ export async function resolveYieldSources({
             dataSource: "onchain",
             exchangeRate: rate,
             sourceKey: buildOnChainSourceKey(id),
+            sourceObservedAt: startSec,
+            comparisonAnchorObservedAt: null,
           },
         });
       }
@@ -206,20 +210,22 @@ export async function resolveYieldSources({
       && (!hasAnySource || allDlSourcesZero);
 
     if (shouldTryPriceDerived) {
-      const apy = await getPriceDerivedApy(db, id);
-      if (apy != null) {
+      const priceDerived = await getPriceDerivedApy(db, id);
+      if (priceDerived != null) {
         resolved.push({
           id,
           symbol,
           yield: {
-            currentApy: apy,
-            apyBase: apy,
+            currentApy: priceDerived.apy,
+            apyBase: priceDerived.apy,
             apyReward: null,
             sourcePool: null,
             sourceTvlUsd: null,
             dataSource: "price-derived",
             exchangeRate: null,
             sourceKey: "price-derived",
+            sourceObservedAt: priceDerived.sourceObservedAt,
+            comparisonAnchorObservedAt: priceDerived.comparisonAnchorObservedAt,
           },
         });
         hasAnySource = true;
@@ -244,6 +250,8 @@ export async function resolveYieldSources({
           exchangeRate: null,
           sourceKey: "rate-derived",
           yieldSource: rateDerivedConfig.label,
+          sourceObservedAt: startSec,
+          comparisonAnchorObservedAt: null,
         },
       });
       hasAnySource = true;

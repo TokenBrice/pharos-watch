@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveYieldSourceUrl } from "../yield-source-links";
+import { LENDING_PROTOCOL_ALLOWLIST, LENDING_PROTOCOL_LABELS } from "../../cron/yield-config";
 
 describe("resolveYieldSourceUrl", () => {
   it("prefers curated protocol links for discovered lending sources", () => {
@@ -61,5 +62,19 @@ describe("resolveYieldSourceUrl", () => {
         yieldSource: "Radiant v2",
       }),
     ).toBe("https://app.radiant.capital/");
+  });
+
+  it("covers every allowlisted lending protocol label with a curated source URL", () => {
+    for (const protocol of LENDING_PROTOCOL_ALLOWLIST) {
+      const label = LENDING_PROTOCOL_LABELS[protocol];
+      expect(label).toBeTruthy();
+      expect(
+        resolveYieldSourceUrl({
+          stablecoinId: "nonexistent-coin",
+          sourceKey: `${protocol}:test`,
+          yieldSource: label,
+        }),
+      ).toMatch(/^https?:\/\//);
+    }
   });
 });

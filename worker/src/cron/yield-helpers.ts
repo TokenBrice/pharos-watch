@@ -13,14 +13,10 @@
  * I/O counterparts live in yield-sync/: sources.ts (pool discovery), resolve.ts
  * (APY resolution), cache.ts (KV caching), rankings.ts (DB row mapping).
  */
-
+export { buildOnChainSourceKey } from "../lib/yield-utils";
 export const STALE_THRESHOLD_MS = 90 * 60 * 1000; // 3 sync cycles
 
 export { computePYS, PYS_RISK_PENALTY_FLOOR, PYS_SUSTAINABILITY_FLOOR } from "@shared/lib/yield-scoring";
-
-export function buildOnChainSourceKey(stablecoinId: string): string {
-  return `onchain:${stablecoinId}`;
-}
 
 // --- Warning signal thresholds ---
 const YIELD_SPIKE_THRESHOLD = 2.0;

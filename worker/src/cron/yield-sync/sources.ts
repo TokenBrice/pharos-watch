@@ -339,7 +339,11 @@ export async function fetchBprotocolLqtyOnlySource(
 export async function getPriceDerivedApy(
   db: D1Database,
   stablecoinId: string,
-): Promise<number | null> {
+): Promise<{
+  apy: number;
+  sourceObservedAt: number;
+  comparisonAnchorObservedAt: number;
+} | null> {
   const now = Math.floor(Date.now() / 1000);
   const minLookbackSec = 7 * 86400;
   const maxLookbackSec = 45 * 86400;
@@ -370,7 +374,11 @@ export async function getPriceDerivedApy(
   const lookbackDays = (recentRow.snapshot_date - anchoredRow.snapshot_date) / 86400;
   if (!Number.isFinite(lookbackDays) || lookbackDays < 7) return null;
 
-  return computeApyFromPrice(recentRow.price, anchoredRow.price, lookbackDays);
+  return {
+    apy: computeApyFromPrice(recentRow.price, anchoredRow.price, lookbackDays),
+    sourceObservedAt: recentRow.snapshot_date,
+    comparisonAnchorObservedAt: anchoredRow.snapshot_date,
+  };
 }
 
 export async function loadRiskFreeRateSnapshot(db: D1Database): Promise<YieldBenchmarkMeta> {

@@ -1489,7 +1489,12 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
 | `apyMax30d`        | `number \| null`   | Maximum APY in last 30 days (%)                                                                                                                     |
 | `warningSignals`   | `string[]`         | Active warning-signal flags for the selected best source                                                                                            |
 | `altSources`       | `AltYieldSource[]` | Additional non-selected source rows for the same coin                                                                                               |
-| `provenance`       | `object \| null`   | Source-level provenance: confidence tier, selection reason, benchmark state, and source-switch metadata                                             |
+| `provenance`       | `object \| null`   | Source-level provenance: confidence tier, selection reason, benchmark state, source-switch metadata, source freshness, and optional anchor timing   |
+
+When present, `YieldRanking.provenance` includes:
+
+- `sourceObservedAt` / `sourceAgeSeconds`: the timestamp and age of the latest observation actually backing the row
+- `comparisonAnchorObservedAt` / `comparisonAnchorAgeSeconds`: optional prior-anchor timing for APYs derived from two observations, such as price-derived and on-chain exchange-rate rows
 
 ---
 
@@ -1512,6 +1517,31 @@ Historical yield data for a single stablecoin. If a stored `warning_signals` pay
 | `days`      | `integer` | `90`    | 1–365  | Lookback window in days                                           |
 | `mode`      | `string`  | `best`  | —      | `best` for historically selected best-source rows                 |
 | `sourceKey` | `string`  | —       | —      | When present, returns source-specific history for that source key |
+
+**Response**
+
+```json
+{
+  "current": {
+    "date": 1772000000,
+    "apy": 4.21,
+    "sourceKey": "onchain:usde-ethena",
+    "yieldSource": "Ethena staking (sUSDe)"
+  },
+  "history": [YieldHistoryPoint, "..."],
+  "methodology": {
+    "version": "4.10",
+    "currentVersion": "4.10",
+    "changelogPath": "/methodology/yield-changelog/"
+  }
+}
+```
+
+| Field         | Type                   | Description                                                                 |
+| ------------- | ---------------------- | --------------------------------------------------------------------------- |
+| `current`     | `YieldHistoryPoint\|null` | Latest row in the returned history window, or `null` when no history exists |
+| `history`     | `YieldHistoryPoint[]`  | History rows sorted by `date` ASC                                           |
+| `methodology` | `object`               | Yield methodology envelope for the response                                 |
 
 **Response:** Array sorted by `date` ascending.
 
@@ -1637,7 +1667,7 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 | `netFlow30dUsd`       | `number`                                         | 30-day net flow (USD)                                                                                                               |
 | `netFlow90dUsd`       | `number`                                         | 90-day net flow (USD)                                                                                                               |
 | `largestEvent24h`     | `object \| null`                                 | Largest event in the last 24h: `{ direction, amountUsd, txHash, timestamp }`                                                        |
-| `coverage`            | `object \| undefined`                            | Coverage metadata: `startBlock`, `lastSyncedBlock`, `lagBlocks`, `historyStartAt`, window booleans, and `status`                    |
+| `coverage`            | `object \| undefined`                            | Coverage metadata: `startBlock`, `lastSyncedBlock`, `lagBlocks`, `historyStartAt`, window booleans, adapter provenance (`adapterKinds`, `startBlockSource`, `startBlockConfidence`), and `status` |
 
 **`HourlyFlow`**
 
@@ -2239,7 +2269,7 @@ Backfills CoinGecko historical prices into the price_cache table for more accura
 
 ### `POST /api/backfill-mint-burn-prices`
 
-Backfills `amount_usd` for all mint-burn events with NULL values using current prices from `price_cache`. Recalculates affected hourly aggregation buckets.
+Repairs incomplete mint/burn valuation metadata using a historical-first policy. The endpoint now prefers event-day `supply_history` prices for rows with `amount_usd IS NULL` and only derives audit fields for already-valued rows. It no longer bulk-fills historical `amount_usd` from the current `price_cache` snapshot.
 
 Cron `sync-mint-burn` automatically heals recent NULL-price events within a 48-hour window and reports the healed count in cron metadata as `nullPricesHealed`; this endpoint is primarily for historical backfills beyond that window.
 
@@ -2250,9 +2280,19 @@ Cron `sync-mint-burn` automatically heals recent NULL-price events within a 48-h
 ```json
 {
   "totalUpdated": 15000,
+  "rowsValued": 14000,
+  "rowsAudited": 1000,
+  "rowsStillUnpriced": 85,
+  "rowsStillMissingAudit": 320,
   "coins": [
-    { "id": "usdt-tether", "updated": 49 },
-    { "id": "usdc-circle", "updated": 15119 }
+    {
+      "id": "usdt-tether",
+      "updated": 49,
+      "valued": 41,
+      "audited": 8,
+      "stillUnpriced": 0,
+      "stillMissingAudit": 2
+    }
   ]
 }
 ```

@@ -447,6 +447,18 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                             riskFreeRate={riskFreeRate}
                             medianApy={medianApy}
                             compact
+                            availableSources={[
+                              ...(row.provenance?.sourceKey
+                                ? [{
+                                  sourceKey: row.provenance.sourceKey,
+                                  yieldSource: row.yieldSource,
+                                }]
+                                : []),
+                              ...(row.altSources ?? []).map((source) => ({
+                                sourceKey: source.sourceKey,
+                                yieldSource: source.yieldSource,
+                              })),
+                            ]}
                           />
                         </TableCell>
                       </TableRow>

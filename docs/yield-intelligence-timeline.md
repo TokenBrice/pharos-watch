@@ -1,8 +1,24 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v4.8` (2026-03-01 -> 2026-03-24).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v4.10` (2026-03-01 -> 2026-03-24).
 
 ---
+
+## v4.10 - Richer freshness provenance and curated lending source links (Mar 24, 2026)
+
+**Commit:** `unreleased`
+
+- Rankings provenance now exposes source-observation age and comparison-anchor timing for derived sources such as price-derived and on-chain APYs
+- This removes the prior optimistic `age = 0` behavior for derived rows whose underlying snapshots may be materially older than the sync run
+- The lending allowlist now has curated source-link coverage for every supported protocol label
+
+## v4.9 - Publish-safe retention and deterministic adapter quarantine (Mar 24, 2026)
+
+**Commit:** `unreleased`
+
+- Yield rankings payloads are now preflighted before live-row mutation, reducing DB/cache divergence risk when publication would fail
+- Degraded runs now retain prior current rows by skipping destructive yield cleanup instead of pruning optimistically under impaired inputs
+- `dusd-dtrinity` and `reusd-re-protocol` were removed from the generic Tier 1 ERC-4626 reader until protocol-specific deterministic adapters exist
 
 ## v4.8 - Explicit edge-case overrides for remaining high-signal lending markets (Mar 24, 2026)
 

@@ -1,5 +1,5 @@
 import { YieldRankingsResponseSchema, type AltYieldSource, type YieldBenchmarkMeta, type YieldSafetySnapshotMeta, type YieldSourceInputMeta } from "@shared/types";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { batchExecute } from "../../lib/db";
 import { getCache, setCache } from "../../lib/db-cache";
 import { validatePayloadWithSchema } from "../../lib/api-utils";
@@ -9,6 +9,163 @@ import { STALE_THRESHOLD_MS, detectWarningSignals } from "../yield-helpers";
 import { dedupeLatestBestRows, computeTvlWeightedMedianApy, rowToRanking } from "./rankings";
 import { deleteOrphanYieldRows, deleteStaleYieldRows } from "./history";
 import { buildHistoryKey, buildSelectionReason, type EvaluatedYieldSource } from "./evaluation";
+
+function evaluatedSourceToRanking(
+  source: EvaluatedYieldSource,
+  provenance: Record<string, unknown> | null,
+) {
+  const meta = TRACKED_META_BY_ID.get(source.id);
+  return {
+    id: source.id,
+    symbol: source.symbol,
+    name: meta?.name ?? source.symbol,
+    currentApy: source.currentApy,
+    apy7d: source.apy7d,
+    apy30d: source.apy30d,
+    apyBase: source.apyBase,
+    apyReward: source.apyReward,
+    yieldSource: source.yieldSource,
+    yieldSourceUrl: resolveYieldSourceUrl({
+      stablecoinId: source.id,
+      sourceKey: source.sourceKey,
+      yieldSource: source.yieldSource,
+    }),
+    yieldType: source.yieldType,
+    dataSource: source.dataSource,
+    sourceTvlUsd: source.sourceTvlUsd,
+    pharosYieldScore: source.pharosYieldScore,
+    safetyScore: source.safetyScore,
+    safetyGrade: source.safetyGrade,
+    yieldToRisk: source.yieldToRisk,
+    excessYield: source.excessYield,
+    yieldStability: source.yieldStability,
+    apyVariance30d: source.stdDev30d,
+    apyMin30d: source.apyMin30d,
+    apyMax30d: source.apyMax30d,
+    warningSignals: [...source.warnings],
+    altSources: [] as AltYieldSource[],
+    provenance,
+  };
+}
+
+export function buildYieldRankingsPayloadFromEvaluatedSources(
+  input: {
+    evaluatedSources: EvaluatedYieldSource[];
+    bestSourceKeyByCoin: Map<string, string>;
+    rankingProvenanceByKey: Map<string, Record<string, unknown>>;
+    riskFreeRate: number;
+    riskFreeRateMeta: YieldBenchmarkMeta;
+    dlPoolsMeta: YieldSourceInputMeta;
+    safetySnapshot: YieldSafetySnapshotMeta;
+    startSec: number;
+  },
+) {
+  const bestRows = input.evaluatedSources
+    .filter((source) => input.bestSourceKeyByCoin.get(source.id) === source.sourceKey)
+    .sort((a, b) => b.pharosYieldScore - a.pharosYieldScore);
+
+  const altSourcesByCoin = new Map<string, AltYieldSource[]>();
+  for (const source of input.evaluatedSources) {
+    if (input.bestSourceKeyByCoin.get(source.id) === source.sourceKey) continue;
+
+    const alts = altSourcesByCoin.get(source.id) ?? [];
+    alts.push({
+      sourceKey: source.sourceKey,
+      yieldSource: source.yieldSource,
+      yieldSourceUrl: resolveYieldSourceUrl({
+        stablecoinId: source.id,
+        sourceKey: source.sourceKey,
+        yieldSource: source.yieldSource,
+      }),
+      yieldType: source.yieldType as AltYieldSource["yieldType"],
+      currentApy: source.currentApy,
+      apy30d: source.apy30d,
+      sourceTvlUsd: source.sourceTvlUsd,
+      dataSource: source.dataSource,
+    });
+    altSourcesByCoin.set(source.id, alts);
+  }
+
+  const rankings = bestRows.map((source) => {
+    const key = buildHistoryKey(source.id, source.sourceKey);
+    const provenance = input.rankingProvenanceByKey.get(key) ?? null;
+    const ranking = evaluatedSourceToRanking(source, provenance);
+    ranking.altSources = altSourcesByCoin.get(source.id) ?? [];
+
+    const sourceObservedAt =
+      provenance != null && typeof provenance.sourceObservedAt === "number"
+        ? provenance.sourceObservedAt
+        : input.startSec;
+    const updatedAtMs = sourceObservedAt * 1000;
+    if (updatedAtMs > 0 && updatedAtMs < Date.now() - STALE_THRESHOLD_MS) {
+      if (!ranking.warningSignals.includes("data-stale")) {
+        ranking.warningSignals = [...ranking.warningSignals, "data-stale"];
+      }
+    }
+
+    return ranking;
+  });
+
+  return {
+    rankings,
+    riskFreeRate: input.riskFreeRate,
+    scalingFactor: PYS_SCALING_FACTOR,
+    medianApy: computeTvlWeightedMedianApy(
+      bestRows.map((source) => ({
+        apy_30d: source.apy30d,
+        source_tvl_usd: source.sourceTvlUsd,
+      })),
+    ),
+    updatedAt: input.startSec,
+    provenance: {
+      selectionMethod: "confidence-weighted" as const,
+      benchmark: input.riskFreeRateMeta,
+      dlPools: input.dlPoolsMeta,
+      safetySnapshot: input.safetySnapshot,
+    },
+  };
+}
+
+export async function validateYieldRankingsPayloadForPublish(
+  db: D1Database,
+  rankingsPayload: unknown,
+): Promise<{ ok: boolean; validationFailures: number; reason?: string }> {
+  const validation = validatePayloadWithSchema(
+    YieldRankingsResponseSchema,
+    rankingsPayload,
+    "sync-yield-data:yield-rankings",
+  );
+
+  if (!validation.ok) {
+    console.warn("[sync-yield-data] Skipped yield-rankings cache write due to schema validation failure");
+    return { ok: false, validationFailures: 1, reason: "schema-validation-failed" };
+  }
+
+  const currentRankings = validation.data.rankings.length;
+  const previousCache = await getCache(db, "yield-rankings");
+  let previousRankings = 0;
+  if (previousCache) {
+    try {
+      const parsed = JSON.parse(previousCache.value) as { rankings?: unknown[] };
+      if (Array.isArray(parsed.rankings)) previousRankings = parsed.rankings.length;
+    } catch {
+      previousRankings = 0;
+    }
+  }
+  const severeShrink =
+    previousRankings >= 5 &&
+    currentRankings < Math.ceil(previousRankings * 0.4);
+  if (previousRankings > 0 && (currentRankings === 0 || severeShrink)) {
+    console.warn("[sync-yield-data] Skipped yield-rankings cache write due to publish guard");
+    return {
+      ok: false,
+      validationFailures: 1,
+      reason: currentRankings === 0 ? "empty-rankings-payload" : "rankings-payload-shrunk",
+    };
+  }
+
+  return { ok: true, validationFailures: 0 };
+}
 
 export async function persistEvaluatedYieldSources(
   db: D1Database,
@@ -111,24 +268,30 @@ export async function persistEvaluatedYieldSources(
         ),
     );
 
-    const sourceAgeSeconds =
-      source.dataSource === "defillama" || source.dataSource === "defillama-auto"
-        ? (input.dlPoolsMeta.ageSeconds ?? 0)
-        : source.dataSource === "rate-derived"
-          ? (input.riskFreeRateMeta.ageSeconds ?? 0)
-          : 0;
     const sourceObservedAt =
-      source.dataSource === "defillama" || source.dataSource === "defillama-auto"
+      source.sourceObservedAt
+      ?? (source.dataSource === "defillama" || source.dataSource === "defillama-auto"
         ? (input.dlPoolsMeta.updatedAt ?? input.startSec)
         : source.dataSource === "rate-derived"
           ? (input.riskFreeRateMeta.fetchedAt ?? input.startSec)
-          : input.startSec;
+          : input.startSec);
+    const sourceAgeSeconds =
+      source.dataSource === "defillama" || source.dataSource === "defillama-auto"
+        ? (input.dlPoolsMeta.ageSeconds ?? Math.max(0, input.startSec - sourceObservedAt))
+        : source.dataSource === "rate-derived"
+          ? (input.riskFreeRateMeta.ageSeconds ?? Math.max(0, input.startSec - sourceObservedAt))
+          : Math.max(0, input.startSec - sourceObservedAt);
+    const comparisonAnchorObservedAt = source.comparisonAnchorObservedAt ?? null;
+    const comparisonAnchorAgeSeconds =
+      comparisonAnchorObservedAt != null ? Math.max(0, input.startSec - comparisonAnchorObservedAt) : null;
 
     const rejectedPeers = input.evaluatedSources.filter((candidate) => candidate.id === source.id && candidate.rejected).length;
     rankingProvenanceByKey.set(buildHistoryKey(source.id, source.sourceKey), {
       sourceKey: source.sourceKey,
       sourceObservedAt,
       sourceAgeSeconds,
+      comparisonAnchorObservedAt,
+      comparisonAnchorAgeSeconds,
       confidenceTier: source.confidenceTier,
       selectionMethod: "confidence-weighted",
       selectionReason: isBest
@@ -165,9 +328,12 @@ export async function persistEvaluatedYieldSources(
 export async function pruneYieldTables(
   db: D1Database,
   startSec: number,
+  options?: {
+    allowDestructiveCleanup?: boolean;
+  },
 ): Promise<void> {
   const managedYieldIds = ACTIVE_STABLECOINS.map((meta) => meta.id);
-  if (managedYieldIds.length > 0) {
+  if ((options?.allowDestructiveCleanup ?? true) && managedYieldIds.length > 0) {
     await deleteStaleYieldRows(db, managedYieldIds, startSec);
     await deleteOrphanYieldRows(db, managedYieldIds);
   }
@@ -270,40 +436,11 @@ export async function writeYieldRankingsCache(
   db: D1Database,
   rankingsPayload: unknown,
 ): Promise<{ ok: boolean; validationFailures: number; reason?: string }> {
-  const validation = validatePayloadWithSchema(
-    YieldRankingsResponseSchema,
-    rankingsPayload,
-    "sync-yield-data:yield-rankings",
-  );
-
-  if (!validation.ok) {
-    console.warn("[sync-yield-data] Skipped yield-rankings cache write due to schema validation failure");
-    return { ok: false, validationFailures: 1, reason: "schema-validation-failed" };
+  const publishability = await validateYieldRankingsPayloadForPublish(db, rankingsPayload);
+  if (!publishability.ok) {
+    return publishability;
   }
 
-  const currentRankings = validation.data.rankings.length;
-  const previousCache = await getCache(db, "yield-rankings");
-  let previousRankings = 0;
-  if (previousCache) {
-    try {
-      const parsed = JSON.parse(previousCache.value) as { rankings?: unknown[] };
-      if (Array.isArray(parsed.rankings)) previousRankings = parsed.rankings.length;
-    } catch {
-      previousRankings = 0;
-    }
-  }
-  const severeShrink =
-    previousRankings >= 5 &&
-    currentRankings < Math.ceil(previousRankings * 0.4);
-  if (previousRankings > 0 && (currentRankings === 0 || severeShrink)) {
-    console.warn("[sync-yield-data] Skipped yield-rankings cache write due to publish guard");
-    return {
-      ok: false,
-      validationFailures: 1,
-      reason: currentRankings === 0 ? "empty-rankings-payload" : "rankings-payload-shrunk",
-    };
-  }
-
-  await setCache(db, "yield-rankings", JSON.stringify(validation.data));
-  return { ok: true, validationFailures: 0 };
+  await setCache(db, "yield-rankings", JSON.stringify(rankingsPayload));
+  return publishability;
 }
