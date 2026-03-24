@@ -72,6 +72,37 @@ export const CHAIN_COLORS: Record<string, string> = {
   fantom: "bg-blue-300",
 };
 
+/** Hex equivalents of CHAIN_COLORS for SVG fill attributes (Recharts) */
+export const CHAIN_HEX: Record<string, string> = {
+  ethereum:  "#2563eb",
+  arbitrum:  "#0ea5e9",
+  base:      "#60a5fa",
+  polygon:   "#8b5cf6",
+  bsc:       "#f59e0b",
+  optimism:  "#ef4444",
+  avalanche: "#dc2626",
+  solana:    "#10b981",
+  gnosis:    "#14b8a6",
+  fantom:    "#93c5fd",
+};
+
+/** Hex equivalents of PROTOCOL_COLORS for SVG fill attributes (Recharts) */
+export const PROTOCOL_HEX: Record<string, string> = {
+  curve:        "#3b82f6",
+  "uniswap-v3": "#ec4899",
+  uniswap:      "#f472b6",
+  fluid:        "#06b6d4",
+  balancer:     "#8b5cf6",
+  aerodrome:    "#0ea5e9",
+  velodrome:    "#ef4444",
+  pancakeswap:  "#f59e0b",
+  sushiswap:    "#6366f1",
+  "trader-joe": "#f97316",
+  raydium:      "#a855f7",
+  orca:         "#2dd4bf",
+  quickswap:    "#8b5cf6",
+};
+
 /** Normalize a chain name to lowercase for color lookup, returning a canonical display name. */
 export function normalizeChain(chain: string): string {
   const key = chain.toLowerCase();
