@@ -16,6 +16,7 @@ import {
   formatPercentChange,
   formatSupply,
 } from "@shared/lib/format";
+import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import type { DexLiquidityData, PegSummaryCoin, StablecoinData, StablecoinMeta } from "@shared/types";
 import { MethodologyLabel } from "@/components/methodology-hint";
@@ -157,7 +158,9 @@ function HeroPriceContent({
       )}
       <div className="min-w-0">
         <div className="text-2xl font-bold font-mono tracking-tight">
-          {formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef)}
+          <span className={confidenceClass(coinData.priceConfidence)}>
+            {formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef)}
+          </span>
         </div>
         <p
           className={`text-sm font-mono ${isNavToken ? "text-green-700 dark:text-green-400" : deviationColorClass(Math.abs(deviationBps))}`}
