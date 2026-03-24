@@ -544,8 +544,10 @@ export const LENDING_PROTOCOL_ALLOWLIST = new Set([
   "liqwid",
   "lista-lending",
   "loopscale",
+  "more-markets",
   "navi-lending",
   "overnight-finance",
+  "smardex-usdn",
   "vesper",
 ]);
 
@@ -590,8 +592,10 @@ export const LENDING_PROTOCOL_LABELS: Record<string, string> = {
   "liqwid": "Liqwid",
   "lista-lending": "Lista Lending",
   "loopscale": "Loopscale",
+  "more-markets": "More Markets",
   "navi-lending": "NAVI Lending",
   "overnight-finance": "Overnight",
+  "smardex-usdn": "SmarDex USDN",
   "vesper": "Vesper",
 };
 
@@ -624,4 +628,5 @@ export const AUTO_LENDING_POOL_MAP: Record<string, string> = {
  */
 export const AUTO_LENDING_SAFETY_BYPASS_IDS = new Set([
   "u-united-stables", // U: explicitly requested inclusion despite D-grade score
+  "pusd-polaris", // Yield-bearing coin with missing report-card coverage; vetted Silo market keeps native yield visibility intact.
 ]);

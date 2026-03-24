@@ -1052,11 +1052,23 @@ describe("price-derived and auto-discovery yield paths", () => {
   });
 
   it("resolves price-derived APY for navToken coins from supply_history prices", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
       { match: "cache", rows: [] },
       { match: "yield_data", rows: [] },
       { match: "yield_history", rows: [] },
-      { match: "supply_history", rows: [], first: { price: 1.05 } },
+      {
+        match: "SELECT price, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
+        matchBinds: ["sdai-maker"],
+        rows: [],
+        first: { price: 1.05, snapshot_date: nowSec },
+      },
+      {
+        match: "FROM supply_history",
+        matchBinds: ["sdai-maker", nowSec - 45 * 86400, nowSec - 7 * 86400],
+        rows: [],
+        first: { price: 1.01, snapshot_date: nowSec - 30 * 86400 },
+      },
       { match: "depeg_events", rows: [] },
       { match: "dex_liquidity", rows: [] },
     ]);

@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.6`
+- **Current methodology version:** `v4.7`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -158,13 +158,13 @@ APY, base/reward split, pool TVL, and pool UUID are all taken directly from the 
 
 ### Tier 3: Price-Derived APY
 
-For `navToken` coins and explicit `PRICE_DERIVED_FALLBACK_IDS`. Derives APY from 30-day price appreciation in the existing `supply_history` table.
+For `navToken` coins and explicit `PRICE_DERIVED_FALLBACK_IDS`. Derives APY from price appreciation in the existing `supply_history` table using the oldest available anchor between 7 and 45 days.
 
 ```
-apy = ((price_now / price_30d_ago) ^ (365.25 / 30) - 1) * 100
+apy = ((price_now / price_anchor) ^ (365.25 / lookbackDays) - 1) * 100
 ```
 
-Zero new API calls — reuses cached price data. Falls through if no price history exists.
+Zero new API calls — reuses cached price data. Falls through if no price history exists or if the coin has fewer than 7 days of priced history.
 
 **Tier 3 as additional source:** For `navToken` and `PRICE_DERIVED_FALLBACK_IDS` coins, Tier 3 also runs when Tier 2 found sources but they all report 0% APY. This handles DL pools that exist but have stale/broken yield data (e.g., a tiny Aave lending market matched via Layer 3 symbol fallback). The price-derived source is added alongside the DL source, and `is_best` picks the higher-APY winner.
 
@@ -205,9 +205,9 @@ For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), 
 | Tier 1 | aave-v3, compound-v2, compound-v3, dolomite, sparklend, spark-savings, maple, yearn-finance |
 | Tier 2 | fluid-lending, euler-v2, venus-core-pool, kamino-lend, morpho-v1, morpho-blue, pendle, curve-llamalend, exactly, flux-finance, gains-network, lazy-summer-protocol, moonwell-lending, silo-v2 |
 | Tier 3 | justlend, openeden-usdo, multipli.fi, jupiter-lend, stables-labs-usdx, benqi-lending |
-| Tier 4 | radiant-v2, fraxlend-v2, clearpool, centrifuge, sturdy-v2, goldfinch, truefi, lagoon, liqwid, lista-lending, loopscale, navi-lending, overnight-finance, vesper |
+| Tier 4 | radiant-v2, fraxlend-v2, clearpool, centrifuge, sturdy-v2, goldfinch, truefi, lagoon, liqwid, lista-lending, loopscale, more-markets, navi-lending, overnight-finance, smardex-usdn, vesper |
 
-**Discovery logic:** Filters DL pools by `exposure === "single"`, `stablecoin === true`, project in allowlist, exact symbol match (case-insensitive). Picks highest TVL. Current quality gates require `apy >= 0.5` and `tvlUsd >= 500_000`.
+**Discovery logic:** Filters DL pools by `exposure === "single"`, `stablecoin === true`, project in allowlist, exact symbol match (case-insensitive). Picks highest TVL. Current quality gates require `apy >= 0.1` and `tvlUsd >= 100_000`.
 
 **Yield type:** `lending-opportunity` — distinguishes these from native yield coins on the frontend.
 

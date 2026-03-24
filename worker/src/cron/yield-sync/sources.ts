@@ -341,25 +341,36 @@ export async function getPriceDerivedApy(
   stablecoinId: string,
 ): Promise<number | null> {
   const now = Math.floor(Date.now() / 1000);
-  const thirtyDaysAgo = now - 30 * 86400;
+  const minLookbackSec = 7 * 86400;
+  const maxLookbackSec = 45 * 86400;
 
-  const [recentRow, oldRow] = await Promise.all([
+  const [recentRow, anchoredRow] = await Promise.all([
     db
       .prepare(
-        "SELECT price FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
+        "SELECT price, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
       )
       .bind(stablecoinId)
-      .first<{ price: number }>(),
+      .first<{ price: number; snapshot_date: number }>(),
     db
       .prepare(
-        "SELECT price FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL AND snapshot_date <= ? ORDER BY snapshot_date DESC LIMIT 1",
+        `SELECT price, snapshot_date
+         FROM supply_history
+         WHERE stablecoin_id = ?
+           AND price IS NOT NULL
+           AND snapshot_date BETWEEN ? AND ?
+         ORDER BY snapshot_date ASC
+         LIMIT 1`,
       )
-      .bind(stablecoinId, thirtyDaysAgo)
-      .first<{ price: number }>(),
+      .bind(stablecoinId, now - maxLookbackSec, now - minLookbackSec)
+      .first<{ price: number; snapshot_date: number }>(),
   ]);
 
-  if (!recentRow?.price || !oldRow?.price || oldRow.price <= 0) return null;
-  return computeApyFromPrice(recentRow.price, oldRow.price, 30);
+  if (!recentRow?.price || !anchoredRow?.price || anchoredRow.price <= 0) return null;
+
+  const lookbackDays = (recentRow.snapshot_date - anchoredRow.snapshot_date) / 86400;
+  if (!Number.isFinite(lookbackDays) || lookbackDays < 7) return null;
+
+  return computeApyFromPrice(recentRow.price, anchoredRow.price, lookbackDays);
 }
 
 export async function loadRiskFreeRateSnapshot(db: D1Database): Promise<YieldBenchmarkMeta> {

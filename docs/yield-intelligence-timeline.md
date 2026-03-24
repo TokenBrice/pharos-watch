@@ -1,6 +1,16 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v4.6` (2026-03-01 -> 2026-03-24).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v4.7` (2026-03-01 -> 2026-03-24).
+
+---
+
+## v4.7 - Early NAV fallback support and deeper long-tail lending coverage (Mar 24, 2026)
+
+**Commit:** `unreleased`
+
+- Price-derived APY now uses the oldest available 7-45 day price anchor instead of requiring a strict 30-day sample, improving early NAV-token coverage
+- Auto-discovered lending floors moved from `$500K / 0.5%` to `$100K / 0.1%` to capture still-meaningful long-tail markets
+- Added More Markets and SmarDex USDN to the curated lending allowlist, plus an explicit Polaris pUSD safety bypass for vetted yield-bearing coverage
 
 ---
 

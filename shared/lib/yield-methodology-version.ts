@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "4.6",
+  currentVersion: "4.7",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "4.7",
+    title: "Early NAV fallback support and deeper long-tail lending coverage",
+    date: "2026-03-24",
+    effectiveAt: 1774357200,
+    summary:
+      "Yield coverage widened again through lower but still curated lending floors, two additional protocol families, and price-derived fallbacks that can bootstrap younger NAV tokens before day 30.",
+    impact: [
+      "Auto-discovered lending opportunities now accept single-asset pools down to $100K TVL and 0.10% APY, capturing still-meaningful long-tail markets without opening full dust-pool coverage",
+      "The curated lending allowlist now includes More Markets and SmarDex USDN, while Polaris pUSD can bypass the report-card gate through an explicit vetted edge-case override",
+      "Price-derived APY now annualizes from the oldest available price anchor between 7 and 45 days instead of requiring a strict 30-day sample, improving early coverage for newer NAV tokens",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.6",
     title: "Rate-derived treasury expansion and broader lending discovery",

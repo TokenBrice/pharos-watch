@@ -855,11 +855,23 @@ describe("syncYieldData", () => {
   it("tries price-derived as additional source when DL returns 0% APY for navToken", async () => {
     // sDAI (navToken: true) gets a DL pool with 0% APY.
     // The resolve logic should also try price-derived and pick the non-zero source.
+    const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
       { match: "cache", rows: [] },
       { match: "yield_data", rows: [] },
       { match: "yield_history", rows: [] },
-      { match: "supply_history", rows: [], first: { price: 1.05 } },
+      {
+        match: "SELECT price, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
+        matchBinds: ["100"],
+        rows: [],
+        first: { price: 1.05, snapshot_date: nowSec },
+      },
+      {
+        match: "FROM supply_history",
+        matchBinds: ["100", nowSec - 45 * 86400, nowSec - 7 * 86400],
+        rows: [],
+        first: { price: 1.01, snapshot_date: nowSec - 30 * 86400 },
+      },
       { match: "depeg_events", rows: [] },
       { match: "dex_liquidity", rows: [] },
     ]);
@@ -910,6 +922,50 @@ describe("syncYieldData", () => {
     expect(priceDerivedRow?.boundValues?.[25]).toBe(1);
   });
 
+  it("uses the oldest available 7-45 day price anchor for young navToken coverage", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "yield_data", rows: [] },
+      { match: "yield_history", rows: [] },
+      {
+        match: "SELECT price, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
+        matchBinds: ["100"],
+        rows: [],
+        first: { price: 1.05, snapshot_date: nowSec },
+      },
+      {
+        match: "FROM supply_history",
+        matchBinds: ["100", nowSec - 45 * 86400, nowSec - 7 * 86400],
+        rows: [],
+        first: { price: 1.01, snapshot_date: nowSec - 10 * 86400 },
+      },
+      { match: "depeg_events", rows: [] },
+      { match: "dex_liquidity", rows: [] },
+    ]);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dl-stablecoin-pools") {
+        return {
+          value: JSON.stringify([]),
+          updatedAt: nowSec,
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    await syncYieldData(db);
+
+    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
+    const priceDerivedRow = writeStatements?.find(
+      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "price-derived",
+    );
+    expect(priceDerivedRow).toBeDefined();
+    expect(Number(priceDerivedRow?.boundValues?.[3])).toBeGreaterThan(0);
+  });
+
   it("computes trailing APY from source-specific history instead of mixed coin-level history", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
@@ -953,7 +1009,18 @@ describe("syncYieldData", () => {
           },
         ],
       },
-      { match: "supply_history", rows: [], first: { price: 1.05 } },
+      {
+        match: "SELECT price, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
+        matchBinds: ["100"],
+        rows: [],
+        first: { price: 1.05, snapshot_date: nowSec },
+      },
+      {
+        match: "FROM supply_history",
+        matchBinds: ["100", nowSec - 45 * 86400, nowSec - 7 * 86400],
+        rows: [],
+        first: { price: 1.01, snapshot_date: nowSec - 30 * 86400 },
+      },
       { match: "depeg_events", rows: [] },
       { match: "dex_liquidity", rows: [] },
     ]);
