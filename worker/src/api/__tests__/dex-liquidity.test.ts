@@ -85,6 +85,50 @@ describe("handleDexLiquidity", () => {
     expect(coin?.trendworthy).toBe(false);
   });
 
+  it("classifies strong measured liquidity and marks high-confidence snapshots trendworthy", async () => {
+    const db = mockD1([
+      {
+        match: "dex_liquidity",
+        rows: [makeDexLiquidityRow({
+          total_tvl_usd: 2_000_000,
+          balance_measured_tvl_usd: 1_900_000,
+          coverage_class: "primary",
+          coverage_confidence: 0.9,
+        })],
+      },
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const res = await handleDexLiquidity(db);
+    const body = (await res.json()) as Record<string, Record<string, unknown>>;
+    const coin = body["usdt-tether"];
+    expect(coin?.liquidityEvidenceClass).toBe("measured");
+    expect(coin?.hasMeasuredLiquidityEvidence).toBe(true);
+    expect(coin?.trendworthy).toBe(true);
+  });
+
+  it("classifies partial measured liquidity separately", async () => {
+    const db = mockD1([
+      {
+        match: "dex_liquidity",
+        rows: [makeDexLiquidityRow({
+          total_tvl_usd: 2_000_000,
+          balance_measured_tvl_usd: 900_000,
+          coverage_class: "mixed",
+          coverage_confidence: 0.8,
+        })],
+      },
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const res = await handleDexLiquidity(db);
+    const body = (await res.json()) as Record<string, Record<string, unknown>>;
+    const coin = body["usdt-tether"];
+    expect(coin?.liquidityEvidenceClass).toBe("partial_measured");
+    expect(coin?.hasMeasuredLiquidityEvidence).toBe(true);
+    expect(coin?.trendworthy).toBe(true);
+  });
+
   it("includes X-Data-Age header", async () => {
     const db = mockD1([
       { match: "dex_liquidity", rows: [row] },
@@ -162,6 +206,32 @@ describe("handleDexLiquidity", () => {
     const res = await handleDexLiquidity(db);
     expect(res.headers.get("Warning") ?? "").toContain("shows high quality drift");
     expect(res.headers.get("Warning") ?? "").toContain("qualityDrift=high");
+  });
+
+  it("adds a failure warning when the latest liquidity cron run errored", async () => {
+    const db = mockD1([
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+      {
+        match: "cron_runs",
+        rows: [],
+        first: {
+          status: "error",
+          metadata: JSON.stringify({
+            failedSources: ["defillama-yields"],
+            sourceCoverage: {
+              nearValueGuard: true,
+            },
+          }),
+        },
+      },
+      { match: "dex_liquidity", rows: [row] },
+    ]);
+
+    const res = await handleDexLiquidity(db);
+    expect(res.headers.get("Warning") ?? "").toContain("run failed");
+    expect(res.headers.get("Warning") ?? "").toContain("failedSources=defillama-yields");
+    expect(res.headers.get("Warning") ?? "").toContain("nearValueGuard");
   });
 
   it("normalizes legacy topPools source values and uses latest successful cron timestamp for freshness", async () => {

@@ -51,6 +51,7 @@ describe("api endpoint registry", () => {
     expect(getProbePaths("manual")).toEqual([
       "/api/trigger-digest",
       "/api/reset-blacklist-sync",
+      "/api/remediate-blacklist-amount-gaps",
       "/api/backfill-depegs",
       "/api/backfill-supply-history",
       "/api/backfill-cg-prices",
@@ -140,6 +141,13 @@ describe("api endpoint registry", () => {
         confirm: "Fetch sync state debug dump?",
         destructive: false,
         method: "GET",
+      },
+      {
+        label: "Remediate Blacklist Gaps",
+        path: "/api/remediate-blacklist-amount-gaps",
+        confirm: "Run targeted blacklist amount-gap remediation? Prefer dry-run first.",
+        destructive: false,
+        method: "POST",
       },
       {
         label: "Backfill Depegs",

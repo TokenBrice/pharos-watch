@@ -87,6 +87,7 @@ import { convertToGtNewPools, extractPriceObservations } from "../../lib/dex-api
 import { fetchAerodromeData, fetchDataSources, fetchUniV3Data } from "../dex-liquidity/fetch-primary";
 import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";
 import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
+import { computeStablecoinScores } from "../dex-liquidity/scoring";
 import { filterPrimaryPoolsPreferDirectApi } from "../dex-liquidity/orchestrator";
 
 const db = {
@@ -346,6 +347,172 @@ describe("syncDexLiquidity", () => {
     expect(warnSpy).toHaveBeenCalledWith(
       "[dex-liquidity] Stablecoins cache unavailable for tracked quote pricing; using reference-only fallback",
     );
+  });
+
+  it("records drift and evidence telemetry when previous run metadata exists", async () => {
+    vi.mocked(fetchDataSources).mockResolvedValueOnce({
+      pools: [],
+      dexProjects: new Set<string>(),
+      protocolTvlCaps: new Map<string, number>([["curve", 50]]),
+      curveResponses: [],
+      graphApiKey: "graph-key",
+      dlYieldsAvailable: true,
+      dlProtocolsAvailable: true,
+    });
+    vi.mocked(fetchFluidPools).mockResolvedValueOnce({
+      pools: [{
+        source: "fluid",
+        chain: "Ethereum",
+        poolAddress: "0xfluid-pool",
+        poolType: "fluid",
+        tokens: [
+          { address: "0xusdc", symbol: "USDC", decimals: 6 },
+          { address: "0xusdt", symbol: "USDT", decimals: 6 },
+        ],
+        price: 1,
+        tvlUsd: 100_000,
+        volume24hUsd: 10_000,
+        feeRate: 0.0001,
+        balances: [50_000_000_000, 50_000_000_000],
+      }],
+      ok: true,
+      degraded: false,
+      errors: [],
+    });
+    vi.mocked(extractPriceObservations).mockReturnValueOnce(new Map([
+      ["usdc-circle", [{
+        sourceFamily: "gecko_terminal",
+        price: 1,
+        tvl: 100,
+        chain: "Ethereum",
+        protocol: "curve",
+      }]],
+    ]));
+    vi.mocked(computeStablecoinScores).mockResolvedValueOnce({
+      scores: new Map([
+        ["usdc-circle", {
+          coverageClass: "fallback",
+          coverageConfidence: 0.55,
+          tvl: 100,
+          balanceMeasuredTvlUsd: 0,
+          sourceMix: { gecko_terminal: { poolCount: 1, tvlUsd: 100 } },
+        }],
+      ]),
+      globalAgg: { totalTvl: 100 },
+      retainedPoolsByStablecoin: new Map([
+        ["usdc-circle", [{
+          source: "gecko_terminal",
+          tvlUsd: 100,
+          project: "curve",
+          extra: { measurement: { balanceMeasured: false } },
+        }]],
+      ]),
+      tvlStabilityMap: new Map(),
+      diagnostics: {
+        protocolCapReductions: { cappedPoolCount: 1, cappedProtocols: 1, reducedTvlUsd: 50 },
+      },
+    } as Awaited<ReturnType<typeof computeStablecoinScores>>);
+
+    const driftDb = {
+      prepare(sql: string) {
+        if (sql.includes("COUNT(*) as cnt FROM dex_liquidity WHERE stablecoin_id != '__global__'")) {
+          return { first: async () => ({ cnt: 5 }) };
+        }
+        if (sql.includes("SELECT total_tvl_usd FROM dex_liquidity WHERE stablecoin_id = '__global__'")) {
+          return { first: async () => ({ total_tvl_usd: 100 }) };
+        }
+        if (sql.includes("GROUP BY coverage_class")) {
+          return { all: async () => ({ results: [] }) };
+        }
+        if (sql.includes("ORDER BY total_tvl_usd DESC")) {
+          return { all: async () => ({ results: [{ stablecoin_id: "usdc-circle", total_tvl_usd: 100 }] }) };
+        }
+        if (sql.includes("SELECT metadata") && sql.includes("cron_runs")) {
+          return {
+            first: async () => ({
+              metadata: JSON.stringify({
+                stagedPoolsMerged: 10,
+                stagedPoolsSkipped: 0,
+                sourceCoverage: {
+                  priceObservationCoins: 5,
+                  measuredBalanceCoveragePct: 0.5,
+                  weakCoverageCoins: 0,
+                },
+              }),
+            }),
+          };
+        }
+        if (sql.includes("WHERE stablecoin_id IN")) {
+          return {
+            bind: () => ({
+              all: async () => ({
+                results: [{
+                  stablecoin_id: "usdc-circle",
+                  pool_count: 5,
+                  coverage_confidence: 0.9,
+                  total_tvl_usd: 100,
+                  balance_measured_tvl_usd: 50,
+                }],
+              }),
+            }),
+          };
+        }
+        return {
+          bind: () => ({
+            all: async () => ({ results: [] }),
+            first: async () => ({ cnt: 0 }),
+            run: async () => ({ success: true, meta: {} }),
+          }),
+          all: async () => ({ results: [] }),
+          first: async () => ({ cnt: 0 }),
+          run: async () => ({ success: true, meta: {} }),
+        };
+      },
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    const result = await syncDexLiquidity(driftDb, "graph-key");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      sourceCoverage?: {
+        qualityDriftSeverity?: string;
+        qualityDriftFlags?: string[];
+        coinsWithoutMeasuredBalances?: number;
+        coinsGtOnly?: number;
+        coinsCrawlerOnly?: number;
+        coinsPriceOnlyNoMeasuredLiquidity?: number;
+        protocolCapReductions?: {
+          topProtocols?: Array<{ protocol: string; reducedTvlUsd: number }>;
+          topStablecoins?: Array<{ stablecoinId: string; reducedTvlUsd: number }>;
+        };
+        topAssetCoverageDeltas?: Array<{ stablecoinId: string; poolCountPctDelta: number | null }>;
+      };
+    };
+
+    expect(metadata.sourceCoverage?.qualityDriftSeverity).toBe("high");
+    expect(metadata.sourceCoverage?.qualityDriftFlags).toEqual(expect.arrayContaining([
+      "price-observation-drop",
+      "measured-balance-drop",
+      "watchlist-pool-drop:usdc-circle",
+    ]));
+    expect(metadata.sourceCoverage?.coinsWithoutMeasuredBalances).toBe(1);
+    expect(metadata.sourceCoverage?.coinsGtOnly).toBe(1);
+    expect(metadata.sourceCoverage?.coinsCrawlerOnly).toBe(1);
+    expect(metadata.sourceCoverage?.coinsPriceOnlyNoMeasuredLiquidity).toBe(1);
+    expect(metadata.sourceCoverage?.protocolCapReductions?.topProtocols).toEqual([
+      expect.objectContaining({ protocol: "curve", reducedTvlUsd: 50 }),
+    ]);
+    expect(metadata.sourceCoverage?.protocolCapReductions?.topStablecoins).toEqual([
+      expect.objectContaining({ stablecoinId: "usdc-circle", reducedTvlUsd: 50 }),
+    ]);
+    expect(metadata.sourceCoverage?.topAssetCoverageDeltas).toEqual([
+      expect.objectContaining({ stablecoinId: "usdc-circle", poolCountPctDelta: -0.8 }),
+      expect.objectContaining({ stablecoinId: "usdt-tether", poolCountPctDelta: null }),
+      expect.objectContaining({ stablecoinId: "dai-makerdao", poolCountPctDelta: null }),
+      expect.objectContaining({ stablecoinId: "usds-sky", poolCountPctDelta: null }),
+      expect.objectContaining({ stablecoinId: "usde-ethena", poolCountPctDelta: null }),
+    ]);
   });
 });
 
