@@ -67,6 +67,13 @@ const CollateralUsageSection = dynamic(
   },
 );
 
+const DistributionSection = dynamic(
+  () => import("@/components/stablecoin-detail/distribution-section").then((mod) => mod.DistributionSection),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
+  },
+);
+
 const SafetyScoreHistorySection = dynamic(
   () => import("@/components/stablecoin-detail/safety-score-history-section").then((mod) => mod.SafetyScoreHistorySection),
   {
@@ -79,6 +86,7 @@ const DETAIL_SECTIONS = [
   { id: "overview", label: "Overview" },
   { id: "price-transparency", label: "Price Sources" },
   { id: "chart", label: "Chart" },
+  { id: "distribution", label: "Distribution" },
   { id: "info", label: "Info" },
   { id: "collateral-usage", label: "Collateral Usage" },
   { id: "yield", label: "Yield" },
@@ -282,6 +290,12 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
 
       <section id="chart">
         <McapChart data={viewModel.supplyHistory} />
+      </section>
+
+      <section id="distribution">
+        <SectionErrorBoundary name="distribution">
+          <DistributionSection stablecoinId={viewModel.id} />
+        </SectionErrorBoundary>
       </section>
 
       <section id="info" className="space-y-6">
