@@ -422,6 +422,10 @@ export function HomepageClient() {
 
       {startHereReady && shouldShowStartHereCallout ? <StartHereCallout onOpenStartHere={retireCallout} /> : null}
 
+      <SectionErrorBoundary name="highlights">
+        <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
+      </SectionErrorBoundary>
+
       <SectionErrorBoundary name="table">
         <section>
           <div className="flex items-center justify-between mb-4">
@@ -459,10 +463,6 @@ export function HomepageClient() {
           </div>
           <PegBrowseSection pegs={ACTIVE_PEGS} pegCoinCount={pegCoinCount} />
         </section>
-      </SectionErrorBoundary>
-
-      <SectionErrorBoundary name="highlights">
-        <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
       </SectionErrorBoundary>
 
       <SectionErrorBoundary name="digest">
