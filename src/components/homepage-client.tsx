@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Compass, Megaphone, Search } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Compass, Megaphone, Search, SlidersHorizontal } from "lucide-react";
 import { useDexLiquidity, usePegSummary, useReportCards, useStressSignals } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
@@ -318,7 +318,7 @@ function HomepageSectionBand({
 export function HomepageClient() {
   const { isReady: startHereReady, shouldShow: shouldShowStartHereCallout, retireCallout } = useStartHereCallout();
   const [showCampaignCallout, setShowCampaignCallout] = useState(true);
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const { data, isLoading, error: pricesError, dataUpdatedAt, refetch: refetchPrices } = useStablecoins();
   const { data: logos } = useLogos();
   const { data: pegSummaryData, dataUpdatedAt: pegUpdatedAt, error: pegError, refetch: refetchPeg } = usePegSummary();
@@ -432,7 +432,23 @@ export function HomepageClient() {
 
       <SectionErrorBoundary name="table">
         <section>
-          <h2 className="mb-4 text-xl font-semibold tracking-tight text-foreground">Key Stablecoin Data</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold tracking-tight text-foreground">Key Stablecoin Data</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowFilters((prev) => !prev)}
+              className="gap-1.5 text-xs text-muted-foreground"
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              {showFilters ? "Hide filters" : "Filters"}
+              {filters.hasFilters && (
+                <span className="inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold size-4">
+                  {filters.activeFilters.length}
+                </span>
+              )}
+            </Button>
+          </div>
           {showFilters && <FilterBar {...filters} />}
           <div className={showFilters ? "mt-6" : ""}>
             <StablecoinTable
