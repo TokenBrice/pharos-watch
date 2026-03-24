@@ -386,15 +386,6 @@ export function HomepageClient() {
     return () => window.clearTimeout(timeoutId);
   }, []);
 
-  // Keyboard shortcut to toggle filters
-  useEffect(() => {
-    function handleToggleFilters() {
-      setShowFilters((prev) => !prev);
-    }
-    window.addEventListener("toggle-filters", handleToggleFilters);
-    return () => window.removeEventListener("toggle-filters", handleToggleFilters);
-  }, []);
-
   return (
     <div className="space-y-6">
       <DataLiveRegion />

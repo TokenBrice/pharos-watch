@@ -20,7 +20,6 @@ const SHORTCUTS: Shortcut[] = [
   { keys: ["Enter"], description: "Select/open item", category: "Navigation" },
   { keys: ["T"], description: "Toggle theme", category: "Actions" },
   { keys: ["S"], description: "Focus stablecoin table", category: "Table" },
-  { keys: ["F"], description: "Toggle filters", category: "Table" },
 ];
 
 function KeyCombo({ keys }: { keys: string[] }) {
@@ -102,12 +101,10 @@ export function useGlobalShortcuts({
   onToggleTheme,
   onFocusSearch,
   onFocusTable,
-  onToggleFilters,
 }: {
   onToggleTheme?: () => void;
   onFocusSearch?: () => void;
   onFocusTable?: () => void;
-  onToggleFilters?: () => void;
 }) {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -138,16 +135,10 @@ export function useGlobalShortcuts({
             onFocusTable?.();
           }
           break;
-        case "f":
-          if (!e.ctrlKey && !e.metaKey && !e.altKey) {
-            e.preventDefault();
-            onToggleFilters?.();
-          }
-          break;
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onToggleTheme, onFocusSearch, onFocusTable, onToggleFilters]);
+  }, [onToggleTheme, onFocusSearch, onFocusTable]);
 }
