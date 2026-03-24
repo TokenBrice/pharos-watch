@@ -9,8 +9,8 @@ describe("handleStabilityIndex contract tests", () => {
   const sampleRow = {
     stored_at: nowSec - 300,
     score: 72.5,
-    band: "Stable",
-    components: JSON.stringify({ pricePeg: 85, supplyMomentum: 60 }),
+    band: "TREMOR",
+    components: JSON.stringify({ severity: 12.5, breadth: 10.2, stressBreadth: 3.1, trend: -1.4 }),
     input_snapshot: JSON.stringify({ totalMcapUsd: 1e11, contributors: [] }),
     methodology_version: "3.0",
   };
@@ -18,8 +18,8 @@ describe("handleStabilityIndex contract tests", () => {
   const historyRow = {
     computed_at: yesterdayMidnight,
     score: 71.0,
-    band: "Stable",
-    components: JSON.stringify({ pricePeg: 83, supplyMomentum: 59 }),
+    band: "TREMOR",
+    components: JSON.stringify({ severity: 14.2, breadth: 9.7, stressBreadth: 2.4, trend: -0.9 }),
     input_snapshot: null,
     methodology_version: "2.1",
   };
@@ -104,5 +104,52 @@ describe("handleStabilityIndex contract tests", () => {
     expect(body.current.methodologyVersion).toBe("1.3");
     expect(body.history[0]?.methodologyVersion).toBe("1.3");
     expect(body.methodology.version).toBe("1.3");
+  });
+
+  it("replaces an existing today row with the synthetic today average instead of duplicating it", async () => {
+    const todayMidnight = nowSec - (nowSec % 86400);
+    const db = mockD1([
+      {
+        match: "WHERE stored_at >= ?",
+        rows: [],
+        first: { avg: 80.6 },
+      },
+      {
+        match: "WHERE stored_at > ?",
+        rows: [],
+        first: { avg: 79.8 },
+      },
+      {
+        match: "stability_index_samples",
+        rows: [sampleRow],
+        first: sampleRow,
+      },
+      {
+        match: "stability_index ORDER BY computed_at DESC",
+        rows: [
+          {
+            computed_at: todayMidnight,
+            score: 78.1,
+            band: "STEADY",
+            components: JSON.stringify({ severity: 10, breadth: 8, stressBreadth: 2, trend: 0.1 }),
+            input_snapshot: null,
+            methodology_version: "3.0",
+          },
+          historyRow,
+        ],
+      },
+    ]);
+
+    const res = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as {
+      history: Array<{ date: number; score: number; band: string }>;
+    };
+
+    expect(body.history.filter((point) => point.date === todayMidnight)).toEqual([
+      { date: todayMidnight, score: 80.6, band: "STEADY", methodologyVersion: "3.0" },
+    ]);
+    expect(body.history).toHaveLength(2);
   });
 });

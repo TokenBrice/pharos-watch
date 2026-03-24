@@ -23,9 +23,9 @@ function getBandColor(band: string): string {
 
 /** Get position percentage for thermometer (0 = BEDROCK/healthy, 100 = MELTDOWN/crisis) */
 function getThermometerPosition(score: number): number {
-  // PSI ranges from 0 (best) to 100 (worst)
-  // Position is directly proportional to score
-  return Math.min(100, Math.max(0, score));
+  // PSI ranges from 0 (worst) to 100 (best)
+  // Thermometer runs left (healthy) -> right (stress), so invert the score.
+  return Math.min(100, Math.max(0, 100 - score));
 }
 
 export function StabilityIndexCard({
@@ -35,8 +35,8 @@ export function StabilityIndexCard({
 }) {
   const bandColor = getBandColor(data.psiBand);
   const deltaColor =
-    data.delta24h > 0 ? "#ef4444" : data.delta24h < 0 ? "#22c55e" : "#8b8fa3";
-  // Higher PSI = worse stability, so positive delta = red (worsening), negative = green (improving)
+    data.delta24h > 0 ? "#22c55e" : data.delta24h < 0 ? "#ef4444" : "#8b8fa3";
+  // Higher PSI = healthier conditions, so positive delta = green (improving), negative = red (worsening)
   const deltaSign = data.delta24h > 0 ? "+" : "";
   
   // Calculate position for thermometer
@@ -94,10 +94,10 @@ export function StabilityIndexCard({
       >
         <div style={{ display: "flex", gap: 16 }}>
           <span style={{ color: TEXT_SECONDARY }}>
-            ATH: <span style={{ color: SEMANTIC_COLORS.negative, fontWeight: 600 }}>{data.allTimeHigh.toFixed(1)}</span>
+            ATH: <span style={{ color: SEMANTIC_COLORS.positive, fontWeight: 600 }}>{data.allTimeHigh.toFixed(1)}</span>
           </span>
           <span style={{ color: TEXT_SECONDARY }}>
-            ATL: <span style={{ color: SEMANTIC_COLORS.positive, fontWeight: 600 }}>{data.allTimeLow.toFixed(1)}</span>
+            ATL: <span style={{ color: SEMANTIC_COLORS.negative, fontWeight: 600 }}>{data.allTimeLow.toFixed(1)}</span>
           </span>
         </div>
         {data.flightToQuality && (

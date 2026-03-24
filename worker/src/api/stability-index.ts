@@ -14,6 +14,7 @@ import {
   getPsiMethodologyVersionAt,
 } from "@shared/lib/stability-index-version";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
+import { upsertPsiHistoryPoint } from "@shared/lib/psi-view-model";
 
 export const handleStabilityIndex = withErrorHandler("stability-index", async (db: D1Database, url: URL): Promise<Response> => {
   const detail = url.searchParams.get("detail") === "true";
@@ -102,13 +103,14 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
         : results[0]
           ? resolveMethodologyVersion(results[0].methodology_version, results[0].computed_at)
           : getPsiMethodologyVersionAt(todayMidnight);
-    // Prepend to newest-first array (today is the newest)
-    history.unshift({
+    const todayPoint = {
       date: todayMidnight,
       score: todayScore,
       band: todayBand,
       methodologyVersion: todayMethodologyVersion,
-    } as typeof history[number]);
+    } as typeof history[number];
+    const normalizedHistory = upsertPsiHistoryPoint(history, todayPoint);
+    history.splice(0, history.length, ...normalizedHistory);
   }
 
   const computedAt = latestSample ? latestSample.stored_at : (results[0]?.computed_at ?? now);

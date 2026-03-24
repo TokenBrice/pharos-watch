@@ -13,6 +13,11 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { formatCurrency, getNetColor, getNetPrefix } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
+import {
+  getDisplayedPsi,
+  getPsiBandStreak,
+  getPsiCompletedDayPoint,
+} from "@shared/lib/psi-view-model";
 import { THREAT_BAND_COLORS, type ThreatBand } from "@shared/lib/classification";
 
 type TrendDirection = "up" | "down" | "flat";
@@ -356,8 +361,9 @@ export function KpiBar() {
   }, [flowData]);
 
   const psiCurrent = psiData?.current;
-  const psiScoreNum = psiCurrent ? (psiCurrent.avg24h ?? psiCurrent.score) : null;
-  const psiBand = psiCurrent ? (psiCurrent.avg24hBand ?? psiCurrent.band) : "";
+  const displayedPsi = psiCurrent ? getDisplayedPsi(psiCurrent) : null;
+  const psiScoreNum = displayedPsi?.score ?? null;
+  const psiBand = displayedPsi?.band ?? "";
   const psiDayAnchor = psiCurrent?.computedAt ?? null;
   const psiColorClass = PSI_BAND_CLASSES[psiBand as ConditionBand] ?? "";
   const hasStablecoinsData = !!stablecoinsData?.peggedAssets;
@@ -397,18 +403,16 @@ export function KpiBar() {
       return { psiDaysInBand: 0, psiDelta24h: null, psiDelta7d: null, psiDelta30d: null };
     }
 
-    let days = 1;
-    const todayMidnight = psiDayAnchor - (psiDayAnchor % 86400);
-    for (const point of psiData.history) {
-      if (point.date >= todayMidnight) continue; // skip today's entry, already counted
-      if (point.band === psiBand) days++;
-      else break;
-    }
+    const previousDay = getPsiCompletedDayPoint(psiData.history, psiDayAnchor, 1);
+    const previousWeek = getPsiCompletedDayPoint(psiData.history, psiDayAnchor, 7);
+    const previousMonth = getPsiCompletedDayPoint(psiData.history, psiDayAnchor, 30);
 
-    const d24h = psiData.history.length > 0 ? psiScoreNum - psiData.history[0].score : null;
-    const d7d = psiData.history.length >= 7 ? psiScoreNum - psiData.history[6].score : null;
-    const d30d = psiData.history.length >= 30 ? psiScoreNum - psiData.history[29].score : null;
-    return { psiDaysInBand: days, psiDelta24h: d24h, psiDelta7d: d7d, psiDelta30d: d30d };
+    return {
+      psiDaysInBand: getPsiBandStreak(psiData.history, psiDayAnchor, psiBand),
+      psiDelta24h: previousDay ? psiScoreNum - previousDay.score : null,
+      psiDelta7d: previousWeek ? psiScoreNum - previousWeek.score : null,
+      psiDelta30d: previousMonth ? psiScoreNum - previousMonth.score : null,
+    };
   }, [psiBand, psiData, psiDayAnchor, psiScoreNum]);
 
   const dewsBandCounts = useMemo(() => {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { deriveStablecoinOgCardData } from "../og";
 import { StablecoinCard } from "../../lib/og-templates/stablecoin-card";
+import { StabilityIndexCard } from "../../lib/og-templates/stability-index-card";
 
 describe("stablecoin OG card data", () => {
   it("marks unavailable 24h volume as null", () => {
@@ -65,5 +66,56 @@ describe("stablecoin OG card data", () => {
     expect(markup).toContain("7D FLOW");
     expect(markup).toContain("PEG SCORE");
     expect(markup).toContain("BACKING");
+  });
+});
+
+describe("stability index OG card", () => {
+  const baseData = {
+    psiBand: "BEDROCK",
+    sparklineData: [90, 92, 94],
+    bands: [
+      { name: "BEDROCK", active: true },
+      { name: "STEADY", active: false },
+      { name: "TREMOR", active: false },
+      { name: "FRACTURE", active: false },
+      { name: "CRISIS", active: false },
+      { name: "MELTDOWN", active: false },
+    ],
+    avg7d: 91.2,
+    allTimeHigh: 97.5,
+    allTimeLow: 11.4,
+    flightToQuality: false,
+    flightIntensity: null,
+  };
+
+  it("places healthy scores near the healthy end of the thermometer", () => {
+    const markup = renderToStaticMarkup(
+      <StabilityIndexCard
+        data={{
+          ...baseData,
+          psiScore: 92,
+          delta24h: 1.3,
+        }}
+      />,
+    );
+
+    expect(markup).toContain("left:8%");
+    expect(markup).toContain("color:#22c55e");
+  });
+
+  it("places stressed scores near the stressed end of the thermometer", () => {
+    const markup = renderToStaticMarkup(
+      <StabilityIndexCard
+        data={{
+          ...baseData,
+          psiScore: 15,
+          psiBand: "MELTDOWN",
+          delta24h: -2.8,
+        }}
+      />,
+    );
+
+    expect(markup).toContain("left:85%");
+    expect(markup).toContain("color:#ef4444");
   });
 });

@@ -24,6 +24,11 @@ import { formatChartDate, formatCurrency, formatScore } from "@shared/lib/format
 import { useStabilityIndexDetail, type StabilityContributor } from "@/hooks/api-hooks";
 import { PsiLighthouse } from "@/components/stability-index";
 import { PSI_BAND_CLASSES, PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
+import {
+  getDisplayedPsi,
+  getPsiBandStreak,
+  getPsiCompletedDayPoint,
+} from "@shared/lib/psi-view-model";
 import { trackEvent } from "@/lib/analytics";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
@@ -579,18 +584,7 @@ export function StabilityIndexClient() {
 
   const daysInBand = useMemo(() => {
     if (!current || !history?.length) return 0;
-    const currentBand = current.avg24hBand ?? current.band;
-    // History is newest-first; count consecutive days with same band
-    let count = 0;
-    for (const point of history) {
-      if (point.band === currentBand) {
-        count++;
-      } else {
-        break;
-      }
-    }
-    // Add 1 for today (current)
-    return count + 1;
+    return getPsiBandStreak(history, current.computedAt, getDisplayedPsi(current).band);
   }, [current, history]);
 
   const chartData = useMemo(() => {
@@ -688,10 +682,9 @@ export function StabilityIndexClient() {
     );
   }
 
-  const { score, band, avg24h, avg24hBand, components } = data.current;
-  const displayScore = avg24h ?? score;
-  const displayBand = avg24hBand ?? band;
-  const yesterday = data.history.length > 0 ? data.history[0] : null;
+  const { components } = data.current;
+  const { score: displayScore, band: displayBand } = getDisplayedPsi(data.current);
+  const yesterday = getPsiCompletedDayPoint(data.history, data.current.computedAt, 1);
   const delta = yesterday ? Math.round((displayScore - yesterday.score) * 10) / 10 : null;
   const colorClass = PSI_BAND_CLASSES[displayBand as ConditionBand] ?? "text-foreground";
   const hexColor = PSI_HEX_COLORS[displayBand as ConditionBand] ?? "#888";

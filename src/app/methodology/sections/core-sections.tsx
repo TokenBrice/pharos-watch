@@ -78,6 +78,11 @@ export function CoreMethodologySections() {
                   value:
                     "Returns null when market-cap input is missing/<=0; the cron also skips publication when active-depeg inputs are unavailable, and the API serves the last valid value",
                 },
+                {
+                  label: "Historical replay",
+                  value:
+                    "Backfills use same-day supply_history prices when available, then fall back to peak event deviation only for missing historical price coverage",
+                },
               ]}
             />
           </div>
@@ -220,6 +225,11 @@ export function CoreMethodologySections() {
                 <li>
                   <span className="text-foreground font-medium">Per-coin deduplication:</span> active events are grouped
                   by coin; each coin contributes once using the worst current deviation.
+                </li>
+                <li>
+                  <span className="text-foreground font-medium">Historical rebuild parity:</span> completed-day backfills
+                  replay same-day deviation from `supply_history.price` when possible, with peak-deviation fallback only
+                  when historical day prices are unavailable.
                 </li>
                 <li>
                   <span className="text-foreground font-medium">Age-aware depreciation:</span> fresh depegs get full

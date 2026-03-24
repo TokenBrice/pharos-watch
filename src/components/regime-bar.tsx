@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useStabilityIndex } from "@/hooks/api-hooks";
 import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
+import { getDisplayedPsi, getPsiBandStreak } from "@shared/lib/psi-view-model";
 import { cn } from "@/lib/utils";
 
 /** Persistent 3px bar at the top of every page, colored by current PSI band. */
@@ -13,8 +14,9 @@ export function RegimeBar() {
   const current = psiData?.current;
   if (!current) return null;
 
-  const band = (current.avg24hBand ?? current.band) as ConditionBand;
-  const score = current.avg24h ?? current.score;
+  const displayedPsi = getDisplayedPsi(current);
+  const band = displayedPsi.band as ConditionBand;
+  const score = displayedPsi.score;
   const color = PSI_HEX_COLORS[band];
   const isElevated = band === "FRACTURE" || band === "CRISIS" || band === "MELTDOWN";
 
@@ -22,16 +24,9 @@ export function RegimeBar() {
   const useDarkText = band === "BEDROCK" || band === "STEADY";
 
   // Walk history to compute days in current band
-  const daysInBand = (() => {
-    const history = psiData?.history;
-    if (!history?.length) return null;
-    let count = 0;
-    for (let i = history.length - 1; i >= 0; i--) {
-      if (history[i].band === band) count++;
-      else break;
-    }
-    return count || null;
-  })();
+  const daysInBand = psiData?.history?.length
+    ? getPsiBandStreak(psiData.history, current.computedAt, band)
+    : null;
 
   return (
     <div

@@ -46,6 +46,8 @@ The cron computes **live deviation** from the current stablecoins snapshot price
 
 For **already-open depegs only**, if the current stablecoins snapshot temporarily lacks a usable positive price, PSI falls back to the last replay-safe positive `price_cache` entry as long as it is no older than 6 hours. This preserves contributor continuity through transient price-validation gaps without anchoring PSI to arbitrarily stale prices.
 
+The **historical admin replay** now mirrors that recovery-sensitive behavior more closely. When rebuilding a prior UTC day, it first uses same-day `supply_history.price` to derive replayed deviation, then falls back to `peak_deviation_bps` only when a usable historical day price is unavailable. This keeps sharp crisis windows intact while avoiding permanent peak-anchoring on recovery days that still had valid historical price coverage.
+
 ### Depreciation
 
 Chronically depegged coins have their severity and breadth contributions reduced over time to prevent zombie stablecoins from permanently dominating the score.
@@ -119,6 +121,7 @@ If the active-depeg query is unavailable, the cron fails closed and does not pub
 
 - **30-min samples**: `computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` — runs every **30 minutes** (`10,40 * * * *`) after `compute-dews` on the shared half-hourly lane. Computes severity/breadth from active depegs, stress breadth from DEWS, and trend from 7-day market cap change. If DEWS input is unavailable, the run records `dewsUnavailable=true` in `input_snapshot`, defaults stress breadth to 0 for continuity, and returns cron `status: "degraded"`. If the active-depeg query itself is unavailable, the run records that dependency loss in metadata, skips the sample entirely, and leaves the last valid stored PSI untouched. For already-open depegs whose current stablecoins snapshot price is temporarily missing, the cron can reuse a replay-safe positive `price_cache` price if it is at most 6 hours old; otherwise that coin is skipped for that sample. If total market cap input is missing/zero, PSI compute returns `null`, the cron skips writing that sample, and the API continues serving the last valid stored value. Samples are stored in `stability_index_samples` (migration 0026) and pruned after 90 days.
 - **Daily aggregation**: `snapshotPsiDaily()` in `worker/src/cron/snapshot-psi.ts` — runs daily at **08:00 UTC**. Averages all 30-minute samples from the previous UTC day and stores one row in the `stability_index` table using `INSERT OR REPLACE` on the midnight-keyed `computed_at`. If the prior UTC day has zero samples, the cron returns `status: "degraded"` with `reason: "no-samples-for-yesterday"` and skips the write.
+- **Historical admin backfill**: `handleBackfillStabilityIndex()` replays completed UTC days only. The replay path now bounds market-cap denominators to the PSI-eligible universe, derives same-day depeg severity from `supply_history.price` when available (falling back to `peak_deviation_bps` only for missing/invalid historical prices), and, for methodology `v3.0+`, derives historical `stressBreadth` from same-day `stress_signal_history` warning bands (`ALERT`, `WARNING`, `DANGER`). Live PSI sample semantics are unchanged.
 - **Pure compute**: `computeStabilityIndex()` in `worker/src/lib/stability-index.ts` — stateless, deterministic
 - **Tables**: `stability_index_samples` (migration 0026, columns added by 0035) — per-sample: `stored_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON), `methodology_version`. `stability_index` (migration 0022, columns added by 0035) — daily averages: `computed_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON), `methodology_version`
 
@@ -146,7 +149,7 @@ The daily digest cron (08:05 UTC) queries the latest two stability index rows an
 | `worker/src/lib/stability-index.ts` | Pure compute function, band definitions, colors |
 | `worker/src/cron/stability-index.ts` | 30-minute cron job |
 | `worker/src/api/stability-index.ts` | API endpoint |
-| `worker/src/api/backfill-stability-index.ts` | Admin backfill (replays formula over historical data) |
+| `worker/src/api/backfill-stability-index.ts` | Admin backfill (replays formula over completed UTC days only, using the PSI-eligible supply universe plus same-day historical price replay where available) |
 | `src/components/stability-index.tsx` | Homepage widget + lighthouse SVG |
 | `src/app/stability-index/client.tsx` | Full page with charts and methodology |
 | `src/hooks/api-hooks.ts` | TanStack Query hook exports for `useStabilityIndex()` and `useStabilityIndexDetail()` |

@@ -10,6 +10,7 @@ import { SECONDS } from "../lib/time-constants";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
 import { getConditionBand } from "../lib/stability-index";
+import { getDisplayedPsi } from "@shared/lib/psi-view-model";
 import { getCache, setCache } from "../lib/db-cache";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import {
@@ -532,10 +533,17 @@ export async function generateDailyDigest(
     ? Math.round(avg24hRow.avg * 10) / 10
     : null;
 
-  const displayScore = avg24h ?? currentPsiSource?.score ?? null;
-  const displayBand = avg24h != null
-    ? getConditionBand(avg24h)
-    : currentPsiSource?.band ?? null;
+  const displayPsi = currentPsiSource
+    ? getDisplayedPsi({
+      score: currentPsiSource.score,
+      band: currentPsiSource.band,
+      avg24h: avg24h ?? undefined,
+      avg24hBand: avg24h != null ? getConditionBand(avg24h) : undefined,
+      computedAt: nowSec,
+    })
+    : null;
+  const displayScore = displayPsi?.score ?? null;
+  const displayBand = displayPsi?.band ?? null;
 
   let parsedComponents: { severity: number; breadth: number; stressBreadth?: number; trend: number } | null = null;
   if (currentPsiSource) {

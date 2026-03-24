@@ -2301,7 +2301,17 @@ Backfills per-coin supply history snapshots.
 
 Backfills historical stability index scores from stored depeg events and supply data.
 
+The rebuild now stops at the last completed UTC day; it does not write a `stability_index` row for the current UTC day. Historical market-cap denominators in this replay path are bounded to the PSI-eligible universe (tracked coins plus configured shadow assets). Historical depeg severity is replayed from same-day `supply_history.price` when a usable day price exists, with `peak_deviation_bps` used only as a fallback for missing/invalid price coverage. For methodology `v3.0+`, the replay also derives daily `stressBreadth` from `stress_signal_history` rows in `ALERT`, `WARNING`, or `DANGER` bands. The response includes the evaluated `startDay`/`endDay` so operators can confirm the rebuild window.
+
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
+
+**Query parameters**
+
+| Param     | Type                               | Default | Description |
+| --------- | ---------------------------------- | ------- | ----------- |
+| `dry-run` | `"true"`                           | —       | Preview the rebuild window and change summary without mutating `stability_index` |
+| `startDay` | `integer \| ISO date (YYYY-MM-DD)` | earliest depeg day | Lower bound for rebuilt UTC days |
+| `endDay` | `integer \| ISO date (YYYY-MM-DD)` | last completed UTC day | Upper bound for rebuilt UTC days |
 
 ### `POST /api/backfill-cg-prices`
 

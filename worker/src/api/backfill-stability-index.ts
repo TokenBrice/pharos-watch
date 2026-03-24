@@ -1,15 +1,33 @@
 import { errorResponse, jsonResponse } from "../lib/api-utils";
 import { withAdmin } from "../lib/auth";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { computeStabilityIndex } from "../lib/stability-index";
 import { batchExecute } from "../lib/db";
 import { getPsiMethodologyVersionAt } from "@shared/lib/stability-index-version";
 import {
-  buildStabilityInputForDay,
   buildSupplySnapshotMap,
   type PsiDepegEventRow,
   type PsiSupplyRow,
 } from "../lib/psi-recompute";
+import {
+  buildHistoricalDewsMap,
+  replayHistoricalPsiForDay,
+  type PsiHistoricalDewsRow,
+  usesHistoricalStressBreadth,
+} from "../lib/psi-replay";
+
+function parseDayParam(raw: string | null): number | null {
+  if (!raw) return null;
+  if (/^\d+$/.test(raw)) {
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return null;
+    const seconds = parsed > 1e12 ? Math.floor(parsed / 1000) : parsed;
+    return Math.floor(seconds / DAY_SECONDS) * DAY_SECONDS;
+  }
+
+  const parsedMs = Date.parse(raw);
+  if (Number.isNaN(parsedMs)) return null;
+  return Math.floor(parsedMs / 1000 / DAY_SECONDS) * DAY_SECONDS;
+}
 
 export async function handleBackfillStabilityIndex(
   db: D1Database,
@@ -19,6 +37,8 @@ export async function handleBackfillStabilityIndex(
   return withAdmin(
     request,
     async () => {
+      const url = request ? new URL(request.url) : null;
+      const dryRun = url?.searchParams.get("dry-run") === "true";
       const rebuildTableSql = [
         "CREATE TABLE stability_index_rebuild (",
         "computed_at INTEGER PRIMARY KEY,",
@@ -31,6 +51,7 @@ export async function handleBackfillStabilityIndex(
       ].join(" ");
 
       const now = Math.floor(Date.now() / 1000);
+      const todayMidnight = Math.floor(now / DAY_SECONDS) * DAY_SECONDS;
 
       // Determine backfill window: find earliest depeg event
       const earliest = await db
@@ -42,8 +63,32 @@ export async function handleBackfillStabilityIndex(
       }
 
       // Start from earliest depeg event, iterate day by day
-      const startDay = Math.floor(earliest.earliest / DAY_SECONDS) * DAY_SECONDS;
-      const endDay = Math.floor(now / DAY_SECONDS) * DAY_SECONDS;
+      const earliestDay = Math.floor(earliest.earliest / DAY_SECONDS) * DAY_SECONDS;
+      const latestCompletedDay = todayMidnight - DAY_SECONDS;
+      const requestedStartDay = parseDayParam(url?.searchParams.get("startDay") ?? null);
+      const requestedEndDay = parseDayParam(url?.searchParams.get("endDay") ?? null);
+
+      if ((url?.searchParams.get("startDay") && requestedStartDay == null) || (url?.searchParams.get("endDay") && requestedEndDay == null)) {
+        return errorResponse(400, "Invalid startDay/endDay. Use Unix seconds/milliseconds or YYYY-MM-DD.");
+      }
+
+      const startDay = Math.max(earliestDay, requestedStartDay ?? earliestDay);
+      const endDay = Math.min(latestCompletedDay, requestedEndDay ?? latestCompletedDay);
+
+      if (startDay > endDay) {
+        return jsonResponse({
+          ok: true,
+          dryRun,
+          daysBackfilled: 0,
+          daysEvaluated: 0,
+          daysChanged: 0,
+          skippedInsufficientData: 0,
+          maxAbsoluteScoreDelta: 0,
+          startDay,
+          endDay,
+          reason: "no-completed-utc-days",
+        });
+      }
 
       // Load all depeg events into memory for fast lookup
       const allDepegs = await db
@@ -55,50 +100,104 @@ export async function handleBackfillStabilityIndex(
 
       // Load all supply snapshots for mcap lookup
       const allSupply = await db
-        .prepare("SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history ORDER BY snapshot_date")
+        .prepare("SELECT stablecoin_id, snapshot_date, circulating_usd, price FROM supply_history ORDER BY snapshot_date")
         .all<PsiSupplyRow>();
       const supplyByCoin = buildSupplySnapshotMap(allSupply.results ?? []);
 
-      await db.batch([db.prepare("DROP TABLE IF EXISTS stability_index_rebuild"), db.prepare(rebuildTableSql)]);
+      const allHistoricalDews = await db
+        .prepare("SELECT stablecoin_id, snapshot_date, band FROM stress_signal_history ORDER BY snapshot_date")
+        .all<PsiHistoricalDewsRow>();
+      const dewsByDay = buildHistoricalDewsMap(allHistoricalDews.results ?? []);
+
+      const existingRows = await db
+        .prepare(
+          "SELECT computed_at, score, band, methodology_version FROM stability_index WHERE computed_at >= ? AND computed_at <= ?",
+        )
+        .bind(startDay, endDay)
+        .all<{ computed_at: number; score: number; band: string; methodology_version: string | null }>();
+      const existingByDay = new Map((existingRows.results ?? []).map((row) => [row.computed_at, row]));
+
+      if (!dryRun) {
+        await db.batch([db.prepare("DROP TABLE IF EXISTS stability_index_rebuild"), db.prepare(rebuildTableSql)]);
+      }
 
       // Iterate day by day — build all statements first, then atomically swap
       const stmts: D1PreparedStatement[] = [];
       let count = 0;
       let skippedInsufficientData = 0;
+      let daysEvaluated = 0;
+      let daysChanged = 0;
+      let maxAbsoluteScoreDelta = 0;
 
       for (let day = startDay; day <= endDay; day += DAY_SECONDS) {
-        const input = buildStabilityInputForDay(day, now, depegEvents, supplyByCoin);
-        const result = computeStabilityIndex({
-          depegs: input.depegs,
-          totalMcapUsd: input.totalMcapUsd,
-          mcap7dChangePct: input.mcap7dChangePct,
+        daysEvaluated++;
+        const methodologyVersion = getPsiMethodologyVersionAt(day);
+        const replay = replayHistoricalPsiForDay({
+          day,
+          now,
+          methodologyVersion,
+          depegEvents,
+          supplyByCoin,
+          dewsByDay,
         });
+        const { input, result } = replay;
         if (!result) {
           skippedInsufficientData++;
           continue;
         }
-        const methodologyVersion = getPsiMethodologyVersionAt(day);
 
-        stmts.push(
-          db
-            .prepare(
-              "INSERT INTO stability_index_rebuild (computed_at, score, band, components, input_snapshot, methodology_version) VALUES (?, ?, ?, ?, ?, ?)",
-            )
-            .bind(
-              day,
-              result.score,
-              result.band,
-              JSON.stringify(result.components),
-              JSON.stringify({
-                depegCount: input.depegCount,
-                totalMcapUsd: input.totalMcapUsd,
-                mcap7dChangePct: input.mcap7dChangePct,
+        const existing = existingByDay.get(day);
+        const absoluteDelta = existing ? Math.abs(existing.score - result.score) : Math.abs(result.score);
+        if (!existing || existing.band !== result.band || existing.methodology_version !== methodologyVersion || absoluteDelta > 0.0001) {
+          daysChanged++;
+        }
+        if (absoluteDelta > maxAbsoluteScoreDelta) {
+          maxAbsoluteScoreDelta = absoluteDelta;
+        }
+
+        if (!dryRun) {
+          stmts.push(
+            db
+              .prepare(
+                "INSERT INTO stability_index_rebuild (computed_at, score, band, components, input_snapshot, methodology_version) VALUES (?, ?, ?, ?, ?, ?)",
+              )
+              .bind(
+                day,
+                result.score,
+                result.band,
+                JSON.stringify(result.components),
+                JSON.stringify({
+                  depegCount: input.depegCount,
+                  totalMcapUsd: input.totalMcapUsd,
+                  mcap7dChangePct: input.mcap7dChangePct,
+                  eligibleUniverseCount: input.eligibleUniverseCount,
+                  coveredUniverseCount: input.coveredUniverseCount,
+                  shadowCoverageCount: input.shadowCoverageCount,
+                  historicalPriceCoverageCount: input.historicalPriceCoverageCount,
+                  peakDeviationFallbackCount: input.peakDeviationFallbackCount,
+                  dewsStressBreadth: input.dewsStressBreadth ?? 0,
+                  stressBreadthIncluded: usesHistoricalStressBreadth(methodologyVersion),
+                  methodologyVersion,
+                }),
                 methodologyVersion,
-              }),
-              methodologyVersion,
-            ),
-        );
+              ),
+          );
+        }
         count++;
+      }
+
+      if (dryRun) {
+        return jsonResponse({
+          ok: true,
+          dryRun,
+          daysBackfilled: count,
+          daysEvaluated,
+          daysChanged,
+          skippedInsufficientData,
+          maxAbsoluteScoreDelta: Math.round(maxAbsoluteScoreDelta * 1000) / 1000,
+          startDay,
+          endDay,
+        });
       }
 
       await batchExecute(db, stmts);
@@ -119,7 +218,17 @@ export async function handleBackfillStabilityIndex(
         await db.exec("DROP TABLE IF EXISTS stability_index_rebuild").catch(() => {});
       }
 
-      return jsonResponse({ ok: true, daysBackfilled: count, skippedInsufficientData });
+      return jsonResponse({
+        ok: true,
+        dryRun,
+        daysBackfilled: count,
+        daysEvaluated,
+        daysChanged,
+        skippedInsufficientData,
+        maxAbsoluteScoreDelta: Math.round(maxAbsoluteScoreDelta * 1000) / 1000,
+        startDay,
+        endDay,
+      });
     },
     trustedAdmin,
   );

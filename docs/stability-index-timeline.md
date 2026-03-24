@@ -113,3 +113,4 @@ Score = 100 - severity - breadth - freezes + trend
 
 - PSI did not initially ship with explicit version tags/changelog; versions above were assigned retroactively from score-impacting commit boundaries.
 - Effective boundaries for data backfills are encoded in `shared/lib/stability-index-version.ts` and migration `worker/migrations/0035_stability_index_methodology_version.sql`.
+- On Mar 24, 2026, the historical admin replay path was tightened without changing the live PSI compute version: completed-day backfills became PSI-universe bounded, began deriving `stressBreadth` from `stress_signal_history` for `v3.0+` days, and now replay depeg severity from same-day `supply_history.price` when available before falling back to `peak_deviation_bps`. This improves historical reconstruction fidelity but does not change the live `v3.2` formula used by fresh 30-minute samples.

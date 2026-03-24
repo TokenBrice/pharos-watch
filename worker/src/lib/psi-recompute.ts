@@ -1,7 +1,10 @@
-import { binarySearchNearest } from "./binary-search";
+import {
+  buildPsiHistoricalSupplySnapshotMap,
+  buildPsiHistoricalUniverseForDay,
+  findNearestSupplySnapshot,
+  type SupplySnapshotMap,
+} from "./psi-history-universe";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-
-const MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC = 14 * DAY_SECONDS;
 
 export interface PsiDepegEventRow {
   stablecoin_id: string;
@@ -15,54 +18,44 @@ export interface PsiSupplyRow {
   stablecoin_id: string;
   snapshot_date: number;
   circulating_usd: number;
+  price?: number | null;
 }
-
-export interface SupplySnapshot {
-  date: number;
-  mcap: number;
-}
-
-export type SupplySnapshotMap = Map<string, SupplySnapshot[]>;
 
 export interface StabilityInputForDay {
   depegs: Array<{ bps: number; mcapUsd: number; depegAgeDays: number }>;
   totalMcapUsd: number;
   mcap7dChangePct: number;
   depegCount: number;
+  eligibleUniverseCount: number;
+  coveredUniverseCount: number;
+  shadowCoverageCount: number;
+  historicalPriceCoverageCount: number;
+  peakDeviationFallbackCount: number;
 }
 
 export function buildSupplySnapshotMap(rows: PsiSupplyRow[]): SupplySnapshotMap {
-  const supplyByCoin: SupplySnapshotMap = new Map();
-  for (const row of rows) {
-    const list = supplyByCoin.get(row.stablecoin_id) ?? [];
-    list.push({ date: row.snapshot_date, mcap: row.circulating_usd });
-    supplyByCoin.set(row.stablecoin_id, list);
-  }
-
-  for (const snapshots of supplyByCoin.values()) {
-    snapshots.sort((a, b) => a.date - b.date);
-  }
-
-  return supplyByCoin;
+  return buildPsiHistoricalSupplySnapshotMap(rows);
 }
 
-export function findNearestSupplySnapshot(
-  snapshots: SupplySnapshot[] | undefined,
-  targetDay: number,
-): SupplySnapshot | null {
-  if (!snapshots || snapshots.length === 0) return null;
-  const nearest = binarySearchNearest(snapshots, targetDay, (s) => s.date);
-  if (!nearest) return null;
-  return Math.abs(nearest.date - targetDay) <= MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC ? nearest : null;
-}
-
-function getTotalMcapForDay(supplyByCoin: SupplySnapshotMap, day: number): number {
-  let total = 0;
-  for (const snapshots of supplyByCoin.values()) {
-    const nearest = findNearestSupplySnapshot(snapshots, day);
-    if (nearest) total += nearest.mcap;
+function computeHistoricalEventBps(
+  event: PsiDepegEventRow,
+  snapshotPrice: number | undefined,
+): { bps: number; source: "historical-price" | "peak-fallback" } | null {
+  if (snapshotPrice != null && event.peg_reference > 0) {
+    return {
+      bps: Math.round(((snapshotPrice / event.peg_reference) - 1) * 10_000),
+      source: "historical-price",
+    };
   }
-  return total;
+
+  if (Number.isFinite(event.peak_deviation_bps)) {
+    return {
+      bps: event.peak_deviation_bps,
+      source: "peak-fallback",
+    };
+  }
+
+  return null;
 }
 
 export function buildStabilityInputForDay(
@@ -83,22 +76,32 @@ export function buildStabilityInputForDay(
   }
 
   const depegs: Array<{ bps: number; mcapUsd: number; depegAgeDays: number }> = [];
+  let historicalPriceCoverageCount = 0;
+  let peakDeviationFallbackCount = 0;
   for (const [coinId, events] of grouped) {
     let worstBps = 0;
     let earliestStart = Infinity;
+    let usedHistoricalPrice = false;
+    let usedPeakFallback = false;
+    const snapshot = findNearestSupplySnapshot(supplyByCoin.get(coinId), day);
+    const snapshotPrice = snapshot?.price;
 
     for (const event of events) {
-      if (event.peg_reference <= 0) continue;
-      if (Math.abs(event.peak_deviation_bps) > Math.abs(worstBps)) {
-        worstBps = event.peak_deviation_bps;
+      const replayBps = computeHistoricalEventBps(event, snapshotPrice);
+      if (!replayBps) continue;
+      if (Math.abs(replayBps.bps) > Math.abs(worstBps)) {
+        worstBps = replayBps.bps;
       }
+      if (replayBps.source === "historical-price") usedHistoricalPrice = true;
+      if (replayBps.source === "peak-fallback") usedPeakFallback = true;
       if (event.started_at < earliestStart) {
         earliestStart = event.started_at;
       }
     }
 
     if (earliestStart === Infinity) continue;
-    const snapshot = findNearestSupplySnapshot(supplyByCoin.get(coinId), day);
+    if (usedHistoricalPrice) historicalPriceCoverageCount++;
+    if (usedPeakFallback) peakDeviationFallbackCount++;
     depegs.push({
       bps: worstBps,
       mcapUsd: snapshot?.mcap ?? 0,
@@ -106,8 +109,10 @@ export function buildStabilityInputForDay(
     });
   }
 
-  const totalMcapUsd = getTotalMcapForDay(supplyByCoin, day);
-  const totalMcap7dAgo = getTotalMcapForDay(supplyByCoin, day - 7 * DAY_SECONDS);
+  const universe = buildPsiHistoricalUniverseForDay(supplyByCoin, day);
+  const universe7dAgo = buildPsiHistoricalUniverseForDay(supplyByCoin, day - 7 * DAY_SECONDS);
+  const totalMcapUsd = universe.totalMcapUsd;
+  const totalMcap7dAgo = universe7dAgo.totalMcapUsd;
   const mcap7dChangePct =
     totalMcap7dAgo > 0
       ? ((totalMcapUsd - totalMcap7dAgo) / totalMcap7dAgo) * 100
@@ -118,5 +123,10 @@ export function buildStabilityInputForDay(
     totalMcapUsd,
     mcap7dChangePct,
     depegCount: depegs.length,
+    eligibleUniverseCount: universe.eligibleUniverseCount,
+    coveredUniverseCount: universe.coveredUniverseCount,
+    shadowCoverageCount: universe.shadowCoverageCount,
+    historicalPriceCoverageCount,
+    peakDeviationFallbackCount,
   };
 }
