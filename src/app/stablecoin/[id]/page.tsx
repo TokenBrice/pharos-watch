@@ -89,9 +89,6 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
             {coin.name} <span className="text-muted-foreground font-semibold">({coin.symbol})</span>
           </h1>
         </div>
-        <p className="text-sm text-muted-foreground">
-          {BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing} · {GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} · Pegged to {PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}
-        </p>
       </div>
       <Suspense fallback={
         <div className="space-y-6" aria-hidden="true">
