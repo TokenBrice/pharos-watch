@@ -1,7 +1,8 @@
 "use client";
 
-import { Download } from "lucide-react";
+import { Download, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { DensityToggle } from "./density-toggle";
 import { ColumnVisibilityDropdown } from "./stablecoin-table-column-visibility";
 import type { TableDensity } from "@/hooks/use-table-density";
@@ -40,17 +41,33 @@ export function TableToolbar({
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-2">
-        <DensityToggle value={density} onChange={onDensityChange} />
         {additionalActions}
       </div>
 
       <div className="flex items-center gap-2">
-        <ColumnVisibilityDropdown
-          visibleColumns={visibleColumns}
-          setVisibleColumns={onVisibleColumnsChange}
-          resetColumns={onResetColumns}
-          defaultColumns={defaultColumns}
-        />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground">
+              <Settings2 className="h-3.5 w-3.5" />
+              Table settings
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-64 space-y-4 p-4">
+            <div className="space-y-2">
+              <p className="pharos-kicker">Density</p>
+              <DensityToggle value={density} onChange={onDensityChange} />
+            </div>
+            <div className="space-y-2">
+              <p className="pharos-kicker">Columns</p>
+              <ColumnVisibilityDropdown
+                visibleColumns={visibleColumns}
+                setVisibleColumns={onVisibleColumnsChange}
+                resetColumns={onResetColumns}
+                defaultColumns={defaultColumns}
+              />
+            </div>
+          </PopoverContent>
+        </Popover>
         <Button
           variant="outline"
           size="sm"
