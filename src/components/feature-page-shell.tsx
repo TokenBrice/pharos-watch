@@ -18,8 +18,6 @@ export interface FeaturePageShellProps {
     version: string;
     changelogPath: string;
   };
-  /** Semantic top accent color — 3px border-top to visually distinguish feature pages. */
-  accent?: string; // Tailwind border-color class, e.g. "border-t-red-500"
   headerActions?: React.ReactNode;
   leadParagraphs?: readonly React.ReactNode[];
   preface?: React.ReactNode;
@@ -35,7 +33,6 @@ export function FeaturePageShell({
   breadcrumbLabel,
   statusBadge,
   methodology,
-  accent,
   headerActions,
   leadParagraphs = [],
   preface,
@@ -49,7 +46,7 @@ export function FeaturePageShell({
         : "space-y-6";
 
   return (
-    <div className={cn(variantClassName, containerClassName, accent && `border-t-[3px] ${accent} pt-5`)}>
+    <div className={cn(variantClassName, containerClassName)}>
       <BreadcrumbJsonLd name={breadcrumbName} path={path} />
       {preface}
       <div className="space-y-2.5">

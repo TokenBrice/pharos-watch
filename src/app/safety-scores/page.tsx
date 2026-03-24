@@ -42,7 +42,6 @@ export default createClientFeaturePage({
     breadcrumbName: "Safety Scores",
     path: "/safety-scores/",
     title: "Safety Scores",
-    accent: "border-t-emerald-500",
     statusBadge: { status: "mature", version: SAFETY_SCORE_VERSION_LABEL },
     methodology: {
       version: SAFETY_SCORE_VERSION_LABEL,

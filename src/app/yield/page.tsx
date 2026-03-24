@@ -56,7 +56,6 @@ export default createClientFeaturePage({
     breadcrumbName: "Yield Intelligence",
     path: "/yield/",
     title: "Yield Intelligence",
-    accent: "border-t-amber-500",
     statusBadge: { status: "mature", version: YIELD_METHODOLOGY_VERSION_LABEL },
     methodology: {
       version: YIELD_METHODOLOGY_VERSION_LABEL,

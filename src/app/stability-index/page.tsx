@@ -43,7 +43,6 @@ export default createClientFeaturePage({
     breadcrumbName: "Stability Index",
     path: "/stability-index/",
     title: "Pharos Stability Index",
-    accent: "border-t-cyan-500",
     statusBadge: { status: "mature", version: PSI_METHODOLOGY_VERSION_LABEL },
     methodology: {
       version: PSI_METHODOLOGY_VERSION_LABEL,

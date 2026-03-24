@@ -22,7 +22,6 @@ export default createClientFeaturePage({
     breadcrumbName: "DEX Liquidity",
     path: "/liquidity/",
     title: "DEX Liquidity",
-    accent: "border-t-blue-500",
     statusBadge: { status: "mature", version: LIQUIDITY_METHODOLOGY_VERSION_LABEL },
     methodology: {
       version: LIQUIDITY_METHODOLOGY_VERSION_LABEL,

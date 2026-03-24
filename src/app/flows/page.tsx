@@ -56,7 +56,7 @@ function FlowsPageInner() {
   const showDataHealthBanner = !syncWarning;
 
   return (
-    <div className="space-y-6 border-t-[3px] border-t-teal-500 pt-5">
+    <div className="space-y-6">
       {/* Header */}
       <div className="space-y-2">
         <nav
