@@ -10,7 +10,7 @@ import { BLACKLIST_CHART_COLORS } from "@shared/lib/classification";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import type { BlacklistSummaryResponse, BlacklistStablecoin } from "@shared/types";
 
-const STABLECOINS_ORDER = ["USDT", "USDC", "PAXG", "XAUT"] as const satisfies readonly BlacklistStablecoin[];
+const STABLECOINS_ORDER = ["USDT", "USDC", "PYUSD", "USD1", "PAXG", "XAUT"] as const satisfies readonly BlacklistStablecoin[];
 const CHART_HEIGHT = "h-[220px] sm:h-[280px]";
 
 interface BlacklistChartProps {
@@ -127,14 +127,14 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
                 />
                 <Tooltip content={<BlacklistTooltip />} cursor={{ fill: "currentColor", opacity: 0.05 }} />
                 <Legend iconType="square" iconSize={9} wrapperStyle={{ fontSize: 12, paddingTop: "8px" }} />
-                {STABLECOINS_ORDER.map((coin) => (
+                {STABLECOINS_ORDER.map((coin, i) => (
                   <Bar
                     key={coin}
                     dataKey={coin}
                     stackId="a"
                     fill={BLACKLIST_CHART_COLORS[coin]}
-                    fillOpacity={coin === "USDT" ? 0.75 : 0.62}
-                    radius={coin === "XAUT" ? [3, 3, 0, 0] : undefined}
+                    fillOpacity={i === 0 ? 0.75 : 0.62}
+                    radius={i === STABLECOINS_ORDER.length - 1 ? [3, 3, 0, 0] : undefined}
                   />
                 ))}
                 <Line

@@ -1,9 +1,26 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const blacklistTracker = createMethodologyVersion({
-  currentVersion: "3.2",
+  currentVersion: "3.3",
   changelogPath: "/methodology/blacklist-tracker-changelog/",
   changelog: [
+  {
+    version: "3.3",
+    title: "pyUSD and USD1 blacklist tracking coverage",
+    date: "2026-03-24",
+    effectiveAt: 1774353600,
+    summary:
+      "Extended blacklist tracker to cover pyUSD (PayPal/Paxos) on Ethereum and Arbitrum, and USD1 (World Liberty Financial) on Ethereum, BSC, and Tron. Introduced configurable address topic index for two-indexed-address events.",
+    impact: [
+      "Added pyUSD FreezeAddress/UnfreezeAddress/FrozenAddressWiped event tracking (Paxos PaxosTokenV2 pattern)",
+      "Added USD1 Freeze/Unfreeze event tracking with addressTopicIndex=2 for dual-indexed events",
+      "EVM parser now supports configurable topic index for affected address extraction",
+      "Tron parser extended with tronResultKey for non-standard event parameter names",
+      "Aggregation layer (chart, summary stats) made dynamic to accommodate new stablecoins",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.2",
     title: "Provenance-aware rows and explicit amount semantics",

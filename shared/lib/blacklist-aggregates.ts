@@ -4,6 +4,7 @@ import {
   isGoldBlacklistStablecoin,
   type BlacklistAddressCountMode,
 } from "./blacklist";
+import { BLACKLIST_STABLECOINS } from "../types/market";
 import type { BlacklistEvent, BlacklistStablecoin } from "../types/market";
 
 export interface BlacklistSummaryStats {
@@ -16,14 +17,7 @@ export interface BlacklistSummaryStats {
   recoverableGapCount: number;
 }
 
-export interface BlacklistChartPoint {
-  quarter: string;
-  USDT: number;
-  USDC: number;
-  PAXG: number;
-  XAUT: number;
-  total: number;
-}
+export type BlacklistChartPoint = { quarter: string; total: number } & Record<BlacklistStablecoin, number>;
 
 function quarterToSortKey(timestamp: number): number {
   const d = new Date(timestamp * 1000);
@@ -45,6 +39,7 @@ export function computeBlacklistSummaryStats(
   const usdcAddresses = new Map<string, number>();
   const usdtAddresses = new Map<string, number>();
   const goldAddresses = new Map<string, number>();
+  const otherAddresses = new Map<string, number>();
   const allAddresses = new Map<string, number>();
   let destroyedTotal = 0;
   let recentCount = 0;
@@ -53,7 +48,10 @@ export function computeBlacklistSummaryStats(
   for (const evt of events) {
     const isGold = isGoldBlacklistStablecoin(evt.stablecoin);
     const scopedKey = buildBlacklistAddressCountKey(evt.stablecoin, evt.chainId, evt.address, countMode);
-    const map = isGold ? goldAddresses : evt.stablecoin === "USDC" ? usdcAddresses : usdtAddresses;
+    const map = isGold ? goldAddresses
+      : evt.stablecoin === "USDC" ? usdcAddresses
+      : evt.stablecoin === "USDT" ? usdtAddresses
+      : otherAddresses;
 
     if (evt.eventType === "blacklist") {
       map.set(scopedKey, (map.get(scopedKey) ?? 0) + 1);
@@ -83,12 +81,15 @@ export function computeBlacklistSummaryStats(
 }
 
 export function buildBlacklistChartData(events: BlacklistEvent[]): BlacklistChartPoint[] {
+  const emptyBucket = (): Record<BlacklistStablecoin, number> =>
+    Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<BlacklistStablecoin, number>;
+
   const buckets = new Map<number, Record<BlacklistStablecoin, number>>();
 
   for (const evt of events) {
     if (evt.eventType !== "blacklist" || evt.amountUsdAtEvent == null || evt.amountUsdAtEvent <= 0) continue;
     const sortKey = quarterToSortKey(evt.timestamp);
-    const bucket = buckets.get(sortKey) ?? { USDT: 0, USDC: 0, PAXG: 0, XAUT: 0 };
+    const bucket = buckets.get(sortKey) ?? emptyBucket();
     bucket[evt.stablecoin] = (bucket[evt.stablecoin] ?? 0) + evt.amountUsdAtEvent;
     buckets.set(sortKey, bucket);
   }
@@ -98,15 +99,9 @@ export function buildBlacklistChartData(events: BlacklistEvent[]): BlacklistChar
   const result: BlacklistChartPoint[] = [];
   for (let sortKey = sortKeys[0]; sortKey <= sortKeys[sortKeys.length - 1]; sortKey++) {
     const bucket = buckets.get(sortKey);
-    const total = (bucket?.USDT ?? 0) + (bucket?.USDC ?? 0) + (bucket?.PAXG ?? 0) + (bucket?.XAUT ?? 0);
-    result.push({
-      quarter: sortKeyToLabel(sortKey),
-      USDT: bucket?.USDT ?? 0,
-      USDC: bucket?.USDC ?? 0,
-      PAXG: bucket?.PAXG ?? 0,
-      XAUT: bucket?.XAUT ?? 0,
-      total,
-    });
+    const total = BLACKLIST_STABLECOINS.reduce((sum, s) => sum + (bucket?.[s] ?? 0), 0);
+    const point = Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, bucket?.[s] ?? 0])) as Record<BlacklistStablecoin, number>;
+    result.push({ quarter: sortKeyToLabel(sortKey), ...point, total });
   }
   return result;
 }

@@ -72,8 +72,9 @@ export function parseEvmLogs(
   for (const log of logs) {
     const eventDef = getBlacklistEventByTopic(config, log.topics[0]);
     if (!eventDef) continue;
-    const addressIndexed = log.topics.length > 1;
-    const affectedAddress = addressIndexed ? decodeAddress(log.topics[1]) : decodeAddress(log.data.slice(0, 66));
+    const topicIdx = eventDef.addressTopicIndex ?? 1;
+    const addressIndexed = log.topics.length > topicIdx;
+    const affectedAddress = addressIndexed ? decodeAddress(log.topics[topicIdx]) : decodeAddress(log.data.slice(0, 66));
     const amount = eventDef.hasAmount
       ? addressIndexed
         ? log.data.length >= 66

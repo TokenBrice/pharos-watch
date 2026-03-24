@@ -1,10 +1,10 @@
 # Blacklist Tracker
 
-Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 16 contract configurations on 8 chains. Runs hourly, incrementally scanning from the last processed block.
+Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 21 contract configurations on 8 chains. Runs hourly, incrementally scanning from the last processed block.
 
-**Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT.
+**Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT, PYUSD, USD1.
 
-**Live API/UI filter enum:** USDC, USDT, PAXG, XAUT via `BLACKLIST_STABLECOINS` in `shared/types/index.ts`.
+**Live API/UI filter enum:** USDC, USDT, PAXG, XAUT, PYUSD, USD1 via `BLACKLIST_STABLECOINS` in `shared/types/index.ts`.
 
 Implementation note: `EURC` is intentionally not live-supported right now. Circle often mirrors the same blacklist action across both USDC and EURC, which creates many zero-balance EURC rows. Pharos will only re-enable EURC if those mirrored no-balance events can be classified without hiding genuine EURC signal.
 
@@ -362,14 +362,14 @@ For destroy events, try fetching from transaction receipt first (`eth_getTransac
 | ------------ | ------ | ------- | -------------------------------------------------------------------- |
 | `limit`      | number | 1000    | Max results (1-1000; `0` maps to default `1000`)                     |
 | `offset`     | number | 0       | Pagination offset                                                    |
-| `stablecoin` | string | --      | Filter by name (`"USDC"`, `"USDT"`, `"PAXG"`, `"XAUT"`)              |
+| `stablecoin` | string | --      | Filter by name (`"USDC"`, `"USDT"`, `"PAXG"`, `"XAUT"`, `"PYUSD"`, `"USD1"`)  |
 | `chain`      | string | --      | Filter by `chain_name`                                               |
 | `eventType`  | string | --      | Filter by `event_type` (`"blacklist"`, `"unblacklist"`, `"destroy"`) |
 | `q`          | string | --      | Case-insensitive address substring search                            |
 | `sortBy`     | string | date    | Sort field (`"date"`, `"stablecoin"`, `"chain"`, `"event"`)          |
 | `sortDirection` | string | desc | Sort direction (`"asc"`, `"desc"`)                                   |
 
-The handler now exposes only the live-supported symbols: USDC, USDT, PAXG, and XAUT.
+The handler now exposes only the live-supported symbols: USDC, USDT, PAXG, XAUT, PYUSD, and USD1.
 
 **Response:**
 

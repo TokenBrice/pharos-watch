@@ -392,7 +392,7 @@ export const PegSummaryResponseSchema = z.object({
 });
 export type PegSummaryResponse = z.infer<typeof PegSummaryResponseSchema>;
 
-export const BLACKLIST_STABLECOINS = ["USDC", "USDT", "PAXG", "XAUT"] as const;
+export const BLACKLIST_STABLECOINS = ["USDC", "USDT", "PAXG", "XAUT", "PYUSD", "USD1"] as const;
 
 export type BlacklistStablecoin = (typeof BLACKLIST_STABLECOINS)[number];
 export type BlacklistEventType = "blacklist" | "unblacklist" | "destroy";
@@ -467,10 +467,7 @@ export type BlacklistResponse = z.infer<typeof BlacklistResponseSchema>;
 
 const BlacklistChartPointSchema = z.object({
   quarter: z.string(),
-  USDT: z.number(),
-  USDC: z.number(),
-  PAXG: z.number(),
-  XAUT: z.number(),
+  ...Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, z.number()])),
   total: z.number(),
 });
 

@@ -315,6 +315,8 @@ export const YIELD_TYPE_STYLES: Record<YieldType, { badge: string; hex: string }
 export const BLACKLIST_CHART_COLORS: Record<BlacklistStablecoin, string> = {
   USDT: "#06b6d4",
   USDC: "#3b82f6",
+  PYUSD: "#6366f1",
+  USD1: "#c026d3",
   PAXG: "#eab308",
   XAUT: "#f59e0b",
 };

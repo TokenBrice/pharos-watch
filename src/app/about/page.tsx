@@ -253,7 +253,7 @@ export default function AboutPage() {
     {
       title: "Blacklist Tracker",
       description:
-        "USDC, USDT, PAXG, and XAUT blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron.",
+        "USDC, USDT, PAXG, XAUT, PYUSD, and USD1 blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron.",
       icon: ShieldAlert,
       href: "/blacklist/",
       linkLabel: "Open blacklist tracker",

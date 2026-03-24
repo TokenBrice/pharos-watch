@@ -30,6 +30,8 @@ export interface BlacklistEventDef {
   topicHash: string;     // Keccak256 of the event signature
   eventType: BlacklistEventType;
   hasAmount: boolean;
+  addressTopicIndex?: number;  // EVM: which topics[] slot holds the affected address (default 1)
+  tronResultKey?: string;      // Tron: which result key holds the affected address
 }
 
 export interface BlacklistEventFamily {
@@ -190,6 +192,59 @@ const PAXG_EVENT_FAMILY = defineEventFamily("paxos-freeze", [
   },
 ]);
 
+// --- pyUSD event definitions (Paxos PaxosTokenV2 contract) ---
+// FreezeAddress/UnfreezeAddress/FrozenAddressWiped — address is indexed (in topics[1])
+
+const PYUSD_FREEZE_TOPIC = "0x1aa660498c83ea285bc55e4cfc00afcaa7120798db87b74f3c0d7c6e001bc392"; // FreezeAddress(address)
+const PYUSD_UNFREEZE_TOPIC = "0x150465b020dfc06a59269da94ed66db9b65a516cf4fdd5f583b0f12752339bbe"; // UnfreezeAddress(address)
+const PYUSD_WIPED_TOPIC = PAXG_WIPED_TOPIC; // FrozenAddressWiped(address) — same signature as PAXG
+
+const PYUSD_EVENT_FAMILY = defineEventFamily("paxos-pyusd-freeze", [
+  {
+    signature: "FreezeAddress(address)",
+    topicHash: PYUSD_FREEZE_TOPIC,
+    eventType: "blacklist",
+    hasAmount: false,
+  },
+  {
+    signature: "UnfreezeAddress(address)",
+    topicHash: PYUSD_UNFREEZE_TOPIC,
+    eventType: "unblacklist",
+    hasAmount: false,
+  },
+  {
+    signature: "FrozenAddressWiped(address)",
+    topicHash: PYUSD_WIPED_TOPIC,
+    eventType: "destroy",
+    hasAmount: false, // Amount not in event; fetched via balanceOf at blockNumber-1
+  },
+]);
+
+// --- USD1 event definitions (World Liberty Financial Stablecoin contract) ---
+// Freeze(address indexed caller, address indexed account) / Unfreeze — affected address in topics[2]
+
+const USD1_FREEZE_TOPIC = "0x51d18786e9cb144f87d46e7b796309ea84c7c687d91e09c97f051eacf59bc528"; // Freeze(address,address)
+const USD1_UNFREEZE_TOPIC = "0x4f3ab9ff0cc4f039268532098e01239544b0420171876e36889d01c62c784c79"; // Unfreeze(address,address)
+
+const USD1_EVENT_FAMILY = defineEventFamily("wlfi-freeze", [
+  {
+    signature: "Freeze(address,address)",
+    topicHash: USD1_FREEZE_TOPIC,
+    eventType: "blacklist",
+    hasAmount: false,
+    addressTopicIndex: 2,
+    tronResultKey: "account",
+  },
+  {
+    signature: "Unfreeze(address,address)",
+    topicHash: USD1_UNFREEZE_TOPIC,
+    eventType: "unblacklist",
+    hasAmount: false,
+    addressTopicIndex: 2,
+    tronResultKey: "account",
+  },
+]);
+
 const BLACKLIST_STABLECOIN_SET = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
 
 function resolveBlacklistStablecoinSymbol(
@@ -261,6 +316,15 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
 
   // XAUT (Ethereum only — same event pattern as USDT0: BlockPlaced/BlockReleased/DestroyedBlockedFunds)
   { chain: ETHEREUM, stablecoinId: "xaut-tether", events: USDT0_EVENT_FAMILY.events },
+
+  // pyUSD (Ethereum + Arbitrum)
+  { chain: ETHEREUM, stablecoinId: "pyusd-paypal", events: PYUSD_EVENT_FAMILY.events },
+  { chain: ARBITRUM, stablecoinId: "pyusd-paypal", events: PYUSD_EVENT_FAMILY.events },
+
+  // USD1 (Ethereum + BSC + Tron)
+  { chain: ETHEREUM, stablecoinId: "usd1-world-liberty-financial", events: USD1_EVENT_FAMILY.events },
+  { chain: BSC, stablecoinId: "usd1-world-liberty-financial", events: USD1_EVENT_FAMILY.events },
+  { chain: TRON, stablecoinId: "usd1-world-liberty-financial", events: USD1_EVENT_FAMILY.events },
 ];
 
 export const CONTRACT_CONFIGS: ContractEventConfig[] = CONTRACT_CONFIG_SPECS.map(

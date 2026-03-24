@@ -33,6 +33,8 @@ const TRON_EVENT_NAME_MAP: Record<string, BlacklistEventType> = {
   AddedBlackList: "blacklist",
   RemovedBlackList: "unblacklist",
   DestroyedBlackFunds: "destroy",
+  Freeze: "blacklist",
+  Unfreeze: "unblacklist",
 };
 
 function runtimeBudgetReached(deadlineMs: number): boolean {
@@ -44,7 +46,12 @@ function parseTronEvent(config: ContractEventConfig, evt: TronEventResult): Blac
   const eventType = TRON_EVENT_NAME_MAP[evt.event_name];
   if (!eventDef || !eventType) return null;
 
-  const affectedAddress = evt.result._user || evt.result._blackListedUser || evt.result["0"] || "";
+  const affectedAddress = (eventDef.tronResultKey && evt.result[eventDef.tronResultKey])
+    || evt.result._user
+    || evt.result._blackListedUser
+    || evt.result["0"]
+    || evt.result["1"]
+    || "";
   const rawAmountStr = evt.result._balance || evt.result._value || evt.result["1"];
   const amount =
     eventDef.hasAmount && rawAmountStr

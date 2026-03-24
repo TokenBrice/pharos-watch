@@ -1,6 +1,15 @@
 # Blacklist Tracker Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.2` (2026-02-09 -> 2026-03-24).
+Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.3` (2026-02-09 -> 2026-03-24).
+
+---
+
+## v3.3 — pyUSD and USD1 blacklist tracking coverage (Mar 24, 2026)
+
+- Added pyUSD (PayPal/Paxos) blacklist event tracking on Ethereum and Arbitrum using `FreezeAddress`, `UnfreezeAddress`, and `FrozenAddressWiped` events
+- Added USD1 (World Liberty Financial) blacklist event tracking on Ethereum, BSC, and Tron using `Freeze` and `Unfreeze` events with `addressTopicIndex: 2` for dual-indexed address extraction
+- Extended `BlacklistEventDef` with `addressTopicIndex` (EVM) and `tronResultKey` (Tron) for flexible address extraction
+- Made aggregation layer dynamic: `BlacklistChartPoint`, `buildBlacklistChartData`, `computeBlacklistSummaryStats`, `BLACKLIST_CHART_COLORS`
 
 ---
 
