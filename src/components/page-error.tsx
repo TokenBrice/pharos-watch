@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { isHardReloadableRouteError } from "@/lib/route-error-recovery";
 
 export function PageError({
   title,
@@ -15,7 +16,18 @@ export function PageError({
   const message =
     process.env.NODE_ENV === "development"
       ? (error.message || "An unexpected error occurred.")
-      : "Something went wrong while loading this page.";
+      : isHardReloadableRouteError(error)
+        ? "A newer site version may be available. Reloading usually fixes this page."
+        : "Something went wrong while loading this page.";
+  const shouldHardReload = isHardReloadableRouteError(error);
+
+  const handleRetry = () => {
+    if (shouldHardReload && typeof window !== "undefined") {
+      window.location.reload();
+      return;
+    }
+    reset();
+  };
 
   return (
     <div className="space-y-6">
@@ -30,10 +42,10 @@ export function PageError({
         <h2 className="text-2xl font-bold font-mono">{title}</h2>
         <p className="text-muted-foreground text-sm">{message}</p>
         <button
-          onClick={reset}
+          onClick={handleRetry}
           className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
         >
-          Try again
+          {shouldHardReload ? "Reload page" : "Try again"}
         </button>
       </div>
     </div>
