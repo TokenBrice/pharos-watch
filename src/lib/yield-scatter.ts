@@ -22,6 +22,10 @@ function roundUp(value: number, step: number) {
   return Math.ceil(value / step) * step;
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
 function percentile(sortedValues: number[], p: number) {
   if (sortedValues.length === 0) return 0;
 
@@ -138,6 +142,10 @@ export function nudgeOverlaps<T extends NudgeablePoint>(
         result[i].plotY -= cy;
         result[j].plotX += cx;
         result[j].plotY += cy;
+        result[i].plotX = clamp(result[i].plotX, xDomain[0], xDomain[1]);
+        result[i].plotY = clamp(result[i].plotY, yDomain[0], yDomain[1]);
+        result[j].plotX = clamp(result[j].plotX, xDomain[0], xDomain[1]);
+        result[j].plotY = clamp(result[j].plotY, yDomain[0], yDomain[1]);
         moved = true;
       }
     }

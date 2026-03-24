@@ -37,6 +37,8 @@ interface YieldScatterPlotProps {
   onDotClick: (id: string) => void;
 }
 
+const SCATTER_Y_VISUAL_PADDING = 0.4;
+
 interface LogoScatterShapeProps {
   cx?: number;
   cy?: number;
@@ -169,6 +171,10 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
       ),
     [rawData, riskFreeRate],
   );
+  const plotYDomain = useMemo<[number, number]>(
+    () => [-SCATTER_Y_VISUAL_PADDING, apyAxis.domainMax + SCATTER_Y_VISUAL_PADDING],
+    [apyAxis.domainMax],
+  );
 
   const safetyDomain = useMemo(
     () =>
@@ -193,12 +199,12 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
     return nudgeOverlaps(
       clipped,
       safetyDomain,
-      [0, apyAxis.domainMax],
+      plotYDomain,
       width || 900,
       height || 300,
       isMobile,
     );
-  }, [apyAxis, rawData, safetyDomain, width, height, isMobile]);
+  }, [apyAxis, rawData, safetyDomain, plotYDomain, width, height, isMobile]);
 
   const handleClick = useCallback(
     (entry: unknown) => {
@@ -244,7 +250,7 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
                   x1={Math.max(SAFETY_SCORE_THRESHOLD, safetyDomain[0])}
                   x2={safetyDomain[1]}
                   y1={riskFreeRate}
-                  y2={apyAxis.domainMax}
+                  y2={plotYDomain[1]}
                   fill={CHART_GREEN}
                   fillOpacity={0.12}
                   label={
@@ -266,7 +272,7 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
                   x1={safetyDomain[0]}
                   x2={Math.min(SAFETY_SCORE_THRESHOLD, safetyDomain[1])}
                   y1={riskFreeRate}
-                  y2={apyAxis.domainMax}
+                  y2={plotYDomain[1]}
                   fill={CHART_RED}
                   fillOpacity={0.12}
                   label={
@@ -287,7 +293,7 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
                 <ReferenceArea
                   x1={Math.max(SAFETY_SCORE_THRESHOLD, safetyDomain[0])}
                   x2={safetyDomain[1]}
-                  y1={0}
+                  y1={plotYDomain[0]}
                   y2={riskFreeRate}
                   fill={CHART_BLUE}
                   fillOpacity={0.12}
@@ -309,7 +315,7 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
                 <ReferenceArea
                   x1={safetyDomain[0]}
                   x2={Math.min(SAFETY_SCORE_THRESHOLD, safetyDomain[1])}
-                  y1={0}
+                  y1={plotYDomain[0]}
                   y2={riskFreeRate}
                   fill="#94a3b8"
                   fillOpacity={0.07}
@@ -367,7 +373,8 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
               <YAxis
                 type="number"
                 dataKey="plotY"
-                domain={[0, apyAxis.domainMax]}
+                domain={plotYDomain}
+                allowDataOverflow
                 name="APY (%)"
                 label={
                   isMobile

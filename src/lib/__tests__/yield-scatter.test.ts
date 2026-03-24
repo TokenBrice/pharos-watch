@@ -69,6 +69,22 @@ describe("nudgeOverlaps", () => {
     const result = nudgeOverlaps(points, xDomain, yDomain, w, h, false);
     expect(result).toEqual(points);
   });
+
+  it("keeps nudged points inside the chart domain", () => {
+    const points = [
+      { plotX: 58.9, plotY: 0, id: "a" },
+      { plotX: 59.1, plotY: 0, id: "b" },
+      { plotX: 59, plotY: 0.05, id: "c" },
+    ];
+    const result = nudgeOverlaps(points, xDomain, yDomain, w, h, false);
+
+    for (const point of result) {
+      expect(point.plotX).toBeGreaterThanOrEqual(xDomain[0]);
+      expect(point.plotX).toBeLessThanOrEqual(xDomain[1]);
+      expect(point.plotY).toBeGreaterThanOrEqual(yDomain[0]);
+      expect(point.plotY).toBeLessThanOrEqual(yDomain[1]);
+    }
+  });
 });
 
 describe("computeApyAxis", () => {
