@@ -3,7 +3,7 @@ import {
   resolveOrReject,
   addFreshnessHeaders,
   errorResponse,
-  parseIntParam,
+  parseQueryParams,
   jsonResponse,
   safeJsonParse,
   buildMethodologyEnvelope,
@@ -22,10 +22,11 @@ export const handleStressSignals = withErrorHandler(
   "stress-signals",
   async (db: D1Database, url: URL): Promise<Response> => {
     const stablecoinId = url.searchParams.get("stablecoin");
-    const days = parseIntParam(url.searchParams.get("days"), 30, 1, 365, "days");
-    if (days instanceof Response) {
-      return days;
-    }
+    const parsedParams = parseQueryParams(url.searchParams, {
+      days: { type: "int", default: 30, min: 1, max: 365 },
+    });
+    if (parsedParams instanceof Response) return parsedParams;
+    const { days } = parsedParams;
 
     if (stablecoinId) {
       const resolved = resolveOrReject(stablecoinId);

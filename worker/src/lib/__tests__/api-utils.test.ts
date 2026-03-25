@@ -4,6 +4,7 @@ import {
   errorResponse,
   parseFloatParam,
   parseIntParam,
+  parseQueryParams,
   parseStablecoinHistoryQuery,
   jsonResponse,
   validatePayloadWithSchema,
@@ -78,6 +79,42 @@ describe("parseFloatParam", () => {
     const response = result as Response;
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Invalid minAmount: must be a number" });
+  });
+});
+
+describe("parseQueryParams", () => {
+  it("parses multiple params into an object", () => {
+    const params = new URLSearchParams("limit=25&offset=10");
+    const result = parseQueryParams(params, {
+      limit: { type: "int", default: 50, min: 1, max: 200 },
+      offset: { type: "int", default: 0, min: 0, max: 10000 },
+    });
+    expect(result).toEqual({ limit: 25, offset: 10 });
+  });
+
+  it("returns 400 Response for invalid param", () => {
+    const params = new URLSearchParams("limit=abc");
+    const result = parseQueryParams(params, {
+      limit: { type: "int", default: 50, min: 1, max: 200 },
+    });
+    expect(result).toBeInstanceOf(Response);
+  });
+
+  it("uses defaults for missing params", () => {
+    const params = new URLSearchParams("");
+    const result = parseQueryParams(params, {
+      limit: { type: "int", default: 50, min: 1, max: 200 },
+      offset: { type: "int", default: 0, min: 0, max: 10000 },
+    });
+    expect(result).toEqual({ limit: 50, offset: 0 });
+  });
+
+  it("supports float params", () => {
+    const params = new URLSearchParams("threshold=0.5");
+    const result = parseQueryParams(params, {
+      threshold: { type: "float", default: 1.0, min: 0, max: 10 },
+    });
+    expect(result).toEqual({ threshold: 0.5 });
   });
 });
 

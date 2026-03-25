@@ -289,6 +289,32 @@ export function parseFloatParam(
   return Math.min(max, Math.max(min, parsed));
 }
 
+interface ParamSpec {
+  type: "int" | "float";
+  default: number;
+  min: number;
+  max: number;
+  name?: string;
+}
+
+/**
+ * Parse and validate multiple query parameters at once.
+ * Returns a validated object or a 400 Response on the first invalid param.
+ */
+export function parseQueryParams<T extends Record<string, ParamSpec>>(
+  searchParams: URLSearchParams,
+  specs: T,
+): { [K in keyof T]: number } | Response {
+  const result = {} as { [K in keyof T]: number };
+  for (const [key, spec] of Object.entries(specs) as [keyof T & string, ParamSpec][]) {
+    const parser = spec.type === "int" ? parseIntParam : parseFloatParam;
+    const value = parser(searchParams.get(key), spec.default, spec.min, spec.max, spec.name ?? key);
+    if (value instanceof Response) return value;
+    result[key] = value;
+  }
+  return result;
+}
+
 export interface MethodologyEnvelopeInput {
   version: string;
   versionLabel: string;
