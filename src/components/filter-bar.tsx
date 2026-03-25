@@ -7,6 +7,12 @@ import { FILTER_GROUPS } from "@/hooks/use-homepage-filters";
 import type { FilterTag } from "@shared/types";
 import { FILTER_TAG_LABELS } from "@shared/types";
 
+const FILTER_BAR_LABEL_OVERRIDES: Partial<Record<FilterTag, string>> = {
+  "rwa-backed": "RWA",
+  "crypto-backed": "Crypto",
+  "centralized-dependent": "CeFi-Dep",
+};
+
 interface FilterBarProps {
   groupSelections: Record<string, FilterTag | "">;
   searchQuery: string;
@@ -86,7 +92,7 @@ export function FilterBar({
                   size="sm"
                   className="pharos-toggle-pill min-h-11 px-3 sm:min-h-8 sm:py-1"
                 >
-                  {FILTER_TAG_LABELS[opt]}
+                  {FILTER_BAR_LABEL_OVERRIDES[opt] ?? FILTER_TAG_LABELS[opt]}
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>

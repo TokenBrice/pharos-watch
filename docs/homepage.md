@@ -109,6 +109,7 @@ Managed by `src/hooks/use-homepage-filters.ts` and `src/hooks/use-url-filters.ts
 Rules:
 
 - only one value per filter group is active at a time
+- the homepage peg rail exposes `USD`, `Gold`, `EUR`, and `Other`; `Other` includes GBP/CHF and the longer tail of non-USD pegs
 - `"all"` and empty-string values clear the param instead of persisting it
 - updates use `window.history.replaceState(...)`, so filter changes do not create extra history entries or scroll jumps
 

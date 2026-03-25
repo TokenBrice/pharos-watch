@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildTrackedIdSet,
   sortStablecoins,
   filterStablecoins,
   resolveEffectiveSortKey,
   type StablecoinTableSortKey,
 } from "@/components/stablecoin-table-logic";
-import type { StablecoinData } from "@shared/types";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { OTHER_PEG_TAGS, getFilterTags, type StablecoinData } from "@shared/types";
 import type { ColumnId } from "@/hooks/use-preferences";
 
 // Minimal StablecoinData factory
@@ -69,6 +71,23 @@ describe("filterStablecoins", () => {
     const coins = [makeCoin("usdc", "USD Coin"), makeCoin("dai", "Dai")];
     const result = filterStablecoins(coins, new Set(["usdc", "dai"]), "");
     expect(result).toHaveLength(2);
+  });
+});
+
+describe("buildTrackedIdSet", () => {
+  it("treats GBP and CHF pegs as part of the shared other-peg taxonomy", () => {
+    expect(OTHER_PEG_TAGS).toContain("gbp-peg");
+    expect(OTHER_PEG_TAGS).toContain("chf-peg");
+  });
+
+  it("returns active long-tail peg assets when filtering by other-peg", () => {
+    const trackedIds = buildTrackedIdSet(["other-peg"]);
+    const activeOtherPegIds = ACTIVE_STABLECOINS
+      .filter((coin) => getFilterTags(coin).some((tag) => OTHER_PEG_TAGS.includes(tag)))
+      .map((coin) => coin.id);
+
+    expect(activeOtherPegIds.length).toBeGreaterThan(0);
+    expect(activeOtherPegIds.every((id) => trackedIds.has(id))).toBe(true);
   });
 });
 

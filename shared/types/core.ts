@@ -269,6 +269,8 @@ export type FilterTag =
   | "grade-le-d";
 
 export const OTHER_PEG_TAGS: FilterTag[] = [
+  "chf-peg",
+  "gbp-peg",
   "brl-peg",
   "rub-peg",
   "jpy-peg",
