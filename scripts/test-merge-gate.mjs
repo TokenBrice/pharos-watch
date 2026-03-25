@@ -16,6 +16,7 @@ export const NON_NEGOTIABLE_VALIDATE_COMMANDS = [
   "npm run check:worker-boundary",
   "npm run check:migrations",
   "npm run check:cron-sync",
+  "npm run check:cron-connections",
   "npm run check:doc-counts",
   "npm run check:doc-sync",
   "npm run check:duplicate-exports",
@@ -32,6 +33,19 @@ export const PAGES_VALIDATE_COMMANDS = [
   "npm run seo:check",
 ];
 
+/**
+ * Commands that can be skipped when their relevant input files haven't changed.
+ * Key: command string (must match an entry in NON_NEGOTIABLE_VALIDATE_COMMANDS).
+ * Value: path prefixes — if no changedFiles start with any prefix, the command is skipped.
+ */
+const SKIPPABLE_CHECKS = new Map([
+  ["npm run check:migrations", ["worker/migrations/"]],
+  ["npm run check:cron-sync", ["shared/lib/cron-jobs.", "worker/wrangler.toml"]],
+  ["npm run check:cron-connections", ["shared/lib/cron-jobs.", "worker/wrangler.toml"]],
+  ["npm run check:doc-counts", ["shared/lib/stablecoins/", "docs/"]],
+  ["npm run check:redemption-backstops", ["shared/lib/redemption-backstop-configs/"]],
+]);
+
 function addCommand(plan, cmd, reason) {
   const existing = plan.find((item) => item.cmd === cmd);
   if (existing) {
@@ -43,7 +57,27 @@ function addCommand(plan, cmd, reason) {
 
 export function buildCommandPlan(changedFiles) {
   const plan = [];
-  for (const cmd of NON_NEGOTIABLE_VALIDATE_COMMANDS) {
+
+  const skippedCommands = new Set();
+  if (changedFiles.length > 0) {
+    for (const [cmd, prefixes] of SKIPPABLE_CHECKS) {
+      const relevant = changedFiles.some((f) =>
+        prefixes.some((p) => f.startsWith(p) || f === p),
+      );
+      if (!relevant) skippedCommands.add(cmd);
+    }
+  }
+
+  const filteredCommands = NON_NEGOTIABLE_VALIDATE_COMMANDS.filter(
+    (cmd) => !skippedCommands.has(cmd),
+  );
+
+  if (skippedCommands.size > 0) {
+    console.log(`\nSkipping ${skippedCommands.size} check(s) (no relevant file changes):`);
+    for (const cmd of skippedCommands) console.log(`  - ${cmd}`);
+  }
+
+  for (const cmd of filteredCommands) {
     addCommand(plan, cmd, "Local merge gate mirrors the shared CI validate core");
   }
 

@@ -47,8 +47,8 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
   const dlProtocolsAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_PROTOCOLS);
 
   // Fetch DL first, consume bodies immediately to release connections before Curve batch.
-  // sync-yield-data runs concurrently on the same cron slot (10,40), sharing the
-  // Workers 6-connection limit — consuming early leaves headroom.
+  // Jobs on this trigger run sequentially; consume early to stay within the 6-connection
+  // pool budget during the Curve parallel phase that follows.
   const [llamaRes, protocolsRes] = await Promise.all([
     dlYieldsAllowed
       ? fetchWithRetry(DEFILLAMA_YIELDS_URL, { headers: { "User-Agent": USER_AGENT }, signal })

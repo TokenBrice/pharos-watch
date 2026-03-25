@@ -232,7 +232,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: 1800,
     scheduleKey: "halfHourlyOffset",
     triggerMode: "shared",
-    maxConnections: 2, // DL yields (1) + on-chain rates / CG price lookups (1)
+    maxConnections: 1, // on-chain rate batch (1); DL pools read from cache written by sync-dex-liquidity (sequential)
   },
   {
     // Runs on the quarter-hourly trigger after a safe stablecoins cache write.
