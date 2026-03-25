@@ -15,17 +15,12 @@ function formatTextBlock(label: string, value: string): string[] {
   return [`**${label}:**`, "```text", normalizeMultilineText(value), "```"];
 }
 
-function formatFeedbackBody(
-  feedback: FeedbackBody,
-  submissionId: string,
-  verificationBlock?: string,
-): string {
+function formatFeedbackBody(feedback: FeedbackBody, verificationBlock?: string): string {
   const lines: string[] = [];
 
   lines.push(
     `**Type:** ${feedback.type === "bug" ? "Bug Report" : feedback.type === "data-correction" ? "Data Correction" : "Feature Request"}`,
   );
-  lines.push(`**Submission ID:** ${submissionId}`);
 
   if (feedback.stablecoinName || feedback.stablecoinId) {
     const name = sanitizeInlineText(feedback.stablecoinName ?? "").slice(0, 100);
@@ -37,8 +32,8 @@ function formatFeedbackBody(
   lines.push(`**Page:** ${safePageUrl}`);
 
   if (feedback.pegValue) lines.push(`**Current value:** ${sanitizeInlineText(feedback.pegValue).slice(0, 100)}`);
-  if (feedback.contactConsent) {
-    lines.push("**Submitter contact:** available privately in `feedback_submissions`");
+  if (feedback.contactHandle) {
+    lines.push(`**Submitter contact:** ${sanitizeInlineText(feedback.contactHandle)}`);
   }
 
   lines.push("", ...formatTextBlock("Description", feedback.description));
@@ -56,7 +51,6 @@ function formatFeedbackBody(
 
 export function buildIssueSubmission(
   feedback: FeedbackBody,
-  submissionId: string,
   verificationBlock?: string,
   verifiedLabel: VerifiedLabel = "verified: pending",
 ): { title: string; labels: string[]; body: string } {
@@ -70,16 +64,15 @@ export function buildIssueSubmission(
         ? `[Bug] ${sanitizeInlineText((feedback.title ?? "").trim()).slice(0, 100)}`
         : `[Data Correction] ${stablecoinPart}${shortDesc}${ellipsis}`,
     labels: feedback.type === "bug" ? ["bug"] : ["data-correction", verifiedLabel],
-    body: formatFeedbackBody(feedback, submissionId, verificationBlock),
+    body: formatFeedbackBody(feedback, verificationBlock),
   };
 }
 
 export function buildFeatureRequestSubmission(
   feedback: FeedbackBody,
-  submissionId: string,
 ): { title: string; body: string } {
   return {
     title: `[Feature Request] ${sanitizeInlineText((feedback.title ?? "").trim()).slice(0, 100)}`,
-    body: formatFeedbackBody(feedback, submissionId),
+    body: formatFeedbackBody(feedback),
   };
 }

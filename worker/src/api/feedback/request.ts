@@ -42,27 +42,6 @@ export async function prepareFeedbackSubmission(
     };
   }
 
-  const contactHandle = feedback.contactHandle?.trim() ?? "";
-  if (feedback.contactConsent) {
-    if (!feedback.contactChannel) {
-      return errorResponse(400, "Choose Telegram or X for follow-up contact");
-    }
-    if (contactHandle.length < 2 || contactHandle.length > 100) {
-      return errorResponse(400, "Contact handle must be 2–100 characters");
-    }
-    feedback = {
-      ...feedback,
-      contactHandle,
-    };
-  } else if (feedback.contactChannel || contactHandle) {
-    feedback = {
-      ...feedback,
-      contactConsent: false,
-      contactChannel: undefined,
-      contactHandle: undefined,
-    };
-  }
-
   let canonicalStablecoinId: string | undefined;
   if (feedback.stablecoinId) {
     const resolved = resolveStablecoinId(feedback.stablecoinId);
@@ -98,9 +77,11 @@ export async function prepareFeedbackSubmission(
   }
 
   return {
-    feedback,
+    feedback: {
+      ...feedback,
+      contactHandle: feedback.contactHandle?.trim() || undefined,
+    },
     pat: env.GITHUB_PAT,
-    submissionId: "",
     canonicalStablecoinId,
     repositoryId: env.GITHUB_REPO_NODE_ID,
     discussionCategoryId: env.GITHUB_DISCUSSION_CATEGORY_ID,

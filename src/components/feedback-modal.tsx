@@ -14,7 +14,6 @@ import { Label } from "@/components/ui/label";
 import { buildApiUrl } from "@/lib/api";
 
 type FeedbackType = "bug" | "data-correction" | "feature-request";
-type ContactChannel = "telegram" | "x";
 
 interface FeedbackModalProps {
   open: boolean;
@@ -50,24 +49,18 @@ export function FeedbackModal({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [expectedValue, setExpectedValue] = useState("");
-  const [contactConsent, setContactConsent] = useState(false);
-  const [contactChannel, setContactChannel] = useState<ContactChannel>("telegram");
   const [contactHandle, setContactHandle] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
-  const [submissionId, setSubmissionId] = useState("");
 
   const reset = useCallback(() => {
     setType(defaultType);
     setTitle("");
     setDescription("");
     setExpectedValue("");
-    setContactConsent(false);
-    setContactChannel("telegram");
     setContactHandle("");
     setStatus("idle");
     setErrorMsg("");
-    setSubmissionId("");
   }, [defaultType]);
 
   const handleOpenChange = useCallback(
@@ -95,13 +88,7 @@ export function FeedbackModal({
       ...(stablecoinId ? { stablecoinId } : {}),
       ...(stablecoinName ? { stablecoinName } : {}),
       ...(pegValue ? { pegValue } : {}),
-      ...(contactConsent
-        ? {
-            contactConsent: true,
-            contactChannel,
-            contactHandle: contactHandle.trim(),
-          }
-        : {}),
+      ...(contactHandle.trim() ? { contactHandle: contactHandle.trim() } : {}),
       pageUrl,
       website: "",
     };
@@ -112,39 +99,28 @@ export function FeedbackModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const data = (await res.json()) as { ok?: boolean; error?: string; submissionId?: string };
+      const data = (await res.json()) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) {
         setErrorMsg(data.error ?? "Something went wrong. Please try again.");
         setStatus("error");
       } else {
-        setSubmissionId(data.submissionId ?? "");
         setStatus("success");
       }
     } catch {
       setErrorMsg("Network error. Please try again.");
       setStatus("error");
     }
-  }, [
-    type,
-    title,
-    description,
-    expectedValue,
-    stablecoinId,
-    stablecoinName,
-    pegValue,
-    contactConsent,
-    contactChannel,
-    contactHandle,
-  ]);
+  }, [type, title, description, expectedValue, stablecoinId, stablecoinName, pegValue, contactHandle]);
 
   const needsTitle = type === "bug" || type === "feature-request";
-  const hasValidContact =
-    !contactConsent || contactHandle.trim().length >= 2;
+  const contactValid =
+    contactHandle.trim().length === 0 ||
+    (contactHandle.trim().length >= 2 && contactHandle.trim().length <= 100);
   const isValid =
     description.trim().length >= 10 &&
     description.trim().length <= 2000 &&
     (!needsTitle || (title.trim().length >= 3 && title.trim().length <= 100)) &&
-    hasValidContact;
+    contactValid;
 
   const pageUrl =
     typeof window !== "undefined"
@@ -164,11 +140,6 @@ export function FeedbackModal({
             <p className="text-sm text-muted-foreground">
               We review all submissions and prioritize data corrections.
             </p>
-            {submissionId ? (
-              <p className="text-xs text-muted-foreground">
-                Reference ID: <span className="font-mono text-foreground">{submissionId}</span>
-              </p>
-            ) : null}
             <Button variant="outline" className="mt-4" onClick={() => handleOpenChange(false)}>
               Close
             </Button>
@@ -255,60 +226,22 @@ export function FeedbackModal({
               </div>
             )}
 
-            <div className="space-y-2 rounded-md border border-border/60 bg-card/40 px-3 py-3">
-              <label className="flex items-start gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={contactConsent}
-                  onChange={(e) => setContactConsent(e.target.checked)}
-                  disabled={status === "loading"}
-                  className="mt-0.5 h-4 w-4 rounded border-border bg-background"
-                />
-                <span>
-                  Share a private follow-up contact
-                  <span className="block text-xs text-muted-foreground">
-                    Optional. Stored privately by Pharos and not posted publicly to GitHub.
-                  </span>
-                </span>
-              </label>
-
-              {contactConsent ? (
-                <div className="space-y-3">
-                  <div className="flex gap-1 rounded-lg bg-muted p-1">
-                    {(["telegram", "x"] as ContactChannel[]).map((channel) => (
-                      <button
-                        key={channel}
-                        type="button"
-                        aria-pressed={contactChannel === channel}
-                        onClick={() => setContactChannel(channel)}
-                        className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
-                          contactChannel === channel
-                            ? "bg-background text-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        {channel === "telegram" ? "Telegram" : "X"}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="fb-contact">
-                      {contactChannel === "telegram" ? "Telegram handle" : "X handle"}
-                    </Label>
-                    <Input
-                      id="fb-contact"
-                      placeholder={contactChannel === "telegram" ? "@username" : "@handle"}
-                      value={contactHandle}
-                      onChange={(e) => setContactHandle(e.target.value)}
-                      maxLength={100}
-                      disabled={status === "loading"}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      We only use this for follow-up on your submission.
-                    </p>
-                  </div>
-                </div>
-              ) : null}
+            <div className="space-y-1.5">
+              <Label htmlFor="fb-contact">
+                Contact handle{" "}
+                <span className="text-xs text-muted-foreground">(optional)</span>
+              </Label>
+              <Input
+                id="fb-contact"
+                placeholder="@PharosWatch"
+                value={contactHandle}
+                onChange={(e) => setContactHandle(e.target.value)}
+                maxLength={100}
+                disabled={status === "loading"}
+              />
+              <p className="text-xs text-muted-foreground">
+                This handle will be included publicly on GitHub issues/discussions.
+              </p>
             </div>
 
             {/* Honeypot */}

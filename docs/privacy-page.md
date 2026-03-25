@@ -43,9 +43,9 @@ The current policy copy covers:
 4. 14-month GA4 retention when GA4 is enabled
 5. Cloudflare Pages / Workers hosting and Google Analytics as third-party services
 6. support contact via `@PharosWatch` and the About page
-7. optional Telegram/X handles submitted through the feedback form are stored privately for follow-up and are not posted publicly to GitHub
+7. optional Telegram/X handles submitted through the feedback form appear publicly on the GitHub issue/discussion created for your submission
 
-Portfolio holdings are explicitly described as browser-local only, which matches the `/portfolio/` implementation. The page now also distinguishes between public GitHub feedback artifacts and private feedback-contact storage in D1.
+Portfolio holdings are explicitly described as browser-local only, which matches the `/portfolio/` implementation. The page now also notes that any delegated feedback contact handle will be visible in the GitHub issues/discussions that Pharos creates.
 
 ### Telemetry Contract
 

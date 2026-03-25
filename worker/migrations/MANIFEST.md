@@ -86,6 +86,7 @@
 | 0076     | `0076_blacklist_provenance_and_amount_semantics.sql` | Add blacklist provenance and amount-semantics metadata                                     |
 | 0077     | `0077_blacklist_amount_recovery_telemetry.sql`  | Add blacklist amount-recovery telemetry columns                                                |
 | 0078     | `0078_feedback_submissions.sql`                 | Create feedback_submissions table for durable feedback logging                                 |
+| 0079     | `0079_drop_feedback_submissions.sql`            | Remove feedback_submissions table to keep feedback contacts public on GitHub                 |
 
 ## Known Anomalies
 

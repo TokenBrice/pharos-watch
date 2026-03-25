@@ -1,8 +1,5 @@
 import { z } from "zod";
 
-const FeedbackContactChannelSchema = z.enum(["telegram", "x"]);
-export type FeedbackContactChannel = z.infer<typeof FeedbackContactChannelSchema>;
-
 export const FeedbackBodySchema = z.object({
   type: z.enum(["bug", "data-correction", "feature-request"], {
     message: "Invalid feedback type",
@@ -17,8 +14,6 @@ export const FeedbackBodySchema = z.object({
   stablecoinName: z.string().max(100).optional(),
   pageUrl: z.string().startsWith("/", "Invalid pageUrl").max(300),
   pegValue: z.string().max(100).optional(),
-  contactConsent: z.boolean().optional(),
-  contactChannel: FeedbackContactChannelSchema.optional(),
   contactHandle: z.string().max(100).optional(),
   website: z.string().optional(),
 });
@@ -41,16 +36,9 @@ export interface VerificationResult {
 export interface PreparedFeedbackSubmission {
   feedback: FeedbackBody;
   pat: string;
-  submissionId: string;
   canonicalStablecoinId?: string;
   repositoryId?: string;
   discussionCategoryId?: string;
-}
-
-export interface GitHubSubmissionResult {
-  kind: "issue" | "discussion";
-  number: number | null;
-  url: string | null;
 }
 
 export const GITHUB_OWNER = "TokenBrice";

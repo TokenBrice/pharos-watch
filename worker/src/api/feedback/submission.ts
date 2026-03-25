@@ -1,18 +1,18 @@
 import { buildFeatureRequestSubmission, buildIssueSubmission } from "./format";
 import { createGitHubDiscussion, createGitHubIssue } from "./github";
 import { verifyDataCorrection } from "./verification";
-import type { GitHubSubmissionResult, PreparedFeedbackSubmission, VerifiedLabel } from "./types";
+import type { PreparedFeedbackSubmission, VerifiedLabel } from "./types";
 
 export async function submitFeedback(
   db: D1Database,
   submission: PreparedFeedbackSubmission,
-): Promise<GitHubSubmissionResult> {
-  const { feedback, pat, submissionId } = submission;
+): Promise<void> {
+  const { feedback, pat } = submission;
 
   if (feedback.type === "feature-request") {
-    const { title, body } = buildFeatureRequestSubmission(feedback, submissionId);
+    const { title, body } = buildFeatureRequestSubmission(feedback);
 
-    let created: GitHubSubmissionResult | null = null;
+    let created = false;
     if (submission.repositoryId && submission.discussionCategoryId) {
       created = await createGitHubDiscussion(
         pat,
@@ -22,10 +22,10 @@ export async function submitFeedback(
         body,
       );
     }
-    if (created) {
-      return created;
+    if (!created) {
+      await createGitHubIssue(pat, title, body, ["feature-request"]);
     }
-    return createGitHubIssue(pat, title, body, ["feature-request"]);
+    return;
   }
 
   let verificationBlock: string | undefined;
@@ -37,6 +37,6 @@ export async function submitFeedback(
     verifiedLabel = verification.verifiedLabel;
   }
 
-  const issue = buildIssueSubmission(feedback, submissionId, verificationBlock, verifiedLabel);
-  return createGitHubIssue(pat, issue.title, issue.body, issue.labels);
+  const issue = buildIssueSubmission(feedback, verificationBlock, verifiedLabel);
+  await createGitHubIssue(pat, issue.title, issue.body, issue.labels);
 }
