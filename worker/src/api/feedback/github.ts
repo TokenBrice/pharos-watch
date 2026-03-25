@@ -1,5 +1,5 @@
 import { drainResponseBody } from "../../lib/response-body";
-import { GITHUB_OWNER, GITHUB_REPO, type GitHubSubmissionResult } from "./types";
+import { GITHUB_OWNER, GITHUB_REPO } from "./types";
 
 function buildGitHubHeaders(pat: string): Record<string, string> {
   return {
@@ -16,7 +16,7 @@ export async function createGitHubIssue(
   title: string,
   body: string,
   labels: string[],
-): Promise<GitHubSubmissionResult> {
+): Promise<void> {
   const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/issues`, {
     method: "POST",
     headers: buildGitHubHeaders(pat),
@@ -28,12 +28,7 @@ export async function createGitHubIssue(
     throw new Error(`GitHub Issues API ${res.status}: ${text.slice(0, 200)}`);
   }
 
-  const data = (await res.json()) as { number?: number; html_url?: string };
-  return {
-    kind: "issue",
-    number: typeof data.number === "number" ? data.number : null,
-    url: typeof data.html_url === "string" ? data.html_url : null,
-  };
+  await drainResponseBody(res);
 }
 
 export async function createGitHubDiscussion(
@@ -42,7 +37,7 @@ export async function createGitHubDiscussion(
   categoryId: string,
   title: string,
   body: string,
-): Promise<GitHubSubmissionResult | null> {
+): Promise<boolean> {
   const mutation = `
     mutation CreateDiscussion($repositoryId: ID!, $categoryId: ID!, $title: String!, $body: String!) {
       createDiscussion(input: {
@@ -51,7 +46,7 @@ export async function createGitHubDiscussion(
         title: $title,
         body: $body
       }) {
-        discussion { id number url }
+        discussion { id }
       }
     }
   `;
@@ -69,24 +64,16 @@ export async function createGitHubDiscussion(
     if (!res.ok) {
       await drainResponseBody(res);
       console.warn("[feedback] GraphQL HTTP error:", res.status);
-      return null;
+      return false;
     }
-    const data = (await res.json()) as {
-      errors?: unknown[];
-      data?: { createDiscussion?: { discussion?: { number?: number; url?: string } | null } | null };
-    };
+    const data = (await res.json()) as { errors?: unknown[] };
     if (data.errors?.length) {
       console.warn("[feedback] GraphQL errors:", JSON.stringify(data.errors));
-      return null;
+      return false;
     }
-    const discussion = data.data?.createDiscussion?.discussion;
-    return {
-      kind: "discussion",
-      number: typeof discussion?.number === "number" ? discussion.number : null,
-      url: typeof discussion?.url === "string" ? discussion.url : null,
-    };
+    return true;
   } catch (err) {
     console.warn("[feedback] GraphQL Discussion creation failed:", err);
-    return null;
+    return false;
   }
 }
