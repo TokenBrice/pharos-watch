@@ -807,6 +807,65 @@ export async function fetchBeefySources(
   }
 }
 
+const COMPOUND_V3_GET_UTILIZATION = "0x7eb71131";
+const COMPOUND_V3_GET_SUPPLY_RATE = "0xd955759d";
+const SECONDS_PER_YEAR = 31_536_000;
+
+export const COMPOUND_V3_COMETS = [
+  { chain: "ethereum", comet: "0xc3d688B66703497DAA19211EEdff47f25384cdc3", symbol: "USDC" },
+  { chain: "ethereum", comet: "0x3Afdc9BCA9213A35503b077a6072F3D0d5AB0840", symbol: "USDT" },
+  { chain: "base", comet: "0xb125E6687d4313864e53df431d5425969c15Eb2F", symbol: "USDC" },
+  { chain: "arbitrum", comet: "0xA5EDBDD9646f8dFF606d7448e414884C7d905dCA", symbol: "USDC" },
+] as const;
+
+export async function fetchCompoundV3SupplyRates(
+  targets: Array<{ chain: string; comet: string; symbol: string }>,
+  signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+): Promise<Array<{ symbol: string; yield: ResolvedYield }>> {
+  const results: Array<{ symbol: string; yield: ResolvedYield }> = [];
+  for (const target of targets) {
+    try {
+      const rpc = getChainRpc(chainRpcs ?? new Map(), target.chain);
+      const extraRpcUrls = rpc?.fallbackRpcUrl ? [rpc.fallbackRpcUrl] : [];
+      const opts = { extraRpcUrls, signal };
+
+      const utilization = await fetchEvmUint256AtBlock(
+        target.chain, target.comet, COMPOUND_V3_GET_UTILIZATION, "latest", opts,
+      );
+      if (utilization == null) continue;
+
+      const supplyRateData = COMPOUND_V3_GET_SUPPLY_RATE + utilization.toString(16).padStart(64, "0");
+      const perSecondRate = await fetchEvmUint256AtBlock(
+        target.chain, target.comet, supplyRateData, "latest", opts,
+      );
+      if (perSecondRate == null || perSecondRate === 0n) continue;
+
+      const ratePerSecond = Number(perSecondRate) / 1e18;
+      const apy = (Math.pow(1 + ratePerSecond, SECONDS_PER_YEAR) - 1) * 100;
+      if (!Number.isFinite(apy) || apy <= 0) continue;
+
+      results.push({
+        symbol: target.symbol,
+        yield: {
+          currentApy: apy, apyBase: apy, apyReward: null,
+          sourcePool: null, sourceTvlUsd: null, dataSource: "protocol-api",
+          exchangeRate: null,
+          sourceKey: `protocol-api:compound-v3-supply:${target.chain}:${target.comet.slice(0, 10)}`,
+          yieldSource: `Compound V3 (${target.chain})`,
+          yieldType: "lending-opportunity",
+          sourceObservedAt: Math.floor(Date.now() / 1000),
+          comparisonAnchorObservedAt: null,
+        },
+      });
+    } catch (error) {
+      if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+      console.warn(`[yield] Compound V3 ${target.chain}:${target.symbol} failed:`, error);
+    }
+  }
+  return results;
+}
+
 export async function getPriceDerivedApy(
   db: D1Database,
   stablecoinId: string,
