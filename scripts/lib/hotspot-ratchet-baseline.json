@@ -5,9 +5,9 @@
     "branchCount": 4
   },
   "worker/src/api/feedback.ts": {
-    "fileLines": 47,
-    "maxFunctionLines": 30,
-    "branchCount": 5
+    "fileLines": 27,
+    "maxFunctionLines": 15,
+    "branchCount": 3
   },
   "worker/src/handlers/http.ts": {
     "fileLines": 52,
@@ -20,13 +20,13 @@
     "branchCount": 29
   },
   "src/app/methodology/sections/core-sections.tsx": {
-    "fileLines": 1372,
-    "maxFunctionLines": 1348,
+    "fileLines": 1291,
+    "maxFunctionLines": 1269,
     "branchCount": 0
   },
   "src/app/coverage/client.tsx": {
-    "fileLines": 808,
-    "maxFunctionLines": 411,
+    "fileLines": 806,
+    "maxFunctionLines": 412,
     "branchCount": 27
   },
   "worker/src/cron/daily-digest/collectors.ts": {
