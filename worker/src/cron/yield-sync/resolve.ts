@@ -511,11 +511,21 @@ export async function resolveYieldSources({
 
     const SMALL_ECOSYSTEM_CHAINS = new Set(["solana", "sui", "aptos", "cardano", "stacks"]);
 
+    const PHAROS_TO_DL_CHAIN: Record<string, string> = {
+      ethereum: "Ethereum", arbitrum: "Arbitrum", base: "Base", optimism: "Optimism",
+      polygon: "Polygon", avalanche: "Avalanche", bsc: "BSC", solana: "Solana", gnosis: "Gnosis",
+    };
+
     for (const meta of lendingCandidates) {
       const primaryChain = meta.contracts?.[0]?.chain;
       const minTvlUsd = primaryChain && SMALL_ECOSYSTEM_CHAINS.has(primaryChain)
         ? MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM
         : MIN_LENDING_POOL_TVL_USD;
+
+      const coinChains = new Set(
+        (meta.contracts ?? []).map((c) => PHAROS_TO_DL_CHAIN[c.chain]).filter(Boolean),
+      );
+      const chainFilter = coinChains.size > 0 ? coinChains : undefined;
 
       const pool = findBestLendingPool(
         meta.symbol,
@@ -525,6 +535,7 @@ export async function resolveYieldSources({
           minApy: MIN_LENDING_POOL_APY,
           minTvlUsd,
           contractAddresses: (meta.contracts ?? []).map((contract) => contract.address),
+          chainFilter,
         },
       );
       if (!pool) continue;

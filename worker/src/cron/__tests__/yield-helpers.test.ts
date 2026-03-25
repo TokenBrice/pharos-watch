@@ -11,6 +11,7 @@ import {
   findBestLendingPool,
 } from "../yield-helpers";
 import { computeTvlWeightedMedianApy, parseWarningSignals } from "../yield-sync/rankings";
+import { LENDING_PROTOCOL_ALLOWLIST } from "../yield-config";
 
 // computeTvlWeightedMedianApy is internal to sync-yield-data.ts - tested via integration
 describe("STALE_THRESHOLD_MS", () => {
@@ -574,6 +575,46 @@ describe("computeTvlWeightedMedianApy", () => {
       { apy_30d: 8, source_tvl_usd: 1_000_000 },
     ]);
     expect(result).toBe(5);
+  });
+});
+
+describe("findBestLendingPool with chain scope", () => {
+  it("does not match a Solana pool for an Ethereum-only coin", () => {
+    const pool = {
+      pool: "p1", chain: "Solana", project: "kamino-lend", symbol: "USDC",
+      tvlUsd: 200_000, apy: 5, apyBase: 5, apyReward: null,
+      stablecoin: true, exposure: "single", underlyingTokens: null,
+    };
+    const result = findBestLendingPool("USDC", [pool], LENDING_PROTOCOL_ALLOWLIST, {
+      minApy: 0.1, minTvlUsd: 100_000, contractAddresses: [],
+      chainFilter: new Set(["Ethereum"]),
+    });
+    expect(result).toBeNull();
+  });
+
+  it("matches a pool on the correct chain", () => {
+    const pool = {
+      pool: "p2", chain: "Ethereum", project: "aave-v3", symbol: "USDC",
+      tvlUsd: 500_000, apy: 4, apyBase: 4, apyReward: null,
+      stablecoin: true, exposure: "single", underlyingTokens: null,
+    };
+    const result = findBestLendingPool("USDC", [pool], LENDING_PROTOCOL_ALLOWLIST, {
+      minApy: 0.1, minTvlUsd: 100_000, contractAddresses: [],
+      chainFilter: new Set(["Ethereum"]),
+    });
+    expect(result).toBeTruthy();
+  });
+
+  it("matches any chain when chainFilter is omitted (backwards compat)", () => {
+    const pool = {
+      pool: "p3", chain: "Solana", project: "kamino-lend", symbol: "USDC",
+      tvlUsd: 200_000, apy: 5, apyBase: 5, apyReward: null,
+      stablecoin: true, exposure: "single", underlyingTokens: null,
+    };
+    const result = findBestLendingPool("USDC", [pool], LENDING_PROTOCOL_ALLOWLIST, {
+      minApy: 0.1, minTvlUsd: 100_000, contractAddresses: [],
+    });
+    expect(result).toBeTruthy();
   });
 });
 

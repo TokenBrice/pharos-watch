@@ -168,25 +168,29 @@ export function findBestLendingPool(
     apy: number; apyBase: number | null; apyReward: number | null;
     stablecoin: boolean; exposure: string;
     underlyingTokens?: string[] | null;
+    chain?: string;
   }>,
   allowlist: Set<string>,
   options?: {
     minApy?: number;
     minTvlUsd?: number;
     contractAddresses?: string[];
+    chainFilter?: Set<string>;
   },
 ): { pool: string; apy: number; apyBase: number | null; apyReward: number | null; tvlUsd: number; project: string } | null {
   const symLower = symbol.toLowerCase();
   const minApy = options?.minApy ?? 0;
   const minTvlUsd = options?.minTvlUsd ?? 0;
   const contractSet = new Set((options?.contractAddresses ?? []).map((a) => a.toLowerCase()));
+  const chainFilter = options?.chainFilter;
 
   const baseCandidates = dlPools.filter((p) =>
     p.exposure === "single" &&
     p.stablecoin &&
     allowlist.has(p.project) &&
     p.apy >= minApy &&
-    p.tvlUsd >= minTvlUsd
+    p.tvlUsd >= minTvlUsd &&
+    (!chainFilter || !p.chain || chainFilter.has(p.chain))
   );
 
   // Primary match: exact symbol (existing behavior).
