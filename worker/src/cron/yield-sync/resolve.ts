@@ -5,6 +5,7 @@ import { buildInClause } from "../../lib/db";
 import {
   MIN_LENDING_POOL_APY,
   MIN_LENDING_POOL_TVL_USD,
+  MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM,
   MIN_SAFETY_SCORE_FOR_YIELD,
 } from "../../lib/constants";
 import {
@@ -356,14 +357,21 @@ export async function resolveYieldSources({
         && (safetyScores.get(meta.id)?.score ?? 0) >= MIN_SAFETY_SCORE_FOR_YIELD,
     );
 
+    const SMALL_ECOSYSTEM_CHAINS = new Set(["solana", "sui", "aptos", "cardano", "stacks"]);
+
     for (const meta of lendingCandidates) {
+      const primaryChain = meta.contracts?.[0]?.chain;
+      const minTvlUsd = primaryChain && SMALL_ECOSYSTEM_CHAINS.has(primaryChain)
+        ? MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM
+        : MIN_LENDING_POOL_TVL_USD;
+
       const pool = findBestLendingPool(
         meta.symbol,
         dlPools,
         LENDING_PROTOCOL_ALLOWLIST,
         {
           minApy: MIN_LENDING_POOL_APY,
-          minTvlUsd: MIN_LENDING_POOL_TVL_USD,
+          minTvlUsd,
           contractAddresses: (meta.contracts ?? []).map((contract) => contract.address),
         },
       );
