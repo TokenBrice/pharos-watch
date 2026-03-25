@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "5.0",
+  currentVersion: "5.1",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "5.1",
+    title: "Yield Infrastructure Automation",
+    date: "2026-03-26",
+    effectiveAt: 1774771200,
+    summary:
+      "Chain-scoped Layer 3 symbol matching prevents cross-chain false positives in auto-lending discovery, variant symbol auto-scanner detects new wrapper tokens (advisory mode), and monthly yield coverage audit cron provides protocol expansion recommendations.",
+    impact: [
+      "Chain-scoped matching adds optional chainFilter to findBestLendingPool, derived from coin contract deployments",
+      "Variant scanner detects sXXX/stXXX/wXXX prefix and SAVE/VAULT/EARN/STAKE suffix patterns in DL pools",
+      "Monthly coverage audit cron (1st of month, 06:00 UTC) flags unmatched high-TVL pools and missing protocols",
+      "Protocol recommendations classify missing protocols as high-confidence (>$10M, 3+ pools) or review-needed",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.0",
     title: "Yield Coverage Expansion — Protocol-Native API Wave",
