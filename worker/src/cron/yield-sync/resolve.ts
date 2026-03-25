@@ -25,12 +25,13 @@ import {
   YIELD_VARIANT_MAP,
 } from "../yield-config";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { fetchBimaSusbdSource, fetchBprotocolLqtyOnlySource, fetchHashnoteUsycSource, getPriceDerivedApy } from "./sources";
+import { fetchBimaSusbdSource, fetchBprotocolLqtyOnlySource, fetchHashnoteUsycSource, fetchOndoUsdyOracleSource, getPriceDerivedApy } from "./sources";
 import type { DlPool, ResolvedYieldEntry } from "./types";
 
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
 const BIMA_USBD_ID = "usbd-bima";
 const HASHNOTE_USYC_ID = "usyc-hashnote";
+const ONDO_USDY_ID = "usdy-ondo-finance";
 
 interface SafetyScoreSnapshot {
   score: number;
@@ -283,6 +284,32 @@ export async function resolveYieldSources({
       const hashnoteYield = await fetchHashnoteUsycSource(signal);
       if (hashnoteYield) {
         resolved.push({ id, symbol, yield: hashnoteYield });
+        hasAnySource = true;
+      }
+    }
+
+    if (
+      id === ONDO_USDY_ID &&
+      !resolved.some((e) => e.id === id && e.yield?.sourceKey === "protocol-api:ondo-usdy-oracle")
+    ) {
+      const priorRow = await db
+        .prepare(
+          `SELECT exchange_rate, recorded_at FROM yield_history
+           WHERE stablecoin_id = ? AND source_key = 'protocol-api:ondo-usdy-oracle'
+             AND exchange_rate IS NOT NULL
+           ORDER BY recorded_at DESC LIMIT 1`,
+        )
+        .bind(ONDO_USDY_ID)
+        .first<{ exchange_rate: number; recorded_at: number }>();
+
+      const prevPriceBigint = priorRow?.exchange_rate
+        ? BigInt(Math.round(priorRow.exchange_rate * 1e18))
+        : null;
+      const daysDelta = priorRow ? (startSec - priorRow.recorded_at) / 86400 : 0;
+
+      const ondoYield = await fetchOndoUsdyOracleSource(prevPriceBigint, daysDelta, signal, chainRpcs);
+      if (ondoYield) {
+        resolved.push({ id, symbol, yield: ondoYield });
         hasAnySource = true;
       }
     }

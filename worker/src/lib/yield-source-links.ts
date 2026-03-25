@@ -9,6 +9,7 @@ const YIELD_SOURCE_URLS: Record<string, string> = {
   "B.Protocol Stability Pool (LQTY only)": "https://app.bprotocol.org/liquity",
   "BIMA savings (sUSBD)": "https://bima.money/earn",
   "Hashnote USYC": "https://usyc.hashnote.com/",
+  "Ondo USDY Oracle": "https://ondo.finance/usdy",
   BENQI: "https://app.benqi.fi/",
   "Compound v2": "https://app.compound.finance/",
   "Compound v3": "https://app.compound.finance/",

@@ -478,6 +478,58 @@ export async function fetchHashnoteUsycSource(signal?: AbortSignal): Promise<Res
   }
 }
 
+const ONDO_USDY_SOURCE_KEY = "protocol-api:ondo-usdy-oracle";
+const ONDO_USDY_SOURCE_LABEL = "Ondo USDY Oracle";
+const ONDO_USDY_SOURCE_TYPE = "nav-appreciation";
+const ONDO_USDY_ORACLE = "0xa0219aa5b31e65bc920b5b6dfb8edf0988121de0";
+const ONDO_GET_PRICE_SELECTOR = "0x98d5fdca";
+
+export async function fetchOndoUsdyOracleSource(
+  prevPriceBigint: bigint | null,
+  daysDelta: number,
+  signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+): Promise<ResolvedYield | null> {
+  try {
+    const rpc = chainRpcs ? getChainRpc(chainRpcs, "ethereum") : undefined;
+    const extraRpcUrls = rpc?.fallbackRpcUrl ? [rpc.fallbackRpcUrl] : [];
+    const currentPrice = await fetchEvmUint256AtBlock(
+      "ethereum", ONDO_USDY_ORACLE, ONDO_GET_PRICE_SELECTOR, "latest",
+      { extraRpcUrls, signal },
+    );
+    if (!currentPrice || currentPrice === 0n) return null;
+
+    const currentPriceFloat = Number(currentPrice) / 1e18;
+    if (!Number.isFinite(currentPriceFloat) || currentPriceFloat <= 0) return null;
+
+    if (!prevPriceBigint || prevPriceBigint === 0n || daysDelta < 1) {
+      return {
+        currentApy: 0, apyBase: null, apyReward: null,
+        sourcePool: null, sourceTvlUsd: null, dataSource: "protocol-api",
+        exchangeRate: currentPriceFloat, sourceKey: ONDO_USDY_SOURCE_KEY,
+        yieldSource: ONDO_USDY_SOURCE_LABEL, yieldType: ONDO_USDY_SOURCE_TYPE,
+        sourceObservedAt: Math.floor(Date.now() / 1000), comparisonAnchorObservedAt: null,
+      };
+    }
+
+    const prevPriceFloat = Number(prevPriceBigint) / 1e18;
+    const apy = (Math.pow(currentPriceFloat / prevPriceFloat, 365.25 / daysDelta) - 1) * 100;
+    if (!Number.isFinite(apy) || apy < 0) return null;
+
+    return {
+      currentApy: apy, apyBase: apy, apyReward: null,
+      sourcePool: null, sourceTvlUsd: null, dataSource: "protocol-api",
+      exchangeRate: currentPriceFloat, sourceKey: ONDO_USDY_SOURCE_KEY,
+      yieldSource: ONDO_USDY_SOURCE_LABEL, yieldType: ONDO_USDY_SOURCE_TYPE,
+      sourceObservedAt: Math.floor(Date.now() / 1000), comparisonAnchorObservedAt: null,
+    };
+  } catch (error) {
+    if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+    console.warn("[yield] Ondo USDY oracle source failed:", error);
+    return null;
+  }
+}
+
 export async function getPriceDerivedApy(
   db: D1Database,
   stablecoinId: string,
