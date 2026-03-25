@@ -30,12 +30,12 @@
     "branchCount": 27
   },
   "worker/src/cron/daily-digest/collectors.ts": {
-    "fileLines": 912,
+    "fileLines": 913,
     "maxFunctionLines": 121,
     "branchCount": 83
   },
   "worker/src/cron/sync-fx-rates.ts": {
-    "fileLines": 798,
+    "fileLines": 799,
     "maxFunctionLines": 543,
     "branchCount": 99
   },
