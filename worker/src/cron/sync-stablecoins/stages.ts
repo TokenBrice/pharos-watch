@@ -5,6 +5,16 @@ import { throwIfAborted } from "../../lib/abort";
 import type { PeggedAsset } from "../enrich-prices";
 
 const CHAIN_CIRCULATING_KEYS = ["current", "circulatingPrevDay", "circulatingPrevWeek", "circulatingPrevMonth"];
+
+/** Safely sum numeric values from a peg-bucket object (e.g., { peggedUSD: 123, peggedEUR: 45 }). */
+function sumPegBucketValues(bucket: unknown): number {
+  if (bucket == null || typeof bucket !== "object") return 0;
+  return Object.values(bucket as Record<string, unknown>).reduce<number>(
+    (sum, val) => sum + (typeof val === "number" && Number.isFinite(val) ? val : 0),
+    0,
+  );
+}
+
 const ADDRESS_OVERRIDES: Record<string, string> = {
   "m-m0": "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b", // M by M0 — no address in DL stablecoins API
   "bean-beanstalk": "arbitrum:0xBEA0005B8599265D41256905A9B3073D397812E4", // BEAN — no address in DL stablecoins API
@@ -50,10 +60,7 @@ export function normalizeChainCirculating(assets: PeggedAsset[]): void {
         const value = entry[key];
         if (!value || typeof value !== "object") continue;
 
-        entry[key] = Object.values(value as Record<string, number>).reduce(
-          (sum: number, raw: number) => sum + (Number.isFinite(raw) ? raw : 0),
-          0,
-        );
+        entry[key] = sumPegBucketValues(value);
       }
     }
   }
@@ -81,12 +88,12 @@ export function applyTrackedAssetOverrides(assets: PeggedAsset[]): void {
 
 function compareCanonicalAssetQuality(left: PeggedAsset, right: PeggedAsset): number {
   const leftVector = [
-    sumPegBuckets(left.circulating as Record<string, number> | undefined),
+    sumPegBuckets(left.circulating),
     countChainEntries(left.chainCirculating),
     Array.isArray(left.chains) ? left.chains.length : 0,
-    countFiniteBuckets(left.circulatingPrevDay as Record<string, number> | undefined) +
-      countFiniteBuckets(left.circulatingPrevWeek as Record<string, number> | undefined) +
-      countFiniteBuckets(left.circulatingPrevMonth as Record<string, number> | undefined),
+    countFiniteBuckets(left.circulatingPrevDay ?? undefined) +
+      countFiniteBuckets(left.circulatingPrevWeek ?? undefined) +
+      countFiniteBuckets(left.circulatingPrevMonth ?? undefined),
     left.price != null && typeof left.price === "number" && left.price > 0 ? 1 : 0,
     typeof left.priceUpdatedAt === "number" && Number.isFinite(left.priceUpdatedAt) ? left.priceUpdatedAt : 0,
     left.geckoId ? 1 : 0,
@@ -94,12 +101,12 @@ function compareCanonicalAssetQuality(left: PeggedAsset, right: PeggedAsset): nu
     left.address ? 1 : 0,
   ];
   const rightVector = [
-    sumPegBuckets(right.circulating as Record<string, number> | undefined),
+    sumPegBuckets(right.circulating),
     countChainEntries(right.chainCirculating),
     Array.isArray(right.chains) ? right.chains.length : 0,
-    countFiniteBuckets(right.circulatingPrevDay as Record<string, number> | undefined) +
-      countFiniteBuckets(right.circulatingPrevWeek as Record<string, number> | undefined) +
-      countFiniteBuckets(right.circulatingPrevMonth as Record<string, number> | undefined),
+    countFiniteBuckets(right.circulatingPrevDay ?? undefined) +
+      countFiniteBuckets(right.circulatingPrevWeek ?? undefined) +
+      countFiniteBuckets(right.circulatingPrevMonth ?? undefined),
     right.price != null && typeof right.price === "number" && right.price > 0 ? 1 : 0,
     typeof right.priceUpdatedAt === "number" && Number.isFinite(right.priceUpdatedAt) ? right.priceUpdatedAt : 0,
     right.geckoId ? 1 : 0,
@@ -197,7 +204,7 @@ export async function fillMissingSupplyHistory(
     const historical = historyById.get(String(asset.id));
     if (!historical) continue;
 
-    const circulating = asset.circulating as Record<string, number> | undefined;
+    const circulating = asset.circulating;
     if (!circulating) continue;
 
     const pegKey = Object.keys(circulating)[0];
