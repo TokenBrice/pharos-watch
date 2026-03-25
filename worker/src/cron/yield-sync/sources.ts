@@ -8,7 +8,7 @@ import {
 } from "../../lib/constants";
 import { getCache } from "../../lib/db-cache";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
+import { fetchEvmCallHexAtBlock, fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
@@ -909,6 +909,111 @@ export async function getPriceDerivedApy(
     sourceObservedAt: recentRow.snapshot_date,
     comparisonAnchorObservedAt: anchoredRow.snapshot_date,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Aave V3 on-chain supply rate adapter
+// ---------------------------------------------------------------------------
+
+const AAVE_V3_POOL_ADDRESSES: Record<string, string> = {
+  ethereum: "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+  arbitrum: "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+  base: "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5",
+};
+
+// getReserveData(address asset) selector
+const AAVE_GET_RESERVE_DATA_SELECTOR = "0x35ea6a75";
+
+const AAVE_V3_YIELD_SOURCE = "Aave v3";
+const AAVE_V3_YIELD_TYPE = "lending";
+
+const RAY = 10n ** 27n;
+
+function rayToApy(currentLiquidityRate: bigint): number {
+  const ratePerSecond = Number(currentLiquidityRate) / Number(RAY) / 31536000;
+  return (Math.pow(1 + ratePerSecond, 31536000) - 1) * 100;
+}
+
+export interface AaveV3RateTarget {
+  stablecoinId: string;
+  symbol: string;
+  chain: string;
+  assetAddress: string;
+}
+
+export interface AaveV3RateResult {
+  rates: Map<string, { apy: number; chain: string }>;
+}
+
+export async function fetchAaveV3SupplyRates(
+  targets: AaveV3RateTarget[],
+  signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+): Promise<AaveV3RateResult> {
+  const rates = new Map<string, { apy: number; chain: string }>();
+
+  if (!chainRpcs || targets.length === 0) {
+    return { rates };
+  }
+
+  const AAVE_BATCH_SIZE = 4;
+
+  for (let i = 0; i < targets.length; i += AAVE_BATCH_SIZE) {
+    const batch = targets.slice(i, i + AAVE_BATCH_SIZE);
+    await Promise.all(
+      batch.map(async (target) => {
+        const poolAddress = AAVE_V3_POOL_ADDRESSES[target.chain];
+        if (!poolAddress) return;
+
+        const rpc = getChainRpc(chainRpcs, target.chain);
+        if (!rpc) return;
+
+        const rpcUrls = [rpc.rpcUrl, rpc.fallbackRpcUrl].filter(
+          (url): url is string => typeof url === "string" && url.length > 0,
+        );
+
+        // Encode getReserveData(address) calldata: selector + padded address
+        const callData =
+          AAVE_GET_RESERVE_DATA_SELECTOR +
+          target.assetAddress.replace("0x", "").toLowerCase().padStart(64, "0");
+
+        try {
+          const hex = await fetchEvmCallHexAtBlock(target.chain, poolAddress, callData, "latest", {
+            extraRpcUrls: rpcUrls,
+            signal,
+            timeoutMs: 10_000,
+          });
+
+          if (!hex || hex.length < 2) return;
+
+          // currentLiquidityRate is the 3rd uint256 in the struct (byte offset 64–128)
+          // hex string after stripping "0x": chars 128–191 (0-indexed)
+          const stripped = hex.slice(2); // remove "0x"
+          if (stripped.length < 192) return;
+
+          const liquidityRateHex = stripped.slice(128, 192);
+          const currentLiquidityRate = BigInt("0x" + liquidityRateHex);
+          const apy = rayToApy(currentLiquidityRate);
+
+          if (!Number.isFinite(apy) || apy <= 0) return;
+
+          // Keep the best APY per stablecoin (in case of multiple chains)
+          const existing = rates.get(target.stablecoinId);
+          if (!existing || apy > existing.apy) {
+            rates.set(target.stablecoinId, { apy, chain: target.chain });
+          }
+        } catch (err) {
+          console.warn(
+            `[yield/aave-v3] Failed to fetch reserve data for ${target.symbol} on ${target.chain}:`,
+            err instanceof Error ? err.message : String(err),
+          );
+        }
+      }),
+    );
+  }
+
+  console.log(`[yield/aave-v3] Fetched ${rates.size}/${targets.length} Aave V3 supply rates`);
+  return { rates };
 }
 
 export async function loadRiskFreeRateSnapshot(db: D1Database): Promise<YieldBenchmarkMeta> {
