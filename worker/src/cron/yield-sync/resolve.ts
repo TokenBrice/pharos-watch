@@ -24,7 +24,7 @@ import {
   YIELD_VARIANT_MAP,
 } from "../yield-config";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { fetchBimaSusbdSource, fetchBprotocolLqtyOnlySource, getPriceDerivedApy } from "./sources";
+import { fetchBimaSusbdSource, fetchBprotocolLqtyOnlySource, fetchYearnKongSources, getPriceDerivedApy } from "./sources";
 import type { DlPool, ResolvedYieldEntry } from "./types";
 
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
@@ -295,6 +295,16 @@ export async function resolveYieldSources({
         symbol: lusdMeta.symbol,
         yield: bprotocolYield,
       });
+    }
+  }
+
+  const kongVaults = await fetchYearnKongSources(signal);
+  for (const { symbol: assetSymbol, yield: kongYield } of kongVaults) {
+    for (const meta of TRACKED_STABLECOINS) {
+      if (meta.symbol.toUpperCase() !== assetSymbol.toUpperCase()) continue;
+      if (resolved.some((e) => e.id === meta.id && e.yield?.sourceKey === kongYield.sourceKey)) continue;
+      resolved.push({ id: meta.id, symbol: meta.symbol, yield: kongYield });
+      break;
     }
   }
 
