@@ -84,9 +84,52 @@ describe("fetchPancakeSwapPools", () => {
     const result = await fetchPancakeSwapPools("graph-key");
 
     expect(result.ok).toBe(true);
-    expect(result.degraded).toBe(true);
-    expect(result.errors.some((entry) => entry.includes("dayData"))).toBe(true);
+    expect(result.degraded).toBe(false);
+    expect(result.errors).toHaveLength(0);
     expect(result.pools).toHaveLength(1);
     expect(result.pools[0]?.volume24hUsd).toBe(0);
+  });
+
+  it("batches dayData lookups so one page can make multiple volume requests", async () => {
+    const pagePools = Array.from({ length: 51 }, (_, index) => ({
+      id: `0xpool${index}`,
+      feeTier: "100",
+      totalValueLockedUSD: "125000",
+      totalValueLockedToken0: "62500",
+      totalValueLockedToken1: "62500",
+      token0Price: "1",
+      token1Price: "1",
+      token0: { id: `0xusdc${index}`, symbol: "USDC", decimals: "6" },
+      token1: { id: `0xusdt${index}`, symbol: "USDT", decimals: "6" },
+    }));
+
+    vi.mocked(fetchWithRetry)
+      .mockImplementationOnce(async (_url, init) => {
+        const body = JSON.parse(String(init?.body));
+        expect(body.query).toContain("first: 250");
+        return response({ data: { pools: pagePools } });
+      })
+      .mockImplementationOnce(async (_url, init) => {
+        const body = JSON.parse(String(init?.body));
+        expect(body.query).toContain("pool_in");
+        expect(body.query).toContain("\"0xpool0\"");
+        expect(body.query).toContain("\"0xpool49\"");
+        expect(body.query).not.toContain("\"0xpool50\"");
+        return response({ data: { poolDayDatas: [{ date: 1_700_000_000, volumeUSD: "1000", pool: { id: "0xpool0" } }] } });
+      })
+      .mockImplementationOnce(async (_url, init) => {
+        const body = JSON.parse(String(init?.body));
+        expect(body.query).toContain("\"0xpool50\"");
+        return response({ data: { poolDayDatas: [{ date: 1_700_000_000, volumeUSD: "2000", pool: { id: "0xpool50" } }] } });
+      })
+      .mockImplementation(async () => response({ data: { pools: [] } }));
+
+    const result = await fetchPancakeSwapPools("graph-key");
+
+    expect(result.ok).toBe(true);
+    expect(result.degraded).toBe(false);
+    expect(result.pools).toHaveLength(51);
+    expect(result.pools[0]?.volume24hUsd).toBe(1000);
+    expect(result.pools[50]?.volume24hUsd).toBe(2000);
   });
 });

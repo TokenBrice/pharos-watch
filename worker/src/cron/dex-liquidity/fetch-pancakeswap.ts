@@ -5,6 +5,7 @@ import { classifyClPoolType } from "./direct-source-helpers";
 
 const PAGE_SIZE = 250;
 const MAX_PAGES = 8;
+const DAY_DATA_BATCH_SIZE = 50;
 const SUBGRAPH_TIMEOUT_MS = 15_000;
 
 const PANCAKESWAP_V3_SUBGRAPHS: Record<string, { chain: string; subgraphId: string }> = {
@@ -73,6 +74,14 @@ function buildPoolDayDataQuery(poolIds: string[], cutoff: number): string {
   }`;
 }
 
+function chunkPoolIds(poolIds: string[], chunkSize: number): string[][] {
+  const chunks: string[][] = [];
+  for (let index = 0; index < poolIds.length; index += chunkSize) {
+    chunks.push(poolIds.slice(index, index + chunkSize));
+  }
+  return chunks;
+}
+
 async function fetchSubgraphJson<T>(subgraphUrl: string, query: string, signal?: AbortSignal): Promise<T> {
   const res = await fetchWithRetry(subgraphUrl, {
     method: "POST",
@@ -115,24 +124,42 @@ export async function fetchPancakeSwapPools(
         if (pagePools.length === 0) break;
 
         const latestVolumeByPool = new Map<string, number>();
-        try {
-          const cutoff = Math.floor(Date.now() / 1000) - 86400;
-          const dayData = await fetchSubgraphJson<{ poolDayDatas?: PoolDayData[] }>(
-            subgraphUrl,
-            buildPoolDayDataQuery(pagePools.map((pool) => pool.id), cutoff),
-            signal,
-          );
+        const cutoff = Math.floor(Date.now() / 1000) - 86400;
+        const dayDataPoolIdBatches = chunkPoolIds(pagePools.map((pool) => pool.id), DAY_DATA_BATCH_SIZE);
+        let failedDayDataBatches = 0;
+        for (let batchIndex = 0; batchIndex < dayDataPoolIdBatches.length; batchIndex++) {
+          const poolIdBatch = dayDataPoolIdBatches[batchIndex]!;
+          try {
+            const dayData = await fetchSubgraphJson<{ poolDayDatas?: PoolDayData[] }>(
+              subgraphUrl,
+              buildPoolDayDataQuery(poolIdBatch, cutoff),
+              signal,
+            );
 
-          for (const row of dayData.poolDayDatas ?? []) {
-            const poolId = row.pool.id.toLowerCase();
-            if (latestVolumeByPool.has(poolId)) continue;
-            const volume = parseFloat(row.volumeUSD);
-            latestVolumeByPool.set(poolId, Number.isFinite(volume) ? volume : 0);
+            for (const row of dayData.poolDayDatas ?? []) {
+              const poolId = row.pool.id.toLowerCase();
+              if (latestVolumeByPool.has(poolId)) continue;
+              const volume = parseFloat(row.volumeUSD);
+              latestVolumeByPool.set(poolId, Number.isFinite(volume) ? volume : 0);
+            }
+          } catch (error) {
+            failedDayDataBatches++;
+            const message = error instanceof Error ? error.message : String(error);
+            console.warn(
+              "[fetch-pancakeswap]",
+              chain,
+              "poolDayDatas",
+              `page ${page + 1} batch ${batchIndex + 1}/${dayDataPoolIdBatches.length}`,
+              message,
+            );
           }
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          errors.push(`${chain} page ${page + 1} dayData: ${message}`);
-          console.warn("[fetch-pancakeswap]", chain, "poolDayDatas", message);
+        }
+        if (failedDayDataBatches > 0) {
+          console.warn(
+            "[fetch-pancakeswap]",
+            chain,
+            `page ${page + 1} completed with ${failedDayDataBatches}/${dayDataPoolIdBatches.length} dayData batch failures`,
+          );
         }
 
         for (const pool of pagePools) {
