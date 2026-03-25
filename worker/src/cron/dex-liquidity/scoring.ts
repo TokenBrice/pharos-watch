@@ -737,8 +737,27 @@ export async function computeDexPrices(
     collapsedDuplicateObservations += duplicateObservations;
     if (collapsedObservations.length === 0) continue;
 
+    // Look up primary price early — used for outlier filtering and deviation calc
+    const primaryPrice = primaryPrices.get(id);
+
+    // H2: Filter extreme outliers relative to primary price before computing median.
+    // When a source (e.g. CoinGecko aggregate) reports a price near peg for a severely
+    // depegged stablecoin, its high TVL can dominate the TVL-weighted median.
+    // Only apply when 3+ observations exist and majority by count agrees with primary.
+    let medianInputObs = collapsedObservations;
+    if (primaryPrice != null && primaryPrice > 0 && collapsedObservations.length >= 3) {
+      const MAX_DEVIATION_RATIO = 2.5;
+      const nearPrimary = collapsedObservations.filter((o) => {
+        const ratio = o.price / primaryPrice;
+        return ratio >= (1 / MAX_DEVIATION_RATIO) && ratio <= MAX_DEVIATION_RATIO;
+      });
+      if (nearPrimary.length >= 2 && nearPrimary.length > collapsedObservations.length / 2) {
+        medianInputObs = nearPrimary;
+      }
+    }
+
     // H1: Scale TVL weights by source confidence before computing median
-    const adjustedObs = collapsedObservations.map((o) => ({
+    const adjustedObs = medianInputObs.map((o) => ({
       ...o,
       tvl: o.tvl * dexPriceConfidenceForProtocol(o.protocol),
     }));
@@ -759,9 +778,6 @@ export async function computeDexPrices(
 
     // Raw TVL for DB storage (represents actual on-chain liquidity, not confidence-weighted)
     const totalTvl = collapsedObservations.reduce((s, o) => s + o.tvl, 0);
-
-    // Compute deviation from primary price
-    const primaryPrice = primaryPrices.get(id);
     let deviationBps: number | null = null;
     if (primaryPrice != null && primaryPrice > 0) {
       deviationBps = Math.round(((medianPrice / primaryPrice) - 1) * 10000);
