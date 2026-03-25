@@ -159,7 +159,7 @@ describe("api endpoint registry", () => {
         confirm: "Run depeg backfill? This may take several minutes.",
         destructive: false,
         method: "POST",
-        acceptsStablecoinFilter: false,
+        acceptsStablecoinFilter: true,
       },
       {
         label: "Backfill Supply",
@@ -175,7 +175,7 @@ describe("api endpoint registry", () => {
         confirm: "Backfill CoinGecko prices?",
         destructive: false,
         method: "POST",
-        acceptsStablecoinFilter: false,
+        acceptsStablecoinFilter: true,
       },
       {
         label: "Backfill PSI",

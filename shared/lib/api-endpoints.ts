@@ -489,6 +489,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
       label: "Backfill Depegs",
       confirm: "Run depeg backfill? This may take several minutes.",
       method: "POST",
+      acceptsStablecoinFilter: true,
     },
   },
   {
@@ -520,6 +521,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
       label: "Backfill CG Prices",
       confirm: "Backfill CoinGecko prices?",
       method: "POST",
+      acceptsStablecoinFilter: true,
     },
   },
   {
