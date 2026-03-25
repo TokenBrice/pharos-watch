@@ -1,3 +1,5 @@
+import { clamp } from "@shared/lib/math";
+
 export const SAFETY_SCORE_THRESHOLD = 60;
 
 const SAFETY_WINDOW_STEP = 5;
@@ -20,10 +22,6 @@ function roundDown(value: number, step: number) {
 
 function roundUp(value: number, step: number) {
   return Math.ceil(value / step) * step;
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
 }
 
 function percentile(sortedValues: number[], p: number) {

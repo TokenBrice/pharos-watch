@@ -1,5 +1,6 @@
 "use client";
 
+import { clamp } from "@shared/lib/math";
 import { getNetPrefix } from "@shared/lib/format";
 import { getLiteralMintingPressureScore } from "@shared/lib/mint-burn-signals";
 import { cn } from "@/lib/utils";
@@ -15,10 +16,6 @@ interface MintingPressureUi {
   badgeClass: string;
   valueClass: string;
   panelClass: string;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 function getLiteralMintingPressureUi(score: number | null): MintingPressureUi {
