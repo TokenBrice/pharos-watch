@@ -13,8 +13,8 @@ import {
   PHASE_RING,
   dateScore,
   formatFuzzyDate,
-  truncateTeaser,
 } from "@/lib/pre-launch";
+import { trimTextAtWordBoundary } from "@/lib/page-metadata";
 import type { LaunchPhase, StablecoinMeta } from "@shared/types";
 import aiSummaries from "../../data/ai-summaries.json";
 
@@ -279,7 +279,7 @@ export function UpcomingStablecoinsSection({ logos }: Props) {
                 logoSrc={logos[coin.id]}
                 teaser={
                   summaries[coin.id]?.text
-                    ? truncateTeaser(summaries[coin.id].text!)
+                    ? trimTextAtWordBoundary(summaries[coin.id].text!, 120)
                     : null
                 }
                 align={

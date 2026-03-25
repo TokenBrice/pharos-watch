@@ -151,9 +151,3 @@ export function dateScore(raw?: string): number {
   return 999999;
 }
 
-/** Truncate text at a word boundary for teasers. */
-export function truncateTeaser(text: string, max = 120): string {
-  if (text.length <= max) return text;
-  const cut = text.lastIndexOf(" ", max);
-  return text.slice(0, cut > 0 ? cut : max) + "\u2026";
-}
