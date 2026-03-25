@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState, useEffect, useRef } from "react";
 import { Search } from "lucide-react";
 import { useBlacklistEventsPage, useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import { StaleDataBanner } from "@/components/stale-data-banner";
@@ -91,6 +91,14 @@ function BlacklistPageInner() {
   const parsedFilters = useMemo(() => parseFilters(searchParams.toString()), [searchParams]);
 
   const { stablecoinFilter, chainFilter, eventTypeFilter, sortKey, sortDirection, page, searchQuery } = parsedFilters;
+
+  // Local search state for instant input, debounced sync to URL + API
+  const [searchInput, setSearchInput] = useState(() => searchQuery);
+  const searchSyncTimer = useRef<ReturnType<typeof setTimeout>>(null);
+  useEffect(() => {
+    // Sync URL → local when navigating back/forward
+    setSearchInput(searchQuery);
+  }, [searchQuery]);
   const selectedChainName = useMemo(
     () => summary?.chains.find((chain) => chain.id === chainFilter)?.name ?? "all",
     [summary?.chains, chainFilter],
@@ -176,8 +184,12 @@ function BlacklistPageInner() {
 
   const handleSearchChange = useCallback(
     (v: string) => {
-      trackSearch("blacklist", v.length);
-      updateFilters({ searchQuery: v, page: 1 });
+      setSearchInput(v);
+      if (searchSyncTimer.current) clearTimeout(searchSyncTimer.current);
+      searchSyncTimer.current = setTimeout(() => {
+        trackSearch("blacklist", v.length);
+        updateFilters({ searchQuery: v, page: 1 });
+      }, 300);
     },
     [updateFilters],
   );
@@ -245,7 +257,7 @@ function BlacklistPageInner() {
           <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search by address..."
-            value={searchQuery}
+            value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-8 h-11 sm:h-8 text-sm sm:text-xs"
             aria-label="Search events by address"
@@ -265,7 +277,7 @@ function BlacklistPageInner() {
 
       {total > 0 && (
         <TablePagination
-          page={clampedPage - 1}
+          page={clampedPage - 1} /* TablePagination expects 0-indexed page */
           totalPages={totalPages}
           rangeStart={rangeStart}
           rangeEnd={rangeEnd}

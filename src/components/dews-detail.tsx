@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import { AreaChart, Area } from "recharts";
+import { useMemo, useState } from "react";
+import { AreaChart, Area, ReferenceLine } from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useStressSignalDetail } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
@@ -12,6 +12,7 @@ import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/secti
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { formatChartDate } from "@shared/lib/format";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import { cn } from "@/lib/utils";
 
 const SIGNAL_META: Record<string, { name: string; metricKey: string; metricLabel: string }> = {
   supply: { name: "Supply Velocity", metricKey: "delta1d", metricLabel: "1d change" },
@@ -24,13 +25,33 @@ const SIGNAL_META: Record<string, { name: string; metricKey: string; metricLabel
   yield: { name: "Yield Anomaly", metricKey: "warnings", metricLabel: "warnings" },
 };
 
-function ProgressBar({ value, band }: { value: number; band: ThreatBand }) {
-  const hex = THREAT_BAND_HEX[band] ?? THREAT_BAND_HEX.CALM;
+/** Per-signal chart colors (Tailwind 400-level for dark bg readability) */
+const SIGNAL_CHART_COLORS: Record<string, string> = {
+  supply: "#60a5fa",
+  pool: "#fbbf24",
+  liq: "#a78bfa",
+  price: "#22d3ee",
+  diverg: "#f472b6",
+  black: "#f87171",
+  flow: "#34d399",
+  yield: "#fb923c",
+};
+
+/** Map a signal score to its severity color (per-signal, not composite band) */
+function signalBarHex(value: number): string {
+  if (value < 25) return THREAT_BAND_HEX.CALM;
+  if (value < 50) return THREAT_BAND_HEX.WATCH;
+  if (value < 75) return THREAT_BAND_HEX.ALERT;
+  if (value < 90) return THREAT_BAND_HEX.WARNING;
+  return THREAT_BAND_HEX.DANGER;
+}
+
+function ProgressBar({ value }: { value: number }) {
   return (
     <div className="h-1.5 w-full rounded-full bg-muted">
       <div
         className="h-full rounded-full transition-all"
-        style={{ width: `${Math.min(value, 100)}%`, backgroundColor: hex }}
+        style={{ width: `${Math.min(value, 100)}%`, backgroundColor: signalBarHex(value) }}
       />
     </div>
   );
@@ -62,14 +83,47 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
   const { data, isLoading, error, refetch } = useStressSignalDetail(stablecoinId);
   const history = data?.history;
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
+  const [showBreakdown, setShowBreakdown] = useState(false);
 
+  // Include per-signal values in chart data for breakdown mode
   const chartData = useMemo(() => {
     if (!history?.length) return [];
-    return history.map((h) => ({
-      ts: h.date * 1000,
-      score: h.score,
-      band: h.band,
-    }));
+    return history.map((h) => {
+      const point: Record<string, unknown> = {
+        ts: h.date * 1000,
+        score: h.score,
+        band: h.band,
+      };
+      for (const key of Object.keys(SIGNAL_META)) {
+        const sig = h.signals?.[key];
+        point[key] = sig?.available ? sig.value : 0;
+      }
+      return point;
+    });
+  }, [history]);
+
+  // Dynamic Y-axis for composite view
+  const chartYMax = useMemo(() => {
+    if (!chartData.length) return 100;
+    const max = Math.max(...chartData.map((d) => d.score as number));
+    if (max <= 25) return 50;
+    if (max <= 50) return 75;
+    return 100;
+  }, [chartData]);
+
+  // Dynamic Y-axis for breakdown view (max of any individual signal)
+  const signalYMax = useMemo(() => {
+    if (!history?.length) return 100;
+    let max = 0;
+    for (const h of history) {
+      for (const key of Object.keys(SIGNAL_META)) {
+        const sig = h.signals?.[key];
+        if (sig?.available && sig.value > max) max = sig.value;
+      }
+    }
+    if (max <= 25) return 50;
+    if (max <= 50) return 75;
+    return 100;
   }, [history]);
 
   if (isLoading) {
@@ -114,6 +168,10 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
   const bandHex = THREAT_BAND_HEX[typedBand] ?? THREAT_BAND_HEX.CALM;
   const availableCount = Object.values(signals).filter((s) => s.available).length;
 
+  const unavailableSignalNames = Object.entries(SIGNAL_META)
+    .filter(([key]) => signals[key] && !signals[key].available)
+    .map(([, meta]) => meta.name);
+
   return (
     <Card className="animate-in fade-in duration-300">
       <CardHeader className="flex flex-row items-center justify-between gap-3">
@@ -136,59 +194,124 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
 
         {/* Signal breakdown */}
         <div className="space-y-2">
+          <div className="grid grid-cols-[1fr_auto] gap-x-3 text-[11px] uppercase tracking-[0.12em] text-muted-foreground/60">
+            <div className="flex justify-between">
+              <span>Signal</span>
+              <span>Score</span>
+            </div>
+            <span className="w-20 text-right">Value</span>
+          </div>
+
           {Object.entries(SIGNAL_META).map(([key, meta]) => {
             const signal = signals[key];
-            if (!signal) return null;
+            if (!signal || !signal.available) return null;
             const metricVal = signal[meta.metricKey];
+            const isInactive = Math.round(signal.value) === 0;
 
             return (
-              <div key={key} className="grid grid-cols-[1fr_auto] gap-x-3 items-center text-sm">
+              <div
+                key={key}
+                className={cn(
+                  "grid grid-cols-[1fr_auto] gap-x-3 items-center text-sm",
+                  isInactive && "opacity-50",
+                )}
+              >
                 <div className="space-y-0.5">
                   <div className="flex items-center justify-between">
-                    <span className={signal.available ? "text-foreground" : "text-muted-foreground"}>{meta.name}</span>
+                    <span className="text-foreground">{meta.name}</span>
                     <span className="font-mono text-xs tabular-nums">
-                      {signal.available ? `${Math.round(signal.value)}/100` : "—"}
+                      {Math.round(signal.value)}/100
                     </span>
                   </div>
-                  <ProgressBar value={signal.available ? signal.value : 0} band={typedBand} />
+                  <ProgressBar value={signal.value} />
                 </div>
                 <span className="text-xs text-muted-foreground w-20 text-right truncate" title={meta.metricLabel}>
-                  {signal.available ? formatMetric(meta.metricKey, metricVal) : "\u2014"}
+                  {formatMetric(meta.metricKey, metricVal)}
                 </span>
               </div>
             );
           })}
         </div>
 
+        {unavailableSignalNames.length > 0 && (
+          <p className="text-[11px] text-muted-foreground">
+            {unavailableSignalNames.join(", ")} — not applicable
+          </p>
+        )}
+
         {/* History chart */}
         {chartData.length > 1 && (
-          <div ref={chartContainerRef} className="h-[180px]" role="figure" aria-label="DEWS score history">
-            {isChartReady ? (
-              <AreaChart
-                width={width}
-                height={height}
-                data={chartData}
-                margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
+          <>
+            <div className="flex items-center justify-end">
+              <button
+                onClick={() => setShowBreakdown((v) => !v)}
+                className="pharos-focus-ring min-h-11 rounded-md px-2 py-1 text-xs text-muted-foreground underline decoration-dashed underline-offset-2 transition-colors hover:text-foreground lg:min-h-9"
               >
-                <defs>
-                  <linearGradient id="dewsGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={bandHex} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={bandHex} stopOpacity={0.05} />
-                  </linearGradient>
-                </defs>
-                <TimeGrid />
-                <TimeXAxis
-                  dataKey="ts"
-                  tickFormatter={(ts: number) => formatChartDate(ts, "short")}
-                />
-                <MonoYAxis domain={[0, 100]} width={30} />
-                <DateTooltip formatter={(val) => [`${val}/100`, "DEWS"]} />
-                <Area type="monotone" dataKey="score" stroke={bandHex} fill="url(#dewsGrad)" strokeWidth={2} />
-              </AreaChart>
-            ) : (
-              <div className="h-full w-full animate-pulse rounded bg-muted" />
+                {showBreakdown ? "Show composite" : "Show signal breakdown"}
+              </button>
+            </div>
+
+            <div ref={chartContainerRef} className="h-[180px]" role="figure" aria-label="DEWS score history">
+              {isChartReady ? (
+                <AreaChart
+                  width={width}
+                  height={height}
+                  data={chartData}
+                  margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
+                >
+                  <defs>
+                    <linearGradient id="dewsGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={bandHex} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={bandHex} stopOpacity={0.05} />
+                    </linearGradient>
+                  </defs>
+                  <TimeGrid />
+                  <TimeXAxis
+                    dataKey="ts"
+                    tickFormatter={(ts: number) => formatChartDate(ts, "short")}
+                  />
+                  <MonoYAxis domain={[0, showBreakdown ? signalYMax : chartYMax]} width={30} />
+                  {(showBreakdown ? signalYMax : chartYMax) >= 50 && (
+                    <ReferenceLine y={25} stroke={THREAT_BAND_HEX.WATCH} strokeDasharray="4 4" strokeOpacity={0.25} />
+                  )}
+                  <DateTooltip
+                    formatter={(val) => [`${Math.round(val as number)}/100`, showBreakdown ? "Signal" : "DEWS"]}
+                  />
+                  {showBreakdown ? (
+                    Object.keys(SIGNAL_META).map((key) => (
+                      <Area
+                        key={key}
+                        type="monotone"
+                        dataKey={key}
+                        stroke={SIGNAL_CHART_COLORS[key]}
+                        fill={SIGNAL_CHART_COLORS[key]}
+                        fillOpacity={0.12}
+                        strokeWidth={1.5}
+                        dot={false}
+                        isAnimationActive={false}
+                      />
+                    ))
+                  ) : (
+                    <Area type="monotone" dataKey="score" stroke={bandHex} fill="url(#dewsGrad)" strokeWidth={2} />
+                  )}
+                </AreaChart>
+              ) : (
+                <div className="h-full w-full animate-pulse rounded bg-muted" />
+              )}
+            </div>
+
+            {/* Breakdown legend */}
+            {showBreakdown && (
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                {Object.entries(SIGNAL_META).map(([key, meta]) => (
+                  <div key={key} className="flex items-center gap-1">
+                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: SIGNAL_CHART_COLORS[key] }} />
+                    <span>{meta.name}</span>
+                  </div>
+                ))}
+              </div>
             )}
-          </div>
+          </>
         )}
 
         <MethodologyCardActions topic="dews" />

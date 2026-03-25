@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -68,7 +69,7 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
 
   if (!signals) {
     return (
-      <Card className={["rounded-xl flex flex-col", className].filter(Boolean).join(" ")}>
+      <Card className={cn("rounded-xl flex flex-col", className)}>
         <CardHeader className="pb-3">
           <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             DEWS Alert Queue
@@ -84,7 +85,7 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
   }
 
   return (
-    <Card className={["rounded-xl flex flex-col", className].filter(Boolean).join(" ")}>
+    <Card className={cn("rounded-xl flex flex-col", className)}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2">
           <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
@@ -105,7 +106,7 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
             <Link
               key={coin.id}
               href={buildStablecoinUrl(coin.id)}
-              className="flex items-center justify-between gap-3 py-2 px-2 rounded-lg hover:bg-accent/50 transition-colors group"
+              className="flex items-center justify-between gap-3 py-2 px-2 min-h-11 rounded-lg hover:bg-accent/50 transition-colors group"
               onMouseEnter={() => prefetch(coin.id)}
             >
               <div className="flex items-center gap-3 min-w-0">
@@ -132,7 +133,8 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
             type="button"
             disabled={safePage === 0}
             onClick={() => setPage(safePage - 1)}
-            className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed pharos-focus-ring"
+            className="min-h-11 sm:min-h-0 px-2 text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed pharos-focus-ring"
+            aria-label="Previous page"
           >
             ← Prev
           </button>
@@ -143,7 +145,8 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
             type="button"
             disabled={safePage >= totalPages - 1}
             onClick={() => setPage(safePage + 1)}
-            className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed pharos-focus-ring"
+            className="min-h-11 sm:min-h-0 px-2 text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed pharos-focus-ring"
+            aria-label="Next page"
           >
             Next →
           </button>

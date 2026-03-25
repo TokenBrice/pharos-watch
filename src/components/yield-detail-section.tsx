@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ChevronDown } from "lucide-react";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
@@ -69,10 +69,13 @@ function PysBreakdown({
 
   return (
     <details className="group relative inline-flex min-w-0 flex-col">
-      <summary className="pharos-focus-ring inline-flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-md px-1 py-1 text-left [&::-webkit-details-marker]:hidden">
+      <summary className="pharos-focus-ring inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-md px-1 py-1 text-left [&::-webkit-details-marker]:hidden">
         <span className={cn("font-mono text-2xl tabular-nums", toneClass)}>{score.toFixed(1)}</span>
-        <span className="text-[11px] font-medium text-muted-foreground group-open:hidden">Breakdown</span>
-        <span className="hidden text-[11px] font-medium text-muted-foreground group-open:inline">Hide</span>
+        <span className="flex items-center gap-0.5 text-[11px] font-medium text-muted-foreground underline decoration-dashed underline-offset-2">
+          <span className="group-open:hidden">Breakdown</span>
+          <span className="hidden group-open:inline">Hide</span>
+          <ChevronDown aria-hidden="true" className="h-3 w-3 transition-transform group-open:rotate-180" />
+        </span>
       </summary>
       <div className="pt-2 sm:absolute sm:bottom-full sm:left-1/2 sm:z-50 sm:mb-2 sm:w-max sm:max-w-[220px] sm:-translate-x-1/2 sm:pt-0">
         <div className="space-y-1.5 rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
@@ -100,23 +103,30 @@ function DetailStatCard({
   label,
   value,
   toneClass,
+  subtitle,
   children,
+  className,
 }: {
   label: ReactNode;
   value?: string;
   toneClass?: string;
+  subtitle?: string;
   children?: ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+    <div className={cn("rounded-xl border border-border/60 bg-muted/20 px-3 py-2 sm:p-3", className)}>
       <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
-      <div className="mt-2 min-h-[2.5rem]">
+      <div className="mt-1.5">
         {children ?? (
           <span className={cn("font-mono text-2xl tabular-nums text-foreground", toneClass)}>
             {value}
           </span>
         )}
       </div>
+      {subtitle && (
+        <p className="mt-0.5 text-[11px] text-muted-foreground">{subtitle}</p>
+      )}
     </div>
   );
 }
@@ -146,20 +156,21 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
       <section id="yield" aria-labelledby="yield-intelligence-heading">
           <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
           <CardHeader className="pb-2">
-            <CardTitle as="h3" id="yield-intelligence-heading" className={DETAIL_SECTION_TITLE_CLASS}>
+            <CardTitle as="h2" id="yield-intelligence-heading" className={DETAIL_SECTION_TITLE_CLASS}>
               Yield Intelligence
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-              {Array.from({ length: 5 }).map((_, index) => (
+            <Skeleton className="h-[300px] rounded-xl" />
+            <Skeleton className="h-9 w-48" />
+            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, index) => (
                 <div key={index} className="rounded-xl border border-border/60 bg-muted/20 p-3">
                   <Skeleton className="h-3 w-20" />
                   <Skeleton className="mt-3 h-8 w-24" />
                 </div>
               ))}
             </div>
-            <Skeleton className="h-[300px] rounded-xl" />
           </CardContent>
         </Card>
       </section>
@@ -171,7 +182,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
       <section id="yield" aria-labelledby="yield-intelligence-heading">
           <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
           <CardHeader className="pb-2">
-            <CardTitle as="h3" id="yield-intelligence-heading" className={DETAIL_SECTION_TITLE_CLASS}>
+            <CardTitle as="h2" id="yield-intelligence-heading" className={DETAIL_SECTION_TITLE_CLASS}>
               Yield Intelligence
             </CardTitle>
           </CardHeader>
@@ -210,12 +221,17 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
     })),
   ];
 
+  // Benchmark subtitle for Excess Yield card (distill: fold benchmark into stat card)
+  const benchmarkSubtitle = data?.provenance
+    ? `vs ${data.provenance.benchmark.rate.toFixed(2)}% T-Bill${data.provenance.benchmark.isFallback ? " (fallback)" : ""}`
+    : undefined;
+
   return (
     <section id="yield" aria-labelledby="yield-intelligence-heading">
       <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
         <CardHeader className="pb-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle as="h3" id="yield-intelligence-heading" className={DETAIL_SECTION_TITLE_CLASS}>
+            <CardTitle as="h2" id="yield-intelligence-heading" className={DETAIL_SECTION_TITLE_CLASS}>
               Yield Intelligence
             </CardTitle>
             <span
@@ -257,7 +273,41 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             </div>
           ) : null}
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {/* ── History chart (hero visual — chart leads) ── */}
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              APY trend against the current T-bill hurdle rate and peer median.
+            </p>
+            <YieldHistoryChart
+              stablecoinId={stablecoinId}
+              riskFreeRate={riskFreeRate}
+              medianApy={medianApy}
+              availableSources={historySources}
+            />
+          </div>
+
+          {/* ── Excess Yield verdict (hero metric) ── */}
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Excess Yield</span>
+            <span
+              className={cn(
+                "font-mono text-3xl tabular-nums",
+                ranking.excessYield === null
+                  ? "text-muted-foreground"
+                  : ranking.excessYield >= 0
+                    ? "text-emerald-700 dark:text-emerald-400"
+                    : "text-red-700 dark:text-red-400",
+              )}
+            >
+              {formatSignedPercent(ranking.excessYield)}
+            </span>
+            {benchmarkSubtitle && (
+              <span className="text-sm text-muted-foreground">{benchmarkSubtitle}</span>
+            )}
+          </div>
+
+          {/* ── Stat cards (4 supporting metrics, clean 2x2 / 4-col) ── */}
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             <DetailStatCard label="Current APY" value={formatPercent(ranking.currentApy)} />
             <DetailStatCard label="30d APY" value={formatPercent(ranking.apy30d)} />
             <DetailStatCard label={<MethodologyLabel topic="pys">PYS</MethodologyLabel>}>
@@ -269,21 +319,14 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
                 safetyScore={ranking.safetyScore}
                 sustainabilityMult={sustainabilityMult}
               />
+              {ranking.provenance?.usedDefaultSafety && (
+                <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-300">Default safety inputs</p>
+              )}
             </DetailStatCard>
             <DetailStatCard label={<MethodologyLabel topic="yieldStability">Stability</MethodologyLabel>} value={stabilityValue} />
-            <DetailStatCard
-              label="Excess Yield"
-              value={formatSignedPercent(ranking.excessYield)}
-              toneClass={
-                ranking.excessYield === null
-                  ? "text-muted-foreground"
-                  : ranking.excessYield >= 0
-                    ? "text-emerald-700 dark:text-emerald-400"
-                    : "text-red-700 dark:text-red-400"
-              }
-            />
           </div>
 
+          {/* ── Source details ── */}
           <div className="grid gap-3 rounded-xl border border-border/60 bg-background/40 p-4 sm:grid-cols-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Yield Source</p>
@@ -318,24 +361,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             </div>
           </div>
 
-          {data?.provenance ? (
-            <div className="rounded-xl border border-border/60 bg-muted/15 p-4 text-xs text-muted-foreground">
-              <p>
-                Benchmark:{" "}
-                {data.provenance.benchmark.recordDate
-                  ? `${data.provenance.benchmark.rate.toFixed(2)}% as of ${data.provenance.benchmark.recordDate}`
-                  : `${data.provenance.benchmark.rate.toFixed(2)}%`}
-                {data.provenance.benchmark.isFallback
-                  ? ` (${data.provenance.benchmark.fallbackMode ?? "fallback"})`
-                  : ""}
-              </p>
-              <p className="mt-1">
-                Safety coverage: {(data.provenance.safetySnapshot.coverageRatio * 100).toFixed(0)}%
-                {ranking.provenance?.usedDefaultSafety ? " — this row uses default NR safety inputs." : ""}
-              </p>
-            </div>
-          ) : null}
-
+          {/* ── Alternative sources ── */}
           {ranking.altSources.length > 0 ? (
             <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Alternative Sources</p>
@@ -356,21 +382,6 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
               </div>
             </div>
           ) : null}
-
-          <div className="space-y-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">History</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                APY trend against the current T-bill hurdle rate and peer median.
-              </p>
-            </div>
-            <YieldHistoryChart
-              stablecoinId={stablecoinId}
-              riskFreeRate={riskFreeRate}
-              medianApy={medianApy}
-              availableSources={historySources}
-            />
-          </div>
 
           <MethodologyCardActions topic="pys" />
         </CardContent>

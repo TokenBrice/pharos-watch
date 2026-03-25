@@ -201,7 +201,7 @@ export function CompareClient() {
                 </p>
               </div>
               <p className="text-xs text-muted-foreground">
-                URL-backed selection · up to {MAX_COMPARE_COINS} assets · live dataset mix
+                Shareable link · up to {MAX_COMPARE_COINS} assets · live data
               </p>
             </div>
             {selectionInsights ? (
@@ -239,6 +239,7 @@ export function CompareClient() {
             onClick={handleTwitterShare}
             disabled={shareLoading}
             className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-50"
+            aria-label="Share comparison on Twitter"
             title="Share on Twitter/X"
           >
             <Twitter className="h-3.5 w-3.5" />
@@ -248,6 +249,7 @@ export function CompareClient() {
             onClick={handleWebShare}
             disabled={shareLoading}
             className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-50"
+            aria-label="Share comparison link or image"
             title="Share comparison"
           >
             <Share2 className="h-3.5 w-3.5" />
@@ -257,6 +259,7 @@ export function CompareClient() {
             onClick={handleDownload}
             disabled={shareLoading}
             className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-50"
+            aria-label="Download comparison as image"
             title="Download comparison image"
           >
             <Download className="h-3.5 w-3.5" />
@@ -301,10 +304,7 @@ export function CompareClient() {
 
               {/* Per-coin flow cards */}
               {flowCardData.length > 0 && (
-                <div
-                  className="grid gap-3"
-                  style={{ gridTemplateColumns: `repeat(${Math.min(flowCardData.length, 5)}, minmax(0, 1fr))` }}
-                >
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                   {flowCardData.map((card) => (
                     <CoinFlowCard key={card.id} {...card} />
                   ))}
@@ -351,7 +351,7 @@ export function CompareClient() {
                   <CardTitle className="pharos-kicker">Safety Score Comparison</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col items-center justify-center">
-                  <CompareRadar cards={radarCards} size={350} />
+                  <CompareRadar cards={radarCards} size={300} />
                   <div className="flex flex-wrap gap-3 justify-center mt-3">
                     {radarCards.map(({ card, color }) => (
                       <div key={card.id} className="flex items-center gap-1.5 text-sm">

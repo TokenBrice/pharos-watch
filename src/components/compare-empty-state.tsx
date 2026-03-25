@@ -75,7 +75,7 @@ function ComparePreview({
                   >
                     <span className="text-xs text-muted-foreground">{label}</span>
                     <span
-                      className={`text-xs font-mono ${index === 0 ? "text-emerald-400" : index === 1 ? "text-cyan-300" : "text-amber-300"}`}
+                      className="text-xs font-mono text-muted-foreground"
                     >
                       {index === 0 ? "-0.02%" : index === 1 ? "+2.4%" : "78/100"}
                     </span>

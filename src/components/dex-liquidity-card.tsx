@@ -30,6 +30,7 @@ import { getScoreTier, TIER_TEXT, getDurabilityColor, getDurabilityBgColor } fro
 import { BalanceBar } from "@/components/balance-bar";
 import type { DexLiquidityPool, DexLiquidityData } from "@shared/types";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 
 type PoolBalanceDetails = NonNullable<NonNullable<DexLiquidityPool["extra"]>["balanceDetails"]>;
 
@@ -152,7 +153,7 @@ function ProtocolBar({ protocolTvl }: { protocolTvl: Record<string, number> }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Protocol Breakdown</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-foreground">Protocol Breakdown</p>
       <BreakdownBar
         entries={entries}
         total={total}
@@ -190,7 +191,7 @@ function ChainBar({ chainTvl }: { chainTvl: Record<string, number> }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Chain Breakdown</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-foreground">Chain Breakdown</p>
       <BreakdownBar
         entries={entries}
         total={total}
@@ -218,11 +219,11 @@ function ChainBar({ chainTvl }: { chainTvl: Record<string, number> }) {
 
 function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPool[]; totalPoolCount?: number }) {
   if (pools.length === 0) return null;
-  const displayed = pools.slice(0, 5).length;
+  const displayed = Math.min(pools.length, 5);
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <p className="text-xs font-semibold uppercase tracking-wider text-foreground">
         {totalPoolCount != null && totalPoolCount > displayed
           ? `Top ${displayed} of ${totalPoolCount} pools`
           : "Top Pools"}
@@ -259,10 +260,14 @@ function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPool[]; t
                     <span className="font-medium">{pool.symbol}</span>
                     <span className="text-xs text-muted-foreground">({pool.project})</span>
                   </div>
-                  {pool.extra?.organicFraction != null && (
-                    <div className="mt-0.5">
+                  {(pool.extra?.organicFraction != null) && (
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <span className="text-xs text-muted-foreground sm:hidden">{pool.chain}</span>
                       <OrganicBadge fraction={pool.extra.organicFraction} maturityDays={pool.extra.maturityDays} />
                     </div>
+                  )}
+                  {pool.extra?.organicFraction == null && (
+                    <span className="mt-0.5 block text-xs text-muted-foreground sm:hidden">{pool.chain}</span>
                   )}
                 </td>
                 <td className="px-3 py-1.5 text-muted-foreground hidden sm:table-cell">{pool.chain}</td>
@@ -288,24 +293,29 @@ function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPool[]; t
                   {formatCurrency(pool.volumeUsd1d)}
                 </td>
                 <td className="px-3 py-1.5 text-right text-xs text-muted-foreground hidden lg:table-cell">
-                  <div className="flex justify-end gap-1.5">
-                    {pool.extra?.amplificationCoefficient != null && (
-                      <span title="Curve amplification coefficient">A={pool.extra.amplificationCoefficient}</span>
-                    )}
-                    {pool.extra?.amplificationCoefficient == null && getPoolVariantLabel(pool.poolType) && (
-                      <span title="Pool variant">{getPoolVariantLabel(pool.poolType)}</span>
-                    )}
-                    {pool.extra?.feeTier != null && (
-                      <span title="Fee tier">{formatFeeTierLabel(pool.extra.feeTier)}</span>
-                    )}
-                    {pool.extra?.isMetaPool && <span className="opacity-60">meta</span>}
-                    {pool.extra?.amplificationCoefficient == null &&
-                      pool.extra?.feeTier == null &&
-                      !pool.extra?.isMetaPool &&
-                      !getPoolVariantLabel(pool.poolType) && (
-                        <span>&mdash;</span>
-                      )}
-                  </div>
+                  {(() => {
+                    const variantLabel = getPoolVariantLabel(pool.poolType);
+                    return (
+                      <div className="flex justify-end gap-1.5">
+                        {pool.extra?.amplificationCoefficient != null && (
+                          <span title="Curve amplification coefficient">A={pool.extra.amplificationCoefficient}</span>
+                        )}
+                        {pool.extra?.amplificationCoefficient == null && variantLabel && (
+                          <span title="Pool variant">{variantLabel}</span>
+                        )}
+                        {pool.extra?.feeTier != null && (
+                          <span title="Fee tier">{formatFeeTierLabel(pool.extra.feeTier)}</span>
+                        )}
+                        {pool.extra?.isMetaPool && <span className="opacity-60">meta</span>}
+                        {pool.extra?.amplificationCoefficient == null &&
+                          pool.extra?.feeTier == null &&
+                          !pool.extra?.isMetaPool &&
+                          !variantLabel && (
+                            <span>&mdash;</span>
+                          )}
+                      </div>
+                    );
+                  })()}
                 </td>
               </tr>
             ))}
@@ -317,6 +327,7 @@ function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPool[]; t
 }
 
 function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
+  const gradientId = `tvlGrad-${stablecoinId}`;
   const { data: history, isLoading } = useDexLiquidityHistory(stablecoinId, 90);
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
@@ -332,7 +343,7 @@ function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
     if (isLoading) {
       return (
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">TVL History (90d)</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-foreground">TVL History (90d)</p>
           <ChartSkeleton className="h-32" />
         </div>
       );
@@ -342,35 +353,35 @@ function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">TVL History (90d)</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-foreground">TVL History (90d)</p>
       <div ref={chartContainerRef} className="h-32" role="figure" aria-label="TVL trend chart">
         {isChartReady ? (
           <AreaChart width={width} height={height} data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
             <defs>
-              <linearGradient id="tvlGradient" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={CHART_BLUE} stopOpacity={0.3} />
                 <stop offset="95%" stopColor={CHART_BLUE} stopOpacity={0.05} />
               </linearGradient>
             </defs>
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
+              tick={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
               tickLine={false}
               axisLine={false}
-              interval="preserveStartEnd"
+              minTickGap={24}
             />
             <YAxis
-              tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
+              tick={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
               tickLine={false}
               axisLine={false}
               tickFormatter={(v: number) => formatCurrency(v)}
-              width={60}
+              width={56}
             />
             <Tooltip
               {...RECHARTS_TOOLTIP_STYLES}
               formatter={(value) => [formatCurrency(typeof value === "number" ? value : Number(value ?? 0) || 0), "TVL"]}
             />
-            <Area type="monotone" dataKey="tvl" stroke={CHART_BLUE} fill="url(#tvlGradient)" strokeWidth={1.5} />
+            <Area type="monotone" dataKey="tvl" stroke={CHART_BLUE} fill={`url(#${gradientId})`} strokeWidth={1.5} />
           </AreaChart>
         ) : (
           <ChartSkeleton className="h-full w-full" />
@@ -380,47 +391,21 @@ function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
   );
 }
 
-/** 6-bar horizontal breakdown of score components */
+/** 5-bar horizontal breakdown of score components */
 function ScoreBreakdown({ components }: { components: DexLiquidityData["scoreComponents"] }) {
   if (!components) return null;
-  const bars = [
-    {
-      label: "TVL Depth",
-      value: components.tvlDepth,
-      weight: "35%",
-      tooltip: "Log-scale effective TVL (quality-adjusted, metapool-deduped)",
-    },
-    {
-      label: "Volume",
-      value: components.volumeActivity,
-      weight: "20%",
-      tooltip: "Log-scale volume/TVL ratio",
-    },
-    {
-      label: "Pool Quality",
-      value: components.poolQuality,
-      weight: "22.5%",
-      tooltip: "Mechanism quality \u00d7 balance health \u00d7 pair quality",
-    },
-    {
-      label: "Durability",
-      value: components.durability,
-      weight: "15%",
-      tooltip: "TVL stability, volume consistency, maturity, organic fees",
-    },
-    {
-      label: "Diversity",
-      value: components.pairDiversity,
-      weight: "7.5%",
-      tooltip: "Number of distinct liquidity pools",
-    },
-  ];
+  const bars = LIQUIDITY_SCORE_WEIGHTS.map((w) => ({
+    label: w.label,
+    value: components[w.key],
+    weight: w.displayWeight,
+    tooltip: w.tooltip,
+  }));
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Score Breakdown</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-foreground">Score Breakdown</p>
       {bars.map(({ label, value, weight, tooltip }) => (
         <div key={label} className="flex items-center gap-2 text-xs">
-          <span className="w-24 text-muted-foreground shrink-0 cursor-help" title={tooltip}>
+          <span className="w-28 sm:w-36 text-muted-foreground shrink-0 cursor-help" title={tooltip}>
             {label} <span className="opacity-60">({weight})</span>
           </span>
           <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
@@ -473,7 +458,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
 
   if (isLoading) {
     return (
-      <Card className="rounded-xl border-l-[3px] border-l-cyan-500">
+      <Card className="rounded-xl">
         <CardHeader className="pb-2">
           <Skeleton className="h-3 w-36" />
         </CardHeader>
@@ -489,7 +474,22 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
   }
 
   const liq = liquidityMap?.[stablecoinId];
-  if (!liq) return null;
+  if (!liq) {
+    return (
+      <Card className="rounded-xl">
+        <CardHeader className="pb-2">
+          <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
+            <MethodologyLabel topic="liquidityScore">DEX Liquidity</MethodologyLabel>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            No DEX liquidity data available for this stablecoin.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const score = liq.liquidityScore ?? 0;
   const tier = getScoreTier(score);
@@ -498,7 +498,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
   const evidenceLabel = getLiquidityEvidenceLabel(liq);
 
   return (
-    <Card className="rounded-xl border-l-[3px] border-l-cyan-500 animate-in fade-in duration-300">
+    <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -507,7 +507,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
             </CardTitle>
             <Badge
               variant="outline"
-              className={`text-[10px] ${coverageBadge.className}`}
+              className={`text-[11px] ${coverageBadge.className}`}
               title={formatLiquiditySourceMix(liq.sourceMix)}
             >
               {coverageBadge.label}
@@ -523,7 +523,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         {!isRated && (
           <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
             No observed DEX liquidity in the current pipeline. This asset is tracked, but it is currently unrated for
@@ -531,144 +531,153 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           </div>
         )}
 
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-          <div>
-            <p className="text-xs text-muted-foreground">Total AMM Liquidity TVL</p>
-            <p className="text-lg font-extrabold font-mono tabular-nums">{formatCurrency(liq.totalTvlUsd)}</p>
-            {(liq.tvlChange24h != null || liq.tvlChange7d != null) && (
-              <div className="flex gap-2 mt-0.5">
-                {liq.tvlChange24h != null && (
-                  <span className="text-xs text-muted-foreground">
-                    24h <TrendArrow value={liq.tvlChange24h} />
-                  </span>
-                )}
-                {liq.tvlChange7d != null && (
-                  <span className="text-xs text-muted-foreground">
-                    7d <TrendArrow value={liq.tvlChange7d} />
-                  </span>
-                )}
-              </div>
-            )}
-            {liq.effectiveTvlUsd > 0 && liq.effectiveTvlUsd !== liq.totalTvlUsd && (
-              <div className="text-xs text-muted-foreground mt-0.5">
-                <span className="inline-flex items-center gap-1">
-                  <MethodologyLabel topic="effectiveTvl">Effective</MethodologyLabel>: {formatCurrency(liq.effectiveTvlUsd)}
-                </span>
-              </div>
-            )}
-            {evidenceLabel && (
-              <div className="text-xs text-muted-foreground mt-0.5">{evidenceLabel}</div>
-            )}
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">24h Volume</p>
-            <p className="text-lg font-extrabold font-mono tabular-nums">{formatCurrency(liq.totalVolume24hUsd)}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">7d Volume</p>
-            <p className="text-lg font-extrabold font-mono tabular-nums">{formatCurrency(liq.totalVolume7dUsd)}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Pools</p>
-            <p className="text-lg font-extrabold font-mono tabular-nums">{liq.poolCount}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Chains</p>
-            <p className="text-lg font-extrabold font-mono tabular-nums">{liq.chainCount}</p>
-          </div>
-        </div>
-
-        {/* Concentration & Stability indicators */}
-        {(liq.concentrationHhi != null || liq.depthStability != null) && (
-          <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-            {liq.concentrationHhi != null &&
-              (() => {
-                const { label, color } = getConcentrationLabel(liq.concentrationHhi);
-                return (
-                  <span className="text-muted-foreground">
-                    Concentration: <span className={`font-medium ${color}`}>{label}</span>
-                    <span className="text-xs ml-1 font-mono">({(liq.concentrationHhi * 100).toFixed(0)}%)</span>
-                  </span>
-                );
-              })()}
-            {liq.depthStability != null && (
-              <span className="text-muted-foreground">
-                Depth Stability: <span className="font-medium font-mono">{(liq.depthStability * 100).toFixed(0)}%</span>
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Durability, balance, organic indicators */}
-        {(liq.durabilityScore != null || liq.weightedBalanceRatio != null || liq.organicFraction != null) && (
-          <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-            {liq.durabilityScore != null && (
-              <div>
-                <span className="text-muted-foreground">Durability: </span>
-                <DurabilityBadge score={liq.durabilityScore} />
-              </div>
-            )}
-            {liq.weightedBalanceRatio != null && (
-              <div className="flex items-center gap-1">
-                <span className="text-muted-foreground">Pool Balance: </span>
-                <BalanceBar ratio={liq.weightedBalanceRatio} />
-              </div>
-            )}
-            {liq.organicFraction != null && (
-              <div>
-                <span className="text-muted-foreground">Organic: </span>
-                <span
-                  className={`font-mono tabular-nums ${
-                    liq.organicFraction >= 0.8
-                      ? "text-emerald-700 dark:text-emerald-400"
-                      : liq.organicFraction >= 0.5
-                        ? "text-amber-700 dark:text-amber-400"
-                        : "text-red-700 dark:text-red-400"
-                  }`}
-                >
-                  {Math.round(liq.organicFraction * 100)}%
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* DEX-Implied Price */}
-        {liq.dexPriceUsd != null && (
-          <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">DEX-Implied Price</p>
-            <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-              <span className="text-lg font-extrabold font-mono tabular-nums">${liq.dexPriceUsd.toFixed(4)}</span>
-              {liq.dexDeviationBps != null && (
-                <span
-                  className={`text-sm font-mono ${
-                    Math.abs(liq.dexDeviationBps) >= 50 ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground"
-                  }`}
-                >
-                  {liq.dexDeviationBps >= 0 ? "+" : ""}
-                  {liq.dexDeviationBps}bps vs primary
-                </span>
+        {/* ── Zone 1: Health Summary ── */}
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div>
+              <p className="text-xs text-muted-foreground"><span className="sm:hidden">AMM TVL</span><span className="hidden sm:inline">Total AMM Liquidity TVL</span></p>
+              <p className="text-lg font-extrabold font-mono tabular-nums">{formatCurrency(liq.totalTvlUsd)}</p>
+              {(liq.tvlChange24h != null || liq.tvlChange7d != null) && (
+                <div className="flex gap-2 mt-0.5">
+                  {liq.tvlChange24h != null && (
+                    <span className="text-xs text-muted-foreground">
+                      24h <TrendArrow value={liq.tvlChange24h} />
+                    </span>
+                  )}
+                  {liq.tvlChange7d != null && (
+                    <span className="text-xs text-muted-foreground">
+                      7d <TrendArrow value={liq.tvlChange7d} />
+                    </span>
+                  )}
+                </div>
               )}
-              {liq.priceSourceCount != null && (
-                <PoolSourceLabel
-                  count={liq.priceSourceCount}
-                  tvl={liq.priceSourceTvl ?? null}
-                  priceSources={liq.priceSources ?? null}
-                />
+              {liq.effectiveTvlUsd > 0 && liq.effectiveTvlUsd !== liq.totalTvlUsd && (
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  <span className="inline-flex items-center gap-1">
+                    <MethodologyLabel topic="effectiveTvl">Effective</MethodologyLabel>: {formatCurrency(liq.effectiveTvlUsd)}
+                  </span>
+                </div>
+              )}
+              {evidenceLabel && (
+                <div className="text-xs text-muted-foreground mt-0.5">{evidenceLabel}</div>
               )}
             </div>
+            <div>
+              <p className="text-xs text-muted-foreground">24h Volume</p>
+              <p className="text-lg font-extrabold font-mono tabular-nums">{formatCurrency(liq.totalVolume24hUsd)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">7d Volume</p>
+              <p className="text-lg font-extrabold font-mono tabular-nums">{formatCurrency(liq.totalVolume7dUsd)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Pools</p>
+              <p className="text-lg font-extrabold font-mono tabular-nums">{liq.poolCount}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Chains</p>
+              <p className="text-lg font-extrabold font-mono tabular-nums">{liq.chainCount}</p>
+            </div>
           </div>
-        )}
 
-        <ProtocolBar protocolTvl={liq.protocolTvl} />
+          {/* Health indicators — grouped into a cohesive block */}
+          {(liq.concentrationHhi != null || liq.depthStability != null ||
+            liq.durabilityScore != null || liq.weightedBalanceRatio != null || liq.organicFraction != null) && (
+            <div className="rounded-lg bg-muted/20 px-3 py-2.5 space-y-1.5">
+              {(liq.concentrationHhi != null || liq.depthStability != null) && (
+                <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                  {liq.concentrationHhi != null &&
+                    (() => {
+                      const { label, color } = getConcentrationLabel(liq.concentrationHhi);
+                      return (
+                        <span className="text-muted-foreground">
+                          Concentration: <span className={`font-medium ${color}`}>{label}</span>
+                          <span className="text-xs ml-1 font-mono">({(liq.concentrationHhi * 100).toFixed(0)}%)</span>
+                        </span>
+                      );
+                    })()}
+                  {liq.depthStability != null && (
+                    <span className="text-muted-foreground">
+                      Depth Stability: <span className="font-medium font-mono">{(liq.depthStability * 100).toFixed(0)}%</span>
+                    </span>
+                  )}
+                </div>
+              )}
+              {(liq.durabilityScore != null || liq.weightedBalanceRatio != null || liq.organicFraction != null) && (
+                <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                  {liq.durabilityScore != null && (
+                    <div>
+                      <span className="text-muted-foreground">Durability: </span>
+                      <DurabilityBadge score={liq.durabilityScore} />
+                    </div>
+                  )}
+                  {liq.weightedBalanceRatio != null && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground">Pool Balance: </span>
+                      <BalanceBar ratio={liq.weightedBalanceRatio} />
+                    </div>
+                  )}
+                  {liq.organicFraction != null && (
+                    <div>
+                      <span className="text-muted-foreground">Organic: </span>
+                      <span
+                        className={`font-mono tabular-nums ${
+                          liq.organicFraction >= 0.8
+                            ? "text-emerald-700 dark:text-emerald-400"
+                            : liq.organicFraction >= 0.5
+                              ? "text-amber-700 dark:text-amber-400"
+                              : "text-red-700 dark:text-red-400"
+                        }`}
+                      >
+                        {Math.round(liq.organicFraction * 100)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
-        <ChainBar chainTvl={liq.chainTvl} />
+          {/* DEX-Implied Price — anchors the bottom of the summary zone */}
+          {liq.dexPriceUsd != null && (
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">DEX-Implied Price</p>
+              <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                <span className="text-lg font-extrabold font-mono tabular-nums">${liq.dexPriceUsd.toFixed(4)}</span>
+                {liq.dexDeviationBps != null && (
+                  <span
+                    className={`text-sm font-mono ${
+                      Math.abs(liq.dexDeviationBps) >= 50 ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground"
+                    }`}
+                  >
+                    {liq.dexDeviationBps >= 0 ? "+" : ""}
+                    {liq.dexDeviationBps}bps vs primary
+                  </span>
+                )}
+                {liq.priceSourceCount != null && (
+                  <PoolSourceLabel
+                    count={liq.priceSourceCount}
+                    tvl={liq.priceSourceTvl ?? null}
+                    priceSources={liq.priceSources ?? null}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
-        {isRated && <ScoreBreakdown components={liq.scoreComponents} />}
+        {/* ── Zone 2: Market Structure ── */}
+        <div className="space-y-4">
+          <ProtocolBar protocolTvl={liq.protocolTvl} />
 
-        {isRated && <TvlTrendChart stablecoinId={stablecoinId} />}
+          <ChainBar chainTvl={liq.chainTvl} />
 
-        {liq.topPools.length > 0 && <TopPoolsTable pools={liq.topPools} totalPoolCount={liq.poolCount} />}
+          {isRated && <ScoreBreakdown components={liq.scoreComponents} />}
+
+          {isRated && <TvlTrendChart stablecoinId={stablecoinId} />}
+
+          {liq.topPools.length > 0 && <TopPoolsTable pools={liq.topPools} totalPoolCount={liq.poolCount} />}
+        </div>
 
         <MethodologyCardActions topic="liquidityScore" />
       </CardContent>

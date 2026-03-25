@@ -70,7 +70,7 @@ function TimelineNode({
     <div className="group/node relative z-0 flex flex-col items-center hover:z-20 focus-within:z-20">
       {/* ── Popover ──────────────────────────────────────────── */}
       <div
-        className={`pointer-events-none invisible absolute bottom-full mb-4 w-60 translate-y-1 opacity-0 transition-[opacity,visibility,transform] duration-200 ease-out group-hover/node:pointer-events-auto group-hover/node:visible group-hover/node:translate-y-0 group-hover/node:opacity-100 group-focus-within/node:pointer-events-auto group-focus-within/node:visible group-focus-within/node:translate-y-0 group-focus-within/node:opacity-100 ${popoverAlign}`}
+        className={`pointer-events-none invisible absolute bottom-full w-60 pb-4 translate-y-1 opacity-0 transition-[opacity,visibility,transform] duration-200 ease-out group-hover/node:pointer-events-auto group-hover/node:visible group-hover/node:translate-y-0 group-hover/node:opacity-100 group-focus-within/node:pointer-events-auto group-focus-within/node:visible group-focus-within/node:translate-y-0 group-focus-within/node:opacity-100 ${popoverAlign}`}
       >
         <div className="rounded-lg border border-border/70 bg-card p-3 shadow-xl">
           {/* Header */}
@@ -230,9 +230,9 @@ export function UpcomingStablecoinsSection({ logos }: Props) {
     string,
     { title?: string; text?: string; updatedAt?: string }
   >;
-  const sorted = [...PRE_LAUNCH_STABLECOINS].sort(
-    (a, b) => dateScore(a.expectedLaunchDate) - dateScore(b.expectedLaunchDate),
-  );
+  const sorted = [...PRE_LAUNCH_STABLECOINS]
+    .sort((a, b) => dateScore(a.expectedLaunchDate) - dateScore(b.expectedLaunchDate))
+    .slice(0, 7);
 
   return (
     <section
@@ -260,7 +260,7 @@ export function UpcomingStablecoinsSection({ logos }: Props) {
       </div>
 
       {/* ── Desktop: horizontal timeline ─────────────────────── */}
-      <div className="hidden md:block" aria-label="Launch timeline">
+      <div className="hidden md:block" role="navigation" aria-label="Launch timeline">
         <div className="relative pb-2 pt-4">
           {/* Timeline rail — gradient from brand accent into border */}
           <div className="absolute inset-x-0 top-[calc(1rem+22px)] h-px bg-gradient-to-r from-indigo-500/30 via-border/50 to-transparent" />
@@ -296,17 +296,13 @@ export function UpcomingStablecoinsSection({ logos }: Props) {
       </div>
 
       {/* ── Mobile: vertical timeline ────────────────────────── */}
-      <div className="md:hidden">
+      <div className="md:hidden" role="navigation" aria-label="Launch timeline">
         {sorted.map((coin, i) => (
           <MobileEntry
             key={coin.id}
             coin={coin}
             logoSrc={logos[coin.id]}
-            teaser={
-              summaries[coin.id]?.text
-                ? truncateTeaser(summaries[coin.id].text!, 80)
-                : null
-            }
+            teaser={summaries[coin.id]?.text ?? null}
             isLast={i === sorted.length - 1}
           />
         ))}

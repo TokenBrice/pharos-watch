@@ -12,7 +12,7 @@ export function RegimeBar() {
   const [expanded, setExpanded] = useState(false);
 
   const current = psiData?.current;
-  if (!current) return null;
+  if (!current) return <div className="fixed top-0 z-[60] h-[3px] w-full" />;
 
   const displayedPsi = getDisplayedPsi(current);
   const band = displayedPsi.band as ConditionBand;
@@ -29,15 +29,16 @@ export function RegimeBar() {
     : null;
 
   return (
-    <div
+    <button
+      type="button"
       className={cn(
-        "relative z-[60] w-full cursor-pointer select-none overflow-hidden",
+        "fixed top-0 z-[60] w-full cursor-pointer select-none overflow-hidden text-left",
         "transition-[background-color] duration-[600ms] ease-out",
         isElevated && "animate-[pharos-regime-pulse_1.5s_ease-in-out_infinite]",
       )}
       style={{ backgroundColor: color }}
       onClick={() => setExpanded((prev) => !prev)}
-      role="status"
+      aria-expanded={expanded}
       aria-label={`Market regime: ${band}, PSI ${Math.round(score)}`}
     >
       {/* Use grid-template-rows for smooth expand/collapse (height:auto can't transition) */}
@@ -47,14 +48,14 @@ export function RegimeBar() {
       >
         <div className="min-h-0 overflow-hidden">
           <div className={cn(
-            "flex items-center justify-center gap-3 px-4 py-1.5 text-[11px] font-mono tabular-nums",
+            "flex items-center justify-center gap-3 px-4 py-1.5 text-xs font-mono tabular-nums",
             useDarkText ? "text-gray-900/90" : "text-white/90",
           )}>
             <span className="font-semibold tracking-wide">{band}</span>
             {daysInBand && <span>for {daysInBand}d</span>}
-            <span className={useDarkText ? "text-gray-900/50" : "text-white/60"}>·</span>
+            <span className={useDarkText ? "text-gray-900/70" : "text-white/80"} aria-hidden="true">·</span>
             <span>PSI {Math.round(score)}</span>
-            <span className={useDarkText ? "text-gray-900/50" : "text-white/60"}>·</span>
+            <span className={useDarkText ? "text-gray-900/70" : "text-white/80"} aria-hidden="true">·</span>
             <span>
               sev {current.components.severity.toFixed(1)} · breadth{" "}
               {current.components.breadth.toFixed(1)}
@@ -68,6 +69,6 @@ export function RegimeBar() {
       </div>
       {/* Collapsed minimum: 3px colored bar */}
       {!expanded && <div className="h-[3px]" />}
-    </div>
+    </button>
   );
 }

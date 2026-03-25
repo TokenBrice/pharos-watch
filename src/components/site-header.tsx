@@ -14,7 +14,8 @@ interface SiteHeaderProps {
 }
 
 const METRIC_PILL_CLASS =
-  "inline-flex items-center rounded-full border px-2.5 py-1 font-mono tabular-nums text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-sm border-border/65 bg-background/78 dark:border-white/10 dark:bg-white/[0.035] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_18px_rgba(0,0,0,0.18)]";
+  "inline-flex items-center rounded-full border px-2.5 py-1 font-mono tabular-nums text-muted-foreground backdrop-blur-sm" +
+  " border-[var(--control-pill-border)] bg-[var(--control-pill-bg)] shadow-[inset_0_1px_0_oklch(1_0_0_/0.08)]";
 
 export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
   const { data: health } = useHealth();
@@ -56,35 +57,50 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
   }, [stablecoinsData, total]);
 
   return (
-    <div className="pharos-card-shell hidden lg:flex items-end justify-between gap-6 px-5 py-5">
-      <div className="flex min-w-0 items-center gap-4">
-        <PharosLogo size={40} className="rounded-xl shadow-sm" priority />
-        <div className="min-w-0 space-y-1.5">
-          <p className="text-[1.06rem] font-mono font-semibold uppercase tracking-[0.16em] text-foreground">Pharos</p>
-          <p className="max-w-2xl text-sm leading-relaxed tracking-[0.01em] text-muted-foreground/88">
-            Live market intelligence for stablecoins: peg stress, liquidity analysis, blacklist tracking, risk-adjusted-yield and hidden dependencies
-            in one research surface.
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-2 text-[11px]">
-        <div className="flex flex-wrap justify-end gap-2">
+    <>
+      {/* ── Mobile / tablet header ── */}
+      <div className="pharos-card-shell flex items-center gap-3 px-4 py-3 lg:hidden">
+        <PharosLogo size={28} className="shrink-0 rounded-lg shadow-sm" priority />
+        <p className="text-sm font-mono font-semibold uppercase tracking-[0.14em] text-foreground">Pharos</p>
+        <div className="ml-auto flex flex-wrap gap-1.5 text-[11px]">
           <span className={METRIC_PILL_CLASS}>{formatCompactCount(liveTrackedCount)} coins</span>
           <span className={METRIC_PILL_CLASS}>{formatCompactCount(pegCount)} pegs</span>
           <span className={METRIC_PILL_CLASS}>{formatCompactCount(chainCount)} chains</span>
         </div>
-        <div className="flex flex-wrap justify-end gap-2">
-          {trackedStats.map((stat) => (
-            <span key={stat} className={METRIC_PILL_CLASS}>
-              {stat}
-            </span>
-          ))}
-        </div>
-        <p className="text-right text-[11px] leading-relaxed text-muted-foreground/80">
-          Watch live conditions first, then move deeper into dossier pages, comparisons, and route-specific risk surfaces.
-        </p>
       </div>
-    </div>
+
+      {/* ── Desktop header ── */}
+      <div className="pharos-card-shell hidden lg:flex items-end justify-between gap-6 px-5 py-5">
+        <div className="flex min-w-0 items-center gap-4">
+          <PharosLogo size={40} className="rounded-xl shadow-sm" priority />
+          <div className="min-w-0 space-y-1.5">
+            <p className="text-[1.06rem] font-mono font-semibold uppercase tracking-[0.16em] text-foreground">Pharos</p>
+            <p className="max-w-2xl text-sm leading-relaxed tracking-[0.01em] text-muted-foreground/88">
+              Live market intelligence for stablecoins: peg stress, liquidity analysis, blacklist tracking, risk-adjusted-yield and hidden dependencies
+              in one research surface.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-2 text-[11px]">
+          <div className="flex flex-wrap justify-end gap-2">
+            <span className={METRIC_PILL_CLASS}>{formatCompactCount(liveTrackedCount)} coins</span>
+            <span className={METRIC_PILL_CLASS}>{formatCompactCount(pegCount)} pegs</span>
+            <span className={METRIC_PILL_CLASS}>{formatCompactCount(chainCount)} chains</span>
+          </div>
+          {/* Secondary stats: hidden below 1280px to prevent overflow */}
+          <div className="hidden 2xl:flex flex-wrap justify-end gap-2">
+            {trackedStats.map((stat) => (
+              <span key={stat} className={METRIC_PILL_CLASS}>
+                {stat}
+              </span>
+            ))}
+          </div>
+          <p className="text-right text-[11px] leading-relaxed text-muted-foreground/80">
+            Watch live conditions first, then move deeper into dossier pages, comparisons, and route-specific risk surfaces.
+          </p>
+        </div>
+      </div>
+    </>
   );
 }

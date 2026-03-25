@@ -1,9 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Compass, Megaphone, Search, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, Compass, Search, SlidersHorizontal } from "lucide-react";
 import { useDexLiquidity, usePegSummary, useReportCards, useStressSignals } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
@@ -20,18 +20,21 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { UpcomingStablecoinsSection } from "@/components/upcoming-stablecoins-section";
-import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
+import { PEG_CURRENCY_COUNT, getDewsRiskLevel, isThreatBand } from "@shared/lib/classification";
 import { ACTIVE_PEGS, PEG_LABELS_SHORT, PEG_SLUGS, pegCoinCount } from "@/lib/peg-landing";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { FILTER_TAG_LABELS, type PegSummaryCoin } from "@shared/types";
 import { buildTrackedIdSet, filterStablecoins } from "@/components/stablecoin-table-logic";
 
+const CEFI_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized").length;
+const CEFI_DEP_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").length;
+const DEFI_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "decentralized").length;
+
 function SectionSkeleton({ className }: { className: string }) {
   return <Skeleton className={className} />;
 }
 
-function ChartSkeleton({ className, type = "area" }: { className?: string; type?: "area" | "bar" | "radar" | "line" }) {
-  const heightClass = className?.match(/h-\[?\d+(?:px)?\]?/) || "h-[300px]";
+function ChartSkeleton({ className, type = "area", height = "h-[300px]" }: { className?: string; type?: "area" | "bar" | "radar"; height?: string }) {
   return (
     <div className={`relative overflow-hidden rounded-xl border border-border/50 bg-card/50 ${className}`}>
       {/* Chart header placeholder */}
@@ -49,7 +52,7 @@ function ChartSkeleton({ className, type = "area" }: { className?: string; type?
           <Skeleton className="h-3 w-6" />
         </div>
         {/* Chart content */}
-        <div className={`ml-12 ${heightClass} relative`}>
+        <div className={`ml-12 ${height} relative`}>
           {type === "area" && (
             <>
               <div className="absolute inset-0 bg-gradient-to-b from-muted/60 via-muted/30 to-transparent rounded-lg" />
@@ -145,72 +148,8 @@ const DailyDigest = dynamic(() => import("@/components/daily-digest").then((mod)
 });
 
 const PEG_PREVIEW_COUNT = 5;
-const CAMPAIGN_END_AT = Date.parse("2026-03-20T00:00:00Z");
-const CAMPAIGN_POST_URL = "https://x.com/PharosWatch/status/2032107485629202921";
-
-function CampaignCallout() {
-  return (
-    <section
-      aria-label="Pharos community campaign"
-      className="pharos-card-shell relative overflow-hidden border px-4 py-4 sm:px-5"
-      style={{
-        background: 'var(--surface-campaign-gradient)',
-        borderColor: 'var(--surface-campaign-border)',
-        boxShadow: 'var(--surface-campaign-shadow)',
-      }}
-      data-no-theme-transition
-    >
-      <div 
-        className="pointer-events-none absolute inset-y-0 right-0 hidden w-56 md:block"
-        style={{
-          background: 'radial-gradient(circle at center, oklch(0.82 0.09 230 / 0.22), transparent 68%)',
-        }}
-      />
-      <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-        <div className="min-w-0 space-y-3">
-          <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-[0.12em] text-sky-900/78 dark:text-sky-100/76">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-600/20 bg-white/80 px-2.5 py-1 shadow-sm dark:border-sky-400/15 dark:bg-white/[0.06]">
-              <Megaphone className="h-3.5 w-3.5" aria-hidden="true" />
-              Community Campaign
-            </span>
-            <span className="inline-flex rounded-full border border-sky-600/18 bg-white/65 px-2.5 py-1 font-mono tabular-nums shadow-sm dark:border-sky-400/15 dark:bg-white/[0.04]">
-              $3,000 pool
-            </span>
-            <span className="inline-flex rounded-full border border-sky-600/18 bg-white/65 px-2.5 py-1 shadow-sm dark:border-sky-400/15 dark:bg-white/[0.04]">
-              Ends March 19, 2026
-            </span>
-          </div>
-          <div className="space-y-1.5">
-            <h2 className="text-lg font-semibold tracking-tight text-slate-950 dark:text-white sm:text-xl">
-              Spot the signal. Tell the story.
-            </h2>
-            <p className="max-w-3xl text-sm leading-relaxed text-slate-700 dark:text-slate-200/78">
-              Threads, blog posts, videos, podcasts, and useful product feedback can all earn from the Pharos push.
-              Top prize is <span className="font-mono tabular-nums text-slate-950 dark:text-white">$1,250</span> from
-              a <span className="font-mono tabular-nums text-slate-950 dark:text-white">$3,000</span> reward pool.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex shrink-0 flex-col items-start gap-2 xl:items-end">
-          <a
-            href={CAMPAIGN_POST_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="pharos-focus-ring inline-flex min-h-11 items-center gap-2 rounded-full border border-slate-950/12 bg-slate-950 px-4 py-2 text-sm font-medium text-white shadow-[0_10px_24px_oklch(0_0_0_/0.18)] transition-[transform,background-color,box-shadow] hover:bg-slate-900 hover:shadow-[0_14px_28px_oklch(0_0_0_/0.22)] active:translate-y-[1px] dark:border-white/12 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90"
-            aria-label="View campaign details on X"
-          >
-            View campaign
-            <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-          </a>
-          <p className="max-w-sm text-xs leading-relaxed text-slate-700/88 dark:text-slate-200/70 xl:text-right">
-            Useful bug reports and data corrections count too. The feedback button stays live across every page.
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
+const PEG_PILL_CLASS =
+  "pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-border hover:bg-accent/65 hover:text-foreground sm:min-h-9 sm:py-1";
 
 function PegBrowseSection({
   pegs,
@@ -233,7 +172,7 @@ function PegBrowseSection({
             <Link
               key={peg}
               href={`/stablecoins/${slug}/`}
-              className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-border hover:bg-accent/65 hover:text-foreground sm:min-h-0 sm:py-1"
+              className={PEG_PILL_CLASS}
             >
               {PEG_LABELS_SHORT[peg]} ({pegCoinCount(peg)})
             </Link>
@@ -242,7 +181,7 @@ function PegBrowseSection({
         {!expanded && pegs.length > PEG_PREVIEW_COUNT && (
           <button
             onClick={() => setExpanded(true)}
-            className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-border hover:bg-accent/65 hover:text-foreground sm:min-h-0 sm:py-1"
+            className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-border hover:bg-accent/65 hover:text-foreground sm:min-h-9 sm:py-1"
           >
             +{pegs.length - PEG_PREVIEW_COUNT} more
           </button>
@@ -254,28 +193,28 @@ function PegBrowseSection({
 
 function StartHereCallout({ onOpenStartHere }: { onOpenStartHere: () => void }) {
   return (
-    <section 
-      className="pharos-card-shell overflow-hidden border border-black/7 px-4 py-4 shadow-[0_16px_34px_oklch(0_0_0_/0.08)] sm:px-5 dark:border-white/10 dark:shadow-[0_20px_42px_oklch(0_0_0_/0.16)]"
-      style={{ background: 'var(--surface-onboarding-gradient)' }}
+    <section
+      className="pharos-card-shell overflow-hidden border border-border/40 px-4 py-4 sm:px-5"
+      style={{ background: 'var(--surface-onboarding-gradient)', boxShadow: 'var(--elevation-rest)' }}
     >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0 flex-1 space-y-2">
-          <div className="flex items-center gap-2 text-sky-700 dark:text-sky-200/82">
+          <div className="flex items-center gap-2 text-[var(--brand-accent)]">
             <Compass className="h-4 w-4" aria-hidden="true" />
-            <p className="pharos-kicker text-sky-700 dark:text-sky-200/82">New to Pharos?</p>
+            <p className="pharos-kicker text-[var(--brand-accent)]">New to Pharos?</p>
           </div>
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold tracking-tight text-slate-950 dark:text-white sm:text-xl">
+            <h2 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
               Start with the route that matches your job, not the full feature list.
             </h2>
-            <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200/74">
+            <p className="text-sm leading-relaxed text-muted-foreground">
               The /start/ page explains what the core signals mean and points you to the right surface for market
               monitoring, single-coin research, yield, comparison, or alerts.
             </p>
           </div>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
-          <Button asChild className="h-10 rounded-full bg-slate-950 px-5 text-white hover:bg-slate-900 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90">
+          <Button asChild className="h-10 rounded-full bg-primary px-5 text-primary-foreground hover:bg-primary/90">
             <Link href="/start/" onClick={onOpenStartHere}>
               Start Here
               <ArrowRight className="h-4 w-4" />
@@ -284,7 +223,7 @@ function StartHereCallout({ onOpenStartHere }: { onOpenStartHere: () => void }) 
           <Button
             type="button"
             variant="outline"
-            className="h-10 rounded-full border-black/10 bg-white/70 px-5 text-slate-900 hover:bg-white hover:text-slate-950 dark:border-white/15 dark:bg-white/[0.05] dark:text-slate-100 dark:hover:bg-white/[0.1] dark:hover:text-white"
+            className="h-10 rounded-full px-5"
             onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
           >
             <Search className="h-4 w-4" />
@@ -318,7 +257,6 @@ function HomepageSectionBand({
 
 export function HomepageClient() {
   const { isReady: startHereReady, shouldShow: shouldShowStartHereCallout, retireCallout } = useStartHereCallout();
-  const [showCampaignCallout, setShowCampaignCallout] = useState(() => Date.now() < CAMPAIGN_END_AT);
   const [showFilters, setShowFilters] = useState(false);
   const { data, isLoading, error: pricesError, dataUpdatedAt, refetch: refetchPrices } = useStablecoins();
   const { data: logos } = useLogos();
@@ -336,21 +274,15 @@ export function HomepageClient() {
     refetch: refetchReportCards,
   } = useReportCards();
   const { data: stressData } = useStressSignals();
-  const metaById = TRACKED_META_BY_ID;
 
-  // Compute DEWS risk level for visual styling
-  const dewsRiskLevel = useMemo(() => {
-    if (!stressData?.signals) return "calm";
-    const signals = Object.values(stressData.signals);
-    const dangerCount = signals.filter((s) => s.band === "DANGER").length;
-    const warningCount = signals.filter((s) => s.band === "WARNING").length;
-    const alertCount = signals.filter((s) => s.band === "ALERT").length;
-    
-    if (dangerCount > 0) return "danger";
-    if (warningCount > 0) return "warning";
-    if (alertCount > 0) return "alert";
-    return "calm";
-  }, [stressData]);
+  const dewsRiskLevel = useMemo(
+    () => getDewsRiskLevel(
+      stressData?.signals
+        ? Object.values(stressData.signals).map((s) => s.band).filter(isThreatBand)
+        : [],
+    ),
+    [stressData],
+  );
   const pegScores = useMemo(() => {
     const map = new Map<string, PegSummaryCoin>();
     if (!pegSummaryData?.coins) return map;
@@ -364,8 +296,8 @@ export function HomepageClient() {
     return Object.fromEntries(reportCardsData.cards.map((c) => [c.id, c]));
   }, [reportCardsData]);
   const { rates: pegRates } = useMemo(
-    () => derivePegRates(data?.peggedAssets ?? [], metaById, data?.fxFallbackRates),
-    [data, metaById],
+    () => derivePegRates(data?.peggedAssets ?? [], TRACKED_META_BY_ID, data?.fxFallbackRates),
+    [data],
   );
   const filters = useHomepageFilters();
   const filteredRowCount = useMemo(() => {
@@ -399,12 +331,6 @@ export function HomepageClient() {
     { dataUpdatedAt: rcUpdatedAt, dataName: "Report cards" },
   ]);
 
-  useEffect(() => {
-    const remainingMs = CAMPAIGN_END_AT - Date.now();
-    const timeoutId = window.setTimeout(() => setShowCampaignCallout(false), Math.max(0, remainingMs));
-    return () => window.clearTimeout(timeoutId);
-  }, []);
-
   return (
     <div className="space-y-6">
       <DataLiveRegion />
@@ -428,8 +354,6 @@ export function HomepageClient() {
         ]}
       />
 
-      {showCampaignCallout ? <CampaignCallout /> : null}
-
       {startHereReady && shouldShowStartHereCallout ? <StartHereCallout onOpenStartHere={retireCallout} /> : null}
 
       <SectionErrorBoundary name="highlights">
@@ -437,18 +361,13 @@ export function HomepageClient() {
       </SectionErrorBoundary>
 
       <SectionErrorBoundary name="table">
-        <section>
+        <section aria-label="Tracked stablecoin universe">
           <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-1.5">
-              <p className="pharos-kicker">Tracked Universe</p>
-              <div className="space-y-1">
-                <h2 className="text-xl font-semibold tracking-tight text-foreground">Key Stablecoin Data</h2>
-                <p className="max-w-3xl text-sm text-muted-foreground">
-                  Scan the tracked market first, then narrow by peg, structure, backing, or grade without leaving the
-                  live ranking surface.
-                </p>
-              </div>
-            </div>
+            <HomepageSectionBand
+              eyebrow="Tracked Universe"
+              title="Key Stablecoin Data"
+              description="Scan the tracked market first, then narrow by peg, structure, backing, or grade without leaving the live ranking surface."
+            />
             <div className="flex flex-col gap-2 sm:items-end">
               {activeScopeSummary ? (
                 <p className="max-w-md rounded-2xl border border-border/60 bg-background/45 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
@@ -509,7 +428,7 @@ export function HomepageClient() {
         <UpcomingStablecoinsSection logos={logos} />
       </SectionErrorBoundary>
 
-      <section className="space-y-6 border-t border-border/50 pt-6">
+      <section aria-label="Core monitoring" className="space-y-6 border-t border-border/50 pt-6">
         <HomepageSectionBand
           eyebrow="Core Monitoring"
           title="Live system stress and market health"
@@ -518,11 +437,11 @@ export function HomepageClient() {
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-start">
           <SectionErrorBoundary name="dews-radar">
-            <section className="space-y-3">
+            <section aria-label="DEWS depeg early warning" className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className={`border-l-4 pl-3 transition-colors duration-300 ${
-                  dewsRiskLevel === "danger" 
-                    ? "border-l-red-500" 
+                <div role="status" aria-label={`DEWS risk level: ${dewsRiskLevel}`} className={`border-l-4 pl-3 transition-colors duration-300 ${
+                  dewsRiskLevel === "danger"
+                    ? "border-l-red-500"
                     : dewsRiskLevel === "warning"
                       ? "border-l-amber-500"
                       : dewsRiskLevel === "alert"
@@ -583,7 +502,7 @@ export function HomepageClient() {
         </SectionErrorBoundary>
       </section>
 
-      <section className="space-y-6 border-t border-border/50 pt-6">
+      <section aria-label="Research surfaces" className="space-y-6 border-t border-border/50 pt-6">
         <HomepageSectionBand
           eyebrow="Research Surfaces"
           title="Distribution and market structure"
@@ -601,16 +520,16 @@ export function HomepageClient() {
           <TotalMcapChart />
         </SectionErrorBoundary>
 
-        <PegDiversityChart />
+        <SectionErrorBoundary name="peg-diversity">
+          <PegDiversityChart />
+        </SectionErrorBoundary>
       </section>
 
-      <section className="space-y-2 border-t border-border/50 pt-6">
-        <p className="mx-auto max-w-5xl text-center text-xs leading-loose text-muted-foreground">
+      <section aria-label="About Pharos" className="space-y-2 border-t border-border/50 pt-6">
+        <p className="mx-auto max-w-5xl text-center text-xs leading-relaxed text-muted-foreground">
           Pharos tracks {ACTIVE_STABLECOINS.length} stablecoins across {PEG_CURRENCY_COUNT} peg currencies with honest
           governance classification:{" "}
-          {ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized").length} CeFi,{" "}
-          {ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").length} CeFi-Dependent, and{" "}
-          {ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "decentralized").length} DeFi. Use the dashboard
+          {CEFI_COUNT} CeFi, {CEFI_DEP_COUNT} CeFi-Dependent, and {DEFI_COUNT} DeFi. Use the dashboard
           for live market ranking, then drill into peg stress, safety, liquidity, blacklist risk, flows, and dead-coin
           history on the specialist routes. Core market data refreshes every 15 minutes; slower diagnostics run on
           their own cadences.

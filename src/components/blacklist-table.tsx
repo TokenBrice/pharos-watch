@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Download, ExternalLink } from "lucide-react";
 import { downloadCsv } from "@/lib/csv-export";
 import { formatAddress, formatEventDate, formatCurrency } from "@shared/lib/format";
-import { isGoldStablecoin } from "@/lib/blacklist-helpers";
+import { isGoldBlacklistStablecoin } from "@shared/lib/blacklist";
 import type { BlacklistEvent, BlacklistSortDirection, BlacklistSortKey } from "@shared/types";
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
 import { getNextSortState, shouldToggleSortOnKeyDown } from "@/hooks/use-sort";
@@ -92,20 +92,31 @@ export function BlacklistTable({
   if (isLoading) {
     return (
       <div className="rounded-xl border overflow-x-auto">
-        <div className="bg-muted/50 h-10" />
-        {SKELETON_ROWS.map((i) => (
-          <div key={i} className="flex items-center gap-3 px-4 py-2 border-t">
-            <Skeleton className="h-4 w-8 shrink-0" />
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-4 w-14" />
-            <Skeleton className="h-5 w-16 rounded-full" />
-            <Skeleton className="h-4 w-24" />
-            <div className="flex-1" />
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-4 w-4 shrink-0" />
-          </div>
-        ))}
+        <table className="w-full caption-bottom text-sm">
+          <thead>
+            <tr className="bg-muted/80 h-10">
+              {BLACKLIST_COLUMNS.map((col) => (
+                <th key={col.id} className={col.className}>
+                  <Skeleton className="h-3 w-12 inline-block" />
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {SKELETON_ROWS.map((i) => (
+              <tr key={i} className="border-t">
+                <td className="px-4 py-2 text-right"><Skeleton className="h-4 w-6" /></td>
+                <td className="px-4 py-2"><Skeleton className="h-4 w-24" /></td>
+                <td className="px-4 py-2"><Skeleton className="h-4 w-14" /></td>
+                <td className="px-4 py-2"><Skeleton className="h-4 w-16" /></td>
+                <td className="px-4 py-2"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                <td className="hidden md:table-cell px-4 py-2"><Skeleton className="h-4 w-28" /></td>
+                <td className="hidden sm:table-cell px-4 py-2 text-right"><Skeleton className="h-4 w-16" /></td>
+                <td className="hidden sm:table-cell px-4 py-2 text-center"><Skeleton className="h-4 w-4" /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     );
   }
@@ -152,6 +163,7 @@ export function BlacklistTable({
                   target="_blank"
                   rel="noopener noreferrer"
                   className="pharos-focus-ring block max-w-[120px] sm:max-w-none truncate sm:overflow-visible font-mono text-xs hover:underline"
+                  aria-label={`View address ${evt.address} on ${evt.chainName}`}
                 >
                   {formatAddress(evt.address)}
                 </a>
@@ -160,7 +172,7 @@ export function BlacklistTable({
                 {evt.amountUsdAtEvent != null
                   ? formatCurrency(evt.amountUsdAtEvent)
                   : evt.amountNative != null && !(evt.amountNative === 0 && evt.eventType !== "destroy")
-                    ? isGoldStablecoin(evt.stablecoin)
+                    ? isGoldBlacklistStablecoin(evt.stablecoin)
                       ? `${evt.amountNative.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${evt.stablecoin}`
                       : `${evt.amountNative.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${evt.stablecoin}`
                     : evt.amountStatus === "permanently_unavailable"

@@ -178,6 +178,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
   // Tooltip state
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [hoveredEdge, setHoveredEdge] = useState<number | null>(null);
+  const [focusedId, setFocusedId] = useState<string | null>(null);
 
   // Keyboard navigation for graph nodes
   const handleNodeKeyDown = useCallback((e: React.KeyboardEvent, nodeId: string) => {
@@ -367,11 +368,15 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
     // BFS for downstream contagion (hops 2+): from each downstream node at
     // distance d, follow further downstream edges to distance d+1
     const queue: string[] = [];
+    const queued = new Set<string>();
 
     // Seed BFS with downstream neighbors at distance 1
     const downstreamFromHovered = downstreamByTarget.get(hoveredId) ?? [];
     for (const link of downstreamFromHovered) {
-      if (!queue.includes(link.srcId)) queue.push(link.srcId);
+      if (!queued.has(link.srcId)) {
+        queued.add(link.srcId);
+        queue.push(link.srcId);
+      }
     }
 
     let queueStart = 0;
@@ -399,6 +404,78 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
 
   if (nodes.length === 0) return null;
 
+  // Screen-reader tooltip announcement (polite live region)
+  const tooltipAnnouncement = (() => {
+    if (hoveredEdge !== null) {
+      const link = resolvedLinkByIndex.get(hoveredEdge);
+      if (!link) return "";
+      const fromNode = nodeMap.get(link.tgtId);
+      const toNode = nodeMap.get(link.srcId);
+      if (!fromNode || !toNode) return "";
+      return `${fromNode.symbol} to ${toNode.symbol}, ${Math.round(link.weight * 100)}% ${link.type} dependency`;
+    }
+    if (hoveredId) {
+      const node = nodeMap.get(hoveredId);
+      const card = cards.find((c) => c.id === hoveredId);
+      if (!node) return "";
+      return `${node.symbol}, Grade ${card?.overallGrade ?? "NR"}, market cap ${formatCurrency(node.mcap)}`;
+    }
+    return "";
+  })();
+
+  // Pre-compute tooltip elements for cleaner JSX
+  const nodeTooltipEl = (() => {
+    if (!hoveredId || hoveredEdge !== null) return null;
+    const node = nodeMap.get(hoveredId);
+    const pos = positions.get(hoveredId);
+    if (!node || !pos) return null;
+    const card = cards.find((c) => c.id === hoveredId);
+    const tx = Math.min(pos.x + node.r + 8, WIDTH - 135);
+    const ty = Math.max(PAD, pos.y - 20);
+    return (
+      <g pointerEvents="none">
+        <rect x={tx} y={ty} width={125} height={52} rx={6}
+          fill="var(--color-card, #1a1a2e)" stroke="var(--color-border, #333)" strokeWidth={1} />
+        <text x={tx + 8} y={ty + 18} fill="currentColor" fontSize={12} fontWeight={600}>
+          {node.symbol}
+        </text>
+        <text x={tx + 8} y={ty + 34} fill="currentColor" fontSize={10} opacity={0.7}>
+          Grade: {card?.overallGrade ?? "NR"}
+        </text>
+        <text x={tx + 8} y={ty + 46} fill="currentColor" fontSize={10} opacity={0.7} fontFamily="var(--font-mono, monospace)">
+          {formatCurrency(node.mcap)}
+        </text>
+      </g>
+    );
+  })();
+
+  const edgeTooltipEl = (() => {
+    if (hoveredEdge === null) return null;
+    const link = resolvedLinkByIndex.get(hoveredEdge);
+    if (!link) return null;
+    const fromPos = positions.get(link.tgtId);
+    const toPos = positions.get(link.srcId);
+    const fromNode = nodeMap.get(link.tgtId);
+    const toNode = nodeMap.get(link.srcId);
+    if (!fromPos || !toPos || !fromNode || !toNode) return null;
+    const mx = (fromPos.x + toPos.x) / 2;
+    const my = (fromPos.y + toPos.y) / 2;
+    const tx = Math.min(Math.max(mx + 8, PAD), WIDTH - 140);
+    const ty = Math.min(Math.max(my - 20, PAD), HEIGHT - 44);
+    return (
+      <g pointerEvents="none">
+        <rect x={tx} y={ty} width={130} height={38} rx={6}
+          fill="var(--color-card, #1a1a2e)" stroke="var(--color-border, #333)" strokeWidth={1} />
+        <text x={tx + 8} y={ty + 15} fill="currentColor" fontSize={11} fontWeight={600}>
+          {fromNode.symbol} → {toNode.symbol}
+        </text>
+        <text x={tx + 8} y={ty + 30} fill="currentColor" fontSize={10} opacity={0.7}>
+          {Math.round(link.weight * 100)}% · {link.type}
+        </text>
+      </g>
+    );
+  })();
+
   return (
     <Card className="rounded-xl">
       <CardHeader className="pb-2">
@@ -416,7 +493,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                 onValueChange={(v) => { if (v) setFocusMode(v as FocusMode); }}
                 variant="outline"
                 size="sm"
-                className="inline-flex h-7 min-w-max"
+                className="inline-flex h-9 min-w-max md:h-7"
               >
                 <ToggleGroupItem value="all" className="text-[10px]">All</ToggleGroupItem>
                 <ToggleGroupItem value="hub" className="text-[10px]">Hub dependencies</ToggleGroupItem>
@@ -430,7 +507,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
                 Coin
                 <select
-                  className="h-7 max-w-full rounded-md border bg-background px-2 text-[11px] text-foreground"
+                  className="h-9 max-w-full rounded-md border bg-background px-2 text-[11px] text-foreground md:h-7"
                   value={neighborhoodFocusId ?? ""}
                   onChange={(e) => setSelectedNeighborhoodId(e.target.value || null)}
                 >
@@ -604,8 +681,8 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                   onPointerDown={(e) => handlePointerDown(e, node.id)}
                   onMouseEnter={() => { setHoveredId(node.id); setHoveredEdge(null); }}
                   onMouseLeave={() => setHoveredId(null)}
-                  onFocus={() => { setHoveredId(node.id); setHoveredEdge(null); }}
-                  onBlur={() => setHoveredId(null)}
+                  onFocus={() => { setHoveredId(node.id); setFocusedId(node.id); setHoveredEdge(null); }}
+                  onBlur={() => { setHoveredId(null); setFocusedId(null); }}
                   onKeyDown={(e) => handleNodeKeyDown(e, node.id)}
                   onClick={() => {
                     if (dragId) return;
@@ -660,7 +737,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                         y={pos.y + 1}
                         textAnchor="middle"
                         dominantBaseline="central"
-                        fill="white"
+                        fill="currentColor"
                         fontSize={Math.min(10, node.r * 0.65)}
                         fontWeight={600}
                         pointerEvents="none"
@@ -670,15 +747,16 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                     )
                   )}
 
-                  {/* Hover highlight ring */}
-                  {isHovered && (
+                  {/* Highlight ring — dashed for keyboard focus, solid for hover */}
+                  {(isHovered || focusedId === node.id) && (
                     <circle
                       cx={pos.x}
                       cy={pos.y}
-                      r={node.r + 2}
+                      r={node.r + (focusedId === node.id ? 3 : 2)}
                       fill="none"
-                      stroke="currentColor"
-                      strokeWidth={1.5}
+                      stroke={focusedId === node.id ? "var(--color-ring)" : "currentColor"}
+                      strokeWidth={focusedId === node.id ? 2 : 1.5}
+                      strokeDasharray={focusedId === node.id ? "4 2" : undefined}
                       opacity={0.6}
                     />
                   )}
@@ -688,15 +766,15 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                       x={pos.x}
                       y={hubLabelY}
                       textAnchor="middle"
-                      fill="white"
+                      fill="currentColor"
                       fontSize={isCoreHub ? HUB_LABEL_FONT_SIZE : HUB_LABEL_FONT_SIZE - 1}
                       fontWeight={isCoreHub ? 700 : 600}
-                      stroke="rgba(0,0,0,0.82)"
+                      stroke="var(--color-card, #1a1a2e)"
                       strokeWidth={2.4}
                       paintOrder="stroke"
                       pointerEvents="none"
                     >
-                      {node.symbol}
+                      {node.symbol} · {node.grade}
                     </text>
                   )}
 
@@ -704,75 +782,15 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               );
             })}
 
-            {/* Node Tooltip (only when no edge is hovered) */}
-            {hoveredId && hoveredEdge === null && (() => {
-              const node = nodeMap.get(hoveredId);
-              const pos = positions.get(hoveredId);
-              if (!node || !pos) return null;
-              const card = cards.find((c) => c.id === hoveredId);
-
-              const tx = Math.min(pos.x + node.r + 8, WIDTH - 135);
-              const ty = Math.max(PAD, pos.y - 20);
-
-              return (
-                <g pointerEvents="none">
-                  <rect
-                    x={tx}
-                    y={ty}
-                    width={125}
-                    height={52}
-                    rx={6}
-                    fill="var(--color-card, #1c1c1c)"
-                    stroke="var(--color-border, #333)"
-                    strokeWidth={1}
-                  />
-                  <text x={tx + 8} y={ty + 18} fill="currentColor" fontSize={12} fontWeight={600}>
-                    {node.symbol}
-                  </text>
-                  <text x={tx + 8} y={ty + 34} fill="currentColor" fontSize={10} opacity={0.7}>
-                    Grade: {card?.overallGrade ?? "NR"}
-                  </text>
-                  <text x={tx + 8} y={ty + 46} fill="currentColor" fontSize={10} opacity={0.7} fontFamily="var(--font-mono, monospace)">
-                    {formatCurrency(node.mcap)}
-                  </text>
-                </g>
-              );
-            })()}
-
-            {/* Edge Tooltip */}
-            {hoveredEdge !== null && (() => {
-              const link = resolvedLinkByIndex.get(hoveredEdge);
-              if (!link) return null;
-              const srcId = link.srcId;
-              const tgtId = link.tgtId;
-              const fromPos = positions.get(tgtId);
-              const toPos = positions.get(srcId);
-              const fromNode = nodeMap.get(tgtId);
-              const toNode = nodeMap.get(srcId);
-              if (!fromPos || !toPos || !fromNode || !toNode) return null;
-
-              const mx = (fromPos.x + toPos.x) / 2;
-              const my = (fromPos.y + toPos.y) / 2;
-              const tx = Math.min(Math.max(mx + 8, PAD), WIDTH - 140);
-              const ty = Math.min(Math.max(my - 20, PAD), HEIGHT - 44);
-              const pctText = `${Math.round(link.weight * 100)}%`;
-              const typeLabel = link.type;
-
-              return (
-                <g pointerEvents="none">
-                  <rect x={tx} y={ty} width={130} height={38} rx={6}
-                    fill="var(--color-card, #1c1c1c)" stroke="var(--color-border, #333)" strokeWidth={1} />
-                  <text x={tx + 8} y={ty + 15} fill="currentColor" fontSize={11} fontWeight={600}>
-                    {fromNode.symbol} → {toNode.symbol}
-                  </text>
-                  <text x={tx + 8} y={ty + 30} fill="currentColor" fontSize={10} opacity={0.7}>
-                    {pctText} · {typeLabel}
-                  </text>
-                </g>
-              );
-            })()}
+            {/* Tooltips (pre-computed above return) */}
+            {nodeTooltipEl}
+            {edgeTooltipEl}
 
           </svg>
+        </div>
+        {/* Screen reader announcements for tooltip content */}
+        <div className="sr-only" aria-live="polite" aria-atomic="true">
+          {tooltipAnnouncement}
         </div>
       </CardContent>
     </Card>

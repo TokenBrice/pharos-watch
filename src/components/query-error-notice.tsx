@@ -18,6 +18,41 @@ function getErrorDetail(error: unknown): string | null {
   return message.length <= 140 ? message : null;
 }
 
+const NOTICE_TONES = {
+  stale: {
+    icon: Database,
+    title: "Refresh delayed",
+    message: "Showing the last successful snapshot while live refresh retries.",
+    detail: "The rest of this view should remain usable while the dataset catches up.",
+    tone: "border-amber-500/30 bg-amber-500/8 text-amber-700 dark:text-amber-400",
+    iconBg: "bg-amber-500/15",
+  },
+  unavailable: {
+    icon: Database,
+    title: "Waiting for first sync",
+    message: "This dataset has not populated yet.",
+    detail: "Structural parts of the route may still render while the first successful snapshot is pending.",
+    tone: "border-border/60 bg-muted/40 text-muted-foreground",
+    iconBg: "bg-muted",
+  },
+  network: {
+    icon: WifiOff,
+    title: "Connection issue",
+    message: "Unable to reach the Pharos data API right now.",
+    detail: "Retry when your connection stabilizes.",
+    tone: "border-orange-500/30 bg-orange-500/8 text-orange-700 dark:text-orange-400",
+    iconBg: "bg-orange-500/15",
+  },
+  error: {
+    icon: AlertCircle,
+    title: "Failed to load this dataset",
+    message: "The dataset could not be loaded right now.",
+    detail: null as string | null,
+    tone: "border-red-500/30 bg-red-500/8 text-red-700 dark:text-red-400",
+    iconBg: "bg-red-500/15",
+  },
+} as const;
+
 export function QueryErrorNotice({ error, hasData = false, onRetry }: QueryErrorNoticeProps) {
   if (!error) return null;
 
@@ -26,48 +61,14 @@ export function QueryErrorNotice({ error, hasData = false, onRetry }: QueryError
     error instanceof TypeError &&
     /failed to fetch|networkerror|load failed|network request failed/i.test(error.message);
 
-  const config = {
-    stale: {
-      icon: Database,
-      title: "Refresh delayed",
-      message: "Showing the last successful snapshot while live refresh retries.",
-      detail: "The rest of this view should remain usable while the dataset catches up.",
-      tone: "border-amber-500/30 bg-amber-500/8 text-amber-700 dark:text-amber-400",
-      iconBg: "bg-amber-500/15",
-    },
-    unavailable: {
-      icon: Database,
-      title: "Waiting for first sync",
-      message: "This dataset has not populated yet.",
-      detail: "Structural parts of the route may still render while the first successful snapshot is pending.",
-      tone: "border-border/60 bg-muted/40 text-muted-foreground",
-      iconBg: "bg-muted",
-    },
-    network: {
-      icon: WifiOff,
-      title: "Connection issue",
-      message: "Unable to reach the Pharos data API right now.",
-      detail: "Retry when your connection stabilizes.",
-      tone: "border-orange-500/30 bg-orange-500/8 text-orange-700 dark:text-orange-400",
-      iconBg: "bg-orange-500/15",
-    },
-    error: {
-      icon: AlertCircle,
-      title: "Failed to load this dataset",
-      message: "The dataset could not be loaded right now.",
-      detail: getErrorDetail(error),
-      tone: "border-red-500/30 bg-red-500/8 text-red-700 dark:text-red-400",
-      iconBg: "bg-red-500/15",
-    },
-  };
-
   const type = hasData ? "stale" : isUnavailable ? "unavailable" : isNetworkFetchError ? "network" : "error";
-  const { icon: Icon, title, message, detail, tone, iconBg } = config[type];
+  const { icon: Icon, title, message, tone, iconBg } = NOTICE_TONES[type];
+  const detail = type === "error" ? getErrorDetail(error) : NOTICE_TONES[type].detail;
 
   return (
-    <div 
-      role="status" 
-      aria-live="polite" 
+    <div
+      role="status"
+      aria-live="polite"
       className={`rounded-lg border px-4 py-3 shadow-sm ${tone}`}
     >
       <div className="flex items-start gap-3">

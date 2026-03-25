@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
 import { formatCurrency, formatDeathDate } from "@shared/lib/format";
@@ -169,6 +169,21 @@ function Tombstone({
   onPayRespects: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
+  const tombRef = useRef<HTMLDivElement>(null);
+  const [tooltipShift, setTooltipShift] = useState(0);
+
+  const updateTooltipShift = useCallback(() => {
+    if (!tombRef.current) {
+      setTooltipShift(0);
+      return;
+    }
+    const rect = tombRef.current.getBoundingClientRect();
+    const tooltipW = 224; // w-56 = 14rem = 224px
+    const center = rect.left + rect.width / 2;
+    const leftOverflow = 8 - (center - tooltipW / 2);
+    const rightOverflow = (center + tooltipW / 2) - (window.innerWidth - 8);
+    setTooltipShift(leftOverflow > 0 ? leftOverflow : rightOverflow > 0 ? -rightOverflow : 0);
+  }, []);
 
   // "Press F to pay respects" — listen while hovered
   const handleF = useCallback(
@@ -214,14 +229,27 @@ function Tombstone({
 
   return (
     <div
-      className={`pharos-focus-ring relative flex flex-col items-center ${staggerClass}`}
+      ref={tombRef}
+      className={cn("pharos-focus-ring relative flex flex-col items-center", staggerClass)}
       tabIndex={0}
       role="button"
       aria-label={`${coin.symbol} — ${coin.name}, ${CAUSE_META[coin.causeOfDeath].label}`}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onFocus={() => setHovered(true)}
-      onBlur={() => setHovered(false)}
+      onMouseEnter={() => {
+        setHovered(true);
+        updateTooltipShift();
+      }}
+      onMouseLeave={() => {
+        setHovered(false);
+        setTooltipShift(0);
+      }}
+      onFocus={() => {
+        setHovered(true);
+        updateTooltipShift();
+      }}
+      onBlur={() => {
+        setHovered(false);
+        setTooltipShift(0);
+      }}
       onClick={() => onSelect(coin.symbol)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -240,12 +268,12 @@ function Tombstone({
         >
           {/* Vertical bar */}
           <div
-            className="absolute left-1/2 -translate-x-1/2 bg-stone-100 dark:bg-card border border-border"
+            className="absolute left-1/2 -translate-x-1/2 bg-stone-100 dark:bg-muted border border-border"
             style={{ width: cross.vw, height: cross.vh, filter: `brightness(${brightness})` }}
           />
           {/* Horizontal bar */}
           <div
-            className="absolute left-1/2 -translate-x-1/2 bg-stone-100 dark:bg-card border border-border"
+            className="absolute left-1/2 -translate-x-1/2 bg-stone-100 dark:bg-muted border border-border"
             style={{
               width: cross.hw,
               height: cross.hh,
@@ -257,15 +285,12 @@ function Tombstone({
       )}
 
       <div
-        className={`
-          relative
-          ${cfg.w} ${cfg.h} ${topRounding}
-          bg-stone-100 dark:bg-card
-          border border-border
-          flex flex-col items-center justify-center gap-1.5
-          cursor-pointer transition-all duration-200
-          hover:-translate-y-1
-        `}
+        className={cn(
+          "relative bg-stone-100 dark:bg-card border border-border",
+          "flex flex-col items-center justify-center gap-1.5",
+          "cursor-pointer transition-all duration-200 hover:-translate-y-1",
+          cfg.w, cfg.h, topRounding,
+        )}
         style={{
           borderTopWidth: "3px",
           borderTopColor: color,
@@ -279,7 +304,7 @@ function Tombstone({
         {/* Hammer smashing into tombstone for regulatory kills */}
         {shape === "hammer" && <HammerStrike size={size} />}
 
-        <span className="text-[9px] text-muted-foreground/40 tracking-widest">
+        <span className="text-[9px] text-muted-foreground/40 tracking-widest" aria-hidden="true">
           R.I.P.
         </span>
 
@@ -293,7 +318,7 @@ function Tombstone({
               alt={coin.symbol}
               width={cfg.logo}
               height={cfg.logo}
-              className={`rounded-full transition-all duration-300 ${hovered ? "" : "grayscale"}`}
+              className={cn("rounded-full transition-all duration-300", !hovered && "grayscale")}
               unoptimized
             />
           ) : (
@@ -332,7 +357,10 @@ function Tombstone({
 
       {/* Tooltip */}
       {hovered && (
-        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-30 w-56 rounded-lg border bg-popover p-3 text-xs shadow-lg pointer-events-none">
+        <div
+          className="absolute bottom-full mb-2 left-1/2 z-30 w-56 rounded-lg border bg-popover p-3 text-xs shadow-lg pointer-events-none"
+          style={{ transform: `translateX(calc(-50% + ${tooltipShift}px))` }}
+        >
           <p className="font-semibold">{coin.name}</p>
           <p className="text-muted-foreground mt-1 leading-relaxed">
             {coin.obituary.split(". ")[0]}.
@@ -423,7 +451,7 @@ export function CemeteryTombstones({ coins, onSelect }: CemeteryTombstonesProps)
             </span>
           </div>
         ))}
-        <span className="ml-auto text-xs text-muted-foreground/50 italic">
+        <span className="ml-auto text-xs text-muted-foreground/70 italic">
           Order follows the archive toggle. Tombstone size reflects peak market cap.
         </span>
       </div>

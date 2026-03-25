@@ -79,7 +79,7 @@ function LazyCard({ children, className }: { children: React.ReactNode; classNam
           observer.disconnect();
         }
       },
-      { rootMargin: "200px" },
+      { rootMargin: "100px" },
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -88,7 +88,7 @@ function LazyCard({ children, className }: { children: React.ReactNode; classNam
   return (
     <div ref={ref} className={className}>
       {visible ? children : (
-        <div className="h-[340px] rounded-xl border bg-muted/20 animate-pulse flex flex-col items-center justify-center gap-2">
+        <div className="h-[340px] rounded-xl border bg-muted/20 animate-pulse flex flex-col items-center justify-center gap-2" role="status" aria-busy="true" aria-label="Loading score card">
           <div className="h-8 w-8 rounded-full bg-muted/40" />
           <div className="h-4 w-20 bg-muted/40 rounded" />
           <div className="h-6 w-12 bg-muted/40 rounded" />
@@ -200,6 +200,8 @@ function GradeDistributionHero({
               <button
                 key={range}
                 onClick={() => onFilterChange(activeFilter === range ? "all" : range)}
+                aria-label={`Filter by grade ${range}, ${count} coins, ${pct.toFixed(1)}%`}
+                aria-pressed={isActive}
                 className={cn(
                   "pharos-focus-ring relative flex items-center justify-center text-sm font-semibold text-white transition-all duration-200",
                   GRADE_BAR_COLORS[range],
@@ -232,6 +234,8 @@ function GradeDistributionHero({
             <button
               key={range}
               onClick={() => onFilterChange(activeFilter === range ? "all" : range)}
+              aria-label={`Filter by grade ${range}, ${count} coins`}
+              aria-pressed={isActive}
               className={cn(
                 "pharos-focus-ring inline-flex items-center gap-1.5 rounded-full px-2 py-1 transition-colors",
                 isActive
@@ -248,13 +252,6 @@ function GradeDistributionHero({
       </div>
     </div>
   );
-}
-
-function getActiveGradeButtonClassName(range: GradeFilter): string | undefined {
-  if (range === "all") return undefined;
-  return REPORT_CARD_GRADE_COLORS[range as keyof typeof REPORT_CARD_GRADE_COLORS]
-    ?.replace("bg-", "bg-")
-    .replace("hover:bg-", "");
 }
 
 function GradeFilterButtons({
@@ -274,7 +271,7 @@ function GradeFilterButtons({
         variant={gradeFilter === "all" ? "default" : "outline"}
         size="sm"
         onClick={() => onChange("all")}
-        className="pharos-focus-ring rounded-full text-xs"
+        className="pharos-focus-ring rounded-full text-xs min-h-[44px] md:min-h-0"
       >
         All ({totalCards})
       </Button>
@@ -289,8 +286,8 @@ function GradeFilterButtons({
             size="sm"
             onClick={() => onChange(isActive ? "all" : range)}
             className={cn(
-              "pharos-focus-ring rounded-full text-xs",
-              isActive && getActiveGradeButtonClassName(range),
+              "pharos-focus-ring rounded-full text-xs min-h-[44px] md:min-h-0",
+              isActive && REPORT_CARD_GRADE_COLORS[range as keyof typeof REPORT_CARD_GRADE_COLORS],
             )}
           >
             {range} ({count})
@@ -316,7 +313,7 @@ function SortButtons({
           variant={sortKey === opt.key ? "default" : "outline"}
           size="sm"
           onClick={() => onChange(opt.key)}
-          className="pharos-focus-ring rounded-full text-xs"
+          className="pharos-focus-ring rounded-full text-xs min-h-[44px] md:min-h-0"
         >
           {opt.label}
         </Button>
@@ -475,7 +472,7 @@ export function ReportCardsClient() {
             <Skeleton className="h-4 w-full" />
           </CardContent>
         </Card>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
           {Array.from({ length: 15 }, (_, i) => (
             <Card key={i}>
               <CardContent className="py-4 space-y-2">
@@ -542,7 +539,7 @@ export function ReportCardsClient() {
       <div className="space-y-3">
         {/* Mobile */}
         <details className="rounded-2xl border border-border/60 bg-card/50 px-4 py-3 md:hidden">
-          <summary className="cursor-pointer text-sm font-medium text-foreground">
+          <summary className="pharos-focus-ring cursor-pointer rounded-lg text-sm font-medium text-foreground">
             Sort and filter score cards
           </summary>
           <div className="pt-4 space-y-4">
@@ -642,7 +639,7 @@ export function ReportCardsClient() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
           {filteredCards.map((card, i) => (
             <LazyCard key={card.id}>
               <ReportCardMini

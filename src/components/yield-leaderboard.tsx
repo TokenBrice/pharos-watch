@@ -24,8 +24,6 @@ import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
 import { MethodologyLabel } from "@/components/methodology-hint";
 
-const COLUMN_COUNT = 12;
-
 const YIELD_COLUMNS: readonly DataTableColumn<YieldTableSortKey>[] = [
   { id: "rank", label: "#", className: "w-[50px] text-right" },
   { id: "coin", label: "Coin", className: "w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none" },
@@ -53,6 +51,8 @@ const YIELD_COLUMNS: readonly DataTableColumn<YieldTableSortKey>[] = [
   { id: "expand", label: <span className="sr-only">Expand row</span>, className: "w-[44px] text-right" },
 ] as const;
 
+const COLUMN_COUNT = YIELD_COLUMNS.length;
+
 /** Small pill badge that opens an inline popover listing alternative yield sources. */
 function AltSourcesPopover({ altSources }: { altSources: AltYieldSource[] }) {
   const [open, setOpen] = useState(false);
@@ -61,10 +61,17 @@ function AltSourcesPopover({ altSources }: { altSources: AltYieldSource[] }) {
   useEffect(() => {
     if (!open) return;
     const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && e.target instanceof Node && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
     };
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [open]);
 
   return (
@@ -84,11 +91,12 @@ function AltSourcesPopover({ altSources }: { altSources: AltYieldSource[] }) {
         className="inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
         aria-label={`${altSources.length} alternative yield source${altSources.length > 1 ? "s" : ""}`}
         aria-expanded={open}
+        aria-haspopup="dialog"
       >
         +{altSources.length}
       </button>
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 min-w-[180px] rounded-lg border bg-card shadow-lg p-2 text-xs">
+        <div role="dialog" aria-label="Alternative yield sources" className="absolute left-0 top-full mt-1 z-50 min-w-[180px] rounded-lg border bg-card shadow-lg p-2 text-xs">
           <p className="text-muted-foreground mb-1.5 font-medium">Alt sources</p>
           {altSources.map((src) => (
             <div key={src.sourceKey} className="flex items-center justify-between gap-2 py-1 border-b last:border-0">
@@ -377,7 +385,7 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                               <button
                                 type="button"
                                 onClick={(event) => event.stopPropagation()}
-                                onKeyDown={(event) => event.stopPropagation()}
+                                onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") event.stopPropagation(); }}
                                 className="mx-auto inline-flex pharos-focus-ring"
                                 aria-label={`${warningSignalCount} warning signal${warningSignalCount > 1 ? "s" : ""}`}
                               >

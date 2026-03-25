@@ -1,8 +1,9 @@
 "use client";
 
-import { type CSSProperties, useMemo } from "react";
+import { type CSSProperties, useMemo, useState } from "react";
 import { Banknote, Printer, Scissors } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { clamp } from "@shared/lib/math";
 
 /**
  * Visual note: This component uses hardcoded dark-palette colors (slate, rgba shadows)
@@ -94,10 +95,6 @@ interface ShredderDims {
   stripH: number;
   stripDropBase: number;
   stripSpread: number;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 function calcOffset(offset: number): string {
@@ -270,10 +267,10 @@ function PrinterMachine({ size, intensity, stress, accentHex }: PrinterMachinePr
   const isMini = size === "mini";
   const dims = isMini ? MINI_PRINTER_DIMS : FULL_PRINTER_DIMS;
 
-  const prefersReducedMotion = typeof window !== "undefined"
-    ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    : false;
-  const effectiveIntensity = prefersReducedMotion ? 0 : intensity;
+  const [reducedMotion] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false,
+  );
+  const effectiveIntensity = reducedMotion ? 0 : intensity;
 
   const power = clamp(effectiveIntensity, 0.08, 1);
   const stressFactor = clamp(stress, 0, 1);
@@ -613,10 +610,10 @@ function ShredderMachine({ size, intensity }: ShredderMachineProps) {
   const isMini = size === "mini";
   const dims = isMini ? MINI_SHREDDER_DIMS : FULL_SHREDDER_DIMS;
 
-  const prefersReducedMotion = typeof window !== "undefined"
-    ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    : false;
-  const effectiveIntensity = prefersReducedMotion ? 0 : intensity;
+  const [reducedMotion] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false,
+  );
+  const effectiveIntensity = reducedMotion ? 0 : intensity;
 
   const power = clamp(effectiveIntensity, 0.08, 1);
 

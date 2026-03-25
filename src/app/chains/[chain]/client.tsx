@@ -15,15 +15,16 @@ import {
   BACKING_DIVERSITY_WEIGHT,
 } from "@shared/lib/chain-health";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatChainUsd, formatRatioPct, HEALTH_BADGE_CLASSES, HEALTH_TEXT_CLASSES, trendColor } from "@/lib/chain-ui";
+import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { MethodologyLabel, MethodologyHint, MethodologyCardActions } from "@/components/methodology-hint";
 import type { ChainSummary } from "@shared/types/chains";
-import { TrendingUp, TrendingDown, Minus, ChevronRight, Info } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, ChevronRight, Info, CheckCircle2, AlertCircle, AlertTriangle, XCircle } from "lucide-react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import logos from "../../../../data/logos.json";
 
@@ -41,6 +42,28 @@ const BACKING_FILTER_COLORS: Record<string, string> = {
   other: "bg-zinc-500/15 text-zinc-700 dark:text-zinc-400 border-zinc-500/30 hover:bg-zinc-500/20",
 };
 
+
+function getScoreColorClass(score: number): string {
+  if (score >= 80) return "bg-emerald-500";
+  if (score >= 60) return "bg-amber-500";
+  if (score >= 40) return "bg-orange-500";
+  return "bg-red-500";
+}
+
+function getScoreTextClass(score: number): string {
+  if (score >= 80) return "text-emerald-600 dark:text-emerald-400";
+  if (score >= 60) return "text-amber-600 dark:text-amber-400";
+  if (score >= 40) return "text-orange-600 dark:text-orange-400";
+  return "text-red-600 dark:text-red-400";
+}
+
+function ScoreIcon({ score }: { score: number }) {
+  if (score >= 80) return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" aria-hidden="true" />;
+  if (score >= 60) return <AlertCircle className="h-3.5 w-3.5 text-amber-500" aria-hidden="true" />;
+  if (score >= 40) return <AlertTriangle className="h-3.5 w-3.5 text-orange-500" aria-hidden="true" />;
+  return <XCircle className="h-3.5 w-3.5 text-red-500" aria-hidden="true" />;
+}
+
 function FactorGauge({
   label,
   score,
@@ -50,21 +73,31 @@ function FactorGauge({
   score: number | null;
   methodologyKey?: "chainHealthQuality" | "chainHealthEnvironment" | "chainHealthConcentration" | "chainHealthPegStability" | "chainHealthBackingDiversity";
 }) {
+  const hasScore = score != null;
+  const colorClass = hasScore ? getScoreColorClass(score) : "bg-muted-foreground/30";
+  const textClass = hasScore ? getScoreTextClass(score) : "text-muted-foreground";
+  
   return (
     <div className="space-y-1.5">
-      <div className="flex justify-between text-xs">
-        {methodologyKey ? (
-          <MethodologyLabel topic={methodologyKey} className="text-xs">
-            <span className="pharos-kicker cursor-help">{label}</span>
-          </MethodologyLabel>
-        ) : (
-          <span className="pharos-kicker">{label}</span>
-        )}
-        <span className="font-mono font-medium">{score != null ? score : "--"}</span>
+      <div className="flex items-center justify-between text-xs">
+        <div className="flex items-center gap-1.5">
+          {hasScore && <ScoreIcon score={score} />}
+          {methodologyKey ? (
+            <MethodologyLabel topic={methodologyKey} className="text-xs">
+              <span className="pharos-kicker cursor-help">{label}</span>
+            </MethodologyLabel>
+          ) : (
+            <span className="pharos-kicker">{label}</span>
+          )}
+        </div>
+        <span className={cn("font-mono font-medium", textClass)}>{hasScore ? score : "--"}</span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-        {score != null && (
-          <div className="h-full rounded-full bg-primary/70 transition-all" style={{ width: `${score}%` }} />
+        {hasScore && (
+          <div 
+            className={cn("h-full rounded-full transition-all duration-500", colorClass)} 
+            style={{ width: `${score}%` }} 
+          />
         )}
       </div>
     </div>
@@ -76,57 +109,74 @@ function HeroCard({ chain, chainId }: { chain: ChainSummary; chainId: string }) 
   const hasHealthScore = chain.healthScore != null && chain.healthBand;
 
   return (
-    <Card className="overflow-hidden">
-      <CardContent className="px-5 py-5">
+    <Card 
+      className="relative overflow-hidden"
+      style={{
+        background: "linear-gradient(135deg, var(--card) 0%, var(--muted) 100%)",
+      }}
+    >
+      {/* Subtle gradient overlay for featured feel */}
+      <div 
+        className="pointer-events-none absolute inset-0 opacity-30"
+        style={{
+          background: hasHealthScore 
+            ? `radial-gradient(circle at 90% 10%, ${chain.healthBand === 'robust' ? 'oklch(0.7 0.2 145 / 0.15)' : chain.healthBand === 'healthy' ? 'oklch(0.7 0.15 220 / 0.15)' : chain.healthBand === 'mixed' ? 'oklch(0.75 0.15 85 / 0.15)' : chain.healthBand === 'fragile' ? 'oklch(0.7 0.18 55 / 0.15)' : 'oklch(0.65 0.2 25 / 0.15)'} 0%, transparent 50%)`
+            : 'radial-gradient(circle at 90% 10%, oklch(0.7 0.1 220 / 0.1) 0%, transparent 50%)'
+        }}
+      />
+      <CardContent className="relative px-5 py-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           {/* Chain Identity - Enhanced */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-5">
             {meta && (
               <div className="relative shrink-0">
-                <div className="rounded-xl border border-border/60 bg-background/80 p-2 shadow-sm">
+                <div 
+                  className="rounded-2xl border border-border/60 bg-background/90 p-3 shadow-md"
+                  style={{
+                    background: "linear-gradient(145deg, var(--background) 0%, var(--muted) 100%)",
+                  }}
+                >
                   <Image
                     src={meta.logoPath}
                     alt=""
-                    width={48}
-                    height={48}
+                    width={64}
+                    height={64}
                     className={`rounded-full${meta.darkInvert ? " dark:invert" : ""}`}
                   />
                 </div>
-                {hasHealthScore && (
-                  <div
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-3">
+                <h2 className="text-3xl font-extrabold tracking-tight">{chain.name}</h2>
+                <ChainTypeBadge type={chain.type} />
+              </div>
+              {hasHealthScore ? (
+                <div className="mt-2 flex items-center gap-3">
+                  <div 
                     className={cn(
-                      "absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold shadow-sm ring-2 ring-background",
+                      "flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold shadow-sm",
                       HEALTH_BADGE_CLASSES[chain.healthBand!]
                     )}
                     title={`Health Score: ${chain.healthScore}`}
                   >
                     {chain.healthScore}
                   </div>
-                )}
-              </div>
-            )}
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-2xl font-extrabold tracking-tight">{chain.name}</h2>
-                <Badge variant="secondary" className="text-[10px] font-medium uppercase">
-                  {chain.type}
-                </Badge>
-              </div>
-              {hasHealthScore ? (
-                <div className="mt-1 flex items-center gap-2">
-                  <span className={cn("text-sm font-semibold capitalize", HEALTH_TEXT_CLASSES[chain.healthBand!])}>
-                    {chain.healthBand}
-                  </span>
-                  <span className="text-xs text-muted-foreground">ecosystem health</span>
+                  <div className="flex flex-col">
+                    <span className={cn("text-sm font-semibold capitalize leading-tight", HEALTH_TEXT_CLASSES[chain.healthBand!])}>
+                      {chain.healthBand}
+                    </span>
+                    <span className="text-xs text-muted-foreground">ecosystem health</span>
+                  </div>
                 </div>
               ) : (
-                <p className="mt-1 text-xs text-muted-foreground">Health score unavailable</p>
+                <p className="mt-2 text-xs text-muted-foreground">Health score unavailable</p>
               )}
             </div>
           </div>
 
           {/* Metrics Grid - Subordinated with separator */}
-          <div className="grid grid-cols-2 gap-x-6 gap-y-3 border-t pt-4 text-sm sm:grid-cols-5 lg:border-t-0 lg:border-l lg:pl-6 lg:pt-0">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-4 border-t pt-4 text-sm sm:grid-cols-3 lg:grid-cols-5 lg:border-t-0 lg:border-l lg:pl-6 lg:pt-0">
             <div>
               <p className="pharos-kicker">Total Supply</p>
               <p className="text-lg font-bold tracking-tight">{formatChainUsd(chain.totalUsd)}</p>
@@ -325,6 +375,7 @@ function CompositionSection({ chainId }: { chainId: string }) {
               count={rest.length}
               total={restTotal}
               totalUsd={totalUsd}
+              coins={rest}
             />
           )}
         </div>
@@ -364,8 +415,7 @@ function CompositionBlock({
   percentage: number;
   shouldSpan: boolean;
 }) {
-  const [isHovered, setIsHovered] = useState(false);
-  const logoSize = shouldSpan ? 40 : percentage > 0.15 ? 32 : 24;
+  const logoSize = shouldSpan ? 44 : percentage > 0.15 ? 32 : 24;
 
   return (
     <Link
@@ -373,31 +423,33 @@ function CompositionBlock({
       className={cn(
         "pharos-focus-ring group relative flex flex-col items-center justify-center rounded-xl border p-3 text-center transition-all duration-200",
         "bg-gradient-to-b from-muted/40 to-muted/20 hover:from-muted/60 hover:to-muted/40",
-        "hover:border-primary/30 hover:shadow-sm",
+        "hover:border-primary/40 hover:shadow-md hover:shadow-primary/5",
+        "hover:-translate-y-0.5",
         shouldSpan && "min-h-[100px]"
       )}
       style={{
         gridColumn: shouldSpan ? "span 2" : undefined,
       }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       title={`${coin.name} (${coin.symbol}) - ${(percentage * 100).toFixed(1)}% - Click to view details`}
     >
       <StablecoinLogo src={(logos as Record<string, string>)[coin.id]} name={coin.name} size={logoSize} />
-      <span className={cn("mt-1 font-semibold", shouldSpan ? "text-base" : "text-sm")}>{coin.symbol}</span>
+      <span className={cn("mt-1.5 font-semibold", shouldSpan ? "text-base" : "text-sm")}>{coin.symbol}</span>
       <span className={cn("text-muted-foreground", shouldSpan && "text-sm")}>
         {(percentage * 100).toFixed(1)}%
       </span>
-      <span className={cn("font-mono transition-opacity", shouldSpan ? "text-xs" : "text-[10px]", isHovered ? "opacity-100" : "opacity-70")}>
+      <span className="font-mono text-xs transition-opacity opacity-70 group-hover:opacity-100">
         {formatChainUsd(coin.supplyOnChain)}
       </span>
-      <ChevronRight
-        className={cn(
-          "absolute right-2 top-2 text-primary/50 transition-all duration-200",
-          shouldSpan ? "h-5 w-5" : "h-4 w-4",
-          isHovered ? "translate-x-0 opacity-100" : "-translate-x-1 opacity-0"
-        )}
-      />
+      {/* Enhanced click affordance */}
+      <div className="absolute right-2 top-2 flex items-center gap-1 transition-all duration-200 -translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100">
+        <span className="text-xs font-medium text-primary/70">View</span>
+        <ChevronRight
+          className={cn(
+            "text-primary/60",
+            shouldSpan ? "h-5 w-5" : "h-4 w-4"
+          )}
+        />
+      </div>
     </Link>
   );
 }
@@ -406,32 +458,66 @@ function CompositionOthersBlock({
   count,
   total,
   totalUsd,
+  coins,
 }: {
   count: number;
   total: number;
   totalUsd: number;
+  coins: ChainStablecoin[];
 }) {
-  const [isHovered, setIsHovered] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
   const percentage = totalUsd > 0 ? (total / totalUsd) * 100 : 0;
+
+  // Get top 5 coins for the preview
+  const previewCoins = coins.slice(0, 5);
+  const remainingCount = Math.max(0, coins.length - 5);
+  const tooltipId = "others-tooltip";
 
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 p-3 text-center transition-all duration-200",
-        isHovered && "bg-muted/30 border-border/80"
+        "pharos-focus-ring group relative flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 p-3 text-center transition-all duration-200",
+        "hover:bg-muted/30 hover:border-border/80 focus-within:bg-muted/30 focus-within:border-border/80"
       )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      title={`${count} other stablecoins totaling ${formatChainUsd(total)}`}
+      tabIndex={0}
+      aria-describedby={tooltipId}
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+      onFocus={() => setShowTooltip(true)}
+      onBlur={() => setShowTooltip(false)}
     >
       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted/60">
         <span className="text-xs font-semibold text-muted-foreground">+{count}</span>
       </div>
       <span className="mt-1 text-sm font-medium text-muted-foreground">Others</span>
       <span className="text-xs text-muted-foreground">{percentage.toFixed(1)}%</span>
-      <span className={cn("font-mono text-[10px] transition-opacity", isHovered ? "opacity-100" : "opacity-70")}>
+      <span className="font-mono text-xs transition-opacity opacity-70 group-hover:opacity-100 group-focus-within:opacity-100">
         {formatChainUsd(total)}
       </span>
+
+      {/* Tooltip with coin preview */}
+      {showTooltip && (
+        <div id={tooltipId} role="tooltip" className="absolute bottom-full left-1/2 z-50 mb-2 w-48 -translate-x-1/2 rounded-lg border border-border/60 bg-popover p-3 shadow-lg">
+          <p className="mb-2 text-xs font-medium text-foreground">Other stablecoins</p>
+          <div className="space-y-1">
+            {previewCoins.map((coin) => (
+              <div key={coin.id} className="flex items-center justify-between text-xs">
+                <span className="flex items-center gap-1.5">
+                  <StablecoinLogo src={(logos as Record<string, string>)[coin.id]} name={coin.name} size={14} />
+                  <span className="text-muted-foreground">{coin.symbol}</span>
+                </span>
+                <span className="font-mono text-muted-foreground">{(coin.chainShare * 100).toFixed(1)}%</span>
+              </div>
+            ))}
+          </div>
+          {remainingCount > 0 && (
+            <p className="mt-2 border-t border-border/40 pt-1 text-xs text-muted-foreground">
+              +{remainingCount} more coins
+            </p>
+          )}
+          <div className="absolute bottom-0 left-1/2 h-2 w-2 -translate-x-1/2 translate-y-1/2 rotate-45 border-b border-r border-border/60 bg-popover" />
+        </div>
+      )}
     </div>
   );
 }
@@ -465,7 +551,11 @@ function BackingBreakdown({
         <CardTitle className="pharos-kicker">Supply by Backing Type</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex h-4 w-full overflow-hidden rounded-full">
+        <div
+          className="flex h-4 w-full overflow-hidden rounded-full"
+          role="img"
+          aria-label={`Backing breakdown: ${Object.entries(backingTotals).filter(([, a]) => a > 0).map(([type, amount]) => `${BACKING_LABELS_SHORT[type as keyof typeof BACKING_LABELS_SHORT] ?? type} ${(totalUsd > 0 ? (amount / totalUsd) * 100 : 0).toFixed(1)}%`).join(", ")}`}
+        >
           {Object.entries(backingTotals).map(([type, amount]) => {
             const pct = totalUsd > 0 ? (amount / totalUsd) * 100 : 0;
             if (pct <= 0) return null;
@@ -473,6 +563,22 @@ function BackingBreakdown({
           })}
         </div>
         <div className="flex flex-wrap gap-2">
+          {/* "All" filter pill */}
+          <button
+            onClick={() => onFilterChange(null)}
+            className={cn(
+              "pharos-focus-ring inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+              activeFilter === null 
+                ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/15" 
+                : "border-border/60 bg-background hover:bg-muted/50"
+            )}
+            title={activeFilter === null ? "Showing all stablecoins" : "Click to show all stablecoins"}
+          >
+            <div className="h-2.5 w-2.5 rounded-full bg-gradient-to-br from-sky-500 via-violet-500 to-amber-500" />
+            <span>All</span>
+            <span className="font-mono text-muted-foreground">{coins.length}</span>
+            {activeFilter === null && <span className="ml-1 text-xs">●</span>}
+          </button>
           {Object.entries(backingTotals).map(([type, amount]) => {
             const pct = totalUsd > 0 ? (amount / totalUsd) * 100 : 0;
             if (pct <= 0) return null;
@@ -490,7 +596,7 @@ function BackingBreakdown({
                 <div className={cn("h-2.5 w-2.5 rounded-full", BACKING_BAR_COLORS[type])} />
                 <span>{BACKING_LABELS_SHORT[type as keyof typeof BACKING_LABELS_SHORT] ?? (type === "other" ? "Other" : type)}</span>
                 <span className="font-mono text-muted-foreground">{pct.toFixed(1)}%</span>
-                {isActive && <span className="ml-1 text-[10px]">✕</span>}
+                {isActive && <span className="ml-1 text-xs">✕</span>}
               </button>
             );
           })}
@@ -547,7 +653,7 @@ function StablecoinTable({
         <CardTitle className="pharos-kicker">
           All Stablecoins
           {backingFilter && (
-            <span className="ml-2 text-[10px] font-normal normal-case text-muted-foreground">
+            <span className="ml-2 text-xs font-normal normal-case text-muted-foreground">
               ({BACKING_LABELS_SHORT[backingFilter as keyof typeof BACKING_LABELS_SHORT] ?? backingFilter})
             </span>
           )}
@@ -555,35 +661,25 @@ function StablecoinTable({
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
-          <table className="w-full caption-bottom text-sm">
-            <caption className="sr-only">Stablecoins deployed on this chain</caption>
-            <thead>
-              <tr className="border-b bg-muted/40 text-left text-xs font-medium text-muted-foreground">
-                <th scope="col" className="w-10 px-3 py-2">
-                  #
-                </th>
-                <th scope="col" className="px-3 py-2">
-                  Stablecoin
-                </th>
-                <th scope="col" className="px-3 py-2 text-right">
-                  Supply on Chain
-                </th>
-                <th scope="col" className="px-3 py-2 text-right">
-                  Chain Share
-                </th>
-                <th scope="col" className="px-3 py-2 text-right">
-                  7d
-                </th>
-                <th scope="col" className="px-3 py-2 text-right">
-                  30d
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+          <table className="w-full text-sm">
+            <TableCaption className="sr-only">Stablecoins deployed on this chain</TableCaption>
+            <TableHeader>
+              <TableRow className="bg-muted/40">
+                <TableHead className="w-10">#</TableHead>
+                <TableHead>Stablecoin</TableHead>
+                <TableHead className="text-right">Supply on Chain</TableHead>
+                <TableHead className="text-right">Chain Share</TableHead>
+                <TableHead className="text-right">7d</TableHead>
+                <TableHead className="text-right">30d</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {coins.map((coin, i) => (
-                <tr
+                <TableRow
                   key={coin.id}
-                  className="group cursor-pointer border-b transition-colors last:border-0 hover:bg-muted/40"
+                  role="link"
+                  aria-label={`${coin.name} (${coin.symbol}) — ${formatChainUsd(coin.supplyOnChain)} on chain`}
+                  className="group cursor-pointer transition-colors hover:bg-muted/40"
                   onClick={() => router.push(buildStablecoinUrl(coin.id))}
                   tabIndex={0}
                   onKeyDown={(e) => {
@@ -593,17 +689,17 @@ function StablecoinTable({
                     }
                   }}
                 >
-                  <td className="px-3 py-2.5 tabular-nums text-muted-foreground">{i + 1}</td>
-                  <td className="px-3 py-2.5">
+                  <TableCell className="tabular-nums text-muted-foreground">{i + 1}</TableCell>
+                  <TableCell>
                     <span className="flex items-center gap-2 font-medium group-hover:text-primary">
                       <StablecoinLogo src={(logos as Record<string, string>)[coin.id]} name={coin.name} size={24} />
                       <span className="hidden sm:inline">{coin.name}</span>
                       <span className="text-muted-foreground">({coin.symbol})</span>
                       <ChevronRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-50" />
                     </span>
-                  </td>
-                  <td className="px-3 py-2.5 text-right font-mono tabular-nums">{formatChainUsd(coin.supplyOnChain)}</td>
-                  <td className="px-3 py-2.5 text-right">
+                  </TableCell>
+                  <TableCell className="text-right font-mono tabular-nums">{formatChainUsd(coin.supplyOnChain)}</TableCell>
+                  <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <div className="h-1.5 w-12 overflow-hidden rounded-full bg-muted">
                         <div
@@ -615,16 +711,16 @@ function StablecoinTable({
                         {(coin.chainShare * 100).toFixed(1)}%
                       </span>
                     </div>
-                  </td>
-                  <td className={cn("px-3 py-2.5 text-right font-mono tabular-nums", trendColor(coin.change7dPct))}>
+                  </TableCell>
+                  <TableCell className={cn("text-right font-mono tabular-nums", trendColor(coin.change7dPct))}>
                     {formatRatioPct(coin.change7dPct)}
-                  </td>
-                  <td className={cn("px-3 py-2.5 text-right font-mono tabular-nums", trendColor(coin.change30dPct))}>
+                  </TableCell>
+                  <TableCell className={cn("text-right font-mono tabular-nums", trendColor(coin.change30dPct))}>
                     {formatRatioPct(coin.change30dPct)}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
+            </TableBody>
           </table>
         </div>
       </CardContent>

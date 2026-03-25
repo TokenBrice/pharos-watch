@@ -112,7 +112,9 @@ export function DependencyMapClient() {
 
   return (
     <div className="space-y-4">
-      <ContagionGraph cards={reportData.cards} mcapMap={mcapMap} logos={logos} />
+      <div className="hidden md:block">
+        <ContagionGraph cards={reportData.cards} mcapMap={mcapMap} logos={logos} />
+      </div>
       <DependencyMapMobileSummary hubs={mobileSummary} logos={logos} />
     </div>
   );

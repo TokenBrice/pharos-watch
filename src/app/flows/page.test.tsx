@@ -91,7 +91,7 @@ describe("FlowsPage", () => {
       if (hours === 168) {
         return makeQueryResult({
           data: buildFlowData(syncWarning),
-        }) as ReturnType<typeof useMintBurnFlows>;
+        }) as unknown as ReturnType<typeof useMintBurnFlows>;
       }
 
       return makeQueryResult({
@@ -101,7 +101,7 @@ describe("FlowsPage", () => {
           ageSeconds: 3_000,
           status: "degraded",
         },
-      }) as ReturnType<typeof useMintBurnFlows>;
+      }) as unknown as ReturnType<typeof useMintBurnFlows>;
     });
 
     const html = renderToStaticMarkup(<FlowsPage />);
@@ -115,7 +115,7 @@ describe("FlowsPage", () => {
       if (hours === 168) {
         return makeQueryResult({
           data: buildFlowData(null),
-        }) as ReturnType<typeof useMintBurnFlows>;
+        }) as unknown as ReturnType<typeof useMintBurnFlows>;
       }
 
       return makeQueryResult({
@@ -125,7 +125,7 @@ describe("FlowsPage", () => {
           ageSeconds: 3_000,
           status: "degraded",
         },
-      }) as ReturnType<typeof useMintBurnFlows>;
+      }) as unknown as ReturnType<typeof useMintBurnFlows>;
     });
 
     const html = renderToStaticMarkup(<FlowsPage />);

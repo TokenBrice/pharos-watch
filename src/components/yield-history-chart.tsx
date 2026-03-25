@@ -90,31 +90,20 @@ function toTimestampMs(value: unknown) {
   return Number.NaN;
 }
 
-function formatAxisDate(timestamp: number, days: number) {
-  if (days === 365) {
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      year: "2-digit",
-    }).format(timestamp);
-  }
+const DATE_FMT_MONTH_YEAR = new Intl.DateTimeFormat("en-US", { month: "short", year: "2-digit" });
+const DATE_FMT_MONTH_DAY = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
+const DATE_FMT_TOOLTIP = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-  }).format(timestamp);
+function formatAxisDate(timestamp: number, days: number) {
+  return (days === 365 ? DATE_FMT_MONTH_YEAR : DATE_FMT_MONTH_DAY).format(timestamp);
 }
 
 function formatTooltipDate(timestamp: number) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(timestamp);
+  return DATE_FMT_TOOLTIP.format(timestamp);
 }
 
-function formatPercent(value: number, minimumFractionDigits = 2, maximumFractionDigits = 2) {
+/** Format a number for chart display (no % suffix — callers append it). */
+function formatChartNumber(value: number, minimumFractionDigits = 2, maximumFractionDigits = 2) {
   return new Intl.NumberFormat("en-US", {
     minimumFractionDigits,
     maximumFractionDigits,
@@ -122,11 +111,7 @@ function formatPercent(value: number, minimumFractionDigits = 2, maximumFraction
 }
 
 function formatTickPercent(value: number) {
-  return `${formatPercent(value, 0, Math.abs(value) >= 10 ? 1 : 2)}%`;
-}
-
-function formatWarningSignal(signal: string) {
-  return formatYieldWarningSignal(signal);
+  return `${formatChartNumber(value, 0, Math.abs(value) >= 10 ? 1 : 2)}%`;
 }
 
 function buildTicks(points: YieldHistoryChartPoint[], days: number) {
@@ -279,20 +264,20 @@ function YieldHistoryTooltip({
         ) : null}
         <div className="flex items-center justify-between gap-4">
           <span>APY</span>
-          <span className="font-mono tabular-nums text-foreground">{formatPercent(point.apy)}%</span>
+          <span className="font-mono tabular-nums text-foreground">{formatChartNumber(point.apy)}%</span>
         </div>
         {showBreakdown ? (
           <>
             <div className="flex items-center justify-between gap-4">
               <span>Base</span>
               <span className="font-mono tabular-nums">
-                {point.apyBase !== null ? `${formatPercent(point.apyBase)}%` : "—"}
+                {point.apyBase !== null ? `${formatChartNumber(point.apyBase)}%` : "—"}
               </span>
             </div>
             <div className="flex items-center justify-between gap-4">
               <span>Reward</span>
               <span className="font-mono tabular-nums">
-                {point.apyReward !== null ? `${formatPercent(point.apyReward)}%` : "—"}
+                {point.apyReward !== null ? `${formatChartNumber(point.apyReward)}%` : "—"}
               </span>
             </div>
           </>
@@ -311,7 +296,7 @@ function YieldHistoryTooltip({
           <div className="mt-1 space-y-1">
             {point.warningSignals.map((signal) => (
               <div key={signal} className="text-muted-foreground">
-                {formatWarningSignal(signal)}
+                {formatYieldWarningSignal(signal)}
               </div>
             ))}
           </div>
@@ -609,12 +594,12 @@ export function YieldHistoryChart({
       </ChartShell>
       <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
-          <span className="font-mono tabular-nums">{formatPercent(riskFreeRate)}%</span>
+          <span className="font-mono tabular-nums">{formatChartNumber(riskFreeRate)}%</span>
           T-Bill reference
         </span>
         {medianApy > 0 ? (
           <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
-            <span className="font-mono tabular-nums">{formatPercent(medianApy)}%</span>
+            <span className="font-mono tabular-nums">{formatChartNumber(medianApy)}%</span>
             Peer median
           </span>
         ) : null}
@@ -682,11 +667,11 @@ function Controls({
         </ToggleGroup>
 
         {availableSources.length > 0 ? (
-          <label className="flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1.5 text-xs text-muted-foreground">
+          <label className="flex cursor-pointer items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1.5 text-xs text-muted-foreground">
             <span className="uppercase tracking-[0.12em]">History</span>
             <select
               aria-label="Select yield history source"
-              className="bg-transparent font-medium text-foreground outline-none"
+              className="appearance-none bg-transparent font-medium text-foreground outline-none cursor-pointer"
               value={selectedSourceKey}
               onChange={(event) => onSourceChange(event.target.value)}
             >
@@ -697,6 +682,7 @@ function Controls({
                 </option>
               ))}
             </select>
+            <span aria-hidden="true" className="text-[10px] leading-none text-muted-foreground">&#9662;</span>
           </label>
         ) : null}
       </div>

@@ -2,11 +2,7 @@
 
 import { useDeferredValue, useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  ChevronDown,
-  Search,
-  SearchX,
-} from "lucide-react";
+import { ChevronDown, Search, SearchX } from "lucide-react";
 import { formatCurrency } from "@shared/lib/format";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { StaleDataBanner } from "@/components/stale-data-banner";
@@ -33,6 +29,7 @@ import {
 import { useCoverageMatrixModel } from "@/hooks/use-coverage-matrix-model";
 import { useLogos } from "@/hooks/use-logos";
 import {
+  AUTHORITATIVE_ACCENT,
   FEATURE_ACCENT_CLASSES,
   FEATURE_ICON,
   FILTER_OPTIONS,
@@ -128,6 +125,12 @@ function CoverageFeatureLink({
   );
 }
 
+const REMAINING_MOBILE_FEATURES = COVERAGE_FEATURES.filter(
+  (feature) => !MOBILE_PREVIEW_FEATURES.includes(feature.key),
+);
+const COVERAGE_FEATURES_BY_KEY = Object.fromEntries(COVERAGE_FEATURES.map((feature) => [feature.key, feature])) as Record<CoverageFeatureKey, CoverageFeatureDefinition>;
+const MOBILE_PREVIEW_DEFINITIONS = MOBILE_PREVIEW_FEATURES.map((key) => COVERAGE_FEATURES_BY_KEY[key]);
+
 function CoverageMobileCard({
   row,
   logoSrc,
@@ -135,10 +138,6 @@ function CoverageMobileCard({
   row: CoverageRow;
   logoSrc?: string;
 }) {
-  const remainingFeatures = COVERAGE_FEATURES.filter(
-    (feature) => !MOBILE_PREVIEW_FEATURES.includes(feature.key),
-  );
-
   return (
     <details className="group rounded-2xl border border-border/70 bg-background/35 open:bg-background/42">
       <summary className="pharos-focus-ring flex cursor-pointer list-none flex-col gap-4 p-4 [&::-webkit-details-marker]:hidden">
@@ -181,28 +180,25 @@ function CoverageMobileCard({
         </div>
 
         <dl className="grid gap-2 sm:grid-cols-2">
-          {MOBILE_PREVIEW_FEATURES.map((featureKey) => {
-            const feature = COVERAGE_FEATURES.find((item) => item.key === featureKey)!;
-            return (
-              <div
-                key={feature.key}
-                className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-background/45 px-3 py-2"
-              >
-                <dt className="min-w-0 text-[11px] font-medium text-muted-foreground">
-                  {feature.shortLabel}
-                </dt>
-                <dd className="shrink-0">
-                  <CoverageBadge status={row.statuses[feature.key]} compact />
-                </dd>
-              </div>
-            );
-          })}
+          {MOBILE_PREVIEW_DEFINITIONS.map((feature) => (
+            <div
+              key={feature.key}
+              className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-background/45 px-3 py-2"
+            >
+              <dt className="min-w-0 text-[11px] font-medium text-muted-foreground">
+                {feature.shortLabel}
+              </dt>
+              <dd className="shrink-0">
+                <CoverageBadge status={row.statuses[feature.key]} compact />
+              </dd>
+            </div>
+          ))}
         </dl>
       </summary>
 
       <div className="space-y-4 border-t border-border/60 px-4 py-4">
         <dl className="grid gap-2">
-          {remainingFeatures.map((feature) => (
+          {REMAINING_MOBILE_FEATURES.map((feature) => (
             <div
               key={feature.key}
               className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-background/45 px-3 py-2"
@@ -530,10 +526,10 @@ export default function CoveragePageClient() {
             </div>
 
             {authoritativeSources.length > 0 && (
-              <div className="space-y-3 rounded-xl border border-violet-500/25 bg-violet-500/[0.03] p-4">
+              <div className={cn("space-y-3 rounded-xl border p-4", AUTHORITATIVE_ACCENT.container)}>
                 <div className="flex items-center gap-2">
                   <p className="pharos-kicker">Authoritative Overrides</p>
-                  <span className="inline-flex items-center rounded-full border border-violet-500/25 bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-300">
+                  <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium", AUTHORITATIVE_ACCENT.badge)}>
                     Protocol
                   </span>
                 </div>
@@ -544,9 +540,9 @@ export default function CoveragePageClient() {
                   {authoritativeSources.map((src) => (
                     <div
                       key={src.name}
-                      className="flex flex-col items-center gap-1.5 rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-4"
+                      className={cn("flex flex-col items-center gap-1.5 rounded-xl border px-4 py-4", AUTHORITATIVE_ACCENT.card)}
                     >
-                      <span className="text-sm font-semibold text-violet-800 dark:text-violet-300">
+                      <span className={cn("text-sm font-semibold", AUTHORITATIVE_ACCENT.cardLabel)}>
                         {getPricingSourceLabel(src.name)}
                       </span>
                       <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
@@ -596,7 +592,7 @@ export default function CoveragePageClient() {
                 <select
                   value={sort}
                   onChange={(event) => setSort(event.target.value as CoverageSortKey)}
-                  className="h-10 rounded-2xl border border-border/65 bg-background/45 px-3 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+                  className="pharos-focus-ring h-10 rounded-2xl border border-border/65 bg-background/45 px-3 text-sm text-foreground transition-colors"
                   aria-label="Sort coverage table"
                 >
                   <option value="market-cap">Market cap</option>
@@ -606,7 +602,6 @@ export default function CoveragePageClient() {
               </label>
             </div>
             <div
-              role="toolbar"
               aria-label="Coverage filters"
               className="flex flex-wrap items-center gap-2"
             >
@@ -655,7 +650,7 @@ export default function CoveragePageClient() {
               <span>Status legend</span>
               <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
             </summary>
-            <div className="grid gap-3 border-t border-border/60 px-4 py-4 sm:grid-cols-2 lg:grid-cols-4">
+            <dl className="grid gap-3 border-t border-border/60 px-4 py-4 sm:grid-cols-2 lg:grid-cols-4">
               {LEGEND_ITEMS.map((item) => (
                 <div key={item.term} className="rounded-xl border border-border/60 bg-background/45 px-3 py-3">
                   <dt className="text-sm font-semibold text-foreground">{item.term}</dt>
@@ -664,7 +659,7 @@ export default function CoveragePageClient() {
                   </dd>
                 </div>
               ))}
-            </div>
+            </dl>
           </details>
         </CardHeader>
 
@@ -713,7 +708,7 @@ export default function CoveragePageClient() {
 
               <div className="hidden overflow-hidden rounded-2xl border border-border/70 bg-background/30 md:block">
                 <div className="overflow-auto">
-                  <table className="min-w-[76rem] w-full caption-bottom text-sm">
+                  <table className="min-w-[68rem] w-full caption-bottom text-sm">
                     <TableCaption className="sr-only">
                       Per-coin feature availability across {rows.length} tracked stablecoins.
                     </TableCaption>
@@ -731,8 +726,8 @@ export default function CoveragePageClient() {
                             scope="col"
                             className="h-11 text-sm font-medium text-foreground"
                           >
-                            <span>{feature.label}</span>
-                            <span className="sr-only">. {feature.description}</span>
+                            <span>{feature.shortLabel}</span>
+                            <span className="sr-only">: {feature.label}. {feature.description}</span>
                           </TableHead>
                         ))}
                       </TableRow>

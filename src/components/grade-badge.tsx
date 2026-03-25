@@ -18,10 +18,10 @@ export function GradeBadge({
     size === "lg" ? "text-2xl px-4 py-2 font-bold" : "text-xs px-2 py-0.5 font-medium";
 
   return (
-    <Badge variant="outline" className={`${colorClasses} ${sizeClasses}`}>
+    <Badge variant="outline" className={`${colorClasses} ${sizeClasses}`} aria-label={`Safety grade ${grade}${score !== null ? `, score ${score}` : ""}`}>
       {grade}
       {score !== null && (
-        <span className="ml-1 opacity-70">({score})</span>
+        <span className="ml-1 opacity-70" aria-hidden="true">({score})</span>
       )}
     </Badge>
   );

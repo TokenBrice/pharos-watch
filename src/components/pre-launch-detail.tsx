@@ -10,6 +10,7 @@ import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { buildStablecoinUrl } from "@/lib/urls";
 import {
   LAUNCH_PHASE_LABELS,
+  PHASE_BADGE,
   MILESTONE_TYPE_LABELS,
   MILESTONE_TYPE_BADGE,
   DRIFT_STATUS_BADGE,
@@ -66,7 +67,7 @@ function extractTweetId(url: string): string | null {
 
 function LaunchPhaseBadge({ phase }: { phase: LaunchPhase }) {
   return (
-    <span className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-0.5 text-xs font-medium text-indigo-600 dark:text-indigo-400">
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${PHASE_BADGE[phase]}`}>
       {LAUNCH_PHASE_LABELS[phase]}
     </span>
   );
@@ -138,11 +139,14 @@ function MilestoneTimeline({ milestones }: { milestones: LaunchMilestone[] }) {
     <div className="space-y-0">
       {sorted.map((m, i) => {
         const isLast = i === sorted.length - 1;
-        const dateDisplay = new Date(m.date).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        });
+        const parsed = new Date(m.date);
+        const dateDisplay = isNaN(parsed.getTime())
+          ? m.date
+          : parsed.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            });
 
         return (
           <div key={`${m.date}-${m.title}`} className="relative flex gap-3">
@@ -226,11 +230,11 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
       {/* ── Back Navigation ───────────────────────────────────────── */}
       <nav aria-label="Breadcrumb">
         <Link
-          href="/"
+          href="/upcoming/"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          <span>Back to Dashboard</span>
+          <span>Back to Upcoming</span>
         </Link>
       </nav>
 
@@ -273,48 +277,50 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
       </section>
 
       {/* ── Launch Timeline ───────────────────────────────────────── */}
-      {coin.announcedDate && coin.expectedLaunchDate ? (
-        <section className="pharos-card-shell p-4 sm:p-5">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-lg font-semibold tracking-tight">Launch Timeline</h3>
-            {coin.dateHistory && coin.dateHistory.length > 0 && (
-              <span
-                className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium leading-none ${DRIFT_STATUS_BADGE[getDriftStatus(coin.dateHistory, coin.expectedLaunchDate)]}`}
-              >
-                {DRIFT_STATUS_LABEL[getDriftStatus(coin.dateHistory, coin.expectedLaunchDate)]}
-              </span>
-            )}
-          </div>
-          <TimelineBar announcedDate={coin.announcedDate} expectedLaunchDate={coin.expectedLaunchDate} />
-          {coin.dateHistory && coin.dateHistory.length > 0 && (
-            <p className="mt-2 text-xs text-muted-foreground/60">
-              {coin.dateHistory.map((entry) => formatFuzzyDate(entry.date)).join(" → ")}{" → "}
-              {formatFuzzyDate(coin.expectedLaunchDate)} (current)
-            </p>
-          )}
-        </section>
-      ) : coin.expectedLaunchDate ? (
-        <section className="pharos-card-shell p-4 sm:p-5">
-          <div className="flex items-center gap-2 text-sm">
-            <Calendar className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            <span className="text-muted-foreground">Expected Launch:</span>
-            <span className="font-medium">{formatFuzzyDate(coin.expectedLaunchDate)}</span>
-            {coin.dateHistory && coin.dateHistory.length > 0 && (
-              <span
-                className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium leading-none ${DRIFT_STATUS_BADGE[getDriftStatus(coin.dateHistory, coin.expectedLaunchDate)]}`}
-              >
-                {DRIFT_STATUS_LABEL[getDriftStatus(coin.dateHistory, coin.expectedLaunchDate)]}
-              </span>
-            )}
-          </div>
-          {coin.dateHistory && coin.dateHistory.length > 0 && (
-            <p className="mt-2 text-xs text-muted-foreground/60">
-              {coin.dateHistory.map((entry) => formatFuzzyDate(entry.date)).join(" → ")}{" → "}
-              {formatFuzzyDate(coin.expectedLaunchDate)} (current)
-            </p>
-          )}
-        </section>
-      ) : null}
+      {(() => {
+        const drift = getDriftStatus(coin.dateHistory, coin.expectedLaunchDate);
+        const hasDrift = coin.dateHistory && coin.dateHistory.length > 0;
+        const driftBadge = hasDrift ? (
+          <span
+            className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium leading-none ${DRIFT_STATUS_BADGE[drift]}`}
+          >
+            {DRIFT_STATUS_LABEL[drift]}
+          </span>
+        ) : null;
+        const dateTrail = hasDrift ? (
+          <p className="mt-2 text-xs text-muted-foreground/60">
+            {coin.dateHistory!.map((entry) => formatFuzzyDate(entry.date)).join(" → ")}{" → "}
+            {formatFuzzyDate(coin.expectedLaunchDate!)} (current)
+          </p>
+        ) : null;
+
+        if (coin.announcedDate && coin.expectedLaunchDate) {
+          return (
+            <section className="pharos-card-shell p-4 sm:p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-lg font-semibold tracking-tight">Launch Timeline</h3>
+                {driftBadge}
+              </div>
+              <TimelineBar announcedDate={coin.announcedDate} expectedLaunchDate={coin.expectedLaunchDate} />
+              {dateTrail}
+            </section>
+          );
+        }
+        if (coin.expectedLaunchDate) {
+          return (
+            <section className="pharos-card-shell p-4 sm:p-5">
+              <div className="flex items-center gap-2 text-sm">
+                <Calendar className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                <span className="text-muted-foreground">Expected Launch:</span>
+                <span className="font-medium">{formatFuzzyDate(coin.expectedLaunchDate)}</span>
+                {driftBadge}
+              </div>
+              {dateTrail}
+            </section>
+          );
+        }
+        return null;
+      })()}
 
       {/* ── Activity Timeline (milestones) ─────────────────────────── */}
       {coin.milestones && coin.milestones.length > 0 && (

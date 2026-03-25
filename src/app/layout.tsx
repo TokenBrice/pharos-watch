@@ -109,6 +109,7 @@ export default function RootLayout({
         </a>
         <Providers>
           <RegimeBar />
+          <div className="h-[3px] shrink-0" />
           <Header />
           <SidebarProvider>
             <div className="flex min-h-screen">

@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { TableBody, TableCell, TableHead, TableCaption, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RotateCcw, Sparkles } from "lucide-react";
 import { TableToolbar } from "./table-toolbar";
 import { useTableDensity, DENSITY_CONFIGS } from "@/hooks/use-table-density";
 import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange } from "@shared/lib/format";
@@ -219,7 +221,7 @@ export function StablecoinTable({
     function handleFocusTable() {
       tableRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       // Focus the first row if available
-      const firstRow = tableRef.current?.querySelector('[role="link"]') as HTMLElement;
+      const firstRow = tableRef.current?.querySelector<HTMLElement>('[role="link"]');
       firstRow?.focus();
     }
 
@@ -584,39 +586,72 @@ export function StablecoinTable({
             )}
             {sorted.length === 0 && (
               <TableRow>
-                <TableCell colSpan={99} className="py-8">
-                  <EmptyStateIllustration variant={searchQuery ? "search" : "data"} />
-                  <div className="mx-auto mt-4 max-w-xl pharos-empty-note text-center">
-                    <p className="text-foreground">
-                      {searchQuery ? `No results for "${searchQuery}"` : "No stablecoin data available"}
-                    </p>
-                    <p className="mt-2">
-                      Adjust the current lens or clear it entirely to return to the broader tracked universe.
-                    </p>
+                <TableCell colSpan={99} className="py-10">
+                  <div className="flex flex-col items-center text-center">
+                    <EmptyStateIllustration variant={searchQuery ? "search" : "data"} />
+                    <div className="mx-auto mt-5 max-w-lg space-y-2">
+                      <p className="text-base font-medium text-foreground">
+                        {searchQuery 
+                          ? `No results for "${searchQuery}"` 
+                          : activeFilters.length > 0 
+                            ? "No stablecoins match your filters"
+                            : "No stablecoin data available"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {activeFilters.length > 0 
+                          ? "Try adjusting your filters or clearing them to see the full tracked universe."
+                          : "Check back soon — we're constantly monitoring the market."}
+                      </p>
+                    </div>
+                    {(searchQuery || activeFilters.length > 0) && (
+                      <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                        {activeFilters.length > 0 && onClearFilters && (
+                          <Button 
+                            variant="default" 
+                            size="sm" 
+                            onClick={onClearFilters}
+                            className="gap-1.5 rounded-full"
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            Clear all filters
+                          </Button>
+                        )}
+                        {searchQuery && onClearSearch && (
+                          <Button 
+                            variant={activeFilters.length > 0 ? "outline" : "default"} 
+                            size="sm" 
+                            onClick={onClearSearch}
+                            className="gap-1.5 rounded-full"
+                          >
+                            <Sparkles className="h-3.5 w-3.5" />
+                            Clear search
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                    {/* Show popular options when filters are active */}
+                    {(searchQuery || activeFilters.length > 0) && data && data.length > 0 && (
+                      <div className="mt-6 border-t border-border/50 pt-5">
+                        <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          Popular stablecoins
+                        </p>
+                        <div className="flex flex-wrap justify-center gap-2">
+                          {data
+                            .slice(0, 5)
+                            .map((coin) => (
+                              <Link
+                                key={coin.id}
+                                href={buildStablecoinUrl(coin.id)}
+                                className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent/50 hover:text-foreground"
+                              >
+                                <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={16} />
+                                {coin.symbol}
+                              </Link>
+                            ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  {(searchQuery || activeFilters.length > 0) && (
-                    <p className="mt-4 text-center text-sm">
-                      {searchQuery && onClearSearch && (
-                        <button
-                          onClick={onClearSearch}
-                          className="pharos-focus-ring cursor-pointer rounded text-sm text-primary hover:underline"
-                        >
-                          Clear search
-                        </button>
-                      )}
-                      {searchQuery && activeFilters.length > 0 && onClearSearch && onClearFilters && (
-                        <span className="mx-1.5">or</span>
-                      )}
-                      {activeFilters.length > 0 && onClearFilters && (
-                        <button
-                          onClick={onClearFilters}
-                          className="pharos-focus-ring cursor-pointer rounded text-sm text-primary hover:underline"
-                        >
-                          Clear filters
-                        </button>
-                      )}
-                    </p>
-                  )}
                 </TableCell>
               </TableRow>
             )}

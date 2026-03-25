@@ -128,17 +128,27 @@
       scroll-behavior: auto;
     }
   }
-  html * {
-    /* Allow elements to transition between theme values */
+  /* Scoped theme transitions — only elements that benefit from smooth
+     theme switching get the transition. Previously this was `html *` which
+     added compositing overhead to every DOM element on every repaint. */
+  body,
+  [data-slot="card"],
+  [data-slot="button"],
+  .pharos-card-shell,
+  nav,
+  header,
+  aside,
+  [role="dialog"],
+  [data-slot="badge"] {
     transition-property: background-color, border-color, color, fill, stroke;
     transition-duration: var(--theme-transition-duration);
     transition-timing-function: var(--motion-ease-standard);
   }
   /* Disable theme transition for elements that shouldn't animate */
-  html *[data-no-theme-transition],
-  html svg *,
-  html .recharts-surface *,
-  html canvas {
+  *[data-no-theme-transition],
+  svg *,
+  .recharts-surface *,
+  canvas {
     transition: none !important;
   }
   body {
@@ -334,7 +344,7 @@
   }
 
   .pharos-lead {
-    @apply max-w-4xl text-sm leading-relaxed text-muted-foreground;
+    @apply text-sm leading-relaxed text-muted-foreground;
   }
 
   .pharos-section-title {
@@ -493,6 +503,13 @@
 
   .pharos-grade-pop {
     animation: pharos-grade-pop 400ms var(--motion-ease-spring) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pharos-grade-pop,
+    .pharos-stagger-entrance > * {
+      animation: none;
+    }
   }
 
   /* Table striping for better horizontal scanning */
@@ -666,23 +683,6 @@
   }
 
   .scroll-shadow::-webkit-scrollbar {
-    height: 10px;
-    width: 10px;
-  }
-
-  .scroll-shadow::-webkit-scrollbar-thumb {
-    background: color-mix(in oklab, var(--border-default) 72%, transparent);
-    border-radius: 999px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
-  }
-
-  .scroll-shadow::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  /* Webkit scrollbar styling */
-  .scroll-shadow::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
@@ -774,6 +774,12 @@
     }
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    [style*="pharos-slide-in-right"] {
+      animation: none !important;
+    }
+  }
+
   @keyframes pharos-risk-pulse {
     0%, 100% { box-shadow: 0 0 0 0 oklch(0.7 0.2 25 / 0.25); }
     50% { box-shadow: 0 0 0 4px oklch(0.7 0.2 25 / 0); }
@@ -792,6 +798,25 @@
     .animate-risk-pulse {
       animation: none;
     }
+  }
+
+  /* ── DEWS Radar animations ─────────────────────────────────────────────── */
+  @keyframes dews-sweep-rotate {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  @keyframes dews-glow {
+    0%, 100% { opacity: 0.10; }
+    50%      { opacity: 0.35; }
+  }
+  @keyframes dews-center-pulse {
+    0%, 100% { opacity: 0.65; }
+    50%      { opacity: 1.00; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dews-sweep-g  { animation-play-state: paused !important; }
+    .dews-glow-r   { animation: none !important; opacity: 0.15; }
+    .dews-center-r { animation: none !important; opacity: 0.80; }
   }
 
   /* Shimmer loading effect for skeletons */
@@ -894,7 +919,7 @@
 
   @media (hover: hover) {
     [data-slot="table-row"]:hover {
-      transform: translateX(2px);
+      transform: translateX(1px);
     }
   }
 

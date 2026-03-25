@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { ReportCard as ReportCardType } from "@shared/types";
+import type { ReportCard as ReportCardType, DimensionKey } from "@shared/types";
 import {
   REPORT_CARD_GRADE_COLORS,
   DIMENSION_LABELS,
@@ -15,25 +17,27 @@ import Link from "next/link";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import { cn } from "@/lib/utils";
+import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 
 // ---------------------------------------------------------------------------
 // Grade Glow Component
 // ---------------------------------------------------------------------------
 
 const GRADE_GLOW_COLORS: Record<string, string> = {
-  A: 'oklch(0.5 0.18 145 / 0.2)',
-  B: 'oklch(0.5 0.12 250 / 0.18)',
-  C: 'oklch(0.55 0.15 85 / 0.18)',
-  D: 'oklch(0.55 0.18 55 / 0.22)',
-  F: 'oklch(0.5 0.2 25 / 0.25)',
+  A: 'oklch(0.5 0.2 145 / 0.35)',
+  B: 'oklch(0.5 0.16 250 / 0.3)',
+  C: 'oklch(0.55 0.18 85 / 0.3)',
+  D: 'oklch(0.55 0.2 55 / 0.35)',
+  F: 'oklch(0.5 0.22 25 / 0.4)',
 };
 
 const GRADE_BORDER_HEX: Record<string, string> = {
-  A: 'oklch(0.65 0.2 145 / 0.5)',
-  B: 'oklch(0.6 0.14 250 / 0.45)',
-  C: 'oklch(0.65 0.16 85 / 0.45)',
-  D: 'oklch(0.6 0.2 55 / 0.5)',
-  F: 'oklch(0.55 0.22 25 / 0.55)',
+  A: 'oklch(0.65 0.22 145 / 0.6)',
+  B: 'oklch(0.6 0.18 250 / 0.55)',
+  C: 'oklch(0.65 0.2 85 / 0.55)',
+  D: 'oklch(0.6 0.22 55 / 0.6)',
+  F: 'oklch(0.55 0.24 25 / 0.65)',
 };
 
 function GradeGlow({ grade }: { grade: string }) {
@@ -41,13 +45,184 @@ function GradeGlow({ grade }: { grade: string }) {
   
   return (
     <div 
-      className="absolute inset-0 pointer-events-none"
+      className="absolute inset-0 pointer-events-none -z-10"
       style={{ 
-        background: `radial-gradient(circle at center, ${color}, transparent 65%)`,
-        transform: 'scale(0.9)',
+        background: `radial-gradient(circle at center, ${color}, transparent 70%)`,
+        transform: 'scale(1.2)',
+        filter: 'blur(20px)',
       }}
       aria-hidden="true"
     />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Dimension Row Component
+// ---------------------------------------------------------------------------
+
+interface DimensionRowProps {
+  dimKey: DimensionKey;
+  dim: ReportCardType["dimensions"][DimensionKey];
+  card: ReportCardType;
+  liquidityComponents?: ReportCardDetailProps["liquidityComponents"];
+}
+
+function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowProps) {
+  const [expanded, setExpanded] = useState(false);
+  const dimRange = dim.grade.charAt(0);
+  const dimBorder = GRADE_BORDER_HEX[dimRange] ?? 'transparent';
+  const hasDetails = (dimKey === "resilience" || dimKey === "decentralization" || dimKey === "dependencyRisk" || dimKey === "liquidity") && dim.score !== null;
+
+  return (
+    <div className="group">
+      <button
+        onClick={() => hasDetails && setExpanded(!expanded)}
+        className={cn(
+          "w-full flex items-center justify-between rounded-lg border border-l-[4px] px-3 py-2.5 transition-colors",
+          hasDetails ? "hover:bg-muted/30 cursor-pointer" : "cursor-default"
+        )}
+        style={{ borderLeftColor: dimBorder }}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">
+            {dimKey === "resilience" ? (
+              <MethodologyLabel topic="resilience">{DIMENSION_LABELS[dimKey]}</MethodologyLabel>
+            ) : dimKey === "dependencyRisk" ? (
+              <MethodologyLabel topic="dependencyRisk">{DIMENSION_LABELS[dimKey]}</MethodologyLabel>
+            ) : (
+              DIMENSION_LABELS[dimKey]
+            )}
+          </span>
+          {hasDetails && (
+            <ChevronDown aria-hidden="true" className={cn("h-4 w-4 text-muted-foreground transition-transform", expanded && "rotate-180")} />
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <Badge
+            variant="outline"
+            className={`text-xs font-semibold ${REPORT_CARD_GRADE_COLORS[dim.grade]}`}
+          >
+            {dim.grade}
+          </Badge>
+          <span className="w-14 text-right text-sm tabular-nums text-muted-foreground">
+            {dim.score !== null ? (
+              <>
+                {dim.score}
+                <span className="text-xs">/100</span>
+              </>
+            ) : (
+              "\u2014"
+            )}
+          </span>
+        </div>
+      </button>
+
+      {/* Peg stability cap warning - always visible */}
+      {dimKey === "pegStability" && dim.detail.includes("capped at C") && (
+        <p className="ml-4 mt-1 text-xs text-amber-700 dark:text-amber-400">
+          Capped — active depeg in progress
+        </p>
+      )}
+
+      {/* Expanded Details */}
+      {expanded && hasDetails && (
+        <div className="mt-2 ml-4 space-y-2 animate-in slide-in-from-top-1 duration-200">
+          {/* Factor breakdown for resilience/decentralization/dependencyRisk */}
+          {(dimKey === "resilience" || dimKey === "decentralization" || dimKey === "dependencyRisk") && (
+            <div className="space-y-1">
+              {dim.detail.split(". ").map((part, idx) => {
+                const match = part.match(/^(.+?):\s*(.+?)\s*\((-?\d+)\)$/);
+                if (!match) return null;
+                const [, label, desc, scoreStr] = match;
+                const subScore = parseInt(scoreStr, 10);
+                const isNegative = subScore < 0;
+                return (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between text-xs"
+                  >
+                    <span className="text-muted-foreground">
+                      {label}: <span className="text-foreground/80">{desc}</span>
+                    </span>
+                    <span className={`tabular-nums font-mono ${isNegative ? "text-amber-700 dark:text-amber-400" : "text-foreground/80"}`}>
+                      {isNegative ? subScore : subScore === 0 ? "—" : `+${subScore}`}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Live data indicator */}
+          {dimKey === "resilience" && card.rawInputs.collateralFromLive && (
+            <span className="text-xs text-muted-foreground" title="Scored from live reserve data">(live data)</span>
+          )}
+
+          {/* Liquidity breakdown */}
+          {dimKey === "liquidity" && (
+            <div className="space-y-2">
+              <div className="space-y-1">
+                {card.rawInputs.liquidityScore != null ? (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">DEX liquidity</span>
+                    <span className="tabular-nums text-foreground font-mono">
+                      {card.rawInputs.liquidityScore}/100
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">DEX liquidity</span>
+                    <span className="text-foreground/60">Unavailable</span>
+                  </div>
+                )}
+                {card.rawInputs.redemptionBackstopScore != null && (
+                  <div className="flex items-center justify-between text-xs">
+                    <MethodologyLabel topic="redemptionBackstop" className="text-muted-foreground">Redemption backstop</MethodologyLabel>
+                    <span className="tabular-nums text-foreground font-mono">
+                      {card.rawInputs.redemptionBackstopScore}/100
+                      {!card.rawInputs.redemptionUsedForLiquidity &&
+                      card.rawInputs.redemptionModelConfidence === "low"
+                        ? " (not used)"
+                        : ""}
+                    </span>
+                  </div>
+                )}
+                {card.rawInputs.effectiveExitScore != null && (
+                  <div className="flex items-center justify-between text-xs">
+                    <MethodologyLabel topic="effectiveExit" className="text-muted-foreground">Effective exit</MethodologyLabel>
+                    <span className="tabular-nums text-foreground font-mono">
+                      {card.rawInputs.effectiveExitScore}/100
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Liquidity components */}
+              {liquidityComponents && (
+                <div className="pt-2 border-t border-border/30 space-y-1.5">
+                  {LIQUIDITY_SCORE_WEIGHTS.map((w) => {
+                    const value = liquidityComponents[w.key];
+                    return value != null ? (
+                      <div key={w.key} className="flex items-center gap-2">
+                        <span className="w-28 shrink-0 text-xs text-muted-foreground">{w.label}</span>
+                        <div className="h-1.5 flex-1 rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-foreground/40"
+                            style={{ width: `${Math.min(100, value)}%` }}
+                          />
+                        </div>
+                        <span className="w-8 text-right font-mono tabular-nums text-xs">{value.toFixed(0)}</span>
+                        <span className="w-8 text-right text-muted-foreground/60 text-xs">{w.displayWeight}</span>
+                      </div>
+                    ) : null;
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -105,215 +280,78 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
   const topBorderColor = GRADE_BORDER_HEX[gradeRange] ?? GRADE_BORDER_HEX.B;
 
   return (
-      <Card
-        className="overflow-hidden"
-        style={{ borderTopWidth: '3px', borderTopColor: topBorderColor }}
-      >
-        <CardHeader>
-          <CardTitle as="h2" className="text-xl font-bold tracking-tight">
-            <div className="flex items-center justify-between">
-              <MethodologyLabel topic="safetyScore">Safety Score</MethodologyLabel>
-              <span className="text-xs font-normal text-muted-foreground">
-                v{METHODOLOGY_VERSION}
-              </span>
-            </div>
-          </CardTitle>
+    <Card
+      className="overflow-hidden"
+      style={{ borderTopWidth: '3px', borderTopColor: topBorderColor }}
+    >
+      <CardHeader>
+        <CardTitle as="h2" className="text-xl font-bold tracking-tight">
+          <div className="flex items-center justify-between">
+            <MethodologyLabel topic="safetyScore">Safety Score</MethodologyLabel>
+            <span className="text-xs font-normal text-muted-foreground">
+              v{METHODOLOGY_VERSION}
+            </span>
+          </div>
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Two-column layout: grade + radar | dimension breakdown */}
-        <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] md:items-stretch">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-stretch">
           {/* Left column: grade + radar stacked */}
-          <div className="flex flex-col items-center gap-4">
-            {/* Grade hero */}
-            <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-4 gap-y-2">
-              <Badge
-                variant="outline"
-                className={`text-4xl px-6 py-2.5 font-extrabold tracking-tight ${REPORT_CARD_GRADE_COLORS[card.overallGrade]}`}
-              >
-                {card.overallGrade}
-              </Badge>
-              {card.overallScore !== null && (
-                <span className="text-2xl font-bold font-mono tabular-nums tracking-tight text-foreground">
-                  {card.overallScore}
-                  <span className="text-base text-muted-foreground">/100</span>
-                </span>
-              )}
-              {card.baseScore != null && card.overallScore != null && card.dimensions.pegStability.score != null && (
-                <details className="mt-2 basis-full text-center text-xs text-muted-foreground">
-                  <summary className="pharos-focus-ring inline-flex cursor-pointer rounded-md px-2 py-1 transition-colors hover:text-foreground hover:bg-muted/50">
-                    Score breakdown
-                  </summary>
-                  <div className="mt-2 mx-auto max-w-[200px] space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span>Base score</span>
-                      <span className="font-mono tabular-nums">{card.baseScore.toFixed(1)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Peg multiplier</span>
-                      <span className="font-mono tabular-nums">
-                        {card.baseScore !== card.overallScore
-                          ? `\u2212${(card.baseScore - card.overallScore).toFixed(1)}pts`
-                          : "none"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between font-medium text-foreground">
-                      <span>Final score</span>
-                      <span className="font-mono tabular-nums">{card.overallScore.toFixed(1)}</span>
-                    </div>
+          <div className="flex flex-col items-center gap-5">
+            {/* Grade hero with glow */}
+            <div className="relative flex flex-col items-center gap-3 pt-4 pb-2 px-6">
+              <GradeGlow grade={card.overallGrade} />
+              <div className="flex items-center gap-4">
+                <Badge
+                  variant="outline"
+                  className={`text-5xl px-7 py-3 font-extrabold tracking-tight shadow-lg ${REPORT_CARD_GRADE_COLORS[card.overallGrade]}`}
+                >
+                  {card.overallGrade}
+                </Badge>
+                {card.overallScore !== null && (
+                  <div className="flex flex-col">
+                    <span className="text-3xl font-bold font-mono tabular-nums tracking-tight text-foreground">
+                      {card.overallScore}
+                      <span className="text-lg text-muted-foreground">/100</span>
+                    </span>
                   </div>
-                </details>
+                )}
+              </div>
+              
+              {/* Score breakdown - surfaced from details */}
+              {card.baseScore != null && card.overallScore != null && (
+                <div className="text-xs text-muted-foreground text-center space-y-1 mt-1">
+                  <div className="flex items-center gap-2 justify-center">
+                    <span>Base: <span className="font-mono text-foreground">{card.baseScore.toFixed(1)}</span></span>
+                    {card.baseScore !== card.overallScore && (
+                      <>
+                        <span>·</span>
+                        <span>Peg: <span className="font-mono text-amber-600 dark:text-amber-400">−{(card.baseScore - card.overallScore).toFixed(1)}</span></span>
+                      </>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
-            {/* Radar chart — grows to fill remaining height, capped width */}
-            <div className="relative w-full max-w-[320px] min-h-[220px] flex-1">
-              <GradeGlow grade={card.overallGrade} />
+            
+            {/* Radar chart - larger */}
+            <div className="relative w-full max-w-[380px] min-h-[280px] flex-1">
               <ReportCardRadar card={card} labels="short" />
             </div>
           </div>
 
           {/* Right column: Dimension breakdown */}
           <div className="space-y-2">
-            {DIMENSION_ORDER.map((key) => {
-              const dim = card.dimensions[key];
-              const dimRange = dim.grade.charAt(0);
-              const dimBorder = GRADE_BORDER_HEX[dimRange] ?? 'transparent';
-              return (
-                <div key={key}>
-                  <div
-                    className="flex items-center justify-between rounded-lg border border-l-[3px] px-3 py-2"
-                    style={{ borderLeftColor: dimBorder }}
-                  >
-                    <span className="text-sm font-medium">
-                      {key === "resilience" ? (
-                        <MethodologyLabel topic="resilience">{DIMENSION_LABELS[key]}</MethodologyLabel>
-                      ) : key === "dependencyRisk" ? (
-                        <MethodologyLabel topic="dependencyRisk">{DIMENSION_LABELS[key]}</MethodologyLabel>
-                      ) : (
-                        DIMENSION_LABELS[key]
-                      )}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant="outline"
-                        className={`text-xs font-semibold ${REPORT_CARD_GRADE_COLORS[dim.grade]}`}
-                      >
-                        {dim.grade}
-                      </Badge>
-                      <span className="w-12 text-right text-sm tabular-nums text-muted-foreground">
-                        {dim.score !== null ? (
-                          <>
-                            {dim.score}
-                            <span className="text-xs">/100</span>
-                          </>
-                        ) : (
-                          "\u2014"
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                  {key === "pegStability" && dim.detail.includes("capped at C") && (
-                    <p className="ml-4 mt-1 text-xs text-amber-700 dark:text-amber-400">
-                      Capped — active depeg in progress
-                    </p>
-                  )}
-                  {(key === "resilience" || key === "decentralization" || key === "dependencyRisk") && dim.score !== null && (
-                    <div className="ml-4 mt-1 space-y-0.5">
-                      {dim.detail.split(". ").map((part) => {
-                        const match = part.match(/^(.+?):\s*(.+?)\s*\((-?\d+)\)$/);
-                        if (!match) return null;
-                        const [, label, desc, scoreStr] = match;
-                        const subScore = parseInt(scoreStr, 10);
-                        const isNegative = subScore < 0;
-                        return (
-                          <div
-                            key={label}
-                            className="flex items-center justify-between text-xs text-muted-foreground"
-                          >
-                            <span>
-                              {label}: <span className="text-foreground/70">{desc}</span>
-                            </span>
-                            <span className={`tabular-nums ${isNegative ? "text-amber-700 dark:text-amber-400" : "text-foreground/80"}`}>
-                              {isNegative ? subScore : subScore === 0 ? "—" : subScore}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {key === "resilience" && card.rawInputs.collateralFromLive && (
-                    <span className="text-xs text-muted-foreground ml-4" title="Scored from live reserve data">(live data)</span>
-                  )}
-                  {key === "liquidity" && dim.score !== null && (
-                    <div className="ml-4 mt-1 space-y-0.5 text-xs text-muted-foreground">
-                      {card.rawInputs.liquidityScore != null ? (
-                        <div className="flex items-center justify-between">
-                          <span>DEX liquidity</span>
-                          <span className="tabular-nums text-foreground/80">
-                            {card.rawInputs.liquidityScore}/100
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <span>DEX liquidity</span>
-                          <span className="text-foreground/60">Unavailable</span>
-                        </div>
-                      )}
-                      {card.rawInputs.redemptionBackstopScore != null ? (
-                        <div className="flex items-center justify-between">
-                          <MethodologyLabel topic="redemptionBackstop">Redemption backstop</MethodologyLabel>
-                          <span className="tabular-nums text-foreground/80">
-                            {card.rawInputs.redemptionBackstopScore}/100
-                            {!card.rawInputs.redemptionUsedForLiquidity &&
-                            card.rawInputs.redemptionModelConfidence === "low"
-                              ? " (not used)"
-                              : ""}
-                          </span>
-                        </div>
-                      ) : null}
-                      {card.rawInputs.effectiveExitScore != null ? (
-                        <div className="flex items-center justify-between">
-                          <MethodologyLabel topic="effectiveExit">Effective exit</MethodologyLabel>
-                          <span className="tabular-nums text-foreground/80">
-                            {card.rawInputs.effectiveExitScore}/100
-                          </span>
-                        </div>
-                      ) : null}
-                    </div>
-                  )}
-                  {key === "liquidity" && liquidityComponents && dim.score !== null && (
-                    <details className="mt-1.5 text-xs text-muted-foreground">
-                      <summary className="pharos-focus-ring ml-4 cursor-pointer rounded-md transition-colors hover:text-foreground">
-                        Show components
-                      </summary>
-                      <div className="mt-2 ml-4 space-y-1.5">
-                        {[
-                          { label: "TVL Depth", key: "tvlDepth" as const, weight: 35 },
-                          { label: "Volume Activity", key: "volumeActivity" as const, weight: 20 },
-                          { label: "Pool Quality", key: "poolQuality" as const, weight: 22.5 },
-                          { label: "Durability", key: "durability" as const, weight: 15 },
-                          { label: "Pair Diversity", key: "pairDiversity" as const, weight: 7.5 },
-                        ].map(({ label, key: k, weight }) => {
-                          const value = liquidityComponents[k];
-                          return value != null ? (
-                            <div key={k} className="flex items-center gap-2">
-                              <span className="w-28 shrink-0">{label}</span>
-                              <div className="h-1.5 flex-1 rounded-full bg-muted">
-                                <div
-                                  className="h-full rounded-full bg-foreground/40"
-                                  style={{ width: `${Math.min(100, value)}%` }}
-                                />
-                              </div>
-                              <span className="w-8 text-right font-mono tabular-nums">{value.toFixed(0)}</span>
-                              <span className="w-8 text-right text-muted-foreground/60">{weight}%</span>
-                            </div>
-                          ) : null;
-                        })}
-                      </div>
-                    </details>
-                  )}
-                </div>
-              );
-            })}
+            {DIMENSION_ORDER.map((key) => (
+              <DimensionRow
+                key={key}
+                dimKey={key}
+                dim={card.dimensions[key]}
+                card={card}
+                liquidityComponents={liquidityComponents}
+              />
+            ))}
           </div>
         </div>
 

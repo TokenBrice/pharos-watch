@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { formatDuration, formatEventDate, formatBps } from "@shared/lib/format";
+import { deviationColorClass, deviationBorderClass } from "@/lib/severity-colors";
 import type { DepegEvent } from "@shared/types";
 
 interface DepegFeedProps {
@@ -95,7 +96,7 @@ export function DepegFeed({ events, logos, hasMore = false, isLoadingMore = fals
             <Link
               key={evt.id}
               href={buildStablecoinUrl(evt.stablecoinId)}
-              className="pharos-focus-ring flex items-center justify-between gap-3 py-2 px-2 rounded-lg hover:bg-accent/50 transition-colors group"
+              className="pharos-focus-ring flex items-center justify-between gap-3 py-2 px-2 min-h-11 rounded-lg hover:bg-accent/50 transition-colors group"
               onMouseEnter={() => prefetch(evt.stablecoinId)}
               style={newIndex != null ? {
                 animation: 'pharos-slide-in-right 300ms var(--motion-ease-standard) both',
@@ -107,25 +108,19 @@ export function DepegFeed({ events, logos, hasMore = false, isLoadingMore = fals
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium group-hover:underline">{evt.symbol}</span>
-                    <span className={`font-mono text-xs font-semibold ${
-                      Math.abs(evt.peakDeviationBps) >= 500 ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400"
-                    }`}>
+                    <span className={`font-mono text-xs font-semibold ${deviationColorClass(Math.abs(evt.peakDeviationBps))}`}>
                       {formatBps(evt.peakDeviationBps)}
                     </span>
                     <Badge
                       variant="outline"
-                      className={`text-xs px-1.5 py-0 ${
-                        evt.direction === "below"
-                          ? "border-red-500/50 text-red-700 dark:text-red-400"
-                          : "border-amber-500/50 text-amber-700 dark:text-amber-400"
-                      }`}
+                      className={`text-xs px-1.5 py-0 ${deviationBorderClass(Math.abs(evt.peakDeviationBps))} ${deviationColorClass(Math.abs(evt.peakDeviationBps))}`}
                     >
                       {evt.direction}
                     </Badge>
                     {isOngoing && (
                       <span className="flex items-center gap-1 text-xs text-red-700 dark:text-red-400 font-medium">
                         <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                          <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
                         </span>
                         LIVE

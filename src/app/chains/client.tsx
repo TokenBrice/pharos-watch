@@ -5,7 +5,6 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useChains } from "@/hooks/use-chains";
 import { useSort } from "@/hooks/use-sort";
-import { Card, CardContent } from "@/components/ui/card";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SortableTableHead } from "@/components/sortable-table-head";
 import { QueryErrorNotice } from "@/components/query-error-notice";
@@ -13,33 +12,35 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatChainUsd, formatRatioPct, HEALTH_BADGE_CLASSES, trendColor } from "@/lib/chain-ui";
+import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { CHAIN_META } from "@shared/lib/chains";
 import type { HealthBand, ChainSummary } from "@shared/types/chains";
+import { StablecoinLogo } from "@/components/stablecoin-logo";
+import logos from "../../../data/logos.json";
+
+/** Muted oklch palette for the dominance breakdown bar — distinct but not decorative. */
+const DOMINANCE_COLORS = [
+  "oklch(0.62 0.14 250)", // blue
+  "oklch(0.58 0.14 300)", // violet
+  "oklch(0.70 0.13 80)",  // amber
+  "oklch(0.62 0.14 160)", // teal
+  "oklch(0.62 0.12 20)",  // rose
+];
 
 type ChainSortKey = "totalUsd" | "healthScore" | "change24hPct" | "change7dPct" | "change30dPct" | "stablecoinCount" | "dominanceShare";
-
-function KpiCard({ label, value }: { label: string; value: string }) {
-  return (
-    <Card>
-      <CardContent className="px-4 py-3">
-        <p className="pharos-kicker">{label}</p>
-        <p className="text-lg font-bold tracking-tight">{value}</p>
-      </CardContent>
-    </Card>
-  );
-}
 
 function HealthBadge({ score, band }: { score: number | null; band: HealthBand | null }) {
   if (score == null || band == null) {
     return <span className="text-xs text-muted-foreground">--</span>;
   }
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", HEALTH_BADGE_CLASSES[band])}>
+    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", HEALTH_BADGE_CLASSES[band])} title={`${score} — ${band}`}>
       {score}
       <span className="hidden sm:inline capitalize">{band}</span>
     </span>
   );
 }
+
 
 function sortChains(chains: ChainSummary[], key: ChainSortKey, dir: "asc" | "desc"): ChainSummary[] {
   return [...chains].sort((a, b) => {
@@ -59,16 +60,35 @@ export function ChainsLeaderboardClient() {
     return sortChains(data.chains, sortKey, sortDirection);
   }, [data, sortKey, sortDirection]);
 
+  // Top chains by supply for dominance breakdown (independent of table sort)
+  const topBySupply = useMemo(() => {
+    if (!data?.chains) return [];
+    return [...data.chains].sort((a, b) => b.totalUsd - a.totalUsd).slice(0, 5);
+  }, [data]);
+
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 rounded-lg" />
-          ))}
+      <div className="space-y-4">
+        <div className="pharos-subtle-band space-y-3 py-4">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="mt-2 h-9 w-44" />
+            </div>
+            <div className="flex gap-4">
+              <Skeleton className="h-5 w-16" />
+              <Skeleton className="h-5 w-12" />
+            </div>
+          </div>
+          <Skeleton className="h-2.5 w-full rounded-full" />
+          <div className="flex gap-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-4 w-20" />
+            ))}
+          </div>
         </div>
-        <div className="rounded-lg border">
-          {Array.from({ length: 8 }).map((_, i) => (
+        <div className="pharos-table-shell">
+          {Array.from({ length: 10 }).map((_, i) => (
             <Skeleton key={i} className="mx-3 my-2.5 h-8 rounded" />
           ))}
         </div>
@@ -82,28 +102,108 @@ export function ChainsLeaderboardClient() {
   }
   if (!data) return null;
 
-  const topHealthChain = [...data.chains].sort((a, b) => (b.healthScore ?? -1) - (a.healthScore ?? -1))[0];
-  const topSupplyChain = [...data.chains].sort((a, b) => b.totalUsd - a.totalUsd)[0];
+  // Aggregate 7d change for global trend
+  const globalChange7d = data.globalTotalUsd > 0
+    ? data.chains.reduce((sum, c) => sum + (c.change7dPct || 0) * c.totalUsd, 0) / data.globalTotalUsd
+    : 0;
+  const change7dPct = globalChange7d * 100;
+  const show7dTrend = Math.abs(change7dPct) >= 0.05;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <QueryErrorNotice error={error} hasData={!!data?.chains?.length} onRetry={() => { void refetch(); }} />
       <StaleDataBanner queries={[{ preset: "chains", dataUpdatedAt, error, hasData: !!data?.chains?.length }]} />
-      {/* KPI Strip */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Total Stablecoin Supply" value={formatChainUsd(data.globalTotalUsd)} />
-        <KpiCard label="Active Chains" value={String(data.chains.length)} />
-        <KpiCard label="Top Chain" value={topSupplyChain ? `${topSupplyChain.name} ${(topSupplyChain.dominanceShare * 100).toFixed(1)}%` : "--"} />
-        <KpiCard label="Healthiest Chain" value={topHealthChain?.healthScore != null ? `${topHealthChain.name} (${topHealthChain.healthScore})` : "--"} />
+
+      {/* Hero summary */}
+      <div className="pharos-subtle-band space-y-3 py-4">
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+          <div>
+            <p className="pharos-kicker">Total Stablecoin Supply</p>
+            <p className="mt-1 text-3xl font-extrabold font-mono tabular-nums tracking-tight">
+              {formatChainUsd(data.globalTotalUsd)}
+            </p>
+          </div>
+          <div className="flex items-center gap-5 pb-1 text-sm">
+            {show7dTrend && (
+              <span>
+                <span className="pharos-kicker mr-1.5">7d</span>
+                <span className={cn("font-mono font-semibold tabular-nums", change7dPct > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
+                  {change7dPct >= 0 ? "+" : ""}{change7dPct.toFixed(1)}%
+                </span>
+              </span>
+            )}
+            <span>
+              <span className="pharos-kicker mr-1.5">Chains</span>
+              <span className="font-mono font-semibold tabular-nums">{data.chains.length}</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Dominance breakdown */}
+        {topBySupply.length > 0 && (() => {
+          const othersShare = 1 - topBySupply.reduce((s, c) => s + c.dominanceShare, 0);
+          return (
+            <>
+              <div
+                className="flex h-2.5 w-full overflow-hidden rounded-full"
+                role="img"
+                aria-label={`Supply dominance: ${topBySupply.map((c) => `${c.name} ${(c.dominanceShare * 100).toFixed(1)}%`).join(", ")}${othersShare > 0.005 ? `, Others ${(othersShare * 100).toFixed(1)}%` : ""}`}
+              >
+                {topBySupply.map((chain, idx) => (
+                  <div
+                    key={chain.id}
+                    className="h-full transition-all duration-500"
+                    style={{
+                      width: `${chain.dominanceShare * 100}%`,
+                      backgroundColor: DOMINANCE_COLORS[idx],
+                    }}
+                  />
+                ))}
+                {othersShare > 0.005 && (
+                  <div
+                    className="h-full bg-muted-foreground/20"
+                    style={{ width: `${othersShare * 100}%` }}
+                  />
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                {topBySupply.map((chain, idx) => (
+                  <span key={chain.id} className="inline-flex items-center gap-1.5">
+                    <span
+                      className="inline-block h-2 w-2 rounded-full"
+                      style={{ backgroundColor: DOMINANCE_COLORS[idx] }}
+                    />
+                    <Image
+                      src={chain.logoPath}
+                      alt=""
+                      width={14}
+                      height={14}
+                      className={cn("rounded-full", CHAIN_META[chain.id]?.darkInvert ? "dark:invert" : "")}
+                    />
+                    <span>{chain.name}</span>
+                    <span className="font-mono tabular-nums">{(chain.dominanceShare * 100).toFixed(1)}%</span>
+                  </span>
+                ))}
+                {othersShare > 0.005 && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-block h-2 w-2 rounded-full bg-muted-foreground/20" />
+                    <span>Others</span>
+                    <span className="font-mono tabular-nums">{(othersShare * 100).toFixed(1)}%</span>
+                  </span>
+                )}
+              </div>
+            </>
+          );
+        })()}
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto lg:overflow-x-hidden rounded-lg border">
+      <div className="pharos-table-shell scroll-shadow overflow-x-auto md:max-h-[70vh]">
         <table className="w-full text-sm pharos-table-striped">
           <caption className="sr-only">Blockchain networks ranked by stablecoin supply</caption>
-          <TableHeader>
-            <TableRow className="bg-muted/40">
-              <TableHead className="w-[50px] text-right">#</TableHead>
+          <TableHeader className="sticky top-0 z-10">
+            <TableRow className="bg-muted/70 backdrop-blur-sm">
+              <TableHead className="w-[40px] text-right">#</TableHead>
               <TableHead>Chain</TableHead>
               <SortableTableHead<ChainSortKey>
                 sortKey="healthScore"
@@ -160,10 +260,14 @@ export function ChainsLeaderboardClient() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sorted.map((chain, i) => (
+            {sorted.map((chain, i) => {
+              const rank = i + 1;
+              return (
               <TableRow
                 key={chain.id}
-                className="pharos-focus-ring group cursor-pointer"
+                role="link"
+                aria-label={`${chain.name} — ${formatChainUsd(chain.totalUsd)} supply`}
+                className="pharos-focus-ring group cursor-pointer border-l-2 border-l-transparent transition-all duration-150 hover:border-l-frost-blue hover:bg-muted/30 hover:translate-x-[1px] data-[state=selected]:border-l-frost-blue"
                 onClick={() => router.push(`/chains/${chain.id}/`)}
                 tabIndex={0}
                 onKeyDown={(e) => {
@@ -173,12 +277,14 @@ export function ChainsLeaderboardClient() {
                   }
                 }}
               >
-                <TableCell className="text-right text-muted-foreground tabular-nums">{i + 1}</TableCell>
+                <TableCell className="text-right tabular-nums text-muted-foreground">
+                  {rank}
+                </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Image src={chain.logoPath} alt="" width={20} height={20} className={`rounded-full${CHAIN_META[chain.id]?.darkInvert ? " dark:invert" : ""}`} />
+                    <Image src={chain.logoPath} alt="" width={20} height={20} className={cn("rounded-full", CHAIN_META[chain.id]?.darkInvert ? "dark:invert" : "")} />
                     <span className="font-medium">{chain.name}</span>
-                    <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">{chain.type}</span>
+                    <ChainTypeBadge type={chain.type} />
                   </div>
                 </TableCell>
                 <TableCell>
@@ -197,11 +303,20 @@ export function ChainsLeaderboardClient() {
                   </div>
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums">{chain.stablecoinCount}</TableCell>
-                <TableCell className="hidden lg:table-cell text-sm">
-                  {chain.dominantStablecoin.symbol} ({(chain.dominantStablecoin.share * 100).toFixed(0)}%)
+                <TableCell className="hidden lg:table-cell">
+                  <div className="flex items-center gap-2">
+                    <StablecoinLogo 
+                      src={(logos as Record<string, string>)[chain.dominantStablecoin.id]} 
+                      name={chain.dominantStablecoin.symbol} 
+                      size={18} 
+                    />
+                    <span className="text-sm">{chain.dominantStablecoin.symbol}</span>
+                    <span className="text-xs text-muted-foreground">({(chain.dominantStablecoin.share * 100).toFixed(0)}%)</span>
+                  </div>
                 </TableCell>
               </TableRow>
-            ))}
+            );
+            })}
           </TableBody>
         </table>
       </div>

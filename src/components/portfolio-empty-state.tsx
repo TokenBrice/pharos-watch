@@ -30,7 +30,7 @@ function PortfolioPreview() {
       <div className="grid gap-3 sm:grid-cols-[0.9fr_1.1fr]">
         <div className="rounded-2xl border border-border/60 bg-background/55 p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-500/30 bg-emerald-500/12 text-lg font-semibold text-emerald-300">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--severity-healthy)]/30 bg-[var(--severity-healthy)]/12 text-lg font-semibold text-emerald-700 dark:text-emerald-300">
               A
             </div>
             <div>
@@ -62,7 +62,7 @@ function PortfolioPreview() {
                 </div>
                 <div className="h-2 rounded-full bg-muted/30">
                   <div
-                    className={`h-2 rounded-full ${index === 0 ? "bg-cyan-500/50" : index === 1 ? "bg-emerald-500/40" : "bg-amber-500/40"}`}
+                    className={`h-2 rounded-full ${index === 0 ? "bg-[var(--chart-primary)]/50" : index === 1 ? "bg-[var(--chart-tertiary)]/40" : "bg-[var(--severity-mild)]/40"}`}
                     style={{ width: value }}
                   />
                 </div>
@@ -123,7 +123,7 @@ export function PortfolioEmptyState({ presets, logos, onApplyPreset }: Portfolio
         }
       />
 
-      <div className="grid gap-3 lg:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         {presets.map((preset) => {
           const previewItems = preset.holdings
             .slice(0, 4)

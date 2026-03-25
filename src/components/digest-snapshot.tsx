@@ -21,12 +21,12 @@ function SnapshotCard({
 }) {
   return (
     <div className={`rounded-lg border border-border/50 border-l-[3px] ${borderClass} p-3 space-y-1.5`}>
-      <p className="pharos-kicker">
+      <h3 className="pharos-kicker">
         <span className="flex items-center gap-1.5">
           {icon}
           {title}
         </span>
-      </p>
+      </h3>
       {children}
     </div>
   );
@@ -34,7 +34,7 @@ function SnapshotCard({
 
 /** Green for positive, red for negative, muted for zero. */
 function deltaColor(value: number): string {
-  if (value > 0) return "text-green-700 dark:text-green-400";
+  if (value > 0) return "text-emerald-700 dark:text-emerald-400";
   if (value < 0) return "text-red-700 dark:text-red-400";
   return "text-muted-foreground";
 }
@@ -273,7 +273,7 @@ export function DigestSnapshot({ date }: { date: string }) {
 
         {/* 7. Yield Anomalies */}
         {inputData.yieldAnomalies && inputData.yieldAnomalies.length > 0 && (
-          <SnapshotCard title="Yield Anomalies" icon={<TrendingUp className="h-4 w-4" />} borderClass="border-l-amber-500">
+          <SnapshotCard title="Yield Anomalies" icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />} borderClass="border-l-amber-500">
             {inputData.yieldAnomalies.map((y) => (
               <div key={y.symbol} className="flex items-baseline justify-between gap-2 text-sm">
                 <span className="font-mono font-medium">{y.symbol}</span>
@@ -290,11 +290,11 @@ export function DigestSnapshot({ date }: { date: string }) {
 
         {/* 8. Liquidity Shifts */}
         {inputData.liquidityShifts && inputData.liquidityShifts.length > 0 && (
-          <SnapshotCard title="DEX Liquidity Shifts" icon={<BarChart3 className="h-4 w-4" />} borderClass="border-l-blue-500">
+          <SnapshotCard title="DEX Liquidity Shifts" icon={<BarChart3 className="h-4 w-4" aria-hidden="true" />} borderClass="border-l-blue-500">
             {inputData.liquidityShifts.map((l) => (
               <div key={l.symbol} className="flex items-baseline justify-between gap-2 text-sm">
                 <span className="font-mono font-medium">{l.symbol}</span>
-                <span className={l.scoreDelta > 0 ? "text-emerald-600" : "text-red-600"}>
+                <span className={l.scoreDelta > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}>
                   {l.previousScore} → {l.currentScore} ({l.scoreDelta > 0 ? "+" : ""}{l.scoreDelta})
                 </span>
                 <span className="text-xs text-muted-foreground">

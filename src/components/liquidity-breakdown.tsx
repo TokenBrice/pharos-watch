@@ -87,8 +87,13 @@ export function buildBreakdownEntries(
 export function BreakdownBar({ entries, total, minPercent, className, titleFormatter }: BreakdownBarProps) {
   if (total === 0) return null;
 
+  const summaryLabel = entries
+    .filter((e) => (e.value / total) * 100 >= minPercent)
+    .map((e) => `${e.label} ${((e.value / total) * 100).toFixed(0)}%`)
+    .join(", ");
+
   return (
-    <div className={className}>
+    <div className={className} role="img" aria-label={`Breakdown: ${summaryLabel}`}>
       {entries.map((entry) => {
         const percent = (entry.value / total) * 100;
         if (percent < minPercent) return null;
@@ -123,7 +128,7 @@ export function BreakdownLegend({
   if (visibleEntries.length === 0) return null;
 
   return (
-    <div className={className}>
+    <div className={className} role="list">
       {visibleEntries.map((entry) => {
         const percent = (entry.value / total) * 100;
         const marker = <span className={`inline-block shrink-0 rounded-sm ${markerClassName} ${entry.colorClass}`} />;
@@ -139,7 +144,7 @@ export function BreakdownLegend({
 
         if (variant === "inline") {
           return (
-            <span key={entry.key} className={itemClassName}>
+            <span key={entry.key} role="listitem" className={itemClassName}>
               {marker}
               {logo}
               <span className={nameClassName}>{entry.label}</span>
@@ -149,7 +154,7 @@ export function BreakdownLegend({
         }
 
         return (
-          <div key={entry.key} className={itemClassName}>
+          <div key={entry.key} role="listitem" className={itemClassName}>
             {marker}
             {logo}
             <div>

@@ -176,7 +176,7 @@ function HoldingRow({
         </div>
         <button
           onClick={() => onRemove(coinId)}
-          className="pharos-focus-ring text-muted-foreground hover:text-destructive transition-colors p-1 rounded"
+          className="pharos-focus-ring text-muted-foreground hover:text-destructive transition-colors min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 sm:p-1 flex items-center justify-center rounded"
           aria-label={`Remove ${meta.name}`}
         >
           <X className="h-4 w-4" />
@@ -222,10 +222,10 @@ function ExposureBar({
         <div
           className={
             isCollateral
-              ? "h-full rounded-full bg-teal-500/50"
+              ? "h-full rounded-full bg-[var(--chart-tertiary)]/50"
               : isWarning
-                ? "h-full rounded-full bg-amber-500/70"
-                : "h-full rounded-full bg-blue-500/50"
+                ? "h-full rounded-full bg-[var(--severity-mild)]/70"
+                : "h-full rounded-full bg-[var(--chart-primary)]/50"
           }
           style={{ width: `${widthPct}%` }}
         />
@@ -248,11 +248,15 @@ export function PortfolioClient() {
   } = useReportCards();
   const { data: logos } = useLogos();
   const [toast, setToast] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
   const [showUpstreamDetail, setShowUpstreamDetail] = useState(false);
 
   const portfolio = usePortfolio(reportData?.cards);
 
   const exposureToShow = showUpstreamDetail ? portfolio.upstreamExposure : portfolio.upstreamExposureGrouped;
+
+  // Clean up toast timer on unmount
+  useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
 
   // URL sync: keep query string in sync with portfolio holdings
   const { setParam } = useUrlFilters();
@@ -330,7 +334,8 @@ export function PortfolioClient() {
       await navigator.clipboard.writeText(url);
       trackEvent("portfolio_shared", { coin_count: portfolio.holdings.length });
       setToast("Link copied to clipboard");
-      setTimeout(() => setToast(null), 2500);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => setToast(null), 2500);
     } catch {
       window.prompt("Copy this link:", url);
     }
@@ -354,7 +359,7 @@ export function PortfolioClient() {
 
   if (isLoadingCards) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6" role="status" aria-label="Loading portfolio data">
         <Card>
           <CardContent className="pt-4 pb-4 space-y-3">
             {Array.from({ length: 3 }, (_, i) => (
@@ -390,19 +395,19 @@ export function PortfolioClient() {
         <CardHeader>
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-violet-700 dark:text-violet-400 shrink-0" />
+              <Wallet className="h-5 w-5 text-primary/80 shrink-0" />
               <CardTitle className="pharos-kicker">My Holdings</CardTitle>
             </div>
             <div className="flex items-center gap-2">
-              {toast && <span className="text-xs text-muted-foreground animate-in fade-in duration-300">{toast}</span>}
+              <span role="status" aria-live="polite" className="text-xs text-muted-foreground animate-in fade-in duration-300">{toast}</span>
               {portfolio.holdings.length > 0 && (
                 <>
-                  <Button variant="ghost" size="xs" onClick={handleShare} className="pharos-focus-ring text-muted-foreground">
-                    <Share2 className="h-3 w-3" />
+                  <Button variant="ghost" size="sm" onClick={handleShare} className="pharos-focus-ring text-muted-foreground">
+                    <Share2 className="h-3.5 w-3.5" />
                     Share
                   </Button>
-                  <Button variant="ghost" size="xs" onClick={handleClear} className="pharos-focus-ring text-muted-foreground">
-                    <Trash2 className="h-3 w-3" />
+                  <Button variant="ghost" size="sm" onClick={handleClear} className="pharos-focus-ring text-muted-foreground">
+                    <Trash2 className="h-3.5 w-3.5" />
                     Clear
                   </Button>
                 </>
@@ -476,18 +481,20 @@ export function PortfolioClient() {
                     <h3 className="pharos-kicker">
                       Upstream Exposure
                     </h3>
-                    <div className="inline-flex items-center rounded-md border bg-muted/30 p-0.5 gap-0.5">
+                    <div role="group" aria-label="Exposure view" className="inline-flex items-center rounded-md border bg-muted/30 p-0.5 gap-0.5">
                       <button
                         type="button"
+                        aria-pressed={!showUpstreamDetail}
                         onClick={() => setShowUpstreamDetail(false)}
-                        className={`pharos-focus-ring px-2.5 py-1 text-xs font-medium rounded-sm transition-colors ${!showUpstreamDetail ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`pharos-focus-ring px-3 py-2 text-xs font-medium rounded-sm transition-colors ${!showUpstreamDetail ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                       >
                         Summary
                       </button>
                       <button
                         type="button"
+                        aria-pressed={showUpstreamDetail}
                         onClick={() => setShowUpstreamDetail(true)}
-                        className={`pharos-focus-ring px-2.5 py-1 text-xs font-medium rounded-sm transition-colors ${showUpstreamDetail ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`pharos-focus-ring px-3 py-2 text-xs font-medium rounded-sm transition-colors ${showUpstreamDetail ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                       >
                         Detail
                       </button>
@@ -507,7 +514,7 @@ export function PortfolioClient() {
                     ))}
                   </div>
                   {exposureToShow.some((e) => !e.isCollateral && e.pct > 80) && (
-                    <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/20 dark:border-amber-500/40 bg-amber-500/5 dark:bg-amber-500/10 p-2 text-xs text-amber-600 dark:text-amber-400">
+                    <div role="alert" className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/20 dark:border-amber-500/40 bg-amber-500/5 dark:bg-amber-500/10 p-2 text-xs text-amber-600 dark:text-amber-400">
                       <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                       <span>
                         High concentration: a single upstream stablecoin accounts for over 80% of your portfolio

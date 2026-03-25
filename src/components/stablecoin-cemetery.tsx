@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ExternalLink, ChevronDown, ChevronRight } from "lucide-react";
+import { ExternalLink, ChevronRight } from "lucide-react";
 import { CAUSE_META } from "@shared/lib/dead-stablecoins";
 import { CHAIN_META } from "@shared/lib/chains";
 import { buildExplorerUrl } from "@shared/lib/explorer";
@@ -12,18 +12,20 @@ interface StablecoinCemeteryProps {
   coins: DeadStablecoin[];
   expanded: Set<string>;
   onToggle: (symbol: string) => void;
+  highlightedSymbol?: string | null;
 }
 
-export function StablecoinCemetery({ coins, expanded, onToggle }: StablecoinCemeteryProps) {
+export function StablecoinCemetery({ coins, expanded, onToggle, highlightedSymbol }: StablecoinCemeteryProps) {
   return (
     <div className="rounded-xl border divide-y divide-border">
       {coins.map((coin) => {
         const cause = CAUSE_META[coin.causeOfDeath];
         const isExpanded = expanded.has(coin.symbol);
         const logoUrl = coin.logo ? `/logos/cemetery/${coin.logo}` : undefined;
+        const isHighlighted = highlightedSymbol === coin.symbol;
 
         return (
-          <div key={coin.symbol} id={`obituary-${coin.symbol}`} className="transition-all duration-300">
+          <div key={coin.symbol} id={`obituary-${coin.symbol}`} className={isHighlighted ? "ring-2 ring-primary/50" : undefined}>
             {/* Collapsed row — always visible */}
             <button
               type="button"
@@ -83,102 +85,102 @@ export function StablecoinCemetery({ coins, expanded, onToggle }: StablecoinCeme
               </span>
 
               {/* Chevron */}
-              <span className="text-muted-foreground shrink-0">
-                {isExpanded
-                  ? <ChevronDown className="h-4 w-4" />
-                  : <ChevronRight className="h-4 w-4" />
-                }
+              <span className="text-muted-foreground shrink-0 transition-transform duration-300" style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>
+                <ChevronRight className="h-4 w-4" />
               </span>
             </button>
 
-            {/* Expanded autopsy content */}
-            {isExpanded && (
-              <div
-                id={`autopsy-${coin.symbol}`}
-                className="px-4 pb-4 pt-1 space-y-3 border-t border-border/50"
-              >
-                {/* Cause badge on mobile (hidden on sm+) */}
-                <span
-                  className={`sm:hidden inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${cause.textColor} ${cause.borderColor}`}
-                >
-                  {cause.label}
-                </span>
+            {/* Expanded autopsy content — grid-rows animation */}
+            <div
+              id={`autopsy-${coin.symbol}`}
+              className="grid transition-[grid-template-rows] duration-300 ease-out"
+              style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
+            >
+              <div className="overflow-hidden">
+                <div className="px-4 pb-4 pt-1 space-y-3 border-t border-border/50">
+                  {/* Cause badge on mobile (hidden on sm+) */}
+                  <span
+                    className={`sm:hidden inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${cause.textColor} ${cause.borderColor}`}
+                  >
+                    {cause.label}
+                  </span>
 
-                {/* Key facts grid */}
-                <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
-                  {coin.peakMcap && (
+                  {/* Key facts grid */}
+                  <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
+                    {coin.peakMcap && (
+                      <div>
+                        <span className="text-muted-foreground">Peak Mcap: </span>
+                        <span className="font-mono tabular-nums">{formatCurrency(coin.peakMcap, 1)}</span>
+                      </div>
+                    )}
                     <div>
-                      <span className="text-muted-foreground">Peak Mcap: </span>
-                      <span className="font-mono tabular-nums">{formatCurrency(coin.peakMcap, 1)}</span>
+                      <span className="text-muted-foreground">Peg: </span>
+                      <span className="font-mono">{coin.pegCurrency}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Death: </span>
+                      <span className="font-mono tabular-nums">{formatDeathDate(coin.deathDate)}</span>
+                    </div>
+                  </div>
+
+                  {/* Contract addresses */}
+                  {coin.contracts && coin.contracts.length > 0 && (
+                    <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs">
+                      {coin.contracts.map((c) => {
+                        const chain = CHAIN_META[c.chain];
+                        const url = buildExplorerUrl({
+                          chainKey: c.chain,
+                          entityType: "contract",
+                          value: c.address,
+                        });
+                        return (
+                          <div key={`${c.chain}-${c.address}`} className="flex items-center gap-1.5">
+                            {chain?.logoPath && (
+                              <Image
+                                src={chain.logoPath}
+                                alt={chain?.name ?? c.chain}
+                                width={14}
+                                height={14}
+                                className="rounded-full"
+                                unoptimized
+                              />
+                            )}
+                            {url ? (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="pharos-focus-ring font-mono text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                {formatAddress(c.address)}
+                              </a>
+                            ) : (
+                              <span className="font-mono text-muted-foreground">{formatAddress(c.address)}</span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
-                  <div>
-                    <span className="text-muted-foreground">Peg: </span>
-                    <span className="font-mono">{coin.pegCurrency}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Death: </span>
-                    <span className="font-mono tabular-nums">{formatDeathDate(coin.deathDate)}</span>
-                  </div>
+
+                  {/* Obituary */}
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {coin.obituary}
+                  </p>
+
+                  {/* Source link */}
+                  <a
+                    href={coin.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pharos-focus-ring inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {coin.sourceLabel}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
                 </div>
-
-                {/* Contract addresses */}
-                {coin.contracts && coin.contracts.length > 0 && (
-                  <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs">
-                    {coin.contracts.map((c) => {
-                      const chain = CHAIN_META[c.chain];
-                      const url = buildExplorerUrl({
-                        chainKey: c.chain,
-                        entityType: "contract",
-                        value: c.address,
-                      });
-                      return (
-                        <div key={`${c.chain}-${c.address}`} className="flex items-center gap-1.5">
-                          {chain?.logoPath && (
-                            <Image
-                              src={chain.logoPath}
-                              alt={chain?.name ?? c.chain}
-                              width={14}
-                              height={14}
-                              className="rounded-full"
-                              unoptimized
-                            />
-                          )}
-                          {url ? (
-                            <a
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="pharos-focus-ring font-mono text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                              {formatAddress(c.address)}
-                            </a>
-                          ) : (
-                            <span className="font-mono text-muted-foreground">{formatAddress(c.address)}</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Obituary */}
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {coin.obituary}
-                </p>
-
-                {/* Source link */}
-                <a
-                  href={coin.sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="pharos-focus-ring inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {coin.sourceLabel}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
               </div>
-            )}
+            </div>
           </div>
         );
       })}

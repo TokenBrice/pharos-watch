@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Check, Download, ImageIcon, Link, Loader2, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,8 +32,13 @@ export function ShareButton({ ogPath, label = "Share" }: ShareButtonProps) {
     typeof navigator?.clipboard?.write === "function",
   );
 
+  const resetTimer = useRef<ReturnType<typeof setTimeout>>(null);
+
+  useEffect(() => () => { if (resetTimer.current) clearTimeout(resetTimer.current); }, []);
+
   const resetStatus = useCallback(() => {
-    setTimeout(() => setStatus("idle"), 2000);
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+    resetTimer.current = setTimeout(() => setStatus("idle"), 2000);
   }, []);
 
   const copyLink = useCallback(async () => {

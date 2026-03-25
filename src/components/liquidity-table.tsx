@@ -164,7 +164,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
                   {topProtocol ? (
                     <span className="flex items-center gap-1.5">
                       {PROTOCOL_LOGOS[topProtocol[0]] && (
-                        <Image src={PROTOCOL_LOGOS[topProtocol[0]]} alt="" width={16} height={16} className="rounded-full shrink-0" />
+                        <Image src={PROTOCOL_LOGOS[topProtocol[0]]} alt="" width={16} height={16} className="rounded-full shrink-0" aria-hidden="true" />
                       )}
                       {prettifyProtocol(topProtocol[0])}
                     </span>

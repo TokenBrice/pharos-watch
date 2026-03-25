@@ -46,13 +46,22 @@ export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelP
     <Card>
       {/* Header */}
       <CardHeader
+        role="button"
+        tabIndex={0}
+        aria-expanded={isOpen}
         className="cursor-pointer select-none pb-3"
         onClick={() => setIsOpen((v) => !v)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setIsOpen((v) => !v);
+          }
+        }}
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-500/15">
-              <Network className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0" />
+              <Network className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0" aria-hidden="true" />
             </div>
             <div>
               <p className="pharos-kicker text-rose-600 dark:text-rose-400">Risk Simulation</p>
@@ -61,6 +70,7 @@ export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelP
               </CardTitle>
             </div>
             <ChevronDown
+              aria-hidden="true"
               className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ml-2 ${isOpen ? "rotate-180" : ""}`}
             />
           </div>

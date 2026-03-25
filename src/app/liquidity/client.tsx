@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useDeferredValue, useEffect, useMemo, useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,10 +30,14 @@ const PEG_FILTERS: { value: PegCurrency | "all"; label: string }[] = [
 ];
 
 function formatWarningMessage(warning: string): string {
-  return warning
-    .split(/,\s*(?=\d{3}\s+-)/)
-    .map((entry) => entry.match(/"(.+)"/)?.[1] ?? entry.trim())
-    .join(" ");
+  try {
+    return warning
+      .split(/,\s*(?=\d{3}\s+-)/)
+      .map((entry) => entry.match(/"(.+)"/)?.[1] ?? entry.trim())
+      .join(" ");
+  } catch {
+    return warning;
+  }
 }
 
 export function LiquidityClient() {
@@ -41,15 +45,27 @@ export function LiquidityClient() {
   const { data: logos } = useLogos();
   const { getParam, setParam } = useUrlFilters();
   const pegFilter = (getParam("peg", "all")) as PegCurrency | "all";
-  const searchQuery = getParam("q");
   const setPegFilter = useCallback((v: PegCurrency | "all") => { trackEvent("filter_applied", { page: "liquidity", filter_type: "peg", filter_value: v }); setParam("peg", v); }, [setParam]);
-  const setSearchQuery = useCallback((v: string) => { trackSearch("liquidity", v.length); setParam("q", v); }, [setParam]);
   const router = useRouter();
+
+  // Search: local state for instant input, deferred value for filtering,
+  // debounced sync to URL + analytics to avoid per-keystroke overhead
+  const [searchInput, setSearchInput] = useState(() => getParam("q"));
+  const deferredSearch = useDeferredValue(searchInput);
+  const urlSyncTimer = useRef<ReturnType<typeof setTimeout>>(null);
+  useEffect(() => {
+    if (urlSyncTimer.current) clearTimeout(urlSyncTimer.current);
+    urlSyncTimer.current = setTimeout(() => {
+      setParam("q", deferredSearch);
+      if (deferredSearch) trackSearch("liquidity", deferredSearch.length);
+    }, 300);
+    return () => { if (urlSyncTimer.current) clearTimeout(urlSyncTimer.current); };
+  }, [deferredSearch, setParam]);
 
   // Combine tracked stablecoins with liquidity data, applying filters
   const rows = useMemo((): LiquidityRow[] => {
     if (!liquidityMap) return [];
-    const q = searchQuery.toLowerCase().trim();
+    const q = deferredSearch.toLowerCase().trim();
     return ACTIVE_STABLECOINS
       .filter((meta) => {
         if (pegFilter !== "all" && meta.flags.pegCurrency !== pegFilter) return false;
@@ -61,7 +77,7 @@ export function LiquidityClient() {
         liq: liquidityMap[meta.id],
       }))
       .filter((r): r is LiquidityRow => r.liq != null);
-  }, [liquidityMap, pegFilter, searchQuery]);
+  }, [liquidityMap, pegFilter, deferredSearch]);
 
   const scoredRows = useMemo(
     () => rows.filter((row) => row.liq.liquidityScore != null),
@@ -165,7 +181,7 @@ export function LiquidityClient() {
         queries={[{ preset: "dexLiquidity", dataUpdatedAt, error, hasData: !!liquidityMap, meta }]}
       />
       {meta?.warning && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+        <div role="alert" className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
           {formatWarningMessage(meta.warning)}
         </div>
       )}
@@ -187,7 +203,7 @@ export function LiquidityClient() {
               aria-label="Filter by peg currency"
             >
               {PEG_FILTERS.map((f) => (
-                <ToggleGroupItem key={f.value} value={f.value} variant="outline" size="sm" className="text-xs">
+                <ToggleGroupItem key={f.value} value={f.value} variant="outline" size="sm" className="text-xs min-h-[44px] md:min-h-0">
                   {f.label}
                 </ToggleGroupItem>
               ))}
@@ -196,9 +212,9 @@ export function LiquidityClient() {
               <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 h-8 text-xs"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="pl-8 h-11 md:h-8 text-xs"
                 aria-label="Search stablecoins by name or symbol"
               />
             </div>
@@ -208,7 +224,7 @@ export function LiquidityClient() {
         <LiquidityTable
           rows={scoredRows}
           logos={logos}
-          searchQuery={searchQuery}
+          searchQuery={deferredSearch}
           onRowClick={handleRowClick}
         />
       </div>
@@ -224,7 +240,7 @@ export function LiquidityClient() {
           <LiquidityTable
             rows={unratedRows}
             logos={logos}
-            searchQuery={searchQuery}
+            searchQuery={deferredSearch}
             onRowClick={handleRowClick}
           />
         </div>

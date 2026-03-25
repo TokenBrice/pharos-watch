@@ -211,7 +211,7 @@ export function YieldClient() {
                     Yields under {formatPercent(data.riskFreeRate)} are failing the basic hurdle rate.
                   </p>
                 </div>
-                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-3">
+                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3">
                   <p className="pharos-kicker text-emerald-400">Sweet Spot</p>
                   <p className="mt-1 text-sm text-foreground">
                     Right side plus above the T-Bill line is where strong yield meets acceptable safety.

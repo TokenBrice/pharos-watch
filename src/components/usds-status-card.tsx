@@ -6,15 +6,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MetricStatCard } from "@/components/metric-stat-card";
 import { useUsdsStatus } from "@/hooks/api-hooks";
 
+const LAST_CHECKED_FMT = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
 function formatLastChecked(timestamp: number): string {
-  const date = new Date(timestamp * 1000);
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return LAST_CHECKED_FMT.format(new Date(timestamp * 1000));
 }
 
 function UsdsLogo({ active, className }: { active: boolean; className?: string }) {

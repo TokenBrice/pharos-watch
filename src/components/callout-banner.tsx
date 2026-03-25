@@ -9,6 +9,7 @@ interface CalloutBannerProps {
 export function CalloutBanner({ icon, children, className }: CalloutBannerProps) {
   return (
     <div
+      role="note"
       className={cn(
         "mx-auto flex w-fit items-start gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground",
         className,

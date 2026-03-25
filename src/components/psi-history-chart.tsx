@@ -208,7 +208,7 @@ export function ScoreChart({
             />
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="icon"
               className="shrink-0"
               onClick={handlePngExport}
               title="Save chart as PNG"
@@ -220,7 +220,9 @@ export function ScoreChart({
         </CardHeader>
       )}
       <CardContent className={showHeader ? undefined : "px-4 pt-4 pb-2"}>
-        {filteredData.length > 0 ? (
+        {(() => {
+          const chartHeight = showHeader ? "h-[250px] sm:h-[350px]" : "h-[250px] sm:h-[336px]";
+          return filteredData.length > 0 ? (
           <div ref={chartRef}>
             <div className={showHeader ? "mb-4 flex flex-wrap gap-4" : "mb-3 flex flex-wrap gap-4"}>
               {BAND_ZONES.map((zone) => (
@@ -232,7 +234,7 @@ export function ScoreChart({
             </div>
             <div
               ref={chartContainerRef}
-              className={showHeader ? "psi-chart h-[250px] sm:h-[350px]" : "psi-chart h-[250px] sm:h-[336px]"}
+              className={`psi-chart ${chartHeight}`}
               role="figure"
               aria-label={`PSI score history chart showing ${filteredData.length} data points`}
             >
@@ -325,16 +327,11 @@ export function ScoreChart({
             </div>
           </div>
         ) : (
-          <div
-            className={
-              showHeader
-                ? "flex h-[250px] sm:h-[350px] items-center justify-center text-muted-foreground"
-                : "flex h-[250px] sm:h-[336px] items-center justify-center text-muted-foreground"
-            }
-          >
+          <div className={`flex ${chartHeight} items-center justify-center text-muted-foreground`}>
             No score history available
           </div>
-        )}
+        );
+        })()}
       </CardContent>
     </Card>
   );

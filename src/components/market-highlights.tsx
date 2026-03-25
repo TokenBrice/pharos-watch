@@ -240,11 +240,12 @@ export function MarketHighlights({ data, logos, pegRates }: MarketHighlightsProp
   if (!data) return <MarketSignalsSkeleton />;
 
   return (
-    <div className="pharos-card-shell overflow-hidden p-0 animate-in fade-in duration-300">
+    <div aria-label="Market highlights" className="pharos-card-shell overflow-hidden p-0 animate-in fade-in duration-300">
       {/* ── Header bar ── */}
       <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-4 py-3">
-        <h2 className="pharos-kicker">Biggest Depegs</h2>
-        <h2 className="pharos-kicker">Biggest Supply Changes 7D</h2>
+        <h2 className="sr-only">Market Highlights</h2>
+        <span className="pharos-kicker" aria-hidden="true">Biggest Depegs</span>
+        <span className="pharos-kicker" aria-hidden="true">Biggest Supply Changes 7D</span>
       </div>
 
       {/* ── Content ── */}

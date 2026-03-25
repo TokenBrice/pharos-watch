@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { CemeteryTombstones } from "@/components/cemetery-tombstones";
@@ -16,6 +16,11 @@ const SORT_OPTIONS: { value: CemeterySortMode; label: string }[] = [
 export function CemeteryClient() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [sortMode, setSortMode] = useState<CemeterySortMode>("newest");
+  const [highlightedSymbol, setHighlightedSymbol] = useState<string | null>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
+
+  // Clear highlight timer on unmount
+  useEffect(() => () => { if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current); }, []);
 
   const orderedCoins = sortCemeteryCoins(DEAD_STABLECOINS, sortMode);
 
@@ -37,13 +42,14 @@ export function CemeteryClient() {
       next.add(symbol);
       return next;
     });
+    setHighlightedSymbol(symbol);
+    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+    highlightTimerRef.current = setTimeout(() => setHighlightedSymbol(null), 2000);
     // Scroll to autopsy card after a tick so the DOM has expanded
     requestAnimationFrame(() => {
       const el = document.getElementById(`obituary-${symbol}`);
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
-        el.classList.add("ring-2", "ring-primary/50");
-        setTimeout(() => el.classList.remove("ring-2", "ring-primary/50"), 2000);
       }
     });
   }, []);
@@ -104,6 +110,7 @@ export function CemeteryClient() {
             coins={orderedCoins}
             expanded={expanded}
             onToggle={handleToggle}
+            highlightedSymbol={highlightedSymbol}
           />
         </CardContent>
       </Card>

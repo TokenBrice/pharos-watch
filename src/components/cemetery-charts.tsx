@@ -81,8 +81,8 @@ function CauseOfDeathDonutChart({
             data={data}
             cx="50%"
             cy="50%"
-            innerRadius={55}
-            outerRadius={95}
+            innerRadius="35%"
+            outerRadius="60%"
             dataKey="value"
             nameKey="name"
             paddingAngle={3}
@@ -312,7 +312,7 @@ function TopFailuresChart() {
           <YAxis
             type="category"
             dataKey="name"
-            tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)" }}
+            tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
             tickLine={false}
             axisLine={false}
             width={60}
@@ -358,7 +358,8 @@ function CumulativeDestroyedChart() {
       const [y, m] = c.deathDate.split("-");
       const date = new Date(Number(y), Number(m || 1) - 1);
       const label = formatChartDate(date.getTime(), "compact");
-      return [...acc, { date: label, cumulative, symbol: c.symbol, added: c.peakMcap! }];
+      acc.push({ date: label, cumulative, symbol: c.symbol, added: c.peakMcap! });
+      return acc;
     }, []);
   }, []);
 
@@ -432,13 +433,13 @@ export function CemeteryCharts() {
 
   if (!mounted) {
     return (
-      <div className="grid grid-cols-2 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-4">
         {Array.from({ length: 4 }, (_, index) => (
           <CemeteryChartCard key={index} title="Loading chart">
             <ChartSkeleton className="h-full w-full" />
           </CemeteryChartCard>
         ))}
-        <div className="col-span-2">
+        <div className="sm:col-span-2">
           <CemeteryChartCard title="Loading chart">
             <ChartSkeleton className="h-full w-full" />
           </CemeteryChartCard>
@@ -448,12 +449,12 @@ export function CemeteryCharts() {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:gap-4">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-4">
       <CauseOfDeathByCountChart />
       <CauseOfDeathByMcapChart />
       <DeathsByYearChart />
       <TopFailuresChart />
-      <div className="col-span-2">
+      <div className="sm:col-span-2">
         <CumulativeDestroyedChart />
       </div>
     </div>

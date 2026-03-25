@@ -34,9 +34,10 @@ export function EmptyStateSurface({
   return (
     <section
       className={cn(
-        "rounded-[1.5rem] border border-border/70 bg-[linear-gradient(180deg,oklch(0.2_0.03_252_/_0.72),oklch(0.16_0.02_252_/_0.95))] px-4 py-5 shadow-[0_22px_60px_oklch(0_0_0_/0.22)] sm:px-6 sm:py-6",
+        "rounded-[1.5rem] border border-border/70 px-4 py-5 shadow-[0_22px_60px_oklch(0_0_0_/0.22)] sm:px-6 sm:py-6",
         className,
       )}
+      style={{ background: "var(--surface-onboarding-gradient)" }}
     >
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)] lg:items-start">
         <div className="space-y-5">

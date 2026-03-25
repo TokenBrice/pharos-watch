@@ -194,7 +194,7 @@ export function DigestArchiveClient() {
             aria-label="Filter by month"
             value={activeMonth ?? ""}
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="text-sm bg-background border border-border rounded px-2 py-1 text-foreground"
+            className="text-sm bg-background border border-border rounded px-3 py-2 min-h-[44px] md:min-h-0 md:py-1 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             {monthOptions.map((m) => (
               <option key={m.key} value={m.key} className="bg-background text-foreground">
@@ -206,7 +206,7 @@ export function DigestArchiveClient() {
       )}
 
       {/* Wire table */}
-      <div>
+      <div role="region" aria-live="polite" aria-label="Digest archive list">
         {wireDigests.length === 0 && (
           <p className="text-sm text-muted-foreground py-4">
             No other digests this month.
@@ -222,7 +222,7 @@ export function DigestArchiveClient() {
                 "pharos-focus-ring flex items-start sm:items-center gap-3 sm:gap-4 border-b transition-colors -mx-2 px-2 rounded",
                 isWeekly
                   ? "py-3.5 border-border/60 hover:bg-muted/30 border-l-2 border-l-foreground/20"
-                  : "py-2.5 border-border/30 hover:bg-muted/20",
+                  : "py-3 md:py-2.5 border-border/30 hover:bg-muted/20",
               )}
             >
               <span className="font-mono text-xs text-muted-foreground w-14 shrink-0 mt-0.5 sm:mt-0">

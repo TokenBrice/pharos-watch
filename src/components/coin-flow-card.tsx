@@ -74,7 +74,7 @@ export function CoinFlowCard({
 
       <div className="pressure-track h-1 w-full rounded-full bg-border/40">
         <div
-          className={cn("h-1 rounded-full transition-all", PRESSURE_BAR_COLOR[pressureShiftState])}
+          className={cn("h-1 rounded-full transition-[width]", PRESSURE_BAR_COLOR[pressureShiftState])}
           style={{ width: `${barFillPct}%` }}
         />
       </div>

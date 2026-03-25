@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatNativePrice } from "@shared/lib/format";
-import { deviationBgClass } from "@/lib/severity-colors";
+import { deviationBgClass, deviationTileClass } from "@/lib/severity-colors";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { PegSummaryCoin, PegCurrency, GovernanceType } from "@shared/types";
 import { GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
@@ -43,13 +43,6 @@ const TYPE_OPTIONS: { value: GovernanceType | "all"; label: string }[] = [
   { value: "decentralized", label: GOVERNANCE_LABELS_SHORT.decentralized },
 ];
 
-/** Compound tile classes for heatmap cells, derived from shared severity thresholds. */
-function deviationTileClass(absBps: number): string {
-  if (absBps >= 500) return "bg-red-500/20 border-red-500/50 text-red-600 dark:text-red-400";
-  if (absBps >= 200) return "bg-orange-500/15 border-orange-500/40 text-orange-600 dark:text-orange-400";
-  if (absBps >= 50) return "bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400";
-  return "bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400";
-}
 
 function FilterChips<T extends string>({
   options,
@@ -67,7 +60,7 @@ function FilterChips<T extends string>({
           key={opt.value}
           onClick={() => onChange(opt.value)}
           aria-pressed={value === opt.value}
-          className={`px-2.5 py-1.5 sm:py-1 rounded-full text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
+          className={`px-2.5 py-1.5 sm:py-1 min-h-11 sm:min-h-0 rounded-full text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
             value === opt.value
               ? "bg-primary text-primary-foreground"
               : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
@@ -110,10 +103,10 @@ export function PegHeatmap({
               Live Peg Deviation
             </CardTitle>
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1"><span className={`h-2.5 w-2.5 rounded-sm ${deviationBgClass(0)}`} /> &lt;50bps</div>
-              <div className="flex items-center gap-1"><span className={`h-2.5 w-2.5 rounded-sm ${deviationBgClass(50)}`} /> 50-200</div>
-              <div className="flex items-center gap-1"><span className={`h-2.5 w-2.5 rounded-sm ${deviationBgClass(200)}`} /> 200-500</div>
-              <div className="flex items-center gap-1"><span className={`h-2.5 w-2.5 rounded-sm ${deviationBgClass(500)}`} /> &gt;500bps</div>
+              <div className="flex items-center gap-1"><span className={`h-3 w-3 rounded-sm ${deviationBgClass(0)}`} /> &lt;50bps</div>
+              <div className="flex items-center gap-1"><span className={`h-3 w-3 rounded-sm ${deviationBgClass(50)}`} /> 50-200</div>
+              <div className="flex items-center gap-1"><span className={`h-3 w-3 rounded-sm ${deviationBgClass(200)}`} /> 200-500</div>
+              <div className="flex items-center gap-1"><span className={`h-3 w-3 rounded-sm ${deviationBgClass(500)}`} /> &gt;500bps</div>
             </div>
           </div>
           {!hideFilters && (
@@ -127,7 +120,7 @@ export function PegHeatmap({
                     placeholder="Search..."
                     value={searchQuery ?? ""}
                     onChange={(e) => onSearchChange(e.target.value)}
-                    className="pl-8 pr-7 h-9 sm:h-8 text-xs"
+                    className="pl-8 pr-7 h-11 sm:h-8 text-xs"
                     aria-label="Search stablecoins by name or symbol"
                   />
                   {searchQuery && (
@@ -152,7 +145,7 @@ export function PegHeatmap({
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="grid grid-cols-3 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
+          <div className="grid grid-cols-2 min-[375px]:grid-cols-3 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
             {Array.from({ length: 30 }).map((_, i) => (
               <Skeleton key={i} className="h-16 rounded-lg" />
             ))}
@@ -161,7 +154,7 @@ export function PegHeatmap({
           <p className="text-sm text-muted-foreground text-center py-8">No coins match filters</p>
         ) : (
           <>
-            <div className="grid grid-cols-3 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
+            <div className="grid grid-cols-2 min-[375px]:grid-cols-3 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
               {sorted.map((coin) => {
                 const absBps = Math.abs(coin.currentDeviationBps!);
                 const sign = coin.currentDeviationBps! >= 0 ? "+" : "";

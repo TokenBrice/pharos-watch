@@ -21,6 +21,22 @@ const SEVERITY_HEX = {
   severe:   "#ef4444",
 } as const;
 
+/** Compound tile class: tinted bg + matching border + text color for heatmap-style cells. */
+export function deviationTileClass(absBps: number): string {
+  if (absBps < THRESHOLDS.GREEN) return "bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400";
+  if (absBps < THRESHOLDS.AMBER) return "bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400";
+  if (absBps < THRESHOLDS.ORANGE) return "bg-orange-500/15 border-orange-500/40 text-orange-600 dark:text-orange-400";
+  return "bg-red-500/20 border-red-500/50 text-red-600 dark:text-red-400";
+}
+
+/** Severity border class with accent opacity — suitable for outlined badges. */
+export function deviationBorderClass(absBps: number): string {
+  if (absBps < THRESHOLDS.GREEN) return "border-green-500/50";
+  if (absBps < THRESHOLDS.AMBER) return "border-amber-500/50";
+  if (absBps < THRESHOLDS.ORANGE) return "border-orange-500/50";
+  return "border-red-500/50";
+}
+
 export function deviationColorClass(absBps: number): string {
   if (absBps < THRESHOLDS.GREEN) return "text-green-700 dark:text-green-400";
   if (absBps < THRESHOLDS.AMBER) return "text-amber-700 dark:text-amber-400";

@@ -39,6 +39,7 @@ export function BlacklistFilters({
           onValueChange={(v) => {
             if (v) onStablecoinChange(v as BlacklistStablecoin | "all");
           }}
+          aria-label="Filter by stablecoin"
         >
           <ToggleGroupItem value="all" className="min-h-11 sm:min-h-8">
             All
@@ -61,6 +62,7 @@ export function BlacklistFilters({
           onValueChange={(v) => {
             if (v) onChainChange(v);
           }}
+          aria-label="Filter by chain"
         >
           <ToggleGroupItem value="all" className="min-h-11 sm:min-h-8">
             All
@@ -83,6 +85,7 @@ export function BlacklistFilters({
           onValueChange={(v) => {
             if (v) onEventTypeChange(v as BlacklistEventType | "all");
           }}
+          aria-label="Filter by event type"
         >
           <ToggleGroupItem value="all" className="min-h-11 sm:min-h-8">
             All

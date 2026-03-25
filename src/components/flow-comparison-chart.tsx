@@ -9,6 +9,7 @@ import {
   Tooltip,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { formatChartDate, formatCurrency } from "@shared/lib/format";
 import { MonoYAxis, TimeXAxis } from "@/components/chart-primitives";
 import { mergeSeriesByTimestamp } from "@/lib/chart-utils";
@@ -46,10 +47,10 @@ export function FlowComparisonChart({
   if (mergedData.length === 0) return null;
 
   return (
-    <Card>
+    <Card className="pharos-card-shell">
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-sm font-semibold">
+          <CardTitle as="h3" className="pharos-kicker">
             Net Flow Over Time
           </CardTitle>
           <div className="flex gap-1">
@@ -59,7 +60,7 @@ export function FlowComparisonChart({
                 type="button"
                 aria-pressed={hours === opt.value}
                 onClick={() => onHoursChange(opt.value)}
-                className={`rounded px-2 py-0.5 text-xs transition-colors ${
+                className={`pharos-focus-ring rounded px-2 py-0.5 text-xs transition-colors ${
                   hours === opt.value
                     ? "bg-accent text-foreground"
                     : "text-muted-foreground hover:text-foreground"
@@ -72,6 +73,20 @@ export function FlowComparisonChart({
         </div>
       </CardHeader>
       <CardContent>
+        <div className="mb-3 flex flex-wrap gap-3">
+          {series.map((s) => (
+            <div
+              key={s.id}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground"
+            >
+              <span
+                className="inline-block h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: s.color }}
+              />
+              {s.label}
+            </div>
+          ))}
+        </div>
         <ResponsiveContainer width="100%" height={200}>
           <LineChart
             data={mergedData}
@@ -95,10 +110,10 @@ export function FlowComparisonChart({
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
                 return (
-                  <div className="rounded-lg border border-border/60 bg-card px-3 py-2 text-xs shadow-md space-y-1">
-                    <p className="text-muted-foreground">
+                  <PharosChartTooltip active={active}>
+                    <TooltipLabel>
                       {formatChartDate(label as number, hours <= 24 ? "with-time" : "short")}
-                    </p>
+                    </TooltipLabel>
                     {payload.map((p) => {
                       const val = p.value as number | null | undefined;
                       const formatted =
@@ -106,27 +121,15 @@ export function FlowComparisonChart({
                           ? `${val >= 0 ? "+" : ""}${formatCurrency(val, 1)}`
                           : "—";
                       return (
-                        <div
+                        <TooltipRow
                           key={p.dataKey as string}
-                          className="flex items-center gap-2"
-                        >
-                          <span
-                            className="h-2 w-2 rounded-full"
-                            style={{ background: p.color }}
-                          />
-                          <span className="text-muted-foreground">
-                            {p.name}:
-                          </span>
-                          <span
-                            className="font-mono font-semibold"
-                            style={{ color: p.color }}
-                          >
-                            {formatted}
-                          </span>
-                        </div>
+                          color={p.color}
+                          label={String(p.name ?? p.dataKey)}
+                          value={formatted}
+                        />
                       );
                     })}
-                  </div>
+                  </PharosChartTooltip>
                 );
               }}
             />
@@ -144,22 +147,6 @@ export function FlowComparisonChart({
             ))}
           </LineChart>
         </ResponsiveContainer>
-
-        {/* Legend */}
-        <div className="mt-2 flex flex-wrap gap-3">
-          {series.map((s) => (
-            <div
-              key={s.id}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground"
-            >
-              <span
-                className="h-2 w-2 rounded-full"
-                style={{ background: s.color }}
-              />
-              {s.label}
-            </div>
-          ))}
-        </div>
       </CardContent>
     </Card>
   );

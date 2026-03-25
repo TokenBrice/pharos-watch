@@ -128,6 +128,13 @@ export const FEATURE_ACCENT_CLASSES: Record<
   },
 };
 
+export const AUTHORITATIVE_ACCENT = {
+  container: "border-violet-500/25 bg-violet-500/[0.03]",
+  badge: "border-violet-500/25 bg-violet-500/10 text-violet-700 dark:text-violet-300",
+  card: "border-violet-500/30 bg-violet-500/10",
+  cardLabel: "text-violet-800 dark:text-violet-300",
+} as const;
+
 export const FILTER_OPTIONS: ReadonlyArray<{
   key: CoverageFilterKey;
   label: string;

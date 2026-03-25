@@ -23,6 +23,7 @@ import {
   type FlowPressureUi,
 } from "@/lib/flow-signal-ui";
 import { cn } from "@/lib/utils";
+import { clamp } from "@shared/lib/math";
 import {
   getNetFlowDirection24h,
   getPressureShiftState,
@@ -60,10 +61,6 @@ interface FlowSnapshot {
   pressureState: PressureShiftState;
   directionUi: FlowDirectionUi;
   pressureUi: FlowPressureUi;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 function formatSignedCurrency(value: number): string {

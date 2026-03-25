@@ -203,7 +203,7 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
                     ) : evt.amount > 0 ? (
                       <div className="flex flex-col items-end gap-1">
                         <span>{formatTokenAmount(evt.amount)} {evt.symbol}</span>
-                        <Badge variant="outline" className="text-[10px]">
+                        <Badge variant="outline" className="text-xs">
                           Unpriced
                         </Badge>
                       </div>
@@ -222,7 +222,7 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
                       className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground hover:text-foreground transition-colors"
                     >
                       <span className="hidden md:inline">{formatTxHash(evt.txHash)}</span>
-                      <ExternalLink className="h-3.5 w-3.5" />
+                      <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                     </a>
                   </TableCell>
                 </TableRow>

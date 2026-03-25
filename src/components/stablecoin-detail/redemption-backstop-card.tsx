@@ -2,6 +2,8 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { DETAIL_SECTION_TITLE_CLASS } from "./section-title";
 import {
   REDEMPTION_ACCESS_LABELS,
@@ -18,6 +20,7 @@ function formatCapacityUsd(value: number | null): string | null {
   return formatCurrency(value, 1);
 }
 
+/** Full badge treatment (border + bg + text) for the composite score */
 function scoreToneClass(score: number | null): string {
   if (score == null) return "border-border/60 bg-muted/30 text-muted-foreground";
   if (score >= 80) return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
@@ -25,6 +28,16 @@ function scoreToneClass(score: number | null): string {
   if (score >= 50) return "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400";
   if (score >= 35) return "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400";
   return "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400";
+}
+
+/** Text-only color for sub-score values */
+function scoreTextClass(score: number | null): string {
+  if (score == null) return "text-muted-foreground";
+  if (score >= 80) return "text-emerald-700 dark:text-emerald-400";
+  if (score >= 65) return "text-blue-700 dark:text-blue-400";
+  if (score >= 50) return "text-amber-700 dark:text-amber-400";
+  if (score >= 35) return "text-orange-700 dark:text-orange-400";
+  return "text-red-700 dark:text-red-400";
 }
 
 function formatResolutionState(value: RedemptionBackstopEntry["resolutionState"]): string {
@@ -168,35 +181,46 @@ export function RedemptionBackstopCard({
       ? [{ label: docs.label ?? "Source", url: docs.url }]
       : [];
 
+  // Filter notes that are redundant with the capacity detail (distill)
+  const filteredNotes = entry.notes?.filter(
+    (note) => !(entry.capacitySemantics === "eventual-only" && note.toLowerCase().includes("redeemability")),
+  ) ?? [];
+
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle as="h3" className={DETAIL_SECTION_TITLE_CLASS}>
+        <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
           <MethodologyLabel topic="redemptionBackstop">Redemption Backstop</MethodologyLabel>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline" className={`font-mono ${scoreToneClass(entry.score)}`}>
+        {/* ── arrange: Hero score + Exit, separated from metadata ── */}
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
+          <Badge variant="outline" className={cn("px-2.5 py-1 font-mono text-lg", scoreToneClass(entry.score))}>
             {entry.score != null ? `${entry.score}/100` : "NR"}
           </Badge>
-          {entry.effectiveExitScore != null ? (
-            <Badge variant="outline" className="font-mono border-border/60 bg-muted/30">
-              <span className="inline-flex items-center gap-1">
-                <MethodologyLabel topic="effectiveExit">Exit</MethodologyLabel> {entry.effectiveExitScore}/100
-              </span>
-            </Badge>
-          ) : null}
-          <Badge variant="outline" className="border-border/60 bg-muted/30">
+          {entry.effectiveExitScore != null && (
+            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <MethodologyLabel topic="effectiveExit">Exit</MethodologyLabel>
+              <span className="font-mono text-foreground">{entry.effectiveExitScore}/100</span>
+            </span>
+          )}
+        </div>
+
+        {/* ── arrange: Classification + metadata badges (secondary) ── */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Badge variant="outline" className="border-border/60 bg-muted/30 text-xs">
             {REDEMPTION_ROUTE_FAMILY_LABELS[entry.routeFamily]}
           </Badge>
-          <Badge variant="outline" className="border-border/60 bg-muted/30">
+          <Badge variant="outline" className="border-border/60 bg-muted/30 text-xs">
             {entry.sourceMode}
           </Badge>
-          <Badge variant="outline" className="border-border/60 bg-muted/30">
-            {formatResolutionState(entry.resolutionState)}
-          </Badge>
-          <Badge variant="outline" className="border-border/60 bg-muted/30">
+          {entry.resolutionState !== "resolved" && (
+            <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300">
+              {formatResolutionState(entry.resolutionState)}
+            </Badge>
+          )}
+          <Badge variant="outline" className="border-border/60 bg-muted/30 text-xs">
             {formatModelConfidence(entry.modelConfidence)}
           </Badge>
         </div>
@@ -207,73 +231,73 @@ export function RedemptionBackstopCard({
           </div>
         ) : null}
 
-        <div className="grid gap-2 text-sm sm:grid-cols-2">
-          <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-              Access
-            </p>
-            <p className="mt-1 font-medium">
-              {REDEMPTION_ACCESS_LABELS[entry.accessModel]}
-            </p>
+        {/* ── distill: Route properties as compact inline row ── */}
+        <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <div>
+            <span className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Access </span>
+            <span className="font-medium">{REDEMPTION_ACCESS_LABELS[entry.accessModel]}</span>
           </div>
-          <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-              Settlement
-            </p>
-            <p className="mt-1 font-medium">
-              {REDEMPTION_SETTLEMENT_LABELS[entry.settlementModel]}
-            </p>
+          <div>
+            <span className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Settlement </span>
+            <span className="font-medium">{REDEMPTION_SETTLEMENT_LABELS[entry.settlementModel]}</span>
           </div>
-          <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-              Output
-            </p>
-            <p className="mt-1 font-medium">
-              {REDEMPTION_OUTPUT_ASSET_LABELS[entry.outputAssetType]}
-            </p>
-          </div>
-          <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-              Immediate Capacity
-            </p>
-            <p className="mt-1 font-medium">{capacitySummary.headline}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{capacitySummary.detail}</p>
+          <div>
+            <span className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Output </span>
+            <span className="font-medium">{REDEMPTION_OUTPUT_ASSET_LABELS[entry.outputAssetType]}</span>
           </div>
         </div>
 
+        {/* ── Capacity card (earns the card treatment — has detail) ── */}
         <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-          <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+          <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+            Immediate Capacity
+          </p>
+          <p className="mt-1 text-sm font-medium">{capacitySummary.headline}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{capacitySummary.detail}</p>
+        </div>
+
+        {/* ── Fee card (earns the card treatment — has detail) ── */}
+        <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+          <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
             Redemption Fee
           </p>
-          <p className="mt-1 font-medium">{feeSummary.headline}</p>
+          <p className="mt-1 text-sm font-medium">{feeSummary.headline}</p>
           <p className="mt-1 text-xs text-muted-foreground">{feeSummary.detail}</p>
         </div>
 
-        <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
-          <div className="rounded-lg border border-border/60 px-3 py-2">
-            Access score <span className="font-mono text-foreground">{entry.accessScore ?? "—"}</span>
+        {/* ── colorize + distill: Sub-scores collapsed with color ── */}
+        <details className="group">
+          <summary className="pharos-focus-ring inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-md text-sm text-muted-foreground [&::-webkit-details-marker]:hidden lg:min-h-9">
+            <span className="underline decoration-dashed underline-offset-2">Scoring breakdown</span>
+            <ChevronDown aria-hidden="true" className="h-3 w-3 transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+            <div className="rounded-lg border border-border/60 px-3 py-2">
+              Access score <span className={cn("font-mono", scoreTextClass(entry.accessScore))}>{entry.accessScore ?? "—"}</span>
+            </div>
+            <div className="rounded-lg border border-border/60 px-3 py-2">
+              Settlement <span className={cn("font-mono", scoreTextClass(entry.settlementScore))}>{entry.settlementScore ?? "—"}</span>
+            </div>
+            <div className="rounded-lg border border-border/60 px-3 py-2">
+              Execution <span className={cn("font-mono", scoreTextClass(entry.executionCertaintyScore))}>{entry.executionCertaintyScore ?? "—"}</span>
+            </div>
+            <div className="rounded-lg border border-border/60 px-3 py-2">
+              Capacity <span className={cn("font-mono", scoreTextClass(entry.capacityScore))}>{entry.capacityScore ?? "—"}</span>
+            </div>
+            <div className="rounded-lg border border-border/60 px-3 py-2">
+              Output quality <span className={cn("font-mono", scoreTextClass(entry.outputAssetQualityScore))}>{entry.outputAssetQualityScore ?? "—"}</span>
+            </div>
+            <div className="rounded-lg border border-border/60 px-3 py-2">
+              Cost <span className={cn("font-mono", scoreTextClass(entry.costScore))}>{entry.costScore ?? "—"}</span>
+              {entry.feeBps != null ? ` (${entry.feeBps} bps)` : ""}
+            </div>
           </div>
-          <div className="rounded-lg border border-border/60 px-3 py-2">
-            Settlement <span className="font-mono text-foreground">{entry.settlementScore ?? "—"}</span>
-          </div>
-          <div className="rounded-lg border border-border/60 px-3 py-2">
-            Execution <span className="font-mono text-foreground">{entry.executionCertaintyScore ?? "—"}</span>
-          </div>
-          <div className="rounded-lg border border-border/60 px-3 py-2">
-            Capacity <span className="font-mono text-foreground">{entry.capacityScore ?? "—"}</span>
-          </div>
-          <div className="rounded-lg border border-border/60 px-3 py-2">
-            Output quality <span className="font-mono text-foreground">{entry.outputAssetQualityScore ?? "—"}</span>
-          </div>
-          <div className="rounded-lg border border-border/60 px-3 py-2">
-            Cost <span className="font-mono text-foreground">{entry.costScore ?? "—"}</span>
-            {entry.feeBps != null ? ` (${entry.feeBps} bps)` : ""}
-          </div>
-        </div>
+        </details>
 
-        {entry.notes && entry.notes.length > 0 ? (
+        {/* ── distill: Notes (filtered for redundancy with capacity) ── */}
+        {filteredNotes.length > 0 ? (
           <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-            {entry.notes.join(". ")}
+            {filteredNotes.join(". ")}
           </div>
         ) : null}
 

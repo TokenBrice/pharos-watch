@@ -83,19 +83,16 @@ const SafetyScoreHistorySection = dynamic(
   },
 );
 
-const DETAIL_SECTIONS = [
-  { id: "report-card", label: "Safety Score" },
+const BASE_DETAIL_SECTIONS = [
+  { id: "report-card", label: "Safety" },
   { id: "overview", label: "Overview" },
-  { id: "price-transparency", label: "Price Sources" },
-  { id: "chart", label: "Chart" },
-  { id: "distribution", label: "Distribution" },
-  { id: "info", label: "Info" },
-  { id: "collateral-usage", label: "Collateral Usage" },
-  { id: "yield", label: "Yield" },
-  { id: "flows", label: "Flows" },
+  { id: "chart", label: "Market" },
   { id: "liquidity", label: "Liquidity" },
-  { id: "history", label: "Depeg History" },
+  { id: "info", label: "Details" },
+  { id: "history", label: "History" },
 ];
+
+const YIELD_SECTION = { id: "yield", label: "Yield" };
 
 function DetailLoadingShell({ coin, logoSrc }: { coin: StablecoinMeta; logoSrc?: string }) {
   return (
@@ -235,9 +232,10 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
     );
   }
 
-  const detailSections = DETAIL_SECTIONS
-    .filter((section) => section.id !== "flows" || viewModel.hasFlows)
-    .filter((section) => section.id !== "collateral-usage" || hasCollateralUsage);
+  const isYieldBearing = viewModel.coin.flags.yieldBearing ?? false;
+  const detailSections = isYieldBearing
+    ? [...BASE_DETAIL_SECTIONS.slice(0, 3), YIELD_SECTION, ...BASE_DETAIL_SECTIONS.slice(3)]
+    : BASE_DETAIL_SECTIONS;
 
   return (
     <div>
@@ -263,16 +261,12 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
           prevDay={viewModel.prevDay}
           prevWeek={viewModel.prevWeek}
           prevMonth={viewModel.prevMonth}
-          prev90d={viewModel.prev90d}
           pegRef={viewModel.pegRef}
           deviationBps={viewModel.deviationBps}
           gaugeDeviationBps={viewModel.gaugeDeviationBps}
-          usesFallbackPegRate={viewModel.usesFallbackPegRate}
           pegScoreResult={viewModel.pegScoreResult}
           recordedDepegEventCount={depegHistoryData?.total ?? null}
-          pegScoreBorderClass={viewModel.pegScoreBorderClass}
           liquidityData={viewModel.liquidityData}
-          liqBorderClass={viewModel.liqBorderClass}
           reportCard={viewModel.reportCard ?? null}
           onOpenFeedback={() => setFeedbackOpen(true)}
         />
@@ -323,19 +317,21 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
 
       {/* ── Context zone ── */}
       <div className="mt-12 space-y-6">
-        <NoticesAndSummarySection
-          stablecoinId={viewModel.id}
-          coin={viewModel.coin}
-          summary={viewModel.summary}
-          reserves={viewModel.reserves}
-          reserveFetchError={viewModel.reserveFetchError}
-          redemptionBackstop={viewModel.redemptionBackstop}
-          isNavToken={viewModel.isNavToken}
-          coinData={viewModel.coinData}
-          consensusSources={viewModel.consensusSources}
-          agreeSources={viewModel.agreeSources}
-          dexPriceCheck={viewModel.dexPriceCheck}
-        />
+        <section id="overview">
+          <NoticesAndSummarySection
+            stablecoinId={viewModel.id}
+            coin={viewModel.coin}
+            summary={viewModel.summary}
+            reserves={viewModel.reserves}
+            reserveFetchError={viewModel.reserveFetchError}
+            redemptionBackstop={viewModel.redemptionBackstop}
+            isNavToken={viewModel.isNavToken}
+            coinData={viewModel.coinData}
+            consensusSources={viewModel.consensusSources}
+            agreeSources={viewModel.agreeSources}
+            dexPriceCheck={viewModel.dexPriceCheck}
+          />
+        </section>
       </div>
 
       {/* ── Market zone ── */}
@@ -359,7 +355,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
 
         {hasCollateralUsage && <CollateralUsageSection stablecoinId={viewModel.id} />}
 
-        {detailSections.some((section) => section.id === "yield") ? <YieldDetailSection stablecoinId={viewModel.id} /> : null}
+        {isYieldBearing && <YieldDetailSection stablecoinId={viewModel.id} />}
       </div>
 
       {/* ── Activity zone ── */}

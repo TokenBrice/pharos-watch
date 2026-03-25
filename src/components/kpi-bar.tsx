@@ -26,7 +26,8 @@ const SKELETON_CARDS = Array.from({ length: 4 }, (_, i) => i);
 const KPI_CHIP_BASE =
   "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] shadow-[inset_0_1px_0_oklch(1_0_0_/0.2)] transition-colors";
 const SNAPSHOT_PILL_BASE =
-  "inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-sm";
+  "inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm" +
+  " border-[var(--control-pill-border)] bg-[var(--control-pill-bg)] shadow-[inset_0_1px_0_oklch(1_0_0_/0.08)]";
 
 function trendDirection(value: number): TrendDirection {
   if (value === 0) return "flat";
@@ -126,7 +127,7 @@ function KpiCell({
     return (
       <div className={`flex h-full flex-col items-center justify-center gap-1.5 px-4 py-3 text-center ${className}`}>
         <span className="pharos-kicker">{label}</span>
-        <span className={`text-xl font-extrabold font-mono tabular-nums leading-tight ${valueClassName ?? ""}`}>
+        <span aria-live="polite" className={`text-xl font-extrabold font-mono tabular-nums leading-tight ${valueClassName ?? ""}`}>
           {value}
         </span>
         {sublabel && <div className="flex flex-wrap items-center justify-center gap-1 pt-0.5 text-xs">{sublabel}</div>}
@@ -136,7 +137,7 @@ function KpiCell({
   return (
     <div className={`flex min-h-[92px] flex-col justify-between gap-2 px-4 py-3 ${className}`}>
       <span className="pharos-kicker">{label}</span>
-      <span className={`text-xl font-extrabold font-mono tabular-nums leading-tight ${valueClassName ?? ""}`}>
+      <span aria-live="polite" className={`text-xl font-extrabold font-mono tabular-nums leading-tight ${valueClassName ?? ""}`}>
         {value}
       </span>
       {sublabel && <div className="flex flex-wrap items-center gap-1 pb-1 text-xs">{sublabel}</div>}
@@ -215,6 +216,7 @@ function PrimarySnapshotCard({
   // Detect crisis/meltdown bands for alert styling
   const isCrisis = band.toLowerCase().includes("crisis") || band.toLowerCase().includes("meltdown");
   const isTremor = band.toLowerCase().includes("tremor") || band.toLowerCase().includes("fracture");
+  const isElevated = isCrisis || isTremor;
 
   return (
     <div
@@ -222,12 +224,14 @@ function PrimarySnapshotCard({
         isCrisis ? "animate-pulse" : ""
       }`}
       style={{
-        background: "var(--surface-featured-gradient)",
+        background: isElevated 
+          ? "var(--surface-featured-gradient), linear-gradient(135deg, oklch(0.7 0.15 25 / 0.08) 0%, transparent 50%)"
+          : "var(--surface-featured-gradient)",
         borderColor: isCrisis ? "var(--p-red-400)" : isTremor ? "var(--p-amber-400)" : "var(--surface-featured-border)",
         boxShadow: isCrisis
-          ? "var(--surface-featured-shadow), 0 0 30px oklch(0.7 0.2 25 / 0.3)"
+          ? "var(--surface-featured-shadow), 0 0 30px oklch(0.7 0.2 25 / 0.35)"
           : isTremor
-            ? "var(--surface-featured-shadow), 0 0 20px oklch(0.75 0.15 85 / 0.2)"
+            ? "var(--surface-featured-shadow), 0 0 20px oklch(0.75 0.15 85 / 0.25)"
             : "var(--surface-featured-shadow)",
       }}
     >
@@ -239,34 +243,44 @@ function PrimarySnapshotCard({
                 PSI
               </p>
               <span className="relative flex h-2 w-2">
-                <span className="animate-breathe absolute inline-flex h-full w-full rounded-full bg-green-400"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                <span className={`animate-breathe absolute inline-flex h-full w-full rounded-full ${isElevated ? "bg-red-400" : "bg-green-400"}`}></span>
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${isElevated ? "bg-red-500" : "bg-green-500"}`}></span>
               </span>
             </div>
             <div
+              aria-live="polite"
               className={`font-mono text-[3.2rem] font-extrabold leading-none tabular-nums sm:text-[3.4rem] ${valueClassName ?? ""}`}
             >
               {value}
             </div>
           </div>
-          <p className={`text-sm font-semibold whitespace-nowrap ${valueClassName ?? "text-foreground"}`}>
-            {band || "No current PSI band"}
-          </p>
+          {/* Enhanced band display for stress states */}
+          <div className={`flex items-center gap-1.5 ${isElevated ? "rounded-lg bg-red-500/10 px-2 py-1 -mx-1" : ""}`}>
+            {isCrisis && (
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+              </span>
+            )}
+            <p className={`font-semibold whitespace-nowrap ${isElevated ? "text-base" : "text-sm"} ${valueClassName ?? "text-foreground"}`}>
+              {band || "No current PSI band"}
+            </p>
+          </div>
         </div>
         <div className="flex shrink-0 flex-col items-end justify-center gap-2 min-[1024px]:max-[1599px]:hidden">
           <div className="flex flex-col items-end gap-2">
             <span
-              className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap border-slate-300/70 bg-white/76 text-slate-600 dark:border-white/8 dark:bg-black/18 dark:text-slate-300`}
+              className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap`}
             >
               24h {delta24h ?? "—"}
             </span>
             <span
-              className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap border-slate-300/70 bg-white/76 text-slate-600 dark:border-white/8 dark:bg-black/18 dark:text-slate-300`}
+              className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap`}
             >
               7d {delta7d ?? "—"}
             </span>
             <span
-              className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap border-slate-300/70 bg-white/76 text-slate-600 dark:border-white/8 dark:bg-black/18 dark:text-slate-300`}
+              className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap`}
             >
               30d {delta30d ?? "—"}
             </span>
@@ -282,11 +296,11 @@ export function KpiBar() {
   const stablecoinsQuery = useStablecoins();
   const { data: psiData, isLoading: psiLoading } = psiQuery;
   const { data: stablecoinsData, isLoading: stablecoinsLoading } = stablecoinsQuery;
-  const { data: pegData, isLoading: pegLoading } = usePegSummary();
-  const { data: dexData, isLoading: dexLoading } = useDexLiquidity();
-  const { data: flowData } = useMintBurnFlows(24);
-  const { data: stressData } = useStressSignals();
-  const primaryError = stablecoinsQuery.error || psiQuery.error;
+  const { data: pegData, isLoading: pegLoading, error: pegError } = usePegSummary();
+  const { data: dexData, isLoading: dexLoading, error: dexError } = useDexLiquidity();
+  const { data: flowData, isLoading: flowLoading, error: flowError } = useMintBurnFlows(24);
+  const { data: stressData, isLoading: stressLoading, error: stressError } = useStressSignals();
+  const primaryError = stablecoinsQuery.error || psiQuery.error || pegError || dexError || flowError || stressError;
   const hasPrimaryData = !!psiData || !!stablecoinsData;
 
   const { totalMcap, mcapChange24hPct, mcapChange7dPct, usdtUsdcSharePct } = useMemo(() => {
@@ -365,7 +379,7 @@ export function KpiBar() {
   const psiScoreNum = displayedPsi?.score ?? null;
   const psiBand = displayedPsi?.band ?? "";
   const psiDayAnchor = psiCurrent?.computedAt ?? null;
-  const psiColorClass = PSI_BAND_CLASSES[psiBand as ConditionBand] ?? "";
+  const psiColorClass = psiBand && psiBand in PSI_BAND_CLASSES ? PSI_BAND_CLASSES[psiBand as ConditionBand] : "";
   const hasStablecoinsData = !!stablecoinsData?.peggedAssets;
   const hasPsiData = !!psiCurrent;
   const hasDexData = !!dexData;
@@ -442,7 +456,7 @@ export function KpiBar() {
   const psiScoreDisplay = hasPsiData ? animatedPsi : "—";
   const mcapDisplay = hasStablecoinsData ? animatedMcap : "—";
 
-  const isLoading = psiLoading || stablecoinsLoading || pegLoading || dexLoading;
+  const isLoading = psiLoading || stablecoinsLoading || pegLoading || dexLoading || flowLoading || stressLoading;
 
   if (isLoading) {
     return (
@@ -608,7 +622,7 @@ export function KpiBar() {
   ];
 
   return (
-    <Card className="pharos-card-shell overflow-hidden p-0">
+    <Card aria-label="Market snapshot" className="pharos-card-shell overflow-hidden p-0">
       <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-4 py-2.5">
         <p className="pharos-kicker">Market Snapshot</p>
         <p className="text-[11px] text-muted-foreground">Refreshes every 15m</p>

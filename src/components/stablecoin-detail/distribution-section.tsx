@@ -84,7 +84,7 @@ function CenterOverlay({ total, subtitle }: { total: number; subtitle: string })
       className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in fade-in duration-300"
       style={{ animationDelay: "400ms", animationFillMode: "backwards" }}
     >
-      <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+      <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
         {subtitle}
       </span>
       <span className="text-base font-semibold font-mono tabular-nums text-foreground">

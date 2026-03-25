@@ -32,6 +32,7 @@ import {
   getFlowPressureUi,
 } from "@/lib/flow-signal-ui";
 import { cn } from "@/lib/utils";
+import { clamp } from "@shared/lib/math";
 import type { MintBurnCoinFlow } from "@shared/types";
 import {
   getNetFlowDirection24h,
@@ -40,10 +41,6 @@ import {
   type PressureShiftState,
 } from "@shared/lib/mint-burn-signals";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
 
 function inferHas24hActivity(coin: MintBurnCoinFlow): boolean {
   if (coin.has24hActivity !== undefined) {

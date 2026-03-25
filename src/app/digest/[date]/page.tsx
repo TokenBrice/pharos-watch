@@ -117,16 +117,18 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
         }}
       />
       <div className="space-y-2">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link href="/" className="pharos-focus-ring hover:text-foreground transition-colors">
-            Dashboard
-          </Link>
-          <span>/</span>
-          <Link href="/digest/" className="pharos-focus-ring hover:text-foreground transition-colors">
-            Digest Archive
-          </Link>
-          <span>/</span>
-          <span className="text-foreground">{formatted}</span>
+        <nav aria-label="Breadcrumb">
+          <ol className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <li>
+              <Link href="/" className="pharos-focus-ring hover:text-foreground transition-colors">Dashboard</Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li>
+              <Link href="/digest/" className="pharos-focus-ring hover:text-foreground transition-colors">Digest Archive</Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li aria-current="page" className="text-foreground">{formatted}</li>
+          </ol>
         </nav>
         {editionKicker && (
           <p className="pharos-kicker">
@@ -173,10 +175,11 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
 
       <DigestSnapshot date={digest.date} />
 
-      <nav className="flex items-center justify-between pt-4 border-t border-border/50 text-sm">
+      <nav aria-label="Digest navigation" className="flex items-center justify-between pt-4 border-t border-border/50 text-sm">
         {older ? (
           <Link
             href={`/digest/${older.date}/`}
+            aria-label={`Older digest: ${formatDate(older.date)}`}
             className="pharos-focus-ring text-muted-foreground hover:text-foreground transition-colors"
           >
             &larr; {formatDate(older.date)}
@@ -187,6 +190,7 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
         {newer ? (
           <Link
             href={`/digest/${newer.date}/`}
+            aria-label={`Newer digest: ${formatDate(newer.date)}`}
             className="pharos-focus-ring text-muted-foreground hover:text-foreground transition-colors"
           >
             {formatDate(newer.date)} &rarr;

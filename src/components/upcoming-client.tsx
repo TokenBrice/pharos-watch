@@ -19,7 +19,6 @@ import {
   getDriftStatus,
   dateScore,
   formatFuzzyDate,
-  truncateTeaser,
 } from "@/lib/pre-launch";
 import {
   DropdownMenu,
@@ -67,24 +66,27 @@ function toggleSet<T>(set: Set<T>, value: T): Set<T> {
   return next;
 }
 
+/* tw: min-h-11 sm:min-h-9 — keep literal for Tailwind scanner */
+const FILTER_TOUCH = "min-h-11 sm:min-h-9";
+
 function neutralToggleClass(active: boolean): string {
-  return active ? "pharos-control-pill pharos-control-pill-active" : "pharos-toggle-pill";
+  return active ? `pharos-control-pill pharos-control-pill-active ${FILTER_TOUCH}` : `pharos-toggle-pill ${FILTER_TOUCH}`;
 }
 
 function phaseToggleClass(phase: LaunchPhase, active: boolean): string {
-  if (!active) return "pharos-toggle-pill";
+  if (!active) return `pharos-toggle-pill ${FILTER_TOUCH}`;
 
   switch (phase) {
     case "announced":
-      return "pharos-toggle-pill border-amber-400/20 bg-amber-500/12 text-amber-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(245,158,11,0.12)]";
+      return `pharos-toggle-pill ${FILTER_TOUCH} border-amber-400/20 bg-amber-500/12 text-amber-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(245,158,11,0.12)]`;
     case "testnet":
-      return "pharos-toggle-pill border-indigo-400/20 bg-indigo-500/12 text-indigo-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(99,102,241,0.12)]";
+      return `pharos-toggle-pill ${FILTER_TOUCH} border-indigo-400/20 bg-indigo-500/12 text-indigo-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(99,102,241,0.12)]`;
     case "auditing":
-      return "pharos-toggle-pill border-violet-400/20 bg-violet-500/12 text-violet-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(139,92,246,0.12)]";
+      return `pharos-toggle-pill ${FILTER_TOUCH} border-violet-400/20 bg-violet-500/12 text-violet-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(139,92,246,0.12)]`;
     case "beta":
-      return "pharos-toggle-pill border-emerald-400/20 bg-emerald-500/12 text-emerald-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(16,185,129,0.12)]";
+      return `pharos-toggle-pill ${FILTER_TOUCH} border-emerald-400/20 bg-emerald-500/12 text-emerald-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(16,185,129,0.12)]`;
     case "launching-soon":
-      return "pharos-toggle-pill border-sky-400/20 bg-sky-500/12 text-sky-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(14,165,233,0.12)]";
+      return `pharos-toggle-pill ${FILTER_TOUCH} border-sky-400/20 bg-sky-500/12 text-sky-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_24px_rgba(14,165,233,0.12)]`;
   }
 }
 
@@ -191,6 +193,7 @@ export function UpcomingClient() {
               {ALL_PHASES.map((phase) => (
                 <button
                   key={phase}
+                  aria-pressed={phaseFilter.has(phase)}
                   onClick={() => setPhaseFilter(toggleSet(phaseFilter, phase))}
                   className={phaseToggleClass(phase, phaseFilter.has(phase))}
                 >
@@ -207,6 +210,7 @@ export function UpcomingClient() {
                 {ALL_PEGS.map((peg) => (
                   <button
                     key={peg}
+                    aria-pressed={pegFilter.has(peg)}
                     onClick={() => setPegFilter(toggleSet(pegFilter, peg))}
                     className={neutralToggleClass(pegFilter.has(peg))}
                   >
@@ -224,6 +228,7 @@ export function UpcomingClient() {
                 {ALL_BACKINGS.map((backing) => (
                   <button
                     key={backing}
+                    aria-pressed={backingFilter.has(backing)}
                     onClick={() => setBackingFilter(toggleSet(backingFilter, backing))}
                     className={neutralToggleClass(backingFilter.has(backing))}
                   >
@@ -259,8 +264,18 @@ export function UpcomingClient() {
 
       {/* ── Card grid ────────────────────────────────────────────── */}
       {filtered.length === 0 ? (
-        <div className="pharos-empty-note py-12 text-center">
-          No pre-launch stablecoins match the current filters.
+        <div className="pharos-empty-note flex flex-col items-center gap-3 py-12 text-center">
+          <p>No pre-launch stablecoins match the current filters.</p>
+          <button
+            onClick={() => {
+              setPhaseFilter(new Set());
+              setPegFilter(new Set());
+              setBackingFilter(new Set());
+            }}
+            className="pharos-focus-ring rounded-full border border-border/60 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+          >
+            Clear filters
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -308,7 +323,7 @@ export function UpcomingClient() {
                 {/* Teaser */}
                 {teaser && (
                   <p className="mt-2.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                    {truncateTeaser(teaser, 100)}
+                    {teaser}
                   </p>
                 )}
 

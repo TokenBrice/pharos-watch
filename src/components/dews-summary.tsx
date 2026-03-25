@@ -68,25 +68,7 @@ const SPOKES = Array.from({ length: 8 }, (_, i) => {
 // The sweep line points right (0°). The wake is the quadrant behind it (-90° to 0°).
 const WAKE_PATH = `M ${CX} ${CY} L ${CX} ${CY - OUTER_R} A ${OUTER_R} ${OUTER_R} 0 0 1 ${CX + OUTER_R} ${CY} Z`;
 
-const RADAR_KEYFRAMES = `
-  @keyframes dews-sweep-rotate {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
-  }
-  @keyframes dews-glow {
-    0%, 100% { opacity: 0.10; }
-    50%      { opacity: 0.35; }
-  }
-  @keyframes dews-center-pulse {
-    0%, 100% { opacity: 0.65; }
-    50%      { opacity: 1.00; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .dews-sweep-g  { animation-play-state: paused !important; }
-    .dews-glow-r   { animation: none !important; opacity: 0.15; }
-    .dews-center-r { animation: none !important; opacity: 0.80; }
-  }
-`;
+// DEWS radar keyframes are defined in globals.css under "DEWS Radar animations".
 
 // ---------------------------------------------------------------------------
 // Types
@@ -457,7 +439,6 @@ function DEWSRadar({
       role="img"
     >
       <defs>
-        <style>{RADAR_KEYFRAMES}</style>
         <radialGradient id={wakeGradId} cx={CX} cy={CY} r={OUTER_R} gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor={hex} stopOpacity={0.18} />
           <stop offset="100%" stopColor={hex} stopOpacity={0} />
@@ -635,7 +616,7 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
           </CardHeader>
         )}
         <CardContent className={showHeader ? undefined : "p-4"}>
-          <div className={`${showHeader ? "h-[440px]" : "min-h-[440px]"} rounded-lg bg-muted animate-pulse`} />
+          <div aria-busy="true" className={`${showHeader ? "h-[440px]" : "min-h-[440px]"} rounded-lg bg-muted animate-pulse`} />
         </CardContent>
       </Card>
     );

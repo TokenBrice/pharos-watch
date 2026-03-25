@@ -1,14 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import {
   AreaChart,
   Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
   ResponsiveContainer,
 } from "recharts";
 import { ExternalLink } from "lucide-react";
@@ -19,7 +15,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
-import { RECHARTS_TOOLTIP_STYLES, CHART_ORANGE, CHART_BLUE, CHART_CYAN, CHART_GREEN } from "@/lib/chart-colors";
+import { CHART_ORANGE, CHART_BLUE, CHART_CYAN, CHART_GREEN } from "@/lib/chart-colors";
+import { CHART_DRAW_IN } from "@/lib/chart-animation";
+import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { formatChartDate, formatCurrency, formatScore } from "@shared/lib/format";
 import { useStabilityIndexDetail, type StabilityContributor } from "@/hooks/api-hooks";
 import { PsiLighthouse } from "@/components/stability-index";
@@ -49,13 +47,6 @@ const COMPONENT_COLORS = {
   trend: CHART_GREEN,
 };
 
-const COMPONENT_LEGEND: Array<{ label: string; topic: MethodologyContextKey; color: string }> = [
-  { label: "Severity", topic: "psiSeverity", color: COMPONENT_COLORS.severity },
-  { label: "Breadth", topic: "psiBreadth", color: COMPONENT_COLORS.breadth },
-  { label: "Stress Breadth", topic: "psiStressBreadth", color: COMPONENT_COLORS.stressBreadth },
-  { label: "Trend", topic: "psiTrend", color: COMPONENT_COLORS.trend },
-];
-
 const COMPONENT_DETAIL: Array<{
   key: "severity" | "breadth" | "stressBreadth" | "trend";
   label: string;
@@ -84,7 +75,7 @@ function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="pb-2">
-        <CardTitle className="pharos-kicker">Notable Events</CardTitle>
+        <CardTitle as="h2" className="pharos-kicker">Notable Events</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {PSI_EVENTS.map((evt) => {
@@ -127,8 +118,8 @@ function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
                     rel="noopener noreferrer"
                     className="pharos-focus-ring text-sm text-blue-700 dark:text-blue-400 hover:underline inline-flex items-center gap-1 min-w-0 shrink rounded-sm"
                   >
-                    <span className="truncate">{link.title}</span>
-                    <ExternalLink className="h-3 w-3 shrink-0" />
+                    <span className="truncate" title={link.title}>{link.title}</span>
+                    <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
                   </a>
                 ))}
               </div>
@@ -148,16 +139,21 @@ function ComponentChart({
   data: { ts: number; severity: number; breadth: number; stressBreadth: number; trend: number }[];
 }) {
   const { range, setRange, filteredData, options } = useTimeRangeFilter(data, "ts");
+  const [shouldAnimate, setShouldAnimate] = useState(true);
+  const animProps = shouldAnimate ? CHART_DRAW_IN : { isAnimationActive: false };
+  const handleAnimationEnd = useCallback(() => {
+    setShouldAnimate(false);
+  }, []);
 
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="pharos-kicker">Component Breakdown</CardTitle>
+        <CardTitle as="h2" className="pharos-kicker">Component Breakdown</CardTitle>
         <TimeRangeButtons options={options} value={range} onChange={(r) => { trackEvent("time_range_changed", { page: "stability-index-components", range: r }); setRange(r); }} />
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap gap-4 mb-4">
-          {COMPONENT_LEGEND.map((item) => (
+          {COMPONENT_DETAIL.map((item) => (
             <div key={item.label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
               <MethodologyLabel topic={item.topic}>{item.label}</MethodologyLabel>
@@ -190,27 +186,11 @@ function ComponentChart({
                     <stop offset="95%" stopColor={COMPONENT_COLORS.trend} stopOpacity={0.05} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                <XAxis
-                  dataKey="ts"
-                  type="number"
-                  scale="time"
-                  domain={["dataMin", "dataMax"]}
-                  tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
-                  tickLine={false}
-                  axisLine={false}
-                  minTickGap={72}
-                  tickFormatter={(ts: number) => formatChartDate(ts, "compact")}
-                />
-                <YAxis
-                  tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <Tooltip
+                <TimeGrid />
+                <TimeXAxis dataKey="ts" minTickGap={72} />
+                <MonoYAxis />
+                <DateTooltip
                   formatter={(value, name) => [formatScore(Number(value)), String(name)]}
-                  labelFormatter={(label) => formatChartDate(Number(label), "long")}
-                  {...RECHARTS_TOOLTIP_STYLES}
                 />
                 <Area
                   type="monotone"
@@ -220,6 +200,8 @@ function ComponentChart({
                   stroke={COMPONENT_COLORS.severity}
                   fill="url(#psiSeverityGrad)"
                   strokeWidth={1.5}
+                  onAnimationEnd={handleAnimationEnd}
+                  {...animProps}
                 />
                 <Area
                   type="monotone"
@@ -229,6 +211,7 @@ function ComponentChart({
                   stroke={COMPONENT_COLORS.breadth}
                   fill="url(#psiBreadthGrad)"
                   strokeWidth={1.5}
+                  {...animProps}
                 />
                 <Area
                   type="monotone"
@@ -238,6 +221,7 @@ function ComponentChart({
                   stroke={COMPONENT_COLORS.stressBreadth}
                   fill="url(#psiStressBreadthGrad)"
                   strokeWidth={1.5}
+                  {...animProps}
                 />
                 <Area
                   type="monotone"
@@ -246,6 +230,7 @@ function ComponentChart({
                   stroke={COMPONENT_COLORS.trend}
                   fill="none"
                   strokeWidth={2}
+                  {...animProps}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -326,7 +311,7 @@ function HistoryStats({
             <span className={cn(compact ? "text-base font-bold" : "text-lg font-extrabold", "tabular-nums leading-none", color)}>
               {item.value}
             </span>
-            {item.sub ? <span className="text-[11px] leading-tight text-muted-foreground">{item.sub}</span> : null}
+            {item.sub ? <span className="text-xs leading-tight text-muted-foreground">{item.sub}</span> : null}
           </div>
         );
       })}
@@ -350,7 +335,7 @@ function Methodology({
     <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="space-y-2 pb-3">
         <div className="flex flex-wrap items-center gap-2">
-          <CardTitle className="pharos-kicker">Methodology</CardTitle>
+          <CardTitle as="h2" className="pharos-kicker">Methodology</CardTitle>
           <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border/60">
             {methodology.versionLabel}
           </Badge>
@@ -383,7 +368,7 @@ function Methodology({
         <div>
           <h3 className="pharos-kicker mb-3">Components</h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" aria-label="PSI formula components and their scoring ranges">
               <thead>
                 <tr className="border-b text-left">
                   <th className="pb-2 pr-4 font-medium text-muted-foreground">Component</th>
@@ -429,7 +414,7 @@ function Methodology({
         <div>
           <h3 className="pharos-kicker mb-3">Condition Bands</h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" aria-label="PSI condition bands and their score ranges">
               <thead>
                 <tr className="border-b text-left">
                   <th className="pb-2 pr-4 font-medium text-muted-foreground">Range</th>
@@ -481,7 +466,7 @@ function ContributorsTable({
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="pb-2">
-        <CardTitle className="pharos-kicker">Top Contributors</CardTitle>
+        <CardTitle as="h2" className="pharos-kicker">Top Contributors</CardTitle>
       </CardHeader>
       <CardContent>
         {rows.length === 0 ? (
@@ -501,7 +486,7 @@ function ContributorsTable({
               Long-lasting depegs (over 30 days) receive a scoring depreciation — the percentage in parentheses next to the age shows the remaining impact weight.
             </p>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm" aria-label="Stablecoins currently contributing to PSI score reduction">
                 <thead>
                   <tr className="border-b text-left">
                     <th className="pb-2 pr-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Coin</th>
@@ -523,18 +508,18 @@ function ContributorsTable({
                       )}
                     >
                       <td className="py-2.5 pr-4">
-                        <a
+                        <Link
                           href={buildStablecoinUrl(r.id)}
                           className="pharos-focus-ring flex items-center gap-2 font-medium text-foreground hover:text-blue-700 dark:hover:text-blue-400 transition-colors rounded-sm"
                         >
                           <StablecoinLogo src={logos[r.id]} name={r.symbol} size={22} />
                           <span className={cn(idx === 0 && "font-semibold")}>{r.symbol}</span>
                           {idx === 0 && (
-                            <span className="ml-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                            <span className="ml-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
                               Top
                             </span>
                           )}
-                        </a>
+                        </Link>
                       </td>
                       <td className={cn("py-2.5 pr-4 text-right tabular-nums", r.bps < 0 ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400")}>
                         {r.bps > 0 ? "+" : ""}{(r.bps / 100).toFixed(2)}%
@@ -546,7 +531,7 @@ function ContributorsTable({
                       <td className="py-2.5 pr-4 text-right tabular-nums hidden sm:table-cell font-mono">{r.breadth.toFixed(2)}</td>
                       <td className="py-2.5 pr-4 text-right tabular-nums">
                         <div className="flex items-center justify-end gap-2">
-                          <div className="h-1.5 w-12 overflow-hidden rounded-full bg-muted">
+                          <div className="h-1.5 w-12 overflow-hidden rounded-full bg-muted" aria-hidden="true">
                             <div
                               className="h-full rounded-full bg-foreground/60"
                               style={{ width: `${Math.min(100, (r.total / (rows[0]?.total ?? 1)) * 100)}%` }}
@@ -560,7 +545,7 @@ function ContributorsTable({
                       <td className="py-2.5 text-right tabular-nums">
                         <span className="font-mono text-xs">{r.ageDays < 1 ? "<1d" : `${Math.round(r.ageDays)}d`}</span>
                         {r.factor < 1 && (
-                          <span className="ml-1 text-[10px] text-muted-foreground/60">({Math.round(r.factor * 100)}%)</span>
+                          <span className="ml-1 text-xs text-muted-foreground/60">({Math.round(r.factor * 100)}%)</span>
                         )}
                       </td>
                     </tr>

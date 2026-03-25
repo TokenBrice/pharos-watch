@@ -34,7 +34,7 @@ interface DepegTrackerTableProps {
 }
 
 const DEPEG_TRACKER_COLUMNS: readonly DataTableColumn<DepegTableSortKey>[] = [
-  { id: "rank", label: "#", className: "w-[50px] text-right" },
+  { id: "rank", label: <span aria-label="Rank">#</span>, className: "w-[50px] text-right" },
   { id: "name", label: "Name", className: "w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none" },
   { id: "pegScore", label: <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>, sortKey: "pegScore", className: "text-right" },
   { id: "dewsScore", label: <MethodologyLabel topic="dews">DEWS</MethodologyLabel>, sortKey: "dewsScore", className: "text-right" },
@@ -129,8 +129,9 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                     <span className="font-medium text-sm truncate">{coin.symbol}</span>
                     {trustBadge && (
                       <span
-                        className="rounded-full border border-slate-300/80 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-700 dark:border-slate-600 dark:text-slate-300"
+                        className="rounded-full border border-border/60 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
                         title={`Primary price requires confirmation (${provenanceLabel})`}
+                        aria-label={`Primary price requires confirmation (${provenanceLabel})`}
                       >
                         {trustBadge}
                       </span>
@@ -184,9 +185,9 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                 <TableCell className="text-center hidden xl:table-cell">
                   {coin.dexPriceCheck ? (
                     coin.dexPriceCheck.agrees ? (
-                      <span className="text-green-700 dark:text-green-400 text-sm" title="DEX price agrees">&#10003;</span>
+                      <span className="text-emerald-700 dark:text-emerald-400 text-sm" title="DEX price agrees" aria-label="DEX price agrees">&#10003;</span>
                     ) : (
-                      <span className="text-red-700 dark:text-red-400 text-sm" title="DEX price disagrees">&#10007;</span>
+                      <span className="text-destructive text-sm" title="DEX price disagrees" aria-label="DEX price disagrees">&#10007;</span>
                     )
                   ) : (
                     <span className="text-muted-foreground text-sm">—</span>

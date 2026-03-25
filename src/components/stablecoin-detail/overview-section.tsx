@@ -123,24 +123,40 @@ export function OverviewSection({
     ? buildReserveFetchNotice(reserveFetchError, reserves)
     : null;
 
+  const hasRightColumn = hasDews || hasPriceTransparency;
+  const hasAnything = hasLeft || hasRightColumn;
+
+  if (!hasAnything) {
+    return <section id="overview" />;
+  }
+
+  const rightColumnContent = hasRightColumn ? (
+    <div className="flex flex-col gap-6">
+      {hasDews && <DEWSDetail stablecoinId={stablecoinId} />}
+      {hasPriceTransparency && coinData && (
+        <div id="price-transparency">
+          <PriceTransparencyCard
+            coinData={coinData}
+            consensusSources={consensusSources ?? []}
+            agreeSources={agreeSources ?? []}
+            dexPriceCheck={dexPriceCheck}
+          />
+        </div>
+      )}
+    </div>
+  ) : null;
+
+  if (!hasLeft) {
+    return (
+      <section id="overview">
+        {rightColumnContent}
+      </section>
+    );
+  }
+
   return (
     <section id="overview">
-      {!hasLeft && !hasDews && !hasPriceTransparency ? null : !hasLeft ? (
-        <div className="flex flex-col gap-6">
-          {hasDews && <DEWSDetail stablecoinId={stablecoinId} />}
-          {hasPriceTransparency && coinData && (
-            <div id="price-transparency">
-              <PriceTransparencyCard
-                coinData={coinData}
-                consensusSources={consensusSources ?? []}
-                agreeSources={agreeSources ?? []}
-                dexPriceCheck={dexPriceCheck}
-              />
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className={`grid grid-cols-1 gap-6 ${hasDews || hasPriceTransparency ? "lg:grid-cols-2" : ""}`}>
+      <div className={`grid grid-cols-1 gap-6 ${hasRightColumn ? "lg:grid-cols-2" : ""}`}>
           <div className="flex flex-col gap-6">
             {summary && <AiSummary {...summary} />}
             {reserveFetchNotice ? (
@@ -239,23 +255,8 @@ export function OverviewSection({
               <RedemptionBackstopCard entry={redemptionBackstop} />
             ) : null}
           </div>
-          {(hasDews || hasPriceTransparency) && (
-            <div className="flex flex-col gap-6">
-              {hasDews && <DEWSDetail stablecoinId={stablecoinId} />}
-              {hasPriceTransparency && coinData && (
-                <div id="price-transparency">
-                  <PriceTransparencyCard
-                    coinData={coinData}
-                    consensusSources={consensusSources ?? []}
-                    agreeSources={agreeSources ?? []}
-                    dexPriceCheck={dexPriceCheck}
-                  />
-                </div>
-              )}
-            </div>
-          )}
+          {rightColumnContent}
         </div>
-      )}
     </section>
   );
 }

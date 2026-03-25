@@ -170,6 +170,7 @@ function BlacklistTooltip({
   payload?: Array<BlacklistTooltipEntry>;
   label?: string;
 }) {
+  if (!active || !payload) return null;
   const { rows, total } = getBlacklistTooltipSummary(payload);
   if (!rows.length && total <= 0) return null;
 

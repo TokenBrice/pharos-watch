@@ -187,7 +187,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                       {coverageBadge && (
                         <span
                           className={cn(
-                            "inline-flex rounded-full border px-1.5 py-0.5 text-[10px] font-medium leading-none",
+                            "inline-flex rounded-full border px-1.5 py-0.5 text-xs font-medium leading-none",
                             coverageBadge.className,
                           )}
                         >
@@ -251,7 +251,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                       {formatCurrency(coin.netFlow30dUsd)}
                     </span>
                     {coin.coverage?.has30dWindow === false && (
-                      <span className="text-[10px] text-muted-foreground">partial</span>
+                      <span className="text-xs text-muted-foreground">partial</span>
                     )}
                   </div>
                 </TableCell>
@@ -274,7 +274,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                       {formatCurrency(coin.netFlow90dUsd)}
                     </span>
                     {coin.coverage?.has90dWindow === false && (
-                      <span className="text-[10px] text-muted-foreground">partial</span>
+                      <span className="text-xs text-muted-foreground">partial</span>
                     )}
                   </div>
                 </TableCell>

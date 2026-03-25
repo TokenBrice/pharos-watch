@@ -40,7 +40,7 @@ function TrendIndicator({ trend, score }: { trend?: "up" | "down" | "stable" | n
   const isPositive = trend === "up";
   return (
     <span className={cn("flex items-center gap-0.5 text-[10px] font-medium", isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
-      {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+      {isPositive ? <TrendingUp className="h-3 w-3" aria-hidden="true" /> : <TrendingDown className="h-3 w-3" aria-hidden="true" />}
       {score != null && <span className="tabular-nums">{score}</span>}
     </span>
   );

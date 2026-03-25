@@ -5,15 +5,13 @@ import {
   ComposedChart,
   Area,
   Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
+import { TimeXAxis, MonoYAxis, TimeGrid } from "@/components/chart-primitives";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { CHART_GREEN, CHART_RED, CHART_BLUE, CHART_HEIGHT } from "@/lib/chart-colors";
 import type { MintBurnHourlyBucket } from "@shared/types";
@@ -117,24 +115,9 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
                 <stop offset="95%" stopColor={CHART_RED} stopOpacity={0.05} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-            <XAxis
-              dataKey="ts"
-              type="number"
-              scale="time"
-              domain={["dataMin", "dataMax"]}
-              tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
-              tickLine={false}
-              axisLine={false}
-              minTickGap={72}
-              tickFormatter={formatXAxisTick}
-            />
-            <YAxis
-              tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(val: number) => formatCurrency(val, 0)}
-            />
+            <TimeGrid />
+            <TimeXAxis dataKey="ts" minTickGap={72} tickFormatter={formatXAxisTick} />
+            <MonoYAxis tickFormatter={(val: number) => formatCurrency(val, 0)} />
             <Tooltip
               content={<FlowTooltip />}
               cursor={{ stroke: "var(--color-border)", strokeWidth: 1 }}
@@ -173,7 +156,7 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
         </ResponsiveContainer>
       </div>
       {hasInterpolated && (
-        <p className="mt-1 text-[11px] text-muted-foreground/60">
+        <p className="mt-1 text-xs text-muted-foreground">
           Gaps in hourly data are filled with zero values.
         </p>
       )}
@@ -190,7 +173,7 @@ function FlowTooltip({
   payload?: Array<{ dataKey: string; value: number; color: string; name: string }>;
   label?: number;
 }) {
-  if (!payload || !label) return null;
+  if (!active || !payload || !label) return null;
 
   const time = new Date(label).toLocaleString("en-US", {
     month: "short",

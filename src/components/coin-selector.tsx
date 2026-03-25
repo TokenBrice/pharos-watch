@@ -135,7 +135,7 @@ export function CoinSelector({
         </span>
         <button
           onClick={onRemove}
-          className="pharos-focus-ring ml-auto text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded"
+          className="pharos-focus-ring ml-auto flex min-h-11 min-w-11 items-center justify-center text-muted-foreground hover:text-foreground transition-colors rounded sm:min-h-9 sm:min-w-9"
           aria-label={`Remove ${selected.name}`}
         >
           <X className="h-4 w-4" />
@@ -164,7 +164,16 @@ export function CoinSelector({
             <input
               ref={inputRef}
               type="text"
+              role="combobox"
               aria-label="Search coins"
+              aria-expanded={open}
+              aria-controls="coin-selector-listbox"
+              aria-autocomplete="list"
+              aria-activedescendant={
+                focusedIndex >= 0
+                  ? `coin-option-${filtered[focusedIndex]?.id}`
+                  : undefined
+              }
               placeholder="Search by name or symbol..."
               value={search}
               onChange={(e) => {
@@ -175,12 +184,8 @@ export function CoinSelector({
             />
           </div>
           <ul
+            id="coin-selector-listbox"
             role="listbox"
-            aria-activedescendant={
-              focusedIndex >= 0
-                ? `coin-option-${filtered[focusedIndex]?.id}`
-                : undefined
-            }
             className="max-h-56 overflow-y-auto px-1 pb-1"
           >
             {filtered.length === 0 && (

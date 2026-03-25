@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import type { StablecoinData, StablecoinMeta, ReportCardGrade } from "@shared/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { formatCurrency, formatNativePrice, formatScore, getNetColor, getNetPrefix } from "@shared/lib/format";
@@ -100,7 +100,7 @@ function bestGradeIndex(grades: (ReportCardGrade | null)[]): number | null {
 
 const BEST_CLASS = "text-green-600 dark:text-green-400 font-semibold";
 
-export function ComparisonTable({ coins, pegRates, logos, detailErrors }: ComparisonTableProps) {
+export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, logos, detailErrors }: ComparisonTableProps) {
   // Pre-compute row data
   const rowData = useMemo(() => {
     const prices = coins.map(({ data, meta }) => {
@@ -187,8 +187,8 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
             <div className="flex items-center gap-2">
               <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={28} />
               <div className="min-w-0">
-                <span className="block text-sm font-semibold">{coin.symbol}</span>
-                <span className="block truncate text-xs text-muted-foreground">{coin.name}</span>
+                <h3 className="text-sm font-semibold">{coin.symbol}</h3>
+                <p className="truncate text-xs text-muted-foreground">{coin.name}</p>
               </div>
               {detailErrors?.[coin.id] && (
                 <span className="text-xs text-destructive ml-auto">Chart unavailable</span>
@@ -236,7 +236,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
 
       {/* Desktop: side-by-side table */}
       <div className="hidden sm:block">
-        <div className="pharos-table-shell overflow-x-auto">
+        <div className="pharos-table-shell overflow-x-auto" role="region" aria-label="Comparison table" tabIndex={0}>
           <Table>
             <TableHeader>
               <TableRow>
@@ -397,4 +397,4 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
       </div>
     </>
   );
-}
+});

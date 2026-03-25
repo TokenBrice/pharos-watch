@@ -2,7 +2,7 @@
 
 import { useMemo, useCallback } from "react";
 import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ReferenceArea, ReferenceLine } from "recharts";
-import { CHART_BLUE, CHART_GREEN, CHART_ORANGE, CHART_RED } from "@/lib/chart-colors";
+import { CHART_BLUE, CHART_GREEN, CHART_ORANGE, CHART_RED, CHART_SLATE } from "@/lib/chart-colors";
 import { PharosChartTooltip } from "@/components/pharos-chart-tooltip";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
@@ -111,7 +111,7 @@ function LogoScatterPoint({ cx, cy, payload, emphasized = false, compact = false
 }
 
 function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: ScatterDataPoint }> }) {
-  if (!payload || payload.length === 0) return null;
+  if (!active || !payload || payload.length === 0) return null;
   const d = payload[0].payload;
   return (
     <PharosChartTooltip active={active} className="text-xs">
@@ -234,7 +234,11 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
 
   return (
     <div className="space-y-3">
-      <div className="h-[600px] overflow-hidden rounded-2xl border-2 border-border/80 bg-card/60 p-2 sm:h-[850px] sm:p-4">
+      <div
+        className="h-[600px] overflow-hidden rounded-2xl border-2 border-border/80 bg-card/60 p-2 sm:h-[850px] sm:p-4"
+        role="figure"
+        aria-label={`Yield vs safety scatter plot with ${data.length} stablecoins. Click a logo to open its detail page.`}
+      >
         <div ref={chartContainerRef} className="h-full w-full">
           {isChartReady ? (
             <ScatterChart
@@ -317,7 +321,7 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
                   x2={Math.min(SAFETY_SCORE_THRESHOLD, safetyDomain[1])}
                   y1={plotYDomain[0]}
                   y2={riskFreeRate}
-                  fill="#94a3b8"
+                  fill={CHART_SLATE}
                   fillOpacity={0.07}
                   label={
                     isMobile
@@ -325,7 +329,7 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
                       : {
                           value: "Why Bother?",
                           position: "insideBottomLeft",
-                          fill: "#94a3b8",
+                          fill: CHART_SLATE,
                           fontSize: 13,
                           opacity: 0.9,
                           fontWeight: 700,
@@ -334,17 +338,17 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
                 />
               ) : null}
 
-              <ReferenceLine x={SAFETY_SCORE_THRESHOLD} stroke="#94a3b8" strokeOpacity={0.35} strokeDasharray="3 4" />
+              <ReferenceLine x={SAFETY_SCORE_THRESHOLD} stroke={CHART_SLATE} strokeOpacity={0.35} strokeDasharray="3 4" />
 
               {/* Risk-free rate reference line */}
               <ReferenceLine
                 y={riskFreeRate}
-                stroke="#94a3b8"
+                stroke={CHART_SLATE}
                 strokeDasharray="4 4"
                 label={
                   isMobile
                     ? undefined
-                    : { value: `T-Bill ${riskFreeRate.toFixed(2)}%`, position: "right", fill: "#94a3b8", fontSize: 13, fontWeight: 600 }
+                    : { value: `T-Bill ${riskFreeRate.toFixed(2)}%`, position: "right", fill: CHART_SLATE, fontSize: 13, fontWeight: 600 }
                 }
               />
 
@@ -415,12 +419,12 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
         <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
           <span className="text-foreground font-medium">Sweet spot</span>
-          <span className="hidden sm:inline">= above {riskFreeRate.toFixed(2)}% and right of {SAFETY_SCORE_THRESHOLD}</span>
+          <span className="hidden md:inline">= above {riskFreeRate.toFixed(2)}% and right of {SAFETY_SCORE_THRESHOLD}</span>
         </span>
         <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
           <span className="text-foreground font-medium">Danger zone</span>
-          <span className="hidden sm:inline">= high APY on low safety</span>
+          <span className="hidden md:inline">= high APY on low safety</span>
         </span>
         {apyAxis.clippedCount > 0 && apyAxis.clipThreshold !== null ? (
           <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5">
