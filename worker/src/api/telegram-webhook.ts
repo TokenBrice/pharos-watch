@@ -276,37 +276,29 @@ const completionHandlers: CompletionHandlerMap = {
   },
 };
 
-async function runActionResolutionFlow<TActionType extends PendingActionType>({
-  context,
-  botToken,
-  tickers,
-  actionType,
-  actionPayload,
-  alertTypes,
-  initialCoins,
-  clearPendingOnTerminal,
-}: {
-  context: TelegramActionContext;
-  botToken: string;
+type BoundActionRunner = <TActionType extends PendingActionType>(opts: {
   tickers: string[];
   actionType: TActionType;
   actionPayload: ActionPayloadMap[TActionType];
   alertTypes?: Set<string>;
   initialCoins?: ResolvedCoin[];
   clearPendingOnTerminal?: boolean;
-}): Promise<void> {
-  await runCoinResolutionFlow({
-    db: context.db,
-    chatId: context.chatId,
-    tickers,
-    initialCoins,
-    actionType,
-    actionPayload,
-    alertTypes,
-    clearPendingOnTerminal,
-    reply: (message) => replyToChat(context.chatId, message, botToken),
-    onComplete: (coins, options) => completionHandlers[actionType](context, coins, actionPayload, options),
-  });
+}) => Promise<void>;
+
+function makeActionRunner(context: TelegramActionContext, botToken: string): BoundActionRunner {
+  return ({ tickers, actionType, actionPayload, alertTypes, initialCoins, clearPendingOnTerminal }) =>
+    runCoinResolutionFlow({
+      db: context.db,
+      chatId: context.chatId,
+      tickers,
+      initialCoins,
+      actionType,
+      actionPayload,
+      alertTypes,
+      clearPendingOnTerminal,
+      reply: (message) => replyToChat(context.chatId, message, botToken),
+      onComplete: (coins, options) => completionHandlers[actionType](context, coins, actionPayload, options),
+    });
 }
 
 async function handleSubscribe(
@@ -326,7 +318,6 @@ async function handleSubscribe(
       await replyToChat(chatId, buildNotFoundMessage(invalidTicker, suggestion), botToken);
       return;
     }
-
     await replyToChat(chatId, escapeHtml(validationError), botToken);
     return;
   }
@@ -342,9 +333,8 @@ async function handleSubscribe(
     return;
   }
 
-  await runActionResolutionFlow({
-    context: { db, chatId, username },
-    botToken,
+  const runAction = makeActionRunner({ db, chatId, username }, botToken);
+  await runAction({
     tickers: parsed.tickers,
     actionType: "subscribe",
     actionPayload: { alertTypes: [...parsed.alertTypes] },
@@ -382,9 +372,8 @@ async function handleUnsubscribe(db: D1Database, chatId: string, args: string, b
     return;
   }
 
-  await runActionResolutionFlow({
-    context: { db, chatId, username: null },
-    botToken,
+  const runAction = makeActionRunner({ db, chatId, username: null }, botToken);
+  await runAction({
     tickers: trimmedArgs.split(/[\s,]+/).filter(Boolean),
     actionType: "unsubscribe",
     actionPayload: {},
@@ -410,20 +399,14 @@ async function handleSet(
       await replyToChat(chatId, escapeHtml(globalError), botToken);
       return;
     }
-
     await applyGlobalSetting(db, chatId, username, parsed);
     const subscriber = await loadSubscriberByChat(db, chatId);
     await replyToChat(chatId, buildGlobalAlertSummaryMessage("Updated all-stablecoin alerts.", subscriber), botToken);
     return;
   }
 
-  await runActionResolutionFlow({
-    context: { db, chatId, username },
-    botToken,
-    tickers: [parsed.ticker],
-    actionType: "set",
-    actionPayload: parsed,
-  });
+  const runAction = makeActionRunner({ db, chatId, username }, botToken);
+  await runAction({ tickers: [parsed.ticker], actionType: "set", actionPayload: parsed });
 }
 
 async function handleMute(
@@ -515,42 +498,28 @@ async function handleDisambiguationReply(
     selectedIndices.map((index) => pending.candidates[index]).filter((coin): coin is ResolvedCoin => Boolean(coin)),
   );
 
+  const initialCoins = dedupeCoins([...pending.resolvedCoins, ...selectedCoins]);
+  const sharedOpts = { tickers: pending.remainingTickers, initialCoins, clearPendingOnTerminal: true as const };
+
   switch (pending.actionType) {
     case "subscribe": {
-      await runActionResolutionFlow({
-        context: { db, chatId, username },
-        botToken,
-        tickers: pending.remainingTickers,
-        initialCoins: dedupeCoins([...pending.resolvedCoins, ...selectedCoins]),
+      const runAction = makeActionRunner({ db, chatId, username }, botToken);
+      await runAction({
+        ...sharedOpts,
         actionType: "subscribe",
         actionPayload: { alertTypes: [...pending.alertTypes] },
         alertTypes: pending.alertTypes,
-        clearPendingOnTerminal: true,
       });
       return;
     }
     case "unsubscribe": {
-      await runActionResolutionFlow({
-        context: { db, chatId, username: null },
-        botToken,
-        tickers: pending.remainingTickers,
-        initialCoins: dedupeCoins([...pending.resolvedCoins, ...selectedCoins]),
-        actionType: "unsubscribe",
-        actionPayload: {},
-        clearPendingOnTerminal: true,
-      });
+      const runAction = makeActionRunner({ db, chatId, username: null }, botToken);
+      await runAction({ ...sharedOpts, actionType: "unsubscribe", actionPayload: {} });
       return;
     }
     case "set": {
-      await runActionResolutionFlow({
-        context: { db, chatId, username },
-        botToken,
-        tickers: pending.remainingTickers,
-        initialCoins: dedupeCoins([...pending.resolvedCoins, ...selectedCoins]),
-        actionType: "set",
-        actionPayload: pending.command,
-        clearPendingOnTerminal: true,
-      });
+      const runAction = makeActionRunner({ db, chatId, username }, botToken);
+      await runAction({ ...sharedOpts, actionType: "set", actionPayload: pending.command });
       return;
     }
   }
