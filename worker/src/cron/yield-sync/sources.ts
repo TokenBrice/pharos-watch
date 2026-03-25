@@ -36,8 +36,18 @@ const BIMA_SUSBD_SOURCE_LABEL = "BIMA savings (sUSBD)";
 const BIMA_SUSBD_SOURCE_TYPE = "lending-vault";
 const BIMA_EARN_POOLS_URL =
   "https://bima.money/api/earn/pools?network=Ethereum&user=0x0000000000000000000000000000000000000000";
+const HASHNOTE_USYC_SOURCE_KEY = "protocol-api:hashnote-usyc";
+const HASHNOTE_USYC_SOURCE_LABEL = "Hashnote USYC";
+const HASHNOTE_USYC_SOURCE_TYPE = "nav-appreciation";
+const HASHNOTE_PRICE_REPORTS_URL = "https://usyc.hashnote.com/api/price-reports";
 
 const MAX_DL_CACHE_AGE_SEC = 6 * 3600; // 6 hours (3× the expected 2-hour DEX sync refresh)
+
+interface HashnoteReport {
+  roundId: string;
+  price: string;
+  timestamp: string;
+}
 
 interface BimaEarnPool {
   id?: string;
@@ -416,6 +426,54 @@ export async function fetchBimaSusbdSource(signal?: AbortSignal): Promise<Resolv
       throw error instanceof Error ? error : new Error(String(error));
     }
     console.warn("[yield] BIMA sUSBD source failed:", error);
+    return null;
+  }
+}
+
+export async function fetchHashnoteUsycSource(signal?: AbortSignal): Promise<ResolvedYield | null> {
+  try {
+    const res = await fetchWithRetry(HASHNOTE_PRICE_REPORTS_URL, {
+      headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal,
+    }, 1);
+    if (!res?.ok) return null;
+
+    const body = (await res.json()) as { entity?: string; data?: HashnoteReport[] };
+    const reports = body.data;
+    if (!Array.isArray(reports) || reports.length < 2) return null;
+
+    const latest = reports[0];
+    const latestPrice = parseFloat(latest.price);
+    const latestTimeSec = parseInt(latest.timestamp, 10);
+    if (!Number.isFinite(latestPrice) || latestPrice <= 0) return null;
+    if (!Number.isFinite(latestTimeSec)) return null;
+
+    const targetAnchorSec = latestTimeSec - 7 * 86400;
+    let anchor = reports[reports.length - 1];
+    for (const report of reports) {
+      const ts = parseInt(report.timestamp, 10);
+      if (Number.isFinite(ts) && ts <= targetAnchorSec) { anchor = report; break; }
+    }
+    const anchorPrice = parseFloat(anchor.price);
+    const anchorTimeSec = parseInt(anchor.timestamp, 10);
+    if (!Number.isFinite(anchorPrice) || anchorPrice <= 0) return null;
+
+    const daysDelta = (latestTimeSec - anchorTimeSec) / 86400;
+    if (daysDelta < 1) return null;
+
+    const apy = (Math.pow(latestPrice / anchorPrice, 365.25 / daysDelta) - 1) * 100;
+    if (!Number.isFinite(apy) || apy < 0) return null;
+
+    return {
+      currentApy: apy, apyBase: apy, apyReward: null,
+      sourcePool: null, sourceTvlUsd: null, dataSource: "protocol-api",
+      exchangeRate: null, sourceKey: HASHNOTE_USYC_SOURCE_KEY,
+      yieldSource: HASHNOTE_USYC_SOURCE_LABEL, yieldType: HASHNOTE_USYC_SOURCE_TYPE,
+      sourceObservedAt: latestTimeSec,
+      comparisonAnchorObservedAt: anchorTimeSec,
+    };
+  } catch (error) {
+    if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+    console.warn("[yield] Hashnote USYC source failed:", error);
     return null;
   }
 }

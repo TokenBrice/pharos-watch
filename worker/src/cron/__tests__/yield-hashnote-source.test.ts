@@ -1,0 +1,40 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
+
+vi.mock("../../lib/fetch-retry", () => ({
+  fetchWithRetry: vi.fn(async (url: string, init?: RequestInit) => fetch(url, init)),
+}));
+
+import { fetchHashnoteUsycSource } from "../yield-sync/sources";
+
+describe("fetchHashnoteUsycSource", () => {
+  afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+  it("derives APY from USYC price reports", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const sevenDaysAgoSec = nowSec - 7 * 86400;
+    mockFetch([{
+      match: "usyc.hashnote.com/api/price-reports",
+      body: {
+        entity: "usyc_price_report",
+        data: [
+          { roundId: "392", price: "1.120246648414663082", timestamp: String(nowSec), principal: "2453604554.64", interest: "236175.55", balance: "2453840730.19", totalSupply: "2190425756.78094", decimals: 6, fee: "21082.459861", txhash: "0xabc" },
+          { roundId: "385", price: "1.119046648414663082", timestamp: String(sevenDaysAgoSec), principal: "2400000000.00", interest: "200000.00", balance: "2400200000.00", totalSupply: "2190000000.00", decimals: 6, fee: "20000.00", txhash: "0xdef" },
+        ],
+      },
+    }]);
+
+    const result = await fetchHashnoteUsycSource();
+    expect(result).toEqual(expect.objectContaining({
+      dataSource: "protocol-api",
+      sourceKey: "protocol-api:hashnote-usyc",
+      yieldSource: "Hashnote USYC",
+    }));
+    expect(result!.currentApy).toBeGreaterThan(0);
+  });
+
+  it("returns null on HTTP error", async () => {
+    mockFetch([{ match: "usyc.hashnote.com", status: 500, body: "" }]);
+    await expect(fetchHashnoteUsycSource()).resolves.toBeNull();
+  });
+});

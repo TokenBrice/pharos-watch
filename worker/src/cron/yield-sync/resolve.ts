@@ -25,11 +25,12 @@ import {
   YIELD_VARIANT_MAP,
 } from "../yield-config";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { fetchBimaSusbdSource, fetchBprotocolLqtyOnlySource, getPriceDerivedApy } from "./sources";
+import { fetchBimaSusbdSource, fetchBprotocolLqtyOnlySource, fetchHashnoteUsycSource, getPriceDerivedApy } from "./sources";
 import type { DlPool, ResolvedYieldEntry } from "./types";
 
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
 const BIMA_USBD_ID = "usbd-bima";
+const HASHNOTE_USYC_ID = "usyc-hashnote";
 
 interface SafetyScoreSnapshot {
   score: number;
@@ -271,6 +272,17 @@ export async function resolveYieldSources({
           symbol,
           yield: bimaYield,
         });
+        hasAnySource = true;
+      }
+    }
+
+    if (
+      id === HASHNOTE_USYC_ID &&
+      !resolved.some((e) => e.id === id && e.yield?.sourceKey === "protocol-api:hashnote-usyc")
+    ) {
+      const hashnoteYield = await fetchHashnoteUsycSource(signal);
+      if (hashnoteYield) {
+        resolved.push({ id, symbol, yield: hashnoteYield });
         hasAnySource = true;
       }
     }
