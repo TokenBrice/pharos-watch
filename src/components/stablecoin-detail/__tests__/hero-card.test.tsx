@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { HeroCard } from "@/components/stablecoin-detail/hero-card";
-import type { DexLiquidityData, PegSummaryCoin, StablecoinData, StablecoinMeta } from "@shared/types";
+import type { DexLiquidityData, PegSummaryCoin, ReportCard, StablecoinData, StablecoinMeta, StressSignalEntry, YieldRanking } from "@shared/types";
 
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
@@ -33,14 +33,14 @@ const coin: StablecoinMeta = {
   id: "usdc-circle",
   symbol: "USDC",
   name: "USD Coin",
-  status: "live",
-  hidden: false,
-  peggedAsset: "usd",
+  canBeBlacklisted: true,
+  status: "active",
   tags: ["major", "fiat-backed"],
   flags: {
-    backing: "fiat-backed",
+    backing: "rwa-backed",
     governance: "centralized",
     pegCurrency: "USD",
+    rwa: true,
   },
 };
 
@@ -78,30 +78,128 @@ const pegScoreResult: PegSummaryCoin = {
 };
 
 const liquidityData: DexLiquidityData = {
-  stablecoin: "usdc-circle",
-  symbol: "USDC",
-  liquidityScore: 82,
   totalTvlUsd: 125_000_000,
+  totalVolume24hUsd: 250_000_000,
+  totalVolume7dUsd: 1_500_000_000,
   poolCount: 24,
+  pairCount: 24,
   chainCount: 3,
-  dexCount: 8,
-  volume24hUsd: 250_000_000,
-  volume7dUsd: 1_500_000_000,
+  protocolTvl: {},
+  chainTvl: {},
   topPools: [],
-  chainBreakdown: [],
-  protocolBreakdown: [],
-  dexPrices: [],
+  liquidityScore: 82,
   concentrationHhi: 0.2,
-  largestPoolShare: 0.15,
   depthStability: 0.92,
-  marketDepthShare: 0.8,
-  scoreComponents: {
-    size: 80,
-    distribution: 75,
-    organicity: 70,
-    durability: 85,
-  },
+  tvlChange24h: null,
+  tvlChange7d: null,
   updatedAt: 1_700_000_000,
+  dexPriceUsd: null,
+  dexDeviationBps: null,
+  priceSourceCount: null,
+  priceSourceTvl: null,
+  priceSources: null,
+  effectiveTvlUsd: 125_000_000,
+  avgPoolStress: null,
+  weightedBalanceRatio: null,
+  organicFraction: null,
+  durabilityScore: null,
+  coverageClass: "primary",
+  coverageConfidence: 1,
+  liquidityEvidenceClass: "measured",
+  hasMeasuredLiquidityEvidence: true,
+  trendworthy: true,
+  sourceMix: {},
+  balanceMeasuredTvlUsd: 125_000_000,
+  organicMeasuredTvlUsd: 125_000_000,
+  scoreComponents: {
+    tvlDepth: 80,
+    volumeActivity: 75,
+    poolQuality: 70,
+    durability: 85,
+    pairDiversity: 78,
+  },
+};
+
+const reportCardWithInheritedBlacklistRisk: ReportCard = {
+  id: "usdc-circle",
+  name: "USD Coin",
+  symbol: "USDC",
+  overallGrade: "B+",
+  overallScore: 79,
+  baseScore: 79,
+  dimensions: {
+    pegStability: { grade: "A", score: 95, detail: "ok" },
+    liquidity: { grade: "B+", score: 82, detail: "ok" },
+    resilience: { grade: "B", score: 70, detail: "ok" },
+    decentralization: { grade: "C", score: 55, detail: "ok" },
+    dependencyRisk: { grade: "B", score: 73, detail: "ok" },
+  },
+  ratedDimensions: 5,
+  rawInputs: {
+    pegScore: 95,
+    activeDepeg: true,
+    depegEventCount: 2,
+    lastEventAt: null,
+    liquidityScore: 82,
+    effectiveExitScore: 82,
+    redemptionBackstopScore: null,
+    redemptionRouteFamily: null,
+    redemptionModelConfidence: null,
+    redemptionUsedForLiquidity: false,
+    redemptionImmediateCapacityUsd: null,
+    redemptionImmediateCapacityRatio: null,
+    concentrationHhi: 0.2,
+    bluechipGrade: null,
+    canBeBlacklisted: "possible-inherited",
+    chainTier: "ethereum",
+    deploymentModel: "multi-chain",
+    collateralQuality: "mixed",
+    custodyModel: "institutional-regulated",
+    governanceTier: "centralized",
+    governanceQuality: "single-entity",
+    dependencies: [],
+    navToken: false,
+    collateralFromLive: false,
+  },
+  isDefunct: false,
+};
+
+const yieldRanking: YieldRanking = {
+  id: "usdc-circle",
+  symbol: "USDC",
+  name: "USD Coin",
+  currentApy: 4.8,
+  apy7d: 4.7,
+  apy30d: 4.6,
+  apyBase: 4.6,
+  apyReward: 0,
+  yieldSource: "Circle Treasury",
+  yieldSourceUrl: "https://example.com/yield",
+  yieldType: "nav-appreciation",
+  dataSource: "rate-derived",
+  sourceTvlUsd: 1_000_000_000,
+  pharosYieldScore: 70,
+  safetyScore: 79,
+  safetyGrade: "B+",
+  yieldToRisk: 3.2,
+  excessYield: 0.85,
+  yieldStability: 0.92,
+  apyVariance30d: 0.1,
+  apyMin30d: 4.4,
+  apyMax30d: 4.8,
+  warningSignals: [],
+  altSources: [],
+  provenance: null,
+};
+
+const stressSignal: StressSignalEntry = {
+  score: 31,
+  band: "WATCH",
+  signals: {
+    supply: { value: 31, available: true },
+  },
+  computedAt: 1_700_000_000,
+  methodologyVersion: "v1",
 };
 
 describe("HeroCard", () => {
@@ -117,16 +215,15 @@ describe("HeroCard", () => {
         prevDay={995_000_000}
         prevWeek={980_000_000}
         prevMonth={970_000_000}
-        prev90d={950_000_000}
         pegRef={1}
         deviationBps={-2}
         gaugeDeviationBps={2}
-        usesFallbackPegRate={false}
         pegScoreResult={pegScoreResult}
         recordedDepegEventCount={3}
-        pegScoreBorderClass="border-cyan-500/20"
         liquidityData={liquidityData}
-        liqBorderClass="border-emerald-500/20"
+        yieldRanking={yieldRanking}
+        stressSignal={stressSignal}
+        reportCard={null}
         onOpenFeedback={() => {}}
       />,
     );
@@ -139,6 +236,55 @@ describe("HeroCard", () => {
     expect(html).toContain("Report issue");
     expect(html).toContain("Active depeg");
     expect(html).toContain("Liquidity");
+    expect(html).toContain("Blacklistable");
+    expect(html).toContain("Excess Yield");
+    expect(html).toContain("+0.85%");
+    expect(html).toContain("DEWS");
+    expect(html).toContain("Watch");
+    expect(html).not.toContain("Issuer controls");
     expect(html).toContain("Compare");
+  });
+
+  it("prefers resolved report-card blacklist status for inherited-risk coins", () => {
+    const inheritedCoin: StablecoinMeta = {
+      ...coin,
+      id: "usde-ethena",
+      name: "Ethena USDe",
+      symbol: "USDe",
+      canBeBlacklisted: undefined,
+      flags: {
+        ...coin.flags,
+        governance: "centralized-dependent",
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <HeroCard
+        coin={inheritedCoin}
+        coinData={{ ...coinData, id: "usde-ethena", name: "Ethena USDe", symbol: "USDe" }}
+        logoSrc="/logos/usde.svg"
+        isNavToken={false}
+        mcap={1_000_000_000}
+        supply={1_000_000_000}
+        prevDay={995_000_000}
+        prevWeek={980_000_000}
+        prevMonth={970_000_000}
+        pegRef={1}
+        deviationBps={-2}
+        gaugeDeviationBps={2}
+        pegScoreResult={pegScoreResult}
+        recordedDepegEventCount={3}
+        liquidityData={liquidityData}
+        yieldRanking={null}
+        stressSignal={null}
+        reportCard={{ ...reportCardWithInheritedBlacklistRisk, id: "usde-ethena", name: "Ethena USDe", symbol: "USDe" }}
+        onOpenFeedback={() => {}}
+      />,
+    );
+
+    expect(html).toContain("Blacklistable");
+    expect(html).toContain("Possible");
+    expect(html).not.toContain("Inherited");
+    expect(html).not.toContain("No issuer controls");
   });
 });

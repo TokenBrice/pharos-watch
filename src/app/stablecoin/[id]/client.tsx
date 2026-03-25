@@ -267,6 +267,8 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
           pegScoreResult={viewModel.pegScoreResult}
           recordedDepegEventCount={depegHistoryData?.total ?? null}
           liquidityData={viewModel.liquidityData}
+          yieldRanking={viewModel.yieldRanking}
+          stressSignal={viewModel.stressSignal}
           reportCard={viewModel.reportCard ?? null}
           onOpenFeedback={() => setFeedbackOpen(true)}
         />

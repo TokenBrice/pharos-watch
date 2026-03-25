@@ -6,6 +6,8 @@ import {
   usePegSummary,
   useRedemptionBackstops,
   useReportCards,
+  useStressSignals,
+  useYieldRankings,
 } from "@/hooks/api-hooks";
 import { useSupplyHistory, useStablecoins } from "@/hooks/use-stablecoins";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
@@ -70,6 +72,8 @@ export function useStablecoinDetailViewModel({
     error: redemptionBackstopsError,
     refetch: refetchRedemptionBackstops,
   } = useRedemptionBackstops();
+  const { data: yieldRankingsData } = useYieldRankings();
+  const { data: stressSignalsData } = useStressSignals();
   const { data: flowsData, isLoading: isFlowsLoading } = useMintBurnFlows();
   const liveReserves = useStablecoinReserves(id, !!coin.liveReservesConfig);
 
@@ -117,6 +121,8 @@ export function useStablecoinDetailViewModel({
     redemptionBackstopsData,
     rbUpdatedAt,
     redemptionBackstopsError,
+    yieldRankingsData,
+    stressSignalsData,
     flowsData,
     isFlowsLoading,
     liveReserves: liveReserves.reserveResult,

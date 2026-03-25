@@ -8,19 +8,35 @@ import { PegGauge } from "@/components/peg-gauge";
 import { ShareButton } from "@/components/share-button";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Card } from "@/components/ui/card";
-import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import {
+  BACKING_LABELS,
+  GOVERNANCE_LABELS,
+  PEG_LABELS_SHORT,
+  THREAT_BAND_LABELS,
+  isThreatBand,
+} from "@shared/lib/classification";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
 import {
   formatCurrency,
   formatNativePrice,
   formatPegDeviation,
   formatPercentChange,
+  formatSignedPercent,
   formatSupply,
 } from "@shared/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
+import { isBlacklistable } from "@shared/lib/report-cards";
 import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severity-colors";
-import type { DexLiquidityData, PegSummaryCoin, ReportCard, StablecoinData, StablecoinMeta } from "@shared/types";
+import type {
+  DexLiquidityData,
+  PegSummaryCoin,
+  ReportCard,
+  StablecoinData,
+  StablecoinMeta,
+  StressSignalEntry,
+  YieldRanking,
+} from "@shared/types";
 import { MethodologyLabel } from "@/components/methodology-hint";
 
 interface HeroCardProps {
@@ -39,6 +55,8 @@ interface HeroCardProps {
   pegScoreResult: PegSummaryCoin | null;
   recordedDepegEventCount: number | null;
   liquidityData: DexLiquidityData | undefined;
+  yieldRanking: YieldRanking | null;
+  stressSignal: StressSignalEntry | null;
   reportCard: ReportCard | null;
   onOpenFeedback: () => void;
 }
@@ -92,6 +110,14 @@ function HeroClassificationLine({ coin }: { coin: StablecoinMeta }) {
     </p>
   );
 }
+
+const THREAT_BAND_TEXT_COLORS = {
+  CALM: "text-green-700 dark:text-green-400",
+  WATCH: "text-teal-700 dark:text-teal-400",
+  ALERT: "text-yellow-700 dark:text-yellow-400",
+  WARNING: "text-orange-700 dark:text-orange-400",
+  DANGER: "text-red-700 dark:text-red-400",
+} as const;
 
 function SafetyGradeHero({
   reportCard,
@@ -147,10 +173,13 @@ export function HeroCard({
   pegScoreResult,
   recordedDepegEventCount,
   liquidityData,
+  yieldRanking,
+  stressSignal,
   reportCard,
   onOpenFeedback,
 }: HeroCardProps) {
   const chainCount = coinData?.chains?.length ?? 0;
+  const blacklistStatus = reportCard?.rawInputs.canBeBlacklisted ?? isBlacklistable(coin);
   const primaryComparisonPage = getPrimaryStaticComparisonPageForCoin(coin.id);
   const compareHref = primaryComparisonPage?.href ?? buildLiveCompareUrl([coin.id]);
   const benchmarkSymbol = primaryComparisonPage
@@ -215,6 +244,57 @@ export function HeroCard({
     }
     const score = liq.liquidityScore ?? 0;
     return { value: Math.round(score), sub: `${liq.poolCount} pools · ${liq.chainCount} chains`, color: getScoreColor(score) };
+  })();
+  const blacklistDisplay = (() => {
+    switch (blacklistStatus) {
+      case true:
+        return {
+          value: "Yes",
+          sub: undefined,
+          color: "text-red-700 dark:text-red-400",
+        };
+      case "possible":
+        return {
+          value: "Possible",
+          sub: undefined,
+          color: "text-amber-700 dark:text-amber-400",
+        };
+      case "possible-inherited":
+        return {
+          value: "Possible",
+          sub: undefined,
+          color: "text-amber-700 dark:text-amber-400",
+        };
+      default:
+        return {
+          value: "No",
+          sub: undefined,
+          color: "text-green-700 dark:text-green-400",
+        };
+    }
+  })();
+  const excessYieldDisplay = (() => {
+    if (!yieldRanking) {
+      return { value: "—", sub: undefined, color: "text-muted-foreground" };
+    }
+    if (yieldRanking.excessYield === null) {
+      return { value: "—", sub: "No benchmark gap", color: "text-muted-foreground" };
+    }
+    return {
+      value: formatSignedPercent(yieldRanking.excessYield),
+      sub: "vs T-Bill",
+      color: yieldRanking.excessYield >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400",
+    };
+  })();
+  const dewsDisplay = (() => {
+    if (!stressSignal || !isThreatBand(stressSignal.band)) {
+      return { value: "—", sub: undefined, color: "text-muted-foreground" };
+    }
+    return {
+      value: THREAT_BAND_LABELS[stressSignal.band],
+      sub: `${Math.round(stressSignal.score)}/100`,
+      color: THREAT_BAND_TEXT_COLORS[stressSignal.band],
+    };
   })();
 
   return (
@@ -336,6 +416,24 @@ export function HeroCard({
             subValue={liqDisplay.sub}
             colorClass={liqDisplay.color}
           />
+          <MetricChip
+            label="Blacklistable"
+            value={blacklistDisplay.value}
+            subValue={blacklistDisplay.sub}
+            colorClass={blacklistDisplay.color}
+          />
+          <MetricChip
+            label={<MethodologyLabel topic="pys">Excess Yield</MethodologyLabel>}
+            value={excessYieldDisplay.value}
+            subValue={excessYieldDisplay.sub}
+            colorClass={excessYieldDisplay.color}
+          />
+          <MetricChip
+            label={<MethodologyLabel topic="dews">DEWS</MethodologyLabel>}
+            value={dewsDisplay.value}
+            subValue={dewsDisplay.sub}
+            colorClass={dewsDisplay.color}
+          />
           <div className="flex items-center gap-1 rounded-lg border border-border/40 bg-background/30 px-2.5 py-1.5">
             <span className="text-[11px] text-muted-foreground">{chainCount} chains</span>
           </div>
@@ -350,110 +448,130 @@ export function HeroCard({
 
       {/* Desktop Layout */}
       <div className="hidden lg:block px-5 py-5">
-        <div className="flex gap-6">
-          {/* Left Column - Identity & Metrics */}
-          <div className="flex-1 min-w-0">
-            {/* Identity */}
-            <div className="flex items-start gap-3">
-              <StablecoinLogo src={logoSrc} name={coin.name} size={64} />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h2 className="text-3xl font-black tracking-tighter">{coin.name}</h2>
-                  <span className="text-base font-mono text-muted-foreground/70">{coin.symbol}</span>
-                  <BluechipHeaderBadge stablecoinId={coin.id} />
+        <div className="space-y-4">
+          <div className="flex gap-6">
+            {/* Left Column - Identity & Metrics */}
+            <div className="flex-1 min-w-0">
+              {/* Identity */}
+              <div className="flex items-start gap-3">
+                <StablecoinLogo src={logoSrc} name={coin.name} size={64} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h2 className="text-3xl font-black tracking-tighter">{coin.name}</h2>
+                    <span className="text-base font-mono text-muted-foreground/70">{coin.symbol}</span>
+                    <BluechipHeaderBadge stablecoinId={coin.id} />
+                  </div>
+                  <div className="flex items-center gap-3 mt-1">
+                    <HeroClassificationLine coin={coin} />
+                  </div>
+                  <HeroTagList tags={coin.tags} />
                 </div>
-                <div className="flex items-center gap-3 mt-1">
-                  <HeroClassificationLine coin={coin} />
-                </div>
-                <HeroTagList tags={coin.tags} />
               </div>
-            </div>
 
-            {/* Primary Metrics Row */}
-            <div className="mt-5 grid grid-cols-3 gap-4">
-              {/* Price */}
-              <div className="rounded-xl border border-border/60 bg-background/45 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  {coinData.price != null && pegRef > 0 && (
-                    <PegGauge deviationBps={gaugeDeviationBps} className="w-16 xl:w-20" />
-                  )}
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Price</p>
-                    <p className={`text-2xl xl:text-3xl font-extrabold font-mono tracking-tight ${confidenceClass(coinData.priceConfidence)}`}>
-                      {formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef)}
-                    </p>
-                    <p className={`text-xs font-mono mt-0.5 ${isNavToken ? "text-green-700 dark:text-green-400" : deviationColorClass(Math.abs(deviationBps))}`}>
-                      {formatPegDeviation(coinData.price, pegRef)}
-                    </p>
+              {/* Primary Metrics Row */}
+              <div className="mt-5 grid grid-cols-3 gap-4">
+                {/* Price */}
+                <div className="rounded-xl border border-border/60 bg-background/45 px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    {coinData.price != null && pegRef > 0 && (
+                      <PegGauge deviationBps={gaugeDeviationBps} className="w-16 xl:w-20" />
+                    )}
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Price</p>
+                      <p className={`text-2xl xl:text-3xl font-extrabold font-mono tracking-tight ${confidenceClass(coinData.priceConfidence)}`}>
+                        {formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef)}
+                      </p>
+                      <p className={`text-xs font-mono mt-0.5 ${isNavToken ? "text-green-700 dark:text-green-400" : deviationColorClass(Math.abs(deviationBps))}`}>
+                        {formatPegDeviation(coinData.price, pegRef)}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Market Cap */}
-              <div className="rounded-xl border border-border/60 bg-background/45 px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Market Cap</p>
-                <p className="text-2xl font-bold font-mono tracking-tight">{formatCurrency(mcap)}</p>
-                <p className={`text-xs font-mono mt-1 ${prevDayTrendClass}`}>
-                  {hasPrevDay ? formatPercentChange(mcap, prevDay!) : "—"} <span className="text-muted-foreground">24h</span>
-                </p>
-              </div>
+                {/* Market Cap */}
+                <div className="rounded-xl border border-border/60 bg-background/45 px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Market Cap</p>
+                  <p className="text-2xl font-bold font-mono tracking-tight">{formatCurrency(mcap)}</p>
+                  <p className={`text-xs font-mono mt-1 ${prevDayTrendClass}`}>
+                    {hasPrevDay ? formatPercentChange(mcap, prevDay!) : "—"} <span className="text-muted-foreground">24h</span>
+                  </p>
+                </div>
 
-              {/* Supply */}
-              <div className="rounded-xl border border-border/60 bg-background/45 px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Supply</p>
-                <p className="text-2xl font-bold font-mono tracking-tight">
-                  {supply != null ? formatSupply(supply) : "—"} <span className="text-sm text-muted-foreground">{coin.symbol}</span>
-                </p>
-                <p className="text-xs font-mono mt-1 whitespace-nowrap">
-                  <span className={prevWeekTrendClass}>{hasPrevWeek ? formatPercentChange(mcap, prevWeek!) : "—"}</span>
-                  <span className="text-muted-foreground"> 7d</span>
-                  {hasPrevMonth && (
-                    <>
-                      <span className="text-muted-foreground"> · </span>
-                      <span className={prevMonthTrendClass}>{formatPercentChange(mcap, prevMonth!)}</span>
-                      <span className="text-muted-foreground"> 30d</span>
-                    </>
-                  )}
-                </p>
+                {/* Supply */}
+                <div className="rounded-xl border border-border/60 bg-background/45 px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Supply</p>
+                  <p className="text-2xl font-bold font-mono tracking-tight">
+                    {supply != null ? formatSupply(supply) : "—"} <span className="text-sm text-muted-foreground">{coin.symbol}</span>
+                  </p>
+                  <p className="text-xs font-mono mt-1 whitespace-nowrap">
+                    <span className={prevWeekTrendClass}>{hasPrevWeek ? formatPercentChange(mcap, prevWeek!) : "—"}</span>
+                    <span className="text-muted-foreground"> 7d</span>
+                    {hasPrevMonth && (
+                      <>
+                        <span className="text-muted-foreground"> · </span>
+                        <span className={prevMonthTrendClass}>{formatPercentChange(mcap, prevMonth!)}</span>
+                        <span className="text-muted-foreground"> 30d</span>
+                      </>
+                    )}
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* Tertiary Metrics */}
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <MetricChip
-                label={<MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>}
-                value={pegScoreDisplay.value}
-                subValue={pegScoreDisplay.sub}
-                colorClass={pegScoreDisplay.color}
-              />
-              <MetricChip
-                label={<MethodologyLabel topic="liquidityScore">Liquidity</MethodologyLabel>}
-                value={liqDisplay.value}
-                subValue={liqDisplay.sub}
-                colorClass={liqDisplay.color}
-              />
-              <div className="flex items-center gap-2 rounded-lg border border-border/40 bg-background/30 px-3 py-1.5">
-                <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Chains</span>
-                <span className="text-base font-bold font-mono">{chainCount}</span>
-              </div>
-              {earlyPegScore && (
-                <span className="text-xs text-amber-600 dark:text-amber-400">
-                  Early peg score · {pegScoreResult?.trackingSpanDays ?? 0}d tracked
-                </span>
-              )}
+            {/* Right Column - Safety Grade */}
+            <div className="w-52 shrink-0">
+              <SafetyGradeHero reportCard={reportCard} />
             </div>
+          </div>
 
-            {pegScoreResult?.activeDepeg && (
-              <div className="mt-4 rounded-lg border border-red-500/20 bg-red-500/8 px-4 py-2.5 text-sm text-red-700 dark:text-red-400">
-                Active depeg detected — view details in Depeg History
-              </div>
+          {/* Tertiary Metrics */}
+          <div className="flex flex-wrap items-center gap-3">
+            <MetricChip
+              label={<MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>}
+              value={pegScoreDisplay.value}
+              subValue={pegScoreDisplay.sub}
+              colorClass={pegScoreDisplay.color}
+            />
+            <MetricChip
+              label={<MethodologyLabel topic="liquidityScore">Liquidity</MethodologyLabel>}
+              value={liqDisplay.value}
+              subValue={liqDisplay.sub}
+              colorClass={liqDisplay.color}
+            />
+            <MetricChip
+              label="Blacklistable"
+              value={blacklistDisplay.value}
+              subValue={blacklistDisplay.sub}
+              colorClass={blacklistDisplay.color}
+            />
+            <MetricChip
+              label={<MethodologyLabel topic="pys">Excess Yield</MethodologyLabel>}
+              value={excessYieldDisplay.value}
+              subValue={excessYieldDisplay.sub}
+              colorClass={excessYieldDisplay.color}
+            />
+            <MetricChip
+              label={<MethodologyLabel topic="dews">DEWS</MethodologyLabel>}
+              value={dewsDisplay.value}
+              subValue={dewsDisplay.sub}
+              colorClass={dewsDisplay.color}
+            />
+            <div className="flex items-center gap-2 rounded-lg border border-border/40 bg-background/30 px-3 py-1.5">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Chains</span>
+              <span className="text-base font-bold font-mono">{chainCount}</span>
+            </div>
+            {earlyPegScore && (
+              <span className="text-xs text-amber-600 dark:text-amber-400">
+                Early peg score · {pegScoreResult?.trackingSpanDays ?? 0}d tracked
+              </span>
             )}
           </div>
 
-          {/* Right Column - Safety Grade */}
-          <div className="w-52 shrink-0">
-            <SafetyGradeHero reportCard={reportCard} />
-          </div>
+          {pegScoreResult?.activeDepeg && (
+            <div className="rounded-lg border border-red-500/20 bg-red-500/8 px-4 py-2.5 text-sm text-red-700 dark:text-red-400">
+              Active depeg detected — view details in Depeg History
+            </div>
+          )}
         </div>
       </div>
     </Card>

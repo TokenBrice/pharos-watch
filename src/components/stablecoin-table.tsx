@@ -23,6 +23,7 @@ import {
   GOVERNANCE_LABELS_SHORT,
 } from "@shared/lib/classification";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
+import { isBlacklistable } from "@shared/lib/report-cards";
 import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -94,6 +95,13 @@ const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     sortKey: "liquidity",
     className: "text-right",
     title: "DEX Liquidity Score: measures pool depth, volume, and diversity across decentralized exchanges",
+  },
+  {
+    id: "blacklistable",
+    label: "Blacklistable",
+    sortKey: "blacklistable",
+    className: "text-center",
+    title: "Issuer blacklist/freeze control risk, including inherited dependency exposure where applicable",
   },
   { id: "backing", label: "Backing", className: "text-center", title: "Collateral backing type" },
   { id: "type", label: "Type", className: "text-center", title: "Stablecoin mechanism type" },
@@ -360,6 +368,9 @@ export function StablecoinTable({
               const prevDay = getPrevDayRaw(coin);
               const prevWeek = getPrevWeekRaw(coin);
               const meta = metaById.get(coin.id);
+              const blacklistStatus = meta
+                ? reportCards?.[coin.id]?.rawInputs.canBeBlacklisted ?? isBlacklistable(meta)
+                : null;
               const change24h = prevDay > 0 ? ((circulating - prevDay) / prevDay) * 100 : 0;
               const change7d = prevWeek > 0 ? ((circulating - prevWeek) / prevWeek) * 100 : 0;
 
@@ -542,6 +553,19 @@ export function StablecoinTable({
                         const score = liq.liquidityScore;
                         return <span className={getScoreColor(score)}>{score}</span>;
                       })()}
+                    </TableCell>
+                  )}
+                  {isVisible("blacklistable") && (
+                    <TableCell className="text-center font-mono tabular-nums text-sm">
+                      {blacklistStatus === true ? (
+                        <span className="text-red-700 dark:text-red-400">Yes</span>
+                      ) : blacklistStatus === false ? (
+                        <span className="text-green-700 dark:text-green-400">No</span>
+                      ) : blacklistStatus === "possible" || blacklistStatus === "possible-inherited" ? (
+                        <span className="text-amber-700 dark:text-amber-400">Possible</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                   )}
                   {isVisible("backing") && (

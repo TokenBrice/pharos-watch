@@ -11,6 +11,10 @@ import type {
   DexLiquidityMap,
   RedemptionBackstopsResponse,
   RedemptionBackstopEntry,
+  StressSignalEntry,
+  StressSignalsAllResponse,
+  YieldRanking,
+  YieldRankingsResponse,
 } from "@shared/types";
 import {
   getCirculatingRaw,
@@ -73,6 +77,8 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   agreeSources: string[];
   dexPriceCheck: PegSummaryCoin["dexPriceCheck"];
   liquidityData: DexLiquidityData | undefined;
+  yieldRanking: YieldRanking | null;
+  stressSignal: StressSignalEntry | null;
   redemptionBackstop: RedemptionBackstopEntry | undefined;
   hasFlows: boolean;
   supplyHistory: SupplyHistoryPoint[];
@@ -120,6 +126,8 @@ interface BuildStablecoinDetailViewModelParams {
   redemptionBackstopsData?: RedemptionBackstopsResponse;
   rbUpdatedAt?: number;
   redemptionBackstopsError?: unknown | null;
+  yieldRankingsData?: YieldRankingsResponse;
+  stressSignalsData?: StressSignalsAllResponse;
   flowsData?: MintBurnFlowsResponse;
   isFlowsLoading: boolean;
   liveReserves?: ReserveResult | null;
@@ -153,6 +161,8 @@ export function buildStablecoinDetailViewModel({
   redemptionBackstopsData,
   rbUpdatedAt = 0,
   redemptionBackstopsError = null,
+  yieldRankingsData,
+  stressSignalsData,
   flowsData,
   isFlowsLoading,
   liveReserves = null,
@@ -199,6 +209,8 @@ export function buildStablecoinDetailViewModel({
   const agreeSources = pegScoreResult?.agreeSources ?? [];
   const dexPriceCheck = pegScoreResult?.dexPriceCheck ?? null;
   const liquidityData = liquidityMap?.[id];
+  const yieldRanking = yieldRankingsData?.rankings.find((candidate) => candidate.id === id) ?? null;
+  const stressSignal = stressSignalsData?.signals[id] ?? null;
   const redemptionBackstop = redemptionBackstopsData?.coins?.[id];
   const reportCard = reportCardsData?.cards.find((candidate) => candidate.id === id);
   const reserves = liveReserves ?? getReserves(coin);
@@ -229,6 +241,8 @@ export function buildStablecoinDetailViewModel({
     agreeSources,
     dexPriceCheck,
     liquidityData,
+    yieldRanking,
+    stressSignal,
     redemptionBackstop,
     hasFlows,
     supplyHistory: resolvedSupplyHistory,

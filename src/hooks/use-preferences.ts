@@ -64,6 +64,7 @@ export type ColumnId =
   | "grade"
   | "stability"
   | "liquidity"
+  | "blacklistable"
   | "backing"
   | "type"
   | "flags";
@@ -88,13 +89,19 @@ export const ALL_COLUMNS: ColumnDef[] = [
   { id: "grade", label: "Grade", hiddenMobile: true },
   { id: "stability", label: "Peg Score", hiddenMobile: true },
   { id: "liquidity", label: "Liq", hiddenMobile: true },
+  { id: "blacklistable", label: "Blacklistable", hiddenMobile: true },
   { id: "backing", label: "Backing", hiddenMobile: true },
   { id: "type", label: "Type", hiddenMobile: true },
   { id: "flags", label: "Flags", hiddenMobile: true },
 ];
 
-export const DEFAULT_VISIBLE_COLUMNS: ColumnId[] = ALL_COLUMNS.map((c) => c.id);
-export const MOBILE_DEFAULT_COLUMNS: ColumnId[] = ALL_COLUMNS.filter((c) => !c.hiddenMobile).map((c) => c.id);
+export const DEFAULT_VISIBLE_COLUMNS: ColumnId[] = ALL_COLUMNS
+  .filter((c) => c.id !== "flags")
+  .map((c) => c.id);
+
+export const MOBILE_DEFAULT_COLUMNS: ColumnId[] = ALL_COLUMNS
+  .filter((c) => !c.hiddenMobile && c.id !== "flags")
+  .map((c) => c.id);
 
 export const LOCKED_COLUMNS: Set<ColumnId> = new Set(
   ALL_COLUMNS.filter((c) => c.locked).map((c) => c.id)
