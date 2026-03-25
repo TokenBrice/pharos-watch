@@ -1,3 +1,20 @@
+/**
+ * Price consensus engine — selects the most trustworthy price from multiple
+ * sources using a maximal-clique agreement algorithm (Bron-Kerbosch).
+ *
+ * Algorithm:
+ * 1. Build agreement graph: sources whose prices agree within `thresholdBps`.
+ * 2. Find all maximal cliques (sets of mutually agreeing sources).
+ * 3. Pick the best cluster by: largest size → highest total weight → tightest
+ *    spread → closest to pegRef → alphabetical tiebreak.
+ * 4. Return the median price of the winning cluster with confidence metadata.
+ *
+ * Pairwise agreement is required (not transitive) to prevent a chain like
+ * 1.000 / 1.004 / 1.008 from being treated as a single high-confidence cluster
+ * when the endpoints disagree materially.
+ *
+ * @see docs/pricing-pipeline.md for pipeline-level context.
+ */
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import {
@@ -44,6 +61,16 @@ export interface ConsensusOptions {
  *    `thresholdBps` of each other (pairwise).
  * 4. If majority cluster has 2+ members → high confidence, pick highest-weight member.
  * 5. If no majority → low confidence, pick source closest to `pegRef` (or highest-weight if NAV).
+ *
+ * @param sources - Candidate price feeds, each with a source name, price, and weight.
+ * @param pegRef - The expected peg price (e.g. 1.0 for USD stablecoins). Used as
+ *   tiebreaker when clusters are otherwise equal; `null` activates NAV mode.
+ * @param thresholdBps - Maximum allowed price spread (in basis points) for two
+ *   sources to be considered agreeing. NAV mode overrides this to 500 bps.
+ * @param options.mode - Explicit mode override: "fixed" uses `thresholdBps` as-is;
+ *   "nav" forces 500 bps tolerance. Inferred from `pegRef` when omitted.
+ * @returns Consensus result with price, confidence level, and source attribution,
+ *   or `null` if `sources` is empty.
  */
 export function computePriceConsensus(
   sources: SourcePrice[],
@@ -236,6 +263,15 @@ function clusterSpreadBps(cluster: SourcePrice[]): number {
   return (Math.abs(maxPrice - minPrice) / mid) * 10000;
 }
 
+/**
+ * Selects the winning cluster from all maximal cliques by a priority cascade:
+ * largest size → highest total weight → tightest price spread → closest median
+ * to `pegRef` → alphabetical source label tiebreak.
+ *
+ * @param clusters - All maximal agreement cliques found by Bron-Kerbosch.
+ * @param pegRef - The expected peg price used as a proximity tiebreaker.
+ * @returns The single best cluster of sources to use for consensus.
+ */
 function pickBestCluster(clusters: SourcePrice[][], pegRef: number | null): SourcePrice[] {
   return clusters.reduce((best, candidate) => {
     if (candidate.length !== best.length) {
