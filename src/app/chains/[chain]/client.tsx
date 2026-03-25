@@ -16,6 +16,7 @@ import {
 } from "@shared/lib/chain-health";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -769,6 +770,7 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
   }
 
   return (
+    <SectionErrorBoundary name="Chain Detail">
     <div className="space-y-6">
       <QueryErrorNotice error={error} hasData={!!data?.chains?.length} onRetry={() => { void refetch(); }} />
       <HeroCard chain={chain} chainId={chainId} />
@@ -781,5 +783,6 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
       />
       <StablecoinTable chainId={chainId} backingFilter={backingFilter} />
     </div>
+    </SectionErrorBoundary>
   );
 }

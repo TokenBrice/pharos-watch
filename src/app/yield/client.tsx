@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useYieldRankings } from "@/hooks/api-hooks";
 import { useLogos } from "@/hooks/use-logos";
+import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { YieldLeaderboard } from "@/components/yield-leaderboard";
@@ -81,6 +82,7 @@ export function YieldClient() {
   }
 
   return (
+    <SectionErrorBoundary name="Yield">
     <div className="space-y-6">
       <QueryErrorNotice
         error={error}
@@ -261,5 +263,6 @@ export function YieldClient() {
         confidence-aware arbitration. Past yields do not guarantee future returns.
       </p>
     </div>
+    </SectionErrorBoundary>
   );
 }
