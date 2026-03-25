@@ -924,9 +924,6 @@ const AAVE_V3_POOL_ADDRESSES: Record<string, string> = {
 // getReserveData(address asset) selector
 const AAVE_GET_RESERVE_DATA_SELECTOR = "0x35ea6a75";
 
-const AAVE_V3_YIELD_SOURCE = "Aave v3";
-const AAVE_V3_YIELD_TYPE = "lending";
-
 const RAY = 10n ** 27n;
 
 function rayToApy(currentLiquidityRate: bigint): number {

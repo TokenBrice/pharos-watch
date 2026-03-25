@@ -55,7 +55,8 @@ export function buildBackfillRows(
     .filter((row): row is BackfillRow => row != null);
 }
 
-export async function backfillYieldHistory(
+/** Backfill yield history from DeFiLlama chart data. Re-export when wired to admin endpoint. */
+async function backfillYieldHistory(
   db: D1Database,
   stablecoinId: string,
   signal?: AbortSignal,
