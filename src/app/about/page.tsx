@@ -53,7 +53,7 @@ const DATA_SOURCE_GROUPS = [
   },
   {
     label: "DEX Data",
-    sources: "DeFiLlama Yields & Protocols, protocol-native yield APIs where needed (currently BIMA Earn), Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, Meteora API, PancakeSwap subgraphs, Aerodrome and Velodrome Sugar view contracts, GeckoTerminal, DexScreener",
+    sources: "DeFiLlama Yields & Protocols, protocol-native yield APIs (Hashnote, Ondo, Morpho, Pendle, Yearn Kong, Beefy, Aave V3, Compound V3, BIMA Earn), Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, Meteora API, PancakeSwap subgraphs, Aerodrome and Velodrome Sugar view contracts, GeckoTerminal, DexScreener",
   },
   { label: "AI Generation", sources: "Anthropic Claude (daily digest)" },
 ] as const;

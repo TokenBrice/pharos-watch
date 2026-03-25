@@ -8,7 +8,7 @@ import {
 } from "../../lib/constants";
 import { getCache } from "../../lib/db-cache";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
+import { fetchEvmCallHexAtBlock, fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
@@ -36,8 +36,18 @@ const BIMA_SUSBD_SOURCE_LABEL = "BIMA savings (sUSBD)";
 const BIMA_SUSBD_SOURCE_TYPE = "lending-vault";
 const BIMA_EARN_POOLS_URL =
   "https://bima.money/api/earn/pools?network=Ethereum&user=0x0000000000000000000000000000000000000000";
+const HASHNOTE_USYC_SOURCE_KEY = "protocol-api:hashnote-usyc";
+const HASHNOTE_USYC_SOURCE_LABEL = "Hashnote USYC";
+const HASHNOTE_USYC_SOURCE_TYPE = "nav-appreciation";
+const HASHNOTE_PRICE_REPORTS_URL = "https://usyc.hashnote.com/api/price-reports";
 
 const MAX_DL_CACHE_AGE_SEC = 6 * 3600; // 6 hours (3× the expected 2-hour DEX sync refresh)
+
+interface HashnoteReport {
+  roundId: string;
+  price: string;
+  timestamp: string;
+}
 
 interface BimaEarnPool {
   id?: string;
@@ -420,6 +430,442 @@ export async function fetchBimaSusbdSource(signal?: AbortSignal): Promise<Resolv
   }
 }
 
+export async function fetchHashnoteUsycSource(signal?: AbortSignal): Promise<ResolvedYield | null> {
+  try {
+    const res = await fetchWithRetry(HASHNOTE_PRICE_REPORTS_URL, {
+      headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal,
+    }, 1);
+    if (!res?.ok) return null;
+
+    const body = (await res.json()) as { entity?: string; data?: HashnoteReport[] };
+    const reports = body.data;
+    if (!Array.isArray(reports) || reports.length < 2) return null;
+
+    const latest = reports[0];
+    const latestPrice = parseFloat(latest.price);
+    const latestTimeSec = parseInt(latest.timestamp, 10);
+    if (!Number.isFinite(latestPrice) || latestPrice <= 0) return null;
+    if (!Number.isFinite(latestTimeSec)) return null;
+
+    const targetAnchorSec = latestTimeSec - 7 * 86400;
+    let anchor = reports[reports.length - 1];
+    for (const report of reports) {
+      const ts = parseInt(report.timestamp, 10);
+      if (Number.isFinite(ts) && ts <= targetAnchorSec) { anchor = report; break; }
+    }
+    const anchorPrice = parseFloat(anchor.price);
+    const anchorTimeSec = parseInt(anchor.timestamp, 10);
+    if (!Number.isFinite(anchorPrice) || anchorPrice <= 0) return null;
+
+    const daysDelta = (latestTimeSec - anchorTimeSec) / 86400;
+    if (daysDelta < 1) return null;
+
+    const apy = (Math.pow(latestPrice / anchorPrice, 365.25 / daysDelta) - 1) * 100;
+    if (!Number.isFinite(apy) || apy < 0) return null;
+
+    return {
+      currentApy: apy, apyBase: apy, apyReward: null,
+      sourcePool: null, sourceTvlUsd: null, dataSource: "protocol-api",
+      exchangeRate: null, sourceKey: HASHNOTE_USYC_SOURCE_KEY,
+      yieldSource: HASHNOTE_USYC_SOURCE_LABEL, yieldType: HASHNOTE_USYC_SOURCE_TYPE,
+      sourceObservedAt: latestTimeSec,
+      comparisonAnchorObservedAt: anchorTimeSec,
+    };
+  } catch (error) {
+    if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+    console.warn("[yield] Hashnote USYC source failed:", error);
+    return null;
+  }
+}
+
+const ONDO_USDY_SOURCE_KEY = "protocol-api:ondo-usdy-oracle";
+const ONDO_USDY_SOURCE_LABEL = "Ondo USDY Oracle";
+const ONDO_USDY_SOURCE_TYPE = "nav-appreciation";
+const ONDO_USDY_ORACLE = "0xa0219aa5b31e65bc920b5b6dfb8edf0988121de0";
+const ONDO_GET_PRICE_SELECTOR = "0x98d5fdca";
+
+export async function fetchOndoUsdyOracleSource(
+  prevPriceBigint: bigint | null,
+  daysDelta: number,
+  signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+): Promise<ResolvedYield | null> {
+  try {
+    const rpc = chainRpcs ? getChainRpc(chainRpcs, "ethereum") : undefined;
+    const extraRpcUrls = rpc?.fallbackRpcUrl ? [rpc.fallbackRpcUrl] : [];
+    const currentPrice = await fetchEvmUint256AtBlock(
+      "ethereum", ONDO_USDY_ORACLE, ONDO_GET_PRICE_SELECTOR, "latest",
+      { extraRpcUrls, signal },
+    );
+    if (!currentPrice || currentPrice === 0n) return null;
+
+    const currentPriceFloat = Number(currentPrice) / 1e18;
+    if (!Number.isFinite(currentPriceFloat) || currentPriceFloat <= 0) return null;
+
+    if (!prevPriceBigint || prevPriceBigint === 0n || daysDelta < 1) {
+      return {
+        currentApy: 0, apyBase: null, apyReward: null,
+        sourcePool: null, sourceTvlUsd: null, dataSource: "protocol-api",
+        exchangeRate: currentPriceFloat, sourceKey: ONDO_USDY_SOURCE_KEY,
+        yieldSource: ONDO_USDY_SOURCE_LABEL, yieldType: ONDO_USDY_SOURCE_TYPE,
+        sourceObservedAt: Math.floor(Date.now() / 1000), comparisonAnchorObservedAt: null,
+      };
+    }
+
+    const prevPriceFloat = Number(prevPriceBigint) / 1e18;
+    const apy = (Math.pow(currentPriceFloat / prevPriceFloat, 365.25 / daysDelta) - 1) * 100;
+    if (!Number.isFinite(apy) || apy < 0) return null;
+
+    return {
+      currentApy: apy, apyBase: apy, apyReward: null,
+      sourcePool: null, sourceTvlUsd: null, dataSource: "protocol-api",
+      exchangeRate: currentPriceFloat, sourceKey: ONDO_USDY_SOURCE_KEY,
+      yieldSource: ONDO_USDY_SOURCE_LABEL, yieldType: ONDO_USDY_SOURCE_TYPE,
+      sourceObservedAt: Math.floor(Date.now() / 1000), comparisonAnchorObservedAt: null,
+    };
+  } catch (error) {
+    if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+    console.warn("[yield] Ondo USDY oracle source failed:", error);
+    return null;
+  }
+}
+
+const MORPHO_GQL_URL = "https://api.morpho.org/graphql";
+const MORPHO_STABLECOIN_SYMBOLS = ["USDC", "USDT", "DAI", "USDS", "GHO", "FRAX", "PYUSD", "FRXUSD", "crvUSD", "DOLA", "LUSD"];
+const MORPHO_STABLECOIN_QUERY = `query($symbols: [String!]!) {
+  vaults(first: 100, where: { listed: true, assetSymbol_in: $symbols, totalAssetsUsd_gte: 100000 }) {
+    items {
+      address name
+      asset { symbol }
+      chain { id }
+      state { netApy totalAssetsUsd fee }
+    }
+  }
+}`;
+
+interface MorphoVaultItem {
+  address: string; name: string;
+  asset: { symbol: string };
+  chain: { id: number };
+  state: { netApy: number; totalAssetsUsd: number | null; fee: number } | null;
+}
+
+export async function fetchMorphoVaultSources(
+  signal?: AbortSignal,
+): Promise<Array<{ symbol: string; yield: ResolvedYield }>> {
+  try {
+    const res = await fetchWithRetry(MORPHO_GQL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
+      body: JSON.stringify({ query: MORPHO_STABLECOIN_QUERY, variables: { symbols: MORPHO_STABLECOIN_SYMBOLS } }),
+      signal,
+    }, 1);
+    if (!res?.ok) return [];
+
+    const body = (await res.json()) as { data?: { vaults?: { items?: MorphoVaultItem[] } } };
+    const items = body.data?.vaults?.items;
+    if (!Array.isArray(items)) return [];
+
+    const results: Array<{ symbol: string; yield: ResolvedYield }> = [];
+    for (const vault of items) {
+      const apy = vault.state?.netApy;
+      if (typeof apy !== "number" || !Number.isFinite(apy) || apy <= 0) continue;
+
+      const tvl = vault.state?.totalAssetsUsd;
+      if (typeof tvl !== "number" || tvl < 100_000) continue;
+
+      results.push({
+        symbol: vault.asset.symbol,
+        yield: {
+          currentApy: apy * 100,
+          apyBase: apy * 100,
+          apyReward: null,
+          sourcePool: vault.address,
+          sourceTvlUsd: tvl,
+          dataSource: "protocol-api",
+          exchangeRate: null,
+          sourceKey: `protocol-api:morpho-vault:${vault.address.slice(0, 10)}`,
+          yieldSource: `Morpho: ${vault.name}`,
+          yieldType: "lending-vault",
+          sourceObservedAt: Math.floor(Date.now() / 1000),
+          comparisonAnchorObservedAt: null,
+        },
+      });
+    }
+    return results;
+  } catch (error) {
+    if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+    console.warn("[yield] Morpho vault sources failed:", error);
+    return [];
+  }
+}
+
+const PENDLE_MARKETS_BASE = "https://api-v2.pendle.finance/core/v1";
+const PENDLE_CHAINS = [1, 42161, 8453];
+
+interface PendleMarket {
+  id: string; address: string; chainId: number;
+  isActive: boolean; expiry: string;
+  impliedApy: number; underlyingApy: number; aggregatedApy: number;
+  underlyingAsset: { symbol: string; address: string };
+  assetRepresentation: string;
+  protocol: string;
+  liquidity: { usd: number };
+  categoryIds: string[];
+}
+
+export async function fetchPendleMarketSources(
+  signal?: AbortSignal,
+): Promise<Array<{ symbol: string; yield: ResolvedYield }>> {
+  const results: Array<{ symbol: string; yield: ResolvedYield }> = [];
+
+  for (const chainId of PENDLE_CHAINS) {
+    try {
+      const url = `${PENDLE_MARKETS_BASE}/${chainId}/markets?limit=100&is_active=true`;
+      const res = await fetchWithRetry(url, {
+        headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal,
+      }, 1);
+      if (!res?.ok) continue;
+
+      const body = (await res.json()) as { results?: PendleMarket[] };
+      if (!Array.isArray(body.results)) continue;
+
+      for (const market of body.results) {
+        if (!market.categoryIds?.includes("stables")) continue;
+        if (!market.isActive) continue;
+
+        const apy = market.impliedApy;
+        if (typeof apy !== "number" || !Number.isFinite(apy) || apy <= 0) continue;
+
+        const tvl = market.liquidity?.usd;
+        if (typeof tvl !== "number" || tvl < 100_000) continue;
+
+        results.push({
+          symbol: market.assetRepresentation || market.underlyingAsset.symbol,
+          yield: {
+            currentApy: apy * 100,
+            apyBase: apy * 100,
+            apyReward: null,
+            sourcePool: market.address,
+            sourceTvlUsd: tvl,
+            dataSource: "protocol-api",
+            exchangeRate: null,
+            sourceKey: `protocol-api:pendle:${market.address.slice(0, 10)}`,
+            yieldSource: `Pendle: ${market.protocol} ${market.assetRepresentation}`,
+            yieldType: "lending-vault",
+            sourceObservedAt: Math.floor(Date.now() / 1000),
+            comparisonAnchorObservedAt: null,
+          },
+        });
+      }
+    } catch (error) {
+      if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+      console.warn(`[yield] Pendle chain ${chainId} failed:`, error);
+    }
+  }
+  return results;
+}
+
+const YEARN_KONG_GQL_URL = "https://kong.yearn.fi/api/gql";
+const YEARN_KONG_CHAINS = [1, 10, 137, 8453, 42161];
+const YEARN_KONG_VAULTS_QUERY = `query($chainId: Int!) {
+  vaults(chainId: $chainId) {
+    address name yearn
+    asset { symbol }
+    tvl { close }
+    apy { net monthlyNet }
+    meta { category isRetired }
+  }
+}`;
+
+interface KongVault {
+  address: string; name: string; yearn: boolean;
+  asset: { symbol: string };
+  tvl: { close: number } | null;
+  apy: { net: number | null; monthlyNet: number | null } | null;
+  meta: { category: string | null; isRetired: boolean | null } | null;
+}
+
+export async function fetchYearnKongSources(
+  signal?: AbortSignal,
+): Promise<Array<{ symbol: string; yield: ResolvedYield }>> {
+  const results: Array<{ symbol: string; yield: ResolvedYield }> = [];
+  const seenAddresses = new Set<string>();
+
+  for (const chainId of YEARN_KONG_CHAINS) {
+    try {
+      const res = await fetchWithRetry(YEARN_KONG_GQL_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
+        body: JSON.stringify({ query: YEARN_KONG_VAULTS_QUERY, variables: { chainId } }),
+        signal,
+      }, 1);
+      if (!res?.ok) continue;
+
+      const body = (await res.json()) as { data?: { vaults?: KongVault[] } };
+      const vaults = body.data?.vaults;
+      if (!Array.isArray(vaults)) continue;
+
+      for (const vault of vaults) {
+        if (seenAddresses.has(vault.address.toLowerCase())) continue;
+        if (vault.meta?.isRetired) continue;
+        if (vault.meta?.category !== "Stablecoin") continue;
+
+        const netApy = vault.apy?.monthlyNet ?? vault.apy?.net;
+        if (typeof netApy !== "number" || !Number.isFinite(netApy) || netApy <= 0) continue;
+
+        const tvl = vault.tvl?.close;
+        if (typeof tvl !== "number" || tvl < 100_000) continue;
+
+        seenAddresses.add(vault.address.toLowerCase());
+        const sourcePrefix = vault.yearn ? "Yearn" : "Kong";
+        results.push({
+          symbol: vault.asset.symbol,
+          yield: {
+            currentApy: netApy * 100,
+            apyBase: netApy * 100,
+            apyReward: null,
+            sourcePool: vault.address,
+            sourceTvlUsd: tvl,
+            dataSource: "protocol-api",
+            exchangeRate: null,
+            sourceKey: `protocol-api:kong:${vault.address.slice(0, 10)}`,
+            yieldSource: `${sourcePrefix}: ${vault.name}`,
+            yieldType: "lending-vault",
+            sourceObservedAt: Math.floor(Date.now() / 1000),
+            comparisonAnchorObservedAt: null,
+          },
+        });
+      }
+    } catch (error) {
+      if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+      console.warn(`[yield] Yearn Kong chain ${chainId} failed:`, error);
+    }
+  }
+  return results;
+}
+
+const BEEFY_APY_URL = "https://api.beefy.finance/apy";
+const BEEFY_VAULTS_URL = "https://api.beefy.finance/vaults";
+
+interface BeefyVault {
+  id: string;
+  name: string;
+  token: string;
+  assets: string[];
+  status: string;
+  chain: string;
+  platformId: string;
+  tokenAddress: string;
+}
+
+export async function fetchBeefySources(
+  signal?: AbortSignal,
+): Promise<Array<{ symbol: string; yield: ResolvedYield }>> {
+  try {
+    const [apyRes, vaultsRes] = await Promise.all([
+      fetchWithRetry(BEEFY_APY_URL, { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal }, 1),
+      fetchWithRetry(BEEFY_VAULTS_URL, { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal }, 1),
+    ]);
+    if (!apyRes?.ok || !vaultsRes?.ok) return [];
+
+    const apyMap = (await apyRes.json()) as Record<string, number | null>;
+    const vaults = (await vaultsRes.json()) as BeefyVault[];
+    if (!Array.isArray(vaults)) return [];
+
+    const results: Array<{ symbol: string; yield: ResolvedYield }> = [];
+    for (const vault of vaults) {
+      if (vault.status !== "active") continue;
+      if (!vault.assets || vault.assets.length !== 1) continue;
+
+      const apy = apyMap[vault.id];
+      if (typeof apy !== "number" || !Number.isFinite(apy) || apy <= 0 || apy > 10) continue;
+
+      results.push({
+        symbol: vault.assets[0],
+        yield: {
+          currentApy: apy * 100,
+          apyBase: apy * 100,
+          apyReward: null,
+          sourcePool: vault.id,
+          sourceTvlUsd: null,
+          dataSource: "protocol-api",
+          exchangeRate: null,
+          sourceKey: `protocol-api:beefy:${vault.id.slice(0, 30)}`,
+          yieldSource: `Beefy: ${vault.name || vault.id}`,
+          yieldType: "lending-vault",
+          sourceObservedAt: Math.floor(Date.now() / 1000),
+          comparisonAnchorObservedAt: null,
+        },
+      });
+    }
+    return results;
+  } catch (error) {
+    if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+    console.warn("[yield] Beefy sources failed:", error);
+    return [];
+  }
+}
+
+const COMPOUND_V3_GET_UTILIZATION = "0x7eb71131";
+const COMPOUND_V3_GET_SUPPLY_RATE = "0xd955759d";
+const SECONDS_PER_YEAR = 31_536_000;
+
+export const COMPOUND_V3_COMETS = [
+  { chain: "ethereum", comet: "0xc3d688B66703497DAA19211EEdff47f25384cdc3", symbol: "USDC" },
+  { chain: "ethereum", comet: "0x3Afdc9BCA9213A35503b077a6072F3D0d5AB0840", symbol: "USDT" },
+  { chain: "base", comet: "0xb125E6687d4313864e53df431d5425969c15Eb2F", symbol: "USDC" },
+  { chain: "arbitrum", comet: "0xA5EDBDD9646f8dFF606d7448e414884C7d905dCA", symbol: "USDC" },
+] as const;
+
+export async function fetchCompoundV3SupplyRates(
+  targets: Array<{ chain: string; comet: string; symbol: string }>,
+  signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+): Promise<Array<{ symbol: string; yield: ResolvedYield }>> {
+  const results: Array<{ symbol: string; yield: ResolvedYield }> = [];
+  for (const target of targets) {
+    try {
+      const rpc = getChainRpc(chainRpcs ?? new Map(), target.chain);
+      const extraRpcUrls = rpc?.fallbackRpcUrl ? [rpc.fallbackRpcUrl] : [];
+      const opts = { extraRpcUrls, signal };
+
+      const utilization = await fetchEvmUint256AtBlock(
+        target.chain, target.comet, COMPOUND_V3_GET_UTILIZATION, "latest", opts,
+      );
+      if (utilization == null) continue;
+
+      const supplyRateData = COMPOUND_V3_GET_SUPPLY_RATE + utilization.toString(16).padStart(64, "0");
+      const perSecondRate = await fetchEvmUint256AtBlock(
+        target.chain, target.comet, supplyRateData, "latest", opts,
+      );
+      if (perSecondRate == null || perSecondRate === 0n) continue;
+
+      const ratePerSecond = Number(perSecondRate) / 1e18;
+      const apy = (Math.pow(1 + ratePerSecond, SECONDS_PER_YEAR) - 1) * 100;
+      if (!Number.isFinite(apy) || apy <= 0) continue;
+
+      results.push({
+        symbol: target.symbol,
+        yield: {
+          currentApy: apy, apyBase: apy, apyReward: null,
+          sourcePool: null, sourceTvlUsd: null, dataSource: "protocol-api",
+          exchangeRate: null,
+          sourceKey: `protocol-api:compound-v3-supply:${target.chain}:${target.comet.slice(0, 10)}`,
+          yieldSource: `Compound V3 (${target.chain})`,
+          yieldType: "lending-opportunity",
+          sourceObservedAt: Math.floor(Date.now() / 1000),
+          comparisonAnchorObservedAt: null,
+        },
+      });
+    } catch (error) {
+      if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+      console.warn(`[yield] Compound V3 ${target.chain}:${target.symbol} failed:`, error);
+    }
+  }
+  return results;
+}
+
 export async function getPriceDerivedApy(
   db: D1Database,
   stablecoinId: string,
@@ -463,6 +909,108 @@ export async function getPriceDerivedApy(
     sourceObservedAt: recentRow.snapshot_date,
     comparisonAnchorObservedAt: anchoredRow.snapshot_date,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Aave V3 on-chain supply rate adapter
+// ---------------------------------------------------------------------------
+
+const AAVE_V3_POOL_ADDRESSES: Record<string, string> = {
+  ethereum: "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+  arbitrum: "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+  base: "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5",
+};
+
+// getReserveData(address asset) selector
+const AAVE_GET_RESERVE_DATA_SELECTOR = "0x35ea6a75";
+
+const RAY = 10n ** 27n;
+
+function rayToApy(currentLiquidityRate: bigint): number {
+  const ratePerSecond = Number(currentLiquidityRate) / Number(RAY) / 31536000;
+  return (Math.pow(1 + ratePerSecond, 31536000) - 1) * 100;
+}
+
+export interface AaveV3RateTarget {
+  stablecoinId: string;
+  symbol: string;
+  chain: string;
+  assetAddress: string;
+}
+
+export interface AaveV3RateResult {
+  rates: Map<string, { apy: number; chain: string }>;
+}
+
+export async function fetchAaveV3SupplyRates(
+  targets: AaveV3RateTarget[],
+  signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+): Promise<AaveV3RateResult> {
+  const rates = new Map<string, { apy: number; chain: string }>();
+
+  if (!chainRpcs || targets.length === 0) {
+    return { rates };
+  }
+
+  const AAVE_BATCH_SIZE = 4;
+
+  for (let i = 0; i < targets.length; i += AAVE_BATCH_SIZE) {
+    const batch = targets.slice(i, i + AAVE_BATCH_SIZE);
+    await Promise.all(
+      batch.map(async (target) => {
+        const poolAddress = AAVE_V3_POOL_ADDRESSES[target.chain];
+        if (!poolAddress) return;
+
+        const rpc = getChainRpc(chainRpcs, target.chain);
+        if (!rpc) return;
+
+        const rpcUrls = [rpc.rpcUrl, rpc.fallbackRpcUrl].filter(
+          (url): url is string => typeof url === "string" && url.length > 0,
+        );
+
+        // Encode getReserveData(address) calldata: selector + padded address
+        const callData =
+          AAVE_GET_RESERVE_DATA_SELECTOR +
+          target.assetAddress.replace("0x", "").toLowerCase().padStart(64, "0");
+
+        try {
+          const hex = await fetchEvmCallHexAtBlock(target.chain, poolAddress, callData, "latest", {
+            extraRpcUrls: rpcUrls,
+            signal,
+            timeoutMs: 10_000,
+          });
+
+          if (!hex || hex.length < 2) return;
+
+          // currentLiquidityRate is the 3rd uint256 in the struct (byte offset 64–128)
+          // hex string after stripping "0x": chars 128–191 (0-indexed)
+          const stripped = hex.slice(2); // remove "0x"
+          if (stripped.length < 192) return;
+
+          const liquidityRateHex = stripped.slice(128, 192);
+          const currentLiquidityRate = BigInt("0x" + liquidityRateHex);
+          const apy = rayToApy(currentLiquidityRate);
+
+          if (!Number.isFinite(apy) || apy <= 0) return;
+
+          // Keep the best APY per stablecoin (in case of multiple chains)
+          const existing = rates.get(target.stablecoinId);
+          if (!existing || apy > existing.apy) {
+            rates.set(target.stablecoinId, { apy, chain: target.chain });
+          }
+        } catch (err) {
+          console.warn(
+            `[yield/aave-v3] Failed to fetch reserve data for ${target.symbol} on ${target.chain}:`,
+            err instanceof Error ? err.message : String(err),
+          );
+        }
+      }),
+    );
+  }
+
+  console.log(`[yield/aave-v3] Fetched ${rates.size}/${targets.length} Aave V3 supply rates`);
+  return { rates };
 }
 
 export async function loadRiskFreeRateSnapshot(db: D1Database): Promise<YieldBenchmarkMeta> {

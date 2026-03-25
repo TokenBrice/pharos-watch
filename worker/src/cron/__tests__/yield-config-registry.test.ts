@@ -3,6 +3,8 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import {
   AUTO_LENDING_POOL_MAP,
   AUTO_LENDING_SAFETY_BYPASS_IDS,
+  LENDING_PROTOCOL_ALLOWLIST,
+  LENDING_PROTOCOL_LABELS,
   ON_CHAIN_RATE_CONFIGS,
   PRICE_DERIVED_FALLBACK_IDS,
   RATE_DERIVED_CONFIGS,
@@ -88,5 +90,16 @@ describe("yield config registry", () => {
       .sort();
 
     expect(quarantined).toEqual(["dusd-dtrinity", "reusd-re-protocol"]);
+  });
+
+  it("includes high-TVL stablecoin lending protocols from 2026-03-25 audit", () => {
+    const tierAProtocols = [
+      "wildcat-protocol", "tectonic", "upshift", "venus-flux",
+      "avantis", "cap", "resupply", "zerobase-cedefi",
+    ];
+    for (const slug of tierAProtocols) {
+      expect(LENDING_PROTOCOL_ALLOWLIST.has(slug), slug).toBe(true);
+      expect(LENDING_PROTOCOL_LABELS[slug], slug).toBeTruthy();
+    }
   });
 });
