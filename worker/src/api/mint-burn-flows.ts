@@ -24,6 +24,7 @@ import {
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import type { StablecoinData } from "@shared/types";
 import { sumPegBuckets } from "@shared/lib/supply";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
   getNetFlowDirection24h,
   getPressureShiftState,
@@ -47,7 +48,6 @@ import {
   perCoinFlowCacheKey,
   readMintBurnCronSnapshot,
   selectLargestEvents,
-  DAY_SEC,
 } from "./mint-burn-flows-shared";
 
 // ---------------------------------------------------------------------------
@@ -104,7 +104,7 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
     const window30d = nowSec - 30 * 24 * 3600;
     const window90d = nowSec - 90 * 24 * 3600;
     const nowDayTs = bucketDay(nowSec);
-    const baselineWindowStart = nowDayTs - BASELINE_WINDOW_DAYS * DAY_SEC;
+    const baselineWindowStart = nowDayTs - BASELINE_WINDOW_DAYS * DAY_SECONDS;
 
     // Load grade-based classification (FTQ disabled when cache unavailable; see classificationWarning)
     const reportCardCache = await loadReportCardCache(db, { maxAgeMs: REPORT_CARD_MAX_AGE_MS });

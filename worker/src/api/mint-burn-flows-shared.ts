@@ -43,7 +43,6 @@ export interface EventRow {
 }
 
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-export const DAY_SEC = DAY_SECONDS;
 export const BASELINE_WINDOW_DAYS = 30;
 export const FLOW_CACHE_PREFIX = "mint-burn-flows:v2";
 export const ETHEREUM_CHAIN_ID = "ethereum";
@@ -51,8 +50,8 @@ export const FLOW_DEFAULT_WINDOW_HOURS = 24;
 export const MINT_BURN_CRON_JOB = "sync-mint-burn";
 const ETH_BLOCK_TIME_SEC = 12;
 const WINDOW_24H_BLOCKS = Math.ceil(24 * 3600 / ETH_BLOCK_TIME_SEC);
-const WINDOW_30D_BLOCKS = Math.ceil(30 * DAY_SEC / ETH_BLOCK_TIME_SEC);
-const WINDOW_90D_BLOCKS = Math.ceil(90 * DAY_SEC / ETH_BLOCK_TIME_SEC);
+const WINDOW_30D_BLOCKS = Math.ceil(30 * DAY_SECONDS / ETH_BLOCK_TIME_SEC);
+const WINDOW_90D_BLOCKS = Math.ceil(90 * DAY_SECONDS / ETH_BLOCK_TIME_SEC);
 const COVERAGE_LAG_GRACE_BLOCKS = 5_000;
 const COVERAGE_LAG_THRESHOLD_BLOCKS = 10_000;
 
@@ -63,7 +62,7 @@ export interface MintBurnCronSnapshot {
 }
 
 export function bucketDay(ts: number): number {
-  return Math.floor(ts / DAY_SEC) * DAY_SEC;
+  return Math.floor(ts / DAY_SECONDS) * DAY_SECONDS;
 }
 
 export function aggregateFlowCacheKey(hours: number): string {
@@ -158,7 +157,7 @@ export function buildBaselineMap(
   firstSeenRows: FirstSeenRow[],
 ): Map<string, { avgNet: number; avgAbs: number; dataDays: number }> {
   const nowDayTs = bucketDay(nowSec);
-  const baselineEndDayTs = nowDayTs - DAY_SEC;
+  const baselineEndDayTs = nowDayTs - DAY_SECONDS;
   const byCoinDay = new Map<string, Map<number, { net: number; abs: number }>>();
 
   for (const row of dailyRows) {
@@ -178,16 +177,16 @@ export function buildBaselineMap(
     const firstDayTs = bucketDay(row.first_hour_ts);
     if (firstDayTs > baselineEndDayTs) continue;
 
-    const trackedDays = Math.floor((baselineEndDayTs - firstDayTs) / DAY_SEC) + 1;
+    const trackedDays = Math.floor((baselineEndDayTs - firstDayTs) / DAY_SECONDS) + 1;
     const dataDays = Math.max(0, Math.min(BASELINE_WINDOW_DAYS, trackedDays));
     if (dataDays === 0) continue;
 
-    const startDayTs = baselineEndDayTs - (dataDays - 1) * DAY_SEC;
+    const startDayTs = baselineEndDayTs - (dataDays - 1) * DAY_SECONDS;
     const perDay = byCoinDay.get(row.stablecoin_id);
     let sumNet = 0;
     let sumAbs = 0;
 
-    for (let dayTs = startDayTs; dayTs <= baselineEndDayTs; dayTs += DAY_SEC) {
+    for (let dayTs = startDayTs; dayTs <= baselineEndDayTs; dayTs += DAY_SECONDS) {
       const bucket = perDay?.get(dayTs);
       if (!bucket) continue;
       sumNet += bucket.net;
