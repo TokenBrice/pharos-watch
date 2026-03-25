@@ -20,6 +20,7 @@ export const CRON_SCHEDULES = {
   fiveMinuteTelegramAlerts: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
   daily0800Utc: "0 8 * * *",
   daily0805Utc: "5 8 * * *",
+  monthlyYieldAudit: "0 6 1 * *",
 } as const;
 
 export type CronScheduleKey = keyof typeof CRON_SCHEDULES;
@@ -37,6 +38,7 @@ const CRON_SCHEDULE_BUCKETS = {
   fiveMinuteTelegramAlerts: { intervalSec: 300, offsetSec: 2 * 60 },
   daily0800Utc: { intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 },
   daily0805Utc: { intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 + 5 * 60 },
+  monthlyYieldAudit: { intervalSec: 30 * 86400, offsetSec: 6 * 3600 },
 } as const satisfies Record<CronScheduleKey, { intervalSec: number; offsetSec: number }>;
 
 const CRON_SCHEDULE_INTERVALS = Object.freeze(
@@ -355,6 +357,15 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     scheduleKey: "daily0805Utc",
     triggerMode: "shared",
     maxConnections: 1, // CoinGecko stablecoins market list fetch
+  },
+  {
+    job: "yield-coverage-audit",
+    label: "Yield coverage audit",
+    group: "other",
+    intervalSec: 30 * 86400,
+    scheduleKey: "monthlyYieldAudit",
+    triggerMode: "isolated",
+    maxConnections: 1,
   },
 ] as const;
 
