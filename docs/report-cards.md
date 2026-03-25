@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v6.6)
+## Overall Grade (v6.7)
 
 Three-step computation:
 
@@ -12,7 +12,7 @@ Three-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v6.6 keeps the v6.4 structure. LUSD and BOLD still use documented-bound eventual redemption capacity, and when fresh live reserve telemetry exists their current on-chain redemption fee bps is used for cost scoring instead of a flat formula placeholder. Collateral-quality passthrough now only accepts fresh authoritative independent live reserve snapshots whose latest sync state is `ok` and whose freshness evidence is scoring-eligible; `validated-static`, `weak-live-probe`, and `unverified` reserve feeds remain visible on reserve detail surfaces but no longer override curated collateral scoring.
+Current-version note: v6.7 keeps the v6.4 structure. LUSD and BOLD still use documented-bound eventual redemption capacity, and when fresh live reserve telemetry exists their current on-chain redemption fee bps is used for cost scoring instead of a flat formula placeholder. Collateral-quality passthrough now only accepts fresh authoritative independent live reserve snapshots whose latest sync state is `ok` and whose freshness evidence is scoring-eligible; `validated-static`, `weak-live-probe`, and `unverified` reserve feeds remain visible on reserve detail surfaces but no longer override curated collateral scoring. Blacklist attribution now defaults `centralized-dependent` stablecoins to `Possible` unless an explicit override or inherited-reserve classification is more specific.
 
 ## Dimensions
 

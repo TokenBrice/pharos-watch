@@ -35,6 +35,8 @@ const coin: StablecoinMeta = {
   name: "USD Coin",
   canBeBlacklisted: true,
   status: "active",
+  protocolFamily: "liquity",
+  protocolVariant: "v2",
   tags: ["major", "fiat-backed"],
   flags: {
     backing: "rwa-backed",
@@ -231,6 +233,7 @@ describe("HeroCard", () => {
     expect(html).toContain("USD Coin");
     expect(html).toContain("major");
     expect(html).toContain("fiat-backed");
+    expect(html).toContain("Liquity v2");
     expect(html).toContain("Bluechip: B");
     expect(html).toContain("peg-gauge:2");
     expect(html).toContain("Report issue");

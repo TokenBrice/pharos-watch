@@ -664,6 +664,7 @@
         "decimals": 6
       }
     ],
+    "canBeBlacklisted": "possible",
     "dependencies": [
       {
         "id": "usdt-tether",
@@ -771,6 +772,8 @@
     "chainTier": "unproven",
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "protocolFamily": "liquity",
+    "protocolVariant": "v1",
     "reserves": [
       {
         "name": "BTC (overcollateralized CDP)",
@@ -792,9 +795,6 @@
         "pct": 15,
         "risk": "medium"
       }
-    ],
-    "tags": [
-      "Liquity v1 fork"
     ]
   },
   {
@@ -1426,6 +1426,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": "possible",
     "deploymentModel": "native-multichain",
     "collateralQuality": "exotic",
     "liveReservesConfig": {
@@ -1920,6 +1921,7 @@
         "decimals": 6
       }
     ],
+    "canBeBlacklisted": "possible",
     "dependencies": [
       {
         "id": "usdc-circle",
@@ -2095,6 +2097,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": "possible",
     "chainTier": "mature-alt-l1",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "reserves": [
@@ -3161,6 +3164,8 @@
     ],
     "deploymentModel": "third-party-bridge",
     "governanceQuality": "immutable-code",
+    "protocolFamily": "liquity",
+    "protocolVariant": "v2",
     "reserves": [
       {
         "name": "wstETH (Lido)",
@@ -3357,6 +3362,8 @@
     ],
     "deploymentModel": "canonical-bridge",
     "governanceQuality": "immutable-code",
+    "protocolFamily": "liquity",
+    "protocolVariant": "v1",
     "reserves": [
       {
         "name": "ETH",
@@ -3777,6 +3784,8 @@
     ],
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "protocolFamily": "liquity",
+    "protocolVariant": "v1",
     "reserves": [
       {
         "name": "USDC (Circle)",
@@ -4215,6 +4224,8 @@
     ],
     "chainTier": "unproven",
     "collateralQuality": "exotic",
+    "protocolFamily": "liquity",
+    "protocolVariant": "style",
     "reserves": [
       {
         "name": "iBGT (Infrared liquid staked BGT)",
@@ -4429,6 +4440,8 @@
     ],
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "protocolFamily": "liquity",
+    "protocolVariant": "v1",
     "reserves": [
       {
         "name": "Bitcoin (BTC) — native and wrapped variants (tBTC, WBTC, SolvBTC, cbBTC)",
@@ -4461,10 +4474,7 @@
           ]
         }
       }
-    },
-    "tags": [
-      "Liquity v1 fork"
-    ]
+    }
   },
   {
     "id": "uty-xsy",
@@ -4686,6 +4696,8 @@
     ],
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
+    "protocolFamily": "liquity",
+    "protocolVariant": "v2",
     "reserves": [
       {
         "name": "ysyBOLD (Yearn savings BOLD)",
@@ -4741,10 +4753,7 @@
           "url": "https://app.asymmetry.finance/api/stats"
         }
       }
-    },
-    "tags": [
-      "Liquity v2 fork"
-    ]
+    }
   },
   {
     "id": "usnd-nerite",
@@ -4791,6 +4800,8 @@
     "chainTier": "stage1-l2",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
+    "protocolFamily": "liquity",
+    "protocolVariant": "v2",
     "reserves": [
       {
         "name": "tBTC",
@@ -4961,6 +4972,8 @@
     ],
     "deploymentModel": "native-multichain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "protocolFamily": "liquity",
+    "protocolVariant": "v2",
     "reserves": [
       {
         "name": "sUSDe (Ethena savings)",
@@ -5034,6 +5047,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": true,
     "collateralQuality": "exotic",
     "custodyModel": "institutional-regulated",
     "reserves": [
@@ -5137,6 +5151,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": "possible",
     "chainTier": "unproven",
     "collateralQuality": "exotic",
     "reserves": [
@@ -5446,6 +5461,7 @@
         "decimals": 24
       }
     ],
+    "canBeBlacklisted": "possible",
     "chainTier": "established-alt-l1",
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "alt-lst-bridged-or-mixed",
@@ -5637,6 +5653,8 @@
     ],
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "protocolFamily": "liquity",
+    "protocolVariant": "v2",
     "reserves": [
       {
         "name": "HYPE / kHYPE / wstHYPE (Hyperliquid native + LSTs)",
@@ -5678,10 +5696,7 @@
       "params": {
         "rpcUrl": "https://rpc.hyperliquid.xyz/evm"
       }
-    },
-    "tags": [
-      "Liquity v2 fork"
-    ]
+    }
   },
   {
     "id": "fidd-fidelity",
@@ -6642,6 +6657,8 @@
     ],
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
+    "protocolFamily": "liquity",
+    "protocolVariant": "v1",
     "reserves": [
       {
         "name": "BTC / WBTC / BTCB / cbBTC (overcollateralized CDP vaults)",
@@ -6667,10 +6684,7 @@
       "params": {
         "handlersUrl": "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false"
       }
-    },
-    "tags": [
-      "Liquity v1 fork"
-    ]
+    }
   },
   {
     "id": "usbd-bima",
@@ -6734,15 +6748,14 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "protocolFamily": "liquity",
+    "protocolVariant": "style",
     "reserves": [
       {
         "name": "Bitcoin LSTs / LRTs and approved BTC wrappers",
         "pct": 100,
         "risk": "high"
       }
-    ],
-    "tags": [
-      "Liquity-style CDP"
     ],
     "yieldConfig": {
       "yieldSource": "BIMA savings (sUSBD)",
@@ -6787,6 +6800,7 @@
         "decimals": 18
       }
     ],
+    "canBeBlacklisted": "possible",
     "collateralQuality": "exotic",
     "custodyModel": "institutional-regulated",
     "reserves": [
@@ -8903,7 +8917,7 @@
         "decimals": 8
       }
     ],
-    "canBeBlacklisted": false,
+    "canBeBlacklisted": "possible",
     "collateralQuality": "exotic",
     "custodyModel": "cex",
     "governanceQuality": "single-entity",

@@ -15,6 +15,7 @@ import {
   THREAT_BAND_LABELS,
   isThreatBand,
 } from "@shared/lib/classification";
+import { getProtocolFamilyLabel } from "@shared/lib/protocol-family";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
 import {
   formatCurrency,
@@ -99,6 +100,16 @@ function HeroTagList({ tags }: { tags: readonly string[] | undefined }) {
   );
 }
 
+function ProtocolFamilyTag({ label }: { label: string | null }) {
+  if (!label) return null;
+
+  return (
+    <span className="inline-flex items-center rounded-full border border-frost-blue/30 bg-frost-blue/10 px-2.5 py-0.5 text-[11px] font-semibold text-frost-blue">
+      {label}
+    </span>
+  );
+}
+
 function HeroClassificationLine({ coin }: { coin: StablecoinMeta }) {
   return (
     <p className="text-xs text-muted-foreground">
@@ -178,6 +189,7 @@ export function HeroCard({
   reportCard,
   onOpenFeedback,
 }: HeroCardProps) {
+  const protocolLabel = getProtocolFamilyLabel(coin);
   const chainCount = coinData?.chains?.length ?? 0;
   const blacklistStatus = reportCard?.rawInputs.canBeBlacklisted ?? isBlacklistable(coin);
   const primaryComparisonPage = getPrimaryStaticComparisonPageForCoin(coin.id);
@@ -340,7 +352,10 @@ export function HeroCard({
               <BluechipHeaderBadge stablecoinId={coin.id} />
             </div>
             <HeroClassificationLine coin={coin} />
-            <HeroTagList tags={coin.tags} />
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              <ProtocolFamilyTag label={protocolLabel} />
+              <HeroTagList tags={coin.tags} />
+            </div>
           </div>
           <SafetyGradeHero reportCard={reportCard} mobile />
         </div>
@@ -464,7 +479,10 @@ export function HeroCard({
                   <div className="flex items-center gap-3 mt-1">
                     <HeroClassificationLine coin={coin} />
                   </div>
-                  <HeroTagList tags={coin.tags} />
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <ProtocolFamilyTag label={protocolLabel} />
+                    <HeroTagList tags={coin.tags} />
+                  </div>
                 </div>
               </div>
 

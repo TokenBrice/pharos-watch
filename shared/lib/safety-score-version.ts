@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const safetyScore = createMethodologyVersion({
-  currentVersion: "6.6",
+  currentVersion: "6.7",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "6.7",
+      title: "CeFi-dependent blacklistability fallback",
+      date: "2026-03-25",
+      effectiveAt: 1774396800,
+      summary:
+        "Blacklistability attribution now defaults centralized-dependent stablecoins to possible unless an explicit override or inherited-reserve classification is more specific.",
+      impact: [
+        "Shared isBlacklistable() logic now resolves centralized-dependent governance to possible instead of false",
+        "Inherited reserve exposure still takes precedence, preserving possible-inherited for reserve-heavy dependency cases",
+        "Explicit canBeBlacklisted overrides remain authoritative, including explicit false exceptions",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "6.6",
       title: "Timestamp-backed live reserve scoring gate",

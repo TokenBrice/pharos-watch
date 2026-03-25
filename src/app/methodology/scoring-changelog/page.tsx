@@ -352,6 +352,35 @@ const route = createMethodologyChangelogRoute({
         </ul>
       </VersionCard>
 
+      {/* ──────────── v6.7 ──────────── */}
+      <VersionCard
+        version="v6.7"
+        title="CeFi-dependent blacklistability fallback"
+        date="Mar 25, 2026"
+        accent="border-l-amber-500"
+      >
+        <p>
+          Blacklistability attribution now treats{" "}
+          <span className="text-foreground font-medium">centralized-dependent</span> stablecoins as{" "}
+          <span className="text-foreground font-medium">possible</span> by default unless a more specific signal
+          applies.
+        </p>
+        <ul className="list-disc list-inside space-y-1">
+          <li>
+            Shared blacklistability resolution now falls back to <code className="text-xs bg-muted px-1 py-0.5 rounded">possible</code>{" "}
+            for centralized-dependent governance instead of <code className="text-xs bg-muted px-1 py-0.5 rounded">false</code>.
+          </li>
+          <li>
+            Reserve-heavy dependency cases still surface as <code className="text-xs bg-muted px-1 py-0.5 rounded">possible-inherited</code>{" "}
+            when inherited exposure is the more specific explanation.
+          </li>
+          <li>
+            Explicit overrides remain authoritative, including curated <code className="text-xs bg-muted px-1 py-0.5 rounded">false</code>{" "}
+            exceptions.
+          </li>
+        </ul>
+      </VersionCard>
+
       {/* ──────────── v5.9 ──────────── */}
       <VersionCard
         version="v5.9"

@@ -488,7 +488,8 @@ export const INHERITED_BLACKLIST_THRESHOLD_PCT = 25;
  *   2. Centralized governance → true
  *   3. Inherited: ≥ INHERITED_BLACKLIST_THRESHOLD_PCT of reserves are backed
  *      by first-order blacklistable coins (matched by coinId)
- *   4. false
+ *   4. Centralized-dependent governance → possible
+ *   5. false
  *
  * Pass `blacklistableIds` built from first-order coins only (explicit + centralized,
  * no index arg) to avoid recursive/circular inheritance.
@@ -505,6 +506,7 @@ export function isBlacklistable(
       .reduce((sum, r) => sum + r.pct, 0);
     if (inheritedPct >= INHERITED_BLACKLIST_THRESHOLD_PCT) return "possible-inherited";
   }
+  if (meta.flags.governance === "centralized-dependent") return "possible";
   return false;
 }
 

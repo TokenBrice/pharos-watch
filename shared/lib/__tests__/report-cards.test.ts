@@ -351,4 +351,23 @@ describe("isBlacklistable", () => {
     };
     expect(isBlacklistable(meta as never)).toBe(false);
   });
+
+  it("returns possible for centralized-dependent governance", () => {
+    const meta = {
+      flags: { governance: "centralized-dependent" as const },
+      canBeBlacklisted: undefined,
+    };
+    expect(isBlacklistable(meta as never)).toBe("possible");
+  });
+
+  it("prefers inherited risk over the generic centralized-dependent fallback", () => {
+    const meta = {
+      flags: { governance: "centralized-dependent" as const },
+      canBeBlacklisted: undefined,
+      reserves: [
+        { name: "USDC", pct: 30, risk: "low", coinId: "usdc-circle" },
+      ],
+    };
+    expect(isBlacklistable(meta as never, new Set(["usdc-circle"]))).toBe("possible-inherited");
+  });
 });
