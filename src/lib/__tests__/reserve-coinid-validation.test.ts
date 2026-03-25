@@ -44,6 +44,14 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "dusd-dtrinity::sUSDS (Sky Savings Rate)::USDS",
     "sUSDS is a yield-bearing wrapper and the coin already tracks stablecoin exposure through dependencies.",
   ],
+  [
+    "ftusd-flying-tulip::USDC (Aave lending positions)::USDC",
+    "ftUSD uses dependency modeling for its USDC/USDT collateral exposure.",
+  ],
+  [
+    "ftusd-flying-tulip::USDT (Aave lending positions)::USDT",
+    "ftUSD uses dependency modeling for its USDC/USDT collateral exposure.",
+  ],
 ]);
 
 describe("reserve coinId validation", () => {

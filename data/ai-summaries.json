@@ -868,5 +868,10 @@
     "title": "tBTC's Immutable Dollar",
     "text": "Nerite's USND earns a B+ safety grade at 77 — the highest of any stablecoin under $5 million in market cap — with A+ in both decentralization and dependency risk, powered by immutable contracts on Arbitrum (a Stage 1 L2) accepting tBTC (86.5%), rETH, WETH, and wstETH as collateral. The A+ peg score at 87 and 82-rated backstop with permissionless collateral redemption validate the Liquity V2-style architecture, though the 172 depeg events and zero DEX liquidity reveal a product that is structurally sound but too small for secondary market trading. Separate Stability Pools per collateral type and user-set interest rates are sophisticated engineering that would serve a larger protocol well, deployed here on a product with barely $1.3 million in circulation. USND demonstrates that immutable governance, clean collateral, and a proven chain can produce an excellent safety profile even at micro-cap scale — the question is whether anyone will notice.",
     "updatedAt": "2026-03-23"
+  },
+  "ftusd-flying-tulip": {
+    "title": "Cronje's Carry Trade",
+    "text": "Andre Cronje's Flying Tulip raised $225 million to build a DeFi super-app, and the stablecoin at its center has attracted roughly $730K in circulation from 20 holders — a ratio of venture capital to actual usage that would make a Web2 startup blush. The delta-neutral pitch echoes Ethena's playbook but runs a domesticated version: USDC and USDT lent into Aave with borrowed native assets staked to generate carry, no CEX perpetuals in sight. Yield flows exclusively to sftUSD stakers while unstaked ftUSD proceeds feed the protocol treasury, a design that makes the base token a zero-yield stablecoin whose holders subsidize the protocol by default. Deployed on Ethereum and Sonic with single-entity governance, circuit breaker contracts, and full dependency on the two largest centralized stablecoins, ftUSD is less a standalone dollar and more an opt-in yield wrapper for USDC and USDT with extra steps.",
+    "updatedAt": "2026-03-25"
   }
 }

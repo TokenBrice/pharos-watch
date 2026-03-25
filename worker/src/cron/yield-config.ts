@@ -188,6 +188,14 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     yieldSource: "Parallel Savings (sUSDp)",
     yieldType: "governance-set",
   },
+  // ftUSD -> sftUSD (Flying Tulip EpochRewardsVault — delta-neutral carry yield)
+  "ftusd-flying-tulip": {
+    variantSymbol: "sftUSD",
+    variantAddress: "0xeb48218a4c35C814C7678cBcae88C6Ee037F7625",
+    variantChain: "ethereum",
+    yieldSource: "Flying Tulip staking (sftUSD)",
+    yieldType: "fee-sharing",
+  },
 };
 
 /**
