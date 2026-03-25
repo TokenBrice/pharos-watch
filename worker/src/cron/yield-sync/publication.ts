@@ -1,4 +1,5 @@
 import { YieldRankingsResponseSchema, type AltYieldSource, type YieldBenchmarkMeta, type YieldSafetySnapshotMeta, type YieldSourceInputMeta } from "@shared/types";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { batchExecute } from "../../lib/db";
 import { getCache, setCache } from "../../lib/db-cache";
@@ -338,7 +339,7 @@ export async function pruneYieldTables(
     await deleteOrphanYieldRows(db, managedYieldIds);
   }
 
-  const pruneCutoff = startSec - 365 * 86400;
+  const pruneCutoff = startSec - 365 * DAY_SECONDS;
   await db.prepare("DELETE FROM yield_history WHERE recorded_at < ?").bind(pruneCutoff).run();
 }
 

@@ -36,6 +36,7 @@ import {
 } from "@shared/lib/redemption-backstop-confidence";
 import { buildMethodologyEnvelope } from "./api-utils";
 import { decodeJsonString } from "./cache-json";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 interface RedemptionBackstopRow {
   stablecoin_id: string;
@@ -338,7 +339,7 @@ export async function upsertRedemptionBackstopSnapshots(
 ): Promise<void> {
   if (records.length === 0) return;
 
-  const snapshotDate = Math.floor(Date.now() / 1000 / 86400) * 86400;
+  const snapshotDate = Math.floor(Date.now() / 1000 / DAY_SECONDS) * DAY_SECONDS;
   const stmts: D1PreparedStatement[] = [];
   for (const record of records) {
     stmts.push(buildCurrentUpsert(db, record));

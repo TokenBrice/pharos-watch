@@ -1,4 +1,5 @@
 import { CIRCUIT_SOURCE, USER_AGENT } from "../lib/constants";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
@@ -125,7 +126,7 @@ export async function upsertDiscoveryCandidates(
 }
 
 async function cleanupOldDismissed(db: D1Database): Promise<number> {
-  const cutoff = Math.floor(Date.now() / 1000) - DISMISSED_CLEANUP_DAYS * 86400;
+  const cutoff = Math.floor(Date.now() / 1000) - DISMISSED_CLEANUP_DAYS * DAY_SECONDS;
   const result = await db.prepare(
     "DELETE FROM discovery_candidates WHERE dismissed = 1 AND dismissed_at < ?",
   ).bind(cutoff).run();

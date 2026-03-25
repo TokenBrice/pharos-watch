@@ -1,4 +1,5 @@
 import { TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { computePegScore, coinTrackingStart } from "@shared/lib/peg-score";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { getDepegDewsMethodologyVersionAt } from "@shared/lib/depeg-dews-version";
@@ -27,7 +28,7 @@ export async function derivePegAnalyticsSnapshot(
 ): Promise<PegAnalyticsSnapshot> {
   const includeNavTokens = options.includeNavTokens ?? false;
   const nowSec = Math.floor(Date.now() / 1000);
-  const fourYearsAgoSec = nowSec - Math.ceil(4 * 365.25 * 86400);
+  const fourYearsAgoSec = nowSec - Math.ceil(4 * 365.25 * DAY_SECONDS);
 
   const [eventsResult, firstSeenMap] = await Promise.all([
     db.prepare("SELECT * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC")
@@ -47,7 +48,7 @@ export async function derivePegAnalyticsSnapshot(
   const priceById = new Map(options.peggedAssets.map((asset) => [asset.id, asset]));
   const { rates: pegRates } = derivePegRates(options.peggedAssets, TRACKED_META_BY_ID, options.fxFallbackRates);
   const methodologyVersion = getDepegDewsMethodologyVersionAt(options.methodologyAsOf);
-  const trackingFallbackStart = nowSec - 4 * 365.25 * 86400;
+  const trackingFallbackStart = nowSec - 4 * 365.25 * DAY_SECONDS;
 
   const pegDataById = new Map<string, PegSummaryCoin>();
   for (const meta of ACTIVE_STABLECOINS) {

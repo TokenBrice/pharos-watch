@@ -1,6 +1,7 @@
 import {
   TRACKED_META_BY_ID,
 } from "@shared/lib/stablecoins";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import {
   buildOnChainSourceKey,
@@ -14,9 +15,9 @@ import type { ResolvedYield, ResolvedYieldEntry } from "./types";
 
 const LOW_SOURCE_TVL_USD = 250_000;
 const CROSS_SOURCE_DIVERGENCE_THRESHOLD = 0.35;
-const LEGACY_HISTORY_MAX_AGE_SEC = 30 * 86400 + 5 * 86400;
+const LEGACY_HISTORY_MAX_AGE_SEC = 30 * DAY_SECONDS + 5 * DAY_SECONDS;
 const LEGACY_LUSD_BPROTOCOL_SOURCE_KEY = "bprotocol-lqty-only";
-const MAX_RETAINED_RISK_FREE_RATE_AGE_SEC = 3 * 86400;
+const MAX_RETAINED_RISK_FREE_RATE_AGE_SEC = 3 * DAY_SECONDS;
 
 export type ConfidenceTier = "deterministic" | "curated" | "discovered" | "fallback";
 

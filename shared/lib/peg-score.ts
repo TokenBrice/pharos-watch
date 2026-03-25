@@ -1,7 +1,8 @@
 import type { DepegEvent } from "../types";
 import { mergeDepegSeconds, worstDeviation } from "./peg-utils";
+import { DAY_SECONDS } from "./time-constants";
 
-export const PEG_SCORE_LOOKBACK_SEC = Math.ceil(4 * 365.25 * 86400);
+export const PEG_SCORE_LOOKBACK_SEC = Math.ceil(4 * 365.25 * DAY_SECONDS);
 
 /**
  * Compute the tracking window start for a coin, respecting both the 4-year
@@ -106,7 +107,7 @@ export function computePegScore(
   }
 
   const spanSec = Math.max(now - startSec, 1);
-  const spanDays = spanSec / 86400;
+  const spanDays = spanSec / DAY_SECONDS;
   const insufficientData = spanDays < 7;
 
   // --- Time score (pegPct) ---
@@ -123,8 +124,8 @@ export function computePegScore(
   for (const e of events) {
     const peakBps = Math.abs(e.peakDeviationBps);
     const endSec = e.endedAt ?? now;
-    const durationDays = Math.min((endSec - e.startedAt) / 86400, 90);
-    const yearsAgo = (now - e.startedAt) / (365.25 * 86400);
+    const durationDays = Math.min((endSec - e.startedAt) / DAY_SECONDS, 90);
+    const yearsAgo = (now - e.startedAt) / (365.25 * DAY_SECONDS);
     const recencyWeight = 1 / (1 + yearsAgo);
 
     const durationPenalty = (peakBps / 100) * (durationDays / 30) * recencyWeight;

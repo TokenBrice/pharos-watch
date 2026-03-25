@@ -1,4 +1,5 @@
 import { batchExecute } from "../lib/db";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { CronResult } from "../lib/cron-logger";
@@ -100,7 +101,7 @@ export async function snapshotSupply(db: D1Database, _signal?: AbortSignal): Pro
 
   // Prune supply_history rows older than 2 years
   try {
-    const twoYearsAgoSec = Math.floor(Date.now() / 1000) - 2 * 365 * 86400;
+    const twoYearsAgoSec = Math.floor(Date.now() / 1000) - 2 * 365 * DAY_SECONDS;
     await db.prepare("DELETE FROM supply_history WHERE snapshot_date < ?").bind(twoYearsAgoSec).run();
   } catch (pruneErr) {
     console.warn("[snapshot-supply] Failed to prune old supply history:", pruneErr);

@@ -1,4 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { StablecoinMeta } from "@shared/types";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { CIRCUIT_SOURCE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../../lib/constants";
@@ -210,9 +211,9 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal):
     }
 
     const nowSec = Math.floor(Date.now() / 1000);
-    const dayAgo = nowSec - 86400;
-    const weekAgo = nowSec - 7 * 86400;
-    const monthAgo = nowSec - 30 * 86400;
+    const dayAgo = nowSec - DAY_SECONDS;
+    const weekAgo = nowSec - 7 * DAY_SECONDS;
+    const monthAgo = nowSec - 30 * DAY_SECONDS;
 
     const findNearestTvl = (
       history: { date: number; totalLiquidityUSD: number }[],
@@ -231,7 +232,7 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal):
         }
       }
 
-      return closest && closestDist < 2 * 86400 ? closest.totalLiquidityUSD : null;
+      return closest && closestDist < 2 * DAY_SECONDS ? closest.totalLiquidityUSD : null;
     };
 
     return GOLD_METAS

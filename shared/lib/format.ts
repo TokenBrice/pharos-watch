@@ -1,3 +1,5 @@
+import { DAY_SECONDS } from "./time-constants";
+
 /** Abbreviate a number into tier suffixes (T/B/M/K) with configurable decimals and prefix. */
 function abbreviateNumber(value: number, decimals: number, prefix = ""): string {
   if (!Number.isFinite(value)) return "N/A";
@@ -121,7 +123,7 @@ export function formatTrackingSpanDays(days: number): string {
 }
 
 export function formatTrackingSpanSeconds(seconds: number): string {
-  return formatTrackingSpanDays(Math.floor(seconds / 86400));
+  return formatTrackingSpanDays(Math.floor(seconds / DAY_SECONDS));
 }
 
 export function formatEventDate(timestamp: number): string {
@@ -143,8 +145,8 @@ export function formatDuration(startSec: number, endSec: number | null): string 
   if (totalSeconds < 0) return "N/A";
   if (totalSeconds < 60) return "< 1m";
 
-  const days = Math.floor(totalSeconds / 86400);
-  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const days = Math.floor(totalSeconds / DAY_SECONDS);
+  const hours = Math.floor((totalSeconds % DAY_SECONDS) / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
 
   if (days > 0) {
@@ -168,12 +170,12 @@ export function formatDeathDate(d: string): string {
 export function formatElapsedSeconds(seconds: number): string {
   if (seconds < 60) return `${Math.floor(seconds)}s`;
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-  if (seconds < 86400) {
+  if (seconds < DAY_SECONDS) {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
   }
-  return `${Math.floor(seconds / 86400)}d`;
+  return `${Math.floor(seconds / DAY_SECONDS)}d`;
 }
 
 /** Format an epoch-seconds timestamp as a relative time string ("just now", "5m ago", "2h ago"). */

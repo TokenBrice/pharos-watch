@@ -1,4 +1,5 @@
 import { DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../../lib/constants";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { resolveMarketCap } from "../../lib/resolve-market-cap";
@@ -27,7 +28,7 @@ export interface CommodityDetailConfig {
 export async function fetchCommodityTokens(
   config: CommodityDetailConfig,
 ): Promise<Record<string, unknown>[]> {
-  const twoYearsAgo = Math.floor(Date.now() / 1000) - 2 * 365 * 86400;
+  const twoYearsAgo = Math.floor(Date.now() / 1000) - 2 * 365 * DAY_SECONDS;
 
   const [priceRes, protocolRes] = await Promise.all([
     fetchWithRetry(

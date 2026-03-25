@@ -1,5 +1,6 @@
 import type { CacheStatus } from "@shared/types";
 import { FRESHNESS_RATIOS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { getCache, setCacheIfNewer } from "./db-cache";
 import { decodeJsonString } from "./cache-json";
 import { sanitizeRecordValues } from "./normalizers";
@@ -219,9 +220,9 @@ function isWeekendDay(dayStartSec: number): boolean {
 }
 
 function previousBusinessDaySec(dayStartSec: number): number {
-  let current = dayStartSec - 86400;
+  let current = dayStartSec - DAY_SECONDS;
   while (isWeekendDay(current)) {
-    current -= 86400;
+    current -= DAY_SECONDS;
   }
   return current;
 }
@@ -229,7 +230,7 @@ function previousBusinessDaySec(dayStartSec: number): number {
 function countBusinessDaysBehind(sourceDaySec: number, expectedDaySec: number): number {
   if (sourceDaySec >= expectedDaySec) return 0;
   let missed = 0;
-  for (let cursor = sourceDaySec + 86400; cursor <= expectedDaySec; cursor += 86400) {
+  for (let cursor = sourceDaySec + DAY_SECONDS; cursor <= expectedDaySec; cursor += DAY_SECONDS) {
     if (!isWeekendDay(cursor)) {
       missed++;
     }
@@ -242,7 +243,7 @@ function resolveBusinessDailyExpectedDaySec(nowSec: number): number {
   if (isWeekendDay(dayStartSec)) {
     let expected = dayStartSec;
     while (isWeekendDay(expected)) {
-      expected -= 86400;
+      expected -= DAY_SECONDS;
     }
     return expected;
   }
@@ -257,7 +258,7 @@ function resolveCalendarDailyExpectedDaySec(nowSec: number): number {
   const hourUtc = new Date(nowSec * 1000).getUTCHours();
   return hourUtc >= FX_CALENDAR_DAILY_ROLLOVER_HOUR_UTC
     ? dayStartSec
-    : dayStartSec - 86400;
+    : dayStartSec - DAY_SECONDS;
 }
 
 interface FxSourceFreshness {
@@ -304,7 +305,7 @@ function evaluateFxSourceFreshness(
 
   if (normalizedCadence === "calendar-daily" && sourceDaySec != null) {
     const expectedDaySec = resolveCalendarDailyExpectedDaySec(nowSec);
-    const missedDays = Math.max(0, Math.floor((expectedDaySec - sourceDaySec) / 86400));
+    const missedDays = Math.max(0, Math.floor((expectedDaySec - sourceDaySec) / DAY_SECONDS));
     if (missedDays <= 0) {
       return { status: "fresh", ageSec, cadence: normalizedCadence, warning: null };
     }

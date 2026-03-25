@@ -1,4 +1,5 @@
 import { YieldRankingsResponseSchema, type ReportCard, type YieldRanking, type YieldRankingsResponse } from "@shared/types";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
   addFreshnessHeaders,
   buildFreshnessMeta,
@@ -19,7 +20,7 @@ export const handleStablecoinCharts = createCacheHandler("stablecoin-charts", "s
 
 export const handleBluechipRatings = createCacheHandler("bluechip-ratings", "bluechip-ratings", CACHE_PROFILES.slow, 43200);
 
-export const handleUsdsStatus = createCacheHandler("usds-status", "usds-status", CACHE_PROFILES.standard, 86400);
+export const handleUsdsStatus = createCacheHandler("usds-status", "usds-status", CACHE_PROFILES.standard, DAY_SECONDS);
 
 const YIELD_RANKINGS_MAX_AGE_SEC = 1800;
 

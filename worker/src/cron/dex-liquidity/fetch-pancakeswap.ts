@@ -1,4 +1,5 @@
 import { fetchWithRetry } from "../../lib/fetch-retry";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { USER_AGENT } from "../../lib/constants";
 import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
 import { classifyClPoolType } from "./direct-source-helpers";
@@ -121,7 +122,7 @@ export async function fetchPancakeSwapPools(
         if (pagePools.length === 0) break;
 
         const latestVolumeByPool = new Map<string, number>();
-        const cutoff = Math.floor(Date.now() / 1000) - 86400;
+        const cutoff = Math.floor(Date.now() / 1000) - DAY_SECONDS;
         const dayDataPoolIdBatches = chunkPoolIds(pagePools.map((pool) => pool.id), DAY_DATA_BATCH_SIZE);
         let failedDayDataBatches = 0;
         for (let batchIndex = 0; batchIndex < dayDataPoolIdBatches.length; batchIndex++) {

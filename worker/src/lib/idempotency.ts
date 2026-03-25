@@ -1,4 +1,5 @@
 import { errorResponse } from "./api-utils";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 interface IdempotencyRecord {
   request_hash: string;
@@ -133,7 +134,7 @@ export async function runIdempotentAdminAction(
   // Keep table bounded.
   await db
     .prepare("DELETE FROM admin_idempotency_keys WHERE created_at < ?")
-    .bind(now - 7 * 86400)
+    .bind(now - 7 * DAY_SECONDS)
     .run()
     .catch(() => {});
 

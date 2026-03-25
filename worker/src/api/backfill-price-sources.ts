@@ -1,4 +1,5 @@
 import { DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { RATE_LIMITS } from "../lib/rate-limit";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchWithRetry } from "../lib/fetch-retry";
@@ -68,7 +69,7 @@ export async function fetchCgPriceHistoryHourly(geckoId: string): Promise<PriceP
 
   const HOURLY_EPOCH = Math.floor(new Date("2018-01-30T00:00:00Z").getTime() / 1000);
   const CHUNK_DAYS = 89;
-  const CHUNK_SEC = CHUNK_DAYS * 86400;
+  const CHUNK_SEC = CHUNK_DAYS * DAY_SECONDS;
 
   // Phase 1: pre-hourly epoch — single request returns daily data
   try {
@@ -161,8 +162,8 @@ export async function fetchMarketBackfillPrices(
   // Fall back to DefiLlama if CG has no data (~4 year coverage)
   if (prices.length === 0) {
     const coinId = `coingecko:${geckoId}`;
-    const twoYearsAgo = Math.floor(Date.now() / 1000) - 2 * 365 * 86400;
-    const fourYearsAgo = twoYearsAgo - 2 * 365 * 86400;
+    const twoYearsAgo = Math.floor(Date.now() / 1000) - 2 * 365 * DAY_SECONDS;
+    const fourYearsAgo = twoYearsAgo - 2 * 365 * DAY_SECONDS;
     const [pricesOld, pricesRecent] = await Promise.all([
       fetchDlPriceChart(coinId, fourYearsAgo),
       fetchDlPriceChart(coinId, twoYearsAgo),

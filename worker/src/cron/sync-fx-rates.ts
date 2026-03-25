@@ -1,4 +1,5 @@
 import type { CronResult } from "../lib/cron-logger";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { validatePayloadWithSchema } from "../lib/api-utils";
 import { RUB_FALLBACK, USER_AGENT, CIRCUIT_SOURCE } from "../lib/constants";
@@ -526,7 +527,7 @@ export async function syncFxRates(
           const ecbDateObj = new Date(data.date + "T16:00:00Z");
           const ecbUpdatedAt = resolveDatedSourceUpdatedAt(data.date, syncStartSec, 16);
           const ecbAgeSec = (Date.now() - ecbDateObj.getTime()) / 1000;
-          if (ecbAgeSec > 86400) {
+          if (ecbAgeSec > DAY_SECONDS) {
             console.warn(
               `[sync-fx-rates] ECB rates are ${Math.round(ecbAgeSec / 3600)}h stale (date=${data.date}). ` +
               `Weekend/holiday — non-USD pegs using last published rates.`,

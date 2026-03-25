@@ -1,4 +1,5 @@
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { batchExecute } from "../lib/db";
@@ -73,7 +74,7 @@ async function backfillCommodity(
       const priceMap = new Map<number, number>();
       if (cgData.prices) {
         for (const [ts, p] of cgData.prices) {
-          const snapshotDate = Math.floor(ts / 1000 / 86400) * 86400;
+          const snapshotDate = Math.floor(ts / 1000 / DAY_SECONDS) * DAY_SECONDS;
           priceMap.set(snapshotDate, p);
         }
       }
@@ -81,7 +82,7 @@ async function backfillCommodity(
       const stmts: D1PreparedStatement[] = [];
       for (const [ts, mcap] of mcaps) {
         if (mcap <= 0) continue;
-        const snapshotDate = Math.floor(ts / 1000 / 86400) * 86400;
+        const snapshotDate = Math.floor(ts / 1000 / DAY_SECONDS) * DAY_SECONDS;
         const price = priceMap.get(snapshotDate) ?? null;
 
         // Validate historical mcap via supply×price when price is available
@@ -157,7 +158,7 @@ async function backfillCommodity(
   for (const point of tvlHistory) {
     const mcap = point.totalLiquidityUSD;
     if (mcap <= 0) continue;
-    const snapshotDate = Math.floor(point.date / 86400) * 86400;
+    const snapshotDate = Math.floor(point.date / DAY_SECONDS) * DAY_SECONDS;
     const price = findPrice(point.date);
     stmts.push(
       db
@@ -324,7 +325,7 @@ export async function handleBackfillSupplyHistory(
 
         const stmts: D1PreparedStatement[] = [];
 
-        const fallbackWindowStart = Math.floor(Date.now() / 1000) - 7 * 86400;
+        const fallbackWindowStart = Math.floor(Date.now() / 1000) - 7 * DAY_SECONDS;
         for (const entry of tokens) {
           const circ = entry.circulating;
           if (!circ) continue;
@@ -350,7 +351,7 @@ export async function handleBackfillSupplyHistory(
           }
 
           // Floor to UTC midnight
-          const snapshotDate = Math.floor(entry.date / 86400) * 86400;
+          const snapshotDate = Math.floor(entry.date / DAY_SECONDS) * DAY_SECONDS;
 
           stmts.push(
             db

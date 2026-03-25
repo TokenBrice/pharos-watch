@@ -1,4 +1,5 @@
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { StablecoinData } from "@shared/types";
 import { sumPegBuckets } from "@shared/lib/supply";
@@ -243,8 +244,8 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
   }
 
   // Count depeg events started today vs yesterday (UTC day boundaries)
-  const todayStart = Math.floor(now / 86400) * 86400;
-  const yesterdayStart = todayStart - 86400;
+  const todayStart = Math.floor(now / DAY_SECONDS) * DAY_SECONDS;
+  const yesterdayStart = todayStart - DAY_SECONDS;
   let depegEventsToday = 0;
   let depegEventsYesterday = 0;
   for (const e of allEvents) {

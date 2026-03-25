@@ -1,3 +1,5 @@
+import { DAY_SECONDS } from "@shared/lib/time-constants";
+
 /** Raw pool entry written to dex_pool_staging by the discovery cron. */
 export interface StagedPool {
   poolId: string;
@@ -56,7 +58,7 @@ export function stagedPoolConfidence(ageHours: number): number {
  * Estimate maturity as days since discovery, capped to avoid overstating durability.
  */
 export function stagedPoolMaturityDays(discoveredAt: number, now: number): number {
-  const days = (now - discoveredAt) / 86400;
+  const days = (now - discoveredAt) / DAY_SECONDS;
   return Math.min(Math.max(0, days), 30);
 }
 
@@ -69,5 +71,5 @@ export const DISCOVERY_TIERS = {
   BACKOFF_T2_MISSES: 3,
   BACKOFF_T3_MISSES: 6,
   BACKOFF_DORMANT_MISSES: 10,
-  DORMANT_INTERVAL_SEC: 86400,
+  DORMANT_INTERVAL_SEC: DAY_SECONDS,
 } as const;

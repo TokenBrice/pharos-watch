@@ -1,5 +1,6 @@
 import { isDewsAlertable, type DepegAlertPayload } from "../lib/telegram-alerts";
 import { setCache } from "../lib/db-cache";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 // ---------- Constants ----------
 
@@ -11,7 +12,7 @@ export const SNAPSHOT_KEYS = {
   launch: "alert:launch-snapshot",
 } as const;
 
-export const SNAPSHOT_MAX_AGE_SEC = 86400; // 24h
+export const SNAPSHOT_MAX_AGE_SEC = DAY_SECONDS; // 24h
 
 export const SAFETY_GRADE_RANK: Record<string, number> = {
   NR: 0,

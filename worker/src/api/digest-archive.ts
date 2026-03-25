@@ -1,5 +1,6 @@
 import { withErrorHandler, jsonFreshResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 export const handleDigestArchive = withErrorHandler("digest-archive", async (db: D1Database): Promise<Response> => {
   const rows = await db.prepare(
@@ -58,6 +59,6 @@ export const handleDigestArchive = withErrorHandler("digest-archive", async (db:
   return jsonFreshResponse({ digests }, {
     cacheControl: CACHE_PROFILES.standard,
     updatedAt: latestTs,
-    maxAgeSec: 86400,
+    maxAgeSec: DAY_SECONDS,
   });
 });

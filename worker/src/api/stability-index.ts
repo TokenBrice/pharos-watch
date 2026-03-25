@@ -5,6 +5,7 @@ import {
   jsonResponse,
   buildMethodologyEnvelope,
 } from "../lib/api-utils";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getConditionBand } from "../lib/stability-index";
 import {
@@ -19,7 +20,7 @@ import { upsertPsiHistoryPoint } from "@shared/lib/psi-view-model";
 export const handleStabilityIndex = withErrorHandler("stability-index", async (db: D1Database, url: URL): Promise<Response> => {
   const detail = url.searchParams.get("detail") === "true";
   const now = Math.floor(Date.now() / 1000);
-  const todayMidnight = now - (now % 86400);
+  const todayMidnight = now - (now % DAY_SECONDS);
 
   // Latest valid sample (live score). If a compute cycle was skipped (insufficient inputs),
   // the previous sample remains the source of truth.
@@ -30,7 +31,7 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
   // 24h rolling average
   const avg24hRow = await db
     .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?")
-    .bind(now - 86400)
+    .bind(now - DAY_SECONDS)
     .first<{ avg: number | null }>();
 
   // Today's running average (for appending to history)
@@ -141,5 +142,5 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
     }),
   }, addFreshnessHeaders({
     "Cache-Control": CACHE_PROFILES.standard,
-  }, computedAt, 86400));
+  }, computedAt, DAY_SECONDS));
 });

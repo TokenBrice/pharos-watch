@@ -1,4 +1,5 @@
 import type { LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseChainlinkLatestRoundData } from "./chainlink";
@@ -9,7 +10,7 @@ const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
 const LATEST_ROUND_DATA_SELECTOR = "0xfeaf968c";
 /** Ondo-style getPrice() — returns single uint256 with 18 decimals. */
 const GET_PRICE_SELECTOR = "0x98d5fdca";
-const DEFAULT_MAX_ORACLE_AGE_SEC = 2 * 86400;
+const DEFAULT_MAX_ORACLE_AGE_SEC = 2 * DAY_SECONDS;
 
 export interface ChainlinkNavParams {
   oracleAddress: string;

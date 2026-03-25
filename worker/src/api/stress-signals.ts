@@ -8,6 +8,7 @@ import {
   safeJsonParse,
   buildMethodologyEnvelope,
 } from "../lib/api-utils";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CACHE_PROFILES } from "../lib/constants";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
@@ -55,7 +56,7 @@ export const handleStressSignals = withErrorHandler(
           computed_at: number;
         }>();
 
-      const cutoff = Math.floor(Date.now() / 1000) - days * 86400;
+      const cutoff = Math.floor(Date.now() / 1000) - days * DAY_SECONDS;
       const history = await db
         .prepare(
           `SELECT snapshot_date, score, band, signals_json

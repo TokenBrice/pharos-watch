@@ -1,4 +1,5 @@
 import type { StagedPool } from "../dex-discovery/types";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { stagedPoolConfidence, stagedPoolMaturityDays } from "../dex-discovery/types";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
@@ -150,7 +151,7 @@ export async function mergeStagedPools(
                        base_token, quote_token, quote_symbol, price_usd, locked_liq_pct,
                        discovered_at, refreshed_at
                 FROM dex_pool_staging WHERE refreshed_at >= ?`)
-      .bind(nowSec - 86400)
+      .bind(nowSec - DAY_SECONDS)
       .all<StagedPoolRow>();
     rows = result.results ?? [];
   } catch (err) {
