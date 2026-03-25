@@ -17,7 +17,7 @@ const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
 
 export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   ...expandIds(
-    ["bold-liquity", "lusd-liquity", "feusd-felix", "meusd-mezo", "nect-beraborrow", "fxusd-f-x-protocol"],
+    ["bold-liquity", "lusd-liquity", "feusd-felix", "meusd-mezo", "nect-beraborrow", "fxusd-f-x-protocol", "usdq-quill", "usdk-orki"],
     collateralRedeemBase,
   ),
   "bold-liquity": {
@@ -72,6 +72,18 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
   },
   "usnd-nerite": {
+    ...collateralRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    outputAssetType: "mixed-collateral",
+    costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
+  },
+  "usdq-quill": {
+    ...collateralRedeemBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    outputAssetType: "mixed-collateral",
+    costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
+  },
+  "usdk-orki": {
     ...collateralRedeemBase,
     ...reviewedDirectRedemptionSupplyFull,
     outputAssetType: "mixed-collateral",

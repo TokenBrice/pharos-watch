@@ -4930,6 +4930,116 @@
     }
   },
   {
+    "id": "usdq-quill",
+    "name": "Quill USD",
+    "symbol": "USDQ",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "wETH, wstETH, weETH, and SCR in overcollateralized CDP markets on Scroll",
+    "pegMechanism": "Overcollateralized CDP with user-set interest rates and direct on-chain redemption for underlying collateral; Stability Pools absorb liquidations per collateral market",
+    "llamaId": "228",
+    "detailProvider": "defillama",
+    "geckoId": "quill-usdq",
+    "canBeBlacklisted": false,
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://app.quill.finance/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/QuillFi"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.quill.finance/faq/usdusdq"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "scroll",
+        "address": "0xdb9e8f82d6d45fff803161f2a5f75543972b229a",
+        "decimals": 18
+      }
+    ],
+    "chainTier": "unproven",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "governanceQuality": "immutable-code",
+    "protocolFamily": "liquity",
+    "protocolVariant": "v2",
+    "reserves": [
+      {
+        "name": "wETH",
+        "pct": 25,
+        "risk": "very-low"
+      },
+      {
+        "name": "wstETH (Lido)",
+        "pct": 25,
+        "risk": "low"
+      },
+      {
+        "name": "weETH (Ether.fi)",
+        "pct": 25,
+        "risk": "low"
+      },
+      {
+        "name": "SCR (Scroll)",
+        "pct": 25,
+        "risk": "high"
+      }
+    ]
+  },
+  {
+    "id": "usdk-orki",
+    "name": "Orki USD",
+    "symbol": "USDK",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "LST/LRT assets including swETH and rswETH in overcollateralized CDP markets on Swellchain",
+    "pegMechanism": "Overcollateralized CDP with Liquity v2-style user-set interest rates and direct on-chain redemption for underlying collateral; Stability Pools absorb liquidations per collateral market",
+    "llamaId": "265",
+    "detailProvider": "defillama",
+    "canBeBlacklisted": false,
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://app.orki.finance/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/OrkiFi"
+      },
+      {
+        "label": "Docs",
+        "url": "https://orki-finance.gitbook.io/orki-finance-docs/products/usdk"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "swellchain",
+        "address": "0x0000baa0b1678229863c0a941c1056b83a1955f5",
+        "decimals": 18
+      }
+    ],
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "governanceQuality": "immutable-code",
+    "protocolFamily": "liquity",
+    "protocolVariant": "v2"
+  },
+  {
     "id": "ebusd-ebisu",
     "name": "Ebisu ebUSD",
     "symbol": "ebUSD",
