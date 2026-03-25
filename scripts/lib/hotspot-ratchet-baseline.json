@@ -5,9 +5,9 @@
     "branchCount": 4
   },
   "worker/src/api/feedback.ts": {
-    "fileLines": 27,
-    "maxFunctionLines": 15,
-    "branchCount": 3
+    "fileLines": 47,
+    "maxFunctionLines": 30,
+    "branchCount": 5
   },
   "worker/src/handlers/http.ts": {
     "fileLines": 52,
@@ -20,22 +20,22 @@
     "branchCount": 29
   },
   "src/app/methodology/sections/core-sections.tsx": {
-    "fileLines": 1774,
-    "maxFunctionLines": 1747,
+    "fileLines": 1372,
+    "maxFunctionLines": 1348,
     "branchCount": 0
   },
   "src/app/coverage/client.tsx": {
-    "fileLines": 809,
-    "maxFunctionLines": 413,
+    "fileLines": 808,
+    "maxFunctionLines": 411,
     "branchCount": 27
   },
   "worker/src/cron/daily-digest/collectors.ts": {
-    "fileLines": 918,
+    "fileLines": 912,
     "maxFunctionLines": 121,
-    "branchCount": 85
+    "branchCount": 83
   },
   "worker/src/cron/sync-fx-rates.ts": {
-    "fileLines": 800,
+    "fileLines": 798,
     "maxFunctionLines": 543,
     "branchCount": 99
   },
