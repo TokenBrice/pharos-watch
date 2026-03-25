@@ -51,7 +51,7 @@ const SYSTEM_PROMPT =
   "Every sentence must contain a specific number or coin name from the data. " +
   "CRITICAL — rank everything by market impact (deviation × market cap). " +
   "A 30 bps wobble on USDT is front-page news. A 2000 bps depeg on a $15M coin is a footnote at best — mention it only if nothing more interesting happened. " +
-  "Do not lead with small illiquid coins that have been off-peg for weeks; that is not news.\n\n" +
+  "Do not lead with small illiquid coins that have been above-peg or below-peg for weeks; that is not news.\n\n" +
   // 3. Formatting bans
   "No emojis, no clickbait, no hedging, no exclamation marks. " +
   "NEVER use em dashes (\u2014) or en dashes (\u2013). Use commas, semicolons, colons, or periods instead. Any dash that is not a hyphen is forbidden.\n\n" +
@@ -186,7 +186,7 @@ function buildUserPrompt(
   if (data.topDepegs.length > 0) {
     lines.push("Active depegs by market impact (deviation × mcap):");
     for (const d of data.topDepegs) {
-      lines.push(`  ${d.symbol} | ${d.bps} bps off-peg | ${formatCurrency(d.mcapUsd)} mcap`);
+      lines.push(`  ${d.symbol} | ${Math.abs(d.bps)} bps ${d.bps >= 0 ? "above" : "below"}-peg | ${formatCurrency(d.mcapUsd)} mcap`);
     }
   }
 
