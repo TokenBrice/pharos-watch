@@ -1,7 +1,9 @@
+import { ratioQualityColor } from "@/lib/severity-colors";
+
 export function BalanceBar({ ratio }: { ratio: number }) {
   const pct = Math.round(ratio * 100);
   const bgColor = ratio >= 0.8 ? "bg-emerald-500" : ratio >= 0.5 ? "bg-amber-500" : "bg-red-500";
-  const textColor = ratio >= 0.8 ? "text-emerald-700 dark:text-emerald-400" : ratio >= 0.5 ? "text-amber-700 dark:text-amber-400" : "text-red-700 dark:text-red-400";
+  const textColor = ratioQualityColor(ratio);
   const level = ratio >= 0.8 ? "good" : ratio >= 0.5 ? "fair" : "poor";
   return (
     <div className="flex items-center gap-1.5" role="meter" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`Pool balance ${pct}%, ${level}`}>

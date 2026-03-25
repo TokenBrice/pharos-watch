@@ -26,7 +26,7 @@ import {
   normalizeChain,
 } from "@/lib/dex-constants";
 import { CHAIN_META } from "@shared/lib/chains";
-import { getScoreTier, TIER_TEXT, getDurabilityColor, getDurabilityBgColor } from "@/lib/severity-colors";
+import { getScoreTier, TIER_TEXT, getDurabilityColor, getDurabilityBgColor, ratioQualityColor } from "@/lib/severity-colors";
 import { BalanceBar } from "@/components/balance-bar";
 import type { DexLiquidityPool, DexLiquidityData } from "@shared/types";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
@@ -621,13 +621,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
                     <div>
                       <span className="text-muted-foreground">Organic: </span>
                       <span
-                        className={`font-mono tabular-nums ${
-                          liq.organicFraction >= 0.8
-                            ? "text-emerald-700 dark:text-emerald-400"
-                            : liq.organicFraction >= 0.5
-                              ? "text-amber-700 dark:text-amber-400"
-                              : "text-red-700 dark:text-red-400"
-                        }`}
+                        className={`font-mono tabular-nums ${ratioQualityColor(liq.organicFraction)}`}
                       >
                         {Math.round(liq.organicFraction * 100)}%
                       </span>
