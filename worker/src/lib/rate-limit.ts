@@ -1,10 +1,5 @@
 import { PUBLIC_API_RATE_LIMIT_SALT_FALLBACK } from "./env";
 
-interface RateLimitEntry {
-  count: number;
-  resetAt: number;
-}
-
 interface RateLimitRunResult {
   meta?: { changes?: number };
 }
@@ -19,69 +14,10 @@ interface RateLimitDb {
   prepare(query: string): RateLimitStatement;
 }
 
-const ipCounts = new Map<string, RateLimitEntry>();
-const MAX_IP_ENTRIES = 10_000;
-const PRUNE_EVERY_REQUESTS = 1000;
 const PUBLIC_API_PRUNE_WINDOW_MULTIPLIER = 10;
-let requestCount = 0;
 let lastPublicApiPruneBucket: number | null = null;
 let publicApiPruneFailures = 0;
 let feedbackPruneFailures = 0;
-
-function pruneExpired(now: number): void {
-  for (const [ip, entry] of ipCounts.entries()) {
-    if (now > entry.resetAt) {
-      ipCounts.delete(ip);
-    }
-  }
-}
-
-/**
- * Best-effort rate limiting within a single Workers isolate.
- *
- * @deprecated This Map-based limiter is NOT shared across isolates or data centers.
- * Use `checkPublicApiRateLimit()` (D1-backed) for distributed rate limiting.
- * This function only provides per-isolate throttling (~5-30s window).
- */
-export function checkRateLimit(
-  ip: string,
-  limit = 60,
-  windowMs = 60_000,
-): Response | null {
-  const now = Date.now();
-
-  // Hard cap to prevent unbounded map growth under heavy traffic
-  if (ipCounts.size >= MAX_IP_ENTRIES) {
-    pruneExpired(now);
-    if (ipCounts.size >= MAX_IP_ENTRIES) {
-      const entries = [...ipCounts.entries()].sort((a, b) => a[1].resetAt - b[1].resetAt);
-      for (let i = 0; i < entries.length / 2; i++) ipCounts.delete(entries[i][0]);
-    }
-  }
-
-  requestCount++;
-  if (requestCount % PRUNE_EVERY_REQUESTS === 0) {
-    pruneExpired(now);
-  }
-
-  const entry = ipCounts.get(ip);
-  if (!entry || now > entry.resetAt) {
-    ipCounts.set(ip, { count: 1, resetAt: now + windowMs });
-    return null;
-  }
-
-  entry.count++;
-  if (entry.count > limit) {
-    const resp = new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-      status: 429,
-      headers: { "Content-Type": "application/json" },
-    });
-    resp.headers.set("Retry-After", String(Math.max(1, Math.ceil((entry.resetAt - now) / 1000))));
-    return resp;
-  }
-
-  return null;
-}
 
 function buildRateLimitExceededResponse(retryAfterSec: number): Response {
   const resp = new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
@@ -164,11 +100,10 @@ export async function checkPublicApiRateLimit(
 
     return null;
   } catch (err) {
-    // Known limitation: in-memory fallback resets on isolate eviction.
-    // Under sustained D1 failure, rate limiting provides best-effort
-    // protection within a single isolate's lifetime only.
-    console.warn("[public-api] distributed rate limit failed, falling back to isolate-local limiter:", err);
-    return checkRateLimit(ip, limit, windowMs);
+    // D1 failure is transient — allow the request through rather than
+    // maintaining an unreliable isolate-local Map with module-scope state.
+    console.warn("[public-api] distributed rate limit unavailable, allowing request:", err);
+    return null;
   }
 }
 
