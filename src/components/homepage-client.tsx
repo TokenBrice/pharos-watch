@@ -3,11 +3,11 @@
 import dynamic from "next/dynamic";
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Compass, Search, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, Compass, Search, SlidersHorizontal, X } from "lucide-react";
 import { useDexLiquidity, usePegSummary, useReportCards, useStressSignals } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
-import { useHomepageFilters } from "@/hooks/use-homepage-filters";
+import { useHomepageFilters, FILTER_GROUPS } from "@/hooks/use-homepage-filters";
 import { useStartHereCallout } from "@/hooks/use-start-here-callout";
 import { useDataAnnounce } from "@/hooks/use-data-announce";
 import { DataLiveRegion } from "@/components/data-live-region";
@@ -147,45 +147,83 @@ const DailyDigest = dynamic(() => import("@/components/daily-digest").then((mod)
   loading: () => <SectionSkeleton className="h-[220px] w-full rounded-xl" />,
 });
 
-const PEG_PREVIEW_COUNT = 5;
 const PEG_PILL_CLASS =
   "pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-border hover:bg-accent/65 hover:text-foreground sm:min-h-9 sm:py-1";
 
-function PegBrowseSection({
+/** Group pegs into semantic categories for the browse strip. */
+type PegGroup = { label: string; pegs: typeof ACTIVE_PEGS };
+function groupPegs(pegs: typeof ACTIVE_PEGS): PegGroup[] {
+  const fiat: typeof ACTIVE_PEGS = [];
+  const commodity: typeof ACTIVE_PEGS = [];
+  const other: typeof ACTIVE_PEGS = [];
+  for (const peg of pegs) {
+    if (peg === "GOLD" || peg === "SILVER") commodity.push(peg);
+    else if (peg === "VAR" || peg === "OTHER") other.push(peg);
+    else fiat.push(peg);
+  }
+  const groups: PegGroup[] = [];
+  if (fiat.length > 0) groups.push({ label: "Fiat", pegs: fiat });
+  if (commodity.length > 0) groups.push({ label: "Commodity", pegs: commodity });
+  if (other.length > 0) groups.push({ label: "Other", pegs: other });
+  return groups;
+}
+
+const PEG_PREVIEW_FIAT = 4;
+
+function PegBrowseStrip({
   pegs,
-  pegCoinCount,
+  pegCoinCount: countFn,
 }: {
   pegs: typeof ACTIVE_PEGS;
   pegCoinCount: (peg: (typeof ACTIVE_PEGS)[number]) => number;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? pegs : pegs.slice(0, PEG_PREVIEW_COUNT);
+  const groups = useMemo(() => groupPegs(pegs), [pegs]);
+
+  // Collapsed: first N fiat + all commodity/other
+  const collapsedFiatCount = PEG_PREVIEW_FIAT;
+  const hasFiatOverflow = groups[0]?.pegs.length > collapsedFiatCount;
 
   return (
-    <div className="mt-8 space-y-2.5">
-      <h2 className="pharos-kicker">Browse By Peg</h2>
-      <div className="flex flex-wrap gap-2">
-        {visible.map((peg) => {
-          const slug = PEG_SLUGS[peg];
-          if (!slug) return null;
-          return (
-            <Link
-              key={peg}
-              href={`/stablecoins/${slug}/`}
-              className={PEG_PILL_CLASS}
-            >
-              {PEG_LABELS_SHORT[peg]} ({pegCoinCount(peg)})
-            </Link>
-          );
-        })}
-        {!expanded && pegs.length > PEG_PREVIEW_COUNT && (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h3 className="pharos-kicker">Browse by peg</h3>
+        {hasFiatOverflow && (
           <button
-            onClick={() => setExpanded(true)}
-            className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-border hover:bg-accent/65 hover:text-foreground sm:min-h-9 sm:py-1"
+            onClick={() => setExpanded((v) => !v)}
+            className="pharos-focus-ring text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
-            +{pegs.length - PEG_PREVIEW_COUNT} more
+            {expanded ? "Show fewer" : `+${groups[0].pegs.length - collapsedFiatCount} more pegs`}
           </button>
         )}
+      </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        {groups.map((group) => {
+          const visiblePegs =
+            !expanded && group.label === "Fiat"
+              ? group.pegs.slice(0, collapsedFiatCount)
+              : group.pegs;
+          return (
+            <div key={group.label} className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mr-0.5">
+                {group.label}
+              </span>
+              {visiblePegs.map((peg) => {
+                const slug = PEG_SLUGS[peg];
+                if (!slug) return null;
+                return (
+                  <Link
+                    key={peg}
+                    href={`/stablecoins/${slug}/`}
+                    className={PEG_PILL_CLASS}
+                  >
+                    {PEG_LABELS_SHORT[peg]} ({countFn(peg)})
+                  </Link>
+                );
+              })}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -304,20 +342,6 @@ export function HomepageClient() {
     const trackedIds = buildTrackedIdSet(filters.activeFilters, reportCardMap);
     return filterStablecoins(data?.peggedAssets, trackedIds, filters.searchQuery).length;
   }, [data?.peggedAssets, filters.activeFilters, filters.searchQuery, reportCardMap]);
-  const activeScopeSummary = useMemo(() => {
-    const parts: string[] = [];
-    const trimmedSearch = filters.searchQuery.trim();
-    if (trimmedSearch) {
-      parts.push(`Search: "${trimmedSearch}"`);
-    }
-    if (filters.activeFilters.length > 0) {
-      const labels = filters.activeFilters.map((filter) => FILTER_TAG_LABELS[filter]);
-      const preview = labels.slice(0, 3).join(" · ");
-      const remaining = labels.length - 3;
-      parts.push(remaining > 0 ? `Filters: ${preview} +${remaining}` : `Filters: ${preview}`);
-    }
-    return parts.join("  ");
-  }, [filters.activeFilters, filters.searchQuery]);
   const globalError = pricesError ?? pegError ?? liquidityError ?? reportCardsError;
   const handleRetry = useCallback(() => {
     void Promise.allSettled([refetchPrices(), refetchPeg(), refetchLiquidity(), refetchReportCards()]);
@@ -366,16 +390,12 @@ export function HomepageClient() {
             <HomepageSectionBand
               eyebrow="Tracked Universe"
               title="Key Stablecoin Data"
-              description="Scan the tracked market first, then narrow by peg, structure, backing, or grade without leaving the live ranking surface."
+              description="Filter and sort across all tracked stablecoins."
             />
-            <div className="flex flex-col gap-2 sm:items-end">
-              {activeScopeSummary ? (
-                <p className="max-w-md rounded-2xl border border-border/60 bg-background/45 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-                  {activeScopeSummary}
-                </p>
-              ) : null}
-            </div>
+            {/* Active filter chips now shown inline in the table toolbar */}
           </div>
+          <PegBrowseStrip pegs={ACTIVE_PEGS} pegCoinCount={pegCoinCount} />
+          <div className="mt-4">
           <StablecoinTable
             data={data?.peggedAssets}
             isLoading={isLoading}
@@ -384,12 +404,27 @@ export function HomepageClient() {
               <>
                 {filters.activeFilters.length > 0 ? (
                   <>
-                    <span className="pharos-control-pill">
-                      {filters.activeFilters.length} active filter{filters.activeFilters.length === 1 ? "" : "s"}
-                    </span>
-                    <span className="pharos-control-pill">{filteredRowCount} rows</span>
+                    {filters.activeFilters.map((tag) => {
+                      const group = FILTER_GROUPS.find((g) => g.options.includes(tag));
+                      return (
+                        <button
+                          key={tag}
+                          onClick={() => group && filters.handleGroupChange(group.label, "all")}
+                          className="pharos-focus-ring inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-primary/20"
+                          aria-label={`Remove ${FILTER_TAG_LABELS[tag]} filter`}
+                        >
+                          {FILTER_TAG_LABELS[tag]}
+                          <X className="h-3 w-3 text-muted-foreground" aria-hidden />
+                        </button>
+                      );
+                    })}
+                    <span className="text-[11px] font-mono tabular-nums text-muted-foreground">{filteredRowCount} rows</span>
                   </>
-                ) : null}
+                ) : (
+                  <span className="hidden text-[11px] text-muted-foreground/60 sm:inline">
+                    Filter by peg, backing, governance, grade
+                  </span>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -397,7 +432,7 @@ export function HomepageClient() {
                   className="gap-1.5 text-xs text-muted-foreground"
                 >
                   <SlidersHorizontal className="h-3.5 w-3.5" />
-                  {showFilters ? "Hide filters" : "Filters"}
+                  {showFilters ? "Hide" : "Filters"}
                   {filters.hasFilters && (
                     <span className="inline-flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
                       {filters.activeFilters.length}
@@ -416,7 +451,7 @@ export function HomepageClient() {
             onClearSearch={() => filters.setSearchQuery("")}
             onClearFilters={filters.clearAll}
           />
-          <PegBrowseSection pegs={ACTIVE_PEGS} pegCoinCount={pegCoinCount} />
+          </div>
         </section>
       </SectionErrorBoundary>
 
@@ -428,11 +463,15 @@ export function HomepageClient() {
         <UpcomingStablecoinsSection logos={logos} />
       </SectionErrorBoundary>
 
-      <section aria-label="Core monitoring" className="space-y-6 border-t border-border/50 pt-6">
+      <section
+        aria-label="Core monitoring"
+        className="space-y-6 -mx-3 px-3 py-6 rounded-2xl sm:-mx-4 sm:px-4"
+        style={{ borderTop: '2px solid var(--zone-divider)', background: 'var(--surface-zone-monitoring)' }}
+      >
         <HomepageSectionBand
           eyebrow="Core Monitoring"
           title="Live system stress and market health"
-          description="Use these surfaces to scan depeg risk, mint and burn pressure, safety distribution, and the market-wide stability regime before drilling into a single coin."
+          description="Depeg risk, flows, safety distribution, and the market-wide stability regime."
         />
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-start">
@@ -502,11 +541,15 @@ export function HomepageClient() {
         </SectionErrorBoundary>
       </section>
 
-      <section aria-label="Research surfaces" className="space-y-6 border-t border-border/50 pt-6">
+      <section
+        aria-label="Research surfaces"
+        className="space-y-6 -mx-3 px-3 py-6 rounded-2xl sm:-mx-4 sm:px-4"
+        style={{ borderTop: '2px solid var(--zone-divider)', background: 'var(--surface-zone-research)' }}
+      >
         <HomepageSectionBand
           eyebrow="Research Surfaces"
           title="Distribution and market structure"
-          description="These charts shift from live monitoring to deeper context: cohort mix, total market-cap regime changes, and the growth of non-USD pegs across the ecosystem."
+          description="Cohort mix, total market-cap regime changes, and non-USD peg growth."
         />
 
         <SectionErrorBoundary name="stats">

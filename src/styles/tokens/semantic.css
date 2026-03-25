@@ -34,6 +34,11 @@
   --surface-campaign-shadow: 0 18px 40px oklch(0 0 0 / 0.08);
   --surface-onboarding-gradient: linear-gradient(135deg, oklch(0.985 0.01 248 / 0.98), oklch(0.95 0.018 248 / 0.98));
 
+  /* ── Homepage Zone Surfaces ──────────────────────────────────── */
+  --surface-zone-monitoring: oklch(0.978 0.006 255 / 0.55);
+  --surface-zone-research:  oklch(0.973 0.004 260 / 0.45);
+  --zone-divider:           oklch(0.82 0.012 255 / 0.40);
+
   /* ── Severity (peg deviation) ─────────────────────────────────── */
   --severity-healthy:  var(--p-green-500);
   --severity-mild:     var(--p-amber-300);
@@ -203,6 +208,11 @@
   --surface-campaign-border: oklch(0.55 0.1 230 / 0.20);
   --surface-campaign-shadow: 0 24px 48px oklch(0 0 0 / 0.18);
   --surface-onboarding-gradient: linear-gradient(135deg, oklch(0.21 0.03 250 / 0.92), oklch(0.16 0.02 250 / 0.98));
+
+  /* ── Homepage Zone Surfaces (Dark) ──────────────────────────── */
+  --surface-zone-monitoring: oklch(0.19 0.012 250 / 0.45);
+  --surface-zone-research:  oklch(0.175 0.008 255 / 0.40);
+  --zone-divider:           oklch(1 0 0 / 0.10);
 
   /* ── Risk Alert States (Dark) ─────────────────────────────────── */
   --risk-alert-border: var(--p-amber-400);

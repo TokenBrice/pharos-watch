@@ -76,8 +76,7 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
           <div className="min-w-0 space-y-1.5">
             <p className="text-[1.06rem] font-mono font-semibold uppercase tracking-[0.16em] text-foreground">Pharos</p>
             <p className="max-w-2xl text-sm leading-relaxed tracking-[0.01em] text-muted-foreground/88">
-              Live market intelligence for stablecoins: peg stress, liquidity analysis, blacklist tracking, risk-adjusted-yield and hidden dependencies
-              in one research surface.
+              Peg stress, liquidity, safety, and dependency signals for every tracked stablecoin.
             </p>
           </div>
         </div>
@@ -88,7 +87,6 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
             <span className={METRIC_PILL_CLASS}>{formatCompactCount(pegCount)} pegs</span>
             <span className={METRIC_PILL_CLASS}>{formatCompactCount(chainCount)} chains</span>
           </div>
-          {/* Secondary stats: hidden below 1280px to prevent overflow */}
           <div className="hidden 2xl:flex flex-wrap justify-end gap-2">
             {trackedStats.map((stat) => (
               <span key={stat} className={METRIC_PILL_CLASS}>
@@ -96,9 +94,6 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
               </span>
             ))}
           </div>
-          <p className="text-right text-[11px] leading-relaxed text-muted-foreground/80">
-            Watch live conditions first, then move deeper into dossier pages, comparisons, and route-specific risk surfaces.
-          </p>
         </div>
       </div>
     </>
