@@ -8,9 +8,12 @@ const { handleTelegramWebhook } = await import("../telegram-webhook");
 const { resolveTicker } = await import("../../lib/telegram-alerts");
 
 function makeWebhookRequest(chatId: number, text: string, secret = "test-secret"): Request {
-  return new Request(`https://x/api/telegram-webhook?secret=${secret}`, {
+  return new Request(`https://x/api/telegram-webhook`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "X-Telegram-Bot-Api-Secret-Token": secret,
+    },
     body: JSON.stringify({
       message: {
         chat: { id: chatId, username: "testuser" },

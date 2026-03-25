@@ -53,11 +53,8 @@ export const handleTelegramWebhook = withErrorHandler(
   async (db: D1Database, request: Request, webhookSecret?: string, botToken?: string): Promise<Response> => {
     const ok = () => new Response("ok", { status: 200 });
 
-    const url = new URL(request.url);
     const providedSecret =
-      request.headers.get("X-Telegram-Bot-Api-Secret-Token") ??
-      url.searchParams.get("secret") ?? // backward compat during migration
-      "";
+      request.headers.get("X-Telegram-Bot-Api-Secret-Token") ?? "";
     if (!webhookSecret || !(await timingSafeCompare(providedSecret, webhookSecret))) {
       return ok();
     }

@@ -1,5 +1,6 @@
 import { BLUECHIP_SLUG_MAP } from "../lib/bluechip-slugs";
-import type { BluechipGrade, BluechipRating, BluechipSmidge } from "@shared/types";
+import type { BluechipRating, BluechipSmidge } from "@shared/types";
+import { BluechipGradeSchema } from "@shared/types/core";
 import { getCache, shouldSkipFreshCache, setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { fetchWithRetry } from "../lib/fetch-retry";
@@ -26,7 +27,7 @@ const BluechipCategorySchema = z.object({
 }).nullable().optional();
 
 const BluechipCoinSchema = z.object({
-  grade: z.string(),
+  grade: BluechipGradeSchema,
   collateralization: z.number().optional(),
   smart_contract_audit: z.boolean().optional(),
   date_of_rating: z.string().optional(),
@@ -130,7 +131,7 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
         }
 
         const coin = validation.data.data[0];
-        const grade = coin.grade as BluechipGrade | undefined;
+        const grade = coin.grade;
         if (!grade) {
           failedSlugs.push({ slug, reason: "no-grade" });
           return null;
@@ -139,10 +140,10 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
         const rating: BluechipRating = {
           grade,
           slug,
-          collateralization: (coin.collateralization as number) ?? 0,
-          smartContractAudit: (coin.smart_contract_audit as boolean) ?? false,
-          dateOfRating: (coin.date_of_rating as string) ?? "",
-          dateLastChange: (coin.date_last_change as string) ?? null,
+          collateralization: coin.collateralization ?? 0,
+          smartContractAudit: coin.smart_contract_audit ?? false,
+          dateOfRating: coin.date_of_rating ?? "",
+          dateLastChange: coin.date_last_change ?? null,
           smidge: extractSmidge(coin),
         };
         return { pharosId, rating };
