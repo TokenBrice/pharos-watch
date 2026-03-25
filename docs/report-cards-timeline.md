@@ -1,6 +1,6 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.5 (2026-02-25 → 2026-03-22).
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.7 (2026-02-25 → 2026-03-25).
 
 ---
 
@@ -303,17 +303,27 @@ Weights and grade thresholds are unchanged from v5.8.
 - Wrapper governance exempted from chain infrastructure penalty
 - Deployment multipliers: canonical-bridge 0.85→0.90, native-multichain 0.40→0.75
 
-## v6.1 — Redemption confidence gating and capacity semantics (2026-03-22)
+## v6.7 — CeFi-dependent blacklistability fallback (2026-03-25)
 
-Safety Score structure is unchanged, but the liquidity dimension is now stricter about what redemption evidence can improve it:
+Safety Score structure is unchanged, but blacklistability attribution is now stricter for centralized-dependent governance:
 
-- Low-confidence / heuristic redemption routes remain visible in detail surfaces, but they no longer uplift the Safety Score liquidity dimension
-- When the reused DEX liquidity snapshot is stale, report-card liquidity does not blend it into `effectiveExitScore`; the dimension falls back to redemption-only logic or `NR`
-- Redemption detail surfaces now distinguish immediate redeemable buffer from eventual issuer/protocol redeemability, so `supply-full` models no longer present full supply as immediately available capacity
+- `isBlacklistable()` now defaults centralized-dependent stablecoins to `possible` unless an explicit override or inherited-reserve classification is more specific
+- Inherited reserve exposure still takes precedence, preserving `possible-inherited` for reserve-heavy dependency cases
+- Explicit `canBeBlacklisted` overrides remain authoritative, including explicit `false` exceptions
 
-Weights and grade thresholds are unchanged from v6.0.
+Weights and grade thresholds are unchanged from v6.6.
 
-## v6.5 - Clean independent live reserve passthrough (2026-03-22)
+## v6.6 — Timestamp-backed live reserve scoring gate (2026-03-24)
+
+Safety Score structure is unchanged, but collateral-quality passthrough now requires stronger freshness evidence from live reserve feeds:
+
+- Independent live reserve feeds now need scoring-eligible freshness evidence in addition to fresh authoritative `ok` snapshots
+- Snapshots with `freshnessMode = "unverified"` no longer override curated collateral quality in report-card scoring
+- Direct on-chain reserve adapters can still qualify when freshness is marked `not-applicable`
+
+Weights and grade thresholds are unchanged from v6.5.
+
+## v6.5 — Clean independent live reserve passthrough (2026-03-22)
 
 Safety Score structure is unchanged, but the collateral-quality live reserve passthrough is now stricter about evidence quality and warning-bearing feeds:
 
@@ -324,7 +334,7 @@ Safety Score structure is unchanged, but the collateral-quality live reserve pas
 
 Weights and grade thresholds are unchanged from v6.4.
 
-## v6.4 - Live Liquity redemption fee telemetry (2026-03-22)
+## v6.4 — Live Liquity redemption fee telemetry (2026-03-22)
 
 Safety Score structure is unchanged, but Liquity-style formula routes can now use current on-chain redemption fees when live reserve telemetry is available:
 
@@ -334,7 +344,7 @@ Safety Score structure is unchanged, but Liquity-style formula routes can now us
 
 Weights and grade thresholds are unchanged from v6.3.
 
-## v6.3 - Documented-bound Liquity redemption confidence (2026-03-22)
+## v6.3 — Documented-bound Liquity redemption confidence (2026-03-22)
 
 Safety Score structure is unchanged, but the liquidity dimension now recognizes a narrow class of fully on-chain redemption routes as stronger evidence than heuristic capacity models:
 
@@ -352,6 +362,16 @@ Safety Score structure is unchanged, but the collateral-quality live reserve pas
 - Single-bucket live feeds now count for collateral passthrough and reserve drift; the old implicit `>= 2 slices` gate is no longer the scoring contract
 
 Weights and grade thresholds are unchanged from v6.1.
+
+## v6.1 — Redemption confidence gating and capacity semantics (2026-03-22)
+
+Safety Score structure is unchanged, but the liquidity dimension is now stricter about what redemption evidence can improve it:
+
+- Low-confidence / heuristic redemption routes remain visible in detail surfaces, but they no longer uplift the Safety Score liquidity dimension
+- When the reused DEX liquidity snapshot is stale, report-card liquidity does not blend it into `effectiveExitScore`; the dimension falls back to redemption-only logic or `NR`
+- Redemption detail surfaces now distinguish immediate redeemable buffer from eventual issuer/protocol redeemability, so `supply-full` models no longer present full supply as immediately available capacity
+
+Weights and grade thresholds are unchanged from v6.0.
 
 ---
 

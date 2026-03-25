@@ -65,6 +65,7 @@ Default policy:
    - `npm run check:worker-boundary`
    - `npm run check:migrations`
    - `npm run check:cron-sync`
+   - `npm run check:cron-connections`
    - `npm run check:doc-counts`
    - `npm run check:doc-sync`
    - `npm run check:duplicate-exports`
@@ -101,6 +102,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 1. `validate`
    - includes `npm run audit:deps`
    - includes `npm run check:cron-sync`
+   - includes `npm run check:cron-connections`
    - includes `npm run check:doc-counts`
    - includes `npm run check:doc-sync`
    - includes `npm run check:duplicate-exports`

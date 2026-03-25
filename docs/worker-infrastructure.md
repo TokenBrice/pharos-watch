@@ -74,7 +74,7 @@ The paired Pages Functions contract lives in `functions/lib/ops-env.ts` with the
 | `TWITTER_ACCESS_TOKEN_SECRET`   | string     | No                 | Digest → Twitter (access token secret)                                                                                                                                     |
 | `TELEGRAM_BOT_TOKEN`            | string     | No                 | Digest → Telegram, bot chat replies, subscriber alert dispatch                                                                                                             |
 | `TELEGRAM_CHAT_ID`              | string     | No                 | Digest channel posts and cemetery announcements                                                                                                                            |
-| `TELEGRAM_WEBHOOK_SECRET`       | string     | No                 | Telegram webhook secret validation (`X-Telegram-Bot-Api-Secret-Token` primary, legacy query-string fallback)                                                              |
+| `TELEGRAM_WEBHOOK_SECRET`       | string     | No                 | Telegram webhook secret validation via `X-Telegram-Bot-Api-Secret-Token`                                                                                                   |
 | `MAINTENANCE_MODE`              | `string?`  | No                 | Optional. When set to the exact string `"true"`, the worker returns 503 for all non-`OPTIONS` requests. Used as a kill switch.                                             |
 | `MINT_BURN_DISABLED_IDS`        | string     | No                 | Mint/burn runtime disable list by stablecoin ID (CSV)                                                                                                                      |
 | `MINT_BURN_DISABLED_SYMBOLS`    | string     | No                 | Mint/burn runtime disable list by symbol (CSV)                                                                                                                             |
@@ -99,7 +99,7 @@ These are pure functions. `Env` bindings are only available inside handler funct
 
 ## Public API Rate Limiting
 
-Non-admin public `/api/*` requests are rate-limited through the D1-backed `public_api_rate_limit` table with per-minute hashed IP buckets. The worker prefers `PUBLIC_API_RATE_LIMIT_SALT`, then `FEEDBACK_IP_SALT`, then a built-in fallback constant to avoid storing raw IPs in D1. If the distributed limiter path fails, the worker falls back to the legacy isolate-local in-memory limiter so the request path still has bounded abuse protection.
+Non-admin public `/api/*` requests are rate-limited through the D1-backed `public_api_rate_limit` table with per-minute hashed IP buckets. The worker prefers `PUBLIC_API_RATE_LIMIT_SALT`, then `FEEDBACK_IP_SALT`, then a built-in fallback constant to avoid storing raw IPs in D1. If the distributed limiter path fails, the worker logs the failure and allows the request instead of switching to an isolate-local fallback limiter.
 
 ---
 
@@ -120,7 +120,7 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 
 - `worker/src/handlers/http/gates.ts` calls `checkPublicApiRateLimit(...)` for non-admin public `/api/*` traffic before router dispatch.
 - Default threshold: `300 requests / 60 seconds` per IP hash, enforced through the D1-backed `public_api_rate_limit` table.
-- If the distributed D1 path fails, `worker/src/lib/rate-limit.ts` falls back to the legacy isolate-local in-memory limiter for the same threshold/window.
+- If the distributed D1 path fails, `worker/src/lib/rate-limit.ts` logs the failure and returns `null`, which makes the request gate fail open for that request.
 - Requests that are already authorized for the `ops-api.pharos.watch` admin lane bypass this limiter.
 
 ### CORS Headers
@@ -242,15 +242,15 @@ Current consumers:
 
 ### Module-Level State
 
-Most module-level mutable state was eliminated in the parameter-passing refactor. The remaining module-level state is:
+Most module-level mutable state was eliminated in the parameter-passing refactor. The remaining intentional cache is:
 
-- `rate-limit.ts` → module-level `ipCounts` Map (isolate-local fallback rate limiter)
+- `jwt-verify.ts` → module-level `cachedJwks` with a 1-hour TTL for Cloudflare Access signing keys
 
 **Constraints:**
 
 - State persists within an isolate but resets on cold starts
 - State is NOT shared across isolates
-- The `ipCounts` rate limiter provides best-effort protection within a single isolate only
+- The JWKS cache is an optimization only; auth still re-fetches when the cache is cold or expired
 
 ---
 
@@ -602,7 +602,7 @@ Auto-detects webhook format from URL:
 
 ### Cache Table
 
-All lightweight cron data is stored in the generic `cache` table (migration `0001_initial.sql`):
+All lightweight cron data is stored in the generic `cache` table. In the current migration tree that schema lives in `worker/migrations/0000_baseline.sql`; see [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) for the squashed lineage.
 
 ```sql
 CREATE TABLE IF NOT EXISTS cache (
@@ -645,7 +645,7 @@ Chunks statements into batches of 100 (D1's batch limit) and executes sequential
 
 ### Cron Lease Primitives (Phase C)
 
-Lease primitives are implemented in `worker/src/lib/cron-lease.ts` and backed by migration `0034_cron_leases.sql`.
+Lease primitives are implemented in `worker/src/lib/cron-lease.ts` and are part of `worker/migrations/0000_baseline.sql`.
 Scheduled slot fencing is backed by migration `0074_cron_slot_executions.sql`.
 
 ```sql
@@ -859,7 +859,7 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 
 **Purpose:** Builds the current `redemption_backstop` dataset for redeemable assets and writes daily rows to `redemption_backstop_history`. This sync is deliberately separate from report-card generation so redeemability remains a first-class worker dataset with its own cron visibility, API surface, and methodology versioning.
 
-Current dynamic reserve-metadata support covers `usdo-openeden`, `gho-aave`, `wsrusd-reservoir`, and `iusd-infinifi` for immediate-capacity inputs, plus fresh live fee telemetry on reviewed routes such as `gho-aave`, `bold-liquity`, and `lusd-liquity`. These routes now require a fresh authoritative reserve snapshot; stale reserve metadata no longer stays resolved indefinitely and instead falls back conservatively or leaves the route unrated.
+Current reserve-sync support distinguishes direct and proxy live-capacity telemetry. Only adapters that explicitly expose immediate redemption capacity can drive `sourceMode = dynamic`, while fee-only adapters (for example `single-asset`) are now restricted to fee telemetry only. Reserve-sync routes require a fresh `ok` authoritative reserve snapshot; degraded snapshots, stale rows, and rows without scoring-grade freshness evidence now fall back conservatively or leave the route unrated.
 
 ### sync-kinesis-supply
 
@@ -1039,17 +1039,12 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/cron/snapshot-safety-grade-history.ts` | Daily Safety Score grade history snapshot writer (seed + grade-change events)                                                                                       |
 | `worker/src/cron/status-self-check.ts`             | Status reliability self-check: default-origin internal router probes, external `SELF_URL` HTTP probes, hysteresis persistence, discrepancy + probe-failure alerting |
 | `worker/src/lib/status-reliability.ts`             | Status state machine + transition/probe/discrepancy persistence helpers                                                                                             |
-| `worker/migrations/0001_initial.sql`               | `cache`, `blacklist_events`, `blacklist_sync_state` tables                                                                                                          |
+| `worker/migrations/0000_baseline.sql`              | Baseline schema for `cache`, blacklist tables, cron leases, and the rest of the pre-0072 D1 surface                                                                |
 
 ---
 
-### Migration Squash Strategy
+### Migration Baseline
 
-Currently at 83 D1 SQL migrations. When the count approaches ~150, perform a one-time squash:
+The D1 migration tree was squashed on 2026-03-25. `worker/migrations/0000_baseline.sql` now represents historical migrations `0001` through `0071`, and fresh databases apply that baseline before the remaining checked-in incremental migrations (`0072+`).
 
-1. Export current schema: `wrangler d1 export stablecoin-db --remote --output=baseline.sql`
-2. Replace all migration files with a single `0001_baseline.sql`
-3. Reset D1's internal migration tracking
-4. Verify with a fresh `wrangler d1 migrations apply --remote`
-
-Normal production deploy still applies D1 migrations before the new worker binary is live. Because of that ordering, the default path only supports backward-compatible migrations: new migration files starting at `0071` must include `-- rollout-safety: backward-compatible` and avoid destructive table/column drop-or-rename patterns. Any destructive cleanup needs a separate coordinated rollout after the new worker code is already serving. See also [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) for the rollback runbook and the enforced rollout-safety contract.
+Normal production deploy still applies D1 migrations before the new worker binary is live. Because of that ordering, the default path only supports backward-compatible migrations: new migration files starting at `0071` must include `-- rollout-safety: backward-compatible` and avoid destructive table/column drop-or-rename patterns. Any destructive cleanup needs a separate coordinated rollout after the new worker code is already serving. See also [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) for the rollback runbook, the baseline lineage, and the enforced rollout-safety contract.

@@ -36,10 +36,10 @@ Light mode keeps the same hierarchy as dark mode, but status/accent text is cali
 Public pages use this shell:
 
 ```tsx
-<header className="md:hidden sticky top-0 z-50 border-b border-border/80 bg-background/88 shadow-[0_6px_20px_oklch(0_0_0_/0.08)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/72" />
+<header className="md:hidden sticky top-[3px] z-50 border-b border-border/80 bg-background/88 backdrop-blur-xl supports-[backdrop-filter]:bg-background/72" style={{ boxShadow: "var(--elevation-rest)" }} />
 <div className="flex min-h-screen">
-  <aside className="hidden md:flex flex-col fixed top-0 left-0 h-screen border-r border-border/70 bg-card/92 shadow-[0_0_0_1px_oklch(1_0_0_/0.03),0_20px_35px_oklch(0_0_0_/0.2)] backdrop-blur-xl z-40 transition-all duration-200" />
-  <div className="hidden md:block shrink-0 transition-all duration-200 w-[220px]" />
+  <aside className="hidden md:flex flex-col fixed top-[3px] left-0 h-[calc(100vh-3px)] border-r border-border/70 bg-card/92 backdrop-blur-xl z-40 transition-all duration-200" />
+  <div className="hidden md:block shrink-0 transition-all duration-200 w-[var(--sidebar-width-expanded)]" />
 
   <div className="flex-1 flex flex-col min-w-0">
     <main id="main-content" className="pharos-mobile-utility-safe flex-1 container mx-auto px-4 py-6 md:py-7 lg:px-6">
@@ -53,7 +53,7 @@ Public pages use this shell:
 
 ### Chrome Patterns
 
-- Desktop sidebar width: `220px`
+- Desktop sidebar widths: `--sidebar-width-expanded` and `--sidebar-width-collapsed`
 - Mobile header height: `h-14`
 - Mobile utility dock: fixed bottom-right dock on `<640px` with shared feedback + scroll-to-top placement; the dock stays hidden until the first scroll so it does not cover top-fold content
 - Main content and footer reserve bottom safe space via `pharos-mobile-utility-safe` + `--mobile-utility-safe-offset`
@@ -138,7 +138,7 @@ The digest feature employs a dual-font hierarchy that evokes newspaper headlines
 
 | Element | Font | Rationale |
 |---------|------|-----------|
-| **Headlines** | `Newsreader` (variable serif) | Editorial authority — magazine headline gravitas |
+| **Headlines** | `font-serif` + route-local `Newsreader` usage where needed | Editorial authority — magazine headline gravitas |
 | **Body copy** | `Courier New` italic | Raw urgency — telegrams, terminals, raw intel |
 | **Metadata** | `Courier New` upright | Systematic precision — timestamps, edition numbers |
 
@@ -147,7 +147,7 @@ This pairing creates a "broadsheet newspaper" aesthetic that signals both author
 **Implementation**: Import styles from `@/lib/digest`:
 - `EDITORIAL_BODY_STYLE` — Courier italic for prose
 - `EDITORIAL_META_STYLE` — Courier upright for labels
-- `EDITORIAL_TITLE_CLASS` — serif font class for titles
+- `EDITORIAL_TITLE_CLASS` — currently `font-serif`; route components can pair it with the `Newsreader` font import when they want the full newspaper headline treatment
 
 ### Cemetery (Special)
 

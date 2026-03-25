@@ -58,7 +58,7 @@ cd worker && npx tsc --noEmit      # Worker type-check
 npm run test:merge-gate
 ```
 
-This mirrors the full CI validation suite (lint, all checks, tests, coverage, worker typecheck). Do NOT push until it passes. The git pre-push hook enforces this automatically for pushes to `main`, but you should run it manually for any branch to catch failures before CI.
+This mirrors the full CI validation suite (lint, all checks, tests, coverage, worker typecheck). Do NOT push until it passes. The git pre-push hook enforces this automatically for every push, but you should run it manually before pushing any branch to catch failures before CI.
 
 If the merge gate fails, fix the issue locally and re-run — do not push hoping CI will pass.
 

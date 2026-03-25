@@ -196,7 +196,7 @@ FrozenAddressWiped(address indexed)
 
 ### blacklist_events table
 
-**Migrations:** `0001_initial.sql`, `0028_blacklist_indexes.sql`, `0037_blacklist_methodology_version.sql`, `0049_audit_blacklist_index.sql`, `0076_blacklist_provenance_and_amount_semantics.sql`, `0077_blacklist_amount_recovery_telemetry.sql`
+**Migrations:** baseline schema in `worker/migrations/0000_baseline.sql`, plus `0076_blacklist_provenance_and_amount_semantics.sql` and `0077_blacklist_amount_recovery_telemetry.sql`. Historical pre-squash index/version additions are tracked in [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md).
 
 ```sql
 CREATE TABLE blacklist_events (
@@ -251,7 +251,7 @@ CREATE INDEX idx_blacklist_events_amount_status ON blacklist_events(amount_statu
 
 ### blacklist_sync_state table
 
-**Migration:** `0001_initial.sql`
+**Migration:** baseline schema in `worker/migrations/0000_baseline.sql`
 
 ```sql
 CREATE TABLE blacklist_sync_state (
@@ -537,10 +537,9 @@ The summary hook loads aggregate cards/chart/filter metadata from the dedicated 
 | `worker/src/route-registry.ts`                             | API route dispatch, including admin endpoints (`reset-blacklist-sync`, `debug-sync-state`, `remediate-blacklist-amount-gaps`) |
 | `worker/src/handlers/scheduled.ts`                         | Cron scheduling orchestration for `sync-blacklist`                                         |
 | `worker/src/lib/db.ts`                                     | `getLastBlock()`, `setLastBlock()`, `batchExecute()`                                       |
-| `worker/migrations/0001_initial.sql`                       | `blacklist_events` + `blacklist_sync_state` tables                                         |
-| `worker/migrations/0028_blacklist_indexes.sql`             | `chain_name` + `event_type` indexes                                                        |
-| `worker/migrations/0037_blacklist_methodology_version.sql` | Adds `methodology_version` to blacklist events and backfills by timestamp windows          |
-| `worker/migrations/0049_audit_blacklist_index.sql`         | Composite index `(chain_name, timestamp DESC)` for filtered pagination                     |
+| `worker/migrations/0000_baseline.sql`                      | Baseline blacklist schema, including `blacklist_events`, `blacklist_sync_state`, and the pre-0072 index/version additions |
+| `worker/migrations/0076_blacklist_provenance_and_amount_semantics.sql` | Adds amount provenance and semantics columns                                  |
+| `worker/migrations/0077_blacklist_amount_recovery_telemetry.sql` | Adds recovery-attempt telemetry for unresolved amount rows                       |
 | `src/hooks/use-blacklist-events.ts`                        | TanStack Query hook                                                                        |
 | `src/app/blacklist/page.tsx`                               | Blacklist page with filters, stats, chart, table                                           |
 | `src/components/blacklist-filters.tsx`                     | Filter UI (stablecoin, chain, event type)                                                  |

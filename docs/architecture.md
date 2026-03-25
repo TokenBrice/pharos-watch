@@ -66,7 +66,7 @@ Static route metadata is declared once in `shared/lib/api-endpoints.ts`. That sh
 | `telegram_pending_disambiguation` | Ephemeral mid-conversation state for ticker disambiguation                  |
 | `telegram_pending_alerts`         | Overflow subscriber-alert delivery queue drained by the 5-minute alert cron |
 
-The subscription/disambiguation tables are created in `worker/migrations/0054_telegram_subscribers.sql`; the overflow queue is added by `worker/migrations/0060_telegram_pending_alerts.sql`. For the full bot flow, see [Telegram Alert Bot](./telegram-alerts.md).
+The Telegram subscriber, disambiguation, and overflow-queue tables are part of the squashed worker baseline in `worker/migrations/0000_baseline.sql`; see [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) for the pre-squash lineage and current post-baseline files. For the full bot flow, see [Telegram Alert Bot](./telegram-alerts.md).
 
 ## Telegram Alert Cron Job
 
@@ -420,7 +420,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migration files (83) plus MANIFEST.md
+├── migrations/                   # D1 baseline + post-squash SQL migrations plus MANIFEST.md
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
     ├── route-registry.ts         # Static route binding registry keyed by shared endpoint metadata + dependency descriptors
@@ -617,6 +617,7 @@ data/
   - `/stablecoins/[peg]/`
   - `/stablecoins/governance/[governance]/`
   - `/stablecoins/backing/[backing]/`
+  - `/stablecoins/protocol/[protocol]/`
   - `/compare/[slug]/`
   - `/digest/` and `/digest/[date]/`
   - major feature pages with standalone static copy (`/start/`, `/upcoming/`, `/blacklist/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/telegram/`, `/about/`, `/methodology/`)

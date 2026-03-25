@@ -62,14 +62,14 @@ The page deliberately mixes structural coverage and live dataset coverage. The i
 
 | Column                | Hook / field used on `/coverage/`                                                                                          | Notes                                                                                                                                                                                                                                                |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Price & Depeg`       | `usePegSummary().data.coins[].id`, `consensusSources`, `priceConfidence` plus `ACTIVE_STABLECOINS[*].flags.navToken`       | `Tracked` requires a live peg-summary row. NAV tokens intentionally map to `Price only` even without depeg logic.                                                                                                                                    |
+| `Price & Depeg`       | `usePegSummary().data.coins[].id`, `consensusSources`, `priceConfidence` plus `ACTIVE_STABLECOINS[*].flags.navToken`       | `Tracked` requires a live peg-summary row. NAV tokens intentionally map to `Price only` even without depeg logic. The headline summary is stricter: it counts only rows with at least 3 consensus price sources.                                     |
 | `Safety Score`        | `useReportCards().data.cards[].overallScore`                                                                               | Coverage is `Rated` only when the report card has a non-null overall score.                                                                                                                                                                          |
 | `DEX Price`           | `useDexLiquidity().data[id].coverageClass`                                                                                 | User-facing badge labels are mapped from liquidity `coverageClass`.                                                                                                                                                                                  |
 | `Live Reserves Sync`  | `ACTIVE_STABLECOINS[*].liveReservesConfig` first, otherwise `getReserves(coin)` from `@shared/lib/reserve-templates`       | Live reserve adapters outrank curated or estimated reserve metadata.                                                                                                                                                                                 |
 | `Redemption Backstop` | `useRedemptionBackstops().data.coins[id]`                                                                                  | The matrix reflects the live redemption-backstop snapshot exposed by the worker dataset, not static coin metadata alone. Configured-but-unrated routes render as `Config.`; low-confidence heuristic routes render as `Heur.`; neither counts as covered in the headline metric. |
 | `Yield`               | `useYieldRankings().data.rankings[].id`                                                                                    | Coverage reflects current inclusion in the yield rankings, not theoretical yield-bearing eligibility.                                                                                                                                                |
 | `Flows`               | `useMintBurnFlows().data.coins[].coverage.status`                                                                          | Mirrors the Ethereum mint/burn coverage state exposed on `/flows`.                                                                                                                                                                                   |
-| `Blacklist`           | `BLACKLIST_STABLECOINS` from `@shared/types`                                                                               | Structural support flag, matching the shared filter enum used by the blacklist route and worker handlers. Current live-supported values are `USDC`, `USDT`, `PAXG`, and `XAUT`; `EURC` remains intentionally gated until mirrored zero-balance noise can be classified deterministically. |
+| `Blacklist`           | `BLACKLIST_STABLECOINS` from `@shared/types`                                                                               | Structural support flag, matching the shared filter enum used by the blacklist route and worker handlers. Current live-supported values are `USDC`, `USDT`, `PAXG`, `XAUT`, `PYUSD`, and `USD1`.                                                  |
 | `Dependency Map`      | `useReportCards().data.cards` filtered to live cards, then `deriveDependencies(meta)` from `@shared/lib/reserve-templates` | This mirrors the live dependency-edge derivation used by `src/app/dependency-map/client.tsx`.                                                                                                                                                        |
 
 Additional page-level sources:
@@ -90,7 +90,7 @@ The feature snapshot leads the page. It is the first stop for users who want to 
 
 Every row shows:
 
-- covered coin count
+- a headline count aligned to the feature's summary rule
 - percent of tracked coins
 - percent of tracked market cap
 - a short per-feature breakdown
@@ -99,6 +99,8 @@ Every row shows:
 For `Live Reserves Sync`, the headline metric intentionally emphasizes `Live` reserve tracking. Curated and estimated reserve views still appear in the breakdown so the row distinguishes true live coverage from metadata-only reserve composition.
 
 For `Redemption Backstop`, the headline metric intentionally emphasizes strong redemption coverage only. Low-confidence heuristic routes and configured-but-unrated routes still appear in the breakdown so the row does not imply the modeled registry disappeared.
+
+For `Price & Depeg`, the headline metric intentionally emphasizes breadth with corroborated pricing. A coin still renders `Tracked` in the matrix with fewer than 3 sources, but the feature snapshot headline only counts rows whose `consensusSources` depth is at least 3.
 
 Breakdowns are intentionally dense and should stay short:
 

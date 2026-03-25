@@ -53,26 +53,14 @@ Unlike the homepage, `/start/` is a guided long-form route with standard breadcr
 
 All authored route content lives in `src/lib/start-here-content.ts`.
 
-The page consumes five exported datasets:
+The page consumes four exported datasets:
 
 - `START_HERE_GOALS`
-- `START_HERE_FACTS`
 - `START_HERE_GLOSSARY`
 - `START_HERE_ATLAS`
 - `START_HERE_SHORTCUTS`
 
 These are the canonical source of truth for route destinations, copy, and grouping. `src/components/start-here-page.tsx` is mostly presentation logic.
-
-### Fact sources
-
-`START_HERE_FACTS` currently derives its values from:
-
-- `ACTIVE_STABLECOINS.length`
-- `PEG_CURRENCY_COUNT`
-- `DEAD_STABLECOINS.length`
-- the fixed `"15m"` core-refresh label
-
-If those facts change meaning, update the content registry and this doc together.
 
 ---
 
@@ -90,14 +78,13 @@ If those facts change meaning, update the content registry and this doc together
 The hero combines:
 
 - editorial onboarding copy
-- CTA/support cluster
-- fact grid
+- desktop/mobile `HeroEscapeHatch` support cluster
 - route-selection board built from `START_HERE_GOALS`
 
 Goal-card rules:
 
 - each card represents a distinct user job, not a generic feature link
-- the first and last cards span two columns on `sm+`
+- goal cards render in a uniform responsive grid (`sm:grid-cols-2`, `xl:grid-cols-3`)
 - each card carries its own primary route, CTA label, and destination chips
 
 ### Glossary
@@ -147,7 +134,6 @@ Key layout behavior from `src/components/start-here-page.tsx`:
 - desktop hero uses a two-column planning-board layout
 - mobile compresses the onboarding copy so the first goal card stays near the top fold
 - desktop support content sits in a vertical stack under the headline
-- the hero fact grid is desktop-inline and mobile-bottom, not duplicated semantically
 - follow-up sections use cards and flattened route groups instead of long prose
 
 For visual-treatment rules, see [Design Language](./design-language.md).
@@ -161,7 +147,6 @@ Update this doc when any of these change:
 - section order
 - the curated goal/atlas/shortcut route structure
 - the homepage-callout retirement handshake
-- the static fact sources shown in the hero
 - the shared-shell contract for `/start/`
 
 When changing onboarding copy or destinations, update `src/lib/start-here-content.ts` in the same change. If the homepage CTA behavior changes too, update [Homepage](./homepage.md) alongside this document.

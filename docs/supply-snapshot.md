@@ -35,16 +35,21 @@ The snapshot does **not** call on-chain RPCs --- it relies entirely on DefiLlama
    - Skip if sum <= 0
    - Extract price (must be a number > 0, else `null`)
    - Build `INSERT OR REPLACE` statement
-7. Data quality check: warn if fewer than 80% of expected coins have valid data
-8. Execute all statements via `batchExecute()` (batch size = 100, D1 limit)
-9. If zero rows were prepared, return cron `status: "degraded"` with `reason: "all_coins_zero_supply"`
-10. Log item count and date
+7. Check the cooldown guard:
+   - read cache key `snapshot-supply:last-write`
+   - if the previous successful write is < 1 hour old, skip with `reason: "cooldown_active"`
+8. Data quality check: warn if fewer than 80% of expected coins have valid data
+9. Execute all statements via `batchExecute()` (batch size = 100, D1 limit)
+10. If zero rows were prepared, return cron `status: "degraded"` with `reason: "all_coins_zero_supply"`
+11. Update cache key `snapshot-supply:last-write`
+12. Prune `supply_history` rows older than 2 years
+13. Log item count and date
 
 ---
 
 ## Database Schema
 
-### supply_history (migration 0015)
+### supply_history
 
 ```sql
 CREATE TABLE IF NOT EXISTS supply_history (
@@ -65,9 +70,9 @@ CREATE INDEX idx_supply_hist_date ON supply_history(snapshot_date DESC);
 | `circulating_usd` | REAL | Total market cap in USD |
 | `price` | REAL | USD price at snapshot time (may be `null`) |
 
-The primary key `(stablecoin_id, snapshot_date)` enforces one row per coin per UTC day. The cron uses `INSERT OR REPLACE`, so re-runs on the same day are idempotent and refresh the row with the latest valid cached values.
+The primary key `(stablecoin_id, snapshot_date)` enforces one row per coin per UTC day. The cron uses `INSERT OR REPLACE`, so re-runs on the same day are idempotent and refresh the row with the latest valid cached values. In the checked-in migration tree this table now lives in `worker/migrations/0000_baseline.sql`.
 
-### onchain_supply (migration 0013)
+### onchain_supply
 
 ```sql
 CREATE TABLE IF NOT EXISTS onchain_supply (
@@ -81,7 +86,7 @@ CREATE TABLE IF NOT EXISTS onchain_supply (
 
 Per-chain supply cache. Not actively used by the current snapshot pipeline.
 
-### chain_supply_history (migration 0069)
+### chain_supply_history
 
 ```sql
 CREATE TABLE IF NOT EXISTS chain_supply_history (
@@ -105,6 +110,7 @@ CREATE TABLE IF NOT EXISTS chain_supply_history (
 - **Volume:** ~50 rows/day (one row per active chain per UTC day).
 - **Primary use:** future trend charts on chain profile pages (`/chains/[chain]/`). The live `/api/chains` leaderboard does not read this table — it computes aggregates on-the-fly from the stablecoins cache.
 - **Publication guard:** if a fresh stablecoins cache produces zero valid per-chain rows, the cron returns `status: "degraded"` with `reason: "no-valid-chain-rows"` and skips the write instead of overwriting the historical series with an empty snapshot.
+- **Current migration note:** this table is part of `worker/migrations/0000_baseline.sql` in the post-squash migration tree.
 
 ---
 
@@ -141,25 +147,9 @@ All in `shared/lib/supply.ts`:
 ---
 
 
-### Known decimal exceptions
+### Decimal handling
 
-Do not assume `18` decimals, or even one fixed decimal count per token across all chains. The authoritative source is `contracts[].decimals` in the metadata assets under `shared/data/stablecoins/*.json`, loaded via `shared/lib/stablecoins/index.ts`.
-
-Current examples:
-
-| Decimals | Example tokens |
-|----------|----------------|
-| 0 | EURCV, USDQ |
-| 2 | EURCV, EURS, GUSD, USDCV |
-| 4 | BRZ |
-| 5 | USDC |
-| 6 | USDC, USDT, PYUSD, RLUSD, FDUSD, XAUT, XSGD |
-| 7 | AUDD, EURC, EURCV, EURS, PYUSD, USDC, USDY |
-| 8 | VEUR |
-| 9 | BUCK, FRXUSD, KAG, SBC, USDe, VCHF, VEUR, wsrUSD |
-| 12 | UUSD |
-| 13 | VEUR |
-| 24 | cUSD |
+Do not assume `18` decimals, or even one fixed decimal count per token across all chains. The authoritative source is `contracts[].decimals` in the metadata assets under `shared/data/stablecoins/*.json`, loaded via `shared/lib/stablecoins/index.ts`. The exact exception set changes as metadata evolves; use the live metadata, not hardcoded examples.
 
 ---
 
@@ -170,7 +160,7 @@ Current examples:
 | Param | Required | Default | Constraints |
 |-------|----------|---------|-------------|
 | `stablecoin` | Yes | --- | Canonical Pharos stablecoin ID |
-| `days` | No | 365 | Min 1, max 1825 (5 years) |
+| `days` | No | 365 | Min 1, max 1825 (5 years requested). In practice the cron prunes `supply_history` to roughly the most recent 2 years, so older dates may simply return no rows. |
 
 ```sql
 SELECT snapshot_date, circulating_usd, price
@@ -236,6 +226,7 @@ The compare data model fetches per-coin `/api/supply-history` series directly th
 |-----------|----------|
 | `loadStablecoinsCache()` returns `kind !== "ok"` | Return degraded with the loader reason (`missing-cache`, `json-parse-failed`, `invalid-payload-shape`, `missing-pegged-assets`, or `legacy-array-not-allowed`) |
 | Cache > 20 min old | Return degraded (`reason: "cache_stale"`) |
+| Successful write < 1 hour ago | Skip write (`reason: "cooldown_active"`) |
 | 0 prepared rows (all tracked coins missing/zero supply) | Return degraded (`reason: "all_coins_zero_supply"`) |
 | < 80% of tracked coins have valid data | Log warning, continue |
 | `batchExecute()` exception | Propagate to `logCronRun` error handler |
@@ -252,6 +243,8 @@ All cron runs are logged to the `cron_runs` table (7-day retention).
 4. Strict cache loading means malformed or legacy array payloads fail closed instead of snapshotting partial data
 5. DefiLlama-backed non-USD backfills require historical prices for native-to-USD conversion
 6. Daily cron and admin backfill both use `INSERT OR REPLACE` for idempotent re-runs
+7. The write path is intentionally throttled by a 1-hour cooldown cache key even though the cron is chained to more frequent lanes
+8. `supply_history` retention is currently pruned to roughly 2 years
 
 ---
 
@@ -261,7 +254,7 @@ All cron runs are logged to the `cron_runs` table (7-day retention).
 |------|------|
 | `worker/src/cron/snapshot-supply.ts` | Snapshot cron: reads cache, builds `INSERT OR REPLACE` statements, batch executes |
 | `worker/src/cron/snapshot-chain-supply.ts` | Chain-level snapshot cron: aggregates per-chain totals from stablecoins cache → `chain_supply_history` |
-| `worker/migrations/0069_chain_supply_history.sql` | `chain_supply_history` table |
+| `worker/migrations/0000_baseline.sql` | Baseline schema for `supply_history`, `onchain_supply`, and `chain_supply_history` |
 | `worker/src/api/supply-history.ts` | `GET /api/supply-history` handler |
 | `worker/src/api/stablecoin-detail.ts` | Detail API with `supply_history` fallback for CG-only/commodity coins |
 | `worker/src/api/backfill-supply-history.ts` | Admin backfill endpoint |
@@ -269,8 +262,6 @@ All cron runs are logged to the `cron_runs` table (7-day retention).
 | `worker/src/lib/db-cache.ts` | `getCache()` cache-row access helpers |
 | `worker/src/lib/cron-logger.ts` | `CronResult` type and `logCronRun()` wrapper used by scheduled handlers |
 | `worker/src/lib/stablecoins-cache.ts` | Strict/lenient stablecoins-cache loader and failure reasons |
-| `worker/migrations/0015_supply_history.sql` | `supply_history` table |
-| `worker/migrations/0013_onchain_supply.sql` | `onchain_supply` table (per-chain cache) |
 | `shared/lib/supply.ts` | `sumPegBuckets()`, `getCirculatingRaw()`, other supply helpers |
 | `shared/lib/psi-eligible.ts` | PSI-eligible tracked + shadow stablecoin registry used by the snapshot filter |
 | `shared/lib/shadow-stablecoins.ts` | Shadow-asset metadata referenced by `PSI_ELIGIBLE_STABLECOINS` |

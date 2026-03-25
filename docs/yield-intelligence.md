@@ -327,7 +327,7 @@ This selection behavior is surfaced in row-level `provenance` metadata on `/api/
 
 ## Database Schema
 
-**Migrations:** `worker/migrations/0031_yield_data.sql` (initial), `worker/migrations/0033_yield_warning_signals.sql` (warning_signals column), `worker/migrations/0041_yield_data_multi_source.sql` (multi-source PK), `worker/migrations/0056_yield_history_warning_signals.sql` (warning signal persistence), `worker/migrations/0061_yield_history_source_aware.sql` (per-source history rows)
+**Migrations:** the current checked-in schema lives in `worker/migrations/0000_baseline.sql`. Historical pre-squash yield schema changes (initial table creation, warning signals, multi-source keys, and source-aware history rows) are tracked in `worker/migrations/MANIFEST.md`.
 
 ### `yield_data` — Current Snapshot (one row per coin per source)
 
@@ -740,9 +740,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 
 | File                                                 | Role                                                                                                                                         |
 | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `worker/migrations/0031_yield_data.sql`              | D1 schema: `yield_data` + `yield_history` tables                                                                                             |
-| `worker/migrations/0041_yield_data_multi_source.sql` | Adds `source_key` + `is_best` columns, changes PK to `(stablecoin_id, source_key)`                                                           |
-| `worker/migrations/0056_yield_history_warning_signals.sql` | Adds `warning_signals` history persistence support                                                                                       |
+| `worker/migrations/0000_baseline.sql`                | Baseline `yield_data` / `yield_history` schema, including the historical multi-source and warning-signal additions                           |
 | `worker/src/cron/sync-yield-data.ts` + `worker/src/cron/yield-sync/*` | Yield sync orchestration and stage modules: source loading, resolution, evaluation, publication, history maintenance, and rankings caching |
 | `worker/src/cron/yield-config.ts`                    | Static config: `YIELD_POOL_MAP`, `YIELD_VARIANT_MAP`, `ON_CHAIN_RATE_CONFIGS`, `RATE_DERIVED_CONFIGS`                                        |
 | `worker/src/cron/yield-helpers.ts`                   | Pure functions: APY, PYS, stability, variance, warning signals, `matchAllDlPools`                                                            |

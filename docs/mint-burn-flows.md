@@ -633,7 +633,7 @@ Current production scope is Ethereum-only ingestion. Planned expansions:
 | `worker/src/api/backfill-mint-burn.ts` | Admin endpoint: controlled event ingestion backfill |
 | `worker/src/api/backfill-mint-burn-prices.ts` | Admin endpoint: backfill NULL amount_usd values |
 | `worker/src/api/reclassify-atomic-roundtrips.ts` | Admin endpoint: retroactively tag same-tx mint/burn rows as atomic roundtrips |
-| `worker/migrations/0031a_mint_burn_v2.sql` | Database schema (3 tables) |
+| `worker/migrations/0000_baseline.sql` | Baseline mint/burn schema (3 tables, including the historical v2 layout) |
 | `src/hooks/use-mint-burn-flows.ts` | TanStack Query hooks (3 hooks) |
 | `src/app/flows/page.tsx` | Frontend page |
 | `src/app/flows/layout.tsx` | Page metadata/layout |

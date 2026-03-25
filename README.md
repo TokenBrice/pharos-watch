@@ -143,6 +143,7 @@ src/                              Frontend (Next.js static export)
 │   ├── stablecoins/[peg]/        Stablecoins filtered by peg currency
 │   ├── stablecoins/backing/[backing]/     Backing taxonomy landing pages
 │   ├── stablecoins/governance/[governance]/ Governance taxonomy landing pages
+│   ├── stablecoins/protocol/[protocol]/   Protocol-lineage landing pages
 │   ├── admin/                    Access-gated operator admin panel (ops.pharos.watch only)
 │   ├── status/                   Public system-status dashboard (read-only, noindex)
 │   ├── telegram/                 Telegram alerts + digest landing page
@@ -166,7 +167,7 @@ worker/                           Cloudflare Worker (API + cron jobs)
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
 │   ├── api/                      REST endpoint handlers (stablecoin/detail/history/status/admin)
 │   └── lib/                      D1 helpers, shared constants, depeg types, API error handler, circuit breaker
-└── migrations/                   D1 SQL migration files (83) plus `MANIFEST.md`
+└── migrations/                   D1 baseline + post-squash SQL migrations plus `MANIFEST.md`
 ```
 
 ## Documentation
@@ -278,7 +279,7 @@ For the canonical delivery workflow (including worktree merge flow and the repo 
 For the full Worker, Pages Functions, and frontend runtime binding table, see [.env.example](./.env.example) and [docs/worker-infrastructure.md](./docs/worker-infrastructure.md).
 For mint/burn ingestion diagnostics and recovery, see `agents/process/mint-burn-ingestion.md`.
 
-1. **Validate gate:** `npm run audit:deps` → `npm run lint` → `npm run check:worker-boundary` → `npm run check:migrations` → `npm run check:cron-sync` → `npm run check:doc-counts` → `npm run check:doc-sync` → `npm run check:duplicate-exports` → `npm run check:redemption-backstops` → `npm run check:unused-code` → `npm run check:hotspot-ratchet` → `npm run build` → `npm run seo:check` → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit`
+1. **Validate gate:** `npm run audit:deps` → `npm run lint` → `npm run check:worker-boundary` → `npm run check:migrations` → `npm run check:cron-sync` → `npm run check:cron-connections` → `npm run check:doc-counts` → `npm run check:doc-sync` → `npm run check:duplicate-exports` → `npm run check:redemption-backstops` → `npm run check:unused-code` → `npm run check:hotspot-ratchet` → `npm run build` → `npm run seo:check` → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit`
 2. **Worker deploy:** `npm ci` → `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote` → `cd worker && npx --no-install wrangler deploy` → `cd worker && npx --no-install wrangler triggers deploy`
 3. **API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE` (fed from GitHub variable `SMOKE_API_BASE_URL`, fallback `API_BASE_URL`)
 4. **Pages release path:** `npm ci` → `npm run sync:digests` → `npm run build` → `npm run seo:check` → serve `out/` locally through `scripts/serve-static-export.mjs` → `npm run test:smoke-ui -- --url http://127.0.0.1:4173` → `npx --no-install wrangler pages deploy out` (with retry in CI)
@@ -293,7 +294,7 @@ Required ops smoke secrets: `OPS_SMOKE_CF_ACCESS_CLIENT_ID`, `OPS_SMOKE_CF_ACCES
 
 Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `COINGECKO_API_KEY`, `OPENEXCHANGERATES_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `PUBLIC_API_RATE_LIMIT_SALT`
 
-Worker vars (see `.env.example` for the current surface): `CORS_ORIGIN`, `SELF_URL`, `OPS_UI_ORIGIN`, `OPS_API_ORIGIN`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_OPS_UI_AUD`, `CF_ACCESS_OPS_API_AUD`, `MAINTENANCE_MODE`
+Worker vars (see `.env.example` for the current surface): active worker bindings are `CORS_ORIGIN`, `SELF_URL`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_OPS_API_AUD`, and `MAINTENANCE_MODE`. `OPS_UI_ORIGIN`, `OPS_API_ORIGIN`, and `CF_ACCESS_OPS_UI_AUD` remain reserved on the worker side for cross-runtime contract alignment and future Pages-side Access validation.
 
 Pages Functions secrets for the same-origin ops admin proxy: `OPS_API_SERVICE_TOKEN_ID`, `OPS_API_SERVICE_TOKEN_SECRET`
 

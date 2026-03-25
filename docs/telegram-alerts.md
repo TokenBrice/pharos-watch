@@ -6,7 +6,7 @@ Pharos runs a Telegram bot for opt-in stablecoin alerts and channel posts.
 
 The subsystem has four moving parts:
 
-- `POST /api/telegram-webhook` accepts Telegram commands, validates the shared secret from `X-Telegram-Bot-Api-Secret-Token` (with legacy `?secret=` query fallback), and stores subscriber state in D1.
+- `POST /api/telegram-webhook` accepts Telegram commands, validates the shared secret from `X-Telegram-Bot-Api-Secret-Token`, and stores subscriber state in D1.
 - `worker/src/cron/dispatch-telegram-alerts.ts` diffs the latest DEWS, active depeg, and safety-grade snapshots against cached prior snapshots, then fans out consolidated messages to matching subscribers.
 - `worker/src/cron/daily-digest.ts` appends pending cemetery additions and newly tracked coins to the next Telegram digest post after a deploy.
 - `worker/src/lib/telegram.ts`, `worker/src/lib/telegram-alerts.ts`, and `worker/src/lib/telegram-digest-appendices.ts` handle Bot API sends, ticker parsing, message formatting, diffing, and HTML escaping.
@@ -26,10 +26,8 @@ The delivery system is worker-owned. The frontend exposes a static `/telegram/` 
 - `worker/src/lib/telegram-alerts.ts`
 - `worker/src/lib/telegram-digest-appendices.ts`
 - `src/app/telegram/page.tsx`
-- `worker/migrations/0054_telegram_subscribers.sql`
-- `worker/migrations/0060_telegram_pending_alerts.sql`
-- `worker/migrations/0061_telegram_bot_tightening.sql`
-- `worker/migrations/0063_telegram_global_alerts.sql`
+- `worker/migrations/0000_baseline.sql`
+- `worker/migrations/MANIFEST.md`
 - `scripts/register-telegram-webhook.sh`
 
 ## Frontend Landing Page
@@ -42,7 +40,7 @@ The delivery system is worker-owned. The frontend exposes a static `/telegram/` 
 
 ## D1 Schema
 
-`worker/migrations/0054_telegram_subscribers.sql` creates the subscriber/subscription/disambiguation tables, `worker/migrations/0060_telegram_pending_alerts.sql` adds the overflow delivery queue, and `worker/migrations/0063_telegram_global_alerts.sql` adds explicit all-stablecoin alert flags:
+The Telegram subscriber, disambiguation, and overflow-queue tables are part of `worker/migrations/0000_baseline.sql`. [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) records the pre-squash lineage, including the historical migrations that introduced the subscriber, overflow-queue, and global-alert columns:
 
 | Table | Purpose | Key fields |
 |-------|---------|------------|
@@ -58,18 +56,19 @@ The webhook also uses the generic `cache` table key `telegram:last-update-id` to
 | Binding | Required | Used by |
 |---------|----------|---------|
 | `TELEGRAM_BOT_TOKEN` | Yes | Webhook replies, digest posting (including appended cemetery / tracking notices), subscriber alert fan-out |
-| `TELEGRAM_WEBHOOK_SECRET` | Yes | Telegram webhook secret validation for `POST /api/telegram-webhook` (`X-Telegram-Bot-Api-Secret-Token` primary, legacy `?secret=` fallback) |
+| `TELEGRAM_WEBHOOK_SECRET` | Yes | Telegram webhook secret validation for `POST /api/telegram-webhook` via `X-Telegram-Bot-Api-Secret-Token` |
 | `TELEGRAM_CHAT_ID` | No | Daily digest channel posting, including appended cemetery and tracking notices |
 
-Webhook registration is handled by `scripts/register-telegram-webhook.sh`, which currently calls Telegram `setWebhook` with a legacy query-param URL:
+Webhook registration is handled by `scripts/register-telegram-webhook.sh`, which calls Telegram `setWebhook` with the webhook URL and the JSON `secret_token` field:
 
-`https://api.pharos.watch/api/telegram-webhook?secret=<TELEGRAM_WEBHOOK_SECRET>`
+- URL: `https://api.pharos.watch/api/telegram-webhook`
+- Secret token: `<TELEGRAM_WEBHOOK_SECRET>`
 
 ## Webhook Command Flow
 
 `worker/src/api/telegram-webhook.ts` now acts as a thin ingress coordinator. Command parsing, message formatting, and D1 persistence live in the adjacent `telegram-webhook-*` helper modules so command behavior can be tested without editing the transport entrypoint.
 
-The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Token` first and still accepts the legacy `secret` query param for older registrations. Invalid secrets, missing bot token, malformed JSON, and non-command messages all return `200 ok` without side effects so Telegram does not keep retrying.
+The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Token`. Invalid secrets, missing bot token, malformed JSON, and non-command messages all return `200 ok` without side effects so Telegram does not keep retrying.
 
 ### Supported Commands
 

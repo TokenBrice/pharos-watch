@@ -104,7 +104,7 @@ Max of: primary deviation from peg, DEX deviation from peg, cross-source spread 
 
 ### S_black — Blacklist Activity
 
-Only for tracked coins (USDC, USDT, PAXG, XAUT). Uses 24h event count with spike detection relative to 7d daily average.
+Only for blacklist-tracked coins (currently USDC, USDT, PAXG, XAUT, PYUSD, and USD1). Uses 24h event count with spike detection relative to 7d daily average.
 
 ### S_flow — Mint/Burn Flow
 

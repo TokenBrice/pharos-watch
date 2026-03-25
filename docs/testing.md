@@ -16,6 +16,7 @@ npm run check:worker-boundary # Enforce the shared boundary in both directions (
 npm run check:unused-code # Detect unreferenced internal runtime modules and unused named exports in hotspot areas
 npm run check:hotspot-ratchet # Fail when key hotspot files grow beyond the checked-in baseline
 npm run check:cron-sync # Verify `shared/lib/cron-jobs.ts` stays aligned with `worker/wrangler.toml` cron declarations
+npm run check:cron-connections # Enforce the documented per-trigger outbound connection budget across cron slots
 npm run check:doc-sync # Verify exact methodology versions, thresholds, weights, and enforced limits stay aligned with code
 npm run check:migrations # Replay worker D1 migrations against a throwaway SQLite DB
 npm run lint -- --fix # Auto-fix fixable warnings (stale directives, etc.)
@@ -46,6 +47,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - `npm run check:worker-boundary`
    - `npm run check:migrations`
    - `npm run check:cron-sync`
+   - `npm run check:cron-connections`
    - `npm run check:doc-counts`
    - `npm run check:doc-sync`
    - `npm run check:duplicate-exports`
@@ -117,7 +119,7 @@ The workflows pin `actions/checkout@v6` and `actions/setup-node@v6` by commit SH
 
 `npm run check:migrations` replays every file in `worker/migrations/` against a throwaway SQLite database before deploy. It uses Node's built-in `node:sqlite` module on Node 22+ and falls back to the `sqlite3` CLI when needed, which catches schema typos in unapplied D1 migrations before `deploy-worker` touches production. Historical duplicate migration prefixes are tracked explicitly in `worker/migrations/MANIFEST.md`; the checker fails only on new undeclared duplicates and keeps the current allowlist visible in review. The same check now also enforces the rollout-safety contract for new migrations starting at `0071`: every new migration must declare `-- rollout-safety: backward-compatible`, and obvious table/column drop or rename patterns are rejected because the standard deploy path applies D1 migrations before the new worker is live.
 
-`npm run test:merge-gate` now mirrors the shared CI validate core locally: `audit:deps`, lint, worker-boundary, migrations, cron/doc sync checks, duplicate-export and redemption-backstop guards, unused-code, hotspot-ratchet, full test suite, critical coverage, and worker type-checking all run every time. The only remaining conditional part is frontend export validation: `npm run build` and `npm run seo:check` are added when the changed-file set is Pages-impacting, using the same matcher as deploy classification (`src/`, `shared/`, `functions/`, `public/`, `data/`, selected build/config scripts, or Pages/deploy workflow files). It still skips deploy-time smoke suites.
+`npm run test:merge-gate` now mirrors the shared CI validate core locally: `audit:deps`, lint, worker-boundary, migrations, cron schedule/connection checks, doc sync checks, duplicate-export and redemption-backstop guards, unused-code, hotspot-ratchet, full test suite, critical coverage, and worker type-checking all run every time. The only remaining conditional part is frontend export validation: `npm run build` and `npm run seo:check` are added when the changed-file set is Pages-impacting, using the same matcher as deploy classification (`src/`, `shared/`, `functions/`, `public/`, `data/`, selected build/config scripts, or Pages/deploy workflow files). It still skips deploy-time smoke suites.
 
 `npm run check:unused-code` now scans all runtime code under `src/`, `shared/`, `worker/src/`, and `functions/`, with explicit module/export allowlists for intentional exceptions. `npm run check:hotspot-ratchet` now guards nine tracked hotspot files, including `src/app/coverage/client.tsx`, `worker/src/cron/daily-digest/collectors.ts`, `worker/src/cron/sync-fx-rates.ts`, and `worker/src/lib/status-evaluation.ts`; refresh the baseline only after an intentional refactor with `npm run check:hotspot-ratchet:update-baseline`.
 
@@ -567,7 +569,7 @@ Current critical file set:
 
 - `npm run test:critical-contracts` covers the explicitly enumerated critical handler suites (`peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`) plus shared strict-path registry tests and router mapping tests.
 - `npm run test:invariants` covers numerical/schema invariants and cache-write validation guards in critical cron paths.
-- `npm run test:merge-gate` runs a delta-aware local gate for merged worktree changes. It now also runs `check:doc-counts` for doc changes and `build` + `seo:check` for any Pages-impacting changed-file set, in addition to the contract/invariant/coverage/lint/type-check buckets. Useful controls: `npm run test:merge-gate -- --staged`, `MERGE_GATE_BASE_REF=<ref>`, and `MERGE_GATE_DRY_RUN=1`.
+- `npm run test:merge-gate` runs a delta-aware local gate for merged worktree changes. It now also runs `check:cron-connections`, `check:doc-counts` for doc changes, and `build` + `seo:check` for any Pages-impacting changed-file set, in addition to the contract/invariant/coverage/lint/type-check buckets. Useful controls: `npm run test:merge-gate -- --staged`, `MERGE_GATE_BASE_REF=<ref>`, and `MERGE_GATE_DRY_RUN=1`.
 - `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health` plus every strict contract path derived from `shared/lib/api-endpoints.ts` (currently including `stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `redemption-backstops`, `stress-signals`, and `mint-burn-flows`) with shape/range assertions, sequential endpoint execution, and bounded retries for transient failures.
 - `npm run test:smoke-ops` performs private post-deploy checks against the operator surfaces through Cloudflare Access. In service-token mode, Access consumes `CF-Access-Client-Id` / `CF-Access-Client-Secret`, injects `Cf-Access-Jwt-Assertion`, and the worker verifies that JWT before serving `ops-api` routes. The smoke test accepts either a Cloudflare Access redirect or a successful token-backed HTML response for `ops.pharos.watch/admin/`, then validates `ops-api.pharos.watch/api/status`, `ops-api.pharos.watch/api/status-history`, and the safe dry-run `audit-depeg-history` path.
 - `npm run test:smoke-ui` performs a fast browser smoke check on the live site; it fails on homepage outage/empty states (`Failed to load data` or `Failed to load this dataset`, `stablecoins:404`, `Data not yet available` or `Waiting for first sync`, `Connection issue` or `Unable to reach the Pharos data API right now.`, `No stablecoin data available`) and on sustained horizontal overflow across tracked mobile routes.

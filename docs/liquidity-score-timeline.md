@@ -184,4 +184,4 @@ Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0`
 ## Notes
 
 - Liquidity methodology did not initially ship with explicit version tracking; versions above were assigned retroactively from score-impacting commit boundaries.
-- Canonical windows for historical labeling are encoded in `shared/lib/liquidity-score-version.ts` and migration `worker/migrations/0036_liquidity_methodology_version.sql`.
+- Canonical windows for historical labeling are encoded in `shared/lib/liquidity-score-version.ts`. The historical methodology-version migration now lives inside `worker/migrations/0000_baseline.sql` after the D1 squash.

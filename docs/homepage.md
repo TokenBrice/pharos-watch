@@ -35,7 +35,6 @@ The visible top fold is split across three independently composed surfaces:
 
 - `SiteHeader` on `lg+`
 - `KpiBar` across breakpoints
-- the optional campaign callout inside `HomepageClient` while the March 2026 community campaign is active on the client
 - the optional Start Here callout inside `HomepageClient`
 
 The page keeps the only semantic `h1` visually hidden. The visible masthead is intentionally a dashboard surface, not a hero-heading block.
@@ -61,10 +60,6 @@ Derived helpers:
 - `derivePegRates(...)` for non-USD peg display context
 - `useHomepageFilters()` for URL-backed table filters
 - `useStartHereCallout()` for first-session onboarding behavior
-
-Time-boxed promo state:
-
-- `CAMPAIGN_END_AT` in `src/components/homepage-client.tsx` hides the campaign strip after `2026-03-20T00:00:00Z` without waiting for a redeploy
 
 Page-level shared error and freshness surfaces:
 
@@ -145,15 +140,14 @@ The `/start/` route is documented in [Start Page](./start-page.md).
 
 1. `QueryErrorNotice`
 2. `StaleDataBanner`
-3. `CampaignCallout` while `CAMPAIGN_END_AT` is still in the future on the client
-4. `StartHereCallout` when `useStartHereCallout()` says it should show
-5. `MarketHighlights`
-6. `Key Stablecoin Data` section
-7. `DailyDigest` in `preview` mode
-8. `UpcomingStablecoinsSection` (includes "View all" link to `/upcoming`)
-9. `Core Monitoring` band
-10. `Research Surfaces` band
-11. Bottom summary / last-updated footer copy
+3. `StartHereCallout` when `useStartHereCallout()` says it should show
+4. `MarketHighlights`
+5. `Key Stablecoin Data` section
+6. `DailyDigest` in `preview` mode
+7. `UpcomingStablecoinsSection` (includes "View all" link to `/upcoming`)
+8. `Core Monitoring` band
+9. `Research Surfaces` band
+10. Bottom summary / last-updated footer copy
 
 The destination route for item 8 is documented in [Upcoming Page](./upcoming-page.md).
 
@@ -161,11 +155,11 @@ The destination route for item 8 is documented in [Upcoming Page](./upcoming-pag
 
 This section contains:
 
-- `FilterBar`
+- `PegBrowseStrip`
 - `StablecoinTable`
-- `PegBrowseSection`
+- conditional `FilterBar` mounted through the table's `filterPanel` slot only while the local Filters toggle is open
 
-`PegBrowseSection` uses `ACTIVE_PEGS`, `PEG_SLUGS`, and `pegCoinCount(...)` to expose peg landing pages without duplicating routing logic locally.
+`PegBrowseStrip` uses `ACTIVE_PEGS`, `PEG_SLUGS`, and `pegCoinCount(...)` to expose peg landing pages without duplicating routing logic locally.
 
 ### Core Monitoring
 

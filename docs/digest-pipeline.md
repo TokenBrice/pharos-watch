@@ -102,9 +102,9 @@ CREATE TABLE daily_digest (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
   generated_at INTEGER NOT NULL,   -- Unix seconds
   digest_text  TEXT    NOT NULL,   -- tweet-sized text
-  digest_title TEXT,               -- headline (added migration 0021)
-  digest_extended TEXT,            -- longer editorial (added migration 0027)
-  digest_meta    TEXT,             -- editorial metadata (lead, tone, coins) for variety enforcement (added migration 0055)
+  digest_title TEXT,               -- headline
+  digest_extended TEXT,            -- longer editorial
+  digest_meta    TEXT,             -- editorial metadata (lead, tone, coins) for variety enforcement
   input_data   TEXT    NOT NULL    -- full DigestInputData JSON for reconstruction
 );
 
@@ -125,7 +125,8 @@ Read endpoints are public, but they do not all share the same cache profile: `GE
 |----------|-------------|
 | `GET /api/daily-digest` | Latest digest only |
 | `GET /api/digest-archive` | All digests, newest first (up to 365) |
-| `GET /api/digest-snapshot?date=YYYY-MM-DD` | Input data + depeg/blacklist context for a specific date — used by SSG detail pages; cached as archive data (`s-maxage=86400, max-age=3600`) |
+| `GET /api/digest-snapshot?date=YYYY-MM-DD` | Input data + depeg/blacklist context for a daily digest date — used by SSG detail pages; cached as archive data (`s-maxage=86400, max-age=3600`) |
+| `GET /api/digest-snapshot?date=YYYY-MM-DD-weekly` | Input data for a weekly recap slug; the handler strips `-weekly` for date parsing and returns the weekly snapshot when that digest row exists |
 | `POST /api/trigger-digest` *(admin)* | Force-regenerate digest and post to all distribution channels; requires Access service-token headers on `ops-api.pharos.watch` |
 
 ---
@@ -262,7 +263,7 @@ Posted to Telegram only (no Twitter for weekly recaps). Title is prefixed with "
 The latest digest is presented in a broadsheet newspaper style:
 - **Masthead:** compact uppercase lockup with the full date; the homepage preview uses a slightly sharper mono masthead treatment than the archive broadsheet
 - **Headline:** the homepage preview uses `Newsreader` at a larger newspaper-style display scale, while the full `/digest/` broadsheet keeps the original serif headline treatment
-- **Body:** Extended text paragraphs in serif italic (`Georgia`). On the homepage, only the first editorial paragraph is shown as a teaser; the paragraph is preserved whole and never character-clamped mid-sentence. The `/digest/` archive broadsheet shows the full editorial body.
+- **Body:** Extended text paragraphs in italic Courier-style monospace (`EDITORIAL_BODY_STYLE`). On the homepage, only the first editorial paragraph is shown as a teaser; the paragraph is preserved whole and never character-clamped mid-sentence. The `/digest/` archive broadsheet shows the full editorial body.
 - **Homepage preview split:** desktop uses an asymmetric two-column layout with a hairline `Executive Summary` label and headline block on the left, then the lead paragraph plus CTA rail on the right
 
 The `text` field remains the short distribution summary used for metadata and digest detail intros. The shared broadsheet renderer prefers `extended`, and falls back to `text` only if `extended` is unavailable.
@@ -289,6 +290,8 @@ The wire table shows each digest as a compact row: **date** (monospace, e.g. "27
 **Static params:** generated from `data/digests.json` at build time
 **Component:** `src/components/digest-snapshot.tsx`
 **Hook:** `src/hooks/api-hooks.ts` (`useDigestSnapshot`) → `GET /api/digest-snapshot?date={date}`
+
+Daily detail pages use slugs like `/digest/2026-03-24/`. Weekly recap pages use `/digest/2026-03-24-weekly/`; the archive client builds those slugs from `digestType === "weekly"` and the snapshot API accepts the matching `?date=YYYY-MM-DD-weekly` query.
 
 Each detail page shows the short summary intro (`text`) followed by every extended editorial paragraph plus 8 contextual data cards (Market Snapshot, Stability Index, Supply Mover, Active Depegs, Blacklist Activity, Safety Scores, Supply Velocity, Resolved Depegs). Includes JSON-LD Article structured data and prev/next navigation.
 
@@ -347,10 +350,7 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Twitter and Telegra
 | `worker/src/route-registry.ts` | Static worker route bindings keyed by shared endpoint descriptors, including `trigger-digest` dependency hints |
 | `worker/src/router.ts` | Worker route dispatcher for static registry lookup plus dynamic route matching |
 | `worker/src/lib/env.ts` | `Env` interface used by fetch/scheduled handlers |
-| `worker/migrations/0018_daily_digest.sql` | Initial `daily_digest` table |
-| `worker/migrations/0021_digest_title.sql` | Added `digest_title` column |
-| `worker/migrations/0027_digest_extended.sql` | Added `digest_extended` column |
-| `worker/migrations/0055_digest_meta.sql` | Added `digest_meta` column |
+| `worker/migrations/0000_baseline.sql` | Baseline `daily_digest` schema, including the historical title/extended/meta additions |
 | `src/components/daily-digest.tsx` | Broadsheet component (shared: homepage + archive page) |
 | `src/components/digest-archive-client.tsx` | Archive page: broadsheet + wire table with month picker |
 | `src/components/digest-snapshot.tsx` | Date-specific data cards (8 categories) |

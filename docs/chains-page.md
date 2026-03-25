@@ -38,7 +38,7 @@ The leaderboard is public and indexable. The profile routes are statically gener
 
 `src/app/chains/client.tsx` consumes `useChains()` and renders:
 
-- KPI strip: total stablecoin supply, active chains, top chain (explicit sort by supply), healthiest chain
+- hero summary: total stablecoin supply, optional weighted global 7d trend, chain count, and a top-chain dominance breakdown bar/legend
 - sortable leaderboard table with `<caption>` for screen readers
 - `QueryErrorNotice` with retry and `StaleDataBanner` (preset `"chains"`)
 - skeleton loading states (KPI grid + table rows)
@@ -72,7 +72,7 @@ Default sort is `totalUsd desc`.
 3. Chain Health breakdown card — weight labels derived dynamically from exported constants in `chain-health.ts`
 4. stablecoin composition treemap — adaptive 2/3/4-column layout with 1-3 rows, optional `Others` aggregation when the chain has more coins than display cells, and dominant span only when a coin exceeds 35% share in a 3+ column layout
 5. backing-type breakdown — unclassified coins shown as "Other" (zinc-colored) bucket
-6. full stablecoin table with `<caption>` and `scope="col"` attributes
+6. full stablecoin table with a screen-reader-only `<caption>`
 7. skeleton loading states (hero + health + composition blocks)
 
 `useChainStablecoins()` derives profile rows from `/api/stablecoins`, not `/api/chains`, by summing every `chainCirculating` entry that resolves to the selected canonical chain ID.

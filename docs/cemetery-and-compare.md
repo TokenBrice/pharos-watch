@@ -83,7 +83,7 @@ Primary files:
 - Query param `coins` accepts:
   - canonical ticker-issuer IDs (primary format, e.g. `usdt-tether`)
   - legacy DefiLlama / historical IDs that still resolve through the shared ID registry
-  - lowercase symbols (legacy fallback)
+  - lowercase symbols only when the symbol resolves uniquely; ambiguous symbols are rejected instead of guessing
 - Query param `range` stores the market-cap chart window. Accepted values are `7d`, `30d`, `90d`, `1y`, and `all`; `all` is the default and is cleared from the URL instead of persisted.
 - Static comparison landing pages are generated from `STATIC_COMPARISON_PAGES` in `src/lib/compare-pages.ts` and live at `/compare/<left-id>-vs-<right-id>/`.
 

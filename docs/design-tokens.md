@@ -18,7 +18,7 @@ Pharos uses a 3-layer design token architecture that separates raw values from m
 
 Raw values with no semantic meaning. Never reference directly in components.
 
-- **Color scales** — 9 hues (neutral, blue, green, teal, amber, orange, red, purple, pink), each with 50–900 lightness stops in OKLch (neutral and red extend to 950; neutral has additional 850/925/975 stops)
+- **Color scales** — 9 hue families (neutral, blue, green, teal, amber, orange, red, purple, pink) plus the dedicated `--p-frost-blue` brand accent; scale stops run 50–900 in OKLch (neutral and red extend to 950; neutral has additional 850/925/975 stops)
 - **Spacing** — 4px-grid scale from `--p-space-0` to `--p-space-20`
 - **Typography** — Font sizes (`--p-text-xs` to `--p-text-5xl`), line heights, tracking
 - **Radius** — `--p-radius-none` to `--p-radius-full`

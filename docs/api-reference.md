@@ -448,7 +448,7 @@ Aggregate historical supply chart data across all stablecoins, broken down by pe
 
 ### `GET /api/blacklist`
 
-Freeze, blacklist, and token-destruction events currently ingested for USDC, USDT, PAXG, and XAUT. `EURC` is intentionally excluded from the live filter set for now because Circle frequently mirrors the same blacklist actions on both USDC and EURC, which creates many zero-balance EURC rows. Data is sourced from on-chain logs via Etherscan, Tron, and EVM RPCs.
+Freeze, blacklist, and token-destruction events currently ingested for USDC, USDT, PAXG, XAUT, PYUSD, and USD1. `EURC` is intentionally excluded from the live filter set for now because Circle frequently mirrors the same blacklist actions on both USDC and EURC, which creates many zero-balance EURC rows. Data is sourced from on-chain logs via Etherscan, Tron, and EVM RPCs.
 
 **Cache:** realtime
 
@@ -456,7 +456,7 @@ Freeze, blacklist, and token-destruction events currently ingested for USDC, USD
 
 | Param        | Type      | Default | Description                                                    |
 | ------------ | --------- | ------- | -------------------------------------------------------------- |
-| `stablecoin` | `string`  | —       | Filter by token symbol: `USDC`, `USDT`, `PAXG`, `XAUT`         |
+| `stablecoin` | `string`  | —       | Filter by token symbol: `USDC`, `USDT`, `PAXG`, `XAUT`, `PYUSD`, `USD1` |
 | `chain`      | `string`  | —       | Filter by chain name (e.g. `Ethereum`, `Tron`)                 |
 | `eventType`  | `string`  | —       | Filter by type: `blacklist`, `unblacklist`, `destroy`          |
 | `q`          | `string`  | —       | Case-insensitive address substring search                      |
@@ -1426,7 +1426,7 @@ Top-level fields:
 | `outputAssetType`        | `string`                                        | `stable-single`, `stable-basket`, `bluechip-collateral`, `mixed-collateral`, or `nav`                       |
 | `sourceMode`             | `string`                                        | `dynamic`, `estimated`, or `static` capacity provenance                                                     |
 | `resolutionState`        | `string`                                        | `resolved`, `missing-cache`, `missing-capacity`, or `failed`                                                |
-| `capacityConfidence`     | `string`                                        | `dynamic`, `documented-bound`, or `heuristic` fidelity tag for the capacity model                           |
+| `capacityConfidence`     | `string`                                        | `live-direct`, `live-proxy`, `documented-bound`, `heuristic`, or legacy `dynamic` fidelity tag for the capacity model |
 | `capacitySemantics`      | `string`                                        | `immediate-bounded` or `eventual-only`, distinguishing current redeemable buffer from eventual redeemability |
 | `feeConfidence`          | `string`                                        | `fixed`, `formula`, or `undisclosed-reviewed` fidelity tag for the fee model                                |
 | `feeModelKind`           | `string`                                        | `fixed-bps`, `formula`, `documented-variable`, or `undisclosed-reviewed`                                    |
@@ -1436,7 +1436,7 @@ Top-level fields:
 | `feeBps`                 | `number \| null`                                | Explicit bounded fee when configured                                                                        |
 | `feeDescription`         | `string \| undefined`                           | Docs-backed fee description for variable, conditional, flat-minimum, or undisclosed redemption schedules    |
 | `queueEnabled`           | `boolean`                                       | Whether the modeled route is explicitly queued/serial                                                       |
-| `docs`                   | `{ label?: string, url?: string, reviewedAt?: string, provenance?: string, sources?: { label: string, url: string, supports?: string[] }[] } \| undefined` | Optional documentation / transparency metadata. `provenance` is `config-reviewed`, `live-reserve-display`, `proof-of-reserves`, or `preferred-link` |
+| `docs`                   | `{ label?: string, url?: string, reviewedAt?: string, provenance?: string, sources?: { label: string, url: string, supports?: string[] }[] } \| undefined` | Optional documentation / transparency metadata. `reviewedAt` is the route-review date, while `provenance` is `config-reviewed`, `live-reserve-display`, `proof-of-reserves`, or `preferred-link` |
 | `notes`                  | `string[] \| undefined`                         | Runtime notes such as stale reserve metadata fallback                                                       |
 | `capsApplied`            | `string[] \| undefined`                         | Applied score caps (`queue-route-cap`, `offchain-route-cap`, `config-cap`)                                  |
 
@@ -1928,7 +1928,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 
 **Rate limits**
 
-- Global public API limiter: D1-backed per-IP-hash limiter (`300 requests / 60 seconds`) for non-admin requests, with the legacy isolate-local in-memory limiter used only as fallback if the distributed limiter path fails.
+- Global public API limiter: D1-backed per-IP-hash limiter (`300 requests / 60 seconds`) for non-admin requests. If the distributed limiter path fails, the worker logs the failure and allows the request instead of switching to an isolate-local fallback limiter.
 - Feedback endpoint limiter: `3 submissions / 10 minutes` per salted IP hash in D1.
 
 **Request body**
@@ -1977,7 +1977,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 
 Telegram Bot API webhook endpoint. Receives user messages, processes bot commands, and manages subscriptions.
 
-**Authentication:** `X-Telegram-Bot-Api-Secret-Token` header (primary), with `?secret=...` query parameter as backward-compatible fallback. Not the standard `X-Admin-Key`.
+**Authentication:** `X-Telegram-Bot-Api-Secret-Token` header. Not the standard `X-Admin-Key`.
 
 **Rate limiting:** Exempt from IP rate limiter (Telegram sends from fixed IPs).
 
@@ -2512,7 +2512,7 @@ Admin-only bounded remediation endpoint for recoverable blacklist rows.
 **Inputs**
 
 - `chainId?: string`
-- `stablecoin?: "USDC" | "USDT" | "PAXG" | "XAUT"`
+- `stablecoin?: "USDC" | "USDT" | "PAXG" | "XAUT" | "PYUSD" | "USD1"`
 - `limit?: number` default `25`, max `200`
 - `dryRun?: boolean` default `true`
 - `onlyMissingProvenance?: boolean` default `true`

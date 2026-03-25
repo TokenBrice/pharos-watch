@@ -406,10 +406,7 @@ Returns `null` if < 7 days tracking. Scores based on 7–30 days are flagged as 
 | `worker/src/cron/sync-stablecoins.ts` | Parent cron that calls both stages after price enrichment |
 | `worker/src/lib/depeg-helpers.ts` | `DepegRow` type, `rowToDepegEvent()`, `loadDexPriceRows()`, `buildInsertDepegEventStmt()` |
 | `worker/src/api/depeg-events.ts` | `GET /api/depeg-events` handler |
-| `worker/migrations/0006_depeg_events.sql` | Initial `depeg_events` table |
-| `worker/migrations/0008_depeg_dedup.sql` | Uniqueness + open events indexes |
-| `worker/migrations/0023_depeg_pending.sql` | `depeg_pending` table for multi-source confirmation |
-| `worker/migrations/0016_cleanup_non_usd_depeg_events.sql` | Cleanup when non-USD threshold raised |
+| `worker/migrations/0000_baseline.sql` | Baseline `depeg_events` / `depeg_pending` schema, including the historical dedupe and non-USD cleanup changes |
 | `shared/types/index.ts` | `DepegEvent` frontend type |
 | `shared/lib/peg-score.ts` | Peg score computation for report cards |
 | `src/lib/peg-stability.ts` | Peg stability metrics (`pegPct`, streak, tracking span) |

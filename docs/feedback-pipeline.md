@@ -124,7 +124,7 @@ Implemented in D1 via the `feedback_rate_limit` table. Logic:
 4. If no row is inserted, the endpoint returns `429 Too Many Submissions`.
 5. Rows older than 3600 seconds are pruned in a non-blocking fire-and-forget call.
 
-**D1 schema** (`worker/migrations/0029_feedback_rate_limit.sql`):
+**D1 schema** (now part of `worker/migrations/0000_baseline.sql`; see `worker/migrations/MANIFEST.md` for the pre-squash lineage):
 
 ```sql
 CREATE TABLE IF NOT EXISTS feedback_rate_limit (
@@ -233,4 +233,4 @@ Without `FEEDBACK_IP_SALT` or `GITHUB_PAT` the endpoint returns 503.
 | `worker/src/api/feedback/github.ts` | GitHub REST transport helper |
 | `worker/src/api/feedback/format.ts` | Issue body and title formatting |
 | `worker/src/router.ts` | Routes `POST /api/feedback` to `handleFeedback()` |
-| `worker/migrations/0029_feedback_rate_limit.sql` | D1 rate-limit table migration |
+| `worker/migrations/0000_baseline.sql` | Baseline D1 rate-limit table schema for feedback submissions |

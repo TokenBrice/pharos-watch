@@ -6,7 +6,7 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v1.20`
+- **Current methodology version:** `v1.21`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
@@ -37,7 +37,7 @@ The cron reads:
 
 1. The strict `stablecoins` cache via `loadStablecoinsCache(...)`
 2. The latest DEX liquidity snapshot via `loadDexLiquiditySnapshot(db)` so both the liquidity map and freshness can be reused
-3. The latest successful authoritative reserve snapshot metadata on demand for routes that use live reserve telemetry for capacity or fee inputs
+3. A preloaded map of the latest authoritative reserve snapshot metadata for routes that use live reserve telemetry for capacity or fee inputs
 
 No external HTTP calls happen during the redemption-backstop pass itself; any live reserve telemetry is reused from D1.
 
@@ -121,7 +121,7 @@ Capacity resolution happens in `worker/src/lib/redemption-backstop-sources.ts`.
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `supply-full`           | Scores against full current supply as eventual redeemability, but leaves `immediateCapacity*` empty because immediate buffer is not separately quantified |
 | `supply-ratio`          | Immediate modeled capacity equals `supplyUsd * ratio`; this is heuristic unless the config explicitly opts into stronger confidence |
-| `reserve-sync-metadata` | Reads `reserve_composition.metadata.immediateRedeemableUsd` / `immediateRedeemableRatio` from the latest successful authoritative live snapshot while it is fresh; otherwise falls back to a configured ratio when provided or leaves the route unrated |
+| `reserve-sync-metadata` | Reads `reserve_composition.metadata.immediateRedeemableUsd` / `immediateRedeemableRatio` from the latest fresh `ok` live snapshot only when the adapter explicitly exposes redemption-capacity telemetry and the snapshot carries scoring-grade freshness evidence; otherwise falls back to a configured ratio when provided or leaves the route unrated |
 
 Sky `DAI` and `USDS` now use the live `sky-makercore` PSM `USDC` balance as their immediate redeemable bound when that telemetry is fresh, with the prior 33% reviewed heuristic retained only as fallback.
 Reviewed bounded primary-market liquidity buffers published by protocols or issuers, such as DOLA's USDS PSM share or JupUSD's USDC buffer, can also use `documented-bound` ratio semantics when the underlying source is explicit enough to avoid pretending the ratio is merely a blind heuristic.
@@ -141,9 +141,12 @@ Each row also carries:
   - `missing-capacity` when the route is configured but current runtime inputs could not produce usable capacity
   - `failed` when a route-specific resolver failed
 - `capacityConfidence`:
-  - `dynamic` for live reserve-sync backed capacity
+  - `live-direct` for live reserve-sync capacity sourced from direct current redemption telemetry
+  - `live-proxy` for live reserve-sync capacity inferred from a live proxy liquidity bucket rather than a protocol-native redemption-limit feed
+  - `dynamic` only as a legacy / unresolved reserve-sync bucket when older stored rows lack the richer live-capacity classification
   - `documented-bound` when a bounded model is explicitly configured that way after source review, including reviewed full-supply redeemability where official issuer or protocol terms establish eventual redemption of outstanding supply
   - `heuristic` by default for `supply-full`, `supply-ratio`, and inferred legacy rows without stronger evidence
+- Reserve-sync capacity now ignores degraded snapshots, weak fee-only adapters, and snapshots that do not carry scoring-grade freshness evidence. This makes the redemption trust boundary match the live-reserve scoring boundary more closely instead of trusting `fetchedAt` alone.
 - Immutable fully on-chain systems and reviewed direct issuer / direct redeem routes can use `documented-bound` with `eventual-only` semantics when protocol mechanics or issuer terms establish full-system redeemability directly, even if no separate immediate buffer is measured
 - `capacitySemantics`:
   - `immediate-bounded` when the model is intended to represent a current redeemable buffer
@@ -162,6 +165,7 @@ Each row also carries:
 
 - `docs` prefers explicit config-reviewed sources first (`docs[]` + `reviewedAt`), then live-reserve display links for reserve-sync routes, then the coin metadata's `proofOfReserves.url`, then preferred public links (`Docs`, `Proof of Reserve`, `Transparency`, `Website`)
 - `docs.provenance` distinguishes reviewed route docs from fallback live-reserve, proof-of-reserves, or generic project-link sources so detail pages do not overstate evidence quality
+- `docs.reviewedAt` is the route-review date, not a claim that the rendered fallback link itself was the reviewed source; the detail card now shows review date and provenance together
 - `docs.sources[]` records structured provenance for what the linked source supports (`route`, `capacity`, `fees`, `access`, `settlement`)
 - `feeDescription` carries docs-backed fee text when the route fee is fixed, conditional, dynamic, flat-fee-based, or publicly undisclosed
 - `notes` merges config notes plus runtime notes such as stale reserve metadata expiry, conservative fallback use, or live fee fallback
@@ -185,7 +189,7 @@ Each row also carries:
 
 ## Database Schema
 
-Migration: `worker/migrations/0066_redemption_backstops.sql`
+Migration: `worker/migrations/0000_baseline.sql` in the current post-squash tree. Historical introduction lives in the pre-squash lineage recorded in `worker/migrations/MANIFEST.md`.
 
 ### `redemption_backstop`
 
@@ -218,7 +222,7 @@ Key columns:
 - `methodology_version`
 - `details_json`
 
-`details_json` now also stores `resolutionState`, `capacityConfidence`, `capacitySemantics`, `feeConfidence`, `feeModelKind`, `modelConfidence`, and `feeDescription` alongside `docs`, `notes`, and `capsApplied`, so runtime status and fidelity metadata survive current-snapshot and history writes without a schema migration.
+`details_json` now also stores `routeFamily`, route attributes, provider/source provenance, component subscores, immediate-capacity fields, fee fields, `resolutionState`, `capacityConfidence`, `capacitySemantics`, `feeConfidence`, `feeModelKind`, `modelConfidence`, and `feeDescription` alongside `docs`, `notes`, and `capsApplied`, so richer runtime context survives current-snapshot and history writes without a schema migration.
 
 ### `redemption_backstop_history`
 
@@ -278,7 +282,7 @@ There is currently no dedicated list page or standalone public methodology secti
 | `worker/src/lib/redemption-backstop-sources.ts`                 | Runtime resolver for capacity, costs, docs, and scoring inputs     |
 | `worker/src/lib/redemption-backstops-store.ts`                  | D1 storage helpers and API payload builder                         |
 | `worker/src/api/redemption-backstops.ts`                        | Public API handler                                                 |
-| `worker/migrations/0066_redemption_backstops.sql`               | Current + history tables                                           |
+| `worker/migrations/0000_baseline.sql`                           | Baseline current + history table schema                            |
 | `src/hooks/api-hooks.ts`                                        | `useRedemptionBackstops()`                                         |
 | `src/hooks/use-stablecoin-detail-view-model.ts`                 | Detail-page query wiring                                           |
 | `src/lib/stablecoin-detail-view-model.ts`                       | Detail-page composed view model with redemption freshness tracking |
