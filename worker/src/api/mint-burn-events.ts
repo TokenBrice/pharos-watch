@@ -3,8 +3,7 @@ import {
   addFreshnessHeaders,
   resolveOrReject,
   errorResponse,
-  parseIntParam,
-  parseFloatParam,
+  parseQueryParams,
   jsonResponse,
   getLatestSuccessfulCronTimestamp,
   fetchPaginatedEvents,
@@ -68,26 +67,13 @@ export const handleMintBurnEvents = withErrorHandler(
     if (!VALID_SCOPES.has(scope)) {
       return errorResponse(400, "Invalid scope parameter");
     }
-    const parsedMinAmount = parseFloatParam(
-      params.get("minAmount"),
-      0,
-      0,
-      Number.MAX_SAFE_INTEGER,
-      "minAmount",
-    );
-    if (parsedMinAmount instanceof Response) {
-      return parsedMinAmount;
-    }
-    const minAmount = parsedMinAmount;
-
-    const limit = parseIntParam(params.get("limit"), 50, 1, 500, "limit");
-    if (limit instanceof Response) {
-      return limit;
-    }
-    const offset = parseIntParam(params.get("offset"), 0, 0, Number.MAX_SAFE_INTEGER, "offset");
-    if (offset instanceof Response) {
-      return offset;
-    }
+    const numericParams = parseQueryParams(params, {
+      minAmount: { type: "float", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER },
+      limit: { type: "int", default: 50, min: 1, max: 500 },
+      offset: { type: "int", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER },
+    });
+    if (numericParams instanceof Response) return numericParams;
+    const { minAmount, limit, offset } = numericParams;
 
     // Build WHERE conditions
     const conditions: string[] = ["stablecoin_id = ?", "chain_id = ?"];

@@ -2,7 +2,7 @@ import {
   withErrorHandler,
   addFreshnessHeaders,
   errorResponse,
-  parseIntParam,
+  parseQueryParams,
   jsonResponse,
   getLatestSuccessfulCronTimestamp,
   buildMethodologyEnvelope,
@@ -77,15 +77,13 @@ type BlacklistRow = {
 
 export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;
-  const parsedLimit = parseIntParam(params.get("limit"), 1000, 0, 1000, "limit");
-  if (parsedLimit instanceof Response) {
-    return parsedLimit;
-  }
-  const limit = parsedLimit === 0 ? 1000 : parsedLimit;
-  const offset = parseIntParam(params.get("offset"), 0, 0, Number.MAX_SAFE_INTEGER, "offset");
-  if (offset instanceof Response) {
-    return offset;
-  }
+  const numericParams = parseQueryParams(params, {
+    limit: { type: "int", default: 1000, min: 0, max: 1000 },
+    offset: { type: "int", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER },
+  });
+  if (numericParams instanceof Response) return numericParams;
+  const limit = numericParams.limit === 0 ? 1000 : numericParams.limit;
+  const { offset } = numericParams;
   const stablecoin = params.get("stablecoin");
   const chain = params.get("chain");
   const eventType = params.get("eventType");
