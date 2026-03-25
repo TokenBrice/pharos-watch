@@ -93,7 +93,7 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
   return (
       <Card>
         <CardHeader>
-          <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
+          <CardTitle as="h2" className="text-xl font-bold tracking-tight">
             <div className="flex items-center justify-between">
               <MethodologyLabel topic="safetyScore">Safety Score</MethodologyLabel>
               <span className="text-xs font-normal text-muted-foreground">
@@ -104,11 +104,11 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Two-column layout: grade + radar | dimension breakdown */}
-        <div className="grid gap-6 md:grid-cols-2 md:items-stretch">
-          {/* Left column: grade top-left strip + radar filling full height */}
-          <div className="flex min-w-0 flex-col items-center gap-4 md:flex-row md:items-stretch md:h-full">
-            {/* Grade strip — top-aligned on desktop, centred inline on mobile */}
-            <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-3 gap-y-2 md:flex-col md:justify-start md:items-center md:gap-1 md:pt-1">
+        <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] md:items-stretch">
+          {/* Left column: grade + radar stacked */}
+          <div className="flex flex-col items-center gap-4">
+            {/* Grade strip */}
+            <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-3 gap-y-2">
               <Badge
                 variant="outline"
                 className={`text-3xl px-5 py-2 font-bold ${REPORT_CARD_GRADE_COLORS[card.overallGrade]}`}
@@ -116,17 +116,17 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
                 {card.overallGrade}
               </Badge>
               {card.overallScore !== null && (
-                <span className="text-lg text-muted-foreground md:text-base">
+                <span className="text-lg text-muted-foreground">
                   {card.overallScore}
                   <span className="text-sm">/100</span>
                 </span>
               )}
               {card.baseScore != null && card.overallScore != null && card.dimensions.pegStability.score != null && (
-                <details className="mt-1 basis-full text-center text-xs text-muted-foreground md:mt-2 md:text-left">
+                <details className="mt-1 basis-full text-center text-xs text-muted-foreground">
                   <summary className="pharos-focus-ring inline-flex cursor-pointer rounded-md transition-colors hover:text-foreground">
                     Show score breakdown
                   </summary>
-                  <div className="mt-2 space-y-1.5 pl-1">
+                  <div className="mt-2 mx-auto max-w-[200px] space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span>Base score</span>
                       <span className="font-mono tabular-nums">{card.baseScore.toFixed(1)}</span>
@@ -147,11 +147,10 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
                 </details>
               )}
             </div>
-            {/* Radar chart — fills remaining width and full column height on desktop */}
-            <div className="relative min-w-0 w-full flex-1 min-h-[240px] md:h-full md:min-h-[260px]">
-              {/* Grade-colored glow behind radar */}
+            {/* Radar chart — grows to fill remaining height, capped width */}
+            <div className="relative w-full max-w-[320px] min-h-[220px] flex-1">
               <GradeGlow grade={card.overallGrade} />
-              <ReportCardRadar card={card} labels="full" />
+              <ReportCardRadar card={card} labels="short" />
             </div>
           </div>
 

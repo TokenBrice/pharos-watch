@@ -24,10 +24,7 @@ export function AiSummary({ title, text, updatedAt }: AiSummaryProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <p
-          className="text-[1.05rem] leading-relaxed text-foreground/90 italic"
-          style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-        >
+        <p className="font-serif text-[1.05rem] leading-relaxed text-foreground/90 italic">
           {text}
         </p>
       </CardContent>

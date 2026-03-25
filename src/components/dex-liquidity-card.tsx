@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -93,6 +93,50 @@ function getLiquidityEvidenceLabel(liq: DexLiquidityData): string | null {
     default:
       return null;
   }
+}
+
+function PoolSourceLabel({
+  count,
+  tvl,
+  priceSources,
+}: {
+  count: number;
+  tvl: number | null;
+  priceSources: Array<{ protocol: string }> | null;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const protocols = priceSources && priceSources.length > 0
+    ? [...new Set(priceSources.map((s) => prettifyProtocol(s.protocol)))]
+    : null;
+  const summary = `from ${count} ${count === 1 ? "pool" : "pools"}`;
+  const tvlSuffix = tvl != null ? ` (${formatCurrency(tvl)} TVL)` : "";
+
+  if (!protocols || protocols.length <= 5) {
+    const protocolLabel = protocols ? protocols.join(" / ") : "DEX";
+    return (
+      <span className="text-xs text-muted-foreground">
+        from {count} {protocolLabel} {count === 1 ? "pool" : "pools"}{tvlSuffix}
+      </span>
+    );
+  }
+
+  return (
+    <span className="text-xs text-muted-foreground">
+      {summary}{tvlSuffix}
+      {" "}
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="pharos-focus-ring rounded-sm text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
+      >
+        {expanded ? "hide sources" : "show all"}
+      </button>
+      {expanded && (
+        <span className="mt-1 block leading-relaxed">
+          {protocols.join(" / ")}
+        </span>
+      )}
+    </span>
+  );
 }
 
 function ProtocolBar({ protocolTvl }: { protocolTvl: Record<string, number> }) {
@@ -606,17 +650,11 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
                 </span>
               )}
               {liq.priceSourceCount != null && (
-                <span className="text-xs text-muted-foreground">
-                  {(() => {
-                    const protocols =
-                      liq.priceSources && liq.priceSources.length > 0
-                        ? [...new Set(liq.priceSources.map((s) => prettifyProtocol(s.protocol)))]
-                        : null;
-                    const protocolLabel = protocols ? protocols.join(" / ") : "DEX";
-                    return `from ${liq.priceSourceCount} ${protocolLabel} ${liq.priceSourceCount === 1 ? "pool" : "pools"}`;
-                  })()}
-                  {liq.priceSourceTvl != null && ` (${formatCurrency(liq.priceSourceTvl)} TVL)`}
-                </span>
+                <PoolSourceLabel
+                  count={liq.priceSourceCount}
+                  tvl={liq.priceSourceTvl ?? null}
+                  priceSources={liq.priceSources ?? null}
+                />
               )}
             </div>
           </div>

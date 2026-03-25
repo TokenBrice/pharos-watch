@@ -103,7 +103,7 @@ export function ExploreNextSection({
           {staticComparisonPages.length > 0 ? (
             <div className="pharos-card-shell space-y-3 p-4">
               <p className="pharos-kicker">Compare From Here</p>
-              <div className="grid gap-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 {staticComparisonPages.map((page) => (
                   <div
                     key={page.href}

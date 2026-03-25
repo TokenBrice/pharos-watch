@@ -136,7 +136,7 @@ describe("HeroCard", () => {
     expect(html).toContain("fiat-backed");
     expect(html).toContain("Bluechip: B");
     expect(html).toContain("peg-gauge:2");
-    expect(html).toContain("Report data issue");
+    expect(html).toContain("Report issue");
     expect(html).toContain("Active depeg");
     expect(html).toContain("90d");
     expect(html).toContain("Liquidity");

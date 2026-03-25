@@ -163,7 +163,6 @@ export function LongformScrollspyNav({
               {sections.find((section) => section.id === effectiveActiveId)?.label}
             </span>
           </div>
-          <span className="text-[11px] text-muted-foreground sm:hidden">Swipe to jump</span>
         </div>
         {rightSlot}
       </div>

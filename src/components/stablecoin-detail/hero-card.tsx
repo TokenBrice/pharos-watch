@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeftRight, Flag } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
 import { PegGauge } from "@/components/peg-gauge";
 import { ShareButton } from "@/components/share-button";
@@ -16,9 +17,10 @@ import {
   formatPercentChange,
   formatSupply,
 } from "@shared/lib/format";
+import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severity-colors";
-import type { DexLiquidityData, PegSummaryCoin, StablecoinData, StablecoinMeta } from "@shared/types";
+import type { DexLiquidityData, PegSummaryCoin, ReportCard, StablecoinData, StablecoinMeta } from "@shared/types";
 import { MethodologyLabel } from "@/components/methodology-hint";
 
 interface HeroCardProps {
@@ -41,6 +43,7 @@ interface HeroCardProps {
   pegScoreBorderClass: string;
   liquidityData: DexLiquidityData | undefined;
   liqBorderClass: string;
+  reportCard: ReportCard | null;
   onOpenFeedback: () => void;
 }
 
@@ -102,14 +105,14 @@ function HeroIdentityHeader({
   if (mobile) {
     return (
       <div className="flex items-start gap-3">
-        <StablecoinLogo src={logoSrc} name={coin.name} size={52} />
-        <div className="min-w-0 flex-1 space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="min-w-0 text-2xl font-extrabold tracking-tighter">{coin.name}</h2>
-            <span className="text-base font-mono text-muted-foreground">{coin.symbol}</span>
+        <StablecoinLogo src={logoSrc} name={coin.name} size={44} />
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <h2 className="min-w-0 text-xl font-extrabold tracking-tighter">{coin.name}</h2>
+            <span className="text-sm font-mono text-muted-foreground">{coin.symbol}</span>
+            <BluechipHeaderBadge stablecoinId={coin.id} />
           </div>
           <HeroClassificationLine coin={coin} />
-          <BluechipHeaderBadge stablecoinId={coin.id} />
         </div>
       </div>
     );
@@ -121,9 +124,9 @@ function HeroIdentityHeader({
         <StablecoinLogo src={logoSrc} name={coin.name} size={48} />
         <h2 className="text-2xl font-extrabold tracking-tighter">{coin.name}</h2>
         <span className="text-lg text-muted-foreground font-mono">{coin.symbol}</span>
+        <BluechipHeaderBadge stablecoinId={coin.id} />
       </div>
       <HeroClassificationLine coin={coin} />
-      <BluechipHeaderBadge stablecoinId={coin.id} />
     </>
   );
 }
@@ -136,9 +139,7 @@ function HeroPriceContent({
   isNavToken,
   deviationBps,
   usesFallbackPegRate,
-  onOpenFeedback,
   gaugeClassName,
-  buttonClassName,
 }: {
   coin: StablecoinMeta;
   coinData: StablecoinData;
@@ -147,9 +148,7 @@ function HeroPriceContent({
   isNavToken: boolean;
   deviationBps: number;
   usesFallbackPegRate: boolean;
-  onOpenFeedback: () => void;
   gaugeClassName: string;
-  buttonClassName: string;
 }) {
   return (
     <>
@@ -183,10 +182,6 @@ function HeroPriceContent({
             </span>
           )}
         </p>
-        <button onClick={onOpenFeedback} className={buttonClassName}>
-          <Flag className="h-3 w-3" />
-          Report data issue
-        </button>
       </div>
     </>
   );
@@ -296,6 +291,7 @@ export function HeroCard({
   pegScoreBorderClass,
   liquidityData,
   liqBorderClass,
+  reportCard,
   onOpenFeedback,
 }: HeroCardProps) {
   const chainCount = coinData?.chains?.length ?? 0;
@@ -434,7 +430,14 @@ export function HeroCard({
             {coin.name}
           </span>
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={onOpenFeedback}
+            className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground lg:min-h-9 lg:rounded-md lg:px-2 lg:py-1"
+          >
+            <Flag className="h-3 w-3" />
+            <span className="hidden sm:inline">Report issue</span>
+          </button>
           <Link
             href={compareHref}
             className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground lg:min-h-9 lg:rounded-md lg:px-2 lg:py-1"
@@ -447,35 +450,53 @@ export function HeroCard({
       </div>
 
       <div className="px-4 sm:px-5 py-4">
-        <div className="space-y-5 lg:hidden">
-          <div className="space-y-3">
+        <div className="space-y-3 lg:hidden">
+          <div className="space-y-1">
             <HeroIdentityHeader coin={coin} logoSrc={logoSrc} mobile />
             <HeroTagList tags={coin.tags} />
           </div>
 
-          <div className="rounded-2xl border border-border/60 bg-background/45 px-4 py-4">
-            <div className="flex items-center gap-4">
-              <HeroPriceContent
-                coin={coin}
-                coinData={coinData}
-                pegRef={pegRef}
-                gaugeDeviationBps={gaugeDeviationBps}
-                isNavToken={isNavToken}
-                deviationBps={deviationBps}
-                usesFallbackPegRate={usesFallbackPegRate}
-                onOpenFeedback={onOpenFeedback}
-                gaugeClassName="w-full max-w-[108px]"
-                buttonClassName="pharos-focus-ring mt-2 flex min-h-11 items-center gap-1.5 rounded-md text-xs text-muted-foreground transition-colors hover:text-foreground"
-              />
-            </div>
-            {pegScoreResult?.activeDepeg && (
-              <div className="mt-3 rounded-full border border-red-500/20 bg-red-500/8 px-3 py-1.5 text-xs text-red-700 dark:text-red-400">
-                Active depeg
+          <div className="flex items-center gap-3 border-t border-border/30 pt-3">
+            <HeroPriceContent
+              coin={coin}
+              coinData={coinData}
+              pegRef={pegRef}
+              gaugeDeviationBps={gaugeDeviationBps}
+              isNavToken={isNavToken}
+              deviationBps={deviationBps}
+              usesFallbackPegRate={usesFallbackPegRate}
+              gaugeClassName="w-full max-w-[80px]"
+            />
+
+            {reportCard && !reportCard.isDefunct && (
+              <div className="border-l border-border/30 pl-3">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <MethodologyLabel topic="safetyScore">Safety Score</MethodologyLabel>
+                </p>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className={`shrink-0 text-lg px-2.5 py-0.5 font-bold ${REPORT_CARD_GRADE_COLORS[reportCard.overallGrade]}`}
+                  >
+                    {reportCard.overallGrade}
+                  </Badge>
+                  {reportCard.overallScore !== null && (
+                    <span className="text-lg font-bold font-mono tabular-nums tracking-tight leading-none">
+                      {reportCard.overallScore}<span className="text-sm text-muted-foreground">/100</span>
+                    </span>
+                  )}
+                </div>
               </div>
             )}
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          {pegScoreResult?.activeDepeg && (
+            <div className="rounded-full border border-red-500/20 bg-red-500/8 px-3 py-1.5 text-xs text-red-700 dark:text-red-400">
+              Active depeg
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
             <HeroMetricCard label="Market Cap">
               <HeroMarketCapContent
                 mcap={mcap}
@@ -486,51 +507,45 @@ export function HeroCard({
               />
             </HeroMetricCard>
 
+            <HeroMetricCard label="Supply">
+              <HeroSupplyContent
+                mcap={mcap}
+                supply={supply}
+                symbol={coin.symbol}
+                prevWeek={prevWeek}
+                prevWeekTrendClass={prevWeekTrendClass}
+                hasPrevWeek={hasPrevWeek}
+                prevMonth={prevMonth}
+                prevMonthTrendClass={prevMonthTrendClass}
+                hasPrevMonth={hasPrevMonth}
+                prev90d={prev90d}
+                prev90dTrendClass={prev90dTrendClass}
+                include90d={false}
+              />
+            </HeroMetricCard>
+
             <HeroMetricCard
               label={!isNavToken ? <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel> : "Type"}
               className={!isNavToken ? pegScoreBorderClass : ""}
             >
               {pegScoreContent}
             </HeroMetricCard>
+
+            <HeroMetricCard label={<MethodologyLabel topic="liquidityScore">Liquidity</MethodologyLabel>} className={liqBorderClass}>
+              {liquidityContent}
+            </HeroMetricCard>
           </div>
-
-          <details className="rounded-2xl border border-border/60 bg-background/45">
-            <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-2xl px-4 py-3 text-sm font-medium text-foreground [&::-webkit-details-marker]:hidden">
-              More market detail
-            </summary>
-            <div className="grid gap-3 border-t border-border/50 px-4 pb-4 pt-4 sm:grid-cols-2">
-              <HeroMetricCard label="Supply">
-                <HeroSupplyContent
-                  mcap={mcap}
-                  supply={supply}
-                  symbol={coin.symbol}
-                  prevWeek={prevWeek}
-                  prevWeekTrendClass={prevWeekTrendClass}
-                  hasPrevWeek={hasPrevWeek}
-                  prevMonth={prevMonth}
-                  prevMonthTrendClass={prevMonthTrendClass}
-                  hasPrevMonth={hasPrevMonth}
-                  prev90d={prev90d}
-                  prev90dTrendClass={prev90dTrendClass}
-                  include90d={false}
-                />
-              </HeroMetricCard>
-
-              <HeroMetricCard label={<MethodologyLabel topic="liquidityScore">Liquidity</MethodologyLabel>} className={liqBorderClass}>
-                {liquidityContent}
-              </HeroMetricCard>
-            </div>
-          </details>
         </div>
 
-        <div className="hidden lg:flex lg:flex-row lg:items-stretch gap-6">
-          <div className="lg:w-[45%] flex flex-col gap-3">
-            <div className="flex flex-col gap-1.5">
+        <div className="hidden lg:flex lg:items-stretch gap-5">
+          {/* Left column: identity + price + safety */}
+          <div className="lg:w-[40%] flex flex-col">
+            <div className="flex flex-col gap-1">
               <HeroIdentityHeader coin={coin} logoSrc={logoSrc} mobile={false} />
               <HeroTagList tags={coin.tags} />
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-auto border-t border-border/30 pt-3">
+            <div className="mt-auto flex items-center gap-4 border-t border-border/30 pt-3">
               <HeroPriceContent
                 coin={coin}
                 coinData={coinData}
@@ -539,54 +554,29 @@ export function HeroCard({
                 isNavToken={isNavToken}
                 deviationBps={deviationBps}
                 usesFallbackPegRate={usesFallbackPegRate}
-                onOpenFeedback={onOpenFeedback}
-                gaugeClassName="w-full max-w-[110px]"
-                buttonClassName="pharos-focus-ring mt-2 flex min-h-11 items-center gap-1.5 rounded-md text-xs text-muted-foreground transition-colors hover:text-foreground sm:min-h-0"
+                gaugeClassName="w-full max-w-[88px]"
               />
-            </div>
-          </div>
 
-          <div className="w-px bg-border/30 my-3" />
-
-          <div className="lg:flex-1">
-            <div className="grid grid-cols-2 gap-3">
-              <HeroMetricCard label="Market Cap">
-                <HeroMarketCapContent
-                  mcap={mcap}
-                  prevDay={prevDay}
-                  prevDayTrendClass={prevDayTrendClass}
-                  hasPrevDay={hasPrevDay}
-                  chainCount={chainCount}
-                />
-              </HeroMetricCard>
-
-              <HeroMetricCard label="Supply">
-                <HeroSupplyContent
-                  mcap={mcap}
-                  supply={supply}
-                  symbol={coin.symbol}
-                  prevWeek={prevWeek}
-                  prevWeekTrendClass={prevWeekTrendClass}
-                  hasPrevWeek={hasPrevWeek}
-                  prevMonth={prevMonth}
-                  prevMonthTrendClass={prevMonthTrendClass}
-                  hasPrevMonth={hasPrevMonth}
-                  prev90d={prev90d}
-                  prev90dTrendClass={prev90dTrendClass}
-                  include90d
-                />
-              </HeroMetricCard>
-
-              <HeroMetricCard
-                label={!isNavToken ? <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel> : "Type"}
-                className={!isNavToken ? pegScoreBorderClass : ""}
-              >
-                {pegScoreContent}
-              </HeroMetricCard>
-
-              <HeroMetricCard label={<MethodologyLabel topic="liquidityScore">Liquidity</MethodologyLabel>} className={liqBorderClass}>
-                {liquidityContent}
-              </HeroMetricCard>
+              {reportCard && !reportCard.isDefunct && (
+                <div className="border-l border-border/30 pl-4">
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    <MethodologyLabel topic="safetyScore">Safety Score</MethodologyLabel>
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="outline"
+                      className={`shrink-0 text-lg px-2.5 py-0.5 font-bold ${REPORT_CARD_GRADE_COLORS[reportCard.overallGrade]}`}
+                    >
+                      {reportCard.overallGrade}
+                    </Badge>
+                    {reportCard.overallScore !== null && (
+                      <span className="text-lg font-bold font-mono tabular-nums tracking-tight leading-none">
+                        {reportCard.overallScore}<span className="text-sm text-muted-foreground">/100</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {pegScoreResult?.activeDepeg && (
@@ -594,6 +584,50 @@ export function HeroCard({
                 <span className="text-red-700 dark:text-red-400 font-medium">Active depeg</span>
               </div>
             )}
+          </div>
+
+          {/* Divider */}
+          <div className="w-px bg-border/30" />
+
+          {/* Right column: 2x2 metric grid */}
+          <div className="flex-1 grid grid-cols-2 gap-3 content-start">
+            <HeroMetricCard label="Market Cap">
+              <HeroMarketCapContent
+                mcap={mcap}
+                prevDay={prevDay}
+                prevDayTrendClass={prevDayTrendClass}
+                hasPrevDay={hasPrevDay}
+                chainCount={chainCount}
+              />
+            </HeroMetricCard>
+
+            <HeroMetricCard label="Supply">
+              <HeroSupplyContent
+                mcap={mcap}
+                supply={supply}
+                symbol={coin.symbol}
+                prevWeek={prevWeek}
+                prevWeekTrendClass={prevWeekTrendClass}
+                hasPrevWeek={hasPrevWeek}
+                prevMonth={prevMonth}
+                prevMonthTrendClass={prevMonthTrendClass}
+                hasPrevMonth={hasPrevMonth}
+                prev90d={prev90d}
+                prev90dTrendClass={prev90dTrendClass}
+                include90d
+              />
+            </HeroMetricCard>
+
+            <HeroMetricCard
+              label={!isNavToken ? <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel> : "Type"}
+              className={!isNavToken ? pegScoreBorderClass : ""}
+            >
+              {pegScoreContent}
+            </HeroMetricCard>
+
+            <HeroMetricCard label={<MethodologyLabel topic="liquidityScore">Liquidity</MethodologyLabel>} className={liqBorderClass}>
+              {liquidityContent}
+            </HeroMetricCard>
           </div>
         </div>
       </div>

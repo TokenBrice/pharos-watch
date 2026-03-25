@@ -205,7 +205,7 @@ export function SafetyScoreHistorySection({
         {/* Mini grade timeline bar */}
         {segments.length > 0 && (
           <TooltipProvider>
-            <div className="mt-4 flex h-2 overflow-hidden rounded-full bg-muted">
+            <div className="mt-4 flex h-4 overflow-hidden rounded-full bg-muted">
               {segments.map((seg, i) => (
                 <Tooltip key={i}>
                   <TooltipTrigger asChild>
