@@ -2,6 +2,7 @@
 // (same pattern as stability-index).
 // Reads existing D1 tables, computes DEWS per eligible coin,
 // writes to stress_signals + stress_signal_history.
+import { z } from "zod";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
@@ -13,6 +14,13 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../lib/constants";
 import { chunkArray } from "../lib/collections";
 import { getCache, setCache } from "../lib/db-cache";
+
+const RawPoolDataSchema = z.object({
+  tvlUsd: z.number().default(0),
+  extra: z.object({
+    balanceRatio: z.number(),
+  }).optional(),
+});
 
 // Map blacklist symbol → stablecoin IDs
 const BLACKLIST_SYMBOL_TO_IDS: Record<string, string[]> = {
@@ -461,10 +469,13 @@ export async function computeAndStoreDEWS(
     if (dexLiq?.top_pools_json) {
       try {
         const parsed = JSON.parse(dexLiq.top_pools_json);
-        topPools = (Array.isArray(parsed) ? parsed : []).map((p: Record<string, unknown>) => ({
-          tvlUsd: (p.tvlUsd as number) ?? 0,
-          balanceRatio: ((p.extra as Record<string, unknown>)?.balanceRatio as number) ?? 1.0,
-        }));
+        topPools = (Array.isArray(parsed) ? parsed : []).map((raw) => {
+          const p = RawPoolDataSchema.safeParse(raw);
+          return {
+            tvlUsd: p.success ? p.data.tvlUsd : 0,
+            balanceRatio: p.success ? (p.data.extra?.balanceRatio ?? 1.0) : 1.0,
+          };
+        });
       } catch { /* expected: malformed top_pools_json */
         validationFailures++;
       }
