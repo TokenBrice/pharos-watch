@@ -322,8 +322,8 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   { chain: ARBITRUM, stablecoinId: "pyusd-paypal", events: PYUSD_EVENT_FAMILY.events },
 
   // USD1 (Ethereum + BSC + Tron)
-  { chain: ETHEREUM, stablecoinId: "usd1-world-liberty-financial", events: USD1_EVENT_FAMILY.events },
-  { chain: BSC, stablecoinId: "usd1-world-liberty-financial", events: USD1_EVENT_FAMILY.events },
+  { chain: ETHEREUM, stablecoinId: "usd1-world-liberty-financial", startBlock: 21_720_503, events: USD1_EVENT_FAMILY.events },
+  { chain: BSC, stablecoinId: "usd1-world-liberty-financial", startBlock: 46_151_905, events: USD1_EVENT_FAMILY.events },
   { chain: TRON, stablecoinId: "usd1-world-liberty-financial", events: USD1_EVENT_FAMILY.events },
 ];
 
