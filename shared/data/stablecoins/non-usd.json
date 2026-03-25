@@ -2987,7 +2987,7 @@
       "governance": "decentralized",
       "yieldBearing": false,
       "rwa": false,
-      "navToken": false
+      "navToken": true
     },
     "collateral": "ETH only; overcollateralized CDPs ('Safes') with ~130%+ collateral ratio; a PID controller continuously adjusts the redemption rate to dampen market price deviations from the moving redemption price",
     "pegMechanism": "Non-pegged floating-rate stablecoin: a PI controller adjusts the redemption price up or down based on market price deviation, creating an incentive to arbitrage the gap; users mint RAI by depositing ETH into Safes and repay their debt (burning RAI) to reclaim collateral; undercollateralized Safes are liquidated via English auctions",
@@ -3026,7 +3026,7 @@
       "governance": "decentralized",
       "yieldBearing": false,
       "rwa": false,
-      "navToken": false
+      "navToken": true
     },
     "collateral": "Crypto assets via ShadeLend overcollateralized vaults (ATOM, SCRT, stablecoins like USDC, SHD governance token) plus stablecoin redemption pools; targets 100-150% system-wide collateralization ratio",
     "pegMechanism": "Basket peg tracking GDP-weighted currencies of the top 20 economies (USD 30%, CNY 22%, EUR 14%, JPY 7%, GBP 4%, etc.); stability maintained via overcollateralized lending (ShadeLend), redemption pools, bounded minting, collateral liquidations, and ShadeDAO bond mechanism",
