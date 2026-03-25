@@ -8,6 +8,10 @@ import type { StablecoinData } from "@shared/types";
 
 const push = vi.fn();
 
+vi.mock("@/components/table-toolbar", () => ({
+  TableToolbar: () => <div data-testid="table-toolbar" />,
+}));
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
 }));
