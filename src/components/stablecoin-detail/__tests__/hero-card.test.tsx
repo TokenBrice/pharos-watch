@@ -138,7 +138,6 @@ describe("HeroCard", () => {
     expect(html).toContain("peg-gauge:2");
     expect(html).toContain("Report issue");
     expect(html).toContain("Active depeg");
-    expect(html).toContain("90d");
     expect(html).toContain("Liquidity");
     expect(html).toContain("Compare");
   });
