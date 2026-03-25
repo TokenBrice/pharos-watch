@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   getDepegThresholdBps,
   DEPEG_PENDING_MIN_AGE_SEC,
@@ -9,6 +10,11 @@ import {
   DEX_FRESHNESS_SEC,
   POOL_CHALLENGE_MIN_TVL,
 } from "../lib/constants";
+
+const CoinGeckoPriceSchema = z.record(z.string(), z.object({ usd: z.number().optional() }));
+const DefiLlamaPriceSchema = z.object({
+  coins: z.record(z.string(), z.object({ price: z.number().optional() })).optional(),
+});
 import { batchExecute } from "../lib/db";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
@@ -178,13 +184,11 @@ export async function confirmPendingDepegs(
         if (offchainRes?.ok) {
           let offchainPrice: number | undefined;
           if (useDefiLlamaSecondary) {
-            const dlData = (await offchainRes.json()) as {
-              coins?: Record<string, { price?: number }>;
-            };
-            offchainPrice = dlData.coins?.[`coingecko:${geckoId}`]?.price;
+            const parsed = DefiLlamaPriceSchema.safeParse(await offchainRes.json());
+            offchainPrice = parsed.success ? parsed.data.coins?.[`coingecko:${geckoId}`]?.price : undefined;
           } else {
-            const cgData = (await offchainRes.json()) as Record<string, { usd?: number }>;
-            offchainPrice = cgData[geckoId]?.usd;
+            const parsed = CoinGeckoPriceSchema.safeParse(await offchainRes.json());
+            offchainPrice = parsed.success ? parsed.data[geckoId]?.usd : undefined;
           }
 
           if (offchainPrice && offchainPrice > 0) {
