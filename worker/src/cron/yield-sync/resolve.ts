@@ -24,7 +24,7 @@ import {
   YIELD_VARIANT_MAP,
 } from "../yield-config";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { fetchBimaSusbdSource, fetchBprotocolLqtyOnlySource, getPriceDerivedApy } from "./sources";
+import { fetchBimaSusbdSource, fetchBprotocolLqtyOnlySource, fetchCompoundV3SupplyRates, getPriceDerivedApy, COMPOUND_V3_COMETS } from "./sources";
 import type { DlPool, ResolvedYieldEntry } from "./types";
 
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
@@ -295,6 +295,20 @@ export async function resolveYieldSources({
         symbol: lusdMeta.symbol,
         yield: bprotocolYield,
       });
+    }
+  }
+
+  // Compound V3 direct on-chain supply rates — batched 4 at a time.
+  const COMPOUND_V3_BATCH_SIZE = 4;
+  const compoundV3Targets = [...COMPOUND_V3_COMETS];
+  for (let i = 0; i < compoundV3Targets.length; i += COMPOUND_V3_BATCH_SIZE) {
+    const batch = compoundV3Targets.slice(i, i + COMPOUND_V3_BATCH_SIZE);
+    const batchResults = await fetchCompoundV3SupplyRates(batch, signal, chainRpcs);
+    for (const entry of batchResults) {
+      const meta = TRACKED_STABLECOINS.find((m) => m.symbol === entry.symbol);
+      if (!meta) continue;
+      if (resolved.some((r) => r.id === meta.id && r.yield?.sourceKey === entry.yield.sourceKey)) continue;
+      resolved.push({ id: meta.id, symbol: meta.symbol, yield: entry.yield });
     }
   }
 
