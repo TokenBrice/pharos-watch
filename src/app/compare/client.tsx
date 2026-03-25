@@ -15,6 +15,7 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { Share2, Twitter, Download } from "lucide-react";
 import { DIMENSION_ORDER, DIMENSION_SHORT_LABELS } from "@shared/lib/report-cards";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { CompareEmptyState } from "@/components/compare-empty-state";
@@ -174,6 +175,7 @@ export function CompareClient() {
   }
 
   return (
+    <SectionErrorBoundary name="Compare">
     <div className="space-y-6">
       <QueryErrorNotice error={globalError} hasData={!!listData?.peggedAssets?.length} onRetry={handleRetry} />
       <StaleDataBanner
@@ -369,5 +371,6 @@ export function CompareClient() {
         </div>
       )}
     </div>
+    </SectionErrorBoundary>
   );
 }

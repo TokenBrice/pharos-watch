@@ -7,6 +7,7 @@ import { useChains } from "@/hooks/use-chains";
 import { useSort } from "@/hooks/use-sort";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SortableTableHead } from "@/components/sortable-table-head";
+import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -110,6 +111,7 @@ export function ChainsLeaderboardClient() {
   const show7dTrend = Math.abs(change7dPct) >= 0.05;
 
   return (
+    <SectionErrorBoundary name="Chains">
     <div className="space-y-4">
       <QueryErrorNotice error={error} hasData={!!data?.chains?.length} onRetry={() => { void refetch(); }} />
       <StaleDataBanner queries={[{ preset: "chains", dataUpdatedAt, error, hasData: !!data?.chains?.length }]} />
@@ -321,5 +323,6 @@ export function ChainsLeaderboardClient() {
         </table>
       </div>
     </div>
+    </SectionErrorBoundary>
   );
 }

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useDexLiquidity } from "@/hooks/api-hooks";
+import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { useLogos } from "@/hooks/use-logos";
@@ -175,6 +176,7 @@ export function LiquidityClient() {
   }
 
   return (
+    <SectionErrorBoundary name="Liquidity">
     <div className="space-y-6">
       <QueryErrorNotice error={error} hasData={!!liquidityMap} onRetry={handleRetry} />
       <StaleDataBanner
@@ -246,5 +248,6 @@ export function LiquidityClient() {
         </div>
       )}
     </div>
+    </SectionErrorBoundary>
   );
 }

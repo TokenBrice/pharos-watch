@@ -18,6 +18,7 @@ import { DIMENSION_ORDER, scoreToGrade } from "@shared/lib/report-cards";
 import type { ReportCard } from "@shared/types";
 import { AlertTriangle, Share2, Trash2, Wallet, X } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
+import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { useUrlFilters } from "@/hooks/use-url-filters";
@@ -372,6 +373,7 @@ export function PortfolioClient() {
   }
 
   return (
+    <SectionErrorBoundary name="Portfolio">
     <div className="space-y-6">
       <QueryErrorNotice
         error={reportCardsError}
@@ -548,5 +550,6 @@ export function PortfolioClient() {
         </>
       )}
     </div>
+    </SectionErrorBoundary>
   );
 }

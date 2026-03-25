@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronDown, Search, SearchX } from "lucide-react";
 import { formatCurrency } from "@shared/lib/format";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { CoverageLensSummary } from "@/components/coverage-lens-summary";
 import {
@@ -425,6 +426,7 @@ export default function CoveragePageClient() {
   const hasActiveFilters = filter !== "all" || search.trim().length > 0;
 
   return (
+    <SectionErrorBoundary name="Coverage">
     <div className="space-y-6">
       <StaleDataBanner queries={staleQueries} />
 
@@ -798,5 +800,6 @@ export default function CoveragePageClient() {
         </CardContent>
       </Card>
     </div>
+    </SectionErrorBoundary>
   );
 }
