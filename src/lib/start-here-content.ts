@@ -22,9 +22,6 @@ import {
   TrendingUp,
   Wallet,
 } from "lucide-react";
-import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
-import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 
 export interface StartHereGoal {
   title: string;
@@ -34,14 +31,7 @@ export interface StartHereGoal {
   cta: string;
   destinations: readonly string[];
   icon: LucideIcon;
-  borderClass: string;
-  spanClass: string;
-}
-
-export interface StartHereFact {
-  value: string;
-  label: string;
-  detail: string;
+  tone: "frost" | "emerald" | "amber" | "violet";
 }
 
 export interface StartHereGlossaryItem {
@@ -58,55 +48,56 @@ export interface StartHereAtlasItem {
 
 export interface StartHereAtlasGroup {
   title: string;
+  kickerLabel: string;
   intro: string;
-  borderClass: string;
   items: readonly StartHereAtlasItem[];
 }
 
 export interface StartHereShortcut {
   title: string;
+  kickerLabel: string;
   description: string;
   detail: string;
   href?: string;
   cta?: string;
   icon: LucideIcon;
-  borderClass: string;
 }
+
+// ── Goal cards (plain language — no jargon before the glossary) ──────
 
 export const START_HERE_GOALS: readonly StartHereGoal[] = [
   {
     title: "Check market health",
-    description: "Start with the dashboard, then read PSI and current peg stress before you zoom into any one asset.",
-    mobileDescription: "Start with the dashboard, PSI, and current depeg stress.",
+    description:
+      "Start with the dashboard for a live market overview, then check whether any stablecoins are drifting from their target price.",
+    mobileDescription: "Start with the dashboard for a live overview and current stress levels.",
     href: "/",
     cta: "Open dashboard",
     destinations: ["Dashboard", "Stability Index", "Depeg Tracker"],
     icon: LayoutDashboard,
-    borderClass: "border-l-cyan-500",
-    spanClass: "sm:col-span-2",
+    tone: "frost",
   },
   {
     title: "Research one stablecoin",
     description:
-      "Use the directory as your launch point, then open the coin page, safety grade, liquidity view, and dependency context.",
-    mobileDescription: "Open the directory, then jump to detail, safety, and liquidity.",
+      "Use the directory to find any tracked stablecoin, then open its detail page for safety grades, liquidity, and risk breakdown.",
+    mobileDescription: "Open the directory, then jump to any coin's detail, safety, and liquidity.",
     href: "/stablecoins/usd/",
     cta: "Browse the directory",
     destinations: ["Directory", "Detail page", "Safety + Liquidity"],
     icon: Search,
-    borderClass: "border-l-sky-500",
-    spanClass: "",
+    tone: "frost",
   },
   {
     title: "Compare several coins",
-    description: "Build a shortlist side by side and pressure-test it with the portfolio lens before you commit size.",
-    mobileDescription: "Build a shortlist side by side, then pressure-test it in portfolio view.",
+    description:
+      "Build a shortlist side by side and stress-test it with the portfolio view before making allocation decisions.",
+    mobileDescription: "Build a shortlist side by side, then stress-test it in portfolio view.",
     href: "/compare/",
     cta: "Open compare",
     destinations: ["Compare", "Portfolio", "Safety Scores"],
     icon: ArrowLeftRight,
-    borderClass: "border-l-emerald-500",
-    spanClass: "",
+    tone: "emerald",
   },
   {
     title: "Find safer yield",
@@ -117,53 +108,41 @@ export const START_HERE_GOALS: readonly StartHereGoal[] = [
     cta: "Open yield intelligence",
     destinations: ["Yield", "Safety Scores", "Coin detail"],
     icon: TrendingUp,
-    borderClass: "border-l-amber-500",
-    spanClass: "",
+    tone: "amber",
   },
   {
     title: "Set up alerts",
-    description: "Use Telegram if you want Pharos to watch depegs, DEWS band shifts, and daily grade changes for you.",
-    mobileDescription: "Use Telegram for depegs, DEWS shifts, and daily grade changes.",
+    description:
+      "Use Telegram if you want Pharos to watch for price deviations, early warning shifts, and daily grade changes for you.",
+    mobileDescription: "Use Telegram for price alerts, early warnings, and daily grade changes.",
     href: "/telegram/",
     cta: "Set up Telegram alerts",
     destinations: ["Telegram", "Depeg alerts", "Daily updates"],
     icon: Send,
-    borderClass: "border-l-violet-500",
-    spanClass: "sm:col-span-2",
+    tone: "violet",
   },
 ] as const;
 
-export const START_HERE_FACTS: readonly StartHereFact[] = [
-  {
-    value: String(ACTIVE_STABLECOINS.length),
-    label: "tracked stablecoins",
-    detail: "Major fiat issuers, DeFi-native names, non-USD pegs, and metal-backed assets.",
-  },
-  {
-    value: String(PEG_CURRENCY_COUNT),
-    label: "peg currencies",
-    detail: "USD, EUR, GBP, gold, silver, and more in one classification system.",
-  },
-  {
-    value: "15m",
-    label: "core refresh cadence",
-    detail: "Dashboard, PSI, DEWS, and depeg monitoring are built for active market surveillance.",
-  },
-  {
-    value: String(DEAD_STABLECOINS.length),
-    label: "failure case studies",
-    detail: "The cemetery keeps historical collapse patterns close to the live research surface.",
-  },
-] as const;
+// ── Glossary (foundational terms first, then Pharos-specific) ────────
 
 export const START_HERE_GLOSSARY: readonly StartHereGlossaryItem[] = [
+  {
+    term: "Peg",
+    meaning:
+      "The target price a stablecoin is designed to hold — usually $1 for USD stablecoins, but also EUR, GBP, gold, and other reference values.",
+  },
+  {
+    term: "Depeg",
+    meaning:
+      "When a stablecoin's market price drifts away from its target. Small deviations are common; sustained or sharp moves are the danger signal.",
+  },
   {
     term: "Peg score",
     meaning: "How tightly a stablecoin has held its target over time, including penalties for real depeg events.",
   },
   {
     term: "DEWS",
-    meaning: "The early warning layer. It looks for stress before a full depeg is obvious.",
+    meaning: "Early warning system. Detects stress building in a stablecoin before a visible depeg event occurs.",
   },
   {
     term: "Safety score",
@@ -172,27 +151,30 @@ export const START_HERE_GLOSSARY: readonly StartHereGlossaryItem[] = [
   },
   {
     term: "Liquidity score",
-    meaning: "A 0-100 read on how much usable on-chain swap depth and protocol support a coin has.",
+    meaning: "A 0-100 measure of how easily you can trade in or out of a stablecoin on-chain.",
   },
   {
     term: "Dependency risk",
-    meaning: "How much a stablecoin secretly leans on other stablecoins or upstream collateral structures.",
+    meaning:
+      "How much a stablecoin depends on other stablecoins or their backing assets — hidden exposure that can cascade during stress.",
   },
   {
     term: "PYS",
-    meaning: "Pharos Yield Score. It adjusts raw yield for the safety of the asset producing that yield.",
+    meaning: "Pharos Yield Score. Adjusts raw yield for the safety of the asset producing that yield.",
   },
   {
     term: "PSI",
-    meaning: "Pharos Stability Index. It is the market-wide stress barometer for the whole stablecoin system.",
+    meaning: "Pharos Stability Index. The market-wide stress barometer for the whole stablecoin system.",
   },
 ] as const;
+
+// ── Feature atlas (jargon-free descriptions) ─────────────────────────
 
 export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
   {
     title: "Monitor",
+    kickerLabel: "Surveillance",
     intro: "Use these when you want the market picture first and the narrative second.",
-    borderClass: "border-l-cyan-500",
     items: [
       {
         title: "Dashboard",
@@ -202,13 +184,13 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
       },
       {
         title: "Stability Index",
-        description: "PSI trend and condition bands for ecosystem-wide stress.",
+        description: "Market-wide stress trend and risk condition bands, updated every 15 minutes.",
         href: "/stability-index/",
         icon: Compass,
       },
       {
         title: "Depeg Tracker",
-        description: "Live deviations, DEWS scores, and event history.",
+        description: "Live price deviations from peg, early warning scores, and event history.",
         href: "/depeg/",
         icon: ShieldAlert,
       },
@@ -220,7 +202,7 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
       },
       {
         title: "Telegram Alerts",
-        description: "Push delivery for depegs, DEWS shifts, and digest updates.",
+        description: "Push alerts for price deviations, early warning changes, and daily digest delivery.",
         href: "/telegram/",
         icon: Send,
       },
@@ -234,8 +216,8 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
   },
   {
     title: "Research",
+    kickerLabel: "Due diligence",
     intro: "Use these when you are evaluating one asset or trying to understand what sits underneath it.",
-    borderClass: "border-l-sky-500",
     items: [
       {
         title: "Stablecoin directory",
@@ -245,19 +227,19 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
       },
       {
         title: "Safety Scores",
-        description: "Cross-market risk grades and contagion simulation.",
+        description: "Risk grades across all tracked stablecoins with stress-test scenarios.",
         href: "/safety-scores/",
         icon: FlaskConical,
       },
       {
         title: "DEX Liquidity",
-        description: "On-chain depth, pool quality, and protocol support.",
+        description: "How much swap depth each stablecoin has on decentralized exchanges.",
         href: "/liquidity/",
         icon: Droplets,
       },
       {
         title: "Dependency Map",
-        description: "Collateral graph for upstream stablecoin exposure.",
+        description: "Visual map of which stablecoins depend on other stablecoins or shared backing.",
         href: "/dependency-map/",
         icon: Network,
       },
@@ -271,8 +253,8 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
   },
   {
     title: "Operate",
-    intro: "Use these when you are deciding, sizing, or actively monitoring flows and issuer behavior.",
-    borderClass: "border-l-emerald-500",
+    kickerLabel: "Action",
+    intro: "Use these when you are deciding, allocating, or actively monitoring flows and issuer behavior.",
     items: [
       {
         title: "Compare",
@@ -282,13 +264,13 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
       },
       {
         title: "Portfolio",
-        description: "Weighted grade and upstream exposure for your own mix.",
+        description: "Blended risk grade and shared-backing exposure for your own stablecoin mix.",
         href: "/portfolio/",
         icon: Wallet,
       },
       {
         title: "Mint/Burn Flows",
-        description: "Issuance, redemption, and pressure-shift monitoring.",
+        description: "Tracks when issuers create or destroy supply, and the market pressure that follows.",
         href: "/flows/",
         icon: ArrowUpDown,
       },
@@ -308,8 +290,8 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
   },
   {
     title: "Learn",
-    intro: "Use these when you want the framework, provenance, or historical perspective behind the live data.",
-    borderClass: "border-l-violet-500",
+    kickerLabel: "Reference",
+    intro: "Use these when you want the methodology, history, or context behind the live data.",
     items: [
       {
         title: "Methodology",
@@ -339,31 +321,33 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
   },
 ] as const;
 
+// ── Power-move shortcuts ─────────────────────────────────────────────
+
 export const START_HERE_SHORTCUTS: readonly StartHereShortcut[] = [
   {
     title: "Search fast",
+    kickerLabel: "Navigation",
     description: "Press Ctrl/Cmd+K from anywhere to jump straight to a coin page or route.",
     detail: "Best when you already know the ticker and do not want to navigate manually.",
     icon: Search,
-    borderClass: "border-l-cyan-500",
   },
   {
-    title: "Browse by taxonomy",
+    title: "Browse by category",
+    kickerLabel: "Discovery",
     description:
       "Use the peg, backing, and governance landing pages when you want to scan a category instead of a ticker.",
     detail: "Good for questions like 'show me EUR stablecoins' or 'which DeFi names are crypto-backed'.",
     href: "/stablecoins/usd/",
     cta: "Open the directory",
     icon: Activity,
-    borderClass: "border-l-sky-500",
   },
   {
     title: "Set and forget",
+    kickerLabel: "Automation",
     description: "Use Telegram when you want Pharos to keep watching after you leave the site.",
-    detail: "Best for depegs, DEWS changes, digest delivery, and daily safety-grade moves.",
+    detail: "Best for price deviation alerts, early warning changes, digest delivery, and daily safety-grade moves.",
     href: "/telegram/",
     cta: "Configure alerts",
     icon: Send,
-    borderClass: "border-l-violet-500",
   },
 ] as const;
