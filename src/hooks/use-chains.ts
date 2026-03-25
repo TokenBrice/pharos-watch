@@ -39,7 +39,7 @@ export interface ChainStablecoin {
  * Handles DL display names ("Ethereum", "BSC") and aliases ("hyperliquid-l1").
  * Returns the summed data across all matching keys.
  */
-function findChainData(
+export function findChainData(
   cc: Record<string, { current?: number; circulatingPrevDay?: number; circulatingPrevWeek?: number; circulatingPrevMonth?: number }>,
   targetChainId: string,
 ): { current: number; circulatingPrevDay: number; circulatingPrevWeek: number; circulatingPrevMonth: number } | null {

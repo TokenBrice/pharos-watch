@@ -15,6 +15,12 @@ import { apiFetch } from "@/lib/api";
 import { CRON_1H, CRON_20MIN } from "@/lib/cron-intervals";
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import {
+  deriveComparisonCoins,
+  deriveSupplySeries,
+  deriveFlowSeries,
+  deriveFlowCardData,
+} from "@/lib/compare-derive";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import {
   MintBurnPerCoinResponseSchema,
@@ -128,81 +134,39 @@ export function useCompareDataModel({
   }, [flowData]);
 
   const comparisonCoins = useMemo(() => {
-    if (assetMap.size === 0) return [];
-    return selectedIds
-      .map((id) => {
-        const data = assetMap.get(id);
-        const meta = TRACKED_META_BY_ID.get(id);
-        if (!data || !meta) return null;
-        const pegCoin = pegCoinMap.get(id);
-        const dexCoin = dexData?.[id];
-        const safetyGrade = cardMap.get(id)?.overallGrade ?? null;
-        const flowCoin = flowCoinMap.get(id);
-        return {
-          id,
-          symbol: data.symbol,
-          name: data.name,
-          data,
-          meta,
-          pegScore: pegCoin?.pegScore ?? null,
-          liquidityScore: dexCoin?.liquidityScore ?? null,
-          safetyGrade,
-          netFlow30d: flowCoin?.netFlow30dUsd ?? null,
-        };
-      })
-      .filter((coin): coin is NonNullable<typeof coin> => coin != null);
+    return deriveComparisonCoins({
+      selectedIds,
+      assetMap,
+      metaMap: TRACKED_META_BY_ID,
+      pegCoinMap,
+      dexData,
+      cardMap,
+      flowCoinMap,
+    });
   }, [assetMap, cardMap, dexData, flowCoinMap, pegCoinMap, selectedIds]);
 
   const supplySeries = useMemo(() => {
-    return selectedIds
-      .map((id, index) => {
-        const history = detailQueries[index]?.data ?? [];
-        if (history.length === 0) return null;
-        const meta = TRACKED_META_BY_ID.get(id);
-        return {
-          id,
-          label: meta?.name ?? id,
-          data: history.map((point) => ({ ts: point.date * 1000, value: point.circulatingUsd })),
-          color: COMPARE_COLORS[index % COMPARE_COLORS.length],
-        };
-      })
-      .filter((series): series is NonNullable<typeof series> => series != null);
+    return deriveSupplySeries({
+      selectedIds,
+      histories: selectedIds.map((_, index) => detailQueries[index]?.data ?? []),
+      metaMap: TRACKED_META_BY_ID,
+    });
   }, [detailQueries, selectedIds]);
 
   const flowSeries = useMemo(() => {
-    return selectedIds
-      .map((id, index) => {
-        const detail = flowCoinQueries[index]?.data;
-        if (!detail?.hourly?.length) return null;
-        const meta = TRACKED_META_BY_ID.get(id);
-        return {
-          id,
-          label: meta?.symbol ?? id,
-          color: COMPARE_COLORS[index % COMPARE_COLORS.length],
-          data: detail.hourly.map((bucket) => ({ ts: bucket.hourTs * 1000, netFlowUsd: bucket.netFlowUsd })),
-        };
-      })
-      .filter((series): series is NonNullable<typeof series> => series != null);
+    return deriveFlowSeries({
+      selectedIds,
+      flowDetails: selectedIds.map((_, index) => flowCoinQueries[index]?.data),
+      metaMap: TRACKED_META_BY_ID,
+    });
   }, [flowCoinQueries, selectedIds]);
 
   const flowCardData = useMemo(() => {
-    if (flowCoinMap.size === 0) return [];
-    return selectedIds
-      .map((id, index) => {
-        const coin = flowCoinMap.get(id);
-        if (!coin) return null;
-        const meta = TRACKED_META_BY_ID.get(id);
-        return {
-          id,
-          symbol: meta?.symbol ?? id,
-          color: COMPARE_COLORS[index % COMPARE_COLORS.length],
-          netFlow24hUsd: coin.netFlow24hUsd,
-          pressureShiftScore: coin.pressureShiftScore ?? null,
-          netFlowDirection24h: coin.netFlowDirection24h ?? "inactive",
-          pressureShiftState: coin.pressureShiftState ?? "nr",
-        };
-      })
-      .filter((entry): entry is NonNullable<typeof entry> => entry != null);
+    return deriveFlowCardData({
+      selectedIds,
+      flowCoinMap,
+      metaMap: TRACKED_META_BY_ID,
+    });
   }, [flowCoinMap, selectedIds]);
 
   const detailLoading = detailQueries.some((query) => query.isLoading);
