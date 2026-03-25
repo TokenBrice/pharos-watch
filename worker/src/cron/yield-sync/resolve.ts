@@ -25,7 +25,7 @@ import {
   YIELD_VARIANT_MAP,
 } from "../yield-config";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { fetchBimaSusbdSource, fetchBprotocolLqtyOnlySource, fetchHashnoteUsycSource, fetchMorphoVaultSources, fetchOndoUsdyOracleSource, fetchPendleMarketSources, fetchYearnKongSources, getPriceDerivedApy } from "./sources";
+import { fetchBeefySources, fetchBimaSusbdSource, fetchBprotocolLqtyOnlySource, fetchHashnoteUsycSource, fetchMorphoVaultSources, fetchOndoUsdyOracleSource, fetchPendleMarketSources, fetchYearnKongSources, getPriceDerivedApy } from "./sources";
 import type { DlPool, ResolvedYieldEntry } from "./types";
 
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
@@ -367,6 +367,17 @@ export async function resolveYieldSources({
       if (meta.symbol.toUpperCase() !== assetSymbol.toUpperCase()) continue;
       if (resolved.some((e) => e.id === meta.id && e.yield?.sourceKey === kongYield.sourceKey)) continue;
       resolved.push({ id: meta.id, symbol: meta.symbol, yield: kongYield });
+      break;
+    }
+  }
+
+  // Beefy auto-compounded vaults — runs once, matched by asset symbol
+  const beefyVaults = await fetchBeefySources(signal);
+  for (const { symbol: assetSymbol, yield: beefyYield } of beefyVaults) {
+    for (const meta of TRACKED_STABLECOINS) {
+      if (meta.symbol.toUpperCase() !== assetSymbol.toUpperCase()) continue;
+      if (resolved.some((e) => e.id === meta.id && e.yield?.sourceKey === beefyYield.sourceKey)) continue;
+      resolved.push({ id: meta.id, symbol: meta.symbol, yield: beefyYield });
       break;
     }
   }

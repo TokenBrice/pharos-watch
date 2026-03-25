@@ -745,6 +745,68 @@ export async function fetchYearnKongSources(
   return results;
 }
 
+const BEEFY_APY_URL = "https://api.beefy.finance/apy";
+const BEEFY_VAULTS_URL = "https://api.beefy.finance/vaults";
+
+interface BeefyVault {
+  id: string;
+  name: string;
+  token: string;
+  assets: string[];
+  status: string;
+  chain: string;
+  platformId: string;
+  tokenAddress: string;
+}
+
+export async function fetchBeefySources(
+  signal?: AbortSignal,
+): Promise<Array<{ symbol: string; yield: ResolvedYield }>> {
+  try {
+    const [apyRes, vaultsRes] = await Promise.all([
+      fetchWithRetry(BEEFY_APY_URL, { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal }, 1),
+      fetchWithRetry(BEEFY_VAULTS_URL, { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal }, 1),
+    ]);
+    if (!apyRes?.ok || !vaultsRes?.ok) return [];
+
+    const apyMap = (await apyRes.json()) as Record<string, number | null>;
+    const vaults = (await vaultsRes.json()) as BeefyVault[];
+    if (!Array.isArray(vaults)) return [];
+
+    const results: Array<{ symbol: string; yield: ResolvedYield }> = [];
+    for (const vault of vaults) {
+      if (vault.status !== "active") continue;
+      if (!vault.assets || vault.assets.length !== 1) continue;
+
+      const apy = apyMap[vault.id];
+      if (typeof apy !== "number" || !Number.isFinite(apy) || apy <= 0 || apy > 10) continue;
+
+      results.push({
+        symbol: vault.assets[0],
+        yield: {
+          currentApy: apy * 100,
+          apyBase: apy * 100,
+          apyReward: null,
+          sourcePool: vault.id,
+          sourceTvlUsd: null,
+          dataSource: "protocol-api",
+          exchangeRate: null,
+          sourceKey: `protocol-api:beefy:${vault.id.slice(0, 30)}`,
+          yieldSource: `Beefy: ${vault.name || vault.id}`,
+          yieldType: "lending-vault",
+          sourceObservedAt: Math.floor(Date.now() / 1000),
+          comparisonAnchorObservedAt: null,
+        },
+      });
+    }
+    return results;
+  } catch (error) {
+    if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+    console.warn("[yield] Beefy sources failed:", error);
+    return [];
+  }
+}
+
 export async function getPriceDerivedApy(
   db: D1Database,
   stablecoinId: string,
