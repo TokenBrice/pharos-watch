@@ -84,6 +84,27 @@ function toFullResult(
   };
 }
 
+/**
+ * Computes safety grades from the latest report-card snapshot in D1.
+ *
+ * Reads all non-defunct report cards, maps each to an overall grade and score
+ * derived from peg stability, liquidity depth, and governance dimensions, then
+ * returns coverage statistics alongside the scored results.
+ *
+ * On any failure (missing snapshot, DB error), returns a "degraded" result
+ * containing whatever partial scores were accumulated before the error rather
+ * than throwing, so callers can serve stale-but-non-empty data.
+ *
+ * @param db - D1 database handle.
+ * @param options.outputMode - "map" returns an id→{grade,score} lookup suitable
+ *   for fast per-coin lookups; "full-grades" returns ordered grade rows with
+ *   symbol, pegScore, and liqScore for the public API and safety-scores page.
+ * @param options.includeNavTokens - Whether to include NAV tokens (appreciating
+ *   assets not pegged to a fixed price). Defaults to `true`.
+ * @returns `SafetyScoresResultMap` when outputMode is "map", or
+ *   `SafetyScoresResultFull` when outputMode is "full-grades". Both include a
+ *   `kind` field ("ok" | "degraded") and coverage ratio.
+ */
 export async function computeSafetyScoresSnapshot(
   db: D1Database,
   options: { includeNavTokens?: boolean; outputMode: "map" },

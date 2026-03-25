@@ -1,3 +1,27 @@
+/**
+ * Dynamic Early Warning Score (DEWS) — composite risk metric cron job.
+ *
+ * DEWS aggregates multiple real-time signals into a single 0-100 risk score
+ * per stablecoin (higher = more risk). Runs every 15 minutes, chained after
+ * syncStablecoins so fresh supply data is always available.
+ *
+ * Signal sources (read from D1):
+ * - Peg deviation: oracle/DEX price vs. expected peg reference
+ * - Pool balance ratio: DEX pool imbalance indicating directional pressure
+ * - Liquidity depth: current TVL vs. 7-day ago TVL (trend signal)
+ * - Price confidence: consensus quality from the pricing engine
+ * - Mint/burn flows: 24h vs. 30-day baseline (anomalous outflows = stress)
+ * - Blacklist events: on-chain address freezes (24h + 7d windows)
+ * - Yield warnings: anomalous APY signals from yield tracking
+ * - PSI score: ecosystem-level stress context for individual coin scoring
+ *
+ * Persistence: current scores → `stress_signals` (7-day rolling);
+ * daily snapshots → `stress_signal_history` (365-day rolling).
+ *
+ * Bootstrap mode: On first run or after schema migration, sources flagged in
+ * `BOOTSTRAP_ALLOWED_MISSING_TABLE_SOURCES` are tolerated as missing so that
+ * DEWS can produce partial scores before all tables are populated.
+ */
 // DEWS cron job — runs every 15 minutes, chained after syncStablecoins
 // (same pattern as stability-index).
 // Reads existing D1 tables, computes DEWS per eligible coin,
@@ -87,6 +111,34 @@ async function deleteOrphansForTable(
   return deleted;
 }
 
+/**
+ * Main cron entry point: reads all signal sources from D1, computes DEWS for
+ * every PSI-eligible non-NAV stablecoin, persists results, and returns a
+ * structured {@link CronResult} with coverage diagnostics.
+ *
+ * Execution steps:
+ * 1. Load stablecoins cache (hard dependency — aborts if unavailable).
+ * 2. Read DEX liquidity, DEX prices, 7d liquidity history.
+ * 3. Read blacklist event counts (24h + 7d per symbol).
+ * 4. Read previous stress signals for EMA smoothing of pool/divergence signals.
+ * 5. Read mint/burn hourly aggregates (24h totals + 30d daily baselines).
+ * 6. Read yield warnings and latest PSI score.
+ * 7. For each eligible coin: assemble {@link DEWSInput}, call `computeDEWS`,
+ *    collect scored results.
+ * 8. Batch-upsert current scores to `stress_signals`.
+ * 9. Write daily snapshot to `stress_signal_history` (once per UTC day).
+ * 10. Delete orphan rows for coins removed from the PSI universe.
+ * 11. Prune stale rows (signals > 7d, history > 365d).
+ *
+ * Returns "degraded" status if any non-bootstrap-allowed source failed.
+ * Partial results are always written — a failed source reduces coverage but
+ * does not abort the entire run.
+ *
+ * @param db - D1 database handle bound to the Worker environment.
+ * @param _signal - Unused AbortSignal (reserved for future graceful shutdown).
+ * @returns CronResult with itemCount (coins computed) and JSON metadata
+ *   containing rowsRead, rowsWritten, sourceCoverage, and sourceFailures.
+ */
 export async function computeAndStoreDEWS(
   db: D1Database,
   _signal?: AbortSignal,

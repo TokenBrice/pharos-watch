@@ -1,6 +1,23 @@
 /**
- * Pharos Stability Index — pure compute function.
- * See docs/plans/2026-02-25-stability-index-design.md for algorithm details.
+ * Pharos Stability Index (PSI) — pure compute function.
+ *
+ * Produces a single 0-100 score reflecting the health of the stablecoin
+ * ecosystem at a point in time. Higher = more stable.
+ *
+ * Components (all subtracted from a 100-point baseline):
+ * - Severity (max 68 pts): market-cap-weighted, log-amplified depeg depth,
+ *   with linear depreciation after 30 days grace (fades to 25% floor over 120d).
+ * - Breadth  (max 17 pts): square-root-scaled count of affected market cap,
+ *   rewarding diversity of impact rather than just total size.
+ * - Stress breadth (max  5 pts): DEWS-sourced coins under stress but not yet
+ *   formally depegged — an early-warning buffer.
+ * - Trend    (-5 to +5): 7-day market-cap change percent, clamped to ±5,
+ *   rewarding inflows and penalising outflows.
+ *
+ * The score is rounded to one decimal place and mapped to a named condition
+ * band (BEDROCK → MELTDOWN) for display.
+ *
+ * @see docs/plans/2026-02-25-stability-index-design.md for full algorithm spec.
  */
 
 import type { ConditionBand } from "@shared/lib/psi-colors";
@@ -77,6 +94,20 @@ export function computeStabilityIndex(input: StabilityInput): StabilityResult | 
   };
 }
 
+/**
+ * Maps a PSI score to its named condition band.
+ *
+ * Thresholds (inclusive lower bound):
+ * - 90–100 → BEDROCK   (exceptional stability)
+ * - 75–89  → STEADY    (normal operating conditions)
+ * - 60–74  → TREMOR    (mild stress, monitor closely)
+ * - 40–59  → FRACTURE  (significant stress, active depegs)
+ * - 20–39  → CRISIS    (severe ecosystem distress)
+ * -  0–19  → MELTDOWN  (systemic failure)
+ *
+ * @param score - PSI score in [0, 100].
+ * @returns The corresponding {@link ConditionBand} label.
+ */
 export function getConditionBand(score: number): ConditionBand {
   if (score >= 90) return "BEDROCK";
   if (score >= 75) return "STEADY";
