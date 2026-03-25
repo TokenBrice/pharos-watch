@@ -12,6 +12,7 @@ import { runHourlyReserveSyncSlot } from "./scheduled/hourly-live-reserves";
 import { runFiveMinuteTelegramSlot } from "./scheduled/five-minute-telegram";
 import { runDaily0800Slot } from "./scheduled/daily-0800";
 import { runDaily0805Slot } from "./scheduled/daily-0805";
+import { runMonthlyYieldAuditSlot } from "./scheduled/monthly-yield-audit";
 
 type SlotRunner = (runtime: ScheduledRuntimeContext) => Promise<void> | void;
 
@@ -26,6 +27,7 @@ const SLOT_RUNNER_BY_SCHEDULE: Record<string, SlotRunner> = {
   [CRON_SCHEDULES.fiveMinuteTelegramAlerts]: runFiveMinuteTelegramSlot,
   [CRON_SCHEDULES.daily0800Utc]: runDaily0800Slot,
   [CRON_SCHEDULES.daily0805Utc]: runDaily0805Slot,
+  [CRON_SCHEDULES.monthlyYieldAudit]: runMonthlyYieldAuditSlot,
 };
 
 export async function handleScheduledEvent(
