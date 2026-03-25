@@ -420,6 +420,76 @@ export async function fetchBimaSusbdSource(signal?: AbortSignal): Promise<Resolv
   }
 }
 
+const MORPHO_GQL_URL = "https://api.morpho.org/graphql";
+const MORPHO_STABLECOIN_SYMBOLS = ["USDC", "USDT", "DAI", "USDS", "GHO", "FRAX", "PYUSD", "FRXUSD", "crvUSD", "DOLA", "LUSD"];
+const MORPHO_STABLECOIN_QUERY = `query($symbols: [String!]!) {
+  vaults(first: 100, where: { listed: true, assetSymbol_in: $symbols, totalAssetsUsd_gte: 100000 }) {
+    items {
+      address name
+      asset { symbol }
+      chain { id }
+      state { netApy totalAssetsUsd fee }
+    }
+  }
+}`;
+
+interface MorphoVaultItem {
+  address: string; name: string;
+  asset: { symbol: string };
+  chain: { id: number };
+  state: { netApy: number; totalAssetsUsd: number | null; fee: number } | null;
+}
+
+export async function fetchMorphoVaultSources(
+  signal?: AbortSignal,
+): Promise<Array<{ symbol: string; yield: ResolvedYield }>> {
+  try {
+    const res = await fetchWithRetry(MORPHO_GQL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
+      body: JSON.stringify({ query: MORPHO_STABLECOIN_QUERY, variables: { symbols: MORPHO_STABLECOIN_SYMBOLS } }),
+      signal,
+    }, 1);
+    if (!res?.ok) return [];
+
+    const body = (await res.json()) as { data?: { vaults?: { items?: MorphoVaultItem[] } } };
+    const items = body.data?.vaults?.items;
+    if (!Array.isArray(items)) return [];
+
+    const results: Array<{ symbol: string; yield: ResolvedYield }> = [];
+    for (const vault of items) {
+      const apy = vault.state?.netApy;
+      if (typeof apy !== "number" || !Number.isFinite(apy) || apy <= 0) continue;
+
+      const tvl = vault.state?.totalAssetsUsd;
+      if (typeof tvl !== "number" || tvl < 100_000) continue;
+
+      results.push({
+        symbol: vault.asset.symbol,
+        yield: {
+          currentApy: apy * 100,
+          apyBase: apy * 100,
+          apyReward: null,
+          sourcePool: vault.address,
+          sourceTvlUsd: tvl,
+          dataSource: "protocol-api",
+          exchangeRate: null,
+          sourceKey: `protocol-api:morpho-vault:${vault.address.slice(0, 10)}`,
+          yieldSource: `Morpho: ${vault.name}`,
+          yieldType: "lending-vault",
+          sourceObservedAt: Math.floor(Date.now() / 1000),
+          comparisonAnchorObservedAt: null,
+        },
+      });
+    }
+    return results;
+  } catch (error) {
+    if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+    console.warn("[yield] Morpho vault sources failed:", error);
+    return [];
+  }
+}
+
 export async function getPriceDerivedApy(
   db: D1Database,
   stablecoinId: string,
