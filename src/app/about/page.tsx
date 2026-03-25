@@ -59,7 +59,7 @@ const DATA_SOURCE_GROUPS = [
 ] as const;
 
 const INLINE_EXTERNAL_LINK_CLASS =
-  "pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-foreground underline underline-offset-4 transition-colors hover:text-foreground";
+  "pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-foreground underline underline-offset-4 transition-colors hover:text-frost-blue";
 const CTA_BUTTON_CLASS =
   "min-h-11 w-full justify-between rounded-2xl border-border/65 bg-background/50 px-4 py-2 whitespace-normal text-left sm:h-9 sm:min-h-0 sm:w-auto sm:justify-center sm:whitespace-nowrap sm:rounded-full";
 
@@ -118,9 +118,9 @@ function PipelineSources() {
   return (
     <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
       {DATA_SOURCE_GROUPS.map((group) => (
-        <div key={group.label} className="space-y-1.5">
+        <div key={group.label} className="space-y-1">
           <dt className="pharos-kicker">{group.label}</dt>
-          <dd className="text-sm leading-relaxed text-foreground">{group.sources}</dd>
+          <dd className="text-xs leading-relaxed text-muted-foreground">{group.sources}</dd>
         </div>
       ))}
     </dl>
@@ -171,6 +171,35 @@ function AboutFeatureRow({ item, tone }: { item: AboutFeatureItem; tone: AboutTo
   );
 }
 
+function AboutSection({
+  eyebrow,
+  title,
+  tone,
+  children,
+  contentClassName,
+}: {
+  eyebrow: string;
+  title: string;
+  tone: AboutTone;
+  children: ReactNode;
+  contentClassName?: string;
+}) {
+  const toneClasses = getToneClasses(tone);
+
+  return (
+    <Card className={cn("rounded-xl border-l-[3px]", toneClasses.border)}>
+      <CardHeader className="space-y-2">
+        <div className="flex items-center gap-3">
+          <p className={cn("pharos-kicker", toneClasses.kicker)}>{eyebrow}</p>
+          <div className={cn("h-px flex-1 bg-gradient-to-r", toneClasses.rule)} />
+        </div>
+        <CardTitle as="h2">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className={contentClassName}>{children}</CardContent>
+    </Card>
+  );
+}
+
 function AboutFeatureSection({
   eyebrow,
   title,
@@ -186,27 +215,16 @@ function AboutFeatureSection({
   tone: AboutTone;
   footer?: ReactNode;
 }) {
-  const toneClasses = getToneClasses(tone);
-
   return (
-    <Card className={cn("rounded-xl border-l-[3px]", toneClasses.border)}>
-      <CardHeader className="space-y-2">
-        <div className="flex items-center gap-3">
-          <p className={cn("pharos-kicker", toneClasses.kicker)}>{eyebrow}</p>
-          <div className={cn("h-px flex-1 bg-gradient-to-r", toneClasses.rule)} />
-        </div>
-        <CardTitle as="h2">{title}</CardTitle>
-        <div className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{intro}</div>
-      </CardHeader>
-      <CardContent className="space-y-0">
-        <div className="divide-y divide-border/60">
-          {items.map((item) => (
-            <AboutFeatureRow key={item.title} item={item} tone={tone} />
-          ))}
-        </div>
-        {footer ? <div className="mt-4 border-t border-border/60 pt-4">{footer}</div> : null}
-      </CardContent>
-    </Card>
+    <AboutSection eyebrow={eyebrow} title={title} tone={tone} contentClassName="space-y-0">
+      <div className="-mt-2 mb-4 max-w-3xl px-4 text-sm leading-relaxed text-muted-foreground">{intro}</div>
+      <div className="divide-y divide-border/60">
+        {items.map((item) => (
+          <AboutFeatureRow key={item.title} item={item} tone={tone} />
+        ))}
+      </div>
+      {footer ? <div className="mt-4 border-t border-border/60 pt-4">{footer}</div> : null}
+    </AboutSection>
   );
 }
 
@@ -402,15 +420,7 @@ export default function AboutPage() {
       }
     >
       <div className="space-y-8">
-        <Card className="rounded-xl border-l-[3px] border-l-frost-blue">
-          <CardHeader className="space-y-2">
-            <div className="flex items-center gap-3">
-              <p className="pharos-kicker text-sky-700 dark:text-frost-blue/82">Why it exists</p>
-              <div className="h-px flex-1 bg-gradient-to-r from-frost-blue/35 to-transparent" />
-            </div>
-            <CardTitle as="h2">Why Pharos?</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+        <AboutSection eyebrow="Why it exists" title="Why Pharos?" tone="brand" contentClassName="space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>
               Stablecoins are the backbone of on-chain finance, yet the data to evaluate them is scattered,
               inconsistent, or buried behind paywalls. Pharos changes that. It tracks {ACTIVE_STABLECOINS.length} live
@@ -425,20 +435,11 @@ export default function AboutPage() {
               Pharos is a public good, a resource. It&apos;s a mission-driven project made to elevate the understanding
               of stablecoin market participants: free, open source, and with no plan to monetize. Make the most of it!
             </p>
-          </CardContent>
-        </Card>
+        </AboutSection>
 
-        <Card className="rounded-xl border-l-[3px] border-l-frost-blue">
-          <CardHeader className="space-y-2">
-            <div className="flex items-center gap-3">
-              <p className="pharos-kicker text-sky-700 dark:text-frost-blue/82">The team</p>
-              <div className="h-px flex-1 bg-gradient-to-r from-frost-blue/35 to-transparent" />
-            </div>
-            <CardTitle as="h2">Who Is Building Pharos?</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 text-sm leading-relaxed text-muted-foreground lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-5">
-            <div className="flex items-start gap-4">
-              <div className="flex flex-col items-center gap-1.5">
+        <AboutSection eyebrow="The team" title="Who Is Building Pharos?" tone="brand" contentClassName="grid gap-4 text-sm leading-relaxed text-muted-foreground lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-5">
+            <div className="flex flex-wrap items-start gap-4">
+              <figure className="flex flex-col items-center gap-1.5">
                 <div className="rounded-xl border border-border/60 bg-background/50 p-1">
                   <Image
                     src="/tokenbrice.png"
@@ -448,9 +449,9 @@ export default function AboutPage() {
                     className="h-14 w-14 rounded-lg sm:h-16 sm:w-16"
                   />
                 </div>
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Creator</span>
-              </div>
-              <div className="flex flex-col items-center gap-1.5">
+                <figcaption className="text-[11px] uppercase tracking-wide text-muted-foreground">Creator</figcaption>
+              </figure>
+              <figure className="flex flex-col items-center gap-1.5">
                 <div className="rounded-xl border border-border/60 bg-background/50 p-1">
                   <Image
                     src="/ike.jpg"
@@ -460,9 +461,9 @@ export default function AboutPage() {
                     className="h-14 w-14 rounded-lg sm:h-16 sm:w-16"
                   />
                 </div>
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Champion</span>
-              </div>
-              <div className="flex flex-col items-center gap-1.5">
+                <figcaption className="text-[11px] uppercase tracking-wide text-muted-foreground">Champion</figcaption>
+              </figure>
+              <figure className="flex flex-col items-center gap-1.5">
                 <div className="rounded-xl border border-border/60 bg-background/50 p-1">
                   <Image
                     src="/claude.png"
@@ -472,9 +473,9 @@ export default function AboutPage() {
                     className="h-14 w-14 rounded-lg sm:h-16 sm:w-16"
                   />
                 </div>
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">AI Brainstormer</span>
-              </div>
-              <div className="flex flex-col items-center gap-1.5">
+                <figcaption className="text-[11px] uppercase tracking-wide text-muted-foreground">AI Brainstormer</figcaption>
+              </figure>
+              <figure className="flex flex-col items-center gap-1.5">
                 <div className="rounded-xl border border-border/60 bg-background/50 p-1">
                   <Image
                     src="/codex.svg"
@@ -484,8 +485,8 @@ export default function AboutPage() {
                     className="h-14 w-14 rounded-lg sm:h-16 sm:w-16"
                   />
                 </div>
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">AI Engineer</span>
-              </div>
+                <figcaption className="text-[11px] uppercase tracking-wide text-muted-foreground">AI Engineer</figcaption>
+              </figure>
             </div>
             <div className="space-y-3">
               <p>
@@ -532,8 +533,7 @@ export default function AboutPage() {
                 , from the worker pipeline and scoring engine to the frontend and daily digest.
               </p>
             </div>
-          </CardContent>
-        </Card>
+        </AboutSection>
 
         <AboutFeatureSection
           eyebrow="Coverage"
@@ -564,16 +564,8 @@ export default function AboutPage() {
           }
         />
 
-        <Card className="rounded-xl border-l-[3px] border-l-frost-blue">
-          <CardHeader className="space-y-2">
-            <div className="flex items-center gap-3">
-              <p className="pharos-kicker text-sky-700 dark:text-frost-blue/82">In the wild</p>
-              <div className="h-px flex-1 bg-gradient-to-r from-frost-blue/35 to-transparent" />
-            </div>
-            <CardTitle as="h2">Live Walkthrough</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4 text-sm leading-relaxed text-muted-foreground sm:flex-row sm:items-start">
-            <Radio className="mt-0.5 h-5 w-5 shrink-0 text-sky-700 dark:text-frost-blue/82" />
+        <AboutSection eyebrow="In the wild" title="Live Walkthrough" tone="brand" contentClassName="flex flex-col gap-4 text-sm leading-relaxed text-muted-foreground sm:flex-row sm:items-start">
+            <Radio className={cn("mt-0.5 h-5 w-5 shrink-0", getToneClasses("brand").icon)} />
             <div className="space-y-3">
               <p>
                 TokenBrice walked through Pharos live on Leviathan News, covering the motivation behind the project, how
@@ -586,18 +578,9 @@ export default function AboutPage() {
                 </a>
               </Button>
             </div>
-          </CardContent>
-        </Card>
+        </AboutSection>
 
-        <Card className="rounded-xl border-l-[3px] border-l-violet-500">
-          <CardHeader className="space-y-2">
-            <div className="flex items-center gap-3">
-              <p className="pharos-kicker text-violet-700 dark:text-violet-400">Governance lens</p>
-              <div className="h-px flex-1 bg-gradient-to-r from-violet-500/35 to-transparent" />
-            </div>
-            <CardTitle as="h2">Classification</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm leading-relaxed text-muted-foreground">
+        <AboutSection eyebrow="Governance lens" title="Classification" tone="classification" contentClassName="text-sm leading-relaxed text-muted-foreground">
             <p>
               Pharos classifies stablecoins into three governance tiers:{" "}
               <span className="font-medium text-foreground">CeFi</span> (fully centralized),{" "}
@@ -606,18 +589,9 @@ export default function AboutPage() {
               <span className="font-medium text-foreground">DeFi</span> (fully on-chain, no centralized custody
               dependency). The classification reflects actual infrastructure dependency, not marketing claims.
             </p>
-          </CardContent>
-        </Card>
+        </AboutSection>
 
-        <Card className="rounded-xl border-l-[3px] border-l-amber-500">
-          <CardHeader className="space-y-2">
-            <div className="flex items-center gap-3">
-              <p className="pharos-kicker text-amber-700 dark:text-amber-400">Source flow</p>
-              <div className="h-px flex-1 bg-gradient-to-r from-amber-500/35 to-transparent" />
-            </div>
-            <CardTitle as="h2">Data Pipeline</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5 text-sm leading-relaxed text-muted-foreground">
+        <AboutSection eyebrow="Source flow" title="Data Pipeline" tone="data" contentClassName="space-y-5 text-sm leading-relaxed text-muted-foreground">
             <p>
               All data is fetched server-side by a Cloudflare Worker and cached in D1. The browser never calls external
               APIs directly.
@@ -630,8 +604,8 @@ export default function AboutPage() {
               <div className="rounded-xl bg-muted/20 p-4 space-y-4 lg:border-l-2 lg:border-border/60 lg:bg-transparent lg:p-0 lg:border-l">
                 <p className="text-sm font-semibold text-foreground">Processing path</p>
                 <ol className="space-y-4">
-                  <li className="flex gap-3">
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/70 text-xs font-semibold text-foreground">
+                  <li aria-label="Step 1: Sources" className="flex gap-3">
+                    <div aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/70 text-sm font-semibold text-foreground">
                       1
                     </div>
                     <div className="space-y-1">
@@ -641,8 +615,8 @@ export default function AboutPage() {
                       </p>
                     </div>
                   </li>
-                  <li className="flex gap-3">
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/70 text-xs font-semibold text-foreground">
+                  <li aria-label="Step 2: Cloudflare Worker + D1" className="flex gap-3">
+                    <div aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/70 text-sm font-semibold text-foreground">
                       2
                     </div>
                     <div className="space-y-1">
@@ -653,8 +627,8 @@ export default function AboutPage() {
                       </p>
                     </div>
                   </li>
-                  <li className="flex gap-3">
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/70 text-xs font-semibold text-foreground">
+                  <li aria-label="Step 3: Static dashboard" className="flex gap-3">
+                    <div aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/70 text-sm font-semibold text-foreground">
                       3
                     </div>
                     <div className="space-y-1">
@@ -668,18 +642,9 @@ export default function AboutPage() {
                 </ol>
               </div>
             </div>
-          </CardContent>
-        </Card>
+        </AboutSection>
 
-        <Card className="rounded-xl border-l-[3px] border-l-amber-500">
-          <CardHeader className="space-y-2">
-            <div className="flex items-center gap-3">
-              <p className="pharos-kicker text-amber-700 dark:text-amber-400">Scoring details</p>
-              <div className="h-px flex-1 bg-gradient-to-r from-amber-500/35 to-transparent" />
-            </div>
-            <CardTitle as="h2">Methodology</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+        <AboutSection eyebrow="Scoring details" title="Methodology" tone="data" contentClassName="space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>
               Pharos grades every stablecoin across four base dimensions, with peg stability acting as a multiplier on
               top. The methodology page covers the full grading formula, peg score computation, DEX liquidity scoring,
@@ -691,41 +656,24 @@ export default function AboutPage() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
-          </CardContent>
-        </Card>
+        </AboutSection>
 
-        <Card className="rounded-xl border-l-[3px] border-l-zinc-500">
-          <CardHeader className="space-y-2">
-            <div className="flex items-center gap-3">
-              <p className="pharos-kicker">Important context</p>
-              <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
-            </div>
-            <CardTitle as="h2">Disclaimer</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm leading-relaxed text-muted-foreground">
-            <p>
-              Pharos is an informational tool, not a licensed financial advisor. Nothing on this site constitutes
-              financial, investment, or legal advice. All data is provided as-is and may contain errors or delays.
-              Always do your own research and consult a qualified professional before making financial decisions.
-            </p>
-          </CardContent>
-        </Card>
+        <aside className="border-y border-border/60 py-5 text-xs leading-relaxed text-muted-foreground">
+          <p>
+            <span className="font-semibold text-foreground">Disclaimer</span> — Pharos is an informational tool, not a
+            licensed financial advisor. Nothing on this site constitutes financial, investment, or legal advice. All data
+            is provided as-is and may contain errors or delays. Always do your own research and consult a qualified
+            professional before making financial decisions.
+          </p>
+        </aside>
 
-        <Card className="rounded-xl border-l-[3px] border-l-frost-blue">
-          <CardHeader className="space-y-2">
-            <div className="flex items-center gap-3">
-              <p className="pharos-kicker text-sky-700 dark:text-frost-blue/82">Reach out</p>
-              <div className="h-px flex-1 bg-gradient-to-r from-frost-blue/35 to-transparent" />
-            </div>
-            <CardTitle as="h2">Get in Touch</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+        <AboutSection eyebrow="Reach out" title="Get in Touch" tone="brand" contentClassName="space-y-3 text-sm leading-relaxed text-muted-foreground">
             <p>
               Pharos is fully open source. If you spot a bad data point, want a stablecoin added, or want to understand
               how something is computed, open the code or reach out directly.
             </p>
             <div className="flex flex-wrap gap-2">
-              <Button asChild className="min-h-11 w-full justify-between rounded-2xl px-4 py-2 whitespace-normal text-left sm:h-9 sm:min-h-0 sm:w-auto sm:justify-center sm:whitespace-nowrap sm:rounded-full">
+              <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
                 <a href="https://github.com/TokenBrice/stablecoin-dashboard" target="_blank" rel="noopener noreferrer">
                   <Github className="h-4 w-4" />
                   View on GitHub
@@ -745,8 +693,7 @@ export default function AboutPage() {
                 </a>
               </Button>
             </div>
-          </CardContent>
-        </Card>
+        </AboutSection>
       </div>
     </FeaturePageShell>
   );

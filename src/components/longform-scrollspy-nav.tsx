@@ -66,7 +66,7 @@ function scheduleSectionAlignment(
 
 export function LongformScrollspyNav({
   sections,
-  railLabel = "Jump to Section",
+  railLabel = "Jump to",
   navAriaLabel,
   rightSlot,
   className,
@@ -151,23 +151,24 @@ export function LongformScrollspyNav({
     <div
       ref={railRef}
       className={cn(
-        "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 -mx-4 rounded-2xl border border-border/60 bg-background/95 px-4 py-3 shadow-[0_16px_40px_oklch(0_0_0_/0.12)] backdrop-blur supports-[backdrop-filter]:bg-background/85 md:top-0",
+        "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 -mx-4 rounded-xl border border-border/60 bg-background/95 px-3 py-2 shadow-[0_8px_24px_oklch(0_0_0_/0.1)] backdrop-blur supports-[backdrop-filter]:bg-background/85 md:top-0 md:rounded-2xl md:px-4 md:py-2.5",
         className,
       )}
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <p className="pharos-kicker">{railLabel}</p>
-            <span className="hidden text-xs text-muted-foreground sm:inline">
-              {sections.find((section) => section.id === effectiveActiveId)?.label}
-            </span>
-          </div>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground hidden sm:block">{railLabel}</p>
+          <span className="text-xs font-medium text-foreground sm:hidden">
+            {sections.find((section) => section.id === effectiveActiveId)?.label}
+          </span>
         </div>
-        {rightSlot}
+        {rightSlot && <div className="hidden sm:block">{rightSlot}</div>}
       </div>
-      <nav aria-label={navAriaLabel} className="scroll-shadow mt-3 overflow-x-auto pb-1 scrollbar-none">
-        <div className="flex min-w-max snap-x snap-mandatory items-center gap-2 pr-4 sm:pr-0">
+      <div className="relative">
+        {/* Fade mask hints at off-screen content */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background/95 to-transparent sm:hidden" aria-hidden="true" />
+      <nav aria-label={navAriaLabel} className="overflow-x-auto pb-0.5 scrollbar-none -mx-1 px-1">
+        <div className="flex min-w-max snap-x snap-mandatory items-center gap-1.5">
           {sections.map((section) => (
             <a
               key={section.id}
@@ -178,10 +179,10 @@ export function LongformScrollspyNav({
                 setActiveId(section.id);
               }}
               className={cn(
-                "pharos-focus-ring inline-flex min-h-11 shrink-0 snap-start items-center whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors md:min-h-9 md:px-3.5",
+                "pharos-focus-ring inline-flex min-h-9 shrink-0 snap-start items-center whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors md:min-h-8 md:text-sm",
                 effectiveActiveId === section.id
                   ? "border-foreground/35 bg-muted text-foreground"
-                  : "border-border/60 bg-background text-muted-foreground hover:border-foreground/20 hover:bg-muted hover:text-foreground",
+                  : "border-border/60 bg-background/80 text-muted-foreground hover:border-foreground/20 hover:bg-muted hover:text-foreground",
               )}
             >
               {section.label}
@@ -189,6 +190,7 @@ export function LongformScrollspyNav({
           ))}
         </div>
       </nav>
+      </div>
     </div>
   );
 }

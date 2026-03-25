@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
@@ -16,55 +14,35 @@ import {
   CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
   CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/chain-health-version";
-import { MethodologyDetails, MethodologyFacts, WorkedExample } from "../methodology-shared";
+import { MethodologyDetails, MethodologyFacts, MethodologySectionShell, WorkedExample } from "../methodology-shared";
 
 export function MonitoringMethodologySections() {
   return (
     <>
       {/* Yield Intelligence */}
-      <Card
+      <MethodologySectionShell
         id="yield-intelligence-methodology"
-        className="scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] border-l-violet-500 bg-card md:scroll-mt-28"
+        title="Yield Intelligence"
+        versionLabel={YIELD_METHODOLOGY_VERSION_LABEL}
+        changelogPath={YIELD_METHODOLOGY_CHANGELOG_PATH}
+        versionNote="Version increments when APY source resolution, source arbitration, history semantics, PYS scoring logic, or eligibility rules for discovered yield sources change."
+        accentClassName="border-l-violet-500"
+        badgeClassName="border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400"
+        changelogClassName="hover:text-violet-700 dark:text-violet-400"
       >
-        <CardHeader className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <CardTitle as="h2">Yield Intelligence</CardTitle>
-            <span className="inline-flex items-center rounded-md border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-violet-700 dark:text-violet-400">
-              {YIELD_METHODOLOGY_VERSION_LABEL}
-            </span>
-            <Link
-              href={YIELD_METHODOLOGY_CHANGELOG_PATH}
-              className="text-xs text-foreground underline underline-offset-4 hover:text-violet-700 dark:text-violet-400 transition-colors"
-            >
-              Version history &rarr;
-            </Link>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Version increments when APY source resolution, source arbitration, history semantics, PYS scoring logic, or
-            eligibility rules for discovered yield sources change.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
             Pharos tracks yield-bearing stablecoins and computes a risk-adjusted ranking via the Pharos Yield Score
             (PYS). Data is refreshed every 30 minutes using a source-aware APY resolution strategy, with alternative
             sources retained when multiple valid yield paths exist and confidence-weighted arbitration selecting the
             primary row.
           </p>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">Update cadence</p>
-              <p className="text-foreground">30m refresh</p>
-            </div>
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">APY priority</p>
-              <p className="text-foreground">Confidence-weighted across deterministic, curated, and fallback sources</p>
-            </div>
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">Output</p>
-              <p className="text-foreground">PYS (0-100)</p>
-            </div>
-          </div>
+          <MethodologyFacts
+            facts={[
+              { label: "Update cadence", value: "30m refresh" },
+              { label: "APY priority", value: "Confidence-weighted across deterministic, curated, and fallback sources" },
+              { label: "Output", value: "PYS (0-100)" },
+            ]}
+          />
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
             <MethodologyFacts
@@ -279,33 +257,19 @@ export function MonitoringMethodologySections() {
               </ul>
             </div>
           </MethodologyDetails>
-        </CardContent>
-      </Card>
+      </MethodologySectionShell>
 
       {/* PegScore and Depeg Early Warning Score (DEWS) */}
-      <Card
+      <MethodologySectionShell
         id="pegscore-dews-methodology"
-        className="scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] border-l-amber-500 bg-card md:scroll-mt-28"
+        title="PegScore and Depeg Early Warning Score (DEWS)"
+        versionLabel={DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}
+        changelogPath={DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH}
+        versionNote="Version increments when depeg thresholds, confirmation policy, peg-score formula terms, or DEWS signal composition or score-affecting input semantics change."
+        accentClassName="border-l-amber-500"
+        badgeClassName="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+        changelogClassName="hover:text-amber-700 dark:text-amber-400"
       >
-        <CardHeader className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <CardTitle as="h2">PegScore and Depeg Early Warning Score (DEWS)</CardTitle>
-            <span className="inline-flex items-center rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-amber-700 dark:text-amber-400">
-              {DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}
-            </span>
-            <Link
-              href={DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH}
-              className="text-xs text-foreground underline underline-offset-4 hover:text-amber-700 dark:text-amber-400 transition-colors"
-            >
-              Version history &rarr;
-            </Link>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Version increments when depeg thresholds, confirmation policy, peg-score formula terms, or DEWS signal
-            composition or score-affecting input semantics change.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
             PegScore observes the past and present by scoring realized peg behavior, while DEWS is forward-looking and
             tries to anticipate future depeg risk before it fully manifests.
@@ -331,20 +295,13 @@ export function MonitoringMethodologySections() {
             DEWS (Depeg Early Warning System) computes forward-looking stress every 30 minutes from market, liquidity,
             confidence, flow, and yield signals, with optional PSI-based amplification during systemic stress.
           </p>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">PegScore focus</p>
-              <p className="text-foreground">History: realized peg behavior</p>
-            </div>
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">DEWS focus</p>
-              <p className="text-foreground">Forward stress probability</p>
-            </div>
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">Refresh</p>
-              <p className="text-foreground">Peg 15m / DEWS 30m</p>
-            </div>
-          </div>
+          <MethodologyFacts
+            facts={[
+              { label: "PegScore focus", value: "History: realized peg behavior" },
+              { label: "DEWS focus", value: "Forward stress probability" },
+              { label: "Refresh", value: "Peg 15m / DEWS 30m" },
+            ]}
+          />
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
             <MethodologyFacts
@@ -456,10 +413,10 @@ export function MonitoringMethodologySections() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left">
-                      <th className="py-2 pr-4 font-medium text-foreground">Component</th>
-                      <th className="py-2 pr-4 font-medium text-foreground">Weight</th>
-                      <th className="py-2 pr-4 font-medium text-foreground">Range</th>
-                      <th className="py-2 font-medium text-foreground">How it works</th>
+                      <th scope="col" className="py-2 pr-4 font-medium text-foreground">Component</th>
+                      <th scope="col" className="py-2 pr-4 font-medium text-foreground">Weight</th>
+                      <th scope="col" className="py-2 pr-4 font-medium text-foreground">Range</th>
+                      <th scope="col" className="py-2 font-medium text-foreground">How it works</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -746,36 +703,25 @@ export function MonitoringMethodologySections() {
               </ul>
             </div>
           </MethodologyDetails>
-        </CardContent>
-      </Card>
+      </MethodologySectionShell>
 
       {/* Contagion Stress Test */}
-      <Card
+      <MethodologySectionShell
         id="contagion-stress-test-methodology"
-        className="scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] border-l-emerald-500 bg-card md:scroll-mt-28"
+        title="Contagion Stress Test"
+        accentClassName="border-l-emerald-500"
       >
-        <CardHeader>
-          <CardTitle as="h2">Contagion Stress Test</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
             The stress test simulates dependency failures to reveal systemic concentration risk across the stablecoin
             ecosystem.
           </p>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">Simulation action</p>
-              <p className="text-foreground">Force one coin to grade D</p>
-            </div>
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">Propagation channel</p>
-              <p className="text-foreground">Dependency channel only</p>
-            </div>
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">Primary output</p>
-              <p className="text-foreground">Affected coins + supply at risk</p>
-            </div>
-          </div>
+          <MethodologyFacts
+            facts={[
+              { label: "Simulation action", value: "Force one coin to grade D" },
+              { label: "Propagation channel", value: "Dependency channel only" },
+              { label: "Primary output", value: "Affected coins + supply at risk" },
+            ]}
+          />
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
             <MethodologyFacts
@@ -886,32 +832,18 @@ export function MonitoringMethodologySections() {
               </ul>
             </div>
           </MethodologyDetails>
-        </CardContent>
-      </Card>
+      </MethodologySectionShell>
 
-      <Card
+      <MethodologySectionShell
         id="blacklist-tracker-methodology"
-        className="scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] border-l-rose-500 bg-card md:scroll-mt-28"
+        title="Blacklist Tracker Methodology"
+        versionLabel={BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL}
+        changelogPath={BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH}
+        versionNote="Version increments when tracked contracts, event parsing rules, cursor semantics, or amount-enrichment logic change."
+        accentClassName="border-l-rose-500"
+        badgeClassName="border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400"
+        changelogClassName="hover:text-rose-700 dark:text-rose-400"
       >
-        <CardHeader className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <CardTitle as="h2">Blacklist Tracker Methodology</CardTitle>
-            <span className="inline-flex items-center rounded-md border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-rose-700 dark:text-rose-400">
-              {BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL}
-            </span>
-            <Link
-              href={BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH}
-              className="text-xs text-foreground underline underline-offset-4 hover:text-rose-700 dark:text-rose-400 transition-colors"
-            >
-              Version history &rarr;
-            </Link>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Version increments when tracked contracts, event parsing rules, cursor semantics, or amount-enrichment logic
-            change.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground leading-relaxed">
           <p>
             The Blacklist Tracker monitors issuer intervention events across USDC, USDT, PAXG, and XAUT contracts,
             including blacklist, unblacklist, and destroy/wipe actions across EVM and Tron networks.
@@ -920,32 +852,19 @@ export function MonitoringMethodologySections() {
             Methodology revisions document changes to event coverage, cross-chain decoding behavior, cursor safety
             policies, and amount attribution rules that affect historical interpretation and comparability over time.
           </p>
-        </CardContent>
-      </Card>
+      </MethodologySectionShell>
 
       {/* ─── Chain Health Score ─────────────────────────────── */}
-      <Card
+      <MethodologySectionShell
         id="chain-health-score"
-        className="scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] border-l-teal-500 bg-card md:scroll-mt-28"
+        title="Chain Health Score"
+        versionLabel={CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL}
+        changelogPath={CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH}
+        versionNote="Version increments when factor weights, tier assignments, or sub-factor formulas change."
+        accentClassName="border-l-teal-500"
+        badgeClassName="border-teal-500/30 bg-teal-500/10 text-teal-700 dark:text-teal-400"
+        changelogClassName="hover:text-teal-700 dark:hover:text-teal-400"
       >
-        <CardHeader className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <CardTitle as="h2">Chain Health Score</CardTitle>
-            <span className="inline-flex items-center rounded-md border border-teal-500/30 bg-teal-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-teal-700 dark:text-teal-400">
-              {CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL}
-            </span>
-            <Link
-              href={CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH}
-              className="text-xs text-foreground underline underline-offset-4 hover:text-teal-700 dark:hover:text-teal-400 transition-colors"
-            >
-              Version history &rarr;
-            </Link>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Version increments when factor weights, tier assignments, or sub-factor formulas change.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
             The Chain Health Score is a 0&ndash;100 composite that rates each blockchain&rsquo;s stablecoin ecosystem
             across five weighted factors. It answers: <em>how healthy, diverse, and resilient is the stablecoin mix on
@@ -975,9 +894,9 @@ export function MonitoringMethodologySections() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-xs text-muted-foreground">
-                    <th className="py-2 pr-4">Factor</th>
-                    <th className="py-2 pr-4">Weight</th>
-                    <th className="py-2">What it measures</th>
+                    <th scope="col" className="py-2 pr-4">Factor</th>
+                    <th scope="col" className="py-2 pr-4">Weight</th>
+                    <th scope="col" className="py-2">What it measures</th>
                   </tr>
                 </thead>
                 <tbody className="text-foreground">
@@ -1026,10 +945,10 @@ export function MonitoringMethodologySections() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-xs text-muted-foreground">
-                    <th className="py-2 pr-4">Tier</th>
-                    <th className="py-2 pr-4">Score</th>
-                    <th className="py-2 pr-4">Criteria</th>
-                    <th className="py-2">Examples</th>
+                    <th scope="col" className="py-2 pr-4">Tier</th>
+                    <th scope="col" className="py-2 pr-4">Score</th>
+                    <th scope="col" className="py-2 pr-4">Criteria</th>
+                    <th scope="col" className="py-2">Examples</th>
                   </tr>
                 </thead>
                 <tbody className="text-foreground">
@@ -1061,9 +980,9 @@ export function MonitoringMethodologySections() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-xs text-muted-foreground">
-                    <th className="py-2 pr-4">Band</th>
-                    <th className="py-2 pr-4">Score Range</th>
-                    <th className="py-2">Interpretation</th>
+                    <th scope="col" className="py-2 pr-4">Band</th>
+                    <th scope="col" className="py-2 pr-4">Score Range</th>
+                    <th scope="col" className="py-2">Interpretation</th>
                   </tr>
                 </thead>
                 <tbody className="text-foreground">
@@ -1103,8 +1022,7 @@ health = 0.30×72 + 0.20×20 + 0.20×67 + 0.20×98 + 0.10×61
 → Chain environment alone creates a 16-point gap vs Ethereum.`}
             </pre>
           </WorkedExample>
-        </CardContent>
-      </Card>
+      </MethodologySectionShell>
     </>
   );
 }

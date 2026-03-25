@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
   LIQUIDITY_METHODOLOGY_VERSION_LABEL,
@@ -18,7 +16,7 @@ import {
 } from "@shared/lib/stability-index-version";
 import { SafetyScoreCalculator } from "@/components/methodology/safety-score-calculator";
 import { CollateralQualityMethodologyCopy } from "./core-sections-fragments";
-import { MethodologyDetails, MethodologyFacts, WorkedExample } from "../methodology-shared";
+import { MethodologyDetails, MethodologyFacts, MethodologySectionShell, WorkedExample } from "../methodology-shared";
 import { PricingPipelineMethodologySection } from "./core-sections-pricing";
 
 export function CoreMethodologySections() {
@@ -26,47 +24,28 @@ export function CoreMethodologySections() {
     <>
       <PricingPipelineMethodologySection />
 
-      <Card
+      <MethodologySectionShell
         id="stability-index-methodology"
-        className="scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] border-l-cyan-500 bg-card md:scroll-mt-28"
+        title="Stability Index Methodology"
+        versionLabel={PSI_METHODOLOGY_VERSION_LABEL}
+        changelogPath={PSI_METHODOLOGY_CHANGELOG_PATH}
+        versionNote="Version increments when PSI formula, caps, bands, component definitions, or other score-affecting input semantics change."
+        accentClassName="border-l-cyan-500"
+        badgeClassName="border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-400"
+        changelogClassName="hover:text-cyan-700 dark:text-cyan-400"
       >
-        <CardHeader className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <CardTitle as="h2">Stability Index Methodology</CardTitle>
-            <span className="inline-flex items-center rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-cyan-700 dark:text-cyan-400">
-              {PSI_METHODOLOGY_VERSION_LABEL}
-            </span>
-            <Link
-              href={PSI_METHODOLOGY_CHANGELOG_PATH}
-              className="text-xs text-foreground underline underline-offset-4 hover:text-cyan-700 dark:text-cyan-400 transition-colors"
-            >
-              Version history &rarr;
-            </Link>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Version increments when PSI formula, caps, bands, component definitions, or other score-affecting input semantics change.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
             The Pharos Stability Index (PSI) is a market-level 0&ndash;100 health score for the stablecoin ecosystem. It
             is recomputed every 30 minutes from live depeg conditions and stress signals, then aggregated into daily
             history snapshots.
           </p>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">Update cadence</p>
-              <p className="text-foreground">30m refresh</p>
-            </div>
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">Score range</p>
-              <p className="text-foreground">0-100 market health</p>
-            </div>
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">Main use</p>
-              <p className="text-foreground">Bands: BEDROCK to MELTDOWN</p>
-            </div>
-          </div>
+          <MethodologyFacts
+            facts={[
+              { label: "Update cadence", value: "30m refresh" },
+              { label: "Score range", value: "0-100 market health" },
+              { label: "Main use", value: "Bands: BEDROCK to MELTDOWN" },
+            ]}
+          />
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
             <MethodologyFacts
@@ -178,10 +157,10 @@ export function CoreMethodologySections() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left">
-                      <th className="py-2 pr-4 font-medium text-foreground">Component</th>
-                      <th className="py-2 pr-4 font-medium text-foreground">Range</th>
-                      <th className="py-2 pr-4 font-medium text-foreground">Formula</th>
-                      <th className="py-2 font-medium text-foreground">Purpose</th>
+                      <th scope="col" className="py-2 pr-4 font-medium text-foreground">Component</th>
+                      <th scope="col" className="py-2 pr-4 font-medium text-foreground">Range</th>
+                      <th scope="col" className="py-2 pr-4 font-medium text-foreground">Formula</th>
+                      <th scope="col" className="py-2 font-medium text-foreground">Purpose</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -246,9 +225,9 @@ export function CoreMethodologySections() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left">
-                      <th className="py-2 pr-4 font-medium text-foreground">Range</th>
-                      <th className="py-2 pr-4 font-medium text-foreground">Band</th>
-                      <th className="py-2 font-medium text-foreground">Meaning</th>
+                      <th scope="col" className="py-2 pr-4 font-medium text-foreground">Range</th>
+                      <th scope="col" className="py-2 pr-4 font-medium text-foreground">Band</th>
+                      <th scope="col" className="py-2 font-medium text-foreground">Meaning</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -287,32 +266,19 @@ export function CoreMethodologySections() {
               </div>
             </div>
           </MethodologyDetails>
-        </CardContent>
-      </Card>
+      </MethodologySectionShell>
 
       {/* Grading Methodology */}
-      <Card
+      <MethodologySectionShell
         id="safety-scores-methodology"
-        className="scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] border-l-amber-500 bg-card md:scroll-mt-28"
+        title="Safety Scores Grading Methodology"
+        versionLabel={SAFETY_SCORE_VERSION_LABEL}
+        changelogPath={SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH}
+        versionNote="Version increments when weights, thresholds, or dimension definitions change."
+        accentClassName="border-l-amber-500"
+        badgeClassName="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+        changelogClassName="hover:text-amber-700 dark:text-amber-400"
       >
-        <CardHeader className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <CardTitle as="h2">Safety Scores Grading Methodology</CardTitle>
-            <span className="inline-flex items-center rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-amber-700 dark:text-amber-400">
-              {SAFETY_SCORE_VERSION_LABEL}
-            </span>
-            <Link
-              href={SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH}
-              className="text-xs text-foreground underline underline-offset-4 hover:text-amber-700 dark:text-amber-400 transition-colors"
-            >
-              Version history &rarr;
-            </Link>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Version increments when weights, thresholds, or dimension definitions change.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
             Pharos synthesizes multiple data signals into a single transparent grade per stablecoin. The overall score
             is computed in two steps: first, a weighted average of four base dimensions (exit liquidity, resilience,
@@ -321,20 +287,13 @@ export function CoreMethodologySections() {
             redemption-backstop quality when a direct exit path exists. When some base dimensions lack data (NR), their
             weight is redistributed proportionally among rated ones.
           </p>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">Model shape</p>
-              <p className="text-foreground">4 dimensions + peg multiplier</p>
-            </div>
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">Grade output</p>
-              <p className="text-foreground">A+ to F, with NR</p>
-            </div>
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">Key caveat</p>
-              <p className="text-foreground">No exit signal = 10% penalty</p>
-            </div>
-          </div>
+          <MethodologyFacts
+            facts={[
+              { label: "Model shape", value: "4 dimensions + peg multiplier" },
+              { label: "Grade output", value: "A+ to F, with NR" },
+              { label: "Key caveat", value: "No exit signal = 10% penalty" },
+            ]}
+          />
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
             <MethodologyFacts
@@ -457,10 +416,10 @@ export function CoreMethodologySections() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left">
-                      <th className="py-2 pr-4 font-medium text-foreground">Dimension</th>
-                      <th className="py-2 pr-4 font-medium text-foreground">Weight</th>
-                      <th className="py-2 pr-4 font-medium text-foreground">Source</th>
-                      <th className="py-2 font-medium text-foreground">Description</th>
+                      <th scope="col" className="py-2 pr-4 font-medium text-foreground">Dimension</th>
+                      <th scope="col" className="py-2 pr-4 font-medium text-foreground">Weight</th>
+                      <th scope="col" className="py-2 pr-4 font-medium text-foreground">Source</th>
+                      <th scope="col" className="py-2 font-medium text-foreground">Description</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -546,9 +505,9 @@ export function CoreMethodologySections() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left">
-                      <th className="py-2 pr-4 font-medium text-foreground">Sub-factor</th>
-                      <th className="py-2 pr-4 font-medium text-foreground">What it measures</th>
-                      <th className="py-2 font-medium text-foreground">Scoring</th>
+                      <th scope="col" className="py-2 pr-4 font-medium text-foreground">Sub-factor</th>
+                      <th scope="col" className="py-2 pr-4 font-medium text-foreground">What it measures</th>
+                      <th scope="col" className="py-2 font-medium text-foreground">Scoring</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -669,8 +628,8 @@ export function CoreMethodologySections() {
                 <table className="text-sm">
                   <thead>
                     <tr className="border-b text-left">
-                      <th className="py-2 pr-8 font-medium text-foreground">Grade</th>
-                      <th className="py-2 font-medium text-foreground">Score Range</th>
+                      <th scope="col" className="py-2 pr-8 font-medium text-foreground">Grade</th>
+                      <th scope="col" className="py-2 font-medium text-foreground">Score Range</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -787,33 +746,19 @@ export function CoreMethodologySections() {
               </ul>
             </div>
           </MethodologyDetails>
-        </CardContent>
-      </Card>
+      </MethodologySectionShell>
 
       {/* Liquidity Score */}
-      <Card
+      <MethodologySectionShell
         id="liquidity-methodology"
-        className="scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] border-l-cyan-500 bg-card md:scroll-mt-28"
+        title="Liquidity Score"
+        versionLabel={LIQUIDITY_METHODOLOGY_VERSION_LABEL}
+        changelogPath={LIQUIDITY_METHODOLOGY_CHANGELOG_PATH}
+        versionNote="Version increments when liquidity formula weights, source inclusion rules, or TVL normalization logic changes."
+        accentClassName="border-l-cyan-500"
+        badgeClassName="border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-400"
+        changelogClassName="hover:text-cyan-700 dark:text-cyan-400"
       >
-        <CardHeader className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <CardTitle as="h2">Liquidity Score</CardTitle>
-            <span className="inline-flex items-center rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-cyan-700 dark:text-cyan-400">
-              {LIQUIDITY_METHODOLOGY_VERSION_LABEL}
-            </span>
-            <Link
-              href={LIQUIDITY_METHODOLOGY_CHANGELOG_PATH}
-              className="text-xs text-foreground underline underline-offset-4 hover:text-cyan-700 dark:text-cyan-400 transition-colors"
-            >
-              Version history &rarr;
-            </Link>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Version increments when liquidity formula weights, source inclusion rules, or TVL normalization logic
-            changes.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
             Composite 0&ndash;100 score measuring DEX liquidity depth per stablecoin, updated every 30 minutes.
             Aggregates pool data across all major DEXes and chains.
@@ -859,20 +804,13 @@ export function CoreMethodologySections() {
             much retained TVL has measured balances and prices, how broad the protocol mix is, and how much of the row
             depends on synthetic or freshness-decayed fallback liquidity.
           </p>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">Update cadence</p>
-              <p className="text-foreground">30m refresh</p>
-            </div>
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">Signal mix</p>
-              <p className="text-foreground">6 weighted liquidity components</p>
-            </div>
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">Output</p>
-              <p className="text-foreground">0-100 DEX depth score</p>
-            </div>
-          </div>
+          <MethodologyFacts
+            facts={[
+              { label: "Update cadence", value: "30m refresh" },
+              { label: "Signal mix", value: "6 weighted liquidity components" },
+              { label: "Output", value: "0-100 DEX depth score" },
+            ]}
+          />
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
             <MethodologyFacts
@@ -973,9 +911,9 @@ export function CoreMethodologySections() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left">
-                      <th className="py-2 pr-4 font-medium text-foreground">Component</th>
-                      <th className="py-2 pr-4 font-medium text-foreground">Weight</th>
-                      <th className="py-2 font-medium text-foreground">How it works</th>
+                      <th scope="col" className="py-2 pr-4 font-medium text-foreground">Component</th>
+                      <th scope="col" className="py-2 pr-4 font-medium text-foreground">Weight</th>
+                      <th scope="col" className="py-2 font-medium text-foreground">How it works</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -1047,53 +985,32 @@ export function CoreMethodologySections() {
               </ul>
             </div>
           </MethodologyDetails>
-        </CardContent>
-      </Card>
+      </MethodologySectionShell>
 
       {/* Mint/Burn Flow Scoring */}
-      <Card
+      <MethodologySectionShell
         id="mint-burn-flow-methodology"
-        className="scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] border-l-orange-500 bg-card md:scroll-mt-28"
+        title="Mint/Burn Flow Scoring"
+        versionLabel={MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL}
+        changelogPath={MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH}
+        versionNote="Version increments when flow scoring logic, tracked event semantics, or ingestion attribution policies change."
+        accentClassName="border-l-orange-500"
+        badgeClassName="border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400"
+        changelogClassName="hover:text-orange-700 dark:text-orange-400"
       >
-        <CardHeader className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <CardTitle as="h2">Mint/Burn Flow Scoring</CardTitle>
-            <span className="inline-flex items-center rounded-md border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-orange-700 dark:text-orange-400">
-              {MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL}
-            </span>
-            <Link
-              href={MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH}
-              className="text-xs text-foreground underline underline-offset-4 hover:text-orange-700 dark:text-orange-400 transition-colors"
-            >
-              Version history &rarr;
-            </Link>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Version increments when flow scoring logic, tracked event semantics, or ingestion attribution policies
-            change.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
             Pharos tracks on-chain mint and burn events for major stablecoins via Alchemy JSON-RPC (Transfer mints/burns
             plus USDT Issue/Redeem). These raw events are aggregated into hourly buckets and exposed as two separate
             signals: raw net flow for current direction, and a baseline-relative pressure score for context. Counted
             flow excludes bridge burns, review-required burns, and atomic roundtrips.
           </p>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">Data source</p>
-              <p className="text-foreground">On-chain mint + burn events</p>
-            </div>
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">Primary score</p>
-              <p className="text-foreground">Pressure Shift vs 30D</p>
-            </div>
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-xs uppercase tracking-wide">Main outputs</p>
-              <p className="text-foreground">Net flow, gauge, and FtQ</p>
-            </div>
-          </div>
+          <MethodologyFacts
+            facts={[
+              { label: "Data source", value: "On-chain mint + burn events" },
+              { label: "Primary score", value: "Pressure Shift vs 30D" },
+              { label: "Main outputs", value: "Net flow, gauge, and FtQ" },
+            ]}
+          />
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
             <MethodologyFacts
@@ -1290,9 +1207,9 @@ export function CoreMethodologySections() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left">
-                      <th className="py-2 pr-4 font-medium text-foreground">Band</th>
-                      <th className="py-2 pr-4 font-medium text-foreground">Score Range</th>
-                      <th className="py-2 font-medium text-foreground">Meaning</th>
+                      <th scope="col" className="py-2 pr-4 font-medium text-foreground">Band</th>
+                      <th scope="col" className="py-2 pr-4 font-medium text-foreground">Score Range</th>
+                      <th scope="col" className="py-2 font-medium text-foreground">Meaning</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -1364,8 +1281,7 @@ export function CoreMethodologySections() {
               </ul>
             </div>
           </MethodologyDetails>
-        </CardContent>
-      </Card>
+      </MethodologySectionShell>
     </>
   );
 }

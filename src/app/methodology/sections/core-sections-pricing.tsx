@@ -1,35 +1,21 @@
-import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   PRICING_PIPELINE_CHANGELOG_PATH,
   PRICING_PIPELINE_VERSION_LABEL,
 } from "@shared/lib/pricing-pipeline-version";
-import { MethodologyDetails, MethodologyFacts, WorkedExample } from "../methodology-shared";
+import { MethodologyDetails, MethodologyFacts, MethodologySectionShell, WorkedExample } from "../methodology-shared";
 
 export function PricingPipelineMethodologySection() {
   return (
-    <Card
+    <MethodologySectionShell
       id="pricing-pipeline-methodology"
-      className="scroll-mt-36 rounded-xl border border-border/70 border-l-[3px] border-l-blue-500 bg-card md:scroll-mt-28"
+      title="Pricing Pipeline Methodology"
+      versionLabel={PRICING_PIPELINE_VERSION_LABEL}
+      changelogPath={PRICING_PIPELINE_CHANGELOG_PATH}
+      versionNote="Version increments when price sources, consensus algorithm, enrichment passes, or validation rules change."
+      accentClassName="border-l-blue-500"
+      badgeClassName="border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400"
+      changelogClassName="hover:text-blue-700 dark:text-blue-400"
     >
-      <CardHeader className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <CardTitle as="h2">Pricing Pipeline Methodology</CardTitle>
-          <span className="inline-flex items-center rounded-md border border-blue-500/30 bg-blue-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-blue-700 dark:text-blue-400">
-            {PRICING_PIPELINE_VERSION_LABEL}
-          </span>
-          <Link
-            href={PRICING_PIPELINE_CHANGELOG_PATH}
-            className="text-xs text-foreground underline underline-offset-4 hover:text-blue-700 dark:text-blue-400 transition-colors"
-          >
-            Version history &rarr;
-          </Link>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Version increments when price sources, consensus algorithm, enrichment passes, or validation rules change.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <p>
           Every score Pharos computes starts with a price. The pricing pipeline collects quotes from more than a dozen
           live voices, requires fully pairwise agreement inside each cluster, and selects the highest-confidence result.
@@ -80,20 +66,13 @@ export function PricingPipelineMethodologySection() {
           <code className="mx-1 text-xs">price_cache</code> rows instead of letting the asset flap to{" "}
           <code className="mx-1 text-xs">N/A</code>.
         </p>
-        <div className="grid gap-2 sm:grid-cols-3">
-          <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-            <p className="text-xs uppercase tracking-wide">Update cadence</p>
-            <p className="text-foreground">15m refresh</p>
-          </div>
-          <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-            <p className="text-xs uppercase tracking-wide">Sources</p>
-            <p className="text-foreground">14+ live voices</p>
-          </div>
-          <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-            <p className="text-xs uppercase tracking-wide">Output</p>
-            <p className="text-foreground">Price + confidence tag per asset</p>
-          </div>
-        </div>
+        <MethodologyFacts
+          facts={[
+            { label: "Update cadence", value: "15m refresh" },
+            { label: "Sources", value: "14+ live voices" },
+            { label: "Output", value: "Price + confidence tag per asset" },
+          ]}
+        />
         <div className="space-y-2">
           <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
           <MethodologyFacts
@@ -230,10 +209,10 @@ export function PricingPipelineMethodologySection() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left">
-                    <th className="py-2 pr-4 font-medium text-foreground">Source</th>
-                    <th className="py-2 pr-4 font-medium text-foreground">Weight</th>
-                    <th className="py-2 pr-4 font-medium text-foreground">Type</th>
-                    <th className="py-2 font-medium text-foreground">Notes</th>
+                    <th scope="col" className="py-2 pr-4 font-medium text-foreground">Source</th>
+                    <th scope="col" className="py-2 pr-4 font-medium text-foreground">Weight</th>
+                    <th scope="col" className="py-2 pr-4 font-medium text-foreground">Type</th>
+                    <th scope="col" className="py-2 font-medium text-foreground">Notes</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -299,9 +278,9 @@ export function PricingPipelineMethodologySection() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left">
-                    <th className="py-2 pr-4 font-medium text-foreground">Level</th>
-                    <th className="py-2 pr-4 font-medium text-foreground">Condition</th>
-                    <th className="py-2 font-medium text-foreground">Downstream effect</th>
+                    <th scope="col" className="py-2 pr-4 font-medium text-foreground">Level</th>
+                    <th scope="col" className="py-2 pr-4 font-medium text-foreground">Condition</th>
+                    <th scope="col" className="py-2 font-medium text-foreground">Downstream effect</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -326,7 +305,6 @@ export function PricingPipelineMethodologySection() {
             <p>Commodity tokens (gold, silver) scale references by <code className="text-xs">commodityOunces</code> for gram- and 1/1000-ounce assets. NAV tokens use broad positive-price checks. Replay-safe cache storage is limited to strong, replayable prices and now expires after 6 hours.</p>
           </div>
         </MethodologyDetails>
-      </CardContent>
-    </Card>
+    </MethodologySectionShell>
   );
 }

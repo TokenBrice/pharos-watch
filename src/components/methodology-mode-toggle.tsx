@@ -31,19 +31,20 @@ export function MethodologyModeToggle({ className }: { className?: string }) {
   }, [mode]);
 
   const setAndApplyMode = useCallback((nextMode: MethodologyMode) => {
-    applyMethodologyMode(nextMode);
     setMode(nextMode);
     window.localStorage.setItem(STORAGE_KEY, nextMode);
   }, []);
 
   return (
     <div
+      role="group"
+      aria-label="Methodology view mode"
       className={cn(
         "inline-flex flex-wrap items-center gap-1.5 rounded-[1.1rem] border border-border/60 bg-background/85 p-1.5 text-xs shadow-sm md:gap-2 md:rounded-full md:px-2 md:py-1",
         className,
       )}
     >
-      <span className="pharos-kicker px-1 text-[10px]">View</span>
+      <span className="pharos-kicker px-1 text-xs">View</span>
       <button
         type="button"
         aria-pressed={mode === "reader"}

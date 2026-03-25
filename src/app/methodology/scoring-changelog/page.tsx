@@ -569,10 +569,10 @@ const route = createMethodologyChangelogRoute({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left">
-                  <th className="py-2 pr-4 font-medium text-foreground">
+                  <th scope="col" className="py-2 pr-4 font-medium text-foreground">
                     Tier
                   </th>
-                  <th className="py-2 font-medium text-foreground">Score</th>
+                  <th scope="col" className="py-2 font-medium text-foreground">Score</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -709,11 +709,11 @@ const route = createMethodologyChangelogRoute({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left">
-                <th className="py-2 pr-4 font-medium text-foreground">pegScore</th>
-                <th className="py-2 pr-4 font-medium text-foreground">
+                <th scope="col" className="py-2 pr-4 font-medium text-foreground">pegScore</th>
+                <th scope="col" className="py-2 pr-4 font-medium text-foreground">
                   Multiplier
                 </th>
-                <th className="py-2 font-medium text-foreground">Impact</th>
+                <th scope="col" className="py-2 font-medium text-foreground">Impact</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -770,10 +770,10 @@ const route = createMethodologyChangelogRoute({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left">
-                <th className="py-2 pr-4 font-medium text-foreground">
+                <th scope="col" className="py-2 pr-4 font-medium text-foreground">
                   Reserve risk tier
                 </th>
-                <th className="py-2 font-medium text-foreground">Score</th>
+                <th scope="col" className="py-2 font-medium text-foreground">Score</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -840,10 +840,10 @@ const route = createMethodologyChangelogRoute({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left">
-                <th className="py-2 pr-4 font-medium text-foreground">
+                <th scope="col" className="py-2 pr-4 font-medium text-foreground">
                   Sub-factor
                 </th>
-                <th className="py-2 font-medium text-foreground">
+                <th scope="col" className="py-2 font-medium text-foreground">
                   Tiers &amp; scores
                 </th>
               </tr>
@@ -940,13 +940,13 @@ const route = createMethodologyChangelogRoute({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left">
-                <th className="py-2 pr-4 font-medium text-foreground">
+                <th scope="col" className="py-2 pr-4 font-medium text-foreground">
                   Dimension
                 </th>
-                <th className="py-2 pr-4 font-medium text-foreground">
+                <th scope="col" className="py-2 pr-4 font-medium text-foreground">
                   Weight
                 </th>
-                <th className="py-2 font-medium text-foreground">Approach</th>
+                <th scope="col" className="py-2 font-medium text-foreground">Approach</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -1042,25 +1042,25 @@ const route = createMethodologyChangelogRoute({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left">
-                    <th className="py-2 pr-4 font-medium text-foreground">
+                    <th scope="col" className="py-2 pr-4 font-medium text-foreground">
                       Version
                     </th>
-                    <th className="py-2 pr-4 font-medium text-foreground">
+                    <th scope="col" className="py-2 pr-4 font-medium text-foreground">
                       Peg
                     </th>
-                    <th className="py-2 pr-4 font-medium text-foreground">
+                    <th scope="col" className="py-2 pr-4 font-medium text-foreground">
                       Liquidity
                     </th>
-                    <th className="py-2 pr-4 font-medium text-foreground">
+                    <th scope="col" className="py-2 pr-4 font-medium text-foreground">
                       Safety
                     </th>
-                    <th className="py-2 pr-4 font-medium text-foreground">
+                    <th scope="col" className="py-2 pr-4 font-medium text-foreground">
                       Resilience
                     </th>
-                    <th className="py-2 pr-4 font-medium text-foreground">
+                    <th scope="col" className="py-2 pr-4 font-medium text-foreground">
                       Decentralization
                     </th>
-                    <th className="py-2 font-medium text-foreground">
+                    <th scope="col" className="py-2 font-medium text-foreground">
                       Dep Risk
                     </th>
                   </tr>
@@ -1124,16 +1124,16 @@ const route = createMethodologyChangelogRoute({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left">
-                    <th className="py-2 pr-4 font-medium text-foreground">
+                    <th scope="col" className="py-2 pr-4 font-medium text-foreground">
                       Grade
                     </th>
-                    <th className="py-2 pr-4 font-medium text-foreground">
+                    <th scope="col" className="py-2 pr-4 font-medium text-foreground">
                       v1.0
                     </th>
-                    <th className="py-2 pr-4 font-medium text-foreground">
+                    <th scope="col" className="py-2 pr-4 font-medium text-foreground">
                       v4.0 (&minus;5)
                     </th>
-                    <th className="py-2 font-medium text-foreground">
+                    <th scope="col" className="py-2 font-medium text-foreground">
                       v5.1 (&minus;5)
                     </th>
                   </tr>

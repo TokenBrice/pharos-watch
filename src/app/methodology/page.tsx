@@ -6,6 +6,7 @@ import { MethodologyModeToggle } from "@/components/methodology-mode-toggle";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { safeJsonLd } from "@/lib/json-ld";
 import {
   METHODOLOGY_READING_STEPS,
   METHODOLOGY_SECTIONS,
@@ -40,7 +41,7 @@ export default function MethodologyPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: safeJsonLd({
             "@context": "https://schema.org",
             "@type": "FAQPage",
             mainEntity: [
