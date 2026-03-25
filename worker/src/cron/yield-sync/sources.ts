@@ -420,6 +420,72 @@ export async function fetchBimaSusbdSource(signal?: AbortSignal): Promise<Resolv
   }
 }
 
+const PENDLE_MARKETS_BASE = "https://api-v2.pendle.finance/core/v1";
+const PENDLE_CHAINS = [1, 42161, 8453];
+
+interface PendleMarket {
+  id: string; address: string; chainId: number;
+  isActive: boolean; expiry: string;
+  impliedApy: number; underlyingApy: number; aggregatedApy: number;
+  underlyingAsset: { symbol: string; address: string };
+  assetRepresentation: string;
+  protocol: string;
+  liquidity: { usd: number };
+  categoryIds: string[];
+}
+
+export async function fetchPendleMarketSources(
+  signal?: AbortSignal,
+): Promise<Array<{ symbol: string; yield: ResolvedYield }>> {
+  const results: Array<{ symbol: string; yield: ResolvedYield }> = [];
+
+  for (const chainId of PENDLE_CHAINS) {
+    try {
+      const url = `${PENDLE_MARKETS_BASE}/${chainId}/markets?limit=100&is_active=true`;
+      const res = await fetchWithRetry(url, {
+        headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal,
+      }, 1);
+      if (!res?.ok) continue;
+
+      const body = (await res.json()) as { results?: PendleMarket[] };
+      if (!Array.isArray(body.results)) continue;
+
+      for (const market of body.results) {
+        if (!market.categoryIds?.includes("stables")) continue;
+        if (!market.isActive) continue;
+
+        const apy = market.impliedApy;
+        if (typeof apy !== "number" || !Number.isFinite(apy) || apy <= 0) continue;
+
+        const tvl = market.liquidity?.usd;
+        if (typeof tvl !== "number" || tvl < 100_000) continue;
+
+        results.push({
+          symbol: market.assetRepresentation || market.underlyingAsset.symbol,
+          yield: {
+            currentApy: apy * 100,
+            apyBase: apy * 100,
+            apyReward: null,
+            sourcePool: market.address,
+            sourceTvlUsd: tvl,
+            dataSource: "protocol-api",
+            exchangeRate: null,
+            sourceKey: `protocol-api:pendle:${market.address.slice(0, 10)}`,
+            yieldSource: `Pendle: ${market.protocol} ${market.assetRepresentation}`,
+            yieldType: "lending-vault",
+            sourceObservedAt: Math.floor(Date.now() / 1000),
+            comparisonAnchorObservedAt: null,
+          },
+        });
+      }
+    } catch (error) {
+      if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+      console.warn(`[yield] Pendle chain ${chainId} failed:`, error);
+    }
+  }
+  return results;
+}
+
 export async function getPriceDerivedApy(
   db: D1Database,
   stablecoinId: string,

@@ -24,7 +24,7 @@ import {
   YIELD_VARIANT_MAP,
 } from "../yield-config";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { fetchBimaSusbdSource, fetchBprotocolLqtyOnlySource, getPriceDerivedApy } from "./sources";
+import { fetchBimaSusbdSource, fetchBprotocolLqtyOnlySource, fetchPendleMarketSources, getPriceDerivedApy } from "./sources";
 import type { DlPool, ResolvedYieldEntry } from "./types";
 
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
@@ -295,6 +295,16 @@ export async function resolveYieldSources({
         symbol: lusdMeta.symbol,
         yield: bprotocolYield,
       });
+    }
+  }
+
+  const pendleMarkets = await fetchPendleMarketSources(signal);
+  for (const { symbol: assetSymbol, yield: pendleYield } of pendleMarkets) {
+    for (const meta of TRACKED_STABLECOINS) {
+      if (meta.symbol.toUpperCase() !== assetSymbol.toUpperCase()) continue;
+      if (resolved.some((e) => e.id === meta.id && e.yield?.sourceKey === pendleYield.sourceKey)) continue;
+      resolved.push({ id: meta.id, symbol: meta.symbol, yield: pendleYield });
+      break;
     }
   }
 
