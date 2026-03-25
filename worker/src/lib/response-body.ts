@@ -8,6 +8,8 @@ export async function drainResponseBody(response: Response): Promise<void> {
   } catch {
     try {
       await response.body.cancel();
-    } catch {}
+    } catch {
+      /* expected: body already consumed or stream cancelled */
+    }
   }
 }
