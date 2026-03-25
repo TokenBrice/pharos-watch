@@ -36,6 +36,7 @@ Normalize Liquity-family identification into structured metadata so Pharos can:
 - `feusd-felix` -> `liquity / v2`
 - `nect-beraborrow` -> `liquity / v2`
 - `usbd-bima` -> `liquity / v1`
+- `cjpy-yamato` -> `liquity / v1`
 
 ## Notes
 

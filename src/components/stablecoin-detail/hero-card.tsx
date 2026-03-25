@@ -110,6 +110,17 @@ function ProtocolFamilyTag({ label }: { label: string | null }) {
   );
 }
 
+function LiquityForkBadge({ variant }: { variant?: "v1" | "v2" }) {
+  if (!variant) return null;
+
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-border/40 bg-background/40 px-2.5 py-1.5">
+      <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Liquity Fork</span>
+      <span className="text-base font-bold font-mono text-frost-blue">{variant}</span>
+    </div>
+  );
+}
+
 function HeroClassificationLine({ coin }: { coin: StablecoinMeta }) {
   return (
     <p className="text-xs text-muted-foreground">
@@ -199,6 +210,10 @@ export function HeroCard({
       ? primaryComparisonPage.right.symbol
       : primaryComparisonPage.left.symbol
     : null;
+  const liquityForkVariant =
+    coin.protocolFamily === "liquity" && (coin.protocolVariant === "v1" || coin.protocolVariant === "v2")
+      ? coin.protocolVariant
+      : undefined;
   const hasPrevDay = typeof prevDay === "number" && prevDay > 0;
   const hasPrevWeek = typeof prevWeek === "number" && prevWeek > 0;
   const hasPrevMonth = typeof prevMonth === "number" && prevMonth > 0;
@@ -452,6 +467,7 @@ export function HeroCard({
           <div className="flex items-center gap-1 rounded-lg border border-border/40 bg-background/30 px-2.5 py-1.5">
             <span className="text-[11px] text-muted-foreground">{chainCount} chains</span>
           </div>
+          <LiquityForkBadge variant={liquityForkVariant} />
         </div>
 
         {pegScoreResult?.activeDepeg && (
@@ -578,6 +594,7 @@ export function HeroCard({
               <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Chains</span>
               <span className="text-base font-bold font-mono">{chainCount}</span>
             </div>
+            <LiquityForkBadge variant={liquityForkVariant} />
             {earlyPegScore && (
               <span className="text-xs text-amber-600 dark:text-amber-400">
                 Early peg score · {pegScoreResult?.trackingSpanDays ?? 0}d tracked
