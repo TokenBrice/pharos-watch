@@ -498,6 +498,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: true,
+    routeDependencies: ["coingeckoApiKey"],
     probeGroup: "manual",
     statusPageAction: {
       label: "Backfill Supply",

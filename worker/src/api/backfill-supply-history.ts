@@ -28,18 +28,20 @@ interface StablecoinDetail {
 async function backfillCommodity(
   db: D1Database,
   id: string,
-  config: { geckoId: string; protocolSlug?: string },
+  config: { geckoId: string; protocolSlug?: string; cgApiKey?: string | null },
 ): Promise<{ rows: number; error?: string }> {
+  const apiKey = config.cgApiKey ?? null;
   // Fetch market_chart (prices + market_caps) and current circulating_supply in parallel
   const [cgRes, coinRes] = await Promise.all([
-    fetchWithRetry(cgUrl(`/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`), {
-      headers: cgHeaders({ "User-Agent": USER_AGENT }),
+    fetchWithRetry(cgUrl(`/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`, apiKey), {
+      headers: cgHeaders({ "User-Agent": USER_AGENT }, apiKey),
     }),
     fetchWithRetry(
       cgUrl(
         `/coins/${config.geckoId}?market_data=true&localization=false&tickers=false&community_data=false&developer_data=false`,
+        apiKey,
       ),
-      { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
+      { headers: cgHeaders({ "User-Agent": USER_AGENT }, apiKey) },
     ),
   ]);
 
@@ -177,6 +179,7 @@ export async function handleBackfillSupplyHistory(
   url: URL,
   trustedAdmin?: boolean,
   request?: Request,
+  cgApiKey?: string | null,
 ): Promise<Response> {
   return withAdmin(
     request,
@@ -207,6 +210,7 @@ export async function handleBackfillSupplyHistory(
             const result = await backfillCommodity(db, meta.id, {
               geckoId: meta.geckoId,
               protocolSlug: meta.protocolSlug ?? undefined,
+              cgApiKey,
             });
             if (result.error) {
               errors.push(`${meta.symbol}: ${result.error}`);
@@ -227,6 +231,7 @@ export async function handleBackfillSupplyHistory(
               const result = await backfillCommodity(db, meta.id, {
                 geckoId: meta.geckoId,
                 protocolSlug: meta.protocolSlug ?? undefined,
+                cgApiKey,
               });
               if (result.error) {
                 errors.push(`${meta.symbol}: ${result.error}`);

@@ -131,9 +131,9 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
       handleBackfillDepegs(db, url, trustedAdmin, request),
     ),
   ),
-  "backfill-supply-history": withErrorHandler("backfill-supply-history", ({ db, url, trustedAdmin, request }) =>
+  "backfill-supply-history": withErrorHandler("backfill-supply-history", ({ db, url, trustedAdmin, request, coingeckoApiKey }) =>
     runIdempotentAdminAction(db, "backfill-supply-history", request, () =>
-      handleBackfillSupplyHistory(db, url, trustedAdmin, request),
+      handleBackfillSupplyHistory(db, url, trustedAdmin, request, coingeckoApiKey),
     ),
   ),
   "peg-summary": ({ db }) => handlePegSummary(db),
