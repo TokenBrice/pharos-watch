@@ -2990,9 +2990,14 @@
       "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": false,
+      "yieldBearing": true,
       "rwa": false,
       "navToken": false
+    },
+    "yieldConfig": {
+      "defiLlamaPoolId": "bf6ca887-e357-49ec-8031-0d1a6141c455",
+      "yieldSource": "Cap savings (stCUSD)",
+      "yieldType": "lending-vault"
     },
     "collateral": "Basket of regulated stablecoins: USDC, USDT, pyUSD, BUIDL, and BENJI (max 40% each)",
     "pegMechanism": "Dynamic-fee vault: users deposit whitelisted reserve assets to mint cUSD at oracle-determined value; redemptions return a proportional basket of all underlying assets, socializing any reserve depeg across redeemers; dynamic interest rates prevent full utilization so redemptions remain atomic; secured by EigenLayer AVS",

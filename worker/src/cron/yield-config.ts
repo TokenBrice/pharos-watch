@@ -203,6 +203,13 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     yieldSource: "Hermetica staking (sUSDh)",
     yieldType: "lending-vault",
   },
+  // cUSD -> stCUSD (Cap staked savings wrapper, ~$68M TVL, ~4.6% APY)
+  "cusd-cap": {
+    variantSymbol: "stCUSD",
+    variantChain: "ethereum",
+    yieldSource: "Cap savings (stCUSD)",
+    yieldType: "lending-vault",
+  },
 };
 
 /**
@@ -327,6 +334,9 @@ export const YIELD_POOL_MAP: Record<string, string> = {
 
   // Noon USN -> sUSN - morpho-v1 collateral, Ethereum, $10M TVL, APY via on-chain rate
   "usn-noon": "a18a761b-49cd-416d-8342-839cac722094",
+
+  // Cap cUSD -> stCUSD - cap native staking, Ethereum, $68M TVL, ~4.6% APY
+  "cusd-cap": "bf6ca887-e357-49ec-8031-0d1a6141c455",
 };
 
 /** On-chain exchange rate config for Tier 1 vault tokens. */
@@ -447,6 +457,26 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
     inputAmount:
       "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
   },
+  // USTB (Superstate) — ERC-4626 NAV-accreting fund token, 6 decimals
+  {
+    stablecoinId: "ustb-superstate",
+    chain: "ethereum",
+    contract: "0x43415eB6ff9DB7E26A15b704e7A3eDCe97d31C4e",
+    selector: "0x07a2d13a",
+    decimals: 6,
+    inputAmount:
+      "0x00000000000000000000000000000000000000000000000000000000000f4240",
+  },
+  // thBILL (Theo) — ERC-4626 MultiAsset vault, 6 decimals
+  {
+    stablecoinId: "thbill-theo",
+    chain: "ethereum",
+    contract: "0x5FA487BCa6158c64046B2813623e20755091DA0b",
+    selector: "0x07a2d13a",
+    decimals: 6,
+    inputAmount:
+      "0x00000000000000000000000000000000000000000000000000000000000f4240",
+  },
 ];
 
 /**
@@ -486,10 +516,10 @@ export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
   { stablecoinId: "buidl-blackrock", spreadBps: 20, label: "T-bill proxy (net of 0.20% fee)" },
   { stablecoinId: "usyc-hashnote", spreadBps: 50, label: "T-bill proxy (net of 0.50% performance fee)" },
   { stablecoinId: "ylds-figure", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)" },
-  { stablecoinId: "ustb-superstate", spreadBps: 15, label: "T-bill proxy (net of 0.15% fee)" },
+  // ustb-superstate: promoted to ON_CHAIN_RATE_CONFIGS (ERC-4626)
   { stablecoinId: "mtbill-midas", spreadBps: 0, label: "T-bill proxy" },
   { stablecoinId: "ousg-ondo-finance", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)" },
-  { stablecoinId: "thbill-theo", spreadBps: 0, label: "T-bill proxy" },
+  // thbill-theo: promoted to ON_CHAIN_RATE_CONFIGS (ERC-4626)
 ];
 
 /**
