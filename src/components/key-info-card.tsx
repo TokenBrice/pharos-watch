@@ -7,6 +7,7 @@ import { Check, Copy, ExternalLink, Globe } from "lucide-react";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CHAIN_META } from "@shared/lib/chains";
+import { getProtocolFamilyLabel, getProtocolFamilySummary } from "@shared/lib/protocol-family";
 import { formatAddress } from "@shared/lib/format";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { trackEvent } from "@/lib/analytics";
@@ -27,6 +28,8 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
   const gov = GOVERNANCE_BADGE_STYLES[meta.flags.governance];
   const backing = BACKING_BADGE_STYLES[meta.flags.backing];
   const peg = PEG_BADGE_STYLES[meta.flags.pegCurrency];
+  const protocolLabel = getProtocolFamilyLabel(meta);
+  const protocolSummary = getProtocolFamilySummary(meta);
   const hasDescription = meta.collateral || meta.pegMechanism;
   const isDecentralized = meta.flags.governance === "decentralized";
   const hasLinks = meta.links && meta.links.length > 0;
@@ -67,6 +70,11 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                 className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${peg.cls}`}
               >
                 {peg.label}
+              </span>
+            )}
+            {protocolLabel && (
+              <span className="inline-flex items-center rounded-full border border-frost-blue/30 bg-frost-blue/10 px-3 py-1 text-xs font-semibold text-frost-blue">
+                {protocolLabel}
               </span>
             )}
             {meta.flags.yieldBearing && (
@@ -131,6 +139,13 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                 <p className="text-base leading-relaxed">{meta.pegMechanism}</p>
               </div>
             )}
+          </div>
+        )}
+
+        {protocolSummary && (
+          <div className="border-t border-border/40 pt-3 sm:pt-4">
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Protocol Lineage</p>
+            <p className="text-sm leading-relaxed text-muted-foreground">{protocolSummary}</p>
           </div>
         )}
 

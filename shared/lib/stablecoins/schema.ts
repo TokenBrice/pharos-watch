@@ -45,6 +45,8 @@ const GOVERNANCE_QUALITY_VALUES = [
   "single-entity",
   "wrapper",
 ] as const;
+const PROTOCOL_FAMILY_VALUES = ["liquity"] as const;
+const PROTOCOL_VARIANT_VALUES = ["v1", "v2", "style"] as const;
 const COIN_NOTICE_TYPE_VALUES = ["danger", "warning", "info"] as const;
 const YIELD_TYPE_VALUES = [
   "lending-vault",
@@ -173,6 +175,8 @@ export const StablecoinMetaAssetSchema = z.object({
   collateralQuality: z.enum(COLLATERAL_QUALITY_VALUES).optional(),
   custodyModel: z.enum(CUSTODY_MODEL_VALUES).optional(),
   governanceQuality: z.enum(GOVERNANCE_QUALITY_VALUES).optional(),
+  protocolFamily: z.enum(PROTOCOL_FAMILY_VALUES).optional(),
+  protocolVariant: z.enum(PROTOCOL_VARIANT_VALUES).optional(),
   reserves: z.array(ReserveSliceAssetSchema).optional(),
   liveReservesConfig: LiveReservesConfigSchema.optional(),
   notices: z.array(CoinNoticeAssetSchema).optional(),

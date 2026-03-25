@@ -100,6 +100,9 @@ export type GovernanceQuality =
   | "single-entity"
   | "wrapper";
 
+export type ProtocolFamily = "liquity";
+export type ProtocolVariant = "v1" | "v2" | "style";
+
 const GOVERNANCE_TYPE_VALUES = ["centralized", "centralized-dependent", "decentralized"] as const;
 const DEPENDENCY_TYPE_VALUES = ["wrapper", "mechanism", "collateral"] as const;
 const CHAIN_TIER_VALUES = ["ethereum", "stage1-l2", "mature-alt-l1", "established-alt-l1", "unproven"] as const;
@@ -217,6 +220,8 @@ export interface StablecoinMeta {
   collateralQuality?: CollateralQuality;
   custodyModel?: CustodyModel;
   governanceQuality?: GovernanceQuality;
+  protocolFamily?: ProtocolFamily;
+  protocolVariant?: ProtocolVariant;
   reserves?: ReserveSlice[];
   liveReservesConfig?: LiveReservesConfig;
   notices?: CoinNotice[];
@@ -262,6 +267,10 @@ export type FilterTag =
   | "rwa-backed"
   | "crypto-backed"
   | "algorithmic"
+  | "liquity-family"
+  | "liquity-v1"
+  | "liquity-v2"
+  | "liquity-style"
   | "grade-a"
   | "grade-ge-b"
   | "grade-ge-c-plus"
@@ -321,6 +330,10 @@ export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
   "rwa-backed": "RWA-Backed",
   "crypto-backed": "Crypto-Backed",
   algorithmic: "Algorithmic",
+  "liquity-family": "Liquity",
+  "liquity-v1": "Liquity v1",
+  "liquity-v2": "Liquity v2",
+  "liquity-style": "Liquity-Style",
   "grade-a": "A",
   "grade-ge-b": "≥B",
   "grade-ge-c-plus": "≥C+",
@@ -384,6 +397,22 @@ export function getFilterTags(meta: StablecoinMeta): FilterTag[] {
   tags.push(pegCurrencyToFilterTag(meta.flags.pegCurrency));
   tags.push(meta.flags.governance);
   tags.push(meta.flags.backing);
+  if (meta.protocolFamily === "liquity") {
+    tags.push("liquity-family");
+    switch (meta.protocolVariant) {
+      case "v1":
+        tags.push("liquity-v1");
+        break;
+      case "v2":
+        tags.push("liquity-v2");
+        break;
+      case "style":
+        tags.push("liquity-style");
+        break;
+      default:
+        break;
+    }
+  }
   return tags;
 }
 

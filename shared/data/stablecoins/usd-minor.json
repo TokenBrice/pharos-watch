@@ -3784,8 +3784,6 @@
     ],
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "protocolFamily": "liquity",
-    "protocolVariant": "v1",
     "reserves": [
       {
         "name": "USDC (Circle)",
@@ -4225,7 +4223,7 @@
     "chainTier": "unproven",
     "collateralQuality": "exotic",
     "protocolFamily": "liquity",
-    "protocolVariant": "style",
+    "protocolVariant": "v2",
     "reserves": [
       {
         "name": "iBGT (Infrared liquid staked BGT)",
@@ -6749,7 +6747,7 @@
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
     "protocolFamily": "liquity",
-    "protocolVariant": "style",
+    "protocolVariant": "v1",
     "reserves": [
       {
         "name": "Bitcoin LSTs / LRTs and approved BTC wrappers",

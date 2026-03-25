@@ -11,6 +11,8 @@ const FILTER_BAR_LABEL_OVERRIDES: Partial<Record<FilterTag, string>> = {
   "rwa-backed": "RWA",
   "crypto-backed": "Crypto",
   "centralized-dependent": "CeFi-Dep",
+  "liquity-v1": "v1",
+  "liquity-v2": "v2",
 };
 
 interface FilterBarProps {
@@ -74,9 +76,12 @@ export function FilterBar({
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1.2fr_1fr_1fr_0.8fr]">
         {FILTER_GROUPS.map((group) => (
-          <div key={group.label} className={`space-y-2${group.label === "Peg" ? " hidden sm:block" : ""}`}>
+          <div
+            key={group.label}
+            className={`space-y-2${group.label === "Peg" ? " hidden sm:block" : ""}${group.label === "Type" ? " lg:min-w-0" : ""}`}
+          >
             <p className="pharos-kicker">{group.label}</p>
             <ToggleGroup
               type="single"

@@ -54,6 +54,8 @@ Key fields on `StablecoinMeta` (see `shared/types/index.ts` for the full interfa
 - `dependencies?: DependencyWeight[]` — upstream stablecoin dependencies (for report cards)
 - `canBeBlacklisted?: boolean | "possible"` — blacklist capability (for resilience scoring)
 - `chainTier? / deploymentModel? / collateralQuality? / custodyModel? / governanceQuality?` — report card resilience/decentralization overrides
+- `protocolFamily?: "liquity"` — structured protocol-lineage family used for UI badges, cohort filters, and discovery hubs
+- `protocolVariant?: "v1" | "v2" | "style"` — structured Liquity-family variant used for stricter cohorting (`v1`, `v2`) or broader lineage-only grouping (`style`)
 - `reserves?: ReserveSlice[]` — reserve composition data
 - `yieldConfig?: YieldConfig` — yield intelligence configuration
 - `pythFeedId?: string` — Pyth Network oracle feed ID (used for gold/commodity stablecoins)
@@ -61,6 +63,32 @@ Key fields on `StablecoinMeta` (see `shared/types/index.ts` for the full interfa
 - `liveReservesConfig?: LiveReservesConfig` — live reserve sync configuration (see `docs/live-reserves.md`)
 - `notices?: CoinNotice[]` — per-coin alert notices shown on detail pages
 - `tags?: string[]` — freeform tag array for filtering and categorization
+
+### Protocol Lineage
+
+Pharos now supports a small structured protocol-lineage layer for families that users may want to recognize across multiple issuers or forks.
+
+Current support:
+
+- `protocolFamily: "liquity"`
+- `protocolVariant: "v1" | "v2" | "style"`
+
+This is intentionally narrower than the general classification system:
+
+- use `protocolFamily` / `protocolVariant` for concrete fork or lineage cohorts that deserve dedicated badges, filters, and discovery pages
+- keep `tags` for loose editorial labels that do not need first-class routing or filtering semantics
+
+For Liquity-family assets:
+
+- `v1` means the classic LUSD-style pattern
+  - 110% liquidation threshold / minimum collateral ratio
+  - Stability Pool liquidation path
+  - no ongoing borrower interest
+- `v2` means the BOLD-style pattern
+  - user-set borrower rates
+  - Stability Pools
+  - Liquity-style redemptions across branch-like collateral markets
+- `style` means the lineage is clear, but Pharos is not claiming a strict v1/v2 classification from the currently verified metadata
 
 ### Bluechip Grade
 

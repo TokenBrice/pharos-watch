@@ -179,6 +179,14 @@ Composite-score surfaces on the detail page now share a lightweight explainabili
 - mobile sheet / desktop tooltip behavior from the same component
 - footer-level `View methodology` + `Version history` actions on the main score cards
 
+## Protocol Lineage Surfacing
+
+When `StablecoinMeta` includes a supported `protocolFamily` / `protocolVariant`, the detail experience now surfaces that lineage in three places:
+
+- `HeroCard` renders a prominent protocol badge near the identity block so users can immediately recognize Liquity-family assets
+- `KeyInfoCard` adds a concise "Protocol Lineage" explainer line for the classified cohort
+- `ExploreNextSection` adds a cohort link into the matching protocol hub (for example Liquity family, Liquity v1, Liquity v2, or Liquity-style)
+
 ---
 
 ## File Index

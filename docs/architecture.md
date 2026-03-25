@@ -162,6 +162,8 @@ src/                              # Next.js frontend (static export)
 │   │   └── page.tsx
 │   ├── stablecoins/governance/[governance]/ # Static governance taxonomy landing pages
 │   │   └── page.tsx
+│   ├── stablecoins/protocol/[protocol]/ # Static protocol-lineage landing pages (for example Liquity family / v1 / v2)
+│   │   └── page.tsx
 │   ├── yield/                    # Yield intelligence leaderboard
 │   │   ├── page.tsx
 │   │   └── client.tsx

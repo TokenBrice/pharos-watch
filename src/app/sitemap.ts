@@ -3,7 +3,7 @@ import { getActiveChainIds } from "@shared/lib/chains";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";
-import { STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
+import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
 import { buildStablecoinUrl } from "@/lib/urls";
 import digests from "../../data/digests.json";
 
@@ -254,7 +254,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.5,
   }));
 
-  const taxonomyPages: MetadataRoute.Sitemap = STABLECOIN_TAXONOMY_PAGES.map((page) => ({
+  const taxonomyPages: MetadataRoute.Sitemap = ALL_STABLECOIN_TAXONOMY_PAGES.map((page) => ({
     url: `https://pharos.watch${page.href}`,
     lastModified: new Date(LAST_EDITED[page.href] ?? "2026-03-07"),
     changeFrequency: "weekly" as const,

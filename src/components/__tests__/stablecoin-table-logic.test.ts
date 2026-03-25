@@ -89,6 +89,15 @@ describe("buildTrackedIdSet", () => {
     expect(activeOtherPegIds.length).toBeGreaterThan(0);
     expect(activeOtherPegIds.every((id) => trackedIds.has(id))).toBe(true);
   });
+
+  it("returns the normalized Liquity-family cohort when filtering by protocol lineage", () => {
+    const trackedIds = buildTrackedIdSet(["liquity-family"]);
+    expect(trackedIds.has("lusd-liquity")).toBe(true);
+    expect(trackedIds.has("bold-liquity")).toBe(true);
+    expect(trackedIds.has("usdaf-asymmetry")).toBe(true);
+    expect(trackedIds.has("feusd-felix")).toBe(true);
+    expect(trackedIds.has("usdt-tether")).toBe(false);
+  });
 });
 
 describe("resolveEffectiveSortKey", () => {

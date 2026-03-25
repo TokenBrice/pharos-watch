@@ -2,12 +2,12 @@ import Link from "next/link";
 import type { BackingType, GovernanceType } from "@shared/types";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { StablecoinFilteredTable } from "@/components/stablecoin-filtered-table";
-import type { StablecoinTaxonomyPage as StablecoinTaxonomyPageConfig } from "@/lib/stablecoin-taxonomy";
-import { STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
+import type { ProtocolTaxonomyValue, StablecoinTaxonomyPage as StablecoinTaxonomyPageConfig } from "@/lib/stablecoin-taxonomy";
+import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
 import { buildStablecoinUrl } from "@/lib/urls";
 
 interface StablecoinTaxonomyPageProps {
-  page: StablecoinTaxonomyPageConfig<BackingType | GovernanceType>;
+  page: StablecoinTaxonomyPageConfig<BackingType | GovernanceType | ProtocolTaxonomyValue>;
 }
 
 const DIRECTORY_PREVIEW_COUNT = 24;
@@ -15,7 +15,7 @@ const DIRECTORY_PREVIEW_COUNT = 24;
 export function StablecoinTaxonomyPage({ page }: StablecoinTaxonomyPageProps) {
   const visibleCoins = page.coins.slice(0, DIRECTORY_PREVIEW_COUNT);
   const overflowCoins = page.coins.slice(DIRECTORY_PREVIEW_COUNT);
-  const relatedPages = STABLECOIN_TAXONOMY_PAGES.filter((candidate) => candidate.href !== page.href).slice(0, 6);
+  const relatedPages = ALL_STABLECOIN_TAXONOMY_PAGES.filter((candidate) => candidate.href !== page.href).slice(0, 6);
 
   return (
     <FeaturePageShell
@@ -87,7 +87,7 @@ export function StablecoinTaxonomyPage({ page }: StablecoinTaxonomyPageProps) {
         <div className="space-y-1.5">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">More Stablecoin Hubs</h2>
           <p className="text-sm text-muted-foreground">
-            Move laterally into other governance and backing taxonomies without going back to the homepage.
+            Move laterally into other governance, backing, and protocol taxonomies without going back to the homepage.
           </p>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">

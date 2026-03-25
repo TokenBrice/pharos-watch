@@ -26,6 +26,10 @@ export const FILTER_GROUPS: FilterGroup[] = [
     label: "Grade",
     options: ["grade-a", "grade-ge-b", "grade-ge-c-plus", "grade-ge-c-minus", "grade-le-d"],
   },
+  {
+    label: "Liquity Forks",
+    options: ["liquity-v1", "liquity-v2"],
+  },
 ];
 
 function parseHomepageParams(searchParams: URLSearchParams): {
