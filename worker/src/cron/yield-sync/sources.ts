@@ -666,6 +666,85 @@ export async function fetchPendleMarketSources(
   return results;
 }
 
+const YEARN_KONG_GQL_URL = "https://kong.yearn.fi/api/gql";
+const YEARN_KONG_CHAINS = [1, 10, 137, 8453, 42161];
+const YEARN_KONG_VAULTS_QUERY = `query($chainId: Int!) {
+  vaults(chainId: $chainId) {
+    address name yearn
+    asset { symbol }
+    tvl { close }
+    apy { net monthlyNet }
+    meta { category isRetired }
+  }
+}`;
+
+interface KongVault {
+  address: string; name: string; yearn: boolean;
+  asset: { symbol: string };
+  tvl: { close: number } | null;
+  apy: { net: number | null; monthlyNet: number | null } | null;
+  meta: { category: string | null; isRetired: boolean | null } | null;
+}
+
+export async function fetchYearnKongSources(
+  signal?: AbortSignal,
+): Promise<Array<{ symbol: string; yield: ResolvedYield }>> {
+  const results: Array<{ symbol: string; yield: ResolvedYield }> = [];
+  const seenAddresses = new Set<string>();
+
+  for (const chainId of YEARN_KONG_CHAINS) {
+    try {
+      const res = await fetchWithRetry(YEARN_KONG_GQL_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
+        body: JSON.stringify({ query: YEARN_KONG_VAULTS_QUERY, variables: { chainId } }),
+        signal,
+      }, 1);
+      if (!res?.ok) continue;
+
+      const body = (await res.json()) as { data?: { vaults?: KongVault[] } };
+      const vaults = body.data?.vaults;
+      if (!Array.isArray(vaults)) continue;
+
+      for (const vault of vaults) {
+        if (seenAddresses.has(vault.address.toLowerCase())) continue;
+        if (vault.meta?.isRetired) continue;
+        if (vault.meta?.category !== "Stablecoin") continue;
+
+        const netApy = vault.apy?.monthlyNet ?? vault.apy?.net;
+        if (typeof netApy !== "number" || !Number.isFinite(netApy) || netApy <= 0) continue;
+
+        const tvl = vault.tvl?.close;
+        if (typeof tvl !== "number" || tvl < 100_000) continue;
+
+        seenAddresses.add(vault.address.toLowerCase());
+        const sourcePrefix = vault.yearn ? "Yearn" : "Kong";
+        results.push({
+          symbol: vault.asset.symbol,
+          yield: {
+            currentApy: netApy * 100,
+            apyBase: netApy * 100,
+            apyReward: null,
+            sourcePool: vault.address,
+            sourceTvlUsd: tvl,
+            dataSource: "protocol-api",
+            exchangeRate: null,
+            sourceKey: `protocol-api:kong:${vault.address.slice(0, 10)}`,
+            yieldSource: `${sourcePrefix}: ${vault.name}`,
+            yieldType: "lending-vault",
+            sourceObservedAt: Math.floor(Date.now() / 1000),
+            comparisonAnchorObservedAt: null,
+          },
+        });
+      }
+    } catch (error) {
+      if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+      console.warn(`[yield] Yearn Kong chain ${chainId} failed:`, error);
+    }
+  }
+  return results;
+}
+
 export async function getPriceDerivedApy(
   db: D1Database,
   stablecoinId: string,

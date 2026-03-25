@@ -25,7 +25,7 @@ import {
   YIELD_VARIANT_MAP,
 } from "../yield-config";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { fetchBimaSusbdSource, fetchBprotocolLqtyOnlySource, fetchHashnoteUsycSource, fetchMorphoVaultSources, fetchOndoUsdyOracleSource, fetchPendleMarketSources, getPriceDerivedApy } from "./sources";
+import { fetchBimaSusbdSource, fetchBprotocolLqtyOnlySource, fetchHashnoteUsycSource, fetchMorphoVaultSources, fetchOndoUsdyOracleSource, fetchPendleMarketSources, fetchYearnKongSources, getPriceDerivedApy } from "./sources";
 import type { DlPool, ResolvedYieldEntry } from "./types";
 
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
@@ -356,6 +356,17 @@ export async function resolveYieldSources({
       if (meta.symbol.toUpperCase() !== assetSymbol.toUpperCase()) continue;
       if (resolved.some((e) => e.id === meta.id && e.yield?.sourceKey === pendleYield.sourceKey)) continue;
       resolved.push({ id: meta.id, symbol: meta.symbol, yield: pendleYield });
+      break;
+    }
+  }
+
+  // Yearn Kong ERC-4626 vaults (Yearn-native + third-party) — runs once, matched by asset symbol
+  const kongVaults = await fetchYearnKongSources(signal);
+  for (const { symbol: assetSymbol, yield: kongYield } of kongVaults) {
+    for (const meta of TRACKED_STABLECOINS) {
+      if (meta.symbol.toUpperCase() !== assetSymbol.toUpperCase()) continue;
+      if (resolved.some((e) => e.id === meta.id && e.yield?.sourceKey === kongYield.sourceKey)) continue;
+      resolved.push({ id: meta.id, symbol: meta.symbol, yield: kongYield });
       break;
     }
   }
