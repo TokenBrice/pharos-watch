@@ -99,3 +99,85 @@ describe("stablecoin detail derivations", () => {
     });
   });
 });
+
+describe("deriveSupplyFromMarketCap", () => {
+  it("divides market cap by price", () => {
+    expect(deriveSupplyFromMarketCap(1_000_000, 1.0)).toBe(1_000_000);
+    expect(deriveSupplyFromMarketCap(2_000_000, 0.5)).toBe(4_000_000);
+  });
+
+  it("returns null for zero or negative price", () => {
+    expect(deriveSupplyFromMarketCap(1_000_000, 0)).toBeNull();
+    expect(deriveSupplyFromMarketCap(1_000_000, -1)).toBeNull();
+  });
+
+  it("returns null for zero or negative market cap", () => {
+    expect(deriveSupplyFromMarketCap(0, 1.0)).toBeNull();
+    expect(deriveSupplyFromMarketCap(-100, 1.0)).toBeNull();
+  });
+
+  it("returns null for non-number inputs", () => {
+    expect(deriveSupplyFromMarketCap(null, 1.0)).toBeNull();
+    expect(deriveSupplyFromMarketCap(undefined, 1.0)).toBeNull();
+  });
+});
+
+describe("deriveDeviationBps", () => {
+  it("returns 0 bps for exact peg", () => {
+    expect(deriveDeviationBps(1.0, 1.0)).toBe(0);
+  });
+
+  it("returns positive bps for price above peg", () => {
+    expect(deriveDeviationBps(1.01, 1.0)).toBeCloseTo(100, 0);
+  });
+
+  it("returns negative bps for price below peg", () => {
+    expect(deriveDeviationBps(0.99, 1.0)).toBeCloseTo(-100, 0);
+  });
+
+  it("returns 0 for invalid peg reference", () => {
+    expect(deriveDeviationBps(1.0, 0)).toBe(0);
+    expect(deriveDeviationBps(1.0, NaN)).toBe(0);
+  });
+
+  it("returns 0 for null price", () => {
+    expect(deriveDeviationBps(null, 1.0)).toBe(0);
+  });
+});
+
+describe("deriveGaugeDeviationBps", () => {
+  it("returns 0 for NAV tokens", () => {
+    expect(deriveGaugeDeviationBps(150, true)).toBe(0);
+  });
+
+  it("passes through deviation for non-NAV tokens", () => {
+    expect(deriveGaugeDeviationBps(50, false)).toBe(50);
+    expect(deriveGaugeDeviationBps(-30, false)).toBe(-30);
+  });
+});
+
+describe("derivePrev90dReferenceMcap", () => {
+  const NOW_MS = Date.now();
+  const DAY_MS_LOCAL = 86_400_000;
+  const NINETY_DAYS_MS = 90 * DAY_MS_LOCAL;
+
+  it("finds closest entry to 90 days ago", () => {
+    const history = [
+      { date: NOW_MS - NINETY_DAYS_MS, circulatingUsd: 5_000_000 },
+      { date: NOW_MS - 30 * DAY_MS_LOCAL, circulatingUsd: 8_000_000 },
+      { date: NOW_MS, circulatingUsd: 10_000_000 },
+    ];
+    expect(derivePrev90dReferenceMcap(history, NOW_MS)).toBe(5_000_000);
+  });
+
+  it("returns 0 for empty history", () => {
+    expect(derivePrev90dReferenceMcap([], NOW_MS)).toBe(0);
+  });
+
+  it("returns 0 when closest entry exceeds tolerance", () => {
+    const history = [
+      { date: NOW_MS - 120 * DAY_MS_LOCAL, circulatingUsd: 5_000_000 },
+    ];
+    expect(derivePrev90dReferenceMcap(history, NOW_MS)).toBe(0);
+  });
+});
