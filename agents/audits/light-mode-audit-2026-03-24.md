@@ -22,3 +22,19 @@
 - `npm run lint`
 - `npm run build`
 - `npm test`
+
+## Mobile follow-up scope
+
+- Focus: mobile viewport (`390x844`) in light mode
+- Route families: home, analytics, detail/template pages, longform pages, public status, alerts landing page
+
+## Mobile follow-up findings
+
+- Spot-checked mobile light mode on live route families: homepage, Start Here, stability-index, Telegram alerts, and a representative stablecoin detail page.
+- No additional concrete mobile-light regressions were confirmed from those checks.
+- The public `/status/` route remains the main light-mode outlier on mobile as well, matching the local fix already applied in this branch.
+
+## Mobile follow-up validation
+
+- `npm run lint`
+- `npm test`
