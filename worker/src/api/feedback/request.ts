@@ -36,6 +36,31 @@ export async function prepareFeedbackSubmission(
     if (title.length < 3 || title.length > 100) {
       return errorResponse(400, "Title must be 3–100 characters");
     }
+    feedback = {
+      ...feedback,
+      title,
+    };
+  }
+
+  const contactHandle = feedback.contactHandle?.trim() ?? "";
+  if (feedback.contactConsent) {
+    if (!feedback.contactChannel) {
+      return errorResponse(400, "Choose Telegram or X for follow-up contact");
+    }
+    if (contactHandle.length < 2 || contactHandle.length > 100) {
+      return errorResponse(400, "Contact handle must be 2–100 characters");
+    }
+    feedback = {
+      ...feedback,
+      contactHandle,
+    };
+  } else if (feedback.contactChannel || contactHandle) {
+    feedback = {
+      ...feedback,
+      contactConsent: false,
+      contactChannel: undefined,
+      contactHandle: undefined,
+    };
   }
 
   let canonicalStablecoinId: string | undefined;
@@ -69,12 +94,13 @@ export async function prepareFeedbackSubmission(
     FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS,
   );
   if (!allowed) {
-    return errorResponse(429, "Too many submissions. Please wait a few minutes.");
+      return errorResponse(429, "Too many submissions. Please wait a few minutes.");
   }
 
   return {
     feedback,
     pat: env.GITHUB_PAT,
+    submissionId: "",
     canonicalStablecoinId,
     repositoryId: env.GITHUB_REPO_NODE_ID,
     discussionCategoryId: env.GITHUB_DISCUSSION_CATEGORY_ID,

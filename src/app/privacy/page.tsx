@@ -25,15 +25,14 @@ export default function PrivacyPage() {
       title="Privacy Policy"
       variant="longform"
       containerClassName="max-w-2xl"
-      leadParagraphs={["Last updated: February 2026"]}
+      leadParagraphs={["Last updated: March 2026"]}
     >
       <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <div className="rounded-[1.35rem] border border-border/60 bg-card/70 px-5 py-4 shadow-[0_14px_32px_oklch(0_0_0_/0.1)]">
           <p className="pharos-kicker">Policy Summary</p>
           <p className="mt-2 text-sm text-foreground">
             Pharos does not ask for accounts or wallet connections. Portfolio data stays in your browser, analytics are
-            anonymized when enabled, and support requests route through the public feedback/contact channels listed
-            below.
+            anonymized when enabled, and support requests route through the feedback/contact channels listed below.
           </p>
         </div>
 
@@ -42,8 +41,9 @@ export default function PrivacyPage() {
           <p>
             When a Google Analytics 4 (GA4) measurement ID is configured for the current deployment, Pharos collects
             anonymized usage analytics such as page views, session duration, approximate geographic region, device or
-            browser type, and a small set of product-interaction events. We do not collect personally identifiable
-            information (PII).
+            browser type, and a small set of product-interaction events. If you choose to share a Telegram or X handle
+            in the feedback form, we store that handle privately for follow-up on that submission. We do not otherwise
+            collect personally identifiable information (PII).
           </p>
         </section>
 
@@ -51,7 +51,8 @@ export default function PrivacyPage() {
           <h2 className="text-lg font-semibold text-foreground">No Accounts or Wallet Connections</h2>
           <p>
             Pharos does not require user accounts, logins, or wallet connections. There is no sign-up process, no email
-            collection, and no authentication of any kind.
+            collection, and no authentication of any kind. Optional feedback contact details are self-declared and are
+            not used as site accounts or persistent user identities.
           </p>
         </section>
 
@@ -69,7 +70,8 @@ export default function PrivacyPage() {
           <h2 className="text-lg font-semibold text-foreground">Data Retention</h2>
           <p>
             When GA4 is enabled, analytics data is retained for 14 months per Google&apos;s default settings. We do not
-            maintain any additional databases of visitor information.
+            maintain user-account databases. Feedback submissions, including optional follow-up contact details when you
+            provide them, are retained in our operational database for product support and issue tracking.
           </p>
         </section>
 
@@ -77,8 +79,9 @@ export default function PrivacyPage() {
           <h2 className="text-lg font-semibold text-foreground">Third-Party Services</h2>
           <p>
             Pharos is hosted on Cloudflare Pages with API endpoints served by Cloudflare Workers. Analytics data is
-            processed by Google (GA4) only when analytics is enabled for the current deployment. No data is shared with
-            any other third parties.
+            processed by Google (GA4) only when analytics is enabled for the current deployment. Feedback submissions
+            are also forwarded to GitHub Issues or Discussions for product triage; optional Telegram/X handles are kept
+            private in our database and are not posted publicly to GitHub.
           </p>
         </section>
 

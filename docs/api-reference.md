@@ -1943,6 +1943,9 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
   "stablecoinName": "Optional stablecoin name",
   "pageUrl": "/stablecoin/usdt-tether",
   "pegValue": "Optional UI value snapshot",
+  "contactConsent": true,
+  "contactChannel": "telegram",
+  "contactHandle": "@pharos_user",
   "website": ""
 }
 ```
@@ -1955,11 +1958,14 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 | `pageUrl`                                                     | `string`                                          | Yes         | Relative app path (must start with `/`)                                                |
 | `website`                                                     | `string`                                          | No          | Honeypot field; non-empty is silently accepted/dropped                                 |
 | `expectedValue`, `stablecoinId`, `stablecoinName`, `pegValue` | `string`                                          | No          | Optional metadata                                                                      |
+| `contactConsent`                                              | `boolean`                                         | No          | When `true`, a follow-up contact channel and handle are required                       |
+| `contactChannel`                                              | `"telegram" \| "x"`                               | Conditional | Required when `contactConsent=true`; stored privately in D1                            |
+| `contactHandle`                                               | `string`                                          | Conditional | Required when `contactConsent=true`; stored privately in D1                            |
 
 **Response**
 
 ```json
-{ "ok": true }
+{ "ok": true, "submissionId": "fb_mn59ys5h_c0cfb94388" }
 ```
 
 **Error responses**
@@ -1968,6 +1974,8 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 - `429` rate limited (3 submissions / 10 minutes per salted IP hash)
 - `500` forwarding/processing failure
 - `503` service misconfigured (missing `FEEDBACK_IP_SALT` or `GITHUB_PAT`)
+
+Every accepted submission is also written to the private `feedback_submissions` D1 table before the GitHub call. The returned `submissionId` matches that durable ledger row and is echoed in the GitHub artifact body.
 
 ---
 

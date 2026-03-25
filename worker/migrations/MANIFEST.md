@@ -82,6 +82,10 @@
 | 0072     | `0072_telegram_launch_alerts.sql`               | Add launch alert flags to telegram subscribers and subscriptions                                |
 | 0073     | `0073_price_cache_provenance.sql`               | Add price-cache provenance and timestamp metadata columns                                        |
 | 0074     | `0074_cron_slot_executions.sql`                 | Add durable scheduled-slot execution fencing and slot timestamps to cron history/progress        |
+| 0075     | `0075_price_cache_observed_at_mode.sql`         | Add price-cache observation-mode metadata column                                                |
+| 0076     | `0076_blacklist_provenance_and_amount_semantics.sql` | Add blacklist provenance and amount-semantics metadata                                     |
+| 0077     | `0077_blacklist_amount_recovery_telemetry.sql`  | Add blacklist amount-recovery telemetry columns                                                |
+| 0078     | `0078_feedback_submissions.sql`                 | Create feedback_submissions table for durable feedback logging                                 |
 
 ## Known Anomalies
 

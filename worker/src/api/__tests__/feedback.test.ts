@@ -21,6 +21,9 @@ function makeFeedbackBody(
     stablecoinId: string;
     stablecoinName: string;
     expectedValue: string;
+    contactConsent: boolean;
+    contactChannel: string;
+    contactHandle: string;
     website: string;
   }> = {},
 ) {
@@ -32,6 +35,9 @@ function makeFeedbackBody(
     stablecoinId: overrides.stablecoinId,
     stablecoinName: overrides.stablecoinName,
     expectedValue: overrides.expectedValue,
+    contactConsent: overrides.contactConsent,
+    contactChannel: overrides.contactChannel,
+    contactHandle: overrides.contactHandle,
     website: overrides.website,
   };
 }
@@ -161,7 +167,11 @@ describe("handleFeedback", () => {
   });
 
   it("returns 200 and creates GitHub issue for bug report", async () => {
-    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
+    const db = mockD1([
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
+      { match: "INSERT INTO feedback_submissions", rows: [], runMeta: { changes: 1 } },
+      { match: "UPDATE feedback_submissions", rows: [], runMeta: { changes: 1 } },
+    ]);
 
     // Mock successful GitHub Issues API response
     const response = new Response(JSON.stringify({ id: 1, number: 42 }), { status: 201 });
@@ -174,8 +184,9 @@ describe("handleFeedback", () => {
     );
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean };
+    const body = (await res.json()) as { ok: boolean; submissionId?: string };
     expect(body.ok).toBe(true);
+    expect(body.submissionId).toMatch(/^fb_/);
 
     // Verify GitHub API was called
     expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -184,11 +195,15 @@ describe("handleFeedback", () => {
     expect(String(url)).toContain("/issues");
     expect(init?.method).toBe("POST");
     expect(response.bodyUsed).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO feedback_submissions"))).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("UPDATE feedback_submissions"))).toBe(true);
   });
 
   it("returns 200 and creates GitHub issue for data-correction", async () => {
     const db = mockD1([
       { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
+      { match: "INSERT INTO feedback_submissions", rows: [], runMeta: { changes: 1 } },
+      { match: "UPDATE feedback_submissions", rows: [], runMeta: { changes: 1 } },
       // verifyDataCorrection will query the stablecoins cache
       { match: "cache", rows: [], first: null },
     ]);
@@ -216,6 +231,8 @@ describe("handleFeedback", () => {
   it("uses the EUR peg reference for EUR-pegged data-correction auto-verification", async () => {
     const db = mockD1([
       { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
+      { match: "INSERT INTO feedback_submissions", rows: [], runMeta: { changes: 1 } },
+      { match: "UPDATE feedback_submissions", rows: [], runMeta: { changes: 1 } },
       {
         match: "cache",
         rows: [],
@@ -263,6 +280,8 @@ describe("handleFeedback", () => {
   it("uses the commodity peg reference for gold-pegged auto-verification", async () => {
     const db = mockD1([
       { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
+      { match: "INSERT INTO feedback_submissions", rows: [], runMeta: { changes: 1 } },
+      { match: "UPDATE feedback_submissions", rows: [], runMeta: { changes: 1 } },
       {
         match: "cache",
         rows: [],
@@ -308,7 +327,11 @@ describe("handleFeedback", () => {
   });
 
   it("tries GitHub Discussion first for feature-request, falls back to issue", async () => {
-    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
+    const db = mockD1([
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
+      { match: "INSERT INTO feedback_submissions", rows: [], runMeta: { changes: 1 } },
+      { match: "UPDATE feedback_submissions", rows: [], runMeta: { changes: 1 } },
+    ]);
 
     // First call: GraphQL Discussion creation fails
     fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ errors: [{ message: "fail" }] }), { status: 200 }));
@@ -339,7 +362,11 @@ describe("handleFeedback", () => {
   });
 
   it("drains GraphQL HTTP error bodies before falling back to issues", async () => {
-    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
+    const db = mockD1([
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
+      { match: "INSERT INTO feedback_submissions", rows: [], runMeta: { changes: 1 } },
+      { match: "UPDATE feedback_submissions", rows: [], runMeta: { changes: 1 } },
+    ]);
 
     const graphQlError = new Response("upstream unavailable", { status: 502 });
     const issueResponse = new Response(JSON.stringify({ id: 3, number: 44 }), { status: 201 });
@@ -366,7 +393,11 @@ describe("handleFeedback", () => {
   });
 
   it("returns 500 when GitHub API call fails", async () => {
-    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
+    const db = mockD1([
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
+      { match: "INSERT INTO feedback_submissions", rows: [], runMeta: { changes: 1 } },
+      { match: "UPDATE feedback_submissions", rows: [], runMeta: { changes: 1 } },
+    ]);
 
     fetchSpy.mockResolvedValueOnce(new Response("Forbidden", { status: 403 }));
 
@@ -375,11 +406,14 @@ describe("handleFeedback", () => {
     expect(res.status).toBe(500);
     const body = (await res.json()) as { error: string };
     expect(body.error).toMatch(/Failed to submit/i);
+    expect(db.getHistory().some((entry) => entry.sql.includes("UPDATE feedback_submissions"))).toBe(true);
   });
 
   it("does not require title for data-correction type", async () => {
     const db = mockD1([
       { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
+      { match: "INSERT INTO feedback_submissions", rows: [], runMeta: { changes: 1 } },
+      { match: "UPDATE feedback_submissions", rows: [], runMeta: { changes: 1 } },
       { match: "cache", rows: [], first: null },
     ]);
 
@@ -398,5 +432,76 @@ describe("handleFeedback", () => {
     );
 
     expect(res.status).toBe(200);
+  });
+
+  it("returns 400 when contact consent is set without a channel", async () => {
+    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
+    const res = await handleFeedback(
+      db,
+      makeRequest(makeFeedbackBody({ contactConsent: true, contactHandle: "@pharos_user" })),
+      makeEnv(),
+    );
+
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Choose Telegram or X for follow-up contact" });
+  });
+
+  it("stores private contact in D1 without exposing the handle in GitHub body", async () => {
+    const db = mockD1([
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
+      { match: "INSERT INTO feedback_submissions", rows: [], runMeta: { changes: 1 } },
+      { match: "UPDATE feedback_submissions", rows: [], runMeta: { changes: 1 } },
+    ]);
+
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ id: 7, number: 48, html_url: "https://github.com/x/y/48" }), { status: 201 }));
+
+    const res = await handleFeedback(
+      db,
+      makeRequest(
+        makeFeedbackBody({
+          contactConsent: true,
+          contactChannel: "telegram",
+          contactHandle: "@pharos_user",
+        }),
+      ),
+      makeEnv(),
+    );
+
+    expect(res.status).toBe(200);
+    const insertBindCall = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO feedback_submissions"));
+    expect(insertBindCall?.binds).toContain("@pharos_user");
+
+    const [, init] = fetchSpy.mock.calls[0]!;
+    const issuePayload = JSON.parse(String(init?.body)) as { body: string };
+    expect(issuePayload.body).toContain("feedback_submissions");
+    expect(issuePayload.body).not.toContain("@pharos_user");
+  });
+
+  it("neutralizes markdown-style mentions in GitHub issue bodies", async () => {
+    const db = mockD1([
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
+      { match: "INSERT INTO feedback_submissions", rows: [], runMeta: { changes: 1 } },
+      { match: "UPDATE feedback_submissions", rows: [], runMeta: { changes: 1 } },
+    ]);
+
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ id: 8, number: 49 }), { status: 201 }));
+
+    const res = await handleFeedback(
+      db,
+      makeRequest(
+        makeFeedbackBody({
+          title: "@ops broken",
+          description: "Ping @ops and **please** fix this regression.",
+        }),
+      ),
+      makeEnv(),
+    );
+
+    expect(res.status).toBe(200);
+    const [, init] = fetchSpy.mock.calls[0]!;
+    const issuePayload = JSON.parse(String(init?.body)) as { title: string; body: string };
+    expect(issuePayload.title).toContain("@ ops");
+    expect(issuePayload.body).toContain("Ping @ops and **please** fix this regression.");
+    expect(issuePayload.body).toContain("```text");
   });
 });

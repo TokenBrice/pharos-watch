@@ -68,6 +68,13 @@ Static route metadata is declared once in `shared/lib/api-endpoints.ts`. That sh
 
 The subscription/disambiguation tables are created in `worker/migrations/0054_telegram_subscribers.sql`; the overflow queue is added by `worker/migrations/0060_telegram_pending_alerts.sql`. For the full bot flow, see [Telegram Alert Bot](./telegram-alerts.md).
 
+## Feedback Tables
+
+| Table                  | Description                                                                  |
+| ---------------------- | ---------------------------------------------------------------------------- |
+| `feedback_rate_limit`  | Salted per-IP submission buckets for `POST /api/feedback`                    |
+| `feedback_submissions` | Durable feedback ledger with private follow-up contact and GitHub sync state |
+
 ## Telegram Alert Cron Job
 
 | Job                        | Description                                                                                                                               |
@@ -535,7 +542,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── mint-burn-flows-shared.ts # Shared mint/burn cache, baseline, and coverage helpers
     │   ├── mint-burn-events.ts   # GET /api/mint-burn-events (paginated event log)
     │   ├── feedback.ts          # POST /api/feedback (public coordinator)
-    │   ├── feedback/            # Feedback endpoint internals
+    │   ├── feedback/            # Feedback endpoint internals + durable submission ledger helpers
     │   │   ├── request.ts       # JSON parsing, validation, rate-limit/env policy
     │   │   ├── verification.ts  # Auto-verification snapshots for data corrections
     │   │   ├── submission.ts    # GitHub routing orchestration
