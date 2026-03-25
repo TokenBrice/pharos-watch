@@ -541,6 +541,27 @@ const LENDING_PROTOCOLS = {
   "overnight-finance": { label: "Overnight" },
   "smardex-usdn": { label: "SmarDex USDN" },
   "vesper": { label: "Vesper" },
+  // Tier A — 2026-03-25 audit (>$50M TVL)
+  "wildcat-protocol": { label: "Wildcat" },
+  "tectonic": { label: "Tectonic" },
+  "upshift": { label: "Upshift" },
+  "venus-flux": { label: "Venus Flux" },
+  "avantis": { label: "Avantis" },
+  "cap": { label: "Cap" },
+  "resupply": { label: "Resupply" },
+  "zerobase-cedefi": { label: "ZeroBase" },
+  // Tier B — 2026-03-25 audit ($10M–$50M TVL)
+  "convex-finance": { label: "Convex Finance" },
+  "yo-protocol": { label: "Yo Protocol" },
+  "clearpool-lending": { label: "Clearpool Lending" },
+  "3jane-lending": { label: "3Jane" },
+  "hyperlend-pooled": { label: "HyperLend" },
+  "zest-v2": { label: "Zest v2" },
+  "liquity-v2": { label: "Liquity v2" },
+  "echelon-market": { label: "Echelon" },
+  "termmax": { label: "TermMax" },
+  "beefy": { label: "Beefy" },
+  "gearbox": { label: "Gearbox" },
 } as const;
 
 export const LENDING_PROTOCOL_ALLOWLIST = new Set(Object.keys(LENDING_PROTOCOLS));

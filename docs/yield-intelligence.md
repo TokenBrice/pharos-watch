@@ -223,6 +223,8 @@ For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), 
 | Tier 2 | fluid-lending, euler-v2, venus-core-pool, kamino-lend, morpho-v1, morpho-blue, pendle, curve-llamalend, exactly, flux-finance, gains-network, lazy-summer-protocol, moonwell-lending, silo-v2 |
 | Tier 3 | justlend, openeden-usdo, multipli.fi, jupiter-lend, stables-labs-usdx, benqi-lending |
 | Tier 4 | radiant-v2, fraxlend-v2, clearpool, centrifuge, sturdy-v2, goldfinch, truefi, lagoon, liqwid, lista-lending, loopscale, more-markets, navi-lending, overnight-finance, smardex-usdn, vesper |
+| Tier A (2026-03-25, >$50M TVL) | wildcat-protocol, tectonic, upshift, venus-flux, avantis, cap, resupply, zerobase-cedefi |
+| Tier B (2026-03-25, $10M–$50M TVL) | convex-finance, yo-protocol, clearpool-lending, 3jane-lending, hyperlend-pooled, zest-v2, liquity-v2, echelon-market, termmax, beefy, gearbox |
 
 **Discovery logic:** Filters DL pools by `exposure === "single"`, `stablecoin === true`, project in allowlist, exact symbol match (case-insensitive). Picks highest TVL. Current quality gates require `apy >= 0.1` and `tvlUsd >= 100_000`.
 
