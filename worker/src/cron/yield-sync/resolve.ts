@@ -24,7 +24,13 @@ import {
   YIELD_VARIANT_MAP,
 } from "../yield-config";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { fetchBimaSusbdSource, fetchBprotocolLqtyOnlySource, getPriceDerivedApy } from "./sources";
+import {
+  fetchAaveV3SupplyRates,
+  fetchBimaSusbdSource,
+  fetchBprotocolLqtyOnlySource,
+  getPriceDerivedApy,
+  type AaveV3RateTarget,
+} from "./sources";
 import type { DlPool, ResolvedYieldEntry } from "./types";
 
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
@@ -294,6 +300,61 @@ export async function resolveYieldSources({
         id: lusdMeta.id,
         symbol: lusdMeta.symbol,
         yield: bprotocolYield,
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Aave V3 direct on-chain supply rates (after batch adapters, before auto-lending)
+  // ---------------------------------------------------------------------------
+  const AAVE_SUPPORTED_CHAINS = new Set(["ethereum", "arbitrum", "base"]);
+  const aaveTargets: AaveV3RateTarget[] = [];
+  for (const meta of TRACKED_STABLECOINS) {
+    for (const contract of meta.contracts ?? []) {
+      if (
+        AAVE_SUPPORTED_CHAINS.has(contract.chain) &&
+        contract.address &&
+        !aaveTargets.some((t) => t.stablecoinId === meta.id && t.chain === contract.chain)
+      ) {
+        aaveTargets.push({
+          stablecoinId: meta.id,
+          symbol: meta.symbol,
+          chain: contract.chain,
+          assetAddress: contract.address,
+        });
+      }
+    }
+  }
+
+  if (aaveTargets.length > 0 && chainRpcs) {
+    const { rates: aaveRates } = await fetchAaveV3SupplyRates(aaveTargets, signal, chainRpcs);
+    const AAVE_SOURCE_KEY = "aave-v3-onchain";
+    const AAVE_YIELD_SOURCE = "Aave v3";
+    const AAVE_YIELD_TYPE = "lending";
+    for (const [stablecoinId, { apy }] of aaveRates) {
+      if (apy <= 0) continue;
+      if (resolved.some((entry) => entry.id === stablecoinId && entry.yield?.sourceKey === AAVE_SOURCE_KEY)) {
+        continue;
+      }
+      const meta = TRACKED_META_BY_ID.get(stablecoinId);
+      if (!meta) continue;
+      resolved.push({
+        id: meta.id,
+        symbol: meta.symbol,
+        yield: {
+          currentApy: apy,
+          apyBase: apy,
+          apyReward: null,
+          sourcePool: null,
+          sourceTvlUsd: null,
+          dataSource: "onchain",
+          exchangeRate: null,
+          sourceKey: AAVE_SOURCE_KEY,
+          yieldSource: AAVE_YIELD_SOURCE,
+          yieldType: AAVE_YIELD_TYPE,
+          sourceObservedAt: startSec,
+          comparisonAnchorObservedAt: null,
+        },
       });
     }
   }

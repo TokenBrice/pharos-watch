@@ -4,6 +4,12 @@ const APP_LINK_LABEL_PRIORITY = ["App", "Portal", "Earn", "Mint", "Stake", "Dash
 const FALLBACK_LINK_LABEL_PRIORITY = [...APP_LINK_LABEL_PRIORITY, "Website", "Docs"] as const;
 const APP_LIKE_DISPLAY_LABEL = /\b(app|earn|mint|portal|stake|vault)\b/i;
 
+export const AAVE_V3_CHAIN_URLS: Record<string, string> = {
+  ethereum: "https://app.aave.com/?marketName=proto_mainnet_v3",
+  arbitrum: "https://app.aave.com/?marketName=proto_arbitrum_v3",
+  base: "https://app.aave.com/?marketName=proto_base_v3",
+};
+
 const YIELD_SOURCE_URLS: Record<string, string> = {
   "Aave v3": "https://app.aave.com/",
   "B.Protocol Stability Pool (LQTY only)": "https://app.bprotocol.org/liquity",
