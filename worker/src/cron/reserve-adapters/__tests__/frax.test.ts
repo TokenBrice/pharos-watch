@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/core";
 import { adaptFraxCombinedData, type FraxCombinedDataResponse } from "../frax";
 
 const SAMPLE: FraxCombinedDataResponse = {

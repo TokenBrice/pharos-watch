@@ -2,7 +2,7 @@ import {
   STATUS_ONCHAIN_THRESHOLDS,
   hasRepresentativeOnchainRatioSample,
 } from "@shared/lib/status-thresholds";
-import type { StatusCause, StatusResponse } from "@shared/types";
+import type { StatusCause, StatusResponse } from "@shared/types/status";
 
 function formatRatio(value: number): string {
   return `${(value * 100).toFixed(2)}%`;

@@ -6,7 +6,7 @@ import {
   getLatestSuccessfulCronTimestamp,
 } from "../lib/api-utils";
 import { getLiquidityMethodologyVersionAt } from "@shared/lib/liquidity-score-version";
-import type { LiquidityPoolSourceFamily } from "@shared/types";
+import type { LiquidityPoolSourceFamily } from "@shared/types/market";
 import { DexLiquidityCronMetadataSchema } from "../lib/schemas";
 
 const TREND_BASELINE_CONFIDENCE_MIN = 0.5;

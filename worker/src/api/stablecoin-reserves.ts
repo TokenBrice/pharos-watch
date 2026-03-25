@@ -1,6 +1,6 @@
 import { jsonFreshResponse, errorResponse, withErrorHandler } from "../lib/api-utils";
 import { ACTIVE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import type { StablecoinReservesResponse } from "@shared/types";
+import type { StablecoinReservesResponse } from "@shared/types/live-reserves";
 import { resolveReserveResult } from "../lib/live-reserves-store";
 
 const LIVE_CACHE_CONTROL = "public, s-maxage=3600, max-age=300";

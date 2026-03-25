@@ -1,7 +1,7 @@
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import type { StablecoinData } from "@shared/types";
+import type { StablecoinData } from "@shared/types/market";
 import { sumPegBuckets } from "@shared/lib/supply";
 import {
   withErrorHandler,

@@ -2,7 +2,7 @@ import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import { batchExecute } from "../lib/db";
 import type { CronResult } from "../lib/cron-logger";
-import type { ReportCardGrade } from "@shared/types";
+import type { ReportCardGrade } from "@shared/types/report-cards";
 
 interface LatestSafetyGradeRow {
   stablecoin_id: string;

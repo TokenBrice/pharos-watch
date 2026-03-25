@@ -1,4 +1,5 @@
-import type { LiveReserveWarning, LiveReservesConfig, StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/core";
+import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {

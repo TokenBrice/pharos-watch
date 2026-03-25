@@ -1,10 +1,5 @@
-import type {
-  LiveReserveInput,
-  LiveReserveWarning,
-  LiveReservesConfig,
-  ReserveSlice,
-  StablecoinMeta,
-} from "@shared/types";
+import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { LiveReserveInput, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseEvmAddressResult } from "./evm";

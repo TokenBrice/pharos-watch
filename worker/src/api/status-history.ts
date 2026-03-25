@@ -7,7 +7,7 @@ import {
   getStatusStateSnapshot,
   listRecentStatusTransitions,
 } from "../lib/status-reliability";
-import type { StatusHistoryResponse } from "@shared/types";
+import type { StatusHistoryResponse } from "@shared/types/status";
 
 function parseTimeParam(value: string | null): number | null {
   if (!value) return null;

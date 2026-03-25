@@ -1,4 +1,5 @@
-import type { LiveReservesConfig, LiveReserveWarning, StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/core";
+import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   accumulateBucketedExposure,

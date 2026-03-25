@@ -1,4 +1,4 @@
-import type { PriceObservedAtMode } from "@shared/types";
+import type { PriceObservedAtMode } from "@shared/types/core";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import type { SourcePrice } from "./price-consensus";
 

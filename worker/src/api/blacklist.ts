@@ -22,7 +22,7 @@ import {
   type BlacklistSortDirection,
   type BlacklistSortKey,
   type BlacklistStablecoin,
-} from "@shared/types";
+} from "@shared/types/market";
 
 const VALID_STABLECOINS = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
 const VALID_CHAIN_NAMES = new Set(Object.values(CHAIN_META).map((m) => m.name));

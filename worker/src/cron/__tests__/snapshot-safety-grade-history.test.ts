@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReportCard, ReportCardGrade } from "@shared/types";
+import type { ReportCard, ReportCardGrade } from "@shared/types/report-cards";
 import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 

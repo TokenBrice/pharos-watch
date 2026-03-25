@@ -1,4 +1,5 @@
-import type { LiveReservesConfig, LiveReserveWarning, ReserveSlice, StablecoinMeta } from "@shared/types";
+import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import { fetchJsonWithRetry, getAdapterTimeout, isHttpJsonInput, normalizeSlices, reserveDegradedWarning } from "./helpers";
 import { wrapperAssetMeta } from "./wrapper-assets";

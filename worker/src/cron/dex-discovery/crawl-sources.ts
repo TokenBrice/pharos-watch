@@ -1,5 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import type { ContractDeployment } from "@shared/types";
+import type { ContractDeployment } from "@shared/types/core";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { RATE_LIMITS } from "../../lib/rate-limit";
 import { dsRateLimit, fetchDsTokenPools, getDsTrackedTokenPriceUsd } from "../../lib/dexscreener";

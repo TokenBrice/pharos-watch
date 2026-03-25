@@ -150,7 +150,7 @@ import {
   collectDewsStress,
   type CollectorContext,
 } from "../daily-digest/collectors";
-import type { DigestInputData } from "@shared/types";
+import type { DigestInputData } from "@shared/types/digest";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { computeSafetyScoresSnapshot } from "../../lib/safety-scores";
 import { fetchWithRetry } from "../../lib/fetch-retry";

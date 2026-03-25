@@ -1,6 +1,6 @@
 import { isSevereFixedPegDownside, validatePriceCandidate, type PriceValidationContext, type PriceValidationReferences } from "./price-validation";
 import { FIXED_PEG_SEVERE_DOWNSIDE_RATIO, hasDepegAuthoritativeSource } from "./pricing-source-policy";
-import type { PriceConfidence, PriceObservedAtMode } from "@shared/types";
+import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 
 const WEAK_FIXED_PEG_JUMP_QUARANTINE_BPS = 2_000;
 

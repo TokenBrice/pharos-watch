@@ -27,24 +27,28 @@ import {
 } from "@shared/lib/report-cards";
 import { loadStablecoinsCache } from "./stablecoins-cache";
 import type {
-  StablecoinData,
   StablecoinMeta,
-  DexLiquidityData,
-  BluechipRating,
-  ReportCard,
-  PegSummaryCoin,
-  DimensionKey,
   GovernanceType,
   GovernanceQuality,
-  RawDimensionInputs,
   ChainTier,
   DeploymentModel,
   CollateralQuality,
   CustodyModel,
-  ReportCardGrade,
-  RedemptionBackstopEntry,
   ReserveSlice,
-} from "@shared/types";
+} from "@shared/types/core";
+import type {
+  StablecoinData,
+  DexLiquidityData,
+  BluechipRating,
+  PegSummaryCoin,
+} from "@shared/types/market";
+import type {
+  ReportCard,
+  DimensionKey,
+  RawDimensionInputs,
+  ReportCardGrade,
+} from "@shared/types/report-cards";
+import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 
 export interface CollateralDriftEntry {
   id: string;

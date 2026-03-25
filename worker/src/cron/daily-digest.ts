@@ -1,4 +1,5 @@
-import type { DigestInputData, StablecoinData } from "@shared/types";
+import type { DigestInputData } from "@shared/types/digest";
+import type { StablecoinData } from "@shared/types/market";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins";
 import { formatCurrency } from "@shared/lib/format";

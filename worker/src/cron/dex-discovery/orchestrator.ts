@@ -1,7 +1,7 @@
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
-import type { ContractDeployment } from "@shared/types";
+import type { ContractDeployment } from "@shared/types/core";
 import { getTrackedContracts } from "../dex-liquidity/pool-helpers";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
 import type { DiscoveryMeta } from "./types";

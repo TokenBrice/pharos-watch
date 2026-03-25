@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { topologicalOrder } from "../report-cards-snapshot";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/core";
 
 function makeMeta(
   id: string,

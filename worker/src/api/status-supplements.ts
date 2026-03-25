@@ -13,7 +13,7 @@ import type {
   StatusResponse,
   StatusSectionError,
   StatusSectionErrors,
-} from "@shared/types";
+} from "@shared/types/status";
 import { computeCollateralQualityFromReserves } from "@shared/lib/report-cards";
 import { cgHeaders, cgUrl } from "../lib/coingecko";
 import { USER_AGENT } from "../lib/constants";

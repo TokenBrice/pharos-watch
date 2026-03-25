@@ -3,7 +3,7 @@ import {
   BLACKLIST_STABLECOINS,
   type BlacklistStablecoin,
   type BlacklistEventType,
-} from "@shared/types";
+} from "@shared/types/market";
 import { getTrackedStablecoin, resolveTrackedContractConfig } from "@shared/lib/tracked-stablecoin-utils";
 
 export interface ChainConfig {

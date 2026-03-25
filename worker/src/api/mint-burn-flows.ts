@@ -22,7 +22,7 @@ import {
   getGaugeBand,
 } from "../lib/mint-burn-scoring";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import type { StablecoinData } from "@shared/types";
+import type { StablecoinData } from "@shared/types/market";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {

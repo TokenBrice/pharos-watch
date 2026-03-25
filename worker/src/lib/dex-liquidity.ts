@@ -1,4 +1,4 @@
-import type { DexLiquidityData } from "@shared/types";
+import type { DexLiquidityData } from "@shared/types/market";
 
 interface DexLiquidityRow {
   stablecoin_id: string;

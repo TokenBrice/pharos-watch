@@ -1,4 +1,5 @@
-import { YieldRankingsResponseSchema, type ReportCard, type YieldRanking, type YieldRankingsResponse } from "@shared/types";
+import type { ReportCard } from "@shared/types/report-cards";
+import { YieldRankingsResponseSchema, type YieldRanking, type YieldRankingsResponse } from "@shared/types/yield";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
   addFreshnessHeaders,

@@ -14,7 +14,7 @@ import {
 } from "@shared/lib/blacklist-tracker-version";
 import { buildBlacklistChartData, computeBlacklistSummaryStats } from "@shared/lib/blacklist-aggregates";
 import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
-import type { BlacklistStablecoin } from "@shared/types";
+import type { BlacklistStablecoin } from "@shared/types/market";
 
 type SummaryRow = {
   id: string;

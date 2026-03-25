@@ -1,7 +1,7 @@
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { formatCurrency } from "@shared/lib/format";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
-import type { CauseOfDeath, DeadStablecoin } from "@shared/types";
+import type { CauseOfDeath, DeadStablecoin } from "@shared/types/market";
 import { getCache, setCache } from "./db-cache";
 import { escapeHtml } from "./telegram";
 

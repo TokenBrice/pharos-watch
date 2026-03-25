@@ -14,7 +14,7 @@ import type {
   RedemptionFeeConfidence,
   RedemptionFeeModelKind,
   RedemptionModelConfidence,
-} from "@shared/types";
+} from "@shared/types/redemption";
 import { batchExecute } from "./db";
 import {
   REDEMPTION_BACKSTOP_METHODOLOGY_PATH,

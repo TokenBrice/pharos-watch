@@ -1,4 +1,5 @@
-import type { LiveReservesConfig, StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/core";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchTextWithRetry,

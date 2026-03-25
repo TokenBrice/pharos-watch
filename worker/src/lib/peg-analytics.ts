@@ -4,7 +4,7 @@ import { computePegScore, coinTrackingStart } from "@shared/lib/peg-score";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { getDepegDewsMethodologyVersionAt } from "@shared/lib/depeg-dews-version";
 import { sumPegBuckets } from "@shared/lib/supply";
-import type { DepegEvent, PegSummaryCoin, StablecoinData } from "@shared/types";
+import type { DepegEvent, PegSummaryCoin, StablecoinData } from "@shared/types/market";
 import { type DepegRow, rowToDepegEvent } from "./depeg-helpers";
 import { getFirstSeenDates } from "./db";
 

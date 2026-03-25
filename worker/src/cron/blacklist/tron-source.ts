@@ -1,4 +1,4 @@
-import type { BlacklistEventType } from "@shared/types";
+import type { BlacklistEventType } from "@shared/types/market";
 import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
 import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
 import { TronEventsResponseSchema } from "../../lib/external-api-schemas";

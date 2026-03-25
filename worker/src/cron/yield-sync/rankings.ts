@@ -7,7 +7,7 @@
  * Pure computation counterparts live in ../yield-helpers.ts.
  */
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import type { AltYieldSource } from "@shared/types";
+import type { AltYieldSource } from "@shared/types/yield";
 import { parseYieldWarningSignals } from "../../lib/yield-utils";
 import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
 

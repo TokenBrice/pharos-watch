@@ -1,6 +1,6 @@
 import { jsonResponse, errorResponse, parseIntParam, withErrorHandler } from "../lib/api-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import type { DiscoveryCandidate } from "@shared/types";
+import type { DiscoveryCandidate } from "@shared/types/status";
 
 function parseDiscoveryStatus(value: string | null): "active" | "dismissed" | "all" | Response {
   if (value == null) {

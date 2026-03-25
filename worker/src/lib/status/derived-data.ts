@@ -6,7 +6,7 @@ import type {
   MintBurnReconciliationSummary,
   StatusResponse,
   TelegramBotStats,
-} from "@shared/types";
+} from "@shared/types/status";
 import { buildInClause } from "../db";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../stablecoins-cache";

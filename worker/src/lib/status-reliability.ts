@@ -6,7 +6,7 @@ import type {
   StatusStateInfo,
   StatusStaleness,
   StatusTransition,
-} from "@shared/types";
+} from "@shared/types/status";
 import { clamp } from "@shared/lib/math";
 
 export type StatusLevel = "healthy" | "degraded" | "stale";

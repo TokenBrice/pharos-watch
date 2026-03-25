@@ -14,7 +14,7 @@ import {
 } from "../lib/status-reliability";
 import { computeRawStatus } from "../lib/status-evaluation";
 import { loadStatusSupplements } from "./status-supplements";
-import type { StatusResponse } from "@shared/types";
+import type { StatusResponse } from "@shared/types/status";
 
 export const handleStatus = withErrorHandler(
   "status",

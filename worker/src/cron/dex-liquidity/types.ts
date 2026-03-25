@@ -73,7 +73,7 @@ import type {
   LiquidityPoolSourceFamily,
   LiquiditySourceMixEntry,
   LiquidityCoverageClass,
-} from "@shared/types";
+} from "@shared/types/market";
 
 export type { LiquidityPoolSourceFamily, LiquiditySourceMixEntry, LiquidityCoverageClass };
 

@@ -9,7 +9,8 @@ import {
   slicesFromValues,
   unverifiedFreshnessMetadata,
 } from "../helpers";
-import type { LiveReservesConfig, ReserveSlice } from "@shared/types";
+import type { ReserveSlice } from "@shared/types/core";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
 
 describe("normalizeSlices", () => {
   it("rounds to one decimal by default and adjusts the largest slice to sum to 100", () => {

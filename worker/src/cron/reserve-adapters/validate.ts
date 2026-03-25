@@ -1,4 +1,5 @@
-import type { LiveReserveWarning, ReserveSlice } from "@shared/types";
+import type { ReserveSlice } from "@shared/types/core";
+import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import type { ReserveAdapterDefinition } from "./types";
 import { isReserveRisk } from "./helpers";
 

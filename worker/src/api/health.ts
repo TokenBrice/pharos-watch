@@ -6,7 +6,7 @@ import {
 import { getCircuitStates, type CircuitRecord } from "../lib/circuit-breaker";
 import { buildInClause } from "../lib/db";
 import { CIRCUIT_SOURCE } from "../lib/constants";
-import type { HealthResponse } from "@shared/types";
+import type { HealthResponse } from "@shared/types/status";
 import {
   buildMintBurnSyncHealth,
   evaluateMintBurnFreshness,

@@ -1,16 +1,13 @@
-import type {
-  LiveReserveSnapshotMetadata,
-  LiveReserveWarning,
-  LiveReservesConfig,
-  ReserveSlice,
-  StablecoinMeta,
-} from "@shared/types";
+import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type {
   LiveReserveAdapterKey,
   LiveReserveEvidenceClass,
+  LiveReserveSnapshotMetadata,
   LiveReserveSourceModel,
   LiveReserveSourceSharingMode,
-} from "@shared/types";
+  LiveReserveWarning,
+  LiveReservesConfig,
+} from "@shared/types/live-reserves";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { LiveReserveAdapterValidationPolicy } from "@shared/lib/live-reserve-adapters";
 
