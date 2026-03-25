@@ -1560,5 +1560,75 @@
         "address": "0xb05097849bca421a3f51b249ba6cca4af4b97cb9"
       }
     ]
+  },
+  {
+    "name": "Lift Dollar",
+    "symbol": "USDL",
+    "llamaId": "244",
+    "pegCurrency": "USD",
+    "causeOfDeath": "abandoned",
+    "deathDate": "2025-12",
+    "peakMcap": 128760000,
+    "epitaph": "Yield-bearing prototype, sunset for USDG",
+    "obituary": "Paxos International launched Lift Dollar in 2024 as a yield-bearing stablecoin regulated by ADGM (Abu Dhabi), distributing daily yield via rebase from T-bill reserves. It peaked at $128.7M on Ethereum before Paxos decided to consolidate around USDG and the Global Dollar Network. Minting ceased October 8, 2025; rebasing stopped December 8, 2025; remaining balances were auto-converted to USDG. A clean, regulated wind-down — no depeg, no drama, just strategic prioritization.",
+    "sourceUrl": "https://www.paxos.com/newsroom/winding-down-usdl-lift-dollar",
+    "sourceLabel": "Paxos Newsroom",
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xbdc7c08592ee4aa51d06c27ee23d5087d65adbcd"
+      }
+    ]
+  },
+  {
+    "name": "Mountain Protocol USDM",
+    "symbol": "USDM",
+    "llamaId": "132",
+    "pegCurrency": "USD",
+    "causeOfDeath": "abandoned",
+    "deathDate": "2025-08",
+    "peakMcap": 154580000,
+    "epitaph": "Acquired into oblivion",
+    "obituary": "Mountain Protocol USDM was a regulated, yield-bearing stablecoin backed by U.S. Treasuries, earning an S&P stability assessment and peaking at $154.6M across Ethereum and Optimism. Anchorage Digital acquired Mountain Protocol in May 2025 and immediately began a three-phase wind-down: minting ceased May 12, yield dropped to zero June 11, and primary market redemption closed August 22. Remaining USDM was deposited into a Uniswap USDC pool for secondary market exit. The team and tech were absorbed; the stablecoin was not.",
+    "sourceUrl": "https://docs.mountainprotocol.com/wind-down-documentation/usdm-wind-down-overview",
+    "sourceLabel": "Mountain Protocol Docs",
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x59d9356e565ab3a36dd77763fc0d87feaf85508c"
+      }
+    ]
+  },
+  {
+    "name": "Synnax Stablecoin",
+    "symbol": "syUSD",
+    "llamaId": "236",
+    "pegCurrency": "USD",
+    "causeOfDeath": "counterparty-failure",
+    "deathDate": "2026-01",
+    "peakMcap": 3900000,
+    "epitaph": "Flash-loaned into irrelevance",
+    "obituary": "Synnax launched as the first SEI-backed stablecoin on the Sei network, allowing users to mint syUSD against SEI collateral. On January 9, 2026, an attacker exploited the protocol via a flash loan, borrowing approximately 1.96 million WSEI (~$240K) from the Synnax contract without repayment. The protocol migrated to a new contract but never recovered — trading volume dropped to $15/day and supply continued bleeding from its $3.9M peak. DefiLlama marks it dead from January 15, 2026.",
+    "sourceUrl": "https://www.techflowpost.com/en-US/newsletter/110877",
+    "sourceLabel": "TechFlow (BlockSec Alert)",
+    "contracts": [
+      {
+        "chain": "sei",
+        "address": "0x059A6b0bA116c63191182a0956cF697d0d2213eC"
+      }
+    ]
+  },
+  {
+    "name": "Saga Dollar",
+    "symbol": "D",
+    "llamaId": "308",
+    "pegCurrency": "USD",
+    "causeOfDeath": "counterparty-failure",
+    "deathDate": "2026-01",
+    "peakMcap": 6040000,
+    "epitaph": "IBC minted, IBC drained",
+    "obituary": "Saga Dollar was the native stablecoin of the SagaEVM chainlet, a Cosmos SDK-based L1 app-chain. On January 21, 2026, an attacker deployed malicious contracts that abused IBC mechanisms to mint tokens out of thin air, draining nearly $7M in USDC, yUSD, ETH, and tBTC to Ethereum mainnet. The chain was halted at block 6,593,800. Saga Dollar depegged to $0.75, and the sibling stablecoins Mustang and Colt were also wiped out. The exploit did not involve a consensus breach — just a creative reading of IBC semantics.",
+    "sourceUrl": "https://cointelegraph.com/news/saga-pauses-sagaevm-after-7m-exploit",
+    "sourceLabel": "CoinTelegraph"
   }
 ]

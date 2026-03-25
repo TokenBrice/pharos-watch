@@ -32,7 +32,7 @@ describe("tracked stablecoin metadata", () => {
     expect(commodity).toHaveLength(10);
     expect(canonicalOrder).toHaveLength(178);
     expect(usdMajor.length + usdMinor.length + nonUsd.length + commodity.length).toBe(canonicalOrder.length);
-    expect(parseDeadStablecoinAssets(deadStablecoinAsset, "dead-stablecoins")).toHaveLength(83);
+    expect(parseDeadStablecoinAssets(deadStablecoinAsset, "dead-stablecoins")).toHaveLength(87);
   });
 
   it("keeps canonical order references limited to known tracked IDs", () => {
