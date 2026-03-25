@@ -32,7 +32,7 @@ export const FILTER_GROUPS: FilterGroup[] = [
   },
 ];
 
-function parseHomepageParams(searchParams: URLSearchParams): {
+export function parseHomepageParams(searchParams: URLSearchParams): {
   groupSelections: Record<string, FilterTag | "">;
   searchQuery: string;
 } {
