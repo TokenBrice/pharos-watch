@@ -26,6 +26,7 @@ import {
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { fetchBimaSusbdSource, fetchBprotocolLqtyOnlySource, getPriceDerivedApy } from "./sources";
 import type { DlPool, ResolvedYieldEntry } from "./types";
+import { scanForNewVariants } from "./variant-scanner";
 
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
 const BIMA_USBD_ID = "usbd-bima";
@@ -395,6 +396,19 @@ export async function resolveYieldSources({
     console.log(
       `[sync-yield-data] Auto-discovery: ${autoCount} lending pools (${deterministicCount} deterministic, ${autoCount - deterministicCount} dynamic)`,
     );
+
+    // Advisory: log newly discovered wrapper tokens for manual review
+    const trackedSymbols = new Set(TRACKED_STABLECOINS.map((m) => m.symbol.toUpperCase()));
+    const knownVariantSymbols = new Set(
+      Object.values(YIELD_VARIANT_MAP).map((v) => v.variantSymbol.toUpperCase()),
+    );
+    const newVariants = scanForNewVariants(dlPools, trackedSymbols, knownVariantSymbols);
+    if (newVariants.length > 0) {
+      console.log(
+        `[sync-yield-data] Variant scanner found ${newVariants.length} new wrapper tokens:`,
+        newVariants.map((v) => `${v.variantSymbol} (${v.baseSymbol}, ${v.chain}, $${(v.tvlUsd / 1e6).toFixed(1)}M)`).join(", "),
+      );
+    }
   }
 
   return { resolved, tier1PrevRates };
