@@ -17,7 +17,11 @@ export const SEMANTIC_COLORS = {
   highlight: "#5ba3d9",  // Frost blue for highlights
 };
 
-// Grade colors (consistent with report cards)
+/**
+ * Grade-to-hex mapping for OG images. Uses project branding colors
+ * (e.g., frost-blue #5ba3d9 for B grades) which intentionally differ
+ * from GRADE_RADAR_COLORS in shared/lib/report-cards.ts (standard palette).
+ */
 export const GRADE_COLORS: Record<string, string> = {
   "A+": "#22c55e", "A": "#22c55e", "A-": "#4ade80",
   "B+": "#5ba3d9", "B": "#5ba3d9", "B-": "#7dd3fc",
