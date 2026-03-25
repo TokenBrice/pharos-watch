@@ -8864,5 +8864,221 @@
         "risk": "low"
       }
     ]
+  },
+  {
+    "id": "usdh-hermetica",
+    "name": "Hermetica USDh",
+    "symbol": "USDh",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "BTC spot holdings paired with equal short BTC perpetual futures positions on centralized exchanges, creating a delta-neutral synthetic dollar position; collateral custodied through institutional off-exchange settlement providers",
+    "pegMechanism": "Delta-neutral hedging: BTC spot long + equal BTC short perpetual futures neutralize directional exposure; mint and redeem via KYC-gated Hermetica app; DIA oracle provides reserve-backed fair value pricing on Stacks",
+    "llamaId": "242",
+    "detailProvider": "defillama",
+    "geckoId": "hermetica-usdh",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://hermetica.fi/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/HermeticaFi"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.hermetica.fi/usdh/usdh-and-susdh"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "stacks",
+        "address": "SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.usdh-token-v1",
+        "decimals": 8
+      }
+    ],
+    "canBeBlacklisted": false,
+    "collateralQuality": "exotic",
+    "custodyModel": "cex",
+    "governanceQuality": "single-entity",
+    "deploymentModel": "single-chain",
+    "reserves": [
+      {
+        "name": "BTC spot + short BTC perpetual futures (delta-neutral)",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Hermetica staking (sUSDh)",
+      "yieldType": "lending-vault"
+    }
+  },
+  {
+    "id": "usdsc-startale",
+    "name": "Startale USD",
+    "symbol": "USDSC",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Short-term U.S. Treasury bills held in bankruptcy-remote SPVs via M0 Protocol's permissioned Minter infrastructure; M0 Validators independently attest collateral sufficiency on-chain before minting",
+    "pegMechanism": "1:1 wrapper around M (M0) token — USDSC is minted by wrapping M via the Soneium-native UsdscToken contract; underlying M is backed by T-bill collateral attested by M0 Validators; redemption unwinds the wrapper back to M",
+    "detailProvider": "coingecko",
+    "geckoId": "startale-usd",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://dashboard.m0.org/",
+      "provider": "M0 Protocol (on-chain Validator attestations)"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://usd.startale.com/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/StartaleGroup"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.m0.org/"
+      },
+      {
+        "label": "Audits",
+        "url": "https://github.com/StartaleGroup/stablecoin-vault-contracts/tree/main/audits"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Singapore"
+    },
+    "contracts": [
+      {
+        "chain": "soneium",
+        "address": "0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": true,
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "deploymentModel": "single-chain",
+    "dependencies": [
+      {
+        "id": "m-m0",
+        "weight": 1.0,
+        "type": "wrapper"
+      }
+    ],
+    "reserves": [
+      {
+        "name": "Short-term U.S. Treasury Bills (via M0 Protocol)",
+        "pct": 100,
+        "risk": "very-low"
+      }
+    ]
+  },
+  {
+    "id": "ctusd-citrea",
+    "name": "Citrea USD",
+    "symbol": "ctUSD",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Short-term U.S. Treasury bills and cash, held for the benefit of token holders via M0 Protocol's bankruptcy-remote SPV structure; issued by MoonPay under U.S. Money Transmitter Licenses across 49 states (excl. New York)",
+    "pegMechanism": "1:1 fiat-backed mint and redemption via MoonPay using M0 Protocol infrastructure; reserves cryptographically attested on-chain by independent M0 Validators before minting; fiat on/off ramp via Visa, Mastercard, Apple Pay, Google Pay, and PayPal through MoonPay's 30M+ verified user base",
+    "llamaId": "350",
+    "detailProvider": "defillama",
+    "geckoId": "citrea-usd",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://dashboard.m0.org/",
+      "provider": "M0 Protocol"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://citrea.xyz/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/citrea_xyz"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.citrea.xyz/developer-documentation/citrea-usd-ctusd"
+      },
+      {
+        "label": "Blog",
+        "url": "https://www.blog.citrea.xyz/introducing-citrea-usd-ctusd-the-native-stablecoin-for-bitcoin-issued-by-moonpay-and-powered-by-m0/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "United States",
+      "license": "Money Transmitter Licenses (49 states)"
+    },
+    "contracts": [
+      {
+        "chain": "citrea",
+        "address": "0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "collateralQuality": "rwa",
+    "deploymentModel": "single-chain",
+    "reserves": [
+      {
+        "name": "Short-term U.S. Treasury Bills",
+        "pct": 85,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash and cash equivalents",
+        "pct": 15,
+        "risk": "very-low"
+      }
+    ],
+    "dependencies": [
+      {
+        "id": "m-m0",
+        "weight": 1.0,
+        "type": "mechanism"
+      }
+    ],
+    "liveReservesConfig": {
+      "adapter": "m0",
+      "version": 1,
+      "semantics": "protocol-reserve",
+      "breakerScope": "m0",
+      "display": {
+        "url": "https://dashboard.m0.org/",
+        "label": "M0 Dashboard"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://protocol-api.m0.org/graphql"
+        }
+      }
+    }
   }
 ]

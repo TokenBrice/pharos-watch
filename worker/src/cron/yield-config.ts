@@ -196,6 +196,13 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     yieldSource: "Flying Tulip staking (sftUSD)",
     yieldType: "fee-sharing",
   },
+  // USDh -> sUSDh (Hermetica staking wrapper — BTC funding rate yield)
+  "usdh-hermetica": {
+    variantSymbol: "sUSDh",
+    variantChain: "stacks",
+    yieldSource: "Hermetica staking (sUSDh)",
+    yieldType: "lending-vault",
+  },
 };
 
 /**

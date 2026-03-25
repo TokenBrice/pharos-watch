@@ -23,7 +23,7 @@ The snapshot does **not** call on-chain RPCs --- it relies entirely on DefiLlama
    - Cache age > 1200 seconds (20 min): skip snapshot and return cron `status: "degraded"` with `reason: "cache_stale"`
    - Cache age > 600 seconds (10 min): log warning but proceed (degraded freshness)
 3. Parse and validate the cached payload via `loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false })`
-4. Filter to only `PSI_ELIGIBLE_STABLECOINS` (currently 179 entries: 177 tracked + 2 shadow)
+4. Filter to only `PSI_ELIGIBLE_STABLECOINS` (currently 183 entries: 181 tracked + 2 shadow)
 5. Floor current date/time to UTC midnight:
    ```typescript
    const snapshotDate = Math.floor(

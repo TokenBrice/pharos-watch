@@ -222,6 +222,7 @@
   "cash-phantom": "/logos/316-cash.jpg",
   "tgbp-tokenised": "/logos/317-tgbp.png",
   "eurau-allunity": "/logos/319-eurau.png",
+  "usdh-hermetica": "/logos/usdh-hermetica.png",
   "usdh-native-markets": "/logos/321-usdh.png",
   "sbc-brale": "/logos/324-sbc.png",
   "euri-banking-circle": "/logos/325-euri.jpg",
@@ -291,5 +292,7 @@
   "mxnb-juno": "/logos/mxnb-juno.png",
   "gbpm-mento": "/logos/gbpm-mento.png",
   "cjpy-yamato": "/logos/cjpy-yamato.webp",
-  "usdkg-gold-dollar": "/logos/usdkg-gold-dollar.jpg"
+  "usdkg-gold-dollar": "/logos/usdkg-gold-dollar.jpg",
+  "usdsc-startale": "/logos/usdsc-startale.png",
+  "ctusd-citrea": "/logos/ctusd-citrea.jpg"
 }
