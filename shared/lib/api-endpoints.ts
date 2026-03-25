@@ -15,6 +15,8 @@ interface EndpointStatusPageActionConfig {
   destructive?: boolean;
   method: EndpointMethod;
   path?: string;
+  /** When true the action dialog offers an optional stablecoin ID input to target a single coin. */
+  acceptsStablecoinFilter?: boolean;
 }
 
 export interface EndpointDefinition {
@@ -38,6 +40,7 @@ export interface StatusPageAction {
   confirm: string;
   destructive: boolean;
   method: EndpointMethod;
+  acceptsStablecoinFilter: boolean;
 }
 
 interface EndpointMethodValidationError {
@@ -500,6 +503,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
       label: "Backfill Supply",
       confirm: "Backfill supply history snapshots?",
       method: "POST",
+      acceptsStablecoinFilter: true,
     },
   },
   {
@@ -734,6 +738,7 @@ export function getStatusPageActions(): StatusPageAction[] {
         confirm: endpoint.statusPageAction.confirm,
         destructive: endpoint.statusPageAction.destructive ?? false,
         method: endpoint.statusPageAction.method,
+        acceptsStablecoinFilter: endpoint.statusPageAction.acceptsStablecoinFilter ?? false,
       },
     ];
   });

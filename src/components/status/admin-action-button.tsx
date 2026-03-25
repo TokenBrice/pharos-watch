@@ -41,6 +41,7 @@ export function AdminActionButton({
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [stablecoinFilter, setStablecoinFilter] = useState("");
 
   const handleConfirm = async () => {
     setLoading(true);
@@ -48,6 +49,12 @@ export function AdminActionButton({
     setError(null);
 
     try {
+      const trimmedFilter = stablecoinFilter.trim();
+      const effectivePath =
+        action.acceptsStablecoinFilter && trimmedFilter
+          ? `${action.path}${action.path.includes("?") ? "&" : "?"}stablecoin=${encodeURIComponent(trimmedFilter)}`
+          : action.path;
+
       const requestInit = buildAdminFetchInit({ method: action.method });
       const headers = new Headers(requestInit.headers);
       headers.set(
@@ -56,7 +63,7 @@ export function AdminActionButton({
           ? crypto.randomUUID()
           : `${action.path}:${Date.now()}`,
       );
-      const res = await fetch(buildRequestUrl(buildAdminApiPath(action.path, adminAccess)), {
+      const res = await fetch(buildRequestUrl(buildAdminApiPath(effectivePath, adminAccess)), {
         ...requestInit,
         headers,
       });
@@ -109,6 +116,7 @@ export function AdminActionButton({
         if (isOpen) {
           setResult(null);
           setError(null);
+          setStablecoinFilter("");
         }
       }}
     >
@@ -126,6 +134,22 @@ export function AdminActionButton({
           <DialogTitle>{action.label}</DialogTitle>
           <DialogDescription>{action.confirm}</DialogDescription>
         </DialogHeader>
+        {action.acceptsStablecoinFilter && (
+          <div className="space-y-1">
+            <label htmlFor="stablecoin-filter" className="text-xs font-medium text-muted-foreground">
+              Stablecoin ID <span className="font-normal">(optional — leave empty for batch)</span>
+            </label>
+            <input
+              id="stablecoin-filter"
+              type="text"
+              value={stablecoinFilter}
+              onChange={(e) => setStablecoinFilter(e.target.value)}
+              placeholder="e.g. usdt-tether"
+              className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
+              disabled={loading}
+            />
+          </div>
+        )}
         {result && <pre className="max-h-60 overflow-auto rounded bg-muted p-3 text-xs">{result}</pre>}
         {error && (
           <pre className="max-h-60 overflow-auto rounded bg-red-500/10 p-3 text-xs text-red-700 dark:text-red-400">

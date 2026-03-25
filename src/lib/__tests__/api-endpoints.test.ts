@@ -127,6 +127,7 @@ describe("api endpoint registry", () => {
         confirm: "Trigger daily digest? Bypasses 1h dedup window.",
         destructive: false,
         method: "POST",
+        acceptsStablecoinFilter: false,
       },
       {
         label: "Reset Blacklist Sync",
@@ -134,6 +135,7 @@ describe("api endpoint registry", () => {
         confirm: "Reset blacklist sync? Rolls back EVM 50k blocks, Tron 7 days.",
         destructive: true,
         method: "POST",
+        acceptsStablecoinFilter: false,
       },
       {
         label: "Debug Sync State",
@@ -141,6 +143,7 @@ describe("api endpoint registry", () => {
         confirm: "Fetch sync state debug dump?",
         destructive: false,
         method: "GET",
+        acceptsStablecoinFilter: false,
       },
       {
         label: "Remediate Blacklist Gaps",
@@ -148,6 +151,7 @@ describe("api endpoint registry", () => {
         confirm: "Run targeted blacklist amount-gap remediation? Prefer dry-run first.",
         destructive: false,
         method: "POST",
+        acceptsStablecoinFilter: false,
       },
       {
         label: "Backfill Depegs",
@@ -155,6 +159,7 @@ describe("api endpoint registry", () => {
         confirm: "Run depeg backfill? This may take several minutes.",
         destructive: false,
         method: "POST",
+        acceptsStablecoinFilter: false,
       },
       {
         label: "Backfill Supply",
@@ -162,6 +167,7 @@ describe("api endpoint registry", () => {
         confirm: "Backfill supply history snapshots?",
         destructive: false,
         method: "POST",
+        acceptsStablecoinFilter: true,
       },
       {
         label: "Backfill CG Prices",
@@ -169,6 +175,7 @@ describe("api endpoint registry", () => {
         confirm: "Backfill CoinGecko prices?",
         destructive: false,
         method: "POST",
+        acceptsStablecoinFilter: false,
       },
       {
         label: "Backfill PSI",
@@ -176,6 +183,7 @@ describe("api endpoint registry", () => {
         confirm: "Backfill stability index history?",
         destructive: false,
         method: "POST",
+        acceptsStablecoinFilter: false,
       },
       {
         label: "Backfill Mint/Burn Prices",
@@ -183,6 +191,7 @@ describe("api endpoint registry", () => {
         confirm: "Backfill mint/burn USD prices for NULL events?",
         destructive: false,
         method: "POST",
+        acceptsStablecoinFilter: false,
       },
       {
         label: "Backfill Mint/Burn",
@@ -190,6 +199,7 @@ describe("api endpoint registry", () => {
         confirm: "Run mint/burn backfill job?",
         destructive: false,
         method: "POST",
+        acceptsStablecoinFilter: false,
       },
       {
         label: "Reclassify Roundtrips",
@@ -197,6 +207,7 @@ describe("api endpoint registry", () => {
         confirm: "Reclassify atomic roundtrips in mint/burn data?",
         destructive: false,
         method: "POST",
+        acceptsStablecoinFilter: false,
       },
       {
         label: "Audit Depegs",
@@ -204,6 +215,7 @@ describe("api endpoint registry", () => {
         confirm: "Run depeg history audit (dry-run)?",
         destructive: false,
         method: "GET",
+        acceptsStablecoinFilter: false,
       },
       {
         label: "Backfill DEWS",
@@ -211,6 +223,7 @@ describe("api endpoint registry", () => {
         confirm: "Run DEWS historical backfill validation?",
         destructive: false,
         method: "GET",
+        acceptsStablecoinFilter: false,
       },
     ]);
   });
