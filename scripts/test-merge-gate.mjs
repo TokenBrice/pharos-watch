@@ -16,6 +16,7 @@ export const NON_NEGOTIABLE_VALIDATE_COMMANDS = [
   "npm run check:worker-boundary",
   "npm run check:migrations",
   "npm run check:cron-sync",
+  "npm run check:cron-connections",
   "npm run check:doc-counts",
   "npm run check:doc-sync",
   "npm run check:duplicate-exports",
@@ -40,6 +41,7 @@ export const PAGES_VALIDATE_COMMANDS = [
 const SKIPPABLE_CHECKS = new Map([
   ["npm run check:migrations", ["worker/migrations/"]],
   ["npm run check:cron-sync", ["shared/lib/cron-jobs.", "worker/wrangler.toml"]],
+  ["npm run check:cron-connections", ["shared/lib/cron-jobs.", "worker/wrangler.toml"]],
   ["npm run check:doc-counts", ["shared/lib/stablecoins/", "docs/"]],
   ["npm run check:redemption-backstops", ["shared/lib/redemption-backstop-configs/"]],
 ]);

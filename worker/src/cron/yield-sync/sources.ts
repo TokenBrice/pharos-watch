@@ -175,8 +175,8 @@ export async function fetchOnChainRates(
     };
   }
 
-  // Fetch vault exchange rates in batches of 4 to stay within the 6-connection
-  // pool shared with co-scheduled jobs (e.g. sync-dex-liquidity).
+  // Fetch vault exchange rates in batches of 4; half-hourly slot jobs run
+  // sequentially so the full 6-connection pool is available at this point.
   const RATE_BATCH_SIZE = 4;
   type RateResult = { id: string; rate: number; status: "ok" } | { id: string; status: "no-rpc" | "null" | "error"; error?: string };
   const allResults: PromiseSettledResult<RateResult>[] = [];

@@ -9,10 +9,11 @@ import {
 
 describe("buildCommandPlan", () => {
   it("always runs the shared CI validate core, even for docs-only changes", () => {
-    // docs/ triggers check:doc-counts; migrations, cron-sync, redemption-backstops are skipped
+    // docs/ triggers check:doc-counts; migrations, cron-sync, cron-connections, redemption-backstops are skipped
     const skipped = new Set([
       "npm run check:migrations",
       "npm run check:cron-sync",
+      "npm run check:cron-connections",
       "npm run check:redemption-backstops",
     ]);
     expect(buildCommandPlan(["docs/testing.md"])).toEqual(
@@ -24,10 +25,11 @@ describe("buildCommandPlan", () => {
   });
 
   it("adds build and seo checks for frontend export changes", () => {
-    // src/app/page.tsx doesn't match any skippable prefix → all 4 skippable checks are skipped
+    // src/app/page.tsx doesn't match any skippable prefix → all 5 skippable checks are skipped
     const skipped = new Set([
       "npm run check:migrations",
       "npm run check:cron-sync",
+      "npm run check:cron-connections",
       "npm run check:doc-counts",
       "npm run check:redemption-backstops",
     ]);
@@ -41,6 +43,7 @@ describe("buildCommandPlan", () => {
     const skipped = new Set([
       "npm run check:migrations",
       "npm run check:cron-sync",
+      "npm run check:cron-connections",
       "npm run check:doc-counts",
       "npm run check:redemption-backstops",
     ]);
@@ -66,6 +69,7 @@ describe("buildCommandPlan", () => {
     const skipped = new Set([
       "npm run check:migrations",
       "npm run check:cron-sync",
+      "npm run check:cron-connections",
       "npm run check:doc-counts",
       "npm run check:redemption-backstops",
     ]);
@@ -76,10 +80,11 @@ describe("buildCommandPlan", () => {
   });
 
   it("keeps the validate core stable when worker files all change together", () => {
-    // worker/src/* doesn't match any skippable prefix → all 4 skippable checks are skipped
+    // worker/src/* doesn't match any skippable prefix → all 5 skippable checks are skipped
     const skipped = new Set([
       "npm run check:migrations",
       "npm run check:cron-sync",
+      "npm run check:cron-connections",
       "npm run check:doc-counts",
       "npm run check:redemption-backstops",
     ]);
@@ -95,7 +100,7 @@ describe("buildCommandPlan", () => {
   });
 
   it("runs skippable checks when their relevant files change", () => {
-    // worker/migrations triggers check:migrations; worker/wrangler.toml triggers check:cron-sync
+    // worker/migrations triggers check:migrations; worker/wrangler.toml triggers check:cron-sync + check:cron-connections
     // docs/ triggers check:doc-counts; shared/lib/redemption-backstop-configs/ triggers check:redemption-backstops
     // None of these match Pages-deploy prefixes (worker/* and docs/* are not in PAGES_CHANGE_PREFIXES)
     const allSkippableFiles = [
@@ -131,6 +136,7 @@ describe("buildCommandPlan", () => {
       "npm run check:worker-boundary",
       "npm run check:migrations",
       "npm run check:cron-sync",
+      "npm run check:cron-connections",
       "npm run check:doc-counts",
       "npm run check:doc-sync",
       "npm run check:duplicate-exports",
