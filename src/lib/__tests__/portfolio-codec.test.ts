@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   encodePortfolioHoldings,
+  isPortfolioHolding,
   migratePortfolioIds,
   parsePortfolioUrlParam,
 } from "../portfolio-codec";
@@ -32,5 +33,48 @@ describe("portfolio codec", () => {
       { coinId: "usdt-tether", amount: 50 },
       { coinId: "usdc-circle", amount: 50 },
     ]);
+  });
+});
+
+describe("parsePortfolioUrlParam edge cases", () => {
+  it("returns empty array for empty string", () => {
+    expect(parsePortfolioUrlParam("")).toEqual([]);
+  });
+
+  it("filters out entries with non-numeric amounts", () => {
+    const result = parsePortfolioUrlParam("usdc-circle:abc");
+    expect(result).toEqual([]);
+  });
+
+  it("filters out entries with zero or negative amounts", () => {
+    const result = parsePortfolioUrlParam("usdc-circle:0,usdt-tether:-5");
+    expect(result).toEqual([]);
+  });
+});
+
+describe("encodePortfolioHoldings edge cases", () => {
+  it("returns empty string for empty holdings", () => {
+    expect(encodePortfolioHoldings([])).toBe("");
+  });
+});
+
+describe("isPortfolioHolding", () => {
+  it("accepts valid holdings", () => {
+    expect(isPortfolioHolding({ coinId: "usdc-circle", amount: 100 })).toBe(true);
+  });
+
+  it("rejects missing coinId", () => {
+    expect(isPortfolioHolding({ amount: 100 })).toBe(false);
+  });
+
+  it("rejects non-positive amount", () => {
+    expect(isPortfolioHolding({ coinId: "usdc-circle", amount: 0 })).toBe(false);
+    expect(isPortfolioHolding({ coinId: "usdc-circle", amount: -1 })).toBe(false);
+  });
+
+  it("rejects non-object values", () => {
+    expect(isPortfolioHolding(null)).toBe(false);
+    expect(isPortfolioHolding("string")).toBe(false);
+    expect(isPortfolioHolding(42)).toBe(false);
   });
 });
