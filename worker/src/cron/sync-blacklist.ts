@@ -154,21 +154,47 @@ async function enrichRowBalances(
     } else if (config.chain.evmChainId != null) {
       counters.attempted++;
       try {
-        markRecoveryAttempt(row, "chain_rpc", null);
-        const amount = await fetchEvmTokenBalance(
-          config,
-          row.address,
-          blockForBalance,
-          etherscanApiKey,
-          drpcApiKey,
-          etherscanLimiter,
-          budget,
-          signal,
-          chainRpcs,
-        );
+        let amount: number | null = null;
+        let source: "event" | "historical_balance" = "historical_balance";
+
+        // For destroy events, try extracting the amount from the tx receipt first.
+        // This is more reliable than balanceOf for contracts like PAXG that override
+        // balanceOf to return 0 for frozen addresses.
+        if (row.event_type === "destroy") {
+          markRecoveryAttempt(row, "event_receipt", null);
+          amount = await fetchDestroyAmountFromLog(
+            config.chain.evmChainId,
+            config.contractAddress,
+            row.tx_hash,
+            row.address,
+            config,
+            etherscanApiKey,
+            etherscanLimiter,
+            budget,
+            signal,
+          );
+          if (amount != null) source = "event";
+        }
+
+        // Fall back to balanceOf at block-1
+        if (amount == null) {
+          markRecoveryAttempt(row, "chain_rpc", null);
+          amount = await fetchEvmTokenBalance(
+            config,
+            row.address,
+            blockForBalance,
+            etherscanApiKey,
+            drpcApiKey,
+            etherscanLimiter,
+            budget,
+            signal,
+            chainRpcs,
+          );
+        }
+
         row.amount_native = amount;
         row.amount_usd_at_event = computeBlacklistAmountUsdAtEvent(config.stablecoin, amount);
-        row.amount_source = "historical_balance";
+        row.amount_source = source;
         row.amount_status = amount != null ? "resolved" : "provider_failed";
         row.amount_last_error_class = amount != null ? null : "provider_null";
         if (amount != null) {
@@ -190,10 +216,15 @@ async function enrichRowBalances(
 
 // Re-fetch event log from Etherscan to extract the amount from event data.
 // Used for destroy events where balanceOf is unreliable (especially on L2s).
+// ERC-20 Transfer(address indexed from, address indexed to, uint256 value)
+const ERC20_TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+const ZERO_ADDRESS_TOPIC = "0x0000000000000000000000000000000000000000000000000000000000000000";
+
 async function fetchDestroyAmountFromLog(
   evmChainId: number,
   contractAddress: string,
   txHash: string,
+  affectedAddress: string,
   config: ContractEventConfig,
   apiKey: string | null,
   rateLimit: RateLimitedFetch,
@@ -221,7 +252,7 @@ async function fetchDestroyAmountFromLog(
 
     if (!json?.result?.logs) return null;
 
-    // Find the destroy event log in the receipt
+    // Strategy 1: Find a destroy event log that carries an amount natively
     for (const log of json.result.logs) {
       if (log.address.toLowerCase() !== contractAddress.toLowerCase()) continue;
       const matchingEvent = getBlacklistEventByTopic(config, log.topics[0]);
@@ -235,6 +266,24 @@ async function fetchDestroyAmountFromLog(
         return log.data.length > 66 ? decodeUint256("0x" + log.data.slice(66), config.decimals) : null;
       }
     }
+
+    // Strategy 2: For destroy events without an amount field (e.g. PAXG/pyUSD
+    // FrozenAddressWiped), look for a co-emitted ERC-20 Transfer burn event
+    // in the same receipt: Transfer(from=affectedAddress, to=0x0, amount).
+    // Some contracts (PAXG) override balanceOf to return 0 for frozen addresses,
+    // making balance lookups unreliable — the Transfer burn is authoritative.
+    const paddedAddress = "0x000000000000000000000000" + (affectedAddress.startsWith("0x") ? affectedAddress.slice(2) : affectedAddress).toLowerCase();
+    for (const log of json.result.logs) {
+      if (log.address.toLowerCase() !== contractAddress.toLowerCase()) continue;
+      if (log.topics[0]?.toLowerCase() !== ERC20_TRANSFER_TOPIC) continue;
+      if (log.topics.length < 3) continue;
+      if (log.topics[1]?.toLowerCase() !== paddedAddress) continue;
+      if (log.topics[2]?.toLowerCase() !== ZERO_ADDRESS_TOPIC) continue;
+      if (log.data.length >= 66) {
+        return decodeUint256(log.data, config.decimals);
+      }
+    }
+
     return null;
   } catch (e) {
     console.warn("[sync-blacklist] fetchDestroyAmountFromLog failed:", e);
@@ -339,6 +388,7 @@ async function backfillAmounts(
         config.chain.evmChainId,
         config.contractAddress,
         row.tx_hash,
+        row.address,
         config,
         etherscanApiKey,
         etherscanLimiter,
