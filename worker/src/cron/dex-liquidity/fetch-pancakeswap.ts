@@ -11,7 +11,6 @@ const SUBGRAPH_TIMEOUT_MS = 15_000;
 const PANCAKESWAP_V3_SUBGRAPHS: Record<string, { chain: string; subgraphId: string }> = {
   bsc: { chain: "bsc", subgraphId: "Hv1GncLY5docZoGtXjo4kwbTvxm3MAhVZqBZE4sUT9eZ" },
   ethereum: { chain: "ethereum", subgraphId: "CJYGNhb7RvnhfBDjqpRnD3oxgyhibzc7fkAMa38YV3oS" },
-  arbitrum: { chain: "arbitrum", subgraphId: "251MHFNN1rwjErXD2efWMpNS73SANZN8Ua192zw6iXve" },
   base: { chain: "base", subgraphId: "BHWNsedAHtmTCzXxCCDfhPmm6iN9rxUhoRHdHKyujic3" },
 };
 
