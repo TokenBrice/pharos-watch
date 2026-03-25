@@ -1542,5 +1542,23 @@
         "address": "0x0000206329b97db379d5e1bf586bbdb969c63274"
       }
     ]
+  },
+  {
+    "name": "Float Protocol",
+    "symbol": "FLOAT",
+    "pegCurrency": "USD",
+    "causeOfDeath": "abandoned",
+    "deathDate": "2025-07",
+    "peakMcap": 4950000,
+    "epitaph": "The golden ratio experiment",
+    "obituary": "Float Protocol launched in 2021 with an ambitious vision: a floating-rate stablecoin backed by ETH, with a target price initialized at $1.618 (the golden ratio). Supply expanded and contracted via Dutch auctions using ETH and the BANK governance token. The protocol peaked at ~$5M market cap but never gained meaningful adoption. By 2025, the anonymous team had vanished, the website went dark, GitHub fell dormant, and supply froze at ~$654K. The contracts remain on Ethereum — an immutable monument to the idea that stability doesn't require a peg.",
+    "sourceUrl": "https://web.archive.org/web/2021*/floatprotocol.com",
+    "sourceLabel": "Wayback Machine",
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xb05097849bca421a3f51b249ba6cca4af4b97cb9"
+      }
+    ]
   }
 ]

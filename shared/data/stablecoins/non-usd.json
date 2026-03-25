@@ -2931,5 +2931,309 @@
         "sourceUrl": "https://www.coindesk.com/business/2026/03/02/eu-banks-euro-pegged-stablecoin-in-talks-with-crypto-exchanges-to-ensure-liquidity"
       }
     ]
+  },
+  {
+    "id": "brla-brla-digital",
+    "name": "BRLA Digital",
+    "symbol": "BRLA",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "BRL",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Brazilian government bonds (titulos publicos) and BRL cash held in regulated custody in Brazil; reserves audited monthly by a third-party firm with attestations published on a transparency page",
+    "pegMechanism": "Fiat-backed 1:1 peg to the Brazilian Real; mint/redeem 1:1 for BRL through Avenia (formerly BRLA Digital) platform after KYC; native multichain deployment without wrapping or bridge dependencies",
+    "llamaId": "365",
+    "detailProvider": "defillama",
+    "geckoId": "brla-digital-brla",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a",
+      "provider": "Avenia"
+    },
+    "links": [
+      { "label": "Website", "url": "https://avenia.io/brla" },
+      { "label": "Twitter", "url": "https://x.com/BRLAdigital" },
+      { "label": "GitHub", "url": "https://github.com/Ada-Capital" }
+    ],
+    "jurisdiction": {
+      "country": "Brazil"
+    },
+    "contracts": [
+      { "chain": "polygon", "address": "0xe6a537a407488807f0bbeb0038b79004f19dddfb", "decimals": 18 },
+      { "chain": "gnosis", "address": "0xfecb3f7c54e2caae9dc6ac9060a822d47e053760", "decimals": 18 },
+      { "chain": "celo", "address": "0xfecb3f7c54e2caae9dc6ac9060a822d47e053760", "decimals": 18 },
+      { "chain": "moonbeam", "address": "0xfeb25f3fddad13f82c4d6dbc1481516f62236429", "decimals": 18 }
+    ],
+    "canBeBlacklisted": true,
+    "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-unregulated",
+    "collateralQuality": "rwa",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      { "name": "Brazilian government bonds and BRL cash in regulated custody", "pct": 100, "risk": "low" }
+    ]
+  },
+  {
+    "id": "rai-reflexer",
+    "name": "Rai Reflex Index",
+    "symbol": "RAI",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "VAR",
+      "governance": "decentralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "ETH only; overcollateralized CDPs ('Safes') with ~130%+ collateral ratio; a PID controller continuously adjusts the redemption rate to dampen market price deviations from the moving redemption price",
+    "pegMechanism": "Non-pegged floating-rate stablecoin: a PI controller adjusts the redemption price up or down based on market price deviation, creating an incentive to arbitrage the gap; users mint RAI by depositing ETH into Safes and repay their debt (burning RAI) to reclaim collateral; undercollateralized Safes are liquidated via English auctions",
+    "llamaId": "40",
+    "detailProvider": "defillama",
+    "geckoId": "rai",
+    "links": [
+      { "label": "Website", "url": "https://reflexer.finance/" },
+      { "label": "Twitter", "url": "https://x.com/reflexerfinance" },
+      { "label": "Docs", "url": "https://docs.reflexer.finance/" },
+      { "label": "GitHub", "url": "https://github.com/reflexer-labs" }
+    ],
+    "contracts": [
+      { "chain": "ethereum", "address": "0x03ab458634910aad20ef5f1c8ee96f1d6ac54919", "decimals": 18 },
+      { "chain": "optimism", "address": "0x7fb688ccf682d58f86d7e38e03f9d22e7705448b", "decimals": 18 },
+      { "chain": "arbitrum", "address": "0xaef5bbcbfa438519a5ea80b4c7181b4e78d419f2", "decimals": 18 },
+      { "chain": "polygon", "address": "0x00e5646f60ac6fb446f621d146b6e1886f002905", "decimals": 18 },
+      { "chain": "gnosis", "address": "0xd7a28aa9c470e7e9d8c676bcd5dd2f40c5683afa", "decimals": 18 },
+      { "chain": "avalanche", "address": "0x97cd1cfe2ed5712660bb6c14053c0ecb031bff7d", "decimals": 18 }
+    ],
+    "canBeBlacklisted": false,
+    "deploymentModel": "canonical-bridge",
+    "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      { "name": "ETH", "pct": 100, "risk": "very-low" }
+    ]
+  },
+  {
+    "id": "silk-shade-protocol",
+    "name": "SILK",
+    "symbol": "SILK",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "VAR",
+      "governance": "decentralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Crypto assets via ShadeLend overcollateralized vaults (ATOM, SCRT, stablecoins like USDC, SHD governance token) plus stablecoin redemption pools; targets 100-150% system-wide collateralization ratio",
+    "pegMechanism": "Basket peg tracking GDP-weighted currencies of the top 20 economies (USD 30%, CNY 22%, EUR 14%, JPY 7%, GBP 4%, etc.); stability maintained via overcollateralized lending (ShadeLend), redemption pools, bounded minting, collateral liquidations, and ShadeDAO bond mechanism",
+    "llamaId": "113",
+    "detailProvider": "defillama",
+    "geckoId": "silk-bcec1136-561c-4706-a42c-8b67d0d7f7d2",
+    "links": [
+      { "label": "Website", "url": "https://app.shadeprotocol.io" },
+      { "label": "Twitter", "url": "https://x.com/Shade_Protocol" },
+      { "label": "Docs", "url": "https://docs.shadeprotocol.io/shade-protocol/" },
+      { "label": "GitHub", "url": "https://github.com/securesecrets/shade" }
+    ],
+    "contracts": [
+      { "chain": "secret", "address": "secret1fl449muk5yq8dlad7a22nje4p5d2pnsgymhjfd", "decimals": 6 }
+    ],
+    "canBeBlacklisted": false,
+    "chainTier": "unproven",
+    "deploymentModel": "single-chain",
+    "custodyModel": "onchain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      { "name": "Overcollateralized vault collateral (ATOM, SCRT, stablecoins)", "pct": 70, "risk": "medium" },
+      { "name": "Stablecoin redemption pools (USDC, other stables)", "pct": 20, "risk": "low" },
+      { "name": "SHD governance token (bounded minting backing)", "pct": 10, "risk": "high" }
+    ]
+  },
+  {
+    "id": "idrx-idrx",
+    "name": "IDRX",
+    "symbol": "IDRX",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "IDR",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Indonesian rupiah (IDR) fiat reserves and government bonds held 1:1 by PT IDRX Indo Inovasi; CertiK-audited smart contracts with multisig + timelock controls",
+    "pegMechanism": "Direct 1:1 mint and redemption of IDRX for Indonesian rupiah through IDRX platform after KYC verification; native multichain deployment with built-in bridge functions",
+    "detailProvider": "coingecko",
+    "geckoId": "idrx",
+    "links": [
+      { "label": "Website", "url": "https://idrx.co/" },
+      { "label": "Docs", "url": "https://docs.idrx.co/" },
+      { "label": "Twitter", "url": "https://x.com/idrx_co" }
+    ],
+    "jurisdiction": {
+      "country": "Indonesia"
+    },
+    "contracts": [
+      { "chain": "polygon", "address": "0x649a2da7b28e0d54c13d5eff95d3a660652742cc", "decimals": 2 },
+      { "chain": "base", "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22", "decimals": 2 },
+      { "chain": "bsc", "address": "0x649a2da7b28e0d54c13d5eff95d3a660652742cc", "decimals": 2 },
+      { "chain": "klaytn", "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22", "decimals": 2 },
+      { "chain": "gnosis", "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22", "decimals": 2 },
+      { "chain": "etherlink", "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22", "decimals": 2 },
+      { "chain": "worldchain", "address": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22", "decimals": 2 },
+      { "chain": "solana", "address": "idrxZcP8xiKkYk6XGD4uz1dxEYCWSgKDHqgjsBbwDur", "decimals": 2 }
+    ],
+    "canBeBlacklisted": true,
+    "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-unregulated",
+    "collateralQuality": "rwa",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      { "name": "IDR fiat reserves and government bonds", "pct": 100, "risk": "low" }
+    ]
+  },
+  {
+    "id": "mxnb-juno",
+    "name": "MXNB",
+    "symbol": "MXNB",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "MXN",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Mexican peso (MXN) fiat reserves and cash-equivalent assets held across multiple regulated financial institutions in Mexico; quarterly third-party attestation reports published following International Valuation Standards (ASA/FASB); operated through NVIO PAGOS MEXICO SAPI DE CV, a licensed IFPE",
+    "pegMechanism": "1:1 fiat-collateralized; issuance via SPEI deposit or Bitso transfer to Juno account; redemption via API burning tokens and settling to linked bank account; reserves audited quarterly to confirm they exceed circulating supply",
+    "detailProvider": "coingecko",
+    "geckoId": "mxnb",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://mxnb.mx/transparency"
+    },
+    "links": [
+      { "label": "Website", "url": "https://mxnb.mx/" },
+      { "label": "Twitter", "url": "https://x.com/mxnb_token" },
+      { "label": "Docs", "url": "https://docs.bitso.com/juno" },
+      { "label": "Transparency", "url": "https://mxnb.mx/transparency" }
+    ],
+    "jurisdiction": {
+      "country": "Mexico",
+      "regulator": "CNBV"
+    },
+    "contracts": [
+      { "chain": "ethereum", "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa", "decimals": 6 },
+      { "chain": "polygon", "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa", "decimals": 6 },
+      { "chain": "arbitrum", "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa", "decimals": 6 },
+      { "chain": "avalanche", "address": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa", "decimals": 6 }
+    ],
+    "canBeBlacklisted": true,
+    "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-regulated",
+    "collateralQuality": "rwa",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      { "name": "MXN fiat reserves and cash-equivalents at Mexican financial institutions", "pct": 100, "risk": "low" }
+    ]
+  },
+  {
+    "id": "gbpm-mento",
+    "name": "Mento British Pound",
+    "symbol": "GBPm",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "GBP",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "USDm (Mento Dollar) deposited as sole collateral into Liquity v2-style CDPs; USDm is itself Reserve-backed by sUSDS, EURC, CELO, stETH, USDT, USDC, and ETH",
+    "pegMechanism": "Liquity v2-style CDPs: users lock USDm collateral and borrow GBPm at oracle-enforced GBP/USD rates; redemptions allow GBPm holders to claim USDm from the least-collateralized troves; FPMM pools provide secondary liquidity at oracle price; circuit breakers halt trading during FX market closures or extreme deviation",
+    "llamaId": "358",
+    "detailProvider": "defillama",
+    "geckoId": "celo-british-pound",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://reserve.mento.org/",
+      "provider": "Mento Reserve (on-chain, publicly verifiable)"
+    },
+    "links": [
+      { "label": "Website", "url": "https://www.mento.org/" },
+      { "label": "Twitter", "url": "https://x.com/MentoLabs" },
+      { "label": "Docs", "url": "https://docs.mento.org/mento-v3" },
+      { "label": "GitHub", "url": "https://github.com/mento-protocol" }
+    ],
+    "contracts": [
+      { "chain": "celo", "address": "0xccf663b1ff11028f0b19058d0f7b674004a40746", "decimals": 18 }
+    ],
+    "canBeBlacklisted": false,
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "custodyModel": "onchain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      { "name": "USDm (Mento Dollar, Reserve-backed stablecoin)", "pct": 100, "risk": "medium" }
+    ],
+    "dependencies": [
+      { "id": "cusd-celo", "weight": 1.0, "type": "collateral" }
+    ],
+    "liveReservesConfig": {
+      "adapter": "mento",
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "mento-reserve",
+      "display": {
+        "url": "https://reserve.mento.org/",
+        "label": "Reserve"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "http-html",
+          "url": "https://reserve.mento.org/"
+        }
+      }
+    }
+  },
+  {
+    "id": "cjpy-yamato",
+    "name": "Convertible JPY Token",
+    "symbol": "CJPY",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "JPY",
+      "governance": "decentralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "ETH only; 130% minimum collateralization ratio at issuance (110% MCR for liquidation); one-time borrowing fee with no accrued interest",
+    "pegMechanism": "Overcollateralized ETH CDPs (pledges) with game-theory peg maintenance: (1) hard floor via on-chain redemption of 1 CJPY for 1 JPY worth of ETH from the riskiest pledge; (2) subrogation mechanism uses accumulated protocol fees to automatically repay positions below 100% health rate; (3) non-forced liquidation where any user can redeem debt positions below 130% using market-purchased CJPY",
+    "llamaId": "179",
+    "detailProvider": "defillama",
+    "geckoId": "convertible-jpy-token",
+    "links": [
+      { "label": "Website", "url": "https://app.yamato.fi/" },
+      { "label": "Twitter", "url": "https://x.com/YamatoProtocol" },
+      { "label": "Docs", "url": "https://docs.yamato.fi/v/en" },
+      { "label": "GitHub", "url": "https://github.com/DeFiGeek-Community/yamato" }
+    ],
+    "contracts": [
+      { "chain": "ethereum", "address": "0x1cfa5641c01406ab8ac350ded7d735ec41298372", "decimals": 18 }
+    ],
+    "canBeBlacklisted": false,
+    "deploymentModel": "single-chain",
+    "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      { "name": "ETH", "pct": 100, "risk": "very-low" }
+    ]
   }
 ]

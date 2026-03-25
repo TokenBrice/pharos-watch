@@ -95,6 +95,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   noble:     { name: "Noble",   explorerUrl: "https://www.mintscan.io/noble",    evmChainId: null,  type: "other", logoPath: "/chains/noble.png"     },
   osmosis:   { name: "Osmosis", explorerUrl: "https://www.mintscan.io/osmosis",  evmChainId: null,  type: "other", logoPath: "/chains/osmosis.png"   },
   mantra:    { name: "MANTRA",  explorerUrl: "https://www.mintscan.io/mantra",   evmChainId: null,  type: "other", logoPath: "/chains/mantra.png"    },
+  secret:    { name: "Secret Network", explorerUrl: "https://www.mintscan.io/secret", evmChainId: null, type: "other", logoPath: "/chains/secret.png" },
   provenance:{ name: "Provenance",explorerUrl: "https://www.mintscan.io/provenance", evmChainId: null, type: "other", logoPath: "/chains/provenance.png" },
   hydration: { name: "Hydration",explorerUrl: "https://hydration.subscan.io",    evmChainId: null,  type: "other", logoPath: "/chains/hydration.png" },
   injective:      { name: "Injective",       explorerUrl: "https://explorer.injective.network",           evmChainId: null,     type: "other", logoPath: "/chains/injective.png"      },
@@ -113,6 +114,7 @@ export const CHAIN_ALIASES: Record<string, string> = {
   "XRPL": "xrpl",
   "Bsquared": "bsquared",
   "Kaia": "klaytn",  // Klaytn rebranded to Kaia
+  "Secret": "secret",
 };
 
 /**

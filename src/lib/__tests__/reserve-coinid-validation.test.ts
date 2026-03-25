@@ -52,6 +52,10 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "ftusd-flying-tulip::USDT (Aave lending positions)::USDT",
     "ftUSD uses dependency modeling for its USDC/USDT collateral exposure.",
   ],
+  [
+    "silk-shade-protocol::Stablecoin redemption pools (USDC, other stables)::USDC",
+    "SILK redemption pools are a mixed basket of stablecoins on Secret Network; no single tracked coinId applies.",
+  ],
 ]);
 
 describe("reserve coinId validation", () => {
