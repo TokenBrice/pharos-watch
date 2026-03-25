@@ -3,9 +3,29 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "4.11",
+  currentVersion: "5.0",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "5.0",
+    title: "Yield Coverage Expansion — Protocol-Native API Wave",
+    date: "2026-03-25",
+    effectiveAt: 1774684800,
+    summary:
+      "Major yield coverage expansion: 10 protocol-native adapters (Hashnote USYC, Ondo oracle, Morpho GraphQL, Pendle REST, Yearn Kong GraphQL, Beefy REST, Aave V3 on-chain, Compound V3 on-chain, BIMA Earn), USTB + thBILL promoted to on-chain ERC-4626, cusd-cap flagged yield-bearing, 19 new lending protocols added, TVL floor lowered for smaller ecosystems, DeFiLlama yield history backfill for instant 365-day charts.",
+    impact: [
+      "10 protocol-native adapters provide direct yield data, reducing DeFiLlama intermediation",
+      "Aave V3 + Compound V3 direct on-chain supply rates across Ethereum, Arbitrum, and Base",
+      "Kong adapter covers 2,083 ERC-4626 vaults (Yearn + Morpho + Spark + Fluid + others)",
+      "USTB + thBILL upgraded from T-bill proxy to actual on-chain ERC-4626 exchange rate reads",
+      "DeFiLlama yield history backfill gives instant 365-day charts for newly tracked coins",
+      "Expanded lending protocol allowlist with 19 new protocols (Wildcat $235M, Tectonic $100M, etc.)",
+      "cusd-cap flagged as yield-bearing with stCUSD savings wrapper ($68M TVL)",
+      "Lower TVL floor ($25K) captures Solana/Sui/Aptos/Cardano/Stacks lending markets",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.11",
     title: "Protocol-native BIMA savings fallback for USBD",
