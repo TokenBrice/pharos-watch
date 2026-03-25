@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Copy, ExternalLink, Globe } from "lucide-react";
+import { Check, Copy, ExternalLink, Globe } from "lucide-react";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CHAIN_META } from "@shared/lib/chains";
@@ -21,6 +21,7 @@ import {
 export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
   const [openChain, setOpenChain] = useState<string | null>(null);
   const [showAllContractsMobile, setShowAllContractsMobile] = useState(false);
+  const [copiedChain, setCopiedChain] = useState<string | null>(null);
   const contracts = meta.contracts ?? [];
 
   const gov = GOVERNANCE_BADGE_STYLES[meta.flags.governance];
@@ -37,35 +38,15 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
   const openContract = hasContracts ? (contracts.find((c) => c.chain === openChain) ?? null) : null;
 
   return (
-    <Card className="rounded-xl border-l-[3px] border-l-violet-500">
+    <Card className="rounded-xl">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
           Key Information
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Links (left) + classification badges (right) */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          {hasLinks && (
-            <div className="flex flex-wrap items-center gap-2">
-              {meta.links?.map((link) => (
-                <a
-                  key={link.url}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
-                >
-                  {link.label === "Website" ? (
-                    <Globe className="h-3.5 w-3.5" />
-                  ) : (
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  )}
-                  {link.label}
-                </a>
-              ))}
-            </div>
-          )}
+      <CardContent className="space-y-3 sm:space-y-4">
+        {/* Classification badges (identity) then external links (navigation) */}
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <div className="flex flex-wrap items-center gap-2">
             {gov && (
               <span
@@ -111,23 +92,43 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                 </span>
               ))}
           </div>
+          {hasLinks && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {meta.links?.map((link) => (
+                <a
+                  key={link.url}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
+                >
+                  {link.label === "Website" ? (
+                    <Globe className="h-3.5 w-3.5" />
+                  ) : (
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  )}
+                  {link.label}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Collateral + Peg Stability */}
         {hasDescription && (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-x-6 gap-y-3 border-t border-border/40 pt-3 sm:pt-4 sm:grid-cols-2">
             {meta.collateral && (
-              <div className="rounded-xl bg-muted/50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Collateral</p>
-                <p className="text-sm leading-relaxed">{meta.collateral}</p>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Collateral</p>
+                <p className="text-base leading-relaxed">{meta.collateral}</p>
               </div>
             )}
             {meta.pegMechanism && (
-              <div className="rounded-xl bg-muted/50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                   Peg Stability
                 </p>
-                <p className="text-sm leading-relaxed">{meta.pegMechanism}</p>
+                <p className="text-base leading-relaxed">{meta.pegMechanism}</p>
               </div>
             )}
           </div>
@@ -135,36 +136,35 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
 
         {/* Proof of Reserves + Jurisdiction (2-col on desktop) */}
         {!isDecentralized && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl bg-muted/50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+          <div className="grid gap-x-6 gap-y-3 border-t border-border/40 pt-3 sm:pt-4 sm:grid-cols-2">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                 Proof of Reserves
               </p>
               {meta.proofOfReserves ? (
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm leading-relaxed">
-                    {POR_BADGE_STYLES[meta.proofOfReserves.type].label}
-                    {meta.proofOfReserves.provider && ` by ${meta.proofOfReserves.provider}`}
-                  </p>
+                <p className="text-sm leading-relaxed">
+                  {POR_BADGE_STYLES[meta.proofOfReserves.type].label}
+                  {meta.proofOfReserves.provider && ` by ${meta.proofOfReserves.provider}`}
+                  {" "}
                   <a
                     href={meta.proofOfReserves.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-md text-sm text-blue-700 hover:underline shrink-0 dark:text-blue-400"
+                    className="pharos-focus-ring inline-flex items-center gap-1 text-frost-blue hover:underline"
                   >
-                    View reserves <ExternalLink className="h-3 w-3" />
+                    View reserves<ExternalLink className="h-3 w-3" />
                   </a>
-                </div>
+                </p>
               ) : (
                 <p className="text-sm text-muted-foreground">No proof of reserves published</p>
               )}
             </div>
 
-            {meta.jurisdiction && (
-              <div className="rounded-xl bg-muted/50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                  Jurisdiction
-                </p>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                Jurisdiction
+              </p>
+              {meta.jurisdiction ? (
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm font-medium">{meta.jurisdiction.country}</span>
                   {meta.jurisdiction.regulator && (
@@ -178,14 +178,16 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                     </span>
                   )}
                 </div>
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-muted-foreground">Not disclosed</p>
+              )}
+            </div>
           </div>
         )}
 
         {/* Contract Addresses */}
         {hasContracts && (
-          <div className="rounded-xl bg-muted/50 p-4">
+          <div className="border-t border-border/40 pt-3 sm:pt-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
               Contract Addresses
             </p>
@@ -233,9 +235,9 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                   value: openContract.address,
                 });
                 return (
-                  <div className="mt-3 rounded-lg bg-background/60 px-3 py-2 space-y-1.5">
+                  <div className="mt-3 rounded-lg border border-border/40 bg-background/60 px-3 py-2 space-y-1.5">
                     <div className="text-sm font-medium">
-                      <Link href={`/chains/${openContract.chain}/`} className="hover:underline">
+                      <Link href={`/chains/${openContract.chain}/`} className="pharos-focus-ring rounded-sm hover:underline">
                         {chain?.name ?? openContract.chain}
                       </Link>
                     </div>
@@ -247,12 +249,18 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                         onClick={() => {
                           navigator.clipboard.writeText(openContract.address);
                           trackEvent("contract_copied", { coin_id: meta.id, chain: openContract.chain });
+                          setCopiedChain(openContract.chain);
+                          setTimeout(() => setCopiedChain(null), 2000);
                         }}
                         className="pharos-focus-ring inline-flex size-11 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
                         title="Copy address"
                         aria-label="Copy address"
                       >
-                        <Copy className="h-3.5 w-3.5" />
+                        {copiedChain === openContract.chain ? (
+                          <Check className="h-3.5 w-3.5 text-emerald-500" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
                       </button>
                     </div>
                     {explorerUrl && (
@@ -260,7 +268,7 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                         href={explorerUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-md text-xs text-blue-700 hover:underline dark:text-blue-400"
+                        className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-md text-xs text-frost-blue hover:underline"
                       >
                         View on {chain?.name ? `${chain.name} explorer` : "explorer"}
                         <ExternalLink className="h-3 w-3" />
