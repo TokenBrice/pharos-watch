@@ -1,4 +1,4 @@
-import { YieldRankingsResponseSchema, type AltYieldSource, type YieldBenchmarkMeta, type YieldSafetySnapshotMeta, type YieldSourceInputMeta } from "@shared/types";
+import { YieldRankingsResponseSchema, type AltYieldSource, type YieldBenchmarkMeta, type YieldSafetySnapshotMeta, type YieldSourceInputMeta } from "@shared/types/yield";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { batchExecute } from "../../lib/db";
 import { getCache, setCache } from "../../lib/db-cache";

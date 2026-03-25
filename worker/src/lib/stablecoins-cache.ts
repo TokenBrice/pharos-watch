@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getCache } from "./db-cache";
 import { decodeCachedJson, type JsonDecodeMode } from "./cache-json";
-import type { StablecoinData } from "@shared/types";
+import type { StablecoinData } from "@shared/types/market";
 
 // Validate critical fields only -- passthrough preserves all upstream data
 const StablecoinEntrySchema = z.object({

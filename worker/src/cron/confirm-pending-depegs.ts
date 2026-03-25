@@ -23,7 +23,8 @@ import {
   loadDexPriceRows,
   loadDexPoolChallengers,
 } from "../lib/depeg-helpers";
-import type { DepegEvent, PegAssetBase } from "@shared/types";
+import type { DepegEvent } from "@shared/types/market";
+import type { PegAssetBase } from "@shared/types/core";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 
 interface PendingRow {

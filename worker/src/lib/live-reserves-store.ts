@@ -7,13 +7,15 @@ import {
 } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type {
+  ReserveSlice,
+  StablecoinMeta,
+} from "@shared/types/core";
+import type {
   LiveReserveFreshnessMode,
   LiveReserveSnapshotMetadata,
   LiveReserveWarning,
-  ReserveSlice,
   ReserveSyncStateView,
-  StablecoinMeta,
-} from "@shared/types";
+} from "@shared/types/live-reserves";
 import { buildInClause } from "./db";
 import { chunkArray } from "./collections";
 import { decodeJsonString } from "./cache-json";

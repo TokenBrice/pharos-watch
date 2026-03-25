@@ -3,7 +3,7 @@
  * Each returns a complete row with sensible defaults; pass `overrides` for specific values.
  */
 
-import type { BlacklistStablecoin, StablecoinData } from "@shared/types";
+import type { BlacklistStablecoin, StablecoinData } from "@shared/types/market";
 
 type BlacklistRow = {
   id: string;

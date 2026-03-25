@@ -1,4 +1,4 @@
-import type { CacheStatus } from "@shared/types";
+import type { CacheStatus } from "@shared/types/status";
 import { FRESHNESS_RATIOS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { getCache, setCacheIfNewer } from "./db-cache";
 import { decodeJsonString } from "./cache-json";

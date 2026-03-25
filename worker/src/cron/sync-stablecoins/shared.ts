@@ -1,5 +1,5 @@
-import { StablecoinListResponseSchema } from "@shared/types";
-import type { PriceSourceHealth } from "@shared/types";
+import { StablecoinListResponseSchema } from "@shared/types/market";
+import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { setCacheIfNewer, getCache } from "../../lib/db-cache";
 import type { CronResult } from "../../lib/cron-logger";

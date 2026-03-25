@@ -1,4 +1,5 @@
-import type { LiveReserveWarning, LiveReservesConfig, ReserveSlice, StablecoinMeta } from "@shared/types";
+import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import { fetchJsonWithRetry, getAdapterTimeout, normalizeSlices, requireJsonInput, reserveDegradedWarning } from "./helpers";

@@ -3,7 +3,7 @@ import { RATE_LIMITS } from "../lib/rate-limit";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { CoinGeckoMarketChartSchema } from "../lib/external-api-schemas";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/core";
 
 export interface PricePoint {
   timestamp: number;

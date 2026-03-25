@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/core";
 
 export function parseEvmAddressResult(result: `0x${string}`): string | null {
   return /^0x[0-9a-fA-F]{64}$/.test(result)

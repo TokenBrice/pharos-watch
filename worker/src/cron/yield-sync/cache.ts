@@ -1,4 +1,4 @@
-import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types";
+import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import { RISK_FREE_RATE_FALLBACK } from "../../lib/constants";
 import { toFiniteNumber } from "../../lib/number-utils";
 import type { DlPool } from "./types";

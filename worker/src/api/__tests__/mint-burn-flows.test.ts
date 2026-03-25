@@ -4,7 +4,7 @@ import { handleMintBurnFlows } from "../mint-burn-flows";
 import {
   MintBurnFlowsResponseSchema,
   MintBurnPerCoinResponseSchema,
-} from "@shared/types";
+} from "@shared/types/mint-burn";
 
 // ---------------------------------------------------------------------------
 // Regression tests (shape assertions on literal objects)

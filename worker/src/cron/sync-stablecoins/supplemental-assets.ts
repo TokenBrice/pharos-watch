@@ -1,5 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types/core";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { CIRCUIT_SOURCE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../../lib/constants";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";

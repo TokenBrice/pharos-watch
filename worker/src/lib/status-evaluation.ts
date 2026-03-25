@@ -10,7 +10,7 @@ import type {
   CronStatus,
   StatusCause,
   StatusResponse,
-} from "@shared/types";
+} from "@shared/types/status";
 import { buildCacheStatuses } from "./api-utils";
 import { buildInClause } from "./db";
 import { computeReserveCompositionOverview } from "./live-reserves-store";

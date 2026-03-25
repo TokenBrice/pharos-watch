@@ -23,7 +23,8 @@ import {
   type RedemptionCostModel,
 } from "@shared/lib/redemption-backstops";
 import { REDEMPTION_BACKSTOP_VERSION } from "@shared/lib/redemption-backstop-version";
-import type { RedemptionBackstopEntry, StablecoinData } from "@shared/types";
+import type { StablecoinData } from "@shared/types/market";
+import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import {
   getLatestSuccessfulReserveSnapshotMetadata,
   type ReserveSnapshotMetadataRecord,

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { computeCollateralQualityFromReserves } from "@shared/lib/report-cards";
-import type { ReserveSlice } from "@shared/types";
+import type { ReserveSlice } from "@shared/types/core";
 
 describe("collateral score delta detection", () => {
   function computeDelta(live: ReserveSlice[], curated: ReserveSlice[]): number {

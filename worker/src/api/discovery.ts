@@ -1,5 +1,5 @@
 import { jsonResponse, errorResponse, parseIntParam, withErrorHandler } from "../lib/api-utils";
-import type { DiscoveryCandidate } from "@shared/types";
+import type { DiscoveryCandidate } from "@shared/types/status";
 
 function parseDiscoveryStatus(value: string | null): "active" | "dismissed" | "all" | Response {
   if (value == null) {

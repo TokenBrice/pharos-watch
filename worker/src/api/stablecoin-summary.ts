@@ -1,4 +1,4 @@
-import type { StablecoinData } from "@shared/types";
+import type { StablecoinData } from "@shared/types/market";
 import {
   addFreshnessHeaders,
   errorResponse,

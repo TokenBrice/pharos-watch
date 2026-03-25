@@ -1,5 +1,5 @@
 import { withErrorHandler, safeJsonParse, errorResponse, jsonResponse } from "../lib/api-utils";
-import type { DigestInputData } from "@shared/types";
+import type { DigestInputData } from "@shared/types/digest";
 
 interface DigestRow {
   generated_at: number;

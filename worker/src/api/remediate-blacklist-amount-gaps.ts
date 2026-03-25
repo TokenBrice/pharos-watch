@@ -1,4 +1,4 @@
-import { BLACKLIST_STABLECOINS, type BlacklistStablecoin } from "@shared/types";
+import { BLACKLIST_STABLECOINS, type BlacklistStablecoin } from "@shared/types/market";
 import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
 import { requireAdmin } from "../lib/auth";
 import { errorResponse, jsonResponse, parseIntParam } from "../lib/api-utils";

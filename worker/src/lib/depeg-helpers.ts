@@ -1,4 +1,4 @@
-import type { DepegEvent } from "@shared/types";
+import type { DepegEvent } from "@shared/types/market";
 import {
   DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
   DEX_FRESHNESS_SEC,
@@ -6,7 +6,7 @@ import {
   DEX_PRICE_CHECK_FRESHNESS_SEC,
   DEX_PRICE_CHECK_UI_MIN_TVL_USD,
 } from "./constants";
-import type { DepegPrimaryTrust, PriceConfidence, PriceObservedAtMode } from "@shared/types";
+import type { DepegPrimaryTrust, PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { hasDepegAuthoritativeSource } from "./pricing-source-policy";
 import {

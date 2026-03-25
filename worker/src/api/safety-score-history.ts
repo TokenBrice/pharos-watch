@@ -4,7 +4,7 @@ import {
   getLatestSuccessfulCronTimestamp,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
-import type { ReportCardGrade } from "@shared/types";
+import type { ReportCardGrade } from "@shared/types/report-cards";
 
 interface SafetyScoreHistoryRow {
   recorded_at: number;

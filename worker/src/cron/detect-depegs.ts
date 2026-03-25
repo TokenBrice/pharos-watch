@@ -17,7 +17,8 @@ import {
 } from "../lib/depeg-helpers";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
-import type { DepegEvent, PegAssetBase } from "@shared/types";
+import type { DepegEvent } from "@shared/types/market";
+import type { PegAssetBase } from "@shared/types/core";
 import { sumPegBuckets } from "@shared/lib/supply";
 
 // --- Helpers ---

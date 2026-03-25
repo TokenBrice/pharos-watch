@@ -1,4 +1,4 @@
-import type { PriceConfidence, PriceObservedAtMode } from "@shared/types";
+import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import {
   buildObservedAtModeRecord,

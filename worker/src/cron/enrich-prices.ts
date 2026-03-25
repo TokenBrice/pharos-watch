@@ -7,7 +7,7 @@ import { getCache } from "../lib/db-cache";
 import { throwIfAborted } from "../lib/abort";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices-shared";
 import { runDlContractPasses, runCmcPass, runDexScreenerPass, runJupiterPass } from "./enrich-prices-passes";
-import type { PriceConfidence, PriceObservedAtMode } from "@shared/types";
+import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import {
   buildPriceValidationContext,

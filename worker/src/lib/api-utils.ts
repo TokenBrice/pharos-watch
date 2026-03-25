@@ -3,7 +3,7 @@ import { getCache } from "./db-cache";
 import { CACHE_FRESHNESS_THRESHOLDS } from "./constants";
 import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { FRESHNESS_RATIOS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
-import type { CacheStatus } from "@shared/types";
+import type { CacheStatus } from "@shared/types/status";
 import type { ZodType } from "zod";
 import { buildFxCacheStatus, getFxRatesMetaKey, hydrateFxRateState } from "./fx-rate-state";
 

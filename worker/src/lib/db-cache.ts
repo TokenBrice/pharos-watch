@@ -1,5 +1,5 @@
 import { batchExecute } from "./db";
-import type { PriceConfidence, PriceObservedAtMode } from "@shared/types";
+import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 
 export async function getCache(db: D1Database, key: string): Promise<{ value: string; updatedAt: number } | null> {
   const row = await db

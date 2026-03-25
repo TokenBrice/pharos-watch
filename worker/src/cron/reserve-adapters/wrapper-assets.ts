@@ -1,4 +1,4 @@
-import type { ReserveSlice } from "@shared/types";
+import type { ReserveSlice } from "@shared/types/core";
 
 type WrapperAssetKey =
   | "gho"

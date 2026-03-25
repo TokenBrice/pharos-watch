@@ -1,4 +1,4 @@
-import type { PriceConfidence, PriceObservedAtMode } from "@shared/types";
+import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 
 export interface PeggedAsset {
   id: string;

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { StablecoinData } from "@shared/types";
+import type { StablecoinData } from "@shared/types/market";
 import type { DexApiPool } from "../../lib/dex-api-common";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { LlamaPool } from "../dex-liquidity/types";

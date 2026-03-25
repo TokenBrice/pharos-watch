@@ -9,7 +9,7 @@ import { getCache } from "../../lib/db-cache";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types";
+import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
 import { buildOnChainSourceKey, computeApyFromPrice } from "../yield-helpers";
 import {

@@ -1,5 +1,6 @@
 import { BLUECHIP_SLUG_MAP } from "../lib/bluechip-slugs";
-import type { BluechipGrade, BluechipRating, BluechipSmidge } from "@shared/types";
+import type { BluechipGrade } from "@shared/types/core";
+import type { BluechipRating, BluechipSmidge } from "@shared/types/market";
 import { getCache, shouldSkipFreshCache, setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { fetchWithRetry } from "../lib/fetch-retry";

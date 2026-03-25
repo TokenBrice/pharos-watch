@@ -1,10 +1,5 @@
-import type {
-  LiveReserveInput,
-  LiveReserveWarning,
-  LiveReservesConfig,
-  ReserveSlice,
-  StablecoinMeta,
-} from "@shared/types";
+import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { LiveReserveInput, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { DEFILLAMA_COINS } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import {

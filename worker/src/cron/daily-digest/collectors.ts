@@ -6,7 +6,8 @@
  * them sequentially and assembles the results into DigestInputData.
  */
 
-import type { DigestInputData, StablecoinData } from "@shared/types";
+import type { DigestInputData } from "@shared/types/digest";
+import type { StablecoinData } from "@shared/types/market";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { scoreToGrade } from "@shared/lib/report-cards";
 import { buildInClause } from "../../lib/db";

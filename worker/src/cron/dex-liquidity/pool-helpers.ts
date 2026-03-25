@@ -1,5 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
-import type { ContractDeployment, StablecoinMeta } from "@shared/types";
+import type { ContractDeployment, StablecoinMeta } from "@shared/types/core";
 import {
   QUALITY_MULTIPLIERS, GT_DEX_QUALITY, COMPOSITE_POOL_NAMES, normalizeDexSymbol,
 } from "../../lib/dex-constants";

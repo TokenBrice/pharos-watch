@@ -1,4 +1,4 @@
-import type { DigestInputData } from "@shared/types";
+import type { DigestInputData } from "@shared/types/digest";
 import { formatCurrency } from "@shared/lib/format";
 import { type CronResult } from "../lib/cron-logger";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
