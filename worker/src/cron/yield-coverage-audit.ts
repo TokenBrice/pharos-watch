@@ -25,11 +25,21 @@ export interface CoverageGapPool {
   apy: number;
 }
 
+export interface ProtocolRecommendation {
+  project: string;
+  poolCount: number;
+  totalTvlUsd: number;
+  recommendedTier: "high-confidence" | "review-needed";
+  examplePools: string[];
+}
+
 export interface CoverageGaps {
   /** Pools above the TVL threshold that are not in the covered set. */
   unmatchedHighTvlPools: CoverageGapPool[];
   /** Protocols with stablecoin pools but not in the lending allowlist. */
   missingProtocols: CoverageGapPool[];
+  /** Actionable protocol recommendations based on TVL and pool count. */
+  protocolRecommendations: ProtocolRecommendation[];
 }
 
 /**
@@ -81,7 +91,30 @@ export function identifyCoverageGaps(
   unmatchedHighTvlPools.sort((a, b) => b.tvlUsd - a.tvlUsd);
   missingProtocols.sort((a, b) => b.tvlUsd - a.tvlUsd);
 
-  return { unmatchedHighTvlPools, missingProtocols };
+  // Build protocol recommendations from non-allowlisted pools
+  const byProject = new Map<string, { pools: CoverageGapPool[]; tvl: number }>();
+  for (const pool of dlPools) {
+    if (LENDING_PROTOCOL_ALLOWLIST.has(pool.project)) continue;
+    if (pool.exposure !== "single" || !pool.stablecoin) continue;
+    const entry = byProject.get(pool.project) ?? { pools: [], tvl: 0 };
+    entry.pools.push({ pool: pool.pool, project: pool.project, symbol: pool.symbol, chain: pool.chain, tvlUsd: pool.tvlUsd, apy: pool.apy });
+    entry.tvl += pool.tvlUsd;
+    byProject.set(pool.project, entry);
+  }
+
+  const protocolRecommendations: ProtocolRecommendation[] = [...byProject.entries()]
+    .filter(([, v]) => v.tvl >= HIGH_TVL_THRESHOLD_USD)
+    .map(([project, v]) => ({
+      project,
+      poolCount: v.pools.length,
+      totalTvlUsd: v.tvl,
+      recommendedTier: (v.tvl >= 10_000_000 && v.pools.length >= 3 ? "high-confidence" : "review-needed") as "high-confidence" | "review-needed",
+      examplePools: v.pools.slice(0, 3).map((p) => p.pool),
+    }))
+    .sort((a, b) => b.totalTvlUsd - a.totalTvlUsd)
+    .slice(0, 20);
+
+  return { unmatchedHighTvlPools, missingProtocols, protocolRecommendations };
 }
 
 /**

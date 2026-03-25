@@ -37,4 +37,33 @@ describe("identifyCoverageGaps", () => {
     expect(gaps.missingProtocols.length).toBeGreaterThan(0);
     expect(gaps.missingProtocols[0].project).toBe("brand-new-protocol");
   });
+
+  it("recommends high-confidence protocols with >$10M TVL and 3+ pools", () => {
+    const dlPools: DlPool[] = [
+      { pool: "p1", chain: "Ethereum", project: "rising-protocol", symbol: "USDC", tvlUsd: 4_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },
+      { pool: "p2", chain: "Ethereum", project: "rising-protocol", symbol: "USDT", tvlUsd: 4_000_000, apy: 3.5, apyBase: 3.5, apyReward: null, apyMean30d: 3.5, stablecoin: true, exposure: "single", underlyingTokens: null },
+      { pool: "p3", chain: "Arbitrum", project: "rising-protocol", symbol: "USDC", tvlUsd: 3_000_000, apy: 5, apyBase: 5, apyReward: null, apyMean30d: 5, stablecoin: true, exposure: "single", underlyingTokens: null },
+    ];
+    const gaps = identifyCoverageGaps(dlPools, new Set(), new Set(["USDC", "USDT"]));
+    expect(gaps.protocolRecommendations).toContainEqual(
+      expect.objectContaining({
+        project: "rising-protocol",
+        totalTvlUsd: 11_000_000,
+        recommendedTier: "high-confidence",
+      }),
+    );
+  });
+
+  it("marks review-needed for protocols with <$10M TVL or <3 pools", () => {
+    const dlPools: DlPool[] = [
+      { pool: "p1", chain: "Ethereum", project: "small-protocol", symbol: "USDC", tvlUsd: 6_000_000, apy: 3, apyBase: 3, apyReward: null, apyMean30d: 3, stablecoin: true, exposure: "single", underlyingTokens: null },
+    ];
+    const gaps = identifyCoverageGaps(dlPools, new Set(), new Set(["USDC"]));
+    expect(gaps.protocolRecommendations).toContainEqual(
+      expect.objectContaining({
+        project: "small-protocol",
+        recommendedTier: "review-needed",
+      }),
+    );
+  });
 });
