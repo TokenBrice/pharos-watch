@@ -47,9 +47,3 @@ export function splitCompositePriceSource(source: string): string[] {
     .map((part) => part.trim())
     .filter((part) => part.length > 0);
 }
-
-export function formatPricingSourceLabel(source: string): string {
-  return splitCompositePriceSource(source)
-    .map((part) => getPricingSourceLabel(part))
-    .join(" + ");
-}
