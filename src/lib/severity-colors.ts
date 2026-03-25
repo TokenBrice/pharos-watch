@@ -127,3 +127,10 @@ export function getDurabilityBgColor(score: number): string {
   if (score >= 40) return "bg-amber-500";
   return "bg-red-500";
 }
+
+/** Semantic color class for ratio-based quality (green/amber/red). */
+export function ratioQualityColor(ratio: number, highThreshold = 0.8, midThreshold = 0.5): string {
+  if (ratio >= highThreshold) return "text-emerald-700 dark:text-emerald-400";
+  if (ratio >= midThreshold) return "text-amber-700 dark:text-amber-400";
+  return "text-red-700 dark:text-red-400";
+}
