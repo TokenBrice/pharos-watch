@@ -2,6 +2,7 @@ import { ALCHEMY_CHAINS } from "./chain-registry";
 import type { SubrequestBudget, TopicFilter } from "./evm-logs";
 import { budgetExhausted } from "./evm-logs";
 import { buildInClause } from "./db";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 // --- Types ---
 
@@ -365,7 +366,7 @@ const TIMESTAMP_CACHE_READ_CHUNK = Math.max(
   1,
   D1_SAFE_MAX_SQL_VARIABLES - TIMESTAMP_CACHE_READ_FIXED_BINDINGS,
 );
-const DEFAULT_TIMESTAMP_CACHE_MAX_AGE_SEC = 14 * 86400;
+const DEFAULT_TIMESTAMP_CACHE_MAX_AGE_SEC = 14 * DAY_SECONDS;
 
 export async function resolveBlockTimestamps(
   alchemyUrl: string,

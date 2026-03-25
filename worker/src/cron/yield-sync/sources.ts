@@ -1,4 +1,5 @@
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import {
   CIRCUIT_SOURCE,
@@ -428,8 +429,8 @@ export async function getPriceDerivedApy(
   comparisonAnchorObservedAt: number;
 } | null> {
   const now = Math.floor(Date.now() / 1000);
-  const minLookbackSec = 7 * 86400;
-  const maxLookbackSec = 45 * 86400;
+  const minLookbackSec = 7 * DAY_SECONDS;
+  const maxLookbackSec = 45 * DAY_SECONDS;
 
   const [recentRow, anchoredRow] = await Promise.all([
     db
@@ -454,7 +455,7 @@ export async function getPriceDerivedApy(
 
   if (!recentRow?.price || !anchoredRow?.price || anchoredRow.price <= 0) return null;
 
-  const lookbackDays = (recentRow.snapshot_date - anchoredRow.snapshot_date) / 86400;
+  const lookbackDays = (recentRow.snapshot_date - anchoredRow.snapshot_date) / DAY_SECONDS;
   if (!Number.isFinite(lookbackDays) || lookbackDays < 7) return null;
 
   return {

@@ -1,4 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { BLOCKED_DEX_IDS, QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
 import type { LlamaPool, CurvePoolEntry, LiquidityMetrics } from "./types";
 import {
@@ -116,7 +117,7 @@ export function processPoolMetrics(
       effectivePoolTvl = curveAddressMatch ? curveData.metapoolAdjustedTvl : pool.tvlUsd;
       // Pool maturity from Curve creation timestamp
       if (curveData.creationTs > 0) {
-        poolMaturityDays = Math.floor((Date.now() / 1000 - curveData.creationTs) / 86400);
+        poolMaturityDays = Math.floor((Date.now() / 1000 - curveData.creationTs) / DAY_SECONDS);
       }
     } else if (poolType === "uniswap-v3-5bp" && uniV3PoolFees.size > 0) {
       // Try to resolve exact fee tier from subgraph data

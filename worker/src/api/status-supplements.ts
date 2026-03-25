@@ -1,4 +1,5 @@
 import { computeCentralizedCustodyFraction } from "@shared/lib/centralized-custody";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT } from "@shared/lib/status-thresholds";
 import { ACTIVE_IDS, ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type {
@@ -161,7 +162,7 @@ export async function loadStatusSupplements(
       source: row.source as "defillama" | "coingecko" | "both",
       firstSeen: row.first_seen as number,
       lastSeen: row.last_seen as number,
-      daysSeen: Math.max(1, Math.floor((now - (row.first_seen as number)) / 86400)),
+      daysSeen: Math.max(1, Math.floor((now - (row.first_seen as number)) / DAY_SECONDS)),
       dismissed: false,
     }));
   } catch (err) {

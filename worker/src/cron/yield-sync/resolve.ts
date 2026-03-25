@@ -1,4 +1,5 @@
 import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { buildInClause } from "../../lib/db";
 import {
@@ -116,7 +117,7 @@ export async function resolveYieldSources({
       tier1PrevRates.set(id, prevRow?.exchangeRate ?? null);
 
       if (prevRow?.exchangeRate && prevRow.exchangeRate > 0) {
-        const actualDays = (startSec - prevRow.recordedAt) / 86400;
+        const actualDays = (startSec - prevRow.recordedAt) / DAY_SECONDS;
         const apy = computeApyFromRate(rate, prevRow.exchangeRate, actualDays);
         const nativePoolId = YIELD_POOL_MAP[id] ?? null;
         resolved.push({

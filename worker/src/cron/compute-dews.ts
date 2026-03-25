@@ -3,6 +3,7 @@
 // Reads existing D1 tables, computes DEWS per eligible coin,
 // writes to stress_signals + stress_signal_history.
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { batchExecute, buildInClause } from "../lib/db";
@@ -215,8 +216,8 @@ export async function computeAndStoreDEWS(
   }
 
   // 4. Read dex_liquidity_history (7d lookback)
-  const liqHistCutoff = nowSec - 8 * 86400;
-  const target7d = nowSec - 7 * 86400;
+  const liqHistCutoff = nowSec - 8 * DAY_SECONDS;
+  const target7d = nowSec - 7 * DAY_SECONDS;
   const liqHist7dMap = new Map<string, { score: number | null; tvl: number | null; date: number }>();
   let liqHistRowsRead = 0;
   try {
@@ -261,13 +262,13 @@ export async function computeAndStoreDEWS(
       .prepare(
         "SELECT stablecoin, COUNT(*) as cnt FROM blacklist_events WHERE timestamp >= ? GROUP BY stablecoin",
       )
-      .bind(nowSec - 7 * 86400)
+      .bind(nowSec - 7 * DAY_SECONDS)
       .all<{ stablecoin: string; cnt: number }>();
     const bl24h = await db
       .prepare(
         "SELECT stablecoin, COUNT(*) as cnt FROM blacklist_events WHERE timestamp >= ? GROUP BY stablecoin",
       )
-      .bind(nowSec - 86400)
+      .bind(nowSec - DAY_SECONDS)
       .all<{ stablecoin: string; cnt: number }>();
     blacklistRowsRead = (bl7d.results?.length ?? 0) + (bl24h.results?.length ?? 0);
 
@@ -337,7 +338,7 @@ export async function computeAndStoreDEWS(
                 SUM(CASE WHEN mint_volume_usd IS NOT NULL THEN mint_volume_usd ELSE 0 END) as total_mint
          FROM mint_burn_hourly WHERE hour_ts >= ? GROUP BY stablecoin_id`,
       )
-      .bind(nowSec - 86400)
+      .bind(nowSec - DAY_SECONDS)
       .all<{ stablecoin_id: string; total_burn: number; total_mint: number }>();
 
     const mb30d = await db
@@ -348,7 +349,7 @@ export async function computeAndStoreDEWS(
                 COUNT(DISTINCT date(hour_ts, 'unixepoch')) as days_with_data
          FROM mint_burn_hourly WHERE hour_ts >= ? GROUP BY stablecoin_id`,
       )
-      .bind(nowSec - 30 * 86400)
+      .bind(nowSec - 30 * DAY_SECONDS)
       .all<{
         stablecoin_id: string;
         avg_burn: number;
@@ -570,12 +571,12 @@ export async function computeAndStoreDEWS(
   // 12. Prune old data (7 days for signals, 365 for history)
   const oldSignals = await db
     .prepare("DELETE FROM stress_signals WHERE computed_at < ?")
-    .bind(nowSec - 7 * 86400)
+    .bind(nowSec - 7 * DAY_SECONDS)
     .run();
   rowsDropped += oldSignals.meta?.changes ?? 0;
   const oldHistory = await db
     .prepare("DELETE FROM stress_signal_history WHERE snapshot_date < ?")
-    .bind(nowSec - 365 * 86400)
+    .bind(nowSec - 365 * DAY_SECONDS)
     .run();
   rowsDropped += oldHistory.meta?.changes ?? 0;
 

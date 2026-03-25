@@ -1,4 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { USER_AGENT } from "../lib/constants";
 import { batchExecute } from "../lib/db";
@@ -87,14 +88,14 @@ export async function handleBackfillCgPrices(
         const priceByDate = new Map<number, number>();
         for (const [ts, price] of cgPrices) {
           if (price <= 0) continue;
-          const snapshotDate = Math.floor(ts / 1000 / 86400) * 86400;
+          const snapshotDate = Math.floor(ts / 1000 / DAY_SECONDS) * DAY_SECONDS;
           priceByDate.set(snapshotDate, price);
         }
 
         const mcapByDate = new Map<number, number>();
         for (const [ts, mcap] of cgMarketCaps) {
           if (mcap <= 0) continue;
-          const snapshotDate = Math.floor(ts / 1000 / 86400) * 86400;
+          const snapshotDate = Math.floor(ts / 1000 / DAY_SECONDS) * DAY_SECONDS;
           mcapByDate.set(snapshotDate, mcap);
         }
 

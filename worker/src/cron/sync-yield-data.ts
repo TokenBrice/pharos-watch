@@ -1,5 +1,6 @@
 // worker/src/cron/sync-yield-data.ts
 import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { setCache } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
@@ -36,7 +37,7 @@ const MIN_SAFETY_SCORE_COVERAGE_RATIO = 0.75;
 
 export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainRpcs?: Map<string, ChainRpcConfig>, coingeckoApiKey?: string | null): Promise<CronResult> {
   const startSec = Math.floor(Date.now() / 1000);
-  const sevenDaysAgoSec = startSec - 7 * 86400;
+  const sevenDaysAgoSec = startSec - 7 * DAY_SECONDS;
   const yieldCoins = YIELD_BEARING_STABLECOINS;
 
   if (yieldCoins.length === 0) {

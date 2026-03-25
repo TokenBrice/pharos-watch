@@ -1,4 +1,5 @@
 import { BLOCKED_DEX_IDS } from "../../lib/dex-constants";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { throwIfAborted } from "../../lib/abort";
 import type { PriceValidationReferences } from "../../lib/price-validation";
@@ -94,7 +95,7 @@ function resolveStablecoinSide(
 function toMaturityDays(createdAt: string | null, nowSec: number): number {
   if (!createdAt) return 0;
   const createdSec = new Date(createdAt).getTime() / 1000;
-  return createdSec > 0 ? Math.floor((nowSec - createdSec) / 86400) : 0;
+  return createdSec > 0 ? Math.floor((nowSec - createdSec) / DAY_SECONDS) : 0;
 }
 
 export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(

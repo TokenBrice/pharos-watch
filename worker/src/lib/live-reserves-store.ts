@@ -1,4 +1,5 @@
 import { getReserves, type ReserveResult } from "@shared/lib/reserve-templates";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
   getLiveReserveAdapterDefinition,
   type LiveReserveAdapterKey,
@@ -18,7 +19,7 @@ import { buildInClause } from "./db";
 import { chunkArray } from "./collections";
 import { decodeJsonString } from "./cache-json";
 
-export const LIVE_RESERVE_FRESHNESS_SEC = 2 * 86400;
+export const LIVE_RESERVE_FRESHNESS_SEC = 2 * DAY_SECONDS;
 const SCORING_LIVE_RESERVE_EVIDENCE_CLASSES: LiveReserveEvidenceClass[] = ["independent"];
 const VALID_RISKS = new Set(["very-low", "low", "medium", "high", "very-high"]);
 const VALID_SOURCE_MODELS = new Set<LiveReserveSourceModel>(["dynamic-mix", "validated-static", "single-bucket"]);

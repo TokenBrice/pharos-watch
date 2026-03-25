@@ -1,3 +1,5 @@
+import { DAY_SECONDS } from "./time-constants";
+
 export type CronGroupKey =
   | "quarter-hourly"
   | "five-minute"
@@ -33,8 +35,8 @@ const CRON_SCHEDULE_BUCKETS = {
   halfHourlyOffset: { intervalSec: 1800, offsetSec: 10 * 60 },
   hourlyReserveSync: { intervalSec: 3600, offsetSec: 11 * 60 },
   fiveMinuteTelegramAlerts: { intervalSec: 300, offsetSec: 2 * 60 },
-  daily0800Utc: { intervalSec: 86400, offsetSec: 8 * 3600 },
-  daily0805Utc: { intervalSec: 86400, offsetSec: 8 * 3600 + 5 * 60 },
+  daily0800Utc: { intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 },
+  daily0805Utc: { intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 + 5 * 60 },
 } as const satisfies Record<CronScheduleKey, { intervalSec: number; offsetSec: number }>;
 
 const CRON_SCHEDULE_INTERVALS = Object.freeze(
@@ -237,11 +239,11 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
   {
     // Runs on the quarter-hourly trigger after a safe stablecoins cache write.
     // The daily 08:00 UTC trigger is a safety-net fallback.
-    // intervalSec stays 86400 because the job only writes one snapshot per day.
+    // intervalSec stays DAY_SECONDS because the job only writes one snapshot per day.
     job: "snapshot-supply",
     label: "Supply snapshot",
     group: "quarter-hourly",
-    intervalSec: 86400,
+    intervalSec: DAY_SECONDS,
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
     maxConnections: 0, // DB-only snapshot from cached stablecoins data
@@ -250,7 +252,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "snapshot-chain-supply",
     label: "Chain supply snapshot",
     group: "quarter-hourly",
-    intervalSec: 86400,
+    intervalSec: DAY_SECONDS,
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
     maxConnections: 0,
@@ -259,7 +261,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "snapshot-safety-grade-history",
     label: "Safety grade snapshot",
     group: "daily",
-    intervalSec: 86400,
+    intervalSec: DAY_SECONDS,
     scheduleKey: "daily0800Utc",
     triggerMode: "shared",
     maxConnections: 0, // DB-only snapshot
@@ -268,7 +270,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "fetch-tbill-rate",
     label: "T-bill rate",
     group: "daily",
-    intervalSec: 86400,
+    intervalSec: DAY_SECONDS,
     scheduleKey: "daily0800Utc",
     triggerMode: "shared",
     maxConnections: 1, // FRED CSV then Treasury XML fallback (sequential)
@@ -277,7 +279,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "snapshot-psi",
     label: "PSI snapshot",
     group: "daily",
-    intervalSec: 86400,
+    intervalSec: DAY_SECONDS,
     scheduleKey: "daily0800Utc",
     triggerMode: "shared",
     maxConnections: 0, // DB-only snapshot
@@ -286,7 +288,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "sync-usds-status",
     label: "USDS status",
     group: "daily",
-    intervalSec: 86400,
+    intervalSec: DAY_SECONDS,
     scheduleKey: "daily0800Utc",
     triggerMode: "shared",
     maxConnections: 1, // Sequential Etherscan eth_getStorageAt + eth_call probes
@@ -322,7 +324,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "sync-bluechip",
     label: "Bluechip sync",
     group: "daily",
-    intervalSec: 86400,
+    intervalSec: DAY_SECONDS,
     scheduleKey: "daily0805Utc",
     triggerMode: "shared",
     maxConnections: 1, // Sequential batched bluechip API fetches
@@ -331,7 +333,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "daily-digest",
     label: "Daily digest",
     group: "daily",
-    intervalSec: 86400,
+    intervalSec: DAY_SECONDS,
     scheduleKey: "daily0805Utc",
     triggerMode: "shared",
     maxConnections: 1, // Anthropic LLM call, then Twitter + Telegram posts (sequential)

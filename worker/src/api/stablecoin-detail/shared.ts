@@ -1,4 +1,5 @@
 import { setCache } from "../../lib/db-cache";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CACHE_PROFILES } from "../../lib/constants";
 import { binarySearchNearest } from "../../lib/binary-search";
 import { errorResponse } from "../../lib/api-utils";
@@ -6,7 +7,7 @@ import { errorResponse } from "../../lib/api-utils";
 export const CACHE_TTL_SECONDS = 5 * 60; // 5 minutes
 export const DETAIL_UPSTREAM_TIMEOUT_MS = 12_000;
 export const DETAIL_UPSTREAM_MAX_RETRIES = 2;
-const DETAIL_HISTORY_MAX_AGE_SECONDS = 3 * 86400;
+const DETAIL_HISTORY_MAX_AGE_SECONDS = 3 * DAY_SECONDS;
 
 type DetailCacheEntry = { value: string; updatedAt: number } | null;
 type DetailTokens = Record<string, unknown>[];

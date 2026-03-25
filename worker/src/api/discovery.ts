@@ -1,4 +1,5 @@
 import { jsonResponse, errorResponse, parseIntParam, withErrorHandler } from "../lib/api-utils";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { DiscoveryCandidate } from "@shared/types";
 
 function parseDiscoveryStatus(value: string | null): "active" | "dismissed" | "all" | Response {
@@ -65,7 +66,7 @@ export const handleDiscoveryCandidates = withErrorHandler("discovery-candidates"
     source: row.source as "defillama" | "coingecko" | "both",
     firstSeen: row.first_seen as number,
     lastSeen: row.last_seen as number,
-    daysSeen: Math.max(1, Math.floor((nowSec - (row.first_seen as number)) / 86400)),
+    daysSeen: Math.max(1, Math.floor((nowSec - (row.first_seen as number)) / DAY_SECONDS)),
     dismissed: (row.dismissed as number) === 1,
   }));
 

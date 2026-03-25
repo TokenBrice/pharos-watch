@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DAY_SECONDS } from "./time-constants";
 
 const LIVE_RESERVE_ADAPTER_KEYS = [
   "accountable",
@@ -330,8 +331,8 @@ export type LiveReserveAdapterParamsByKey = {
 export type LiveReserveAdapterParams = LiveReserveAdapterParamsByKey[LiveReserveAdapterKey];
 
 const MATERIAL_UNKNOWN_EXPOSURE_PCT = 5;
-const DASHBOARD_SOURCE_MAX_AGE_SEC = 3 * 86400;
-const DISCLOSURE_SOURCE_MAX_AGE_SEC = 7 * 86400;
+const DASHBOARD_SOURCE_MAX_AGE_SEC = 3 * DAY_SECONDS;
+const DISCLOSURE_SOURCE_MAX_AGE_SEC = 7 * DAY_SECONDS;
 
 export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
   accountable: {

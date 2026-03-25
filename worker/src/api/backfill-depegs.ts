@@ -1,4 +1,5 @@
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import { DAY_SECONDS, DAY_MS } from "@shared/lib/time-constants";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import {
   getDepegThresholdBps,
@@ -152,7 +153,7 @@ export async function handleBackfillDepegs(
 
       // Fetch historical FX rates only as far back as the oldest supply snapshot in this batch.
       // If supply history is missing, fall back to 10 years to preserve current behavior.
-      const tenYearsAgoMs = Date.now() - 10 * 365 * 86400 * 1000;
+      const tenYearsAgoMs = Date.now() - 10 * 365 * DAY_MS;
       const defaultStartDate = new Date(tenYearsAgoMs).toISOString().slice(0, 10);
       const endDate = new Date().toISOString().slice(0, 10);
       let historicalFxStartDate = endDate;
@@ -609,7 +610,7 @@ export function extractDepegEvents(
   if (current) {
     const lastTs = prices[prices.length - 1].timestamp;
     const now = Math.floor(Date.now() / 1000);
-    if (now - lastTs > 7 * 86400) {
+    if (now - lastTs > 7 * DAY_SECONDS) {
       current.endedAt = lastTs;
     }
     events.push(current);

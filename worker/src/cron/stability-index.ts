@@ -1,4 +1,5 @@
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/stability-index-version";
 import type { CronResult } from "../lib/cron-logger";
@@ -166,7 +167,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
 
     if (earliestStart === Infinity) continue;
     const mcapUsd = mcapById.get(coinId) ?? 0;
-    const ageDays = Math.max(0, (now - earliestStart) / 86400);
+    const ageDays = Math.max(0, (now - earliestStart) / DAY_SECONDS);
 
     depegs.push({ bps: worstBps, mcapUsd, depegAgeDays: ageDays });
 
@@ -230,7 +231,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
 
   // Prune samples older than 90 days
   await db.prepare("DELETE FROM stability_index_samples WHERE stored_at < ?")
-    .bind(Math.floor(Date.now() / 1000) - 90 * 86400)
+    .bind(Math.floor(Date.now() / 1000) - 90 * DAY_SECONDS)
     .run();
 
   console.log(`[stability-index] score=${result.score} band=${result.band}`);

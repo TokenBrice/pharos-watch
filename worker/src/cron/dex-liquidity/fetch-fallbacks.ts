@@ -1,4 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { cgUrl, cgHeaders } from "../../lib/coingecko";
@@ -173,7 +174,7 @@ export async function fetchDsFallbackPools(
         // Compute maturity
         let maturityDays = 0;
         if (pair.pairCreatedAt) {
-          maturityDays = Math.max(0, Math.floor((nowSec - pair.pairCreatedAt / 1000) / 86400));
+          maturityDays = Math.max(0, Math.floor((nowSec - pair.pairCreatedAt / 1000) / DAY_SECONDS));
         }
 
         // Quality multiplier — use GT_DEX_QUALITY for known DEXes, generic fallback
