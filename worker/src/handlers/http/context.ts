@@ -39,8 +39,6 @@ export function buildRouteContext(config: {
       case "feedbackEnv":
         routeCtx.feedbackEnv = {
           GITHUB_PAT: config.env.GITHUB_PAT,
-          GITHUB_REPO_NODE_ID: config.env.GITHUB_REPO_NODE_ID,
-          GITHUB_DISCUSSION_CATEGORY_ID: config.env.GITHUB_DISCUSSION_CATEGORY_ID,
           FEEDBACK_IP_SALT: config.env.FEEDBACK_IP_SALT,
         };
         break;

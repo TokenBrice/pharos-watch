@@ -1,6 +1,6 @@
 # Feedback Pipeline
 
-In-app feedback collection that routes submissions to GitHub Issues or Discussions.
+In-app feedback collection that routes all submissions to GitHub Issues.
 
 ---
 
@@ -72,7 +72,7 @@ A shadcn `Dialog` with three feedback modes selected via a segmented tab control
 
 **Honeypot:** a hidden `website` input (off-screen, `tabIndex=-1`, `aria-hidden`) is sent as an empty string. If the worker receives a non-empty `website` value, the submission is silently accepted but discarded.
 
-**Submission:** `POST buildApiUrl("/api/feedback")` with `Content-Type: application/json`. On Pharos production and Pages preview hosts this resolves to `https://api.pharos.watch/api/feedback`; local proxy and explicit `NEXT_PUBLIC_API_BASE` setups follow the frontend runtime API rules in `src/lib/api.ts`. Optional contact handles are echoed publicly in the created GitHub issue/discussion. On success the modal transitions to a thank-you screen. On error the server's error message is displayed inline.
+**Submission:** `POST buildApiUrl("/api/feedback")` with `Content-Type: application/json`. On Pharos production and Pages preview hosts this resolves to `https://api.pharos.watch/api/feedback`; local proxy and explicit `NEXT_PUBLIC_API_BASE` setups follow the frontend runtime API rules in `src/lib/api.ts`. Optional contact handles are echoed publicly in the created GitHub issue. On success the modal transitions to a thank-you screen. On error the server's error message is displayed inline.
 
 ---
 
@@ -165,9 +165,7 @@ For non-USD pegs, the worker now derives `pegReference` from the tracked peg typ
 |------|-------------|--------|
 | `"bug"` | GitHub Issue | `["bug"]` |
 | `"data-correction"` | GitHub Issue | `["data-correction", "<verified-label>"]` |
-| `"feature-request"` | GitHub Discussion (preferred) → Issue (fallback) | `["feature-request"]` (Issue fallback only) |
-
-Feature requests are posted to GitHub Discussions using the GraphQL `createDiscussion` mutation when `GITHUB_REPO_NODE_ID` and `GITHUB_DISCUSSION_CATEGORY_ID` are configured. If either env var is absent or the GraphQL call fails, a regular Issue is created instead.
+| `"feature-request"` | GitHub Issue | `["feature-request"]` |
 
 **Issue title format:**
 
@@ -213,22 +211,10 @@ Set in `wrangler.toml` (non-secret) or via Cloudflare dashboard / `wrangler secr
 
 | Variable | Type | Required | Description |
 |----------|------|----------|-------------|
-| `GITHUB_PAT` | Secret | Yes | Personal access token with `repo` scope (write Issues + Discussions) |
+| `GITHUB_PAT` | Secret | Yes | Personal access token with `repo` scope (write Issues) |
 | `FEEDBACK_IP_SALT` | Secret | Yes | Random string used to hash IPs before storage |
-| `GITHUB_REPO_NODE_ID` | Var | No | GraphQL node ID of the repo (enables Discussion routing for feature requests) |
-| `GITHUB_DISCUSSION_CATEGORY_ID` | Var | No | GraphQL ID of the target Discussion category |
 
-Without `FEEDBACK_IP_SALT` or `GITHUB_PAT` the endpoint returns 503. Without `GITHUB_REPO_NODE_ID` / `GITHUB_DISCUSSION_CATEGORY_ID` feature requests fall back to Issues silently.
-
-To retrieve the GraphQL IDs:
-
-```bash
-# Repo node ID
-gh api graphql -f query='{ repository(owner: "TokenBrice", name: "stablecoin-dashboard") { id } }'
-
-# Discussion category IDs
-gh api graphql -f query='{ repository(owner: "TokenBrice", name: "stablecoin-dashboard") { discussionCategories(first: 10) { nodes { id name } } } }'
-```
+Without `FEEDBACK_IP_SALT` or `GITHUB_PAT` the endpoint returns 503.
 
 ---
 
@@ -244,7 +230,7 @@ gh api graphql -f query='{ repository(owner: "TokenBrice", name: "stablecoin-das
 | `worker/src/api/feedback/request.ts` | Request parsing, canonicalization, and policy checks |
 | `worker/src/api/feedback/verification.ts` | Auto-verification snapshot builder for data corrections |
 | `worker/src/api/feedback/submission.ts` | GitHub routing orchestration |
-| `worker/src/api/feedback/github.ts` | GitHub REST / GraphQL transport helpers |
-| `worker/src/api/feedback/format.ts` | Issue/discussion body and title formatting |
+| `worker/src/api/feedback/github.ts` | GitHub REST transport helper |
+| `worker/src/api/feedback/format.ts` | Issue body and title formatting |
 | `worker/src/router.ts` | Routes `POST /api/feedback` to `handleFeedback()` |
 | `worker/migrations/0029_feedback_rate_limit.sql` | D1 rate-limit table migration |

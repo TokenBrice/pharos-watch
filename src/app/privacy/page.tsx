@@ -80,8 +80,8 @@ export default function PrivacyPage() {
           <p>
             Pharos is hosted on Cloudflare Pages with API endpoints served by Cloudflare Workers. Analytics data is
             processed by Google (GA4) only when analytics is enabled for the current deployment. Feedback submissions
-            are also forwarded to GitHub Issues or Discussions for product triage; optional Telegram/X handles are
-            echoed publicly in those GitHub artifacts.
+            are also forwarded to GitHub Issues for product triage; optional Telegram/X handles are
+            echoed publicly in those GitHub issues.
           </p>
         </section>
 

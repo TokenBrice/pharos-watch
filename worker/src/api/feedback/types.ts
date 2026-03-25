@@ -23,8 +23,6 @@ export type VerifiedLabel = "verified: confirmed" | "verified: unconfirmed" | "v
 
 export interface FeedbackEnv {
   GITHUB_PAT?: string;
-  GITHUB_REPO_NODE_ID?: string;
-  GITHUB_DISCUSSION_CATEGORY_ID?: string;
   FEEDBACK_IP_SALT?: string;
 }
 
@@ -37,8 +35,6 @@ export interface PreparedFeedbackSubmission {
   feedback: FeedbackBody;
   pat: string;
   canonicalStablecoinId?: string;
-  repositoryId?: string;
-  discussionCategoryId?: string;
 }
 
 export const GITHUB_OWNER = "TokenBrice";

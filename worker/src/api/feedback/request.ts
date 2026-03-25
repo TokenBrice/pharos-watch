@@ -83,8 +83,6 @@ export async function prepareFeedbackSubmission(
     },
     pat: env.GITHUB_PAT,
     canonicalStablecoinId,
-    repositoryId: env.GITHUB_REPO_NODE_ID,
-    discussionCategoryId: env.GITHUB_DISCUSSION_CATEGORY_ID,
   };
 }
 

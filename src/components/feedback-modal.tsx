@@ -240,7 +240,7 @@ export function FeedbackModal({
                 disabled={status === "loading"}
               />
               <p className="text-xs text-muted-foreground">
-                This handle will be included publicly on GitHub issues/discussions.
+                This handle will be included publicly on GitHub issues.
               </p>
             </div>
 

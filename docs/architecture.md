@@ -539,8 +539,8 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   │   ├── request.ts       # JSON parsing, validation, rate-limit/env policy
     │   │   ├── verification.ts  # Auto-verification snapshots for data corrections
     │   │   ├── submission.ts    # GitHub routing orchestration
-    │   │   ├── github.ts        # GitHub REST / GraphQL helpers
-    │   │   ├── format.ts        # Issue/discussion payload formatting
+    │   │   ├── github.ts        # GitHub REST helper
+    │   │   ├── format.ts        # Issue payload formatting
     │   │   └── types.ts         # Shared feedback types and constants
     │   ├── telegram-webhook.ts  # POST /api/telegram-webhook (Telegram bot command ingress coordinator)
     │   ├── telegram-webhook-shared.ts # Telegram webhook shared constants/types/catalog

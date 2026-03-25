@@ -1922,7 +1922,7 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
 
 ### `POST /api/feedback`
 
-Public feedback ingestion endpoint used by the in-app feedback modal. Validates payloads, applies IP-based rate limiting, and forwards submissions to GitHub Issues/Discussions.
+Public feedback ingestion endpoint used by the in-app feedback modal. Validates payloads, applies IP-based rate limiting, and forwards submissions to GitHub Issues.
 
 **Cache:** no edge cache (POST passthrough)
 

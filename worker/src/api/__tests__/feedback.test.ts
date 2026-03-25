@@ -52,8 +52,6 @@ function makeRequest(body: unknown): Request {
 function makeEnv(overrides: Partial<FeedbackEnv> = {}): FeedbackEnv {
   return {
     GITHUB_PAT: overrides.GITHUB_PAT ?? "ghp_test_token",
-    GITHUB_REPO_NODE_ID: overrides.GITHUB_REPO_NODE_ID,
-    GITHUB_DISCUSSION_CATEGORY_ID: overrides.GITHUB_DISCUSSION_CATEGORY_ID,
     FEEDBACK_IP_SALT: overrides.FEEDBACK_IP_SALT ?? "test-salt",
   };
 }
@@ -309,43 +307,11 @@ describe("handleFeedback", () => {
     expect(issuePayload.body).toContain("**Peg deviation:** -1.157%");
   });
 
-  it("tries GitHub Discussion first for feature-request, falls back to issue", async () => {
+  it("returns 200 and creates GitHub issue for feature-request", async () => {
     const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
 
-    // First call: GraphQL Discussion creation fails
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ errors: [{ message: "fail" }] }), { status: 200 }));
-    // Second call: Falls back to Issues API
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ id: 3, number: 44 }), { status: 201 }));
-
-    const res = await handleFeedback(
-      db,
-      makeRequest(
-        makeFeedbackBody({
-          type: "feature-request",
-          title: "Add dark mode",
-          description: "Please add a dark mode toggle to the dashboard.",
-        }),
-      ),
-      makeEnv({
-        GITHUB_REPO_NODE_ID: "R_abc123",
-        GITHUB_DISCUSSION_CATEGORY_ID: "DC_xyz789",
-      }),
-    );
-
-    expect(res.status).toBe(200);
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
-    // First call should be GraphQL
-    expect(String(fetchSpy.mock.calls[0][0])).toContain("graphql");
-    // Second call should be Issues fallback
-    expect(String(fetchSpy.mock.calls[1][0])).toContain("/issues");
-  });
-
-  it("drains GraphQL HTTP error bodies before falling back to issues", async () => {
-    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
-
-    const graphQlError = new Response("upstream unavailable", { status: 502 });
     const issueResponse = new Response(JSON.stringify({ id: 3, number: 44 }), { status: 201 });
-    fetchSpy.mockResolvedValueOnce(graphQlError).mockResolvedValueOnce(issueResponse);
+    fetchSpy.mockResolvedValueOnce(issueResponse);
 
     const res = await handleFeedback(
       db,
@@ -356,14 +322,16 @@ describe("handleFeedback", () => {
           description: "Please add a dark mode toggle to the dashboard.",
         }),
       ),
-      makeEnv({
-        GITHUB_REPO_NODE_ID: "R_abc123",
-        GITHUB_DISCUSSION_CATEGORY_ID: "DC_xyz789",
-      }),
+      makeEnv(),
     );
 
     expect(res.status).toBe(200);
-    expect(graphQlError.bodyUsed).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchSpy.mock.calls[0];
+    expect(String(url)).toContain("/issues");
+    expect(init?.method).toBe("POST");
+    const payload = JSON.parse(String(init?.body)) as { labels: string[] };
+    expect(payload.labels).toEqual(["feature-request"]);
     expect(issueResponse.bodyUsed).toBe(true);
   });
 

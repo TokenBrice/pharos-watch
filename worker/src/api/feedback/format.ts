@@ -58,21 +58,21 @@ export function buildIssueSubmission(
   const shortDesc = sanitizeInlineText(feedback.description).slice(0, 60);
   const ellipsis = sanitizeInlineText(feedback.description).length > 60 ? "..." : "";
 
-  return {
-    title:
-      feedback.type === "bug"
-        ? `[Bug] ${sanitizeInlineText((feedback.title ?? "").trim()).slice(0, 100)}`
-        : `[Data Correction] ${stablecoinPart}${shortDesc}${ellipsis}`,
-    labels: feedback.type === "bug" ? ["bug"] : ["data-correction", verifiedLabel],
-    body: formatFeedbackBody(feedback, verificationBlock),
+  const titleMap: Record<string, string> = {
+    bug: `[Bug] ${sanitizeInlineText((feedback.title ?? "").trim()).slice(0, 100)}`,
+    "data-correction": `[Data Correction] ${stablecoinPart}${shortDesc}${ellipsis}`,
+    "feature-request": `[Feature Request] ${sanitizeInlineText((feedback.title ?? "").trim()).slice(0, 100)}`,
   };
-}
 
-export function buildFeatureRequestSubmission(
-  feedback: FeedbackBody,
-): { title: string; body: string } {
+  const labelsMap: Record<string, string[]> = {
+    bug: ["bug"],
+    "data-correction": ["data-correction", verifiedLabel],
+    "feature-request": ["feature-request"],
+  };
+
   return {
-    title: `[Feature Request] ${sanitizeInlineText((feedback.title ?? "").trim()).slice(0, 100)}`,
-    body: formatFeedbackBody(feedback),
+    title: titleMap[feedback.type] ?? titleMap.bug,
+    labels: labelsMap[feedback.type] ?? labelsMap.bug,
+    body: formatFeedbackBody(feedback, verificationBlock),
   };
 }
