@@ -71,8 +71,12 @@ describe("syncBluechip", () => {
 
     expect(result.status).toBeUndefined();
     expect(result.itemCount).toBe(2);
-    const metadata = JSON.parse(result.metadata ?? "{}") as { ratingsFetched: number };
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      ratingsFetched: number;
+      failedSlugs?: unknown;
+    };
     expect(metadata.ratingsFetched).toBe(2);
+    expect(metadata.failedSlugs).toBeUndefined();
 
     const insert = getCacheInsert(db as MockD1Database);
     expect(insert).toBeDefined();
@@ -145,8 +149,15 @@ describe("syncBluechip", () => {
 
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(0);
-    const metadata = JSON.parse(result.metadata ?? "{}") as { reason: string };
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      reason: string;
+      failedSlugs: { slug: string; reason: string }[];
+    };
     expect(metadata.reason).toBe("upstream-no-ratings");
+    expect(metadata.failedSlugs).toEqual([
+      { slug: "tether", reason: "http-500" },
+      { slug: "usdc", reason: "http-500" },
+    ]);
     expect(getCacheInsert(db as MockD1Database)).toBeUndefined();
   });
 
@@ -209,10 +220,12 @@ describe("syncBluechip", () => {
       ratingsFetched: number;
       ratingsPublished: number;
       fallbackMode: string | null;
+      failedSlugs: { slug: string; reason: string }[];
     };
     expect(metadata.ratingsFetched).toBe(1);
     expect(metadata.ratingsPublished).toBe(2);
     expect(metadata.fallbackMode).toBe("partial-cache-merge");
+    expect(metadata.failedSlugs).toEqual([{ slug: "usdc", reason: "http-500" }]);
 
     const insert = getCacheInsert(db as MockD1Database);
     const cached = JSON.parse(String(insert?.binds[1])) as Record<string, { grade: string }>;
@@ -238,8 +251,15 @@ describe("syncBluechip", () => {
 
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(0);
-    const metadata = JSON.parse(result.metadata ?? "{}") as { reason: string };
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      reason: string;
+      failedSlugs: { slug: string; reason: string }[];
+    };
     expect(metadata.reason).toBe("upstream-no-ratings");
+    expect(metadata.failedSlugs).toEqual([
+      { slug: "tether", reason: "invalid-payload" },
+      { slug: "usdc", reason: "empty-data" },
+    ]);
     expect(warnSpy).toHaveBeenCalledWith("[bluechip] No ratings fetched, preserving cache");
     expect(getCacheInsert(db as MockD1Database)).toBeUndefined();
   });

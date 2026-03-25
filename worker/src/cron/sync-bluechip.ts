@@ -95,6 +95,7 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
   const BATCH_SIZE = 3;
   const results: PromiseSettledResult<{ pharosId: string; rating: BluechipRating } | null>[] = [];
   let invalidPayloads = 0;
+  const failedSlugs: { slug: string; reason: string }[] = [];
 
   for (let i = 0; i < entries.length; i += BATCH_SIZE) {
     if (i > 0) await new Promise((r) => setTimeout(r, 500));
@@ -107,7 +108,10 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
           2,
           { passthrough404: true }
         );
-        if (!res || !res.ok) return null;
+        if (!res || !res.ok) {
+          failedSlugs.push({ slug, reason: res ? `http-${res.status}` : "no-response" });
+          return null;
+        }
         const payload = await res.json();
         const validation = validatePayloadWithSchema(
           BluechipResponseSchema,
@@ -116,14 +120,21 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
         );
         if (!validation.ok) {
           invalidPayloads++;
+          failedSlugs.push({ slug, reason: "invalid-payload" });
           console.warn(`[bluechip] Invalid payload for ${slug}: ${validation.issues}`);
           return null;
         }
-        if (validation.data.data.length === 0) return null;
+        if (validation.data.data.length === 0) {
+          failedSlugs.push({ slug, reason: "empty-data" });
+          return null;
+        }
 
         const coin = validation.data.data[0];
         const grade = coin.grade as BluechipGrade | undefined;
-        if (!grade) return null;
+        if (!grade) {
+          failedSlugs.push({ slug, reason: "no-grade" });
+          return null;
+        }
 
         const rating: BluechipRating = {
           grade,
@@ -163,7 +174,7 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
     return {
       status: "degraded",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "upstream-no-ratings" }),
+      metadata: JSON.stringify({ reason: "upstream-no-ratings", failedSlugs }),
     };
   }
 
@@ -179,6 +190,7 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
       retainedFromCache: Math.max(0, Object.keys(ratingsMap).length - freshCount),
       fallbackMode: partialCoverage ? "partial-cache-merge" : null,
       invalidPayloads,
+      ...(failedSlugs.length > 0 ? { failedSlugs } : {}),
     }),
   };
 }
