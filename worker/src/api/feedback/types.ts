@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const FeedbackContactChannelSchema = z.enum(["telegram", "x"]);
+const FeedbackContactChannelSchema = z.enum(["telegram", "x"]);
 export type FeedbackContactChannel = z.infer<typeof FeedbackContactChannelSchema>;
 
 export const FeedbackBodySchema = z.object({
