@@ -21,11 +21,19 @@ import { MethodologyCardActions, MethodologyLabel } from "@/components/methodolo
 // ---------------------------------------------------------------------------
 
 const GRADE_GLOW_COLORS: Record<string, string> = {
-  A: 'oklch(0.5 0.18 145 / 0.12)',  // Green
-  B: 'oklch(0.5 0.12 250 / 0.12)',  // Blue
-  C: 'oklch(0.55 0.15 85 / 0.12)',  // Amber
-  D: 'oklch(0.55 0.18 55 / 0.15)',   // Orange
-  F: 'oklch(0.5 0.2 25 / 0.18)',     // Red
+  A: 'oklch(0.5 0.18 145 / 0.2)',
+  B: 'oklch(0.5 0.12 250 / 0.18)',
+  C: 'oklch(0.55 0.15 85 / 0.18)',
+  D: 'oklch(0.55 0.18 55 / 0.22)',
+  F: 'oklch(0.5 0.2 25 / 0.25)',
+};
+
+const GRADE_BORDER_HEX: Record<string, string> = {
+  A: 'oklch(0.65 0.2 145 / 0.5)',
+  B: 'oklch(0.6 0.14 250 / 0.45)',
+  C: 'oklch(0.65 0.16 85 / 0.45)',
+  D: 'oklch(0.6 0.2 55 / 0.5)',
+  F: 'oklch(0.55 0.22 25 / 0.55)',
 };
 
 function GradeGlow({ grade }: { grade: string }) {
@@ -66,7 +74,10 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
   // Defunct coins get a minimal card
   if (card.isDefunct) {
     return (
-      <Card>
+      <Card
+        className="overflow-hidden"
+        style={{ borderTopWidth: '3px', borderTopColor: GRADE_BORDER_HEX.F }}
+      >
         <CardHeader>
           <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>Safety Score</CardTitle>
         </CardHeader>
@@ -90,8 +101,14 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
     );
   }
 
+  const gradeRange = card.overallGrade.charAt(0);
+  const topBorderColor = GRADE_BORDER_HEX[gradeRange] ?? GRADE_BORDER_HEX.B;
+
   return (
-      <Card>
+      <Card
+        className="overflow-hidden"
+        style={{ borderTopWidth: '3px', borderTopColor: topBorderColor }}
+      >
         <CardHeader>
           <CardTitle as="h2" className="text-xl font-bold tracking-tight">
             <div className="flex items-center justify-between">
@@ -107,24 +124,24 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
         <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] md:items-stretch">
           {/* Left column: grade + radar stacked */}
           <div className="flex flex-col items-center gap-4">
-            {/* Grade strip */}
-            <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-3 gap-y-2">
+            {/* Grade hero */}
+            <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-4 gap-y-2">
               <Badge
                 variant="outline"
-                className={`text-3xl px-5 py-2 font-bold ${REPORT_CARD_GRADE_COLORS[card.overallGrade]}`}
+                className={`text-4xl px-6 py-2.5 font-extrabold tracking-tight ${REPORT_CARD_GRADE_COLORS[card.overallGrade]}`}
               >
                 {card.overallGrade}
               </Badge>
               {card.overallScore !== null && (
-                <span className="text-lg text-muted-foreground">
+                <span className="text-2xl font-bold font-mono tabular-nums tracking-tight text-foreground">
                   {card.overallScore}
-                  <span className="text-sm">/100</span>
+                  <span className="text-base text-muted-foreground">/100</span>
                 </span>
               )}
               {card.baseScore != null && card.overallScore != null && card.dimensions.pegStability.score != null && (
-                <details className="mt-1 basis-full text-center text-xs text-muted-foreground">
-                  <summary className="pharos-focus-ring inline-flex cursor-pointer rounded-md transition-colors hover:text-foreground">
-                    Show score breakdown
+                <details className="mt-2 basis-full text-center text-xs text-muted-foreground">
+                  <summary className="pharos-focus-ring inline-flex cursor-pointer rounded-md px-2 py-1 transition-colors hover:text-foreground hover:bg-muted/50">
+                    Score breakdown
                   </summary>
                   <div className="mt-2 mx-auto max-w-[200px] space-y-1.5">
                     <div className="flex items-center justify-between">
@@ -158,10 +175,13 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
           <div className="space-y-2">
             {DIMENSION_ORDER.map((key) => {
               const dim = card.dimensions[key];
+              const dimRange = dim.grade.charAt(0);
+              const dimBorder = GRADE_BORDER_HEX[dimRange] ?? 'transparent';
               return (
                 <div key={key}>
                   <div
-                    className="flex items-center justify-between rounded-lg border px-3 py-2"
+                    className="flex items-center justify-between rounded-lg border border-l-[3px] px-3 py-2"
+                    style={{ borderLeftColor: dimBorder }}
                   >
                     <span className="text-sm font-medium">
                       {key === "resilience" ? (
@@ -212,7 +232,7 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
                             <span>
                               {label}: <span className="text-foreground/70">{desc}</span>
                             </span>
-                            <span className={`tabular-nums ${isNegative ? "text-amber-700 dark:text-amber-400" : ""}`}>
+                            <span className={`tabular-nums ${isNegative ? "text-amber-700 dark:text-amber-400" : "text-foreground/80"}`}>
                               {isNegative ? subScore : subScore === 0 ? "—" : subScore}
                             </span>
                           </div>
@@ -262,10 +282,10 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
                   )}
                   {key === "liquidity" && liquidityComponents && dim.score !== null && (
                     <details className="mt-1.5 text-xs text-muted-foreground">
-                      <summary className="pharos-focus-ring ml-3 cursor-pointer rounded-md transition-colors hover:text-foreground">
+                      <summary className="pharos-focus-ring ml-4 cursor-pointer rounded-md transition-colors hover:text-foreground">
                         Show components
                       </summary>
-                      <div className="mt-2 ml-4 space-y-1">
+                      <div className="mt-2 ml-4 space-y-1.5">
                         {[
                           { label: "TVL Depth", key: "tvlDepth" as const, weight: 35 },
                           { label: "Volume Activity", key: "volumeActivity" as const, weight: 20 },

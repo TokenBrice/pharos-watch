@@ -83,7 +83,7 @@ function HeroTagList({ tags }: { tags: readonly string[] | undefined }) {
 
 function HeroClassificationLine({ coin }: { coin: StablecoinMeta }) {
   return (
-    <p className="text-sm text-muted-foreground">
+    <p className="text-sm text-muted-foreground/70">
       {GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance}
       {" \u00b7 "}
       {BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing}
@@ -121,9 +121,9 @@ function HeroIdentityHeader({
   return (
     <>
       <div className="flex flex-wrap items-center gap-3">
-        <StablecoinLogo src={logoSrc} name={coin.name} size={48} />
-        <h2 className="text-2xl font-extrabold tracking-tighter">{coin.name}</h2>
-        <span className="text-lg text-muted-foreground font-mono">{coin.symbol}</span>
+        <StablecoinLogo src={logoSrc} name={coin.name} size={56} />
+        <h2 className="text-3xl font-extrabold tracking-tighter">{coin.name}</h2>
+        <span className="text-lg text-muted-foreground/70 font-mono">{coin.symbol}</span>
         <BluechipHeaderBadge stablecoinId={coin.id} />
       </div>
       <HeroClassificationLine coin={coin} />
@@ -156,8 +156,16 @@ function HeroPriceContent({
         <PegGauge deviationBps={gaugeDeviationBps} className={gaugeClassName} />
       )}
       <div className="min-w-0">
-        <div className="text-2xl font-bold font-mono tracking-tight">
-          <span className={confidenceClass(coinData.priceConfidence)}>
+        <div className="text-3xl font-extrabold font-mono tracking-tight">
+          <span className={`sm:hidden ${confidenceClass(coinData.priceConfidence)}`}>
+            {formatNativePrice(
+              coinData.price != null ? Math.floor(coinData.price * 1000) / 1000 : coinData.price,
+              coin.flags.pegCurrency ?? "USD",
+              pegRef,
+              3,
+            )}
+          </span>
+          <span className={`hidden sm:inline ${confidenceClass(coinData.priceConfidence)}`}>
             {formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef)}
           </span>
         </div>
@@ -470,8 +478,8 @@ export function HeroCard({
 
             {reportCard && !reportCard.isDefunct && (
               <div className="border-l border-border/30 pl-3">
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  <MethodologyLabel topic="safetyScore">Safety Score</MethodologyLabel>
+                <p className="mb-1 whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <MethodologyLabel topic="safetyScore">Safety</MethodologyLabel>
                 </p>
                 <div className="flex items-center gap-2">
                   <Badge
@@ -559,8 +567,8 @@ export function HeroCard({
 
               {reportCard && !reportCard.isDefunct && (
                 <div className="border-l border-border/30 pl-4">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <MethodologyLabel topic="safetyScore">Safety Score</MethodologyLabel>
+                  <p className="mb-1 whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    <MethodologyLabel topic="safetyScore">Safety</MethodologyLabel>
                   </p>
                   <div className="flex items-center gap-2">
                     <Badge
