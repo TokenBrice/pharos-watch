@@ -13,7 +13,6 @@ import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { apiFetch } from "@/lib/api";
 import { CRON_1H, CRON_20MIN } from "@/lib/cron-intervals";
-import { CHART_PALETTE } from "@/lib/chart-colors";
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { derivePegRates } from "@shared/lib/peg-rates";
@@ -21,6 +20,7 @@ import {
   MintBurnPerCoinResponseSchema,
   SupplyHistoryResponseSchema,
   type ReportCard,
+  type StablecoinData,
   type SupplyHistoryPoint,
 } from "@shared/types";
 
@@ -112,17 +112,32 @@ export function useCompareDataModel({
     return errors;
   }, [detailQueries, selectedIds]);
 
+  const assetMap = useMemo(() => {
+    if (!listData?.peggedAssets) return new Map<string, StablecoinData>();
+    return new Map(listData.peggedAssets.map((a) => [a.id, a] as const));
+  }, [listData]);
+
+  const pegCoinMap = useMemo(() => {
+    if (!pegSummary?.coins) return new Map<string, NonNullable<typeof pegSummary>["coins"][number]>();
+    return new Map(pegSummary.coins.map((c) => [c.id, c] as const));
+  }, [pegSummary]);
+
+  const flowCoinMap = useMemo(() => {
+    if (!flowData?.coins) return new Map<string, NonNullable<typeof flowData>["coins"][number]>();
+    return new Map(flowData.coins.map((c) => [c.stablecoinId, c] as const));
+  }, [flowData]);
+
   const comparisonCoins = useMemo(() => {
-    if (!listData?.peggedAssets) return [];
+    if (assetMap.size === 0) return [];
     return selectedIds
       .map((id) => {
-        const data = listData.peggedAssets.find((asset) => asset.id === id);
+        const data = assetMap.get(id);
         const meta = TRACKED_META_BY_ID.get(id);
         if (!data || !meta) return null;
-        const pegCoin = pegSummary?.coins?.find((coin) => coin.id === id);
+        const pegCoin = pegCoinMap.get(id);
         const dexCoin = dexData?.[id];
         const safetyGrade = cardMap.get(id)?.overallGrade ?? null;
-        const flowCoin = flowData?.coins.find((coin) => coin.stablecoinId === id);
+        const flowCoin = flowCoinMap.get(id);
         return {
           id,
           symbol: data.symbol,
@@ -136,7 +151,7 @@ export function useCompareDataModel({
         };
       })
       .filter((coin): coin is NonNullable<typeof coin> => coin != null);
-  }, [cardMap, dexData, flowData, listData, pegSummary, selectedIds]);
+  }, [assetMap, cardMap, dexData, flowCoinMap, pegCoinMap, selectedIds]);
 
   const supplySeries = useMemo(() => {
     return selectedIds
@@ -148,7 +163,7 @@ export function useCompareDataModel({
           id,
           label: meta?.name ?? id,
           data: history.map((point) => ({ ts: point.date * 1000, value: point.circulatingUsd })),
-          color: CHART_PALETTE[index % CHART_PALETTE.length],
+          color: COMPARE_COLORS[index % COMPARE_COLORS.length],
         };
       })
       .filter((series): series is NonNullable<typeof series> => series != null);
@@ -171,10 +186,10 @@ export function useCompareDataModel({
   }, [flowCoinQueries, selectedIds]);
 
   const flowCardData = useMemo(() => {
-    if (!flowData?.coins) return [];
+    if (flowCoinMap.size === 0) return [];
     return selectedIds
       .map((id, index) => {
-        const coin = flowData.coins.find((entry) => entry.stablecoinId === id);
+        const coin = flowCoinMap.get(id);
         if (!coin) return null;
         const meta = TRACKED_META_BY_ID.get(id);
         return {
@@ -188,7 +203,7 @@ export function useCompareDataModel({
         };
       })
       .filter((entry): entry is NonNullable<typeof entry> => entry != null);
-  }, [flowData, selectedIds]);
+  }, [flowCoinMap, selectedIds]);
 
   const detailLoading = detailQueries.some((query) => query.isLoading);
 

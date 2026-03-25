@@ -23,10 +23,7 @@ import { getReserves, type ReserveResult } from "@shared/lib/reserve-templates";
 import {
   deriveDeviationBps,
   deriveGaugeDeviationBps,
-  deriveLiquidityBorderClass,
   derivePegReferenceContext,
-  derivePegScoreBorderClass,
-  derivePrev90dReferenceMcap,
   deriveSupplyFromMarketCap,
 } from "@/lib/stablecoin-detail-derive";
 import type { MintBurnFlowsResponse } from "@shared/types";
@@ -67,7 +64,6 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   prevDay: number | null;
   prevWeek: number | null;
   prevMonth: number | null;
-  prev90d: number;
   pegRef: number;
   deviationBps: number;
   gaugeDeviationBps: number;
@@ -76,10 +72,8 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   consensusSources: string[];
   agreeSources: string[];
   dexPriceCheck: PegSummaryCoin["dexPriceCheck"];
-  pegScoreBorderClass: string;
   liquidityData: DexLiquidityData | undefined;
   redemptionBackstop: RedemptionBackstopEntry | undefined;
-  liqBorderClass: string;
   hasFlows: boolean;
   supplyHistory: SupplyHistoryPoint[];
   earliestTrackingDate: string | null;
@@ -92,7 +86,6 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
     error: unknown | null;
     hasData: boolean;
   }[];
-  usesFallbackPegRate: boolean;
 }
 
 export type StablecoinDetailViewModel =
@@ -164,7 +157,7 @@ export function buildStablecoinDetailViewModel({
   isFlowsLoading,
   liveReserves = null,
   liveReserveError = null,
-  nowMs = Date.now(),
+  nowMs: _nowMs = Date.now(),
 }: BuildStablecoinDetailViewModelParams): StablecoinDetailViewModel {
   if (supplyLoading || listLoading) {
     return { status: "loading", handleRetryAll };
@@ -190,7 +183,6 @@ export function buildStablecoinDetailViewModel({
     resolvedSupplyHistory.length > 0
       ? String(resolvedSupplyHistory[0].date)
       : null;
-  const prev90d = derivePrev90dReferenceMcap(resolvedSupplyHistory, nowMs);
   const pegContext = derivePegReferenceContext({
     assets: listData?.peggedAssets ?? [],
     pegType: coinData.pegType,
@@ -206,10 +198,8 @@ export function buildStablecoinDetailViewModel({
   const consensusSources = pegScoreResult?.consensusSources ?? [];
   const agreeSources = pegScoreResult?.agreeSources ?? [];
   const dexPriceCheck = pegScoreResult?.dexPriceCheck ?? null;
-  const pegScoreBorderClass = derivePegScoreBorderClass(pegScoreResult?.pegScore);
   const liquidityData = liquidityMap?.[id];
   const redemptionBackstop = redemptionBackstopsData?.coins?.[id];
-  const liqBorderClass = deriveLiquidityBorderClass(liquidityData);
   const reportCard = reportCardsData?.cards.find((candidate) => candidate.id === id);
   const reserves = liveReserves ?? getReserves(coin);
   const hasFlows =
@@ -230,7 +220,6 @@ export function buildStablecoinDetailViewModel({
     prevDay,
     prevWeek,
     prevMonth,
-    prev90d,
     pegRef: pegContext.pegReference,
     deviationBps,
     gaugeDeviationBps,
@@ -239,10 +228,8 @@ export function buildStablecoinDetailViewModel({
     consensusSources,
     agreeSources,
     dexPriceCheck,
-    pegScoreBorderClass,
     liquidityData,
     redemptionBackstop,
-    liqBorderClass,
     hasFlows,
     supplyHistory: resolvedSupplyHistory,
     earliestTrackingDate,
@@ -281,6 +268,5 @@ export function buildStablecoinDetailViewModel({
         hasData: !!redemptionBackstopsData?.coins,
       },
     ],
-    usesFallbackPegRate: pegContext.pegRateSources[coinData.pegType ?? ""] === "fallback",
   };
 }

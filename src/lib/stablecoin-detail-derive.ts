@@ -1,6 +1,5 @@
 import { derivePegRates, getPegReference, type PegRateSource } from "@shared/lib/peg-rates";
-import { TIER_BORDER, getScoreTier } from "./severity-colors";
-import type { DexLiquidityData, PegAssetBase, StablecoinMeta } from "@shared/types";
+import type { PegAssetBase, StablecoinMeta } from "@shared/types";
 import { NINETY_DAYS_MS, WEEK_MS } from "./constants";
 
 const NINETY_DAY_TOLERANCE_MS = WEEK_MS;
@@ -90,16 +89,4 @@ export function derivePegReferenceContext({
     pegRateSources: sources,
     pegRateSource: pegType ? sources[pegType] : undefined,
   };
-}
-
-export function derivePegScoreBorderClass(pegScore: number | null | undefined): string {
-  if (pegScore == null) return "";
-  if (pegScore >= 90) return "border-l-2 border-l-green-500";
-  if (pegScore >= 70) return "border-l-2 border-l-amber-500";
-  return "border-l-2 border-l-red-500";
-}
-
-export function deriveLiquidityBorderClass(liquidity: DexLiquidityData | undefined): string {
-  if (liquidity == null || liquidity.liquidityScore === null) return "";
-  return `border-l-2 ${TIER_BORDER[getScoreTier(liquidity.liquidityScore)]}`;
 }

@@ -66,9 +66,9 @@ function findChainData(
 export function useChainStablecoins(chainId: string) {
   const { data, isLoading, isError } = useStablecoins();
 
-  return useMemo(() => {
+  const { coins, totalUsd } = useMemo(() => {
     if (!data?.peggedAssets) {
-      return { coins: [], totalUsd: 0, isLoading, isError };
+      return { coins: [] as ChainStablecoin[], totalUsd: 0 };
     }
 
     let totalUsd = 0;
@@ -117,6 +117,8 @@ export function useChainStablecoins(chainId: string) {
 
     coins.sort((a, b) => b.supplyOnChain - a.supplyOnChain);
 
-    return { coins, totalUsd, isLoading, isError };
-  }, [data, chainId, isLoading, isError]);
+    return { coins, totalUsd };
+  }, [data, chainId]);
+
+  return { coins, totalUsd, isLoading, isError };
 }

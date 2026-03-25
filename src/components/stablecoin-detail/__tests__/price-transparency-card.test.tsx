@@ -73,18 +73,39 @@ describe("PriceTransparencyCard", () => {
       />,
     );
 
-    expect(screen.getByText("CoinGecko + Kraken + Bitstamp + Jupiter")).toBeTruthy();
+    // Check summary shows correct counts
+    expect(screen.getByText("3 used")).toBeTruthy();
+    expect(screen.getByText("1 available")).toBeTruthy();
 
-    const krakenRow = screen.getByText("Kraken").parentElement;
+    // Check used sources are displayed with "Used" badges
+    const krakenRow = screen.getByText("Kraken").closest("div");
     expect(krakenRow).not.toBeNull();
     expect(within(krakenRow as HTMLElement).getByText("Used")).toBeTruthy();
 
-    const bitstampRow = screen.getByText("Bitstamp").parentElement;
+    const bitstampRow = screen.getByText("Bitstamp").closest("div");
     expect(bitstampRow).not.toBeNull();
     expect(within(bitstampRow as HTMLElement).getByText("Used")).toBeTruthy();
 
-    const jupiterRow = screen.getByText("Jupiter").parentElement;
+    // Check available source is displayed with "Available" badge
+    const jupiterRow = screen.getByText("Jupiter").closest("div");
     expect(jupiterRow).not.toBeNull();
     expect(within(jupiterRow as HTMLElement).getByText("Available")).toBeTruthy();
+  });
+
+  it("shows current price and confidence", () => {
+    render(
+      <PriceTransparencyCard
+        coinData={makeCoinData("coingecko")}
+        consensusSources={["coingecko"]}
+        agreeSources={["coingecko"]}
+        dexPriceCheck={null}
+      />,
+    );
+
+    // Check price is displayed (appears twice in component, so check at least one exists)
+    expect(screen.getAllByText("$1.0000").length).toBeGreaterThanOrEqual(1);
+    
+    // Check confidence badge (appears in summary and DEX check)
+    expect(screen.getAllByText("high").length).toBeGreaterThanOrEqual(1);
   });
 });

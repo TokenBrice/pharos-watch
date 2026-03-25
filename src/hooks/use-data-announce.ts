@@ -13,20 +13,26 @@ interface DataUpdateAnnouncement {
  */
 export function useDataAnnounce(updates: DataUpdateAnnouncement[]) {
   const previousUpdates = useRef<Record<string, number>>({});
+  const clearTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
   const announce = useCallback((message: string) => {
     const liveRegion = document.getElementById("pharos-data-live-region");
-    if (liveRegion) {
-      liveRegion.textContent = message;
-      // Clear after announcement to avoid repetition
-      setTimeout(() => {
-        liveRegion.textContent = "";
-      }, 1000);
-    }
+    if (!liveRegion) return;
+    if (clearTimer.current) clearTimeout(clearTimer.current);
+    liveRegion.textContent = message;
+    clearTimer.current = setTimeout(() => {
+      liveRegion.textContent = "";
+    }, 1000);
+  }, []);
+
+  // Clean up pending timer on unmount
+  useEffect(() => () => {
+    if (clearTimer.current) clearTimeout(clearTimer.current);
   }, []);
 
   useEffect(() => {
     const updatesToAnnounce: string[] = [];
-    
+
     for (const { dataUpdatedAt, dataName } of updates) {
       const previous = previousUpdates.current[dataName];
       if (dataUpdatedAt > 0 && previous && dataUpdatedAt > previous) {

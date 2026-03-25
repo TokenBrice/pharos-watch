@@ -1,4 +1,4 @@
-import type { ZodType } from "zod";
+import { z, type ZodType } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
 
@@ -98,6 +98,13 @@ export interface ApiMeta {
   warning?: string | null;
 }
 
+const ApiMetaSchema = z.object({
+  updatedAt: z.number(),
+  ageSeconds: z.number(),
+  status: z.enum(["fresh", "degraded", "stale"]),
+  warning: z.string().nullish(),
+});
+
 function resolveContractMode(
   schema: ZodType<unknown> | undefined,
   mode: ApiContractMode | undefined,
@@ -181,7 +188,8 @@ export async function apiFetchWithMeta<T>(
   let data = json;
   if (json && typeof json === "object" && !Array.isArray(json) && "_meta" in json) {
     const { _meta, ...rest } = json as Record<string, unknown>;
-    meta = _meta as ApiMeta;
+    const parsed = ApiMetaSchema.safeParse(_meta);
+    if (parsed.success) meta = parsed.data;
     data = rest;
   }
 

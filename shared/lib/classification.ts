@@ -311,7 +311,8 @@ export const YIELD_TYPE_STYLES: Record<YieldType, { badge: string; hex: string }
   "lending-opportunity": { badge: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20", hex: "#0ea5e9" },
 };
 
-/** Chart hex colors for blacklist stablecoin breakdown */
+/** Chart hex colors for blacklist stablecoin breakdown.
+ *  Intentionally per-stablecoin brand colors — independent of chart-colors.ts tokens. */
 export const BLACKLIST_CHART_COLORS: Record<BlacklistStablecoin, string> = {
   USDT: "#06b6d4",
   USDC: "#3b82f6",
@@ -362,6 +363,24 @@ export const THREAT_BAND_HEX: Record<ThreatBand, string> = {
   WARNING: "#f97316",
   DANGER: "#ef4444",
 };
+
+/**
+ * Derive the highest DEWS risk level from an array of threat bands.
+ * Returns a lowercase token suitable for UI styling: "danger" | "warning" | "alert" | "calm".
+ */
+export type DewsRiskLevel = "danger" | "warning" | "alert" | "calm";
+
+export function getDewsRiskLevel(bands: ThreatBand[]): DewsRiskLevel {
+  let maxOrder = 0;
+  for (const band of bands) {
+    const order = THREAT_BAND_ORDER[band] ?? 0;
+    if (order > maxOrder) maxOrder = order;
+  }
+  if (maxOrder >= THREAT_BAND_ORDER.DANGER) return "danger";
+  if (maxOrder >= THREAT_BAND_ORDER.WARNING) return "warning";
+  if (maxOrder >= THREAT_BAND_ORDER.ALERT) return "alert";
+  return "calm";
+}
 
 // ---------------------------------------------------------------------------
 // Feature status badge styles

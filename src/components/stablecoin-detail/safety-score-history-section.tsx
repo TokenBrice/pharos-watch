@@ -31,7 +31,6 @@ import type { ReportCardGrade, SafetyScoreHistoryPoint } from "@shared/types";
 // ---------------------------------------------------------------------------
 
 const VISIBLE_CAP = 3;
-const NOW_SEC = Math.floor(Date.now() / 1000);
 
 /** Rank a grade by position in GRADE_THRESHOLDS (0 = A+ = best). NR = worst. */
 function gradeRank(grade: ReportCardGrade): number {
@@ -118,6 +117,9 @@ export function SafetyScoreHistorySection({
 
   // --- derived data --------------------------------------------------------
 
+  // Computed once per mount — fresh on each page navigation, avoids module-level staleness
+  const [nowSec] = useState(() => Math.floor(Date.now() / 1000));
+
   const history = useMemo(() => data ?? [], [data]);
 
   const stats = useMemo(() => {
@@ -134,19 +136,19 @@ export function SafetyScoreHistorySection({
     }
 
     const lastEntry = history[history.length - 1];
-    const streakDays = Math.max(0, Math.floor((NOW_SEC - lastEntry.date) / 86400));
+    const streakDays = Math.max(0, Math.floor((nowSec - lastEntry.date) / 86400));
 
     return { best, worst, lastEntry, streakDays };
-  }, [history]);
+  }, [history, nowSec]);
 
   const segments = useMemo(() => {
     if (history.length === 0) return [];
-    const totalSpan = NOW_SEC - history[0].date;
+    const totalSpan = nowSec - history[0].date;
     if (totalSpan <= 0) return [];
 
     return history.map((entry, i) => {
       const start = entry.date;
-      const end = i < history.length - 1 ? history[i + 1].date : NOW_SEC;
+      const end = i < history.length - 1 ? history[i + 1].date : nowSec;
       const duration = end - start;
       const pct = (duration / totalSpan) * 100;
       const range = gradeRange(entry.grade);
@@ -154,7 +156,7 @@ export function SafetyScoreHistorySection({
         GRADE_RADAR_COLORS[range] ?? GRADE_RADAR_COLORS.NR ?? "#71717a";
       return { grade: entry.grade, start, end, duration, pct, color, isLast: i === history.length - 1 };
     });
-  }, [history]);
+  }, [history, nowSec]);
 
   const reversed = useMemo(() => [...history].reverse(), [history]);
   const visibleEntries = expanded
@@ -173,7 +175,7 @@ export function SafetyScoreHistorySection({
   return (
     <Card className="rounded-xl">
       <CardHeader className="pb-1">
-        <CardTitle as="h3" className={DETAIL_SECTION_TITLE_CLASS}>
+        <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
           Grade History
         </CardTitle>
       </CardHeader>
@@ -205,17 +207,23 @@ export function SafetyScoreHistorySection({
         {/* Mini grade timeline bar */}
         {segments.length > 0 && (
           <TooltipProvider>
-            <div className="mt-4 flex h-4 overflow-hidden rounded-full bg-muted">
+            <div
+              className="mt-4 flex h-4 overflow-hidden rounded-full bg-muted"
+              role="img"
+              aria-label={`Grade timeline: ${segments.map((seg) => `${seg.grade} for ${formatDuration(seg.start, seg.end)}`).join(", ")}`}
+            >
               {segments.map((seg, i) => (
                 <Tooltip key={i}>
                   <TooltipTrigger asChild>
-                    <div
-                      className="h-full first:rounded-l-full last:rounded-r-full"
+                    <button
+                      type="button"
+                      className="h-full first:rounded-l-full last:rounded-r-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                       style={{
                         width: `${seg.pct}%`,
                         backgroundColor: seg.color,
                         minWidth: "2px",
                       }}
+                      aria-label={`${seg.grade}, ${formatChartDate(seg.start * 1000, "long")} to ${seg.isLast ? "now" : formatChartDate(seg.end * 1000, "long")}, ${formatDuration(seg.start, seg.end)}`}
                     />
                   </TooltipTrigger>
                   <TooltipContent className="text-xs">

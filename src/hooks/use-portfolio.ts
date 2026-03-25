@@ -20,7 +20,7 @@ import {
   type PortfolioHolding,
 } from "@/lib/portfolio-codec";
 
-export { categorizeCollateral, computeGroupedExposure } from "@/lib/portfolio-analysis";
+export { categorizeCollateral, computeGroupedExposure, type UpstreamExposure } from "@/lib/portfolio-analysis";
 
 interface PortfolioState {
   initialized: boolean;
