@@ -12,9 +12,6 @@ const PANCAKESWAP_V3_SUBGRAPHS: Record<string, { chain: string; subgraphId: stri
   bsc: { chain: "bsc", subgraphId: "Hv1GncLY5docZoGtXjo4kwbTvxm3MAhVZqBZE4sUT9eZ" },
   ethereum: { chain: "ethereum", subgraphId: "CJYGNhb7RvnhfBDjqpRnD3oxgyhibzc7fkAMa38YV3oS" },
   arbitrum: { chain: "arbitrum", subgraphId: "251MHFNN1rwjErXD2efWMpNS73SANZN8Ua192zw6iXve" },
-  "polygon-zkevm": { chain: "polygon-zkevm", subgraphId: "7HroSeAFxfJtYqpbgcfAnNSgkzzcZXZi6c75qLPheKzQ" },
-  "zksync-era": { chain: "zksync-era", subgraphId: "3dKr3tYxTuwiRLkU9vPj3MvZeUmeuGgWURbFC72ZBpYY" },
-  linea: { chain: "linea", subgraphId: "6gCTVX98K3A9Hf9zjvgEKwjz7rtD4C1V173RYEdbeMFX" },
   base: { chain: "base", subgraphId: "BHWNsedAHtmTCzXxCCDfhPmm6iN9rxUhoRHdHKyujic3" },
 };
 
