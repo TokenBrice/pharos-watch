@@ -1,19 +1,65 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildCiValidateCommands } from "../test-merge-gate.mjs";
+import { buildCiValidateStepPlan } from "../test-merge-gate.mjs";
 
-function extractRunCommands(yaml) {
-  return Array.from(yaml.matchAll(/^\s*-\s+run:\s+(.+)$/gm), (match) => match[1].trim());
+function extractRunSteps(yaml) {
+  const lines = yaml.split(/\r?\n/g);
+  const steps = [];
+  let current = null;
+
+  function flushCurrent() {
+    if (current?.cmd) {
+      steps.push(current);
+    }
+    current = null;
+  }
+
+  for (const line of lines) {
+    if (/^\s*-\s+(uses|run|if):/.test(line)) {
+      flushCurrent();
+      current = { cmd: null, condition: null };
+    }
+
+    if (!current) {
+      continue;
+    }
+
+    const ifMatch = line.match(/^\s*if:\s+\$\{\{\s+inputs\.([a-z_]+)\s+\}\}\s*$/);
+    if (ifMatch) {
+      current.condition = ifMatch[1];
+      continue;
+    }
+
+    const inlineIfMatch = line.match(/^\s*-\s+if:\s+\$\{\{\s+inputs\.([a-z_]+)\s+\}\}\s*$/);
+    if (inlineIfMatch) {
+      current.condition = inlineIfMatch[1];
+      continue;
+    }
+
+    const trimmed = line.trim();
+    const runPrefix = trimmed.startsWith("- ") ? "- run:" : "run:";
+    if (trimmed.startsWith(runPrefix)) {
+      current.cmd = trimmed.slice(runPrefix.length).trim();
+      continue;
+    }
+
+    if (/^\s*-\s+uses:/.test(line)) {
+      flushCurrent();
+    }
+  }
+
+  flushCurrent();
+  return steps;
 }
 
 describe("validate-ci parity", () => {
-  it("keeps the shared CI validate workflow aligned with the merge-gate contract", () => {
+  it("keeps the shared CI validate workflow aligned with the merge-gate command contract", () => {
     const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
 
-    expect(extractRunCommands(workflow)).toEqual([
-      "npm ci",
-      ...buildCiValidateCommands(),
+    expect(extractRunSteps(workflow)).toEqual([
+      { cmd: "npm ci", condition: null },
+      ...buildCiValidateStepPlan(),
     ]);
   });
 });

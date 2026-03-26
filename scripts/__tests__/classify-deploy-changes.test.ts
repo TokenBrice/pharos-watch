@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   classifyDeployChanges,
+  hasDeployImpact,
   hasPagesDeployImpact,
   hasWorkerDeployImpact,
   normalizeChangedFiles,
@@ -53,9 +54,21 @@ describe("hasPagesDeployImpact", () => {
   });
 });
 
+describe("hasDeployImpact", () => {
+  it("returns false when the diff does not touch deploy surfaces", () => {
+    expect(hasDeployImpact(["docs/testing.md", "agents/plans/example.md"])).toBe(false);
+  });
+
+  it("returns true when either Pages or worker deploy surfaces changed", () => {
+    expect(hasDeployImpact(["src/app/page.tsx"])).toBe(true);
+    expect(hasDeployImpact(["worker/src/api/health.ts"])).toBe(true);
+  });
+});
+
 describe("classifyDeployChanges", () => {
   it("runs the full worker deploy path for non-push events", () => {
     const result = classifyDeployChanges({ eventName: "workflow_dispatch" });
+    expect(result.deployRequired).toBe(true);
     expect(result.workerChanged).toBe(true);
     expect(result.pagesChanged).toBe(true);
   });
@@ -66,6 +79,7 @@ describe("classifyDeployChanges", () => {
       eventName: "push",
       headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
     });
+    expect(result.deployRequired).toBe(true);
     expect(result.workerChanged).toBe(true);
     expect(result.pagesChanged).toBe(true);
   });
@@ -80,6 +94,7 @@ describe("classifyDeployChanges", () => {
       headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
     });
 
+    expect(result.deployRequired).toBe(true);
     expect(result.workerChanged).toBe(false);
     expect(result.pagesChanged).toBe(true);
     expect(result.changedFiles).toEqual(["src/app/page.tsx", "docs/testing.md"]);
@@ -95,6 +110,7 @@ describe("classifyDeployChanges", () => {
       headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
     });
 
+    expect(result.deployRequired).toBe(true);
     expect(result.workerChanged).toBe(true);
     expect(result.pagesChanged).toBe(false);
     expect(result.changedFiles).toEqual(["worker/src/api/health.ts", "docs/testing.md"]);
@@ -110,6 +126,7 @@ describe("classifyDeployChanges", () => {
       headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
     });
 
+    expect(result.deployRequired).toBe(true);
     expect(result.workerChanged).toBe(true);
     expect(result.pagesChanged).toBe(true);
     expect(result.changedFiles).toEqual(["src/app/page.tsx", "shared/lib/classification.ts"]);
@@ -125,8 +142,25 @@ describe("classifyDeployChanges", () => {
       headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
     });
 
+    expect(result.deployRequired).toBe(true);
     expect(result.workerChanged).toBe(false);
     expect(result.pagesChanged).toBe(true);
     expect(result.changedFiles).toEqual([".github/workflows/pages-release.yml"]);
+  });
+
+  it("skips the deploy path for docs-only push diffs", () => {
+    const exec = () => "docs/testing.md\nagents/plans/notes.md\n";
+
+    const result = classifyDeployChanges({
+      baseSha: "70ed0512d6a23dccc2e5a4e65ff3ab3f4c0e45e2",
+      eventName: "push",
+      exec,
+      headSha: "25197af364c3c9ada9f9f394e4d65f62e6554f6e",
+    });
+
+    expect(result.deployRequired).toBe(false);
+    expect(result.workerChanged).toBe(false);
+    expect(result.pagesChanged).toBe(false);
+    expect(result.changedFiles).toEqual(["docs/testing.md", "agents/plans/notes.md"]);
   });
 });

@@ -12,6 +12,7 @@ jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
+      deploy_required: ${{ steps.classify.outputs.deploy_required }}
       pages_changed: ${{ steps.classify.outputs.pages_changed }}
       worker_changed: ${{ steps.classify.outputs.worker_changed }}
     steps:
@@ -29,9 +30,20 @@ jobs:
         run: node scripts/classify-deploy-changes.mjs >> "$GITHUB_OUTPUT"
 
   validate:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.deploy_required == 'true' }}
     uses: ./.github/workflows/validate-ci.yml
     with:
       coverage-compare-ref: ${{ github.event.before }}
+      pages_changed: ${{ needs.detect-changes.outputs.pages_changed == 'true' }}
+      worker_changed: ${{ needs.detect-changes.outputs.worker_changed == 'true' }}
+
+  no-deploy-required:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.deploy_required != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "No Pages or worker deploy surfaces changed in this push; skipping the production workflow."
 
   deploy-worker:
     needs:
@@ -107,7 +119,7 @@ jobs:
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: 22
-      - run: npm run test:smoke-ui -- --url https://pharos.watch
+      - run: npm run test:smoke-ui -- --url https://pharos.watch --mode live
 
   smoke-ops:
     needs:

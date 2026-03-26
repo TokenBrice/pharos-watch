@@ -11,11 +11,11 @@ Operational and CI helper scripts live in `scripts/`. They support build integri
 | `scripts/sync-digests.ts`                       | Fetch digest archive from an explicit API source before frontend build or CI artifact creation                                                                            | `--api-url`, `DIGEST_API_URL`, `SMOKE_API_BASE`, or `API_BASE_URL`; optional `--output`                                                                                                                                                                                                                    | Writes `data/digests.json` by default, or the requested output path                                                      |
 | `scripts/generate-redirects.ts`                 | Regenerate Cloudflare Pages redirects for legacy stablecoin IDs before frontend build                                                                                     | Existing `public/_redirects` + embedded ID mapping tables                                                                                                                                                                                                                                                  | Idempotently updates `public/_redirects`                                                                                 |
 | `scripts/check-seo-static.mjs`                  | Validate static-export SEO/meta/link integrity                                                                                                                            | `out/` build output                                                                                                                                                                                                                                                                                        | Fails non-zero on SEO/crawlability issues                                                                                |
-| `scripts/classify-deploy-changes.mjs`           | Classify whether a push diff requires worker/API deploy work, Pages deploy work, or both                                                                                  | `DEPLOY_EVENT_NAME`, `DEPLOY_BASE_SHA`, `DEPLOY_HEAD_SHA`, local git history                                                                                                                                                                                                                               | Emits GitHub Actions outputs such as `worker_changed=true/false` and `pages_changed=true/false`                          |
+| `scripts/classify-deploy-changes.mjs`           | Classify whether a push diff requires worker/API deploy work, Pages deploy work, both, or no deploy work                                                                  | `DEPLOY_EVENT_NAME`, `DEPLOY_BASE_SHA`, `DEPLOY_HEAD_SHA`, local git history                                                                                                                                                                                                                               | Emits GitHub Actions outputs such as `deploy_required=true/false`, `worker_changed=true/false`, and `pages_changed=true/false` |
 | `scripts/serve-static-export.mjs`               | Serve the built static export locally and proxy `/api/*` to the configured public API base for pre-deploy browser smoke                                                   | `STATIC_EXPORT_ROOT`, `STATIC_EXPORT_HOST`, `STATIC_EXPORT_PORT`, `STATIC_EXPORT_API_BASE`                                                                                                                                                                                                                 | Starts a local HTTP server for the exported app + API proxy                                                              |
 | `scripts/smoke-api.mjs`                         | HTTP smoke checks for strict API contract paths                                                                                                                           | `--base-url`, `--timeout-ms`, `--retry-count`, `--retry-delay-ms`, or `SMOKE_API_BASE` / `API_BASE_URL`, optional `SMOKE_API_TIMEOUT_MS`, `SMOKE_API_RETRY_COUNT`, `SMOKE_API_RETRY_DELAY_MS`                                                                                                              | Exits non-zero on shape/range/status failures                                                                            |
 | `scripts/smoke-ops.mjs`                         | Private post-deploy smoke for the Access-protected ops UI and ops API                                                                                                     | `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `OPS_SMOKE_CF_ACCESS_CLIENT_ID`, `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`                                                                                                                                                                                             | Exits non-zero on ops-host shell or admin API failures                                                                   |
-| `scripts/smoke-ui.mjs`                          | Browser smoke check for live homepage data state + mobile overflow regression routes                                                                                      | `--url`, `--skip-overflow`, `SMOKE_UI_URL`, optional `SMOKE_UI_WAIT_TIMEOUT_MS`, `SMOKE_UI_RETRY_COUNT`, `SMOKE_UI_RETRY_DELAY_MS`, `SMOKE_UI_OVERFLOW_ROUTES`, `SMOKE_UI_OVERFLOW_WAIT_MS`, `SMOKE_UI_OVERFLOW_SETTLE_SAMPLES`, `SMOKE_UI_OVERFLOW_SAMPLE_INTERVAL_MS`, `SMOKE_UI_STYLE_READY_TIMEOUT_MS` | Exits non-zero on homepage outage/empty state or sustained horizontal overflow on tracked mobile routes                  |
+| `scripts/smoke-ui.mjs`                          | Browser smoke check for homepage data state plus either the full local mobile overflow sweep or a narrower live canary route                                              | `--url`, `--mode`, `--skip-overflow`, `SMOKE_UI_URL`, `SMOKE_UI_MODE`, optional `SMOKE_UI_WAIT_TIMEOUT_MS`, `SMOKE_UI_RETRY_COUNT`, `SMOKE_UI_RETRY_DELAY_MS`, `SMOKE_UI_OVERFLOW_ROUTES`, `SMOKE_UI_CANARY_ROUTE`, `SMOKE_UI_OVERFLOW_WAIT_MS`, `SMOKE_UI_OVERFLOW_SETTLE_SAMPLES`, `SMOKE_UI_OVERFLOW_SAMPLE_INTERVAL_MS`, `SMOKE_UI_STYLE_READY_TIMEOUT_MS` | Exits non-zero on homepage outage/empty state or sustained horizontal overflow on the configured local or live route set |
 | `scripts/check-worker-import-boundary.mjs`      | Enforce the shared boundary: `worker/src/**` may not import `src/**`, and `src` / `shared` / `scripts` / `functions` may not import `worker/src/**`                       | `worker/src/**`, `src/**`, `shared/**`, `scripts/**`, `functions/**`                                                                                                                                                                                                                                       | Exits non-zero with offending import locations                                                                           |
 | `scripts/check-unused-code.mjs`                 | Detect unreferenced internal runtime modules and unused named exports across all runtime surfaces                                                                         | Runtime source graph across `src`, `shared`, `worker/src`, and `functions`; explicit module/export allowlists for intentional exceptions                                                                                                                                                                   | Exits non-zero with dead-module / unused-export findings                                                                 |
 | `scripts/check-hotspot-ratchet.mjs`             | Prevent the tracked hotspot files from growing beyond the checked-in post-refactor baseline                                                                               | `scripts/lib/hotspot-ratchet-baseline.json`, currently the nine ratcheted hotspot files                                                                                                                                                                                                                    | Exits non-zero when file size / largest function / branch-count regressions occur                                        |
@@ -39,7 +39,7 @@ Operational and CI helper scripts live in `scripts/`. They support build integri
 
 These are wired into the GitHub Actions CI workflows (`.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-release.yml`, and `.github/workflows/rebuild-pages.yml`) directly, or indirectly through `npm run build`:
 
-- `sync-digests.ts` in the `prepare-digests` Pages-release job before the build artifact is created
+- `sync-digests.ts` in the `build-pages` Pages-release job before the build artifact is created
 - `generate-redirects.ts` via the `prebuild` hook that runs automatically before `npm run build`
 - `check-seo-static.mjs` via `npm run seo:check`
 - `classify-deploy-changes.mjs` via the `detect-changes` job in `.github/workflows/deploy-cloudflare.yml`
@@ -65,7 +65,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 
 - Requires an explicit digest API source via `--api-url` or `DIGEST_API_URL`; falls back to `SMOKE_API_BASE` or `API_BASE_URL` when those are already set by CI/local shell context.
 - Accepts `--output` so CI can write digest data into an artifact path before the Pages build job runs.
-- The shared Pages release workflow now runs this once in `prepare-digests`, uploads the normalized digest JSON as an artifact, and lets `build-pages` consume that artifact instead of fetching from `api.pharos.watch` during the build itself.
+- The shared Pages release workflow now runs this once inside `build-pages`, writing the normalized digest JSON directly to `data/digests.json` before `npm run build`.
 
 ### `backfill-gold-depegs.sh`
 
@@ -92,15 +92,16 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 
 ### `smoke-ui.mjs`
 
-- Uses Playwright CLI in a temporary session.
+- Uses Playwright CLI in a temporary session, but now collapses the smoke flow into one `run-code` browser session instead of repeated per-route CLI round-trips.
 - In CI deploys, the browser now targets a locally served `out/` export before Pages production deploy; `scripts/serve-static-export.mjs` proxies `/api/*` to the configured public API base so the smoke still exercises live API responses against the exact built frontend artifact.
 - The shared Pages release workflow also runs the same smoke script against `https://pharos.watch` after `deploy-pages`, so the pipeline checks both the pre-publish artifact and the real public host.
 - Verifies homepage is not in outage/empty state (`Failed to load data` or `Failed to load this dataset`, `stablecoins:404`, `Data not yet available` or `Waiting for first sync`, `Connection issue` or `Unable to reach the Pharos data API right now.`, `No stablecoin data available`, missing rows/ticker).
 - Homepage data wait retries once on timeout by default (configurable via `SMOKE_UI_RETRY_COUNT` / `SMOKE_UI_RETRY_DELAY_MS`) and includes a compact DOM text preview in timeout diagnostics.
-- Runs mobile overflow checks at `390x844` on a default critical route set:
+- Local mode runs mobile overflow checks at `390x844` on a default critical route set:
   - `/`, `/dependency-map/`, `/flows/`, `/yield/`, `/liquidity/`, `/depeg/`, `/blacklist/`, `/stability-index/`, `/safety-scores/`
-- Overflow detection samples layout multiple times and retries once before failing, which filters transient post-deploy layout jitter while still catching sustained overflow regressions.
-- Override checked routes via `SMOKE_UI_OVERFLOW_ROUTES` (comma-separated), or skip overflow checks with `--skip-overflow`.
+- Live mode keeps the homepage/GA checks and a single canary overflow route (`/yield/` by default, override with `SMOKE_UI_CANARY_ROUTE`).
+- Overflow detection samples layout multiple times and retries once before failing, which filters transient layout jitter while still catching sustained overflow regressions.
+- Override checked routes via `SMOKE_UI_OVERFLOW_ROUTES` (comma-separated), choose `--mode local|live`, or skip overflow checks with `--skip-overflow`.
 
 ### `serve-static-export.mjs`
 
@@ -111,15 +112,18 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 ### `classify-deploy-changes.mjs`
 
 - Used only by the deploy workflow’s `detect-changes` job.
-- On `push`, diffs `DEPLOY_BASE_SHA..DEPLOY_HEAD_SHA` and emits both `worker_changed` and `pages_changed`.
+- On `push`, diffs `DEPLOY_BASE_SHA..DEPLOY_HEAD_SHA` and emits `deploy_required`, `worker_changed`, and `pages_changed`.
 - `worker_changed` turns on worker deploy/API smoke when worker/shared runtime or worker-deploy infra paths changed.
 - `pages_changed` turns on Pages build/browser-smoke/deploy when the diff touches any Pages-impacting path (`src/`, `shared/`, `functions/`, `public/`, `data/`, selected build/config scripts, or Pages/deploy workflow files).
+- `deploy_required=false` lets the push workflow skip the heavy deploy path entirely for docs-only or other non-deploy diffs.
 - On `workflow_dispatch`, forces the full deploy path for safety.
 
 ### `test-merge-gate.mjs`
 
-- Always runs the same non-negotiable validate core as CI: dependency audit, lint, worker-boundary, migrations, cron schedule/connection checks, doc sync, duplicate-export and redemption-backstop checks, unused-code, hotspot-ratchet, full tests, critical coverage, and worker type-checking.
+- Skips cleanly when the changed-file set is not deploy-impacting.
+- For deploy-impacting diffs, always runs the same validate core as deploy CI: dependency audit, lint, worker-boundary, migrations, cron schedule/connection checks, doc sync, duplicate-export and redemption-backstop checks, unused-code, hotspot-ratchet, full tests, and critical coverage.
 - Adds `npm run build` and `npm run seo:check` only when the changed-file set is Pages-impacting, using the same matcher as `classify-deploy-changes.mjs`.
+- Adds worker typecheck only when the changed-file set is worker-impacting.
 - Supports `--staged`, `MERGE_GATE_BASE_REF=<ref>`, and `MERGE_GATE_DRY_RUN=1`.
 
 ### `smoke-api.mjs`

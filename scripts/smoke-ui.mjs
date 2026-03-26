@@ -8,7 +8,8 @@ const execFileAsync = promisify(execFile);
 const PLAYWRIGHT_CLI_PREFIX = ["--yes", "--package", "@playwright/cli", "playwright-cli"];
 const DEFAULT_URL = process.env.SMOKE_UI_URL ?? "https://pharos.watch";
 const MAX_BUFFER_BYTES = 10 * 1024 * 1024;
-const SESSION_PREFIX = "prod-ui-smoke";
+const SESSION_PREFIX = "ui";
+const DEFAULT_MODE = process.env.SMOKE_UI_MODE ?? "local";
 const DEFAULT_UI_WAIT_TIMEOUT_MS = 30_000;
 const DEFAULT_UI_RETRY_COUNT = 1;
 const DEFAULT_UI_RETRY_DELAY_MS = 1500;
@@ -19,6 +20,7 @@ const DEFAULT_OVERFLOW_SETTLE_SAMPLES = 4;
 const DEFAULT_OVERFLOW_SAMPLE_INTERVAL_MS = 350;
 const DEFAULT_STYLE_READY_TIMEOUT_MS = 4000;
 const DEFAULT_OVERFLOW_RETRY_EXTRA_WAIT_MS = 2000;
+const DEFAULT_LIVE_CANARY_ROUTE = "/yield/";
 const OVERFLOW_ROUTE_DEFAULTS = [
   "/",
   "/dependency-map/",
@@ -32,11 +34,14 @@ const OVERFLOW_ROUTE_DEFAULTS = [
 ];
 
 function parseArgs(argv) {
-  const args = { url: DEFAULT_URL, skipOverflow: false };
+  const args = { mode: DEFAULT_MODE, skipOverflow: false, url: DEFAULT_URL };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--url") {
       args.url = argv[i + 1] ?? "";
+      i += 1;
+    } else if (arg === "--mode") {
+      args.mode = argv[i + 1] ?? "";
       i += 1;
     } else if (arg === "--skip-overflow") {
       args.skipOverflow = true;
@@ -56,6 +61,14 @@ function ensureUrl(input) {
   }
   const parsed = new URL(trimmed);
   return parsed.toString();
+}
+
+function ensureMode(input) {
+  const normalized = (input ?? "").trim().toLowerCase();
+  if (normalized === "local" || normalized === "live") {
+    return normalized;
+  }
+  throw new Error(`Invalid mode "${input}". Expected "local" or "live".`);
 }
 
 async function runPlaywrightCli(sessionId, args) {
@@ -84,7 +97,7 @@ function parseResultJson(output) {
 }
 
 function removePlaywrightArtifacts() {
-  rmSync(".playwright-cli", { recursive: true, force: true });
+  rmSync(".playwright-cli", { force: true, recursive: true });
 }
 
 function getUiWaitTimeoutMs() {
@@ -120,147 +133,231 @@ function readNonNegativeIntEnv(key, fallback) {
   return fallback;
 }
 
-function buildUiEval(waitTimeoutMs) {
-  return `async () => {
-  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-  const matchesAny = (text, values) => values.some((value) => text.includes(value));
-  const timeoutAt = Date.now() + ${waitTimeoutMs};
-  while (Date.now() < timeoutAt) {
-    const text = document.body?.innerText ?? "";
-    const rows = document.querySelectorAll("table tbody tr").length;
-    const hasFailedToLoad = matchesAny(text, ["Failed to load data", "Failed to load this dataset"]);
-    const hasStablecoins404 = text.includes("stablecoins:404");
-    const hasDataNotYetAvailable = matchesAny(text, ["Data not yet available", "Waiting for first sync"]);
-    const hasConnectionIssue = matchesAny(text, ["Connection issue", "Unable to reach the Pharos data API right now."]);
-    const hasLiveRefreshDelayed = matchesAny(text, ["Live refresh delayed", "Live refresh is running behind"]);
-    const hasNoStablecoinData = text.includes("No stablecoin data available");
-    const hasTerminalError = hasFailedToLoad || hasStablecoins404 || hasDataNotYetAvailable || hasConnectionIssue || hasNoStablecoinData;
-    if (rows > 0 || hasTerminalError) {
-      return {
-        rows,
-        hasFailedToLoad,
-        hasStablecoins404,
-        hasDataNotYetAvailable,
-        hasConnectionIssue,
-        hasLiveRefreshDelayed,
-        hasNoStablecoinData,
-        hasKnownTicker: /\\bUSDT\\b|\\bUSDC\\b/.test(text),
-        title: document.title,
-        textPreview: text.replace(/\\s+/g, " ").trim().slice(0, 180),
-        waitTimeoutMs: ${waitTimeoutMs},
-        timedOut: false
-      };
-    }
-    await delay(500);
+function normalizeRoute(input) {
+  const trimmed = (input ?? "").trim();
+  if (!trimmed || trimmed === "/") {
+    return "/";
   }
-  const text = document.body?.innerText ?? "";
-  return {
-    rows: document.querySelectorAll("table tbody tr").length,
-    hasFailedToLoad: matchesAny(text, ["Failed to load data", "Failed to load this dataset"]),
-    hasStablecoins404: text.includes("stablecoins:404"),
-    hasDataNotYetAvailable: matchesAny(text, ["Data not yet available", "Waiting for first sync"]),
-    hasConnectionIssue: matchesAny(text, ["Connection issue", "Unable to reach the Pharos data API right now."]),
-    hasLiveRefreshDelayed: matchesAny(text, ["Live refresh delayed", "Live refresh is running behind"]),
-    hasNoStablecoinData: text.includes("No stablecoin data available"),
-    hasKnownTicker: /\\bUSDT\\b|\\bUSDC\\b/.test(text),
-    title: document.title,
-    textPreview: text.replace(/\\s+/g, " ").trim().slice(0, 180),
-    waitTimeoutMs: ${waitTimeoutMs},
-    timedOut: true
-  };
-}`;
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
 }
 
-function getOverflowRoutes() {
+function getOverflowRoutes(mode) {
   const fromEnv = (process.env.SMOKE_UI_OVERFLOW_ROUTES ?? "")
     .split(",")
     .map((route) => route.trim())
-    .filter(Boolean);
-  return fromEnv.length > 0 ? fromEnv : OVERFLOW_ROUTE_DEFAULTS;
+    .filter(Boolean)
+    .map((route) => normalizeRoute(route));
+  if (fromEnv.length > 0) {
+    return fromEnv;
+  }
+  if (mode === "live") {
+    return [normalizeRoute(process.env.SMOKE_UI_CANARY_ROUTE ?? DEFAULT_LIVE_CANARY_ROUTE)];
+  }
+  return OVERFLOW_ROUTE_DEFAULTS;
 }
 
-function buildOverflowEval(waitMs, settleSamples, sampleIntervalMs, styleReadyTimeoutMs) {
-  return `async () => {
+function buildSmokeRunCode(config) {
+  const serialized = JSON.stringify(config);
+  return `async (page) => {
+  const config = ${serialized};
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-  const measure = () => {
-    const doc = document.documentElement;
-    const body = document.body;
-    const innerWidth = window.innerWidth;
-    const scrollWidth = Math.max(
-      doc?.scrollWidth ?? 0,
-      body?.scrollWidth ?? 0
+  const joinUrl = (baseUrl, route) => {
+    const normalizedRoute = !route || route === "/" ? "/" : route.startsWith("/") ? route : \`/\${route}\`;
+    if (normalizedRoute === "/") {
+      return baseUrl;
+    }
+    return baseUrl.endsWith("/") ? \`\${baseUrl.slice(0, -1)}\${normalizedRoute}\` : \`\${baseUrl}\${normalizedRoute}\`;
+  };
+
+  async function captureHomepageSummary() {
+    return page.evaluate(async ({ waitTimeoutMs }) => {
+      const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      const matchesAny = (text, values) => values.some((value) => text.includes(value));
+      const timeoutAt = Date.now() + waitTimeoutMs;
+
+      while (Date.now() < timeoutAt) {
+        const text = document.body?.innerText ?? "";
+        const rows = document.querySelectorAll("table tbody tr").length;
+        const hasFailedToLoad = matchesAny(text, ["Failed to load data", "Failed to load this dataset"]);
+        const hasStablecoins404 = text.includes("stablecoins:404");
+        const hasDataNotYetAvailable = matchesAny(text, ["Data not yet available", "Waiting for first sync"]);
+        const hasConnectionIssue = matchesAny(text, ["Connection issue", "Unable to reach the Pharos data API right now."]);
+        const hasLiveRefreshDelayed = matchesAny(text, ["Live refresh delayed", "Live refresh is running behind"]);
+        const hasNoStablecoinData = text.includes("No stablecoin data available");
+        const hasTerminalError =
+          hasFailedToLoad
+          || hasStablecoins404
+          || hasDataNotYetAvailable
+          || hasConnectionIssue
+          || hasNoStablecoinData;
+
+        if (rows > 0 || hasTerminalError) {
+          return {
+            hasConnectionIssue,
+            hasDataNotYetAvailable,
+            hasFailedToLoad,
+            hasKnownTicker: /\\bUSDT\\b|\\bUSDC\\b/.test(text),
+            hasLiveRefreshDelayed,
+            hasNoStablecoinData,
+            hasStablecoins404,
+            rows,
+            textPreview: text.replace(/\\s+/g, " ").trim().slice(0, 180),
+            timedOut: false,
+            title: document.title,
+            waitTimeoutMs,
+          };
+        }
+
+        await delay(500);
+      }
+
+      const text = document.body?.innerText ?? "";
+      return {
+        hasConnectionIssue: matchesAny(text, ["Connection issue", "Unable to reach the Pharos data API right now."]),
+        hasDataNotYetAvailable: matchesAny(text, ["Data not yet available", "Waiting for first sync"]),
+        hasFailedToLoad: matchesAny(text, ["Failed to load data", "Failed to load this dataset"]),
+        hasKnownTicker: /\\bUSDT\\b|\\bUSDC\\b/.test(text),
+        hasLiveRefreshDelayed: matchesAny(text, ["Live refresh delayed", "Live refresh is running behind"]),
+        hasNoStablecoinData: text.includes("No stablecoin data available"),
+        hasStablecoins404: text.includes("stablecoins:404"),
+        rows: document.querySelectorAll("table tbody tr").length,
+        textPreview: text.replace(/\\s+/g, " ").trim().slice(0, 180),
+        timedOut: true,
+        title: document.title,
+        waitTimeoutMs,
+      };
+    }, { waitTimeoutMs: config.waitTimeoutMs });
+  }
+
+  async function measureOverflow(route, waitMs) {
+    const routeUrl = joinUrl(config.baseUrl, route);
+    await page.goto(routeUrl, { timeout: config.waitTimeoutMs, waitUntil: "domcontentloaded" });
+
+    return page.evaluate(
+      async ({ route, sampleIntervalMs, settleSamples, styleReadyTimeoutMs, waitMs }) => {
+        const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        const measure = () => {
+          const doc = document.documentElement;
+          const body = document.body;
+          const innerWidth = window.innerWidth;
+          const scrollWidth = Math.max(
+            doc?.scrollWidth ?? 0,
+            body?.scrollWidth ?? 0,
+          );
+          return {
+            delta: scrollWidth - innerWidth,
+            innerWidth,
+            scrollWidth,
+          };
+        };
+        const isCssReady = () => {
+          const rootStyles = getComputedStyle(document.documentElement);
+          const bodyStyles = getComputedStyle(document.body);
+          const hasRootToken = (rootStyles.getPropertyValue("--background") ?? "").trim().length > 0;
+          const hasMarginReset = bodyStyles.marginLeft === "0px" && bodyStyles.marginRight === "0px";
+          return hasRootToken && hasMarginReset;
+        };
+
+        await delay(waitMs);
+
+        const cssReadyDeadline = Date.now() + styleReadyTimeoutMs;
+        let cssReady = isCssReady();
+        while (!cssReady && Date.now() < cssReadyDeadline) {
+          await delay(100);
+          cssReady = isCssReady();
+        }
+
+        const samples = [];
+        for (let i = 0; i < settleSamples; i += 1) {
+          samples.push(measure());
+          if (i < settleSamples - 1) {
+            await delay(sampleIntervalMs);
+          }
+        }
+
+        const finalSample = samples[samples.length - 1];
+        const sampledDeltas = samples.map((sample) => sample.delta);
+        const maxDelta = Math.max(...sampledDeltas);
+        const hasOverflow = sampledDeltas.every((value) => value > 1);
+        const offenders = [];
+
+        if (maxDelta > 1) {
+          const walker = document.querySelectorAll("body *");
+          for (const el of walker) {
+            const rect = el.getBoundingClientRect();
+            if (!Number.isFinite(rect.right) || !Number.isFinite(rect.left) || rect.width <= 0) {
+              continue;
+            }
+            if (rect.right > finalSample.innerWidth + 1 || rect.left < -1) {
+              offenders.push({
+                className: (el.className || "").toString().slice(0, 80),
+                id: el.id || "",
+                left: Math.round(rect.left),
+                right: Math.round(rect.right),
+                tag: el.tagName.toLowerCase(),
+                width: Math.round(rect.width),
+              });
+              if (offenders.length >= 8) {
+                break;
+              }
+            }
+          }
+        }
+
+        const bodyStyles = getComputedStyle(document.body);
+        return {
+          bodyMarginLeft: bodyStyles.marginLeft,
+          bodyMarginRight: bodyStyles.marginRight,
+          cssReady,
+          delta: finalSample.delta,
+          hasOverflow,
+          innerWidth: finalSample.innerWidth,
+          maxDelta,
+          offenders,
+          path: route,
+          sampledDeltas,
+          scrollWidth: finalSample.scrollWidth,
+        };
+      },
+      {
+        route,
+        sampleIntervalMs: config.overflowSampleIntervalMs,
+        settleSamples: config.overflowSettleSamples,
+        styleReadyTimeoutMs: config.styleReadyTimeoutMs,
+        waitMs,
+      },
     );
-    return {
-      innerWidth,
-      scrollWidth,
-      delta: scrollWidth - innerWidth
-    };
-  };
-  const isCssReady = () => {
-    const rootStyles = getComputedStyle(document.documentElement);
-    const bodyStyles = getComputedStyle(document.body);
-    const hasRootToken = (rootStyles.getPropertyValue("--background") ?? "").trim().length > 0;
-    const hasMarginReset = bodyStyles.marginLeft === "0px" && bodyStyles.marginRight === "0px";
-    return hasRootToken && hasMarginReset;
-  };
-
-  await delay(${waitMs});
-
-  const cssReadyDeadline = Date.now() + ${styleReadyTimeoutMs};
-  let cssReady = isCssReady();
-  while (!cssReady && Date.now() < cssReadyDeadline) {
-    await delay(100);
-    cssReady = isCssReady();
   }
 
-  const samples = [];
-  for (let i = 0; i < ${settleSamples}; i += 1) {
-    samples.push(measure());
-    if (i < ${settleSamples} - 1) {
-      await delay(${sampleIntervalMs});
+  await page.goto(config.baseUrl, { timeout: config.waitTimeoutMs, waitUntil: "domcontentloaded" });
+
+  let homepage = null;
+  for (let attempt = 0; attempt <= config.uiRetryCount; attempt += 1) {
+    homepage = await captureHomepageSummary();
+    if (!homepage.timedOut) {
+      break;
     }
-  }
-  const finalSample = samples[samples.length - 1];
-  const sampledDeltas = samples.map((sample) => sample.delta);
-  const maxDelta = Math.max(...sampledDeltas);
-  const hasOverflow = sampledDeltas.every((value) => value > 1);
-
-  const offenders = [];
-  if (maxDelta > 1) {
-    const walker = document.querySelectorAll("body *");
-    for (const el of walker) {
-      const rect = el.getBoundingClientRect();
-      if (!Number.isFinite(rect.right) || !Number.isFinite(rect.left) || rect.width <= 0) {
-        continue;
-      }
-      if (rect.right > finalSample.innerWidth + 1 || rect.left < -1) {
-        offenders.push({
-          tag: el.tagName.toLowerCase(),
-          id: el.id || "",
-          className: (el.className || "").toString().slice(0, 80),
-          left: Math.round(rect.left),
-          right: Math.round(rect.right),
-          width: Math.round(rect.width)
-        });
-        if (offenders.length >= 8) break;
-      }
+    if (attempt < config.uiRetryCount) {
+      await delay(config.uiRetryDelayMs);
+      await page.goto(config.baseUrl, { timeout: config.waitTimeoutMs, waitUntil: "domcontentloaded" });
     }
   }
 
-  const bodyStyles = getComputedStyle(document.body);
-  return {
-    path: window.location.pathname,
-    innerWidth: finalSample.innerWidth,
-    scrollWidth: finalSample.scrollWidth,
-    delta: finalSample.delta,
-    sampledDeltas,
-    maxDelta,
-    hasOverflow,
-    cssReady,
-    bodyMarginLeft: bodyStyles.marginLeft,
-    bodyMarginRight: bodyStyles.marginRight,
-    offenders
-  };
+  const overflowChecks = [];
+  if (!config.skipOverflow && config.routes.length > 0) {
+    await page.setViewportSize({ height: config.mobileHeight, width: config.mobileWidth });
+
+    for (const route of config.routes) {
+      const initial = await measureOverflow(route, config.overflowWaitMs);
+      let retry = null;
+      if (initial.hasOverflow) {
+        retry = await measureOverflow(route, config.overflowWaitMs + config.overflowRetryExtraWaitMs);
+      }
+      overflowChecks.push({ initial, retry, route });
+    }
+  }
+
+  return { homepage, overflowChecks };
 }`;
 }
 
@@ -282,15 +379,6 @@ function formatOverflowFailure(summary) {
   return `Horizontal overflow detected on ${summary.path} (${summary.scrollWidth}px > ${summary.innerWidth}px, sampledDeltas=${sampledDeltas}, cssReady=${summary.cssReady}, bodyMargins=${summary.bodyMarginLeft}/${summary.bodyMarginRight}, offenders=${offenders})`;
 }
 
-async function runOverflowCheck(sessionId, waitMs, settleSamples, sampleIntervalMs, styleReadyTimeoutMs, route) {
-  const overflowOutput = await runPlaywrightCli(sessionId, [
-    "eval",
-    buildOverflowEval(waitMs, settleSamples, sampleIntervalMs, styleReadyTimeoutMs),
-  ]);
-  ensureNoCliError(`overflow check ${route}`, overflowOutput);
-  return parseResultJson(overflowOutput);
-}
-
 function formatUiSummary(summary) {
   const markers = [];
   if (summary.hasFailedToLoad) markers.push("Failed to load data / Failed to load this dataset");
@@ -305,36 +393,6 @@ function formatUiSummary(summary) {
       ? summary.textPreview.replace(/"/g, "'")
       : "n/a";
   return `title="${summary.title}", rows=${summary.rows}, knownTicker=${summary.hasKnownTicker}, markers=${markerSummary}, preview="${preview}"`;
-}
-
-async function runHomepageCheck(sessionId, waitTimeoutMs) {
-  const evalOutput = await runPlaywrightCli(sessionId, ["eval", buildUiEval(waitTimeoutMs)]);
-  ensureNoCliError("eval", evalOutput);
-  return parseResultJson(evalOutput);
-}
-
-async function navigateWithRetry(sessionId, targetUrl, label, retryCount, retryDelayMs) {
-  const totalAttempts = retryCount + 1;
-  let lastError = null;
-
-  for (let attempt = 0; attempt < totalAttempts; attempt += 1) {
-    try {
-      const gotoOutput = await runPlaywrightCli(sessionId, ["goto", targetUrl]);
-      ensureNoCliError(label, gotoOutput);
-      return;
-    } catch (error) {
-      lastError = error;
-      if (attempt >= totalAttempts - 1) {
-        break;
-      }
-      console.log(
-        `[smoke-ui] WARN ${label} attempt ${attempt + 1}/${totalAttempts} failed; retrying in ${retryDelayMs}ms`,
-      );
-      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
-    }
-  }
-
-  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
 async function verifyAnalyticsSnippet(url, expectedGaId) {
@@ -357,28 +415,41 @@ async function verifyAnalyticsSnippet(url, expectedGaId) {
 }
 
 async function run() {
-  const { url: rawUrl, skipOverflow } = parseArgs(process.argv.slice(2));
+  const { mode: rawMode, skipOverflow, url: rawUrl } = parseArgs(process.argv.slice(2));
   const url = ensureUrl(rawUrl);
-  const sessionId = `${SESSION_PREFIX}-${Date.now()}`;
+  const mode = ensureMode(rawMode);
+  const sessionId = `${SESSION_PREFIX}-${Date.now().toString(36)}`;
   const waitTimeoutMs = getUiWaitTimeoutMs();
   const uiRetryCount = getUiRetryCount();
   const uiRetryDelayMs = getUiRetryDelayMs();
-  const safeOverflowWaitMs = readPositiveIntEnv("SMOKE_UI_OVERFLOW_WAIT_MS", DEFAULT_OVERFLOW_WAIT_MS);
-  const overflowSettleSamples = Math.max(
-    2,
-    readPositiveIntEnv("SMOKE_UI_OVERFLOW_SETTLE_SAMPLES", DEFAULT_OVERFLOW_SETTLE_SAMPLES),
-  );
-  const overflowSampleIntervalMs = readPositiveIntEnv(
-    "SMOKE_UI_OVERFLOW_SAMPLE_INTERVAL_MS",
-    DEFAULT_OVERFLOW_SAMPLE_INTERVAL_MS,
-  );
-  const styleReadyTimeoutMs = readPositiveIntEnv(
-    "SMOKE_UI_STYLE_READY_TIMEOUT_MS",
-    DEFAULT_STYLE_READY_TIMEOUT_MS,
-  );
   const expectedGaId = getExpectedGaId();
 
-  console.log(`[smoke-ui] Running browser smoke checks against ${url}`);
+  const config = {
+    baseUrl: url,
+    mobileHeight: MOBILE_HEIGHT,
+    mobileWidth: MOBILE_WIDTH,
+    overflowRetryExtraWaitMs: DEFAULT_OVERFLOW_RETRY_EXTRA_WAIT_MS,
+    overflowSampleIntervalMs: readPositiveIntEnv(
+      "SMOKE_UI_OVERFLOW_SAMPLE_INTERVAL_MS",
+      DEFAULT_OVERFLOW_SAMPLE_INTERVAL_MS,
+    ),
+    overflowSettleSamples: Math.max(
+      2,
+      readPositiveIntEnv("SMOKE_UI_OVERFLOW_SETTLE_SAMPLES", DEFAULT_OVERFLOW_SETTLE_SAMPLES),
+    ),
+    overflowWaitMs: readPositiveIntEnv("SMOKE_UI_OVERFLOW_WAIT_MS", DEFAULT_OVERFLOW_WAIT_MS),
+    routes: getOverflowRoutes(mode),
+    skipOverflow,
+    styleReadyTimeoutMs: readPositiveIntEnv(
+      "SMOKE_UI_STYLE_READY_TIMEOUT_MS",
+      DEFAULT_STYLE_READY_TIMEOUT_MS,
+    ),
+    uiRetryCount,
+    uiRetryDelayMs,
+    waitTimeoutMs,
+  };
+
+  console.log(`[smoke-ui] Running ${mode} browser smoke checks against ${url}`);
 
   try {
     await verifyAnalyticsSnippet(url, expectedGaId);
@@ -389,25 +460,12 @@ async function run() {
     const openOutput = await runPlaywrightCli(sessionId, ["open", url]);
     ensureNoCliError("open", openOutput);
 
-    let summary = null;
-    const totalAttempts = uiRetryCount + 1;
-    for (let attempt = 0; attempt < totalAttempts; attempt += 1) {
-      summary = await runHomepageCheck(sessionId, waitTimeoutMs);
-      if (!summary.timedOut) {
-        break;
-      }
-      if (attempt < totalAttempts - 1) {
-        console.log(
-          `[smoke-ui] WARN homepage data timeout on attempt ${attempt + 1}/${totalAttempts} (${formatUiSummary(summary)}); retrying in ${uiRetryDelayMs}ms`,
-        );
-        await new Promise((resolve) => setTimeout(resolve, uiRetryDelayMs));
-        const retryGotoOutput = await runPlaywrightCli(sessionId, ["goto", url]);
-        ensureNoCliError(`goto retry ${attempt + 1}`, retryGotoOutput);
-      }
-    }
+    const smokeOutput = await runPlaywrightCli(sessionId, ["run-code", buildSmokeRunCode(config)]);
+    ensureNoCliError("run-code", smokeOutput);
+    const result = parseResultJson(smokeOutput);
+    const summary = result.homepage;
 
     assert(summary, "Homepage smoke check did not produce a summary result");
-
     assert(
       !summary.timedOut,
       `Timed out waiting for homepage table data after ${summary.waitTimeoutMs}ms (${formatUiSummary(summary)})`,
@@ -426,46 +484,19 @@ async function run() {
     console.log(`[smoke-ui] OK ${summary.title}`);
     console.log(`[smoke-ui] OK table rows=${summary.rows}, knownTicker=${summary.hasKnownTicker}`);
 
-    if (!skipOverflow) {
-      const resizeOutput = await runPlaywrightCli(sessionId, ["resize", String(MOBILE_WIDTH), String(MOBILE_HEIGHT)]);
-      ensureNoCliError("resize", resizeOutput);
-
-      const routes = getOverflowRoutes();
-      let currentRoute = new URL(url).pathname || "/";
-      for (const route of routes) {
-        const routeUrl = new URL(route, url).toString();
-        if (route !== currentRoute) {
-          await navigateWithRetry(sessionId, routeUrl, `goto ${route}`, uiRetryCount, uiRetryDelayMs);
-          currentRoute = route;
-        }
-
-        let overflowSummary = await runOverflowCheck(
-          sessionId,
-          safeOverflowWaitMs,
-          overflowSettleSamples,
-          overflowSampleIntervalMs,
-          styleReadyTimeoutMs,
-          route,
-        );
-        if (overflowSummary.hasOverflow) {
-          const retrySummary = await runOverflowCheck(
-            sessionId,
-            safeOverflowWaitMs + DEFAULT_OVERFLOW_RETRY_EXTRA_WAIT_MS,
-            overflowSettleSamples,
-            overflowSampleIntervalMs,
-            styleReadyTimeoutMs,
-            route,
-          );
-          if (retrySummary.hasOverflow) {
-            throw new Error(formatOverflowFailure(retrySummary));
-          }
-          console.log(
-            `[smoke-ui] WARN transient overflow resolved on ${retrySummary.path} (initial=${overflowSummary.scrollWidth}/${overflowSummary.innerWidth}, retry=${retrySummary.scrollWidth}/${retrySummary.innerWidth})`,
-          );
-          overflowSummary = retrySummary;
-        }
-        console.log(`[smoke-ui] OK overflow ${overflowSummary.path} (${overflowSummary.scrollWidth}/${overflowSummary.innerWidth})`);
+    for (const check of result.overflowChecks ?? []) {
+      const finalSummary = check.retry ?? check.initial;
+      if (check.initial?.hasOverflow && check.retry?.hasOverflow) {
+        throw new Error(formatOverflowFailure(check.retry));
       }
+      if (check.initial?.hasOverflow && check.retry && !check.retry.hasOverflow) {
+        console.log(
+          `[smoke-ui] WARN transient overflow resolved on ${check.route} (initial=${check.initial.scrollWidth}/${check.initial.innerWidth}, retry=${check.retry.scrollWidth}/${check.retry.innerWidth})`,
+        );
+      }
+      console.log(
+        `[smoke-ui] OK overflow ${finalSummary.path} (${finalSummary.scrollWidth}/${finalSummary.innerWidth})`,
+      );
     }
 
     console.log("[smoke-ui] All checks passed.");

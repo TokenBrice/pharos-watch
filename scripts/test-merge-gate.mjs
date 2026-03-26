@@ -2,7 +2,9 @@
 import { execSync, spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import {
+  hasDeployImpact,
   hasPagesDeployImpact,
+  hasWorkerDeployImpact,
   normalizeRepoPath,
 } from "./lib/deploy-impact.mjs";
 
@@ -10,7 +12,7 @@ export function normalizePath(path) {
   return normalizeRepoPath(path);
 }
 
-export const NON_NEGOTIABLE_VALIDATE_COMMANDS = [
+export const COMMON_VALIDATE_PREBUILD_COMMANDS = [
   "npm run audit:deps",
   "npm run lint",
   "npm run check:worker-boundary",
@@ -23,9 +25,6 @@ export const NON_NEGOTIABLE_VALIDATE_COMMANDS = [
   "npm run check:redemption-backstops",
   "npm run check:unused-code",
   "npm run check:hotspot-ratchet",
-  "npm test",
-  "npm run coverage:critical",
-  "cd worker && npx tsc --noEmit",
 ];
 
 export const PAGES_VALIDATE_COMMANDS = [
@@ -33,9 +32,16 @@ export const PAGES_VALIDATE_COMMANDS = [
   "npm run seo:check",
 ];
 
+export const COMMON_VALIDATE_POSTBUILD_COMMANDS = [
+  "npm test",
+  "npm run coverage:critical",
+];
+
+export const WORKER_VALIDATE_COMMANDS = ["cd worker && npx tsc --noEmit"];
+
 /**
  * Commands that can be skipped when their relevant input files haven't changed.
- * Key: command string (must match an entry in NON_NEGOTIABLE_VALIDATE_COMMANDS).
+ * Key: command string (must match an entry in COMMON_VALIDATE_PREBUILD_COMMANDS).
  * Value: path prefixes — if no changedFiles start with any prefix, the command is skipped.
  */
 const SKIPPABLE_CHECKS = new Map([
@@ -56,7 +62,13 @@ function addCommand(plan, cmd, reason) {
 }
 
 export function buildCommandPlan(changedFiles) {
+  if (!hasDeployImpact(changedFiles)) {
+    return [];
+  }
+
   const plan = [];
+  const pagesChanged = hasPagesDeployImpact(changedFiles);
+  const workerChanged = hasWorkerDeployImpact(changedFiles);
 
   const skippedCommands = new Set();
   if (changedFiles.length > 0) {
@@ -68,7 +80,7 @@ export function buildCommandPlan(changedFiles) {
     }
   }
 
-  const filteredCommands = NON_NEGOTIABLE_VALIDATE_COMMANDS.filter(
+  const filteredCommands = COMMON_VALIDATE_PREBUILD_COMMANDS.filter(
     (cmd) => !skippedCommands.has(cmd),
   );
 
@@ -78,12 +90,22 @@ export function buildCommandPlan(changedFiles) {
   }
 
   for (const cmd of filteredCommands) {
-    addCommand(plan, cmd, "Local merge gate mirrors the shared CI validate core");
+    addCommand(plan, cmd, "Deploy-impacting files changed; local merge gate mirrors the deploy-path validate core");
   }
 
-  if (hasPagesDeployImpact(changedFiles)) {
+  if (pagesChanged) {
     for (const cmd of PAGES_VALIDATE_COMMANDS) {
       addCommand(plan, cmd, "Pages-impacting files changed");
+    }
+  }
+
+  for (const cmd of COMMON_VALIDATE_POSTBUILD_COMMANDS) {
+    addCommand(plan, cmd, "Deploy-impacting files changed; local merge gate mirrors the deploy-path validate core");
+  }
+
+  if (workerChanged) {
+    for (const cmd of WORKER_VALIDATE_COMMANDS) {
+      addCommand(plan, cmd, "Worker-impacting files changed");
     }
   }
 
@@ -91,11 +113,24 @@ export function buildCommandPlan(changedFiles) {
 }
 
 export function buildCiValidateCommands() {
-  const testIndex = NON_NEGOTIABLE_VALIDATE_COMMANDS.indexOf("npm test");
+  return buildCiValidateStepPlan().map((step) => step.cmd);
+}
+
+export function buildCiValidateStepPlan({
+  pagesChanged = true,
+  workerChanged = true,
+} = {}) {
   return [
-    ...NON_NEGOTIABLE_VALIDATE_COMMANDS.slice(0, testIndex),
-    ...PAGES_VALIDATE_COMMANDS,
-    ...NON_NEGOTIABLE_VALIDATE_COMMANDS.slice(testIndex),
+    ...COMMON_VALIDATE_PREBUILD_COMMANDS.map((cmd) => ({ cmd, condition: null })),
+    ...PAGES_VALIDATE_COMMANDS.map((cmd) => ({
+      cmd,
+      condition: pagesChanged ? "pages_changed" : null,
+    })),
+    ...COMMON_VALIDATE_POSTBUILD_COMMANDS.map((cmd) => ({ cmd, condition: null })),
+    ...WORKER_VALIDATE_COMMANDS.map((cmd) => ({
+      cmd,
+      condition: workerChanged ? "worker_changed" : null,
+    })),
   ];
 }
 
@@ -165,6 +200,11 @@ export function runMergeGate({ argv = process.argv.slice(2), env = process.env }
   }
 
   const plan = buildCommandPlan(changedFiles);
+
+  if (plan.length === 0) {
+    console.log("[merge-gate] No Pages or worker deploy surfaces changed; gate skipped.");
+    return;
+  }
 
   console.log("[merge-gate] Command plan:");
   for (let i = 0; i < plan.length; i++) {

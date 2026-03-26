@@ -62,3 +62,7 @@ export function hasPagesDeployImpact(files) {
     || PAGES_CHANGE_PREFIXES.some((prefix) => file.startsWith(prefix)),
   );
 }
+
+export function hasDeployImpact(files) {
+  return hasWorkerDeployImpact(files) || hasPagesDeployImpact(files);
+}

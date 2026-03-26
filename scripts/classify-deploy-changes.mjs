@@ -3,6 +3,7 @@
 import { execSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import {
+  hasDeployImpact,
   hasPagesDeployImpact,
   hasWorkerDeployImpact,
   normalizeRepoPath,
@@ -10,7 +11,7 @@ import {
 
 const ZERO_SHA = /^0+$/;
 
-export { hasPagesDeployImpact, hasWorkerDeployImpact };
+export { hasDeployImpact, hasPagesDeployImpact, hasWorkerDeployImpact };
 
 export function normalizeChangedFiles(rawOutput) {
   return rawOutput
@@ -28,6 +29,7 @@ export function classifyDeployChanges({
   if (eventName !== "push") {
     return {
       changedFiles: [],
+      deployRequired: true,
       pagesChanged: true,
       reason: `Non-push event (${eventName ?? "unknown"}) runs the full deploy workflow`,
       workerChanged: true,
@@ -37,6 +39,7 @@ export function classifyDeployChanges({
   if (!baseSha || ZERO_SHA.test(baseSha) || !headSha) {
     return {
       changedFiles: [],
+      deployRequired: true,
       pagesChanged: true,
       reason: "Missing push diff base/head; falling back to full deploy path",
       workerChanged: true,
@@ -50,19 +53,23 @@ export function classifyDeployChanges({
   } catch {
     return {
       changedFiles: [],
+      deployRequired: true,
       pagesChanged: true,
       reason: `Failed to diff ${baseSha}..${headSha}; falling back to full deploy path`,
       workerChanged: true,
     };
   }
 
+  const pagesChanged = hasPagesDeployImpact(changedFiles);
+  const workerChanged = hasWorkerDeployImpact(changedFiles);
   return {
     changedFiles,
-    pagesChanged: hasPagesDeployImpact(changedFiles),
+    deployRequired: hasDeployImpact(changedFiles),
+    pagesChanged,
     reason: changedFiles.length > 0
       ? `Detected ${changedFiles.length} changed file(s) in push range`
       : "No changed files detected in push range",
-    workerChanged: hasWorkerDeployImpact(changedFiles),
+    workerChanged,
   };
 }
 
@@ -71,6 +78,7 @@ function writeGithubOutputLine(key, value) {
 }
 
 export function emitGithubOutputs(classification) {
+  writeGithubOutputLine("deploy_required", classification.deployRequired ? "true" : "false");
   writeGithubOutputLine("pages_changed", classification.pagesChanged ? "true" : "false");
   writeGithubOutputLine("worker_changed", classification.workerChanged ? "true" : "false");
 }
@@ -90,6 +98,7 @@ function runCli(env = process.env) {
   }
   console.error(`[deploy-changes] pages_changed=${classification.pagesChanged}`);
   console.error(`[deploy-changes] worker_changed=${classification.workerChanged}`);
+  console.error(`[deploy-changes] deploy_required=${classification.deployRequired}`);
 
   emitGithubOutputs(classification);
 }
