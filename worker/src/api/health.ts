@@ -6,7 +6,7 @@ import {
 import { getCircuitStates, type CircuitRecord } from "../lib/circuit-breaker";
 import { buildInClause } from "../lib/db";
 import { CIRCUIT_SOURCE } from "../lib/constants";
-import type { HealthResponse } from "@shared/types/status";
+import type { HealthResponse, TelegramHealthSummary } from "@shared/types/status";
 import {
   buildMintBurnSyncHealth,
   evaluateMintBurnFreshness,
@@ -208,10 +208,34 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database, op
     }
   }
 
+  // Lightweight telegram summary — silently null if tables are not migrated
+  let telegramSummary: TelegramHealthSummary | null = null;
+  if (dbHealthy) {
+    try {
+      const [chatCount, pendingCount, lastDispatch] = await Promise.all([
+        db.prepare("SELECT COUNT(*) AS n FROM telegram_subscribers").first<{ n: number }>(),
+        db.prepare("SELECT COUNT(*) AS n FROM telegram_pending_alerts").first<{ n: number }>(),
+        db
+          .prepare(
+            "SELECT started_at, status FROM cron_runs WHERE job = 'dispatch-telegram-alerts' ORDER BY started_at DESC LIMIT 1",
+          )
+          .first<{ started_at: number; status: string }>(),
+      ]);
+      telegramSummary = {
+        totalChats: chatCount?.n ?? 0,
+        pendingDeliveries: pendingCount?.n ?? 0,
+        lastDispatchAt: lastDispatch?.started_at ?? null,
+        lastDispatchStatus: lastDispatch?.status ?? null,
+      };
+    } catch {
+      // Telegram tables may not be migrated yet — silently null
+    }
+  }
+
   const status: HealthResponse["status"] =
     worstRatioMut > 2 ? "stale" : worstRatioMut > 1.5 ? "degraded" : "healthy";
 
-  const body: HealthResponse = { status, timestamp: now, warnings, caches, blacklist, mintBurn, circuits };
+  const body: HealthResponse = { status, timestamp: now, warnings, caches, blacklist, mintBurn, circuits, telegramSummary };
 
   return jsonResponse(body, { "Cache-Control": "no-store" });
 });

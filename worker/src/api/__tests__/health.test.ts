@@ -242,4 +242,41 @@ describe("handleHealth", () => {
     });
     expect(body.warnings.some((warning) => warning.includes("cached fallback FX rates"))).toBe(true);
   });
+
+  it("includes telegramSummary when telegram tables exist", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+      { match: "mint_burn_hourly", rows: [], first: { total: 0 } },
+      { match: "SELECT status", rows: [], first: { status: "ok" } },
+      { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
+      { match: "telegram_subscribers", rows: [], first: { n: 42 } },
+      { match: "telegram_pending_alerts", rows: [], first: { n: 3 } },
+      { match: "dispatch-telegram-alerts", rows: [], first: { started_at: now - 120, status: "ok" } },
+    ]);
+    const res = await handleHealth(db);
+    const body = (await res.json()) as { telegramSummary: { totalChats: number; pendingDeliveries: number; lastDispatchAt: number | null; lastDispatchStatus: string | null } | null };
+    expect(body.telegramSummary).toEqual({
+      totalChats: 42,
+      pendingDeliveries: 3,
+      lastDispatchAt: now - 120,
+      lastDispatchStatus: "ok",
+    });
+  });
+
+  it("returns null telegramSummary when telegram tables do not exist", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+      { match: "mint_burn_hourly", rows: [], first: { total: 0 } },
+      { match: "SELECT status", rows: [], first: { status: "ok" } },
+      { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
+      { match: "telegram_subscribers", rows: [], throwError: new Error("no such table: telegram_subscribers") },
+    ]);
+    const res = await handleHealth(db);
+    const body = (await res.json()) as { telegramSummary: unknown };
+    expect(body.telegramSummary).toBeNull();
+  });
 });
