@@ -76,6 +76,18 @@ function parseExistingRatings(raw: string | null | undefined): Record<string, Bl
   }
 }
 
+async function parseBluechipResponseJson(
+  res: Response,
+  slug: string,
+): Promise<unknown | null> {
+  try {
+    return await res.json();
+  } catch (error) {
+    console.warn(`[bluechip] Failed to parse JSON for ${slug}:`, error);
+    return null;
+  }
+}
+
 export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
 
@@ -113,7 +125,12 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
           failedSlugs.push({ slug, reason: res ? `http-${res.status}` : "no-response" });
           return null;
         }
-        const payload = await res.json();
+        const payload = await parseBluechipResponseJson(res, slug);
+        if (payload == null) {
+          invalidPayloads++;
+          failedSlugs.push({ slug, reason: "json-parse-failed" });
+          return null;
+        }
         const validation = validatePayloadWithSchema(
           BluechipResponseSchema,
           payload,
@@ -168,7 +185,7 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
     ...freshRatingsMap,
   };
 
-  await recordOutcomeSafe(db, CIRCUIT_SOURCE.BLUECHIP, freshCount === totalEntries);
+  await recordOutcomeSafe(db, CIRCUIT_SOURCE.BLUECHIP, freshCount > 0);
 
   if (freshCount === 0) {
     console.warn("[bluechip] No ratings fetched, preserving cache");

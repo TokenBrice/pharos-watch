@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "../../api/__tests__/helpers/mock-d1";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
+import { recordOutcomeSafe } from "../../lib/circuit-breaker";
 
 vi.mock("../../lib/bluechip-slugs", () => ({
   BLUECHIP_SLUG_MAP: {
@@ -12,6 +13,15 @@ vi.mock("../../lib/bluechip-slugs", () => ({
 vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: vi.fn(async (url: string, init?: RequestInit) => fetch(url, init)),
 }));
+
+vi.mock("../../lib/circuit-breaker", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../lib/circuit-breaker")>();
+  return {
+    ...original,
+    shouldAttemptFetch: vi.fn(async () => true),
+    recordOutcomeSafe: vi.fn(async () => undefined),
+  };
+});
 
 import { syncBluechip } from "../sync-bluechip";
 
@@ -226,11 +236,78 @@ describe("syncBluechip", () => {
     expect(metadata.ratingsPublished).toBe(2);
     expect(metadata.fallbackMode).toBe("partial-cache-merge");
     expect(metadata.failedSlugs).toEqual([{ slug: "usdc", reason: "http-500" }]);
+    expect(recordOutcomeSafe).toHaveBeenCalledWith(db, "bluechip-api", true);
 
     const insert = getCacheInsert(db as MockD1Database);
     const cached = JSON.parse(String(insert?.binds[1])) as Record<string, { grade: string }>;
     expect(cached["usdt-tether"]?.grade).toBe("A");
     expect(cached["usdc-circle"]?.grade).toBe("B");
+  });
+
+  it("records json parse failures per slug without losing partial coverage", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockFetch([
+      {
+        match: "/coin-data/tether",
+        body: "<html>bad gateway</html>",
+        status: 200,
+        headers: { "content-type": "text/html" },
+      },
+      {
+        match: "/coin-data/usdc",
+        body: {
+          data: [
+            {
+              grade: "B",
+              collateralization: 88,
+              smart_contract_audit: true,
+              date_of_rating: "2026-03-01",
+              date_last_change: null,
+            },
+          ],
+        },
+      },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["bluechip-ratings"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            "usdt-tether": {
+              grade: "A",
+              slug: "tether",
+              collateralization: 95,
+              smartContractAudit: true,
+              dateOfRating: "2026-02-20",
+              dateLastChange: null,
+              smidge: {
+                stability: null,
+                management: null,
+                implementation: null,
+                decentralization: null,
+                governance: null,
+                externals: null,
+              },
+            },
+          }),
+          updated_at: Math.floor(Date.now() / 1000) - 30_000,
+        },
+      },
+    ]);
+
+    const result = await syncBluechip(db);
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      invalidPayloads: number;
+      failedSlugs: { slug: string; reason: string }[];
+    };
+    expect(metadata.invalidPayloads).toBe(1);
+    expect(metadata.failedSlugs).toEqual([{ slug: "tether", reason: "json-parse-failed" }]);
+    expect(warnSpy).toHaveBeenCalledWith("[bluechip] Failed to parse JSON for tether:", expect.any(SyntaxError));
   });
 
   it("returns degraded on invalid response shape", async () => {

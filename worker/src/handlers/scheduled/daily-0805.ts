@@ -16,27 +16,40 @@ import { buildTelegramCreds } from "../../lib/runtime-credentials";
 import type { ScheduledRuntimeContext } from "./context";
 
 export async function runDaily0805Slot(runtime: ScheduledRuntimeContext): Promise<void> {
+  const runDailyJob = async (
+    job: string,
+    fn: Parameters<ScheduledRuntimeContext["runLeasedCron"]>[1],
+  ) => {
+    try {
+      return (await runtime.runLeasedCron(job, fn)) ?? null;
+    } catch (err) {
+      console.error(`[cron] ${job} failed in daily 08:05 slot:`, err);
+      return null;
+    }
+  };
+
   await Promise.all([
-    runtime.runLeasedCron("sync-bluechip", (signal) => syncBluechip(runtime.db, signal)),
-    runtime.runLeasedCron("daily-digest", (signal) => {
-      return generateDailyDigest(
-        runtime.db,
-        runtime.env.ANTHROPIC_API_KEY ?? null,
-        null,
-        false,
-        buildTelegramCreds(runtime.env),
-        signal,
-      );
-    }).finally(() =>
-      runtime.runLeasedCron("weekly-recap", (signal) => {
+    runDailyJob("sync-bluechip", (signal) => syncBluechip(runtime.db, signal)),
+    (async () => {
+      await runDailyJob("daily-digest", (signal) => {
+        return generateDailyDigest(
+          runtime.db,
+          runtime.env.ANTHROPIC_API_KEY ?? null,
+          null,
+          false,
+          buildTelegramCreds(runtime.env),
+          signal,
+        );
+      });
+      await runDailyJob("weekly-recap", (signal) => {
         return generateWeeklyRecap(
           runtime.db,
           runtime.env.ANTHROPIC_API_KEY ?? null,
           buildTelegramCreds(runtime.env),
           signal,
         );
-      }),
-    ),
-    runtime.runLeasedCron("discovery-scan", (signal) => runDiscoveryScan(runtime.db, signal, runtime.coingeckoApiKey)),
+      });
+    })(),
+    runDailyJob("discovery-scan", (signal) => runDiscoveryScan(runtime.db, signal, runtime.coingeckoApiKey)),
   ]);
 }

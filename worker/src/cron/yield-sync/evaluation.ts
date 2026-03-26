@@ -2,6 +2,7 @@ import {
   TRACKED_META_BY_ID,
 } from "@shared/lib/stablecoins";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import type { YieldType } from "@shared/types/core";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import {
   buildOnChainSourceKey,
@@ -26,7 +27,7 @@ export interface EvaluatedYieldSource {
   symbol: string;
   sourceKey: string;
   yieldSource: string;
-  yieldType: string;
+  yieldType: YieldType;
   currentApy: number;
   apyBase: number | null;
   apyReward: number | null;
@@ -160,8 +161,8 @@ function resolveYieldSourceLabel(params: {
 function resolveYieldTypeLabel(params: {
   id: string;
   dataSource: string;
-  explicitType?: string;
-}): string {
+  explicitType?: YieldType;
+}): YieldType {
   const meta = TRACKED_META_BY_ID.get(params.id);
   const yieldConfig = meta?.yieldConfig;
   return (

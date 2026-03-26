@@ -423,7 +423,7 @@ export async function resolveYieldSources({
     const { rates: aaveRates } = await fetchAaveV3SupplyRates(aaveTargets, signal, chainRpcs);
     const AAVE_SOURCE_KEY = "aave-v3-onchain";
     const AAVE_YIELD_SOURCE = "Aave v3";
-    const AAVE_YIELD_TYPE = "lending";
+    const AAVE_YIELD_TYPE = "lending-opportunity";
     for (const [stablecoinId, { apy }] of aaveRates) {
       if (apy <= 0) continue;
       if (resolved.some((entry) => entry.id === stablecoinId && entry.yield?.sourceKey === AAVE_SOURCE_KEY)) {

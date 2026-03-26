@@ -451,7 +451,7 @@ These files are called internally by `syncStablecoins()`, not registered as stan
 
 Every scheduled trigger now runs as one fenced slot in `worker/src/handlers/scheduled.ts`, keyed by shared schedule metadata plus the normalized scheduled timestamp. Inside that slot, each cron job is still wrapped with `runCronWithLease(...)` + `logCronRun(...)` via `runLeasedCron(...)` from the scheduled runtime context.
 
-`ctx.waitUntil(runScheduledSlotWithFence(db, scheduleKey, () => runner(runtime), { slotStartedAt }))`
+`await runScheduledSlotWithFence(db, scheduleKey, () => runner(runtime), { slotStartedAt })`
 
 ```typescript
 async function logCronRun(
@@ -693,7 +693,7 @@ Default behavior in `runCronWithLease`:
 
 Scheduled execution is now wired in two layers:
 
-- `worker/src/handlers/scheduled.ts` normalizes `event.scheduledTime` into a durable slot timestamp and fences the whole slot with `runScheduledSlotWithFence(...)`
+- `worker/src/handlers/scheduled.ts` normalizes `event.scheduledTime` into a durable slot timestamp and awaits the fenced slot inline via `runScheduledSlotWithFence(...)`, which keeps manual `/__scheduled` replays from being cancelled mid-slot by preview-only `waitUntil()` teardown semantics
 - `worker/src/handlers/scheduled/context.ts` keeps per-job `runLeasedCron(...)` for job-level overlap protection, timeout logging, and progress
 
 This means duplicate trigger deliveries for the same slot are skipped before shared-slot fan-out can reorder downstream jobs, while individual jobs inside the accepted slot still use their existing per-job leases.
@@ -906,9 +906,10 @@ Current reserve-sync support distinguishes direct and proxy live-capacity teleme
    - `dateOfRating`, `dateLastChange`
    - `smidge`: 6 category summaries (stability, management, implementation, decentralization, governance, externals) — HTML stripped via regex
 4. Merge any freshly fetched rows onto the previous cache map so missed slugs do not disappear from the published payload
-5. If zero ratings fetched: preserve existing cache, don't overwrite
-6. If only a subset of slugs succeeded: store the merged map and return `status: "degraded"` with `fallbackMode: "partial-cache-merge"`
-7. Store `Record<string, BluechipRating>` (keyed by canonical Pharos ID) via `setCacheIfNewer()`
+5. Treat malformed/non-JSON `200` responses as slug-scoped failures (`json-parse-failed`) instead of aborting the whole cron on a raw parser exception
+6. If zero ratings fetched: preserve existing cache, don't overwrite
+7. If only a subset of slugs succeeded: store the merged map and return `status: "degraded"` with `fallbackMode: "partial-cache-merge"`; this degraded partial-refresh path does not count as a circuit-breaker failure as long as at least one fresh slug was recovered
+8. Store `Record<string, BluechipRating>` (keyed by canonical Pharos ID) via `setCacheIfNewer()`
 
 **Tracked coins:** USDC, USDT, DAI, LUSD, BOLD, PYUSD, PAXG, XAUT, GUSD, USDP, EURC, FDUSD, FRAX, GHO, TUSD, RLUSD, XSGD, OUSD, CETES.
 

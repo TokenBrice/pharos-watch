@@ -343,7 +343,6 @@ export async function syncDexLiquidity(
     if (!(await shouldAttemptFetch(db, circuitKey))) {
       console.log(`[dex-liquidity] ${name} API circuit open, skipping`);
       failedSources.push(circuitKey);
-      criticalSourceFailures.push(circuitKey);
       fallbackSignals.push(`${circuitKey}-circuit-open`);
       directApiResults.push({
         name,
@@ -360,9 +359,10 @@ export async function syncDexLiquidity(
     try {
       const result = await fn(signal);
       await recordOutcomeSafe(db, circuitKey, result.ok);
-      if (!result.ok || result.degraded) {
+      if (!result.ok) {
         failedSources.push(circuitKey);
-        criticalSourceFailures.push(circuitKey);
+      } else if (result.degraded) {
+        failedSources.push(circuitKey);
       }
       if (!result.ok) {
         fallbackSignals.push(`${circuitKey}-unavailable`);
@@ -375,7 +375,6 @@ export async function syncDexLiquidity(
       console.warn(`[dex-liquidity] ${name} API failed (non-fatal):`, err);
       await recordOutcomeSafe(db, circuitKey, false);
       failedSources.push(circuitKey);
-      criticalSourceFailures.push(circuitKey);
       fallbackSignals.push(`${circuitKey}-exception`);
       directApiResults.push({
         name,

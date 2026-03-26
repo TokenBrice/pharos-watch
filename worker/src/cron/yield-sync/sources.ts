@@ -185,9 +185,9 @@ export async function fetchOnChainRates(
     };
   }
 
-  // Fetch vault exchange rates in batches of 4; half-hourly slot jobs run
-  // sequentially so the full 6-connection pool is available at this point.
-  const RATE_BATCH_SIZE = 4;
+  // Fetch vault exchange rates in smaller batches to avoid brief RPC bursts
+  // that can collapse an otherwise healthy deterministic lane into all-null.
+  const RATE_BATCH_SIZE = 2;
   type RateResult = { id: string; rate: number; status: "ok" } | { id: string; status: "no-rpc" | "null" | "error"; error?: string };
   const allResults: PromiseSettledResult<RateResult>[] = [];
   for (let i = 0; i < ON_CHAIN_RATE_CONFIGS.length; i += RATE_BATCH_SIZE) {

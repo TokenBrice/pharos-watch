@@ -32,6 +32,10 @@ const cronMocks = vi.hoisted(() => ({
   syncKinesisSupply: vi.fn(async () => ({ status: "ok", itemCount: 2, metadata: "{}" })),
   syncDexLiquidity: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncYieldData: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  syncBluechip: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  generateDailyDigest: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  generateWeeklyRecap: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  runDiscoveryScan: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   logCronRun: vi.fn(async (
     _db: D1Database,
     _job: string,
@@ -95,6 +99,10 @@ vi.mock("../cron/sync-redemption-backstops", () => ({ syncRedemptionBackstops: c
 vi.mock("../cron/sync-kinesis-supply", () => ({ syncKinesisSupply: cronMocks.syncKinesisSupply }));
 vi.mock("../cron/dex-liquidity", () => ({ syncDexLiquidity: cronMocks.syncDexLiquidity }));
 vi.mock("../cron/sync-yield-data", () => ({ syncYieldData: cronMocks.syncYieldData }));
+vi.mock("../cron/sync-bluechip", () => ({ syncBluechip: cronMocks.syncBluechip }));
+vi.mock("../cron/daily-digest", () => ({ generateDailyDigest: cronMocks.generateDailyDigest }));
+vi.mock("../cron/weekly-recap", () => ({ generateWeeklyRecap: cronMocks.generateWeeklyRecap }));
+vi.mock("../cron/discovery-scan", () => ({ runDiscoveryScan: cronMocks.runDiscoveryScan }));
 
 vi.mock("../lib/db-cache", () => ({
   getCache: cronMocks.getCache,
@@ -241,6 +249,72 @@ describe("worker.scheduled", () => {
     );
   });
 
+  it("logs and returns when the slot fence reports a duplicate delivery", async () => {
+    const scheduledTime = Date.parse("2025-11-24T01:45:00Z");
+    const expectedSlotStartedAt = Math.floor(scheduledTime / 1000);
+    cronMocks.runScheduledSlotWithFence.mockResolvedValueOnce({
+      status: "skipped_duplicate",
+      slotKey: "quarterHourly",
+      slotStartedAt: expectedSlotStartedAt,
+      owner: "slot-owner",
+    });
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+      TELEGRAM_BOT_TOKEN: "bot-token",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "*/15 * * * *", scheduledTime } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(cronMocks.syncStablecoins).not.toHaveBeenCalled();
+    expect(infoSpy).toHaveBeenCalledWith(
+      `[cron-slot] Skipping duplicate slot quarterHourly@${expectedSlotStartedAt}`,
+    );
+
+    infoSpy.mockRestore();
+  });
+
+  it("logs when the slot fence reports an already-running delivery", async () => {
+    const scheduledTime = Date.parse("2025-11-24T01:45:00Z");
+    const expectedSlotStartedAt = Math.floor(scheduledTime / 1000);
+    cronMocks.runScheduledSlotWithFence.mockResolvedValueOnce({
+      status: "skipped_running",
+      slotKey: "quarterHourly",
+      slotStartedAt: expectedSlotStartedAt,
+      owner: "slot-owner",
+    });
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+      TELEGRAM_BOT_TOKEN: "bot-token",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "*/15 * * * *", scheduledTime } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(cronMocks.syncStablecoins).not.toHaveBeenCalled();
+    expect(infoSpy).toHaveBeenCalledWith(
+      `[cron-slot] Slot already running quarterHourly@${expectedSlotStartedAt}`,
+    );
+
+    infoSpy.mockRestore();
+  });
+
   it("skips downstream-safe dependent jobs when sync-stablecoins finishes degraded without safe cache write", async () => {
     cronMocks.syncStablecoins.mockResolvedValueOnce({
       status: "degraded",
@@ -380,6 +454,29 @@ describe("worker.scheduled", () => {
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotSafetyGradeHistory).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotPsiDaily).toHaveBeenCalledTimes(1);
+  });
+
+  it("contains individual daily 08:05 failures and continues the other jobs", async () => {
+    cronMocks.generateDailyDigest.mockRejectedValueOnce(new Error("digest failed"));
+
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+      ANTHROPIC_API_KEY: "anthropic",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "5 8 * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(cronMocks.syncBluechip).toHaveBeenCalledTimes(1);
+    expect(cronMocks.generateDailyDigest).toHaveBeenCalledTimes(1);
+    expect(cronMocks.generateWeeklyRecap).toHaveBeenCalledTimes(1);
+    expect(cronMocks.runDiscoveryScan).toHaveBeenCalledTimes(1);
   });
 
   it("runs live reserve sync on the dedicated hourly trigger", async () => {

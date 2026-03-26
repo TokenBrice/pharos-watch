@@ -1,3 +1,5 @@
+import type { YieldType } from "@shared/types/core";
+
 export interface DlPool {
   pool: string;
   chain: string;
@@ -23,7 +25,7 @@ export interface ResolvedYield {
   exchangeRate: number | null;
   sourceKey: string;
   yieldSource?: string;
-  yieldType?: string;
+  yieldType?: YieldType;
   project?: string;
   sourceObservedAt?: number | null;
   comparisonAnchorObservedAt?: number | null;

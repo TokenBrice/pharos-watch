@@ -80,6 +80,13 @@ function chunkPoolIds(poolIds: string[], chunkSize: number): string[][] {
   return chunks;
 }
 
+function summarizeBodySnippet(body: string): string {
+  return body
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
+}
+
 async function fetchSubgraphJson<T>(subgraphUrl: string, query: string, signal?: AbortSignal): Promise<T> {
   const res = await fetchWithRetry(subgraphUrl, {
     method: "POST",
@@ -88,7 +95,19 @@ async function fetchSubgraphJson<T>(subgraphUrl: string, query: string, signal?:
     signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(SUBGRAPH_TIMEOUT_MS)]) : AbortSignal.timeout(SUBGRAPH_TIMEOUT_MS),
   });
   if (!res?.ok) throw new Error(`returned ${res?.status ?? "unknown"}`);
-  const json = await res.json() as { data?: T; errors?: Array<{ message?: string }> };
+
+  const rawBody = await res.text();
+  let json: { data?: T; errors?: Array<{ message?: string }> };
+  try {
+    json = JSON.parse(rawBody) as { data?: T; errors?: Array<{ message?: string }> };
+  } catch (error) {
+    throw new Error(
+      `invalid-json: ${
+        error instanceof Error ? error.message : String(error)
+      }; body=${summarizeBodySnippet(rawBody)}`,
+    );
+  }
+
   if (json.errors?.length) {
     throw new Error(json.errors.map((entry) => entry.message ?? "unknown").join("; "));
   }

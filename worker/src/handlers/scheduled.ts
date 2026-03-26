@@ -50,20 +50,18 @@ export async function handleScheduledEvent(
     slotStartedAt,
   });
 
-  ctx.waitUntil((async () => {
-    const slotResult = await runScheduledSlotWithFence(
-      env.DB,
-      scheduleKey,
-      () => Promise.resolve(runner(runtime)),
-      { slotStartedAt },
-    );
+  const slotResult = await runScheduledSlotWithFence(
+    env.DB,
+    scheduleKey,
+    () => Promise.resolve(runner(runtime)),
+    { slotStartedAt },
+  );
 
-    if (slotResult.status === "skipped_duplicate") {
-      console.info(`[cron-slot] Skipping duplicate slot ${scheduleKey}@${slotStartedAt}`);
-      return;
-    }
-    if (slotResult.status === "skipped_running") {
-      console.info(`[cron-slot] Slot already running ${scheduleKey}@${slotStartedAt}`);
-    }
-  })());
+  if (slotResult.status === "skipped_duplicate") {
+    console.info(`[cron-slot] Skipping duplicate slot ${scheduleKey}@${slotStartedAt}`);
+    return;
+  }
+  if (slotResult.status === "skipped_running") {
+    console.info(`[cron-slot] Slot already running ${scheduleKey}@${slotStartedAt}`);
+  }
 }

@@ -39,11 +39,13 @@ Current map covers:
 4. Discards 404s, empty payloads, and rows without a `grade`.
 5. Normalizes each successful row into `BluechipRating`, accepting Bluechip category blocks that are omitted or explicitly `null`.
 6. Strips HTML from SMIDGE category summaries before persistence.
-7. Writes the merged map back with `setCacheIfNewer()`.
+7. Treats malformed/non-JSON `200` responses as slug-scoped `json-parse-failed` misses so one bad payload does not abort the full daily refresh.
+8. Writes the merged map back with `setCacheIfNewer()`.
 
 Failure behavior:
 - If zero ratings are fetched, the cron returns `status: "degraded"` and preserves the previous cache.
 - Partial success is accepted, but fresh rows are now merged onto the previous cache instead of replacing it wholesale. When only a subset of slugs succeeds, the cron returns `status: "degraded"` with `fallbackMode: "partial-cache-merge"` and preserves the last good values for missed slugs.
+- Degraded partial-refresh runs still count as a healthy breaker outcome when at least one slug refreshed, so repeated partial merges do not incorrectly open the Bluechip API circuit.
 
 ---
 

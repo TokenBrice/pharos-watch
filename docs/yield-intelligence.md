@@ -228,7 +228,7 @@ For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), 
 
 **Discovery logic:** Filters DL pools by `exposure === "single"`, `stablecoin === true`, project in allowlist, exact symbol match (case-insensitive). Picks highest TVL. Current quality gates require `apy >= 0.1` and `tvlUsd >= 100_000`.
 
-**Yield type:** `lending-opportunity` — distinguishes these from native yield coins on the frontend.
+**Yield type:** `lending-opportunity` — distinguishes these from native yield coins on the frontend. The direct Aave v3 on-chain supply-rate path uses the same classification so rankings/cache schema validation stays aligned across deterministic and auto-discovered lending rows.
 
 **Data source:** `defillama-auto` — distinguishes from static-mapped `defillama` pools.
 
@@ -412,7 +412,7 @@ CREATE TABLE yield_history (
 
 1. Filter `TRACKED_STABLECOINS` where `flags.yieldBearing === true` for the base four-tier resolution, then evaluate auto-discovery across all eligible tracked non-gold/silver coins
 2. Fetch DeFiLlama pools (`https://yields.llama.fi/pools`) — circuit-breaker protected
-3. Fetch on-chain exchange rates via `eth_call` for `ON_CHAIN_RATE_CONFIGS` entries
+3. Fetch on-chain exchange rates via `eth_call` for `ON_CHAIN_RATE_CONFIGS` entries, using small batched concurrency so deterministic sources do not self-inflict RPC burst failures
 4. Read cached risk-free rate from D1
 5. Compute safety scores via shared helper `computeSafetyScoresSnapshot(db, { includeNavTokens: true, outputMode: "map" })`; this helper now reuses the same peg-analytics path as `/api/report-cards` so live peg deviation inputs stay aligned across Safety Score and Yield Intelligence. Treat the helper's explicit degraded result as degraded input, and also classify coverage below the minimum ratio as degraded even when the helper itself succeeded
 6. Resolve APY for each yield-bearing coin (Tier 1 → 2 → 3 → 4, potentially multiple sources per coin), then append auto-discovered lending rows for any remaining eligible tracked coins

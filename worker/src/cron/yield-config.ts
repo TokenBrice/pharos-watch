@@ -1,6 +1,8 @@
 // worker/src/cron/yield-config.ts
 // Static configuration for the yield intelligence pipeline.
 
+import type { YieldType } from "@shared/types/core";
+
 /** Yield variant: maps a tracked Pharos coin to its untracked yield wrapper. */
 export interface YieldVariant {
   variantSymbol: string;
@@ -11,7 +13,7 @@ export interface YieldVariant {
   /** Label used as yield_source when this wrapper is the source row. */
   yieldSource?: string;
   /** Yield mechanism type for this wrapper. */
-  yieldType?: string;
+  yieldType?: YieldType;
 }
 
 /**

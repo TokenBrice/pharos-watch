@@ -239,20 +239,24 @@ describe("syncDexLiquidity", () => {
     expect(metadata.sourceCoverage?.protocolCapReductions?.reducedTvlUsd).toBe(0);
   });
 
-  it("returns degraded when a direct API source is unavailable", async () => {
+  it("keeps the run ok when an optional direct API source is unavailable but coverage stays intact", async () => {
     vi.mocked(fetchRaydiumPools).mockResolvedValueOnce(
       { pools: [], ok: false, degraded: true, errors: ["query poolType type error"] },
     );
 
     const result = await syncDexLiquidity(db, "graph-key");
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       failedSources?: string[];
       fallbackMode?: string[];
+      sourceCoverage?: {
+        sourceDegradedFamilies?: string[];
+      };
     };
     expect(metadata.failedSources).toContain("raydium-api");
     expect(metadata.fallbackMode).toContain("raydium-api-unavailable");
+    expect(metadata.sourceCoverage?.sourceDegradedFamilies).toEqual([]);
   });
 
   it("waits for subgraph enrichment before starting direct API fetches", async () => {

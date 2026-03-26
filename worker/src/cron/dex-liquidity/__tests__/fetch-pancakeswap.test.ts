@@ -132,4 +132,21 @@ describe("fetchPancakeSwapPools", () => {
     expect(result.pools[0]?.volume24hUsd).toBe(1000);
     expect(result.pools[50]?.volume24hUsd).toBe(2000);
   });
+
+  it("surfaces non-json 200 responses as degraded diagnostics instead of throwing a raw parse error", async () => {
+    vi.mocked(fetchWithRetry)
+      .mockImplementationOnce(async () =>
+        new Response("GET,HEAD", {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+        }))
+      .mockImplementation(async () => response({ data: { pools: [] } }));
+
+    const result = await fetchPancakeSwapPools("graph-key");
+
+    expect(result.ok).toBe(false);
+    expect(result.degraded).toBe(true);
+    expect(result.errors[0]).toContain("invalid-json");
+    expect(result.errors[0]).toContain("GET,HEAD");
+  });
 });
