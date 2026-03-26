@@ -1,12 +1,16 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { StablecoinTable } from "@/components/stablecoin-table";
 import type { ReportCard, StablecoinData } from "@shared/types";
 
 const push = vi.fn();
+
+afterEach(() => {
+  cleanup();
+});
 
 vi.mock("@/components/table-toolbar", () => ({
   TableToolbar: () => <div data-testid="table-toolbar" />,
