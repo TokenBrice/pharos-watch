@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   STALE_THRESHOLD_MS,
   computeApyFromRate,
@@ -15,8 +16,8 @@ import { LENDING_PROTOCOL_ALLOWLIST } from "../yield-config";
 
 // computeTvlWeightedMedianApy is internal to sync-yield-data.ts - tested via integration
 describe("STALE_THRESHOLD_MS", () => {
-  it("equals 90 minutes in milliseconds", () => {
-    expect(STALE_THRESHOLD_MS).toBe(5_400_000);
+  it("tracks three sync-yield-data intervals in milliseconds", () => {
+    expect(STALE_THRESHOLD_MS).toBe(CRON_INTERVALS["sync-yield-data"] * 3 * 1000);
   });
 });
 

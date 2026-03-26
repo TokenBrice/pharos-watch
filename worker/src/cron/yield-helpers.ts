@@ -1,3 +1,5 @@
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+
 /**
  * Yield Pipeline — Pure Computation Functions
  *
@@ -14,7 +16,9 @@
  * (APY resolution), cache.ts (KV caching), rankings.ts (DB row mapping).
  */
 export { buildOnChainSourceKey } from "../lib/yield-utils";
-export const STALE_THRESHOLD_MS = 90 * 60 * 1000; // 3 sync cycles
+
+const YIELD_STALE_THRESHOLD_SYNC_CYCLES = 3;
+export const STALE_THRESHOLD_MS = CRON_INTERVALS["sync-yield-data"] * YIELD_STALE_THRESHOLD_SYNC_CYCLES * 1000;
 
 export {
   computePYS,

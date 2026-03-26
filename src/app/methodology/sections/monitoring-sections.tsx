@@ -212,6 +212,12 @@ export function MonitoringMethodologySections() {
                 Trailing APY metrics are computed from source-specific history rather than a mixed coin-level series, so
                 source switches no longer contaminate the displayed 7d/30d averages.
               </p>
+              <p>
+                Read-time <code className="text-xs bg-muted px-1 py-0.5 rounded">data-stale</code> warnings are also
+                cadence-aware: they attach only after three missed <code className="text-xs bg-muted px-1 py-0.5 rounded">sync-yield-data</code>{" "}
+                intervals (about 3 hours at the current hourly publisher), so one delayed run does not immediately mark
+                a ranking row stale.
+              </p>
             </div>
 
             {/* PYS formula */}

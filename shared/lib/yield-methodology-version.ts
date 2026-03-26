@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "5.6",
+  currentVersion: "5.7",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "5.7",
+    title: "Cadence-Aligned Data-Stale Warnings",
+    date: "2026-03-26",
+    effectiveAt: 1774807200,
+    summary:
+      "The read-time `data-stale` warning now follows the shared hourly `sync-yield-data` cadence instead of a leftover fixed 90-minute threshold from the old half-hourly lane.",
+    impact: [
+      "`data-stale` now triggers after three `sync-yield-data` intervals (currently about 3 hours) instead of after a hard-coded 90 minutes",
+      "Stablecoin detail Yield Intelligence cards no longer flag healthy hourly snapshots as stale after only one delayed publish window",
+      "The stale-warning threshold is now derived from shared cron metadata so future cadence moves stay aligned automatically",
+      "Methodology docs and the internal timeline now describe the cadence-aware stale-warning rule explicitly",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.6",
     title: "First-Party EUR Benchmarks and Resilient CHF Parsing",

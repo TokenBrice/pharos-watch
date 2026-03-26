@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v5.5`
+- **Current methodology version:** `v5.7`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -333,11 +333,11 @@ https://www.snb.ch/en/the-snb/mandates-goals/statistics/statistics-pub/current_i
 | `reward-heavy`     | `apyReward / apy > 0.8`                                | 80%+ from incentives, not base yield |
 | `tvl-outflow`      | TVL dropped > 20% from prev week                       | Capital leaving the protocol         |
 | `zero-yield`       | `currentApy === 0 AND apy30d > 0.5%`                   | Yield dropped to zero but had recent activity |
-| `data-stale`       | `updated_at` > 90 min old (`STALE_THRESHOLD_MS` in `worker/src/cron/yield-helpers.ts`) | Yield data hasn't refreshed in 90+ min |
+| `data-stale`       | `updated_at` > 3 `sync-yield-data` intervals old (currently 180 min; `STALE_THRESHOLD_MS` in `worker/src/cron/yield-helpers.ts`) | Yield data hasn't refreshed for roughly 3 publish cycles |
 
 All frontend surfaces (leaderboard, detail section, history chart) format warning signals via the shared `formatYieldWarningSignal()` function in `src/lib/yield-constants.ts`, which maps known signal keys to human-readable labels and falls back to hyphen-to-space conversion for unknown signals.
 
-At rankings cache-build time, `sync-yield-data` decorates rows with the read-time-only `data-stale` signal when `updated_at` is older than 90 minutes (`STALE_THRESHOLD_MS`). This signal is included in cached rankings responses but is not written back to `yield_data`.
+At rankings cache-build time, `sync-yield-data` decorates rows with the read-time-only `data-stale` signal when `updated_at` is older than three `sync-yield-data` intervals (currently 180 minutes; `STALE_THRESHOLD_MS`). This signal is included in cached rankings responses but is not written back to `yield_data`.
 
 The sync also performs a confidence-aware cross-source arbitration pass before `is_best` is chosen:
 
@@ -448,7 +448,7 @@ CREATE TABLE yield_history (
 11. Batch upsert `yield_data` (all sources) + insert `yield_history` points for every resolved source with `is_best` markers
 12. Purge stale rows for refreshed coins so obsolete primary/alt sources are removed together, then scan `yield_data` for orphan coin IDs and delete those in chunked `IN (...)` batches instead of a single large `NOT IN (...)`
 13. Prune `yield_history` older than 365 days
-14. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, add read-time `data-stale` warning decoration from `updated_at` age, and include top-level + per-row provenance in the cached rankings payload whenever the payload passes schema validation and the new payload has not collapsed severely versus the previous cache. Safety-degraded runs still publish fresh rankings when the payload is valid but skip `report_card_cache`.
+14. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, add read-time `data-stale` warning decoration from `updated_at` age using the cadence-aligned three-cycle threshold, and include top-level + per-row provenance in the cached rankings payload whenever the payload passes schema validation and the new payload has not collapsed severely versus the previous cache. Safety-degraded runs still publish fresh rankings when the payload is valid but skip `report_card_cache`.
 
 **Degraded semantics:** If `computeSafetyScoresSnapshot()` returns a degraded result, safety coverage is below the minimum ratio (0.75), the default USD benchmark is on a true fallback path (`isFallback === true`), the `fallbackMode` contains `"retained"` (indicating a benchmark fetch failure with last-known-good retention), the retained last-known-good USD benchmark is older than 48 hours, DeFiLlama pool inputs are unavailable, the direct DeFiLlama fetch payload is invalid or yields zero relevant stablecoin pools, all configured deterministic on-chain sources fail in the same cycle without full alternative coverage, a deterministic cooldown suppresses on-chain reads but coverage gaps reappear, or rankings publication fails schema/severe-shrink guards, `sync-yield-data` returns `status: "degraded"`. Repeated deterministic all-fail runs that are fully masked by non-onchain coverage now arm a cooldown instead of burning the full deterministic path every hour. Stale or missing supplemental cache does not by itself degrade the hourly publisher; it only reduces optional source coverage. Retained benchmark metadata still appears in rankings provenance via `provenance.benchmark.fallbackMode`, including the last market-derived rate/date/source preserved across fallback streaks. Row-level benchmark provenance also exposes the selected benchmark key, label, rate, fallback state, and selection mode. Schema-invalid or severe-shrink runs skip cache overwrite. Safety-degraded runs continue to publish a fresh `yield-rankings` cache when the rankings payload is valid, but they still skip `report_card_cache` writes so the degraded condition remains visible without taking the public API offline.
 

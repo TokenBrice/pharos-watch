@@ -1,8 +1,14 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.6` (2026-03-01 -> 2026-03-26).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.7` (2026-03-01 -> 2026-03-26).
 
 ---
+
+## v5.7 - Cadence-aligned data-stale warnings (Mar 26, 2026)
+
+- The read-time `data-stale` warning now keys off three `sync-yield-data` intervals instead of a leftover fixed `90 min` threshold from the old half-hourly lane
+- At the current hourly publisher cadence, that means detail-surface stale warnings wait about 3 hours before firing
+- The threshold is now derived from shared cron metadata, so future schedule changes stay aligned without another manual constant update
 
 ## v5.6 - First-party EUR benchmarks and resilient CHF parsing (Mar 26, 2026)
 
