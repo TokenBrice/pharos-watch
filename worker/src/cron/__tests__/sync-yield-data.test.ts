@@ -1594,12 +1594,18 @@ describe("syncYieldData", () => {
       sourceCoverage?: {
         onChainRatesResolved?: number;
         onChainAllDeterministicFailed?: boolean;
+        onChainExplorerAttempted?: number;
+        onChainExplorerResolved?: number;
+        onChainFailures?: Record<string, number> | null;
       };
     };
 
     expect(metadata.fallbackMode ?? "").not.toContain("onchain-rates:all-deterministic-failed");
     expect(metadata.sourceCoverage?.onChainRatesResolved).toBe(1);
     expect(metadata.sourceCoverage?.onChainAllDeterministicFailed).toBe(false);
+    expect(metadata.sourceCoverage?.onChainExplorerAttempted).toBe(1);
+    expect(metadata.sourceCoverage?.onChainExplorerResolved).toBe(1);
+    expect(metadata.sourceCoverage?.onChainFailures).toBeNull();
     const deterministicRawRpcCalls = rawRpcSpy.mock.calls.filter(
       ([, contract, data]) =>
         contract === "0x83F20F44975D03b1b09e64809B757c47f942BEeA"
@@ -1614,6 +1620,101 @@ describe("syncYieldData", () => {
       "latest",
       expect.objectContaining({ apiKey: "etherscan-key" }),
     );
+
+    onChainConfigs.length = 0;
+  });
+
+  it("records explorer fallback failures when deterministic RPC and explorer reads both return empty", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const onChainConfigs = yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+    onChainConfigs.push({
+      stablecoinId: "100",
+      chain: "ethereum",
+      contract: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+      selector: "0x07a2d13a",
+      decimals: 18,
+      inputAmount: "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+    });
+
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "yield_data", rows: [] },
+      {
+        match: "yield_history",
+        rows: [
+          {
+            stablecoin_id: "100",
+            source_key: "onchain:100",
+            recorded_at: nowSec - 8 * 86400,
+            is_best: 1,
+            apy: 5,
+            source_tvl_usd: null,
+            data_source: "onchain",
+            yield_source: null,
+            yield_type: null,
+            exchange_rate: 1.0,
+          },
+        ],
+      },
+      { match: "supply_history", rows: [] },
+      { match: "depeg_events", rows: [] },
+      { match: "dex_liquidity", rows: [] },
+    ]);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "risk_free_rate") {
+        return { value: "4.0", updatedAt: nowSec };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    vi.mocked(getChainRpc).mockReturnValue({
+      chainId: "ethereum",
+      chainName: "Ethereum",
+      type: "evm",
+      rpcUrl: "https://rpc.example/primary",
+      fallbackRpcUrl: "https://rpc.example/fallback",
+      explorerUrl: "https://etherscan.io",
+    });
+    mockFetch([]);
+    vi.spyOn(evmRpcModule, "fetchEvmUint256AtBlock").mockResolvedValue(null);
+    vi.spyOn(evmRpcModule, "fetchEtherscanUint256AtBlock").mockResolvedValue(null);
+
+    const testChainRpcs = new Map<string, ChainRpcConfig>([
+      ["ethereum", {
+        chainId: "ethereum",
+        chainName: "Ethereum",
+        type: "evm",
+        rpcUrl: "https://rpc.example/primary",
+        fallbackRpcUrl: "https://rpc.example/fallback",
+        explorerUrl: "https://etherscan.io",
+      }],
+    ]);
+    const result = await syncYieldData(
+      db,
+      undefined,
+      testChainRpcs,
+      undefined,
+      "etherscan-key",
+    );
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      fallbackMode?: string | null;
+      sourceCoverage?: {
+        onChainAttempted?: number;
+        onChainAllDeterministicFailed?: boolean;
+        onChainExplorerAttempted?: number;
+        onChainExplorerResolved?: number;
+        onChainFailures?: Record<string, number> | null;
+      };
+    };
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.fallbackMode ?? "").toContain("onchain-rates:all-deterministic-failed");
+    expect(metadata.sourceCoverage?.onChainAttempted).toBe(1);
+    expect(metadata.sourceCoverage?.onChainAllDeterministicFailed).toBe(true);
+    expect(metadata.sourceCoverage?.onChainExplorerAttempted).toBe(1);
+    expect(metadata.sourceCoverage?.onChainExplorerResolved).toBe(0);
+    expect(metadata.sourceCoverage?.onChainFailures).toEqual({ "rpc-empty|etherscan-empty": 1 });
 
     onChainConfigs.length = 0;
   });

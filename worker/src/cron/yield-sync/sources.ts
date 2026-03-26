@@ -194,13 +194,38 @@ export interface OnChainRateResult {
   failureBreakdown: Record<string, number> | null;
   attemptedCount?: number;
   allDeterministicFailed?: boolean;
+  explorerAttemptedCount?: number;
+  explorerResolvedCount?: number;
 }
 
-type OnChainRateFetchResult =
-  | { id: string; rate: number; status: "ok" }
-  | { id: string; status: "no-rpc" | "null" | "error"; error?: string };
+type OnChainRateFailureStatus =
+  | "no-rpc|etherscan-empty"
+  | "no-rpc|etherscan-unavailable"
+  | "rpc-empty|etherscan-empty"
+  | "rpc-empty|etherscan-unavailable";
 
-function buildOnChainRateRpcUrls(rpc: ChainRpcConfig): string[] {
+type OnChainRateFetchResult =
+  | {
+    id: string;
+    rate: number;
+    status: "ok";
+    resolvedVia: "rpc" | "etherscan";
+    explorerAttempted: boolean;
+  }
+  | { id: string; status: OnChainRateFailureStatus; explorerAttempted: boolean };
+
+function buildOnChainFailureStatus(
+  rpcStatus: "no-rpc" | "rpc-empty",
+  etherscanStatus: "etherscan-empty" | "etherscan-unavailable",
+): OnChainRateFailureStatus {
+  return `${rpcStatus}|${etherscanStatus}` as OnChainRateFailureStatus;
+}
+
+function buildOnChainRateRpcUrls(rpc?: ChainRpcConfig): string[] {
+  if (!rpc) {
+    return [];
+  }
+
   const urls = [
     rpc.fallbackRpcUrl,
     rpc.rpcUrl,
@@ -211,15 +236,13 @@ function buildOnChainRateRpcUrls(rpc: ChainRpcConfig): string[] {
 
 async function fetchSingleOnChainRate(
   config: (typeof ON_CHAIN_RATE_CONFIGS)[number],
-  rpc: ChainRpcConfig,
+  rpc: ChainRpcConfig | undefined,
   etherscanApiKey?: string | null,
   signal?: AbortSignal,
 ): Promise<OnChainRateFetchResult> {
   const callData = config.selector + config.inputAmount.replace("0x", "").padStart(64, "0");
   const rpcUrls = buildOnChainRateRpcUrls(rpc);
-  if (rpcUrls.length === 0) {
-    return { id: config.stablecoinId, status: "no-rpc" };
-  }
+  const rpcStatus: "no-rpc" | "rpc-empty" = rpcUrls.length === 0 ? "no-rpc" : "rpc-empty";
 
   for (const rpcUrl of rpcUrls) {
     try {
@@ -235,6 +258,8 @@ async function fetchSingleOnChainRate(
         id: config.stablecoinId,
         rate: Number(raw) / 10 ** config.decimals,
         status: "ok",
+        resolvedVia: "rpc",
+        explorerAttempted: false,
       };
     } catch (err) {
       if (signal?.aborted) {
@@ -244,28 +269,40 @@ async function fetchSingleOnChainRate(
   }
 
   const evmChainId = CHAIN_META[config.chain]?.evmChainId;
-  if (typeof evmChainId === "number" && etherscanApiKey) {
-    try {
-      const raw = await fetchEtherscanUint256AtBlock(evmChainId, config.contract, callData, "latest", {
-        apiKey: etherscanApiKey,
-        signal,
-        timeoutMs: ON_CHAIN_RATE_REQUEST_TIMEOUT_MS,
-      });
-      if (raw != null) {
-        return {
-          id: config.stablecoinId,
-          rate: Number(raw) / 10 ** config.decimals,
-          status: "ok",
-        };
-      }
-    } catch (err) {
-      if (signal?.aborted) {
-        throw err instanceof Error ? err : new Error(String(err));
-      }
+  if (typeof evmChainId !== "number" || !etherscanApiKey) {
+    return {
+      id: config.stablecoinId,
+      status: buildOnChainFailureStatus(rpcStatus, "etherscan-unavailable"),
+      explorerAttempted: false,
+    };
+  }
+
+  try {
+    const raw = await fetchEtherscanUint256AtBlock(evmChainId, config.contract, callData, "latest", {
+      apiKey: etherscanApiKey,
+      signal,
+      timeoutMs: ON_CHAIN_RATE_REQUEST_TIMEOUT_MS,
+    });
+    if (raw != null) {
+      return {
+        id: config.stablecoinId,
+        rate: Number(raw) / 10 ** config.decimals,
+        status: "ok",
+        resolvedVia: "etherscan",
+        explorerAttempted: true,
+      };
+    }
+  } catch (err) {
+    if (signal?.aborted) {
+      throw err instanceof Error ? err : new Error(String(err));
     }
   }
 
-  return { id: config.stablecoinId, status: "null" };
+  return {
+    id: config.stablecoinId,
+    status: buildOnChainFailureStatus(rpcStatus, "etherscan-empty"),
+    explorerAttempted: true,
+  };
 }
 
 export async function fetchOnChainRates(
@@ -292,10 +329,6 @@ export async function fetchOnChainRates(
     const batch = ON_CHAIN_RATE_CONFIGS.slice(i, i + RATE_BATCH_SIZE);
     const tasks = batch.map(async (config): Promise<OnChainRateFetchResult> => {
       const rpc = getChainRpc(chainRpcs, config.chain);
-      if (!rpc) {
-        return { id: config.stablecoinId, status: "no-rpc" };
-      }
-
       return fetchSingleOnChainRate(config, rpc, etherscanApiKey, signal);
     });
     const batchSettled = await Promise.allSettled(tasks);
@@ -305,12 +338,23 @@ export async function fetchOnChainRates(
   const settled = allResults;
   const rates = new Map<string, { rate: number }>();
   const failureCounts: Record<string, number> = {};
+  let explorerAttemptedCount = 0;
+  let explorerResolvedCount = 0;
 
   for (const result of settled) {
     const val = result.status === "fulfilled" ? result.value : { id: "unknown", status: "rejected" as const };
     if ("rate" in val && val.status === "ok") {
       rates.set(val.id, { rate: val.rate });
+      if (val.explorerAttempted) {
+        explorerAttemptedCount += 1;
+      }
+      if (val.resolvedVia === "etherscan") {
+        explorerResolvedCount += 1;
+      }
     } else {
+      if (result.status === "fulfilled" && result.value.explorerAttempted) {
+        explorerAttemptedCount += 1;
+      }
       failureCounts[val.status] = (failureCounts[val.status] ?? 0) + 1;
     }
   }
@@ -327,6 +371,8 @@ export async function fetchOnChainRates(
     failureBreakdown: totalFailures > 0 ? failureCounts : null,
     attemptedCount,
     allDeterministicFailed: attemptedCount > 0 && rates.size === 0 && totalFailures >= attemptedCount,
+    explorerAttemptedCount,
+    explorerResolvedCount,
   };
 }
 

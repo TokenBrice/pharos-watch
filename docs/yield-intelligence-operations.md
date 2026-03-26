@@ -12,6 +12,7 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
 - Deterministic on-chain vault reads now run one asset at a time with a 6 second per-RPC timeout, explicit per-URL failover, and an explorer-proxy fallback for supported EVM chains when Worker RPC reads all return empty.
 - When both a provider RPC and a public fallback are configured for a deterministic yield source, the reader probes the fallback/public URL first to avoid inheriting a sticky provider failure across the whole half-hourly slot.
 - The half-hourly runtime forwards `ETHERSCAN_API_KEY` into deterministic yield reads so Ethereum-family explorer proxies can keep the publication path alive during transient Worker-to-RPC outages.
+- Deterministic yield run metadata now splits RPC-vs-explorer failure buckets (for example `rpc-empty|etherscan-empty`) and records how many explorer fallbacks were attempted versus how many actually resolved.
 - Single-coin optional adapters are time-boxed to 12 seconds:
   - `BIMA sUSBD`
   - `Hashnote USYC`

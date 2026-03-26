@@ -56,6 +56,8 @@ export async function syncYieldData(
     failureBreakdown: onChainFailures,
     attemptedCount: onChainAttemptedCount = 0,
     allDeterministicFailed = false,
+    explorerAttemptedCount: onChainExplorerAttemptedCount = 0,
+    explorerResolvedCount: onChainExplorerResolvedCount = 0,
   } = await fetchOnChainRates(signal, chainRpcs, etherscanApiKey);
   const riskFreeRateMeta = await loadRiskFreeRateSnapshot(db);
   const riskFreeRate = riskFreeRateMeta.rate;
@@ -396,6 +398,8 @@ export async function syncYieldData(
         onChainRatesConfigured: ON_CHAIN_RATE_CONFIGS.length,
         onChainAttempted: onChainAttemptedCount,
         onChainAllDeterministicFailed: allDeterministicFailed,
+        onChainExplorerAttempted: onChainExplorerAttemptedCount,
+        onChainExplorerResolved: onChainExplorerResolvedCount,
         onChainFailures: onChainFailures,
       },
       fallbackMode: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
