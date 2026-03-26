@@ -170,6 +170,7 @@ export default function StatusClient() {
     recentMissingAmounts: healthData.blacklist.recentMissingAmounts,
   });
   const blacklistWindowHours = Math.max(1, Math.round(healthData.blacklist.recentWindowSec / 3600));
+  const telegramSummary = healthData.telegramSummary ?? null;
 
   return (
     <FeaturePageShell
@@ -211,6 +212,13 @@ export default function StatusClient() {
                 className={blacklistStatus !== "healthy" ? getStatusTone(blacklistStatus).badgeClassName : undefined}
               />
               <SummaryBadge label="Major Mint/Burn Stale" value={String(healthData.mintBurn.majorStaleCount)} />
+              {telegramSummary && (
+                <SummaryBadge
+                  label="Alert Queue"
+                  value={String(telegramSummary.pendingDeliveries)}
+                  className={telegramSummary.pendingDeliveries > 0 ? getStatusTone("degraded").badgeClassName : undefined}
+                />
+              )}
             </>
           }
         >
@@ -294,6 +302,51 @@ export default function StatusClient() {
               </div>
             </PublicSignalCard>
           </div>
+
+          {telegramSummary && (
+            <PublicSignalCard
+              kicker="Alert Delivery"
+              title="Telegram Bot Health"
+              description="Aggregate delivery stats for the Pharos Telegram alert bot. Detailed dispatch telemetry is on the operator admin page."
+              badges={
+                <div className="flex flex-wrap gap-2">
+                  <SummaryBadge label="Subscribers" value={String(telegramSummary.totalChats)} />
+                  <SummaryBadge
+                    label="Pending"
+                    value={String(telegramSummary.pendingDeliveries)}
+                    className={telegramSummary.pendingDeliveries > 0 ? getStatusTone("degraded").badgeClassName : undefined}
+                  />
+                  {telegramSummary.lastDispatchStatus && (
+                    <SummaryBadge
+                      label="Last Dispatch"
+                      value={telegramSummary.lastDispatchStatus}
+                      className={telegramSummary.lastDispatchStatus !== "ok" ? getStatusTone("stale").badgeClassName : undefined}
+                    />
+                  )}
+                </div>
+              }
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-[1rem] border border-border/60 bg-background/78 p-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.58)] dark:bg-background/35 dark:shadow-none">
+                  <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Subscribers</div>
+                  <div className="mt-2 font-mono text-sm text-foreground">{telegramSummary.totalChats} chats registered</div>
+                </div>
+                <div className="rounded-[1rem] border border-border/60 bg-background/78 p-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.58)] dark:bg-background/35 dark:shadow-none">
+                  <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Last Dispatch</div>
+                  <div className="mt-2 font-mono text-sm text-foreground">
+                    {telegramSummary.lastDispatchAt
+                      ? formatTimestampSeconds(telegramSummary.lastDispatchAt)
+                      : "No dispatch recorded"}
+                  </div>
+                </div>
+              </div>
+              {telegramSummary.pendingDeliveries > 0 && (
+                <div className="rounded-[1rem] border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+                  {telegramSummary.pendingDeliveries} alert{telegramSummary.pendingDeliveries !== 1 ? "s" : ""} pending delivery
+                </div>
+              )}
+            </PublicSignalCard>
+          )}
 
           <PublicSignalCard
             kicker="Surface Impact"
