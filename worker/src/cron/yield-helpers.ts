@@ -19,6 +19,8 @@ export { buildOnChainSourceKey } from "../lib/yield-utils";
 
 const YIELD_STALE_THRESHOLD_SYNC_CYCLES = 3;
 export const STALE_THRESHOLD_MS = CRON_INTERVALS["sync-yield-data"] * YIELD_STALE_THRESHOLD_SYNC_CYCLES * 1000;
+// Price-derived rows are backed by daily supply-history snapshots, so allow one missed daily write plus buffer.
+export const PRICE_DERIVED_STALE_THRESHOLD_MS = 36 * 60 * 60 * 1000;
 
 export {
   computePYS,
@@ -92,6 +94,13 @@ export function detectWarningSignals(input: WarningInput): string[] {
   }
   if (input.currentApy === 0 && input.apy30d > ZERO_YIELD_HISTORY_THRESHOLD) signals.push("zero-yield");
   return signals;
+}
+
+export function getRankingStaleThresholdMs(dataSource: string): number {
+  if (dataSource === "price-derived") {
+    return PRICE_DERIVED_STALE_THRESHOLD_MS;
+  }
+  return STALE_THRESHOLD_MS;
 }
 
 /**

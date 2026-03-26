@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "5.9",
+  currentVersion: "5.10",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "5.10",
+    title: "Source-Cadence-Aware Freshness Warnings",
+    date: "2026-03-26",
+    effectiveAt: 1774818000,
+    summary:
+      "Read-time `data-stale` warnings now respect the cadence of the underlying source family, so daily price-derived rows are not marked stale by the hourly publisher threshold.",
+    impact: [
+      "`price-derived` rankings now use a 36 hour stale threshold because they are backed by daily `supply_history` snapshots rather than hourly source observations",
+      "Hourly publication families such as on-chain, DeFiLlama, protocol-native, and auto-discovered rows still mark stale after three missed `sync-yield-data` intervals",
+      "Healthy daily snapshot rows such as USTB, USDA, and CETES no longer show false `data-stale` warnings after roughly one day of normal operation",
+      "The methodology docs, changelog, and operations note now document the source-cadence freshness windows explicitly",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.9",
     title: "3M Risk-Free Benchmarks For EUR And CHF",

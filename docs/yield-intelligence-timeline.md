@@ -1,8 +1,15 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.9` (2026-03-01 -> 2026-03-26).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.10` (2026-03-01 -> 2026-03-26).
 
 ---
+
+## v5.10 - Source-cadence-aware freshness warnings (Mar 26, 2026)
+
+- Read-time `data-stale` warnings now respect source cadence instead of forcing daily price-derived rows through the hourly publish threshold
+- `price-derived` rows now wait 36 hours before going stale because they are backed by daily `supply_history` snapshots
+- Hourly publication families still mark stale after three missed `sync-yield-data` intervals
+- Healthy daily snapshot rows such as USTB, USDA, and CETES no longer surface false stale warnings after roughly one day of normal operation
 
 ## v5.9 - 3M risk-free benchmarks for EUR and CHF (Mar 26, 2026)
 
@@ -22,7 +29,7 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 
 - The read-time `data-stale` warning now keys off three `sync-yield-data` intervals instead of a leftover fixed `90 min` threshold from the old half-hourly lane
 - At the current hourly publisher cadence, that means detail-surface stale warnings wait about 3 hours before firing
-- The threshold is now derived from shared cron metadata, so future schedule changes stay aligned without another manual constant update
+- The hourly-source threshold is derived from shared cron metadata, so future schedule changes stay aligned without another manual constant update
 
 ## v5.6 - First-party EUR benchmarks and resilient CHF parsing (Mar 26, 2026)
 

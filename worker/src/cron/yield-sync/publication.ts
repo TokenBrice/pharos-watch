@@ -6,7 +6,7 @@ import { getCache, setCache } from "../../lib/db-cache";
 import { validatePayloadWithSchema } from "../../lib/api-utils";
 import { PYS_SCALING_FACTOR } from "../../lib/constants";
 import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
-import { STALE_THRESHOLD_MS, detectWarningSignals } from "../yield-helpers";
+import { detectWarningSignals, getRankingStaleThresholdMs } from "../yield-helpers";
 import { deleteOrphanYieldRows, deleteStaleYieldRows } from "./history";
 import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
 import { buildYieldSourceProvenance } from "./provenance";
@@ -120,7 +120,8 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
         ? provenance.sourceObservedAt
         : input.startSec;
     const updatedAtMs = sourceObservedAt * 1000;
-    if (updatedAtMs > 0 && updatedAtMs < Date.now() - STALE_THRESHOLD_MS) {
+    const staleThresholdMs = getRankingStaleThresholdMs(source.dataSource);
+    if (updatedAtMs > 0 && updatedAtMs < Date.now() - staleThresholdMs) {
       if (!ranking.warningSignals.includes("data-stale")) {
         ranking.warningSignals = [...ranking.warningSignals, "data-stale"];
       }

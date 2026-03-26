@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
-import { STALE_THRESHOLD_MS } from "../yield-helpers";
+import { PRICE_DERIVED_STALE_THRESHOLD_MS, STALE_THRESHOLD_MS } from "../yield-helpers";
 import { buildHistoryKey, type EvaluatedYieldSource } from "../yield-sync/evaluation";
 import type { ParsedYieldBenchmarkMeta, ParsedYieldBenchmarkRegistry } from "../yield-sync/benchmarks";
 import { buildYieldRankingsPayloadFromEvaluatedSources } from "../yield-sync/publication";
@@ -99,9 +99,9 @@ function makeEvaluatedSource(overrides: Partial<EvaluatedYieldSource> = {}): Eva
   };
 }
 
-function buildPayloadWithObservedAt(sourceObservedAt: number) {
+function buildPayloadWithObservedAt(sourceObservedAt: number, overrides: Partial<EvaluatedYieldSource> = {}) {
   const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
-  const source = makeEvaluatedSource();
+  const source = makeEvaluatedSource(overrides);
   const benchmark = makeBenchmarkMeta();
   const benchmarks: ParsedYieldBenchmarkRegistry = { USD: benchmark, EUR: null, CHF: null };
 
@@ -165,6 +165,32 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
   it("adds data-stale once the cadence-derived threshold is exceeded", () => {
     const thresholdSec = STALE_THRESHOLD_MS / 1000;
     const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec - 60);
+
+    expect(payload.rankings[0]?.warningSignals).toContain("data-stale");
+  });
+
+  it("does not add data-stale for healthy price-derived daily snapshots", () => {
+    const thresholdSec = PRICE_DERIVED_STALE_THRESHOLD_MS / 1000;
+    const payload = buildPayloadWithObservedAt(
+      Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec + 60,
+      {
+        dataSource: "price-derived",
+        sourceKey: "price-derived",
+      },
+    );
+
+    expect(payload.rankings[0]?.warningSignals).not.toContain("data-stale");
+  });
+
+  it("still adds data-stale when price-derived snapshots miss the extended threshold", () => {
+    const thresholdSec = PRICE_DERIVED_STALE_THRESHOLD_MS / 1000;
+    const payload = buildPayloadWithObservedAt(
+      Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec - 60,
+      {
+        dataSource: "price-derived",
+        sourceKey: "price-derived",
+      },
+    );
 
     expect(payload.rankings[0]?.warningSignals).toContain("data-stale");
   });

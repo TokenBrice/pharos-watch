@@ -214,9 +214,10 @@ export function MonitoringMethodologySections() {
               </p>
               <p>
                 Read-time <code className="text-xs bg-muted px-1 py-0.5 rounded">data-stale</code> warnings are also
-                cadence-aware: they attach only after three missed <code className="text-xs bg-muted px-1 py-0.5 rounded">sync-yield-data</code>{" "}
-                intervals (about 3 hours at the current hourly publisher), so one delayed run does not immediately mark
-                a ranking row stale.
+                cadence-aware: hourly families attach only after three missed <code className="text-xs bg-muted px-1 py-0.5 rounded">sync-yield-data</code>{" "}
+                intervals (about 3 hours at the current publisher), while <code className="text-xs bg-muted px-1 py-0.5 rounded">price-derived</code>{" "}
+                rows wait 36 hours because they are backed by daily <code className="text-xs bg-muted px-1 py-0.5 rounded">supply_history</code>{" "}
+                snapshots rather than hourly source observations.
               </p>
             </div>
 

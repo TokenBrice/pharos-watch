@@ -23,6 +23,7 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
 - `sync-yield-supplemental` owns the heavier best-effort families. It writes a cached snapshot and does not overwrite the last good snapshot with an empty result.
 - supplemental candidate dedupe now keys on source identity plus asset identity, not bare `sourceKey` alone, so same-chain families such as Aave V3 cannot collapse multiple coins into one cached row.
 - `sync-yield-supplemental` metadata now reports raw candidate count, deduped candidate count, and dropped-row count so silent row loss is visible in cron history.
+- read-time `yield-rankings` freshness warnings are now source-cadence-aware: hourly families trip after three hourly publish cycles, while `price-derived` rows wait 36 hours because their observations come from daily `supply_history` snapshots.
 - Protocol API families use an 8 second per-request timeout, no retries, and a 25 second family budget:
   - `Morpho`
   - `Pendle`
