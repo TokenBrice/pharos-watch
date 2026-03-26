@@ -29,6 +29,7 @@ const PUBLIC_ENDPOINTS = [
 const ADMIN_PATHS = new Set<string>([...ENDPOINT_GROUPS.admin]);
 const PUBLIC_PROBE_TIMEOUT_MS = 5_000;
 const ADMIN_PROBE_TIMEOUT_MS = 10_000;
+export const ENDPOINT_PROBE_CONCURRENCY = 6;
 
 function getProbeTimeoutMs(path: string): number {
   return ADMIN_PATHS.has(path) ? ADMIN_PROBE_TIMEOUT_MS : PUBLIC_PROBE_TIMEOUT_MS;
@@ -50,6 +51,15 @@ function getProbeErrorMessage(err: unknown, signal: AbortSignal): string {
 
 function isSemanticStatus(value: unknown): value is NonNullable<EndpointProbeResult["semanticStatus"]> {
   return value === "healthy" || value === "degraded" || value === "stale";
+}
+
+async function discardResponseBody(response: Response): Promise<void> {
+  if (!response.body) return;
+  try {
+    await response.body.cancel();
+  } catch {
+    // Best effort only. The probe already has the transport status it needs.
+  }
 }
 
 function extractHealthProbeSemantics(body: unknown): Partial<EndpointProbeResult> | null {
@@ -168,6 +178,10 @@ async function probeEndpoint(
       } catch {
         semanticFields = undefined;
       }
+    } else {
+      // This fan-out probe loop only needs transport reachability for non-semantic routes.
+      // Cancel unread bodies so one browser session does not strand slots across repeated runs.
+      await discardResponseBody(res);
     }
 
     return { path, status: res.status, latencyMs, ...semanticFields };
@@ -184,6 +198,29 @@ async function probeEndpoint(
   }
 }
 
+export async function collectEndpointProbes(
+  paths: readonly string[],
+  adminAccess?: AdminAccess,
+): Promise<EndpointProbeResult[]> {
+  if (paths.length === 0) return [];
+
+  const results = new Array<EndpointProbeResult>(paths.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(ENDPOINT_PROBE_CONCURRENCY, paths.length);
+
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (nextIndex < paths.length) {
+        const currentIndex = nextIndex;
+        nextIndex += 1;
+        results[currentIndex] = await probeEndpoint(paths[currentIndex]!, adminAccess);
+      }
+    }),
+  );
+
+  return results;
+}
+
 /**
  * Probes all API endpoints in parallel.
  * Auto-refreshes every 60s.
@@ -193,7 +230,7 @@ export function useEndpointProbes(
 ): UseQueryResult<EndpointProbeResult[], Error> {
   return usePollingQuery(
     ["endpoint-probes", getAdminQueryScope()],
-    () => Promise.all(ALL_ENDPOINTS.map((path) => probeEndpoint(path, adminAccess))),
+    () => collectEndpointProbes(ALL_ENDPOINTS, adminAccess),
     CRON_1MIN,
     { enabled: true, retry: 0 },
   );
@@ -202,7 +239,7 @@ export function useEndpointProbes(
 export function usePublicEndpointProbes(): UseQueryResult<EndpointProbeResult[], Error> {
   return usePollingQuery(
     ["endpoint-probes", "public"],
-    () => Promise.all(PUBLIC_ENDPOINTS.map((path) => probeEndpoint(path))),
+    () => collectEndpointProbes(PUBLIC_ENDPOINTS),
     CRON_1MIN,
     { enabled: true, retry: 0 },
   );
