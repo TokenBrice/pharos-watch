@@ -10,7 +10,13 @@
 import type { CronResult } from "../lib/cron-logger";
 import { getCache, setCache } from "../lib/db-cache";
 import { loadDlStablecoinPools } from "./yield-sync/sources";
-import { LENDING_PROTOCOL_ALLOWLIST, YIELD_ADAPTER_MANIFEST, YIELD_POOL_MAP } from "./yield-config";
+import {
+  AUTO_LENDING_POOL_MAP,
+  EXPLICIT_YIELD_SOURCE_POOL_MAP,
+  LENDING_PROTOCOL_ALLOWLIST,
+  YIELD_ADAPTER_MANIFEST,
+  YIELD_POOL_MAP,
+} from "./yield-config";
 import type { DlPool } from "./yield-sync/types";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 
@@ -44,16 +50,16 @@ export interface CoverageGaps {
 }
 
 /**
- * Pure function: given a list of DL pools, the set of covered pool UUIDs, and
- * the set of tracked stablecoin symbols, returns coverage gaps.
+ * Pure function: given a list of DL pools and the exact DL pool IDs already
+ * covered by Pharos, returns coverage gaps.
  *
  * @param dlPools       - Full list of DL stablecoin pools.
- * @param coveredPools  - Set of pool UUIDs already matched by YIELD_POOL_MAP.
- * @param trackedSymbols - Set of stablecoin symbols tracked by Pharos.
+ * @param coveredPools  - Set of exact covered DL pool UUIDs.
  */
 export function identifyCoverageGaps(
   dlPools: DlPool[],
   coveredPools: Set<string>,
+  supportedProtocols: Set<string> = LENDING_PROTOCOL_ALLOWLIST,
 ): CoverageGaps {
   const unmatchedHighTvlPools: CoverageGapPool[] = [];
   const missingProtocols: CoverageGapPool[] = [];
@@ -72,14 +78,16 @@ export function identifyCoverageGaps(
       apy: pool.apy,
     };
 
-    // Flag high-TVL pools not covered
-    if (pool.tvlUsd >= HIGH_TVL_THRESHOLD_USD) {
+    // High-TVL gaps should focus on surfaces outside the already-supported
+    // allowlisted protocol universe; otherwise the report is dominated by
+    // pools the runtime already treats as covered opportunities.
+    if (pool.tvlUsd >= HIGH_TVL_THRESHOLD_USD && !supportedProtocols.has(pool.project)) {
       unmatchedHighTvlPools.push(poolEntry);
     }
 
     // Flag protocols not in the allowlist (once per project, any TVL)
     if (
-      !LENDING_PROTOCOL_ALLOWLIST.has(pool.project) &&
+      !supportedProtocols.has(pool.project) &&
       !seenMissingProtocols.has(pool.project)
     ) {
       seenMissingProtocols.add(pool.project);
@@ -139,9 +147,14 @@ export async function runYieldCoverageAudit(
     };
   }
 
-  // Build the set of covered pool UUIDs from YIELD_POOL_MAP values
-  const coveredPools = new Set(Object.values(YIELD_POOL_MAP));
-  const gaps = identifyCoverageGaps(dlPools, coveredPools);
+  // Track the exact DL pool IDs already covered by static native mappings,
+  // explicit auto-discovery overrides, and curated exact-pool overrides.
+  const coveredPools = new Set([
+    ...Object.values(YIELD_POOL_MAP),
+    ...Object.values(AUTO_LENDING_POOL_MAP),
+    ...Object.values(EXPLICIT_YIELD_SOURCE_POOL_MAP).flat().map((config) => config.poolId),
+  ]);
+  const gaps = identifyCoverageGaps(dlPools, coveredPools, LENDING_PROTOCOL_ALLOWLIST);
   const manifestById = new Map(YIELD_ADAPTER_MANIFEST.map((entry) => [entry.stablecoinId, entry]));
   const manifestMissingIds = ACTIVE_YIELD_BEARING_STABLECOINS
     .filter((coin) => !manifestById.has(coin.id))

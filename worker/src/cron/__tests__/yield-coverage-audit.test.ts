@@ -38,6 +38,27 @@ describe("identifyCoverageGaps", () => {
     expect(gaps.missingProtocols[0].project).toBe("brand-new-protocol");
   });
 
+  it("does not flag high-TVL pools on already-supported allowlisted protocols as unmatched gaps", () => {
+    const dlPools: DlPool[] = [{
+      pool: "aave-pool",
+      chain: "Ethereum",
+      project: "aave-v3",
+      symbol: "USDC",
+      tvlUsd: 100_000_000,
+      apy: 3,
+      apyBase: 3,
+      apyReward: null,
+      apyMean30d: 3,
+      stablecoin: true,
+      exposure: "single",
+      underlyingTokens: null,
+    }];
+
+    const gaps = identifyCoverageGaps(dlPools, new Set(), new Set(["aave-v3"]));
+    expect(gaps.unmatchedHighTvlPools).toEqual([]);
+    expect(gaps.missingProtocols).toEqual([]);
+  });
+
   it("recommends high-confidence protocols with >$10M TVL and 3+ pools", () => {
     const dlPools: DlPool[] = [
       { pool: "p1", chain: "Ethereum", project: "rising-protocol", symbol: "USDC", tvlUsd: 4_000_000, apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null },

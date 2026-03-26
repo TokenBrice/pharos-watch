@@ -2,6 +2,7 @@ import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins"
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
+import { normalizeTokenAddress } from "./dex-liquidity/token-resolution";
 import { buildYieldSupplementalSourcesCache } from "./yield-sync/cache";
 import {
   COMPOUND_V3_COMETS,
@@ -47,13 +48,50 @@ function buildAaveTargets(): AaveV3RateTarget[] {
   return targets;
 }
 
-function dedupeCandidates(candidates: ResolvedYieldCandidate[]): ResolvedYieldCandidate[] {
-  const bySourceKey = new Map<string, ResolvedYieldCandidate>();
+function buildAaveSourceKey(stablecoinId: string, chain: string, assetAddress: string | null): string {
+  const normalizedAddress = normalizeTokenAddress(assetAddress ?? "");
+  return normalizedAddress
+    ? `aave-v3-onchain:${chain}:${normalizedAddress}`
+    : `aave-v3-onchain:${chain}:${stablecoinId}`;
+}
+
+function buildSupplementalCandidateDedupKey(candidate: ResolvedYieldCandidate): string | null {
+  const sourceKey = candidate.yield?.sourceKey?.trim();
+  if (!sourceKey) return null;
+
+  const chain = (candidate.chain ?? "").trim().toLowerCase();
+  const address = normalizeTokenAddress(candidate.address ?? "");
+  const symbol = candidate.symbol.trim().toUpperCase();
+  const identity = address || symbol;
+  return `${sourceKey}|${chain}|${identity}`;
+}
+
+function dedupeCandidates(
+  candidates: ResolvedYieldCandidate[],
+): { candidates: ResolvedYieldCandidate[]; droppedCount: number } {
+  const byDedupKey = new Map<string, ResolvedYieldCandidate>();
+  let droppedCount = 0;
+
   for (const candidate of candidates) {
-    if (!candidate.yield?.sourceKey) continue;
-    bySourceKey.set(candidate.yield.sourceKey, candidate);
+    const dedupKey = buildSupplementalCandidateDedupKey(candidate);
+    if (!dedupKey) continue;
+
+    const existing = byDedupKey.get(dedupKey);
+    if (!existing) {
+      byDedupKey.set(dedupKey, candidate);
+      continue;
+    }
+
+    droppedCount += 1;
+    if ((candidate.yield.currentApy ?? 0) > (existing.yield.currentApy ?? 0)) {
+      byDedupKey.set(dedupKey, candidate);
+    }
   }
-  return [...bySourceKey.values()];
+
+  return {
+    candidates: [...byDedupKey.values()],
+    droppedCount,
+  };
 }
 
 export async function syncYieldSupplemental(
@@ -107,10 +145,11 @@ export async function syncYieldSupplemental(
     for (const [stablecoinId, { apy, chain }] of aaveRates) {
       const meta = TRACKED_META_BY_ID.get(stablecoinId);
       if (!meta || apy <= 0) continue;
+      const assetAddress = getTrackedContractAddress(stablecoinId, chain);
       candidates.push({
         symbol: meta.symbol,
         chain,
-        address: getTrackedContractAddress(stablecoinId, chain),
+        address: assetAddress,
         yield: {
           currentApy: apy,
           apyBase: apy,
@@ -119,7 +158,7 @@ export async function syncYieldSupplemental(
           sourceTvlUsd: null,
           dataSource: "onchain",
           exchangeRate: null,
-          sourceKey: `aave-v3-onchain:${chain}`,
+          sourceKey: buildAaveSourceKey(stablecoinId, chain, assetAddress),
           yieldSource: `Aave v3 (${chain})`,
           yieldType: "lending-opportunity",
           sourceObservedAt: startSec,
@@ -130,15 +169,19 @@ export async function syncYieldSupplemental(
     sourceFamilyCounts.aaveV3 = aaveRates.size;
   }
 
-  const dedupedCandidates = dedupeCandidates(candidates);
+  const rawCandidateCount = candidates.length;
+  const { candidates: dedupedCandidates, droppedCount } = dedupeCandidates(candidates);
   if (dedupedCandidates.length === 0) {
     return {
       status: "degraded",
       itemCount: 0,
       metadata: JSON.stringify({
-        rowsRead: 0,
+        rowsRead: rawCandidateCount,
         rowsWritten: 0,
+        rowsDropped: droppedCount,
         sourceCoverage: {
+          rawSupplementalCandidates: rawCandidateCount,
+          dedupedSupplementalCandidates: 0,
           supplementalCandidatesWritten: 0,
           sourceFamilyCounts,
         },
@@ -158,9 +201,12 @@ export async function syncYieldSupplemental(
   return {
     itemCount: dedupedCandidates.length,
     metadata: JSON.stringify({
-      rowsRead: dedupedCandidates.length,
+      rowsRead: rawCandidateCount,
       rowsWritten: dedupedCandidates.length,
+      rowsDropped: droppedCount,
       sourceCoverage: {
+        rawSupplementalCandidates: rawCandidateCount,
+        dedupedSupplementalCandidates: dedupedCandidates.length,
         supplementalCandidatesWritten: dedupedCandidates.length,
         sourceFamilyCounts,
       },
