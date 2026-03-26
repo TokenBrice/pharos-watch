@@ -386,7 +386,7 @@ export function buildStatusDashboardData({
       label: "Actions",
       kicker: "Operations",
       title: "Manual response",
-      description: "Recovery actions and operator controls for active incidents.",
+      description: "Rarely-used recovery actions and operator controls. Positioned last since these are only needed during active incidents.",
       accentClassName: "border-l-emerald-500",
       value: recommendedActions.length > 0 ? `${recommendedActions.length} suggested` : "Clear",
       valueClassName:
@@ -407,6 +407,8 @@ export function buildStatusDashboardData({
   const sections = [...baseSections].sort((a, b) => {
     if (a.id === "overview") return -1;
     if (b.id === "overview") return 1;
+    if (a.id === "control") return 1;
+    if (b.id === "control") return -1;
     if (a.id === "history") return 1;
     if (b.id === "history") return -1;
 

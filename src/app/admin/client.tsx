@@ -218,7 +218,7 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
   const statusSync = querySyncs.find((sync) => sync.key === "status") ?? null;
   const publicHealthSync = querySyncs.find((sync) => sync.key === "health") ?? null;
   const browserProbeSync = querySyncs.find((sync) => sync.key === "probes") ?? null;
-  const operationalSections = sections.filter((section) => section.id !== "overview" && section.id !== "history");
+  const operationalSections = sections.filter((section) => section.id !== "overview" && section.id !== "history" && section.id !== "control");
   const sortedCronGroups = cronGroups
     .map((group) => ({
       ...group,
@@ -471,7 +471,7 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
         id="control"
         kicker="Operations"
         title="Manual response"
-        description="Recovery tools stay near the top; downstream delivery telemetry is quieter and collapsible."
+        description="Rarely-used recovery actions and operator controls. Positioned last since these are only needed during active incidents."
         accentClassName="border-l-emerald-500"
         summary={
           <>
