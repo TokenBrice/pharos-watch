@@ -3,76 +3,19 @@
  * All use free, unauthenticated public APIs.
  */
 
+import {
+  BINANCE_MARKETS,
+  BITSTAMP_MARKETS,
+  CEX_PROVIDER_AUDIT_CONFIG,
+  COINBASE_PRODUCTS,
+  KRAKEN_MARKETS,
+} from "@shared/lib/pricing-provider-config";
 import { USER_AGENT } from "./constants";
 import { fetchWithRetry } from "./fetch-retry";
 import { cancelResponseBodyQuietly } from "./response-body";
 
-interface BinanceMarketConfig {
-  pair: string;
-  symbol: string;
-}
-
-interface KrakenMarketConfig {
-  symbol: string;
-  requestPair: string;
-  responseKeys: readonly string[];
-}
-
-interface BitstampMarketConfig {
-  pair: string;
-  symbol: string;
-}
-
-interface CoinbaseProductConfig {
-  symbol: string;
-  productId: string;
-}
-
-interface CexProviderAuditConfigEntry {
-  metadataUrl: string;
-}
-
 const CEX_REQUEST_TIMEOUT_MS = 10_000;
 const CEX_REQUEST_RETRIES = 1;
-
-export const BINANCE_MARKETS = [
-  { pair: "USDTUSD", symbol: "USDT" },
-  { pair: "USDCUSD", symbol: "USDC" },
-] as const satisfies readonly BinanceMarketConfig[];
-
-export const KRAKEN_MARKETS = [
-  { symbol: "DAI", requestPair: "DAIUSD", responseKeys: ["DAIUSD"] },
-  { symbol: "EURC", requestPair: "EURCUSD", responseKeys: ["EURCUSD"] },
-  { symbol: "PAXG", requestPair: "PAXGUSD", responseKeys: ["PAXGUSD"] },
-  { symbol: "PYUSD", requestPair: "PYUSDUSD", responseKeys: ["PYUSDUSD"] },
-  { symbol: "USD1", requestPair: "USD1USD", responseKeys: ["USD1USD"] },
-  { symbol: "USDC", requestPair: "USDCUSD", responseKeys: ["USDCUSD"] },
-  { symbol: "USDS", requestPair: "USDSUSD", responseKeys: ["USDSUSD"] },
-  { symbol: "USDT", requestPair: "USDTUSD", responseKeys: ["USDTUSD", "USDTZUSD"] },
-] as const satisfies readonly KrakenMarketConfig[];
-
-export const BITSTAMP_MARKETS = [
-  { pair: "DAI/USD", symbol: "DAI" },
-  { pair: "PYUSD/USD", symbol: "PYUSD" },
-  { pair: "USDC/USD", symbol: "USDC" },
-  { pair: "USDT/USD", symbol: "USDT" },
-] as const satisfies readonly BitstampMarketConfig[];
-
-export const COINBASE_PRODUCTS = [
-  { symbol: "USDT", productId: "USDT-USD" },
-  { symbol: "DAI", productId: "DAI-USD" },
-  { symbol: "PAXG", productId: "PAXG-USD" },
-  { symbol: "USDS", productId: "USDS-USD" },
-  { symbol: "USD1", productId: "USD1-USD" },
-  { symbol: "HONEY", productId: "HONEY-USD" },
-] as const satisfies readonly CoinbaseProductConfig[];
-
-export const CEX_PROVIDER_AUDIT_CONFIG = {
-  binance: { metadataUrl: "https://api.binance.com/api/v3/exchangeInfo" },
-  kraken: { metadataUrl: "https://api.kraken.com/0/public/AssetPairs" },
-  bitstamp: { metadataUrl: "https://www.bitstamp.net/api/v2/trading-pairs-info/" },
-  coinbase: { metadataUrl: "https://api.exchange.coinbase.com/products" },
-} as const satisfies Record<string, CexProviderAuditConfigEntry>;
 
 const BINANCE_PAIR_TO_SYMBOL = new Map<string, string>(BINANCE_MARKETS.map((market) => [market.pair, market.symbol]));
 const KRAKEN_RESPONSE_KEY_TO_SYMBOL = new Map<string, string>(

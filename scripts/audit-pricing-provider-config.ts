@@ -4,8 +4,9 @@ import {
   COINBASE_PRODUCTS,
   CEX_PROVIDER_AUDIT_CONFIG,
   KRAKEN_MARKETS,
-} from "../worker/src/lib/cex-tickers";
-import { REDSTONE_PROVIDER_AUDIT_CONFIG, REDSTONE_SYMBOL_CONFIG } from "../worker/src/lib/redstone";
+  REDSTONE_PROVIDER_AUDIT_CONFIG,
+  REDSTONE_SYMBOL_CONFIG,
+} from "../shared/lib/pricing-provider-config";
 
 interface AuditSection {
   provider: string;
