@@ -40,7 +40,9 @@ import {
   useApiQuery,
   useApiQueryWithMeta,
 } from "./use-api-query";
-import { CRON_1H, CRON_1MIN, CRON_15MIN, CRON_24H, CRON_30MIN } from "@/lib/cron-intervals";
+import { CRON_1H, CRON_1MIN, CRON_15MIN, CRON_24H, CRON_30MIN, CRON_YIELD } from "@/lib/cron-intervals";
+
+const YIELD_META_MAX_AGE_SEC = CRON_YIELD / 1000;
 
 export type { StabilityContributor };
 
@@ -172,8 +174,8 @@ export function useYieldHistory(
   return useApiQueryWithMeta<YieldHistoryResponse>(
     ["yield-history", stablecoinId, days, mode, sourceKey],
     API_PATHS.yieldHistory(stablecoinId, days, mode, sourceKey ?? undefined),
-    CRON_30MIN,
-    { metaMaxAgeSec: 1800, enabled: options?.enabled ?? !!stablecoinId, schema: YieldHistoryResponseSchema },
+    CRON_YIELD,
+    { metaMaxAgeSec: YIELD_META_MAX_AGE_SEC, enabled: options?.enabled ?? !!stablecoinId, schema: YieldHistoryResponseSchema },
   );
 }
 
@@ -181,8 +183,8 @@ export function useYieldRankings() {
   return useApiQueryWithMeta<YieldRankingsResponse>(
     ["yield-rankings"],
     API_PATHS.yieldRankings(),
-    CRON_30MIN,
-    { metaMaxAgeSec: 1800, schema: YieldRankingsResponseSchema },
+    CRON_YIELD,
+    { metaMaxAgeSec: YIELD_META_MAX_AGE_SEC, schema: YieldRankingsResponseSchema },
   );
 }
 

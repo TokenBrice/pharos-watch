@@ -35,7 +35,7 @@ const faqJsonLd = {
       name: "How are stablecoin yields sourced?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yields are resolved through deterministic on-chain reads, curated DeFiLlama sources, price-derived or rate-derived fallbacks, and curated lending opportunities. Rankings are refreshed every 30 minutes and now preserve source-specific history so trailing APY metrics stay tied to the active source.",
+        text: "Yields are resolved through deterministic on-chain reads, curated DeFiLlama sources, price-derived or rate-derived fallbacks, and curated lending opportunities. Rankings refresh hourly, with slower supplemental-source families merged in from a separate four-hour lane, and preserve source-specific history so trailing APY metrics stay tied to the active source.",
       },
     },
     {

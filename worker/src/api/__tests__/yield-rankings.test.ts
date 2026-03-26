@@ -262,4 +262,24 @@ describe("handleYieldRankings", () => {
     });
     expect(buildReportCardsSnapshotMock).not.toHaveBeenCalled();
   });
+
+  it("keeps hourly rankings fresh for snapshots that are under one hour old", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 3_500;
+    const db = makeCacheDb({
+      rankings: [],
+      riskFreeRate: 4.25,
+      scalingFactor: 5,
+      medianApy: 4.2,
+      updatedAt,
+      provenance: null,
+    }, updatedAt);
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as { _meta: { ageSeconds: number; status: string } };
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Warning")).toBeNull();
+    expect(body._meta.ageSeconds).toBe(3_500);
+    expect(body._meta.status).toBe("fresh");
+  });
 });

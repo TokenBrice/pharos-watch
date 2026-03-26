@@ -32,13 +32,14 @@ export function MonitoringMethodologySections() {
       >
           <p>
             Pharos tracks yield-bearing stablecoins and computes a risk-adjusted ranking via the Pharos Yield Score
-            (PYS). Data is refreshed every 30 minutes using a source-aware APY resolution strategy, with alternative
-            sources retained when multiple valid yield paths exist, address-first identity used before symbol fallback,
-            and confidence-weighted arbitration selecting the primary row.
+            (PYS). Core rankings publish hourly using a source-aware APY resolution strategy, while slower
+            supplemental-source families refresh on a separate four-hour lane. Alternative sources are retained when
+            multiple valid yield paths exist, address-first identity is used before symbol fallback, and
+            confidence-weighted arbitration selects the primary row.
           </p>
           <MethodologyFacts
             facts={[
-              { label: "Update cadence", value: "30m refresh" },
+              { label: "Update cadence", value: "1h publish / 4h supplemental" },
               { label: "APY priority", value: "Confidence-weighted across deterministic, curated, and fallback sources" },
               { label: "Output", value: "PYS (0-100)" },
             ]}

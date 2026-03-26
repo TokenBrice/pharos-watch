@@ -134,4 +134,16 @@ describe("handleYieldHistory", () => {
     const body = await res.json() as { history: Array<{ warningSignals: string[] }> };
     expect(body.history[0]?.warningSignals).toEqual([]);
   });
+
+  it("uses the hourly yield freshness budget for history responses", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 3_500;
+    const historyRow = makeYieldHistoryRow({ recorded_at: updatedAt });
+    const db = mockD1([{ match: "yield_history", rows: [historyRow] }]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Warning")).toBeNull();
+    expect(res.headers.get("X-Data-Age")).toBe("3500");
+  });
 });

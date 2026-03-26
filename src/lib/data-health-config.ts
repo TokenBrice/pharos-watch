@@ -1,4 +1,4 @@
-import { CRON_15MIN, CRON_20MIN, CRON_30MIN, CRON_1H, CRON_24H, CRON_BLACKLIST } from "@/lib/cron-intervals";
+import { CRON_15MIN, CRON_20MIN, CRON_30MIN, CRON_YIELD, CRON_1H, CRON_24H, CRON_BLACKLIST } from "@/lib/cron-intervals";
 
 interface DataHealthPreset {
   label: string;
@@ -17,7 +17,7 @@ export const DATA_HEALTH_PRESETS = {
   mintBurnFlows: { label: "Mint/Burn Flows", staleTime: CRON_20MIN },
   blacklist: { label: "Blacklist", staleTime: CRON_BLACKLIST },
   dexLiquidity: { label: "Liquidity", staleTime: CRON_30MIN },
-  yieldRankings: { label: "Yield Rankings", staleTime: CRON_30MIN },
+  yieldRankings: { label: "Yield Rankings", staleTime: CRON_YIELD },
   dailyDigest: { label: "Daily Digest", staleTime: CRON_24H },
   digestArchive: { label: "Digests", staleTime: CRON_24H },
   bluechip: { label: "Bluechip", staleTime: CRON_24H },

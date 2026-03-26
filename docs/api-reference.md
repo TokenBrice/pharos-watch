@@ -69,7 +69,7 @@ Endpoints backed by `createCacheHandler()` inject a `_meta` object into plain-ob
 | `GET /api/stablecoin-charts` | 3600          | `createCacheHandler`                         |
 | `GET /api/bluechip-ratings`  | 43200         | `createCacheHandler`                         |
 | `GET /api/usds-status`       | 86400         | `createCacheHandler`                         |
-| `GET /api/yield-rankings`    | 1800          | Manual injection after live safety hydration |
+| `GET /api/yield-rankings`    | 3600          | Manual injection after live safety hydration |
 
 Array-typed responses (e.g., endpoints returning a JSON array at the top level) receive only the HTTP headers (`X-Data-Age`, `Warning`) and do not include `_meta`.
 
@@ -1506,7 +1506,7 @@ Per-coin Safety Score grade transition history (seed row + grade changes only). 
 
 Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint rehydrates `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` from the current report-card snapshot at read time so Yield Intelligence stays aligned with `/api/report-cards`. Includes source-selection provenance and the current risk-free rate. If a ranking row has no matching live report-card snapshot, the API now retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage.
 
-**Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 1800 s (30 minutes).
+**Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour, aligned to the hourly `sync-yield-data` publisher).
 
 **Error responses:** `503` when the cached rankings payload is missing or malformed.
 
@@ -1578,7 +1578,7 @@ When present, `YieldRanking.provenance` includes:
 
 Historical yield data for a single stablecoin. If a stored `warning_signals` payload is malformed, the API treats it as an empty array rather than failing the entire response. Returned rows are capped at the latest published `/api/yield-rankings` snapshot so history cannot advance past an unpublished yield cache state.
 
-**Cache:** slow — `X-Data-Age` and `Warning` headers included.
+**Cache:** slow — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour, aligned to the hourly `sync-yield-data` publisher).
 
 **Required query parameter**
 

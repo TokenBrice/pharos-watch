@@ -10,6 +10,7 @@ import { CACHE_PROFILES } from "../lib/constants";
 import { getCache } from "../lib/db-cache";
 import { buildOnChainSourceKey, parseYieldWarningSignals } from "../lib/yield-utils";
 import { resolveYieldSourceUrl } from "../lib/yield-source-links";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION,
@@ -158,6 +159,6 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
   }, {
     cacheControl: CACHE_PROFILES.slow,
     updatedAt: latestHistoryTimestamp,
-    maxAgeSec: 1800,
+    maxAgeSec: CRON_INTERVALS["sync-yield-data"],
   });
 });

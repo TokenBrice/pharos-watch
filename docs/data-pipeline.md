@@ -212,12 +212,12 @@ The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns u
 | **Compare**           | Prices, Peg Data, Liquidity, Report Cards, Bluechip | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`, `CRON_24H` |
 | **Safety scores**     | Grades, Prices                                      | `CRON_15MIN`, `CRON_15MIN`                                         |
 | **Liquidity**         | Liquidity                                           | `CRON_30MIN`                                                       |
-| **Yield**             | Yield Rankings                                      | `CRON_30MIN`                                                       |
+| **Yield**             | Yield Rankings                                      | `CRON_YIELD`                                                       |
 | **Flows**             | Mint/Burn Flows                                     | `CRON_20MIN`                                                       |
 | **Blacklist**         | Blacklist                                           | `CRON_BLACKLIST`                                                   |
 | **Portfolio**         | Grades                                              | `CRON_15MIN`                                                       |
 
-Constants defined in `src/lib/cron-intervals.ts`: `CRON_1MIN` (1 min), `CRON_15MIN` (15 min), `CRON_20MIN` (20 min, mint/burn), `CRON_BLACKLIST` (1 hour), `CRON_30MIN` (30 min), `CRON_1H` (1 hour), `CRON_24H` (24 hours).
+Constants defined in `src/lib/cron-intervals.ts`: `CRON_1MIN` (1 min), `CRON_15MIN` (15 min), `CRON_20MIN` (20 min, mint/burn), `CRON_BLACKLIST` (1 hour), `CRON_30MIN` (30 min), `CRON_YIELD` (1 hour), `CRON_1H` (1 hour), `CRON_24H` (24 hours).
 
 The `staleTime` value for each query matches the cron interval of the backend job that produces the data. TanStack Query's `refetchInterval` is always 2x the `staleTime`. The banner triggers at 2x `staleTime` (i.e., 4x the cron interval), but hook-level freshness metadata can mark data degraded/stale sooner when the worker explicitly reports old cache age or stale-table warnings.
 

@@ -295,7 +295,7 @@ https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO
 
 When FRED fetches fail after a previously good benchmark has been cached, the worker now prefers retaining that last-known-good rate and marks it as degraded fallback (`isFallback: true`) instead of silently publishing it as healthy. The hardcoded fallback is used when no retained benchmark is available.
 
-**Usage:** The 30-min yield sync reads the cached rate. The scatter plot renders it as a dashed reference line, and `excessYield` is computed against it.
+**Usage:** The hourly core yield sync reads the cached rate. The scatter plot renders it as a dashed reference line, and `excessYield` is computed against it.
 
 ---
 
@@ -588,7 +588,7 @@ Each `history` row includes:
 
 **Layout (top to bottom):**
 
-1. Stale data banner (triggers at 2 × 30 min = 60 min)
+1. Stale data banner (tracks the hourly core publish lane and warns when rankings are delayed or stale)
 2. Summary stat cards — Average Yield (TVL-weighted), Risk-Free Rate, Best Risk-Adjusted (highest PYS)
 3. Yield vs Safety scatter plot
 4. Yield leaderboard table
@@ -675,8 +675,8 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 
 | Hook               | File                     | Endpoint              | Stale Time            |
 | ------------------ | ------------------------ | --------------------- | --------------------- |
-| `useYieldRankings` | `src/hooks/api-hooks.ts` | `/api/yield-rankings` | `CRON_30MIN` (30 min) |
-| `useYieldHistory`  | `src/hooks/api-hooks.ts` | `/api/yield-history`  | `CRON_30MIN` (30 min) |
+| `useYieldRankings` | `src/hooks/api-hooks.ts` | `/api/yield-rankings` | `CRON_YIELD` (1 hour) |
+| `useYieldHistory`  | `src/hooks/api-hooks.ts` | `/api/yield-history`  | `CRON_YIELD` (1 hour) |
 
 ---
 

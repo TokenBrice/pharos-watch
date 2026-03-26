@@ -1,4 +1,5 @@
 import type { ReportCard } from "@shared/types/report-cards";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { YieldRankingsResponseSchema, type YieldRanking, type YieldRankingsResponse } from "@shared/types/yield";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
@@ -23,7 +24,7 @@ export const handleBluechipRatings = createCacheHandler("bluechip-ratings", "blu
 
 export const handleUsdsStatus = createCacheHandler("usds-status", "usds-status", CACHE_PROFILES.standard, DAY_SECONDS);
 
-const YIELD_RANKINGS_MAX_AGE_SEC = 1800;
+const YIELD_RANKINGS_MAX_AGE_SEC = CRON_INTERVALS["sync-yield-data"];
 
 function recomputeYieldScore(row: YieldRanking, safetyInputScore: number, scalingFactor: number): number {
   if (row.apy30d <= 0) return 0;
