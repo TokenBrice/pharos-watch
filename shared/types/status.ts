@@ -400,6 +400,13 @@ const CircuitRecordSchema = z.object({
   openedAt: z.number().nullable(),
 });
 
+export interface TelegramHealthSummary {
+  totalChats: number;
+  pendingDeliveries: number;
+  lastDispatchAt: number | null;
+  lastDispatchStatus: string | null;
+}
+
 export interface HealthResponse {
   status: "healthy" | "degraded" | "stale";
   timestamp: number;
@@ -427,6 +434,7 @@ export interface HealthResponse {
     };
   };
   circuits: Record<string, CircuitRecord>;
+  telegramSummary?: TelegramHealthSummary | null;
 }
 
 export const HealthResponseSchema: z.ZodType<HealthResponse> = z.object({
@@ -456,6 +464,12 @@ export const HealthResponseSchema: z.ZodType<HealthResponse> = z.object({
     }),
   }),
   circuits: z.record(z.string(), CircuitRecordSchema),
+  telegramSummary: z.object({
+    totalChats: z.number(),
+    pendingDeliveries: z.number(),
+    lastDispatchAt: z.number().nullable(),
+    lastDispatchStatus: z.string().nullable(),
+  }).nullable().optional(),
 });
 
 export interface EndpointProbeResult {
