@@ -3,9 +3,42 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "5.3",
+  currentVersion: "5.5",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "5.5",
+    title: "Safety-Reweighted PYS Curve and Shared Scoring Hydration",
+    date: "2026-03-26",
+    effectiveAt: 1774800000,
+    summary:
+      "Pharos Yield Score now uses a steeper safety penalty curve so risky names need much larger yield spreads to outrank safe ones, and the scaling factor was retuned to keep the score range readable.",
+    impact: [
+      "PYS now computes yield efficiency as `apy30d / (riskPenalty ^ 1.75)` instead of dividing by a linear safety penalty",
+      "The global `PYS_SCALING_FACTOR` increased from `5` to `8` so score distribution remains readable after the steeper safety curve",
+      "Live `/api/yield-rankings` hydration now reuses the shared PYS scorer, removing formula drift risk between cron-time scoring and read-time safety hydration",
+      "Leaderboard, detail-surface breakdowns, docs, and the methodology page now reference the adjusted risk penalty explicitly",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "5.4",
+    title: "Currency-Aware Benchmarks For Excess Yield",
+    date: "2026-03-26",
+    effectiveAt: 1774792800,
+    summary:
+      "Yield Intelligence now resolves row-level benchmark context by peg currency, using USD T-bills by default, EUR €STR when available, and a CHF SNB policy-rate proxy for Swiss-franc pegs.",
+    impact: [
+      "The benchmark cache now publishes a small benchmark registry instead of only a single global USD risk-free rate",
+      "Each ranking row now exposes its selected benchmark label, rate, fallback state, and selection mode so excess-yield semantics remain explicit downstream",
+      "Detail pages, hero chips, and yield-history charts now label excess yield against the row's actual benchmark instead of hard-coding `vs T-Bill`",
+      "The `/yield` page now hides the single benchmark line on mixed-benchmark views and restores it only when the visible scope shares one benchmark",
+      "CHF support uses the public SNB policy rate as a proxy rather than the SNB-published SARON display, whose usage is restricted",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.3",
     title: "Non-USD Yield Scoping and Exact-Pool Commodity Overrides",

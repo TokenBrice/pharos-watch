@@ -1,26 +1,37 @@
-import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
+import type { YieldBenchmarkKey, YieldSourceInputMeta } from "@shared/types/yield";
 import { RISK_FREE_RATE_FALLBACK } from "../../lib/constants";
 import { toFiniteNumber } from "../../lib/number-utils";
 import type { DlPool, ResolvedYieldCandidate } from "./types";
+import {
+  getYieldBenchmarkStaticMeta,
+  type ParsedYieldBenchmarkMeta,
+  type ParsedYieldBenchmarkRegistry,
+} from "./benchmarks";
 
 interface RiskFreeRateCachePayload {
+  key?: YieldBenchmarkKey;
+  label?: string;
+  currency?: string;
   rate: number;
   recordDate: string | null;
   fetchedAt: number | null;
   source: string;
   isFallback: boolean;
   fallbackMode: string | null;
+  isProxy?: boolean;
   lastMarketRate: number | null;
   lastMarketRecordDate: string | null;
   lastMarketFetchedAt: number | null;
   lastMarketSource: string | null;
 }
 
-export interface ParsedRiskFreeRateCache extends YieldBenchmarkMeta {
-  lastMarketRate: number | null;
-  lastMarketRecordDate: string | null;
-  lastMarketFetchedAt: number | null;
-  lastMarketSource: string | null;
+interface RiskFreeRatesCachePayload {
+  version: 1;
+  benchmarks: {
+    USD: RiskFreeRateCachePayload;
+    EUR: RiskFreeRateCachePayload | null;
+    CHF: RiskFreeRateCachePayload | null;
+  };
 }
 
 interface DlStablecoinPoolsCachePayload {
@@ -111,13 +122,21 @@ export function buildRiskFreeRateCachePayload(
   const inferredLastMarketSource =
     fields.lastMarketSource ??
     (inferredLastMarketRate != null ? fields.source : null);
+  const staticMeta =
+    fields.key != null
+      ? getYieldBenchmarkStaticMeta(fields.key)
+      : getYieldBenchmarkStaticMeta("USD");
   return {
+    key: fields.key ?? "USD",
+    label: fields.label ?? staticMeta.label,
+    currency: fields.currency ?? staticMeta.currency,
     rate: fields.rate,
     recordDate: fields.recordDate ?? null,
     fetchedAt: fields.fetchedAt ?? null,
     source: fields.source,
     isFallback: fields.isFallback ?? false,
     fallbackMode: fields.fallbackMode ?? null,
+    isProxy: fields.isProxy ?? staticMeta.isProxy,
     lastMarketRate: inferredLastMarketRate,
     lastMarketRecordDate: inferredLastMarketRecordDate,
     lastMarketFetchedAt: inferredLastMarketFetchedAt,
@@ -129,24 +148,49 @@ export function serializeRiskFreeRateCache(payload: RiskFreeRateCachePayload): s
   return JSON.stringify(payload);
 }
 
+export function buildRiskFreeRatesCachePayload(
+  benchmarks: RiskFreeRatesCachePayload["benchmarks"],
+): RiskFreeRatesCachePayload {
+  return {
+    version: 1,
+    benchmarks,
+  };
+}
+
+export function serializeRiskFreeRatesCache(payload: RiskFreeRatesCachePayload): string {
+  return JSON.stringify(payload);
+}
+
 export function parseRiskFreeRateCache(
   raw: string,
   cacheUpdatedAt: number,
   nowSec = Math.floor(Date.now() / 1000),
-): ParsedRiskFreeRateCache | null {
+  defaults?: {
+    key?: YieldBenchmarkKey;
+    label?: string;
+    currency?: string;
+    isProxy?: boolean;
+  },
+): ParsedYieldBenchmarkMeta | null {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (isRecord(parsed)) {
       const rate = toFiniteNumber(parsed.rate);
       const fetchedAt = toFiniteNumber(parsed.fetchedAt);
-      if (rate != null && rate >= 0) {
+      if (rate != null) {
         const effectiveFetchedAt = fetchedAt ?? cacheUpdatedAt;
         const isFallback = parsed.isFallback === true;
         const source = toNullableString(parsed.source) ?? "unknown";
+        const parsedKey = toNullableString(parsed.key) as YieldBenchmarkKey | null;
+        const key = defaults?.key ?? parsedKey ?? "USD";
+        const staticMeta = getYieldBenchmarkStaticMeta(key);
         const lastMarketRate =
           toFiniteNumber(parsed.lastMarketRate) ??
           (!isFallback && source !== "hardcoded-fallback" ? rate : null);
         return {
+          key,
+          label: defaults?.label ?? toNullableString(parsed.label) ?? staticMeta.label,
+          currency: defaults?.currency ?? toNullableString(parsed.currency) ?? staticMeta.currency,
           rate,
           recordDate: toNullableString(parsed.recordDate),
           fetchedAt: effectiveFetchedAt,
@@ -154,6 +198,7 @@ export function parseRiskFreeRateCache(
           source,
           isFallback,
           fallbackMode: toNullableString(parsed.fallbackMode),
+          isProxy: defaults?.isProxy ?? (typeof parsed.isProxy === "boolean" ? parsed.isProxy : staticMeta.isProxy),
           lastMarketRate,
           lastMarketRecordDate:
             toNullableString(parsed.lastMarketRecordDate) ??
@@ -171,8 +216,13 @@ export function parseRiskFreeRateCache(
   }
 
   const legacyRate = toFiniteNumber(raw);
-  if (legacyRate == null || legacyRate < 0) return null;
+  if (legacyRate == null) return null;
+  const key = defaults?.key ?? "USD";
+  const staticMeta = getYieldBenchmarkStaticMeta(key);
   return {
+    key,
+    label: defaults?.label ?? staticMeta.label,
+    currency: defaults?.currency ?? staticMeta.currency,
     rate: legacyRate,
     recordDate: null,
     fetchedAt: cacheUpdatedAt,
@@ -180,11 +230,49 @@ export function parseRiskFreeRateCache(
     source: "legacy-scalar",
     isFallback: legacyRate === RISK_FREE_RATE_FALLBACK,
     fallbackMode: legacyRate === RISK_FREE_RATE_FALLBACK ? "legacy-scalar-fallback" : null,
+    isProxy: defaults?.isProxy ?? staticMeta.isProxy,
     lastMarketRate: legacyRate === RISK_FREE_RATE_FALLBACK ? null : legacyRate,
     lastMarketRecordDate: null,
     lastMarketFetchedAt: legacyRate === RISK_FREE_RATE_FALLBACK ? null : cacheUpdatedAt,
     lastMarketSource: legacyRate === RISK_FREE_RATE_FALLBACK ? null : "legacy-scalar",
   };
+}
+
+export function parseRiskFreeRatesCache(
+  raw: string,
+  cacheUpdatedAt: number,
+  nowSec = Math.floor(Date.now() / 1000),
+): ParsedYieldBenchmarkRegistry | null {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isRecord(parsed) || !isRecord(parsed.benchmarks)) return null;
+    const benchmarks = parsed.benchmarks as Record<string, unknown>;
+    const usdRaw = benchmarks.USD;
+    if (!usdRaw) return null;
+
+    const usd = parseRiskFreeRateCache(
+      JSON.stringify(usdRaw),
+      cacheUpdatedAt,
+      nowSec,
+      { key: "USD" },
+    );
+    if (!usd) return null;
+
+    const eur = benchmarks.EUR == null
+      ? null
+      : parseRiskFreeRateCache(JSON.stringify(benchmarks.EUR), cacheUpdatedAt, nowSec, { key: "EUR" });
+    const chf = benchmarks.CHF == null
+      ? null
+      : parseRiskFreeRateCache(JSON.stringify(benchmarks.CHF), cacheUpdatedAt, nowSec, { key: "CHF" });
+
+    return {
+      USD: usd,
+      EUR: eur,
+      CHF: chf,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function buildDlStablecoinPoolsCache(

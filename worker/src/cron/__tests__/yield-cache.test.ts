@@ -34,8 +34,11 @@ describe("parseRiskFreeRateCache", () => {
     expect(result!.source).toBe("legacy-scalar");
   });
 
-  it("returns null for negative rate", () => {
-    expect(parseRiskFreeRateCache("-1.5", nowSec, nowSec)).toBeNull();
+  it("accepts negative rates for non-USD benchmark support", () => {
+    const result = parseRiskFreeRateCache("-1.5", nowSec, nowSec, { key: "CHF" });
+    expect(result).not.toBeNull();
+    expect(result!.rate).toBe(-1.5);
+    expect(result!.key).toBe("CHF");
   });
 
   it("returns null for empty string", () => {

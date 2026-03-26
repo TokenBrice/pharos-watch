@@ -1,4 +1,4 @@
-import { YieldRankingsResponseSchema, type AltYieldSource, type YieldBenchmarkMeta, type YieldSafetySnapshotMeta, type YieldSourceInputMeta } from "@shared/types/yield";
+import { YieldRankingsResponseSchema, type AltYieldSource, type YieldBenchmarkMeta, type YieldBenchmarkRegistry, type YieldSafetySnapshotMeta, type YieldSourceInputMeta } from "@shared/types/yield";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { batchExecute } from "../../lib/db";
@@ -39,6 +39,15 @@ function evaluatedSourceToRanking(
     safetyGrade: source.safetyGrade,
     yieldToRisk: source.yieldToRisk,
     excessYield: source.excessYield,
+    benchmarkKey: source.benchmarkKey,
+    benchmarkLabel: source.benchmarkLabel,
+    benchmarkCurrency: source.benchmarkCurrency,
+    benchmarkRate: source.benchmarkRate,
+    benchmarkRecordDate: source.benchmarkRecordDate,
+    benchmarkIsFallback: source.benchmarkIsFallback,
+    benchmarkFallbackMode: source.benchmarkFallbackMode,
+    benchmarkSelectionMode: source.benchmarkSelectionMode,
+    benchmarkIsProxy: source.benchmarkIsProxy,
     yieldStability: source.yieldStability,
     apyVariance30d: source.stdDev30d,
     apyMin30d: source.apyMin30d,
@@ -56,6 +65,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     rankingProvenanceByKey: Map<string, Record<string, unknown>>;
     riskFreeRate: number;
     riskFreeRateMeta: YieldBenchmarkMeta;
+    riskFreeRateRegistry?: YieldBenchmarkRegistry;
     dlPoolsMeta: YieldSourceInputMeta;
     safetySnapshot: YieldSafetySnapshotMeta;
     medianApy: number;
@@ -111,12 +121,14 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
   return {
     rankings,
     riskFreeRate: input.riskFreeRate,
+    benchmarks: input.riskFreeRateRegistry,
     scalingFactor: PYS_SCALING_FACTOR,
     medianApy: input.medianApy,
     updatedAt: input.startSec,
     provenance: {
       selectionMethod: "confidence-weighted" as const,
       benchmark: input.riskFreeRateMeta,
+      benchmarks: input.riskFreeRateRegistry,
       dlPools: input.dlPoolsMeta,
       safetySnapshot: input.safetySnapshot,
     },
@@ -171,7 +183,6 @@ export async function persistEvaluatedYieldSources(
     bestSourceKeyByCoin: Map<string, string>;
     startSec: number;
     medianApy: number;
-    riskFreeRateMeta: YieldBenchmarkMeta;
     dlPoolsMeta: YieldSourceInputMeta;
   },
 ): Promise<{
@@ -272,7 +283,6 @@ export async function persistEvaluatedYieldSources(
         isBest: isBest === 1,
         evaluatedSources: input.evaluatedSources,
         startSec: input.startSec,
-        riskFreeRateMeta: input.riskFreeRateMeta,
         dlPoolsMeta: input.dlPoolsMeta,
       }),
     );

@@ -4,7 +4,6 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import {
   CIRCUIT_SOURCE,
-  RISK_FREE_RATE_FALLBACK,
   USER_AGENT,
 } from "../../lib/constants";
 import { getCache } from "../../lib/db-cache";
@@ -21,7 +20,12 @@ import { buildOnChainSourceKey, computeApyFromPrice } from "../yield-helpers";
 import {
   parseDlStablecoinPoolsCache,
   parseRiskFreeRateCache,
+  parseRiskFreeRatesCache,
 } from "./cache";
+import {
+  buildHardcodedUsdBenchmark,
+  type ParsedYieldBenchmarkRegistry,
+} from "./benchmarks";
 import { isYieldRelevantDlPool } from "./pool-filter";
 import type { DlPool, ResolvedYield, ResolvedYieldCandidate } from "./types";
 
@@ -1282,20 +1286,42 @@ export async function fetchAaveV3SupplyRates(
   }
 }
 
-export async function loadRiskFreeRateSnapshot(db: D1Database): Promise<YieldBenchmarkMeta> {
-  const rfCache = await getCache(db, "risk_free_rate");
-  if (rfCache) {
-    const parsed = parseRiskFreeRateCache(rfCache.value, rfCache.updatedAt);
-    if (parsed) return parsed;
+export async function loadRiskFreeRateRegistry(db: D1Database): Promise<ParsedYieldBenchmarkRegistry> {
+  const registryCache = await getCache(db, "risk_free_rates");
+  if (registryCache) {
+    const parsed = parseRiskFreeRatesCache(registryCache.value, registryCache.updatedAt);
+    if (parsed) {
+      return parsed;
+    }
+  }
+
+  const legacyUsdCache = await getCache(db, "risk_free_rate");
+  if (legacyUsdCache) {
+    const parsedUsd = parseRiskFreeRateCache(
+      legacyUsdCache.value,
+      legacyUsdCache.updatedAt,
+      Math.floor(Date.now() / 1000),
+      { key: "USD" },
+    );
+    if (parsedUsd) {
+      return {
+        USD: parsedUsd,
+        EUR: null,
+        CHF: null,
+      };
+    }
   }
 
   return {
-    rate: RISK_FREE_RATE_FALLBACK,
-    recordDate: null,
-    fetchedAt: null,
-    ageSeconds: null,
-    source: "hardcoded-fallback",
-    isFallback: true,
-    fallbackMode: rfCache ? "invalid-cache" : "missing-cache",
+    USD: buildHardcodedUsdBenchmark(
+      registryCache || legacyUsdCache ? "invalid-cache" : "missing-cache",
+    ),
+    EUR: null,
+    CHF: null,
   };
+}
+
+export async function loadRiskFreeRateSnapshot(db: D1Database): Promise<YieldBenchmarkMeta> {
+  const registry = await loadRiskFreeRateRegistry(db);
+  return registry.USD;
 }

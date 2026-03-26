@@ -15,8 +15,9 @@ import {
 import {
   fetchOnChainRates,
   loadDlStablecoinPools,
-  loadRiskFreeRateSnapshot,
+  loadRiskFreeRateRegistry,
 } from "./yield-sync/sources";
+import { toYieldBenchmarkRegistry } from "./yield-sync/benchmarks";
 import { resolveYieldSources } from "./yield-sync/resolve";
 import {
   loadYieldHistorySnapshots,
@@ -249,7 +250,8 @@ export async function syncYieldData(
     explorerAttemptedCount: onChainExplorerAttemptedCount = 0,
     explorerResolvedCount: onChainExplorerResolvedCount = 0,
   } = onChainFetchResult;
-  const riskFreeRateMeta = await loadRiskFreeRateSnapshot(db);
+  const riskFreeRates = await loadRiskFreeRateRegistry(db);
+  const riskFreeRateMeta = riskFreeRates.USD;
   const riskFreeRate = riskFreeRateMeta.rate;
 
   const safetySnapshot = await computeSafetyScoresSnapshot(db, {
@@ -292,7 +294,7 @@ export async function syncYieldData(
     dlPools,
     onChainRates,
     safetyScores,
-    riskFreeRate,
+    riskFreeRates,
     signal,
     chainRpcs,
     coingeckoApiKey,
@@ -390,7 +392,7 @@ export async function syncYieldData(
     startSec,
     sevenDaysAgoSec,
     safetyScores,
-    riskFreeRate,
+    riskFreeRates,
     tier1PrevRates,
     sourceHistory,
     onChainCompatibilityHistoryById,
@@ -500,7 +502,6 @@ export async function syncYieldData(
         isBest: bestSourceKeyByCoin.get(source.id) === source.sourceKey,
         evaluatedSources,
         startSec,
-        riskFreeRateMeta,
         dlPoolsMeta,
       }),
     );
@@ -512,6 +513,7 @@ export async function syncYieldData(
     rankingProvenanceByKey: previewRankingProvenanceByKey,
     riskFreeRate,
     riskFreeRateMeta,
+    riskFreeRateRegistry: toYieldBenchmarkRegistry(riskFreeRates),
     dlPoolsMeta,
     safetySnapshot: safetySnapshotMeta,
     medianApy,
@@ -598,7 +600,6 @@ export async function syncYieldData(
     bestSourceKeyByCoin,
     startSec,
     medianApy,
-    riskFreeRateMeta,
     dlPoolsMeta,
   });
 

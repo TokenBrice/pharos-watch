@@ -8,6 +8,7 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { computeApyAxis, computeSafetyDomain, nudgeOverlaps, SAFETY_SCORE_THRESHOLD } from "@/lib/yield-scatter";
+import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import type { YieldRanking, YieldType } from "@shared/types";
@@ -32,7 +33,10 @@ interface ScatterDataPoint {
 
 interface YieldScatterPlotProps {
   rankings: YieldRanking[];
-  riskFreeRate: number;
+  benchmarkRate: number;
+  benchmarkLabel?: string;
+  showBenchmarkReference?: boolean;
+  benchmarkIsFallback?: boolean;
   logos?: Record<string, string>;
   onDotClick: (id: string) => void;
 }
@@ -142,7 +146,15 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<
   );
 }
 
-export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: YieldScatterPlotProps) {
+export function YieldScatterPlot({
+  rankings,
+  benchmarkRate,
+  benchmarkLabel,
+  showBenchmarkReference = true,
+  benchmarkIsFallback = false,
+  logos,
+  onDotClick,
+}: YieldScatterPlotProps) {
   const isMobile = useIsMobile();
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const rawData = useMemo(() => {
@@ -167,9 +179,9 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
     () =>
       computeApyAxis(
         rawData.map((point) => point.y),
-        riskFreeRate,
+        benchmarkRate,
       ),
-    [rawData, riskFreeRate],
+    [benchmarkRate, rawData],
   );
   const plotYDomain = useMemo<[number, number]>(
     () => [-SCATTER_Y_VISUAL_PADDING, apyAxis.domainMax + SCATTER_Y_VISUAL_PADDING],
@@ -223,6 +235,10 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
     (props: LogoScatterShapeProps) => <LogoScatterPoint {...props} compact={isMobile} emphasized />,
     [isMobile],
   );
+  const resolvedBenchmarkLabel = getYieldBenchmarkDisplayLabel({
+    benchmarkLabel,
+    benchmarkIsFallback,
+  });
 
   if (data.length === 0) {
     return (
@@ -249,11 +265,11 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
               }
             >
               {/* Quadrant shading */}
-              {safetyDomain[1] > SAFETY_SCORE_THRESHOLD ? (
+              {showBenchmarkReference && safetyDomain[1] > SAFETY_SCORE_THRESHOLD ? (
                 <ReferenceArea
                   x1={Math.max(SAFETY_SCORE_THRESHOLD, safetyDomain[0])}
                   x2={safetyDomain[1]}
-                  y1={riskFreeRate}
+                  y1={benchmarkRate}
                   y2={plotYDomain[1]}
                   fill={CHART_GREEN}
                   fillOpacity={0.12}
@@ -271,11 +287,11 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
                   }
                 />
               ) : null}
-              {safetyDomain[0] < SAFETY_SCORE_THRESHOLD ? (
+              {showBenchmarkReference && safetyDomain[0] < SAFETY_SCORE_THRESHOLD ? (
                 <ReferenceArea
                   x1={safetyDomain[0]}
                   x2={Math.min(SAFETY_SCORE_THRESHOLD, safetyDomain[1])}
-                  y1={riskFreeRate}
+                  y1={benchmarkRate}
                   y2={plotYDomain[1]}
                   fill={CHART_RED}
                   fillOpacity={0.12}
@@ -293,12 +309,12 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
                   }
                 />
               ) : null}
-              {safetyDomain[1] > SAFETY_SCORE_THRESHOLD ? (
+              {showBenchmarkReference && safetyDomain[1] > SAFETY_SCORE_THRESHOLD ? (
                 <ReferenceArea
                   x1={Math.max(SAFETY_SCORE_THRESHOLD, safetyDomain[0])}
                   x2={safetyDomain[1]}
                   y1={plotYDomain[0]}
-                  y2={riskFreeRate}
+                  y2={benchmarkRate}
                   fill={CHART_BLUE}
                   fillOpacity={0.12}
                   label={
@@ -315,12 +331,12 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
                   }
                 />
               ) : null}
-              {safetyDomain[0] < SAFETY_SCORE_THRESHOLD ? (
+              {showBenchmarkReference && safetyDomain[0] < SAFETY_SCORE_THRESHOLD ? (
                 <ReferenceArea
                   x1={safetyDomain[0]}
                   x2={Math.min(SAFETY_SCORE_THRESHOLD, safetyDomain[1])}
                   y1={plotYDomain[0]}
-                  y2={riskFreeRate}
+                  y2={benchmarkRate}
                   fill={CHART_SLATE}
                   fillOpacity={0.07}
                   label={
@@ -341,16 +357,24 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
               <ReferenceLine x={SAFETY_SCORE_THRESHOLD} stroke={CHART_SLATE} strokeOpacity={0.35} strokeDasharray="3 4" />
 
               {/* Risk-free rate reference line */}
-              <ReferenceLine
-                y={riskFreeRate}
-                stroke={CHART_SLATE}
-                strokeDasharray="4 4"
-                label={
-                  isMobile
-                    ? undefined
-                    : { value: `T-Bill ${riskFreeRate.toFixed(2)}%`, position: "right", fill: CHART_SLATE, fontSize: 13, fontWeight: 600 }
-                }
-              />
+              {showBenchmarkReference ? (
+                <ReferenceLine
+                  y={benchmarkRate}
+                  stroke={CHART_SLATE}
+                  strokeDasharray="4 4"
+                  label={
+                    isMobile
+                      ? undefined
+                      : {
+                        value: `${resolvedBenchmarkLabel} ${benchmarkRate.toFixed(2)}%`,
+                        position: "right",
+                        fill: CHART_SLATE,
+                        fontSize: 13,
+                        fontWeight: 600,
+                      }
+                  }
+                />
+              ) : null}
 
               <XAxis
                 type="number"
@@ -419,7 +443,11 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
         <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
           <span className="text-foreground font-medium">Sweet spot</span>
-          <span className="hidden md:inline">= above {riskFreeRate.toFixed(2)}% and right of {SAFETY_SCORE_THRESHOLD}</span>
+          {showBenchmarkReference ? (
+            <span className="hidden md:inline">= above {benchmarkRate.toFixed(2)}% and right of {SAFETY_SCORE_THRESHOLD}</span>
+          ) : (
+            <span className="hidden md:inline">= high safety with yield that clears the local benchmark</span>
+          )}
         </span>
         <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-red-500" />

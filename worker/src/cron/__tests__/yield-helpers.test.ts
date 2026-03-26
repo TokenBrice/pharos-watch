@@ -76,6 +76,11 @@ describe("computePYS", () => {
     const result = computePYS({ apy30d: 100, safetyScore: 100, apyVarianceScore: 0, scalingFactor: 100 });
     expect(result).toBeLessThanOrEqual(100);
   });
+
+  it("matches the steeper safety-curve worked example", () => {
+    const result = computePYS({ apy30d: 8.4, safetyScore: 72, apyVarianceScore: 0.18, scalingFactor: 8 });
+    expect(result).toBe(29);
+  });
 });
 
 describe("computeYieldStability", () => {

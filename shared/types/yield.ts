@@ -2,6 +2,9 @@ import { z } from "zod";
 import { MethodologyEnvelope, MethodologyEnvelopeSchema, YieldType, YieldTypeSchema } from "./core";
 import { ReportCardGrade, ReportCardGradeSchema } from "./report-cards";
 
+export type YieldBenchmarkKey = "USD" | "EUR" | "CHF";
+export type YieldBenchmarkSelectionMode = "native" | "fallback-usd" | "manual-override";
+
 export interface AltYieldSource {
   sourceKey: string;
   yieldSource: string;
@@ -14,6 +17,9 @@ export interface AltYieldSource {
 }
 
 export interface YieldBenchmarkMeta {
+  key?: YieldBenchmarkKey;
+  label?: string;
+  currency?: string;
   rate: number;
   recordDate: string | null;
   fetchedAt: number | null;
@@ -21,6 +27,13 @@ export interface YieldBenchmarkMeta {
   source: string;
   isFallback: boolean;
   fallbackMode: string | null;
+  isProxy?: boolean;
+}
+
+export interface YieldBenchmarkRegistry {
+  USD: YieldBenchmarkMeta;
+  EUR?: YieldBenchmarkMeta | null;
+  CHF?: YieldBenchmarkMeta | null;
 }
 
 export interface YieldSourceInputMeta {
@@ -52,15 +65,22 @@ export interface YieldRankingProvenance {
   previousBestSourceKey: string | null;
   usedLegacyHistory: boolean;
   usedDefaultSafety: boolean;
+  benchmarkKey?: YieldBenchmarkKey;
+  benchmarkLabel?: string;
+  benchmarkCurrency?: string;
+  benchmarkRate?: number;
   benchmarkRecordDate: string | null;
   benchmarkIsFallback: boolean;
   benchmarkFallbackMode: string | null;
+  benchmarkSelectionMode?: YieldBenchmarkSelectionMode;
+  benchmarkIsProxy?: boolean;
   anomalies: string[];
 }
 
 export interface YieldRankingsProvenance {
   selectionMethod: "confidence-weighted";
   benchmark: YieldBenchmarkMeta;
+  benchmarks?: YieldBenchmarkRegistry;
   dlPools: YieldSourceInputMeta;
   safetySnapshot: YieldSafetySnapshotMeta;
 }
@@ -111,6 +131,9 @@ const AltYieldSourceSchema = z.object({
 });
 
 const YieldBenchmarkMetaSchema = z.object({
+  key: z.enum(["USD", "EUR", "CHF"]).optional(),
+  label: z.string().optional(),
+  currency: z.string().optional(),
   rate: z.number(),
   recordDate: z.string().nullable(),
   fetchedAt: z.number().nullable(),
@@ -118,6 +141,13 @@ const YieldBenchmarkMetaSchema = z.object({
   source: z.string(),
   isFallback: z.boolean(),
   fallbackMode: z.string().nullable(),
+  isProxy: z.boolean().optional(),
+});
+
+const YieldBenchmarkRegistrySchema = z.object({
+  USD: YieldBenchmarkMetaSchema,
+  EUR: YieldBenchmarkMetaSchema.nullable().optional(),
+  CHF: YieldBenchmarkMetaSchema.nullable().optional(),
 });
 
 const YieldSourceInputMetaSchema = z.object({
@@ -149,15 +179,22 @@ const YieldRankingProvenanceSchema = z.object({
   previousBestSourceKey: z.string().nullable(),
   usedLegacyHistory: z.boolean(),
   usedDefaultSafety: z.boolean(),
+  benchmarkKey: z.enum(["USD", "EUR", "CHF"]).optional(),
+  benchmarkLabel: z.string().optional(),
+  benchmarkCurrency: z.string().optional(),
+  benchmarkRate: z.number().optional(),
   benchmarkRecordDate: z.string().nullable(),
   benchmarkIsFallback: z.boolean(),
   benchmarkFallbackMode: z.string().nullable(),
+  benchmarkSelectionMode: z.enum(["native", "fallback-usd", "manual-override"]).optional(),
+  benchmarkIsProxy: z.boolean().optional(),
   anomalies: z.array(z.string()),
 });
 
 const YieldRankingsProvenanceSchema = z.object({
   selectionMethod: z.literal("confidence-weighted"),
   benchmark: YieldBenchmarkMetaSchema,
+  benchmarks: YieldBenchmarkRegistrySchema.optional(),
   dlPools: YieldSourceInputMetaSchema,
   safetySnapshot: YieldSafetySnapshotMetaSchema,
 });
@@ -181,6 +218,15 @@ export interface YieldRanking {
   safetyGrade: ReportCardGrade | null;
   yieldToRisk: number | null;
   excessYield: number | null;
+  benchmarkKey?: YieldBenchmarkKey;
+  benchmarkLabel?: string;
+  benchmarkCurrency?: string;
+  benchmarkRate?: number;
+  benchmarkRecordDate?: string | null;
+  benchmarkIsFallback?: boolean;
+  benchmarkFallbackMode?: string | null;
+  benchmarkSelectionMode?: YieldBenchmarkSelectionMode;
+  benchmarkIsProxy?: boolean;
   yieldStability: number | null;
   apyVariance30d: number | null;
   apyMin30d: number | null;
@@ -209,6 +255,15 @@ const YieldRankingSchema = z.object({
   safetyGrade: ReportCardGradeSchema.nullable(),
   yieldToRisk: z.number().nullable(),
   excessYield: z.number().nullable(),
+  benchmarkKey: z.enum(["USD", "EUR", "CHF"]).optional(),
+  benchmarkLabel: z.string().optional(),
+  benchmarkCurrency: z.string().optional(),
+  benchmarkRate: z.number().optional(),
+  benchmarkRecordDate: z.string().nullable().optional(),
+  benchmarkIsFallback: z.boolean().optional(),
+  benchmarkFallbackMode: z.string().nullable().optional(),
+  benchmarkSelectionMode: z.enum(["native", "fallback-usd", "manual-override"]).optional(),
+  benchmarkIsProxy: z.boolean().optional(),
   yieldStability: z.number().nullable(),
   apyVariance30d: z.number().nullable(),
   apyMin30d: z.number().nullable(),
@@ -221,6 +276,7 @@ const YieldRankingSchema = z.object({
 export interface YieldRankingsResponse {
   rankings: YieldRanking[];
   riskFreeRate: number;
+  benchmarks?: YieldBenchmarkRegistry;
   scalingFactor: number;
   medianApy: number;
   updatedAt: number;
@@ -230,6 +286,7 @@ export interface YieldRankingsResponse {
 export const YieldRankingsResponseSchema: z.ZodType<YieldRankingsResponse> = z.object({
   rankings: z.array(YieldRankingSchema),
   riskFreeRate: z.number(),
+  benchmarks: YieldBenchmarkRegistrySchema.optional(),
   scalingFactor: z.number(),
   medianApy: z.number(),
   updatedAt: z.number(),

@@ -68,13 +68,14 @@ export function MonitoringMethodologySections() {
             />
           </div>
           <WorkedExample summary="Worked example (verified against computePYS)">
-            <p className="font-mono">Inputs: apy30d=8.4, safetyScore=72, apyVarianceScore=0.18, scalingFactor=5</p>
+            <p className="font-mono">Inputs: apy30d=8.4, safetyScore=72, apyVarianceScore=0.18, scalingFactor=8</p>
             <p className="font-mono">
-              riskPenalty=max(0.5,(101-72)/20)=1.45; yieldEfficiency=8.4/1.45=5.79; sustainability=1-0.18=0.82
+              riskPenalty=max(0.5,(101-72)/20)=1.45; adjustedPenalty=1.45^1.75=1.92; yieldEfficiency=8.4/1.92=4.38;
+              sustainability=1-0.18=0.82
             </p>
-            <p className="font-mono">PYS=min(100, round(5.79*0.82*5))=24</p>
+            <p className="font-mono">PYS=min(100, round(4.38*0.82*8))=29</p>
             <p>
-              Result: <span className="text-foreground">PYS 24</span>.
+              Result: <span className="text-foreground">PYS 29</span>.
             </p>
           </WorkedExample>
 
@@ -107,7 +108,7 @@ export function MonitoringMethodologySections() {
               <div className="flex flex-col gap-2 flex-1">
                 <div className="rounded-lg border p-3 text-center flex-1">
                   <p className="text-foreground font-medium">Yield Efficiency</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">APY ÷ risk penalty</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">APY ÷ curved risk penalty</p>
                 </div>
                 <div className="rounded-lg border p-3 text-center flex-1">
                   <p className="text-foreground font-medium">Sustainability</p>
@@ -147,7 +148,7 @@ export function MonitoringMethodologySections() {
               <div className="grid grid-cols-2 gap-2 w-full">
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium text-xs">Yield Efficiency</p>
-                  <p className="text-xs text-muted-foreground">APY ÷ risk penalty</p>
+                  <p className="text-xs text-muted-foreground">APY ÷ curved risk penalty</p>
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium text-xs">Sustainability</p>
@@ -188,8 +189,9 @@ export function MonitoringMethodologySections() {
                 </li>
                 <li>
                   <span className="text-foreground">Tier 4 &mdash; Rate-derived</span>: for dividend-distributing and
-                  Treasury-tracking tokens, derives APY from the cached 3-month Treasury benchmark net of known fee
-                  spreads
+                  Treasury-tracking tokens, derives APY from the selected benchmark registry entry net of known fee
+                  spreads, using USD by default, EUR €STR when available, and a CHF SNB policy-rate proxy for Swiss
+                  pegs
                 </li>
               </ul>
               <p>
@@ -218,7 +220,7 @@ export function MonitoringMethodologySections() {
               <p className="font-mono text-xs border border-l-[3px] border-l-amber-500 border-border/60 bg-muted/50 rounded-lg px-4 py-3">
                 riskPenalty = max(0.5, (101 &minus; safetyScore) / 20)
                 <br />
-                yieldEfficiency = apy30d / riskPenalty
+                yieldEfficiency = apy30d / (riskPenalty ^ 1.75)
                 <br />
                 sustainability = max(0.3, 1.0 &minus; apyVarianceScore)
                 <br />
@@ -227,7 +229,8 @@ export function MonitoringMethodologySections() {
               <ul className="list-disc list-inside space-y-1">
                 <li>
                   <span className="text-foreground">Yield efficiency</span> rewards higher APY relative to the
-                  coin&apos;s risk profile &mdash; safer coins get a lower penalty divisor
+                  coin&apos;s risk profile &mdash; the raw safety penalty is raised to a fixed power so weaker safety
+                  grades need much more yield to compete
                 </li>
                 <li>
                   <span className="text-foreground">Sustainability multiplier</span> penalizes volatile yields (high
@@ -235,7 +238,7 @@ export function MonitoringMethodologySections() {
                 </li>
                 <li>
                   <span className="text-foreground">Scaling factor</span> is a global constant that normalises scores
-                  into the 0&ndash;100 range
+                  into a readable 0&ndash;100 range after the steeper safety curve is applied
                 </li>
               </ul>
             </div>

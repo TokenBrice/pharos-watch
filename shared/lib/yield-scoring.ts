@@ -9,11 +9,19 @@
 /** Risk penalty floor — prevents division by near-zero. */
 export const PYS_RISK_PENALTY_FLOOR = 0.5;
 
+/** Exponent applied to the safety-derived risk penalty curve. */
+export const PYS_RISK_PENALTY_EXPONENT = 1.75;
+
 /** Sustainability multiplier floor — ensures non-zero contribution. */
 export const PYS_SUSTAINABILITY_FLOOR = 0.3;
 
 /** Default safety score when no report card grade is available. */
 export const PYS_DEFAULT_SAFETY_SCORE = 40;
+
+export function yieldStabilityToApyVarianceScore(yieldStability: number | null | undefined): number {
+  if (yieldStability == null) return 0;
+  return Math.max(0, Math.min(1, 1 - yieldStability));
+}
 
 interface PysComponentInput {
   apy30d: number;
@@ -24,9 +32,10 @@ interface PysComponentInput {
 export function computePysComponents(input: PysComponentInput) {
   const effectiveSafety = input.safetyScore ?? PYS_DEFAULT_SAFETY_SCORE;
   const riskPenalty = Math.max(PYS_RISK_PENALTY_FLOOR, (101 - effectiveSafety) / 20);
-  const yieldEfficiency = input.apy30d / riskPenalty;
+  const adjustedRiskPenalty = Math.pow(riskPenalty, PYS_RISK_PENALTY_EXPONENT);
+  const yieldEfficiency = input.apy30d / adjustedRiskPenalty;
   const sustainabilityMultiplier = Math.max(PYS_SUSTAINABILITY_FLOOR, 1.0 - input.apyVarianceScore);
-  return { riskPenalty, yieldEfficiency, sustainabilityMultiplier };
+  return { riskPenalty, adjustedRiskPenalty, yieldEfficiency, sustainabilityMultiplier };
 }
 
 interface PYSInput {

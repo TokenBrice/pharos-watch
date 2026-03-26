@@ -1504,7 +1504,7 @@ Per-coin Safety Score grade transition history (seed row + grade changes only). 
 
 ### `GET /api/yield-rankings`
 
-Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint rehydrates `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` from the current report-card snapshot at read time so Yield Intelligence stays aligned with `/api/report-cards`. Includes source-selection provenance and the current risk-free rate. If a ranking row has no matching live report-card snapshot, the API now retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage.
+Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint rehydrates `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` from the current report-card snapshot at read time so Yield Intelligence stays aligned with `/api/report-cards`. Includes source-selection provenance, the default USD benchmark (`riskFreeRate`), and the structured benchmark registry used for row-level excess-yield selection. If a ranking row has no matching live report-card snapshot, the API now retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour, aligned to the hourly `sync-yield-data` publisher).
 
@@ -1515,13 +1515,23 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
 ```json
 {
   "rankings": [YieldRanking, ...],
-  "riskFreeRate": 3.76,
-  "scalingFactor": 5,
+  "riskFreeRate": 4.25,
+  "benchmarks": {
+    "USD": { "key": "USD", "label": "USD 3M T-Bill", "currency": "USD", "rate": 4.25, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "fred-dgs3mo", "isFallback": false, "fallbackMode": null, "isProxy": false },
+    "EUR": { "key": "EUR", "label": "EUR €STR", "currency": "EUR", "rate": 1.93, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "fred-estr", "isFallback": false, "fallbackMode": null, "isProxy": false },
+    "CHF": { "key": "CHF", "label": "CHF SNB policy rate (proxy)", "currency": "CHF", "rate": 0.25, "recordDate": "2025-12-13", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "snb-policy-rate", "isFallback": false, "fallbackMode": null, "isProxy": true }
+  },
+  "scalingFactor": 8,
   "medianApy": 4.21,
   "updatedAt": 1772000000,
   "provenance": {
     "selectionMethod": "confidence-weighted",
-    "benchmark": { "rate": 3.76, "recordDate": "2026-03-10", "isFallback": false },
+    "benchmark": { "key": "USD", "label": "USD 3M T-Bill", "currency": "USD", "rate": 4.25, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "fred-dgs3mo", "isFallback": false, "fallbackMode": null, "isProxy": false },
+    "benchmarks": {
+      "USD": { "key": "USD", "label": "USD 3M T-Bill", "currency": "USD", "rate": 4.25, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "fred-dgs3mo", "isFallback": false, "fallbackMode": null, "isProxy": false },
+      "EUR": { "key": "EUR", "label": "EUR €STR", "currency": "EUR", "rate": 1.93, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "fred-estr", "isFallback": false, "fallbackMode": null, "isProxy": false },
+      "CHF": { "key": "CHF", "label": "CHF SNB policy rate (proxy)", "currency": "CHF", "rate": 0.25, "recordDate": "2025-12-13", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "snb-policy-rate", "isFallback": false, "fallbackMode": null, "isProxy": true }
+    },
     "dlPools": { "mode": "dex-cache", "ageSeconds": 240, "poolCount": 812 },
     "safetySnapshot": { "kind": "ok", "coverageRatio": 0.98 }
   }
@@ -1530,12 +1540,13 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
 
 | Field           | Type             | Description                                                                                                              |
 | --------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `rankings`      | `YieldRanking[]` | All ranked stablecoins, sorted by Pharos Yield Score descending                                                          |
-| `riskFreeRate`  | `number`         | Current 3-month Treasury yield proxy (%) from FRED `DGS3MO`, used as the risk-free benchmark                             |
-| `scalingFactor` | `number`         | Scaling factor applied in yield score computation                                                                        |
-| `medianApy`     | `number`         | TVL-weighted median APY (30d) across best-source rows, used as a peer reference in warning heuristics                    |
-| `updatedAt`     | `number`         | Unix seconds when the rankings were last computed                                                                        |
-| `provenance`    | `object \| null` | Snapshot-level provenance for benchmark freshness, DeFiLlama pool input freshness, safety coverage, and selection method |
+| `rankings`      | `YieldRanking[]` | All ranked stablecoins, sorted by Pharos Yield Score descending |
+| `riskFreeRate`  | `number`         | Default USD benchmark rate (%) retained for backward compatibility and mixed-view fallback |
+| `benchmarks`    | `object \| null` | Benchmark registry keyed by currency (`USD`, `EUR`, `CHF`) with label, rate, freshness, fallback, and proxy metadata |
+| `scalingFactor` | `number`         | Scaling factor applied in yield score computation |
+| `medianApy`     | `number`         | TVL-weighted median APY (30d) across best-source rows, used as a peer reference in warning heuristics |
+| `updatedAt`     | `number`         | Unix seconds when the rankings were last computed |
+| `provenance`    | `object \| null` | Snapshot-level provenance for default benchmark freshness, full benchmark registry, DeFiLlama pool input freshness, safety coverage, and selection method |
 
 **`YieldRanking`**
 
@@ -1559,6 +1570,15 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
 | `safetyGrade`      | `string \| null`   | Current Safety Score letter grade (`"A+"` through `"F"`, or `"NR"`) from `/api/report-cards`                                                        |
 | `yieldToRisk`      | `number \| null`   | Yield-to-risk ratio recomputed at read time from cached APY inputs plus the current Safety Score                                                    |
 | `excessYield`      | `number \| null`   | APY above risk-free rate (percentage points)                                                                                                        |
+| `benchmarkKey`     | `"USD" \| "EUR" \| "CHF" \| undefined` | Benchmark selected for this row's `excessYield` and any rate-derived APY logic |
+| `benchmarkLabel`   | `string \| undefined` | Human-readable benchmark label for the row |
+| `benchmarkCurrency`| `string \| undefined` | Benchmark currency code used for the row |
+| `benchmarkRate`    | `number \| undefined` | Benchmark rate (%) applied to this row |
+| `benchmarkRecordDate` | `string \| null \| undefined` | Market or policy record date for the selected benchmark |
+| `benchmarkIsFallback` | `boolean \| undefined` | Whether the row benchmark is currently on a fallback path |
+| `benchmarkFallbackMode` | `string \| null \| undefined` | Fallback reason for the row benchmark when applicable |
+| `benchmarkSelectionMode` | `"native" \| "fallback-usd" \| "manual-override" \| undefined` | How the row benchmark was selected |
+| `benchmarkIsProxy` | `boolean \| undefined` | True when the selected benchmark is an explicit proxy rather than the exact reference rate |
 | `yieldStability`   | `number \| null`   | Yield stability metric (0–1; higher = more stable)                                                                                                  |
 | `apyVariance30d`   | `number \| null`   | 30-day APY variance                                                                                                                                 |
 | `apyMin30d`        | `number \| null`   | Minimum APY in last 30 days (%)                                                                                                                     |
@@ -1571,6 +1591,7 @@ When present, `YieldRanking.provenance` includes:
 
 - `sourceObservedAt` / `sourceAgeSeconds`: the timestamp and age of the latest observation actually backing the row
 - `comparisonAnchorObservedAt` / `comparisonAnchorAgeSeconds`: optional prior-anchor timing for APYs derived from two observations, such as price-derived and on-chain exchange-rate rows
+- `benchmarkKey`, `benchmarkLabel`, `benchmarkRate`, `benchmarkIsFallback`, `benchmarkSelectionMode`, and related fields for the exact benchmark applied to that row
 
 ---
 
@@ -1606,8 +1627,8 @@ Historical yield data for a single stablecoin. If a stored `warning_signals` pay
   },
   "history": [YieldHistoryPoint, "..."],
   "methodology": {
-    "version": "5.2",
-    "currentVersion": "5.2",
+    "version": "5.5",
+    "currentVersion": "5.5",
     "changelogPath": "/methodology/yield-changelog/"
   }
 }

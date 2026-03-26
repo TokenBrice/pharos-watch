@@ -29,6 +29,7 @@ import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { isBlacklistable } from "@shared/lib/report-cards";
 import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severity-colors";
+import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
 import type {
   DexLiquidityData,
   PegSummaryCoin,
@@ -311,7 +312,7 @@ export function HeroCard({
     }
     return {
       value: formatSignedPercent(yieldRanking.excessYield),
-      sub: "vs T-Bill",
+      sub: getYieldBenchmarkReferenceText(yieldRanking),
       color: yieldRanking.excessYield >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400",
     };
   })();

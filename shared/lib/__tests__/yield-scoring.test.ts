@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   PYS_RISK_PENALTY_FLOOR,
+  PYS_RISK_PENALTY_EXPONENT,
   PYS_SUSTAINABILITY_FLOOR,
   computePysComponents,
   computePYS,
@@ -9,6 +10,9 @@ import {
 describe("PYS constants", () => {
   it("exports risk penalty floor of 0.5", () => {
     expect(PYS_RISK_PENALTY_FLOOR).toBe(0.5);
+  });
+  it("exports risk penalty exponent of 1.75", () => {
+    expect(PYS_RISK_PENALTY_EXPONENT).toBe(1.75);
   });
   it("exports sustainability floor of 0.3", () => {
     expect(PYS_SUSTAINABILITY_FLOOR).toBe(0.3);
@@ -19,6 +23,12 @@ describe("computePysComponents", () => {
   it("computes riskPenalty from safety score", () => {
     const result = computePysComponents({ apy30d: 5, safetyScore: 80, apyVarianceScore: 0.2 });
     expect(result.riskPenalty).toBeCloseTo((101 - 80) / 20); // 1.05
+  });
+
+  it("raises the risk penalty by the configured exponent before computing yield efficiency", () => {
+    const result = computePysComponents({ apy30d: 5, safetyScore: 80, apyVarianceScore: 0.2 });
+    expect(result.adjustedRiskPenalty).toBeCloseTo(Math.pow(1.05, 1.75), 6);
+    expect(result.yieldEfficiency).toBeCloseTo(5 / Math.pow(1.05, 1.75), 6);
   });
 
   it("floors riskPenalty at 0.5", () => {
@@ -52,5 +62,9 @@ describe("computePYS", () => {
     const base = computePYS({ apy30d: 5, safetyScore: 80, apyVarianceScore: 0.1, scalingFactor: 1 });
     const scaled = computePYS({ apy30d: 5, safetyScore: 80, apyVarianceScore: 0.1, scalingFactor: 2 });
     expect(scaled).toBeGreaterThan(base);
+  });
+
+  it("matches the published methodology example for the steeper safety curve", () => {
+    expect(computePYS({ apy30d: 8.4, safetyScore: 72, apyVarianceScore: 0.18, scalingFactor: 8 })).toBe(29);
   });
 });

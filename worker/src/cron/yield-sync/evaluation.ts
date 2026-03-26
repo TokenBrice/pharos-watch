@@ -3,6 +3,7 @@ import {
 } from "@shared/lib/stablecoins";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { YieldType } from "@shared/types/core";
+import type { YieldBenchmarkKey, YieldBenchmarkSelectionMode } from "@shared/types/yield";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import {
   buildOnChainSourceKey,
@@ -14,6 +15,7 @@ import { LENDING_PROTOCOL_LABELS } from "../yield-config";
 import type { YieldHistorySnapshotRow } from "./history";
 import { computeTvlWeightedMedianApy } from "./rankings";
 import type { ResolvedYield, ResolvedYieldEntry } from "./types";
+import { resolveBenchmarkForStablecoin, type ParsedYieldBenchmarkMeta, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
 
 const LOW_SOURCE_TVL_USD = 250_000;
 const CROSS_SOURCE_DIVERGENCE_THRESHOLD = 0.35;
@@ -49,6 +51,16 @@ export interface EvaluatedYieldSource {
   safetyGrade: string;
   yieldToRisk: number | null;
   excessYield: number;
+  benchmarkKey: YieldBenchmarkKey;
+  benchmarkLabel: string;
+  benchmarkCurrency: string;
+  benchmarkRate: number;
+  benchmarkRecordDate: string | null;
+  benchmarkIsFallback: boolean;
+  benchmarkFallbackMode: string | null;
+  benchmarkSelectionMode: YieldBenchmarkSelectionMode;
+  benchmarkIsProxy: boolean;
+  benchmarkMeta: ParsedYieldBenchmarkMeta;
   pharosYieldScore: number;
   prevExchangeRate: number | null;
   prevTvlUsd: number | null;
@@ -262,7 +274,7 @@ export interface EvaluateYieldSourcesInput {
   startSec: number;
   sevenDaysAgoSec: number;
   safetyScores: Map<string, { score: number; grade: string }>;
-  riskFreeRate: number;
+  riskFreeRates: ParsedYieldBenchmarkRegistry;
   tier1PrevRates: Map<string, number | null>;
   sourceHistory: Map<string, YieldHistorySnapshotRow[]>;
   onChainCompatibilityHistoryById: Map<string, YieldHistorySnapshotRow[]>;
@@ -363,7 +375,11 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         scalingFactor: PYS_SCALING_FACTOR,
       });
       const yieldToRisk = 101 - safetyScore > 0 ? apy30d / (101 - safetyScore) : null;
-      const excessYield = apy30d - input.riskFreeRate;
+      const benchmarkSelection = resolveBenchmarkForStablecoin({
+        stablecoinId,
+        benchmarks: input.riskFreeRates,
+      });
+      const excessYield = apy30d - benchmarkSelection.meta.rate;
       const prevExchangeRate = input.tier1PrevRates.get(stablecoinId) ?? null;
       const prevTvlUsd = historySelection.usedLegacyHistory
         ? (input.legacyPrevTvlById.get(stablecoinId) ?? null)
@@ -401,6 +417,16 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         safetyGrade,
         yieldToRisk,
         excessYield,
+        benchmarkKey: benchmarkSelection.key,
+        benchmarkLabel: benchmarkSelection.meta.label ?? benchmarkSelection.key,
+        benchmarkCurrency: benchmarkSelection.meta.currency ?? benchmarkSelection.key,
+        benchmarkRate: benchmarkSelection.meta.rate,
+        benchmarkRecordDate: benchmarkSelection.meta.recordDate,
+        benchmarkIsFallback: benchmarkSelection.meta.isFallback,
+        benchmarkFallbackMode: benchmarkSelection.meta.fallbackMode,
+        benchmarkSelectionMode: benchmarkSelection.selectionMode,
+        benchmarkIsProxy: benchmarkSelection.meta.isProxy ?? false,
+        benchmarkMeta: benchmarkSelection.meta,
         pharosYieldScore: Number.isFinite(pharosYieldScore) ? pharosYieldScore : 0,
         prevExchangeRate,
         prevTvlUsd,

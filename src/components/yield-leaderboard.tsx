@@ -19,6 +19,7 @@ import { formatCurrency, formatScore, formatPercent } from "@shared/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import type { YieldRanking, AltYieldSource, YieldType } from "@shared/types";
+import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
 import { formatYieldWarningSignal, getPysColor, computePysBreakdown } from "@/lib/yield-constants";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
@@ -236,7 +237,7 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                 const safetyScore = row.safetyScore;
                 const warningSignalCount = row.warningSignals.length;
                 const pysColor = getPysColor(row.pharosYieldScore);
-                const { riskPenalty, yieldEfficiency, sustainabilityMult } = computePysBreakdown(row.apy30d, safetyScore, row.yieldStability);
+                const { adjustedRiskPenalty, yieldEfficiency, sustainabilityMult } = computePysBreakdown(row.apy30d, safetyScore, row.yieldStability);
                 return (
                   <Fragment key={row.id}>
                     <InteractiveTableRow
@@ -292,8 +293,8 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                                 </div>
                                 <div className="text-[11px] text-muted-foreground">
                                   <span className="font-mono tabular-nums">{row.apy30d.toFixed(1)}%</span> APY /{" "}
-                                  <span className="font-mono tabular-nums">{riskPenalty.toFixed(1)}x</span> risk
-                                  penalty
+                                  <span className="font-mono tabular-nums">{adjustedRiskPenalty.toFixed(1)}x</span>{" "}
+                                  adjusted risk penalty
                                 </div>
                                 <div>
                                   <span className="text-muted-foreground">Safety: </span>
@@ -319,21 +320,26 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                         )}
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-left text-sm text-muted-foreground max-w-[160px]">
-                        <div className="flex items-center gap-1" title={row.provenance?.selectionReason ?? row.yieldSource}>
-                          <YieldSourceLink
-                            href={row.yieldSourceUrl}
-                            className="max-w-[160px]"
-                            iconClassName="h-3 w-3"
-                            stopPropagation
-                          >
-                            {row.yieldSource}
-                          </YieldSourceLink>
-                          {row.provenance?.sourceSwitch ? (
-                            <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-300">
-                              switch
-                            </span>
-                          ) : null}
-                          {(row.altSources?.length ?? 0) > 0 && <AltSourcesPopover altSources={row.altSources} />}
+                        <div title={row.provenance?.selectionReason ?? row.yieldSource}>
+                          <div className="flex items-center gap-1">
+                            <YieldSourceLink
+                              href={row.yieldSourceUrl}
+                              className="max-w-[160px]"
+                              iconClassName="h-3 w-3"
+                              stopPropagation
+                            >
+                              {row.yieldSource}
+                            </YieldSourceLink>
+                            {row.provenance?.sourceSwitch ? (
+                              <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-300">
+                                switch
+                              </span>
+                            ) : null}
+                            {(row.altSources?.length ?? 0) > 0 && <AltSourcesPopover altSources={row.altSources} />}
+                          </div>
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            {getYieldBenchmarkReferenceText(row)}
+                          </p>
                         </div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-center">
@@ -447,12 +453,17 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                                   </span>
                                 ) : null}
                               </div>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {getYieldBenchmarkReferenceText(row)}
+                              </p>
                             </div>
                             {(row.altSources?.length ?? 0) > 0 ? <AltSourcesPopover altSources={row.altSources} /> : null}
                           </div>
                           <YieldHistoryChart
                             stablecoinId={row.id}
-                            riskFreeRate={riskFreeRate}
+                            benchmarkRate={row.benchmarkRate ?? riskFreeRate}
+                            benchmarkLabel={row.benchmarkLabel}
+                            benchmarkIsFallback={row.benchmarkSelectionMode === "fallback-usd" || row.benchmarkIsFallback}
                             medianApy={medianApy}
                             compact
                             availableSources={[

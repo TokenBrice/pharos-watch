@@ -106,10 +106,14 @@ export const DEPEG_SECONDARY_THRESHOLD_RATIO = 0.5;
 export const RISK_FREE_RATE_FALLBACK = 3.75;
 /** FRED 3-month Treasury yield series (DGS3MO), used by fetch-tbill-rate cron. */
 export const FRED_TBILL_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO";
+/** FRED euro short-term rate series (€STR, volume-weighted trimmed mean). */
+export const FRED_ESTR_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=ECBESTRVOLWGTTRMDMNRT";
 export const TREASURY_YIELD_XML_URL = "https://home.treasury.gov/sites/default/files/interest-rates/yield.xml";
+/** SNB current interest rates page, used for the public CHF policy-rate proxy. */
+export const SNB_CURRENT_RATES_URL = "https://www.snb.ch/en/the-snb/mandates-goals/statistics/statistics-pub/current_interest_exchange_rates";
 export const FRED_FETCH_TIMEOUT_MS = 15_000;
 export const FRED_FETCH_MAX_RETRIES = 2;
-export const PYS_SCALING_FACTOR = 5;
+export const PYS_SCALING_FACTOR = 8;
 /** Default safety score for unrated coins (navTokens, coins with insufficient data). */
 export const DEFAULT_SAFETY_SCORE = 40;
 /** Minimum report-card score for a coin to qualify for automatic yield discovery (C- = 50). */

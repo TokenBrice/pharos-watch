@@ -13,6 +13,11 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { YieldLeaderboard } from "@/components/yield-leaderboard";
 import { YieldScatterPlot } from "@/components/yield-scatter-plot";
+import {
+  getYieldBenchmarkDisplayLabel,
+  getYieldBenchmarkForKey,
+  getYieldBenchmarkKeys,
+} from "@/lib/yield-benchmark";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { PEG_BADGE_STYLES } from "@shared/lib/classification";
 import { formatPercent } from "@shared/lib/format";
@@ -133,8 +138,22 @@ export function YieldClient() {
   // Compute summary stats from the active yield universe filter.
   const stats = useMemo(() => {
     if (!data) return null;
-    const { riskFreeRate } = data;
-    if (filteredRankings.length === 0) return { avgApy: 0, riskFreeRate, bestPys: null };
+    const benchmarkRegistry = data.benchmarks ?? data.provenance?.benchmarks;
+    const visibleBenchmarkKeys = getYieldBenchmarkKeys(filteredRankings);
+    const hasMixedBenchmarks = visibleBenchmarkKeys.length > 1;
+    const sharedBenchmarkKey = visibleBenchmarkKeys.length === 1 ? visibleBenchmarkKeys[0] : null;
+    const referenceBenchmark = sharedBenchmarkKey
+      ? getYieldBenchmarkForKey(benchmarkRegistry, sharedBenchmarkKey) ?? data.provenance?.benchmark ?? null
+      : getYieldBenchmarkForKey(benchmarkRegistry, "USD") ?? data.provenance?.benchmark ?? null;
+    if (filteredRankings.length === 0) {
+      return {
+        avgApy: 0,
+        bestPys: null,
+        referenceBenchmark,
+        hasMixedBenchmarks,
+        sharedBenchmarkKey,
+      };
+    }
 
     // Weighted average APY (weighted by TVL where available)
     let tvlSum = 0;
@@ -158,7 +177,13 @@ export function YieldClient() {
       }
     }
 
-    return { avgApy, riskFreeRate, bestPys };
+    return {
+      avgApy,
+      bestPys,
+      referenceBenchmark,
+      hasMixedBenchmarks,
+      sharedBenchmarkKey,
+    };
   }, [data, filteredRankings]);
 
   if (isLoading) {
@@ -182,6 +207,26 @@ export function YieldClient() {
     );
   }
 
+  if (!data) {
+    return (
+      <SectionErrorBoundary name="Yield">
+        <div className="space-y-6">
+          <QueryErrorNotice
+            error={error}
+            hasData={false}
+            onRetry={() => {
+              void refetch();
+            }}
+          />
+        </div>
+      </SectionErrorBoundary>
+    );
+  }
+
+  if (!stats) {
+    return null;
+  }
+
   return (
     <SectionErrorBoundary name="Yield">
     <div className="space-y-6">
@@ -198,21 +243,26 @@ export function YieldClient() {
         <div className="grid grid-cols-1 gap-3 sm:gap-5 sm:grid-cols-3">
           <Card className="rounded-xl">
             <CardHeader className="pb-1">
-              <span className="text-xs text-muted-foreground">Benchmark Provenance</span>
+              <span className="text-xs text-muted-foreground">Benchmarks</span>
             </CardHeader>
-            <CardContent className="space-y-1 text-sm">
-              <p className="font-medium text-foreground">
-                {data.provenance.benchmark.recordDate
-                  ? `T-Bill as of ${data.provenance.benchmark.recordDate}`
-                  : "T-Bill record date unavailable"}
-              </p>
-              <p className="text-muted-foreground">
-                {data.provenance.benchmark.isFallback
-                  ? `Fallback benchmark in use${data.provenance.benchmark.fallbackMode ? ` (${data.provenance.benchmark.fallbackMode})` : ""}`
-                  : data.provenance.benchmark.ageSeconds != null
-                    ? `Benchmark age ${Math.round(data.provenance.benchmark.ageSeconds / 3600)}h`
-                    : "Benchmark age unavailable"}
-              </p>
+            <CardContent className="space-y-2 text-sm">
+              {Object.values(data.benchmarks ?? data.provenance.benchmarks ?? { USD: data.provenance.benchmark })
+                .filter((benchmark): benchmark is NonNullable<typeof benchmark> => benchmark != null)
+                .map((benchmark) => (
+                  <div key={benchmark.key ?? benchmark.label ?? benchmark.currency} className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-foreground">{getYieldBenchmarkDisplayLabel(benchmark)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {benchmark.recordDate
+                          ? `as of ${benchmark.recordDate}`
+                          : benchmark.ageSeconds != null
+                            ? `age ${Math.round(benchmark.ageSeconds / 3600)}h`
+                            : "record date unavailable"}
+                      </p>
+                    </div>
+                    <span className="font-mono tabular-nums text-foreground">{formatPercent(benchmark.rate)}</span>
+                  </div>
+                ))}
             </CardContent>
           </Card>
           <Card className="rounded-xl">
@@ -300,10 +350,22 @@ export function YieldClient() {
           </Card>
           <Card className="rounded-xl">
             <CardHeader className="pb-1">
-              <span className="text-xs text-muted-foreground">Risk-Free Rate (T-Bill)</span>
+              <span className="text-xs text-muted-foreground">
+                {stats.hasMixedBenchmarks ? "Default Benchmark (USD)" : "Benchmark"}
+              </span>
             </CardHeader>
             <CardContent>
-              <span className="text-2xl font-bold font-mono tabular-nums">{formatPercent(stats.riskFreeRate)}</span>
+              <span className="text-2xl font-bold font-mono tabular-nums">
+                {formatPercent(stats.referenceBenchmark?.rate ?? data.riskFreeRate)}
+              </span>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {stats.referenceBenchmark
+                  ? getYieldBenchmarkDisplayLabel({
+                    benchmarkLabel: stats.referenceBenchmark.label,
+                    benchmarkIsFallback: stats.referenceBenchmark.isFallback,
+                  })
+                  : "USD default"}
+              </p>
             </CardContent>
           </Card>
           <Card className="rounded-xl">
@@ -336,21 +398,30 @@ export function YieldClient() {
                   Yield vs Safety
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Each logo marks a stablecoin. Click a point to open the detail page.
+                  {stats.hasMixedBenchmarks
+                    ? "Each logo marks a stablecoin. Mixed views use local benchmarks per row, so the table carries the benchmark context."
+                    : "Each logo marks a stablecoin. Click a point to open the detail page."}
                 </p>
               </div>
 
               <div className="grid gap-2 sm:grid-cols-3">
                 <div className="rounded-2xl border border-border/60 bg-background/45 px-4 py-3">
-                  <p className="pharos-kicker">Below T-Bill</p>
+                  <p className="pharos-kicker">{stats.hasMixedBenchmarks ? "Local Benchmarks" : "Below Benchmark"}</p>
                   <p className="mt-1 text-sm text-foreground">
-                    Yields under {formatPercent(data.riskFreeRate)} are failing the basic hurdle rate.
+                    {stats.hasMixedBenchmarks
+                      ? "Rows are benchmarked against USD T-Bill, EUR €STR, or CHF policy-rate proxy depending on the peg."
+                      : `Yields under ${formatPercent(stats.referenceBenchmark?.rate ?? data.riskFreeRate)} are failing the basic hurdle rate.`}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3">
-                  <p className="pharos-kicker text-emerald-400">Sweet Spot</p>
+                  <p className="pharos-kicker text-emerald-400">{stats.hasMixedBenchmarks ? "Read The Plot" : "Sweet Spot"}</p>
                   <p className="mt-1 text-sm text-foreground">
-                    Right side plus above the T-Bill line is where strong yield meets acceptable safety.
+                    {stats.hasMixedBenchmarks
+                      ? "On mixed views, compare safety first and use each row's benchmark tag to interpret excess yield."
+                      : `Right side plus above the ${getYieldBenchmarkDisplayLabel({
+                        benchmarkLabel: stats.referenceBenchmark?.label,
+                        benchmarkIsFallback: stats.referenceBenchmark?.isFallback,
+                      })} line is where strong yield meets acceptable safety.`}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-red-500/20 bg-red-500/8 px-4 py-3">
@@ -364,7 +435,10 @@ export function YieldClient() {
             <CardContent className="pt-0">
               <YieldScatterPlot
                 rankings={filteredRankings}
-                riskFreeRate={data.riskFreeRate}
+                benchmarkRate={stats.referenceBenchmark?.rate ?? data.riskFreeRate}
+                benchmarkLabel={stats.referenceBenchmark?.label}
+                benchmarkIsFallback={stats.referenceBenchmark?.isFallback}
+                showBenchmarkReference={!stats.hasMixedBenchmarks}
                 logos={logos}
                 onDotClick={handleNavigate}
               />

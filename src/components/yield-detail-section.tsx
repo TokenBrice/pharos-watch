@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useYieldRankings } from "@/hooks/api-hooks";
 import { formatYieldWarningSignal, getPysColor, computePysBreakdown } from "@/lib/yield-constants";
+import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
 import { cn } from "@/lib/utils";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatCurrency, formatPercent, formatSignedPercent as sharedFormatSignedPercent } from "@shared/lib/format";
@@ -51,6 +52,7 @@ function formatSignedPercent(value: number | null) {
 function PysBreakdown({
   score,
   toneClass,
+  adjustedRiskPenalty,
   yieldEfficiency,
   safetyGrade,
   safetyScore,
@@ -58,6 +60,7 @@ function PysBreakdown({
 }: {
   score: number | null;
   toneClass: string;
+  adjustedRiskPenalty: number;
   yieldEfficiency: number;
   safetyGrade: string | null;
   safetyScore: number | null;
@@ -82,6 +85,10 @@ function PysBreakdown({
           <div>
             <span className="text-muted-foreground">Yield Efficiency: </span>
             <span className="font-mono">{yieldEfficiency.toFixed(1)}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Adjusted Risk Penalty: </span>
+            <span className="font-mono">{adjustedRiskPenalty.toFixed(1)}x</span>
           </div>
           <div>
             <span className="text-muted-foreground">Safety: </span>
@@ -134,7 +141,6 @@ function DetailStatCard({
 export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionProps) {
   const { data, meta: apiMeta, error, isLoading } = useYieldRankings();
   const ranking = data?.rankings.find((row) => row.id === stablecoinId);
-  const riskFreeRate = data?.riskFreeRate ?? 0;
   const medianApy = data?.medianApy ?? 0;
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
   const shouldHaveYieldData = meta?.flags.yieldBearing ?? false;
@@ -203,7 +209,11 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
     return null;
   }
 
-  const { yieldEfficiency, sustainabilityMult } = computePysBreakdown(ranking.apy30d, ranking.safetyScore, ranking.yieldStability);
+  const { adjustedRiskPenalty, yieldEfficiency, sustainabilityMult } = computePysBreakdown(
+    ranking.apy30d,
+    ranking.safetyScore,
+    ranking.yieldStability,
+  );
   const pysColor = getPysColor(ranking.pharosYieldScore);
   const stabilityValue = ranking.yieldStability !== null ? `${(ranking.yieldStability * 100).toFixed(0)}%` : "—";
   const dataSourceMeta = DATA_SOURCE_BADGES[ranking.dataSource] ?? DATA_SOURCE_BADGES.defillama;
@@ -222,9 +232,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
   ];
 
   // Benchmark subtitle for Excess Yield card (distill: fold benchmark into stat card)
-  const benchmarkSubtitle = data?.provenance
-    ? `vs ${data.provenance.benchmark.rate.toFixed(2)}% T-Bill${data.provenance.benchmark.isFallback ? " (fallback)" : ""}`
-    : undefined;
+  const benchmarkSubtitle = ranking ? getYieldBenchmarkReferenceText(ranking) : undefined;
 
   return (
     <section id="yield" aria-labelledby="yield-intelligence-heading">
@@ -276,11 +284,13 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           {/* ── History chart (hero visual — chart leads) ── */}
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              APY trend against the current T-bill hurdle rate and peer median.
+              APY trend against the current benchmark hurdle rate and peer median.
             </p>
             <YieldHistoryChart
               stablecoinId={stablecoinId}
-              riskFreeRate={riskFreeRate}
+              benchmarkRate={ranking.benchmarkRate ?? data?.riskFreeRate ?? 0}
+              benchmarkLabel={ranking.benchmarkLabel}
+              benchmarkIsFallback={ranking.benchmarkSelectionMode === "fallback-usd" || ranking.benchmarkIsFallback}
               medianApy={medianApy}
               availableSources={historySources}
             />
@@ -314,6 +324,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
               <PysBreakdown
                 score={ranking.pharosYieldScore}
                 toneClass={pysColor}
+                adjustedRiskPenalty={adjustedRiskPenalty}
                 yieldEfficiency={yieldEfficiency}
                 safetyGrade={ranking.safetyGrade}
                 safetyScore={ranking.safetyScore}

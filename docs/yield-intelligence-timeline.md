@@ -1,8 +1,23 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.3` (2026-03-01 -> 2026-03-26).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.5` (2026-03-01 -> 2026-03-26).
 
 ---
+
+## v5.5 - Safety-reweighted PYS curve and shared scoring hydration (Mar 26, 2026)
+
+- PYS now divides APY by `riskPenalty ^ 1.75` instead of a linear safety divisor, making weak safety grades earn their place with much larger yield spreads
+- The global PYS scaling factor was retuned from `5` to `8` so score distribution stays readable after the steeper safety curve
+- Live `/api/yield-rankings` hydration now reuses the shared PYS scorer instead of maintaining a duplicated read-time formula
+- Leaderboard and detail breakdown copy now references the adjusted risk penalty explicitly, and the methodology docs / changelog reflect the new formula
+
+## v5.4 - Currency-aware benchmarks for excess yield (Mar 26, 2026)
+
+- Benchmark selection is now row-level: USD pegs use the USD 3M Treasury benchmark, EUR pegs use €STR when available, and CHF pegs use an SNB policy-rate proxy
+- `/api/yield-rankings` now carries row-level benchmark labels, rates, and fallback-selection metadata so `excessYield` stays interpretable on mixed-currency views
+- Stablecoin detail yield cards, hero chips, and history charts no longer hard-code `vs T-Bill`; they render the selected row benchmark instead
+- The `/yield` scatter plot now suppresses the single benchmark line on mixed-benchmark scopes and restores it only when the visible filter shares one benchmark
+- CHF support intentionally uses the public SNB policy rate proxy rather than the SNB-published SARON display, whose use is restricted
 
 ## v5.3 - Non-USD yield scoping and exact-pool commodity overrides (Mar 26, 2026)
 

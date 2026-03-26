@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v5.3`
+- **Current methodology version:** `v5.5`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -197,10 +197,10 @@ Zero new API calls — reuses cached price data. Falls through if no price histo
 For dividend-distributing tokens (maintain $1.00 NAV, pay yield as new token mints) and T-bill-backed funds whose yield mechanically tracks short-term rates. Configured via `RATE_DERIVED_CONFIGS` in `yield-config.ts`.
 
 ```
-apy = max(0, cachedTbillRate - spreadBps / 100)
+apy = max(0, benchmarkRate - spreadBps / 100)
 ```
 
-Uses the structured `risk_free_rate` cache already refreshed daily by `fetch-tbill-rate` (FRED DGS3MO). If FRED fails, the cron retains the last known good benchmark when available and marks provenance as degraded instead of immediately snapping back to the hardcoded fallback.
+Uses the structured benchmark cache refreshed daily by `fetch-tbill-rate`. USD defaults to the 3-month Treasury yield (`DGS3MO`), but the resolver can switch to a peg-native benchmark when one exists. EUR rows use FRED's ECB-published euro short-term rate mirror (`ECBESTRVOLWGTTRMDMNRT`), and CHF rows use an SNB policy-rate proxy sourced from the SNB current-rates page. If a benchmark fetch fails, the cron retains the last known market benchmark when available and marks provenance as degraded instead of immediately snapping back to the hardcoded default.
 
 **Configured tokens:**
 
@@ -249,58 +249,74 @@ For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), 
 
 Risk-adjusted ranking (0–100) that balances yield magnitude against safety and consistency.
 
-**Formula (`yield-helpers.ts::computePYS`):**
+**Formula (`shared/lib/yield-scoring.ts::computePYS`):**
 
 ```
 riskPenalty         = max(0.5, (101 - safetyScore) / 20)
-yieldEfficiency     = apy30d / riskPenalty
+yieldEfficiency     = apy30d / (riskPenalty ^ 1.75)
 sustainabilityMult  = max(0.3, 1.0 - apyVarianceScore)
 PYS                 = min(100, round(yieldEfficiency * sustainabilityMult * scalingFactor))
 ```
 
 **Components:**
 
-| Component          | Range    | Meaning                                                                                     |
-| ------------------ | -------- | ------------------------------------------------------------------------------------------- | ---- | --------- |
-| `safetyScore`      | 0–100    | Report card overall score. `DEFAULT_SAFETY_SCORE` (40) for unrated coins                    |
-| `riskPenalty`      | 0.5–5.05 | Divisor derived from safety (A+ coin → 0.55, F → 4.55)                                      |
+| Component | Range | Meaning |
+| --------- | ----- | ------- |
+| `safetyScore` | 0–100 | Report card overall score. `DEFAULT_SAFETY_SCORE` (40) for unrated coins |
+| `riskPenalty` | 0.5–5.05 | Raw safety penalty before the power curve is applied |
+| `riskPenalty^1.75` | ~0.30–17.01 | Effective divisor used by PYS after the steeper safety curve is applied |
 | `apyVarianceScore` | 0–1 or null | Coefficient of variation of 30-day APY samples, clamped to [0, 1]. Returns null if < 2 samples or mean ≈ 0 (`|mean| < 1e-10`); PYS caller defaults null to 0 |
-| `scalingFactor`    | 5        | Global constant (`PYS_SCALING_FACTOR` in `constants.ts`)                                    |
+| `scalingFactor` | 8 | Global constant (`PYS_SCALING_FACTOR` in `constants.ts`) tuned after the steeper safety curve |
 
 Returns 0 when `apy30d <= 0`.
 
-Frontend components display PYS breakdown via `computePysBreakdown()` in `src/lib/yield-constants.ts`, which mirrors the intermediate values (`riskPenalty`, `yieldEfficiency`, `sustainabilityMult`) from the worker's `computePYS()`. The final PYS value is always served by the API.
+Frontend components display PYS breakdown via `computePysBreakdown()` in `src/lib/yield-constants.ts`, which delegates to the shared scorer and mirrors the intermediate values (`riskPenalty`, `adjustedRiskPenalty`, `yieldEfficiency`, `sustainabilityMult`). The final PYS value is always served by the API.
 
 ### Supporting Metrics
 
-| Metric           | Formula                               | Description                                                                   |
-| ---------------- | ------------------------------------- | ----------------------------------------------------------------------------- | ---- | --------- |
-| `yieldStability` | `1 - CV(30d samples)`                 | 0–1, higher = more consistent. Null if < 2 samples or mean ≈ 0 (`|mean| < 1e-10`) |
-| `yieldToRisk`    | `apy30d / (101 - safetyScore)`        | Raw yield per unit of risk                                                    |
-| `excessYield`    | `apy30d - riskFreeRate`               | Yield above the T-bill benchmark                                              |
-| `apy7d`          | Timestamp-filtered 7d average         | 7-day trailing APY (uses `recorded_at >= now - 7d`, not proportional slicing) |
-| `apy30d`         | Simple average of 30d samples         | 30-day trailing APY                                                           |
-| `variance30d`    | Standard deviation of 30d APY samples | APY volatility measure                                                        |
+| Metric | Formula | Description |
+| ------ | ------- | ----------- |
+| `yieldStability` | `1 - CV(30d samples)` | 0–1, higher = more consistent. Null if < 2 samples or mean ≈ 0 (`|mean| < 1e-10`) |
+| `yieldToRisk` | `apy30d / (101 - safetyScore)` | Raw yield per unit of risk |
+| `excessYield` | `apy30d - benchmarkRate` | Yield above the row's selected benchmark |
+| `apy7d` | Timestamp-filtered 7d average | 7-day trailing APY (uses `recorded_at >= now - 7d`, not proportional slicing) |
+| `apy30d` | Simple average of 30d samples | 30-day trailing APY |
+| `variance30d` | Standard deviation of 30d APY samples | APY volatility measure |
 
 ---
 
-## Risk-Free Rate (T-Bill)
+## Benchmark Registry
 
-Fetched daily by the `fetch-tbill-rate` cron from FRED's 3-month Treasury yield series (`DGS3MO`).
+Yield Intelligence now uses a small benchmark registry instead of a single global T-bill field.
 
-**Source URL:**
+**Benchmarks currently supported:**
 
-```
+| Key | Label | Primary source | Notes |
+| --- | ----- | -------------- | ----- |
+| `USD` | USD 3M T-Bill | FRED `DGS3MO` | Default benchmark and backward-compatible top-level `riskFreeRate` |
+| `EUR` | EUR €STR | FRED `ECBESTRVOLWGTTRMDMNRT` | Native benchmark for EUR pegs when available |
+| `CHF` | CHF SNB policy rate (proxy) | SNB current-rates page | Proxy benchmark for CHF pegs; intentionally labeled as a proxy |
+
+**Source URLs:**
+
+```text
 https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO
+https://fred.stlouisfed.org/graph/fredgraph.csv?id=ECBESTRVOLWGTTRMDMNRT
+https://www.snb.ch/en/the-snb/mandates-goals/statistics/statistics-pub/current_interest_exchange_rates
 ```
 
-**Stored as:** `cache` table, key `"risk_free_rate"`.
+**Stored as:** `cache` table, key `"risk_free_rates"`, with the legacy USD-only key `"risk_free_rate"` still written for compatibility.
 
-**Fallback:** `RISK_FREE_RATE_FALLBACK = 3.75%`.
+**Fallback:** `RISK_FREE_RATE_FALLBACK = 3.75%` applies to USD only. EUR and CHF prefer a retained last-known market benchmark when available; otherwise they remain unavailable and rows fall back to USD when selection requires it.
 
-When FRED fetches fail after a previously good benchmark has been cached, the worker now prefers retaining that last-known-good rate and marks it as degraded fallback (`isFallback: true`) instead of silently publishing it as healthy. The hardcoded fallback is used when no retained benchmark is available.
+**Selection rules:**
 
-**Usage:** The hourly core yield sync reads the cached rate. The scatter plot renders it as a dashed reference line, and `excessYield` is computed against it.
+- USD is the default benchmark for the stack and remains the top-level `riskFreeRate` / `provenance.benchmark`
+- Yield rows switch to a peg-native benchmark when the stablecoin's benchmark currency is supported
+- Rate-derived configs can explicitly override the benchmark key when the asset's benchmark should differ from the peg currency
+- When a native benchmark is unavailable, the row falls back to USD and records `benchmarkSelectionMode: "fallback-usd"`
+
+**Usage:** The hourly core yield sync resolves `excessYield` and rate-derived APY against each row's selected benchmark. Detail cards, hero chips, and history charts render that row-level label. The `/yield` scatter plot only draws a single benchmark reference line when the visible scope shares one benchmark.
 
 ---
 
@@ -421,7 +437,7 @@ CREATE TABLE yield_history (
 2. Fetch DeFiLlama pools (`https://yields.llama.fi/pools`) — circuit-breaker protected
 3. Load the latest cached supplemental-source snapshot from `sync-yield-supplemental`; stale or missing supplemental cache is treated as optional loss, not a publisher hard-stop
 4. Fetch on-chain exchange rates via `eth_call` for `ON_CHAIN_RATE_CONFIGS` entries, unless the deterministic lane is in a cooldown window after consecutive masked all-fail runs
-5. Read cached risk-free rate from D1
+5. Read the cached benchmark registry from D1, with USD as the default benchmark and EUR / CHF available when fetched successfully
 6. Compute safety scores via shared helper `computeSafetyScoresSnapshot(db, { includeNavTokens: true, outputMode: "map" })`; this helper now reuses the same peg-analytics path as `/api/report-cards` so live peg deviation inputs stay aligned across Safety Score and Yield Intelligence. Treat the helper's explicit degraded result as degraded input, and also classify coverage below the minimum ratio as degraded even when the helper itself succeeded
 7. Resolve APY for each yield-bearing coin (Tier 1 → 2 → 3 → 4, potentially multiple sources per coin), reusing cached supplemental families instead of live-fetching them on the publisher path, then append auto-discovered lending rows for any remaining eligible tracked coins
 7. Batch preload source-aware `yield_history` datasets (previous best source, previous TVL by source, 30d APY history by source) and legacy best-history fallbacks, chunking stablecoin ID lists so each D1 statement stays under the 100-bind limit
@@ -433,10 +449,10 @@ CREATE TABLE yield_history (
 13. Prune `yield_history` older than 365 days
 14. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, add read-time `data-stale` warning decoration from `updated_at` age, and include top-level + per-row provenance in the cached rankings payload whenever the payload passes schema validation and the new payload has not collapsed severely versus the previous cache. Safety-degraded runs still publish fresh rankings when the payload is valid but skip `report_card_cache`.
 
-**Degraded semantics:** If `computeSafetyScoresSnapshot()` returns a degraded result, safety coverage is below the minimum ratio (0.75), the benchmark is on a true fallback path (`isFallback === true`), the `fallbackMode` contains `"retained"` (indicating FRED fetch failure with last-known-good retention), the retained last-known-good benchmark is older than 48 hours, DeFiLlama pool inputs are unavailable, the direct DeFiLlama fetch payload is invalid or yields zero relevant stablecoin pools, all configured deterministic on-chain sources fail in the same cycle without full alternative coverage, a deterministic cooldown suppresses on-chain reads but coverage gaps reappear, or rankings publication fails schema/severe-shrink guards, `sync-yield-data` returns `status: "degraded"`. Repeated deterministic all-fail runs that are fully masked by non-onchain coverage now arm a cooldown instead of burning the full deterministic path every hour. Stale or missing supplemental cache does not by itself degrade the hourly publisher; it only reduces optional source coverage. Retained benchmark metadata still appears in rankings provenance via `provenance.benchmark.fallbackMode`, including the last market-derived rate/date/source preserved across fallback streaks. Schema-invalid or severe-shrink runs skip cache overwrite. Safety-degraded runs continue to publish a fresh `yield-rankings` cache when the rankings payload is valid, but they still skip `report_card_cache` writes so the degraded condition remains visible without taking the public API offline.
+**Degraded semantics:** If `computeSafetyScoresSnapshot()` returns a degraded result, safety coverage is below the minimum ratio (0.75), the default USD benchmark is on a true fallback path (`isFallback === true`), the `fallbackMode` contains `"retained"` (indicating a benchmark fetch failure with last-known-good retention), the retained last-known-good USD benchmark is older than 48 hours, DeFiLlama pool inputs are unavailable, the direct DeFiLlama fetch payload is invalid or yields zero relevant stablecoin pools, all configured deterministic on-chain sources fail in the same cycle without full alternative coverage, a deterministic cooldown suppresses on-chain reads but coverage gaps reappear, or rankings publication fails schema/severe-shrink guards, `sync-yield-data` returns `status: "degraded"`. Repeated deterministic all-fail runs that are fully masked by non-onchain coverage now arm a cooldown instead of burning the full deterministic path every hour. Stale or missing supplemental cache does not by itself degrade the hourly publisher; it only reduces optional source coverage. Retained benchmark metadata still appears in rankings provenance via `provenance.benchmark.fallbackMode`, including the last market-derived rate/date/source preserved across fallback streaks. Row-level benchmark provenance also exposes the selected benchmark key, label, rate, fallback state, and selection mode. Schema-invalid or severe-shrink runs skip cache overwrite. Safety-degraded runs continue to publish a fresh `yield-rankings` cache when the rankings payload is valid, but they still skip `report_card_cache` writes so the degraded condition remains visible without taking the public API offline.
 
 Implementation stages:
-- `yield-sync/sources.ts` + `yield-sync/pool-filter.ts`: DL pool loading, wrapper-relevant pool filtering, on-chain reads, risk-free rate cache, price-derived and B.Protocol helpers
+- `yield-sync/sources.ts` + `yield-sync/pool-filter.ts`: DL pool loading, wrapper-relevant pool filtering, on-chain reads, benchmark cache loading, price-derived and B.Protocol helpers
 - `yield-sync/resolve.ts`: per-coin source resolution and auto-discovery candidate shaping
 - `yield-sync/evaluation.ts`: source-aware history normalization, trailing metric computation, confidence arbitration, and source-switch tracking
 - `yield-sync/publication.ts` + `yield-sync/rankings.ts`: persistence helpers, rankings shaping, provenance/warning parsing, TVL-weighted median helper, and cache writes
@@ -468,9 +484,15 @@ It fetches those families, serializes the resolved candidate set into a cache sn
 **Schedule:** `0 8 * * *` (daily lightweight snapshot/fetch lane)
 **File:** `worker/src/cron/fetch-tbill-rate.ts`
 
-Fetches the latest T-bill proxy rate from FRED (`DGS3MO`). Validates the rate (must be 0–20%), stores in cache. Falls back to `RISK_FREE_RATE_FALLBACK` on any failure.
+Fetches the benchmark registry used by Yield Intelligence:
 
-When FRED fails but a prior benchmark exists, the cache now preserves the last market-derived benchmark fields (`lastMarketRate`, `lastMarketRecordDate`, `lastMarketFetchedAt`, `lastMarketSource`) across retained fallback streaks. That lets downstream yield provenance distinguish "still carrying the last market rate" from a hardcoded benchmark floor.
+- USD 3M Treasury yield from FRED `DGS3MO`
+- EUR €STR from FRED `ECBESTRVOLWGTTRMDMNRT`
+- CHF SNB policy rate proxy from the SNB current-rates page
+
+Validated rates must stay within `[-10, 20]` so EUR / CHF support can tolerate negative-rate regimes. The cron writes the structured `"risk_free_rates"` cache and also mirrors USD into the legacy `"risk_free_rate"` key for compatibility.
+
+When a fetch fails but a prior benchmark exists, the cache preserves the last market-derived benchmark fields (`lastMarketRate`, `lastMarketRecordDate`, `lastMarketFetchedAt`, `lastMarketSource`) across retained fallback streaks. That lets downstream yield provenance distinguish "still carrying the last market rate" from a hardcoded or proxy default.
 
 ---
 
@@ -506,6 +528,15 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
       "safetyGrade": "B",
       "yieldToRisk": 0.33,
       "excessYield": 5.95,
+      "benchmarkKey": "USD",
+      "benchmarkLabel": "USD 3M T-Bill",
+      "benchmarkCurrency": "USD",
+      "benchmarkRate": 4.25,
+      "benchmarkRecordDate": "2026-03-25",
+      "benchmarkIsFallback": false,
+      "benchmarkFallbackMode": null,
+      "benchmarkSelectionMode": "native",
+      "benchmarkIsProxy": false,
       "yieldStability": 0.82,
       "apyVariance30d": 2.1,
       "apyMin30d": 7.5,
@@ -530,8 +561,13 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
       }
     }
   ],
-  "riskFreeRate": 3.76,
-  "scalingFactor": 5,
+  "riskFreeRate": 4.25,
+  "benchmarks": {
+    "USD": { "key": "USD", "label": "USD 3M T-Bill", "currency": "USD", "rate": 4.25, "recordDate": "2026-03-25", "source": "fred-dgs3mo", "isFallback": false, "fallbackMode": null, "isProxy": false },
+    "EUR": { "key": "EUR", "label": "EUR €STR", "currency": "EUR", "rate": 1.93, "recordDate": "2026-03-25", "source": "fred-estr", "isFallback": false, "fallbackMode": null, "isProxy": false },
+    "CHF": { "key": "CHF", "label": "CHF SNB policy rate (proxy)", "currency": "CHF", "rate": 0.25, "recordDate": "2025-12-13", "source": "snb-policy-rate", "isFallback": false, "fallbackMode": null, "isProxy": true }
+  },
+  "scalingFactor": 8,
   "medianApy": 4.21,
   "updatedAt": 1772000000
 }
@@ -594,7 +630,7 @@ Each `history` row includes:
 **Layout (top to bottom):**
 
 1. Stale data banner (tracks the hourly core publish lane and warns when rankings are delayed or stale)
-2. Summary stat cards — Average Yield (TVL-weighted), Risk-Free Rate, Best Risk-Adjusted (highest PYS)
+2. Summary stat cards — Average Yield (TVL-weighted), Benchmark / Default Benchmark (USD), Best Risk-Adjusted (highest PYS)
 3. Yield vs Safety scatter plot
 4. Yield leaderboard table
 5. Disclaimer
@@ -603,7 +639,7 @@ Each `history` row includes:
 
 Yield intelligence section for stablecoin detail pages. Shows stat cards (Current APY, 30d APY, PYS with breakdown, Stability, Excess Yield), source info, source links, alt sources, warning callouts, embedded `YieldHistoryChart`, and contextual methodology hints / footer links for PYS and yield stability. Conditional: only renders for coins with yield data.
 
-It reuses the cached `/api/yield-rankings` payload to find the coin's best-source row, surfaces row-level provenance (selection reason, source age, benchmark state, source-switch state), and passes the shared risk-free rate, peer median, and source list into `YieldHistoryChart`.
+It reuses the cached `/api/yield-rankings` payload to find the coin's best-source row, surfaces row-level provenance (selection reason, source age, benchmark state, source-switch state), and passes the selected benchmark context, peer median, and source list into `YieldHistoryChart`.
 
 **Layout (top to bottom):**
 
@@ -622,16 +658,16 @@ The section returns `null` once rankings have loaded and the coin is neither `yi
 
 Recharts scatter chart. X = safety score, Y = APY (%). The chart plots one best-source point per stablecoin, auto-focuses the x-axis on the occupied safety-score band instead of always rendering the full 0-100 range, and keeps the safety threshold at 60 visible for quadrant context. Scatter markers render each stablecoin's logo (with an initial fallback if no logo exists), and yield type information lives in the tooltip instead of a separate legend. Rare high-APY outliers are pinned to a disclosed top rail so one extreme point does not flatten the rest of the plot.
 
-**Quadrants** (divided at safety = 60 and APY = T-bill rate):
+**Quadrants** (divided at safety = 60 and APY = the visible benchmark rate when one shared benchmark exists):
 
 | Quadrant     | Position                  | Color              |
 | ------------ | ------------------------- | ------------------ |
-| Sweet Spot   | High safety, above T-bill | Green (5% opacity) |
-| Danger Zone  | Low safety, above T-bill  | Red (5% opacity)   |
-| Play It Safe | High safety, below T-bill | Blue (5% opacity)  |
-| Why Bother?  | Low safety, below T-bill  | Gray (5% opacity)  |
+| Sweet Spot   | High safety, above benchmark | Green (5% opacity) |
+| Danger Zone  | Low safety, above benchmark  | Red (5% opacity)   |
+| Play It Safe | High safety, below benchmark | Blue (5% opacity)  |
+| Why Bother?  | Low safety, below benchmark  | Gray (5% opacity)  |
 
-Dashed reference line at the T-bill rate. Click a dot to navigate to that coin's detail page.
+Dashed reference line at the shared benchmark rate when the current filter scope is benchmark-homogeneous. Mixed scopes suppress that single line to avoid implying one global hurdle. Click a dot to navigate to that coin's detail page.
 
 ### `YieldLeaderboard` (`src/components/yield-leaderboard.tsx`)
 
@@ -653,13 +689,13 @@ Tab selection and both filters feed rows into the shared sort/pagination pipelin
 
 Stability display multiplies the raw 0–1 value by 100 for both the bar width and the percentage text.
 
-**PYS tooltip:** Hovering a non-null PYS score opens a component breakdown tooltip with Yield Efficiency (`apy30d / riskPenalty`), the APY-to-risk line, Safety (grade + score with `40` fallback), and Consistency (`max(0.3, yieldStability)` shown as a percentage).
+**PYS tooltip:** Hovering a non-null PYS score opens a component breakdown tooltip with Yield Efficiency (`apy30d / adjustedRiskPenalty`), the adjusted risk-penalty line, Safety (grade + score with `40` fallback), and Consistency (`max(0.3, yieldStability)` shown as a percentage).
 
 **Signals column (desktop/tablet):** Rows with no active warnings show an em dash. Rows with one warning show an amber outline alert icon. Rows with two or more warnings show a filled amber icon and an additional subtle amber left border on the row. Hovering the icon opens a tooltip with human-readable warning descriptions (`yield-spike`, `yield-divergence`, `negative-trend`, `reward-heavy`, `tvl-outflow`, `zero-yield`, `data-stale`).
 
 **Alt-sources badge:** When a coin has `altSources.length > 0`, a `+N` pill badge appears next to the source name in the Source column. Clicking it opens a small inline popover listing each alternative source name, clickable source link, and current APY.
 
-**Inline expansion:** Clicking a leaderboard row toggles an inline `YieldHistoryChart` panel directly beneath that row. The expanded panel repeats the selected source as a clickable link above the chart, passes the page-level `riskFreeRate`, `medianApy`, and available source list into compact mode, and only one row can remain expanded at a time.
+**Inline expansion:** Clicking a leaderboard row toggles an inline `YieldHistoryChart` panel directly beneath that row. The expanded panel repeats the selected source as a clickable link above the chart, passes the selected row benchmark, `medianApy`, and available source list into compact mode, and only one row can remain expanded at a time.
 
 ### `YieldHistoryChart` (`src/components/yield-history-chart.tsx`)
 
@@ -670,7 +706,7 @@ The chart now supports source-aware inspection. When alternative sources exist, 
 
 This lets the detail page and leaderboard inspect the actual history of an alternative source instead of only showing its current snapshot.
 
-Recharts line chart. Primary APY line with optional base/reward breakdown toggle. Two reference lines: T-bill rate and peer median APY. Warning signal markers on data points. Time presets: 7d / 30d / 90d / 1y.
+Recharts line chart. Primary APY line with optional base/reward breakdown toggle. Two reference lines: the row's benchmark rate and peer median APY. Warning signal markers on data points. Time presets: 7d / 30d / 90d / 1y.
 
 It reads `/api/yield-history` through `useYieldHistory`, and points carrying `warningSignals` get amber markers so spike/divergence/reward-heavy regimes are visible without expanding the tooltip.
 
@@ -693,10 +729,12 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | ------------------------------- | ----------------------------------------------------------- | ------------------------------------------------ |
 | `RISK_FREE_RATE_FALLBACK`       | 3.75                                                        | Fallback T-bill rate (%)                         |
 | `FRED_TBILL_CSV_URL`            | `https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO` | FRED daily 3-month Treasury yield series         |
-| `PYS_SCALING_FACTOR`            | 5                                                           | PYS distribution tuning parameter                |
+| `FRED_ESTR_CSV_URL`             | `https://fred.stlouisfed.org/graph/fredgraph.csv?id=ECBESTRVOLWGTTRMDMNRT` | FRED daily EUR €STR mirror |
+| `SNB_CURRENT_RATES_URL`         | `https://www.snb.ch/en/the-snb/mandates-goals/statistics/statistics-pub/current_interest_exchange_rates` | SNB current-rates page used for the CHF policy-rate proxy |
+| `PYS_SCALING_FACTOR`            | 8                                                           | PYS distribution tuning parameter after safety-curve steepening |
 | `DEFAULT_SAFETY_SCORE`          | 40                                                          | Safety score for unrated coins (most NAV tokens) |
 | `CIRCUIT_SOURCE.DL_YIELDS`      | `"defillama-yields"`                                        | Circuit breaker key for DL Yields API            |
-| `CIRCUIT_SOURCE.TREASURY_RATES` | `"treasury-rates"`                                          | Circuit breaker key for risk-free rate fetch     |
+| `CIRCUIT_SOURCE.TREASURY_RATES` | `"treasury-rates"`                                          | Circuit breaker key for the benchmark-registry fetch lane |
 
 ---
 
@@ -716,10 +754,10 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 
 **Integration tests:** `worker/src/cron/__tests__/sync-yield-data.test.ts`
 
-- Happy path, stale/orphan cleanup, D1 chunking, cached DL pools, deterministic auto-discovery override, B.Protocol LUSD, DL API failure, circuit breaker open, schema validation, price-derived fallback, source-specific history, legacy history carry-forward, rate-derived, degraded safety coverage
+- Happy path, stale/orphan cleanup, D1 chunking, cached DL pools, deterministic auto-discovery override, B.Protocol LUSD, DL API failure, circuit breaker open, schema validation, price-derived fallback, source-specific history, legacy history carry-forward, rate-derived, degraded safety coverage, and mixed benchmark publication
 - Deterministic/native coexistence: verifies on-chain rows can coexist with curated native rows without source-key collision
 - Auto-discovery labeling: verifies `defillama-auto` rows on yield-bearing coins publish protocol-derived labels and `lending-opportunity`
-- Retained benchmark degradation: verifies retained FRED fallback stays marked degraded in rankings provenance
+- Retained benchmark degradation: verifies retained benchmark fallbacks stay marked degraded in rankings provenance
 
 **Pool-filter tests:** `worker/src/cron/__tests__/pool-filter.test.ts`
 
@@ -729,13 +767,13 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 
 **Resolve/arbitration tests:** `worker/src/cron/__tests__/yield-resolve.test.ts`
 
-- DL curated source selection, deterministic rate-derived preference, cross-source divergence rejection, T-bill excess yield, negative excess yield, hardcoded fallback rate, rate-derived from T-bill, rate floor at zero, yield-spike warning, TVL-outflow warning, stable conditions, PYS computation, PYS=0 for zero APY
+- DL curated source selection, deterministic rate-derived preference, cross-source divergence rejection, benchmark-aware excess yield, negative excess yield, hardcoded fallback rate, rate-derived from benchmark minus spread, rate floor at zero, yield-spike warning, TVL-outflow warning, stable conditions, PYS computation, PYS=0 for zero APY
 - Price-derived as explicit source (Tier 3 path through resolve for navToken coins)
 - Auto-discovery path (non-yield-bearing coin matches a lending pool via `AUTO_LENDING_POOL_MAP`)
 
 **Cache parsing tests:** `worker/src/cron/__tests__/yield-cache.test.ts`
 
-- `parseRiskFreeRateCache` — valid JSON, malformed JSON, missing fields
+- `parseRiskFreeRateCache` / `parseRiskFreeRatesCache` — valid JSON, malformed JSON, missing fields, and negative-rate support for non-USD benchmarks
 - `parseDlStablecoinPoolsCache` — valid JSON, malformed JSON, legacy format, missing fields, cache age computation, stale cache rejection
 
 **Source link tests:** `worker/src/lib/__tests__/yield-source-links.test.ts`
@@ -757,7 +795,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 - **DL Yields circuit-broken:** Tier 2 skipped entirely. Coins with Tier 1 or Tier 3 coverage still get APY. Others get `yield: null`.
 - **Cron gaps (7d filter):** The 7d trailing average uses timestamp-based filtering (`recorded_at >= now - 7d`) rather than proportional slicing, so gaps don't shift the window.
 - **DL pool returns 0% for navToken:** When Tier 2 finds a DL pool but it reports 0% APY, Tier 3 price-derived is tried as an additional source. The `is_best` logic picks the higher APY. This covers upstream DL data staleness and spurious Layer 3 symbol matches.
-- **Dividend-distributing tokens (BUIDL, YLDS):** These maintain a fixed $1.00 NAV and distribute yield as new tokens. Price-derived returns ~0% because the price doesn't change. Resolved via Tier 4 rate-derived, which computes APY from the cached T-bill rate minus the token's management fee spread.
+- **Dividend-distributing tokens (BUIDL, YLDS):** These maintain a fixed $1.00 NAV and distribute yield as new tokens. Price-derived returns ~0% because the price doesn't change. Resolved via Tier 4 rate-derived, which computes APY from the selected benchmark rate minus the token's management fee spread.
 - **Malformed persisted warning payloads:** `yield-history` treats them as `[]` so a single bad row cannot 500 the endpoint.
 
 ---
@@ -773,7 +811,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `worker/src/cron/yield-helpers.ts`                   | Pure functions: APY, PYS, stability, variance, warning signals, `matchAllDlPools`                                                            |
 | `worker/src/cron/yield-sync/pool-filter.ts`          | Pre-filter for wrapper-relevant DeFiLlama pools before matching                                                                               |
 | `worker/src/lib/yield-source-links.ts`               | Curated yield-source link registry plus metadata fallback resolver for rankings/history payloads                                               |
-| `worker/src/cron/fetch-tbill-rate.ts`                | Daily T-bill rate cron                                                                                                                       |
+| `worker/src/cron/fetch-tbill-rate.ts`                | Daily benchmark-registry cron (USD T-bill, EUR €STR, CHF policy-rate proxy)                                                                 |
 | `worker/src/api/cache-handlers.ts`                   | Cache-backed `GET /api/yield-rankings` handler with live Safety Score hydration (`handleYieldRankings`)                                      |
 | `worker/src/api/yield-history.ts`                    | `GET /api/yield-history` handler                                                                                                             |
 | `shared/types/index.ts`                              | `YieldConfig`, `YieldType`, `YieldRanking` (`.altSources: AltYieldSource[]`), `AltYieldSource`, `YieldRankingsResponse`, `YieldHistoryPoint` |
@@ -785,11 +823,11 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `src/app/yield/client.tsx`                           | Interactive page: stats, scatter, leaderboard                                                                                                |
 | `src/components/yield-detail-section.tsx`            | Stablecoin detail-page yield section with warnings, source metadata, metric cards, and shared history chart                                 |
 | `src/components/yield-leaderboard.tsx`               | Sortable rankings table with `+N` alt-source pill badge                                                                                      |
-| `src/components/yield-history-chart.tsx`             | Shared APY history chart with T-bill / peer-median reference lines, optional base-reward split, and warning markers                          |
+| `src/components/yield-history-chart.tsx`             | Shared APY history chart with row-benchmark / peer-median reference lines, optional base-reward split, and warning markers                   |
 | `src/components/yield-scatter-plot.tsx`              | Risk-adjusted scatter visualization                                                                                                          |
 | `worker/src/cron/__tests__/yield-helpers.test.ts`    | Unit tests for all pure yield functions                                                                                                      |
 | `worker/src/cron/__tests__/sync-yield-data.test.ts`  | Integration tests for sync-yield-data orchestration (on-chain, rate-derived, DL, supplemental-cache, cooldown, auto-discovery)              |
 | `worker/src/cron/__tests__/pool-filter.test.ts`      | Tests wrapper-preserving pre-filter behavior for cached/direct DeFiLlama pool ingestion                                                       |
 | `worker/src/cron/__tests__/yield-resolve.test.ts`    | Resolve/arbitration tests (price-derived, auto-discovery, DL source selection, warnings)                                                     |
-| `worker/src/cron/__tests__/yield-cache.test.ts`      | Cache parsing tests for DL pools and risk-free rate cache                                                                                    |
+| `worker/src/cron/__tests__/yield-cache.test.ts`      | Cache parsing tests for DL pools and benchmark caches                                                                                        |
 | `worker/src/lib/__tests__/yield-source-links.test.ts` | Yield source link resolution tests (curated, protocol, metadata fallback)                                                                   |

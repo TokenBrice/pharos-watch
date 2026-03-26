@@ -6,23 +6,23 @@ export function buildYieldSourceProvenance(params: {
   isBest: boolean;
   evaluatedSources: EvaluatedYieldSource[];
   startSec: number;
-  riskFreeRateMeta: YieldBenchmarkMeta;
   dlPoolsMeta: YieldSourceInputMeta;
 }): Record<string, unknown> {
-  const { source, isBest, evaluatedSources, startSec, riskFreeRateMeta, dlPoolsMeta } = params;
+  const { source, isBest, evaluatedSources, startSec, dlPoolsMeta } = params;
+  const benchmarkMeta: YieldBenchmarkMeta = source.benchmarkMeta;
 
   const sourceObservedAt =
     source.sourceObservedAt
     ?? (source.dataSource === "defillama" || source.dataSource === "defillama-auto"
       ? (dlPoolsMeta.updatedAt ?? startSec)
       : source.dataSource === "rate-derived"
-        ? (riskFreeRateMeta.fetchedAt ?? startSec)
+        ? (benchmarkMeta.fetchedAt ?? startSec)
         : startSec);
   const sourceAgeSeconds =
     source.dataSource === "defillama" || source.dataSource === "defillama-auto"
       ? (dlPoolsMeta.ageSeconds ?? Math.max(0, startSec - sourceObservedAt))
       : source.dataSource === "rate-derived"
-        ? (riskFreeRateMeta.ageSeconds ?? Math.max(0, startSec - sourceObservedAt))
+        ? (benchmarkMeta.ageSeconds ?? Math.max(0, startSec - sourceObservedAt))
         : Math.max(0, startSec - sourceObservedAt);
   const comparisonAnchorObservedAt = source.comparisonAnchorObservedAt ?? null;
   const comparisonAnchorAgeSeconds =
@@ -51,9 +51,15 @@ export function buildYieldSourceProvenance(params: {
         : null,
     usedLegacyHistory: source.usedLegacyHistory,
     usedDefaultSafety: source.usedDefaultSafety,
-    benchmarkRecordDate: riskFreeRateMeta.recordDate,
-    benchmarkIsFallback: riskFreeRateMeta.isFallback,
-    benchmarkFallbackMode: riskFreeRateMeta.fallbackMode,
+    benchmarkKey: source.benchmarkKey,
+    benchmarkLabel: source.benchmarkLabel,
+    benchmarkCurrency: source.benchmarkCurrency,
+    benchmarkRate: source.benchmarkRate,
+    benchmarkRecordDate: source.benchmarkRecordDate,
+    benchmarkIsFallback: source.benchmarkIsFallback,
+    benchmarkFallbackMode: source.benchmarkFallbackMode,
+    benchmarkSelectionMode: source.benchmarkSelectionMode,
+    benchmarkIsProxy: source.benchmarkIsProxy,
     anomalies: source.anomalies,
   };
 }

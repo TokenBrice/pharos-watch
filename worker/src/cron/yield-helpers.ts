@@ -16,7 +16,12 @@
 export { buildOnChainSourceKey } from "../lib/yield-utils";
 export const STALE_THRESHOLD_MS = 90 * 60 * 1000; // 3 sync cycles
 
-export { computePYS, PYS_RISK_PENALTY_FLOOR, PYS_SUSTAINABILITY_FLOOR } from "@shared/lib/yield-scoring";
+export {
+  computePYS,
+  PYS_RISK_PENALTY_FLOOR,
+  PYS_RISK_PENALTY_EXPONENT,
+  PYS_SUSTAINABILITY_FLOOR,
+} from "@shared/lib/yield-scoring";
 import { resolveChainId } from "@shared/lib/chains";
 import { normalizeDexSymbol } from "../lib/dex-constants";
 import { normalizeTokenAddress } from "./dex-liquidity/token-resolution";

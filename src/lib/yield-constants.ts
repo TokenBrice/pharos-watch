@@ -1,4 +1,4 @@
-import { computePysComponents } from "@shared/lib/yield-scoring";
+import { computePysComponents, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 
 export const WARNING_SIGNAL_LABELS: Record<string, string> = {
   "yield-spike": "Yield spike",
@@ -32,9 +32,8 @@ export function computePysBreakdown(
   safetyScore: number | null,
   yieldStability: number | null,
 ) {
-  // yieldStability in the API = 1.0 - apyVarianceScore
-  const apyVarianceScore = 1.0 - (yieldStability ?? 1.0);
-  const { riskPenalty, yieldEfficiency, sustainabilityMultiplier } =
+  const apyVarianceScore = yieldStabilityToApyVarianceScore(yieldStability);
+  const { riskPenalty, adjustedRiskPenalty, yieldEfficiency, sustainabilityMultiplier } =
     computePysComponents({ apy30d, safetyScore, apyVarianceScore });
-  return { riskPenalty, yieldEfficiency, sustainabilityMult: sustainabilityMultiplier };
+  return { riskPenalty, adjustedRiskPenalty, yieldEfficiency, sustainabilityMult: sustainabilityMultiplier };
 }

@@ -164,7 +164,7 @@ describe("handleYieldRankings", () => {
         },
       ],
       riskFreeRate: 4.25,
-      scalingFactor: 5,
+      scalingFactor: 8,
       medianApy: 4.2,
       updatedAt,
       provenance: {
@@ -219,21 +219,26 @@ describe("handleYieldRankings", () => {
       _meta: { ageSeconds: number };
     };
     expect(body.rankings).toHaveLength(3);
-    expect(body.rankings.map((row: { id: string }) => row.id)).toEqual(["orphan-coin", "rated-coin", "nr-coin"]);
+    expect(body.rankings.map((row: { id: string }) => row.id)).toEqual(["rated-coin", "orphan-coin", "nr-coin"]);
 
-    expect(body.rankings[0].safetyGrade).toBe("NR");
-    expect(body.rankings[0].safetyScore).toBe(40);
-    expect(body.rankings[0].provenance?.usedDefaultSafety).toBeUndefined();
+    const rankedById = new Map(body.rankings.map((row) => [row.id, row]));
+    const orphan = rankedById.get("orphan-coin");
+    const rated = rankedById.get("rated-coin");
+    const unrated = rankedById.get("nr-coin");
 
-    expect(body.rankings[1].safetyGrade).toBe("B-");
-    expect(body.rankings[1].safetyScore).toBe(66);
-    expect(body.rankings[1].yieldToRisk).toBeCloseTo(5 / 35);
-    expect(body.rankings[1].pharosYieldScore).toBe(11);
-    expect(body.rankings[1].provenance?.usedDefaultSafety).toBe(false);
+    expect(orphan?.safetyGrade).toBe("NR");
+    expect(orphan?.safetyScore).toBe(40);
+    expect(orphan?.provenance?.usedDefaultSafety).toBeUndefined();
 
-    expect(body.rankings[2].safetyGrade).toBe("NR");
-    expect(body.rankings[2].safetyScore).toBe(40);
-    expect(body.rankings[2].provenance?.usedDefaultSafety).toBe(true);
+    expect(rated?.safetyGrade).toBe("B-");
+    expect(rated?.safetyScore).toBe(66);
+    expect(rated?.yieldToRisk).toBeCloseTo(5 / 35);
+    expect(rated?.pharosYieldScore).toBe(12);
+    expect(rated?.provenance?.usedDefaultSafety).toBe(false);
+
+    expect(unrated?.safetyGrade).toBe("NR");
+    expect(unrated?.safetyScore).toBe(40);
+    expect(unrated?.provenance?.usedDefaultSafety).toBe(true);
 
     expect(body.provenance.safetySnapshot).toEqual({
       kind: "ok",
@@ -268,7 +273,7 @@ describe("handleYieldRankings", () => {
     const db = makeCacheDb({
       rankings: [],
       riskFreeRate: 4.25,
-      scalingFactor: 5,
+      scalingFactor: 8,
       medianApy: 4.2,
       updatedAt,
       provenance: null,

@@ -36,9 +36,10 @@ describe("getPysColor", () => {
 
 describe("computePysBreakdown", () => {
   it("computes correct breakdown for typical inputs", () => {
-    const { riskPenalty, yieldEfficiency, sustainabilityMult } = computePysBreakdown(10, 80, 0.9);
+    const { riskPenalty, adjustedRiskPenalty, yieldEfficiency, sustainabilityMult } = computePysBreakdown(10, 80, 0.9);
     expect(riskPenalty).toBeCloseTo(1.05, 2);
-    expect(yieldEfficiency).toBeCloseTo(10 / 1.05, 1);
+    expect(adjustedRiskPenalty).toBeCloseTo(Math.pow(1.05, 1.75), 2);
+    expect(yieldEfficiency).toBeCloseTo(10 / Math.pow(1.05, 1.75), 1);
     expect(sustainabilityMult).toBeCloseTo(0.9, 2);
   });
 

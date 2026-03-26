@@ -2,6 +2,7 @@ import type { ReportCard } from "@shared/types/report-cards";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { YieldRankingsResponseSchema, type YieldRanking, type YieldRankingsResponse } from "@shared/types/yield";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 import {
   addFreshnessHeaders,
   buildFreshnessMeta,
@@ -27,11 +28,12 @@ export const handleUsdsStatus = createCacheHandler("usds-status", "usds-status",
 const YIELD_RANKINGS_MAX_AGE_SEC = CRON_INTERVALS["sync-yield-data"];
 
 function recomputeYieldScore(row: YieldRanking, safetyInputScore: number, scalingFactor: number): number {
-  if (row.apy30d <= 0) return 0;
-  const riskPenalty = Math.max(0.5, (101 - safetyInputScore) / 20);
-  const yieldEfficiency = row.apy30d / riskPenalty;
-  const sustainabilityMult = Math.max(0.3, row.yieldStability ?? 1);
-  return Math.min(100, Math.round(yieldEfficiency * sustainabilityMult * scalingFactor));
+  return computePYS({
+    apy30d: row.apy30d,
+    safetyScore: safetyInputScore,
+    apyVarianceScore: yieldStabilityToApyVarianceScore(row.yieldStability),
+    scalingFactor,
+  });
 }
 
 function hydrateYieldRankingsWithLiveSafety(

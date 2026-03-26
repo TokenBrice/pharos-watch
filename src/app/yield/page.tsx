@@ -27,7 +27,7 @@ const faqJsonLd = {
       name: "What is the Pharos Yield Score (PYS)?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "The Pharos Yield Score (PYS) is a risk-adjusted yield metric scored 0–100 that balances yield magnitude against safety and consistency. It divides the 30-day average APY by a risk penalty derived from the stablecoin's safety grade, then applies a sustainability multiplier based on APY volatility over the same period. Higher-safety stablecoins incur a lower risk penalty, so their PYS reflects their yield more faithfully.",
+        text: "The Pharos Yield Score (PYS) is a risk-adjusted yield metric scored 0–100 that balances yield magnitude against safety and consistency. It divides the 30-day average APY by a safety-derived risk penalty raised to a fixed exponent, then applies a sustainability multiplier based on APY volatility over the same period. Higher-safety stablecoins incur a much lower adjusted penalty, so moderate but durable yield can compete with riskier double-digit offers.",
       },
     },
     {
@@ -43,7 +43,7 @@ const faqJsonLd = {
       name: "What does 'risk-adjusted' mean for stablecoin yield?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Risk-adjusted yield accounts for the safety of the stablecoin issuing the yield, not just the raw APY. A stablecoin with a high safety grade (A or A+) receives a low risk penalty in the PYS formula, so even a moderate APY can score well. Conversely, a risky stablecoin must offer significantly higher raw yield to achieve the same PYS, reflecting the extra risk borne by the holder.",
+        text: "Risk-adjusted yield accounts for the safety of the stablecoin issuing the yield, not just the raw APY. A stablecoin with a high safety grade (A or A+) receives a much lighter adjusted penalty in the PYS formula, so even a moderate APY can score well. Conversely, a risky stablecoin must offer meaningfully higher raw yield to achieve the same PYS, reflecting the extra risk borne by the holder.",
       },
     },
   ],

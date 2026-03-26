@@ -17,6 +17,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useYieldHistory } from "@/hooks/api-hooks";
 import { CHART_AMBER, CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
 import { DAY_MS } from "@/lib/constants";
+import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import { formatYieldWarningSignal } from "@/lib/yield-constants";
 import { cn } from "@/lib/utils";
 import type { YieldHistoryPoint } from "@shared/types";
@@ -27,7 +28,9 @@ const PRESET_DAYS = [7, 30, 90, 365] as const;
 
 interface YieldHistoryChartProps {
   stablecoinId: string;
-  riskFreeRate: number;
+  benchmarkRate: number;
+  benchmarkLabel?: string;
+  benchmarkIsFallback?: boolean;
   medianApy: number;
   defaultDays?: number;
   compact?: boolean;
@@ -308,7 +311,9 @@ function YieldHistoryTooltip({
 
 export function YieldHistoryChart({
   stablecoinId,
-  riskFreeRate,
+  benchmarkRate,
+  benchmarkLabel,
+  benchmarkIsFallback = false,
   medianApy,
   defaultDays = DEFAULT_DAYS,
   compact = false,
@@ -361,14 +366,14 @@ export function YieldHistoryChart({
 
   const yDomain = useMemo(() => {
     if (chartData.length === 0) {
-      const minRef = Math.min(0, riskFreeRate, medianApy > 0 ? medianApy : 0);
-      const maxRef = Math.max(riskFreeRate, medianApy, 1);
+      const minRef = Math.min(0, benchmarkRate, medianApy > 0 ? medianApy : 0);
+      const maxRef = Math.max(benchmarkRate, medianApy, 1);
       return [minRef - 1, maxRef + 1] as const;
     }
 
     const values = [
       ...chartData.map((point) => point.apy),
-      riskFreeRate,
+      benchmarkRate,
     ];
 
     if (medianApy > 0) {
@@ -388,12 +393,16 @@ export function YieldHistoryChart({
     const padding = Math.max(span * 0.08, 0.5);
 
     return [min - padding, max + padding] as const;
-  }, [chartData, effectiveShowBreakdown, medianApy, riskFreeRate]);
+  }, [benchmarkRate, chartData, effectiveShowBreakdown, medianApy]);
 
   const chartHeightClass = compact ? "h-[200px]" : "h-[300px]";
   const referenceLabelStyle = compact
     ? undefined
     : { fill: "var(--color-muted-foreground)", fontSize: 10, position: "right" as const };
+  const resolvedBenchmarkLabel = getYieldBenchmarkDisplayLabel({
+    benchmarkLabel,
+    benchmarkIsFallback,
+  });
 
   if (historyQuery.isLoading) {
     return (
@@ -507,13 +516,13 @@ export function YieldHistoryChart({
                 content={<YieldHistoryTooltip showBreakdown={effectiveShowBreakdown} compact={compact} />}
               />
               <ReferenceLine
-                y={riskFreeRate}
+                y={benchmarkRate}
                 stroke={CHART_SLATE}
                 strokeOpacity={0.8}
                 strokeDasharray="6 4"
                 label={
                   referenceLabelStyle
-                    ? { ...referenceLabelStyle, value: "T-Bill" }
+                    ? { ...referenceLabelStyle, value: resolvedBenchmarkLabel }
                     : undefined
                 }
               />
@@ -594,8 +603,8 @@ export function YieldHistoryChart({
       </ChartShell>
       <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
-          <span className="font-mono tabular-nums">{formatChartNumber(riskFreeRate)}%</span>
-          T-Bill reference
+          <span className="font-mono tabular-nums">{formatChartNumber(benchmarkRate)}%</span>
+          {resolvedBenchmarkLabel} reference
         </span>
         {medianApy > 0 ? (
           <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
