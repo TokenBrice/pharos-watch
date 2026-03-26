@@ -249,6 +249,7 @@ import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import * as safetyScoresModule from "../../lib/safety-scores";
 import * as yieldConfigModule from "../yield-config";
 import * as yieldHelpersModule from "../yield-helpers";
@@ -838,21 +839,53 @@ describe("syncYieldData", () => {
   });
 
   it("returns early with itemCount 0 when no yield-bearing coins exist", async () => {
-    // Override TRACKED_STABLECOINS to have no yield-bearing coins
-    // We can test this by checking the case where yieldCoins is empty
-    // Since we can't easily re-mock the stablecoins list mid-test,
-    // we verify the function handles the "no yield data resolved" case
+    const originalYieldCoins = [...ACTIVE_YIELD_BEARING_STABLECOINS];
     const db = makeDb();
-    vi.mocked(getCache).mockResolvedValue(null);
-    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
 
+    ACTIVE_YIELD_BEARING_STABLECOINS.splice(0, ACTIVE_YIELD_BEARING_STABLECOINS.length);
+
+    try {
+      const result = await syncYieldData(db);
+
+      expect(result.itemCount).toBe(0);
+      expect(result.metadata).toBe("no yield-bearing coins");
+      expect(shouldAttemptFetch).not.toHaveBeenCalled();
+      expect(batchExecute).not.toHaveBeenCalled();
+    } finally {
+      ACTIVE_YIELD_BEARING_STABLECOINS.push(...originalYieldCoins);
+    }
+  });
+
+  it("returns degraded when published yield-bearing coverage regresses against the previous rankings snapshot", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "yield-rankings") {
+        return {
+          value: JSON.stringify({
+            rankings: Array.from({ length: 10 }, () => ({ id: "100" })),
+          }),
+          updatedAt: nowSec,
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
 
     const result = await syncYieldData(db);
 
-    // With no pools available, yield resolution produces 0 updates
-    expect(result.itemCount).toBe(0);
-    expect(typeof result.metadata).toBe("string");
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      reason: string | null;
+      previousPublishedYieldBearingCount: number;
+      currentPublishedYieldBearingCount: number;
+    };
+    expect(metadata.reason).toBe("published-yield-coverage-regression");
+    expect(metadata.previousPublishedYieldBearingCount).toBe(10);
+    expect(metadata.currentPublishedYieldBearingCount).toBe(0);
+    expect(batchExecute).not.toHaveBeenCalled();
   });
 
   it("skips yield-rankings cache write when response payload fails schema validation", async () => {
@@ -881,6 +914,53 @@ describe("syncYieldData", () => {
     const cacheCalls = vi.mocked(setCache).mock.calls;
     const wroteYieldRankings = cacheCalls.some((call) => call[1] === "yield-rankings");
     expect(wroteYieldRankings).toBe(false);
+  });
+
+  it("marks the run degraded when yield-rankings cache persistence fails after data is written", async () => {
+    const db = makeDb();
+    mockHealthyRiskFreeRateCache();
+
+    vi.spyOn(publicationModule, "writeYieldRankingsCache").mockResolvedValue({
+      ok: false,
+      validationFailures: 2,
+      reason: "schema-validation-failed",
+    });
+    mockFetch([
+      {
+        match: "yields.llama.fi",
+        body: {
+          data: [
+            {
+              pool: "pool-sdai-1",
+              chain: "Ethereum",
+              project: "maker",
+              symbol: "sDAI",
+              tvlUsd: 1_000_000_000,
+              apy: 5.2,
+              apyBase: 5.2,
+              apyReward: null,
+              apyMean30d: 5.1,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ],
+        },
+      },
+    ]);
+
+    const result = await syncYieldData(db);
+
+    expect(result.status).toBe("degraded");
+    expect(batchExecute).toHaveBeenCalled();
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      fallbackMode: string | null;
+      validationFailures: number | null;
+      cacheWriteSkipped: boolean;
+    };
+    expect(metadata.fallbackMode ?? "").toContain("schema-validation-failed");
+    expect(metadata.validationFailures).toBe(2);
+    expect(metadata.cacheWriteSkipped).toBe(true);
   });
 
   it("tries price-derived as additional source when DL returns 0% APY for navToken", async () => {
