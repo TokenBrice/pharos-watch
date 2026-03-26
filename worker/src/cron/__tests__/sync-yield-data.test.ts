@@ -1400,6 +1400,64 @@ describe("syncYieldData", () => {
     onChainConfigs.length = 0;
   });
 
+  it("keeps the run healthy when deterministic on-chain reads fail but every affected coin has non-onchain coverage", async () => {
+    const onChainConfigs = yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+    onChainConfigs.push({
+      stablecoinId: "100",
+      chain: "ethereum",
+      contract: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+      selector: "0x07a2d13a",
+      decimals: 18,
+      inputAmount: "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+    });
+
+    const db = makeDb();
+    mockHealthyRiskFreeRateCache();
+    mockFetch([
+      {
+        match: "yields.llama.fi",
+        body: {
+          data: [
+            {
+              pool: "pool-sdai-1",
+              chain: "Ethereum",
+              project: "maker",
+              symbol: "sDAI",
+              tvlUsd: 1_000_000_000,
+              apy: 5.2,
+              apyBase: 5.2,
+              apyReward: null,
+              apyMean30d: 5.1,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ],
+        },
+      },
+    ]);
+
+    const result = await syncYieldData(db);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      fallbackMode?: string | null;
+      sourceCoverage?: {
+        onChainAllDeterministicFailed?: boolean;
+        onChainFailureMaskedByAlternativeCoverage?: boolean;
+        onChainAlternativeCoverageMissingIds?: string[];
+        onChainFailures?: Record<string, number> | null;
+      };
+    };
+
+    expect(result.status).toBeUndefined();
+    expect(metadata.fallbackMode).toBeNull();
+    expect(metadata.sourceCoverage?.onChainAllDeterministicFailed).toBe(true);
+    expect(metadata.sourceCoverage?.onChainFailureMaskedByAlternativeCoverage).toBe(true);
+    expect(metadata.sourceCoverage?.onChainAlternativeCoverageMissingIds).toEqual([]);
+    expect(metadata.sourceCoverage?.onChainFailures).toEqual({ "no-chain-rpcs": 1 });
+
+    onChainConfigs.length = 0;
+  });
+
   it("falls back to the secondary RPC URL before degrading the deterministic lane", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const onChainConfigs = yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;

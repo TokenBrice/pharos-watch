@@ -31,6 +31,7 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
 ## Failure Semantics
 
 - Deterministic on-chain rows, curated DeFiLlama rows, price-derived rows, and rate-derived rows remain the primary publication path.
+- A fully failed deterministic on-chain lane only degrades the cron when it leaves at least one configured coin without a non-onchain evaluated source in the same run; otherwise the run stays healthy and records the masked failure in metadata.
 - When an optional source budget is exhausted, the cron logs a warning and continues with the best remaining data instead of timing out the entire run.
 - Chain-looped optional families keep any partial results they already collected before the budget expires.
 - The intended failure mode for optional upstream stress is reduced supplemental coverage, not a missing `yield-rankings` publish.

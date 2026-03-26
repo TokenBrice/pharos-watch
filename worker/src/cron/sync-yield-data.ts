@@ -205,6 +205,22 @@ export async function syncYieldData(
     prevBestSourceKeyByCoin,
   });
 
+  const deterministicSourceIds = Array.from(
+    new Set(ON_CHAIN_RATE_CONFIGS.map((config) => config.stablecoinId)),
+  );
+  const nonOnchainEvaluatedIds = new Set(
+    evaluatedSources
+      .filter((source) => source.dataSource !== "onchain")
+      .map((source) => source.id),
+  );
+  const onChainAlternativeCoverageMissingIds = deterministicSourceIds.filter(
+    (id) => !nonOnchainEvaluatedIds.has(id),
+  );
+  const maskedAllDeterministicFailure =
+    allDeterministicFailed &&
+    deterministicSourceIds.length > 0 &&
+    onChainAlternativeCoverageMissingIds.length === 0;
+
   {
     const nativeApyByCoin = new Map<string, number>();
     const lendingApyByCoin = new Map<string, number>();
@@ -334,7 +350,13 @@ export async function syncYieldData(
     degradationReasons.push(`dl-pools:${dlPoolsMeta.fallbackMode ?? dlPoolsMeta.mode}`);
   }
   if (allDeterministicFailed) {
-    degradationReasons.push("onchain-rates:all-deterministic-failed");
+    if (maskedAllDeterministicFailure) {
+      console.warn(
+        "[sync-yield-data] Deterministic on-chain lane failed, but all configured coins retained non-onchain yield coverage",
+      );
+    } else {
+      degradationReasons.push("onchain-rates:all-deterministic-failed");
+    }
   }
 
   const previewPublishability = await validateYieldRankingsPayloadForPublish(db, previewRankingsPayload);
@@ -400,6 +422,8 @@ export async function syncYieldData(
         onChainAllDeterministicFailed: allDeterministicFailed,
         onChainExplorerAttempted: onChainExplorerAttemptedCount,
         onChainExplorerResolved: onChainExplorerResolvedCount,
+        onChainFailureMaskedByAlternativeCoverage: maskedAllDeterministicFailure,
+        onChainAlternativeCoverageMissingIds,
         onChainFailures: onChainFailures,
       },
       fallbackMode: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
