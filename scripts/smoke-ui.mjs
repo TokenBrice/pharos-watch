@@ -160,7 +160,13 @@ function buildSmokeRunCode(config) {
   const serialized = JSON.stringify(config);
   return `async (page) => {
   const config = ${serialized};
-  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const waitForRetryDelay = async (ms) => {
+    if (typeof page.waitForTimeout === "function") {
+      await page.waitForTimeout(ms);
+      return;
+    }
+    await page.evaluate((timeoutMs) => new Promise((resolve) => window.setTimeout(resolve, timeoutMs)), ms);
+  };
   const joinUrl = (baseUrl, route) => {
     const normalizedRoute = !route || route === "/" ? "/" : route.startsWith("/") ? route : \`/\${route}\`;
     if (normalizedRoute === "/") {
@@ -338,7 +344,7 @@ function buildSmokeRunCode(config) {
       break;
     }
     if (attempt < config.uiRetryCount) {
-      await delay(config.uiRetryDelayMs);
+      await waitForRetryDelay(config.uiRetryDelayMs);
       await page.goto(config.baseUrl, { timeout: config.waitTimeoutMs, waitUntil: "domcontentloaded" });
     }
   }
