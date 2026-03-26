@@ -1,3 +1,6 @@
+import { buildPoolIdentity, type PoolIdentity } from "./pool-identity";
+import type { DexApiPool } from "../../lib/dex-api-common";
+
 export function normalizeFeeRateFromBps(feeBps: number | null | undefined): number | null {
   if (feeBps == null || !Number.isFinite(feeBps) || feeBps <= 0) return null;
   return feeBps / 10_000;
@@ -12,4 +15,21 @@ export function classifyClPoolType(
   if (normalizedFeeBps <= 1) return `${prefix}-1bp`;
   if (normalizedFeeBps <= 5) return `${prefix}-5bp`;
   return `${prefix}-30bp`;
+}
+
+function deriveDirectApiFeeTierBps(pool: DexApiPool): number | null {
+  if (pool.feeRate == null || !Number.isFinite(pool.feeRate) || pool.feeRate <= 0) return null;
+  return Math.round(pool.feeRate * 10_000 * 100) / 100;
+}
+
+export function buildDirectApiPoolIdentity(pool: DexApiPool): PoolIdentity {
+  return buildPoolIdentity({
+    chain: pool.chain,
+    protocol: pool.source,
+    poolAddressOrId: pool.poolAddress,
+    tokenAddresses: pool.tokens.map((token) => token.address),
+    poolType: pool.poolType,
+    feeTierBps: deriveDirectApiFeeTierBps(pool),
+    isStable: pool.poolType.includes("stable") || pool.poolType.includes("fluid"),
+  });
 }

@@ -1,7 +1,7 @@
 import { StablecoinListResponseSchema } from "@shared/types/market";
 import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
-import { setCacheIfNewer, getCache } from "../../lib/db-cache";
+import { setCacheIfNewer, getCache, getPriceCache, type PriceCacheEntry } from "../../lib/db-cache";
 import type { CronResult } from "../../lib/cron-logger";
 import type { PeggedAsset } from "../enrich-prices";
 import type { PriceValidationReferences } from "../../lib/price-validation";
@@ -221,6 +221,17 @@ export async function loadPreviousStablecoinsById(db: D1Database): Promise<Map<s
   } catch (err) {
     console.warn("[sync-stablecoins] Failed to parse previous stablecoins cache:", err);
     return new Map();
+  }
+}
+
+export async function loadReplayPriceCacheForTrustedContinuity(
+  db: D1Database,
+): Promise<Map<string, PriceCacheEntry>> {
+  try {
+    return await getPriceCache(db);
+  } catch (error) {
+    console.warn("[sync-stablecoins] Failed to load replay price cache for trusted-price continuity:", error);
+    return new Map<string, PriceCacheEntry>();
   }
 }
 

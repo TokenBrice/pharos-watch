@@ -1,5 +1,5 @@
 import { buildSyncMetadata } from "./shared";
-import { detectPriceStaleness } from "./stages";
+import { detectPriceStaleness, fillMissingSupplyHistory } from "./stages";
 import { reportCronProgress } from "../../lib/cron-progress";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import type { PeggedAsset } from "../enrich-prices";
@@ -49,6 +49,26 @@ export function abortResult(signal: AbortSignal | undefined, stage: string): Cro
 export function returnIfAborted(signal: AbortSignal | undefined, stage: string): CronResult | null {
   if (!signal?.aborted) return null;
   return abortResult(signal, stage);
+}
+
+export async function fillStablecoinsSupplyHistoryStage(
+  db: D1Database,
+  assets: PeggedAsset[],
+  signal?: AbortSignal,
+): Promise<CronResult | null> {
+  try {
+    const fillAbort = returnIfAborted(signal, "fill-supply-history");
+    if (fillAbort) return fillAbort;
+    const fillCount = await fillMissingSupplyHistory(db, assets, signal);
+    if (fillCount > 0) {
+      console.log(`[sync-stablecoins] Filled ${fillCount} missing supply changes from supply_history`);
+    }
+  } catch (err) {
+    if (signal?.aborted) return abortResult(signal, "fill-supply-history");
+    console.warn("[sync-stablecoins] supply_history fallback failed:", err);
+  }
+
+  return null;
 }
 
 function buildStalenessSummaryMetadata(staleness: {

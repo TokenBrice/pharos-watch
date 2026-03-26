@@ -4,13 +4,10 @@ import {
   fetchPrimaryPrices,
   runGtProbePass,
 } from "./enrich-prices";
-import type { PeggedAsset } from "./enrich-prices";
-import {
-  fillMissingSupplyHistory,
-} from "./sync-stablecoins/stages";
 import {
   buildSyncMetadata,
   loadFreshFxRates,
+  loadReplayPriceCacheForTrustedContinuity,
   stampPriceMetadata,
   type CronResult,
 } from "./sync-stablecoins/shared";
@@ -36,6 +33,7 @@ import { queueTrackedAdditionsNotice } from "./sync-stablecoins/telegram-tracked
 import {
   abortResult,
   checkStablecoinsPriceStaleness,
+  fillStablecoinsSupplyHistoryStage,
   reportStablecoinsStage,
   returnIfAborted,
 } from "./sync-stablecoins/runtime";
@@ -45,18 +43,6 @@ import { CIRCUIT_SOURCE } from "../lib/constants";
 import { recordOutcome } from "../lib/circuit-breaker";
 import { fetchAuthoritativeLivePriceOverrides } from "../lib/authoritative-price-sources";
 import type { CronProgressReporter } from "../lib/cron-logger";
-import { getPriceCache, type PriceCacheEntry } from "../lib/db-cache";
-
-async function loadReplayPriceCacheForTrustedContinuity(
-  db: D1Database,
-): Promise<Map<string, PriceCacheEntry>> {
-  try {
-    return await getPriceCache(db);
-  } catch (error) {
-    console.warn("[sync-stablecoins] Failed to load replay price cache for trusted-price continuity:", error);
-    return new Map<string, PriceCacheEntry>();
-  }
-}
 
 export async function syncStablecoins(
   db: D1Database,
@@ -219,7 +205,7 @@ export async function syncStablecoins(
     },
   });
 
-  const fillSupplyHistoryResult = await fillStablecoinsSupplyHistoryFromSnapshots(db, assets, signal);
+  const fillSupplyHistoryResult = await fillStablecoinsSupplyHistoryStage(db, assets, signal);
   if (fillSupplyHistoryResult) return fillSupplyHistoryResult;
 
   const stalenessCheck = await checkStablecoinsPriceStaleness({
@@ -349,24 +335,4 @@ export async function syncStablecoins(
     },
   });
   return result;
-}
-
-async function fillStablecoinsSupplyHistoryFromSnapshots(
-  db: D1Database,
-  assets: PeggedAsset[],
-  signal?: AbortSignal,
-): Promise<CronResult | null> {
-  try {
-    const fillAbort = returnIfAborted(signal, "fill-supply-history");
-    if (fillAbort) return fillAbort;
-    const fillCount = await fillMissingSupplyHistory(db, assets, signal);
-    if (fillCount > 0) {
-      console.log(`[sync-stablecoins] Filled ${fillCount} missing supply changes from supply_history`);
-    }
-  } catch (err) {
-    if (signal?.aborted) return abortResult(signal, "fill-supply-history");
-    console.warn("[sync-stablecoins] supply_history fallback failed:", err);
-  }
-
-  return null;
 }

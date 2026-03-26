@@ -1,71 +1,42 @@
 import type { CronResult } from "../../lib/cron-logger";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { LiquidityMetrics, LlamaPool } from "./types";
-import { CRAWL_BUDGETS } from "../../lib/rate-limit";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
-import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
+import { throwIfAborted } from "../../lib/abort";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
-import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
-import { classifyPrimaryDepegTrust } from "../../lib/depeg-helpers";
-import type { DexPriceObs } from "./types";
 import { buildSymbolLookups, classifyPoolType } from "./pool-helpers";
 import {
-  fetchDataSources, buildCurveLookups, fetchUniV3Data,
-  fetchAerodromeData, buildKnownPoolAddresses,
+  fetchDataSources, buildCurveLookups, buildKnownPoolAddresses,
 } from "./fetch-primary";
 import { publishDexPriceChallengerSnapshots } from "./challenger-persistence";
 import { processPoolMetrics } from "./process-pools";
 import { mergeStagedPools } from "./staging-merge";
-import { mergeGtPools } from "./fetch-crawlers";
-import { fetchDsFallbackPools, fetchCgTickersFallback, getFallbackTargets } from "./fetch-fallbacks";
 import { computeStablecoinScores, computeDepthStability, computeDexPrices } from "./scoring";
 import { persistScores, writeHistoricalSnapshots } from "./persistence";
-import { fetchFluidPools } from "./fetch-fluid";
-import { fetchBalancerPools } from "./fetch-balancer";
-import { fetchRaydiumPools } from "./fetch-raydium";
-import { fetchOrcaPools } from "./fetch-orca";
-import { fetchMeteoraPools } from "./fetch-meteora";
-import { fetchPancakeSwapPools } from "./fetch-pancakeswap";
-import { fetchSlipstreamPools } from "./fetch-slipstream";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
 import {
-  convertToGtNewPools,
-  extractPriceObservations,
-  hydrateDirectApiPoolMetadata,
-  isEligibleDirectApiPool,
   isPreferredDirectApiPool,
-  makeDexApiFetchResult,
-  type DexApiFetchResult,
   type DexApiPool,
 } from "../../lib/dex-api-common";
-import { CIRCUIT_SOURCE, POOL_CHALLENGE_MIN_TVL } from "../../lib/constants";
-import { shouldAttemptFetch, recordOutcomeSafe } from "../../lib/circuit-breaker";
+import { POOL_CHALLENGE_MIN_TVL } from "../../lib/constants";
+import { buildDirectApiPoolIdentity } from "./direct-source-helpers";
+import {
+  buildDexDirectApiFetchers,
+  fetchSubgraphEnrichmentPhase,
+  integrateDirectApiLiquidityPhase,
+  loadTrackedStablecoinPriceMap,
+  mergeDexPriceObservationMap,
+  runDirectApiFetchPhase,
+  runFallbackCrawlerPhase,
+} from "./orchestrator-phases";
 import {
   buildPoolIdentity,
   countPoolIdentityKeys,
   createKnownPoolIdentityIndex,
   getIdentityDedupReason,
   registerKnownPoolIdentity,
-  type PoolIdentity,
 } from "./pool-identity";
-
-function deriveDirectApiFeeTierBps(pool: DexApiPool): number | null {
-  if (pool.feeRate == null || !Number.isFinite(pool.feeRate) || pool.feeRate <= 0) return null;
-  return Math.round(pool.feeRate * 10_000 * 100) / 100;
-}
-
-function buildDirectApiPoolIdentity(pool: DexApiPool): PoolIdentity {
-  return buildPoolIdentity({
-    chain: pool.chain,
-    protocol: pool.source,
-    poolAddressOrId: pool.poolAddress,
-    tokenAddresses: pool.tokens.map((token) => token.address),
-    poolType: pool.poolType,
-    feeTierBps: deriveDirectApiFeeTierBps(pool),
-    isStable: pool.poolType.includes("stable") || pool.poolType.includes("fluid"),
-  });
-}
 
 const DRIFT_WATCHLIST = [
   "usdc-circle",
@@ -199,30 +170,7 @@ export async function syncDexLiquidity(
   console.log(`[dex-liquidity] Starting sync`);
   throwIfAborted(signal);
   const validationReferences = await loadPriceValidationReferences(db);
-  const stablecoinPriceById = new Map<string, number>();
-  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
-  if (hasUsableStablecoinsPayload(stablecoinsCache)) {
-    let skippedWeakTrackedPrices = 0;
-    for (const asset of stablecoinsCache.payload.peggedAssets) {
-      if (
-        asset.price != null &&
-        Number.isFinite(asset.price) &&
-        asset.price > 0 &&
-        classifyPrimaryDepegTrust(asset, syncStartSec) === "authoritative"
-      ) {
-        stablecoinPriceById.set(asset.id, asset.price);
-      } else {
-        skippedWeakTrackedPrices++;
-      }
-    }
-    if (skippedWeakTrackedPrices > 0) {
-      console.log(
-        `[dex-liquidity] Ignoring ${skippedWeakTrackedPrices} tracked stablecoin price(s) as weak/stale quote legs`,
-      );
-    }
-  } else {
-    console.warn("[dex-liquidity] Stablecoins cache unavailable for tracked quote pricing; using reference-only fallback");
-  }
+  const stablecoinPriceById = await loadTrackedStablecoinPriceMap(db, syncStartSec);
 
   // 1. Fetch all external data sources
   const dataSources = await fetchDataSources(graphApiKey, db, signal);
@@ -259,149 +207,32 @@ export async function syncDexLiquidity(
     validationReferences,
   );
 
-  // Defer direct API fetches until after subgraph enrichment so we do not overlap
-  // their connection usage with UniV3/Aerodrome fan-out in the same trigger.
-  const directApiFetchers: Array<{ name: string; circuitKey: string; fn: (s?: AbortSignal) => Promise<DexApiFetchResult> }> = [
-    { name: "Fluid", circuitKey: CIRCUIT_SOURCE.FLUID_DEX_API, fn: (fetchSignal) => fetchFluidPools(fetchSignal, chainRpcs) },
-    { name: "Balancer", circuitKey: CIRCUIT_SOURCE.BALANCER_API, fn: fetchBalancerPools },
-    { name: "PancakeSwap", circuitKey: CIRCUIT_SOURCE.PANCAKESWAP_API, fn: (fetchSignal) => fetchPancakeSwapPools(graphApiKey, fetchSignal) },
-    { name: "Meteora", circuitKey: CIRCUIT_SOURCE.METEORA_API, fn: fetchMeteoraPools },
-    { name: "Raydium", circuitKey: CIRCUIT_SOURCE.RAYDIUM_API, fn: fetchRaydiumPools },
-    { name: "Orca", circuitKey: CIRCUIT_SOURCE.ORCA_API, fn: fetchOrcaPools },
-    {
-      name: "Aerodrome Slipstream",
-      circuitKey: CIRCUIT_SOURCE.AERODROME_SLIPSTREAM_API,
-      fn: (fetchSignal) =>
-        fetchSlipstreamPools(
-          "aerodrome-slipstream",
-          chainAddressToId,
-          symbolToChainScopedIds,
-          stablecoinPriceById,
-          fetchSignal,
-          chainRpcs,
-        ),
-    },
-    {
-      name: "Velodrome Slipstream",
-      circuitKey: CIRCUIT_SOURCE.VELODROME_SLIPSTREAM_API,
-      fn: (fetchSignal) =>
-        fetchSlipstreamPools(
-          "velodrome-slipstream",
-          chainAddressToId,
-          symbolToChainScopedIds,
-          stablecoinPriceById,
-          fetchSignal,
-          chainRpcs,
-        ),
-    },
-  ];
+  const directApiFetchers = buildDexDirectApiFetchers({
+    graphApiKey,
+    chainAddressToId,
+    symbolToChainScopedIds,
+    stablecoinPriceById,
+    chainRpcs,
+  });
+  const subgraphEnrichment = await fetchSubgraphEnrichmentPhase({
+    graphApiKey,
+    symbolToIds,
+    symbolToChainScopedIds,
+    chainAddressToId,
+    signal,
+    validationReferences,
+  });
+  failedSources.push(...subgraphEnrichment.failedSources);
 
-  // 4. Fetch Uniswap V3 subgraph data for fee tier enrichment + price observations
-  let uniV3PoolFees = new Map<string, number>();
-  let uniV3SymbolFees = new Map<string, number>();
-  let uniV3PriceObs = new Map<string, DexPriceObs[]>();
-  try {
-    const uniV3Data = await fetchUniV3Data(
-      graphApiKey,
-      symbolToIds,
-      symbolToChainScopedIds,
-      chainAddressToId,
-      signal,
-      validationReferences,
-    );
-    uniV3PoolFees = uniV3Data.uniV3PoolFees;
-    uniV3SymbolFees = uniV3Data.uniV3SymbolFees;
-    uniV3PriceObs = uniV3Data.uniV3PriceObs;
-  } catch (err) {
-    rethrowIfAborted(err, signal);
-    console.warn("[dex-liquidity] UniV3 fetch failed (non-fatal):", err);
-    failedSources.push("univ3-subgraph");
-  }
+  const directApiPhase = await runDirectApiFetchPhase(db, directApiFetchers, signal);
+  failedSources.push(...directApiPhase.failedSources);
+  fallbackSignals.push(...directApiPhase.fallbackSignals);
 
-  // 4b. Fetch Aerodrome subgraph data for price observations + pool stability flags
-  let aerodromePriceObs = new Map<string, DexPriceObs[]>();
-  let aerodromeIsStable = new Map<string, boolean>();
-  try {
-    const aeroData = await fetchAerodromeData(
-      graphApiKey,
-      symbolToIds,
-      symbolToChainScopedIds,
-      chainAddressToId,
-      signal,
-      validationReferences,
-    );
-    aerodromePriceObs = aeroData.aerodromePriceObs;
-    aerodromeIsStable = aeroData.aerodromeIsStable;
-  } catch (err) {
-    rethrowIfAborted(err, signal);
-    console.warn("[dex-liquidity] Aerodrome fetch failed (non-fatal):", err);
-    failedSources.push("aerodrome-subgraph");
-  }
-
-  const directApiResults: Array<{ name: string; circuitKey: string; result: DexApiFetchResult }> = [];
-  for (const { name, circuitKey, fn } of directApiFetchers) {
-    if (!(await shouldAttemptFetch(db, circuitKey))) {
-      console.log(`[dex-liquidity] ${name} API circuit open, skipping`);
-      failedSources.push(circuitKey);
-      fallbackSignals.push(`${circuitKey}-circuit-open`);
-      directApiResults.push({
-        name,
-        circuitKey,
-        result: makeDexApiFetchResult([], {
-          ok: false,
-          degraded: true,
-          errors: ["circuit open"],
-        }),
-      });
-      continue;
-    }
-
-    try {
-      const result = await fn(signal);
-      await recordOutcomeSafe(db, circuitKey, result.ok);
-      if (!result.ok) {
-        failedSources.push(circuitKey);
-      } else if (result.degraded) {
-        failedSources.push(circuitKey);
-      }
-      if (!result.ok) {
-        fallbackSignals.push(`${circuitKey}-unavailable`);
-      } else if (result.degraded) {
-        fallbackSignals.push(`${circuitKey}-partial`);
-      }
-      directApiResults.push({ name, circuitKey, result });
-    } catch (err) {
-      if (signal?.aborted) throw err;
-      console.warn(`[dex-liquidity] ${name} API failed (non-fatal):`, err);
-      await recordOutcomeSafe(db, circuitKey, false);
-      failedSources.push(circuitKey);
-      fallbackSignals.push(`${circuitKey}-exception`);
-      directApiResults.push({
-        name,
-        circuitKey,
-        result: makeDexApiFetchResult([], {
-          ok: false,
-          degraded: true,
-          errors: [err instanceof Error ? err.message : String(err)],
-        }),
-      });
-    }
-  }
-
-  // Merge all price observations into a single map
-  for (const [id, obs] of uniV3PriceObs) {
-    const existing = priceObservations.get(id) ?? [];
-    existing.push(...obs);
-    priceObservations.set(id, existing);
-  }
-  for (const [id, obs] of aerodromePriceObs) {
-    const existing = priceObservations.get(id) ?? [];
-    existing.push(...obs);
-    priceObservations.set(id, existing);
-  }
+  mergeDexPriceObservationMap(priceObservations, subgraphEnrichment.uniV3PriceObs);
+  mergeDexPriceObservationMap(priceObservations, subgraphEnrichment.aerodromePriceObs);
   console.log(`[dex-liquidity] Total: ${priceObservations.size} coins with price observations across all sources`);
 
-  const directApiPools = directApiResults.flatMap((entry) => entry.result.pools);
+  const directApiPools = directApiPhase.results.flatMap((entry) => entry.result.pools);
 
   const {
     filteredPools: preferredPrimaryPools,
@@ -424,7 +255,7 @@ export async function syncDexLiquidity(
   // 4c. Build known pool identity index from preferred primary sources (for staged/fallback dedup)
   const knownPoolIndex = buildKnownPoolAddresses(
     preferredPrimaryPools, dataSources.dexProjects,
-    curvePoolMap, uniV3PoolFees, aerodromeIsStable,
+    curvePoolMap, subgraphEnrichment.uniV3PoolFees, subgraphEnrichment.aerodromeIsStable,
   );
 
   // 5. Match pools to stablecoins and compute per-pool metrics
@@ -435,98 +266,23 @@ export async function syncDexLiquidity(
     symbolToChainScopedIds,
     addressToId,
     chainAddressToId,
-    curvePoolMap, uniV3PoolFees, uniV3SymbolFees, aerodromeIsStable,
+    curvePoolMap,
+    subgraphEnrichment.uniV3PoolFees,
+    subgraphEnrichment.uniV3SymbolFees,
+    subgraphEnrichment.aerodromeIsStable,
   );
-
-  let directApiDedupSkippedByAddress = 0;
-  let directApiDedupSkippedByDerivedIdentity = 0;
-  let directApiDedupSkippedByOptionalWildcardIdentity = 0;
-  if (directApiPools.length > 0) {
-    console.log(`[dex-liquidity] Fetched ${directApiPools.length} direct API pools total`);
-    hydrateDirectApiPoolMetadata(directApiPools, contractMetaByChainAddress);
-
-    const eligibleDirectApiPools = directApiPools.filter((pool) => isEligibleDirectApiPool(pool));
-    const directApiIdentities = eligibleDirectApiPools.map(buildDirectApiPoolIdentity);
-    const directApiIdentityCounts = countPoolIdentityKeys(directApiIdentities);
-
-    const retainedDirectApiPools: DexApiPool[] = [];
-    for (let index = 0; index < eligibleDirectApiPools.length; index++) {
-      const pool = eligibleDirectApiPools[index]!;
-      const identity = directApiIdentities[index]!;
-      const dedupReason = getIdentityDedupReason(
-        identity,
-        knownPoolIndex,
-        {
-          derived: identity.derivedMatchKey
-            ? (directApiIdentityCounts.derived.get(identity.derivedMatchKey) ?? 0)
-            : 0,
-          wildcard: identity.optionalWildcardKey
-            ? (directApiIdentityCounts.wildcard.get(identity.optionalWildcardKey) ?? 0)
-            : 0,
-        },
-        { allowOptionalWildcard: true },
-      );
-      if (dedupReason === "exact") {
-        directApiDedupSkippedByAddress++;
-        continue;
-      }
-      if (dedupReason === "derived_unique") {
-        directApiDedupSkippedByDerivedIdentity++;
-        continue;
-      }
-      if (dedupReason === "derived_optional_wildcard") {
-        directApiDedupSkippedByOptionalWildcardIdentity++;
-        continue;
-      }
-
-      registerKnownPoolIdentity(knownPoolIndex, identity);
-      retainedDirectApiPools.push(pool);
-    }
-
-    if (
-      directApiDedupSkippedByAddress > 0 ||
-      directApiDedupSkippedByDerivedIdentity > 0 ||
-      directApiDedupSkippedByOptionalWildcardIdentity > 0
-    ) {
-      console.log(
-        `[dex-liquidity] Skipped ${directApiDedupSkippedByAddress} exact, ` +
-        `${directApiDedupSkippedByDerivedIdentity} unique derived, and ` +
-        `${directApiDedupSkippedByOptionalWildcardIdentity} optional wildcard direct API duplicates`,
-      );
-    }
-
-    if (retainedDirectApiPools.length > 0) {
-      const directApiGtPools = convertToGtNewPools(
-        retainedDirectApiPools,
-        chainAddressToId,
-        symbolToChainScopedIds,
-        symbolToIds,
-        validationReferences,
-        stablecoinPriceById,
-      );
-      if (directApiGtPools.size > 0) mergeGtPools(metrics, directApiGtPools);
-
-      const directApiPriceObs = extractPriceObservations(
-        retainedDirectApiPools,
-        chainAddressToId,
-        symbolToChainScopedIds,
-        validationReferences,
-        stablecoinPriceById,
-      );
-      for (const [id, obs] of directApiPriceObs) {
-        const existing = priceObservations.get(id) ?? [];
-        existing.push(...obs);
-        priceObservations.set(id, existing);
-      }
-    }
-
-    if (directApiDedupSkippedByAddress > 0 || directApiDedupSkippedByDerivedIdentity > 0) {
-      console.log(
-        `[dex-liquidity] Skipped ${directApiDedupSkippedByAddress} direct API pools by exact identity and ` +
-        `${directApiDedupSkippedByDerivedIdentity} by unique derived identity`,
-      );
-    }
-  }
+  integrateDirectApiLiquidityPhase({
+    directApiPools,
+    knownPoolIndex,
+    contractMetaByChainAddress,
+    metrics,
+    priceObservations,
+    chainAddressToId,
+    symbolToChainScopedIds,
+    symbolToIds,
+    validationReferences,
+    stablecoinPriceById,
+  });
 
   const {
     mergedCount: stagedMergedCount,
@@ -536,67 +292,22 @@ export async function syncDexLiquidity(
     priceObservations: stagedPriceObs,
   } =
     await mergeStagedPools(db, metrics, knownPoolIndex, syncStartSec, validationReferences);
-  for (const [id, obs] of stagedPriceObs) {
-    const existing = priceObservations.get(id) ?? [];
-    existing.push(...obs);
-    priceObservations.set(id, existing);
-  }
+  mergeDexPriceObservationMap(priceObservations, stagedPriceObs);
 
-  const weakCoverageTargetIdsBeforeFallback = new Set(
-    getFallbackTargets(metrics, priceObservations, { requireTrackedContracts: true }).map((meta) => meta.id),
-  );
-
-  // 5b. Fallback crawlers: fill price observation gaps for coins with missing or weak coverage
-  const fallbackDeadlineMs = Date.now() + CRAWL_BUDGETS.FALLBACK_MS;
-  let dsFallbackCoins = 0;
-  let cgTickerFallbackCoins = 0;
-
-  try {
-    const dsFallback = await fetchDsFallbackPools(
-      metrics, priceObservations, knownPoolIndex, signal, fallbackDeadlineMs, validationReferences,
-    );
-    dsFallbackCoins = dsFallback.newPools.size;
-    if (dsFallback.newPools.size > 0) mergeGtPools(metrics, dsFallback.newPools);
-    for (const [id, obs] of dsFallback.priceObs) {
-      const existing = priceObservations.get(id) ?? [];
-      existing.push(...obs);
-      priceObservations.set(id, existing);
-    }
-  } catch (err) {
-    rethrowIfAborted(err, signal);
-    console.warn("[dex-liquidity] DexScreener fallback failed (non-fatal):", err);
-    failedSources.push("dexscreener-fallback");
-  }
-
-  try {
-    const cgFallback = await fetchCgTickersFallback(
-      metrics, priceObservations, signal, fallbackDeadlineMs, validationReferences, coingeckoApiKey,
-    );
-    cgTickerFallbackCoins = cgFallback.newPools.size;
-    if (cgFallback.newPools.size > 0) mergeGtPools(metrics, cgFallback.newPools);
-    for (const [id, obs] of cgFallback.priceObs) {
-      const existing = priceObservations.get(id) ?? [];
-      existing.push(...obs);
-      priceObservations.set(id, existing);
-    }
-  } catch (err) {
-    rethrowIfAborted(err, signal);
-    console.warn("[dex-liquidity] CG tickers fallback failed (non-fatal):", err);
-    failedSources.push("cg-tickers-fallback");
-  }
-
-  console.log(
-    `[dex-liquidity] After fallbacks: ${priceObservations.size} coins with price observations ` +
-    `(DS fallback: ${dsFallbackCoins} coins, CG tickers: ${cgTickerFallbackCoins} coins)`,
-  );
-
-  const weakCoverageTargetIdsAfterFallback = new Set(
-    getFallbackTargets(metrics, priceObservations, { requireTrackedContracts: true }).map((meta) => meta.id),
-  );
-  let coverageRecoveredCoins = 0;
-  for (const stablecoinId of weakCoverageTargetIdsBeforeFallback) {
-    if (!weakCoverageTargetIdsAfterFallback.has(stablecoinId)) coverageRecoveredCoins++;
-  }
+  const {
+    dsFallbackCoins,
+    cgTickerFallbackCoins,
+    coverageRecoveredCoins,
+    weakCoverageCoinsBeforeFallback,
+  } = await runFallbackCrawlerPhase({
+    metrics,
+    priceObservations,
+    knownPoolIndex,
+    signal,
+    validationReferences,
+    failedSources,
+    coingeckoApiKey,
+  });
 
   // 6. Compute composite scores per stablecoin
   const {
@@ -780,7 +491,7 @@ export async function syncDexLiquidity(
     ? round4(measuredBalanceCoveragePct - previousSummary.measuredBalanceCoveragePct)
     : null;
   const weakCoverageDelta = previousSummary
-    ? weakCoverageTargetIdsBeforeFallback.size - previousSummary.weakCoverageCoins
+    ? weakCoverageCoinsBeforeFallback - previousSummary.weakCoverageCoins
     : null;
 
   const qualityDriftFlags: string[] = [];
@@ -968,7 +679,7 @@ export async function syncDexLiquidity(
         currentCoverageClasses,
         previousCoverageClasses,
         priceObservationCoins: priceObservations.size,
-        weakCoverageCoins: weakCoverageTargetIdsBeforeFallback.size,
+        weakCoverageCoins: weakCoverageCoinsBeforeFallback,
         coverageRecoveredCoins,
         dsFallbackCoins,
         cgTickerFallbackCoins,
@@ -1003,7 +714,7 @@ export async function syncDexLiquidity(
           currentStagedPoolsSkipped: stagedSkippedCount,
           stagedPoolsSkippedPctDelta,
           previousWeakCoverageCoins: previousSummary?.weakCoverageCoins ?? null,
-          currentWeakCoverageCoins: weakCoverageTargetIdsBeforeFallback.size,
+          currentWeakCoverageCoins: weakCoverageCoinsBeforeFallback,
           weakCoverageDelta,
         },
         topAssetCoverageDeltas: currentWatchlistDeltas,
