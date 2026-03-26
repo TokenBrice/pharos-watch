@@ -76,7 +76,7 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 9. `DistributionSection`
 10. `KeyInfoCard`
 11. `CollateralUsageSection` when the coin is used as tracked collateral elsewhere
-12. `YieldDetailSection` when the coin is marked `yieldBearing`
+12. `YieldDetailSection` when the coin is marked `yieldBearing` or the cached yield rankings include a live row for that coin
 13. `DexLiquidityCard`
 14. `FlowsSection`
 15. `DepegHistory` (suppressed for NAV tokens)
@@ -92,7 +92,7 @@ The server shell then appends `ExploreNextSection` after the client-rendered ana
 - `FlowsSection` renders after liquidity, outside the top-level rail. When flow coverage exists it owns both `#flows` and `#flow-history`.
 - `PriceTransparencyCard` lives inside `OverviewSection` under the nested `price-transparency` anchor and is hidden when `coinData.price == null`.
 - `DepegHistory` is omitted for NAV tokens.
-- `YieldDetailSection` decides its own empty/loading/null behavior from the cached yield rankings plus static coin metadata.
+- `YieldDetailSection` decides its own empty/loading/null behavior from the cached yield rankings plus static coin metadata. Non-yield-bearing coins can still render the section when the yield stack publishes a live lending-opportunity or curated ranking row for that asset.
 
 ### Price Transparency Card
 
@@ -170,7 +170,7 @@ That shared retry is used by the page-level error surfaces.
 | `DistributionSection`       | Holder and supply distribution view between market history and the metadata stack                                                                                                                                                                                                                                                                                                       |
 | `KeyInfoCard`               | Classification, collateral, peg mechanism, links, proof-of-reserves, jurisdiction                                                                                                                                                                                                                                                                                                      |
 | `PriceTransparencyCard`     | Current price, source label, confidence badge, update recency, and a table of all known price sources with their status (Used/Available/No data). It is rendered inside `OverviewSection` under the `price-transparency` anchor. When protocol-redeem overrides are active, all market sources show "Not applicable". DEX Price Check section renders when `dexPriceCheck` data exists |
-| `YieldDetailSection`        | Yield rankings row, clickable source links, warnings, history chart, alt-source/provenance detail, and contextual PYS / Stability help                                                                                                                                                                                                                                                 |
+| `YieldDetailSection`        | Yield rankings row, clickable source links, warnings, history chart, alt-source/provenance detail, and contextual PYS / Stability help. Renders for statically yield-bearing coins and for non-yield-bearing coins that currently have a published yield ranking (for example auto-discovered lending coverage).                                                                 |
 | `DexLiquidityCard`          | Liquidity score, top pools, DEX-implied price context, and contextual methodology hints / footer links                                                                                                                                                                                                                                                                                 |
 | `FlowsSection`              | Per-coin mint/burn summary plus the separate `flow-history` event-feed section, with contextual Pressure Shift help on the summary card; rendered below liquidity and outside the top-level scrollspy rail                                                                                                                                                                            |
 | `DepegHistory`              | Historical depeg timeline for non-NAV assets                                                                                                                                                                                                                                                                                                                                           |

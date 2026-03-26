@@ -232,8 +232,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
     );
   }
 
-  const isYieldBearing = viewModel.coin.flags.yieldBearing ?? false;
-  const detailSections = isYieldBearing
+  const detailSections = viewModel.hasYieldSection
     ? [...BASE_DETAIL_SECTIONS.slice(0, 3), YIELD_SECTION, ...BASE_DETAIL_SECTIONS.slice(3)]
     : BASE_DETAIL_SECTIONS;
 
@@ -358,7 +357,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
 
         {hasCollateralUsage && <CollateralUsageSection stablecoinId={viewModel.id} />}
 
-        {isYieldBearing && <YieldDetailSection stablecoinId={viewModel.id} />}
+        {viewModel.hasYieldSection && <YieldDetailSection stablecoinId={viewModel.id} />}
       </div>
 
       {/* ── Activity zone ── */}

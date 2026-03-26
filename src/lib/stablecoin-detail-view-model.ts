@@ -80,6 +80,7 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   dexPriceCheck: PegSummaryCoin["dexPriceCheck"];
   liquidityData: DexLiquidityData | undefined;
   yieldRanking: YieldRanking | null;
+  hasYieldSection: boolean;
   stressSignal: StressSignalEntry | null;
   redemptionBackstop: RedemptionBackstopEntry | undefined;
   hasFlows: boolean;
@@ -260,6 +261,7 @@ export function buildStablecoinDetailViewModel({
   const dexPriceCheck = pegScoreResult?.dexPriceCheck ?? null;
   const liquidityData = liquidityMap?.[id];
   const yieldRanking = yieldRankingsData?.rankings.find((candidate) => candidate.id === id) ?? null;
+  const hasYieldSection = (coin.flags.yieldBearing ?? false) || yieldRanking !== null;
   const stressSignal = stressSignalsData?.signals[id] ?? null;
   const redemptionBackstop = redemptionBackstopsData?.coins?.[id];
   const reportCard = reportCardsData?.cards.find((candidate) => candidate.id === id);
@@ -293,6 +295,7 @@ export function buildStablecoinDetailViewModel({
     dexPriceCheck,
     liquidityData,
     yieldRanking,
+    hasYieldSection,
     stressSignal,
     redemptionBackstop,
     hasFlows,
