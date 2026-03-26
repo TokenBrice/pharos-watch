@@ -34,8 +34,9 @@ export function MonitoringMethodologySections() {
             Pharos tracks yield-bearing stablecoins and computes a risk-adjusted ranking via the Pharos Yield Score
             (PYS). Core rankings publish hourly using a source-aware APY resolution strategy, while slower
             supplemental-source families refresh on a separate four-hour lane. Alternative sources are retained when
-            multiple valid yield paths exist, address-first identity is used before symbol fallback, and
-            confidence-weighted arbitration selects the primary row.
+            multiple valid yield paths exist, address-first identity is used before symbol fallback, curated
+            exact-pool overrides can cover named non-stablecoin venues, and confidence-weighted arbitration selects
+            the primary row.
           </p>
           <MethodologyFacts
             facts={[
@@ -173,7 +174,8 @@ export function MonitoringMethodologySections() {
                   <span className="text-foreground">Tier 2 &mdash; DeFiLlama pools</span>: matches the coin to a
                   DeFiLlama yield pool via static mapping, chain-scoped wrapper rules, and address-first fallback
                   matching, while explicitly preserving wrapper pools that upstream marks as non-stablecoin when they
-                  are configured as relevant yield sources
+                  are configured as relevant yield sources and allowing exact-pool curated overrides for assets such as
+                  XAUT
                 </li>
                 <li>
                   <span className="text-foreground">Tier 2.5 &mdash; Protocol-native venues</span>: ingests curated

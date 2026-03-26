@@ -1,4 +1,5 @@
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { resolveChainId } from "@shared/lib/chains";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { buildInClause } from "../../lib/db";
@@ -17,6 +18,7 @@ import {
 import {
   AUTO_LENDING_POOL_MAP,
   AUTO_LENDING_SAFETY_BYPASS_IDS,
+  EXPLICIT_YIELD_SOURCE_POOL_MAP,
   LENDING_PROTOCOL_ALLOWLIST,
   ON_CHAIN_RATE_CONFIGS,
   PRICE_DERIVED_FALLBACK_IDS,
@@ -32,6 +34,7 @@ import {
   fetchOndoUsdyOracleSource,
   getPriceDerivedApy,
 } from "./sources";
+import { resolveBenchmarkForStablecoin, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
 import { buildDlChainFilter, buildYieldIdentityLookups, canUseSymbolOnlyYieldMatch, getTrackedContractAddresses, resolveYieldCandidateStablecoinId } from "./identity";
 import type { DlPool, ResolvedYieldCandidate, ResolvedYieldEntry } from "./types";
 import { scanForNewVariants } from "./variant-scanner";
@@ -59,11 +62,33 @@ interface ResolveYieldSourcesParams {
   dlPools: DlPool[];
   onChainRates: Map<string, { rate: number }>;
   safetyScores: Map<string, SafetyScoreSnapshot>;
-  riskFreeRate: number;
+  riskFreeRates: ParsedYieldBenchmarkRegistry;
   signal?: AbortSignal;
   chainRpcs?: Map<string, ChainRpcConfig>;
   coingeckoApiKey?: string | null;
   supplementalCandidates?: ResolvedYieldCandidate[];
+}
+
+function normalizeYieldPoolChain(chain: string | null | undefined): string | null {
+  if (!chain) return null;
+  return resolveChainId(chain) ?? chain.toLowerCase();
+}
+
+function matchesExplicitYieldPool(
+  pool: DlPool,
+  config: (typeof EXPLICIT_YIELD_SOURCE_POOL_MAP)[string][number],
+): boolean {
+  const expectedChain = config.expectedChain ? normalizeYieldPoolChain(config.expectedChain) : null;
+
+  if (pool.exposure !== "single") return false;
+  if (config.expectedProject && pool.project !== config.expectedProject) return false;
+  if (config.expectedSymbol && pool.symbol.trim().toLowerCase() !== config.expectedSymbol.trim().toLowerCase()) {
+    return false;
+  }
+  if (expectedChain && normalizeYieldPoolChain(pool.chain) !== expectedChain) return false;
+  if (pool.apy < (config.minApy ?? MIN_LENDING_POOL_APY)) return false;
+  if (pool.tvlUsd < (config.minTvlUsd ?? MIN_LENDING_POOL_TVL_USD)) return false;
+  return true;
 }
 
 function appendResolvedYieldCandidates(
@@ -135,7 +160,7 @@ export async function resolveYieldSources({
   dlPools,
   onChainRates,
   safetyScores,
-  riskFreeRate,
+  riskFreeRates,
   signal,
   chainRpcs,
   coingeckoApiKey,
@@ -147,6 +172,9 @@ export async function resolveYieldSources({
   const reservedExplicitPoolIds = new Set([
     ...Object.values(YIELD_POOL_MAP),
     ...Object.values(AUTO_LENDING_POOL_MAP),
+    ...Object.values(EXPLICIT_YIELD_SOURCE_POOL_MAP)
+      .flat()
+      .map((config) => config.poolId),
   ]);
   const tier1CandidateIds = ACTIVE_YIELD_BEARING_STABLECOINS
     .map((meta) => meta.id)
@@ -322,8 +350,13 @@ export async function resolveYieldSources({
     // Rate-derived: for dividend-distributing tokens and T-bill-backed funds,
     // compute yield from the cached T-bill rate minus the token's fee spread.
     const rateDerivedConfig = RATE_DERIVED_CONFIGS.find((c) => c.stablecoinId === id);
-    if (rateDerivedConfig && riskFreeRate > 0) {
-      const apy = Math.max(0, riskFreeRate - rateDerivedConfig.spreadBps / 100);
+    if (rateDerivedConfig) {
+      const benchmarkSelection = resolveBenchmarkForStablecoin({
+        stablecoinId: id,
+        benchmarks: riskFreeRates,
+        benchmarkCurrency: rateDerivedConfig.benchmarkCurrency ?? null,
+      });
+      const apy = Math.max(0, benchmarkSelection.meta.rate - rateDerivedConfig.spreadBps / 100);
       resolved.push({
         id,
         symbol,
@@ -468,6 +501,42 @@ export async function resolveYieldSources({
   }
 
   appendResolvedYieldCandidates(resolved, supplementalCandidates, identityLookups);
+
+  if (dlPools.length > 0) {
+    for (const [stablecoinId, configs] of Object.entries(EXPLICIT_YIELD_SOURCE_POOL_MAP)) {
+      const meta = TRACKED_META_BY_ID.get(stablecoinId);
+      if (!meta) continue;
+
+      for (const config of configs) {
+        if (resolved.some((entry) => entry.id === stablecoinId && entry.yield?.sourceKey === config.poolId)) {
+          continue;
+        }
+
+        const pool = dlPools.find((entry) => entry.pool === config.poolId);
+        if (!pool || !matchesExplicitYieldPool(pool, config)) {
+          continue;
+        }
+
+        resolved.push({
+          id: meta.id,
+          symbol: meta.symbol,
+          yield: {
+            currentApy: pool.apy,
+            apyBase: pool.apyBase,
+            apyReward: pool.apyReward,
+            sourcePool: pool.pool,
+            sourceTvlUsd: pool.tvlUsd,
+            dataSource: config.dataSource ?? "defillama",
+            exchangeRate: null,
+            sourceKey: pool.pool,
+            yieldSource: config.yieldSource,
+            yieldType: config.yieldType,
+            project: pool.project,
+          },
+        });
+      }
+    }
+  }
 
   if (dlPools.length > 0) {
     const autoDiscoveredIds = new Set<string>();

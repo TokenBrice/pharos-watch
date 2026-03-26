@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "5.2",
+  currentVersion: "5.3",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "5.3",
+    title: "Non-USD Yield Scoping and Exact-Pool Commodity Overrides",
+    date: "2026-03-26",
+    effectiveAt: 1774785600,
+    summary:
+      "Yield Intelligence now exposes a shareable non-USD ranking scope on `/yield`, and commodity coverage can use curated exact-pool DeFiLlama venues without relaxing the generic gold/silver discovery guardrails.",
+    impact: [
+      "The `/yield` page now supports peg-scoped ranking views, including a `non-usd` preset that groups the live EUR, CHF, SGD, MXN, and commodity rows into one visible universe",
+      "Tier-2 DeFiLlama ingestion now preserves exact curated non-stablecoin pool UUIDs in addition to native pool IDs and wrapper symbols",
+      "A new exact-pool override lane can publish assets like `xaut-tether` from a named venue when the UUID, project, chain, and symbol all match and the APY/TVL quality gates pass",
+      "Generic gold/silver auto-discovery remains disabled, preventing mixed baskets such as Multipli's RWAUSDI pool from being misclassified as single-asset commodity yield sources",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.2",
     title: "Address-First Identity, Explicit Coverage, and Publish-Consistent History",

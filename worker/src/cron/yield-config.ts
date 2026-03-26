@@ -2,6 +2,7 @@
 // Static configuration for the yield intelligence pipeline.
 
 import type { YieldType } from "@shared/types/core";
+import type { YieldBenchmarkKey } from "@shared/types/yield";
 import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 
 /** Yield variant: maps a tracked Pharos coin to its untracked yield wrapper. */
@@ -15,6 +16,22 @@ export interface YieldVariant {
   yieldSource?: string;
   /** Yield mechanism type for this wrapper. */
   yieldType?: YieldType;
+}
+
+/**
+ * Explicit single-pool overrides for tracked assets whose valid yield venue is
+ * real but should not be discovered through the generic stablecoin pipeline.
+ */
+export interface ExplicitYieldPoolConfig {
+  poolId: string;
+  yieldSource: string;
+  yieldType: YieldType;
+  dataSource?: "defillama" | "defillama-auto";
+  expectedProject?: string;
+  expectedSymbol?: string;
+  expectedChain?: string;
+  minApy?: number;
+  minTvlUsd?: number;
 }
 
 /**
@@ -342,6 +359,25 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "cusd-cap": "bf6ca887-e357-49ec-8031-0d1a6141c455",
 };
 
+/**
+ * Exact-pool curated yield venues for tracked assets that should stay outside
+ * the generic stablecoin auto-discovery universe.
+ */
+export const EXPLICIT_YIELD_SOURCE_POOL_MAP: Record<string, ExplicitYieldPoolConfig[]> = {
+  "xaut-tether": [
+    {
+      // XAUT - Yo Protocol isolated lending market on Ethereum
+      poolId: "653c3979-83bc-40c9-aba0-f01a5ba0d118",
+      yieldSource: "Yo Protocol",
+      yieldType: "lending-opportunity",
+      dataSource: "defillama",
+      expectedProject: "yo-protocol",
+      expectedSymbol: "XAUT",
+      expectedChain: "ethereum",
+    },
+  ],
+};
+
 /** On-chain exchange rate config for Tier 1 vault tokens. */
 export interface OnChainRateConfig {
   stablecoinId: string;
@@ -504,15 +540,17 @@ export const PRICE_DERIVED_FALLBACK_IDS = new Set([
  * Rate-derived yield config for dividend-distributing tokens (rebasing at $1 NAV)
  * and T-bill-backed NAV tokens whose yield mechanically tracks short-term rates.
  *
- * APY = max(0, cachedTbillRate - spreadBps / 100).
- * Uses the risk_free_rate already cached daily by fetch-tbill-rate (FRED DGS3MO).
+ * APY = max(0, selectedBenchmarkRate - spreadBps / 100).
+ * Uses the benchmark registry already cached daily by fetch-tbill-rate.
  */
 export interface RateDerivedConfig {
   stablecoinId: string;
-  /** Basis points subtracted from the cached T-bill rate (management fee / spread). */
+  /** Basis points subtracted from the selected benchmark rate (management fee / spread). */
   spreadBps: number;
   /** Human-readable label surfaced as yield_source in yield_data. */
   label: string;
+  /** Optional explicit benchmark override; otherwise the coin's peg-currency benchmark is used when available. */
+  benchmarkCurrency?: YieldBenchmarkKey;
 }
 
 export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [

@@ -1,8 +1,14 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.2` (2026-03-01 -> 2026-03-26).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.3` (2026-03-01 -> 2026-03-26).
 
 ---
+
+## v5.3 - Non-USD yield scoping and exact-pool commodity overrides (Mar 26, 2026)
+
+- `/yield` now exposes a shareable peg scope with a `non-usd` preset so the live EUR, CHF, SGD, MXN, and commodity rows can be reviewed as one universe
+- Tier-2 DeFiLlama ingestion now preserves exact curated non-stablecoin pool UUIDs alongside native pool IDs and wrapper-symbol matches
+- Added an exact-pool override lane for assets like `xaut-tether`, while keeping the generic gold/silver auto-discovery exclusion in place so mixed baskets such as Multipli `RWAUSDI` do not get misclassified as single-asset commodity yield sources
 
 ## v5.2 - Address-First Identity and Explicit Coverage Truth (Mar 26, 2026)
 

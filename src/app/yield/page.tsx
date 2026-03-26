@@ -9,7 +9,7 @@ import {
 import { safeJsonLd } from "@/lib/json-ld";
 
 const yieldBearingCount = YIELD_BEARING_STABLECOINS.length;
-const desc = `Risk-adjusted yield rankings for ${yieldBearingCount} yield-bearing stablecoins plus curated lending opportunities. Compare APY, safety grades, freshness, and the Pharos Yield Score.`;
+const desc = `Risk-adjusted yield rankings for ${yieldBearingCount} yield-bearing stablecoins plus curated lending opportunities. Compare APY, safety grades, freshness, the Pharos Yield Score, and peg-scoped yield universes including non-USD markets.`;
 
 export const metadata = buildPageMetadata({
   title: "Yield Intelligence",
@@ -69,6 +69,7 @@ export default createClientFeaturePage({
     ),
     leadParagraphs: [
       `Risk-adjusted yield rankings for ${yieldBearingCount} yield-bearing stablecoins plus curated lending opportunities. Compare APY, safety grades, freshness, and the Pharos Yield Score (PYS).`,
+      "Use the peg scope controls to isolate non-USD yield markets as a single view or drill into specific peg targets such as EUR, CHF, SGD, MXN, and gold.",
     ],
   },
 });

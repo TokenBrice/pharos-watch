@@ -24,6 +24,17 @@ describe("isYieldRelevantDlPool", () => {
     ).toBe(true);
   });
 
+  it("retains exact curated commodity pools even when DeFiLlama marks them non-stablecoin", () => {
+    expect(
+      isYieldRelevantDlPool({
+        pool: "653c3979-83bc-40c9-aba0-f01a5ba0d118",
+        symbol: "XAUT",
+        stablecoin: false,
+        exposure: "single",
+      }),
+    ).toBe(true);
+  });
+
   it("filters unrelated non-stablecoin pools", () => {
     expect(
       isYieldRelevantDlPool({

@@ -198,6 +198,7 @@ vi.mock("../yield-config", () => ({
   YIELD_POOL_MAP: {
     "sdai-maker": "pool-sdai-native",
   },
+  EXPLICIT_YIELD_SOURCE_POOL_MAP: {},
   ON_CHAIN_RATE_CONFIGS: [],
   LENDING_PROTOCOL_ALLOWLIST: new Set(["aave-v3", "venus-core-pool"]),
   LENDING_PROTOCOL_LABELS: { "aave-v3": "Aave V3", "venus-core-pool": "Venus Core Pool" },

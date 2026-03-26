@@ -180,6 +180,7 @@ vi.mock("../yield-helpers", async (importOriginal) => {
 vi.mock("../yield-config", () => ({
   YIELD_VARIANT_MAP: {},
   YIELD_POOL_MAP: {},
+  EXPLICIT_YIELD_SOURCE_POOL_MAP: {},
   ON_CHAIN_RATE_CONFIGS: [],
   LENDING_PROTOCOL_ALLOWLIST: new Set(["venus-core-pool", "aave-v3"]),
   LENDING_PROTOCOL_LABELS: {
@@ -249,7 +250,7 @@ import { getCache, setCache, setCacheIfNewer } from "../../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import * as safetyScoresModule from "../../lib/safety-scores";
 import * as yieldConfigModule from "../yield-config";
@@ -325,6 +326,9 @@ describe("syncYieldData", () => {
     ).length = 0;
     const poolMap = yieldConfigModule.YIELD_POOL_MAP as Record<string, string>;
     for (const key of Object.keys(poolMap)) delete poolMap[key];
+    const explicitPoolMap =
+      yieldConfigModule.EXPLICIT_YIELD_SOURCE_POOL_MAP as typeof yieldConfigModule.EXPLICIT_YIELD_SOURCE_POOL_MAP;
+    for (const key of Object.keys(explicitPoolMap)) delete explicitPoolMap[key];
     // Reset mocks to factory defaults
     vi.mocked(getCache).mockReset().mockResolvedValue(null);
     vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
@@ -832,6 +836,102 @@ describe("syncYieldData", () => {
 
     // sDAI cannot resolve in this fixture; deterministic override should add U.
     expect(result.itemCount).toBe(1);
+  });
+
+  it("publishes curated exact-pool coverage for XAUT without enabling generic gold auto-discovery", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const xautMeta = {
+      id: "xaut-tether",
+      name: "Tether Gold",
+      symbol: "XAUT",
+      geckoId: "tether-gold",
+      flags: {
+        pegCurrency: "GOLD",
+        backing: "rwa-backed",
+        yieldBearing: false,
+        navToken: false,
+        rwa: true,
+        governance: "centralized",
+      },
+      contracts: [{ chain: "ethereum", address: "0x68749665ff8d2d112fa859aa293f07a622782f38", decimals: 6 }],
+    };
+    const explicitPoolMap =
+      yieldConfigModule.EXPLICIT_YIELD_SOURCE_POOL_MAP as typeof yieldConfigModule.EXPLICIT_YIELD_SOURCE_POOL_MAP;
+
+    ACTIVE_STABLECOINS.push(xautMeta as never);
+    TRACKED_META_BY_ID.set("xaut-tether", xautMeta as never);
+    explicitPoolMap["xaut-tether"] = [
+      {
+        poolId: "pool-xaut-yo",
+        yieldSource: "Yo Protocol",
+        yieldType: "lending-opportunity",
+        dataSource: "defillama",
+        expectedProject: "yo-protocol",
+        expectedSymbol: "XAUT",
+        expectedChain: "ethereum",
+      },
+    ];
+
+    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValueOnce({
+      kind: "ok",
+      mode: "map",
+      coveredCount: 5,
+      trackedCount: 5,
+      coverageRatio: 1,
+      scores: new Map([
+        ["100", { score: 80, grade: "B+" }],
+        ["usdc-circle", { score: 78, grade: "B+" }],
+        ["u-united-stables", { score: 55, grade: "C" }],
+        ["lusd-liquity", { score: 86, grade: "A-" }],
+        ["xaut-tether", { score: 82, grade: "B+" }],
+      ]),
+    } as never);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dl-stablecoin-pools") {
+        return {
+          value: JSON.stringify([
+            {
+              pool: "pool-xaut-yo",
+              chain: "Ethereum",
+              project: "yo-protocol",
+              symbol: "XAUT",
+              tvlUsd: 3_200_000,
+              apy: 11.4,
+              apyBase: 11.4,
+              apyReward: null,
+              apyMean30d: 11.1,
+              stablecoin: false,
+              exposure: "single",
+              underlyingTokens: ["0x68749665ff8d2d112fa859aa293f07a622782f38"],
+            },
+          ]),
+          updatedAt: nowSec,
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    try {
+      const result = await syncYieldData(db);
+      const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }>;
+      const xautRow = writeStatements.find(
+        (stmt) => stmt.boundValues?.[0] === "xaut-tether" && stmt.boundValues?.[1] === "pool-xaut-yo",
+      );
+
+      expect(result.itemCount).toBe(1);
+      expect(xautRow?.boundValues?.[8]).toBe("Yo Protocol");
+      expect(xautRow?.boundValues?.[9]).toBe("lending-opportunity");
+      expect(xautRow?.boundValues?.[12]).toBe("defillama");
+      expect(xautRow?.boundValues?.[25]).toBe(1);
+    } finally {
+      delete explicitPoolMap["xaut-tether"];
+      TRACKED_META_BY_ID.delete("xaut-tether");
+      ACTIVE_STABLECOINS.pop();
+    }
   });
 
   it("keeps deterministic override quality-gated (min TVL/APY/allowlist still apply)", async () => {

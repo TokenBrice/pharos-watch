@@ -4,7 +4,9 @@ import { useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useYieldRankings } from "@/hooks/api-hooks";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useLogos } from "@/hooks/use-logos";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
@@ -12,15 +14,114 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { YieldLeaderboard } from "@/components/yield-leaderboard";
 import { YieldScatterPlot } from "@/components/yield-scatter-plot";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { PEG_BADGE_STYLES } from "@shared/lib/classification";
 import { formatPercent } from "@shared/lib/format";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
+import type { PegCurrency } from "@shared/types";
+
+type YieldPegFilter = PegCurrency | "all" | "non-usd";
+
+const YIELD_PEG_PRIORITY: readonly PegCurrency[] = [
+  "EUR",
+  "CHF",
+  "GOLD",
+  "GBP",
+  "JPY",
+  "AUD",
+  "CAD",
+  "BRL",
+  "ZAR",
+  "CNH",
+  "CNY",
+  "PHP",
+  "TRY",
+  "IDR",
+  "RUB",
+  "UAH",
+  "ARS",
+  "SILVER",
+  "VAR",
+  "OTHER",
+];
+
+const HIDDEN_INDIVIDUAL_YIELD_PEG_FILTERS = new Set<PegCurrency>(["SGD", "MXN"]);
+
+function getYieldPegLabel(peg: PegCurrency): string {
+  return PEG_BADGE_STYLES[peg].label.replace(/\s+Peg$/, "");
+}
+
+function getYieldRankingPeg(rankingId: string): PegCurrency | null {
+  return TRACKED_META_BY_ID.get(rankingId)?.flags.pegCurrency ?? null;
+}
+
+function compareYieldPegs(a: PegCurrency, b: PegCurrency): number {
+  const aIndex = YIELD_PEG_PRIORITY.indexOf(a);
+  const bIndex = YIELD_PEG_PRIORITY.indexOf(b);
+
+  if (aIndex !== -1 || bIndex !== -1) {
+    if (aIndex === -1) return 1;
+    if (bIndex === -1) return -1;
+    return aIndex - bIndex;
+  }
+
+  return getYieldPegLabel(a).localeCompare(getYieldPegLabel(b));
+}
+
+function matchesYieldPegFilter(peg: PegCurrency | null, filter: YieldPegFilter): boolean {
+  if (filter === "all") return true;
+  if (!peg) return false;
+  if (filter === "non-usd") return peg !== "USD";
+  return peg === filter;
+}
 
 export function YieldClient() {
   const { data, meta, isLoading, error, dataUpdatedAt, refetch } = useYieldRankings();
   const { data: logos } = useLogos();
+  const { getParam, setParam } = useUrlFilters();
   const router = useRouter();
 
   const rankings = useMemo(() => dedupeYieldRankings(data?.rankings ?? []), [data?.rankings]);
+  const pegFilterOptions = useMemo(() => {
+    const pegs = Array.from(
+      new Set(
+        rankings
+          .map((ranking) => getYieldRankingPeg(ranking.id))
+          .filter((peg): peg is PegCurrency => peg != null),
+      ),
+    ).sort(compareYieldPegs);
+    const hasNonUsd = pegs.some((peg) => peg !== "USD");
+    const options: Array<{ value: YieldPegFilter; label: string }> = [{ value: "all", label: "All" }];
+
+    if (hasNonUsd) {
+      options.push({ value: "non-usd", label: "Non-USD" });
+    }
+    if (pegs.includes("USD")) {
+      options.push({ value: "USD", label: "USD" });
+    }
+
+    for (const peg of pegs) {
+      if (peg === "USD" || HIDDEN_INDIVIDUAL_YIELD_PEG_FILTERS.has(peg)) continue;
+      options.push({ value: peg, label: getYieldPegLabel(peg) });
+    }
+
+    return options;
+  }, [rankings]);
+  const rawPegFilter = getParam("peg", "all");
+  const pegFilter = useMemo<YieldPegFilter>(
+    () => (pegFilterOptions.some((option) => option.value === rawPegFilter) ? rawPegFilter as YieldPegFilter : "all"),
+    [pegFilterOptions, rawPegFilter],
+  );
+  const filteredRankings = useMemo(
+    () => rankings.filter((ranking) => matchesYieldPegFilter(getYieldRankingPeg(ranking.id), pegFilter)),
+    [rankings, pegFilter],
+  );
+  const setPegFilter = useCallback(
+    (value: YieldPegFilter) => {
+      setParam("peg", value);
+    },
+    [setParam],
+  );
 
   const handleNavigate = useCallback(
     (id: string) => {
@@ -29,17 +130,17 @@ export function YieldClient() {
     [router],
   );
 
-  // Compute summary stats from rankings
+  // Compute summary stats from the active yield universe filter.
   const stats = useMemo(() => {
     if (!data) return null;
     const { riskFreeRate } = data;
-    if (rankings.length === 0) return { avgApy: 0, riskFreeRate, bestPys: null };
+    if (filteredRankings.length === 0) return { avgApy: 0, riskFreeRate, bestPys: null };
 
     // Weighted average APY (weighted by TVL where available)
     let tvlSum = 0;
     let weightedApySum = 0;
     let unweightedApySum = 0;
-    for (const r of rankings) {
+    for (const r of filteredRankings) {
       const tvl = r.sourceTvlUsd ?? 0;
       if (tvl > 0) {
         tvlSum += tvl;
@@ -47,18 +148,18 @@ export function YieldClient() {
       }
       unweightedApySum += r.apy30d;
     }
-    const avgApy = tvlSum > 0 ? weightedApySum / tvlSum : unweightedApySum / rankings.length;
+    const avgApy = tvlSum > 0 ? weightedApySum / tvlSum : unweightedApySum / filteredRankings.length;
 
     // Best risk-adjusted (highest PYS)
     let bestPys: { name: string; symbol: string; score: number } | null = null;
-    for (const r of rankings) {
+    for (const r of filteredRankings) {
       if (r.pharosYieldScore !== null && (bestPys === null || r.pharosYieldScore > bestPys.score)) {
         bestPys = { name: r.name, symbol: r.symbol, score: r.pharosYieldScore };
       }
     }
 
     return { avgApy, riskFreeRate, bestPys };
-  }, [data, rankings]);
+  }, [data, filteredRankings]);
 
   if (isLoading) {
     return (
@@ -153,6 +254,39 @@ export function YieldClient() {
         </div>
       ) : null}
 
+      {pegFilterOptions.length > 1 ? (
+        <Card className="rounded-2xl border-border/70 bg-card/80">
+          <CardContent className="flex flex-col gap-3 pt-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-1">
+              <p className="pharos-kicker">Yield Universe</p>
+              <p className="text-sm text-muted-foreground">
+                Scope the page by peg target. The `Non-USD` preset groups every live non-dollar yield row, including
+                the existing EUR, CHF, SGD, MXN, and commodity coverage.
+              </p>
+            </div>
+            <ToggleGroup
+              type="single"
+              value={pegFilter}
+              onValueChange={(value) => value && setPegFilter(value as YieldPegFilter)}
+              className="flex flex-wrap justify-start gap-1"
+              aria-label="Filter yield rankings by peg currency"
+            >
+              {pegFilterOptions.map((option) => (
+                <ToggleGroupItem
+                  key={option.value}
+                  value={option.value}
+                  variant="outline"
+                  size="sm"
+                  className="pharos-toggle-pill min-h-11 px-3 sm:min-h-8 sm:py-1"
+                >
+                  {option.label}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {/* Summary stat cards */}
       {stats && (
         <div className="grid grid-cols-1 gap-3 sm:gap-5 sm:grid-cols-3">
@@ -193,7 +327,7 @@ export function YieldClient() {
       )}
 
       {/* Scatter plot */}
-      {data && rankings.length > 0 && (
+      {data && filteredRankings.length > 0 && (
         <section aria-labelledby="scatter-heading">
           <Card className="rounded-2xl border-border/70 bg-card/80">
             <CardHeader className="space-y-4">
@@ -229,7 +363,7 @@ export function YieldClient() {
             </CardHeader>
             <CardContent className="pt-0">
               <YieldScatterPlot
-                rankings={rankings}
+                rankings={filteredRankings}
                 riskFreeRate={data.riskFreeRate}
                 logos={logos}
                 onDotClick={handleNavigate}
@@ -247,7 +381,7 @@ export function YieldClient() {
               Yield Leaderboard
             </h2>
             <YieldLeaderboard
-              rankings={rankings}
+              rankings={filteredRankings}
               logos={logos ?? {}}
               riskFreeRate={data.riskFreeRate}
               medianApy={data.medianApy ?? 0}
