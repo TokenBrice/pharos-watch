@@ -45,6 +45,7 @@ const MAX_DL_CACHE_AGE_SEC = 6 * 3600; // 6 hours (3× the expected 2-hour DEX s
 const OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS = 8_000;
 const OPTIONAL_PROTOCOL_API_BUDGET_MS = 25_000;
 const OPTIONAL_PROTOCOL_RPC_BUDGET_MS = 30_000;
+const ON_CHAIN_RATE_REQUEST_TIMEOUT_MS = 6_000;
 
 interface HashnoteReport {
   roundId: string;
@@ -190,6 +191,55 @@ export interface OnChainRateResult {
   allDeterministicFailed?: boolean;
 }
 
+type OnChainRateFetchResult =
+  | { id: string; rate: number; status: "ok" }
+  | { id: string; status: "no-rpc" | "null" | "error"; error?: string };
+
+function buildOnChainRateRpcUrls(rpc: ChainRpcConfig): string[] {
+  const urls = [
+    rpc.fallbackRpcUrl,
+    rpc.rpcUrl,
+  ].filter((url): url is string => typeof url === "string" && url.length > 0);
+
+  return Array.from(new Set(urls));
+}
+
+async function fetchSingleOnChainRate(
+  config: (typeof ON_CHAIN_RATE_CONFIGS)[number],
+  rpc: ChainRpcConfig,
+  signal?: AbortSignal,
+): Promise<OnChainRateFetchResult> {
+  const callData = config.selector + config.inputAmount.replace("0x", "").padStart(64, "0");
+  const rpcUrls = buildOnChainRateRpcUrls(rpc);
+  if (rpcUrls.length === 0) {
+    return { id: config.stablecoinId, status: "no-rpc" };
+  }
+
+  for (const rpcUrl of rpcUrls) {
+    try {
+      const raw = await fetchEvmUint256AtBlock(undefined, config.contract, callData, "latest", {
+        extraRpcUrls: [rpcUrl],
+        signal,
+        timeoutMs: ON_CHAIN_RATE_REQUEST_TIMEOUT_MS,
+      });
+      if (raw == null) {
+        continue;
+      }
+      return {
+        id: config.stablecoinId,
+        rate: Number(raw) / 10 ** config.decimals,
+        status: "ok",
+      };
+    } catch (err) {
+      if (signal?.aborted) {
+        throw err instanceof Error ? err : new Error(String(err));
+      }
+    }
+  }
+
+  return { id: config.stablecoinId, status: "null" };
+}
+
 export async function fetchOnChainRates(
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
@@ -207,29 +257,17 @@ export async function fetchOnChainRates(
 
   // Fetch vault exchange rates in smaller batches to avoid brief RPC bursts
   // that can collapse an otherwise healthy deterministic lane into all-null.
-  const RATE_BATCH_SIZE = 2;
-  type RateResult = { id: string; rate: number; status: "ok" } | { id: string; status: "no-rpc" | "null" | "error"; error?: string };
-  const allResults: PromiseSettledResult<RateResult>[] = [];
+  const RATE_BATCH_SIZE = 1;
+  const allResults: PromiseSettledResult<OnChainRateFetchResult>[] = [];
   for (let i = 0; i < ON_CHAIN_RATE_CONFIGS.length; i += RATE_BATCH_SIZE) {
     const batch = ON_CHAIN_RATE_CONFIGS.slice(i, i + RATE_BATCH_SIZE);
-    const tasks = batch.map(async (config): Promise<RateResult> => {
+    const tasks = batch.map(async (config): Promise<OnChainRateFetchResult> => {
       const rpc = getChainRpc(chainRpcs, config.chain);
-      if (!rpc) return { id: config.stablecoinId, status: "no-rpc" };
-
-      try {
-        const callData = config.selector + config.inputAmount.replace("0x", "").padStart(64, "0");
-        const raw = await fetchEvmUint256AtBlock(config.chain, config.contract, callData, "latest", {
-          extraRpcUrls: [rpc.rpcUrl, rpc.fallbackRpcUrl].filter(
-            (url): url is string => typeof url === "string" && url.length > 0,
-          ),
-          signal,
-          timeoutMs: 10_000,
-        });
-        if (raw == null) return { id: config.stablecoinId, status: "null" };
-        return { id: config.stablecoinId, rate: Number(raw) / 10 ** config.decimals, status: "ok" };
-      } catch (err) {
-        return { id: config.stablecoinId, status: "error", error: err instanceof Error ? err.message : String(err) };
+      if (!rpc) {
+        return { id: config.stablecoinId, status: "no-rpc" };
       }
+
+      return fetchSingleOnChainRate(config, rpc, signal);
     });
     const batchSettled = await Promise.allSettled(tasks);
     allResults.push(...batchSettled);

@@ -9,6 +9,8 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
 
 ## Runtime Guardrails
 
+- Deterministic on-chain vault reads now run one asset at a time with a 6 second per-RPC timeout and explicit per-URL failover.
+- When both a provider RPC and a public fallback are configured for a deterministic yield source, the reader probes the fallback/public URL first to avoid inheriting a sticky provider failure across the whole half-hourly slot.
 - Single-coin optional adapters are time-boxed to 12 seconds:
   - `BIMA sUSBD`
   - `Hashnote USYC`
