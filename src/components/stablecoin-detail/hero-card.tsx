@@ -50,6 +50,7 @@ interface HeroCardProps {
   prevDay: number | null;
   prevWeek: number | null;
   prevMonth: number | null;
+  performanceVsUsd1y: number | null;
   pegRef: number;
   deviationBps: number;
   gaugeDeviationBps: number;
@@ -189,6 +190,7 @@ export function HeroCard({
   prevDay,
   prevWeek,
   prevMonth,
+  performanceVsUsd1y,
   pegRef,
   deviationBps,
   gaugeDeviationBps,
@@ -311,6 +313,18 @@ export function HeroCard({
       value: formatSignedPercent(yieldRanking.excessYield),
       sub: "vs T-Bill",
       color: yieldRanking.excessYield >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400",
+    };
+  })();
+  const performanceVsUsdDisplay = (() => {
+    if (performanceVsUsd1y === null) return null;
+    return {
+      value: formatSignedPercent(performanceVsUsd1y),
+      color:
+        performanceVsUsd1y > 0
+          ? "text-green-700 dark:text-green-400"
+          : performanceVsUsd1y < 0
+            ? "text-red-700 dark:text-red-400"
+            : "text-muted-foreground",
     };
   })();
   const dewsDisplay = (() => {
@@ -458,6 +472,13 @@ export function HeroCard({
             subValue={excessYieldDisplay.sub}
             colorClass={excessYieldDisplay.color}
           />
+          {performanceVsUsdDisplay && (
+            <MetricChip
+              label="1Y vs USD"
+              value={performanceVsUsdDisplay.value}
+              colorClass={performanceVsUsdDisplay.color}
+            />
+          )}
           <MetricChip
             label={<MethodologyLabel topic="dews">DEWS</MethodologyLabel>}
             value={dewsDisplay.value}
@@ -584,6 +605,13 @@ export function HeroCard({
               subValue={excessYieldDisplay.sub}
               colorClass={excessYieldDisplay.color}
             />
+            {performanceVsUsdDisplay && (
+              <MetricChip
+                label="1Y vs USD"
+                value={performanceVsUsdDisplay.value}
+                colorClass={performanceVsUsdDisplay.color}
+              />
+            )}
             <MetricChip
               label={<MethodologyLabel topic="dews">DEWS</MethodologyLabel>}
               value={dewsDisplay.value}

@@ -261,6 +261,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
           prevDay={viewModel.prevDay}
           prevWeek={viewModel.prevWeek}
           prevMonth={viewModel.prevMonth}
+          performanceVsUsd1y={viewModel.performanceVsUsd1y}
           pegRef={viewModel.pegRef}
           deviationBps={viewModel.deviationBps}
           gaugeDeviationBps={viewModel.gaugeDeviationBps}

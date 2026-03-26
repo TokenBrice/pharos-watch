@@ -217,6 +217,7 @@ describe("HeroCard", () => {
         prevDay={995_000_000}
         prevWeek={980_000_000}
         prevMonth={970_000_000}
+        performanceVsUsd1y={null}
         pegRef={1}
         deviationBps={-2}
         gaugeDeviationBps={2}
@@ -242,6 +243,7 @@ describe("HeroCard", () => {
     expect(html).toContain("Blacklistable");
     expect(html).toContain("Excess Yield");
     expect(html).toContain("+0.85%");
+    expect(html).not.toContain("1Y vs USD");
     expect(html).toContain("DEWS");
     expect(html).toContain("Watch");
     expect(html).not.toContain("Issuer controls");
@@ -272,6 +274,7 @@ describe("HeroCard", () => {
         prevDay={995_000_000}
         prevWeek={980_000_000}
         prevMonth={970_000_000}
+        performanceVsUsd1y={null}
         pegRef={1}
         deviationBps={-2}
         gaugeDeviationBps={2}
@@ -289,5 +292,59 @@ describe("HeroCard", () => {
     expect(html).toContain("Possible");
     expect(html).not.toContain("Inherited");
     expect(html).not.toContain("No issuer controls");
+  });
+
+  it("renders 1Y vs USD for eligible non-USD coins when performance is available", () => {
+    const nonUsdCoin: StablecoinMeta = {
+      ...coin,
+      id: "zchf-frankencoin",
+      name: "Frankencoin",
+      symbol: "ZCHF",
+      flags: {
+        ...coin.flags,
+        pegCurrency: "CHF",
+      },
+    };
+
+    const nonUsdCoinData: StablecoinData = {
+      ...coinData,
+      id: "zchf-frankencoin",
+      name: "Frankencoin",
+      symbol: "ZCHF",
+      pegType: "peggedCHF",
+      price: 1.12,
+      circulating: { peggedCHF: 1_000_000_000 },
+      circulatingPrevDay: { peggedCHF: 995_000_000 },
+      circulatingPrevWeek: { peggedCHF: 980_000_000 },
+      circulatingPrevMonth: { peggedCHF: 970_000_000 },
+    };
+
+    const html = renderToStaticMarkup(
+      <HeroCard
+        coin={nonUsdCoin}
+        coinData={nonUsdCoinData}
+        logoSrc="/logos/zchf.svg"
+        isNavToken={false}
+        mcap={1_000_000_000}
+        supply={1_000_000_000}
+        prevDay={995_000_000}
+        prevWeek={980_000_000}
+        prevMonth={970_000_000}
+        performanceVsUsd1y={12.34}
+        pegRef={1.12}
+        deviationBps={-2}
+        gaugeDeviationBps={2}
+        pegScoreResult={pegScoreResult}
+        recordedDepegEventCount={3}
+        liquidityData={liquidityData}
+        yieldRanking={yieldRanking}
+        stressSignal={stressSignal}
+        reportCard={null}
+        onOpenFeedback={() => {}}
+      />,
+    );
+
+    expect(html).toContain("1Y vs USD");
+    expect(html).toContain("+12.34%");
   });
 });

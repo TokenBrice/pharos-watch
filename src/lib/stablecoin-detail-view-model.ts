@@ -22,6 +22,7 @@ import {
   getPrevMonthRawOrNull,
   getPrevWeekRawOrNull,
 } from "@shared/lib/supply";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { getReserves, type ReserveResult } from "@shared/lib/reserve-templates";
 import {
@@ -68,6 +69,7 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   prevDay: number | null;
   prevWeek: number | null;
   prevMonth: number | null;
+  performanceVsUsd1y: number | null;
   pegRef: number;
   deviationBps: number;
   gaugeDeviationBps: number;
@@ -135,6 +137,53 @@ interface BuildStablecoinDetailViewModelParams {
   nowMs?: number;
 }
 
+const YEAR_SECONDS = 365 * DAY_SECONDS;
+const YEARLY_PERFORMANCE_ANCHOR_TOLERANCE_SECONDS = 14 * DAY_SECONDS;
+
+function isEligibleForUsdPerformance(coin: StablecoinMeta): boolean {
+  const pegCurrency = coin.flags.pegCurrency;
+  return !coin.flags.navToken && pegCurrency !== "USD" && pegCurrency !== "VAR" && pegCurrency !== "OTHER";
+}
+
+function computePerformanceVsUsd1y(
+  coin: StablecoinMeta,
+  currentPrice: number | null | undefined,
+  supplyHistory: SupplyHistoryPoint[],
+  nowMs: number,
+): number | null {
+  if (!isEligibleForUsdPerformance(coin)) return null;
+  if (currentPrice == null || !Number.isFinite(currentPrice) || currentPrice <= 0) return null;
+
+  // For non-USD and commodity pegs, the tracked USD price series is the best
+  // repo-local proxy we have for "asset vs USD" without introducing a new FX-history API.
+  const pricedHistory = supplyHistory.filter(
+    (point) => point.price != null && Number.isFinite(point.price) && point.price > 0,
+  );
+  if (pricedHistory.length === 0) return null;
+
+  const targetDate = Math.floor(nowMs / 1000) - YEAR_SECONDS;
+  if (pricedHistory[0].date > targetDate + YEARLY_PERFORMANCE_ANCHOR_TOLERANCE_SECONDS) {
+    return null;
+  }
+
+  let anchor = pricedHistory[0];
+  let closestDelta = Math.abs(anchor.date - targetDate);
+
+  for (const point of pricedHistory) {
+    const delta = Math.abs(point.date - targetDate);
+    if (delta < closestDelta) {
+      anchor = point;
+      closestDelta = delta;
+    }
+  }
+
+  if (closestDelta > YEARLY_PERFORMANCE_ANCHOR_TOLERANCE_SECONDS || anchor.price == null || anchor.price <= 0) {
+    return null;
+  }
+
+  return ((currentPrice / anchor.price) - 1) * 100;
+}
+
 export function buildStablecoinDetailViewModel({
   id,
   coin,
@@ -167,7 +216,7 @@ export function buildStablecoinDetailViewModel({
   isFlowsLoading,
   liveReserves = null,
   liveReserveError = null,
-  nowMs: _nowMs = Date.now(),
+  nowMs = Date.now(),
 }: BuildStablecoinDetailViewModelParams): StablecoinDetailViewModel {
   if (supplyLoading || listLoading) {
     return { status: "loading", handleRetryAll };
@@ -189,6 +238,7 @@ export function buildStablecoinDetailViewModel({
   const prevWeek = getPrevWeekRawOrNull(coinData);
   const prevMonth = getPrevMonthRawOrNull(coinData);
   const resolvedSupplyHistory = supplyData ?? [];
+  const performanceVsUsd1y = computePerformanceVsUsd1y(coin, coinData.price, resolvedSupplyHistory, nowMs);
   const earliestTrackingDate =
     resolvedSupplyHistory.length > 0
       ? String(resolvedSupplyHistory[0].date)
@@ -232,6 +282,7 @@ export function buildStablecoinDetailViewModel({
     prevDay,
     prevWeek,
     prevMonth,
+    performanceVsUsd1y,
     pegRef: pegContext.pegReference,
     deviationBps,
     gaugeDeviationBps,
