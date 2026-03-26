@@ -87,5 +87,12 @@ export const STATUS_RECONCILIATION_THRESHOLDS = {
   warnRatio: 0.12,
 } as const;
 
+// --- Reserve metadata drift thresholds ---
+export const STATUS_RESERVE_DRIFT_THRESHOLD_POINTS = 15;
+
+export function isReserveDriftThresholdExceeded(delta: number): boolean {
+  return delta > STATUS_RESERVE_DRIFT_THRESHOLD_POINTS;
+}
+
 // --- Discovery scan ---
 export const DISCOVERY_MIN_MCAP = 5_000_000;

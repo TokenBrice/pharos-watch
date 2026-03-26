@@ -1,8 +1,7 @@
+import { isReserveDriftThresholdExceeded } from "@shared/lib/status-thresholds";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { computeCollateralQualityFromReserves } from "@shared/lib/report-cards";
 import { loadFreshIndependentLiveReserveMap } from "./live-reserves-store";
-
-const DRIFT_THRESHOLD = 15;
 
 export interface CollateralDriftEntry {
   id: string;
@@ -18,7 +17,7 @@ export interface CollateralDriftResult {
 
 /**
  * Load fresh live reserves and compare with curated reserve metadata.
- * Returns coins with score drift > 15 points and coins that fell back to curated.
+ * Returns coins with score drift above the shared reserve-drift threshold and coins that fell back to curated.
  */
 export async function checkCollateralDrift(db: D1Database): Promise<CollateralDriftResult> {
   const liveReserveMap = await loadFreshIndependentLiveReserveMap(db);
@@ -38,7 +37,7 @@ export async function checkCollateralDrift(db: D1Database): Promise<CollateralDr
       const liveScore = computeCollateralQualityFromReserves(liveSlices);
       const curatedScore = computeCollateralQualityFromReserves(meta.reserves);
       const delta = Math.abs(liveScore - curatedScore);
-      if (delta > DRIFT_THRESHOLD) {
+      if (isReserveDriftThresholdExceeded(delta)) {
         driftCoins.push({ id: meta.id, liveScore, curatedScore, delta });
       }
     }

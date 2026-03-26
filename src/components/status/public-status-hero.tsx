@@ -3,6 +3,7 @@
 import type { HealthResponse } from "@shared/types";
 import { RefreshCountdown } from "@/components/status/refresh-countdown";
 import { formatTimestampMs, formatTimestampSeconds, getStatusTone } from "@/lib/status-dashboard-model";
+import { getPublicMintBurnStatus } from "@/lib/status/public-status";
 import { cn } from "@/lib/utils";
 
 interface PublicProbeSummary {
@@ -22,7 +23,7 @@ interface PublicStatusHeroProps {
   probeSummary: PublicProbeSummary | null;
   worstCacheRatio: number | null;
   worstCacheStatus: "healthy" | "degraded" | "stale";
-  unhealthyCaches: number;
+  impactedCacheLanes: number;
   openCircuits: number;
   halfOpenCircuits: number;
   lastSuccessfulMintBurnSyncAge: string;
@@ -147,7 +148,7 @@ export function PublicStatusHero({
   probeSummary,
   worstCacheRatio,
   worstCacheStatus,
-  unhealthyCaches,
+  impactedCacheLanes,
   openCircuits,
   halfOpenCircuits,
   lastSuccessfulMintBurnSyncAge,
@@ -172,12 +173,16 @@ export function PublicStatusHero({
       : halfOpenCircuits > 0
         ? `${halfOpenCircuits} breaker(s) are probing recovery.`
         : "All registered public-source breakers are closed.";
-  const mintBurnTone =
-    healthData.mintBurn.sync.freshnessStatus === "stale"
-      ? "stale"
-      : healthData.mintBurn.sync.freshnessStatus === "degraded"
-        ? "degraded"
-        : "healthy";
+  const mintBurnTone = getPublicMintBurnStatus(healthData.mintBurn.sync);
+  const mintBurnDetail = healthData.mintBurn.sync.warning
+    ? `${healthData.mintBurn.sync.warning}${
+      healthData.mintBurn.sync.lastSuccessfulSyncAt != null
+        ? ` Last successful sync ${lastSuccessfulMintBurnSyncAge} ago.`
+        : ""
+    }`
+    : healthData.mintBurn.sync.lastSuccessfulSyncAt != null
+      ? `Last successful sync ${lastSuccessfulMintBurnSyncAge} ago.`
+      : "No successful mint/burn sync has been recorded yet.";
 
   return (
     <section className={cn("relative overflow-hidden rounded-[2rem] border px-4 py-5 shadow-[0_34px_90px_oklch(0_0_0_/0.24)] sm:px-5 lg:px-6", hero.shell)}>
@@ -229,18 +234,14 @@ export function PublicStatusHero({
               <div className="grid gap-3">
                 <SignalTile
                   label="Worst Cache Lane"
-                  value={worstCacheRatio != null ? `${worstCacheRatio.toFixed(2)}x` : "—"}
-                  detail={`${unhealthyCaches} cache lane(s) are outside their freshness target.`}
+                  value={worstCacheRatio != null ? `${worstCacheRatio.toFixed(2)}x` : worstCacheStatus === "healthy" ? "—" : "missing"}
+                  detail={`${impactedCacheLanes} cache lane(s) are outside their public reliability floor.`}
                   tone={worstCacheStatus}
                 />
                 <SignalTile
                   label="Mint/Burn Writer"
-                  value={healthData.mintBurn.sync.freshnessStatus}
-                  detail={
-                    healthData.mintBurn.sync.lastSuccessfulSyncAt != null
-                      ? `Last successful sync ${lastSuccessfulMintBurnSyncAge} ago.`
-                      : "No successful mint/burn sync has been recorded yet."
-                  }
+                  value={mintBurnTone}
+                  detail={mintBurnDetail}
                   tone={mintBurnTone}
                 />
               </div>

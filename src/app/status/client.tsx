@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import { getBlacklistGapStatus, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
 import { formatElapsedSeconds } from "@shared/lib/format";
-import type { HealthResponse } from "@shared/types";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
 import { CircuitBreakerTable } from "@/components/status/circuit-breaker-table";
@@ -13,115 +12,11 @@ import { NoticeRail, StatusSection, SummaryBadge } from "@/components/status/pag
 import { useHealth } from "@/hooks/api-hooks";
 import { usePublicEndpointProbes } from "@/hooks/use-endpoint-probes";
 import { buildBrowserProbeSummary, formatTimestampSeconds, getStatusTone } from "@/lib/status-dashboard-model";
-import { getCacheImpactStatus } from "@/lib/status/cache-health";
-
-function getWorstCacheRatio(caches: Record<string, { ageSeconds: number | null; maxAge: number }>): number | null {
-  let worst: number | null = null;
-  for (const cache of Object.values(caches)) {
-    if (cache.ageSeconds == null || !Number.isFinite(cache.maxAge) || cache.maxAge <= 0) continue;
-    const ratio = cache.ageSeconds / cache.maxAge;
-    worst = worst == null ? ratio : Math.max(worst, ratio);
-  }
-  return worst;
-}
-
-function getWorstCacheStatus(ratio: number | null): "healthy" | "degraded" | "stale" {
-  if (ratio == null) return "healthy";
-  if (ratio > STATUS_CACHE_RATIO_THRESHOLDS.stale) return "stale";
-  if (ratio > STATUS_CACHE_RATIO_THRESHOLDS.degraded) return "degraded";
-  return "healthy";
-}
-
-function getMintBurnStatus(
-  freshnessStatus: "fresh" | "degraded" | "stale",
-): "healthy" | "degraded" | "stale" {
-  if (freshnessStatus === "stale") return "stale";
-  if (freshnessStatus === "degraded") return "degraded";
-  return "healthy";
-}
-
-const CACHE_IMPACT_COPY: Partial<Record<string, { title: string; detail: string }>> = {
-  stablecoins: {
-    title: "Core market listings",
-    detail: "Homepage rankings, comparison tables, and market-cap driven views rely on the core stablecoin cache.",
-  },
-  "stablecoin-charts": {
-    title: "Historical chart lanes",
-    detail: "Stablecoin detail charts and historical trend panels can lag when chart snapshots fall behind.",
-  },
-  "usds-status": {
-    title: "USDS status surface",
-    detail: "USDS-specific status and reserve context can drift when this cache is stale.",
-  },
-  "fx-rates": {
-    title: "Non-USD normalization",
-    detail: "FX normalization affects non-USD peg interpretation and any view that translates source values into USD terms.",
-  },
-  "bluechip-ratings": {
-    title: "Safety overlays",
-    detail: "Bluechip-derived safety context and dependent report-card inputs can lag.",
-  },
-  "dex-liquidity": {
-    title: "Liquidity analytics",
-    detail: "Liquidity scores and related route panels depend on fresh DEX liquidity snapshots.",
-  },
-  "yield-data": {
-    title: "Yield monitoring",
-    detail: "Yield rankings and per-coin yield history can lag when yield snapshots are stale.",
-  },
-  dews: {
-    title: "Stress and depeg warnings",
-    detail: "DEWS and stress-warning surfaces can lag when the stress lane falls behind.",
-  },
-};
-
-function getImpactedSurfaceStatus(cache: HealthResponse["caches"][string]): "healthy" | "degraded" | "stale" {
-  return getCacheImpactStatus(cache);
-}
-
-function getImpactedPublicSurfaces(healthData: HealthResponse) {
-  const items: Array<{ id: string; title: string; detail: string; tone: "degraded" | "stale" }> = [];
-  const blacklistStatus = getBlacklistGapStatus({
-    missingRatio: healthData.blacklist.missingRatio,
-    recentMissingAmounts: healthData.blacklist.recentMissingAmounts,
-  });
-
-  if (healthData.mintBurn.sync.freshnessStatus !== "fresh" || healthData.mintBurn.majorStaleCount > 0) {
-    items.push({
-      id: "mint-burn",
-      title: "Mint and burn flow surfaces",
-      detail:
-        "Mint/burn flows, event timelines, and any downstream checks that compare recent issuance or redemption activity can lag while the writer is degraded.",
-      tone: healthData.mintBurn.sync.freshnessStatus === "stale" ? "stale" : "degraded",
-    });
-  }
-
-  if (blacklistStatus !== "healthy") {
-    items.push({
-      id: "blacklist",
-      title: "Blacklist risk context",
-      detail:
-        "Blacklist event totals and amount-aware risk context are incomplete until missing blacklist amounts are backfilled.",
-      tone: blacklistStatus,
-    });
-  }
-
-  for (const [key, cache] of Object.entries(healthData.caches)) {
-    const copy = CACHE_IMPACT_COPY[key];
-    if (!copy) continue;
-    const tone = getImpactedSurfaceStatus(cache);
-    if (tone === "healthy") continue;
-
-    items.push({
-      id: `cache-${key}`,
-      title: copy.title,
-      detail: copy.detail,
-      tone,
-    });
-  }
-
-  return items;
-}
+import {
+  getImpactedPublicSurfaces,
+  getPublicMintBurnStatus,
+  getPublicWorstCacheSummary,
+} from "@/lib/status/public-status";
 
 function PublicSignalCard({
   kicker,
@@ -260,10 +155,9 @@ export default function StatusClient() {
   }
 
   const statusTone = getStatusTone(healthData.status);
-  const worstCacheRatio = getWorstCacheRatio(healthData.caches);
-  const worstCacheStatus = getWorstCacheStatus(worstCacheRatio);
+  const worstCache = getPublicWorstCacheSummary(healthData.caches);
+  const mintBurnStatus = getPublicMintBurnStatus(healthData.mintBurn.sync);
   const probeSummary = buildBrowserProbeSummary(probes, probesUpdatedAt ?? 0);
-  const unhealthyCaches = Object.values(healthData.caches).filter((cache) => !cache.healthy).length;
   const openCircuits = Object.values(healthData.circuits).filter((circuit) => circuit.state === "open").length;
   const halfOpenCircuits = Object.values(healthData.circuits).filter((circuit) => circuit.state === "half-open").length;
   const lastSuccessfulMintBurnSyncAge =
@@ -291,9 +185,9 @@ export default function StatusClient() {
           healthData={healthData}
           lastUpdated={lastUpdated}
           probeSummary={probeSummary}
-          worstCacheRatio={worstCacheRatio}
-          worstCacheStatus={worstCacheStatus}
-          unhealthyCaches={unhealthyCaches}
+          worstCacheRatio={worstCache.ratio}
+          worstCacheStatus={worstCache.status}
+          impactedCacheLanes={worstCache.impactedCount}
           openCircuits={openCircuits}
           halfOpenCircuits={halfOpenCircuits}
           lastSuccessfulMintBurnSyncAge={lastSuccessfulMintBurnSyncAge}
@@ -324,20 +218,22 @@ export default function StatusClient() {
             <PublicSignalCard
               kicker="Sync Watch"
               title="Mint/Burn Sync"
-              description="Critical mint/burn writer freshness determines whether the public flows surface is current."
+              description="Critical mint/burn writer freshness and latest run health determine whether the public flows surface is current."
               badges={
                 <div className="flex flex-wrap gap-2">
                   <SummaryBadge
-                    label="Freshness"
-                    value={healthData.mintBurn.sync.freshnessStatus}
-                    className={getStatusTone(getMintBurnStatus(healthData.mintBurn.sync.freshnessStatus)).badgeClassName}
+                    label="Writer"
+                    value={mintBurnStatus}
+                    className={getStatusTone(mintBurnStatus).badgeClassName}
                   />
+                  <SummaryBadge label="Freshness" value={healthData.mintBurn.sync.freshnessStatus} />
                   <SummaryBadge label="Major Stale" value={String(healthData.mintBurn.majorStaleCount)} />
                 </div>
               }
             >
               <p className="text-sm leading-relaxed text-muted-foreground">
-                {healthData.mintBurn.sync.warning ?? "Critical mint/burn lanes are within their expected freshness window."}
+                {healthData.mintBurn.sync.warning
+                  ?? "Critical mint/burn lanes are within their expected freshness and run-health windows."}
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-[1rem] border border-border/60 bg-background/78 p-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.58)] dark:bg-background/35 dark:shadow-none">

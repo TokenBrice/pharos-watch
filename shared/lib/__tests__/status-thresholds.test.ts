@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { getBlacklistGapStatus } from "../status-thresholds";
+import {
+  getBlacklistGapStatus,
+  isReserveDriftThresholdExceeded,
+  STATUS_RESERVE_DRIFT_THRESHOLD_POINTS,
+} from "../status-thresholds";
 
 describe("getBlacklistGapStatus", () => {
   it("returns healthy for historical low-ratio blacklist gaps", () => {
@@ -33,5 +37,13 @@ describe("getBlacklistGapStatus", () => {
       missingRatio: 0.005,
       recentMissingAmounts: 25,
     })).toBe("stale");
+  });
+});
+
+describe("isReserveDriftThresholdExceeded", () => {
+  it("keeps the reserve drift watch threshold at greater than 15 points", () => {
+    expect(STATUS_RESERVE_DRIFT_THRESHOLD_POINTS).toBe(15);
+    expect(isReserveDriftThresholdExceeded(STATUS_RESERVE_DRIFT_THRESHOLD_POINTS)).toBe(false);
+    expect(isReserveDriftThresholdExceeded(STATUS_RESERVE_DRIFT_THRESHOLD_POINTS + 0.1)).toBe(true);
   });
 });

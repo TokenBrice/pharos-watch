@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Fragment, type ReactNode, useEffect, useState, useSyncExternalStore } from "react";
+import { STATUS_RESERVE_DRIFT_THRESHOLD_POINTS } from "@shared/lib/status-thresholds";
 import type { StatusResponse } from "@shared/types";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
@@ -721,7 +722,7 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
                       </div>
                       <div className="mt-2 text-sm leading-relaxed text-foreground">
                         {(data.reserveDrift?.length ?? 0) > 0
-                          ? `${data.reserveDrift?.length} coin(s) show >5pt drift between live reserve slices and curated reserve metadata.`
+                          ? `${data.reserveDrift?.length} coin(s) show >${STATUS_RESERVE_DRIFT_THRESHOLD_POINTS}pt drift between live reserve slices and curated reserve metadata.`
                           : "No reserve drift watch items."}
                       </div>
                     </div>

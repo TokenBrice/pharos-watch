@@ -1,3 +1,4 @@
+import { STATUS_RESERVE_DRIFT_THRESHOLD_POINTS } from "@shared/lib/status-thresholds";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
 import type { ClassificationWarning, ReserveDriftEntry, StatusSectionError } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +33,8 @@ export function MetadataIntegrityCard({
           <div>
             <h3 className="text-sm font-medium">Curated vs live reserve drift</h3>
             <p className="text-xs text-muted-foreground">
-              Flags coins where live reserve slices shift collateral quality by more than 5 points versus curated metadata.
+              Flags coins where live reserve slices shift collateral quality by more than{" "}
+              {STATUS_RESERVE_DRIFT_THRESHOLD_POINTS} points versus curated metadata.
             </p>
           </div>
           {hasReserveDrift ? (
@@ -55,7 +57,7 @@ export function MetadataIntegrityCard({
             <div className="rounded-lg border border-border/60 p-3 text-sm text-muted-foreground">
               {reserveDriftError
                 ? `Reserve drift loader failed: ${reserveDriftError.message}`
-                : "No reserve-score drift above the 5-point watch threshold."}
+                : `No reserve-score drift above the ${STATUS_RESERVE_DRIFT_THRESHOLD_POINTS}-point watch threshold.`}
             </div>
           )}
         </div>

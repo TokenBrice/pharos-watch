@@ -1,6 +1,9 @@
 import { computeCentralizedCustodyFraction } from "@shared/lib/centralized-custody";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT } from "@shared/lib/status-thresholds";
+import {
+  isReserveDriftThresholdExceeded,
+  STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT,
+} from "@shared/lib/status-thresholds";
 import { ACTIVE_IDS, ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type {
   ClassificationWarning,
@@ -264,7 +267,7 @@ export async function loadStatusSupplements(
       const liveScore = computeCollateralQualityFromReserves(liveSlices);
       const curatedScore = computeCollateralQualityFromReserves(meta.reserves);
       const delta = Math.abs(liveScore - curatedScore);
-      if (delta > 5) {
+      if (isReserveDriftThresholdExceeded(delta)) {
         driftEntries.push({ coinId, liveCollateralScore: liveScore, curatedCollateralScore: curatedScore, delta });
       }
     }
