@@ -1,8 +1,16 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.1` (2026-03-01 -> 2026-03-26).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.2` (2026-03-01 -> 2026-03-26).
 
 ---
+
+## v5.2 - Address-First Identity and Explicit Coverage Truth (Mar 26, 2026)
+
+- DeFiLlama discovery, variant matching, and protocol-native adapters now resolve by chain and address before symbol fallback and drop ambiguous candidates instead of guessing
+- Protocol-native source keys now use full chain-aware identifiers, and source-link resolution understands prefixed labels such as `Morpho: ...`, `Pendle: ...`, `Yearn: ...`, `Kong: ...`, `Beefy: ...`, and chain-qualified labels such as `Aave v3 (base)`
+- Yield manifest coverage is now explicit for every yield-bearing asset, including price-derived fallback-only assets and intentional gaps such as pre-launch `usg-tangent`
+- Warning divergence checks and published `medianApy` now share the same TVL-weighted 30d median benchmark
+- `/api/yield-history` is now bounded to the latest published `/api/yield-rankings` snapshot so history cannot advance past an unpublished cache state
 
 ## v5.1 - Yield Infrastructure Automation (Mar 26, 2026)
 

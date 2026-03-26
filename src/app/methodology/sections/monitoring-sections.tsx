@@ -33,8 +33,8 @@ export function MonitoringMethodologySections() {
           <p>
             Pharos tracks yield-bearing stablecoins and computes a risk-adjusted ranking via the Pharos Yield Score
             (PYS). Data is refreshed every 30 minutes using a source-aware APY resolution strategy, with alternative
-            sources retained when multiple valid yield paths exist and confidence-weighted arbitration selecting the
-            primary row.
+            sources retained when multiple valid yield paths exist, address-first identity used before symbol fallback,
+            and confidence-weighted arbitration selecting the primary row.
           </p>
           <MethodologyFacts
             facts={[
@@ -55,7 +55,7 @@ export function MonitoringMethodologySections() {
                 {
                   label: "Required sources",
                   value:
-                    "Direct on-chain reads, curated DeFiLlama pools, rate-derived benchmark inputs, or 30d price history",
+                    "Direct on-chain reads, curated DeFiLlama pools, curated protocol-native APIs, rate-derived benchmark inputs, or 7-45d price history",
                 },
                 {
                   label: "Failure behavior",
@@ -87,10 +87,10 @@ export function MonitoringMethodologySections() {
                 </div>
                 <div className="rounded-lg border p-3 text-center flex-1">
                   <p className="text-foreground font-medium">Tier 2</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">DeFiLlama pools</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Curated pools + protocol APIs</p>
                 </div>
                 <div className="rounded-lg border p-3 text-center flex-1">
-                  <p className="text-foreground font-medium">Tier 3</p>
+                  <p className="text-foreground font-medium">Tier 3 / 4</p>
                   <p className="text-xs text-muted-foreground mt-0.5">Price- or rate-derived fallback</p>
                 </div>
               </div>
@@ -129,11 +129,11 @@ export function MonitoringMethodologySections() {
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium text-xs">Tier 2</p>
-                  <p className="text-xs text-muted-foreground">DeFiLlama</p>
+                  <p className="text-xs text-muted-foreground">Curated venues</p>
                 </div>
                 <div className="rounded-lg border p-3 text-center">
-                  <p className="text-foreground font-medium text-xs">Tier 3</p>
-                  <p className="text-xs text-muted-foreground">Price-derived</p>
+                  <p className="text-foreground font-medium text-xs">Tier 3 / 4</p>
+                  <p className="text-xs text-muted-foreground">Fallbacks</p>
                 </div>
               </div>
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
@@ -170,12 +170,18 @@ export function MonitoringMethodologySections() {
                 </li>
                 <li>
                   <span className="text-foreground">Tier 2 &mdash; DeFiLlama pools</span>: matches the coin to a
-                  DeFiLlama yield pool via static mapping or symbol-based fallback, while explicitly preserving wrapper
-                  pools that upstream marks as non-stablecoin when they are configured as relevant yield sources
+                  DeFiLlama yield pool via static mapping, chain-scoped wrapper rules, and address-first fallback
+                  matching, while explicitly preserving wrapper pools that upstream marks as non-stablecoin when they
+                  are configured as relevant yield sources
+                </li>
+                <li>
+                  <span className="text-foreground">Tier 2.5 &mdash; Protocol-native venues</span>: ingests curated
+                  protocol-owned APIs and protocol-specific on-chain venue readers when the canonical savings path is
+                  not representable as a reliable DeFiLlama pool
                 </li>
                 <li>
                   <span className="text-foreground">Tier 3 &mdash; Price-derived</span>: for NAV tokens only, derives
-                  APY from the 30-day price appreciation in supply_history
+                  APY from 7-45 day price appreciation in `supply_history`
                 </li>
                 <li>
                   <span className="text-foreground">Tier 4 &mdash; Rate-derived</span>: for dividend-distributing and
@@ -187,6 +193,10 @@ export function MonitoringMethodologySections() {
                 Deterministic and curated paths can all contribute rows, then a confidence-weighted arbitration layer
                 chooses the best row. Divergent discovered or fallback sources can be demoted or rejected when a
                 canonical source disagrees materially.
+              </p>
+              <p>
+                Yield-bearing coverage is now explicitly inventoried per asset. If no reliable runtime source exists,
+                the asset is marked as an intentional gap rather than silently disappearing from audit coverage.
               </p>
               <p>
                 Deterministic rows keep their own source identity (`onchain:&lt;stablecoinId&gt;`) rather than sharing
@@ -247,7 +257,8 @@ export function MonitoringMethodologySections() {
                   until 7 days of data accumulate
                 </li>
                 <li>
-                  DeFiLlama pool matching uses heuristics; pool mismatches are corrected via the static override map
+                  Some DeFiLlama and protocol-native surfaces still depend on upstream asset metadata completeness; the
+                  resolver now drops ambiguous candidates rather than guessing across duplicate symbols
                 </li>
                 <li>
                   The LUSD B.Protocol Stability Pool row is conservative by design: it includes projected LQTY

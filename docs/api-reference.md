@@ -1572,7 +1572,7 @@ When present, `YieldRanking.provenance` includes:
 
 ### `GET /api/yield-history`
 
-Historical yield data for a single stablecoin. If a stored `warning_signals` payload is malformed, the API treats it as an empty array rather than failing the entire response.
+Historical yield data for a single stablecoin. If a stored `warning_signals` payload is malformed, the API treats it as an empty array rather than failing the entire response. Returned rows are capped at the latest published `/api/yield-rankings` snapshot so history cannot advance past an unpublished yield cache state.
 
 **Cache:** slow — `X-Data-Age` and `Warning` headers included.
 
@@ -1602,8 +1602,8 @@ Historical yield data for a single stablecoin. If a stored `warning_signals` pay
   },
   "history": [YieldHistoryPoint, "..."],
   "methodology": {
-    "version": "4.10",
-    "currentVersion": "4.10",
+    "version": "5.2",
+    "currentVersion": "5.2",
     "changelogPath": "/methodology/yield-changelog/"
   }
 }

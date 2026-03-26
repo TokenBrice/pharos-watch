@@ -67,20 +67,29 @@ describe("yield config registry", () => {
     }
   });
 
-  it("exports a unified manifest entry for every configured yield adapter surface", () => {
+  it("exports a unified manifest entry for every yield-bearing stablecoin", () => {
     const manifestIds = new Set(YIELD_ADAPTER_MANIFEST.map((entry) => entry.stablecoinId));
-    const configuredIds = new Set([
-      ...Object.keys(YIELD_VARIANT_MAP),
-      ...Object.keys(YIELD_POOL_MAP),
-      ...ON_CHAIN_RATE_CONFIGS.map((config) => config.stablecoinId),
-      ...RATE_DERIVED_CONFIGS.map((config) => config.stablecoinId),
-      ...PRICE_DERIVED_FALLBACK_IDS,
-      ...Object.keys(AUTO_LENDING_POOL_MAP),
-      "dusd-dtrinity",
-      "reusd-re-protocol",
-    ]);
+    const yieldBearingIds = new Set(
+      TRACKED_STABLECOINS
+        .filter((coin) => coin.flags.yieldBearing)
+        .map((coin) => coin.id),
+    );
 
-    expect(manifestIds).toEqual(configuredIds);
+    expect(manifestIds).toEqual(yieldBearingIds);
+    expect(YIELD_ADAPTER_MANIFEST.every((entry) => entry.strategies.length > 0)).toBe(true);
+  });
+
+  it("marks intentional manifest gaps explicitly instead of leaving them implicit", () => {
+    expect(
+      YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "usg-tangent"),
+    ).toMatchObject({
+      status: "intentional-gap",
+      strategies: [
+        expect.objectContaining({
+          kind: "intentional-gap",
+        }),
+      ],
+    });
   });
 
   it("documents the quarantined deterministic adapters in the manifest", () => {

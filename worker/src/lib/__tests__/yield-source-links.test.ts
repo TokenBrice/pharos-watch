@@ -74,6 +74,36 @@ describe("resolveYieldSourceUrl", () => {
     ).toBe("https://app.radiant.capital/");
   });
 
+  it("matches prefixed protocol labels before falling back to coin metadata", () => {
+    expect(
+      resolveYieldSourceUrl({
+        stablecoinId: "usdc-circle",
+        sourceKey: "protocol-api:morpho-vault:ethereum:0xabc",
+        yieldSource: "Morpho: Gauntlet USDC Prime",
+      }),
+    ).toBe("https://app.morpho.org/");
+  });
+
+  it("matches chain-qualified labels emitted by chain-aware source keys", () => {
+    expect(
+      resolveYieldSourceUrl({
+        stablecoinId: "usdc-circle",
+        sourceKey: "aave-v3-onchain:base",
+        yieldSource: "Aave v3 (base)",
+      }),
+    ).toBe("https://app.aave.com/");
+  });
+
+  it("resolves Kong-prefixed labels to the Kong app", () => {
+    expect(
+      resolveYieldSourceUrl({
+        stablecoinId: "usdc-circle",
+        sourceKey: "protocol-api:kong:ethereum:0xabc",
+        yieldSource: "Kong: Steakhouse USDC",
+      }),
+    ).toBe("https://kong.yearn.fi/");
+  });
+
   it("covers every allowlisted lending protocol label with a curated source URL", () => {
     for (const protocol of LENDING_PROTOCOL_ALLOWLIST) {
       const label = LENDING_PROTOCOL_LABELS[protocol];

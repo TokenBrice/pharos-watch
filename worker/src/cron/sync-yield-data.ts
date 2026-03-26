@@ -1,7 +1,7 @@
 // worker/src/cron/sync-yield-data.ts
-import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
+import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { setCache } from "../lib/db-cache";
+import { getCache, setCache } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
 import { ON_CHAIN_RATE_CONFIGS } from "./yield-config";
@@ -17,13 +17,13 @@ import {
   type YieldHistorySnapshotRow,
 } from "./yield-sync/history";
 import {
-  buildSelectionReason,
   evaluateYieldSources,
   buildHistoryKey,
   isLegacyDeterministicOnChainSourceKey,
   normalizePreviousBestSourceKey,
   shouldDegradeForRiskFreeRate,
 } from "./yield-sync/evaluation";
+import { buildYieldSourceProvenance } from "./yield-sync/provenance";
 import {
   buildYieldRankingsPayloadFromEvaluatedSources,
   persistEvaluatedYieldSources,
@@ -44,7 +44,8 @@ export async function syncYieldData(
 ): Promise<CronResult> {
   const startSec = Math.floor(Date.now() / 1000);
   const sevenDaysAgoSec = startSec - 7 * DAY_SECONDS;
-  const yieldCoins = YIELD_BEARING_STABLECOINS;
+  const yieldCoins = ACTIVE_YIELD_BEARING_STABLECOINS;
+  const yieldCoinIdSet = new Set(yieldCoins.map((coin) => coin.id));
 
   if (yieldCoins.length === 0) {
     return { itemCount: 0, metadata: "no yield-bearing coins" };
@@ -109,6 +110,11 @@ export async function syncYieldData(
   });
 
   const resolvedWithYield = resolved.filter((entry) => entry.yield != null);
+  const resolvedYieldBearingIds = new Set(
+    resolvedWithYield
+      .filter((entry) => yieldCoinIdSet.has(entry.id))
+      .map((entry) => entry.id),
+  );
   const resolvedIds = [...new Set(resolvedWithYield.map((entry) => entry.id))];
   const resolvedCountByCoin = new Map<string, number>();
   for (const entry of resolvedWithYield) {
@@ -248,19 +254,19 @@ export async function syncYieldData(
   // Only applies when there are enough tracked coins to make the ratio meaningful.
   const MIN_YIELD_COVERAGE_RATIO = 0.6;
   const MIN_YIELD_COINS_FOR_GUARD = 10;
-  const yieldCoverageRatio = yieldCoins.length > 0 ? resolvedIds.length / yieldCoins.length : 1;
+  const yieldCoverageRatio = yieldCoins.length > 0 ? resolvedYieldBearingIds.size / yieldCoins.length : 1;
   if (yieldCoins.length >= MIN_YIELD_COINS_FOR_GUARD && yieldCoverageRatio < MIN_YIELD_COVERAGE_RATIO) {
     console.error(
-      `[sync-yield-data] Yield coverage regression: ${resolvedIds.length}/${yieldCoins.length} ` +
+      `[sync-yield-data] Yield coverage regression: ${resolvedYieldBearingIds.size}/${yieldCoins.length} ` +
       `(${(yieldCoverageRatio * 100).toFixed(1)}%) — skipping persistence`,
     );
     return {
       status: "degraded" as const,
-      itemCount: resolvedIds.length,
+      itemCount: resolvedYieldBearingIds.size,
       metadata: JSON.stringify({
         reason: "coverage-regression",
         coverage: yieldCoverageRatio,
-        resolvedCount: resolvedIds.length,
+        resolvedCount: resolvedYieldBearingIds.size,
         totalCount: yieldCoins.length,
       }),
     };
@@ -276,53 +282,17 @@ export async function syncYieldData(
 
   const previewRankingProvenanceByKey = new Map<string, Record<string, unknown>>();
   for (const source of evaluatedSources) {
-    const sourceObservedAt =
-      source.sourceObservedAt
-      ?? (source.dataSource === "defillama" || source.dataSource === "defillama-auto"
-        ? (dlPoolsMeta.updatedAt ?? startSec)
-        : source.dataSource === "rate-derived"
-          ? (riskFreeRateMeta.fetchedAt ?? startSec)
-          : startSec);
-    const sourceAgeSeconds =
-      source.dataSource === "defillama" || source.dataSource === "defillama-auto"
-        ? (dlPoolsMeta.ageSeconds ?? Math.max(0, startSec - sourceObservedAt))
-        : source.dataSource === "rate-derived"
-          ? (riskFreeRateMeta.ageSeconds ?? Math.max(0, startSec - sourceObservedAt))
-          : Math.max(0, startSec - sourceObservedAt);
-    const comparisonAnchorObservedAt = source.comparisonAnchorObservedAt ?? null;
-    const comparisonAnchorAgeSeconds =
-      comparisonAnchorObservedAt != null
-        ? Math.max(0, startSec - comparisonAnchorObservedAt)
-        : null;
-    const rejectedPeers = evaluatedSources.filter((candidate) => candidate.id === source.id && candidate.rejected).length;
-    previewRankingProvenanceByKey.set(buildHistoryKey(source.id, source.sourceKey), {
-      sourceKey: source.sourceKey,
-      sourceObservedAt,
-      sourceAgeSeconds,
-      comparisonAnchorObservedAt,
-      comparisonAnchorAgeSeconds,
-      confidenceTier: source.confidenceTier,
-      selectionMethod: "confidence-weighted",
-      selectionReason:
-        bestSourceKeyByCoin.get(source.id) === source.sourceKey
-          ? buildSelectionReason(source, rejectedPeers)
-          : "Alternative source retained for comparison",
-      sourceSwitch:
-        bestSourceKeyByCoin.get(source.id) === source.sourceKey &&
-        source.previousBestSourceKey != null &&
-        source.previousBestSourceKey !== "legacy-best" &&
-        source.previousBestSourceKey !== source.sourceKey,
-      previousBestSourceKey:
-        source.previousBestSourceKey != null && source.previousBestSourceKey !== "legacy-best"
-          ? source.previousBestSourceKey
-          : null,
-      usedLegacyHistory: source.usedLegacyHistory,
-      usedDefaultSafety: source.usedDefaultSafety,
-      benchmarkRecordDate: riskFreeRateMeta.recordDate,
-      benchmarkIsFallback: riskFreeRateMeta.isFallback,
-      benchmarkFallbackMode: riskFreeRateMeta.fallbackMode,
-      anomalies: source.anomalies,
-    });
+    previewRankingProvenanceByKey.set(
+      buildHistoryKey(source.id, source.sourceKey),
+      buildYieldSourceProvenance({
+        source,
+        isBest: bestSourceKeyByCoin.get(source.id) === source.sourceKey,
+        evaluatedSources,
+        startSec,
+        riskFreeRateMeta,
+        dlPoolsMeta,
+      }),
+    );
   }
 
   const previewRankingsPayload = buildYieldRankingsPayloadFromEvaluatedSources({
@@ -333,8 +303,39 @@ export async function syncYieldData(
     riskFreeRateMeta,
     dlPoolsMeta,
     safetySnapshot: safetySnapshotMeta,
+    medianApy,
     startSec,
   });
+
+  const previousRankingsCache = await getCache(db, "yield-rankings");
+  let previousPublishedYieldBearingCount = 0;
+  if (previousRankingsCache) {
+    try {
+      const parsed = JSON.parse(previousRankingsCache.value) as { rankings?: Array<{ id?: string }> };
+      previousPublishedYieldBearingCount = (parsed.rankings ?? [])
+        .filter((ranking) => typeof ranking.id === "string" && yieldCoinIdSet.has(ranking.id))
+        .length;
+    } catch {
+      previousPublishedYieldBearingCount = 0;
+    }
+  }
+  const currentPublishedYieldBearingCount = previewRankingsPayload.rankings
+    .filter((ranking) => yieldCoinIdSet.has(ranking.id))
+    .length;
+  if (
+    previousPublishedYieldBearingCount >= MIN_YIELD_COINS_FOR_GUARD &&
+    currentPublishedYieldBearingCount < Math.ceil(previousPublishedYieldBearingCount * MIN_YIELD_COVERAGE_RATIO)
+  ) {
+    return {
+      status: "degraded",
+      itemCount: currentPublishedYieldBearingCount,
+      metadata: JSON.stringify({
+        reason: "published-yield-coverage-regression",
+        previousPublishedYieldBearingCount,
+        currentPublishedYieldBearingCount,
+      }),
+    };
+  }
 
   const degradationReasons: string[] = [];
   if (safetySnapshotDegraded) {
@@ -411,12 +412,16 @@ export async function syncYieldData(
       divergenceFlags,
       sourceSwitches,
       defaultSafetyCoinCount: defaultSafetyIds.size,
-      sourceCoverage: {
-        safetyScoresComputed: safetySnapshot.coveredCount,
-        safetyScoresExpected: safetySnapshot.trackedCount,
-        safetyCoverageRatio: Number(safetyCoverageRatio.toFixed(4)),
-        dlPoolCount: dlPoolsMeta.poolCount,
-        onChainRatesResolved: onChainRates.size,
+        sourceCoverage: {
+          safetyScoresComputed: safetySnapshot.coveredCount,
+          safetyScoresExpected: safetySnapshot.trackedCount,
+          safetyCoverageRatio: Number(safetyCoverageRatio.toFixed(4)),
+          resolvedYieldBearingCount: resolvedYieldBearingIds.size,
+          expectedYieldBearingCount: yieldCoins.length,
+          publishedYieldBearingCount: currentPublishedYieldBearingCount,
+          previousPublishedYieldBearingCount,
+          dlPoolCount: dlPoolsMeta.poolCount,
+          onChainRatesResolved: onChainRates.size,
         onChainRatesConfigured: ON_CHAIN_RATE_CONFIGS.length,
         onChainAttempted: onChainAttemptedCount,
         onChainAllDeterministicFailed: allDeterministicFailed,

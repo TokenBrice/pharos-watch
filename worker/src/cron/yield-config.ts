@@ -2,6 +2,7 @@
 // Static configuration for the yield intelligence pipeline.
 
 import type { YieldType } from "@shared/types/core";
+import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 
 /** Yield variant: maps a tracked Pharos coin to its untracked yield wrapper. */
 export interface YieldVariant {
@@ -648,6 +649,8 @@ export const AUTO_LENDING_SAFETY_BYPASS_IDS = new Set([
 
 export interface YieldAdapterManifestEntry {
   stablecoinId: string;
+  status: "covered" | "intentional-gap";
+  strategies: YieldStrategyDescriptor[];
   variant?: YieldVariant;
   nativePoolId?: string;
   onChainRate?: OnChainRateConfig;
@@ -663,22 +666,118 @@ const QUARANTINED_DETERMINISTIC_ADAPTERS: Record<string, string> = {
   "reusd-re-protocol": "generic convertToAssets probe returns empty data; requires protocol-specific deterministic reader",
 };
 
-export const YIELD_ADAPTER_MANIFEST: YieldAdapterManifestEntry[] = Array.from(new Set([
-  ...Object.keys(YIELD_VARIANT_MAP),
-  ...Object.keys(YIELD_POOL_MAP),
-  ...ON_CHAIN_RATE_CONFIGS.map((config) => config.stablecoinId),
-  ...RATE_DERIVED_CONFIGS.map((config) => config.stablecoinId),
-  ...PRICE_DERIVED_FALLBACK_IDS,
-  ...Object.keys(AUTO_LENDING_POOL_MAP),
-  ...Object.keys(QUARANTINED_DETERMINISTIC_ADAPTERS),
-])).sort().map((stablecoinId) => ({
-  stablecoinId,
-  variant: YIELD_VARIANT_MAP[stablecoinId],
-  nativePoolId: YIELD_POOL_MAP[stablecoinId],
-  onChainRate: ON_CHAIN_RATE_CONFIGS.find((config) => config.stablecoinId === stablecoinId),
-  priceDerivedFallback: PRICE_DERIVED_FALLBACK_IDS.has(stablecoinId) || undefined,
-  rateDerived: RATE_DERIVED_CONFIGS.find((config) => config.stablecoinId === stablecoinId),
-  autoLendingPoolId: AUTO_LENDING_POOL_MAP[stablecoinId],
-  bypassesAutoLendingSafety: AUTO_LENDING_SAFETY_BYPASS_IDS.has(stablecoinId) || undefined,
-  deterministicQuarantineReason: QUARANTINED_DETERMINISTIC_ADAPTERS[stablecoinId],
-}));
+export type YieldStrategyKind =
+  | "native-pool"
+  | "variant-pool"
+  | "deterministic-onchain"
+  | "protocol-api"
+  | "price-derived"
+  | "rate-derived"
+  | "auto-discovery-override"
+  | "quarantined"
+  | "intentional-gap";
+
+export interface YieldStrategyDescriptor {
+  kind: YieldStrategyKind;
+  label: string;
+  rationale?: string;
+  priority: number;
+}
+
+const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
+  "lusd-liquity": "B.Protocol LQTY-only",
+  "usbd-bima": "BIMA savings",
+  "usyc-hashnote": "Hashnote NAV feed",
+  "usdy-ondo-finance": "Ondo USDY oracle",
+};
+
+const INTENTIONAL_GAP_REASONS: Record<string, string> = {
+  "usg-tangent": "pre-launch asset with no reliable runtime yield source yet",
+};
+
+export const YIELD_ADAPTER_MANIFEST: YieldAdapterManifestEntry[] = YIELD_BEARING_STABLECOINS
+  .map((meta) => {
+    const stablecoinId = meta.id;
+    const strategies: YieldStrategyDescriptor[] = [];
+
+    if (YIELD_POOL_MAP[stablecoinId]) {
+      strategies.push({
+        kind: "native-pool",
+        label: "Curated DeFiLlama pool UUID",
+        priority: 10,
+      });
+    }
+    if (YIELD_VARIANT_MAP[stablecoinId]) {
+      strategies.push({
+        kind: "variant-pool",
+        label: YIELD_VARIANT_MAP[stablecoinId].variantSymbol,
+        priority: 20,
+      });
+    }
+    if (ON_CHAIN_RATE_CONFIGS.some((config) => config.stablecoinId === stablecoinId)) {
+      strategies.push({
+        kind: "deterministic-onchain",
+        label: "On-chain exchange-rate reader",
+        priority: 30,
+      });
+    }
+    if (DIRECT_PROTOCOL_API_STRATEGIES[stablecoinId]) {
+      strategies.push({
+        kind: "protocol-api",
+        label: DIRECT_PROTOCOL_API_STRATEGIES[stablecoinId],
+        priority: 40,
+      });
+    }
+    if (RATE_DERIVED_CONFIGS.some((config) => config.stablecoinId === stablecoinId)) {
+      strategies.push({
+        kind: "rate-derived",
+        label: "Benchmark-linked rate fallback",
+        priority: 50,
+      });
+    }
+    if (meta.flags.navToken || PRICE_DERIVED_FALLBACK_IDS.has(stablecoinId)) {
+      strategies.push({
+        kind: "price-derived",
+        label: "Supply-history NAV appreciation fallback",
+        priority: 60,
+      });
+    }
+    if (AUTO_LENDING_POOL_MAP[stablecoinId]) {
+      strategies.push({
+        kind: "auto-discovery-override",
+        label: "Explicit lending override pool",
+        priority: 70,
+      });
+    }
+    if (QUARANTINED_DETERMINISTIC_ADAPTERS[stablecoinId]) {
+      strategies.push({
+        kind: "quarantined",
+        label: "Quarantined deterministic reader",
+        rationale: QUARANTINED_DETERMINISTIC_ADAPTERS[stablecoinId],
+        priority: 80,
+      });
+    }
+    if (INTENTIONAL_GAP_REASONS[stablecoinId]) {
+      strategies.push({
+        kind: "intentional-gap",
+        label: "Intentional coverage gap",
+        rationale: INTENTIONAL_GAP_REASONS[stablecoinId],
+        priority: 90,
+      });
+    }
+
+    return {
+      stablecoinId,
+      status: INTENTIONAL_GAP_REASONS[stablecoinId] ? "intentional-gap" as const : "covered" as const,
+      strategies: strategies.sort((a, b) => a.priority - b.priority),
+      variant: YIELD_VARIANT_MAP[stablecoinId],
+      nativePoolId: YIELD_POOL_MAP[stablecoinId],
+      onChainRate: ON_CHAIN_RATE_CONFIGS.find((config) => config.stablecoinId === stablecoinId),
+      priceDerivedFallback: (meta.flags.navToken || PRICE_DERIVED_FALLBACK_IDS.has(stablecoinId)) || undefined,
+      rateDerived: RATE_DERIVED_CONFIGS.find((config) => config.stablecoinId === stablecoinId),
+      autoLendingPoolId: AUTO_LENDING_POOL_MAP[stablecoinId],
+      bypassesAutoLendingSafety: AUTO_LENDING_SAFETY_BYPASS_IDS.has(stablecoinId) || undefined,
+      deterministicQuarantineReason: QUARANTINED_DETERMINISTIC_ADAPTERS[stablecoinId],
+    };
+  })
+  .sort((a, b) => a.stablecoinId.localeCompare(b.stablecoinId));

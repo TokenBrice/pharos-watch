@@ -1,10 +1,15 @@
 import type { ContractDeployment, StablecoinMeta } from "../types";
 import {
+  ACTIVE_STABLECOINS,
   TRACKED_META_BY_ID,
   TRACKED_STABLECOINS,
 } from "./stablecoins";
 
 export const YIELD_BEARING_STABLECOINS = TRACKED_STABLECOINS.filter(
+  (stablecoin) => stablecoin.flags.yieldBearing,
+);
+
+export const ACTIVE_YIELD_BEARING_STABLECOINS = ACTIVE_STABLECOINS.filter(
   (stablecoin) => stablecoin.flags.yieldBearing,
 );
 

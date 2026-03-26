@@ -7,6 +7,7 @@ import {
   errorResponse,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
+import { getCache } from "../lib/db-cache";
 import { buildOnChainSourceKey, parseYieldWarningSignals } from "../lib/yield-utils";
 import { resolveYieldSourceUrl } from "../lib/yield-source-links";
 import {
@@ -79,19 +80,32 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
     return errorResponse(400, "Missing ?sourceKey= parameter for source history mode");
   }
 
+  let publishedCutoff = Math.floor(Date.now() / 1000);
+  const rankingsCache = await getCache(db, "yield-rankings");
+  if (rankingsCache) {
+    try {
+      const parsed = JSON.parse(rankingsCache.value) as { updatedAt?: unknown };
+      if (typeof parsed.updatedAt === "number" && Number.isFinite(parsed.updatedAt) && parsed.updatedAt > 0) {
+        publishedCutoff = parsed.updatedAt;
+      }
+    } catch {
+      publishedCutoff = Math.floor(Date.now() / 1000);
+    }
+  }
+
   const sql = mode === "source"
     ? `SELECT recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, warning_signals, source_key, yield_source, yield_type, data_source, is_best
        FROM yield_history
-       WHERE stablecoin_id = ? AND recorded_at >= ? AND source_key = ?
+       WHERE stablecoin_id = ? AND recorded_at >= ? AND recorded_at <= ? AND source_key = ?
        ORDER BY recorded_at ASC`
     : `SELECT recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, warning_signals, source_key, yield_source, yield_type, data_source, is_best
        FROM yield_history
-       WHERE stablecoin_id = ? AND recorded_at >= ? AND is_best = 1
+       WHERE stablecoin_id = ? AND recorded_at >= ? AND recorded_at <= ? AND is_best = 1
        ORDER BY recorded_at ASC`;
 
   const result = mode === "source"
-    ? await db.prepare(sql).bind(parsed.stablecoinId, parsed.cutoff, sourceKey).all<YieldHistoryRow>()
-    : await db.prepare(sql).bind(parsed.stablecoinId, parsed.cutoff).all<YieldHistoryRow>();
+    ? await db.prepare(sql).bind(parsed.stablecoinId, parsed.cutoff, publishedCutoff, sourceKey).all<YieldHistoryRow>()
+    : await db.prepare(sql).bind(parsed.stablecoinId, parsed.cutoff, publishedCutoff).all<YieldHistoryRow>();
 
   let previousSourceKey: string | null = null;
   const history = (result.results ?? []).map((row) => {

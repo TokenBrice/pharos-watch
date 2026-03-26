@@ -10,7 +10,7 @@ describe("identifyCoverageGaps", () => {
       apyReward: null, apyMean30d: 5, stablecoin: true,
       exposure: "single", underlyingTokens: null,
     }];
-    const gaps = identifyCoverageGaps(dlPools, new Set(), new Set(["USDC", "USDT"]));
+    const gaps = identifyCoverageGaps(dlPools, new Set());
     expect(gaps.unmatchedHighTvlPools.length).toBe(1);
     expect(gaps.unmatchedHighTvlPools[0].pool).toBe("unknown-pool");
   });
@@ -22,7 +22,7 @@ describe("identifyCoverageGaps", () => {
       apyReward: null, apyMean30d: 3, stablecoin: true,
       exposure: "single", underlyingTokens: null,
     }];
-    const gaps = identifyCoverageGaps(dlPools, new Set(["covered-pool"]), new Set(["USDC"]));
+    const gaps = identifyCoverageGaps(dlPools, new Set(["covered-pool"]));
     expect(gaps.unmatchedHighTvlPools.length).toBe(0);
   });
 
@@ -33,7 +33,7 @@ describe("identifyCoverageGaps", () => {
       apyReward: null, apyMean30d: 4, stablecoin: true,
       exposure: "single", underlyingTokens: null,
     }];
-    const gaps = identifyCoverageGaps(dlPools, new Set(), new Set(["USDC"]));
+    const gaps = identifyCoverageGaps(dlPools, new Set());
     expect(gaps.missingProtocols.length).toBeGreaterThan(0);
     expect(gaps.missingProtocols[0].project).toBe("brand-new-protocol");
   });
@@ -44,7 +44,7 @@ describe("identifyCoverageGaps", () => {
       { pool: "p2", chain: "Ethereum", project: "rising-protocol", symbol: "USDT", tvlUsd: 4_000_000, apy: 3.5, apyBase: 3.5, apyReward: null, apyMean30d: 3.5, stablecoin: true, exposure: "single", underlyingTokens: null },
       { pool: "p3", chain: "Arbitrum", project: "rising-protocol", symbol: "USDC", tvlUsd: 3_000_000, apy: 5, apyBase: 5, apyReward: null, apyMean30d: 5, stablecoin: true, exposure: "single", underlyingTokens: null },
     ];
-    const gaps = identifyCoverageGaps(dlPools, new Set(), new Set(["USDC", "USDT"]));
+    const gaps = identifyCoverageGaps(dlPools, new Set());
     expect(gaps.protocolRecommendations).toContainEqual(
       expect.objectContaining({
         project: "rising-protocol",
@@ -58,7 +58,7 @@ describe("identifyCoverageGaps", () => {
     const dlPools: DlPool[] = [
       { pool: "p1", chain: "Ethereum", project: "small-protocol", symbol: "USDC", tvlUsd: 6_000_000, apy: 3, apyBase: 3, apyReward: null, apyMean30d: 3, stablecoin: true, exposure: "single", underlyingTokens: null },
     ];
-    const gaps = identifyCoverageGaps(dlPools, new Set(), new Set(["USDC"]));
+    const gaps = identifyCoverageGaps(dlPools, new Set());
     expect(gaps.protocolRecommendations).toContainEqual(
       expect.objectContaining({
         project: "small-protocol",

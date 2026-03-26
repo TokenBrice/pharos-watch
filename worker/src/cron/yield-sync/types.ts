@@ -31,6 +31,13 @@ export interface ResolvedYield {
   comparisonAnchorObservedAt?: number | null;
 }
 
+export interface ResolvedYieldCandidate {
+  symbol: string;
+  chain?: string | null;
+  address?: string | null;
+  yield: ResolvedYield;
+}
+
 export interface ResolvedYieldEntry {
   id: string;
   symbol: string;

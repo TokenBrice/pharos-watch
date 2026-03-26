@@ -17,6 +17,9 @@ export { buildOnChainSourceKey } from "../lib/yield-utils";
 export const STALE_THRESHOLD_MS = 90 * 60 * 1000; // 3 sync cycles
 
 export { computePYS, PYS_RISK_PENALTY_FLOOR, PYS_SUSTAINABILITY_FLOOR } from "@shared/lib/yield-scoring";
+import { resolveChainId } from "@shared/lib/chains";
+import { normalizeDexSymbol } from "../lib/dex-constants";
+import { normalizeTokenAddress } from "./dex-liquidity/token-resolution";
 
 // --- Warning signal thresholds ---
 const YIELD_SPIKE_THRESHOLD = 2.0;
@@ -101,21 +104,43 @@ export function matchAllDlPools(
     pool: string; symbol: string; tvlUsd: number;
     apy: number; apyBase: number | null; apyReward: number | null;
     stablecoin: boolean; exposure: string;
+    underlyingTokens?: string[] | null;
+    chain?: string;
   }>,
   poolMap: Record<string, string>,
-  variantMap: Record<string, { variantSymbol: string }>,
+  variantMap: Record<string, { variantSymbol: string; variantChain?: string; variantAddress?: string }>,
+  options?: {
+    chainFilter?: Set<string>;
+    contractAddresses?: string[];
+    reservedPoolIds?: Set<string>;
+  },
 ): Array<{ pool: string; apy: number; apyBase: number | null; apyReward: number | null; tvlUsd: number }> {
   const found: Array<{ pool: string; apy: number; apyBase: number | null; apyReward: number | null; tvlUsd: number }> = [];
   const seenUuids = new Set<string>();
+  const nativeId = poolMap[stablecoinId];
+  const reservedPoolIds = options?.reservedPoolIds ?? new Set<string>();
+  const contractSet = new Set((options?.contractAddresses ?? []).map((address) => normalizeTokenAddress(address)));
+  const normalizedChainFilter = options?.chainFilter
+    ? new Set(Array.from(options.chainFilter).map((chain) => resolveChainId(chain) ?? chain.toLowerCase()))
+    : undefined;
+
+  const isEligibleChain = (poolChain: string | undefined): boolean => {
+    if (!normalizedChainFilter || !poolChain) return true;
+    const chainId = resolveChainId(poolChain) ?? poolChain.toLowerCase();
+    return normalizedChainFilter.has(chainId);
+  };
+  const isReservedForAnotherCoin = (poolId: string): boolean => reservedPoolIds.has(poolId) && poolId !== nativeId;
+  const addressMatches = (pool: { underlyingTokens?: string[] | null }): boolean =>
+    contractSet.size > 0 &&
+    (pool.underlyingTokens ?? []).some((address) => contractSet.has(normalizeTokenAddress(address)));
 
   // Layer 1: Static pool map (native/primary source — stablecoin=true required)
-  const nativeId = poolMap[stablecoinId];
   if (nativeId) {
-    const p = dlPools.find(p => p.pool === nativeId && p.exposure === "single");
+    const p = dlPools.find((pool) => pool.pool === nativeId && pool.exposure === "single");
     if (p) {
       found.push({ pool: p.pool, apy: p.apy, apyBase: p.apyBase, apyReward: p.apyReward, tvlUsd: p.tvlUsd });
       seenUuids.add(p.pool);
-    } else if (!dlPools.find(p => p.pool === nativeId)) {
+    } else if (!dlPools.find((pool) => pool.pool === nativeId)) {
       console.warn(`[yield-sync] Pool UUID ${nativeId} for ${stablecoinId} not found in DL response, falling through`);
     }
   }
@@ -123,14 +148,39 @@ export function matchAllDlPools(
   // Layer 2: Variant map (wrapper/savings pool — stablecoin flag relaxed)
   const variant = variantMap[stablecoinId];
   if (variant) {
-    const sym = variant.variantSymbol.toLowerCase();
-    const candidates = dlPools.filter(p => p.exposure === "single" && p.symbol.toLowerCase() === sym);
-    if (candidates.length > 0) {
-      const best = candidates.reduce((a, b) => b.tvlUsd > a.tvlUsd ? b : a);
-      if (!seenUuids.has(best.pool)) {
-        found.push({ pool: best.pool, apy: best.apy, apyBase: best.apyBase, apyReward: best.apyReward, tvlUsd: best.tvlUsd });
-        seenUuids.add(best.pool);
-      }
+    const variantSymbol = normalizeDexSymbol(variant.variantSymbol);
+    const variantChain = variant.variantChain ? resolveChainId(variant.variantChain) ?? variant.variantChain.toLowerCase() : null;
+    const variantAddress = normalizeTokenAddress(variant.variantAddress ?? "");
+
+    const baseCandidates = dlPools.filter(
+      (pool) =>
+        pool.exposure === "single" &&
+        !seenUuids.has(pool.pool) &&
+        !isReservedForAnotherCoin(pool.pool) &&
+        (!variantChain || (resolveChainId(pool.chain ?? "") ?? pool.chain?.toLowerCase()) === variantChain),
+    );
+
+    const addressCandidates = variantAddress
+      ? baseCandidates.filter((pool) =>
+        (pool.underlyingTokens ?? []).some((address) => normalizeTokenAddress(address) === variantAddress))
+      : [];
+    const symbolCandidates = baseCandidates.filter((pool) => normalizeDexSymbol(pool.symbol) === variantSymbol);
+
+    const selectedVariantCandidates = addressCandidates.length > 0 ? addressCandidates : symbolCandidates;
+    if (selectedVariantCandidates.length === 1) {
+      const selected = selectedVariantCandidates[0];
+      found.push({
+        pool: selected.pool,
+        apy: selected.apy,
+        apyBase: selected.apyBase,
+        apyReward: selected.apyReward,
+        tvlUsd: selected.tvlUsd,
+      });
+      seenUuids.add(selected.pool);
+    } else if (selectedVariantCandidates.length > 1) {
+      console.warn(
+        `[yield-sync] Ambiguous variant DL match for ${stablecoinId} (${variant.variantSymbol}) across ${selectedVariantCandidates.length} pools; skipping variant layer`,
+      );
     }
   }
 
@@ -140,12 +190,38 @@ export function matchAllDlPools(
   // coins first, so Layer 3 only fires when both miss. A minimum symbol length of 4 prevents
   // short symbols like "USD" from matching everything.
   if (found.length === 0) {
-    const sym = symbol.toLowerCase();
+    const sym = normalizeDexSymbol(symbol);
     if (sym.length >= 4) {
-      const candidates = dlPools.filter(p => p.exposure === "single" && p.stablecoin && p.symbol.toLowerCase().includes(sym));
-      if (candidates.length > 0) {
-        const best = candidates.reduce((a, b) => b.tvlUsd > a.tvlUsd ? b : a);
+      const baseCandidates = dlPools.filter(
+        (pool) =>
+          pool.exposure === "single" &&
+          pool.stablecoin &&
+          !isReservedForAnotherCoin(pool.pool) &&
+          isEligibleChain(pool.chain),
+      );
+
+      const addressCandidates = contractSet.size > 0
+        ? baseCandidates.filter((pool) => addressMatches(pool))
+        : [];
+      if (addressCandidates.length > 0) {
+        const best = addressCandidates.reduce((a, b) => b.tvlUsd > a.tvlUsd ? b : a);
         found.push({ pool: best.pool, apy: best.apy, apyBase: best.apyBase, apyReward: best.apyReward, tvlUsd: best.tvlUsd });
+      } else {
+        const symbolCandidates = baseCandidates.filter((pool) => normalizeDexSymbol(pool.symbol).includes(sym));
+        if (symbolCandidates.length === 1) {
+          const candidate = symbolCandidates[0];
+          found.push({
+            pool: candidate.pool,
+            apy: candidate.apy,
+            apyBase: candidate.apyBase,
+            apyReward: candidate.apyReward,
+            tvlUsd: candidate.tvlUsd,
+          });
+        } else if (symbolCandidates.length > 1) {
+          console.warn(
+            `[yield-sync] Ambiguous fallback DL match for ${stablecoinId} (${symbol}) across ${symbolCandidates.length} pools; skipping fallback`,
+          );
+        }
       }
     }
   }
@@ -176,13 +252,18 @@ export function findBestLendingPool(
     minTvlUsd?: number;
     contractAddresses?: string[];
     chainFilter?: Set<string>;
+    allowSymbolMatch?: boolean;
+    reservedPoolIds?: Set<string>;
   },
 ): { pool: string; apy: number; apyBase: number | null; apyReward: number | null; tvlUsd: number; project: string } | null {
-  const symLower = symbol.toLowerCase();
+  const symbolKey = normalizeDexSymbol(symbol);
   const minApy = options?.minApy ?? 0;
   const minTvlUsd = options?.minTvlUsd ?? 0;
-  const contractSet = new Set((options?.contractAddresses ?? []).map((a) => a.toLowerCase()));
-  const chainFilter = options?.chainFilter;
+  const contractSet = new Set((options?.contractAddresses ?? []).map((address) => normalizeTokenAddress(address)));
+  const chainFilter = options?.chainFilter
+    ? new Set(Array.from(options.chainFilter).map((chain) => resolveChainId(chain) ?? chain.toLowerCase()))
+    : undefined;
+  const reservedPoolIds = options?.reservedPoolIds ?? new Set<string>();
 
   const baseCandidates = dlPools.filter((p) =>
     p.exposure === "single" &&
@@ -190,13 +271,17 @@ export function findBestLendingPool(
     allowlist.has(p.project) &&
     p.apy >= minApy &&
     p.tvlUsd >= minTvlUsd &&
-    (!chainFilter || !p.chain || chainFilter.has(p.chain))
+    !reservedPoolIds.has(p.pool) &&
+    (!chainFilter || !p.chain || chainFilter.has(resolveChainId(p.chain) ?? p.chain.toLowerCase()))
   );
 
-  // Primary match: exact symbol (existing behavior).
-  const symbolCandidates = baseCandidates.filter((p) => p.symbol.toLowerCase() === symLower);
-  if (symbolCandidates.length > 0) {
-    const best = symbolCandidates.reduce((a, b) => (b.tvlUsd > a.tvlUsd ? b : a));
+  // Primary match: underlying token address match.
+  const addressCandidates = contractSet.size > 0
+    ? baseCandidates.filter((pool) =>
+      (pool.underlyingTokens ?? []).some((address) => contractSet.has(normalizeTokenAddress(address))))
+    : [];
+  if (addressCandidates.length > 0) {
+    const best = addressCandidates.reduce((a, b) => (b.tvlUsd > a.tvlUsd ? b : a));
     return {
       pool: best.pool,
       apy: best.apy,
@@ -207,14 +292,15 @@ export function findBestLendingPool(
     };
   }
 
-  // Fallback: underlying token address match (covers symbol drift like FEUSDH/STEAKEURCV).
-  if (contractSet.size === 0) return null;
-  const addressCandidates = baseCandidates.filter((p) =>
-    (p.underlyingTokens ?? []).some((addr) => contractSet.has(addr.toLowerCase()))
-  );
-  if (addressCandidates.length === 0) return null;
+  if (options?.allowSymbolMatch === false) {
+    return null;
+  }
 
-  const best = addressCandidates.reduce((a, b) => (b.tvlUsd > a.tvlUsd ? b : a));
+  // Fallback: exact symbol, but only when the caller has determined it is safe.
+  const symbolCandidates = baseCandidates.filter((pool) => normalizeDexSymbol(pool.symbol) === symbolKey);
+  if (symbolCandidates.length === 0) return null;
+
+  const best = symbolCandidates.reduce((a, b) => (b.tvlUsd > a.tvlUsd ? b : a));
   return {
     pool: best.pool,
     apy: best.apy,

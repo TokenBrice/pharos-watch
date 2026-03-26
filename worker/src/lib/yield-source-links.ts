@@ -76,6 +76,7 @@ const YIELD_SOURCE_URLS: Record<string, string> = {
   Echelon: "https://echelon.market/",
   TermMax: "https://app.termmax.io/",
   Gearbox: "https://app.gearbox.fi/",
+  Kong: "https://kong.yearn.fi/",
 };
 
 function pickMetaYieldUrl(stablecoinId: string): string | null {
@@ -109,10 +110,18 @@ export function resolveYieldSourceUrl(params: {
   sourceKey?: string | null;
   yieldSource?: string | null;
 }): string | null {
-  const overrideByLabel =
-    params.yieldSource && YIELD_SOURCE_URLS[params.yieldSource]
-      ? YIELD_SOURCE_URLS[params.yieldSource]
-      : null;
+  const labelCandidates = params.yieldSource
+    ? [
+        params.yieldSource,
+        params.yieldSource.replace(/\s+\([^)]*\)\s*$/, ""),
+        params.yieldSource.split(":")[0]?.trim(),
+        params.yieldSource.replace(/\s+\([^)]*\)\s*$/, "").split(":")[0]?.trim(),
+      ].filter((label): label is string => typeof label === "string" && label.length > 0)
+    : [];
+
+  const overrideByLabel = labelCandidates
+    .map((label) => YIELD_SOURCE_URLS[label] ?? null)
+    .find((value): value is string => typeof value === "string" && value.length > 0) ?? null;
   if (overrideByLabel) {
     return overrideByLabel;
   }

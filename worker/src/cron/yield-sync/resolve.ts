@@ -1,6 +1,6 @@
-import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
+import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { buildInClause } from "../../lib/db";
 import {
   MIN_LENDING_POOL_APY,
@@ -26,7 +26,8 @@ import {
 } from "../yield-config";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { COMPOUND_V3_COMETS, fetchAaveV3SupplyRates, fetchBeefySources, fetchBimaSusbdSource, fetchBprotocolLqtyOnlySource, fetchCompoundV3SupplyRates, fetchHashnoteUsycSource, fetchMorphoVaultSources, fetchOndoUsdyOracleSource, fetchPendleMarketSources, fetchYearnKongSources, getPriceDerivedApy, type AaveV3RateTarget } from "./sources";
-import type { DlPool, ResolvedYield, ResolvedYieldEntry } from "./types";
+import { buildDlChainFilter, buildYieldIdentityLookups, canUseSymbolOnlyYieldMatch, getTrackedContractAddresses, resolveYieldCandidateStablecoinId } from "./identity";
+import type { DlPool, ResolvedYieldCandidate, ResolvedYieldEntry } from "./types";
 import { scanForNewVariants } from "./variant-scanner";
 
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
@@ -58,19 +59,37 @@ interface ResolveYieldSourcesParams {
   coingeckoApiKey?: string | null;
 }
 
-function appendOptionalSourcesBySymbol(
+function appendResolvedYieldCandidates(
   resolved: ResolvedYieldEntry[],
-  entries: Array<{ symbol: string; yield: ResolvedYield }>,
+  entries: ResolvedYieldCandidate[],
+  identityLookups: ReturnType<typeof buildYieldIdentityLookups>,
 ): void {
-  for (const { symbol: assetSymbol, yield: optionalYield } of entries) {
-    for (const meta of TRACKED_STABLECOINS) {
-      if (meta.symbol.toUpperCase() !== assetSymbol.toUpperCase()) continue;
-      if (resolved.some((entry) => entry.id === meta.id && entry.yield?.sourceKey === optionalYield.sourceKey)) {
-        continue;
+  let ambiguousDrops = 0;
+  let unresolvedDrops = 0;
+
+  for (const entry of entries) {
+    const resolution = resolveYieldCandidateStablecoinId(entry, identityLookups);
+    if (resolution.status !== "matched" || !resolution.stablecoinId) {
+      if (resolution.status === "ambiguous") {
+        ambiguousDrops += 1;
+      } else {
+        unresolvedDrops += 1;
       }
-      resolved.push({ id: meta.id, symbol: meta.symbol, yield: optionalYield });
-      break;
+      continue;
     }
+
+    const meta = TRACKED_META_BY_ID.get(resolution.stablecoinId);
+    if (!meta) continue;
+    if (resolved.some((resolvedEntry) => resolvedEntry.id === meta.id && resolvedEntry.yield?.sourceKey === entry.yield.sourceKey)) {
+      continue;
+    }
+    resolved.push({ id: meta.id, symbol: meta.symbol, yield: entry.yield });
+  }
+
+  if (ambiguousDrops > 0 || unresolvedDrops > 0) {
+    console.warn(
+      `[yield-sync] Dropped optional protocol candidates: ambiguous=${ambiguousDrops}, unresolved=${unresolvedDrops}`,
+    );
   }
 }
 
@@ -116,7 +135,12 @@ export async function resolveYieldSources({
 }: ResolveYieldSourcesParams): Promise<YieldResolutionResult> {
   const resolved: ResolvedYieldEntry[] = [];
   const tier1PrevRates = new Map<string, number | null>();
-  const tier1CandidateIds = YIELD_BEARING_STABLECOINS
+  const identityLookups = buildYieldIdentityLookups();
+  const reservedExplicitPoolIds = new Set([
+    ...Object.values(YIELD_POOL_MAP),
+    ...Object.values(AUTO_LENDING_POOL_MAP),
+  ]);
+  const tier1CandidateIds = ACTIVE_YIELD_BEARING_STABLECOINS
     .map((meta) => meta.id)
     .filter(
       (id) => ON_CHAIN_RATE_CONFIGS.some((config) => config.stablecoinId === id)
@@ -149,7 +173,7 @@ export async function resolveYieldSources({
     }
   }
 
-  for (const meta of YIELD_BEARING_STABLECOINS) {
+  for (const meta of ACTIVE_YIELD_BEARING_STABLECOINS) {
     if (signal?.aborted) {
       throw signal.reason instanceof Error
         ? signal.reason
@@ -215,7 +239,11 @@ export async function resolveYieldSources({
         .filter((entry) => entry.id === id && entry.yield != null)
         .map((entry) => entry.yield!.sourceKey),
     );
-    const dlSources = matchAllDlPools(id, symbol, dlPools, YIELD_POOL_MAP, YIELD_VARIANT_MAP);
+    const dlSources = matchAllDlPools(id, symbol, dlPools, YIELD_POOL_MAP, YIELD_VARIANT_MAP, {
+      chainFilter: buildDlChainFilter(meta),
+      contractAddresses: getTrackedContractAddresses(meta),
+      reservedPoolIds: reservedExplicitPoolIds,
+    });
     for (const dlPool of dlSources) {
       if (alreadyResolvedKeys.has(dlPool.pool) || dlPool.apy == null || dlPool.apy < 0) {
         continue;
@@ -350,26 +378,49 @@ export async function resolveYieldSources({
       id === ONDO_USDY_ID &&
       !resolved.some((e) => e.id === id && e.yield?.sourceKey === "protocol-api:ondo-usdy-oracle")
     ) {
-      const priorRow = await db
+      const preferredPriorRow = await db
         .prepare(
           `SELECT exchange_rate, recorded_at FROM yield_history
            WHERE stablecoin_id = ? AND source_key = 'protocol-api:ondo-usdy-oracle'
              AND exchange_rate IS NOT NULL
+             AND recorded_at <= ?
+             AND recorded_at >= ?
            ORDER BY recorded_at DESC LIMIT 1`,
         )
-        .bind(ONDO_USDY_ID)
+        .bind(ONDO_USDY_ID, startSec - 7 * DAY_SECONDS, startSec - 45 * DAY_SECONDS)
         .first<{ exchange_rate: number; recorded_at: number }>();
 
-      const prevPriceBigint = priorRow?.exchange_rate
-        ? BigInt(Math.round(priorRow.exchange_rate * 1e18))
+      const fallbackPriorRow = preferredPriorRow
+        ?? await db
+          .prepare(
+            `SELECT exchange_rate, recorded_at FROM yield_history
+             WHERE stablecoin_id = ? AND source_key = 'protocol-api:ondo-usdy-oracle'
+               AND exchange_rate IS NOT NULL
+               AND recorded_at <= ?
+               AND recorded_at >= ?
+             ORDER BY recorded_at DESC LIMIT 1`,
+          )
+          .bind(ONDO_USDY_ID, startSec - 3 * DAY_SECONDS, startSec - 14 * DAY_SECONDS)
+          .first<{ exchange_rate: number; recorded_at: number }>();
+
+      const anchorRow = preferredPriorRow ?? fallbackPriorRow;
+
+      const prevPriceBigint = anchorRow?.exchange_rate
+        ? BigInt(Math.round(anchorRow.exchange_rate * 1e18))
         : null;
-      const daysDelta = priorRow ? (startSec - priorRow.recorded_at) / 86400 : 0;
+      const daysDelta = anchorRow ? (startSec - anchorRow.recorded_at) / DAY_SECONDS : 0;
 
       const ondoYield = await runTimedOptionalSource(
         "Ondo USDY oracle source",
         OPTIONAL_SINGLE_SOURCE_TIMEOUT_MS,
         signal,
-        (budgetSignal) => fetchOndoUsdyOracleSource(prevPriceBigint, daysDelta, budgetSignal, chainRpcs),
+        (budgetSignal) => fetchOndoUsdyOracleSource(
+          prevPriceBigint,
+          daysDelta,
+          anchorRow?.recorded_at ?? null,
+          budgetSignal,
+          chainRpcs,
+        ),
         null,
       );
       if (ondoYield) {
@@ -414,15 +465,15 @@ export async function resolveYieldSources({
     fetchYearnKongSources(signal),
     fetchBeefySources(signal),
   ]);
-  appendOptionalSourcesBySymbol(resolved, morphoVaults);
-  appendOptionalSourcesBySymbol(resolved, pendleMarkets);
-  appendOptionalSourcesBySymbol(resolved, kongVaults);
-  appendOptionalSourcesBySymbol(resolved, beefyVaults);
+  appendResolvedYieldCandidates(resolved, morphoVaults, identityLookups);
+  appendResolvedYieldCandidates(resolved, pendleMarkets, identityLookups);
+  appendResolvedYieldCandidates(resolved, kongVaults, identityLookups);
+  appendResolvedYieldCandidates(resolved, beefyVaults, identityLookups);
 
   // Compound V3 direct on-chain supply rates — bounded by the adapter budget.
   const compoundV3Results = await fetchCompoundV3SupplyRates([...COMPOUND_V3_COMETS], signal, chainRpcs);
   for (const entry of compoundV3Results) {
-    const meta = TRACKED_STABLECOINS.find((m) => m.symbol === entry.symbol);
+    const meta = TRACKED_META_BY_ID.get(entry.stablecoinId);
     if (!meta) continue;
     if (resolved.some((r) => r.id === meta.id && r.yield?.sourceKey === entry.yield.sourceKey)) continue;
     resolved.push({ id: meta.id, symbol: meta.symbol, yield: entry.yield });
@@ -433,7 +484,7 @@ export async function resolveYieldSources({
   // ---------------------------------------------------------------------------
   const AAVE_SUPPORTED_CHAINS = new Set(["ethereum", "arbitrum", "base"]);
   const aaveTargets: AaveV3RateTarget[] = [];
-  for (const meta of TRACKED_STABLECOINS) {
+  for (const meta of ACTIVE_STABLECOINS) {
     for (const contract of meta.contracts ?? []) {
       if (
         AAVE_SUPPORTED_CHAINS.has(contract.chain) &&
@@ -452,12 +503,12 @@ export async function resolveYieldSources({
 
   if (aaveTargets.length > 0 && chainRpcs) {
     const { rates: aaveRates } = await fetchAaveV3SupplyRates(aaveTargets, signal, chainRpcs);
-    const AAVE_SOURCE_KEY = "aave-v3-onchain";
-    const AAVE_YIELD_SOURCE = "Aave v3";
     const AAVE_YIELD_TYPE = "lending-opportunity";
-    for (const [stablecoinId, { apy }] of aaveRates) {
+    for (const [stablecoinId, { apy, chain }] of aaveRates) {
       if (apy <= 0) continue;
-      if (resolved.some((entry) => entry.id === stablecoinId && entry.yield?.sourceKey === AAVE_SOURCE_KEY)) {
+      const sourceKey = `aave-v3-onchain:${chain}`;
+      const yieldSource = `Aave v3 (${chain})`;
+      if (resolved.some((entry) => entry.id === stablecoinId && entry.yield?.sourceKey === sourceKey)) {
         continue;
       }
       const meta = TRACKED_META_BY_ID.get(stablecoinId);
@@ -473,8 +524,8 @@ export async function resolveYieldSources({
           sourceTvlUsd: null,
           dataSource: "onchain",
           exchangeRate: null,
-          sourceKey: AAVE_SOURCE_KEY,
-          yieldSource: AAVE_YIELD_SOURCE,
+          sourceKey,
+          yieldSource,
           yieldType: AAVE_YIELD_TYPE,
           sourceObservedAt: startSec,
           comparisonAnchorObservedAt: null,
@@ -533,7 +584,7 @@ export async function resolveYieldSources({
       deterministicCount++;
     }
 
-    const lendingCandidates = TRACKED_STABLECOINS.filter(
+    const lendingCandidates = ACTIVE_STABLECOINS.filter(
       (meta) =>
         !autoDiscoveredIds.has(meta.id)
         && meta.flags.pegCurrency !== "GOLD"
@@ -543,21 +594,17 @@ export async function resolveYieldSources({
 
     const SMALL_ECOSYSTEM_CHAINS = new Set(["solana", "sui", "aptos", "cardano", "stacks"]);
 
-    const PHAROS_TO_DL_CHAIN: Record<string, string> = {
-      ethereum: "Ethereum", arbitrum: "Arbitrum", base: "Base", optimism: "Optimism",
-      polygon: "Polygon", avalanche: "Avalanche", bsc: "BSC", solana: "Solana", gnosis: "Gnosis",
-    };
-
     for (const meta of lendingCandidates) {
       const primaryChain = meta.contracts?.[0]?.chain;
       const minTvlUsd = primaryChain && SMALL_ECOSYSTEM_CHAINS.has(primaryChain)
         ? MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM
         : MIN_LENDING_POOL_TVL_USD;
 
-      const coinChains = new Set(
-        (meta.contracts ?? []).map((c) => PHAROS_TO_DL_CHAIN[c.chain]).filter(Boolean),
-      );
-      const chainFilter = coinChains.size > 0 ? coinChains : undefined;
+      const chainFilter = buildDlChainFilter(meta);
+      const contractAddresses = getTrackedContractAddresses(meta);
+      const allowSymbolMatch = chainFilter
+        ? Array.from(chainFilter).every((chain) => canUseSymbolOnlyYieldMatch(meta, identityLookups, chain))
+        : canUseSymbolOnlyYieldMatch(meta, identityLookups, null);
 
       const pool = findBestLendingPool(
         meta.symbol,
@@ -566,8 +613,10 @@ export async function resolveYieldSources({
         {
           minApy: MIN_LENDING_POOL_APY,
           minTvlUsd,
-          contractAddresses: (meta.contracts ?? []).map((contract) => contract.address),
+          contractAddresses,
           chainFilter,
+          allowSymbolMatch,
+          reservedPoolIds: reservedExplicitPoolIds,
         },
       );
       if (!pool) continue;

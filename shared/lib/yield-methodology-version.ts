@@ -3,9 +3,26 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "5.1",
+  currentVersion: "5.2",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "5.2",
+    title: "Address-First Identity, Explicit Coverage, and Publish-Consistent History",
+    date: "2026-03-26",
+    effectiveAt: 1774778400,
+    summary:
+      "Yield resolution now matches by chain and address before symbol fallbacks, every yield-bearing asset has explicit manifest coverage or an intentional gap, and published history is bounded to the latest rankings snapshot.",
+    impact: [
+      "DeFiLlama discovery, variant matching, and protocol-native adapters now prefer chain+address identity and drop ambiguous symbol-only candidates instead of attaching them to the first matching coin",
+      "Protocol-native source keys now use full chain-aware identifiers (Morpho, Pendle, Yearn, Kong, Beefy, Compound, Aave) and source-link matching understands prefixed and chain-qualified labels",
+      "Yield manifest coverage now includes explicit price-derived fallbacks and intentional gaps, so assets like cetes-etherfuse and usg-tangent are no longer invisible to coverage reporting",
+      "Warning heuristics and published `medianApy` now share the same TVL-weighted 30d benchmark",
+      "yield-history no longer advances past the latest published yield-rankings snapshot when DB writes and cache publication diverge",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.1",
     title: "Yield Infrastructure Automation",

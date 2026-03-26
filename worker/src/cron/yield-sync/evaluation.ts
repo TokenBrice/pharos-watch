@@ -12,6 +12,7 @@ import {
 } from "../yield-helpers";
 import { LENDING_PROTOCOL_LABELS } from "../yield-config";
 import type { YieldHistorySnapshotRow } from "./history";
+import { computeTvlWeightedMedianApy } from "./rankings";
 import type { ResolvedYield, ResolvedYieldEntry } from "./types";
 
 const LOW_SOURCE_TVL_USD = 250_000;
@@ -85,15 +86,6 @@ function shouldNormalizeOnChainSourceKey(row: {
 }): boolean {
   return row.data_source === "onchain"
     && (row.exchange_rate != null || isLegacyDeterministicOnChainSourceKey(row.stablecoin_id, row.source_key));
-}
-
-function computeMedian(values: number[]): number {
-  const finite = values.filter(Number.isFinite);
-  if (finite.length === 0) return 0;
-  const sorted = [...finite].sort((a, b) => a - b);
-  return sorted.length % 2 === 1
-    ? sorted[Math.floor(sorted.length / 2)]
-    : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
 }
 
 function getConfidenceTier(dataSource: string): ConfidenceTier {
@@ -496,7 +488,12 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
   }
 
   const bestRows = evaluatedSources.filter((source) => bestSourceKeyByCoin.get(source.id) === source.sourceKey);
-  const medianApy = computeMedian(bestRows.map((row) => row.currentApy));
+  const medianApy = computeTvlWeightedMedianApy(
+    bestRows.map((row) => ({
+      apy_30d: row.apy30d,
+      source_tvl_usd: row.sourceTvlUsd,
+    })),
+  );
 
   return {
     evaluatedSources,

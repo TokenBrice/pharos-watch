@@ -15,7 +15,7 @@ describe("fetchOndoUsdyOracleSource", () => {
   it("derives APY from USDY oracle price vs prior price", async () => {
     mockEvmCall.mockResolvedValue(1_085_000_000_000_000_000n);
     const result = await fetchOndoUsdyOracleSource(
-      1_083_500_000_000_000_000n, 7,
+      1_083_500_000_000_000_000n, 7, 1_771_000_000,
     );
     expect(result).toEqual(expect.objectContaining({
       dataSource: "protocol-api",
@@ -26,7 +26,7 @@ describe("fetchOndoUsdyOracleSource", () => {
 
   it("returns seed row when no prior price exists", async () => {
     mockEvmCall.mockResolvedValue(1_085_000_000_000_000_000n);
-    const result = await fetchOndoUsdyOracleSource(null, 0);
+    const result = await fetchOndoUsdyOracleSource(null, 0, null);
     expect(result).toEqual(expect.objectContaining({
       currentApy: 0,
       exchangeRate: expect.closeTo(1.085, 2),
@@ -36,7 +36,7 @@ describe("fetchOndoUsdyOracleSource", () => {
 
   it("returns null when oracle call fails", async () => {
     mockEvmCall.mockResolvedValue(null);
-    const result = await fetchOndoUsdyOracleSource(null, 7);
+    const result = await fetchOndoUsdyOracleSource(null, 7, null);
     expect(result).toBeNull();
   });
 });

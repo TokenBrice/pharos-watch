@@ -27,10 +27,11 @@ describe("fetchYearnKongSources", () => {
     expect(results.length).toBe(1);
     expect(results[0]).toEqual(expect.objectContaining({
       symbol: "USDC",
+      chain: "ethereum",
       yield: expect.objectContaining({
         currentApy: expect.closeTo(3.12, 1),
         dataSource: "protocol-api",
-        sourceKey: expect.stringContaining("protocol-api:kong:"),
+        sourceKey: expect.stringContaining("protocol-api:yearn:ethereum:"),
         yieldSource: expect.stringContaining("Yearn"),
       }),
     }));
@@ -63,5 +64,6 @@ describe("fetchYearnKongSources", () => {
     }]);
     const results = await fetchYearnKongSources();
     expect(results[0].yield.yieldSource).toContain("Kong");
+    expect(results[0].yield.sourceKey).toContain("protocol-api:kong:");
   });
 });

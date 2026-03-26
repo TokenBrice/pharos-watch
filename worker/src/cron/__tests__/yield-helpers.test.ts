@@ -389,6 +389,77 @@ describe("matchAllDlPools", () => {
     expect(result[0].apy).toBe(4.5);
   });
 
+  it("uses variant chain and address before symbol fallback", () => {
+    const variantMap = {
+      "test-coin": {
+        variantSymbol: "sTEST",
+        variantChain: "ethereum",
+        variantAddress: "0xdef",
+      },
+    };
+    const dlPools = [
+      {
+        pool: "uuid-wrong-chain",
+        chain: "Base",
+        symbol: "sTEST",
+        stablecoin: false,
+        exposure: "single",
+        tvlUsd: 50_000_000,
+        apy: 6,
+        apyBase: 6,
+        apyReward: null,
+        underlyingTokens: ["0xdef"],
+      },
+      {
+        pool: "uuid-correct",
+        chain: "Ethereum",
+        symbol: "sTEST",
+        stablecoin: false,
+        exposure: "single",
+        tvlUsd: 10_000_000,
+        apy: 5,
+        apyBase: 5,
+        apyReward: null,
+        underlyingTokens: ["0xdef"],
+      },
+    ];
+
+    const result = matchAllDlPools("test-coin", "TEST", dlPools, {}, variantMap);
+    expect(result).toHaveLength(1);
+    expect(result[0].pool).toBe("uuid-correct");
+  });
+
+  it("skips ambiguous variant symbol matches when no stronger identity exists", () => {
+    const variantMap = { "test-coin": { variantSymbol: "sTEST", variantChain: "ethereum" } };
+    const dlPools = [
+      {
+        pool: "uuid-a",
+        chain: "Ethereum",
+        symbol: "sTEST",
+        stablecoin: false,
+        exposure: "single",
+        tvlUsd: 10_000_000,
+        apy: 5,
+        apyBase: 5,
+        apyReward: null,
+      },
+      {
+        pool: "uuid-b",
+        chain: "Ethereum",
+        symbol: "sTEST",
+        stablecoin: false,
+        exposure: "single",
+        tvlUsd: 9_000_000,
+        apy: 4,
+        apyBase: 4,
+        apyReward: null,
+      },
+    ];
+
+    const result = matchAllDlPools("test-coin", "TEST", dlPools, {}, variantMap);
+    expect(result).toEqual([]);
+  });
+
   it("returns empty array when dlPools is empty", () => {
     const result = matchAllDlPools("test-coin", "TEST", [], { "test-coin": "uuid-1" }, {});
     expect(result).toHaveLength(0);
@@ -486,7 +557,7 @@ describe("findBestLendingPool", () => {
     expect(result!.pool).toBe("p5");
   });
 
-  it("prefers exact symbol match over address fallback", () => {
+  it("prefers address match over exact symbol when both are available", () => {
     const poolsWithUnderlying = [
       ...pools,
       {
@@ -519,12 +590,25 @@ describe("findBestLendingPool", () => {
       contractAddresses: ["0xAbC"],
     });
     expect(result).not.toBeNull();
-    expect(result!.pool).toBe("p5");
+    expect(result!.pool).toBe("p6");
   });
 
   it("applies optional min APY and TVL quality gates", () => {
     const result = findBestLendingPool("USDT", pools, allowlist, { minApy: 3.1, minTvlUsd: 15_000_000 });
     expect(result).toBeNull();
+  });
+
+  it("returns null when symbol-only matching is explicitly disallowed", () => {
+    const result = findBestLendingPool("USDT", pools, allowlist, { allowSymbolMatch: false });
+    expect(result).toBeNull();
+  });
+
+  it("does not reuse pools reserved for explicit overrides", () => {
+    const result = findBestLendingPool("USDT", pools, allowlist, {
+      reservedPoolIds: new Set(["p2"]),
+    });
+    expect(result).not.toBeNull();
+    expect(result!.pool).toBe("p1");
   });
 });
 

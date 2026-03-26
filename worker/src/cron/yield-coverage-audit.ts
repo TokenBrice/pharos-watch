@@ -10,8 +10,9 @@
 import type { CronResult } from "../lib/cron-logger";
 import { getCache, setCache } from "../lib/db-cache";
 import { loadDlStablecoinPools } from "./yield-sync/sources";
-import { YIELD_POOL_MAP, LENDING_PROTOCOL_ALLOWLIST } from "./yield-config";
+import { LENDING_PROTOCOL_ALLOWLIST, YIELD_ADAPTER_MANIFEST, YIELD_POOL_MAP } from "./yield-config";
 import type { DlPool } from "./yield-sync/types";
+import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 
 /** Minimum TVL (USD) for a pool to be flagged as an unmatched high-TVL pool. */
 const HIGH_TVL_THRESHOLD_USD = 5_000_000;
@@ -53,7 +54,6 @@ export interface CoverageGaps {
 export function identifyCoverageGaps(
   dlPools: DlPool[],
   coveredPools: Set<string>,
-  _trackedSymbols: Set<string>,
 ): CoverageGaps {
   const unmatchedHighTvlPools: CoverageGapPool[] = [];
   const missingProtocols: CoverageGapPool[] = [];
@@ -141,52 +141,66 @@ export async function runYieldCoverageAudit(
 
   // Build the set of covered pool UUIDs from YIELD_POOL_MAP values
   const coveredPools = new Set(Object.values(YIELD_POOL_MAP));
+  const gaps = identifyCoverageGaps(dlPools, coveredPools);
+  const manifestById = new Map(YIELD_ADAPTER_MANIFEST.map((entry) => [entry.stablecoinId, entry]));
+  const manifestMissingIds = ACTIVE_YIELD_BEARING_STABLECOINS
+    .filter((coin) => !manifestById.has(coin.id))
+    .map((coin) => coin.id);
+  const intentionalGapIds = YIELD_ADAPTER_MANIFEST
+    .filter((entry) => entry.status === "intentional-gap")
+    .map((entry) => entry.stablecoinId);
 
-  // Load tracked stablecoin symbols from the DB yield_data table (if available)
-  const trackedSymbols = new Set<string>();
-  try {
-    const rows = await db
-      .prepare("SELECT DISTINCT symbol FROM yield_data WHERE symbol IS NOT NULL")
-      .all<{ symbol: string }>();
-    for (const row of rows.results ?? []) {
-      if (row.symbol) trackedSymbols.add(row.symbol.toUpperCase());
-    }
-  } catch {
-    // Table may not exist or be empty — continue with empty set
-  }
-
-  // Also load symbols from cache/stablecoins if possible
-  const cachedStablecoins = await getCache(db, "stablecoins");
-  if (cachedStablecoins) {
+  let publishedYieldIds = new Set<string>();
+  const rankingsCache = await getCache(db, "yield-rankings");
+  if (rankingsCache) {
     try {
-      const parsed = JSON.parse(cachedStablecoins.value) as Array<{ symbol?: string }>;
-      if (Array.isArray(parsed)) {
-        for (const coin of parsed) {
-          if (coin.symbol) trackedSymbols.add(coin.symbol.toUpperCase());
-        }
-      }
+      const parsed = JSON.parse(rankingsCache.value) as { rankings?: Array<{ id?: string }> };
+      publishedYieldIds = new Set(
+        (parsed.rankings ?? [])
+          .map((ranking) => ranking.id)
+          .filter((id): id is string => typeof id === "string"),
+      );
     } catch {
-      // Ignore parse failures
+      publishedYieldIds = new Set<string>();
     }
   }
 
-  const gaps = identifyCoverageGaps(dlPools, coveredPools, trackedSymbols);
+  const yieldBearingMissingFromRankings = ACTIVE_YIELD_BEARING_STABLECOINS
+    .filter((coin) => {
+      const manifestEntry = manifestById.get(coin.id);
+      return manifestEntry?.status !== "intentional-gap" && !publishedYieldIds.has(coin.id);
+    })
+    .map((coin) => coin.id);
 
   const reportedAt = Math.floor(Date.now() / 1000);
   const report = {
     reportedAt,
     totalDlPools: dlPools.length,
     coveredPoolCount: coveredPools.size,
+    manifestYieldBearingCount: YIELD_ADAPTER_MANIFEST.length,
+    manifestMissingIds,
+    intentionalGapIds,
+    yieldBearingMissingFromRankings,
     unmatchedHighTvlPoolCount: gaps.unmatchedHighTvlPools.length,
     missingProtocolCount: gaps.missingProtocols.length,
     unmatchedHighTvlPools: gaps.unmatchedHighTvlPools.slice(0, 50),
     missingProtocols: gaps.missingProtocols.slice(0, 50),
+    manifest: YIELD_ADAPTER_MANIFEST.map((entry) => ({
+      stablecoinId: entry.stablecoinId,
+      status: entry.status,
+      strategyKinds: entry.strategies.map((strategy) => strategy.kind),
+      strategyLabels: entry.strategies.map((strategy) => strategy.label),
+    })),
     poolMeta,
   };
 
   await setCache(db, "yield-coverage-audit", JSON.stringify(report));
 
-  const itemCount = gaps.unmatchedHighTvlPools.length + gaps.missingProtocols.length;
+  const itemCount =
+    gaps.unmatchedHighTvlPools.length +
+    gaps.missingProtocols.length +
+    manifestMissingIds.length +
+    yieldBearingMissingFromRankings.length;
 
   return {
     status: "ok",
@@ -194,6 +208,10 @@ export async function runYieldCoverageAudit(
     metadata: JSON.stringify({
       totalDlPools: dlPools.length,
       coveredPoolCount: coveredPools.size,
+      manifestYieldBearingCount: YIELD_ADAPTER_MANIFEST.length,
+      manifestMissingCount: manifestMissingIds.length,
+      intentionalGapCount: intentionalGapIds.length,
+      yieldBearingMissingFromRankingsCount: yieldBearingMissingFromRankings.length,
       unmatchedHighTvlPoolCount: gaps.unmatchedHighTvlPools.length,
       missingProtocolCount: gaps.missingProtocols.length,
     }),
