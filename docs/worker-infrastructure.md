@@ -389,7 +389,7 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 | `sync-usds-status`              | `syncUsdsStatus()`             | `worker/src/cron/sync-usds-status.ts`              | This doc (below)                                 |
 | `fetch-tbill-rate`              | `fetchTbillRate()`             | `worker/src/cron/fetch-tbill-rate.ts`              | [Yield Intelligence](./yield-intelligence.md)    |
 
-**Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (FRED) and `sync-usds-status` (Etherscan) are still executed sequentially on the external-fetch branch to keep this trigger conservative on connection use, but a failed `fetch-tbill-rate` run no longer suppresses `sync-usds-status`.
+**Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (ECB/FRED/Treasury/SNB benchmark fetches, still serialized inside one job) and `sync-usds-status` (Etherscan) are still executed sequentially on the external-fetch branch to keep this trigger conservative on connection use, but a failed `fetch-tbill-rate` run no longer suppresses `sync-usds-status`.
 
 ### Trigger 12: `5 8 * * *` (daily at 08:05 UTC — heavy external fetchers)
 
@@ -426,7 +426,7 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 | 8 | `20 * * * *` | 1 (core yield publisher) | 5 |
 | 9 | `25 */4 * * *` | 5 (supplemental yield families) | 1 |
 | 10 | `2,7,…,57 * * * *` | 5 (Telegram fan-out batch sends) | 1 |
-| 11 | `0 8 * * *` | 2 (FRED + Etherscan) | 4 |
+| 11 | `0 8 * * *` | 2 (benchmark feeds + Etherscan) | 4 |
 | 12 | `5 8 * * *` | 5 (bluechip + Anthropic + CoinGecko) | 1 |
 | 13 | `0 6 1 * *` | 1 (DeFiLlama yield scan) | 5 |
 

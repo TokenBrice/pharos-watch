@@ -1,8 +1,15 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.5` (2026-03-01 -> 2026-03-26).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.6` (2026-03-01 -> 2026-03-26).
 
 ---
+
+## v5.6 - First-party EUR benchmarks and resilient CHF parsing (Mar 26, 2026)
+
+- EUR benchmark refreshes now query the ECB's official €STR feed first and only fall back to the FRED mirror when the first-party source is unavailable
+- CHF benchmark parsing now normalizes the SNB current-rates page to text before extracting the policy-rate sentence, so harmless markup changes no longer null out the proxy rate
+- Benchmark degradation metadata now reports explicit EUR and CHF failure modes instead of collapsing first-run outages into a generic `unavailable` bucket
+- The methodology docs, API examples, and about-page source inventory now reflect the ECB Data API and the hardened SNB parser
 
 ## v5.5 - Safety-reweighted PYS curve and shared scoring hydration (Mar 26, 2026)
 

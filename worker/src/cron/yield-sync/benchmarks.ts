@@ -20,8 +20,6 @@ export interface ParsedYieldBenchmarkRegistry {
   CHF: ParsedYieldBenchmarkMeta | null;
 }
 
-const DEFAULT_YIELD_BENCHMARK_KEY: YieldBenchmarkKey = "USD";
-
 const BENCHMARK_META_BY_KEY: Record<YieldBenchmarkKey, { label: string; currency: string; isProxy: boolean }> = {
   USD: {
     label: "USD 3M T-Bill",

@@ -200,7 +200,7 @@ For dividend-distributing tokens (maintain $1.00 NAV, pay yield as new token min
 apy = max(0, benchmarkRate - spreadBps / 100)
 ```
 
-Uses the structured benchmark cache refreshed daily by `fetch-tbill-rate`. USD defaults to the 3-month Treasury yield (`DGS3MO`), but the resolver can switch to a peg-native benchmark when one exists. EUR rows use FRED's ECB-published euro short-term rate mirror (`ECBESTRVOLWGTTRMDMNRT`), and CHF rows use an SNB policy-rate proxy sourced from the SNB current-rates page. If a benchmark fetch fails, the cron retains the last known market benchmark when available and marks provenance as degraded instead of immediately snapping back to the hardcoded default.
+Uses the structured benchmark cache refreshed daily by `fetch-tbill-rate`. USD defaults to the 3-month Treasury yield (`DGS3MO`), but the resolver can switch to a peg-native benchmark when one exists. EUR rows use the ECB's official €STR data feed first and fall back to FRED's mirror (`ECBESTRVOLWGTTRMDMNRT`) only when the first-party feed is unavailable. CHF rows use an SNB policy-rate proxy sourced from the SNB current-rates page, with the parser normalizing page text so minor markup changes do not break extraction. If a benchmark fetch fails, the cron retains the last known market benchmark when available and marks provenance as degraded instead of immediately snapping back to the hardcoded default.
 
 **Configured tokens:**
 
@@ -294,13 +294,14 @@ Yield Intelligence now uses a small benchmark registry instead of a single globa
 | Key | Label | Primary source | Notes |
 | --- | ----- | -------------- | ----- |
 | `USD` | USD 3M T-Bill | FRED `DGS3MO` | Default benchmark and backward-compatible top-level `riskFreeRate` |
-| `EUR` | EUR €STR | FRED `ECBESTRVOLWGTTRMDMNRT` | Native benchmark for EUR pegs when available |
+| `EUR` | EUR €STR | ECB Data API (`EST/B.EU000A2X2A25.WT`) | Native benchmark for EUR pegs when available; FRED mirror is a fallback |
 | `CHF` | CHF SNB policy rate (proxy) | SNB current-rates page | Proxy benchmark for CHF pegs; intentionally labeled as a proxy |
 
 **Source URLs:**
 
 ```text
 https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO
+https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2X2A25.WT?lastNObservations=5&format=csvdata
 https://fred.stlouisfed.org/graph/fredgraph.csv?id=ECBESTRVOLWGTTRMDMNRT
 https://www.snb.ch/en/the-snb/mandates-goals/statistics/statistics-pub/current_interest_exchange_rates
 ```
@@ -487,8 +488,8 @@ It fetches those families, serializes the resolved candidate set into a cache sn
 Fetches the benchmark registry used by Yield Intelligence:
 
 - USD 3M Treasury yield from FRED `DGS3MO`
-- EUR €STR from FRED `ECBESTRVOLWGTTRMDMNRT`
-- CHF SNB policy rate proxy from the SNB current-rates page
+- EUR €STR from the ECB Data API, with the FRED mirror `ECBESTRVOLWGTTRMDMNRT` as fallback
+- CHF SNB policy rate proxy from the SNB current-rates page, parsed from normalized page text rather than a single raw-HTML phrase
 
 Validated rates must stay within `[-10, 20]` so EUR / CHF support can tolerate negative-rate regimes. The cron writes the structured `"risk_free_rates"` cache and also mirrors USD into the legacy `"risk_free_rate"` key for compatibility.
 
@@ -564,7 +565,7 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
   "riskFreeRate": 4.25,
   "benchmarks": {
     "USD": { "key": "USD", "label": "USD 3M T-Bill", "currency": "USD", "rate": 4.25, "recordDate": "2026-03-25", "source": "fred-dgs3mo", "isFallback": false, "fallbackMode": null, "isProxy": false },
-    "EUR": { "key": "EUR", "label": "EUR €STR", "currency": "EUR", "rate": 1.93, "recordDate": "2026-03-25", "source": "fred-estr", "isFallback": false, "fallbackMode": null, "isProxy": false },
+    "EUR": { "key": "EUR", "label": "EUR €STR", "currency": "EUR", "rate": 1.93, "recordDate": "2026-03-25", "source": "ecb-estr", "isFallback": false, "fallbackMode": null, "isProxy": false },
     "CHF": { "key": "CHF", "label": "CHF SNB policy rate (proxy)", "currency": "CHF", "rate": 0.25, "recordDate": "2025-12-13", "source": "snb-policy-rate", "isFallback": false, "fallbackMode": null, "isProxy": true }
   },
   "scalingFactor": 8,
@@ -729,7 +730,8 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | ------------------------------- | ----------------------------------------------------------- | ------------------------------------------------ |
 | `RISK_FREE_RATE_FALLBACK`       | 3.75                                                        | Fallback T-bill rate (%)                         |
 | `FRED_TBILL_CSV_URL`            | `https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO` | FRED daily 3-month Treasury yield series         |
-| `FRED_ESTR_CSV_URL`             | `https://fred.stlouisfed.org/graph/fredgraph.csv?id=ECBESTRVOLWGTTRMDMNRT` | FRED daily EUR €STR mirror |
+| `ECB_ESTR_CSV_URL`              | `https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2X2A25.WT?lastNObservations=5&format=csvdata` | Official ECB €STR feed |
+| `FRED_ESTR_CSV_URL`             | `https://fred.stlouisfed.org/graph/fredgraph.csv?id=ECBESTRVOLWGTTRMDMNRT` | FRED EUR €STR mirror fallback |
 | `SNB_CURRENT_RATES_URL`         | `https://www.snb.ch/en/the-snb/mandates-goals/statistics/statistics-pub/current_interest_exchange_rates` | SNB current-rates page used for the CHF policy-rate proxy |
 | `PYS_SCALING_FACTOR`            | 8                                                           | PYS distribution tuning parameter after safety-curve steepening |
 | `DEFAULT_SAFETY_SCORE`          | 40                                                          | Safety score for unrated coins (most NAV tokens) |

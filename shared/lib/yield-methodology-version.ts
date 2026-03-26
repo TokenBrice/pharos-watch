@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "5.5",
+  currentVersion: "5.6",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "5.6",
+    title: "First-Party EUR Benchmarks and Resilient CHF Parsing",
+    date: "2026-03-26",
+    effectiveAt: 1774803600,
+    summary:
+      "Yield benchmark fetching now sources EUR €STR from the ECB's official data API with the FRED mirror as fallback, and the CHF proxy parser now tolerates the SNB's current HTML structure instead of depending on one plain-text sentence layout.",
+    impact: [
+      "EUR benchmark refreshes now try the ECB Data API first and only fall back to the FRED €STR mirror when the official feed is unavailable",
+      "CHF benchmark parsing now normalizes the SNB page to text before extracting the policy-rate sentence, avoiding breakage from harmless markup changes",
+      "Degraded benchmark metadata now reports explicit EUR and CHF failure modes instead of collapsing first-run failures into a generic `unavailable` bucket",
+      "Yield methodology, API examples, and source inventory now reflect the official ECB feed plus the hardened SNB proxy parser",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.5",
     title: "Safety-Reweighted PYS Curve and Shared Scoring Hydration",

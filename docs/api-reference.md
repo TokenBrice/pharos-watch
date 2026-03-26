@@ -1518,7 +1518,7 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
   "riskFreeRate": 4.25,
   "benchmarks": {
     "USD": { "key": "USD", "label": "USD 3M T-Bill", "currency": "USD", "rate": 4.25, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "fred-dgs3mo", "isFallback": false, "fallbackMode": null, "isProxy": false },
-    "EUR": { "key": "EUR", "label": "EUR €STR", "currency": "EUR", "rate": 1.93, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "fred-estr", "isFallback": false, "fallbackMode": null, "isProxy": false },
+    "EUR": { "key": "EUR", "label": "EUR €STR", "currency": "EUR", "rate": 1.93, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "ecb-estr", "isFallback": false, "fallbackMode": null, "isProxy": false },
     "CHF": { "key": "CHF", "label": "CHF SNB policy rate (proxy)", "currency": "CHF", "rate": 0.25, "recordDate": "2025-12-13", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "snb-policy-rate", "isFallback": false, "fallbackMode": null, "isProxy": true }
   },
   "scalingFactor": 8,
@@ -1529,7 +1529,7 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
     "benchmark": { "key": "USD", "label": "USD 3M T-Bill", "currency": "USD", "rate": 4.25, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "fred-dgs3mo", "isFallback": false, "fallbackMode": null, "isProxy": false },
     "benchmarks": {
       "USD": { "key": "USD", "label": "USD 3M T-Bill", "currency": "USD", "rate": 4.25, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "fred-dgs3mo", "isFallback": false, "fallbackMode": null, "isProxy": false },
-      "EUR": { "key": "EUR", "label": "EUR €STR", "currency": "EUR", "rate": 1.93, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "fred-estr", "isFallback": false, "fallbackMode": null, "isProxy": false },
+      "EUR": { "key": "EUR", "label": "EUR €STR", "currency": "EUR", "rate": 1.93, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "ecb-estr", "isFallback": false, "fallbackMode": null, "isProxy": false },
       "CHF": { "key": "CHF", "label": "CHF SNB policy rate (proxy)", "currency": "CHF", "rate": 0.25, "recordDate": "2025-12-13", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "snb-policy-rate", "isFallback": false, "fallbackMode": null, "isProxy": true }
     },
     "dlPools": { "mode": "dex-cache", "ageSeconds": 240, "poolCount": 812 },

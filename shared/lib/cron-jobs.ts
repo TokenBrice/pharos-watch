@@ -295,7 +295,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     intervalSec: DAY_SECONDS,
     scheduleKey: "daily0800Utc",
     triggerMode: "shared",
-    maxConnections: 1, // FRED CSV then Treasury XML fallback (sequential)
+    maxConnections: 1, // Sequential benchmark fetches (ECB/FRED/Treasury/SNB)
   },
   {
     job: "snapshot-psi",

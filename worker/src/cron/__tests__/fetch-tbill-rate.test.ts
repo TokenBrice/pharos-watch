@@ -18,7 +18,7 @@ vi.mock("../../lib/circuit-breaker", () => ({
   recordOutcome: vi.fn(),
 }));
 
-import { fetchTbillRate, parseSnbPolicyRateHtml, parseTreasuryYieldXml } from "../fetch-tbill-rate";
+import { fetchTbillRate, parseEcbEstrCsv, parseSnbPolicyRateHtml, parseTreasuryYieldXml } from "../fetch-tbill-rate";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { getCache, setCache } from "../../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
@@ -34,9 +34,28 @@ const TREASURY_XML_SNIPPET = `<QR_BC_CM><LIST_G_WEEK_OF_MONTH>
 </LIST_G_NEW_DATE></G_WEEK_OF_MONTH>
 </LIST_G_WEEK_OF_MONTH></QR_BC_CM>`;
 
+const ECB_ESTR_CSV_SNIPPET = `KEY,FREQ,BENCHMARK_ITEM,DATA_TYPE_EST,TIME_PERIOD,OBS_VALUE,OBS_STATUS,CONF_STATUS,PRE_BREAK_VALUE,COMMENT_OBS,CALCUL_START_DATE,CALCUL_END_DATE,TIME_FORMAT,BREAKS,COMMENT_TS,COMPILING_ORG,COVERAGE,DATA_COMP,DECIMALS,DISS_ORG,PUBL_ECB,PUBL_MU,PUBL_PUBLIC,TIME_PER_COLLECT,TITLE,TITLE_COMPL,UNIT_INDEX_BASE,UNIT_MEASURE,UNIT_MULT
+EST.B.EU000A2X2A25.WT,B,EU000A2X2A25,WT,2026-03-24,1.932,A,F,,,,,P1D,,,,"ESA 2010 Sectors: S.121, S.122, S.123, S.124, S.125, S.126, S.127, S.128, S.129",,3,,,,,A,Euro short-term rate,"Euro short-term rate, Volume-weighted trimmed mean rate - Unsecured - Overnight - Borrowing - Financial corporations",,PC,0
+EST.B.EU000A2X2A25.WT,B,EU000A2X2A25,WT,2026-03-25,1.930,A,F,,,,,P1D,,,,"ESA 2010 Sectors: S.121, S.122, S.123, S.124, S.125, S.126, S.127, S.128, S.129",,3,,,,,A,Euro short-term rate,"Euro short-term rate, Volume-weighted trimmed mean rate - Unsecured - Overnight - Borrowing - Financial corporations",,PC,0
+`;
+
 const SNB_CURRENT_RATES_HTML = `
-  <div>SNB policy rate 0.00% valid from 20.06.2025</div>
-  <div>SARON -0.05% fixing at the close of the trading day, 24.03.2026</div>
+  <li class="rates-values-item-container col-md-6">
+    <div class="rates-values-item-wrapper">
+      <div class="rates-values-item">
+        <span class="heading">SNB policy rate</span>
+        <span>0.00%</span>
+        <span class="dt">
+          valid from
+          20.06.2025
+        </span>
+      </div>
+      <div class="rates-values-item">
+        <span class="heading">SARON</span>
+        <span>-0.05%</span>
+      </div>
+    </div>
+  </li>
 `;
 
 function cloneResponse(response: Response | null): Response | null {
@@ -94,9 +113,10 @@ describe("fetchTbillRate", () => {
     expect(recordOutcome).not.toHaveBeenCalled();
   });
 
-  it("returns ok from FRED data", async () => {
+  it("returns ok from benchmark feeds", async () => {
     mockByUrl({
-      "fred.stlouisfed.org": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
+      "data-api.ecb.europa.eu": new Response(ECB_ESTR_CSV_SNIPPET, { status: 200 }),
+      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
       "snb.ch": new Response(SNB_CURRENT_RATES_HTML, { status: 200 }),
     });
 
@@ -107,6 +127,8 @@ describe("fetchTbillRate", () => {
     expect(metadata.fallbackMode).toBeNull();
     expect(metadata.usdSource).toBe("fred-dgs3mo");
     expect(metadata.usdRate).toBe(3.72);
+    expect(metadata.eurSource).toBe("ecb-estr");
+    expect(metadata.eurRate).toBe(1.93);
     expect(metadata.chfSource).toBe("snb-policy-rate");
     expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.TREASURY_RATES, true);
     expect(latestCachePayload()).toMatchObject({
@@ -120,8 +142,8 @@ describe("fetchTbillRate", () => {
 
   it("falls back to Treasury XML when FRED fails", async () => {
     mockByUrl({
+      "data-api.ecb.europa.eu": new Response(ECB_ESTR_CSV_SNIPPET, { status: 200 }),
       "id=DGS3MO": null,
-      "id=ECBESTRVOLWGTTRMDMNRT": new Response("DATE,ECBESTRVOLWGTTRMDMNRT\n2026-03-25,1.93\n", { status: 200 }),
       "home.treasury.gov": new Response(TREASURY_XML_SNIPPET, { status: 200 }),
       "snb.ch": new Response(SNB_CURRENT_RATES_HTML, { status: 200 }),
     });
@@ -145,8 +167,8 @@ describe("fetchTbillRate", () => {
 
   it("falls back to Treasury XML when FRED returns invalid data", async () => {
     mockByUrl({
+      "data-api.ecb.europa.eu": new Response(ECB_ESTR_CSV_SNIPPET, { status: 200 }),
       "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,.\n", { status: 200 }),
-      "id=ECBESTRVOLWGTTRMDMNRT": new Response("DATE,ECBESTRVOLWGTTRMDMNRT\n2026-03-25,1.93\n", { status: 200 }),
       "home.treasury.gov": new Response(TREASURY_XML_SNIPPET, { status: 200 }),
       "snb.ch": new Response(SNB_CURRENT_RATES_HTML, { status: 200 }),
     });
@@ -160,17 +182,35 @@ describe("fetchTbillRate", () => {
     expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.TREASURY_RATES, true);
   });
 
+  it("falls back to the FRED EUR mirror when the ECB feed fails", async () => {
+    mockByUrl({
+      "data-api.ecb.europa.eu": null,
+      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
+      "id=ECBESTRVOLWGTTRMDMNRT": new Response("DATE,ECBESTRVOLWGTTRMDMNRT\n2026-03-25,1.93\n", { status: 200 }),
+      "snb.ch": new Response(SNB_CURRENT_RATES_HTML, { status: 200 }),
+    });
+
+    const result = await fetchTbillRate(db);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+
+    expect(result.status).toBe("ok");
+    expect(metadata.eurSource).toBe("fred-estr");
+    expect(metadata.eurRate).toBe(1.93);
+  });
+
   it("returns degraded when both sources fail", async () => {
     mockByUrl({
+      "data-api.ecb.europa.eu": null,
       "fred.stlouisfed.org": null,
       "home.treasury.gov": null,
+      "snb.ch": null,
     });
 
     const result = await fetchTbillRate(db);
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
 
     expect(result.status).toBe("degraded");
-    expect(metadata.fallbackMode).toBe("usd:all-sources-failed,eur:unavailable,chf:unavailable");
+    expect(metadata.fallbackMode).toBe("usd:all-sources-failed,eur:all-sources-failed,chf:snb-failed");
     expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.TREASURY_RATES, false);
     expect(latestCachePayload()).toMatchObject({
       rate: RISK_FREE_RATE_FALLBACK,
@@ -182,8 +222,10 @@ describe("fetchTbillRate", () => {
 
   it("retains last known good rate when both sources fail", async () => {
     mockByUrl({
+      "data-api.ecb.europa.eu": null,
       "fred.stlouisfed.org": null,
       "home.treasury.gov": null,
+      "snb.ch": null,
     });
     vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
@@ -208,7 +250,7 @@ describe("fetchTbillRate", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
 
     expect(result.status).toBe("degraded");
-    expect(metadata.fallbackMode).toBe("usd:all-sources-failed-retained,eur:unavailable,chf:unavailable");
+    expect(metadata.fallbackMode).toBe("usd:all-sources-failed-retained,eur:all-sources-failed,chf:snb-failed");
     expect(latestCachePayload()).toMatchObject({
       rate: 3.91,
       source: "fred-dgs3mo",
@@ -220,8 +262,10 @@ describe("fetchTbillRate", () => {
 
   it("retains the last market-derived rate across consecutive degraded fallback days", async () => {
     mockByUrl({
+      "data-api.ecb.europa.eu": null,
       "fred.stlouisfed.org": null,
       "home.treasury.gov": null,
+      "snb.ch": null,
     });
     vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
@@ -250,7 +294,7 @@ describe("fetchTbillRate", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
 
     expect(result.status).toBe("degraded");
-    expect(metadata.fallbackMode).toBe("usd:all-sources-failed-retained,eur:unavailable,chf:unavailable");
+    expect(metadata.fallbackMode).toBe("usd:all-sources-failed-retained,eur:all-sources-failed,chf:snb-failed");
     expect(latestCachePayload()).toMatchObject({
       rate: 3.91,
       source: "fred-dgs3mo",
@@ -259,6 +303,15 @@ describe("fetchTbillRate", () => {
       recordDate: "2026-03-07",
       lastMarketRate: 3.91,
       lastMarketSource: "fred-dgs3mo",
+    });
+  });
+});
+
+describe("parseEcbEstrCsv", () => {
+  it("extracts the latest ECB €STR observation", () => {
+    expect(parseEcbEstrCsv(ECB_ESTR_CSV_SNIPPET)).toEqual({
+      rate: 1.93,
+      recordDate: "2026-03-25",
     });
   });
 });
@@ -288,7 +341,7 @@ describe("parseTreasuryYieldXml", () => {
 });
 
 describe("parseSnbPolicyRateHtml", () => {
-  it("extracts the current SNB policy rate and validity date", () => {
+  it("extracts the current SNB policy rate and validity date from the live markup shape", () => {
     expect(parseSnbPolicyRateHtml(SNB_CURRENT_RATES_HTML)).toEqual({
       rate: 0,
       recordDate: "2025-06-20",

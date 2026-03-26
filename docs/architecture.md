@@ -488,7 +488,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── dispatch-telegram-alerts.ts # Subscriber alert fan-out for DEWS/depeg/safety shifts plus launch promotions (dedicated every-5-minute trigger)
     │   ├── yield-config.ts       # Yield source configs: pool UUIDs, source types, scoring params
     │   ├── yield-helpers.ts      # Pure yield computation helpers: Pharos Yield Score, excess yield, stability
-    │   ├── fetch-tbill-rate.ts   # T-bill proxy fetcher (FRED DGS3MO)
+    │   ├── fetch-tbill-rate.ts   # Benchmark-registry fetcher (USD/EUR/CHF)
     │   ├── sync-yield-data.ts    # Yield data sync orchestration: source load + resolution + persistence/cache stages
     │   ├── yield-sync/           # Yield sync stage modules (source loading, resolution, evaluation, publication, history)
     │   ├── sync-mint-burn.ts     # On-chain mint/burn event sync via Alchemy JSON-RPC (critical + extended 20min lanes)

@@ -190,8 +190,8 @@ export function MonitoringMethodologySections() {
                 <li>
                   <span className="text-foreground">Tier 4 &mdash; Rate-derived</span>: for dividend-distributing and
                   Treasury-tracking tokens, derives APY from the selected benchmark registry entry net of known fee
-                  spreads, using USD by default, EUR €STR when available, and a CHF SNB policy-rate proxy for Swiss
-                  pegs
+                  spreads, using USD by default, EUR €STR from the ECB benchmark feed when available, and a CHF SNB
+                  policy-rate proxy for Swiss pegs
                 </li>
               </ul>
               <p>

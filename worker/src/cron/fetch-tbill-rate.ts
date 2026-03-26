@@ -4,12 +4,13 @@ import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import {
   CIRCUIT_SOURCE,
   USER_AGENT,
+  ECB_ESTR_CSV_URL,
   FRED_TBILL_CSV_URL,
   FRED_ESTR_CSV_URL,
   TREASURY_YIELD_XML_URL,
   SNB_CURRENT_RATES_URL,
-  FRED_FETCH_TIMEOUT_MS,
-  FRED_FETCH_MAX_RETRIES,
+  BENCHMARK_FETCH_TIMEOUT_MS,
+  BENCHMARK_FETCH_MAX_RETRIES,
 } from "../lib/constants";
 import type { CronResult } from "../lib/cron-logger";
 import {
@@ -58,6 +59,32 @@ function parseFredLatest(csv: string): { recordDate: string; rate: number } | nu
   return null;
 }
 
+export function parseEcbEstrCsv(csv: string): { recordDate: string; rate: number } | null {
+  const lines = csv.split(/\r?\n/);
+  const header = lines.find((line) => line.trim().length > 0);
+  if (!header) return null;
+
+  const headers = header.split(",").map((value) => value.trim());
+  const dateIndex = headers.indexOf("TIME_PERIOD");
+  const rateIndex = headers.indexOf("OBS_VALUE");
+  if (dateIndex === -1 || rateIndex === -1) return null;
+
+  const headerIndex = lines.indexOf(header);
+  for (let i = lines.length - 1; i > headerIndex; i--) {
+    const line = lines[i]?.trim();
+    if (!line) continue;
+
+    const columns = line.split(",");
+    const recordDate = columns[dateIndex]?.trim();
+    const rate = parseRate(columns[rateIndex]?.trim());
+    if (!recordDate || !isValidBenchmarkRate(rate)) continue;
+
+    return { recordDate, rate };
+  }
+
+  return null;
+}
+
 /** Parse the latest 3-month yield from Treasury.gov yield curve XML. */
 export function parseTreasuryYieldXml(xml: string): { recordDate: string; rate: number } | null {
   const blockPattern =
@@ -83,6 +110,18 @@ export function parseTreasuryYieldXml(xml: string): { recordDate: string; rate: 
   return { recordDate, rate: lastRate };
 }
 
+function normalizeHtmlText(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#160;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function parseSnbDate(dateRaw: string): string | null {
   const match = dateRaw.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
   if (!match) return null;
@@ -90,7 +129,7 @@ function parseSnbDate(dateRaw: string): string | null {
 }
 
 export function parseSnbPolicyRateHtml(html: string): { recordDate: string; rate: number } | null {
-  const match = html.match(/SNB policy rate\s+(-?[\d.]+)%\s+valid from\s+(\d{2}\.\d{2}\.\d{4})/i);
+  const match = normalizeHtmlText(html).match(/SNB policy rate\s+(-?[\d.]+)%\s+valid from\s+(\d{2}\.\d{2}\.\d{4})/i);
   if (!match) return null;
 
   const rate = parseFloat(match[1]);
@@ -240,7 +279,7 @@ async function tryFredCsv(
     const res = await fetchWithRetry(url, {
       headers: { "User-Agent": USER_AGENT },
       signal,
-    }, FRED_FETCH_MAX_RETRIES, { timeoutMs: FRED_FETCH_TIMEOUT_MS });
+    }, BENCHMARK_FETCH_MAX_RETRIES, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
 
     if (!res?.ok) {
       return null;
@@ -253,12 +292,30 @@ async function tryFredCsv(
   }
 }
 
+async function tryEcbEstrCsv(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+  try {
+    const res = await fetchWithRetry(ECB_ESTR_CSV_URL, {
+      headers: { "User-Agent": USER_AGENT },
+      signal,
+    }, BENCHMARK_FETCH_MAX_RETRIES, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
+
+    if (!res?.ok) {
+      return null;
+    }
+
+    return parseEcbEstrCsv(await res.text());
+  } catch (err) {
+    console.warn(`[fetch-tbill-rate] ECB €STR CSV failed: ${String(err).slice(0, 200)}`);
+    return null;
+  }
+}
+
 async function tryTreasuryXml(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
   try {
     const res = await fetchWithRetry(TREASURY_YIELD_XML_URL, {
       headers: { "User-Agent": USER_AGENT },
       signal,
-    }, 1, { timeoutMs: FRED_FETCH_TIMEOUT_MS });
+    }, 1, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
 
     if (!res?.ok) {
       return null;
@@ -276,7 +333,7 @@ async function trySnbPolicyRate(signal?: AbortSignal): Promise<{ rate: number; r
     const res = await fetchWithRetry(SNB_CURRENT_RATES_URL, {
       headers: { "User-Agent": USER_AGENT },
       signal,
-    }, 1, { timeoutMs: FRED_FETCH_TIMEOUT_MS });
+    }, 1, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
 
     if (!res?.ok) {
       return null;
@@ -333,16 +390,19 @@ export async function fetchTbillRate(db: D1Database, signal?: AbortSignal): Prom
     await recordOutcome(db, CIRCUIT_SOURCE.TREASURY_RATES, false);
   }
 
-  const eurParsed = await tryFredCsv(FRED_ESTR_CSV_URL, signal);
-  const eurMeta = eurParsed
+  const eurEcb = await tryEcbEstrCsv(signal);
+  const eurFred = eurEcb ? null : await tryFredCsv(FRED_ESTR_CSV_URL, signal);
+  const eurParsed = eurEcb ?? eurFred;
+  const eurSource = eurEcb ? "ecb-estr" : (eurFred ? "fred-estr" : null);
+  const eurMeta = eurParsed && eurSource
     ? buildResolvedBenchmark({
       key: "EUR",
       rate: eurParsed.rate,
       recordDate: eurParsed.recordDate,
       fetchedAt,
-      source: "fred-estr",
+      source: eurSource,
     })
-    : buildRetainedBenchmark(previous.EUR, "fred-failed");
+    : buildRetainedBenchmark(previous.EUR, "all-sources-failed");
 
   const chfParsed = await trySnbPolicyRate(signal);
   const chfMeta = chfParsed
@@ -361,18 +421,12 @@ export async function fetchTbillRate(db: D1Database, signal?: AbortSignal): Prom
     CHF: chfMeta,
   });
 
+  const eurFailureMode = eurParsed ? null : (eurMeta?.fallbackMode ?? "all-sources-failed");
+  const chfFailureMode = chfParsed ? null : (chfMeta?.fallbackMode ?? "snb-failed");
   const degradationReasons: string[] = [];
   if (usdMeta.isFallback) degradationReasons.push(`usd:${usdMeta.fallbackMode}`);
-  if (!eurMeta) {
-    degradationReasons.push("eur:unavailable");
-  } else if (eurMeta.isFallback) {
-    degradationReasons.push(`eur:${eurMeta.fallbackMode}`);
-  }
-  if (!chfMeta) {
-    degradationReasons.push("chf:unavailable");
-  } else if (chfMeta.isFallback) {
-    degradationReasons.push(`chf:${chfMeta.fallbackMode}`);
-  }
+  if (eurFailureMode) degradationReasons.push(`eur:${eurFailureMode}`);
+  if (chfFailureMode) degradationReasons.push(`chf:${chfFailureMode}`);
 
   return {
     status: degradationReasons.length > 0 ? "degraded" : "ok",
