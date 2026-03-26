@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 26 scheduled runtime jobs across 10 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track the same 26 jobs; cemetery and tracking appendices are now folded into daily digest delivery instead of a separate cron.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 27 scheduled runtime jobs across 11 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track the same 27 jobs; cemetery and tracking appendices are now folded into daily digest delivery instead of a separate cron.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -256,7 +256,7 @@ Most module-level mutable state was eliminated in the parameter-passing refactor
 
 ## Cron Scheduling
 
-This worker declares 10 cron expressions in `worker/wrangler.toml`. Fetch-heavy lanes are split across separate trigger slots so they do not compete with the quarter-hourly core pipeline for the Workers per-trigger 6-connection fetch pool.
+This worker declares 11 cron expressions in `worker/wrangler.toml`. Fetch-heavy lanes are split across separate trigger slots so they do not compete with the quarter-hourly core pipeline for the Workers per-trigger 6-connection fetch pool.
 
 ### wrangler.toml Triggers
 
@@ -273,6 +273,7 @@ crons = [
   "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
   "0 8 * * *",
   "5 8 * * *",
+  "0 6 1 * *",
 ]
 ```
 
@@ -382,7 +383,15 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 | `weekly-recap`   | `generateWeeklyRecap()` | `worker/src/cron/weekly-recap.ts`   | [Digest Pipeline](./digest-pipeline.md) |
 | `discovery-scan` | `runDiscoveryScan()`    | `worker/src/cron/discovery-scan.ts` | [Data Pipeline](./data-pipeline.md)     |
 
-**Connection budget:** `sync-bluechip` (3 parallel batch connections), `daily-digest` / `weekly-recap` (1 long-lived Anthropic API call at a time because the recap is chained after the daily digest), and `discovery-scan` (1 CoinGecko call) use ≤5 concurrent external connections. The 5-minute offset from Trigger 9 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency. `weekly-recap` and `discovery-scan` both run Monday-only and return immediately on other days.
+**Connection budget:** `sync-bluechip` (3 parallel batch connections), `daily-digest` / `weekly-recap` (1 long-lived Anthropic API call at a time because the recap is chained after the daily digest), and `discovery-scan` (1 CoinGecko call) use ≤5 concurrent external connections. The 5-minute offset from Trigger 9 ensures PSI snapshot data is available for the daily digest without an explicit chain dependency. `weekly-recap` and `discovery-scan` both run Monday-only and return immediately on other days. Reliability is now failure-contained at the job level for this slot: a thrown `sync-bluechip`, `daily-digest`, `weekly-recap`, or `discovery-scan` run is recorded independently and no longer aborts the rest of the 08:05 lane before the remaining jobs can settle.
+
+### Trigger 11: `0 6 1 * *` (monthly at 06:00 UTC on the 1st)
+
+| Job                    | Function                   | File                                           | Documentation                                   |
+| ---------------------- | -------------------------- | ---------------------------------------------- | ----------------------------------------------- |
+| `yield-coverage-audit` | `runYieldCoverageAudit()`  | `worker/src/handlers/scheduled/monthly-yield-audit.ts` | [Yield Intelligence](./yield-intelligence.md) |
+
+Runs once a month on the 1st at 06:00 UTC. Scans unmatched high-TVL DeFiLlama pools and flags missing protocols as high-confidence or review-needed expansion candidates.
 
 ### Cron Slot Capacity and Connection Pool Budget
 
@@ -400,6 +409,7 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 | 8 | `2,7,…,57 * * * *` | 5 (Telegram fan-out batch sends) | 1 |
 | 9 | `0 8 * * *` | 2 (FRED + Etherscan) | 4 |
 | 10 | `5 8 * * *` | 5 (bluechip + Anthropic + CoinGecko) | 1 |
+| 11 | `0 6 1 * *` | 1 (DeFiLlama yield scan) | 5 |
 
 **Policy for new jobs:**
 - Jobs requiring ≤1 external connection may share any slot with headroom ≥2.

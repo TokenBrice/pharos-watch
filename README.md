@@ -18,9 +18,9 @@ Public-facing analytics dashboard tracking 183 stablecoins in repo metadata: 175
 - **Compare** — side-by-side stablecoin comparison across key metrics
 - **Daily Digest** — AI-generated daily summary of market movements and notable events
 - **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
-- **Stablecoin Cemetery** — 82 dead stablecoins documented with cause of death, peak market cap, and obituaries
+- **Stablecoin Cemetery** — 87 dead stablecoins documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
-- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 141 configured assets
+- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 135 configured assets
 - **Detail pages** — price chart, supply history, chain distribution, reserve card, redemption backstop card, liquidity card, and safety ratings for each stablecoin
 - **Public status page + private operator admin** — read-only system health on `/status/`, plus Access-gated monitoring and recovery controls on `ops.pharos.watch/admin/`
 - **Backing type breakdown** — RWA-backed, crypto-backed, and algorithmic
@@ -199,7 +199,8 @@ Cloudflare Worker (API layer)
   ├── Cron: 11 * * * *                          → live reserve sync + redemption backstop snapshots
   ├── Cron: 2,7,12,17,22,27,32,37,42,47,52,57 * * * * → Telegram subscriber alerts
   ├── Cron: 0 8 * * *                           → supply snapshot + safety-grade snapshot + T-bill rate + PSI daily snapshot + USDS status
-  └── Cron: 5 8 * * *                           → Bluechip sync + daily digest + weekly recap (Mondays) + discovery scan (Mondays)
+  ├── Cron: 5 8 * * *                           → Bluechip sync + daily digest + weekly recap (Mondays) + discovery scan (Mondays)
+  └── Cron: 0 6 1 * *                           → monthly yield coverage audit
 
 Cloudflare D1 (SQLite database)
   ├── cache                → JSON blobs (stablecoin list, per-coin detail, charts, FX/status/ranking caches) with CAS write guard

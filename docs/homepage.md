@@ -149,7 +149,7 @@ The `/start/` route is documented in [Start Page](./start-page.md).
 9. `Research Surfaces` band
 10. Bottom summary / last-updated footer copy
 
-The destination route for item 8 is documented in [Upcoming Page](./upcoming-page.md).
+The destination route for item 7 is documented in [Upcoming Page](./upcoming-page.md).
 
 ### Key Stablecoin Data
 

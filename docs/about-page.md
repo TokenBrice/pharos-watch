@@ -34,7 +34,7 @@ The page is organized into these sections, in order:
 6. `Classification`
 7. `Data Pipeline`
 8. `Methodology`
-9. `Disclaimer`
+9. `Disclaimer` (rendered as an `<aside>`, not a titled `AboutSection`)
 10. `Get in Touch`
 
 ## Design And Interaction Rules
@@ -65,5 +65,5 @@ The page is organized into these sections, in order:
 - Reserve-transparency sources now include issuer/protocol reserve APIs, dashboards, proof-of-reserve portals, and direct on-chain vault/accounting reads used for live reserve composition where available, with current examples including Ethena, Falcon, infiniFi, M0, Mento Reserve, OpenEden, Re, USDD, Accountable, Tether, Frax, Circle, First Digital Labs, SG-FORGE, Paxos, Sky/MakerDAO, Chainlink PoR/NAV feeds, and Aave GHO.
 - On-chain reads now include selected public chain RPC endpoints alongside Etherscan v2, TronGrid, Alchemy, and dRPC when a direct reserve probe needs chain-native access.
 - The `Ratings & Reference` source group now explicitly includes Bluechip, Chainlink Data Feeds, Frankfurter, Open Exchange Rates, `fawazahmed0/currency-api`, ExchangeRate-API, gold-api.com, and FRED DGS3MO. Keep this list aligned with `DATA_SOURCE_GROUPS` in `src/app/about/page.tsx` when the FX or benchmark stack changes.
-- The DEX data source group reflects the live liquidity and yield pipeline: DeFiLlama Yields and DeFiLlama Protocols, protocol-native yield APIs where needed (currently BIMA Earn), alongside Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, Meteora API, PancakeSwap subgraphs, Aerodrome and Velodrome Sugar view contracts, GeckoTerminal, and DexScreener.
+- The DEX data source group reflects the live liquidity and yield pipeline: DeFiLlama Yields and DeFiLlama Protocols, protocol-native yield APIs (Hashnote, Ondo, Morpho, Pendle, Yearn Kong, Beefy, Aave V3, Compound V3, BIMA Earn), alongside Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, Meteora API, PancakeSwap subgraphs, Aerodrome and Velodrome Sugar view contracts, GeckoTerminal, and DexScreener.
 - PSI copy should describe the current 30-minute cadence and the live formula inputs: active-depeg severity, market-cap breadth, DEWS stress breadth, and 7-day market-cap trend.

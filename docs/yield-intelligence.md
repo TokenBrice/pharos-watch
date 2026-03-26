@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.11`
+- **Current methodology version:** `v5.1`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -65,7 +65,7 @@ interface OnChainRateConfig {
 }
 ```
 
-Currently configured for 11 vaults (all use selector `0x07a2d13a` — `convertToAssets(uint256)`):
+Currently configured for 13 vaults (all use selector `0x07a2d13a` — `convertToAssets(uint256)`):
 
 | Coin ID | Wrapper | Contract | Chain |
 |---------|---------|----------|-------|
@@ -80,6 +80,8 @@ Currently configured for 11 vaults (all use selector `0x07a2d13a` — `convertTo
 | `bold-liquity` | yBOLD | `0x9F43...a3d8` | Ethereum |
 | `usdf-falcon` | sUSDf | `0xc8cf...4b0` | Ethereum |
 | `usn-noon` | sUSN | `0xE24a...B91D` | Ethereum |
+| `ustb-superstate` | USTB | ERC-4626 (6 decimals) | Ethereum |
+| `thbill-theo` | thBILL | ERC-4626 (6 decimals) | Ethereum |
 
 `dusd-dtrinity` and `reusd-re-protocol` are intentionally quarantined from this generic Tier 1 reader for now. Their current `convertToAssets(1e18)` probes do not return a usable value, so they continue to rely on non-deterministic source paths until protocol-specific deterministic adapters are added.
 

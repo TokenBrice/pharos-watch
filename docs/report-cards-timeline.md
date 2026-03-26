@@ -1,6 +1,6 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.7 (2026-02-25 → 2026-03-25).
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.8 (2026-02-25 → 2026-03-25).
 
 ---
 
@@ -302,6 +302,15 @@ Weights and grade thresholds are unchanged from v5.8.
 - 5-band chain penalty replaces 4-band: ≥80→0, ≥60→-10, ≥40→-25, ≥20→-40, <20→-60
 - Wrapper governance exempted from chain infrastructure penalty
 - Deployment multipliers: canonical-bridge 0.85→0.90, native-multichain 0.40→0.75
+
+## v6.8 — On-chain reserve freshness alignment (2026-03-25)
+
+Safety Score structure is unchanged, but the live reserve freshness contract is refined for direct on-chain adapters:
+
+- `evm-branch-balances` snapshots now carry `freshnessMode=not-applicable` instead of remaining timestamp-less and implicitly ineligible
+- Clean branch-balance reserve feeds can override curated collateral quality again when their latest reserve sync status is `ok`
+
+Weights and grade thresholds are unchanged from v6.7.
 
 ## v6.7 — CeFi-dependent blacklistability fallback (2026-03-25)
 

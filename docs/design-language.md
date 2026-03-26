@@ -168,7 +168,7 @@ This is a **one-off artistic treatment** — the patterns are not intended for r
 
 | Role                      | Live class pattern                                                                           |
 | ------------------------- | -------------------------------------------------------------------------------------------- |
-| Standard page title       | `min-w-0 text-3xl sm:text-4xl font-extrabold tracking-tight leading-[1.08]`                  |
+| Standard page title       | `min-w-0 text-3xl sm:text-4xl font-extrabold tracking-tight leading-[1.05]`                  |
 | Shared page title utility | `pharos-page-title`                                                                           |
 | Digest article title      | `text-3xl font-extrabold tracking-tighter`                                                   |
 | Homepage digest hero      | `Newsreader`, `font-semibold`, `text-[clamp(2.8rem,6vw,5rem)]`, `leading-[0.88]`, `tracking-[-0.045em]` |

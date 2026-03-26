@@ -400,10 +400,10 @@ The handler now exposes only the live-supported symbols: USDC, USDT, PAXG, XAUT,
   ],
   "total": 12345,
   "methodology": {
-    "version": "3.2",
-    "versionLabel": "v3.2",
-    "currentVersion": "3.2",
-    "currentVersionLabel": "v3.2",
+    "version": "3.3",
+    "versionLabel": "v3.3",
+    "currentVersion": "3.3",
+    "currentVersionLabel": "v3.3",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1704067200,
     "isCurrent": true
@@ -463,7 +463,7 @@ All blacklist admin endpoints are routed in `worker/src/route-registry.ts` and e
 
 **File:** `src/hooks/use-blacklist-events.ts`
 **Endpoints:** `GET /api/blacklist-summary` + `GET /api/blacklist`
-**Cache:** `staleTime: 20 min`, `refetchInterval: 40 min`
+**Cache:** `staleTime: 60 min`, `refetchInterval: 120 min`
 
 The summary hook loads aggregate cards/chart/filter metadata from the dedicated summary endpoint. The page hook fetches only the currently requested table slice, including server-side filtering, sorting, search, and pagination.
 

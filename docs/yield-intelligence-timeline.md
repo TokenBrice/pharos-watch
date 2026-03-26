@@ -1,6 +1,26 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v4.11` (2026-03-01 -> 2026-03-24).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.1` (2026-03-01 -> 2026-03-26).
+
+---
+
+## v5.1 - Yield Infrastructure Automation (Mar 26, 2026)
+
+- Chain-scoped Layer 3 symbol matching prevents cross-chain false positives in auto-lending discovery
+- Variant symbol auto-scanner detects new wrapper tokens (sXXX/stXXX/wXXX prefix and SAVE/VAULT/EARN/STAKE suffix patterns) in advisory mode
+- Monthly yield coverage audit cron (`0 6 1 * *`, 1st of month at 06:00 UTC) provides protocol expansion recommendations
+- Protocol recommendations classify missing protocols as high-confidence (>$10M, 3+ pools) or review-needed
+
+---
+
+## v5.0 - Yield Coverage Expansion — Protocol-Native API Wave (Mar 25, 2026)
+
+- 10 protocol-native adapters added: Hashnote USYC, Ondo oracle, Morpho GraphQL, Pendle REST, Yearn Kong GraphQL, Beefy REST, Aave V3 on-chain, Compound V3 on-chain, BIMA Earn
+- USTB + thBILL promoted to on-chain ERC-4626 exchange rate reads (previously T-bill proxy only)
+- cusd-cap flagged yield-bearing
+- 19 new lending protocols added to the auto-discovery allowlist
+- TVL floor lowered for smaller ecosystems
+- DeFiLlama yield history backfill for instant 365-day charts
 
 ---
 

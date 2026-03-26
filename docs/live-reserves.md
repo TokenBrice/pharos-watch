@@ -316,11 +316,13 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 | `m0` | `http-json` | `protocol-reserve` | 3 |
 | `mento` | `http-html` | `collateral-mix` | 2 |
 | `openeden-usdo` | `http-json` | `collateral-mix` | 1 |
+| `re-metrics` | `http-html` | `collateral-mix` | 1 |
 | `reservoir` | `http-json` | `protocol-reserve` | 1 |
 | `sgforge-coinvertible` | `http-html` | `attestation-mix` | 1 |
 | `single-asset` | `onchain-evm` / `http-json` | `single-asset` | 47 |
 | `sky-makercore` | `http-json` | `collateral-mix` | 2 |
 | `tether` | `http-json` | `attestation-mix` | 1 |
+| `usdd-data-platform` | `http-json` | `collateral-mix` | 1 |
 
 GHO-specific note:
 the `gho` adapter now values reviewed mainnet GSM backing directly from live onchain GSM state and leaves the remainder of GHO supply in an aggregated residual issuance / reserve-buffer slice. `immediateRedeemableUsd` only counts GSM modules that are not frozen or seized, while `redemptionFeeBps` is normalized to the current worst tracked GSM buy fee and the raw min/max values are retained as `buyFeeBpsMin` / `buyFeeBpsMax`.
