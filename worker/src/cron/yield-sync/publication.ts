@@ -81,7 +81,9 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     if (input.bestSourceKeyByCoin.get(source.id) === source.sourceKey) continue;
 
     const alts = altSourcesByCoin.get(source.id) ?? [];
-    alts.push({
+    // Deduplicate by yieldSource name — keep the entry with higher APY
+    const existingIdx = alts.findIndex((a) => a.yieldSource === source.yieldSource);
+    const alt: AltYieldSource = {
       sourceKey: source.sourceKey,
       yieldSource: source.yieldSource,
       yieldSourceUrl: resolveYieldSourceUrl({
@@ -94,7 +96,14 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
       apy30d: source.apy30d,
       sourceTvlUsd: source.sourceTvlUsd,
       dataSource: source.dataSource,
-    });
+    };
+    if (existingIdx >= 0) {
+      if ((source.currentApy ?? 0) > (alts[existingIdx].currentApy ?? 0)) {
+        alts[existingIdx] = alt;
+      }
+    } else {
+      alts.push(alt);
+    }
     altSourcesByCoin.set(source.id, alts);
   }
 
@@ -102,7 +111,9 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     const key = buildHistoryKey(source.id, source.sourceKey);
     const provenance = input.rankingProvenanceByKey.get(key) ?? null;
     const ranking = evaluatedSourceToRanking(source, provenance);
-    ranking.altSources = altSourcesByCoin.get(source.id) ?? [];
+    // Exclude alts whose display name matches the best source (duplicate label)
+    ranking.altSources = (altSourcesByCoin.get(source.id) ?? [])
+      .filter((alt) => alt.yieldSource !== source.yieldSource);
 
     const sourceObservedAt =
       provenance != null && typeof provenance.sourceObservedAt === "number"

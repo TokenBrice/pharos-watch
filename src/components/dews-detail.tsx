@@ -275,7 +275,13 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                     <ReferenceLine y={25} stroke={THREAT_BAND_HEX.WATCH} strokeDasharray="4 4" strokeOpacity={0.25} />
                   )}
                   <DateTooltip
-                    formatter={(val) => [`${Math.round(val as number)}/100`, showBreakdown ? "Signal" : "DEWS"]}
+                    formatter={(val, name) => [
+                      `${Math.round(val as number)}/100`,
+                      showBreakdown ? (SIGNAL_META[name as string]?.name ?? name) : "DEWS",
+                    ]}
+                    {...(showBreakdown && {
+                      itemStyle: { fontFamily: "var(--font-mono)", fontSize: "0.875rem" },
+                    })}
                   />
                   {showBreakdown ? (
                     Object.keys(SIGNAL_META).map((key) => (
