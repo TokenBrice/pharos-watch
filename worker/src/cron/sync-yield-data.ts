@@ -35,7 +35,13 @@ import {
 const MIN_SAFETY_SCORE_COVERAGE_RATIO = 0.75;
 // -- Main sync function ------------------------------------------------------
 
-export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainRpcs?: Map<string, ChainRpcConfig>, coingeckoApiKey?: string | null): Promise<CronResult> {
+export async function syncYieldData(
+  db: D1Database,
+  signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+  coingeckoApiKey?: string | null,
+  etherscanApiKey?: string | null,
+): Promise<CronResult> {
   const startSec = Math.floor(Date.now() / 1000);
   const sevenDaysAgoSec = startSec - 7 * DAY_SECONDS;
   const yieldCoins = YIELD_BEARING_STABLECOINS;
@@ -50,7 +56,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal, chainR
     failureBreakdown: onChainFailures,
     attemptedCount: onChainAttemptedCount = 0,
     allDeterministicFailed = false,
-  } = await fetchOnChainRates(signal, chainRpcs);
+  } = await fetchOnChainRates(signal, chainRpcs, etherscanApiKey);
   const riskFreeRateMeta = await loadRiskFreeRateSnapshot(db);
   const riskFreeRate = riskFreeRateMeta.rate;
 

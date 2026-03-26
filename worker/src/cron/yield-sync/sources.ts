@@ -1,3 +1,4 @@
+import { CHAIN_META } from "@shared/lib/chains";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
@@ -8,7 +9,11 @@ import {
 } from "../../lib/constants";
 import { getCache } from "../../lib/db-cache";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { fetchEvmCallHexAtBlock, fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
+import {
+  fetchEtherscanUint256AtBlock,
+  fetchEvmCallHexAtBlock,
+  fetchEvmUint256AtBlock,
+} from "../../lib/evm-rpc";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
@@ -207,6 +212,7 @@ function buildOnChainRateRpcUrls(rpc: ChainRpcConfig): string[] {
 async function fetchSingleOnChainRate(
   config: (typeof ON_CHAIN_RATE_CONFIGS)[number],
   rpc: ChainRpcConfig,
+  etherscanApiKey?: string | null,
   signal?: AbortSignal,
 ): Promise<OnChainRateFetchResult> {
   const callData = config.selector + config.inputAmount.replace("0x", "").padStart(64, "0");
@@ -237,12 +243,35 @@ async function fetchSingleOnChainRate(
     }
   }
 
+  const evmChainId = CHAIN_META[config.chain]?.evmChainId;
+  if (typeof evmChainId === "number" && etherscanApiKey) {
+    try {
+      const raw = await fetchEtherscanUint256AtBlock(evmChainId, config.contract, callData, "latest", {
+        apiKey: etherscanApiKey,
+        signal,
+        timeoutMs: ON_CHAIN_RATE_REQUEST_TIMEOUT_MS,
+      });
+      if (raw != null) {
+        return {
+          id: config.stablecoinId,
+          rate: Number(raw) / 10 ** config.decimals,
+          status: "ok",
+        };
+      }
+    } catch (err) {
+      if (signal?.aborted) {
+        throw err instanceof Error ? err : new Error(String(err));
+      }
+    }
+  }
+
   return { id: config.stablecoinId, status: "null" };
 }
 
 export async function fetchOnChainRates(
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
+  etherscanApiKey?: string | null,
 ): Promise<OnChainRateResult> {
   if (!chainRpcs) {
     console.warn("[yield] No chain RPCs configured, skipping all on-chain rate fetches");
@@ -267,7 +296,7 @@ export async function fetchOnChainRates(
         return { id: config.stablecoinId, status: "no-rpc" };
       }
 
-      return fetchSingleOnChainRate(config, rpc, signal);
+      return fetchSingleOnChainRate(config, rpc, etherscanApiKey, signal);
     });
     const batchSettled = await Promise.allSettled(tasks);
     allResults.push(...batchSettled);

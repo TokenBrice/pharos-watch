@@ -49,6 +49,12 @@ export async function runHalfHourlySlot(runtime: ScheduledRuntimeContext): Promi
   await runHalfHourlyJob("compute-dews", (signal) => computeAndStoreDEWS(runtime.db, signal));
   await runHalfHourlyJob("stability-index", (signal) => computeAndStoreStabilityIndex(runtime.db, signal));
   await runHalfHourlyJob("sync-yield-data", (signal) =>
-    syncYieldData(runtime.db, signal, runtime.chainRpcs, runtime.coingeckoApiKey),
+    syncYieldData(
+      runtime.db,
+      signal,
+      runtime.chainRpcs,
+      runtime.coingeckoApiKey,
+      runtime.env.ETHERSCAN_API_KEY ?? null,
+    ),
   );
 }

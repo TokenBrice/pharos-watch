@@ -253,6 +253,7 @@ import * as safetyScoresModule from "../../lib/safety-scores";
 import * as yieldConfigModule from "../yield-config";
 import * as yieldHelpersModule from "../yield-helpers";
 import * as publicationModule from "../yield-sync/publication";
+import * as evmRpcModule from "../../lib/evm-rpc";
 
 // --- Helpers ---
 
@@ -1509,6 +1510,110 @@ describe("syncYieldData", () => {
     expect(metadata.fallbackMode ?? "").not.toContain("onchain-rates:all-deterministic-failed");
     expect(metadata.sourceCoverage?.onChainRatesResolved).toBe(1);
     expect(metadata.sourceCoverage?.onChainAllDeterministicFailed).toBe(false);
+
+    onChainConfigs.length = 0;
+  });
+
+  it("falls back to the Etherscan proxy when Worker RPC reads all fail", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const onChainConfigs = yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+    onChainConfigs.push({
+      stablecoinId: "100",
+      chain: "ethereum",
+      contract: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+      selector: "0x07a2d13a",
+      decimals: 18,
+      inputAmount: "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+    });
+
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "yield_data", rows: [] },
+      {
+        match: "yield_history",
+        rows: [
+          {
+            stablecoin_id: "100",
+            source_key: "onchain:100",
+            recorded_at: nowSec - 8 * 86400,
+            is_best: 1,
+            apy: 5,
+            source_tvl_usd: null,
+            data_source: "onchain",
+            yield_source: null,
+            yield_type: null,
+            exchange_rate: 1.0,
+          },
+        ],
+      },
+      { match: "supply_history", rows: [] },
+      { match: "depeg_events", rows: [] },
+      { match: "dex_liquidity", rows: [] },
+    ]);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "risk_free_rate") {
+        return { value: "4.0", updatedAt: nowSec };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    vi.mocked(getChainRpc).mockReturnValue({
+      chainId: "ethereum",
+      chainName: "Ethereum",
+      type: "evm",
+      rpcUrl: "https://rpc.example/primary",
+      fallbackRpcUrl: "https://rpc.example/fallback",
+      explorerUrl: "https://etherscan.io",
+    });
+    mockFetch([]);
+    const rawRpcSpy = vi.spyOn(evmRpcModule, "fetchEvmUint256AtBlock").mockResolvedValue(null);
+    const etherscanSpy = vi.spyOn(evmRpcModule, "fetchEtherscanUint256AtBlock").mockResolvedValue(
+      BigInt("1050000000000000000"),
+    );
+
+    const testChainRpcs = new Map<string, ChainRpcConfig>([
+      ["ethereum", {
+        chainId: "ethereum",
+        chainName: "Ethereum",
+        type: "evm",
+        rpcUrl: "https://rpc.example/primary",
+        fallbackRpcUrl: "https://rpc.example/fallback",
+        explorerUrl: "https://etherscan.io",
+      }],
+    ]);
+    const result = await syncYieldData(
+      db,
+      undefined,
+      testChainRpcs,
+      undefined,
+      "etherscan-key",
+    );
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      fallbackMode?: string | null;
+      sourceCoverage?: {
+        onChainRatesResolved?: number;
+        onChainAllDeterministicFailed?: boolean;
+      };
+    };
+
+    expect(metadata.fallbackMode ?? "").not.toContain("onchain-rates:all-deterministic-failed");
+    expect(metadata.sourceCoverage?.onChainRatesResolved).toBe(1);
+    expect(metadata.sourceCoverage?.onChainAllDeterministicFailed).toBe(false);
+    const deterministicRawRpcCalls = rawRpcSpy.mock.calls.filter(
+      ([, contract, data]) =>
+        contract === "0x83F20F44975D03b1b09e64809B757c47f942BEeA"
+        && typeof data === "string"
+        && data.startsWith("0x07a2d13a"),
+    );
+    expect(deterministicRawRpcCalls).toHaveLength(2);
+    expect(etherscanSpy).toHaveBeenCalledWith(
+      1,
+      "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+      expect.stringMatching(/^0x07a2d13a/),
+      "latest",
+      expect.objectContaining({ apiKey: "etherscan-key" }),
+    );
 
     onChainConfigs.length = 0;
   });
