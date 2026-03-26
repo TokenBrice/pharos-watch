@@ -26,13 +26,14 @@ import {
 } from "../yield-config";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { COMPOUND_V3_COMETS, fetchAaveV3SupplyRates, fetchBeefySources, fetchBimaSusbdSource, fetchBprotocolLqtyOnlySource, fetchCompoundV3SupplyRates, fetchHashnoteUsycSource, fetchMorphoVaultSources, fetchOndoUsdyOracleSource, fetchPendleMarketSources, fetchYearnKongSources, getPriceDerivedApy, type AaveV3RateTarget } from "./sources";
-import type { DlPool, ResolvedYieldEntry } from "./types";
+import type { DlPool, ResolvedYield, ResolvedYieldEntry } from "./types";
 import { scanForNewVariants } from "./variant-scanner";
 
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
 const BIMA_USBD_ID = "usbd-bima";
 const HASHNOTE_USYC_ID = "usyc-hashnote";
 const ONDO_USDY_ID = "usdy-ondo-finance";
+const OPTIONAL_SINGLE_SOURCE_TIMEOUT_MS = 12_000;
 
 interface SafetyScoreSnapshot {
   score: number;
@@ -55,6 +56,50 @@ interface ResolveYieldSourcesParams {
   signal?: AbortSignal;
   chainRpcs?: Map<string, ChainRpcConfig>;
   coingeckoApiKey?: string | null;
+}
+
+function appendOptionalSourcesBySymbol(
+  resolved: ResolvedYieldEntry[],
+  entries: Array<{ symbol: string; yield: ResolvedYield }>,
+): void {
+  for (const { symbol: assetSymbol, yield: optionalYield } of entries) {
+    for (const meta of TRACKED_STABLECOINS) {
+      if (meta.symbol.toUpperCase() !== assetSymbol.toUpperCase()) continue;
+      if (resolved.some((entry) => entry.id === meta.id && entry.yield?.sourceKey === optionalYield.sourceKey)) {
+        continue;
+      }
+      resolved.push({ id: meta.id, symbol: meta.symbol, yield: optionalYield });
+      break;
+    }
+  }
+}
+
+async function runTimedOptionalSource<T>(
+  label: string,
+  timeoutMs: number,
+  signal: AbortSignal | undefined,
+  fn: (budgetSignal: AbortSignal) => Promise<T>,
+  fallback: T,
+): Promise<T> {
+  const budgetController = new AbortController();
+  const timer = setTimeout(() => {
+    budgetController.abort(new Error(`${label} timed out after ${Math.round(timeoutMs / 1000)}s`));
+  }, timeoutMs);
+  const budgetSignal = signal ? AbortSignal.any([signal, budgetController.signal]) : budgetController.signal;
+
+  try {
+    return await fn(budgetSignal);
+  } catch (error) {
+    if (signal?.aborted) {
+      throw error instanceof Error ? error : new Error(String(error));
+    }
+    if (budgetController.signal.aborted) {
+      console.warn(`[yield] ${label} timed out; continuing without this source`);
+    }
+    return fallback;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function resolveYieldSources({
@@ -267,7 +312,13 @@ export async function resolveYieldSources({
       id === BIMA_USBD_ID &&
       !resolved.some((entry) => entry.id === id && entry.yield?.sourceKey === "protocol-api:bima-susbd")
     ) {
-      const bimaYield = await fetchBimaSusbdSource(signal);
+      const bimaYield = await runTimedOptionalSource(
+        "BIMA sUSBD source",
+        OPTIONAL_SINGLE_SOURCE_TIMEOUT_MS,
+        signal,
+        (budgetSignal) => fetchBimaSusbdSource(budgetSignal),
+        null,
+      );
       if (bimaYield) {
         resolved.push({
           id,
@@ -282,7 +333,13 @@ export async function resolveYieldSources({
       id === HASHNOTE_USYC_ID &&
       !resolved.some((e) => e.id === id && e.yield?.sourceKey === "protocol-api:hashnote-usyc")
     ) {
-      const hashnoteYield = await fetchHashnoteUsycSource(signal);
+      const hashnoteYield = await runTimedOptionalSource(
+        "Hashnote USYC source",
+        OPTIONAL_SINGLE_SOURCE_TIMEOUT_MS,
+        signal,
+        (budgetSignal) => fetchHashnoteUsycSource(budgetSignal),
+        null,
+      );
       if (hashnoteYield) {
         resolved.push({ id, symbol, yield: hashnoteYield });
         hasAnySource = true;
@@ -308,7 +365,13 @@ export async function resolveYieldSources({
         : null;
       const daysDelta = priorRow ? (startSec - priorRow.recorded_at) / 86400 : 0;
 
-      const ondoYield = await fetchOndoUsdyOracleSource(prevPriceBigint, daysDelta, signal, chainRpcs);
+      const ondoYield = await runTimedOptionalSource(
+        "Ondo USDY oracle source",
+        OPTIONAL_SINGLE_SOURCE_TIMEOUT_MS,
+        signal,
+        (budgetSignal) => fetchOndoUsdyOracleSource(prevPriceBigint, daysDelta, budgetSignal, chainRpcs),
+        null,
+      );
       if (ondoYield) {
         resolved.push({ id, symbol, yield: ondoYield });
         hasAnySource = true;
@@ -329,7 +392,13 @@ export async function resolveYieldSources({
         && entry.yield?.sourceKey === buildOnChainSourceKey(LIQUITY_V1_LUSD_ID),
     )
   ) {
-    const bprotocolYield = await fetchBprotocolLqtyOnlySource(signal, chainRpcs, coingeckoApiKey);
+    const bprotocolYield = await runTimedOptionalSource(
+      "B.Protocol LQTY-only source",
+      OPTIONAL_SINGLE_SOURCE_TIMEOUT_MS,
+      signal,
+      (budgetSignal) => fetchBprotocolLqtyOnlySource(budgetSignal, chainRpcs, coingeckoApiKey),
+      null,
+    );
     if (bprotocolYield) {
       resolved.push({
         id: lusdMeta.id,
@@ -339,62 +408,24 @@ export async function resolveYieldSources({
     }
   }
 
-  // Morpho protocol-native vaults — runs once, matched by asset symbol
-  const morphoVaults = await fetchMorphoVaultSources(signal);
-  for (const { symbol: assetSymbol, yield: morphoYield } of morphoVaults) {
-    for (const meta of TRACKED_STABLECOINS) {
-      if (meta.symbol.toUpperCase() !== assetSymbol.toUpperCase()) continue;
-      if (resolved.some((e) => e.id === meta.id && e.yield?.sourceKey === morphoYield.sourceKey)) continue;
-      resolved.push({ id: meta.id, symbol: meta.symbol, yield: morphoYield });
-      break;
-    }
-  }
+  const [morphoVaults, pendleMarkets, kongVaults, beefyVaults] = await Promise.all([
+    fetchMorphoVaultSources(signal),
+    fetchPendleMarketSources(signal),
+    fetchYearnKongSources(signal),
+    fetchBeefySources(signal),
+  ]);
+  appendOptionalSourcesBySymbol(resolved, morphoVaults);
+  appendOptionalSourcesBySymbol(resolved, pendleMarkets);
+  appendOptionalSourcesBySymbol(resolved, kongVaults);
+  appendOptionalSourcesBySymbol(resolved, beefyVaults);
 
-  // Pendle protocol-native markets — runs once, matched by asset symbol
-  const pendleMarkets = await fetchPendleMarketSources(signal);
-  for (const { symbol: assetSymbol, yield: pendleYield } of pendleMarkets) {
-    for (const meta of TRACKED_STABLECOINS) {
-      if (meta.symbol.toUpperCase() !== assetSymbol.toUpperCase()) continue;
-      if (resolved.some((e) => e.id === meta.id && e.yield?.sourceKey === pendleYield.sourceKey)) continue;
-      resolved.push({ id: meta.id, symbol: meta.symbol, yield: pendleYield });
-      break;
-    }
-  }
-
-  // Yearn Kong ERC-4626 vaults (Yearn-native + third-party) — runs once, matched by asset symbol
-  const kongVaults = await fetchYearnKongSources(signal);
-  for (const { symbol: assetSymbol, yield: kongYield } of kongVaults) {
-    for (const meta of TRACKED_STABLECOINS) {
-      if (meta.symbol.toUpperCase() !== assetSymbol.toUpperCase()) continue;
-      if (resolved.some((e) => e.id === meta.id && e.yield?.sourceKey === kongYield.sourceKey)) continue;
-      resolved.push({ id: meta.id, symbol: meta.symbol, yield: kongYield });
-      break;
-    }
-  }
-
-  // Beefy auto-compounded vaults — runs once, matched by asset symbol
-  const beefyVaults = await fetchBeefySources(signal);
-  for (const { symbol: assetSymbol, yield: beefyYield } of beefyVaults) {
-    for (const meta of TRACKED_STABLECOINS) {
-      if (meta.symbol.toUpperCase() !== assetSymbol.toUpperCase()) continue;
-      if (resolved.some((e) => e.id === meta.id && e.yield?.sourceKey === beefyYield.sourceKey)) continue;
-      resolved.push({ id: meta.id, symbol: meta.symbol, yield: beefyYield });
-      break;
-    }
-  }
-
-  // Compound V3 direct on-chain supply rates — batched 4 at a time.
-  const COMPOUND_V3_BATCH_SIZE = 4;
-  const compoundV3Targets = [...COMPOUND_V3_COMETS];
-  for (let i = 0; i < compoundV3Targets.length; i += COMPOUND_V3_BATCH_SIZE) {
-    const batch = compoundV3Targets.slice(i, i + COMPOUND_V3_BATCH_SIZE);
-    const batchResults = await fetchCompoundV3SupplyRates(batch, signal, chainRpcs);
-    for (const entry of batchResults) {
-      const meta = TRACKED_STABLECOINS.find((m) => m.symbol === entry.symbol);
-      if (!meta) continue;
-      if (resolved.some((r) => r.id === meta.id && r.yield?.sourceKey === entry.yield.sourceKey)) continue;
-      resolved.push({ id: meta.id, symbol: meta.symbol, yield: entry.yield });
-    }
+  // Compound V3 direct on-chain supply rates — bounded by the adapter budget.
+  const compoundV3Results = await fetchCompoundV3SupplyRates([...COMPOUND_V3_COMETS], signal, chainRpcs);
+  for (const entry of compoundV3Results) {
+    const meta = TRACKED_STABLECOINS.find((m) => m.symbol === entry.symbol);
+    if (!meta) continue;
+    if (resolved.some((r) => r.id === meta.id && r.yield?.sourceKey === entry.yield.sourceKey)) continue;
+    resolved.push({ id: meta.id, symbol: meta.symbol, yield: entry.yield });
   }
 
   // ---------------------------------------------------------------------------

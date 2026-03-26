@@ -148,6 +148,50 @@ describe("syncBluechip", () => {
     expect(cached["usdc-circle"].smidge.externals).toBeNull();
   });
 
+  it("accepts null date_of_rating values from the Bluechip payload", async () => {
+    mockFetch([
+      {
+        match: "/coin-data/tether",
+        body: {
+          data: [
+            {
+              grade: "A",
+              collateralization: 95,
+              smart_contract_audit: true,
+              date_of_rating: null,
+              date_last_change: "2026-02-15",
+            },
+          ],
+        },
+      },
+      {
+        match: "/coin-data/usdc",
+        body: {
+          data: [
+            {
+              grade: "B+",
+              collateralization: 100,
+              smart_contract_audit: true,
+              date_of_rating: null,
+              date_last_change: null,
+            },
+          ],
+        },
+      },
+    ]);
+
+    const db = mockD1();
+    const result = await syncBluechip(db);
+
+    expect(result.status).toBeUndefined();
+    expect(result.itemCount).toBe(2);
+
+    const insert = getCacheInsert(db as MockD1Database);
+    const cached = JSON.parse(String(insert?.binds[1])) as Record<string, { dateOfRating: string }>;
+    expect(cached["usdt-tether"].dateOfRating).toBe("");
+    expect(cached["usdc-circle"].dateOfRating).toBe("");
+  });
+
   it("returns degraded when bluechip API requests fail", async () => {
     mockFetch([
       { match: "/coin-data/tether", body: { error: "down" }, status: 500 },

@@ -42,6 +42,9 @@ const HASHNOTE_USYC_SOURCE_TYPE = "nav-appreciation";
 const HASHNOTE_PRICE_REPORTS_URL = "https://usyc.hashnote.com/api/price-reports";
 
 const MAX_DL_CACHE_AGE_SEC = 6 * 3600; // 6 hours (3× the expected 2-hour DEX sync refresh)
+const OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS = 8_000;
+const OPTIONAL_PROTOCOL_API_BUDGET_MS = 25_000;
+const OPTIONAL_PROTOCOL_RPC_BUDGET_MS = 30_000;
 
 interface HashnoteReport {
   roundId: string;
@@ -57,6 +60,23 @@ interface BimaEarnPool {
   token?: {
     title?: string;
     label?: string;
+  };
+}
+
+function createOptionalSourceBudget(
+  label: string,
+  timeoutMs: number,
+  signal?: AbortSignal,
+): { signal: AbortSignal; budgetController: AbortController; cleanup: () => void } {
+  const budgetController = new AbortController();
+  const timer = setTimeout(() => {
+    budgetController.abort(new Error(`${label} budget exhausted after ${Math.round(timeoutMs / 1000)}s`));
+  }, timeoutMs);
+
+  return {
+    signal: signal ? AbortSignal.any([signal, budgetController.signal]) : budgetController.signal,
+    budgetController,
+    cleanup: () => clearTimeout(timer),
   };
 }
 
@@ -371,7 +391,8 @@ export async function fetchBimaSusbdSource(signal?: AbortSignal): Promise<Resolv
         headers: { Accept: "application/json", "User-Agent": USER_AGENT },
         signal,
       },
-      1,
+      0,
+      { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
     );
     if (!res?.ok) return null;
 
@@ -432,9 +453,15 @@ export async function fetchBimaSusbdSource(signal?: AbortSignal): Promise<Resolv
 
 export async function fetchHashnoteUsycSource(signal?: AbortSignal): Promise<ResolvedYield | null> {
   try {
-    const res = await fetchWithRetry(HASHNOTE_PRICE_REPORTS_URL, {
-      headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal,
-    }, 1);
+    const res = await fetchWithRetry(
+      HASHNOTE_PRICE_REPORTS_URL,
+      {
+        headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+        signal,
+      },
+      0,
+      { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
+    );
     if (!res?.ok) return null;
 
     const body = (await res.json()) as { entity?: string; data?: HashnoteReport[] };
@@ -553,13 +580,14 @@ interface MorphoVaultItem {
 export async function fetchMorphoVaultSources(
   signal?: AbortSignal,
 ): Promise<Array<{ symbol: string; yield: ResolvedYield }>> {
+  const budget = createOptionalSourceBudget("Morpho vault sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
   try {
     const res = await fetchWithRetry(MORPHO_GQL_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
       body: JSON.stringify({ query: MORPHO_STABLECOIN_QUERY, variables: { symbols: MORPHO_STABLECOIN_SYMBOLS } }),
-      signal,
-    }, 1);
+      signal: budget.signal,
+    }, 0, { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS });
     if (!res?.ok) return [];
 
     const body = (await res.json()) as { data?: { vaults?: { items?: MorphoVaultItem[] } } };
@@ -595,8 +623,14 @@ export async function fetchMorphoVaultSources(
     return results;
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+    if (budget.budgetController.signal.aborted) {
+      console.warn("[yield] Morpho vault sources budget exhausted; continuing without this source family");
+      return [];
+    }
     console.warn("[yield] Morpho vault sources failed:", error);
     return [];
+  } finally {
+    budget.cleanup();
   }
 }
 
@@ -618,52 +652,63 @@ export async function fetchPendleMarketSources(
   signal?: AbortSignal,
 ): Promise<Array<{ symbol: string; yield: ResolvedYield }>> {
   const results: Array<{ symbol: string; yield: ResolvedYield }> = [];
+  const budget = createOptionalSourceBudget("Pendle market sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
 
-  for (const chainId of PENDLE_CHAINS) {
-    try {
-      const url = `${PENDLE_MARKETS_BASE}/${chainId}/markets?limit=100&is_active=true`;
-      const res = await fetchWithRetry(url, {
-        headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal,
-      }, 1);
-      if (!res?.ok) continue;
+  try {
+    for (const chainId of PENDLE_CHAINS) {
+      if (budget.budgetController.signal.aborted) break;
+      try {
+        const url = `${PENDLE_MARKETS_BASE}/${chainId}/markets?limit=100&is_active=true`;
+        const res = await fetchWithRetry(url, {
+          headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+          signal: budget.signal,
+        }, 0, { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS });
+        if (!res?.ok) continue;
 
-      const body = (await res.json()) as { results?: PendleMarket[] };
-      if (!Array.isArray(body.results)) continue;
+        const body = (await res.json()) as { results?: PendleMarket[] };
+        if (!Array.isArray(body.results)) continue;
 
-      for (const market of body.results) {
-        if (!market.categoryIds?.includes("stables")) continue;
-        if (!market.isActive) continue;
+        for (const market of body.results) {
+          if (!market.categoryIds?.includes("stables")) continue;
+          if (!market.isActive) continue;
 
-        const apy = market.impliedApy;
-        if (typeof apy !== "number" || !Number.isFinite(apy) || apy <= 0) continue;
+          const apy = market.impliedApy;
+          if (typeof apy !== "number" || !Number.isFinite(apy) || apy <= 0) continue;
 
-        const tvl = market.liquidity?.usd;
-        if (typeof tvl !== "number" || tvl < 100_000) continue;
+          const tvl = market.liquidity?.usd;
+          if (typeof tvl !== "number" || tvl < 100_000) continue;
 
-        results.push({
-          symbol: market.assetRepresentation || market.underlyingAsset.symbol,
-          yield: {
-            currentApy: apy * 100,
-            apyBase: apy * 100,
-            apyReward: null,
-            sourcePool: market.address,
-            sourceTvlUsd: tvl,
-            dataSource: "protocol-api",
-            exchangeRate: null,
-            sourceKey: `protocol-api:pendle:${market.address.slice(0, 10)}`,
-            yieldSource: `Pendle: ${market.protocol} ${market.assetRepresentation}`,
-            yieldType: "lending-vault",
-            sourceObservedAt: Math.floor(Date.now() / 1000),
-            comparisonAnchorObservedAt: null,
-          },
-        });
+          results.push({
+            symbol: market.assetRepresentation || market.underlyingAsset.symbol,
+            yield: {
+              currentApy: apy * 100,
+              apyBase: apy * 100,
+              apyReward: null,
+              sourcePool: market.address,
+              sourceTvlUsd: tvl,
+              dataSource: "protocol-api",
+              exchangeRate: null,
+              sourceKey: `protocol-api:pendle:${market.address.slice(0, 10)}`,
+              yieldSource: `Pendle: ${market.protocol} ${market.assetRepresentation}`,
+              yieldType: "lending-vault",
+              sourceObservedAt: Math.floor(Date.now() / 1000),
+              comparisonAnchorObservedAt: null,
+            },
+          });
+        }
+      } catch (error) {
+        if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+        if (budget.budgetController.signal.aborted) {
+          console.warn(`[yield] Pendle sources budget exhausted; keeping ${results.length} partial results`);
+          break;
+        }
+        console.warn(`[yield] Pendle chain ${chainId} failed:`, error);
       }
-    } catch (error) {
-      if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
-      console.warn(`[yield] Pendle chain ${chainId} failed:`, error);
     }
+    return results;
+  } finally {
+    budget.cleanup();
   }
-  return results;
 }
 
 const YEARN_KONG_GQL_URL = "https://kong.yearn.fi/api/gql";
@@ -691,58 +736,68 @@ export async function fetchYearnKongSources(
 ): Promise<Array<{ symbol: string; yield: ResolvedYield }>> {
   const results: Array<{ symbol: string; yield: ResolvedYield }> = [];
   const seenAddresses = new Set<string>();
+  const budget = createOptionalSourceBudget("Yearn Kong sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
 
-  for (const chainId of YEARN_KONG_CHAINS) {
-    try {
-      const res = await fetchWithRetry(YEARN_KONG_GQL_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
-        body: JSON.stringify({ query: YEARN_KONG_VAULTS_QUERY, variables: { chainId } }),
-        signal,
-      }, 1);
-      if (!res?.ok) continue;
+  try {
+    for (const chainId of YEARN_KONG_CHAINS) {
+      if (budget.budgetController.signal.aborted) break;
+      try {
+        const res = await fetchWithRetry(YEARN_KONG_GQL_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
+          body: JSON.stringify({ query: YEARN_KONG_VAULTS_QUERY, variables: { chainId } }),
+          signal: budget.signal,
+        }, 0, { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS });
+        if (!res?.ok) continue;
 
-      const body = (await res.json()) as { data?: { vaults?: KongVault[] } };
-      const vaults = body.data?.vaults;
-      if (!Array.isArray(vaults)) continue;
+        const body = (await res.json()) as { data?: { vaults?: KongVault[] } };
+        const vaults = body.data?.vaults;
+        if (!Array.isArray(vaults)) continue;
 
-      for (const vault of vaults) {
-        if (seenAddresses.has(vault.address.toLowerCase())) continue;
-        if (vault.meta?.isRetired) continue;
-        if (vault.meta?.category !== "Stablecoin") continue;
+        for (const vault of vaults) {
+          if (seenAddresses.has(vault.address.toLowerCase())) continue;
+          if (vault.meta?.isRetired) continue;
+          if (vault.meta?.category !== "Stablecoin") continue;
 
-        const netApy = vault.apy?.monthlyNet ?? vault.apy?.net;
-        if (typeof netApy !== "number" || !Number.isFinite(netApy) || netApy <= 0) continue;
+          const netApy = vault.apy?.monthlyNet ?? vault.apy?.net;
+          if (typeof netApy !== "number" || !Number.isFinite(netApy) || netApy <= 0) continue;
 
-        const tvl = vault.tvl?.close;
-        if (typeof tvl !== "number" || tvl < 100_000) continue;
+          const tvl = vault.tvl?.close;
+          if (typeof tvl !== "number" || tvl < 100_000) continue;
 
-        seenAddresses.add(vault.address.toLowerCase());
-        const sourcePrefix = vault.yearn ? "Yearn" : "Kong";
-        results.push({
-          symbol: vault.asset.symbol,
-          yield: {
-            currentApy: netApy * 100,
-            apyBase: netApy * 100,
-            apyReward: null,
-            sourcePool: vault.address,
-            sourceTvlUsd: tvl,
-            dataSource: "protocol-api",
-            exchangeRate: null,
-            sourceKey: `protocol-api:kong:${vault.address.slice(0, 10)}`,
-            yieldSource: `${sourcePrefix}: ${vault.name}`,
-            yieldType: "lending-vault",
-            sourceObservedAt: Math.floor(Date.now() / 1000),
-            comparisonAnchorObservedAt: null,
-          },
-        });
+          seenAddresses.add(vault.address.toLowerCase());
+          const sourcePrefix = vault.yearn ? "Yearn" : "Kong";
+          results.push({
+            symbol: vault.asset.symbol,
+            yield: {
+              currentApy: netApy * 100,
+              apyBase: netApy * 100,
+              apyReward: null,
+              sourcePool: vault.address,
+              sourceTvlUsd: tvl,
+              dataSource: "protocol-api",
+              exchangeRate: null,
+              sourceKey: `protocol-api:kong:${vault.address.slice(0, 10)}`,
+              yieldSource: `${sourcePrefix}: ${vault.name}`,
+              yieldType: "lending-vault",
+              sourceObservedAt: Math.floor(Date.now() / 1000),
+              comparisonAnchorObservedAt: null,
+            },
+          });
+        }
+      } catch (error) {
+        if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+        if (budget.budgetController.signal.aborted) {
+          console.warn(`[yield] Yearn Kong sources budget exhausted; keeping ${results.length} partial results`);
+          break;
+        }
+        console.warn(`[yield] Yearn Kong chain ${chainId} failed:`, error);
       }
-    } catch (error) {
-      if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
-      console.warn(`[yield] Yearn Kong chain ${chainId} failed:`, error);
     }
+    return results;
+  } finally {
+    budget.cleanup();
   }
-  return results;
 }
 
 const BEEFY_APY_URL = "https://api.beefy.finance/apy";
@@ -762,10 +817,21 @@ interface BeefyVault {
 export async function fetchBeefySources(
   signal?: AbortSignal,
 ): Promise<Array<{ symbol: string; yield: ResolvedYield }>> {
+  const budget = createOptionalSourceBudget("Beefy sources", OPTIONAL_PROTOCOL_API_BUDGET_MS, signal);
   try {
     const [apyRes, vaultsRes] = await Promise.all([
-      fetchWithRetry(BEEFY_APY_URL, { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal }, 1),
-      fetchWithRetry(BEEFY_VAULTS_URL, { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal }, 1),
+      fetchWithRetry(
+        BEEFY_APY_URL,
+        { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal: budget.signal },
+        0,
+        { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
+      ),
+      fetchWithRetry(
+        BEEFY_VAULTS_URL,
+        { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal: budget.signal },
+        0,
+        { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
+      ),
     ]);
     if (!apyRes?.ok || !vaultsRes?.ok) return [];
 
@@ -802,8 +868,14 @@ export async function fetchBeefySources(
     return results;
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+    if (budget.budgetController.signal.aborted) {
+      console.warn("[yield] Beefy sources budget exhausted; continuing without this source family");
+      return [];
+    }
     console.warn("[yield] Beefy sources failed:", error);
     return [];
+  } finally {
+    budget.cleanup();
   }
 }
 
@@ -824,46 +896,56 @@ export async function fetchCompoundV3SupplyRates(
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<Array<{ symbol: string; yield: ResolvedYield }>> {
   const results: Array<{ symbol: string; yield: ResolvedYield }> = [];
-  for (const target of targets) {
-    try {
-      const rpc = getChainRpc(chainRpcs ?? new Map(), target.chain);
-      const extraRpcUrls = rpc?.fallbackRpcUrl ? [rpc.fallbackRpcUrl] : [];
-      const opts = { extraRpcUrls, signal };
+  const budget = createOptionalSourceBudget("Compound V3 supply rates", OPTIONAL_PROTOCOL_RPC_BUDGET_MS, signal);
+  try {
+    for (const target of targets) {
+      if (budget.budgetController.signal.aborted) break;
+      try {
+        const rpc = getChainRpc(chainRpcs ?? new Map(), target.chain);
+        const extraRpcUrls = rpc?.fallbackRpcUrl ? [rpc.fallbackRpcUrl] : [];
+        const opts = { extraRpcUrls, signal: budget.signal };
 
-      const utilization = await fetchEvmUint256AtBlock(
-        target.chain, target.comet, COMPOUND_V3_GET_UTILIZATION, "latest", opts,
-      );
-      if (utilization == null) continue;
+        const utilization = await fetchEvmUint256AtBlock(
+          target.chain, target.comet, COMPOUND_V3_GET_UTILIZATION, "latest", opts,
+        );
+        if (utilization == null) continue;
 
-      const supplyRateData = COMPOUND_V3_GET_SUPPLY_RATE + utilization.toString(16).padStart(64, "0");
-      const perSecondRate = await fetchEvmUint256AtBlock(
-        target.chain, target.comet, supplyRateData, "latest", opts,
-      );
-      if (perSecondRate == null || perSecondRate === 0n) continue;
+        const supplyRateData = COMPOUND_V3_GET_SUPPLY_RATE + utilization.toString(16).padStart(64, "0");
+        const perSecondRate = await fetchEvmUint256AtBlock(
+          target.chain, target.comet, supplyRateData, "latest", opts,
+        );
+        if (perSecondRate == null || perSecondRate === 0n) continue;
 
-      const ratePerSecond = Number(perSecondRate) / 1e18;
-      const apy = (Math.pow(1 + ratePerSecond, SECONDS_PER_YEAR) - 1) * 100;
-      if (!Number.isFinite(apy) || apy <= 0) continue;
+        const ratePerSecond = Number(perSecondRate) / 1e18;
+        const apy = (Math.pow(1 + ratePerSecond, SECONDS_PER_YEAR) - 1) * 100;
+        if (!Number.isFinite(apy) || apy <= 0) continue;
 
-      results.push({
-        symbol: target.symbol,
-        yield: {
-          currentApy: apy, apyBase: apy, apyReward: null,
-          sourcePool: null, sourceTvlUsd: null, dataSource: "protocol-api",
-          exchangeRate: null,
-          sourceKey: `protocol-api:compound-v3-supply:${target.chain}:${target.comet.slice(0, 10)}`,
-          yieldSource: `Compound V3 (${target.chain})`,
-          yieldType: "lending-opportunity",
-          sourceObservedAt: Math.floor(Date.now() / 1000),
-          comparisonAnchorObservedAt: null,
-        },
-      });
-    } catch (error) {
-      if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
-      console.warn(`[yield] Compound V3 ${target.chain}:${target.symbol} failed:`, error);
+        results.push({
+          symbol: target.symbol,
+          yield: {
+            currentApy: apy, apyBase: apy, apyReward: null,
+            sourcePool: null, sourceTvlUsd: null, dataSource: "protocol-api",
+            exchangeRate: null,
+            sourceKey: `protocol-api:compound-v3-supply:${target.chain}:${target.comet.slice(0, 10)}`,
+            yieldSource: `Compound V3 (${target.chain})`,
+            yieldType: "lending-opportunity",
+            sourceObservedAt: Math.floor(Date.now() / 1000),
+            comparisonAnchorObservedAt: null,
+          },
+        });
+      } catch (error) {
+        if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+        if (budget.budgetController.signal.aborted) {
+          console.warn(`[yield] Compound V3 budget exhausted; keeping ${results.length} partial results`);
+          break;
+        }
+        console.warn(`[yield] Compound V3 ${target.chain}:${target.symbol} failed:`, error);
+      }
     }
+    return results;
+  } finally {
+    budget.cleanup();
   }
-  return results;
 }
 
 export async function getPriceDerivedApy(
@@ -953,64 +1035,73 @@ export async function fetchAaveV3SupplyRates(
     return { rates };
   }
 
-  const AAVE_BATCH_SIZE = 4;
+  const budget = createOptionalSourceBudget("Aave V3 supply rates", OPTIONAL_PROTOCOL_RPC_BUDGET_MS, signal);
+  const AAVE_BATCH_SIZE = 2;
 
-  for (let i = 0; i < targets.length; i += AAVE_BATCH_SIZE) {
-    const batch = targets.slice(i, i + AAVE_BATCH_SIZE);
-    await Promise.all(
-      batch.map(async (target) => {
-        const poolAddress = AAVE_V3_POOL_ADDRESSES[target.chain];
-        if (!poolAddress) return;
+  try {
+    for (let i = 0; i < targets.length; i += AAVE_BATCH_SIZE) {
+      if (budget.budgetController.signal.aborted) break;
+      const batch = targets.slice(i, i + AAVE_BATCH_SIZE);
+      await Promise.all(
+        batch.map(async (target) => {
+          if (budget.budgetController.signal.aborted) return;
+          const poolAddress = AAVE_V3_POOL_ADDRESSES[target.chain];
+          if (!poolAddress) return;
 
-        const rpc = getChainRpc(chainRpcs, target.chain);
-        if (!rpc) return;
+          const rpc = getChainRpc(chainRpcs, target.chain);
+          if (!rpc) return;
 
-        const rpcUrls = [rpc.rpcUrl, rpc.fallbackRpcUrl].filter(
-          (url): url is string => typeof url === "string" && url.length > 0,
-        );
-
-        // Encode getReserveData(address) calldata: selector + padded address
-        const callData =
-          AAVE_GET_RESERVE_DATA_SELECTOR +
-          target.assetAddress.replace("0x", "").toLowerCase().padStart(64, "0");
-
-        try {
-          const hex = await fetchEvmCallHexAtBlock(target.chain, poolAddress, callData, "latest", {
-            extraRpcUrls: rpcUrls,
-            signal,
-            timeoutMs: 10_000,
-          });
-
-          if (!hex || hex.length < 2) return;
-
-          // currentLiquidityRate is the 3rd uint256 in the struct (byte offset 64–128)
-          // hex string after stripping "0x": chars 128–191 (0-indexed)
-          const stripped = hex.slice(2); // remove "0x"
-          if (stripped.length < 192) return;
-
-          const liquidityRateHex = stripped.slice(128, 192);
-          const currentLiquidityRate = BigInt("0x" + liquidityRateHex);
-          const apy = rayToApy(currentLiquidityRate);
-
-          if (!Number.isFinite(apy) || apy <= 0) return;
-
-          // Keep the best APY per stablecoin (in case of multiple chains)
-          const existing = rates.get(target.stablecoinId);
-          if (!existing || apy > existing.apy) {
-            rates.set(target.stablecoinId, { apy, chain: target.chain });
-          }
-        } catch (err) {
-          console.warn(
-            `[yield/aave-v3] Failed to fetch reserve data for ${target.symbol} on ${target.chain}:`,
-            err instanceof Error ? err.message : String(err),
+          const rpcUrls = [rpc.rpcUrl, rpc.fallbackRpcUrl].filter(
+            (url): url is string => typeof url === "string" && url.length > 0,
           );
-        }
-      }),
-    );
-  }
 
-  console.log(`[yield/aave-v3] Fetched ${rates.size}/${targets.length} Aave V3 supply rates`);
-  return { rates };
+          // Encode getReserveData(address) calldata: selector + padded address
+          const callData =
+            AAVE_GET_RESERVE_DATA_SELECTOR +
+            target.assetAddress.replace("0x", "").toLowerCase().padStart(64, "0");
+
+          try {
+            const hex = await fetchEvmCallHexAtBlock(target.chain, poolAddress, callData, "latest", {
+              extraRpcUrls: rpcUrls,
+              signal: budget.signal,
+              timeoutMs: 10_000,
+            });
+
+            if (!hex || hex.length < 2) return;
+
+            // currentLiquidityRate is the 3rd uint256 in the struct (byte offset 64–128)
+            // hex string after stripping "0x": chars 128–191 (0-indexed)
+            const stripped = hex.slice(2); // remove "0x"
+            if (stripped.length < 192) return;
+
+            const liquidityRateHex = stripped.slice(128, 192);
+            const currentLiquidityRate = BigInt("0x" + liquidityRateHex);
+            const apy = rayToApy(currentLiquidityRate);
+
+            if (!Number.isFinite(apy) || apy <= 0) return;
+
+            // Keep the best APY per stablecoin (in case of multiple chains)
+            const existing = rates.get(target.stablecoinId);
+            if (!existing || apy > existing.apy) {
+              rates.set(target.stablecoinId, { apy, chain: target.chain });
+            }
+          } catch (err) {
+            if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+            if (budget.budgetController.signal.aborted) return;
+            console.warn(
+              `[yield/aave-v3] Failed to fetch reserve data for ${target.symbol} on ${target.chain}:`,
+              err instanceof Error ? err.message : String(err),
+            );
+          }
+        }),
+      );
+    }
+
+    console.log(`[yield/aave-v3] Fetched ${rates.size}/${targets.length} Aave V3 supply rates`);
+    return { rates };
+  } finally {
+    budget.cleanup();
+  }
 }
 
 export async function loadRiskFreeRateSnapshot(db: D1Database): Promise<YieldBenchmarkMeta> {

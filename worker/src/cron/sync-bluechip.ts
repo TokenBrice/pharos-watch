@@ -30,7 +30,7 @@ const BluechipCoinSchema = z.object({
   grade: BluechipGradeSchema,
   collateralization: z.number().optional(),
   smart_contract_audit: z.boolean().optional(),
-  date_of_rating: z.string().optional(),
+  date_of_rating: z.string().nullable().optional(),
   date_last_change: z.string().nullable().optional(),
   stability: BluechipCategorySchema.optional(),
   management: BluechipCategorySchema.optional(),

@@ -1224,3 +1224,82 @@ describe("on-chain rate bootstrapping seed", () => {
     configs.length = 0;
   });
 });
+
+describe("optional source budgets", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-06-15T12:00:00Z"));
+    setupDefaultMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("keeps sync-yield-data completing when Pendle stalls past its budget", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dl-stablecoin-pools") {
+        return {
+          value: JSON.stringify([
+            {
+              pool: "pool-sdai-native",
+              chain: "Ethereum",
+              project: "maker",
+              symbol: "sDAI",
+              tvlUsd: 2_000_000_000,
+              apy: 6.5,
+              apyBase: 6.5,
+              apyReward: null,
+              apyMean30d: 6.3,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ]),
+          updatedAt: nowSec,
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+
+    const fetchSpy = vi.fn((input: string | Request, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.url;
+      if (url.includes("api-v2.pendle.finance")) {
+        return new Promise<Response>((_resolve, reject) => {
+          const signal = init?.signal;
+          const rejectForAbort = () => {
+            reject(signal?.reason instanceof Error ? signal.reason : new Error(String(signal?.reason ?? "aborted")));
+          };
+          if (signal?.aborted) {
+            rejectForAbort();
+            return;
+          }
+          signal?.addEventListener("abort", rejectForAbort, { once: true });
+        });
+      }
+
+      return Promise.resolve(new Response(JSON.stringify({ error: "Not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      }));
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const resultPromise = syncYieldData(db);
+    await vi.advanceTimersByTimeAsync(30_000);
+    const result = await resultPromise;
+
+    expect(result.status).not.toBe("error");
+    expect(result.itemCount).toBeGreaterThanOrEqual(1);
+
+    const stmts = getWriteStatements();
+    const bestRow = findYieldDataRow(stmts, "sdai-maker", "pool-sdai-native");
+    expect(bestRow).toBeDefined();
+  });
+});
