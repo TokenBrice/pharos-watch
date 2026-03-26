@@ -4,158 +4,185 @@
  */
 
 import { USER_AGENT } from "./constants";
+import { fetchWithRetry } from "./fetch-retry";
+import { cancelResponseBodyQuietly } from "./response-body";
 
-async function cancelFailedResponseBody(res: Response): Promise<void> {
-  try {
-    await res.body?.cancel();
-  } catch {
-    // Best-effort: failed bodies still must not block the caller path.
-  }
+interface BinanceMarketConfig {
+  pair: string;
+  symbol: string;
 }
 
-/**
- * Explicit mapping from Binance pair symbol to the stablecoin ticker.
- * This avoids broken string-replacement logic (e.g., "USDTUSD".replace("USD","") → "TUSD").
- */
-// Only USDT and USDC have active USD pairs on Binance (verified 2026-03-14).
-// DAI, TUSD, USDP, PYUSD, USDE, XAUT, PAXG, FDUSD USD pairs were all delisted.
-const BINANCE_PAIR_TO_SYMBOL: Record<string, string> = {
-  USDTUSD: "USDT",
-  USDCUSD: "USDC",
-};
+interface KrakenMarketConfig {
+  symbol: string;
+  requestPair: string;
+  responseKeys: readonly string[];
+}
 
-export const BINANCE_KNOWN_SYMBOLS: readonly string[] = [
-  ...new Set(Object.values(BINANCE_PAIR_TO_SYMBOL)),
-].sort() as readonly string[];
+interface BitstampMarketConfig {
+  pair: string;
+  symbol: string;
+}
 
-/**
- * Explicit list of stablecoin symbols with confirmed active Coinbase Exchange
- * USD trading pairs. Verified 2026-03-14 against /products endpoint.
- *
- * NOTE: USDC has NO Coinbase Exchange USD pair — Coinbase treats USDC as
- * equivalent to USD (1:1 convertible), so no USDC-USD product exists.
- *
- * NOTE: Coinbase lists PAX-USD (Pax Dollar) but our tracked stablecoin uses
- * symbol "USDP" (rebranded), so "PAX" never matches in the symbol filter.
- */
-export const COINBASE_KNOWN_SYMBOLS: readonly string[] = [
-  "USDT", "DAI", "PAXG", "USDS", "USD1", "HONEY",
-] as const;
+interface CoinbaseProductConfig {
+  symbol: string;
+  productId: string;
+}
 
-/**
- * Kraken request-pair mapping. Keep request pair and returned result key
- * explicit because Kraken aliases some USD markets (notably USDT/USD).
- */
-const KRAKEN_REQUEST_PAIR_TO_SYMBOL: Record<string, string> = {
-  DAIUSD: "DAI",
-  EURCUSD: "EURC",
-  PAXGUSD: "PAXG",
-  PYUSDUSD: "PYUSD",
-  USD1USD: "USD1",
-  USDCUSD: "USDC",
-  USDSUSD: "USDS",
-  USDTUSD: "USDT",
-};
+interface CexProviderAuditConfigEntry {
+  metadataUrl: string;
+}
 
-const KRAKEN_RESPONSE_KEY_TO_SYMBOL: Record<string, string> = {
-  DAIUSD: "DAI",
-  EURCUSD: "EURC",
-  PAXGUSD: "PAXG",
-  PYUSDUSD: "PYUSD",
-  USD1USD: "USD1",
-  USDCUSD: "USDC",
-  USDSUSD: "USDS",
-  USDTUSD: "USDT",
-  USDTZUSD: "USDT",
-};
+const CEX_REQUEST_TIMEOUT_MS = 10_000;
+const CEX_REQUEST_RETRIES = 1;
 
-export const KRAKEN_KNOWN_SYMBOLS: readonly string[] = [
-  "USDT", "USDC", "DAI", "EURC", "PAXG", "PYUSD", "USD1", "USDS",
-] as const;
+export const BINANCE_MARKETS = [
+  { pair: "USDTUSD", symbol: "USDT" },
+  { pair: "USDCUSD", symbol: "USDC" },
+] as const satisfies readonly BinanceMarketConfig[];
 
-const BITSTAMP_PAIR_TO_SYMBOL: Record<string, string> = {
-  "DAI/USD": "DAI",
-  "PYUSD/USD": "PYUSD",
-  "USDC/USD": "USDC",
-  "USDT/USD": "USDT",
-};
+export const KRAKEN_MARKETS = [
+  { symbol: "DAI", requestPair: "DAIUSD", responseKeys: ["DAIUSD"] },
+  { symbol: "EURC", requestPair: "EURCUSD", responseKeys: ["EURCUSD"] },
+  { symbol: "PAXG", requestPair: "PAXGUSD", responseKeys: ["PAXGUSD"] },
+  { symbol: "PYUSD", requestPair: "PYUSDUSD", responseKeys: ["PYUSDUSD"] },
+  { symbol: "USD1", requestPair: "USD1USD", responseKeys: ["USD1USD"] },
+  { symbol: "USDC", requestPair: "USDCUSD", responseKeys: ["USDCUSD"] },
+  { symbol: "USDS", requestPair: "USDSUSD", responseKeys: ["USDSUSD"] },
+  { symbol: "USDT", requestPair: "USDTUSD", responseKeys: ["USDTUSD", "USDTZUSD"] },
+] as const satisfies readonly KrakenMarketConfig[];
 
-export const BITSTAMP_KNOWN_SYMBOLS: readonly string[] = [
-  "DAI", "PYUSD", "USDC", "USDT",
-] as const;
+export const BITSTAMP_MARKETS = [
+  { pair: "DAI/USD", symbol: "DAI" },
+  { pair: "PYUSD/USD", symbol: "PYUSD" },
+  { pair: "USDC/USD", symbol: "USDC" },
+  { pair: "USDT/USD", symbol: "USDT" },
+] as const satisfies readonly BitstampMarketConfig[];
 
-/**
- * Fetch all ticker prices from Binance in a single call.
- * Returns Map<symbol, price> for stablecoin/USD pairs only.
- * API weight: 4 (trivial against 6,000/min budget).
- */
+export const COINBASE_PRODUCTS = [
+  { symbol: "USDT", productId: "USDT-USD" },
+  { symbol: "DAI", productId: "DAI-USD" },
+  { symbol: "PAXG", productId: "PAXG-USD" },
+  { symbol: "USDS", productId: "USDS-USD" },
+  { symbol: "USD1", productId: "USD1-USD" },
+  { symbol: "HONEY", productId: "HONEY-USD" },
+] as const satisfies readonly CoinbaseProductConfig[];
+
+export const CEX_PROVIDER_AUDIT_CONFIG = {
+  binance: { metadataUrl: "https://api.binance.com/api/v3/exchangeInfo" },
+  kraken: { metadataUrl: "https://api.kraken.com/0/public/AssetPairs" },
+  bitstamp: { metadataUrl: "https://www.bitstamp.net/api/v2/trading-pairs-info/" },
+  coinbase: { metadataUrl: "https://api.exchange.coinbase.com/products" },
+} as const satisfies Record<string, CexProviderAuditConfigEntry>;
+
+const BINANCE_PAIR_TO_SYMBOL = new Map<string, string>(BINANCE_MARKETS.map((market) => [market.pair, market.symbol]));
+const KRAKEN_RESPONSE_KEY_TO_SYMBOL = new Map<string, string>(
+  KRAKEN_MARKETS.flatMap((market) => market.responseKeys.map((key) => [key, market.symbol] as const)),
+);
+const BITSTAMP_PAIR_TO_SYMBOL = new Map<string, string>(BITSTAMP_MARKETS.map((market) => [market.pair, market.symbol]));
+const COINBASE_PRODUCT_TO_SYMBOL = new Map<string, string>(COINBASE_PRODUCTS.map((product) => [product.productId, product.symbol]));
+
+export const BINANCE_KNOWN_SYMBOLS: readonly string[] = [...new Set(BINANCE_MARKETS.map((market) => market.symbol))].sort();
+export const KRAKEN_KNOWN_SYMBOLS: readonly string[] = [...new Set(KRAKEN_MARKETS.map((market) => market.symbol))].sort();
+export const BITSTAMP_KNOWN_SYMBOLS: readonly string[] = [...new Set(BITSTAMP_MARKETS.map((market) => market.symbol))].sort();
+export const COINBASE_KNOWN_SYMBOLS: readonly string[] = [...new Set(COINBASE_PRODUCTS.map((product) => product.symbol))].sort();
+
+function parsePositiveNumber(value: string | number | null | undefined): number | null {
+  const numeric = typeof value === "number" ? value : typeof value === "string" ? parseFloat(value) : Number.NaN;
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
+
+function midpointFromBidAsk(
+  bid: string | number | null | undefined,
+  ask: string | number | null | undefined,
+): number | null {
+  const parsedBid = parsePositiveNumber(bid);
+  const parsedAsk = parsePositiveNumber(ask);
+  if (parsedBid == null || parsedAsk == null) {
+    return null;
+  }
+  return (parsedBid + parsedAsk) / 2;
+}
+
+async function fetchCexJson<T>(
+  url: string,
+  signal?: AbortSignal,
+): Promise<T | null> {
+  const response = await fetchWithRetry(
+    url,
+    {
+      signal,
+      headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+    },
+    CEX_REQUEST_RETRIES,
+    { timeoutMs: CEX_REQUEST_TIMEOUT_MS },
+  );
+  if (!response?.ok) {
+    await cancelResponseBodyQuietly(response);
+    return null;
+  }
+  return response.json() as Promise<T>;
+}
+
 export async function fetchBinancePrices(
   signal?: AbortSignal,
 ): Promise<Map<string, number>> {
   const results = new Map<string, number>();
+
   try {
-    const res = await fetch(
+    const tickers = await fetchCexJson<Array<{ symbol?: string; price?: string }>>(
       "https://data-api.binance.vision/api/v3/ticker/price",
-      { signal, headers: { Accept: "application/json", "User-Agent": USER_AGENT } },
+      signal,
     );
-    if (!res.ok) {
-      await cancelFailedResponseBody(res);
-      console.warn(`[cex-binance] API returned ${res.status}`);
-      return results;
-    }
-    const tickers = (await res.json()) as Array<{ symbol: string; price: string }>;
-    for (const t of tickers) {
-      const symbol = BINANCE_PAIR_TO_SYMBOL[t.symbol];
-      if (symbol) {
-        const price = parseFloat(t.price);
-        if (price > 0) results.set(symbol, price);
+    if (!tickers) return results;
+
+    for (const ticker of tickers) {
+      const symbol = ticker.symbol ? BINANCE_PAIR_TO_SYMBOL.get(ticker.symbol) : undefined;
+      const price = parsePositiveNumber(ticker.price);
+      if (symbol && price != null) {
+        results.set(symbol, price);
       }
     }
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.warn("[cex-binance] Fetch failed:", err);
   }
+
   return results;
 }
 
-/**
- * Fetch requested Kraken USD pairs in a single call.
- * Returns Map<symbol, price> for tracked markets only.
- */
 export async function fetchKrakenPrices(
   symbols: string[],
   signal?: AbortSignal,
 ): Promise<Map<string, number>> {
   const results = new Map<string, number>();
-  const requested = Object.entries(KRAKEN_REQUEST_PAIR_TO_SYMBOL)
-    .filter(([, symbol]) => symbols.includes(symbol))
-    .map(([pair]) => pair);
-  if (requested.length === 0) return results;
+  const requestedPairs = KRAKEN_MARKETS
+    .filter((market) => symbols.includes(market.symbol))
+    .map((market) => market.requestPair);
+  if (requestedPairs.length === 0) return results;
 
   try {
-    const res = await fetch(
-      `https://api.kraken.com/0/public/Ticker?pair=${requested.join(",")}`,
-      { signal, headers: { Accept: "application/json", "User-Agent": USER_AGENT } },
-    );
-    if (!res.ok) {
-      await cancelFailedResponseBody(res);
-      console.warn(`[cex-kraken] API returned ${res.status}`);
-      return results;
-    }
-    const data = (await res.json()) as {
+    const payload = await fetchCexJson<{
       error?: string[];
-      result?: Record<string, { c?: string[] }>;
-    };
-    if (Array.isArray(data.error) && data.error.length > 0) {
-      console.warn(`[cex-kraken] API error: ${data.error.join(", ")}`);
+      result?: Record<string, { a?: string[]; b?: string[]; c?: string[] }>;
+    }>(
+      `https://api.kraken.com/0/public/Ticker?pair=${requestedPairs.join(",")}`,
+      signal,
+    );
+    if (!payload) return results;
+    if (Array.isArray(payload.error) && payload.error.length > 0) {
+      console.warn(`[cex-kraken] API error: ${payload.error.join(", ")}`);
       return results;
     }
-    for (const [pair, payload] of Object.entries(data.result ?? {})) {
-      const symbol = KRAKEN_RESPONSE_KEY_TO_SYMBOL[pair];
-      const lastTrade = payload.c?.[0];
-      if (!symbol || !lastTrade) continue;
-      const price = parseFloat(lastTrade);
-      if (price > 0) results.set(symbol, price);
+
+    for (const [responseKey, market] of Object.entries(payload.result ?? {})) {
+      const symbol = KRAKEN_RESPONSE_KEY_TO_SYMBOL.get(responseKey);
+      if (!symbol) continue;
+      const midpoint = midpointFromBidAsk(market.b?.[0], market.a?.[0]);
+      const lastTrade = parsePositiveNumber(market.c?.[0]);
+      const price = midpoint ?? lastTrade;
+      if (price != null) {
+        results.set(symbol, price);
+      }
     }
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
@@ -165,31 +192,34 @@ export async function fetchKrakenPrices(
   return results;
 }
 
-/**
- * Fetch all Bitstamp tickers in a single call.
- * Returns Map<symbol, price> for tracked stablecoin/USD pairs only.
- */
 export async function fetchBitstampPrices(
   signal?: AbortSignal,
 ): Promise<Map<string, number>> {
   const results = new Map<string, number>();
+
   try {
-    const res = await fetch(
+    const tickers = await fetchCexJson<Array<{
+      pair?: string;
+      market?: string;
+      bid?: string;
+      ask?: string;
+      last?: string;
+    }>>(
       "https://www.bitstamp.net/api/v2/ticker/",
-      { signal, headers: { Accept: "application/json", "User-Agent": USER_AGENT } },
+      signal,
     );
-    if (!res.ok) {
-      await cancelFailedResponseBody(res);
-      console.warn(`[cex-bitstamp] API returned ${res.status}`);
-      return results;
-    }
-    const tickers = (await res.json()) as Array<{ pair?: string; market?: string; last?: string }>;
+    if (!tickers) return results;
+
     for (const ticker of tickers) {
       const pair = ticker.pair ?? ticker.market;
-      const symbol = pair ? BITSTAMP_PAIR_TO_SYMBOL[pair] : undefined;
-      if (!symbol || !ticker.last) continue;
-      const price = parseFloat(ticker.last);
-      if (price > 0) results.set(symbol, price);
+      const symbol = pair ? BITSTAMP_PAIR_TO_SYMBOL.get(pair) : undefined;
+      if (!symbol) continue;
+      const midpoint = midpointFromBidAsk(ticker.bid, ticker.ask);
+      const lastTrade = parsePositiveNumber(ticker.last);
+      const price = midpoint ?? lastTrade;
+      if (price != null) {
+        results.set(symbol, price);
+      }
     }
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
@@ -199,41 +229,39 @@ export async function fetchBitstampPrices(
   return results;
 }
 
-/**
- * Fetch individual ticker prices from Coinbase.
- * No auth required. 10 req/sec rate limit.
- *
- * IMPORTANT: Fetches sequentially to avoid exceeding the Workers 6-connection
- * limit. This runs inside fetchPrimaryPrices() which shares the pool with
- * CG, DL, Pyth, RedStone, and Binance fetches.
- *
- * @param symbols Array of symbols to fetch (e.g., ["USDT", "USDC", "DAI"])
- */
 export async function fetchCoinbasePrices(
   symbols: string[],
   signal?: AbortSignal,
 ): Promise<Map<string, number>> {
   const results = new Map<string, number>();
+  const requestedProducts = COINBASE_PRODUCTS.filter((product) => symbols.includes(product.symbol));
 
-  for (const symbol of symbols) {
+  for (const product of requestedProducts) {
     try {
-      const res = await fetch(
-        `https://api.exchange.coinbase.com/products/${symbol}-USD/ticker`,
-        { signal, headers: { Accept: "application/json", "User-Agent": USER_AGENT } },
+      const response = await fetchWithRetry(
+        `${CEX_PROVIDER_AUDIT_CONFIG.coinbase.metadataUrl}/${product.productId}/ticker`,
+        {
+          signal,
+          headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+        },
+        CEX_REQUEST_RETRIES,
+        { timeoutMs: CEX_REQUEST_TIMEOUT_MS },
       );
-      if (!res.ok) {
-        await cancelFailedResponseBody(res);
-        console.warn(`[cex-coinbase] ${symbol}-USD returned ${res.status}`);
+      if (!response?.ok) {
+        await cancelResponseBodyQuietly(response);
         continue;
       }
-      const data = (await res.json()) as { price?: string };
-      if (data.price) {
-        const price = parseFloat(data.price);
-        if (price > 0) results.set(symbol, price);
+
+      const payload = await response.json() as { bid?: string; ask?: string; price?: string };
+      const midpoint = midpointFromBidAsk(payload.bid, payload.ask);
+      const lastTrade = parsePositiveNumber(payload.price);
+      const price = midpoint ?? lastTrade;
+      if (price != null) {
+        results.set(COINBASE_PRODUCT_TO_SYMBOL.get(product.productId) ?? product.symbol, price);
       }
     } catch (err) {
       if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-      console.warn(`[cex-coinbase] ${symbol}-USD fetch failed:`, err);
+      console.warn(`[cex-coinbase] ${product.productId} fetch failed:`, err);
     }
   }
 

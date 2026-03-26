@@ -13,3 +13,15 @@ export async function drainResponseBody(response: Response): Promise<void> {
     }
   }
 }
+
+export async function cancelResponseBodyQuietly(response: Response | null | undefined): Promise<void> {
+  if (!response?.body) {
+    return;
+  }
+
+  try {
+    await response.body.cancel();
+  } catch {
+    /* best-effort cancellation only */
+  }
+}

@@ -34,7 +34,7 @@ describe("fetchBinancePrices", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, body: { cancel } }));
     const results = await fetchBinancePrices();
     expect(results.size).toBe(0);
-    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(cancel).toHaveBeenCalledTimes(2);
   });
 
   it("returns empty map when Binance returns no stablecoin pairs", async () => {
@@ -72,7 +72,7 @@ describe("fetchCoinbasePrices", () => {
     const results = await fetchCoinbasePrices(["USDT"]);
 
     expect(results.size).toBe(0);
-    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(cancel).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -115,7 +115,7 @@ describe("fetchKrakenPrices", () => {
     const results = await fetchKrakenPrices(["USDT"]);
 
     expect(results.size).toBe(0);
-    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(cancel).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -143,7 +143,7 @@ describe("fetchBitstampPrices", () => {
     const results = await fetchBitstampPrices();
 
     expect(results.size).toBe(0);
-    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(cancel).toHaveBeenCalledTimes(2);
   });
 });
 

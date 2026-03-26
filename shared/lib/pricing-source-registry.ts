@@ -20,6 +20,8 @@ export interface PricingSourceRegistryEntry {
   isPoolChallengeExempt: boolean;
   isGtProbeEligible: boolean;
   canBeDepegAuthoritative: boolean;
+  canSingleSourceDepegAuthoritative?: boolean;
+  supportsUpstreamObservedAt?: boolean;
   requiresObservedAt: boolean;
   isSearchDerived: boolean;
   defaultObservedAtMode: PriceObservedAtMode | null;
@@ -70,6 +72,21 @@ const REGISTRY = [
     requiresObservedAt: false,
     isSearchDerived: false,
     defaultObservedAtMode: null,
+  },
+  {
+    key: "coingecko-mirror",
+    label: "CoinGecko mirror",
+    shortLabel: "CG-mirror",
+    trustTier: "soft_aggregator",
+    defaultWeight: 1,
+    isSoftSource: true,
+    isReplaySafe: true,
+    isPoolChallengeExempt: false,
+    isGtProbeEligible: false,
+    canBeDepegAuthoritative: false,
+    requiresObservedAt: false,
+    isSearchDerived: false,
+    defaultObservedAtMode: "local_fetch",
   },
   {
     key: "cg-ticker",
@@ -407,7 +424,15 @@ export const PRICING_SOURCE_REGISTRY = REGISTRY;
 export type PricingSourceKey = (typeof REGISTRY)[number]["key"];
 
 const REGISTRY_MAP = new Map<string, PricingSourceRegistryEntry>(
-  REGISTRY.map((entry) => [entry.key, entry]),
+  REGISTRY.map((entry): [string, PricingSourceRegistryEntry] => [
+    entry.key,
+    {
+      ...entry,
+      supportsUpstreamObservedAt: entry.requiresObservedAt,
+      canSingleSourceDepegAuthoritative:
+        entry.canBeDepegAuthoritative && entry.defaultObservedAtMode === "upstream",
+    },
+  ]),
 );
 
 export function getPricingSourceRegistryEntry(sourceKey: string): PricingSourceRegistryEntry | undefined {

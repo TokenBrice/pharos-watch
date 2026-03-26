@@ -35,12 +35,12 @@ function resolveSupplementalPrice(
   priceData: { coins: Record<string, DefiLlamaCoinPrice> },
   cgData: CoinGeckoMcapData,
   geckoId?: string,
-): { price: number; source: "defillama" | "coingecko" } | null {
+): { price: number; source: "coingecko-mirror" | "coingecko" } | null {
   if (!geckoId) return null;
 
   const dlPrice = toPositiveFiniteNumber(priceData.coins[`coingecko:${geckoId}`]?.price);
   if (dlPrice != null) {
-    return { price: dlPrice, source: "defillama" };
+    return { price: dlPrice, source: "coingecko-mirror" };
   }
 
   const cgPrice = toPositiveFiniteNumber(cgData[geckoId]?.usd);

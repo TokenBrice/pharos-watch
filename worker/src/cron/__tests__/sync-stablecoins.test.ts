@@ -1599,7 +1599,7 @@ describe("syncStablecoins", () => {
 
     expect(pgold).toBeDefined();
     expect(pgold?.price).toBe(5_119.117514760049);
-    expect(pgold?.priceSource).toBe("defillama");
+    expect(pgold?.priceSource).toBe("coingecko-mirror");
     expect(pgold?.circulating).toEqual({ peggedGOLD: 99_913_387.23420689 });
   });
 
@@ -1848,7 +1848,7 @@ describe("syncStablecoins", () => {
 
     expect(dgld).toBeDefined();
     expect(dgld?.price).toBe(10_700);
-    expect(dgld?.priceSource).toBe("defillama");
+    expect(dgld?.priceSource).toBe("coingecko-mirror");
     expect(dgld?.supplySource).toBe("coingecko-fallback");
     expect(dgld?.circulating).toEqual({ peggedGOLD: 16_985_391.664749127 });
   });

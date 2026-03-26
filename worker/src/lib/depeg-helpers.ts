@@ -8,7 +8,11 @@ import {
 } from "./constants";
 import type { DepegPrimaryTrust, PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
-import { hasDepegAuthoritativeSource } from "./pricing-source-policy";
+import {
+  countDepegAuthoritativeSources,
+  hasUpstreamCapableDepegAuthoritativeSource,
+  isSingleSourceDepegAuthoritative,
+} from "./pricing-source-policy";
 import {
   loadPublishedDexPoolChallengers,
   type DexPriceChallengerLoadRow,
@@ -202,18 +206,20 @@ export function classifyPrimaryDepegTrust(
     return "confirm_required";
   }
 
-  if (
-    (input.priceConfidence === "high" || input.priceConfidence === "single-source") &&
-    hasDepegAuthoritativeSource(trustSources)
-  ) {
-    if (
-      input.priceConfidence === "single-source" &&
-      input.priceObservedAtMode != null &&
-      input.priceObservedAtMode !== "upstream"
-    ) {
-      return "confirm_required";
+  if (input.priceConfidence === "single-source") {
+    return trustSources.length === 1 && isSingleSourceDepegAuthoritative(trustSources[0], input.priceObservedAtMode)
+      ? "authoritative"
+      : "confirm_required";
+  }
+
+  if (input.priceConfidence === "high") {
+    if (countDepegAuthoritativeSources(trustSources) >= 2) {
+      return "authoritative";
     }
-    return "authoritative";
+
+    if (hasUpstreamCapableDepegAuthoritativeSource(trustSources)) {
+      return "authoritative";
+    }
   }
 
   return "confirm_required";

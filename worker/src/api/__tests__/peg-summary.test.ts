@@ -93,6 +93,9 @@ describe("handlePegSummary", () => {
       symbol: "USDT",
       priceSource: "cached",
       priceConfidence: "fallback",
+      priceObservedAt: nowSec - 3600,
+      priceObservedAtMode: "local_fetch",
+      priceSyncedAt: nowSec - 1200,
       priceUpdatedAt: nowSec - 1800,
     });
     const db = makePegSummaryDb([asset]);
@@ -102,6 +105,9 @@ describe("handlePegSummary", () => {
         id: string;
         priceSource?: string;
         priceConfidence?: string | null;
+        priceObservedAt?: number | null;
+        priceObservedAtMode?: string | null;
+        priceSyncedAt?: number | null;
         priceUpdatedAt?: number | null;
         primaryTrust?: string;
       }>;
@@ -110,6 +116,9 @@ describe("handlePegSummary", () => {
     expect(coin).toMatchObject({
       priceSource: "cached",
       priceConfidence: "fallback",
+      priceObservedAt: nowSec - 3600,
+      priceObservedAtMode: "local_fetch",
+      priceSyncedAt: nowSec - 1200,
       priceUpdatedAt: nowSec - 1800,
       primaryTrust: "confirm_required",
     });

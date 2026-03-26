@@ -23,6 +23,7 @@
     "coverage:critical:update-baseline": "node scripts/update-critical-coverage-baseline.mjs",
     "test:merge-gate": "node scripts/test-merge-gate.mjs",
     "test:watch": "vitest",
+    "audit:pricing-providers": "tsx scripts/audit-pricing-provider-config.ts",
     "sync:digests": "tsx scripts/sync-digests.ts",
     "test:smoke-api": "tsx scripts/smoke-api.mjs",
     "test:smoke-ops": "node scripts/smoke-ops.mjs",

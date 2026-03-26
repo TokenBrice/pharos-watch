@@ -16,6 +16,7 @@ import {
   loadPriceValidationReferences,
   normalizePegTypeFromCurrency,
   validatePriceCandidate,
+  validatePriceCandidateAgainstReference,
   type PriceValidationReferences,
 } from "../price-validation";
 
@@ -277,5 +278,16 @@ describe("validatePriceCandidate", () => {
     expect(validatePriceCandidate(110, nav, "dex_observation", freshRefs).accepted).toBe(true);
     expect(validatePriceCandidate(3.5, variable, "dex_observation", freshRefs).accepted).toBe(true);
     expect(validatePriceCandidate(0, variable, "dex_observation", freshRefs).accepted).toBe(false);
+  });
+
+  it("shares fixed-peg evaluation logic with direct reference validation", () => {
+    const context = buildPriceValidationContext({ pegType: "peggedEUR", pegCurrency: "EUR" });
+    const result = validatePriceCandidateAgainstReference(3.0, context, "fallback_enrichment", {
+      price: 1.08,
+      type: "fresh",
+    });
+
+    expect(result.accepted).toBe(false);
+    expect(result.reasonCode).toBe("reference_upper_bound_exceeded");
   });
 });

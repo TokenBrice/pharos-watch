@@ -1,17 +1,13 @@
 import { z } from "zod";
+import { fetchWithRetry } from "./fetch-retry";
+import { cancelResponseBodyQuietly } from "./response-body";
 
 const HERMES_BASE = "https://hermes.pyth.network";
 
 /** Maximum age (seconds) of a Pyth price feed before it's considered stale */
 const PYTH_MAX_STALENESS_SEC = 300; // 5 minutes
 
-async function cancelFailedResponseBody(res: Response): Promise<void> {
-  try {
-    await res.body?.cancel();
-  } catch {
-    // Best-effort: failed bodies still must not block the caller path.
-  }
-}
+const PYTH_REQUEST_TIMEOUT_MS = 10_000;
 
 function normalizeFeedId(feedId: string): string {
   return feedId.toLowerCase().replace(/^0x/, "");
@@ -58,13 +54,15 @@ export async function fetchPythPrices(
 
   try {
     const ids = [...feedIds.values()].map((id) => `ids[]=${id}`).join("&");
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `${HERMES_BASE}/v2/updates/price/latest?${ids}`,
       { signal, headers: { Accept: "application/json" } },
+      1,
+      { timeoutMs: PYTH_REQUEST_TIMEOUT_MS },
     );
-    if (!res.ok) {
-      await cancelFailedResponseBody(res);
-      console.warn(`[pyth] Hermes API returned ${res.status}`);
+    if (!res?.ok) {
+      await cancelResponseBodyQuietly(res);
+      console.warn(`[pyth] Hermes API returned ${res?.status ?? "no response"}`);
       return results;
     }
 

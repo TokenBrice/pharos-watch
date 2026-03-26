@@ -134,6 +134,9 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       pegScore: number | null;
       priceSource?: string;
       priceConfidence?: StablecoinData["priceConfidence"];
+      priceObservedAt?: number | null;
+      priceObservedAtMode?: StablecoinData["priceObservedAtMode"];
+      priceSyncedAt?: number | null;
       priceUpdatedAt?: number | null;
       consensusSources?: string[];
       agreeSources?: string[];
@@ -214,6 +217,9 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       pegScore: pegData.pegScore,
       priceSource: asset?.priceSource,
       priceConfidence: asset?.priceConfidence ?? null,
+      priceObservedAt: asset?.priceObservedAt ?? null,
+      priceObservedAtMode: asset?.priceObservedAtMode ?? null,
+      priceSyncedAt: asset?.priceSyncedAt ?? null,
       priceUpdatedAt: asset?.priceUpdatedAt ?? null,
       consensusSources: asset?.consensusSources,
       agreeSources: asset?.agreeSources,

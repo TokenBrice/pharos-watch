@@ -264,6 +264,7 @@ describe("buildRedemptionBackstopEntry", () => {
           warnings: [],
           sourceModel: "single-bucket",
           evidenceClass: "weak-live-probe",
+          syncStatus: "ok",
         },
       },
     );
@@ -329,6 +330,7 @@ describe("buildRedemptionBackstopEntry", () => {
           warnings: [],
           sourceModel: "dynamic-mix",
           evidenceClass: "independent",
+          syncStatus: "ok",
         },
       },
     );
@@ -464,6 +466,7 @@ describe("buildRedemptionBackstopEntry", () => {
           warnings: [],
           sourceModel: "dynamic-mix",
           evidenceClass: "independent",
+          syncStatus: "ok",
         },
       },
     );
@@ -539,6 +542,7 @@ describe("buildRedemptionBackstopEntry", () => {
           warnings: [],
           sourceModel: "dynamic-mix",
           evidenceClass: "independent",
+          syncStatus: "ok",
         },
       },
     );
@@ -578,6 +582,7 @@ describe("buildRedemptionBackstopEntry", () => {
           warnings: [],
           sourceModel: "dynamic-mix",
           evidenceClass: "independent",
+          syncStatus: "ok",
         },
       },
     );

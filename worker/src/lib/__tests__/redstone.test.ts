@@ -77,7 +77,7 @@ describe("fetchRedstonePrices", () => {
         },
       }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
-        TUSD: {
+        USD1: {
           value: 0.9993,
           source: { coingecko: 0.9993 },
           timestamp: Date.now(),
@@ -85,11 +85,11 @@ describe("fetchRedstonePrices", () => {
       }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const results = await fetchRedstonePrices(["USDT", "TUSD"]);
+    const results = await fetchRedstonePrices(["USDT", "USD1"]);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(results.get("USDT")?.price).toBe(1);
-    expect(results.get("TUSD")?.price).toBeCloseTo(0.9993, 4);
+    expect(results.get("USD1")?.price).toBeCloseTo(0.9993, 4);
   });
 
   it("filters out symbols that are outside the tracked RedStone allowlist", async () => {

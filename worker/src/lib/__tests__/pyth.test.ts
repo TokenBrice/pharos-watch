@@ -55,7 +55,7 @@ describe("fetchPythPrices", () => {
     const feedIds = new Map([["usdt-tether", "0xabc"]]);
     const results = await fetchPythPrices(feedIds);
     expect(results.size).toBe(0);
-    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(cancel).toHaveBeenCalledTimes(2);
   });
 
   it("skips feeds with non-positive price", async () => {

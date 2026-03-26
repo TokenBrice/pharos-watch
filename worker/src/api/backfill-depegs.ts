@@ -40,11 +40,19 @@ export {
 } from "./backfill-fx";
 
 export {
+  type HistoricalMarketBackfillGranularity,
+  type HistoricalMarketMergeReason,
+  type HistoricalMarketPolicyAdjustment,
+  type HistoricalMarketPriceSeriesResult,
+  type HistoricalMarketSeriesStats,
+  type HistoricalMarketSource,
+  type HistoricalMarketSourceDiagnostics,
   type PricePoint,
   fetchCgPriceHistoryDaily,
   fetchCgPriceHistoryHourly,
   fetchDlPriceChart,
   collapsePricesToDailyTimestamps,
+  fetchMarketBackfillPriceSeries,
   fetchMarketBackfillPrices,
 } from "./backfill-price-sources";
 
@@ -61,7 +69,12 @@ import {
   buildFxLookup,
 } from "./backfill-fx";
 
-import { type PricePoint, collapsePricesToDailyTimestamps, fetchMarketBackfillPrices } from "./backfill-price-sources";
+import {
+  type HistoricalMarketPriceSeriesResult,
+  type PricePoint,
+  collapsePricesToDailyTimestamps,
+  fetchMarketBackfillPriceSeries,
+} from "./backfill-price-sources";
 
 const BATCH_SIZE = 3;
 const BATCH_CHUNK_SIZE = 100;
@@ -397,17 +410,27 @@ async function backfillCoin(
 ): Promise<BackfillEvent[] | null> {
   const pegType = `pegged${meta.flags.pegCurrency}`;
 
-  let marketPrices: PricePoint[] | null = null;
-  const loadMarketPrices = async (): Promise<PricePoint[] | null> => {
-    if (marketPrices != null) return marketPrices;
-    marketPrices = await fetchMarketBackfillPrices(meta, geckoId);
-    return marketPrices;
+  let marketSeries: HistoricalMarketPriceSeriesResult | null = null;
+  const loadMarketSeries = async (): Promise<HistoricalMarketPriceSeriesResult> => {
+    if (marketSeries != null) return marketSeries;
+    marketSeries = await fetchMarketBackfillPriceSeries(meta, geckoId, { granularity: "hourly" });
+    if (
+      marketSeries.diagnostics.mergeReasons.length > 0 ||
+      marketSeries.diagnostics.policyAdjustments.length > 0
+    ) {
+      console.log(
+        `[backfill-depegs] ${meta.id} historical market replay used ${marketSeries.diagnostics.sourcesUsed.join("+") || "none"}`
+          + ` mergeReasons=${marketSeries.diagnostics.mergeReasons.join(",") || "none"}`
+          + ` adjustments=${marketSeries.diagnostics.policyAdjustments.length}`,
+      );
+    }
+    return marketSeries;
   };
 
   const candidateTimestamps =
     supplyByDate.length > 0
       ? supplyByDate.map((snapshot) => snapshot.ts)
-      : collapsePricesToDailyTimestamps((await loadMarketPrices()) ?? []);
+      : collapsePricesToDailyTimestamps((await loadMarketSeries()).prices ?? []);
 
   const authoritativeHistory = await fetchAuthoritativeHistoricalPriceSeries(meta, {
     candidateTimestamps,
@@ -425,7 +448,7 @@ async function backfillCoin(
       return null;
     }
   } else {
-    prices = await loadMarketPrices();
+    prices = (await loadMarketSeries()).prices;
     if (!prices || prices.length === 0) return null;
   }
 

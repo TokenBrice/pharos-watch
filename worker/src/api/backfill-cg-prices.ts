@@ -8,6 +8,11 @@ import { jsonResponse } from "../lib/api-utils";
 import { withAdmin } from "../lib/auth";
 import { RATE_LIMITS } from "../lib/rate-limit";
 import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
+import {
+  fetchMarketBackfillPriceSeries,
+  type HistoricalMarketSourceDiagnostics,
+  type PricePoint,
+} from "./backfill-price-sources";
 
 const DEFAULT_BATCH_SIZE = 10;
 
@@ -16,6 +21,7 @@ interface CoinResult {
   symbol: string;
   pricesFilled: number;
   rowsInserted: number;
+  diagnostics?: HistoricalMarketSourceDiagnostics;
 }
 
 export async function handleBackfillCgPrices(
@@ -78,18 +84,25 @@ export async function handleBackfillCgPrices(
 
         const cgPrices = cgData.prices ?? [];
         const cgMarketCaps = cgData.market_caps ?? [];
+        const seedCoinGeckoPrices: PricePoint[] = cgPrices
+          .filter(([, price]) => price > 0)
+          .map(([ts, price]) => ({ timestamp: Math.floor(ts / 1000), price }));
+        const priceSeries = await fetchMarketBackfillPriceSeries(meta, meta.geckoId, {
+          granularity: "daily",
+          seedCoinGeckoPrices,
+        });
+        const mergedPrices = priceSeries.prices ?? [];
 
-        if (cgPrices.length === 0) {
-          skipped.push(`${meta.symbol} (no CG price data)`);
+        if (mergedPrices.length === 0) {
+          skipped.push(`${meta.symbol} (no historical market price data)`);
           continue;
         }
 
         // Build maps: date → price, date → market_cap (normalized to UTC midnight)
         const priceByDate = new Map<number, number>();
-        for (const [ts, price] of cgPrices) {
-          if (price <= 0) continue;
-          const snapshotDate = Math.floor(ts / 1000 / DAY_SECONDS) * DAY_SECONDS;
-          priceByDate.set(snapshotDate, price);
+        for (const point of mergedPrices) {
+          const snapshotDate = Math.floor(point.timestamp / DAY_SECONDS) * DAY_SECONDS;
+          priceByDate.set(snapshotDate, point.price);
         }
 
         const mcapByDate = new Map<number, number>();
@@ -161,6 +174,7 @@ export async function handleBackfillCgPrices(
           symbol: meta.symbol,
           pricesFilled,
           rowsInserted,
+          diagnostics: priceSeries.diagnostics,
         });
       }
 

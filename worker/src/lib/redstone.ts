@@ -14,62 +14,52 @@ interface RedstoneEntry {
   timestamp?: number;
 }
 
+interface RedstoneSymbolConfigEntry {
+  metaSymbol: string;
+  apiSymbol: string;
+}
+
 const REDSTONE_BATCH_SIZE = 10;
 const REDSTONE_REQUEST_TIMEOUT_MS = 7_500;
 const REDSTONE_MAX_STALENESS_SEC = 300;
 
-export const REDSTONE_TRACKED_SYMBOL_ALLOWLIST = [
-  "ALUSD",
-  "AUSD",
-  "CETES",
-  "CEUR",
-  "DAI",
-  "DOLA",
-  "EURC",
-  "EURS",
-  "EUSD",
-  "FDUSD",
-  "FRAX",
-  "FRXUSD",
-  "GHO",
-  "GYEN",
-  "HONEY",
-  "LUSD",
-  "MUSD",
-  "OUSD",
-  "PAXG",
-  "PYUSD",
-  "SUSD",
-  "TUSD",
-  "USD1",
-  "USDC",
-  "USDD",
-  "USDH",
-  "USDP",
-  "USDT",
-  "USDe",
-  "USDf",
-  "USR",
-  "XAUT",
-  "XSGD",
-  "crvUSD",
-  "fxUSD",
-] as const;
+export const REDSTONE_SYMBOL_CONFIG = [
+  { metaSymbol: "ALUSD", apiSymbol: "ALUSD" },
+  { metaSymbol: "AUSD", apiSymbol: "aUSD" },
+  { metaSymbol: "CETES", apiSymbol: "CETES" },
+  { metaSymbol: "DAI", apiSymbol: "DAI" },
+  { metaSymbol: "EURC", apiSymbol: "EUROC" },
+  { metaSymbol: "EUSD", apiSymbol: "eUSD" },
+  { metaSymbol: "FDUSD", apiSymbol: "FDUSD" },
+  { metaSymbol: "FRAX", apiSymbol: "FRAX" },
+  { metaSymbol: "FRXUSD", apiSymbol: "frxUSD" },
+  { metaSymbol: "GHO", apiSymbol: "GHO" },
+  { metaSymbol: "HONEY", apiSymbol: "HONEY" },
+  { metaSymbol: "LUSD", apiSymbol: "LUSD" },
+  { metaSymbol: "PYUSD", apiSymbol: "PYUSD" },
+  { metaSymbol: "USD1", apiSymbol: "USD1" },
+  { metaSymbol: "USDC", apiSymbol: "USDC" },
+  { metaSymbol: "USDH", apiSymbol: "USDH" },
+  { metaSymbol: "USDT", apiSymbol: "USDT" },
+  { metaSymbol: "USDe", apiSymbol: "USDe" },
+  { metaSymbol: "USR", apiSymbol: "USR" },
+  { metaSymbol: "XAUT", apiSymbol: "XAUt" },
+  { metaSymbol: "crvUSD", apiSymbol: "crvUSD" },
+  { metaSymbol: "fxUSD", apiSymbol: "fxUSD" },
+] as const satisfies readonly RedstoneSymbolConfigEntry[];
 
-/**
- * Maps metadata symbol → RedStone API symbol when they differ.
- * RedStone is case-sensitive; some feeds use different casing or legacy names.
- */
-const REDSTONE_API_SYMBOL_MAP: Record<string, string> = {
-  AUSD: "aUSD",
-  EURC: "EUROC",
-  EUSD: "eUSD",
-  FRXUSD: "frxUSD",
-  XAUT: "XAUt",
-};
+export const REDSTONE_PROVIDER_AUDIT_CONFIG = {
+  metadataUrl: "https://api.redstone.finance/prices",
+} as const;
+
+const REDSTONE_META_TO_API_SYMBOL = new Map<string, string>(
+  REDSTONE_SYMBOL_CONFIG.map((entry) => [entry.metaSymbol, entry.apiSymbol] as const),
+);
+
+export const REDSTONE_TRACKED_SYMBOL_ALLOWLIST = REDSTONE_SYMBOL_CONFIG.map((entry) => entry.metaSymbol) as readonly string[];
 
 function toApiSymbol(metaSymbol: string): string {
-  return REDSTONE_API_SYMBOL_MAP[metaSymbol] ?? metaSymbol;
+  return REDSTONE_META_TO_API_SYMBOL.get(metaSymbol) ?? metaSymbol;
 }
 
 const REDSTONE_TRACKED_SYMBOL_SET = new Set<string>(REDSTONE_TRACKED_SYMBOL_ALLOWLIST);

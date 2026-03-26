@@ -325,6 +325,169 @@ export function isSevereFixedPegDownside(
   return (price / referencePrice) < downsideRatio;
 }
 
+function isAuthoritativeDownsideMode(mode: PriceValidationMode): boolean {
+  return mode === "primary_authoritative" || mode === "historical_backfill";
+}
+
+function buildDecision(input: {
+  accepted: boolean;
+  reasonCode: string;
+  referenceType: PriceReferenceType;
+  referencePrice: number | null;
+  candidateRatio: number | null;
+  boundsUsed: { min: number; max: number } | null;
+}): PriceValidationDecision {
+  return input;
+}
+
+function validateCandidatePreamble(
+  price: number,
+  context: PriceValidationContext,
+  referenceType: PriceReferenceType,
+  referencePrice: number | null,
+): PriceValidationDecision | null {
+  if (!Number.isFinite(price) || price <= 0) {
+    return buildDecision({
+      accepted: false,
+      reasonCode: "non_finite_or_non_positive",
+      referenceType,
+      referencePrice,
+      candidateRatio: null,
+      boundsUsed: null,
+    });
+  }
+
+  if (price >= MAX_PRICE) {
+    return buildDecision({
+      accepted: false,
+      reasonCode: "hard_cap_exceeded",
+      referenceType,
+      referencePrice,
+      candidateRatio: null,
+      boundsUsed: { min: 0, max: MAX_PRICE },
+    });
+  }
+
+  if (context.pegClass === "nav") {
+    return buildDecision({
+      accepted: true,
+      reasonCode: "nav_positive_price",
+      referenceType,
+      referencePrice,
+      candidateRatio: null,
+      boundsUsed: { min: 0, max: MAX_PRICE },
+    });
+  }
+
+  if (context.pegClass === "variable" || context.pegClass === "unknown") {
+    return buildDecision({
+      accepted: true,
+      reasonCode: "non_fixed_positive_price",
+      referenceType,
+      referencePrice,
+      candidateRatio: null,
+      boundsUsed: { min: 0, max: MAX_PRICE },
+    });
+  }
+
+  return null;
+}
+
+function evaluateReferenceBand(
+  price: number,
+  mode: PriceValidationMode,
+  referenceType: PriceReferenceType,
+  referencePrice: number | null,
+): PriceValidationDecision | null {
+  if (referencePrice == null || !Number.isFinite(referencePrice) || referencePrice <= 0) {
+    return null;
+  }
+
+  const lowerBound = isAuthoritativeDownsideMode(mode) ? 0 : 0.01 * referencePrice;
+  const upperBound = 2 * referencePrice;
+  const candidateRatio = price / referencePrice;
+
+  if (price >= upperBound) {
+    return buildDecision({
+      accepted: false,
+      reasonCode: "reference_upper_bound_exceeded",
+      referenceType,
+      referencePrice,
+      candidateRatio,
+      boundsUsed: { min: lowerBound, max: upperBound },
+    });
+  }
+
+  if (lowerBound > 0 && price <= lowerBound) {
+    return buildDecision({
+      accepted: false,
+      reasonCode: "reference_lower_bound_exceeded",
+      referenceType,
+      referencePrice,
+      candidateRatio,
+      boundsUsed: { min: lowerBound, max: upperBound },
+    });
+  }
+
+  return buildDecision({
+    accepted: true,
+    reasonCode:
+      lowerBound === 0 && candidateRatio < 0.01
+        ? "authoritative_downside_allowed"
+        : "within_reference_band",
+    referenceType,
+    referencePrice,
+    candidateRatio,
+    boundsUsed: { min: lowerBound, max: upperBound },
+  });
+}
+
+function evaluateHardcodedBand(
+  price: number,
+  mode: PriceValidationMode,
+  referenceType: PriceReferenceType,
+  hardcodedBounds: { min: number; max: number } | null,
+): PriceValidationDecision | null {
+  if (!hardcodedBounds) {
+    return null;
+  }
+
+  const lowerBound = isAuthoritativeDownsideMode(mode) ? 0 : hardcodedBounds.min;
+  if (price >= hardcodedBounds.max) {
+    return buildDecision({
+      accepted: false,
+      reasonCode: "hardcoded_upper_bound_exceeded",
+      referenceType,
+      referencePrice: null,
+      candidateRatio: null,
+      boundsUsed: { min: lowerBound, max: hardcodedBounds.max },
+    });
+  }
+
+  if (lowerBound > 0 && price <= lowerBound) {
+    return buildDecision({
+      accepted: false,
+      reasonCode: "hardcoded_lower_bound_exceeded",
+      referenceType,
+      referencePrice: null,
+      candidateRatio: null,
+      boundsUsed: { min: lowerBound, max: hardcodedBounds.max },
+    });
+  }
+
+  return buildDecision({
+    accepted: true,
+    reasonCode:
+      lowerBound === 0
+        ? "authoritative_hardcoded_downside_allowed"
+        : "within_hardcoded_band",
+    referenceType,
+    referencePrice: null,
+    candidateRatio: null,
+    boundsUsed: { min: lowerBound, max: hardcodedBounds.max },
+  });
+}
+
 export function validatePriceCandidate(
   price: number,
   context: PriceValidationContext,
@@ -332,144 +495,30 @@ export function validatePriceCandidate(
   references?: PriceValidationReferences,
 ): PriceValidationDecision {
   const referenceType = getReferenceTypeForContext(context, references);
-  if (!Number.isFinite(price) || price <= 0) {
-    return {
-      accepted: false,
-      reasonCode: "non_finite_or_non_positive",
-      referenceType,
-      referencePrice: null,
-      candidateRatio: null,
-      boundsUsed: null,
-    };
-  }
-
-  if (price >= MAX_PRICE) {
-    return {
-      accepted: false,
-      reasonCode: "hard_cap_exceeded",
-      referenceType,
-      referencePrice: null,
-      candidateRatio: null,
-      boundsUsed: { min: 0, max: MAX_PRICE },
-    };
-  }
-
-  if (context.pegClass === "nav") {
-    return {
-      accepted: true,
-      reasonCode: "nav_positive_price",
-      referenceType,
-      referencePrice: getReferencePriceForContext(context, references),
-      candidateRatio: null,
-      boundsUsed: { min: 0, max: MAX_PRICE },
-    };
-  }
-
-  if (context.pegClass === "variable" || context.pegClass === "unknown") {
-    return {
-      accepted: true,
-      reasonCode: "non_fixed_positive_price",
-      referenceType,
-      referencePrice: getReferencePriceForContext(context, references),
-      candidateRatio: null,
-      boundsUsed: { min: 0, max: MAX_PRICE },
-    };
-  }
-
   const referencePrice = getReferencePriceForContext(context, references);
-  if (referencePrice != null && referencePrice > 0) {
-    const lowerBound =
-      mode === "primary_authoritative" || mode === "historical_backfill"
-        ? 0
-        : 0.01 * referencePrice;
-    const upperBound = 2 * referencePrice;
-    const candidateRatio = price / referencePrice;
-
-    if (price >= upperBound) {
-      return {
-        accepted: false,
-        reasonCode: "reference_upper_bound_exceeded",
-        referenceType,
-        referencePrice,
-        candidateRatio,
-        boundsUsed: { min: lowerBound, max: upperBound },
-      };
-    }
-
-    if (lowerBound > 0 && price <= lowerBound) {
-      return {
-        accepted: false,
-        reasonCode: "reference_lower_bound_exceeded",
-        referenceType,
-        referencePrice,
-        candidateRatio,
-        boundsUsed: { min: lowerBound, max: upperBound },
-      };
-    }
-
-    return {
-      accepted: true,
-      reasonCode:
-        lowerBound === 0 && candidateRatio < 0.01
-          ? "authoritative_downside_allowed"
-          : "within_reference_band",
-      referenceType,
-      referencePrice,
-      candidateRatio,
-      boundsUsed: { min: lowerBound, max: upperBound },
-    };
+  const preamble = validateCandidatePreamble(price, context, referenceType, referencePrice);
+  if (preamble) {
+    return preamble;
   }
 
-  const hardcodedBounds = getHardcodedBounds(context);
-  if (hardcodedBounds) {
-    const lowerBound =
-      mode === "primary_authoritative" || mode === "historical_backfill"
-        ? 0
-        : hardcodedBounds.min;
-
-    if (price >= hardcodedBounds.max) {
-      return {
-        accepted: false,
-        reasonCode: "hardcoded_upper_bound_exceeded",
-        referenceType,
-        referencePrice: null,
-        candidateRatio: null,
-        boundsUsed: { min: lowerBound, max: hardcodedBounds.max },
-      };
-    }
-
-    if (lowerBound > 0 && price <= lowerBound) {
-      return {
-        accepted: false,
-        reasonCode: "hardcoded_lower_bound_exceeded",
-        referenceType,
-        referencePrice: null,
-        candidateRatio: null,
-        boundsUsed: { min: lowerBound, max: hardcodedBounds.max },
-      };
-    }
-
-    return {
-      accepted: true,
-      reasonCode:
-        lowerBound === 0
-          ? "authoritative_hardcoded_downside_allowed"
-          : "within_hardcoded_band",
-      referenceType,
-      referencePrice: null,
-      candidateRatio: null,
-      boundsUsed: { min: lowerBound, max: hardcodedBounds.max },
-    };
+  const referenceDecision = evaluateReferenceBand(price, mode, referenceType, referencePrice);
+  if (referenceDecision) {
+    return referenceDecision;
   }
 
-  return {
+  const hardcodedDecision = evaluateHardcodedBand(price, mode, referenceType, getHardcodedBounds(context));
+  if (hardcodedDecision) {
+    return hardcodedDecision;
+  }
+
+  return buildDecision({
     accepted: true,
     reasonCode: "non_fixed_positive_price",
     referenceType,
     referencePrice: null,
     candidateRatio: null,
     boundsUsed: { min: 0, max: MAX_PRICE },
-  };
+  });
 }
 
 export function validatePriceCandidateAgainstReference(
@@ -478,80 +527,16 @@ export function validatePriceCandidateAgainstReference(
   mode: PriceValidationMode,
   reference: DirectPriceValidationReference | null,
 ): PriceValidationDecision {
-  if (!Number.isFinite(price) || price <= 0) {
-    return {
-      accepted: false,
-      reasonCode: "non_finite_or_non_positive",
-      referenceType: reference?.type ?? "none",
-      referencePrice: reference?.price ?? null,
-      candidateRatio: null,
-      boundsUsed: null,
-    };
+  const referenceType = reference?.type ?? "none";
+  const referencePrice = reference?.price ?? null;
+  const preamble = validateCandidatePreamble(price, context, referenceType, referencePrice);
+  if (preamble) {
+    return preamble;
   }
 
-  if (price >= MAX_PRICE) {
-    return {
-      accepted: false,
-      reasonCode: "hard_cap_exceeded",
-      referenceType: reference?.type ?? "none",
-      referencePrice: reference?.price ?? null,
-      candidateRatio: null,
-      boundsUsed: { min: 0, max: MAX_PRICE },
-    };
-  }
-
-  if (context.pegClass === "nav" || context.pegClass === "variable" || context.pegClass === "unknown") {
-    return {
-      accepted: true,
-      reasonCode: context.pegClass === "nav" ? "nav_positive_price" : "non_fixed_positive_price",
-      referenceType: reference?.type ?? "none",
-      referencePrice: reference?.price ?? null,
-      candidateRatio: null,
-      boundsUsed: { min: 0, max: MAX_PRICE },
-    };
-  }
-
-  if (reference && Number.isFinite(reference.price) && reference.price > 0) {
-    const lowerBound =
-      mode === "primary_authoritative" || mode === "historical_backfill"
-        ? 0
-        : 0.01 * reference.price;
-    const upperBound = 2 * reference.price;
-    const candidateRatio = price / reference.price;
-
-    if (price >= upperBound) {
-      return {
-        accepted: false,
-        reasonCode: "reference_upper_bound_exceeded",
-        referenceType: reference.type,
-        referencePrice: reference.price,
-        candidateRatio,
-        boundsUsed: { min: lowerBound, max: upperBound },
-      };
-    }
-
-    if (lowerBound > 0 && price <= lowerBound) {
-      return {
-        accepted: false,
-        reasonCode: "reference_lower_bound_exceeded",
-        referenceType: reference.type,
-        referencePrice: reference.price,
-        candidateRatio,
-        boundsUsed: { min: lowerBound, max: upperBound },
-      };
-    }
-
-    return {
-      accepted: true,
-      reasonCode:
-        lowerBound === 0 && candidateRatio < 0.01
-          ? "authoritative_downside_allowed"
-          : "within_reference_band",
-      referenceType: reference.type,
-      referencePrice: reference.price,
-      candidateRatio,
-      boundsUsed: { min: lowerBound, max: upperBound },
-    };
+  const referenceDecision = evaluateReferenceBand(price, mode, referenceType, referencePrice);
+  if (referenceDecision) {
+    return referenceDecision;
   }
 
   return validatePriceCandidate(price, context, mode);

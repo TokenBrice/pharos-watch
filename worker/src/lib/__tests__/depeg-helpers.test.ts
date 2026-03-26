@@ -46,6 +46,36 @@ describe("classifyPrimaryDepegTrust", () => {
     }, nowSec)).toBe("confirm_required");
   });
 
+  it("treats an upstream-capable hard source plus soft corroboration as authoritative", () => {
+    expect(classifyPrimaryDepegTrust({
+      price: 0.998,
+      priceSource: "coingecko+pyth",
+      priceConfidence: "high",
+      priceObservedAt: nowSec - 60,
+      agreeSources: ["coingecko", "pyth"],
+    }, nowSec)).toBe("authoritative");
+  });
+
+  it("requires confirmation for a lone local-fetch hard source plus soft corroboration", () => {
+    expect(classifyPrimaryDepegTrust({
+      price: 0.999,
+      priceSource: "coingecko+kraken",
+      priceConfidence: "high",
+      priceObservedAt: nowSec - 60,
+      agreeSources: ["coingecko", "kraken"],
+    }, nowSec)).toBe("confirm_required");
+  });
+
+  it("accepts two authoritative local-fetch hard sources in agreement", () => {
+    expect(classifyPrimaryDepegTrust({
+      price: 0.999,
+      priceSource: "binance+kraken",
+      priceConfidence: "high",
+      priceObservedAt: nowSec - 60,
+      agreeSources: ["binance", "kraken"],
+    }, nowSec)).toBe("authoritative");
+  });
+
   it("uses source observation time rather than sync-write time for freshness", () => {
     expect(classifyPrimaryDepegTrust({
       price: 1.0,
@@ -55,5 +85,15 @@ describe("classifyPrimaryDepegTrust", () => {
       priceUpdatedAt: nowSec - 30,
       agreeSources: ["pyth"],
     }, nowSec)).toBe("confirm_required");
+  });
+
+  it("keeps legacy null freshness mode backward-compatible for upstream-capable hard sources", () => {
+    expect(classifyPrimaryDepegTrust({
+      price: 0.999,
+      priceSource: "pyth",
+      priceConfidence: "single-source",
+      priceObservedAt: nowSec - 60,
+      agreeSources: ["pyth"],
+    }, nowSec)).toBe("authoritative");
   });
 });

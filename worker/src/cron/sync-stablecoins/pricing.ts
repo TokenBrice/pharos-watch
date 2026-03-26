@@ -48,6 +48,7 @@ export function buildDlListPrices(assets: PeggedAsset[]): Map<string, number> {
   const dlListPrices = new Map<string, number>();
   for (const asset of assets) {
     if (
+      asset.supplySource !== "coingecko-fallback" &&
       asset.price != null &&
       typeof asset.price === "number" &&
       Number.isFinite(asset.price) &&
