@@ -29,7 +29,6 @@ import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { isBlacklistable } from "@shared/lib/report-cards";
 import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severity-colors";
-import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
 import type {
   DexLiquidityData,
   PegSummaryCoin,
@@ -273,7 +272,7 @@ export function HeroCard({
       return { value: "—", sub: undefined, color: "text-muted-foreground" };
     }
     const score = liq.liquidityScore ?? 0;
-    return { value: Math.round(score), sub: `${liq.poolCount} pools · ${liq.chainCount} chains`, color: getScoreColor(score) };
+    return { value: Math.round(score), sub: `${liq.poolCount} pools`, color: getScoreColor(score) };
   })();
   const blacklistDisplay = (() => {
     switch (blacklistStatus) {
@@ -312,7 +311,7 @@ export function HeroCard({
     }
     return {
       value: formatSignedPercent(yieldRanking.excessYield),
-      sub: getYieldBenchmarkReferenceText(yieldRanking),
+      sub: "vs Ref",
       color: yieldRanking.excessYield >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400",
     };
   })();
