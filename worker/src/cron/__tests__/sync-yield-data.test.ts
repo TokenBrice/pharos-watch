@@ -725,6 +725,79 @@ describe("syncYieldData", () => {
     }
   });
 
+  it("marks the run degraded when deterministic cooldown leaves a coverage gap", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const onChainConfigs = yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+    onChainConfigs.push({
+      stablecoinId: "100",
+      chain: "ethereum",
+      contract: "0x0000000000000000000000000000000000000001",
+      method: "exchangeRate",
+      scale: 1e18,
+    } as never);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dl-stablecoin-pools") {
+        return {
+          value: JSON.stringify([]),
+          updatedAt: nowSec - 60,
+        };
+      }
+      if (key === "risk_free_rate") {
+        return {
+          value: JSON.stringify({
+            rate: 4.0,
+            source: "fred",
+            fetchedAt: nowSec - 3600,
+            recordDate: "2025-06-15",
+            isFallback: false,
+            fallbackMode: null,
+          }),
+          updatedAt: nowSec - 3600,
+        };
+      }
+      if (key === "yield:onchain-health:v1") {
+        return {
+          value: JSON.stringify({
+            version: 1,
+            consecutiveAllFailRuns: 2,
+            consecutiveMaskedAllFailRuns: 2,
+            cooldownUntil: nowSec + 3600,
+            lastAttemptedAt: nowSec - 3600,
+            lastAllFailedAt: nowSec - 3600,
+            lastSuccessAt: null,
+            lastSkippedAt: null,
+            lastFailureMissingIds: [],
+          }),
+          updatedAt: nowSec - 60,
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    const fetchSpy = mockFetch([]);
+
+    try {
+      const result = await syncYieldData(db);
+      const metadata = JSON.parse(result.metadata ?? "{}") as {
+        fallbackMode?: string | null;
+        sourceCoverage?: {
+          onChainSkippedDueToCooldown?: boolean;
+          onChainAlternativeCoverageMissingIds?: string[];
+        };
+      };
+
+      expect(result.status).toBe("degraded");
+      expect(metadata.fallbackMode ?? "").toContain("onchain-rates:cooldown-coverage-gap");
+      expect(metadata.sourceCoverage?.onChainSkippedDueToCooldown).toBe(true);
+      expect(metadata.sourceCoverage?.onChainAlternativeCoverageMissingIds).toEqual(["100"]);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      onChainConfigs.length = 0;
+    }
+  });
+
   it("applies deterministic auto-discovery override for U (id 336)", async () => {
     const db = makeDb();
 
@@ -1024,6 +1097,120 @@ describe("syncYieldData", () => {
     expect(metadata.previousPublishedYieldBearingCount).toBe(10);
     expect(metadata.currentPublishedYieldBearingCount).toBe(0);
     expect(batchExecute).not.toHaveBeenCalled();
+  });
+
+  it("ignores an invalid previous yield-rankings cache payload", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "yield-rankings") {
+        return {
+          value: "{not-json",
+          updatedAt: nowSec,
+        };
+      }
+      return null;
+    });
+    mockFetch([
+      {
+        match: "yields.llama.fi",
+        body: {
+          data: [
+            {
+              pool: "pool-sdai-1",
+              chain: "Ethereum",
+              project: "maker",
+              symbol: "sDAI",
+              tvlUsd: 1_000_000_000,
+              apy: 5.2,
+              apyBase: 5.2,
+              apyReward: null,
+              apyMean30d: 5.1,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ],
+        },
+      },
+    ]);
+
+    const result = await syncYieldData(db);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      sourceCoverage?: {
+        previousPublishedYieldBearingCount?: number;
+        publishedYieldBearingCount?: number;
+      };
+    };
+
+    expect(metadata.sourceCoverage?.previousPublishedYieldBearingCount).toBe(0);
+    expect(metadata.sourceCoverage?.publishedYieldBearingCount).toBe(1);
+    expect(batchExecute).toHaveBeenCalled();
+  });
+
+  it("returns early when tracked yield coverage regresses below the guard threshold", async () => {
+    const db = makeDb();
+    const originalYieldCoins = [...ACTIVE_YIELD_BEARING_STABLECOINS];
+
+    for (let i = 0; i < 10; i++) {
+      ACTIVE_YIELD_BEARING_STABLECOINS.push({
+        id: `yield-extra-${i}`,
+        name: `Yield Extra ${i}`,
+        symbol: `YE${i}`,
+        geckoId: `yield-extra-${i}`,
+        flags: {
+          pegCurrency: "USD",
+          backing: "crypto-backed",
+          yieldBearing: true,
+          navToken: false,
+          governance: "decentralized",
+        },
+      } as never);
+    }
+
+    try {
+      mockFetch([
+        {
+          match: "yields.llama.fi",
+          body: {
+            data: [
+              {
+                pool: "pool-sdai-1",
+                chain: "Ethereum",
+                project: "maker",
+                symbol: "sDAI",
+                tvlUsd: 1_000_000_000,
+                apy: 5.2,
+                apyBase: 5.2,
+                apyReward: null,
+                apyMean30d: 5.1,
+                stablecoin: true,
+                exposure: "single",
+                underlyingTokens: null,
+              },
+            ],
+          },
+        },
+      ]);
+
+      const result = await syncYieldData(db);
+      const metadata = JSON.parse(result.metadata ?? "{}") as {
+        reason?: string | null;
+        coverage?: number;
+        resolvedCount?: number;
+        totalCount?: number;
+      };
+
+      expect(result.status).toBe("degraded");
+      expect(metadata.reason).toBe("coverage-regression");
+      expect(metadata.coverage).toBeCloseTo(1 / 11, 6);
+      expect(metadata.resolvedCount).toBe(1);
+      expect(metadata.totalCount).toBe(11);
+      expect(batchExecute).not.toHaveBeenCalled();
+    } finally {
+      ACTIVE_YIELD_BEARING_STABLECOINS.splice(0, ACTIVE_YIELD_BEARING_STABLECOINS.length, ...originalYieldCoins);
+    }
   });
 
   it("skips yield-rankings cache write when response payload fails schema validation", async () => {
