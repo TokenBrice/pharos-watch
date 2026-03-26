@@ -4,11 +4,14 @@ import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import {
   CIRCUIT_SOURCE,
   USER_AGENT,
-  ECB_ESTR_CSV_URL,
+  ECB_ESTR_3M_CSV_URL,
   FRED_TBILL_CSV_URL,
-  FRED_ESTR_CSV_URL,
   TREASURY_YIELD_XML_URL,
-  SNB_CURRENT_RATES_URL,
+  SIX_BROWSER_USER_AGENT,
+  SIX_OAUTH_TOKEN_URL,
+  SIX_REPORT_DOWNLOAD_URL,
+  SIX_SARON_3M_CSV_URL,
+  SIX_SARON_COMPOUND_RATES_REFERER_URL,
   BENCHMARK_FETCH_TIMEOUT_MS,
   BENCHMARK_FETCH_MAX_RETRIES,
 } from "../lib/constants";
@@ -59,7 +62,7 @@ function parseFredLatest(csv: string): { recordDate: string; rate: number } | nu
   return null;
 }
 
-export function parseEcbEstrCsv(csv: string): { recordDate: string; rate: number } | null {
+export function parseEcbCompoundedEstrCsv(csv: string): { recordDate: string; rate: number } | null {
   const lines = csv.split(/\r?\n/);
   const header = lines.find((line) => line.trim().length > 0);
   if (!header) return null;
@@ -110,35 +113,49 @@ export function parseTreasuryYieldXml(xml: string): { recordDate: string; rate: 
   return { recordDate, rate: lastRate };
 }
 
-function normalizeHtmlText(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&#160;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function parseSnbDate(dateRaw: string): string | null {
+function parseEuropeanDate(dateRaw: string): string | null {
   const match = dateRaw.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
   if (!match) return null;
   return `${match[3]}-${match[2]}-${match[1]}`;
 }
 
-export function parseSnbPolicyRateHtml(html: string): { recordDate: string; rate: number } | null {
-  const match = normalizeHtmlText(html).match(/SNB policy rate\s+(-?[\d.]+)%\s+valid from\s+(\d{2}\.\d{2}\.\d{4})/i);
-  if (!match) return null;
+function parseSixOauthToken(json: string): string | null {
+  try {
+    const parsed = JSON.parse(json) as Record<string, unknown>;
+    return typeof parsed.access_token === "string" && parsed.access_token.trim() !== ""
+      ? parsed.access_token
+      : null;
+  } catch {
+    return null;
+  }
+}
 
-  const rate = parseFloat(match[1]);
-  if (!isValidBenchmarkRate(rate)) return null;
+export function parseSixSar3mcCsv(csv: string): { recordDate: string; rate: number } | null {
+  const lines = csv
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  if (lines.length < 2) return null;
 
-  const recordDate = parseSnbDate(match[2]);
-  if (!recordDate) return null;
+  const headers = lines[0]?.split(";").map((value) => value.trim().toLowerCase()) ?? [];
+  const dateIndex = headers.indexOf("date");
+  const rateIndex = headers.indexOf("value");
+  const symbolIndex = headers.indexOf("symbol");
+  if (dateIndex === -1 || rateIndex === -1) return null;
 
-  return { recordDate, rate };
+  for (let i = 1; i < lines.length; i++) {
+    const columns = lines[i]?.split(";").map((value) => value.trim()) ?? [];
+    const symbol = symbolIndex === -1 ? null : columns[symbolIndex];
+    if (symbolIndex !== -1 && symbol !== "SAR3MC") continue;
+
+    const recordDate = parseEuropeanDate(columns[dateIndex] ?? "");
+    const rate = parseRate(columns[rateIndex] ?? "");
+    if (!recordDate || !isValidBenchmarkRate(rate)) continue;
+
+    return { recordDate, rate };
+  }
+
+  return null;
 }
 
 async function loadPreviousBenchmarks(db: D1Database): Promise<ParsedYieldBenchmarkRegistry> {
@@ -292,9 +309,9 @@ async function tryFredCsv(
   }
 }
 
-async function tryEcbEstrCsv(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+async function tryEcbCompoundedEstrCsv(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
   try {
-    const res = await fetchWithRetry(ECB_ESTR_CSV_URL, {
+    const res = await fetchWithRetry(ECB_ESTR_3M_CSV_URL, {
       headers: { "User-Agent": USER_AGENT },
       signal,
     }, BENCHMARK_FETCH_MAX_RETRIES, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
@@ -303,9 +320,9 @@ async function tryEcbEstrCsv(signal?: AbortSignal): Promise<{ rate: number; reco
       return null;
     }
 
-    return parseEcbEstrCsv(await res.text());
+    return parseEcbCompoundedEstrCsv(await res.text());
   } catch (err) {
-    console.warn(`[fetch-tbill-rate] ECB €STR CSV failed: ${String(err).slice(0, 200)}`);
+    console.warn(`[fetch-tbill-rate] ECB 3M compounded €STR CSV failed: ${String(err).slice(0, 200)}`);
     return null;
   }
 }
@@ -328,20 +345,68 @@ async function tryTreasuryXml(signal?: AbortSignal): Promise<{ rate: number; rec
   }
 }
 
-async function trySnbPolicyRate(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+function buildSixGuestHeaders(token?: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    Accept: "application/json, text/plain, */*",
+    Origin: "https://indexdata.six-group.com",
+    Referer: SIX_SARON_COMPOUND_RATES_REFERER_URL,
+    "User-Agent": SIX_BROWSER_USER_AGENT,
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
+async function trySixGuestToken(signal?: AbortSignal): Promise<string | null> {
   try {
-    const res = await fetchWithRetry(SNB_CURRENT_RATES_URL, {
-      headers: { "User-Agent": USER_AGENT },
+    const res = await fetchWithRetry(SIX_OAUTH_TOKEN_URL, {
+      method: "POST",
+      headers: {
+        ...buildSixGuestHeaders(),
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      },
+      body: "grant_type=client_credentials&client_id=default_consumer&scope=api_authentication",
       signal,
-    }, 1, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
+    }, BENCHMARK_FETCH_MAX_RETRIES, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
 
     if (!res?.ok) {
       return null;
     }
 
-    return parseSnbPolicyRateHtml(await res.text());
+    return parseSixOauthToken(await res.text());
   } catch (err) {
-    console.warn(`[fetch-tbill-rate] SNB policy rate fetch failed: ${String(err).slice(0, 200)}`);
+    console.warn(`[fetch-tbill-rate] SIX guest token fetch failed: ${String(err).slice(0, 200)}`);
+    return null;
+  }
+}
+
+async function trySixSar3mcCsv(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+  const token = await trySixGuestToken(signal);
+  if (!token) return null;
+
+  try {
+    const res = await fetchWithRetry(SIX_REPORT_DOWNLOAD_URL, {
+      method: "POST",
+      headers: {
+        ...buildSixGuestHeaders(token),
+        "Content-Type": "application/json;charset=UTF-8",
+      },
+      body: JSON.stringify({ furl: SIX_SARON_3M_CSV_URL }),
+      signal,
+    }, BENCHMARK_FETCH_MAX_RETRIES, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
+
+    if (!res?.ok) {
+      return null;
+    }
+
+    const contentType = (res.headers.get("content-type") ?? "").toLowerCase();
+    const body = await res.text();
+    if (contentType.includes("application/json")) {
+      return null;
+    }
+
+    return parseSixSar3mcCsv(body);
+  } catch (err) {
+    console.warn(`[fetch-tbill-rate] SIX SAR3MC fetch failed: ${String(err).slice(0, 200)}`);
     return null;
   }
 }
@@ -390,10 +455,8 @@ export async function fetchTbillRate(db: D1Database, signal?: AbortSignal): Prom
     await recordOutcome(db, CIRCUIT_SOURCE.TREASURY_RATES, false);
   }
 
-  const eurEcb = await tryEcbEstrCsv(signal);
-  const eurFred = eurEcb ? null : await tryFredCsv(FRED_ESTR_CSV_URL, signal);
-  const eurParsed = eurEcb ?? eurFred;
-  const eurSource = eurEcb ? "ecb-estr" : (eurFred ? "fred-estr" : null);
+  const eurParsed = await tryEcbCompoundedEstrCsv(signal);
+  const eurSource = eurParsed ? "ecb-estr-3m" : null;
   const eurMeta = eurParsed && eurSource
     ? buildResolvedBenchmark({
       key: "EUR",
@@ -402,18 +465,18 @@ export async function fetchTbillRate(db: D1Database, signal?: AbortSignal): Prom
       fetchedAt,
       source: eurSource,
     })
-    : buildRetainedBenchmark(previous.EUR, "all-sources-failed");
+    : buildRetainedBenchmark(previous.EUR, "ecb-failed");
 
-  const chfParsed = await trySnbPolicyRate(signal);
+  const chfParsed = await trySixSar3mcCsv(signal);
   const chfMeta = chfParsed
     ? buildResolvedBenchmark({
       key: "CHF",
       rate: chfParsed.rate,
       recordDate: chfParsed.recordDate,
       fetchedAt,
-      source: "snb-policy-rate",
+      source: "six-sar3mc",
     })
-    : buildRetainedBenchmark(previous.CHF, "snb-failed");
+    : buildRetainedBenchmark(previous.CHF, "six-saron-failed");
 
   await writeStructuredBenchmarks(db, {
     USD: usdMeta,
@@ -421,8 +484,8 @@ export async function fetchTbillRate(db: D1Database, signal?: AbortSignal): Prom
     CHF: chfMeta,
   });
 
-  const eurFailureMode = eurParsed ? null : (eurMeta?.fallbackMode ?? "all-sources-failed");
-  const chfFailureMode = chfParsed ? null : (chfMeta?.fallbackMode ?? "snb-failed");
+  const eurFailureMode = eurParsed ? null : (eurMeta?.fallbackMode ?? "ecb-failed");
+  const chfFailureMode = chfParsed ? null : (chfMeta?.fallbackMode ?? "six-saron-failed");
   const degradationReasons: string[] = [];
   if (usdMeta.isFallback) degradationReasons.push(`usd:${usdMeta.fallbackMode}`);
   if (eurFailureMode) degradationReasons.push(`eur:${eurFailureMode}`);

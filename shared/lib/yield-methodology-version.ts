@@ -3,9 +3,41 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "5.7",
+  currentVersion: "5.9",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "5.9",
+    title: "3M Risk-Free Benchmarks For EUR And CHF",
+    date: "2026-03-26",
+    effectiveAt: 1774814400,
+    summary:
+      "Yield Intelligence now benchmarks EUR pegs against 3-month compounded €STR and CHF pegs against 3-month compounded SARON instead of using overnight €STR and a CHF policy-rate proxy.",
+    impact: [
+      "EUR benchmark refreshes now use the ECB's official 3-month compounded €STR series (`EST/B.EU000A2QQF32.CR`) instead of the overnight €STR series",
+      "CHF benchmark refreshes now fetch delayed public `SAR3MC` from SIX via the guest OAuth plus report-download flow, replacing the old SNB policy-rate proxy",
+      "CHF benchmark entries are no longer labeled as proxies, and mixed-benchmark UI copy now names the 3-month compounded EUR and CHF cash hurdles explicitly",
+      "Methodology docs, API examples, and the about-page source inventory now reflect the new EUR/CHF risk-free benchmark stack",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "5.8",
+    title: "Asset-Scoped Supplemental Identity and Actionable Coverage Audits",
+    date: "2026-03-26",
+    effectiveAt: 1774810800,
+    summary:
+      "Supplemental protocol families now keep asset-scoped source identity instead of collapsing same-chain markets together, and the monthly coverage audit now measures the real exact-pool DL surface rather than only the native static map.",
+    impact: [
+      "Aave V3 supplemental on-chain rows now use asset-scoped source keys, so same-chain markets no longer overwrite each other in the supplemental cache",
+      "`sync-yield-supplemental` now reports raw candidate count, deduped candidate count, and dropped-row count in cron metadata so silent row loss becomes visible to operators",
+      "The monthly coverage audit now counts explicit auto-discovery overrides and curated exact-pool overrides as covered DL surfaces instead of treating only `YIELD_POOL_MAP` UUIDs as covered",
+      "High-TVL coverage-gap reporting now focuses on unsupported protocol surfaces rather than flooding the audit with already-supported allowlisted markets",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.7",
     title: "Cadence-Aligned Data-Stale Warnings",

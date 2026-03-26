@@ -106,13 +106,19 @@ export const DEPEG_SECONDARY_THRESHOLD_RATIO = 0.5;
 export const RISK_FREE_RATE_FALLBACK = 3.75;
 /** FRED 3-month Treasury yield series (DGS3MO), used by fetch-tbill-rate cron. */
 export const FRED_TBILL_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO";
-/** Official ECB data API endpoint for the euro short-term rate (€STR). */
-export const ECB_ESTR_CSV_URL = "https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2X2A25.WT?lastNObservations=5&format=csvdata";
-/** FRED euro short-term rate series (€STR, volume-weighted trimmed mean). */
-export const FRED_ESTR_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=ECBESTRVOLWGTTRMDMNRT";
+/** Official ECB data API endpoint for 3-month compounded €STR. */
+export const ECB_ESTR_3M_CSV_URL = "https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2QQF32.CR?lastNObservations=5&format=csvdata";
 export const TREASURY_YIELD_XML_URL = "https://home.treasury.gov/sites/default/files/interest-rates/yield.xml";
-/** SNB current interest rates page, used for the public CHF policy-rate proxy. */
-export const SNB_CURRENT_RATES_URL = "https://www.snb.ch/en/the-snb/mandates-goals/statistics/statistics-pub/current_interest_exchange_rates";
+/** SIX public OAuth endpoint used to fetch delayed SARON compound-rate downloads as a guest client. */
+export const SIX_OAUTH_TOKEN_URL = "https://indexdata.six-group.com/pro/oauth/token";
+/** SIX public download broker endpoint for delayed index and rate files. */
+export const SIX_REPORT_DOWNLOAD_URL = "https://indexdata.six-group.com/pro/api/report-download";
+/** Public browser route used as the referer/origin context for delayed SARON downloads. */
+export const SIX_SARON_COMPOUND_RATES_REFERER_URL = "https://indexdata.six-group.com/swiss_reference_rates/compound_rates.html";
+/** Full delayed public CSV URL for the 3-month compounded SARON series (SAR3MC). */
+export const SIX_SARON_3M_CSV_URL = "https://indexdata.six-group.com/download/saron/h_sar3mc_delayed.csv";
+/** SIX guest token and report-download endpoints reject the Pharos UA; use a browser-compatible UA instead. */
+export const SIX_BROWSER_USER_AGENT = "Mozilla/5.0";
 export const BENCHMARK_FETCH_TIMEOUT_MS = 15_000;
 export const BENCHMARK_FETCH_MAX_RETRIES = 2;
 export const PYS_SCALING_FACTOR = 8;

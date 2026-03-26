@@ -1523,8 +1523,8 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
   "riskFreeRate": 4.25,
   "benchmarks": {
     "USD": { "key": "USD", "label": "USD 3M T-Bill", "currency": "USD", "rate": 4.25, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "fred-dgs3mo", "isFallback": false, "fallbackMode": null, "isProxy": false },
-    "EUR": { "key": "EUR", "label": "EUR €STR", "currency": "EUR", "rate": 1.93, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "ecb-estr", "isFallback": false, "fallbackMode": null, "isProxy": false },
-    "CHF": { "key": "CHF", "label": "CHF SNB policy rate (proxy)", "currency": "CHF", "rate": 0.25, "recordDate": "2025-12-13", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "snb-policy-rate", "isFallback": false, "fallbackMode": null, "isProxy": true }
+    "EUR": { "key": "EUR", "label": "EUR 3M compounded €STR", "currency": "EUR", "rate": 1.9358, "recordDate": "2026-03-26", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "ecb-estr-3m", "isFallback": false, "fallbackMode": null, "isProxy": false },
+    "CHF": { "key": "CHF", "label": "CHF 3M compounded SARON", "currency": "CHF", "rate": -0.0539, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "six-sar3mc", "isFallback": false, "fallbackMode": null, "isProxy": false }
   },
   "scalingFactor": 8,
   "medianApy": 4.21,
@@ -1534,8 +1534,8 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
     "benchmark": { "key": "USD", "label": "USD 3M T-Bill", "currency": "USD", "rate": 4.25, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "fred-dgs3mo", "isFallback": false, "fallbackMode": null, "isProxy": false },
     "benchmarks": {
       "USD": { "key": "USD", "label": "USD 3M T-Bill", "currency": "USD", "rate": 4.25, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "fred-dgs3mo", "isFallback": false, "fallbackMode": null, "isProxy": false },
-      "EUR": { "key": "EUR", "label": "EUR €STR", "currency": "EUR", "rate": 1.93, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "ecb-estr", "isFallback": false, "fallbackMode": null, "isProxy": false },
-      "CHF": { "key": "CHF", "label": "CHF SNB policy rate (proxy)", "currency": "CHF", "rate": 0.25, "recordDate": "2025-12-13", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "snb-policy-rate", "isFallback": false, "fallbackMode": null, "isProxy": true }
+      "EUR": { "key": "EUR", "label": "EUR 3M compounded €STR", "currency": "EUR", "rate": 1.9358, "recordDate": "2026-03-26", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "ecb-estr-3m", "isFallback": false, "fallbackMode": null, "isProxy": false },
+      "CHF": { "key": "CHF", "label": "CHF 3M compounded SARON", "currency": "CHF", "rate": -0.0539, "recordDate": "2026-03-25", "fetchedAt": 1774425600, "ageSeconds": 0, "source": "six-sar3mc", "isFallback": false, "fallbackMode": null, "isProxy": false }
     },
     "dlPools": { "mode": "dex-cache", "ageSeconds": 240, "poolCount": 812 },
     "safetySnapshot": { "kind": "ok", "coverageRatio": 0.98 }

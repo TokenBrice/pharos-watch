@@ -1,8 +1,22 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.7` (2026-03-01 -> 2026-03-26).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.9` (2026-03-01 -> 2026-03-26).
 
 ---
+
+## v5.9 - 3M risk-free benchmarks for EUR and CHF (Mar 26, 2026)
+
+- EUR pegs now benchmark against the ECB's official 3-month compounded €STR series rather than the overnight €STR feed
+- CHF pegs now benchmark against delayed public `SAR3MC` from SIX rather than an SNB policy-rate proxy
+- CHF benchmark rows are no longer marked as proxies, and mixed-benchmark UI copy now names the 3-month compounded EUR/CHF cash hurdles directly
+- The worker now fetches delayed SARON compound-rate files through SIX's guest OAuth plus report-download flow, and the docs/about-page source inventory reflect that pipeline
+
+## v5.8 - Asset-scoped supplemental identity and actionable coverage audits (Mar 26, 2026)
+
+- Aave V3 supplemental rows now use asset-scoped source keys instead of collapsing all same-chain markets into one cached row
+- `sync-yield-supplemental` metadata now reports raw candidate count, deduped candidate count, and dropped-row count so silent row loss is visible in cron history
+- The monthly yield coverage audit now counts explicit auto-discovery overrides and curated exact-pool overrides as covered DL surfaces
+- High-TVL gap reporting now focuses on unsupported protocol families instead of flooding the audit with already-allowlisted markets
 
 ## v5.7 - Cadence-aligned data-stale warnings (Mar 26, 2026)
 

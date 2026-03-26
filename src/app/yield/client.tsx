@@ -409,7 +409,7 @@ export function YieldClient() {
                   <p className="pharos-kicker">{stats.hasMixedBenchmarks ? "Local Benchmarks" : "Below Benchmark"}</p>
                   <p className="mt-1 text-sm text-foreground">
                     {stats.hasMixedBenchmarks
-                      ? "Rows are benchmarked against USD T-Bill, EUR €STR, or CHF policy-rate proxy depending on the peg."
+                      ? "Rows are benchmarked against USD T-Bill, EUR 3M compounded €STR, or CHF 3M compounded SARON depending on the peg."
                       : `Yields under ${formatPercent(stats.referenceBenchmark?.rate ?? data.riskFreeRate)} are failing the basic hurdle rate.`}
                   </p>
                 </div>

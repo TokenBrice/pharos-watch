@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v5.7`
+- **Current methodology version:** `v5.8`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -16,6 +16,7 @@ Rankings provenance now carries source-native freshness for derived sources:
 
 - `sourceObservedAt` / `sourceAgeSeconds` reflect the actual latest observation backing the ranking, not just the cron run time
 - `comparisonAnchorObservedAt` / `comparisonAnchorAgeSeconds` are included when APY is derived from a prior anchor, such as price-derived and on-chain exchange-rate calculations
+- supplemental protocol families now keep asset-scoped source identity for same-chain markets (notably Aave V3), preventing cross-coin cache collapse and preserving per-asset alternative-source coverage
 
 ---
 
@@ -200,7 +201,7 @@ For dividend-distributing tokens (maintain $1.00 NAV, pay yield as new token min
 apy = max(0, benchmarkRate - spreadBps / 100)
 ```
 
-Uses the structured benchmark cache refreshed daily by `fetch-tbill-rate`. USD defaults to the 3-month Treasury yield (`DGS3MO`), but the resolver can switch to a peg-native benchmark when one exists. EUR rows use the ECB's official €STR data feed first and fall back to FRED's mirror (`ECBESTRVOLWGTTRMDMNRT`) only when the first-party feed is unavailable. CHF rows use an SNB policy-rate proxy sourced from the SNB current-rates page, with the parser normalizing page text so minor markup changes do not break extraction. If a benchmark fetch fails, the cron retains the last known market benchmark when available and marks provenance as degraded instead of immediately snapping back to the hardcoded default.
+Uses the structured benchmark cache refreshed daily by `fetch-tbill-rate`. USD defaults to the 3-month Treasury yield (`DGS3MO`), but the resolver can switch to a peg-native benchmark when one exists. EUR rows use the ECB's official 3-month compounded €STR series. CHF rows use delayed public `SAR3MC` (3-month compounded SARON) from SIX. If a benchmark fetch fails, the cron retains the last known market benchmark when available and marks provenance as degraded instead of immediately snapping back to the hardcoded default. Because the public SIX compound-rate file is delayed, CHF benchmark `recordDate` can trail the fetch date by one business day even on a healthy run.
 
 **Configured tokens:**
 
@@ -242,6 +243,8 @@ For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), 
 **Explicit deterministic edge cases:** `AUTO_LENDING_POOL_MAP` can also pin a small number of exact-symbol, single-asset lending markets for coins that would otherwise be blocked by ambiguous matching or by the generic safety gate. These rows still pass the same pool-shape and source-quality checks; the bypass is coin-specific and documented rather than global.
 
 **Commodity-specific exact venues:** `EXPLICIT_YIELD_SOURCE_POOL_MAP` is a separate lane for curated non-stablecoin assets such as `xaut-tether`. Unlike `AUTO_LENDING_POOL_MAP`, these rows are not broadening the generic stablecoin discovery universe; they only publish the exact named pool after matching the expected venue metadata.
+
+The monthly coverage audit now treats both `AUTO_LENDING_POOL_MAP` and `EXPLICIT_YIELD_SOURCE_POOL_MAP` as exact covered DeFiLlama surfaces. Its high-TVL gap report intentionally focuses on unsupported protocol families instead of re-flagging already-allowlisted markets that the runtime already supports dynamically.
 
 ---
 
@@ -294,16 +297,17 @@ Yield Intelligence now uses a small benchmark registry instead of a single globa
 | Key | Label | Primary source | Notes |
 | --- | ----- | -------------- | ----- |
 | `USD` | USD 3M T-Bill | FRED `DGS3MO` | Default benchmark and backward-compatible top-level `riskFreeRate` |
-| `EUR` | EUR €STR | ECB Data API (`EST/B.EU000A2X2A25.WT`) | Native benchmark for EUR pegs when available; FRED mirror is a fallback |
-| `CHF` | CHF SNB policy rate (proxy) | SNB current-rates page | Proxy benchmark for CHF pegs; intentionally labeled as a proxy |
+| `EUR` | EUR 3M compounded €STR | ECB Data API (`EST/B.EU000A2QQF32.CR`) | Native benchmark for EUR pegs; retained-last-market fallback covers feed outages |
+| `CHF` | CHF 3M compounded SARON | SIX delayed `SAR3MC` download | Public feed is delayed by one business day; not labeled as a proxy |
 
 **Source URLs:**
 
 ```text
 https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO
-https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2X2A25.WT?lastNObservations=5&format=csvdata
-https://fred.stlouisfed.org/graph/fredgraph.csv?id=ECBESTRVOLWGTTRMDMNRT
-https://www.snb.ch/en/the-snb/mandates-goals/statistics/statistics-pub/current_interest_exchange_rates
+https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2QQF32.CR?lastNObservations=5&format=csvdata
+https://indexdata.six-group.com/pro/oauth/token
+https://indexdata.six-group.com/pro/api/report-download
+https://indexdata.six-group.com/download/saron/h_sar3mc_delayed.csv
 ```
 
 **Stored as:** `cache` table, key `"risk_free_rates"`, with the legacy USD-only key `"risk_free_rate"` still written for compatibility.
@@ -488,8 +492,8 @@ It fetches those families, serializes the resolved candidate set into a cache sn
 Fetches the benchmark registry used by Yield Intelligence:
 
 - USD 3M Treasury yield from FRED `DGS3MO`
-- EUR €STR from the ECB Data API, with the FRED mirror `ECBESTRVOLWGTTRMDMNRT` as fallback
-- CHF SNB policy rate proxy from the SNB current-rates page, parsed from normalized page text rather than a single raw-HTML phrase
+- EUR 3M compounded €STR from the ECB Data API (`EST/B.EU000A2QQF32.CR`)
+- CHF 3M compounded SARON (`SAR3MC`) from SIX's delayed public download, fetched through the guest OAuth + report-download flow used by their public site
 
 Validated rates must stay within `[-10, 20]` so EUR / CHF support can tolerate negative-rate regimes. The cron writes the structured `"risk_free_rates"` cache and also mirrors USD into the legacy `"risk_free_rate"` key for compatibility.
 
@@ -565,8 +569,8 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
   "riskFreeRate": 4.25,
   "benchmarks": {
     "USD": { "key": "USD", "label": "USD 3M T-Bill", "currency": "USD", "rate": 4.25, "recordDate": "2026-03-25", "source": "fred-dgs3mo", "isFallback": false, "fallbackMode": null, "isProxy": false },
-    "EUR": { "key": "EUR", "label": "EUR €STR", "currency": "EUR", "rate": 1.93, "recordDate": "2026-03-25", "source": "ecb-estr", "isFallback": false, "fallbackMode": null, "isProxy": false },
-    "CHF": { "key": "CHF", "label": "CHF SNB policy rate (proxy)", "currency": "CHF", "rate": 0.25, "recordDate": "2025-12-13", "source": "snb-policy-rate", "isFallback": false, "fallbackMode": null, "isProxy": true }
+    "EUR": { "key": "EUR", "label": "EUR 3M compounded €STR", "currency": "EUR", "rate": 1.9358, "recordDate": "2026-03-26", "source": "ecb-estr-3m", "isFallback": false, "fallbackMode": null, "isProxy": false },
+    "CHF": { "key": "CHF", "label": "CHF 3M compounded SARON", "currency": "CHF", "rate": -0.0539, "recordDate": "2026-03-25", "source": "six-sar3mc", "isFallback": false, "fallbackMode": null, "isProxy": false }
   },
   "scalingFactor": 8,
   "medianApy": 4.21,
@@ -730,9 +734,11 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | ------------------------------- | ----------------------------------------------------------- | ------------------------------------------------ |
 | `RISK_FREE_RATE_FALLBACK`       | 3.75                                                        | Fallback T-bill rate (%)                         |
 | `FRED_TBILL_CSV_URL`            | `https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO` | FRED daily 3-month Treasury yield series         |
-| `ECB_ESTR_CSV_URL`              | `https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2X2A25.WT?lastNObservations=5&format=csvdata` | Official ECB €STR feed |
-| `FRED_ESTR_CSV_URL`             | `https://fred.stlouisfed.org/graph/fredgraph.csv?id=ECBESTRVOLWGTTRMDMNRT` | FRED EUR €STR mirror fallback |
-| `SNB_CURRENT_RATES_URL`         | `https://www.snb.ch/en/the-snb/mandates-goals/statistics/statistics-pub/current_interest_exchange_rates` | SNB current-rates page used for the CHF policy-rate proxy |
+| `ECB_ESTR_3M_CSV_URL`           | `https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2QQF32.CR?lastNObservations=5&format=csvdata` | Official ECB 3M compounded €STR feed |
+| `SIX_OAUTH_TOKEN_URL`           | `https://indexdata.six-group.com/pro/oauth/token` | Public SIX guest OAuth endpoint for delayed downloads |
+| `SIX_REPORT_DOWNLOAD_URL`       | `https://indexdata.six-group.com/pro/api/report-download` | SIX download broker for delayed public report files |
+| `SIX_SARON_3M_CSV_URL`          | `https://indexdata.six-group.com/download/saron/h_sar3mc_delayed.csv` | Delayed public CSV for `SAR3MC` |
+| `SIX_BROWSER_USER_AGENT`        | `Mozilla/5.0` | Browser-compatible UA required by SIX guest endpoints |
 | `PYS_SCALING_FACTOR`            | 8                                                           | PYS distribution tuning parameter after safety-curve steepening |
 | `DEFAULT_SAFETY_SCORE`          | 40                                                          | Safety score for unrated coins (most NAV tokens) |
 | `CIRCUIT_SOURCE.DL_YIELDS`      | `"defillama-yields"`                                        | Circuit breaker key for DL Yields API            |
@@ -813,7 +819,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `worker/src/cron/yield-helpers.ts`                   | Pure functions: APY, PYS, stability, variance, warning signals, `matchAllDlPools`                                                            |
 | `worker/src/cron/yield-sync/pool-filter.ts`          | Pre-filter for wrapper-relevant DeFiLlama pools before matching                                                                               |
 | `worker/src/lib/yield-source-links.ts`               | Curated yield-source link registry plus metadata fallback resolver for rankings/history payloads                                               |
-| `worker/src/cron/fetch-tbill-rate.ts`                | Daily benchmark-registry cron (USD T-bill, EUR €STR, CHF policy-rate proxy)                                                                 |
+| `worker/src/cron/fetch-tbill-rate.ts`                | Daily benchmark-registry cron (USD T-bill, EUR 3M compounded €STR, CHF 3M compounded SARON)                                                  |
 | `worker/src/api/cache-handlers.ts`                   | Cache-backed `GET /api/yield-rankings` handler with live Safety Score hydration (`handleYieldRankings`)                                      |
 | `worker/src/api/yield-history.ts`                    | `GET /api/yield-history` handler                                                                                                             |
 | `shared/types/index.ts`                              | `YieldConfig`, `YieldType`, `YieldRanking` (`.altSources: AltYieldSource[]`), `AltYieldSource`, `YieldRankingsResponse`, `YieldHistoryPoint` |

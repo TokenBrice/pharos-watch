@@ -27,14 +27,14 @@ const BENCHMARK_META_BY_KEY: Record<YieldBenchmarkKey, { label: string; currency
     isProxy: false,
   },
   EUR: {
-    label: "EUR €STR",
+    label: "EUR 3M compounded €STR",
     currency: "EUR",
     isProxy: false,
   },
   CHF: {
-    label: "CHF SNB policy rate (proxy)",
+    label: "CHF 3M compounded SARON",
     currency: "CHF",
-    isProxy: true,
+    isProxy: false,
   },
 };
 
