@@ -10,18 +10,6 @@ import {
   WORKER_VALIDATE_COMMANDS,
 } from "../test-merge-gate.mjs";
 
-const SKIPPED_WITHOUT_TARGETED_PATHS = new Set([
-  "npm run check:migrations",
-  "npm run check:cron-sync",
-  "npm run check:cron-connections",
-  "npm run check:doc-counts",
-  "npm run check:redemption-backstops",
-]);
-
-function filteredCommonPrebuild(skipped = SKIPPED_WITHOUT_TARGETED_PATHS) {
-  return COMMON_VALIDATE_PREBUILD_COMMANDS.filter((cmd) => !skipped.has(cmd));
-}
-
 describe("buildCommandPlan", () => {
   it("skips the merge gate when no deploy surfaces changed", () => {
     expect(buildCommandPlan(["docs/testing.md", "agents/plans/notes.md"])).toEqual([]);
@@ -29,7 +17,7 @@ describe("buildCommandPlan", () => {
 
   it("runs the Pages path without worker typecheck for frontend export changes", () => {
     expect(buildCommandPlan(["src/app/page.tsx"]).map((item) => item.cmd)).toEqual([
-      ...filteredCommonPrebuild(),
+      ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...PAGES_VALIDATE_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
     ]);
@@ -40,7 +28,7 @@ describe("buildCommandPlan", () => {
       "worker/src/api/status.ts",
       "worker/src/cron/sync-yield-data.ts",
     ]).map((item) => item.cmd)).toEqual([
-      ...filteredCommonPrebuild(),
+      ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
       ...WORKER_VALIDATE_COMMANDS,
     ]);
@@ -48,7 +36,7 @@ describe("buildCommandPlan", () => {
 
   it("runs the full path for shared runtime changes", () => {
     expect(buildCommandPlan(["shared/lib/classification.ts"]).map((item) => item.cmd)).toEqual([
-      ...filteredCommonPrebuild(),
+      ...COMMON_VALIDATE_PREBUILD_COMMANDS,
       ...PAGES_VALIDATE_COMMANDS,
       ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
       ...WORKER_VALIDATE_COMMANDS,
