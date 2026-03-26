@@ -102,7 +102,7 @@ function classifyFailure(reason: string, lastError: string | null): ReserveFailu
 
   const message = (lastError ?? "").toLowerCase();
   if (message.includes("layout-changed")) return "parser-drift";
-  if (message.includes("parse-failed")) return "parse-failure";
+  if (message.includes("parse-failed") || message.includes("json parse failed")) return "parse-failure";
   if (message.includes("d1 write timeout") || message.includes("sqlite") || message.includes("database")) return "storage-write";
   if (/\bhttp\s+[45]\d{2}\b/.test(message)) return "upstream-http";
   if (

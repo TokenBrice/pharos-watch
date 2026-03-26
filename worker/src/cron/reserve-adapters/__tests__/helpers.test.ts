@@ -1,6 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ReserveSlice } from "@shared/types/core";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
+
+vi.mock("../../../lib/fetch-retry", () => ({
+  fetchWithRetry: vi.fn(),
+}));
+
+import { fetchWithRetry } from "../../../lib/fetch-retry";
 import {
   accumulateBucketedExposure,
+  fetchJsonWithRetry,
   getAdapterTimeout,
   isReserveRisk,
   normalizeSlices,
@@ -11,8 +20,6 @@ import {
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "../helpers";
-import type { ReserveSlice } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
 
 describe("normalizeSlices", () => {
   it("rounds to one decimal by default and adjusts the largest slice to sum to 100", () => {
@@ -245,5 +252,58 @@ describe("parseTimestampLikeToUnixSeconds", () => {
     expect(parseTimestampLikeToUnixSeconds("")).toBeNull();
     expect(parseTimestampLikeToUnixSeconds("not-a-date")).toBeNull();
     expect(parseTimestampLikeToUnixSeconds(null)).toBeNull();
+  });
+});
+
+describe("fetchJsonWithRetry", () => {
+  const signal = AbortSignal.timeout(5000);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("requests JSON explicitly and parses successful responses", async () => {
+    vi.mocked(fetchWithRetry).mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(fetchJsonWithRetry("https://example.com/api", signal, 1234)).resolves.toEqual({ ok: true });
+
+    expect(fetchWithRetry).toHaveBeenCalledWith(
+      "https://example.com/api",
+      {
+        signal,
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "Mozilla/5.0",
+        },
+      },
+      2,
+      { timeoutMs: 1234 },
+    );
+  });
+
+  it("surfaces content type and body snippet when a JSON endpoint returns HTML", async () => {
+    vi.mocked(fetchWithRetry).mockResolvedValue(
+      new Response("<!DOCTYPE html><html><body>blocked</body></html>", {
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      }),
+    );
+
+    const error = await fetchJsonWithRetry("https://example.com/api", signal).then(
+      () => new Error("expected fetchJsonWithRetry to reject"),
+      (err: unknown) => err,
+    );
+
+    expect(error).toBeInstanceOf(Error);
+    if (!(error instanceof Error)) {
+      throw new Error("expected fetchJsonWithRetry to reject with an Error");
+    }
+    expect(error.message).toContain("JSON parse failed for https://example.com/api (text/html; charset=utf-8)");
+    expect(error.message).toContain("body starts with: <!DOCTYPE html><html><body>blocked</body></html>");
   });
 });

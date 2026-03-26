@@ -38,8 +38,14 @@ interface ReMetricsSeries {
   points?: ReMetricsSeriesPoint[];
 }
 
+interface ReMetricsTvlPoint {
+  date?: string;
+  offchain_capital?: number;
+}
+
 const ESCAPED_INITIAL_BREAKDOWNS_KEY = "\\\"initialChainBreakdowns\\\":";
 const ESCAPED_SERIES_KEY = "\\\"series\\\":";
+const ESCAPED_INITIAL_TVL_DATA_KEY = "\\\"initialTvlData\\\":";
 
 const SYMBOL_CONFIG: Record<string, {
   name: string;
@@ -127,6 +133,24 @@ function parseSeries(html: string): ReMetricsSeries[] {
   return parsed as ReMetricsSeries[];
 }
 
+function parseInitialTvlData(html: string): ReMetricsTvlPoint[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(
+      extractEscapedJsonValueAfterKey(html, ESCAPED_INITIAL_TVL_DATA_KEY, "re-metrics"),
+    ) as unknown;
+  } catch (error) {
+    throw htmlParseError(
+      "re-metrics",
+      `initialTvlData JSON is malformed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  if (!Array.isArray(parsed)) {
+    throw htmlParseError("re-metrics", "initialTvlData was not an array");
+  }
+  return parsed as ReMetricsTvlPoint[];
+}
+
 function normalizeTokenSymbol(symbol: string): string {
   return symbol.trim().toLowerCase();
 }
@@ -135,9 +159,42 @@ function lastItem<T>(items: T[] | undefined): T | undefined {
   return items && items.length > 0 ? items[items.length - 1] : undefined;
 }
 
+function extractOffchainCapitalContext(html: string): {
+  offchainCapitalUsd: number | null;
+  offchainTimestamp: number | null;
+} {
+  if (html.includes(ESCAPED_SERIES_KEY)) {
+    const series = parseSeries(html);
+    const offchainSeries = series.find((entry) => entry.seriesKey === "offchain_capital");
+    return {
+      offchainCapitalUsd: offchainSeries?.stats?.current
+        ?? lastItem(offchainSeries?.points)?.value
+        ?? null,
+      offchainTimestamp: parseTimestampLikeToUnixSeconds(lastItem(offchainSeries?.points)?.date),
+    };
+  }
+
+  if (html.includes(ESCAPED_INITIAL_TVL_DATA_KEY)) {
+    const tvlData = parseInitialTvlData(html);
+    const latestPoint = lastItem(tvlData);
+    return {
+      offchainCapitalUsd:
+        latestPoint?.offchain_capital != null && Number.isFinite(latestPoint.offchain_capital)
+          ? latestPoint.offchain_capital
+          : null,
+      offchainTimestamp: parseTimestampLikeToUnixSeconds(latestPoint?.date),
+    };
+  }
+
+  throw htmlLayoutChangedError(
+    "re-metrics",
+    `missing ${ESCAPED_SERIES_KEY} and ${ESCAPED_INITIAL_TVL_DATA_KEY}`,
+  );
+}
+
 export function adaptReMetrics(html: string): AdapterResult {
   const breakdowns = parseInitialChainBreakdowns(html);
-  const series = parseSeries(html);
+  const { offchainCapitalUsd, offchainTimestamp } = extractOffchainCapitalContext(html);
 
   const tokenValues = new Map<string, number>();
   const snapshotTimestamps: number[] = [];
@@ -158,12 +215,6 @@ export function adaptReMetrics(html: string): AdapterResult {
       tokenValues.set(key, (tokenValues.get(key) ?? 0) + valueUsd);
     }
   }
-
-  const offchainSeries = series.find((entry) => entry.seriesKey === "offchain_capital");
-  const offchainCapitalUsd = offchainSeries?.stats?.current
-    ?? lastItem(offchainSeries?.points)?.value
-    ?? null;
-  const offchainTimestamp = parseTimestampLikeToUnixSeconds(lastItem(offchainSeries?.points)?.date);
   if (offchainTimestamp != null) {
     snapshotTimestamps.push(offchainTimestamp);
   }

@@ -55,6 +55,19 @@ interface BucketedExposureOptions<Item, Bucket extends string> {
 
 const ADAPTER_USER_AGENT = "Mozilla/5.0";
 
+function summarizeResponseBody(raw: string, limit = 120): string {
+  return raw.replace(/\s+/g, " ").trim().slice(0, limit);
+}
+
+function buildJsonParseError(url: string, res: Response, raw: string, error: unknown): Error {
+  const contentType = res.headers.get("content-type") ?? "unknown";
+  const snippet = summarizeResponseBody(raw);
+  const detail = error instanceof Error ? error.message : String(error);
+  return new Error(
+    `JSON parse failed for ${url} (${contentType}): ${detail}${snippet ? `; body starts with: ${snippet}` : ""}`,
+  );
+}
+
 function getRequestCache(ctx?: AdapterContext): Map<string, Promise<unknown>> | null {
   return ctx?.requestCache ?? null;
 }
@@ -175,7 +188,18 @@ export async function fetchJsonWithRetry<T>(
   return getCachedRequest(
     `json-get:${url}:${timeoutMs}`,
     async () => {
-      const res = await fetchWithRetry(url, { signal, headers: { "User-Agent": ADAPTER_USER_AGENT } }, 2, { timeoutMs });
+      const res = await fetchWithRetry(
+        url,
+        {
+          signal,
+          headers: {
+            Accept: "application/json",
+            "User-Agent": ADAPTER_USER_AGENT,
+          },
+        },
+        2,
+        { timeoutMs },
+      );
       if (!res) {
         throw new Error(`Fetch failed for ${url}`);
       }
@@ -183,7 +207,12 @@ export async function fetchJsonWithRetry<T>(
         await res.body?.cancel();
         throw new Error(`HTTP ${res.status} for ${url}`);
       }
-      return res.json() as Promise<T>;
+      const raw = await res.text();
+      try {
+        return JSON.parse(raw) as T;
+      } catch (error) {
+        throw buildJsonParseError(url, res, raw, error);
+      }
     },
     ctx,
   );
