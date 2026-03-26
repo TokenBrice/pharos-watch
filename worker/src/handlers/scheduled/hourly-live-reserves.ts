@@ -15,12 +15,12 @@ import type { ScheduledRuntimeContext } from "./context";
 
 export async function runHourlyReserveSyncSlot(runtime: ScheduledRuntimeContext): Promise<void> {
   try {
-    await runtime.runLeasedCron("sync-live-reserves", (signal) =>
+    await runtime.runLeasedCron("sync-live-reserves", (signal, reportProgress) =>
       syncLiveReserves(runtime.db, signal, {
         etherscanApiKey: runtime.env.ETHERSCAN_API_KEY,
         alchemyApiKey: runtime.env.ALCHEMY_API_KEY,
         chainRpcs: runtime.chainRpcs,
-      }),
+      }, reportProgress),
     );
   } finally {
     await runtime.runLeasedCron("sync-redemption-backstops", (signal) =>

@@ -2,7 +2,13 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInput, reserveDegradedWarning } from "./helpers";
+import {
+  fetchJsonWithRetry,
+  getAdapterTimeout,
+  requireJsonInput,
+  reserveDegradedWarning,
+  unverifiedFreshnessMetadata,
+} from "./helpers";
 
 interface BtcfiMarketRow {
   token_handler_id: number;
@@ -44,11 +50,15 @@ export function adaptBtcfi(market: BtcfiMarketRow[], handlers: BtcfiHandlerRow[]
 
   if (total <= 0) return { slices: [] };
 
-  const slices: ReserveSlice[] = [{
-    name: "BTC / WBTC / BTCB / cbBTC",
-    pct: ((total - unexpectedValue) / total) * 100,
-    risk: "medium",
-  }];
+  const mappedPct = ((total - unexpectedValue) / total) * 100;
+  const slices: ReserveSlice[] = [];
+  if (mappedPct > 0) {
+    slices.push({
+      name: "BTC / WBTC / BTCB / cbBTC",
+      pct: mappedPct,
+      risk: "medium",
+    });
+  }
   if (unexpectedValue > 0) {
     slices.push({
       name: "Other BTC wrappers / unmapped handlers",
@@ -64,7 +74,13 @@ export function adaptBtcfi(market: BtcfiMarketRow[], handlers: BtcfiHandlerRow[]
 
   return {
     slices,
-    metadata: { handlerCount: handlers.length, freshnessMode: "unverified" },
+    metadata: {
+      handlerCount: handlers.length,
+      ...unverifiedFreshnessMetadata(
+        "protocol-market-and-handler-apis",
+        "btcfi market and handler payloads do not expose a trustworthy source timestamp",
+      ),
+    },
     ...(warnings.length > 0 ? { warnings } : {}),
   };
 }

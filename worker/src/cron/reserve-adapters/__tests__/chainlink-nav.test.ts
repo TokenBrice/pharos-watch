@@ -28,6 +28,8 @@ describe("adaptChainlinkNavResponse", () => {
     // NAV = 1.119, Supply = 500
     expect(result.metadata?.navPerToken).toBe("1.119");
     expect(result.metadata?.totalSupplyFormatted).toBe("500");
+    expect(result.metadata?.freshnessMode).toBe("verified");
+    expect(result.metadata?.sourceTimestamp).toBe(1773405239);
   });
 
   it("throws on zero NAV", () => {
@@ -37,6 +39,21 @@ describe("adaptChainlinkNavResponse", () => {
         params,
       ),
     ).toThrow();
+  });
+
+  it("marks getPrice mode as explicitly unverified when no oracle timestamp exists", () => {
+    const result = adaptChainlinkNavResponse(
+      { navPerToken: 1_119_000_000_000_000_000n, navDecimals: 18, totalSupply: 500_000_000n, tokenDecimals: 6, roundId: 0n, updatedAt: 0 },
+      params,
+    );
+
+    expect(result.metadata).toMatchObject({
+      oracleTimestampSource: "unavailable",
+      freshnessMode: "unverified",
+      details: {
+        freshnessSource: "onchain-oracle-getprice",
+      },
+    });
   });
 });
 

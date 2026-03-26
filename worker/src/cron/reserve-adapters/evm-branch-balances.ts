@@ -132,6 +132,7 @@ export async function fetchEvmBranchBalancesReserves(
     slices,
     metadata: {
       branchCount: pricedBranches.length,
+      freshnessMode: "not-applicable",
       ...(redemptionFeeBps != null ? { redemptionFeeBps } : {}),
     },
   };

@@ -1,5 +1,40 @@
-import { describe, expect, it } from "vitest";
-import { adaptUsddLatestCollateral } from "../usdd-data-platform";
+import type { StablecoinMeta } from "@shared/types/core";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../helpers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../helpers")>();
+  return {
+    ...actual,
+    fetchJsonWithRetry: vi.fn(),
+    getAdapterTimeout: vi.fn(() => 12_000),
+  };
+});
+
+import { fetchJsonWithRetry } from "../helpers";
+import {
+  adaptUsddLatestCollateral,
+  buildUsddHistoryUrl,
+  fetchUsddDataPlatformReserves,
+} from "../usdd-data-platform";
+
+const coin = {
+  id: "usdd-decentralized-usd",
+  name: "USDD",
+  symbol: "USDD",
+  flags: {
+    backing: "crypto-backed",
+    pegCurrency: "USD",
+    governance: "centralized",
+    yieldBearing: false,
+    rwa: false,
+    navToken: false,
+  },
+} as const satisfies StablecoinMeta;
+const signal = AbortSignal.timeout(5_000);
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("adaptUsddLatestCollateral", () => {
   it("maps the USDD collateral feed into detail-page reserve slices", () => {
@@ -43,7 +78,99 @@ describe("adaptUsddLatestCollateral", () => {
     });
   });
 
+  it("preserves unknown vault types as an explicit high-risk slice and warning", () => {
+    const result = adaptUsddLatestCollateral({
+      code: 0,
+      data: {
+        items: [
+          { vaultType: "SA001-A", lockedValue: 75 },
+          { vaultType: "RWA-A", lockedValue: 25 },
+        ],
+      },
+    });
+
+    expect(result.slices).toEqual([
+      { name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)", pct: 75, risk: "medium" },
+      { name: "Unknown / unmapped collateral vaults", pct: 25, risk: "high" },
+    ]);
+    expect(result.warnings).toEqual([{
+      code: "unknown-vault-type",
+      message: "USDD collateral feed includes unmapped vault types: RWA-A",
+      severity: "info",
+      effect: "info",
+    }]);
+    expect(result.metadata).toMatchObject({
+      vaultCount: 2,
+      trackedVaultCount: 5,
+      unknownVaultCount: 1,
+      unknownVaultTypes: ["RWA-A"],
+      unknownExposurePct: 25,
+      freshnessMode: "unverified",
+      details: {
+        freshnessSource: "collateral-history",
+        freshnessReason: "history timestamp unavailable",
+      },
+    });
+  });
+
   it("throws when the USDD feed reports a non-success code", () => {
     expect(() => adaptUsddLatestCollateral({ code: 500 })).toThrow("returned code");
+  });
+});
+
+describe("buildUsddHistoryUrl", () => {
+  it("derives the matching history endpoint from the active latest-collateral URL", () => {
+    expect(buildUsddHistoryUrl("https://app-api.usdd.io/data-platform/latest-collateral?chain=ethereum"))
+      .toBe("https://app-api.usdd.io/data-platform/collateral-history?interval=WEEKLY&chain=ethereum");
+  });
+});
+
+describe("fetchUsddDataPlatformReserves", () => {
+  it("fetches history from the same configured chain as the latest collateral source", async () => {
+    vi.mocked(fetchJsonWithRetry)
+      .mockResolvedValueOnce({
+        code: 0,
+        data: {
+          items: [{ vaultType: "USDT-A", lockedValue: 100 }],
+        },
+      })
+      .mockResolvedValueOnce({
+        code: 0,
+        data: {
+          items: [{ statisticTime: 1_774_281_600_000 }],
+        },
+      });
+
+    const config = {
+      adapter: "usdd-data-platform",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://app-api.usdd.io/data-platform/latest-collateral?chain=ethereum",
+        },
+      },
+    } as const;
+
+    const result = await fetchUsddDataPlatformReserves(coin, config, signal);
+
+    expect(result.slices).toEqual([
+      { name: "USDT (direct vaults)", pct: 100, risk: "high", coinId: "usdt-tether" },
+    ]);
+    expect(fetchJsonWithRetry).toHaveBeenNthCalledWith(
+      1,
+      "https://app-api.usdd.io/data-platform/latest-collateral?chain=ethereum",
+      signal,
+      12_000,
+      undefined,
+    );
+    expect(fetchJsonWithRetry).toHaveBeenNthCalledWith(
+      2,
+      "https://app-api.usdd.io/data-platform/collateral-history?interval=WEEKLY&chain=ethereum",
+      signal,
+      12_000,
+      undefined,
+    );
   });
 });

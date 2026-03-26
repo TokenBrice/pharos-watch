@@ -4,12 +4,14 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
   getAdapterTimeout,
+  parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
   slicesFromValues,
   unverifiedFreshnessMetadata,
 } from "./helpers";
 
 interface OpenEdenReserveCompositionResponse {
+  date?: string;
   usdoAmount: number;
   totalTbillAmountInUsd: number;
   usdcAmount: number;
@@ -22,6 +24,7 @@ interface OpenEdenReserveCompositionResponse {
 }
 
 function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResponse): AdapterResult {
+  const sourceTimestamp = parseTimestampLikeToUnixSeconds(payload.date ?? null);
   const componentTotal =
     payload.totalTbillAmountInUsd
     + payload.usdcAmount
@@ -90,10 +93,12 @@ function adaptOpenEdenReserveComposition(payload: OpenEdenReserveCompositionResp
   return {
     slices,
     metadata: {
-      ...unverifiedFreshnessMetadata(
-        "issuer-api",
-        "OpenEden reserve composition payload does not include a trustworthy source timestamp",
-      ),
+      ...(sourceTimestamp != null
+        ? { sourceTimestamp, freshnessMode: "verified" as const }
+        : unverifiedFreshnessMetadata(
+          "issuer-api",
+          "OpenEden reserve composition payload does not include a trustworthy source timestamp",
+        )),
       reserveAssetsInUsd: payload.reserveAssetsInUsd,
       reserveRatio: normalizedRatio,
       supplyUsd: payload.usdoAmount,

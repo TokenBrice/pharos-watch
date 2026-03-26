@@ -8,6 +8,8 @@ import {
   requireJsonInputFromConfig,
   reserveDegradedWarning,
   slicesFromValues,
+  unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
 } from "./helpers";
 
 interface FalconBreakdownAsset {
@@ -180,7 +182,12 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
         ? { immediateRedeemableRatio: stableBucketUsd / supplyUsd }
         : {}),
       assetCount: assets.length,
-      sourceTimestamp: payload.snapshot_date,
+      ...(payload.snapshot_date > 0
+        ? verifiedFreshnessMetadata(payload.snapshot_date)
+        : unverifiedFreshnessMetadata(
+            "issuer-api",
+            "Falcon transparency payload did not expose a trustworthy snapshot timestamp",
+          )),
       unknownExposurePct: totalAssetUsd > 0 ? (unknownExposureUsd / totalAssetUsd) * 100 : 0,
     },
   };

@@ -53,6 +53,95 @@ describe("OverviewSection", () => {
     expect(html).toContain("last worker-resolved reserve snapshot");
   });
 
+  it("renders independent live reserve provenance messaging", () => {
+    const coin = TRACKED_META_BY_ID.get("iusd-infinifi");
+    expect(coin).toBeDefined();
+
+    const html = renderToStaticMarkup(
+      <OverviewSection
+        stablecoinId="iusd-infinifi"
+        coin={coin!}
+        summary={null}
+        reserves={{
+          reserves: [{ name: "Live farm", pct: 100, risk: "low" }],
+          estimated: false,
+          mode: "live",
+          liveAt: 1_700_000_000,
+          source: "infinifi",
+          provenance: {
+            evidenceClass: "independent",
+            sourceModel: "dynamic-mix",
+            freshnessMode: "unverified",
+            scoringEligible: false,
+          },
+        }}
+        reserveFetchError={null}
+        isNavToken
+      />,
+    );
+
+    expect(html).toContain("Independent live reserve disclosure");
+    expect(html).toContain("freshness is not verified strongly enough for collateral scoring");
+  });
+
+  it("renders static-validated reserve provenance messaging", () => {
+    const coin = TRACKED_META_BY_ID.get("frax-frax");
+    expect(coin).toBeDefined();
+
+    const html = renderToStaticMarkup(
+      <OverviewSection
+        stablecoinId="frax-frax"
+        coin={coin!}
+        summary={null}
+        reserves={{
+          reserves: [{ name: "Reviewed baseline", pct: 100, risk: "very-low" }],
+          estimated: false,
+          mode: "live",
+          liveAt: 1_700_000_000,
+          source: "frax",
+          provenance: {
+            evidenceClass: "static-validated",
+            sourceModel: "validated-static",
+            scoringEligible: false,
+          },
+        }}
+        reserveFetchError={null}
+        isNavToken
+      />,
+    );
+
+    expect(html).toContain("Live validation over reviewed reserve baseline");
+  });
+
+  it("renders weak-probe reserve provenance messaging", () => {
+    const coin = TRACKED_META_BY_ID.get("pyusd-paypal");
+    expect(coin).toBeDefined();
+
+    const html = renderToStaticMarkup(
+      <OverviewSection
+        stablecoinId="pyusd-paypal"
+        coin={coin!}
+        summary={null}
+        reserves={{
+          reserves: [{ name: "Issuer reserves", pct: 100, risk: "very-low" }],
+          estimated: false,
+          mode: "live",
+          liveAt: 1_700_000_000,
+          source: "single-asset",
+          provenance: {
+            evidenceClass: "weak-live-probe",
+            sourceModel: "single-bucket",
+            scoringEligible: false,
+          },
+        }}
+        reserveFetchError={null}
+        isNavToken
+      />,
+    );
+
+    expect(html).toContain("Liveness probe over reviewed reserve baseline");
+  });
+
   it("renders the redemption backstop card when a score is available", () => {
     const coin = TRACKED_META_BY_ID.get("cusd-cap");
     expect(coin).toBeDefined();

@@ -50,4 +50,17 @@ describe("adaptReMetrics", () => {
   it("throws when the page no longer exposes the expected metrics payload", () => {
     expect(() => adaptReMetrics("<html></html>")).toThrow("layout-changed");
   });
+
+  it("keeps parser failures distinguishable from layout drift", () => {
+    const malformedHtml = `
+<html>
+  <body>
+    <script>
+      self.__next_f.push([1,"...\\\"series\\\":[bad-json],\\\"initialChainBreakdowns\\\":{}..."]);
+    </script>
+  </body>
+</html>
+`;
+    expect(() => adaptReMetrics(malformedHtml)).toThrow("parse-failed");
+  });
 });

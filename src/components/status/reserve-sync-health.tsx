@@ -56,6 +56,32 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
             Oldest fresh snapshot age: {health.oldestFreshAgeSec != null ? formatElapsedSeconds(health.oldestFreshAgeSec) : "—"}
           </div>
         </div>
+
+        <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
+          <div className="text-xs font-medium text-foreground">Fresh Evidence Mix</div>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+            <div>
+              <div className="text-muted-foreground">Independent eligible</div>
+              <div className="font-mono text-base text-green-600 dark:text-green-400">{health.independentFreshEligible}</div>
+            </div>
+            <div>
+              <div className="text-muted-foreground">Independent unverified</div>
+              <div className="font-mono text-base text-amber-600 dark:text-amber-400">{health.independentFreshUnverified}</div>
+            </div>
+            <div>
+              <div className="text-muted-foreground">Static validated</div>
+              <div className="font-mono text-base">{health.staticValidatedFresh}</div>
+            </div>
+            <div>
+              <div className="text-muted-foreground">Weak probe</div>
+              <div className="font-mono text-base">{health.weakProbeFresh}</div>
+            </div>
+            <div>
+              <div className="text-muted-foreground">Write-timeout uncertain</div>
+              <div className="font-mono text-base text-red-600 dark:text-red-400">{health.writeTimeoutUncertain}</div>
+            </div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

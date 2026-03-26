@@ -1,4 +1,9 @@
 import type { ReserveSlice } from "./core";
+import type {
+  LiveReserveEvidenceClass,
+  LiveReserveFreshnessMode,
+  LiveReserveSourceModel,
+} from "../lib/live-reserve-adapters";
 
 export type {
   LiveReserveAdapterKey,
@@ -33,6 +38,13 @@ export interface ReserveSyncStateView {
   lastError?: string;
 }
 
+export interface ReserveProvenanceView {
+  evidenceClass: LiveReserveEvidenceClass;
+  sourceModel: LiveReserveSourceModel;
+  freshnessMode?: LiveReserveFreshnessMode;
+  scoringEligible: boolean;
+}
+
 export interface StablecoinReservesResponse {
   stablecoinId: string;
   mode: ReservePresentationMode;
@@ -41,5 +53,6 @@ export interface StablecoinReservesResponse {
   liveAt?: number;
   source?: string;
   displayUrl?: string;
+  provenance?: ReserveProvenanceView;
   sync?: ReserveSyncStateView;
 }

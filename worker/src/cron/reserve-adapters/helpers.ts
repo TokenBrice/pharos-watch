@@ -1,5 +1,5 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
-import type { LiveReserveInput, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReserveInput, LiveReservesConfig } from "@shared/types/live-reserves";
 import { DEFILLAMA_COINS } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import {
@@ -9,6 +9,14 @@ import {
   fetchEtherscanProxyHex,
 } from "../../lib/evm-rpc";
 import type { AdapterContext } from "./types";
+export {
+  parseTimestampLikeToUnixSeconds,
+  notApplicableFreshnessMetadata,
+  unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
+} from "./freshness";
+export { htmlLayoutChangedError, htmlParseError } from "./html";
+export { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
 
 const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
 const BALANCE_OF_SELECTOR = "0x70a08231";
@@ -72,35 +80,6 @@ function getCachedRequest<T>(
   });
   cache.set(key, promise);
   return promise;
-}
-
-export function reserveInfoWarning(code: string, message: string): LiveReserveWarning {
-  return { code, message, severity: "info", effect: "info" };
-}
-
-export function reserveDegradedWarning(code: string, message: string): LiveReserveWarning {
-  return { code, message, severity: "warning", effect: "degraded" };
-}
-
-export function unverifiedFreshnessMetadata(
-  source: string,
-  reason: string,
-): { freshnessMode: "unverified"; details: { freshnessSource: string; freshnessReason: string } } {
-  return {
-    freshnessMode: "unverified",
-    details: {
-      freshnessSource: source,
-      freshnessReason: reason,
-    },
-  };
-}
-
-export function htmlLayoutChangedError(adapterName: string, detail: string): Error {
-  return new Error(`${adapterName}: layout-changed: ${detail}`);
-}
-
-export function htmlParseError(adapterName: string, detail: string): Error {
-  return new Error(`${adapterName}: parse-failed: ${detail}`);
 }
 
 export function accumulateBucketedExposure<Item, Bucket extends string>({
@@ -558,44 +537,6 @@ export function parsePositiveNumericLike(value: unknown): number | null {
   }
 
   return null;
-}
-
-function normalizeUnixTimestampSeconds(value: number): number | null {
-  if (!Number.isFinite(value) || value <= 0) return null;
-  return Math.floor(value >= 1_000_000_000_000 ? value / 1000 : value);
-}
-
-export function parseTimestampLikeToUnixSeconds(value: unknown): number | null {
-  if (typeof value === "number") {
-    return normalizeUnixTimestampSeconds(value);
-  }
-
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  if (/^\d+$/.test(trimmed)) {
-    return normalizeUnixTimestampSeconds(Number(trimmed));
-  }
-
-  const shortDateMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{2})$/);
-  if (shortDateMatch) {
-    const [, day, month, year] = shortDateMatch;
-    const parsed = Date.UTC(2000 + Number(year), Number(month) - 1, Number(day));
-    return normalizeUnixTimestampSeconds(parsed);
-  }
-
-  const longDateOnlyMatch = trimmed.match(/^([A-Za-z]{3,9})\s+(\d{1,2}),\s*(\d{4})$/);
-  if (longDateOnlyMatch) {
-    const parsed = Date.parse(`${trimmed} 00:00:00 UTC`);
-    return Number.isFinite(parsed) ? normalizeUnixTimestampSeconds(parsed) : null;
-  }
-
-  const parsed = Date.parse(trimmed);
-  return Number.isFinite(parsed) ? normalizeUnixTimestampSeconds(parsed) : null;
 }
 
 export function slicesFromPercentages(

@@ -9,6 +9,8 @@ import {
   htmlParseError,
   parseTimestampLikeToUnixSeconds,
   requireHtmlInput,
+  unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
 } from "./helpers";
 
 type SgForgeCoinType = "eur" | "usd";
@@ -91,7 +93,12 @@ export function adaptSgForgeCoinvertible(html: string, coinType: SgForgeCoinType
       bankName,
       bankPct,
       ...(lastUpdate ? { lastUpdate } : {}),
-      ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
+      ...(sourceTimestamp != null
+        ? verifiedFreshnessMetadata(sourceTimestamp)
+        : unverifiedFreshnessMetadata(
+            "html-disclosure",
+            "SG Forge CoinVertible page did not expose a parseable 'Last update' timestamp",
+          )),
     },
   };
 }

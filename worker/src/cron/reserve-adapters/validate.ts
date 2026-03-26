@@ -38,6 +38,13 @@ function getFiniteMetadataNumber(metadata: Record<string, unknown> | undefined, 
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function getMetadataDetails(metadata: Record<string, unknown> | undefined): Record<string, unknown> | null {
+  const details = metadata?.details;
+  return details && typeof details === "object" && !Array.isArray(details)
+    ? details as Record<string, unknown>
+    : null;
+}
+
 export function validateAdapterOutput(
   input: ValidationInput,
   options?: ValidationOptions,
@@ -49,7 +56,7 @@ export function validateAdapterOutput(
   const warnings: LiveReserveWarning[] = [];
 
   for (const slice of input.slices) {
-    if (!Number.isFinite(slice.pct) || slice.pct < 0) {
+    if (!Number.isFinite(slice.pct) || slice.pct <= 0) {
       return { valid: false, warnings: [fatalWarning("invalid-pct", `Slice "${slice.name}" has invalid pct: ${slice.pct}`)] };
     }
     if (!isReserveRisk(slice.risk)) {
@@ -106,6 +113,49 @@ export function validateAdapterOutput(
   }
 
   const freshnessMode = input.metadata?.freshnessMode;
+  if (options?.adapter?.evidenceClass === "independent") {
+    if (freshnessMode === "verified" && sourceTimestamp == null) {
+      return {
+        valid: false,
+        warnings: [fatalWarning(
+          "verified-freshness-missing-source-timestamp",
+          `Independent live reserve output marked freshness as verified without sourceTimestamp${adapterLabel}`,
+        )],
+      };
+    }
+
+    if (sourceTimestamp != null && freshnessMode == null) {
+      warnings.push(degradedWarning(
+        "freshness-mode-missing",
+        `Independent live reserve output is missing freshnessMode despite providing sourceTimestamp${adapterLabel}`,
+      ));
+    }
+
+    if (sourceTimestamp == null && freshnessMode == null) {
+      warnings.push(degradedWarning(
+        "freshness-metadata-missing",
+        `Independent live reserve output omitted explicit freshness metadata${adapterLabel}`,
+      ));
+    }
+
+    if (freshnessMode === "unverified") {
+      const details = getMetadataDetails(input.metadata);
+      const freshnessSource = details?.freshnessSource;
+      const freshnessReason = details?.freshnessReason;
+      if (
+        typeof freshnessSource !== "string"
+        || freshnessSource.length === 0
+        || typeof freshnessReason !== "string"
+        || freshnessReason.length === 0
+      ) {
+        warnings.push(infoWarning(
+          "freshness-reason-missing",
+          `Independent live reserve output marked freshness as unverified without operator-facing reason metadata${adapterLabel}`,
+        ));
+      }
+    }
+  }
+
   if (maxSourceAgeSec != null && sourceTimestamp == null && freshnessMode === "unverified") {
     warnings.push(infoWarning(
       "freshness-unverified",

@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const safetyScore = createMethodologyVersion({
-  currentVersion: "6.7",
+  currentVersion: "6.8",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "6.8",
+      title: "On-chain reserve freshness alignment",
+      date: "2026-03-25",
+      effectiveAt: 1774396800,
+      summary:
+        "Direct latest-state reserve adapters now explicitly mark on-chain freshness as not-applicable, allowing clean independent branch-balance snapshots to participate in collateral-quality passthrough again.",
+      impact: [
+        "evm-branch-balances snapshots now carry freshnessMode=not-applicable instead of remaining timestamp-less and implicitly ineligible",
+        "Clean branch-balance reserve feeds can override curated collateral quality again when their latest reserve sync status is ok",
+        "This is an implementation-alignment change to the existing v6.6 freshness policy, not a new scoring rule family",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "6.7",
       title: "CeFi-dependent blacklistability fallback",

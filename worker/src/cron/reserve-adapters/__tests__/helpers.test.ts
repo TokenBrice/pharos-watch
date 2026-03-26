@@ -4,10 +4,12 @@ import {
   getAdapterTimeout,
   isReserveRisk,
   normalizeSlices,
+  notApplicableFreshnessMetadata,
   parsePositiveNumericLike,
   parseTimestampLikeToUnixSeconds,
   slicesFromValues,
   unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
 } from "../helpers";
 import type { ReserveSlice } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
@@ -196,6 +198,23 @@ describe("unverifiedFreshnessMetadata", () => {
         freshnessSource: "issuer-api",
         freshnessReason: "timestamp missing",
       },
+    });
+  });
+});
+
+describe("verifiedFreshnessMetadata", () => {
+  it("standardizes verified freshness semantics", () => {
+    expect(verifiedFreshnessMetadata(1_777_000_000)).toEqual({
+      sourceTimestamp: 1_777_000_000,
+      freshnessMode: "verified",
+    });
+  });
+});
+
+describe("notApplicableFreshnessMetadata", () => {
+  it("standardizes latest-state freshness semantics", () => {
+    expect(notApplicableFreshnessMetadata()).toEqual({
+      freshnessMode: "not-applicable",
     });
   });
 });

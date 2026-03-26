@@ -68,6 +68,16 @@ describe("mento adapter", () => {
     expect(() => parseMentoReserveComposition(malformed)).toThrow("parse-failed");
   });
 
+  it("annotates freshness as explicitly unverified with reason metadata", () => {
+    const result = adaptMentoReserveComposition(SAMPLE_HTML);
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "unverified",
+      details: {
+        freshnessSource: "nextjs-embedded-payload",
+      },
+    });
+  });
+
   it("emits an unknown-asset warning for symbols not in TOKEN_CONFIG", () => {
     const unknownTokenHtml = `<html><body><script>self.__next_f.push([1,"...\\"reserveComposition\\":[{\\"symbol\\":\\"USDC\\",\\"percent\\":50},{\\"symbol\\":\\"ETH\\",\\"percent\\":30},{\\"symbol\\":\\"NEW_TOKEN\\",\\"percent\\":10},{\\"symbol\\":\\"CELO\\",\\"percent\\":10}],\\"reserveHoldings\\":{}..."]);
 </script></body></html>`;

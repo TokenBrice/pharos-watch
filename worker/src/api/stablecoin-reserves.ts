@@ -32,6 +32,7 @@ export const handleStablecoinReserves = withErrorHandler("stablecoin-reserves", 
     ...(resolved.liveAt != null ? { liveAt: resolved.liveAt } : {}),
     ...(resolved.source ? { source: resolved.source } : {}),
     ...(resolved.displayUrl ? { displayUrl: resolved.displayUrl } : {}),
+    ...(resolved.provenance ? { provenance: resolved.provenance } : {}),
     ...(resolved.sync ? { sync: resolved.sync } : {}),
   };
 

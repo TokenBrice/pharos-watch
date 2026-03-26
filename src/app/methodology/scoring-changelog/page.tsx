@@ -124,6 +124,34 @@ const route = createMethodologyChangelogRoute({
   })),
   renderContent: () => (
     <>
+      {/* ──────────── v6.8 ──────────── */}
+      <VersionCard
+        version="v6.8"
+        title="On-chain reserve freshness alignment"
+        date="Mar 25, 2026"
+        accent="border-l-amber-500"
+      >
+        <p>
+          Safety Score structure is unchanged, but direct latest-state reserve adapters now stamp
+          explicit on-chain freshness so eligible feeds are no longer excluded by missing timestamp metadata.
+        </p>
+        <ul className="list-disc list-inside space-y-1">
+          <li>
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">evm-branch-balances</code>{" "}
+            snapshots now persist <code className="text-xs bg-muted px-1 py-0.5 rounded">freshnessMode=not-applicable</code>.
+          </li>
+          <li>
+            Clean independent branch-balance snapshots can once again override curated collateral quality
+            when their latest <code className="text-xs bg-muted px-1 py-0.5 rounded">reserve_sync_state.last_status</code>{" "}
+            is <code className="text-xs bg-muted px-1 py-0.5 rounded">ok</code>.
+          </li>
+          <li>
+            This aligns implementation with the existing v6.6 freshness gate rather than introducing a new
+            collateral-scoring rule family.
+          </li>
+        </ul>
+      </VersionCard>
+
       {/* ──────────── v6.6 ──────────── */}
       <VersionCard
         version="v6.6"

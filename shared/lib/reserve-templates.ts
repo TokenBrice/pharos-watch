@@ -1,6 +1,7 @@
 import type {
   DependencyType,
   DependencyWeight,
+  ReserveProvenanceView,
   ReservePresentationMode,
   ReserveSlice,
   ReserveSyncStateView,
@@ -17,6 +18,8 @@ export interface ReserveResult {
   source?: string;
   /** Human-readable URL to link to. Present when reserves came from a live sync. */
   displayUrl?: string;
+  /** Evidence-quality metadata for live reserve snapshots. */
+  provenance?: ReserveProvenanceView;
   /** Sync-state metadata for live-enabled reserve feeds. */
   sync?: ReserveSyncStateView;
 }

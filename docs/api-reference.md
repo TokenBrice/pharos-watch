@@ -411,9 +411,19 @@ Returns the resolved reserve presentation for a stablecoin with `liveReservesCon
 | `liveAt`       | `number?`        | Unix seconds of the last successful live snapshot. Present only when live data exists                                            |
 | `source`       | `string?`        | Adapter key (for example `"infinifi"`, `"m0"`, `"openeden-usdo"`, or `"accountable"`). Present only when live data exists        |
 | `displayUrl`   | `string?`        | Human-readable source link shown in the UI. Present only when configured                                                         |
+| `provenance`   | `object?`        | Evidence-quality envelope for authoritative live snapshots (`evidenceClass`, `sourceModel`, optional `freshnessMode`, `scoringEligible`) |
 | `sync`         | `object?`        | Live sync state (`status`, `bootstrap`, `stale`, `lastAttemptedAt`, `lastSuccessAt`, `warnings`, `lastError`). Present only when live-enabled |
 
 `sync.warnings` can include both adapter-emitted warnings from the latest attempt and storage-integrity warnings when a stored live snapshot is rejected and the endpoint fails closed to a fallback presentation.
+
+When present, `provenance` has:
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `evidenceClass` | `"independent" \| "static-validated" \| "weak-live-probe"` | Whether the snapshot is independently measured live composition, live validation over reviewed slices, or a weaker proof/liveness path |
+| `sourceModel` | `"dynamic-mix" \| "validated-static" \| "single-bucket"` | Structural shape of the reserve feed |
+| `freshnessMode` | `"verified" \| "unverified" \| "not-applicable" \| undefined` | Explicit freshness policy when the adapter emits one |
+| `scoringEligible` | `boolean` | Whether this exact snapshot is currently eligible for collateral-quality passthrough |
 
 **Response (404):** `{ "error": "Not found" }`
 

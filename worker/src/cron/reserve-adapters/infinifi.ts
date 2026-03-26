@@ -1,7 +1,14 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, isHttpJsonInput, normalizeSlices, reserveDegradedWarning } from "./helpers";
+import {
+  fetchJsonWithRetry,
+  getAdapterTimeout,
+  isHttpJsonInput,
+  normalizeSlices,
+  reserveDegradedWarning,
+  unverifiedFreshnessMetadata,
+} from "./helpers";
 import { wrapperAssetMeta } from "./wrapper-assets";
 
 interface InfiniFiFarm {
@@ -147,7 +154,10 @@ export async function fetchInfiniFiReserves(
       activeFarmCount: adapted.slices.length,
       unknownFarmCount: adapted.unknownFarms.length,
       unknownExposurePct: adapted.unknownExposurePct,
-      freshnessMode: "unverified",
+      ...unverifiedFreshnessMetadata(
+        "protocol-stats-api",
+        "InfiniFi protocol stats payload does not expose a trustworthy source timestamp",
+      ),
       totalReserveUsd,
       immediateRedeemableUsd: adapted.immediateRedeemableUsd,
       illiquidReserveUsd,

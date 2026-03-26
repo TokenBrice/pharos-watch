@@ -18,7 +18,43 @@ describe("adaptBtcfi", () => {
 
     expect(slices).toEqual({
       slices: [{ name: "BTC / WBTC / BTCB / cbBTC", pct: 100, risk: "medium" }],
-      metadata: { handlerCount: 3, freshnessMode: "unverified" },
+      metadata: {
+        handlerCount: 3,
+        freshnessMode: "unverified",
+        details: {
+          freshnessSource: "protocol-market-and-handler-apis",
+          freshnessReason: "btcfi market and handler payloads do not expose a trustworthy source timestamp",
+        },
+      },
+    });
+  });
+
+  it("drops zero-percent mapped slices when all collateral is unknown wrappers", () => {
+    const result = adaptBtcfi(
+      [
+        { token_handler_id: 0, deposit_value: "4000" },
+      ],
+      [
+        { id: 0, symbol: "FBTC", isStable: false },
+      ],
+    );
+
+    expect(result).toEqual({
+      slices: [{ name: "Other BTC wrappers / unmapped handlers", pct: 100, risk: "high" }],
+      metadata: {
+        handlerCount: 1,
+        freshnessMode: "unverified",
+        details: {
+          freshnessSource: "protocol-market-and-handler-apis",
+          freshnessReason: "btcfi market and handler payloads do not expose a trustworthy source timestamp",
+        },
+      },
+      warnings: [{
+        code: "unknown-btc-wrapper",
+        message: "btcfi handler bucketed into other BTC wrappers: FBTC",
+        severity: "warning",
+        effect: "degraded",
+      }],
     });
   });
 });

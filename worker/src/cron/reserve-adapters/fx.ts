@@ -2,7 +2,14 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchDefiLlamaPrices, fetchJsonWithRetry, getAdapterTimeout, requireJsonInput, slicesFromValues } from "./helpers";
+import {
+  fetchDefiLlamaPrices,
+  fetchJsonWithRetry,
+  getAdapterTimeout,
+  requireJsonInput,
+  slicesFromValues,
+  unverifiedFreshnessMetadata,
+} from "./helpers";
 
 interface FxPoolInfo {
   collateralBalance?: string;
@@ -81,8 +88,9 @@ export async function fetchFxReserves(
   });
   return {
     slices: slicesFromValues(knownValues),
-    metadata: {
-      freshnessMode: "unverified",
-    },
+    metadata: unverifiedFreshnessMetadata(
+      "protocol-pool-api",
+      "FX protocol pool payload does not expose a trustworthy source timestamp",
+    ),
   };
 }

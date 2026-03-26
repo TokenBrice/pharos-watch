@@ -363,6 +363,11 @@ export interface StatusResponse {
     degradedCoins: number;
     errorCoins: number;
     corruptCoins: number;
+    independentFreshEligible: number;
+    independentFreshUnverified: number;
+    staticValidatedFresh: number;
+    weakProbeFresh: number;
+    writeTimeoutUncertain: number;
     lastSuccessAt: number | null;
     oldestFreshAgeSec: number | null;
   };

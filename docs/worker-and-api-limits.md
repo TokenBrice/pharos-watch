@@ -62,6 +62,7 @@ The same rule applies to Worker-side integration clients. Telegram delivery, X p
 | DEX discovery overall deadline         | `12 minutes`        | `worker/src/cron/dex-discovery/orchestrator.ts`                   | Shared deadline for the discovery pass before persistence/cleanup tail work |
 | DEX discovery per-coin budget          | `25 seconds`        | `worker/src/cron/dex-discovery/orchestrator.ts`                   | Prevents one slow coin from consuming the whole staging lane |
 | Live reserve sync overall deadline     | `12 minutes`        | `worker/src/lib/cron-lease.ts`                                    | Explicit wrapper budget for the serialized reserve loop before the rest of the hourly slot |
+| Live reserve history retention         | `90 days`           | `worker/src/lib/live-reserves-store.ts`                           | `reserve_composition_history` and `reserve_sync_attempt_history` are pruned during reserve-sync cleanup |
 | Blacklist sync runtime budget          | `7 minutes`         | `worker/src/cron/sync-blacklist.ts`                               | Guardrail before the trigger wrapper times out                              |
 | Blacklist sync subrequest budget       | `900`               | `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/evm-logs.ts` | Covers explorer/RPC calls for a single run                                  |
 | Mint/burn global request budget        | `200`               | `worker/src/cron/sync-mint-burn.ts`                               | Shared per-run request ceiling                                              |
@@ -106,6 +107,7 @@ The same rule applies to Worker-side integration clients. Telegram delivery, X p
 | Jupiter price fallback              | `5_000 ms`                   | `worker/src/cron/enrich-prices-passes.ts`         |
 | DexScreener price fallback requests | up to `5_000 ms` per request | `worker/src/cron/enrich-prices.ts`                |
 | Live reserve adapter attempt        | `20_000 ms`                  | `worker/src/cron/sync-live-reserves.ts`           |
+| Live reserve D1 finalize timeout    | `30_000 ms`                  | `worker/src/cron/sync-live-reserves.ts`           |
 | Blacklist explorer / RPC reads      | `15_000 ms`                  | `worker/src/lib/fetch-retry.ts` (default timeout) |
 | Daily digest LLM call               | `120_000 ms`                 | `worker/src/cron/daily-digest.ts`                 |
 

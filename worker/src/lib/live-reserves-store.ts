@@ -12,6 +12,7 @@ import type {
   StablecoinMeta,
 } from "@shared/types/core";
 import type {
+  ReserveProvenanceView,
   LiveReserveFreshnessMode,
   LiveReserveSnapshotMetadata,
   LiveReserveWarning,
@@ -22,6 +23,7 @@ import { chunkArray } from "./collections";
 import { decodeJsonString } from "./cache-json";
 
 export const LIVE_RESERVE_FRESHNESS_SEC = 2 * DAY_SECONDS;
+const LIVE_RESERVE_HISTORY_RETENTION_SEC = 90 * DAY_SECONDS;
 const SCORING_LIVE_RESERVE_EVIDENCE_CLASSES: LiveReserveEvidenceClass[] = ["independent"];
 const VALID_RISKS = new Set(["very-low", "low", "medium", "high", "very-high"]);
 const VALID_SOURCE_MODELS = new Set<LiveReserveSourceModel>(["dynamic-mix", "validated-static", "single-bucket"]);
@@ -29,6 +31,7 @@ const VALID_EVIDENCE_CLASSES = new Set<LiveReserveEvidenceClass>(["independent",
 const VALID_WARNING_EFFECTS = new Set(["info", "degraded", "fatal"]);
 const VALID_FRESHNESS_MODES = new Set<LiveReserveFreshnessMode>(["verified", "unverified", "not-applicable"]);
 const STORED_SLICE_SUM_TOLERANCE = 2;
+const SQLITE_NOW_MS_EXPRESSION = "CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)";
 
 export type ReserveSyncStatus = "ok" | "degraded" | "error" | "skipped";
 
@@ -37,6 +40,7 @@ interface ReserveCompositionRow {
   slices: string;
   fetched_at: number;
   source: string;
+  attempt_id?: string | null;
   metadata?: string | null;
   warning_count?: number | null;
   warnings?: string | null;
@@ -55,6 +59,9 @@ interface ReserveSyncStateRow {
   warnings: string | null;
   last_error: string | null;
   metadata: string;
+  last_attempt_id?: string | null;
+  pending_attempt_id?: string | null;
+  last_success_attempt_id?: string | null;
 }
 
 interface SnapshotIntegrityIssue {
@@ -72,6 +79,7 @@ export interface ReserveCompositionRecord {
   slices: ReserveSlice[];
   fetchedAt: number;
   source: string;
+  attemptId?: string | null;
   metadata: LiveReserveSnapshotMetadata;
   warningCount: number;
   warnings: LiveReserveWarning[];
@@ -90,6 +98,9 @@ export interface ReserveSyncStateRecord {
   warnings: LiveReserveWarning[];
   lastError: string | null;
   metadata: LiveReserveSnapshotMetadata;
+  lastAttemptId?: string | null;
+  pendingAttemptId?: string | null;
+  lastSuccessAttemptId?: string | null;
 }
 
 export interface ReserveSyncAttemptHistoryRecord {
@@ -102,6 +113,21 @@ export interface ReserveSyncAttemptHistoryRecord {
   warnings: LiveReserveWarning[];
   lastError: string | null;
   metadata: LiveReserveSnapshotMetadata;
+  attemptId?: string | null;
+}
+
+export interface ReserveSyncAttemptStartRecord {
+  stablecoinId: string;
+  adapterKey: string;
+  breakerKey: string;
+  attemptedAt: number;
+  attemptId: string;
+}
+
+export interface LiveReserveHistoryPruneResult {
+  cutoff: number;
+  compositionHistoryDeleted: number;
+  attemptHistoryDeleted: number;
 }
 
 export interface ReserveCompositionOverview {
@@ -112,6 +138,11 @@ export interface ReserveCompositionOverview {
   degradedCoins: number;
   errorCoins: number;
   corruptCoins: number;
+  independentFreshEligible: number;
+  independentFreshUnverified: number;
+  staticValidatedFresh: number;
+  weakProbeFresh: number;
+  writeTimeoutUncertain: number;
   lastSuccessAt: number | null;
   oldestFreshAgeSec: number | null;
 }
@@ -137,6 +168,7 @@ export interface ReserveSnapshotMetadataRecord {
   warnings: LiveReserveWarning[];
   sourceModel: LiveReserveSourceModel;
   evidenceClass: LiveReserveEvidenceClass;
+  syncStatus: ReserveSyncStatus;
 }
 
 function parseJsonObject(value: string | null | undefined): Record<string, unknown> {
@@ -299,9 +331,30 @@ function parseSlicesStrict(value: string): { slices: ReserveSlice[] } | { issue:
 }
 
 function hasConsistentSnapshotState(
-  syncState: Pick<ReserveSyncStateRecord, "lastSuccessAt"> | null | undefined,
-  fetchedAt: number | null | undefined,
+  syncState: Pick<ReserveSyncStateRecord, "lastSuccessAt" | "lastSuccessAttemptId"> | null | undefined,
+  snapshot: {
+    fetchedAt: number | null | undefined;
+    attemptId?: string | null;
+  } | null | undefined,
 ): boolean {
+  const fetchedAt = snapshot?.fetchedAt;
+  const snapshotAttemptId = snapshot?.attemptId ?? null;
+  const successAttemptId = syncState?.lastSuccessAttemptId ?? null;
+  const hasAttemptMatch = typeof successAttemptId === "string"
+    || typeof snapshotAttemptId === "string";
+  if (hasAttemptMatch) {
+    return typeof successAttemptId === "string"
+      && successAttemptId.length > 0
+      && typeof snapshotAttemptId === "string"
+      && snapshotAttemptId.length > 0
+      && successAttemptId === snapshotAttemptId
+      && typeof syncState?.lastSuccessAt === "number"
+      && syncState.lastSuccessAt > 0
+      && typeof fetchedAt === "number"
+      && fetchedAt > 0
+      && syncState.lastSuccessAt === fetchedAt;
+  }
+
   return typeof syncState?.lastSuccessAt === "number"
     && syncState.lastSuccessAt > 0
     && typeof fetchedAt === "number"
@@ -309,7 +362,7 @@ function hasConsistentSnapshotState(
     && syncState.lastSuccessAt === fetchedAt;
 }
 
-function hasScoringEligibleFreshness(metadata: LiveReserveSnapshotMetadata): boolean {
+function hasScoringEligibleLiveReserveFreshness(metadata: LiveReserveSnapshotMetadata): boolean {
   if (typeof metadata.sourceTimestamp === "number" && Number.isFinite(metadata.sourceTimestamp) && metadata.sourceTimestamp > 0) {
     return true;
   }
@@ -317,11 +370,39 @@ function hasScoringEligibleFreshness(metadata: LiveReserveSnapshotMetadata): boo
   return metadata.freshnessMode === "verified" || metadata.freshnessMode === "not-applicable";
 }
 
+function hasUncertainWriteState(syncState: ReserveSyncStateRecord | null | undefined): boolean {
+  return syncState?.metadata.uncertainWrite === true;
+}
+
+function buildReserveProvenanceView(
+  record: Pick<ReserveCompositionRecord, "adapterEvidenceClass" | "adapterSourceModel" | "metadata">,
+  syncState: ReserveSyncStateRecord | null,
+  stale: boolean,
+): ReserveProvenanceView {
+  const freshnessMode = record.metadata.freshnessMode;
+  return {
+    evidenceClass: record.adapterEvidenceClass,
+    sourceModel: record.adapterSourceModel,
+    ...(freshnessMode ? { freshnessMode } : {}),
+    scoringEligible: record.adapterEvidenceClass === "independent"
+      && !stale
+      && syncState?.lastStatus === "ok"
+      && hasScoringEligibleLiveReserveFreshness(record.metadata),
+  };
+}
+
 function canUseLegacySnapshotFallback(
   syncState: ReserveSyncStateRecord | null,
-  fetchedAt: number | null | undefined,
+  snapshot: {
+    fetchedAt: number | null | undefined;
+    attemptId?: string | null;
+  } | null | undefined,
 ): boolean {
-  return hasConsistentSnapshotState(syncState, fetchedAt)
+  if (syncState?.lastSuccessAttemptId || snapshot?.attemptId) {
+    return false;
+  }
+
+  return hasConsistentSnapshotState(syncState, snapshot)
     && typeof syncState?.lastAttemptedAt === "number"
     && syncState.lastAttemptedAt === syncState.lastSuccessAt
     && syncState.lastStatus !== "error"
@@ -366,11 +447,17 @@ function parseReserveCompositionRow(
     ?? row.source;
   const metadata = parseSnapshotMetadata(row.metadata);
   const warnings = parseWarnings(row.warnings ?? null);
-  const legacyMetadata = canUseLegacySnapshotFallback(syncState, row.fetched_at)
+  const legacyMetadata = canUseLegacySnapshotFallback(syncState, {
+    fetchedAt: row.fetched_at,
+    attemptId: row.attempt_id ?? null,
+  })
     ? normalizeSnapshotMetadata(syncState?.metadata ?? {})
     : {};
   const finalMetadata = isEmptyMetadata(metadata) && !isEmptyMetadata(legacyMetadata) ? legacyMetadata : metadata;
-  const finalWarnings = warnings.length === 0 && canUseLegacySnapshotFallback(syncState, row.fetched_at)
+  const finalWarnings = warnings.length === 0 && canUseLegacySnapshotFallback(syncState, {
+    fetchedAt: row.fetched_at,
+    attemptId: row.attempt_id ?? null,
+  })
     ? syncState?.warnings ?? []
     : warnings;
   const warningCount = typeof row.warning_count === "number" && Number.isFinite(row.warning_count)
@@ -383,6 +470,7 @@ function parseReserveCompositionRow(
       slices: parsedSlices.slices,
       fetchedAt: row.fetched_at,
       source: row.source,
+      attemptId: row.attempt_id ?? null,
       metadata: finalMetadata,
       warningCount,
       warnings: finalWarnings,
@@ -404,16 +492,18 @@ function buildReserveCompositionUpsertStatement(
          slices,
          fetched_at,
          source,
+         attempt_id,
          metadata,
          warning_count,
          warnings,
          adapter_source_model,
          adapter_evidence_class
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(stablecoin_id) DO UPDATE SET
          slices = excluded.slices,
          fetched_at = excluded.fetched_at,
          source = excluded.source,
+         attempt_id = excluded.attempt_id,
          metadata = excluded.metadata,
          warning_count = excluded.warning_count,
          warnings = excluded.warnings,
@@ -425,6 +515,7 @@ function buildReserveCompositionUpsertStatement(
       JSON.stringify(record.slices),
       record.fetchedAt,
       record.source,
+      record.attemptId ?? null,
       JSON.stringify(record.metadata),
       record.warningCount,
       record.warnings.length > 0 ? JSON.stringify(record.warnings) : null,
@@ -443,67 +534,26 @@ function buildReserveCompositionHistoryInsertStatement(
          stablecoin_id,
          fetched_at,
          adapter_key,
+         attempt_id,
          slices,
          metadata,
          warnings,
          warning_count,
          adapter_source_model,
          adapter_evidence_class
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       record.stablecoinId,
       record.fetchedAt,
       record.source,
+      record.attemptId ?? null,
       JSON.stringify(record.slices),
       JSON.stringify(record.metadata),
       record.warnings.length > 0 ? JSON.stringify(record.warnings) : null,
       record.warningCount,
       record.adapterSourceModel,
       record.adapterEvidenceClass,
-    );
-}
-
-function buildReserveSyncStateUpsertStatement(
-  db: D1Database,
-  record: ReserveSyncStateRecord,
-): D1PreparedStatement {
-  return db
-    .prepare(
-      `INSERT INTO reserve_sync_state (
-         stablecoin_id,
-         adapter_key,
-         breaker_key,
-         last_attempted_at,
-         last_success_at,
-         last_status,
-         warning_count,
-         warnings,
-         last_error,
-         metadata
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(stablecoin_id) DO UPDATE SET
-         adapter_key = excluded.adapter_key,
-         breaker_key = excluded.breaker_key,
-         last_attempted_at = excluded.last_attempted_at,
-         last_success_at = excluded.last_success_at,
-         last_status = excluded.last_status,
-         warning_count = excluded.warning_count,
-         warnings = excluded.warnings,
-         last_error = excluded.last_error,
-         metadata = excluded.metadata`,
-    )
-    .bind(
-      record.stablecoinId,
-      record.adapterKey,
-      record.breakerKey,
-      record.lastAttemptedAt,
-      record.lastSuccessAt,
-      record.lastStatus,
-      record.warningCount,
-      record.warnings.length > 0 ? JSON.stringify(record.warnings) : null,
-      record.lastError,
-      JSON.stringify(record.metadata),
     );
 }
 
@@ -518,18 +568,20 @@ function buildReserveSyncAttemptHistoryInsertStatement(
          attempted_at,
          adapter_key,
          breaker_key,
+         attempt_id,
          status,
          warnings,
          warning_count,
          last_error,
          metadata
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       record.stablecoinId,
       record.attemptedAt,
       record.adapterKey,
       record.breakerKey,
+      record.attemptId ?? null,
       record.status,
       record.warnings.length > 0 ? JSON.stringify(record.warnings) : null,
       record.warningCount,
@@ -542,6 +594,21 @@ export function getConfiguredLiveReserveCoins(): StablecoinMeta[] {
   return ACTIVE_STABLECOINS.filter((coin) => !!coin.liveReservesConfig);
 }
 
+export function createReserveSyncAttemptId(stablecoinId: string): string {
+  const cryptoObj = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  if (cryptoObj?.randomUUID) {
+    return `${stablecoinId}:${cryptoObj.randomUUID()}`;
+  }
+  return `${stablecoinId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function didReserveSyncAttemptFinalizeAsSuccess(
+  syncState: Pick<ReserveSyncStateRecord, "lastSuccessAttemptId"> | null | undefined,
+  attemptId: string,
+): boolean {
+  return syncState?.lastSuccessAttemptId === attemptId;
+}
+
 export async function upsertReserveComposition(
   db: D1Database,
   record: ReserveCompositionRecord,
@@ -549,36 +616,145 @@ export async function upsertReserveComposition(
   await buildReserveCompositionUpsertStatement(db, record).run();
 }
 
-export async function recordReserveSyncAttempt(
+function buildReserveSyncAttemptStartStatement(
   db: D1Database,
-  syncState: ReserveSyncStateRecord,
-): Promise<void> {
-  await db.batch([
-    buildReserveSyncStateUpsertStatement(db, syncState),
-    buildReserveSyncAttemptHistoryInsertStatement(db, {
-      stablecoinId: syncState.stablecoinId,
-      attemptedAt: syncState.lastAttemptedAt ?? Math.floor(Date.now() / 1000),
-      adapterKey: syncState.adapterKey,
-      breakerKey: syncState.breakerKey,
-      status: syncState.lastStatus,
-      warningCount: syncState.warningCount,
-      warnings: syncState.warnings,
-      lastError: syncState.lastError,
-      metadata: syncState.metadata,
-    }),
-  ]);
+  record: ReserveSyncAttemptStartRecord,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `INSERT INTO reserve_sync_state (
+         stablecoin_id,
+         adapter_key,
+         breaker_key,
+         last_attempted_at,
+         last_success_at,
+         last_status,
+         warning_count,
+         warnings,
+         last_error,
+         metadata,
+         last_attempt_id,
+         pending_attempt_id,
+         last_success_attempt_id
+       ) VALUES (?, ?, ?, ?, NULL, 'skipped', 0, NULL, NULL, '{}', ?, ?, NULL)
+       ON CONFLICT(stablecoin_id) DO UPDATE SET
+         adapter_key = excluded.adapter_key,
+         breaker_key = excluded.breaker_key,
+         last_attempted_at = excluded.last_attempted_at,
+         last_attempt_id = excluded.last_attempt_id,
+         pending_attempt_id = excluded.pending_attempt_id`,
+    )
+    .bind(
+      record.stablecoinId,
+      record.adapterKey,
+      record.breakerKey,
+      record.attemptedAt,
+      record.attemptId,
+      record.attemptId,
+    );
 }
 
-export async function upsertReserveSnapshot(
+function buildReserveSyncFinalizeSuccessStatement(
+  db: D1Database,
+  record: ReserveSyncStateRecord,
+  finalizeDeadlineMs: number,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `UPDATE reserve_sync_state
+         SET adapter_key = ?,
+             breaker_key = ?,
+             last_attempted_at = ?,
+             last_success_at = ?,
+             last_status = ?,
+             warning_count = ?,
+             warnings = ?,
+             last_error = ?,
+             metadata = ?,
+             last_attempt_id = ?,
+             pending_attempt_id = NULL,
+             last_success_attempt_id = ?
+       WHERE stablecoin_id = ?
+         AND last_attempt_id = ?
+         AND pending_attempt_id = ?
+         AND ${SQLITE_NOW_MS_EXPRESSION} <= ?`,
+    )
+    .bind(
+      record.adapterKey,
+      record.breakerKey,
+      record.lastAttemptedAt,
+      record.lastSuccessAt,
+      record.lastStatus,
+      record.warningCount,
+      record.warnings.length > 0 ? JSON.stringify(record.warnings) : null,
+      record.lastError,
+      JSON.stringify(record.metadata),
+      record.lastAttemptId ?? null,
+      record.lastSuccessAttemptId ?? null,
+      record.stablecoinId,
+      record.lastAttemptId ?? null,
+      record.pendingAttemptId ?? null,
+      finalizeDeadlineMs,
+    );
+}
+
+function buildReserveSyncFinalizeAttemptStatement(
+  db: D1Database,
+  record: ReserveSyncStateRecord,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `UPDATE reserve_sync_state
+         SET adapter_key = ?,
+             breaker_key = ?,
+             last_attempted_at = ?,
+             last_status = ?,
+             warning_count = ?,
+             warnings = ?,
+             last_error = ?,
+             metadata = ?,
+             last_attempt_id = ?,
+             pending_attempt_id = NULL
+       WHERE stablecoin_id = ?
+         AND last_attempt_id = ?
+         AND pending_attempt_id = ?`,
+    )
+    .bind(
+      record.adapterKey,
+      record.breakerKey,
+      record.lastAttemptedAt,
+      record.lastStatus,
+      record.warningCount,
+      record.warnings.length > 0 ? JSON.stringify(record.warnings) : null,
+      record.lastError,
+      JSON.stringify(record.metadata),
+      record.lastAttemptId ?? null,
+      record.stablecoinId,
+      record.lastAttemptId ?? null,
+      record.pendingAttemptId ?? null,
+    );
+}
+
+export async function beginReserveSyncAttempt(
+  db: D1Database,
+  record: ReserveSyncAttemptStartRecord,
+): Promise<void> {
+  await buildReserveSyncAttemptStartStatement(db, record).run();
+}
+
+export async function finalizeReserveSyncSuccess(
   db: D1Database,
   composition: ReserveCompositionRecord,
   syncState: ReserveSyncStateRecord,
-): Promise<void> {
-  await db.batch([
-    buildReserveCompositionUpsertStatement(db, composition),
-    buildReserveSyncStateUpsertStatement(db, syncState),
-    buildReserveCompositionHistoryInsertStatement(db, composition),
-    buildReserveSyncAttemptHistoryInsertStatement(db, {
+  finalizeDeadlineMs: number,
+): Promise<{ finalized: boolean }> {
+  await buildReserveCompositionUpsertStatement(db, composition).run();
+  await buildReserveCompositionHistoryInsertStatement(db, composition).run();
+  const finalizeResult = await buildReserveSyncFinalizeSuccessStatement(db, syncState, finalizeDeadlineMs).run();
+  const finalized = (finalizeResult.meta.changes ?? 0) > 0;
+
+  if (finalized) {
+    await buildReserveSyncAttemptHistoryInsertStatement(db, {
       stablecoinId: syncState.stablecoinId,
       attemptedAt: syncState.lastAttemptedAt ?? composition.fetchedAt,
       adapterKey: syncState.adapterKey,
@@ -588,8 +764,58 @@ export async function upsertReserveSnapshot(
       warnings: syncState.warnings,
       lastError: syncState.lastError,
       metadata: syncState.metadata,
-    }),
-  ]);
+      attemptId: syncState.lastAttemptId ?? null,
+    }).run();
+  }
+
+  return { finalized };
+}
+
+export async function finalizeReserveSyncAttempt(
+  db: D1Database,
+  syncState: ReserveSyncStateRecord,
+): Promise<{ finalized: boolean }> {
+  const finalizeResult = await buildReserveSyncFinalizeAttemptStatement(db, syncState).run();
+  const finalized = (finalizeResult.meta.changes ?? 0) > 0;
+
+  if (finalized) {
+    await buildReserveSyncAttemptHistoryInsertStatement(db, {
+      stablecoinId: syncState.stablecoinId,
+      attemptedAt: syncState.lastAttemptedAt ?? Math.floor(Date.now() / 1000),
+      adapterKey: syncState.adapterKey,
+      breakerKey: syncState.breakerKey,
+      status: syncState.lastStatus,
+      warningCount: syncState.warningCount,
+      warnings: syncState.warnings,
+      lastError: syncState.lastError,
+      metadata: syncState.metadata,
+      attemptId: syncState.lastAttemptId ?? null,
+    }).run();
+  }
+
+  return { finalized };
+}
+
+export async function pruneLiveReserveHistory(
+  db: D1Database,
+  now = Math.floor(Date.now() / 1000),
+  retentionSec = LIVE_RESERVE_HISTORY_RETENTION_SEC,
+): Promise<LiveReserveHistoryPruneResult> {
+  const cutoff = now - retentionSec;
+  const compositionDelete = await db
+    .prepare("DELETE FROM reserve_composition_history WHERE fetched_at < ?")
+    .bind(cutoff)
+    .run();
+  const attemptDelete = await db
+    .prepare("DELETE FROM reserve_sync_attempt_history WHERE attempted_at < ?")
+    .bind(cutoff)
+    .run();
+
+  return {
+    cutoff,
+    compositionHistoryDeleted: compositionDelete.meta.changes ?? 0,
+    attemptHistoryDeleted: attemptDelete.meta.changes ?? 0,
+  };
 }
 
 async function getReserveCompositionRow(
@@ -598,7 +824,7 @@ async function getReserveCompositionRow(
 ): Promise<ReserveCompositionRow | null> {
   return db
     .prepare(
-      `SELECT stablecoin_id, slices, fetched_at, source, metadata, warning_count, warnings,
+      `SELECT stablecoin_id, slices, fetched_at, source, attempt_id, metadata, warning_count, warnings,
               adapter_source_model, adapter_evidence_class
          FROM reserve_composition
         WHERE stablecoin_id = ?`,
@@ -619,14 +845,15 @@ export async function getReserveComposition(
   return parseReserveCompositionRow(row, syncState).record;
 }
 
-async function getReserveSyncState(
+export async function getReserveSyncState(
   db: D1Database,
   stablecoinId: string,
 ): Promise<ReserveSyncStateRecord | null> {
   const row = await db
     .prepare(
       `SELECT stablecoin_id, adapter_key, breaker_key, last_attempted_at, last_success_at,
-              last_status, warning_count, warnings, last_error, metadata
+              last_status, warning_count, warnings, last_error, metadata,
+              last_attempt_id, pending_attempt_id, last_success_attempt_id
          FROM reserve_sync_state
         WHERE stablecoin_id = ?`,
     )
@@ -646,6 +873,9 @@ async function getReserveSyncState(
     warnings: parseWarnings(row.warnings),
     lastError: row.last_error,
     metadata: parseSnapshotMetadata(row.metadata),
+    lastAttemptId: row.last_attempt_id ?? null,
+    pendingAttemptId: row.pending_attempt_id ?? null,
+    lastSuccessAttemptId: row.last_success_attempt_id ?? null,
   };
 }
 
@@ -663,7 +893,8 @@ export async function loadReserveSyncStateMap(
     const rows = await db
       .prepare(
         `SELECT stablecoin_id, adapter_key, breaker_key, last_attempted_at, last_success_at,
-                last_status, warning_count, warnings, last_error, metadata
+                last_status, warning_count, warnings, last_error, metadata,
+                last_attempt_id, pending_attempt_id, last_success_attempt_id
            FROM reserve_sync_state
           WHERE stablecoin_id IN (${inClause.sql})`,
       )
@@ -682,6 +913,9 @@ export async function loadReserveSyncStateMap(
         warnings: parseWarnings(row.warnings),
         lastError: row.last_error,
         metadata: parseSnapshotMetadata(row.metadata),
+        lastAttemptId: row.last_attempt_id ?? null,
+        pendingAttemptId: row.pending_attempt_id ?? null,
+        lastSuccessAttemptId: row.last_success_attempt_id ?? null,
       });
     }
   }
@@ -702,7 +936,7 @@ async function loadReserveCompositionRowMap(
     const inClause = buildInClause(batch);
     const rows = await db
       .prepare(
-        `SELECT stablecoin_id, slices, fetched_at, source, metadata, warning_count, warnings,
+        `SELECT stablecoin_id, slices, fetched_at, source, attempt_id, metadata, warning_count, warnings,
                 adapter_source_model, adapter_evidence_class
            FROM reserve_composition
           WHERE stablecoin_id IN (${inClause.sql})`,
@@ -733,6 +967,11 @@ export async function computeReserveCompositionOverview(
       degradedCoins: 0,
       errorCoins: 0,
       corruptCoins: 0,
+      independentFreshEligible: 0,
+      independentFreshUnverified: 0,
+      staticValidatedFresh: 0,
+      weakProbeFresh: 0,
+      writeTimeoutUncertain: 0,
       lastSuccessAt: null,
       oldestFreshAgeSec: null,
     };
@@ -750,13 +989,23 @@ export async function computeReserveCompositionOverview(
   let degradedCoins = 0;
   let errorCoins = 0;
   let corruptCoins = 0;
+  let independentFreshEligible = 0;
+  let independentFreshUnverified = 0;
+  let staticValidatedFresh = 0;
+  let weakProbeFresh = 0;
+  let writeTimeoutUncertain = 0;
   let lastSuccessAt: number | null = null;
   let oldestFreshAgeSec: number | null = null;
 
   for (const coin of configuredCoins) {
     const syncState = syncById.get(coin.id) ?? null;
     const compositionRow = compositionById.get(coin.id);
-    const hasSnapshot = hasConsistentSnapshotState(syncState, compositionRow?.fetched_at);
+    if (hasUncertainWriteState(syncState)) {
+      writeTimeoutUncertain++;
+    }
+    const hasSnapshot = hasConsistentSnapshotState(syncState, compositionRow
+      ? { fetchedAt: compositionRow.fetched_at, attemptId: compositionRow.attempt_id ?? null }
+      : null);
 
     if (!hasSnapshot || !compositionRow) {
       if (syncState?.lastStatus === "error") {
@@ -792,6 +1041,17 @@ export async function computeReserveCompositionOverview(
     }
 
     freshCoins++;
+    if (parsed.record.adapterEvidenceClass === "independent") {
+      if (hasScoringEligibleLiveReserveFreshness(parsed.record.metadata)) {
+        independentFreshEligible++;
+      } else {
+        independentFreshUnverified++;
+      }
+    } else if (parsed.record.adapterEvidenceClass === "static-validated") {
+      staticValidatedFresh++;
+    } else if (parsed.record.adapterEvidenceClass === "weak-live-probe") {
+      weakProbeFresh++;
+    }
     oldestFreshAgeSec = oldestFreshAgeSec == null ? ageSec : Math.max(oldestFreshAgeSec, ageSec);
   }
 
@@ -803,6 +1063,11 @@ export async function computeReserveCompositionOverview(
     degradedCoins,
     errorCoins,
     corruptCoins,
+    independentFreshEligible,
+    independentFreshUnverified,
+    staticValidatedFresh,
+    weakProbeFresh,
+    writeTimeoutUncertain,
     lastSuccessAt,
     oldestFreshAgeSec,
   };
@@ -844,7 +1109,10 @@ async function loadFreshAuthoritativeReserveSnapshots(
   for (const coin of configuredCoins) {
     const syncState = syncById.get(coin.id) ?? null;
     const compositionRow = compositionById.get(coin.id);
-    if (!compositionRow || !hasConsistentSnapshotState(syncState, compositionRow.fetched_at)) {
+    if (!compositionRow || !hasConsistentSnapshotState(syncState, {
+      fetchedAt: compositionRow.fetched_at,
+      attemptId: compositionRow.attempt_id ?? null,
+    })) {
       continue;
     }
 
@@ -890,37 +1158,67 @@ export async function loadFreshIndependentLiveReserveMap(
   });
   return new Map(
     Array.from(snapshots.entries())
-      .filter(([, snapshot]) => hasScoringEligibleFreshness(snapshot.metadata))
+      .filter(([, snapshot]) => hasScoringEligibleLiveReserveFreshness(snapshot.metadata))
       .map(([coinId, snapshot]) => [coinId, snapshot.slices]),
   );
+}
+
+function buildReserveSnapshotMetadataRecord(
+  stablecoinId: string,
+  record: ReserveCompositionRecord,
+  syncState: ReserveSyncStateRecord | null,
+): ReserveSnapshotMetadataRecord {
+  return {
+    stablecoinId,
+    fetchedAt: record.fetchedAt,
+    source: record.source,
+    metadata: record.metadata,
+    warningCount: record.warningCount,
+    warnings: record.warnings,
+    sourceModel: record.adapterSourceModel,
+    evidenceClass: record.adapterEvidenceClass,
+    syncStatus: syncState?.lastStatus ?? "error",
+  };
+}
+
+async function loadReserveSnapshotMetadataMap(
+  db: D1Database,
+  stablecoinIds: readonly string[],
+): Promise<Map<string, ReserveSnapshotMetadataRecord>> {
+  if (stablecoinIds.length === 0) {
+    return new Map();
+  }
+
+  const [syncById, compositionById] = await Promise.all([
+    loadReserveSyncStateMap(db, stablecoinIds),
+    loadReserveCompositionRowMap(db, stablecoinIds),
+  ]);
+
+  const records = new Map<string, ReserveSnapshotMetadataRecord>();
+  for (const stablecoinId of stablecoinIds) {
+    const syncState = syncById.get(stablecoinId) ?? null;
+    const compositionRow = compositionById.get(stablecoinId);
+    if (!compositionRow || !hasConsistentSnapshotState(syncState, {
+      fetchedAt: compositionRow.fetched_at,
+      attemptId: compositionRow.attempt_id ?? null,
+    })) {
+      continue;
+    }
+
+    const parsed = parseReserveCompositionRow(compositionRow, syncState);
+    if (!parsed.record) continue;
+    records.set(stablecoinId, buildReserveSnapshotMetadataRecord(stablecoinId, parsed.record, syncState));
+  }
+
+  return records;
 }
 
 export async function getLatestSuccessfulReserveSnapshotMetadata(
   db: D1Database,
   stablecoinId: string,
 ): Promise<ReserveSnapshotMetadataRecord | null> {
-  const [compositionRow, syncState] = await Promise.all([
-    getReserveCompositionRow(db, stablecoinId),
-    getReserveSyncState(db, stablecoinId),
-  ]);
-
-  if (!compositionRow || !hasConsistentSnapshotState(syncState, compositionRow.fetched_at)) {
-    return null;
-  }
-
-  const parsed = parseReserveCompositionRow(compositionRow, syncState);
-  if (!parsed.record) return null;
-
-  return {
-    stablecoinId,
-    fetchedAt: parsed.record.fetchedAt,
-    source: parsed.record.source,
-    metadata: parsed.record.metadata,
-    warningCount: parsed.record.warningCount,
-    warnings: parsed.record.warnings,
-    sourceModel: parsed.record.adapterSourceModel,
-    evidenceClass: parsed.record.adapterEvidenceClass,
-  };
+  const records = await loadReserveSnapshotMetadataMap(db, [stablecoinId]);
+  return records.get(stablecoinId) ?? null;
 }
 
 function buildSyncView(
@@ -984,15 +1282,26 @@ export async function resolveReserveResult(
 
   const displayUrl = meta.liveReservesConfig?.display?.url;
   const staticFallback = getReserves(meta);
-  const consistentSnapshot = compositionRow && hasConsistentSnapshotState(syncState, compositionRow.fetched_at)
+  const consistentSnapshot = compositionRow && hasConsistentSnapshotState(syncState, {
+    fetchedAt: compositionRow.fetched_at,
+    attemptId: compositionRow.attempt_id ?? null,
+  })
     ? parseReserveCompositionRow(compositionRow, syncState)
     : { record: null, issue: null };
   const liveSnapshot = consistentSnapshot.record;
   const liveAtCandidate = liveSnapshot?.fetchedAt
-    ?? (compositionRow && hasConsistentSnapshotState(syncState, compositionRow.fetched_at) ? compositionRow.fetched_at : syncState?.lastSuccessAt ?? null);
+    ?? (
+      compositionRow && hasConsistentSnapshotState(syncState, {
+        fetchedAt: compositionRow.fetched_at,
+        attemptId: compositionRow.attempt_id ?? null,
+      })
+        ? compositionRow.fetched_at
+        : syncState?.lastSuccessAt ?? null
+    );
   const stale = !!(liveAtCandidate && now - liveAtCandidate > freshnessSec);
 
   if (liveSnapshot) {
+    const provenance = buildReserveProvenanceView(liveSnapshot, syncState, stale);
     return {
       reserves: liveSnapshot.slices,
       estimated: false,
@@ -1000,6 +1309,7 @@ export async function resolveReserveResult(
       liveAt: liveSnapshot.fetchedAt,
       source: liveSnapshot.source,
       displayUrl,
+      provenance,
       sync: buildSyncView(syncState, stale, {
         enabled: !!meta.liveReservesConfig,
         defaultStatus: "ok",

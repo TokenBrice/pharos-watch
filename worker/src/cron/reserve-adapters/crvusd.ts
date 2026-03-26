@@ -2,7 +2,14 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, normalizeSlices, requireJsonInput, reserveDegradedWarning } from "./helpers";
+import {
+  fetchJsonWithRetry,
+  getAdapterTimeout,
+  normalizeSlices,
+  requireJsonInput,
+  reserveDegradedWarning,
+  unverifiedFreshnessMetadata,
+} from "./helpers";
 
 interface CurveMarketEntry {
   collateral_amount_usd?: number;
@@ -105,7 +112,10 @@ export function adaptCrvUsd(payload: CurveMarketsPayload): AdapterResult {
       activeMarketCount: activeMarkets,
       bucketCount: buckets.size,
       unknownExposurePct: totalWithUnknown > 0 ? (unknownUsd / totalWithUnknown) * 100 : 0,
-      freshnessMode: "unverified",
+      ...unverifiedFreshnessMetadata(
+        "curve-market-api",
+        "crvUSD market payload does not expose a trustworthy source timestamp",
+      ),
     },
   };
 }

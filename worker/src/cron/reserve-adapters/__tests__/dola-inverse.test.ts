@@ -122,6 +122,8 @@ describe("adaptFirmMarkets", () => {
     expect(result.metadata?.activeMarkets).toBe(2);
     expect(result.metadata?.totalMarkets).toBe(3);
     expect(result.metadata?.timestamp).toBe(12345);
+    expect(result.metadata?.sourceTimestamp).toBe(12345);
+    expect(result.metadata?.freshnessMode).toBe("verified");
   });
 
   it("assigns correct risk levels to each bucket", () => {

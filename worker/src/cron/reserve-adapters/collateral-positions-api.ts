@@ -3,7 +3,14 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, normalizeSlices, requireJsonInput, reserveDegradedWarning } from "./helpers";
+import {
+  fetchJsonWithRetry,
+  getAdapterTimeout,
+  normalizeSlices,
+  requireJsonInput,
+  reserveDegradedWarning,
+  unverifiedFreshnessMetadata,
+} from "./helpers";
 
 interface PositionDetailsEntry {
   address: string;
@@ -176,7 +183,10 @@ export function adaptCollateralPositions(
       missingPriceCount: missingPriceSymbols.size,
       unknownAssetCount: warnings.length,
       unknownExposurePct: total > 0 ? (unknownExposureUsd / total) * 100 : 0,
-      freshnessMode: "unverified",
+      ...unverifiedFreshnessMetadata(
+        "position-and-price-apis",
+        "Collateral positions and price payloads do not expose a trustworthy source timestamp",
+      ),
     },
   };
 }

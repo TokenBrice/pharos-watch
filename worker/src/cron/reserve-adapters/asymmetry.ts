@@ -2,7 +2,14 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
-import { requireJsonInput, fetchJsonWithRetry, getAdapterTimeout, normalizeSlices, reserveDegradedWarning } from "./helpers";
+import {
+  requireJsonInput,
+  fetchJsonWithRetry,
+  getAdapterTimeout,
+  normalizeSlices,
+  reserveDegradedWarning,
+  unverifiedFreshnessMetadata,
+} from "./helpers";
 
 interface AsymmetryBranchStats {
   coll_value?: string;
@@ -68,7 +75,10 @@ export function adaptAsymmetry(payload: AsymmetryPayload): AdapterResult {
       activeBranchCount: entries.length,
       unknownBranchCount: warnings.length,
       unknownExposurePct: total > 0 ? (unknownExposureUsd / total) * 100 : 0,
-      freshnessMode: "unverified",
+      ...unverifiedFreshnessMetadata(
+        "protocol-branch-api",
+        "Asymmetry branch composition payload does not expose a trustworthy source timestamp",
+      ),
     },
   };
 }

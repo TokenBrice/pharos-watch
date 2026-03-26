@@ -8,6 +8,8 @@ import {
   requireJsonInputFromConfig,
   reserveDegradedWarning,
   slicesFromValues,
+  unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
 } from "./helpers";
 
 interface EthenaCollateralRow {
@@ -117,7 +119,12 @@ export function adaptEthenaCollateral(payload: EthenaCollateralResponse): Adapte
         ? { immediateRedeemableRatio: stableBucketUsd / computedTotalBackingAssetsInUsd }
         : {}),
       lastUpdatedAt,
-      sourceTimestamp: lastUpdatedAt,
+      ...(lastUpdatedAt > 0
+        ? verifiedFreshnessMetadata(lastUpdatedAt)
+        : unverifiedFreshnessMetadata(
+            "issuer-api",
+            "Ethena collateral rows did not expose a trustworthy source timestamp",
+          )),
       unknownExposurePct:
         computedTotalBackingAssetsInUsd > 0
           ? (unknownExposureUsd / computedTotalBackingAssetsInUsd) * 100

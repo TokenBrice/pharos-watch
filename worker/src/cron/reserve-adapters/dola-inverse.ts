@@ -9,6 +9,8 @@ import {
   requireJsonInputFromConfig,
   reserveDegradedWarning,
   slicesFromValues,
+  unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
 } from "./helpers";
 
 export interface FirmMarket {
@@ -110,7 +112,12 @@ export function adaptFirmMarkets(payload: FirmMarketsResponse): AdapterResult {
       activeMarkets,
       totalMarkets: payload.markets.length,
       timestamp: payload.timestamp,
-      sourceTimestamp: payload.timestamp,
+      ...(payload.timestamp > 0
+        ? verifiedFreshnessMetadata(payload.timestamp)
+        : unverifiedFreshnessMetadata(
+            "firm-markets-api",
+            "FiRM markets payload did not expose a trustworthy source timestamp",
+          )),
       unknownExposurePct: totalDebt > 0 ? (unknownDebt / totalDebt) * 100 : 0,
     },
   };

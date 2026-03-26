@@ -9,7 +9,10 @@ import {
   parseTimestampLikeToUnixSeconds,
   requireHtmlInput,
   slicesFromValues,
+  unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
 } from "./helpers";
+import { extractEscapedJsonValueAfterKey } from "./html";
 
 interface ReMetricsChainRow {
   tokenSymbol?: string;
@@ -81,54 +84,6 @@ const SYMBOL_CONFIG: Record<string, {
   },
 };
 
-function extractEscapedJsonValue(html: string, key: string): string {
-  const keyIndex = html.indexOf(key);
-  if (keyIndex < 0) {
-    throw htmlLayoutChangedError("re-metrics", `missing ${key}`);
-  }
-
-  const valueStart = keyIndex + key.length;
-  let start = -1;
-  let depth = 0;
-  let inString = false;
-  let escape = false;
-
-  for (let index = valueStart; index < html.length; index += 1) {
-    const char = html[index];
-    if (start === -1) {
-      if (char === "{" || char === "[") {
-        start = index;
-        depth = 1;
-      }
-      continue;
-    }
-
-    if (escape) {
-      escape = false;
-      continue;
-    }
-    if (char === "\\") {
-      escape = true;
-      continue;
-    }
-    if (char === "\"") {
-      inString = !inString;
-      continue;
-    }
-    if (inString) continue;
-
-    if (char === "{" || char === "[") depth += 1;
-    if (char === "}" || char === "]") {
-      depth -= 1;
-      if (depth === 0) {
-        return html.slice(start, index + 1).replace(/\\"/g, "\"");
-      }
-    }
-  }
-
-  throw htmlParseError("re-metrics", `unterminated ${key}`);
-}
-
 function parseValueUsdFromWei(raw: string | undefined): number | null {
   if (!raw || !/^\d+$/.test(raw)) return null;
   const whole = raw.length > 18 ? raw.slice(0, -18) : "0";
@@ -137,7 +92,17 @@ function parseValueUsdFromWei(raw: string | undefined): number | null {
 }
 
 function parseInitialChainBreakdowns(html: string): Record<string, ReMetricsChainBreakdown> {
-  const parsed = JSON.parse(extractEscapedJsonValue(html, ESCAPED_INITIAL_BREAKDOWNS_KEY)) as unknown;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(
+      extractEscapedJsonValueAfterKey(html, ESCAPED_INITIAL_BREAKDOWNS_KEY, "re-metrics"),
+    ) as unknown;
+  } catch (error) {
+    throw htmlParseError(
+      "re-metrics",
+      `initialChainBreakdowns JSON is malformed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw htmlParseError("re-metrics", "initialChainBreakdowns was not an object");
   }
@@ -145,7 +110,17 @@ function parseInitialChainBreakdowns(html: string): Record<string, ReMetricsChai
 }
 
 function parseSeries(html: string): ReMetricsSeries[] {
-  const parsed = JSON.parse(extractEscapedJsonValue(html, ESCAPED_SERIES_KEY)) as unknown;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(
+      extractEscapedJsonValueAfterKey(html, ESCAPED_SERIES_KEY, "re-metrics"),
+    ) as unknown;
+  } catch (error) {
+    throw htmlParseError(
+      "re-metrics",
+      `series JSON is malformed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
   if (!Array.isArray(parsed)) {
     throw htmlParseError("re-metrics", "series was not an array");
   }
@@ -238,8 +213,11 @@ export function adaptReMetrics(html: string): AdapterResult {
       offchainCapitalUsd,
       trackedTokenCount: tokenValues.size,
       ...(sourceTimestamp != null
-        ? { sourceTimestamp, freshnessMode: "verified" as const }
-        : { freshnessMode: "unverified" as const }),
+        ? verifiedFreshnessMetadata(sourceTimestamp)
+        : unverifiedFreshnessMetadata(
+            "nextjs-embedded-payload",
+            "Re Metrics embedded payload did not expose a trustworthy source timestamp",
+          )),
     },
   };
 }

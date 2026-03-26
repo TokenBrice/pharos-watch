@@ -4,7 +4,14 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseChainlinkLatestRoundData } from "./chainlink";
-import { fetchOnchainRawCall, fetchOnchainUint256, requireOnchainInput, reserveInfoWarning } from "./helpers";
+import {
+  fetchOnchainRawCall,
+  fetchOnchainUint256,
+  requireOnchainInput,
+  reserveInfoWarning,
+  unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
+} from "./helpers";
 
 const DECIMALS_SELECTOR = "0x313ce567";
 const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
@@ -71,7 +78,12 @@ export function adaptChainlinkNavResponse(data: ChainlinkNavData, params: Chainl
       oracleRoundId: data.roundId.toString(),
       oracleUpdatedAt: data.updatedAt,
       oracleTimestampSource: data.roundId === 0n ? "unavailable" : "oracle-round",
-      ...(data.updatedAt > 0 ? { sourceTimestamp: data.updatedAt, freshnessMode: "verified" as const } : { freshnessMode: "unverified" as const }),
+      ...(data.updatedAt > 0
+        ? verifiedFreshnessMetadata(data.updatedAt)
+        : unverifiedFreshnessMetadata(
+            "onchain-oracle-getprice",
+            "chainlink-nav getPrice() mode does not expose an oracle update timestamp",
+          )),
     },
   };
 }

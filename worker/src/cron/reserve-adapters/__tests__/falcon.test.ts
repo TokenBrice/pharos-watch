@@ -38,6 +38,8 @@ describe("adaptFalconTransparency", () => {
       immediateRedeemableUsd: 30,
       immediateRedeemableRatio: 0.3,
       assetCount: 5,
+      sourceTimestamp: 1773316982,
+      freshnessMode: "verified",
     });
     // AVAX is a known altcoin — no warning emitted
     expect(result.warnings).toBeUndefined();

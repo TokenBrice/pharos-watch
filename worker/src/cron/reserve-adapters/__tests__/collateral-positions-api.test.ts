@@ -51,6 +51,9 @@ describe("adaptCollateralPositions", () => {
       activePositionCount: 3,
       missingPriceCount: 0,
       freshnessMode: "unverified",
+      details: {
+        freshnessSource: "position-and-price-apis",
+      },
     });
   });
 

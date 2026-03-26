@@ -28,6 +28,9 @@ describe("adaptCrvUsd", () => {
       activeMarketCount: 4,
       bucketCount: 4,
       freshnessMode: "unverified",
+      details: {
+        freshnessSource: "curve-market-api",
+      },
     });
   });
 

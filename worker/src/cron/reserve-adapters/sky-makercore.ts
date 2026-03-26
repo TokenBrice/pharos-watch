@@ -8,6 +8,8 @@ import {
   requireJsonInputFromConfig,
   reserveDegradedWarning,
   slicesFromValues,
+  unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
 } from "./helpers";
 
 interface DefiLlamaProtocolResponse {
@@ -132,7 +134,12 @@ export async function fetchSkyMakercoreReserves(
       totalCollateralUsd: Math.round(totalUsd),
       immediateRedeemableUsd,
       snapshotDate: latest.date,
-      sourceTimestamp: latest.date,
+      ...(latest.date > 0
+        ? verifiedFreshnessMetadata(latest.date)
+        : unverifiedFreshnessMetadata(
+            "protocol-history-api",
+            "Sky tokensInUsd payload did not expose a trustworthy snapshot timestamp",
+          )),
       unknownExposurePct: totalUsd > 0 ? (unknownExposureUsd / totalUsd) * 100 : 0,
     },
     ...(warnings.length > 0 ? { warnings } : {}),

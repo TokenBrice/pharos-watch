@@ -4,6 +4,7 @@ import { adaptOpenEdenUsdo } from "../openeden";
 describe("adaptOpenEdenUsdo", () => {
   it("maps reserve composition fields into reserve slices", () => {
     const result = adaptOpenEdenUsdo({
+      date: "2026-03-25T08:00:17.600Z",
       usdoAmount: 62_283_070,
       totalTbillAmountInUsd: 46_831_981.32,
       usdcAmount: 4_767_161.22,
@@ -22,10 +23,8 @@ describe("adaptOpenEdenUsdo", () => {
       { name: "USDC buffer", pct: 7.6, risk: "low", coinId: "usdc-circle" },
     ]);
     expect(result.metadata).toMatchObject({
-      freshnessMode: "unverified",
-      details: {
-        freshnessSource: "issuer-api",
-      },
+      freshnessMode: "verified",
+      sourceTimestamp: Date.UTC(2026, 2, 25, 8, 0, 17) / 1000,
       reserveAssetsInUsd: 62_539_444.54,
       supplyUsd: 62_283_070,
       immediateRedeemableUsd: 4_767_161.22,

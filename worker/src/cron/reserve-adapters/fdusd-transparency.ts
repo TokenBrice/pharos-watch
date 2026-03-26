@@ -8,6 +8,8 @@ import {
   parseTimestampLikeToUnixSeconds,
   requireHtmlInput,
   slicesFromPercentages,
+  unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
 } from "./helpers";
 
 const FDUSD_LABEL_MAP: Record<string, string> = {
@@ -66,7 +68,12 @@ export function adaptFdusdTransparency(html: string): AdapterResult {
     metadata: {
       sliceCount: entries.length,
       ...(asOf ? { asOf } : {}),
-      ...(sourceTimestamp != null ? { sourceTimestamp, freshnessMode: "verified" as const } : { freshnessMode: "unverified" as const }),
+      ...(sourceTimestamp != null
+        ? verifiedFreshnessMetadata(sourceTimestamp)
+        : unverifiedFreshnessMetadata(
+            "html-disclosure",
+            "FDUSD reserve page did not expose a parseable 'As of' timestamp",
+          )),
     },
   };
 }

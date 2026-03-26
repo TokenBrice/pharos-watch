@@ -17,7 +17,8 @@ interface CircleSliceConfig {
   label: string;
 }
 
-const CIRCLE_AMOUNT_MODE_MAX_RELATIVE_DIFF = 0.1;
+const CIRCLE_ABSOLUTE_MODE_MAX_RELATIVE_DIFF = 0.03;
+const CIRCLE_PERCENT_MODE_TOLERANCE_PCT = 2;
 
 const USDC_SLICES: CircleSliceConfig[] = [
   { attr: "data-usdc-us-treasuries", label: "<3-Month U.S. Treasuries" },
@@ -82,9 +83,13 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
 
   const rawValueSum = entries.reduce((sum, entry) => sum + entry.value, 0);
   const displayAmount = extractDisplayAmount(html, coinType);
-  const useAbsoluteValues = displayAmount != null
-    && displayAmount > 0
-    && Math.abs(rawValueSum - displayAmount) / Math.max(rawValueSum, displayAmount) <= CIRCLE_AMOUNT_MODE_MAX_RELATIVE_DIFF;
+  const displayAmountRelativeDiff = displayAmount != null && displayAmount > 0
+    ? Math.abs(rawValueSum - displayAmount) / Math.max(rawValueSum, displayAmount)
+    : null;
+  const looksLikePercentages = Math.abs(rawValueSum - 100) <= CIRCLE_PERCENT_MODE_TOLERANCE_PCT;
+  const useAbsoluteValues = !looksLikePercentages
+    && displayAmountRelativeDiff != null
+    && displayAmountRelativeDiff <= CIRCLE_ABSOLUTE_MODE_MAX_RELATIVE_DIFF;
 
   const slices = useAbsoluteValues
     ? slicesFromValues(
@@ -117,6 +122,7 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
       valueMode: useAbsoluteValues ? "absolute" : "percentage",
       rawValueSum,
       ...(displayAmount != null ? { displayAmount } : {}),
+      ...(displayAmountRelativeDiff != null ? { displayAmountRelativeDiff } : {}),
     },
   };
 }

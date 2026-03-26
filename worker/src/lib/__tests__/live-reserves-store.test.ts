@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import {
+  beginReserveSyncAttempt,
   computeReserveCompositionOverview,
+  finalizeReserveSyncSuccess,
   loadFreshIndependentLiveReserveMap,
+  pruneLiveReserveHistory,
   resolveReserveResult,
-  upsertReserveSnapshot,
 } from "../live-reserves-store";
 
 const LIVE_SLICES = [{ name: "Test Farm", pct: 100, risk: "low" as const }];
@@ -71,6 +73,11 @@ describe("live-reserves-store", () => {
       mode: "live",
       liveAt: 1_000,
       reserves: LIVE_SLICES,
+      provenance: {
+        evidenceClass: "independent",
+        sourceModel: "dynamic-mix",
+        scoringEligible: false,
+      },
       sync: {
         status: "ok",
         bootstrap: false,
@@ -120,14 +127,24 @@ describe("live-reserves-store", () => {
 
   it("persists reserve composition and sync state together for successful snapshots", async () => {
     const db = mockD1();
+    const attemptId = "attempt-1";
 
-    await upsertReserveSnapshot(
+    await beginReserveSyncAttempt(db, {
+      stablecoinId: "iusd-infinifi",
+      adapterKey: "infinifi",
+      breakerKey: "live-reserves:infinifi",
+      attemptedAt: 1_000,
+      attemptId,
+    });
+
+    await finalizeReserveSyncSuccess(
       db,
       {
         stablecoinId: "iusd-infinifi",
         slices: LIVE_SLICES,
         fetchedAt: 1_000,
         source: "infinifi",
+        attemptId,
         metadata: {},
         warningCount: 0,
         warnings: [],
@@ -145,12 +162,81 @@ describe("live-reserves-store", () => {
         warnings: [],
         lastError: null,
         metadata: {},
+        lastAttemptId: attemptId,
+        pendingAttemptId: attemptId,
+        lastSuccessAttemptId: attemptId,
       },
+      Date.now() + 30_000,
     );
 
     const history = db.getHistory().map((entry) => entry.sql);
     expect(history.some((sql) => sql.includes("reserve_composition"))).toBe(true);
     expect(history.some((sql) => sql.includes("reserve_sync_state"))).toBe(true);
+  });
+
+  it("prunes reserve history tables by retention cutoff", async () => {
+    const db = mockD1([
+      {
+        match: "DELETE FROM reserve_composition_history",
+        rows: [],
+        runMeta: { changes: 3 },
+      },
+      {
+        match: "DELETE FROM reserve_sync_attempt_history",
+        rows: [],
+        runMeta: { changes: 7 },
+      },
+    ]);
+
+    const result = await pruneLiveReserveHistory(db, 10_000, 1_000);
+    expect(result).toEqual({
+      cutoff: 9_000,
+      compositionHistoryDeleted: 3,
+      attemptHistoryDeleted: 7,
+    });
+
+    const history = db.getHistory();
+    expect(history[0]?.binds).toEqual([9_000]);
+    expect(history[1]?.binds).toEqual([9_000]);
+  });
+
+  it("rejects attempt-stamped snapshots when sync state points to a different successful attempt", async () => {
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          slices: JSON.stringify(LIVE_SLICES),
+          fetched_at: 1_000,
+          source: "infinifi",
+          attempt_id: "attempt-a",
+        },
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [],
+        first: {
+          stablecoin_id: "iusd-infinifi",
+          adapter_key: "infinifi",
+          breaker_key: "live-reserves:infinifi",
+          last_attempted_at: 1_000,
+          last_success_at: 1_000,
+          last_status: "ok",
+          warning_count: 0,
+          warnings: null,
+          last_error: null,
+          metadata: "{}",
+          last_attempt_id: "attempt-b",
+          pending_attempt_id: null,
+          last_success_attempt_id: "attempt-b",
+        },
+      },
+    ]);
+
+    const result = await resolveReserveResult(db, "iusd-infinifi", 1_200);
+    expect(result?.mode).toBe("curated-fallback");
+    expect(result?.liveAt).toBeUndefined();
   });
 
   it("fails closed on malformed stored slices and falls back instead of serving them as live", async () => {
@@ -599,5 +685,125 @@ describe("live-reserves-store", () => {
     expect(scoringMap.has("iusd-infinifi")).toBe(false);
     expect(scoringMap.get("gho-aave")).toEqual([{ name: "Tracked GSM", pct: 100, risk: "low" }]);
     expect(scoringMap.get("usds-sky")).toEqual([{ name: "PSM USDC", pct: 100, risk: "low" }]);
+  });
+
+  it("rolls up fresh evidence quality and uncertain write states separately", async () => {
+    const now = 10_000;
+    const db = mockD1([
+      {
+        match: "reserve_sync_state",
+        rows: [
+          {
+            stablecoin_id: "frax-frax",
+            adapter_key: "frax",
+            breaker_key: "live-reserves:frax",
+            last_attempted_at: now,
+            last_success_at: now,
+            last_status: "ok",
+            warning_count: 0,
+            warnings: null,
+            last_error: null,
+            metadata: "{}",
+          },
+          {
+            stablecoin_id: "iusd-infinifi",
+            adapter_key: "infinifi",
+            breaker_key: "live-reserves:infinifi",
+            last_attempted_at: now,
+            last_success_at: now,
+            last_status: "ok",
+            warning_count: 0,
+            warnings: null,
+            last_error: null,
+            metadata: "{}",
+          },
+          {
+            stablecoin_id: "gho-aave",
+            adapter_key: "gho",
+            breaker_key: "live-reserves:gho",
+            last_attempted_at: now,
+            last_success_at: now,
+            last_status: "ok",
+            warning_count: 0,
+            warnings: null,
+            last_error: null,
+            metadata: "{}",
+          },
+          {
+            stablecoin_id: "pyusd-paypal",
+            adapter_key: "single-asset",
+            breaker_key: "live-reserves:single-asset",
+            last_attempted_at: now,
+            last_success_at: now,
+            last_status: "ok",
+            warning_count: 0,
+            warnings: null,
+            last_error: null,
+            metadata: "{}",
+          },
+          {
+            stablecoin_id: "usdo-openeden",
+            adapter_key: "openeden-usdo",
+            breaker_key: "live-reserves:openeden-usdo",
+            last_attempted_at: now,
+            last_success_at: null,
+            last_status: "error",
+            warning_count: 0,
+            warnings: null,
+            last_error: "D1 write timeout for usdo-openeden",
+            metadata: JSON.stringify({ uncertainWrite: true, reason: "storage-write-timeout" }),
+          },
+        ],
+      },
+      {
+        match: "reserve_composition",
+        rows: [
+          {
+            stablecoin_id: "frax-frax",
+            slices: JSON.stringify([{ name: "Reviewed baseline", pct: 100, risk: "very-low" }]),
+            fetched_at: now,
+            source: "frax",
+            metadata: JSON.stringify({ freshnessMode: "unverified" }),
+            adapter_source_model: "validated-static",
+            adapter_evidence_class: "static-validated",
+          },
+          {
+            stablecoin_id: "iusd-infinifi",
+            slices: JSON.stringify([{ name: "Known Farm", pct: 100, risk: "low" }]),
+            fetched_at: now,
+            source: "infinifi",
+            metadata: JSON.stringify({ freshnessMode: "unverified" }),
+            adapter_source_model: "dynamic-mix",
+            adapter_evidence_class: "independent",
+          },
+          {
+            stablecoin_id: "gho-aave",
+            slices: JSON.stringify([{ name: "Tracked GSM", pct: 100, risk: "low" }]),
+            fetched_at: now,
+            source: "gho",
+            metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
+            adapter_source_model: "dynamic-mix",
+            adapter_evidence_class: "independent",
+          },
+          {
+            stablecoin_id: "pyusd-paypal",
+            slices: JSON.stringify([{ name: "Issuer reserves", pct: 100, risk: "very-low" }]),
+            fetched_at: now,
+            source: "single-asset",
+            metadata: JSON.stringify({}),
+            adapter_source_model: "single-bucket",
+            adapter_evidence_class: "weak-live-probe",
+          },
+        ],
+      },
+    ]);
+
+    const overview = await computeReserveCompositionOverview(db, now + 100);
+    expect(overview.freshCoins).toBeGreaterThanOrEqual(4);
+    expect(overview.independentFreshEligible).toBe(1);
+    expect(overview.independentFreshUnverified).toBe(1);
+    expect(overview.staticValidatedFresh).toBe(1);
+    expect(overview.weakProbeFresh).toBe(1);
+    expect(overview.writeTimeoutUncertain).toBe(1);
   });
 });

@@ -4,7 +4,7 @@ export function CollateralQualityMethodologyCopy() {
       Collateral quality is derived from reserve compositions when available &mdash; curated metadata by
       default, or a fresh authoritative independent live reserve snapshot for coins covered by the live
       reserve sync. For report-card scoring, that live snapshot must also carry scoring-eligible freshness
-      evidence: either a verified timestamp path or an explicit on-chain{" "}
+      evidence: either a verified timestamp path or an explicit on-chain latest-state{" "}
       <code className="text-xs bg-muted px-1 py-0.5 rounded">not-applicable</code> freshness mode.
       Each reserve slice is classified into one of five risk tiers and the score is their weighted average.
       Direct ETH and canonical WETH slices share the same Very Low tier, while ETH liquid staking tokens

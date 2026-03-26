@@ -14,6 +14,8 @@ export interface MockTableConfig {
   first?: Record<string, unknown> | null;
   /** Optional metadata for .run() responses */
   runMeta?: Record<string, unknown>;
+  /** Optional artificial delay before resolving the statement. */
+  delayMs?: number;
   /** Optional error to throw when this statement executes. */
   throwError?: unknown;
 }
@@ -52,6 +54,11 @@ function normalizeSql(sql: string): string {
   return sql.replace(/\s+/g, " ").trim();
 }
 
+async function maybeDelay(table: MockTableConfig | undefined): Promise<void> {
+  if (!table?.delayMs || table.delayMs <= 0) return;
+  await new Promise((resolve) => setTimeout(resolve, table.delayMs));
+}
+
 export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = {}): MockD1Database {
   const history: Array<{ sql: string; binds: unknown[] }> = [];
   const matchHits = new Map<MockTableConfig, number>();
@@ -88,6 +95,7 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
         throw new Error(`mockD1: no match for SQL: ${normalizeSql(sql)}`);
       }
       if (table?.throwError != null) throw toError(table.throwError);
+      await maybeDelay(table);
       return {
         results: (table?.rows ?? []) as T[],
         success: true,
@@ -102,6 +110,7 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
         throw new Error(`mockD1: no match for SQL: ${normalizeSql(sql)}`);
       }
       if (table?.throwError != null) throw toError(table.throwError);
+      await maybeDelay(table);
       return (table?.first ?? table?.rows?.[0] ?? null) as T | null;
     };
 
@@ -112,7 +121,8 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
         throw new Error(`mockD1: no match for SQL: ${normalizeSql(sql)}`);
       }
       if (table?.throwError != null) throw toError(table.throwError);
-      return { success: true, meta: table?.runMeta ?? {} };
+      await maybeDelay(table);
+      return { success: true, meta: table?.runMeta ?? { changes: 1 } };
     };
 
     return {

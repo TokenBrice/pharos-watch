@@ -34,6 +34,17 @@ describe("validateAdapterOutput", () => {
     expect(result.valid).toBe(false);
   });
 
+  it("rejects slices with non-positive pct", () => {
+    const result = validateAdapterOutput({
+      slices: [
+        { name: "A", pct: 0, risk: "low" },
+        { name: "B", pct: 100, risk: "medium" },
+      ],
+    });
+    expect(result.valid).toBe(false);
+    expect(result.warnings[0].code).toBe("invalid-pct");
+  });
+
   it("rejects slices with negative pct", () => {
     const result = validateAdapterOutput({
       slices: [
@@ -107,7 +118,7 @@ describe("validateAdapterOutput", () => {
     const result = validateAdapterOutput(
       {
         slices: [{ name: "A", pct: 100, risk: "low" }],
-        metadata: { sourceTimestamp: 1_000 },
+        metadata: { sourceTimestamp: 1_000, freshnessMode: "verified" },
       },
       {
         adapter: {
@@ -124,6 +135,72 @@ describe("validateAdapterOutput", () => {
 
     expect(result.valid).toBe(true);
     expect(result.warnings.some((warning) => warning.code === "stale-source-data")).toBe(true);
+  });
+
+  it("rejects independent outputs that claim verified freshness without a source timestamp", () => {
+    const result = validateAdapterOutput(
+      {
+        slices: [{ name: "A", pct: 100, risk: "low" }],
+        metadata: { freshnessMode: "verified" },
+      },
+      {
+        adapter: {
+          key: "ethena",
+          fetch: async () => ({ slices: [] }),
+          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sourceModel,
+          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.evidenceClass,
+          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sharedSourceMode,
+          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.validation,
+        },
+      },
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.warnings[0]?.code).toBe("verified-freshness-missing-source-timestamp");
+  });
+
+  it("warns when independent outputs provide a timestamp without explicit freshnessMode", () => {
+    const result = validateAdapterOutput(
+      {
+        slices: [{ name: "A", pct: 100, risk: "low" }],
+        metadata: { sourceTimestamp: 1_000 },
+      },
+      {
+        adapter: {
+          key: "ethena",
+          fetch: async () => ({ slices: [] }),
+          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sourceModel,
+          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.evidenceClass,
+          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.sharedSourceMode,
+          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS.ethena.validation,
+        },
+      },
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.warnings.some((warning) => warning.code === "freshness-mode-missing")).toBe(true);
+  });
+
+  it("warns when unverified independent outputs omit reason metadata", () => {
+    const result = validateAdapterOutput(
+      {
+        slices: [{ name: "A", pct: 100, risk: "low" }],
+        metadata: { freshnessMode: "unverified" },
+      },
+      {
+        adapter: {
+          key: "reservoir",
+          fetch: async () => ({ slices: [] }),
+          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.sourceModel,
+          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.evidenceClass,
+          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.sharedSourceMode,
+          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.validation,
+        },
+      },
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.warnings.some((warning) => warning.code === "freshness-reason-missing")).toBe(true);
   });
 
   it("warns when material unknown exposure exceeds the adapter threshold", () => {

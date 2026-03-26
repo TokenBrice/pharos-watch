@@ -28,6 +28,8 @@ describe("adaptEthenaCollateral", () => {
       immediateRedeemableUsd: 35,
       immediateRedeemableRatio: 0.35,
       lastUpdatedAt: 1,
+      sourceTimestamp: 1,
+      freshnessMode: "verified",
     });
   });
 

@@ -29,6 +29,9 @@ describe("adaptAsymmetry", () => {
       activeBranchCount: 6,
       unknownBranchCount: 0,
       freshnessMode: "unverified",
+      details: {
+        freshnessSource: "protocol-branch-api",
+      },
     });
   });
 });

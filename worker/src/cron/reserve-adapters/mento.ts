@@ -13,6 +13,7 @@ import {
   slicesFromPercentages,
   unverifiedFreshnessMetadata,
 } from "./helpers";
+import { extractEscapedJsonArrayBetween } from "./html";
 
 interface MentoReserveEntry {
   symbol: string;
@@ -39,28 +40,16 @@ const TOKEN_CONFIG: Record<string, TokenConfig> = {
   ETH: { name: "ETH", risk: CANONICAL_ETH_RESERVE_RISK },
 };
 
-function extractEscapedArray(html: string, startNeedle: string, endNeedle: string): string {
-  const start = html.indexOf(startNeedle);
-  if (start === -1) {
-    throw htmlLayoutChangedError("mento", "reserve payload is missing reserveComposition");
-  }
-  const contentStart = start + startNeedle.length;
-  const end = html.indexOf(endNeedle, contentStart);
-  if (end === -1) {
-    throw htmlLayoutChangedError("mento", "reserve payload is missing reserveHoldings delimiter");
-  }
-  return `${html.slice(contentStart, end)}]`;
-}
-
 export function parseMentoReserveComposition(html: string): MentoReserveEntry[] {
-  const escapedJson = extractEscapedArray(html, RESERVE_COMPOSITION_START, RESERVE_COMPOSITION_END);
+  const escapedJson = extractEscapedJsonArrayBetween(
+    html,
+    RESERVE_COMPOSITION_START,
+    RESERVE_COMPOSITION_END,
+    "mento",
+  );
   let parsed: unknown;
   try {
-    parsed = JSON.parse(
-      escapedJson
-        .replace(/\\\\/g, "\\")
-        .replace(/\\"/g, '"'),
-    );
+    parsed = JSON.parse(escapedJson);
   } catch (e) {
     throw htmlParseError(
       "mento",

@@ -26,6 +26,9 @@ describe("handleStablecoinReserves", () => {
           slices: JSON.stringify(slices),
           fetched_at: now,
           source: "infinifi",
+          metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
+          adapter_source_model: "dynamic-mix",
+          adapter_evidence_class: "independent",
         },
       },
       {
@@ -48,11 +51,28 @@ describe("handleStablecoinReserves", () => {
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
     expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=3600, max-age=300");
-    const body = await res.json() as { reserves: unknown[]; estimated: boolean; source: string; mode: string };
+    const body = await res.json() as {
+      reserves: unknown[];
+      estimated: boolean;
+      source: string;
+      mode: string;
+      provenance?: {
+        evidenceClass: string;
+        sourceModel: string;
+        freshnessMode?: string;
+        scoringEligible: boolean;
+      };
+    };
     expect(body.reserves).toEqual(slices);
     expect(body.estimated).toBe(false);
     expect(body.source).toBe("infinifi");
     expect(body.mode).toBe("live");
+    expect(body.provenance).toEqual({
+      evidenceClass: "independent",
+      sourceModel: "dynamic-mix",
+      freshnessMode: "not-applicable",
+      scoringEligible: true,
+    });
   });
 
   it("returns 404 for unknown stablecoin IDs", async () => {

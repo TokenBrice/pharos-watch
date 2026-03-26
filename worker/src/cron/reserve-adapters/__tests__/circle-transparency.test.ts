@@ -35,6 +35,16 @@ const EURC_AMOUNT_HTML = `
 </canvas>
 `;
 
+const AMBIGUOUS_NEAR_PERCENT_HTML = `
+<span data-coin="usdc" data-point="100.8" id="usdc-in-circulation"></span>
+<canvas id="usdc_chartjs_canvas"
+  data-usdc-us-treasuries="47.08"
+  data-usdc-months="19.87"
+  data-usdc-cash="11.35"
+  data-usdc-in-circulation="21.70">
+</canvas>
+`;
+
 describe("adaptCircleTransparency", () => {
   it("extracts USDC reserve slices from HTML", () => {
     const result = adaptCircleTransparency(USDC_HTML, "usdc");
@@ -81,6 +91,11 @@ describe("adaptCircleTransparency", () => {
       { name: "Other Bank Deposits", pct: 98.7, risk: "very-low" },
       { name: "Deposits at Systemically Important Institutions", pct: 1.3, risk: "very-low" },
     ]);
+  });
+
+  it("prefers percentage mode when the payload already sums to roughly 100%", () => {
+    const result = adaptCircleTransparency(AMBIGUOUS_NEAR_PERCENT_HTML, "usdc");
+    expect(result.metadata?.valueMode).toBe("percentage");
   });
 
   it("throws when no matching canvas found", () => {

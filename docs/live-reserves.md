@@ -13,6 +13,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
+- **Operational telemetry:** `sync-live-reserves` emits per-coin progress into `cron_run_progress`, including the current coin, adapter, breaker key, and running synced / failed / skipped counters
 
 This pipeline is intentionally separate from curated reserve metadata in `StablecoinMeta.reserves`. Live reserve sync affects live-enabled detail-page reserve views, status monitoring, and (since v5.8, tightened in v6.2 and v6.5) collateral quality scoring in report cards. The dependency map and all other scoring dimensions still derive from curated/static reserve metadata.
 
@@ -60,7 +61,7 @@ The shared registry in `shared/lib/live-reserve-adapters.ts` defines two importa
 - If the adapter throws, the orchestrator retries the same adapter against each fallback by temporarily swapping that fallback into `inputs.primary`.
 - If every fallback fails, the original primary error is surfaced and the normal breaker/error path runs.
 
-Current repo configs do not declare any `inputs.fallbacks`, so the feature is live but presently unused.
+USDD currently uses this path: the cron retries `latest-collateral` on Ethereum if the Tron source fails, and the adapter now derives the matching `collateral-history` URL from whichever chain endpoint is active so fallback freshness stays chain-consistent.
 
 Supported input kinds:
 
@@ -88,6 +89,8 @@ Common metadata fields:
 | `redemptionFeeBps` | Current live redemption fee telemetry when the source exposes it |
 | `buyFeeBpsMin`, `buyFeeBpsMax` | Optional raw buy-fee range context retained alongside normalized `redemptionFeeBps` |
 
+`freshnessMode = "not-applicable"` is the expected scoring-eligible path for intrinsically current on-chain reads such as `evm-branch-balances`, where reserve composition comes from latest-state contract balances rather than a separately timestamped disclosure.
+
 Warnings now carry both a display `severity` and an execution `effect`:
 
 | Effect | Meaning |
@@ -111,7 +114,7 @@ Warnings now carry both a display `severity` and an execution `effect`:
 5. Persists either a fresh snapshot (`reserve_composition`) plus sync-state row, or an error/degraded/skipped sync-state row.
 
 **Adapter output validation:** After each adapter returns, `validateAdapterOutput()` checks
-that all slice `risk` values are valid enum members, all `pct` values are finite and non-negative,
+that all slice `risk` values are valid enum members, all `pct` values are finite and strictly positive,
 the slice list is non-empty, and the sum is within 2 points of 100%. Invalid output is treated as
 an error. Sum deviation above 0.5 points produces a `degraded` warning, while deviation above 2 points
 hard-fails the adapter output with a `fatal` warning.
@@ -140,7 +143,7 @@ Cron result statuses:
 
 Per-coin warnings still matter operationally, but they affect `reserve_sync_state.last_status` for that coin (`degraded`) and the cron metadata warning list, not the run-level `CronResult.status`.
 
-The cron loop is sequential. This is deliberate: reserve adapters can hit multiple heterogeneous sources, and the isolated hourly trigger keeps connection pressure predictable. Within a run, fetched results are only reused when the adapter registry marks the adapter as `source-invariant` (currently `m0`, `mento`, and `sky-makercore`); coin-aware adapters such as `frax` never share cached results across coins.
+The cron loop is sequential. This is deliberate: reserve adapters can hit multiple heterogeneous sources, and the isolated hourly trigger keeps connection pressure predictable. The leased wrapper now gives `sync-live-reserves` an explicit 12-minute wall-clock budget, and the cron itself reports `setup`, `syncing`, and `finalizing` progress stages so `/status` can show which coin is currently in flight. Within a run, fetched results are only reused when the adapter registry marks the adapter as `source-invariant` (currently `m0`, `mento`, and `sky-makercore`); coin-aware adapters such as `frax` never share cached results across coins.
 
 ---
 
@@ -162,7 +165,7 @@ Latest successful live snapshot per live-enabled coin.
 
 ### `reserve_composition_history`
 
-Append-only history of successful live snapshots. Every successful upsert also inserts a history row carrying the same slices, metadata, warnings, and adapter classification fields as the latest-snapshot table.
+Append-only history of successful live snapshots. Every successful upsert also inserts a history row carrying the same slices, metadata, warnings, and adapter classification fields as the latest-snapshot table. The hourly reserve cron prunes rows older than 90 days.
 
 ### `reserve_sync_state`
 
@@ -183,7 +186,7 @@ Per-coin operational state for the most recent attempt.
 
 ### `reserve_sync_attempt_history`
 
-Append-only history of all reserve-sync attempts, including `ok`, `degraded`, `error`, and `skipped` outcomes with their warnings, error message, and attempt-scoped metadata.
+Append-only history of all reserve-sync attempts, including `ok`, `degraded`, `error`, and `skipped` outcomes with their warnings, error message, and attempt-scoped metadata. The hourly reserve cron prunes rows older than 90 days.
 
 Freshness and consistency rules live in `worker/src/lib/live-reserves-store.ts`:
 
@@ -194,6 +197,7 @@ Freshness and consistency rules live in `worker/src/lib/live-reserves-store.ts`:
 - `loadFreshIndependentLiveReserveMap()` further filters authoritative snapshots to `evidenceClass = independent`, `reserve_sync_state.last_status = "ok"`, **and** scoring-eligible freshness evidence. In practice that means the snapshot must either carry a verified `sourceTimestamp` path or explicitly mark freshness as `not-applicable` / `verified`; `freshnessMode = "unverified"` no longer qualifies for collateral passthrough.
 - `getLatestSuccessfulReserveSnapshotMetadata()` is the canonical accessor for downstream consumers that need snapshot telemetry such as redeemable capacity or live redemption fees
 - failed `reserve_sync_state` / `reserve_sync_attempt_history` rows now also retain `metadata.failureCategory` so parser drift, network issues, upstream HTTP failures, validation failures, and storage write failures are distinguishable without log grep
+- authoritative `live` / `live-stale` API responses now also carry a `provenance` envelope so the frontend can distinguish independent live disclosure from static-validation and weak-proof paths
 
 `computeReserveCompositionOverview()` aggregates the status-card summary used by `/status`:
 
@@ -204,12 +208,18 @@ Freshness and consistency rules live in `worker/src/lib/live-reserves-store.ts`:
 - `degradedCoins`
 - `errorCoins`
 - `corruptCoins`
+- `independentFreshEligible`
+- `independentFreshUnverified`
+- `staticValidatedFresh`
+- `weakProbeFresh`
+- `writeTimeoutUncertain`
 - `lastSuccessAt`
 - `oldestFreshAgeSec`
 
 `errorCoins` includes active adapter failures even before a coin has ever produced a successful live snapshot; those rows no longer remain hidden inside `missingCoins`.
 `corruptCoins` counts rows where a matching latest-success snapshot exists in D1 but fails strict integrity validation, so the system fails closed to fallback presentation instead of serving truncated or malformed live data.
 When a coin has both an old latest-success snapshot and a newer failing attempt state, the overview now prioritizes the active `error` / `degraded` attempt classification over generic `stale` labeling so status surfaces better reflect live incidents.
+`writeTimeoutUncertain` counts coins whose latest attempt hit the D1 write-timeout / finalize-rejection path, meaning the worker could not prove whether the attempted write became authoritative.
 
 ---
 
@@ -241,6 +251,15 @@ Cache control:
 |---------------|---------------|
 | `live` | `public, s-maxage=3600, max-age=300` |
 | `live-stale`, fallback / unavailable modes | `public, s-maxage=300, max-age=60` |
+
+The optional `provenance` object is present only when the response is serving an authoritative `live` or `live-stale` snapshot:
+
+| Field | Meaning |
+|-------|---------|
+| `evidenceClass` | `independent`, `static-validated`, or `weak-live-probe` |
+| `sourceModel` | `dynamic-mix`, `validated-static`, or `single-bucket` |
+| `freshnessMode` | Optional explicit freshness policy (`verified`, `unverified`, `not-applicable`) |
+| `scoringEligible` | Whether the current snapshot is eligible for collateral-quality passthrough right now |
 
 The optional `sync` object exposes the last operational state:
 

@@ -76,7 +76,10 @@ describe("fetchEvmBranchBalancesReserves", () => {
     expect(result.slices[0].pct).toBeCloseTo(3.2, 0);
     expect(result.slices[1].pct).toBeCloseTo(96.8, 0);
 
-    expect(result.metadata).toEqual({ branchCount: 2 });
+    expect(result.metadata).toEqual({
+      branchCount: 2,
+      freshnessMode: "not-applicable",
+    });
   });
 
   it("includes live redemption fee metadata when a probe is configured", async () => {
@@ -112,6 +115,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
     expect(result.metadata).toEqual({
       branchCount: 1,
+      freshnessMode: "not-applicable",
       redemptionFeeBps: 50,
     });
   });

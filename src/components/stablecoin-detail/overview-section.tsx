@@ -102,6 +102,53 @@ function buildReserveFetchNotice(
   };
 }
 
+function formatReserveUpdatedAt(timestamp: number | undefined): string {
+  return timestamp
+    ? new Date(timestamp * 1000).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZoneName: "short",
+      })
+    : "the previous successful run";
+}
+
+function buildReserveProvenanceNotice(
+  reserves: ReserveResult | null,
+): { title: string; message: string; toneClass: string } | null {
+  if (!reserves?.provenance || (reserves.mode !== "live" && reserves.mode !== "live-stale")) {
+    return null;
+  }
+
+  switch (reserves.provenance.evidenceClass) {
+    case "independent":
+      return {
+        title: "Independent live reserve disclosure",
+        message: reserves.provenance.scoringEligible
+          ? "This reserve view comes from an independently measured live reserve feed."
+          : reserves.provenance.freshnessMode === "unverified"
+            ? "This reserve view comes from an independently measured live reserve feed, but freshness is not verified strongly enough for collateral scoring."
+            : "This reserve view comes from an independently measured live reserve feed, but the current snapshot is not scoring-eligible.",
+        toneClass: "border-border/60 bg-muted/30 text-muted-foreground",
+      };
+    case "static-validated":
+      return {
+        title: "Live validation over reviewed reserve baseline",
+        message: "This reserve view keeps the reviewed reserve baseline live through validation data rather than a fully independent live composition feed.",
+        toneClass: "border-border/60 bg-muted/30 text-muted-foreground",
+      };
+    case "weak-live-probe":
+      return {
+        title: "Liveness probe over reviewed reserve baseline",
+        message: "This reserve view reflects a live proof or liveness check over the reviewed reserve baseline, not a full independent live reserve composition feed.",
+        toneClass: "border-border/60 bg-muted/30 text-muted-foreground",
+      };
+    default:
+      return null;
+  }
+}
+
 export function OverviewSection({
   stablecoinId,
   coin,
@@ -122,6 +169,7 @@ export function OverviewSection({
   const reserveFetchNotice = reserveFetchError
     ? buildReserveFetchNotice(reserveFetchError, reserves)
     : null;
+  const reserveProvenanceNotice = buildReserveProvenanceNotice(reserves);
 
   const hasRightColumn = hasDews || hasPriceTransparency;
   const hasAnything = hasLeft || hasRightColumn;
@@ -179,16 +227,7 @@ export function OverviewSection({
                   {reserves.mode === "live" ? (
                     <>
                       <span>
-                        Updated{" "}
-                        {reserves.liveAt
-                          ? new Date(reserves.liveAt * 1000).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            timeZoneName: "short",
-                          })
-                          : "just now"}
+                        Updated {formatReserveUpdatedAt(reserves.liveAt)}
                       </span>
                       {reserves.displayUrl && (
                         <>
@@ -207,16 +246,7 @@ export function OverviewSection({
                   ) : reserves.mode === "live-stale" ? (
                     <>
                       <span>
-                        Live snapshot stale; showing last successful sync from{" "}
-                        {reserves.liveAt
-                          ? new Date(reserves.liveAt * 1000).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            timeZoneName: "short",
-                          })
-                          : "the previous successful run"}
+                        Live snapshot stale; showing last successful sync from {formatReserveUpdatedAt(reserves.liveAt)}
                       </span>
                       {reserves.displayUrl && (
                         <>
@@ -244,6 +274,12 @@ export function OverviewSection({
                     </span>
                   ) : null}
                 </div>
+                {reserveProvenanceNotice ? (
+                  <div className={`mt-2 rounded-lg border px-4 py-3 text-sm leading-relaxed ${reserveProvenanceNotice.toneClass}`}>
+                    <p className="font-medium text-foreground">{reserveProvenanceNotice.title}</p>
+                    <p className="mt-1">{reserveProvenanceNotice.message}</p>
+                  </div>
+                ) : null}
                 {reserves.sync?.warnings && reserves.sync.warnings.length > 0 && (
                   <div className="mt-2 text-center text-xs text-amber-700 dark:text-amber-300">
                     Operator note: {reserves.sync.warnings.join("; ")}

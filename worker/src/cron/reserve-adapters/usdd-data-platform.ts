@@ -1,5 +1,5 @@
 import type { ReserveRisk, StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
@@ -29,7 +29,8 @@ interface UsddHistoryResponse {
   };
 }
 
-const USDD_HISTORY_URL = "https://app-api.usdd.io/data-platform/collateral-history?interval=WEEKLY&chain=tron";
+const USDD_HISTORY_INTERVAL = "WEEKLY";
+const USDD_UNKNOWN_VAULT_SLICE_NAME = "Unknown / unmapped collateral vaults";
 
 type BucketValue = {
   name: string;
@@ -45,6 +46,30 @@ function assertSuccess<T extends { code?: number }>(payload: T, label: string): 
   return payload;
 }
 
+export function buildUsddHistoryUrl(latestUrl: string): string {
+  const latest = new URL(latestUrl);
+  const history = new URL(latest.toString());
+  history.pathname = latest.pathname.endsWith("/latest-collateral")
+    ? latest.pathname.replace(/\/latest-collateral$/, "/collateral-history")
+    : "/data-platform/collateral-history";
+  history.search = "";
+  history.searchParams.set("interval", USDD_HISTORY_INTERVAL);
+  const chain = latest.searchParams.get("chain");
+  if (chain) {
+    history.searchParams.set("chain", chain);
+  }
+  return history.toString();
+}
+
+function createUnknownVaultWarning(unknownVaultTypes: Iterable<string>): LiveReserveWarning {
+  return {
+    code: "unknown-vault-type",
+    message: `USDD collateral feed includes unmapped vault types: ${Array.from(unknownVaultTypes).sort().join(", ")}`,
+    severity: "info",
+    effect: "info",
+  };
+}
+
 export function adaptUsddLatestCollateral(
   latest: UsddLatestCollateralResponse,
   history?: UsddHistoryResponse,
@@ -58,10 +83,15 @@ export function adaptUsddLatestCollateral(
     directUsdtUsd: 0,
     stakedTrxUsd: 0,
   };
+  const unknownVaultTypes = new Set<string>();
+  let unknownVaultCount = 0;
+  let unknownVaultUsd = 0;
+  let totalVaultUsd = 0;
 
   for (const item of items) {
     const lockedValue = Number(item.lockedValue ?? 0);
     if (!Number.isFinite(lockedValue) || lockedValue <= 0) continue;
+    totalVaultUsd += lockedValue;
     switch (item.vaultType) {
       case "SA001-A":
         bucketValues.smartAllocatorUsd += lockedValue;
@@ -81,51 +111,76 @@ export function adaptUsddLatestCollateral(
         bucketValues.stakedTrxUsd += lockedValue;
         break;
       default:
+        unknownVaultCount += 1;
+        unknownVaultUsd += lockedValue;
+        unknownVaultTypes.add(
+          typeof item.vaultType === "string" && item.vaultType.trim().length > 0
+            ? item.vaultType.trim()
+            : "unknown",
+        );
         break;
     }
   }
 
-  const historyItems = history && assertSuccess(history, "usdd collateral history").data?.items
-    ? history.data?.items ?? []
-    : [];
-  const latestHistoryPoint = historyItems.length > 0 ? historyItems[historyItems.length - 1] : undefined;
-  const statisticTimeMs = latestHistoryPoint?.statisticTime;
+  const historyItems = history ? (assertSuccess(history, "usdd collateral history").data?.items ?? []) : [];
+  const statisticTimeMs = historyItems.reduce<number | null>((latestPoint, item) => {
+    if (typeof item.statisticTime !== "number" || !Number.isFinite(item.statisticTime)) {
+      return latestPoint;
+    }
+    return latestPoint == null || item.statisticTime > latestPoint
+      ? item.statisticTime
+      : latestPoint;
+  }, null);
 
   const bucketSlices: BucketValue[] = [
-      {
-        name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)",
-        value: bucketValues.smartAllocatorUsd,
-        risk: "medium",
-      },
-      {
-        name: "USDT (PSM vaults)",
-        value: bucketValues.psmUsdtUsd,
-        risk: "low",
-        coinId: "usdt-tether",
-      },
-      {
-        name: "TRX",
-        value: bucketValues.trxUsd,
-        risk: "high",
-      },
-      {
-        name: "USDT (direct vaults)",
-        value: bucketValues.directUsdtUsd,
-        risk: "high",
-        coinId: "usdt-tether",
-      },
-      {
-        name: "sTRX (direct vaults)",
-        value: bucketValues.stakedTrxUsd,
-        risk: "high",
-      },
-    ];
+    {
+      name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)",
+      value: bucketValues.smartAllocatorUsd,
+      risk: "medium",
+    },
+    {
+      name: "USDT (PSM vaults)",
+      value: bucketValues.psmUsdtUsd,
+      risk: "low",
+      coinId: "usdt-tether",
+    },
+    {
+      name: "TRX",
+      value: bucketValues.trxUsd,
+      risk: "high",
+    },
+    {
+      name: "USDT (direct vaults)",
+      value: bucketValues.directUsdtUsd,
+      risk: "high",
+      coinId: "usdt-tether",
+    },
+    {
+      name: "sTRX (direct vaults)",
+      value: bucketValues.stakedTrxUsd,
+      risk: "high",
+    },
+    ...(unknownVaultUsd > 0
+      ? [{
+          name: USDD_UNKNOWN_VAULT_SLICE_NAME,
+          value: unknownVaultUsd,
+          risk: "high" as const,
+        }]
+      : []),
+  ];
+  const warnings: LiveReserveWarning[] = unknownVaultTypes.size > 0
+    ? [createUnknownVaultWarning(unknownVaultTypes)]
+    : [];
 
   return {
     slices: slicesFromValues(bucketSlices.sort((left, right) => right.value - left.value)),
+    ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       vaultCount: items.length,
       trackedVaultCount: 5,
+      ...(unknownVaultCount > 0 ? { unknownVaultCount } : {}),
+      ...(unknownVaultTypes.size > 0 ? { unknownVaultTypes: Array.from(unknownVaultTypes).sort() } : {}),
+      ...(totalVaultUsd > 0 ? { unknownExposurePct: (unknownVaultUsd / totalVaultUsd) * 100 } : {}),
       ...(typeof statisticTimeMs === "number" && Number.isFinite(statisticTimeMs)
         ? {
             sourceTimestamp: Math.floor(statisticTimeMs / 1000),
@@ -133,6 +188,10 @@ export function adaptUsddLatestCollateral(
           }
         : {
             freshnessMode: "unverified" as const,
+            details: {
+              freshnessSource: "collateral-history",
+              freshnessReason: "history timestamp unavailable",
+            },
           }),
     },
   };
@@ -146,9 +205,10 @@ export async function fetchUsddDataPlatformReserves(
 ): Promise<AdapterResult> {
   const input = requireJsonInputFromConfig(config, "usdd-data-platform");
   const timeout = getAdapterTimeout(config, 12_000);
+  const historyUrl = buildUsddHistoryUrl(input.url);
   const [latest, history] = await Promise.all([
     fetchJsonWithRetry<UsddLatestCollateralResponse>(input.url, signal, timeout, ctx),
-    fetchJsonWithRetry<UsddHistoryResponse>(USDD_HISTORY_URL, signal, timeout, ctx),
+    fetchJsonWithRetry<UsddHistoryResponse>(historyUrl, signal, timeout, ctx),
   ]);
   return adaptUsddLatestCollateral(latest, history);
 }
