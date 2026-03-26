@@ -40,19 +40,11 @@ export {
 } from "./backfill-fx";
 
 export {
-  type HistoricalMarketBackfillGranularity,
-  type HistoricalMarketMergeReason,
-  type HistoricalMarketPolicyAdjustment,
-  type HistoricalMarketPriceSeriesResult,
-  type HistoricalMarketSeriesStats,
-  type HistoricalMarketSource,
-  type HistoricalMarketSourceDiagnostics,
   type PricePoint,
   fetchCgPriceHistoryDaily,
   fetchCgPriceHistoryHourly,
   fetchDlPriceChart,
   collapsePricesToDailyTimestamps,
-  fetchMarketBackfillPriceSeries,
   fetchMarketBackfillPrices,
 } from "./backfill-price-sources";
 
