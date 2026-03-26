@@ -9,6 +9,8 @@ import { runTwentyMinuteDexDiscoverySlot } from "./scheduled/twenty-minute-dex-d
 import { runTwentyMinuteMintBurnExtendedSlot } from "./scheduled/twenty-minute-mint-burn-extended";
 import { runHalfHourlySlot } from "./scheduled/half-hourly";
 import { runHourlyReserveSyncSlot } from "./scheduled/hourly-live-reserves";
+import { runHourlyYieldSlot } from "./scheduled/hourly-yield";
+import { runYieldSupplementalSlot } from "./scheduled/yield-supplemental";
 import { runFiveMinuteTelegramSlot } from "./scheduled/five-minute-telegram";
 import { runDaily0800Slot } from "./scheduled/daily-0800";
 import { runDaily0805Slot } from "./scheduled/daily-0805";
@@ -24,6 +26,8 @@ const SLOT_RUNNER_BY_SCHEDULE: Record<string, SlotRunner> = {
   [CRON_SCHEDULES.twentyMinuteExtendedOffset]: runTwentyMinuteMintBurnExtendedSlot,
   [CRON_SCHEDULES.halfHourlyOffset]: runHalfHourlySlot,
   [CRON_SCHEDULES.hourlyReserveSync]: runHourlyReserveSyncSlot,
+  [CRON_SCHEDULES.hourlyYieldSync]: runHourlyYieldSlot,
+  [CRON_SCHEDULES.fourHourlyYieldSupplemental]: runYieldSupplementalSlot,
   [CRON_SCHEDULES.fiveMinuteTelegramAlerts]: runFiveMinuteTelegramSlot,
   [CRON_SCHEDULES.daily0800Utc]: runDaily0800Slot,
   [CRON_SCHEDULES.daily0805Utc]: runDaily0805Slot,

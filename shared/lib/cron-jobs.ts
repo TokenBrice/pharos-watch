@@ -6,6 +6,7 @@ export type CronGroupKey =
   | "twenty-minute"
   | "half-hourly"
   | "hourly"
+  | "multi-hourly"
   | "daily"
   | "other";
 
@@ -17,6 +18,8 @@ export const CRON_SCHEDULES = {
   twentyMinuteExtendedOffset: "13,33,53 * * * *",
   halfHourlyOffset: "10,40 * * * *",
   hourlyReserveSync: "11 * * * *",
+  hourlyYieldSync: "20 * * * *",
+  fourHourlyYieldSupplemental: "25 */4 * * *",
   fiveMinuteTelegramAlerts: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
   daily0800Utc: "0 8 * * *",
   daily0805Utc: "5 8 * * *",
@@ -35,6 +38,8 @@ const CRON_SCHEDULE_BUCKETS = {
   twentyMinuteExtendedOffset: { intervalSec: 1200, offsetSec: 13 * 60 },
   halfHourlyOffset: { intervalSec: 1800, offsetSec: 10 * 60 },
   hourlyReserveSync: { intervalSec: 3600, offsetSec: 11 * 60 },
+  hourlyYieldSync: { intervalSec: 3600, offsetSec: 20 * 60 },
+  fourHourlyYieldSupplemental: { intervalSec: 4 * 3600, offsetSec: 25 * 60 },
   fiveMinuteTelegramAlerts: { intervalSec: 300, offsetSec: 2 * 60 },
   daily0800Utc: { intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 },
   daily0805Utc: { intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 + 5 * 60 },
@@ -98,13 +103,19 @@ export const CRON_GROUPS: readonly CronGroupDefinition[] = [
     key: "half-hourly",
     title: "30-minute slot",
     badge: "~30 min",
-    description: "Stablecoin charts, DEX discovery/liquidity, DEWS, PSI, and yield refresh.",
+    description: "Stablecoin charts, DEX discovery/liquidity, DEWS, and PSI refresh.",
   },
   {
     key: "hourly",
     title: "Hourly slot",
     badge: "~1h",
-    description: "Blacklist sync plus reserve-sync tuning lanes, each on its own trigger so cadence changes do not perturb other slots.",
+    description: "Blacklist sync plus dedicated reserve and core yield publication lanes, each on its own trigger.",
+  },
+  {
+    key: "multi-hourly",
+    title: "Multi-hour slot",
+    badge: "~4h",
+    description: "Best-effort slower refresh lanes isolated from the hourly publication paths.",
   },
   {
     key: "daily",
@@ -232,11 +243,20 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
   {
     job: "sync-yield-data",
     label: "Yield sync",
-    group: "half-hourly",
-    intervalSec: 1800,
-    scheduleKey: "halfHourlyOffset",
-    triggerMode: "shared",
+    group: "hourly",
+    intervalSec: 3600,
+    scheduleKey: "hourlyYieldSync",
+    triggerMode: "isolated",
     maxConnections: 1, // on-chain rate batch (1); DL pools read from cache written by sync-dex-liquidity (sequential)
+  },
+  {
+    job: "sync-yield-supplemental",
+    label: "Yield supplemental sync",
+    group: "multi-hourly",
+    intervalSec: 4 * 3600,
+    scheduleKey: "fourHourlyYieldSupplemental",
+    triggerMode: "isolated",
+    maxConnections: 5, // Morpho/Pendle/Yearn/Beefy run in parallel (peak 5), then Compound/Aave consume the isolated lane
   },
   {
     // Runs on the quarter-hourly trigger after a safe stablecoins cache write.

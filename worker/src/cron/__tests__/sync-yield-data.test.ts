@@ -153,6 +153,7 @@ vi.mock("../../lib/db", async (importOriginal) => {
 vi.mock("../../lib/db-cache", () => ({
   getCache: vi.fn(async () => null),
   setCache: vi.fn(async () => {}),
+  setCacheIfNewer: vi.fn(async () => {}),
 }));
 
 // Stub chain-registry
@@ -244,7 +245,7 @@ vi.mock("../../lib/constants", () => ({
 
 import { syncYieldData } from "../sync-yield-data";
 import { batchExecute } from "../../lib/db";
-import { getCache, setCache } from "../../lib/db-cache";
+import { getCache, setCache, setCacheIfNewer } from "../../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
@@ -327,6 +328,7 @@ describe("syncYieldData", () => {
     // Reset mocks to factory defaults
     vi.mocked(getCache).mockReset().mockResolvedValue(null);
     vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
+    vi.mocked(setCacheIfNewer).mockReset().mockResolvedValue(undefined);
     vi.mocked(batchExecute).mockReset().mockResolvedValue(0);
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
     vi.mocked(recordOutcome).mockReset().mockResolvedValue(undefined);
@@ -585,6 +587,142 @@ describe("syncYieldData", () => {
       (call: unknown[]) => typeof call[0] === "string" && (call[0] as string).includes("yields.llama.fi"),
     );
     expect(yieldCalls.length).toBe(0);
+  });
+
+  it("uses cached supplemental sources on the hourly publication path", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "yield:supplemental-sources:v1") {
+        return {
+          value: JSON.stringify({
+            version: 1,
+            updatedAt: nowSec,
+            source: "sync-yield-supplemental",
+            sourceCount: 1,
+            data: [
+              {
+                symbol: "sDAI",
+                chain: "ethereum",
+                address: null,
+                yield: {
+                  currentApy: 6.1,
+                  apyBase: 6.1,
+                  apyReward: null,
+                  sourcePool: "vault-sdai-morpho",
+                  sourceTvlUsd: 50_000_000,
+                  dataSource: "protocol-api",
+                  exchangeRate: null,
+                  sourceKey: "protocol-api:morpho-vault:ethereum:0xvault",
+                  yieldSource: "Morpho: sDAI Vault",
+                  yieldType: "lending-vault",
+                  sourceObservedAt: nowSec,
+                  comparisonAnchorObservedAt: null,
+                },
+              },
+            ],
+          }),
+          updatedAt: nowSec,
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    const result = await syncYieldData(db);
+
+    expect(result.itemCount).toBe(1);
+    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }>;
+    const supplementalRow = writeStatements.find(
+      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "protocol-api:morpho-vault:ethereum:0xvault",
+    );
+    expect(supplementalRow).toBeDefined();
+  });
+
+  it("skips deterministic on-chain reads while cooldown is active", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const onChainConfigs = yieldConfigModule.ON_CHAIN_RATE_CONFIGS as typeof yieldConfigModule.ON_CHAIN_RATE_CONFIGS;
+    onChainConfigs.push({
+      stablecoinId: "100",
+      chain: "ethereum",
+      contract: "0x0000000000000000000000000000000000000001",
+      method: "exchangeRate",
+      scale: 1e18,
+    } as never);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "yield:supplemental-sources:v1") {
+        return {
+          value: JSON.stringify({
+            version: 1,
+            updatedAt: nowSec,
+            source: "sync-yield-supplemental",
+            sourceCount: 1,
+            data: [
+              {
+                symbol: "sDAI",
+                chain: "ethereum",
+                address: null,
+                yield: {
+                  currentApy: 6.1,
+                  apyBase: 6.1,
+                  apyReward: null,
+                  sourcePool: "vault-sdai-morpho",
+                  sourceTvlUsd: 50_000_000,
+                  dataSource: "protocol-api",
+                  exchangeRate: null,
+                  sourceKey: "protocol-api:morpho-vault:ethereum:0xvault",
+                  yieldSource: "Morpho: sDAI Vault",
+                  yieldType: "lending-vault",
+                  sourceObservedAt: nowSec,
+                  comparisonAnchorObservedAt: null,
+                },
+              },
+            ],
+          }),
+          updatedAt: nowSec,
+        };
+      }
+      if (key === "yield:onchain-health:v1") {
+        return {
+          value: JSON.stringify({
+            version: 1,
+            consecutiveAllFailRuns: 2,
+            consecutiveMaskedAllFailRuns: 2,
+            cooldownUntil: nowSec + 3600,
+            lastAttemptedAt: nowSec - 3600,
+            lastAllFailedAt: nowSec - 3600,
+            lastSuccessAt: null,
+            lastSkippedAt: null,
+            lastFailureMissingIds: [],
+          }),
+          updatedAt: nowSec - 60,
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    const fetchSpy = mockFetch([]);
+
+    try {
+      const result = await syncYieldData(db);
+      const metadata = JSON.parse(result.metadata ?? "{}") as {
+        sourceCoverage?: {
+          onChainSkippedDueToCooldown?: boolean;
+          onChainCooldownActive?: boolean;
+        };
+      };
+
+      expect(result.itemCount).toBe(1);
+      expect(metadata.sourceCoverage?.onChainSkippedDueToCooldown).toBe(true);
+      expect(metadata.sourceCoverage?.onChainCooldownActive).toBe(true);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      onChainConfigs.length = 0;
+    }
   });
 
   it("applies deterministic auto-discovery override for U (id 336)", async () => {

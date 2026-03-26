@@ -174,6 +174,7 @@ vi.mock("../../lib/db", async (importOriginal) => {
 vi.mock("../../lib/db-cache", () => ({
   getCache: vi.fn(async () => null),
   setCache: vi.fn(async () => {}),
+  setCacheIfNewer: vi.fn(async () => {}),
 }));
 
 vi.mock("../../lib/chain-registry", () => ({

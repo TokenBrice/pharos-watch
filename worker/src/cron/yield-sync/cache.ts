@@ -1,7 +1,7 @@
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import { RISK_FREE_RATE_FALLBACK } from "../../lib/constants";
 import { toFiniteNumber } from "../../lib/number-utils";
-import type { DlPool } from "./types";
+import type { DlPool, ResolvedYieldCandidate } from "./types";
 
 interface RiskFreeRateCachePayload {
   rate: number;
@@ -30,12 +30,70 @@ interface DlStablecoinPoolsCachePayload {
   data: DlPool[];
 }
 
+interface YieldSupplementalSourcesCachePayload {
+  version: 1;
+  updatedAt: number;
+  source: string;
+  sourceCount: number;
+  data: ResolvedYieldCandidate[];
+}
+
+export interface ParsedYieldSupplementalSourcesCache {
+  candidates: ResolvedYieldCandidate[];
+  updatedAt: number;
+  ageSeconds: number;
+  sourceCount: number;
+}
+
+interface DeterministicOnChainHealthStateCachePayload {
+  version: 1;
+  consecutiveAllFailRuns: number;
+  consecutiveMaskedAllFailRuns: number;
+  cooldownUntil: number | null;
+  lastAttemptedAt: number | null;
+  lastAllFailedAt: number | null;
+  lastSuccessAt: number | null;
+  lastSkippedAt: number | null;
+  lastFailureMissingIds: string[];
+}
+
+export interface DeterministicOnChainHealthState {
+  consecutiveAllFailRuns: number;
+  consecutiveMaskedAllFailRuns: number;
+  cooldownUntil: number | null;
+  lastAttemptedAt: number | null;
+  lastAllFailedAt: number | null;
+  lastSuccessAt: number | null;
+  lastSkippedAt: number | null;
+  lastFailureMissingIds: string[];
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
 function toNullableString(value: unknown): string | null {
   return typeof value === "string" && value.trim() !== "" ? value : null;
+}
+
+function toNonNegativeInteger(value: unknown): number {
+  const parsed = toFiniteNumber(value);
+  if (parsed == null || parsed < 0) return 0;
+  return Math.floor(parsed);
+}
+
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
+}
+
+function isResolvedYieldCandidate(value: unknown): value is ResolvedYieldCandidate {
+  if (!isRecord(value)) return false;
+  if (typeof value.symbol !== "string" || value.symbol.trim() === "") return false;
+  if (value.chain != null && typeof value.chain !== "string") return false;
+  if (value.address != null && typeof value.address !== "string") return false;
+  if (!isRecord(value.yield)) return false;
+  return typeof value.yield.sourceKey === "string" && value.yield.sourceKey.trim() !== "";
 }
 
 export function buildRiskFreeRateCachePayload(
@@ -180,4 +238,104 @@ export function parseDlStablecoinPoolsCache(
   }
 
   return null;
+}
+
+export function buildYieldSupplementalSourcesCache(
+  candidates: ResolvedYieldCandidate[],
+  updatedAt = Math.floor(Date.now() / 1000),
+): string {
+  const payload: YieldSupplementalSourcesCachePayload = {
+    version: 1,
+    updatedAt,
+    source: "sync-yield-supplemental",
+    sourceCount: candidates.length,
+    data: candidates,
+  };
+  return JSON.stringify(payload);
+}
+
+export function parseYieldSupplementalSourcesCache(
+  raw: string,
+  cacheUpdatedAt: number,
+  nowSec = Math.floor(Date.now() / 1000),
+): ParsedYieldSupplementalSourcesCache | null {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (Array.isArray(parsed)) {
+      const candidates = parsed.filter(isResolvedYieldCandidate);
+      return {
+        candidates,
+        updatedAt: cacheUpdatedAt,
+        ageSeconds: Math.max(0, nowSec - cacheUpdatedAt),
+        sourceCount: candidates.length,
+      };
+    }
+
+    if (isRecord(parsed) && Array.isArray(parsed.data)) {
+      const candidates = parsed.data.filter(isResolvedYieldCandidate);
+      const updatedAt = toFiniteNumber(parsed.updatedAt) ?? cacheUpdatedAt;
+      return {
+        candidates,
+        updatedAt,
+        ageSeconds: Math.max(0, nowSec - updatedAt),
+        sourceCount: toNonNegativeInteger(parsed.sourceCount) || candidates.length,
+      };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+export function getDefaultDeterministicOnChainHealthState(): DeterministicOnChainHealthState {
+  return {
+    consecutiveAllFailRuns: 0,
+    consecutiveMaskedAllFailRuns: 0,
+    cooldownUntil: null,
+    lastAttemptedAt: null,
+    lastAllFailedAt: null,
+    lastSuccessAt: null,
+    lastSkippedAt: null,
+    lastFailureMissingIds: [],
+  };
+}
+
+export function serializeDeterministicOnChainHealthState(
+  state: DeterministicOnChainHealthState,
+): string {
+  const payload: DeterministicOnChainHealthStateCachePayload = {
+    version: 1,
+    consecutiveAllFailRuns: state.consecutiveAllFailRuns,
+    consecutiveMaskedAllFailRuns: state.consecutiveMaskedAllFailRuns,
+    cooldownUntil: state.cooldownUntil,
+    lastAttemptedAt: state.lastAttemptedAt,
+    lastAllFailedAt: state.lastAllFailedAt,
+    lastSuccessAt: state.lastSuccessAt,
+    lastSkippedAt: state.lastSkippedAt,
+    lastFailureMissingIds: state.lastFailureMissingIds,
+  };
+  return JSON.stringify(payload);
+}
+
+export function parseDeterministicOnChainHealthState(raw: string): DeterministicOnChainHealthState {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isRecord(parsed)) {
+      return getDefaultDeterministicOnChainHealthState();
+    }
+
+    return {
+      consecutiveAllFailRuns: toNonNegativeInteger(parsed.consecutiveAllFailRuns),
+      consecutiveMaskedAllFailRuns: toNonNegativeInteger(parsed.consecutiveMaskedAllFailRuns),
+      cooldownUntil: toFiniteNumber(parsed.cooldownUntil),
+      lastAttemptedAt: toFiniteNumber(parsed.lastAttemptedAt),
+      lastAllFailedAt: toFiniteNumber(parsed.lastAllFailedAt),
+      lastSuccessAt: toFiniteNumber(parsed.lastSuccessAt),
+      lastSkippedAt: toFiniteNumber(parsed.lastSkippedAt),
+      lastFailureMissingIds: toStringArray(parsed.lastFailureMissingIds),
+    };
+  } catch {
+    return getDefaultDeterministicOnChainHealthState();
+  }
 }

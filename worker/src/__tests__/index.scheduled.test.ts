@@ -32,6 +32,7 @@ const cronMocks = vi.hoisted(() => ({
   syncKinesisSupply: vi.fn(async () => ({ status: "ok", itemCount: 2, metadata: "{}" })),
   syncDexLiquidity: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncYieldData: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  syncYieldSupplemental: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncBluechip: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   generateDailyDigest: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   generateWeeklyRecap: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -99,6 +100,7 @@ vi.mock("../cron/sync-redemption-backstops", () => ({ syncRedemptionBackstops: c
 vi.mock("../cron/sync-kinesis-supply", () => ({ syncKinesisSupply: cronMocks.syncKinesisSupply }));
 vi.mock("../cron/dex-liquidity", () => ({ syncDexLiquidity: cronMocks.syncDexLiquidity }));
 vi.mock("../cron/sync-yield-data", () => ({ syncYieldData: cronMocks.syncYieldData }));
+vi.mock("../cron/sync-yield-supplemental", () => ({ syncYieldSupplemental: cronMocks.syncYieldSupplemental }));
 vi.mock("../cron/sync-bluechip", () => ({ syncBluechip: cronMocks.syncBluechip }));
 vi.mock("../cron/daily-digest", () => ({ generateDailyDigest: cronMocks.generateDailyDigest }));
 vi.mock("../cron/weekly-recap", () => ({ generateWeeklyRecap: cronMocks.generateWeeklyRecap }));
@@ -377,7 +379,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
   });
 
-  it("runs charts → dex → yield on the 30-min cron", async () => {
+  it("runs charts → dex → dews → psi on the 30-min cron", async () => {
     const { ctx, waits } = makeCtx();
     const env = {
       DB: {} as D1Database,
@@ -395,7 +397,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncDexLiquidity).toHaveBeenCalledTimes(1);
     expect(cronMocks.computeAndStoreDEWS).toHaveBeenCalledTimes(1);
     expect(cronMocks.computeAndStoreStabilityIndex).toHaveBeenCalledTimes(1);
-    expect(cronMocks.syncYieldData).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncYieldData).not.toHaveBeenCalled();
     expect(cronMocks.syncDexLiquidity.mock.invocationCallOrder[0]).toBeGreaterThan(
       cronMocks.syncStablecoinCharts.mock.invocationCallOrder[0],
     );
@@ -404,9 +406,6 @@ describe("worker.scheduled", () => {
     );
     expect(cronMocks.computeAndStoreStabilityIndex.mock.invocationCallOrder[0]).toBeGreaterThan(
       cronMocks.computeAndStoreDEWS.mock.invocationCallOrder[0],
-    );
-    expect(cronMocks.syncYieldData.mock.invocationCallOrder[0]).toBeGreaterThan(
-      cronMocks.computeAndStoreStabilityIndex.mock.invocationCallOrder[0],
     );
   });
 
@@ -429,7 +428,47 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncDexLiquidity).toHaveBeenCalledTimes(1);
     expect(cronMocks.computeAndStoreDEWS).toHaveBeenCalledTimes(1);
     expect(cronMocks.computeAndStoreStabilityIndex).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncYieldData).not.toHaveBeenCalled();
+  });
+
+  it("runs yield publication on the dedicated hourly :20 trigger", async () => {
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+      ETHERSCAN_API_KEY: "etherscan",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "20 * * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
     expect(cronMocks.syncYieldData).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncStablecoinCharts).not.toHaveBeenCalled();
+    expect(cronMocks.syncDexLiquidity).not.toHaveBeenCalled();
+    expect(cronMocks.syncYieldSupplemental).not.toHaveBeenCalled();
+  });
+
+  it("runs supplemental yield refresh on the dedicated 4-hour :25 trigger", async () => {
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "25 */4 * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(cronMocks.syncYieldSupplemental).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncYieldData).not.toHaveBeenCalled();
+    expect(cronMocks.syncStablecoinCharts).not.toHaveBeenCalled();
   });
 
   it("continues sync-usds-status when fetch-tbill-rate throws in the daily 08:00 slot", async () => {

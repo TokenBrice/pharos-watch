@@ -1,10 +1,11 @@
 /**
  * Half-hourly trigger (10,40 * * * *):
  *   sync-stablecoin-charts (1) → sync-dex-liquidity (4)
- *   → compute-dews (0) → stability-index (0) → sync-yield-data (2)
+ *   → compute-dews (0) → stability-index (0)
  *
  * Jobs are chained sequentially so the heaviest phase (dex-liquidity with
- * up to 4 concurrent Curve-chain/subgraph fetches) does not overlap with yield-sync.
+ * up to 4 concurrent Curve-chain/subgraph fetches) does not overlap with any
+ * other fetch-heavy work.
  * compute-dews and stability-index are DB-only (0 connections) and benefit
  * from running after dex-liquidity provides fresh liquidity scores.
  * Connection budget: 4/6 peak (dex-liquidity subgraph phase; direct APIs run afterward)
@@ -13,7 +14,6 @@ import { syncStablecoinCharts } from "../../cron/sync-stablecoin-charts";
 import { syncDexLiquidity } from "../../cron/dex-liquidity";
 import { computeAndStoreDEWS } from "../../cron/compute-dews";
 import { computeAndStoreStabilityIndex } from "../../cron/stability-index";
-import { syncYieldData } from "../../cron/sync-yield-data";
 import type { ScheduledRuntimeContext } from "./context";
 
 export async function runHalfHourlySlot(runtime: ScheduledRuntimeContext): Promise<void> {
@@ -48,13 +48,4 @@ export async function runHalfHourlySlot(runtime: ScheduledRuntimeContext): Promi
 
   await runHalfHourlyJob("compute-dews", (signal) => computeAndStoreDEWS(runtime.db, signal));
   await runHalfHourlyJob("stability-index", (signal) => computeAndStoreStabilityIndex(runtime.db, signal));
-  await runHalfHourlyJob("sync-yield-data", (signal) =>
-    syncYieldData(
-      runtime.db,
-      signal,
-      runtime.chainRpcs,
-      runtime.coingeckoApiKey,
-      runtime.env.ETHERSCAN_API_KEY ?? null,
-    ),
-  );
 }

@@ -25,7 +25,13 @@ import {
   YIELD_VARIANT_MAP,
 } from "../yield-config";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { COMPOUND_V3_COMETS, fetchAaveV3SupplyRates, fetchBeefySources, fetchBimaSusbdSource, fetchBprotocolLqtyOnlySource, fetchCompoundV3SupplyRates, fetchHashnoteUsycSource, fetchMorphoVaultSources, fetchOndoUsdyOracleSource, fetchPendleMarketSources, fetchYearnKongSources, getPriceDerivedApy, type AaveV3RateTarget } from "./sources";
+import {
+  fetchBimaSusbdSource,
+  fetchBprotocolLqtyOnlySource,
+  fetchHashnoteUsycSource,
+  fetchOndoUsdyOracleSource,
+  getPriceDerivedApy,
+} from "./sources";
 import { buildDlChainFilter, buildYieldIdentityLookups, canUseSymbolOnlyYieldMatch, getTrackedContractAddresses, resolveYieldCandidateStablecoinId } from "./identity";
 import type { DlPool, ResolvedYieldCandidate, ResolvedYieldEntry } from "./types";
 import { scanForNewVariants } from "./variant-scanner";
@@ -57,6 +63,7 @@ interface ResolveYieldSourcesParams {
   signal?: AbortSignal;
   chainRpcs?: Map<string, ChainRpcConfig>;
   coingeckoApiKey?: string | null;
+  supplementalCandidates?: ResolvedYieldCandidate[];
 }
 
 function appendResolvedYieldCandidates(
@@ -132,6 +139,7 @@ export async function resolveYieldSources({
   signal,
   chainRpcs,
   coingeckoApiKey,
+  supplementalCandidates = [],
 }: ResolveYieldSourcesParams): Promise<YieldResolutionResult> {
   const resolved: ResolvedYieldEntry[] = [];
   const tier1PrevRates = new Map<string, number | null>();
@@ -459,80 +467,7 @@ export async function resolveYieldSources({
     }
   }
 
-  const [morphoVaults, pendleMarkets, kongVaults, beefyVaults] = await Promise.all([
-    fetchMorphoVaultSources(signal),
-    fetchPendleMarketSources(signal),
-    fetchYearnKongSources(signal),
-    fetchBeefySources(signal),
-  ]);
-  appendResolvedYieldCandidates(resolved, morphoVaults, identityLookups);
-  appendResolvedYieldCandidates(resolved, pendleMarkets, identityLookups);
-  appendResolvedYieldCandidates(resolved, kongVaults, identityLookups);
-  appendResolvedYieldCandidates(resolved, beefyVaults, identityLookups);
-
-  // Compound V3 direct on-chain supply rates — bounded by the adapter budget.
-  const compoundV3Results = await fetchCompoundV3SupplyRates([...COMPOUND_V3_COMETS], signal, chainRpcs);
-  for (const entry of compoundV3Results) {
-    const meta = TRACKED_META_BY_ID.get(entry.stablecoinId);
-    if (!meta) continue;
-    if (resolved.some((r) => r.id === meta.id && r.yield?.sourceKey === entry.yield.sourceKey)) continue;
-    resolved.push({ id: meta.id, symbol: meta.symbol, yield: entry.yield });
-  }
-
-  // ---------------------------------------------------------------------------
-  // Aave V3 direct on-chain supply rates (after batch adapters, before auto-lending)
-  // ---------------------------------------------------------------------------
-  const AAVE_SUPPORTED_CHAINS = new Set(["ethereum", "arbitrum", "base"]);
-  const aaveTargets: AaveV3RateTarget[] = [];
-  for (const meta of ACTIVE_STABLECOINS) {
-    for (const contract of meta.contracts ?? []) {
-      if (
-        AAVE_SUPPORTED_CHAINS.has(contract.chain) &&
-        contract.address &&
-        !aaveTargets.some((t) => t.stablecoinId === meta.id && t.chain === contract.chain)
-      ) {
-        aaveTargets.push({
-          stablecoinId: meta.id,
-          symbol: meta.symbol,
-          chain: contract.chain,
-          assetAddress: contract.address,
-        });
-      }
-    }
-  }
-
-  if (aaveTargets.length > 0 && chainRpcs) {
-    const { rates: aaveRates } = await fetchAaveV3SupplyRates(aaveTargets, signal, chainRpcs);
-    const AAVE_YIELD_TYPE = "lending-opportunity";
-    for (const [stablecoinId, { apy, chain }] of aaveRates) {
-      if (apy <= 0) continue;
-      const sourceKey = `aave-v3-onchain:${chain}`;
-      const yieldSource = `Aave v3 (${chain})`;
-      if (resolved.some((entry) => entry.id === stablecoinId && entry.yield?.sourceKey === sourceKey)) {
-        continue;
-      }
-      const meta = TRACKED_META_BY_ID.get(stablecoinId);
-      if (!meta) continue;
-      resolved.push({
-        id: meta.id,
-        symbol: meta.symbol,
-        yield: {
-          currentApy: apy,
-          apyBase: apy,
-          apyReward: null,
-          sourcePool: null,
-          sourceTvlUsd: null,
-          dataSource: "onchain",
-          exchangeRate: null,
-          sourceKey,
-          yieldSource,
-          yieldType: AAVE_YIELD_TYPE,
-          sourceObservedAt: startSec,
-          comparisonAnchorObservedAt: null,
-        },
-      });
-    }
-  }
+  appendResolvedYieldCandidates(resolved, supplementalCandidates, identityLookups);
 
   if (dlPools.length > 0) {
     const autoDiscoveredIds = new Set<string>();

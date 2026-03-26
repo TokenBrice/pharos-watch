@@ -36,6 +36,21 @@ describe("status cron config", () => {
     });
   });
 
+  it("maps core and supplemental yield jobs onto their dedicated post-DEX lanes", () => {
+    expect(getStatusCronDisplay("sync-yield-data")).toEqual({
+      group: "hourly",
+      label: "Yield sync",
+      schedule: "20 * * * *",
+      triggerMode: "isolated",
+    });
+    expect(getStatusCronDisplay("sync-yield-supplemental")).toEqual({
+      group: "multi-hourly",
+      label: "Yield supplemental sync",
+      schedule: "25 */4 * * *",
+      triggerMode: "isolated",
+    });
+  });
+
   it("maps telegram alerts to the dedicated 5-minute slot", () => {
     expect(getStatusCronDisplay("dispatch-telegram-alerts")).toEqual({
       group: "five-minute",

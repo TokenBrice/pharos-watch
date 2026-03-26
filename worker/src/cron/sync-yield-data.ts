@@ -1,11 +1,17 @@
 // worker/src/cron/sync-yield-data.ts
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { getCache, setCache } from "../lib/db-cache";
+import { getCache, setCache, setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
 import { ON_CHAIN_RATE_CONFIGS } from "./yield-config";
 import type { ChainRpcConfig } from "../lib/chain-registry";
+import {
+  getDefaultDeterministicOnChainHealthState,
+  parseDeterministicOnChainHealthState,
+  parseYieldSupplementalSourcesCache,
+  serializeDeterministicOnChainHealthState,
+} from "./yield-sync/cache";
 import {
   fetchOnChainRates,
   loadDlStablecoinPools,
@@ -31,8 +37,164 @@ import {
   validateYieldRankingsPayloadForPublish,
   writeYieldRankingsCache,
 } from "./yield-sync/publication";
+import type { ResolvedYieldCandidate } from "./yield-sync/types";
 
 const MIN_SAFETY_SCORE_COVERAGE_RATIO = 0.75;
+const YIELD_SUPPLEMENTAL_CACHE_KEY = "yield:supplemental-sources:v1";
+const DETERMINISTIC_ONCHAIN_HEALTH_CACHE_KEY = "yield:onchain-health:v1";
+const YIELD_SUPPLEMENTAL_MAX_AGE_SEC = 12 * 3600;
+const DETERMINISTIC_ONCHAIN_COOLDOWN_THRESHOLD = 2;
+const DETERMINISTIC_ONCHAIN_COOLDOWN_SEC = 6 * 3600;
+
+interface YieldSupplementalCacheMeta {
+  mode: "cache" | "stale-cache" | "unavailable";
+  updatedAt: number | null;
+  ageSeconds: number | null;
+  sourceCount: number;
+  fallbackMode: string | null;
+}
+
+async function loadYieldSupplementalCandidates(
+  db: D1Database,
+  startSec: number,
+): Promise<{ candidates: ResolvedYieldCandidate[]; meta: YieldSupplementalCacheMeta }> {
+  const cached = await getCache(db, YIELD_SUPPLEMENTAL_CACHE_KEY);
+  if (!cached) {
+    return {
+      candidates: [],
+      meta: {
+        mode: "unavailable",
+        updatedAt: null,
+        ageSeconds: null,
+        sourceCount: 0,
+        fallbackMode: "missing-cache",
+      },
+    };
+  }
+
+  const parsed = parseYieldSupplementalSourcesCache(cached.value, cached.updatedAt, startSec);
+  if (!parsed) {
+    return {
+      candidates: [],
+      meta: {
+        mode: "unavailable",
+        updatedAt: cached.updatedAt,
+        ageSeconds: Math.max(0, startSec - cached.updatedAt),
+        sourceCount: 0,
+        fallbackMode: "invalid-cache",
+      },
+    };
+  }
+
+  if (parsed.ageSeconds > YIELD_SUPPLEMENTAL_MAX_AGE_SEC) {
+    return {
+      candidates: [],
+      meta: {
+        mode: "stale-cache",
+        updatedAt: parsed.updatedAt,
+        ageSeconds: parsed.ageSeconds,
+        sourceCount: parsed.sourceCount,
+        fallbackMode: "stale-cache",
+      },
+    };
+  }
+
+  return {
+    candidates: parsed.candidates,
+    meta: {
+      mode: "cache",
+      updatedAt: parsed.updatedAt,
+      ageSeconds: parsed.ageSeconds,
+      sourceCount: parsed.sourceCount,
+      fallbackMode: null,
+    },
+  };
+}
+
+function buildNextDeterministicOnChainHealthState(params: {
+  deterministicConfigCount: number;
+  previous: ReturnType<typeof getDefaultDeterministicOnChainHealthState>;
+  startSec: number;
+  onChainAttemptedCount: number;
+  onChainRatesResolved: number;
+  allDeterministicFailed: boolean;
+  maskedAllDeterministicFailure: boolean;
+  onChainAlternativeCoverageMissingIds: string[];
+  onChainSkippedDueToCooldown: boolean;
+}) {
+  const {
+    deterministicConfigCount,
+    previous,
+    startSec,
+    onChainAttemptedCount,
+    onChainRatesResolved,
+    allDeterministicFailed,
+    maskedAllDeterministicFailure,
+    onChainAlternativeCoverageMissingIds,
+    onChainSkippedDueToCooldown,
+  } = params;
+
+  if (deterministicConfigCount === 0) {
+    return getDefaultDeterministicOnChainHealthState();
+  }
+
+  if (onChainSkippedDueToCooldown) {
+    if (onChainAlternativeCoverageMissingIds.length > 0) {
+      return {
+        ...getDefaultDeterministicOnChainHealthState(),
+        lastSkippedAt: startSec,
+        lastFailureMissingIds: onChainAlternativeCoverageMissingIds,
+      };
+    }
+    return {
+      ...previous,
+      lastSkippedAt: startSec,
+    };
+  }
+
+  if (onChainAttemptedCount === 0) {
+    return {
+      ...previous,
+      cooldownUntil:
+        previous.cooldownUntil != null && previous.cooldownUntil > startSec
+          ? previous.cooldownUntil
+          : null,
+    };
+  }
+
+  if (onChainRatesResolved > 0) {
+    return {
+      ...getDefaultDeterministicOnChainHealthState(),
+      lastAttemptedAt: startSec,
+      lastSuccessAt: startSec,
+    };
+  }
+
+  if (allDeterministicFailed) {
+    const consecutiveAllFailRuns = previous.consecutiveAllFailRuns + 1;
+    const consecutiveMaskedAllFailRuns = maskedAllDeterministicFailure
+      ? previous.consecutiveMaskedAllFailRuns + 1
+      : 0;
+    return {
+      consecutiveAllFailRuns,
+      consecutiveMaskedAllFailRuns,
+      cooldownUntil:
+        maskedAllDeterministicFailure && consecutiveMaskedAllFailRuns >= DETERMINISTIC_ONCHAIN_COOLDOWN_THRESHOLD
+          ? startSec + DETERMINISTIC_ONCHAIN_COOLDOWN_SEC
+          : null,
+      lastAttemptedAt: startSec,
+      lastAllFailedAt: startSec,
+      lastSuccessAt: previous.lastSuccessAt,
+      lastSkippedAt: previous.lastSkippedAt,
+      lastFailureMissingIds: onChainAlternativeCoverageMissingIds,
+    };
+  }
+
+  return {
+    ...getDefaultDeterministicOnChainHealthState(),
+    lastAttemptedAt: startSec,
+  };
+}
 // -- Main sync function ------------------------------------------------------
 
 export async function syncYieldData(
@@ -52,6 +214,33 @@ export async function syncYieldData(
   }
 
   const { pools: dlPools, meta: dlPoolsMeta } = await loadDlStablecoinPools(db, signal);
+  const { candidates: supplementalCandidates, meta: supplementalMeta } = await loadYieldSupplementalCandidates(
+    db,
+    startSec,
+  );
+  const onChainHealthCache = await getCache(db, DETERMINISTIC_ONCHAIN_HEALTH_CACHE_KEY);
+  const onChainHealthState = onChainHealthCache
+    ? parseDeterministicOnChainHealthState(onChainHealthCache.value)
+    : getDefaultDeterministicOnChainHealthState();
+  const onChainCooldownActive =
+    ON_CHAIN_RATE_CONFIGS.length > 0 &&
+    onChainHealthState.cooldownUntil != null &&
+    onChainHealthState.cooldownUntil > startSec;
+  const onChainCooldownRemainingSec =
+    onChainCooldownActive && onChainHealthState.cooldownUntil != null
+      ? Math.max(0, onChainHealthState.cooldownUntil - startSec)
+      : 0;
+  const onChainSkippedDueToCooldown = onChainCooldownActive;
+  const onChainFetchResult = onChainSkippedDueToCooldown
+    ? {
+      rates: new Map<string, { rate: number }>(),
+      failureBreakdown: null as Record<string, number> | null,
+      attemptedCount: 0,
+      allDeterministicFailed: false,
+      explorerAttemptedCount: 0,
+      explorerResolvedCount: 0,
+    }
+    : await fetchOnChainRates(signal, chainRpcs, etherscanApiKey);
   const {
     rates: onChainRates,
     failureBreakdown: onChainFailures,
@@ -59,7 +248,7 @@ export async function syncYieldData(
     allDeterministicFailed = false,
     explorerAttemptedCount: onChainExplorerAttemptedCount = 0,
     explorerResolvedCount: onChainExplorerResolvedCount = 0,
-  } = await fetchOnChainRates(signal, chainRpcs, etherscanApiKey);
+  } = onChainFetchResult;
   const riskFreeRateMeta = await loadRiskFreeRateSnapshot(db);
   const riskFreeRate = riskFreeRateMeta.rate;
 
@@ -107,6 +296,7 @@ export async function syncYieldData(
     signal,
     chainRpcs,
     coingeckoApiKey,
+    supplementalCandidates,
   });
 
   const resolvedWithYield = resolved.filter((entry) => entry.yield != null);
@@ -226,6 +416,27 @@ export async function syncYieldData(
     allDeterministicFailed &&
     deterministicSourceIds.length > 0 &&
     onChainAlternativeCoverageMissingIds.length === 0;
+  const nextOnChainHealthState = buildNextDeterministicOnChainHealthState({
+    deterministicConfigCount: deterministicSourceIds.length,
+    previous: onChainHealthState,
+    startSec,
+    onChainAttemptedCount,
+    onChainRatesResolved: onChainRates.size,
+    allDeterministicFailed,
+    maskedAllDeterministicFailure,
+    onChainAlternativeCoverageMissingIds,
+    onChainSkippedDueToCooldown,
+  });
+  const onChainCooldownTriggered =
+    !onChainCooldownActive &&
+    nextOnChainHealthState.cooldownUntil != null &&
+    nextOnChainHealthState.cooldownUntil > startSec;
+  await setCacheIfNewer(
+    db,
+    DETERMINISTIC_ONCHAIN_HEALTH_CACHE_KEY,
+    serializeDeterministicOnChainHealthState(nextOnChainHealthState),
+    startSec,
+  );
 
   {
     const nativeApyByCoin = new Map<string, number>();
@@ -359,6 +570,9 @@ export async function syncYieldData(
       degradationReasons.push("onchain-rates:all-deterministic-failed");
     }
   }
+  if (onChainSkippedDueToCooldown && onChainAlternativeCoverageMissingIds.length > 0) {
+    degradationReasons.push("onchain-rates:cooldown-coverage-gap");
+  }
 
   const previewPublishability = await validateYieldRankingsPayloadForPublish(db, previewRankingsPayload);
   if (!previewPublishability.ok) {
@@ -412,16 +626,20 @@ export async function syncYieldData(
       divergenceFlags,
       sourceSwitches,
       defaultSafetyCoinCount: defaultSafetyIds.size,
-        sourceCoverage: {
-          safetyScoresComputed: safetySnapshot.coveredCount,
-          safetyScoresExpected: safetySnapshot.trackedCount,
-          safetyCoverageRatio: Number(safetyCoverageRatio.toFixed(4)),
-          resolvedYieldBearingCount: resolvedYieldBearingIds.size,
-          expectedYieldBearingCount: yieldCoins.length,
-          publishedYieldBearingCount: currentPublishedYieldBearingCount,
-          previousPublishedYieldBearingCount,
-          dlPoolCount: dlPoolsMeta.poolCount,
-          onChainRatesResolved: onChainRates.size,
+      sourceCoverage: {
+        safetyScoresComputed: safetySnapshot.coveredCount,
+        safetyScoresExpected: safetySnapshot.trackedCount,
+        safetyCoverageRatio: Number(safetyCoverageRatio.toFixed(4)),
+        resolvedYieldBearingCount: resolvedYieldBearingIds.size,
+        expectedYieldBearingCount: yieldCoins.length,
+        publishedYieldBearingCount: currentPublishedYieldBearingCount,
+        previousPublishedYieldBearingCount,
+        dlPoolCount: dlPoolsMeta.poolCount,
+        supplementalSourceMode: supplementalMeta.mode,
+        supplementalSourceUpdatedAt: supplementalMeta.updatedAt,
+        supplementalSourceAgeSeconds: supplementalMeta.ageSeconds,
+        supplementalSourceCount: supplementalMeta.sourceCount,
+        onChainRatesResolved: onChainRates.size,
         onChainRatesConfigured: ON_CHAIN_RATE_CONFIGS.length,
         onChainAttempted: onChainAttemptedCount,
         onChainAllDeterministicFailed: allDeterministicFailed,
@@ -430,6 +648,13 @@ export async function syncYieldData(
         onChainFailureMaskedByAlternativeCoverage: maskedAllDeterministicFailure,
         onChainAlternativeCoverageMissingIds,
         onChainFailures: onChainFailures,
+        onChainSkippedDueToCooldown,
+        onChainCooldownActive,
+        onChainCooldownTriggered,
+        onChainCooldownUntil: nextOnChainHealthState.cooldownUntil,
+        onChainCooldownRemainingSec,
+        onChainConsecutiveAllFailRuns: nextOnChainHealthState.consecutiveAllFailRuns,
+        onChainConsecutiveMaskedAllFailRuns: nextOnChainHealthState.consecutiveMaskedAllFailRuns,
       },
       fallbackMode: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
       validationFailures,

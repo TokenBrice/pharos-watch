@@ -423,7 +423,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | File                      | Module Under Test  | What It Covers                                                                                    |
 | ------------------------- | ------------------ | ------------------------------------------------------------------------------------------------- |
 | `index.fetch.test.ts`     | `worker.fetch`     | CORS preflight, method guards, edge-cache hit/miss behavior, cache-bypass paths                   |
-| `index.scheduled.test.ts` | `worker.scheduled` | Cron fan-out wiring and chained dependencies (`stablecoins -> snapshot/PSI/DEWS`, `dex -> yield`) |
+| `index.scheduled.test.ts` | `worker.scheduled` | Cron fan-out wiring and chained dependencies (`stablecoins -> snapshot`, `dex -> DEWS/PSI`, dedicated hourly/core yield and supplemental yield slots) |
 
 ### Cron Tests (`worker/src/cron/__tests__/`)
 
@@ -452,7 +452,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `sync-usds-status.test.ts`              | `sync-usds-status.ts`              | USDS implementation/freeze-module on-chain checks                                                                                                               |
 | `yield-helpers.test.ts`                 | `yield-helpers.ts`                 | `computeApyFromRate`, `computePYS`, `computeYieldStability`, `computeApyVarianceScore`, `detectWarningSignals`, `findBestLendingPool`                           |
 | `sync-fx-rates.test.ts`                 | `sync-fx-rates.ts`                 | Normal path (frankfurter + secondary + metals), degraded (frankfurter 503), secondary API for CNH/RUB/UAH/ARS                                                   |
-| `sync-yield-data.test.ts`               | `sync-yield-data.ts`               | Yield ranking sync, validation guard, fallback behavior and ranking parity                                                                                      |
+| `sync-yield-data.test.ts`               | `sync-yield-data.ts`               | Yield ranking sync, validation guards, deterministic cooldown behavior, supplemental-cache consumption, fallback behavior, and ranking parity                    |
 | `dex-liquidity-pool-helpers.test.ts`    | `dex-liquidity/pool-helpers.ts`    | Symbol parsing, pool classification, quality multipliers, chain-map toggles, durability/liquidity scoring branches, protocol normalization, pair/stress helpers |
 | `dex-liquidity-process-pools.test.ts`   | `dex-liquidity/process-pools.ts`   | Pool filtering, address/symbol matching, collision safety, Curve/Uni v3/Aerodrome enrichment, weighted metric accumulation                                      |
 | `dex-liquidity-price-sanity.test.ts`    | `dex-liquidity/price-sanity.ts`    | DEX observation plausibility bounds and anomaly rejection                                                                                                       |
