@@ -13,7 +13,7 @@ npm run lint          # ESLint across frontend + worker code
 npm run audit:deps    # Fails on high-severity npm advisories
 npm run seo:check     # Static SEO audit against built `out/` HTML
 npm run check:worker-boundary # Enforce the shared boundary in both directions (no worker -> `src` imports, no `src`/`shared`/`scripts`/`functions` -> `worker/src` imports)
-npm run check:unused-code # Detect unreferenced internal runtime modules and unused named exports in hotspot areas
+npm run check:unused-code # Detect unreferenced internal runtime modules and unused named exports across `src/`, `shared/`, `worker/src/`, and `functions/`
 npm run check:hotspot-ratchet # Fail when key hotspot files grow beyond the checked-in baseline
 npm run check:cron-sync # Verify `shared/lib/cron-jobs.ts` stays aligned with `worker/wrangler.toml` cron declarations
 npm run check:cron-connections # Enforce the documented per-trigger outbound connection budget across cron slots
@@ -34,7 +34,7 @@ When `SMOKE_UI_EXPECT_GA_ID` is set, `npm run test:smoke-ui` also verifies that 
 
 ## CI Pipeline
 
-Defined across `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/rebuild-pages.yml`, and `.github/workflows/codeql.yml`.
+Defined across `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`, and `.github/workflows/codeql.yml`.
 
 For deployment/worktree operating procedure (including the local merge gate before every push), see [Deployment Process](./deployment-process.md).
 
@@ -141,7 +141,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
-      thresholds: { lines: 66 }, // Coverage gate — CI fails if lines < 66%
+      thresholds: { lines: 66 }, // Local full-suite coverage reference; CI enforces the critical coverage gate separately
     },
   },
   resolve: { alias: { "@": path.resolve(__dirname, "src"), "@shared": path.resolve(__dirname, "shared") } },
@@ -156,10 +156,13 @@ When the checkout itself lives under `/.worktrees/`, Vitest now drops those glob
 - `src/components/__tests__/` — component-level pure/helper logic tests
 - `src/hooks/__tests__/` — hook utility/state tests
 - `src/__tests__/` — frontend component/integration tests
+- `src/app/**/__tests__/` — route-level UI/page tests
+- `functions/__tests__/` — Pages Functions and ops-host proxy tests
 - `worker/src/__tests__/` — worker entrypoint tests (`fetch` request policy + `scheduled` cron dispatch wiring)
 - `worker/src/lib/__tests__/` — worker library tests (scoring, parsing)
 - `worker/src/api/__tests__/` — API handler contract tests
 - `worker/src/cron/__tests__/` — cron job tests (with degraded-mode scenarios)
+- `worker/src/cron/blacklist/__tests__/` — blacklist source-module tests
 - `shared/lib/__tests__/` — shared library tests (format, classification invariants, peg rates, stablecoin registry)
 - `scripts/__tests__/` — repo policy / guardrail tests for CI and developer tooling
 - `src/components/stablecoin-detail/__tests__/` — stablecoin detail component tests
@@ -268,7 +271,7 @@ Use these helpers instead of duplicating per-file `vi.stubGlobal("crypto", ...)`
 This inventory is representative, not exhaustive. For the full current list, run:
 
 ```bash
-find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
+rg --files src shared worker/src functions scripts | rg '(^|/)__tests__/|\\.(test|spec)\\.' | sort
 ```
 
 ### Frontend Library Tests (`src/lib/__tests__/`)
@@ -295,7 +298,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `portfolio-codec.test.ts`              | `src/lib/portfolio-codec.ts`                                          | Portfolio codec round-trips and canonical-ID migration behavior                                                                                                                                                     |
 | `stablecoin-detail-derive.test.ts`     | `src/lib/stablecoin-detail-derive.ts`                                 | Stablecoin detail pure derivations: supply fallback, deviation guards, 90d reference tolerance, peg-reference fallback                                                                                              |
 | `stablecoin-detail-view-model.test.ts` | `src/lib/stablecoin-detail-view-model.ts`                             | Detail-page composed view-model derivation, reserve integration, and stale-query aggregation                                                                                                                        |
-| `stablecoins.test.ts`                  | `shared/data/stablecoins/*.json` + `shared/lib/stablecoins/schema.ts` | Tracked stablecoin JSON assets load successfully, preserve canonical ordering, and remain compatible with the shared metadata loader                                                                                |
+| `stablecoin-schema-compat.test.ts`     | `shared/data/stablecoins/*.json` + `shared/lib/stablecoins/schema.ts` | Tracked stablecoin JSON assets load successfully, preserve canonical ordering, and remain compatible with the shared metadata loader                                                                                |
 | `start-here-callout.test.ts`           | `src/lib/start-here-callout.ts`                                       | Browser-persisted Start Here callout retirement and first-session visibility helpers                                                                                                                                |
 | `yield-scatter.test.ts`                | `src/lib/yield-scatter.ts`                                            | Scatterplot point derivation and label bucketing for yield views                                                                                                                                                    |
 | `severity-colors.test.ts`              | `src/lib/severity-colors.ts`                                          | Deviation threshold classes/icons/hex mapping, score-tier thresholds, peg/durability color helpers                                                                                                                  |
@@ -563,7 +566,7 @@ Current critical file set:
 - `worker/src/api/health.ts` _(explicit threshold: 60% lines)_
 - `worker/src/api/status.ts` _(explicit threshold: 40% lines)_
 - `worker/src/api/stablecoin-detail.ts` _(explicit threshold: 30% lines)_
-- `worker/src/cron/dex-liquidity/orchestrator.ts` _(explicit threshold: 55% lines — below global, overridden per-file)_
+- `worker/src/cron/dex-liquidity/orchestrator.ts` _(explicit threshold: 55% lines — above the global CI threshold, overridden per-file)_
 
 ### Critical Test Suites
 
@@ -666,7 +669,7 @@ describe("syncFxRates", () => {
 | `react-hooks/purity`                      | warn  | `Date.now()` in render is intentional for timestamp-based UIs                                |
 | `react-hooks/incompatible-library`        | warn  | TanStack Virtual `useVirtualizer()` — known library limitation                               |
 
-**Ignored paths:** `.next/`, `out/`, `build/`, `coverage/`, `.codex-autorunner/`, `worker/.wrangler/` (auto-generated build artifacts). Nested `.worktrees/` and `worktrees/` directories are also ignored when the active checkout is not itself inside a worktree path.
+**Ignored paths:** `.next/`, `out/`, `build/`, `coverage/`, `.codex-autorunner/`, `worker/.wrangler/`, `.worktrees/`, and `worktrees/` (auto-generated build artifacts plus worktree directories). The conditional worktree behavior described earlier applies to Vitest coverage globs, not ESLint.
 
 ### Zod Runtime Validation
 

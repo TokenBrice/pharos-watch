@@ -11,13 +11,13 @@ Live: https://pharos.watch
 - Verify before claiming completion. Run the relevant build, type-check, lint, and tests.
 - Update the matching docs for any behavior, API, pipeline, or methodology change.
 - If you add a data source, update the about page.
-- If you change PSI, PegScore, LiquidityScore, Report Cards, DEWS, blacklist, mint/burn, or yield methodology, also update `/methodology` and the relevant timeline doc.
+- If you change any methodology surface (pricing pipeline, PSI, PegScore/DEWS, LiquidityScore, Report Cards, blacklist tracker, mint/burn flow, yield intelligence, or Chain Health), also update `/methodology` and the relevant changelog/timeline doc.
 - You are logged into wrangler: feel free to use it for debugging.
 
 ## Working Set
 
 - Put agent-generated plans, audits, and research notes in `/agents/`.
-- Treat `/docs/` as the verified documentation corpus.
+- Treat `/docs/` and `README.md` as the verified documentation corpus.
 - Preserve existing product and design system patterns unless the task is explicitly a redesign.
 
 ## Repo Map
@@ -53,7 +53,7 @@ cd worker && npx wrangler dev
 npm run test:merge-gate
 ```
 
-This mirrors the full CI validation suite (lint, all checks, tests, coverage, worker typecheck), plus the Pages build and SEO checks that now run in shared CI. Do NOT push until it passes. In the standard npm setup, the repo pre-push hook is configured automatically via `prepare` and runs the merge gate for every push. If hooks are disabled locally, run it manually before pushing.
+This is the local deploy-surface-aware merge gate. If the diff is not Pages- or worker-deploy-impacting, it skips cleanly. For deploy-impacting diffs, it runs the shared validate core (lint, checks, tests, critical coverage), adds the Pages build + SEO gate for Pages-impacting changes, and adds `cd worker && npx tsc --noEmit` for worker-impacting changes. In the standard npm setup, `prepare` configures the repo pre-push hook to run the merge gate automatically; if hooks are disabled or `core.hooksPath` is overridden locally, run it manually before pushing.
 If the merge gate fails, fix the issue locally and re-run. Do not push hoping CI will pass.
 
 ## High-Value Gotchas

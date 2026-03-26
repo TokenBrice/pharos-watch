@@ -394,7 +394,7 @@ export default function AboutPage() {
                   name: "What does Pharos track?",
                   acceptedAnswer: {
                     "@type": "Answer",
-                    text: `Pharos tracks ${ACTIVE_STABLECOINS.length} stablecoins across every major chain, classified by governance, backing, and peg currency. It documents ${DEAD_STABLECOINS.length} dead stablecoins in the cemetery, monitors USDC/USDT/PAXG/XAUT freeze events on-chain, provides composite peg scores with depeg detection and heatmaps, integrates independent Bluechip SMIDGE safety ratings, scores DEX liquidity depth 0–100 across decentralized exchanges, computes a 30-minute Pharos Stability Index for ecosystem health, and issues report cards grading each stablecoin across 5 dimensions, including an exit-liquidity dimension that now blends DEX liquidity with protocol or issuer redemption backstops when a direct exit path exists.`,
+                    text: `Pharos tracks ${ACTIVE_STABLECOINS.length} stablecoins across every major chain, classified by governance, backing, and peg currency. It documents ${DEAD_STABLECOINS.length} dead stablecoins in the cemetery, monitors USDC, USDT, PAXG, XAUT, PYUSD, and USD1 freeze and blacklist events on-chain, provides composite peg scores with depeg detection and heatmaps, integrates independent Bluechip SMIDGE safety ratings, scores DEX liquidity depth 0–100 across decentralized exchanges, computes a 30-minute Pharos Stability Index for ecosystem health, and issues report cards grading each stablecoin across 5 dimensions, including an exit-liquidity dimension that now blends DEX liquidity with protocol or issuer redemption backstops when a direct exit path exists.`,
                   },
                 },
                 {

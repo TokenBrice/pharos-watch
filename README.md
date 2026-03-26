@@ -8,10 +8,10 @@ Public-facing analytics dashboard tracking 183 stablecoins in repo metadata: 175
 
 - **Three-tier classification** — stablecoins categorized as CeFi, CeFi-Dependent, or DeFi based on actual dependency on centralized infrastructure, not marketing claims
 - **Multi-peg support** — USD, EUR, GBP, CHF, BRL, RUB, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNH, PHP, MXN, gold, silver, and CPI-linked stablecoins with cross-currency FX-adjusted totals
-- **Peg Tracker** — continuous peg monitoring with a composite Peg Score (0–100) for every tracked stablecoin, depeg event detection with direction tracking, deviation heatmaps, and a historical timeline going back 4 years
-- **Freeze & Blacklist Tracker** — real-time on-chain tracking of USDC, USDT, PAXG, and XAUT freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron with BigInt-precision amounts
+- **Peg Tracker** — 15-minute peg monitoring with a composite Peg Score (0–100) for every tracked stablecoin, depeg event detection with direction tracking, deviation heatmaps, and a historical timeline going back 4 years
+- **Freeze & Blacklist Tracker** — hourly on-chain tracking of USDC, USDT, PAXG, XAUT, PYUSD, and USD1 freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron with BigInt-precision amounts
 - **DEX Liquidity Score** — composite liquidity score (0–100) per stablecoin from DEX pool TVL, volume, quality, durability, and pair diversity
-- **DEX Price Cross-Validation** — implied prices from Curve, Uniswap V3, Aerodrome, Fluid, Balancer, Raydium, Orca, and DexScreener pools used to suppress false depeg alerts
+- **DEX Price Cross-Validation** — implied prices from Curve, Uniswap V3, Aerodrome and Velodrome Slipstream, Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, and DexScreener pools used to suppress false depeg alerts
 - **Coverage Matrix** — per-feature coverage breadth across tracked coins and tracked market cap
 - **Upcoming Stablecoins** — pre-launch tracker with phase, peg, and backing filters plus schedule-drift badges
 - **Chains** — per-chain stablecoin leaderboard and profile pages with Chain Health Score breakdowns
@@ -40,7 +40,7 @@ Public-facing analytics dashboard tracking 183 stablecoins in repo metadata: 175
 
 ## Data Sources
 
-All external API calls and on-chain contract reads go through the Cloudflare Worker. The frontend never calls providers directly.
+All external API calls and on-chain contract reads go through the Cloudflare Worker. The frontend never calls providers directly. Key live sources are listed below; the grouped source families on `/about/` and in `docs/about-page.md` are the fuller source-of-truth summary when this table is intentionally condensed.
 
 | Source                                                                  | Purpose                                                                                                    | Refresh                           |
 | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------- |
@@ -60,20 +60,20 @@ All external API calls and on-chain contract reads go through the Cloudflare Wor
 | [GeckoTerminal](https://www.geckoterminal.com/)                         | Fallback DEX pool crawl for GT-only chains or no-CoinGecko-key runs                                        | 30 min                            |
 | [DexScreener](https://dexscreener.com/)                                 | Discovery fallback, DEX-implied price fallback, and last-resort price enrichment                           | Varies by pipeline (15/30 min)    |
 | [Jupiter Price API](https://hub.jup.ag/docs/price-api/v2)               | Solana-specific fallback price enrichment for tracked mint addresses                                       | 15 min (as fallback)              |
-| Direct DEX APIs (Fluid, Balancer, Raydium, Orca)                        | Direct pool/liquidity reads that supplement DefiLlama, Curve, Graph, and crawl-based DEX coverage         | 30 min                            |
+| Direct DEX APIs (Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, Velodrome Slipstream) | Direct pool/liquidity reads that supplement DefiLlama, Curve, Graph, and crawl-based DEX coverage         | 30 min                            |
 | [CoinGecko](https://www.coingecko.com/)                                 | Gold/silver/fiat token supply (not in DefiLlama), fallback price enrichment                                | 15 min (as fallback)              |
 | [CoinMarketCap](https://coinmarketcap.com/)                             | Fallback price enrichment for assets with CMC slugs                                                        | 15 min (rate-limited to 1/hour)   |
 | Direct protocol redemption contract reads                               | Authoritative redeem prices for selected wrapper assets such as Cap cUSD and infiniFi iUSD                | 15 min                            |
 | Protocol reserve APIs, dashboards, and on-chain accounting reads        | Live reserve composition for live-enabled assets                                                           | Hourly                            |
-| [Etherscan v2](https://etherscan.io/)                                   | USDC, USDT, PAXG, XAUT freeze/blacklist events (EVM chains)                                                | Hourly                            |
-| [TronGrid](https://www.trongrid.io/)                                    | USDT freeze events on Tron                                                                                 | Hourly                            |
+| [Etherscan v2](https://etherscan.io/)                                   | USDC, USDT, PAXG, XAUT, PYUSD, and USD1 freeze/blacklist events (EVM chains)                              | Hourly                            |
+| [TronGrid](https://www.trongrid.io/)                                    | USDT and USD1 freeze/blacklist events on Tron                                                              | Hourly                            |
 | [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/)         | RPC reads for blacklist balance enrichment (dRPC/Alchemy) and Ethereum mint/burn event ingestion (Alchemy) | Hourly / 20 min                   |
 | [api.frankfurter.dev](https://api.frankfurter.dev/v1/latest)           | ECB FX rates for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN                      | 15 min                            |
 | [Open Exchange Rates](https://openexchangerates.org/)                   | Real-time FX cross-validation overlay for supported fiat pegs when `OPENEXCHANGERATES_API_KEY` is set      | 15 min cron (rate-limited to 1/h) |
 | [fawazahmed0/currency-api](https://github.com/fawazahmed0/currency-api) | Secondary live FX mirror for CNH, RUB, UAH, and ARS, plus full-set fallback coverage when Frankfurter fails | 15 min                            |
 | [ExchangeRate-API](https://www.exchangerate-api.com/)                   | Tertiary live full-set FX fallback when both Frankfurter and the secondary FX mirrors are unavailable      | 15 min                            |
 | [gold-api.com](https://gold-api.com/)                                   | Gold and silver spot prices for commodity-pegged stablecoin peg validation                                 | 15 min                            |
-| [FRED (St. Louis Fed)](https://fred.stlouisfed.org/series/DGS3MO)       | 3-month Treasury yield for yield benchmarking (risk-free rate, PYS `excessYield`)                          | Daily                             |
+| [FRED (St. Louis Fed)](https://fred.stlouisfed.org/series/DGS3MO) / ECB Data API / FRED €STR mirror / SNB current-rates page | USD, EUR, and CHF benchmark rates for yield benchmarking (`excessYield`)                                   | Daily                             |
 | [Bluechip](https://bluechip.org/)                                       | Independent stablecoin safety ratings (SMIDGE framework)                                                   | Daily                             |
 | [Anthropic](https://anthropic.com/)                                     | AI-generated daily market digest                                                                           | Daily                             |
 
@@ -178,12 +178,14 @@ Current source-of-truth product docs live in `/docs/` and this README. `/agents/
 - [docs/api-reference.md](./docs/api-reference.md) - exact API routes, query params, headers, and response contracts
 - [docs/architecture.md](./docs/architecture.md) - curated file tree and architecture-significant routes
 - [docs/worker-infrastructure.md](./docs/worker-infrastructure.md) - Worker env bindings, cron slots, cache/auth behavior
+- [docs/worker-and-api-limits.md](./docs/worker-and-api-limits.md) - runtime budgets, rate limits, and provider assumptions
 - [docs/stablecoin-detail-page.md](./docs/stablecoin-detail-page.md) - `/stablecoin/[id]/` route shell, section composition, and fallback/staleness rules
 - [docs/upcoming-page.md](./docs/upcoming-page.md) - `/upcoming/` pre-launch tracker contract, filters, and crawlability
 - [docs/chains-page.md](./docs/chains-page.md) - `/chains/` and `/chains/[chain]/` route contracts plus Chain Health Score wiring
 - [docs/live-reserves.md](./docs/live-reserves.md) - live reserve-sync config, adapter registry, API modes, and status/detail consumers
 - [docs/redemption-backstops.md](./docs/redemption-backstops.md) - modeled redemption routes, effective-exit scoring, storage, and API/detail consumers
 - [docs/deployment-process.md](./docs/deployment-process.md) - local merge gate and CI deploy sequence
+- [docs/testing.md](./docs/testing.md) - lint/test/coverage workflow, CI gates, and helper inventory
 - [docs/methodology-page.md](./docs/methodology-page.md) - `/methodology` section-to-source mapping and update contract
 
 ## Infrastructure
@@ -195,8 +197,10 @@ Cloudflare Worker (API layer)
   ├── Cron: 4,24,44 * * * *                     → mint/burn critical lane
   ├── Cron: 6,36 * * * *                         → DEX discovery staging (30 min)
   ├── Cron: 13,33,53 * * * *                    → mint/burn extended lane
-  ├── Cron: 10,40 * * * *                       → stablecoin charts + DEX liquidity + DEWS + PSI + yield sync
-  ├── Cron: 11 * * * *                          → live reserve sync + redemption backstop snapshots
+  ├── Cron: 10,40 * * * *                       → stablecoin charts + DEX liquidity + DEWS + PSI
+  ├── Cron: 11 * * * *                          → live reserve sync + redemption backstop snapshots + Kinesis supply
+  ├── Cron: 20 * * * *                          → yield sync
+  ├── Cron: 25 */4 * * *                        → supplemental yield sync
   ├── Cron: 2,7,12,17,22,27,32,37,42,47,52,57 * * * * → Telegram subscriber alerts
   ├── Cron: 0 8 * * *                           → supply snapshot + safety-grade snapshot + T-bill rate + PSI daily snapshot + USDS status
   ├── Cron: 5 8 * * *                           → Bluechip sync + daily digest + weekly recap (Mondays) + discovery scan (Mondays)
@@ -280,10 +284,10 @@ For the canonical delivery workflow (including worktree merge flow and the repo 
 For the full Worker, Pages Functions, and frontend runtime binding table, see [.env.example](./.env.example) and [docs/worker-infrastructure.md](./docs/worker-infrastructure.md).
 For mint/burn ingestion diagnostics and recovery, see `agents/process/mint-burn-ingestion.md`.
 
-1. **Validate gate:** `npm run audit:deps` → `npm run lint` → `npm run check:worker-boundary` → `npm run check:migrations` → `npm run check:cron-sync` → `npm run check:cron-connections` → `npm run check:doc-counts` → `npm run check:doc-sync` → `npm run check:duplicate-exports` → `npm run check:redemption-backstops` → `npm run check:unused-code` → `npm run check:hotspot-ratchet` → `npm run build` → `npm run seo:check` → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit`
+1. **Validate gate:** `npm run audit:deps` → `npm run lint` → `npm run check:worker-boundary` → `npm run check:migrations` → `npm run check:cron-sync` → `npm run check:cron-connections` → `npm run check:doc-counts` → `npm run check:doc-sync` → `npm run check:duplicate-exports` → `npm run check:redemption-backstops` → `npm run check:unused-code` → `npm run check:hotspot-ratchet` → `npm test` → `npm run coverage:critical` → `npm run build` → `npm run seo:check` when Pages-impacting files changed → `cd worker && npx tsc --noEmit` when worker-impacting files changed
 2. **Worker deploy:** `npm ci` → `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote` → `cd worker && npx --no-install wrangler deploy` → `cd worker && npx --no-install wrangler triggers deploy`
 3. **API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE` (fed from GitHub variable `SMOKE_API_BASE_URL`, fallback `API_BASE_URL`)
-4. **Pages release path:** `npm ci` → `npm run sync:digests` → `npm run build` → `npm run seo:check` → serve `out/` locally through `scripts/serve-static-export.mjs` → `npm run test:smoke-ui -- --url http://127.0.0.1:4173` → `npx --no-install wrangler pages deploy out` (with retry in CI)
+4. **Pages release path:** `npm ci` → fetch `/api/digest-archive` once into `data/digests.json` → `npm run build` → `npm run seo:check` → serve `out/` locally through `scripts/serve-static-export.mjs` → `npm run test:smoke-ui -- --url http://127.0.0.1:4173` → `npx --no-install wrangler pages deploy out` (with retry in CI)
 5. **Live public-host UI smoke:** worker-only deploys still smoke `https://pharos.watch` against the new worker/API, and Pages-including deploys now also smoke the real public host after the Pages publish
 6. **Post-deploy ops smoke:** `npm run test:smoke-ops` runs after `pages-release` on Pages-including deploys, or after `smoke-api` + `smoke-ui-live` on worker-only deploys
 

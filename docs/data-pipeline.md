@@ -20,7 +20,7 @@ All external data sources are protected by per-source circuit breakers (`worker/
 - **Open threshold**: 3 consecutive failures
 - **Probe interval**: 30 minutes (one request allowed to test recovery)
 - **Alerts**: Open/close transition alerts are sent when the caller provides a webhook URL to `recordOutcome(...)`
-- **Health impact**: Any open circuit triggers `degraded` status on `/api/health`
+- **Health impact**: 3 or more open circuits degrade `/api/health`; smaller circuit failures still surface in the circuit list without degrading public health on their own
 
 The source-name registry is maintained in `worker/src/lib/constants.ts` under `CIRCUIT_SOURCE`. Current keys span the main data and delivery lanes, including DefiLlama (`defillama-*`), CoinGecko (`coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coingecko-ticker`), CoinMarketCap, DexScreener, Jupiter, Pyth, Binance, Kraken, Bitstamp, Coinbase, RedStone, Curve, the protocol-native DEX lanes (Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, Velodrome Slipstream), FX (`fx-frankfurter`, `fx-realtime`, `chainlink-feeds`), treasury rates, Etherscan, Alchemy, Bluechip, Anthropic, Twitter, Telegram, DRPC, TronGrid, and the Kinesis Horizon sources.
 

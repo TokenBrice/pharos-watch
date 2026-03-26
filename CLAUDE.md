@@ -6,15 +6,15 @@ Analytics dashboard tracking 183 stablecoins (+2 shadow assets for PSI). Static 
 
 ## Folder Structure
 
-All agent-produced plans, audits, research, and process notes live in the `/agents/` folder. Treat `/agents/` as a working-artifact archive, not as the canonical source of truth over live code or `/docs/`.
-**`/docs/` is the verified application documentation corpus**
+All agent-produced plans, audits, research, and process notes live in the `/agents/` folder. Treat `/agents/` as a working-artifact archive, not as the canonical source of truth over live code, `/docs/`, or `README.md`.
+**`/docs/` and `README.md` are the verified application documentation corpus**
 
 ## Core Principles
 
 - DRY/KISS/YAGNI. Minimal impact. Find root causes, no temp fixes.
 - When adding a data source, update the about page.
 - **Plan first**: Enter plan mode for non-trivial tasks (3+ steps). If stuck, stop and re-plan.
-- **Verify before done**: Prove it works — build, type-check, test. Never claim done without evidence.
+- **Verify before done**: Prove it works — build, lint, run the relevant type-checks, and test. Never claim done without evidence.
 - **Be autonomous**: Fix bugs end-to-end without hand-holding. Chase logs and errors yourself.
 - **Learn from corrections**: Record recurring mistakes in auto-memory to avoid repeating them.
 
@@ -26,8 +26,10 @@ Next.js 16 (static export), React 19, TypeScript strict, Tailwind CSS v4, shadcn
 
 ## Directory Overview
 
+Representative route inventory, not an exhaustive route list:
+
 ```
-src/app/         — Pages (homepage, admin, blacklist, cemetery, chains, chains/[chain], compare, coverage, dependency-map, depeg, digest, flows, liquidity, methodology, portfolio, privacy, safety-scores, stability-index, start, status, telegram, about, yield, stablecoin/[id], stablecoins/[peg], stablecoins/backing/[backing], stablecoins/governance/[governance])
+src/app/         — Representative pages (homepage, admin, blacklist, cemetery, chains, chains/[chain], compare, coverage, dependency-map, depeg, digest, flows, liquidity, methodology, portfolio, privacy, safety-scores, stability-index, start, status, telegram, about, yield, stablecoin/[id], stablecoins/[peg], stablecoins/backing/[backing], stablecoins/governance/[governance])
 src/components/  — UI components (ui/ = shadcn primitives, do not edit)
 src/hooks/       — TanStack Query hooks + shared state hooks
 src/lib/         — Frontend-only utilities (API client, charts/colors, metadata, UI helpers)
@@ -58,7 +60,7 @@ cd worker && npx tsc --noEmit      # Worker type-check
 npm run test:merge-gate
 ```
 
-This mirrors the full CI validation suite (lint, all checks, tests, coverage, worker typecheck). Do NOT push until it passes. The git pre-push hook enforces this automatically for every push, but you should run it manually before pushing any branch to catch failures before CI.
+This is the local deploy-surface-aware merge gate. If the diff is not Pages- or worker-deploy-impacting, it skips cleanly. For deploy-impacting diffs, it runs the shared validate core (lint, checks, tests, critical coverage), adds the Pages build + SEO gate for Pages-impacting changes, and adds `cd worker && npx tsc --noEmit` for worker-impacting changes. In the standard npm setup, `prepare` configures the repo pre-push hook automatically; if hooks are disabled or `core.hooksPath` is overridden locally, run it manually before pushing.
 
 If the merge gate fails, fix the issue locally and re-run — do not push hoping CI will pass.
 
@@ -80,6 +82,6 @@ If the merge gate fails, fix the issue locally and re-run — do not push hoping
 
 ## Documentation
 
-All the codebase is documented in `/docs/`. Filenames are self-descriptive. While working, update the corresponding doc before pushing. After updating a scoring methodology (PSI, PegScore, LiquidityScore, Report Cards), update both the `/methodology` page and the relevant `*-timeline.md` changelog in `/docs/`.
+The verified docs live in `/docs/` and `README.md`. Filenames are self-descriptive. While working, update the corresponding doc before pushing. After updating any methodology surface (pricing pipeline, PSI, PegScore/DEWS, LiquidityScore, Report Cards, blacklist tracker, mint/burn flow, yield intelligence, or Chain Health), update both the `/methodology` page and the relevant changelog/timeline doc in `/docs/`.
 
 See **`docs/design-context.md`** before any frontend/UI work.

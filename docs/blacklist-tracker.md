@@ -1,6 +1,6 @@
 # Blacklist Tracker
 
-Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 21 contract configurations on 8 chains. Runs hourly, incrementally scanning from the last processed block.
+Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 21 contract configurations on 8 chains. Runs hourly, incrementally scanning from the last processed block or timestamp cursor.
 
 **Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT, PYUSD, USD1.
 
@@ -13,8 +13,9 @@ Implementation note: `EURC` is intentionally not live-supported right now. Circl
 ## Cron Schedule
 
 - **Pattern:** `3 * * * *` (hourly at :03)
-- **Function:** `syncBlacklist(db, etherscanApiKey, trongridApiKey, drpcApiKey)`
+- **Function:** `syncBlacklist(opts: SyncBlacklistOptions)`
 - **File:** `worker/src/cron/sync-blacklist.ts`
+- **Caller contract:** the hourly handler passes `db`, provider keys, `chainRpcs`, optional abort signal, and cron progress hooks via `SyncBlacklistOptions`
 - **Returns:** `{ itemCount, metadata: JSON { rowsWritten, eventsFetched, contractsSkipped, apiErrors, apiErrorConfigs, zeroCursorConfigCount, zeroCursorConfigs, rpcLogConfigs, apiErrorClasses, budgetUsed, budgetLimit, runtimeBudgetReached, runtimeBudgetMs } }`
 
 `itemCount` now reflects the number of rows actually inserted into `blacklist_events`. `metadata.eventsFetched` tracks fetched/parsed rows before `INSERT OR IGNORE` deduplication, which is useful when diagnosing repeated rescans.
@@ -62,7 +63,7 @@ Implementation note: `EURC` is intentionally not live-supported right now. Circl
 | TronGrid  | 3 requests/second |
 
 **Budget:** 900 subrequests per cron cycle, shared across all configs + backfill.
-**Runtime guard:** 7-minute in-app budget with a 60-second per-config start buffer, so the job exits cleanly before the outer 8-minute `logCronRun()` timeout.
+**Runtime guard:** 7-minute in-app budget with a 60-second per-config start buffer, so the job exits cleanly before the outer 12-minute cron timeout enforced in `worker/src/lib/cron-lease.ts`.
 
 ---
 

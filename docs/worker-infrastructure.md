@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 27 scheduled runtime jobs across 11 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track the same 27 jobs; cemetery and tracking appendices are now folded into daily digest delivery instead of a separate cron.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 28 scheduled runtime jobs across 13 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track the same 28 jobs; cemetery and tracking appendices are now folded into daily digest delivery instead of a separate cron.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -34,7 +34,7 @@ invocation_logs = true
 
 ## Env Interface
 
-The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worker/src/index.ts` plus the HTTP-request helper stack under `worker/src/handlers/http*.ts` and the scheduled-runtime entrypoint/context (`worker/src/handlers/scheduled.ts`, `worker/src/handlers/scheduled/context.ts`). `DB` and `CORS_ORIGIN` are set in `wrangler.toml`; remaining bindings are runtime env values (typically provided via `wrangler secret put`).
+The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worker/src/index.ts` plus the HTTP-request helper stack under `worker/src/handlers/http*.ts` and the scheduled-runtime entrypoint/context (`worker/src/handlers/scheduled.ts`, `worker/src/handlers/scheduled/context.ts`). `DB`, `CORS_ORIGIN`, `SELF_URL`, `CF_ACCESS_TEAM_DOMAIN`, and `CF_ACCESS_OPS_API_AUD` are set in `wrangler.toml`; the remaining active bindings are runtime env values (typically provided via `wrangler secret put`).
 
 `worker/src/lib/env.ts` is now the canonical worker binding contract and exports four groupings:
 
@@ -65,8 +65,8 @@ The paired Pages Functions contract lives in `functions/lib/ops-env.ts` with the
 | `CMC_API_KEY`                   | string     | No                 | Price fallback (CoinMarketCap)                                                                                                                                             |
 | `OPENEXCHANGERATES_API_KEY`     | string     | No                 | Real-time FX rate cross-validation (Open Exchange Rates)                                                                                                                   |
 | `COINGECKO_API_KEY`             | string     | No                 | Price enrichment, depeg confirmation                                                                                                                                       |
-| `GITHUB_PAT`                    | string     | No                 | Feedback → GitHub Issues                                                                                                                                                   |
-| `FEEDBACK_IP_SALT`              | string     | Yes (for feedback) | Rate limit IP hashing for `POST /api/feedback`                                                                                                                             |
+| `GITHUB_PAT`                    | string     | No (worker contract); Yes for feedback submissions | Feedback → GitHub Issues                                                                                                                                                   |
+| `FEEDBACK_IP_SALT`              | string     | No (worker contract); Yes for feedback submissions | Rate limit IP hashing for `POST /api/feedback`                                                                                                                             |
 | `PUBLIC_API_RATE_LIMIT_SALT`    | string     | No                 | Optional salt for hashed public API rate limiting; falls back to `FEEDBACK_IP_SALT`, then a built-in constant                                                              |
 | `TWITTER_API_KEY`               | string     | No                 | Digest → Twitter (OAuth consumer key)                                                                                                                                      |
 | `TWITTER_API_SECRET`            | string     | No                 | Digest → Twitter (OAuth consumer secret)                                                                                                                                   |
@@ -256,7 +256,7 @@ Most module-level mutable state was eliminated in the parameter-passing refactor
 
 ## Cron Scheduling
 
-This worker declares 11 cron expressions in `worker/wrangler.toml`. Fetch-heavy lanes are split across separate trigger slots so they do not compete with the quarter-hourly core pipeline for the Workers per-trigger 6-connection fetch pool.
+This worker declares 13 cron expressions in `worker/wrangler.toml`. Fetch-heavy lanes are split across separate trigger slots so they do not compete with the quarter-hourly core pipeline for the Workers per-trigger 6-connection fetch pool.
 
 ### wrangler.toml Triggers
 
@@ -422,11 +422,11 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 | 4 | `6,36 * * * *` | 1 (sequential CG/GT/DexScreener) | 5 |
 | 5 | `13,33,53 * * * *` | 2 (Alchemy JSON-RPC, extended lane) | 4 |
 | 6 | `10,40 * * * *` | 4 (charts + DEX liquidity + compute-dews(0) + stability-index(0)) | 2 |
-| 7 | `11 * * * *` | 2 (reserve adapters + redemption) | 4 |
+| 7 | `11 * * * *` | 1 (reserve adapters + Kinesis are sequential; redemption is DB-only) | 5 |
 | 8 | `20 * * * *` | 1 (core yield publisher) | 5 |
 | 9 | `25 */4 * * *` | 5 (supplemental yield families) | 1 |
 | 10 | `2,7,…,57 * * * *` | 5 (Telegram fan-out batch sends) | 1 |
-| 11 | `0 8 * * *` | 2 (benchmark feeds + Etherscan) | 4 |
+| 11 | `0 8 * * *` | 1 (benchmark feeds and Etherscan are serialized) | 5 |
 | 12 | `5 8 * * *` | 5 (bluechip + Anthropic + CoinGecko) | 1 |
 | 13 | `0 6 1 * *` | 1 (DeFiLlama yield scan) | 5 |
 
@@ -437,18 +437,14 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 
 ### Cron Error Handling Policy
 
-All cron jobs follow a 4-tier error classification:
+Shared cron behavior is narrower than a single worker-wide tier system:
 
-| Tier | Example | Action | Log Level |
-|------|---------|--------|-----------|
-| **Fatal** | D1 unreachable, binding error | `sendAlert()` + abort job | `error` |
-| **Recoverable** | External API timeout, HTTP 5xx | Retry with backoff (max 3), then warn | `warn` |
-| **Validation** | Malformed API response, schema mismatch | Skip record, continue processing | `warn` |
-| **Degradation** | Partial sync, stale data | Update status page, continue | `warn` |
+- `runLeasedCron(...)` / `logCronRun(...)` record `ok`, `error`, and lease-skip outcomes per job in `cron_runs`
+- thrown job errors trigger `sendAlert()` and are re-thrown unless the scheduled slot catches them locally to keep sibling jobs running
+- retries, degraded returns, no-write fallbacks, and cooldowns are job-specific rather than enforced by one shared classification layer
+- fire-and-forget cleanup work may use `.catch()` when failure should not crash the main cron path
 
-**Fire-and-forget cleanup** (e.g., rate-limit pruning, cache eviction) may use `.catch()` with a counter. Non-critical background operations should never crash the main job.
-
-**Alert deduplication:** Use job name + error category as the dedup key. Don't send the same alert more than once per 10-minute window.
+There is no shared 10-minute alert-dedup layer in the worker today. Any cooldown or dedupe behavior is implemented by individual jobs when needed.
 
 ## Telegram Alert Bot
 
@@ -529,6 +525,8 @@ CREATE TABLE cron_run_progress (
 
 Current producers:
 
+- `sync-stablecoins`
+- `sync-live-reserves`
 - `sync-blacklist`
 - `sync-mint-burn`
 - `sync-mint-burn-extended`
@@ -560,7 +558,7 @@ All external data sources are protected by per-source circuit breakers (`worker/
 - **Open threshold**: 3 consecutive failures
 - **Probe interval**: 30 minutes (one request allowed to test recovery)
 - **Alerts**: Webhook alert fires on open and close transitions
-- **Health impact**: Any open circuit triggers `degraded` status on `/api/health`
+- **Health impact**: 3 or more open circuits degrade `/api/health`; smaller circuit failures still surface in the circuit list without degrading public health on their own
 
 Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 

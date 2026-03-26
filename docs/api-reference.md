@@ -66,7 +66,6 @@ Endpoints backed by `createCacheHandler()` inject a `_meta` object into plain-ob
 | Endpoint                     | Max Age (sec) | Source                                       |
 | ---------------------------- | ------------- | -------------------------------------------- |
 | `GET /api/stablecoins`       | 600           | `createCacheHandler`                         |
-| `GET /api/stablecoin-charts` | 3600          | `createCacheHandler`                         |
 | `GET /api/bluechip-ratings`  | 43200         | `createCacheHandler`                         |
 | `GET /api/usds-status`       | 86400         | `createCacheHandler`                         |
 | `GET /api/yield-rankings`    | 3600          | Manual injection after live safety hydration |
@@ -433,14 +432,14 @@ When present, `provenance` has:
 
 Aggregate historical supply chart data across all stablecoins, broken down by peg type. `sync-stablecoin-charts` is triggered every 30 minutes, but a `stablecoin-charts:last-write` cooldown caps successful refreshes at once per hour; `/api/health` treats the cache as healthy for up to 1 hour.
 
-**Cache:** standard — `X-Data-Age` and `Warning` headers included.
+**Cache:** standard — `X-Data-Age` and `Warning` headers included. This array response gets freshness headers only; it does not receive a response-body `_meta` envelope.
 
 **Response:** A top-level array.
 
 ```json
 [
   {
-    "date": "1511913600",
+    "date": 1511913600,
     "totalCirculatingUSD": {
       "peggedUSD": 110105,
       "peggedEUR": 14967600
@@ -451,7 +450,7 @@ Aggregate historical supply chart data across all stablecoins, broken down by pe
 
 | Field                 | Type                     | Description                          |
 | --------------------- | ------------------------ | ------------------------------------ |
-| `date`                | `string`                 | Unix timestamp as a string           |
+| `date`                | `number`                 | Unix timestamp (seconds)             |
 | `totalCirculatingUSD` | `Record<string, number>` | Aggregate supply in USD per peg type |
 
 ---
@@ -790,7 +789,7 @@ Safety ratings from [bluechip.org](https://bluechip.org) for covered stablecoins
 
 DEX liquidity scores, pool breakdowns, source-confidence metadata, and on-chain DEX price data for all tracked stablecoins. Updated every 30 minutes. Trend data is only returned when a trusted historical baseline exists.
 
-**Cache:** standard
+**Cache:** custom — `public, s-maxage=300, max-age=300`
 
 **Freshness note:** In addition to stale-data warnings, this endpoint can also emit a `Warning` header when the latest `sync-dex-liquidity` run finished in `degraded` or `error` state and the API is serving the last successful dataset.
 
@@ -828,7 +827,7 @@ DEX liquidity scores, pool breakdowns, source-confidence metadata, and on-chain 
 | `priceSourceTvl`        | `number \| null`                                                 | Combined TVL of price-source pools (USD)                                                                                                             |
 | `priceSources`          | `DexPriceSource[] \| null`                                       | Aggregated price sources by protocol (for example one `balancer` or `raydium` entry per asset)                                                       |
 | `effectiveTvlUsd`       | `number`                                                         | TVL after applying quality multipliers                                                                                                               |
-| `avgPoolStress`         | `number \| null`                                                 | Average pool stress index (0 = balanced, 1 = fully imbalanced)                                                                                       |
+| `avgPoolStress`         | `number \| null`                                                 | Average pool stress index on a 0–100 scale (0 = balanced, 100 = maximally stressed / imbalanced)                                                     |
 | `weightedBalanceRatio`  | `number \| null`                                                 | TVL-weighted balance ratio across pools                                                                                                              |
 | `organicFraction`       | `number \| null`                                                 | Fraction of TVL from organic (non-incentivized) pools                                                                                                |
 | `durabilityScore`       | `number \| null`                                                 | Score for pool maturity and reliability                                                                                                              |
@@ -944,7 +943,7 @@ Per-coin historical DEX liquidity snapshots. Snapshots are recorded daily (UTC m
 
 Per-coin circulating supply and price history, snapshotted once daily at 08:00 UTC.
 
-**Cache:** slow
+**Cache:** archive
 
 **Required query parameter**
 
@@ -982,13 +981,14 @@ Per-coin circulating supply and price history, snapshotted once daily at 08:00 U
 
 Latest AI-generated market summary, produced daily at 08:05 UTC via the Claude API.
 
-**Cache:** standard — `X-Data-Age` and `Warning` (max 2 h) headers included.
+**Cache:** standard. When a digest exists, the response includes `X-Data-Age` and `Warning` freshness headers (max 2 h). The bootstrap `{ "digest": null }` response carries only `Cache-Control`.
 
 **Response**
 
 ```json
 {
-  "digest": "USDC absorbed $812M of the market's $1.36B weekly inflow…"
+  "digest": "USDC absorbed $812M of the market's $1.36B weekly inflow…",
+  "editionNumber": 214
 }
 ```
 
@@ -1000,12 +1000,13 @@ If no digest exists yet, the endpoint returns only `{ "digest": null }`.
 | `digestTitle`    | `string \| null` | Short headline for the digest                                                        |
 | `digestExtended` | `string \| null` | Extended commentary for the website view                                             |
 | `generatedAt`    | `number`         | Unix seconds when this digest was generated (present only when `digest` is non-null) |
+| `editionNumber`  | `number \| null` | Sequential daily digest number (present only when `digest` is non-null)              |
 
 ---
 
 ### `GET /api/digest-archive`
 
-All daily digests, newest-first.
+Newest-first archive of up to 365 daily and weekly digests.
 
 **Cache:** standard
 
@@ -1021,7 +1022,9 @@ All daily digests, newest-first.
       "generatedAt": 1771839719,
       "psiScore": 81.1,
       "psiBand": "STEADY",
-      "totalMcapUsd": 234500000000
+      "totalMcapUsd": 234500000000,
+      "digestType": "daily",
+      "editionNumber": 214
     }
   ]
 }
@@ -1038,6 +1041,8 @@ Each element uses `digestText` (note: differs from the singular `/api/daily-dige
 | `psiScore`       | `number \| null` | PSI score parsed from archived digest input data            |
 | `psiBand`        | `string \| null` | PSI condition band parsed from archived digest input data   |
 | `totalMcapUsd`   | `number \| null` | Ecosystem market cap parsed from archived digest input data |
+| `digestType`     | `"daily" \| "weekly"` | Digest cadence for this archived entry                 |
+| `editionNumber`  | `number`         | Sequential edition number within that digest cadence        |
 
 ---
 
@@ -1045,7 +1050,7 @@ Each element uses `digestText` (note: differs from the singular `/api/daily-dige
 
 Contextual data snapshot for a specific digest date — includes the digest's input data, active depeg events, and blacklist events for that day. Used by SSG builds for individual digest pages.
 
-**Cache:** slow
+**Cache:** archive
 
 **Required query parameter**
 
@@ -1640,27 +1645,25 @@ Historical yield data for a single stablecoin. If a stored `warning_signals` pay
 | `history`     | `YieldHistoryPoint[]`  | History rows sorted by `date` ASC                                           |
 | `methodology` | `object`               | Yield methodology envelope for the response                                 |
 
-**Response:** Array sorted by `date` ascending.
+**`YieldHistoryPoint`**
 
 ```json
-[
-  {
-    "date": 1771500000,
-    "apy": 12.4,
-    "apyBase": 10.2,
-    "apyReward": 2.2,
-    "exchangeRate": 1.052,
-    "sourceTvlUsd": 5200000000,
-    "warningSignals": [],
-    "sourceKey": "rate-derived",
-    "yieldSource": "T-bill proxy",
-    "yieldSourceUrl": "https://ondo.finance/usdy",
-    "yieldType": "nav-appreciation",
-    "dataSource": "rate-derived",
-    "isBest": true,
-    "sourceSwitch": false
-  }
-]
+{
+  "date": 1771500000,
+  "apy": 12.4,
+  "apyBase": 10.2,
+  "apyReward": 2.2,
+  "exchangeRate": 1.052,
+  "sourceTvlUsd": 5200000000,
+  "warningSignals": [],
+  "sourceKey": "rate-derived",
+  "yieldSource": "T-bill proxy",
+  "yieldSourceUrl": "https://ondo.finance/usdy",
+  "yieldType": "nav-appreciation",
+  "dataSource": "rate-derived",
+  "isBest": true,
+  "sourceSwitch": false
+}
 ```
 
 | Field            | Type             | Description                                                                                            |
@@ -2297,7 +2300,7 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 
 `datasetFreshness` covers the key operator-visible datasets written by the pipeline: cache-backed stablecoins, blacklist, mint/burn, supply snapshots, safety-grade history, yield, depeg/dews tables, daily digest, and discovery backlog timestamps.
 
-`priceSourceHealth` is derived from the final `sync-stablecoins` asset payload and summarizes resolved price-source distribution, confidence buckets, recent CoinGecko-vs-DefiLlama divergences, and the timestamp of the latest successful price-health snapshot. This includes protocol-backed sources such as direct redemption quotes when they supersede market data.
+`priceSourceHealth` is derived from the final `sync-stablecoins` asset payload and summarizes resolved price-source distribution, confidence buckets, total assets, and the timestamp of the latest successful price-health snapshot. CoinGecko-vs-Pharos divergence details live in the separate `coingeckoPriceDiff` block.
 
 `coingeckoPriceDiff` is an admin-only live comparison block. It reads the cached tracked assets with `geckoId`, fetches current CoinGecko spot prices through one or more batched `simple/price` calls, and reports the rows where `abs(pharosPrice - coinGeckoPrice) / coinGeckoPrice > 0.05`. The field is `null` when the comparison is unavailable in the current environment or when the loader fails; failures are surfaced through `sectionErrors.coingeckoPriceDiff`.
 

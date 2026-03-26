@@ -17,6 +17,7 @@ Static route metadata is declared once in `shared/lib/api-endpoints.ts`. That sh
 | `GET /api/redemption-backstops`              | Modeled redemption-route and effective-exit snapshot for configured assets                                                                                                                                                     |
 | `GET /api/stablecoin-charts`                 | Historical total supply chart data                                                                                                                                                                                             |
 | `GET /api/blacklist`                         | Freeze/blacklist events (filterable by token, chain)                                                                                                                                                                           |
+| `GET /api/blacklist-summary`                 | Blacklist summary stats, chart data, chain options, and methodology envelope                                                                                                                                                   |
 | `GET /api/depeg-events`                      | Depeg events (`?stablecoin=ID`, `?active=true`, `?limit=N&offset=M`)                                                                                                                                                           |
 | `GET /api/peg-summary`                       | Per-coin peg scores + aggregate summary stats                                                                                                                                                                                  |
 | `GET /api/usds-status`                       | USDS Sky protocol status                                                                                                                                                                                                       |
@@ -49,6 +50,7 @@ Static route metadata is declared once in `shared/lib/api-endpoints.ts`. That sh
 | `POST /api/audit-depeg-history`              | Admin: audit depeg events against CoinGecko price data for false positive detection (GET supports `dry-run=true` only; preferred access: `ops-api.pharos.watch` + Access service-token headers)                                |
 | `POST /api/trigger-digest`                   | Admin: force digest regeneration bypassing 1h dedup (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                  |
 | `POST /api/reset-blacklist-sync`             | Admin: roll back blacklist sync state to re-scan missed events (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                       |
+| `POST /api/remediate-blacklist-amount-gaps`  | Admin: remediate recoverable blacklist amount/provenance gaps (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                       |
 | `GET /api/backfill-dews`                     | Admin: DEWS backtest audit against historical depeg events (reports true-positive rate and lead time; preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                 |
 | `POST /api/backfill-mint-burn-prices`        | Admin: backfill mint/burn event prices (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                               |
 | `GET /api/debug-sync-state`                  | Admin: view blacklist sync state for all chains (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                      |
@@ -507,6 +509,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── chains.ts             # GET /api/chains
     │   ├── supply-history.ts     # GET /api/supply-history
     │   ├── blacklist.ts          # GET /api/blacklist
+    │   ├── blacklist-summary.ts  # GET /api/blacklist-summary
     │   ├── depeg-events.ts       # GET /api/depeg-events
     │   ├── peg-summary.ts        # GET /api/peg-summary
     │   ├── daily-digest.ts       # GET /api/daily-digest
@@ -530,6 +533,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── backfill-mint-burn-prices.ts # POST /api/backfill-mint-burn-prices (admin)
     │   ├── backfill-mint-burn.ts # POST /api/backfill-mint-burn (admin)
     │   ├── reclassify-atomic-roundtrips.ts # POST /api/reclassify-atomic-roundtrips (admin)
+    │   ├── remediate-blacklist-amount-gaps.ts # POST /api/remediate-blacklist-amount-gaps (admin)
     │   ├── stress-signals.ts    # GET /api/stress-signals (DEWS scores)
     │   ├── discovery.ts         # GET /api/discovery-candidates + POST /api/discovery-candidates/:id/dismiss
     │   ├── yield-history.ts     # GET /api/yield-history
@@ -611,8 +615,10 @@ data/
 
 ## Frontend Runtime And SEO Surface
 
-- Indexable route families:
+- Indexable route families include:
   - `/`
+  - `/coverage/`
+  - `/chains/` and `/chains/[chain]/`
   - `/stablecoin/[id]/`
   - `/stablecoins/[peg]/`
   - `/stablecoins/governance/[governance]/`
@@ -620,7 +626,8 @@ data/
   - `/stablecoins/protocol/[protocol]/`
   - `/compare/[slug]/`
   - `/digest/` and `/digest/[date]/`
-  - major feature pages with standalone static copy (`/start/`, `/upcoming/`, `/blacklist/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/telegram/`, `/about/`, `/methodology/`)
+  - `/methodology/` and `/methodology/*-changelog/`
+  - major feature pages with standalone static copy (`/start/`, `/upcoming/`, `/blacklist/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/telegram/`, `/about/`, `/privacy/`)
 - Tool roots intentionally marked `noindex,follow`:
   - `/compare/`
   - `/portfolio/`
