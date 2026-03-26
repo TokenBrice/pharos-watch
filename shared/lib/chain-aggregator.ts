@@ -1,4 +1,5 @@
-import { CHAIN_META, resolveChainId, getChainResilienceTier } from "./chains";
+import { CHAIN_META, getChainResilienceTier } from "./chains";
+import { canonicalizeChainCirculating } from "./chain-circulating";
 import { TRACKED_META_BY_ID } from "./stablecoins";
 import { getPegReference } from "./peg-rates";
 import {
@@ -57,17 +58,11 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
   const accumulators = new Map<string, ChainAccumulator>();
 
   for (const asset of peggedAssets) {
-    const cc = asset.chainCirculating;
-    if (!cc || typeof cc !== "object") continue;
+    const canonicalChainCirculating = canonicalizeChainCirculating(asset.chainCirculating);
 
-    for (const [rawChainId, data] of Object.entries(cc)) {
-      if (!data || typeof data !== "object") continue;
-      const d = data as { current?: number; circulatingPrevDay?: number; circulatingPrevWeek?: number; circulatingPrevMonth?: number };
-      const current = d.current ?? 0;
+    for (const [chainId, data] of canonicalChainCirculating) {
+      const current = data.current;
       if (current <= 0) continue;
-
-      const chainId = resolveChainId(rawChainId);
-      if (!chainId) continue;
 
       let acc = accumulators.get(chainId);
       if (!acc) {
@@ -76,9 +71,9 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
       }
 
       acc.totalUsd += current;
-      acc.prevDay += d.circulatingPrevDay ?? 0;
-      acc.prevWeek += d.circulatingPrevWeek ?? 0;
-      acc.prevMonth += d.circulatingPrevMonth ?? 0;
+      acc.prevDay += data.circulatingPrevDay;
+      acc.prevWeek += data.circulatingPrevWeek;
+      acc.prevMonth += data.circulatingPrevMonth;
 
       const meta = TRACKED_META_BY_ID.get(asset.id);
       acc.coins.push({

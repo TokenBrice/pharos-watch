@@ -1,4 +1,5 @@
 import { queryBlacklistGapMetrics } from "../blacklist-gaps";
+import type { BlacklistGapMetrics } from "../blacklist-gaps";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../stablecoins-cache";
 import {
   BLACKLIST_RECENT_WINDOW_SEC,
@@ -53,7 +54,13 @@ export function emptyDataQuality(): DataQuality {
   };
 }
 
-export async function getDataQuality(db: D1Database, now: number): Promise<DataQuality> {
+export async function getDataQuality(
+  db: D1Database,
+  now: number,
+  options?: {
+    blacklistMetrics?: BlacklistGapMetrics | null;
+  },
+): Promise<DataQuality> {
   const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
   const sourceFailures: StatusResponse["dataQuality"]["sourceFailures"] = [];
   if (stablecoinsCacheResult.kind !== "ok") {
@@ -82,7 +89,7 @@ export async function getDataQuality(db: D1Database, now: number): Promise<DataQ
   let blacklistRepeatedFailureCount = 0;
   let blacklistGapStatus: DataQuality["blacklistGapStatus"] = "ok";
   try {
-    const gaps = await queryBlacklistGapMetrics(db, now, BLACKLIST_RECENT_WINDOW_SEC);
+    const gaps = options?.blacklistMetrics ?? await queryBlacklistGapMetrics(db, now, BLACKLIST_RECENT_WINDOW_SEC);
     blacklistTotal = gaps.totalEvents;
     blacklistMissingAmounts = gaps.missingAmounts;
     blacklistRecentMissingAmounts = gaps.recentMissingAmounts;

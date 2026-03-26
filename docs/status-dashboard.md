@@ -139,6 +139,8 @@ Source: `worker/src/api/status.ts`
 
 Shared raw-status evaluator: `worker/src/lib/status-evaluation.ts`
 
+Shared public-health floor: `worker/src/lib/public-health-assessment.ts`, backed by the pure helpers in `shared/lib/cache-health.ts` and `shared/lib/public-health.ts`
+
 Related extracted loaders:
 
 - `worker/src/lib/status/derived-data.ts`
@@ -168,7 +170,7 @@ Related extracted loaders:
 
 Operational nuance: a fresh recovery attempt should not keep `/status` degraded purely because the most recent completed run failed. When a leased cron is actively running and its heartbeat is fresh, availability treats that lane as live again while still preserving the previous completed run in card history.
 
-Mint/burn public freshness now uses the same grace window before warning: `/api/mint-burn-flows` and `/flows` stay `fresh` through `2 * expectedIntervalSec` for the critical lane (`40m` at the current cadence), then degrade/stale afterward. This avoids the public flows page warning while `/status` still shows the mint/burn lane healthy.
+Mint/burn public freshness now uses the same grace window before warning: `/api/mint-burn-flows` and `/flows` stay `fresh` through `2 * expectedIntervalSec` for the critical lane (`40m` at the current cadence), then degrade/stale afterward. `/api/status` now reuses that same public-health floor for availability once the critical lane has emitted real sync telemetry, so admin and public surfaces no longer drift on fresh-but-degraded mint/burn runs.
 
 For the split DEX pipeline:
 
@@ -180,14 +182,17 @@ For the split DEX pipeline:
 
 ### Availability status
 
-Computed from cache staleness + cron error state:
+Computed from the shared public-health floor plus cron availability:
 
 - `stale` if any of:
-  - `worstCacheRatio > 2`
+  - any shared cache impact is `stale`
+  - the public mint/burn lane is `stale`
   - any cron lastRun status is `error`
   - `unhealthyCrons >= 3`
 - `degraded` if any of:
-  - `worstCacheRatio > 1.5`
+  - any shared cache impact is `degraded`
+  - the public mint/burn lane is `degraded` (once the lane has emitted real sync telemetry)
+  - `openCircuitGroups >= 3`
   - `unhealthyCrons > 0`
 - else `healthy`
 

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { makeAsset } from "../../api/__tests__/helpers/fixtures";
 import { handleReportCards } from "../../api/report-cards";
@@ -9,7 +9,15 @@ import {
 import { RedemptionBackstopSnapshotUnavailableError } from "../redemption-backstops-store";
 
 const loadRedemptionBackstopMapMock = vi.hoisted(() =>
-  vi.fn(async () => ({})),
+  vi.fn(),
+);
+
+const loadDexLiquiditySnapshotMock = vi.hoisted(() =>
+  vi.fn(),
+);
+
+const loadFreshIndependentLiveReserveMapMock = vi.hoisted(() =>
+  vi.fn(),
 );
 
 vi.mock("../redemption-backstops-store", async (importOriginal) => {
@@ -19,6 +27,26 @@ vi.mock("../redemption-backstops-store", async (importOriginal) => {
   return {
     ...original,
     loadRedemptionBackstopMap: loadRedemptionBackstopMapMock,
+  };
+});
+
+vi.mock("../dex-liquidity", async (importOriginal) => {
+  const original = await importOriginal<
+    typeof import("../dex-liquidity")
+  >();
+  return {
+    ...original,
+    loadDexLiquiditySnapshot: loadDexLiquiditySnapshotMock,
+  };
+});
+
+vi.mock("../live-reserves-store", async (importOriginal) => {
+  const original = await importOriginal<
+    typeof import("../live-reserves-store")
+  >();
+  return {
+    ...original,
+    loadFreshIndependentLiveReserveMap: loadFreshIndependentLiveReserveMapMock,
   };
 });
 
@@ -42,6 +70,50 @@ function makeReportCardsDb(assets: ReturnType<typeof makeAsset>[] = []) {
 }
 
 describe("buildReportCardsSnapshot", () => {
+  beforeEach(() => {
+    loadRedemptionBackstopMapMock.mockReset();
+    loadRedemptionBackstopMapMock.mockResolvedValue({});
+    loadDexLiquiditySnapshotMock.mockReset();
+    loadDexLiquiditySnapshotMock.mockImplementation(async (db: D1Database) => {
+      const rows = await db
+        .prepare(
+          "SELECT stablecoin_id, liquidity_score, concentration_hhi, pool_count, chain_count, updated_at FROM dex_liquidity",
+        )
+        .all<{
+          stablecoin_id: string;
+          liquidity_score: number | null;
+          concentration_hhi: number | null;
+          pool_count: number;
+          chain_count: number;
+          updated_at: number | null;
+        }>();
+
+      const map: Record<string, {
+        liquidityScore: number | null;
+        concentrationHhi: number | null;
+        poolCount: number;
+        chainCount: number;
+      }> = {};
+      let latestUpdatedAt: number | null = null;
+
+      for (const row of rows.results ?? []) {
+        map[row.stablecoin_id] = {
+          liquidityScore: row.liquidity_score,
+          concentrationHhi: row.concentration_hhi,
+          poolCount: row.pool_count,
+          chainCount: row.chain_count,
+        };
+        if (row.updated_at != null && (latestUpdatedAt == null || row.updated_at > latestUpdatedAt)) {
+          latestUpdatedAt = row.updated_at;
+        }
+      }
+
+      return { map, latestUpdatedAt };
+    });
+    loadFreshIndependentLiveReserveMapMock.mockReset();
+    loadFreshIndependentLiveReserveMapMock.mockResolvedValue(new Map());
+  });
+
   it("throws when stablecoins cache is missing", async () => {
     await expect(buildReportCardsSnapshot(mockD1())).rejects.toBeInstanceOf(
       ReportCardsSnapshotUnavailableError,
@@ -155,5 +227,31 @@ describe("buildReportCardsSnapshot", () => {
     await expect(buildReportCardsSnapshot(db)).rejects.toBeInstanceOf(
       ReportCardsSnapshotUnavailableError,
     );
+  });
+
+  it("degrades gracefully when dex liquidity is unavailable", async () => {
+    const db = makeReportCardsDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
+    loadDexLiquiditySnapshotMock
+      .mockRejectedValueOnce(new Error("dex liquidity unavailable"))
+      .mockRejectedValueOnce(new Error("dex liquidity unavailable"));
+
+    const snapshot = await buildReportCardsSnapshot(db);
+    expect(snapshot.liquidityStale).toBe(true);
+
+    const response = await handleReportCards(db);
+    expect(response.status).toBe(200);
+  });
+
+  it("degrades gracefully when live reserves are unavailable", async () => {
+    const db = makeReportCardsDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
+    loadFreshIndependentLiveReserveMapMock
+      .mockRejectedValueOnce(new Error("live reserves unavailable"))
+      .mockRejectedValueOnce(new Error("live reserves unavailable"));
+
+    const snapshot = await buildReportCardsSnapshot(db);
+    expect(Array.isArray(snapshot.cards)).toBe(true);
+
+    const response = await handleReportCards(db);
+    expect(response.status).toBe(200);
   });
 });

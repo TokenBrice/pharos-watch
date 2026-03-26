@@ -10,6 +10,7 @@ import { PharosChartTooltip, TooltipRow } from "@/components/pharos-chart-toolti
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useDexLiquidity } from "@/hooks/api-hooks";
+import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
 import { formatCurrency } from "@shared/lib/format";
 import { CHAIN_META } from "@shared/lib/chains";
 import { CHART_PALETTE, CHART_SLATE } from "@/lib/chart-colors";
@@ -218,8 +219,8 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
     if (!coin?.chainCirculating) return { data: [], total: 0 };
 
     const raw: Record<string, number> = {};
-    for (const [chain, info] of Object.entries(coin.chainCirculating)) {
-      if (info.current > 0) raw[chain] = info.current;
+    for (const [chainId, info] of canonicalizeChainCirculating(coin.chainCirculating)) {
+      if (info.current > 0) raw[chainId] = info.current;
     }
 
     return buildDonutData(raw, {

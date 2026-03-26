@@ -11,9 +11,9 @@ import type {
   StatusCause,
   StatusResponse,
 } from "@shared/types/status";
-import { buildCacheStatuses } from "./api-utils";
 import { buildInClause } from "./db";
 import { computeReserveCompositionOverview } from "./live-reserves-store";
+import { assessPublicHealth } from "./public-health-assessment";
 import {
   emptyDatasetFreshness,
   emptyReserveComposition,
@@ -27,6 +27,7 @@ import {
   type StatusLevel,
 } from "./status-reliability";
 import { assessOnchainDataQuality } from "./status/onchain-data-quality";
+import { maxPublicStatus } from "@shared/lib/public-health";
 
 const STATUS_SEVERITY: Record<StatusLevel, number> = {
   healthy: 0,
@@ -163,25 +164,15 @@ export async function evaluateStatusAndPersist(
 }
 
 export async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusComputation> {
-  let dbHealthy = true;
-  try {
-    await db.prepare("SELECT 1").first();
-  } catch (err) {
-    dbHealthy = false;
-    console.error("[status] DB health sentinel failed:", err);
-  }
-  if (!dbHealthy) {
+  const publicHealth = await assessPublicHealth(db, now, { logPrefix: "status" });
+  if (!publicHealth.dbHealthy) {
     return buildDbUnavailableRawStatus();
   }
 
-  const {
-    caches,
-    worstRatio: rawWorstCacheRatio,
-    failures: cacheFailures,
-    statusFloor: cacheStatusFloor,
-    warnings: cacheWarnings,
-  } = await buildCacheStatuses(db, now);
-  const worstCacheRatio = Number.isFinite(rawWorstCacheRatio) ? rawWorstCacheRatio : 99;
+  const caches = publicHealth.caches;
+  const worstCacheRatio = publicHealth.worstCacheRatio;
+  const cacheFailures = publicHealth.cacheFailures;
+  const cacheWarnings = publicHealth.cacheWarnings;
 
   const cronJobs = Object.keys(CRON_INTERVALS);
   const cronJobInClause = buildInClause(cronJobs);
@@ -366,27 +357,25 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     };
   }
 
-  const dataQuality = dbHealthy ? await getDataQuality(db, now) : emptyDataQuality();
+  const dataQuality = await getDataQuality(db, now, {
+    blacklistMetrics: publicHealth.blacklistMetrics,
+  });
   const sectionErrors: StatusResponse["sectionErrors"] = {};
   let telegramBot: StatusResponse["telegramBot"] = null;
-  if (dbHealthy) {
-    try {
-      telegramBot = await getTelegramBotStats(db, now);
-    } catch (err) {
-      console.warn("[status] Telegram bot stats unavailable:", err);
-      sectionErrors.telegramBot = {
-        code: "telegram_bot_stats_query_failed",
-        message: err instanceof Error ? err.message : String(err),
-      };
-    }
+  try {
+    telegramBot = await getTelegramBotStats(db, now);
+  } catch (err) {
+    console.warn("[status] Telegram bot stats unavailable:", err);
+    sectionErrors.telegramBot = {
+      code: "telegram_bot_stats_query_failed",
+      message: err instanceof Error ? err.message : String(err),
+    };
   }
-  const datasetFreshness = dbHealthy ? await getDatasetFreshness(db) : emptyDatasetFreshness();
+  const datasetFreshness = await getDatasetFreshness(db);
   let reserveComposition = emptyReserveComposition();
   let reserveCompositionQueryFailed = false;
   try {
-    reserveComposition = dbHealthy
-      ? await computeReserveCompositionOverview(db, now)
-      : emptyReserveComposition();
+    reserveComposition = await computeReserveCompositionOverview(db, now);
   } catch (err) {
     reserveCompositionQueryFailed = true;
     console.warn("[status] Reserve composition overview unavailable:", err);
@@ -423,14 +412,21 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
   const reserveCompositionWarning = !reserveCompositionBootstrap && reserveIssueCount >= reserveWarningFloor;
 
   const baseAvailabilityStatus: StatusResponse["availabilityStatus"] =
-    cacheStatusFloor === "stale" || anyCronError || unhealthyCrons >= 3
+    publicHealth.cacheImpactStatus === "stale" || anyCronError || unhealthyCrons >= 3
       ? "stale"
-      : cacheStatusFloor === "degraded" || unhealthyCrons > 0
+      : publicHealth.cacheImpactStatus === "degraded" || unhealthyCrons > 0
         ? "degraded"
         : "healthy";
-  const availabilityStatus: StatusResponse["availabilityStatus"] = dbHealthy
-    ? baseAvailabilityStatus
-    : maxStatus(baseAvailabilityStatus, "degraded");
+  const publicAvailabilityFloor = maxPublicStatus(
+    publicHealth.circuitImpactStatus,
+    publicHealth.mintBurnQueryError == null && !publicHealth.mintBurnBootstrap
+      ? publicHealth.mintBurnImpactStatus
+      : "healthy",
+  );
+  const availabilityStatus: StatusResponse["availabilityStatus"] = maxStatus(
+    baseAvailabilityStatus,
+    publicAvailabilityFloor,
+  );
 
   const dataQualityStatus: StatusResponse["dataQualityStatus"] =
     dataQuality.stablecoinsCacheStatus === "error" ||
@@ -454,14 +450,6 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
   const rawOverallStatus = maxStatus(availabilityStatus, dataQualityStatus);
 
   const availabilityCauses: StatusCause[] = [];
-  if (!dbHealthy) {
-    pushCause(availabilityCauses, {
-      code: "db_unhealthy",
-      layer: "availability",
-      severity: "warning",
-      message: "Primary database connectivity check failed; data-quality queries were skipped.",
-    });
-  }
   if (worstCacheRatio > STATUS_CACHE_RATIO_THRESHOLDS.stale) {
     pushCause(availabilityCauses, {
       code: "cache_ratio_stale",
@@ -538,6 +526,50 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
         message: warning,
       });
     }
+  }
+  if (publicHealth.mintBurnQueryError) {
+    pushCause(availabilityCauses, {
+      code: "mint_burn_health_query_failed",
+      layer: "availability",
+      severity: "info",
+      message: `Mint/burn health query failed: ${publicHealth.mintBurnQueryError}`,
+    });
+  } else if (!publicHealth.mintBurnBootstrap && publicHealth.mintBurnImpactStatus === "stale") {
+    pushCause(availabilityCauses, {
+      code: "mint_burn_public_stale",
+      layer: "availability",
+      severity: "critical",
+      message:
+        publicHealth.mintBurn.sync.warning
+        ?? "Mint/burn public freshness is stale versus the critical-lane cadence.",
+    });
+  } else if (!publicHealth.mintBurnBootstrap && publicHealth.mintBurnImpactStatus === "degraded") {
+    pushCause(availabilityCauses, {
+      code: "mint_burn_public_degraded",
+      layer: "availability",
+      severity: "warning",
+      message:
+        publicHealth.mintBurn.sync.warning
+        ?? "Mint/burn public freshness is degraded versus the critical-lane cadence.",
+    });
+  }
+  if (publicHealth.circuitQueryError) {
+    pushCause(availabilityCauses, {
+      code: "circuit_query_failed",
+      layer: "availability",
+      severity: "warning",
+      message: `Circuit breaker diagnostics failed: ${publicHealth.circuitQueryError}`,
+    });
+  } else if (publicHealth.openCircuitCount >= 3) {
+    pushCause(availabilityCauses, {
+      code: "open_circuit_groups",
+      layer: "availability",
+      severity: "warning",
+      message: `${publicHealth.openCircuitCount} circuit breaker groups are currently open.`,
+      metric: "openCircuits",
+      value: publicHealth.openCircuitCount,
+      threshold: 3,
+    });
   }
   if (cronHistoryQueryFailed) {
     pushCause(availabilityCauses, {
@@ -714,7 +746,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
   });
 
   return {
-    dbHealthy,
+    dbHealthy: true,
     availabilityStatus,
     dataQualityStatus,
     rawOverallStatus,

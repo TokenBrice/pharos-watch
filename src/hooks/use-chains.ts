@@ -2,8 +2,8 @@
 
 import { useMemo } from "react";
 import { API_PATHS } from "@shared/lib/api-endpoints";
+import { findCanonicalChainData, type RawChainCirculating } from "@shared/lib/chain-circulating";
 import type { ChainsResponse } from "@shared/types/chains";
-import { resolveChainId } from "@shared/lib/chains";
 import { useApiQuery } from "./use-api-query";
 import { useStablecoins } from "./use-stablecoins";
 import { CRON_15MIN } from "@/lib/cron-intervals";
@@ -40,27 +40,10 @@ export interface ChainStablecoin {
  * Returns the summed data across all matching keys.
  */
 export function findChainData(
-  cc: Record<string, { current?: number; circulatingPrevDay?: number; circulatingPrevWeek?: number; circulatingPrevMonth?: number }>,
+  cc: RawChainCirculating,
   targetChainId: string,
 ): { current: number; circulatingPrevDay: number; circulatingPrevWeek: number; circulatingPrevMonth: number } | null {
-  let current = 0;
-  let prevDay = 0;
-  let prevWeek = 0;
-  let prevMonth = 0;
-  let found = false;
-
-  for (const [rawKey, data] of Object.entries(cc)) {
-    if (!data || typeof data !== "object") continue;
-    const resolved = resolveChainId(rawKey);
-    if (resolved !== targetChainId) continue;
-    found = true;
-    current += data.current ?? 0;
-    prevDay += data.circulatingPrevDay ?? 0;
-    prevWeek += data.circulatingPrevWeek ?? 0;
-    prevMonth += data.circulatingPrevMonth ?? 0;
-  }
-
-  return found ? { current, circulatingPrevDay: prevDay, circulatingPrevWeek: prevWeek, circulatingPrevMonth: prevMonth } : null;
+  return findCanonicalChainData(cc, targetChainId);
 }
 
 export function useChainStablecoins(chainId: string) {
@@ -79,7 +62,7 @@ export function useChainStablecoins(chainId: string) {
       if (!cc || typeof cc !== "object") continue;
 
       const chainData = findChainData(
-        cc as Record<string, { current?: number; circulatingPrevDay?: number; circulatingPrevWeek?: number; circulatingPrevMonth?: number }>,
+        cc as RawChainCirculating,
         chainId,
       );
       if (!chainData || chainData.current <= 0) continue;

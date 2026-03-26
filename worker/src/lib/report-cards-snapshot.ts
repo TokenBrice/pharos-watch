@@ -1,14 +1,22 @@
 import { getCache } from "./db-cache";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { buildDependencyGraphEdges } from "@shared/lib/dependency-graph";
 import { deriveDependencies } from "@shared/lib/reserve-templates";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { derivePegAnalyticsSnapshot } from "./peg-analytics";
-import { loadDexLiquiditySnapshot } from "./dex-liquidity";
+import {
+  loadDexLiquiditySnapshot,
+  type DexLiquidityLoadResult,
+} from "./dex-liquidity";
 import {
   loadRedemptionBackstopMap,
   RedemptionBackstopSnapshotUnavailableError,
 } from "./redemption-backstops-store";
 import { loadFreshIndependentLiveReserveMap } from "./live-reserves-store";
+import {
+  summarizeCollateralDriftFromLiveReserveMap,
+  type CollateralDriftEntry,
+} from "./collateral-drift";
 import {
   METHODOLOGY_VERSION,
   DIMENSION_WEIGHTS,
@@ -23,9 +31,8 @@ import {
   resolveResilienceFactors,
   resolveGovernanceQuality,
   isBlacklistable,
-  computeCollateralQualityFromReserves,
 } from "@shared/lib/report-cards";
-import { loadStablecoinsCache } from "./stablecoins-cache";
+import { loadStablecoinsCache, type StablecoinsCacheLoadOk } from "./stablecoins-cache";
 import type {
   StablecoinMeta,
   GovernanceType,
@@ -49,13 +56,6 @@ import type {
   ReportCardGrade,
 } from "@shared/types/report-cards";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
-
-export interface CollateralDriftEntry {
-  id: string;
-  liveScore: number;
-  curatedScore: number;
-  delta: number;
-}
 
 export interface ReportCardsSnapshot {
   cards: ReportCard[];
@@ -83,48 +83,103 @@ export class ReportCardsSnapshotUnavailableError extends Error {
   }
 }
 
-export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCardsSnapshot> {
-  let stablecoinsCached;
-  let bluechipCached;
-  let dexLiquiditySnapshot;
-  let redemptionBackstopMap;
-  let liveReserveMap;
-  try {
-    [
-      stablecoinsCached,
-      bluechipCached,
-      dexLiquiditySnapshot,
-      redemptionBackstopMap,
-      liveReserveMap,
-    ] = await Promise.all([
-      loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false }),
-      getCache(db, "bluechip-ratings"),
-      loadDexLiquiditySnapshot(db),
-      loadRedemptionBackstopMap(db),
-      loadFreshIndependentLiveReserveMap(db),
-    ]);
-  } catch (error) {
-    if (error instanceof RedemptionBackstopSnapshotUnavailableError) {
+interface ReportCardsSnapshotInputs {
+  stablecoinsCached: StablecoinsCacheLoadOk;
+  bluechipCached: Awaited<ReturnType<typeof getCache>> | null;
+  dexLiquiditySnapshot: DexLiquidityLoadResult;
+  redemptionBackstopMap: Record<string, RedemptionBackstopEntry>;
+  liveReserveMap: Map<string, ReserveSlice[]>;
+  liquidityStale: boolean;
+}
+
+const EMPTY_DEX_LIQUIDITY_SNAPSHOT: DexLiquidityLoadResult = {
+  map: {},
+  latestUpdatedAt: null,
+};
+
+async function loadReportCardsSnapshotInputs(db: D1Database): Promise<ReportCardsSnapshotInputs> {
+  const [
+    stablecoinsCachedResult,
+    bluechipCachedResult,
+    dexLiquiditySnapshotResult,
+    redemptionBackstopMapResult,
+    liveReserveMapResult,
+  ] = await Promise.allSettled([
+    loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false }),
+    getCache(db, "bluechip-ratings"),
+    loadDexLiquiditySnapshot(db),
+    loadRedemptionBackstopMap(db),
+    loadFreshIndependentLiveReserveMap(db),
+  ]);
+
+  if (stablecoinsCachedResult.status === "rejected") {
+    throw stablecoinsCachedResult.reason;
+  }
+  const stablecoinsCached = stablecoinsCachedResult.value;
+  if (stablecoinsCached.kind !== "ok") {
+    throw new ReportCardsSnapshotUnavailableError("Cached stablecoins data is corrupt");
+  }
+
+  if (redemptionBackstopMapResult.status === "rejected") {
+    if (redemptionBackstopMapResult.reason instanceof RedemptionBackstopSnapshotUnavailableError) {
       throw new ReportCardsSnapshotUnavailableError(
         "Redemption backstop snapshot unavailable",
       );
     }
-    throw error;
+    throw redemptionBackstopMapResult.reason;
   }
+
+  const bluechipCached = bluechipCachedResult.status === "fulfilled"
+    ? bluechipCachedResult.value
+    : (() => {
+        console.warn("[report-cards] Bluechip ratings unavailable; continuing without bluechip overlay:", bluechipCachedResult.reason);
+        return null;
+      })();
+
+  let dexLiquiditySnapshot = EMPTY_DEX_LIQUIDITY_SNAPSHOT;
+  let liquidityStale = false;
+  if (dexLiquiditySnapshotResult.status === "fulfilled") {
+    dexLiquiditySnapshot = dexLiquiditySnapshotResult.value;
+    if (dexLiquiditySnapshot.latestUpdatedAt != null) {
+      const ageSec = Math.floor(Date.now() / 1000) - dexLiquiditySnapshot.latestUpdatedAt;
+      if (ageSec > 3600) {
+        console.warn(`[report-cards] Liquidity data is stale (age: ${ageSec}s)`);
+        liquidityStale = true;
+      }
+    }
+  } else {
+    console.warn("[report-cards] DEX liquidity snapshot unavailable; suppressing liquidity inputs:", dexLiquiditySnapshotResult.reason);
+    liquidityStale = true;
+  }
+
+  const liveReserveMap = liveReserveMapResult.status === "fulfilled"
+    ? liveReserveMapResult.value
+    : (() => {
+        console.warn("[report-cards] Live reserve snapshot unavailable; falling back to curated reserves:", liveReserveMapResult.reason);
+        return new Map<string, ReserveSlice[]>();
+      })();
+
+  return {
+    stablecoinsCached,
+    bluechipCached,
+    dexLiquiditySnapshot,
+    redemptionBackstopMap: redemptionBackstopMapResult.value,
+    liveReserveMap,
+    liquidityStale,
+  };
+}
+
+export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCardsSnapshot> {
+  const {
+    stablecoinsCached,
+    bluechipCached,
+    dexLiquiditySnapshot,
+    redemptionBackstopMap,
+    liveReserveMap,
+    liquidityStale,
+  } = await loadReportCardsSnapshotInputs(db);
 
   const dexLiqMap = dexLiquiditySnapshot.map;
-  let liquidityStale = false;
-  if (dexLiquiditySnapshot.latestUpdatedAt != null) {
-    const ageSec = Math.floor(Date.now() / 1000) - dexLiquiditySnapshot.latestUpdatedAt;
-    if (ageSec > 3600) {
-      console.warn(`[report-cards] Liquidity data is stale (age: ${ageSec}s)`);
-      liquidityStale = true;
-    }
-  }
-
-  if (stablecoinsCached.kind !== "ok") {
-    throw new ReportCardsSnapshotUnavailableError("Cached stablecoins data is corrupt");
-  }
   const peggedAssets: StablecoinData[] = stablecoinsCached.payload.peggedAssets;
   const fxFallbackRates = stablecoinsCached.payload.fxFallbackRates;
 
@@ -154,8 +209,6 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
   const sortedMetas = topologicalOrder([...ACTIVE_STABLECOINS]);
   const overallScores = new Map<string, number>();
   const liveCards: ReportCard[] = [];
-  const collateralDriftCoins: CollateralDriftEntry[] = [];
-  const liveToFallbackCoins: string[] = [];
 
   for (const meta of sortedMetas) {
     const card = computeCard({
@@ -173,21 +226,12 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
     if (card.overallScore !== null) {
       overallScores.set(card.id, card.overallScore);
     }
-
-    // Track drift for snapshot metadata
-    const liveSlices = liveReserveMap.get(meta.id);
-    if (liveSlices && meta.reserves && meta.reserves.length > 0) {
-      const liveScore = computeCollateralQualityFromReserves(liveSlices);
-      const curatedScore = computeCollateralQualityFromReserves(meta.reserves);
-      const delta = Math.abs(liveScore - curatedScore);
-      if (delta > 15) {
-        collateralDriftCoins.push({ id: meta.id, liveScore, curatedScore, delta });
-      }
-    }
-    if (meta.liveReservesConfig && !liveReserveMap.has(meta.id)) {
-      liveToFallbackCoins.push(meta.id);
-    }
   }
+
+  const {
+    driftCoins: collateralDriftCoins,
+    fallbackCoins: liveToFallbackCoins,
+  } = summarizeCollateralDriftFromLiveReserveMap(liveReserveMap);
 
   const defunctCards: ReportCard[] = DEAD_STABLECOINS.map((dead) => {
     const id = dead.llamaId ?? `dead-${dead.symbol.toLowerCase()}`;
@@ -245,12 +289,8 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
     return b.overallScore - a.overallScore;
   });
 
-  const edges: { from: string; to: string }[] = [];
-  for (const meta of ACTIVE_STABLECOINS) {
-    for (const dep of deriveDependencies(meta)) {
-      edges.push({ from: dep.id, to: meta.id });
-    }
-  }
+  const edges = buildDependencyGraphEdges(ACTIVE_STABLECOINS)
+    .map((edge) => ({ from: edge.from, to: edge.to }));
 
   return {
     cards: allCards,

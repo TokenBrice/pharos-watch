@@ -1,8 +1,7 @@
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
+import { getPublicMintBurnStatus, type PublicStatusTone } from "@shared/lib/public-health";
 import type { HealthResponse } from "@shared/types";
 import { getCacheFreshnessRatio, getCacheImpactStatus } from "@/lib/status/cache-health";
-
-export type PublicStatusTone = "healthy" | "degraded" | "stale";
 
 export interface PublicCacheSummary {
   ratio: number | null;
@@ -16,6 +15,8 @@ export interface PublicImpactedSurface {
   detail: string;
   tone: "degraded" | "stale";
 }
+
+export { getPublicMintBurnStatus };
 
 const CACHE_IMPACT_COPY: Partial<Record<string, { title: string; detail: string }>> = {
   stablecoins: {
@@ -56,14 +57,6 @@ function getStatusSeverity(status: PublicStatusTone): number {
   if (status === "stale") return 2;
   if (status === "degraded") return 1;
   return 0;
-}
-
-export function getPublicMintBurnStatus(
-  sync: HealthResponse["mintBurn"]["sync"],
-): PublicStatusTone {
-  if (sync.freshnessStatus === "stale") return "stale";
-  if (sync.freshnessStatus === "degraded" || !sync.criticalLaneHealthy) return "degraded";
-  return "healthy";
 }
 
 export function getPublicWorstCacheSummary(

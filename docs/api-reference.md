@@ -1179,9 +1179,11 @@ The `/status/` page consumes the richer blacklist fields directly so it can dist
 
 **Overall status logic:**
 
-- `healthy` — worst cache ratio ≤ 1.5, no open circuits, and no stale major mint/burn symbols
-- `degraded` — worst ratio between 1.5 and 2, or any circuit is open, or at least 1 major mint/burn symbol is stale
-- `stale` — worst ratio > 2, or 3+ major mint/burn symbols are stale
+- `healthy` — every cache impact is healthy, the public mint/burn lane is healthy, fewer than 3 circuit groups are open, and the health subqueries all resolved cleanly
+- `degraded` — any cache impact is degraded (including FX cached-fallback or source-cadence lag), any of the blacklist/mint-burn/circuit health subqueries failed, the public mint/burn lane is warning-only, or 3+ circuit groups are open
+- `stale` — any cache impact is stale, or the public mint/burn lane is stale versus its critical-lane cadence
+
+Blacklist ratio fields are still emitted here for the public surface, but threshold-based blacklist severity lives under `/api/status` data-quality; `/api/health` only escalates its top-level status when the blacklist health loader itself fails.
 
 ---
 
@@ -1290,6 +1292,8 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
 ```
 
 The Liquidity dimension now represents `effectiveExitScore`: the public DEX liquidity score remains the floor, while redeemable assets can receive uplift from `redemptionBackstopScore` when a meaningful direct exit path exists. Low-confidence redemption routes stay visible but do not uplift the score, and stale DEX inputs are not blended.
+
+`GET /api/report-cards` treats the stablecoins cache and redemption-backstop snapshot as hard dependencies. DEX liquidity, bluechip ratings, and live-reserve inputs are soft dependencies: if one of those loaders is temporarily unavailable, the endpoint continues serving a degraded snapshot instead of failing closed.
 
 **`dependencyGraph.edges`**: Pre-computed forward edges. `from` = upstream stablecoin ID, `to` = dependent stablecoin ID. Used by the frontend to identify targetable coins for stress testing and walk the dependency tree.
 
@@ -2255,6 +2259,8 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 `itemCount` and `dataQuality.totalStablecoins` are illustrative example values. In the live handler they reflect the current cached stablecoin payload size, not `TRACKED_STABLECOINS.length`.
 
 `crons[*].healthy` reflects availability impact. Fresh cron runs with `status="degraded"` are warning-only and counted in `summary.degradedCrons`, but they do not mark availability unhealthy on their own.
+
+`availabilityStatus` also inherits the shared public-health floor used by `/api/health`: cache-impact status, the critical mint/burn lane's public warning/staleness contract, and 3+ open circuit groups can degrade availability even when cron freshness alone is still green.
 
 `crons[*].inFlight` is present when a leased cron is actively reporting `cron_run_progress` and the matching `cron_leases` row is still active for the same owner. It includes `startedAt`, `updatedAt`, `stage`, optional `itemsDone/itemsTotal`, optional `message/metadata`, and a `stale` flag when the heartbeat stops updating.
 

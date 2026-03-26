@@ -53,6 +53,7 @@ Current-version note: v6.8 keeps the v6.4 structure. LUSD and BOLD still use doc
 - Low-confidence redemption routes stay visible in the dimension detail, but they do not improve the Safety Score liquidity score
 - Formula-based routes with live on-chain fee telemetry can use the current redemption fee bps for cost scoring while remaining labeled as formula models
 - When DEX liquidity is stale, report cards do not reuse it for blended effective-exit scoring; the dimension falls back to redemption-only or `NR`
+- If the DEX liquidity snapshot is temporarily unavailable at read time, `/api/report-cards` degrades in place the same way: liquidity inputs are suppressed for that snapshot instead of failing the whole response
 - If a redemption route is configured but currently unrated, the dimension stays `NR` without pretending the route is absent; the detail string calls out the configured-but-unrated state explicitly
 - High concentration (HHI > 0.5) remains descriptive context, not an extra penalty
 - See [Redemption Backstops](./redemption-backstops.md) for redemption component scoring and route-family caps
@@ -111,6 +112,10 @@ Delta alerts are fired from the hourly reserve sync cron via `checkCollateralDri
 Drift data is also included in the report-cards snapshot as `collateralDriftCoins` for
 `/status` visibility. Coins using curated fallback (no fresh independent live data) are tracked as
 `liveToFallbackCoins` in the snapshot metadata.
+
+If the live reserve snapshot loader is temporarily unavailable at read time, report cards
+continue serving from curated reserve metadata and mark the affected coins in
+`liveToFallbackCoins` for operator visibility instead of failing the endpoint.
 
 **Known Limitation: Blacklist Inherited Uses Curated Data**
 

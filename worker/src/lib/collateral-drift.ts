@@ -1,6 +1,7 @@
 import { isReserveDriftThresholdExceeded } from "@shared/lib/status-thresholds";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { computeCollateralQualityFromReserves } from "@shared/lib/report-cards";
+import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import { loadFreshIndependentLiveReserveMap } from "./live-reserves-store";
 
 export interface CollateralDriftEntry {
@@ -15,16 +16,14 @@ export interface CollateralDriftResult {
   fallbackCoins: string[];
 }
 
-/**
- * Load fresh live reserves and compare with curated reserve metadata.
- * Returns coins with score drift above the shared reserve-drift threshold and coins that fell back to curated.
- */
-export async function checkCollateralDrift(db: D1Database): Promise<CollateralDriftResult> {
-  const liveReserveMap = await loadFreshIndependentLiveReserveMap(db);
+export function summarizeCollateralDriftFromLiveReserveMap(
+  liveReserveMap: ReadonlyMap<string, ReserveSlice[]>,
+  stablecoins: readonly StablecoinMeta[] = ACTIVE_STABLECOINS,
+): CollateralDriftResult {
   const driftCoins: CollateralDriftEntry[] = [];
   const fallbackCoins: string[] = [];
 
-  for (const meta of ACTIVE_STABLECOINS) {
+  for (const meta of stablecoins) {
     if (!meta.liveReservesConfig) continue;
 
     const liveSlices = liveReserveMap.get(meta.id);
@@ -44,4 +43,13 @@ export async function checkCollateralDrift(db: D1Database): Promise<CollateralDr
   }
 
   return { driftCoins, fallbackCoins };
+}
+
+/**
+ * Load fresh live reserves and compare with curated reserve metadata.
+ * Returns coins with score drift above the shared reserve-drift threshold and coins that fell back to curated.
+ */
+export async function checkCollateralDrift(db: D1Database): Promise<CollateralDriftResult> {
+  const liveReserveMap = await loadFreshIndependentLiveReserveMap(db);
+  return summarizeCollateralDriftFromLiveReserveMap(liveReserveMap);
 }

@@ -8,8 +8,11 @@ import {
   type SimulationNodeDatum,
   type SimulationLinkDatum,
 } from "d3-force";
+import {
+  buildDependencyGraphEdges,
+  filterDependencyGraphEdgesToLive,
+} from "@shared/lib/dependency-graph";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
-import { deriveDependencies } from "@shared/lib/reserve-templates";
 import type { DependencyType, ReportCard } from "@shared/types";
 
 // ---------------------------------------------------------------------------
@@ -205,29 +208,24 @@ export function buildGraphData(
   const cardMap = new Map(cards.map((c) => [c.id, c]));
   const liveIds = [...cardMap.keys()].filter((id) => !cardMap.get(id)!.isDefunct);
   const liveIdSet = new Set(liveIds);
+  const liveEdges = filterDependencyGraphEdgesToLive(
+    buildDependencyGraphEdges(ACTIVE_STABLECOINS),
+    liveIdSet,
+  );
 
   const inboundCounts = new Map<string, number>();
   const outboundCounts = new Map<string, number>();
   const liveLinks: RawGraphLink[] = [];
 
-  for (const meta of ACTIVE_STABLECOINS) {
-    if (!liveIdSet.has(meta.id)) continue;
-    const deps = deriveDependencies(meta);
-    let outCount = 0;
-
-    for (const dep of deps) {
-      if (!liveIdSet.has(dep.id)) continue;
-      outCount++;
-      inboundCounts.set(dep.id, (inboundCounts.get(dep.id) ?? 0) + 1);
-      liveLinks.push({
-        source: meta.id,
-        target: dep.id,
-        weight: dep.weight,
-        type: dep.type ?? "collateral",
-      });
-    }
-
-    if (outCount > 0) outboundCounts.set(meta.id, outCount);
+  for (const edge of liveEdges) {
+    inboundCounts.set(edge.from, (inboundCounts.get(edge.from) ?? 0) + 1);
+    outboundCounts.set(edge.to, (outboundCounts.get(edge.to) ?? 0) + 1);
+    liveLinks.push({
+      source: edge.to,
+      target: edge.from,
+      weight: edge.weight,
+      type: edge.type,
+    });
   }
 
   const rankedIds = liveIds

@@ -1,6 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
+import {
+  buildDependencyGraphEdges,
+  filterDependencyGraphEdgesToLive,
+} from "@shared/lib/dependency-graph";
 import { useReportCards } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
@@ -10,8 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { sumPegBuckets } from "@shared/lib/supply";
-import { deriveDependencies } from "@shared/lib/reserve-templates";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 
 export function DependencyMapClient() {
   const reportCardsQuery = useReportCards();
@@ -40,23 +43,22 @@ export function DependencyMapClient() {
     if (!reportData?.cards?.length) return [];
 
     const liveIds = new Set(reportData.cards.filter((card) => !card.isDefunct).map((card) => card.id));
+    const cardById = new Map(reportData.cards.map((card) => [card.id, card]));
     const hubMap = new Map<string, { dependentCount: number; weightedInbound: number; examples: string[] }>();
+    const liveEdges = filterDependencyGraphEdgesToLive(
+      buildDependencyGraphEdges(ACTIVE_STABLECOINS),
+      liveIds,
+    );
 
-    for (const card of reportData.cards) {
-      if (!liveIds.has(card.id)) continue;
-      const sourceMeta = TRACKED_META_BY_ID.get(card.id);
-      if (!sourceMeta) continue;
-
-      for (const dependency of deriveDependencies(sourceMeta)) {
-        if (!liveIds.has(dependency.id)) continue;
-        const hub = hubMap.get(dependency.id) ?? { dependentCount: 0, weightedInbound: 0, examples: [] };
-        hub.dependentCount += 1;
-        hub.weightedInbound += dependency.weight;
-        if (hub.examples.length < 3) {
-          hub.examples.push(sourceMeta.symbol);
-        }
-        hubMap.set(dependency.id, hub);
+    for (const edge of liveEdges) {
+      const hub = hubMap.get(edge.from) ?? { dependentCount: 0, weightedInbound: 0, examples: [] };
+      const dependentCard = cardById.get(edge.to);
+      hub.dependentCount += 1;
+      hub.weightedInbound += edge.weight;
+      if (dependentCard && hub.examples.length < 3) {
+        hub.examples.push(dependentCard.symbol);
       }
+      hubMap.set(edge.from, hub);
     }
 
     return [...hubMap.entries()]

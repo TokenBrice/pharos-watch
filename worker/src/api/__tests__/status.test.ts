@@ -1604,6 +1604,113 @@ describe("handleStatus", () => {
     expect(body.causes.availability.some((cause) => cause.code === "fx_source_degraded")).toBe(true);
   });
 
+  it("degrades availability when the critical mint/burn lane is in public degraded mode", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const cronRows = Object.keys(CRON_INTERVALS).map((job) =>
+      makeCronRow(job, job === "sync-mint-burn" ? "degraded" : "ok", 60),
+    );
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          makeCacheRow("stablecoins"),
+          makeCacheRow("stablecoin-charts"),
+          makeCacheRow("usds-status"),
+          makeCacheRow("fx-rates"),
+          makeCacheRow("bluechip-ratings"),
+        ],
+      },
+      { match: "dex_liquidity", rows: [], first: { age: 60 } },
+      { match: "yield_data", rows: [], first: { age: 60 } },
+      { match: "stress_signals", rows: [], first: { age: 60 } },
+      { match: "mint_burn_hourly", rows: [], first: { total: 1234 } },
+      { match: "SELECT MAX(timestamp) as latest FROM mint_burn_events", rows: [], first: { latest: now - 30 } },
+      { match: "SELECT MAX(hour_ts) as latest FROM mint_burn_hourly", rows: [], first: { latest: now - 3600 } },
+      { match: "SELECT symbol, MAX(timestamp) as latest", rows: [{ symbol: "USDT", latest: now - 300 }] },
+      { match: "SELECT status", rows: [], first: { status: "degraded" } },
+      { match: "status = 'ok'", rows: [], first: { started_at: now - 600 } },
+      { match: "cron_runs", rows: cronRows },
+      {
+        match: "cache",
+        rows: [],
+        first: { value: stablecoinsCache, updated_at: now - 60 },
+      },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request);
+    const body = (await res.json()) as {
+      availabilityStatus: string;
+      causes: { availability: Array<{ code: string }> };
+    };
+
+    expect(body.availabilityStatus).toBe("degraded");
+    expect(body.causes.availability.some((cause) => cause.code === "mint_burn_public_degraded")).toBe(true);
+  });
+
+  it("degrades availability when three or more circuit groups are open", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const cronRows = Object.keys(CRON_INTERVALS).map((job) => makeCronRow(job, "ok", 60));
+    const openCircuitValue = (openedAt: number) => JSON.stringify({
+      state: "open",
+      consecutiveFailures: 3,
+      lastFailureAt: openedAt - 30,
+      lastSuccessAt: null,
+      openedAt,
+    });
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          makeCacheRow("stablecoins"),
+          makeCacheRow("stablecoin-charts"),
+          makeCacheRow("usds-status"),
+          makeCacheRow("fx-rates"),
+          makeCacheRow("bluechip-ratings"),
+        ],
+      },
+      { match: "dex_liquidity", rows: [], first: { age: 60 } },
+      { match: "yield_data", rows: [], first: { age: 60 } },
+      { match: "stress_signals", rows: [], first: { age: 60 } },
+      { match: "cron_runs", rows: cronRows },
+      {
+        match: "key LIKE 'circuit:%'",
+        rows: [
+          { key: "circuit:defillama-stablecoins", value: openCircuitValue(now - 600) },
+          { key: "circuit:coingecko-prices", value: openCircuitValue(now - 540) },
+          { key: "circuit:dexscreener-prices", value: openCircuitValue(now - 480) },
+        ],
+      },
+      {
+        match: "cache",
+        rows: [],
+        first: { value: stablecoinsCache, updated_at: now - 60 },
+      },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request);
+    const body = (await res.json()) as {
+      availabilityStatus: string;
+      causes: { availability: Array<{ code: string }> };
+    };
+
+    expect(body.availabilityStatus).toBe("degraded");
+    expect(body.causes.availability.some((cause) => cause.code === "open_circuit_groups")).toBe(true);
+  });
+
   it("keeps data quality healthy when blacklist gaps are low-ratio and not recent", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({
