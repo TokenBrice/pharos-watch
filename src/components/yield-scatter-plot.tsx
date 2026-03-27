@@ -37,6 +37,7 @@ interface YieldScatterPlotProps {
   benchmarkLabel?: string;
   showBenchmarkReference?: boolean;
   benchmarkIsFallback?: boolean;
+  usesDefaultBenchmarkFrame?: boolean;
   logos?: Record<string, string>;
   onDotClick: (id: string) => void;
 }
@@ -152,6 +153,7 @@ export function YieldScatterPlot({
   benchmarkLabel,
   showBenchmarkReference = true,
   benchmarkIsFallback = false,
+  usesDefaultBenchmarkFrame = false,
   logos,
   onDotClick,
 }: YieldScatterPlotProps) {
@@ -253,7 +255,7 @@ export function YieldScatterPlot({
       <div
         className="h-[600px] overflow-hidden rounded-2xl border-2 border-border/80 bg-card/60 p-2 sm:h-[850px] sm:p-4"
         role="figure"
-        aria-label={`Yield vs safety scatter plot with ${data.length} stablecoins. Click a logo to open its detail page.`}
+        aria-label={`Yield vs safety scatter plot with ${data.length} stablecoins.${usesDefaultBenchmarkFrame ? " The background benchmark frame uses the default USD benchmark for mixed views." : ""} Click a logo to open its detail page.`}
       >
         <div ref={chartContainerRef} className="h-full w-full">
           {isChartReady ? (
@@ -366,7 +368,9 @@ export function YieldScatterPlot({
                     isMobile
                       ? undefined
                       : {
-                        value: `${resolvedBenchmarkLabel} ${benchmarkRate.toFixed(2)}%`,
+                        value: usesDefaultBenchmarkFrame
+                          ? `${resolvedBenchmarkLabel} frame ${benchmarkRate.toFixed(2)}%`
+                          : `${resolvedBenchmarkLabel} ${benchmarkRate.toFixed(2)}%`,
                         position: "right",
                         fill: CHART_SLATE,
                         fontSize: 13,
@@ -443,7 +447,9 @@ export function YieldScatterPlot({
         <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
           <span className="text-foreground font-medium">Sweet spot</span>
-          {showBenchmarkReference ? (
+          {showBenchmarkReference && usesDefaultBenchmarkFrame ? (
+            <span className="hidden md:inline">= above the USD frame and right of {SAFETY_SCORE_THRESHOLD}; row tags still show local benchmarks</span>
+          ) : showBenchmarkReference ? (
             <span className="hidden md:inline">= above {benchmarkRate.toFixed(2)}% and right of {SAFETY_SCORE_THRESHOLD}</span>
           ) : (
             <span className="hidden md:inline">= high safety with yield that clears the local benchmark</span>

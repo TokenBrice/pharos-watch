@@ -1,8 +1,14 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.10` (2026-03-01 -> 2026-03-26).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.11` (2026-03-01 -> 2026-03-27).
 
 ---
+
+## v5.11 - Restored mixed-view scatter benchmark frame (Mar 27, 2026)
+
+- The `/yield` scatter plot now restores its horizontal benchmark line and four shaded quadrants on mixed-benchmark scopes instead of dropping them entirely
+- Mixed scopes use the default USD benchmark as the shared visual frame, so the chart stays readable even when rows carry local EUR or CHF hurdles
+- Mixed-view copy now makes the distinction explicit: the background frame is for orientation, while each row's benchmark tag still controls excess-yield interpretation
 
 ## v5.10 - Source-cadence-aware freshness warnings (Mar 26, 2026)
 

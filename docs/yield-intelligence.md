@@ -322,7 +322,7 @@ https://indexdata.six-group.com/download/saron/h_sar3mc_delayed.csv
 - Rate-derived configs can explicitly override the benchmark key when the asset's benchmark should differ from the peg currency
 - When a native benchmark is unavailable, the row falls back to USD and records `benchmarkSelectionMode: "fallback-usd"`
 
-**Usage:** The hourly core yield sync resolves `excessYield` and rate-derived APY against each row's selected benchmark. Detail cards, hero chips, and history charts render that row-level label. The `/yield` scatter plot only draws a single benchmark reference line when the visible scope shares one benchmark.
+**Usage:** The hourly core yield sync resolves `excessYield` and rate-derived APY against each row's selected benchmark. Detail cards, hero chips, and history charts render that row-level label. The `/yield` scatter plot now always keeps a benchmark frame visible: homogeneous scopes use the shared visible benchmark, while mixed scopes use the default USD benchmark as an orientation frame and rely on row-level tags for the exact hurdle.
 
 ---
 
@@ -664,7 +664,7 @@ The section returns `null` once rankings have loaded and the coin is neither `yi
 
 Recharts scatter chart. X = safety score, Y = APY (%). The chart plots one best-source point per stablecoin, auto-focuses the x-axis on the occupied safety-score band instead of always rendering the full 0-100 range, and keeps the safety threshold at 60 visible for quadrant context. Scatter markers render each stablecoin's logo (with an initial fallback if no logo exists), and yield type information lives in the tooltip instead of a separate legend. Rare high-APY outliers are pinned to a disclosed top rail so one extreme point does not flatten the rest of the plot.
 
-**Quadrants** (divided at safety = 60 and APY = the visible benchmark rate when one shared benchmark exists):
+**Quadrants** (divided at safety = 60 and APY = the visible benchmark frame rate):
 
 | Quadrant     | Position                  | Color              |
 | ------------ | ------------------------- | ------------------ |
@@ -673,7 +673,7 @@ Recharts scatter chart. X = safety score, Y = APY (%). The chart plots one best-
 | Play It Safe | High safety, below benchmark | Blue (5% opacity)  |
 | Why Bother?  | Low safety, below benchmark  | Gray (5% opacity)  |
 
-Dashed reference line at the shared benchmark rate when the current filter scope is benchmark-homogeneous. Mixed scopes suppress that single line to avoid implying one global hurdle. Click a dot to navigate to that coin's detail page.
+Dashed reference line at the benchmark frame rate. On benchmark-homogeneous scopes, that frame uses the shared visible benchmark. On mixed scopes, the chart keeps the overlay visible by using the default USD benchmark as a shared orientation frame while the table and row tags continue to show each stablecoin's local benchmark context. Click a dot to navigate to that coin's detail page.
 
 ### `YieldLeaderboard` (`src/components/yield-leaderboard.tsx`)
 

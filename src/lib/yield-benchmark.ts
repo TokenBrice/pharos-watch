@@ -53,3 +53,28 @@ export function getYieldBenchmarkForKey(
   if (!benchmarks) return null;
   return benchmarks[key] ?? null;
 }
+
+export function resolveYieldScatterBenchmarkFrame(params: {
+  rankings: YieldRanking[];
+  benchmarks: YieldBenchmarkRegistry | null | undefined;
+  fallbackBenchmark?: YieldBenchmarkMeta | null;
+}): {
+  referenceBenchmark: YieldBenchmarkMeta | null;
+  hasMixedBenchmarks: boolean;
+  usesDefaultBenchmarkFrame: boolean;
+  sharedBenchmarkKey: YieldBenchmarkKey | null;
+} {
+  const visibleBenchmarkKeys = getYieldBenchmarkKeys(params.rankings);
+  const hasMixedBenchmarks = visibleBenchmarkKeys.length > 1;
+  const sharedBenchmarkKey = visibleBenchmarkKeys.length === 1 ? visibleBenchmarkKeys[0] : null;
+  const referenceBenchmark = sharedBenchmarkKey
+    ? getYieldBenchmarkForKey(params.benchmarks, sharedBenchmarkKey) ?? params.fallbackBenchmark ?? null
+    : getYieldBenchmarkForKey(params.benchmarks, "USD") ?? params.fallbackBenchmark ?? null;
+
+  return {
+    referenceBenchmark,
+    hasMixedBenchmarks,
+    usesDefaultBenchmarkFrame: hasMixedBenchmarks,
+    sharedBenchmarkKey,
+  };
+}

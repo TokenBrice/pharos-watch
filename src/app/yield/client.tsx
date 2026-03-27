@@ -15,8 +15,7 @@ import { YieldLeaderboard } from "@/components/yield-leaderboard";
 import { YieldScatterPlot } from "@/components/yield-scatter-plot";
 import {
   getYieldBenchmarkDisplayLabel,
-  getYieldBenchmarkForKey,
-  getYieldBenchmarkKeys,
+  resolveYieldScatterBenchmarkFrame,
 } from "@/lib/yield-benchmark";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { PEG_BADGE_STYLES } from "@shared/lib/classification";
@@ -139,18 +138,23 @@ export function YieldClient() {
   const stats = useMemo(() => {
     if (!data) return null;
     const benchmarkRegistry = data.benchmarks ?? data.provenance?.benchmarks;
-    const visibleBenchmarkKeys = getYieldBenchmarkKeys(filteredRankings);
-    const hasMixedBenchmarks = visibleBenchmarkKeys.length > 1;
-    const sharedBenchmarkKey = visibleBenchmarkKeys.length === 1 ? visibleBenchmarkKeys[0] : null;
-    const referenceBenchmark = sharedBenchmarkKey
-      ? getYieldBenchmarkForKey(benchmarkRegistry, sharedBenchmarkKey) ?? data.provenance?.benchmark ?? null
-      : getYieldBenchmarkForKey(benchmarkRegistry, "USD") ?? data.provenance?.benchmark ?? null;
+    const {
+      referenceBenchmark,
+      hasMixedBenchmarks,
+      usesDefaultBenchmarkFrame,
+      sharedBenchmarkKey,
+    } = resolveYieldScatterBenchmarkFrame({
+      rankings: filteredRankings,
+      benchmarks: benchmarkRegistry,
+      fallbackBenchmark: data.provenance?.benchmark ?? null,
+    });
     if (filteredRankings.length === 0) {
       return {
         avgApy: 0,
         bestPys: null,
         referenceBenchmark,
         hasMixedBenchmarks,
+        usesDefaultBenchmarkFrame,
         sharedBenchmarkKey,
       };
     }
@@ -182,6 +186,7 @@ export function YieldClient() {
       bestPys,
       referenceBenchmark,
       hasMixedBenchmarks,
+      usesDefaultBenchmarkFrame,
       sharedBenchmarkKey,
     };
   }, [data, filteredRankings]);
@@ -351,7 +356,7 @@ export function YieldClient() {
           <Card className="rounded-xl">
             <CardHeader className="pb-1">
               <span className="text-xs text-muted-foreground">
-                {stats.hasMixedBenchmarks ? "Default Benchmark (USD)" : "Benchmark"}
+                {stats.usesDefaultBenchmarkFrame ? "Scatter Frame (USD)" : "Benchmark"}
               </span>
             </CardHeader>
             <CardContent>
@@ -399,7 +404,7 @@ export function YieldClient() {
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   {stats.hasMixedBenchmarks
-                    ? "Each logo marks a stablecoin. Mixed views use local benchmarks per row, so the table carries the benchmark context."
+                    ? "Each logo marks a stablecoin. Mixed views keep the USD frame for orientation, while each row still carries its local benchmark context."
                     : "Each logo marks a stablecoin. Click a point to open the detail page."}
                 </p>
               </div>
@@ -409,7 +414,7 @@ export function YieldClient() {
                   <p className="pharos-kicker">{stats.hasMixedBenchmarks ? "Local Benchmarks" : "Below Benchmark"}</p>
                   <p className="mt-1 text-sm text-foreground">
                     {stats.hasMixedBenchmarks
-                      ? "Rows are benchmarked against USD T-Bill, EUR 3M compounded €STR, or CHF 3M compounded SARON depending on the peg."
+                      ? "Background zones use the USD frame. Row benchmark tags still show whether a coin is being judged against USD T-Bill, EUR 3M compounded €STR, or CHF 3M compounded SARON."
                       : `Yields under ${formatPercent(stats.referenceBenchmark?.rate ?? data.riskFreeRate)} are failing the basic hurdle rate.`}
                   </p>
                 </div>
@@ -417,7 +422,7 @@ export function YieldClient() {
                   <p className="pharos-kicker text-emerald-400">{stats.hasMixedBenchmarks ? "Read The Plot" : "Sweet Spot"}</p>
                   <p className="mt-1 text-sm text-foreground">
                     {stats.hasMixedBenchmarks
-                      ? "On mixed views, compare safety first and use each row's benchmark tag to interpret excess yield."
+                      ? "On mixed views, use the quadrants as a USD orientation frame, then confirm excess yield against each row's benchmark tag."
                       : `Right side plus above the ${getYieldBenchmarkDisplayLabel({
                         benchmarkLabel: stats.referenceBenchmark?.label,
                         benchmarkIsFallback: stats.referenceBenchmark?.isFallback,
@@ -438,7 +443,8 @@ export function YieldClient() {
                 benchmarkRate={stats.referenceBenchmark?.rate ?? data.riskFreeRate}
                 benchmarkLabel={stats.referenceBenchmark?.label}
                 benchmarkIsFallback={stats.referenceBenchmark?.isFallback}
-                showBenchmarkReference={!stats.hasMixedBenchmarks}
+                showBenchmarkReference
+                usesDefaultBenchmarkFrame={stats.usesDefaultBenchmarkFrame}
                 logos={logos}
                 onDotClick={handleNavigate}
               />

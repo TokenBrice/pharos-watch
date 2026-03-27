@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "5.10",
+  currentVersion: "5.11",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "5.11",
+    title: "Restored Mixed-View Scatter Benchmark Frame",
+    date: "2026-03-27",
+    effectiveAt: 1774861200,
+    summary:
+      "The `/yield` scatter plot now keeps its four-zone benchmark frame visible on mixed-benchmark scopes by using the default USD benchmark for orientation, instead of dropping the overlay entirely.",
+    impact: [
+      "Mixed-benchmark scopes such as the default `All` view now render the horizontal benchmark line and four shaded quadrants again",
+      "When the visible set mixes USD, EUR, and CHF hurdles, the scatter frame explicitly uses the USD benchmark as a shared visual reference",
+      "Mixed-view copy now tells users that the background zones are an orientation frame and that each row's benchmark tag still governs excess-yield interpretation",
+      "Yield methodology docs and the changelog now describe the restored mixed-view scatter behavior explicitly",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.10",
     title: "Source-Cadence-Aware Freshness Warnings",

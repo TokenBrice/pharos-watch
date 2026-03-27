@@ -1,0 +1,131 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  getYieldBenchmarkDisplayLabel,
+  resolveYieldScatterBenchmarkFrame,
+} from "@/lib/yield-benchmark";
+import type { YieldBenchmarkRegistry, YieldRanking } from "@shared/types";
+
+const BENCHMARKS: YieldBenchmarkRegistry = {
+  USD: {
+    key: "USD",
+    label: "USD 3M T-Bill",
+    currency: "USD",
+    rate: 4.25,
+    recordDate: "2026-03-26",
+    fetchedAt: 1774483200,
+    ageSeconds: 0,
+    source: "fred-dgs3mo",
+    isFallback: false,
+    fallbackMode: null,
+    isProxy: false,
+  },
+  EUR: {
+    key: "EUR",
+    label: "EUR 3M compounded €STR",
+    currency: "EUR",
+    rate: 1.94,
+    recordDate: "2026-03-26",
+    fetchedAt: 1774483200,
+    ageSeconds: 0,
+    source: "ecb-estr-3m",
+    isFallback: false,
+    fallbackMode: null,
+    isProxy: false,
+  },
+  CHF: {
+    key: "CHF",
+    label: "CHF 3M compounded SARON",
+    currency: "CHF",
+    rate: -0.05,
+    recordDate: "2026-03-25",
+    fetchedAt: 1774483200,
+    ageSeconds: 0,
+    source: "six-sar3mc",
+    isFallback: false,
+    fallbackMode: null,
+    isProxy: false,
+  },
+};
+
+function buildRanking(id: string, benchmarkKey: "USD" | "EUR" | "CHF"): YieldRanking {
+  return {
+    id,
+    symbol: id.toUpperCase(),
+    name: id,
+    currentApy: 4,
+    apy7d: 4,
+    apy30d: 4,
+    apyBase: 4,
+    apyReward: null,
+    yieldSource: "Test Source",
+    yieldSourceUrl: null,
+    yieldType: "lending-vault",
+    dataSource: "defillama",
+    sourceTvlUsd: 1_000_000,
+    pharosYieldScore: 10,
+    safetyScore: 70,
+    safetyGrade: "B",
+    yieldToRisk: 0.1,
+    excessYield: 0.1,
+    benchmarkKey,
+    benchmarkLabel: BENCHMARKS[benchmarkKey]?.label,
+    benchmarkCurrency: benchmarkKey,
+    benchmarkRate: BENCHMARKS[benchmarkKey]?.rate ?? null,
+    benchmarkRecordDate: BENCHMARKS[benchmarkKey]?.recordDate ?? null,
+    benchmarkIsFallback: false,
+    benchmarkFallbackMode: null,
+    benchmarkSelectionMode: "native",
+    benchmarkIsProxy: false,
+    yieldStability: 0.8,
+    apyVariance30d: 0.2,
+    apyMin30d: 3.8,
+    apyMax30d: 4.2,
+    warningSignals: [],
+    altSources: [],
+    provenance: {
+      confidenceTier: "curated",
+      selectionReason: "test",
+      sourceSwitch: false,
+    },
+  };
+}
+
+describe("getYieldBenchmarkDisplayLabel", () => {
+  it("adds the fallback suffix when a row is using a fallback benchmark", () => {
+    expect(
+      getYieldBenchmarkDisplayLabel({
+        benchmarkLabel: "USD 3M T-Bill",
+        benchmarkIsFallback: true,
+      }),
+    ).toBe("USD 3M T-Bill (fallback)");
+  });
+});
+
+describe("resolveYieldScatterBenchmarkFrame", () => {
+  it("uses the shared native benchmark when the visible set is homogeneous", () => {
+    const result = resolveYieldScatterBenchmarkFrame({
+      rankings: [buildRanking("eur-a", "EUR"), buildRanking("eur-b", "EUR")],
+      benchmarks: BENCHMARKS,
+      fallbackBenchmark: BENCHMARKS.USD,
+    });
+
+    expect(result.hasMixedBenchmarks).toBe(false);
+    expect(result.usesDefaultBenchmarkFrame).toBe(false);
+    expect(result.sharedBenchmarkKey).toBe("EUR");
+    expect(result.referenceBenchmark?.key).toBe("EUR");
+  });
+
+  it("uses the USD default benchmark frame when the visible set mixes currencies", () => {
+    const result = resolveYieldScatterBenchmarkFrame({
+      rankings: [buildRanking("usd-a", "USD"), buildRanking("eur-a", "EUR"), buildRanking("chf-a", "CHF")],
+      benchmarks: BENCHMARKS,
+      fallbackBenchmark: BENCHMARKS.USD,
+    });
+
+    expect(result.hasMixedBenchmarks).toBe(true);
+    expect(result.usesDefaultBenchmarkFrame).toBe(true);
+    expect(result.sharedBenchmarkKey).toBeNull();
+    expect(result.referenceBenchmark?.key).toBe("USD");
+  });
+});
