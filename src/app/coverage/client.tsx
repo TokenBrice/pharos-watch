@@ -1,6 +1,5 @@
 "use client";
 
-import { useDeferredValue, useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Search, SearchX } from "lucide-react";
 import { formatCurrency } from "@shared/lib/format";
@@ -19,383 +18,25 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-  type CoverageFeatureDefinition,
-  type CoverageFeatureKey,
-  type CoverageFeatureSummary,
-  type CoverageRow,
-  type CoverageStatus,
-  COVERAGE_BADGE_TONE_CLASS,
   COVERAGE_FEATURES,
 } from "@/lib/coverage";
 import { useCoverageMatrixModel } from "@/hooks/use-coverage-matrix-model";
 import { useLogos } from "@/hooks/use-logos";
 import {
   AUTHORITATIVE_ACCENT,
-  FEATURE_ACCENT_CLASSES,
-  FEATURE_ICON,
   FILTER_OPTIONS,
   LEGEND_ITEMS,
-  MOBILE_PREVIEW_FEATURES,
-  type CoverageFilterKey,
   type CoverageSortKey,
 } from "@/lib/coverage-page-config";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { cn } from "@/lib/utils";
 import { getPricingSourceLabel } from "@shared/lib/pricing-sources";
-
-function buildSourceTooltip(status: CoverageStatus): string {
-  if (!status.sourceNames?.length) return status.detail;
-
-  const confidenceLabel = status.priceConfidence
-    ? `${status.priceConfidence.charAt(0).toUpperCase()}${status.priceConfidence.slice(1).replace("-", " ")} confidence`
-    : "";
-  const sourceList = status.sourceNames
-    .map((s) => getPricingSourceLabel(s))
-    .join(", ");
-
-  return confidenceLabel
-    ? `${confidenceLabel} — ${sourceList}`
-    : sourceList;
-}
-
-function CoverageBadge({
-  status,
-  compact = false,
-}: {
-  status: CoverageStatus;
-  compact?: boolean;
-}) {
-  const countSuffix =
-    status.sourceCount != null && status.sourceCount > 0
-      ? compact
-        ? ` (${status.sourceCount})`
-        : ` (${status.sourceCount} sources)`
-      : "";
-
-  return (
-    <span
-      title={buildSourceTooltip(status)}
-      className={cn(
-        "inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.01em]",
-        compact ? "min-w-[4.25rem]" : "min-w-[4.75rem]",
-        COVERAGE_BADGE_TONE_CLASS[status.tone],
-      )}
-    >
-      <span aria-hidden="true">
-        {status.label}
-        {countSuffix}
-      </span>
-      <span className="sr-only">
-        {status.spokenLabel}
-        {countSuffix}
-      </span>
-    </span>
-  );
-}
-
-function CoverageFeatureLink({
-  feature,
-  className,
-  children,
-}: {
-  feature: CoverageFeatureDefinition;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  if (!feature.href) {
-    return <span className={className}>{children}</span>;
-  }
-
-  if (feature.external) {
-    return (
-      <a
-        href={feature.href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={className}
-      >
-        {children}
-      </a>
-    );
-  }
-
-  return (
-    <Link href={feature.href} className={className}>
-      {children}
-    </Link>
-  );
-}
-
-const REMAINING_MOBILE_FEATURES = COVERAGE_FEATURES.filter(
-  (feature) => !MOBILE_PREVIEW_FEATURES.includes(feature.key),
-);
-const COVERAGE_FEATURES_BY_KEY = Object.fromEntries(COVERAGE_FEATURES.map((feature) => [feature.key, feature])) as Record<CoverageFeatureKey, CoverageFeatureDefinition>;
-const MOBILE_PREVIEW_DEFINITIONS = MOBILE_PREVIEW_FEATURES.map((key) => COVERAGE_FEATURES_BY_KEY[key]);
-
-function CoverageMobileCard({
-  row,
-  logoSrc,
-}: {
-  row: CoverageRow;
-  logoSrc?: string;
-}) {
-  return (
-    <details className="group rounded-2xl border border-border/70 bg-background/35 open:bg-background/42">
-      <summary className="pharos-focus-ring flex cursor-pointer list-none flex-col gap-4 p-4 [&::-webkit-details-marker]:hidden">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-3">
-            <StablecoinLogo src={logoSrc} name={row.name} size={32} />
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="text-sm font-semibold text-foreground">
-                  {row.symbol}
-                </span>
-                <span className="truncate text-sm text-muted-foreground">
-                  {row.name}
-                </span>
-              </div>
-              <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
-                <span className="font-mono tabular-nums text-foreground">
-                  {row.marketCapUsd > 0 ? formatCurrency(row.marketCapUsd) : "Mcap —"}
-                </span>
-                <span aria-hidden>·</span>
-                <span>{row.pegLabel}</span>
-                <span aria-hidden>·</span>
-                <span>{row.backingLabel}</span>
-                <span aria-hidden>·</span>
-                <span>{row.governanceLabel}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="shrink-0 text-right">
-            <div className="pharos-kicker">Covered</div>
-            <div className="font-mono text-lg font-semibold text-foreground">
-              {row.coverageCount}/{COVERAGE_FEATURES.length}
-            </div>
-            <ChevronDown
-              className="ml-auto mt-2 h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180"
-              aria-hidden="true"
-            />
-          </div>
-        </div>
-
-        <dl className="grid gap-2 sm:grid-cols-2">
-          {MOBILE_PREVIEW_DEFINITIONS.map((feature) => (
-            <div
-              key={feature.key}
-              className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-background/45 px-3 py-2"
-            >
-              <dt className="min-w-0 text-[11px] font-medium text-muted-foreground">
-                {feature.shortLabel}
-              </dt>
-              <dd className="shrink-0">
-                <CoverageBadge status={row.statuses[feature.key]} compact />
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </summary>
-
-      <div className="space-y-4 border-t border-border/60 px-4 py-4">
-        <dl className="grid gap-2">
-          {REMAINING_MOBILE_FEATURES.map((feature) => (
-            <div
-              key={feature.key}
-              className="flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-background/45 px-3 py-2"
-            >
-              <dt className="min-w-0 text-[11px] font-medium text-muted-foreground">
-                {feature.shortLabel}
-              </dt>
-              <dd className="shrink-0">
-                <CoverageBadge status={row.statuses[feature.key]} compact />
-              </dd>
-            </div>
-          ))}
-        </dl>
-
-        <Link
-          href={buildStablecoinUrl(row.id)}
-          className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background/55 px-4 py-2 text-sm font-medium text-foreground hover:border-foreground/20 hover:bg-accent"
-        >
-          Open stablecoin detail
-        </Link>
-      </div>
-    </details>
-  );
-}
-
-function CoverageFeatureSnapshotRow({
-  summary,
-  totalRows,
-}: {
-  summary: CoverageFeatureSummary;
-  totalRows: number;
-}) {
-  const Icon = FEATURE_ICON[summary.feature.key];
-  const accent = FEATURE_ACCENT_CLASSES[summary.feature.key];
-  const breakdownItems = summary.breakdown.split("·").map((item) => item.trim());
-
-  return (
-    <li
-      className={cn(
-        "relative grid gap-4 overflow-hidden rounded-xl border border-border/60 bg-card px-4 py-4 before:absolute before:inset-y-4 before:left-0 before:w-[2px] xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.35fr)_minmax(15rem,0.9fr)]",
-        accent.rail,
-      )}
-    >
-      <div className="min-w-0">
-        <CoverageFeatureLink
-          feature={summary.feature}
-          className={cn(
-            "inline-flex min-w-0 items-center gap-2 rounded-md",
-            summary.feature.href
-              ? "pharos-focus-ring text-foreground hover:text-foreground"
-              : "text-foreground",
-          )}
-        >
-          <span className={cn("inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border", accent.ring)}>
-            <Icon className={cn("h-4 w-4", accent.icon)} aria-hidden="true" />
-          </span>
-          <span className={cn("truncate text-sm font-semibold", accent.title)}>
-            {summary.feature.label}
-          </span>
-        </CoverageFeatureLink>
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-          {summary.feature.description}
-        </p>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between gap-3 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-            <span>{summary.countLabel}</span>
-            <span className="font-mono text-base font-semibold tracking-tight text-foreground">
-              {summary.availableCount}/{totalRows}
-            </span>
-          </div>
-          <div className="h-2 rounded-full bg-muted/80">
-            <div
-              className={cn("h-full rounded-full", accent.countBar)}
-              style={{ width: `${Math.max(summary.coveragePct, 4)}%` }}
-            />
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {summary.coverageLabel}
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between gap-3 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-            <span>Market Share</span>
-            <span className="font-mono text-base font-semibold tracking-tight text-foreground">
-              {summary.mcapSharePct == null ? "—" : `${summary.mcapSharePct.toFixed(0)}%`}
-            </span>
-          </div>
-          <div className="h-2 rounded-full bg-frost-blue/12">
-            <div
-              className="h-full rounded-full bg-frost-blue/75"
-              style={{ width: `${Math.max(summary.mcapSharePct ?? 0, 4)}%` }}
-            />
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {summary.shareLabel}
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-border/60 bg-background/40 px-3 py-3">
-        <div className="pharos-kicker">Breakdown</div>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {breakdownItems.map((item, index) => (
-            <span
-              key={`${summary.feature.key}-${item}`}
-              className={cn(
-                "rounded-full border px-2.5 py-1 text-[11px] font-medium",
-                index === 0
-                  ? accent.chip
-                  : "border-border/60 bg-background/45 text-muted-foreground",
-              )}
-            >
-              {item}
-            </span>
-          ))}
-        </div>
-      </div>
-    </li>
-  );
-}
-
-function FeatureSnapshotInsight({
-  label,
-  title,
-  detail,
-  accent,
-}: {
-  label: string;
-  title: React.ReactNode;
-  detail: React.ReactNode;
-  accent: CoverageFeatureKey;
-}) {
-  const accentClasses = FEATURE_ACCENT_CLASSES[accent];
-
-  return (
-    <div
-      className={cn(
-        "space-y-2 rounded-[1rem] border px-4 py-4",
-        accentClasses.tile,
-      )}
-    >
-      <div className="pharos-kicker">{label}</div>
-      <div className={cn("text-base font-semibold leading-tight", accentClasses.title)}>
-        {title}
-      </div>
-      <div className="text-sm leading-relaxed text-muted-foreground">{detail}</div>
-    </div>
-  );
-}
-
-const FILTER_MATCHERS: Record<CoverageFilterKey, (row: CoverageRow) => boolean> = {
-  all: () => true,
-  redemption: (row) => row.statuses.redemption.kind !== "none",
-  "live-reserves": (row) => row.statuses.reserves.kind === "live",
-  yield: (row) => row.statuses.yield.available,
-  flows: (row) => row.statuses.flows.available,
-  blacklist: (row) => row.statuses.blacklist.available,
-};
-
-function matchesFilter(row: CoverageRow, filter: CoverageFilterKey): boolean {
-  return FILTER_MATCHERS[filter](row);
-}
-
-function sortRows(rows: CoverageRow[], sort: CoverageSortKey): CoverageRow[] {
-  const cloned = [...rows];
-  if (sort === "name") {
-    return cloned.sort((left, right) => left.name.localeCompare(right.name));
-  }
-  if (sort === "most-covered") {
-    return cloned.sort((left, right) => {
-      if (right.coverageCount !== left.coverageCount) {
-        return right.coverageCount - left.coverageCount;
-      }
-      if (right.advancedCoverageCount !== left.advancedCoverageCount) {
-        return right.advancedCoverageCount - left.advancedCoverageCount;
-      }
-      return right.marketCapUsd - left.marketCapUsd;
-    });
-  }
-  return cloned.sort((left, right) => {
-    if (right.marketCapUsd !== left.marketCapUsd) {
-      return right.marketCapUsd - left.marketCapUsd;
-    }
-    return left.name.localeCompare(right.name);
-  });
-}
+import { CoverageBadge } from "./coverage-badge";
+import { CoverageMobileCard } from "./coverage-mobile-card";
+import { CoverageFeatureSnapshotRow, FeatureSnapshotInsight } from "./coverage-feature-snapshot";
+import { useCoverageFilters } from "./use-coverage-filters";
 
 export default function CoveragePageClient() {
-  const [filter, setFilter] = useState<CoverageFilterKey>("all");
-  const [sort, setSort] = useState<CoverageSortKey>("market-cap");
-  const [search, setSearch] = useState("");
-  const deferredSearch = useDeferredValue(search.trim().toLowerCase());
   const { data: logos } = useLogos();
   const {
     rows,
@@ -408,22 +49,16 @@ export default function CoveragePageClient() {
     staleQueries,
   } = useCoverageMatrixModel();
 
-  const filteredRows = useMemo(
-    () =>
-      sortRows(
-        rows.filter((row) => {
-          if (!matchesFilter(row, filter)) return false;
-          if (!deferredSearch) return true;
-          return (
-            row.name.toLowerCase().includes(deferredSearch) ||
-            row.symbol.toLowerCase().includes(deferredSearch)
-          );
-        }),
-        sort,
-      ),
-    [deferredSearch, filter, rows, sort],
-  );
-  const hasActiveFilters = filter !== "all" || search.trim().length > 0;
+  const {
+    filter,
+    setFilter,
+    sort,
+    setSort,
+    search,
+    setSearch,
+    filteredRows,
+    hasActiveFilters,
+  } = useCoverageFilters(rows);
 
   return (
     <SectionErrorBoundary name="Coverage">
@@ -768,13 +403,13 @@ export default function CoveragePageClient() {
                                     <span className="font-mono tabular-nums text-foreground">
                                       {row.marketCapUsd > 0
                                         ? formatCurrency(row.marketCapUsd)
-                                        : "Mcap —"}
+                                        : "Mcap \u2014"}
                                     </span>
-                                    <span aria-hidden>·</span>
+                                    <span aria-hidden>\u00b7</span>
                                     <span>{row.pegLabel}</span>
-                                    <span aria-hidden>·</span>
+                                    <span aria-hidden>\u00b7</span>
                                     <span>{row.backingLabel}</span>
-                                    <span aria-hidden>·</span>
+                                    <span aria-hidden>\u00b7</span>
                                     <span>{row.governanceLabel}</span>
                                   </div>
                                 </div>
