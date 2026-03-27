@@ -52,6 +52,7 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
       "eurr-stablr",
       "europ-schuman",
       "eurau-allunity",
+      "chfau-allunity",
       "tusd-trueusd",
       "eurs-stasis",
       "gyen-gyen",
@@ -456,6 +457,17 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
     ],
   },
   "eurau-allunity": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    costModel: documentedVariableFee(
+      "Direct 1:1 redemption through AllUnity; public fee schedule not disclosed",
+    ),
+    docs: [
+      sourceRef("AllUnity whitepaper", "https://allunity.com/whitepaper/", ["route", "capacity"]),
+      sourceRef("AllUnity trust center", "https://allunity.com/trust-center/", ["capacity"]),
+    ],
+  },
+  "chfau-allunity": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee(

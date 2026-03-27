@@ -25,6 +25,7 @@ describe("getRedemptionBackstopConfig", () => {
       ["eurr-stablr", "offchain-issuer"],
       ["europ-schuman", "offchain-issuer"],
       ["eurau-allunity", "offchain-issuer"],
+      ["chfau-allunity", "offchain-issuer"],
       ["usdh-native-markets", "offchain-issuer"],
       ["fidd-fidelity", "offchain-issuer"],
       ["usdgo-osl", "offchain-issuer"],
@@ -237,6 +238,7 @@ describe("getRedemptionBackstopConfig", () => {
       "idrt-rupiah-token",
       "europ-schuman",
       "eurau-allunity",
+      "chfau-allunity",
     ] as const;
 
     for (const id of reviewedIssuerIds) {
