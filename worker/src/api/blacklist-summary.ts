@@ -13,6 +13,7 @@ import {
   getBlacklistTrackerMethodologyVersionAt,
 } from "@shared/lib/blacklist-tracker-version";
 import { buildBlacklistChartData, computeBlacklistSummaryStats } from "@shared/lib/blacklist-aggregates";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
 import type { BlacklistStablecoin } from "@shared/types/market";
 
@@ -99,7 +100,7 @@ export const handleBlacklistSummary = withErrorHandler(
       addFreshnessHeaders(
         { "Cache-Control": CACHE_PROFILES.realtime },
         freshnessTs,
-        900,
+        API_FRESHNESS_MAX_AGE_SEC.blacklistSummary,
       ),
     );
   },

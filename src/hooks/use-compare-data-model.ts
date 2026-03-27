@@ -39,25 +39,28 @@ export function useCompareDataModel({
   selectedIds,
   flowHours,
 }: UseCompareDataModelOptions) {
-  const { data: listData, dataUpdatedAt, error: listError, refetch: refetchList } = useStablecoins();
-  const { data: pegSummary, dataUpdatedAt: pegUpdatedAt, error: pegError, refetch: refetchPeg } = usePegSummary();
+  const { data: listData, dataUpdatedAt, error: listError, refetch: refetchList, meta: listMeta } = useStablecoins();
+  const { data: pegSummary, dataUpdatedAt: pegUpdatedAt, error: pegError, refetch: refetchPeg, meta: pegMeta } = usePegSummary();
   const {
     data: bluechipData,
     dataUpdatedAt: bcUpdatedAt,
     error: bluechipError,
     refetch: refetchBluechip,
+    meta: bluechipMeta,
   } = useBluechipRatings();
   const {
     data: dexData,
     dataUpdatedAt: liqUpdatedAt,
     error: dexError,
     refetch: refetchLiquidity,
+    meta: dexMeta,
   } = useDexLiquidity();
   const {
     data: reportCardsData,
     dataUpdatedAt: rcUpdatedAt,
     error: reportCardsError,
     refetch: refetchReportCards,
+    meta: reportCardsMeta,
   } = useReportCards();
   const { data: flowData } = useMintBurnFlows();
 
@@ -194,6 +197,7 @@ export function useCompareDataModel({
   return {
     bluechipData,
     bluechipError,
+    bluechipMeta,
     bcUpdatedAt,
     comparisonCoins,
     dataUpdatedAt,
@@ -202,6 +206,7 @@ export function useCompareDataModel({
     detailQueries,
     dexData,
     dexError,
+    dexMeta,
     flowCardData,
     flowCoinQueries,
     flowData,
@@ -210,7 +215,9 @@ export function useCompareDataModel({
     liqUpdatedAt,
     listData,
     listError,
+    listMeta,
     pegError,
+    pegMeta,
     pegRates,
     pegSummary,
     pegUpdatedAt,
@@ -218,6 +225,7 @@ export function useCompareDataModel({
     rcUpdatedAt,
     reportCardsData,
     reportCardsError,
+    reportCardsMeta,
     supplySeries,
     handleRetry,
   };

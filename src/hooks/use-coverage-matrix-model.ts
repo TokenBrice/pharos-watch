@@ -169,6 +169,7 @@ export function useCoverageMatrixModel() {
         dataUpdatedAt: stablecoinsQuery.dataUpdatedAt,
         error: stablecoinsQuery.error,
         hasData: !!stablecoinsQuery.data?.peggedAssets?.length,
+        meta: stablecoinsQuery.meta,
       },
       {
         preset: "pegSummary" as const,
@@ -189,6 +190,7 @@ export function useCoverageMatrixModel() {
         dataUpdatedAt: redemptionQuery.dataUpdatedAt,
         error: redemptionQuery.error,
         hasData: !!redemptionQuery.data?.coins,
+        meta: redemptionQuery.meta,
       },
       {
         preset: "yieldRankings" as const,
@@ -209,6 +211,7 @@ export function useCoverageMatrixModel() {
         dataUpdatedAt: reportCardsQuery.dataUpdatedAt,
         error: reportCardsQuery.error,
         hasData: !!reportCardsQuery.data?.cards?.length,
+        meta: reportCardsQuery.meta,
       },
     ],
   };

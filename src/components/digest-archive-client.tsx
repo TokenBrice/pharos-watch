@@ -86,7 +86,7 @@ function WeeklyTeaser({ entry }: { entry: { digestTitle: string | null; digestEx
 }
 
 export function DigestArchiveClient() {
-  const { data, isLoading, dataUpdatedAt, error, refetch } = useDigestArchive();
+  const { data, isLoading, dataUpdatedAt, error, refetch, meta } = useDigestArchive();
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
 
   const monthOptions = useMemo(() => {
@@ -164,7 +164,7 @@ export function DigestArchiveClient() {
   return (
     <div>
       <StaleDataBanner
-        queries={[{ preset: "digestArchive", dataUpdatedAt, error, hasData: !!data?.digests?.length }]}
+        queries={[{ preset: "digestArchive", dataUpdatedAt, error, hasData: !!data?.digests?.length, meta }]}
       />
 
       {/* Lead story: today's digest */}

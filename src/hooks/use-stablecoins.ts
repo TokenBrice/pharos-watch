@@ -7,15 +7,19 @@ import {
   type StablecoinListResponse,
   type SupplyHistoryPoint,
 } from "@shared/types";
-import { useApiQuery } from "./use-api-query";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { useApiQuery, useApiQueryWithMeta } from "./use-api-query";
 import { CRON_15MIN, CRON_1H } from "@/lib/cron-intervals";
 
 export type { SupplyHistoryPoint } from "@shared/types";
 
 export function useStablecoins() {
-  return useApiQuery<StablecoinListResponse>(
+  return useApiQueryWithMeta<StablecoinListResponse>(
     ["stablecoins"], API_PATHS.stablecoins(), CRON_15MIN,
-    { schema: StablecoinListResponseSchema },
+    {
+      schema: StablecoinListResponseSchema,
+      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stablecoins,
+    },
   );
 }
 

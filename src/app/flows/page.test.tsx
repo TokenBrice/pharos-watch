@@ -133,4 +133,31 @@ describe("FlowsPage", () => {
     expect(html).not.toContain("Mint/burn sync freshness is degraded");
     expect(html).toContain("Live refresh is running behind");
   });
+
+  it("does not show the generic stale-data banner when fresh API metadata is present during a retry error", () => {
+    const refreshError = new Error("network");
+
+    mockUseMintBurnFlows.mockImplementation((hours = 24) => {
+      if (hours === 168) {
+        return makeQueryResult({
+          data: buildFlowData(null),
+        }) as unknown as ReturnType<typeof useMintBurnFlows>;
+      }
+
+      return makeQueryResult({
+        data: buildFlowData(null),
+        error: refreshError,
+        meta: {
+          updatedAt: Math.floor(Date.now() / 1000) - 120,
+          ageSeconds: 120,
+          status: "fresh",
+        },
+      }) as unknown as ReturnType<typeof useMintBurnFlows>;
+    });
+
+    const html = renderToStaticMarkup(<FlowsPage />);
+
+    expect(html).not.toContain("Live refresh is running behind");
+    expect(html).not.toContain("Showing an older snapshot");
+  });
 });

@@ -467,6 +467,7 @@ All blacklist admin endpoints are routed in `worker/src/route-registry.ts` and e
 **Cache:** `staleTime: 60 min`, `refetchInterval: 120 min`
 
 The summary hook loads aggregate cards/chart/filter metadata from the dedicated summary endpoint. The page hook fetches only the currently requested table slice, including server-side filtering, sorting, search, and pagination.
+Both endpoints now emit freshness headers from the same hourly `sync-blacklist` writer timestamp, so the shared stale-data banner does not warn before the next scheduled blacklist run is actually late.
 
 ### Page: /blacklist
 

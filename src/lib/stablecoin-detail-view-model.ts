@@ -32,6 +32,7 @@ import {
   deriveSupplyFromMarketCap,
 } from "@/lib/stablecoin-detail-derive";
 import type { MintBurnFlowsResponse } from "@shared/types";
+import type { ApiMeta } from "@/lib/api";
 
 export interface StablecoinDetailSummary {
   title: string;
@@ -94,6 +95,7 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
     dataUpdatedAt: number;
     error: unknown | null;
     hasData: boolean;
+    meta: ApiMeta | null;
   }[];
 }
 
@@ -117,18 +119,23 @@ interface BuildStablecoinDetailViewModelParams {
   listError: unknown | null;
   isListError: boolean;
   listUpdatedAt: number;
+  listMeta: ApiMeta | null;
   pegSummaryData?: PegSummaryResponse;
   pegUpdatedAt: number;
   pegError: unknown | null;
+  pegMeta: ApiMeta | null;
   liquidityMap?: DexLiquidityMap;
   liqUpdatedAt: number;
   liquidityError: unknown | null;
+  liquidityMeta: ApiMeta | null;
   reportCardsData?: ReportCardsResponse;
   rcUpdatedAt: number;
   reportCardsError: unknown | null;
+  reportCardsMeta: ApiMeta | null;
   redemptionBackstopsData?: RedemptionBackstopsResponse;
   rbUpdatedAt?: number;
   redemptionBackstopsError?: unknown | null;
+  redemptionBackstopsMeta?: ApiMeta | null;
   yieldRankingsData?: YieldRankingsResponse;
   stressSignalsData?: StressSignalsAllResponse;
   flowsData?: MintBurnFlowsResponse;
@@ -199,18 +206,23 @@ export function buildStablecoinDetailViewModel({
   listError,
   isListError,
   listUpdatedAt,
+  listMeta,
   pegSummaryData,
   pegUpdatedAt,
   pegError,
+  pegMeta,
   liquidityMap,
   liqUpdatedAt,
   liquidityError,
+  liquidityMeta,
   reportCardsData,
   rcUpdatedAt,
   reportCardsError,
+  reportCardsMeta,
   redemptionBackstopsData,
   rbUpdatedAt = 0,
   redemptionBackstopsError = null,
+  redemptionBackstopsMeta = null,
   yieldRankingsData,
   stressSignalsData,
   flowsData,
@@ -310,30 +322,35 @@ export function buildStablecoinDetailViewModel({
         dataUpdatedAt: listUpdatedAt,
         error: listError,
         hasData: !!listData?.peggedAssets?.length,
+        meta: listMeta,
       },
       {
         preset: "pegSummary",
         dataUpdatedAt: pegUpdatedAt,
         error: pegError,
         hasData: !!pegSummaryData?.coins?.length,
+        meta: pegMeta,
       },
       {
         preset: "dexLiquidity",
         dataUpdatedAt: liqUpdatedAt,
         error: liquidityError,
         hasData: !!liquidityMap,
+        meta: liquidityMeta,
       },
       {
         preset: "reportCards",
         dataUpdatedAt: rcUpdatedAt,
         error: reportCardsError,
         hasData: !!reportCardsData?.cards?.length,
+        meta: reportCardsMeta,
       },
       {
         preset: "redemptionBackstops",
         dataUpdatedAt: rbUpdatedAt,
         error: redemptionBackstopsError,
         hasData: !!redemptionBackstopsData?.coins,
+        meta: redemptionBackstopsMeta,
       },
     ],
   };

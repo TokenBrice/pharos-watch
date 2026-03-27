@@ -563,7 +563,7 @@ function ContributorsTable({
 /* ─── Main Client Component ─────────────────────────────────────── */
 
 export function StabilityIndexClient() {
-  const { data, isLoading, isError, error, dataUpdatedAt, refetch } = useStabilityIndexDetail();
+  const { data, isLoading, isError, error, dataUpdatedAt, refetch, meta } = useStabilityIndexDetail();
   const history = data?.history;
   const current = data?.current;
 
@@ -677,7 +677,7 @@ export function StabilityIndexClient() {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <StaleDataBanner
-        queries={[{ preset: "stabilityIndex", dataUpdatedAt, error, hasData: !!data?.current }]}
+        queries={[{ preset: "stabilityIndex", dataUpdatedAt, error, hasData: !!data?.current, meta }]}
       />
       {/* Hero — score + components + history stats in one card */}
       <Card className="rounded-xl py-0">

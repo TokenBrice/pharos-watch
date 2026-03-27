@@ -47,30 +47,35 @@ export function useStablecoinDetailViewModel({
     error: listError,
     dataUpdatedAt: listUpdatedAt,
     refetch: refetchList,
+    meta: listMeta,
   } = useStablecoins();
   const {
     data: pegSummaryData,
     dataUpdatedAt: pegUpdatedAt,
     error: pegError,
     refetch: refetchPeg,
+    meta: pegMeta,
   } = usePegSummary();
   const {
     data: liquidityMap,
     dataUpdatedAt: liqUpdatedAt,
     error: liquidityError,
     refetch: refetchLiquidity,
+    meta: liquidityMeta,
   } = useDexLiquidity();
   const {
     data: reportCardsData,
     dataUpdatedAt: rcUpdatedAt,
     error: reportCardsError,
     refetch: refetchReportCards,
+    meta: reportCardsMeta,
   } = useReportCards();
   const {
     data: redemptionBackstopsData,
     dataUpdatedAt: rbUpdatedAt,
     error: redemptionBackstopsError,
     refetch: refetchRedemptionBackstops,
+    meta: redemptionBackstopsMeta,
   } = useRedemptionBackstops();
   const { data: yieldRankingsData } = useYieldRankings();
   const { data: stressSignalsData } = useStressSignals();
@@ -109,18 +114,23 @@ export function useStablecoinDetailViewModel({
     listError,
     isListError,
     listUpdatedAt,
+    listMeta,
     pegSummaryData,
     pegUpdatedAt,
     pegError,
+    pegMeta,
     liquidityMap,
     liqUpdatedAt,
     liquidityError,
+    liquidityMeta,
     reportCardsData,
     rcUpdatedAt,
     reportCardsError,
+    reportCardsMeta,
     redemptionBackstopsData,
     rbUpdatedAt,
     redemptionBackstopsError,
+    redemptionBackstopsMeta,
     yieldRankingsData,
     stressSignalsData,
     flowsData,

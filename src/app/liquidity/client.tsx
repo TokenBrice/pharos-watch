@@ -158,6 +158,7 @@ export function LiquidityClient() {
   const handleRetry = useCallback(() => {
     void refetch();
   }, [refetch]);
+  const showDataHealthBanner = !meta?.warning;
 
   if (isLoading) {
     return (
@@ -179,9 +180,11 @@ export function LiquidityClient() {
     <SectionErrorBoundary name="Liquidity">
     <div className="space-y-6">
       <QueryErrorNotice error={error} hasData={!!liquidityMap} onRetry={handleRetry} />
-      <StaleDataBanner
-        queries={[{ preset: "dexLiquidity", dataUpdatedAt, error, hasData: !!liquidityMap, meta }]}
-      />
+      {showDataHealthBanner && (
+        <StaleDataBanner
+          queries={[{ preset: "dexLiquidity", dataUpdatedAt, error, hasData: !!liquidityMap, meta }]}
+        />
+      )}
       {meta?.warning && (
         <div role="alert" className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
           {formatWarningMessage(meta.warning)}

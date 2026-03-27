@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { API_PATHS } from "@shared/lib/api-endpoints";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { useApiQueryWithMeta } from "./use-api-query";
 import { CRON_20MIN } from "@/lib/cron-intervals";
 import {
@@ -21,7 +22,7 @@ import {
   getPressureShiftState,
 } from "@shared/lib/mint-burn-signals";
 
-const MINT_BURN_META_MAX_AGE_SEC = (CRON_20MIN * 2) / 1000;
+const MINT_BURN_META_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows;
 
 function inferHas24hActivity(
   coin: MintBurnFlowsResponse["coins"][number],
@@ -158,6 +159,9 @@ export function useMintBurnEvents(
     ],
     API_PATHS.mintBurnEvents(queryParams),
     CRON_20MIN,
-    { schema: MintBurnEventsResponseSchema },
+    {
+      schema: MintBurnEventsResponseSchema,
+      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.mintBurnEvents,
+    },
   );
 }

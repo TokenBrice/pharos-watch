@@ -17,6 +17,7 @@ import {
   getBlacklistTrackerMethodologyVersionAt,
 } from "@shared/lib/blacklist-tracker-version";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   BLACKLIST_STABLECOINS,
   type BlacklistSortDirection,
@@ -209,7 +210,7 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
         "Cache-Control": CACHE_PROFILES.realtime,
       },
       freshnessTs,
-      900,
+      API_FRESHNESS_MAX_AGE_SEC.blacklist,
     ),
   );
 });

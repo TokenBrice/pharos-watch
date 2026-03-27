@@ -355,12 +355,14 @@ export function ReportCardsClient() {
     dataUpdatedAt: rcUpdatedAt,
     error: reportCardsError,
     refetch: refetchReportCards,
+    meta: reportCardsMeta,
   } = useReportCards();
   const {
     data: stablecoinsData,
     dataUpdatedAt: pricesUpdatedAt,
     error: pricesError,
     refetch: refetchPrices,
+    meta: pricesMeta,
   } = useStablecoins();
   const { data: logos } = useLogos();
   const globalError = reportCardsError ?? pricesError;
@@ -501,12 +503,14 @@ export function ReportCardsClient() {
             dataUpdatedAt: rcUpdatedAt,
             error: reportCardsError,
             hasData: !!reportData?.cards?.length,
+            meta: reportCardsMeta,
           },
           {
             preset: "stablecoins",
             dataUpdatedAt: pricesUpdatedAt,
             error: pricesError,
             hasData: !!stablecoinsData?.peggedAssets?.length,
+            meta: pricesMeta,
           },
         ]}
       />

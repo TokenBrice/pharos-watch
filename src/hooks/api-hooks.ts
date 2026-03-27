@@ -2,6 +2,7 @@
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { API_PATHS } from "@shared/lib/api-endpoints";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   DexLiquidityMapSchema,
   HealthResponseSchema,
@@ -47,7 +48,12 @@ const YIELD_META_MAX_AGE_SEC = CRON_YIELD / 1000;
 export type { StabilityContributor };
 
 export function useBluechipRatings() {
-  return useApiQuery<BluechipRatingsMap | null>(["bluechip-ratings"], API_PATHS.bluechipRatings(), CRON_24H);
+  return useApiQueryWithMeta<BluechipRatingsMap | null>(
+    ["bluechip-ratings"],
+    API_PATHS.bluechipRatings(),
+    CRON_24H,
+    { metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.bluechip },
+  );
 }
 
 export function useDailyDigest() {
@@ -59,7 +65,10 @@ export function useDexLiquidity() {
     ["dex-liquidity"],
     API_PATHS.dexLiquidity(),
     CRON_30MIN,
-    { schema: DexLiquidityMapSchema },
+    {
+      schema: DexLiquidityMapSchema,
+      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.dexLiquidity,
+    },
   );
 }
 
@@ -72,7 +81,12 @@ export function useDexLiquidityHistory(stablecoinId: string, days = 90) {
 }
 
 export function useDigestArchive() {
-  return useApiQuery<DigestArchiveResponse>(["digest-archive"], API_PATHS.digestArchive(), CRON_24H);
+  return useApiQueryWithMeta<DigestArchiveResponse>(
+    ["digest-archive"],
+    API_PATHS.digestArchive(),
+    CRON_24H,
+    { metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.digestArchive },
+  );
 }
 
 export function useDigestSnapshot(date: string): UseQueryResult<DigestSnapshotResponse, Error> {
@@ -99,25 +113,34 @@ export function usePegSummary() {
     ["peg-summary"],
     API_PATHS.pegSummary(),
     CRON_15MIN,
-    { schema: PegSummaryResponseSchema },
+    {
+      schema: PegSummaryResponseSchema,
+      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.pegSummary,
+    },
   );
 }
 
 export function useReportCards() {
-  return useApiQuery<ReportCardsResponse>(
+  return useApiQueryWithMeta<ReportCardsResponse>(
     ["report-cards"],
     API_PATHS.reportCards(),
     CRON_15MIN,
-    { schema: ReportCardsResponseSchema },
+    {
+      schema: ReportCardsResponseSchema,
+      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.reportCards,
+    },
   );
 }
 
 export function useRedemptionBackstops() {
-  return useApiQuery<RedemptionBackstopsResponse>(
+  return useApiQueryWithMeta<RedemptionBackstopsResponse>(
     ["redemption-backstops"],
     API_PATHS.redemptionBackstops(),
     CRON_1H,
-    { schema: RedemptionBackstopsResponseSchema },
+    {
+      schema: RedemptionBackstopsResponseSchema,
+      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops,
+    },
   );
 }
 
@@ -138,20 +161,26 @@ export function useStablecoinCharts() {
 }
 
 export function useStabilityIndex() {
-  return useApiQuery<StabilityIndexResponse>(
+  return useApiQueryWithMeta<StabilityIndexResponse>(
     ["stability-index"],
     API_PATHS.stabilityIndex(),
     CRON_30MIN,
-    { schema: StabilityIndexResponseSchema },
+    {
+      schema: StabilityIndexResponseSchema,
+      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stabilityIndex,
+    },
   );
 }
 
 export function useStabilityIndexDetail() {
-  return useApiQuery<StabilityIndexResponse>(
+  return useApiQueryWithMeta<StabilityIndexResponse>(
     ["stability-index-detail"],
     API_PATHS.stabilityIndex(true),
     CRON_30MIN,
-    { schema: StabilityIndexResponseSchema },
+    {
+      schema: StabilityIndexResponseSchema,
+      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stabilityIndex,
+    },
   );
 }
 
@@ -193,7 +222,10 @@ export function useStressSignals() {
     ["stress-signals"],
     API_PATHS.stressSignals(),
     CRON_30MIN,
-    { schema: StressSignalsAllResponseSchema },
+    {
+      schema: StressSignalsAllResponseSchema,
+      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals,
+    },
   );
 }
 
@@ -202,6 +234,10 @@ export function useStressSignalDetail(stablecoinId: string, days = 30) {
     ["stress-signals", stablecoinId, days],
     API_PATHS.stressSignals(stablecoinId, days),
     CRON_30MIN,
-    { enabled: !!stablecoinId, schema: StressSignalDetailResponseSchema },
+    {
+      enabled: !!stablecoinId,
+      schema: StressSignalDetailResponseSchema,
+      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals,
+    },
   );
 }

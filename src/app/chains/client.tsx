@@ -52,7 +52,7 @@ function sortChains(chains: ChainSummary[], key: ChainSortKey, dir: "asc" | "des
 }
 
 export function ChainsLeaderboardClient() {
-  const { data, isLoading, isError, error, refetch, dataUpdatedAt } = useChains();
+  const { data, isLoading, isError, error, refetch, dataUpdatedAt, meta } = useChains();
   const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } = useSort<ChainSortKey>("totalUsd", "desc");
   const router = useRouter();
 
@@ -114,7 +114,7 @@ export function ChainsLeaderboardClient() {
     <SectionErrorBoundary name="Chains">
     <div className="space-y-4">
       <QueryErrorNotice error={error} hasData={!!data?.chains?.length} onRetry={() => { void refetch(); }} />
-      <StaleDataBanner queries={[{ preset: "chains", dataUpdatedAt, error, hasData: !!data?.chains?.length }]} />
+      <StaleDataBanner queries={[{ preset: "chains", dataUpdatedAt, error, hasData: !!data?.chains?.length, meta }]} />
 
       {/* Hero summary */}
       <div className="pharos-subtle-band space-y-3 py-4">

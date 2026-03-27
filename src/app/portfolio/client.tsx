@@ -246,6 +246,7 @@ export function PortfolioClient() {
     dataUpdatedAt: rcUpdatedAt,
     error: reportCardsError,
     refetch: refetchReportCards,
+    meta: reportCardsMeta,
   } = useReportCards();
   const { data: logos } = useLogos();
   const [toast, setToast] = useState<string | null>(null);
@@ -389,6 +390,7 @@ export function PortfolioClient() {
             dataUpdatedAt: rcUpdatedAt,
             error: reportCardsError,
             hasData: !!reportData?.cards?.length,
+            meta: reportCardsMeta,
           },
         ]}
       />

@@ -42,13 +42,24 @@ function isUnavailableError(error: unknown): boolean {
   return error instanceof ApiFetchError && error.status === 503;
 }
 
-function pickBaseState(meta: ApiMeta | null | undefined, ageMs: number | null, staleTime: number): DataHealthState {
+function pickBaseState(
+  meta: ApiMeta | null | undefined,
+  ageMs: number | null,
+  staleTime: number,
+): Exclude<DataHealthState, "error"> {
   if (meta?.status === "stale") return "stale";
   if (meta?.status === "degraded" || meta?.warning) return "degraded";
   if (ageMs === null) return "unavailable";
   if (ageMs <= staleTime) return "fresh";
   if (ageMs <= FRESHNESS_RATIOS.DEGRADED * staleTime) return "degraded";
   return "stale";
+}
+
+function getBaseMessage(state: Exclude<DataHealthState, "error">): string {
+  if (state === "unavailable") return "Data is not yet available.";
+  if (state === "fresh") return "Data is fresh.";
+  if (state === "degraded") return "Data is delayed or from a degraded source.";
+  return "Data is stale.";
 }
 
 export function deriveDataHealth(input: QueryHealthInput): DataHealthInfo {
@@ -88,11 +99,13 @@ export function deriveDataHealth(input: QueryHealthInput): DataHealthInfo {
   }
 
   if (input.error && hasData) {
-    const state = baseState === "fresh" ? "degraded" : baseState;
+    const state = input.meta ? baseState : (baseState === "fresh" ? "degraded" : baseState);
     return {
       label: input.label,
       state,
-      message: "Using last successful data while refresh retries.",
+      message: state === "fresh" || state === "degraded" || state === "stale"
+        ? getBaseMessage(state)
+        : "Using last successful data while refresh retries.",
       dataUpdatedAt: updatedAtMs,
       ageMs,
       staleTime: input.staleTime,
@@ -112,12 +125,7 @@ export function deriveDataHealth(input: QueryHealthInput): DataHealthInfo {
     };
   }
 
-  const message =
-    baseState === "fresh"
-      ? "Data is fresh."
-      : baseState === "degraded"
-        ? "Data is delayed or from a degraded source."
-        : "Data is stale.";
+  const message = getBaseMessage(baseState);
 
   return {
     label: input.label,

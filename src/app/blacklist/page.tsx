@@ -86,6 +86,7 @@ function BlacklistPageInner() {
     error: summaryError,
     dataUpdatedAt: summaryUpdatedAt,
     refetch: refetchSummary,
+    meta: summaryMeta,
   } = useBlacklistSummary();
   const { searchParams, replaceParams } = useUrlFilters();
   const parsedFilters = useMemo(() => parseFilters(searchParams.toString()), [searchParams]);
@@ -111,6 +112,7 @@ function BlacklistPageInner() {
     error: pageError,
     dataUpdatedAt: pageUpdatedAt,
     refetch: refetchPage,
+    meta: pageMeta,
   } = useBlacklistEventsPage({
     stablecoin: stablecoinFilter,
     chainName: selectedChainName,
@@ -124,6 +126,7 @@ function BlacklistPageInner() {
   const events = pageData?.events ?? [];
   const error = summaryError ?? pageError;
   const dataUpdatedAt = Math.max(summaryUpdatedAt, pageUpdatedAt);
+  const freshnessMeta = summaryMeta ?? pageMeta;
 
   const updateFilters = useCallback(
     (updates: Partial<FilterState>) => {
@@ -237,7 +240,9 @@ function BlacklistPageInner() {
           void refetchPage();
         }}
       />
-      <StaleDataBanner queries={[{ preset: "blacklist", dataUpdatedAt, error, hasData: !!summary || events.length > 0 }]} />
+      <StaleDataBanner
+        queries={[{ preset: "blacklist", dataUpdatedAt, error, hasData: !!summary || events.length > 0, meta: freshnessMeta }]}
+      />
 
       <BlacklistStats stats={summary?.stats} isLoading={summaryLoading} />
 

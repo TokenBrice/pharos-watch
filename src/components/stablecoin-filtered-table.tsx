@@ -17,7 +17,7 @@ interface StablecoinFilteredTableProps {
 }
 
 export function StablecoinFilteredTable({ activeFilters, renderNotice }: StablecoinFilteredTableProps) {
-  const { data, isLoading, dataUpdatedAt, error, refetch } = useStablecoins();
+  const { data, isLoading, dataUpdatedAt, error, refetch, meta } = useStablecoins();
   const { data: logos } = useLogos();
   const { data: pegSummaryData } = usePegSummary();
   const { data: dexLiquidity } = useDexLiquidity();
@@ -52,7 +52,7 @@ export function StablecoinFilteredTable({ activeFilters, renderNotice }: Stablec
         }}
       />
       <StaleDataBanner
-        queries={[{ preset: "stablecoins", dataUpdatedAt, error, hasData: !!data?.peggedAssets?.length }]}
+        queries={[{ preset: "stablecoins", dataUpdatedAt, error, hasData: !!data?.peggedAssets?.length, meta }]}
       />
       {renderNotice?.({ pegRateSources })}
       <StablecoinTable

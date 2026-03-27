@@ -115,6 +115,26 @@ describe("deriveDataHealth", () => {
     expect(health.state).toBe("degraded");
   });
 
+  it("keeps backend-fresh cached data fresh when refresh fails and freshness metadata is present", () => {
+    const now = Date.now();
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    const updatedAtMs = now - 2 * 60_000;
+    const health = deriveDataHealth({
+      label: "Mint/Burn Flows",
+      dataUpdatedAt: updatedAtMs,
+      staleTime: 40 * 60_000,
+      error: new Error("network"),
+      hasData: true,
+      meta: {
+        updatedAt: Math.floor(updatedAtMs / 1000),
+        ageSeconds: 120,
+        status: "fresh",
+      },
+    });
+    expect(health.state).toBe("fresh");
+    expect(health.message).toBe("Data is fresh.");
+  });
+
   it("treats empty successful responses as available when the caller marks hasData true", () => {
     const now = Date.now();
     vi.spyOn(Date, "now").mockReturnValue(now);

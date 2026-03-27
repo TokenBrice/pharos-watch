@@ -62,12 +62,14 @@ export function CompareClient() {
     bcUpdatedAt,
     bluechipData,
     bluechipError,
+    bluechipMeta,
     comparisonCoins,
     dataUpdatedAt,
     detailErrors,
     detailLoading,
     dexData,
     dexError,
+    dexMeta,
     flowCardData,
     flowCoinQueries,
     flowData,
@@ -77,7 +79,9 @@ export function CompareClient() {
     liqUpdatedAt,
     listData,
     listError,
+    listMeta,
     pegError,
+    pegMeta,
     pegRates,
     pegSummary,
     pegUpdatedAt,
@@ -85,6 +89,7 @@ export function CompareClient() {
     rcUpdatedAt,
     reportCardsData,
     reportCardsError,
+    reportCardsMeta,
     supplySeries,
   } = useCompareDataModel({
     selectedIds,
@@ -180,16 +185,17 @@ export function CompareClient() {
       <QueryErrorNotice error={globalError} hasData={!!listData?.peggedAssets?.length} onRetry={handleRetry} />
       <StaleDataBanner
         queries={[
-          { preset: "stablecoins", dataUpdatedAt, error: listError, hasData: !!listData?.peggedAssets?.length },
-          { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegSummary?.coins?.length },
-          { preset: "dexLiquidity", dataUpdatedAt: liqUpdatedAt, error: dexError, hasData: !!dexData },
+          { preset: "stablecoins", dataUpdatedAt, error: listError, hasData: !!listData?.peggedAssets?.length, meta: listMeta },
+          { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegSummary?.coins?.length, meta: pegMeta },
+          { preset: "dexLiquidity", dataUpdatedAt: liqUpdatedAt, error: dexError, hasData: !!dexData, meta: dexMeta },
           {
             preset: "reportCards",
             dataUpdatedAt: rcUpdatedAt,
             error: reportCardsError,
             hasData: !!reportCardsData?.cards?.length,
+            meta: reportCardsMeta,
           },
-          { preset: "bluechip", dataUpdatedAt: bcUpdatedAt, error: bluechipError, hasData: !!bluechipData },
+          { preset: "bluechip", dataUpdatedAt: bcUpdatedAt, error: bluechipError, hasData: !!bluechipData, meta: bluechipMeta },
         ]}
       />
       {selectedIds.length >= 2 ? (

@@ -461,6 +461,8 @@ Freeze, blacklist, and token-destruction events currently ingested for USDC, USD
 
 **Cache:** realtime
 
+**Freshness note:** `X-Data-Age` / `Warning` track the latest successful hourly `sync-blacklist` writer timestamp. Public freshness stays `fresh` through that hourly budget and only degrades once the scheduled blacklist sync is actually late.
+
 **Query parameters**
 
 | Param        | Type      | Default | Description                                                    |
@@ -536,6 +538,8 @@ Freeze, blacklist, and token-destruction events currently ingested for USDC, USD
 Server-side aggregates for the Blacklist Tracker overview cards, chart, and filter options. This lets the frontend render summary state without hydrating the full blacklist history first.
 
 **Cache:** realtime
+
+**Freshness note:** Shares the same hourly freshness headers as `GET /api/blacklist`, keyed to the latest successful `sync-blacklist` write rather than the request time of the summary endpoint itself.
 
 **Response**
 

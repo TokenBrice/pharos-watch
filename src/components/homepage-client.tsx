@@ -296,20 +296,22 @@ function HomepageSectionBand({
 export function HomepageClient() {
   const { isReady: startHereReady, shouldShow: shouldShowStartHereCallout, retireCallout } = useStartHereCallout();
   const [showFilters, setShowFilters] = useState(false);
-  const { data, isLoading, error: pricesError, dataUpdatedAt, refetch: refetchPrices } = useStablecoins();
+  const { data, isLoading, error: pricesError, dataUpdatedAt, refetch: refetchPrices, meta: pricesMeta } = useStablecoins();
   const { data: logos } = useLogos();
-  const { data: pegSummaryData, dataUpdatedAt: pegUpdatedAt, error: pegError, refetch: refetchPeg } = usePegSummary();
+  const { data: pegSummaryData, dataUpdatedAt: pegUpdatedAt, error: pegError, refetch: refetchPeg, meta: pegMeta } = usePegSummary();
   const {
     data: dexLiquidity,
     dataUpdatedAt: liqUpdatedAt,
     error: liquidityError,
     refetch: refetchLiquidity,
+    meta: liquidityMeta,
   } = useDexLiquidity();
   const {
     data: reportCardsData,
     dataUpdatedAt: rcUpdatedAt,
     error: reportCardsError,
     refetch: refetchReportCards,
+    meta: reportCardsMeta,
   } = useReportCards();
   const { data: stressData } = useStressSignals();
 
@@ -361,19 +363,33 @@ export function HomepageClient() {
       <QueryErrorNotice error={globalError} hasData={!!data?.peggedAssets?.length} onRetry={handleRetry} />
       <StaleDataBanner
         queries={[
-          { preset: "stablecoins", dataUpdatedAt, error: pricesError, hasData: !!data?.peggedAssets?.length },
+          {
+            preset: "stablecoins",
+            dataUpdatedAt,
+            error: pricesError,
+            hasData: !!data?.peggedAssets?.length,
+            meta: pricesMeta,
+          },
           {
             preset: "pegSummary",
             dataUpdatedAt: pegUpdatedAt,
             error: pegError,
             hasData: !!pegSummaryData?.coins?.length,
+            meta: pegMeta,
           },
-          { preset: "dexLiquidity", dataUpdatedAt: liqUpdatedAt, error: liquidityError, hasData: !!dexLiquidity },
+          {
+            preset: "dexLiquidity",
+            dataUpdatedAt: liqUpdatedAt,
+            error: liquidityError,
+            hasData: !!dexLiquidity,
+            meta: liquidityMeta,
+          },
           {
             preset: "reportCards",
             dataUpdatedAt: rcUpdatedAt,
             error: reportCardsError,
             hasData: !!reportCardsData?.cards?.length,
+            meta: reportCardsMeta,
           },
         ]}
       />

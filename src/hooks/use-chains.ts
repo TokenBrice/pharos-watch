@@ -2,18 +2,20 @@
 
 import { useMemo } from "react";
 import { API_PATHS } from "@shared/lib/api-endpoints";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { findCanonicalChainData, type RawChainCirculating } from "@shared/lib/chain-circulating";
 import type { ChainsResponse } from "@shared/types/chains";
-import { useApiQuery } from "./use-api-query";
+import { useApiQueryWithMeta } from "./use-api-query";
 import { useStablecoins } from "./use-stablecoins";
 import { CRON_15MIN } from "@/lib/cron-intervals";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 
 export function useChains() {
-  return useApiQuery<ChainsResponse>(
+  return useApiQueryWithMeta<ChainsResponse>(
     ["chains"],
     API_PATHS.chains(),
     CRON_15MIN,
+    { metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.chains },
   );
 }
 
