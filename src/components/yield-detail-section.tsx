@@ -34,6 +34,10 @@ const DATA_SOURCE_BADGES: Record<string, { label: string; badge: string }> = {
     label: "DeFiLlama",
     badge: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",
   },
+  "protocol-api": {
+    label: "Protocol-native",
+    badge: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20",
+  },
   "price-derived": {
     label: "Price-derived",
     badge: "bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20",

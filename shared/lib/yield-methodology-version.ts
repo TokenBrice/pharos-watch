@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "5.11",
+  currentVersion: "5.12",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "5.12",
+    title: "Protocol-Native Lending Readers No Longer Outrank Stronger Native Wrapper Yields",
+    date: "2026-03-27",
+    effectiveAt: 1774587600,
+    summary:
+      "Supplemental lending-market readers that query protocol state directly now stay in the curated protocol-native tier instead of inheriting Tier 1 deterministic precedence reserved for native wrapper sources.",
+    impact: [
+      "Aave V3 supplemental supply-rate rows now participate in arbitration as curated protocol-native venues rather than deterministic wrapper rows",
+      "Native wrapper yields such as sDAI no longer lose the primary row to a lower-yield supplemental lending market purely because the lending reader used an on-chain transport",
+      "Source keys and alternative-source history remain unchanged, so only arbitration precedence moves",
+      "Yield methodology docs and the timeline now document that Tier 2.5 lending readers do not outrank stronger native wrapper yields by source family alone",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.11",
     title: "Restored Mixed-View Scatter Benchmark Frame",

@@ -1,8 +1,14 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.11` (2026-03-01 -> 2026-03-27).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.12` (2026-03-01 -> 2026-03-27).
 
 ---
+
+## v5.12 - Protocol-native lending readers no longer outrank stronger native wrapper yields (Mar 27, 2026)
+
+- Supplemental lending-market readers such as Aave V3 are now classified as curated protocol-native sources instead of Tier 1 deterministic wrapper sources
+- Native wrapper yields such as sDAI no longer lose the primary row to a lower-yield supplemental lending market purely because the supplemental reader queried on-chain state directly
+- Source keys and alternative-source history stay unchanged, so the fix changes arbitration precedence without breaking source continuity
 
 ## v5.11 - Restored mixed-view scatter benchmark frame (Mar 27, 2026)
 

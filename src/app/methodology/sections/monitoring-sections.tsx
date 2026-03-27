@@ -181,7 +181,8 @@ export function MonitoringMethodologySections() {
                 <li>
                   <span className="text-foreground">Tier 2.5 &mdash; Protocol-native venues</span>: ingests curated
                   protocol-owned APIs and protocol-specific on-chain venue readers when the canonical savings path is
-                  not representable as a reliable DeFiLlama pool
+                  not representable as a reliable DeFiLlama pool; these rows stay in the curated tier rather than
+                  inheriting Tier 1 deterministic precedence reserved for native wrapper readers
                 </li>
                 <li>
                   <span className="text-foreground">Tier 3 &mdash; Price-derived</span>: for NAV tokens only, derives
@@ -197,7 +198,8 @@ export function MonitoringMethodologySections() {
               <p>
                 Deterministic and curated paths can all contribute rows, then a confidence-weighted arbitration layer
                 chooses the best row. Divergent discovered or fallback sources can be demoted or rejected when a
-                canonical source disagrees materially.
+                canonical source disagrees materially. Protocol-native supplemental lending venues such as Aave V3 do
+                not outrank stronger native wrapper yields purely because they query protocol state directly.
               </p>
               <p>
                 Yield-bearing coverage is now explicitly inventoried per asset. If no reliable runtime source exists,

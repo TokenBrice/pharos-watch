@@ -156,7 +156,9 @@ export async function syncYieldSupplemental(
           apyReward: null,
           sourcePool: null,
           sourceTvlUsd: null,
-          dataSource: "onchain",
+          // These are protocol-native lending-market readers, not Tier 1
+          // deterministic wrapper sources like ERC-4626 exchange-rate reads.
+          dataSource: "protocol-api",
           exchangeRate: null,
           sourceKey: buildAaveSourceKey(stablecoinId, chain, assetAddress),
           yieldSource: `Aave v3 (${chain})`,

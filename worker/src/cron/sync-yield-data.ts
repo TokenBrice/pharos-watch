@@ -444,7 +444,7 @@ export async function syncYieldData(
     const nativeApyByCoin = new Map<string, number>();
     const lendingApyByCoin = new Map<string, number>();
     for (const source of evaluatedSources) {
-      if (source.dataSource === "defillama-auto") {
+      if (source.yieldType === "lending-opportunity") {
         lendingApyByCoin.set(source.id, source.currentApy);
       } else {
         nativeApyByCoin.set(source.id, source.currentApy);

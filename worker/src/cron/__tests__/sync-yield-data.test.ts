@@ -645,6 +645,94 @@ describe("syncYieldData", () => {
     expect(supplementalRow).toBeDefined();
   });
 
+  it("keeps a higher native wrapper APY ahead of a lower supplemental Aave source", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const poolMap = yieldConfigModule.YIELD_POOL_MAP as typeof yieldConfigModule.YIELD_POOL_MAP;
+    poolMap["100"] = "pool-sdai-native";
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dl-stablecoin-pools") {
+        return {
+          value: JSON.stringify([
+            {
+              pool: "pool-sdai-native",
+              chain: "Ethereum",
+              project: "maker",
+              symbol: "sDAI",
+              tvlUsd: 84_819_532,
+              apy: 4.45953,
+              apyBase: 4.45953,
+              apyReward: null,
+              apyMean30d: 4.43603,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ]),
+          updatedAt: nowSec,
+        };
+      }
+      if (key === "yield:supplemental-sources:v1") {
+        return {
+          value: JSON.stringify({
+            version: 1,
+            updatedAt: nowSec,
+            source: "sync-yield-supplemental",
+            sourceCount: 1,
+            data: [
+              {
+                symbol: "sDAI",
+                chain: "ethereum",
+                address: null,
+                yield: {
+                  currentApy: 2.23864,
+                  apyBase: 2.23864,
+                  apyReward: null,
+                  sourcePool: null,
+                  sourceTvlUsd: null,
+                  dataSource: "protocol-api",
+                  exchangeRate: null,
+                  sourceKey: "aave-v3-onchain:ethereum:0xsdai",
+                  yieldSource: "Aave v3 (ethereum)",
+                  yieldType: "lending-opportunity",
+                  sourceObservedAt: nowSec,
+                  comparisonAnchorObservedAt: null,
+                },
+              },
+            ],
+          }),
+          updatedAt: nowSec,
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    try {
+      const result = await syncYieldData(db);
+
+      expect(result.itemCount).toBe(2);
+      const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }>;
+      const nativeRow = writeStatements.find(
+        (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "pool-sdai-native",
+      );
+      const aaveRow = writeStatements.find(
+        (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "aave-v3-onchain:ethereum:0xsdai",
+      );
+
+      expect(nativeRow?.boundValues?.[8]).toBe("DSR");
+      expect(nativeRow?.boundValues?.[12]).toBe("defillama");
+      expect(nativeRow?.boundValues?.[25]).toBe(1);
+      expect(aaveRow?.boundValues?.[8]).toBe("Aave v3 (ethereum)");
+      expect(aaveRow?.boundValues?.[12]).toBe("protocol-api");
+      expect(aaveRow?.boundValues?.[25]).toBe(0);
+    } finally {
+      delete poolMap["100"];
+    }
+  });
+
   it("skips deterministic on-chain reads while cooldown is active", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
