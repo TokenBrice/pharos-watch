@@ -19,7 +19,7 @@ describe("deriveDataHealth", () => {
     expect(health.state).toBe("fresh");
   });
 
-  it("returns fresh when age is between 1.0x and 2.0x staleTime (within FRESH ratio)", () => {
+  it("returns fresh when age is well within the FRESH ratio (8x)", () => {
     const now = Date.now();
     vi.spyOn(Date, "now").mockReturnValue(now);
     const health = deriveDataHealth({
@@ -31,24 +31,24 @@ describe("deriveDataHealth", () => {
     expect(health.state).toBe("fresh");
   });
 
-  it("returns degraded when age is between 2.0x and 3.0x staleTime", () => {
+  it("returns degraded when age is between 8x and 12x staleTime", () => {
     const now = Date.now();
     vi.spyOn(Date, "now").mockReturnValue(now);
     const health = deriveDataHealth({
       label: "Liquidity",
-      dataUpdatedAt: now - 75 * 60_000,
+      dataUpdatedAt: now - 300 * 60_000,
       staleTime: 30 * 60_000,
       hasData: true,
     });
     expect(health.state).toBe("degraded");
   });
 
-  it("returns stale when age exceeds 3.0x staleTime", () => {
+  it("returns stale when age exceeds 12x staleTime", () => {
     const now = Date.now();
     vi.spyOn(Date, "now").mockReturnValue(now);
     const health = deriveDataHealth({
       label: "Report Cards",
-      dataUpdatedAt: now - 100 * 60_000,
+      dataUpdatedAt: now - 400 * 60_000,
       staleTime: 30 * 60_000,
       hasData: true,
     });

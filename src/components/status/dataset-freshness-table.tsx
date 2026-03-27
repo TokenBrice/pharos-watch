@@ -41,8 +41,9 @@ function getExpectedFreshnessSec(owners: readonly string[]): number | null {
   return Math.min(...intervals) * 2;
 }
 
-// Band heuristics: "on time" = age ≤ expected (2× intervalSec),
-// "aging" = expected < age ≤ 1.5× expected, "late" = age > 1.5× expected.
+// Band heuristics: "on time" = age ≤ 4× expected (2× intervalSec),
+// "aging" = 4× expected < age ≤ 6× expected, "late" = age > 6× expected.
+// Thresholds are intentionally generous — only flag truly overdue pipelines.
 function getBand(
   ageSeconds: number | null,
   expectedFreshnessSec: number | null,
@@ -62,13 +63,13 @@ function getBand(
       className: "bg-muted text-muted-foreground",
     };
   }
-  if (ageSeconds > expectedFreshnessSec * 1.5) {
+  if (ageSeconds > expectedFreshnessSec * 6) {
     return {
       label: "late",
       className: "bg-red-500/15 text-red-700 dark:text-red-400",
     };
   }
-  if (ageSeconds > expectedFreshnessSec) {
+  if (ageSeconds > expectedFreshnessSec * 4) {
     return {
       label: "aging",
       className: "bg-amber-500/15 text-amber-700 dark:text-amber-400",

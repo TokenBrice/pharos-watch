@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { getCacheFreshnessStatus, getCacheImpactStatus } from "@/lib/status/cache-health";
 
 describe("cache-health", () => {
-  it("keeps a >1.5x but <=2.0x cache ratio in degraded instead of stale", () => {
+  it("keeps a >8x but <=12x cache ratio in degraded instead of stale", () => {
     expect(
       getCacheFreshnessStatus({
-        ageSeconds: 4000,
+        ageSeconds: 16000,
         maxAge: 1800,
       }),
     ).toBe("degraded");
@@ -14,7 +14,7 @@ describe("cache-health", () => {
   it("still treats source-stale fallback modes as stale public impact", () => {
     expect(
       getCacheImpactStatus({
-        ageSeconds: 4000,
+        ageSeconds: 16000,
         maxAge: 1800,
         healthy: false,
         sourceStatus: "stale",
@@ -25,7 +25,7 @@ describe("cache-health", () => {
   it("marks degraded cache ratios as degraded public impact when the source is otherwise live", () => {
     expect(
       getCacheImpactStatus({
-        ageSeconds: 4000,
+        ageSeconds: 16000,
         maxAge: 1800,
         healthy: false,
       }),

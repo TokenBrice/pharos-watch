@@ -55,9 +55,9 @@ describe("cache-passthrough: handleStablecoins", () => {
     expect(res.headers.get("X-Data-Age")).toBe(String(body._meta.ageSeconds));
   });
 
-  it("returns 200 with stale metadata when cache is older than one hour", async () => {
+  it("returns 200 with stale metadata when cache exceeds 12x maxAge", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const staleUpdatedAt = nowSec - 4000;
+    const staleUpdatedAt = nowSec - 8000;
     const db = makeCacheDb("stablecoins", { peggedAssets: [] }, staleUpdatedAt);
     const res = await handleStablecoins(db);
 
@@ -67,8 +67,8 @@ describe("cache-passthrough: handleStablecoins", () => {
     };
     expect(body._meta.updatedAt).toBe(staleUpdatedAt);
     expect(body._meta.status).toBe("stale");
-    expect(body._meta.ageSeconds).toBe(4000);
-    expect(res.headers.get("X-Data-Age")).toBe("4000");
+    expect(body._meta.ageSeconds).toBe(8000);
+    expect(res.headers.get("X-Data-Age")).toBe("8000");
     expect(res.headers.get("Warning")).toContain("Response is stale");
     expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
