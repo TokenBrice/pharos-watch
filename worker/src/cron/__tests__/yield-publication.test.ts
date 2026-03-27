@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
-import { PRICE_DERIVED_STALE_THRESHOLD_MS, STALE_THRESHOLD_MS } from "../yield-helpers";
+import {
+  PRICE_DERIVED_STALE_THRESHOLD_MS,
+  STALE_THRESHOLD_MS,
+  SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
+} from "../yield-helpers";
 import { buildHistoryKey, type EvaluatedYieldSource } from "../yield-sync/evaluation";
 import type { ParsedYieldBenchmarkMeta, ParsedYieldBenchmarkRegistry } from "../yield-sync/benchmarks";
 import { buildYieldRankingsPayloadFromEvaluatedSources } from "../yield-sync/publication";
@@ -193,5 +197,44 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
     );
 
     expect(payload.rankings[0]?.warningSignals).toContain("data-stale");
+  });
+
+  it("does not add data-stale for healthy supplemental protocol-api rows", () => {
+    const thresholdSec = SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000;
+    const payload = buildPayloadWithObservedAt(
+      Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec + 60,
+      {
+        dataSource: "protocol-api",
+        sourceKey: "protocol-api:pendle:ethereum:0xpool",
+      },
+    );
+
+    expect(payload.rankings[0]?.warningSignals).not.toContain("data-stale");
+  });
+
+  it("adds data-stale once supplemental protocol-api rows miss their cadence window", () => {
+    const thresholdSec = SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000;
+    const payload = buildPayloadWithObservedAt(
+      Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec - 60,
+      {
+        dataSource: "protocol-api",
+        sourceKey: "protocol-api:pendle:ethereum:0xpool",
+      },
+    );
+
+    expect(payload.rankings[0]?.warningSignals).toContain("data-stale");
+  });
+
+  it("does not add data-stale for healthy supplemental onchain rows", () => {
+    const thresholdSec = SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS / 1000;
+    const payload = buildPayloadWithObservedAt(
+      Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec + 60,
+      {
+        dataSource: "onchain",
+        sourceKey: "aave-v3-onchain:ethereum:0xasset",
+      },
+    );
+
+    expect(payload.rankings[0]?.warningSignals).not.toContain("data-stale");
   });
 });

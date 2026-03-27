@@ -1,13 +1,16 @@
 import { describe, it, expect, vi } from "vitest";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
+  PRICE_DERIVED_STALE_THRESHOLD_MS,
   STALE_THRESHOLD_MS,
+  SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
   computeApyFromRate,
   computeApyFromPrice,
   computePYS,
   computeYieldStability,
   computeApyVarianceScore,
   detectWarningSignals,
+  getRankingStaleThresholdMs,
   matchAllDlPools,
   findBestLendingPool,
 } from "../yield-helpers";
@@ -18,6 +21,35 @@ import { LENDING_PROTOCOL_ALLOWLIST } from "../yield-config";
 describe("STALE_THRESHOLD_MS", () => {
   it("tracks three sync-yield-data intervals in milliseconds", () => {
     expect(STALE_THRESHOLD_MS).toBe(CRON_INTERVALS["sync-yield-data"] * 3 * 1000);
+  });
+
+  it("gives supplemental families one four-hour cycle plus buffer before stale", () => {
+    expect(SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS).toBe(CRON_INTERVALS["sync-yield-supplemental"] * 1.5 * 1000);
+  });
+});
+
+describe("getRankingStaleThresholdMs", () => {
+  it("keeps price-derived rows on the daily snapshot threshold", () => {
+    expect(getRankingStaleThresholdMs("price-derived", "price-derived")).toBe(PRICE_DERIVED_STALE_THRESHOLD_MS);
+  });
+
+  it("uses the supplemental threshold for protocol-api rows", () => {
+    expect(getRankingStaleThresholdMs("protocol-api", "protocol-api:pendle:ethereum:0xpool")).toBe(
+      SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
+    );
+  });
+
+  it("uses the supplemental threshold for optional onchain source keys", () => {
+    expect(getRankingStaleThresholdMs("onchain", "aave-v3-onchain:ethereum:0xasset")).toBe(
+      SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
+    );
+    expect(getRankingStaleThresholdMs("onchain", "compound-v3:ethereum:0xasset")).toBe(
+      SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
+    );
+  });
+
+  it("keeps deterministic onchain rows on the hourly threshold", () => {
+    expect(getRankingStaleThresholdMs("onchain", "onchain:sky-ssr")).toBe(STALE_THRESHOLD_MS);
   });
 });
 

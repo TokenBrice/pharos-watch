@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "5.13",
+  currentVersion: "5.14",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "5.14",
+    title: "Supplemental Freshness Windows Match The 4-Hour Cache Lane",
+    date: "2026-03-27",
+    effectiveAt: 1774602000,
+    summary:
+      "Read-time `data-stale` warnings now give supplemental protocol-API and optional Aave/Compound rows a freshness window that matches their 4-hour cache cadence instead of treating them like hourly publisher data.",
+    impact: [
+      "Supplemental-backed protocol-API rows now wait 6 hours before surfacing `data-stale`, so normal end-of-cycle hourly publishes no longer show false stale warnings",
+      "Optional Aave V3 and Compound V3 rows now use the same 6 hour freshness window because they are refreshed by `sync-yield-supplemental`, not the hourly publisher",
+      "Deterministic hourly on-chain rows keep the existing three-hour stale threshold, so only the slower supplemental families move",
+      "Yield methodology and operations docs now distinguish hourly, supplemental, and daily freshness windows explicitly",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.13",
     title: "Optional RPC Hardening And Explicit Wrapper Venue Pins",

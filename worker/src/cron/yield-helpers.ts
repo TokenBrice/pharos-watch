@@ -19,6 +19,11 @@ export { buildOnChainSourceKey } from "../lib/yield-utils";
 
 const YIELD_STALE_THRESHOLD_SYNC_CYCLES = 3;
 export const STALE_THRESHOLD_MS = CRON_INTERVALS["sync-yield-data"] * YIELD_STALE_THRESHOLD_SYNC_CYCLES * 1000;
+// Supplemental families refresh every four hours, so allow one full cycle plus a half-cycle buffer
+// before surfacing stale warnings on the hourly publisher.
+const SUPPLEMENTAL_STALE_THRESHOLD_CYCLES = 1.5;
+export const SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS =
+  CRON_INTERVALS["sync-yield-supplemental"] * SUPPLEMENTAL_STALE_THRESHOLD_CYCLES * 1000;
 // Price-derived rows are backed by daily supply-history snapshots, so allow one missed daily write plus buffer.
 export const PRICE_DERIVED_STALE_THRESHOLD_MS = 36 * 60 * 60 * 1000;
 
@@ -96,9 +101,16 @@ export function detectWarningSignals(input: WarningInput): string[] {
   return signals;
 }
 
-export function getRankingStaleThresholdMs(dataSource: string): number {
+function isSupplementalOnchainSource(sourceKey: string | null | undefined): boolean {
+  return sourceKey?.startsWith("aave-v3-onchain:") === true || sourceKey?.startsWith("compound-v3:") === true;
+}
+
+export function getRankingStaleThresholdMs(dataSource: string, sourceKey?: string | null): number {
   if (dataSource === "price-derived") {
     return PRICE_DERIVED_STALE_THRESHOLD_MS;
+  }
+  if (dataSource === "protocol-api" || (dataSource === "onchain" && isSupplementalOnchainSource(sourceKey))) {
+    return SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS;
   }
   return STALE_THRESHOLD_MS;
 }

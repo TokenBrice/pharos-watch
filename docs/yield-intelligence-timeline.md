@@ -1,8 +1,15 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.13` (2026-03-01 -> 2026-03-27).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.14` (2026-03-01 -> 2026-03-27).
 
 ---
+
+## v5.14 - Supplemental freshness windows align with the 4-hour cache lane (Mar 27, 2026)
+
+- Read-time `data-stale` warnings now treat supplemental protocol-API rows and optional Aave/Compound rows as 4-hour-family data instead of hourly-family data
+- Supplemental-backed rows now wait 6 hours before going stale, which avoids false warnings during the normal final hour of the supplemental refresh cycle
+- Deterministic hourly on-chain rows keep the 3-hour hourly threshold, so only the slower supplemental families move
+- The methodology and operations docs now spell out the distinct stale windows for hourly, supplemental, and daily yield families
 
 ## v5.13 - Optional RPC hardening and explicit wrapper venue pins (Mar 27, 2026)
 

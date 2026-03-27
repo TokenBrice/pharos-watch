@@ -120,7 +120,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
         ? provenance.sourceObservedAt
         : input.startSec;
     const updatedAtMs = sourceObservedAt * 1000;
-    const staleThresholdMs = getRankingStaleThresholdMs(source.dataSource);
+    const staleThresholdMs = getRankingStaleThresholdMs(source.dataSource, source.sourceKey);
     if (updatedAtMs > 0 && updatedAtMs < Date.now() - staleThresholdMs) {
       if (!ranking.warningSignals.includes("data-stale")) {
         ranking.warningSignals = [...ranking.warningSignals, "data-stale"];
