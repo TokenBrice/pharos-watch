@@ -748,6 +748,7 @@ const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
 };
 
 const INTENTIONAL_GAP_REASONS: Record<string, string> = {
+  "trusd-tori": "pre-launch asset with no reliable runtime yield source yet",
   "usg-tangent": "pre-launch asset with no reliable runtime yield source yet",
 };
 

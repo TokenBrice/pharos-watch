@@ -8474,11 +8474,12 @@
     "jurisdiction": {
       "country": "United States"
     },
+    "geckoId": "usdpt-western-union",
     "status": "pre-launch",
     "announcedDate": "2025-10",
     "expectedLaunchDate": "2026-Q2",
-    "launchPhase": "announced",
-    "launchPhaseDetail": "Listed as 'Coming soon' on Anchorage Digital reserve page",
+    "launchPhase": "beta",
+    "launchPhaseDetail": "Crossmint wallet partnership live; CEO public media tour; CoinGecko preview listing (zero supply); token not yet circulating on Solana",
     "featuredContent": [
       {
         "type": "tweet",
@@ -8493,6 +8494,13 @@
         "description": "Western Union plans to launch USDPT for its 100-million-user payment network, becoming the latest traditional finance firm tapping blockchain rails for global transfers.",
         "image": "/featured/usdpt-coindesk.jpg",
         "source": "CoinDesk"
+      },
+      {
+        "type": "article",
+        "url": "https://www.americanbanker.com/payments/news/western-union-has-big-plans-for-stablecoins",
+        "title": "Western Union has big plans for stablecoins",
+        "description": "CEO Devin McGranahan outlines strategy: converting negative float to positive float revenue, opening network to community banks, and enabling dollar-denominated holdings in inflationary regions.",
+        "source": "American Banker"
       }
     ],
     "custodyModel": "institutional-regulated",
@@ -8509,6 +8517,20 @@
         "type": "partnership",
         "title": "Anchorage Digital Bank named as federally regulated issuer",
         "sourceUrl": "https://www.coindesk.com/business/2025/10/28/western-union-to-launch-stablecoin-on-solana-with-anchorage-digital"
+      },
+      {
+        "date": "2026-03-05",
+        "type": "partnership",
+        "title": "Crossmint partnership for wallet infrastructure and payment APIs",
+        "description": "Crossmint integrates USDPT into wallet infrastructure, enabling fintech developers to build on Solana with cash-out through Western Union locations.",
+        "sourceUrl": "https://crypto.news/western-union-usdpt-stablecoin-solana-crossmint-2026/"
+      },
+      {
+        "date": "2026-03-24",
+        "type": "milestone",
+        "title": "CEO Devin McGranahan unveils USDPT strategy on Fox Business",
+        "description": "National TV debut outlining USDPT business model: positive float revenue, community bank onboarding, and dollar-denominated holdings for inflationary regions.",
+        "sourceUrl": "https://www.americanbanker.com/payments/news/western-union-has-big-plans-for-stablecoins"
       }
     ]
   },
@@ -8546,7 +8568,7 @@
     "announcedDate": "2025-10",
     "expectedLaunchDate": "2026-09",
     "launchPhase": "beta",
-    "launchPhaseDetail": "ND Industrial Commission reviewing pilot at March 25 meeting; September 2026 launch target",
+    "launchPhaseDetail": "IC unanimously approved bank-to-bank pilot March 25; 10 local banks interested; September 2026 on track; Fiserv contract finalizing",
     "featuredContent": [
       {
         "type": "tweet",
@@ -8584,6 +8606,13 @@
         "title": "ND Industrial Commission to review stablecoin pilot at March 25 meeting",
         "description": "Review includes utilization plan, risk assessment, safeguards, and cost projections. September 2026 launch pending approval.",
         "sourceUrl": "https://northdakotamonitor.com/2026/03/09/next-steps-for-bank-of-north-dakota-stablecoin-to-be-reviewed-this-month/"
+      },
+      {
+        "date": "2026-03-25",
+        "type": "regulatory",
+        "title": "ND Industrial Commission unanimously approves bank-to-bank use case",
+        "description": "10 local banks express pilot interest; risk rated 'low to moderate'; project cost-neutral; September 2026 launch reaffirmed; Fiserv contract finalization underway.",
+        "sourceUrl": "https://www.kvrr.com/2026/03/26/north-dakota-moves-forward-with-stablecoin-as-local-banks-express-interest-in-pilot-project/"
       }
     ]
   },
@@ -8617,7 +8646,7 @@
     "announcedDate": "2025-06",
     "expectedLaunchDate": "2026",
     "launchPhase": "beta",
-    "launchPhaseDetail": "Platform live; Mastercard and PayPal partnerships announced; bank onboarding underway",
+    "launchPhaseDetail": "Platform live; INDX cash settlement launched Feb 2026; StoneCastle acquired; Roughrider pilot approved by ND IC; bank onboarding continues",
     "featuredContent": [
       {
         "type": "article",
@@ -8650,10 +8679,29 @@
         "sourceUrl": "https://investors.fiserv.com/newsroom/detail/2849/fiserv-and-paypal-expand-partnership-to-advance-stablecoin-payments"
       },
       {
+        "date": "2025-09-29",
+        "type": "partnership",
+        "title": "StoneCastle acquisition announced to help FIs retain funds from FIUSD issuance",
+        "sourceUrl": "https://investors.fiserv.com/news-releases/news-release-details/fiserv-completes-stonecastle-acquisition-extending-insured"
+      },
+      {
         "date": "2025-10-08",
         "type": "partnership",
         "title": "Fiserv powers Roughrider Coin for Bank of North Dakota",
         "sourceUrl": "https://investors.fiserv.com/newsroom/detail/2868/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin-north-dakotas-first-stablecoin"
+      },
+      {
+        "date": "2025-12-17",
+        "type": "milestone",
+        "title": "StoneCastle acquisition completed",
+        "sourceUrl": "https://investors.fiserv.com/news-releases/news-release-details/fiserv-completes-stonecastle-acquisition-extending-insured"
+      },
+      {
+        "date": "2026-02-12",
+        "type": "milestone",
+        "title": "INDX real-time cash settlement platform launched for digital asset firms",
+        "description": "Up to $25M FDIC insurance, distributes across 1,100+ insured financial institutions.",
+        "sourceUrl": "https://investors.fiserv.com/news-releases/news-release-details/fiserv-introduces-indx-real-time-cash-settlement-platform"
       }
     ]
   },
@@ -8747,8 +8795,8 @@
     "status": "pre-launch",
     "announcedDate": "2026-03",
     "expectedLaunchDate": "2026-Q2",
-    "launchPhase": "auditing",
-    "launchPhaseDetail": "Sherlock audit contest active ($50K USDC pool); CDP backed by Curve LP, Pendle PT",
+    "launchPhase": "beta",
+    "launchPhaseDetail": "Four audits completed (Sherlock, Egis, Pashov x2 through Dec 2025); beta testing underway; mainnet launch pending",
     "featuredContent": [
       {
         "type": "tweet",
@@ -8759,25 +8807,37 @@
       {
         "type": "article",
         "url": "https://audits.sherlock.xyz/contests/1073",
-        "title": "USG — Tangent Sherlock Audit Contest ($50K USDC)",
-        "description": "Competitive audit covering lending mechanism, dynamic interest rate model, LP oracle, and integrations with Curve, Convex, and Pendle.",
+        "title": "USG — Tangent Sherlock Audit (Completed)",
+        "description": "Competitive audit covering lending mechanism, dynamic interest rate model, LP oracle, and integrations with Curve, Convex, and Pendle. Led by Senior Watson Obsidian.",
         "source": "Sherlock"
       }
     ],
     "milestones": [
+      {
+        "date": "2025-09-11",
+        "type": "audit",
+        "title": "Sherlock audit contest completed ($50K USDC prize pool)",
+        "description": "Competitive audit covering lending mechanism, dynamic interest rate model, LP oracle, Curve/Convex/Pendle integrations. Led by Senior Watson Obsidian.",
+        "sourceUrl": "https://audits.sherlock.xyz/contests/1073"
+      },
+      {
+        "date": "2025-10-30",
+        "type": "audit",
+        "title": "Pashov Audit Group first security review completed",
+        "sourceUrl": "https://docs.tangent.finance/docs/faq/audits"
+      },
+      {
+        "date": "2025-12-08",
+        "type": "audit",
+        "title": "Pashov Audit Group second security review completed",
+        "sourceUrl": "https://docs.tangent.finance/docs/faq/audits"
+      },
       {
         "date": "2026-03-01",
         "type": "announcement",
         "title": "Tangent announces USG stablecoin backed by productive DeFi collateral",
         "description": "0% interest borrowing, backed by Curve LP and Pendle PT positions. sUSG (ERC4626) as yield-bearing wrapper.",
         "sourceUrl": "https://www.tangent.finance/"
-      },
-      {
-        "date": "2026-03-15",
-        "type": "audit",
-        "title": "Sherlock audit contest launched ($50K USDC prize pool)",
-        "description": "Competitive audit covering lending mechanism, dynamic interest rate model, LP oracle, Curve/Convex/Pendle integrations.",
-        "sourceUrl": "https://audits.sherlock.xyz/contests/1073"
       }
     ]
   },
@@ -8811,7 +8871,7 @@
     "announcedDate": "2025-11",
     "expectedLaunchDate": "2026",
     "launchPhase": "testnet",
-    "launchPhaseDetail": "Live on Tempo testnet since Nov 2025; mainnet launch in 2026",
+    "launchPhaseDetail": "Tempo mainnet live since March 18; KlarnaUSD still on testnet; Bridge OCC charter approved Feb 2026; mainnet deployment could come at any time",
     "featuredContent": [
       {
         "type": "tweet",
@@ -8840,6 +8900,20 @@
         "type": "testnet",
         "title": "Live on Tempo testnet for early integration and prototyping",
         "sourceUrl": "https://fintechobserve.com/klarnausd-stablecoin-launch/"
+      },
+      {
+        "date": "2026-02-17",
+        "type": "regulatory",
+        "title": "Bridge (Stripe subsidiary) receives conditional OCC national bank trust charter",
+        "description": "Approval enables Bridge to custody crypto assets, issue stablecoins, and manage reserves as a federally regulated entity.",
+        "sourceUrl": "https://www.coindesk.com/business/2026/02/17/stripe-s-stablecoin-firm-bridge-wins-initial-approval-of-national-bank-trust-charter/"
+      },
+      {
+        "date": "2026-03-18",
+        "type": "milestone",
+        "title": "Tempo mainnet launches; KlarnaUSD not yet migrated from testnet",
+        "description": "Tempo L1 goes live with sub-second finality, Machine Payments Protocol for AI agents, and partners including Anthropic, Mastercard, Visa, and Revolut. Klarna absent from mainnet launch partners.",
+        "sourceUrl": "https://www.coindesk.com/tech/2026/03/18/stripe-led-payments-blockchain-tempo-goes-live-with-protocol-for-ai-agents"
       }
     ]
   },
@@ -9201,6 +9275,113 @@
           "url": "https://protocol-api.m0.org/graphql"
         }
       }
+    }
+  },
+  {
+    "id": "trusd-tori",
+    "name": "Tori trUSD",
+    "symbol": "trUSD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Delta-neutral trading positions across global markets: hedged money markets, futures arbitrage, calendar spreads, and options strategies; all positions backed by USDC and USDT deposits with real-time verification via Accountable DVN",
+    "pegMechanism": "1:1 mint and redeem against USDC or USDT with 0.1% fee; peg maintained by arbitrage incentives and delta-neutral portfolio construction offsetting directional exposure",
+    "detailProvider": "defillama",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://tori.finance/",
+      "provider": "Accountable"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://tori.finance/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/tori_finance"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.tori.finance/"
+      },
+      {
+        "label": "App",
+        "url": "https://app.tori.finance/"
+      }
+    ],
+    "status": "pre-launch",
+    "announcedDate": "2026-03",
+    "launchPhase": "beta",
+    "launchPhaseDetail": "Soft launch on Ethereum mainnet March 24; contract addresses TBA in docs; Delphi Ventures seed (+ QInvest, CMCC Global, Bering Waters); dual audits completed (Sherlock, Nethermind); not yet tracked on DefiLlama or CoinGecko",
+    "featuredContent": [
+      {
+        "type": "tweet",
+        "url": "https://x.com/tori_finance/status/2036533806774231309",
+        "title": "Tori Finance launch announcement",
+        "description": "Tori wraps institutional strategies into strUSD — a liquid, composable, yield-bearing token backed by delta-neutral positions verified in real time.",
+        "source": "X / @tori_finance"
+      },
+      {
+        "type": "article",
+        "url": "https://cryip.co/tori-secures-backing-from-delphi-ventures-for-on-chain-yield-protocol/",
+        "title": "Tori Secures Backing from Delphi Ventures",
+        "description": "Tori Finance raises seed funding from Delphi Ventures to bring institutional yield on-chain through trUSD.",
+        "source": "Cryip"
+      }
+    ],
+    "custodyModel": "onchain",
+    "collateralQuality": "exotic",
+    "governanceQuality": "single-entity",
+    "milestones": [
+      {
+        "date": "2026-01-22",
+        "type": "audit",
+        "title": "Sherlock collaborative audit completed",
+        "description": "Full protocol scope audit covering core protocol, trUSD token, strUSD staking, access control, and oracle integration.",
+        "sourceUrl": "https://github.com/sherlock-protocol/sherlock-reports/blob/main/audits/2026.02.10%20-%20Final%20-%20Tori%20Finance%20Collaborative%20Audit%20Report%201770734349.pdf"
+      },
+      {
+        "date": "2026-03-24",
+        "type": "announcement",
+        "title": "Tori Finance launches on Ethereum mainnet",
+        "description": "trUSD and strUSD go live with mint/redeem via USDC and USDT; ~15% advertised APY from delta-neutral institutional strategies.",
+        "sourceUrl": "https://x.com/tori_finance/status/2036533806774231309"
+      },
+      {
+        "date": "2026-03-25",
+        "type": "partnership",
+        "title": "Delphi Ventures leads seed round; QInvest, CMCC Global, Bering Waters also participate",
+        "sourceUrl": "https://cryip.co/tori-secures-backing-from-delphi-ventures-for-on-chain-yield-protocol/"
+      },
+      {
+        "date": "2026-03-26",
+        "type": "audit",
+        "title": "Nethermind security review completed",
+        "description": "Full protocol scope security review; all findings addressed.",
+        "sourceUrl": "https://github.com/NethermindEth/PublicAuditReports/blob/main/NM_0854_Tori.pdf"
+      }
+    ],
+    "dependencies": [
+      {
+        "id": "usdc-circle",
+        "weight": 0.5,
+        "type": "collateral"
+      },
+      {
+        "id": "usdt-tether",
+        "weight": 0.5,
+        "type": "collateral"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Tori staking (strUSD)",
+      "yieldType": "fee-sharing"
     }
   }
 ]

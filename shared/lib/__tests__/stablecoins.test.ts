@@ -27,10 +27,10 @@ describe("tracked stablecoin metadata", () => {
     const canonicalOrder = parseCanonicalOrderAsset(canonicalOrderAsset, "canonical-order");
 
     expect(usdMajor).toHaveLength(28);
-    expect(usdMinor).toHaveLength(105);
+    expect(usdMinor).toHaveLength(106);
     expect(nonUsd).toHaveLength(40);
     expect(commodity).toHaveLength(10);
-    expect(canonicalOrder).toHaveLength(183);
+    expect(canonicalOrder).toHaveLength(184);
     expect(usdMajor.length + usdMinor.length + nonUsd.length + commodity.length).toBe(canonicalOrder.length);
     expect(parseDeadStablecoinAssets(deadStablecoinAsset, "dead-stablecoins")).toHaveLength(87);
   });
@@ -47,7 +47,7 @@ describe("tracked stablecoin metadata", () => {
   });
 
   it("keeps active and pre-launch partitions unchanged after the JSON migration", () => {
-    expect(TRACKED_STABLECOINS).toHaveLength(183);
+    expect(TRACKED_STABLECOINS).toHaveLength(184);
     expect(ACTIVE_STABLECOINS).toHaveLength(175);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
       "usdpt-western-union",
@@ -58,6 +58,7 @@ describe("tracked stablecoin metadata", () => {
       "pgold-polaris",
       "usg-tangent",
       "klarnausd-klarna",
+      "trusd-tori",
     ]);
   });
 
