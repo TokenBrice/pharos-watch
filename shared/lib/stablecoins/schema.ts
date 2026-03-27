@@ -1,6 +1,16 @@
 import { z } from "zod";
 import type { DeadStablecoin, StablecoinMeta } from "../../types";
 import { LiveReservesConfigSchema } from "../live-reserve-adapters";
+import {
+  GOVERNANCE_TYPE_VALUES,
+  DEPENDENCY_TYPE_VALUES,
+  CHAIN_TIER_VALUES,
+  DEPLOYMENT_MODEL_VALUES,
+  COLLATERAL_QUALITY_VALUES,
+  CUSTODY_MODEL_VALUES,
+  GOVERNANCE_QUALITY_VALUES,
+  YIELD_TYPE_VALUES,
+} from "../../types/core";
 
 const BACKING_TYPE_VALUES = ["rwa-backed", "crypto-backed", "algorithmic"] as const;
 const PEG_CURRENCY_VALUES = [
@@ -28,35 +38,12 @@ const PEG_CURRENCY_VALUES = [
   "VAR",
   "OTHER",
 ] as const;
-const GOVERNANCE_TYPE_VALUES = ["centralized", "centralized-dependent", "decentralized"] as const;
 const DETAIL_PROVIDER_VALUES = ["defillama", "coingecko", "commodity"] as const;
 const PROOF_OF_RESERVES_TYPE_VALUES = ["independent-audit", "real-time", "self-reported"] as const;
-const DEPENDENCY_TYPE_VALUES = ["wrapper", "mechanism", "collateral"] as const;
 const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-high"] as const;
-const CHAIN_TIER_VALUES = ["ethereum", "stage1-l2", "mature-alt-l1", "established-alt-l1", "unproven"] as const;
-const DEPLOYMENT_MODEL_VALUES = ["single-chain", "canonical-bridge", "third-party-bridge", "native-multichain"] as const;
-const COLLATERAL_QUALITY_VALUES = ["native", "rwa", "eth-lst", "alt-lst-bridged-or-mixed", "exotic"] as const;
-const CUSTODY_MODEL_VALUES = ["onchain", "institutional-top", "institutional-regulated", "institutional-unregulated", "institutional-sanctioned", "cex"] as const;
-const GOVERNANCE_QUALITY_VALUES = [
-  "immutable-code",
-  "dao-governance",
-  "multisig",
-  "regulated-entity",
-  "single-entity",
-  "wrapper",
-] as const;
 const PROTOCOL_FAMILY_VALUES = ["liquity"] as const;
 const PROTOCOL_VARIANT_VALUES = ["v1", "v2", "style"] as const;
 const COIN_NOTICE_TYPE_VALUES = ["danger", "warning", "info"] as const;
-const YIELD_TYPE_VALUES = [
-  "lending-vault",
-  "rebase",
-  "fee-sharing",
-  "lp-receipt",
-  "nav-appreciation",
-  "governance-set",
-  "lending-opportunity",
-] as const;
 const LAUNCH_PHASE_VALUES = ["announced", "testnet", "auditing", "beta", "launching-soon"] as const;
 const LAUNCH_MILESTONE_TYPE_VALUES = ["announcement", "milestone", "delay", "partnership", "regulatory", "audit", "testnet"] as const;
 const FEATURED_CONTENT_TYPE_VALUES = ["tweet", "blog", "video", "article"] as const;

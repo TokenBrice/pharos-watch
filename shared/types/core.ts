@@ -103,13 +103,13 @@ export type GovernanceQuality =
 export type ProtocolFamily = "liquity";
 export type ProtocolVariant = "v1" | "v2" | "style";
 
-const GOVERNANCE_TYPE_VALUES = ["centralized", "centralized-dependent", "decentralized"] as const;
-const DEPENDENCY_TYPE_VALUES = ["wrapper", "mechanism", "collateral"] as const;
-const CHAIN_TIER_VALUES = ["ethereum", "stage1-l2", "mature-alt-l1", "established-alt-l1", "unproven"] as const;
-const DEPLOYMENT_MODEL_VALUES = ["single-chain", "canonical-bridge", "third-party-bridge", "native-multichain"] as const;
-const COLLATERAL_QUALITY_VALUES = ["native", "rwa", "eth-lst", "alt-lst-bridged-or-mixed", "exotic"] as const;
-const CUSTODY_MODEL_VALUES = ["onchain", "institutional-top", "institutional-regulated", "institutional-unregulated", "institutional-sanctioned", "cex"] as const;
-const GOVERNANCE_QUALITY_VALUES = [
+export const GOVERNANCE_TYPE_VALUES = ["centralized", "centralized-dependent", "decentralized"] as const;
+export const DEPENDENCY_TYPE_VALUES = ["wrapper", "mechanism", "collateral"] as const;
+export const CHAIN_TIER_VALUES = ["ethereum", "stage1-l2", "mature-alt-l1", "established-alt-l1", "unproven"] as const;
+export const DEPLOYMENT_MODEL_VALUES = ["single-chain", "canonical-bridge", "third-party-bridge", "native-multichain"] as const;
+export const COLLATERAL_QUALITY_VALUES = ["native", "rwa", "eth-lst", "alt-lst-bridged-or-mixed", "exotic"] as const;
+export const CUSTODY_MODEL_VALUES = ["onchain", "institutional-top", "institutional-regulated", "institutional-unregulated", "institutional-sanctioned", "cex"] as const;
+export const GOVERNANCE_QUALITY_VALUES = [
   "immutable-code",
   "dao-governance",
   "multisig",
@@ -141,7 +141,7 @@ export type YieldType =
   | "governance-set"
   | "lending-opportunity";
 
-const YIELD_TYPE_VALUES = [
+export const YIELD_TYPE_VALUES = [
   "lending-vault",
   "rebase",
   "fee-sharing",

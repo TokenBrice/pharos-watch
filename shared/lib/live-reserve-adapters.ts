@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { DAY_SECONDS } from "./time-constants";
+import { DEPENDENCY_TYPE_VALUES } from "../types/core";
 
 const LIVE_RESERVE_ADAPTER_KEYS = [
   "accountable",
@@ -71,7 +72,6 @@ const LIVE_RESERVE_SEMANTICS_VALUES = [
 
 const LIVE_RESERVE_RPC_MODE_VALUES = ["etherscan-proxy", "alchemy", "public-rpc"] as const;
 const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-high"] as const;
-const DEPENDENCY_TYPE_VALUES = ["wrapper", "mechanism", "collateral"] as const;
 
 export type LiveReserveAdapterKey = (typeof LIVE_RESERVE_ADAPTER_KEYS)[number];
 export type LiveReserveSourceModel = (typeof _LIVE_RESERVE_SOURCE_MODEL_VALUES)[number];
