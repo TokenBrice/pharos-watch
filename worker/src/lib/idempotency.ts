@@ -85,7 +85,7 @@ export async function runIdempotentAdminAction(
         .prepare("DELETE FROM admin_idempotency_keys WHERE action = ? AND idempotency_key = ? AND response_status = ?")
         .bind(action, key, PENDING_RESPONSE_STATUS)
         .run()
-        .catch(() => {});
+        .catch((e) => { console.warn("[idempotency] cleanup after key-reuse failed:", e); });
     }
     return errorResponse(409, "Idempotency key reuse with different request payload");
   }
@@ -119,7 +119,7 @@ export async function runIdempotentAdminAction(
       )
       .bind(action, key, fingerprint, PENDING_RESPONSE_STATUS)
       .run()
-      .catch(() => {});
+      .catch((e) => { console.warn("[idempotency] cleanup after execution error failed — key may be stuck in PENDING:", e); });
     throw err;
   }
   const responseBody = await response.clone().text();
@@ -136,7 +136,7 @@ export async function runIdempotentAdminAction(
     .prepare("DELETE FROM admin_idempotency_keys WHERE created_at < ?")
     .bind(now - 7 * DAY_SECONDS)
     .run()
-    .catch(() => {});
+    .catch((e) => { console.warn("[idempotency] TTL prune failed:", e); });
 
   return withIdempotencyHeaders(response, key, false);
 }
