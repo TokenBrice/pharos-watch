@@ -99,6 +99,12 @@ describe("computePYS", () => {
     expect(high).toBeGreaterThan(low);
   });
 
+  it("returns higher score when the same APY clears a lower benchmark", () => {
+    const usdLike = computePYS({ apy30d: 4, benchmarkRate: 4.5, safetyScore: 80, apyVarianceScore: 0.1, scalingFactor: 10 });
+    const chfLike = computePYS({ apy30d: 4, benchmarkRate: 0, safetyScore: 80, apyVarianceScore: 0.1, scalingFactor: 10 });
+    expect(chfLike).toBeGreaterThan(usdLike);
+  });
+
   it("returns higher score for higher safety score", () => {
     const risky = computePYS({ apy30d: 5, safetyScore: 30, apyVarianceScore: 0.1, scalingFactor: 10 });
     const safe = computePYS({ apy30d: 5, safetyScore: 90, apyVarianceScore: 0.1, scalingFactor: 10 });
@@ -110,9 +116,15 @@ describe("computePYS", () => {
     expect(result).toBeLessThanOrEqual(100);
   });
 
-  it("matches the steeper safety-curve worked example", () => {
-    const result = computePYS({ apy30d: 8.4, safetyScore: 72, apyVarianceScore: 0.18, scalingFactor: 8 });
-    expect(result).toBe(29);
+  it("matches the benchmark-aware worked example", () => {
+    const result = computePYS({
+      apy30d: 8.4,
+      benchmarkRate: 4.25,
+      safetyScore: 72,
+      apyVarianceScore: 0.18,
+      scalingFactor: 8,
+    });
+    expect(result).toBe(32);
   });
 });
 

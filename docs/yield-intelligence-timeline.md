@@ -1,8 +1,15 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.14` (2026-03-01 -> 2026-03-27).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.15` (2026-03-01 -> 2026-03-27).
 
 ---
+
+## v5.15 - Benchmark-aware PYS for cross-currency yield context (Mar 27, 2026)
+
+- PYS now forms an `effectiveYield` term equal to raw `apy30d` plus 25% of the row's benchmark spread before the safety penalty and consistency multiplier are applied
+- This keeps raw nominal APY as the anchor while giving above-benchmark EUR, CHF, and other non-USD rows explicit credit for clearing their local cash hurdle
+- Read-time `/api/yield-rankings` hydration, leaderboard/detail breakdowns, and methodology docs now use the same benchmark-aware scorer so shipped scores and explanations stay aligned
+- Strong local-rate rows such as EURCV and ZCHF no longer look artificially flat versus same-APY USD rows that clear a much easier benchmark
 
 ## v5.14 - Supplemental freshness windows align with the 4-hour cache lane (Mar 27, 2026)
 

@@ -36,7 +36,8 @@ export function MonitoringMethodologySections() {
             supplemental-source families refresh on a separate four-hour lane. Alternative sources are retained when
             multiple valid yield paths exist, address-first identity is used before symbol fallback, curated
             exact-pool overrides can cover named non-stablecoin venues, and confidence-weighted arbitration selects
-            the primary row.
+            the primary row. PYS is now benchmark-aware: it keeps raw APY as the base term, adds a modest slice of
+            row-level benchmark spread, and only then applies the safety and consistency penalties.
           </p>
           <MethodologyFacts
             facts={[
@@ -62,20 +63,20 @@ export function MonitoringMethodologySections() {
                 {
                   label: "Failure behavior",
                   value:
-                    "No resolved source skips coin update; PYS returns 0 when apy30d <= 0 (safety defaults to 40 / NR if live report-card hydration is missing), while degraded benchmark or safety inputs are surfaced in provenance",
+                    "No resolved source skips coin update; PYS returns 0 when apy30d <= 0 or the benchmark-adjusted effective yield is non-positive (safety defaults to 40 / NR if live report-card hydration is missing), while degraded benchmark or safety inputs are surfaced in provenance",
                 },
               ]}
             />
           </div>
           <WorkedExample summary="Worked example (verified against computePYS)">
-            <p className="font-mono">Inputs: apy30d=8.4, safetyScore=72, apyVarianceScore=0.18, scalingFactor=8</p>
+            <p className="font-mono">Inputs: apy30d=8.4, benchmarkRate=4.25, safetyScore=72, apyVarianceScore=0.18, scalingFactor=8</p>
             <p className="font-mono">
-              riskPenalty=max(0.5,(101-72)/20)=1.45; adjustedPenalty=1.45^1.75=1.92; yieldEfficiency=8.4/1.92=4.38;
-              sustainability=1-0.18=0.82
+              benchmarkSpread=8.4-4.25=4.15; effectiveYield=max(0,8.4+0.25*4.15)=9.44; riskPenalty=max(0.5,(101-72)/20)=1.45;
+              adjustedPenalty=1.45^1.75=1.92; yieldEfficiency=9.44/1.92=4.92; sustainability=1-0.18=0.82
             </p>
-            <p className="font-mono">PYS=min(100, round(4.38*0.82*8))=29</p>
+            <p className="font-mono">PYS=min(100, round(4.92*0.82*8))=32</p>
             <p>
-              Result: <span className="text-foreground">PYS 29</span>.
+              Result: <span className="text-foreground">PYS 32</span>.
             </p>
           </WorkedExample>
 
@@ -100,15 +101,15 @@ export function MonitoringMethodologySections() {
               <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
               {/* APY */}
               <div className="rounded-lg border p-3 text-center w-32 flex flex-col justify-center flex-shrink-0">
-                <p className="text-foreground font-medium">APY</p>
-                <p className="text-xs text-muted-foreground mt-0.5">first successful tier</p>
+                <p className="text-foreground font-medium">Effective Yield</p>
+                <p className="text-xs text-muted-foreground mt-0.5">APY + 25% benchmark spread</p>
               </div>
               <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
               {/* Formula components */}
               <div className="flex flex-col gap-2 flex-1">
                 <div className="rounded-lg border p-3 text-center flex-1">
                   <p className="text-foreground font-medium">Yield Efficiency</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">APY ÷ curved risk penalty</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Effective yield ÷ curved risk penalty</p>
                 </div>
                 <div className="rounded-lg border p-3 text-center flex-1">
                   <p className="text-foreground font-medium">Sustainability</p>
@@ -141,14 +142,14 @@ export function MonitoringMethodologySections() {
               </div>
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="w-full rounded-lg border p-3 text-center">
-                <p className="text-foreground font-medium">APY</p>
-                <p className="text-xs text-muted-foreground mt-0.5">first successful tier</p>
+                <p className="text-foreground font-medium">Effective Yield</p>
+                <p className="text-xs text-muted-foreground mt-0.5">APY + 25% benchmark spread</p>
               </div>
               <div className="text-muted-foreground text-xl font-bold">&darr;</div>
               <div className="grid grid-cols-2 gap-2 w-full">
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium text-xs">Yield Efficiency</p>
-                  <p className="text-xs text-muted-foreground">APY ÷ curved risk penalty</p>
+                  <p className="text-xs text-muted-foreground">Effective yield ÷ curved risk penalty</p>
                 </div>
                 <div className="rounded-lg border p-3 text-center">
                   <p className="text-foreground font-medium text-xs">Sustainability</p>
@@ -227,9 +228,13 @@ export function MonitoringMethodologySections() {
             <div className="space-y-2">
               <h3 className="text-foreground font-medium">Pharos Yield Score (PYS)</h3>
               <p className="font-mono text-xs border border-l-[3px] border-l-amber-500 border-border/60 bg-muted/50 rounded-lg px-4 py-3">
+                benchmarkSpread = apy30d &minus; benchmarkRate
+                <br />
+                effectiveYield = max(0, apy30d + benchmarkSpread &times; 0.25)
+                <br />
                 riskPenalty = max(0.5, (101 &minus; safetyScore) / 20)
                 <br />
-                yieldEfficiency = apy30d / (riskPenalty ^ 1.75)
+                yieldEfficiency = effectiveYield / (riskPenalty ^ 1.75)
                 <br />
                 sustainability = max(0.3, 1.0 &minus; apyVarianceScore)
                 <br />
@@ -237,9 +242,14 @@ export function MonitoringMethodologySections() {
               </p>
               <ul className="list-disc list-inside space-y-1">
                 <li>
+                  <span className="text-foreground">Effective yield</span> keeps raw APY as the anchor, then adds 25%
+                  of the row&apos;s benchmark spread so tighter local-currency cash hurdles can lift the score without
+                  turning PYS into a pure excess-yield ranker
+                </li>
+                <li>
                   <span className="text-foreground">Yield efficiency</span> rewards higher APY relative to the
                   coin&apos;s risk profile &mdash; the raw safety penalty is raised to a fixed power so weaker safety
-                  grades need much more yield to compete
+                  grades need much more effective yield to compete
                 </li>
                 <li>
                   <span className="text-foreground">Sustainability multiplier</span> penalizes volatile yields (high

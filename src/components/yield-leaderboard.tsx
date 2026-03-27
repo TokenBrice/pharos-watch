@@ -15,9 +15,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { YieldSourceLink } from "@/components/yield-source-link";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
-import { formatCurrency, formatScore, formatPercent } from "@shared/lib/format";
+import { formatCurrency, formatPercent, formatScore, formatSignedPercent } from "@shared/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
+import { PYS_BENCHMARK_SPREAD_WEIGHT } from "@shared/lib/yield-scoring";
 import type { YieldRanking, AltYieldSource, YieldType } from "@shared/types";
 import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
 import { formatYieldWarningSignal, getPysColor, computePysBreakdown } from "@/lib/yield-constants";
@@ -237,7 +238,14 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                 const safetyScore = row.safetyScore;
                 const warningSignalCount = row.warningSignals.length;
                 const pysColor = getPysColor(row.pharosYieldScore);
-                const { adjustedRiskPenalty, yieldEfficiency, sustainabilityMult } = computePysBreakdown(row.apy30d, safetyScore, row.yieldStability);
+                const {
+                  adjustedRiskPenalty,
+                  benchmarkAdjustment,
+                  benchmarkSpread,
+                  effectiveYield,
+                  yieldEfficiency,
+                  sustainabilityMult,
+                } = computePysBreakdown(row.apy30d, safetyScore, row.yieldStability, row.benchmarkRate);
                 return (
                   <Fragment key={row.id}>
                     <InteractiveTableRow
@@ -285,14 +293,34 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                             <TooltipTrigger asChild>
                               <span className={`cursor-help ${pysColor}`}>{formatScore(row.pharosYieldScore)}</span>
                             </TooltipTrigger>
-                            <TooltipContent className="max-w-[220px]">
+                            <TooltipContent className="max-w-[260px]">
                               <div className="space-y-1.5 text-xs">
+                                <div>
+                                  <span className="text-muted-foreground">Effective Yield: </span>
+                                  <span className="font-mono tabular-nums">{effectiveYield.toFixed(1)}%</span>
+                                </div>
+                                {benchmarkSpread !== null ? (
+                                  <div>
+                                    <span className="text-muted-foreground">Benchmark Adj.: </span>
+                                    <span className="font-mono tabular-nums">{formatSignedPercent(benchmarkAdjustment)}</span>
+                                  </div>
+                                ) : null}
                                 <div>
                                   <span className="text-muted-foreground">Yield Efficiency: </span>
                                   <span className="font-mono tabular-nums">{yieldEfficiency.toFixed(1)}</span>
                                 </div>
                                 <div className="text-[11px] text-muted-foreground">
-                                  <span className="font-mono tabular-nums">{row.apy30d.toFixed(1)}%</span> APY /{" "}
+                                  <span className="font-mono tabular-nums">{row.apy30d.toFixed(1)}%</span> APY
+                                  {benchmarkSpread !== null ? (
+                                    <>
+                                      {" "}with{" "}
+                                      <span className="font-mono tabular-nums">{formatSignedPercent(benchmarkAdjustment)}</span>{" "}
+                                      benchmark adj. ({(PYS_BENCHMARK_SPREAD_WEIGHT * 100).toFixed(0)}% of{" "}
+                                      <span className="font-mono tabular-nums">{formatSignedPercent(benchmarkSpread)}</span>
+                                      {row.benchmarkLabel ? ` vs ${row.benchmarkLabel}` : " spread"})
+                                    </>
+                                  ) : null}
+                                  {" "} /{" "}
                                   <span className="font-mono tabular-nums">{adjustedRiskPenalty.toFixed(1)}x</span>{" "}
                                   adjusted risk penalty
                                 </div>

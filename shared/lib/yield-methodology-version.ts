@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "5.14",
+  currentVersion: "5.15",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "5.15",
+    title: "Benchmark-Aware PYS For Cross-Currency Yield Context",
+    date: "2026-03-27",
+    effectiveAt: 1774609200,
+    summary:
+      "Pharos Yield Score now preserves raw APY as the base yield term, then adds a modest share of row-level benchmark spread before applying the steep safety curve and consistency multiplier.",
+    impact: [
+      "PYS now computes `effectiveYield = max(0, apy30d + 0.25 * (apy30d - benchmarkRate))` before dividing by the adjusted risk penalty, so local-currency benchmark outperformance affects the score directly",
+      "The change rewards rows that clear tighter EUR, CHF, or other native hurdles without turning PYS into a pure excess-yield ranker",
+      "Worker-time scoring and live `/api/yield-rankings` safety hydration now pass row benchmark context into the shared scorer, removing another source of score drift risk",
+      "Leaderboard/detail breakdowns, methodology docs, and yield-changelog entries now expose the benchmark adjustment and effective-yield terms explicitly",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.14",
     title: "Supplemental Freshness Windows Match The 4-Hour Cache Lane",

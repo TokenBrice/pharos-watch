@@ -211,8 +211,8 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   },
   pys: {
     title: "PYS",
-    summary: "Risk-adjusted yield score that discounts raw APY by stablecoin safety and yield consistency.",
-    detail: "High APY on weak safety still needs an exceptional edge because the safety penalty curve is deliberately steep and sustainability can still pull the score down.",
+    summary: "Benchmark-aware risk-adjusted yield score that starts from APY, adds a weighted slice of benchmark spread, then discounts by stablecoin safety and yield consistency.",
+    detail: "High APY on weak safety still needs an exceptional edge because the safety penalty curve is deliberately steep, while stronger local-currency benchmark outperformance now gets explicit credit.",
     methodologyPath: "/methodology/#yield-intelligence-methodology",
     versionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
     changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,

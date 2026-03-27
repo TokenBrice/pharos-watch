@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  PYS_BENCHMARK_SPREAD_WEIGHT,
   PYS_RISK_PENALTY_FLOOR,
   PYS_RISK_PENALTY_EXPONENT,
   PYS_SUSTAINABILITY_FLOOR,
@@ -8,6 +9,9 @@ import {
 } from "../yield-scoring";
 
 describe("PYS constants", () => {
+  it("exports benchmark spread weight of 0.25", () => {
+    expect(PYS_BENCHMARK_SPREAD_WEIGHT).toBe(0.25);
+  });
   it("exports risk penalty floor of 0.5", () => {
     expect(PYS_RISK_PENALTY_FLOOR).toBe(0.5);
   });
@@ -29,6 +33,13 @@ describe("computePysComponents", () => {
     const result = computePysComponents({ apy30d: 5, safetyScore: 80, apyVarianceScore: 0.2 });
     expect(result.adjustedRiskPenalty).toBeCloseTo(Math.pow(1.05, 1.75), 6);
     expect(result.yieldEfficiency).toBeCloseTo(5 / Math.pow(1.05, 1.75), 6);
+  });
+
+  it("adds a weighted slice of benchmark spread to the effective yield", () => {
+    const result = computePysComponents({ apy30d: 4.1, benchmarkRate: 1.9358, safetyScore: 68, apyVarianceScore: 0.09 });
+    expect(result.benchmarkSpread).toBeCloseTo(2.1642, 4);
+    expect(result.benchmarkAdjustment).toBeCloseTo(2.1642 * 0.25, 4);
+    expect(result.effectiveYield).toBeCloseTo(4.1 + 2.1642 * 0.25, 4);
   });
 
   it("floors riskPenalty at 0.5", () => {
@@ -58,13 +69,42 @@ describe("computePYS", () => {
     expect(result).toBe(100);
   });
 
+  it("rewards rows that outperform their benchmark", () => {
+    const base = computePYS({ apy30d: 4.1, safetyScore: 68, apyVarianceScore: 0.09, scalingFactor: 8 });
+    const benchmarkAware = computePYS({
+      apy30d: 4.1,
+      safetyScore: 68,
+      apyVarianceScore: 0.09,
+      scalingFactor: 8,
+      benchmarkRate: 1.9358,
+    });
+    expect(benchmarkAware).toBeGreaterThan(base);
+  });
+
+  it("drops to zero when benchmark adjustment makes effective yield non-positive", () => {
+    const result = computePYS({
+      apy30d: 1,
+      safetyScore: 80,
+      apyVarianceScore: 0,
+      scalingFactor: 8,
+      benchmarkRate: 8,
+    });
+    expect(result).toBe(0);
+  });
+
   it("applies scaling factor", () => {
     const base = computePYS({ apy30d: 5, safetyScore: 80, apyVarianceScore: 0.1, scalingFactor: 1 });
     const scaled = computePYS({ apy30d: 5, safetyScore: 80, apyVarianceScore: 0.1, scalingFactor: 2 });
     expect(scaled).toBeGreaterThan(base);
   });
 
-  it("matches the published methodology example for the steeper safety curve", () => {
-    expect(computePYS({ apy30d: 8.4, safetyScore: 72, apyVarianceScore: 0.18, scalingFactor: 8 })).toBe(29);
+  it("matches the published methodology example for benchmark-aware PYS", () => {
+    expect(computePYS({
+      apy30d: 8.4,
+      benchmarkRate: 4.25,
+      safetyScore: 72,
+      apyVarianceScore: 0.18,
+      scalingFactor: 8,
+    })).toBe(32);
   });
 });

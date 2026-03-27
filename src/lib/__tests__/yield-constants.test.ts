@@ -36,10 +36,21 @@ describe("getPysColor", () => {
 
 describe("computePysBreakdown", () => {
   it("computes correct breakdown for typical inputs", () => {
-    const { riskPenalty, adjustedRiskPenalty, yieldEfficiency, sustainabilityMult } = computePysBreakdown(10, 80, 0.9);
+    const {
+      riskPenalty,
+      adjustedRiskPenalty,
+      benchmarkSpread,
+      benchmarkAdjustment,
+      effectiveYield,
+      yieldEfficiency,
+      sustainabilityMult,
+    } = computePysBreakdown(10, 80, 0.9, 4);
     expect(riskPenalty).toBeCloseTo(1.05, 2);
     expect(adjustedRiskPenalty).toBeCloseTo(Math.pow(1.05, 1.75), 2);
-    expect(yieldEfficiency).toBeCloseTo(10 / Math.pow(1.05, 1.75), 1);
+    expect(benchmarkSpread).toBeCloseTo(6, 2);
+    expect(benchmarkAdjustment).toBeCloseTo(1.5, 2);
+    expect(effectiveYield).toBeCloseTo(11.5, 2);
+    expect(yieldEfficiency).toBeCloseTo(11.5 / Math.pow(1.05, 1.75), 1);
     expect(sustainabilityMult).toBeCloseTo(0.9, 2);
   });
 
@@ -61,5 +72,12 @@ describe("computePysBreakdown", () => {
   it("clamps sustainability floor to 0.3 when stability is very low", () => {
     const { sustainabilityMult } = computePysBreakdown(5, 80, 0.1);
     expect(sustainabilityMult).toBe(0.3);
+  });
+
+  it("omits benchmark adjustment when the row has no benchmark metadata", () => {
+    const { benchmarkSpread, benchmarkAdjustment, effectiveYield } = computePysBreakdown(5, 80, 0.8);
+    expect(benchmarkSpread).toBeNull();
+    expect(benchmarkAdjustment).toBe(0);
+    expect(effectiveYield).toBe(5);
   });
 });

@@ -31,9 +31,25 @@ export function computePysBreakdown(
   apy30d: number,
   safetyScore: number | null,
   yieldStability: number | null,
+  benchmarkRate?: number | null,
 ) {
   const apyVarianceScore = yieldStabilityToApyVarianceScore(yieldStability);
-  const { riskPenalty, adjustedRiskPenalty, yieldEfficiency, sustainabilityMultiplier } =
-    computePysComponents({ apy30d, safetyScore, apyVarianceScore });
-  return { riskPenalty, adjustedRiskPenalty, yieldEfficiency, sustainabilityMult: sustainabilityMultiplier };
+  const {
+    riskPenalty,
+    adjustedRiskPenalty,
+    benchmarkSpread,
+    benchmarkAdjustment,
+    effectiveYield,
+    yieldEfficiency,
+    sustainabilityMultiplier,
+  } = computePysComponents({ apy30d, safetyScore, apyVarianceScore, benchmarkRate });
+  return {
+    riskPenalty,
+    adjustedRiskPenalty,
+    benchmarkSpread,
+    benchmarkAdjustment,
+    effectiveYield,
+    yieldEfficiency,
+    sustainabilityMult: sustainabilityMultiplier,
+  };
 }

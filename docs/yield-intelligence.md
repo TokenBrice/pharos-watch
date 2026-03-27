@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v5.14`
+- **Current methodology version:** `v5.15`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -16,6 +16,7 @@ Rankings provenance now carries source-native freshness for derived sources:
 
 - `sourceObservedAt` / `sourceAgeSeconds` reflect the actual latest observation backing the ranking, not just the cron run time
 - `comparisonAnchorObservedAt` / `comparisonAnchorAgeSeconds` are included when APY is derived from a prior anchor, such as price-derived and on-chain exchange-rate calculations
+- PYS now keeps raw APY as the base yield term, then adds 25% of the row's benchmark spread before applying the safety and consistency penalties
 - supplemental protocol families now keep asset-scoped source identity for same-chain markets (notably Aave V3), preventing cross-coin cache collapse and preserving per-asset alternative-source coverage
 - protocol-native lending venue readers such as Aave V3 and Compound V3 stay in the curated Tier 2.5 lane rather than inheriting Tier 1 deterministic wrapper precedence, so a lower-yield supplemental market does not displace a stronger native wrapper purely by source family
 - wrapper resolution can now pin the intended DeFiLlama project in addition to chain and address, which keeps shared wrapper tokens fail-closed even when the same wrapper appears across multiple single-exposure venues
@@ -260,8 +261,10 @@ Risk-adjusted ranking (0–100) that balances yield magnitude against safety and
 **Formula (`shared/lib/yield-scoring.ts::computePYS`):**
 
 ```
+benchmarkSpread     = apy30d - benchmarkRate
+effectiveYield      = max(0, apy30d + benchmarkSpread * 0.25)
 riskPenalty         = max(0.5, (101 - safetyScore) / 20)
-yieldEfficiency     = apy30d / (riskPenalty ^ 1.75)
+yieldEfficiency     = effectiveYield / (riskPenalty ^ 1.75)
 sustainabilityMult  = max(0.3, 1.0 - apyVarianceScore)
 PYS                 = min(100, round(yieldEfficiency * sustainabilityMult * scalingFactor))
 ```
@@ -270,15 +273,18 @@ PYS                 = min(100, round(yieldEfficiency * sustainabilityMult * scal
 
 | Component | Range | Meaning |
 | --------- | ----- | ------- |
+| `benchmarkRate` | depends on row | Row-level benchmark selected from the benchmark registry |
+| `benchmarkSpread` | unbounded | `apy30d - benchmarkRate`; positive means the row clears its local benchmark |
+| `effectiveYield` | `>= 0` | Raw APY plus 25% of benchmark spread, floored at zero before the safety divisor |
 | `safetyScore` | 0–100 | Report card overall score. `DEFAULT_SAFETY_SCORE` (40) for unrated coins |
 | `riskPenalty` | 0.5–5.05 | Raw safety penalty before the power curve is applied |
 | `riskPenalty^1.75` | ~0.30–17.01 | Effective divisor used by PYS after the steeper safety curve is applied |
 | `apyVarianceScore` | 0–1 or null | Coefficient of variation of 30-day APY samples, clamped to [0, 1]. Returns null if < 2 samples or mean ≈ 0 (`|mean| < 1e-10`); PYS caller defaults null to 0 |
 | `scalingFactor` | 8 | Global constant (`PYS_SCALING_FACTOR` in `constants.ts`) tuned after the steeper safety curve |
 
-Returns 0 when `apy30d <= 0`.
+Returns 0 when `apy30d <= 0` or the benchmark-aware `effectiveYield` is non-positive.
 
-Frontend components display PYS breakdown via `computePysBreakdown()` in `src/lib/yield-constants.ts`, which delegates to the shared scorer and mirrors the intermediate values (`riskPenalty`, `adjustedRiskPenalty`, `yieldEfficiency`, `sustainabilityMult`). The final PYS value is always served by the API.
+Frontend components display PYS breakdown via `computePysBreakdown()` in `src/lib/yield-constants.ts`, which delegates to the shared scorer and mirrors the intermediate values (`benchmarkSpread`, `benchmarkAdjustment`, `effectiveYield`, `riskPenalty`, `adjustedRiskPenalty`, `yieldEfficiency`, `sustainabilityMult`). The final PYS value is always served by the API.
 
 ### Supporting Metrics
 
@@ -287,6 +293,7 @@ Frontend components display PYS breakdown via `computePysBreakdown()` in `src/li
 | `yieldStability` | `1 - CV(30d samples)` | 0–1, higher = more consistent. Null if < 2 samples or mean ≈ 0 (`|mean| < 1e-10`) |
 | `yieldToRisk` | `apy30d / (101 - safetyScore)` | Raw yield per unit of risk |
 | `excessYield` | `apy30d - benchmarkRate` | Yield above the row's selected benchmark |
+| `effectiveYield` | `max(0, apy30d + 0.25 * excessYield)` | Benchmark-aware yield term used by PYS before safety and consistency penalties |
 | `apy7d` | Timestamp-filtered 7d average | 7-day trailing APY (uses `recorded_at >= now - 7d`, not proportional slicing) |
 | `apy30d` | Simple average of 30d samples | 30-day trailing APY |
 | `variance30d` | Standard deviation of 30d APY samples | APY volatility measure |

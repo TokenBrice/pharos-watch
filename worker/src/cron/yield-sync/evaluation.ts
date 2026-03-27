@@ -367,19 +367,20 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
       if (usedDefaultSafety) defaultSafetyIds.add(stablecoinId);
       const safetyScore = safety?.score ?? DEFAULT_SAFETY_SCORE;
       const safetyGrade = safety?.grade ?? "NR";
+      const benchmarkSelection = resolveBenchmarkForStablecoin({
+        stablecoinId,
+        benchmarks: input.riskFreeRates,
+      });
+      const excessYield = apy30d - benchmarkSelection.meta.rate;
 
       const pharosYieldScore = computePYS({
         apy30d,
         safetyScore,
         apyVarianceScore,
         scalingFactor: PYS_SCALING_FACTOR,
+        benchmarkRate: benchmarkSelection.meta.rate,
       });
       const yieldToRisk = 101 - safetyScore > 0 ? apy30d / (101 - safetyScore) : null;
-      const benchmarkSelection = resolveBenchmarkForStablecoin({
-        stablecoinId,
-        benchmarks: input.riskFreeRates,
-      });
-      const excessYield = apy30d - benchmarkSelection.meta.rate;
       const prevExchangeRate = input.tier1PrevRates.get(stablecoinId) ?? null;
       const prevTvlUsd = historySelection.usedLegacyHistory
         ? (input.legacyPrevTvlById.get(stablecoinId) ?? null)

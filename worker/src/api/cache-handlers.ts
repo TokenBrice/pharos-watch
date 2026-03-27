@@ -33,6 +33,7 @@ function recomputeYieldScore(row: YieldRanking, safetyInputScore: number, scalin
     safetyScore: safetyInputScore,
     apyVarianceScore: yieldStabilityToApyVarianceScore(row.yieldStability),
     scalingFactor,
+    benchmarkRate: row.benchmarkRate ?? null,
   });
 }
 

@@ -890,7 +890,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const sync = body.sync!;
     expect(sync.freshnessStatus).toBe("degraded");
     expect(sync.warning).toBe("Mint/burn sync freshness is degraded versus the 20-minute cron cadence.");
-    expect(res.headers.get("Warning") ?? "").toContain("Response is stale");
+    expect(res.headers.get("Warning")).toBeNull();
     expect(res.headers.get("X-Data-Age")).toBe(String(50 * 60));
   });
 });

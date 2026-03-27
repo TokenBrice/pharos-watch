@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatCurrency, formatPercent, formatSignedPercent as sharedFormatSignedPercent } from "@shared/lib/format";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { PYS_BENCHMARK_SPREAD_WEIGHT } from "@shared/lib/yield-scoring";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 
 interface YieldDetailSectionProps {
@@ -57,6 +58,10 @@ function PysBreakdown({
   score,
   toneClass,
   adjustedRiskPenalty,
+  benchmarkAdjustment,
+  benchmarkLabel,
+  benchmarkSpread,
+  effectiveYield,
   yieldEfficiency,
   safetyGrade,
   safetyScore,
@@ -65,6 +70,10 @@ function PysBreakdown({
   score: number | null;
   toneClass: string;
   adjustedRiskPenalty: number;
+  benchmarkAdjustment: number;
+  benchmarkLabel?: string | null;
+  benchmarkSpread: number | null;
+  effectiveYield: number;
   yieldEfficiency: number;
   safetyGrade: string | null;
   safetyScore: number | null;
@@ -84,8 +93,23 @@ function PysBreakdown({
           <ChevronDown aria-hidden="true" className="h-3 w-3 transition-transform group-open:rotate-180" />
         </span>
       </summary>
-      <div className="pt-2 sm:absolute sm:bottom-full sm:left-1/2 sm:z-50 sm:mb-2 sm:w-max sm:max-w-[220px] sm:-translate-x-1/2 sm:pt-0">
+      <div className="pt-2 sm:absolute sm:bottom-full sm:left-1/2 sm:z-50 sm:mb-2 sm:w-max sm:max-w-[260px] sm:-translate-x-1/2 sm:pt-0">
         <div className="space-y-1.5 rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
+          <div>
+            <span className="text-muted-foreground">Effective Yield: </span>
+            <span className="font-mono">{effectiveYield.toFixed(1)}%</span>
+          </div>
+          {benchmarkSpread !== null ? (
+            <div>
+              <span className="text-muted-foreground">Benchmark Adj.: </span>
+              <span className="font-mono">{formatSignedPercent(benchmarkAdjustment)}</span>
+              <span className="text-muted-foreground">
+                {" "}
+                ({(PYS_BENCHMARK_SPREAD_WEIGHT * 100).toFixed(0)}% of {formatSignedPercent(benchmarkSpread)}
+                {benchmarkLabel ? ` vs ${benchmarkLabel}` : " spread"})
+              </span>
+            </div>
+          ) : null}
           <div>
             <span className="text-muted-foreground">Yield Efficiency: </span>
             <span className="font-mono">{yieldEfficiency.toFixed(1)}</span>
@@ -213,10 +237,11 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
     return null;
   }
 
-  const { adjustedRiskPenalty, yieldEfficiency, sustainabilityMult } = computePysBreakdown(
+  const { adjustedRiskPenalty, benchmarkAdjustment, benchmarkSpread, effectiveYield, yieldEfficiency, sustainabilityMult } = computePysBreakdown(
     ranking.apy30d,
     ranking.safetyScore,
     ranking.yieldStability,
+    ranking.benchmarkRate,
   );
   const pysColor = getPysColor(ranking.pharosYieldScore);
   const stabilityValue = ranking.yieldStability !== null ? `${(ranking.yieldStability * 100).toFixed(0)}%` : "—";
@@ -329,6 +354,10 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
                 score={ranking.pharosYieldScore}
                 toneClass={pysColor}
                 adjustedRiskPenalty={adjustedRiskPenalty}
+                benchmarkAdjustment={benchmarkAdjustment}
+                benchmarkLabel={ranking.benchmarkLabel}
+                benchmarkSpread={benchmarkSpread}
+                effectiveYield={effectiveYield}
                 yieldEfficiency={yieldEfficiency}
                 safetyGrade={ranking.safetyGrade}
                 safetyScore={ranking.safetyScore}
