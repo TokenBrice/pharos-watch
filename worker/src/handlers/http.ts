@@ -3,6 +3,7 @@ import { addCorsHeaders, handleCorsPreflight, resolveCorsOrigin } from "./http/c
 import { buildRouteContext } from "./http/context";
 import { createEdgeCacheContext, readEdgeCache, writeEdgeCache } from "./http/edge-cache";
 import { evaluateAccessGate, handleMaintenanceMode, notFoundResponse, warnWorkerEnvIssuesOnce } from "./http/gates";
+import { flushPendingPrunes } from "../lib/rate-limit";
 import type { Env } from "../lib/env";
 
 export async function handleHttpRequest(
@@ -46,6 +47,7 @@ export async function handleHttpRequest(
     return addCorsHeaders(notFoundResponse(), origin);
   }
 
+  ctx.waitUntil(flushPendingPrunes());
   writeEdgeCache(edgeCache, response, ctx);
   return addCorsHeaders(response, origin);
 }

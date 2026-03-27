@@ -18,6 +18,20 @@ const PUBLIC_API_PRUNE_WINDOW_MULTIPLIER = 10;
 let lastPublicApiPruneBucket: number | null = null;
 let publicApiPruneFailures = 0;
 let feedbackPruneFailures = 0;
+let pendingPublicPrune: Promise<void> | null = null;
+let pendingFeedbackPrune: Promise<void> | null = null;
+
+/**
+ * Flush any pending rate-limit prune promises.
+ * Call via `ctx.waitUntil(flushPendingPrunes())` in the main fetch handler
+ * so isolate shutdown doesn't abort in-flight cleanup.
+ */
+export function flushPendingPrunes(): Promise<void> {
+  const promises: Promise<void>[] = [];
+  if (pendingPublicPrune) { promises.push(pendingPublicPrune); pendingPublicPrune = null; }
+  if (pendingFeedbackPrune) { promises.push(pendingFeedbackPrune); pendingFeedbackPrune = null; }
+  return promises.length > 0 ? Promise.all(promises).then(() => {}) : Promise.resolve();
+}
 
 function buildRateLimitExceededResponse(retryAfterSec: number): Response {
   const resp = new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
@@ -83,7 +97,7 @@ export async function checkPublicApiRateLimit(
 
     if (lastPublicApiPruneBucket !== bucketStart) {
       lastPublicApiPruneBucket = bucketStart;
-      db.prepare("DELETE FROM public_api_rate_limit WHERE bucket_start < ?")
+      pendingPublicPrune = db.prepare("DELETE FROM public_api_rate_limit WHERE bucket_start < ?")
         .bind(bucketStart - windowSec * PUBLIC_API_PRUNE_WINDOW_MULTIPLIER)
         .run()
         .then(() => { publicApiPruneFailures = 0; })
@@ -138,7 +152,7 @@ export async function checkFeedbackRateLimit(
     return false;
   }
 
-  db.prepare("DELETE FROM feedback_rate_limit WHERE submitted_at < ?")
+  pendingFeedbackPrune = db.prepare("DELETE FROM feedback_rate_limit WHERE submitted_at < ?")
     .bind(now - 3600)
     .run()
     .then(() => { feedbackPruneFailures = 0; })
