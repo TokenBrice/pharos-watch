@@ -2,7 +2,7 @@ import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
 import {
   withErrorHandler,
   resolveOrReject,
-  parseIntParam,
+  parseQueryParams,
   jsonFreshResponse,
   getLatestSuccessfulCronTimestamp,
   buildMethodologyEnvelope,
@@ -19,14 +19,12 @@ import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 
 export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;
-  const limit = parseIntParam(params.get("limit"), 100, 1, 1000, "limit");
-  if (limit instanceof Response) {
-    return limit;
-  }
-  const offset = parseIntParam(params.get("offset"), 0, 0, Number.MAX_SAFE_INTEGER, "offset");
-  if (offset instanceof Response) {
-    return offset;
-  }
+  const parsed = parseQueryParams(params, {
+    limit: { type: "int", default: 100, min: 1, max: 1000 },
+    offset: { type: "int", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER },
+  });
+  if (parsed instanceof Response) return parsed;
+  const { limit, offset } = parsed;
   const stablecoin = params.get("stablecoin");
   const active = params.get("active");
 

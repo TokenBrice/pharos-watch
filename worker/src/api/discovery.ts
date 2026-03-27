@@ -1,4 +1,4 @@
-import { jsonResponse, errorResponse, parseIntParam, withErrorHandler } from "../lib/api-utils";
+import { jsonResponse, errorResponse, parseQueryParams, withErrorHandler } from "../lib/api-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { DiscoveryCandidate } from "@shared/types/status";
 
@@ -24,14 +24,12 @@ export const handleDiscoveryCandidates = withErrorHandler("discovery-candidates"
   if (parsedStatus instanceof Response) {
     return parsedStatus;
   }
-  const limit = parseIntParam(url.searchParams.get("limit"), 50, 1, 200, "limit");
-  if (limit instanceof Response) {
-    return limit;
-  }
-  const offset = parseIntParam(url.searchParams.get("offset"), 0, 0, Number.MAX_SAFE_INTEGER, "offset");
-  if (offset instanceof Response) {
-    return offset;
-  }
+  const parsed = parseQueryParams(url.searchParams, {
+    limit: { type: "int", default: 50, min: 1, max: 200 },
+    offset: { type: "int", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER },
+  });
+  if (parsed instanceof Response) return parsed;
+  const { limit, offset } = parsed;
 
   let whereClause: string;
   switch (parsedStatus) {

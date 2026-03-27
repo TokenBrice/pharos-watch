@@ -1,4 +1,4 @@
-import { parseIntParam, jsonResponse, errorResponse } from "../lib/api-utils";
+import { parseQueryParams, jsonResponse, errorResponse } from "../lib/api-utils";
 import { withAdmin } from "../lib/auth";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { getDepegThresholdBps, DEPEG_SECONDARY_THRESHOLD_RATIO, USER_AGENT } from "../lib/constants";
@@ -47,15 +47,15 @@ export async function handleAuditDepegHistory(
   return withAdmin(
     request,
     async () => {
-      // Pagination: ?limit=N&offset=M — Analyst plan (500 req/min) supports large batches
-      const limit = parseIntParam(url.searchParams.get("limit"), 200, 1, 100_000, "limit");
-      if (limit instanceof Response) {
-        return limit;
-      }
-      const offset = parseIntParam(url.searchParams.get("offset"), 0, 0, 100_000, "offset");
-      if (offset instanceof Response) {
-        return offset;
-      }
+      // Pagination + supply filter
+      const parsed = parseQueryParams(url.searchParams, {
+        limit: { type: "int", default: 200, min: 1, max: 100_000 },
+        offset: { type: "int", default: 0, min: 0, max: 100_000 },
+        "min-supply": { type: "int", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER, name: "min-supply" },
+      });
+      if (parsed instanceof Response) return parsed;
+      const { limit, offset } = parsed;
+      const minSupply = parsed["min-supply"];
       // Direct delete: ?delete=ID1,ID2 skips CG checks and deletes specified events
       const deleteIds = url.searchParams.get("delete");
       // Dry run: preview deletions without touching the DB
@@ -66,11 +66,6 @@ export async function handleAuditDepegHistory(
           JSON.stringify({ error: "Method not allowed. GET supports dry-run=true only; use POST for mutations." }),
           { status: 405, headers: { "Content-Type": "application/json", Allow: "POST" } },
         );
-      }
-      // Optional supply filter: ?min-supply=N (default 0 = audit everything with a geckoId)
-      const minSupply = parseIntParam(url.searchParams.get("min-supply"), 0, 0, Number.MAX_SAFE_INTEGER, "min-supply");
-      if (minSupply instanceof Response) {
-        return minSupply;
       }
       // Optional symbol filter: ?symbol=USDC (case-insensitive)
       const symbolFilter = url.searchParams.get("symbol")?.toUpperCase() ?? null;

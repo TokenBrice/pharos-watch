@@ -4,7 +4,7 @@ import {
   addFreshnessHeaders,
   resolveOrReject,
   errorResponse,
-  parseIntParam,
+  parseQueryParams,
   jsonResponse,
   getLatestSuccessfulCronTimestamp,
 } from "../lib/api-utils";
@@ -73,10 +73,11 @@ export const handleMintBurnFlows = withErrorHandler(
   async (db: D1Database, url: URL): Promise<Response> => {
     const params = url.searchParams;
     const stablecoinParam = params.get("stablecoin");
-    const hours = parseIntParam(params.get("hours"), 24, 1, 720, "hours");
-    if (hours instanceof Response) {
-      return hours;
-    }
+    const parsed = parseQueryParams(params, {
+      hours: { type: "int", default: 24, min: 1, max: 720 },
+    });
+    if (parsed instanceof Response) return parsed;
+    const { hours } = parsed;
 
     if (stablecoinParam) {
       const resolved = resolveOrReject(stablecoinParam);

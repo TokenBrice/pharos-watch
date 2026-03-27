@@ -1,4 +1,4 @@
-import { parseIntParam, withErrorHandler, jsonResponse } from "../lib/api-utils";
+import { parseQueryParams, withErrorHandler, jsonResponse } from "../lib/api-utils";
 import { withAdmin } from "../lib/auth";
 import {
   buildDiscrepancy,
@@ -34,13 +34,13 @@ export const handleStatusHistory = withErrorHandler(
     return withAdmin(request, async () => {
       const now = Math.floor(Date.now() / 1000);
       const url = new URL(request?.url ?? "https://pharos.watch/api/status-history");
-      const limitParam = url.searchParams.get("limit");
       const from = parseTimeParam(url.searchParams.get("from"));
       const to = parseTimeParam(url.searchParams.get("to"));
-      const limit = parseIntParam(limitParam, 50, 1, 200, "limit");
-      if (limit instanceof Response) {
-        return limit;
-      }
+      const parsed = parseQueryParams(url.searchParams, {
+        limit: { type: "int", default: 50, min: 1, max: 200 },
+      });
+      if (parsed instanceof Response) return parsed;
+      const { limit } = parsed;
 
       const [{ state, staleness }, probe, streak, transitions] = await Promise.all([
         getStatusStateSnapshot(db, now),
