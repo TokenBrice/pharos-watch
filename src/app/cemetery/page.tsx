@@ -4,6 +4,7 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { CemeteryClient } from "@/components/cemetery-client";
 import { CemeteryCharts } from "@/components/cemetery-charts";
 import { FaqSection } from "@/components/faq-section";
+import { safeJsonLd } from "@/lib/json-ld";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import type { FaqItem } from "@/lib/faq";
 import { sortCemeteryCoins } from "@/lib/cemetery";
@@ -45,7 +46,7 @@ export default function CemeteryPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: safeJsonLd({
             "@context": "https://schema.org",
             "@type": "ItemList",
             name: "Stablecoin Cemetery",

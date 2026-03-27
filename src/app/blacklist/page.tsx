@@ -65,7 +65,8 @@ function parseFilters(search: string): FilterState {
   const sortDirection = (
     VALID_SORT_DIRECTIONS.has(rawSortDirection as BlacklistSortDirection) ? rawSortDirection : "desc"
   ) as BlacklistSortDirection;
-  const page = rawPage ? Math.max(1, Number.parseInt(rawPage, 10) || 1) : 1;
+  const parsed = Number(rawPage);
+  const page = rawPage && Number.isFinite(parsed) && parsed >= 1 ? Math.max(1, Math.floor(parsed)) : 1;
   const searchQuery = rawQuery === "all" ? "" : rawQuery;
 
   return {

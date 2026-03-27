@@ -297,7 +297,7 @@ export function renderCompareShareImage(
   coins: ShareCoinData[],
   pharosLogo: HTMLImageElement,
   radarData?: ShareRadarData,
-): HTMLCanvasElement {
+): HTMLCanvasElement | null {
   // Compute card and canvas height from content
   const maxRows = coins.reduce((m, c) => Math.max(m, statRowCount(c)), -Infinity);
   const cardH = CARD_HEADER_H + maxRows * ROW_H + CARD_BOTTOM_PAD;
@@ -307,7 +307,7 @@ export function renderCompareShareImage(
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Failed to get 2d context");
+  if (!ctx) return null;
 
   // --- Background ---
   ctx.fillStyle = BG;

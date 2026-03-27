@@ -337,7 +337,7 @@ export function YieldHistoryChart({
   const chartData = useMemo<YieldHistoryChartPoint[]>(() => {
     return (historyQuery.data?.history ?? [])
       .map((point: YieldHistoryPoint) => {
-        const date = toTimestampMs(point.date as unknown);
+        const date = toTimestampMs(point.date);
         return {
           date,
           apy: point.apy,

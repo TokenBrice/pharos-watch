@@ -1,5 +1,7 @@
 import { DAY_SECONDS } from "./time-constants";
 
+const BPS_PER_UNIT = 10_000;
+
 /** Abbreviate a number into tier suffixes (T/B/M/K) with configurable decimals and prefix. */
 function abbreviateNumber(value: number, decimals: number, prefix = ""): string {
   if (!Number.isFinite(value)) return "N/A";
@@ -78,9 +80,9 @@ export function formatBps(bps: number): string {
 export function formatPegDeviation(price: number | null | undefined, pegValue = 1): string {
   if (price == null || typeof price !== "number" || isNaN(price)) return "N/A";
   if (pegValue === 0) return "N/A";
-  // Deviation as basis points relative to peg: ((price / pegValue) - 1) * 10000
+  // Deviation as basis points relative to peg: ((price / pegValue) - 1) * BPS_PER_UNIT
   const ratio = price / pegValue;
-  const bps = Math.round((ratio - 1) * 10000);
+  const bps = Math.round((ratio - 1) * BPS_PER_UNIT);
   if (!Number.isFinite(bps)) return "N/A";
   return formatBps(bps);
 }
@@ -162,7 +164,10 @@ export function formatDuration(startSec: number, endSec: number | null): string 
 export function formatDeathDate(d: string): string {
   const [year, month] = d.split("-");
   if (!month) return year;
-  const date = new Date(Number(year), Number(month) - 1);
+  const y = Number(year);
+  const m = Number(month);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return d;
+  const date = new Date(y, m - 1);
   return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 }
 
@@ -234,6 +239,7 @@ export function formatChartDate(
   format: ChartDateFormat = "short",
 ): string {
   const d = new Date(timestamp);
+  if (isNaN(d.getTime())) return String(timestamp);
   switch (format) {
     case "short":
       return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });

@@ -23,6 +23,8 @@ export function usePreference<T>(
         return defaultValue;
       }
       const parsed = JSON.parse(stored) as unknown;
+      // When no decode function is provided, the parsed value is trusted as T.
+      // Callers handling complex types should supply a decoder for runtime validation.
       return options.decode ? options.decode(parsed) : (parsed as T);
     } catch {
       return defaultValue;

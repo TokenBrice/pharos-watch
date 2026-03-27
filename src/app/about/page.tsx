@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { safeJsonLd } from "@/lib/json-ld";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { ACTIVE_STABLECOINS, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";
 
@@ -377,7 +378,7 @@ export default function AboutPage() {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
+            __html: safeJsonLd({
               "@context": "https://schema.org",
               "@type": "FAQPage",
               mainEntity: [

@@ -112,13 +112,15 @@ export function useCompareShareActions({
       const data = await buildShareData();
       if (data) {
         const canvas = renderCompareShareImage(data.coins, data.pharosLogo, data.radarData);
-        const blob = await canvasToBlob(canvas);
-        try {
-          await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-          setToast("Image copied! Paste it in your tweet (Ctrl+V)");
-          setTimeout(() => setToast(null), 5000);
-        } catch {
-          // Clipboard image write not supported — continue to intent URL.
+        if (canvas) {
+          const blob = await canvasToBlob(canvas);
+          try {
+            await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+            setToast("Image copied! Paste it in your tweet (Ctrl+V)");
+            setTimeout(() => setToast(null), 5000);
+          } catch {
+            // Clipboard image write not supported — continue to intent URL.
+          }
         }
       }
     } finally {
@@ -141,6 +143,7 @@ export function useCompareShareActions({
       const data = await buildShareData();
       if (!data) return;
       const canvas = renderCompareShareImage(data.coins, data.pharosLogo, data.radarData);
+      if (!canvas) return;
       const blob = await canvasToBlob(canvas);
       const file = new File([blob], "pharos-compare.png", { type: "image/png" });
       const symbols = comparisonCoins.map((coin) => coin.symbol).join(" vs ");
@@ -158,8 +161,12 @@ export function useCompareShareActions({
           setToast("Image copied to clipboard");
           setTimeout(() => setToast(null), 3000);
         } catch {
-          await navigator.clipboard.writeText(window.location.href);
-          setToast("Link copied to clipboard");
+          try {
+            await navigator.clipboard.writeText(window.location.href);
+            setToast("Link copied to clipboard");
+          } catch {
+            setToast("Could not copy to clipboard");
+          }
           setTimeout(() => setToast(null), 3000);
         }
       }
@@ -178,6 +185,7 @@ export function useCompareShareActions({
       const data = await buildShareData();
       if (!data) return;
       const canvas = renderCompareShareImage(data.coins, data.pharosLogo, data.radarData);
+      if (!canvas) return;
       const blob = await canvasToBlob(canvas);
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");

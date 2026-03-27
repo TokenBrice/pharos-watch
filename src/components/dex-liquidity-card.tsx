@@ -252,8 +252,8 @@ function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPool[]; t
             </tr>
           </thead>
           <tbody>
-            {pools.slice(0, 5).map((pool, i) => (
-              <tr key={i} className="border-t">
+            {pools.slice(0, 5).map((pool) => (
+              <tr key={`${pool.chain}-${pool.symbol}-${pool.project}`} className="border-t">
                 <td className="px-3 py-1.5">
                   <div className="flex items-center gap-1.5">
                     <StressDot stress={pool.extra?.stressIndex} />

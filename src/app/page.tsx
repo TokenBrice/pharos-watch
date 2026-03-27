@@ -5,6 +5,7 @@ import { CHAIN_META } from "@shared/lib/chains";
 import { HomepageClient } from "@/components/homepage-client";
 import { KpiBar } from "@/components/kpi-bar";
 import { SiteHeader } from "@/components/site-header";
+import { safeJsonLd } from "@/lib/json-ld";
 import { buildStablecoinUrl } from "@/lib/urls";
 
 export const metadata: Metadata = {
@@ -42,7 +43,7 @@ export default function HomePage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: safeJsonLd({
             "@context": "https://schema.org",
             "@type": "ItemList",
             name: "Top Tracked Stablecoins",

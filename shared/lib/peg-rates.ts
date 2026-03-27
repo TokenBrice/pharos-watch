@@ -68,6 +68,8 @@ export function derivePegRates(
   const rates: Record<string, number> = {};
   const sources: Record<string, PegRateSource> = {};
   for (const [peg, prices] of Object.entries(groups)) {
+    // Guard: skip empty groups (shouldn't happen since we only push non-empty,
+    // but defends the median indexing below against an empty array).
     if (prices.length === 0) continue;
     prices.sort((a, b) => a - b);
     const mid = Math.floor(prices.length / 2);

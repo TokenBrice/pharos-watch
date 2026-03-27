@@ -65,8 +65,6 @@ export const CANONICAL_WETH_RESERVE_RISK = CANONICAL_RESERVE_ASSET_RISK_BY_SYMBO
 
 export function getCanonicalReserveAssetRisk(symbol: string): ReserveRisk | null {
   const normalized = symbol.trim().toUpperCase();
-  const risk = CANONICAL_RESERVE_ASSET_RISK_BY_SYMBOL[
-    normalized as keyof typeof CANONICAL_RESERVE_ASSET_RISK_BY_SYMBOL
-  ];
+  const risk = (CANONICAL_RESERVE_ASSET_RISK_BY_SYMBOL as Record<string, ReserveRisk | undefined>)[normalized];
   return risk ?? null;
 }

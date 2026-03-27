@@ -40,6 +40,9 @@ import type { MethodologyContextKey } from "@/lib/methodology-context";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 
+const HISTORY_WINDOW_DAYS = 30;
+const SCORE_DECIMAL_PLACES = 1;
+
 const COMPONENT_COLORS = {
   severity: CHART_ORANGE,
   breadth: CHART_BLUE,
@@ -253,11 +256,12 @@ type HistoryStatItem = { label: string; value: string; band: string; sub: string
 function useHistoryStats(history: HistoryPoint[]): HistoryStatItem[] {
   return useMemo(() => {
     if (!history.length) return [];
-    const last30 = history.slice(0, 30);
+    const last30 = history.slice(0, HISTORY_WINDOW_DAYS);
     const scores = last30.map((p) => p.score);
     const high30 = scores.reduce((m, s) => Math.max(m, s), -Infinity);
     const low30 = scores.reduce((m, s) => Math.min(m, s), Infinity);
-    const avg30 = Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10;
+    const factor = 10 ** SCORE_DECIMAL_PLACES;
+    const avg30 = Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * factor) / factor;
     const avg30Band = BAND_ZONES.find((z) => avg30 >= z.y1)?.label ?? "";
     const high30Band = last30.find((p) => p.score === high30)?.band ?? "";
     const low30Band = last30.find((p) => p.score === low30)?.band ?? "";

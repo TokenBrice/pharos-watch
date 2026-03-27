@@ -63,7 +63,8 @@ function loadFromStorage(): PortfolioHolding[] {
       saveToStorage(migrated);
     }
     return migrated;
-  } catch {
+  } catch (e) {
+    console.warn("[usePortfolio] Failed to parse stored portfolio, resetting:", e);
     return [];
   }
 }

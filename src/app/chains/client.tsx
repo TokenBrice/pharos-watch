@@ -47,7 +47,7 @@ function sortChains(chains: ChainSummary[], key: ChainSortKey, dir: "asc" | "des
   return [...chains].sort((a, b) => {
     const av = a[key] ?? -Infinity;
     const bv = b[key] ?? -Infinity;
-    return dir === "desc" ? (bv as number) - (av as number) : (av as number) - (bv as number);
+    return dir === "desc" ? bv - av : av - bv;
   });
 }
 

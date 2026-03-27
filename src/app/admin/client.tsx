@@ -155,6 +155,8 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
   const [isHealthyCronGroupsOpen, setIsHealthyCronGroupsOpen] = useState(false);
   const [isTelegramOpen, setIsTelegramOpen] = useState(false);
 
+  // setTimeout(fn, 0) defers setState out of the effect's synchronous body
+  // to satisfy the react-hooks/set-state-in-effect lint rule.
   useEffect(() => {
     if (!diagnosticsSignal) return;
     const timer = window.setTimeout(() => setIsDiagnosticsOpen(true), 0);

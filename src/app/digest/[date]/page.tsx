@@ -5,6 +5,7 @@ import { Newsreader } from "next/font/google";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { DigestSnapshot } from "@/components/digest-snapshot";
 import { splitDigestParagraphs, EDITORIAL_BODY_STYLE } from "@/lib/digest";
+import { safeJsonLd } from "@/lib/json-ld";
 import { summarizeText } from "@/lib/page-metadata";
 import digests from "../../../../data/digests.json";
 
@@ -35,8 +36,12 @@ export function generateStaticParams() {
 }
 
 function formatDate(dateStr: string): string {
-  const [y, m, d] = dateStr.replace(/-weekly$/, "").split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+  const parts = dateStr.replace(/-weekly$/, "").split("-").map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return dateStr;
+  const [y, m, d] = parts;
+  const date = new Date(y, m - 1, d);
+  if (isNaN(date.getTime())) return dateStr;
+  return date.toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
     year: "numeric",
@@ -95,7 +100,7 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: safeJsonLd({
             "@context": "https://schema.org",
             "@type": "Article",
             headline: `${digest.title} (${formatted})`,

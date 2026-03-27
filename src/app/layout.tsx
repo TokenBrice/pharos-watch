@@ -10,6 +10,7 @@ import { ScrollToTop } from "@/components/scroll-to-top";
 import { FeedbackButton } from "@/components/feedback-button";
 import { MobileUtilityDock } from "@/components/mobile-utility-dock";
 import { RegimeBar } from "@/components/regime-bar";
+import { safeJsonLd } from "@/lib/json-ld";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
@@ -133,7 +134,7 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify([
+            __html: safeJsonLd([
               {
                 "@context": "https://schema.org",
                 "@type": "WebSite",

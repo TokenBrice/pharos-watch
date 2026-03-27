@@ -40,6 +40,7 @@ export function useCountUp(target: number, opts?: CountUpOptions): string {
   );
   const fromRef = useRef(0);
   const rafRef = useRef<number>(0);
+  const startRef = useRef(0);
 
   useEffect(() => {
     if (reducedMotion) {
@@ -51,10 +52,10 @@ export function useCountUp(target: number, opts?: CountUpOptions): string {
     const delta = target - from;
     if (delta === 0) return;
 
-    const start = performance.now();
+    startRef.current = performance.now();
 
     function tick(now: number) {
-      const elapsed = now - start;
+      const elapsed = now - startRef.current;
       const progress = Math.min(elapsed / duration, 1);
       const eased = easeOutCubic(progress);
       const current = from + delta * eased;
@@ -74,7 +75,7 @@ export function useCountUp(target: number, opts?: CountUpOptions): string {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       // Capture current display value as the starting point for the next animation
       fromRef.current = from + delta * easeOutCubic(
-        Math.min((performance.now() - start) / duration, 1),
+        Math.min((performance.now() - startRef.current) / duration, 1),
       );
     };
   }, [target, duration, reducedMotion]);

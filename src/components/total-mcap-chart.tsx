@@ -17,6 +17,7 @@ import { useStablecoinCharts } from "@/hooks/api-hooks";
 import { useStablecoinDetailHistory } from "@/hooks/use-stablecoin-detail-history";
 import { computeChartYDomain } from "@/lib/chart-utils";
 import { buildTotalMcapChartRows } from "@/lib/total-mcap-chart";
+import { CHART_SLATE } from "@/lib/chart-colors";
 
 /** Format a value as billions with $ prefix, e.g. "$142.5 B" */
 function formatBillions(value: number): string {
@@ -24,11 +25,10 @@ function formatBillions(value: number): string {
   return `$${(value / 1e9).toFixed(1)} B`;
 }
 
-/* Brand colors */
+// Brand colors — unique to this chart, not part of the design system palette
 const USDT_GREEN = "#26a17b";
 const USDC_BLUE = "#2775ca";
 const SKY_YELLOW = "#f5a623";
-const OTHERS_SLATE = "#94a3b8";
 
 export function TotalMcapChart() {
   const chartRef = useRef<HTMLDivElement>(null);
@@ -133,7 +133,7 @@ export function TotalMcapChart() {
                 USDS + DAI{latest ? `: ${formatBillions(latest.sky)}` : ""}
               </div>
               <div className="pharos-chart-legend-chip">
-                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: OTHERS_SLATE }} />
+                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CHART_SLATE }} />
                 Others{latest ? `: ${formatBillions(latest.others)}` : ""}
               </div>
             </div>
@@ -165,8 +165,8 @@ export function TotalMcapChart() {
                       <stop offset="95%" stopColor={SKY_YELLOW} stopOpacity={0.1} />
                     </linearGradient>
                     <linearGradient id="othersGrad" x1={0} y1={0} x2={0} y2={1}>
-                      <stop offset="5%" stopColor={OTHERS_SLATE} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={OTHERS_SLATE} stopOpacity={0.05} />
+                      <stop offset="5%" stopColor={CHART_SLATE} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={CHART_SLATE} stopOpacity={0.05} />
                     </linearGradient>
                   </defs>
                   <TimeGrid />
@@ -218,7 +218,7 @@ export function TotalMcapChart() {
                     type="monotone"
                     dataKey="others"
                     stackId="mcap"
-                    stroke={OTHERS_SLATE}
+                    stroke={CHART_SLATE}
                     fill="url(#othersGrad)"
                     strokeWidth={1.5}
                     name="Others"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { DepegEventsResponseSchema, type DepegEventsResponse } from "@shared/types";
@@ -53,10 +53,18 @@ export function useInfiniteDepegEvents({
     },
   });
   const { error, fetchNextPage, hasNextPage, isFetchingNextPage } = query;
+  const retryCountRef = useRef(0);
+  const MAX_AUTO_LOAD_RETRIES = 3;
 
   useEffect(() => {
-    if (!autoLoadAll || !enabled || !hasNextPage || isFetchingNextPage || error) {
+    if (!autoLoadAll || !enabled || !hasNextPage || isFetchingNextPage) {
       return;
+    }
+    if (error) {
+      retryCountRef.current += 1;
+      if (retryCountRef.current > MAX_AUTO_LOAD_RETRIES) return;
+    } else {
+      retryCountRef.current = 0;
     }
     void fetchNextPage();
   }, [

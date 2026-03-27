@@ -197,8 +197,8 @@ export async function apiFetchWithMeta<T>(
   if (!meta) {
     const ageHeader = res.headers.get("X-Data-Age");
     if (ageHeader) {
-      const age = parseInt(ageHeader, 10);
-      if (!isNaN(age)) {
+      const age = Number(ageHeader);
+      if (Number.isFinite(age) && age >= 0) {
         const ratio = age / maxAgeSec;
         const status = ratio <= 1 ? "fresh" : ratio <= 1.5 ? "degraded" : "stale";
         meta = { updatedAt: Math.floor(Date.now() / 1000) - age, ageSeconds: age, status };

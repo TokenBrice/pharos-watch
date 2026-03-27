@@ -89,6 +89,7 @@ export function useDigestArchive() {
   );
 }
 
+// Digest snapshots are immutable by date — static cache, no polling needed
 export function useDigestSnapshot(date: string): UseQueryResult<DigestSnapshotResponse, Error> {
   return useQuery<DigestSnapshotResponse, Error>(
     createStaticQueryOptions(

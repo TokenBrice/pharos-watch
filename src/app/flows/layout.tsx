@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { safeJsonLd } from "@/lib/json-ld";
 
 export const metadata: Metadata = {
   title: "Mint/Burn Flows",
@@ -31,7 +32,7 @@ export default function FlowsLayout({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: safeJsonLd({
             "@context": "https://schema.org",
             "@type": "FAQPage",
             "mainEntity": [

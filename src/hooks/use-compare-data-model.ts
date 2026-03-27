@@ -81,9 +81,19 @@ export function useCompareDataModel({
       .filter((entry): entry is NonNullable<typeof entry> => entry != null);
   }, [cardMap, selectedIds]);
 
-  const pegRates = useMemo(() => {
-    if (!listData?.peggedAssets) return {};
-    return derivePegRates(listData.peggedAssets, TRACKED_META_BY_ID, listData.fxFallbackRates).rates;
+  // pegRates and assetMap share the same dependency (listData), so they are
+  // combined into one memoised block to avoid redundant re-computation.
+  const { pegRates, assetMap } = useMemo(() => {
+    if (!listData?.peggedAssets) {
+      return {
+        pegRates: {} as Record<string, number>,
+        assetMap: new Map<string, StablecoinData>(),
+      };
+    }
+    return {
+      pegRates: derivePegRates(listData.peggedAssets, TRACKED_META_BY_ID, listData.fxFallbackRates).rates,
+      assetMap: new Map(listData.peggedAssets.map((a) => [a.id, a] as const)),
+    };
   }, [listData]);
 
   const detailQueries = useQueries({
@@ -121,11 +131,8 @@ export function useCompareDataModel({
     return errors;
   }, [detailQueries, selectedIds]);
 
-  const assetMap = useMemo(() => {
-    if (!listData?.peggedAssets) return new Map<string, StablecoinData>();
-    return new Map(listData.peggedAssets.map((a) => [a.id, a] as const));
-  }, [listData]);
-
+  // pegCoinMap and flowCoinMap depend on different queries (pegSummary vs flowData)
+  // and cannot be combined without introducing unnecessary re-computation.
   const pegCoinMap = useMemo(() => {
     if (!pegSummary?.coins) return new Map<string, NonNullable<typeof pegSummary>["coins"][number]>();
     return new Map(pegSummary.coins.map((c) => [c.id, c] as const));

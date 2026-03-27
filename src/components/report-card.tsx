@@ -130,7 +130,7 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
           {/* Factor breakdown for resilience/decentralization/dependencyRisk */}
           {(dimKey === "resilience" || dimKey === "decentralization" || dimKey === "dependencyRisk") && (
             <div className="space-y-1">
-              {dim.detail.split(". ").map((part, idx) => {
+              {dim.detail.split(". ").map((part) => {
                 const match = part.match(/^(.+?):\s*(.+?)\s*\((-?\d+)\)$/);
                 if (!match) return null;
                 const [, label, desc, scoreStr] = match;
@@ -138,7 +138,7 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
                 const isNegative = subScore < 0;
                 return (
                   <div
-                    key={idx}
+                    key={`${dimKey}-${label}`}
                     className="flex items-center justify-between text-xs"
                   >
                     <span className="text-muted-foreground">
