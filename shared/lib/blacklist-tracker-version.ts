@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const blacklistTracker = createMethodologyVersion({
-  currentVersion: "3.5",
+  currentVersion: "3.6",
   changelogPath: "/methodology/blacklist-tracker-changelog/",
   changelog: [
+  {
+    version: "3.6",
+    title: "Freeze-ledger quarter attribution for the public chart",
+    date: "2026-03-27",
+    effectiveAt: 1774645600,
+    summary:
+      "The public blacklist chart now buckets the persistent freeze ledger by blacklist quarter instead of summing raw event-time blacklist rows, so the quarterly bars explain the same tracked frozen total shown in the summary cards.",
+    impact: [
+      "The `/api/blacklist-summary` chart now draws from `blacklist_current_balances` rather than raw `blacklist_events` intake amounts",
+      "Each tracked balance is attributed to the latest recorded blacklist event for the same stablecoin/chain/address identity so re-blacklisted rows follow the active freeze cycle represented in the ledger",
+      "Rows without a local blacklist timestamp fall back to the latest related event timestamp, then snapshot observation time, so tracked ledger value is not silently dropped from the chart",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.5",
     title: "Persistent freeze-ledger snapshots and bootstrap reconciliation",

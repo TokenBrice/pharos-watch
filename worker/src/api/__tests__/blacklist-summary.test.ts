@@ -78,7 +78,7 @@ describe("handleBlacklistSummary", () => {
     expect(body.stats.activeFrozenTotal).toBe(1250);
     expect(body.stats.trackedAddressCount).toBe(1);
     expect(body.stats.trackedFrozenTotal).toBe(1250);
-    expect(body.chart[0]?.total).toBe(1000);
+    expect(body.chart[0]?.total).toBe(1250);
     expect(body.chains.some((chain) => chain.id === "ethereum")).toBe(true);
     expect(body.chains.some((chain) => chain.id === "base")).toBe(true);
   });

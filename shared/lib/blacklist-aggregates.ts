@@ -4,6 +4,7 @@ import {
   isGoldBlacklistStablecoin,
   type BlacklistAddressCountMode,
 } from "./blacklist";
+import type { BlacklistCurrentBalanceSnapshot } from "./blacklist-active-records";
 import { BLACKLIST_STABLECOINS } from "../types/market";
 import type { BlacklistEvent, BlacklistStablecoin } from "../types/market";
 
@@ -80,17 +81,36 @@ export function computeBlacklistSummaryStats(
   };
 }
 
-export function buildBlacklistChartData(events: BlacklistEvent[]): BlacklistChartPoint[] {
+export function buildBlacklistChartData(
+  events: BlacklistEvent[],
+  currentBalances: ReadonlyMap<string, BlacklistCurrentBalanceSnapshot> = new Map(),
+): BlacklistChartPoint[] {
   const emptyBucket = (): Record<BlacklistStablecoin, number> =>
     Object.fromEntries(BLACKLIST_STABLECOINS.map((s) => [s, 0])) as Record<BlacklistStablecoin, number>;
 
+  const latestBlacklistTimestampByKey = new Map<string, number>();
+  const latestRelatedTimestampByKey = new Map<string, number>();
+  const ordered = [...events].sort((a, b) => (a.timestamp === b.timestamp ? a.id.localeCompare(b.id) : a.timestamp - b.timestamp));
+
+  for (const evt of ordered) {
+    const key = buildBlacklistAddressCountKey(evt.stablecoin, evt.chainId, evt.address);
+    latestRelatedTimestampByKey.set(key, evt.timestamp);
+    if (evt.eventType === "blacklist") {
+      latestBlacklistTimestampByKey.set(key, evt.timestamp);
+    }
+  }
+
   const buckets = new Map<number, Record<BlacklistStablecoin, number>>();
 
-  for (const evt of events) {
-    if (evt.eventType !== "blacklist" || evt.amountUsdAtEvent == null || evt.amountUsdAtEvent <= 0) continue;
-    const sortKey = quarterToSortKey(evt.timestamp);
+  for (const snapshot of currentBalances.values()) {
+    if (snapshot.amountUsd == null || snapshot.amountUsd <= 0) continue;
+    const key = buildBlacklistAddressCountKey(snapshot.stablecoin, snapshot.chainId, snapshot.address);
+    const timestamp = latestBlacklistTimestampByKey.get(key)
+      ?? latestRelatedTimestampByKey.get(key)
+      ?? snapshot.observedAt;
+    const sortKey = quarterToSortKey(timestamp);
     const bucket = buckets.get(sortKey) ?? emptyBucket();
-    bucket[evt.stablecoin] = (bucket[evt.stablecoin] ?? 0) + evt.amountUsdAtEvent;
+    bucket[snapshot.stablecoin] = (bucket[snapshot.stablecoin] ?? 0) + snapshot.amountUsd;
     buckets.set(sortKey, bucket);
   }
 

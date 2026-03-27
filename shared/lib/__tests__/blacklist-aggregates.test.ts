@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildBlacklistChartData, computeBlacklistSummaryStats } from "../blacklist-aggregates";
+import type { BlacklistCurrentBalanceSnapshot } from "../blacklist-active-records";
 import type { BlacklistEvent } from "../../types/market";
 
 function makeEvent(overrides: Partial<BlacklistEvent> = {}): BlacklistEvent {
@@ -28,14 +29,35 @@ function makeEvent(overrides: Partial<BlacklistEvent> = {}): BlacklistEvent {
   };
 }
 
+function makeBalance(
+  overrides: Partial<BlacklistCurrentBalanceSnapshot> = {},
+): BlacklistCurrentBalanceSnapshot {
+  return {
+    stablecoin: "USDT",
+    chainId: "ethereum",
+    address: "0xabc",
+    amountNative: 1000,
+    amountUsd: 1000,
+    status: "resolved",
+    source: "current_balance",
+    observedAt: 1770000000,
+    ...overrides,
+  };
+}
+
 describe("buildBlacklistChartData", () => {
-  it("includes PYUSD and USD1 in chart data and total", () => {
+  it("includes tracked PYUSD and USD1 freeze-ledger balances in the chart total", () => {
     const events = [
-      makeEvent({ id: "1", stablecoin: "PYUSD", amountUsdAtEvent: 500, timestamp: 1770000000 }),
-      makeEvent({ id: "2", stablecoin: "USD1", amountUsdAtEvent: 300, timestamp: 1770000000 }),
-      makeEvent({ id: "3", stablecoin: "USDC", amountUsdAtEvent: 200, timestamp: 1770000000 }),
+      makeEvent({ id: "1", stablecoin: "PYUSD", address: "0xpy", timestamp: 1770000000 }),
+      makeEvent({ id: "2", stablecoin: "USD1", address: "0xusd1", timestamp: 1770000000 }),
+      makeEvent({ id: "3", stablecoin: "USDC", address: "0xusdc", timestamp: 1770000000 }),
     ];
-    const chart = buildBlacklistChartData(events);
+    const balances = new Map<string, BlacklistCurrentBalanceSnapshot>([
+      ["PYUSD:ethereum:0xpy", makeBalance({ stablecoin: "PYUSD", address: "0xpy", amountUsd: 500 })],
+      ["USD1:ethereum:0xusd1", makeBalance({ stablecoin: "USD1", address: "0xusd1", amountUsd: 300 })],
+      ["USDC:ethereum:0xusdc", makeBalance({ stablecoin: "USDC", address: "0xusdc", amountUsd: 200 })],
+    ]);
+    const chart = buildBlacklistChartData(events, balances);
     expect(chart.length).toBeGreaterThan(0);
     const point = chart[0];
     expect(point.PYUSD).toBe(500);
@@ -46,10 +68,42 @@ describe("buildBlacklistChartData", () => {
 
   it("returns zero for stablecoins with no events in a quarter", () => {
     const events = [makeEvent({ stablecoin: "USDT", amountUsdAtEvent: 100, timestamp: 1770000000 })];
-    const chart = buildBlacklistChartData(events);
+    const balances = new Map<string, BlacklistCurrentBalanceSnapshot>([
+      ["USDT:ethereum:0xabc", makeBalance({ amountUsd: 100 })],
+    ]);
+    const chart = buildBlacklistChartData(events, balances);
     const point = chart[0];
     expect(point.PYUSD).toBe(0);
     expect(point.USD1).toBe(0);
+  });
+
+  it("attributes tracked balances to the latest recorded blacklist quarter for that address", () => {
+    const events = [
+      makeEvent({ id: "1", address: "0xre", stablecoin: "USDT", timestamp: 1710000000 }),
+      makeEvent({ id: "2", address: "0xre", stablecoin: "USDT", eventType: "unblacklist", timestamp: 1714000000 }),
+      makeEvent({ id: "3", address: "0xre", stablecoin: "USDT", timestamp: 1723000000 }),
+    ];
+    const balances = new Map<string, BlacklistCurrentBalanceSnapshot>([
+      ["USDT:ethereum:0xre", makeBalance({ address: "0xre", amountUsd: 250 })],
+    ]);
+
+    const chart = buildBlacklistChartData(events, balances);
+
+    expect(chart).toEqual([
+      { quarter: "Q3 '24", USDT: 250, USDC: 0, PYUSD: 0, USD1: 0, PAXG: 0, XAUT: 0, total: 250 },
+    ]);
+  });
+
+  it("falls back to snapshot observation time when no local event timestamp exists", () => {
+    const balances = new Map<string, BlacklistCurrentBalanceSnapshot>([
+      ["USDT:ethereum:0xfallback", makeBalance({ address: "0xfallback", amountUsd: 400, observedAt: 1730500000 })],
+    ]);
+
+    const chart = buildBlacklistChartData([], balances);
+
+    expect(chart).toEqual([
+      { quarter: "Q4 '24", USDT: 400, USDC: 0, PYUSD: 0, USD1: 0, PAXG: 0, XAUT: 0, total: 400 },
+    ]);
   });
 });
 

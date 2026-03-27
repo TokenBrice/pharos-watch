@@ -61,9 +61,9 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
-            <CardTitle as="h2" className="pharos-kicker">Blacklisted Funds Over Time</CardTitle>
+            <CardTitle as="h2" className="pharos-kicker">Tracked Frozen Total by Quarter</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Historical USD-at-event value for blacklist actions, per quarter, where valuation is available
+              Quarterly spread of the tracked freeze ledger, attributed to each address&apos;s latest recorded blacklist quarter
             </p>
           </div>
           {peakQuarters.length > 0 && (
@@ -81,7 +81,7 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          Peak freeze quarters surface above so the top chart stays legible without losing the issuer breakdown.
+          Bars stack only tracked USD balances, so the quarterly totals roll up to the public freeze-ledger total.
         </p>
       </CardHeader>
       <CardContent>
@@ -90,7 +90,7 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
             ref={chartContainerRef}
             className={CHART_HEIGHT}
             role="figure"
-            aria-label={`Blacklisted funds stacked bar chart showing ${chartData.length} quarters of freeze events by stablecoin issuer`}
+            aria-label={`Tracked frozen total stacked bar chart showing ${chartData.length} quarters of freeze-ledger balances by stablecoin issuer`}
           >
             {isChartReady ? (
               <ComposedChart

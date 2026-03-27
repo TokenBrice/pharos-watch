@@ -452,10 +452,10 @@ The handler now exposes only the live-supported symbols: USDC, USDT, PAXG, XAUT,
   ],
   "total": 12345,
   "methodology": {
-    "version": "3.4",
-    "versionLabel": "v3.4",
-    "currentVersion": "3.4",
-    "currentVersionLabel": "v3.4",
+    "version": "3.6",
+    "versionLabel": "v3.6",
+    "currentVersion": "3.6",
+    "currentVersionLabel": "v3.6",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1704067200,
     "isCurrent": true
@@ -475,6 +475,7 @@ The summary now mixes two intentionally distinct lenses:
 - event-history stats such as `destroyedTotal`
 - local event-state stats such as `activeFrozenTotal`, sourced from Pharos' active blacklist state machine
 - tracked freeze-ledger stats such as `trackedFrozenTotal`, sourced from `blacklist_current_balances`
+- quarterly chart buckets sourced from the tracked freeze ledger and attributed to each row's latest recorded blacklist quarter
 
 ---
 
@@ -536,7 +537,7 @@ Both endpoints now emit freshness headers from the same hourly `sync-blacklist` 
 | Search           | (inline)                               | Server-backed address search                                                                    |
 | BlacklistTable   | `src/components/blacklist-table.tsx`   | Server-sorted, 50 rows per page                                                                 |
 | BlacklistStats   | `src/components/blacklist-stats.tsx`   | USDC/USDT unique blacklisted addresses, freeze-ledger totals, gold addresses, and destroyed funds |
-| BlacklistChart   | `src/components/blacklist-chart.tsx`   | Quarterly stacked bar chart of blacklisted funds by stablecoin                                  |
+| BlacklistChart   | `src/components/blacklist-chart.tsx`   | Quarterly stacked bar chart of tracked freeze-ledger balances by stablecoin, attributed to blacklist quarter |
 | CSV export       | (inline)                               | Download filtered events as CSV                                                                 |
 
 ### Amount Display Logic
@@ -604,4 +605,4 @@ Both endpoints now emit freshness headers from the same hourly `sync-blacklist` 
 | `src/components/blacklist-filters.tsx`                     | Filter UI (stablecoin, chain, event type)                                                  |
 | `src/components/blacklist-table.tsx`                       | Sortable paginated table                                                                   |
 | `src/components/blacklist-stats.tsx`                       | Summary statistics cards                                                                   |
-| `src/components/blacklist-chart.tsx`                       | Quarterly stacked bar chart                                                                |
+| `src/components/blacklist-chart.tsx`                       | Quarterly tracked freeze-ledger chart                                                    |

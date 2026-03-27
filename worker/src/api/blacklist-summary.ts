@@ -104,7 +104,7 @@ export const handleBlacklistSummary = withErrorHandler(
           trackedFrozenTotal: trackedStats.trackedFrozenTotal,
           trackedAmountGapCount: trackedStats.trackedAmountGapCount,
         },
-        chart: buildBlacklistChartData(events),
+        chart: buildBlacklistChartData(events, currentBalances),
         chains: chainOptions,
         totalEvents: events.length,
         methodology: buildMethodologyEnvelope({

@@ -877,8 +877,8 @@ export function MonitoringMethodologySections() {
           <p>
             Methodology revisions document changes to event coverage, cross-chain decoding behavior, cursor safety
             policies, event-time amount attribution rules, and the separate freeze-ledger snapshot used for the public
-            summary, including the reconciled `kyc.rip` / `stables.rip` bootstrap for ETH USDC, ETH USDT, and TRON
-            USDT.
+            summary and quarterly chart, including the reconciled `kyc.rip` / `stables.rip` bootstrap for ETH USDC,
+            ETH USDT, and TRON USDT.
           </p>
       </MethodologySectionShell>
 
