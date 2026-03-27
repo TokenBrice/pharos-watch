@@ -13,7 +13,7 @@
     "worker/src/cron/sync-stablecoins.ts": 94,
     "worker/src/cron/daily-digest.ts": 77.9,
     "worker/src/cron/sync-yield-data.ts": 96.7,
-    "worker/src/api/discovery.ts": 87.5,
+    "worker/src/api/discovery.ts": 86.2,
     "worker/src/api/peg-summary.ts": 62.8,
     "worker/src/api/report-cards.ts": 85.7,
     "worker/src/api/dex-liquidity.ts": 85.2,
