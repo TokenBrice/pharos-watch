@@ -219,7 +219,8 @@ describe("worker.fetch", () => {
 
     expect(res.status).toBe(200);
     expect(cacheMatch).toHaveBeenCalledTimes(1);
-    expect(ctx.waitUntil).toHaveBeenCalledTimes(1);
+    // 1 for cache write + 1 for flushPendingPrunes (rate-limit cleanup)
+    expect(ctx.waitUntil).toHaveBeenCalledTimes(2);
     expect(cachePut).toHaveBeenCalledTimes(1);
   });
 });
