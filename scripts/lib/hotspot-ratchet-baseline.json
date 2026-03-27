@@ -10,8 +10,8 @@
     "branchCount": 3
   },
   "worker/src/handlers/http.ts": {
-    "fileLines": 52,
-    "maxFunctionLines": 44,
+    "fileLines": 54,
+    "maxFunctionLines": 45,
     "branchCount": 6
   },
   "worker/src/cron/sync-stablecoins.ts": {
