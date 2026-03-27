@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { buildBlacklistCurrentBalanceId } from "../src/lib/blacklist-current-balances";
+import { buildBlacklistAddressCountKey } from "../../shared/lib/blacklist";
 import { tronBase58ToHex } from "../src/lib/tron-address";
 
 type ExternalRow = {
@@ -19,6 +19,10 @@ type SnapshotRow = {
   address: string;
   amountUsd: number;
 };
+
+function buildCurrentBalanceId(stablecoin: "USDT" | "USDC", chainId: "ethereum" | "tron", address: string): string {
+  return buildBlacklistAddressCountKey(stablecoin, chainId, address);
+}
 
 function executeWrangler(file: string): void {
   const workerCwd = process.cwd().endsWith("/worker") ? process.cwd() : join(process.cwd(), "worker");
@@ -57,7 +61,7 @@ async function normalizeRows(rows: ExternalRow[]): Promise<SnapshotRow[]> {
     if (row.chain === "ETH" && row.asset === "USDT") {
       const address = row.address.toLowerCase();
       snapshots.push({
-        id: buildBlacklistCurrentBalanceId("USDT", "ethereum", address),
+        id: buildCurrentBalanceId("USDT", "ethereum", address),
         stablecoin: "USDT",
         chainId: "ethereum",
         address,
@@ -69,7 +73,7 @@ async function normalizeRows(rows: ExternalRow[]): Promise<SnapshotRow[]> {
     if (row.chain === "ETH" && row.asset === "USDC") {
       const address = row.address.toLowerCase();
       snapshots.push({
-        id: buildBlacklistCurrentBalanceId("USDC", "ethereum", address),
+        id: buildCurrentBalanceId("USDC", "ethereum", address),
         stablecoin: "USDC",
         chainId: "ethereum",
         address,
@@ -82,7 +86,7 @@ async function normalizeRows(rows: ExternalRow[]): Promise<SnapshotRow[]> {
       const address = await tronBase58ToHex(row.address);
       if (!address) continue;
       snapshots.push({
-        id: buildBlacklistCurrentBalanceId("USDT", "tron", address),
+        id: buildCurrentBalanceId("USDT", "tron", address),
         stablecoin: "USDT",
         chainId: "tron",
         address,

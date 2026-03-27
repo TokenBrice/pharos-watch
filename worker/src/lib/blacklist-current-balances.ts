@@ -17,7 +17,7 @@ export interface BlacklistCurrentBalanceRow {
   lastErrorClass: string | null;
 }
 
-export function buildBlacklistCurrentBalanceId(
+function buildBlacklistCurrentBalanceId(
   stablecoin: BlacklistStablecoin,
   chainId: string,
   address: string,

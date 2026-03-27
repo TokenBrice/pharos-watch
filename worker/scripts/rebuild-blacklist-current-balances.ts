@@ -2,12 +2,12 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { buildBlacklistAddressCountKey } from "../../shared/lib/blacklist";
 import { computeBlacklistAmountUsdAtEvent } from "../../shared/lib/blacklist";
 import { buildBlacklistActiveRecords } from "../../shared/lib/blacklist-active-records";
 import { getBlacklistConfigsForSymbolAndChain } from "../src/lib/blacklist-contracts";
 import { buildChainRpcs } from "../src/lib/chain-registry";
 import { bigIntToDecimal } from "../src/lib/bigint";
-import { buildBlacklistCurrentBalanceId } from "../src/lib/blacklist-current-balances";
 import { createBudget, createRateLimiter } from "../src/lib/evm-logs";
 import {
   fetchEvmTokenCurrentBalance,
@@ -67,6 +67,10 @@ type CurrentBalanceWriteRow = {
   lastErrorClass: string | null;
 };
 
+function buildCurrentBalanceId(stablecoin: string, chainId: string, address: string): string {
+  return buildBlacklistAddressCountKey(stablecoin as Parameters<typeof buildBlacklistAddressCountKey>[0], chainId, address);
+}
+
 function parseArgs(argv: string[]): ScriptOptions {
   const args = new Map<string, string | boolean>();
   for (let index = 0; index < argv.length; index++) {
@@ -118,8 +122,8 @@ function buildCurrentBalanceWriteRow(
   errorClass: string | null = null,
 ): CurrentBalanceWriteRow {
   return {
-    id: buildBlacklistCurrentBalanceId(
-      stablecoin as Parameters<typeof buildBlacklistCurrentBalanceId>[0],
+    id: buildCurrentBalanceId(
+      stablecoin as Parameters<typeof buildCurrentBalanceId>[0],
       chainId,
       address,
     ),

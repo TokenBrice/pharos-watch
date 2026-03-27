@@ -1,11 +1,11 @@
 import { execFileSync } from "node:child_process";
+import { buildBlacklistAddressCountKey } from "../../shared/lib/blacklist";
 import {
   buildBlacklistActiveRecords,
   computeBlacklistActiveSummaryStats,
   type BlacklistCurrentBalanceSnapshot,
 } from "../../shared/lib/blacklist-active-records";
 import type { BlacklistEvent } from "../../shared/types/market";
-import { buildBlacklistCurrentBalanceId } from "../../worker/src/lib/blacklist-current-balances";
 
 type EventRow = {
   id: string;
@@ -49,6 +49,10 @@ function query(sql: string): unknown[] {
     maxBuffer: 1024 * 1024 * 128,
   });
   return JSON.parse(raw)[0]?.results ?? [];
+}
+
+function buildCurrentBalanceId(stablecoin: BlacklistEvent["stablecoin"], chainId: string, address: string): string {
+  return buildBlacklistAddressCountKey(stablecoin, chainId, address);
 }
 
 const eventRows = query(
@@ -105,12 +109,12 @@ const currentBalances = new Map<string, BlacklistCurrentBalanceSnapshot>(
 const activeRecords = buildBlacklistActiveRecords(events, currentBalances);
 const stats = computeBlacklistActiveSummaryStats(activeRecords);
 const activeIds = new Set(activeRecords.map((record) => record.id));
-const eventIds = new Set(events.map((event) => buildBlacklistCurrentBalanceId(event.stablecoin, event.chainId, event.address)));
+const eventIds = new Set(events.map((event) => buildCurrentBalanceId(event.stablecoin, event.chainId, event.address)));
 let orphanActiveAddressCount = 0;
 let orphanActiveFrozenTotal = 0;
 let orphanActiveAmountGapCount = 0;
 for (const snapshot of currentBalances.values()) {
-  const snapshotId = buildBlacklistCurrentBalanceId(snapshot.stablecoin, snapshot.chainId, snapshot.address);
+  const snapshotId = buildCurrentBalanceId(snapshot.stablecoin, snapshot.chainId, snapshot.address);
   if (activeIds.has(snapshotId) || eventIds.has(snapshotId)) continue;
   orphanActiveAddressCount++;
   if (snapshot.amountUsd == null) {
