@@ -4,15 +4,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createPublicClient, http, toHex } from "viem";
 import { mainnet } from "viem/chains";
-import { computeBlacklistAmountUsdAtEvent } from "../shared/lib/blacklist";
-import { getBlacklistTrackerMethodologyVersionAt } from "../shared/lib/blacklist-tracker-version";
+import { computeBlacklistAmountUsdAtEvent } from "../../shared/lib/blacklist";
+import { getBlacklistTrackerMethodologyVersionAt } from "../../shared/lib/blacklist-tracker-version";
 import {
   getBlacklistConfigsForSymbolAndChain,
   getBlacklistEventByTopic,
   type ContractEventConfig,
-} from "../worker/src/lib/blacklist-contracts";
-import { decodeAddress, decodeUint256 } from "../worker/src/lib/evm-logs";
-import type { BlacklistRow } from "../worker/src/cron/blacklist/shared";
+} from "../src/lib/blacklist-contracts";
+import { decodeAddress, decodeUint256 } from "../src/lib/evm-logs";
+import type { BlacklistRow } from "../src/cron/blacklist/shared";
 
 type ExternalRow = {
   address: string;
@@ -38,8 +38,9 @@ type ParsedReceiptLog = {
 };
 
 function query(sql: string): unknown[] {
+  const workerCwd = process.cwd().endsWith("/worker") ? process.cwd() : join(process.cwd(), "worker");
   const raw = execFileSync("npx", ["wrangler", "d1", "execute", "stablecoin-db", "--remote", "--json", "--command", sql], {
-    cwd: join(process.cwd(), "worker"),
+    cwd: workerCwd,
     encoding: "utf8",
     maxBuffer: 1024 * 1024 * 64,
     stdio: "pipe",
@@ -48,8 +49,9 @@ function query(sql: string): unknown[] {
 }
 
 function executeWrangler(file: string): void {
+  const workerCwd = process.cwd().endsWith("/worker") ? process.cwd() : join(process.cwd(), "worker");
   execFileSync("npx", ["wrangler", "d1", "execute", "stablecoin-db", "--remote", "--json", "--file", file], {
-    cwd: join(process.cwd(), "worker"),
+    cwd: workerCwd,
     encoding: "utf8",
     maxBuffer: 1024 * 1024 * 64,
     stdio: "pipe",

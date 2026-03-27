@@ -2,8 +2,8 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { buildBlacklistCurrentBalanceId } from "../worker/src/lib/blacklist-current-balances";
-import { tronBase58ToHex } from "../worker/src/lib/tron-address";
+import { buildBlacklistCurrentBalanceId } from "../src/lib/blacklist-current-balances";
+import { tronBase58ToHex } from "../src/lib/tron-address";
 
 type ExternalRow = {
   address: string;
@@ -21,8 +21,9 @@ type SnapshotRow = {
 };
 
 function executeWrangler(file: string): void {
+  const workerCwd = process.cwd().endsWith("/worker") ? process.cwd() : join(process.cwd(), "worker");
   execFileSync("npx", ["wrangler", "d1", "execute", "stablecoin-db", "--remote", "--json", "--file", file], {
-    cwd: join(process.cwd(), "worker"),
+    cwd: workerCwd,
     encoding: "utf8",
     maxBuffer: 1024 * 1024 * 64,
     stdio: "pipe",

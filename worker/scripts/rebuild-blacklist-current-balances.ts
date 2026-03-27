@@ -2,17 +2,17 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { computeBlacklistAmountUsdAtEvent } from "../shared/lib/blacklist";
-import { buildBlacklistActiveRecords } from "../shared/lib/blacklist-active-records";
-import { getBlacklistConfigsForSymbolAndChain } from "../worker/src/lib/blacklist-contracts";
-import { buildChainRpcs } from "../worker/src/lib/chain-registry";
-import { bigIntToDecimal } from "../worker/src/lib/bigint";
-import { buildBlacklistCurrentBalanceId } from "../worker/src/lib/blacklist-current-balances";
-import { createBudget, createRateLimiter } from "../worker/src/lib/evm-logs";
+import { computeBlacklistAmountUsdAtEvent } from "../../shared/lib/blacklist";
+import { buildBlacklistActiveRecords } from "../../shared/lib/blacklist-active-records";
+import { getBlacklistConfigsForSymbolAndChain } from "../src/lib/blacklist-contracts";
+import { buildChainRpcs } from "../src/lib/chain-registry";
+import { bigIntToDecimal } from "../src/lib/bigint";
+import { buildBlacklistCurrentBalanceId } from "../src/lib/blacklist-current-balances";
+import { createBudget, createRateLimiter } from "../src/lib/evm-logs";
 import {
   fetchEvmTokenCurrentBalance,
-} from "../worker/src/cron/blacklist/balance-providers";
-import { tronBase58ToHex } from "../worker/src/lib/tron-address";
+} from "../src/cron/blacklist/balance-providers";
+import { tronBase58ToHex } from "../src/lib/tron-address";
 
 type ExecuteWranglerOptions = {
   remote: boolean;
@@ -96,8 +96,9 @@ function executeWrangler(options: ExecuteWranglerOptions): string {
   const command = options.sql
     ? ["d1", "execute", "stablecoin-db", options.remote ? "--remote" : "--local", "--json", "--command", options.sql]
     : ["d1", "execute", "stablecoin-db", options.remote ? "--remote" : "--local", "--json", "--file", options.file!];
+  const workerCwd = process.cwd().endsWith("/worker") ? process.cwd() : join(process.cwd(), "worker");
   return execFileSync("npx", ["wrangler", ...command], {
-    cwd: join(process.cwd(), "worker"),
+    cwd: workerCwd,
     encoding: "utf8",
     maxBuffer: 1024 * 1024 * 64,
   });
