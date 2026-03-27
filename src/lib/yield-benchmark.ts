@@ -38,7 +38,7 @@ export function getYieldBenchmarkReferenceText(value: YieldBenchmarkLike | Yield
   return `vs ${getYieldBenchmarkDisplayLabel(value)}`;
 }
 
-export function getYieldBenchmarkKeys(rankings: YieldRanking[]): YieldBenchmarkKey[] {
+function getYieldBenchmarkKeys(rankings: YieldRanking[]): YieldBenchmarkKey[] {
   return Array.from(
     new Set(
       rankings.map((ranking) => ranking.benchmarkKey ?? "USD"),
@@ -46,7 +46,7 @@ export function getYieldBenchmarkKeys(rankings: YieldRanking[]): YieldBenchmarkK
   );
 }
 
-export function getYieldBenchmarkForKey(
+function getYieldBenchmarkForKey(
   benchmarks: YieldBenchmarkRegistry | null | undefined,
   key: YieldBenchmarkKey,
 ): YieldBenchmarkMeta | null {

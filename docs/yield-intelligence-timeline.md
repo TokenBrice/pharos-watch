@@ -1,8 +1,15 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.12` (2026-03-01 -> 2026-03-27).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.13` (2026-03-01 -> 2026-03-27).
 
 ---
+
+## v5.13 - Optional RPC hardening and explicit wrapper venue pins (Mar 27, 2026)
+
+- Compound V3 now probes both configured RPC endpoints instead of only the fallback URL, and Aave V3 plus Compound V3 rotate endpoint order across targets with a slightly deeper retry budget on the supplemental lane
+- `sync-yield-supplemental` metadata now records optional RPC family target counts, attempted counts, resolved target counts, emitted row counts, missing target counts, miss reasons, and per-chain miss breakdowns
+- Layer 2 wrapper matching can now pin a preferred DeFiLlama project in addition to chain and address, keeping shared wrapper tokens fail-closed without attaching to the wrong venue
+- Under-specified wrapper configs now carry explicit live chain/address/project pins for native venues such as `sUSDai`, `sNUSD`, `savUSD`, `sUSDu`, `syzUSD`, `sAID`, `stCUSD`, and `sGHO`
 
 ## v5.12 - Protocol-native lending readers no longer outrank stronger native wrapper yields (Mar 27, 2026)
 

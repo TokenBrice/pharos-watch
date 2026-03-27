@@ -435,6 +435,50 @@ describe("matchAllDlPools", () => {
     expect(result[0].pool).toBe("uuid-correct");
   });
 
+  it("uses variantProject to disambiguate same-address wrapper venues", () => {
+    const variantMap = {
+      "test-coin": {
+        variantSymbol: "sTEST",
+        variantChain: "ethereum",
+        variantAddress: "0xdef",
+        variantProject: "native-wrapper",
+      },
+    };
+    const dlPools = [
+      {
+        pool: "uuid-native",
+        chain: "Ethereum",
+        project: "native-wrapper",
+        symbol: "sTEST",
+        stablecoin: false,
+        exposure: "single",
+        tvlUsd: 40_000_000,
+        apy: 5.2,
+        apyBase: 5.2,
+        apyReward: null,
+        underlyingTokens: ["0xdef"],
+      },
+      {
+        pool: "uuid-lending",
+        chain: "Ethereum",
+        project: "morpho-v1",
+        symbol: "sTEST",
+        stablecoin: false,
+        exposure: "single",
+        tvlUsd: 25_000_000,
+        apy: 6.1,
+        apyBase: 6.1,
+        apyReward: null,
+        underlyingTokens: ["0xdef"],
+      },
+    ];
+
+    const result = matchAllDlPools("test-coin", "TEST", dlPools, {}, variantMap);
+    expect(result).toHaveLength(1);
+    expect(result[0].pool).toBe("uuid-native");
+    expect(result[0].apy).toBe(5.2);
+  });
+
   it("skips ambiguous variant symbol matches when no stronger identity exists", () => {
     const variantMap = { "test-coin": { variantSymbol: "sTEST", variantChain: "ethereum" } };
     const dlPools = [

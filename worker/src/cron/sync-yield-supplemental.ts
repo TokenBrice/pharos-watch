@@ -13,11 +13,25 @@ import {
   fetchPendleMarketSources,
   fetchYearnKongSources,
   type AaveV3RateTarget,
+  type OptionalRpcFamilyTelemetry,
 } from "./yield-sync/sources";
 import type { ResolvedYieldCandidate } from "./yield-sync/types";
 
 const YIELD_SUPPLEMENTAL_CACHE_KEY = "yield:supplemental-sources:v1";
 const AAVE_SUPPORTED_CHAINS = new Set(["ethereum", "arbitrum", "base"]);
+
+const EMPTY_OPTIONAL_RPC_TELEMETRY: OptionalRpcFamilyTelemetry = {
+  targetCount: 0,
+  attemptedCount: 0,
+  resolvedTargetCount: 0,
+  emittedCount: 0,
+  missingTargetCount: 0,
+  missingByChain: {},
+  missingReasonCounts: {},
+  missingTargets: [],
+  budgetExhausted: false,
+  endpointStrategy: "alternating-fallback-primary",
+};
 
 function getTrackedContractAddress(stablecoinId: string, chain: string): string | null {
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
@@ -123,7 +137,11 @@ export async function syncYieldSupplemental(
     ...beefyVaults,
   ];
 
-  const compoundRates = await fetchCompoundV3SupplyRates([...COMPOUND_V3_COMETS], signal, chainRpcs);
+  const { results: compoundRates, telemetry: compoundTelemetry } = await fetchCompoundV3SupplyRates(
+    [...COMPOUND_V3_COMETS],
+    signal,
+    chainRpcs,
+  );
   for (const result of compoundRates) {
     const target = COMPOUND_V3_COMETS.find(
       (entry) =>
@@ -140,8 +158,11 @@ export async function syncYieldSupplemental(
   sourceFamilyCounts.compoundV3 = compoundRates.length;
 
   const aaveTargets = buildAaveTargets();
+  let aaveTelemetry: OptionalRpcFamilyTelemetry = EMPTY_OPTIONAL_RPC_TELEMETRY;
   if (aaveTargets.length > 0) {
-    const { rates: aaveRates } = await fetchAaveV3SupplyRates(aaveTargets, signal, chainRpcs);
+    const aaveResult = await fetchAaveV3SupplyRates(aaveTargets, signal, chainRpcs);
+    const { rates: aaveRates } = aaveResult;
+    aaveTelemetry = aaveResult.telemetry;
     for (const [stablecoinId, { apy, chain }] of aaveRates) {
       const meta = TRACKED_META_BY_ID.get(stablecoinId);
       if (!meta || apy <= 0) continue;
@@ -169,6 +190,8 @@ export async function syncYieldSupplemental(
       });
     }
     sourceFamilyCounts.aaveV3 = aaveRates.size;
+  } else {
+    aaveTelemetry = EMPTY_OPTIONAL_RPC_TELEMETRY;
   }
 
   const rawCandidateCount = candidates.length;
@@ -186,6 +209,10 @@ export async function syncYieldSupplemental(
           dedupedSupplementalCandidates: 0,
           supplementalCandidatesWritten: 0,
           sourceFamilyCounts,
+          optionalRpcTelemetry: {
+            compoundV3: compoundTelemetry,
+            aaveV3: aaveTelemetry,
+          },
         },
         fallbackMode: "empty-snapshot",
         cacheWriteSkipped: true,
@@ -211,6 +238,10 @@ export async function syncYieldSupplemental(
         dedupedSupplementalCandidates: dedupedCandidates.length,
         supplementalCandidatesWritten: dedupedCandidates.length,
         sourceFamilyCounts,
+        optionalRpcTelemetry: {
+          compoundV3: compoundTelemetry,
+          aaveV3: aaveTelemetry,
+        },
       },
       fallbackMode: null,
       cacheWriteSkipped: false,

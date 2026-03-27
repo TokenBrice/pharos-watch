@@ -25,7 +25,7 @@ const LAST_EDITED: Record<string, string> = {
   "/methodology/liquidity-score-changelog/": "2026-03-03",
   "/methodology/stability-index-changelog/": "2026-03-03",
   "/methodology/mint-burn-flow-changelog/": "2026-03-10",
-  "/methodology/yield-changelog/": "2026-03-26",
+  "/methodology/yield-changelog/": "2026-03-27",
   "/methodology/chain-health-changelog/": "2026-03-16",
   "/portfolio/": "2026-03-09",
   "/upcoming/": "2026-03-22",

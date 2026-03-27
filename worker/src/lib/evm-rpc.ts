@@ -11,6 +11,7 @@ export interface EvmRpcOptions {
   extraRpcUrls?: string[];
   signal?: AbortSignal;
   timeoutMs?: number;
+  maxRetries?: number;
   /** Gas limit for eth_call (hex string, e.g. "0x7A120"). Needed for cross-contract calls. */
   gas?: string;
   /** Chain RPC config map (built via buildChainRpcs). Required for RPC URL resolution. */
@@ -63,6 +64,7 @@ async function fetchJsonRpcResult<T>(
   options?: EvmRpcOptions,
 ): Promise<T | null> {
   const timeoutMs = options?.timeoutMs ?? 10_000;
+  const maxRetries = options?.maxRetries ?? 1;
 
   for (const rpcUrl of urls) {
     try {
@@ -79,7 +81,7 @@ async function fetchJsonRpcResult<T>(
             params,
           }),
         },
-        1,
+        maxRetries,
         { timeoutMs },
       );
 
@@ -147,6 +149,7 @@ export async function fetchEvmCallHexAtBlock(
   if (options?.gas) callObj.gas = options.gas;
   const blockTag = toBlockTag(blockNumberOrTag);
   const timeoutMs = options?.timeoutMs ?? 10_000;
+  const maxRetries = options?.maxRetries ?? 1;
 
   // Try each RPC URL, skipping empty/revert results ("0x") so fallbacks are tried
   for (const rpcUrl of urls) {
@@ -159,7 +162,7 @@ export async function fetchEvmCallHexAtBlock(
           signal: options?.signal,
           body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [callObj, blockTag] }),
         },
-        1,
+        maxRetries,
         { timeoutMs },
       );
       if (!res?.ok) continue;

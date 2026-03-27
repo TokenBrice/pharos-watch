@@ -21,6 +21,7 @@ function makeChainRpcs(chains: string[] = ["ethereum", "arbitrum", "base"]): Map
       chainName: chain,
       type: "evm",
       rpcUrl: `https://rpc.${chain}.example.com`,
+      fallbackRpcUrl: `https://fallback.${chain}.example.com`,
       explorerUrl: `https://explorer.${chain}.example.com`,
     });
   }
@@ -79,7 +80,7 @@ describe("fetchAaveV3SupplyRates", () => {
     const hex = buildGetReserveDataHex(rayRate);
     mockFetchEvmCallHexAtBlock.mockResolvedValue(hex);
 
-    const { rates } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
+    const { rates, telemetry } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
 
     expect(rates.has("usdc-circle")).toBe(true);
     const apy = rates.get("usdc-circle")!.apy;
@@ -87,6 +88,9 @@ describe("fetchAaveV3SupplyRates", () => {
     expect(apy).toBeCloseTo(expectedApy(nominalRate), 2);
     expect(apy).toBeGreaterThan(5);
     expect(apy).toBeLessThan(6);
+    expect(telemetry.resolvedTargetCount).toBe(1);
+    expect(telemetry.emittedCount).toBe(1);
+    expect(telemetry.missingTargetCount).toBe(0);
   });
 
   it("correctly reads currentLiquidityRate from byte offset 128 (slot 2 in the struct)", async () => {
@@ -106,22 +110,25 @@ describe("fetchAaveV3SupplyRates", () => {
   it("returns empty map when RPC returns null", async () => {
     mockFetchEvmCallHexAtBlock.mockResolvedValue(null);
 
-    const { rates } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
+    const { rates, telemetry } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
     expect(rates.size).toBe(0);
+    expect(telemetry.missingReasonCounts["reserve-data-unavailable"]).toBe(1);
   });
 
   it("returns empty map when hex response is too short to contain currentLiquidityRate", async () => {
     // Only 64 chars = 32 bytes = 1 slot; need at least 3 slots (192 hex chars)
     mockFetchEvmCallHexAtBlock.mockResolvedValue("0x" + "ab".repeat(32) as `0x${string}`);
 
-    const { rates } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
+    const { rates, telemetry } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs());
     expect(rates.size).toBe(0);
+    expect(telemetry.missingReasonCounts["reserve-data-short"]).toBe(1);
   });
 
   it("returns empty map when chainRpcs is not provided", async () => {
-    const { rates } = await fetchAaveV3SupplyRates([USDC_TARGET]);
+    const { rates, telemetry } = await fetchAaveV3SupplyRates([USDC_TARGET]);
     expect(rates.size).toBe(0);
     expect(mockFetchEvmCallHexAtBlock).not.toHaveBeenCalled();
+    expect(telemetry.missingReasonCounts["no-chain-rpcs"]).toBe(1);
   });
 
   it("returns empty map when targets is empty", async () => {
@@ -138,20 +145,22 @@ describe("fetchAaveV3SupplyRates", () => {
       assetAddress: "0x04068da6c83afcfa0e13ba15a6696662335d5b75",
     };
 
-    const { rates } = await fetchAaveV3SupplyRates(
+    const { rates, telemetry } = await fetchAaveV3SupplyRates(
       [unsupportedTarget],
       undefined,
       makeChainRpcs(["fantom"]),
     );
     expect(rates.size).toBe(0);
     expect(mockFetchEvmCallHexAtBlock).not.toHaveBeenCalled();
+    expect(telemetry.missingReasonCounts["unsupported-pool-chain"]).toBe(1);
   });
 
   it("skips targets when no RPC config exists for the chain", async () => {
     // chainRpcs only has 'base', not 'ethereum'
-    const { rates } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs(["base"]));
+    const { rates, telemetry } = await fetchAaveV3SupplyRates([USDC_TARGET], undefined, makeChainRpcs(["base"]));
     expect(rates.size).toBe(0);
     expect(mockFetchEvmCallHexAtBlock).not.toHaveBeenCalled();
+    expect(telemetry.missingReasonCounts["no-rpc-config"]).toBe(1);
   });
 
   it("handles multiple targets across different chains", async () => {
@@ -215,7 +224,13 @@ describe("fetchAaveV3SupplyRates", () => {
       "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5", // Aave V3 Base pool
       expect.any(String),
       "latest",
-      expect.any(Object),
+      expect.objectContaining({
+        extraRpcUrls: [
+          "https://fallback.base.example.com",
+          "https://rpc.base.example.com",
+        ],
+        maxRetries: 2,
+      }),
     );
   });
 });

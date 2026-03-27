@@ -124,9 +124,15 @@ export function matchAllDlPools(
     stablecoin: boolean; exposure: string;
     underlyingTokens?: string[] | null;
     chain?: string;
+    project?: string;
   }>,
   poolMap: Record<string, string>,
-  variantMap: Record<string, { variantSymbol: string; variantChain?: string; variantAddress?: string }>,
+  variantMap: Record<string, {
+    variantSymbol: string;
+    variantChain?: string;
+    variantAddress?: string;
+    variantProject?: string;
+  }>,
   options?: {
     chainFilter?: Set<string>;
     contractAddresses?: string[];
@@ -169,6 +175,7 @@ export function matchAllDlPools(
     const variantSymbol = normalizeDexSymbol(variant.variantSymbol);
     const variantChain = variant.variantChain ? resolveChainId(variant.variantChain) ?? variant.variantChain.toLowerCase() : null;
     const variantAddress = normalizeTokenAddress(variant.variantAddress ?? "");
+    const variantProject = (variant.variantProject ?? "").trim().toLowerCase();
 
     const baseCandidates = dlPools.filter(
       (pool) =>
@@ -183,8 +190,20 @@ export function matchAllDlPools(
         (pool.underlyingTokens ?? []).some((address) => normalizeTokenAddress(address) === variantAddress))
       : [];
     const symbolCandidates = baseCandidates.filter((pool) => normalizeDexSymbol(pool.symbol) === variantSymbol);
+    const filterByProject = <T extends { project?: string }>(candidates: T[]): T[] =>
+      variantProject
+        ? candidates.filter((pool) => (pool.project ?? "").trim().toLowerCase() === variantProject)
+        : candidates;
 
-    const selectedVariantCandidates = addressCandidates.length > 0 ? addressCandidates : symbolCandidates;
+    const scopedAddressCandidates = filterByProject(addressCandidates);
+    const scopedSymbolCandidates = filterByProject(symbolCandidates);
+
+    let selectedVariantCandidates = symbolCandidates;
+    if (addressCandidates.length > 0) {
+      selectedVariantCandidates = variantProject ? scopedAddressCandidates : addressCandidates;
+    } else if (variantProject) {
+      selectedVariantCandidates = scopedSymbolCandidates;
+    }
     if (selectedVariantCandidates.length === 1) {
       const selected = selectedVariantCandidates[0];
       found.push({

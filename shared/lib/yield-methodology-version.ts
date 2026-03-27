@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "5.12",
+  currentVersion: "5.13",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "5.13",
+    title: "Optional RPC Hardening And Explicit Wrapper Venue Pins",
+    date: "2026-03-27",
+    effectiveAt: 1774600200,
+    summary:
+      "Supplemental optional RPC readers now probe configured endpoints more resiliently and expose per-family miss telemetry, while wrapper matching can pin the intended DeFiLlama venue when one wrapper token appears across multiple pools.",
+    impact: [
+      "Compound V3 now probes both configured RPC endpoints instead of only the fallback URL, and Aave V3 plus Compound V3 rotate endpoint order across targets with a slightly deeper retry budget on the best-effort supplemental lane",
+      "`sync-yield-supplemental` metadata now records optional RPC family target counts, attempted counts, resolved target counts, emitted row counts, missing target counts, per-chain miss breakdowns, and miss reasons",
+      "Layer 2 wrapper matching can now pin a preferred DeFiLlama project in addition to chain and address, so shared wrapper tokens like `sUSDe`, `sUSDS`, and similar cases stay fail-closed without attaching to the wrong venue",
+      "Under-specified wrapper configs now carry explicit live chain/address/project pins for native venues such as `sUSDai`, `sNUSD`, `savUSD`, `sUSDu`, `syzUSD`, `sAID`, `stCUSD`, and `sGHO`",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.12",
     title: "Protocol-Native Lending Readers No Longer Outrank Stronger Native Wrapper Yields",
@@ -26,7 +42,7 @@ const yieldMethodology = createMethodologyVersion({
     version: "5.11",
     title: "Restored Mixed-View Scatter Benchmark Frame",
     date: "2026-03-27",
-    effectiveAt: 1774861200,
+    effectiveAt: 1774576800,
     summary:
       "The `/yield` scatter plot now keeps its four-zone benchmark frame visible on mixed-benchmark scopes by using the default USD benchmark for orientation, instead of dropping the overlay entirely.",
     impact: [

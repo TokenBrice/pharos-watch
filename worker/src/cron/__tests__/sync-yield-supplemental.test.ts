@@ -1,5 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const emptyTelemetry = {
+  targetCount: 0,
+  attemptedCount: 0,
+  resolvedTargetCount: 0,
+  emittedCount: 0,
+  missingTargetCount: 0,
+  missingByChain: {},
+  missingReasonCounts: {},
+  missingTargets: [],
+  budgetExhausted: false,
+  endpointStrategy: "alternating-fallback-primary" as const,
+};
+
 vi.mock("@shared/lib/stablecoins", () => {
   const stablecoins = [
     {
@@ -31,8 +44,36 @@ vi.mock("../yield-sync/sources", () => ({
   fetchPendleMarketSources: vi.fn(async () => []),
   fetchYearnKongSources: vi.fn(async () => []),
   fetchBeefySources: vi.fn(async () => []),
-  fetchCompoundV3SupplyRates: vi.fn(async () => []),
-  fetchAaveV3SupplyRates: vi.fn(async () => ({ rates: new Map() })),
+  fetchCompoundV3SupplyRates: vi.fn(async () => ({
+    results: [],
+    telemetry: {
+      targetCount: 0,
+      attemptedCount: 0,
+      resolvedTargetCount: 0,
+      emittedCount: 0,
+      missingTargetCount: 0,
+      missingByChain: {},
+      missingReasonCounts: {},
+      missingTargets: [],
+      budgetExhausted: false,
+      endpointStrategy: "alternating-fallback-primary",
+    },
+  })),
+  fetchAaveV3SupplyRates: vi.fn(async () => ({
+    rates: new Map(),
+    telemetry: {
+      targetCount: 0,
+      attemptedCount: 0,
+      resolvedTargetCount: 0,
+      emittedCount: 0,
+      missingTargetCount: 0,
+      missingByChain: {},
+      missingReasonCounts: {},
+      missingTargets: [],
+      budgetExhausted: false,
+      endpointStrategy: "alternating-fallback-primary",
+    },
+  })),
 }));
 
 vi.mock("../../lib/db-cache", () => ({
@@ -50,7 +91,7 @@ describe("syncYieldSupplemental", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-26T12:00:00.000Z"));
-    vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({ rates: new Map() });
+    vi.mocked(fetchAaveV3SupplyRates).mockResolvedValue({ rates: new Map(), telemetry: emptyTelemetry });
     vi.mocked(fetchBeefySources).mockResolvedValue([]);
   });
 
@@ -66,6 +107,13 @@ describe("syncYieldSupplemental", () => {
         ["usdt-tether", { apy: 3.75, chain: "ethereum" }],
         ["eurc-circle", { apy: 2.1, chain: "base" }],
       ]),
+      telemetry: {
+        ...emptyTelemetry,
+        targetCount: 3,
+        attemptedCount: 3,
+        resolvedTargetCount: 3,
+        emittedCount: 3,
+      },
     });
 
     const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
@@ -78,7 +126,7 @@ describe("syncYieldSupplemental", () => {
 
     const payload = JSON.parse(String(cacheCall?.[2])) as {
       sourceCount: number;
-      data: Array<{ yield: { sourceKey: string } }>;
+      data: Array<{ yield: { sourceKey: string; dataSource: string } }>;
     };
 
     expect(payload.sourceCount).toBe(3);
@@ -86,6 +134,11 @@ describe("syncYieldSupplemental", () => {
       "aave-v3-onchain:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "aave-v3-onchain:ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7",
       "aave-v3-onchain:base:0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42",
+    ]);
+    expect(payload.data.map((entry) => entry.yield.dataSource)).toEqual([
+      "protocol-api",
+      "protocol-api",
+      "protocol-api",
     ]);
 
     const metadata = JSON.parse(result.metadata ?? "{}") as {
@@ -96,6 +149,9 @@ describe("syncYieldSupplemental", () => {
         rawSupplementalCandidates?: number;
         dedupedSupplementalCandidates?: number;
         sourceFamilyCounts?: { aaveV3?: number };
+        optionalRpcTelemetry?: {
+          aaveV3?: { resolvedTargetCount?: number; emittedCount?: number; missingTargetCount?: number };
+        };
       };
     };
 
@@ -105,6 +161,9 @@ describe("syncYieldSupplemental", () => {
     expect(metadata.sourceCoverage?.rawSupplementalCandidates).toBe(3);
     expect(metadata.sourceCoverage?.dedupedSupplementalCandidates).toBe(3);
     expect(metadata.sourceCoverage?.sourceFamilyCounts?.aaveV3).toBe(3);
+    expect(metadata.sourceCoverage?.optionalRpcTelemetry?.aaveV3?.resolvedTargetCount).toBe(3);
+    expect(metadata.sourceCoverage?.optionalRpcTelemetry?.aaveV3?.emittedCount).toBe(3);
+    expect(metadata.sourceCoverage?.optionalRpcTelemetry?.aaveV3?.missingTargetCount).toBe(0);
   });
 
   it("dedupes exact duplicate candidates and reports the drop count", async () => {
@@ -199,6 +258,10 @@ describe("syncYieldSupplemental", () => {
       sourceCoverage?: {
         rawSupplementalCandidates?: number;
         dedupedSupplementalCandidates?: number;
+        optionalRpcTelemetry?: {
+          compoundV3?: { emittedCount?: number };
+          aaveV3?: { emittedCount?: number };
+        };
       };
     };
 
@@ -207,5 +270,7 @@ describe("syncYieldSupplemental", () => {
     expect(metadata.rowsDropped).toBe(1);
     expect(metadata.sourceCoverage?.rawSupplementalCandidates).toBe(3);
     expect(metadata.sourceCoverage?.dedupedSupplementalCandidates).toBe(2);
+    expect(metadata.sourceCoverage?.optionalRpcTelemetry?.compoundV3?.emittedCount).toBe(0);
+    expect(metadata.sourceCoverage?.optionalRpcTelemetry?.aaveV3?.emittedCount).toBe(0);
   });
 });

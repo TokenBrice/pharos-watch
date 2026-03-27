@@ -29,9 +29,10 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
   - `Pendle`
   - `Yearn/Kong`
   - `Beefy`
-- Optional RPC families use a 30 second family budget on the supplemental lane:
+- Optional RPC families use a 30 second family budget on the supplemental lane, a 10 second per-call timeout, two retries per URL, and alternating fallback/primary endpoint order across targets so one hot endpoint does not absorb the whole family burst:
   - `Compound V3`
   - `Aave V3`
+- Optional RPC family metadata now records target counts, attempted counts, resolved target counts, emitted row counts, missing target counts, chain-level miss breakdowns, miss reasons, and whether the family budget exhausted before all targets were attempted.
 - Aave on-chain reads are batched two assets at a time to stay below the Worker connection ceiling even on the isolated supplemental trigger.
 - the monthly yield coverage audit now counts explicit auto-lending overrides and curated exact-pool overrides as covered DL surfaces, and its high-TVL gap list is scoped to unsupported protocol families so the report stays actionable.
 

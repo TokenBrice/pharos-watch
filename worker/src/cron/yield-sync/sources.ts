@@ -59,6 +59,8 @@ const MAX_DL_CACHE_AGE_SEC = 6 * 3600; // 6 hours (3× the expected 2-hour DEX s
 const OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS = 8_000;
 const OPTIONAL_PROTOCOL_API_BUDGET_MS = 25_000;
 const OPTIONAL_PROTOCOL_RPC_BUDGET_MS = 30_000;
+const OPTIONAL_PROTOCOL_RPC_REQUEST_TIMEOUT_MS = 10_000;
+const OPTIONAL_PROTOCOL_RPC_MAX_RETRIES = 2;
 const ON_CHAIN_RATE_REQUEST_TIMEOUT_MS = 6_000;
 
 interface HashnoteReport {
@@ -110,6 +112,88 @@ function resolveCanonicalChain(chain: string | number | null | undefined): strin
   }
 
   return null;
+}
+
+export interface OptionalRpcFamilyTelemetry {
+  targetCount: number;
+  attemptedCount: number;
+  resolvedTargetCount: number;
+  emittedCount: number;
+  missingTargetCount: number;
+  missingByChain: Record<string, number>;
+  missingReasonCounts: Record<string, number>;
+  missingTargets: string[];
+  budgetExhausted: boolean;
+  endpointStrategy: "alternating-fallback-primary";
+}
+
+function createOptionalRpcFamilyTelemetry(targetCount: number): OptionalRpcFamilyTelemetry {
+  return {
+    targetCount,
+    attemptedCount: 0,
+    resolvedTargetCount: 0,
+    emittedCount: 0,
+    missingTargetCount: 0,
+    missingByChain: {},
+    missingReasonCounts: {},
+    missingTargets: [],
+    budgetExhausted: false,
+    endpointStrategy: "alternating-fallback-primary",
+  };
+}
+
+function buildOptionalRpcTargetLabel(chain: string, symbol: string): string {
+  return `${chain}:${symbol}`;
+}
+
+function recordOptionalRpcMiss(
+  telemetry: OptionalRpcFamilyTelemetry,
+  chain: string,
+  targetLabel: string,
+  reason: string,
+): void {
+  telemetry.missingTargetCount += 1;
+  telemetry.missingByChain[chain] = (telemetry.missingByChain[chain] ?? 0) + 1;
+  telemetry.missingReasonCounts[reason] = (telemetry.missingReasonCounts[reason] ?? 0) + 1;
+  telemetry.missingTargets.push(targetLabel);
+}
+
+function buildOptionalRpcUrls(rpc: ChainRpcConfig | undefined, rotationSeed = 0): string[] {
+  if (!rpc) {
+    return [];
+  }
+
+  const primary = typeof rpc.rpcUrl === "string" && rpc.rpcUrl.length > 0 ? rpc.rpcUrl : null;
+  const fallback =
+    typeof rpc.fallbackRpcUrl === "string" && rpc.fallbackRpcUrl.length > 0 ? rpc.fallbackRpcUrl : null;
+
+  const ordered = rotationSeed % 2 === 0
+    ? [fallback, primary]
+    : [primary, fallback];
+
+  return Array.from(new Set(ordered.filter((url): url is string => typeof url === "string" && url.length > 0)));
+}
+
+function logOptionalRpcTelemetry(
+  family: string,
+  telemetry: OptionalRpcFamilyTelemetry,
+): void {
+  const reasonSummary = Object.entries(telemetry.missingReasonCounts)
+    .map(([reason, count]) => `${reason}=${count}`)
+    .join(", ");
+
+  if (telemetry.missingTargetCount > 0 || telemetry.budgetExhausted) {
+    console.warn(
+      `[yield/${family}] resolved ${telemetry.resolvedTargetCount}/${telemetry.targetCount} targets `
+      + `(emitted ${telemetry.emittedCount}, attempted ${telemetry.attemptedCount}; ${reasonSummary || "no-miss-reasons"})`,
+    );
+    return;
+  }
+
+  console.log(
+    `[yield/${family}] resolved ${telemetry.resolvedTargetCount}/${telemetry.targetCount} targets `
+    + `(emitted ${telemetry.emittedCount}, attempted ${telemetry.attemptedCount})`,
+  );
 }
 
 export async function loadDlStablecoinPools(
@@ -1072,35 +1156,75 @@ export const COMPOUND_V3_COMETS = [
   { stablecoinId: "usdc-circle", chain: "arbitrum", comet: "0xA5EDBDD9646f8dFF606d7448e414884C7d905dCA", symbol: "USDC" },
 ] as const;
 
+export interface CompoundV3SupplyRateResult {
+  results: Array<{ stablecoinId: string; yield: ResolvedYield }>;
+  telemetry: OptionalRpcFamilyTelemetry;
+}
+
 export async function fetchCompoundV3SupplyRates(
   targets: Array<{ stablecoinId: string; chain: string; comet: string; symbol: string }>,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
-): Promise<Array<{ stablecoinId: string; yield: ResolvedYield }>> {
+): Promise<CompoundV3SupplyRateResult> {
   const results: Array<{ stablecoinId: string; yield: ResolvedYield }> = [];
+  const telemetry = createOptionalRpcFamilyTelemetry(targets.length);
+  const accountedTargets = new Set<string>();
   const budget = createOptionalSourceBudget("Compound V3 supply rates", OPTIONAL_PROTOCOL_RPC_BUDGET_MS, signal);
   try {
-    for (const target of targets) {
-      if (budget.budgetController.signal.aborted) break;
+    for (const [index, target] of targets.entries()) {
+      const targetLabel = buildOptionalRpcTargetLabel(target.chain, target.symbol);
+      if (budget.budgetController.signal.aborted) {
+        telemetry.budgetExhausted = true;
+        break;
+      }
       try {
         const rpc = getChainRpc(chainRpcs ?? new Map(), target.chain);
-        const extraRpcUrls = rpc?.fallbackRpcUrl ? [rpc.fallbackRpcUrl] : [];
-        const opts = { extraRpcUrls, signal: budget.signal };
+        const extraRpcUrls = buildOptionalRpcUrls(rpc, index);
+        if (extraRpcUrls.length === 0) {
+          recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "no-rpc-config");
+          accountedTargets.add(targetLabel);
+          continue;
+        }
+
+        telemetry.attemptedCount += 1;
+        const opts = {
+          extraRpcUrls,
+          signal: budget.signal,
+          timeoutMs: OPTIONAL_PROTOCOL_RPC_REQUEST_TIMEOUT_MS,
+          maxRetries: OPTIONAL_PROTOCOL_RPC_MAX_RETRIES,
+        };
 
         const utilization = await fetchEvmUint256AtBlock(
           target.chain, target.comet, COMPOUND_V3_GET_UTILIZATION, "latest", opts,
         );
-        if (utilization == null) continue;
+        if (utilization == null) {
+          recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "utilization-unavailable");
+          accountedTargets.add(targetLabel);
+          continue;
+        }
 
         const supplyRateData = COMPOUND_V3_GET_SUPPLY_RATE + utilization.toString(16).padStart(64, "0");
         const perSecondRate = await fetchEvmUint256AtBlock(
           target.chain, target.comet, supplyRateData, "latest", opts,
         );
-        if (perSecondRate == null || perSecondRate === 0n) continue;
+        if (perSecondRate == null || perSecondRate === 0n) {
+          recordOptionalRpcMiss(
+            telemetry,
+            target.chain,
+            targetLabel,
+            perSecondRate === 0n ? "zero-supply-rate" : "supply-rate-unavailable",
+          );
+          accountedTargets.add(targetLabel);
+          continue;
+        }
 
         const ratePerSecond = Number(perSecondRate) / 1e18;
         const apy = (Math.pow(1 + ratePerSecond, SECONDS_PER_YEAR) - 1) * 100;
-        if (!Number.isFinite(apy) || apy <= 0) continue;
+        if (!Number.isFinite(apy) || apy <= 0) {
+          recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "non-positive-apy");
+          accountedTargets.add(targetLabel);
+          continue;
+        }
 
         results.push({
           stablecoinId: target.stablecoinId,
@@ -1115,16 +1239,35 @@ export async function fetchCompoundV3SupplyRates(
             comparisonAnchorObservedAt: null,
           },
         });
+        telemetry.resolvedTargetCount += 1;
+        accountedTargets.add(targetLabel);
       } catch (error) {
         if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
         if (budget.budgetController.signal.aborted) {
+          telemetry.budgetExhausted = true;
           console.warn(`[yield] Compound V3 budget exhausted; keeping ${results.length} partial results`);
           break;
         }
         console.warn(`[yield] Compound V3 ${target.chain}:${target.symbol} failed:`, error);
+        recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "rpc-exception");
+        accountedTargets.add(targetLabel);
       }
     }
-    return results;
+
+    if (budget.budgetController.signal.aborted) {
+      telemetry.budgetExhausted = true;
+    }
+    for (const target of targets) {
+      const targetLabel = buildOptionalRpcTargetLabel(target.chain, target.symbol);
+      if (!accountedTargets.has(targetLabel)) {
+        recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "budget-exhausted");
+        accountedTargets.add(targetLabel);
+      }
+    }
+
+    telemetry.emittedCount = results.length;
+    logOptionalRpcTelemetry("compound-v3", telemetry);
+    return { results, telemetry };
   } finally {
     budget.cleanup();
   }
@@ -1204,6 +1347,7 @@ export interface AaveV3RateTarget {
 
 export interface AaveV3RateResult {
   rates: Map<string, { apy: number; chain: string }>;
+  telemetry: OptionalRpcFamilyTelemetry;
 }
 
 export async function fetchAaveV3SupplyRates(
@@ -1212,9 +1356,20 @@ export async function fetchAaveV3SupplyRates(
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<AaveV3RateResult> {
   const rates = new Map<string, { apy: number; chain: string }>();
+  const telemetry = createOptionalRpcFamilyTelemetry(targets.length);
+  const accountedTargets = new Set<string>();
+  const resolvedTargets = new Set<string>();
 
   if (!chainRpcs || targets.length === 0) {
-    return { rates };
+    if (!chainRpcs && targets.length > 0) {
+      for (const target of targets) {
+        const targetLabel = buildOptionalRpcTargetLabel(target.chain, target.symbol);
+        recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "no-chain-rpcs");
+      }
+    }
+    telemetry.emittedCount = rates.size;
+    logOptionalRpcTelemetry("aave-v3", telemetry);
+    return { rates, telemetry };
   }
 
   const budget = createOptionalSourceBudget("Aave V3 supply rates", OPTIONAL_PROTOCOL_RPC_BUDGET_MS, signal);
@@ -1222,20 +1377,32 @@ export async function fetchAaveV3SupplyRates(
 
   try {
     for (let i = 0; i < targets.length; i += AAVE_BATCH_SIZE) {
-      if (budget.budgetController.signal.aborted) break;
+      if (budget.budgetController.signal.aborted) {
+        telemetry.budgetExhausted = true;
+        break;
+      }
       const batch = targets.slice(i, i + AAVE_BATCH_SIZE);
       await Promise.all(
-        batch.map(async (target) => {
-          if (budget.budgetController.signal.aborted) return;
+        batch.map(async (target, batchIndex) => {
+          const targetLabel = buildOptionalRpcTargetLabel(target.chain, target.symbol);
+          if (budget.budgetController.signal.aborted) {
+            telemetry.budgetExhausted = true;
+            return;
+          }
           const poolAddress = AAVE_V3_POOL_ADDRESSES[target.chain];
-          if (!poolAddress) return;
+          if (!poolAddress) {
+            recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "unsupported-pool-chain");
+            accountedTargets.add(targetLabel);
+            return;
+          }
 
           const rpc = getChainRpc(chainRpcs, target.chain);
-          if (!rpc) return;
-
-          const rpcUrls = [rpc.rpcUrl, rpc.fallbackRpcUrl].filter(
-            (url): url is string => typeof url === "string" && url.length > 0,
-          );
+          const rpcUrls = buildOptionalRpcUrls(rpc, i + batchIndex);
+          if (rpcUrls.length === 0) {
+            recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "no-rpc-config");
+            accountedTargets.add(targetLabel);
+            return;
+          }
 
           // Encode getReserveData(address) calldata: selector + padded address
           const callData =
@@ -1243,44 +1410,78 @@ export async function fetchAaveV3SupplyRates(
             target.assetAddress.replace("0x", "").toLowerCase().padStart(64, "0");
 
           try {
+            telemetry.attemptedCount += 1;
             const hex = await fetchEvmCallHexAtBlock(target.chain, poolAddress, callData, "latest", {
               extraRpcUrls: rpcUrls,
               signal: budget.signal,
-              timeoutMs: 10_000,
+              timeoutMs: OPTIONAL_PROTOCOL_RPC_REQUEST_TIMEOUT_MS,
+              maxRetries: OPTIONAL_PROTOCOL_RPC_MAX_RETRIES,
             });
 
-            if (!hex || hex.length < 2) return;
+            if (!hex || hex.length < 2) {
+              recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "reserve-data-unavailable");
+              accountedTargets.add(targetLabel);
+              return;
+            }
 
             // currentLiquidityRate is the 3rd uint256 in the struct (byte offset 64–128)
             // hex string after stripping "0x": chars 128–191 (0-indexed)
             const stripped = hex.slice(2); // remove "0x"
-            if (stripped.length < 192) return;
+            if (stripped.length < 192) {
+              recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "reserve-data-short");
+              accountedTargets.add(targetLabel);
+              return;
+            }
 
             const liquidityRateHex = stripped.slice(128, 192);
             const currentLiquidityRate = BigInt("0x" + liquidityRateHex);
             const apy = rayToApy(currentLiquidityRate);
 
-            if (!Number.isFinite(apy) || apy <= 0) return;
+            if (!Number.isFinite(apy) || apy <= 0) {
+              recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "non-positive-apy");
+              accountedTargets.add(targetLabel);
+              return;
+            }
 
             // Keep the best APY per stablecoin (in case of multiple chains)
             const existing = rates.get(target.stablecoinId);
             if (!existing || apy > existing.apy) {
               rates.set(target.stablecoinId, { apy, chain: target.chain });
             }
+            resolvedTargets.add(targetLabel);
+            telemetry.resolvedTargetCount = resolvedTargets.size;
+            accountedTargets.add(targetLabel);
           } catch (err) {
             if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-            if (budget.budgetController.signal.aborted) return;
+            if (budget.budgetController.signal.aborted) {
+              telemetry.budgetExhausted = true;
+              return;
+            }
             console.warn(
               `[yield/aave-v3] Failed to fetch reserve data for ${target.symbol} on ${target.chain}:`,
               err instanceof Error ? err.message : String(err),
             );
+            recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "rpc-exception");
+            accountedTargets.add(targetLabel);
           }
         }),
       );
     }
 
-    console.log(`[yield/aave-v3] Fetched ${rates.size}/${targets.length} Aave V3 supply rates`);
-    return { rates };
+    if (budget.budgetController.signal.aborted) {
+      telemetry.budgetExhausted = true;
+    }
+    for (const target of targets) {
+      const targetLabel = buildOptionalRpcTargetLabel(target.chain, target.symbol);
+      if (!accountedTargets.has(targetLabel)) {
+        recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "budget-exhausted");
+        accountedTargets.add(targetLabel);
+      }
+    }
+
+    telemetry.emittedCount = rates.size;
+    logOptionalRpcTelemetry("aave-v3", telemetry);
+    return { rates, telemetry };
   } finally {
     budget.cleanup();
   }
