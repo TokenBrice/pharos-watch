@@ -1521,7 +1521,7 @@ Per-coin Safety Score grade transition history (seed row + grade changes only). 
 
 ### `GET /api/yield-rankings`
 
-Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint rehydrates `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` from the current report-card snapshot at read time so Yield Intelligence stays aligned with `/api/report-cards`. Includes source-selection provenance, the default USD benchmark (`riskFreeRate`), and the structured benchmark registry used for row-level excess-yield selection. If a ranking row has no matching live report-card snapshot, the API now retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage.
+Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint rehydrates `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` from the current report-card snapshot at read time so Yield Intelligence stays aligned with `/api/report-cards`. PYS is benchmark-aware: it starts from cached APY inputs, adds a weighted slice of the row's benchmark spread, and then applies the current Safety Score. The response also includes source-selection provenance, the default USD benchmark (`riskFreeRate`), and the structured benchmark registry used for row-level excess-yield selection. If a ranking row has no matching live report-card snapshot, the API now retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour, aligned to the hourly `sync-yield-data` publisher).
 
@@ -1582,7 +1582,7 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
 | `yieldType`        | `string`           | Yield type classification (e.g. `"lending-vault"`, `"staking"`)                                                                                     |
 | `dataSource`       | `string`           | Data source identifier (e.g. `"defillama"`)                                                                                                         |
 | `sourceTvlUsd`     | `number \| null`   | TVL of the yield source pool (USD)                                                                                                                  |
-| `pharosYieldScore` | `number \| null`   | Composite Pharos Yield Score (0–100), recomputed at read time from cached APY inputs plus the current Safety Score                                  |
+| `pharosYieldScore` | `number \| null`   | Composite Pharos Yield Score (0–100), recomputed at read time from cached APY + benchmark inputs plus the current Safety Score                     |
 | `safetyScore`      | `number \| null`   | Current Safety Score input used by Yield Intelligence. Rated coins match `/api/report-cards`; unrated coins use the default NR penalty input (`40`) |
 | `safetyGrade`      | `string \| null`   | Current Safety Score letter grade (`"A+"` through `"F"`, or `"NR"`) from `/api/report-cards`                                                        |
 | `yieldToRisk`      | `number \| null`   | Yield-to-risk ratio recomputed at read time from cached APY inputs plus the current Safety Score                                                    |
@@ -2507,7 +2507,7 @@ Audits existing depeg events against CoinGecko historical price data to detect f
 
 ### `POST /api/trigger-digest`
 
-Force-regenerates the daily digest, bypassing the normal 1-hour dedup check. Routed through `worker/src/router.ts`.
+Queues a background daily-digest regeneration, bypassing the normal 1-hour dedup check. Routed through `worker/src/router.ts`.
 
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
@@ -2516,11 +2516,16 @@ Force-regenerates the daily digest, bypassing the normal 1-hour dedup check. Rou
 ```json
 {
   "ok": true,
-  "result": { ... }
+  "accepted": true,
+  "requestId": "manual-digest-..."
 }
 ```
 
-Unhandled failures are wrapped by the shared error handler and return `500` with `{ "error": "Internal Server Error" }`.
+**Status:** `202 Accepted`
+
+The worker enqueues the digest run in `waitUntil()` and returns immediately so the Access-gated ops proxy does not need to hold the HTTP request open for the full Anthropic generation window. The background run is still logged against the `daily-digest` cron history, including manual `skipped_locked` outcomes when another digest run already holds the lease.
+
+Unhandled pre-enqueue failures are wrapped by the shared error handler and return `500` with `{ "error": "Internal Server Error" }`.
 
 ### `POST /api/reset-blacklist-sync`
 

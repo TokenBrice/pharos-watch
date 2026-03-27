@@ -6,6 +6,20 @@ interface FetchWithRetryOptions {
   timeoutMs?: number;
 }
 
+function getRetryDelayMs(response: Response, attempt: number): number | null {
+  if (response.status === 429) {
+    const retryAfter = response.headers.get("Retry-After");
+    const waitSec = retryAfter ? parseInt(retryAfter, 10) : 0;
+    return waitSec > 0 && waitSec <= 120 ? waitSec * 1000 : 5000;
+  }
+
+  if (response.status === 529) {
+    return Math.min(30_000, 5_000 * 2 ** attempt);
+  }
+
+  return null;
+}
+
 /**
  * Fetch with retry and exponential backoff.
  * Respects Retry-After header on 429 responses.
@@ -40,13 +54,12 @@ export async function fetchWithRetry(
       if (res.ok) return res;
       if (passthroughStatuses.has(res.status)) return res;
 
-      if (res.status === 429 && i < maxRetries) {
-        const retryAfter = res.headers.get("Retry-After");
-        const waitSec = retryAfter ? parseInt(retryAfter, 10) : 0;
-        const waitMs = waitSec > 0 && waitSec <= 120 ? waitSec * 1000 : 5000;
-        console.warn(`[fetch-retry] ${url} rate-limited (429), waiting ${waitMs}ms`);
+      const retryDelayMs = i < maxRetries ? getRetryDelayMs(res, i) : null;
+      if (retryDelayMs != null) {
+        const label = res.status === 529 ? "overloaded" : "rate-limited";
+        console.warn(`[fetch-retry] ${url} ${label} (${res.status}), waiting ${retryDelayMs}ms`);
         await res.body?.cancel();
-        await sleepWithSignal(waitMs, signal);
+        await sleepWithSignal(retryDelayMs, signal);
         continue;
       }
 

@@ -4,7 +4,7 @@ import { type CronResult } from "../lib/cron-logger";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { SECONDS } from "../lib/time-constants";
-import { CIRCUIT_SOURCE } from "../lib/constants";
+import { ANTHROPIC_MAX_RETRIES, ANTHROPIC_TIMEOUT_MS, CIRCUIT_SOURCE } from "../lib/constants";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
 import { DigestResponseSchema } from "../lib/schemas";
 
@@ -190,10 +190,12 @@ export async function generateWeeklyRecap(
         system: WEEKLY_SYSTEM_PROMPT,
         messages: [{ role: "user", content: userPrompt }],
       }),
-      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(120_000)]) : AbortSignal.timeout(120_000),
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS)])
+        : AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS),
     },
-    2,
-    { timeoutMs: 120_000 },
+    ANTHROPIC_MAX_RETRIES,
+    { timeoutMs: ANTHROPIC_TIMEOUT_MS },
   );
 
   if (!response || !response.ok) {

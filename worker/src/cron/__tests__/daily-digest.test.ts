@@ -142,6 +142,7 @@ vi.mock("../../lib/circuit-breaker", () => ({
 }));
 
 import { generateDailyDigest, classifyRegime } from "../daily-digest";
+import { ANTHROPIC_MAX_RETRIES, ANTHROPIC_TIMEOUT_MS } from "../../lib/constants";
 import {
   collectPsiContributors,
   collectYieldAnomalies,
@@ -383,8 +384,8 @@ describe("generateDailyDigest", () => {
         method: "POST",
         headers: expect.objectContaining({ "x-api-key": "anthropic-key" }),
       }),
-      2,
-      { timeoutMs: 120_000 },
+      ANTHROPIC_MAX_RETRIES,
+      { timeoutMs: ANTHROPIC_TIMEOUT_MS },
     );
   });
 

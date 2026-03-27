@@ -8,7 +8,7 @@ import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { SECONDS } from "../lib/time-constants";
-import { CIRCUIT_SOURCE } from "../lib/constants";
+import { ANTHROPIC_MAX_RETRIES, ANTHROPIC_TIMEOUT_MS, CIRCUIT_SOURCE } from "../lib/constants";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
 import { getConditionBand } from "../lib/stability-index";
 import { getDisplayedPsi } from "@shared/lib/psi-view-model";
@@ -637,10 +637,12 @@ export async function generateDailyDigest(
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userPromptContent }],
       }),
-      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(120_000)]) : AbortSignal.timeout(120_000),
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS)])
+        : AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS),
     },
-    2,
-    { timeoutMs: 120_000 },
+    ANTHROPIC_MAX_RETRIES,
+    { timeoutMs: ANTHROPIC_TIMEOUT_MS },
   );
 
   if (!response || !response.ok) {

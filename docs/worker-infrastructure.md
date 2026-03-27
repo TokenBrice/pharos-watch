@@ -199,7 +199,7 @@ Operator admin actions are dispatched through `worker/src/router.ts` using share
 
 | Endpoint                         | Auth                                         | Description                                                             |
 | -------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------- |
-| `POST /api/trigger-digest`       | `ops-api` + Access user/JWT or service token | Force-regenerates digest with `force=true`, posts to Twitter + Telegram |
+| `POST /api/trigger-digest`       | `ops-api` + Access user/JWT or service token | Queues a leased background digest run with `force=true`, then returns `202 Accepted` immediately |
 | `POST /api/reset-blacklist-sync` | `ops-api` + Access user/JWT or service token | Rolls back sync state: EVM −50,000 blocks, Tron −7 days                 |
 | `GET /api/debug-sync-state`      | `ops-api` + Access user/JWT or service token | Returns all `blacklist_sync_state` rows                                 |
 

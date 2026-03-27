@@ -51,6 +51,8 @@ import { handleDiscoveryCandidates } from "./api/discovery";
 import { handleFeedback, type FeedbackEnv } from "./api/feedback";
 import { handleTelegramWebhook } from "./api/telegram-webhook";
 import { generateDailyDigest } from "./cron/daily-digest";
+import { createLeaseOwner, runCronWithLease } from "./lib/cron-lease";
+import { logCronRun, type CronResult } from "./lib/cron-logger";
 import { runIdempotentAdminAction } from "./lib/idempotency";
 import { requireAdmin, withAdmin } from "./lib/auth";
 import { jsonResponse, withErrorHandler } from "./lib/api-utils";
@@ -114,6 +116,83 @@ type StaticRouteHandlerMap = Partial<Record<EndpointKey, StaticRouteHandler>>;
 export interface StaticRouteDefinition {
   endpoint: EndpointDefinition;
   handler: StaticRouteHandler;
+}
+
+function createAcceptedJsonResponse(body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status: 202,
+    headers: {
+      "Cache-Control": "no-store",
+      "Content-Type": "application/json",
+    },
+  });
+}
+
+function normalizeManualCronMetadata(
+  result: CronResult | void,
+  extras: Record<string, unknown>,
+): string {
+  const parsed: Record<string, unknown> = {};
+  if (result?.metadata) {
+    try {
+      Object.assign(parsed, JSON.parse(result.metadata) as Record<string, unknown>);
+    } catch {
+      parsed.rawMetadata = result.metadata;
+    }
+  }
+
+  const rowsWrittenDefault = typeof result?.itemCount === "number" ? result.itemCount : null;
+
+  return JSON.stringify({
+    rowsRead: parsed.rowsRead ?? null,
+    rowsWritten: parsed.rowsWritten ?? rowsWrittenDefault,
+    rowsDropped: parsed.rowsDropped ?? 0,
+    sourceCoverage: parsed.sourceCoverage ?? null,
+    fallbackMode: parsed.fallbackMode ?? null,
+    validationFailures: parsed.validationFailures ?? 0,
+    ...parsed,
+    ...extras,
+  });
+}
+
+async function runManualDigestTrigger(
+  db: D1Database,
+  anthropicApiKey: string | null,
+  telegramCreds: TelegramCreds | null,
+  requestId: string,
+): Promise<void> {
+  const leaseOwner = createLeaseOwner("daily-digest");
+  await logCronRun(db, "daily-digest", async (signal): Promise<CronResult> => {
+    const lease = await runCronWithLease(
+      db,
+      "daily-digest",
+      ({ signal: leaseSignal }) => generateDailyDigest(db, anthropicApiKey, null, true, telegramCreds, leaseSignal),
+      { owner: leaseOwner, abortSignal: signal },
+    );
+
+    if (lease.status === "skipped_locked") {
+      return {
+        status: "skipped_locked",
+        metadata: normalizeManualCronMetadata(undefined, {
+          reason: "lease-locked",
+          trigger: "manual",
+          requestId,
+          leaseOwner: lease.leaseOwner,
+          renewFailures: lease.renewFailures,
+        }),
+      };
+    }
+
+    return {
+      ...(lease.result ?? {}),
+      metadata: normalizeManualCronMetadata(lease.result, {
+        trigger: "manual",
+        requestId,
+        leaseOwner: lease.leaseOwner,
+        renewFailures: lease.renewFailures,
+      }),
+    };
+  });
 }
 
 const STATIC_ROUTE_HANDLERS_BY_KEY = {
@@ -199,13 +278,27 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
     handleTelegramWebhook(db, request, telegramWebhookSecret, telegramBotToken),
   "trigger-digest": withErrorHandler(
     "route-trigger-digest",
-    async ({ db, request, trustedAdmin, anthropicApiKey, telegramCreds }) => {
+    async ({ db, execCtx, request, trustedAdmin, anthropicApiKey, telegramCreds }) => {
       const authError = await requireAdmin(request, trustedAdmin);
       if (authError) return authError;
 
       return runIdempotentAdminAction(db, "trigger-digest", request, async () => {
-        const result = await generateDailyDigest(db, anthropicApiKey ?? null, null, true, telegramCreds ?? null);
-        return jsonResponse({ ok: true, result });
+        const cryptoObj = globalThis as typeof globalThis & {
+          crypto?: { randomUUID?: () => string };
+        };
+        const requestId = cryptoObj.crypto?.randomUUID?.() ?? `manual-digest-${Date.now()}`;
+        execCtx.waitUntil(
+          runManualDigestTrigger(db, anthropicApiKey ?? null, telegramCreds ?? null, requestId)
+            .catch((err) => {
+              console.error(`[trigger-digest] Manual digest run failed (${requestId}):`, err);
+            }),
+        );
+        return createAcceptedJsonResponse({
+          ok: true,
+          accepted: true,
+          requestId,
+          message: "Digest trigger accepted and running in the background.",
+        });
       });
     },
   ),

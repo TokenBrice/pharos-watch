@@ -199,3 +199,9 @@ export const GT_PROBE_MAX_RETRIES = 1;
 
 /** Shared wall-clock budget for the serialized GT probe pass inside sync-stablecoins. */
 export const GT_PROBE_RUN_BUDGET_MS = 3 * 60_000;
+
+/** Anthropic digest generation request timeout. */
+export const ANTHROPIC_TIMEOUT_MS = 120_000;
+
+/** Extra retry headroom for transient Anthropic overload responses (529). */
+export const ANTHROPIC_MAX_RETRIES = 4;

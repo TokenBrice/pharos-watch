@@ -68,6 +68,7 @@ The digest's Flight-to-Quality collector is not yet wired to the public `/api/mi
 
 - **Model:** `claude-opus-4-6` via `https://api.anthropic.com/v1/messages`
 - **Timeout:** 120 seconds (Opus generates slower than Sonnet; the cron runs at 08:05 UTC with no downstream time pressure)
+- **Overload retries:** Anthropic `529 Overloaded` responses now back off exponentially (`5s`, `10s`, `20s`, `30s`) before the digest gives up
 - **Voice:** sardonic financial columnist — dry, precise, no emojis, no exclamation marks
 - **Priority rule:** rank everything by market impact (deviation × mcap); enrichment priority varies by regime
 - **Regime classification:** a `classifyRegime()` function labels each day as CRISIS, TENSION, WATCHFUL, or CALM based on PSI band, active depegs, gauge score, FTQ status, and DEWS ALERT+ count
@@ -127,7 +128,7 @@ Read endpoints are public, but they do not all share the same cache profile: `GE
 | `GET /api/digest-archive` | All digests, newest first (up to 365) |
 | `GET /api/digest-snapshot?date=YYYY-MM-DD` | Input data + depeg/blacklist context for a daily digest date — used by SSG detail pages; cached as archive data (`s-maxage=86400, max-age=3600`) |
 | `GET /api/digest-snapshot?date=YYYY-MM-DD-weekly` | Input data for a weekly recap slug; the handler strips `-weekly` for date parsing and returns the weekly snapshot when that digest row exists |
-| `POST /api/trigger-digest` *(admin)* | Force-regenerate digest and post to all distribution channels; requires Access service-token headers on `ops-api.pharos.watch` |
+| `POST /api/trigger-digest` *(admin)* | Queue a background force-regeneration run and post to all distribution channels; requires Access service-token headers on `ops-api.pharos.watch` |
 
 ---
 
@@ -347,7 +348,7 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Twitter and Telegra
 | `worker/src/api/digest-archive.ts` | `GET /api/digest-archive` handler |
 | `worker/src/api/digest-snapshot.ts` | `GET /api/digest-snapshot` handler |
 | `worker/src/handlers/scheduled.ts` | Cron scheduling orchestration (daily digest runs after `snapshot-psi`) |
-| `worker/src/route-registry.ts` | Static worker route bindings keyed by shared endpoint descriptors, including `trigger-digest` dependency hints |
+| `worker/src/route-registry.ts` | Static worker route bindings keyed by shared endpoint descriptors, including the background `trigger-digest` enqueue path |
 | `worker/src/router.ts` | Worker route dispatcher for static registry lookup plus dynamic route matching |
 | `worker/src/lib/env.ts` | `Env` interface used by fetch/scheduled handlers |
 | `worker/migrations/0000_baseline.sql` | Baseline `daily_digest` schema, including the historical title/extended/meta additions |
