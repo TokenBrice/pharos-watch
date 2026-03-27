@@ -19,31 +19,43 @@ describe("deriveDataHealth", () => {
     expect(health.state).toBe("fresh");
   });
 
-  it("returns degraded when age is between 1.0x and 1.5x staleTime", () => {
+  it("returns fresh when age is between 1.0x and 2.0x staleTime (within FRESH ratio)", () => {
     const now = Date.now();
     vi.spyOn(Date, "now").mockReturnValue(now);
     const health = deriveDataHealth({
       label: "Liquidity",
-      dataUpdatedAt: now - 40 * 60_000,
+      dataUpdatedAt: now - 50 * 60_000,
+      staleTime: 30 * 60_000,
+      hasData: true,
+    });
+    expect(health.state).toBe("fresh");
+  });
+
+  it("returns degraded when age is between 2.0x and 3.0x staleTime", () => {
+    const now = Date.now();
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    const health = deriveDataHealth({
+      label: "Liquidity",
+      dataUpdatedAt: now - 75 * 60_000,
       staleTime: 30 * 60_000,
       hasData: true,
     });
     expect(health.state).toBe("degraded");
   });
 
-  it("returns stale when age exceeds 1.5x staleTime", () => {
+  it("returns stale when age exceeds 3.0x staleTime", () => {
     const now = Date.now();
     vi.spyOn(Date, "now").mockReturnValue(now);
     const health = deriveDataHealth({
       label: "Report Cards",
-      dataUpdatedAt: now - 50 * 60_000,
+      dataUpdatedAt: now - 100 * 60_000,
       staleTime: 30 * 60_000,
       hasData: true,
     });
     expect(health.state).toBe("stale");
   });
 
-  it("treats warning header metadata as degraded", () => {
+  it("trusts backend status over warning header when status is fresh", () => {
     const now = Date.now();
     vi.spyOn(Date, "now").mockReturnValue(now);
     const health = deriveDataHealth({
@@ -58,7 +70,7 @@ describe("deriveDataHealth", () => {
         warning: '110 - "Response is stale"',
       },
     });
-    expect(health.state).toBe("degraded");
+    expect(health.state).toBe("fresh");
   });
 
   it("prefers backend freshness metadata over a fresh browser fetch timestamp", () => {

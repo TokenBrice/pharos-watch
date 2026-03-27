@@ -2,10 +2,10 @@
 // Canonical thresholds for age/interval ratio. Used by worker buildFreshnessMeta
 // and frontend data-health.ts to classify cache freshness consistently.
 export const FRESHNESS_RATIOS = {
-  /** Data is fresh if age <= interval * FRESH */
-  FRESH: 1.0,
-  /** Data is degraded if age <= interval * DEGRADED */
-  DEGRADED: 1.5,
+  /** Data is fresh if age <= interval * FRESH (tolerates one missed cycle) */
+  FRESH: 2.0,
+  /** Data is degraded if age <= interval * DEGRADED (missed 2+ cycles) */
+  DEGRADED: 3.0,
   // Anything beyond DEGRADED is stale
 } as const;
 
@@ -63,8 +63,8 @@ export const STATUS_MISSING_PRICE_THRESHOLDS = {
 
 // --- Cache ratio thresholds (availability status) ---
 export const STATUS_CACHE_RATIO_THRESHOLDS = {
-  degraded: 1.5,
-  stale: 2,
+  degraded: 2,
+  stale: 3,
 } as const;
 
 // --- Price source confidence severity bands (UI visual indicators) ---

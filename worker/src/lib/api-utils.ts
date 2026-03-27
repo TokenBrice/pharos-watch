@@ -620,7 +620,7 @@ export function addFreshnessHeaders(
 ): Record<string, string> {
   const age = Math.floor(Date.now() / 1000) - updatedAt;
   const result: Record<string, string> = { ...headers, "X-Data-Age": String(age) };
-  if (age > maxAgeSec) {
+  if (age > FRESHNESS_RATIOS.FRESH * maxAgeSec) {
     result["Warning"] = `110 - "Response is stale (${age}s old, max ${maxAgeSec}s)"`;
     // Do not let edge/browser caches continue serving a stale object after the
     // underlying cron data recovers.

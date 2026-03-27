@@ -5,12 +5,12 @@ import { DAY_SECONDS } from "./time-constants";
 // warning layer. Keep these aligned with the worker handlers that emit
 // X-Data-Age / Warning headers.
 export const API_FRESHNESS_MAX_AGE_SEC = {
-  stablecoins: 600,
+  stablecoins: 900,
   stablecoinCharts: 3600,
-  chains: 600,
+  chains: 900,
   pegSummary: 900,
   depegEvents: 900,
-  stressSignals: 900,
+  stressSignals: 1800,
   reportCards: 900,
   redemptionBackstops: 3600,
   mintBurnFlows: CRON_INTERVALS["sync-mint-burn"] * 2,

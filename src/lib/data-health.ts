@@ -48,9 +48,9 @@ function pickBaseState(
   staleTime: number,
 ): Exclude<DataHealthState, "error"> {
   if (meta?.status === "stale") return "stale";
-  if (meta?.status === "degraded" || meta?.warning) return "degraded";
+  if (meta?.status === "degraded") return "degraded";
   if (ageMs === null) return "unavailable";
-  if (ageMs <= staleTime) return "fresh";
+  if (ageMs <= FRESHNESS_RATIOS.FRESH * staleTime) return "fresh";
   if (ageMs <= FRESHNESS_RATIOS.DEGRADED * staleTime) return "degraded";
   return "stale";
 }
