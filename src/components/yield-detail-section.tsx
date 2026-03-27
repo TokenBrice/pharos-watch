@@ -1,13 +1,15 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { AlertTriangle, ChevronDown } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { AlertTriangle, BarChart3, ChevronDown } from "lucide-react";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { YieldSourceLink } from "@/components/yield-source-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useYieldRankings } from "@/hooks/api-hooks";
 import { formatYieldWarningSignal, getPysColor, computePysBreakdown } from "@/lib/yield-constants";
 import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
@@ -16,7 +18,10 @@ import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification
 import { formatCurrency, formatPercent, formatSignedPercent as sharedFormatSignedPercent } from "@shared/lib/format";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { PYS_BENCHMARK_SPREAD_WEIGHT } from "@shared/lib/yield-scoring";
+import type { AltYieldSource } from "@shared/types";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+
+const ALT_SOURCE_INITIAL_COUNT = 6;
 
 interface YieldDetailSectionProps {
   stablecoinId: string;
@@ -166,8 +171,187 @@ function DetailStatCard({
   );
 }
 
+function AltSourceTable({
+  altSources,
+  bestApy,
+  bestSourceKey,
+  onSelectSource,
+  selectedSourceKeys,
+  showAll,
+  onShowAll,
+}: {
+  altSources: AltYieldSource[];
+  bestApy: number;
+  bestSourceKey: string | null;
+  onSelectSource: (sourceKey: string) => void;
+  selectedSourceKeys: Set<string>;
+  showAll: boolean;
+  onShowAll: () => void;
+}) {
+  const [sortField, setSortField] = useState<"apy" | "tvl">("apy");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  const toggleSort = (field: "apy" | "tvl") => {
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir("desc");
+    }
+  };
+
+  const sorted = [...altSources].sort((a, b) => {
+    const mul = sortDir === "asc" ? 1 : -1;
+    if (sortField === "apy") return mul * (a.apy30d - b.apy30d);
+    return mul * ((a.sourceTvlUsd ?? 0) - (b.sourceTvlUsd ?? 0));
+  });
+
+  const visible = showAll ? sorted : sorted.slice(0, ALT_SOURCE_INITIAL_COUNT);
+  const hiddenCount = sorted.length - ALT_SOURCE_INITIAL_COUNT;
+
+  return (
+    <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        Alternative Sources
+      </p>
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-border/40 text-muted-foreground">
+              <th className="pb-2 text-left font-medium">Source</th>
+              <th className="pb-2 text-center font-medium">Type</th>
+              <th
+                className="cursor-pointer pb-2 text-right font-medium hover:text-foreground transition-colors"
+                onClick={() => toggleSort("apy")}
+              >
+                APY 30d {sortField === "apy" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+              </th>
+              <th className="pb-2 text-right font-medium">vs Best</th>
+              <th
+                className="cursor-pointer pb-2 text-right font-medium hover:text-foreground transition-colors"
+                onClick={() => toggleSort("tvl")}
+              >
+                TVL {sortField === "tvl" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+              </th>
+              <th className="pb-2 text-center font-medium">
+                <span className="sr-only">Actions</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((source) => {
+              const isSelected = selectedSourceKeys.has(source.sourceKey);
+              const isBest = source.sourceKey === bestSourceKey;
+              const delta = source.apy30d - bestApy;
+              const deltaSign = delta >= 0 ? "+" : "";
+              return (
+                <tr
+                  key={source.sourceKey}
+                  className={cn(
+                    "border-b border-border/30 last:border-0 transition-colors",
+                    isSelected && "bg-primary/5",
+                  )}
+                >
+                  <td className="py-2 pr-2">
+                    <div className="flex items-center gap-1.5">
+                      <YieldSourceLink href={source.yieldSourceUrl} className="text-foreground">
+                        {source.yieldSource}
+                      </YieldSourceLink>
+                      {isBest && (
+                        <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+                          Best
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-2 text-center">
+                    <Badge
+                      variant="outline"
+                      className={cn("text-[10px]", YIELD_TYPE_STYLES[source.yieldType]?.badge ?? "")}
+                    >
+                      {YIELD_TYPE_LABELS[source.yieldType] ?? source.yieldType}
+                    </Badge>
+                  </td>
+                  <td className="py-2 text-right font-mono tabular-nums">
+                    {formatPercent(source.apy30d)}
+                  </td>
+                  <td className="py-2 text-right">
+                    <span className={cn("font-mono tabular-nums text-[10px]", delta >= 0 ? "text-emerald-500" : "text-muted-foreground")}>
+                      {deltaSign}{formatPercent(delta)}
+                    </span>
+                  </td>
+                  <td className="py-2 text-right font-mono tabular-nums text-muted-foreground">
+                    {source.sourceTvlUsd !== null ? formatCurrency(source.sourceTvlUsd) : "—"}
+                  </td>
+                  <td className="py-2 text-center">
+                    <button
+                      type="button"
+                      onClick={() => onSelectSource(source.sourceKey)}
+                      className={cn(
+                        "pharos-focus-ring inline-flex items-center rounded-full p-1 transition-colors",
+                        isSelected
+                          ? "bg-primary/10 text-primary hover:bg-primary/20"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      )}
+                      aria-label={`${isSelected ? "Remove" : "Show"} ${source.yieldSource} on chart`}
+                      title={isSelected ? "Remove from chart" : "Show on chart"}
+                    >
+                      <BarChart3 className="h-3.5 w-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {!showAll && hiddenCount > 0 && (
+        <button
+          type="button"
+          onClick={onShowAll}
+          className="mt-3 w-full rounded-lg border border-border/60 bg-background/55 py-1.5 text-xs text-muted-foreground hover:bg-muted/30 hover:text-foreground transition-colors"
+        >
+          Show {hiddenCount} more source{hiddenCount !== 1 ? "s" : ""}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionProps) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { data, meta: apiMeta, error, isLoading } = useYieldRankings();
+
+  // Multi-select source state — URL-persisted via ?sources= param
+  const initialSources = searchParams.get("sources")?.split(",").filter(Boolean) ?? [];
+  const [selectedSourceKeys, setSelectedSourceKeys] = useState<Set<string>>(
+    () => new Set(initialSources),
+  );
+  const [showAllSources, setShowAllSources] = useState(false);
+
+  const toggleSource = (sourceKey: string) => {
+    setSelectedSourceKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(sourceKey)) {
+        next.delete(sourceKey);
+      } else if (next.size < 4) {
+        next.add(sourceKey);
+      }
+      const params = new URLSearchParams(searchParams.toString());
+      if (next.size > 0) {
+        params.set("sources", [...next].join(","));
+      } else {
+        params.delete("sources");
+      }
+      router.replace(`?${params.toString()}`, { scroll: false });
+      return next;
+    });
+  };
+
+  const externalSourceKeys = selectedSourceKeys.size > 0
+    ? [...selectedSourceKeys]
+    : undefined;
   const ranking = data?.rankings.find((row) => row.id === stablecoinId);
   const medianApy = data?.medianApy ?? 0;
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
@@ -268,9 +452,16 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
       <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
         <CardHeader className="pb-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle as="h2" id="yield-intelligence-heading" className={DETAIL_SECTION_TITLE_CLASS}>
-              Yield Intelligence
-            </CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle as="h2" id="yield-intelligence-heading" className={DETAIL_SECTION_TITLE_CLASS}>
+                Yield Intelligence
+              </CardTitle>
+              {ranking.altSources.length > 0 && (
+                <span className="rounded-full border border-border/60 bg-muted/20 px-2 py-0.5 text-xs font-mono text-muted-foreground">
+                  Sources ({1 + ranking.altSources.length})
+                </span>
+              )}
+            </div>
             <span
               className={cn(
                 "rounded-full border px-2 py-0.5 text-xs font-medium",
@@ -315,6 +506,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             <p className="text-sm text-muted-foreground">
               APY trend against the current benchmark hurdle rate and peer median.
             </p>
+
             <YieldHistoryChart
               stablecoinId={stablecoinId}
               benchmarkRate={ranking.benchmarkRate ?? data?.riskFreeRate ?? 0}
@@ -322,6 +514,8 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
               benchmarkIsFallback={ranking.benchmarkSelectionMode === "fallback-usd" || ranking.benchmarkIsFallback}
               medianApy={medianApy}
               availableSources={historySources}
+              hideSourceSelector={historySources.length > 1}
+              externalSourceKeys={externalSourceKeys}
             />
           </div>
 
@@ -406,7 +600,20 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           </div>
 
           {/* ── Alternative sources ── */}
-          {ranking.altSources.length > 0 ? (
+          {ranking.altSources.length >= 2 ? (
+            <AltSourceTable
+              altSources={ranking.altSources}
+              bestApy={ranking.apy30d}
+              bestSourceKey={ranking.provenance?.sourceKey ?? null}
+              onSelectSource={(sourceKey) => {
+                toggleSource(sourceKey);
+                document.getElementById("yield")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              selectedSourceKeys={selectedSourceKeys}
+              showAll={showAllSources}
+              onShowAll={() => setShowAllSources(true)}
+            />
+          ) : ranking.altSources.length === 1 ? (
             <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Alternative Sources</p>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">

@@ -1,8 +1,9 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
-import { AlertTriangle, ChevronDown } from "lucide-react";
+import { Fragment, useState } from "react";
+import { AlertTriangle, ChevronDown, Search } from "lucide-react";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
+import { YieldSourceSheet } from "@/components/yield-source-sheet";
 import { TableCell, TableRow } from "@/components/ui/table";
 import {
   DataTableShell,
@@ -13,13 +14,21 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { YieldSourceLink } from "@/components/yield-source-link";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { formatCurrency, formatPercent, formatScore, formatSignedPercent } from "@shared/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { PYS_BENCHMARK_SPREAD_WEIGHT } from "@shared/lib/yield-scoring";
-import type { YieldRanking, AltYieldSource, YieldType } from "@shared/types";
+import type { YieldRanking, YieldType } from "@shared/types";
 import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
 import { formatYieldWarningSignal, getPysColor, computePysBreakdown } from "@/lib/yield-constants";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
@@ -50,71 +59,11 @@ const YIELD_COLUMNS: readonly DataTableColumn<YieldTableSortKey>[] = [
   },
   { id: "range30d", label: "30d Range", className: "hidden xl:table-cell text-right" },
   { id: "signals", label: <MethodologyLabel topic="yieldWarnings">Signals</MethodologyLabel>, className: "hidden md:table-cell text-center" },
+  { id: "sources", label: "Sources", sortKey: "sourceCount", className: "hidden md:table-cell text-center", title: "Number of yield sources tracked" },
   { id: "expand", label: <span className="sr-only">Expand row</span>, className: "w-[44px] text-right" },
 ] as const;
 
 const COLUMN_COUNT = YIELD_COLUMNS.length;
-
-/** Small pill badge that opens an inline popover listing alternative yield sources. */
-function AltSourcesPopover({ altSources }: { altSources: AltYieldSource[] }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handleClick = (e: MouseEvent) => {
-      if (ref.current && e.target instanceof Node && !ref.current.contains(e.target)) setOpen(false);
-    };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", handleClick);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClick);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative inline-block shrink-0">
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen((v) => !v);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            e.stopPropagation();
-            setOpen((v) => !v);
-          }
-        }}
-        className="inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-        aria-label={`${altSources.length} alternative yield source${altSources.length > 1 ? "s" : ""}`}
-        aria-expanded={open}
-        aria-haspopup="dialog"
-      >
-        +{altSources.length}
-      </button>
-      {open && (
-        <div role="dialog" aria-label="Alternative yield sources" className="absolute left-0 top-full mt-1 z-50 min-w-[180px] rounded-lg border bg-card shadow-lg p-2 text-xs">
-          <p className="text-muted-foreground mb-1.5 font-medium">Alt sources</p>
-          {altSources.map((src) => (
-            <div key={src.sourceKey} className="flex items-center justify-between gap-2 py-1 border-b last:border-0">
-              <YieldSourceLink href={src.yieldSourceUrl} className="max-w-[180px] text-foreground" stopPropagation>
-                {src.yieldSource}
-              </YieldSourceLink>
-              <span className="font-mono text-emerald-700 dark:text-emerald-400 shrink-0">
-                {formatPercent(src.currentApy)}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 interface YieldLeaderboardProps {
   rankings: YieldRanking[];
@@ -132,12 +81,23 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
   );
   const [hideWarnings, setHideWarnings] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [sheetRankingId, setSheetRankingId] = useState<string | null>(null);
+  const sheetRanking = sheetRankingId ? rankings.find((r) => r.id === sheetRankingId) ?? null : null;
 
   const visibleLabels = [...new Set(rankings.map((r) => getLabel(r.yieldType)))];
   const typeFiltered = rankings.filter((r) => activeLabels.has(getLabel(r.yieldType)));
   const warningFiltered = hideWarnings
     ? typeFiltered.filter((ranking) => ranking.warningSignals.length === 0)
     : typeFiltered;
+
+  const searchFiltered = searchQuery.trim()
+    ? warningFiltered.filter((r) => {
+        const q = searchQuery.trim().toLowerCase();
+        return r.symbol.toLowerCase().includes(q) || r.name.toLowerCase().includes(q);
+      })
+    : warningFiltered;
 
   const {
     sortKey,
@@ -155,7 +115,7 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
     totalRows,
     onPreviousPage,
     onNextPage,
-  } = useSortedPaginatedTable<YieldRanking, YieldTableSortKey>(warningFiltered, {
+  } = useSortedPaginatedTable<YieldRanking, YieldTableSortKey>(searchFiltered, {
     defaultKey: "pys",
     defaultDirection: "desc",
     compareRows: compareYieldRows,
@@ -181,45 +141,113 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
           handleSortKeyDown,
         }}
         topSlot={
-          <div className="mb-3 flex flex-wrap items-center gap-2 px-3 pt-3">
-            {visibleLabels.map((label) => {
-              const repType = (Object.entries(YIELD_TYPE_LABELS) as [YieldType, string][]).find(
-                ([, l]) => l === label,
-              )?.[0];
-              return (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => {
-                    setActiveLabels((prev) => {
-                      const next = new Set(prev);
-                      if (next.has(label)) {
-                        next.delete(label);
-                      } else {
-                        next.add(label);
-                      }
-                      return next;
-                    });
-                  }}
-                  className={
-                    activeLabels.has(label)
-                      ? `pharos-focus-ring rounded-full border px-2 py-0.5 text-xs font-medium ${repType ? YIELD_TYPE_STYLES[repType].badge : ""}`
-                      : "pharos-focus-ring rounded-full border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground"
-                  }
-                >
-                  {label}
-                </button>
-              );
-            })}
-            <label className="ml-auto flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={hideWarnings}
-                onChange={(e) => setHideWarnings(e.target.checked)}
-                className="h-3.5 w-3.5 rounded border-border"
-              />
-              Hide warned
-            </label>
+          <div className="flex flex-col gap-2 px-3 pt-3 mb-3">
+            {/* Search combobox */}
+            <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+              <PopoverTrigger asChild>
+                <div className="relative max-w-xs">
+                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setSearchOpen(e.target.value.trim().length > 0);
+                    }}
+                    onFocus={() => { if (searchQuery.trim()) setSearchOpen(true); }}
+                    placeholder="Search stablecoin..."
+                    className="pharos-focus-ring w-full rounded-full border border-border/60 bg-background/60 py-1.5 pl-8 pr-3 text-sm text-foreground placeholder:text-muted-foreground outline-none"
+                  />
+                </div>
+              </PopoverTrigger>
+              {searchQuery.trim() && (
+                <PopoverContent className="w-[280px] p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+                  <Command shouldFilter={false}>
+                    <CommandList>
+                      <CommandEmpty className="py-3 text-center text-xs text-muted-foreground">
+                        No matches
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {warningFiltered
+                          .filter((r) => {
+                            const q = searchQuery.trim().toLowerCase();
+                            return r.symbol.toLowerCase().includes(q) || r.name.toLowerCase().includes(q);
+                          })
+                          .slice(0, 5)
+                          .map((r) => (
+                            <CommandItem
+                              key={r.id}
+                              value={r.id}
+                              onSelect={() => {
+                                setSearchQuery("");
+                                setSearchOpen(false);
+                                setExpandedId(r.id);
+                                requestAnimationFrame(() => {
+                                  document.getElementById(`yield-row-${r.id}`)?.scrollIntoView({
+                                    behavior: "smooth",
+                                    block: "center",
+                                  });
+                                });
+                              }}
+                              className="flex items-center justify-between gap-2"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-xs font-medium">{r.symbol}</span>
+                                <span className="text-xs text-muted-foreground">{r.name}</span>
+                              </div>
+                              <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                                {formatPercent(r.apy30d)}
+                              </span>
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              )}
+            </Popover>
+
+            {/* Type filter pills */}
+            <div className="flex flex-wrap items-center gap-2">
+              {visibleLabels.map((label) => {
+                const repType = (Object.entries(YIELD_TYPE_LABELS) as [YieldType, string][]).find(
+                  ([, l]) => l === label,
+                )?.[0];
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => {
+                      setActiveLabels((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(label)) {
+                          next.delete(label);
+                        } else {
+                          next.add(label);
+                        }
+                        return next;
+                      });
+                    }}
+                    className={
+                      activeLabels.has(label)
+                        ? `pharos-focus-ring rounded-full border px-2 py-0.5 text-xs font-medium ${repType ? YIELD_TYPE_STYLES[repType].badge : ""}`
+                        : "pharos-focus-ring rounded-full border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                    }
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+              <label className="ml-auto flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={hideWarnings}
+                  onChange={(e) => setHideWarnings(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-border"
+                />
+                Hide warned
+              </label>
+            </div>
           </div>
         }
         pagination={sorted.length > 0 ? {
@@ -249,6 +277,7 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                 return (
                   <Fragment key={row.id}>
                     <InteractiveTableRow
+                      id={`yield-row-${row.id}`}
                       onActivate={() => setExpandedId((current) => (current === row.id ? null : row.id))}
                       onHover={() => prefetch(row.id)}
                       className={warningSignalCount >= 2 ? "border-l-2 border-amber-500/50 hover:bg-muted/30" : "hover:bg-muted/30"}
@@ -363,7 +392,6 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                                 switch
                               </span>
                             ) : null}
-                            {(row.altSources?.length ?? 0) > 0 && <AltSourcesPopover altSources={row.altSources} />}
                           </div>
                           <p className="mt-0.5 text-[11px] text-muted-foreground">
                             {getYieldBenchmarkReferenceText(row)}
@@ -442,6 +470,26 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                           </Tooltip>
                         )}
                       </TableCell>
+                      <TableCell className="hidden md:table-cell text-center">
+                        {1 + (row.altSources?.length ?? 0) > 1 ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSheetRankingId(row.id);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") e.stopPropagation();
+                            }}
+                            className="pharos-focus-ring inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                            aria-label={`${1 + row.altSources.length} yield sources — open source explorer`}
+                          >
+                            {1 + row.altSources.length}
+                          </button>
+                        ) : (
+                          <span className="font-mono text-xs text-muted-foreground">1</span>
+                        )}
+                      </TableCell>
                       <TableCell className="px-2 py-2 text-right">
                         <button
                           type="button"
@@ -485,7 +533,19 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                                 {getYieldBenchmarkReferenceText(row)}
                               </p>
                             </div>
-                            {(row.altSources?.length ?? 0) > 0 ? <AltSourcesPopover altSources={row.altSources} /> : null}
+                            {(row.altSources?.length ?? 0) > 0 ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSheetRankingId(row.id);
+                                }}
+                                className="pharos-focus-ring inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                                aria-label={`${1 + row.altSources.length} yield sources — open source explorer`}
+                              >
+                                +{row.altSources.length} sources
+                              </button>
+                            ) : null}
                           </div>
                           <YieldHistoryChart
                             stablecoinId={row.id}
@@ -521,6 +581,14 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
           </TableRow>
         )}
       </DataTableShell>
+      <YieldSourceSheet
+        ranking={sheetRanking}
+        logo={sheetRankingId ? logos[sheetRankingId] : undefined}
+        riskFreeRate={riskFreeRate}
+        medianApy={medianApy}
+        open={sheetRankingId !== null}
+        onOpenChange={(open) => { if (!open) setSheetRankingId(null); }}
+      />
     </TooltipProvider>
   );
 }

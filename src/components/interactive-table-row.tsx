@@ -3,6 +3,7 @@
 import { TableRow } from "@/components/ui/table";
 
 interface InteractiveTableRowProps {
+  id?: string;
   onActivate: () => void;
   onHover?: () => void;
   className?: string;
@@ -11,6 +12,7 @@ interface InteractiveTableRowProps {
 }
 
 export function InteractiveTableRow({
+  id,
   onActivate,
   onHover,
   className = "",
@@ -19,6 +21,7 @@ export function InteractiveTableRow({
 }: InteractiveTableRowProps) {
   return (
     <TableRow
+      id={id}
       className={`cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${className}`}
       onClick={onActivate}
       onMouseEnter={onHover}

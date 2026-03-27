@@ -15,7 +15,7 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { Toggle } from "@/components/ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useYieldHistory } from "@/hooks/api-hooks";
-import { CHART_AMBER, CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
+import { CHART_AMBER, CHART_BLUE, CHART_PALETTE, CHART_SLATE } from "@/lib/chart-colors";
 import { DAY_MS } from "@/lib/constants";
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import { formatYieldWarningSignal } from "@/lib/yield-constants";
@@ -25,6 +25,10 @@ import type { YieldHistoryPoint } from "@shared/types";
 const BRAND_ACCENT = "oklch(0.72 0.14 248)";
 const DEFAULT_DAYS = 90;
 const PRESET_DAYS = [7, 30, 90, 365] as const;
+
+/** Distinct colors for overlay lines (skip index 0 = blue, use contrasting hues) */
+const OVERLAY_COLORS = [CHART_PALETTE[1], CHART_PALETTE[3], CHART_PALETTE[4], CHART_PALETTE[5]];
+const MAX_OVERLAY_SOURCES = 4;
 
 interface YieldHistoryChartProps {
   stablecoinId: string;
@@ -38,6 +42,12 @@ interface YieldHistoryChartProps {
     sourceKey: string;
     yieldSource: string;
   }>;
+  /** Hide the built-in source selector dropdown (when external pills control source) */
+  hideSourceSelector?: boolean;
+  /** Single external source key — used by the sheet (overrides internal state) */
+  externalSourceKey?: string;
+  /** Multiple external source keys — renders overlaid APY lines (detail page) */
+  externalSourceKeys?: string[];
 }
 
 interface YieldHistoryChartPoint {
@@ -318,21 +328,59 @@ export function YieldHistoryChart({
   defaultDays = DEFAULT_DAYS,
   compact = false,
   availableSources = [],
+  hideSourceSelector = false,
+  externalSourceKey,
+  externalSourceKeys,
 }: YieldHistoryChartProps) {
   const [days, setDays] = useState(() => normalizeDefaultDays(defaultDays));
   const [showBreakdown, setShowBreakdown] = useState(false);
-  const [selectedSourceKey, setSelectedSourceKey] = useState<string>("best");
+  const [internalSourceKey, setInternalSourceKey] = useState<string>("best");
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
+
+  // Single-source mode: external key overrides internal state
+  const selectedSourceKey = externalSourceKey ?? internalSourceKey;
+  const onSourceChange = externalSourceKey !== undefined ? () => {} : setInternalSourceKey;
+
   const effectiveSelectedSourceKey =
     selectedSourceKey === "best" || availableSources.some((source) => source.sourceKey === selectedSourceKey)
       ? selectedSourceKey
       : "best";
 
+  // Multi-source overlay: when externalSourceKeys is provided, the primary query
+  // uses the first key; additional keys are fetched separately as overlay lines.
+  const overlayKeys = externalSourceKeys?.slice(0, MAX_OVERLAY_SOURCES) ?? [];
+  const primaryOverlayKey = overlayKeys[0] ?? null;
+  const additionalOverlayKeys = overlayKeys.slice(1);
+
+  // Primary history query — uses the first overlay key if in multi-source mode,
+  // otherwise falls back to the single-source selection logic
+  const primarySourceKey = primaryOverlayKey ?? effectiveSelectedSourceKey;
   const historyQuery = useYieldHistory(stablecoinId, {
     days,
-    mode: effectiveSelectedSourceKey === "best" ? "best" : "source",
-    sourceKey: effectiveSelectedSourceKey === "best" ? null : effectiveSelectedSourceKey,
+    mode: primarySourceKey === "best" ? "best" : "source",
+    sourceKey: primarySourceKey === "best" ? null : primarySourceKey,
   });
+
+  // Overlay history queries (up to 3 additional sources)
+  const overlay1 = useYieldHistory(stablecoinId, {
+    days,
+    mode: "source",
+    sourceKey: additionalOverlayKeys[0] ?? null,
+    enabled: additionalOverlayKeys.length >= 1,
+  });
+  const overlay2 = useYieldHistory(stablecoinId, {
+    days,
+    mode: "source",
+    sourceKey: additionalOverlayKeys[1] ?? null,
+    enabled: additionalOverlayKeys.length >= 2,
+  });
+  const overlay3 = useYieldHistory(stablecoinId, {
+    days,
+    mode: "source",
+    sourceKey: additionalOverlayKeys[2] ?? null,
+    enabled: additionalOverlayKeys.length >= 3,
+  });
+  const overlayQueries = [overlay1, overlay2, overlay3].slice(0, additionalOverlayKeys.length);
 
   const chartData = useMemo<YieldHistoryChartPoint[]>(() => {
     return (historyQuery.data?.history ?? [])
@@ -355,6 +403,44 @@ export function YieldHistoryChart({
       .filter((point) => Number.isFinite(point.date))
       .sort((a, b) => a.date - b.date);
   }, [historyQuery.data]);
+
+  // Build overlay data series keyed by "apy_overlay_0", "apy_overlay_1", etc.
+  // Each overlay series is a Map<roundedDate, apy> for fast lookup when merging.
+  const overlayData = useMemo(() => {
+    return overlayQueries.map((q) => {
+      const map = new Map<number, number>();
+      for (const point of q.data?.history ?? []) {
+        const date = toTimestampMs(point.date);
+        if (Number.isFinite(date)) {
+          // Round to nearest hour for date alignment across sources
+          const rounded = Math.round(date / 3_600_000) * 3_600_000;
+          map.set(rounded, point.apy);
+        }
+      }
+      return map;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- overlay query data refs
+  }, [overlay1.data, overlay2.data, overlay3.data, overlayQueries.length]);
+
+  // Merge overlay APY values into chartData as dynamic keys
+  const mergedChartData = useMemo(() => {
+    if (overlayData.length === 0 || overlayData.every((m) => m.size === 0)) return chartData;
+    return chartData.map((point) => {
+      const rounded = Math.round(point.date / 3_600_000) * 3_600_000;
+      const merged: Record<string, unknown> = { ...point };
+      for (let i = 0; i < overlayData.length; i++) {
+        merged[`apy_overlay_${i}`] = overlayData[i].get(rounded) ?? null;
+      }
+      return merged as YieldHistoryChartPoint & Record<string, number | null>;
+    });
+  }, [chartData, overlayData]);
+
+  // Resolve overlay source labels for legend
+  const overlayLabels = useMemo(() => {
+    return additionalOverlayKeys.map((key) => {
+      return availableSources.find((s) => s.sourceKey === key)?.yieldSource ?? key;
+    });
+  }, [additionalOverlayKeys, availableSources]);
 
   const hasBreakdown = useMemo(
     () => chartData.some((point) => point.apyBase !== null),
@@ -387,13 +473,20 @@ export function YieldHistoryChart({
       }
     }
 
+    // Include overlay values in domain calculation
+    for (const overlayMap of overlayData) {
+      for (const apy of overlayMap.values()) {
+        values.push(apy);
+      }
+    }
+
     const min = Math.min(...values);
     const max = Math.max(...values);
     const span = Math.max(max - min, 1);
     const padding = Math.max(span * 0.08, 0.5);
 
     return [min - padding, max + padding] as const;
-  }, [benchmarkRate, chartData, effectiveShowBreakdown, medianApy]);
+  }, [benchmarkRate, chartData, effectiveShowBreakdown, medianApy, overlayData]);
 
   const chartHeightClass = compact ? "h-[200px]" : "h-[300px]";
   const referenceLabelStyle = compact
@@ -443,7 +536,8 @@ export function YieldHistoryChart({
         onShowBreakdownChange={setShowBreakdown}
         availableSources={availableSources}
         selectedSourceKey={effectiveSelectedSourceKey}
-        onSourceChange={setSelectedSourceKey}
+        onSourceChange={onSourceChange}
+        hideSourceSelector={hideSourceSelector}
       />
         <ChartShell compact={compact}>
           <div className={cn("flex items-center justify-center text-center", chartHeightClass)}>
@@ -470,7 +564,8 @@ export function YieldHistoryChart({
         onShowBreakdownChange={setShowBreakdown}
         availableSources={availableSources}
         selectedSourceKey={effectiveSelectedSourceKey}
-        onSourceChange={setSelectedSourceKey}
+        onSourceChange={onSourceChange}
+        hideSourceSelector={hideSourceSelector}
       />
       <ChartShell compact={compact}>
         <div
@@ -483,7 +578,7 @@ export function YieldHistoryChart({
             <ComposedChart
               width={width}
               height={height}
-              data={chartData}
+              data={mergedChartData}
               margin={compact ? { top: 8, right: 8, bottom: 8, left: 0 } : { top: 12, right: 18, bottom: 12, left: 0 }}
             >
               <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" strokeOpacity={0.35} />
@@ -595,6 +690,21 @@ export function YieldHistoryChart({
                 legendType="none"
                 isAnimationActive={false}
               />
+              {/* Overlay lines for multi-source comparison */}
+              {additionalOverlayKeys.map((_, i) => (
+                <Line
+                  key={`overlay-${i}`}
+                  type="monotone"
+                  dataKey={`apy_overlay_${i}`}
+                  stroke={OVERLAY_COLORS[i + 1] ?? OVERLAY_COLORS[0]}
+                  strokeWidth={1.5}
+                  strokeDasharray="6 3"
+                  dot={false}
+                  activeDot={false}
+                  connectNulls
+                  isAnimationActive={false}
+                />
+              ))}
             </ComposedChart>
           ) : (
             <ChartSkeleton className={cn("w-full rounded-xl", chartHeightClass)} />
@@ -620,6 +730,12 @@ export function YieldHistoryChart({
           <span className="h-2 w-2 rounded-[2px]" style={{ backgroundColor: CHART_BLUE }} />
           Source switches
         </span>
+        {overlayLabels.map((label, i) => (
+          <span key={label} className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: OVERLAY_COLORS[i + 1] ?? OVERLAY_COLORS[0] }} />
+            {label}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -635,6 +751,7 @@ function Controls({
   availableSources,
   selectedSourceKey,
   onSourceChange,
+  hideSourceSelector = false,
 }: {
   compact: boolean;
   days: number;
@@ -645,6 +762,7 @@ function Controls({
   availableSources: Array<{ sourceKey: string; yieldSource: string }>;
   selectedSourceKey: string;
   onSourceChange: (sourceKey: string) => void;
+  hideSourceSelector?: boolean;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -675,7 +793,7 @@ function Controls({
           ))}
         </ToggleGroup>
 
-        {availableSources.length > 0 ? (
+        {availableSources.length > 0 && !hideSourceSelector ? (
           <label className="flex cursor-pointer items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1.5 text-xs text-muted-foreground">
             <span className="uppercase tracking-[0.12em]">History</span>
             <select
