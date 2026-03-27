@@ -871,12 +871,14 @@ export function MonitoringMethodologySections() {
         changelogClassName="hover:text-rose-700 dark:text-rose-400"
       >
           <p>
-            The Blacklist Tracker monitors issuer intervention events across USDC, USDT, PAXG, and XAUT contracts,
-            including blacklist, unblacklist, and destroy/wipe actions across EVM and Tron networks.
+            The Blacklist Tracker monitors issuer intervention events across USDC, USDT, PAXG, XAUT, PYUSD, and USD1
+            contracts, including blacklist, unblacklist, and destroy/wipe actions across EVM and Tron networks.
           </p>
           <p>
             Methodology revisions document changes to event coverage, cross-chain decoding behavior, cursor safety
-            policies, and amount attribution rules that affect historical interpretation and comparability over time.
+            policies, event-time amount attribution rules, and the separate freeze-ledger snapshot used for the public
+            summary, including the reconciled `kyc.rip` / `stables.rip` bootstrap for ETH USDC, ETH USDT, and TRON
+            USDT.
           </p>
       </MethodologySectionShell>
 

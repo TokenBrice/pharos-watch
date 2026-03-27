@@ -13,9 +13,15 @@ import {
   getBlacklistTrackerMethodologyVersionAt,
 } from "@shared/lib/blacklist-tracker-version";
 import { buildBlacklistChartData, computeBlacklistSummaryStats } from "@shared/lib/blacklist-aggregates";
+import {
+  buildBlacklistActiveRecords,
+  computeBlacklistActiveSummaryStats,
+  computeBlacklistTrackedSummaryStats,
+} from "@shared/lib/blacklist-active-records";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
 import type { BlacklistStablecoin } from "@shared/types/market";
+import { loadBlacklistCurrentBalanceMap } from "../lib/blacklist-current-balances";
 
 type SummaryRow = {
   id: string;
@@ -76,15 +82,28 @@ export const handleBlacklistSummary = withErrorHandler(
       explorerAddressUrl: row.explorer_address_url,
     }));
 
+    const currentBalances = await loadBlacklistCurrentBalanceMap(db);
+    const activeRecords = buildBlacklistActiveRecords(events, currentBalances);
     const latestTs = events[0]?.timestamp ?? Math.floor(Date.now() / 1000);
     const freshnessTs = await getLatestSuccessfulCronTimestamp(db, "sync-blacklist", latestTs);
     const chainOptions = [...new Map(
       CONTRACT_CONFIGS.map((config) => [config.chain.chainId, { id: config.chain.chainId, name: config.chain.chainName }]),
     ).values()].sort((a, b) => a.name.localeCompare(b.name));
+    const eventStats = computeBlacklistSummaryStats(events);
+    const activeStats = computeBlacklistActiveSummaryStats(activeRecords);
+    const trackedStats = computeBlacklistTrackedSummaryStats(currentBalances);
 
     return jsonResponse(
       {
-        stats: computeBlacklistSummaryStats(events),
+        stats: {
+          ...eventStats,
+          activeAddressCount: activeStats.activeAddressCount,
+          activeFrozenTotal: activeStats.activeFrozenTotal,
+          activeAmountGapCount: activeStats.activeAmountGapCount,
+          trackedAddressCount: trackedStats.trackedAddressCount,
+          trackedFrozenTotal: trackedStats.trackedFrozenTotal,
+          trackedAmountGapCount: trackedStats.trackedAmountGapCount,
+        },
         chart: buildBlacklistChartData(events),
         chains: chainOptions,
         totalEvents: events.length,

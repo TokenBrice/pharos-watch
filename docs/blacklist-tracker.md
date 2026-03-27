@@ -2,6 +2,11 @@
 
 Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 21 contract configurations on 8 chains. Runs hourly, incrementally scanning from the last processed block or timestamp cursor.
 
+The tracker now has two distinct amount layers:
+
+- `blacklist_events` stores event-time amounts only when Pharos can justify them historically
+- `blacklist_current_balances` stores persistent freeze-ledger snapshots used by the public frozen-total summary
+
 **Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT, PYUSD, USD1.
 
 **Live API/UI filter enum:** USDC, USDT, PAXG, XAUT, PYUSD, USD1 via `BLACKLIST_STABLECOINS` in `shared/types/index.ts`.
@@ -52,7 +57,7 @@ Implementation note: `EURC` is intentionally not live-supported right now. Circl
 
 - **Base URL:** `https://api.trongrid.io/v1/`
 - **Events:** `/contracts/{address}/events?event_name={name}&limit=200&order_by=block_timestamp,desc`
-- **Balances:** `/accounts/{address}` (expects 41-prefix hex, NOT 0x or base58)
+- **Current balances:** `/accounts/{address}` (Pharos converts stored Tron hex addresses to base58 for this path)
 - **Optional auth:** `TRON-PRO-API-KEY` header
 
 ### Rate Limiters
@@ -250,6 +255,45 @@ CREATE INDEX idx_blacklist_events_amount_status ON blacklist_events(amount_statu
 - `amount_attempt_count` records how many historical-recovery attempts Pharos has made for the row
 - `amount_last_attempted_at`, `amount_last_error_class`, and `amount_last_provider` are operator diagnostics for unresolved rows
 
+`amount_source='derived'` is now treated as a legacy migration artifact, not an active ingestion mode. Older Tron blacklist/unblacklist rows that still carried current-state-derived values are reset so event rows no longer claim unsupported historical precision.
+
+### blacklist_current_balances table
+
+**Migration:** `0081_blacklist_current_balances.sql`
+
+This table is a separate freeze-ledger snapshot store used by the public frozen-total summary. It does **not** replace `blacklist_events`.
+
+Rows are seeded from externally reconciled freeze ledgers where Pharos has verified a higher-confidence historical surface. As of `v3.5`, that bootstrap source is `kyc.rip` / [`stables.rip`](https://stables.rip/) for:
+
+- Ethereum `USDC`
+- Ethereum `USDT`
+- Tron `USDT`
+
+```sql
+CREATE TABLE blacklist_current_balances (
+  id TEXT PRIMARY KEY,
+  stablecoin TEXT NOT NULL,
+  chain_id TEXT NOT NULL,
+  address TEXT NOT NULL,
+  amount_native REAL,
+  amount_usd REAL,
+  source TEXT NOT NULL DEFAULT 'current_balance',
+  status TEXT NOT NULL DEFAULT 'resolved',
+  observed_at INTEGER NOT NULL,
+  attempt_count INTEGER NOT NULL DEFAULT 0,
+  last_attempted_at INTEGER,
+  last_error_class TEXT
+);
+```
+
+Use it for:
+
+- tracked freeze-ledger totals (`trackedFrozenTotal`)
+- tracked freeze-ledger record counts (`trackedAddressCount`)
+- tracked snapshot gap tracking (`trackedAmountGapCount`)
+
+Do **not** treat it as raw event history. It is a per-address ledger keyed to blacklist/freeze identities, preserved across later unblacklist events so seized or later-burned balances do not disappear from the public freeze totals. Destroy events can overwrite the stored amount with the seized burn amount when that event emits a better value than the original snapshot.
+
 ### blacklist_sync_state table
 
 **Migration:** baseline schema in `worker/migrations/0000_baseline.sql`
@@ -298,11 +342,17 @@ For RPC log-scan chains (Base, Optimism, Avalanche, BSC), partial `eth_getLogs` 
    - Enrich parsed rows with balances BEFORE inserting into D1
    - EVM Ethereum: Etherscan `eth_call` at historical block (`blockNumber - 1`)
    - EVM L2/sidechain: dRPC archive node first when configured, then `getChainRpc()` (Alchemy/public RPC), then Etherscan best-effort
-   - Tron: TronGrid `/accounts/{addr}` (convert `0x` to `41` prefix)
+   - Tron: destroy events keep their native event amount; blacklist/unblacklist events are not assigned historical balances from current-state account reads
    - RPC-log chains reuse persistent block-timestamp cache rows to avoid re-resolving the same blocks every run
    - `INSERT OR IGNORE` enriched rows into `blacklist_events`
 
-4. **Sync state advancement**
+4. **Freeze-ledger snapshot refresh**
+   - Newly blacklisted addresses fetch a latest token balance snapshot and persist it into `blacklist_current_balances`
+   - Later unblacklist events do **not** delete the ledger row; the freeze snapshot remains part of the historical freeze ledger
+   - Destroy events preserve the row and can replace the stored amount with the emitted seized/burned amount when available
+   - This ledger feeds the public tracked frozen-total summary without claiming unsupported event-time precision for blacklist rows
+
+5. **Sync state advancement**
    - EVM: advance to max block of fetched events, or to the active source's chain head minus safety margin if no events
    - EVM RPC partial coverage: if `eth_getLogs`/timestamp resolution only completes part of the range, advance to the highest contiguous fully scanned block and retry the remainder next cycle
    - Tron: advance to max timestamp, or to `now - TRON_SAFETY_MS` if no events
@@ -339,10 +389,11 @@ Per-chain block margins (`INDEXING_SAFETY_SEC / blockTime`):
 
 ### Tron Strategy
 
-- Convert address: `0x` prefix to `41` prefix (TronGrid requirement)
+- Convert stored hex address to base58 for TronGrid account lookups
 - API: `GET /v1/accounts/{tronAddress}`
 - Extract TRC20 balance: `data[0].trc20[contractAddress]`
 - Empty account (`data === []`): return 0, not null
+- These balances seed the persistent freeze ledger only, not event-time blacklist row attribution
 
 ### Destroy Amount Recovery
 
@@ -401,10 +452,10 @@ The handler now exposes only the live-supported symbols: USDC, USDT, PAXG, XAUT,
   ],
   "total": 12345,
   "methodology": {
-    "version": "3.3",
-    "versionLabel": "v3.3",
-    "currentVersion": "3.3",
-    "currentVersionLabel": "v3.3",
+    "version": "3.4",
+    "versionLabel": "v3.4",
+    "currentVersion": "3.4",
+    "currentVersionLabel": "v3.4",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1704067200,
     "isCurrent": true
@@ -418,6 +469,12 @@ The handler now exposes only the live-supported symbols: USDC, USDT, PAXG, XAUT,
 **Cache:** realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers with 900s TTL.
 
 Returns server-side aggregate stats, quarterly chart buckets, supported chain filters, and total event count for the blacklist UI.
+
+The summary now mixes two intentionally distinct lenses:
+
+- event-history stats such as `destroyedTotal`
+- local event-state stats such as `activeFrozenTotal`, sourced from Pharos' active blacklist state machine
+- tracked freeze-ledger stats such as `trackedFrozenTotal`, sourced from `blacklist_current_balances`
 
 ---
 
@@ -478,7 +535,7 @@ Both endpoints now emit freshness headers from the same hourly `sync-blacklist` 
 | BlacklistFilters | `src/components/blacklist-filters.tsx` | Stablecoin, chain, event type dropdowns                                                         |
 | Search           | (inline)                               | Server-backed address search                                                                    |
 | BlacklistTable   | `src/components/blacklist-table.tsx`   | Server-sorted, 50 rows per page                                                                 |
-| BlacklistStats   | `src/components/blacklist-stats.tsx`   | USDC/USDT unique blacklisted addresses, gold frozen, total destroyed funds, recent events (30d) |
+| BlacklistStats   | `src/components/blacklist-stats.tsx`   | USDC/USDT unique blacklisted addresses, freeze-ledger totals, gold addresses, and destroyed funds |
 | BlacklistChart   | `src/components/blacklist-chart.tsx`   | Quarterly stacked bar chart of blacklisted funds by stablecoin                                  |
 | CSV export       | (inline)                               | Download filtered events as CSV                                                                 |
 

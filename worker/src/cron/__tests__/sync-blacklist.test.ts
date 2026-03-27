@@ -316,7 +316,7 @@ describe("syncBlacklist", () => {
     const meta = JSON.parse(result.metadata);
     // The EVM config had an API error (null logs) — recorded but did not crash
     expect(meta.apiErrors).toBe(1);
-    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/v1/accounts/"))).toBe(false);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("trongrid.io"))).toBe(true);
   });
 
   it("returns zero events when all APIs return empty", async () => {

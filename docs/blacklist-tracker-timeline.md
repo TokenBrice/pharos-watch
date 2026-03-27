@@ -1,6 +1,25 @@
 # Blacklist Tracker Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.3` (2026-02-09 -> 2026-03-24).
+Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.5` (2026-02-09 -> 2026-03-27).
+
+---
+
+## v3.5 — Persistent freeze-ledger snapshots and bootstrap reconciliation (Mar 27, 2026)
+
+- `GET /api/blacklist-summary` now reports `trackedAddressCount`, `trackedFrozenTotal`, and `trackedAmountGapCount` for the persistent freeze ledger
+- `blacklist_current_balances` is now treated as a preserved freeze-ledger snapshot store rather than a disposable live-only current-balance cache
+- Later `unblacklist` events no longer delete ledger rows, and destroy events can overwrite the stored amount with the seized burn amount
+- Historical ETH USDC, ETH USDT, and TRON USDT ledger rows were reconciled from the `kyc.rip` / `stables.rip` bootstrap so seized-and-burned balances remain visible
+
+---
+
+## v3.4 — Active frozen-total ledger and Tron current-balance separation (Mar 27, 2026)
+
+- Added `blacklist_current_balances` so active blacklist totals can use a dedicated current-balance snapshot instead of overloading event rows
+- `GET /api/blacklist-summary` now reports `activeAddressCount`, `activeFrozenTotal`, and `activeAmountGapCount`
+- Active Tron blacklist totals now prefer current TRC20 balances for still-blacklisted addresses and destroy-event amounts for seized/burned addresses
+- Legacy Tron blacklist/unblacklist rows that still carried historical `amount_source='derived'` values were reset so event-time history no longer reuses stale current-state derivations
+- Hourly blacklist sync now refreshes the current-balance cache for newly blacklisted Tron addresses and removes cached balances on Tron destroy/unblacklist events
 
 ---
 

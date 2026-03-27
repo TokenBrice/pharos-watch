@@ -477,6 +477,12 @@ const BlacklistSummaryStatsSchema = z.object({
   goldBlacklisted: z.number(),
   frozenAddresses: z.number(),
   destroyedTotal: z.number(),
+  activeAddressCount: z.number(),
+  activeFrozenTotal: z.number(),
+  activeAmountGapCount: z.number(),
+  trackedAddressCount: z.number().optional(),
+  trackedFrozenTotal: z.number().optional(),
+  trackedAmountGapCount: z.number().optional(),
   recentCount: z.number(),
   recoverableGapCount: z.number(),
 });

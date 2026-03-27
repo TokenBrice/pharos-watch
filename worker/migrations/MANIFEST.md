@@ -10,7 +10,7 @@
 
 **Squash date:** 2026-03-25 (S-014)
 
-## Individual Migrations (0072–0080)
+## Individual Migrations (0072–0081)
 
 Applied sequentially after the baseline (fresh setup) or after the previous individual migration (existing databases).
 
@@ -25,6 +25,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0078     | `0078_feedback_submissions.sql`                 | Create feedback_submissions table for durable feedback logging                                 |
 | 0079     | `0079_reset_paxg_pyusd_destroy_zero_amounts.sql`| Reset PAXG/PYUSD destroy zero amounts for re-fetch                                             |
 | 0080     | `0080_live_reserve_attempt_fencing.sql`         | Add live-reserve attempt IDs and authoritative fencing columns                                 |
+| 0081     | `0081_blacklist_current_balances.sql`           | Add active blacklist current-balance cache table and reset legacy Tron derived event amounts   |
 
 ## Known Anomalies
 

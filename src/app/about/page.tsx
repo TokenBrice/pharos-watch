@@ -44,7 +44,7 @@ const DATA_SOURCE_GROUPS = [
   {
     label: "On-chain Reads & Events",
     sources:
-      "Etherscan v2 (freeze events), TronGrid, Alchemy, dRPC, and selected public chain RPCs (EVM RPCs, including Ethereum mint/burn flows and direct Liquity/B.Protocol reads)",
+      "Etherscan v2 (freeze events), TronGrid, Alchemy, dRPC, selected public chain RPCs (EVM RPCs, including Ethereum mint/burn flows and direct Liquity/B.Protocol reads), and reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist coverage",
   },
   {
     label: "Ratings & Reference",
@@ -271,7 +271,7 @@ export default function AboutPage() {
     {
       title: "Blacklist Tracker",
       description:
-        "USDC, USDT, PAXG, XAUT, PYUSD, and USD1 blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron.",
+        "USDC, USDT, PAXG, XAUT, PYUSD, and USD1 blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron, with a reconciled freeze ledger for major ETH and TRON blacklist totals.",
       icon: ShieldAlert,
       href: "/blacklist/",
       linkLabel: "Open blacklist tracker",
@@ -410,7 +410,7 @@ export default function AboutPage() {
                   name: "Where does Pharos get its data?",
                   acceptedAnswer: {
                     "@type": "Answer",
-                    text: "All data is fetched server-side by a Cloudflare Worker and cached in D1. Sources include DefiLlama for supply, price, and chain distribution; CoinGecko for logos and fallback prices; CoinMarketCap and DexScreener as further price fallbacks; direct protocol redemption quotes for selected redeemable assets such as Cap cUSD and infiniFi iUSD; issuer and protocol reserve APIs, dashboards, proof-of-reserve portals, and direct on-chain vault/accounting reads for live reserve composition and redemption-backstop capacity where available, including Ethena, Falcon, infiniFi, M0, Mento Reserve, OpenEden, Re, USDD, Accountable, Tether, Frax, Circle, First Digital Labs, SG-FORGE, Paxos, Sky/MakerDAO, Chainlink PoR/NAV oracles, and Aave GHO reserve feeds; Etherscan v2 and TronGrid for freeze-event tracking; Alchemy, dRPC, and selected public chain RPCs for EVM reads including Ethereum mint/burn flow tracking and direct contract calls such as Cap and infiniFi redemption quotes, Liquity/B.Protocol, ERC-4626 vault reads, Fluid DexReservesResolver reads, and Aerodrome/Velodrome Sugar view reads; Bluechip for safety ratings; ECB via Frankfurter plus fawazahmed0/currency-api for live FX rates including CNH and other non-ECB coverage, with ExchangeRate-API as a tertiary full-set FX fallback; gold-api.com for gold and silver spot prices; FRED DGS3MO for the USD benchmark, the ECB Data API for 3M compounded €STR, and SIX delayed SARON compound-rate downloads via guest OAuth for the CHF benchmark; DeFiLlama Yields &amp; Protocols, Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, Meteora API, PancakeSwap subgraphs, Aerodrome and Velodrome Sugar view contracts, and GeckoTerminal for DEX liquidity data; and Anthropic Claude for daily digest generation.",
+                    text: "All data is fetched server-side by a Cloudflare Worker and cached in D1. Sources include DefiLlama for supply, price, and chain distribution; CoinGecko for logos and fallback prices; CoinMarketCap and DexScreener as further price fallbacks; direct protocol redemption quotes for selected redeemable assets such as Cap cUSD and infiniFi iUSD; issuer and protocol reserve APIs, dashboards, proof-of-reserve portals, and direct on-chain vault/accounting reads for live reserve composition and redemption-backstop capacity where available, including Ethena, Falcon, infiniFi, M0, Mento Reserve, OpenEden, Re, USDD, Accountable, Tether, Frax, Circle, First Digital Labs, SG-FORGE, Paxos, Sky/MakerDAO, Chainlink PoR/NAV oracles, and Aave GHO reserve feeds; Etherscan v2 and TronGrid for freeze-event tracking, with reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist totals; Alchemy, dRPC, and selected public chain RPCs for EVM reads including Ethereum mint/burn flow tracking and direct contract calls such as Cap and infiniFi redemption quotes, Liquity/B.Protocol, ERC-4626 vault reads, Fluid DexReservesResolver reads, and Aerodrome/Velodrome Sugar view reads; Bluechip for safety ratings; ECB via Frankfurter plus fawazahmed0/currency-api for live FX rates including CNH and other non-ECB coverage, with ExchangeRate-API as a tertiary full-set FX fallback; gold-api.com for gold and silver spot prices; FRED DGS3MO for the USD benchmark, the ECB Data API for 3M compounded €STR, and SIX delayed SARON compound-rate downloads via guest OAuth for the CHF benchmark; DeFiLlama Yields &amp; Protocols, Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, Meteora API, PancakeSwap subgraphs, Aerodrome and Velodrome Sugar view contracts, and GeckoTerminal for DEX liquidity data; and Anthropic Claude for daily digest generation.",
                   },
                 },
               ],

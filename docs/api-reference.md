@@ -483,10 +483,10 @@ Freeze, blacklist, and token-destruction events currently ingested for USDC, USD
   "events": [BlacklistEvent, ...],
   "total": 13422,
   "methodology": {
-    "version": "3.2",
-    "versionLabel": "v3.2",
-    "currentVersion": "3.2",
-    "currentVersionLabel": "v3.2",
+    "version": "3.4",
+    "versionLabel": "v3.4",
+    "currentVersion": "3.4",
+    "currentVersionLabel": "v3.4",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -537,6 +537,8 @@ Freeze, blacklist, and token-destruction events currently ingested for USDC, USD
 
 Server-side aggregates for the Blacklist Tracker overview cards, chart, and filter options. This lets the frontend render summary state without hydrating the full blacklist history first.
 
+`stats.destroyedTotal` remains an event-history total. `stats.activeFrozenTotal` reflects Pharos' local active blacklist state machine. `stats.trackedFrozenTotal` is the persistent freeze-ledger total sourced from `blacklist_current_balances`, including reconciled historical bootstrap rows where later seizures or unblacklists would otherwise hide the frozen amount.
+
 **Cache:** realtime
 
 **Freshness note:** Shares the same hourly freshness headers as `GET /api/blacklist`, keyed to the latest successful `sync-blacklist` write rather than the request time of the summary endpoint itself.
@@ -551,6 +553,12 @@ Server-side aggregates for the Blacklist Tracker overview cards, chart, and filt
     "goldBlacklisted": 19,
     "frozenAddresses": 5071,
     "destroyedTotal": 158938221.19,
+    "activeAddressCount": 5071,
+    "activeFrozenTotal": 2120456789.42,
+    "activeAmountGapCount": 17,
+    "trackedAddressCount": 9466,
+    "trackedFrozenTotal": 3235360796.7,
+    "trackedAmountGapCount": 0,
     "recentCount": 42,
     "recoverableGapCount": 17
   },
@@ -563,10 +571,10 @@ Server-side aggregates for the Blacklist Tracker overview cards, chart, and filt
   ],
   "totalEvents": 13422,
   "methodology": {
-    "version": "3.2",
-    "versionLabel": "v3.2",
-    "currentVersion": "3.2",
-    "currentVersionLabel": "v3.2",
+    "version": "3.5",
+    "versionLabel": "v3.5",
+    "currentVersion": "3.5",
+    "currentVersionLabel": "v3.5",
     "changelogPath": "/methodology/blacklist-tracker-changelog/",
     "asOf": 1772606400,
     "isCurrent": true

@@ -1,9 +1,41 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const blacklistTracker = createMethodologyVersion({
-  currentVersion: "3.3",
+  currentVersion: "3.5",
   changelogPath: "/methodology/blacklist-tracker-changelog/",
   changelog: [
+  {
+    version: "3.5",
+    title: "Persistent freeze-ledger snapshots and bootstrap reconciliation",
+    date: "2026-03-27",
+    effectiveAt: 1774616400,
+    summary:
+      "The public frozen-total summary now uses a persistent freeze ledger instead of treating snapshot balances as a live current-state cache. Historical ETH/USDC, ETH/USDT, and TRON/USDT freeze rows were reconciled from the kyc.rip / stables.rip bootstrap so seized-and-burned balances remain visible after later unblacklist or destroy actions.",
+    impact: [
+      "Added tracked freeze-ledger metrics (`trackedAddressCount`, `trackedFrozenTotal`, `trackedAmountGapCount`) to blacklist summary responses",
+      "Snapshot rows are now preserved across later unblacklist events instead of being deleted as if they were only live current balances",
+      "Destroy events now persist their seized amount into the freeze ledger so burned balances remain counted",
+      "Historical freeze-ledger bootstrap was reconciled against the external kyc.rip / stables.rip dataset for ETH USDC, ETH USDT, and TRON USDT",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "3.4",
+    title: "Active frozen-total ledger and Tron current-balance separation",
+    date: "2026-03-27",
+    effectiveAt: 1774612800,
+    summary:
+      "Blacklist summary now distinguishes event-time amounts from active frozen balances, adds a dedicated current-balance cache for active blacklist records, and stops treating legacy Tron derived event amounts as authoritative history.",
+    impact: [
+      "Added `blacklist_current_balances` for current active blacklist balance snapshots",
+      "Blacklist summary gained active-record metrics (`activeAddressCount`, `activeFrozenTotal`, `activeAmountGapCount`)",
+      "Active Tron totals now prefer current TRC20 balances for active blacklist rows and destroy-event amounts when funds were seized and burned",
+      "Legacy Tron `derived` blacklist/unblacklist event amounts are reset instead of being reused as event-time history",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.3",
     title: "pyUSD and USD1 blacklist tracking coverage",

@@ -29,6 +29,9 @@ import { reportCronProgress, withBudgetMetadata } from "../lib/cron-progress";
 import { fetchEvmEventsIncremental } from "./blacklist/evm-source";
 import { fetchTronEventsIncremental } from "./blacklist/tron-source";
 import { type BlacklistRow } from "./blacklist/shared";
+import {
+  syncCurrentBalanceCacheForRows,
+} from "./blacklist/current-balance-cache";
 
 const EVM_SCANNED_TO_LATEST = 99999999;
 const BACKFILL_BATCH_SIZE = 50;
@@ -568,6 +571,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   let rpcLogConfigs = 0;
   let runtimeBudgetHit = false;
   const enrichCounters = { attempted: 0, succeeded: 0, failed: 0 };
+  const currentBalanceCacheCounters = { updated: 0, deleted: 0, failed: 0 };
   const apiErrorClasses: Record<string, number> = {};
   const apiErrorConfigs: Array<{
     configKey: string;
@@ -705,6 +709,25 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           `[sync-blacklist] enrichRowBalances (tron): attempted=${tronEnrichCounters.attempted} succeeded=${tronEnrichCounters.succeeded} failed=${tronEnrichCounters.failed}`,
         );
         totalInsertedRows += await insertRows(db, result.rows);
+        const tronCurrentBalanceCache = await syncCurrentBalanceCacheForRows(
+          db,
+          config,
+          result.rows,
+          {
+            etherscanApiKey,
+            drpcApiKey,
+            trongridApiKey,
+            etherscanLimiter,
+            tronLimiter,
+            budget,
+            deadlineMs,
+            signal,
+            chainRpcs,
+          },
+        );
+        currentBalanceCacheCounters.updated += tronCurrentBalanceCache.updated;
+        currentBalanceCacheCounters.deleted += tronCurrentBalanceCache.deleted;
+        currentBalanceCacheCounters.failed += tronCurrentBalanceCache.failed;
 
         if (result.incomplete) {
           runtimeBudgetHit = true;
@@ -766,6 +789,25 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           `[sync-blacklist] enrichRowBalances (evm): attempted=${evmEnrichCounters.attempted} succeeded=${evmEnrichCounters.succeeded} failed=${evmEnrichCounters.failed}`,
         );
         totalInsertedRows += await insertRows(db, result.rows);
+        const evmCurrentBalanceCache = await syncCurrentBalanceCacheForRows(
+          db,
+          config,
+          result.rows,
+          {
+            etherscanApiKey,
+            drpcApiKey,
+            trongridApiKey,
+            etherscanLimiter,
+            tronLimiter,
+            budget,
+            deadlineMs,
+            signal,
+            chainRpcs,
+          },
+        );
+        currentBalanceCacheCounters.updated += evmCurrentBalanceCache.updated;
+        currentBalanceCacheCounters.deleted += evmCurrentBalanceCache.deleted;
+        currentBalanceCacheCounters.failed += evmCurrentBalanceCache.failed;
 
         let newBlock: number;
         if (result.incomplete) {
@@ -886,6 +928,9 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       enrichAttempted: enrichCounters.attempted,
       enrichSucceeded: enrichCounters.succeeded,
       enrichFailed: enrichCounters.failed,
+      currentBalanceCacheUpdated: currentBalanceCacheCounters.updated,
+      currentBalanceCacheDeleted: currentBalanceCacheCounters.deleted,
+      currentBalanceCacheFailed: currentBalanceCacheCounters.failed,
     })),
   };
 }

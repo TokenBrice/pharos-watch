@@ -12,6 +12,10 @@ interface BlacklistStatsProps {
 }
 
 export function BlacklistStats({ stats, isLoading }: BlacklistStatsProps) {
+  const trackedAddressCount = stats?.trackedAddressCount ?? stats?.activeAddressCount ?? 0;
+  const trackedAmountGapCount = stats?.trackedAmountGapCount ?? stats?.activeAmountGapCount ?? 0;
+  const trackedFrozenTotal = stats?.trackedFrozenTotal ?? stats?.activeFrozenTotal ?? 0;
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-6">
@@ -45,9 +49,9 @@ export function BlacklistStats({ stats, isLoading }: BlacklistStatsProps) {
       />
       <MetricStatCard
         borderColorClass="border-l-emerald-500"
-        title="Attribution Gaps"
-        value={stats?.recoverableGapCount ?? 0}
-        subtext="recoverable events"
+        title="Freeze Ledger"
+        value={trackedAddressCount}
+        subtext={`${trackedAmountGapCount} snapshot gaps`}
       />
       <MetricStatCard
         borderColorClass="border-l-yellow-500"
@@ -57,15 +61,15 @@ export function BlacklistStats({ stats, isLoading }: BlacklistStatsProps) {
       />
       <MetricStatCard
         borderColorClass="border-l-amber-500"
-        title="Total Destroyed Funds"
-        value={stats ? formatCurrency(stats.destroyedTotal) : "$0"}
-        subtext="seized & burned (USD value)"
+        title="Tracked Frozen Total"
+        value={formatCurrency(trackedFrozenTotal)}
+        subtext="persistent freeze ledger"
       />
       <MetricStatCard
         borderColorClass="border-l-red-500"
-        title="Recent Events"
-        value={stats?.recentCount ?? 0}
-        subtext="last 30 days"
+        title="Total Destroyed Funds"
+        value={stats ? formatCurrency(stats.destroyedTotal) : "$0"}
+        subtext="seized & burned (USD value)"
       />
     </div>
   );
