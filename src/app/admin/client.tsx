@@ -1,35 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, type ReactNode, useEffect, useState, useSyncExternalStore } from "react";
+import { Fragment, type ReactNode, useSyncExternalStore } from "react";
 import { STATUS_RESERVE_DRIFT_THRESHOLD_POINTS } from "@shared/lib/status-thresholds";
 import type { StatusResponse } from "@shared/types";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
-import { AdminActionsPanel } from "@/components/status/admin-actions-panel";
-import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
-import { CoinGeckoPriceDiffCard } from "@/components/status/coingecko-price-diff";
-import { CircuitBreakerTable } from "@/components/status/circuit-breaker-table";
-import { CronCard } from "@/components/status/cron-card";
-import { DataQualityCards } from "@/components/status/data-quality-cards";
-import { DatasetFreshnessTable } from "@/components/status/dataset-freshness-table";
-import { DiscoveryCandidatesCard } from "@/components/status/discovery-candidates";
-import { EndpointHealthGrid } from "@/components/status/endpoint-health-grid";
 import { formatElapsedSeconds } from "@shared/lib/format";
-import { LiquidityHealthCard } from "@/components/status/liquidity-health";
-import { MintBurnReconciliationCard } from "@/components/status/mint-burn-reconciliation";
-import { MetadataIntegrityCard } from "@/components/status/metadata-integrity-card";
-import { PriceSourceHealthCard } from "@/components/status/price-source-health";
-import { ReserveSyncHealthCard } from "@/components/status/reserve-sync-health";
 import { RecommendedActionStrip } from "@/components/status/recommended-action-strip";
 import { RefreshCountdown } from "@/components/status/refresh-countdown";
 import { StatusBanner } from "@/components/status/status-banner";
-import { StatusFacts } from "@/components/status/status-facts";
-import { SystemDiagnostics } from "@/components/status/system-diagnostics";
-import { TelegramBotStats } from "@/components/status/telegram-bot-stats";
 import { getTopFoldCopy, isRecoveryHold as isRecoveryHoldState } from "@/components/status/top-fold-copy";
-import { TransitionTimeline } from "@/components/status/transition-timeline";
-import { NoticeRail, PriorityLaneLink, StatusSection, SummaryBadge } from "@/components/status/page-primitives";
+import { NoticeRail, PriorityLaneLink, SummaryBadge } from "@/components/status/page-primitives";
 import { Button } from "@/components/ui/button";
 import { useStatusDashboardModel } from "@/hooks/use-status-dashboard-model";
 import { isOpsUiHost, type AdminAccess } from "@/lib/admin-access";
@@ -41,6 +23,13 @@ import {
   getSeverityBadgeClass,
 } from "@/lib/status-dashboard-model";
 import { cn } from "@/lib/utils";
+import { useAutoExpand } from "./use-auto-expand";
+import { OverviewSection } from "./sections/overview-section";
+import { PipelineSection } from "./sections/pipeline-section";
+import { ReliabilitySection } from "./sections/reliability-section";
+import { CronsSection, type CronGroup } from "./sections/crons-section";
+import { ControlSection } from "./sections/control-section";
+import { HistorySection } from "./sections/history-section";
 
 function getCronSeverity(cron: StatusResponse["crons"][string]): number {
   if (cron.telemetryUnknown) return 1;
@@ -150,30 +139,11 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
     (model?.browserProbeSummary?.failCount ?? 0) > 0 ||
     (data?.summary.worstCacheRatio ?? 0) > 1;
   const telegramSignal = (data?.telegramBot?.pendingDeliveries ?? 0) > 0;
-  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
-  const [isReliabilityOpen, setIsReliabilityOpen] = useState(false);
-  const [isHealthyCronGroupsOpen, setIsHealthyCronGroupsOpen] = useState(false);
-  const [isTelegramOpen, setIsTelegramOpen] = useState(false);
 
-  // setTimeout(fn, 0) defers setState out of the effect's synchronous body
-  // to satisfy the react-hooks/set-state-in-effect lint rule.
-  useEffect(() => {
-    if (!diagnosticsSignal) return;
-    const timer = window.setTimeout(() => setIsDiagnosticsOpen(true), 0);
-    return () => window.clearTimeout(timer);
-  }, [diagnosticsSignal]);
-
-  useEffect(() => {
-    if (!reliabilitySignal) return;
-    const timer = window.setTimeout(() => setIsReliabilityOpen(true), 0);
-    return () => window.clearTimeout(timer);
-  }, [reliabilitySignal]);
-
-  useEffect(() => {
-    if (!telegramSignal) return;
-    const timer = window.setTimeout(() => setIsTelegramOpen(true), 0);
-    return () => window.clearTimeout(timer);
-  }, [telegramSignal]);
+  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useAutoExpand(diagnosticsSignal);
+  const [isReliabilityOpen, setIsReliabilityOpen] = useAutoExpand(reliabilitySignal);
+  const [isTelegramOpen, setIsTelegramOpen] = useAutoExpand(telegramSignal);
+  const [isHealthyCronGroupsOpen, setIsHealthyCronGroupsOpen] = useAutoExpand(false);
 
   if (isLoading) {
     return (
@@ -231,304 +201,71 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
       const bSeverity = Math.max(...b.entries.map(([, cron]) => getCronSeverity(cron)), 0);
       return bSeverity - aSeverity;
     });
-  const activeCronGroups = sortedCronGroups.filter((group) =>
+  const activeCronGroups: CronGroup[] = sortedCronGroups.filter((group) =>
     group.entries.some(([, cron]) => getCronSeverity(cron) > 0),
   );
-  const healthyCronGroups = sortedCronGroups.filter((group) =>
+  const healthyCronGroups: CronGroup[] = sortedCronGroups.filter((group) =>
     group.entries.every(([, cron]) => getCronSeverity(cron) === 0),
   );
 
-  const renderCronGroup = (group: (typeof sortedCronGroups)[number]) => (
-    <div key={group.key} className="rounded-[1.25rem] border border-border/60 bg-background/35 p-4">
-      <div className="space-y-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-base font-semibold tracking-tight text-foreground">{group.title}</h3>
-          <span className="rounded-full border border-border/60 bg-background/50 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-            {group.badge}
-          </span>
-        </div>
-        <p className="text-sm leading-relaxed text-muted-foreground">{group.description}</p>
-      </div>
-      <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        {group.entries.map(([job, cron]) => (
-          <CronCard key={job} job={job} cron={cron} nowSeconds={data.timestamp} />
-        ))}
-      </div>
-    </div>
-  );
   const sectionNodes: Record<DashboardSectionId, ReactNode> = {
     overview: (
-      <StatusSection
-        id="overview"
-        kicker="Command Center"
-        title="Current incident picture"
-        description="Start here for the state holding, the active blockers, and the short path into deeper diagnostics."
-        accentClassName="border-l-frost-blue"
-        summary={
-          <>
-            <SummaryBadge label="Overall" value={overallTone.label} className={overallTone.badgeClassName} />
-            <SummaryBadge label="Raw" value={data.rawOverallStatus} />
-            <SummaryBadge label="Confidence" value={`${(data.confidence * 100).toFixed(1)}%`} />
-          </>
-        }
-      >
-        <StatusFacts
-          adminAccess={adminAccess}
-          dbHealthy={data.dbHealthy}
-          summary={data.summary}
-          causes={data.causes}
-          onActionFinished={handleRefresh}
-        />
-        <details
-          open={isDiagnosticsOpen}
-          onToggle={(event) => setIsDiagnosticsOpen(event.currentTarget.open)}
-          className="rounded-[1.25rem] border border-border/60 bg-background/30 p-4"
-        >
-          <summary className="cursor-pointer text-sm font-medium text-foreground">
-            State machine, probe, and discrepancy diagnostics
-          </summary>
-          <div className="mt-4">
-            <SystemDiagnostics
-              state={data.state}
-              staleness={data.staleness}
-              probe={data.probe}
-              discrepancy={data.discrepancy}
-              browserProbe={browserProbeSummary}
-              error={data.sectionErrors.statusState}
-              nowSeconds={data.timestamp}
-            />
-          </div>
-        </details>
-      </StatusSection>
+      <OverviewSection
+        data={data}
+        adminAccess={adminAccess}
+        handleRefresh={handleRefresh}
+        overallTone={overallTone}
+        isDiagnosticsOpen={isDiagnosticsOpen}
+        setIsDiagnosticsOpen={setIsDiagnosticsOpen}
+        browserProbeSummary={browserProbeSummary}
+      />
     ),
     pipeline: (
-      <StatusSection
-        id="pipeline"
-        kicker="Data Pipeline"
-        title="Freshness and coverage"
-        description="Use this lane when the issue is data quality rather than routing or cron execution."
-        accentClassName="border-l-cyan-500"
-        summary={
-          <>
-            <SummaryBadge
-              label="Data Quality"
-              value={getStatusTone(data.dataQualityStatus).label}
-              className={getStatusTone(data.dataQualityStatus).badgeClassName}
-            />
-            <SummaryBadge label="Missing Prices" value={String(data.dataQuality.missingPrices)} />
-            <SummaryBadge label="CG Drift" value={String(data.coingeckoPriceDiff?.mismatchedCount ?? 0)} />
-            <SummaryBadge label="Stale On-chain" value={String(data.dataQuality.staleOnchainSupply)} />
-            <SummaryBadge label="Reserve Drift" value={String(data.reserveDrift?.length ?? 0)} />
-            <SummaryBadge label="Class Warnings" value={String(data.classificationWarnings?.length ?? 0)} />
-          </>
-        }
-      >
-        <div className="rounded-[1.25rem] border border-border/60 bg-background/35 p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="space-y-1">
-              <h3 className="text-base font-semibold tracking-tight text-foreground">Quality threshold board</h3>
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                Critical data-quality blockers sort first so the noisiest metrics do not hide the real breakpoints.
-              </p>
-            </div>
-            <span
-              className={cn(
-                "rounded-full border px-2.5 py-1 text-[11px] font-medium",
-                getStatusTone(data.dataQualityStatus).badgeClassName,
-              )}
-            >
-              {getStatusTone(data.dataQualityStatus).label}
-            </span>
-          </div>
-          <div className="mt-4">
-            <DataQualityCards dq={{ ...data.dataQuality, nowSeconds: data.timestamp }} />
-          </div>
-        </div>
-
-        <div className="grid gap-5 xl:grid-cols-2">
-          <PriceSourceHealthCard
-            health={data.priceSourceHealth}
-            error={data.sectionErrors.priceSourceHealth}
-            nowSeconds={data.timestamp}
-          />
-          <LiquidityHealthCard
-            health={data.liquidityHealth}
-            error={data.sectionErrors.liquidityHealth}
-          />
-        </div>
-
-        <CoinGeckoPriceDiffCard
-          summary={data.coingeckoPriceDiff}
-          error={data.sectionErrors.coingeckoPriceDiff}
-          nowSeconds={data.timestamp}
-        />
-
-        <div className="grid gap-5 xl:grid-cols-2">
-          <DatasetFreshnessTable datasetFreshness={data.datasetFreshness} nowSeconds={data.timestamp} />
-          <ReserveSyncHealthCard health={data.reserveComposition} nowSeconds={data.timestamp} />
-        </div>
-
-        <div className="grid gap-5 xl:grid-cols-2">
-          <MintBurnReconciliationCard
-            summary={data.mintBurnReconciliation}
-            error={data.sectionErrors.mintBurnReconciliation}
-          />
-          <MetadataIntegrityCard
-            reserveDrift={data.reserveDrift}
-            classificationWarnings={data.classificationWarnings}
-            reserveDriftError={data.sectionErrors.reserveDrift}
-            classificationWarningsError={data.sectionErrors.classificationWarnings}
-          />
-        </div>
-
-        <DiscoveryCandidatesCard
-          candidates={data.discoveryCandidates}
-          error={data.sectionErrors.discoveryCandidates}
-          adminAccess={adminAccess}
-          nowSeconds={data.timestamp}
-          onDismissed={handleRefresh}
-        />
-      </StatusSection>
+      <PipelineSection
+        data={data}
+        adminAccess={adminAccess}
+        handleRefresh={handleRefresh}
+      />
     ),
     reliability: (
-      <StatusSection
-        id="reliability"
-        kicker="Service Health"
-        title="Probes, breakers, and cache pressure"
-        description="Use this lane when the issue looks like routing, availability, or public-service degradation."
-        accentClassName="border-l-amber-500"
-        summary={
-          <>
-            <SummaryBadge
-              label="Public Health"
-              value={healthData?.status ?? "—"}
-              className={healthData ? getStatusTone(healthData.status).badgeClassName : undefined}
-            />
-            <SummaryBadge
-              label="Browser Probes"
-              value={browserProbeSummary ? `${browserProbeSummary.passCount}/${browserProbeSummary.sampleCount}` : "—"}
-            />
-            <SummaryBadge label="Worst Cache" value={`${data.summary.worstCacheRatio.toFixed(2)}x`} />
-          </>
-        }
-      >
-        <details
-          open={isReliabilityOpen}
-          onToggle={(event) => setIsReliabilityOpen(event.currentTarget.open)}
-          className="rounded-[1.25rem] border border-border/60 bg-background/30 p-4"
-        >
-          <summary className="cursor-pointer text-sm font-medium text-foreground">
-            Endpoint probes, circuit breakers, and cache freshness
-          </summary>
-          <div className="mt-4 space-y-5">
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-              <EndpointHealthGrid probes={probes} isLoading={probesLoading} />
-              <CircuitBreakerTable circuits={healthData?.circuits} />
-            </div>
-            <CacheFreshnessTable caches={data.caches} />
-          </div>
-        </details>
-      </StatusSection>
+      <ReliabilitySection
+        data={data}
+        healthData={healthData}
+        browserProbeSummary={browserProbeSummary}
+        isReliabilityOpen={isReliabilityOpen}
+        setIsReliabilityOpen={setIsReliabilityOpen}
+        probes={probes}
+        probesLoading={probesLoading}
+      />
     ),
     crons: (
-      <StatusSection
-        id="crons"
-        kicker="Schedulers"
-        title="Worker job lanes"
-        description="Unhealthy and degraded lanes stay on top. Healthy lanes collapse until you need them."
-        accentClassName="border-l-orange-500"
-        summary={
-          <>
-            <SummaryBadge label="Unhealthy" value={String(data.summary.unhealthyCrons)} />
-            <SummaryBadge label="Degraded" value={String(data.summary.degradedCrons)} />
-            <SummaryBadge label="Running" value={String(runningCrons)} />
-          </>
-        }
-      >
-        <div className="space-y-4">
-          {activeCronGroups.length > 0 ? (
-            activeCronGroups.map((group) => renderCronGroup(group))
-          ) : (
-            <div className="rounded-[1.25rem] border border-border/60 bg-background/35 p-4 text-sm leading-relaxed text-muted-foreground">
-              No unhealthy cron lanes. Healthy groups are collapsed below.
-            </div>
-          )}
-          {healthyCronGroups.length > 0 ? (
-            <details
-              open={isHealthyCronGroupsOpen}
-              onToggle={(event) => setIsHealthyCronGroupsOpen(event.currentTarget.open)}
-              className="rounded-[1.25rem] border border-border/60 bg-background/30 p-4"
-            >
-              <summary className="cursor-pointer text-sm font-medium text-foreground">
-                Healthy lanes ({healthyCronGroups.length})
-              </summary>
-              <div className="mt-4 space-y-4">{healthyCronGroups.map((group) => renderCronGroup(group))}</div>
-            </details>
-          ) : null}
-        </div>
-      </StatusSection>
+      <CronsSection
+        data={data}
+        runningCrons={runningCrons}
+        activeCronGroups={activeCronGroups}
+        healthyCronGroups={healthyCronGroups}
+        isHealthyCronGroupsOpen={isHealthyCronGroupsOpen}
+        setIsHealthyCronGroupsOpen={setIsHealthyCronGroupsOpen}
+      />
     ),
     control: (
-      <StatusSection
-        id="control"
-        kicker="Operations"
-        title="Manual response"
-        description="Rarely-used recovery actions and operator controls. Positioned last since these are only needed during active incidents."
-        accentClassName="border-l-emerald-500"
-        summary={
-          <>
-            <SummaryBadge label="Suggested Actions" value={String(recommendedActions.length)} />
-            <SummaryBadge label="Alert-ready Chats" value={String(data.telegramBot?.deliverableChats ?? 0)} />
-            <SummaryBadge label="Pending Deliveries" value={String(data.telegramBot?.pendingDeliveries ?? 0)} />
-          </>
-        }
-      >
-        <AdminActionsPanel
-          adminAccess={adminAccess}
-          status={{ causes: data.causes, crons: data.crons }}
-          nowSeconds={data.timestamp}
-          onActionFinished={handleRefresh}
-          showRecommendations={false}
-        />
-        <details
-          open={isTelegramOpen}
-          onToggle={(event) => setIsTelegramOpen(event.currentTarget.open)}
-          className="rounded-[1.25rem] border border-border/60 bg-background/30 p-4"
-        >
-          <summary className="cursor-pointer text-sm font-medium text-foreground">Telegram delivery telemetry</summary>
-          <div className="mt-4">
-            <TelegramBotStats
-              telegramBot={data.telegramBot}
-              dispatchCron={data.crons["dispatch-telegram-alerts"]}
-              error={data.sectionErrors.telegramBot}
-              nowSeconds={data.timestamp}
-            />
-          </div>
-        </details>
-      </StatusSection>
+      <ControlSection
+        data={data}
+        adminAccess={adminAccess}
+        handleRefresh={handleRefresh}
+        recommendedActions={recommendedActions}
+        isTelegramOpen={isTelegramOpen}
+        setIsTelegramOpen={setIsTelegramOpen}
+      />
     ),
     history: (
-      <StatusSection
-        id="history"
-        kicker="Incident Log"
-        title="Timeline and recovery trail"
-        description="Historical context stays last so the page tapers from action into evidence."
-        accentClassName="border-l-rose-500"
-        summary={
-          <>
-            <SummaryBadge label="Window" value={historyWindow} />
-            <SummaryBadge label="Transitions" value={String(allTransitions.length)} />
-            <SummaryBadge label="Latest" value={latestTransition ? formatTransitionLabel(latestTransition) : "—"} />
-          </>
-        }
-      >
-        <TransitionTimeline
-          transitions={allTransitions}
-          window={historyWindow}
-          onWindowChange={setHistoryWindow}
-          isLoading={historyLoading}
-        />
-      </StatusSection>
+      <HistorySection
+        allTransitions={allTransitions}
+        latestTransition={latestTransition}
+        historyWindow={historyWindow}
+        setHistoryWindow={setHistoryWindow}
+        historyLoading={historyLoading}
+      />
     ),
   };
 
