@@ -54,7 +54,7 @@ import { generateDailyDigest } from "./cron/daily-digest";
 import { createLeaseOwner, runCronWithLease } from "./lib/cron-lease";
 import { logCronRun, type CronResult } from "./lib/cron-logger";
 import { runIdempotentAdminAction } from "./lib/idempotency";
-import { requireAdmin, withAdmin } from "./lib/auth";
+import { withAdmin } from "./lib/auth";
 import { jsonResponse, withErrorHandler } from "./lib/api-utils";
 import type { MintBurnFreshnessConfig } from "./lib/mint-burn-health-config";
 import type { TelegramCreds } from "./lib/telegram";
@@ -279,10 +279,7 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
   "trigger-digest": withErrorHandler(
     "route-trigger-digest",
     async ({ db, execCtx, request, trustedAdmin, anthropicApiKey, telegramCreds }) => {
-      const authError = await requireAdmin(request, trustedAdmin);
-      if (authError) return authError;
-
-      return runIdempotentAdminAction(db, "trigger-digest", request, async () => {
+      return withAdmin(request, () => runIdempotentAdminAction(db, "trigger-digest", request, async () => {
         const cryptoObj = globalThis as typeof globalThis & {
           crypto?: { randomUUID?: () => string };
         };
@@ -299,14 +296,11 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
           requestId,
           message: "Digest trigger accepted and running in the background.",
         });
-      });
+      }), trustedAdmin);
     },
   ),
   "reset-blacklist-sync": withErrorHandler("route-reset-blacklist-sync", async ({ db, request, trustedAdmin }) => {
-    const authError = await requireAdmin(request, trustedAdmin);
-    if (authError) return authError;
-
-    return runIdempotentAdminAction(db, "reset-blacklist-sync", request, async () => {
+    return withAdmin(request, () => runIdempotentAdminAction(db, "reset-blacklist-sync", request, async () => {
       const result = await db.batch([
         db.prepare(
           "UPDATE blacklist_sync_state SET last_block = MAX(last_block - 50000, 0) WHERE config_key NOT LIKE 'tron-%'",
@@ -318,13 +312,13 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
       const evmChanged = result[0]?.meta?.changes ?? 0;
       const tronChanged = result[1]?.meta?.changes ?? 0;
       return jsonResponse({ ok: true, evmReset: evmChanged, tronReset: tronChanged });
-    });
+    }), trustedAdmin);
   }),
   "debug-sync-state": withErrorHandler("route-debug-sync-state", async ({ db, request, trustedAdmin }) => {
-    const authError = await requireAdmin(request, trustedAdmin);
-    if (authError) return authError;
-    const rows = await db.prepare("SELECT config_key, last_block FROM blacklist_sync_state ORDER BY config_key").all();
-    return jsonResponse(rows.results);
+    return withAdmin(request, async () => {
+      const rows = await db.prepare("SELECT config_key, last_block FROM blacklist_sync_state ORDER BY config_key").all();
+      return jsonResponse(rows.results);
+    }, trustedAdmin);
   }),
   "remediate-blacklist-amount-gaps": withErrorHandler(
     "route-remediate-blacklist-amount-gaps",
