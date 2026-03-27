@@ -92,7 +92,7 @@ export function TotalMcapChart() {
 
   return (
     <Card className="pharos-card-shell animate-in fade-in duration-300">
-      <CardHeader className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <CardHeader>
         <div className="space-y-1.5">
           <p className="pharos-kicker">Market Structure</p>
           <CardTitle as="h2" className="pharos-section-title min-w-0">
@@ -103,7 +103,7 @@ export function TotalMcapChart() {
             aggregate line.
           </p>
         </div>
-        <CardAction className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+        <CardAction className="flex min-w-0 items-center gap-2">
           <TimeRangeButtons options={options} value={range} onChange={setRange} />
           <Button
             variant="ghost"

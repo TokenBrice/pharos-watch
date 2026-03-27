@@ -193,11 +193,11 @@ export function ScoreChart({
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
       {showHeader && (
-        <CardHeader className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <CardHeader>
           <CardTitle as="h2" className="min-w-0">
             Pharos Stability Index History
           </CardTitle>
-          <CardAction className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+          <CardAction className="flex min-w-0 items-center gap-2">
             <TimeRangeButtons
               options={options}
               value={range}
