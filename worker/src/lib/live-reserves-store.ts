@@ -20,22 +20,31 @@ import type {
 } from "@shared/types/live-reserves";
 import { buildInClause } from "./db";
 import { chunkArray } from "./collections";
-import { decodeJsonString } from "./cache-json";
+import {
+  buildReserveProvenanceView,
+  hasConsistentSnapshotState,
+  hasScoringEligibleLiveReserveFreshness,
+  hasUncertainWriteState,
+  parseReserveCompositionRow,
+  parseSnapshotMetadata,
+  parseWarnings,
+} from "./live-reserves-store-parsing";
+import {
+  buildReserveCompositionHistoryInsertStatement,
+  buildReserveCompositionUpsertStatement,
+  buildReserveSyncAttemptHistoryInsertStatement,
+  buildReserveSyncAttemptStartStatement,
+  buildReserveSyncFinalizeAttemptStatement,
+  buildReserveSyncFinalizeSuccessStatement,
+} from "./live-reserves-store-statements";
 
 export const LIVE_RESERVE_FRESHNESS_SEC = 2 * DAY_SECONDS;
 const LIVE_RESERVE_HISTORY_RETENTION_SEC = 90 * DAY_SECONDS;
 const SCORING_LIVE_RESERVE_EVIDENCE_CLASSES: LiveReserveEvidenceClass[] = ["independent"];
-const VALID_RISKS = new Set(["very-low", "low", "medium", "high", "very-high"]);
-const VALID_SOURCE_MODELS = new Set<LiveReserveSourceModel>(["dynamic-mix", "validated-static", "single-bucket"]);
-const VALID_EVIDENCE_CLASSES = new Set<LiveReserveEvidenceClass>(["independent", "static-validated", "weak-live-probe"]);
-const VALID_WARNING_EFFECTS = new Set(["info", "degraded", "fatal"]);
-const VALID_FRESHNESS_MODES = new Set<LiveReserveFreshnessMode>(["verified", "unverified", "not-applicable"]);
-const STORED_SLICE_SUM_TOLERANCE = 2;
-const SQLITE_NOW_MS_EXPRESSION = "CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)";
 
 export type ReserveSyncStatus = "ok" | "degraded" | "error" | "skipped";
 
-interface ReserveCompositionRow {
+export interface ReserveCompositionRow {
   stablecoin_id: string;
   slices: string;
   fetched_at: number;
@@ -64,7 +73,7 @@ interface ReserveSyncStateRow {
   last_success_attempt_id?: string | null;
 }
 
-interface SnapshotIntegrityIssue {
+export interface SnapshotIntegrityIssue {
   code:
     | "invalid-json"
     | "invalid-payload"

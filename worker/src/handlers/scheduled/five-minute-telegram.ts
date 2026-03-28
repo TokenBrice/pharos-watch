@@ -6,11 +6,25 @@
  * Connection budget: 1/6 peak
  */
 import { dispatchTelegramAlerts } from "../../cron/dispatch-telegram-alerts";
+import { reconcileTelegramWebhookRegistration } from "../../lib/telegram-webhook-registration";
 import type { ScheduledRuntimeContext } from "./context";
 
 export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext): Promise<void> {
   if (!runtime.env.TELEGRAM_BOT_TOKEN) {
     return;
+  }
+
+  try {
+    const result = await reconcileTelegramWebhookRegistration(runtime.db, {
+      botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+      webhookSecret: runtime.env.TELEGRAM_WEBHOOK_SECRET,
+      selfUrl: runtime.env.SELF_URL,
+    });
+    if (result.attempted) {
+      console.log(`[cron] Reconciled Telegram webhook registration: ${result.expectedUrl}`);
+    }
+  } catch (err) {
+    console.error("[cron] Telegram webhook reconciliation failed:", err);
   }
 
   try {

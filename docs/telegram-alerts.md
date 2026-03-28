@@ -64,6 +64,8 @@ Webhook registration is handled by `scripts/register-telegram-webhook.sh`, which
 - URL: `https://api.pharos.watch/api/telegram-webhook`
 - Secret token: `<TELEGRAM_WEBHOOK_SECRET>`
 
+The dedicated five-minute Telegram worker lane now also reconciles the webhook registration in production on a cache-backed cadence. That means the live Worker periodically re-applies the configured webhook URL and secret token via Telegram `setWebhook`, which self-heals webhook-secret drift without requiring a separate manual script run.
+
 ## Webhook Command Flow
 
 `worker/src/api/telegram-webhook.ts` now acts as a thin ingress coordinator. Command parsing, message formatting, and D1 persistence live in the adjacent `telegram-webhook-*` helper modules so command behavior can be tested without editing the transport entrypoint.
