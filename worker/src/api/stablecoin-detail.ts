@@ -32,7 +32,6 @@ export const handleStablecoinDetail = withErrorHandler(
       cached,
       execCtx: ctx,
     });
-
     const geckoId = meta?.geckoId;
 
     const isCommodity =
