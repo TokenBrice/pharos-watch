@@ -5,7 +5,7 @@ import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useTablePagination } from "@/hooks/use-table-pagination";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { EventPaginationFooter } from "@/components/event-pagination-footer";
 import {
   Table,
   TableBody,
@@ -171,7 +171,7 @@ export function DepegHistory({ stablecoinId, earliestTrackingDate, hasPriceData 
       ) : null}
       <div className="rounded-xl border overflow-hidden">
         <Table>
-          <TableHeader className="bg-muted/80 backdrop-blur-sm">
+          <TableHeader className="bg-muted">
             <TableRow>
               <TableHead>Date</TableHead>
               <TableHead>Direction</TableHead>
@@ -190,34 +190,16 @@ export function DepegHistory({ stablecoinId, earliestTrackingDate, hasPriceData 
         </Table>
       </div>
       {isFullyLoaded && totalEvents > 0 ? (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">
-            Showing{" "}
-            <span className="font-mono">{rangeStart}</span>
-            &ndash;
-            <span className="font-mono">{rangeEnd}</span>
-            {" "}of{" "}
-            <span className="font-mono">{totalEvents.toLocaleString()}</span> events
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onPreviousPage}
-              disabled={effectivePage <= 0}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onNextPage}
-              disabled={effectivePage >= totalPages - 1}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        <EventPaginationFooter
+          className="mt-3"
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          total={totalEvents}
+          onPreviousPage={onPreviousPage}
+          onNextPage={onNextPage}
+          previousDisabled={effectivePage <= 0}
+          nextDisabled={effectivePage >= totalPages - 1}
+        />
       ) : null}
     </Card>
   );

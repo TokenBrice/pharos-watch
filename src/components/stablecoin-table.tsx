@@ -329,7 +329,7 @@ export function StablecoinTable({
       <div ref={scrollRef} className="scroll-shadow max-h-[50vh] overflow-y-auto overflow-x-auto px-0 pb-2 pr-2 sm:max-h-[70vh] sm:pr-0">
         <table className={`min-w-[420px] sm:min-w-[820px] w-full caption-bottom text-sm pharos-table-striped pharos-density-${density}`}>
           <TableCaption className="sr-only">Stablecoin data table</TableCaption>
-          <TableHeader className="sticky top-0 z-10 bg-muted/70 backdrop-blur-sm">
+          <TableHeader className="sticky top-0 z-10 bg-muted">
             <TableRow>
               {STABLECOIN_HEADER_DEFS.filter((column) => isVisible(column.id)).map((column) =>
                 column.sortKey ? (

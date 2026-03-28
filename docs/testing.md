@@ -13,6 +13,7 @@ npm run lint          # ESLint across frontend + worker code
 npm run audit:deps    # Fails on high-severity npm advisories
 npm run seo:check     # Static SEO audit against built `out/` HTML
 npm run check:worker-boundary # Enforce the shared boundary in both directions (no worker -> `src` imports, no `src`/`shared`/`scripts`/`functions` -> `worker/src` imports)
+npm run check:shared-cycles # Fail on circular dependencies inside `shared/`
 npm run check:unused-code # Detect unreferenced internal runtime modules and unused named exports across `src/`, `shared/`, `worker/src/`, and `functions/`
 npm run check:hotspot-ratchet # Fail when key hotspot files grow beyond the checked-in baseline
 npm run check:cron-sync # Verify `shared/lib/cron-jobs.ts` stays aligned with `worker/wrangler.toml` cron declarations
@@ -46,6 +47,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - `npm run audit:deps`
    - `npm run lint`
    - `npm run check:worker-boundary`
+   - `npm run check:shared-cycles`
    - `npm run check:migrations`
    - `npm run check:cron-sync`
    - `npm run check:cron-connections`
@@ -119,9 +121,9 @@ The workflows pin `actions/checkout@v6` and `actions/setup-node@v6` by commit SH
 
 `npm run check:migrations` replays every file in `worker/migrations/` against a throwaway SQLite database before deploy. It uses Node's built-in `node:sqlite` module on Node 22+ and falls back to the `sqlite3` CLI when needed, which catches schema typos in unapplied D1 migrations before `deploy-worker` touches production. Historical duplicate migration prefixes are tracked explicitly in `worker/migrations/MANIFEST.md`; the checker fails only on new undeclared duplicates and keeps the current allowlist visible in review. The same check now also enforces the rollout-safety contract for new migrations starting at `0071`: every new migration must declare `-- rollout-safety: backward-compatible`, and obvious table/column drop or rename patterns are rejected because the standard deploy path applies D1 migrations before the new worker is live.
 
-`npm run test:merge-gate` now mirrors the deploy-path validate contract locally. If the changed-file set is not deploy-impacting, it prints the diff and exits successfully. For deploy-impacting diffs, it always runs `audit:deps`, lint, worker-boundary, migrations, cron schedule/connection checks, doc sync checks, duplicate-export and redemption-backstop guards, unused-code, hotspot-ratchet, the full test suite, and critical coverage. It adds `npm run build` + `npm run seo:check` when Pages-impacting files changed, and adds `cd worker && npx tsc --noEmit` when worker-impacting files changed. It still skips deploy-time smoke suites.
+`npm run test:merge-gate` now mirrors the deploy-path validate contract locally. If the changed-file set is not deploy-impacting, it prints the diff and exits successfully. For deploy-impacting diffs, it always runs `audit:deps`, lint, worker-boundary, shared-cycle detection, migrations, cron schedule/connection checks, doc sync checks, duplicate-export and redemption-backstop guards, unused-code, hotspot-ratchet, the full test suite, and critical coverage. It adds `npm run build` + `npm run seo:check` when Pages-impacting files changed, and adds `cd worker && npx tsc --noEmit` when worker-impacting files changed. It still skips deploy-time smoke suites.
 
-`npm run check:unused-code` now scans all runtime code under `src/`, `shared/`, `worker/src/`, and `functions/`, with explicit module/export allowlists for intentional exceptions. `npm run check:hotspot-ratchet` now guards nine tracked hotspot files, including `src/app/coverage/client.tsx`, `worker/src/cron/daily-digest/collectors.ts`, `worker/src/cron/sync-fx-rates.ts`, and `worker/src/lib/status-evaluation.ts`; refresh the baseline only after an intentional refactor with `npm run check:hotspot-ratchet:update-baseline`.
+`npm run check:unused-code` now scans all runtime code under `src/`, `shared/`, `worker/src/`, and `functions/`, with explicit module/export allowlists for intentional exceptions. `npm run check:hotspot-ratchet` now guards seventeen tracked hotspot files, including `src/app/coverage/client.tsx`, `src/app/methodology/sections/monitoring-sections.tsx`, `src/app/methodology/scoring-changelog/page.tsx`, `worker/src/cron/daily-digest.ts`, `worker/src/cron/enrich-prices.ts`, `worker/src/cron/sync-blacklist.ts`, `worker/src/cron/yield-sync/sources.ts`, `worker/src/lib/live-reserves-store.ts`, and `worker/src/lib/status-reliability.ts`; refresh the baseline only after an intentional refactor with `npm run check:hotspot-ratchet:update-baseline`.
 
 `npm run check:cron-sync` is part of the shared CI validate gate. Run it locally whenever you change `worker/wrangler.toml` cron expressions or `shared/lib/cron-jobs.ts` so you catch schedule drift before pushing.
 

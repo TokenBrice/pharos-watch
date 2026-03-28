@@ -39,14 +39,14 @@ function HintBody({
         {item.versionLabel ? <span>Methodology {item.versionLabel}</span> : null}
         <Link
           href={item.methodologyPath}
-          className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+          className="pharos-focus-ring rounded-sm hover:underline hover:underline-offset-4 hover:text-foreground"
         >
           View methodology
         </Link>
         {item.changelogPath ? (
           <Link
             href={item.changelogPath}
-            className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+            className="pharos-focus-ring rounded-sm hover:underline hover:underline-offset-4 hover:text-foreground"
           >
             Version history &rarr;
           </Link>
@@ -162,14 +162,14 @@ export function MethodologyCardActions({
       {showVersion && item.versionLabel ? <span>Methodology {item.versionLabel}</span> : null}
       <Link
         href={item.methodologyPath}
-        className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+        className="pharos-focus-ring rounded-sm hover:underline hover:underline-offset-4 hover:text-foreground"
       >
         View methodology
       </Link>
       {item.changelogPath ? (
         <Link
           href={item.changelogPath}
-          className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+          className="pharos-focus-ring rounded-sm hover:underline hover:underline-offset-4 hover:text-foreground"
         >
           Version history &rarr;
         </Link>

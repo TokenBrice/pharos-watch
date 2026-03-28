@@ -513,60 +513,77 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
                     </InteractiveTableRow>
                     {visibleExpandedId === row.id && (
                       <TableRow>
-                        <TableCell colSpan={COLUMN_COUNT} className="bg-muted/30 p-4">
-                          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/55 px-3 py-2.5">
+                        <TableCell colSpan={COLUMN_COUNT} className="bg-muted/30 px-4 py-4">
+                          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_220px]">
+                            {/* Primary: history chart */}
                             <div className="min-w-0">
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                                Yield Source
-                              </p>
-                              <div className="mt-1 flex min-w-0 items-center gap-2">
-                                <YieldSourceLink href={row.yieldSourceUrl} className="text-sm font-medium text-foreground" stopPropagation>
-                                  {row.yieldSource}
-                                </YieldSourceLink>
-                                {row.provenance?.sourceSwitch ? (
-                                  <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-300">
-                                    switch
-                                  </span>
-                                ) : null}
-                              </div>
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                {getYieldBenchmarkReferenceText(row)}
-                              </p>
+                              <YieldHistoryChart
+                                stablecoinId={row.id}
+                                benchmarkRate={row.benchmarkRate ?? riskFreeRate}
+                                benchmarkLabel={row.benchmarkLabel}
+                                benchmarkIsFallback={row.benchmarkSelectionMode === "fallback-usd" || row.benchmarkIsFallback}
+                                medianApy={medianApy}
+                                compact
+                                availableSources={[
+                                  ...(row.provenance?.sourceKey
+                                    ? [{
+                                      sourceKey: row.provenance.sourceKey,
+                                      yieldSource: row.yieldSource,
+                                    }]
+                                    : []),
+                                  ...(row.altSources ?? []).map((source) => ({
+                                    sourceKey: source.sourceKey,
+                                    yieldSource: source.yieldSource,
+                                  })),
+                                ]}
+                              />
                             </div>
-                            {(row.altSources?.length ?? 0) > 0 ? (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSheetRankingId(row.id);
-                                }}
-                                className="pharos-focus-ring inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                                aria-label={`${1 + row.altSources.length} yield sources — open source explorer`}
-                              >
-                                +{row.altSources.length} sources
-                              </button>
-                            ) : null}
+                            {/* Sidebar: metadata */}
+                            <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-background/55 px-3 py-3">
+                              <div className="min-w-0">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Source</p>
+                                <div className="mt-1 flex min-w-0 items-center gap-1.5">
+                                  <YieldSourceLink href={row.yieldSourceUrl} className="text-sm font-medium text-foreground" stopPropagation>
+                                    {row.yieldSource}
+                                  </YieldSourceLink>
+                                  {row.provenance?.sourceSwitch ? (
+                                    <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-300">
+                                      switch
+                                    </span>
+                                  ) : null}
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Benchmark</p>
+                                <p className="mt-0.5 text-xs text-foreground">
+                                  {getYieldBenchmarkReferenceText(row)}
+                                </p>
+                              </div>
+                              {warningSignalCount > 0 && (
+                                <div>
+                                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Signals</p>
+                                  <ul className="mt-0.5 space-y-0.5 text-xs text-amber-500">
+                                    {row.warningSignals.map((signal) => (
+                                      <li key={signal}>{formatYieldWarningSignal(signal)}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              {(row.altSources?.length ?? 0) > 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSheetRankingId(row.id);
+                                  }}
+                                  className="pharos-focus-ring mt-auto inline-flex items-center justify-center rounded-full bg-muted px-2 py-1 text-xs font-mono text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                                  aria-label={`${1 + row.altSources.length} yield sources — open source explorer`}
+                                >
+                                  +{row.altSources.length} alt sources
+                                </button>
+                              ) : null}
+                            </div>
                           </div>
-                          <YieldHistoryChart
-                            stablecoinId={row.id}
-                            benchmarkRate={row.benchmarkRate ?? riskFreeRate}
-                            benchmarkLabel={row.benchmarkLabel}
-                            benchmarkIsFallback={row.benchmarkSelectionMode === "fallback-usd" || row.benchmarkIsFallback}
-                            medianApy={medianApy}
-                            compact
-                            availableSources={[
-                              ...(row.provenance?.sourceKey
-                                ? [{
-                                  sourceKey: row.provenance.sourceKey,
-                                  yieldSource: row.yieldSource,
-                                }]
-                                : []),
-                              ...(row.altSources ?? []).map((source) => ({
-                                sourceKey: source.sourceKey,
-                                yieldSource: source.yieldSource,
-                              })),
-                            ]}
-                          />
                         </TableCell>
                       </TableRow>
                     )}

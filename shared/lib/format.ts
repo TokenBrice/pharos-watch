@@ -226,6 +226,13 @@ export function formatSignedPercent(value: number | null | undefined, decimals =
   return `${sign}${value.toFixed(decimals)}%`;
 }
 
+/** Format a number as a percentage string for chart axes.
+ *  Includes sign prefix for non-zero values. */
+export function formatChartPercent(value: number, decimals = 1): string {
+  const prefix = value > 0 ? "+" : "";
+  return `${prefix}${value.toFixed(decimals)}%`;
+}
+
 /** Format a 0-100 score to one decimal. Returns "-" for nullish values. */
 export function formatScore(value: number | null | undefined): string {
   return value != null ? value.toFixed(1) : "-";

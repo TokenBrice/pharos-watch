@@ -2,8 +2,8 @@ import { z } from "zod";
 import type { DeadStablecoin, StablecoinMeta } from "../../types";
 import { LiveReservesConfigSchema } from "../live-reserve-adapters";
 import {
-  GOVERNANCE_TYPE_VALUES,
   DEPENDENCY_TYPE_VALUES,
+  GOVERNANCE_TYPE_VALUES,
   CHAIN_TIER_VALUES,
   DEPLOYMENT_MODEL_VALUES,
   COLLATERAL_QUALITY_VALUES,

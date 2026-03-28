@@ -436,7 +436,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
     return (
       <g pointerEvents="none">
         <rect x={tx} y={ty} width={125} height={52} rx={6}
-          fill="var(--color-card, #1a1a2e)" stroke="var(--color-border, #333)" strokeWidth={1} />
+          fill="var(--color-card, #f8f9fa)" stroke="var(--color-border, #e2e5e9)" strokeWidth={1} />
         <text x={tx + 8} y={ty + 18} fill="currentColor" fontSize={12} fontWeight={600}>
           {node.symbol}
         </text>
@@ -466,7 +466,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
     return (
       <g pointerEvents="none">
         <rect x={tx} y={ty} width={130} height={38} rx={6}
-          fill="var(--color-card, #1a1a2e)" stroke="var(--color-border, #333)" strokeWidth={1} />
+          fill="var(--color-card, #f8f9fa)" stroke="var(--color-border, #e2e5e9)" strokeWidth={1} />
         <text x={tx + 8} y={ty + 15} fill="currentColor" fontSize={11} fontWeight={600}>
           {fromNode.symbol} → {toNode.symbol}
         </text>
@@ -533,7 +533,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
             { label: "Grade F", color: GRADE_RADAR_COLORS.F },
           ].map(({ label, color }) => (
             <span key={label} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-              <span className="inline-block h-3 w-3 rounded-full border-2" style={{ borderColor: color, backgroundColor: "var(--color-card, #1a1a2e)" }} />
+              <span className="inline-block h-3 w-3 rounded-full border-2" style={{ borderColor: color, backgroundColor: "var(--color-card, #f8f9fa)" }} />
               {label}
             </span>
           ))}
@@ -697,7 +697,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                     cx={pos.x}
                     cy={pos.y}
                     r={node.r}
-                    fill={logoUrl ? "var(--color-card, #1a1a2e)" : color}
+                    fill={logoUrl ? "var(--color-card, #f8f9fa)" : color}
                     fillOpacity={logoUrl ? 1 : 0.6}
                     stroke={color}
                     strokeWidth={RING_WIDTH + (isCoreHub ? 1.2 : isHub ? 0.8 : 0)}
@@ -770,7 +770,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                       fill="currentColor"
                       fontSize={isCoreHub ? HUB_LABEL_FONT_SIZE : HUB_LABEL_FONT_SIZE - 1}
                       fontWeight={isCoreHub ? 700 : 600}
-                      stroke="var(--color-card, #1a1a2e)"
+                      stroke="var(--color-card, #f8f9fa)"
                       strokeWidth={2.4}
                       paintOrder="stroke"
                       pointerEvents="none"

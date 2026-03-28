@@ -65,7 +65,26 @@ interface DiscrepancyStateRow {
   updated_at: number;
 }
 
-function makeStatefulDb() {
+interface StatefulDbOptions {
+  failOnSql?: string;
+  failMessage?: string;
+}
+
+function cloneStatefulStore(store: {
+  stateRow: StatusStateRow | null;
+  transitions: StatusTransitionRow[];
+  probes: StatusProbeRow[];
+  discrepancy: DiscrepancyStateRow | null;
+}) {
+  return {
+    stateRow: store.stateRow ? { ...store.stateRow } : null,
+    transitions: store.transitions.map((row) => ({ ...row })),
+    probes: store.probes.map((row) => ({ ...row })),
+    discrepancy: store.discrepancy ? { ...store.discrepancy } : null,
+  };
+}
+
+function makeStatefulDb(options: StatefulDbOptions = {}) {
   const store: {
     stateRow: StatusStateRow | null;
     transitions: StatusTransitionRow[];
@@ -123,6 +142,9 @@ function makeStatefulDb() {
       return null as T | null;
     },
     run: async () => {
+      if (options.failOnSql && sql.includes(options.failOnSql)) {
+        throw new Error(options.failMessage ?? "missing migration");
+      }
       if (sql.includes("INSERT INTO status_state")) {
         store.stateRow = {
           scope: String(boundValues[0]),
@@ -232,7 +254,24 @@ function makeStatefulDb() {
 
   const db = {
     prepare: (sql: string) => createStatement(sql),
-    batch: async () => [],
+    batch: async (statements: Array<{ run?: () => Promise<unknown> }>) => {
+      const snapshot = cloneStatefulStore(store);
+      try {
+        for (const statement of statements) {
+          if (!statement.run) {
+            throw new Error("Missing run method on batched statement");
+          }
+          await statement.run();
+        }
+        return [];
+      } catch (error) {
+        store.stateRow = snapshot.stateRow;
+        store.transitions = snapshot.transitions;
+        store.probes = snapshot.probes;
+        store.discrepancy = snapshot.discrepancy;
+        throw error;
+      }
+    },
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
   } as unknown as D1Database;
@@ -264,7 +303,9 @@ function makeFailingDb(): D1Database {
         throw new Error("missing migration");
       },
     }),
-    batch: async () => [],
+    batch: async () => {
+      throw new Error("missing migration");
+    },
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
   } as unknown as D1Database;
@@ -316,6 +357,61 @@ describe("status-reliability", () => {
     expect(store.transitions.map((row) => row.transition_type)).toEqual(["init", "degrade", "recover", "recover"]);
   });
 
+  it("rolls back a seeded status write when the transition insert fails", async () => {
+    const { db, store } = makeStatefulDb({
+      failOnSql: "INSERT INTO status_transitions",
+      failMessage: "seed transition failed",
+    });
+    const issues: Array<{ code: string; operation: string; message: string }> = [];
+
+    const result = await reconcileStatusState(db, 100, "healthy", 0.95, [], (issue) => issues.push(issue));
+
+    expect(result.effectiveStatus).toBe("healthy");
+    expect(store.stateRow).toBeNull();
+    expect(store.transitions).toHaveLength(0);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({
+      code: "status_state_persistence_failed",
+      operation: "seed_status_state",
+    });
+  });
+
+  it("rolls back an update when the transition insert fails", async () => {
+    const { db, store } = makeStatefulDb({
+      failOnSql: "INSERT INTO status_transitions",
+      failMessage: "update transition failed",
+    });
+    store.stateRow = {
+      scope: "global",
+      current_status: "healthy",
+      raw_status: "healthy",
+      last_evaluated_at: 100,
+      last_changed_at: 100,
+      consecutive_healthy: 1,
+      consecutive_degraded: 1,
+      consecutive_stale: 0,
+      confidence: 0.95,
+      causes_json: "[]",
+    };
+
+    const issues: Array<{ code: string; operation: string; message: string }> = [];
+    const result = await reconcileStatusState(db, 220, "degraded", 0.95, [], (issue) => issues.push(issue));
+
+    expect(result.effectiveStatus).toBe("degraded");
+    expect(store.stateRow).toMatchObject({
+      current_status: "healthy",
+      raw_status: "healthy",
+      last_evaluated_at: 100,
+      last_changed_at: 100,
+    });
+    expect(store.transitions).toHaveLength(0);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({
+      code: "status_state_persistence_failed",
+      operation: "update_status_state",
+    });
+  });
+
   it("returns snapshots with staleness metadata and nulls on DB failure", async () => {
     const { db } = makeStatefulDb();
     await reconcileStatusState(db, 100, "degraded", 0.9, []);
@@ -350,7 +446,7 @@ describe("status-reliability", () => {
 
     const summary = summarizeStatusPersistenceIssues(issues);
     expect(issues.some((issue) => issue.code === "status_state_read_failed")).toBe(true);
-    expect(issues.some((issue) => issue.code === "status_state_seed_write_failed")).toBe(true);
+    expect(issues.some((issue) => issue.code === "status_state_persistence_failed")).toBe(true);
     expect(issues.some((issue) => issue.code === "status_state_snapshot_failed")).toBe(true);
     expect(summary?.code).toBe("status_persistence_degraded");
     expect(summary?.message).toMatch(/load-status-state/);

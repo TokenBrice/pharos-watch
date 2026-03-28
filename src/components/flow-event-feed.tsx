@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { EventPaginationFooter } from "@/components/event-pagination-footer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, ArrowDownUp } from "lucide-react";
 import { useMintBurnEvents } from "@/hooks/use-mint-burn-flows";
@@ -169,7 +169,7 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
     <div className="space-y-3">
       <div className="rounded-xl border overflow-hidden">
         <Table>
-          <TableHeader className="bg-muted/80 backdrop-blur-sm">
+          <TableHeader className="bg-muted">
             <TableRow>
               <TableHead>Time</TableHead>
               <TableHead>Direction</TableHead>
@@ -240,34 +240,15 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
       </div>
 
       {total > 0 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Showing{" "}
-            <span className="font-mono">{showingStart}</span>
-            &ndash;
-            <span className="font-mono">{showingEnd}</span>
-            {" "}of{" "}
-            <span className="font-mono">{total}</span> events
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page <= 0}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={page >= totalPages - 1}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        <EventPaginationFooter
+          rangeStart={showingStart}
+          rangeEnd={showingEnd}
+          total={total}
+          onPreviousPage={() => setPage((p) => Math.max(0, p - 1))}
+          onNextPage={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+          previousDisabled={page <= 0}
+          nextDisabled={page >= totalPages - 1}
+        />
       )}
     </div>
   );

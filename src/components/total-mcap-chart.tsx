@@ -17,18 +17,13 @@ import { useStablecoinCharts } from "@/hooks/api-hooks";
 import { useStablecoinDetailHistory } from "@/hooks/use-stablecoin-detail-history";
 import { computeChartYDomain } from "@/lib/chart-utils";
 import { buildTotalMcapChartRows } from "@/lib/total-mcap-chart";
-import { CHART_SLATE } from "@/lib/chart-colors";
+import { CHART_SLATE, USDT_GREEN, USDC_BLUE, SKY_YELLOW } from "@/lib/chart-colors";
 
 /** Format a value as billions with $ prefix, e.g. "$142.5 B" */
 function formatBillions(value: number): string {
   if (!Number.isFinite(value) || value < 0) return "$0 B";
   return `$${(value / 1e9).toFixed(1)} B`;
 }
-
-// Brand colors — unique to this chart, not part of the design system palette
-const USDT_GREEN = "#26a17b";
-const USDC_BLUE = "#2775ca";
-const SKY_YELLOW = "#f5a623";
 
 export function TotalMcapChart() {
   const chartRef = useRef<HTMLDivElement>(null);

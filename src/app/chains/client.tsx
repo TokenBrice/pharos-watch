@@ -204,7 +204,7 @@ export function ChainsLeaderboardClient() {
         <table className="w-full text-sm pharos-table-striped">
           <caption className="sr-only">Blockchain networks ranked by stablecoin supply</caption>
           <TableHeader className="sticky top-0 z-10">
-            <TableRow className="bg-muted/70 backdrop-blur-sm">
+            <TableRow className="bg-muted">
               <TableHead className="w-[40px] text-right">#</TableHead>
               <TableHead>Chain</TableHead>
               <SortableTableHead<ChainSortKey>

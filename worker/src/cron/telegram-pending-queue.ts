@@ -20,15 +20,16 @@ export interface PendingDrainResult {
   attempted: number;
   sent: number;
   blocked: number;
+  blockedCleanupFailed: number;
   retryQueued: number;
   dropped: number;
 }
 
 // ---------- Subscriber Lifecycle ----------
 
-export async function disableBlockedSubscriber(db: D1Database, chatId: string): Promise<void> {
-  await db
-    .batch([
+export async function disableBlockedSubscriber(db: D1Database, chatId: string): Promise<boolean> {
+  try {
+    await db.batch([
       db
         .prepare(
           `UPDATE telegram_subscribers
@@ -50,8 +51,13 @@ export async function disableBlockedSubscriber(db: D1Database, chatId: string): 
             WHERE chat_id=?`,
         )
         .bind(chatId),
-    ])
-    .catch(() => {});
+    ]);
+    return true;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[telegram-pending-queue] Failed to disable blocked subscriber ${chatId}: ${message}`);
+    return false;
+  }
 }
 
 // ---------- Pending Queue Operations ----------
@@ -74,12 +80,13 @@ export async function drainPendingQueue(
 
   const pending = rows.results ?? [];
   if (pending.length === 0) {
-    return { attempted: 0, sent: 0, blocked: 0, retryQueued: 0, dropped: 0 };
+    return { attempted: 0, sent: 0, blocked: 0, blockedCleanupFailed: 0, retryQueued: 0, dropped: 0 };
   }
 
   let attempted = 0;
   let sent = 0;
   let blocked = 0;
+  let blockedCleanupFailed = 0;
   let retryQueued = 0;
   let dropped = 0;
   const idsToDelete: number[] = [];
@@ -106,7 +113,9 @@ export async function drainPendingQueue(
       } else if (result.blocked) {
         blocked++;
         idsToDelete.push(result.id);
-        await disableBlockedSubscriber(db, result.chatId);
+        if (!(await disableBlockedSubscriber(db, result.chatId))) {
+          blockedCleanupFailed++;
+        }
       } else if (result.retryable && result.attempts < 2) {
         retryQueued++;
         idsToRetry.push(result.id);
@@ -133,7 +142,7 @@ export async function drainPendingQueue(
       .run();
   }
 
-  return { attempted, sent, blocked, retryQueued, dropped };
+  return { attempted, sent, blocked, blockedCleanupFailed, retryQueued, dropped };
 }
 
 export async function enqueuePendingAlerts(

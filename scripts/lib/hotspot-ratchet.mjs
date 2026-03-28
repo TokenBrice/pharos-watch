@@ -8,10 +8,18 @@ export const TARGET_FILES = [
   "worker/src/handlers/http.ts",
   "worker/src/cron/sync-stablecoins.ts",
   "src/app/methodology/sections/core-sections.tsx",
+  "src/app/methodology/sections/monitoring-sections.tsx",
+  "src/app/methodology/scoring-changelog/page.tsx",
   "src/app/coverage/client.tsx",
   "worker/src/cron/daily-digest/collectors.ts",
+  "worker/src/cron/daily-digest.ts",
+  "worker/src/cron/enrich-prices.ts",
+  "worker/src/cron/sync-blacklist.ts",
   "worker/src/cron/sync-fx-rates.ts",
+  "worker/src/cron/yield-sync/sources.ts",
+  "worker/src/lib/live-reserves-store.ts",
   "worker/src/lib/status-evaluation.ts",
+  "worker/src/lib/status-reliability.ts",
 ];
 
 export const BASELINE_PATH = resolve(process.cwd(), "scripts/lib/hotspot-ratchet-baseline.json");

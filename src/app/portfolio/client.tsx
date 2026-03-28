@@ -406,7 +406,7 @@ export function PortfolioClient() {
               <span role="status" aria-live="polite" className="text-xs text-muted-foreground animate-in fade-in duration-300">{toast}</span>
               {portfolio.holdings.length > 0 && (
                 <>
-                  <Button variant="ghost" size="sm" onClick={handleShare} className="pharos-focus-ring text-muted-foreground">
+                  <Button variant="outline" size="sm" onClick={handleShare} className="pharos-focus-ring">
                     <Share2 className="h-3.5 w-3.5" />
                     Share
                   </Button>

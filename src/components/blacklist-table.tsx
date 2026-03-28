@@ -133,7 +133,7 @@ export function BlacklistTable({
       }}
       striped
       containerClassName="rounded-xl border"
-      headerClassName="bg-muted/80 backdrop-blur-sm"
+      headerClassName="bg-muted"
       topSlot={
         <div className="flex items-center justify-end px-3 py-1.5 border-b bg-muted/30">
           <span className="mr-auto text-xs text-muted-foreground sm:hidden">Swipe table for more</span>

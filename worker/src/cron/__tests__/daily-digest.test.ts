@@ -558,6 +558,44 @@ describe("generateDailyDigest", () => {
     expect(storedInput.dewsStress.bandChanges[0].to).toBe("ALERT");
   });
 
+  it("marks the digest degraded when persisted DEWS signals JSON is malformed", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const baseTables = makeBaseTables();
+    const db = mockD1([
+      ...baseTables,
+      {
+        match: "FROM stress_signals",
+        rows: [
+          { stablecoin_id: "usdt-tether", score: 8, band: "CALM", signals_json: '{"supply":{"value":5,"available":true}}', computed_at: nowSec - 600 },
+          { stablecoin_id: "usdc-circle", score: 62, band: "ALERT", signals_json: '{"pool":', computed_at: nowSec - 600 },
+        ],
+      },
+      {
+        match: "FROM stress_signal_history WHERE snapshot_date = ?",
+        rows: [
+          { stablecoin_id: "usdt-tether", score: 10, band: "CALM" },
+          { stablecoin_id: "usdc-circle", score: 30, band: "WATCH" },
+        ],
+      },
+    ]);
+
+    try {
+      const result = await generateDailyDigest(db, "anthropic-key");
+
+      expect(result.itemCount).toBe(1);
+      expect(result.status).toBe("degraded");
+      expect(result.metadata).toContain("dews-stress-signals-json");
+
+      const insertBinds = getInsertDigestBinds(db as MockD1Database);
+      const storedInput = JSON.parse(String(insertBinds?.[3])) as { degradedSources?: string[] };
+      expect(storedInput.degradedSources).toContain("dews-stress-signals-json");
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it("includes historical context with PSI precedent and band streak", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const todayTs = nowSec - (nowSec % 86_400);

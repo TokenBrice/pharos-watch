@@ -16,6 +16,7 @@ export const COMMON_VALIDATE_PREBUILD_COMMANDS = [
   "npm run audit:deps",
   "npm run lint",
   "npm run check:worker-boundary",
+  "npm run check:shared-cycles",
   "npm run check:migrations",
   "npm run check:cron-sync",
   "npm run check:cron-connections",

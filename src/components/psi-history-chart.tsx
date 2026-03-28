@@ -327,8 +327,9 @@ export function ScoreChart({
             </div>
           </div>
         ) : (
-          <div className={`flex ${chartHeight} items-center justify-center text-muted-foreground`}>
-            No score history available
+          <div className={`flex ${chartHeight} flex-col items-center justify-center text-muted-foreground`}>
+            <p>No score history available</p>
+            <p className="mt-1 text-xs text-muted-foreground/70">Score history builds over time as data is collected.</p>
           </div>
         );
         })()}

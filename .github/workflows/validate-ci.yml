@@ -36,6 +36,7 @@ jobs:
       - run: npm run audit:deps
       - run: npm run lint
       - run: npm run check:worker-boundary
+      - run: npm run check:shared-cycles
       - run: npm run check:migrations
       - run: npm run check:cron-sync
       - run: npm run check:cron-connections

@@ -26,10 +26,10 @@ function ExploreLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="pharos-focus-ring inline-flex min-h-11 items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/45 px-3 py-2 text-sm text-foreground transition-colors hover:border-foreground/20 hover:bg-accent"
+      className="group pharos-focus-ring inline-flex min-h-11 items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/45 px-3 py-2 text-sm text-foreground transition-colors hover:border-foreground/20 hover:bg-accent"
     >
       <span>{label}</span>
-      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
     </Link>
   );
 }
@@ -81,7 +81,7 @@ export function ExploreNextSection({
   }
 
   return (
-    <section className="mt-8 space-y-4" aria-labelledby="explore-next-heading">
+    <section className="mt-8 -mx-4 rounded-2xl bg-muted/15 px-4 py-6 sm:-mx-6 sm:px-6 space-y-4" aria-labelledby="explore-next-heading">
       <div className="space-y-1.5">
         <h2 id="explore-next-heading" className={DETAIL_SECTION_TITLE_CLASS}>
           Explore Next

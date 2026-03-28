@@ -1,5 +1,8 @@
 import { z } from "zod";
-import type { LiveReservesConfig } from "./live-reserves";
+import type { LiveReservesConfig } from "../lib/live-reserve-adapters";
+import type { DependencyType } from "./dependency-types";
+export type { DependencyType } from "./dependency-types";
+export { DEPENDENCY_TYPE_VALUES, DependencyTypeSchema } from "./dependency-types";
 
 // --- Flag-based classification ---
 
@@ -69,8 +72,6 @@ export interface ContractDeployment {
   decimals: number;
 }
 
-export type DependencyType = "wrapper" | "mechanism" | "collateral";
-
 export interface DependencyWeight {
   id: string;
   weight: number;
@@ -104,7 +105,6 @@ export type ProtocolFamily = "liquity";
 export type ProtocolVariant = "v1" | "v2" | "style";
 
 export const GOVERNANCE_TYPE_VALUES = ["centralized", "centralized-dependent", "decentralized"] as const;
-export const DEPENDENCY_TYPE_VALUES = ["wrapper", "mechanism", "collateral"] as const;
 export const CHAIN_TIER_VALUES = ["ethereum", "stage1-l2", "mature-alt-l1", "established-alt-l1", "unproven"] as const;
 export const DEPLOYMENT_MODEL_VALUES = ["single-chain", "canonical-bridge", "third-party-bridge", "native-multichain"] as const;
 export const COLLATERAL_QUALITY_VALUES = ["native", "rwa", "eth-lst", "alt-lst-bridged-or-mixed", "exotic"] as const;
@@ -119,7 +119,6 @@ export const GOVERNANCE_QUALITY_VALUES = [
 ] as const;
 
 export const GovernanceTypeSchema = z.enum(GOVERNANCE_TYPE_VALUES);
-export const DependencyTypeSchema = z.enum(DEPENDENCY_TYPE_VALUES);
 export const ChainTierSchema = z.enum(CHAIN_TIER_VALUES);
 export const DeploymentModelSchema = z.enum(DEPLOYMENT_MODEL_VALUES);
 export const CollateralQualitySchema = z.enum(COLLATERAL_QUALITY_VALUES);

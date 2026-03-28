@@ -13,6 +13,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { HeroCard } from "@/components/stablecoin-detail/hero-card";
+import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
 import { NoticesAndSummarySection } from "@/components/stablecoin-detail/notices-and-summary-section";
 import { ExploitNoticeBanner } from "@/components/exploit-notice-banner";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
@@ -22,8 +23,7 @@ import {
 } from "@/hooks/use-stablecoin-detail-view-model";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { deriveDependencies } from "@shared/lib/reserve-templates";
-import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { GOVERNANCE_LABELS } from "@shared/lib/classification";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
 import type { StablecoinMeta } from "@shared/types";
@@ -88,7 +88,6 @@ const BASE_DETAIL_SECTIONS = [
   { id: "overview", label: "Overview" },
   { id: "chart", label: "Market" },
   { id: "liquidity", label: "Liquidity" },
-  { id: "info", label: "Details" },
   { id: "history", label: "History" },
 ];
 
@@ -97,61 +96,12 @@ const YIELD_SECTION = { id: "yield", label: "Yield" };
 function DetailLoadingShell({ coin, logoSrc }: { coin: StablecoinMeta; logoSrc?: string }) {
   return (
     <div className="space-y-6">
-      <section className="pharos-card-shell overflow-hidden px-4 py-4 sm:px-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0 space-y-3">
-            <div className="flex items-start gap-3">
-              <StablecoinLogo src={logoSrc} name={coin.name} size={56} />
-              <div className="min-w-0 space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-2xl font-extrabold tracking-tighter text-foreground">{coin.name}</h2>
-                  <span className="text-base font-mono text-muted-foreground">{coin.symbol}</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} ·{" "}
-                  {BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing} ·{" "}
-                  {PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}
-                </p>
-                <p className="max-w-2xl text-sm text-muted-foreground">
-                  Loading research dossier…
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex shrink-0 gap-2">
-            <Skeleton className="h-10 w-28 rounded-full" />
-            <Skeleton className="h-10 w-28 rounded-full" />
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {["Price", "Market Cap", "Supply", "Liquidity"].map((label) => (
-            <div key={label} className="rounded-2xl border border-border/60 bg-background/45 px-3.5 py-3">
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-              <Skeleton className="h-7 w-24" />
-              <Skeleton className="mt-2 h-4 w-28" />
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <div className="rounded-2xl border border-border/60 bg-background/90 px-4 py-3 shadow-[0_16px_40px_oklch(0_0_0_/0.12)]">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <p className="pharos-kicker">Jump to Section</p>
-          <span className="text-[11px] text-muted-foreground">Loading…</span>
-        </div>
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {["Safety Score", "Overview", "Chart", "Info", "Liquidity"].map((label) => (
-            <div
-              key={label}
-              className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-border/60 bg-background px-4 py-2 text-sm text-muted-foreground"
-            >
-              {label}
-            </div>
-          ))}
-        </div>
-      </div>
+      <StablecoinDetailLoadingShell
+        coin={coin}
+        logoSrc={logoSrc}
+        description="Loading research dossier…"
+        statusLabel="Loading…"
+      />
 
       {/* Safety zone skeleton */}
       <div className="mt-10 rounded-xl border border-border/60 p-4">
@@ -299,12 +249,14 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
               </Link>
             </div>
           }
+          showDepthHint
         />
       </div>
 
       {/* ── Safety zone ── */}
       <div className="mt-10 space-y-4">
         <section id="report-card">
+          <p className="pharos-kicker mb-3">Safety Assessment</p>
           {viewModel.reportCard && (
             <ReportCardDetail
               card={viewModel.reportCard}
@@ -317,7 +269,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
         </section>
       </div>
 
-      {/* ── Context zone ── */}
+      {/* ── Context & details zone ── */}
       <div className="mt-12 space-y-6">
         <section id="overview">
           <NoticesAndSummarySection
@@ -334,6 +286,14 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
             dexPriceCheck={viewModel.dexPriceCheck}
           />
         </section>
+
+        <section id="info">
+          <KeyInfoCard meta={viewModel.coin} />
+        </section>
+
+        {hasCollateralUsage && <CollateralUsageSection stablecoinId={viewModel.id} />}
+
+        {viewModel.hasYieldSection && <YieldDetailSection stablecoinId={viewModel.id} />}
       </div>
 
       {/* ── Market zone ── */}
@@ -347,17 +307,6 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
             <DistributionSection stablecoinId={viewModel.id} />
           </SectionErrorBoundary>
         </section>
-      </div>
-
-      {/* ── Details zone ── */}
-      <div className="mt-10 space-y-6">
-        <section id="info">
-          <KeyInfoCard meta={viewModel.coin} />
-        </section>
-
-        {hasCollateralUsage && <CollateralUsageSection stablecoinId={viewModel.id} />}
-
-        {viewModel.hasYieldSection && <YieldDetailSection stablecoinId={viewModel.id} />}
       </div>
 
       {/* ── Activity zone ── */}

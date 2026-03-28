@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { DAY_SECONDS } from "./time-constants";
-import { DEPENDENCY_TYPE_VALUES } from "../types/core";
+import { DEPENDENCY_TYPE_VALUES } from "../types/dependency-types";
 
 const LIVE_RESERVE_ADAPTER_KEYS = [
   "accountable",

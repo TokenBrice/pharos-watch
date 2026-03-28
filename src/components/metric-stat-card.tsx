@@ -38,7 +38,7 @@ export function MetricStatCard({
   const hasCustomContent = children !== undefined && children !== null;
 
   return (
-    <Card className={cn("rounded-xl border-l-[3px]", borderColorClass, className)}>
+    <Card className={cn("@container rounded-xl border-l-[3px]", borderColorClass, className)}>
       <CardHeader className="pb-1">
         {headerRight ? (
           <div className="flex items-center justify-between gap-2">

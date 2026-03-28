@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
@@ -86,6 +86,22 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
       </CardHeader>
       <CardContent>
         {chartData.length > 0 ? (
+          <>
+          <div className="mb-3 flex flex-wrap gap-2">
+            {STABLECOINS_ORDER.map((coin) => (
+              <div key={coin} className="pharos-chart-legend-chip">
+                <span
+                  className="inline-block h-2.5 w-2.5 rounded-sm"
+                  style={{ backgroundColor: BLACKLIST_CHART_COLORS[coin] }}
+                />
+                {coin}
+              </div>
+            ))}
+            <div className="pharos-chart-legend-chip">
+              <span className="inline-block h-2.5 w-2.5 rounded-sm bg-foreground/45" />
+              Total
+            </div>
+          </div>
           <div
             ref={chartContainerRef}
             className={CHART_HEIGHT}
@@ -126,7 +142,6 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
                   width={62}
                 />
                 <Tooltip content={<BlacklistTooltip />} cursor={{ fill: "currentColor", opacity: 0.05 }} />
-                <Legend iconType="square" iconSize={9} wrapperStyle={{ fontSize: 12, paddingTop: "8px" }} />
                 {STABLECOINS_ORDER.map((coin, i) => (
                   <Bar
                     key={coin}
@@ -151,6 +166,7 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
               <Skeleton className="h-full w-full" />
             )}
           </div>
+          </>
         ) : (
           <div className={`flex ${CHART_HEIGHT} items-center justify-center text-muted-foreground`}>
             No blacklist events recorded yet

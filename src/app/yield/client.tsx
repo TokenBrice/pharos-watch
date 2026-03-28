@@ -2,6 +2,7 @@
 
 import { useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -194,20 +195,9 @@ export function YieldClient() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 gap-3 sm:gap-5 sm:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="rounded-xl">
-              <CardHeader className="pb-1">
-                <Skeleton className="h-3 w-24" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-32" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        <Skeleton className="h-[350px]" />
-        <Skeleton className="h-[400px]" />
+        <Skeleton className="h-10 w-full rounded-xl" />
+        <Skeleton className="h-[500px] w-full rounded-2xl" />
+        <Skeleton className="h-[400px] w-full rounded-2xl" />
       </div>
     );
   }
@@ -245,12 +235,27 @@ export function YieldClient() {
       <StaleDataBanner queries={[{ preset: "yieldRankings", dataUpdatedAt, error, hasData: !!data, meta }]} />
 
       {data?.provenance ? (
-        <div className="grid grid-cols-1 gap-3 sm:gap-5 sm:grid-cols-3">
-          <Card className="rounded-xl">
-            <CardHeader className="pb-1">
-              <span className="text-xs text-muted-foreground">Benchmarks</span>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
+        <details className="group rounded-xl border border-border/70 bg-card/80 text-sm">
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-xs font-medium text-muted-foreground select-none [&::-webkit-details-marker]:hidden">
+            <ChevronRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-90" />
+            Data Provenance
+            <span className="ml-auto flex items-center gap-3 font-mono tabular-nums text-foreground">
+              {Object.values(data.benchmarks ?? data.provenance.benchmarks ?? { USD: data.provenance.benchmark })
+                .filter((b): b is NonNullable<typeof b> => b != null)
+                .map((b) => (
+                  <span key={b.key ?? b.label ?? b.currency} className="inline-flex items-center gap-1.5">
+                    <span className="text-muted-foreground font-sans">{b.currency ?? "USD"}</span>
+                    {formatPercent(b.rate)}
+                  </span>
+                ))}
+              <span className="text-muted-foreground font-sans">
+                {(data.provenance.safetySnapshot.coverageRatio * 100).toFixed(0)}% scored
+              </span>
+            </span>
+          </summary>
+          <div className="grid grid-cols-1 gap-4 border-t border-border/50 px-4 py-4 sm:grid-cols-3">
+            <div className="space-y-2">
+              <p className="pharos-kicker">Benchmarks</p>
               {Object.values(data.benchmarks ?? data.provenance.benchmarks ?? { USD: data.provenance.benchmark })
                 .filter((benchmark): benchmark is NonNullable<typeof benchmark> => benchmark != null)
                 .map((benchmark) => (
@@ -268,18 +273,14 @@ export function YieldClient() {
                     <span className="font-mono tabular-nums text-foreground">{formatPercent(benchmark.rate)}</span>
                   </div>
                 ))}
-            </CardContent>
-          </Card>
-          <Card className="rounded-xl">
-            <CardHeader className="pb-1">
-              <span className="text-xs text-muted-foreground">Yield Input Freshness</span>
-            </CardHeader>
-            <CardContent className="space-y-1 text-sm">
+            </div>
+            <div className="space-y-1">
+              <p className="pharos-kicker">Yield Input Freshness</p>
               <p className="font-medium text-foreground">
                 {data.provenance.dlPools.mode === "dex-cache"
-                  ? "Using DEX-sync cached DeFiLlama pools"
+                  ? "DEX-sync cached DeFiLlama pools"
                   : data.provenance.dlPools.mode === "direct-fetch"
-                    ? "Using direct DeFiLlama pool fetch"
+                    ? "Direct DeFiLlama pool fetch"
                     : "DeFiLlama pool input unavailable"}
               </p>
               <p className="text-muted-foreground">
@@ -289,13 +290,9 @@ export function YieldClient() {
                     ? `Reason: ${data.provenance.dlPools.fallbackMode}`
                     : "Pool input age unavailable"}
               </p>
-            </CardContent>
-          </Card>
-          <Card className="rounded-xl">
-            <CardHeader className="pb-1">
-              <span className="text-xs text-muted-foreground">Safety Coverage</span>
-            </CardHeader>
-            <CardContent className="space-y-1 text-sm">
+            </div>
+            <div className="space-y-1">
+              <p className="pharos-kicker">Safety Coverage</p>
               <p className="font-medium text-foreground">
                 {(data.provenance.safetySnapshot.coverageRatio * 100).toFixed(0)}% of tracked coins scored
               </p>
@@ -304,137 +301,88 @@ export function YieldClient() {
                   ? "Confidence-weighted source arbitration active"
                   : data.provenance.safetySnapshot.reason ?? "Safety snapshot degraded"}
               </p>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
+        </details>
       ) : null}
 
       {pegFilterOptions.length > 1 ? (
-        <Card className="rounded-2xl border-border/70 bg-card/80">
-          <CardContent className="flex flex-col gap-3 pt-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-1">
-              <p className="pharos-kicker">Yield Universe</p>
-              <p className="text-sm text-muted-foreground">
-                Scope the page by peg target. The `Non-USD` preset groups every live non-dollar yield row, including
-                the existing EUR, CHF, SGD, MXN, and commodity coverage.
-              </p>
-            </div>
-            <ToggleGroup
-              type="single"
-              value={pegFilter}
-              onValueChange={(value) => value && setPegFilter(value as YieldPegFilter)}
-              className="flex flex-wrap justify-start gap-1"
-              aria-label="Filter yield rankings by peg currency"
-            >
-              {pegFilterOptions.map((option) => (
-                <ToggleGroupItem
-                  key={option.value}
-                  value={option.value}
-                  variant="outline"
-                  size="sm"
-                  className="pharos-toggle-pill min-h-11 px-3 sm:min-h-8 sm:py-1"
-                >
-                  {option.label}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-          </CardContent>
-        </Card>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">Peg:</span>
+          <ToggleGroup
+            type="single"
+            value={pegFilter}
+            onValueChange={(value) => value && setPegFilter(value as YieldPegFilter)}
+            className="flex flex-wrap gap-1"
+            aria-label="Filter yield rankings by peg currency"
+          >
+            {pegFilterOptions.map((option) => (
+              <ToggleGroupItem
+                key={option.value}
+                value={option.value}
+                variant="outline"
+                size="sm"
+                className="pharos-toggle-pill min-h-11 px-3 sm:min-h-8 sm:py-1"
+              >
+                {option.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
       ) : null}
 
-      {/* Summary stat cards */}
-      {stats && (
-        <div className="grid grid-cols-1 gap-3 sm:gap-5 sm:grid-cols-3">
-          <Card className="rounded-xl">
-            <CardHeader className="pb-1">
-              <span className="text-xs text-muted-foreground">Average Yield (TVL-weighted)</span>
-            </CardHeader>
-            <CardContent>
-              <span className="text-2xl font-bold font-mono tabular-nums">{formatPercent(stats.avgApy)}</span>
-            </CardContent>
-          </Card>
-          <Card className="rounded-xl">
-            <CardHeader className="pb-1">
-              <span className="text-xs text-muted-foreground">
-                {stats.usesDefaultBenchmarkFrame ? "Scatter Frame (USD)" : "Benchmark"}
-              </span>
-            </CardHeader>
-            <CardContent>
-              <span className="text-2xl font-bold font-mono tabular-nums">
-                {formatPercent(stats.referenceBenchmark?.rate ?? data.riskFreeRate)}
-              </span>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {stats.referenceBenchmark
-                  ? getYieldBenchmarkDisplayLabel({
-                    benchmarkLabel: stats.referenceBenchmark.label,
-                    benchmarkIsFallback: stats.referenceBenchmark.isFallback,
-                  })
-                  : "USD default"}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="rounded-xl">
-            <CardHeader className="pb-1">
-              <span className="text-xs text-muted-foreground">Best Risk-Adjusted</span>
-            </CardHeader>
-            <CardContent>
-              {stats.bestPys ? (
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold">{stats.bestPys.symbol}</span>
-                  <span className="text-sm font-mono text-muted-foreground tabular-nums">
-                    PYS {stats.bestPys.score.toFixed(1)}
-                  </span>
-                </div>
-              ) : (
-                <span className="text-muted-foreground">—</span>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Scatter plot */}
+      {/* Scatter plot with integrated summary stats */}
       {data && filteredRankings.length > 0 && (
         <section aria-labelledby="scatter-heading">
           <Card className="rounded-2xl border-border/70 bg-card/80">
             <CardHeader className="space-y-4">
-              <div className="space-y-2">
-                <h2 id="scatter-heading" className="text-xl font-semibold">
-                  Yield vs Safety
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  {stats.hasMixedBenchmarks
-                    ? "Each logo marks a stablecoin. Mixed views keep the USD frame for orientation, while each row still carries its local benchmark context."
-                    : "Each logo marks a stablecoin. Click a point to open the detail page."}
-                </p>
-              </div>
-
-              <div className="grid gap-2 sm:grid-cols-3">
-                <div className="rounded-2xl border border-border/60 bg-background/45 px-4 py-3">
-                  <p className="pharos-kicker">{stats.hasMixedBenchmarks ? "Local Benchmarks" : "Below Benchmark"}</p>
-                  <p className="mt-1 text-sm text-foreground">
-                    {stats.hasMixedBenchmarks
-                      ? "Background zones use the USD frame. Row benchmark tags still show whether a coin is being judged against USD T-Bill, EUR 3M compounded €STR, or CHF 3M compounded SARON."
-                      : `Yields under ${formatPercent(stats.referenceBenchmark?.rate ?? data.riskFreeRate)} are failing the basic hurdle rate.`}
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-2">
+                  <h2 id="scatter-heading" className="text-xl font-semibold">
+                    Yield vs Safety
+                  </h2>
+                  <p className="text-sm text-muted-foreground max-w-prose">
+                    {stats?.hasMixedBenchmarks
+                      ? "Each logo marks a stablecoin. Mixed views keep the USD frame for orientation, while each row still carries its local benchmark context."
+                      : "Each logo marks a stablecoin. Click a point to open the detail page."}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3">
-                  <p className="pharos-kicker text-emerald-400">{stats.hasMixedBenchmarks ? "Read The Plot" : "Sweet Spot"}</p>
-                  <p className="mt-1 text-sm text-foreground">
-                    {stats.hasMixedBenchmarks
-                      ? "On mixed views, use the quadrants as a USD orientation frame, then confirm excess yield against each row's benchmark tag."
-                      : `Right side plus above the ${getYieldBenchmarkDisplayLabel({
-                        benchmarkLabel: stats.referenceBenchmark?.label,
-                        benchmarkIsFallback: stats.referenceBenchmark?.isFallback,
-                      })} line is where strong yield meets acceptable safety.`}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-red-500/20 bg-red-500/8 px-4 py-3">
-                  <p className="pharos-kicker text-red-400">Danger Zone</p>
-                  <p className="mt-1 text-sm text-foreground">
-                    High yield on weak safety usually means the risk is doing the heavy lifting.
-                  </p>
-                </div>
+                {stats && (
+                  <div key={pegFilter} className="flex animate-fade-in flex-wrap items-start gap-x-6 gap-y-2 sm:shrink-0 sm:text-right">
+                    {pegFilter !== "all" && (
+                      <div className="flex items-center self-center rounded-full border border-border/60 bg-muted/50 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                        {pegFilter === "non-usd" ? "Non-USD" : pegFilter}
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Avg Yield</p>
+                      <p className="text-lg font-bold font-mono tabular-nums leading-tight">{formatPercent(stats.avgApy)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                        {stats.usesDefaultBenchmarkFrame ? "Frame (USD)" : "Benchmark"}
+                      </p>
+                      <p className="text-lg font-bold font-mono tabular-nums leading-tight">
+                        {formatPercent(stats.referenceBenchmark?.rate ?? data.riskFreeRate)}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {stats.referenceBenchmark
+                          ? getYieldBenchmarkDisplayLabel({
+                            benchmarkLabel: stats.referenceBenchmark.label,
+                            benchmarkIsFallback: stats.referenceBenchmark.isFallback,
+                          })
+                          : "USD default"}
+                      </p>
+                    </div>
+                    {stats.bestPys && (
+                      <div>
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Best PYS</p>
+                        <p className="text-lg font-bold leading-tight">{stats.bestPys.symbol}</p>
+                        <p className="text-[10px] font-mono text-muted-foreground tabular-nums">PYS {stats.bestPys.score.toFixed(1)}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </CardHeader>
             <CardContent className="pt-0">

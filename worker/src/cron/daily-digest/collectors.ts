@@ -42,6 +42,30 @@ function collectorDegraded<T>(value: T, degradedReason: string): CollectorResult
   return { value, degradedReason };
 }
 
+function markCollectorDegraded(degradedReasons: string[] | undefined, degradedReason: string): void {
+  if (!degradedReasons || degradedReasons.includes(degradedReason)) {
+    return;
+  }
+  degradedReasons.push(degradedReason);
+}
+
+function logCollectorParseFailure(
+  collector: string,
+  field: string,
+  error: unknown,
+  context: Record<string, string | number | undefined> = {},
+): void {
+  const contextLabel = Object.entries(context)
+    .filter(([, value]) => value != null)
+    .map(([key, value]) => `${key}=${String(value)}`)
+    .join(", ");
+
+  console.warn(
+    `[daily-digest] Malformed persisted JSON in ${collector}:${field}${contextLabel ? ` (${contextLabel})` : ""}`,
+    error,
+  );
+}
+
 // ---------------------------------------------------------------------------
 // 1. Active depegs
 // ---------------------------------------------------------------------------
@@ -391,6 +415,7 @@ export async function collectMintBurnFlows(
 
 export async function collectDewsStress(
   ctx: CollectorContext,
+  degradedReasons?: string[],
 ): Promise<DigestInputData["dewsStress"]> {
   try {
     // Latest DEWS per coin (most recent sample)
@@ -437,6 +462,7 @@ export async function collectDewsStress(
       };
       const ALERT_BANDS = new Set(["ALERT", "WARNING", "DANGER"]);
       const bandChanges: NonNullable<DigestInputData["dewsStress"]>["bandChanges"] = [];
+      const malformedSignalsReason = "dews-stress-signals-json";
 
       for (const today of todayRows) {
         const yesterday = yesterdayMap.get(today.stablecoin_id);
@@ -455,7 +481,10 @@ export async function collectDewsStress(
           for (const [key, sig] of Object.entries(signals)) {
             if (sig.available && sig.value > maxVal) { maxVal = sig.value; topDriver = SIGNAL_LABELS[key] ?? key; }
           }
-        } catch { /* use "unknown" */ }
+        } catch (error) {
+          markCollectorDegraded(degradedReasons, malformedSignalsReason);
+          logCollectorParseFailure("dews-stress", "signals_json", error, { stablecoinId: today.stablecoin_id });
+        }
 
         const coin = ctx.trackedStablecoinAssets.find((c) => c.id === today.stablecoin_id);
         if (!coin) continue;
@@ -477,7 +506,10 @@ export async function collectDewsStress(
               .sort(([, a], [, b]) => b.value - a.value)
               .slice(0, 3)
               .map(([key, sig]) => ({ name: SIGNAL_LABELS[key] ?? key, value: Math.round(sig.value) }));
-          } catch { /* expected: malformed signals_json — render without top signals */ }
+          } catch (error) {
+            markCollectorDegraded(degradedReasons, malformedSignalsReason);
+            logCollectorParseFailure("dews-stress", "signals_json", error, { stablecoinId: r.stablecoin_id });
+          }
 
           const mcapUsd = getCirculatingRaw(coin);
           const yScore = yesterdayMap.get(r.stablecoin_id)?.score;
@@ -747,6 +779,7 @@ export async function collectGradeTransitions(
 
 export async function collectYieldAnomalies(
   ctx: CollectorContext,
+  degradedReasons?: string[],
 ): Promise<DigestInputData["yieldAnomalies"]> {
   try {
     const rows = await ctx.db
@@ -765,7 +798,12 @@ export async function collectYieldAnomalies(
     const candidates = (rows.results ?? [])
       .map((r) => {
         let warnings: string[] = [];
-        try { warnings = JSON.parse(r.warning_signals) as string[]; } catch { /* expected: malformed warning_signals JSON */ }
+        try {
+          warnings = JSON.parse(r.warning_signals) as string[];
+        } catch (error) {
+          markCollectorDegraded(degradedReasons, "yield-warning-signals-json");
+          logCollectorParseFailure("yield-anomalies", "warning_signals", error, { stablecoinId: r.stablecoin_id });
+        }
         if (warnings.length === 0) return null;
 
         const mcapUsd = ctx.mcapById.get(r.stablecoin_id) ?? 0;
@@ -861,6 +899,7 @@ export async function collectLiquidityShifts(
 
 export async function collectCrossDayTrends(
   ctx: CollectorContext,
+  degradedReasons?: string[],
 ): Promise<DigestInputData["crossDayTrends"]> {
   try {
     const rows = await ctx.db
@@ -893,7 +932,10 @@ export async function collectCrossDayTrends(
         if (data.mintBurnFlows) {
           gaugeTrajectory.push({ date, gaugeScore: data.mintBurnFlows.gaugeScore });
         }
-      } catch { /* skip malformed entries */ }
+      } catch (error) {
+        markCollectorDegraded(degradedReasons, "cross-day-trend-input-json");
+        logCollectorParseFailure("cross-day-trends", "input_data", error, { generatedAt: row.generated_at });
+      }
     }
 
     psiTrajectory.reverse();

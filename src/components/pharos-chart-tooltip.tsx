@@ -12,7 +12,7 @@ export function PharosChartTooltip({ active, children, className }: PharosChartT
   return (
     <div
       className={cn(
-        "rounded-xl border border-border/70 bg-card/95 px-3.5 py-3 backdrop-blur-md",
+        "rounded-xl border border-border/70 bg-card px-3.5 py-3",
         "text-sm",
         className,
       )}

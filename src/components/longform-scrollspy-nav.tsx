@@ -15,6 +15,8 @@ interface LongformScrollspyNavProps {
   navAriaLabel: string;
   rightSlot?: ReactNode;
   className?: string;
+  /** Show a subtle gradient fade below the nav hinting at content below */
+  showDepthHint?: boolean;
 }
 
 function getScrollOffset(railNode: HTMLDivElement | null) {
@@ -70,6 +72,7 @@ export function LongformScrollspyNav({
   navAriaLabel,
   rightSlot,
   className,
+  showDepthHint,
 }: LongformScrollspyNavProps) {
   const [activeId, setActiveId] = useState(sections[0]?.id ?? "");
   const railRef = useRef<HTMLDivElement | null>(null);
@@ -148,49 +151,57 @@ export function LongformScrollspyNav({
   if (sections.length === 0) return null;
 
   return (
-    <div
-      ref={railRef}
-      className={cn(
-        "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 -mx-4 rounded-xl border border-border/60 bg-background/95 px-3 py-2 shadow-[0_8px_24px_oklch(0_0_0_/0.1)] backdrop-blur supports-[backdrop-filter]:bg-background/85 md:top-0 md:rounded-2xl md:px-4 md:py-2.5",
-        className,
+    <>
+      <div
+        ref={railRef}
+        className={cn(
+          "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 -mx-4 rounded-xl border border-border/60 bg-background px-3 py-2 shadow-[0_8px_24px_oklch(0_0_0_/0.1)] md:top-0 md:rounded-2xl md:px-4 md:py-2.5",
+          className,
+        )}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground hidden sm:block">{railLabel}</p>
+            <span className="text-xs font-medium text-foreground sm:hidden">
+              {sections.find((section) => section.id === effectiveActiveId)?.label}
+            </span>
+          </div>
+          {rightSlot && <div className="hidden sm:block">{rightSlot}</div>}
+        </div>
+        <div className="relative">
+          {/* Fade mask hints at off-screen content */}
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background to-transparent sm:hidden" aria-hidden="true" />
+        <nav aria-label={navAriaLabel} className="overflow-x-auto pb-0.5 scrollbar-none -mx-1 px-1">
+          <div className="flex min-w-max snap-x snap-mandatory items-center gap-1.5">
+            {sections.map((section) => (
+              <a
+                key={section.id}
+                href={`#${section.id}`}
+                onClick={(event) => {
+                  event.preventDefault();
+                  scheduleSectionAlignment(section.id, railRef.current, pendingScrollSyncRef, true);
+                  setActiveId(section.id);
+                }}
+                className={cn(
+                  "pharos-focus-ring inline-flex min-h-9 shrink-0 snap-start items-center whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors md:min-h-8 md:text-sm",
+                  effectiveActiveId === section.id
+                    ? "border-foreground/35 bg-muted text-foreground"
+                    : "border-border/60 bg-background/80 text-muted-foreground hover:border-foreground/20 hover:bg-muted hover:text-foreground",
+                )}
+              >
+                {section.label}
+              </a>
+            ))}
+          </div>
+        </nav>
+        </div>
+      </div>
+      {showDepthHint && (
+        <div
+          className="pointer-events-none h-6 bg-gradient-to-b from-border/20 to-transparent motion-safe:animate-[pharos-fade-in-up_0.6s_ease-out_0.3s_both]"
+          aria-hidden="true"
+        />
       )}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground hidden sm:block">{railLabel}</p>
-          <span className="text-xs font-medium text-foreground sm:hidden">
-            {sections.find((section) => section.id === effectiveActiveId)?.label}
-          </span>
-        </div>
-        {rightSlot && <div className="hidden sm:block">{rightSlot}</div>}
-      </div>
-      <div className="relative">
-        {/* Fade mask hints at off-screen content */}
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background/95 to-transparent sm:hidden" aria-hidden="true" />
-      <nav aria-label={navAriaLabel} className="overflow-x-auto pb-0.5 scrollbar-none -mx-1 px-1">
-        <div className="flex min-w-max snap-x snap-mandatory items-center gap-1.5">
-          {sections.map((section) => (
-            <a
-              key={section.id}
-              href={`#${section.id}`}
-              onClick={(event) => {
-                event.preventDefault();
-                scheduleSectionAlignment(section.id, railRef.current, pendingScrollSyncRef, true);
-                setActiveId(section.id);
-              }}
-              className={cn(
-                "pharos-focus-ring inline-flex min-h-9 shrink-0 snap-start items-center whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors md:min-h-8 md:text-sm",
-                effectiveActiveId === section.id
-                  ? "border-foreground/35 bg-muted text-foreground"
-                  : "border-border/60 bg-background/80 text-muted-foreground hover:border-foreground/20 hover:bg-muted hover:text-foreground",
-              )}
-            >
-              {section.label}
-            </a>
-          ))}
-        </div>
-      </nav>
-      </div>
-    </div>
+    </>
   );
 }

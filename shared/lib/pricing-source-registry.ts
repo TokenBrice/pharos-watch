@@ -1,4 +1,4 @@
-import type { PriceObservedAtMode } from "../types";
+import type { PriceObservedAtMode } from "../types/core";
 
 export type PricingSourceTrustTier =
   | "hard_oracle"

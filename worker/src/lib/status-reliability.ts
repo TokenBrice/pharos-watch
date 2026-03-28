@@ -125,6 +125,19 @@ function reportStatusPersistenceIssue(
   });
 }
 
+async function persistStatusStateAtomically(
+  db: D1Database,
+  statements: D1PreparedStatement[],
+  onIssue: StatusPersistenceIssueReporter | undefined,
+  operation: string,
+): Promise<void> {
+  try {
+    await db.batch(statements);
+  } catch (error) {
+    reportStatusPersistenceIssue(onIssue, "status_state_persistence_failed", operation, error);
+  }
+}
+
 export function summarizeStatusPersistenceIssues(
   issues: StatusPersistenceIssue[],
 ): StatusSectionError | undefined {
@@ -278,32 +291,6 @@ export async function reconcileStatusState(
       causes_json: causesJson,
     };
 
-    try {
-      await db
-        .prepare(
-          `INSERT INTO status_state
-           (scope, current_status, raw_status, last_evaluated_at, last_changed_at,
-            consecutive_healthy, consecutive_degraded, consecutive_stale, confidence, causes_json, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        )
-        .bind(
-          seed.scope,
-          seed.current_status,
-          seed.raw_status,
-          seed.last_evaluated_at,
-          seed.last_changed_at,
-          seed.consecutive_healthy,
-          seed.consecutive_degraded,
-          seed.consecutive_stale,
-          seed.confidence,
-          seed.causes_json,
-          now,
-        )
-        .run();
-    } catch (error) {
-      reportStatusPersistenceIssue(onIssue, "status_state_seed_write_failed", "seed-status-state", error);
-    }
-
     const transition: StatusTransition = {
       id: 0,
       scope: "global",
@@ -316,29 +303,50 @@ export async function reconcileStatusState(
       causes,
       at: now,
     };
-
-    try {
-      await db
-        .prepare(
-          `INSERT INTO status_transitions
-           (scope, previous_status, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        )
-        .bind(
-          STATUS_SCOPE,
-          null,
-          seed.current_status,
-          seed.raw_status,
-          transition.transitionType,
-          transition.reason,
-          transition.confidence,
-          causesJson,
-          now,
-        )
-        .run();
-    } catch (error) {
-      reportStatusPersistenceIssue(onIssue, "status_transition_write_failed", "seed-status-transition", error);
-    }
+    await persistStatusStateAtomically(
+      db,
+      [
+        db
+          .prepare(
+            `INSERT INTO status_state
+             (scope, current_status, raw_status, last_evaluated_at, last_changed_at,
+              consecutive_healthy, consecutive_degraded, consecutive_stale, confidence, causes_json, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          )
+          .bind(
+            seed.scope,
+            seed.current_status,
+            seed.raw_status,
+            seed.last_evaluated_at,
+            seed.last_changed_at,
+            seed.consecutive_healthy,
+            seed.consecutive_degraded,
+            seed.consecutive_stale,
+            seed.confidence,
+            seed.causes_json,
+            now,
+          ),
+        db
+          .prepare(
+            `INSERT INTO status_transitions
+             (scope, previous_status, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          )
+          .bind(
+            STATUS_SCOPE,
+            null,
+            seed.current_status,
+            seed.raw_status,
+            transition.transitionType,
+            transition.reason,
+            transition.confidence,
+            causesJson,
+            now,
+          ),
+      ],
+      onIssue,
+      "seed_status_state",
+    );
 
     return {
       effectiveStatus: seed.current_status,
@@ -371,8 +379,25 @@ export async function reconcileStatusState(
     causes_json: causesJson,
   };
 
-  try {
-    await db
+  let transition: StatusTransition | null = null;
+  if (changed) {
+    const tType = transitionType(current.current_status, nextStatus);
+    transition = {
+      id: 0,
+      scope: "global",
+      from: current.current_status,
+      to: nextStatus,
+      rawStatus,
+      transitionType: tType,
+      reason: decision.reason,
+      confidence: normalizedConfidence,
+      causes,
+      at: now,
+    };
+  }
+
+  const statements = [
+    db
       .prepare(
         `UPDATE status_state
          SET current_status = ?, raw_status = ?, last_evaluated_at = ?, last_changed_at = ?,
@@ -392,50 +417,31 @@ export async function reconcileStatusState(
         nextRow.causes_json,
         now,
         STATUS_SCOPE,
-      )
-      .run();
-  } catch (error) {
-    reportStatusPersistenceIssue(onIssue, "status_state_update_failed", "update-status-state", error);
-  }
+      ),
+    ...(changed && transition
+      ? [
+          db
+            .prepare(
+              `INSERT INTO status_transitions
+               (scope, previous_status, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            )
+            .bind(
+              STATUS_SCOPE,
+              current.current_status,
+              nextStatus,
+              rawStatus,
+              transition.transitionType,
+              decision.reason,
+              normalizedConfidence,
+              causesJson,
+              now,
+            ),
+        ]
+      : []),
+  ];
 
-  let transition: StatusTransition | null = null;
-  if (changed) {
-    const tType = transitionType(current.current_status, nextStatus);
-    transition = {
-      id: 0,
-      scope: "global",
-      from: current.current_status,
-      to: nextStatus,
-      rawStatus,
-      transitionType: tType,
-      reason: decision.reason,
-      confidence: normalizedConfidence,
-      causes,
-      at: now,
-    };
-    try {
-      await db
-        .prepare(
-          `INSERT INTO status_transitions
-           (scope, previous_status, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        )
-        .bind(
-          STATUS_SCOPE,
-          current.current_status,
-          nextStatus,
-          rawStatus,
-          tType,
-          decision.reason,
-          normalizedConfidence,
-          causesJson,
-          now,
-        )
-        .run();
-    } catch (error) {
-      reportStatusPersistenceIssue(onIssue, "status_transition_write_failed", "write-status-transition", error);
-    }
-  }
+  await persistStatusStateAtomically(db, statements, onIssue, "update_status_state");
 
   return {
     effectiveStatus: nextStatus,
