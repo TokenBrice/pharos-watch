@@ -3,6 +3,8 @@ import { addFreshnessHeaders, readCachedJsonOr503 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "../lib/mint-burn-health-config";
 import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
+import { decodeJsonString } from "../lib/cache-json";
+import { logMalformedJsonPath } from "../lib/json-decode-observability";
 
 export interface HourlyRow {
   stablecoin_id: string;
@@ -61,6 +63,14 @@ export interface MintBurnCronSnapshot {
   chainHead: number | null;
 }
 
+export interface FlowAggregate {
+  mintVolume: number;
+  burnVolume: number;
+  mintCount: number;
+  burnCount: number;
+  netFlow: number;
+}
+
 export function bucketDay(ts: number): number {
   return Math.floor(ts / DAY_SECONDS) * DAY_SECONDS;
 }
@@ -73,8 +83,203 @@ export function perCoinFlowCacheKey(stablecoinId: string, hours: number): string
   return `${FLOW_CACHE_PREFIX}:coin:${stablecoinId}:${hours}`;
 }
 
+function emptyFlowAggregate(): FlowAggregate {
+  return {
+    mintVolume: 0,
+    burnVolume: 0,
+    mintCount: 0,
+    burnCount: 0,
+    netFlow: 0,
+  };
+}
+
+function addHourlyRowToAggregate(aggregate: FlowAggregate, row: HourlyRow): void {
+  aggregate.mintVolume += row.mint_volume_usd;
+  aggregate.burnVolume += row.burn_volume_usd;
+  aggregate.mintCount += row.mint_count;
+  aggregate.burnCount += row.burn_count;
+  aggregate.netFlow += row.net_flow_usd;
+}
+
+export function aggregateHourlyRowsByStablecoin(rows: HourlyRow[]): Map<string, FlowAggregate> {
+  const aggregates = new Map<string, FlowAggregate>();
+  for (const row of rows) {
+    const aggregate = aggregates.get(row.stablecoin_id) ?? emptyFlowAggregate();
+    addHourlyRowToAggregate(aggregate, row);
+    aggregates.set(row.stablecoin_id, aggregate);
+  }
+  return aggregates;
+}
+
+export function aggregateHourlyRowsByChain(rows: HourlyRow[]): Map<string, FlowAggregate> {
+  const aggregates = new Map<string, FlowAggregate>();
+  for (const row of rows) {
+    const aggregate = aggregates.get(row.chain_id) ?? emptyFlowAggregate();
+    addHourlyRowToAggregate(aggregate, row);
+    aggregates.set(row.chain_id, aggregate);
+  }
+  return aggregates;
+}
+
+function aggregateHourlyRowsByTimestamp(rows: HourlyRow[]): Map<number, { net: number; mint: number; burn: number }> {
+  const aggregates = new Map<number, { net: number; mint: number; burn: number }>();
+  for (const row of rows) {
+    const aggregate = aggregates.get(row.hour_ts) ?? { net: 0, mint: 0, burn: 0 };
+    aggregate.net += row.net_flow_usd;
+    aggregate.mint += row.mint_volume_usd;
+    aggregate.burn += row.burn_volume_usd;
+    aggregates.set(row.hour_ts, aggregate);
+  }
+  return aggregates;
+}
+
+export function buildHourlyFlowSeries(rows: HourlyRow[]): Array<{
+  hourTs: number;
+  netFlowUsd: number;
+  mintVolumeUsd: number;
+  burnVolumeUsd: number;
+}> {
+  return [...aggregateHourlyRowsByTimestamp(rows).entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([ts, value]) => ({
+      hourTs: ts,
+      netFlowUsd: value.net,
+      mintVolumeUsd: value.mint,
+      burnVolumeUsd: value.burn,
+    }));
+}
+
+export function resolveFlowUpdatedAt(rows: HourlyRow[], fallbackTs: number): number {
+  return rows.length > 0
+    ? rows.reduce((maxTs, row) => Math.max(maxTs, row.hour_ts), -Infinity)
+    : fallbackTs;
+}
+
+export function logMintBurnFallbackFailure(
+  scope: "aggregate" | "per-coin",
+  cacheKey: string,
+  error: unknown,
+): void {
+  const summary = error instanceof Error ? error.message : String(error);
+  console.error(
+    `[mint-burn-flows] scope=${scope} event=live-query-failed cacheKey=${cacheKey} fallback=cache summary=${summary}`,
+    error,
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function toFinitePositiveNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function resolveCachedFlowFreshnessTimestamp(
+  payload: unknown,
+  fallbackUpdatedAt: number,
+): number {
+  if (!isRecord(payload)) {
+    logMalformedJsonPath({
+      scope: "api",
+      owner: "mint-burn-flows",
+      context: "fallback-payload",
+      reason: "invalid-shape",
+      source: "cache:mint-burn-flows",
+      updatedAt: fallbackUpdatedAt,
+    });
+    return fallbackUpdatedAt;
+  }
+
+  const sync = payload.sync;
+  if (sync != null) {
+    if (!isRecord(sync)) {
+      logMalformedJsonPath({
+        scope: "api",
+        owner: "mint-burn-flows",
+        context: "fallback-payload.sync",
+        reason: "invalid-shape",
+        source: "cache:mint-burn-flows",
+        updatedAt: fallbackUpdatedAt,
+      });
+    } else {
+      const lastSuccessfulSyncAt = toFinitePositiveNumber(sync.lastSuccessfulSyncAt);
+      if (lastSuccessfulSyncAt != null) {
+        return lastSuccessfulSyncAt;
+      }
+      if (sync.lastSuccessfulSyncAt != null) {
+        logMalformedJsonPath({
+          scope: "api",
+          owner: "mint-burn-flows",
+          context: "fallback-payload.sync.lastSuccessfulSyncAt",
+          reason: "invalid-shape",
+          source: "cache:mint-burn-flows",
+          updatedAt: fallbackUpdatedAt,
+        });
+      }
+    }
+  }
+
+  const updatedAt = toFinitePositiveNumber(payload.updatedAt);
+  if (updatedAt != null) {
+    return updatedAt;
+  }
+  if ("updatedAt" in payload && payload.updatedAt != null) {
+    logMalformedJsonPath({
+      scope: "api",
+      owner: "mint-burn-flows",
+      context: "fallback-payload.updatedAt",
+      reason: "invalid-shape",
+      source: "cache:mint-burn-flows",
+      updatedAt: fallbackUpdatedAt,
+    });
+  }
+
+  return fallbackUpdatedAt;
+}
+
+function parseMintBurnCronMetadata(
+  value: string | null,
+  startedAt: number | null,
+): { chainHead: number | null; reason: null | "missing" | "json-parse-failed" | "invalid-shape" } {
+  const decoded = decodeJsonString<{ chainHead: number | null }, "missing" | "json-parse-failed" | "invalid-shape">(
+    value,
+    {
+      mode: "best-effort",
+      updatedAt: startedAt,
+      missingReason: "missing",
+      parseErrorReason: "json-parse-failed",
+      normalize: (parsed) => {
+        if (!isRecord(parsed)) {
+          return { ok: false, reason: "invalid-shape" };
+        }
+
+        const chainHead = parsed.chainHead;
+        if (chainHead == null) {
+          return { ok: true, payload: { chainHead: null } };
+        }
+        if (typeof chainHead === "number" && Number.isFinite(chainHead)) {
+          return { ok: true, payload: { chainHead } };
+        }
+        return { ok: false, reason: "invalid-shape" };
+      },
+    },
+  );
+
+  if (!decoded.ok) {
+    return {
+      chainHead: null,
+      reason: decoded.reason,
+    };
+  }
+
+  return {
+    chainHead: decoded.payload.chainHead,
+    reason: null,
+  };
+}
+
 export function cachedFlowFallbackResponse(cached: { value: string; updatedAt: number }): Response {
-  let freshnessTs = cached.updatedAt;
   const parsed = readCachedJsonOr503<{
     sync?: { lastSuccessfulSyncAt?: number | null };
     updatedAt?: number;
@@ -82,7 +287,7 @@ export function cachedFlowFallbackResponse(cached: { value: string; updatedAt: n
   if (!parsed.ok) {
     return parsed.response;
   }
-  freshnessTs = parsed.data.sync?.lastSuccessfulSyncAt ?? parsed.data.updatedAt ?? cached.updatedAt;
+  const freshnessTs = resolveCachedFlowFreshnessTimestamp(parsed.data, cached.updatedAt);
 
   const headers = addFreshnessHeaders({
     "Content-Type": "application/json",
@@ -128,23 +333,22 @@ export async function readMintBurnCronSnapshot(db: D1Database): Promise<MintBurn
       return { startedAt: null, status: null, chainHead: null };
     }
 
-    let chainHead: number | null = null;
-    if (row.metadata) {
-      try {
-        const parsed = JSON.parse(row.metadata) as { chainHead?: unknown };
-        const rawHead = parsed.chainHead;
-        if (typeof rawHead === "number" && Number.isFinite(rawHead)) {
-          chainHead = rawHead;
-        }
-      } catch {
-        chainHead = null;
-      }
+    const metadata = parseMintBurnCronMetadata(row.metadata, row.started_at ?? null);
+    if (metadata.reason && metadata.reason !== "missing") {
+      logMalformedJsonPath({
+        scope: "api",
+        owner: "mint-burn-flows",
+        context: "cron_runs.metadata.chainHead",
+        reason: metadata.reason,
+        source: "cron_runs:sync-mint-burn",
+        updatedAt: row.started_at ?? null,
+      });
     }
 
     return {
       startedAt: row.started_at ?? null,
       status: row.status ?? null,
-      chainHead,
+      chainHead: metadata.chainHead,
     };
   } catch {
     return { startedAt: null, status: null, chainHead: null };

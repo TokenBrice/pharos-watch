@@ -20,7 +20,7 @@ import {
 } from "@/lib/contagion-layout";
 import { formatCurrency } from "@shared/lib/format";
 import { GRADE_RADAR_COLORS, gradeRange } from "@shared/lib/report-cards";
-import type { DependencyType, ReportCard, ReportCardGrade } from "@shared/types";
+import type { DependencyType, ReportCard, ReportCardGrade, ReportCardsResponse } from "@shared/types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -40,6 +40,7 @@ type FocusMode = "all" | "hub" | "neighborhood";
 
 interface ContagionGraphProps {
   cards: ReportCard[];
+  dependencyEdges?: ReportCardsResponse["dependencyGraph"]["edges"];
   mcapMap: Map<string, number>;
   logos?: Record<string, string>;
 }
@@ -69,14 +70,17 @@ function gradeColor(grade: string): string {
 // Component
 // ---------------------------------------------------------------------------
 
-export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
+export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos }: ContagionGraphProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const prevTierByIdRef = useRef<Map<string, HubTier>>(new Map());
 
 
 
   // Prepare graph data
-  const { nodes, links } = useMemo(() => buildGraphData(cards, mcapMap), [cards, mcapMap]);
+  const { nodes, links } = useMemo(
+    () => buildGraphData(cards, mcapMap, dependencyEdges),
+    [cards, dependencyEdges, mcapMap],
+  );
 
   const supernodeState = useMemo<SupernodeState>(
     // eslint-disable-next-line react-hooks/refs -- read-only hysteresis snapshot from previous render

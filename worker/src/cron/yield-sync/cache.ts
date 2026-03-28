@@ -79,6 +79,12 @@ export interface DeterministicOnChainHealthState {
   lastFailureMissingIds: string[];
 }
 
+export type YieldRankingsPublishedCutoffResult =
+  | { status: "ok"; updatedAt: number }
+  | { status: "missing"; updatedAt: null }
+  | { status: "parse-error"; updatedAt: null }
+  | { status: "invalid-shape"; updatedAt: null };
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -96,6 +102,30 @@ function toNonNegativeInteger(value: unknown): number {
 function toStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
+}
+
+export function parseYieldRankingsPublishedCutoff(
+  cached: { value: string; updatedAt: number } | null,
+): YieldRankingsPublishedCutoffResult {
+  if (!cached) {
+    return { status: "missing", updatedAt: null };
+  }
+
+  try {
+    const parsed = JSON.parse(cached.value) as unknown;
+    if (!isRecord(parsed)) {
+      return { status: "invalid-shape", updatedAt: null };
+    }
+
+    const updatedAt = toFiniteNumber(parsed.updatedAt);
+    if (updatedAt == null || updatedAt <= 0) {
+      return { status: "invalid-shape", updatedAt: null };
+    }
+
+    return { status: "ok", updatedAt };
+  } catch {
+    return { status: "parse-error", updatedAt: null };
+  }
 }
 
 function isResolvedYieldCandidate(value: unknown): value is ResolvedYieldCandidate {

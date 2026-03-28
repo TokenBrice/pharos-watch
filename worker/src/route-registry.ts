@@ -55,9 +55,13 @@ import { generateDailyDigest } from "./cron/daily-digest";
 import { createLeaseOwner, runCronWithLease } from "./lib/cron-lease";
 import { logCronRun, type CronResult } from "./lib/cron-logger";
 import { runIdempotentAdminAction } from "./lib/idempotency";
-import { withAdmin } from "./lib/auth";
 import { normalizeCronMetadata } from "./lib/cron-metadata";
-import { jsonResponse, withErrorHandler } from "./lib/api-utils";
+import { jsonResponse } from "./lib/api-utils";
+import {
+  makeAdminRoute,
+  makeConditionalIdempotentAdminRoute,
+  makeIdempotentAdminRoute,
+} from "./lib/route-wrappers";
 import type { MintBurnFreshnessConfig } from "./lib/mint-burn-health-config";
 import type { TelegramCreds } from "./lib/telegram";
 import type { ChainRpcConfig } from "./lib/chain-registry";
@@ -180,15 +184,11 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
   blacklist: ({ db, url }) => handleBlacklist(db, url),
   "blacklist-summary": ({ db }) => handleBlacklistSummary(db),
   "depeg-events": ({ db, url }) => handleDepegEvents(db, url),
-  "backfill-depegs": withErrorHandler("backfill-depegs", ({ db, url, trustedAdmin, request }) =>
-    runIdempotentAdminAction(db, "backfill-depegs", request, () =>
-      handleBackfillDepegs(db, url, trustedAdmin, request),
-    ),
+  "backfill-depegs": makeIdempotentAdminRoute("backfill-depegs", "backfill-depegs", ({ db, url, trustedAdmin, request }) =>
+    handleBackfillDepegs(db, url, trustedAdmin, request),
   ),
-  "backfill-supply-history": withErrorHandler("backfill-supply-history", ({ db, url, trustedAdmin, request, coingeckoApiKey }) =>
-    runIdempotentAdminAction(db, "backfill-supply-history", request, () =>
-      handleBackfillSupplyHistory(db, url, trustedAdmin, request, coingeckoApiKey),
-    ),
+  "backfill-supply-history": makeIdempotentAdminRoute("backfill-supply-history", "backfill-supply-history", ({ db, url, trustedAdmin, request, coingeckoApiKey }) =>
+    handleBackfillSupplyHistory(db, url, trustedAdmin, request, coingeckoApiKey),
   ),
   "peg-summary": ({ db }) => handlePegSummary(db),
   health: ({ db, mintBurnFreshnessConfig }) => handleHealth(db, { mintBurnConfig: mintBurnFreshnessConfig }),
@@ -203,19 +203,15 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
   "digest-archive": ({ db }) => handleDigestArchive(db),
   "digest-snapshot": ({ db, url }) => handleDigestSnapshot(db, url),
   "stability-index": ({ db, url }) => handleStabilityIndex(db, url),
-  "backfill-stability-index": withErrorHandler("backfill-stability-index", ({ db, trustedAdmin, request }) =>
-    runIdempotentAdminAction(db, "backfill-stability-index", request, () =>
-      handleBackfillStabilityIndex(db, trustedAdmin, request),
-    ),
+  "backfill-stability-index": makeIdempotentAdminRoute("backfill-stability-index", "backfill-stability-index", ({ db, trustedAdmin, request }) =>
+    handleBackfillStabilityIndex(db, trustedAdmin, request),
   ),
-  "audit-depeg-history": withErrorHandler("audit-depeg-history", ({ db, url, trustedAdmin, request }) => {
-    if (request.method === "POST") {
-      return runIdempotentAdminAction(db, "audit-depeg-history", request, () =>
-        handleAuditDepegHistory(db, url, trustedAdmin, request),
-      );
-    }
-    return handleAuditDepegHistory(db, url, trustedAdmin, request);
-  }),
+  "audit-depeg-history": makeConditionalIdempotentAdminRoute(
+    "audit-depeg-history",
+    "audit-depeg-history",
+    ({ request }) => request.method === "POST",
+    ({ db, url, trustedAdmin, request }) => handleAuditDepegHistory(db, url, trustedAdmin, request),
+  ),
   "report-cards": ({ db }) => handleReportCards(db),
   "redemption-backstops": ({ db }) => handleRedemptionBackstops(db),
   "yield-rankings": ({ db }) => handleYieldRankings(db),
@@ -223,27 +219,20 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
   "safety-score-history": ({ db, url }) => handleSafetyScoreHistory(db, url),
   "mint-burn-flows": ({ db, url }) => handleMintBurnFlows(db, url),
   "mint-burn-events": ({ db, url }) => handleMintBurnEvents(db, url),
-  "backfill-cg-prices": withErrorHandler("backfill-cg-prices", ({ db, url, trustedAdmin, request, coingeckoApiKey }) =>
-    runIdempotentAdminAction(db, "backfill-cg-prices", request, () =>
-      handleBackfillCgPrices(db, url, trustedAdmin, request, coingeckoApiKey),
-    ),
+  "backfill-cg-prices": makeIdempotentAdminRoute("backfill-cg-prices", "backfill-cg-prices", ({ db, url, trustedAdmin, request, coingeckoApiKey }) =>
+    handleBackfillCgPrices(db, url, trustedAdmin, request, coingeckoApiKey),
   ),
-  "backfill-mint-burn-prices": withErrorHandler("backfill-mint-burn-prices", ({ db, url, trustedAdmin, request }) =>
-    runIdempotentAdminAction(db, "backfill-mint-burn-prices", request, () =>
-      handleBackfillMintBurnPrices(db, url, trustedAdmin, request),
-    ),
+  "backfill-mint-burn-prices": makeIdempotentAdminRoute("backfill-mint-burn-prices", "backfill-mint-burn-prices", ({ db, url, trustedAdmin, request }) =>
+    handleBackfillMintBurnPrices(db, url, trustedAdmin, request),
   ),
-  "backfill-mint-burn": withErrorHandler("backfill-mint-burn", ({ db, url, trustedAdmin, request, alchemyApiKey }) =>
-    runIdempotentAdminAction(db, "backfill-mint-burn", request, () =>
-      handleBackfillMintBurn(db, url, trustedAdmin, request, alchemyApiKey ?? null),
-    ),
+  "backfill-mint-burn": makeIdempotentAdminRoute("backfill-mint-burn", "backfill-mint-burn", ({ db, url, trustedAdmin, request, alchemyApiKey }) =>
+    handleBackfillMintBurn(db, url, trustedAdmin, request, alchemyApiKey ?? null),
   ),
-  "reclassify-atomic-roundtrips": withErrorHandler(
+  "reclassify-atomic-roundtrips": makeIdempotentAdminRoute(
+    "reclassify-atomic-roundtrips",
     "reclassify-atomic-roundtrips",
     ({ db, url, trustedAdmin, request }) =>
-      runIdempotentAdminAction(db, "reclassify-atomic-roundtrips", request, () =>
-        handleReclassifyAtomicRoundtrips(db, url, trustedAdmin, request),
-      ),
+      handleReclassifyAtomicRoundtrips(db, url, trustedAdmin, request),
   ),
   "stress-signals": ({ db, url }) => handleStressSignals(db, url),
   chains: ({ db }) => handleChains(db),
@@ -251,10 +240,10 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
   feedback: ({ db, request, feedbackEnv }) => handleFeedback(db, request, feedbackEnv ?? {}),
   "telegram-webhook": ({ db, request, telegramWebhookSecret, telegramBotToken }) =>
     handleTelegramWebhook(db, request, telegramWebhookSecret, telegramBotToken),
-  "trigger-digest": withErrorHandler(
+  "trigger-digest": makeAdminRoute(
     "route-trigger-digest",
-    async ({ db, execCtx, request, trustedAdmin, anthropicApiKey, telegramCreds }) => {
-      return withAdmin(request, () => runIdempotentAdminAction(db, "trigger-digest", request, async () => {
+    async ({ db, execCtx, request, trustedAdmin: _trustedAdmin, anthropicApiKey, telegramCreds }) => {
+      return runIdempotentAdminAction(db, "trigger-digest", request, async () => {
         const cryptoObj = globalThis as typeof globalThis & {
           crypto?: { randomUUID?: () => string };
         };
@@ -271,11 +260,11 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
           requestId,
           message: "Digest trigger accepted and running in the background.",
         });
-      }), trustedAdmin);
+      });
     },
   ),
-  "reset-blacklist-sync": withErrorHandler("route-reset-blacklist-sync", async ({ db, request, trustedAdmin }) => {
-    return withAdmin(request, () => runIdempotentAdminAction(db, "reset-blacklist-sync", request, async () => {
+  "reset-blacklist-sync": makeAdminRoute("route-reset-blacklist-sync", async ({ db, request }) => {
+    return runIdempotentAdminAction(db, "reset-blacklist-sync", request, async () => {
       const result = await db.batch([
         db.prepare(
           "UPDATE blacklist_sync_state SET last_block = MAX(last_block - 50000, 0) WHERE config_key NOT LIKE 'tron-%'",
@@ -287,30 +276,27 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
       const evmChanged = result[0]?.meta?.changes ?? 0;
       const tronChanged = result[1]?.meta?.changes ?? 0;
       return jsonResponse({ ok: true, evmReset: evmChanged, tronReset: tronChanged });
-    }), trustedAdmin);
+    });
   }),
-  "debug-sync-state": withErrorHandler("route-debug-sync-state", async ({ db, request, trustedAdmin }) => {
-    return withAdmin(request, async () => {
-      const rows = await db.prepare("SELECT config_key, last_block FROM blacklist_sync_state ORDER BY config_key").all();
-      return jsonResponse(rows.results);
-    }, trustedAdmin);
+  "debug-sync-state": makeAdminRoute("route-debug-sync-state", async ({ db }) => {
+    const rows = await db.prepare("SELECT config_key, last_block FROM blacklist_sync_state ORDER BY config_key").all();
+    return jsonResponse(rows.results);
   }),
-  "remediate-blacklist-amount-gaps": withErrorHandler(
+  "remediate-blacklist-amount-gaps": makeIdempotentAdminRoute(
     "route-remediate-blacklist-amount-gaps",
+    "remediate-blacklist-amount-gaps",
     ({ db, url, trustedAdmin, request, chainRpcs }) =>
-      runIdempotentAdminAction(db, "remediate-blacklist-amount-gaps", request, () =>
-        handleRemediateBlacklistAmountGaps(db, url, trustedAdmin, request, chainRpcs),
-      ),
+      handleRemediateBlacklistAmountGaps(db, url, trustedAdmin, request, chainRpcs),
   ),
-  "backfill-blacklist-current-balances": withErrorHandler(
+  "backfill-blacklist-current-balances": makeIdempotentAdminRoute(
     "route-backfill-blacklist-current-balances",
+    "backfill-blacklist-current-balances",
     ({ db, url, trustedAdmin, request, chainRpcs }) =>
-      runIdempotentAdminAction(db, "backfill-blacklist-current-balances", request, () =>
-        handleBackfillBlacklistCurrentBalances(db, url, trustedAdmin, request, chainRpcs),
-      ),
+      handleBackfillBlacklistCurrentBalances(db, url, trustedAdmin, request, chainRpcs),
   ),
-  "discovery-candidates": ({ db, url, trustedAdmin, request }) =>
-    withAdmin(request, () => handleDiscoveryCandidates(db, url), trustedAdmin),
+  "discovery-candidates": makeAdminRoute("route-discovery-candidates", ({ db, url }) =>
+    handleDiscoveryCandidates(db, url),
+  ),
 } satisfies StaticRouteHandlerMap;
 
 const STATIC_ROUTE_DEFINITIONS = new Map<string, StaticRouteDefinition>(

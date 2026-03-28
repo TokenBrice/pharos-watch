@@ -209,7 +209,12 @@ export function withErrorHandler<T extends unknown[]>(
   };
 }
 
-/** Safely parse JSON, returning fallback on failure */
+/**
+ * Best-effort JSON parse for non-authoritative payloads only.
+ * Do not use this for canonical cache/DB payloads that affect endpoint health
+ * or freshness contracts; those call sites must use `decodeJsonString()` or
+ * `decodeCachedJson()` so malformed data is observable and can fail closed.
+ */
 export function safeJsonParse<T>(json: string | null | undefined, fallback: T): T {
   if (json == null) return fallback;
   try { return JSON.parse(json) as T; } catch { return fallback; }

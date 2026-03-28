@@ -289,8 +289,7 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
     return b.overallScore - a.overallScore;
   });
 
-  const edges = buildDependencyGraphEdges(ACTIVE_STABLECOINS)
-    .map((edge) => ({ from: edge.from, to: edge.to }));
+  const edges = buildDependencyGraphEdges(ACTIVE_STABLECOINS);
 
   return {
     cards: allCards,

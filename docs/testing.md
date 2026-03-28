@@ -165,7 +165,7 @@ When the checkout itself lives under `/.worktrees/`, Vitest now drops those glob
 - `worker/src/api/__tests__/` — API handler contract tests
 - `worker/src/cron/__tests__/` — cron job tests (with degraded-mode scenarios)
 - `worker/src/cron/blacklist/__tests__/` — blacklist source-module tests
-- `shared/lib/__tests__/` — shared library tests (format, classification invariants, peg rates, stablecoin registry)
+- `shared/lib/__tests__/` — shared library tests (format, classification invariants, peg rates, stablecoin registry, timeout helpers)
 - `scripts/__tests__/` — repo policy / guardrail tests for CI and developer tooling
 - `src/components/stablecoin-detail/__tests__/` — stablecoin detail component tests
 - `worker/src/cron/reserve-adapters/__tests__/` — reserve adapter tests (20+ adapters)
@@ -345,6 +345,7 @@ rg --files src shared worker/src functions scripts | rg '(^|/)__tests__/|\\.(tes
 | ------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `alerts.test.ts`                      | `worker/src/lib/alerts.ts`                                 | Webhook transport semantics, non-2xx failure handling, return-value contract                                                          |
 | `api-utils.test.ts`                   | `worker/src/lib/api-utils.ts`                              | `parseIntParam`, `parseStablecoinHistoryQuery`, `jsonResponse`, `errorResponse`, `withErrorHandler`, `createCacheHandler`             |
+| `cache-json.test.ts`                  | `worker/src/lib/cache-json.ts`                             | Canonical cache JSON decode helpers, malformed payload handling, and fail-closed decode boundaries                                    |
 | `mint-burn-scoring.test.ts`           | `worker/src/lib/mint-burn-scoring.ts`                      | `computeFlowIntensity`, `computeGaugeScore`, `detectFlightToQuality`, `getGaugeBand`                                                  |
 | `evm-logs.test.ts`                    | `worker/src/lib/evm-logs.ts`                               | `buildTopicParams`, `decodeAddress`, `decodeUint256`, `createBudget`, `budgetExhausted`, `createRateLimiter`, `fetchEvmLogsForTopics` |
 | `resolve-market-cap.test.ts`          | `worker/src/lib/resolve-market-cap.ts`                     | `resolveMarketCap` — CG vs computed mcap agreement, frozen data detection                                                             |
@@ -367,6 +368,7 @@ rg --files src shared worker/src functions scripts | rg '(^|/)__tests__/|\\.(tes
 | `log-cron-run.test.ts`                | `worker/src/lib/cron-logger.ts`                            | Success/error/skipped logging and prune fallback behavior                                                                             |
 | `mint-burn-bridge-classifier.test.ts` | `worker/src/lib/mint-burn-pipeline/classification.ts`      | CCIP bridge-burn classification and review fallbacks                                                                                  |
 | `mint-burn-contracts.test.ts`         | `worker/src/lib/mint-burn-contracts.ts`                    | Contract config invariants, decimals, and event definition coverage                                                                   |
+| `response-body.test.ts`               | `worker/src/lib/response-body.ts`                          | Quiet response-body cancellation helpers used to stay within worker outbound-connection limits                                         |
 | `twitter.test.ts`                     | `worker/src/lib/twitter.ts`                                | Digest tweet text building, first-mention cashtag injection, truncation, OAuth posting/error handling                                 |
 | `status-reliability.test.ts`          | `worker/src/lib/status-reliability.ts`                     | Hysteresis transitions, state snapshot staleness, transition listing, probe persistence, discrepancy streak/alert state               |
 | `cron-leases.test.ts`                 | `worker/src/lib/cron-lease.ts`                             | `acquireCronLease`, `renewCronLease`, `releaseCronLease`, `runCronWithLease`                                                          |

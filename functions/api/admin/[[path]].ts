@@ -5,6 +5,7 @@ import {
   validatePagesOpsProxyEnv,
   type OpsAdminProxyEnv,
 } from "../../lib/ops-env";
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 
 const DISCOVERY_DISMISS_PATH_PATTERN = /^\/api\/discovery-candidates\/\d+\/dismiss$/;
 const UPSTREAM_TIMEOUT_MS = 10_000;
@@ -100,27 +101,6 @@ function buildProxyResponse(upstreamResponse: Response, method: string): Respons
   });
 }
 
-function createTimeoutSignal(request: Request): {
-  signal: AbortSignal;
-  isTimedOut: () => boolean;
-  dispose: () => void;
-} {
-  const timeoutController = new AbortController();
-  const timeoutId = setTimeout(
-    () => timeoutController.abort(new DOMException("Operator API upstream timed out", "TimeoutError")),
-    UPSTREAM_TIMEOUT_MS,
-  );
-  const signal = request.signal && typeof AbortSignal.any === "function"
-    ? AbortSignal.any([request.signal, timeoutController.signal])
-    : (request.signal ?? timeoutController.signal);
-
-  return {
-    signal,
-    isTimedOut: () => timeoutController.signal.aborted,
-    dispose: () => clearTimeout(timeoutId),
-  };
-}
-
 export const onRequest = async (context: OpsAdminProxyContext): Promise<Response> => {
   const { request, env, params } = context;
   const requestUrl = new URL(request.url);
@@ -151,7 +131,11 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
   }
 
   let upstreamResponse: Response;
-  const timeout = createTimeoutSignal(request);
+  const timeout = createTimeoutSignal({
+    timeoutMs: UPSTREAM_TIMEOUT_MS,
+    timeoutReason: new DOMException("Operator API upstream timed out", "TimeoutError"),
+    parentSignal: request.signal,
+  });
   try {
     upstreamResponse = await fetch(upstreamUrl.toString(), {
       method: request.method,

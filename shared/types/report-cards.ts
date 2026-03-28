@@ -138,8 +138,15 @@ const ReportCardsMethodologySchema = z.object({
   thresholds: z.array(z.object({ grade: ReportCardGradeSchema, min: z.number() })),
 });
 
+const ReportCardsDependencyGraphEdgeSchema = z.object({
+  from: z.string(),
+  to: z.string(),
+  weight: z.number().optional(),
+  type: DependencyTypeSchema.optional(),
+});
+
 const ReportCardsDependencyGraphSchema = z.object({
-  edges: z.array(z.object({ from: z.string(), to: z.string() })),
+  edges: z.array(ReportCardsDependencyGraphEdgeSchema),
 });
 
 export const ReportCardsResponseSchema = z.object({

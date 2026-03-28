@@ -54,7 +54,7 @@ export function useCoverageMatrixModel() {
     );
     const dependencyIds = collectDependencyGraphIds(
       filterDependencyGraphEdgesToLive(
-        buildDependencyGraphEdges(ACTIVE_STABLECOINS),
+        reportCardsQuery.data?.dependencyGraph?.edges ?? buildDependencyGraphEdges(ACTIVE_STABLECOINS),
         liveIds,
       ),
     );

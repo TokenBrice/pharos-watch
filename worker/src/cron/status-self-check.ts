@@ -1,5 +1,7 @@
 import type { CronResult } from "../lib/cron-logger";
 import { sendAlert } from "../lib/alerts";
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
+import { cancelResponseBodyQuietly } from "../lib/response-body";
 
 import { getProbePaths } from "@shared/lib/api-endpoints";
 import { evaluateStatusAndPersist } from "../lib/status-evaluation";
@@ -146,21 +148,13 @@ function shouldUseInternalProbe(probeBaseUrl: URL, ctx?: ExecutionContext): bool
   return !!ctx && probeBaseUrl.origin === DEFAULT_SELF_URL;
 }
 
-async function cancelResponseBody(response: Response): Promise<void> {
-  try {
-    await response.body?.cancel();
-  } catch {
-    // Non-blocking: some runtimes may expose already-consumed or non-cancelable bodies.
-  }
-}
-
 async function evaluateProbeResponse(
   path: string,
   response: Response,
 ): Promise<Pick<ProbeResult, "ok" | "error" | "semanticStatus">> {
   const httpOk = response.status >= 200 && response.status < 300;
   if (path !== HEALTH_PROBE_PATH || !httpOk) {
-    await cancelResponseBody(response);
+    await cancelResponseBodyQuietly(response);
     return { ok: httpOk };
   }
 
@@ -197,25 +191,17 @@ async function probePathExternally(
   signal?: AbortSignal,
 ): Promise<ProbeResult> {
   const startedAt = Date.now();
-  const timeoutController = new AbortController();
-  let timedOut = false;
-  const timeoutId = setTimeout(() => {
-    timedOut = true;
-    timeoutController.abort("probe-timeout");
-  }, PROBE_TIMEOUT_MS);
-  const forwardAbort = () => timeoutController.abort(signal?.reason);
+  const timeout = createTimeoutSignal({
+    timeoutMs: PROBE_TIMEOUT_MS,
+    timeoutReason: "probe-timeout",
+    parentSignal: signal,
+  });
 
   try {
-    if (signal?.aborted) {
-      forwardAbort();
-    } else if (signal) {
-      signal.addEventListener("abort", forwardAbort, { once: true });
-    }
-
     const url = new URL(path, probeBaseUrl);
     const res = await fetch(url.toString(), {
       method: "GET",
-      signal: timeoutController.signal,
+      signal: timeout.signal,
     });
     const status = res.status;
     const semantic = await evaluateProbeResponse(path, res);
@@ -233,11 +219,10 @@ async function probePathExternally(
       status: 0,
       latencyMs: Math.max(0, Date.now() - startedAt),
       ok: false,
-      error: timedOut ? "timeout" : (error instanceof Error ? error.message : String(error)),
+      error: timeout.isTimedOut() ? "timeout" : (error instanceof Error ? error.message : String(error)),
     };
   } finally {
-    clearTimeout(timeoutId);
-    signal?.removeEventListener("abort", forwardAbort);
+    timeout.dispose();
   }
 }
 
@@ -280,7 +265,7 @@ async function probePathInternally(
     const status = response.status;
     const bootstrapMiss = await isBootstrapCacheMiss(db, path, status);
     if (bootstrapMiss) {
-      await cancelResponseBody(response);
+      await cancelResponseBodyQuietly(response);
       return {
         path,
         status,

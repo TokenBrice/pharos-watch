@@ -1,4 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { createTimeoutSignal, raceWithTimeout } from "@shared/lib/timeout-signal";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { getReserveAdapter, type AdapterContext, type AdapterResult, type ReserveAdapterDefinition } from "./reserve-adapters/index";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
@@ -121,45 +122,20 @@ function classifyFailure(reason: string, lastError: string | null): ReserveFailu
 const ADAPTER_TIMEOUT_MS = 20_000;
 const D1_WRITE_FINALIZE_TIMEOUT_MS = 30_000;
 
-async function raceWithTimeout<T>(
-  operation: Promise<T>,
-  timeoutMs: number,
-  timeoutMessage: string,
-): Promise<T> {
-  let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
-  try {
-    return await Promise.race([
-      operation,
-      new Promise<T>((_resolve, reject) => {
-        timeoutHandle = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timeoutHandle) {
-      clearTimeout(timeoutHandle);
-    }
-  }
-}
-
 function createAbortableAttemptSignal(
   parentSignal: AbortSignal,
   timeoutMs: number,
 ): { signal: AbortSignal; cleanup: () => void } {
-  const controller = new AbortController();
-  const abortFromParent = () => controller.abort(parentSignal.reason ?? new Error("sync-live-reserves aborted"));
-  if (parentSignal.aborted) {
-    abortFromParent();
-  } else {
-    parentSignal.addEventListener("abort", abortFromParent, { once: true });
-  }
-
-  const timer = setTimeout(() => controller.abort(new Error("adapter-timeout")), timeoutMs);
+  const timeout = createTimeoutSignal({
+    timeoutMs,
+    timeoutReason: new Error("adapter-timeout"),
+    parentSignal,
+  });
   const cleanup = () => {
-    clearTimeout(timer);
-    parentSignal.removeEventListener("abort", abortFromParent);
+    timeout.dispose();
   };
 
-  return { signal: controller.signal, cleanup };
+  return { signal: timeout.signal, cleanup };
 }
 
 async function reportLiveReserveProgress(

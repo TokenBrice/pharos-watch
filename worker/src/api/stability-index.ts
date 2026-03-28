@@ -1,12 +1,14 @@
 import {
   withErrorHandler,
   addFreshnessHeaders,
-  safeJsonParse,
+  errorResponse,
   jsonResponse,
   buildMethodologyEnvelope,
 } from "../lib/api-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CACHE_PROFILES } from "../lib/constants";
+import { decodeJsonString } from "../lib/cache-json";
+import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { getConditionBand } from "../lib/stability-index";
 import {
   PSI_METHODOLOGY_CHANGELOG_PATH,
@@ -16,6 +18,78 @@ import {
 } from "@shared/lib/stability-index-version";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 import { upsertPsiHistoryPoint } from "@shared/lib/psi-view-model";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+type PsiJsonDecodeReason = "missing" | "json-parse-failed" | "invalid-shape";
+
+function decodePsiComponents(
+  value: string | null,
+  updatedAt: number,
+  context: string,
+): { ok: true; value: Record<string, unknown> } | { ok: false; reason: PsiJsonDecodeReason } {
+  const decoded = decodeJsonString<Record<string, unknown>, PsiJsonDecodeReason>(value, {
+    mode: "strict",
+    updatedAt,
+    missingReason: "missing",
+    parseErrorReason: "json-parse-failed",
+    normalize: (parsed) => {
+      if (!isRecord(parsed)) {
+        return { ok: false, reason: "invalid-shape" };
+      }
+      return { ok: true, payload: parsed };
+    },
+  });
+
+  if (!decoded.ok) {
+    logMalformedJsonPath({
+      scope: "api",
+      owner: "stability-index",
+      context,
+      reason: decoded.reason,
+      source: "stability_index",
+      updatedAt,
+    });
+    return { ok: false, reason: decoded.reason };
+  }
+
+  return { ok: true, value: decoded.payload };
+}
+
+function decodePsiInputSnapshot(
+  value: string | null,
+  updatedAt: number,
+  context: string,
+): { ok: true; value: Record<string, unknown> } | { ok: false; reason: PsiJsonDecodeReason } {
+  const decoded = decodeJsonString<Record<string, unknown>, PsiJsonDecodeReason>(value, {
+    mode: "strict",
+    updatedAt,
+    missingReason: "missing",
+    parseErrorReason: "json-parse-failed",
+    normalize: (parsed) => {
+      if (!isRecord(parsed)) {
+        return { ok: false, reason: "invalid-shape" };
+      }
+      return { ok: true, payload: parsed };
+    },
+  });
+
+  if (!decoded.ok) {
+    logMalformedJsonPath({
+      scope: "api",
+      owner: "stability-index",
+      context,
+      reason: decoded.reason,
+      source: "stability_index",
+      updatedAt,
+    });
+    return { ok: false, reason: decoded.reason };
+  }
+
+  return { ok: true, value: decoded.payload };
+}
 
 export const handleStabilityIndex = withErrorHandler("stability-index", async (db: D1Database, url: URL): Promise<Response> => {
   const detail = url.searchParams.get("detail") === "true";
@@ -68,8 +142,24 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
 
   // Build current from latest sample, falling back to latest history row
   const currentSource = latestSample ?? results[0];
-  const snapshot = safeJsonParse(currentSource.input_snapshot, {} as Record<string, unknown>);
-  const contributors = Array.isArray(snapshot.contributors) ? snapshot.contributors : [];
+  const computedAt = latestSample ? latestSample.stored_at : (results[0]?.computed_at ?? now);
+  const currentComponents = decodePsiComponents(
+    currentSource.components,
+    computedAt,
+    "current.components",
+  );
+  if (!currentComponents.ok) {
+    return errorResponse(503, "PSI current components payload is malformed");
+  }
+  const snapshot = decodePsiInputSnapshot(
+    currentSource.input_snapshot,
+    computedAt,
+    "current.input_snapshot",
+  );
+  if (!snapshot.ok) {
+    return errorResponse(503, "PSI current input snapshot payload is malformed");
+  }
+  const contributors = Array.isArray(snapshot.value.contributors) ? snapshot.value.contributors : [];
 
   const avg24h = avg24hRow?.avg != null ? Math.round(avg24hRow.avg * 10) / 10 : undefined;
   const avg24hBand = avg24h != null ? getConditionBand(avg24h) : undefined;
@@ -77,21 +167,35 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
     version ?? getPsiMethodologyVersionAt(ts);
 
   // Build history array (newest-first from stability_index)
-  const history = results.map((r) => detail
-    ? {
+  let malformedRows = 0;
+  const history = results.map((r) => {
+    if (!detail) {
+      return {
+        date: r.computed_at,
+        score: r.score,
+        band: r.band,
+        methodologyVersion: resolveMethodologyVersion(r.methodology_version, r.computed_at),
+      };
+    }
+
+    const decodedHistoryComponents = decodePsiComponents(
+      r.components,
+      r.computed_at,
+      "history.components",
+    );
+    if (!decodedHistoryComponents.ok) {
+      malformedRows++;
+      return null;
+    }
+
+    return {
       date: r.computed_at,
       score: r.score,
       band: r.band,
-      components: safeJsonParse(r.components, {}),
+      components: decodedHistoryComponents.value,
       methodologyVersion: resolveMethodologyVersion(r.methodology_version, r.computed_at),
-    }
-    : {
-      date: r.computed_at,
-      score: r.score,
-      band: r.band,
-      methodologyVersion: resolveMethodologyVersion(r.methodology_version, r.computed_at),
-    }
-  );
+    };
+  }).filter((row): row is NonNullable<typeof row> => row !== null);
 
   // Append today's running average as the last point if we have samples today
   if (todayAvgRow?.avg != null) {
@@ -114,7 +218,6 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
     history.splice(0, history.length, ...normalizedHistory);
   }
 
-  const computedAt = latestSample ? latestSample.stored_at : (results[0]?.computed_at ?? now);
   const currentMethodologyTs = latestSample ? latestSample.stored_at : (results[0]?.computed_at ?? computedAt);
   const methodologyVersion =
     resolveMethodologyVersion(currentSource.methodology_version, currentMethodologyTs);
@@ -125,13 +228,14 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
       band: currentSource.band,
       avg24h,
       avg24hBand,
-      components: safeJsonParse(currentSource.components, {}),
+      components: currentComponents.value,
       contributors,
-      totalMcapUsd: snapshot.totalMcapUsd ?? 0,
+      totalMcapUsd: typeof snapshot.value.totalMcapUsd === "number" ? snapshot.value.totalMcapUsd : 0,
       computedAt,
       methodologyVersion,
     },
     history,
+    malformedRows,
     methodology: buildMethodologyEnvelope({
       version: methodologyVersion,
       versionLabel: toMethodologyVersionLabel(methodologyVersion),

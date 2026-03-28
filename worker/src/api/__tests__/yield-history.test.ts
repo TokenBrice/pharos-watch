@@ -1,9 +1,13 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
 import { makeYieldHistoryRow } from "./helpers/fixtures";
 import { handleYieldHistory } from "../yield-history";
 
 describe("handleYieldHistory", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   const row = makeYieldHistoryRow();
 
   it("returns 200 with history envelope", async () => {
@@ -145,5 +149,33 @@ describe("handleYieldHistory", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("Warning")).toBeNull();
     expect(res.headers.get("X-Data-Age")).toBe("3500");
+  });
+
+  it("falls back to the latest successful yield cron timestamp when the yield-rankings cache is malformed", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-28T12:00:00Z"));
+    const nowSec = Math.floor(Date.now() / 1000);
+    const latestSuccessfulCronAt = nowSec - 1_800;
+
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["yield-rankings"],
+        rows: [],
+        first: { value: "{bad-json", updated_at: nowSec - 60 },
+      },
+      {
+        match: "MAX(started_at) as started_at FROM cron_runs",
+        rows: [],
+        first: { started_at: latestSuccessfulCronAt },
+      },
+      { match: "yield_history", rows: [row] },
+    ]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    expect(res.status).toBe(200);
+
+    const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history"));
+    expect(historyQuery?.binds[2]).toBe(latestSuccessfulCronAt);
   });
 });

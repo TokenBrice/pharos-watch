@@ -225,9 +225,9 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 
     return buildDonutData(raw, {
       labelForKey: normalizeChain,
-      hexForKey: (key) => CHAIN_HEX[key.toLowerCase()],
+      hexForKey: (key) => CHAIN_HEX[key],
       logoForKey: (key) => {
-        const meta = CHAIN_META[key.toLowerCase()];
+        const meta = CHAIN_META[key];
         return meta?.logoPath ? { path: meta.logoPath, darkInvert: meta.darkInvert } : null;
       },
     });

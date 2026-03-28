@@ -1,10 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-  buildDependencyGraphEdges,
-  filterDependencyGraphEdgesToLive,
-} from "@shared/lib/dependency-graph";
+import { filterDependencyGraphEdgesToLive } from "@shared/lib/dependency-graph";
 import { useReportCards } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
@@ -14,7 +11,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { sumPegBuckets } from "@shared/lib/supply";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 
 export function DependencyMapClient() {
   const reportCardsQuery = useReportCards();
@@ -46,7 +42,7 @@ export function DependencyMapClient() {
     const cardById = new Map(reportData.cards.map((card) => [card.id, card]));
     const hubMap = new Map<string, { dependentCount: number; weightedInbound: number; examples: string[] }>();
     const liveEdges = filterDependencyGraphEdgesToLive(
-      buildDependencyGraphEdges(ACTIVE_STABLECOINS),
+      reportData.dependencyGraph?.edges ?? [],
       liveIds,
     );
 
@@ -114,7 +110,12 @@ export function DependencyMapClient() {
 
   return (
     <div className="space-y-4">
-      <ContagionGraph cards={reportData.cards} mcapMap={mcapMap} logos={logos} />
+      <ContagionGraph
+        cards={reportData.cards}
+        dependencyEdges={reportData.dependencyGraph?.edges}
+        mcapMap={mcapMap}
+        logos={logos}
+      />
       <DependencyMapMobileSummary hubs={mobileSummary} logos={logos} />
     </div>
   );

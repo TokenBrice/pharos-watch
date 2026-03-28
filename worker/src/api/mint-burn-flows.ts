@@ -33,8 +33,11 @@ import { loadReportCardCache } from "../lib/report-card-cache";
 import { buildFlightToQualityClassification } from "../lib/flight-to-quality-classification";
 import {
   aggregateFlowCacheKey,
+  aggregateHourlyRowsByChain,
+  aggregateHourlyRowsByStablecoin,
   BASELINE_WINDOW_DAYS,
   buildBaselineMap,
+  buildHourlyFlowSeries,
   buildCoinCoverageMap,
   bucketDay,
   cachedFlowFallbackResponse,
@@ -44,9 +47,11 @@ import {
   type FirstSeenRow,
   FLOW_DEFAULT_WINDOW_HOURS,
   type HourlyRow,
+  logMintBurnFallbackFailure,
   MINT_BURN_CRON_JOB,
   perCoinFlowCacheKey,
   readMintBurnCronSnapshot,
+  resolveFlowUpdatedAt,
   selectLargestEvents,
 } from "./mint-burn-flows-shared";
 
@@ -263,31 +268,7 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
     const sync = buildMintBurnSyncHealth(nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status);
 
     // Aggregate per-coin summaries from canonical 24h rows
-    const coinAgg = new Map<
-      string,
-      {
-        mintVolume: number;
-        burnVolume: number;
-        mintCount: number;
-        burnCount: number;
-        netFlow: number;
-      }
-    >();
-    for (const row of hourly24hRows) {
-      const agg = coinAgg.get(row.stablecoin_id) ?? {
-        mintVolume: 0,
-        burnVolume: 0,
-        mintCount: 0,
-        burnCount: 0,
-        netFlow: 0,
-      };
-      agg.mintVolume += row.mint_volume_usd;
-      agg.burnVolume += row.burn_volume_usd;
-      agg.mintCount += row.mint_count;
-      agg.burnCount += row.burn_count;
-      agg.netFlow += row.net_flow_usd;
-      coinAgg.set(row.stablecoin_id, agg);
-    }
+    const coinAgg = aggregateHourlyRowsByStablecoin(hourly24hRows);
 
     // Compute FIS and build coin responses
     const coins: Array<{
@@ -438,26 +419,8 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
     const ftq = detectFlightToQuality({ safeNet24h, riskyNet24h });
 
     // Hourly timeseries (aggregate across all coins)
-    const hourlyMap = new Map<number, { net: number; mint: number; burn: number }>();
-    for (const row of hourlyRows) {
-      const entry = hourlyMap.get(row.hour_ts) ?? { net: 0, mint: 0, burn: 0 };
-      entry.net += row.net_flow_usd;
-      entry.mint += row.mint_volume_usd;
-      entry.burn += row.burn_volume_usd;
-      hourlyMap.set(row.hour_ts, entry);
-    }
-    const hourly = [...hourlyMap.entries()]
-      .sort(([a], [b]) => a - b)
-      .map(([ts, v]) => ({
-        hourTs: ts,
-        netFlowUsd: v.net,
-        mintVolumeUsd: v.mint,
-        burnVolumeUsd: v.burn,
-      }));
-
-    const updatedAt = hourlyRows.length > 0
-      ? hourlyRows.reduce((m, r) => Math.max(m, r.hour_ts), -Infinity)
-      : nowSec;
+    const hourly = buildHourlyFlowSeries(hourlyRows);
+    const updatedAt = resolveFlowUpdatedAt(hourlyRows, nowSec);
 
     const body = {
       gauge: {
@@ -492,7 +455,7 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
   } catch (err) {
     const cached = await getCache(db, cacheKey);
     if (cached) {
-      console.error(`[mint-burn-flows] aggregate live query failed, serving fallback cache (${cacheKey})`, err);
+      logMintBurnFallbackFailure("aggregate", cacheKey, err);
       return cachedFlowFallbackResponse(cached);
     }
     throw err;
@@ -537,32 +500,7 @@ async function handlePerCoin(
     const rows = hourlyResult.results ?? [];
 
     // Per-chain breakdown
-    const chainMap = new Map<
-      string,
-      { mintVolume: number; burnVolume: number; mintCount: number; burnCount: number; netFlow: number }
-    >();
-    // Hourly timeseries (aggregate across chains)
-    const hourlyAgg = new Map<number, { net: number; mint: number; burn: number }>();
-
-    for (const row of rows) {
-      // Chain breakdown
-      const chain = chainMap.get(row.chain_id) ?? {
-        mintVolume: 0, burnVolume: 0, mintCount: 0, burnCount: 0, netFlow: 0,
-      };
-      chain.mintVolume += row.mint_volume_usd;
-      chain.burnVolume += row.burn_volume_usd;
-      chain.mintCount += row.mint_count;
-      chain.burnCount += row.burn_count;
-      chain.netFlow += row.net_flow_usd;
-      chainMap.set(row.chain_id, chain);
-
-      // Hourly aggregate
-      const entry = hourlyAgg.get(row.hour_ts) ?? { net: 0, mint: 0, burn: 0 };
-      entry.net += row.net_flow_usd;
-      entry.mint += row.mint_volume_usd;
-      entry.burn += row.burn_volume_usd;
-      hourlyAgg.set(row.hour_ts, entry);
-    }
+    const chainMap = aggregateHourlyRowsByChain(rows);
 
     const chains = [...chainMap.entries()].map(([chainId, v]) => ({
       chainId,
@@ -573,14 +511,7 @@ async function handlePerCoin(
       netFlowUsd: v.netFlow,
     }));
 
-    const hourly = [...hourlyAgg.entries()]
-      .sort(([a], [b]) => a - b)
-      .map(([ts, v]) => ({
-        hourTs: ts,
-        netFlowUsd: v.net,
-        mintVolumeUsd: v.mint,
-        burnVolumeUsd: v.burn,
-      }));
+    const hourly = buildHourlyFlowSeries(rows);
 
     // Totals
     let totalMint = 0;
@@ -594,9 +525,7 @@ async function handlePerCoin(
       totalBurnCount += c.burnCount;
     }
 
-    const updatedAt = rows.length > 0
-      ? rows.reduce((m, r) => Math.max(m, r.hour_ts), -Infinity)
-      : nowSec;
+    const updatedAt = resolveFlowUpdatedAt(rows, nowSec);
 
     const body = {
       stablecoinId,
@@ -624,7 +553,7 @@ async function handlePerCoin(
   } catch (err) {
     const cached = await getCache(db, cacheKey);
     if (cached) {
-      console.error(`[mint-burn-flows] per-coin live query failed, serving fallback cache (${cacheKey})`, err);
+      logMintBurnFallbackFailure("per-coin", cacheKey, err);
       return cachedFlowFallbackResponse(cached);
     }
     throw err;

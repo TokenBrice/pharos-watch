@@ -1210,6 +1210,8 @@ Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a comp
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included.
 
+**Error responses:** `503` when the canonical current PSI `components` or `input_snapshot` payload is missing or malformed.
+
 **Optional query parameters**
 
 | Param    | Type     | Default | Description                                                                                   |
@@ -1253,6 +1255,7 @@ Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a comp
 | `current.computedAt`           | `number`              | Unix seconds of computation                                                                 |
 | `current.methodologyVersion`   | `string`              | Methodology version used to compute the current score                                       |
 | `history`                      | `array`               | Historical scores, newest first. With `detail=true`, each entry includes `components`       |
+| `malformedRows`                | `number`              | Count of historical rows dropped from `detail=true` because persisted `components` JSON was malformed |
 | `history[].methodologyVersion` | `string`              | Methodology version used for that history point                                             |
 | `methodology`                  | `object`              | Version metadata for current PSI methodology context                                        |
 | `methodology.version`          | `string`              | Methodology version used by current score                                                   |
@@ -1296,7 +1299,7 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
 {
   "cards": [ReportCard, ...],
   "dependencyGraph": {
-    "edges": [{ "from": "usde-ethena", "to": "usdc-circle" }, ...]
+    "edges": [{ "from": "usde-ethena", "to": "usdc-circle", "weight": 0.9, "type": "collateral" }, ...]
   },
   "methodology": {
     "version": "6.1",
@@ -1312,7 +1315,7 @@ The Liquidity dimension now represents `effectiveExitScore`: the public DEX liqu
 
 `GET /api/report-cards` treats the stablecoins cache and redemption-backstop snapshot as hard dependencies. DEX liquidity, bluechip ratings, and live-reserve inputs are soft dependencies: if one of those loaders is temporarily unavailable, the endpoint continues serving a degraded snapshot instead of failing closed.
 
-**`dependencyGraph.edges`**: Pre-computed forward edges. `from` = upstream stablecoin ID, `to` = dependent stablecoin ID. Used by the frontend to identify targetable coins for stress testing and walk the dependency tree.
+**`dependencyGraph.edges`**: Pre-computed forward edges. `from` = upstream stablecoin ID, `to` = dependent stablecoin ID. `weight` and `type` carry the worker's canonical dependency metadata, so frontend graph consumers can use the snapshot directly instead of re-deriving edge semantics from static stablecoin metadata.
 
 **`ReportCard`**
 
@@ -1614,7 +1617,7 @@ When present, `YieldRanking.provenance` includes:
 
 ### `GET /api/yield-history`
 
-Historical yield data for a single stablecoin. If a stored `warning_signals` payload is malformed, the API treats it as an empty array rather than failing the entire response. Returned rows are capped at the latest published `/api/yield-rankings` snapshot so history cannot advance past an unpublished yield cache state.
+Historical yield data for a single stablecoin. If a stored `warning_signals` payload is malformed, the API treats it as an empty array rather than failing the entire response. Returned rows are capped at the latest published `/api/yield-rankings` snapshot so history cannot advance past an unpublished yield cache state. If the cached rankings payload is missing or malformed, the cap degrades to the latest successful `sync-yield-data` cron timestamp instead of wall-clock `now`.
 
 **Cache:** slow — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour, aligned to the hourly `sync-yield-data` publisher).
 
@@ -1703,7 +1706,7 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 
 **Cache:** standard
 
-**Error responses:** `503` when the cached fallback payload is missing or malformed and live recomputation cannot satisfy the request.
+**Error responses:** `503` when the cached fallback payload is missing or malformed and live recomputation cannot satisfy the request. Malformed embedded freshness fields inside an otherwise valid cached payload no longer reset freshness to synthetic values; the API logs the corruption and falls back to the cache row timestamp.
 
 **Optional query parameters**
 

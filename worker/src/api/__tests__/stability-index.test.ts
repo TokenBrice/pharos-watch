@@ -152,4 +152,45 @@ describe("handleStabilityIndex contract tests", () => {
     ]);
     expect(body.history).toHaveLength(2);
   });
+
+  it("returns 503 when canonical current JSON fields are malformed", async () => {
+    const malformedSample = {
+      ...sampleRow,
+      components: "{bad-components",
+      input_snapshot: "{bad-snapshot",
+    };
+
+    const db = mockD1([
+      { match: "stability_index_samples", rows: [malformedSample], first: malformedSample },
+      { match: "stability_index", rows: [historyRow] },
+    ]);
+
+    const res = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({
+      error: "PSI current components payload is malformed",
+    });
+  });
+
+  it("detail mode drops malformed historical component rows and reports malformedRows", async () => {
+    const malformedHistory = {
+      ...historyRow,
+      components: "{bad-history-components",
+    };
+    const db = mockD1([
+      { match: "stability_index_samples", rows: [sampleRow], first: sampleRow },
+      { match: "stability_index", rows: [malformedHistory] },
+    ]);
+
+    const res = await handleStabilityIndex(db, new URL("https://x/api/stability-index?detail=true"));
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as {
+      history: Array<{ components?: Record<string, unknown> }>;
+      malformedRows: number;
+    };
+
+    expect(body.history).toEqual([]);
+    expect(body.malformedRows).toBe(1);
+  });
 });

@@ -10,6 +10,8 @@ import { CACHE_PROFILES } from "../lib/constants";
 import { getCache } from "../lib/db-cache";
 import { buildOnChainSourceKey, parseYieldWarningSignals } from "../lib/yield-utils";
 import { resolveYieldSourceUrl } from "../lib/yield-source-links";
+import { logMalformedJsonPath } from "../lib/json-decode-observability";
+import { parseYieldRankingsPublishedCutoff } from "../cron/yield-sync/cache";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
@@ -81,17 +83,25 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
     return errorResponse(400, "Missing ?sourceKey= parameter for source history mode");
   }
 
-  let publishedCutoff = Math.floor(Date.now() / 1000);
+  const nowSec = Math.floor(Date.now() / 1000);
   const rankingsCache = await getCache(db, "yield-rankings");
-  if (rankingsCache) {
-    try {
-      const parsed = JSON.parse(rankingsCache.value) as { updatedAt?: unknown };
-      if (typeof parsed.updatedAt === "number" && Number.isFinite(parsed.updatedAt) && parsed.updatedAt > 0) {
-        publishedCutoff = parsed.updatedAt;
-      }
-    } catch {
-      publishedCutoff = Math.floor(Date.now() / 1000);
-    }
+  const publishedCutoffResult = parseYieldRankingsPublishedCutoff(rankingsCache);
+  const publishedCutoff = publishedCutoffResult.status === "ok"
+    ? publishedCutoffResult.updatedAt
+    : await getLatestSuccessfulCronTimestamp(db, "sync-yield-data", nowSec);
+
+  if (publishedCutoffResult.status !== "ok") {
+    logMalformedJsonPath({
+      scope: "api",
+      owner: "yield-history",
+      context: "yield-rankings.updatedAt",
+      reason: publishedCutoffResult.status,
+      source: "cache:yield-rankings",
+      updatedAt: rankingsCache?.updatedAt ?? null,
+      extra: {
+        fallbackCutoff: publishedCutoff,
+      },
+    });
   }
 
   const sql = mode === "source"
@@ -141,7 +151,7 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
 
   const latestHistoryTimestamp = history.length > 0
     ? Math.max(...history.map((row) => (typeof row.date === "number" ? row.date : 0)))
-    : await getLatestSuccessfulCronTimestamp(db, "sync-yield-data", Math.floor(Date.now() / 1000));
+    : await getLatestSuccessfulCronTimestamp(db, "sync-yield-data", nowSec);
 
   const current = history.length > 0 ? history[history.length - 1] ?? null : null;
 

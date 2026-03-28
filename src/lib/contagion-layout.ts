@@ -11,6 +11,7 @@ import {
 import {
   buildDependencyGraphEdges,
   filterDependencyGraphEdgesToLive,
+  type DependencyGraphEdge,
 } from "@shared/lib/dependency-graph";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { DependencyType, ReportCard } from "@shared/types";
@@ -38,6 +39,9 @@ export interface RawGraphLink {
   weight: number;
   type: DependencyType;
 }
+
+type GraphDependencyEdgeInput = Pick<DependencyGraphEdge, "from" | "to">
+  & Partial<Pick<DependencyGraphEdge, "weight" | "type">>;
 
 export type HubTier = 0 | 1 | 2;
 
@@ -204,14 +208,12 @@ export function pushTargetsOutOfLane(
 export function buildGraphData(
   cards: ReportCard[],
   mcapMap: Map<string, number>,
+  dependencyEdges: readonly GraphDependencyEdgeInput[] = buildDependencyGraphEdges(ACTIVE_STABLECOINS),
 ): { nodes: GraphNode[]; links: GraphLink[] } {
   const cardMap = new Map(cards.map((c) => [c.id, c]));
   const liveIds = [...cardMap.keys()].filter((id) => !cardMap.get(id)!.isDefunct);
   const liveIdSet = new Set(liveIds);
-  const liveEdges = filterDependencyGraphEdgesToLive(
-    buildDependencyGraphEdges(ACTIVE_STABLECOINS),
-    liveIdSet,
-  );
+  const liveEdges = filterDependencyGraphEdgesToLive(dependencyEdges, liveIdSet);
 
   const inboundCounts = new Map<string, number>();
   const outboundCounts = new Map<string, number>();
@@ -223,8 +225,8 @@ export function buildGraphData(
     liveLinks.push({
       source: edge.to,
       target: edge.from,
-      weight: edge.weight,
-      type: edge.type,
+      weight: edge.weight ?? 1,
+      type: edge.type ?? "collateral",
     });
   }
 
