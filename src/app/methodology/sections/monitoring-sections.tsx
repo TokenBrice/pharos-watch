@@ -35,8 +35,9 @@ export function MonitoringMethodologySections() {
             (PYS). Core rankings publish hourly using a source-aware APY resolution strategy, while slower
             supplemental-source families refresh on a separate four-hour lane. Alternative sources are retained when
             multiple valid yield paths exist, address-first identity is used before symbol fallback, curated
-            exact-pool overrides can cover named non-stablecoin venues, and confidence-weighted arbitration selects
-            the primary row. PYS is now benchmark-aware: it keeps raw APY as the base term, adds a modest slice of
+            exact-pool overrides can cover named non-stablecoin venues, confidence-weighted arbitration selects
+            the primary row, and published lending suggestions exclude Resolv / USR-linked venues so broken wrapper
+            ecosystems do not surface as recommended base-asset routes. PYS is now benchmark-aware: it keeps raw APY as the base term, adds a modest slice of
             row-level benchmark spread, and only then applies the safety and consistency penalties.
           </p>
           <MethodologyFacts
@@ -200,7 +201,8 @@ export function MonitoringMethodologySections() {
                 Deterministic and curated paths can all contribute rows, then a confidence-weighted arbitration layer
                 chooses the best row. Divergent discovered or fallback sources can be demoted or rejected when a
                 canonical source disagrees materially. Protocol-native supplemental lending venues such as Aave V3 do
-                not outrank stronger native wrapper yields purely because they query protocol state directly.
+                not outrank stronger native wrapper yields purely because they query protocol state directly, and
+                Resolv / USR-linked lending-opportunity venues are excluded from publication entirely.
               </p>
               <p>
                 Yield-bearing coverage is now explicitly inventoried per asset. If no reliable runtime source exists,

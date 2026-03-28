@@ -5,6 +5,7 @@ export interface DlPool {
   chain: string;
   project: string;
   symbol: string;
+  poolMeta?: string | null;
   tvlUsd: number;
   apy: number;
   apyBase: number | null;

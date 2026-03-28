@@ -13,6 +13,7 @@ import {
   buildOnChainSourceKey,
   computeApyFromRate,
   findBestLendingPool,
+  isBlockedYieldOpportunitySource,
   matchAllDlPools,
 } from "../yield-helpers";
 import {
@@ -96,10 +97,19 @@ function appendResolvedYieldCandidates(
   entries: ResolvedYieldCandidate[],
   identityLookups: ReturnType<typeof buildYieldIdentityLookups>,
 ): void {
+  let blockedDrops = 0;
   let ambiguousDrops = 0;
   let unresolvedDrops = 0;
 
   for (const entry of entries) {
+    if (
+      entry.yield.yieldType === "lending-opportunity" &&
+      isBlockedYieldOpportunitySource({ yieldSource: entry.yield.yieldSource })
+    ) {
+      blockedDrops += 1;
+      continue;
+    }
+
     const resolution = resolveYieldCandidateStablecoinId(entry, identityLookups);
     if (resolution.status !== "matched" || !resolution.stablecoinId) {
       if (resolution.status === "ambiguous") {
@@ -118,9 +128,9 @@ function appendResolvedYieldCandidates(
     resolved.push({ id: meta.id, symbol: meta.symbol, yield: entry.yield });
   }
 
-  if (ambiguousDrops > 0 || unresolvedDrops > 0) {
+  if (blockedDrops > 0 || ambiguousDrops > 0 || unresolvedDrops > 0) {
     console.warn(
-      `[yield-sync] Dropped optional protocol candidates: ambiguous=${ambiguousDrops}, unresolved=${unresolvedDrops}`,
+      `[yield-sync] Dropped optional protocol candidates: blocked=${blockedDrops}, ambiguous=${ambiguousDrops}, unresolved=${unresolvedDrops}`,
     );
   }
 }
@@ -560,6 +570,7 @@ export async function resolveYieldSources({
         && pool.apy >= MIN_LENDING_POOL_APY
         && pool.tvlUsd >= MIN_LENDING_POOL_TVL_USD;
       if (!eligible) continue;
+      if (isBlockedYieldOpportunitySource({ poolMeta: pool.poolMeta, symbol: pool.symbol })) continue;
 
       if (resolved.some((entry) => entry.id === stablecoinId && entry.yield?.sourceKey === poolId)) {
         continue;

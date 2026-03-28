@@ -82,6 +82,7 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
             .filter(isYieldRelevantDlPool)
             .map((p) => ({
               pool: p.pool, chain: p.chain, project: p.project, symbol: p.symbol,
+              poolMeta: p.poolMeta ?? null,
               tvlUsd: p.tvlUsd, apy: p.apy, apyBase: p.apyBase,
               apyReward: p.apyReward, apyMean30d: p.apyMean30d ?? p.apy, stablecoin: p.stablecoin, exposure: p.exposure,
               underlyingTokens: p.underlyingTokens ?? null,

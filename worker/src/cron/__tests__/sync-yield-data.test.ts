@@ -733,6 +733,81 @@ describe("syncYieldData", () => {
     }
   });
 
+  it("filters blocked USR-linked supplemental lending suggestions", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "yield:supplemental-sources:v1") {
+        return {
+          value: JSON.stringify({
+            version: 1,
+            updatedAt: nowSec,
+            source: "sync-yield-supplemental",
+            sourceCount: 2,
+            data: [
+              {
+                symbol: "USDC",
+                chain: "ethereum",
+                address: null,
+                yield: {
+                  currentApy: 8.5,
+                  apyBase: 8.5,
+                  apyReward: null,
+                  sourcePool: "vault-resolv-usdc",
+                  sourceTvlUsd: 25_000_000,
+                  dataSource: "protocol-api",
+                  exchangeRate: null,
+                  sourceKey: "protocol-api:morpho-vault:ethereum:0xresolv",
+                  yieldSource: "Morpho: Resolv USDC",
+                  yieldType: "lending-opportunity",
+                  sourceObservedAt: nowSec,
+                  comparisonAnchorObservedAt: null,
+                },
+              },
+              {
+                symbol: "USDC",
+                chain: "ethereum",
+                address: null,
+                yield: {
+                  currentApy: 3.2,
+                  apyBase: 3.2,
+                  apyReward: null,
+                  sourcePool: null,
+                  sourceTvlUsd: null,
+                  dataSource: "protocol-api",
+                  exchangeRate: null,
+                  sourceKey: "aave-v3-onchain:ethereum:0xusdc",
+                  yieldSource: "Aave v3 (ethereum)",
+                  yieldType: "lending-opportunity",
+                  sourceObservedAt: nowSec,
+                  comparisonAnchorObservedAt: null,
+                },
+              },
+            ],
+          }),
+          updatedAt: nowSec,
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    await syncYieldData(db);
+
+    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }>;
+    const blockedRow = writeStatements.find(
+      (stmt) => stmt.boundValues?.[0] === "usdc-circle" && stmt.boundValues?.[1] === "protocol-api:morpho-vault:ethereum:0xresolv",
+    );
+    const allowedRow = writeStatements.find(
+      (stmt) => stmt.boundValues?.[0] === "usdc-circle" && stmt.boundValues?.[1] === "aave-v3-onchain:ethereum:0xusdc",
+    );
+
+    expect(blockedRow).toBeUndefined();
+    expect(allowedRow).toBeDefined();
+  });
+
   it("skips deterministic on-chain reads while cooldown is active", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);

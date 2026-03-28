@@ -13,6 +13,7 @@ import {
   getRankingStaleThresholdMs,
   matchAllDlPools,
   findBestLendingPool,
+  isBlockedYieldOpportunitySource,
 } from "../yield-helpers";
 import { computeTvlWeightedMedianApy, parseWarningSignals } from "../yield-sync/rankings";
 import { LENDING_PROTOCOL_ALLOWLIST } from "../yield-config";
@@ -703,6 +704,55 @@ describe("findBestLendingPool", () => {
     });
     expect(result).not.toBeNull();
     expect(result!.pool).toBe("p1");
+  });
+
+  it("skips blocked USR/Resolv lending venues", () => {
+    const result = findBestLendingPool(
+      "USDC",
+      [
+        {
+          pool: "blocked",
+          symbol: "USDC",
+          project: "aave-v3",
+          poolMeta: "Resolv USDC",
+          tvlUsd: 50_000_000,
+          apy: 8,
+          apyBase: 8,
+          apyReward: null,
+          stablecoin: true,
+          exposure: "single",
+        },
+        {
+          pool: "safe",
+          symbol: "USDC",
+          project: "aave-v3",
+          poolMeta: "Core USDC",
+          tvlUsd: 5_000_000,
+          apy: 4,
+          apyBase: 4,
+          apyReward: null,
+          stablecoin: true,
+          exposure: "single",
+        },
+      ],
+      allowlist,
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.pool).toBe("safe");
+  });
+});
+
+describe("isBlockedYieldOpportunitySource", () => {
+  it("matches Resolv and USR aliases", () => {
+    expect(isBlockedYieldOpportunitySource({ yieldSource: "Morpho: Resolv USDC" })).toBe(true);
+    expect(isBlockedYieldOpportunitySource({ yieldSource: "Vault using stUSR" })).toBe(true);
+    expect(isBlockedYieldOpportunitySource({ poolMeta: "wstUSR market" })).toBe(true);
+  });
+
+  it("does not block unrelated venues", () => {
+    expect(isBlockedYieldOpportunitySource({ yieldSource: "Aave v3 (ethereum)" })).toBe(false);
+    expect(isBlockedYieldOpportunitySource({ poolMeta: "Core USDC" })).toBe(false);
   });
 });
 

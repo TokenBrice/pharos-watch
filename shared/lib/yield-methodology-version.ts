@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "5.15",
+  currentVersion: "5.16",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "5.16",
+    title: "Blocked USR-Linked Lending Suggestions",
+    date: "2026-03-28",
+    effectiveAt: 1774688400,
+    summary:
+      "Yield suggestion publication now excludes lending-opportunity venues that are explicitly tied to Resolv / USR wrappers, so severely impaired wrapper ecosystems cannot surface as recommended base-asset yield routes.",
+    impact: [
+      "Supplemental protocol-API lending candidates such as `Morpho: Resolv USDC` are dropped before ranking publication when the venue label resolves to Resolv / `USR`, `stUSR`, or `wstUSR` exposures",
+      "Auto-discovered DeFiLlama lending pools now preserve `poolMeta` in the shared cache and apply the same Resolv / USR exclusion rule, keeping the hourly publisher and the slower supplemental lane aligned",
+      "The exclusion is scoped to `lending-opportunity` venues, so native tracked yield assets and their own methodology coverage remain unchanged",
+      "Yield methodology docs and the public changelog now document the explicit USR-linked venue exclusion rule",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.15",
     title: "Benchmark-Aware PYS For Cross-Currency Yield Context",

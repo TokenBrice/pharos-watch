@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v5.15`
+- **Current methodology version:** `v5.16`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -21,6 +21,7 @@ Rankings provenance now carries source-native freshness for derived sources:
 - protocol-native lending venue readers such as Aave V3 and Compound V3 stay in the curated Tier 2.5 lane rather than inheriting Tier 1 deterministic wrapper precedence, so a lower-yield supplemental market does not displace a stronger native wrapper purely by source family
 - wrapper resolution can now pin the intended DeFiLlama project in addition to chain and address, which keeps shared wrapper tokens fail-closed even when the same wrapper appears across multiple single-exposure venues
 - read-time `data-stale` warnings now follow source cadence: hourly families use the shared three-cycle publish threshold, supplemental families wait 6 hours so they do not false-positive inside their 4-hour refresh window, and `price-derived` rows wait 36 hours because they are backed by daily `supply_history` snapshots
+- published `lending-opportunity` suggestions now explicitly exclude Resolv / `USR`, `stUSR`, and `wstUSR`-linked venues across both supplemental protocol APIs and auto-discovered DeFiLlama lending pools, so impaired wrapper ecosystems do not surface as recommended base-asset yield routes
 
 ---
 
@@ -177,6 +178,8 @@ For coins whose native savings path is published by the protocol itself but is n
 
 Protocol-specific lending-market readers that query protocol state directly also live in this tier. Even when the transport is an on-chain call, these rows are treated as curated protocol-native venues rather than Tier 1 deterministic native-wrapper sources, so arbitration still prefers a stronger native wrapper or savings source when one exists.
 
+Published lending-opportunity suggestions also apply an explicit venue exclusion for Resolv / `USR`, `stUSR`, and `wstUSR`-linked markets. This filter is scoped to the suggestion layer for base assets such as USDC or USDT; it does not remove native tracked yield assets from the broader methodology inventory.
+
 **Current adapter:**
 
 | Coin ID | Source | Endpoint |
@@ -239,6 +242,8 @@ For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), 
 | Tier B (2026-03-25, $10M–$50M TVL) | convex-finance, yo-protocol, clearpool-lending, 3jane-lending, hyperlend-pooled, zest-v2, liquity-v2, echelon-market, termmax, beefy, gearbox |
 
 **Discovery logic:** Filters DL pools by `exposure === "single"`, `stablecoin === true`, project in allowlist, and reserved-pool exclusion. Resolution prefers underlying-token address matches over symbol matches. Symbol-only matching is allowed only when the coin remains unambiguous after chain scoping; otherwise the candidate is dropped. Current quality gates require `apy >= 0.1` and `tvlUsd >= 100_000`.
+
+**Explicit venue exclusion:** Even when a pool clears the generic quality gates above, published lending-opportunity suggestions exclude venues whose DeFiLlama `poolMeta` or supplemental source label identifies them as Resolv / `USR`, `stUSR`, or `wstUSR` linked.
 
 **Yield type:** `lending-opportunity` — distinguishes these from native yield coins on the frontend. The direct Aave v3 on-chain supply-rate path uses the same classification so rankings/cache schema validation stays aligned across deterministic and auto-discovered lending rows.
 

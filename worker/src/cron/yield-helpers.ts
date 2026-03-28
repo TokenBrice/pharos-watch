@@ -46,6 +46,10 @@ const TVL_OUTFLOW_THRESHOLD = -0.2;
 const YIELD_SPIKE_MIN_APY = 2.0; // only flag spike if currentApy > 2%
 const NEGATIVE_TREND_MIN_APY = 1.0; // only flag negative trend if apy30d > 1%
 const ZERO_YIELD_HISTORY_THRESHOLD = 0.5; // flag when current=0 but 30d avg > 0.5%
+const BLOCKED_YIELD_OPPORTUNITY_PATTERNS = [
+  /\bresolv\b/i,
+  /\b(?:usr|stusr|wstusr)\b/i,
+];
 
 export function computeApyFromRate(rateNow: number, ratePrev: number, days: number): number {
   if (ratePrev <= 0 || rateNow <= 0 || days <= 0) return 0;
@@ -99,6 +103,19 @@ export function detectWarningSignals(input: WarningInput): string[] {
   }
   if (input.currentApy === 0 && input.apy30d > ZERO_YIELD_HISTORY_THRESHOLD) signals.push("zero-yield");
   return signals;
+}
+
+export function isBlockedYieldOpportunitySource(params: {
+  yieldSource?: string | null;
+  poolMeta?: string | null;
+  symbol?: string | null;
+}): boolean {
+  const searchText = [params.yieldSource, params.poolMeta, params.symbol]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .join(" ");
+
+  if (!searchText) return false;
+  return BLOCKED_YIELD_OPPORTUNITY_PATTERNS.some((pattern) => pattern.test(searchText));
 }
 
 function isSupplementalOnchainSource(sourceKey: string | null | undefined): boolean {
@@ -292,6 +309,7 @@ export function findBestLendingPool(
     pool: string; symbol: string; project: string; tvlUsd: number;
     apy: number; apyBase: number | null; apyReward: number | null;
     stablecoin: boolean; exposure: string;
+    poolMeta?: string | null;
     underlyingTokens?: string[] | null;
     chain?: string;
   }>,
@@ -320,6 +338,7 @@ export function findBestLendingPool(
     allowlist.has(p.project) &&
     p.apy >= minApy &&
     p.tvlUsd >= minTvlUsd &&
+    !isBlockedYieldOpportunitySource({ poolMeta: p.poolMeta, symbol: p.symbol }) &&
     !reservedPoolIds.has(p.pool) &&
     (!chainFilter || !p.chain || chainFilter.has(resolveChainId(p.chain) ?? p.chain.toLowerCase()))
   );

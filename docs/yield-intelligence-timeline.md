@@ -1,8 +1,15 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.15` (2026-03-01 -> 2026-03-27).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.16` (2026-03-01 -> 2026-03-28).
 
 ---
+
+## v5.16 - Blocked USR-linked lending suggestions (Mar 28, 2026)
+
+- Published `lending-opportunity` suggestions now exclude venues explicitly tied to Resolv / `USR`, `stUSR`, or `wstUSR`
+- Supplemental protocol-API sources such as `Morpho: Resolv USDC` are dropped before ranking publication instead of competing for the best-source slot
+- The shared DeFiLlama stablecoin-pool cache now preserves `poolMeta`, allowing the same exclusion rule to apply on the auto-discovery path as well
+- The filter is scoped to lending suggestions for base assets; native tracked yield assets keep their existing methodology coverage
 
 ## v5.15 - Benchmark-aware PYS for cross-currency yield context (Mar 27, 2026)
 

@@ -3,6 +3,7 @@ export interface LlamaPool {
   chain: string;
   project: string;
   symbol: string;
+  poolMeta?: string | null;
   tvlUsd: number;
   volumeUsd1d: number | null;
   volumeUsd7d: number | null;
