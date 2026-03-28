@@ -40,9 +40,6 @@ export interface RawGraphLink {
   type: DependencyType;
 }
 
-type GraphDependencyEdgeInput = Pick<DependencyGraphEdge, "from" | "to">
-  & Partial<Pick<DependencyGraphEdge, "weight" | "type">>;
-
 export type HubTier = 0 | 1 | 2;
 
 export interface LayoutTarget {
@@ -208,7 +205,7 @@ export function pushTargetsOutOfLane(
 export function buildGraphData(
   cards: ReportCard[],
   mcapMap: Map<string, number>,
-  dependencyEdges: readonly GraphDependencyEdgeInput[] = buildDependencyGraphEdges(ACTIVE_STABLECOINS),
+  dependencyEdges: readonly DependencyGraphEdge[] = buildDependencyGraphEdges(ACTIVE_STABLECOINS),
 ): { nodes: GraphNode[]; links: GraphLink[] } {
   const cardMap = new Map(cards.map((c) => [c.id, c]));
   const liveIds = [...cardMap.keys()].filter((id) => !cardMap.get(id)!.isDefunct);
@@ -225,8 +222,8 @@ export function buildGraphData(
     liveLinks.push({
       source: edge.to,
       target: edge.from,
-      weight: edge.weight ?? 1,
-      type: edge.type ?? "collateral",
+      weight: edge.weight,
+      type: edge.type,
     });
   }
 

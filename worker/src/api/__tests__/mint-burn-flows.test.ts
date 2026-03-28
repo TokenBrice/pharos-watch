@@ -194,6 +194,105 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body.gauge.score).toBeNull();
   });
 
+  it("returns 503 when stablecoins cache is unavailable and no flow fallback cache exists", async () => {
+    const res = await handleMintBurnFlows(mockD1(), new URL("https://x/api/mint-burn-flows"));
+
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({
+      error: "Stablecoins data not yet available",
+    });
+  });
+
+  it("classifies safe inflows and risky outflows for flight-to-quality detection", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
+    const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [
+        { id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 60_000_000_000 } },
+        { id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 120_000_000_000 } },
+      ],
+    });
+    const reportCardCache = JSON.stringify({
+      scores: {
+        "usdc-circle": { score: 80, grade: "A" },
+        "usdt-tether": { score: 40, grade: "C" },
+      },
+      updatedAt: now,
+    });
+
+    const db = mockD1([
+      {
+        match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            chain_id: "ethereum",
+            hour_ts: now - 3600,
+            mint_count: 4,
+            burn_count: 1,
+            mint_volume_usd: 170_000_000,
+            burn_volume_usd: 20_000_000,
+            net_flow_usd: 150_000_000,
+          },
+          {
+            stablecoin_id: "usdt-tether",
+            chain_id: "ethereum",
+            hour_ts: now - 3600,
+            mint_count: 1,
+            burn_count: 5,
+            mint_volume_usd: 20_000_000,
+            burn_volume_usd: 220_000_000,
+            net_flow_usd: -200_000_000,
+          },
+        ],
+      },
+      {
+        match: "SUM(net_flow_usd) as net_flow_usd",
+        rows: [
+          { stablecoin_id: "usdc-circle", net_flow_usd: 150_000_000 },
+          { stablecoin_id: "usdt-tether", net_flow_usd: -200_000_000 },
+        ],
+      },
+      {
+        match: "SUM(net_flow_usd) as daily_net",
+        rows: [
+          { stablecoin_id: "usdc-circle", day_ts: tenDaysAgoDay, daily_net: 10_000_000, daily_abs: 190_000_000 },
+          { stablecoin_id: "usdt-tether", day_ts: tenDaysAgoDay, daily_net: -10_000_000, daily_abs: 240_000_000 },
+        ],
+      },
+      {
+        match: "MIN(hour_ts) as first_hour_ts",
+        rows: [
+          { stablecoin_id: "usdc-circle", first_hour_ts: tenDaysAgoHour },
+          { stablecoin_id: "usdt-tether", first_hour_ts: tenDaysAgoHour },
+        ],
+      },
+      { match: "FROM mint_burn_events", rows: [] },
+      {
+        match: "cache",
+        matchBinds: ["report_card_cache"],
+        rows: [{ key: "report_card_cache", value: reportCardCache, updated_at: now }],
+        first: { key: "report_card_cache", value: reportCardCache, updated_at: now },
+      },
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [{ key: "stablecoins", value: stablecoinsCache, updated_at: now }],
+        first: { key: "stablecoins", value: stablecoinsCache, updated_at: now },
+      },
+    ]);
+
+    const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows"));
+    expect(res.status).toBe(200);
+
+    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    expect(body.gauge.classificationSource).toBe("report-card-cache");
+    expect(body.gauge.flightToQuality).toBe(true);
+    expect(body.gauge.flightIntensity).toBe(20);
+    expect(body.sync?.classificationWarning).toBeNull();
+  });
+
   it("excludes NR no-activity coins from gauge weighting", async () => {
     const now = Math.floor(Date.now() / 1000);
     const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;

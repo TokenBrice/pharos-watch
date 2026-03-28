@@ -141,8 +141,8 @@ const ReportCardsMethodologySchema = z.object({
 const ReportCardsDependencyGraphEdgeSchema = z.object({
   from: z.string(),
   to: z.string(),
-  weight: z.number().optional(),
-  type: DependencyTypeSchema.optional(),
+  weight: z.number(),
+  type: DependencyTypeSchema,
 });
 
 const ReportCardsDependencyGraphSchema = z.object({
