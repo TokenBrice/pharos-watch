@@ -1,4 +1,5 @@
 import { REGISTRY_BY_ID, REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
+import { isKnownCoinId } from "@shared/lib/validate-coin-id";
 import {
   decodeStablecoinUrlToken,
   encodeStablecoinUrlToken,
@@ -18,8 +19,9 @@ export function parsePortfolioUrlParam(param: string): PortfolioHolding[] {
     if (!token || !amountRaw) continue;
 
     const coinId = decodeStablecoinUrlToken(token);
+    if (!coinId || !isKnownCoinId(coinId)) continue;
     const amount = Number(amountRaw);
-    if (coinId && Number.isFinite(amount) && amount > 0) {
+    if (Number.isFinite(amount) && amount > 0) {
       holdings.push({ coinId, amount });
     }
   }

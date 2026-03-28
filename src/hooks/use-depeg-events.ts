@@ -57,6 +57,12 @@ export function useInfiniteDepegEvents({
   const MAX_AUTO_LOAD_RETRIES = 3;
 
   useEffect(() => {
+    if (!autoLoadAll) {
+      retryCountRef.current = 0;
+    }
+  }, [autoLoadAll]);
+
+  useEffect(() => {
     if (!autoLoadAll || !enabled || !hasNextPage || isFetchingNextPage) {
       return;
     }

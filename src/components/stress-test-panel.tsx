@@ -9,6 +9,7 @@ import { GradeBadge } from "@/components/grade-badge";
 import { formatCurrency } from "@shared/lib/format";
 import type { StressTestState } from "@/hooks/use-stress-test";
 import type { ReportCardGrade } from "@shared/types";
+import { ReportCardGradeSchema } from "@shared/types/report-cards";
 import { Network, Play, ChevronDown, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trackEvent } from "@/lib/analytics";
@@ -181,7 +182,8 @@ export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelP
               id="stress-grade"
               value={stressTest.targetGrade ?? ""}
               onChange={(e) => {
-                const grade = (e.target.value as ReportCardGrade) || null;
+                const parsed = ReportCardGradeSchema.safeParse(e.target.value);
+                const grade = parsed.success ? parsed.data : null;
                 stressTest.setGrade(grade);
                 if (grade && stressTest.targetCoinId) {
                   trackEvent("stress_test_run", {

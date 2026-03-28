@@ -2,11 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { fetchStablecoinReserves } from "@/lib/api";
+import { createPollingQueryOptions } from "@/hooks/use-api-query";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
 import type { StablecoinReservesResponse } from "@shared/types";
 
-const LIVE_STALE_TIME = 60 * 60 * 1000; // 1 hour — hourly cron
-const LIVE_REFETCH_INTERVAL = 2 * 60 * 60 * 1000; // 2 hours
+// Reserves cron runs hourly; derive live stale/refetch from the shared polling helper convention.
+const RESERVES_CRON_INTERVAL = 3_600_000; // 1 hour
+const { staleTime: LIVE_STALE_TIME, refetchInterval: LIVE_REFETCH_INTERVAL } =
+  createPollingQueryOptions([], () => Promise.resolve(null), RESERVES_CRON_INTERVAL);
 const FALLBACK_STALE_TIME = 60 * 1000; // fallback/live-stale responses are intentionally short-lived
 const FALLBACK_REFETCH_INTERVAL = 2 * 60 * 1000;
 

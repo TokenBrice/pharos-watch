@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { X, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -47,14 +47,16 @@ export function CoinSelector({
   }, [open]);
 
   // Filter coins by search (must be above early return so keyboard handler can reference it)
-  const query = search.toLowerCase();
-  const filtered = query
-    ? coins.filter(
-        (c) =>
-          c.name.toLowerCase().includes(query) ||
-          c.symbol.toLowerCase().includes(query),
-      )
-    : coins;
+  const filtered = useMemo(() => {
+    const query = search.toLowerCase();
+    return query
+      ? coins.filter(
+          (c) =>
+            c.name.toLowerCase().includes(query) ||
+            c.symbol.toLowerCase().includes(query),
+        )
+      : coins;
+  }, [coins, search]);
 
   // Keyboard navigation
   const handleKeyDown = useCallback(

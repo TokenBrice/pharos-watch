@@ -160,7 +160,11 @@ export async function apiFetch<T>(
       if (resolvedMode === "strict") {
         throw new SchemaValidationError(path, issues);
       }
-      console.warn(`[API] Schema validation failed for ${path}:`, issues);
+      console.warn(`[API contract] Schema validation failed`, {
+        endpoint: path,
+        issueCount: result.error.issues.length,
+        issues,
+      });
       return data as T;
     }
     return result.data;
@@ -231,7 +235,11 @@ export async function apiFetchWithMeta<T>(
       if (resolvedMode === "strict") {
         throw new SchemaValidationError(path, issues);
       }
-      console.warn(`[API] Schema validation failed for ${path}:`, issues);
+      console.warn(`[API contract] Schema validation failed`, {
+        endpoint: path,
+        issueCount: result.error.issues.length,
+        issues,
+      });
       return { data: data as T, meta };
     }
     return { data: result.data, meta };

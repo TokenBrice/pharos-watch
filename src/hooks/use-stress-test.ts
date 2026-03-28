@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { computeStressedGrades, GRADE_THRESHOLDS } from "@shared/lib/report-cards";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { isKnownCoinId } from "@shared/lib/validate-coin-id";
 import type {
   ReportCard,
   ReportCardGrade,
@@ -111,7 +112,8 @@ export function parseStressSelectionFromSearch(
     return { coinId: null, grade: null };
   }
 
-  const coinId = decodeStablecoinUrlToken(stressParam);
+  const rawCoinId = decodeStablecoinUrlToken(stressParam);
+  const coinId = rawCoinId && isKnownCoinId(rawCoinId) ? rawCoinId : null;
   if (!coinId) {
     return { coinId: null, grade: null };
   }
