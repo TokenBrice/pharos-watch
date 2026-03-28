@@ -15,33 +15,73 @@
     "branchCount": 6
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 374,
+    "fileLines": 340,
     "maxFunctionLines": 293,
-    "branchCount": 29
+    "branchCount": 24
   },
   "src/app/methodology/sections/core-sections.tsx": {
     "fileLines": 1291,
     "maxFunctionLines": 1269,
     "branchCount": 0
   },
+  "src/app/methodology/sections/monitoring-sections.tsx": {
+    "fileLines": 1069,
+    "maxFunctionLines": 1050,
+    "branchCount": 0
+  },
+  "src/app/methodology/scoring-changelog/page.tsx": {
+    "fileLines": 1235,
+    "maxFunctionLines": 1106,
+    "branchCount": 0
+  },
   "src/app/coverage/client.tsx": {
-    "fileLines": 806,
-    "maxFunctionLines": 412,
-    "branchCount": 27
+    "fileLines": 441,
+    "maxFunctionLines": 402,
+    "branchCount": 8
   },
   "worker/src/cron/daily-digest/collectors.ts": {
-    "fileLines": 913,
+    "fileLines": 955,
     "maxFunctionLines": 121,
-    "branchCount": 83
+    "branchCount": 85
+  },
+  "worker/src/cron/daily-digest.ts": {
+    "fileLines": 833,
+    "maxFunctionLines": 425,
+    "branchCount": 128
+  },
+  "worker/src/cron/enrich-prices.ts": {
+    "fileLines": 865,
+    "maxFunctionLines": 447,
+    "branchCount": 131
+  },
+  "worker/src/cron/sync-blacklist.ts": {
+    "fileLines": 937,
+    "maxFunctionLines": 376,
+    "branchCount": 92
   },
   "worker/src/cron/sync-fx-rates.ts": {
-    "fileLines": 799,
-    "maxFunctionLines": 543,
-    "branchCount": 99
+    "fileLines": 417,
+    "maxFunctionLines": 188,
+    "branchCount": 34
+  },
+  "worker/src/cron/yield-sync/sources.ts": {
+    "fileLines": 1529,
+    "maxFunctionLines": 136,
+    "branchCount": 194
+  },
+  "worker/src/lib/live-reserves-store.ts": {
+    "fileLines": 1363,
+    "maxFunctionLines": 120,
+    "branchCount": 105
   },
   "worker/src/lib/status-evaluation.ts": {
-    "fileLines": 742,
-    "maxFunctionLines": 577,
-    "branchCount": 83
+    "fileLines": 584,
+    "maxFunctionLines": 434,
+    "branchCount": 56
+  },
+  "worker/src/lib/status-reliability.ts": {
+    "fileLines": 781,
+    "maxFunctionLines": 202,
+    "branchCount": 51
   }
 }
