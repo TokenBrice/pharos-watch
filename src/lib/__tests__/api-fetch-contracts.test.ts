@@ -166,13 +166,14 @@ describe("api contract validation policy", () => {
   });
 
   it("captures Warning header in apiFetchWithMeta", async () => {
+    // age 11000s with maxAge 900s → ratio 12.2 → stale (> FRESHNESS_RATIOS.DEGRADED)
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify({ ok: true }), {
         status: 200,
         headers: {
           "Content-Type": "application/json",
-          "X-Data-Age": "1900",
-          "Warning": '110 - "Response is stale (1900s old, max 900s)"',
+          "X-Data-Age": "11000",
+          "Warning": '110 - "Response is stale (11000s old, max 900s)"',
         },
       })
     );

@@ -1,6 +1,7 @@
 import { z, type ZodType } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
+import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 
 export type ApiContractMode = "strict" | "warn";
 
@@ -200,7 +201,7 @@ export async function apiFetchWithMeta<T>(
       const age = Number(ageHeader);
       if (Number.isFinite(age) && age >= 0) {
         const ratio = age / maxAgeSec;
-        const status = ratio <= 1 ? "fresh" : ratio <= 1.5 ? "degraded" : "stale";
+        const status = ratio <= FRESHNESS_RATIOS.FRESH ? "fresh" : ratio <= FRESHNESS_RATIOS.DEGRADED ? "degraded" : "stale";
         meta = { updatedAt: Math.floor(Date.now() / 1000) - age, ageSeconds: age, status };
       }
     }
