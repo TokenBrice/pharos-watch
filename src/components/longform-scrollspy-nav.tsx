@@ -151,7 +151,7 @@ export function LongformScrollspyNav({
     <div
       ref={railRef}
       className={cn(
-        "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 -mx-4 rounded-xl border border-border/60 bg-background/95 px-3 py-2 shadow-[0_8px_24px_oklch(0_0_0_/0.1)] backdrop-blur supports-[backdrop-filter]:bg-background/85 md:top-0 md:rounded-2xl md:px-4 md:py-2.5",
+        "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 -mx-4 rounded-xl border border-border/60 bg-background px-3 py-2 shadow-[0_8px_24px_oklch(0_0_0_/0.1)] md:top-0 md:rounded-2xl md:px-4 md:py-2.5",
         className,
       )}
     >
@@ -166,7 +166,7 @@ export function LongformScrollspyNav({
       </div>
       <div className="relative">
         {/* Fade mask hints at off-screen content */}
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background/95 to-transparent sm:hidden" aria-hidden="true" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background to-transparent sm:hidden" aria-hidden="true" />
       <nav aria-label={navAriaLabel} className="overflow-x-auto pb-0.5 scrollbar-none -mx-1 px-1">
         <div className="flex min-w-max snap-x snap-mandatory items-center gap-1.5">
           {sections.map((section) => (

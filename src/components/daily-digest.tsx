@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Newsreader } from "next/font/google";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDailyDigest } from "@/hooks/api-hooks";
 import { getDigestBodyParagraphs, EDITORIAL_BODY_STYLE } from "@/lib/digest";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { digestDisplay } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
 
 function formatMasthead(ts: number): string {
@@ -100,15 +100,6 @@ export function DigestFullDisplay({ label, dateString, title, paragraphs, ctaHre
     </div>
   );
 }
-
-const digestDisplay = Newsreader({
-  weight: "variable",
-  style: ["normal", "italic"],
-  subsets: ["latin"],
-  display: "swap",
-  axes: ["opsz"],
-  fallback: ["Georgia", "Times New Roman", "serif"],
-});
 
 interface DailyDigestProps {
   variant?: "preview" | "full";

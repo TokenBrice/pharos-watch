@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Newsreader } from "next/font/google";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { DigestSnapshot } from "@/components/digest-snapshot";
 import { splitDigestParagraphs, EDITORIAL_BODY_STYLE } from "@/lib/digest";
+import { digestDisplay } from "@/lib/fonts";
 import { safeJsonLd } from "@/lib/json-ld";
 import { summarizeText } from "@/lib/page-metadata";
 import { SITE_URL } from "@/lib/site-config";
@@ -19,15 +19,6 @@ interface DigestEntry {
   digestType?: "daily" | "weekly";
   editionNumber?: number;
 }
-
-const titleFont = Newsreader({
-  weight: "variable",
-  style: ["normal", "italic"],
-  subsets: ["latin"],
-  display: "swap",
-  axes: ["opsz"],
-  fallback: ["Georgia", "Times New Roman", "serif"],
-});
 
 const allDigests = digests as DigestEntry[];
 const digestByDate = new Map(allDigests.map((d) => [d.date, d]));
@@ -141,7 +132,7 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
             {editionKicker}
           </p>
         )}
-        <h1 className={`${titleFont.className} text-[clamp(2.2rem,5vw,3.5rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-foreground/98 [text-wrap:balance]`}>{digest.title}</h1>
+        <h1 className={`${digestDisplay.className} text-[clamp(2.2rem,5vw,3.5rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-foreground/98 [text-wrap:balance]`}>{digest.title}</h1>
         <p className="text-sm text-muted-foreground">{formatted}</p>
       </div>
 

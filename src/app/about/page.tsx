@@ -536,7 +536,7 @@ export default function AboutPage() {
               <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
                 Telegram alerts cover DEWS state changes, depeg events, and safety grade changes.
               </p>
-              <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
+              <Button asChild variant="default" className={CTA_BUTTON_CLASS}>
                 <Link href="/telegram/">
                   Open @PharosWatchBot
                   <ArrowRight className="h-4 w-4" />

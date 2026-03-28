@@ -14,7 +14,7 @@ interface SiteHeaderProps {
 }
 
 const METRIC_PILL_CLASS =
-  "inline-flex items-center rounded-full border px-2.5 py-1 font-mono tabular-nums text-muted-foreground backdrop-blur-sm" +
+  "inline-flex items-center rounded-full border px-2.5 py-1 font-mono tabular-nums text-muted-foreground" +
   " border-[var(--control-pill-border)] bg-[var(--control-pill-bg)] shadow-[inset_0_1px_0_oklch(1_0_0_/0.08)]";
 
 export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {

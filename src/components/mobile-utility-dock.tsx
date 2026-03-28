@@ -55,7 +55,7 @@ export function MobileUtilityDock() {
         }}
       >
         <div className={cn(
-          "pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/92 p-1 backdrop-blur-md",
+          "pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background p-1",
           "shadow-[0_-4px_20px_oklch(0_0_0_/0.08),0_14px_38px_oklch(0_0_0_/0.28)]",
           "dark:shadow-[0_-4px_20px_oklch(0_0_0_/0.15),0_14px_38px_oklch(0_0_0_/0.35)]"
         )}>
@@ -76,7 +76,7 @@ export function MobileUtilityDock() {
             aria-hidden={!showScrollTop}
             tabIndex={showScrollTop ? 0 : -1}
             className={cn(
-              "pharos-focus-ring flex size-11 items-center justify-center rounded-full border border-border/70 bg-card/92 text-muted-foreground transition-[opacity,transform,color,background-color,border-color] duration-200",
+              "pharos-focus-ring flex size-11 items-center justify-center rounded-full border border-border/70 bg-card text-muted-foreground transition-[opacity,transform,color,background-color,border-color] duration-200",
               showScrollTop ? "opacity-100" : "pointer-events-none -translate-y-1 opacity-0",
             )}
           >

@@ -251,7 +251,7 @@
     width: 4px;
     cursor: col-resize;
     opacity: 0;
-    transition: opacity 0.15s;
+    transition: opacity var(--motion-duration-fast);
     background: var(--brand-accent);
   }
   
@@ -359,7 +359,6 @@
   .pharos-card-shell {
     @apply rounded-xl border border-border/70 bg-card/78 shadow-sm;
     background-image: var(--card-shell-highlight), var(--card-shell-bg);
-    backdrop-filter: saturate(1.08);
     box-shadow: var(--card-shadow);
   }
 
@@ -653,8 +652,7 @@
     z-index: 10;
   }
   .table-header-sticky thead tr {
-    backdrop-filter: blur(10px);
-    background: color-mix(in oklab, var(--table-header-bg) 88%, transparent);
+    background: var(--table-header-bg);
     box-shadow: var(--table-header-shadow);
   }
   /* Shadow appears when header is sticky (scrolled) */

@@ -59,10 +59,10 @@ function getScoreTextClass(score: number): string {
 }
 
 function ScoreIcon({ score }: { score: number }) {
-  if (score >= 80) return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" aria-hidden="true" />;
-  if (score >= 60) return <AlertCircle className="h-3.5 w-3.5 text-amber-500" aria-hidden="true" />;
-  if (score >= 40) return <AlertTriangle className="h-3.5 w-3.5 text-orange-500" aria-hidden="true" />;
-  return <XCircle className="h-3.5 w-3.5 text-red-500" aria-hidden="true" />;
+  if (score >= 80) return <><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" aria-hidden="true" /><span className="sr-only">Healthy</span></>;
+  if (score >= 60) return <><AlertCircle className="h-3.5 w-3.5 text-amber-500" aria-hidden="true" /><span className="sr-only">Warning</span></>;
+  if (score >= 40) return <><AlertTriangle className="h-3.5 w-3.5 text-orange-500" aria-hidden="true" /><span className="sr-only">Degraded</span></>;
+  return <><XCircle className="h-3.5 w-3.5 text-red-500" aria-hidden="true" /><span className="sr-only">Critical</span></>;
 }
 
 function FactorGauge({

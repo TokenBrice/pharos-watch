@@ -173,7 +173,7 @@ export function StatusBanner({
           </div>
         </div>
 
-        <div className="rounded-[1.25rem] border border-white/12 bg-black/18 px-4 py-4 backdrop-blur-[2px]">
+        <div className="rounded-[1.25rem] border border-white/12 bg-black/18 px-4 py-4">
           <div className="text-[11px] uppercase tracking-[0.3em] text-white/45">Last status eval</div>
           <div className="mt-3 text-base font-medium leading-snug text-white/92">{time}</div>
           <div className="mt-3 border-t border-white/10 pt-3 text-xs leading-relaxed text-white/62">

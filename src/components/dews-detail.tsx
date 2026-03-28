@@ -5,7 +5,8 @@ import { AreaChart, Area, ReferenceLine } from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useStressSignalDetail } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
-import { THREAT_BAND_COLORS, THREAT_BAND_LABELS, THREAT_BAND_HEX } from "@shared/lib/classification";
+import { THREAT_BAND_COLORS, THREAT_BAND_LABELS } from "@shared/lib/classification";
+import { THREAT_BAND_HEX, SIGNAL_CHART_COLORS } from "@/lib/chart-colors";
 import type { ThreatBand } from "@shared/lib/classification";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
@@ -23,18 +24,6 @@ const SIGNAL_META: Record<string, { name: string; metricKey: string; metricLabel
   black: { name: "Blacklist Activity", metricKey: "events24h", metricLabel: "24h events" },
   flow: { name: "Mint/Burn Flow", metricKey: "burnSurge", metricLabel: "burn surge" },
   yield: { name: "Yield Anomaly", metricKey: "warnings", metricLabel: "warnings" },
-};
-
-/** Per-signal chart colors (Tailwind 400-level for dark bg readability) */
-const SIGNAL_CHART_COLORS: Record<string, string> = {
-  supply: "#60a5fa",
-  pool: "#fbbf24",
-  liq: "#a78bfa",
-  price: "#22d3ee",
-  diverg: "#f472b6",
-  black: "#f87171",
-  flow: "#34d399",
-  yield: "#fb923c",
 };
 
 /** Map a signal score to its severity color (per-signal, not composite band) */

@@ -14,7 +14,6 @@ import {
   AreaChart,
   Area,
   ResponsiveContainer,
-  Legend,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartSkeleton } from "@/components/chart-skeleton";
@@ -75,40 +74,54 @@ function CauseOfDeathDonutChart({
 }) {
   return (
     <CemeteryChartCard title={title} ariaLabel={ariaLabel}>
-      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            innerRadius="35%"
-            outerRadius="60%"
-            dataKey="value"
-            nameKey="name"
-            paddingAngle={3}
-            strokeWidth={0}
-          >
-            {data.map((datum) => (
-              <Cell key={datum.cause} fill={CAUSE_HEX[datum.cause]} />
-            ))}
-          </Pie>
-          <Tooltip
-            content={({ active, payload }) => {
-              if (!payload?.[0]) return null;
-              const datum = payload[0].payload as CauseOfDeathDonutDatum;
-              return (
-                <ChartTooltip active={active}>
-                  <p className="font-semibold" style={{ color: CAUSE_HEX[datum.cause] }}>
-                    {datum.name}
-                  </p>
-                  <div className="font-mono tabular-nums">{formatValue(datum, total)}</div>
-                </ChartTooltip>
-              );
-            }}
-          />
-          <Legend iconType="circle" iconSize={10} wrapperStyle={{ fontSize: 12 }} />
-        </PieChart>
-      </ResponsiveContainer>
+      <div className="flex h-full flex-col">
+        <div className="mb-2 flex flex-wrap gap-2">
+          {data.map((datum) => (
+            <div key={datum.cause} className="pharos-chart-legend-chip">
+              <span
+                className="inline-block h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: CAUSE_HEX[datum.cause] }}
+              />
+              {datum.name}
+            </div>
+          ))}
+        </div>
+        <div className="min-h-0 flex-1">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+            <PieChart>
+              <Pie
+                data={data}
+                cx="50%"
+                cy="50%"
+                innerRadius="35%"
+                outerRadius="60%"
+                dataKey="value"
+                nameKey="name"
+                paddingAngle={3}
+                strokeWidth={0}
+              >
+                {data.map((datum) => (
+                  <Cell key={datum.cause} fill={CAUSE_HEX[datum.cause]} />
+                ))}
+              </Pie>
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (!payload?.[0]) return null;
+                  const datum = payload[0].payload as CauseOfDeathDonutDatum;
+                  return (
+                    <ChartTooltip active={active}>
+                      <p className="font-semibold" style={{ color: CAUSE_HEX[datum.cause] }}>
+                        {datum.name}
+                      </p>
+                      <div className="font-mono tabular-nums">{formatValue(datum, total)}</div>
+                    </ChartTooltip>
+                  );
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
     </CemeteryChartCard>
   );
 }
@@ -208,71 +221,84 @@ function DeathsByYearChart() {
 
   return (
     <CemeteryChartCard title="Deaths per Year" ariaLabel="Stablecoin deaths per year">
-      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-        <BarChart data={data} barGap={4} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-          <XAxis
-            dataKey="year"
-            tick={{
-              fontSize: 12,
-              fontFamily: "var(--font-mono, monospace)",
-              fill: "var(--color-muted-foreground)",
-            }}
-            tickLine={false}
-            axisLine={false}
-          />
-          <YAxis
-            yAxisId="left"
-            tick={{
-              fontSize: 12,
-              fontFamily: "var(--font-mono, monospace)",
-              fill: "var(--color-muted-foreground)",
-            }}
-            tickLine={false}
-            axisLine={false}
-            allowDecimals={false}
-          />
-          <YAxis
-            yAxisId="right"
-            orientation="right"
-            tick={{
-              fontSize: 12,
-              fontFamily: "var(--font-mono, monospace)",
-              fill: "var(--color-muted-foreground)",
-            }}
-            tickLine={false}
-            axisLine={false}
-            tickFormatter={(v: number) => formatCurrency(v, 0)}
-          />
-          <Tooltip
-            content={({ active, payload, label }) => {
-              if (!payload?.length) return null;
-              return (
-                <ChartTooltip active={active}>
-                  <p className="font-semibold mb-1">{label}</p>
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: CHART_RED }} />
-                      <span>Deaths</span>
-                    </div>
-                    <span className="font-mono tabular-nums">{payload[0]?.value}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: CHART_BLUE }} />
-                      <span>Peak Mcap</span>
-                    </div>
-                    <span className="font-mono tabular-nums">{formatCurrency(Number(payload[1]?.value ?? 0), 1)}</span>
-                  </div>
-                </ChartTooltip>
-              );
-            }}
-          />
-          <Legend iconType="square" iconSize={10} wrapperStyle={{ fontSize: 12 }} />
-          <Bar yAxisId="left" dataKey="count" name="Deaths" fill={CHART_RED} radius={[3, 3, 0, 0]} />
-          <Bar yAxisId="right" dataKey="mcap" name="Peak Mcap" fill={CHART_BLUE} radius={[3, 3, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
+      <div className="flex h-full flex-col">
+        <div className="mb-2 flex flex-wrap gap-2">
+          <div className="pharos-chart-legend-chip">
+            <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: CHART_RED }} />
+            Deaths
+          </div>
+          <div className="pharos-chart-legend-chip">
+            <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: CHART_BLUE }} />
+            Peak Mcap
+          </div>
+        </div>
+        <div className="min-h-0 flex-1">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+            <BarChart data={data} barGap={4} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+              <XAxis
+                dataKey="year"
+                tick={{
+                  fontSize: 12,
+                  fontFamily: "var(--font-mono, monospace)",
+                  fill: "var(--color-muted-foreground)",
+                }}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                yAxisId="left"
+                tick={{
+                  fontSize: 12,
+                  fontFamily: "var(--font-mono, monospace)",
+                  fill: "var(--color-muted-foreground)",
+                }}
+                tickLine={false}
+                axisLine={false}
+                allowDecimals={false}
+              />
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                tick={{
+                  fontSize: 12,
+                  fontFamily: "var(--font-mono, monospace)",
+                  fill: "var(--color-muted-foreground)",
+                }}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(v: number) => formatCurrency(v, 0)}
+              />
+              <Tooltip
+                content={({ active, payload, label }) => {
+                  if (!payload?.length) return null;
+                  return (
+                    <ChartTooltip active={active}>
+                      <p className="font-semibold mb-1">{label}</p>
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: CHART_RED }} />
+                          <span>Deaths</span>
+                        </div>
+                        <span className="font-mono tabular-nums">{payload[0]?.value}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: CHART_BLUE }} />
+                          <span>Peak Mcap</span>
+                        </div>
+                        <span className="font-mono tabular-nums">{formatCurrency(Number(payload[1]?.value ?? 0), 1)}</span>
+                      </div>
+                    </ChartTooltip>
+                  );
+                }}
+              />
+              <Bar yAxisId="left" dataKey="count" name="Deaths" fill={CHART_RED} radius={[3, 3, 0, 0]} />
+              <Bar yAxisId="right" dataKey="mcap" name="Peak Mcap" fill={CHART_BLUE} radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
     </CemeteryChartCard>
   );
 }

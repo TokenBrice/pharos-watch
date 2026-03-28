@@ -11,7 +11,7 @@ import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
-import { formatChartDate } from "@shared/lib/format";
+import { formatChartDate, formatChartPercent } from "@shared/lib/format";
 import { mergeSeriesByTimestamp } from "@/lib/chart-utils";
 
 interface SeriesData {
@@ -101,7 +101,7 @@ export function ComparisonChart({
   const defaultFormat = (v: number) => v.toLocaleString();
   const valueFormatter = formatValue ?? defaultFormat;
   const activeFormatter = normalized
-    ? (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`
+    ? (v: number) => formatChartPercent(v)
     : valueFormatter;
 
   return (

@@ -55,3 +55,35 @@ export const RECHARTS_TOOLTIP_STYLES = {
   labelStyle: { color: "var(--color-foreground)", fontFamily: "var(--font-sans)", fontWeight: 500, fontSize: "0.75rem", marginBottom: "0.5rem" },
   itemStyle: { color: "var(--color-muted-foreground)", fontFamily: "var(--font-mono)", fontSize: "0.875rem" },
 } as const;
+
+export { THREAT_BAND_HEX } from "@shared/lib/classification";
+
+// ---------------------------------------------------------------------------
+// Extracted inline chart colors -- previously defined inside components.
+// ---------------------------------------------------------------------------
+
+/** Reserve-risk treemap colors (from reserve-treemap.tsx) */
+export const RISK_COLORS: Record<string, string> = {
+  "very-low": "#16a34a",
+  low: "#22c55e",
+  medium: "#f59e0b",
+  high: "#f97316",
+  "very-high": "#ef4444",
+};
+
+/** Per-DEWS-signal chart colors (from dews-detail.tsx) */
+export const SIGNAL_CHART_COLORS: Record<string, string> = {
+  supply: "#60a5fa",
+  pool: "#fbbf24",
+  liq: "#a78bfa",
+  price: "#22d3ee",
+  diverg: "#f472b6",
+  black: "#f87171",
+  flow: "#34d399",
+  yield: "#fb923c",
+};
+
+/** Brand-specific colors for the total market-cap chart (from total-mcap-chart.tsx) */
+export const USDT_GREEN = "#26a17b";
+export const USDC_BLUE = "#2775ca";
+export const SKY_YELLOW = "#f5a623";

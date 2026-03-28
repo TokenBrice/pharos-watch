@@ -331,7 +331,7 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
                   return pct > 0 ? <div key={tier.key} className={`h-full ${tier.bg}`} style={{ width: `${pct}%` }} /> : null;
                 })}
               </div>
-              <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+              <div className="grid gap-x-4 gap-y-1 @sm:grid-cols-2">
                 {COLLATERAL_TIERS.map((tier) => {
                   const mcap = stats.collateralMcap[tier.key] ?? 0;
                   if (mcap === 0) return null;

@@ -65,7 +65,7 @@ export function DataTableShell<K extends string>({
     )}>
       {topSlot}
       <Table className={cn(tableClassName, striped && "pharos-table-striped", `pharos-density-${density}`)}>
-        <TableHeader className={cn("bg-muted/50 backdrop-blur-sm", headerClassName)}>
+        <TableHeader className={cn("bg-muted", headerClassName)}>
           <TableRow>
             {columns.map((column) =>
               column.sortKey && sort ? (

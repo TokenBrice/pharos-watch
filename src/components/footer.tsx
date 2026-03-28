@@ -68,7 +68,7 @@ export function Footer() {
             <Link
               key={link.href}
               href={link.href}
-              className="pharos-focus-ring text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="pharos-focus-ring text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline hover:underline-offset-4"
             >
               {link.label}
             </Link>
@@ -87,7 +87,7 @@ export function Footer() {
               <Link
                 key={cat.href}
                 href={cat.href}
-                className="pharos-focus-ring rounded-full px-2 py-1 hover:text-foreground"
+                className="pharos-focus-ring rounded-full px-2 py-1 hover:text-foreground hover:underline hover:underline-offset-4"
               >
                 {cat.label}
               </Link>
@@ -98,13 +98,13 @@ export function Footer() {
         <div className="flex flex-col gap-4 border-t border-border/50 pt-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <nav aria-label="Browse by category" className="hidden flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground sm:flex">
             {CATEGORY_LINKS.map((cat) => (
-              <Link key={cat.href} href={cat.href} className="pharos-focus-ring hover:text-foreground transition-colors">
+              <Link key={cat.href} href={cat.href} className="pharos-focus-ring hover:text-foreground hover:underline hover:underline-offset-4 transition-colors">
                 {cat.label}
               </Link>
             ))}
           </nav>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
-            <Link href="/privacy/" className="pharos-focus-ring rounded-sm hover:text-foreground">Privacy</Link>
+            <Link href="/privacy/" className="pharos-focus-ring rounded-sm hover:text-foreground hover:underline hover:underline-offset-4">Privacy</Link>
             <p>Not financial advice. Data is provided as-is for informational purposes only.</p>
           </div>
         </div>

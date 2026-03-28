@@ -263,7 +263,7 @@ function YieldHistoryTooltip({
   return (
     <div
       className={cn(
-        "min-w-[180px] rounded-xl border border-border/70 bg-card/95 px-3 py-2.5 shadow-lg backdrop-blur-sm",
+        "min-w-[180px] rounded-xl border border-border/70 bg-card px-3 py-2.5 shadow-lg",
         compact ? "text-[11px]" : "text-xs",
       )}
     >
@@ -541,7 +541,10 @@ export function YieldHistoryChart({
       />
         <ChartShell compact={compact}>
           <div className={cn("flex items-center justify-center text-center", chartHeightClass)}>
-            <p className="text-sm text-muted-foreground">No yield history available</p>
+            <div>
+              <p className="text-sm text-muted-foreground">No yield history available</p>
+              <p className="mt-1 text-xs text-muted-foreground/70">Select a different yield source or check back later.</p>
+            </div>
           </div>
         </ChartShell>
       </div>

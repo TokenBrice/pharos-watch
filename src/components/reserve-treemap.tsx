@@ -7,20 +7,13 @@ import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/secti
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
+import { RISK_COLORS } from "@/lib/chart-colors";
 import type { ReserveSlice, ReserveRisk } from "@shared/types";
 
 interface ReserveTreemapProps {
   reserves: ReserveSlice[];
   isLive?: boolean;
 }
-
-const RISK_COLORS: Record<ReserveRisk, string> = {
-  "very-low": "#16a34a",
-  low: "#22c55e",
-  medium: "#f59e0b",
-  high: "#f97316",
-  "very-high": "#ef4444",
-};
 
 const RISK_LABELS: Record<ReserveRisk, string> = {
   "very-low": "Very Low Risk",

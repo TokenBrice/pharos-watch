@@ -244,8 +244,9 @@ export function YieldScatterPlot({
 
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-[500px] text-sm text-muted-foreground">
-        No scatter data available (safety scores required)
+      <div className="flex flex-col items-center justify-center h-[500px] text-sm text-muted-foreground">
+        <p>No scatter data available (safety scores required)</p>
+        <p className="mt-1 text-xs text-muted-foreground/70">Safety scores are calculated daily for tracked stablecoins.</p>
       </div>
     );
   }

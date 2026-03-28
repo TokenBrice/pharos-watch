@@ -26,7 +26,7 @@ const SKELETON_CARDS = Array.from({ length: 4 }, (_, i) => i);
 const KPI_CHIP_BASE =
   "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] shadow-[inset_0_1px_0_oklch(1_0_0_/0.2)] transition-colors";
 const SNAPSHOT_PILL_BASE =
-  "inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur-sm" +
+  "inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground" +
   " border-[var(--control-pill-border)] bg-[var(--control-pill-bg)] shadow-[inset_0_1px_0_oklch(1_0_0_/0.08)]";
 
 function trendDirection(value: number): TrendDirection {
@@ -220,7 +220,7 @@ function PrimarySnapshotCard({
 
   return (
     <div
-      className={`rounded-[1.4rem] border px-4 py-3.5 transition-all duration-500 sm:px-5 sm:py-4 ${
+      className={`@container rounded-[1.4rem] border px-4 py-3.5 transition-all duration-500 @sm:px-5 @sm:py-4 ${
         isCrisis ? "animate-pulse" : ""
       }`}
       style={{
@@ -239,7 +239,7 @@ function PrimarySnapshotCard({
         <div className="min-w-0 space-y-2">
           <div className="flex w-fit flex-col items-center gap-1.5">
             <div className="flex items-center gap-1.5">
-              <p className="text-center text-[14px] font-semibold uppercase tracking-[0.14em] text-slate-600 dark:text-primary/80 sm:text-[13px]">
+              <p className="text-center text-[14px] font-semibold uppercase tracking-[0.14em] text-slate-600 dark:text-primary/80 @sm:text-[13px]">
                 PSI
               </p>
               <span className="relative flex h-2 w-2">
@@ -249,7 +249,7 @@ function PrimarySnapshotCard({
             </div>
             <div
               aria-live="polite"
-              className={`font-mono text-[3.2rem] font-extrabold leading-none tabular-nums sm:text-[3.4rem] ${valueClassName ?? ""}`}
+              className={`font-mono text-[3.2rem] font-extrabold leading-none tabular-nums @sm:text-[3.4rem] ${valueClassName ?? ""}`}
             >
               {value}
             </div>

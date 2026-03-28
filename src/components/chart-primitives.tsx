@@ -55,7 +55,7 @@ export function TimeXAxis({
 
 type MonoYAxisProps = ComponentProps<typeof YAxis>;
 
-export function MonoYAxis({ tick = MONO_AXIS_TICK, tickLine = false, axisLine = false, width = 64, tickMargin = 8, ...props }: MonoYAxisProps) {
+export function MonoYAxis({ tick = MONO_AXIS_TICK, tickLine = false, axisLine = false, width = 56, tickMargin = 8, ...props }: MonoYAxisProps) {
   return (
     <YAxis
       tick={tick}

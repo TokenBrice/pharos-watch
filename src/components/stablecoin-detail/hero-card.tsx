@@ -122,6 +122,75 @@ function LiquityForkBadge({ variant }: { variant?: "v1" | "v2" }) {
   );
 }
 
+interface TertiaryMetricConfig {
+  key: string;
+  label: React.ReactNode;
+  mobileLabel?: React.ReactNode;
+  value: string | number;
+  subValue?: string;
+  colorClass?: string;
+}
+
+function HeroTertiaryMetrics({
+  metrics,
+  chainCount,
+  liquityForkVariant,
+  earlyPegScore,
+  trackingSpanDays,
+  activeDepeg,
+  mobile = false,
+}: {
+  metrics: TertiaryMetricConfig[];
+  chainCount: number;
+  liquityForkVariant?: "v1" | "v2";
+  earlyPegScore: boolean;
+  trackingSpanDays: number;
+  activeDepeg: boolean;
+  mobile?: boolean;
+}) {
+  return (
+    <>
+      <div className={mobile ? "mt-3 flex flex-wrap gap-2" : "flex flex-wrap items-center gap-3"}>
+        {metrics.map((metric) => (
+          <MetricChip
+            key={metric.key}
+            label={mobile ? (metric.mobileLabel ?? metric.label) : metric.label}
+            value={metric.value}
+            subValue={metric.subValue}
+            colorClass={metric.colorClass}
+          />
+        ))}
+        {mobile ? (
+          <div className="flex items-center gap-1 rounded-lg border border-border/40 bg-background/30 px-2.5 py-1.5">
+            <span className="text-[11px] text-muted-foreground">{chainCount} chains</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 rounded-lg border border-border/40 bg-background/30 px-3 py-1.5">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Chains</span>
+            <span className="text-base font-bold font-mono">{chainCount}</span>
+          </div>
+        )}
+        <LiquityForkBadge variant={liquityForkVariant} />
+        {!mobile && earlyPegScore && (
+          <span className="text-xs text-amber-600 dark:text-amber-400">
+            Early peg score · {trackingSpanDays}d tracked
+          </span>
+        )}
+      </div>
+
+      {activeDepeg && (
+        <div
+          className={mobile
+            ? "mt-3 rounded-lg border border-red-500/20 bg-red-500/8 px-3 py-2 text-xs text-red-700 dark:text-red-400"
+            : "rounded-lg border border-red-500/20 bg-red-500/8 px-4 py-2.5 text-sm text-red-700 dark:text-red-400"}
+        >
+          {mobile ? "Active depeg detected" : "Active depeg detected — view details in Depeg History"}
+        </div>
+      )}
+    </>
+  );
+}
+
 function HeroClassificationLine({ coin }: { coin: StablecoinMeta }) {
   return (
     <p className="text-xs text-muted-foreground">
@@ -337,6 +406,53 @@ export function HeroCard({
       color: THREAT_BAND_TEXT_COLORS[stressSignal.band],
     };
   })();
+  const tertiaryMetrics: TertiaryMetricConfig[] = [
+    {
+      key: "peg-score",
+      label: <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>,
+      mobileLabel: <MethodologyLabel topic="pegScore">Peg</MethodologyLabel>,
+      value: pegScoreDisplay.value,
+      subValue: pegScoreDisplay.sub,
+      colorClass: pegScoreDisplay.color,
+    },
+    {
+      key: "liquidity",
+      label: <MethodologyLabel topic="liquidityScore">Liquidity</MethodologyLabel>,
+      mobileLabel: <MethodologyLabel topic="liquidityScore">Liq</MethodologyLabel>,
+      value: liqDisplay.value,
+      subValue: liqDisplay.sub,
+      colorClass: liqDisplay.color,
+    },
+    {
+      key: "blacklistable",
+      label: "Blacklistable",
+      value: blacklistDisplay.value,
+      subValue: blacklistDisplay.sub,
+      colorClass: blacklistDisplay.color,
+    },
+    {
+      key: "excess-yield",
+      label: <MethodologyLabel topic="pys">Excess Yield</MethodologyLabel>,
+      value: excessYieldDisplay.value,
+      subValue: excessYieldDisplay.sub,
+      colorClass: excessYieldDisplay.color,
+    },
+    ...(performanceVsUsdDisplay
+      ? [{
+          key: "performance-vs-usd",
+          label: "1Y vs USD",
+          value: performanceVsUsdDisplay.value,
+          colorClass: performanceVsUsdDisplay.color,
+        }]
+      : []),
+    {
+      key: "dews",
+      label: <MethodologyLabel topic="dews">DEWS</MethodologyLabel>,
+      value: dewsDisplay.value,
+      subValue: dewsDisplay.sub,
+      colorClass: dewsDisplay.color,
+    },
+  ];
 
   return (
     <Card className="rounded-xl gap-0">
@@ -447,55 +563,15 @@ export function HeroCard({
         </div>
 
         {/* Tertiary Metrics */}
-        <div className="mt-3 flex flex-wrap gap-2">
-          <MetricChip
-            label={<MethodologyLabel topic="pegScore">Peg</MethodologyLabel>}
-            value={pegScoreDisplay.value}
-            subValue={pegScoreDisplay.sub}
-            colorClass={pegScoreDisplay.color}
-          />
-          <MetricChip
-            label={<MethodologyLabel topic="liquidityScore">Liq</MethodologyLabel>}
-            value={liqDisplay.value}
-            subValue={liqDisplay.sub}
-            colorClass={liqDisplay.color}
-          />
-          <MetricChip
-            label="Blacklistable"
-            value={blacklistDisplay.value}
-            subValue={blacklistDisplay.sub}
-            colorClass={blacklistDisplay.color}
-          />
-          <MetricChip
-            label={<MethodologyLabel topic="pys">Excess Yield</MethodologyLabel>}
-            value={excessYieldDisplay.value}
-            subValue={excessYieldDisplay.sub}
-            colorClass={excessYieldDisplay.color}
-          />
-          {performanceVsUsdDisplay && (
-            <MetricChip
-              label="1Y vs USD"
-              value={performanceVsUsdDisplay.value}
-              colorClass={performanceVsUsdDisplay.color}
-            />
-          )}
-          <MetricChip
-            label={<MethodologyLabel topic="dews">DEWS</MethodologyLabel>}
-            value={dewsDisplay.value}
-            subValue={dewsDisplay.sub}
-            colorClass={dewsDisplay.color}
-          />
-          <div className="flex items-center gap-1 rounded-lg border border-border/40 bg-background/30 px-2.5 py-1.5">
-            <span className="text-[11px] text-muted-foreground">{chainCount} chains</span>
-          </div>
-          <LiquityForkBadge variant={liquityForkVariant} />
-        </div>
-
-        {pegScoreResult?.activeDepeg && (
-          <div className="mt-3 rounded-lg border border-red-500/20 bg-red-500/8 px-3 py-2 text-xs text-red-700 dark:text-red-400">
-            Active depeg detected
-          </div>
-        )}
+        <HeroTertiaryMetrics
+          metrics={tertiaryMetrics}
+          chainCount={chainCount}
+          liquityForkVariant={liquityForkVariant}
+          earlyPegScore={earlyPegScore}
+          trackingSpanDays={pegScoreResult?.trackingSpanDays ?? 0}
+          activeDepeg={pegScoreResult?.activeDepeg === true}
+          mobile
+        />
       </div>
 
       {/* Desktop Layout */}
@@ -580,61 +656,14 @@ export function HeroCard({
           </div>
 
           {/* Tertiary Metrics */}
-          <div className="flex flex-wrap items-center gap-3">
-            <MetricChip
-              label={<MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>}
-              value={pegScoreDisplay.value}
-              subValue={pegScoreDisplay.sub}
-              colorClass={pegScoreDisplay.color}
-            />
-            <MetricChip
-              label={<MethodologyLabel topic="liquidityScore">Liquidity</MethodologyLabel>}
-              value={liqDisplay.value}
-              subValue={liqDisplay.sub}
-              colorClass={liqDisplay.color}
-            />
-            <MetricChip
-              label="Blacklistable"
-              value={blacklistDisplay.value}
-              subValue={blacklistDisplay.sub}
-              colorClass={blacklistDisplay.color}
-            />
-            <MetricChip
-              label={<MethodologyLabel topic="pys">Excess Yield</MethodologyLabel>}
-              value={excessYieldDisplay.value}
-              subValue={excessYieldDisplay.sub}
-              colorClass={excessYieldDisplay.color}
-            />
-            {performanceVsUsdDisplay && (
-              <MetricChip
-                label="1Y vs USD"
-                value={performanceVsUsdDisplay.value}
-                colorClass={performanceVsUsdDisplay.color}
-              />
-            )}
-            <MetricChip
-              label={<MethodologyLabel topic="dews">DEWS</MethodologyLabel>}
-              value={dewsDisplay.value}
-              subValue={dewsDisplay.sub}
-              colorClass={dewsDisplay.color}
-            />
-            <div className="flex items-center gap-2 rounded-lg border border-border/40 bg-background/30 px-3 py-1.5">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Chains</span>
-              <span className="text-base font-bold font-mono">{chainCount}</span>
-            </div>
-            <LiquityForkBadge variant={liquityForkVariant} />
-            {earlyPegScore && (
-              <span className="text-xs text-amber-600 dark:text-amber-400">
-                Early peg score · {pegScoreResult?.trackingSpanDays ?? 0}d tracked
-              </span>
-            )}
-          </div>
-
-          {pegScoreResult?.activeDepeg && (
-            <div className="rounded-lg border border-red-500/20 bg-red-500/8 px-4 py-2.5 text-sm text-red-700 dark:text-red-400">
-              Active depeg detected — view details in Depeg History
-            </div>
-          )}
+          <HeroTertiaryMetrics
+            metrics={tertiaryMetrics}
+            chainCount={chainCount}
+            liquityForkVariant={liquityForkVariant}
+            earlyPegScore={earlyPegScore}
+            trackingSpanDays={pegScoreResult?.trackingSpanDays ?? 0}
+            activeDepeg={pegScoreResult?.activeDepeg === true}
+          />
         </div>
       </div>
     </Card>

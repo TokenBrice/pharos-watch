@@ -10,9 +10,9 @@ import { YEAR_MS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 /**
- * Visual note: This component uses hardcoded dark-palette colors (slate, rgba shadows)
- * for artistic effect. It renders on dark surfaces only and does not adapt to light mode.
- * See design audit 2026-03-07 for rationale.
+ * Visual note: SVG illustrations (hammer, flowers) use semantic CSS variables with
+ * hex fallbacks so they adapt to both light and dark themes. The tombstone card itself
+ * uses Tailwind theme classes (bg-stone-100 dark:bg-card etc.).
  */
 
 type TombSize = "lg" | "md" | "sm";
@@ -66,7 +66,7 @@ function Flower({ index, tombWidth }: { index: number; tombWidth: number }) {
       }}
     >
       {/* Stem */}
-      <line x1="7" y1="16" x2="7" y2="7" stroke="#4ade80" strokeWidth="1.5" />
+      <line x1="7" y1="16" x2="7" y2="7" stroke="var(--severity-healthy-hex, #4ade80)" strokeWidth="1.5" />
       {/* Petals */}
       <circle cx="7" cy="5" r="2.5" fill={color} opacity="0.85" />
       <circle cx="4.5" cy="6.5" r="2.5" fill={color} opacity="0.75" />
@@ -113,27 +113,27 @@ function HammerStrike({ size }: { size: TombSize }) {
         aria-hidden="true"
       >
         {/* Handle — extends to the right */}
-        <rect x="30" y="19" width="58" height="5" rx="2.5" fill="#9a7b4f" />
-        <rect x="30" y="20" width="58" height="2.5" rx="1.2" fill="#b8956a" opacity="0.45" />
+        <rect x="30" y="19" width="58" height="5" rx="2.5" fill="var(--text-secondary, #9a7b4f)" />
+        <rect x="30" y="20" width="58" height="2.5" rx="1.2" fill="var(--border-default, #b8956a)" opacity="0.45" />
 
         {/* Head — claw hammer, vertical */}
         <path
           d="M10 6 L30 6 L30 14 L26 14 L24 10 L18 10 L16 14 L10 14Z"
-          fill="#374151"
+          fill="var(--text-secondary, #374151)"
         />
         <path
           d="M10 14 L30 14 L30 34 L26 34 L24 30 L18 30 L16 34 L10 34Z"
-          fill="#374151"
+          fill="var(--text-secondary, #374151)"
         />
         {/* Claw notch top */}
         <path
           d="M10 6 L14 10 L10 10Z"
-          fill="#1f2937"
+          fill="var(--text-primary, #1f2937)"
         />
         {/* Face bottom */}
-        <rect x="12" y="30" width="16" height="3" rx="1" fill="#4b5563" opacity="0.5" />
+        <rect x="12" y="30" width="16" height="3" rx="1" fill="var(--border-strong, #4b5563)" opacity="0.5" />
         {/* Side bevel */}
-        <rect x="28" y="8" width="3" height="24" rx="1" fill="#4b5563" opacity="0.35" />
+        <rect x="28" y="8" width="3" height="24" rx="1" fill="var(--border-strong, #4b5563)" opacity="0.35" />
       </svg>
     </div>
   );
