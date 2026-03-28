@@ -69,14 +69,16 @@ function MetricChip({
   value,
   subValue,
   colorClass = "text-foreground",
+  accentClass,
 }: {
   label: React.ReactNode;
   value: string | number;
   subValue?: string;
   colorClass?: string;
+  accentClass?: string;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-border/40 bg-background/40 px-2.5 py-1.5">
+    <div className={`flex items-center gap-2 rounded-lg border border-border/40 bg-background/40 px-2.5 py-1.5 ${accentClass ?? ""}`}>
       <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</span>
       <span className={`text-base font-bold font-mono ${colorClass}`}>{value}</span>
       {subValue && <span className="text-xs text-muted-foreground">{subValue}</span>}
@@ -129,6 +131,8 @@ interface TertiaryMetricConfig {
   value: string | number;
   subValue?: string;
   colorClass?: string;
+  /** Optional border-l accent class for risk-flagged chips (e.g. "border-l-2 border-l-red-500") */
+  accentClass?: string;
 }
 
 function HeroTertiaryMetrics({
@@ -158,6 +162,7 @@ function HeroTertiaryMetrics({
             value={metric.value}
             subValue={metric.subValue}
             colorClass={metric.colorClass}
+            accentClass={metric.accentClass}
           />
         ))}
         {mobile ? (
@@ -406,6 +411,29 @@ export function HeroCard({
       color: THREAT_BAND_TEXT_COLORS[stressSignal.band],
     };
   })();
+  // Compute border-left accent classes for risk-flagged chips
+  const pegScoreAccent = (() => {
+    const score = pegScoreResult?.pegScore;
+    if (score == null) return undefined;
+    if (score < 50) return "border-l-2 border-l-red-500";
+    if (score < 70) return "border-l-2 border-l-amber-500";
+    return undefined;
+  })();
+  const liqAccent = (() => {
+    const score = liquidityData?.liquidityScore;
+    if (score == null) return undefined;
+    if (score < 30) return "border-l-2 border-l-red-500";
+    if (score < 50) return "border-l-2 border-l-amber-500";
+    return undefined;
+  })();
+  const blacklistAccent = blacklistStatus === true ? "border-l-2 border-l-amber-500" : undefined;
+  const dewsAccent = (() => {
+    if (!stressSignal || !isThreatBand(stressSignal.band)) return undefined;
+    if (stressSignal.band === "DANGER") return "border-l-2 border-l-red-500";
+    if (stressSignal.band === "WARNING") return "border-l-2 border-l-orange-500";
+    return undefined;
+  })();
+
   const tertiaryMetrics: TertiaryMetricConfig[] = [
     {
       key: "peg-score",
@@ -414,6 +442,7 @@ export function HeroCard({
       value: pegScoreDisplay.value,
       subValue: pegScoreDisplay.sub,
       colorClass: pegScoreDisplay.color,
+      accentClass: pegScoreAccent,
     },
     {
       key: "liquidity",
@@ -422,6 +451,7 @@ export function HeroCard({
       value: liqDisplay.value,
       subValue: liqDisplay.sub,
       colorClass: liqDisplay.color,
+      accentClass: liqAccent,
     },
     {
       key: "blacklistable",
@@ -429,6 +459,7 @@ export function HeroCard({
       value: blacklistDisplay.value,
       subValue: blacklistDisplay.sub,
       colorClass: blacklistDisplay.color,
+      accentClass: blacklistAccent,
     },
     {
       key: "excess-yield",
@@ -451,6 +482,7 @@ export function HeroCard({
       value: dewsDisplay.value,
       subValue: dewsDisplay.sub,
       colorClass: dewsDisplay.color,
+      accentClass: dewsAccent,
     },
   ];
 

@@ -88,7 +88,6 @@ const BASE_DETAIL_SECTIONS = [
   { id: "overview", label: "Overview" },
   { id: "chart", label: "Market" },
   { id: "liquidity", label: "Liquidity" },
-  { id: "info", label: "Details" },
   { id: "history", label: "History" },
 ];
 
@@ -250,12 +249,14 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
               </Link>
             </div>
           }
+          showDepthHint
         />
       </div>
 
       {/* ── Safety zone ── */}
       <div className="mt-10 space-y-4">
         <section id="report-card">
+          <p className="pharos-kicker mb-3">Safety Assessment</p>
           {viewModel.reportCard && (
             <ReportCardDetail
               card={viewModel.reportCard}
@@ -268,7 +269,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
         </section>
       </div>
 
-      {/* ── Context zone ── */}
+      {/* ── Context & details zone ── */}
       <div className="mt-12 space-y-6">
         <section id="overview">
           <NoticesAndSummarySection
@@ -285,6 +286,14 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
             dexPriceCheck={viewModel.dexPriceCheck}
           />
         </section>
+
+        <section id="info">
+          <KeyInfoCard meta={viewModel.coin} />
+        </section>
+
+        {hasCollateralUsage && <CollateralUsageSection stablecoinId={viewModel.id} />}
+
+        {viewModel.hasYieldSection && <YieldDetailSection stablecoinId={viewModel.id} />}
       </div>
 
       {/* ── Market zone ── */}
@@ -298,17 +307,6 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
             <DistributionSection stablecoinId={viewModel.id} />
           </SectionErrorBoundary>
         </section>
-      </div>
-
-      {/* ── Details zone ── */}
-      <div className="mt-10 space-y-6">
-        <section id="info">
-          <KeyInfoCard meta={viewModel.coin} />
-        </section>
-
-        {hasCollateralUsage && <CollateralUsageSection stablecoinId={viewModel.id} />}
-
-        {viewModel.hasYieldSection && <YieldDetailSection stablecoinId={viewModel.id} />}
       </div>
 
       {/* ── Activity zone ── */}

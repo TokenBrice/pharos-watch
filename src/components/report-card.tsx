@@ -25,11 +25,11 @@ import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 // ---------------------------------------------------------------------------
 
 const GRADE_GLOW_COLORS: Record<string, string> = {
-  A: 'oklch(0.5 0.2 145 / 0.35)',
-  B: 'oklch(0.5 0.16 250 / 0.3)',
-  C: 'oklch(0.55 0.18 85 / 0.3)',
-  D: 'oklch(0.55 0.2 55 / 0.35)',
-  F: 'oklch(0.5 0.22 25 / 0.4)',
+  A: 'oklch(0.5 0.2 145 / 0.53)',
+  B: 'oklch(0.5 0.16 250 / 0.45)',
+  C: 'oklch(0.55 0.18 85 / 0.45)',
+  D: 'oklch(0.55 0.2 55 / 0.53)',
+  F: 'oklch(0.5 0.22 25 / 0.6)',
 };
 
 const GRADE_BORDER_HEX: Record<string, string> = {
