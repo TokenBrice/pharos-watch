@@ -1,4 +1,4 @@
-import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
+import { computeBlacklistAmountUsdAtEvent, isGoldBlacklistStablecoin } from "@shared/lib/blacklist";
 import {
   upsertBlacklistCurrentBalance,
 } from "../../lib/blacklist-current-balances";
@@ -66,6 +66,7 @@ async function persistCurrentBalanceResult(
   address: string,
   amount: number | null,
   now: number,
+  goldPriceUsd: number | null,
 ): Promise<"updated" | "failed"> {
   if (amount == null) {
     await upsertBlacklistCurrentBalance(db, {
@@ -89,7 +90,7 @@ async function persistCurrentBalanceResult(
     chainId: config.chain.chainId,
     address,
     amountNative: amount,
-    amountUsd: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount),
+    amountUsd: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount, goldPriceUsd),
     source: "current_balance",
     status: "resolved",
     observedAt: now,
@@ -98,6 +99,14 @@ async function persistCurrentBalanceResult(
     lastErrorClass: null,
   });
   return "updated";
+}
+
+/** Fetch the gold spot price from price_cache (returns null if unavailable). */
+async function fetchGoldPriceFromCache(db: D1Database): Promise<number | null> {
+  const row = await db
+    .prepare("SELECT price FROM price_cache WHERE asset_id = 'paxg-paxos' LIMIT 1")
+    .first<{ price: number }>();
+  return row?.price ?? null;
 }
 
 export async function syncCurrentBalanceCacheForRows(
@@ -119,6 +128,11 @@ export async function syncCurrentBalanceCacheForRows(
   const counters: SyncCurrentBalanceCacheResult = { updated: 0, deleted: 0, failed: 0 };
   const now = Math.floor(Date.now() / 1000);
 
+  // Resolve gold price once if this config is a gold-pegged stablecoin
+  const goldPriceUsd = isGoldBlacklistStablecoin(config.stablecoin)
+    ? await fetchGoldPriceFromCache(db)
+    : null;
+
   for (const row of latestByAddress.values()) {
     if (runtimeBudgetReached(context.deadlineMs) || budgetExhausted(context.budget)) break;
 
@@ -135,7 +149,7 @@ export async function syncCurrentBalanceCacheForRows(
         chainId: config.chain.chainId,
         address: row.address,
         amountNative: row.amount_native,
-        amountUsd: row.amount_usd_at_event ?? computeBlacklistAmountUsdAtEvent(config.stablecoin, row.amount_native),
+        amountUsd: row.amount_usd_at_event ?? computeBlacklistAmountUsdAtEvent(config.stablecoin, row.amount_native, goldPriceUsd),
         source: "destroy_event",
         status: "resolved",
         observedAt: now,
@@ -147,8 +161,17 @@ export async function syncCurrentBalanceCacheForRows(
       continue;
     }
 
-    const amount = await fetchCurrentBalanceForAddress(config, row.address, context);
-    const status = await persistCurrentBalanceResult(db, config, row.address, amount, now);
+    let amount = await fetchCurrentBalanceForAddress(config, row.address, context);
+
+    // Some contracts (PAXG, XAUT) override balanceOf() to return 0 for frozen
+    // addresses.  When the on-chain balance is 0 but the event captured a
+    // pre-freeze amount, use the event-time amount so the freeze ledger
+    // reflects the actual seized value.
+    if ((amount == null || amount === 0) && row.amount_native != null && row.amount_native > 0) {
+      amount = row.amount_native;
+    }
+
+    const status = await persistCurrentBalanceResult(db, config, row.address, amount, now, goldPriceUsd);
     counters[status]++;
   }
 

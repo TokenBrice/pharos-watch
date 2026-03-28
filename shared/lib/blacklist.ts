@@ -10,9 +10,11 @@ export function isGoldBlacklistStablecoin(symbol: string): symbol is "PAXG" | "X
 export function computeBlacklistAmountUsdAtEvent(
   stablecoin: BlacklistStablecoin,
   amountNative: number | null,
+  goldPriceUsd?: number | null,
 ): number | null {
   if (amountNative == null) return null;
-  return isGoldBlacklistStablecoin(stablecoin) ? null : amountNative;
+  if (!isGoldBlacklistStablecoin(stablecoin)) return amountNative;
+  return goldPriceUsd ? amountNative * goldPriceUsd : null;
 }
 
 export function isBlacklistAmountGapStatus(status: BlacklistAmountStatus): boolean {
