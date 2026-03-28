@@ -20,8 +20,8 @@ Public-facing analytics dashboard tracking 185 stablecoins in repo metadata: 176
 - **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
 - **Stablecoin Cemetery** — 87 dead stablecoins documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
-- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 135 configured assets
-- **Detail pages** — price chart, supply history, chain distribution, reserve card, redemption backstop card, liquidity card, and safety ratings for each stablecoin
+- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 144 configured assets
+- **Detail pages** — full analytics dossiers for tracked live assets plus dedicated pre-launch detail views, with conditional reserve, redemption backstop, liquidity, and safety surfaces when data exists
 - **Public status page + private operator admin** — read-only system health on `/status/`, plus Access-gated monitoring and recovery controls on `ops.pharos.watch/admin/`
 - **Backing type breakdown** — RWA-backed, crypto-backed, and algorithmic
 - **Yield-bearing & NAV token filters** — identify tokens that accrue yield natively
@@ -73,7 +73,7 @@ All external API calls and on-chain contract reads go through the Cloudflare Wor
 | [fawazahmed0/currency-api](https://github.com/fawazahmed0/currency-api) | Secondary live FX mirror for CNH, RUB, UAH, and ARS, plus full-set fallback coverage when Frankfurter fails | 15 min                            |
 | [ExchangeRate-API](https://www.exchangerate-api.com/)                   | Tertiary live full-set FX fallback when both Frankfurter and the secondary FX mirrors are unavailable      | 15 min                            |
 | [gold-api.com](https://gold-api.com/)                                   | Gold and silver spot prices for commodity-pegged stablecoin peg validation                                 | 15 min                            |
-| [FRED (St. Louis Fed)](https://fred.stlouisfed.org/series/DGS3MO) / ECB Data API / FRED €STR mirror / SNB current-rates page | USD, EUR, and CHF benchmark rates for yield benchmarking (`excessYield`)                                   | Daily                             |
+| [FRED (St. Louis Fed)](https://fred.stlouisfed.org/series/DGS3MO) / ECB Data API / SIX delayed SARON guest access | USD, EUR, and CHF benchmark rates for yield benchmarking (`excessYield`)                                   | Daily                             |
 | [Bluechip](https://bluechip.org/)                                       | Independent stablecoin safety ratings (SMIDGE framework)                                                   | Daily                             |
 | [Anthropic](https://anthropic.com/)                                     | AI-generated daily market digest                                                                           | Daily                             |
 
@@ -156,6 +156,7 @@ src/                              Frontend (Next.js static export)
 functions/                        Cloudflare Pages Functions for ops-host gating and `/api/admin/*` proxying
 ├── admin/[[path]].ts             Host gate for `/admin/` on `ops.pharos.watch`
 ├── api/admin/[[path]].ts         Same-origin admin proxy from `ops.pharos.watch` to `ops-api.pharos.watch`
+├── lib/ops-env.ts                Shared Pages Functions env contract for ops-host gating and proxying
 └── lib/ops-origin.ts             Shared ops-origin resolution helper
 
 shared/                           Runtime-neutral shared boundary (`@shared/*`)

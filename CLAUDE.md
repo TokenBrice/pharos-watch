@@ -16,7 +16,7 @@ All agent-produced plans, audits, research, and process notes live in the `/agen
 - **Plan first**: Enter plan mode for non-trivial tasks (3+ steps). If stuck, stop and re-plan.
 - **Verify before done**: Prove it works — build, lint, run the relevant type-checks, and test. Never claim done without evidence.
 - **Be autonomous**: Fix bugs end-to-end without hand-holding. Chase logs and errors yourself.
-- **Learn from corrections**: Record recurring mistakes in auto-memory to avoid repeating them.
+- **Learn from corrections**: Adjust your approach when repo guidance or code proves an assumption wrong.
 
 ## Tech Stack
 
@@ -37,7 +37,7 @@ functions/       — Cloudflare Pages Functions for ops-host gating and `/api/ad
 shared/lib/      — Runtime-neutral shared modules (stablecoin metadata, supply/classification/peg/report-card logic)
 worker/src/cron/ — Data sync crons
 worker/src/api/  — REST API handlers (router-dispatched endpoints + dynamic stablecoin detail)
-worker/src/lib/  — DB helpers, constants, shared utilities
+worker/src/lib/  — Worker runtime/auth/cache/helpers/constants
 ```
 
 ## Commands

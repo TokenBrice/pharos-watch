@@ -6,7 +6,7 @@ Curated architecture-significant routes. Start with the [Documentation Index](./
 
 ## Route Definition Model
 
-Static route metadata is declared once in `shared/lib/api-endpoints.ts`. That shared descriptor list now carries path, method, admin/cache/probe/status-action metadata, plus the worker dependency-hydration hints needed for static routes. `worker/src/route-registry.ts` binds worker handlers to those shared endpoint keys, and `worker/src/router.ts` stays focused on generic dispatch plus the dynamic route patterns that cannot be enumerated statically.
+Static route metadata is declared once in `shared/lib/api-endpoints.ts`. That shared descriptor list now carries path, method, admin/cache/probe/status-action metadata, plus the worker dependency-hydration hints needed for static routes. `worker/src/route-registry.ts` binds worker handlers to those shared endpoint keys and also owns `DYNAMIC_ROUTE_DEFINITIONS`; `worker/src/router.ts` stays focused on method validation, generic dispatch, and delegating dynamic-match resolution.
 
 | Endpoint                                     | Description                                                                                                                                                                                                                    |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -51,6 +51,7 @@ Static route metadata is declared once in `shared/lib/api-endpoints.ts`. That sh
 | `POST /api/trigger-digest`                   | Admin: force digest regeneration bypassing 1h dedup (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                  |
 | `POST /api/reset-blacklist-sync`             | Admin: roll back blacklist sync state to re-scan missed events (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                       |
 | `POST /api/remediate-blacklist-amount-gaps`  | Admin: remediate recoverable blacklist amount/provenance gaps (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                       |
+| `POST /api/backfill-blacklist-current-balances` | Admin: rebuild `blacklist_current_balances` rows for matching blacklist configs, with optional `dryRun`, `stablecoin`, `chainId`, and `limit` filters (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
 | `GET /api/backfill-dews`                     | Admin: DEWS backtest audit against historical depeg events (reports true-positive rate and lead time; preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                 |
 | `POST /api/backfill-mint-burn-prices`        | Admin: backfill mint/burn event prices (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                               |
 | `GET /api/debug-sync-state`                  | Admin: view blacklist sync state for all chains (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                      |
@@ -356,7 +357,7 @@ src/                              # Next.js frontend (static export)
     ├── api.ts                    # API_BASE URL config + apiFetch<T>() typed fetch wrapper (`/api/admin/*` stays same-origin)
     ├── analytics.ts              # Analytics tracking (page views, events)
     ├── client-feature-page.tsx   # Narrow helper for repeated dynamic-client feature routes wrapped by FeaturePageShell
-    ├── blacklist-helpers.ts      # Shared blacklist helpers: isGoldStablecoin() type guard, extractGoldPrices(), computeBlacklistStats()
+    ├── blacklist-api.ts          # Typed frontend fetch helpers for `/api/blacklist` and `/api/blacklist-summary`
     ├── bluechip.ts               # BluechipGrade order, report URL base (slug map moved to worker)
     ├── chart-colors.ts           # Shared CHART_PALETTE, CHART_BLUE/GREEN/RED, RECHARTS_TOOLTIP_STYLES for Recharts charts
     ├── chart-export.ts           # Chart export utilities (PNG download)
@@ -440,13 +441,15 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── sync-stablecoins.ts   # DefiLlama + CoinGecko gold → D1 (orchestrator with explicit stage boundaries)
     │   ├── sync-stablecoins/
     │   │   ├── intake.ts         # Intake/fallback gate: DL fetch, structural validation, canonical remap, supplemental merge
+    │   │   ├── enrich-prices.ts  # Dual-primary price validation + 4-pass enrichment pipeline orchestration
+    │   │   ├── enrich-prices-primary.ts # Primary-source fetch + validation passes used by enrichment
+    │   │   ├── enrich-prices-passes.ts # CoinMarketCap, Jupiter, and DexScreener fallback passes
+    │   │   ├── enrich-prices-shared.ts # Shared enrichment types/helpers and request guards
     │   │   ├── stages.ts         # Extracted sync-stablecoins stage helpers (normalize/filter/staleness/supply-history fill)
     │   │   ├── post-enrichment.ts # Shared post-enrichment cache validation + depeg pipeline helpers
     │   │   ├── metadata.ts       # Final sync metadata and price-source health shaping
     │   │   ├── shared.ts         # Shared stablecoins-sync cache/write helpers and FX utilities
     │   │   └── supplemental-assets.ts # Extracted supplemental token fetch helpers (gold/silver/CG-only fiat overlays)
-    │   ├── enrich-prices.ts      # Dual-primary price validation + 4-pass enrichment pipeline (DefiLlama, CoinGecko, CoinMarketCap, DexScreener)
-    │   ├── enrich-prices-shared.ts # Leaf shared price-enrichment types/helpers used across the enrichment pipeline
     │   ├── detect-depegs.ts      # Depeg event detection + orphan event cleanup
     │   ├── sync-stablecoin-charts.ts  # Historical chart cache refresh (30-min trigger, 1h write cooldown)
     │   ├── snapshot-supply.ts    # Per-coin supply snapshots → D1 (runs on */15, writes once daily via dedup guard; primary daily run at 8AM UTC)
@@ -532,6 +535,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── backfill-dews.ts     # GET /api/backfill-dews (admin)
     │   ├── backfill-mint-burn-prices.ts # POST /api/backfill-mint-burn-prices (admin)
     │   ├── backfill-mint-burn.ts # POST /api/backfill-mint-burn (admin)
+    │   ├── backfill-blacklist-current-balances.ts # POST /api/backfill-blacklist-current-balances (admin)
     │   ├── reclassify-atomic-roundtrips.ts # POST /api/reclassify-atomic-roundtrips (admin)
     │   ├── remediate-blacklist-amount-gaps.ts # POST /api/remediate-blacklist-amount-gaps (admin)
     │   ├── stress-signals.ts    # GET /api/stress-signals (DEWS scores)

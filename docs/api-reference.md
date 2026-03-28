@@ -161,6 +161,7 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/trigger-digest`
 - `POST /api/reset-blacklist-sync`
 - `POST /api/remediate-blacklist-amount-gaps`
+- `POST /api/backfill-blacklist-current-balances`
 
 When an `Idempotency-Key` is supplied on one of those routes, successful responses echo `Idempotency-Key` plus `X-Idempotent-Replay`, and conflicting reuse returns `409`.
 
@@ -1149,6 +1150,12 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
   "circuits": {
     "defillama-stablecoins": { "state": "closed", "consecutiveFailures": 0, "lastSuccessAt": 1772190029 },
     "coingecko-prices": { "state": "closed", "consecutiveFailures": 0, "lastSuccessAt": 1772190030 }
+  },
+  "telegramSummary": {
+    "totalChats": 142,
+    "pendingDeliveries": 0,
+    "lastDispatchAt": 1771856400,
+    "lastDispatchStatus": "success"
   }
 }
 ```
@@ -1165,6 +1172,11 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
 | `blacklist.recentMissingAmounts`     | `number`                           | Missing-amount events inside the recent monitoring window used by status logic                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `blacklist.recentWindowSec`          | `number`                           | Size of the recent monitoring window in seconds                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `blacklist.missingRatio`             | `number`                           | `missingAmounts / totalEvents` (0 when no blacklist rows exist yet)                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `telegramSummary`                    | `TelegramHealthSummary \| null`    | Lightweight Telegram delivery health summary. `null` when the Telegram tables are unavailable or not yet migrated                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `telegramSummary.totalChats`         | `number`                           | Total subscribed Telegram chats currently stored                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `telegramSummary.pendingDeliveries`  | `number`                           | Pending overflow alert deliveries waiting in `telegram_pending_alerts`                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `telegramSummary.lastDispatchAt`     | `number \| null`                   | Unix seconds of the most recent `dispatch-telegram-alerts` cron run, if available                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `telegramSummary.lastDispatchStatus` | `string \| null`                   | Status of the most recent `dispatch-telegram-alerts` cron run, if available                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `mintBurn.totalEvents`               | `number`                           | Total mint+burn event count (aggregated from `mint_burn_hourly`)                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `mintBurn.latestEventTs`             | `number \| null`                   | Latest raw event timestamp from `mint_burn_events` (observability only; does not drive endpoint health on its own)                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `mintBurn.latestHourlyTs`            | `number \| null`                   | Latest hourly bucket timestamp from `mint_burn_hourly`                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
@@ -1302,7 +1314,7 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
     "edges": [{ "from": "usde-ethena", "to": "usdc-circle", "weight": 0.9, "type": "collateral" }, ...]
   },
   "methodology": {
-    "version": "6.1",
+    "version": "6.8",
     "weights": { "pegStability": 0, "liquidity": 0.30, "resilience": 0.20, "decentralization": 0.15, "dependencyRisk": 0.25 },
     "pegMultiplierExponent": 0.2,
     "thresholds": [{ "grade": "A+", "min": 87 }, { "grade": "A", "min": 83 }, ...]
@@ -2608,6 +2620,81 @@ Admin-only bounded remediation endpoint for recoverable blacklist rows.
     "budgetUsed": 26,
     "budgetLimit": 900
   }
+}
+```
+
+### `POST /api/backfill-blacklist-current-balances`
+
+Admin-only one-shot backfill endpoint for `blacklist_current_balances`, intended for blacklist configs whose historical events were ingested before the current-balance cache existed.
+
+**Authentication:** same admin auth as other ops endpoints.
+
+**Idempotency:** supported via optional `Idempotency-Key`.
+
+**Query parameters**
+
+| Param | Type | Default | Description |
+| ----- | ---- | ------- | ----------- |
+| `stablecoin` | `string` | — | Optional uppercase symbol filter (`USDC`, `USDT`, `PAXG`, `XAUT`, `PYUSD`, `USD1`) |
+| `chainId` | `string` | — | Optional chain filter matching the blacklist contract config `chainId` |
+| `limit` | `integer` | `500` | Max blacklist-event rows to load per matching config (max `2000`) |
+| `dryRun` | `"true"` | — | Preview the active-blacklisted candidate count without writing cache rows |
+
+`400` is returned when the filters match no configured blacklist contracts.
+
+**Dry-run response**
+
+```json
+{
+  "ok": true,
+  "dryRun": true,
+  "configs": [
+    {
+      "configKey": "ethereum-pyusd",
+      "stablecoin": "PYUSD",
+      "chainId": "ethereum",
+      "candidateCount": 12,
+      "updated": 0,
+      "deleted": 0,
+      "failed": 0
+    }
+  ],
+  "totals": {
+    "candidates": 12,
+    "updated": 0,
+    "deleted": 0,
+    "failed": 0
+  },
+  "budgetUsed": 0,
+  "budgetLimit": 900
+}
+```
+
+**Write-enabled response**
+
+```json
+{
+  "ok": true,
+  "dryRun": false,
+  "configs": [
+    {
+      "configKey": "ethereum-pyusd",
+      "stablecoin": "PYUSD",
+      "chainId": "ethereum",
+      "candidateCount": 500,
+      "updated": 12,
+      "deleted": 0,
+      "failed": 1
+    }
+  ],
+  "totals": {
+    "candidates": 500,
+    "updated": 12,
+    "deleted": 0,
+    "failed": 1
+  },
+  "budgetUsed": 37,
+  "budgetLimit": 900
 }
 ```
 

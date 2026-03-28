@@ -31,7 +31,7 @@ functions/       - Cloudflare Pages Functions
 shared/lib/      - runtime-neutral shared logic
 worker/src/api/  - Worker API handlers
 worker/src/cron/ - Worker cron jobs
-worker/src/lib/  - Worker DB/helpers/constants
+worker/src/lib/  - Worker runtime/auth/cache/helpers/constants
 ```
 
 ## Commands

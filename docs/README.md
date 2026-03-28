@@ -110,6 +110,7 @@ These are public sub-pages of `/methodology/`. Use the route map below when you 
 - [blacklist-tracker.md](./blacklist-tracker.md) - freeze/blacklist coverage, contracts, sync flow, and API/frontend behavior
 - [mint-burn-flows.md](./mint-burn-flows.md) - mint/burn ingestion, scoring, schema, and admin backfills
 - [yield-intelligence.md](./yield-intelligence.md) - APY resolution, PYS scoring, warning signals, schema, and UI consumers
+- [yield-intelligence-operations.md](./yield-intelligence-operations.md) - runtime guardrails and degraded-mode behavior for the `sync-yield-data` cron
 - [digest-pipeline.md](./digest-pipeline.md) - digest generation, storage, distribution, and SSG pipeline
 - [feedback-pipeline.md](./feedback-pipeline.md) - feedback widget, POST contract, rate limiting, and GitHub routing
 - [telegram-alerts.md](./telegram-alerts.md) - Telegram webhook commands, subscription tables, and alert dispatch rules
