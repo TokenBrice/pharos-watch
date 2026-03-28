@@ -273,7 +273,7 @@ export async function syncLiveReserves(
         try {
           const fbConfig = { ...config, inputs: { ...config.inputs, primary: fb } };
           return await runAdapterAttempt(coin, fbConfig, adapter, signal, effectiveAdapterCtx);
-        } catch { continue; }
+        } catch (e) { console.warn(`[sync-live-reserves] Fallback failed for ${coin.id}:`, e); continue; }
       }
       throw primaryError;
     }
@@ -344,7 +344,7 @@ export async function syncLiveReserves(
       attemptStarted = true;
 
       const canFetch = breakerCanFetch.has(breakerKey)
-        ? breakerCanFetch.get(breakerKey)!
+        ? breakerCanFetch.get(breakerKey) ?? true
         : await shouldAttemptFetch(db, breakerKey);
       breakerCanFetch.set(breakerKey, canFetch);
       if (!canFetch) {

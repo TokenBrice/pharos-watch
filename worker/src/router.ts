@@ -58,6 +58,9 @@ const DYNAMIC_ROUTE_DEFINITIONS: readonly DynamicRouteDefinition[] = [
     pattern: /^\/api\/discovery-candidates\/(\d+)\/dismiss$/,
     handle: async (routeCtx, match) => {
       const candidateId = parseInt(match[1], 10);
+      if (!Number.isFinite(candidateId) || candidateId <= 0) {
+        return Promise.resolve(errorResponse(400, "Invalid candidate ID"));
+      }
       return withAdmin(routeCtx.request, () => handleDismissCandidate(routeCtx.db, candidateId), routeCtx.trustedAdmin);
     },
   },

@@ -169,7 +169,10 @@ export async function handleBackfillDepegs(
         try {
           const res = await fetch(`${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`);
           if (res.ok) {
-            detail = (await res.json()) as CoinDetail;
+            const raw = await res.json();
+            if (raw && typeof raw === "object") {
+              detail = raw as CoinDetail;
+            }
           }
         } catch (err) {
           console.error(`[backfill-depegs] Failed to fetch detail for ${meta.symbol}:`, err);

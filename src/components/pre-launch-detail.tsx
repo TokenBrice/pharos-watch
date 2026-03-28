@@ -287,10 +287,10 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
             {DRIFT_STATUS_LABEL[drift]}
           </span>
         ) : null;
-        const dateTrail = hasDrift ? (
+        const dateTrail = hasDrift && coin.expectedLaunchDate ? (
           <p className="mt-2 text-xs text-muted-foreground/60">
             {coin.dateHistory!.map((entry) => formatFuzzyDate(entry.date)).join(" → ")}{" → "}
-            {formatFuzzyDate(coin.expectedLaunchDate!)} (current)
+            {formatFuzzyDate(coin.expectedLaunchDate)} (current)
           </p>
         ) : null;
 

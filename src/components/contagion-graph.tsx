@@ -165,7 +165,8 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
     setPositions((prev) => {
       const next = new Map(prev);
       const r = nodeMap.get(dragId)?.r ?? MIN_RADIUS;
-      next.set(dragId, clampGraphPosition(dragStart.current!.nx + dx, dragStart.current!.ny + dy, r));
+      const ds = dragStart.current;
+      if (ds) next.set(dragId, clampGraphPosition(ds.nx + dx, ds.ny + dy, r));
       return next;
     });
   }, [dragId, nodeMap, projectClientPoint]);

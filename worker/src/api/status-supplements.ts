@@ -61,8 +61,9 @@ async function fetchCoinGeckoUsdPrices(
       throw new Error(`CoinGecko simple price fetch failed (${response.status})`);
     }
 
-    const payload = await response.json() as Record<string, { usd?: number }>;
-    for (const [geckoId, quote] of Object.entries(payload)) {
+    const payload = await response.json();
+    if (!payload || typeof payload !== "object") continue;
+    for (const [geckoId, quote] of Object.entries(payload as Record<string, { usd?: number }>)) {
       if (typeof quote?.usd === "number" && Number.isFinite(quote.usd) && quote.usd > 0) {
         prices.set(geckoId, quote.usd);
       }

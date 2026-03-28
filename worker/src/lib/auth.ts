@@ -90,7 +90,10 @@ export async function withAdmin(
 
 /** Timing-safe string comparison using Web Crypto API. */
 export async function timingSafeCompare(a: string, b: string): Promise<boolean> {
-  if (a.length === 0 || b.length === 0) return false;
+  if (a.length === 0 || b.length === 0) {
+    console.error("[auth] timingSafeCompare called with empty string — possible misconfiguration");
+    return false;
+  }
   const encoder = new TextEncoder();
   const aBuf = encoder.encode(a);
   const bBuf = encoder.encode(b);
