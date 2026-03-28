@@ -43,6 +43,7 @@ import { handleMintBurnEvents } from "./api/mint-burn-events";
 import { handleBackfillMintBurnPrices } from "./api/backfill-mint-burn-prices";
 import { handleBackfillMintBurn } from "./api/backfill-mint-burn";
 import { handleRemediateBlacklistAmountGaps } from "./api/remediate-blacklist-amount-gaps";
+import { handleBackfillBlacklistCurrentBalances } from "./api/backfill-blacklist-current-balances";
 import { handleReclassifyAtomicRoundtrips } from "./api/reclassify-atomic-roundtrips";
 import { handleStressSignals } from "./api/stress-signals";
 import { handleChains } from "./api/chains";
@@ -325,6 +326,13 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
     ({ db, url, trustedAdmin, request, chainRpcs }) =>
       runIdempotentAdminAction(db, "remediate-blacklist-amount-gaps", request, () =>
         handleRemediateBlacklistAmountGaps(db, url, trustedAdmin, request, chainRpcs),
+      ),
+  ),
+  "backfill-blacklist-current-balances": withErrorHandler(
+    "route-backfill-blacklist-current-balances",
+    ({ db, url, trustedAdmin, request, chainRpcs }) =>
+      runIdempotentAdminAction(db, "backfill-blacklist-current-balances", request, () =>
+        handleBackfillBlacklistCurrentBalances(db, url, trustedAdmin, request, chainRpcs),
       ),
   ),
   "discovery-candidates": ({ db, url, trustedAdmin, request }) =>

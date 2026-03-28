@@ -478,6 +478,21 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     },
   },
   {
+    key: "backfill-blacklist-current-balances",
+    path: "/api/backfill-blacklist-current-balances",
+    methods: ["POST"],
+    adminRequired: true,
+    mutatingAdmin: true,
+    cacheBypass: true,
+    routeDependencies: ["chainRpcs"],
+    probeGroup: "manual",
+    statusPageAction: {
+      label: "Backfill Blacklist Balances",
+      confirm: "Backfill current-balance cache for coins missing balance rows? Prefer dry-run first (?dryRun=true).",
+      method: "POST",
+    },
+  },
+  {
     key: "backfill-depegs",
     path: "/api/backfill-depegs",
     methods: ["POST"],
