@@ -35,7 +35,7 @@ export function encodePortfolioHoldings(
       const token = encodeStablecoinUrlToken(holding.coinId);
       return token ? `${token}:${holding.amount}` : null;
     })
-    .filter(Boolean)
+    .filter((x): x is string => x !== null)
     .join(",");
 }
 
