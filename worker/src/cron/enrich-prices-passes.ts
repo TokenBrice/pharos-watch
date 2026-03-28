@@ -103,6 +103,7 @@ async function fetchPriceMapByIds(config: FetchPriceMapByIdsConfig): Promise<Map
     Object.keys(requestInit).length > 0 ? requestInit : undefined,
   );
   if (!res?.ok) {
+    await res?.body?.cancel();
     config.onFetchFailure?.(res?.status ?? null);
     return null;
   }
@@ -600,6 +601,7 @@ export async function runDexScreenerPass(
           continue;
         }
         if (!res.ok) {
+          await res.body?.cancel();
           console.warn(`[enrich] DexScreener returned ${res.status} for ${m.asset.symbol}`);
           continue;
         }
@@ -684,6 +686,7 @@ export async function runJupiterPass(
       { timeoutMs: JUPITER_REQUEST_TIMEOUT_MS },
     );
     if (!res?.ok) {
+      await res?.body?.cancel();
       console.warn(`[enrich] Jupiter returned ${res?.status ?? "no response"} for batch of ${ids.length}`);
       continue;
     }
