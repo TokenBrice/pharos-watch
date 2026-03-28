@@ -40,12 +40,12 @@ export function coinTrackingStart(
 export function computePegScoreWithWindow(
   isNavToken: boolean,
   events: DepegEvent[] | null,
-  earliestTrackingDate: string | null,
+  earliestTrackingDate: number | null,
 ): PegScoreResult | null {
   if (isNavToken || !events) return null;
   const nowSec = Math.floor(Date.now() / 1000);
   const fourYearsAgo = nowSec - PEG_SCORE_LOOKBACK_SEC;
-  const firstSeenSec = earliestTrackingDate ? Math.floor(Number(earliestTrackingDate)) : null;
+  const firstSeenSec = earliestTrackingDate != null ? Math.floor(earliestTrackingDate) : null;
   return computePegScore(events, coinTrackingStart(events, fourYearsAgo, firstSeenSec), nowSec);
 }
 
@@ -153,9 +153,9 @@ export function computePegScore(
   for (const e of events) {
     if (e.endedAt === null) {
       // Scale: 100 bps (threshold) = 5 penalty (floor), 2500+ bps = 50 penalty (hard cap)
+      // Use worst active event when multiple concurrent depegs exist.
       const absBps = Math.abs(e.peakDeviationBps);
-      activeDepegPenalty = Math.min(50, Math.max(5, absBps / 50));
-      break;
+      activeDepegPenalty = Math.max(activeDepegPenalty, Math.min(50, Math.max(5, absBps / 50)));
     }
   }
 

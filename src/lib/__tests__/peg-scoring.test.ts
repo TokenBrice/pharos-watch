@@ -556,12 +556,12 @@ describe("computePegScoreWithWindow", () => {
   const NOW = 1_700_000_000;
 
   it("returns null for NAV tokens", () => {
-    const result = computePegScoreWithWindow(true, [], String(NOW - 30 * DAY_SECONDS));
+    const result = computePegScoreWithWindow(true, [], NOW - 30 * DAY_SECONDS);
     expect(result).toBeNull();
   });
 
   it("returns null when events are missing", () => {
-    const result = computePegScoreWithWindow(false, null, String(NOW - 30 * DAY_SECONDS));
+    const result = computePegScoreWithWindow(false, null, NOW - 30 * DAY_SECONDS);
     expect(result).toBeNull();
   });
 
@@ -570,7 +570,7 @@ describe("computePegScoreWithWindow", () => {
     const events = [
       makeEvent({ startedAt: NOW - 10 * DAY_SECONDS, endedAt: NOW - 9 * DAY_SECONDS, peakDeviationBps: -200 }),
     ];
-    const result = computePegScoreWithWindow(false, events, String(NOW - 120 * DAY_SECONDS));
+    const result = computePegScoreWithWindow(false, events, NOW - 120 * DAY_SECONDS);
 
     expect(result).not.toBeNull();
     expect(result!.eventCount).toBe(1);
@@ -743,13 +743,13 @@ describe("computePegStability", () => {
 
   it("returns null when historySpanSec <= 0", () => {
     // earliestDate is in the future
-    const futureDate = String(NOW + 1000);
+    const futureDate = NOW + 1000;
     const result = computePegStability([], futureDate, NOW);
     expect(result).toBeNull();
   });
 
   it("returns 100% pegPct when no depeg events", () => {
-    const earliestDate = String(NOW - 365 * DAY_SECONDS);
+    const earliestDate = NOW - 365 * DAY_SECONDS;
     const result = computePegStability([], earliestDate, NOW);
     expect(result).not.toBeNull();
     expect(result!.pegPct).toBe(100);
@@ -759,7 +759,7 @@ describe("computePegStability", () => {
   });
 
   it("calculates pegPct correctly with one closed depeg event", () => {
-    const earliestDate = String(NOW - 100 * DAY_SECONDS);
+    const earliestDate = NOW - 100 * DAY_SECONDS;
     // 10-day depeg in 100-day window => 90% at peg
     const events = [
       makeEvent({
@@ -774,21 +774,21 @@ describe("computePegStability", () => {
   });
 
   it("marks limited=true when tracking span is under 7 days", () => {
-    const earliestDate = String(NOW - 3 * DAY_SECONDS);
+    const earliestDate = NOW - 3 * DAY_SECONDS;
     const result = computePegStability([], earliestDate, NOW);
     expect(result).not.toBeNull();
     expect(result!.limited).toBe(true);
   });
 
   it("marks limited=false when tracking span is 7+ days", () => {
-    const earliestDate = String(NOW - 10 * DAY_SECONDS);
+    const earliestDate = NOW - 10 * DAY_SECONDS;
     const result = computePegStability([], earliestDate, NOW);
     expect(result).not.toBeNull();
     expect(result!.limited).toBe(false);
   });
 
   it("detects depeggedNow when there is an ongoing event", () => {
-    const earliestDate = String(NOW - 365 * DAY_SECONDS);
+    const earliestDate = NOW - 365 * DAY_SECONDS;
     const events = [
       makeEvent({
         startedAt: NOW - 5 * DAY_SECONDS,
@@ -803,7 +803,7 @@ describe("computePegStability", () => {
   });
 
   it("calculates currentStreakDays since last closed event", () => {
-    const earliestDate = String(NOW - 365 * DAY_SECONDS);
+    const earliestDate = NOW - 365 * DAY_SECONDS;
     const events = [
       makeEvent({
         startedAt: NOW - 100 * DAY_SECONDS,
@@ -818,7 +818,7 @@ describe("computePegStability", () => {
   });
 
   it("returns the most recent endedAt for currentStreakDays with multiple events", () => {
-    const earliestDate = String(NOW - 365 * DAY_SECONDS);
+    const earliestDate = NOW - 365 * DAY_SECONDS;
     const events = [
       makeEvent({
         startedAt: NOW - 200 * DAY_SECONDS,
@@ -837,7 +837,7 @@ describe("computePegStability", () => {
   });
 
   it("reports worstDeviationBps from events", () => {
-    const earliestDate = String(NOW - 365 * DAY_SECONDS);
+    const earliestDate = NOW - 365 * DAY_SECONDS;
     const events = [
       makeEvent({ startedAt: NOW - 200 * DAY_SECONDS, endedAt: NOW - 195 * DAY_SECONDS, peakDeviationBps: -200 }),
       makeEvent({ startedAt: NOW - 100 * DAY_SECONDS, endedAt: NOW - 95 * DAY_SECONDS, peakDeviationBps: -700 }),
@@ -848,7 +848,7 @@ describe("computePegStability", () => {
   });
 
   it("reports correct eventCount", () => {
-    const earliestDate = String(NOW - 365 * DAY_SECONDS);
+    const earliestDate = NOW - 365 * DAY_SECONDS;
     const events = [
       makeEvent({ startedAt: NOW - 300 * DAY_SECONDS, endedAt: NOW - 295 * DAY_SECONDS, peakDeviationBps: -200 }),
       makeEvent({ startedAt: NOW - 200 * DAY_SECONDS, endedAt: NOW - 195 * DAY_SECONDS, peakDeviationBps: -300 }),
@@ -869,7 +869,7 @@ describe("computePegStability", () => {
   });
 
   it("handles fully depegged scenario (depeg spans entire window)", () => {
-    const earliestDate = String(NOW - 100 * DAY_SECONDS);
+    const earliestDate = NOW - 100 * DAY_SECONDS;
     const events = [
       makeEvent({
         startedAt: NOW - 100 * DAY_SECONDS,
@@ -886,14 +886,14 @@ describe("computePegStability", () => {
   // --- formatTrackingSpan (tested indirectly through computePegStability) ---
 
   it("formats tracking span as days when < 30 days", () => {
-    const earliestDate = String(NOW - 15 * DAY_SECONDS);
+    const earliestDate = NOW - 15 * DAY_SECONDS;
     const result = computePegStability([], earliestDate, NOW);
     expect(result).not.toBeNull();
     expect(result!.trackingSpan).toBe("15d");
   });
 
   it("formats tracking span as months when < 12 months", () => {
-    const earliestDate = String(NOW - 90 * DAY_SECONDS);
+    const earliestDate = NOW - 90 * DAY_SECONDS;
     const result = computePegStability([], earliestDate, NOW);
     expect(result).not.toBeNull();
     // 90 days / 30.44 ~ 2.95 months, floored to 2
@@ -902,7 +902,7 @@ describe("computePegStability", () => {
 
   it("formats tracking span as years and months", () => {
     // 2 years and 3 months
-    const earliestDate = String(NOW - (2 * 365 + 90) * DAY_SECONDS);
+    const earliestDate = NOW - (2 * 365 + 90) * DAY_SECONDS;
     const result = computePegStability([], earliestDate, NOW);
     expect(result).not.toBeNull();
     // (2*365+90) = 820 days, 820/30.44 ~ 26.9 months, 26/12 = 2 years, 26%12 = 2 remaining
@@ -912,7 +912,7 @@ describe("computePegStability", () => {
   it("formats tracking span as years only when no remaining months", () => {
     // Use enough days that floor(days/30.44) gives exactly 24 months (2 years, 0 remaining)
     // 24 * 30.44 = 730.56, so 731 days => floor(731/30.44) = 24 months => 2y 0mo => "2y"
-    const earliestDate = String(NOW - 731 * DAY_SECONDS);
+    const earliestDate = NOW - 731 * DAY_SECONDS;
     const result = computePegStability([], earliestDate, NOW);
     expect(result).not.toBeNull();
     expect(result!.trackingSpan).toBe("2y");

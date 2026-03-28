@@ -49,7 +49,7 @@ function DepegHistoryIntro() {
   );
 }
 
-export function DepegHistory({ stablecoinId, earliestTrackingDate, hasPriceData = true }: { stablecoinId: string; earliestTrackingDate?: string | null; hasPriceData?: boolean }) {
+export function DepegHistory({ stablecoinId, earliestTrackingDate, hasPriceData = true }: { stablecoinId: string; earliestTrackingDate?: number | null; hasPriceData?: boolean }) {
   const {
     data,
     isLoading,

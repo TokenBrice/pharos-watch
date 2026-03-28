@@ -30,15 +30,14 @@ interface PegStabilityMetrics {
  */
 export function computePegStability(
   events: DepegEvent[],
-  earliestDate: string | null,
+  earliestDate: number | null,
   now?: number,
 ): PegStabilityMetrics | null {
   const nowSec = now ?? Math.floor(Date.now() / 1000);
 
   // Determine tracking start
-  // DefiLlama date field is a Unix timestamp in seconds (as a string)
-  const earliestSec = earliestDate
-    ? Math.floor(Number(earliestDate))
+  const earliestSec = earliestDate != null
+    ? Math.floor(earliestDate)
     : events.length > 0
       ? events.reduce((m, e) => Math.min(m, e.startedAt), Infinity)
       : null;

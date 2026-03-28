@@ -212,8 +212,8 @@ export function SafetyScoreHistorySection({
               role="img"
               aria-label={`Grade timeline: ${segments.map((seg) => `${seg.grade} for ${formatDuration(seg.start, seg.end)}`).join(", ")}`}
             >
-              {segments.map((seg, i) => (
-                <Tooltip key={i}>
+              {segments.map((seg) => (
+                <Tooltip key={`${seg.grade}-${seg.start}`}>
                   <TooltipTrigger asChild>
                     <button
                       type="button"

@@ -589,6 +589,10 @@ function inferGovernanceQuality(governance: GovernanceType): GovernanceQuality {
       return "multisig";
     case "centralized":
       return "single-entity";
+    default: {
+      const _exhaustive: never = governance;
+      return _exhaustive;
+    }
   }
 }
 

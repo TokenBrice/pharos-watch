@@ -33,14 +33,16 @@ export const handleStablecoinDetail = withErrorHandler(
       execCtx: ctx,
     });
 
+    const geckoId = meta?.geckoId;
+
     const isCommodity =
-      !!meta && (meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER") && !!meta.geckoId;
+      !!meta && (meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER") && !!geckoId;
 
     if (isCommodity) {
       return handleCommodityDetail(
         {
         stablecoinId: id,
-        geckoId: meta.geckoId!,
+        geckoId,
         protocolSlug: meta.protocolSlug ?? "",
         pegType,
         },
@@ -48,13 +50,12 @@ export const handleStablecoinDetail = withErrorHandler(
       );
     }
 
-    const isCgOnly = meta?.detailProvider === "coingecko" && !!meta?.geckoId;
-    if (isCgOnly) {
+    if (meta?.detailProvider === "coingecko" && geckoId) {
       return handleCoinGeckoOnlyDetail(
         {
           db,
           stablecoinId: id,
-          geckoId: meta.geckoId!,
+          geckoId,
           pegType,
           coingeckoApiKey,
         },

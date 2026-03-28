@@ -86,7 +86,7 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   redemptionBackstop: RedemptionBackstopEntry | undefined;
   hasFlows: boolean;
   supplyHistory: SupplyHistoryPoint[];
-  earliestTrackingDate: string | null;
+  earliestTrackingDate: number | null;
   reserves: ReserveResult | null;
   reserveFetchError: unknown | null;
   supplyError: unknown | null;
@@ -254,7 +254,7 @@ export function buildStablecoinDetailViewModel({
   const performanceVsUsd1y = computePerformanceVsUsd1y(coin, coinData.price, resolvedSupplyHistory, nowMs);
   const earliestTrackingDate =
     resolvedSupplyHistory.length > 0
-      ? String(resolvedSupplyHistory[0].date)
+      ? resolvedSupplyHistory[0].date
       : null;
   const pegContext = derivePegReferenceContext({
     assets: listData?.peggedAssets ?? [],

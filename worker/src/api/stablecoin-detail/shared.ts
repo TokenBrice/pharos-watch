@@ -204,7 +204,9 @@ export function buildPriceMapByDate(
   if (!prices) return priceMap;
 
   for (const [ts, price] of prices) {
-    priceMap.set(dateKeyFromTimestampMs(ts), price);
+    if (Number.isFinite(price)) {
+      priceMap.set(dateKeyFromTimestampMs(ts), price);
+    }
   }
   return priceMap;
 }
@@ -236,7 +238,7 @@ export function buildTokenRowsFromMarketCaps(
   resolveMcap?: (mcap: number, price: number) => number,
 ): Record<string, unknown>[] {
   return marketCaps
-    .filter(([, mcap]) => mcap > 0)
+    .filter(([, mcap]) => Number.isFinite(mcap) && mcap > 0)
     .map(([ts, mcap]) => {
       const date = Math.floor(ts / 1000);
       const price = priceMap.get(dateKeyFromTimestampMs(ts)) ?? 0;

@@ -159,8 +159,8 @@ function DonutCard({
                   animationDuration={600}
                   animationEasing="ease-out"
                 >
-                  {data.map((d, i) => (
-                    <Cell key={i} fill={d.hex} />
+                  {data.map((d) => (
+                    <Cell key={d.name} fill={d.hex} />
                   ))}
                 </Pie>
                 <Tooltip
