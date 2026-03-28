@@ -62,7 +62,7 @@ Before the enrichment pipeline runs, `fetchPrimaryPrices()` collects prices from
 - **Sources disagree** → `priceConfidence: "low"`, closest to peg reference used
 - **All sources down** → skip, falls through to enrichment pipeline
 
-Each asset gets tagged with `priceConfidence` (high/single-source/low/fallback) and `supplySource` (defillama/coingecko-fallback).
+Each asset gets tagged with `priceConfidence` (high/single-source/low/fallback) and `supplySource` (`defillama`, `coingecko-fallback`, or `onchain-total-supply`). The `onchain-total-supply` path is used for supplemental assets whose circulating supply is derived from an on-chain total-supply probe instead of an upstream market-cap field; preview-only fiat CoinGecko assets can use that path with the existing FX reference for USD normalization while still keeping `price = null`.
 
 #### Consensus source provenance
 After N-source consensus, each asset receives a `consensusSources: string[]` field listing all source names that returned a valid price for that coin during the sync cycle. For enrichment-pass fallbacks, this is a single-element array. Protocol-redeem overrides replace it with `["protocol-redeem"]`.

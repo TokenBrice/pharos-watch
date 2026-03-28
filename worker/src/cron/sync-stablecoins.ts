@@ -56,6 +56,7 @@ export async function syncStablecoins(
   const startAbort = returnIfAborted(signal, "start");
   if (startAbort) return startAbort;
   const syncStartSec = Math.floor(Date.now() / 1000);
+  const { fxFallbackRates: freshFxFallbackRates, validationReferences } = await loadFreshFxRates(db, syncStartSec);
 
   const preFetchAbort = returnIfAborted(signal, "fetch-stablecoins-and-supplementals");
   if (preFetchAbort) return preFetchAbort;
@@ -64,6 +65,7 @@ export async function syncStablecoins(
     db,
     signal,
     syncStartSec,
+    fxFallbackRates: freshFxFallbackRates,
     coingeckoApiKey,
     chainRpcs,
     fallbackToCoingecko: (cgData) =>
@@ -94,7 +96,6 @@ export async function syncStablecoins(
     },
   });
 
-  const { fxFallbackRates: freshFxFallbackRates, validationReferences } = await loadFreshFxRates(db, syncStartSec);
   if (freshFxFallbackRates) {
     fxFallbackRates = freshFxFallbackRates;
   }

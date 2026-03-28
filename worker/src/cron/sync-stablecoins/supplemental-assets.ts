@@ -331,6 +331,7 @@ async function fetchFiatCoinGeckoTokens(
   cgData: CoinGeckoMcapData,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
+  fxFallbackRates?: Record<string, number>,
 ): Promise<PeggedAsset[]> {
   if (FIAT_CG_METAS.length === 0) return [];
   throwIfAborted(signal);
@@ -355,15 +356,19 @@ async function fetchFiatCoinGeckoTokens(
 
     const results = await Promise.all(
       FIAT_CG_METAS.map(async (meta) => {
+        const nowSec = Math.floor(Date.now() / 1000);
+        const pKey = pegTypeKey(meta);
         const priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
-        if (!priceResolution) return null;
+        const pegReferencePrice = toPositiveFiniteNumber(fxFallbackRates?.[pKey]);
+        const priceForSupply = priceResolution?.price ?? pegReferencePrice;
 
         let mcap = mcapMap[meta.id];
         let supplySource: string = "coingecko-fallback";
 
-        // Fallback: on-chain totalSupply × price when CG has no market cap
-        if (!mcap) {
-          const onChainMcap = await fetchOnChainMcap(meta, priceResolution.price, chainRpcs, signal);
+        // Fallback: on-chain totalSupply × market/peg-reference price when CG has no market cap.
+        // This keeps preview-only fiat assets in supply coverage without inventing a live market quote.
+        if (!mcap && priceForSupply != null) {
+          const onChainMcap = await fetchOnChainMcap(meta, priceForSupply, chainRpcs, signal);
           if (onChainMcap) {
             mcap = onChainMcap;
             supplySource = "onchain-total-supply";
@@ -375,7 +380,6 @@ async function fetchFiatCoinGeckoTokens(
           return null;
         }
 
-        const pKey = pegTypeKey(meta);
         return {
           id: meta.id,
           name: meta.name,
@@ -383,13 +387,13 @@ async function fetchFiatCoinGeckoTokens(
           geckoId: meta.geckoId,
           pegType: pKey,
           pegMechanism: meta.flags.backing,
-          price: priceResolution.price,
-          priceSource: priceResolution.source,
-          priceConfidence: "single-source",
-          priceUpdatedAt: Math.floor(Date.now() / 1000),
-          priceObservedAt: Math.floor(Date.now() / 1000),
-          priceObservedAtMode: "local_fetch",
-          priceSyncedAt: Math.floor(Date.now() / 1000),
+          price: priceResolution?.price ?? null,
+          priceSource: priceResolution?.source,
+          priceConfidence: priceResolution ? "single-source" : null,
+          priceUpdatedAt: priceResolution ? nowSec : null,
+          priceObservedAt: priceResolution ? nowSec : null,
+          priceObservedAtMode: priceResolution ? "local_fetch" : null,
+          priceSyncedAt: priceResolution ? nowSec : null,
           supplySource,
           circulating: { [pKey]: mcap },
           circulatingPrevDay: null,
@@ -457,6 +461,7 @@ export async function fetchSupplementalTrackedTokens(
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
   chainRpcs?: Map<string, ChainRpcConfig>,
+  fxFallbackRates?: Record<string, number>,
 ): Promise<{
   goldTokens: PeggedAsset[];
   silverTokens: PeggedAsset[];
@@ -466,7 +471,7 @@ export async function fetchSupplementalTrackedTokens(
   const [goldTokens, silverTokens, fiatCgTokens] = await Promise.all([
     fetchGoldTokens(cgData, signal),
     fetchSilverTokens(cgData, signal, coingeckoApiKey),
-    fetchFiatCoinGeckoTokens(cgData, signal, chainRpcs),
+    fetchFiatCoinGeckoTokens(cgData, signal, chainRpcs, fxFallbackRates),
   ]);
 
   return { goldTokens, silverTokens, fiatCgTokens };

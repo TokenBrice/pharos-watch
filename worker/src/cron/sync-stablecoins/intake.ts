@@ -50,6 +50,7 @@ export async function loadStablecoinsIntake(
     db: D1Database;
     signal?: AbortSignal;
     syncStartSec: number;
+    fxFallbackRates?: Record<string, number>;
     coingeckoApiKey?: string | null;
     chainRpcs?: Map<string, ChainRpcConfig>;
     fallbackToCoingecko: (cgData: CoinGeckoMcapData) => Promise<CronResult>;
@@ -63,7 +64,7 @@ export async function loadStablecoinsIntake(
     dlAllowed
       ? fetchWithRetry(`${DEFILLAMA_BASE}/stablecoins?includePrices=true`, input.signal ? { signal: input.signal } : undefined)
       : Promise.resolve(null),
-    fetchSupplementalTrackedTokens(cgData, input.signal, input.coingeckoApiKey, input.chainRpcs),
+    fetchSupplementalTrackedTokens(cgData, input.signal, input.coingeckoApiKey, input.chainRpcs, input.fxFallbackRates),
   ]);
   const { goldTokens, silverTokens, fiatCgTokens } = supplementalTokens;
 

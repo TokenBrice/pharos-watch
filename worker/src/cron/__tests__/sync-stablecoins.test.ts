@@ -77,6 +77,15 @@ vi.mock("@shared/lib/stablecoins", () => {
       commodityOunces: 1,
       flags: { pegCurrency: "GOLD", backing: "rwa-backed", yieldBearing: false, navToken: false, governance: "centralized" },
     },
+    {
+      id: "chfau-allunity",
+      name: "AllUnity CHF",
+      symbol: "CHFAU",
+      geckoId: "allunity-chf",
+      detailProvider: "coingecko",
+      contracts: [{ chain: "ethereum", address: "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78", decimals: 6 }],
+      flags: { pegCurrency: "CHF", backing: "rwa-backed", yieldBearing: false, navToken: false, governance: "centralized" },
+    },
       ...fallbackTrackedTokens,
     ];
     return {
@@ -95,6 +104,11 @@ vi.mock("@shared/lib/stablecoins", () => {
         geckoId: "pleasing-gold",
         cmcSlug: undefined,
         commodityOunces: 1,
+        flags: { navToken: false },
+      }],
+      ["chfau-allunity", {
+        geckoId: "allunity-chf",
+        cmcSlug: undefined,
         flags: { navToken: false },
       }],
       ["ggbr-goldfish-gold", {
@@ -187,6 +201,7 @@ import { confirmPendingDepegs } from "../confirm-pending-depegs";
 import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
 import { sendAlert } from "../../lib/alerts";
 import * as apiUtils from "../../lib/api-utils";
+import * as evmRpcModule from "../../lib/evm-rpc";
 
 // --- Helpers ---
 
@@ -1649,6 +1664,63 @@ describe("syncStablecoins", () => {
     expect(pgold?.priceSource).toBe("coingecko");
     expect(pgold?.supplySource).toBe("coingecko-fallback");
     expect(pgold?.circulating).toEqual({ peggedGOLD: 84_407_122.82446626 });
+  });
+
+  it("keeps preview-only fiat CoinGecko assets in coverage via on-chain supply and FX normalization", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: { value: JSON.stringify({ peggedCHF: 1.14 }), updated_at: nowSec - 60 },
+      },
+      { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
+      { match: "supply_history", rows: [] },
+      { match: "price_cache", rows: [] },
+      { match: "circuit", rows: [] },
+    ]);
+    const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
+    const evmSupplySpy = vi.spyOn(evmRpcModule, "fetchEvmUint256AtBlock")
+      .mockResolvedValueOnce(1_500_000_000_000n);
+
+    const dlData = makeDlResponse(60);
+    mockFetch([
+      { match: "api.coingecko.com", body: { "allunity-chf": {} } },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.status).toBe("ok");
+    expect(result.itemCount).toBe(61);
+    expect(evmSupplySpy).toHaveBeenCalledWith(
+      "ethereum",
+      "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
+      "0x18160ddd",
+      "latest",
+      expect.any(Object),
+    );
+
+    const finalValidationCall = validateSpy.mock.calls.find(
+      (call) => call[2] === "sync-stablecoins:stablecoins",
+    );
+    const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
+    const chfau = payload?.peggedAssets.find((asset) => asset.id === "chfau-allunity");
+
+    expect(chfau).toBeDefined();
+    expect(chfau?.price).toBeNull();
+    expect(chfau?.priceSource).toBe("missing");
+    expect(chfau?.priceConfidence).toBeNull();
+    expect(chfau?.supplySource).toBe("onchain-total-supply");
+    expect((chfau?.circulating as Record<string, number> | undefined)?.peggedCHF).toBeCloseTo(1_710_000, 6);
   });
 
   it("reuses fresh cached prices during CG supply fallback when CoinGecko spot values fail validation", async () => {
