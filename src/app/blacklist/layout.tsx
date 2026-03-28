@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { SITE_URL } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Blacklist Tracker",
@@ -13,10 +14,10 @@ export const metadata: Metadata = {
     description:
       "Track USDC, USDT, PAXG, and XAUT address freezes and blacklist events across Ethereum, Tron, and L2 chains.",
     url: "/blacklist/",
-    images: [{ url: "https://pharos.watch/og-blacklist.png", width: 1200, height: 628 }],
+    images: [{ url: `${SITE_URL}/og-blacklist.png`, width: 1200, height: 628 }],
   },
   twitter: {
-    images: [{ url: "https://pharos.watch/og-blacklist.png", width: 1200, height: 628 }],
+    images: [{ url: `${SITE_URL}/og-blacklist.png`, width: 1200, height: 628 }],
   },
 };
 

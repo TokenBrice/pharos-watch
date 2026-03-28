@@ -14,6 +14,7 @@ import {
   pegCoinCount,
 } from "@/lib/peg-landing";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { SITE_URL } from "@/lib/site-config";
 import { PegLandingClient } from "./client";
 
 export function generateStaticParams() {
@@ -92,7 +93,7 @@ export default async function PegLandingPage({
                 "@type": "ListItem",
                 position: i + 1,
                 name: `${coin.name} (${coin.symbol})`,
-                url: `https://pharos.watch${buildStablecoinUrl(coin.id)}`,
+                url: `${SITE_URL}${buildStablecoinUrl(coin.id)}`,
               })),
             }),
           }}

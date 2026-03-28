@@ -6,6 +6,7 @@ import { HomepageClient } from "@/components/homepage-client";
 import { KpiBar } from "@/components/kpi-bar";
 import { SiteHeader } from "@/components/site-header";
 import { safeJsonLd } from "@/lib/json-ld";
+import { SITE_URL } from "@/lib/site-config";
 import { buildStablecoinUrl } from "@/lib/urls";
 
 export const metadata: Metadata = {
@@ -33,7 +34,7 @@ export default function HomePage() {
     "@type": "ListItem" as const,
     position: i + 1,
     name: `${coin.name} (${coin.symbol})`,
-    url: `https://pharos.watch${buildStablecoinUrl(coin.id)}`,
+    url: `${SITE_URL}${buildStablecoinUrl(coin.id)}`,
   }));
   const itemListCount = itemListElements.length;
 

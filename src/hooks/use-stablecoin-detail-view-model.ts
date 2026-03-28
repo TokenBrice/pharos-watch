@@ -90,7 +90,12 @@ export function useStablecoinDetailViewModel({
       refetchLiquidity(),
       refetchReportCards(),
       refetchRedemptionBackstops(),
-    ]);
+    ]).then((results) => {
+      const failed = results.filter((r) => r.status === "rejected");
+      if (failed.length > 0) {
+        console.warn("[refetch] Some queries failed to refresh", failed);
+      }
+    });
   }, [
     refetchLiquidity,
     refetchList,

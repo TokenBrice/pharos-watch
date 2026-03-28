@@ -7,6 +7,7 @@ import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { safeJsonLd } from "@/lib/json-ld";
+import { SITE_URL } from "@/lib/site-config";
 import {
   METHODOLOGY_READING_STEPS,
   METHODOLOGY_SECTIONS,
@@ -27,10 +28,10 @@ export const metadata: Metadata = {
       "Full methodology behind Pharos safety grades, peg scores, liquidity scores, and contagion stress tests. Transparent scoring for every stablecoin.",
     url: "/methodology/",
     type: "website",
-    images: [{ url: "https://pharos.watch/og-methodology.png", width: 1200, height: 628 }],
+    images: [{ url: `${SITE_URL}/og-methodology.png`, width: 1200, height: 628 }],
   },
   twitter: {
-    images: [{ url: "https://pharos.watch/og-methodology.png", width: 1200, height: 628 }],
+    images: [{ url: `${SITE_URL}/og-methodology.png`, width: 1200, height: 628 }],
   },
 };
 

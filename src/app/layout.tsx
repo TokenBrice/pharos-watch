@@ -11,6 +11,7 @@ import { FeedbackButton } from "@/components/feedback-button";
 import { MobileUtilityDock } from "@/components/mobile-utility-dock";
 import { RegimeBar } from "@/components/regime-bar";
 import { safeJsonLd } from "@/lib/json-ld";
+import { SITE_URL, API_URL } from "@/lib/site-config";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
@@ -37,7 +38,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://pharos.watch"),
+  metadataBase: new URL(SITE_URL),
   title: {
     template: "%s | Pharos",
     default: "Stablecoin Analytics Dashboard | Pharos",
@@ -57,19 +58,19 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "Pharos",
     locale: "en_US",
-    url: "https://pharos.watch/",
+    url: `${SITE_URL}/`,
     title: "Stablecoin Analytics Dashboard | Pharos",
     description: siteDescription,
-    images: [{ url: "https://pharos.watch/og-card.png", width: 1200, height: 628 }],
+    images: [{ url: `${SITE_URL}/og-card.png`, width: 1200, height: 628 }],
   },
   twitter: {
     card: "summary_large_image",
     site: "@PharosWatch",
     creator: "@TokenBrice",
-    images: [{ url: "https://pharos.watch/og-card.png", width: 1200, height: 628 }],
+    images: [{ url: `${SITE_URL}/og-card.png`, width: 1200, height: 628 }],
   },
   alternates: {
-    canonical: "https://pharos.watch/",
+    canonical: `${SITE_URL}/`,
   },
   icons: {
     icon: [
@@ -88,7 +89,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://api.pharos.watch" />
+        <link rel="preconnect" href={API_URL} />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {process.env.NEXT_PUBLIC_GA_ID && (
@@ -139,11 +140,11 @@ export default function RootLayout({
                 "@context": "https://schema.org",
                 "@type": "WebSite",
                 name: "Pharos",
-                url: "https://pharos.watch",
+                url: SITE_URL,
                 description: siteDescription,
                 potentialAction: {
                   "@type": "SearchAction",
-                  target: "https://pharos.watch/?q={search_term_string}",
+                  target: `${SITE_URL}/?q={search_term_string}`,
                   "query-input": "required name=search_term_string",
                 },
               },
@@ -151,8 +152,8 @@ export default function RootLayout({
                 "@context": "https://schema.org",
                 "@type": "Organization",
                 name: "Pharos",
-                url: "https://pharos.watch",
-                logo: "https://pharos.watch/pharos-icon.png",
+                url: SITE_URL,
+                logo: `${SITE_URL}/pharos-icon.png`,
                 description: siteDescription,
                 sameAs: ["https://x.com/PharosWatch", "https://github.com/TokenBrice/stablecoin-dashboard"],
                 founder: {
@@ -165,7 +166,7 @@ export default function RootLayout({
                 "@context": "https://schema.org",
                 "@type": "WebApplication",
                 name: "Pharos",
-                url: "https://pharos.watch",
+                url: SITE_URL,
                 applicationCategory: "FinanceApplication",
                 operatingSystem: "Web",
                 description: siteDescription,

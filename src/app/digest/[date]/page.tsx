@@ -7,6 +7,7 @@ import { DigestSnapshot } from "@/components/digest-snapshot";
 import { splitDigestParagraphs, EDITORIAL_BODY_STYLE } from "@/lib/digest";
 import { safeJsonLd } from "@/lib/json-ld";
 import { summarizeText } from "@/lib/page-metadata";
+import { SITE_URL } from "@/lib/site-config";
 import digests from "../../../../data/digests.json";
 
 interface DigestEntry {
@@ -109,15 +110,15 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
             author: {
               "@type": "Organization",
               name: "Pharos",
-              url: "https://pharos.watch",
+              url: SITE_URL,
             },
             publisher: {
               "@type": "Organization",
               name: "Pharos",
-              url: "https://pharos.watch",
-              logo: "https://pharos.watch/pharos-icon.png",
+              url: SITE_URL,
+              logo: `${SITE_URL}/pharos-icon.png`,
             },
-            mainEntityOfPage: `https://pharos.watch/digest/${digest.date}/`,
+            mainEntityOfPage: `${SITE_URL}/digest/${digest.date}/`,
           }),
         }}
       />

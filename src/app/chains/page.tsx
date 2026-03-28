@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
 import { CHAIN_HEALTH_METHODOLOGY_VERSION, CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH } from "@shared/lib/chain-health-version";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { SITE_URL } from "@/lib/site-config";
 import { safeJsonLd } from "@/lib/json-ld";
 import { ChainsLeaderboardClient } from "./client";
 import { FeaturePageShell } from "@/components/feature-page-shell";
@@ -11,7 +12,7 @@ export const metadata: Metadata = buildPageMetadata({
   title: "Chains",
   description: "Ranking blockchain networks by stablecoin supply, health score, and composition. Explore per-chain stablecoin analytics on Pharos.",
   canonical: "/chains/",
-  ogImage: "https://pharos.watch/og-chains.png",
+  ogImage: `${SITE_URL}/og-chains.png`,
 });
 
 const CHAINS_FAQ_JSON_LD = {

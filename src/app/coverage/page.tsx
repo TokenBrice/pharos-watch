@@ -1,6 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { SITE_URL } from "@/lib/site-config";
 import { safeJsonLd } from "@/lib/json-ld";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 
@@ -42,7 +43,7 @@ export const metadata = buildPageMetadata({
   title: "Coverage Matrix: Stablecoin Feature Coverage",
   description: coverageDescription,
   canonical: "/coverage/",
-  ogImage: "https://pharos.watch/og-coverage.png",
+  ogImage: `${SITE_URL}/og-coverage.png`,
 });
 
 export default createClientFeaturePage({

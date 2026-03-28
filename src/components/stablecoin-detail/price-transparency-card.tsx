@@ -11,6 +11,7 @@ import {
   PRICE_TRANSPARENCY_SOURCE_KEYS,
   getPricingSourceLabel,
 } from "@shared/lib/pricing-sources";
+import { CONFIDENCE_LEVEL_COLORS } from "@shared/lib/classification";
 
 type SourceStatus = "used" | "available" | "no-data" | "not-applicable";
 
@@ -25,15 +26,6 @@ function resolveSourceStatus(
   if (consensusSources.includes(sourceKey)) return "available";
   return "no-data";
 }
-
-
-
-const CONFIDENCE_COLORS: Record<string, string> = {
-  high: "text-emerald-600 dark:text-emerald-400",
-  "single-source": "text-amber-600 dark:text-amber-400",
-  low: "text-rose-600 dark:text-rose-400",
-  fallback: "text-muted-foreground",
-};
 
 function formatTimeAgo(updatedAtSec: number | null | undefined): string {
   if (updatedAtSec == null) return "\u2014";
@@ -64,7 +56,7 @@ export function PriceTransparencyCard({
   dexPriceCheck,
 }: PriceTransparencyCardProps) {
   const [showAll, setShowAll] = useState(false);
-  
+
   if (coinData.price == null) return null;
 
   const isProtocolRedeem = coinData.priceSource === "protocol-redeem";
@@ -100,9 +92,9 @@ export function PriceTransparencyCard({
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold font-mono tabular-nums">${coinData.price.toFixed(4)}</span>
-            <Badge 
-              variant="outline" 
-              className={cn("text-[11px] uppercase", CONFIDENCE_COLORS[coinData.priceConfidence ?? ""] ?? "text-muted-foreground")}
+            <Badge
+              variant="outline"
+              className={cn("text-[11px] uppercase", CONFIDENCE_LEVEL_COLORS[coinData.priceConfidence as keyof typeof CONFIDENCE_LEVEL_COLORS] ?? "text-muted-foreground")}
             >
               {coinData.priceConfidence ?? "—"}
             </Badge>
@@ -128,8 +120,8 @@ export function PriceTransparencyCard({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">DEX Check</span>
-                <Badge 
-                  variant="outline" 
+                <Badge
+                  variant="outline"
                   className={cn(
                     "text-[11px]",
                     dexPriceCheck.agrees
@@ -163,7 +155,7 @@ export function PriceTransparencyCard({
               </Badge>
             </div>
           ) : null}
-          
+
           {/* Used Sources */}
           {usedSources.map((source) => (
             <div

@@ -5,6 +5,7 @@ import { CemeteryClient } from "@/components/cemetery-client";
 import { CemeteryCharts } from "@/components/cemetery-charts";
 import { FaqSection } from "@/components/faq-section";
 import { safeJsonLd } from "@/lib/json-ld";
+import { SITE_URL } from "@/lib/site-config";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import type { FaqItem } from "@/lib/faq";
 import { sortCemeteryCoins } from "@/lib/cemetery";
@@ -22,10 +23,10 @@ export const metadata: Metadata = {
     description: cemeteryDescription,
     url: "/cemetery/",
     type: "website",
-    images: [{ url: "https://pharos.watch/og-cemetery.png", width: 1200, height: 628 }],
+    images: [{ url: `${SITE_URL}/og-cemetery.png`, width: 1200, height: 628 }],
   },
   twitter: {
-    images: [{ url: "https://pharos.watch/og-cemetery.png", width: 1200, height: 628 }],
+    images: [{ url: `${SITE_URL}/og-cemetery.png`, width: 1200, height: 628 }],
   },
 };
 

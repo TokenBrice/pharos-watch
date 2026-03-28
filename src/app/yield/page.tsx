@@ -2,6 +2,7 @@ import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils"
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { SITE_URL } from "@/lib/site-config";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
@@ -15,7 +16,7 @@ export const metadata = buildPageMetadata({
   title: "Yield Intelligence",
   description: desc,
   canonical: "/yield/",
-  ogImage: "https://pharos.watch/og-yield.png",
+  ogImage: `${SITE_URL}/og-yield.png`,
 });
 
 const faqJsonLd = {

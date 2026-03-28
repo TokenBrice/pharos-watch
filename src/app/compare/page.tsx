@@ -2,6 +2,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { SITE_URL } from "@/lib/site-config";
 
 const compareDescription = `Side-by-side comparison of stablecoin stats, supply history, and peg stability for ${ACTIVE_STABLECOINS.length} tracked stablecoins.`;
 
@@ -9,7 +10,7 @@ export const metadata = buildPageMetadata({
   title: "Compare Stablecoins: Side-by-Side Analysis",
   description: compareDescription,
   canonical: "/compare/",
-  ogImage: "https://pharos.watch/og-compare.png",
+  ogImage: `${SITE_URL}/og-compare.png`,
   robots: {
     index: false,
     follow: true,

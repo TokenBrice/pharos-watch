@@ -190,7 +190,12 @@ export function useCompareDataModel({
       refetchReportCards(),
       ...detailQueries.map((query) => query.refetch()),
       ...flowCoinQueries.map((query) => query.refetch()),
-    ]);
+    ]).then((results) => {
+      const failed = results.filter((r) => r.status === "rejected");
+      if (failed.length > 0) {
+        console.warn("[refetch] Some queries failed to refresh", failed);
+      }
+    });
   }, [
     detailQueries,
     flowCoinQueries,

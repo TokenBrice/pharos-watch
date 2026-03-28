@@ -1,8 +1,10 @@
 import { ratioQualityColor } from "@/lib/severity-colors";
+import { RATIO_QUALITY_COLORS } from "@shared/lib/classification";
 
 export function BalanceBar({ ratio }: { ratio: number }) {
   const pct = Math.round(ratio * 100);
-  const bgColor = ratio >= 0.8 ? "bg-emerald-500" : ratio >= 0.5 ? "bg-amber-500" : "bg-red-500";
+  const quality = ratio >= 0.8 ? "healthy" : ratio >= 0.5 ? "caution" : "critical";
+  const bgColor = RATIO_QUALITY_COLORS[quality];
   const textColor = ratioQualityColor(ratio);
   const level = ratio >= 0.8 ? "good" : ratio >= 0.5 ? "fair" : "poor";
   return (

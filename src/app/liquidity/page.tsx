@@ -2,6 +2,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { SITE_URL } from "@/lib/site-config";
 import {
   LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
   LIQUIDITY_METHODOLOGY_VERSION_LABEL,
@@ -12,7 +13,7 @@ export const metadata = buildPageMetadata({
   title: "DEX Liquidity: Stablecoin Pool Depth & Volume",
   description: liquidityDescription,
   canonical: "/liquidity/",
-  ogImage: "https://pharos.watch/og-liquidity.png",
+  ogImage: `${SITE_URL}/og-liquidity.png`,
 });
 
 export default createClientFeaturePage({

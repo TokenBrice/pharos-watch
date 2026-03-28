@@ -132,7 +132,7 @@ export function deriveDependencies(meta: Pick<StablecoinMeta, 'reserves' | 'depe
   const reserves = meta.reserves;
   if (!reserves?.length) return meta.dependencies ?? [];
 
-  const linked = reserves.filter((r) => r.coinId);
+  const linked = reserves.filter((r): r is typeof r & { coinId: string } => !!r.coinId);
   if (linked.length === 0) return meta.dependencies ?? [];
 
   // Aggregate by (coinId, depType) — multiple reserve slices backed by the
@@ -145,7 +145,7 @@ export function deriveDependencies(meta: Pick<StablecoinMeta, 'reserves' | 'depe
     if (existing) {
       existing.weight += r.pct / 100;
     } else {
-      map.set(key, { id: r.coinId!, weight: r.pct / 100, type });
+      map.set(key, { id: r.coinId, weight: r.pct / 100, type });
     }
   }
   return Array.from(map.values());

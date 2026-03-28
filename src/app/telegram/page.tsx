@@ -6,13 +6,14 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { SITE_URL } from "@/lib/site-config";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Telegram Alerts & Digest: Stablecoin Notifications on Telegram",
   description:
     "Set up Telegram alerts for specific stablecoins or all tracked stablecoins by alert type: depeg events, depeg worsening, DEWS threat level changes, and daily safety grade shifts. Plus get the Pharos digest straight in Telegram.",
   canonical: "/telegram/",
-  ogImage: "https://pharos.watch/og-telegram.png",
+  ogImage: `${SITE_URL}/og-telegram.png`,
 });
 
 const ALERT_TYPES = [

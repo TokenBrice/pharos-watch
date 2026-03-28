@@ -4,6 +4,7 @@ import { getStatusCronDisplay } from "@/lib/status/cron-config";
 import { summarizeCronMetadata } from "./cron-metadata-summary";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { formatLatency, formatInterval } from "./format";
+import { CRON_STATUS_COLORS } from "@shared/lib/classification";
 
 interface CronCardProps {
   job: string;
@@ -67,12 +68,6 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
       ? "border-amber-500/30"
       : "border-green-500/30";
 
-  const badgeClassByStatus: Record<string, string> = {
-    ok: "bg-green-500/15 text-green-700 dark:text-green-400",
-    degraded: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-    skipped_locked: "bg-muted text-muted-foreground",
-    error: "bg-red-500/15 text-red-700 dark:text-red-400",
-  };
   const metadataSummaryClass = cron.telemetryUnknown
     ? "border-slate-500/20 bg-slate-500/5 text-slate-700 dark:text-slate-300"
     : !cron.healthy || latestStatus === "error"
@@ -134,7 +129,7 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
             )}
             <div className="flex items-center gap-2 text-sm">
               <Badge
-                className={`text-xs ${badgeClassByStatus[cron.lastRun.status] ?? "bg-red-500/15 text-red-700 dark:text-red-400"}`}
+                className={`text-xs ${CRON_STATUS_COLORS[cron.lastRun.status as keyof typeof CRON_STATUS_COLORS] ?? "bg-red-500/15 text-red-700 dark:text-red-400"}`}
               >
                 {cron.lastRun.status}
               </Badge>

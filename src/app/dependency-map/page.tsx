@@ -1,6 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { SITE_URL } from "@/lib/site-config";
 
 const description =
   "Interactive graph of collateral dependencies between up to 50 dependency-linked stablecoins by market cap. Node size reflects market cap; lines show collateral links.";
@@ -9,7 +10,7 @@ export const metadata = buildPageMetadata({
   title: "Dependency Map: Stablecoin Collateral Graph",
   description,
   canonical: "/dependency-map/",
-  ogImage: "https://pharos.watch/og-dependency-map.png",
+  ogImage: `${SITE_URL}/og-dependency-map.png`,
 });
 
 export default createClientFeaturePage({

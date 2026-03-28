@@ -61,11 +61,11 @@ export function useCoverageMatrixModel() {
 
     return ACTIVE_STABLECOINS.map((coin) => {
       const pegCoin = pegCoinById.get(coin.id);
+      const asset = assetById.get(coin.id);
+      const mcap = asset ? getCirculatingRaw(asset) : 0;
       return buildCoverageRow({
         coin,
-        marketCapUsd: assetById.has(coin.id)
-          ? getCirculatingRaw(assetById.get(coin.id)!)
-          : 0,
+        marketCapUsd: mcap,
         hasPegCoverage: pegIds.has(coin.id),
         consensusSources: pegCoin?.consensusSources,
         priceConfidence: pegCoin?.priceConfidence ?? undefined,

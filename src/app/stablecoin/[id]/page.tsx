@@ -9,6 +9,7 @@ import { buildStablecoinDetailMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { SITE_URL } from "@/lib/site-config";
 import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { Skeleton } from "@/components/ui/skeleton";
 import StablecoinDetailClient from "./client";
@@ -216,11 +217,11 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
             "@type": "Dataset",
             name: `${coin.name} Stablecoin Analytics`,
             description: `Live analytics for ${coin.name} (${coin.symbol}). ${GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} stablecoin, ${BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing}, pegged to ${PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}. Price, market cap, supply trends, chain distribution, peg score, and depeg history.`,
-            url: `https://pharos.watch${buildStablecoinUrl(id)}`,
+            url: `${SITE_URL}${buildStablecoinUrl(id)}`,
             creator: {
               "@type": "Organization",
               name: "Pharos",
-              url: "https://pharos.watch",
+              url: SITE_URL,
             },
             isAccessibleForFree: true,
             keywords: [

@@ -5,6 +5,7 @@ import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { SITE_URL } from "@/lib/site-config";
 import digests from "../../data/digests.json";
 
 export const dynamic = "force-static";
@@ -47,169 +48,169 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const staticPages: MetadataRoute.Sitemap = [
     {
-      url: "https://pharos.watch/",
+      url: `${SITE_URL}/`,
       lastModified: now,
       changeFrequency: "hourly",
       priority: 1.0,
     },
     {
-      url: "https://pharos.watch/coverage/",
+      url: `${SITE_URL}/coverage/`,
       lastModified: new Date(LAST_EDITED["/coverage/"]!),
       changeFrequency: "weekly",
       priority: 0.6,
     },
     {
-      url: "https://pharos.watch/start/",
+      url: `${SITE_URL}/start/`,
       lastModified: new Date(LAST_EDITED["/start/"]!),
       changeFrequency: "monthly",
       priority: 0.6,
     },
     {
-      url: "https://pharos.watch/blacklist/",
+      url: `${SITE_URL}/blacklist/`,
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.8,
     },
     {
-      url: "https://pharos.watch/depeg/",
+      url: `${SITE_URL}/depeg/`,
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.8,
     },
     {
-      url: "https://pharos.watch/cemetery/",
+      url: `${SITE_URL}/cemetery/`,
       lastModified: new Date(LAST_EDITED["/cemetery/"]!),
       changeFrequency: "monthly",
       priority: 0.7,
     },
     {
-      url: "https://pharos.watch/liquidity/",
+      url: `${SITE_URL}/liquidity/`,
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.8,
     },
     {
-      url: "https://pharos.watch/portfolio/",
+      url: `${SITE_URL}/portfolio/`,
       lastModified: new Date(LAST_EDITED["/portfolio/"]!),
       changeFrequency: "daily",
       priority: 0.7,
     },
     {
-      url: "https://pharos.watch/upcoming/",
+      url: `${SITE_URL}/upcoming/`,
       lastModified: new Date(LAST_EDITED["/upcoming/"]!),
       changeFrequency: "daily",
       priority: 0.6,
     },
     {
-      url: "https://pharos.watch/digest/",
+      url: `${SITE_URL}/digest/`,
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.6,
     },
     {
-      url: "https://pharos.watch/safety-scores/",
+      url: `${SITE_URL}/safety-scores/`,
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.8,
     },
     {
-      url: "https://pharos.watch/stability-index/",
+      url: `${SITE_URL}/stability-index/`,
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.8,
     },
     {
-      url: "https://pharos.watch/dependency-map/",
+      url: `${SITE_URL}/dependency-map/`,
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.7,
     },
     {
-      url: "https://pharos.watch/yield/",
+      url: `${SITE_URL}/yield/`,
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.7,
     },
     {
-      url: "https://pharos.watch/flows/",
+      url: `${SITE_URL}/flows/`,
       lastModified: new Date(LAST_EDITED["/flows/"]!),
       changeFrequency: "daily",
       priority: 0.7,
     },
     {
-      url: "https://pharos.watch/telegram/",
+      url: `${SITE_URL}/telegram/`,
       lastModified: new Date(LAST_EDITED["/telegram/"]!),
       changeFrequency: "weekly",
       priority: 0.7,
     },
     {
-      url: "https://pharos.watch/methodology/",
+      url: `${SITE_URL}/methodology/`,
       lastModified: new Date(LAST_EDITED["/methodology/"]!),
       changeFrequency: "monthly",
       priority: 0.6,
     },
     {
-      url: "https://pharos.watch/methodology/scoring-changelog/",
+      url: `${SITE_URL}/methodology/scoring-changelog/`,
       lastModified: new Date(LAST_EDITED["/methodology/scoring-changelog/"]!),
       changeFrequency: "monthly",
       priority: 0.4,
     },
     {
-      url: "https://pharos.watch/methodology/depeg-changelog/",
+      url: `${SITE_URL}/methodology/depeg-changelog/`,
       lastModified: new Date(LAST_EDITED["/methodology/depeg-changelog/"]!),
       changeFrequency: "monthly",
       priority: 0.4,
     },
     {
-      url: "https://pharos.watch/methodology/blacklist-tracker-changelog/",
+      url: `${SITE_URL}/methodology/blacklist-tracker-changelog/`,
       lastModified: new Date(LAST_EDITED["/methodology/blacklist-tracker-changelog/"]!),
       changeFrequency: "monthly",
       priority: 0.4,
     },
     {
-      url: "https://pharos.watch/methodology/liquidity-score-changelog/",
+      url: `${SITE_URL}/methodology/liquidity-score-changelog/`,
       lastModified: new Date(LAST_EDITED["/methodology/liquidity-score-changelog/"]!),
       changeFrequency: "monthly",
       priority: 0.4,
     },
     {
-      url: "https://pharos.watch/methodology/stability-index-changelog/",
+      url: `${SITE_URL}/methodology/stability-index-changelog/`,
       lastModified: new Date(LAST_EDITED["/methodology/stability-index-changelog/"]!),
       changeFrequency: "monthly",
       priority: 0.4,
     },
     {
-      url: "https://pharos.watch/methodology/mint-burn-flow-changelog/",
+      url: `${SITE_URL}/methodology/mint-burn-flow-changelog/`,
       lastModified: new Date(LAST_EDITED["/methodology/mint-burn-flow-changelog/"]!),
       changeFrequency: "monthly",
       priority: 0.4,
     },
     {
-      url: "https://pharos.watch/methodology/yield-changelog/",
+      url: `${SITE_URL}/methodology/yield-changelog/`,
       lastModified: new Date(LAST_EDITED["/methodology/yield-changelog/"]!),
       changeFrequency: "monthly",
       priority: 0.4,
     },
     {
-      url: "https://pharos.watch/methodology/pricing-pipeline-changelog/",
+      url: `${SITE_URL}/methodology/pricing-pipeline-changelog/`,
       lastModified: new Date(LAST_EDITED["/methodology/pricing-pipeline-changelog/"]!),
       changeFrequency: "monthly",
       priority: 0.4,
     },
     {
-      url: "https://pharos.watch/methodology/chain-health-changelog/",
+      url: `${SITE_URL}/methodology/chain-health-changelog/`,
       lastModified: new Date(LAST_EDITED["/methodology/chain-health-changelog/"]!),
       changeFrequency: "monthly",
       priority: 0.4,
     },
     {
-      url: "https://pharos.watch/about/",
+      url: `${SITE_URL}/about/`,
       lastModified: new Date(LAST_EDITED["/about/"]!),
       changeFrequency: "monthly",
       priority: 0.5,
     },
     {
-      url: "https://pharos.watch/privacy/",
+      url: `${SITE_URL}/privacy/`,
       lastModified: new Date(LAST_EDITED["/privacy/"]!),
       changeFrequency: "yearly",
       priority: 0.3,
@@ -218,7 +219,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const stablecoinPages: MetadataRoute.Sitemap = TRACKED_STABLECOINS.map(
     (coin) => ({
-      url: `https://pharos.watch${buildStablecoinUrl(coin.id)}`,
+      url: `${SITE_URL}${buildStablecoinUrl(coin.id)}`,
       lastModified: now,
       changeFrequency: "daily" as const,
       priority: 0.6,
@@ -227,13 +228,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const chainPages: MetadataRoute.Sitemap = [
     {
-      url: "https://pharos.watch/chains/",
+      url: `${SITE_URL}/chains/`,
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.8,
     },
     ...getActiveChainIds().map((chainId) => ({
-      url: `https://pharos.watch/chains/${chainId}/`,
+      url: `${SITE_URL}/chains/${chainId}/`,
       lastModified: now,
       changeFrequency: "daily" as const,
       priority: 0.5,
@@ -241,28 +242,28 @@ export default function sitemap(): MetadataRoute.Sitemap {
   ];
 
   const pegPages: MetadataRoute.Sitemap = ACTIVE_PEGS.map((peg) => ({
-    url: `https://pharos.watch/stablecoins/${PEG_SLUGS[peg]}/`,
+    url: `${SITE_URL}/stablecoins/${PEG_SLUGS[peg]}/`,
     lastModified: now,
     changeFrequency: "daily" as const,
     priority: 0.7,
   }));
 
   const digestPages: MetadataRoute.Sitemap = digests.map((d) => ({
-    url: `https://pharos.watch/digest/${d.date}/`,
+    url: `${SITE_URL}/digest/${d.date}/`,
     lastModified: new Date(d.generatedAt * 1000),
     changeFrequency: "never" as const,
     priority: 0.5,
   }));
 
   const taxonomyPages: MetadataRoute.Sitemap = ALL_STABLECOIN_TAXONOMY_PAGES.map((page) => ({
-    url: `https://pharos.watch${page.href}`,
+    url: `${SITE_URL}${page.href}`,
     lastModified: new Date(LAST_EDITED[page.href] ?? "2026-03-07"),
     changeFrequency: "weekly" as const,
     priority: 0.7,
   }));
 
   const comparisonPages: MetadataRoute.Sitemap = STATIC_COMPARISON_PAGES.map((page) => ({
-    url: `https://pharos.watch${page.href}`,
+    url: `${SITE_URL}${page.href}`,
     lastModified: new Date("2026-03-07"),
     changeFrequency: "monthly" as const,
     priority: 0.6,

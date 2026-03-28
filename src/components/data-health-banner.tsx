@@ -6,18 +6,12 @@ import {
   mergeHealthStates,
   type DataHealthInfo,
 } from "@/lib/data-health";
+import { DATA_HEALTH_COLORS } from "@shared/lib/classification";
 
 interface DataHealthBannerProps {
   entries: DataHealthInfo[];
   showFreshTimestamp?: boolean;
 }
-
-const STATE_STYLES = {
-  degraded: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  stale: "border-amber-500/50 bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  unavailable: "border-border/60 bg-muted/40 text-muted-foreground",
-  error: "border-destructive/50 bg-destructive/10 text-destructive",
-} as const;
 
 function formatAffectedLabels(labels: string[]): string {
   if (labels.length === 0) return "datasets";
@@ -74,7 +68,7 @@ export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHe
     <div
       role="status"
       aria-live="polite"
-      className={`rounded-lg border px-4 py-3 text-sm leading-relaxed shadow-sm ${STATE_STYLES[merged.state]}`}
+      className={`rounded-lg border px-4 py-3 text-sm leading-relaxed shadow-sm ${DATA_HEALTH_COLORS[merged.state]}`}
     >
       <p className="font-medium">{title}</p>
       <p className="mt-1">{message}</p>

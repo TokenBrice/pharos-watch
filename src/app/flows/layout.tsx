@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { safeJsonLd } from "@/lib/json-ld";
+import { SITE_URL } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Mint/Burn Flows",
@@ -14,10 +15,10 @@ export const metadata: Metadata = {
     description:
       "Ethereum minting and redemption flows for tracked stablecoins. Net flow direction, pressure-vs-baseline signals, and the Bank Run Gauge.",
     url: "/flows/",
-    images: [{ url: "https://pharos.watch/og-flows.png", width: 1200, height: 630 }],
+    images: [{ url: `${SITE_URL}/og-flows.png`, width: 1200, height: 630 }],
   },
   twitter: {
-    images: [{ url: "https://pharos.watch/og-flows.png", width: 1200, height: 630 }],
+    images: [{ url: `${SITE_URL}/og-flows.png`, width: 1200, height: 630 }],
   },
 };
 

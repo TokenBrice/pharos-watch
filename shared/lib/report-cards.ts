@@ -542,7 +542,7 @@ export function scoreResilience(
   const effectiveReserves = liveReserveSlices ?? meta.reserves;
   const hasReserves = effectiveReserves && effectiveReserves.length > 0;
   const collateralScore = hasReserves
-    ? computeCollateralQualityFromReserves(effectiveReserves!)
+    ? computeCollateralQualityFromReserves(effectiveReserves)
     : COLLATERAL_QUALITY_SCORE[factors.collateralQuality];
   const collateralLabel = hasReserves
     ? collateralScoreLabel(collateralScore)
