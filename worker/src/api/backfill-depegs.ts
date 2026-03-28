@@ -173,6 +173,8 @@ export async function handleBackfillDepegs(
             if (raw && typeof raw === "object") {
               detail = raw as CoinDetail;
             }
+          } else {
+            await res.body?.cancel();
           }
         } catch (err) {
           console.error(`[backfill-depegs] Failed to fetch detail for ${meta.symbol}:`, err);
@@ -217,6 +219,7 @@ export async function handleBackfillDepegs(
                 earliestDate = defaultStartDate;
               }
             } else {
+              await cgRes?.body?.cancel();
               earliestDate = defaultStartDate;
             }
           } catch {

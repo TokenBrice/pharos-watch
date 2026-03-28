@@ -24,6 +24,7 @@ import { DepegFeed } from "@/components/depeg-feed";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { PegCurrency, GovernanceType } from "@shared/types";
+import { PEG_LABELS_SHORT, GOVERNANCE_LABELS } from "@shared/lib/classification";
 import type { DepegTrackerRow } from "@/components/depeg-tracker-table";
 
 const PEG_FILTERS: { value: PegCurrency | "all"; label: string }[] = [
@@ -71,8 +72,10 @@ export function DepegClient() {
 
   // Unified filter state (shared by table + heatmap)
   const { getParam, setParam } = useUrlFilters();
-  const pegFilter = getParam("peg", "all") as PegCurrency | "all";
-  const typeFilter = getParam("type", "all") as GovernanceType | "all";
+  const rawPeg = getParam("peg", "all");
+  const pegFilter: PegCurrency | "all" = rawPeg === "all" || rawPeg in PEG_LABELS_SHORT ? rawPeg as PegCurrency | "all" : "all";
+  const rawType = getParam("type", "all");
+  const typeFilter: GovernanceType | "all" = rawType === "all" || rawType in GOVERNANCE_LABELS ? rawType as GovernanceType | "all" : "all";
   const searchQuery = getParam("q");
 
   const setPegFilter = useCallback((v: PegCurrency | "all") => {

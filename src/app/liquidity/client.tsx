@@ -20,6 +20,7 @@ import type { LiquidityRow } from "@/components/liquidity-table";
 import type { LiquidityStatsData } from "@/components/liquidity-stats";
 import type { PegCurrency } from "@shared/types";
 import { DEX_GLOBAL_KEY } from "@shared/types";
+import { PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 import { buildStablecoinUrl } from "@/lib/urls";
 
@@ -45,7 +46,8 @@ export function LiquidityClient() {
   const { data: liquidityMap, isLoading, error, dataUpdatedAt, refetch, meta } = useDexLiquidity();
   const { data: logos } = useLogos();
   const { getParam, setParam } = useUrlFilters();
-  const pegFilter = (getParam("peg", "all")) as PegCurrency | "all";
+  const rawPeg = getParam("peg", "all");
+  const pegFilter: PegCurrency | "all" = rawPeg === "all" || rawPeg in PEG_LABELS_SHORT ? rawPeg as PegCurrency | "all" : "all";
   const setPegFilter = useCallback((v: PegCurrency | "all") => { trackEvent("filter_applied", { page: "liquidity", filter_type: "peg", filter_value: v }); setParam("peg", v); }, [setParam]);
   const router = useRouter();
 
