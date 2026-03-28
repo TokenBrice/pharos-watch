@@ -40,8 +40,8 @@ export function TableToolbar({
 }: TableToolbarProps) {
   return (
     <div className="pharos-table-toolbar">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 flex-1 space-y-1">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+        <div className="min-w-0 space-y-1 xl:flex-1">
           <p className="pharos-kicker">Table Controls</p>
           <p className="pharos-meta hidden sm:block">Tune density, hide noise, and export the current lens without leaving the table.</p>
         </div>
