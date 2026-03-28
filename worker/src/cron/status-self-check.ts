@@ -335,7 +335,7 @@ export async function runStatusSelfCheck(
     semanticProbeStatus,
   );
 
-  await writeStatusProbeRun(db, now, {
+  const probePersistenceSucceeded = await writeStatusProbeRun(db, now, {
     status: probeStatus,
     sampleCount,
     passCount,
@@ -363,7 +363,11 @@ export async function runStatusSelfCheck(
     },
   });
 
-  const { raw, effectiveStatus } = await evaluateStatusAndPersist(db, now);
+  const {
+    raw,
+    effectiveStatus,
+    persistenceSucceeded: statusPersistenceSucceeded,
+  } = await evaluateStatusAndPersist(db, now);
   const discrepancyObservation = buildDiscrepancy(
     effectiveStatus,
     {
@@ -399,6 +403,7 @@ export async function runStatusSelfCheck(
   );
 
   const shouldDiscrepancyAlert =
+    discrepancyState.persistenceSucceeded &&
     discrepancy.hasDivergence &&
     discrepancyState.consecutiveDivergent >= STATUS_DISCREPANCY_ALERT_STREAK &&
     (
@@ -406,6 +411,7 @@ export async function runStatusSelfCheck(
       now - discrepancyState.lastAlertAt >= STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC
     );
   const shouldProbeFailureAlert =
+    discrepancyState.persistenceSucceeded &&
     hasProbeFailure &&
     discrepancyState.consecutiveProbeFailures >= PROBE_FAILURE_ALERT_THRESHOLD &&
     (
@@ -450,6 +456,9 @@ export async function runStatusSelfCheck(
       probeStatus,
       rawOverallStatus: raw.rawOverallStatus,
       effectiveStatus,
+      probePersistenceSucceeded,
+      statusPersistenceSucceeded,
+      discrepancyPersistenceSucceeded: discrepancyState.persistenceSucceeded,
       discrepancy,
       discrepancyStreak: discrepancyState.consecutiveDivergent,
       slowestProbes,

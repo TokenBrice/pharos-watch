@@ -1,7 +1,7 @@
 import { BLACKLIST_STABLECOINS, type BlacklistStablecoin } from "@shared/types/market";
 import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
 import { requireAdmin } from "../lib/auth";
-import { errorResponse, jsonResponse, parseQueryParams } from "../lib/api-utils";
+import { errorResponse, jsonResponse, parseOptionalRequestJsonObject, parseQueryParams } from "../lib/api-utils";
 import {
   getBlacklistConfigByContract,
   getBlacklistConfigByKey,
@@ -44,15 +44,6 @@ function parseBooleanInput(value: unknown, fallback: boolean): boolean {
   return fallback;
 }
 
-async function readBodyJson(request?: Request): Promise<Record<string, unknown>> {
-  if (!request || request.method !== "POST") return {};
-  try {
-    return (await request.clone().json()) as Record<string, unknown>;
-  } catch {
-    return {};
-  }
-}
-
 function resolveCandidate(row: GapRow): ResolvedCandidate {
   const stablecoin = row.stablecoin.toUpperCase() as BlacklistStablecoin;
   if (!VALID_STABLECOINS.has(stablecoin)) {
@@ -83,7 +74,8 @@ export async function handleRemediateBlacklistAmountGaps(
   const authErr = await requireAdmin(request, trustedAdmin);
   if (authErr) return authErr;
 
-  const body = await readBodyJson(request);
+  const body = await parseOptionalRequestJsonObject(request);
+  if (body instanceof Response) return body;
   const dryRun = parseBooleanInput(body.dryRun ?? url.searchParams.get("dryRun"), true);
   const onlyMissingProvenance = parseBooleanInput(
     body.onlyMissingProvenance ?? url.searchParams.get("onlyMissingProvenance"),

@@ -216,6 +216,8 @@ async function main() {
     const tmpDir = mkdtempSync(join(tmpdir(), "blacklist-kyc-rip-events-"));
     try {
       const sqlFile = join(tmpDir, "reconcile-events.sql");
+      // Temp SQL file is created under mkdtempSync() and never leaves this function.
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       writeFileSync(sqlFile, insertedRows.map(buildInsertStatement).join("\n"));
       executeWrangler(sqlFile);
     } finally {

@@ -31,18 +31,20 @@ function buildProbeResponse(input: unknown, healthStatus: HealthProbeStatus = "h
 const fetchMock = vi.fn();
 const routeMock = vi.fn();
 const sendAlertMock = vi.fn(async () => true);
-const writeStatusProbeRunMock = vi.fn(async () => {});
+const writeStatusProbeRunMock = vi.fn(async () => true);
 const updateDiscrepancyObservationMock = vi.fn(async () => ({
   consecutiveDivergent: 2,
   lastAlertAt: null,
   consecutiveProbeFailures: 0,
   lastProbeAlertAt: null,
+  persistenceSucceeded: true,
 }));
-const markDiscrepancyAlertSentMock = vi.fn(async () => {});
-const markProbeFailureAlertSentMock = vi.fn(async () => {});
+const markDiscrepancyAlertSentMock = vi.fn(async () => true);
+const markProbeFailureAlertSentMock = vi.fn(async () => true);
 const evaluateStatusAndPersistMock = vi.fn(async () => ({
   raw: { rawOverallStatus: "healthy" },
   effectiveStatus: "stale",
+  persistenceSucceeded: true,
 }));
 const buildDiscrepancyMock = vi.fn(
   (_status: unknown, _probe: unknown, _now: number, streak: number) => ({
@@ -106,12 +108,14 @@ describe("runStatusSelfCheck", () => {
     evaluateStatusAndPersistMock.mockResolvedValue({
       raw: { rawOverallStatus: "healthy" },
       effectiveStatus: "stale",
+      persistenceSucceeded: true,
     });
     updateDiscrepancyObservationMock.mockResolvedValue({
       consecutiveDivergent: 2,
       lastAlertAt: null,
       consecutiveProbeFailures: 0,
       lastProbeAlertAt: null,
+      persistenceSucceeded: true,
     });
   });
 
@@ -137,6 +141,26 @@ describe("runStatusSelfCheck", () => {
     expect(markDiscrepancyAlertSentMock).toHaveBeenCalledTimes(1);
     expect(metadata.alertAttempted).toBe(true);
     expect(metadata.alertSent).toBe(true);
+  });
+
+  it("suppresses alerts when discrepancy state persistence fails", async () => {
+    updateDiscrepancyObservationMock.mockResolvedValueOnce({
+      consecutiveDivergent: 2,
+      lastAlertAt: null,
+      consecutiveProbeFailures: 3,
+      lastProbeAlertAt: null,
+      persistenceSucceeded: false,
+    });
+
+    const result = await runStatusSelfCheck({} as D1Database, "secret");
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+
+    expect(sendAlertMock).not.toHaveBeenCalled();
+    expect(markDiscrepancyAlertSentMock).not.toHaveBeenCalled();
+    expect(markProbeFailureAlertSentMock).not.toHaveBeenCalled();
+    expect(metadata.alertAttempted).toBe(false);
+    expect(metadata.probeFailureAlertAttempted).toBe(false);
+    expect(metadata.discrepancyPersistenceSucceeded).toBe(false);
   });
 
   it("records latency summary and slowest probes in cron metadata", async () => {
@@ -173,12 +197,14 @@ describe("runStatusSelfCheck", () => {
     evaluateStatusAndPersistMock.mockResolvedValueOnce({
       raw: { rawOverallStatus: "degraded" },
       effectiveStatus: "degraded",
+      persistenceSucceeded: true,
     });
     updateDiscrepancyObservationMock.mockResolvedValueOnce({
       consecutiveDivergent: 0,
       lastAlertAt: null,
       consecutiveProbeFailures: 1,
       lastProbeAlertAt: null,
+      persistenceSucceeded: true,
     });
 
     const result = await runStatusSelfCheck({} as D1Database, "https://staging.api.pharos.watch");
@@ -222,6 +248,7 @@ describe("runStatusSelfCheck", () => {
       lastAlertAt: null,
       consecutiveProbeFailures: 3,
       lastProbeAlertAt: null,
+      persistenceSucceeded: true,
     });
 
     const result = await runStatusSelfCheck({} as D1Database, "https://staging.api.pharos.watch");

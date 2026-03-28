@@ -8,6 +8,7 @@ import type {
   StatusTransition,
 } from "@shared/types/status";
 import { clamp } from "@shared/lib/math";
+import { decideNextStatus } from "./status-reliability-decision";
 
 export type StatusLevel = "healthy" | "degraded" | "stale";
 
@@ -130,11 +131,13 @@ async function persistStatusStateAtomically(
   statements: D1PreparedStatement[],
   onIssue: StatusPersistenceIssueReporter | undefined,
   operation: string,
-): Promise<void> {
+): Promise<boolean> {
   try {
     await db.batch(statements);
+    return true;
   } catch (error) {
     reportStatusPersistenceIssue(onIssue, "status_state_persistence_failed", operation, error);
+    return false;
   }
 }
 
@@ -201,52 +204,6 @@ export function buildFallbackStatusState(rawStatus: StatusLevel, now: number): S
   };
 }
 
-function decideNextStatus(
-  current: StatusLevel,
-  raw: StatusLevel,
-  counters: { healthy: number; degraded: number; stale: number },
-  dwellSec: number,
-): { next: StatusLevel; changed: boolean; reason: string } {
-  // Escalations (fast path)
-  if (current === "healthy" && raw === "stale" && counters.stale >= STATUS_HYSTERESIS.escalateToStale) {
-    return { next: "stale", changed: true, reason: "raw-stale-immediate-escalation" };
-  }
-  if (current === "healthy" && raw === "degraded" && counters.degraded >= STATUS_HYSTERESIS.escalateToDegraded) {
-    return { next: "degraded", changed: true, reason: "raw-degraded-consecutive-threshold" };
-  }
-  if (current === "degraded" && raw === "stale" && counters.stale >= 2) {
-    return { next: "stale", changed: true, reason: "raw-stale-consecutive-threshold" };
-  }
-
-  // Recoveries (require sustained healthy signals + dwell)
-  if (
-    current === "degraded" &&
-    raw === "healthy" &&
-    counters.healthy >= STATUS_HYSTERESIS.recoverToHealthy &&
-    dwellSec >= STATUS_HYSTERESIS.minDwellSec
-  ) {
-    return { next: "healthy", changed: true, reason: "raw-healthy-recovery-threshold" };
-  }
-  if (
-    current === "stale" &&
-    raw === "degraded" &&
-    counters.degraded >= STATUS_HYSTERESIS.recoverToDegraded &&
-    dwellSec >= STATUS_HYSTERESIS.staleMinDwellSec
-  ) {
-    return { next: "degraded", changed: true, reason: "raw-degraded-recovery-from-stale" };
-  }
-  if (
-    current === "stale" &&
-    raw === "healthy" &&
-    counters.healthy >= STATUS_HYSTERESIS.recoverToHealthy &&
-    dwellSec >= STATUS_HYSTERESIS.staleMinDwellSec
-  ) {
-    return { next: "healthy", changed: true, reason: "raw-healthy-recovery-from-stale" };
-  }
-
-  return { next: current, changed: false, reason: "hysteresis-hold" };
-}
-
 export async function reconcileStatusState(
   db: D1Database,
   now: number,
@@ -258,6 +215,7 @@ export async function reconcileStatusState(
   effectiveStatus: StatusLevel;
   state: StatusStateInfo;
   transition: StatusTransition | null;
+  persistenceSucceeded: boolean;
 }> {
   const normalizedConfidence = clampConfidence(confidence);
   const causesJson = JSON.stringify(causes);
@@ -268,8 +226,7 @@ export async function reconcileStatusState(
       .prepare(
         `SELECT scope, current_status, raw_status, last_evaluated_at, last_changed_at,
                 consecutive_healthy, consecutive_degraded, consecutive_stale, confidence, causes_json
-         FROM status_state
-         WHERE scope = ?`,
+         FROM status_state WHERE scope = ?`,
       )
       .bind(STATUS_SCOPE)
       .first<StatusStateRow>();
@@ -279,11 +236,7 @@ export async function reconcileStatusState(
 
   if (!current) {
     const seed: StatusStateRow = {
-      scope: STATUS_SCOPE,
-      current_status: rawStatus,
-      raw_status: rawStatus,
-      last_evaluated_at: now,
-      last_changed_at: now,
+      scope: STATUS_SCOPE, current_status: rawStatus, raw_status: rawStatus, last_evaluated_at: now, last_changed_at: now,
       consecutive_healthy: rawStatus === "healthy" ? 1 : 0,
       consecutive_degraded: rawStatus === "degraded" ? 1 : 0,
       consecutive_stale: rawStatus === "stale" ? 1 : 0,
@@ -292,18 +245,14 @@ export async function reconcileStatusState(
     };
 
     const transition: StatusTransition = {
-      id: 0,
-      scope: "global",
-      from: null,
-      to: seed.current_status,
-      rawStatus: seed.raw_status,
+      id: 0, scope: "global", from: null, to: seed.current_status, rawStatus: seed.raw_status,
       transitionType: "init",
       reason: "status-state-initialized",
       confidence: normalizedConfidence,
       causes,
       at: now,
     };
-    await persistStatusStateAtomically(
+    const persistenceSucceeded = await persistStatusStateAtomically(
       db,
       [
         db
@@ -314,16 +263,8 @@ export async function reconcileStatusState(
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
           .bind(
-            seed.scope,
-            seed.current_status,
-            seed.raw_status,
-            seed.last_evaluated_at,
-            seed.last_changed_at,
-            seed.consecutive_healthy,
-            seed.consecutive_degraded,
-            seed.consecutive_stale,
-            seed.confidence,
-            seed.causes_json,
+            seed.scope, seed.current_status, seed.raw_status, seed.last_evaluated_at, seed.last_changed_at,
+            seed.consecutive_healthy, seed.consecutive_degraded, seed.consecutive_stale, seed.confidence, seed.causes_json,
             now,
           ),
         db
@@ -332,26 +273,26 @@ export async function reconcileStatusState(
              (scope, previous_status, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
-          .bind(
-            STATUS_SCOPE,
-            null,
-            seed.current_status,
-            seed.raw_status,
-            transition.transitionType,
-            transition.reason,
-            transition.confidence,
-            causesJson,
-            now,
-          ),
+          .bind(STATUS_SCOPE, null, seed.current_status, seed.raw_status, transition.transitionType, transition.reason, transition.confidence, causesJson, now),
       ],
       onIssue,
       "seed_status_state",
     );
 
+    if (!persistenceSucceeded) {
+      return {
+        effectiveStatus: rawStatus,
+        state: buildFallbackStatusState(rawStatus, now),
+        transition: null,
+        persistenceSucceeded: false,
+      };
+    }
+
     return {
       effectiveStatus: seed.current_status,
       state: toStateInfo(seed),
       transition,
+      persistenceSucceeded: true,
     };
   }
 
@@ -361,17 +302,13 @@ export async function reconcileStatusState(
     stale: rawStatus === "stale" ? current.consecutive_stale + 1 : 0,
   };
   const dwellSec = Math.max(0, now - current.last_changed_at);
-  const decision = decideNextStatus(current.current_status, rawStatus, counters, dwellSec);
+  const decision = decideNextStatus(current.current_status, rawStatus, counters, dwellSec, STATUS_HYSTERESIS);
   const nextStatus = decision.next;
   const changed = decision.changed;
   const nextChangedAt = changed ? now : current.last_changed_at;
 
   const nextRow: StatusStateRow = {
-    scope: STATUS_SCOPE,
-    current_status: nextStatus,
-    raw_status: rawStatus,
-    last_evaluated_at: now,
-    last_changed_at: nextChangedAt,
+    scope: STATUS_SCOPE, current_status: nextStatus, raw_status: rawStatus, last_evaluated_at: now, last_changed_at: nextChangedAt,
     consecutive_healthy: counters.healthy,
     consecutive_degraded: counters.degraded,
     consecutive_stale: counters.stale,
@@ -383,11 +320,7 @@ export async function reconcileStatusState(
   if (changed) {
     const tType = transitionType(current.current_status, nextStatus);
     transition = {
-      id: 0,
-      scope: "global",
-      from: current.current_status,
-      to: nextStatus,
-      rawStatus,
+      id: 0, scope: "global", from: current.current_status, to: nextStatus, rawStatus,
       transitionType: tType,
       reason: decision.reason,
       confidence: normalizedConfidence,
@@ -406,14 +339,8 @@ export async function reconcileStatusState(
          WHERE scope = ?`,
       )
       .bind(
-        nextRow.current_status,
-        nextRow.raw_status,
-        nextRow.last_evaluated_at,
-        nextRow.last_changed_at,
-        nextRow.consecutive_healthy,
-        nextRow.consecutive_degraded,
-        nextRow.consecutive_stale,
-        nextRow.confidence,
+        nextRow.current_status, nextRow.raw_status, nextRow.last_evaluated_at, nextRow.last_changed_at,
+        nextRow.consecutive_healthy, nextRow.consecutive_degraded, nextRow.consecutive_stale, nextRow.confidence,
         nextRow.causes_json,
         now,
         STATUS_SCOPE,
@@ -426,27 +353,27 @@ export async function reconcileStatusState(
                (scope, previous_status, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             )
-            .bind(
-              STATUS_SCOPE,
-              current.current_status,
-              nextStatus,
-              rawStatus,
-              transition.transitionType,
-              decision.reason,
-              normalizedConfidence,
-              causesJson,
-              now,
-            ),
+            .bind(STATUS_SCOPE, current.current_status, nextStatus, rawStatus, transition.transitionType, decision.reason, normalizedConfidence, causesJson, now),
         ]
       : []),
   ];
 
-  await persistStatusStateAtomically(db, statements, onIssue, "update_status_state");
+  const persistenceSucceeded = await persistStatusStateAtomically(db, statements, onIssue, "update_status_state");
+
+  if (!persistenceSucceeded) {
+    return {
+      effectiveStatus: current.current_status,
+      state: toStateInfo(current),
+      transition: null,
+      persistenceSucceeded: false,
+    };
+  }
 
   return {
     effectiveStatus: nextStatus,
     state: toStateInfo(nextRow),
     transition,
+    persistenceSucceeded: true,
   };
 }
 
@@ -538,7 +465,7 @@ export async function writeStatusProbeRun(
     details?: Record<string, unknown>;
   },
   onIssue?: StatusPersistenceIssueReporter,
-): Promise<void> {
+): Promise<boolean> {
   try {
     await db
       .prepare(
@@ -556,8 +483,10 @@ export async function writeStatusProbeRun(
         now,
       )
       .run();
+    return true;
   } catch (error) {
     reportStatusPersistenceIssue(onIssue, "status_probe_write_failed", "write-status-probe", error);
+    return false;
   }
 }
 
@@ -616,6 +545,7 @@ export async function updateDiscrepancyObservation(
   lastAlertAt: number | null;
   consecutiveProbeFailures: number;
   lastProbeAlertAt: number | null;
+  persistenceSucceeded: boolean;
 }> {
   let current: StatusDiscrepancyStateRow | null = null;
   try {
@@ -677,23 +607,30 @@ export async function updateDiscrepancyObservation(
         now,
       )
       .run();
+    return {
+      consecutiveDivergent: nextConsecutive,
+      lastAlertAt,
+      consecutiveProbeFailures: nextConsecutiveProbeFailures,
+      lastProbeAlertAt,
+      persistenceSucceeded: true,
+    };
   } catch (error) {
     reportStatusPersistenceIssue(onIssue, "status_discrepancy_write_failed", "write-status-discrepancy", error);
+    return {
+      consecutiveDivergent: current?.consecutive_divergent ?? 0,
+      lastAlertAt,
+      consecutiveProbeFailures: current?.consecutive_probe_failures ?? 0,
+      lastProbeAlertAt,
+      persistenceSucceeded: false,
+    };
   }
-
-  return {
-    consecutiveDivergent: nextConsecutive,
-    lastAlertAt,
-    consecutiveProbeFailures: nextConsecutiveProbeFailures,
-    lastProbeAlertAt,
-  };
 }
 
 export async function markDiscrepancyAlertSent(
   db: D1Database,
   now: number,
   onIssue?: StatusPersistenceIssueReporter,
-): Promise<void> {
+): Promise<boolean> {
   try {
     await db
       .prepare(
@@ -703,8 +640,10 @@ export async function markDiscrepancyAlertSent(
       )
       .bind(now, now, STATUS_SCOPE)
       .run();
+    return true;
   } catch (error) {
     reportStatusPersistenceIssue(onIssue, "status_discrepancy_alert_write_failed", "mark-discrepancy-alert", error);
+    return false;
   }
 }
 
@@ -712,7 +651,7 @@ export async function markProbeFailureAlertSent(
   db: D1Database,
   now: number,
   onIssue?: StatusPersistenceIssueReporter,
-): Promise<void> {
+): Promise<boolean> {
   try {
     await db
       .prepare(
@@ -722,8 +661,10 @@ export async function markProbeFailureAlertSent(
       )
       .bind(now, now, STATUS_SCOPE)
       .run();
+    return true;
   } catch (error) {
     reportStatusPersistenceIssue(onIssue, "status_probe_alert_write_failed", "mark-probe-alert", error);
+    return false;
   }
 }
 

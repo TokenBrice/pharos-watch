@@ -132,18 +132,17 @@ function buildDbUnavailableRawStatus(): RawStatusComputation {
   };
 }
 
-export async function evaluateStatusAndPersist(
-  db: D1Database,
-  now: number,
-): Promise<{
+export async function evaluateStatusAndPersist(db: D1Database, now: number): Promise<{
   raw: RawStatusComputation;
   effectiveStatus: StatusLevel;
+  persistenceSucceeded: boolean;
 }> {
   const raw = await computeRawStatus(db, now);
   const persisted = await reconcileStatusState(db, now, raw.rawOverallStatus, raw.confidence, raw.causes.overall);
   return {
     raw,
     effectiveStatus: persisted.effectiveStatus,
+    persistenceSucceeded: persisted.persistenceSucceeded,
   };
 }
 

@@ -466,7 +466,7 @@ These files are called internally by `syncStablecoins()`, not registered as stan
 | --------------------------------------------------------- | ------------------- | --------------------------------------- |
 | `worker/src/cron/detect-depegs.ts`                        | `syncStablecoins()` | [Depeg Detection](./depeg-detection.md) |
 | `worker/src/cron/confirm-pending-depegs.ts`               | `syncStablecoins()` | [Depeg Detection](./depeg-detection.md) |
-| `worker/src/cron/enrich-prices.ts`                        | `syncStablecoins()` | [Data Pipeline](./data-pipeline.md)     |
+| `worker/src/cron/sync-stablecoins/enrich-prices.ts`      | `syncStablecoins()` | [Data Pipeline](./data-pipeline.md)     |
 | `worker/src/cron/sync-stablecoins/supplemental-assets.ts` | `syncStablecoins()` | [Data Pipeline](./data-pipeline.md)     |
 
 ---

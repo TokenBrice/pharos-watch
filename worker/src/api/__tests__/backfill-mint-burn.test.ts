@@ -100,6 +100,42 @@ describe("handleBackfillMintBurn", () => {
     expect(body.error).toContain("Unknown mint/burn configKey");
   });
 
+  it("rejects malformed JSON bodies", async () => {
+    const response = await handleBackfillMintBurn(
+      makeDb(),
+      makeApiUrl("/api/backfill-mint-burn"),
+      true,
+      makeApiRequest("/api/backfill-mint-burn", {
+        method: "POST",
+        adminKey: "secret",
+        headers: { "Content-Type": "application/json" },
+        body: "{",
+      }),
+      "alchemy-key",
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: "Invalid JSON body" });
+  });
+
+  it("rejects non-object JSON bodies", async () => {
+    const response = await handleBackfillMintBurn(
+      makeDb(),
+      makeApiUrl("/api/backfill-mint-burn"),
+      true,
+      makeApiRequest("/api/backfill-mint-burn", {
+        method: "POST",
+        adminKey: "secret",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(["not-an-object"]),
+      }),
+      "alchemy-key",
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: "Invalid JSON body" });
+  });
+
   it("returns done when requested range is empty", async () => {
     const request = makeApiRequest("/api/backfill-mint-burn", {
       method: "POST",

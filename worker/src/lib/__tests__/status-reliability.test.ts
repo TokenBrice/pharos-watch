@@ -328,6 +328,7 @@ describe("status-reliability", () => {
       reason: "status-state-initialized",
       confidence: 0.1,
     });
+    expect(result.persistenceSucceeded).toBe(true);
     expect(store.stateRow?.current_status).toBe("healthy");
     expect(store.transitions).toHaveLength(1);
   });
@@ -367,6 +368,9 @@ describe("status-reliability", () => {
     const result = await reconcileStatusState(db, 100, "healthy", 0.95, [], (issue) => issues.push(issue));
 
     expect(result.effectiveStatus).toBe("healthy");
+    expect(result.persistenceSucceeded).toBe(false);
+    expect(result.state).toEqual(buildFallbackStatusState("healthy", 100));
+    expect(result.transition).toBeNull();
     expect(store.stateRow).toBeNull();
     expect(store.transitions).toHaveLength(0);
     expect(issues).toHaveLength(1);
@@ -397,7 +401,10 @@ describe("status-reliability", () => {
     const issues: Array<{ code: string; operation: string; message: string }> = [];
     const result = await reconcileStatusState(db, 220, "degraded", 0.95, [], (issue) => issues.push(issue));
 
-    expect(result.effectiveStatus).toBe("degraded");
+    expect(result.effectiveStatus).toBe("healthy");
+    expect(result.persistenceSucceeded).toBe(false);
+    expect(result.state.currentStatus).toBe("healthy");
+    expect(result.transition).toBeNull();
     expect(store.stateRow).toMatchObject({
       current_status: "healthy",
       raw_status: "healthy",
@@ -440,6 +447,7 @@ describe("status-reliability", () => {
       (issue) => issues.push(issue),
     );
     expect(reconcile.effectiveStatus).toBe("healthy");
+    expect(reconcile.persistenceSucceeded).toBe(false);
 
     const snapshot = await getStatusStateSnapshot(makeFailingDb(), 200, (issue) => issues.push(issue));
     expect(snapshot).toEqual({ state: null, staleness: null });
@@ -537,21 +545,21 @@ describe("status-reliability", () => {
       p95LatencyMs: null,
     });
 
-    await writeStatusProbeRun(db, 100, {
+    await expect(writeStatusProbeRun(db, 100, {
       status: "healthy",
       sampleCount: 10,
       passCount: 10,
       failCount: 0,
       p95LatencyMs: 180,
       details: { route: "/api/health" },
-    });
-    await writeStatusProbeRun(db, 200, {
+    })).resolves.toBe(true);
+    await expect(writeStatusProbeRun(db, 200, {
       status: "degraded",
       sampleCount: 8,
       passCount: 6,
       failCount: 2,
       p95LatencyMs: 450,
-    });
+    })).resolves.toBe(true);
 
     expect(await getLatestStatusProbe(db)).toEqual({
       timestamp: 200,
@@ -572,10 +580,11 @@ describe("status-reliability", () => {
       lastAlertAt: null,
       consecutiveProbeFailures: 1,
       lastProbeAlertAt: null,
+      persistenceSucceeded: true,
     });
 
-    await markDiscrepancyAlertSent(db, 200);
-    await markProbeFailureAlertSent(db, 300);
+    await expect(markDiscrepancyAlertSent(db, 200)).resolves.toBe(true);
+    await expect(markProbeFailureAlertSent(db, 300)).resolves.toBe(true);
 
     const second = await updateDiscrepancyObservation(db, 400, false, false);
     expect(second).toEqual({
@@ -583,9 +592,37 @@ describe("status-reliability", () => {
       lastAlertAt: 200,
       consecutiveProbeFailures: 0,
       lastProbeAlertAt: 300,
+      persistenceSucceeded: true,
     });
 
     expect(await getDiscrepancyStreak(db)).toBe(0);
+  });
+
+  it("falls back to durable discrepancy counters when the write fails", async () => {
+    const { db, store } = makeStatefulDb({
+      failOnSql: "INSERT INTO status_discrepancy_state",
+      failMessage: "discrepancy write failed",
+    });
+    store.discrepancy = {
+      scope: "global",
+      consecutive_divergent: 4,
+      last_divergent_at: 90,
+      last_alert_at: 80,
+      consecutive_probe_failures: 2,
+      last_probe_failure_at: 70,
+      last_probe_alert_at: 60,
+      updated_at: 90,
+    };
+
+    const result = await updateDiscrepancyObservation(db, 100, false, false);
+
+    expect(result).toEqual({
+      consecutiveDivergent: 4,
+      lastAlertAt: 80,
+      consecutiveProbeFailures: 2,
+      lastProbeAlertAt: 60,
+      persistenceSucceeded: false,
+    });
   });
 
   it("builds discrepancies for unknown, stale, and divergent probe states", () => {

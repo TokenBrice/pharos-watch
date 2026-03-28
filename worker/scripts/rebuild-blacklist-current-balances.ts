@@ -392,6 +392,8 @@ async function main() {
            last_error_class = excluded.last_error_class;`,
       ),
     ];
+    // Temp SQL file is created under mkdtempSync() and never leaves this function.
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     writeFileSync(sqlFile, statements.join("\n"));
     executeWrangler({ remote: options.remote, file: sqlFile });
   } finally {

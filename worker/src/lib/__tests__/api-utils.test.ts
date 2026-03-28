@@ -5,6 +5,7 @@ import {
   parseFloatParam,
   parseIntParam,
   parseOptionalEnumParam,
+  parseOptionalRequestJsonObject,
   parseEnumParam,
   parseRequiredStablecoinIdParam,
   parseQueryParams,
@@ -140,6 +141,56 @@ describe("parseOptionalEnumParam", () => {
     const response = result as Response;
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Invalid mode parameter" });
+  });
+});
+
+describe("parseOptionalRequestJsonObject", () => {
+  it("returns an empty object when no request is provided", async () => {
+    await expect(parseOptionalRequestJsonObject()).resolves.toEqual({});
+  });
+
+  it("returns an empty object for empty post bodies", async () => {
+    const request = new Request("https://api.pharos.watch/api/admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "",
+    });
+
+    await expect(parseOptionalRequestJsonObject(request)).resolves.toEqual({});
+  });
+
+  it("returns the parsed object for valid JSON objects", async () => {
+    const request = new Request("https://api.pharos.watch/api/admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dryRun: true, limit: 10 }),
+    });
+
+    await expect(parseOptionalRequestJsonObject(request)).resolves.toEqual({ dryRun: true, limit: 10 });
+  });
+
+  it("returns 400 for malformed json", async () => {
+    const request = new Request("https://api.pharos.watch/api/admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{",
+    });
+
+    const response = await parseOptionalRequestJsonObject(request);
+    expect(response).toBeInstanceOf(Response);
+    await expect((response as Response).json()).resolves.toEqual({ error: "Invalid JSON body" });
+  });
+
+  it("returns 400 for non-object json", async () => {
+    const request = new Request("https://api.pharos.watch/api/admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(["not-an-object"]),
+    });
+
+    const response = await parseOptionalRequestJsonObject(request);
+    expect(response).toBeInstanceOf(Response);
+    await expect((response as Response).json()).resolves.toEqual({ error: "Invalid JSON body" });
   });
 });
 

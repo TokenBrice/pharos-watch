@@ -22,7 +22,7 @@ It intentionally does **not** treat vendor pricing-plan quotas as source of trut
 - `worker/src/cron/sync-blacklist.ts`
 - `worker/src/cron/sync-mint-burn.ts`
 - `worker/src/cron/dex-discovery/orchestrator.ts`
-- `worker/src/cron/enrich-prices.ts`
+- `worker/src/cron/sync-stablecoins/enrich-prices.ts`
 - `worker/src/cron/sync-fx-rates.ts`
 - `worker/src/cron/daily-digest.ts`
 - `worker/src/cron/sync-yield-data.ts`
@@ -90,8 +90,8 @@ The same rule applies to Worker-side integration clients. Telegram delivery, X p
 | GeckoTerminal probe budget            | `3 minutes` per `sync-stablecoins` run                                       | `worker/src/lib/geckoterminal-price-probe.ts` | Prevents the serialized soft-source cross-check from consuming the full 8-minute stablecoin sync timeout           |
 | DexScreener discovery fallback budget | `2 minutes` shared fallback window                                           | `worker/src/lib/rate-limit.ts`            | Shared with other late-stage discovery fallbacks                                                                   |
 | Jupiter price fallback                | `50` ids/request, `5 s` timeout/request, `0` retries                         | `worker/src/cron/enrich-prices-passes.ts` | Solana-only enrichment pass between CMC and DexScreener                                                            |
-| DexScreener price-enrichment pass     | `10` total requests, `5 s` timeout/request, `45 s` total budget, `0` retries | `worker/src/cron/enrich-prices.ts`        | Best-effort final fallback for missing prices; exact token-address lookups run before symbol search when available |
-| CoinMarketCap fallback                | `1 call / hour`, `10 s` timeout, `0` retries                                 | `worker/src/cron/enrich-prices.ts`        | Rate-limited through cache key `cmc_last_fetch`                                                                    |
+| DexScreener price-enrichment pass     | `10` total requests, `5 s` timeout/request, `45 s` total budget, `0` retries | `worker/src/cron/sync-stablecoins/enrich-prices.ts` | Best-effort final fallback for missing prices; exact token-address lookups run before symbol search when available |
+| CoinMarketCap fallback                | `1 call / hour`, `10 s` timeout, `0` retries                                 | `worker/src/cron/sync-stablecoins/enrich-prices.ts` | Rate-limited through cache key `cmc_last_fetch`                                                                    |
 | Generic circuit breaker               | opens after `3` consecutive failures, probes every `30 minutes`              | `worker/src/lib/circuit-breaker.ts`       | Used to stop hammering degraded upstreams                                                                          |
 
 ### What this means operationally
@@ -107,9 +107,9 @@ The same rule applies to Worker-side integration clients. Telegram delivery, X p
 
 | Area                                | Current timeout              | Source                                            |
 | ----------------------------------- | ---------------------------- | ------------------------------------------------- |
-| CoinMarketCap price fallback        | `10_000 ms`                  | `worker/src/cron/enrich-prices.ts`                |
+| CoinMarketCap price fallback        | `10_000 ms`                  | `worker/src/cron/sync-stablecoins/enrich-prices.ts`                |
 | Jupiter price fallback              | `5_000 ms`                   | `worker/src/cron/enrich-prices-passes.ts`         |
-| DexScreener price fallback requests | up to `5_000 ms` per request | `worker/src/cron/enrich-prices.ts`                |
+| DexScreener price fallback requests | up to `5_000 ms` per request | `worker/src/cron/sync-stablecoins/enrich-prices.ts`                |
 | Live reserve adapter attempt        | `20_000 ms`                  | `worker/src/cron/sync-live-reserves.ts`           |
 | Live reserve D1 finalize timeout    | `30_000 ms`                  | `worker/src/cron/sync-live-reserves.ts`           |
 | Blacklist explorer / RPC reads      | `15_000 ms`                  | `worker/src/lib/fetch-retry.ts` (default timeout) |

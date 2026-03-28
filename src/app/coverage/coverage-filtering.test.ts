@@ -1,0 +1,172 @@
+import { describe, expect, it } from "vitest";
+import type { CoverageRow, CoverageStatus } from "@/lib/coverage";
+import type { CoverageFeatureKey } from "@/lib/coverage";
+import type { CoverageFilterKey } from "@/lib/coverage-page-config";
+import {
+  filterCoverageRows,
+  hasCoverageFilters,
+  matchesCoverageFilter,
+  sortCoverageRows,
+} from "./coverage-filtering";
+
+function status(kind: string, available: boolean): CoverageStatus {
+  return {
+    kind,
+    label: kind,
+    spokenLabel: kind,
+    tone: "slate",
+    available,
+    sortRank: 0,
+    detail: kind,
+  };
+}
+
+function makeRow(overrides: Partial<CoverageRow> & Pick<CoverageRow, "id" | "name" | "symbol">): CoverageRow {
+  const statuses: Record<CoverageFeatureKey, CoverageStatus> = {
+    price: status("tracked", true),
+    safety: status("tracked", true),
+    dex: status("tracked", true),
+    reserves: status("none", false),
+    redemption: status("none", false),
+    yield: status("none", false),
+    flows: status("none", false),
+    blacklist: status("none", false),
+    dependency: status("tracked", true),
+  };
+
+  return {
+    marketCapUsd: 0,
+    pegLabel: "Tracked",
+    backingLabel: "Curated",
+    governanceLabel: "Neutral",
+    coverageCount: 0,
+    advancedCoverageCount: 0,
+    statuses,
+    ...overrides,
+  };
+}
+
+const rows: CoverageRow[] = [
+  makeRow({
+    id: "alpha",
+    name: "Alpha Stable",
+    symbol: "ALP",
+    marketCapUsd: 100,
+    coverageCount: 2,
+    advancedCoverageCount: 1,
+    statuses: {
+      price: status("tracked", true),
+      safety: status("tracked", true),
+      dex: status("none", false),
+      reserves: status("none", false),
+      redemption: status("none", false),
+      yield: status("none", false),
+      flows: status("none", false),
+      blacklist: status("none", false),
+      dependency: status("tracked", true),
+    },
+  }),
+  makeRow({
+    id: "beta",
+    name: "Beta Dollar",
+    symbol: "BET",
+    marketCapUsd: 300,
+    coverageCount: 4,
+    advancedCoverageCount: 2,
+    statuses: {
+      price: status("tracked", true),
+      safety: status("tracked", true),
+      dex: status("tracked", true),
+      reserves: status("live", true),
+      redemption: status("configured", true),
+      yield: status("available", true),
+      flows: status("none", false),
+      blacklist: status("available", true),
+      dependency: status("tracked", true),
+    },
+  }),
+  makeRow({
+    id: "gamma",
+    name: "Gamma Coin",
+    symbol: "GAM",
+    marketCapUsd: 300,
+    coverageCount: 4,
+    advancedCoverageCount: 1,
+    statuses: {
+      price: status("tracked", true),
+      safety: status("tracked", true),
+      dex: status("tracked", true),
+      reserves: status("none", false),
+      redemption: status("none", false),
+      yield: status("none", false),
+      flows: status("available", true),
+      blacklist: status("none", false),
+      dependency: status("tracked", true),
+    },
+  }),
+  makeRow({
+    id: "delta",
+    name: "Delta Token",
+    symbol: "DEL",
+    marketCapUsd: 50,
+    coverageCount: 5,
+    advancedCoverageCount: 5,
+    statuses: {
+      price: status("tracked", true),
+      safety: status("tracked", true),
+      dex: status("tracked", true),
+      reserves: status("none", false),
+      redemption: status("none", false),
+      yield: status("none", false),
+      flows: status("none", false),
+      blacklist: status("none", false),
+      dependency: status("tracked", true),
+    },
+  }),
+];
+
+describe("coverage filtering", () => {
+  it("sorts by market cap, then name when caps tie", () => {
+    const sorted = sortCoverageRows(rows, "market-cap");
+
+    expect(sorted.map((row) => row.id)).toEqual(["beta", "gamma", "alpha", "delta"]);
+  });
+
+  it("sorts by most covered, then advanced coverage, then market cap", () => {
+    const sorted = sortCoverageRows(rows, "most-covered");
+
+    expect(sorted.map((row) => row.id)).toEqual(["delta", "beta", "gamma", "alpha"]);
+  });
+
+  it("sorts alphabetically by name", () => {
+    const sorted = sortCoverageRows(rows, "name");
+
+    expect(sorted.map((row) => row.id)).toEqual(["alpha", "beta", "delta", "gamma"]);
+  });
+
+  it.each<[CoverageFilterKey, string]>([
+    ["redemption", "beta"],
+    ["live-reserves", "beta"],
+    ["yield", "beta"],
+    ["flows", "gamma"],
+    ["blacklist", "beta"],
+  ])("matches %s coverage against the expected row", (filter, expectedId) => {
+    const matches = rows.filter((row) => matchesCoverageFilter(row, filter));
+
+    expect(matches.map((row) => row.id)).toEqual([expectedId]);
+  });
+
+  it("filters by search across names and tickers with trimming and case folding", () => {
+    const byName = filterCoverageRows(rows, "all", "market-cap", "  ga ");
+    const bySymbol = filterCoverageRows(rows, "all", "market-cap", " alp ");
+
+    expect(byName.map((row) => row.id)).toEqual(["gamma"]);
+    expect(bySymbol.map((row) => row.id)).toEqual(["alpha"]);
+  });
+
+  it("reports whether any filters are active", () => {
+    expect(hasCoverageFilters("all", "   ")).toBe(false);
+    expect(hasCoverageFilters("yield", "")).toBe(true);
+    expect(hasCoverageFilters("all", " beta ")).toBe(true);
+  });
+});

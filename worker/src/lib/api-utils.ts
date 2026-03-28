@@ -242,6 +242,25 @@ export function errorResponse(status: number, message: string): Response {
   });
 }
 
+export async function parseOptionalRequestJsonObject(
+  request?: Request,
+): Promise<Record<string, unknown> | Response> {
+  if (!request || request.method !== "POST") return {};
+
+  const rawBody = await request.clone().text();
+  if (!rawBody.trim()) return {};
+
+  try {
+    const parsed = JSON.parse(rawBody);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return errorResponse(400, "Invalid JSON body");
+    }
+    return parsed as Record<string, unknown>;
+  } catch {
+    return errorResponse(400, "Invalid JSON body");
+  }
+}
+
 /**
  * Parse an integer query parameter with default, min, and max bounds.
  *

@@ -4,7 +4,7 @@ import { createBudget, budgetExhausted } from "../lib/evm-logs";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig, type MintBurnEventDef } from "../lib/mint-burn-contracts";
 import type { MintBurnTxContext } from "../lib/mint-burn-bridge-classifier";
 import { requireAdmin } from "../lib/auth";
-import { errorResponse, jsonResponse, parseQueryParams } from "../lib/api-utils";
+import { errorResponse, jsonResponse, parseOptionalRequestJsonObject, parseQueryParams } from "../lib/api-utils";
 import type { TopicFilter } from "../lib/evm-logs";
 import { classifyBridgeBurnRows } from "../lib/mint-burn-pipeline/classification";
 import { loadMintBurnPriceContext } from "../lib/mint-burn-pipeline/context";
@@ -93,15 +93,6 @@ async function resolveBackfillConfig(
   };
 }
 
-async function readBodyJson(request?: Request): Promise<Record<string, unknown>> {
-  if (!request || request.method !== "POST") return {};
-  try {
-    return (await request.clone().json()) as Record<string, unknown>;
-  } catch {
-    return {};
-  }
-}
-
 export async function handleBackfillMintBurn(
   db: D1Database,
   url: URL,
@@ -116,7 +107,8 @@ export async function handleBackfillMintBurn(
     return errorResponse(500, "ALCHEMY_API_KEY is not configured");
   }
 
-  const body = await readBodyJson(request);
+  const body = await parseOptionalRequestJsonObject(request);
+  if (body instanceof Response) return body;
   const configKeyParamRaw =
     (typeof body.configKey === "string" ? body.configKey : null) ?? url.searchParams.get("configKey");
   const configKeyParam = configKeyParamRaw?.trim().toLowerCase() ?? null;

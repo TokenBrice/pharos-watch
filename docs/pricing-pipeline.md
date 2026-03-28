@@ -10,8 +10,8 @@ For supply fallback behavior and broader cache/integrity guardrails, see [data-p
 
 Pharos uses a two-stage pricing system:
 
-1. **Primary consensus** in `fetchPrimaryPrices()` (`worker/src/cron/enrich-prices.ts`)
-2. **Fallback enrichment** in `enrichMissingPrices()` (`worker/src/cron/enrich-prices.ts`)
+1. **Primary consensus** in `fetchPrimaryPrices()` (`worker/src/cron/sync-stablecoins/enrich-prices.ts`)
+2. **Fallback enrichment** in `enrichMissingPrices()` (`worker/src/cron/sync-stablecoins/enrich-prices.ts`)
 
 The output is the cached `price`, `priceSource`, `priceConfidence`, `priceObservedAt`, `priceObservedAtMode`, `priceSyncedAt`, and compatibility `priceUpdatedAt` fields served through `/api/stablecoins`.
 
@@ -45,7 +45,7 @@ When an asset still has no usable current price after validation and fallback re
 | Coinbase spot | 2 | `worker/src/lib/cex-tickers.ts` | Per-symbol venue input |
 | RedStone | 1 | `worker/src/lib/redstone.ts` | Fresh per-venue oracle snapshot with venue-agreement gating |
 | Curve on-chain | 3 | `worker/src/lib/curve-onchain.ts` | Highest-weight on-chain voice for supported pools |
-| Curve oracle (`crvusd-curve` only) | 3 | `worker/src/cron/enrich-prices.ts` | Additional primary-consensus voice for crvUSD |
+| Curve oracle (`crvusd-curve` only) | 3 | `worker/src/cron/sync-stablecoins/enrich-prices.ts` | Additional primary-consensus voice for crvUSD |
 | Trusted promoted DEX prices | 1 | `worker/src/lib/depeg-helpers.ts` | Only used when no promoted per-protocol DEX bridge source exists for the same asset |
 | Fluid DEX (via `dex_prices`) | 3 | `worker/src/lib/depeg-helpers.ts` | One aggregated Fluid price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
 | Balancer DEX (via `dex_prices`) | 3 | `worker/src/lib/depeg-helpers.ts` | One aggregated Balancer price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
@@ -215,7 +215,7 @@ Downstream consumers use these tags for display, depeg confirmation, and risk ha
 
 When changing live pricing behavior, update all relevant surfaces in the same change:
 
-1. runtime implementation in `worker/src/cron/enrich-prices.ts` or related provider modules
+1. runtime implementation in `worker/src/cron/sync-stablecoins/enrich-prices.ts` or related provider modules
 2. this document for canonical pricing behavior
 3. [data-pipeline.md](./data-pipeline.md) if broader sync/integrity semantics changed
 4. `/methodology` pricing copy in `src/app/methodology/sections/core-sections.tsx`
@@ -228,7 +228,7 @@ When changing live pricing behavior, update all relevant surfaces in the same ch
 
 | File | Role |
 |------|------|
-| `worker/src/cron/enrich-prices.ts` | Primary consensus orchestration and fallback enrichment |
+| `worker/src/cron/sync-stablecoins/enrich-prices.ts` | Primary consensus orchestration and fallback enrichment |
 | `worker/src/lib/price-consensus.ts` | N-source clustering and confidence resolution |
 | `worker/src/lib/authoritative-price-sources.ts` | Redeem-quote live/historical override registry |
 | `worker/src/lib/pyth.ts` | Pyth Hermes integration and feed-ID normalization |

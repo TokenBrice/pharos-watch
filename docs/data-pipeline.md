@@ -76,7 +76,7 @@ Primary pricing also includes a few source-specific normalization rules that are
 - **RedStone** uses exact-case tracked symbols only. The worker filters requests through `REDSTONE_TRACKED_SYMBOL_ALLOWLIST`, sends them in sequential batches of 10, and retries any batch-dropped symbol individually once.
 - **Breaker accounting for sparse responses** is data-aware: Pyth and RedStone only count as successful breaker outcomes when they return at least one usable price, not merely a 200 transport response.
 
-These rules live in `worker/src/lib/pyth.ts`, `worker/src/lib/redstone.ts`, and `worker/src/cron/enrich-prices.ts`.
+These rules live in `worker/src/lib/pyth.ts`, `worker/src/lib/redstone.ts`, and `worker/src/cron/sync-stablecoins/enrich-prices.ts`.
 
 ### Authoritative Price Source Registry
 
@@ -96,7 +96,7 @@ The registry lives in `worker/src/lib/authoritative-price-sources.ts` and suppor
 
 ### Enrichment Pipeline
 
-`enrichMissingPrices()` in `worker/src/cron/enrich-prices.ts` uses a 5-pass system for assets still missing prices after primary fetch:
+`enrichMissingPrices()` in `worker/src/cron/sync-stablecoins/enrich-prices.ts` uses a 5-pass system for assets still missing prices after primary fetch:
 
 1. **Pass 1:** Contract address -> DefiLlama coins API
 2. **Pass 1b:** Multi-chain contract address fallback (tries alternate chain addresses via DefiLlama coins API)

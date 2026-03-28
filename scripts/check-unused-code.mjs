@@ -125,7 +125,6 @@ const EXPORT_ALLOWLIST = new Set([
   "worker/src/cron/dex-liquidity/pool-identity.ts::buildKnownPoolIdentityIndex",
   "worker/src/cron/dex-liquidity/token-resolution.ts::normalizeTokenAddress",
   "worker/src/cron/dex-liquidity/token-resolution.ts::resolveStablecoinToken",
-  "worker/src/cron/enrich-prices.ts::buildPriceReasonablenessOptions",
   "worker/src/cron/reserve-adapters/helpers.ts::isHttpHtmlInput",
   "worker/src/cron/reserve-adapters/helpers.ts::fetchErc20TotalSupply",
   "worker/src/cron/sync-stablecoins/metadata.ts::buildPriceSourceHealth",

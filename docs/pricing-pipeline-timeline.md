@@ -226,4 +226,4 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ## Notes
 
 - Canonical machine-readable source: `shared/lib/pricing-pipeline-version.ts`
-- Live consensus and enrichment logic runs through `worker/src/lib/price-consensus.ts` and `worker/src/cron/enrich-prices.ts`
+- Live consensus and enrichment logic runs through `worker/src/lib/price-consensus.ts` and `worker/src/cron/sync-stablecoins/enrich-prices.ts`

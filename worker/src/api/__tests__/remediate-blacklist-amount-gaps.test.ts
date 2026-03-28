@@ -28,6 +28,42 @@ afterEach(() => {
 });
 
 describe("handleRemediateBlacklistAmountGaps", () => {
+  it("rejects malformed JSON bodies", async () => {
+    const response = await handleRemediateBlacklistAmountGaps(
+      mockD1([], { requireMatch: false }),
+      makeApiUrl("/api/remediate-blacklist-amount-gaps"),
+      true,
+      makeApiRequest("/api/remediate-blacklist-amount-gaps", {
+        method: "POST",
+        adminKey: "secret-key",
+        headers: { "Content-Type": "application/json" },
+        body: "{",
+      }),
+      testChainRpcs,
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: "Invalid JSON body" });
+  });
+
+  it("rejects non-object JSON bodies", async () => {
+    const response = await handleRemediateBlacklistAmountGaps(
+      mockD1([], { requireMatch: false }),
+      makeApiUrl("/api/remediate-blacklist-amount-gaps"),
+      true,
+      makeApiRequest("/api/remediate-blacklist-amount-gaps", {
+        method: "POST",
+        adminKey: "secret-key",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(["not-an-object"]),
+      }),
+      testChainRpcs,
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: "Invalid JSON body" });
+  });
+
   it("returns a dry-run summary for targeted legacy gaps", async () => {
     const db = mockD1([
       {
