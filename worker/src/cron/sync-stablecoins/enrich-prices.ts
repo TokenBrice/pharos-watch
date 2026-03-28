@@ -3,7 +3,7 @@ import { throwIfAborted } from "../../lib/abort";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices-shared";
 import { runDlContractPasses, runCmcPass, runDexScreenerPass, runJupiterPass } from "./enrich-prices-passes";
 
-export { buildPriceReasonablenessOptions, isReasonablePrice, PRICE_BOUNDS } from "../../lib/price-validation";
+export { isReasonablePrice, PRICE_BOUNDS } from "../../lib/price-validation";
 export {
   applyPoolChallenge,
   fetchPrimaryPrices,

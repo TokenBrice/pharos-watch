@@ -66,4 +66,37 @@ describe("fetchYearnKongSources", () => {
     expect(results[0].yield.yieldSource).toContain("Kong");
     expect(results[0].yield.sourceKey).toContain("protocol-api:kong:");
   });
+
+  it("maps Staked yBOLD to bold-liquity as a native K3 source", async () => {
+    mockFetch([{
+      match: "kong.yearn.fi",
+      body: { data: { vaults: [{
+        address: "0x23346B04a7f55b8760E5860AA5A77383D63491cD",
+        name: "Staked yBOLD",
+        yearn: true,
+        asset: {
+          symbol: "yBOLD",
+          address: "0x9F4330700a36B29952869fac9b33f45EEdd8A3d8",
+        },
+        tvl: { close: 4_434_056 },
+        apy: { net: 0.0316603818860981, monthlyNet: 0.0316603818860981 },
+        meta: { category: "Stablecoin", isRetired: false },
+      }] } },
+    }]);
+
+    const results = await fetchYearnKongSources();
+    expect(results).toHaveLength(1);
+    expect(results[0]).toEqual(expect.objectContaining({
+      stablecoinId: "bold-liquity",
+      symbol: "yBOLD",
+      chain: "ethereum",
+      address: "0x9F4330700a36B29952869fac9b33f45EEdd8A3d8",
+      yield: expect.objectContaining({
+        currentApy: expect.closeTo(3.17, 1),
+        sourceKey: "protocol-api:k3:ethereum:0x23346b04a7f55b8760e5860aa5a77383d63491cd",
+        yieldSource: "K3: sBOLD",
+        yieldType: "lending-vault",
+      }),
+    }));
+  });
 });

@@ -13,7 +13,7 @@ export const TARGET_FILES = [
   "src/app/coverage/client.tsx",
   "worker/src/cron/daily-digest/collectors.ts",
   "worker/src/cron/daily-digest.ts",
-  "worker/src/cron/enrich-prices.ts",
+  "worker/src/cron/sync-stablecoins/enrich-prices.ts",
   "worker/src/cron/sync-blacklist.ts",
   "worker/src/cron/sync-fx-rates.ts",
   "worker/src/cron/yield-sync/sources.ts",

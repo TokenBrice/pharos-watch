@@ -33,6 +33,7 @@ export interface ResolvedYield {
 }
 
 export interface ResolvedYieldCandidate {
+  stablecoinId?: string;
   symbol: string;
   chain?: string | null;
   address?: string | null;

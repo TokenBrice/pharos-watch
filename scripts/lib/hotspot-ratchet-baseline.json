@@ -32,7 +32,7 @@
   "src/app/methodology/scoring-changelog/page.tsx": {
     "fileLines": 1235,
     "maxFunctionLines": 1106,
-    "branchCount": 0
+    "branchCount": 1
   },
   "src/app/coverage/client.tsx": {
     "fileLines": 441,
@@ -49,7 +49,7 @@
     "maxFunctionLines": 425,
     "branchCount": 128
   },
-  "worker/src/cron/enrich-prices.ts": {
+  "worker/src/cron/sync-stablecoins/enrich-prices.ts": {
     "fileLines": 865,
     "maxFunctionLines": 447,
     "branchCount": 131

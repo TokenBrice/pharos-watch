@@ -110,6 +110,19 @@ function appendResolvedYieldCandidates(
       continue;
     }
 
+    if (entry.stablecoinId) {
+      const meta = TRACKED_META_BY_ID.get(entry.stablecoinId);
+      if (!meta) {
+        unresolvedDrops += 1;
+        continue;
+      }
+      if (resolved.some((resolvedEntry) => resolvedEntry.id === meta.id && resolvedEntry.yield?.sourceKey === entry.yield.sourceKey)) {
+        continue;
+      }
+      resolved.push({ id: meta.id, symbol: meta.symbol, yield: entry.yield });
+      continue;
+    }
+
     const resolution = resolveYieldCandidateStablecoinId(entry, identityLookups);
     if (resolution.status !== "matched" || !resolution.stablecoinId) {
       if (resolution.status === "ambiguous") {

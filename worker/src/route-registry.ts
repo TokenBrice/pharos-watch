@@ -376,7 +376,7 @@ const DYNAMIC_ROUTE_DEFINITIONS: readonly DynamicRouteDefinition[] = [
   },
 ];
 
-export function getStaticRouteDefinition(path: string): StaticRouteDefinition | undefined {
+function getStaticRouteDefinition(path: string): StaticRouteDefinition | undefined {
   return STATIC_ROUTE_DEFINITIONS.get(path);
 }
 

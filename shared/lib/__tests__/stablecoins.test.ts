@@ -98,6 +98,16 @@ describe("tracked stablecoin metadata", () => {
     )).toBe(true);
   });
 
+  it("classifies BOLD yield as a native wrapper over the Liquity Stability Pool", () => {
+    const coin = TRACKED_META_BY_ID.get("bold-liquity");
+
+    expect(coin).toBeDefined();
+    expect(coin?.yieldConfig).toMatchObject({
+      yieldSource: "Liquity Stability Pool (via Yearn yBOLD)",
+      yieldType: "lending-vault",
+    });
+  });
+
   it("uses explicit breaker scopes when a live-reserve adapter is reused across multiple coins", () => {
     const liveCoins = TRACKED_STABLECOINS.filter((coin) => coin.liveReservesConfig);
     const adapterUsage = new Map<string, string[]>();

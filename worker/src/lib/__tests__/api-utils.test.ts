@@ -4,6 +4,9 @@ import {
   errorResponse,
   parseFloatParam,
   parseIntParam,
+  parseOptionalEnumParam,
+  parseEnumParam,
+  parseRequiredStablecoinIdParam,
   parseQueryParams,
   parseStablecoinHistoryQuery,
   jsonResponse,
@@ -115,6 +118,75 @@ describe("parseQueryParams", () => {
       threshold: { type: "float", default: 1.0, min: 0, max: 10 },
     });
     expect(result).toEqual({ threshold: 0.5 });
+  });
+});
+
+describe("parseOptionalEnumParam", () => {
+  const validModes = new Set(["strict", "relaxed"] as const);
+
+  it("returns null for missing or blank values", () => {
+    expect(parseOptionalEnumParam(null, validModes, "mode")).toBeNull();
+    expect(parseOptionalEnumParam(undefined, validModes, "mode")).toBeNull();
+    expect(parseOptionalEnumParam("   ", validModes, "mode")).toBeNull();
+  });
+
+  it("returns the trimmed enum value when valid", () => {
+    expect(parseOptionalEnumParam(" strict ", validModes, "mode")).toBe("strict");
+  });
+
+  it("returns a 400 response for invalid values", async () => {
+    const result = parseOptionalEnumParam("legacy", validModes, "mode");
+    expect(result).toBeInstanceOf(Response);
+    const response = result as Response;
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid mode parameter" });
+  });
+});
+
+describe("parseEnumParam", () => {
+  const validModes = new Set(["strict", "relaxed"] as const);
+
+  it("returns the default when the value is missing", () => {
+    expect(parseEnumParam(null, validModes, "mode", "strict")).toBe("strict");
+  });
+
+  it("returns the parsed enum value when valid", () => {
+    expect(parseEnumParam("relaxed", validModes, "mode", "strict")).toBe("relaxed");
+  });
+
+  it("returns a 400 response for invalid values", async () => {
+    const result = parseEnumParam("legacy", validModes, "mode", "strict");
+    expect(result).toBeInstanceOf(Response);
+    const response = result as Response;
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid mode parameter" });
+  });
+});
+
+describe("parseRequiredStablecoinIdParam", () => {
+  it("returns a 400 response when the parameter is missing", async () => {
+    const result = parseRequiredStablecoinIdParam(new URLSearchParams(""), "stablecoin");
+    expect(result).toBeInstanceOf(Response);
+    const response = result as Response;
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Missing required parameter: stablecoin" });
+  });
+
+  it("returns a 404 response when the stablecoin is unknown", async () => {
+    const result = parseRequiredStablecoinIdParam(
+      new URLSearchParams("stablecoin=not-a-stablecoin"),
+      "stablecoin",
+    );
+    expect(result).toBeInstanceOf(Response);
+    const response = result as Response;
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "Unknown stablecoin" });
+  });
+
+  it("returns the canonical stablecoin id when the parameter is valid", () => {
+    expect(parseRequiredStablecoinIdParam(new URLSearchParams("stablecoin=usdt-tether"), "stablecoin")).toBe(
+      "usdt-tether",
+    );
   });
 });
 

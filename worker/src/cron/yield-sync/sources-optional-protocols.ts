@@ -110,6 +110,9 @@ interface KongVault {
   meta: { category: string | null; isRetired: boolean | null } | null;
 }
 
+const K3_SBOLD_ASSET_ADDRESS = "0x9f4330700a36b29952869fac9b33f45eedd8a3d8";
+const K3_SBOLD_SOURCE_LABEL = "K3: sBOLD";
+
 interface BeefyVault {
   id: string;
   name: string;
@@ -597,11 +600,18 @@ export async function fetchYearnKongSources(
           if (typeof tvl !== "number" || tvl < 100_000) continue;
 
           seenAddresses.add(vault.address.toLowerCase());
-          const sourcePrefix = vault.yearn ? "Yearn" : "Kong";
-          const sourceNamespace = vault.yearn ? "yearn" : "kong";
           const chain = resolveCanonicalChain(chainId);
           if (!chain) continue;
+          const normalizedAssetAddress = vault.asset.address?.toLowerCase() ?? null;
+          const isK3Sbold =
+            chain === "ethereum" &&
+            normalizedAssetAddress === K3_SBOLD_ASSET_ADDRESS &&
+            vault.name.trim().toLowerCase() === "staked ybold";
+          const sourcePrefix = vault.yearn ? "Yearn" : "Kong";
+          const sourceNamespace = isK3Sbold ? "k3" : (vault.yearn ? "yearn" : "kong");
+
           results.push({
+            stablecoinId: isK3Sbold ? "bold-liquity" : undefined,
             symbol: vault.asset.symbol,
             chain,
             address: vault.asset.address ?? null,
@@ -614,8 +624,8 @@ export async function fetchYearnKongSources(
               dataSource: "protocol-api",
               exchangeRate: null,
               sourceKey: `protocol-api:${sourceNamespace}:${chain}:${vault.address.toLowerCase()}`,
-              yieldSource: `${sourcePrefix}: ${vault.name}`,
-              yieldType: "lending-opportunity",
+              yieldSource: isK3Sbold ? K3_SBOLD_SOURCE_LABEL : `${sourcePrefix}: ${vault.name}`,
+              yieldType: isK3Sbold ? "lending-vault" : "lending-opportunity",
               sourceObservedAt: Math.floor(Date.now() / 1000),
               comparisonAnchorObservedAt: null,
             },

@@ -3239,8 +3239,8 @@
       }
     },
     "yieldConfig": {
-      "yieldSource": "Stability Pool (via Yearn yBOLD)",
-      "yieldType": "governance-set"
+      "yieldSource": "Liquity Stability Pool (via Yearn yBOLD)",
+      "yieldType": "lending-vault"
     }
   },
   {

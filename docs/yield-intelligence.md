@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v5.16`
+- **Current methodology version:** `v5.17`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -151,7 +151,7 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 | crvUSD (110)          | scrvUSD | Curve staked crvUSD         |
 | FRXUSD (235)          | sfrxUSD | Frax staked frxUSD          |
 | DOLA (15)             | sDOLA   | Inverse Finance staked DOLA |
-| BOLD (269)            | yBOLD   | Liquity yield BOLD          |
+| BOLD (269)            | yBOLD   | Liquity Stability Pool wrapper |
 | USBD (253)            | sUSBD   | BIMA savings wrapper        |
 | reUSD (339)           | stUSR   | Resolv staking wrapper      |
 | AZND (327)            | loAZND  | Mu Digital locked wrapper   |
@@ -177,6 +177,8 @@ APY, base/reward split, pool TVL, and pool UUID are all taken directly from the 
 For coins whose native savings path is published by the protocol itself but is not exposed as a usable DeFiLlama pool, the sync can ingest a curated protocol-owned earn endpoint directly.
 
 Protocol-specific lending-market readers that query protocol state directly also live in this tier. Even when the transport is an on-chain call, these rows are treated as curated protocol-native venues rather than Tier 1 deterministic native-wrapper sources, so arbitration still prefers a stronger native wrapper or savings source when one exists.
+
+This tier can also carry explicit wrapper-over-wrapper native sources when the upstream venue is a distinct managed wrapper around a tracked native yield token. BOLD now uses this path for K3 `sBOLD`, which wraps `yBOLD` while still representing the Liquity Stability Pool yield stack rather than a governance-set rate.
 
 Published lending-opportunity suggestions also apply an explicit venue exclusion for Resolv / `USR`, `stUSR`, and `wstUSR`-linked markets. This filter is scoped to the suggestion layer for base assets such as USDC or USDT; it does not remove native tracked yield assets from the broader methodology inventory.
 

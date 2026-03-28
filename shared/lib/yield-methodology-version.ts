@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "5.16",
+  currentVersion: "5.17",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "5.17",
+    title: "K3 sBOLD Added As A Distinct Native BOLD Yield Source",
+    date: "2026-03-28",
+    effectiveAt: 1774692000,
+    summary:
+      "Yield Intelligence now publishes Liquity's K3 `sBOLD` wrapper as a second native BOLD source instead of limiting BOLD coverage to the base `yBOLD` wrapper path.",
+    impact: [
+      "The supplemental Yearn/Kong reader now recognizes Ethereum `Staked yBOLD` and pins it to `bold-liquity` as `K3: sBOLD`",
+      "This source is classified as `lending-vault`, keeping BOLD's wrapper-over-wrapper Stability Pool path in the native-yield bucket rather than `lending-opportunity` or `governance-set`",
+      "Source-link resolution now deep-links `K3: sBOLD` to Liquity's dedicated earn route",
+      "Yield methodology docs and the public changelog now document the additional native BOLD source coverage",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.16",
     title: "Blocked USR-Linked Lending Suggestions",
@@ -17,6 +33,7 @@ const yieldMethodology = createMethodologyVersion({
       "Supplemental protocol-API lending candidates such as `Morpho: Resolv USDC` are dropped before ranking publication when the venue label resolves to Resolv / `USR`, `stUSR`, or `wstUSR` exposures",
       "Auto-discovered DeFiLlama lending pools now preserve `poolMeta` in the shared cache and apply the same Resolv / USR exclusion rule, keeping the hourly publisher and the slower supplemental lane aligned",
       "The exclusion is scoped to `lending-opportunity` venues, so native tracked yield assets and their own methodology coverage remain unchanged",
+      "Wrapper-over-native venues such as BOLD / `yBOLD` are documented and classified as native yield rather than `governance-set` when the wrapper only packages the protocol's own Stability Pool return",
       "Yield methodology docs and the public changelog now document the explicit USR-linked venue exclusion rule",
     ],
     commits: [],

@@ -104,6 +104,16 @@ describe("resolveYieldSourceUrl", () => {
     ).toBe("https://kong.yearn.fi/");
   });
 
+  it("resolves the K3 sBOLD source to Liquity's dedicated earn route", () => {
+    expect(
+      resolveYieldSourceUrl({
+        stablecoinId: "bold-liquity",
+        sourceKey: "protocol-api:k3:ethereum:0x23346b04a7f55b8760e5860aa5a77383d63491cd",
+        yieldSource: "K3: sBOLD",
+      }),
+    ).toBe("https://liquity.app/earn/sbold");
+  });
+
   it("covers every allowlisted lending protocol label with a curated source URL", () => {
     for (const protocol of LENDING_PROTOCOL_ALLOWLIST) {
       const label = LENDING_PROTOCOL_LABELS[protocol];

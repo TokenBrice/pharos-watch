@@ -1,14 +1,22 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.16` (2026-03-01 -> 2026-03-28).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.17` (2026-03-01 -> 2026-03-28).
 
 ---
+
+## v5.17 - K3 sBOLD added as a distinct native BOLD yield source (Mar 28, 2026)
+
+- The supplemental Yearn/Kong feed now recognizes Ethereum `Staked yBOLD` and pins it directly to `bold-liquity`
+- The source publishes as `K3: sBOLD`, giving BOLD a second native wrapper path alongside the base `yBOLD` route
+- `sBOLD` is classified as native `lending-vault` yield because it is another wrapper around the Liquity Stability Pool stack, not a governance-set rate or generic lending opportunity
+- Yield-source links now deep-link this row to Liquity's dedicated `https://liquity.app/earn/sbold` route
 
 ## v5.16 - Blocked USR-linked lending suggestions (Mar 28, 2026)
 
 - Published `lending-opportunity` suggestions now exclude venues explicitly tied to Resolv / `USR`, `stUSR`, or `wstUSR`
 - Supplemental protocol-API sources such as `Morpho: Resolv USDC` are dropped before ranking publication instead of competing for the best-source slot
 - The shared DeFiLlama stablecoin-pool cache now preserves `poolMeta`, allowing the same exclusion rule to apply on the auto-discovery path as well
+- Wrapper-over-native venues such as BOLD / `yBOLD` are treated as native yield rather than governance-set when the wrapper only packages the protocol's own Stability Pool return
 - The filter is scoped to lending suggestions for base assets; native tracked yield assets keep their existing methodology coverage
 
 ## v5.15 - Benchmark-aware PYS for cross-currency yield context (Mar 27, 2026)
