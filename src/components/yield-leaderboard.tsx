@@ -133,6 +133,7 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
       <DataTableShell
         columns={YIELD_COLUMNS}
         striped
+        containerClassName="-mx-4 max-w-[calc(100%+2rem)] px-4 sm:mx-0 sm:max-w-none sm:px-0"
         sort={{
           sortKey,
           sortDirection,

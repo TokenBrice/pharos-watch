@@ -236,10 +236,10 @@ export function YieldClient() {
 
       {data?.provenance ? (
         <details className="group rounded-xl border border-border/70 bg-card/80 text-sm">
-          <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-xs font-medium text-muted-foreground select-none [&::-webkit-details-marker]:hidden">
+          <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 px-4 py-3 text-xs font-medium text-muted-foreground select-none [&::-webkit-details-marker]:hidden">
             <ChevronRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-90" />
             Data Provenance
-            <span className="ml-auto flex items-center gap-3 font-mono tabular-nums text-foreground">
+            <span className="flex w-full flex-wrap items-center justify-end gap-x-3 gap-y-1 font-mono tabular-nums text-foreground sm:ml-auto sm:w-auto sm:flex-nowrap">
               {Object.values(data.benchmarks ?? data.provenance.benchmarks ?? { USD: data.provenance.benchmark })
                 .filter((b): b is NonNullable<typeof b> => b != null)
                 .map((b) => (
