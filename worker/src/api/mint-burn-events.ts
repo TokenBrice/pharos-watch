@@ -1,9 +1,11 @@
 import {
   withErrorHandler,
   addFreshnessHeaders,
-  resolveOrReject,
   errorResponse,
+  parseEnumParam,
+  parseOptionalEnumParam,
   parseQueryParams,
+  parseRequiredStablecoinIdParam,
   jsonResponse,
   getLatestSuccessfulCronTimestamp,
   fetchPaginatedEvents,
@@ -41,32 +43,19 @@ export const handleMintBurnEvents = withErrorHandler(
   async (db: D1Database, url: URL): Promise<Response> => {
     const params = url.searchParams;
 
-    const stablecoinInput = params.get("stablecoin");
-    if (!stablecoinInput) {
-      return errorResponse(400, "Missing required parameter: stablecoin");
-    }
-    const resolved = resolveOrReject(stablecoinInput);
-    if (resolved instanceof Response) {
-      return resolved;
-    }
-    const stablecoinId = resolved.canonicalId;
+    const stablecoinId = parseRequiredStablecoinIdParam(params);
+    if (stablecoinId instanceof Response) return stablecoinId;
 
-    const direction = params.get("direction");
-    if (direction && !VALID_DIRECTIONS.has(direction)) {
-      return errorResponse(400, "Invalid direction parameter");
-    }
+    const direction = parseOptionalEnumParam(params.get("direction"), VALID_DIRECTIONS, "direction");
+    if (direction instanceof Response) return direction;
     const chain = params.get("chain");
     if (chain && chain !== ETHEREUM_CHAIN_ID) {
       return errorResponse(400, "Invalid chain parameter");
     }
-    const burnType = params.get("burnType");
-    if (burnType && !VALID_BURN_TYPES.has(burnType)) {
-      return errorResponse(400, "Invalid burnType parameter");
-    }
-    const scope = params.get("scope") ?? "all";
-    if (!VALID_SCOPES.has(scope)) {
-      return errorResponse(400, "Invalid scope parameter");
-    }
+    const burnType = parseOptionalEnumParam(params.get("burnType"), VALID_BURN_TYPES, "burnType");
+    if (burnType instanceof Response) return burnType;
+    const scope = parseEnumParam(params.get("scope"), VALID_SCOPES, "scope", "all");
+    if (scope instanceof Response) return scope;
     const numericParams = parseQueryParams(params, {
       minAmount: { type: "float", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER },
       limit: { type: "int", default: 50, min: 1, max: 500 },

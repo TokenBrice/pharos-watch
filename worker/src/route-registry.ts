@@ -48,7 +48,7 @@ import { handleReclassifyAtomicRoundtrips } from "./api/reclassify-atomic-roundt
 import { handleStressSignals } from "./api/stress-signals";
 import { handleChains } from "./api/chains";
 import { handleBackfillDEWS } from "./api/backfill-dews";
-import { handleDiscoveryCandidates } from "./api/discovery";
+import { handleDiscoveryCandidates, handleDismissCandidate } from "./api/discovery";
 import { handleFeedback, type FeedbackEnv } from "./api/feedback";
 import { handleTelegramWebhook } from "./api/telegram-webhook";
 import { generateDailyDigest } from "./cron/daily-digest";
@@ -56,7 +56,7 @@ import { createLeaseOwner, runCronWithLease } from "./lib/cron-lease";
 import { logCronRun, type CronResult } from "./lib/cron-logger";
 import { runIdempotentAdminAction } from "./lib/idempotency";
 import { normalizeCronMetadata } from "./lib/cron-metadata";
-import { jsonResponse } from "./lib/api-utils";
+import { errorResponse, jsonResponse, resolveOrReject } from "./lib/api-utils";
 import {
   makeAdminRoute,
   makeConditionalIdempotentAdminRoute,
@@ -65,6 +65,8 @@ import {
 import type { MintBurnFreshnessConfig } from "./lib/mint-burn-health-config";
 import type { TelegramCreds } from "./lib/telegram";
 import type { ChainRpcConfig } from "./lib/chain-registry";
+import { handleOg } from "./api/og";
+import { withAdmin } from "./lib/auth";
 
 /** Core context available to every route handler. */
 export interface RouteContext {
@@ -122,6 +124,18 @@ type StaticRouteHandlerMap = Partial<Record<EndpointKey, StaticRouteHandler>>;
 export interface StaticRouteDefinition {
   endpoint: EndpointDefinition;
   handler: StaticRouteHandler;
+}
+
+interface DynamicRouteDefinition {
+  pattern: RegExp;
+  dependencies?: readonly RouteDependency[];
+  handle: (routeCtx: FullRouteContext, match: RegExpMatchArray) => Promise<Response>;
+}
+
+export interface RouteMatch {
+  endpoint?: EndpointDefinition;
+  dependencies: readonly RouteDependency[];
+  handle: (routeCtx: FullRouteContext) => Promise<Response>;
 }
 
 function createAcceptedJsonResponse(body: unknown): Response {
@@ -306,8 +320,91 @@ const STATIC_ROUTE_DEFINITIONS = new Map<string, StaticRouteDefinition>(
   }),
 );
 
+function resolveDynamicStablecoinRoute(
+  match: RegExpMatchArray,
+  handler: (canonicalId: string) => Promise<Response>,
+): Promise<Response> {
+  let id: string;
+  try {
+    id = decodeURIComponent(match[1]);
+  } catch {
+    return Promise.resolve(errorResponse(400, "Malformed URI"));
+  }
+  const resolved = resolveOrReject(id);
+  if (resolved instanceof Response) {
+    return Promise.resolve(resolved);
+  }
+  return handler(resolved.canonicalId);
+}
+
+const DYNAMIC_ROUTE_DEFINITIONS: readonly DynamicRouteDefinition[] = [
+  {
+    pattern: /^\/api\/stablecoin-summary\/(.+)$/,
+    handle: (routeCtx, match) => resolveDynamicStablecoinRoute(
+      match,
+      (canonicalId) => handleStablecoinSummary(routeCtx.db, canonicalId),
+    ),
+  },
+  {
+    pattern: /^\/api\/stablecoin-reserves\/(.+)$/,
+    handle: (routeCtx, match) => resolveDynamicStablecoinRoute(
+      match,
+      (canonicalId) => handleStablecoinReserves(routeCtx.db, canonicalId),
+    ),
+  },
+  {
+    pattern: /^\/api\/stablecoin\/(.+)$/,
+    dependencies: ["coingeckoApiKey"],
+    handle: (routeCtx, match) => resolveDynamicStablecoinRoute(
+      match,
+      (canonicalId) => handleStablecoinDetail(routeCtx.db, canonicalId, routeCtx.execCtx, routeCtx.coingeckoApiKey),
+    ),
+  },
+  {
+    pattern: /^\/api\/discovery-candidates\/(\d+)\/dismiss$/,
+    handle: async (routeCtx, match) => {
+      const candidateId = parseInt(match[1], 10);
+      if (!Number.isFinite(candidateId) || candidateId <= 0) {
+        return Promise.resolve(errorResponse(400, "Invalid candidate ID"));
+      }
+      return withAdmin(routeCtx.request, () => handleDismissCandidate(routeCtx.db, candidateId), routeCtx.trustedAdmin);
+    },
+  },
+  {
+    pattern: /^\/api\/og\/.+$/,
+    handle: (routeCtx) => handleOg(routeCtx.db, routeCtx.url.pathname).then((response) => response ?? errorResponse(404, "Unknown OG route")),
+  },
+];
+
 export function getStaticRouteDefinition(path: string): StaticRouteDefinition | undefined {
   return STATIC_ROUTE_DEFINITIONS.get(path);
+}
+
+export function getRouteMatch(path: string): RouteMatch | null {
+  const staticRoute = getStaticRouteDefinition(path);
+  if (staticRoute) {
+    return {
+      endpoint: staticRoute.endpoint,
+      dependencies: staticRoute.endpoint.routeDependencies ?? [],
+      handle: staticRoute.handler,
+    };
+  }
+
+  for (const definition of DYNAMIC_ROUTE_DEFINITIONS) {
+    const match = path.match(definition.pattern);
+    if (match) {
+      return {
+        dependencies: definition.dependencies ?? [],
+        handle: (routeCtx) => definition.handle(routeCtx, match),
+      };
+    }
+  }
+
+  return null;
+}
+
+export function getRouteDependencies(path: string): readonly RouteDependency[] | null {
+  return getRouteMatch(path)?.dependencies ?? null;
 }
 
 export const ROUTER_STATIC_PATHS = [...STATIC_ROUTE_DEFINITIONS.keys()];

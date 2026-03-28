@@ -3,7 +3,7 @@ import {
   hasMissingPrice,
   fetchPrimaryPrices,
   runGtProbePass,
-} from "./enrich-prices";
+} from "./sync-stablecoins/enrich-prices";
 import {
   buildSyncMetadata,
   loadFreshFxRates,

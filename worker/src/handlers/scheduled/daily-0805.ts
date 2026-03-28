@@ -14,24 +14,13 @@ import { generateWeeklyRecap } from "../../cron/weekly-recap";
 import { runDiscoveryScan } from "../../cron/discovery-scan";
 import { buildTelegramCreds } from "../../lib/runtime-credentials";
 import type { ScheduledRuntimeContext } from "./context";
+import { runBestEffortScheduledJob } from "./run-best-effort-job";
 
 export async function runDaily0805Slot(runtime: ScheduledRuntimeContext): Promise<void> {
-  const runDailyJob = async (
-    job: string,
-    fn: Parameters<ScheduledRuntimeContext["runLeasedCron"]>[1],
-  ) => {
-    try {
-      return (await runtime.runLeasedCron(job, fn)) ?? null;
-    } catch (err) {
-      console.error(`[cron] ${job} failed in daily 08:05 slot:`, err);
-      return null;
-    }
-  };
-
   await Promise.all([
-    runDailyJob("sync-bluechip", (signal) => syncBluechip(runtime.db, signal)),
+    runBestEffortScheduledJob(runtime, "daily 08:05 slot", "sync-bluechip", (signal) => syncBluechip(runtime.db, signal)),
     (async () => {
-      await runDailyJob("daily-digest", (signal) => {
+      await runBestEffortScheduledJob(runtime, "daily 08:05 slot", "daily-digest", (signal) => {
         return generateDailyDigest(
           runtime.db,
           runtime.env.ANTHROPIC_API_KEY ?? null,
@@ -41,7 +30,7 @@ export async function runDaily0805Slot(runtime: ScheduledRuntimeContext): Promis
           signal,
         );
       });
-      await runDailyJob("weekly-recap", (signal) => {
+      await runBestEffortScheduledJob(runtime, "daily 08:05 slot", "weekly-recap", (signal) => {
         return generateWeeklyRecap(
           runtime.db,
           runtime.env.ANTHROPIC_API_KEY ?? null,
@@ -50,6 +39,6 @@ export async function runDaily0805Slot(runtime: ScheduledRuntimeContext): Promis
         );
       });
     })(),
-    runDailyJob("discovery-scan", (signal) => runDiscoveryScan(runtime.db, signal, runtime.coingeckoApiKey)),
+    runBestEffortScheduledJob(runtime, "daily 08:05 slot", "discovery-scan", (signal) => runDiscoveryScan(runtime.db, signal, runtime.coingeckoApiKey)),
   ]);
 }

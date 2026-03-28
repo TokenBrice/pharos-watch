@@ -16,7 +16,14 @@ import {
 } from "@shared/lib/stability-index-version";
 import { SafetyScoreCalculator } from "@/components/methodology/safety-score-calculator";
 import { CollateralQualityMethodologyCopy } from "./core-sections-fragments";
-import { MethodologyDetails, MethodologyFacts, MethodologySectionShell, WorkedExample } from "../methodology-shared";
+import {
+  MethodologyDetails,
+  MethodologyDiagramArrow,
+  MethodologyDiagramCard,
+  MethodologyFacts,
+  MethodologySectionShell,
+  WorkedExample,
+} from "../methodology-shared";
 import { PricingPipelineMethodologySection } from "./core-sections-pricing";
 
 export function CoreMethodologySections() {
@@ -91,65 +98,29 @@ export function CoreMethodologySections() {
             {/* PSI pipeline — desktop */}
             <div className="hidden md:flex flex-col items-center gap-3">
               <div className="grid grid-cols-4 gap-3 w-full">
-                <div className="rounded-lg border p-3 text-center">
-                  <p className="text-foreground font-medium">Severity</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">0&ndash;68</p>
-                </div>
-                <div className="rounded-lg border p-3 text-center">
-                  <p className="text-foreground font-medium">Breadth</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">0&ndash;17</p>
-                </div>
-                <div className="rounded-lg border p-3 text-center">
-                  <p className="text-foreground font-medium">Stress Breadth</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">0&ndash;5</p>
-                </div>
-                <div className="rounded-lg border p-3 text-center">
-                  <p className="text-foreground font-medium">Trend</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">&minus;5 to +5</p>
-                </div>
+                <MethodologyDiagramCard title="Severity" subtitle="0–68" />
+                <MethodologyDiagramCard title="Breadth" subtitle="0–17" />
+                <MethodologyDiagramCard title="Stress Breadth" subtitle="0–5" />
+                <MethodologyDiagramCard title="Trend" subtitle="−5 to +5" />
               </div>
-              <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-              <div className="rounded-lg border p-3 text-center w-80">
-                <p className="text-foreground font-medium">Compute PSI</p>
-                <p className="text-xs text-muted-foreground mt-0.5">100 &minus; penalties + trend</p>
-              </div>
-              <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-              <div className="rounded-lg border border-cyan-500/40 p-3 text-center w-80">
-                <p className="text-foreground font-medium">Condition Band</p>
-                <p className="text-xs text-muted-foreground mt-0.5">BEDROCK through MELTDOWN</p>
-              </div>
+              <MethodologyDiagramArrow />
+              <MethodologyDiagramCard className="w-80" title="Compute PSI" subtitle="100 − penalties + trend" />
+              <MethodologyDiagramArrow />
+              <MethodologyDiagramCard className="w-80 border-cyan-500/40" title="Condition Band" subtitle="BEDROCK through MELTDOWN" />
             </div>
 
             {/* PSI pipeline — mobile */}
             <div className="flex flex-col items-center gap-3 md:hidden">
               <div className="grid grid-cols-2 gap-2 w-full">
-                <div className="rounded-lg border p-3 text-center">
-                  <p className="text-foreground font-medium text-xs">Severity</p>
-                  <p className="text-xs text-muted-foreground">0&ndash;68</p>
-                </div>
-                <div className="rounded-lg border p-3 text-center">
-                  <p className="text-foreground font-medium text-xs">Breadth</p>
-                  <p className="text-xs text-muted-foreground">0&ndash;17</p>
-                </div>
-                <div className="rounded-lg border p-3 text-center">
-                  <p className="text-foreground font-medium text-xs">Stress Breadth</p>
-                  <p className="text-xs text-muted-foreground">0&ndash;5</p>
-                </div>
-                <div className="rounded-lg border p-3 text-center">
-                  <p className="text-foreground font-medium text-xs">Trend</p>
-                  <p className="text-xs text-muted-foreground">&minus;5 to +5</p>
-                </div>
+                <MethodologyDiagramCard title="Severity" titleClassName="text-xs text-foreground font-medium" subtitle="0–68" subtitleClassName="text-xs text-muted-foreground" />
+                <MethodologyDiagramCard title="Breadth" titleClassName="text-xs text-foreground font-medium" subtitle="0–17" subtitleClassName="text-xs text-muted-foreground" />
+                <MethodologyDiagramCard title="Stress Breadth" titleClassName="text-xs text-foreground font-medium" subtitle="0–5" subtitleClassName="text-xs text-muted-foreground" />
+                <MethodologyDiagramCard title="Trend" titleClassName="text-xs text-foreground font-medium" subtitle="−5 to +5" subtitleClassName="text-xs text-muted-foreground" />
               </div>
-              <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-              <div className="w-full rounded-lg border p-3 text-center">
-                <p className="text-foreground font-medium">Compute PSI</p>
-                <p className="text-xs text-muted-foreground mt-0.5">100 &minus; penalties + trend</p>
-              </div>
-              <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-              <div className="w-full rounded-lg border border-cyan-500/40 p-3 text-center">
-                <p className="text-foreground font-medium">Condition Band</p>
-                <p className="text-xs text-muted-foreground mt-0.5">BEDROCK through MELTDOWN</p>
-              </div>
+              <MethodologyDiagramArrow />
+              <MethodologyDiagramCard className="w-full" title="Compute PSI" subtitle="100 − penalties + trend" />
+              <MethodologyDiagramArrow />
+              <MethodologyDiagramCard className="w-full border-cyan-500/40" title="Condition Band" subtitle="BEDROCK through MELTDOWN" />
             </div>
             <div className="space-y-2">
               <h3 className="text-foreground font-medium">Components</h3>

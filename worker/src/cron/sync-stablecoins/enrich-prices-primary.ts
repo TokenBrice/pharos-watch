@@ -1,18 +1,18 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
-import type { PriceValidationReferences } from "../lib/price-validation";
+import type { PriceValidationReferences } from "../../lib/price-validation";
 import {
   buildPriceValidationContext,
   getReferencePriceForContext,
-} from "../lib/price-validation";
-import { USER_AGENT, CIRCUIT_SOURCE, DEX_FRESHNESS_SEC, POOL_CHALLENGE_MIN_TVL, getDepegThresholdBps } from "../lib/constants";
-import { CG_TICKER_COINS, fetchCgTickerPrices } from "../lib/cg-ticker";
-import { fetchWithRetry } from "../lib/fetch-retry";
-import { cgUrl, cgHeaders } from "../lib/coingecko";
-import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
-import { throwIfAborted } from "../lib/abort";
-import { fetchPythPrices } from "../lib/pyth";
+} from "../../lib/price-validation";
+import { USER_AGENT, CIRCUIT_SOURCE, DEX_FRESHNESS_SEC, POOL_CHALLENGE_MIN_TVL, getDepegThresholdBps } from "../../lib/constants";
+import { CG_TICKER_COINS, fetchCgTickerPrices } from "../../lib/cg-ticker";
+import { fetchWithRetry } from "../../lib/fetch-retry";
+import { cgUrl, cgHeaders } from "../../lib/coingecko";
+import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
+import { throwIfAborted } from "../../lib/abort";
+import { fetchPythPrices } from "../../lib/pyth";
 import {
   BITSTAMP_KNOWN_SYMBOLS,
   COINBASE_KNOWN_SYMBOLS,
@@ -21,21 +21,21 @@ import {
   fetchBitstampPrices,
   fetchCoinbasePrices,
   fetchKrakenPrices,
-} from "../lib/cex-tickers";
-import { fetchRedstonePrices, REDSTONE_TRACKED_SYMBOL_ALLOWLIST } from "../lib/redstone";
-import { loadDexPriceRows, isTrustedDexPriceRow, loadDexPoolChallengers, loadDexPriceSources } from "../lib/depeg-helpers";
-import { fetchCurveOnchainPrices } from "../lib/curve-onchain";
-import { CURVE_POOL_CONFIGS } from "../lib/curve-pool-configs";
-import { CRVUSD_PRICE_AGGREGATOR, CRVUSD_PRICE_SELECTOR } from "../lib/authoritative-price-sources";
-import { fetchEvmCallHexAtBlock } from "../lib/evm-rpc";
-import type { ChainRpcConfig } from "../lib/chain-registry";
-import { computePriceConsensus, type SourcePrice } from "../lib/price-consensus";
+} from "../../lib/cex-tickers";
+import { fetchRedstonePrices, REDSTONE_TRACKED_SYMBOL_ALLOWLIST } from "../../lib/redstone";
+import { loadDexPriceRows, isTrustedDexPriceRow, loadDexPoolChallengers, loadDexPriceSources } from "../../lib/depeg-helpers";
+import { fetchCurveOnchainPrices } from "../../lib/curve-onchain";
+import { CURVE_POOL_CONFIGS } from "../../lib/curve-pool-configs";
+import { CRVUSD_PRICE_AGGREGATOR, CRVUSD_PRICE_SELECTOR } from "../../lib/authoritative-price-sources";
+import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
+import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { computePriceConsensus, type SourcePrice } from "../../lib/price-consensus";
 import {
   isGtProbeEligibleSingleSource,
   isPoolChallengeEligibleConsensus,
-} from "../lib/pricing-source-policy";
-import { buildPrimarySourceCandidates, type PrimaryCollectedQuotes } from "../lib/primary-price-collector";
-import { aggregateProtocolPrices, computeWeightedMedianPrice } from "../lib/dex-price-estimators";
+} from "../../lib/pricing-source-policy";
+import { buildPrimarySourceCandidates, type PrimaryCollectedQuotes } from "../../lib/primary-price-collector";
+import { aggregateProtocolPrices, computeWeightedMedianPrice } from "../../lib/dex-price-estimators";
 import type { PeggedAsset } from "./enrich-prices-shared";
 
 export interface PrimaryPriceResult {
@@ -613,8 +613,8 @@ export async function runGtProbePass(
   signal?: AbortSignal,
   references?: PriceValidationReferences,
   coingeckoApiKey?: string | null,
-): Promise<{ updatedCount: number; stats: import("../lib/geckoterminal-price-probe").GtProbeStats }> {
-  const { createEmptyGtProbeStats, probeGeckoTerminalPrices } = await import("../lib/geckoterminal-price-probe");
+): Promise<{ updatedCount: number; stats: import("../../lib/geckoterminal-price-probe").GtProbeStats }> {
+  const { createEmptyGtProbeStats, probeGeckoTerminalPrices } = await import("../../lib/geckoterminal-price-probe");
 
   const singleSourceAssets: Array<{ id: string; price: number; priorityUsd: number }> = [];
   for (const asset of assets) {

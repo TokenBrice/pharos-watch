@@ -4,7 +4,7 @@ import { CIRCUIT_SOURCE, DEFILLAMA_BASE, MIN_VALID_ASSET_COUNT } from "../../lib
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { upsertDiscoveryCandidates } from "../discovery-scan";
-import type { PeggedAsset } from "../enrich-prices";
+import type { PeggedAsset } from "./enrich-prices";
 import {
   applyTrackedAssetOverrides,
   type CanonicalDeduplicationResult,

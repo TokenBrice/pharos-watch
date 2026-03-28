@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { isReasonablePrice, hasMissingPrice, PRICE_BOUNDS, enrichMissingPrices, fetchPrimaryPrices, applyResolvedPrice, applyPoolChallenge } from "../enrich-prices";
-import type { PeggedAsset, PrimaryPriceResult, PriceValidationStats } from "../enrich-prices";
-import { runCmcPass, runDexScreenerPass, runJupiterPass } from "../enrich-prices-passes";
+import { isReasonablePrice, hasMissingPrice, PRICE_BOUNDS, enrichMissingPrices, fetchPrimaryPrices, applyResolvedPrice, applyPoolChallenge } from "../sync-stablecoins/enrich-prices";
+import type { PeggedAsset, PrimaryPriceResult, PriceValidationStats } from "../sync-stablecoins/enrich-prices";
+import { runCmcPass, runDexScreenerPass, runJupiterPass } from "../sync-stablecoins/enrich-prices-passes";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
 

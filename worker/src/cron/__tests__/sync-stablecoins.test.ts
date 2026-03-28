@@ -122,7 +122,7 @@ vi.mock("@shared/lib/stablecoins", () => {
 });
 
 // Stub enrich-prices to avoid complex 5-pass pipeline
-vi.mock("../enrich-prices", () => ({
+vi.mock("../sync-stablecoins/enrich-prices", () => ({
   enrichMissingPrices: vi.fn(async () => ({
     totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0, finalMissing: 0, failedPasses: [],
   })),
@@ -193,8 +193,8 @@ vi.mock("../../lib/alerts", () => ({
 
 import { syncStablecoins } from "../sync-stablecoins";
 import { stampPriceMetadata } from "../sync-stablecoins/shared";
-import { enrichMissingPrices, fetchPrimaryPrices, runGtProbePass, type PrimaryPriceResult } from "../enrich-prices";
-import type { PeggedAsset } from "../enrich-prices";
+import { enrichMissingPrices, fetchPrimaryPrices, runGtProbePass, type PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
+import type { PeggedAsset } from "../sync-stablecoins/enrich-prices";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";

@@ -1,8 +1,10 @@
 import {
+  SAFETY_SCORE_CHANGELOG,
   SAFETY_SCORE_CHANGELOG_NAV_VERSIONS,
   SAFETY_SCORE_VERSION_LABEL,
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
 } from "@shared/lib/safety-score-version";
+import type { MethodologyChangelogEntry } from "@shared/lib/methodology-version";
 import { createMethodologyChangelogRoute } from "../changelog-route-factory";
 import {
   Card,
@@ -27,30 +29,47 @@ function scoringAnchorId(version: string) {
   return `scoring-${version.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
 }
 
+function formatScoringDate(date: string) {
+  return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+const SCORING_CHANGELOG_BY_VERSION = new Map(
+  SAFETY_SCORE_CHANGELOG.map((entry) => [entry.version, entry]),
+);
+
+function getScoringEntry(version: string): MethodologyChangelogEntry {
+  const entry = SCORING_CHANGELOG_BY_VERSION.get(version);
+  if (!entry) {
+    throw new Error(`Missing Safety Score changelog entry for ${version}`);
+  }
+  return entry;
+}
+
 function VersionCard({
-  version,
-  title,
-  date,
+  entry,
   accent,
   children,
 }: {
-  version: string;
-  title: string;
-  date: string;
+  entry: MethodologyChangelogEntry;
   accent: string;
   children: React.ReactNode;
 }) {
-  const anchorId = scoringAnchorId(version);
+  const anchorId = scoringAnchorId(`v${entry.version}`);
 
   return (
     <Card id={anchorId} className={`scroll-mt-28 rounded-xl border-l-[3px] ${accent}`}>
       <CardHeader>
         <CardTitle as="h2">
           <span className="flex flex-wrap items-center gap-2">
-            <Pill>{version}</Pill>
-            {title}
+            <Pill>{`v${entry.version}`}</Pill>
+            {entry.title}
             <span className="text-sm font-normal text-muted-foreground">
-              {date}
+              {formatScoringDate(entry.date)}
             </span>
           </span>
         </CardTitle>
@@ -118,6 +137,8 @@ const route = createMethodologyChangelogRoute({
     </>
   ),
   accentClass: "border-l-amber-500",
+  entries: SAFETY_SCORE_CHANGELOG,
+  selectImpact: (entry) => entry.impact,
   sections: SAFETY_SCORE_CHANGELOG_NAV_VERSIONS.map((version) => ({
     id: scoringAnchorId(version),
     label: version,
@@ -126,9 +147,7 @@ const route = createMethodologyChangelogRoute({
     <>
       {/* ──────────── v6.8 ──────────── */}
       <VersionCard
-        version="v6.8"
-        title="On-chain reserve freshness alignment"
-        date="Mar 25, 2026"
+        entry={getScoringEntry("6.8")}
         accent="border-l-amber-500"
       >
         <p>
@@ -154,9 +173,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v6.6 ──────────── */}
       <VersionCard
-        version="v6.6"
-        title="Timestamp-backed live reserve scoring gate"
-        date="Mar 24, 2026"
+        entry={getScoringEntry("6.6")}
         accent="border-l-amber-500"
       >
         <p>
@@ -187,9 +204,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v6.5 ──────────── */}
       <VersionCard
-        version="v6.5"
-        title="Clean independent live reserve passthrough"
-        date="Mar 22, 2026"
+        entry={getScoringEntry("6.5")}
         accent="border-l-amber-500"
       >
         <p>
@@ -224,9 +239,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v6.4 ──────────── */}
       <VersionCard
-        version="v6.4"
-        title="Live Liquity redemption fee telemetry"
-        date="Mar 22, 2026"
+        entry={getScoringEntry("6.4")}
         accent="border-l-amber-500"
       >
         <p>
@@ -256,9 +269,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v6.3 ──────────── */}
       <VersionCard
-        version="v6.3"
-        title="Documented-bound Liquity redemption confidence"
-        date="Mar 22, 2026"
+        entry={getScoringEntry("6.3")}
         accent="border-l-amber-500"
       >
         <p>
@@ -287,9 +298,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v6.2 ──────────── */}
       <VersionCard
-        version="v6.2"
-        title="Independent live reserve contract tightening"
-        date="Mar 22, 2026"
+        entry={getScoringEntry("6.2")}
         accent="border-l-amber-500"
       >
         <p>
@@ -321,9 +330,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v6.1 ──────────── */}
       <VersionCard
-        version="v6.1"
-        title="Redemption confidence gating and capacity semantics"
-        date="Mar 22, 2026"
+        entry={getScoringEntry("6.1")}
         accent="border-l-amber-500"
       >
         <p>
@@ -348,9 +355,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v6.0 ──────────── */}
       <VersionCard
-        version="v6.0"
-        title="Custody model tiers, mature-alt-l1, 2-factor Resilience"
-        date="Mar 21, 2026"
+        entry={getScoringEntry("6.0")}
         accent="border-l-amber-500"
       >
         <p>
@@ -382,9 +387,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v6.7 ──────────── */}
       <VersionCard
-        version="v6.7"
-        title="CeFi-dependent blacklistability fallback"
-        date="Mar 25, 2026"
+        entry={getScoringEntry("6.7")}
         accent="border-l-amber-500"
       >
         <p>
@@ -411,9 +414,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v5.9 ──────────── */}
       <VersionCard
-        version="v5.9"
-        title="Classification corrections: centralized-custody DeFi coins"
-        date="Mar 20, 2026"
+        entry={getScoringEntry("5.9")}
         accent="border-l-amber-500"
       >
         <p>
@@ -439,9 +440,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v5.8 ──────────── */}
       <VersionCard
-        version="v5.8"
-        title="Live reserve passthrough for collateral quality"
-        date="Mar 14, 2026"
+        entry={getScoringEntry("5.8")}
         accent="border-l-amber-500"
       >
         <p>
@@ -466,9 +465,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v5.7 ──────────── */}
       <VersionCard
-        version="v5.7"
-        title="Canonical ETH wrapper reserve alignment"
-        date="Mar 13, 2026"
+        entry={getScoringEntry("5.7")}
         accent="border-l-amber-500"
       >
         <p>
@@ -494,9 +491,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v5.6 ──────────── */}
       <VersionCard
-        version="v5.6"
-        title="Exit-liquidity integration"
-        date="Mar 12, 2026"
+        entry={getScoringEntry("5.6")}
         accent="border-l-amber-500"
       >
         <p>
@@ -525,9 +520,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v5.5 ──────────── */}
       <VersionCard
-        version="v5.5"
-        title="Peg score fairness for young coins"
-        date="Mar 1, 2026"
+        entry={getScoringEntry("5.5")}
         accent="border-l-amber-500"
       >
         <p>
@@ -557,9 +550,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v5.4 ──────────── */}
       <VersionCard
-        version="v5.4"
-        title="No-liquidity penalty"
-        date="Feb 28, 2026"
+        entry={getScoringEntry("5.4")}
         accent="border-l-amber-500"
       >
         <p>
@@ -578,9 +569,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v5.3 ──────────── */}
       <VersionCard
-        version="v5.3"
-        title="Remove chain infra from Resilience"
-        date="Feb 28, 2026"
+        entry={getScoringEntry("5.3")}
         accent="border-l-amber-500"
       >
         <p>
@@ -605,9 +594,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v5.2 ──────────── */}
       <VersionCard
-        version="v5.2"
-        title="Immutable-code governance tier"
-        date="Feb 28, 2026"
+        entry={getScoringEntry("5.2")}
         accent="border-l-amber-500"
       >
         <p>
@@ -654,9 +641,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v5.1 ──────────── */}
       <VersionCard
-        version="v5.1"
-        title="Regulated-entity tier + blacklist softening"
-        date="Feb 28, 2026"
+        entry={getScoringEntry("5.1")}
         accent="border-l-amber-500"
       >
         <ul className="list-disc list-inside space-y-1">
@@ -686,9 +671,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v5.0 ──────────── */}
       <VersionCard
-        version="v5.0"
-        title="GovernanceQuality + universal dependency scoring"
-        date="Feb 28, 2026"
+        entry={getScoringEntry("5.0")}
         accent="border-l-amber-500"
       >
         <div className="space-y-2">
@@ -728,9 +711,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v4 ──────────── */}
       <VersionCard
-        version="v4.1"
-        title="Liquidity weight increase + reclassifications"
-        date="Feb 27, 2026"
+        entry={getScoringEntry("4.1")}
         accent="border-l-cyan-500"
       >
         <p>
@@ -747,9 +728,7 @@ const route = createMethodologyChangelogRoute({
       </VersionCard>
 
       <VersionCard
-        version="v4.0"
-        title="Peg stability becomes a multiplier"
-        date="Feb 27, 2026"
+        entry={getScoringEntry("4.0")}
         accent="border-l-cyan-500"
       >
         <p>
@@ -813,9 +792,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v3 ──────────── */}
       <VersionCard
-        version="v3.3"
-        title="Reserve-derived collateral quality"
-        date="Feb 27, 2026"
+        entry={getScoringEntry("3.3")}
         accent="border-l-emerald-500"
       >
         <p>
@@ -852,9 +829,7 @@ const route = createMethodologyChangelogRoute({
       </VersionCard>
 
       <VersionCard
-        version="v3.2"
-        title="Dependency type ceilings"
-        date="Feb 27, 2026"
+        entry={getScoringEntry("3.2")}
         accent="border-l-emerald-500"
       >
         <p>
@@ -884,9 +859,7 @@ const route = createMethodologyChangelogRoute({
       </VersionCard>
 
       <VersionCard
-        version="v3.0"
-        title="Resilience 4-factor model"
-        date="Feb 26, 2026"
+        entry={getScoringEntry("3.0")}
         accent="border-l-emerald-500"
       >
         <p>
@@ -943,9 +916,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v2 ──────────── */}
       <VersionCard
-        version="v2.0"
-        title="Remove Safety dimension"
-        date="Feb 26, 2026"
+        entry={getScoringEntry("2.0")}
         accent="border-l-violet-500"
       >
         <p>
@@ -987,9 +958,7 @@ const route = createMethodologyChangelogRoute({
 
       {/* ──────────── v1 ──────────── */}
       <VersionCard
-        version="v1.0"
-        title="Initial implementation"
-        date="Feb 25, 2026"
+        entry={getScoringEntry("1.0")}
         accent="border-l-zinc-500"
       >
         <p>Six weighted dimensions:</p>

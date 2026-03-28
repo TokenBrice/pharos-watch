@@ -2,6 +2,8 @@ import {
   withErrorHandler,
   addFreshnessHeaders,
   errorResponse,
+  parseEnumParam,
+  parseOptionalEnumParam,
   parseQueryParams,
   jsonResponse,
   getLatestSuccessfulCronTimestamp,
@@ -87,18 +89,13 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
   const { offset } = numericParams;
   const stablecoin = params.get("stablecoin");
   const chain = params.get("chain");
-  const eventType = params.get("eventType");
+  const eventType = parseOptionalEnumParam(params.get("eventType"), VALID_EVENT_TYPES, "eventType");
+  if (eventType instanceof Response) return eventType;
   const query = params.get("q")?.trim().toLowerCase() ?? "";
-  const sortByParam = params.get("sortBy") ?? "date";
-  const sortDirectionParam = params.get("sortDirection") ?? "desc";
-  if (!VALID_SORT_KEYS.has(sortByParam as BlacklistSortKey)) {
-    return errorResponse(400, "Invalid sortBy parameter");
-  }
-  if (!VALID_SORT_DIRECTIONS.has(sortDirectionParam as BlacklistSortDirection)) {
-    return errorResponse(400, "Invalid sortDirection parameter");
-  }
-  const sortBy = sortByParam as BlacklistSortKey;
-  const sortDirection = sortDirectionParam as BlacklistSortDirection;
+  const sortBy = parseEnumParam(params.get("sortBy"), VALID_SORT_KEYS, "sortBy", "date");
+  if (sortBy instanceof Response) return sortBy;
+  const sortDirection = parseEnumParam(params.get("sortDirection"), VALID_SORT_DIRECTIONS, "sortDirection", "desc");
+  if (sortDirection instanceof Response) return sortDirection;
 
   const conditions: string[] = [];
   const filterBindings: (string | number)[] = [];
@@ -119,9 +116,6 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
     filterBindings.push(chain);
   }
   if (eventType) {
-    if (!VALID_EVENT_TYPES.has(eventType)) {
-      return errorResponse(400, "Invalid eventType parameter");
-    }
     conditions.push("event_type = ?");
     filterBindings.push(eventType);
   }

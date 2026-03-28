@@ -135,3 +135,48 @@ export function WorkedExample({ children, summary }: { children: ReactNode; summ
     </details>
   );
 }
+
+export function MethodologyDiagramCard({
+  title,
+  subtitle,
+  className,
+  titleClassName,
+  subtitleClassName,
+}: {
+  title: ReactNode;
+  subtitle?: ReactNode;
+  className?: string;
+  titleClassName?: string;
+  subtitleClassName?: string;
+}) {
+  return (
+    <div className={cn("rounded-lg border p-3 text-center", className)}>
+      <p className={cn("text-foreground font-medium", titleClassName)}>{title}</p>
+      {subtitle ? (
+        <p className={cn("mt-0.5 text-xs text-muted-foreground", subtitleClassName)}>{subtitle}</p>
+      ) : null}
+    </div>
+  );
+}
+
+export function MethodologyDiagramArrow({
+  direction = "down",
+  className,
+}: {
+  direction?: "down" | "right";
+  className?: string;
+}) {
+  return (
+    <div
+      aria-hidden="true"
+      className={cn(
+        direction === "right"
+          ? "flex items-center text-xl font-bold text-muted-foreground"
+          : "text-xl font-bold text-muted-foreground",
+        className,
+      )}
+    >
+      {direction === "right" ? "\u2192" : "\u2193"}
+    </div>
+  );
+}

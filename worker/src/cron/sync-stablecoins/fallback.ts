@@ -1,4 +1,4 @@
-import { enrichMissingPrices, hasMissingPrice } from "../enrich-prices";
+import { enrichMissingPrices, hasMissingPrice } from "./enrich-prices";
 import {
   applyTrackedAssetOverrides,
   fillMissingSupplyHistory,
@@ -34,7 +34,7 @@ import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-pr
 import { MIN_VALID_ASSET_COUNT } from "../../lib/constants";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
-import type { PeggedAsset } from "../enrich-prices";
+import type { PeggedAsset } from "./enrich-prices";
 
 export async function syncViaCoingeckoFallback(
   db: D1Database,

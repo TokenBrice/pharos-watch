@@ -9,7 +9,7 @@ import { throwIfAborted } from "../../lib/abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import type { DefiLlamaCoinPrice, PeggedAsset } from "../enrich-prices";
+import type { DefiLlamaCoinPrice, PeggedAsset } from "./enrich-prices";
 
 const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
 

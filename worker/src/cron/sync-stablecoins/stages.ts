@@ -2,7 +2,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { getCache } from "../../lib/db-cache";
 import { throwIfAborted } from "../../lib/abort";
-import type { PeggedAsset } from "../enrich-prices";
+import type { PeggedAsset } from "./enrich-prices";
 
 const CHAIN_CIRCULATING_KEYS = ["current", "circulatingPrevDay", "circulatingPrevWeek", "circulatingPrevMonth"];
 

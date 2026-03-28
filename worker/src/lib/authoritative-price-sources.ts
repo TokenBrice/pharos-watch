@@ -1,6 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { PriceConfidence, StablecoinMeta } from "@shared/types/core";
-import type { PeggedAsset } from "../cron/enrich-prices-shared";
+import type { PeggedAsset } from "../cron/sync-stablecoins/enrich-prices-shared";
 import { binarySearchNearest } from "./binary-search";
 import { fetchEvmCallHexAtBlock, resolveClosestBlockAtOrBeforeTimestamp, type EvmBlockSearchCache } from "./evm-rpc";
 

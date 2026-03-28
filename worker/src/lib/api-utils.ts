@@ -320,6 +320,50 @@ export function parseQueryParams<T extends Record<string, ParamSpec>>(
   return result;
 }
 
+export function parseOptionalEnumParam<T extends string>(
+  value: string | null | undefined,
+  validValues: ReadonlySet<T>,
+  name: string,
+): T | null | Response {
+  if (value == null) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (!validValues.has(trimmed as T)) {
+    return errorResponse(400, `Invalid ${name} parameter`);
+  }
+  return trimmed as T;
+}
+
+export function parseEnumParam<T extends string>(
+  value: string | null | undefined,
+  validValues: ReadonlySet<T>,
+  name: string,
+  defaultValue: T,
+): T | Response {
+  const parsed = parseOptionalEnumParam(value, validValues, name);
+  if (parsed instanceof Response) {
+    return parsed;
+  }
+  return parsed ?? defaultValue;
+}
+
+export function parseRequiredStablecoinIdParam(
+  searchParams: URLSearchParams,
+  name = "stablecoin",
+): string | Response {
+  const stablecoinId = searchParams.get(name);
+  if (!stablecoinId) {
+    return errorResponse(400, `Missing required parameter: ${name}`);
+  }
+
+  const resolved = resolveOrReject(stablecoinId);
+  if (resolved instanceof Response) {
+    return resolved;
+  }
+
+  return resolved.canonicalId;
+}
+
 export interface MethodologyEnvelopeInput {
   version: string;
   versionLabel: string;

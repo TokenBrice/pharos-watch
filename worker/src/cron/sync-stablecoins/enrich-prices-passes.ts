@@ -6,17 +6,17 @@
  * failure labels. Passes execute sequentially because each reads the
  * mutated `hasMissingPrice` state left by the previous pass.
  */
-import { DEFILLAMA_COINS, USER_AGENT, DEXSCREENER_MIN_LIQUIDITY_USD, CIRCUIT_SOURCE } from "../lib/constants";
-import { fetchWithRetry } from "../lib/fetch-retry";
-import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
-import { getCache, setCache } from "../lib/db-cache";
-import { sleepWithSignal, throwIfAborted } from "../lib/abort";
-import { DLPriceResponseSchema } from "../lib/schemas";
-import { fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd } from "../lib/dexscreener";
+import { DEFILLAMA_COINS, USER_AGENT, DEXSCREENER_MIN_LIQUIDITY_USD, CIRCUIT_SOURCE } from "../../lib/constants";
+import { fetchWithRetry } from "../../lib/fetch-retry";
+import { shouldAttemptFetch, recordOutcomeSafe } from "../../lib/circuit-breaker";
+import { getCache, setCache } from "../../lib/db-cache";
+import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
+import { DLPriceResponseSchema } from "../../lib/schemas";
+import { fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd } from "../../lib/dexscreener";
 import {
   buildPriceReasonablenessOptions,
   isReasonablePrice,
-} from "../lib/price-validation";
+} from "../../lib/price-validation";
 import {
   hasMissingPrice,
   applyResolvedPrice,

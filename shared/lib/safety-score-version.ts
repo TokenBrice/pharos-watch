@@ -393,26 +393,13 @@ export const SAFETY_SCORE_VERSION_LABEL = safetyScore.versionLabel;
 /** Public changelog route for Safety Scores methodology version history. */
 export const SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH = safetyScore.changelogPath;
 
+/** Canonical scoring changelog entries used by the methodology page and version resolver. */
+export const SAFETY_SCORE_CHANGELOG = safetyScore.changelog;
+
 /** Resolve safety scoring methodology version active at a given Unix timestamp (seconds). */
 export const getSafetyScoreVersionAt = safetyScore.getVersionAt;
 
 /** Ordered scoring changelog versions used for the longform navigation rail. */
-export const SAFETY_SCORE_CHANGELOG_NAV_VERSIONS = [
-  safetyScore.versionLabel, // dynamic coupling to currentVersion
-  "v5.9",
-  "v5.7",
-  "v5.6",
-  "v5.5",
-  "v5.4",
-  "v5.3",
-  "v5.2",
-  "v5.1",
-  "v5.0",
-  "v4.1",
-  "v4.0",
-  "v3.3",
-  "v3.2",
-  "v3.0",
-  "v2.0",
-  "v1.0",
-] as const;
+export const SAFETY_SCORE_CHANGELOG_NAV_VERSIONS = SAFETY_SCORE_CHANGELOG.map(
+  (entry) => `v${entry.version}`,
+);

@@ -1,4 +1,4 @@
-import type { PeggedAsset } from "../enrich-prices";
+import type { PeggedAsset } from "./enrich-prices";
 import { queuePendingTrackedStablecoinAdditions } from "../../lib/telegram-digest-appendices";
 
 export async function queueTrackedAdditionsNotice(

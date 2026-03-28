@@ -10,8 +10,8 @@ import { validatePayloadWithSchema } from "../../lib/api-utils";
 import { sendAlert } from "../../lib/alerts";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
-import { hasMissingPrice } from "../enrich-prices";
-import type { PeggedAsset } from "../enrich-prices";
+import { hasMissingPrice } from "./enrich-prices";
+import type { PeggedAsset } from "./enrich-prices";
 import {
   type PriceValidationContext,
   type PriceValidationReferences,

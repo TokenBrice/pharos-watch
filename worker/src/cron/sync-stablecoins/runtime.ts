@@ -2,7 +2,7 @@ import { buildSyncMetadata } from "./shared";
 import { detectPriceStaleness, fillMissingSupplyHistory } from "./stages";
 import { reportCronProgress } from "../../lib/cron-progress";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
-import type { PeggedAsset } from "../enrich-prices";
+import type { PeggedAsset } from "./enrich-prices";
 
 const SEVERE_PRICE_STALENESS_RATIO = 0.98;
 

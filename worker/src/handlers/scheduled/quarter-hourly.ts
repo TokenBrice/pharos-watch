@@ -16,21 +16,10 @@ import { snapshotSupply } from "../../cron/snapshot-supply";
 import { snapshotChainSupply } from "../../cron/snapshot-chain-supply";
 import { runStatusSelfCheck } from "../../cron/status-self-check";
 import { parseStablecoinsCapabilities, type ScheduledRuntimeContext } from "./context";
+import { runBestEffortScheduledJob } from "./run-best-effort-job";
 
 export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Promise<void> {
-  const runQuarterHourlyJob = async (
-    job: string,
-    fn: Parameters<ScheduledRuntimeContext["runLeasedCron"]>[1],
-  ) => {
-    try {
-      return (await runtime.runLeasedCron(job, fn)) ?? null;
-    } catch (err) {
-      console.error(`[cron] ${job} failed in quarter-hour slot:`, err);
-      return null;
-    }
-  };
-
-  await runQuarterHourlyJob("sync-fx-rates", (signal) =>
+  await runBestEffortScheduledJob(runtime, "quarter-hour slot", "sync-fx-rates", (signal) =>
     syncFxRates(
       runtime.db,
       signal,
@@ -41,7 +30,9 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
     ),
   );
 
-  const stablecoinsResult = await runQuarterHourlyJob(
+  const stablecoinsResult = await runBestEffortScheduledJob(
+    runtime,
+    "quarter-hour slot",
     "sync-stablecoins",
     (signal, reportProgress) => syncStablecoins(
       runtime.db,
@@ -60,14 +51,16 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
   }
 
   if (stablecoinsCacheSafe) {
-    await runQuarterHourlyJob("snapshot-supply", (signal) => snapshotSupply(runtime.db, signal));
+    await runBestEffortScheduledJob(runtime, "quarter-hour slot", "snapshot-supply", (signal) => snapshotSupply(runtime.db, signal));
   }
 
   if (stablecoinsCacheSafe) {
-    await runQuarterHourlyJob("snapshot-chain-supply", (signal) => snapshotChainSupply(runtime.db, signal));
+    await runBestEffortScheduledJob(runtime, "quarter-hour slot", "snapshot-chain-supply", (signal) => snapshotChainSupply(runtime.db, signal));
   }
 
-  await runQuarterHourlyJob(
+  await runBestEffortScheduledJob(
+    runtime,
+    "quarter-hour slot",
     "status-self-check",
     (signal) => runStatusSelfCheck(
       runtime.db,

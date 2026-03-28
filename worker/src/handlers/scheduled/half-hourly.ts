@@ -15,25 +15,14 @@ import { syncDexLiquidity } from "../../cron/dex-liquidity";
 import { computeAndStoreDEWS } from "../../cron/compute-dews";
 import { computeAndStoreStabilityIndex } from "../../cron/stability-index";
 import type { ScheduledRuntimeContext } from "./context";
+import { runBestEffortScheduledJob } from "./run-best-effort-job";
 
 export async function runHalfHourlySlot(runtime: ScheduledRuntimeContext): Promise<void> {
-  const runHalfHourlyJob = async (
-    job: string,
-    fn: Parameters<ScheduledRuntimeContext["runLeasedCron"]>[1],
-  ) => {
-    try {
-      return (await runtime.runLeasedCron(job, fn)) ?? null;
-    } catch (err) {
-      console.error(`[cron] ${job} failed in half-hour slot:`, err);
-      return null;
-    }
-  };
-
-  await runHalfHourlyJob("sync-stablecoin-charts", (signal) =>
+  await runBestEffortScheduledJob(runtime, "half-hour slot", "sync-stablecoin-charts", (signal) =>
     syncStablecoinCharts(runtime.db, signal),
   );
 
-  const dexResult = await runHalfHourlyJob("sync-dex-liquidity", (signal) =>
+  const dexResult = await runBestEffortScheduledJob(runtime, "half-hour slot", "sync-dex-liquidity", (signal) =>
     syncDexLiquidity(
       runtime.db,
       runtime.env.GRAPH_API_KEY ?? null,
@@ -46,6 +35,6 @@ export async function runHalfHourlySlot(runtime: ScheduledRuntimeContext): Promi
     console.warn("[cron] sync-dex-liquidity did not complete cleanly — continuing with downstream degraded paths");
   }
 
-  await runHalfHourlyJob("compute-dews", (signal) => computeAndStoreDEWS(runtime.db, signal));
-  await runHalfHourlyJob("stability-index", (signal) => computeAndStoreStabilityIndex(runtime.db, signal));
+  await runBestEffortScheduledJob(runtime, "half-hour slot", "compute-dews", (signal) => computeAndStoreDEWS(runtime.db, signal));
+  await runBestEffortScheduledJob(runtime, "half-hour slot", "stability-index", (signal) => computeAndStoreStabilityIndex(runtime.db, signal));
 }

@@ -2,7 +2,14 @@ import {
   PRICING_PIPELINE_CHANGELOG_PATH,
   PRICING_PIPELINE_VERSION_LABEL,
 } from "@shared/lib/pricing-pipeline-version";
-import { MethodologyDetails, MethodologyFacts, MethodologySectionShell, WorkedExample } from "../methodology-shared";
+import {
+  MethodologyDetails,
+  MethodologyDiagramArrow,
+  MethodologyDiagramCard,
+  MethodologyFacts,
+  MethodologySectionShell,
+  WorkedExample,
+} from "../methodology-shared";
 
 export function PricingPipelineMethodologySection() {
   return (
@@ -109,98 +116,40 @@ export function PricingPipelineMethodologySection() {
         >
           <div className="hidden md:flex flex-col items-center gap-3">
             <div className="grid grid-cols-4 gap-3 w-full">
-              <div className="rounded-lg border p-3 text-center">
-                <p className="text-foreground font-medium">Aggregators</p>
-                <p className="text-xs text-muted-foreground mt-0.5">CoinGecko (w2)</p>
-                <p className="text-xs text-muted-foreground">DL list (w1)</p>
-              </div>
-              <div className="rounded-lg border p-3 text-center">
-                <p className="text-foreground font-medium">Exchanges</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Binance (w2), Kraken (w2)</p>
-                <p className="text-xs text-muted-foreground">Coinbase (w2), Bitstamp (w1)</p>
-              </div>
-              <div className="rounded-lg border p-3 text-center">
-                <p className="text-foreground font-medium">Oracles</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Pyth (w2)</p>
-                <p className="text-xs text-muted-foreground">RedStone (w1)</p>
-              </div>
-              <div className="rounded-lg border p-3 text-center">
-                <p className="text-foreground font-medium">On-chain</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Curve (w3)</p>
-                <p className="text-xs text-muted-foreground">DEX agg (w1), protocol DEX (w2-w3), GT (w1)</p>
-              </div>
+              <MethodologyDiagramCard title="Aggregators" subtitle={<><span>CoinGecko (w2)</span><br /><span>DL list (w1)</span></>} />
+              <MethodologyDiagramCard title="Exchanges" subtitle={<><span>Binance (w2), Kraken (w2)</span><br /><span>Coinbase (w2), Bitstamp (w1)</span></>} />
+              <MethodologyDiagramCard title="Oracles" subtitle={<><span>Pyth (w2)</span><br /><span>RedStone (w1)</span></>} />
+              <MethodologyDiagramCard title="On-chain" subtitle={<><span>Curve (w3)</span><br /><span>DEX agg (w1), protocol DEX (w2-w3), GT (w1)</span></>} />
             </div>
-            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-            <div className="rounded-lg border p-3 text-center w-80">
-              <p className="text-foreground font-medium">N-Source Consensus</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Pairwise clusters, then size/weight/spread tie-breaks</p>
-            </div>
-            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-            <div className="rounded-lg border border-orange-500/40 p-3 text-center w-80">
-              <p className="text-foreground font-medium">Pool Challenge</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Soft-only consensus challenged; replacement uses protocol-aware weighted medians</p>
-            </div>
-            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-            <div className="rounded-lg border border-blue-500/40 p-3 text-center w-80">
-              <p className="text-foreground font-medium">Authoritative Overrides</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Protocol redemption (cUSD, iUSD) after market probes</p>
-            </div>
-            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-            <div className="rounded-lg border p-3 text-center w-80">
-              <p className="text-foreground font-medium">Enrichment Pipeline</p>
-              <p className="text-xs text-muted-foreground mt-0.5">5-pass fallback with Solana-native Jupiter recovery</p>
-            </div>
-            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-            <div className="rounded-lg border p-3 text-center w-80">
-              <p className="text-foreground font-medium">Price Validation + Confidence</p>
-              <p className="text-xs text-muted-foreground mt-0.5">high / single-source / low / fallback</p>
-            </div>
+            <MethodologyDiagramArrow />
+            <MethodologyDiagramCard className="w-80" title="N-Source Consensus" subtitle="Pairwise clusters, then size/weight/spread tie-breaks" />
+            <MethodologyDiagramArrow />
+            <MethodologyDiagramCard className="w-80 border-orange-500/40" title="Pool Challenge" subtitle="Soft-only consensus challenged; replacement uses protocol-aware weighted medians" />
+            <MethodologyDiagramArrow />
+            <MethodologyDiagramCard className="w-80 border-blue-500/40" title="Authoritative Overrides" subtitle="Protocol redemption (cUSD, iUSD) after market probes" />
+            <MethodologyDiagramArrow />
+            <MethodologyDiagramCard className="w-80" title="Enrichment Pipeline" subtitle="5-pass fallback with Solana-native Jupiter recovery" />
+            <MethodologyDiagramArrow />
+            <MethodologyDiagramCard className="w-80" title="Price Validation + Confidence" subtitle="high / single-source / low / fallback" />
           </div>
 
           <div className="flex flex-col items-center gap-3 md:hidden">
             <div className="grid grid-cols-2 gap-2 w-full">
-              <div className="rounded-lg border p-3 text-center">
-                <p className="text-foreground font-medium text-xs">Aggregators</p>
-                <p className="text-xs text-muted-foreground">CG (w2), DL-list (w1)</p>
-              </div>
-              <div className="rounded-lg border p-3 text-center">
-                <p className="text-foreground font-medium text-xs">Exchanges</p>
-                <p className="text-xs text-muted-foreground">BN (w2), KR (w2), CB (w2), BS (w1)</p>
-              </div>
-              <div className="rounded-lg border p-3 text-center">
-                <p className="text-foreground font-medium text-xs">Oracles</p>
-                <p className="text-xs text-muted-foreground">Pyth (w2), RS (w1)</p>
-              </div>
-              <div className="rounded-lg border p-3 text-center">
-                <p className="text-foreground font-medium text-xs">On-chain</p>
-                <p className="text-xs text-muted-foreground">Curve (w3), DEX agg (w1), protocol DEX (w2-w3), GT (w1)</p>
-              </div>
+              <MethodologyDiagramCard title="Aggregators" titleClassName="text-xs text-foreground font-medium" subtitle="CG (w2), DL-list (w1)" subtitleClassName="text-xs text-muted-foreground" />
+              <MethodologyDiagramCard title="Exchanges" titleClassName="text-xs text-foreground font-medium" subtitle="BN (w2), KR (w2), CB (w2), BS (w1)" subtitleClassName="text-xs text-muted-foreground" />
+              <MethodologyDiagramCard title="Oracles" titleClassName="text-xs text-foreground font-medium" subtitle="Pyth (w2), RS (w1)" subtitleClassName="text-xs text-muted-foreground" />
+              <MethodologyDiagramCard title="On-chain" titleClassName="text-xs text-foreground font-medium" subtitle="Curve (w3), DEX agg (w1), protocol DEX (w2-w3), GT (w1)" subtitleClassName="text-xs text-muted-foreground" />
             </div>
-            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-            <div className="w-full rounded-lg border p-3 text-center">
-              <p className="text-foreground font-medium">N-Source Consensus</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Pairwise clusters, then size/weight/spread tie-breaks</p>
-            </div>
-            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-            <div className="w-full rounded-lg border border-orange-500/40 p-3 text-center">
-              <p className="text-foreground font-medium">Pool Challenge</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Soft-only &rarr; replace with protocol-aware weighted medians</p>
-            </div>
-            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-            <div className="w-full rounded-lg border border-blue-500/40 p-3 text-center">
-              <p className="text-foreground font-medium">Authoritative Overrides</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Protocol redemption (cUSD, iUSD) after market probes</p>
-            </div>
-            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-            <div className="w-full rounded-lg border p-3 text-center">
-              <p className="text-foreground font-medium">Enrichment Pipeline</p>
-              <p className="text-xs text-muted-foreground mt-0.5">5-pass fallback with Jupiter before DexScreener</p>
-            </div>
-            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-            <div className="w-full rounded-lg border p-3 text-center">
-              <p className="text-foreground font-medium">Price Validation + Confidence</p>
-              <p className="text-xs text-muted-foreground mt-0.5">high / single-source / low / fallback</p>
-            </div>
+            <MethodologyDiagramArrow />
+            <MethodologyDiagramCard className="w-full" title="N-Source Consensus" subtitle="Pairwise clusters, then size/weight/spread tie-breaks" />
+            <MethodologyDiagramArrow />
+            <MethodologyDiagramCard className="w-full border-orange-500/40" title="Pool Challenge" subtitle="Soft-only → replace with protocol-aware weighted medians" />
+            <MethodologyDiagramArrow />
+            <MethodologyDiagramCard className="w-full border-blue-500/40" title="Authoritative Overrides" subtitle="Protocol redemption (cUSD, iUSD) after market probes" />
+            <MethodologyDiagramArrow />
+            <MethodologyDiagramCard className="w-full" title="Enrichment Pipeline" subtitle="5-pass fallback with Jupiter before DexScreener" />
+            <MethodologyDiagramArrow />
+            <MethodologyDiagramCard className="w-full" title="Price Validation + Confidence" subtitle="high / single-source / low / fallback" />
           </div>
 
           <div className="space-y-2">

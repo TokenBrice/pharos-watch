@@ -14,7 +14,14 @@ import {
   CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
   CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/chain-health-version";
-import { MethodologyDetails, MethodologyFacts, MethodologySectionShell, WorkedExample } from "../methodology-shared";
+import {
+  MethodologyDetails,
+  MethodologyDiagramArrow,
+  MethodologyDiagramCard,
+  MethodologyFacts,
+  MethodologySectionShell,
+  WorkedExample,
+} from "../methodology-shared";
 
 export function MonitoringMethodologySections() {
   return (
@@ -86,82 +93,40 @@ export function MonitoringMethodologySections() {
             <div className="hidden md:flex items-stretch gap-4">
               {/* Three tiers */}
               <div className="flex flex-col gap-2 flex-1">
-                <div className="rounded-lg border p-3 text-center flex-1">
-                  <p className="text-foreground font-medium">Tier 1</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Direct on-chain reads</p>
-                </div>
-                <div className="rounded-lg border p-3 text-center flex-1">
-                  <p className="text-foreground font-medium">Tier 2</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Curated pools + protocol APIs</p>
-                </div>
-                <div className="rounded-lg border p-3 text-center flex-1">
-                  <p className="text-foreground font-medium">Tier 3 / 4</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Price- or rate-derived fallback</p>
-                </div>
+                <MethodologyDiagramCard className="flex-1" title="Tier 1" subtitle="Direct on-chain reads" />
+                <MethodologyDiagramCard className="flex-1" title="Tier 2" subtitle="Curated pools + protocol APIs" />
+                <MethodologyDiagramCard className="flex-1" title="Tier 3 / 4" subtitle="Price- or rate-derived fallback" />
               </div>
-              <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
+              <MethodologyDiagramArrow direction="right" />
               {/* APY */}
-              <div className="rounded-lg border p-3 text-center w-32 flex flex-col justify-center flex-shrink-0">
-                <p className="text-foreground font-medium">Effective Yield</p>
-                <p className="text-xs text-muted-foreground mt-0.5">APY + 25% benchmark spread</p>
-              </div>
-              <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
+              <MethodologyDiagramCard className="w-32 flex flex-shrink-0 flex-col justify-center" title="Effective Yield" subtitle="APY + 25% benchmark spread" />
+              <MethodologyDiagramArrow direction="right" />
               {/* Formula components */}
               <div className="flex flex-col gap-2 flex-1">
-                <div className="rounded-lg border p-3 text-center flex-1">
-                  <p className="text-foreground font-medium">Yield Efficiency</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Effective yield ÷ curved risk penalty</p>
-                </div>
-                <div className="rounded-lg border p-3 text-center flex-1">
-                  <p className="text-foreground font-medium">Sustainability</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">penalises high variance</p>
-                </div>
+                <MethodologyDiagramCard className="flex-1" title="Yield Efficiency" subtitle="Effective yield ÷ curved risk penalty" />
+                <MethodologyDiagramCard className="flex-1" title="Sustainability" subtitle="penalises high variance" />
               </div>
-              <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
+              <MethodologyDiagramArrow direction="right" />
               {/* PYS */}
-              <div className="rounded-lg border p-3 text-center w-32 flex flex-col justify-center flex-shrink-0">
-                <p className="text-foreground font-medium">PYS Score</p>
-                <p className="text-xs text-muted-foreground mt-0.5">0–100</p>
-              </div>
+              <MethodologyDiagramCard className="w-32 flex flex-shrink-0 flex-col justify-center" title="PYS Score" subtitle="0–100" />
             </div>
 
             {/* Yield pipeline diagram — mobile: vertical */}
             <div className="flex flex-col items-center gap-3 md:hidden">
               <div className="grid grid-cols-3 gap-2 w-full">
-                <div className="rounded-lg border p-3 text-center">
-                  <p className="text-foreground font-medium text-xs">Tier 1</p>
-                  <p className="text-xs text-muted-foreground">On-chain reads</p>
-                </div>
-                <div className="rounded-lg border p-3 text-center">
-                  <p className="text-foreground font-medium text-xs">Tier 2</p>
-                  <p className="text-xs text-muted-foreground">Curated venues</p>
-                </div>
-                <div className="rounded-lg border p-3 text-center">
-                  <p className="text-foreground font-medium text-xs">Tier 3 / 4</p>
-                  <p className="text-xs text-muted-foreground">Fallbacks</p>
-                </div>
+                <MethodologyDiagramCard title="Tier 1" titleClassName="text-xs text-foreground font-medium" subtitle="On-chain reads" subtitleClassName="text-xs text-muted-foreground" />
+                <MethodologyDiagramCard title="Tier 2" titleClassName="text-xs text-foreground font-medium" subtitle="Curated venues" subtitleClassName="text-xs text-muted-foreground" />
+                <MethodologyDiagramCard title="Tier 3 / 4" titleClassName="text-xs text-foreground font-medium" subtitle="Fallbacks" subtitleClassName="text-xs text-muted-foreground" />
               </div>
-              <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-              <div className="w-full rounded-lg border p-3 text-center">
-                <p className="text-foreground font-medium">Effective Yield</p>
-                <p className="text-xs text-muted-foreground mt-0.5">APY + 25% benchmark spread</p>
-              </div>
-              <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+              <MethodologyDiagramArrow />
+              <MethodologyDiagramCard className="w-full" title="Effective Yield" subtitle="APY + 25% benchmark spread" />
+              <MethodologyDiagramArrow />
               <div className="grid grid-cols-2 gap-2 w-full">
-                <div className="rounded-lg border p-3 text-center">
-                  <p className="text-foreground font-medium text-xs">Yield Efficiency</p>
-                  <p className="text-xs text-muted-foreground">Effective yield ÷ curved risk penalty</p>
-                </div>
-                <div className="rounded-lg border p-3 text-center">
-                  <p className="text-foreground font-medium text-xs">Sustainability</p>
-                  <p className="text-xs text-muted-foreground">penalises variance</p>
-                </div>
+                <MethodologyDiagramCard title="Yield Efficiency" titleClassName="text-xs text-foreground font-medium" subtitle="Effective yield ÷ curved risk penalty" subtitleClassName="text-xs text-muted-foreground" />
+                <MethodologyDiagramCard title="Sustainability" titleClassName="text-xs text-foreground font-medium" subtitle="penalises variance" subtitleClassName="text-xs text-muted-foreground" />
               </div>
-              <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-              <div className="w-full rounded-lg border p-3 text-center">
-                <p className="text-foreground font-medium">PYS Score</p>
-                <p className="text-xs text-muted-foreground mt-0.5">0–100</p>
-              </div>
+              <MethodologyDiagramArrow />
+              <MethodologyDiagramCard className="w-full" title="PYS Score" subtitle="0–100" />
             </div>
 
             {/* APY Resolution tiers */}
@@ -178,7 +143,8 @@ export function MonitoringMethodologySections() {
                   DeFiLlama yield pool via static mapping, chain-scoped wrapper rules, and address-first fallback
                   matching, while explicitly preserving wrapper pools that upstream marks as non-stablecoin when they
                   are configured as relevant yield sources and allowing exact-pool curated overrides for assets such as
-                  XAUT
+                  XAUT. Wrapper-over-native venues such as BOLD/yBOLD stay classified as native yield rather than
+                  governance-set when the wrapper is just packaging the protocol&apos;s own Stability Pool return
                 </li>
                 <li>
                   <span className="text-foreground">Tier 2.5 &mdash; Protocol-native venues</span>: ingests curated

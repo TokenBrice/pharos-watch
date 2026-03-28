@@ -11,33 +11,26 @@ import { fetchTbillRate } from "../../cron/fetch-tbill-rate";
 import { snapshotPsiDaily } from "../../cron/snapshot-psi";
 import { syncUsdsStatus } from "../../cron/sync-usds-status";
 import type { ScheduledRuntimeContext } from "./context";
+import { runBestEffortScheduledJob } from "./run-best-effort-job";
 
 export async function runDaily0800Slot(runtime: ScheduledRuntimeContext): Promise<void> {
-  const runDailyJob = async (
-    job: string,
-    fn: Parameters<ScheduledRuntimeContext["runLeasedCron"]>[1],
-  ) => {
-    try {
-      return (await runtime.runLeasedCron(job, fn)) ?? null;
-    } catch (err) {
-      console.error(`[cron] ${job} failed in daily 08:00 slot:`, err);
-      return null;
-    }
-  };
-
   await Promise.all([
-    runDailyJob("snapshot-supply", (signal) => snapshotSupply(runtime.db, signal)),
-    runDailyJob(
+    runBestEffortScheduledJob(runtime, "daily 08:00 slot", "snapshot-supply", (signal) => snapshotSupply(runtime.db, signal)),
+    runBestEffortScheduledJob(
+      runtime,
+      "daily 08:00 slot",
       "snapshot-safety-grade-history",
       (signal) => snapshotSafetyGradeHistory(runtime.db, signal),
     ),
-    runDailyJob("snapshot-psi", (signal) => snapshotPsiDaily(runtime.db, signal)),
+    runBestEffortScheduledJob(runtime, "daily 08:00 slot", "snapshot-psi", (signal) => snapshotPsiDaily(runtime.db, signal)),
     (async () => {
-      const tbillResult = await runDailyJob("fetch-tbill-rate", (signal) => fetchTbillRate(runtime.db, signal));
+      const tbillResult = await runBestEffortScheduledJob(runtime, "daily 08:00 slot", "fetch-tbill-rate", (signal) => fetchTbillRate(runtime.db, signal));
       if (tbillResult?.status === "error" || tbillResult == null) {
         console.warn("[cron] fetch-tbill-rate did not complete cleanly — continuing to sync-usds-status");
       }
-      await runDailyJob(
+      await runBestEffortScheduledJob(
+        runtime,
+        "daily 08:00 slot",
         "sync-usds-status",
         (signal) => syncUsdsStatus(runtime.db, runtime.env.ETHERSCAN_API_KEY ?? null, signal),
       );
