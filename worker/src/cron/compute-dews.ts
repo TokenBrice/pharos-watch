@@ -30,6 +30,7 @@ import { z } from "zod";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { batchExecute, buildInClause } from "../lib/db";
 import type { CronResult } from "../lib/cron-logger";
@@ -47,17 +48,13 @@ const RawPoolDataSchema = z.object({
   }).optional(),
 });
 
-// Map blacklist symbol → stablecoin IDs
-const BLACKLIST_SYMBOL_TO_IDS: Record<string, string[]> = {
-  USDC: ["usdc-circle"],
-  USDT: ["usdt-tether"],
-  PAXG: ["paxg-paxos"],
-  XAUT: ["xaut-tether"],
-};
-
+const BLACKLIST_SYMBOL_SET = new Set<string>(BLACKLIST_STABLECOINS);
 const BLACKLIST_ID_TO_SYMBOL = new Map<string, string>();
-for (const [sym, ids] of Object.entries(BLACKLIST_SYMBOL_TO_IDS)) {
-  for (const id of ids) BLACKLIST_ID_TO_SYMBOL.set(id, sym);
+for (const meta of PSI_ELIGIBLE_STABLECOINS) {
+  const symbol = typeof meta.symbol === "string" ? meta.symbol.toUpperCase() : "";
+  if (!BLACKLIST_SYMBOL_SET.has(symbol)) continue;
+  // Keep DEWS blacklist coverage aligned with the live tracker's shared symbol set.
+  BLACKLIST_ID_TO_SYMBOL.set(meta.id, symbol);
 }
 
 const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
@@ -181,7 +178,7 @@ export async function computeAndStoreDEWS(
     };
   }
 
-  const assets = stablecoinsCache.payload.peggedAssets;
+  const { peggedAssets: assets, fxFallbackRates } = stablecoinsCache.payload;
   sourceCoverage.stablecoins = assets.length;
   const assetById = new Map(assets.map((a) => [a.id, a]));
   const bootstrapPending = (await getCache(db, DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY)) == null;
@@ -201,7 +198,7 @@ export async function computeAndStoreDEWS(
   };
 
   // Derive peg rates for non-USD reference prices
-  const { rates: pegRates } = derivePegRates(assets, PSI_ELIGIBLE_META_BY_ID);
+  const { rates: pegRates } = derivePegRates(assets, PSI_ELIGIBLE_META_BY_ID, fxFallbackRates);
 
   // 2. Read dex_liquidity
   let dexLiqRows = {

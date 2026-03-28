@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "4.9",
+  currentVersion: "4.10",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
+  {
+    version: "4.10",
+    title: "DEWS blacklist coverage parity and thin-peg FX fallback parity",
+    date: "2026-03-28",
+    effectiveAt: 1774656000,
+    summary:
+      "DEWS now applies issuer-freeze signal coverage to the full live blacklistable set and derives thin non-USD peg references with the same cached FX fallback path used elsewhere in the peg-aware pipeline.",
+    impact: [
+      "Blacklist signal coverage is now derived from the shared supported blacklist symbol set, so PYUSD and USD1 receive the same DEWS blacklist input treatment as USDC, USDT, PAXG, and XAUT",
+      "Thin non-USD DEWS divergence inputs now use cached `fxFallbackRates` from the stablecoins payload instead of relying only on sparse peer medians",
+      "DEWS input semantics now match the documented blacklist coverage and the live depeg / peg-summary FX-reference path",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.9",
     title: "Bootstrap sentinel and core-liquidity freshness gating",

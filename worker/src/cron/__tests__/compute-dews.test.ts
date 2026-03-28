@@ -7,6 +7,16 @@ vi.mock("@shared/lib/psi-eligible", () => ({
       symbol: "USDT",
       flags: { navToken: false },
     },
+    {
+      id: "pyusd-paypal",
+      symbol: "PYUSD",
+      flags: { navToken: false },
+    },
+    {
+      id: "usd1-world-liberty-financial",
+      symbol: "USD1",
+      flags: { navToken: false },
+    },
   ],
   PSI_ELIGIBLE_META_BY_ID: new Map([
     [
@@ -17,12 +27,28 @@ vi.mock("@shared/lib/psi-eligible", () => ({
         flags: { navToken: false },
       },
     ],
+    [
+      "pyusd-paypal",
+      {
+        id: "pyusd-paypal",
+        symbol: "PYUSD",
+        flags: { navToken: false },
+      },
+    ],
+    [
+      "usd1-world-liberty-financial",
+      {
+        id: "usd1-world-liberty-financial",
+        symbol: "USD1",
+        flags: { navToken: false },
+      },
+    ],
   ]),
 }));
 
 vi.mock("@shared/lib/peg-rates", () => ({
-  derivePegRates: () => ({ rates: { peggedUSD: 1 } }),
-  getPegReference: () => 1,
+  derivePegRates: vi.fn(() => ({ rates: { peggedUSD: 1 } })),
+  getPegReference: vi.fn(() => 1),
 }));
 
 vi.mock("../../lib/db", async (importOriginal) => {
@@ -64,12 +90,15 @@ vi.mock("../../lib/dews", () => ({
 
 import { getCache } from "../../lib/db-cache";
 import { computeDEWS } from "../../lib/dews";
+import { derivePegRates } from "@shared/lib/peg-rates";
 import { computeAndStoreDEWS } from "../compute-dews";
 
 interface MakeDbOptions {
   failDexLiquidity?: boolean;
   failDexPricesMissingTable?: boolean;
   dexPriceRows?: Array<{ stablecoin_id: string; dex_price_usd: number; updated_at: number }>;
+  blacklist24hRows?: Array<{ stablecoin: string; cnt: number }>;
+  blacklist7dRows?: Array<{ stablecoin: string; cnt: number }>;
   signalIds?: string[];
   historyIds?: string[];
   onBind?: (sql: string, args: unknown[]) => void;
@@ -78,6 +107,7 @@ interface MakeDbOptions {
 function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
   const stmt = (sql: string) => {
     sqlSeen.push(sql);
+    let boundArgs: unknown[] = [];
     const all = async <T>() => {
       if (sql.includes("SELECT DISTINCT stablecoin_id FROM stress_signals")) {
         return {
@@ -126,6 +156,14 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
           ] as T[],
         };
       }
+      if (sql.includes("FROM blacklist_events")) {
+        const cutoff = typeof boundArgs[0] === "number" ? boundArgs[0] : null;
+        const nowSec = Math.floor(Date.now() / 1000);
+        const sevenDayCutoff = nowSec - 7 * 86400;
+        return {
+          results: (cutoff === sevenDayCutoff ? (opts.blacklist7dRows ?? []) : (opts.blacklist24hRows ?? [])) as T[],
+        };
+      }
       return { results: [] as T[] };
     };
 
@@ -139,6 +177,7 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
 
     return {
       bind: (...args: unknown[]) => {
+        boundArgs = args;
         opts.onBind?.(sql, args);
         return { all, first, run };
       },
@@ -161,6 +200,7 @@ describe("computeAndStoreDEWS", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-03T12:00:00Z"));
     vi.mocked(computeDEWS).mockClear();
+    vi.mocked(derivePegRates).mockClear();
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
       if (key === "dews:bootstrap-complete") return null;
       return {
@@ -177,6 +217,7 @@ describe("computeAndStoreDEWS", () => {
               circulatingPrevWeek: { peggedUSD: 98_000_000 },
             },
           ],
+          fxFallbackRates: { peggedEUR: 1.08 },
         }),
         updatedAt: Math.floor(Date.now() / 1000),
       } as never;
@@ -197,6 +238,19 @@ describe("computeAndStoreDEWS", () => {
         liquidityScore7dAgo: 73,
         tvl7dAgo: 1_200_000,
       }),
+    );
+  });
+
+  it("passes cached fxFallbackRates into peg-rate derivation", async () => {
+    const sqlSeen: string[] = [];
+    const db = makeDb(sqlSeen);
+
+    await computeAndStoreDEWS(db);
+
+    expect(derivePegRates).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.any(Map),
+      { peggedEUR: 1.08 },
     );
   });
 
@@ -274,6 +328,69 @@ describe("computeAndStoreDEWS", () => {
       expect.objectContaining({
         stablecoinId: "usdt-tether",
         dexPriceUsd: null,
+      }),
+    );
+  });
+
+  it("includes blacklist counts for PYUSD and USD1 when those tracker rows exist", async () => {
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dews:bootstrap-complete") return null;
+      return {
+        value: JSON.stringify({
+          peggedAssets: [
+            {
+              id: "pyusd-paypal",
+              symbol: "PYUSD",
+              pegType: "peggedUSD",
+              price: 1,
+              priceConfidence: "high",
+              circulating: { peggedUSD: 50_000_000 },
+              circulatingPrevDay: { peggedUSD: 49_000_000 },
+              circulatingPrevWeek: { peggedUSD: 48_000_000 },
+            },
+            {
+              id: "usd1-world-liberty-financial",
+              symbol: "USD1",
+              pegType: "peggedUSD",
+              price: 1,
+              priceConfidence: "high",
+              circulating: { peggedUSD: 75_000_000 },
+              circulatingPrevDay: { peggedUSD: 74_000_000 },
+              circulatingPrevWeek: { peggedUSD: 73_000_000 },
+            },
+          ],
+        }),
+        updatedAt: Math.floor(Date.now() / 1000),
+      } as never;
+    });
+    const sqlSeen: string[] = [];
+    const db = makeDb(sqlSeen, {
+      blacklist24hRows: [
+        { stablecoin: "PYUSD", cnt: 2 },
+        { stablecoin: "USD1", cnt: 1 },
+      ],
+      blacklist7dRows: [
+        { stablecoin: "PYUSD", cnt: 5 },
+        { stablecoin: "USD1", cnt: 3 },
+      ],
+    });
+
+    await computeAndStoreDEWS(db);
+
+    expect(computeDEWS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stablecoinId: "pyusd-paypal",
+        blacklistEvents24h: 2,
+        blacklistEvents7d: 5,
+        hasBlacklistTracking: true,
+      }),
+    );
+    expect(computeDEWS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stablecoinId: "usd1-world-liberty-financial",
+        blacklistEvents24h: 1,
+        blacklistEvents7d: 3,
+        hasBlacklistTracking: true,
       }),
     );
   });

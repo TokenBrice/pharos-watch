@@ -759,8 +759,9 @@ The three crons below were previously only listed by filename in [Architecture](
 3. Validate: must receive array with ≥100 data points
 4. FX rate corruption fix:
    - Read cached FX rates from the `fx-rates` cache key
-   - For each chart point, validate implied FX rate: `totalCirculatingUSD[key] / totalCirculating[key]`
-   - If rate falls outside tolerance band (`fxRate / RATE_TOLERANCE` to `fxRate * RATE_TOLERANCE`), recompute the USD value using the correct FX rate
+   - Only points within the recent live-reference window are eligible for repair; older history is left untouched because the current FX cache is not a historical reference series
+   - For each eligible chart point, validate implied FX rate: `totalCirculatingUSD[key] / totalCirculating[key]`
+   - If rate falls outside tolerance band (`fxRate / RATE_TOLERANCE` to `fxRate * RATE_TOLERANCE`), recompute the USD value using the current cached FX rate
    - `RATE_TOLERANCE = 3` (accepts 1/3× to 3× of expected rate)
 5. Downsample to adaptive time buckets:
    - Last 90 days: daily (86,400s intervals)

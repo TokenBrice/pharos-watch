@@ -1,6 +1,16 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v4.9` (2026-02-18 -> 2026-03-23).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v4.10` (2026-02-18 -> 2026-03-28).
+
+---
+
+## v4.10 — DEWS blacklist coverage parity and thin-peg FX fallback parity (Mar 28, 2026)
+
+**Commit:** `unreleased`
+
+- DEWS blacklist coverage now derives from the shared supported blacklist symbol set instead of a stale hardcoded subset
+- `PYUSD` and `USD1` now receive the same DEWS blacklist-activity signal treatment as `USDC`, `USDT`, `PAXG`, and `XAUT`
+- Thin non-USD DEWS divergence inputs now use cached `fxFallbackRates`, matching the live depeg and peg-summary peg-reference path
 
 ---
 

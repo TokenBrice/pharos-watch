@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) estimating depeg probability. Com
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/depeg-dews-version.ts`.
 
-- **Current methodology version:** `v4.9`
+- **Current methodology version:** `v4.10`
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/depeg-dews-version.ts`
 
@@ -104,7 +104,7 @@ Max of: primary deviation from peg, DEX deviation from peg, cross-source spread 
 
 ### S_black — Blacklist Activity
 
-Only for blacklist-tracked coins (currently USDC, USDT, PAXG, XAUT, PYUSD, and USD1). Uses 24h event count with spike detection relative to 7d daily average.
+Only for blacklist-tracked coins (currently USDC, USDT, PAXG, XAUT, PYUSD, and USD1). Coverage is derived from the shared supported blacklist symbol set, so DEWS stays aligned with the live blacklist tracker instead of maintaining a separate coin list. Uses 24h event count with spike detection relative to 7d daily average.
 
 ### S_flow — Mint/Burn Flow
 
@@ -160,7 +160,7 @@ Score = `min(100, sum of active signal points)`.
 
 **Data flow:**
 
-1. Read stablecoins cache, derive peg rates
+1. Read stablecoins cache, derive peg rates with cached `fxFallbackRates` for thin non-USD groups
 2. Read `dex_liquidity`, `dex_prices`, `dex_liquidity_history`
 3. Read `blacklist_events` counts (24h + 7d)
 4. Read previous `stress_signals` for smoothing
@@ -184,12 +184,12 @@ When a coin has insufficient data in a cycle (`computeDEWS() === null`), that ru
 ```json
 {
   "signals": {
-    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "4.9" },
+    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "4.10" },
     ...
   },
   "updatedAt": 1740000000,
   "malformedRows": 0,
-  "methodology": { "version": "4.9", "versionLabel": "...", "currentVersion": "4.9", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "4.10", "versionLabel": "...", "currentVersion": "4.10", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
@@ -199,13 +199,13 @@ Unknown IDs and tracked-but-non-active IDs both return `404` (`Stablecoin not tr
 
 ```json
 {
-  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "4.9" },
+  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "4.10" },
   "history": [
-    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "4.9" },
+    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "4.10" },
     ...
   ],
   "malformedRows": 0,
-  "methodology": { "version": "4.9", "versionLabel": "...", "currentVersion": "4.9", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "4.10", "versionLabel": "...", "currentVersion": "4.10", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 

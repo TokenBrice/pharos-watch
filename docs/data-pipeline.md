@@ -150,6 +150,9 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 36. **Fail-closed PSI dependency handling**: `computeAndStoreStabilityIndex()` no longer treats an unavailable `depeg_events` query as "no active depegs". The run now degrades and skips publication so PSI remains anchored to the last valid sample.
 37. **DEWS bootstrap + freshness guard**: `computeAndStoreDEWS()` now uses a dedicated `dews:bootstrap-complete` sentinel to end bootstrap grace after the first successful publication, and stale `dex_liquidity` inputs (>2 hours old) now count as a hard degraded source failure.
 38. **Yield publication guardrails**: `syncYieldData()` now degrades on invalid/empty direct DeFiLlama payloads, on total deterministic on-chain failure, and blocks `yield-rankings` cache writes when the new rankings payload shrinks severely versus the last published cache.
+39. **DEWS blacklist coverage parity**: `computeAndStoreDEWS()` now derives blacklist-signal coverage from the shared `BLACKLIST_STABLECOINS` set instead of a local hardcoded subset, so `PYUSD` and `USD1` receive the same `blacklist_events`-driven stress input as the other live blacklist-tracked coins.
+40. **DEWS thin-peg FX parity**: `computeAndStoreDEWS()` now passes cached `fxFallbackRates` into `derivePegRates()`, matching live depeg detection and peg-summary behavior for thin non-USD peg groups.
+41. **Recent-only chart FX repair**: `syncStablecoinCharts()` still corrects obvious recent `totalCirculatingUSD` corruption with the live FX cache, but it no longer rewrites deep historical points with today's FX reference.
 
 ## Gold & Silver Spot Prices (gold-api.com)
 

@@ -195,4 +195,63 @@ describe("syncStablecoinCharts", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as { fxFixes: number };
     expect(metadata.fxFixes).toBe(0);
   });
+
+  it("does not rewrite older historical points with the current FX rate", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const oldPointDate = nowSec - 400 * 86_400;
+    mockFetch([
+      {
+        match: "stablecoincharts/all",
+        body: [
+          ...makeRawChartPoints(119, nowSec),
+          {
+            date: oldPointDate,
+            totalCirculating: { peggedEUR: 100 },
+            totalCirculatingUSD: { peggedEUR: 500 },
+          },
+        ],
+      },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: {
+          value: JSON.stringify({ peggedEUR: 1.08 }),
+          updated_at: nowSec,
+        },
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            usableSyncAt: nowSec,
+            mode: "live",
+            sourceUpdatedAtByPeg: { peggedEUR: nowSec },
+            sourceModeByPeg: { peggedEUR: "live" },
+            sourceCadenceByPeg: { peggedEUR: "intraday" },
+            consecutiveFallbackRuns: 0,
+          }),
+          updated_at: nowSec,
+        },
+      },
+    ]);
+
+    const result = await syncStablecoinCharts(db);
+    expect(result.itemCount).toBeGreaterThan(0);
+    const metadata = JSON.parse(result.metadata ?? "{}") as { fxFixes: number };
+    expect(metadata.fxFixes).toBe(0);
+
+    const insert = getCacheInsert(db as MockD1Database);
+    const cached = JSON.parse(String(insert?.binds[1])) as Array<{
+      date: number;
+      totalCirculatingUSD: Record<string, number>;
+    }>;
+    const oldPoint = cached.find((point) => point.date === oldPointDate);
+    expect(oldPoint?.totalCirculatingUSD.peggedEUR).toBe(500);
+  });
 });

@@ -9,6 +9,7 @@ import { getFxReferenceTypeFromState, loadFxRateState } from "../lib/fx-rate-sta
  *  recent points) while easily catching corruption like the RUB 22,000x bug. */
 const RATE_TOLERANCE = 3;
 const MIN_DOWNSAMPLED_POINTS = 10;
+const LIVE_FX_REPAIR_MAX_POINT_AGE_SEC = 3 * 24 * 60 * 60;
 
 interface RawChartPoint {
   date: number;
@@ -110,6 +111,10 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
       const circ = point.totalCirculating;
       const usd = point.totalCirculatingUSD;
       if (!circ || !usd) continue;
+      // The live FX cache is only safe as a repair reference near "now"; older
+      // chart points need a point-in-time FX series, not today's rate.
+      const pointAgeSec = Math.max(0, syncStartSec - point.date);
+      if (pointAgeSec > LIVE_FX_REPAIR_MAX_POINT_AGE_SEC) continue;
       for (const key of Object.keys(usd)) {
         if (key === "peggedUSD") continue;
         const rawVal = circ[key];
