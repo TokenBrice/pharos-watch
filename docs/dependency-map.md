@@ -9,7 +9,7 @@ Primary files:
 - `src/app/dependency-map/client.tsx`
 - `src/lib/contagion-layout.ts` — graph construction, supernode scoring, simulation, and layout logic
 - `src/components/contagion-graph.tsx` — SVG rendering, interaction handlers
-- `src/components/dependency-map-mobile-summary.tsx` — mobile fallback view
+- `src/components/dependency-map-mobile-summary.tsx` — mobile quick-summary companion card
 
 ## Data Inputs
 
@@ -110,6 +110,12 @@ Edge encoding:
 - **Hover node**: triggers a contagion ripple effect — see below. Shows tooltip (symbol, grade, market cap).
 - **Hover edge**: shows tooltip with dependency pair + percentage weight + dependency type.
 - **Click node**: in `Selected neighborhood` focus mode, sets the neighborhood root to that node.
+
+## Mobile Layout
+
+- The interactive graph now renders on all screen sizes, including phones.
+- On small screens, the `DependencyMapMobileSummary` card remains below the graph as a quick ranked companion view; it no longer replaces the graph.
+- Graph controls stack vertically on narrow widths while the SVG scales responsively through its `viewBox`.
 
 ### Contagion Ripple
 
