@@ -1,3 +1,5 @@
+import { DAY_SECONDS } from "./time-constants";
+
 export interface PsiComponentsLike {
   severity: number;
   breadth: number;
@@ -28,7 +30,7 @@ export function getDisplayedPsi(current: PsiCurrentLike): { score: number; band:
 }
 
 export function getPsiTodayMidnight(computedAt: number): number {
-  return computedAt - (computedAt % 86_400);
+  return computedAt - (computedAt % DAY_SECONDS);
 }
 
 export function getCompletedPsiHistory<T extends PsiHistoryPointLike>(

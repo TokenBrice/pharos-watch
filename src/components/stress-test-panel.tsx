@@ -46,19 +46,19 @@ export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelP
   return (
     <Card>
       {/* Header */}
-      <CardHeader
-        role="button"
-        tabIndex={0}
-        aria-expanded={isOpen}
-        className="cursor-pointer select-none pb-3"
-        onClick={() => setIsOpen((v) => !v)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            setIsOpen((v) => !v);
-          }
-        }}
-      >
+      <CardHeader className="pb-3">
+        <button
+          type="button"
+          className="w-full text-left appearance-none bg-transparent border-none p-0 cursor-pointer select-none"
+          aria-expanded={isOpen}
+          onClick={() => setIsOpen((v) => !v)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setIsOpen((v) => !v);
+            }
+          }}
+        >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-500/15">
@@ -86,6 +86,7 @@ export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelP
         <p className="text-xs text-muted-foreground mt-1">
           Simulate cascading failures when a stablecoin degrades. Trace dependency chains and see which coins are affected.
         </p>
+        </button>
       </CardHeader>
 
       {isOpen && <CardContent className="space-y-4 pt-0">

@@ -48,13 +48,13 @@ interface ContagionGraphProps {
 // Constants
 // ---------------------------------------------------------------------------
 
-const TYPE_COLORS: Record<string, string> = {
+const TYPE_COLORS: Record<DependencyType, string> = {
   collateral: "#64748b",
   mechanism: "#f59e0b",
   wrapper: "#8b5cf6",
 };
 
-const TYPE_DASH: Record<string, string | undefined> = {
+const TYPE_DASH: Record<DependencyType, string | undefined> = {
   collateral: undefined,
   mechanism: "6 3",
   wrapper: "2 3",

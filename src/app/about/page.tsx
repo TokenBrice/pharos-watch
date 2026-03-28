@@ -28,6 +28,7 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { safeJsonLd } from "@/lib/json-ld";
+import { buildFaqJsonLd } from "@/lib/faq";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { ACTIVE_STABLECOINS, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";
 
@@ -378,44 +379,24 @@ export default function AboutPage() {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: safeJsonLd({
-              "@context": "https://schema.org",
-              "@type": "FAQPage",
-              mainEntity: [
-                {
-                  "@type": "Question",
-                  name: "Why does Pharos exist?",
-                  acceptedAnswer: {
-                    "@type": "Answer",
-                    text: "Pharos is a project by TokenBrice, Ike, Claude, and Codex. It puts the stablecoin data you want to monitor in one place: honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
-                  },
-                },
-                {
-                  "@type": "Question",
-                  name: "What does Pharos track?",
-                  acceptedAnswer: {
-                    "@type": "Answer",
-                    text: `Pharos tracks ${ACTIVE_STABLECOINS.length} stablecoins across every major chain, classified by governance, backing, and peg currency. It documents ${DEAD_STABLECOINS.length} dead stablecoins in the cemetery, monitors USDC, USDT, PAXG, XAUT, PYUSD, and USD1 freeze and blacklist events on-chain, provides composite peg scores with depeg detection and heatmaps, integrates independent Bluechip SMIDGE safety ratings, scores DEX liquidity depth 0–100 across decentralized exchanges, computes a 30-minute Pharos Stability Index for ecosystem health, and issues report cards grading each stablecoin across 5 dimensions, including an exit-liquidity dimension that now blends DEX liquidity with protocol or issuer redemption backstops when a direct exit path exists.`,
-                  },
-                },
-                {
-                  "@type": "Question",
-                  name: "How does Pharos classify stablecoins?",
-                  acceptedAnswer: {
-                    "@type": "Answer",
-                    text: "Pharos classifies stablecoins into three governance tiers: CeFi (fully centralized), CeFi-Dependent (decentralized infrastructure but reliant on centralized collateral or peg mechanisms), and DeFi (fully on-chain, no centralized custody dependency). This reflects actual infrastructure dependency, not marketing claims.",
-                  },
-                },
-                {
-                  "@type": "Question",
-                  name: "Where does Pharos get its data?",
-                  acceptedAnswer: {
-                    "@type": "Answer",
-                    text: "All data is fetched server-side by a Cloudflare Worker and cached in D1. Sources include DefiLlama for supply, price, and chain distribution; CoinGecko for logos and fallback prices; CoinMarketCap and DexScreener as further price fallbacks; direct protocol redemption quotes for selected redeemable assets such as Cap cUSD and infiniFi iUSD; issuer and protocol reserve APIs, dashboards, proof-of-reserve portals, and direct on-chain vault/accounting reads for live reserve composition and redemption-backstop capacity where available, including Ethena, Falcon, infiniFi, M0, Mento Reserve, OpenEden, Re, USDD, Accountable, Tether, Frax, Circle, First Digital Labs, SG-FORGE, Paxos, Sky/MakerDAO, Chainlink PoR/NAV oracles, and Aave GHO reserve feeds; Etherscan v2 and TronGrid for freeze-event tracking, with reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist totals; Alchemy, dRPC, and selected public chain RPCs for EVM reads including Ethereum mint/burn flow tracking and direct contract calls such as Cap and infiniFi redemption quotes, Liquity/B.Protocol, ERC-4626 vault reads, Fluid DexReservesResolver reads, and Aerodrome/Velodrome Sugar view reads; Bluechip for safety ratings; ECB via Frankfurter plus fawazahmed0/currency-api for live FX rates including CNH and other non-ECB coverage, with ExchangeRate-API as a tertiary full-set FX fallback; gold-api.com for gold and silver spot prices; FRED DGS3MO for the USD benchmark, the ECB Data API for 3M compounded €STR, and SIX delayed SARON compound-rate downloads via guest OAuth for the CHF benchmark; DeFiLlama Yields &amp; Protocols, Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, Meteora API, PancakeSwap subgraphs, Aerodrome and Velodrome Sugar view contracts, and GeckoTerminal for DEX liquidity data; and Anthropic Claude for daily digest generation.",
-                  },
-                },
-              ],
-            }),
+            __html: safeJsonLd(buildFaqJsonLd([
+              {
+                question: "Why does Pharos exist?",
+                answer: "Pharos is a project by TokenBrice, Ike, Claude, and Codex. It puts the stablecoin data you want to monitor in one place: honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
+              },
+              {
+                question: "What does Pharos track?",
+                answer: `Pharos tracks ${ACTIVE_STABLECOINS.length} stablecoins across every major chain, classified by governance, backing, and peg currency. It documents ${DEAD_STABLECOINS.length} dead stablecoins in the cemetery, monitors USDC, USDT, PAXG, XAUT, PYUSD, and USD1 freeze and blacklist events on-chain, provides composite peg scores with depeg detection and heatmaps, integrates independent Bluechip SMIDGE safety ratings, scores DEX liquidity depth 0–100 across decentralized exchanges, computes a 30-minute Pharos Stability Index for ecosystem health, and issues report cards grading each stablecoin across 5 dimensions, including an exit-liquidity dimension that now blends DEX liquidity with protocol or issuer redemption backstops when a direct exit path exists.`,
+              },
+              {
+                question: "How does Pharos classify stablecoins?",
+                answer: "Pharos classifies stablecoins into three governance tiers: CeFi (fully centralized), CeFi-Dependent (decentralized infrastructure but reliant on centralized collateral or peg mechanisms), and DeFi (fully on-chain, no centralized custody dependency). This reflects actual infrastructure dependency, not marketing claims.",
+              },
+              {
+                question: "Where does Pharos get its data?",
+                answer: "All data is fetched server-side by a Cloudflare Worker and cached in D1. Sources include DefiLlama for supply, price, and chain distribution; CoinGecko for logos and fallback prices; CoinMarketCap and DexScreener as further price fallbacks; direct protocol redemption quotes for selected redeemable assets such as Cap cUSD and infiniFi iUSD; issuer and protocol reserve APIs, dashboards, proof-of-reserve portals, and direct on-chain vault/accounting reads for live reserve composition and redemption-backstop capacity where available, including Ethena, Falcon, infiniFi, M0, Mento Reserve, OpenEden, Re, USDD, Accountable, Tether, Frax, Circle, First Digital Labs, SG-FORGE, Paxos, Sky/MakerDAO, Chainlink PoR/NAV oracles, and Aave GHO reserve feeds; Etherscan v2 and TronGrid for freeze-event tracking, with reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist totals; Alchemy, dRPC, and selected public chain RPCs for EVM reads including Ethereum mint/burn flow tracking and direct contract calls such as Cap and infiniFi redemption quotes, Liquity/B.Protocol, ERC-4626 vault reads, Fluid DexReservesResolver reads, and Aerodrome/Velodrome Sugar view reads; Bluechip for safety ratings; ECB via Frankfurter plus fawazahmed0/currency-api for live FX rates including CNH and other non-ECB coverage, with ExchangeRate-API as a tertiary full-set FX fallback; gold-api.com for gold and silver spot prices; FRED DGS3MO for the USD benchmark, the ECB Data API for 3M compounded €STR, and SIX delayed SARON compound-rate downloads via guest OAuth for the CHF benchmark; DeFiLlama Yields &amp; Protocols, Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, Meteora API, PancakeSwap subgraphs, Aerodrome and Velodrome Sugar view contracts, and GeckoTerminal for DEX liquidity data; and Anthropic Claude for daily digest generation.",
+              },
+            ])),
           }}
         />
       }

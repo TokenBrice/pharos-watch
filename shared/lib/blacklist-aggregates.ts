@@ -4,6 +4,7 @@ import {
   isGoldBlacklistStablecoin,
   type BlacklistAddressCountMode,
 } from "./blacklist";
+import { THIRTY_DAYS_SECONDS } from "./time-constants";
 import type { BlacklistCurrentBalanceSnapshot } from "./blacklist-active-records";
 import { BLACKLIST_STABLECOINS } from "../types/market";
 import type { BlacklistEvent, BlacklistStablecoin } from "../types/market";
@@ -36,7 +37,7 @@ export function computeBlacklistSummaryStats(
   nowSeconds = Math.floor(Date.now() / 1000),
   countMode: BlacklistAddressCountMode = "address-chain-stablecoin",
 ): BlacklistSummaryStats {
-  const thirtyDaysAgo = nowSeconds - 30 * 24 * 60 * 60;
+  const thirtyDaysAgo = nowSeconds - THIRTY_DAYS_SECONDS;
   const usdcAddresses = new Map<string, number>();
   const usdtAddresses = new Map<string, number>();
   const goldAddresses = new Map<string, number>();

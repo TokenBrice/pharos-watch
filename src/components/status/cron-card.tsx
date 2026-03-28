@@ -53,6 +53,38 @@ function getLastSuccessfulRun(
   return runs.find((run) => run.status === "ok" || run.status === "degraded") ?? null;
 }
 
+type InFlightData = NonNullable<CronCardProps["cron"]["inFlight"]>;
+
+function InFlightDisplay({ inFlight, nowSeconds }: { inFlight: InFlightData; nowSeconds: number }) {
+  return (
+    <div className={`space-y-1 rounded border p-2 text-xs ${inFlight.stale ? "border-red-500/20 bg-red-500/5 text-red-700 dark:text-red-300" : "border-sky-500/20 bg-sky-500/5 text-sky-700 dark:text-sky-300"}`}>
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge className={`text-xs ${inFlight.stale ? "bg-red-500/15 text-red-700 dark:text-red-300" : "bg-sky-500/15 text-sky-700 dark:text-sky-300"}`}>
+          {inFlight.stale ? "running-stale" : "running"}
+        </Badge>
+        <span>started {formatElapsedSeconds(nowSeconds - inFlight.startedAt)} ago</span>
+        <span>heartbeat {formatElapsedSeconds(nowSeconds - inFlight.updatedAt)} ago</span>
+        {inFlight.stage && <span>stage {inFlight.stage}</span>}
+        {inFlight.itemsDone != null && (
+          <span>
+            progress {inFlight.itemsDone}
+            {inFlight.itemsTotal != null ? `/${inFlight.itemsTotal}` : ""}
+          </span>
+        )}
+      </div>
+      {inFlight.message && <div>{inFlight.message}</div>}
+      {inFlight.metadata && Object.keys(inFlight.metadata).length > 0 && (
+        <details className="text-xs">
+          <summary className="cursor-pointer text-current/80">Active run metadata</summary>
+          <pre className="mt-1 max-h-40 overflow-auto rounded bg-background/60 p-2 text-xs">
+            {JSON.stringify(inFlight.metadata, null, 2)}
+          </pre>
+        </details>
+      )}
+    </div>
+  );
+}
+
 export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
   const display = getStatusCronDisplay(job);
   const latestStatus = cron.lastRun?.status;
@@ -101,31 +133,7 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
         {cron.lastRun ? (
           <div className="space-y-1">
             {cron.inFlight && (
-              <div className={`space-y-1 rounded border p-2 text-xs ${cron.inFlight.stale ? "border-red-500/20 bg-red-500/5 text-red-700 dark:text-red-300" : "border-sky-500/20 bg-sky-500/5 text-sky-700 dark:text-sky-300"}`}>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge className={`text-xs ${cron.inFlight.stale ? "bg-red-500/15 text-red-700 dark:text-red-300" : "bg-sky-500/15 text-sky-700 dark:text-sky-300"}`}>
-                    {cron.inFlight.stale ? "running-stale" : "running"}
-                  </Badge>
-                  <span>started {formatElapsedSeconds(nowSeconds - cron.inFlight.startedAt)} ago</span>
-                  <span>heartbeat {formatElapsedSeconds(nowSeconds - cron.inFlight.updatedAt)} ago</span>
-                  {cron.inFlight.stage && <span>stage {cron.inFlight.stage}</span>}
-                  {cron.inFlight.itemsDone != null && (
-                    <span>
-                      progress {cron.inFlight.itemsDone}
-                      {cron.inFlight.itemsTotal != null ? `/${cron.inFlight.itemsTotal}` : ""}
-                    </span>
-                  )}
-                </div>
-                {cron.inFlight.message && <div>{cron.inFlight.message}</div>}
-                {cron.inFlight.metadata && Object.keys(cron.inFlight.metadata).length > 0 && (
-                  <details className="text-xs">
-                    <summary className="cursor-pointer text-current/80">Active run metadata</summary>
-                    <pre className="mt-1 max-h-40 overflow-auto rounded bg-background/60 p-2 text-xs">
-                      {JSON.stringify(cron.inFlight.metadata, null, 2)}
-                    </pre>
-                  </details>
-                )}
-              </div>
+              <InFlightDisplay inFlight={cron.inFlight} nowSeconds={nowSeconds} />
             )}
             <div className="flex items-center gap-2 text-sm">
               <Badge
@@ -170,17 +178,7 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
           </div>
         ) : (
           cron.inFlight ? (
-            <div className={`space-y-1 rounded border p-2 text-xs ${cron.inFlight.stale ? "border-red-500/20 bg-red-500/5 text-red-700 dark:text-red-300" : "border-sky-500/20 bg-sky-500/5 text-sky-700 dark:text-sky-300"}`}>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge className={`text-xs ${cron.inFlight.stale ? "bg-red-500/15 text-red-700 dark:text-red-300" : "bg-sky-500/15 text-sky-700 dark:text-sky-300"}`}>
-                  {cron.inFlight.stale ? "running-stale" : "running"}
-                </Badge>
-                <span>started {formatElapsedSeconds(nowSeconds - cron.inFlight.startedAt)} ago</span>
-                <span>heartbeat {formatElapsedSeconds(nowSeconds - cron.inFlight.updatedAt)} ago</span>
-              </div>
-              {cron.inFlight.stage && <div>stage {cron.inFlight.stage}</div>}
-              {cron.inFlight.message && <div>{cron.inFlight.message}</div>}
-            </div>
+            <InFlightDisplay inFlight={cron.inFlight} nowSeconds={nowSeconds} />
           ) : (
             <span className="text-sm text-muted-foreground">
               {cron.telemetryUnknown ? "History temporarily unavailable" : "No runs recorded"}

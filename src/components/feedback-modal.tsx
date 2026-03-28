@@ -24,6 +24,8 @@ interface FeedbackModalProps {
   pegValue?: string;
 }
 
+const FEEDBACK_TYPES: FeedbackType[] = ["bug", "data-correction", "feature-request"];
+
 const TYPE_LABELS: Record<FeedbackType, string> = {
   bug: "Bug Report",
   "data-correction": "Data Correction",
@@ -71,14 +73,14 @@ export function FeedbackModal({
     [onOpenChange, reset]
   );
 
+  const pageUrl =
+    typeof window !== "undefined"
+      ? `${window.location.pathname}${window.location.search}${window.location.hash}`
+      : "/";
+
   const handleSubmit = useCallback(async () => {
     setStatus("loading");
     setErrorMsg("");
-
-    const pageUrl =
-      typeof window !== "undefined"
-        ? `${window.location.pathname}${window.location.search}${window.location.hash}`
-        : "/";
 
     const body = {
       type,
@@ -122,11 +124,6 @@ export function FeedbackModal({
     (!needsTitle || (title.trim().length >= 3 && title.trim().length <= 100)) &&
     contactValid;
 
-  const pageUrl =
-    typeof window !== "undefined"
-      ? `${window.location.pathname}${window.location.search}${window.location.hash}`
-      : "";
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-lg">
@@ -148,7 +145,7 @@ export function FeedbackModal({
           <div className="space-y-4">
             {/* Type selector */}
             <div className="flex gap-1 rounded-lg bg-muted p-1">
-              {(["bug", "data-correction", "feature-request"] as FeedbackType[]).map((t) => (
+              {FEEDBACK_TYPES.map((t) => (
                 <button
                   key={t}
                   aria-pressed={type === t}

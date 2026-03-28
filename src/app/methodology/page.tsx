@@ -7,6 +7,7 @@ import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { safeJsonLd } from "@/lib/json-ld";
+import { buildFaqJsonLd } from "@/lib/faq";
 import { SITE_URL } from "@/lib/site-config";
 import {
   METHODOLOGY_READING_STEPS,
@@ -42,36 +43,20 @@ export default function MethodologyPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: safeJsonLd({
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            mainEntity: [
-              {
-                "@type": "Question",
-                name: "How does Pharos grade stablecoins?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: `Pharos computes a weighted average of four base dimensions — Liquidity (30%), Resilience (20%), Decentralization (15%), and Dependency Risk (25%) — then applies a peg stability power-curve multiplier. When liquidity data is absent, a 10% penalty is applied to the final score after the peg multiplier (weights are redistributed across available dimensions). Grades range from A+ (87+) to F (0–39), with NR for insufficient data. The methodology is currently at ${SAFETY_SCORE_VERSION_LABEL}.`,
-                },
-              },
-              {
-                "@type": "Question",
-                name: "How is the Pharos peg score calculated?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "The peg score is a composite 0–100 measure combining time-at-peg (50%) and event severity (50%), minus penalties for active depegs and erratic behavior. The tracking window spans up to 4 years but is capped at the coin's actual age. It requires at least 7 days of tracking data; scores under 30 days are flagged as early.",
-                },
-              },
-              {
-                "@type": "Question",
-                name: "How does Pharos measure DEX liquidity?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "The liquidity score is a composite 0–100 metric combining TVL depth (35%), volume activity (20%), pool quality (22.5%), durability (15%), and pair diversity (7.5%). Volume uses log-scale scoring. Pool quality is adjusted for mechanism type, balance health, and pair quality.",
-                },
-              },
-            ],
-          }),
+          __html: safeJsonLd(buildFaqJsonLd([
+            {
+              question: "How does Pharos grade stablecoins?",
+              answer: `Pharos computes a weighted average of four base dimensions — Liquidity (30%), Resilience (20%), Decentralization (15%), and Dependency Risk (25%) — then applies a peg stability power-curve multiplier. When liquidity data is absent, a 10% penalty is applied to the final score after the peg multiplier (weights are redistributed across available dimensions). Grades range from A+ (87+) to F (0–39), with NR for insufficient data. The methodology is currently at ${SAFETY_SCORE_VERSION_LABEL}.`,
+            },
+            {
+              question: "How is the Pharos peg score calculated?",
+              answer: "The peg score is a composite 0–100 measure combining time-at-peg (50%) and event severity (50%), minus penalties for active depegs and erratic behavior. The tracking window spans up to 4 years but is capped at the coin's actual age. It requires at least 7 days of tracking data; scores under 30 days are flagged as early.",
+            },
+            {
+              question: "How does Pharos measure DEX liquidity?",
+              answer: "The liquidity score is a composite 0–100 metric combining TVL depth (35%), volume activity (20%), pool quality (22.5%), durability (15%), and pair diversity (7.5%). Volume uses log-scale scoring. Pool quality is adjusted for mechanism type, balance health, and pair quality.",
+            },
+          ])),
         }}
       />
 

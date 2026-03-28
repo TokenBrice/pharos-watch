@@ -8,6 +8,7 @@ import {
   YIELD_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/yield-methodology-version";
 import { safeJsonLd } from "@/lib/json-ld";
+import { buildFaqJsonLd } from "@/lib/faq";
 
 const yieldBearingCount = YIELD_BEARING_STABLECOINS.length;
 const desc = `Risk-adjusted yield rankings for ${yieldBearingCount} yield-bearing stablecoins plus curated lending opportunities. Compare APY, safety grades, freshness, the Pharos Yield Score, and peg-scoped yield universes including non-USD markets.`;
@@ -19,36 +20,20 @@ export const metadata = buildPageMetadata({
   ogImage: `${SITE_URL}/og-yield.png`,
 });
 
-const faqJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: [
-    {
-      "@type": "Question",
-      name: "What is the Pharos Yield Score (PYS)?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "The Pharos Yield Score (PYS) is a risk-adjusted yield metric scored 0–100 that balances yield magnitude against safety and consistency. It divides the 30-day average APY by a safety-derived risk penalty raised to a fixed exponent, then applies a sustainability multiplier based on APY volatility over the same period. Higher-safety stablecoins incur a much lower adjusted penalty, so moderate but durable yield can compete with riskier double-digit offers.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "How are stablecoin yields sourced?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Yields are resolved through deterministic on-chain reads, curated DeFiLlama sources, price-derived or rate-derived fallbacks, and curated lending opportunities. Rankings refresh hourly, with slower supplemental-source families merged in from a separate four-hour lane, and preserve source-specific history so trailing APY metrics stay tied to the active source.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "What does 'risk-adjusted' mean for stablecoin yield?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Risk-adjusted yield accounts for the safety of the stablecoin issuing the yield, not just the raw APY. A stablecoin with a high safety grade (A or A+) receives a much lighter adjusted penalty in the PYS formula, so even a moderate APY can score well. Conversely, a risky stablecoin must offer meaningfully higher raw yield to achieve the same PYS, reflecting the extra risk borne by the holder.",
-      },
-    },
-  ],
-};
+const faqJsonLd = buildFaqJsonLd([
+  {
+    question: "What is the Pharos Yield Score (PYS)?",
+    answer: "The Pharos Yield Score (PYS) is a risk-adjusted yield metric scored 0–100 that balances yield magnitude against safety and consistency. It divides the 30-day average APY by a safety-derived risk penalty raised to a fixed exponent, then applies a sustainability multiplier based on APY volatility over the same period. Higher-safety stablecoins incur a much lower adjusted penalty, so moderate but durable yield can compete with riskier double-digit offers.",
+  },
+  {
+    question: "How are stablecoin yields sourced?",
+    answer: "Yields are resolved through deterministic on-chain reads, curated DeFiLlama sources, price-derived or rate-derived fallbacks, and curated lending opportunities. Rankings refresh hourly, with slower supplemental-source families merged in from a separate four-hour lane, and preserve source-specific history so trailing APY metrics stay tied to the active source.",
+  },
+  {
+    question: "What does 'risk-adjusted' mean for stablecoin yield?",
+    answer: "Risk-adjusted yield accounts for the safety of the stablecoin issuing the yield, not just the raw APY. A stablecoin with a high safety grade (A or A+) receives a much lighter adjusted penalty in the PYS formula, so even a moderate APY can score well. Conversely, a risky stablecoin must offer meaningfully higher raw yield to achieve the same PYS, reflecting the extra risk borne by the holder.",
+  },
+]);
 
 export default createClientFeaturePage({
   loadClient: () => import("./client").then((m) => ({ default: m.YieldClient })),

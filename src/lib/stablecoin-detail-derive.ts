@@ -24,10 +24,6 @@ interface PegReferenceContext {
   pegRateSource: PegRateSource | undefined;
 }
 
-function toEpochMs(rawDate: number): number {
-  return new Date(rawDate).getTime();
-}
-
 export function deriveSupplyFromMarketCap(
   marketCapUsd: number | null | undefined,
   priceUsd: number | null | undefined,
@@ -66,12 +62,12 @@ export function derivePrev90dReferenceMcap(
   let closest = supplyHistory[0];
 
   for (const entry of supplyHistory) {
-    if (Math.abs(toEpochMs(entry.date) - targetMs) < Math.abs(toEpochMs(closest.date) - targetMs)) {
+    if (Math.abs(new Date(entry.date).getTime() - targetMs) < Math.abs(new Date(closest.date).getTime() - targetMs)) {
       closest = entry;
     }
   }
 
-  if (Math.abs(toEpochMs(closest.date) - targetMs) > NINETY_DAY_TOLERANCE_MS) return 0;
+  if (Math.abs(new Date(closest.date).getTime() - targetMs) > NINETY_DAY_TOLERANCE_MS) return 0;
   return closest.circulatingUsd;
 }
 

@@ -160,7 +160,7 @@ export function AdminActionButton({
           <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
             Cancel
           </Button>
-          <Button variant={action.destructive ? "destructive" : "default"} onClick={handleConfirm} disabled={loading}>
+          <Button variant={action.destructive ? "destructive" : "default"} onClick={handleConfirm} disabled={loading} aria-busy={loading}>
             {loading ? "Running..." : "Confirm"}
           </Button>
         </DialogFooter>
