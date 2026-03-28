@@ -59,6 +59,7 @@ interface DispatchResult {
   subscribersNotified: number;
   messagesSent: number;
   blockedUsersCleanedUp: number;
+  blockedUsersCleanupFailed: number;
   cappedAtLimit: boolean;
   snapshotSeeded: boolean;
   pendingAttempted: number;
@@ -136,6 +137,7 @@ function emptyResult(snapshotSeeded: boolean): DispatchResult {
     subscribersNotified: 0,
     messagesSent: 0,
     blockedUsersCleanedUp: 0,
+    blockedUsersCleanupFailed: 0,
     cappedAtLimit: false,
     snapshotSeeded,
     pendingAttempted: 0,
@@ -704,7 +706,8 @@ export async function dispatchTelegramAlerts(
     let subscribersNotified = 0;
     let freshSent = 0;
     let freshPermanentFailures = 0;
-    let blockedUsersCleanedUp = drainResult.blocked;
+    let blockedUsersCleanedUp = drainResult.blocked - drainResult.blockedCleanupFailed;
+    let blockedUsersCleanupFailed = drainResult.blockedCleanupFailed;
     const blockedChats = new Set<string>();
     const retryableFreshMessages: Array<{ chatId: string; html: string; disableNotification: boolean }> = [];
     const resultsByChat = new Map<string, typeof sendResults>();
@@ -726,8 +729,11 @@ export async function dispatchTelegramAlerts(
       if (result.blocked) {
         if (!blockedChats.has(result.chatId)) {
           blockedChats.add(result.chatId);
-          blockedUsersCleanedUp++;
-          await disableBlockedSubscriber(db, result.chatId);
+          if (await disableBlockedSubscriber(db, result.chatId)) {
+            blockedUsersCleanedUp++;
+          } else {
+            blockedUsersCleanupFailed++;
+          }
         }
         continue;
       }
@@ -782,6 +788,7 @@ export async function dispatchTelegramAlerts(
       subscribersNotified,
       messagesSent: freshSent + drainResult.sent,
       blockedUsersCleanedUp,
+      blockedUsersCleanupFailed,
       cappedAtLimit: toEnqueue.length > 0,
       snapshotSeeded: false,
       pendingAttempted: drainResult.attempted,

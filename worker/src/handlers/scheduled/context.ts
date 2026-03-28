@@ -4,6 +4,7 @@ import { logCronRun, type CronProgressReporter, type CronResult } from "../../li
 import { sendAlert, normalizeWebhookUrl } from "../../lib/alerts";
 import { normalizeCgApiKey } from "../../lib/coingecko";
 import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
+import { normalizeCronMetadata } from "../../lib/cron-metadata";
 import { parseCsvEnv, type Env } from "../../lib/env";
 import {
   resolveMintBurnFreshnessConfig,
@@ -57,30 +58,6 @@ export function parseStablecoinsCapabilities(
       depegPipeline: false,
     };
   }
-}
-
-function normalizeCronMetadata(result: CronResult): string | undefined {
-  const parsed: Record<string, unknown> = {};
-  if (result.metadata) {
-    try {
-      Object.assign(parsed, JSON.parse(result.metadata) as Record<string, unknown>);
-    } catch {
-      parsed.rawMetadata = result.metadata;
-    }
-  }
-
-  const rowsWrittenDefault =
-    typeof result.itemCount === "number" ? result.itemCount : null;
-
-  return JSON.stringify({
-    rowsRead: parsed.rowsRead ?? null,
-    rowsWritten: parsed.rowsWritten ?? rowsWrittenDefault,
-    rowsDropped: parsed.rowsDropped ?? 0,
-    sourceCoverage: parsed.sourceCoverage ?? null,
-    fallbackMode: parsed.fallbackMode ?? null,
-    validationFailures: parsed.validationFailures ?? 0,
-    ...parsed,
-  });
 }
 
 export interface ScheduledRuntimeInit {

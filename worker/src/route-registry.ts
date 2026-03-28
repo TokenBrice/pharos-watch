@@ -56,6 +56,7 @@ import { createLeaseOwner, runCronWithLease } from "./lib/cron-lease";
 import { logCronRun, type CronResult } from "./lib/cron-logger";
 import { runIdempotentAdminAction } from "./lib/idempotency";
 import { withAdmin } from "./lib/auth";
+import { normalizeCronMetadata } from "./lib/cron-metadata";
 import { jsonResponse, withErrorHandler } from "./lib/api-utils";
 import type { MintBurnFreshnessConfig } from "./lib/mint-burn-health-config";
 import type { TelegramCreds } from "./lib/telegram";
@@ -129,33 +130,6 @@ function createAcceptedJsonResponse(body: unknown): Response {
   });
 }
 
-function normalizeManualCronMetadata(
-  result: CronResult | void,
-  extras: Record<string, unknown>,
-): string {
-  const parsed: Record<string, unknown> = {};
-  if (result?.metadata) {
-    try {
-      Object.assign(parsed, JSON.parse(result.metadata) as Record<string, unknown>);
-    } catch {
-      parsed.rawMetadata = result.metadata;
-    }
-  }
-
-  const rowsWrittenDefault = typeof result?.itemCount === "number" ? result.itemCount : null;
-
-  return JSON.stringify({
-    rowsRead: parsed.rowsRead ?? null,
-    rowsWritten: parsed.rowsWritten ?? rowsWrittenDefault,
-    rowsDropped: parsed.rowsDropped ?? 0,
-    sourceCoverage: parsed.sourceCoverage ?? null,
-    fallbackMode: parsed.fallbackMode ?? null,
-    validationFailures: parsed.validationFailures ?? 0,
-    ...parsed,
-    ...extras,
-  });
-}
-
 async function runManualDigestTrigger(
   db: D1Database,
   anthropicApiKey: string | null,
@@ -174,7 +148,7 @@ async function runManualDigestTrigger(
     if (lease.status === "skipped_locked") {
       return {
         status: "skipped_locked",
-        metadata: normalizeManualCronMetadata(undefined, {
+        metadata: normalizeCronMetadata(undefined, {
           reason: "lease-locked",
           trigger: "manual",
           requestId,
@@ -186,7 +160,7 @@ async function runManualDigestTrigger(
 
     return {
       ...(lease.result ?? {}),
-      metadata: normalizeManualCronMetadata(lease.result, {
+      metadata: normalizeCronMetadata(lease.result, {
         trigger: "manual",
         requestId,
         leaseOwner: lease.leaseOwner,

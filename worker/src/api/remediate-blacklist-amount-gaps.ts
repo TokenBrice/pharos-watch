@@ -1,7 +1,7 @@
 import { BLACKLIST_STABLECOINS, type BlacklistStablecoin } from "@shared/types/market";
 import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
 import { requireAdmin } from "../lib/auth";
-import { errorResponse, jsonResponse, parseIntParam } from "../lib/api-utils";
+import { errorResponse, jsonResponse, parseQueryParams } from "../lib/api-utils";
 import {
   getBlacklistConfigByContract,
   getBlacklistConfigByKey,
@@ -90,15 +90,17 @@ export async function handleRemediateBlacklistAmountGaps(
     true,
   );
 
-  const limitParam = parseIntParam(url.searchParams.get("limit"), 25, 1, 200, "limit");
-  if (limitParam instanceof Response) return limitParam;
+  const numericParams = parseQueryParams(url.searchParams, {
+    limit: { type: "int", default: 25, min: 1, max: 200 },
+    maxAttempts: { type: "int", default: 25, min: 0, max: 10_000 },
+  });
+  if (numericParams instanceof Response) return numericParams;
+  const { limit: limitParam, maxAttempts: maxAttemptsParam } = numericParams;
   const limit = typeof body.limit === "number" ? Math.trunc(body.limit) : limitParam;
   if (!Number.isFinite(limit) || limit < 1 || limit > 200) {
     return errorResponse(400, "Invalid limit parameter");
   }
 
-  const maxAttemptsParam = parseIntParam(url.searchParams.get("maxAttempts"), 25, 0, 10_000, "maxAttempts");
-  if (maxAttemptsParam instanceof Response) return maxAttemptsParam;
   const maxAttempts = typeof body.maxAttempts === "number" ? Math.trunc(body.maxAttempts) : maxAttemptsParam;
 
   const chainId = typeof body.chainId === "string" ? body.chainId.trim().toLowerCase() : url.searchParams.get("chainId")?.trim().toLowerCase() ?? null;

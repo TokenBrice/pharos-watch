@@ -582,13 +582,13 @@ export async function generateDailyDigest(
 
   const resolvedDepegs = await collectResolvedDepegs(ctx);
   const mintBurnFlows = await collectMintBurnFlows(ctx);
-  const dewsStress = await collectDewsStress(ctx);
+  const dewsStress = await collectDewsStress(ctx, degradedReasons);
   const historicalContext = await collectHistoricalContext(ctx, displayScore, displayBand, biggestSupplyChange);
   const gradeTransitions = await collectGradeTransitions(ctx, safetyGrades);
   const psiContributors = await collectPsiContributors(ctx);
-  const yieldAnomalies = await collectYieldAnomalies(ctx);
+  const yieldAnomalies = await collectYieldAnomalies(ctx, degradedReasons);
   const liquidityShifts = await collectLiquidityShifts(ctx);
-  const crossDayTrends = await collectCrossDayTrends(ctx);
+  const crossDayTrends = await collectCrossDayTrends(ctx, degradedReasons);
 
   // --- Build input data ---
   const inputData: DigestInputData = {

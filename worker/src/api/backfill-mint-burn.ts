@@ -4,7 +4,7 @@ import { createBudget, budgetExhausted } from "../lib/evm-logs";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig, type MintBurnEventDef } from "../lib/mint-burn-contracts";
 import type { MintBurnTxContext } from "../lib/mint-burn-bridge-classifier";
 import { requireAdmin } from "../lib/auth";
-import { errorResponse, jsonResponse, parseIntParam } from "../lib/api-utils";
+import { errorResponse, jsonResponse, parseQueryParams } from "../lib/api-utils";
 import type { TopicFilter } from "../lib/evm-logs";
 import { classifyBridgeBurnRows } from "../lib/mint-burn-pipeline/classification";
 import { loadMintBurnPriceContext } from "../lib/mint-burn-pipeline/context";
@@ -123,28 +123,21 @@ export async function handleBackfillMintBurn(
 
   const chunkMax = ETHEREUM_CHUNK_SIZE;
   const defaultChunkSize = chunkMax;
-  const parsedFromBlock = parseIntParam(
-    url.searchParams.get("fromBlock"),
-    -1,
-    -1,
-    Number.MAX_SAFE_INTEGER,
-    "fromBlock",
-  );
-  if (parsedFromBlock instanceof Response) {
-    return parsedFromBlock;
+  const numericParams = parseQueryParams(url.searchParams, {
+    fromBlock: { type: "int", default: -1, min: -1, max: Number.MAX_SAFE_INTEGER },
+    toBlock: { type: "int", default: -1, min: -1, max: Number.MAX_SAFE_INTEGER },
+    chunkSize: { type: "int", default: defaultChunkSize, min: 1, max: chunkMax },
+    maxChunks: { type: "int", default: DEFAULT_MAX_CHUNKS, min: 1, max: 500 },
+  });
+  if (numericParams instanceof Response) {
+    return numericParams;
   }
-  const parsedToBlock = parseIntParam(url.searchParams.get("toBlock"), -1, -1, Number.MAX_SAFE_INTEGER, "toBlock");
-  if (parsedToBlock instanceof Response) {
-    return parsedToBlock;
-  }
-  const parsedChunkSize = parseIntParam(url.searchParams.get("chunkSize"), defaultChunkSize, 1, chunkMax, "chunkSize");
-  if (parsedChunkSize instanceof Response) {
-    return parsedChunkSize;
-  }
-  const parsedMaxChunks = parseIntParam(url.searchParams.get("maxChunks"), DEFAULT_MAX_CHUNKS, 1, 500, "maxChunks");
-  if (parsedMaxChunks instanceof Response) {
-    return parsedMaxChunks;
-  }
+  const {
+    fromBlock: parsedFromBlock,
+    toBlock: parsedToBlock,
+    chunkSize: parsedChunkSize,
+    maxChunks: parsedMaxChunks,
+  } = numericParams;
 
   const fromBlockParam = (typeof body.fromBlock === "number" ? Math.trunc(body.fromBlock) : null) ?? parsedFromBlock;
   const toBlockParam = (typeof body.toBlock === "number" ? Math.trunc(body.toBlock) : null) ?? parsedToBlock;
