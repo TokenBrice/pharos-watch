@@ -15,8 +15,8 @@
     "branchCount": 6
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 373,
-    "maxFunctionLines": 292,
+    "fileLines": 374,
+    "maxFunctionLines": 293,
     "branchCount": 29
   },
   "src/app/methodology/sections/core-sections.tsx": {

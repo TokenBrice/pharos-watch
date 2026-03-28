@@ -112,7 +112,7 @@ export function FeedbackModal({
       setErrorMsg("Network error. Please try again.");
       setStatus("error");
     }
-  }, [type, title, description, expectedValue, stablecoinId, stablecoinName, pegValue, contactHandle]);
+  }, [type, title, description, expectedValue, stablecoinId, stablecoinName, pegValue, contactHandle, pageUrl]);
 
   const needsTitle = type === "bug" || type === "feature-request";
   const contactValid =
