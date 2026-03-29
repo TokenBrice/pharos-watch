@@ -2,7 +2,7 @@ import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import type { CacheStatus } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatElapsedSeconds } from "@shared/lib/format";
-import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@/lib/status/cache-health";
+import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
 
 interface CacheFreshnessTableProps {
   caches: Record<string, CacheStatus>;

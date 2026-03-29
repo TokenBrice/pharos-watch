@@ -1,7 +1,7 @@
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
 import { getPublicMintBurnStatus, type PublicStatusTone } from "@shared/lib/public-health";
 import type { HealthResponse } from "@shared/types";
-import { getCacheFreshnessRatio, getCacheImpactStatus } from "@/lib/status/cache-health";
+import { getCacheFreshnessRatio, getCacheImpactStatus } from "@shared/lib/cache-health";
 
 export interface PublicCacheSummary {
   ratio: number | null;

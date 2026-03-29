@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getCacheFreshnessStatus, getCacheImpactStatus } from "@/lib/status/cache-health";
+import { getCacheFreshnessStatus, getCacheImpactStatus } from "@shared/lib/cache-health";
 
 describe("cache-health", () => {
   it("keeps a >8x but <=12x cache ratio in degraded instead of stale", () => {
