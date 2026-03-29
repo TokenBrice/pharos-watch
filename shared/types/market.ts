@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { MethodologyEnvelope, PegCurrency } from "./core";
 import {
   BluechipGrade,
+  BluechipGradeSchema,
   DepegPrimaryTrustSchema,
   MethodologyEnvelopeSchema,
   PriceConfidenceSchema,
@@ -109,6 +110,15 @@ export interface BluechipSmidge {
   externals: string | null;
 }
 
+export const BluechipSmidgeSchema = z.object({
+  stability: z.string().nullable(),
+  management: z.string().nullable(),
+  implementation: z.string().nullable(),
+  decentralization: z.string().nullable(),
+  governance: z.string().nullable(),
+  externals: z.string().nullable(),
+});
+
 export interface BluechipRating {
   grade: BluechipGrade;
   slug: string;
@@ -119,7 +129,18 @@ export interface BluechipRating {
   smidge: BluechipSmidge;
 }
 
+export const BluechipRatingSchema = z.object({
+  grade: BluechipGradeSchema,
+  slug: z.string(),
+  collateralization: z.number(),
+  smartContractAudit: z.boolean(),
+  dateOfRating: z.string(),
+  dateLastChange: z.string().nullable(),
+  smidge: BluechipSmidgeSchema,
+});
+
 export type BluechipRatingsMap = Record<string, BluechipRating>;
+export const BluechipRatingsMapSchema = z.record(z.string(), BluechipRatingSchema);
 
 export const LiquidityPoolSourceFamilySchema = z.enum([
   "dl",

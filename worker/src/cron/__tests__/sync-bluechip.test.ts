@@ -288,6 +288,64 @@ describe("syncBluechip", () => {
     expect(cached["usdc-circle"]?.grade).toBe("B");
   });
 
+  it("ignores malformed existing cache entries when partial coverage is published", async () => {
+    mockFetch([
+      {
+        match: "/coin-data/tether",
+        body: {
+          data: [
+            {
+              grade: "A",
+              collateralization: 95,
+              smart_contract_audit: true,
+              date_of_rating: "2026-03-01",
+              date_last_change: "2026-02-15",
+            },
+          ],
+        },
+      },
+      {
+        match: "/coin-data/usdc",
+        body: { error: "down" },
+        status: 500,
+      },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["bluechip-ratings"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            "usdc-circle": {
+              grade: "B",
+            },
+          }),
+          updated_at: Math.floor(Date.now() / 1000) - 30_000,
+        },
+      },
+    ]);
+
+    const result = await syncBluechip(db);
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      ratingsFetched: number;
+      ratingsPublished: number;
+      retainedFromCache: number;
+    };
+    expect(metadata.ratingsFetched).toBe(1);
+    expect(metadata.ratingsPublished).toBe(1);
+    expect(metadata.retainedFromCache).toBe(0);
+
+    const insert = getCacheInsert(db as MockD1Database);
+    const cached = JSON.parse(String(insert?.binds[1])) as Record<string, { grade: string }>;
+    expect(cached).toEqual({
+      "usdt-tether": expect.objectContaining({ grade: "A" }),
+    });
+  });
+
   it("records json parse failures per slug without losing partial coverage", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     mockFetch([

@@ -34,8 +34,12 @@ import {
   type CollectorResult,
   type CollectorContext,
 } from "./daily-digest/collectors";
-import { buildUserPrompt, type DigestMeta, SYSTEM_PROMPT } from "./daily-digest/prompt";
+import { buildUserPrompt, SYSTEM_PROMPT } from "./daily-digest/prompt";
 import { parseDigestModelResponse } from "./daily-digest/response";
+import {
+  buildRecentDigestMeta,
+  logDailyDigestLlmCall,
+} from "./daily-digest/runtime-helpers";
 
 export { classifyRegime } from "./daily-digest/prompt";
 
@@ -86,23 +90,12 @@ export async function generateDailyDigest(
     }
   }
 
-  // Fetch last 7 digests so the model sees a wider window to avoid repetition
   const recentRows = await db
     .prepare("SELECT digest_title, digest_text, digest_extended, digest_meta FROM daily_digest ORDER BY generated_at DESC LIMIT 7")
     .all<{ digest_title: string | null; digest_text: string; digest_extended: string | null; digest_meta: string | null }>();
-  const recentMeta: { meta: DigestMeta | null; rawText: string | null; title: string | null }[] = (recentRows.results ?? []).map((r) => {
-    let meta: DigestMeta | null = null;
-    if (r.digest_meta) {
-      try { meta = JSON.parse(r.digest_meta) as DigestMeta; } catch { /* expected: legacy digest without structured meta */ }
-    }
-    const rawText = !meta ? (r.digest_title ? `${r.digest_title}: ${r.digest_text}` : r.digest_text) : null;
-    return { meta, rawText, title: r.digest_title ?? null };
-  });
+  const recentMeta = buildRecentDigestMeta(recentRows.results ?? []);
   const degradedReasons: string[] = [];
 
-  // --- Collect data ---
-
-  // 1. Total mcap + 7d delta from stablecoins cache
   const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
   if (stablecoinsCacheResult.kind !== "ok") {
     console.warn(`[daily-digest] stablecoins cache unavailable (${stablecoinsCacheResult.reason}), skipping regeneration`);
@@ -151,7 +144,6 @@ export async function generateDailyDigest(
     }
   }
 
-  // 2. Active depeg count + top depegs ranked by market impact (bps × mcap)
   const nowSec = Math.floor(Date.now() / 1000);
   const todayTs = nowSec - (nowSec % SECONDS.ONE_DAY);
   const yesterdayTs = todayTs - SECONDS.ONE_DAY;
@@ -160,8 +152,6 @@ export async function generateDailyDigest(
 
   const { activeDepegCount, topDepegs } = consumeCollectorResult(await collectActiveDepegs(ctx), degradedReasons);
 
-  // 3. Stability index — match homepage/stability page display logic
-  // Current source: latest 15-min sample, fallback to latest daily snapshot if needed
   const latestSample = await db
     .prepare("SELECT score, band, components FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
     .first<{ score: number; band: string; components: string }>();
@@ -172,7 +162,6 @@ export async function generateDailyDigest(
       .first<{ score: number; band: string; components: string }>();
   const currentPsiSource = latestSample ?? latestDaily;
 
-  // Displayed PSI on both pages is avg24h if available, else current source score
   const avg24hRow = await db
     .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?")
     .bind(nowSec - SECONDS.ONE_DAY)
@@ -206,7 +195,6 @@ export async function generateDailyDigest(
     ? { score: displayScore, band: displayBand, components: parsedComponents }
     : null;
 
-  // Yesterday: daily snapshot for comparison
   const yesterdayRow = await db
     .prepare("SELECT score, band FROM stability_index WHERE computed_at = ?")
     .bind(yesterdayTs)
@@ -215,12 +203,9 @@ export async function generateDailyDigest(
     ? { score: yesterdayRow.score, band: yesterdayRow.band }
     : null;
 
-  // --- Enrichment data collection via collectors ---
-
   const blacklistActivity = consumeCollectorResult(await collectBlacklistActivity(ctx), degradedReasons);
   const supplyVelocity = consumeCollectorResult(await collectSupplyVelocity(ctx), degradedReasons);
 
-  // Safety scores need "mentioned symbols" from earlier phases
   const mentionedSymbols = new Set<string>();
   for (const d of topDepegs) mentionedSymbols.add(d.symbol);
   if (biggestSupplyChange) mentionedSymbols.add(biggestSupplyChange.symbol);
@@ -237,7 +222,6 @@ export async function generateDailyDigest(
   const liquidityShifts = await collectLiquidityShifts(ctx);
   const crossDayTrends = await collectCrossDayTrends(ctx, degradedReasons);
 
-  // --- Build input data ---
   const inputData: DigestInputData = {
     digestVersion: 2,
     totalMcapUsd,
@@ -263,12 +247,19 @@ export async function generateDailyDigest(
   };
 
   const userPromptContent = buildUserPrompt(inputData, recentMeta);
-  console.log("[daily-digest] Calling Claude API with data:\n" + userPromptContent);
 
-  // --- Call Claude API ---
   if (!(await shouldAttemptFetch(db, CIRCUIT_SOURCE.ANTHROPIC))) {
     throw new Error("Anthropic circuit open — skipping LLM call");
   }
+  logDailyDigestLlmCall({
+    activeDepegCount,
+    topDepegs,
+    resolvedDepegs,
+    yieldAnomalies,
+    liquidityShifts,
+    recentMeta,
+    degradedReasons,
+  });
   const response = await fetchWithRetry(
     "https://api.anthropic.com/v1/messages",
     {
@@ -331,7 +322,6 @@ export async function generateDailyDigest(
     console.warn(`[daily-digest] Prompt compliance: stripped ${strippedForbiddenCharCount} chars of forbidden phrases`);
   }
 
-  // --- Store result ---
   const now = Math.floor(Date.now() / 1000);
   const DAILY_FILTER = "digest_meta IS NULL OR json_extract(digest_meta, '$.type') IS NULL OR json_extract(digest_meta, '$.type') != 'weekly'";
   const [, countResult] = await db.batch([
@@ -342,7 +332,6 @@ export async function generateDailyDigest(
   ]);
   const editionNumber = (countResult.results?.[0] as { cnt: number } | undefined)?.cnt ?? null;
 
-  // Post to Twitter if credentials are available
   let tweetStatus = "no-creds";
   if (twitterCreds) {
     const twitterAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.TWITTER_API);
@@ -361,7 +350,6 @@ export async function generateDailyDigest(
     }
   }
 
-  // Post to Telegram if credentials are available
   let telegramStatus = "no-creds";
   if (telegramCreds) {
     const telegramAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.TELEGRAM_API);

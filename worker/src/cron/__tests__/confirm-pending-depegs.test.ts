@@ -12,10 +12,17 @@ vi.mock("../../lib/cex-tickers", () => ({
   fetchBinancePrices: vi.fn(async () => new Map<string, number>()),
 }));
 
+vi.mock("../../lib/circuit-breaker", () => ({
+  shouldAttemptFetch: vi.fn(async () => true),
+  recordOutcomeSafe: vi.fn(async () => undefined),
+}));
+
 import { batchExecute } from "../../lib/db";
 import { fetchBinancePrices } from "../../lib/cex-tickers";
+import { recordOutcomeSafe } from "../../lib/circuit-breaker";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import {
+  CIRCUIT_SOURCE,
   DEPEG_PENDING_EXPIRY_SEC,
   DEPEG_PENDING_MIN_AGE_SEC,
 } from "../../lib/constants";
@@ -139,6 +146,7 @@ describe("confirmPendingDepegs", () => {
 
     expect(batchExecute).not.toHaveBeenCalled();
     expect(fetchWithRetry).not.toHaveBeenCalled();
+    expect(recordOutcomeSafe).not.toHaveBeenCalled();
   });
 
   it("cleans invalid, duplicate, recovered, young, and expired pending rows correctly", async () => {
@@ -509,6 +517,66 @@ describe("confirmPendingDepegs", () => {
 
     expect(errorSpy).not.toHaveBeenCalled();
     expect(batchExecute).not.toHaveBeenCalled();
+  });
+
+  it("records a successful Binance probe outcome when CEX confirmation data is available", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.mocked(fetchBinancePrices).mockResolvedValueOnce(new Map([["USDTUSDC", 0.9998]]));
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 22,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC + 60,
+          }),
+        ],
+      }),
+      [
+        makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: "tether", price: 0.94 }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    expect(recordOutcomeSafe).toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.BINANCE_PRICES,
+      true,
+    );
+  });
+
+  it("surfaces unexpected dex_prices failures instead of treating them as absent data", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(
+      confirmPendingDepegs(
+        makeDb({
+          pendingRows: [
+            makePendingRow({
+              id: 23,
+              stablecoin_id: "usdt-tether",
+              symbol: "USDT",
+              first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            }),
+          ],
+          dexError: new Error("database is locked"),
+        }),
+        [
+          makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: "tether", price: 0.94 }),
+          ...makeNeutralUsdAssets(),
+        ],
+      ),
+    ).rejects.toThrow("database is locked");
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      "[depeg-helpers] Unexpected error loading dex_prices:",
+      "database is locked",
+    );
   });
 
   it("promotes a pending depeg when individual pool prices confirm the deviation", async () => {

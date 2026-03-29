@@ -20,7 +20,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { throwIfAborted } from "../lib/abort";
-import { shouldAttemptFetch } from "../lib/circuit-breaker";
+import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
 import { fetchBinancePrices } from "../lib/cex-tickers";
 import {
   buildInsertDepegEventStmt,
@@ -101,8 +101,10 @@ export async function confirmPendingDepegs(
     throwIfAborted(signal);
     try {
       cexPrices = await fetchBinancePrices(signal);
+      await recordOutcomeSafe(db, CIRCUIT_SOURCE.BINANCE_PRICES, cexPrices.size > 0);
     } catch (err) {
       if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+      await recordOutcomeSafe(db, CIRCUIT_SOURCE.BINANCE_PRICES, false);
       cexPrices = null;
     }
   }

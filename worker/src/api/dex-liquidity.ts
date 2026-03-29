@@ -225,14 +225,13 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       )
       .bind(Math.floor(Date.now() / 1000) - 8 * 86_400) // 8 days back covers 7d comparison
       .all<DexHistoryRow>(),
-    // dex_prices uses a wider column set than loadDexPriceRows() (includes price_sources_json).
-    // Catch pattern mirrors depeg-helpers.ts loadDexPriceRows() for missing-table resilience (M-3).
     db.prepare("SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, price_sources_json, updated_at FROM dex_prices").all<DexPriceRow>().catch((err) => {
       const msg = err instanceof Error ? err.message : String(err);
-      if (!msg.includes("no such table")) {
-        console.error("[dex-liquidity] Unexpected error loading dex_prices:", msg);
+      if (msg.includes("no such table")) {
+        return { results: [] as DexPriceRow[] };
       }
-      return { results: [] as DexPriceRow[] };
+      console.error("[dex-liquidity] Unexpected error loading dex_prices:", msg);
+      throw err;
     }),
     db
       .prepare(

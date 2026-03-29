@@ -17,6 +17,7 @@ import {
   summarizeCollateralDriftFromLiveReserveMap,
   type CollateralDriftEntry,
 } from "./collateral-drift";
+import { parseBluechipRatingsCache } from "./bluechip-cache";
 import {
   METHODOLOGY_VERSION,
   DIMENSION_WEIGHTS,
@@ -183,14 +184,10 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
   const peggedAssets: StablecoinData[] = stablecoinsCached.payload.peggedAssets;
   const fxFallbackRates = stablecoinsCached.payload.fxFallbackRates;
 
-  let bluechipMap: Record<string, BluechipRating> = {};
-  if (bluechipCached) {
-    try {
-      bluechipMap = JSON.parse(bluechipCached.value) as Record<string, BluechipRating>;
-    } catch {
-      bluechipMap = {};
-    }
-  }
+  const bluechipMap: Record<string, BluechipRating> = parseBluechipRatingsCache(
+    bluechipCached?.value,
+    "report-cards-snapshot",
+  );
 
   const pegAnalytics = await derivePegAnalyticsSnapshot(db, {
     peggedAssets,

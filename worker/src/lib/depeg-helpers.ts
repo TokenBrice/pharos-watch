@@ -65,10 +65,11 @@ export async function loadDexPriceRows(db: D1Database): Promise<Map<string, DexP
     return new Map((dexResult.results ?? []).map((row) => [row.stablecoin_id, row]));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.includes("no such table")) {
-      console.error("[depeg-helpers] Unexpected error loading dex_prices:", msg);
+    if (msg.includes("no such table")) {
+      return new Map<string, DexPriceRow>();
     }
-    return new Map<string, DexPriceRow>();
+    console.error("[depeg-helpers] Unexpected error loading dex_prices:", msg);
+    throw err;
   }
 }
 

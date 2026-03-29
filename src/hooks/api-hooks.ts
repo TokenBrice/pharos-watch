@@ -4,6 +4,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
+  BluechipRatingsMapSchema,
   DexLiquidityMapSchema,
   HealthResponseSchema,
   PegSummaryResponseSchema,
@@ -52,7 +53,10 @@ export function useBluechipRatings() {
     ["bluechip-ratings"],
     API_PATHS.bluechipRatings(),
     CRON_24H,
-    { metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.bluechip },
+    {
+      schema: BluechipRatingsMapSchema,
+      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.bluechip,
+    },
   );
 }
 

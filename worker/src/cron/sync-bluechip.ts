@@ -7,6 +7,7 @@ import { fetchWithRetry } from "../lib/fetch-retry";
 import { validatePayloadWithSchema } from "../lib/api-utils";
 import { USER_AGENT, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
+import { parseBluechipRatingsCache } from "../lib/bluechip-cache";
 import { z } from "zod";
 
 const CACHE_KEY = "bluechip-ratings";
@@ -65,17 +66,6 @@ function extractSmidge(coin: Record<string, unknown>): BluechipSmidge {
   return smidge;
 }
 
-function parseExistingRatings(raw: string | null | undefined): Record<string, BluechipRating> {
-  if (!raw) return {};
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object") return {};
-    return parsed as Record<string, BluechipRating>;
-  } catch {
-    return {};
-  }
-}
-
 async function parseBluechipResponseJson(
   res: Response,
   slug: string,
@@ -102,7 +92,10 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
 
   const entries = Object.entries(BLUECHIP_SLUG_MAP);
   const existingCache = await getCache(db, CACHE_KEY);
-  const existingRatings = parseExistingRatings(existingCache?.value);
+  const existingRatings = parseBluechipRatingsCache(
+    existingCache?.value,
+    "sync-bluechip:existing-cache",
+  );
 
   // Process in batches of 3 with 500ms delay to avoid flooding backend.bluechip.org
   const BATCH_SIZE = 3;

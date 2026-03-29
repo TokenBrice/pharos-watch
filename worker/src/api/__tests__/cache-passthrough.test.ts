@@ -11,6 +11,26 @@ import {
   handleBluechipRatings,
 } from "../cache-handlers";
 
+function makeBluechipRating(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    grade: "A",
+    slug: "tether",
+    collateralization: 95,
+    smartContractAudit: true,
+    dateOfRating: "2026-03-01",
+    dateLastChange: null,
+    smidge: {
+      stability: "stable",
+      management: null,
+      implementation: null,
+      decentralization: null,
+      governance: null,
+      externals: null,
+    },
+    ...overrides,
+  };
+}
+
 function makeCacheDb(key: string, value: unknown, updatedAt: number) {
   const jsonValue = typeof value === "string" ? value : JSON.stringify(value);
   return mockD1([
@@ -119,11 +139,22 @@ describe("cache-passthrough: handleBluechipRatings", () => {
 
   it("returns 200 with concrete _meta on cache hit", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const db = makeCacheDb("bluechip-ratings", { "usdt-tether": { grade: "A" } }, nowSec - 120);
+    const db = makeCacheDb("bluechip-ratings", { "usdt-tether": makeBluechipRating() }, nowSec - 120);
     const res = await handleBluechipRatings(db);
     expect(res.status).toBe(200);
     const body = (await res.json()) as { _meta: { status: string; ageSeconds: number } };
     expect(body._meta.status).toBe("fresh");
     expect(body._meta.ageSeconds).toBe(120);
+  });
+
+  it("returns 503 when cached bluechip payload shape is malformed", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeCacheDb("bluechip-ratings", { "usdt-tether": { grade: "A" } }, nowSec - 120);
+    const res = await handleBluechipRatings(db);
+
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({
+      error: "Cached bluechip-ratings payload is malformed",
+    });
   });
 });

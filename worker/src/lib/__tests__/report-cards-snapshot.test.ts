@@ -69,6 +69,30 @@ function makeReportCardsDb(assets: ReturnType<typeof makeAsset>[] = []) {
   ]);
 }
 
+function makeReportCardsDbWithBluechipValue(
+  assets: ReturnType<typeof makeAsset>[],
+  bluechipValue: string,
+) {
+  const stablecoinsValue = JSON.stringify({ peggedAssets: assets });
+  return mockD1([
+    {
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: ["stablecoins"],
+      rows: [],
+      first: { value: stablecoinsValue, updated_at: nowSec },
+    },
+    {
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: ["bluechip-ratings"],
+      rows: [],
+      first: { value: bluechipValue, updated_at: nowSec },
+    },
+    { match: "dex_liquidity", rows: [] },
+    { match: "depeg_events", rows: [] },
+    { match: "supply_history", rows: [] },
+  ]);
+}
+
 describe("buildReportCardsSnapshot", () => {
   beforeEach(() => {
     loadRedemptionBackstopMapMock.mockReset();
@@ -253,5 +277,18 @@ describe("buildReportCardsSnapshot", () => {
 
     const response = await handleReportCards(db);
     expect(response.status).toBe(200);
+  });
+
+  it("ignores malformed bluechip cache payloads instead of failing the snapshot", async () => {
+    const db = makeReportCardsDbWithBluechipValue(
+      [makeAsset({ id: "usdt-tether", symbol: "USDT" })],
+      JSON.stringify({ "usdt-tether": { grade: "A" } }),
+    );
+
+    const snapshot = await buildReportCardsSnapshot(db);
+    const card = snapshot.cards.find((entry) => entry.id === "usdt-tether");
+
+    expect(card).toBeDefined();
+    expect(card?.rawInputs.bluechipGrade ?? null).toBeNull();
   });
 });

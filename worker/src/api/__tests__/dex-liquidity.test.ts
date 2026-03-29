@@ -45,6 +45,21 @@ describe("handleDexLiquidity", () => {
     expect(body).toEqual({});
   });
 
+  it("returns 500 when dex_prices fails unexpectedly", async () => {
+    const db = mockD1([
+      { match: "dex_liquidity", rows: [row] },
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [], throwError: new Error("database is locked") },
+    ]);
+
+    const res = await handleDexLiquidity(db);
+
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toEqual({
+      error: "Internal Server Error",
+    });
+  });
+
   it("includes v2 fields in response", async () => {
     const db = mockD1([
       { match: "dex_liquidity", rows: [row] },

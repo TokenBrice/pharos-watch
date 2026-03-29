@@ -1,6 +1,7 @@
 import type { ReportCard } from "@shared/types/report-cards";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { YieldRankingsResponseSchema, type YieldRanking, type YieldRankingsResponse } from "@shared/types/yield";
+import { BluechipRatingsMapSchema } from "@shared/types/market";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 import {
@@ -21,7 +22,40 @@ export const handleStablecoins = createCacheHandler("stablecoins", "stablecoins"
 
 export const handleStablecoinCharts = createCacheHandler("stablecoin-charts", "stablecoin-charts", CACHE_PROFILES.standard, 3600);
 
-export const handleBluechipRatings = createCacheHandler("bluechip-ratings", "bluechip-ratings", CACHE_PROFILES.slow, 43200);
+export const handleBluechipRatings = withErrorHandler(
+  "bluechip-ratings",
+  async (db: D1Database): Promise<Response> => {
+    const cached = await getCache(db, "bluechip-ratings");
+    if (!cached) {
+      return errorResponse(503, "Data not yet available");
+    }
+
+    const headers = addFreshnessHeaders({
+      "Content-Type": "application/json",
+      "Cache-Control": CACHE_PROFILES.slow,
+    }, cached.updatedAt, 43200);
+
+    const parsed = readCachedJsonOr503<unknown>("bluechip-ratings", "bluechip-ratings", cached);
+    if (!parsed.ok) {
+      return parsed.response;
+    }
+
+    const validation = validatePayloadWithSchema(
+      BluechipRatingsMapSchema,
+      parsed.data,
+      "bluechip-ratings:cache-read",
+    );
+    if (!validation.ok) {
+      return errorResponse(503, "Cached bluechip-ratings payload is malformed");
+    }
+
+    const body = {
+      ...validation.data,
+      _meta: buildFreshnessMeta(cached.updatedAt, 43200),
+    };
+    return jsonResponse(body, headers);
+  },
+);
 
 export const handleUsdsStatus = createCacheHandler("usds-status", "usds-status", CACHE_PROFILES.standard, DAY_SECONDS);
 
