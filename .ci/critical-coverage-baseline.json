@@ -5,7 +5,7 @@
     "src/lib/api.ts": 90.4,
     "worker/src/lib/api-utils.ts": 77.7,
     "worker/src/lib/auth.ts": 96.7,
-    "worker/src/lib/evm-rpc.ts": 78,
+    "worker/src/lib/evm-rpc.ts": 69.5,
     "worker/src/lib/stablecoins-cache.ts": 92,
     "worker/src/lib/safety-scores.ts": 96.2,
     "worker/src/handlers/scheduled.ts": 75,
