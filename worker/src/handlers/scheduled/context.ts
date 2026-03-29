@@ -4,7 +4,7 @@ import { logCronRun, type CronProgressReporter, type CronResult } from "../../li
 import { sendAlert, normalizeWebhookUrl } from "../../lib/alerts";
 import { normalizeCgApiKey } from "../../lib/coingecko";
 import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
-import { normalizeCronMetadata } from "../../lib/cron-metadata";
+import { normalizeCronMetadata, mergeCronMetadataWithLease } from "../../lib/cron-metadata";
 import { parseCsvEnv, type Env } from "../../lib/env";
 import {
   resolveMintBurnFreshnessConfig,
@@ -159,18 +159,10 @@ export function createScheduledRuntimeContext(
           scheduleKey: scheduled.scheduleKey,
         };
 
-        const normalized = normalizeCronMetadata(result);
-        let metadata = normalized;
-        if (!metadata) {
-          metadata = JSON.stringify(leaseMeta);
-        } else {
-          try {
-            const parsed = JSON.parse(metadata) as Record<string, unknown>;
-            metadata = JSON.stringify({ ...parsed, ...leaseMeta });
-          } catch {
-            metadata = `${metadata} | lease=${JSON.stringify(leaseMeta)}`;
-          }
-        }
+        const metadata = mergeCronMetadataWithLease(
+          normalizeCronMetadata(result),
+          leaseMeta,
+        );
 
         await reportProgress({
           stage: "completed",

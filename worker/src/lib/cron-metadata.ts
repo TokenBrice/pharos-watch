@@ -1,5 +1,18 @@
 import type { CronResult } from "./cron-logger";
 
+export function mergeCronMetadataWithLease(
+  cronMetadata: string | null | undefined,
+  leaseMeta: Record<string, unknown>,
+): string {
+  if (!cronMetadata) return JSON.stringify(leaseMeta);
+  try {
+    const parsed = JSON.parse(cronMetadata) as Record<string, unknown>;
+    return JSON.stringify({ ...parsed, ...leaseMeta });
+  } catch {
+    return `${cronMetadata} | lease=${JSON.stringify(leaseMeta)}`;
+  }
+}
+
 export function normalizeCronMetadata(
   result: CronResult | null | void,
   extras: Record<string, unknown> = {},
