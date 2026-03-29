@@ -339,6 +339,53 @@ type AerodromeSubgraphPair = {
   isStable: boolean;
 };
 
+function mapTrackedSubgraphPriceObservations(config: {
+  chain: string;
+  protocol: "uniswap-v3" | "aerodrome";
+  tvl: number;
+  tokenEntries: Array<{ symbol: string; address: string; usdPrice: number }>;
+  chainAddressToId: Map<string, string>;
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>;
+  references?: PriceValidationReferences;
+  identity: ReturnType<typeof buildPoolIdentity>;
+}): SubgraphPriceObservation[] {
+  const mapped: SubgraphPriceObservation[] = [];
+  const {
+    chain,
+    protocol,
+    tvl,
+    tokenEntries,
+    chainAddressToId,
+    symbolToChainScopedIds,
+    references,
+    identity,
+  } = config;
+
+  for (const { symbol, address, usdPrice } of tokenEntries) {
+    const resolved = resolveTrackedStablecoinId(
+      { chain, address, symbol },
+      { chainAddressToId, symbolToChainScopedIds },
+    );
+    if (resolved.status !== "matched" || !resolved.stablecoinId) continue;
+    if (!isPlausibleDexObservationPrice(resolved.stablecoinId, usdPrice, references)) continue;
+    mapped.push({
+      stablecoinId: resolved.stablecoinId,
+      obs: {
+        price: usdPrice,
+        tvl,
+        chain,
+        protocol,
+        poolKey: identity.exactPoolKey ?? undefined,
+        derivedMatchKey: identity.derivedMatchKey ?? undefined,
+        identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
+        sourceFamily: "dl",
+      },
+    });
+  }
+
+  return mapped;
+}
+
 /** Fetch Uniswap V3 subgraph data for fee tier enrichment + price observations. */
 export async function fetchUniV3Data(
   graphApiKey: string | null,
@@ -408,7 +455,6 @@ export async function fetchUniV3Data(
           pricedTokens.push({ symbol: sym1, address: pool.token1.id, usdPrice: token0Price });
         }
 
-        const mapped: SubgraphPriceObservation[] = [];
         const identity = buildPoolIdentity({
           chain,
           protocol: "uniswap-v3",
@@ -416,28 +462,16 @@ export async function fetchUniV3Data(
           tokenAddresses: [pool.token0.id, pool.token1.id],
           feeTierBps: feeTier / 100,
         });
-        for (const { symbol, address, usdPrice } of pricedTokens) {
-          const resolved = resolveTrackedStablecoinId(
-            { chain, address, symbol },
-            { chainAddressToId, symbolToChainScopedIds },
-          );
-          if (resolved.status !== "matched" || !resolved.stablecoinId) continue;
-          if (!isPlausibleDexObservationPrice(resolved.stablecoinId, usdPrice, references)) continue;
-          mapped.push({
-            stablecoinId: resolved.stablecoinId,
-            obs: {
-              price: usdPrice,
-              tvl,
-              chain,
-              protocol: "uniswap-v3",
-              poolKey: identity.exactPoolKey ?? undefined,
-              derivedMatchKey: identity.derivedMatchKey ?? undefined,
-              identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
-              sourceFamily: "dl",
-            },
-          });
-        }
-        return mapped;
+        return mapTrackedSubgraphPriceObservations({
+          chain,
+          protocol: "uniswap-v3",
+          tvl,
+          tokenEntries: pricedTokens,
+          chainAddressToId,
+          symbolToChainScopedIds,
+          references,
+          identity,
+        });
       },
     });
 
@@ -519,7 +553,6 @@ export async function fetchAerodromeData(
           { symbol: sym1, address: pair.token1.id, usdPrice: price1Usd },
         ];
 
-        const mapped: SubgraphPriceObservation[] = [];
         const identity = buildPoolIdentity({
           chain,
           protocol: "aerodrome",
@@ -527,28 +560,16 @@ export async function fetchAerodromeData(
           tokenAddresses: [pair.token0.id, pair.token1.id],
           isStable: pair.isStable,
         });
-        for (const { symbol, address, usdPrice } of pricedTokens) {
-          const resolved = resolveTrackedStablecoinId(
-            { chain, address, symbol },
-            { chainAddressToId, symbolToChainScopedIds },
-          );
-          if (resolved.status !== "matched" || !resolved.stablecoinId) continue;
-          if (!isPlausibleDexObservationPrice(resolved.stablecoinId, usdPrice, references)) continue;
-          mapped.push({
-            stablecoinId: resolved.stablecoinId,
-            obs: {
-              price: usdPrice,
-              tvl: reserveUSD,
-              chain,
-              protocol: "aerodrome",
-              poolKey: identity.exactPoolKey ?? undefined,
-              derivedMatchKey: identity.derivedMatchKey ?? undefined,
-              identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
-              sourceFamily: "dl",
-            },
-          });
-        }
-        return mapped;
+        return mapTrackedSubgraphPriceObservations({
+          chain,
+          protocol: "aerodrome",
+          tvl: reserveUSD,
+          tokenEntries: pricedTokens,
+          chainAddressToId,
+          symbolToChainScopedIds,
+          references,
+          identity,
+        });
       },
     });
 

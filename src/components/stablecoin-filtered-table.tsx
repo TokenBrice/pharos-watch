@@ -7,9 +7,10 @@ import { useStablecoins } from "@/hooks/use-stablecoins";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StablecoinTable } from "@/components/stablecoin-table";
 import { StaleDataBanner } from "@/components/stale-data-banner";
+import { buildPegSummaryCoinMap, buildReportCardMap } from "@/lib/stablecoin-lookups";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import type { FilterTag, PegSummaryCoin } from "@shared/types";
+import type { FilterTag } from "@shared/types";
 
 interface StablecoinFilteredTableProps {
   activeFilters: readonly FilterTag[];
@@ -23,19 +24,9 @@ export function StablecoinFilteredTable({ activeFilters, renderNotice }: Stablec
   const { data: dexLiquidity } = useDexLiquidity();
   const { data: reportCardsData } = useReportCards();
 
-  const pegScores = useMemo(() => {
-    const map = new Map<string, PegSummaryCoin>();
-    if (!pegSummaryData?.coins) return map;
-    for (const coin of pegSummaryData.coins) {
-      map.set(coin.id, coin);
-    }
-    return map;
-  }, [pegSummaryData]);
+  const pegScores = useMemo(() => buildPegSummaryCoinMap(pegSummaryData?.coins), [pegSummaryData?.coins]);
 
-  const reportCardMap = useMemo(() => {
-    if (!reportCardsData?.cards) return undefined;
-    return Object.fromEntries(reportCardsData.cards.map((card) => [card.id, card]));
-  }, [reportCardsData]);
+  const reportCardMap = useMemo(() => buildReportCardMap(reportCardsData?.cards), [reportCardsData?.cards]);
 
   const { rates: pegRates, sources: pegRateSources } = useMemo(
     () => derivePegRates(data?.peggedAssets ?? [], TRACKED_META_BY_ID, data?.fxFallbackRates),

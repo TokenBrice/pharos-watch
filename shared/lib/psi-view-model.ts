@@ -22,6 +22,16 @@ export interface PsiHistoryPointLike {
   band: string;
 }
 
+export interface PsiChartPoint {
+  ts: number;
+  score: number;
+}
+
+export interface PsiCurrentChartLike {
+  computedAt: number;
+  score: number;
+}
+
 export function getDisplayedPsi(current: PsiCurrentLike): { score: number; band: string } {
   return {
     score: current.avg24h ?? current.score,
@@ -69,4 +79,16 @@ export function upsertPsiHistoryPoint<T extends PsiHistoryPointLike>(
   point: T,
 ): T[] {
   return [point, ...history.filter((entry) => entry.date !== point.date)];
+}
+
+export function buildPsiChartData<T extends PsiHistoryPointLike>(
+  history: readonly T[] | null | undefined,
+  current: PsiCurrentChartLike | null | undefined,
+): PsiChartPoint[] {
+  if (!current || !history) return [];
+  const reversed = [...history].reverse();
+  return [
+    ...reversed.map((point) => ({ ts: point.date * 1000, score: point.score })),
+    { ts: current.computedAt * 1000, score: current.score },
+  ];
 }

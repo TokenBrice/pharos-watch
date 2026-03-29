@@ -156,8 +156,6 @@
   --sidebar-bg:        var(--surface-overlay);
   --sidebar-border:    var(--border-default);
   --sidebar-item-hover: var(--interactive-hover);
-  --sidebar-width-expanded: 220px;
-  --sidebar-width-collapsed: 56px;
 
   /* ── Component: Sidebar Dimensions ───────────────────────────── */
   --sidebar-width-expanded: 220px;
@@ -277,8 +275,6 @@
   --sidebar-bg:        var(--surface-overlay);
   --sidebar-border:    var(--border-default);
   --sidebar-item-hover: var(--interactive-hover);
-  --sidebar-width-expanded: 220px;
-  --sidebar-width-collapsed: 56px;
 
   /* ── Component: Sidebar Dimensions ───────────────────────────── */
   --sidebar-width-expanded: 220px;

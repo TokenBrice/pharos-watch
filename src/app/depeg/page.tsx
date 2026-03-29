@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CalloutBanner } from "@/components/callout-banner";
 import { ShareButton } from "@/components/share-button";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
-import { buildPageMetadata } from "@/lib/page-metadata";
+import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
@@ -19,7 +19,7 @@ export const metadata = buildPageMetadata({
   title: "Depeg Tracker: Live Peg Monitoring & Early Warnings",
   description: depegDescription,
   canonical: "/depeg/",
-  ogImage: "https://api.pharos.watch/api/og/depeg",
+  ogImage: buildApiOgImageUrl("/api/og/depeg"),
 });
 
 const faqJsonLd = buildFaqJsonLd([

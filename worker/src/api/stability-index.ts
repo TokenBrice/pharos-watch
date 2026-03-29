@@ -25,40 +25,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 type PsiJsonDecodeReason = "missing" | "json-parse-failed" | "invalid-shape";
 
-function decodePsiComponents(
-  value: string | null,
-  updatedAt: number,
-  context: string,
-): { ok: true; value: Record<string, unknown> } | { ok: false; reason: PsiJsonDecodeReason } {
-  const decoded = decodeJsonString<Record<string, unknown>, PsiJsonDecodeReason>(value, {
-    mode: "strict",
-    updatedAt,
-    missingReason: "missing",
-    parseErrorReason: "json-parse-failed",
-    normalize: (parsed) => {
-      if (!isRecord(parsed)) {
-        return { ok: false, reason: "invalid-shape" };
-      }
-      return { ok: true, payload: parsed };
-    },
-  });
-
-  if (!decoded.ok) {
-    logMalformedJsonPath({
-      scope: "api",
-      owner: "stability-index",
-      context,
-      reason: decoded.reason,
-      source: "stability_index",
-      updatedAt,
-    });
-    return { ok: false, reason: decoded.reason };
-  }
-
-  return { ok: true, value: decoded.payload };
-}
-
-function decodePsiInputSnapshot(
+function decodePsiObjectField(
   value: string | null,
   updatedAt: number,
   context: string,
@@ -143,7 +110,7 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
   // Build current from latest sample, falling back to latest history row
   const currentSource = latestSample ?? results[0];
   const computedAt = latestSample ? latestSample.stored_at : (results[0]?.computed_at ?? now);
-  const currentComponents = decodePsiComponents(
+  const currentComponents = decodePsiObjectField(
     currentSource.components,
     computedAt,
     "current.components",
@@ -151,7 +118,7 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
   if (!currentComponents.ok) {
     return errorResponse(503, "PSI current components payload is malformed");
   }
-  const snapshot = decodePsiInputSnapshot(
+  const snapshot = decodePsiObjectField(
     currentSource.input_snapshot,
     computedAt,
     "current.input_snapshot",
@@ -178,7 +145,7 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
       };
     }
 
-    const decodedHistoryComponents = decodePsiComponents(
+    const decodedHistoryComponents = decodePsiObjectField(
       r.components,
       r.computed_at,
       "history.components",

@@ -1,5 +1,4 @@
 import { computeCentralizedCustodyFraction } from "@shared/lib/centralized-custody";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
   isReserveDriftThresholdExceeded,
   STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT,
@@ -20,6 +19,11 @@ import type {
 import { computeCollateralQualityFromReserves } from "@shared/lib/report-cards";
 import { cgHeaders, cgUrl } from "../lib/coingecko";
 import { USER_AGENT } from "../lib/constants";
+import {
+  DISCOVERY_CANDIDATE_SELECT_COLUMNS,
+  mapDiscoveryCandidateRow,
+  type DiscoveryCandidateRow,
+} from "../lib/discovery-candidates";
 import { loadFreshIndependentLiveReserveMap } from "../lib/live-reserves-store";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { getMintBurnReconciliation } from "../lib/status/derived-data";
@@ -154,21 +158,9 @@ export async function loadStatusSupplements(
   let discoveryCandidates: DiscoveryCandidate[] | null = null;
   try {
     const discRows = await db.prepare(
-      "SELECT id, gecko_id, llama_id, name, symbol, market_cap, source, first_seen, last_seen, dismissed FROM discovery_candidates WHERE dismissed = 0 ORDER BY market_cap DESC LIMIT 20",
-    ).all();
-    discoveryCandidates = (discRows.results ?? []).map((row: Record<string, unknown>) => ({
-      id: row.id as number,
-      geckoId: row.gecko_id as string | null,
-      llamaId: row.llama_id as number | null,
-      name: row.name as string,
-      symbol: row.symbol as string,
-      marketCap: row.market_cap as number | null,
-      source: row.source as "defillama" | "coingecko" | "both",
-      firstSeen: row.first_seen as number,
-      lastSeen: row.last_seen as number,
-      daysSeen: Math.max(1, Math.floor((now - (row.first_seen as number)) / DAY_SECONDS)),
-      dismissed: false,
-    }));
+      `SELECT ${DISCOVERY_CANDIDATE_SELECT_COLUMNS} FROM discovery_candidates WHERE dismissed = 0 ORDER BY market_cap DESC LIMIT 20`,
+    ).all<DiscoveryCandidateRow>();
+    discoveryCandidates = (discRows.results ?? []).map((row) => mapDiscoveryCandidateRow(row, now));
   } catch (err) {
     console.warn("[status] Discovery candidates query failed:", err);
     sectionErrors.discoveryCandidates = sectionError(

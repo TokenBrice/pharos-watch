@@ -180,6 +180,26 @@ async function evaluateProbeResponse(
   }
 }
 
+function buildProbeResult(config: {
+  path: string;
+  startedAt: number;
+  status: number;
+  ok: boolean;
+  error?: string;
+  bootstrapMiss?: boolean;
+  semanticStatus?: StatusLevel;
+}): ProbeResult {
+  return {
+    path: config.path,
+    status: config.status,
+    latencyMs: Math.max(0, Date.now() - config.startedAt),
+    ok: config.ok,
+    ...(config.error ? { error: config.error } : {}),
+    ...(config.bootstrapMiss ? { bootstrapMiss: true } : {}),
+    ...(config.semanticStatus ? { semanticStatus: config.semanticStatus } : {}),
+  };
+}
+
 async function probePathExternally(
   path: string,
   probeBaseUrl: URL,
@@ -200,22 +220,22 @@ async function probePathExternally(
     });
     const status = res.status;
     const semantic = await evaluateProbeResponse(path, res);
-    return {
+    return buildProbeResult({
       path,
+      startedAt,
       status,
-      latencyMs: Math.max(0, Date.now() - startedAt),
       ok: semantic.ok,
-      ...(semantic.error ? { error: semantic.error } : {}),
-      ...(semantic.semanticStatus ? { semanticStatus: semantic.semanticStatus } : {}),
-    };
+      error: semantic.error,
+      semanticStatus: semantic.semanticStatus,
+    });
   } catch (error) {
-    return {
+    return buildProbeResult({
       path,
+      startedAt,
       status: 0,
-      latencyMs: Math.max(0, Date.now() - startedAt),
       ok: false,
       error: timeout.isTimedOut() ? "timeout" : (error instanceof Error ? error.message : String(error)),
-    };
+    });
   } finally {
     timeout.dispose();
   }
@@ -249,44 +269,44 @@ async function probePathInternally(
       mintBurnFreshnessConfig,
     });
     if (!response) {
-      return {
+      return buildProbeResult({
         path,
+        startedAt,
         status: 404,
-        latencyMs: Math.max(0, Date.now() - startedAt),
         ok: false,
         error: "route-not-found",
-      };
+      });
     }
     const status = response.status;
     const bootstrapMiss = await isBootstrapCacheMiss(db, path, status);
     if (bootstrapMiss) {
       await cancelResponseBodyQuietly(response);
-      return {
+      return buildProbeResult({
         path,
+        startedAt,
         status,
-        latencyMs: Math.max(0, Date.now() - startedAt),
         ok: true,
         error: "bootstrap-cache-miss",
         bootstrapMiss: true,
-      };
+      });
     }
     const semantic = await evaluateProbeResponse(path, response);
-    return {
+    return buildProbeResult({
       path,
+      startedAt,
       status,
-      latencyMs: Math.max(0, Date.now() - startedAt),
       ok: semantic.ok,
-      ...(semantic.error ? { error: semantic.error } : {}),
-      ...(semantic.semanticStatus ? { semanticStatus: semantic.semanticStatus } : {}),
-    };
+      error: semantic.error,
+      semanticStatus: semantic.semanticStatus,
+    });
   } catch (error) {
-    return {
+    return buildProbeResult({
       path,
+      startedAt,
       status: 0,
-      latencyMs: Math.max(0, Date.now() - startedAt),
       ok: false,
       error: error instanceof Error ? error.message : String(error),
-    };
+    });
   }
 }
 

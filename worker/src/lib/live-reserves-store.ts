@@ -174,6 +174,21 @@ export interface ReserveSnapshotMetadataRecord {
   syncStatus: ReserveSyncStatus;
 }
 
+const RESERVE_SYNC_STATE_SELECT_COLUMNS = [
+  "stablecoin_id",
+  "adapter_key",
+  "breaker_key",
+  "last_attempted_at",
+  "last_success_at",
+  "last_status",
+  "warning_count",
+  "warnings",
+  "last_error",
+  "metadata",
+  "last_attempt_id",
+  "pending_attempt_id",
+  "last_success_attempt_id",
+].join(", ");
 
 export function getConfiguredLiveReserveCoins(): StablecoinMeta[] {
   return ACTIVE_STABLECOINS.filter((coin) => !!coin.liveReservesConfig);
@@ -192,6 +207,24 @@ export function didReserveSyncAttemptFinalizeAsSuccess(
   attemptId: string,
 ): boolean {
   return syncState?.lastSuccessAttemptId === attemptId;
+}
+
+function mapReserveSyncStateRow(row: ReserveSyncStateRow): ReserveSyncStateRecord {
+  return {
+    stablecoinId: row.stablecoin_id,
+    adapterKey: row.adapter_key,
+    breakerKey: row.breaker_key,
+    lastAttemptedAt: row.last_attempted_at,
+    lastSuccessAt: row.last_success_at,
+    lastStatus: row.last_status,
+    warningCount: row.warning_count,
+    warnings: parseWarnings(row.warnings),
+    lastError: row.last_error,
+    metadata: parseSnapshotMetadata(row.metadata),
+    lastAttemptId: row.last_attempt_id ?? null,
+    pendingAttemptId: row.pending_attempt_id ?? null,
+    lastSuccessAttemptId: row.last_success_attempt_id ?? null,
+  };
 }
 
 export async function upsertReserveComposition(
@@ -317,9 +350,7 @@ export async function getReserveSyncState(
 ): Promise<ReserveSyncStateRecord | null> {
   const row = await db
     .prepare(
-      `SELECT stablecoin_id, adapter_key, breaker_key, last_attempted_at, last_success_at,
-              last_status, warning_count, warnings, last_error, metadata,
-              last_attempt_id, pending_attempt_id, last_success_attempt_id
+      `SELECT ${RESERVE_SYNC_STATE_SELECT_COLUMNS}
          FROM reserve_sync_state
         WHERE stablecoin_id = ?`,
     )
@@ -327,22 +358,7 @@ export async function getReserveSyncState(
     .first<ReserveSyncStateRow>();
 
   if (!row) return null;
-
-  return {
-    stablecoinId: row.stablecoin_id,
-    adapterKey: row.adapter_key,
-    breakerKey: row.breaker_key,
-    lastAttemptedAt: row.last_attempted_at,
-    lastSuccessAt: row.last_success_at,
-    lastStatus: row.last_status,
-    warningCount: row.warning_count,
-    warnings: parseWarnings(row.warnings),
-    lastError: row.last_error,
-    metadata: parseSnapshotMetadata(row.metadata),
-    lastAttemptId: row.last_attempt_id ?? null,
-    pendingAttemptId: row.pending_attempt_id ?? null,
-    lastSuccessAttemptId: row.last_success_attempt_id ?? null,
-  };
+  return mapReserveSyncStateRow(row);
 }
 
 export async function loadReserveSyncStateMap(
@@ -358,9 +374,7 @@ export async function loadReserveSyncStateMap(
     const inClause = buildInClause(batch);
     const rows = await db
       .prepare(
-        `SELECT stablecoin_id, adapter_key, breaker_key, last_attempted_at, last_success_at,
-                last_status, warning_count, warnings, last_error, metadata,
-                last_attempt_id, pending_attempt_id, last_success_attempt_id
+        `SELECT ${RESERVE_SYNC_STATE_SELECT_COLUMNS}
            FROM reserve_sync_state
           WHERE stablecoin_id IN (${inClause.sql})`,
       )
@@ -368,21 +382,7 @@ export async function loadReserveSyncStateMap(
       .all<ReserveSyncStateRow>();
 
     for (const row of rows.results ?? []) {
-      result.set(row.stablecoin_id, {
-        stablecoinId: row.stablecoin_id,
-        adapterKey: row.adapter_key,
-        breakerKey: row.breaker_key,
-        lastAttemptedAt: row.last_attempted_at,
-        lastSuccessAt: row.last_success_at,
-        lastStatus: row.last_status,
-        warningCount: row.warning_count,
-        warnings: parseWarnings(row.warnings),
-        lastError: row.last_error,
-        metadata: parseSnapshotMetadata(row.metadata),
-        lastAttemptId: row.last_attempt_id ?? null,
-        pendingAttemptId: row.pending_attempt_id ?? null,
-        lastSuccessAttemptId: row.last_success_attempt_id ?? null,
-      });
+      result.set(row.stablecoin_id, mapReserveSyncStateRow(row));
     }
   }
 

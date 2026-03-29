@@ -148,6 +148,30 @@ function appendResolvedYieldCandidates(
   }
 }
 
+function appendResolvedAutoDiscoveredYield(
+  resolved: ResolvedYieldEntry[],
+  autoDiscoveredIds: Set<string>,
+  meta: { id: string; symbol: string },
+  pool: Pick<DlPool, "apy" | "apyBase" | "apyReward" | "pool" | "tvlUsd" | "project">,
+): void {
+  resolved.push({
+    id: meta.id,
+    symbol: meta.symbol,
+    yield: {
+      currentApy: pool.apy,
+      apyBase: pool.apyBase,
+      apyReward: pool.apyReward,
+      sourcePool: pool.pool,
+      sourceTvlUsd: pool.tvlUsd,
+      dataSource: "defillama-auto",
+      exchangeRate: null,
+      sourceKey: pool.pool,
+      project: pool.project,
+    },
+  });
+  autoDiscoveredIds.add(meta.id);
+}
+
 async function runTimedOptionalSource<T>(
   label: string,
   timeoutMs: number,
@@ -592,22 +616,7 @@ export async function resolveYieldSources({
       const meta = TRACKED_META_BY_ID.get(stablecoinId);
       if (!meta) continue;
 
-      resolved.push({
-        id: meta.id,
-        symbol: meta.symbol,
-        yield: {
-          currentApy: pool.apy,
-          apyBase: pool.apyBase,
-          apyReward: pool.apyReward,
-          sourcePool: pool.pool,
-          sourceTvlUsd: pool.tvlUsd,
-          dataSource: "defillama-auto",
-          exchangeRate: null,
-          sourceKey: pool.pool,
-          project: pool.project,
-        },
-      });
-      autoDiscoveredIds.add(meta.id);
+      appendResolvedAutoDiscoveredYield(resolved, autoDiscoveredIds, meta, pool);
       autoCount++;
       deterministicCount++;
     }
@@ -653,22 +662,7 @@ export async function resolveYieldSources({
         continue;
       }
 
-      resolved.push({
-        id: meta.id,
-        symbol: meta.symbol,
-        yield: {
-          currentApy: pool.apy,
-          apyBase: pool.apyBase,
-          apyReward: pool.apyReward,
-          sourcePool: pool.pool,
-          sourceTvlUsd: pool.tvlUsd,
-          dataSource: "defillama-auto",
-          exchangeRate: null,
-          sourceKey: pool.pool,
-          project: pool.project,
-        },
-      });
-      autoDiscoveredIds.add(meta.id);
+      appendResolvedAutoDiscoveredYield(resolved, autoDiscoveredIds, meta, pool);
       autoCount++;
     }
 

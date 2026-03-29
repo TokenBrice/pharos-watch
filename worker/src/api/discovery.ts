@@ -1,6 +1,10 @@
 import { jsonResponse, errorResponse, parseQueryParams, withErrorHandler } from "../lib/api-utils";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { DiscoveryCandidate } from "@shared/types/status";
+import {
+  DISCOVERY_CANDIDATE_SELECT_COLUMNS,
+  mapDiscoveryCandidateRow,
+  type DiscoveryCandidateRow,
+} from "../lib/discovery-candidates";
 
 function parseDiscoveryStatus(value: string | null): "active" | "dismissed" | "all" | Response {
   if (value == null) {
@@ -47,26 +51,16 @@ export const handleDiscoveryCandidates = withErrorHandler("discovery-candidates"
 
   const [rows, countResult] = await Promise.all([
     db.prepare(
-      `SELECT id, gecko_id, llama_id, name, symbol, market_cap, source, first_seen, last_seen, dismissed FROM discovery_candidates ${whereClause} ORDER BY market_cap DESC LIMIT ? OFFSET ?`,
-    ).bind(limit, offset).all(),
+      `SELECT ${DISCOVERY_CANDIDATE_SELECT_COLUMNS} FROM discovery_candidates ${whereClause} ORDER BY market_cap DESC LIMIT ? OFFSET ?`,
+    ).bind(limit, offset).all<DiscoveryCandidateRow>(),
     db.prepare(
       `SELECT COUNT(*) as total FROM discovery_candidates ${whereClause}`,
     ).all(),
   ]);
 
-  const candidates: DiscoveryCandidate[] = (rows.results ?? []).map((row: Record<string, unknown>) => ({
-    id: row.id as number,
-    geckoId: row.gecko_id as string | null,
-    llamaId: row.llama_id as number | null,
-    name: row.name as string,
-    symbol: row.symbol as string,
-    marketCap: row.market_cap as number | null,
-    source: row.source as "defillama" | "coingecko" | "both",
-    firstSeen: row.first_seen as number,
-    lastSeen: row.last_seen as number,
-    daysSeen: Math.max(1, Math.floor((nowSec - (row.first_seen as number)) / DAY_SECONDS)),
-    dismissed: (row.dismissed as number) === 1,
-  }));
+  const candidates: DiscoveryCandidate[] = (rows.results ?? []).map((row) =>
+    mapDiscoveryCandidateRow(row, nowSec)
+  );
 
   const total = ((countResult.results?.[0] as Record<string, unknown>)?.total as number) ?? 0;
 

@@ -17,6 +17,7 @@ import { trackEvent } from "@/lib/analytics";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { PSI_HEX_COLORS } from "@shared/lib/psi-colors";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { buildPsiChartData } from "@shared/lib/psi-view-model";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 
@@ -352,12 +353,7 @@ export function PsiHistoryChart({
   const current = data?.current;
 
   const chartData = useMemo(() => {
-    if (!current || !history) return [];
-    const reversed = [...history].reverse();
-    return [
-      ...reversed.map((p) => ({ ts: p.date * 1000, score: p.score })),
-      { ts: current.computedAt * 1000, score: current.score },
-    ];
+    return buildPsiChartData(history, current);
   }, [current, history]);
 
   if (isLoading) {

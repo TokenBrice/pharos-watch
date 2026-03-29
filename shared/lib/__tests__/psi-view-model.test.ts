@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildPsiChartData,
   getCompletedPsiHistory,
   getDisplayedPsi,
   getPsiBandStreak,
@@ -107,6 +108,29 @@ describe("psi-view-model", () => {
         { date: todayMidnight, score: 80, band: "STEADY" },
         { date: yesterday, score: 76, band: "STEADY" },
       ]);
+    });
+  });
+
+  describe("buildPsiChartData", () => {
+    it("returns historical points in chronological order with the current point appended", () => {
+      const chart = buildPsiChartData(
+        [
+          { date: yesterday, score: 76, band: "STEADY" },
+          { date: twoDaysAgo, score: 74, band: "TREMOR" },
+        ],
+        { computedAt, score: 78 },
+      );
+
+      expect(chart).toEqual([
+        { ts: twoDaysAgo * 1000, score: 74 },
+        { ts: yesterday * 1000, score: 76 },
+        { ts: computedAt * 1000, score: 78 },
+      ]);
+    });
+
+    it("returns an empty array when current or history is missing", () => {
+      expect(buildPsiChartData(null, { computedAt, score: 78 })).toEqual([]);
+      expect(buildPsiChartData([{ date: yesterday, score: 76, band: "STEADY" }], null)).toEqual([]);
     });
   });
 });

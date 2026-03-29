@@ -1,7 +1,7 @@
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
-import { cgUrl, cgHeaders } from "../lib/coingecko";
+import { fetchCoinGeckoMarketHistory } from "../lib/coingecko-market-history";
 import { batchExecute } from "../lib/db";
 import { jsonResponse } from "../lib/api-utils";
 import { binarySearchNearest } from "../lib/binary-search";
@@ -9,6 +9,7 @@ import { resolveMarketCap } from "../lib/resolve-market-cap";
 import { selectBackfillCoins } from "../lib/backfill-query";
 import { buildAdminJobSummary, noAdminTargetsResponse, runAdminJob } from "../lib/admin-job";
 import { fetchWithRetry } from "../lib/fetch-retry";
+import { buildPriceMapByDate } from "./stablecoin-detail/shared";
 
 const DEFAULT_BATCH_SIZE = 10;
 
@@ -31,77 +32,41 @@ async function backfillCommodity(
   id: string,
   config: { geckoId: string; protocolSlug?: string; cgApiKey?: string | null },
 ): Promise<{ rows: number; error?: string }> {
-  const apiKey = config.cgApiKey ?? null;
-  // Fetch market_chart (prices + market_caps) and current circulating_supply in parallel
-  const [cgRes, coinRes] = await Promise.all([
-    fetchWithRetry(cgUrl(`/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`, apiKey), {
-      headers: cgHeaders({ "User-Agent": USER_AGENT }, apiKey),
-    }),
-    fetchWithRetry(
-      cgUrl(
-        `/coins/${config.geckoId}?market_data=true&localization=false&tickers=false&community_data=false&developer_data=false`,
-        apiKey,
-      ),
-      { headers: cgHeaders({ "User-Agent": USER_AGENT }, apiKey) },
-    ),
-  ]);
-
-  if (!cgRes?.ok) {
-    await coinRes?.body?.cancel();
-  } else {
-    const cgData = (await cgRes.json()) as {
-      market_caps: [number, number][];
-      prices?: [number, number][];
-    };
-
-    // Extract current circulating_supply as proxy for historical sanity check.
-    // Works for slow-growth RWAs (e.g. physical silver vaults) where today's
-    // supply is a reliable anchor against corrupt historical market_caps.
-    let circulatingSupply: number | undefined;
-    if (coinRes?.ok) {
-      const coinData = (await coinRes.json()) as {
-        market_data?: { circulating_supply?: number };
-      };
-      circulatingSupply = coinData.market_data?.circulating_supply ?? undefined;
-    } else {
+  const marketHistory = await fetchCoinGeckoMarketHistory(config.geckoId, {
+    apiKey: config.cgApiKey ?? null,
+    onCoinDetailFailure: (status) => {
       console.warn(
-        `[backfill-commodity] ${config.geckoId}: coin detail fetch failed (${coinRes?.status ?? "no response"}), sanity check skipped`,
+        `[backfill-commodity] ${config.geckoId}: coin detail fetch failed (${status}), sanity check skipped`,
+      );
+    },
+  });
+
+  if (marketHistory?.marketCaps.length) {
+    const priceMap = buildPriceMapByDate(marketHistory.prices);
+    const stmts: D1PreparedStatement[] = [];
+
+    for (const [ts, mcap] of marketHistory.marketCaps) {
+      if (mcap <= 0) continue;
+      const snapshotDate = Math.floor(ts / 1000 / DAY_SECONDS) * DAY_SECONDS;
+      const price = priceMap.get(new Date(ts).toISOString().slice(0, 10)) ?? null;
+      const resolvedMcap =
+        price != null
+          ? resolveMarketCap(mcap, marketHistory.circulatingSupply, price)
+          : mcap;
+
+      stmts.push(
+        db
+          .prepare(
+            "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
+          )
+          .bind(id, snapshotDate, resolvedMcap, price),
       );
     }
 
-    const mcaps = cgData.market_caps ?? [];
-    if (mcaps.length > 0) {
-      const priceMap = new Map<number, number>();
-      if (cgData.prices) {
-        for (const [ts, p] of cgData.prices) {
-          const snapshotDate = Math.floor(ts / 1000 / DAY_SECONDS) * DAY_SECONDS;
-          priceMap.set(snapshotDate, p);
-        }
-      }
-
-      const stmts: D1PreparedStatement[] = [];
-      for (const [ts, mcap] of mcaps) {
-        if (mcap <= 0) continue;
-        const snapshotDate = Math.floor(ts / 1000 / DAY_SECONDS) * DAY_SECONDS;
-        const price = priceMap.get(snapshotDate) ?? null;
-
-        // Validate historical mcap via supply×price when price is available
-        const resolvedMcap = price != null ? resolveMarketCap(mcap, circulatingSupply, price) : mcap;
-
-        stmts.push(
-          db
-            .prepare(
-              "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
-            )
-            .bind(id, snapshotDate, resolvedMcap, price),
-        );
-      }
-
-      if (stmts.length > 0) {
-        await batchExecute(db, stmts);
-      }
-      return { rows: stmts.length };
+    if (stmts.length > 0) {
+      await batchExecute(db, stmts);
     }
+    return { rows: stmts.length };
   }
 
   // Fallback: protocol TVL (only if TVL ≈ mcap)

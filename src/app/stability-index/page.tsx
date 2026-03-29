@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { FaqSection } from "@/components/faq-section";
-import { buildPageMetadata } from "@/lib/page-metadata";
+import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import type { FaqItem } from "@/lib/faq";
 import {
@@ -14,7 +14,7 @@ export const metadata = buildPageMetadata({
   title: "Stability Index: Pharos Stablecoin Market Health",
   description,
   canonical: "/stability-index/",
-  ogImage: "https://api.pharos.watch/api/og/stability-index",
+  ogImage: buildApiOgImageUrl("/api/og/stability-index"),
 });
 
 const FAQ_ITEMS = [

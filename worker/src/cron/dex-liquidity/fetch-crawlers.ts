@@ -12,7 +12,6 @@ import { fetchGtTokenPools, getGtPoolType, parseGtPool } from "./geckoterminal-s
 import { classifyCgPool, parseCgPool } from "./coingecko-onchain-shared";
 import {
   getGtDexQuality,
-  initMetrics,
 } from "./pool-helpers";
 import { buildChainAddresses, type ProviderChainAddress } from "./fetch-primary";
 import { crawlTokenPools, type CrawlStats, type CrawlToken } from "./crawl-helpers";
@@ -26,6 +25,29 @@ function buildCrawlTokens(chainAddresses: Map<string, ProviderChainAddress[]>): 
     }
   }
   return tokens;
+}
+
+function mergeSecondaryPools<TPool extends GtNewPool | CgNewPool>(
+  metrics: Map<string, LiquidityMetrics>,
+  discoveredPools: Map<string, TPool[]>,
+  options?: {
+    onPoolMerged?: (pool: TPool) => void;
+  },
+): number {
+  let merged = 0;
+
+  for (const [stablecoinId, pools] of discoveredPools) {
+    const meta = TRACKED_META_BY_ID.get(stablecoinId);
+    if (!meta) continue;
+
+    for (const pool of pools) {
+      addSecondaryPoolContribution(metrics, stablecoinId, meta.symbol, pool);
+      options?.onPoolMerged?.(pool);
+      merged++;
+    }
+  }
+
+  return merged;
 }
 
 /** Crawl CG onchain pools for all tracked stablecoins.
@@ -123,26 +145,12 @@ export function mergeCgPools(
   metrics: Map<string, LiquidityMetrics>,
   cgNewPools: Map<string, CgNewPool[]>,
 ): void {
-  let merged = 0;
   let withBalance = 0;
-
-  for (const [stablecoinId, pools] of cgNewPools) {
-    const meta = TRACKED_META_BY_ID.get(stablecoinId);
-    if (!meta) continue;
-
-    let m = metrics.get(stablecoinId);
-    if (!m) {
-      m = initMetrics(stablecoinId, meta.symbol);
-      metrics.set(stablecoinId, m);
-    }
-
-    for (const pool of pools) {
-      addSecondaryPoolContribution(metrics, stablecoinId, meta.symbol, pool);
-      m = metrics.get(stablecoinId)!;
+  const merged = mergeSecondaryPools(metrics, cgNewPools, {
+    onPoolMerged: (pool) => {
       if (pool.balanceRatio != null) withBalance++;
-      merged++;
-    }
-  }
+    },
+  });
 
   if (merged > 0) {
     console.log(`[dex-liquidity] Merged ${merged} CG pools into ${cgNewPools.size} stablecoins (${withBalance} with balance data)`);
@@ -243,24 +251,7 @@ export function mergeGtPools(
   metrics: Map<string, LiquidityMetrics>,
   gtNewPools: Map<string, GtNewPool[]>,
 ): void {
-  let merged = 0;
-
-  for (const [stablecoinId, pools] of gtNewPools) {
-    const meta = TRACKED_META_BY_ID.get(stablecoinId);
-    if (!meta) continue;
-
-    let m = metrics.get(stablecoinId);
-    if (!m) {
-      m = initMetrics(stablecoinId, meta.symbol);
-      metrics.set(stablecoinId, m);
-    }
-
-    for (const pool of pools) {
-      addSecondaryPoolContribution(metrics, stablecoinId, meta.symbol, pool);
-      m = metrics.get(stablecoinId)!;
-      merged++;
-    }
-  }
+  const merged = mergeSecondaryPools(metrics, gtNewPools);
 
   if (merged > 0) {
     console.log(`[dex-liquidity] Merged ${merged} GT pools into ${gtNewPools.size} stablecoins`);

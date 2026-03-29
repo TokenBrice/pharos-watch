@@ -5,6 +5,13 @@ import { RUB_FALLBACK, USER_AGENT, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { loadFxRateState, persistFxRateState } from "../lib/fx-rate-state";
+import {
+  EXPECTED_FX_PEG_KEYS,
+  isValidFxRate,
+  PRIMARY_CURRENCY_TO_PEG,
+  PRIMARY_FX_CURRENCIES,
+  SECONDARY_FX_CURRENCY_TO_PEG,
+} from "../lib/fx-config";
 import { loadCommodityPeerMedianReference, resolveMetalReferenceRates } from "../lib/fx-metals";
 import {
   FxSyncRunState,
@@ -30,82 +37,9 @@ import { z } from "zod";
  * Runs every 15 minutes.
  */
 
-const CURRENCIES = ["EUR", "GBP", "CHF", "BRL", "JPY", "IDR", "SGD", "TRY", "AUD", "ZAR", "CAD", "CNY", "PHP", "MXN"] as const;
-
-const CURRENCY_TO_PEG: Record<string, string> = {
-  EUR: "peggedEUR",
-  GBP: "peggedGBP",
-  CHF: "peggedCHF",
-  BRL: "peggedREAL", // DefiLlama uses "peggedREAL" (not "peggedBRL") for BRL stablecoins
-  JPY: "peggedJPY",
-  IDR: "peggedIDR",
-  SGD: "peggedSGD",
-  TRY: "peggedTRY",
-  AUD: "peggedAUD",
-  ZAR: "peggedZAR",
-  CAD: "peggedCAD",
-  CNY: "peggedCNY",
-  PHP: "peggedPHP",
-  MXN: "peggedMXN",
-};
-
-const SECONDARY_CURRENCY_TO_PEG = {
-  cnh: "peggedCNH",
-  rub: "peggedRUB",
-  uah: "peggedUAH",
-  ars: "peggedARS",
-} as const;
-
-const EXPECTED_FX_PEG_KEYS = [...Object.values(CURRENCY_TO_PEG), ...Object.values(SECONDARY_CURRENCY_TO_PEG)];
-
 const SECONDARY_FX_PRIMARY_URL = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.min.json";
 const SECONDARY_FX_FALLBACK_URL = "https://latest.currency-api.pages.dev/v1/currencies/usd.min.json";
 const TERTIARY_FX_URL = "https://open.er-api.com/v6/latest/USD";
-
-/** Generous bounds for USD-per-unit rates (~50%-200% of typical values).
- *  Any rate outside these bounds is almost certainly corrupted API data. */
-const FX_RATE_BOUNDS: Record<string, [number, number]> = {
-  peggedEUR: [0.50, 2.50],     // EUR ~$1.08
-  peggedGBP: [0.50, 3.00],     // GBP ~$1.27
-  peggedCHF: [0.40, 2.50],     // CHF ~$1.13
-  peggedREAL: [0.05, 0.60],    // BRL ~$0.20
-  peggedJPY: [0.003, 0.03],    // JPY ~$0.007
-  peggedIDR: [0.00003, 0.0003],// IDR ~$0.00006
-  peggedSGD: [0.30, 1.50],     // SGD ~$0.75
-  peggedTRY: [0.01, 0.20],     // TRY ~$0.03
-  peggedAUD: [0.30, 1.50],     // AUD ~$0.65
-  peggedZAR: [0.02, 0.20],     // ZAR ~$0.055
-  peggedRUB: [0.003, 0.10],    // RUB ~$0.013
-  peggedCAD: [0.40, 1.50],     // CAD ~$0.73
-  peggedCNY: [0.05, 0.40],     // CNY ~$0.14
-  peggedCNH: [0.05, 0.40],     // CNH ~$0.14
-  peggedPHP: [0.01, 0.06],     // PHP ~$0.018
-  peggedMXN: [0.02, 0.15],     // MXN ~$0.058
-  peggedUAH: [0.01, 0.10],     // UAH ~$0.024
-  peggedARS: [0.0001, 0.01],   // ARS ~$0.0007
-  peggedSILVER: [5, 500],      // Silver ~$30/oz
-  peggedGOLD: [500, 10000],     // Gold ~$2900/oz
-};
-
-/** Max allowed change from previous cached value (no FX rate moves 20% in 15 minutes) */
-const MAX_DELTA_PCT = 0.20;
-
-/** Validate a rate against bounds and delta from previous value */
-function isValidRate(pegKey: string, rate: number, prevRate: number | undefined): boolean {
-  const bounds = FX_RATE_BOUNDS[pegKey];
-  if (bounds && (rate < bounds[0] || rate > bounds[1])) {
-    console.warn(`[sync-fx-rates] Rejected ${pegKey}=${rate}: outside bounds [${bounds[0]}, ${bounds[1]}]`);
-    return false;
-  }
-  if (prevRate != null && prevRate > 0) {
-    const delta = Math.abs(rate - prevRate) / prevRate;
-    if (delta > MAX_DELTA_PCT) {
-      console.warn(`[sync-fx-rates] Rejected ${pegKey}=${rate}: ${(delta * 100).toFixed(1)}% change from prev ${prevRate}`);
-      return false;
-    }
-  }
-  return true;
-}
 const FrankfurterResponseSchema = z.object({
   base: z.string(),
   date: z.string(),
@@ -244,8 +178,8 @@ export async function syncFxRates(
 
   try {
     const prevState = await loadFxRateState(db);
-    const primaryMappings = Object.entries(CURRENCY_TO_PEG);
-    const secondaryMappings = Object.entries(SECONDARY_CURRENCY_TO_PEG);
+    const primaryMappings = Object.entries(PRIMARY_CURRENCY_TO_PEG);
+    const secondaryMappings = Object.entries(SECONDARY_FX_CURRENCY_TO_PEG);
     const syncState = new FxSyncRunState({
       prevState,
       syncStartSec,
@@ -259,12 +193,12 @@ export async function syncFxRates(
         chainlink: "unavailable",
         openExchangeRates: "unavailable",
       },
-      validateRate: isValidRate,
+      validateRate: (pegKey, rate, prevRate) => isValidFxRate(pegKey, rate, prevRate, "[sync-fx-rates]"),
     });
     const commodityPeerMedian = await loadCommodityPeerMedianReference(db, syncStartSec);
 
     const frankfurterAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.FX_FRANKFURTER);
-    const url = `https://api.frankfurter.dev/v1/latest?base=USD&symbols=${CURRENCIES.join(",")}`;
+    const url = `https://api.frankfurter.dev/v1/latest?base=USD&symbols=${PRIMARY_FX_CURRENCIES.join(",")}`;
     const res = frankfurterAllowed
       ? await fetchWithRetry(url, {
           headers: { "User-Agent": USER_AGENT },
@@ -339,13 +273,13 @@ export async function syncFxRates(
             await recordOutcome(db, CIRCUIT_SOURCE.FX_FRANKFURTER, true);
           });
           const data = frankfurterValidation.data;
-          syncState.applyFrankfurterRates(data.rates, data.date, CURRENCY_TO_PEG);
+          syncState.applyFrankfurterRates(data.rates, data.date, PRIMARY_CURRENCY_TO_PEG);
 
           try {
             const secondaryCandidate = await loadSecondaryCurrencyCandidate(signal);
             if (secondaryCandidate) {
               syncState.applySecondaryRates(secondaryCandidate, secondaryMappings);
-              syncState.sources.fawazahmed0 = Object.values(SECONDARY_CURRENCY_TO_PEG).every(
+              syncState.sources.fawazahmed0 = Object.values(SECONDARY_FX_CURRENCY_TO_PEG).every(
                 (pegKey) => pegKey in syncState.usableRates,
               )
                 ? "ok"
@@ -376,7 +310,7 @@ export async function syncFxRates(
       commodityPeerMedian,
       syncStartSec,
       signal,
-      validateRate: isValidRate,
+      validateRate: (pegKey, rate, prevRate) => isValidFxRate(pegKey, rate, prevRate, "[sync-fx-rates]"),
     });
     syncState.applyResolvedMetals(metals);
     syncState.sources["gold-api.com"] = metals.sources["gold-api.com"];
@@ -403,7 +337,7 @@ export async function syncFxRates(
     const meta = syncState.buildPersistedMeta();
     await persistFxRateState(db, syncState.usableRates, meta, syncStartSec);
     console.log(`[sync-fx-rates] Cached FX rates: ${JSON.stringify(syncState.usableRates)}`);
-    const metadata = syncState.buildResultMetadata(Object.values(SECONDARY_CURRENCY_TO_PEG));
+    const metadata = syncState.buildResultMetadata(Object.values(SECONDARY_FX_CURRENCY_TO_PEG));
     return {
       status: syncState.mode === "cached-fallback" && meta.consecutiveFallbackRuns >= 4 ? "degraded" : undefined,
       itemCount: Object.keys(syncState.usableRates).length,

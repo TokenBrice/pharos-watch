@@ -14,6 +14,30 @@ interface DiscoveredVariant {
   apy: number;
 }
 
+function maybeAddVariant(
+  pool: DlPool,
+  seen: Set<string>,
+  trackedSymbols: Set<string>,
+  candidateSymbol: string,
+  normalizedSymbol: string,
+  results: DiscoveredVariant[],
+): void {
+  if (!trackedSymbols.has(candidateSymbol) || seen.has(normalizedSymbol)) {
+    return;
+  }
+
+  results.push({
+    baseSymbol: candidateSymbol,
+    variantSymbol: pool.symbol,
+    poolId: pool.pool,
+    chain: pool.chain,
+    project: pool.project,
+    tvlUsd: pool.tvlUsd,
+    apy: pool.apy,
+  });
+  seen.add(normalizedSymbol);
+}
+
 export function scanForNewVariants(
   dlPools: DlPool[],
   trackedSymbols: Set<string>,
@@ -33,38 +57,14 @@ export function scanForNewVariants(
     for (const prefix of WRAPPER_PREFIX_PATTERNS) {
       const prefixUpper = prefix.toUpperCase();
       if (sym.startsWith(prefixUpper) && sym.length > prefixUpper.length) {
-        const candidate = sym.slice(prefixUpper.length);
-        if (trackedSymbols.has(candidate) && !seen.has(sym)) {
-          results.push({
-            baseSymbol: candidate,
-            variantSymbol: pool.symbol,
-            poolId: pool.pool,
-            chain: pool.chain,
-            project: pool.project,
-            tvlUsd: pool.tvlUsd,
-            apy: pool.apy,
-          });
-          seen.add(sym);
-        }
+        maybeAddVariant(pool, seen, trackedSymbols, sym.slice(prefixUpper.length), sym, results);
       }
     }
 
     for (const suffix of WRAPPER_SUFFIX_PATTERNS) {
       const suffixUpper = suffix.toUpperCase();
       if (sym.endsWith(suffixUpper) && sym.length > suffixUpper.length) {
-        const candidate = sym.slice(0, -suffixUpper.length);
-        if (trackedSymbols.has(candidate) && !seen.has(sym)) {
-          results.push({
-            baseSymbol: candidate,
-            variantSymbol: pool.symbol,
-            poolId: pool.pool,
-            chain: pool.chain,
-            project: pool.project,
-            tvlUsd: pool.tvlUsd,
-            apy: pool.apy,
-          });
-          seen.add(sym);
-        }
+        maybeAddVariant(pool, seen, trackedSymbols, sym.slice(0, -suffixUpper.length), sym, results);
       }
     }
   }

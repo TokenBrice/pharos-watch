@@ -22,18 +22,22 @@ export interface FetchBlacklistEventsParams {
   offset?: number;
 }
 
+export function buildBlacklistEventsPath(params: FetchBlacklistEventsParams): string {
+  return API_PATHS.blacklist({
+    stablecoin: params.stablecoin && params.stablecoin !== "all" ? params.stablecoin : undefined,
+    chain: params.chainName && params.chainName !== "all" ? params.chainName : undefined,
+    eventType: params.eventType && params.eventType !== "all" ? params.eventType : undefined,
+    q: params.query?.trim() ? params.query.trim() : undefined,
+    sortBy: params.sortBy,
+    sortDirection: params.sortDirection,
+    limit: params.limit,
+    offset: params.offset,
+  });
+}
+
 export function fetchBlacklistEvents(params: FetchBlacklistEventsParams): Promise<BlacklistResponse> {
   return apiFetch(
-    API_PATHS.blacklist({
-      stablecoin: params.stablecoin && params.stablecoin !== "all" ? params.stablecoin : undefined,
-      chain: params.chainName && params.chainName !== "all" ? params.chainName : undefined,
-      eventType: params.eventType && params.eventType !== "all" ? params.eventType : undefined,
-      q: params.query?.trim() ? params.query.trim() : undefined,
-      sortBy: params.sortBy,
-      sortDirection: params.sortDirection,
-      limit: params.limit,
-      offset: params.offset,
-    }),
+    buildBlacklistEventsPath(params),
     BlacklistResponseSchema,
   );
 }

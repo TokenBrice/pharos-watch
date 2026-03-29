@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CalloutBanner } from "@/components/callout-banner";
 import { FaqSection } from "@/components/faq-section";
 import { ShareButton } from "@/components/share-button";
-import { buildPageMetadata } from "@/lib/page-metadata";
+import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import type { FaqItem } from "@/lib/faq";
 import {
@@ -19,7 +19,7 @@ export const metadata = buildPageMetadata({
   title: "Safety Scores: Stablecoin Safety Grades",
   description: reportCardsDescription,
   canonical: "/safety-scores/",
-  ogImage: "https://api.pharos.watch/api/og/safety-scores",
+  ogImage: buildApiOgImageUrl("/api/og/safety-scores"),
 });
 
 const FAQ_ITEMS = [

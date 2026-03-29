@@ -51,6 +51,42 @@ function resolveSupplementalPrice(
   return null;
 }
 
+function buildSupplementalAsset(input: {
+  meta: StablecoinMeta;
+  priceResolution: { price: number; source: "coingecko-mirror" | "coingecko" };
+  mcap: number;
+  supplySource: string;
+  circulatingPrevDay?: number | null;
+  circulatingPrevWeek?: number | null;
+  circulatingPrevMonth?: number | null;
+}): PeggedAsset {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const pKey = pegTypeKey(input.meta);
+  return {
+    id: input.meta.id,
+    name: input.meta.name,
+    symbol: input.meta.symbol,
+    geckoId: input.meta.geckoId,
+    pegType: pKey,
+    pegMechanism: input.meta.flags.backing,
+    price: input.priceResolution.price,
+    priceSource: input.priceResolution.source,
+    priceConfidence: "single-source",
+    priceUpdatedAt: nowSec,
+    priceObservedAt: nowSec,
+    priceObservedAtMode: "local_fetch",
+    priceSyncedAt: nowSec,
+    supplySource: input.supplySource,
+    circulating: { [pKey]: input.mcap },
+    circulatingPrevDay: input.circulatingPrevDay != null ? { [pKey]: input.circulatingPrevDay } : null,
+    circulatingPrevWeek: input.circulatingPrevWeek != null ? { [pKey]: input.circulatingPrevWeek } : null,
+    circulatingPrevMonth: input.circulatingPrevMonth != null ? { [pKey]: input.circulatingPrevMonth } : null,
+    chainCirculating: {},
+    chains: ["Ethereum"],
+    commodityOunces: input.meta.commodityOunces,
+  } as PeggedAsset;
+}
+
 async function fetchSilverTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal, coingeckoApiKey?: string | null): Promise<PeggedAsset[]> {
   if (SILVER_METAS.length === 0) return [];
   throwIfAborted(signal);
@@ -126,30 +162,12 @@ async function fetchSilverTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal
           console.warn(`[silver] No mcap for ${meta.symbol}, including with mcap=0`);
         }
 
-        const pKey = pegTypeKey(meta);
-        return {
-          id: meta.id,
-          name: meta.name,
-          symbol: meta.symbol,
-          geckoId: meta.geckoId,
-          pegType: pKey,
-          pegMechanism: "rwa-backed",
-          price: priceResolution.price,
-          priceSource: priceResolution.source,
-          priceConfidence: "single-source",
-          priceUpdatedAt: Math.floor(Date.now() / 1000),
-          priceObservedAt: Math.floor(Date.now() / 1000),
-          priceObservedAtMode: "local_fetch",
-          priceSyncedAt: Math.floor(Date.now() / 1000),
+        return buildSupplementalAsset({
+          meta,
+          priceResolution,
+          mcap,
           supplySource: "coingecko-fallback",
-          circulating: { [pKey]: mcap },
-          circulatingPrevDay: null,
-          circulatingPrevWeek: null,
-          circulatingPrevMonth: null,
-          chainCirculating: {},
-          chains: ["Ethereum"],
-          commodityOunces: meta.commodityOunces,
-        } as PeggedAsset;
+        });
       })
       .filter((token): token is PeggedAsset => token !== null);
   } catch (err) {
@@ -262,30 +280,15 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal):
         const prevWeek = usableHistory ? findNearestTvl(usableHistory, weekAgo) : null;
         const prevMonth = usableHistory ? findNearestTvl(usableHistory, monthAgo) : null;
 
-        const pKey = pegTypeKey(meta);
-        return {
-          id: meta.id,
-          name: meta.name,
-          symbol: meta.symbol,
-          geckoId: meta.geckoId,
-          pegType: pKey,
-          pegMechanism: "rwa-backed",
-          price: priceResolution.price,
-          priceSource: priceResolution.source,
-          priceConfidence: "single-source",
-          priceUpdatedAt: Math.floor(Date.now() / 1000),
-          priceObservedAt: Math.floor(Date.now() / 1000),
-          priceObservedAtMode: "local_fetch",
-          priceSyncedAt: Math.floor(Date.now() / 1000),
+        return buildSupplementalAsset({
+          meta,
+          priceResolution,
+          mcap,
           supplySource: mcapSourceById[meta.id] ?? "coingecko-fallback",
-          circulating: { [pKey]: mcap },
-          circulatingPrevDay: prevDay != null ? { [pKey]: prevDay } : null,
-          circulatingPrevWeek: prevWeek != null ? { [pKey]: prevWeek } : null,
-          circulatingPrevMonth: prevMonth != null ? { [pKey]: prevMonth } : null,
-          chainCirculating: {},
-          chains: ["Ethereum"],
-          commodityOunces: meta.commodityOunces,
-        } as PeggedAsset;
+          circulatingPrevDay: prevDay,
+          circulatingPrevWeek: prevWeek,
+          circulatingPrevMonth: prevMonth,
+        });
       })
       .filter((token): token is PeggedAsset => token !== null);
   } catch (err) {

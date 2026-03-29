@@ -23,6 +23,7 @@ import { useStabilityIndexDetail, type StabilityContributor } from "@/hooks/api-
 import { PsiLighthouse } from "@/components/stability-index";
 import { PSI_BAND_CLASSES, PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
 import {
+  buildPsiChartData,
   getDisplayedPsi,
   getPsiBandStreak,
   getPsiCompletedDayPoint,
@@ -577,12 +578,7 @@ export function StabilityIndexClient() {
   }, [current, history]);
 
   const chartData = useMemo(() => {
-    if (!current || !history) return [];
-    const reversed = [...history].reverse();
-    return [
-      ...reversed.map((p) => ({ ts: p.date * 1000, score: p.score })),
-      { ts: current.computedAt * 1000, score: current.score },
-    ];
+    return buildPsiChartData(history, current);
   }, [current, history]);
 
   const componentData = useMemo(() => {

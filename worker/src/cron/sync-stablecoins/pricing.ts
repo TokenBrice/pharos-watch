@@ -120,6 +120,68 @@ function applyPrimaryCandidate(input: ApplyPrimaryCandidateInput): string | null
   return null;
 }
 
+interface ApplyPriceResultForAssetInput {
+  asset: PeggedAsset;
+  primaryPriceResult: PrimaryPriceResult | undefined;
+  previousTrustedPrice: PreviousTrustedPrice | null;
+  validationContext: PriceValidationContext;
+  validationReferences?: PriceValidationReferences;
+  syncStartSec: number;
+  rejectionLabel: string;
+  requiredCandidateSource?: string;
+  stampExistingWhenRejected?: boolean;
+  stampExistingWhenMissing?: boolean;
+}
+
+function hasCurrentAssetPrice(asset: PeggedAsset): boolean {
+  return asset.price != null && typeof asset.price === "number" && asset.price > 0;
+}
+
+function applyPriceResultForAsset(input: ApplyPriceResultForAssetInput): void {
+  const {
+    asset,
+    primaryPriceResult,
+    previousTrustedPrice,
+    validationContext,
+    validationReferences,
+    syncStartSec,
+    rejectionLabel,
+    requiredCandidateSource,
+    stampExistingWhenRejected = false,
+    stampExistingWhenMissing = false,
+  } = input;
+
+  if (!primaryPriceResult) {
+    if (stampExistingWhenMissing && hasCurrentAssetPrice(asset)) {
+      stampExistingSingleSource(asset, syncStartSec);
+    }
+    return;
+  }
+
+  if (requiredCandidateSource && !primaryPriceResult.candidateSources.includes(requiredCandidateSource)) {
+    return;
+  }
+
+  const rejectionReason = applyPrimaryCandidate({
+    asset,
+    candidate: primaryPriceResult,
+    previousTrustedPrice,
+    validationContext,
+    validationReferences,
+    syncStartSec,
+  });
+  if (!rejectionReason) return;
+
+  console.warn(
+    `[sync-stablecoins] Rejected ${rejectionLabel} for ${asset.symbol} (id=${asset.id}): ` +
+      `$${primaryPriceResult.price} from ${primaryPriceResult.source} (${rejectionReason})`,
+  );
+
+  if (stampExistingWhenRejected && hasCurrentAssetPrice(asset)) {
+    stampExistingSingleSource(asset, syncStartSec);
+  }
+}
+
 export function buildPreviousTrustedPriceLookup(
   previousAssetsById: Map<string, PeggedAsset>,
   nowSec: number,
@@ -222,26 +284,17 @@ export function applyPrimaryPriceResults(input: {
   } = input;
 
   for (const asset of assets) {
-    const primary = primaryPriceResults.get(asset.id);
-    if (primary) {
-      const rejectionReason = applyPrimaryCandidate({
-        asset,
-        candidate: primary,
-        previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
-        validationContext: validationContexts.get(asset),
-        validationReferences,
-        syncStartSec,
-      });
-      if (rejectionReason && asset.price != null && typeof asset.price === "number" && asset.price > 0) {
-        console.warn(
-          `[sync-stablecoins] Rejected primary consensus price for ${asset.symbol} (id=${asset.id}): ` +
-          `$${primary.price} from ${primary.source} (${rejectionReason})`,
-        );
-        stampExistingSingleSource(asset, syncStartSec);
-      }
-    } else if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
-      stampExistingSingleSource(asset, syncStartSec);
-    }
+    applyPriceResultForAsset({
+      asset,
+      primaryPriceResult: primaryPriceResults.get(asset.id),
+      previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
+      validationContext: validationContexts.get(asset),
+      validationReferences,
+      syncStartSec,
+      rejectionLabel: "primary consensus price",
+      stampExistingWhenRejected: true,
+      stampExistingWhenMissing: true,
+    });
 
     if (!asset.supplySource) {
       asset.supplySource = "defillama";
@@ -300,23 +353,16 @@ export function applyGtProbeResults(input: {
   } = input;
 
   for (const asset of assets) {
-    const primary = primaryPriceResults.get(asset.id);
-    if (!primary || !primary.candidateSources.includes("geckoterminal")) continue;
-
-    const rejectionReason = applyPrimaryCandidate({
+    applyPriceResultForAsset({
       asset,
-      candidate: primary,
+      primaryPriceResult: primaryPriceResults.get(asset.id),
       previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
       validationContext: validationContexts.get(asset),
       validationReferences,
       syncStartSec,
+      rejectionLabel: "GT-probed price",
+      requiredCandidateSource: "geckoterminal",
     });
-    if (rejectionReason) {
-      console.warn(
-        `[sync-stablecoins] Rejected GT-probed price for ${asset.symbol} (id=${asset.id}): ` +
-        `$${primary.price} from ${primary.source} (${rejectionReason})`,
-      );
-    }
   }
 }
 

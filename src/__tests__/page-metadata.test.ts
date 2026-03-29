@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { API_ORIGIN } from "@shared/lib/runtime-origins";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import { buildStablecoinDetailDescription, summarizeText } from "@/lib/page-metadata";
+import {
+  buildApiOgImageUrl,
+  buildStablecoinDetailDescription,
+  summarizeText,
+} from "@/lib/page-metadata";
 
 describe("page metadata helpers", () => {
   it("builds phrase-safe stablecoin descriptions", () => {
@@ -29,5 +34,9 @@ describe("page metadata helpers", () => {
     expect(summary.length).toBeLessThanOrEqual(80);
     expect(summary.endsWith("…")).toBe(true);
     expect(summary).not.toContain("midwor");
+  });
+
+  it("builds OG URLs from the shared API origin", () => {
+    expect(buildApiOgImageUrl("/api/og/depeg")).toBe(`${API_ORIGIN}/api/og/depeg`);
   });
 });

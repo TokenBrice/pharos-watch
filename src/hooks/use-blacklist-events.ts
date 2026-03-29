@@ -5,6 +5,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CRON_BLACKLIST } from "@/lib/cron-intervals";
 import { useApiQueryWithMeta } from "./use-api-query";
 import {
+  buildBlacklistEventsPath,
   type FetchBlacklistEventsParams,
 } from "@/lib/blacklist-api";
 import {
@@ -30,16 +31,7 @@ export function useBlacklistSummary() {
 export function useBlacklistEventsPage(params: FetchBlacklistEventsParams) {
   return useApiQueryWithMeta<BlacklistResponse>(
     ["blacklist-events", params.stablecoin ?? "all", params.chainName ?? "all", params.eventType ?? "all", params.query ?? "", params.limit ?? 50, params.offset ?? 0],
-    API_PATHS.blacklist({
-      stablecoin: params.stablecoin && params.stablecoin !== "all" ? params.stablecoin : undefined,
-      chain: params.chainName && params.chainName !== "all" ? params.chainName : undefined,
-      eventType: params.eventType && params.eventType !== "all" ? params.eventType : undefined,
-      q: params.query?.trim() ? params.query.trim() : undefined,
-      sortBy: params.sortBy,
-      sortDirection: params.sortDirection,
-      limit: params.limit,
-      offset: params.offset,
-    }),
+    buildBlacklistEventsPath(params),
     CRON_BLACKLIST,
     {
       retry: 1,

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { API_ORIGIN } from "@shared/lib/runtime-origins";
 import type { BackingType, StablecoinMeta } from "@shared/types";
 import { buildStablecoinUrl } from "@/lib/urls";
 
@@ -119,8 +120,12 @@ export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
     title: `${coin.name} (${coin.symbol}) Stablecoin Analytics`,
     description: buildStablecoinDetailDescription(coin),
     canonical: buildStablecoinUrl(coin.id),
-    ogImage: `https://api.pharos.watch/api/og/stablecoin/${coin.id}`,
+    ogImage: buildApiOgImageUrl(`/api/og/stablecoin/${coin.id}`),
   });
+}
+
+export function buildApiOgImageUrl(path: string): string {
+  return new URL(path, API_ORIGIN).toString();
 }
 
 export function buildPageMetadata({

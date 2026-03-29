@@ -23,8 +23,9 @@ import { UpcomingStablecoinsSection } from "@/components/upcoming-stablecoins-se
 import { PEG_CURRENCY_COUNT, getDewsRiskLevel, isThreatBand } from "@shared/lib/classification";
 import { ACTIVE_PEGS, PEG_LABELS_SHORT, PEG_SLUGS, pegCoinCount } from "@/lib/peg-landing";
 import { derivePegRates } from "@shared/lib/peg-rates";
-import { FILTER_TAG_LABELS, type PegSummaryCoin } from "@shared/types";
+import { FILTER_TAG_LABELS } from "@shared/types";
 import { buildTrackedIdSet, filterStablecoins } from "@/components/stablecoin-table-logic";
+import { buildPegSummaryCoinMap, buildReportCardMap } from "@/lib/stablecoin-lookups";
 
 const CEFI_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized").length;
 const CEFI_DEP_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").length;
@@ -323,18 +324,8 @@ export function HomepageClient() {
     ),
     [stressData],
   );
-  const pegScores = useMemo(() => {
-    const map = new Map<string, PegSummaryCoin>();
-    if (!pegSummaryData?.coins) return map;
-    for (const coin of pegSummaryData.coins) {
-      map.set(coin.id, coin);
-    }
-    return map;
-  }, [pegSummaryData]);
-  const reportCardMap = useMemo(() => {
-    if (!reportCardsData?.cards) return undefined;
-    return Object.fromEntries(reportCardsData.cards.map((c) => [c.id, c]));
-  }, [reportCardsData]);
+  const pegScores = useMemo(() => buildPegSummaryCoinMap(pegSummaryData?.coins), [pegSummaryData?.coins]);
+  const reportCardMap = useMemo(() => buildReportCardMap(reportCardsData?.cards), [reportCardsData?.cards]);
   const { rates: pegRates } = useMemo(
     () => derivePegRates(data?.peggedAssets ?? [], TRACKED_META_BY_ID, data?.fxFallbackRates),
     [data],

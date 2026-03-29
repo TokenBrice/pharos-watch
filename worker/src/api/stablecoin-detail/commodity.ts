@@ -1,6 +1,6 @@
-import { DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../../lib/constants";
+import { DEFILLAMA_API, DEFILLAMA_COINS } from "../../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { cgHeaders, cgUrl } from "../../lib/coingecko";
+import { fetchCoinGeckoMarketHistory } from "../../lib/coingecko-market-history";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { resolveMarketCap } from "../../lib/resolve-market-cap";
 import {
@@ -93,49 +93,25 @@ export async function fetchCommodityTokens(
 
   // Fallback: no protocol TVL → use CoinGecko market_chart with sanity check.
   if (tokens.length === 0) {
-    const [cgRes, coinRes] = await Promise.all([
-      fetchWithRetry(
-        cgUrl(`/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`),
-        { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
-        DETAIL_UPSTREAM_MAX_RETRIES,
-        { timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS },
-      ),
-      fetchWithRetry(
-        cgUrl(`/coins/${config.geckoId}?market_data=true&localization=false&tickers=false&community_data=false&developer_data=false`),
-        { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
-        DETAIL_UPSTREAM_MAX_RETRIES,
-        { timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS },
-      ),
-    ]);
+    const marketHistory = await fetchCoinGeckoMarketHistory(config.geckoId, {
+      retries: DETAIL_UPSTREAM_MAX_RETRIES,
+      timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS,
+      onCoinDetailFailure: (status) => {
+        logUpstreamFailure("coingecko-coin-detail", config.stablecoinId, status);
+      },
+    });
 
-    if (!cgRes?.ok) {
-      logUpstreamFailure("coingecko-market-chart", config.stablecoinId, cgRes?.status ?? "no-response");
-      coinRes?.body?.cancel();
+    if (!marketHistory) {
+      logUpstreamFailure("coingecko-market-chart", config.stablecoinId, "no-response");
       return [];
     }
 
-    const cgData = (await cgRes.json()) as {
-      market_caps: [number, number][];
-      prices?: [number, number][];
-    };
-
-    let circulatingSupply: number | undefined;
-    if (coinRes?.ok) {
-      const coinData = (await coinRes.json()) as {
-        market_data?: { circulating_supply?: number };
-      };
-      circulatingSupply = coinData.market_data?.circulating_supply ?? undefined;
-    } else {
-      logUpstreamFailure("coingecko-coin-detail", config.stablecoinId, coinRes?.status ?? "no-response");
-      coinRes?.body?.cancel();
-    }
-
-    const priceMap = buildPriceMapByDate(cgData.prices);
+    const priceMap = buildPriceMapByDate(marketHistory.prices);
     tokens = buildTokenRowsFromMarketCaps(
-      cgData.market_caps ?? [],
+      marketHistory.marketCaps,
       config.pegType,
       priceMap,
-      (mcap, price) => (price > 0 ? resolveMarketCap(mcap, circulatingSupply, price) : mcap),
+      (mcap, price) => (price > 0 ? resolveMarketCap(mcap, marketHistory.circulatingSupply, price) : mcap),
     );
   }
 
