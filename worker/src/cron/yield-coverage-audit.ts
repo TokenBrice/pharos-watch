@@ -173,7 +173,8 @@ export async function runYieldCoverageAudit(
           .map((ranking) => ranking.id)
           .filter((id): id is string => typeof id === "string"),
       );
-    } catch {
+    } catch (err) {
+      console.warn(`[yield-coverage-audit] Failed to parse yield-rankings cache: ${err instanceof Error ? err.message : String(err)}`);
       publishedYieldIds = new Set<string>();
     }
   }

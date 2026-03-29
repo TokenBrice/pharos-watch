@@ -258,8 +258,8 @@ export async function syncDexDiscovery(
         if (!existingCoverage || existingCoverage.poolCount === 0) {
           try {
             await updateDiscoveryMeta(db, candidate.stablecoinId, 0, nowSec);
-          } catch {
-            /* non-blocking */
+          } catch (err) {
+            console.warn(`[dex-discovery] Failed to update discovery meta for ${candidate.stablecoinId}: ${err instanceof Error ? err.message : String(err)}`);
           }
         }
       }

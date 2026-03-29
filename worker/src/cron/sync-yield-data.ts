@@ -528,7 +528,8 @@ export async function syncYieldData(
       previousPublishedYieldBearingCount = (parsed.rankings ?? [])
         .filter((ranking) => typeof ranking.id === "string" && yieldCoinIdSet.has(ranking.id))
         .length;
-    } catch {
+    } catch (err) {
+      console.warn(`[sync-yield-data] Failed to parse previous yield-rankings cache: ${err instanceof Error ? err.message : String(err)}`);
       previousPublishedYieldBearingCount = 0;
     }
   }

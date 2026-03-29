@@ -169,7 +169,8 @@ export async function validateYieldRankingsPayloadForPublish(
     try {
       const parsed = JSON.parse(previousCache.value) as { rankings?: unknown[] };
       if (Array.isArray(parsed.rankings)) previousRankings = parsed.rankings.length;
-    } catch {
+    } catch (err) {
+      console.warn(`[yield-sync] Failed to parse previous yield-rankings cache: ${err instanceof Error ? err.message : String(err)}`);
       previousRankings = 0;
     }
   }

@@ -300,7 +300,8 @@ export function parseRiskFreeRatesCache(
       EUR: eur,
       CHF: chf,
     };
-  } catch {
+  } catch (err) {
+    console.warn(`[yield-sync] Failed to parse bundled benchmarks cache: ${err instanceof Error ? err.message : String(err)}`);
     return null;
   }
 }
@@ -399,7 +400,8 @@ export function parseYieldSupplementalSourcesCache(
         sourceCount: toNonNegativeInteger(parsed.sourceCount) || candidates.length,
       };
     }
-  } catch {
+  } catch (err) {
+    console.warn(`[yield-sync] Failed to parse supplemental sources cache: ${err instanceof Error ? err.message : String(err)}`);
     return null;
   }
 

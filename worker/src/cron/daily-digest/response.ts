@@ -90,7 +90,8 @@ export function parseDigestModelResponse(
     if (parsed.meta) {
       parsedMeta = parsed.meta as Record<string, unknown>;
     }
-  } catch {
+  } catch (err) {
+    console.warn(`[daily-digest] Failed to parse digest model response, using raw text fallback: ${err instanceof Error ? err.message : String(err)}`);
     digestTitle = "";
     digestText = rawText.trim();
     digestExtended = "";

@@ -18,8 +18,8 @@ export function buildRecentDigestMeta(
     if (row.digest_meta) {
       try {
         meta = JSON.parse(row.digest_meta) as DigestMeta;
-      } catch {
-        // Legacy digest rows may not have structured metadata.
+      } catch (err) {
+        console.warn(`[daily-digest] Failed to parse digest_meta: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
 

@@ -330,7 +330,8 @@ async function loadLegacyDexPoolChallengers(
       let pools: Array<{ project?: unknown; chain?: unknown; tvlUsd?: unknown; price?: unknown; poolId?: unknown }>;
       try {
         pools = JSON.parse(row.top_pools_json);
-      } catch {
+      } catch (err) {
+        console.warn(`[challenger-persistence] Failed to parse top_pools_json for ${row.stablecoin_id}: ${err instanceof Error ? err.message : String(err)}`);
         continue;
       }
       if (!Array.isArray(pools) || pools.length === 0) continue;
@@ -375,7 +376,8 @@ async function loadLegacyDexPoolChallengers(
       let sources: LegacyDexPoolSource[];
       try {
         sources = JSON.parse(row.price_sources_json);
-      } catch {
+      } catch (err) {
+        console.warn(`[challenger-persistence] Failed to parse price_sources_json for ${row.stablecoin_id}: ${err instanceof Error ? err.message : String(err)}`);
         continue;
       }
       if (!Array.isArray(sources) || sources.length === 0) continue;
