@@ -1,0 +1,2 @@
+export const DEPEG_THRESHOLD_BPS = 100;
+export const DEPEG_THRESHOLD_BPS_NON_USD = 150;

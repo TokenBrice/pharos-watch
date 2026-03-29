@@ -6,6 +6,10 @@
 
 import { getCache, setCache } from "./db-cache";
 import { sendAlert } from "./alerts";
+import {
+  CIRCUIT_OPEN_THRESHOLD,
+  CIRCUIT_PROBE_INTERVAL_SEC,
+} from "./circuit-config";
 
 export type CircuitState = "closed" | "open" | "half-open";
 export type CircuitOutcomeDecision = "success" | "failure" | "neutral";
@@ -17,12 +21,6 @@ export interface CircuitRecord {
   lastSuccessAt: number | null;
   openedAt: number | null;
 }
-
-/** Consecutive failures before the circuit opens */
-const CIRCUIT_OPEN_THRESHOLD = 3;
-
-/** Seconds to wait before allowing a probe request in open state */
-const CIRCUIT_PROBE_INTERVAL_SEC = 1800; // 30 min
 
 const DEFAULT_RECORD: CircuitRecord = {
   state: "closed",

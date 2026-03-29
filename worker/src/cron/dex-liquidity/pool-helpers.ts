@@ -5,6 +5,10 @@ import {
 } from "../../lib/dex-constants";
 import type { LiquidityMetrics, ScoreComponents, SymbolLookups } from "./types";
 import { VOLATILE_PAIR_QUALITY, SYMBOL_GOVERNANCE } from "./constants";
+import {
+  DURABILITY_COMPONENT_WEIGHTS,
+  LIQUIDITY_COMPONENT_WEIGHTS,
+} from "./score-weights";
 import { buildChainAddressKey } from "./token-resolution";
 
 /** Parse pool symbol string into constituent token symbols */
@@ -81,10 +85,10 @@ export function computeDurabilityScore(
   const maturityScore = Math.min(100, (m.oldestPoolDays / 365) * 100);
 
   return Math.max(0, Math.min(100, Math.round(
-    organicScore * 0.15 +
-    tvlStabilityScore * 0.35 +
-    volumeConsistencyScore * 0.25 +
-    maturityScore * 0.25
+    organicScore * DURABILITY_COMPONENT_WEIGHTS.organicFraction +
+    tvlStabilityScore * DURABILITY_COMPONENT_WEIGHTS.tvlStability +
+    volumeConsistencyScore * DURABILITY_COMPONENT_WEIGHTS.volumeConsistency +
+    maturityScore * DURABILITY_COMPONENT_WEIGHTS.maturity
   )));
 }
 
@@ -118,11 +122,11 @@ export function computeLiquidityScore(
   const pairDiversity = Math.min(100, m.poolCount * 5);
 
   const raw =
-    tvlDepth * 0.35 +
-    volumeActivity * 0.20 +
-    poolQuality * 0.225 +
-    durability * 0.15 +
-    pairDiversity * 0.075;
+    tvlDepth * LIQUIDITY_COMPONENT_WEIGHTS.tvlDepth +
+    volumeActivity * LIQUIDITY_COMPONENT_WEIGHTS.volumeActivity +
+    poolQuality * LIQUIDITY_COMPONENT_WEIGHTS.poolQuality +
+    durability * LIQUIDITY_COMPONENT_WEIGHTS.durability +
+    pairDiversity * LIQUIDITY_COMPONENT_WEIGHTS.pairDiversity;
 
   const components: ScoreComponents = {
     tvlDepth: Math.round(tvlDepth),

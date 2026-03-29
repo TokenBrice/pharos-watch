@@ -2,6 +2,10 @@ import { errorResponse } from "../../lib/api-utils";
 import { hasValidAdminCredential } from "../../lib/auth";
 import { checkPublicApiRateLimit } from "../../lib/rate-limit";
 import { resolvePublicApiRateLimitSalt, validateWorkerEnvContract } from "../../lib/env";
+import {
+  PUBLIC_API_RATE_LIMIT_MAX_REQUESTS,
+  PUBLIC_API_RATE_LIMIT_WINDOW_SEC,
+} from "../../lib/public-api-limits";
 import type { Env } from "../../lib/env";
 
 const LOGGED_ENV_ISSUES = new Set<string>();
@@ -42,7 +46,8 @@ export async function evaluateAccessGate(
     env.DB,
     resolveClientIp(request),
     publicApiRateLimit.salt,
-    300,
+    PUBLIC_API_RATE_LIMIT_MAX_REQUESTS,
+    PUBLIC_API_RATE_LIMIT_WINDOW_SEC * 1000,
   );
   return { isAdmin, response };
 }

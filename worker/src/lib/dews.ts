@@ -9,6 +9,10 @@
 
 import type { ThreatBand } from "@shared/lib/classification";
 import { clamp } from "@shared/lib/math";
+import {
+  DEWS_SIGNAL_WEIGHTS,
+  DEWS_THREAT_BANDS,
+} from "./dews-config";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -98,20 +102,6 @@ export interface DEWSResult {
 // Constants
 // ---------------------------------------------------------------------------
 
-// Weights intentionally sum to >1.0. Flow and yield signals are "bonus" weight
-// because they are not available for all coins. The weighted average divides by
-// the sum of available weights, so this normalizes correctly at runtime.
-const WEIGHTS: Record<string, number> = {
-  supply: 0.25,
-  pool: 0.2,
-  liq: 0.15,
-  price: 0.15,
-  diverg: 0.15,
-  black: 0.1,
-  flow: 0.1,
-  yield: 0.05,
-};
-
 const CONFIDENCE_SCORES: Record<string, number> = {
   high: 0,
   "single-source": 25,
@@ -154,10 +144,9 @@ export function piecewiseLinear(
 // ---------------------------------------------------------------------------
 
 export function getThreatBand(score: number): ThreatBand {
-  if (score <= 15) return "CALM";
-  if (score <= 35) return "WATCH";
-  if (score <= 55) return "ALERT";
-  if (score <= 75) return "WARNING";
+  for (const threshold of DEWS_THREAT_BANDS) {
+    if (score <= threshold.upper) return threshold.band;
+  }
   return "DANGER";
 }
 
@@ -579,7 +568,7 @@ function computeYieldSignal(input: DEWSInput): SignalResult {
 // ---------------------------------------------------------------------------
 
 export function computeDEWS(input: DEWSInput): DEWSResult | null {
-  const signals: Record<string, SignalResult> = {
+  const signals: Record<keyof typeof DEWS_SIGNAL_WEIGHTS, SignalResult> = {
     supply: computeSupplySignal(input),
     pool: computePoolSignal(input),
     liq: computeLiquiditySignal(input),
@@ -594,10 +583,10 @@ export function computeDEWS(input: DEWSInput): DEWSResult | null {
   let totalWeight = 0;
   let weightedSum = 0;
 
-  for (const [key, signal] of Object.entries(signals)) {
-    if (signal.available && key in WEIGHTS) {
-      totalWeight += WEIGHTS[key];
-      weightedSum += WEIGHTS[key] * signal.value;
+  for (const [key, signal] of Object.entries(signals) as Array<[keyof typeof signals, SignalResult]>) {
+    if (signal.available) {
+      totalWeight += DEWS_SIGNAL_WEIGHTS[key];
+      weightedSum += DEWS_SIGNAL_WEIGHTS[key] * signal.value;
     }
   }
 
