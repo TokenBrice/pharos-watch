@@ -137,6 +137,32 @@ describe("evm-rpc helpers", () => {
     expect(result).toBe(300n);
   });
 
+  it("logs summary when all RPCs fail for fetchEvmCallHexAtBlock", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    fetchWithRetryMock.mockResolvedValue(new Response(JSON.stringify({ error: { code: -32000, message: "nope" } }), { status: 200 }));
+
+    const result = await fetchEvmCallHexAtBlock(undefined, "0xToken", "0x1234", "latest", {
+      extraRpcUrls: ["https://rpc.a", "https://rpc.b"],
+    });
+
+    expect(result).toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[evm-rpc] eth_call failed across 2 RPCs"));
+    warnSpy.mockRestore();
+  });
+
+  it("logs summary when all RPCs throw for fetchEvmUint256AtBlock", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    fetchWithRetryMock.mockRejectedValue(new Error("network error"));
+
+    const result = await fetchEvmUint256AtBlock(undefined, "0xToken", "0x18160ddd", "latest", {
+      extraRpcUrls: ["https://rpc.a"],
+    });
+
+    expect(result).toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[evm-rpc] eth_call failed across 1 RPCs"));
+    warnSpy.mockRestore();
+  });
+
   it("returns null on malformed Etherscan payloads", async () => {
     fetchWithRetryMock.mockResolvedValue(
       new Response(JSON.stringify({ result: "not-hex" }), { status: 200 }),
