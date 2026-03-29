@@ -12,7 +12,6 @@ import {
   formatDuration,
   formatNativePrice,
   formatDeathDate,
-  formatDeathDateShort,
   formatTrackingSpanDays,
   formatTrackingSpanSeconds,
 } from "@shared/lib/format";
@@ -351,19 +350,3 @@ describe("formatDeathDate", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// formatDeathDateShort
-// ---------------------------------------------------------------------------
-describe("formatDeathDateShort", () => {
-  it("formats with short year", () => {
-    // Node's toLocaleDateString with year: "2-digit" may or may not include an apostrophe
-    const jan23 = formatDeathDateShort("2023-01");
-    expect(jan23).toMatch(/^Jan.+23$/);
-    const dec24 = formatDeathDateShort("2024-12");
-    expect(dec24).toMatch(/^Dec.+24$/);
-  });
-
-  it("returns year only if no month", () => {
-    expect(formatDeathDateShort("2023")).toBe("2023");
-  });
-});

@@ -194,14 +194,6 @@ export function timeAgo(epochSec: number): string {
   return `${Math.floor(diffH / 24)}d ago`;
 }
 
-/** Format "YYYY-MM" death date as "Jan '23" (short year) */
-export function formatDeathDateShort(d: string): string {
-  const [year, month] = d.split("-");
-  if (!month) return year;
-  const dt = new Date(Number(year), Number(month) - 1);
-  return dt.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
-}
-
 /** Tailwind color class for net flow values (positive = green, negative = red) */
 export function getNetColor(value: number): string {
   if (value > 0) return "text-emerald-700 dark:text-emerald-400";
