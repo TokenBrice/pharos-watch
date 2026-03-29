@@ -1,13 +1,14 @@
 import { getReserves, type ReserveResult } from "@shared/lib/reserve-templates";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { type LiveReserveEvidenceClass, type LiveReserveSourceModel } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type {
   ReserveSlice,
   StablecoinMeta,
 } from "@shared/types/core";
 import type {
+  LiveReserveEvidenceClass,
   LiveReserveSnapshotMetadata,
+  LiveReserveSourceModel,
   LiveReserveWarning,
   ReserveSyncStateView,
 } from "@shared/types/live-reserves";

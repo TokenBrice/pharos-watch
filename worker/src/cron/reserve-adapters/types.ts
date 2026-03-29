@@ -1,6 +1,7 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type {
   LiveReserveAdapterKey,
+  LiveReserveAdapterValidationPolicy,
   LiveReserveEvidenceClass,
   LiveReserveSnapshotMetadata,
   LiveReserveSourceModel,
@@ -9,7 +10,6 @@ import type {
   LiveReservesConfig,
 } from "@shared/types/live-reserves";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import type { LiveReserveAdapterValidationPolicy } from "@shared/lib/live-reserve-adapters";
 
 /** Context passed from the cron to adapters that need worker infrastructure. */
 export interface AdapterContext {

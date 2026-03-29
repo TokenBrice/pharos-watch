@@ -1,6 +1,7 @@
+import { API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
 import { setCache, shouldSkipFreshCache } from "./db-cache";
 
-const DEFAULT_SELF_URL = "https://api.pharos.watch";
+const DEFAULT_SELF_URL = API_ORIGIN;
 const TELEGRAM_WEBHOOK_PATH = "/api/telegram-webhook";
 const TELEGRAM_WEBHOOK_RECONCILED_CACHE_KEY = "telegram:webhook-reconciled";
 const TELEGRAM_WEBHOOK_RECONCILE_TTL_SEC = 15 * 60;
@@ -19,7 +20,7 @@ export interface ReconcileTelegramWebhookResult {
 
 export function buildTelegramWebhookUrl(selfUrl?: string | null): string {
   try {
-    return new URL(TELEGRAM_WEBHOOK_PATH, selfUrl ?? DEFAULT_SELF_URL).toString();
+    return new URL(TELEGRAM_WEBHOOK_PATH, resolveOrigin(selfUrl, DEFAULT_SELF_URL)).toString();
   } catch {
     return new URL(TELEGRAM_WEBHOOK_PATH, DEFAULT_SELF_URL).toString();
   }
@@ -76,4 +77,3 @@ export async function reconcileTelegramWebhookRegistration(
   await setCache(db, TELEGRAM_WEBHOOK_RECONCILED_CACHE_KEY, JSON.stringify({ url: expectedUrl }));
   return { attempted: true, skipped: false, expectedUrl };
 }
-

@@ -1,6 +1,7 @@
 import { USER_AGENT } from "../../lib/constants";
 import { GT_API_BASE } from "../../lib/dex-constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchPagedTokenPools } from "../../lib/paged-token-pools";
 import type { ParsedPool } from "./crawl-helpers";
 import type { GtPool } from "./types";
 import { GT_TOKEN_POOLS_MAX_PAGES, GT_TOKEN_POOLS_PAGE_SIZE } from "./constants";
@@ -14,31 +15,28 @@ async function fetchGtTokenPoolsInternal(
   maxRetries = 0,
   timeoutMs = 15_000,
 ): Promise<GtPool[]> {
-  const pools: GtPool[] = [];
-
-  for (let page = 1; page <= GT_TOKEN_POOLS_MAX_PAGES; page++) {
-    const url = `${GT_API_BASE}/networks/${gtChain}/tokens/${tokenAddress}/pools?page=${page}`;
-    const res = await fetchWithRetry(
-      url,
-      {
-        headers: {
-          "User-Agent": USER_AGENT,
-          Accept: "application/json",
+  return fetchPagedTokenPools({
+    maxPages: GT_TOKEN_POOLS_MAX_PAGES,
+    pageSize: GT_TOKEN_POOLS_PAGE_SIZE,
+    fetchPage: async (page) => {
+      const url = `${GT_API_BASE}/networks/${gtChain}/tokens/${tokenAddress}/pools?page=${page}`;
+      const res = await fetchWithRetry(
+        url,
+        {
+          headers: {
+            "User-Agent": USER_AGENT,
+            Accept: "application/json",
+          },
+          signal,
         },
-        signal,
-      },
-      maxRetries,
-      { timeoutMs },
-    );
-    if (!res?.ok) break;
-    const json = (await res.json()) as { data?: GtPool[] };
-    const pagePools = json.data ?? [];
-    if (pagePools.length === 0) break;
-    pools.push(...pagePools);
-    if (pagePools.length < GT_TOKEN_POOLS_PAGE_SIZE) break;
-  }
-
-  return pools;
+        maxRetries,
+        { timeoutMs },
+      );
+      if (!res?.ok) return [];
+      const json = (await res.json()) as { data?: GtPool[] };
+      return json.data ?? [];
+    },
+  });
 }
 
 export function fetchGtTokenPools(

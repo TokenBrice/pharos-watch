@@ -23,7 +23,11 @@ export function makeIdempotentAdminRoute<TContext extends RouteWrapperContext>(
   handler: (context: TContext) => Promise<Response>,
 ): (context: TContext) => Promise<Response> {
   return withErrorHandler(endpoint, (context: TContext) =>
-    runIdempotentAdminAction(context.db, action, context.request, () => handler(context)),
+    withAdmin(
+      context.request,
+      () => runIdempotentAdminAction(context.db, action, context.request, () => handler(context)),
+      context.trustedAdmin,
+    ),
   );
 }
 
@@ -33,10 +37,12 @@ export function makeConditionalIdempotentAdminRoute<TContext extends RouteWrappe
   shouldUseIdempotency: (context: TContext) => boolean,
   handler: (context: TContext) => Promise<Response>,
 ): (context: TContext) => Promise<Response> {
-  return withErrorHandler(endpoint, (context: TContext) => {
-    if (!shouldUseIdempotency(context)) {
-      return handler(context);
-    }
-    return runIdempotentAdminAction(context.db, action, context.request, () => handler(context));
-  });
+  return withErrorHandler(endpoint, (context: TContext) =>
+    withAdmin(context.request, () => {
+      if (!shouldUseIdempotency(context)) {
+        return handler(context);
+      }
+      return runIdempotentAdminAction(context.db, action, context.request, () => handler(context));
+    }, context.trustedAdmin),
+  );
 }

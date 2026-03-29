@@ -1,7 +1,6 @@
+import { OPS_API_HOSTNAME } from "@shared/lib/runtime-origins";
 import { errorResponse } from "./api-utils";
 import { verifyAccessJwt } from "./jwt-verify";
-
-const DEFAULT_OPS_API_HOST = "ops-api.pharos.watch";
 
 /** Env fields relevant to admin auth — avoids importing the full Env type. */
 export interface AdminAuthEnv {
@@ -12,7 +11,7 @@ export interface AdminAuthEnv {
 function isOpsApiRequest(request: Request | undefined): boolean {
   if (!request) return false;
   try {
-    return new URL(request.url).hostname === DEFAULT_OPS_API_HOST;
+    return new URL(request.url).hostname === OPS_API_HOSTNAME;
   } catch {
     return false;
   }

@@ -1,4 +1,8 @@
 import { CHAIN_META } from "@shared/lib/chains";
+import {
+  getPublicRpcUrl,
+  getSecondaryFallbackRpcUrl,
+} from "./public-rpc-registry";
 export {
   CHAIN_REGISTRY,
   CG_CHAIN_MAP,
@@ -43,25 +47,12 @@ const DRPC_CHAINS: Record<string, string> = {
   celo: "celo",
 };
 
-/** Public RPCs used as fallbacks (previously primary) */
-const PUBLIC_RPCS: Record<string, string> = {
-  ethereum: "https://ethereum-rpc.publicnode.com",
-  arbitrum: "https://arb1.arbitrum.io/rpc",
-  base: "https://mainnet.base.org",
-  optimism: "https://mainnet.optimism.io",
-  polygon: "https://polygon-rpc.com",
-  avalanche: "https://api.avax.network/ext/bc/C/rpc",
-  bsc: "https://bsc-dataseed.binance.org",
-  gnosis: "https://rpc.gnosischain.com",
-  fantom: "https://rpc.ftm.tools",
-  celo: "https://forno.celo.org",
-};
-
 export function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): Map<string, ChainRpcConfig> {
   const configs: ChainRpcConfig[] = [];
 
   for (const [chainId, slug] of Object.entries(ALCHEMY_CHAINS)) {
-    const publicRpc = PUBLIC_RPCS[chainId]!;
+    const publicRpc = getPublicRpcUrl(chainId);
+    if (!publicRpc) continue;
     if (alchemyApiKey) {
       configs.push({
         chainId,
@@ -78,14 +69,15 @@ export function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): Map
         chainName: CHAIN_META[chainId]!.name,
         type: "evm",
         rpcUrl: publicRpc,
-        fallbackRpcUrl: chainId === "ethereum" ? "https://eth.llamarpc.com" : undefined,
+        fallbackRpcUrl: getSecondaryFallbackRpcUrl(chainId),
         explorerUrl: CHAIN_META[chainId]!.explorerUrl,
       });
     }
   }
 
   for (const [chainId, slug] of Object.entries(DRPC_CHAINS)) {
-    const publicRpc = PUBLIC_RPCS[chainId]!;
+    const publicRpc = getPublicRpcUrl(chainId);
+    if (!publicRpc) continue;
     if (drpcApiKey) {
       configs.push({
         chainId,
@@ -112,7 +104,7 @@ export function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): Map
       chainName: CHAIN_META.tron.name,
       type: "tron",
       rpcUrl: `https://tron-mainnet.g.alchemy.com/v2/${alchemyApiKey}`,
-      fallbackRpcUrl: "https://api.trongrid.io",
+      fallbackRpcUrl: getPublicRpcUrl("tron"),
       explorerUrl: CHAIN_META.tron.explorerUrl,
     });
   } else {
@@ -120,7 +112,7 @@ export function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): Map
       chainId: "tron",
       chainName: CHAIN_META.tron.name,
       type: "tron",
-      rpcUrl: "https://api.trongrid.io",
+      rpcUrl: getPublicRpcUrl("tron")!,
       explorerUrl: CHAIN_META.tron.explorerUrl,
     });
   }

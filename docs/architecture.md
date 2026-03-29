@@ -6,7 +6,9 @@ Curated architecture-significant routes. Start with the [Documentation Index](./
 
 ## Route Definition Model
 
-Static route metadata is declared once in `shared/lib/api-endpoints.ts`. That shared descriptor list now carries path, method, admin/cache/probe/status-action metadata, plus the worker dependency-hydration hints needed for static routes. `worker/src/route-registry.ts` binds worker handlers to those shared endpoint keys and also owns `DYNAMIC_ROUTE_DEFINITIONS`; `worker/src/router.ts` stays focused on method validation, generic dispatch, and delegating dynamic-match resolution.
+Static route metadata is declared once in `shared/lib/api-endpoints.ts`. That shared descriptor list now carries path, method, admin/cache/probe/status-action metadata, plus the worker dependency-hydration hints needed for static routes. `worker/src/route-registry.ts` binds worker handlers to those shared endpoint keys and also owns `DYNAMIC_ROUTE_DEFINITIONS`; `worker/src/router.ts` stays focused on method validation, generic dispatch, and delegating dynamic-match resolution. The route-context dependency hydrators now live behind an exhaustive keyed map in `worker/src/handlers/http/context.ts`, so adding a new `EndpointDependency` without wiring hydration fails at compile time instead of silently defaulting.
+
+Cron trigger metadata follows the same single-source pattern. `shared/lib/cron-jobs.ts` remains the schedule authority, while `shared/lib/scheduled-runner-registry.ts` binds each cron expression to a symbolic scheduled-runner key that both the worker scheduler and `scripts/check-cron-schedule-sync.ts` consume. That keeps `worker/wrangler.toml`, shared cron metadata, and scheduled-runner dispatch in lockstep.
 
 | Endpoint                                     | Description                                                                                                                                                                                                                    |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -81,6 +83,8 @@ The Telegram subscriber, disambiguation, and overflow-queue tables are part of t
 
 Representative tree of architecture-significant files and directories. For an exhaustive inventory, use `rg --files src shared worker scripts data functions`.
 
+Shared runtime host/origin defaults now live in `shared/lib/runtime-origins.json` + `shared/lib/runtime-origins.ts`. Frontend API-base inference, ops-host Pages Functions, worker self/probe URLs, and local static-export tooling should consume that shared source instead of embedding production origins ad hoc.
+
 ```
 src/                              # Next.js frontend (static export)
 ├── app/
@@ -128,7 +132,7 @@ src/                              # Next.js frontend (static export)
 │   │   ├── error.tsx
 │   │   ├── methodology-shared.tsx # Shared methodology page helpers, section metadata, and section-shell primitives
 │   │   ├── methodology-sections.tsx # Composition root for the long-form methodology section groups
-│   │   ├── sections/             # Grouped long-form methodology section modules (core + monitoring)
+│   │   ├── sections/             # Methodology composition shells plus per-section body modules (core/ + monitoring/)
 │   │   ├── changelog-page-utils.ts # Shared metadata + entry mapping helpers for methodology changelog routes
 │   │   ├── changelog-route-factory.tsx # Config-driven wrapper factory for methodology changelog routes
 │   │   ├── pricing-pipeline-changelog/page.tsx # Pricing pipeline methodology changelog

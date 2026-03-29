@@ -1,5 +1,4 @@
 import { errorResponse, jsonResponse } from "../lib/api-utils";
-import { withAdmin } from "../lib/auth";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { batchExecute } from "../lib/db";
 import { getPsiMethodologyVersionAt } from "@shared/lib/stability-index-version";
@@ -14,6 +13,7 @@ import {
   type PsiHistoricalDewsRow,
   usesHistoricalStressBreadth,
 } from "../lib/psi-replay";
+import { runAdminJob } from "../lib/admin-job";
 
 function parseDayParam(raw: string | null): number | null {
   if (!raw) return null;
@@ -34,11 +34,11 @@ export async function handleBackfillStabilityIndex(
   trustedAdmin?: boolean,
   request?: Request,
 ): Promise<Response> {
-  return withAdmin(
-    request,
-    async () => {
-      const url = request ? new URL(request.url) : null;
-      const dryRun = url?.searchParams.get("dry-run") === "true";
+  const url = request ? new URL(request.url) : new URL("https://api.pharos.watch/api/backfill-stability-index");
+
+  return runAdminJob(
+    { request, trustedAdmin, url },
+    async ({ dryRun }) => {
       const rebuildTableSql = [
         "CREATE TABLE stability_index_rebuild (",
         "computed_at INTEGER PRIMARY KEY,",
@@ -65,10 +65,12 @@ export async function handleBackfillStabilityIndex(
       // Start from earliest depeg event, iterate day by day
       const earliestDay = Math.floor(earliest.earliest / DAY_SECONDS) * DAY_SECONDS;
       const latestCompletedDay = todayMidnight - DAY_SECONDS;
-      const requestedStartDay = parseDayParam(url?.searchParams.get("startDay") ?? null);
-      const requestedEndDay = parseDayParam(url?.searchParams.get("endDay") ?? null);
+      const hasExplicitWindow =
+        url.searchParams.has("startDay") || url.searchParams.has("endDay");
+      const requestedStartDay = parseDayParam(url.searchParams.get("startDay"));
+      const requestedEndDay = parseDayParam(url.searchParams.get("endDay"));
 
-      if ((url?.searchParams.get("startDay") && requestedStartDay == null) || (url?.searchParams.get("endDay") && requestedEndDay == null)) {
+      if ((url.searchParams.get("startDay") && requestedStartDay == null) || (url.searchParams.get("endDay") && requestedEndDay == null)) {
         return errorResponse(400, "Invalid startDay/endDay. Use Unix seconds/milliseconds or YYYY-MM-DD.");
       }
 
@@ -90,23 +92,52 @@ export async function handleBackfillStabilityIndex(
         });
       }
 
-      // Load all depeg events into memory for fast lookup
-      const allDepegs = await db
-        .prepare(
+      const supplyQueryStartDay = Math.max(0, startDay - 7 * DAY_SECONDS);
+
+      const depegQuery = hasExplicitWindow
+        ? db
+          .prepare(
+            `SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at
+             FROM depeg_events
+             WHERE started_at <= ? AND (ended_at IS NULL OR ended_at > ?)
+             ORDER BY started_at`,
+          )
+          .bind(endDay, startDay)
+        : db.prepare(
           "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events ORDER BY started_at",
-        )
-        .all<PsiDepegEventRow>();
+        );
+
+      const allDepegs = await depegQuery.all<PsiDepegEventRow>();
       const depegEvents = allDepegs.results ?? [];
 
-      // Load all supply snapshots for mcap lookup
-      const allSupply = await db
-        .prepare("SELECT stablecoin_id, snapshot_date, circulating_usd, price FROM supply_history ORDER BY snapshot_date")
-        .all<PsiSupplyRow>();
+      const supplyQuery = hasExplicitWindow
+        ? db
+          .prepare(
+            `SELECT stablecoin_id, snapshot_date, circulating_usd, price
+             FROM supply_history
+             WHERE snapshot_date >= ? AND snapshot_date <= ?
+             ORDER BY snapshot_date`,
+          )
+          .bind(supplyQueryStartDay, endDay)
+        : db.prepare(
+          "SELECT stablecoin_id, snapshot_date, circulating_usd, price FROM supply_history ORDER BY snapshot_date",
+        );
+      const allSupply = await supplyQuery.all<PsiSupplyRow>();
       const supplyByCoin = buildSupplySnapshotMap(allSupply.results ?? []);
 
-      const allHistoricalDews = await db
-        .prepare("SELECT stablecoin_id, snapshot_date, band FROM stress_signal_history ORDER BY snapshot_date")
-        .all<PsiHistoricalDewsRow>();
+      const dewsQuery = hasExplicitWindow
+        ? db
+          .prepare(
+            `SELECT stablecoin_id, snapshot_date, band
+             FROM stress_signal_history
+             WHERE snapshot_date >= ? AND snapshot_date <= ?
+             ORDER BY snapshot_date`,
+          )
+          .bind(startDay, endDay)
+        : db.prepare(
+          "SELECT stablecoin_id, snapshot_date, band FROM stress_signal_history ORDER BY snapshot_date",
+        );
+      const allHistoricalDews = await dewsQuery.all<PsiHistoricalDewsRow>();
       const dewsByDay = buildHistoricalDewsMap(allHistoricalDews.results ?? []);
 
       const existingRows = await db
@@ -204,16 +235,33 @@ export async function handleBackfillStabilityIndex(
 
       try {
         // D1 in Workers rejects manual SQL transaction statements.
-        // Use a single batch so DELETE + INSERT swap stays atomic.
-        await db.batch([
-          db.prepare("DELETE FROM stability_index"),
-          db.prepare(
-            `INSERT INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version)
-             SELECT computed_at, score, band, components, input_snapshot, methodology_version
-             FROM stability_index_rebuild
-             ORDER BY computed_at`,
-          ),
-        ]);
+        // Use a single batch so the final swap stays atomic for either the full table or the requested range.
+        if (hasExplicitWindow) {
+          await db.batch([
+            db
+              .prepare("DELETE FROM stability_index WHERE computed_at >= ? AND computed_at <= ?")
+              .bind(startDay, endDay),
+            db
+              .prepare(
+                `INSERT INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version)
+                 SELECT computed_at, score, band, components, input_snapshot, methodology_version
+                 FROM stability_index_rebuild
+                 WHERE computed_at >= ? AND computed_at <= ?
+                 ORDER BY computed_at`,
+              )
+              .bind(startDay, endDay),
+          ]);
+        } else {
+          await db.batch([
+            db.prepare("DELETE FROM stability_index"),
+            db.prepare(
+              `INSERT INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version)
+               SELECT computed_at, score, band, components, input_snapshot, methodology_version
+               FROM stability_index_rebuild
+               ORDER BY computed_at`,
+            ),
+          ]);
+        }
       } finally {
         await db.exec("DROP TABLE IF EXISTS stability_index_rebuild").catch(() => {});
       }
@@ -230,6 +278,5 @@ export async function handleBackfillStabilityIndex(
         endDay,
       });
     },
-    trustedAdmin,
   );
 }

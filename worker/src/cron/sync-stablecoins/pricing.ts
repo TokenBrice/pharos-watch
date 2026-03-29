@@ -74,6 +74,52 @@ function stampExistingSingleSource(asset: PeggedAsset, syncStartSec: number): vo
   );
 }
 
+interface ApplyPrimaryCandidateInput {
+  asset: PeggedAsset;
+  candidate: PrimaryPriceResult;
+  previousTrustedPrice: PreviousTrustedPrice | null;
+  validationContext: PriceValidationContext;
+  validationReferences?: PriceValidationReferences;
+  syncStartSec: number;
+}
+
+function applyPrimaryCandidate(input: ApplyPrimaryCandidateInput): string | null {
+  const {
+    asset,
+    candidate,
+    previousTrustedPrice,
+    validationContext,
+    validationReferences,
+    syncStartSec,
+  } = input;
+
+  const decision = validatePrimaryPriceCandidate({
+    price: candidate.price,
+    source: candidate.source,
+    confidence: candidate.confidence,
+    agreeSources: candidate.agreeSources,
+    validationContext,
+    validationReferences,
+    previousTrustedPrice,
+  });
+  if (!decision.accepted) {
+    return decision.reason;
+  }
+
+  asset.price = candidate.price;
+  stampPriceMetadata(
+    asset,
+    candidate.source,
+    candidate.confidence,
+    candidate.observedAt ?? null,
+    candidate.observedAtMode ?? null,
+    candidate.candidateSources,
+    candidate.agreeSources,
+    syncStartSec,
+  );
+  return null;
+}
+
 export function buildPreviousTrustedPriceLookup(
   previousAssetsById: Map<string, PeggedAsset>,
   nowSec: number,
@@ -178,31 +224,18 @@ export function applyPrimaryPriceResults(input: {
   for (const asset of assets) {
     const primary = primaryPriceResults.get(asset.id);
     if (primary) {
-      const decision = validatePrimaryPriceCandidate({
-        price: primary.price,
-        source: primary.source,
-        confidence: primary.confidence,
-        agreeSources: primary.agreeSources,
+      const rejectionReason = applyPrimaryCandidate({
+        asset,
+        candidate: primary,
+        previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
         validationContext: validationContexts.get(asset),
         validationReferences,
-        previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
+        syncStartSec,
       });
-      if (decision.accepted) {
-        asset.price = primary.price;
-        stampPriceMetadata(
-          asset,
-          primary.source,
-          primary.confidence,
-          primary.observedAt ?? null,
-          primary.observedAtMode ?? null,
-          primary.candidateSources,
-          primary.agreeSources,
-          syncStartSec,
-        );
-      } else if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
+      if (rejectionReason && asset.price != null && typeof asset.price === "number" && asset.price > 0) {
         console.warn(
           `[sync-stablecoins] Rejected primary consensus price for ${asset.symbol} (id=${asset.id}): ` +
-          `$${primary.price} from ${primary.source} (${decision.reason})`,
+          `$${primary.price} from ${primary.source} (${rejectionReason})`,
         );
         stampExistingSingleSource(asset, syncStartSec);
       }
@@ -270,31 +303,18 @@ export function applyGtProbeResults(input: {
     const primary = primaryPriceResults.get(asset.id);
     if (!primary || !primary.candidateSources.includes("geckoterminal")) continue;
 
-    const decision = validatePrimaryPriceCandidate({
-      price: primary.price,
-      source: primary.source,
-      confidence: primary.confidence,
-      agreeSources: primary.agreeSources,
+    const rejectionReason = applyPrimaryCandidate({
+      asset,
+      candidate: primary,
+      previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
       validationContext: validationContexts.get(asset),
       validationReferences,
-      previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
+      syncStartSec,
     });
-    if (decision.accepted) {
-      asset.price = primary.price;
-      stampPriceMetadata(
-        asset,
-        primary.source,
-        primary.confidence,
-        primary.observedAt ?? null,
-        primary.observedAtMode ?? null,
-        primary.candidateSources,
-        primary.agreeSources,
-        syncStartSec,
-      );
-    } else {
+    if (rejectionReason) {
       console.warn(
         `[sync-stablecoins] Rejected GT-probed price for ${asset.symbol} (id=${asset.id}): ` +
-        `$${primary.price} from ${primary.source} (${decision.reason})`,
+        `$${primary.price} from ${primary.source} (${rejectionReason})`,
       );
     }
   }

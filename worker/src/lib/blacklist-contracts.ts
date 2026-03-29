@@ -4,7 +4,8 @@ import {
   type BlacklistStablecoin,
   type BlacklistEventType,
 } from "@shared/types/market";
-import { getTrackedStablecoin, resolveTrackedContractConfig } from "@shared/lib/tracked-stablecoin-utils";
+import { getTrackedStablecoin } from "@shared/lib/tracked-stablecoin-utils";
+import { resolveRequiredTrackedContractConfig } from "./tracked-contract-resolution";
 
 export interface ChainConfig {
   chainId: string;          // Internal identifier (e.g. "ethereum")
@@ -262,19 +263,11 @@ function resolveBlacklistStablecoinSymbol(
 function resolveBlacklistContractConfig(
   spec: ContractEventConfigSpec,
 ): ContractEventConfig {
-  const stablecoin = getTrackedStablecoin(spec.stablecoinId);
-  if (!stablecoin) {
-    throw new Error(`Unknown tracked stablecoin: ${spec.stablecoinId}`);
-  }
-
-  const resolvedContract = resolveTrackedContractConfig(spec.stablecoinId, spec.chain.chainId, {
+  const resolvedContract = resolveRequiredTrackedContractConfig(spec.stablecoinId, spec.chain.chainId, {
     source: spec.contractSource,
     addressOverride: spec.contractAddressOverride,
     decimalsOverride: spec.decimalsOverride,
   });
-  if (!resolvedContract) {
-    throw new Error(`Missing tracked contract for ${spec.stablecoinId} on ${spec.chain.chainId}`);
-  }
 
   return {
     configKey: `${spec.chain.chainId}-${resolvedContract.contractAddress.toLowerCase()}`,

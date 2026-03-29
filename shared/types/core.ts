@@ -1,6 +1,6 @@
 import { z } from "zod";
-import type { LiveReservesConfig } from "../lib/live-reserve-adapters";
 import type { DependencyType } from "./dependency-types";
+import type { LiveReservesConfig } from "./live-reserves";
 export type { DependencyType } from "./dependency-types";
 export { DEPENDENCY_TYPE_VALUES, DependencyTypeSchema } from "./dependency-types";
 

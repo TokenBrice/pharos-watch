@@ -2,6 +2,7 @@ import { z, type ZodType } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
+import { resolvePublicApiBase } from "@shared/lib/runtime-origins";
 
 export type ApiContractMode = "strict" | "warn";
 
@@ -9,20 +10,7 @@ export function resolveApiBase(
   hostname?: string | null,
   envBase: string | undefined = process.env.NEXT_PUBLIC_API_BASE,
 ): string {
-  const explicit = (envBase ?? "").trim();
-  if (explicit) return explicit;
-  if (!hostname) return "";
-
-  if (
-    hostname === "pharos.watch" ||
-    hostname.endsWith(".pharos.watch") ||
-    hostname === "stablecoin-dashboard.pages.dev" ||
-    hostname.endsWith(".stablecoin-dashboard.pages.dev")
-  ) {
-    return "https://api.pharos.watch";
-  }
-
-  return "";
+  return resolvePublicApiBase(hostname, envBase);
 }
 
 const browserHostname = typeof window !== "undefined" ? window.location.hostname : null;
@@ -114,6 +102,35 @@ function resolveContractMode(
   return mode ?? "strict";
 }
 
+function validateApiPayload<T>(
+  path: string,
+  data: unknown,
+  schema?: ZodType<T>,
+  contractMode?: ApiContractMode,
+): T {
+  if (!schema) {
+    return data as T;
+  }
+
+  const resolvedMode = resolveContractMode(schema, contractMode);
+  const result = schema.safeParse(data);
+  if (result.success) {
+    return result.data;
+  }
+
+  const issues = formatIssues(result.error.issues);
+  if (resolvedMode === "strict") {
+    throw new SchemaValidationError(path, issues);
+  }
+
+  console.warn(`[API contract] Schema validation failed`, {
+    endpoint: path,
+    issueCount: result.error.issues.length,
+    issues,
+  });
+  return data as T;
+}
+
 // --- Standard fetch (no meta) ---
 
 export interface ApiFetchOptions {
@@ -151,26 +168,7 @@ export async function apiFetch<T>(
   }
 
   const data: unknown = await res.json();
-
-  if (schema) {
-    const resolvedMode = resolveContractMode(schema, contractMode);
-    const result = schema.safeParse(data);
-    if (!result.success) {
-      const issues = formatIssues(result.error.issues);
-      if (resolvedMode === "strict") {
-        throw new SchemaValidationError(path, issues);
-      }
-      console.warn(`[API contract] Schema validation failed`, {
-        endpoint: path,
-        issueCount: result.error.issues.length,
-        issues,
-      });
-      return data as T;
-    }
-    return result.data;
-  }
-
-  return data as T;
+  return validateApiPayload(path, data, schema, contractMode);
 }
 
 // --- Meta-aware fetch ---
@@ -226,26 +224,7 @@ export async function apiFetchWithMeta<T>(
     }
   }
 
-  // Schema validation (same graceful degradation as apiFetch)
-  if (schema) {
-    const resolvedMode = resolveContractMode(schema, contractMode);
-    const result = schema.safeParse(data);
-    if (!result.success) {
-      const issues = formatIssues(result.error.issues);
-      if (resolvedMode === "strict") {
-        throw new SchemaValidationError(path, issues);
-      }
-      console.warn(`[API contract] Schema validation failed`, {
-        endpoint: path,
-        issueCount: result.error.issues.length,
-        issues,
-      });
-      return { data: data as T, meta };
-    }
-    return { data: result.data, meta };
-  }
-
-  return { data: data as T, meta };
+  return { data: validateApiPayload(path, data, schema, contractMode), meta };
 }
 
 export async function fetchStablecoinReserves(stablecoinId: string): Promise<import("@shared/types").StablecoinReservesResponse | null> {

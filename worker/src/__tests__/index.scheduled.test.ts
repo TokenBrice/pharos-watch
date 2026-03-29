@@ -213,6 +213,23 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncStablecoinCharts).not.toHaveBeenCalled();
   });
 
+  it("throws loudly when a scheduled trigger is unmapped", async () => {
+    const { ctx } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+    } as const;
+
+    await expect(
+      worker.scheduled(
+        { cron: "1 2 3 4 5" } as ScheduledEvent,
+        env as never,
+        ctx,
+      ),
+    ).rejects.toThrow("[cron-slot] Unknown scheduled trigger: 1 2 3 4 5");
+    expect(cronMocks.runScheduledSlotWithFence).not.toHaveBeenCalled();
+  });
+
   it("derives slot identity from scheduledTime and threads it through slot fencing and cron logging", async () => {
     const { ctx, waits } = makeCtx();
     const env = {

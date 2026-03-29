@@ -1,124 +1,23 @@
 import { z } from "zod";
 import { DAY_SECONDS } from "./time-constants";
 import { DEPENDENCY_TYPE_VALUES } from "../types/dependency-types";
-
-const LIVE_RESERVE_ADAPTER_KEYS = [
-  "accountable",
-  "asymmetry",
-  "btcfi",
-  "chainlink-nav",
-  "chainlink-por",
-  "circle-transparency",
-  "collateral-positions-api",
-  "crvusd",
-  "curated-validated",
-  "dola-inverse",
-  "erc4626-single-asset",
-  "ethena",
-  "evm-branch-balances",
-  "falcon",
-  "fdusd-transparency",
-  "frax",
-  "fx",
-  "gho",
-  "infinifi",
-  "m0",
-  "mento",
-  "openeden-usdo",
-  "re-metrics",
-  "reservoir",
-  "sgforge-coinvertible",
-  "single-asset",
-  "sky-makercore",
-  "tether",
-  "usdd-data-platform",
-] as const;
-
-const _LIVE_RESERVE_SOURCE_MODEL_VALUES = [
-  "dynamic-mix",
-  "validated-static",
-  "single-bucket",
-] as const;
-
-const _LIVE_RESERVE_EVIDENCE_CLASS_VALUES = [
-  "independent",
-  "static-validated",
-  "weak-live-probe",
-] as const;
-
-const _LIVE_RESERVE_SHARED_SOURCE_MODE_VALUES = [
-  "none",
-  "source-invariant",
-] as const;
-
-const _LIVE_RESERVE_WARNING_EFFECT_VALUES = [
-  "info",
-  "degraded",
-  "fatal",
-] as const;
-
-const _LIVE_RESERVE_FRESHNESS_MODE_VALUES = [
-  "verified",
-  "unverified",
-  "not-applicable",
-] as const;
-
-const LIVE_RESERVE_SEMANTICS_VALUES = [
-  "collateral-mix",
-  "protocol-reserve",
-  "attestation-mix",
-  "single-asset",
-] as const;
-
-const LIVE_RESERVE_RPC_MODE_VALUES = ["etherscan-proxy", "alchemy", "public-rpc"] as const;
-const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-high"] as const;
-
-export type LiveReserveAdapterKey = (typeof LIVE_RESERVE_ADAPTER_KEYS)[number];
-export type LiveReserveSourceModel = (typeof _LIVE_RESERVE_SOURCE_MODEL_VALUES)[number];
-/** @deprecated Use LiveReserveSourceModel. */
-export type LiveReserveFeedClass = LiveReserveSourceModel;
-export type LiveReserveEvidenceClass = (typeof _LIVE_RESERVE_EVIDENCE_CLASS_VALUES)[number];
-export type LiveReserveSourceSharingMode = (typeof _LIVE_RESERVE_SHARED_SOURCE_MODE_VALUES)[number];
-export type LiveReserveWarningEffect = (typeof _LIVE_RESERVE_WARNING_EFFECT_VALUES)[number];
-export type LiveReserveFreshnessMode = (typeof _LIVE_RESERVE_FRESHNESS_MODE_VALUES)[number];
-export type LiveReserveSemantics = (typeof LIVE_RESERVE_SEMANTICS_VALUES)[number];
-export type LiveReserveRisk = (typeof RESERVE_RISK_VALUES)[number];
-export type LiveReserveDependencyType = (typeof DEPENDENCY_TYPE_VALUES)[number];
-export type LiveReserveInput =
-  | { kind: "http-json"; url: string }
-  | { kind: "http-html"; url: string }
-  | { kind: "indexer"; url: string }
-  | { kind: "onchain-evm"; chain: string; rpcMode: (typeof LIVE_RESERVE_RPC_MODE_VALUES)[number] };
-
-export interface LiveReserveWarning {
-  code: string;
-  message: string;
-  severity: "info" | "warning";
-  effect: LiveReserveWarningEffect;
-}
-
-export interface LiveReserveSnapshotMetadata extends Record<string, unknown> {
-  sourceTimestamp?: number;
-  freshnessMode?: LiveReserveFreshnessMode;
-  unknownExposurePct?: number;
-  supplyUsd?: number;
-  totalReserveUsd?: number;
-  immediateRedeemableUsd?: number;
-  immediateRedeemableRatio?: number;
-  redemptionFeeBps?: number;
-  buyFeeBpsMin?: number;
-  buyFeeBpsMax?: number;
-  details?: Record<string, unknown>;
-}
-
-export interface LiveReserveAdapterValidationPolicy {
-  maxSourceAgeSec?: number;
-  maxUnknownExposurePct?: number;
-}
+import {
+  LIVE_RESERVE_ADAPTER_KEYS,
+  LIVE_RESERVE_RPC_MODE_VALUES,
+  LIVE_RESERVE_RISK_VALUES,
+  LIVE_RESERVE_SEMANTICS_VALUES,
+  type LiveReserveAdapterKey,
+  type LiveReserveAdapterValidationPolicy,
+  type LiveReserveEvidenceClass,
+  type LiveReserveInput,
+  type LiveReservesConfig,
+  type LiveReserveSourceModel,
+  type LiveReserveSourceSharingMode,
+} from "../types/live-reserves";
 
 const LiveReserveSemanticsSchema = z.enum(LIVE_RESERVE_SEMANTICS_VALUES);
 const LiveReserveRpcModeSchema = z.enum(LIVE_RESERVE_RPC_MODE_VALUES);
-const LiveReserveRiskSchema = z.enum(RESERVE_RISK_VALUES);
+const LiveReserveRiskSchema = z.enum(LIVE_RESERVE_RISK_VALUES);
 const LiveReserveDependencyTypeSchema = z.enum(DEPENDENCY_TYPE_VALUES);
 
 const LiveReserveInputSchema: z.ZodType<LiveReserveInput> = z.union([
@@ -145,11 +44,6 @@ const LiveReserveDisplaySchema = z.object({
   url: z.string().optional(),
   label: z.string().optional(),
 }).strict();
-
-export interface LiveReserveDisplay {
-  url?: string;
-  label?: string;
-}
 
 const stringRecordSchema = z.record(z.string(), z.string());
 const riskRecordSchema = z.record(z.string(), LiveReserveRiskSchema);
@@ -493,19 +387,6 @@ const liveReserveConfigVariants = LIVE_RESERVE_ADAPTER_KEYS.map((adapterKey) =>
   }),
 // Zod discriminatedUnion requires a non-empty tuple type that TS cannot infer from array operations
 ) as unknown as readonly [z.ZodTypeAny, ...z.ZodTypeAny[]];
-
-export interface LiveReservesConfig {
-  adapter: LiveReserveAdapterKey;
-  version: number;
-  semantics: LiveReserveSemantics;
-  breakerScope?: string;
-  display?: LiveReserveDisplay;
-  inputs: {
-    primary: LiveReserveInput;
-    fallbacks?: LiveReserveInput[];
-  };
-  params?: Record<string, unknown>;
-}
 
 export const LiveReservesConfigSchema: z.ZodType<LiveReservesConfig> = z.union(
   // Zod union requires a non-empty tuple type that TS cannot infer from the mapped array

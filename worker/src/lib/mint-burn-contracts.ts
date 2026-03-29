@@ -1,6 +1,6 @@
 import type { ChainConfig } from "./blacklist-contracts";
 import { chainConfig } from "./blacklist-contracts";
-import { getTrackedStablecoin, resolveTrackedContractConfig } from "@shared/lib/tracked-stablecoin-utils";
+import { resolveRequiredTrackedContractConfig } from "./tracked-contract-resolution";
 
 // --- Types ---
 
@@ -119,19 +119,11 @@ function ccipBridgeDetection(
 function resolveMintBurnContractConfig(
   spec: MintBurnContractConfigSpec,
 ): MintBurnContractConfig {
-  const stablecoin = getTrackedStablecoin(spec.stablecoinId);
-  if (!stablecoin) {
-    throw new Error(`Unknown tracked stablecoin: ${spec.stablecoinId}`);
-  }
-
-  const resolvedContract = resolveTrackedContractConfig(spec.stablecoinId, spec.chain.chainId, {
+  const resolvedContract = resolveRequiredTrackedContractConfig(spec.stablecoinId, spec.chain.chainId, {
     source: spec.contractSource,
     addressOverride: spec.contractAddressOverride,
     decimalsOverride: spec.decimalsOverride,
   });
-  if (!resolvedContract) {
-    throw new Error(`Missing tracked contract for ${spec.stablecoinId} on ${spec.chain.chainId}`);
-  }
 
   const adapterKind = spec.adapterKind ?? inferAdapterKind(spec.events);
   const defaultedStartBlock = spec.startBlock === 21_900_000

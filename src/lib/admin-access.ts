@@ -1,13 +1,13 @@
+import { OPS_UI_HOSTNAME } from "@shared/lib/runtime-origins";
+
 export interface AdminAccess {
   mode: "ops-proxy";
 }
 
-const OPS_UI_HOST = "ops.pharos.watch";
-
 export function isOpsUiHost(
   hostname: string | null = typeof window !== "undefined" ? window.location.hostname : null,
 ): boolean {
-  return hostname === OPS_UI_HOST;
+  return hostname === OPS_UI_HOSTNAME;
 }
 
 export function buildAdminApiPath(path: string, adminAccess: AdminAccess): string {

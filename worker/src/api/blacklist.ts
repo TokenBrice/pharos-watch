@@ -26,6 +26,11 @@ import {
   type BlacklistSortKey,
   type BlacklistStablecoin,
 } from "@shared/types/market";
+import {
+  mapBlacklistEventRow,
+  type BlacklistEventApiRecord,
+  type BlacklistEventRow,
+} from "../lib/blacklist-api";
 
 const VALID_STABLECOINS = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
 const VALID_CHAIN_NAMES = new Set(Object.values(CHAIN_META).map((m) => m.name));
@@ -54,29 +59,6 @@ const BLACKLIST_ORDER_BY: Record<BlacklistSortKey, Record<BlacklistSortDirection
 function isBlacklistStablecoin(value: string): value is BlacklistStablecoin {
   return VALID_STABLECOINS.has(value as BlacklistStablecoin);
 }
-
-type BlacklistRow = {
-  id: string;
-  stablecoin: string;
-  chain_id: string;
-  chain_name: string;
-  event_type: string;
-  address: string;
-  amount_native: number | null;
-  amount_usd_at_event: number | null;
-  amount_source: "event" | "historical_balance" | "derived" | "unavailable";
-  amount_status: "resolved" | "recoverable_pending" | "permanently_unavailable" | "provider_failed" | "ambiguous";
-  tx_hash: string;
-  block_number: number;
-  timestamp: number;
-  methodology_version: string | null;
-  contract_address: string | null;
-  config_key: string | null;
-  event_signature: string | null;
-  event_topic0: string | null;
-  explorer_tx_url: string;
-  explorer_address_url: string;
-};
 
 export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;
@@ -126,29 +108,8 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
   }
 
   const { events, total } = await fetchPaginatedEvents<
-    BlacklistRow,
-    {
-      methodologyVersion: string;
-      id: string;
-      stablecoin: string;
-      chainId: string;
-      chainName: string;
-      eventType: string;
-      address: string;
-      amountNative: number | null;
-      amountUsdAtEvent: number | null;
-      amountSource: BlacklistRow["amount_source"];
-      amountStatus: BlacklistRow["amount_status"];
-      txHash: string;
-      blockNumber: number;
-      timestamp: number;
-      explorerTxUrl: string;
-      explorerAddressUrl: string;
-      contractAddress: string | null;
-      configKey: string | null;
-      eventSignature: string | null;
-      eventTopic0: string | null;
-    }
+    BlacklistEventRow,
+    BlacklistEventApiRecord
   >(db, {
     tableName: "blacklist_events",
     orderBy: BLACKLIST_ORDER_BY[sortBy][sortDirection],
@@ -156,28 +117,7 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
     filterBindings,
     limit,
     offset,
-    mapRow: (row) => ({
-      methodologyVersion: row.methodology_version ?? getBlacklistTrackerMethodologyVersionAt(row.timestamp),
-      id: row.id,
-      stablecoin: row.stablecoin,
-      chainId: row.chain_id,
-      chainName: row.chain_name,
-      eventType: row.event_type,
-      address: row.address,
-      amountNative: row.amount_native,
-      amountUsdAtEvent: row.amount_usd_at_event,
-      amountSource: row.amount_source,
-      amountStatus: row.amount_status,
-      txHash: row.tx_hash,
-      blockNumber: row.block_number,
-      timestamp: row.timestamp,
-      contractAddress: row.contract_address,
-      configKey: row.config_key,
-      eventSignature: row.event_signature,
-      eventTopic0: row.event_topic0,
-      explorerTxUrl: row.explorer_tx_url,
-      explorerAddressUrl: row.explorer_address_url,
-    }),
+    mapRow: mapBlacklistEventRow,
   });
 
   const latestTs =

@@ -1,2 +1,1 @@
-export const SITE_URL = "https://pharos.watch" as const;
-export const API_URL = "https://api.pharos.watch" as const;
+export { SITE_ORIGIN as SITE_URL, API_ORIGIN as API_URL } from "@shared/lib/runtime-origins";

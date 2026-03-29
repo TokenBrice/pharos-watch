@@ -1,6 +1,6 @@
-import { normalizeOrigin } from "./ops-origin";
+import { OPS_API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
 
-export const DEFAULT_OPS_API_ORIGIN = "https://ops-api.pharos.watch";
+export const DEFAULT_OPS_API_ORIGIN = OPS_API_ORIGIN;
 
 export interface OpsAdminProxyEnv {
   OPS_UI_ORIGIN?: string;
@@ -37,7 +37,7 @@ export const PAGES_FUNCTIONS_ACTIVE_ENV_KEYS = [
 ] as const;
 
 export function resolveOpsApiOrigin(env: Pick<OpsAdminProxyEnv, "OPS_API_ORIGIN">): string {
-  return normalizeOrigin(env.OPS_API_ORIGIN?.trim() || DEFAULT_OPS_API_ORIGIN);
+  return resolveOrigin(env.OPS_API_ORIGIN, DEFAULT_OPS_API_ORIGIN);
 }
 
 export function validatePagesOpsProxyEnv(env: OpsAdminProxyEnv): OpsProxyEnvIssue[] {

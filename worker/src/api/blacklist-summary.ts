@@ -10,7 +10,6 @@ import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
-  getBlacklistTrackerMethodologyVersionAt,
 } from "@shared/lib/blacklist-tracker-version";
 import { buildBlacklistChartData, computeBlacklistSummaryStats } from "@shared/lib/blacklist-aggregates";
 import {
@@ -20,31 +19,11 @@ import {
 } from "@shared/lib/blacklist-active-records";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
-import type { BlacklistStablecoin } from "@shared/types/market";
 import { loadBlacklistCurrentBalanceMap } from "../lib/blacklist-current-balances";
-
-type SummaryRow = {
-  id: string;
-  stablecoin: BlacklistStablecoin;
-  chain_id: string;
-  chain_name: string;
-  event_type: "blacklist" | "unblacklist" | "destroy";
-  address: string;
-  amount_native: number | null;
-  amount_usd_at_event: number | null;
-  amount_source: "event" | "historical_balance" | "derived" | "unavailable";
-  amount_status: "resolved" | "recoverable_pending" | "permanently_unavailable" | "provider_failed" | "ambiguous";
-  tx_hash: string;
-  block_number: number;
-  timestamp: number;
-  methodology_version: string | null;
-  contract_address: string | null;
-  config_key: string | null;
-  event_signature: string | null;
-  event_topic0: string | null;
-  explorer_tx_url: string;
-  explorer_address_url: string;
-};
+import {
+  mapBlacklistEventRow,
+  type BlacklistEventRow,
+} from "../lib/blacklist-api";
 
 export const handleBlacklistSummary = withErrorHandler(
   "blacklist-summary",
@@ -57,30 +36,9 @@ export const handleBlacklistSummary = withErrorHandler(
          FROM blacklist_events
          ORDER BY timestamp DESC`,
       )
-      .all<SummaryRow>();
+      .all<BlacklistEventRow>();
 
-    const events = (result.results ?? []).map((row) => ({
-      id: row.id,
-      stablecoin: row.stablecoin,
-      chainId: row.chain_id,
-      chainName: row.chain_name,
-      eventType: row.event_type,
-      address: row.address,
-      amountNative: row.amount_native,
-      amountUsdAtEvent: row.amount_usd_at_event,
-      amountSource: row.amount_source,
-      amountStatus: row.amount_status,
-      txHash: row.tx_hash,
-      blockNumber: row.block_number,
-      timestamp: row.timestamp,
-      methodologyVersion: row.methodology_version ?? getBlacklistTrackerMethodologyVersionAt(row.timestamp),
-      contractAddress: row.contract_address,
-      configKey: row.config_key,
-      eventSignature: row.event_signature,
-      eventTopic0: row.event_topic0,
-      explorerTxUrl: row.explorer_tx_url,
-      explorerAddressUrl: row.explorer_address_url,
-    }));
+    const events = (result.results ?? []).map(mapBlacklistEventRow);
 
     const currentBalances = await loadBlacklistCurrentBalanceMap(db);
     const activeRecords = buildBlacklistActiveRecords(events, currentBalances);

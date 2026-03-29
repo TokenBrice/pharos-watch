@@ -1,4 +1,5 @@
-import { CRON_SCHEDULES, getCronScheduleKey, getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
+import { getCronScheduleKey, getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
+import { SCHEDULED_RUNNER_KEYS_BY_SCHEDULE, type ScheduledRunnerKey } from "@shared/lib/scheduled-runner-registry";
 import type { Env } from "../lib/env";
 import { runScheduledSlotWithFence } from "../lib/cron-lease";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./scheduled/context";
@@ -18,21 +19,32 @@ import { runMonthlyYieldAuditSlot } from "./scheduled/monthly-yield-audit";
 
 type SlotRunner = (runtime: ScheduledRuntimeContext) => Promise<void> | void;
 
-const SLOT_RUNNER_BY_SCHEDULE: Record<string, SlotRunner> = {
-  [CRON_SCHEDULES.quarterHourly]: runQuarterHourlySlot,
-  [CRON_SCHEDULES.hourlyBlacklist]: runHourlyBlacklistSlot,
-  [CRON_SCHEDULES.twentyMinuteMintBurn]: runTwentyMinuteMintBurnCriticalSlot,
-  [CRON_SCHEDULES.thirtyMinuteDexDiscovery]: runTwentyMinuteDexDiscoverySlot,
-  [CRON_SCHEDULES.twentyMinuteExtendedOffset]: runTwentyMinuteMintBurnExtendedSlot,
-  [CRON_SCHEDULES.halfHourlyOffset]: runHalfHourlySlot,
-  [CRON_SCHEDULES.hourlyReserveSync]: runHourlyReserveSyncSlot,
-  [CRON_SCHEDULES.hourlyYieldSync]: runHourlyYieldSlot,
-  [CRON_SCHEDULES.fourHourlyYieldSupplemental]: runYieldSupplementalSlot,
-  [CRON_SCHEDULES.fiveMinuteTelegramAlerts]: runFiveMinuteTelegramSlot,
-  [CRON_SCHEDULES.daily0800Utc]: runDaily0800Slot,
-  [CRON_SCHEDULES.daily0805Utc]: runDaily0805Slot,
-  [CRON_SCHEDULES.monthlyYieldAudit]: runMonthlyYieldAuditSlot,
-};
+const SLOT_RUNNER_BY_KEY = {
+  quarterHourly: runQuarterHourlySlot,
+  hourlyBlacklist: runHourlyBlacklistSlot,
+  twentyMinuteMintBurn: runTwentyMinuteMintBurnCriticalSlot,
+  thirtyMinuteDexDiscovery: runTwentyMinuteDexDiscoverySlot,
+  twentyMinuteExtendedOffset: runTwentyMinuteMintBurnExtendedSlot,
+  halfHourlyOffset: runHalfHourlySlot,
+  hourlyReserveSync: runHourlyReserveSyncSlot,
+  hourlyYieldSync: runHourlyYieldSlot,
+  fourHourlyYieldSupplemental: runYieldSupplementalSlot,
+  fiveMinuteTelegramAlerts: runFiveMinuteTelegramSlot,
+  daily0800Utc: runDaily0800Slot,
+  daily0805Utc: runDaily0805Slot,
+  monthlyYieldAudit: runMonthlyYieldAuditSlot,
+} satisfies Record<ScheduledRunnerKey, SlotRunner>;
+
+export const SLOT_RUNNER_BY_SCHEDULE: Record<string, SlotRunner> = Object.fromEntries(
+  Object.entries(SCHEDULED_RUNNER_KEYS_BY_SCHEDULE).map(([schedule, runnerKey]) => [
+    schedule,
+    SLOT_RUNNER_BY_KEY[runnerKey],
+  ]),
+) as Record<string, SlotRunner>;
+
+function buildUnknownScheduleError(cron: string): Error {
+  return new Error(`[cron-slot] Unknown scheduled trigger: ${cron}`);
+}
 
 export async function handleScheduledEvent(
   event: ScheduledEvent,
@@ -42,7 +54,9 @@ export async function handleScheduledEvent(
   const runner = SLOT_RUNNER_BY_SCHEDULE[event.cron];
   const scheduleKey = getCronScheduleKey(event.cron);
   if (!runner || !scheduleKey) {
-    return;
+    const error = buildUnknownScheduleError(event.cron);
+    console.error(error.message);
+    throw error;
   }
 
   const scheduledTimeMs = typeof event.scheduledTime === "number" ? event.scheduledTime : null;

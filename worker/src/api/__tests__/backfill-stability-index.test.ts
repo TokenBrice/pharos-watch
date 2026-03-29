@@ -17,6 +17,23 @@ vi.mock("../../lib/stability-index", () => ({
   })),
 }));
 
+interface CapturedBackfillState {
+  stabilityRows?: Array<{
+    computed_at: number;
+    score: number;
+    band: string;
+    methodology_version: string | null;
+  }>;
+  rebuildRows?: Array<{
+    computed_at: number;
+    score: number;
+    band: string;
+    components: string;
+    input_snapshot: string;
+    methodology_version: string;
+  }>;
+}
+
 function makeDb(options?: {
   earliest?: number | null;
   depegRows?: Array<{
@@ -38,6 +55,7 @@ function makeDb(options?: {
     band: string;
     methodology_version: string | null;
   }>;
+  captureState?: CapturedBackfillState;
   onExec?: (sql: string) => void;
 }): D1Database {
   const earliest = options?.earliest ?? null;
@@ -45,44 +63,103 @@ function makeDb(options?: {
   const supplyRows = options?.supplyRows ?? [];
   const onExec = options?.onExec;
   const stabilityRows = options?.stabilityRows ?? [];
+  const captureState = options?.captureState;
+  let currentStabilityRows = [...stabilityRows];
+  let rebuildRows: Array<{
+    computed_at: number;
+    score: number;
+    band: string;
+    components: string;
+    input_snapshot: string;
+    methodology_version: string;
+  }> = [];
 
-  const stmt = (sql: string) => ({
-    bind: (..._args: unknown[]) => ({
-      all: async <T>() => {
-        if (sql.includes("FROM depeg_events ORDER BY started_at")) {
-          return { results: depegRows as T[], success: true, meta: {} };
-        }
-        if (sql.includes("FROM supply_history ORDER BY snapshot_date")) {
-          return { results: supplyRows as T[], success: true, meta: {} };
-        }
-        if (sql.includes("FROM stress_signal_history ORDER BY snapshot_date")) {
-          return { results: [] as T[], success: true, meta: {} };
-        }
-        if (sql.includes("FROM stability_index WHERE computed_at >= ? AND computed_at <= ?")) {
-          return { results: stabilityRows as T[], success: true, meta: {} };
-        }
+  const syncCapturedState = () => {
+    if (!captureState) return;
+    captureState.stabilityRows = [...currentStabilityRows];
+    captureState.rebuildRows = [...rebuildRows];
+  };
+
+  const buildPreparedStatement = (sql: string, boundArgs: unknown[] = []) => ({
+    __sql: sql,
+    __boundArgs: boundArgs,
+    bind: (...args: unknown[]) => buildPreparedStatement(sql, args),
+    all: async <T>() => {
+      if (sql.includes("FROM depeg_events")) {
+        const filtered = sql.includes("WHERE started_at <= ? AND (ended_at IS NULL OR ended_at > ?)")
+          ? depegRows.filter((row) => row.started_at <= Number(boundArgs[0]) && (row.ended_at === null || row.ended_at > Number(boundArgs[1])))
+          : depegRows;
+        return { results: filtered as T[], success: true, meta: {} };
+      }
+      if (sql.includes("FROM supply_history")) {
+        const filtered = sql.includes("WHERE snapshot_date >= ? AND snapshot_date <= ?")
+          ? supplyRows.filter((row) => row.snapshot_date >= Number(boundArgs[0]) && row.snapshot_date <= Number(boundArgs[1]))
+          : supplyRows;
+        return { results: filtered as T[], success: true, meta: {} };
+      }
+      if (sql.includes("FROM stress_signal_history")) {
         return { results: [] as T[], success: true, meta: {} };
-      },
-      first: async <T>() => {
-        if (sql.includes("MIN(started_at) as earliest")) {
-          return { earliest } as T;
-        }
-        return null as T | null;
-      },
-      run: async () => ({ success: true, meta: { changes: 1 } }),
-    }),
-    all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
-    first: async <T>() => (sql.includes("MIN(started_at) as earliest")
-      ? ({ earliest } as T)
-      : null as T | null),
+      }
+      if (sql.includes("FROM stability_index WHERE computed_at >= ? AND computed_at <= ?")) {
+        const filtered = currentStabilityRows.filter((row) => row.computed_at >= Number(boundArgs[0]) && row.computed_at <= Number(boundArgs[1]));
+        return { results: filtered as T[], success: true, meta: {} };
+      }
+      return { results: [] as T[], success: true, meta: {} };
+    },
+    first: async <T>() => {
+      if (sql.includes("MIN(started_at) as earliest")) {
+        return { earliest } as T;
+      }
+      return null as T | null;
+    },
     run: async () => ({ success: true, meta: { changes: 1 } }),
   });
 
   return {
-    prepare: (sql: string) => stmt(sql),
-    batch: async (stmts: D1PreparedStatement[]) => (
-      stmts.map(() => ({ success: true, meta: { changes: 1 } }))
-    ),
+    prepare: (sql: string) => buildPreparedStatement(sql),
+    batch: async (stmts: D1PreparedStatement[]) => {
+      for (const stmt of stmts as Array<{ __sql?: string; __boundArgs?: unknown[] }>) {
+        const sql = stmt.__sql ?? "";
+        const boundArgs = stmt.__boundArgs ?? [];
+        if (sql === "DROP TABLE IF EXISTS stability_index_rebuild") {
+          rebuildRows = [];
+        } else if (sql.startsWith("CREATE TABLE stability_index_rebuild")) {
+          rebuildRows = [];
+        } else if (sql.startsWith("INSERT INTO stability_index_rebuild")) {
+          rebuildRows.push({
+            computed_at: Number(boundArgs[0]),
+            score: Number(boundArgs[1]),
+            band: String(boundArgs[2]),
+            components: String(boundArgs[3]),
+            input_snapshot: String(boundArgs[4]),
+            methodology_version: String(boundArgs[5]),
+          });
+        } else if (sql === "DELETE FROM stability_index") {
+          currentStabilityRows = [];
+        } else if (sql === "DELETE FROM stability_index WHERE computed_at >= ? AND computed_at <= ?") {
+          currentStabilityRows = currentStabilityRows.filter(
+            (row) => row.computed_at < Number(boundArgs[0]) || row.computed_at > Number(boundArgs[1]),
+          );
+        } else if (sql.includes("INSERT INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version)")) {
+          const rowsToInsert = sql.includes("WHERE computed_at >= ? AND computed_at <= ?")
+            ? rebuildRows.filter(
+              (row) => row.computed_at >= Number(boundArgs[0]) && row.computed_at <= Number(boundArgs[1]),
+            )
+            : rebuildRows;
+          currentStabilityRows = [
+            ...currentStabilityRows,
+            ...rowsToInsert.map((row) => ({
+              computed_at: row.computed_at,
+              score: row.score,
+              band: row.band,
+              methodology_version: row.methodology_version,
+            })),
+          ].sort((a, b) => a.computed_at - b.computed_at);
+        }
+      }
+      syncCapturedState();
+      return stmts.map(() => ({ success: true, meta: { changes: 1 } }));
+    },
     exec: async (sql: string) => {
       onExec?.(sql);
       return { count: 0, duration: 0 };
@@ -194,7 +271,9 @@ describe("handleBackfillStabilityIndex", () => {
 
     const origBatch = db.batch.bind(db);
     db.batch = (async (stmts: D1PreparedStatement[]) => {
-      batchCalls.push(stmts.map((s) => stmtSqlMap.get(s as unknown as object) ?? "<unknown>"));
+      batchCalls.push(
+        stmts.map((s) => stmtSqlMap.get(s as unknown as object) ?? ((s as unknown as { __sql?: string }).__sql ?? "<unknown>")),
+      );
       return origBatch(stmts);
     }) as typeof db.batch;
 
@@ -286,6 +365,54 @@ describe("handleBackfillStabilityIndex", () => {
       startDay: day1,
       endDay: day1,
     });
+  });
+
+  it("keeps out-of-range rows intact for bounded non-dry-run rebuilds", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const targetDay = Math.floor((nowSec - 2 * 86400) / 86400) * 86400;
+    const preservedBefore = targetDay - 86400;
+    const preservedAfter = targetDay + 86400;
+    const state: CapturedBackfillState = {};
+
+    const db = makeDb({
+      earliest: targetDay,
+      depegRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          peak_deviation_bps: -120,
+          peg_reference: 1,
+          started_at: targetDay,
+          ended_at: null,
+        },
+      ],
+      supplyRows: [
+        { stablecoin_id: "usdt-tether", snapshot_date: targetDay - 7 * 86400, circulating_usd: 99_000_000, price: 1 },
+        { stablecoin_id: "usdt-tether", snapshot_date: targetDay, circulating_usd: 100_000_000, price: 0.996 },
+      ],
+      stabilityRows: [
+        { computed_at: preservedBefore, score: 11, band: "Stable", methodology_version: "2.0" },
+        { computed_at: targetDay, score: 22, band: "Stable", methodology_version: "2.0" },
+        { computed_at: preservedAfter, score: 33, band: "Stable", methodology_version: "2.0" },
+      ],
+      captureState: state,
+    });
+
+    const res = await handleBackfillStabilityIndex(
+      db,
+      true,
+      makeApiRequest(`/api/backfill-stability-index?startDay=${targetDay}&endDay=${targetDay}`, {
+        method: "POST",
+        adminKey: "secret",
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(state.stabilityRows).toEqual([
+      { computed_at: preservedBefore, score: 11, band: "Stable", methodology_version: "2.0" },
+      expect.objectContaining({ computed_at: targetDay }),
+      { computed_at: preservedAfter, score: 33, band: "Stable", methodology_version: "2.0" },
+    ]);
+    expect(state.stabilityRows?.find((row: { computed_at: number; score: number }) => row.computed_at === targetDay)?.score).not.toBe(22);
   });
 
   it("rejects invalid day parameters", async () => {

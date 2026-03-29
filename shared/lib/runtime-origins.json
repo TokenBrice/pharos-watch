@@ -1,0 +1,7 @@
+{
+  "siteOrigin": "https://pharos.watch",
+  "apiOrigin": "https://api.pharos.watch",
+  "opsUiOrigin": "https://ops.pharos.watch",
+  "opsApiOrigin": "https://ops-api.pharos.watch",
+  "pagesAppOrigin": "https://stablecoin-dashboard.pages.dev"
+}

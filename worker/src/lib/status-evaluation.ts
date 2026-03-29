@@ -1,8 +1,3 @@
-import {
-  STATUS_BLACKLIST_THRESHOLDS,
-  STATUS_CACHE_RATIO_THRESHOLDS,
-  STATUS_MISSING_PRICE_THRESHOLDS,
-} from "@shared/lib/status-thresholds";
 import type {
   StatusCause,
   StatusResponse,
@@ -17,19 +12,23 @@ import {
 } from "./status/derived-data";
 import { emptyDataQuality, getDataQuality } from "./status/data-quality";
 import {
-  clampConfidence,
   reconcileStatusState,
   type StatusLevel,
 } from "./status-reliability";
+import {
+  deriveAvailabilityStatus,
+  deriveDataQualityStatus,
+  deriveReserveCompositionFlags,
+  maxStatus,
+  scoreStatusConfidence,
+} from "./status/evaluation-state";
+import {
+  buildAvailabilityCauses,
+  buildDataQualityCauses,
+  synthesizeOverallCauses,
+} from "./status/evaluation-causes";
 import { assessOnchainDataQuality } from "./status/onchain-data-quality";
 import { loadCronHealth } from "./status/cron-health";
-import { maxPublicStatus } from "@shared/lib/public-health";
-
-const STATUS_SEVERITY: Record<StatusLevel, number> = {
-  healthy: 0,
-  degraded: 1,
-  stale: 2,
-};
 
 export interface RawStatusComputation {
   dbHealthy: boolean;
@@ -46,49 +45,6 @@ export interface RawStatusComputation {
   datasetFreshness: StatusResponse["datasetFreshness"];
   summary: StatusResponse["summary"];
   reserveComposition: StatusResponse["reserveComposition"];
-}
-
-function formatRatio(value: number): string {
-  return `${(value * 100).toFixed(2)}%`;
-}
-
-function pushCause(bucket: StatusCause[], cause: StatusCause): void {
-  bucket.push(cause);
-}
-
-function synthesizeOverallCauses(availability: StatusCause[], dataQuality: StatusCause[]): StatusCause[] {
-  const sorted = [...availability, ...dataQuality].sort((a, b) => {
-    const severityOrder = { critical: 0, warning: 1, info: 2 };
-    return severityOrder[a.severity] - severityOrder[b.severity];
-  });
-  return sorted.slice(0, 12);
-}
-
-function scoreConfidence(input: {
-  availabilityStatus: StatusLevel;
-  dataQualityStatus: StatusLevel;
-  unhealthyCrons: number;
-  degradedCrons: number;
-  missingPriceRatio: number;
-  onchainMonitoringActive: boolean;
-}): number {
-  let confidence = 1;
-
-  if (input.availabilityStatus === "degraded") confidence -= 0.12;
-  if (input.availabilityStatus === "stale") confidence -= 0.28;
-  if (input.dataQualityStatus === "degraded") confidence -= 0.12;
-  if (input.dataQualityStatus === "stale") confidence -= 0.28;
-
-  confidence -= Math.min(0.2, input.unhealthyCrons * 0.03);
-  confidence -= Math.min(0.08, input.degradedCrons * 0.01);
-  confidence -= Math.min(0.18, input.missingPriceRatio * 0.35);
-  if (!input.onchainMonitoringActive) confidence -= 0.03;
-
-  return Math.round(clampConfidence(confidence) * 1000) / 1000;
-}
-
-function maxStatus(a: StatusLevel, b: StatusLevel): StatusLevel {
-  return STATUS_SEVERITY[a] >= STATUS_SEVERITY[b] ? a : b;
 }
 
 function buildDbUnavailableRawStatus(): RawStatusComputation {
@@ -154,8 +110,6 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
 
   const caches = publicHealth.caches;
   const worstCacheRatio = publicHealth.worstCacheRatio;
-  const cacheFailures = publicHealth.cacheFailures;
-  const cacheWarnings = publicHealth.cacheWarnings;
   const {
     crons,
     anyCronError,
@@ -193,7 +147,6 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
       message: err instanceof Error ? err.message : String(err),
     };
   }
-  const reserveCompositionBootstrap = reserveComposition.configuredCoins > 0 && reserveComposition.lastSuccessAt == null;
   const missingPriceRatio =
     dataQuality.totalStablecoins > 0 ? dataQuality.missingPrices / dataQuality.totalStablecoins : 0;
   const blacklistMissingRatio = dataQuality.blacklistMissingRatio;
@@ -208,344 +161,47 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     divergences: hasActiveOnchainMonitor ? dataQuality.onchainSupplyDivergences : 0,
     divergenceRatio: hasActiveOnchainMonitor ? dataQuality.onchainDivergenceRatio : 0,
   });
-  const reserveIssueCount = reserveComposition.missingCoins
-    + reserveComposition.staleCoins
-    + reserveComposition.degradedCoins
-    + reserveComposition.errorCoins
-    + reserveComposition.corruptCoins;
-  const reserveCompositionCritical = !reserveCompositionBootstrap
-    && reserveComposition.configuredCoins > 0
-    && reserveComposition.freshCoins === 0
-    && reserveIssueCount > 0;
-  const reserveWarningFloor = Math.max(3, Math.ceil(reserveComposition.configuredCoins * 0.1));
-  const reserveCompositionWarning = !reserveCompositionBootstrap && reserveIssueCount >= reserveWarningFloor;
+  const reserveFlags = deriveReserveCompositionFlags(reserveComposition);
 
-  const baseAvailabilityStatus: StatusResponse["availabilityStatus"] =
-    publicHealth.cacheImpactStatus === "stale" || anyCronError || unhealthyCrons >= 3
-      ? "stale"
-      : publicHealth.cacheImpactStatus === "degraded" || unhealthyCrons > 0
-        ? "degraded"
-        : "healthy";
-  const publicAvailabilityFloor = maxPublicStatus(
-    publicHealth.circuitImpactStatus,
-    publicHealth.mintBurnQueryError == null && !publicHealth.mintBurnBootstrap
-      ? publicHealth.mintBurnImpactStatus
-      : "healthy",
-  );
-  const availabilityStatus: StatusResponse["availabilityStatus"] = maxStatus(
-    baseAvailabilityStatus,
-    publicAvailabilityFloor,
-  );
+  const availabilityStatus = deriveAvailabilityStatus({
+    publicHealth,
+    anyCronError,
+    unhealthyCrons,
+  });
 
-  const dataQualityStatus: StatusResponse["dataQualityStatus"] =
-    dataQuality.stablecoinsCacheStatus === "error" ||
-    missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioStale ||
-    blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale ||
-    blacklistRecentMissing >= STATUS_BLACKLIST_THRESHOLDS.missingRecentStale ||
-    onchainAssessment.status === "stale" ||
-    reserveCompositionCritical
-      ? "stale"
-      : dataQuality.stablecoinsCacheStatus === "degraded" ||
-          dataQuality.sourceFailures.length > 0 ||
-          missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded ||
-          blacklistRecentMissing > 0 ||
-          blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded ||
-          onchainAssessment.status === "degraded" ||
-          reserveCompositionWarning ||
-          reserveCompositionQueryFailed
-        ? "degraded"
-        : "healthy";
+  const dataQualityStatus = deriveDataQualityStatus({
+    dataQuality,
+    missingPriceRatio,
+    blacklistMissingRatio,
+    blacklistRecentMissing,
+    onchainAssessment,
+    reserveCompositionQueryFailed,
+    reserveFlags,
+  });
 
   const rawOverallStatus = maxStatus(availabilityStatus, dataQualityStatus);
 
-  const availabilityCauses: StatusCause[] = [];
-  if (worstCacheRatio > STATUS_CACHE_RATIO_THRESHOLDS.stale) {
-    pushCause(availabilityCauses, {
-      code: "cache_ratio_stale",
-      layer: "availability",
-      severity: "critical",
-      message: `Cache freshness exceeded stale threshold (${worstCacheRatio.toFixed(2)}x > ${STATUS_CACHE_RATIO_THRESHOLDS.stale.toFixed(2)}x).`,
-      metric: "worstCacheRatio",
-      value: worstCacheRatio,
-      threshold: STATUS_CACHE_RATIO_THRESHOLDS.stale,
-    });
-  } else if (worstCacheRatio > STATUS_CACHE_RATIO_THRESHOLDS.degraded) {
-    pushCause(availabilityCauses, {
-      code: "cache_ratio_degraded",
-      layer: "availability",
-      severity: "warning",
-      message: `Cache freshness exceeded degraded threshold (${worstCacheRatio.toFixed(2)}x > ${STATUS_CACHE_RATIO_THRESHOLDS.degraded.toFixed(2)}x).`,
-      metric: "worstCacheRatio",
-      value: worstCacheRatio,
-      threshold: STATUS_CACHE_RATIO_THRESHOLDS.degraded,
-    });
-  }
-  if (cacheFailures.length > 0) {
-    const cacheTargets = cacheFailures.map((failure) => failure.key).join(", ");
-    pushCause(availabilityCauses, {
-      code: "cache_freshness_query_failed",
-      layer: "availability",
-      severity: "warning",
-      message: `Cache freshness diagnostics were incomplete for: ${cacheTargets}.`,
-    });
-  }
-  const fxCache = caches["fx-rates"];
-  if (fxCache?.mode === "cached-fallback") {
-    pushCause(availabilityCauses, {
-      code: "fx_cached_fallback",
-      layer: "availability",
-      severity: fxCache.consecutiveFallbackRuns != null && fxCache.consecutiveFallbackRuns >= 4 ? "warning" : "info",
-      message:
-        fxCache.warning ??
-        `FX references are running in cached fallback mode (${fxCache.consecutiveFallbackRuns ?? 0} consecutive runs).`,
-      metric: "fxFallbackRuns",
-      value: fxCache.consecutiveFallbackRuns,
-      threshold: 4,
-    });
-  }
-  if (fxCache?.sourceStatus === "stale") {
-    pushCause(availabilityCauses, {
-      code: "fx_source_stale",
-      layer: "availability",
-      severity: "critical",
-      message:
-        fxCache.warning ??
-        "Non-USD FX reference source data is stale relative to its expected source cadence even though usable FX rates still exist.",
-      metric: "fxSourceAgeSeconds",
-      value: fxCache.sourceAgeSeconds ?? undefined,
-    });
-  } else if (fxCache?.sourceStatus === "degraded") {
-    pushCause(availabilityCauses, {
-      code: "fx_source_degraded",
-      layer: "availability",
-      severity: "warning",
-      message:
-        fxCache.warning ??
-        "Non-USD FX reference source data is behind its expected update cadence.",
-      metric: "fxSourceAgeSeconds",
-      value: fxCache.sourceAgeSeconds ?? undefined,
-    });
-  }
-  if (cacheWarnings.length > 0) {
-    for (const warning of cacheWarnings) {
-      pushCause(availabilityCauses, {
-        code: "cache_warning",
-        layer: "availability",
-        severity: "info",
-        message: warning,
-      });
-    }
-  }
-  if (publicHealth.mintBurnQueryError) {
-    pushCause(availabilityCauses, {
-      code: "mint_burn_health_query_failed",
-      layer: "availability",
-      severity: "info",
-      message: `Mint/burn health query failed: ${publicHealth.mintBurnQueryError}`,
-    });
-  } else if (!publicHealth.mintBurnBootstrap && publicHealth.mintBurnImpactStatus === "stale") {
-    pushCause(availabilityCauses, {
-      code: "mint_burn_public_stale",
-      layer: "availability",
-      severity: "critical",
-      message:
-        publicHealth.mintBurn.sync.warning
-        ?? "Mint/burn public freshness is stale versus the critical-lane cadence.",
-    });
-  } else if (!publicHealth.mintBurnBootstrap && publicHealth.mintBurnImpactStatus === "degraded") {
-    pushCause(availabilityCauses, {
-      code: "mint_burn_public_degraded",
-      layer: "availability",
-      severity: "warning",
-      message:
-        publicHealth.mintBurn.sync.warning
-        ?? "Mint/burn public freshness is degraded versus the critical-lane cadence.",
-    });
-  }
-  if (publicHealth.circuitQueryError) {
-    pushCause(availabilityCauses, {
-      code: "circuit_query_failed",
-      layer: "availability",
-      severity: "warning",
-      message: `Circuit breaker diagnostics failed: ${publicHealth.circuitQueryError}`,
-    });
-  } else if (publicHealth.openCircuitCount >= 3) {
-    pushCause(availabilityCauses, {
-      code: "open_circuit_groups",
-      layer: "availability",
-      severity: "warning",
-      message: `${publicHealth.openCircuitCount} circuit breaker groups are currently open.`,
-      metric: "openCircuits",
-      value: publicHealth.openCircuitCount,
-      threshold: 3,
-    });
-  }
-  if (cronHistoryQueryFailed) {
-    pushCause(availabilityCauses, {
-      code: "cron_history_query_failed",
-      layer: "availability",
-      severity: "warning",
-      message: "Cron history query failed; cron health is temporarily unknown rather than unhealthy.",
-    });
-  }
-  if (cronProgressQueryFailed) {
-    pushCause(availabilityCauses, {
-      code: "cron_progress_query_failed",
-      layer: "availability",
-      severity: "info",
-      message: "Cron progress query failed; in-flight cron telemetry is temporarily unavailable.",
-    });
-  }
-  if (cronErrorCount > 0) {
-    pushCause(availabilityCauses, {
-      code: "cron_error_runs",
-      layer: "availability",
-      severity: "critical",
-      message: `${cronErrorCount} cron job(s) currently have last-run status=error.`,
-      metric: "cronErrors",
-      value: cronErrorCount,
-      threshold: 1,
-    });
-  }
-  if (unhealthyCrons >= 3) {
-    pushCause(availabilityCauses, {
-      code: "multiple_unhealthy_crons",
-      layer: "availability",
-      severity: "critical",
-      message: `${unhealthyCrons} cron jobs are unavailable/stale.`,
-      metric: "unhealthyCrons",
-      value: unhealthyCrons,
-      threshold: 3,
-    });
-  } else if (unhealthyCrons > 0) {
-    pushCause(availabilityCauses, {
-      code: "unhealthy_crons_present",
-      layer: "availability",
-      severity: "warning",
-      message: `${unhealthyCrons} cron job(s) are unavailable/stale.`,
-      metric: "unhealthyCrons",
-      value: unhealthyCrons,
-      threshold: 1,
-    });
-  }
-  if (degradedCronRuns > 0) {
-    pushCause(availabilityCauses, {
-      code: "degraded_cron_warning",
-      layer: "availability",
-      severity: "info",
-      message: `${degradedCronRuns} cron job(s) are in fallback/degraded mode (warning-only).`,
-      metric: "degradedCrons",
-      value: degradedCronRuns,
-      threshold: 1,
-    });
-  }
+  const availabilityCauses = buildAvailabilityCauses({
+    publicHealth,
+    unhealthyCrons,
+    degradedCronRuns,
+    cronErrorCount,
+    cronHistoryQueryFailed,
+    cronProgressQueryFailed,
+  });
+  const dataQualityCauses = buildDataQualityCauses({
+    dataQuality,
+    missingPriceRatio,
+    blacklistMissingRatio,
+    blacklistRecentMissing,
+    onchainAssessmentCauses: onchainAssessment.causes,
+    reserveCompositionQueryFailed,
+    reserveCompositionCritical: reserveFlags.critical,
+    reserveCompositionWarning: reserveFlags.warning,
+    reserveComposition,
+  });
 
-  const dataQualityCauses: StatusCause[] = [];
-  if (dataQuality.stablecoinsCacheStatus === "error") {
-    pushCause(dataQualityCauses, {
-      code: "stablecoins_cache_unavailable",
-      layer: "data-quality",
-      severity: "critical",
-      message: `Stablecoins cache is unavailable (${dataQuality.stablecoinsCacheReason ?? "unknown"}).`,
-    });
-  } else if (dataQuality.stablecoinsCacheStatus === "degraded") {
-    pushCause(dataQualityCauses, {
-      code: "stablecoins_cache_degraded",
-      layer: "data-quality",
-      severity: "warning",
-      message: `Stablecoins cache is degraded (${dataQuality.stablecoinsCacheReason ?? "unknown"}).`,
-    });
-  }
-  for (const failure of dataQuality.sourceFailures) {
-    if (failure.source === "stablecoins-cache") continue;
-    const code =
-      failure.source === "blacklist-gaps"
-        ? "blacklist_gap_query_failed"
-        : failure.source === "active-depegs"
-          ? "active_depeg_query_failed"
-          : "onchain_supply_query_failed";
-    pushCause(dataQualityCauses, {
-      code,
-      layer: "data-quality",
-      severity: "warning",
-      message: `${failure.source} query failed: ${failure.message}`,
-    });
-  }
-  if (reserveCompositionQueryFailed) {
-    pushCause(dataQualityCauses, {
-      code: "reserve_sync_query_failed",
-      layer: "data-quality",
-      severity: "warning",
-      message: "Live reserve composition overview query failed; reserve freshness status may be incomplete.",
-    });
-  }
-  if (missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioStale) {
-    pushCause(dataQualityCauses, {
-      code: "missing_prices_stale",
-      layer: "data-quality",
-      severity: "critical",
-      message: `Missing price ratio is stale (${formatRatio(missingPriceRatio)} > ${formatRatio(STATUS_MISSING_PRICE_THRESHOLDS.ratioStale)}).`,
-      metric: "missingPriceRatio",
-      value: missingPriceRatio,
-      threshold: STATUS_MISSING_PRICE_THRESHOLDS.ratioStale,
-    });
-  } else if (missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded) {
-    pushCause(dataQualityCauses, {
-      code: "missing_prices_degraded",
-      layer: "data-quality",
-      severity: "warning",
-      message: `Missing price ratio is degraded (${formatRatio(missingPriceRatio)} > ${formatRatio(STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded)}).`,
-      metric: "missingPriceRatio",
-      value: missingPriceRatio,
-      threshold: STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded,
-    });
-  }
-  if (
-    blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale ||
-    blacklistRecentMissing >= STATUS_BLACKLIST_THRESHOLDS.missingRecentStale
-  ) {
-    pushCause(dataQualityCauses, {
-      code: "blacklist_gaps_stale",
-      layer: "data-quality",
-      severity: "critical",
-      message: `Blacklist amount gaps exceed stale thresholds (ratio=${formatRatio(blacklistMissingRatio)}, recent=${blacklistRecentMissing}).`,
-      metric: "blacklistMissingRatio",
-      value: blacklistMissingRatio,
-      threshold: STATUS_BLACKLIST_THRESHOLDS.missingRatioStale,
-    });
-  } else if (blacklistRecentMissing > 0 || blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded) {
-    pushCause(dataQualityCauses, {
-      code: "blacklist_gaps_degraded",
-      layer: "data-quality",
-      severity: "warning",
-      message: `Recent or elevated blacklist amount gaps detected (ratio=${formatRatio(blacklistMissingRatio)}, recent=${blacklistRecentMissing}).`,
-      metric: "blacklistMissingRatio",
-      value: blacklistMissingRatio,
-      threshold: STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded,
-    });
-  }
-  for (const cause of onchainAssessment.causes) {
-    pushCause(dataQualityCauses, cause);
-  }
-  if (reserveCompositionCritical) {
-    pushCause(dataQualityCauses, {
-      code: "reserve_sync_stale",
-      layer: "data-quality",
-      severity: "critical",
-      message: "All configured live reserve feeds are missing, stale, or degraded.",
-    });
-  } else if (reserveCompositionWarning) {
-    pushCause(dataQualityCauses, {
-      code: "reserve_sync_degraded",
-      layer: "data-quality",
-      severity: "warning",
-      message: `${reserveComposition.errorCoins} error, ${reserveComposition.missingCoins} missing, `
-        + `${reserveComposition.staleCoins} stale, ${reserveComposition.degradedCoins} degraded, `
-        + `${reserveComposition.corruptCoins} corrupt live reserve feed(s).`,
-    });
-  }
-
-  const confidence = scoreConfidence({
+  const confidence = scoreStatusConfidence({
     availabilityStatus,
     dataQualityStatus,
     unhealthyCrons,

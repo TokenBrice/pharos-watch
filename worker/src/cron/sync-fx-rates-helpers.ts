@@ -47,6 +47,27 @@ interface FxSyncRunStateParams {
   validateRate: (pegKey: string, rate: number, prevRate: number | undefined) => boolean;
 }
 
+interface ApplyInverseRateMappingsInput {
+  mappings: SecondaryFxMappings;
+  includeMissingPrevious?: boolean;
+  sourceUpdatedAt: number;
+  sourceDate: string | null;
+  cadence: FxSourceCadence;
+  getPerUsd(currency: string): number | undefined;
+}
+
+interface ApplyPerUsdPayloadInput<TPayload> {
+  payload: TPayload;
+  mappings: SecondaryFxMappings;
+  includeMissingPrevious?: boolean;
+  cadence: FxSourceCadence;
+  resolveSourceMeta(payload: TPayload): {
+    sourceUpdatedAt: number;
+    sourceDate: string | null;
+  };
+  getPerUsd(payload: TPayload, currency: string): number | undefined;
+}
+
 function resolveDatedSourceUpdatedAt(
   dateText: string | null | undefined,
   syncStartSec: number,
@@ -148,34 +169,78 @@ export class FxSyncRunState {
     this.ecbDate = this.prevState?.ecbDate ?? null;
   }
 
+  private applyInverseRateMappings(input: ApplyInverseRateMappingsInput): void {
+    const {
+      mappings,
+      includeMissingPrevious = false,
+      sourceUpdatedAt,
+      sourceDate,
+      cadence,
+      getPerUsd,
+    } = input;
+
+    for (const [currency, pegKey] of mappings) {
+      const perUsd = getPerUsd(currency);
+      if (typeof perUsd === "number" && perUsd > 0) {
+        const rate = Number((1 / perUsd).toFixed(6));
+        if (this.validateRate(pegKey, rate, this.prevRates[pegKey])) {
+          this.usableRates[pegKey] = rate;
+          this.markLive(pegKey, sourceUpdatedAt, cadence, sourceDate);
+        } else if (this.prevRates[pegKey]) {
+          this.usableRates[pegKey] = this.prevRates[pegKey]!;
+          this.inheritPrevious(pegKey);
+        }
+      } else if (includeMissingPrevious && this.prevRates[pegKey]) {
+        this.usableRates[pegKey] = this.prevRates[pegKey]!;
+        this.inheritPrevious(pegKey);
+      }
+    }
+  }
+
+  private applyPerUsdPayload<TPayload>(input: ApplyPerUsdPayloadInput<TPayload>): void {
+    const {
+      payload,
+      mappings,
+      includeMissingPrevious,
+      cadence,
+      resolveSourceMeta,
+      getPerUsd,
+    } = input;
+    const { sourceUpdatedAt, sourceDate } = resolveSourceMeta(payload);
+
+    this.applyInverseRateMappings({
+      mappings,
+      includeMissingPrevious,
+      sourceUpdatedAt,
+      sourceDate,
+      cadence,
+      getPerUsd: (currency) => getPerUsd(payload, currency),
+    });
+  }
+
   applySecondaryRates(
     candidate: SecondaryCurrencyCandidate,
     mappings: SecondaryFxMappings,
     options: { includeMissingPrevious?: boolean } = {},
   ): void {
-    const sourceDate = typeof candidate.payload.date === "string" && candidate.payload.date.length > 0
-      ? candidate.payload.date
-      : null;
-    const secondaryUpdatedAt = sourceDate
-      ? resolveDatedSourceUpdatedAt(sourceDate, this.syncStartSec)
-      : this.syncStartSec;
-
-    for (const [currency, pegKey] of mappings) {
-      const perUsd = candidate.payload.usd?.[currency.toLowerCase()];
-      if (typeof perUsd === "number" && perUsd > 0) {
-        const rate = Number((1 / perUsd).toFixed(6));
-        if (this.validateRate(pegKey, rate, this.prevRates[pegKey])) {
-          this.usableRates[pegKey] = rate;
-          this.markLive(pegKey, secondaryUpdatedAt, "calendar-daily", sourceDate);
-        } else if (this.prevRates[pegKey]) {
-          this.usableRates[pegKey] = this.prevRates[pegKey]!;
-          this.inheritPrevious(pegKey);
-        }
-      } else if (options.includeMissingPrevious && this.prevRates[pegKey]) {
-        this.usableRates[pegKey] = this.prevRates[pegKey]!;
-        this.inheritPrevious(pegKey);
-      }
-    }
+    this.applyPerUsdPayload({
+      payload: candidate,
+      mappings,
+      includeMissingPrevious: options.includeMissingPrevious,
+      cadence: "calendar-daily",
+      resolveSourceMeta: ({ payload }) => {
+        const sourceDate = typeof payload.date === "string" && payload.date.length > 0
+          ? payload.date
+          : null;
+        return {
+          sourceUpdatedAt: sourceDate
+            ? resolveDatedSourceUpdatedAt(sourceDate, this.syncStartSec)
+            : this.syncStartSec,
+          sourceDate,
+        };
+      },
+      getPerUsd: ({ payload }, currency) => payload.usd?.[currency.toLowerCase()],
+    });
   }
 
   applyExchangeRateApiRates(
@@ -183,30 +248,25 @@ export class FxSyncRunState {
     mappings: SecondaryFxMappings,
     options: { includeMissingPrevious?: boolean } = {},
   ): void {
-    const sourceUpdatedAt =
-      typeof payload.time_last_update_unix === "number" &&
-      Number.isFinite(payload.time_last_update_unix) &&
-      payload.time_last_update_unix > 0
-        ? Math.min(this.syncStartSec, Math.floor(payload.time_last_update_unix))
-        : this.syncStartSec;
-    const sourceDate = new Date(sourceUpdatedAt * 1000).toISOString().slice(0, 10);
-
-    for (const [currency, pegKey] of mappings) {
-      const perUsd = payload.rates[currency.toUpperCase()];
-      if (typeof perUsd === "number" && perUsd > 0) {
-        const rate = Number((1 / perUsd).toFixed(6));
-        if (this.validateRate(pegKey, rate, this.prevRates[pegKey])) {
-          this.usableRates[pegKey] = rate;
-          this.markLive(pegKey, sourceUpdatedAt, "calendar-daily", sourceDate);
-        } else if (this.prevRates[pegKey]) {
-          this.usableRates[pegKey] = this.prevRates[pegKey]!;
-          this.inheritPrevious(pegKey);
-        }
-      } else if (options.includeMissingPrevious && this.prevRates[pegKey]) {
-        this.usableRates[pegKey] = this.prevRates[pegKey]!;
-        this.inheritPrevious(pegKey);
-      }
-    }
+    this.applyPerUsdPayload({
+      payload,
+      mappings,
+      includeMissingPrevious: options.includeMissingPrevious,
+      cadence: "calendar-daily",
+      resolveSourceMeta: (sourcePayload) => {
+        const sourceUpdatedAt =
+          typeof sourcePayload.time_last_update_unix === "number" &&
+          Number.isFinite(sourcePayload.time_last_update_unix) &&
+          sourcePayload.time_last_update_unix > 0
+            ? Math.min(this.syncStartSec, Math.floor(sourcePayload.time_last_update_unix))
+            : this.syncStartSec;
+        return {
+          sourceUpdatedAt,
+          sourceDate: new Date(sourceUpdatedAt * 1000).toISOString().slice(0, 10),
+        };
+      },
+      getPerUsd: (sourcePayload, currency) => sourcePayload.rates[currency.toUpperCase()],
+    });
   }
 
   async tryLiveFullSetFallback(

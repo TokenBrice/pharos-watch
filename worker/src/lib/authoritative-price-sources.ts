@@ -3,9 +3,9 @@ import type { PriceConfidence, StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../cron/sync-stablecoins/enrich-prices-shared";
 import { binarySearchNearest } from "./binary-search";
 import { fetchEvmCallHexAtBlock, resolveClosestBlockAtOrBeforeTimestamp, type EvmBlockSearchCache } from "./evm-rpc";
+import { getArchiveFallbackRpcUrls } from "./public-rpc-registry";
 
 const ETHEREUM_CHAIN = "ethereum";
-const ETHEREUM_ARCHIVE_FALLBACK_URLS = ["https://ethereum-rpc.publicnode.com"];
 
 const PROTOCOL_REDEEM_SOURCE = "protocol-redeem";
 const CAP_CUSD_ID = "cusd-cap";
@@ -58,6 +58,12 @@ interface PriceSourceProvider {
   fetchLivePrice?(asset: PeggedAsset, signal?: AbortSignal): Promise<CurrentPriceOverride | null>;
   fetchHistoricalPrices?(meta: StablecoinMeta, context: HistoricalPriceContext): Promise<HistoricalPricePoint[] | null>;
 }
+
+type HistoricalBlockPriceResolver = (
+  blockNumber: number,
+  timestamp: number,
+  signal?: AbortSignal,
+) => Promise<number | null>;
 
 function sumCirculatingUsd(asset: Pick<PeggedAsset, "circulating">): number {
   const circulating = asset.circulating;
@@ -143,6 +149,51 @@ function getContractConfig(stablecoinId: string): {
   };
 }
 
+function normalizeHistoricalTimestamps(candidateTimestamps: number[]): number[] {
+  return Array.from(
+    new Set(candidateTimestamps.filter((timestamp) => Number.isFinite(timestamp) && timestamp > 0)),
+  ).sort((a, b) => a - b);
+}
+
+async function collectHistoricalBlockPrices(
+  context: HistoricalPriceContext,
+  resolvePrice: HistoricalBlockPriceResolver,
+): Promise<HistoricalPricePoint[] | null> {
+  const requestedTimestamps = normalizeHistoricalTimestamps(context.candidateTimestamps);
+  if (requestedTimestamps.length === 0) return null;
+
+  const blockSearchCache: EvmBlockSearchCache = {
+    blockTimestampByNumber: new Map(),
+  };
+  const quoteByBlock = new Map<number, number>();
+  const prices: HistoricalPricePoint[] = [];
+
+  for (const timestamp of requestedTimestamps) {
+    const blockNumber = await resolveClosestBlockAtOrBeforeTimestamp(ETHEREUM_CHAIN, timestamp, blockSearchCache, {
+      signal: context.signal,
+      extraRpcUrls: getArchiveFallbackRpcUrls(ETHEREUM_CHAIN),
+      timeoutMs: 15_000,
+    });
+    if (blockNumber == null) continue;
+
+    let price = quoteByBlock.get(blockNumber) ?? null;
+    if (price == null) {
+      price = await resolvePrice(blockNumber, timestamp, context.signal);
+      if (price == null) continue;
+      quoteByBlock.set(blockNumber, price);
+    }
+
+    prices.push({ timestamp, price });
+  }
+
+  if (prices.length === 0) return null;
+  if (prices.length / requestedTimestamps.length < CAP_HISTORICAL_MIN_COVERAGE) {
+    return null;
+  }
+
+  return prices;
+}
+
 async function fetchCapRedeemQuote(
   sampleNotionalUsd: number,
   blockNumberOrTag: number | "latest",
@@ -157,7 +208,7 @@ async function fetchCapRedeemQuote(
   const calldata = `${CAP_GET_BURN_AMOUNT_SELECTOR}${encodeAddress(config.quoteContract)}${encodeUint256(sampleInputAmount)}`;
   const quoteHex = await fetchEvmCallHexAtBlock(ETHEREUM_CHAIN, config.contract, calldata, blockNumberOrTag, {
     signal,
-    extraRpcUrls: ETHEREUM_ARCHIVE_FALLBACK_URLS,
+    extraRpcUrls: getArchiveFallbackRpcUrls(ETHEREUM_CHAIN),
   });
   if (!quoteHex) {
     console.warn(`[authoritative-price-sources] cusd-cap: RPC returned null`);
@@ -191,46 +242,14 @@ const capCusdProvider: PriceSourceProvider = {
     };
   },
   async fetchHistoricalPrices(
-    meta: StablecoinMeta,
+    _meta: StablecoinMeta,
     context: HistoricalPriceContext,
   ): Promise<HistoricalPricePoint[] | null> {
-    const requestedTimestamps = Array.from(
-      new Set(context.candidateTimestamps.filter((timestamp) => Number.isFinite(timestamp) && timestamp > 0)),
-    ).sort((a, b) => a - b);
-    if (requestedTimestamps.length === 0) return null;
-
-    const blockSearchCache: EvmBlockSearchCache = {
-      blockTimestampByNumber: new Map(),
-    };
-    const quoteByBlock = new Map<number, number>();
-    const prices: HistoricalPricePoint[] = [];
-
-    for (const timestamp of requestedTimestamps) {
-      const blockNumber = await resolveClosestBlockAtOrBeforeTimestamp(ETHEREUM_CHAIN, timestamp, blockSearchCache, {
-        signal: context.signal,
-        extraRpcUrls: ETHEREUM_ARCHIVE_FALLBACK_URLS,
-        timeoutMs: 15_000,
-      });
-      if (blockNumber == null) continue;
-
-      let price = quoteByBlock.get(blockNumber) ?? null;
-      if (price == null) {
+    return collectHistoricalBlockPrices(context, async (blockNumber, timestamp, signal) => {
         const supplyUsd = findNearestSupply(context.supplySnapshots, timestamp);
         const sampleNotionalUsd = clampSampleNotionalUsd(supplyUsd);
-        price = await fetchCapRedeemQuote(sampleNotionalUsd, blockNumber, context.signal);
-        if (price == null) continue;
-        quoteByBlock.set(blockNumber, price);
-      }
-
-      prices.push({ timestamp, price });
-    }
-
-    if (prices.length === 0) return null;
-    if (prices.length / requestedTimestamps.length < CAP_HISTORICAL_MIN_COVERAGE) {
-      return null;
-    }
-
-    return prices;
+      return fetchCapRedeemQuote(sampleNotionalUsd, blockNumber, signal);
+    });
   },
 };
 
@@ -249,7 +268,7 @@ async function fetchInfiniFiRedeemQuote(
     blockNumberOrTag,
     {
       signal,
-      extraRpcUrls: ETHEREUM_ARCHIVE_FALLBACK_URLS,
+      extraRpcUrls: getArchiveFallbackRpcUrls(ETHEREUM_CHAIN),
     },
   );
   if (!quoteHex) {
@@ -286,41 +305,10 @@ const iusdInfinifiProvider: PriceSourceProvider = {
     _meta: StablecoinMeta,
     context: HistoricalPriceContext,
   ): Promise<HistoricalPricePoint[] | null> {
-    const requestedTimestamps = Array.from(
-      new Set(context.candidateTimestamps.filter((timestamp) => Number.isFinite(timestamp) && timestamp > 0)),
-    ).sort((a, b) => a - b);
-    if (requestedTimestamps.length === 0) return null;
-
-    const blockSearchCache: EvmBlockSearchCache = {
-      blockTimestampByNumber: new Map(),
-    };
-    const quoteByBlock = new Map<number, number>();
-    const prices: HistoricalPricePoint[] = [];
-
-    for (const timestamp of requestedTimestamps) {
-      const blockNumber = await resolveClosestBlockAtOrBeforeTimestamp(ETHEREUM_CHAIN, timestamp, blockSearchCache, {
-        signal: context.signal,
-        extraRpcUrls: ETHEREUM_ARCHIVE_FALLBACK_URLS,
-        timeoutMs: 15_000,
-      });
-      if (blockNumber == null) continue;
-
-      let price = quoteByBlock.get(blockNumber) ?? null;
-      if (price == null) {
-        price = await fetchInfiniFiRedeemQuote(blockNumber, context.signal);
-        if (price == null) continue;
-        quoteByBlock.set(blockNumber, price);
-      }
-
-      prices.push({ timestamp, price });
-    }
-
-    if (prices.length === 0) return null;
-    if (prices.length / requestedTimestamps.length < CAP_HISTORICAL_MIN_COVERAGE) {
-      return null;
-    }
-
-    return prices;
+    return collectHistoricalBlockPrices(
+      context,
+      (blockNumber, _timestamp, signal) => fetchInfiniFiRedeemQuote(blockNumber, signal),
+    );
   },
 };
 

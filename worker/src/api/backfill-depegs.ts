@@ -15,14 +15,14 @@ import {
   validatePriceCandidateAgainstReference,
 } from "../lib/price-validation";
 import { jsonResponse } from "../lib/api-utils";
-import { withAdmin } from "../lib/auth";
 import { binarySearchNearest } from "../lib/binary-search";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { RATE_LIMITS } from "../lib/rate-limit";
 import type { StablecoinMeta } from "@shared/types/core";
 import { sumPegBuckets } from "@shared/lib/supply";
-import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
+import { selectBackfillCoins } from "../lib/backfill-query";
+import { buildAdminJobSummary, noAdminTargetsResponse, runAdminJob } from "../lib/admin-job";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { fetchAuthoritativeHistoricalPriceSeries } from "../lib/authoritative-price-sources";
 
@@ -103,8 +103,8 @@ export async function handleBackfillDepegs(
   trustedAdmin?: boolean,
   request?: Request,
 ): Promise<Response> {
-  return withAdmin(
-    request,
+  return runAdminJob(
+    { request, trustedAdmin, url },
     async () => {
       const selection = selectBackfillCoins(url, PSI_ELIGIBLE_STABLECOINS, {
         defaultBatchSize: BATCH_SIZE,
@@ -116,7 +116,7 @@ export async function handleBackfillDepegs(
       const coins = selection.coins;
 
       if (coins.length === 0) {
-        return noCoinsInBatchResponse();
+        return noAdminTargetsResponse();
       }
 
       // Get peg rates from cached stablecoin data
@@ -364,20 +364,19 @@ export async function handleBackfillDepegs(
         }
       }
 
-      return jsonResponse({
+      return jsonResponse(buildAdminJobSummary({
         coinsProcessed: coins.length,
         eventsCreated: totalEvents,
-        skipped: skipped.length > 0 ? skipped : undefined,
-        errors: errors.length > 0 ? errors : undefined,
+        skipped,
+        errors,
         commodities: needsCommodities
           ? {
               goldDataPoints: commoditySeries["GOLD"]?.length ?? 0,
               silverDataPoints: commoditySeries["SILVER"]?.length ?? 0,
             }
           : undefined,
-      });
+      }));
     },
-    trustedAdmin,
   );
 }
 

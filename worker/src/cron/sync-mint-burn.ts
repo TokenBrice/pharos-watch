@@ -1,46 +1,34 @@
-import type { AlchemyLogEntry } from "../lib/alchemy-logs";
 import {
   buildAlchemyUrl,
   getAlchemyBlockNumber,
-  fetchAlchemyLogs,
-  resolveBlockTimestamps,
 } from "../lib/alchemy-logs";
 import {
   createBudget,
-  budgetExhausted,
 } from "../lib/evm-logs";
-import type { TopicFilter } from "../lib/evm-logs";
 import {
   MINT_BURN_CONFIGS,
   type MintBurnContractConfig,
-  type MintBurnEventDef,
   type MintBurnTier,
 } from "../lib/mint-burn-contracts";
 import type { MintBurnTxContext } from "../lib/mint-burn-bridge-classifier";
-import { classifyBridgeBurnRows } from "../lib/mint-burn-pipeline/classification";
 import { loadMintBurnPriceContextBatch } from "../lib/mint-burn-pipeline/context";
-import { parseMintBurnLogs } from "../lib/mint-burn-pipeline/parse";
-import { getNullPriceBacklog, healNullPrices } from "../lib/mint-burn-pipeline/price-heal";
-import { sweepRecentRoundtrips } from "../lib/mint-burn-pipeline/roundtrip-sweep";
 import {
-  persistMintBurnRows,
   recalcAffectedHours,
 } from "../lib/mint-burn-pipeline/persistence";
 import {
   ensureMintBurnSyncStateRows,
   mintBurnConfigKey,
   readMintBurnSyncStateBatch,
-  upsertMintBurnSyncState,
 } from "../lib/mint-burn-pipeline/sync-state";
-import type { MintBurnAffectedHour, MintBurnRow } from "../lib/mint-burn-pipeline/types";
 import type { CronProgressReporter } from "../lib/cron-logger";
-import { reportCronProgress, withBudgetMetadata } from "../lib/cron-progress";
+import { reportCronProgress } from "../lib/cron-progress";
+import { completeMintBurnRun } from "./mint-burn/run-completion";
+import { runMintBurnConfigPhase } from "./mint-burn/run-configs";
 import {
   getMintBurnRunState,
   normalizeDisabledConfigIdSet,
   normalizeDisabledSymbolSet,
   rotateArray,
-  setMintBurnRunState,
 } from "./mint-burn/run-state";
 
 const ETHEREUM_CHAIN_ID = "ethereum";
@@ -68,44 +56,6 @@ export interface SyncMintBurnOptions {
   onProgress?: CronProgressReporter;
 }
 
-interface MintBurnConfigSummary {
-  key: string;
-  symbol: string;
-  chainId: string;
-  tier: MintBurnTier;
-  attempted: boolean;
-  skippedReason: string | null;
-  scanFrom: number | null;
-  scanTo: number | null;
-  advancedTo: number | null;
-  maxBlockSeen: number;
-  rowsRead: number;
-  rowsParsed: number;
-  rowsInserted: number;
-  rowsIgnored: number;
-  rowsDropped: number;
-  errors: number;
-  failedEventDefs: string[];
-  eventCoverage: Array<{
-    eventDef: string;
-    status: "ok" | "partial" | "fetch-failed" | "budget";
-    complete: boolean;
-    scannedToBlock: number;
-    rowsRead: number;
-  }>;
-  coverageFrontier: number | null;
-  advanceReason:
-    | "full-success-events"
-    | "full-success-empty"
-    | "partial-frontier"
-    | "no-safe-frontier"
-    | null;
-  missingTimestampCount: number;
-  earliestMissingTimestampBlock: number | null;
-  requestBudgetLimit: number;
-  requestBudgetUsed: number;
-}
-
 function configKey(config: MintBurnContractConfig): string {
   return mintBurnConfigKey(config);
 }
@@ -122,15 +72,6 @@ function laneIncludesConfig(lane: MintBurnLane, config: MintBurnContractConfig):
 function resolveMintBurnJobName(lane: MintBurnLane, explicitJobName?: string): string {
   if (explicitJobName) return explicitJobName;
   return lane === "extended" ? MINT_BURN_EXTENDED_JOB : MINT_BURN_CRITICAL_JOB;
-}
-
-function eventDefLabel(eventDef: MintBurnEventDef): string {
-  return `${eventDef.signature}:${eventDef.direction}`;
-}
-
-function minOrNull(values: number[]): number | null {
-  if (values.length === 0) return null;
-  return values.reduce((min, value) => Math.min(min, value), values[0]);
 }
 
 function normalizeSyncMintBurnOptions(
@@ -290,337 +231,46 @@ export async function syncMintBurn(
     },
   }, budget);
 
-  let rowsRead = 0;
-  let rowsParsed = 0;
-  let rowsInserted = 0;
-  let rowsIgnored = 0;
-  let rowsDropped = 0;
-  let contractsProcessed = 0;
-  let contractsSkipped = 0;
-  let contractsDeferredExtended = 0;
-  let apiErrors = 0;
-  let effectiveBurns = 0;
-  let bridgeBurns = 0;
-  let reviewBurns = 0;
-  let atomicRoundtripsTotal = 0;
   const criticalContractsEnabled = enabledConfigs.filter((config) => configTier(config) === "critical").length;
-  let criticalContractsSatisfied = 0;
-  let criticalContractsUnsatisfied = 0;
-
-  const configBreakdown: MintBurnConfigSummary[] = [];
-  const affectedHours = new Map<string, MintBurnAffectedHour>();
-
-  for (let i = 0; i < configs.length; i++) {
-    throwIfAborted();
-
-    const config = configs[i];
-    const key = configKey(config);
-    const tier = configTier(config);
-
-    const summary: MintBurnConfigSummary = {
-      key,
-      symbol: config.symbol,
-      chainId: config.chain.chainId,
-      tier,
-      attempted: false,
-      skippedReason: null,
-      scanFrom: null,
-      scanTo: null,
-      advancedTo: null,
-      maxBlockSeen: 0,
-      rowsRead: 0,
-      rowsParsed: 0,
-      rowsInserted: 0,
-      rowsIgnored: 0,
-      rowsDropped: 0,
-      errors: 0,
-      failedEventDefs: [],
-      eventCoverage: [],
-      coverageFrontier: null,
-      advanceReason: null,
-      missingTimestampCount: 0,
-      earliestMissingTimestampBlock: null,
-      requestBudgetLimit: 0,
-      requestBudgetUsed: 0,
-    };
-    await reportCronProgress(reportProgress, {
-      stage: "scan-config",
-      itemsDone: i,
-      itemsTotal: configs.length,
-      message: `Scanning ${config.symbol} on ${config.chain.chainName}`,
-      metadata: {
-        lane,
-        jobName,
-        configKey: key,
-        symbol: config.symbol,
-        tier,
-      },
-    }, budget);
-    const finalizeSummary = (criticalOutcome: "satisfied" | "unsatisfied" | "n/a" = "n/a"): void => {
-      if (tier === "critical") {
-        if (criticalOutcome === "satisfied") {
-          criticalContractsSatisfied++;
-        } else if (criticalOutcome === "unsatisfied") {
-          criticalContractsUnsatisfied++;
-        }
-      }
-      configBreakdown.push(summary);
-    };
-
-    if (config.chain.chainId !== ETHEREUM_CHAIN_ID) {
-      summary.skippedReason = "non-ethereum-config";
-      contractsSkipped++;
-      finalizeSummary("unsatisfied");
-      continue;
-    }
-
-    if (budgetExhausted(budget)) {
-      summary.skippedReason = "global-budget-exhausted";
-      contractsSkipped++;
-      finalizeSummary("unsatisfied");
-      continue;
-    }
-
-    const remainingCritical = configs
-      .slice(i)
-      .filter((next) => configTier(next) === "critical").length;
-    const remainingBudget = budget.limit - budget.count;
-    const shouldDeferExtended = tier === "extended" && remainingBudget <= Math.max(10, remainingCritical * 6);
-    if (shouldDeferExtended) {
-      summary.skippedReason = "extended-deferred-under-pressure";
-      contractsDeferredExtended++;
-      contractsSkipped++;
-      finalizeSummary();
-      continue;
-    }
-
-    const fromBlock = (lastBlocksAfterRun.get(key) ?? (config.startBlock - 1)) + 1;
-    if (fromBlock > chainHead) {
-      summary.skippedReason = "up-to-date";
-      contractsSkipped++;
-      finalizeSummary("satisfied");
-      continue;
-    }
-
-    summary.attempted = true;
-    contractsProcessed++;
-    const configBudget = createBudget(
-      Math.max(
-        1,
-        Math.min(
-          budget.limit - budget.count,
-          tier === "critical" ? CRITICAL_CONFIG_BUDGET_LIMIT : EXTENDED_CONFIG_BUDGET_LIMIT,
-        ),
-      ),
-    );
-    summary.requestBudgetLimit = configBudget.limit;
-
-    const maxRange = MAX_SCAN_RANGE;
-    const scanTo = Math.min(fromBlock + maxRange - 1, chainHead);
-    summary.scanFrom = fromBlock;
-    summary.scanTo = scanTo;
-
-    const allConfigLogs: Array<{ eventDef: MintBurnEventDef; logs: AlchemyLogEntry[] }> = [];
-    for (const eventDef of config.events) {
-      const label = eventDefLabel(eventDef);
-      if (budgetExhausted(configBudget)) {
-        summary.failedEventDefs.push(`${label}:budget`);
-        summary.eventCoverage.push({
-          eventDef: label,
-          status: "budget",
-          complete: false,
-          scannedToBlock: fromBlock - 1,
-          rowsRead: 0,
-        });
-        continue;
-      }
-
-      const topics: TopicFilter[] = [{ index: 0, value: eventDef.topicHash }];
-      if (eventDef.filterTopic) {
-        topics.push({ index: eventDef.filterTopic.index, value: eventDef.filterTopic.value });
-      }
-
-      const fetched = await fetchAlchemyLogs(
-        alchemyUrl,
-        config.contractAddress,
-        topics,
-        fromBlock,
-        scanTo,
-        configBudget,
-        signal,
-      );
-
-      if (!fetched) {
-        apiErrors++;
-        summary.errors++;
-        summary.failedEventDefs.push(`${label}:fetch-failed`);
-        summary.eventCoverage.push({
-          eventDef: label,
-          status: "fetch-failed",
-          complete: false,
-          scannedToBlock: fromBlock - 1,
-          rowsRead: 0,
-        });
-        continue;
-      }
-
-      rowsRead += fetched.logs.length;
-      summary.rowsRead += fetched.logs.length;
-      summary.eventCoverage.push({
-        eventDef: label,
-        status: fetched.complete ? "ok" : "partial",
-        complete: fetched.complete,
-        scannedToBlock: fetched.scannedToBlock,
-        rowsRead: fetched.logs.length,
-      });
-
-      if (!fetched.complete) {
-        apiErrors++;
-        summary.errors++;
-        summary.failedEventDefs.push(`${label}:partial-coverage`);
-      }
-
-      if (fetched.logs.length > 0) {
-        allConfigLogs.push({ eventDef, logs: fetched.logs });
-      }
-    }
-
-    const uniqueBlocks = [
-      ...new Set(allConfigLogs.flatMap(({ logs }) => logs.map((log) => parseInt(log.blockNumber, 16)))),
-    ];
-    const blockTimestamps = uniqueBlocks.length > 0
-      ? await resolveBlockTimestamps(alchemyUrl, uniqueBlocks, configBudget, {
-          signal,
-          localCache: chainTimestampCache,
-          persistentCache: {
-            db,
-            chainId: config.chain.chainId,
-          },
-        })
-      : new Map<number, number>();
-
-    const missingTimestampBlocks = uniqueBlocks
-      .filter((blockNum) => !blockTimestamps.has(blockNum))
-      .sort((a, b) => a - b);
-    summary.missingTimestampCount = missingTimestampBlocks.length;
-    summary.earliestMissingTimestampBlock = missingTimestampBlocks[0] ?? null;
-
-    if (missingTimestampBlocks.length > 0) {
-      const missing = missingTimestampBlocks.length;
-      apiErrors++;
-      summary.errors++;
-      summary.failedEventDefs.push(`timestamps:${missing}`);
-      console.warn(
-        `[sync-mint-burn] ${config.symbol} on ${config.chain.chainName}: ` +
-        `${missing}/${uniqueBlocks.length} blocks missing timestamps`,
-      );
-    }
-
-    // Phase 1: Parse + classify bridge burns per eventDef (preserves Alchemy budget batching)
-    const allParsedRows: MintBurnRow[] = [];
-
-    for (const { eventDef, logs } of allConfigLogs) {
-      const parsed = parseMintBurnLogs(
-        config,
-        eventDef,
-        logs,
-        blockTimestamps,
-        prices,
-        priceHistory,
-        runTimestamp,
-      );
-
-      rowsDropped += parsed.dropped;
-      summary.rowsDropped += parsed.dropped;
-
-      rowsParsed += parsed.rows.length;
-      summary.rowsParsed += parsed.rows.length;
-
-      const burnCounts = await classifyBridgeBurnRows(
-        parsed.rows,
-        config,
-        alchemyUrl,
-        configBudget,
-        txContextCache,
-        signal,
-      );
-      effectiveBurns += burnCounts.effectiveBurns;
-      bridgeBurns += burnCounts.bridgeBurns;
-      reviewBurns += burnCounts.reviewBurns;
-
-      allParsedRows.push(...parsed.rows);
-    }
-
-    // Phase 2: Detect atomic roundtrips across ALL eventDefs for this config.
-    // Must see all rows to find mint+burn pairs in the same transaction.
-    // Phase 3: Track, collect, insert.
-    for (const row of allParsedRows) {
-      summary.maxBlockSeen = Math.max(summary.maxBlockSeen, row.block_number);
-    }
-    const persistResult = await persistMintBurnRows(db, allParsedRows, affectedHours);
-    atomicRoundtripsTotal += persistResult.roundtripsDetected;
-    rowsInserted += persistResult.inserted;
-    rowsIgnored += persistResult.ignored;
-    summary.rowsInserted += persistResult.inserted;
-    summary.rowsIgnored += persistResult.ignored;
-
-    const fullEventCoverage =
-      summary.eventCoverage.length === config.events.length &&
-      summary.eventCoverage.every((coverage) => coverage.complete);
-    const eventCoverageFrontier = minOrNull(
-      summary.eventCoverage.map((coverage) => coverage.scannedToBlock),
-    );
-    const timestampCoverageFrontier = summary.earliestMissingTimestampBlock != null
-      ? summary.earliestMissingTimestampBlock - 1
-      : null;
-    const partialCoverageFrontier = minOrNull(
-      [eventCoverageFrontier, timestampCoverageFrontier]
-        .filter((value): value is number => value != null),
-    );
-    summary.coverageFrontier = partialCoverageFrontier;
-
-    let newLastBlock: number | null = null;
-    if (fullEventCoverage && summary.missingTimestampCount === 0) {
-      if (summary.maxBlockSeen > 0) {
-        newLastBlock = summary.maxBlockSeen;
-        summary.advanceReason = "full-success-events";
-      } else {
-        // Full success and no events found: advance to end of scanned range,
-        // preserving a safety margin near chain head.
-        const safetyBlocks = EVM_SAFETY_MARGIN_BLOCKS;
-        newLastBlock = Math.max(
-          fromBlock - 1,
-          Math.min(scanTo, chainHead - safetyBlocks),
-        );
-        summary.advanceReason = "full-success-empty";
-      }
-    } else if (partialCoverageFrontier != null && partialCoverageFrontier >= fromBlock) {
-      newLastBlock = partialCoverageFrontier;
-      summary.advanceReason = "partial-frontier";
-    } else {
-      summary.advanceReason = "no-safe-frontier";
-    }
-
-    if (newLastBlock != null) {
-      await upsertMintBurnSyncState(db, key, newLastBlock, "replace");
-      lastBlocksAfterRun.set(key, newLastBlock);
-      summary.advancedTo = newLastBlock;
-    }
-    summary.requestBudgetUsed = configBudget.count;
-    budget.count += configBudget.count;
-
-    console.log(
-      `[sync-mint-burn] ${config.symbol} on ${config.chain.chainName}: ` +
-      `${summary.rowsInserted} inserted, ${summary.rowsIgnored} ignored, ` +
-      `scan ${fromBlock}-${scanTo}, advancedTo=${summary.advancedTo ?? "none"}`,
-    );
-
-    finalizeSummary(
-      fullEventCoverage && summary.errors === 0
-        ? "satisfied"
-        : "unsatisfied",
-    );
-  }
+  const {
+    rowsRead,
+    rowsParsed,
+    rowsInserted,
+    rowsIgnored,
+    rowsDropped,
+    contractsProcessed,
+    contractsSkipped,
+    contractsDeferredExtended,
+    apiErrors,
+    effectiveBurns,
+    bridgeBurns,
+    reviewBurns,
+    atomicRoundtripsTotal,
+    criticalContractsSatisfied,
+    criticalContractsUnsatisfied,
+    configBreakdown,
+    affectedHours,
+  } = await runMintBurnConfigPhase({
+    db,
+    configs,
+    lane,
+    jobName,
+    reportProgress,
+    budget,
+    chainHead,
+    alchemyUrl,
+    signal,
+    runTimestamp,
+    priceContext: { prices, priceHistory },
+    chainTimestampCache,
+    txContextCache,
+    lastBlocksAfterRun,
+    ethereumChainId: ETHEREUM_CHAIN_ID,
+    maxScanRange: MAX_SCAN_RANGE,
+    criticalConfigBudgetLimit: CRITICAL_CONFIG_BUDGET_LIMIT,
+    extendedConfigBudgetLimit: EXTENDED_CONFIG_BUDGET_LIMIT,
+    evmSafetyMarginBlocks: EVM_SAFETY_MARGIN_BLOCKS,
+  });
 
   await recalcAffectedHours(db, affectedHours);
   await reportCronProgress(reportProgress, {
@@ -635,124 +285,40 @@ export async function syncMintBurn(
     },
   }, budget);
 
-  const laggingConfigs = configs
-    .map((config) => {
-      const key = configKey(config);
-      const last = lastBlocksAfterRun.get(key) ?? (config.startBlock - 1);
-      const lagBlocks = Math.max(0, chainHead - last);
-      return {
-        key,
-        symbol: config.symbol,
-        chainId: config.chain.chainId,
-        lagBlocks,
-        head: chainHead,
-        lastBlock: last,
-      };
-    })
-    .filter((row): row is NonNullable<typeof row> => row !== null)
-    .sort((a, b) => b.lagBlocks - a.lagBlocks)
-    .slice(0, 6);
-
-  const coverageRatio = enabledConfigs.length > 0 ? contractsProcessed / enabledConfigs.length : 1;
-  const criticalCoverageRatio =
-    criticalContractsEnabled > 0 ? criticalContractsSatisfied / criticalContractsEnabled : 1;
-  const degradedSignal =
-    lane === "extended"
-      ? apiErrors > 1
-      : criticalCoverageRatio < 1 || apiErrors > 1;
-  const degradedStreak = degradedSignal ? runState.degradedStreak + 1 : 0;
-
-  let status: SyncMintBurnStatus = "ok";
-  if (lane !== "extended" && degradedStreak >= ERROR_CONSECUTIVE_THRESHOLD) {
-    status = "error";
-  } else if (degradedStreak >= DEGRADE_CONSECUTIVE_THRESHOLD) {
-    status = "degraded";
-  }
-
-  const nextConfigIndex = enabledConfigs.length > 0
-    ? (startIndex + 1) % enabledConfigs.length
-    : 0;
-  const runStatePersisted = await setMintBurnRunState(db, jobName, nextConfigIndex, degradedStreak);
-  const runStatePersistenceFailed = runStateSnapshot.persistenceFailed || !runStatePersisted;
-
-  if (runStatePersistenceFailed && status === "ok") {
-    status = "degraded";
-  }
-
-  // Auto-heal NULL prices for recent events (only on non-error runs).
-  let nullPricesHealed = 0;
-  const nullPriceBacklog = await getNullPriceBacklog(db, Math.floor(Date.now() / 1000));
-  if (status !== "error") {
-    try {
-      const healResult = await healNullPrices(db, Math.floor(Date.now() / 1000));
-      nullPricesHealed = healResult.healed;
-      if (healResult.affectedHours.size > 0) {
-        await recalcAffectedHours(db, healResult.affectedHours);
-      }
-    } catch (error) {
-      console.warn("[sync-mint-burn] Price heal failed (non-fatal):", error);
-    }
-  }
-
-  // Sweep for cross-run atomic roundtrips (only on non-error runs).
-  let roundtripSweepCount = 0;
-  if (status !== "error") {
-    try {
-      const sweepResult = await sweepRecentRoundtrips(db, Math.floor(Date.now() / 1000));
-      roundtripSweepCount = sweepResult.reclassified;
-      if (roundtripSweepCount > 0) {
-        console.log(`[sync-mint-burn] Roundtrip sweep reclassified ${roundtripSweepCount} rows`);
-      }
-    } catch (error) {
-      console.warn("[sync-mint-burn] Roundtrip sweep failed (non-fatal):", error);
-    }
-  }
-
-  const metadata = JSON.stringify(withBudgetMetadata(budget, {
+  const { status, metadata } = await completeMintBurnRun({
+    db,
+    budget,
     lane,
     jobName,
     chainHead,
+    startIndex,
+    enabledConfigs,
+    configs,
+    configsDisabled,
+    contractsTotal,
+    lastBlocksAfterRun,
+    runState,
+    runStatePersistenceFailed: runStateSnapshot.persistenceFailed,
+    degradeConsecutiveThreshold: DEGRADE_CONSECUTIVE_THRESHOLD,
+    errorConsecutiveThreshold: ERROR_CONSECUTIVE_THRESHOLD,
     rowsRead,
     rowsParsed,
     rowsInserted,
     rowsIgnored,
     rowsDropped,
-    sourceCoverage: {
-      contractsProcessed,
-      contractsSkipped,
-      contractsEnabled: enabledConfigs.length,
-      contractsDisabled: configsDisabled,
-      contractsTotal,
-    },
-    configsDisabled,
     contractsProcessed,
     contractsSkipped,
     contractsDeferredExtended,
     apiErrors,
-    validationFailures: apiErrors,
-    fallbackMode: null,
-    burnClassification: {
-      effectiveBurns,
-      bridgeBurns,
-      reviewBurns,
-    },
-    atomicRoundtripsDetected: atomicRoundtripsTotal,
-    criticalCoverage: {
-      contractsEnabled: criticalContractsEnabled,
-      contractsSatisfied: criticalContractsSatisfied,
-      contractsUnsatisfied: criticalContractsUnsatisfied,
-      ratio: criticalCoverageRatio,
-    },
+    effectiveBurns,
+    bridgeBurns,
+    reviewBurns,
+    atomicRoundtripsTotal,
+    criticalContractsEnabled,
+    criticalContractsSatisfied,
+    criticalContractsUnsatisfied,
     configBreakdown,
-    laggingConfigs,
-    coverageRatio,
-    degradedSignal,
-    degradedStreak,
-    runStatePersistenceFailed,
-    nullPricesHealed,
-    nullPriceBacklog,
-    roundtripSweepCount,
-  }));
+  });
 
   await reportCronProgress(reportProgress, {
     stage: "complete",

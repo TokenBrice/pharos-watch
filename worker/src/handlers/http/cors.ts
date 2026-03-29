@@ -1,4 +1,6 @@
-const DEFAULT_CORS_ORIGIN = "https://pharos.watch";
+import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+
+const DEFAULT_CORS_ORIGIN = SITE_ORIGIN;
 
 function resolveAllowedCorsOrigins(configured: string): string[] {
   const values = configured

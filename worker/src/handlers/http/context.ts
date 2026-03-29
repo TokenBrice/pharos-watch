@@ -6,6 +6,37 @@ import { resolveMintBurnFreshnessConfig } from "../../lib/mint-burn-health-confi
 import { buildTelegramCreds } from "../../lib/runtime-credentials";
 import type { Env } from "../../lib/env";
 
+type RouteDependencyHydrator = (routeCtx: FullRouteContext, env: Env) => void;
+
+const ROUTE_DEPENDENCY_HYDRATORS = {
+  alchemyApiKey(routeCtx, env) {
+    routeCtx.alchemyApiKey = env.ALCHEMY_API_KEY ?? null;
+  },
+  anthropicApiKey(routeCtx, env) {
+    routeCtx.anthropicApiKey = env.ANTHROPIC_API_KEY ?? null;
+  },
+  chainRpcs(routeCtx, env) {
+    routeCtx.chainRpcs = buildChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY);
+  },
+  coingeckoApiKey(routeCtx, env) {
+    routeCtx.coingeckoApiKey = normalizeCgApiKey(env.COINGECKO_API_KEY);
+  },
+  feedbackEnv(routeCtx, env) {
+    routeCtx.feedbackEnv = {
+      GITHUB_PAT: env.GITHUB_PAT,
+      FEEDBACK_IP_SALT: env.FEEDBACK_IP_SALT,
+    };
+  },
+  mintBurnFreshnessConfig(routeCtx, env) {
+    routeCtx.mintBurnFreshnessConfig = resolveMintBurnFreshnessConfig(env);
+  },
+  telegram(routeCtx, env) {
+    routeCtx.telegramCreds = buildTelegramCreds(env);
+    routeCtx.telegramWebhookSecret = env.TELEGRAM_WEBHOOK_SECRET;
+    routeCtx.telegramBotToken = env.TELEGRAM_BOT_TOKEN;
+  },
+} satisfies Record<EndpointDependency, RouteDependencyHydrator>;
+
 export function buildRouteContext(config: {
   request: Request;
   url: URL;
@@ -23,34 +54,7 @@ export function buildRouteContext(config: {
   };
 
   for (const dependency of config.routeDependencies) {
-    switch (dependency) {
-      case "alchemyApiKey":
-        routeCtx.alchemyApiKey = config.env.ALCHEMY_API_KEY ?? null;
-        break;
-      case "anthropicApiKey":
-        routeCtx.anthropicApiKey = config.env.ANTHROPIC_API_KEY ?? null;
-        break;
-      case "chainRpcs":
-        routeCtx.chainRpcs = buildChainRpcs(config.env.ALCHEMY_API_KEY, config.env.DRPC_API_KEY);
-        break;
-      case "coingeckoApiKey":
-        routeCtx.coingeckoApiKey = normalizeCgApiKey(config.env.COINGECKO_API_KEY);
-        break;
-      case "feedbackEnv":
-        routeCtx.feedbackEnv = {
-          GITHUB_PAT: config.env.GITHUB_PAT,
-          FEEDBACK_IP_SALT: config.env.FEEDBACK_IP_SALT,
-        };
-        break;
-      case "mintBurnFreshnessConfig":
-        routeCtx.mintBurnFreshnessConfig = resolveMintBurnFreshnessConfig(config.env);
-        break;
-      case "telegram":
-        routeCtx.telegramCreds = buildTelegramCreds(config.env);
-        routeCtx.telegramWebhookSecret = config.env.TELEGRAM_WEBHOOK_SECRET;
-        routeCtx.telegramBotToken = config.env.TELEGRAM_BOT_TOKEN;
-        break;
-    }
+    ROUTE_DEPENDENCY_HYDRATORS[dependency](routeCtx, config.env);
   }
 
   return routeCtx;

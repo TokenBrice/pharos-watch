@@ -1,6 +1,7 @@
 import type { CronResult } from "../lib/cron-logger";
 import { sendAlert } from "../lib/alerts";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
+import { API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
 import { cancelResponseBodyQuietly } from "../lib/response-body";
 
 import { getProbePaths } from "@shared/lib/api-endpoints";
@@ -43,7 +44,7 @@ const CRITICAL_PROBE_PATHS = [
   ...ADMIN_PROBE_PATHS,
 ];
 
-const DEFAULT_SELF_URL = "https://api.pharos.watch";
+const DEFAULT_SELF_URL = API_ORIGIN;
 const HEALTH_PROBE_PATH = "/api/health";
 const PROBE_TIMEOUT_MS = 10_000;
 const PROBE_FAILURE_ALERT_THRESHOLD = 3;
@@ -131,14 +132,8 @@ function maxProbeStatus(left: StatusLevel, right: StatusLevel): StatusLevel {
 }
 
 function resolveProbeBaseUrl(selfUrl?: string): URL {
-  const trimmed = selfUrl?.trim();
-  if (!trimmed) {
-    return new URL(DEFAULT_SELF_URL);
-  }
-
-  const withScheme = trimmed.includes("://") ? trimmed : `https://${trimmed}`;
   try {
-    return new URL(withScheme);
+    return new URL(resolveOrigin(selfUrl, DEFAULT_SELF_URL));
   } catch { /* expected: malformed SELF_URL env var */
     return new URL(DEFAULT_SELF_URL);
   }

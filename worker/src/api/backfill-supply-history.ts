@@ -4,10 +4,10 @@ import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../l
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { batchExecute } from "../lib/db";
 import { jsonResponse } from "../lib/api-utils";
-import { withAdmin } from "../lib/auth";
 import { binarySearchNearest } from "../lib/binary-search";
 import { resolveMarketCap } from "../lib/resolve-market-cap";
-import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
+import { selectBackfillCoins } from "../lib/backfill-query";
+import { buildAdminJobSummary, noAdminTargetsResponse, runAdminJob } from "../lib/admin-job";
 import { fetchWithRetry } from "../lib/fetch-retry";
 
 const DEFAULT_BATCH_SIZE = 10;
@@ -182,8 +182,8 @@ export async function handleBackfillSupplyHistory(
   request?: Request,
   cgApiKey?: string | null,
 ): Promise<Response> {
-  return withAdmin(
-    request,
+  return runAdminJob(
+    { request, trustedAdmin, url },
     async () => {
       const allowConstantPriceFallback = url.searchParams.get("allow-constant-price-fallback") === "true";
 
@@ -196,7 +196,7 @@ export async function handleBackfillSupplyHistory(
       const coins = selection.coins;
 
       if (coins.length === 0) {
-        return noCoinsInBatchResponse();
+        return noAdminTargetsResponse();
       }
 
       let totalRows = 0;
@@ -368,13 +368,12 @@ export async function handleBackfillSupplyHistory(
         }
       }
 
-      return jsonResponse({
+      return jsonResponse(buildAdminJobSummary({
         coinsProcessed: coins.length,
         rowsInserted: totalRows,
-        skipped: skipped.length > 0 ? skipped : undefined,
-        errors: errors.length > 0 ? errors : undefined,
-      });
+        skipped,
+        errors,
+      }));
     },
-    trustedAdmin,
   );
 }

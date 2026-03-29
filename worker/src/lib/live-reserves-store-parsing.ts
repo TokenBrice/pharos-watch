@@ -1,14 +1,14 @@
 import {
   getLiveReserveAdapterDefinition,
-  type LiveReserveAdapterKey,
-  type LiveReserveEvidenceClass,
-  type LiveReserveSourceModel,
 } from "@shared/lib/live-reserve-adapters";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type {
+  LiveReserveAdapterKey,
+  LiveReserveEvidenceClass,
   ReserveProvenanceView,
   LiveReserveFreshnessMode,
   LiveReserveSnapshotMetadata,
+  LiveReserveSourceModel,
   LiveReserveWarning,
 } from "@shared/types/live-reserves";
 import type { ReserveSlice } from "@shared/types/core";

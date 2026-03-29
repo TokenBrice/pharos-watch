@@ -1,7 +1,7 @@
 import {
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
-  type LiveReserveAdapterKey,
 } from "@shared/lib/live-reserve-adapters";
+import type { LiveReserveAdapterKey } from "@shared/types/live-reserves";
 import { fetchAccountableReserves } from "./accountable";
 import { fetchAsymmetryReserves } from "./asymmetry";
 import { fetchBtcfiReserves } from "./btcfi";
