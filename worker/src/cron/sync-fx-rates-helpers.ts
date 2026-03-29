@@ -362,6 +362,20 @@ export class FxSyncRunState {
     let applied = 0;
 
     for (const [pegKey, quote] of quotes) {
+      const existingUpdatedAt = this.sourceUpdatedAtByPeg[pegKey] ?? null;
+      if (
+        existingUpdatedAt != null &&
+        Number.isFinite(existingUpdatedAt) &&
+        existingUpdatedAt > 0 &&
+        quote.updatedAt < existingUpdatedAt
+      ) {
+        console.log(
+          `[sync-fx-rates] Skipping older Chainlink ${pegKey} quote: ` +
+            `chainlink=${quote.updatedAt}, existing=${existingUpdatedAt}`,
+        );
+        continue;
+      }
+
       const existing = this.usableRates[pegKey];
       if (existing != null && existing > 0) {
         const delta = Math.abs(quote.price - existing) / existing;
