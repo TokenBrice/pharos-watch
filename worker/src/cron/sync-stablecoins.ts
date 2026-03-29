@@ -1,35 +1,13 @@
 import {
-  enrichMissingPrices,
-  hasMissingPrice,
-  fetchPrimaryPrices,
-  runGtProbePass,
-} from "./sync-stablecoins/enrich-prices";
-import {
   buildSyncMetadata,
-  loadFreshFxRates,
-  loadReplayPriceCacheForTrustedContinuity,
-  stampPriceMetadata,
   type CronResult,
 } from "./sync-stablecoins/shared";
 import {
-  runPostEnrichmentPricePipeline,
   validateAndWriteStablecoinsCache,
   runDepegPipeline,
   isAbortResult,
 } from "./sync-stablecoins/post-enrichment";
-import { loadStablecoinsIntake } from "./sync-stablecoins/intake";
 import { buildStablecoinsSyncResult } from "./sync-stablecoins/metadata";
-import { syncViaCoingeckoFallback } from "./sync-stablecoins/fallback";
-import {
-  applyGtProbeResults,
-  applyPrimaryPriceResults,
-  applyProtocolPriceOverrides,
-  buildDlListPrices,
-  buildPreviousTrustedPriceLookup,
-  createValidationContextResolver,
-  prevalidatePrices,
-} from "./sync-stablecoins/pricing";
-import { queueTrackedAdditionsNotice } from "./sync-stablecoins/telegram-tracked-additions";
 import {
   abortResult,
   checkStablecoinsPriceStaleness,
@@ -37,11 +15,14 @@ import {
   reportStablecoinsStage,
   returnIfAborted,
 } from "./sync-stablecoins/runtime";
+import {
+  runStablecoinsIntakeStage,
+  runStablecoinsPricingStage,
+} from "./sync-stablecoins/stages";
+import { queueTrackedAdditionsNotice } from "./sync-stablecoins/telegram-tracked-additions";
 import type { ChainRpcConfig } from "../lib/chain-registry";
-import { createEmptyGtProbeStats } from "../lib/geckoterminal-price-probe";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { recordOutcome } from "../lib/circuit-breaker";
-import { fetchAuthoritativeLivePriceOverrides } from "../lib/authoritative-price-sources";
 import type { CronProgressReporter } from "../lib/cron-logger";
 
 export async function syncStablecoins(
@@ -56,22 +37,19 @@ export async function syncStablecoins(
   const startAbort = returnIfAborted(signal, "start");
   if (startAbort) return startAbort;
   const syncStartSec = Math.floor(Date.now() / 1000);
-  const { fxFallbackRates: freshFxFallbackRates, validationReferences } = await loadFreshFxRates(db, syncStartSec);
-
-  const preFetchAbort = returnIfAborted(signal, "fetch-stablecoins-and-supplementals");
-  if (preFetchAbort) return preFetchAbort;
-  await reportStablecoinsStage(reportProgress, "intake", "Loading DefiLlama stablecoin intake");
-  const intake = await loadStablecoinsIntake({
+  const intake = await runStablecoinsIntakeStage({
     db,
-    signal,
     syncStartSec,
-    fxFallbackRates: freshFxFallbackRates,
+    cmcApiKey,
+    signal,
+    alertWebhookUrl,
     coingeckoApiKey,
     chainRpcs,
-    fallbackToCoingecko: (cgData) =>
-      syncViaCoingeckoFallback(db, cgData, cmcApiKey, syncStartSec, signal, alertWebhookUrl, coingeckoApiKey, reportProgress),
+    reportProgress,
   });
-
+  if (!("kind" in intake)) {
+    return intake;
+  }
   if (intake.kind === "fallback") {
     if (intake.result.itemCount && intake.result.itemCount > 0) {
       return intake.result;
@@ -85,126 +63,26 @@ export async function syncStablecoins(
     canonicalDeduplication,
   } = intake;
   const previousAssetsById = intake.previousAssetsById;
-  let fxFallbackRates = intake.fxFallbackRates;
-  await reportStablecoinsStage(reportProgress, "intake", "Loaded DefiLlama stablecoin intake", {
-    itemsDone: assets.length,
-    itemsTotal: rawAssetCount,
-    metadata: {
-      rawAssetCount,
-      droppedMalformedAssets,
-      canonicalDuplicateRows: canonicalDeduplication.duplicateRows,
-    },
-  });
-
-  if (freshFxFallbackRates) {
-    fxFallbackRates = freshFxFallbackRates;
-  }
-  const validationContexts = createValidationContextResolver();
-  const replayPriceCache = await loadReplayPriceCacheForTrustedContinuity(db);
-  const previousTrustedPrices = buildPreviousTrustedPriceLookup(previousAssetsById, syncStartSec, replayPriceCache);
-  let gtProbe = { updatedCount: 0, stats: createEmptyGtProbeStats() };
-  const dlListPrices = buildDlListPrices(assets);
-  const primaryPricesAbort = returnIfAborted(signal, "primary-prices");
-  if (primaryPricesAbort) return primaryPricesAbort;
-  await reportStablecoinsStage(reportProgress, "price-enrichment", "Running primary pricing and enrichment", {
-    itemsTotal: assets.length,
-  });
-  const { results: primaryPriceResults, stats: priceValidationStats } = await fetchPrimaryPrices(
-    assets, db, signal, validationReferences, coingeckoApiKey, chainRpcs, dlListPrices,
-  );
-  const protocolPriceOverrides = await fetchAuthoritativeLivePriceOverrides(assets, signal);
-  applyPrimaryPriceResults({
-    assets,
-    primaryPriceResults,
-    previousTrustedPrices,
-    validationContexts,
-    validationReferences,
-    syncStartSec,
-  });
-  prevalidatePrices({
-    assets,
-    previousTrustedPrices,
-    validationContexts,
-    validationReferences,
-    logLabel: "Pre-rejected bad price",
-  });
-  const missingBefore = new Set(
-    assets.filter(hasMissingPrice).map((a) => a.id)
-  );
-  const enrichAbort = returnIfAborted(signal, "enrich-prices");
-  if (enrichAbort) return enrichAbort;
-  const enrichStats = await enrichMissingPrices(assets, cmcApiKey, db, signal);
-  for (const asset of assets) {
-    if (missingBefore.has(asset.id) && !hasMissingPrice(asset) && !asset.priceConfidence) {
-      stampPriceMetadata(asset, asset.priceSource || "unknown", "fallback", syncStartSec);
-    }
-  }
-
-  const gtProbeAbort = returnIfAborted(signal, "gt-probe");
-  if (gtProbeAbort) return gtProbeAbort;
-  try {
-    gtProbe = await runGtProbePass(
-      assets, primaryPriceResults, db, signal, validationReferences, coingeckoApiKey,
-    );
-    const { updatedCount: gtUpdated } = gtProbe;
-    if (gtUpdated > 0) {
-      applyGtProbeResults({
-        assets,
-        primaryPriceResults,
-        previousTrustedPrices,
-        validationContexts,
-        validationReferences,
-        syncStartSec,
-      });
-      console.log(`[sync-stablecoins] GT probe updated ${gtUpdated} asset prices`);
-    }
-  } catch (err) {
-    if (signal?.aborted) return abortResult(signal, "gt-probe");
-    console.warn("[sync-stablecoins] GT probe failed (non-fatal):", err);
-  }
-
-  const protocolOverrideCount = applyProtocolPriceOverrides({
-    assets,
-    overrides: protocolPriceOverrides,
-    previousTrustedPrices,
-    validationContexts,
-    validationReferences,
-    syncStartSec,
-  });
-  if (protocolOverrideCount > 0) {
-    console.log(`[sync-stablecoins] Applied ${protocolOverrideCount} protocol-backed price override${protocolOverrideCount === 1 ? "" : "s"}`);
-  }
-
-  const priceResult = await runPostEnrichmentPricePipeline({
-    assets,
-    missingBefore,
+  const pricingStage = await runStablecoinsPricingStage({
     db,
+    assets,
+    previousAssetsById,
     syncStartSec,
+    fxFallbackRates: intake.fxFallbackRates,
+    validationReferences: intake.validationReferences,
+    cmcApiKey,
     signal,
-    fxFallbackRates,
-    validationReferences,
-    validationContexts,
-    previousTrustedPrices,
-    returnIfAborted,
-    abortResult,
-  }, "");
-  if (isAbortResult(priceResult)) return priceResult;
-  const { rejectedCount, cachedFallbackCount } = priceResult;
-  if (rejectedCount > 0) {
-    console.log(`[sync-stablecoins] Rejected ${rejectedCount} unreasonable prices`);
-  }
-  if (cachedFallbackCount > 0) {
-    console.log(`[sync-stablecoins] Applied ${cachedFallbackCount} cached fallback prices`);
-  }
-  await reportStablecoinsStage(reportProgress, "price-validation", "Validated stablecoin prices", {
-    itemsDone: assets.length - assets.filter(hasMissingPrice).length,
-    itemsTotal: assets.length,
-    metadata: {
-      rejectedPrices: rejectedCount,
-      cachedFallbackPrices: cachedFallbackCount,
-      gtProbeUpdates: gtProbe.updatedCount,
-    },
+    coingeckoApiKey,
+    chainRpcs,
+    reportProgress,
   });
+  if ("enrichStats" in pricingStage === false) return pricingStage;
+  const {
+    enrichStats,
+    priceValidationStats,
+    gtProbe,
+    rejectedCount,
+  } = pricingStage;
 
   const fillSupplyHistoryResult = await fillStablecoinsSupplyHistoryStage(db, assets, signal);
   if (fillSupplyHistoryResult) return fillSupplyHistoryResult;
@@ -258,7 +136,7 @@ export async function syncStablecoins(
   });
   const cacheResult = await validateAndWriteStablecoinsCache({
     assets,
-    fxFallbackRates,
+    fxFallbackRates: intake.fxFallbackRates,
     db,
     syncStartSec,
     signal,
@@ -303,7 +181,7 @@ export async function syncStablecoins(
     itemsTotal: assets.length,
   });
   const depegResult = await runDepegPipeline(
-    db, assets, fxFallbackRates, signal, coingeckoApiKey,
+    db, assets, intake.fxFallbackRates, signal, coingeckoApiKey,
     returnIfAborted, abortResult, "", "",
   );
   if (isAbortResult(depegResult)) return depegResult;

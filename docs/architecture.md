@@ -6,7 +6,7 @@ Curated architecture-significant routes. Start with the [Documentation Index](./
 
 ## Route Definition Model
 
-Static route metadata is declared once in `shared/lib/api-endpoints.ts`. That shared descriptor list now carries path, method, admin/cache/probe/status-action metadata, plus the worker dependency-hydration hints needed for static routes. `worker/src/route-registry.ts` binds worker handlers to those shared endpoint keys and also owns `DYNAMIC_ROUTE_DEFINITIONS`; `worker/src/router.ts` stays focused on method validation, generic dispatch, and delegating dynamic-match resolution. The route-context dependency hydrators now live behind an exhaustive keyed map in `worker/src/handlers/http/context.ts`, so adding a new `EndpointDependency` without wiring hydration fails at compile time instead of silently defaulting.
+Static route metadata is declared once in `shared/lib/api-endpoints.ts`. That shared descriptor list now carries path, method, admin/cache/probe/status-action metadata, shared dynamic-admin path matching, plus the worker dependency-hydration hints needed for static routes. `worker/src/route-registry.ts` stays as the binding layer from shared endpoint keys to worker handlers, while `worker/src/router.ts` stays focused on method validation, generic dispatch, and delegating dynamic-match resolution. The route-context dependency hydrators now live behind an exhaustive keyed map in `worker/src/handlers/http/context.ts`, so adding a new `EndpointDependency` without wiring hydration fails at compile time instead of silently defaulting.
 
 Cron trigger metadata follows the same single-source pattern. `shared/lib/cron-jobs.ts` remains the schedule authority, while `shared/lib/scheduled-runner-registry.ts` binds each cron expression to a symbolic scheduled-runner key that both the worker scheduler and `scripts/check-cron-schedule-sync.ts` consume. That keeps `worker/wrangler.toml`, shared cron metadata, and scheduled-runner dispatch in lockstep.
 
@@ -491,6 +491,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── snapshot-psi.ts       # Daily PSI snapshot → D1 (daily, 8AM UTC)
     │   ├── confirm-pending-depegs.ts # Secondary depeg confirmation for major coins (>$1B)
     │   ├── daily-digest.ts       # AI-generated daily market summary via Claude API (daily, 08:05 UTC)
+    │   ├── digest/platform.ts    # Shared digest substrate: model execution, persistence, and channel-delivery wrappers
     │   ├── weekly-recap.ts      # AI-generated weekly market recap via Claude API (Mondays, 08:05 UTC)
     │   ├── discovery-scan.ts     # Weekly stablecoin coverage discovery → D1 (Mondays, 08:05 UTC)
     │   ├── compute-dews.ts       # DEWS computation cron (every 30 min, after sync-dex-liquidity)
@@ -593,7 +594,11 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── stability-index.ts    # Stability index computation helpers
         ├── backfill-query.ts     # Shared admin backfill query parsing/selection helpers (stablecoin/batch/batchSize)
         ├── api-utils.ts          # withErrorHandler(), CacheStatus (from shared types), buildCacheStatuses()
-        ├── status-reliability.ts # Status hysteresis, transitions, probe/discrepancy persistence
+        ├── status-reliability.ts # Stable facade for status reliability imports
+        ├── status-state-store.ts # Status hysteresis state persistence, snapshots, and transition history
+        ├── status-probe-store.ts # Probe-run persistence and latest-probe loading
+        ├── status-discrepancy-store.ts # Divergence/probe-failure streak persistence and alert markers
+        ├── status-discrepancy-view.ts # Discrepancy view assembly
         ├── status/               # Shared status data-quality + derived loader modules used by /api/status
         │   ├── data-quality.ts   # Stablecoins cache / blacklist gap / active-depeg / on-chain-supply quality aggregation
         │   └── derived-data.ts   # Dataset freshness, Telegram stats, and mint/burn reconciliation loaders

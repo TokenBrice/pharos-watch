@@ -43,7 +43,7 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 - `WORKER_RESERVED_ENV_KEYS`
 - `WORKER_ACTIVE_ENV_KEYS` (`required + optional`)
 
-The paired Pages Functions contract lives in `functions/lib/ops-env.ts` with the same `required` / `optional` / `reserved` / `active` shape. Worker runtime validation logs contract warnings when Access bindings are only partially configured or when public API rate limiting falls back to the built-in salt.
+The paired Pages Functions contract lives in `functions/lib/ops-env.ts` with the same `required` / `optional` / `reserved` / `active` shape. Worker runtime validation logs contract errors when Access bindings are only partially configured or when `PUBLIC_API_RATE_LIMIT_SALT` is missing.
 
 | Binding                         | Type       | Required           | Used by                                                                                                                                                                    |
 | ------------------------------- | ---------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -67,7 +67,7 @@ The paired Pages Functions contract lives in `functions/lib/ops-env.ts` with the
 | `COINGECKO_API_KEY`             | string     | No                 | Price enrichment, depeg confirmation                                                                                                                                       |
 | `GITHUB_PAT`                    | string     | No (worker contract); Yes for feedback submissions | Feedback → GitHub Issues                                                                                                                                                   |
 | `FEEDBACK_IP_SALT`              | string     | No (worker contract); Yes for feedback submissions | Rate limit IP hashing for `POST /api/feedback`                                                                                                                             |
-| `PUBLIC_API_RATE_LIMIT_SALT`    | string     | No                 | Optional salt for hashed public API rate limiting; falls back to `FEEDBACK_IP_SALT`, then a built-in constant                                                              |
+| `PUBLIC_API_RATE_LIMIT_SALT`    | string     | Yes for deployed public API traffic | Dedicated salt for hashed public API rate limiting. Public `/api/*` traffic returns `503` until this binding is configured.                                |
 | `TWITTER_API_KEY`               | string     | No                 | Digest → Twitter (OAuth consumer key)                                                                                                                                      |
 | `TWITTER_API_SECRET`            | string     | No                 | Digest → Twitter (OAuth consumer secret)                                                                                                                                   |
 | `TWITTER_ACCESS_TOKEN`          | string     | No                 | Digest → Twitter (access token)                                                                                                                                            |
@@ -99,7 +99,7 @@ These are pure functions. `Env` bindings are only available inside handler funct
 
 ## Public API Rate Limiting
 
-Non-admin public `/api/*` requests are rate-limited through the D1-backed `public_api_rate_limit` table with per-minute hashed IP buckets. The worker prefers `PUBLIC_API_RATE_LIMIT_SALT`, then `FEEDBACK_IP_SALT`, then a built-in fallback constant to avoid storing raw IPs in D1. If the distributed limiter path fails, the worker logs the failure and allows the request instead of switching to an isolate-local fallback limiter.
+Non-admin public `/api/*` requests are rate-limited through the D1-backed `public_api_rate_limit` table with per-minute hashed IP buckets. The worker now requires a dedicated `PUBLIC_API_RATE_LIMIT_SALT` binding for this path and returns `503` for public API traffic until that binding is configured. `FEEDBACK_IP_SALT` remains scoped to feedback submission hashing only. If the distributed limiter path fails after a valid salt is present, the worker logs the failure and allows the request instead of switching to an isolate-local fallback limiter.
 
 ---
 
@@ -195,7 +195,7 @@ This baseline is enough to catch most abuse, regression, or cache-efficiency pro
 
 ### Router-Dispatched Status Actions
 
-Operator admin actions are dispatched through `worker/src/router.ts` using shared endpoint definitions (`shared/lib/api-endpoints.ts`). Examples:
+Operator admin actions are dispatched through `worker/src/router.ts` using shared endpoint definitions (`shared/lib/api-endpoints.ts`) and worker action handlers under `worker/src/api/admin-actions.ts`. Examples:
 
 | Endpoint                         | Auth                                         | Description                                                             |
 | -------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------- |
@@ -1070,7 +1070,11 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/cron/sync-bluechip.ts`                 | Bluechip ratings: batch fetch from bluechip.org                                                                                                                     |
 | `worker/src/cron/snapshot-safety-grade-history.ts` | Daily Safety Score grade history snapshot writer (seed + grade-change events)                                                                                       |
 | `worker/src/cron/status-self-check.ts`             | Status reliability self-check: default-origin internal router probes, external `SELF_URL` HTTP probes, hysteresis persistence, discrepancy + probe-failure alerting |
-| `worker/src/lib/status-reliability.ts`             | Status state machine + transition/probe/discrepancy persistence helpers                                                                                             |
+| `worker/src/lib/status-reliability.ts`             | Stable facade for status reliability imports                                                                                                                        |
+| `worker/src/lib/status-state-store.ts`             | Status hysteresis state persistence, snapshots, and transition history                                                                                              |
+| `worker/src/lib/status-probe-store.ts`             | Status self-probe persistence helpers                                                                                                                                                                                                     |
+| `worker/src/lib/status-discrepancy-store.ts`       | Divergence/probe-failure streak persistence and alert markers                                                                                                                                                                             |
+| `worker/src/lib/status-discrepancy-view.ts`        | Discrepancy view assembly from effective status + probe summary                                                                                                                                                                           |
 | `worker/migrations/0000_baseline.sql`              | Baseline schema for `cache`, blacklist tables, cron leases, and the rest of the pre-0072 D1 surface                                                                |
 
 ---

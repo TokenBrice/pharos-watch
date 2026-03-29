@@ -195,6 +195,27 @@ describe("verifyAccessJwt", () => {
       expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
+    it("retries with a fresh JWKS fetch when the cached key set misses the token kid", async () => {
+      const fetchMock = vi.fn()
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ keys: [{ ...MOCK_JWKS.keys[0], kid: "old-kid" }] }), { status: 200 }),
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ keys: [{ ...MOCK_JWKS.keys[0], kid: "rotated-kid" }] }), { status: 200 }),
+        );
+      vi.stubGlobal("fetch", fetchMock);
+
+      const { token } = makeJwtParts(validHeader({ kid: "old-kid" }), validClaims());
+      await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      const { token: rotatedToken } = makeJwtParts(validHeader({ kid: "rotated-kid" }), validClaims());
+      expect(await verifyAccessJwt({ token: rotatedToken, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(fetchMock).toHaveBeenNthCalledWith(1, JWKS_URL);
+      expect(fetchMock).toHaveBeenNthCalledWith(2, JWKS_URL);
+    });
+
     it("returns false when JWKS response has no keys array", async () => {
       vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 200 })));
       const { token } = makeJwtParts(validHeader(), validClaims());

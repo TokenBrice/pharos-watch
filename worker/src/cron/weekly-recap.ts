@@ -2,11 +2,14 @@ import type { DigestInputData } from "@shared/types/digest";
 import { formatCurrency } from "@shared/lib/format";
 import { type CronResult } from "../lib/cron-logger";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
-import { fetchWithRetry } from "../lib/fetch-retry";
 import { SECONDS } from "../lib/time-constants";
-import { ANTHROPIC_MAX_RETRIES, ANTHROPIC_TIMEOUT_MS, CIRCUIT_SOURCE } from "../lib/constants";
-import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
-import { DigestResponseSchema } from "../lib/schemas";
+import { CIRCUIT_SOURCE } from "../lib/constants";
+import { logMalformedJsonPath } from "../lib/json-decode-observability";
+import {
+  insertDigestRecord,
+  requestDigestCopy,
+  runDigestChannelDelivery,
+} from "./digest/platform";
 
 const WEEKLY_SYSTEM_PROMPT =
   "You write the weekly editorial recap for Pharos, a stablecoin analytics dashboard. " +
@@ -49,7 +52,16 @@ function buildWeeklyInputData(
       const inputData = JSON.parse(row.input_data) as DigestInputData;
       const date = new Date(row.generated_at * 1000).toISOString().slice(0, 10);
       parsed.push({ date, title: row.digest_title ?? "Untitled", text: row.digest_text, inputData });
-    } catch { /* expected: malformed input_data JSON — skip entry */ }
+    } catch (error) {
+      logMalformedJsonPath({
+        scope: "cron",
+        owner: "weekly-recap",
+        context: "daily_digest.input_data",
+        reason: "json-parse-failed",
+        source: "daily_digest",
+        updatedAt: row.generated_at,
+      }, error);
+    }
   }
   if (parsed.length < 5) return null;
 
@@ -172,111 +184,59 @@ export async function generateWeeklyRecap(
 
   const userPrompt = buildWeeklyPrompt(weeklyData);
 
-  if (!(await shouldAttemptFetch(db, CIRCUIT_SOURCE.ANTHROPIC))) {
-    return { metadata: "skipped: anthropic circuit open" };
-  }
-  const response = await fetchWithRetry(
-    "https://api.anthropic.com/v1/messages",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": anthropicApiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-opus-4-6",
-        max_tokens: 2000,
-        system: WEEKLY_SYSTEM_PROMPT,
-        messages: [{ role: "user", content: userPrompt }],
-      }),
-      signal: signal
-        ? AbortSignal.any([signal, AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS)])
-        : AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS),
-    },
-    ANTHROPIC_MAX_RETRIES,
-    { timeoutMs: ANTHROPIC_TIMEOUT_MS },
-  );
-
-  if (!response || !response.ok) {
-    await recordOutcomeSafe(db, CIRCUIT_SOURCE.ANTHROPIC, false);
-    const errorText = response ? await response.text() : "no response after retries";
-    throw new Error(`Claude API error: ${typeof errorText === "string" ? errorText.slice(0, 500) : errorText}`);
-  }
-  await recordOutcomeSafe(db, CIRCUIT_SOURCE.ANTHROPIC, true);
-
-  const result = (await response.json()) as { content?: { type: string; text: string }[] };
-  const rawText = result.content?.[0]?.text ?? "";
-  if (!rawText) throw new Error("Claude API returned empty weekly recap text");
-
-  // Parse JSON response (same extraction logic as daily)
-  let jsonText = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
-  const braceStart = jsonText.indexOf("{");
-  if (braceStart !== -1) {
-    let depth = 0, braceEnd = -1;
-    for (let i = braceStart; i < jsonText.length; i++) {
-      if (jsonText[i] === "{") depth++;
-      else if (jsonText[i] === "}") { depth--; if (depth === 0) { braceEnd = i; break; } }
-    }
-    if (braceEnd !== -1) jsonText = jsonText.slice(braceStart, braceEnd + 1);
-  }
-
-  const stripDashes = (s: string) => s.replace(/[\u2013\u2014]/g, ",");
-  let digestTitle: string, digestText: string, digestExtended: string;
-  let digestMeta: string;
-
-  try {
-    const raw = JSON.parse(jsonText);
-    const parsed = DigestResponseSchema.parse(raw);
-    digestTitle = stripDashes(parsed.title.trim());
-    digestText = stripDashes(parsed.text.trim());
-    digestExtended = stripDashes(parsed.extended.trim());
-    if (!digestText) throw new Error("empty text field");
-    digestMeta = JSON.stringify({
-      ...(parsed.meta ?? {}),
+  const digestCopy = await requestDigestCopy({
+    db,
+    anthropicApiKey,
+    systemPrompt: WEEKLY_SYSTEM_PROMPT,
+    userPrompt,
+    maxTokens: 2000,
+    signal,
+    logPrefix: "weekly-recap",
+    parseOptions: {
+    metaFactory: ({ parsedMeta, usedRawTextFallback: degraded }) => ({
+      ...(parsedMeta ?? {}),
       type: "weekly",
       weekStart: weeklyData.weekStartDate,
       weekEnd: weeklyData.weekEndDate,
-    });
-  } catch { /* degraded: LLM returned non-JSON — fall back to raw text */
-    digestTitle = "";
-    digestText = stripDashes(rawText.trim());
-    digestExtended = "";
-    digestMeta = JSON.stringify({ type: "weekly" });
+      ...(degraded ? { degraded: "raw-text-fallback" } : {}),
+    }),
+    },
+  });
+  if (digestCopy.kind === "circuit-open") {
+    return { metadata: "skipped: anthropic circuit open" };
   }
 
   // Store
   const nowSec = Math.floor(Date.now() / 1000);
-  await db
-    .prepare(
-      "INSERT INTO daily_digest (generated_at, digest_text, digest_title, input_data, digest_extended, digest_meta) VALUES (?, ?, ?, ?, ?, ?)",
-    )
-    .bind(nowSec, digestText, digestTitle || null, JSON.stringify(weeklyData), digestExtended || null, digestMeta)
-    .run();
+  await insertDigestRecord({
+    db,
+    generatedAt: nowSec,
+    digestText: digestCopy.digestText,
+    digestTitle: digestCopy.digestTitle || null,
+    inputData: weeklyData,
+    digestExtended: digestCopy.digestExtended || null,
+    digestMeta: digestCopy.digestMeta,
+  });
 
   // Post to Telegram
-  let telegramStatus = "no-creds";
-  if (telegramCreds) {
-    const allowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.TELEGRAM_API);
-    if (!allowed) {
-      telegramStatus = "skipped: circuit-open";
-    } else {
-      try {
-        const weekLabel = `Week of ${weeklyData.weekStartDate}`;
-        const tgTitle = `Weekly Recap: ${digestTitle || weekLabel}`;
-        const date = new Date(nowSec * 1000).toISOString().slice(0, 10);
-        await postDigestToTelegram(tgTitle, digestExtended, date, telegramCreds);
-        await recordOutcomeSafe(db, CIRCUIT_SOURCE.TELEGRAM_API, true);
-        telegramStatus = "ok";
-      } catch (err) {
-        await recordOutcomeSafe(db, CIRCUIT_SOURCE.TELEGRAM_API, false);
-        telegramStatus = `failed: ${String(err).slice(0, 100)}`;
-      }
-    }
-  }
+  const telegramStatus = await runDigestChannelDelivery({
+    db,
+    circuitSource: CIRCUIT_SOURCE.TELEGRAM_API,
+    creds: telegramCreds,
+    logPrefix: "weekly-recap",
+    channelLabel: "Telegram",
+    deliver: async (creds) => {
+      const weekLabel = `Week of ${weeklyData.weekStartDate}`;
+      const tgTitle = `Weekly Recap: ${digestCopy.digestTitle || weekLabel}`;
+      const date = new Date(nowSec * 1000).toISOString().slice(0, 10);
+      await postDigestToTelegram(tgTitle, digestCopy.digestExtended, date, creds);
+      return "ok";
+    },
+  });
 
   return {
     itemCount: 1,
-    metadata: `weekly: ${digestText.length} chars, telegram: ${telegramStatus}`,
+    ...(digestCopy.usedRawTextFallback ? { status: "degraded" as const } : {}),
+    metadata: `weekly: ${digestCopy.digestText.length} chars, telegram: ${telegramStatus}${digestCopy.usedRawTextFallback ? ", degraded: raw-text-fallback" : ""}`,
   };
 }

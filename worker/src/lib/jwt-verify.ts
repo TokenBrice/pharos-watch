@@ -87,10 +87,13 @@ function decodeJsonPart<T>(part: string): T | null {
 
 // ── JWKS fetching ───────────────────────────────────────────────────
 
-async function fetchJwks(teamDomain: string): Promise<JwksResponse | null> {
+async function fetchJwks(
+  teamDomain: string,
+  options: { forceRefresh?: boolean } = {},
+): Promise<JwksResponse | null> {
   const now = Date.now();
   const cached = jwksCache.get(teamDomain);
-  if (cached && now < cached.expiresAt) {
+  if (!options.forceRefresh && cached && now < cached.expiresAt) {
     return cached.jwks;
   }
 
@@ -189,10 +192,17 @@ export async function verifyAccessJwt(options: JwtVerifyOptions): Promise<boolea
   if (payload.iss !== expectedIssuer) return false;
 
   // ── 3. Fetch JWKS and find matching key ───────────────────────
-  const jwks = await fetchJwks(teamDomain);
+  let jwks = await fetchJwks(teamDomain);
   if (!jwks) return false;
 
-  const matchingKey = jwks.keys.find((k) => k.kid === header.kid);
+  let matchingKey = jwks.keys.find((k) => k.kid === header.kid);
+  if (!matchingKey) {
+    // Cloudflare Access can rotate signing keys before the local cache TTL elapses.
+    // Retry once with a forced refetch before failing closed.
+    jwks = await fetchJwks(teamDomain, { forceRefresh: true });
+    if (!jwks) return false;
+    matchingKey = jwks.keys.find((k) => k.kid === header.kid);
+  }
   if (!matchingKey) return false;
 
   // ── 4. Import key and verify signature ────────────────────────

@@ -15,6 +15,15 @@ function makeCtx() {
   };
 }
 
+function makeEnv(overrides: Record<string, unknown> = {}) {
+  return {
+    DB: mockD1(),
+    CORS_ORIGIN: "https://pharos.watch",
+    PUBLIC_API_RATE_LIMIT_SALT: "test-salt",
+    ...overrides,
+  } as const;
+}
+
 describe("worker.fetch", () => {
   const cacheMatch = vi.fn();
   const cachePut = vi.fn(async () => undefined);
@@ -32,10 +41,7 @@ describe("worker.fetch", () => {
   });
 
   it("returns 204 for CORS preflight", async () => {
-    const env = {
-      DB: mockD1(),
-      CORS_ORIGIN: "https://pharos.watch",
-    } as const;
+    const env = makeEnv();
     const { ctx } = makeCtx();
 
     const res = await worker.fetch(
@@ -51,10 +57,9 @@ describe("worker.fetch", () => {
   });
 
   it("echoes an allowed operator origin from the CORS allowlist", async () => {
-    const env = {
-      DB: mockD1(),
+    const env = makeEnv({
       CORS_ORIGIN: "https://pharos.watch,https://ops.pharos.watch",
-    } as const;
+    });
     const { ctx } = makeCtx();
 
     const res = await worker.fetch(
@@ -72,10 +77,7 @@ describe("worker.fetch", () => {
   });
 
   it("rejects GET on mutating admin endpoints", async () => {
-    const env = {
-      DB: mockD1(),
-      CORS_ORIGIN: "https://pharos.watch",
-    } as const;
+    const env = makeEnv();
     const { ctx } = makeCtx();
 
     const res = await worker.fetch(
@@ -90,10 +92,7 @@ describe("worker.fetch", () => {
   });
 
   it("rejects POST on read-only endpoints", async () => {
-    const env = {
-      DB: mockD1(),
-      CORS_ORIGIN: "https://pharos.watch",
-    } as const;
+    const env = makeEnv();
     const { ctx } = makeCtx();
 
     const res = await worker.fetch(
@@ -112,10 +111,7 @@ describe("worker.fetch", () => {
       headers: { "Content-Type": "application/json" },
     }));
 
-    const env = {
-      DB: mockD1(),
-      CORS_ORIGIN: "https://pharos.watch",
-    } as const;
+    const env = makeEnv();
     const { ctx } = makeCtx();
 
     const res = await worker.fetch(
@@ -131,10 +127,7 @@ describe("worker.fetch", () => {
   });
 
   it("skips edge cache for cache-bypass endpoints", async () => {
-    const env = {
-      DB: mockD1(),
-      CORS_ORIGIN: "https://pharos.watch",
-    } as const;
+    const env = makeEnv();
     const { ctx, waits } = makeCtx();
 
     const res = await worker.fetch(
@@ -150,7 +143,7 @@ describe("worker.fetch", () => {
   });
 
   it("applies the distributed public API rate limit before routing", async () => {
-    const env = {
+    const env = makeEnv({
       DB: mockD1([
         {
           match: "public_api_rate_limit",
@@ -158,9 +151,7 @@ describe("worker.fetch", () => {
           first: { count: 301 },
         },
       ]),
-      CORS_ORIGIN: "https://pharos.watch",
-      PUBLIC_API_RATE_LIMIT_SALT: "test-salt",
-    } as const;
+    });
     const { ctx } = makeCtx();
 
     const res = await worker.fetch(
@@ -176,11 +167,9 @@ describe("worker.fetch", () => {
   });
 
   it("returns a maintenance response before routing or cache lookup", async () => {
-    const env = {
-      DB: mockD1(),
-      CORS_ORIGIN: "https://pharos.watch",
+    const env = makeEnv({
       MAINTENANCE_MODE: "true",
-    } as const;
+    });
     const { ctx } = makeCtx();
 
     const res = await worker.fetch(
@@ -198,7 +187,7 @@ describe("worker.fetch", () => {
 
   it("writes cache on cacheable GET misses", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const env = {
+    const env = makeEnv({
       DB: mockD1([
         {
           match: "cache",
@@ -206,8 +195,7 @@ describe("worker.fetch", () => {
           first: { key: "stablecoins", value: JSON.stringify({ peggedAssets: [] }), updated_at: now },
         },
       ]),
-      CORS_ORIGIN: "https://pharos.watch",
-    } as const;
+    });
     const { ctx, waits } = makeCtx();
 
     const res = await worker.fetch(
@@ -222,5 +210,22 @@ describe("worker.fetch", () => {
     // 1 for cache write + 1 for flushPendingPrunes (rate-limit cleanup)
     expect(ctx.waitUntil).toHaveBeenCalledTimes(2);
     expect(cachePut).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns 503 for public API requests when the rate-limit salt is missing", async () => {
+    const env = makeEnv({
+      PUBLIC_API_RATE_LIMIT_SALT: undefined,
+    });
+    const { ctx } = makeCtx();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/stablecoins", { method: "GET" }),
+      env as never,
+      ctx,
+    );
+
+    expect(res.status).toBe(503);
+    expect(cacheMatch).not.toHaveBeenCalled();
+    expect(cachePut).not.toHaveBeenCalled();
   });
 });

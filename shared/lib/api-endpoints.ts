@@ -48,6 +48,13 @@ interface EndpointMethodValidationError {
   allowedMethods: readonly EndpointMethod[];
 }
 
+export interface DynamicAdminEndpointMatch {
+  key: "discovery-candidate-dismiss";
+  path: string;
+  candidateId: number;
+  methods: readonly EndpointMethod[];
+}
+
 type QueryParamValue = string | number | boolean | null | undefined;
 
 function buildQueryPath(path: string, params?: Record<string, QueryParamValue>): string {
@@ -650,7 +657,7 @@ const ENDPOINT_DEFINITION_BY_KEY = new Map<EndpointKey, EndpointDefinition>(
 const STABLECOIN_DETAIL_PATH_PATTERN = /^\/api\/stablecoin\/[^/]+$/;
 const STABLECOIN_SUMMARY_PATH_PATTERN = /^\/api\/stablecoin-summary\/[^/]+$/;
 const OG_IMAGE_PATH_PATTERN = /^\/api\/og\//;
-const DISCOVERY_DISMISS_PATH_PATTERN = /^\/api\/discovery-candidates\/\d+\/dismiss$/;
+const DISCOVERY_DISMISS_PATH_PATTERN = /^\/api\/discovery-candidates\/(\d+)\/dismiss$/;
 const GET_ONLY_METHODS = ["GET"] as const satisfies readonly EndpointMethod[];
 const POST_ONLY_METHODS = ["POST"] as const satisfies readonly EndpointMethod[];
 const GET_AND_POST_METHODS = ["GET", "POST"] as const satisfies readonly EndpointMethod[];
@@ -674,6 +681,28 @@ export function isMutatingAdminPath(path: string): boolean {
 
 export function isCacheBypassPath(path: string): boolean {
   return CACHE_BYPASS_PATHS.has(path);
+}
+
+export function matchDynamicAdminEndpoint(path: string): DynamicAdminEndpointMatch | null {
+  const discoveryDismissMatch = path.match(DISCOVERY_DISMISS_PATH_PATTERN);
+  if (discoveryDismissMatch) {
+    const candidateId = Number.parseInt(discoveryDismissMatch[1] ?? "", 10);
+    if (!Number.isFinite(candidateId) || candidateId <= 0) {
+      return null;
+    }
+    return {
+      key: "discovery-candidate-dismiss",
+      path,
+      candidateId,
+      methods: POST_ONLY_METHODS,
+    };
+  }
+
+  return null;
+}
+
+export function isAdminPath(path: string): boolean {
+  return Boolean(getEndpointDefinition(path)?.adminRequired || matchDynamicAdminEndpoint(path));
 }
 
 export function getEndpointDefinition(path: string): EndpointDefinition | undefined {
@@ -706,8 +735,9 @@ function getAllowedEndpointMethods(url: URL): readonly EndpointMethod[] | null {
   if (STABLECOIN_SUMMARY_PATH_PATTERN.test(url.pathname)) {
     return GET_ONLY_METHODS;
   }
-  if (DISCOVERY_DISMISS_PATH_PATTERN.test(url.pathname)) {
-    return POST_ONLY_METHODS;
+  const dynamicAdminEndpoint = matchDynamicAdminEndpoint(url.pathname);
+  if (dynamicAdminEndpoint) {
+    return dynamicAdminEndpoint.methods;
   }
   if (OG_IMAGE_PATH_PATTERN.test(url.pathname)) {
     return GET_ONLY_METHODS;

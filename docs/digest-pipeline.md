@@ -13,6 +13,8 @@ The digest pipeline has four layers:
 3. **Distribution** — posted to Twitter and Telegram immediately after generation
 4. **Frontend** — served via public API endpoints, displayed on the homepage and a dedicated archive
 
+Daily and weekly generation now share a common worker substrate in `worker/src/cron/digest/platform.ts` for the Anthropic request/parse path, `daily_digest` row insertion, and circuit-aware delivery wrappers. The daily and weekly jobs still own their distinct input-building and prompt logic.
+
 Each digest has four fields produced by the LLM:
 
 | Field | Description | Constraint |
@@ -340,8 +342,9 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Twitter and Telegra
 
 | File | Role |
 |------|------|
-| `worker/src/cron/daily-digest.ts` | Generation logic: data collection, LLM call, storage, distribution dispatch |
-| `worker/src/cron/weekly-recap.ts` | Weekly recap generation: aggregates 7 days, calls Claude, stores with `type: "weekly"` meta |
+| `worker/src/cron/daily-digest.ts` | Daily digest orchestration: data collection, prompt assembly, edition counting, and daily-specific publish behavior |
+| `worker/src/cron/weekly-recap.ts` | Weekly recap orchestration: aggregates 7 days, builds weekly prompt/input, and weekly-specific Telegram title/meta shaping |
+| `worker/src/cron/digest/platform.ts` | Shared digest substrate: Anthropic request/parse flow, `daily_digest` insertion, and circuit-aware channel delivery wrappers |
 | `worker/src/lib/twitter.ts` | OAuth 1.0a signing, cashtag injection, tweet posting |
 | `worker/src/lib/telegram.ts` | HTML message formatting, Telegram Bot API posting |
 | `worker/src/api/daily-digest.ts` | `GET /api/daily-digest` handler |

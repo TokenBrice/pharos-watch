@@ -17,12 +17,9 @@ import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress, withBudgetMetadata } from "../lib/cron-progress";
 import { fetchEvmEventsIncremental } from "./blacklist/evm-source";
 import { fetchTronEventsIncremental } from "./blacklist/tron-source";
-import {
-  syncCurrentBalanceCacheForRows,
-} from "./blacklist/current-balance-cache";
 import type { BlacklistRow } from "./blacklist/shared";
-import { backfillAmounts, enrichRowBalances } from "./blacklist/amount-recovery";
-import { insertBlacklistRows } from "./blacklist/persistence";
+import { backfillAmounts } from "./blacklist/amount-recovery";
+import { processFetchedBlacklistRows } from "./blacklist/post-fetch";
 
 const EVM_SCANNED_TO_LATEST = 99999999;
 const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 7 * 60_000;
@@ -203,43 +200,28 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         );
         await recordOutcomeSafe(db, CIRCUIT_SOURCE.TRONGRID, !result.apiError);
 
-        const tronEnrichCounters = await enrichRowBalances(
-          result.rows,
+        const processed = await processFetchedBlacklistRows({
+          db,
           config,
+          rows: result.rows,
+          chainLabel: "tron",
           etherscanApiKey,
           drpcApiKey,
+          trongridApiKey,
           etherscanLimiter,
+          tronLimiter,
           budget,
           deadlineMs,
           signal,
           chainRpcs,
-        );
-        enrichCounters.attempted += tronEnrichCounters.attempted;
-        enrichCounters.succeeded += tronEnrichCounters.succeeded;
-        enrichCounters.failed += tronEnrichCounters.failed;
-        console.log(
-          `[sync-blacklist] enrichRowBalances (tron): attempted=${tronEnrichCounters.attempted} succeeded=${tronEnrichCounters.succeeded} failed=${tronEnrichCounters.failed}`,
-        );
-        totalInsertedRows += await insertBlacklistRows(db, result.rows);
-        const tronCurrentBalanceCache = await syncCurrentBalanceCacheForRows(
-          db,
-          config,
-          result.rows,
-          {
-            etherscanApiKey,
-            drpcApiKey,
-            trongridApiKey,
-            etherscanLimiter,
-            tronLimiter,
-            budget,
-            deadlineMs,
-            signal,
-            chainRpcs,
-          },
-        );
-        currentBalanceCacheCounters.updated += tronCurrentBalanceCache.updated;
-        currentBalanceCacheCounters.deleted += tronCurrentBalanceCache.deleted;
-        currentBalanceCacheCounters.failed += tronCurrentBalanceCache.failed;
+        });
+        enrichCounters.attempted += processed.enrichCounters.attempted;
+        enrichCounters.succeeded += processed.enrichCounters.succeeded;
+        enrichCounters.failed += processed.enrichCounters.failed;
+        totalInsertedRows += processed.insertedRows;
+        currentBalanceCacheCounters.updated += processed.currentBalanceCacheCounters.updated;
+        currentBalanceCacheCounters.deleted += processed.currentBalanceCacheCounters.deleted;
+        currentBalanceCacheCounters.failed += processed.currentBalanceCacheCounters.failed;
 
         if (result.incomplete) {
           runtimeBudgetHit = true;
@@ -283,43 +265,28 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
           rpcLogConfigs++;
         }
 
-        const evmEnrichCounters = await enrichRowBalances(
-          result.rows,
+        const processed = await processFetchedBlacklistRows({
+          db,
           config,
+          rows: result.rows,
+          chainLabel: "evm",
           etherscanApiKey,
           drpcApiKey,
+          trongridApiKey,
           etherscanLimiter,
+          tronLimiter,
           budget,
           deadlineMs,
           signal,
           chainRpcs,
-        );
-        enrichCounters.attempted += evmEnrichCounters.attempted;
-        enrichCounters.succeeded += evmEnrichCounters.succeeded;
-        enrichCounters.failed += evmEnrichCounters.failed;
-        console.log(
-          `[sync-blacklist] enrichRowBalances (evm): attempted=${evmEnrichCounters.attempted} succeeded=${evmEnrichCounters.succeeded} failed=${evmEnrichCounters.failed}`,
-        );
-        totalInsertedRows += await insertBlacklistRows(db, result.rows);
-        const evmCurrentBalanceCache = await syncCurrentBalanceCacheForRows(
-          db,
-          config,
-          result.rows,
-          {
-            etherscanApiKey,
-            drpcApiKey,
-            trongridApiKey,
-            etherscanLimiter,
-            tronLimiter,
-            budget,
-            deadlineMs,
-            signal,
-            chainRpcs,
-          },
-        );
-        currentBalanceCacheCounters.updated += evmCurrentBalanceCache.updated;
-        currentBalanceCacheCounters.deleted += evmCurrentBalanceCache.deleted;
-        currentBalanceCacheCounters.failed += evmCurrentBalanceCache.failed;
+        });
+        enrichCounters.attempted += processed.enrichCounters.attempted;
+        enrichCounters.succeeded += processed.enrichCounters.succeeded;
+        enrichCounters.failed += processed.enrichCounters.failed;
+        totalInsertedRows += processed.insertedRows;
+        currentBalanceCacheCounters.updated += processed.currentBalanceCacheCounters.updated;
+        currentBalanceCacheCounters.deleted += processed.currentBalanceCacheCounters.deleted;
+        currentBalanceCacheCounters.failed += processed.currentBalanceCacheCounters.failed;
 
         let newBlock: number;
         if (result.incomplete) {

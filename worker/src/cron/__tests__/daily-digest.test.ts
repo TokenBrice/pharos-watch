@@ -410,7 +410,7 @@ describe("generateDailyDigest", () => {
     expect(insertBinds?.[1]).toBe(malformed);
     expect(insertBinds?.[2]).toBeNull();
     expect(warnSpy).toHaveBeenCalledWith(
-      "[daily-digest] Failed to parse JSON response, using raw text",
+      "[daily-digest] Failed to parse JSON response, using raw text fallback",
     );
   });
 

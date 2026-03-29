@@ -1,4 +1,4 @@
-import { getEndpointDefinition, validateEndpointMethod } from "@shared/lib/api-endpoints";
+import { isAdminPath, validateEndpointMethod } from "@shared/lib/api-endpoints";
 import { resolveOpsUiOrigin } from "../../lib/ops-origin";
 import {
   resolveOpsApiOrigin,
@@ -7,7 +7,6 @@ import {
 } from "../../lib/ops-env";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 
-const DISCOVERY_DISMISS_PATH_PATTERN = /^\/api\/discovery-candidates\/\d+\/dismiss$/;
 const UPSTREAM_TIMEOUT_MS = 10_000;
 const FORWARDED_REQUEST_HEADERS = [
   "Accept",
@@ -54,11 +53,7 @@ function resolveUpstreamPath(params: OpsAdminProxyContext["params"]): string | n
 }
 
 function isAllowedAdminPath(path: string): boolean {
-  const endpoint = getEndpointDefinition(path);
-  if (endpoint?.adminRequired) {
-    return true;
-  }
-  return DISCOVERY_DISMISS_PATH_PATTERN.test(path);
+  return isAdminPath(path);
 }
 
 function buildUpstreamHeaders(

@@ -12,28 +12,16 @@ describe("resolvePublicApiRateLimitSalt", () => {
   it("prefers the dedicated public API salt", () => {
     expect(resolvePublicApiRateLimitSalt({
       PUBLIC_API_RATE_LIMIT_SALT: "public",
-      FEEDBACK_IP_SALT: "feedback",
     })).toEqual({
       salt: "public",
       source: "public-api-rate-limit-salt",
     });
   });
 
-  it("falls back to the feedback salt when needed", () => {
+  it("returns null when the dedicated public API salt is unset", () => {
     expect(resolvePublicApiRateLimitSalt({
       PUBLIC_API_RATE_LIMIT_SALT: undefined,
-      FEEDBACK_IP_SALT: "feedback",
-    })).toEqual({
-      salt: "feedback",
-      source: "feedback-ip-salt",
-    });
-  });
-
-  it("uses the built-in fallback only when both salts are unset", () => {
-    expect(resolvePublicApiRateLimitSalt({
-      PUBLIC_API_RATE_LIMIT_SALT: undefined,
-      FEEDBACK_IP_SALT: undefined,
-    }).source).toBe("built-in-fallback");
+    })).toBeNull();
   });
 });
 
@@ -52,15 +40,15 @@ describe("validateWorkerEnvContract", () => {
     ]);
   });
 
-  it("flags built-in rate-limit fallback when no salts are configured", () => {
+  it("flags missing public API rate-limit salt", () => {
     expect(validateWorkerEnvContract({
       CF_ACCESS_OPS_API_AUD: undefined,
       CF_ACCESS_TEAM_DOMAIN: undefined,
       PUBLIC_API_RATE_LIMIT_SALT: undefined,
-      FEEDBACK_IP_SALT: undefined,
+      FEEDBACK_IP_SALT: "feedback",
     })).toContainEqual({
-      code: "public-api-rate-limit-fallback",
-      message: "PUBLIC_API_RATE_LIMIT_SALT and FEEDBACK_IP_SALT are both unset; public API rate limiting is using the built-in fallback salt.",
+      code: "public-api-rate-limit-misconfigured",
+      message: "PUBLIC_API_RATE_LIMIT_SALT is unset; public API rate limiting is disabled until the dedicated salt is configured.",
     });
   });
 });

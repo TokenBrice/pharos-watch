@@ -1,5 +1,3 @@
-import { PUBLIC_API_RATE_LIMIT_SALT_FALLBACK } from "./env";
-
 interface RateLimitRunResult {
   meta?: { changes?: number };
 }
@@ -73,14 +71,17 @@ async function hashIpWithSalt(ip: string, salt: string): Promise<string> {
 export async function checkPublicApiRateLimit(
   db: RateLimitDb,
   ip: string,
-  salt?: string,
+  salt: string,
   limit = 60,
   windowMs = 60_000,
 ): Promise<Response | null> {
   const nowSec = Math.floor(Date.now() / 1000);
   const windowSec = Math.max(1, Math.ceil(windowMs / 1000));
   const bucketStart = nowSec - (nowSec % windowSec);
-  const effectiveSalt = (salt ?? "").trim() || PUBLIC_API_RATE_LIMIT_SALT_FALLBACK;
+  const effectiveSalt = salt.trim();
+  if (!effectiveSalt) {
+    throw new Error("checkPublicApiRateLimit requires a configured PUBLIC_API_RATE_LIMIT_SALT");
+  }
 
   try {
     const ipHash = await hashIpWithSalt(ip, effectiveSalt);

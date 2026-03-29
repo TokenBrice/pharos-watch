@@ -1,0 +1,210 @@
+import type {
+  StatusCause,
+  StatusSectionError,
+  StatusStateInfo,
+} from "@shared/types/status";
+import { clamp } from "@shared/lib/math";
+import { decodeJsonString } from "./cache-json";
+import { logMalformedJsonPath } from "./json-decode-observability";
+
+export type StatusLevel = "healthy" | "degraded" | "stale";
+
+export const STATUS_SCOPE = "global" as const;
+
+export const STATUS_HYSTERESIS = {
+  escalateToDegraded: 2,
+  escalateToStale: 1,
+  recoverToDegraded: 2,
+  recoverToHealthy: 3,
+  minDwellSec: 120,
+  staleMinDwellSec: 180,
+} as const;
+
+export const STATUS_SYSTEM_FRESHNESS_SEC = 1800;
+export const STATUS_DISCREPANCY_ALERT_STREAK = 2;
+export const STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC = 1800;
+
+const LOGGED_STATUS_PERSISTENCE_FAILURES = new Set<string>();
+
+export interface StatusPersistenceIssue {
+  code: string;
+  operation: string;
+  message: string;
+}
+
+export type StatusPersistenceIssueReporter = (issue: StatusPersistenceIssue) => void;
+
+export interface StatusStateRow {
+  scope: string;
+  current_status: StatusLevel;
+  raw_status: StatusLevel;
+  last_evaluated_at: number;
+  last_changed_at: number;
+  consecutive_healthy: number;
+  consecutive_degraded: number;
+  consecutive_stale: number;
+  confidence: number;
+  causes_json: string | null;
+}
+
+export interface StatusTransitionRow {
+  id: number;
+  scope: string;
+  previous_status: StatusLevel | null;
+  next_status: StatusLevel;
+  raw_status: StatusLevel;
+  transition_type: "degrade" | "recover" | "init";
+  reason: string;
+  confidence: number;
+  causes_json: string | null;
+  created_at: number;
+}
+
+export const SEVERITY: Record<StatusLevel, number> = { healthy: 0, degraded: 1, stale: 2 };
+
+export function clampConfidence(confidence: number): number {
+  if (!Number.isFinite(confidence)) return 0.1;
+  return clamp(confidence, 0.1, 1);
+}
+
+export function parseCauses(
+  json: string | null | undefined,
+  context: string,
+  updatedAt?: number | null,
+): StatusCause[] {
+  const decoded = decodeJsonString<StatusCause[], "missing" | "json-parse-failed" | "invalid-shape">(
+    json,
+    {
+      mode: "best-effort",
+      updatedAt: updatedAt ?? null,
+      missingReason: "missing",
+      parseErrorReason: "json-parse-failed",
+      normalize: (parsed) => {
+        if (!Array.isArray(parsed)) {
+          return { ok: false, reason: "invalid-shape" };
+        }
+        return { ok: true, payload: parsed as StatusCause[] };
+      },
+    },
+  );
+  if (!decoded.ok) {
+    if (decoded.reason !== "missing") {
+      logMalformedJsonPath({
+        scope: "lib",
+        owner: "status-reliability",
+        context,
+        reason: decoded.reason,
+        source: "status_transitions",
+        updatedAt: updatedAt ?? null,
+      });
+    }
+    return [];
+  }
+  return decoded.payload;
+}
+
+export function transitionType(from: StatusLevel | null, to: StatusLevel): "degrade" | "recover" | "init" {
+  if (!from) return "init";
+  return SEVERITY[to] > SEVERITY[from] ? "degrade" : "recover";
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+export function reportStatusPersistenceIssue(
+  report: StatusPersistenceIssueReporter | undefined,
+  code: string,
+  operation: string,
+  error: unknown,
+): void {
+  const message = getErrorMessage(error);
+  const logKey = `${code}:${operation}`;
+  if (!LOGGED_STATUS_PERSISTENCE_FAILURES.has(logKey)) {
+    LOGGED_STATUS_PERSISTENCE_FAILURES.add(logKey);
+    console.error(`[status-reliability] ${operation} failed: ${message}`);
+  }
+  report?.({
+    code,
+    operation,
+    message,
+  });
+}
+
+export async function persistStatusStateAtomically(
+  db: D1Database,
+  statements: D1PreparedStatement[],
+  onIssue: StatusPersistenceIssueReporter | undefined,
+  operation: string,
+): Promise<boolean> {
+  try {
+    await db.batch(statements);
+    return true;
+  } catch (error) {
+    reportStatusPersistenceIssue(onIssue, "status_state_persistence_failed", operation, error);
+    return false;
+  }
+}
+
+export function summarizeStatusPersistenceIssues(
+  issues: StatusPersistenceIssue[],
+): StatusSectionError | undefined {
+  if (issues.length === 0) return undefined;
+  const distinctOperations = [...new Set(issues.map((issue) => issue.operation))];
+  if (issues.length === 1) {
+    return {
+      code: issues[0]!.code,
+      message: `Status persistence degraded during ${issues[0]!.operation}: ${issues[0]!.message}`,
+    };
+  }
+  return {
+    code: "status_persistence_degraded",
+    message: `Status persistence degraded across ${distinctOperations.join(", ")}. First issue: ${issues[0]!.message}`,
+  };
+}
+
+export function toStateInfo(row: StatusStateRow): StatusStateInfo {
+  return {
+    scope: "global",
+    currentStatus: row.current_status,
+    rawStatus: row.raw_status,
+    lastEvaluatedAt: row.last_evaluated_at,
+    lastChangedAt: row.last_changed_at,
+    minDwellSec: STATUS_HYSTERESIS.minDwellSec,
+    staleMinDwellSec: STATUS_HYSTERESIS.staleMinDwellSec,
+    consecutiveRaw: {
+      healthy: row.consecutive_healthy,
+      degraded: row.consecutive_degraded,
+      stale: row.consecutive_stale,
+    },
+    thresholds: {
+      escalateToDegraded: STATUS_HYSTERESIS.escalateToDegraded,
+      escalateToStale: STATUS_HYSTERESIS.escalateToStale,
+      recoverToDegraded: STATUS_HYSTERESIS.recoverToDegraded,
+      recoverToHealthy: STATUS_HYSTERESIS.recoverToHealthy,
+    },
+  };
+}
+
+export function buildFallbackStatusState(rawStatus: StatusLevel, now: number): StatusStateInfo {
+  return {
+    scope: "global",
+    currentStatus: rawStatus,
+    rawStatus,
+    lastEvaluatedAt: now,
+    lastChangedAt: now,
+    minDwellSec: STATUS_HYSTERESIS.minDwellSec,
+    staleMinDwellSec: STATUS_HYSTERESIS.staleMinDwellSec,
+    consecutiveRaw: {
+      healthy: rawStatus === "healthy" ? 1 : 0,
+      degraded: rawStatus === "degraded" ? 1 : 0,
+      stale: rawStatus === "stale" ? 1 : 0,
+    },
+    thresholds: {
+      escalateToDegraded: STATUS_HYSTERESIS.escalateToDegraded,
+      escalateToStale: STATUS_HYSTERESIS.escalateToStale,
+      recoverToDegraded: STATUS_HYSTERESIS.recoverToDegraded,
+      recoverToHealthy: STATUS_HYSTERESIS.recoverToHealthy,
+    },
+  };
+}

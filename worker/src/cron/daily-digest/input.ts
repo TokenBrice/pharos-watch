@@ -1,0 +1,235 @@
+import type { DigestInputData } from "@shared/types/digest";
+import type { StablecoinData } from "@shared/types/market";
+import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { getDisplayedPsi } from "@shared/lib/psi-view-model";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins";
+import { getConditionBand } from "../../lib/stability-index";
+import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { SECONDS } from "../../lib/time-constants";
+import {
+  collectActiveDepegs,
+  collectBlacklistActivity,
+  collectCrossDayTrends,
+  collectDewsStress,
+  collectGradeTransitions,
+  collectHistoricalContext,
+  collectLiquidityShifts,
+  collectMintBurnFlows,
+  collectPsiContributors,
+  collectResolvedDepegs,
+  collectSafetyScores,
+  collectSupplyVelocity,
+  collectYieldAnomalies,
+  type CollectorContext,
+  type CollectorResult,
+} from "./collectors";
+import {
+  buildRecentDigestMeta,
+  type RecentDigestMetaEntry,
+} from "./runtime-helpers";
+
+function consumeCollectorResult<T>(result: CollectorResult<T>, degradedReasons: string[]): T {
+  if (result.degradedReason) {
+    degradedReasons.push(result.degradedReason);
+  }
+  return result.value;
+}
+
+export interface DailyDigestInputBuildResult {
+  inputData: DigestInputData;
+  degradedReasons: string[];
+  recentMeta: RecentDigestMetaEntry[];
+  stablecoinsCacheReason: string | null;
+  llmSignals: {
+    activeDepegCount: number;
+    topDepegs: NonNullable<DigestInputData["topDepegs"]>;
+    resolvedDepegs: NonNullable<DigestInputData["resolvedDepegs"]>;
+    yieldAnomalies: NonNullable<DigestInputData["yieldAnomalies"]>;
+    liquidityShifts: NonNullable<DigestInputData["liquidityShifts"]>;
+  };
+}
+
+export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigestInputBuildResult> {
+  const recentRows = await db
+    .prepare("SELECT digest_title, digest_text, digest_extended, digest_meta FROM daily_digest ORDER BY generated_at DESC LIMIT 7")
+    .all<{ digest_title: string | null; digest_text: string; digest_extended: string | null; digest_meta: string | null }>();
+  const recentMeta = buildRecentDigestMeta(recentRows.results ?? []);
+  const degradedReasons: string[] = [];
+
+  const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+  if (stablecoinsCacheResult.kind !== "ok") {
+    console.warn(`[daily-digest] stablecoins cache unavailable (${stablecoinsCacheResult.reason}), skipping regeneration`);
+    return {
+      inputData: {
+        digestVersion: 2,
+        totalMcapUsd: 0,
+        mcap7dDelta: 0,
+        degradedSources: [stablecoinsCacheResult.reason],
+        activeDepegCount: 0,
+        topDepegs: [],
+        biggestSupplyChange: null,
+        stabilityIndex: null,
+        yesterdayIndex: null,
+      },
+      degradedReasons,
+      recentMeta,
+      stablecoinsCacheReason: stablecoinsCacheResult.reason,
+      llmSignals: {
+        activeDepegCount: 0,
+        topDepegs: [],
+        resolvedDepegs: [],
+        yieldAnomalies: [],
+        liquidityShifts: [],
+      },
+    };
+  }
+
+  const stablecoinAssets = stablecoinsCacheResult.payload.peggedAssets as StablecoinData[];
+  const trackedStablecoinAssets = stablecoinAssets.filter((coin) => ACTIVE_IDS.has(coin.id));
+  const mcapById = new Map<string, number>();
+  for (const coin of stablecoinAssets) {
+    const raw = getCirculatingRaw(coin);
+    if (raw > 0) mcapById.set(coin.id, raw);
+  }
+
+  let totalMcapUsd = 0;
+  let totalPrevWeek = 0;
+  let biggestSupplyChange: DigestInputData["biggestSupplyChange"] = null;
+  let biggestAbsChange = 0;
+
+  for (const coin of trackedStablecoinAssets) {
+    const mcap = getCirculatingRaw(coin);
+    const prevWeek = getPrevWeekRaw(coin);
+    if (mcap <= 0) continue;
+    totalMcapUsd += mcap;
+    totalPrevWeek += prevWeek;
+
+    if (mcap > 1_000_000) {
+      const absChange = Math.abs(mcap - prevWeek);
+      if (absChange > biggestAbsChange) {
+        biggestAbsChange = absChange;
+        biggestSupplyChange = {
+          id: coin.id,
+          symbol: coin.symbol,
+          name: coin.name,
+          changeUsd: mcap - prevWeek,
+          currentMcap: mcap,
+        };
+      }
+    }
+  }
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  const todayTs = nowSec - (nowSec % SECONDS.ONE_DAY);
+  const yesterdayTs = todayTs - SECONDS.ONE_DAY;
+
+  const ctx: CollectorContext = { db, trackedStablecoinAssets, mcapById, nowSec, todayTs, yesterdayTs };
+
+  const { activeDepegCount, topDepegs } = consumeCollectorResult(await collectActiveDepegs(ctx), degradedReasons);
+
+  const latestSample = await db
+    .prepare("SELECT score, band, components FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
+    .first<{ score: number; band: string; components: string }>();
+  const latestDaily = latestSample
+    ? null
+    : await db
+      .prepare("SELECT score, band, components FROM stability_index ORDER BY computed_at DESC LIMIT 1")
+      .first<{ score: number; band: string; components: string }>();
+  const currentPsiSource = latestSample ?? latestDaily;
+
+  const avg24hRow = await db
+    .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?")
+    .bind(nowSec - SECONDS.ONE_DAY)
+    .first<{ avg: number | null }>();
+  const avg24h = avg24hRow?.avg != null
+    ? Math.round(avg24hRow.avg * 10) / 10
+    : null;
+
+  const displayPsi = currentPsiSource
+    ? getDisplayedPsi({
+      score: currentPsiSource.score,
+      band: currentPsiSource.band,
+      avg24h: avg24h ?? undefined,
+      avg24hBand: avg24h != null ? getConditionBand(avg24h) : undefined,
+      computedAt: nowSec,
+    })
+    : null;
+  const displayScore = displayPsi?.score ?? null;
+  const displayBand = displayPsi?.band ?? null;
+
+  let parsedComponents: { severity: number; breadth: number; stressBreadth?: number; trend: number } | null = null;
+  if (currentPsiSource) {
+    try {
+      parsedComponents = JSON.parse(currentPsiSource.components);
+    } catch (err) {
+      console.warn("[daily-digest] Failed to parse PSI components JSON:", err instanceof Error ? err.message : err);
+      parsedComponents = null;
+    }
+  }
+  const stabilityIndex = currentPsiSource && displayScore != null && displayBand && parsedComponents != null
+    ? { score: displayScore, band: displayBand, components: parsedComponents }
+    : null;
+
+  const yesterdayRow = await db
+    .prepare("SELECT score, band FROM stability_index WHERE computed_at = ?")
+    .bind(yesterdayTs)
+    .first<{ score: number; band: string }>();
+  const yesterdayIndex = yesterdayRow
+    ? { score: yesterdayRow.score, band: yesterdayRow.band }
+    : null;
+
+  const blacklistActivity = consumeCollectorResult(await collectBlacklistActivity(ctx), degradedReasons);
+  const supplyVelocity = consumeCollectorResult(await collectSupplyVelocity(ctx), degradedReasons);
+
+  const mentionedSymbols = new Set<string>();
+  for (const d of topDepegs) mentionedSymbols.add(d.symbol);
+  if (biggestSupplyChange) mentionedSymbols.add(biggestSupplyChange.symbol);
+  if (supplyVelocity) for (const v of supplyVelocity) mentionedSymbols.add(v.coin);
+  const { safetyScores, safetyGrades } = await collectSafetyScores(ctx, mentionedSymbols, degradedReasons);
+
+  const resolvedDepegs = await collectResolvedDepegs(ctx);
+  const mintBurnFlows = await collectMintBurnFlows(ctx);
+  const dewsStress = await collectDewsStress(ctx, degradedReasons);
+  const historicalContext = await collectHistoricalContext(ctx, displayScore, displayBand, biggestSupplyChange);
+  const gradeTransitions = await collectGradeTransitions(ctx, safetyGrades);
+  const psiContributors = await collectPsiContributors(ctx);
+  const yieldAnomalies = await collectYieldAnomalies(ctx, degradedReasons);
+  const liquidityShifts = await collectLiquidityShifts(ctx);
+  const crossDayTrends = await collectCrossDayTrends(ctx, degradedReasons);
+
+  return {
+    inputData: {
+      digestVersion: 2,
+      totalMcapUsd,
+      mcap7dDelta: totalMcapUsd - totalPrevWeek,
+      ...(degradedReasons.length > 0 ? { degradedSources: [...degradedReasons] } : {}),
+      activeDepegCount,
+      topDepegs,
+      biggestSupplyChange,
+      stabilityIndex,
+      yesterdayIndex,
+      blacklistActivity,
+      supplyVelocity,
+      safetyScores,
+      resolvedDepegs,
+      mintBurnFlows,
+      dewsStress,
+      historicalContext,
+      psiContributors,
+      gradeTransitions,
+      yieldAnomalies,
+      liquidityShifts,
+      crossDayTrends,
+    },
+    degradedReasons,
+    recentMeta,
+    stablecoinsCacheReason: null,
+    llmSignals: {
+      activeDepegCount,
+      topDepegs,
+      resolvedDepegs: resolvedDepegs ?? [],
+      yieldAnomalies: yieldAnomalies ?? [],
+      liquidityShifts: liquidityShifts ?? [],
+    },
+  };
+}

@@ -18,6 +18,13 @@ export interface ParsedDigestResponse {
   usedRawTextFallback: boolean;
 }
 
+export interface DigestModelResponseParseOptions {
+  metaFactory?: (options: {
+    parsedMeta: Record<string, unknown> | null;
+    usedRawTextFallback: boolean;
+  }) => Record<string, unknown> | null;
+}
+
 function stripForbiddenPhrases(value: string): string {
   let result = value;
   for (const phrase of FORBIDDEN_PHRASES) {
@@ -57,14 +64,17 @@ function extractDigestJson(rawText: string): unknown {
   }
 }
 
-export function parseDigestModelResponse(rawText: string): ParsedDigestResponse {
+export function parseDigestModelResponse(
+  rawText: string,
+  options: DigestModelResponseParseOptions = {},
+): ParsedDigestResponse {
   const parsedJson = extractDigestJson(rawText);
 
   let digestTitle: string;
   let digestText: string;
   let digestExtended: string;
-  let digestMeta: string | null = null;
   let usedRawTextFallback = false;
+  let parsedMeta: Record<string, unknown> | null = null;
 
   try {
     if (!parsedJson) {
@@ -78,15 +88,19 @@ export function parseDigestModelResponse(rawText: string): ParsedDigestResponse 
       throw new Error("empty text field");
     }
     if (parsed.meta) {
-      digestMeta = JSON.stringify(parsed.meta);
+      parsedMeta = parsed.meta as Record<string, unknown>;
     }
   } catch {
     digestTitle = "";
     digestText = rawText.trim();
     digestExtended = "";
-    digestMeta = null;
     usedRawTextFallback = true;
   }
+
+  const resolvedMeta = options.metaFactory
+    ? options.metaFactory({ parsedMeta, usedRawTextFallback })
+    : parsedMeta;
+  const digestMeta = resolvedMeta ? JSON.stringify(resolvedMeta) : null;
 
   const strippedDashCount = [digestTitle, digestText, digestExtended].join("").match(/[\u2013\u2014]/g)?.length ?? 0;
   digestTitle = stripForbiddenDashes(digestTitle);

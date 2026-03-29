@@ -49,6 +49,28 @@ describe("ops admin proxy", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("allowlists shared dynamic admin routes", async () => {
+    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: new Request("https://ops.pharos.watch/api/admin/discovery-candidates/42/dismiss", { method: "POST" }),
+      env: BASE_ENV,
+      params: { path: ["discovery-candidates", "42", "dismiss"] },
+    });
+
+    expect(response.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "https://ops-api.pharos.watch/api/discovery-candidates/42/dismiss",
+      expect.objectContaining({
+        method: "POST",
+      }),
+    );
+  });
+
   it("returns 500 when the service-token pair is incomplete", async () => {
     const response = await onRequest({
       request: new Request("https://ops.pharos.watch/api/admin/status"),

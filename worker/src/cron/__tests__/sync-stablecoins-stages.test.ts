@@ -1,11 +1,25 @@
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("@shared/lib/stablecoins", () => ({
-  TRACKED_META_BY_ID: new Map([
-    ["usdt-tether", { geckoId: "canonical-usdt", cmcSlug: "tether", flags: { navToken: false } }],
-    ["nav-token-test", { geckoId: "nav-token", cmcSlug: "nav-token", flags: { navToken: true } }],
-  ]),
-}));
+vi.mock("@shared/lib/stablecoins", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@shared/lib/stablecoins")>();
+  const TRACKED_META_BY_ID = new Map(actual.TRACKED_META_BY_ID);
+  TRACKED_META_BY_ID.set("usdt-tether", {
+    ...TRACKED_META_BY_ID.get("usdt-tether"),
+    geckoId: "canonical-usdt",
+    cmcSlug: "tether",
+    flags: { navToken: false },
+  } as never);
+  TRACKED_META_BY_ID.set("nav-token-test", {
+    geckoId: "nav-token",
+    cmcSlug: "nav-token",
+    flags: { navToken: true },
+  } as never);
+
+  return {
+    ...actual,
+    TRACKED_META_BY_ID,
+  };
+});
 
 import {
   applyTrackedAssetOverrides,

@@ -14,7 +14,7 @@ export function warnWorkerEnvIssuesOnce(env: Env): void {
   for (const issue of validateWorkerEnvContract(env)) {
     if (LOGGED_ENV_ISSUES.has(issue.code)) continue;
     LOGGED_ENV_ISSUES.add(issue.code);
-    console.warn(`[env] ${issue.message}`);
+    console.error(`[env] ${issue.message}`);
   }
 }
 
@@ -42,6 +42,13 @@ export async function evaluateAccessGate(
   }
 
   const publicApiRateLimit = resolvePublicApiRateLimitSalt(env);
+  if (!publicApiRateLimit) {
+    console.error("[env] Blocking public API request because PUBLIC_API_RATE_LIMIT_SALT is not configured");
+    return {
+      isAdmin,
+      response: errorResponse(503, "Public API temporarily unavailable"),
+    };
+  }
   const response = await checkPublicApiRateLimit(
     env.DB,
     resolveClientIp(request),

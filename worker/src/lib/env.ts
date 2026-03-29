@@ -36,8 +36,6 @@ export interface Env {
   MAINTENANCE_MODE?: string;
 }
 
-export const PUBLIC_API_RATE_LIMIT_SALT_FALLBACK = "pharos-public-api-rate-limit";
-
 export const WORKER_REQUIRED_ENV_KEYS = [
   "DB",
   "CORS_ORIGIN",
@@ -90,13 +88,13 @@ export const WORKER_ACTIVE_ENV_KEYS = [
 export interface WorkerEnvIssue {
   code:
     | "ops-access-partial-config"
-    | "public-api-rate-limit-fallback";
+    | "public-api-rate-limit-misconfigured";
   message: string;
 }
 
 export interface ResolvedPublicApiRateLimitSalt {
   salt: string;
-  source: "public-api-rate-limit-salt" | "feedback-ip-salt" | "built-in-fallback";
+  source: "public-api-rate-limit-salt";
 }
 
 export function parseCsvEnv(value: string | undefined): string[] {
@@ -112,26 +110,15 @@ function hasConfiguredValue(value: string | undefined): boolean {
 }
 
 export function resolvePublicApiRateLimitSalt(
-  env: Pick<Env, "PUBLIC_API_RATE_LIMIT_SALT" | "FEEDBACK_IP_SALT">,
-): ResolvedPublicApiRateLimitSalt {
+  env: Pick<Env, "PUBLIC_API_RATE_LIMIT_SALT">,
+): ResolvedPublicApiRateLimitSalt | null {
   if (hasConfiguredValue(env.PUBLIC_API_RATE_LIMIT_SALT)) {
     return {
       salt: env.PUBLIC_API_RATE_LIMIT_SALT!.trim(),
       source: "public-api-rate-limit-salt",
     };
   }
-
-  if (hasConfiguredValue(env.FEEDBACK_IP_SALT)) {
-    return {
-      salt: env.FEEDBACK_IP_SALT!.trim(),
-      source: "feedback-ip-salt",
-    };
-  }
-
-  return {
-    salt: PUBLIC_API_RATE_LIMIT_SALT_FALLBACK,
-    source: "built-in-fallback",
-  };
+  return null;
 }
 
 export function validateWorkerEnvContract(
@@ -148,10 +135,10 @@ export function validateWorkerEnvContract(
     });
   }
 
-  if (resolvePublicApiRateLimitSalt(env).source === "built-in-fallback") {
+  if (!resolvePublicApiRateLimitSalt(env)) {
     issues.push({
-      code: "public-api-rate-limit-fallback",
-      message: "PUBLIC_API_RATE_LIMIT_SALT and FEEDBACK_IP_SALT are both unset; public API rate limiting is using the built-in fallback salt.",
+      code: "public-api-rate-limit-misconfigured",
+      message: "PUBLIC_API_RATE_LIMIT_SALT is unset; public API rate limiting is disabled until the dedicated salt is configured.",
     });
   }
 

@@ -86,7 +86,7 @@ The current proxy trusts the Cloudflare Access-protected `ops.pharos.watch` host
 
 ### Proxy contract
 
-- Allowed upstream paths are limited to admin routes registered in `shared/lib/api-endpoints.ts`, plus the explicit `/api/discovery-candidates/:id/dismiss` path used by the operator dashboard.
+- Allowed upstream paths are limited to admin routes and shared dynamic-admin matchers exported from `shared/lib/api-endpoints.ts` (including `/api/discovery-candidates/:id/dismiss`).
 - HTTP method rules are enforced by `validateEndpointMethod()`, so the proxy returns `405` with `Allow` when a caller uses the wrong verb for an otherwise valid admin route.
 - The proxy forwards only `Accept`, `Content-Type`, and `Idempotency-Key` from the browser request. It adds `CF-Access-Client-Id` and `CF-Access-Client-Secret` from Pages env itself; browser callers never supply those directly.
 - The proxy reflects only a narrow response-header set back to the browser: `Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, and `X-Idempotent-Replay`.

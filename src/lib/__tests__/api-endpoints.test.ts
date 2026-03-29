@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   getProbePaths,
   getStatusPageActions,
+  isAdminPath,
   isCacheBypassPath,
   isMutatingAdminPath,
+  matchDynamicAdminEndpoint,
   validateEndpointMethod,
 } from "@shared/lib/api-endpoints";
 import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
@@ -85,11 +87,25 @@ describe("api endpoint registry", () => {
     expect(isCacheBypassPath("/api/stablecoins")).toBe(false);
   });
 
+  it("matches dynamic admin routes from the shared registry", () => {
+    expect(matchDynamicAdminEndpoint("/api/discovery-candidates/42/dismiss")).toEqual({
+      key: "discovery-candidate-dismiss",
+      path: "/api/discovery-candidates/42/dismiss",
+      candidateId: 42,
+      methods: ["POST"],
+    });
+    expect(matchDynamicAdminEndpoint("/api/discovery-candidates/not-a-number/dismiss")).toBeNull();
+    expect(isAdminPath("/api/status")).toBe(true);
+    expect(isAdminPath("/api/discovery-candidates/42/dismiss")).toBe(true);
+    expect(isAdminPath("/api/stablecoins")).toBe(false);
+  });
+
   it("validates endpoint methods from shared definitions", () => {
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoins"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/feedback"), "POST")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoin/1"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoin-summary/1"), "GET")).toBeNull();
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/discovery-candidates/1/dismiss"), "POST")).toBeNull();
     expect(
       validateEndpointMethod(new URL("https://api.pharos.watch/api/audit-depeg-history?dry-run=true"), "GET"),
     ).toBeNull();
@@ -107,6 +123,10 @@ describe("api endpoint registry", () => {
       allowedMethods: ["POST"],
     });
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/feedback"), "GET")).toEqual({
+      message: "Method not allowed. Use POST for this endpoint.",
+      allowedMethods: ["POST"],
+    });
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/discovery-candidates/1/dismiss"), "GET")).toEqual({
       message: "Method not allowed. Use POST for this endpoint.",
       allowedMethods: ["POST"],
     });

@@ -1,6 +1,7 @@
 import {
   ENDPOINT_DEFINITIONS,
   getEndpointDefinitionByKey,
+  matchDynamicAdminEndpoint,
   type EndpointDefinition,
   type EndpointDependency,
   type EndpointKey,
@@ -48,15 +49,16 @@ import { handleReclassifyAtomicRoundtrips } from "./api/reclassify-atomic-roundt
 import { handleStressSignals } from "./api/stress-signals";
 import { handleChains } from "./api/chains";
 import { handleBackfillDEWS } from "./api/backfill-dews";
-import { handleDiscoveryCandidates, handleDismissCandidate } from "./api/discovery";
+import {
+  handleDebugSyncState,
+  handleDiscoveryCandidateDismiss,
+  handleResetBlacklistSync,
+  handleTriggerDigest,
+} from "./api/admin-actions";
+import { handleDiscoveryCandidates } from "./api/discovery";
 import { handleFeedback, type FeedbackEnv } from "./api/feedback";
 import { handleTelegramWebhook } from "./api/telegram-webhook";
-import { generateDailyDigest } from "./cron/daily-digest";
-import { createLeaseOwner, runCronWithLease } from "./lib/cron-lease";
-import { logCronRun, type CronResult } from "./lib/cron-logger";
-import { runIdempotentAdminAction } from "./lib/idempotency";
-import { normalizeCronMetadata } from "./lib/cron-metadata";
-import { errorResponse, jsonResponse, resolveOrReject } from "./lib/api-utils";
+import { errorResponse, resolveOrReject } from "./lib/api-utils";
 import {
   makeAdminRoute,
   makeConditionalIdempotentAdminRoute,
@@ -66,7 +68,6 @@ import type { MintBurnFreshnessConfig } from "./lib/mint-burn-health-config";
 import type { TelegramCreds } from "./lib/telegram";
 import type { ChainRpcConfig } from "./lib/chain-registry";
 import { handleOg } from "./api/og";
-import { withAdmin } from "./lib/auth";
 
 /** Core context available to every route handler. */
 export interface RouteContext {
@@ -138,56 +139,6 @@ export interface RouteMatch {
   handle: (routeCtx: FullRouteContext) => Promise<Response>;
 }
 
-function createAcceptedJsonResponse(body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status: 202,
-    headers: {
-      "Cache-Control": "no-store",
-      "Content-Type": "application/json",
-    },
-  });
-}
-
-async function runManualDigestTrigger(
-  db: D1Database,
-  anthropicApiKey: string | null,
-  telegramCreds: TelegramCreds | null,
-  requestId: string,
-): Promise<void> {
-  const leaseOwner = createLeaseOwner("daily-digest");
-  await logCronRun(db, "daily-digest", async (signal): Promise<CronResult> => {
-    const lease = await runCronWithLease(
-      db,
-      "daily-digest",
-      ({ signal: leaseSignal }) => generateDailyDigest(db, anthropicApiKey, null, true, telegramCreds, leaseSignal),
-      { owner: leaseOwner, abortSignal: signal },
-    );
-
-    if (lease.status === "skipped_locked") {
-      return {
-        status: "skipped_locked",
-        metadata: normalizeCronMetadata(undefined, {
-          reason: "lease-locked",
-          trigger: "manual",
-          requestId,
-          leaseOwner: lease.leaseOwner,
-          renewFailures: lease.renewFailures,
-        }),
-      };
-    }
-
-    return {
-      ...(lease.result ?? {}),
-      metadata: normalizeCronMetadata(lease.result, {
-        trigger: "manual",
-        requestId,
-        leaseOwner: lease.leaseOwner,
-        renewFailures: lease.renewFailures,
-      }),
-    };
-  });
-}
-
 const STATIC_ROUTE_HANDLERS_BY_KEY = {
   stablecoins: ({ db }) => handleStablecoins(db),
   "stablecoin-detail-canary": ({ db, execCtx, coingeckoApiKey }) =>
@@ -254,48 +205,9 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
   feedback: ({ db, request, feedbackEnv }) => handleFeedback(db, request, feedbackEnv ?? {}),
   "telegram-webhook": ({ db, request, telegramWebhookSecret, telegramBotToken }) =>
     handleTelegramWebhook(db, request, telegramWebhookSecret, telegramBotToken),
-  "trigger-digest": makeAdminRoute(
-    "route-trigger-digest",
-    async ({ db, execCtx, request, trustedAdmin: _trustedAdmin, anthropicApiKey, telegramCreds }) => {
-      return runIdempotentAdminAction(db, "trigger-digest", request, async () => {
-        const cryptoObj = globalThis as typeof globalThis & {
-          crypto?: { randomUUID?: () => string };
-        };
-        const requestId = cryptoObj.crypto?.randomUUID?.() ?? `manual-digest-${Date.now()}`;
-        execCtx.waitUntil(
-          runManualDigestTrigger(db, anthropicApiKey ?? null, telegramCreds ?? null, requestId)
-            .catch((err) => {
-              console.error(`[trigger-digest] Manual digest run failed (${requestId}):`, err);
-            }),
-        );
-        return createAcceptedJsonResponse({
-          ok: true,
-          accepted: true,
-          requestId,
-          message: "Digest trigger accepted and running in the background.",
-        });
-      });
-    },
-  ),
-  "reset-blacklist-sync": makeAdminRoute("route-reset-blacklist-sync", async ({ db, request }) => {
-    return runIdempotentAdminAction(db, "reset-blacklist-sync", request, async () => {
-      const result = await db.batch([
-        db.prepare(
-          "UPDATE blacklist_sync_state SET last_block = MAX(last_block - 50000, 0) WHERE config_key NOT LIKE 'tron-%'",
-        ),
-        db.prepare(
-          "UPDATE blacklist_sync_state SET last_block = MAX(last_block - 604800000, 0) WHERE config_key LIKE 'tron-%'",
-        ),
-      ]);
-      const evmChanged = result[0]?.meta?.changes ?? 0;
-      const tronChanged = result[1]?.meta?.changes ?? 0;
-      return jsonResponse({ ok: true, evmReset: evmChanged, tronReset: tronChanged });
-    });
-  }),
-  "debug-sync-state": makeAdminRoute("route-debug-sync-state", async ({ db }) => {
-    const rows = await db.prepare("SELECT config_key, last_block FROM blacklist_sync_state ORDER BY config_key").all();
-    return jsonResponse(rows.results);
-  }),
+  "trigger-digest": handleTriggerDigest,
+  "reset-blacklist-sync": handleResetBlacklistSync,
+  "debug-sync-state": handleDebugSyncState,
   "remediate-blacklist-amount-gaps": makeIdempotentAdminRoute(
     "route-remediate-blacklist-amount-gaps",
     "remediate-blacklist-amount-gaps",
@@ -361,16 +273,6 @@ const DYNAMIC_ROUTE_DEFINITIONS: readonly DynamicRouteDefinition[] = [
     ),
   },
   {
-    pattern: /^\/api\/discovery-candidates\/(\d+)\/dismiss$/,
-    handle: async (routeCtx, match) => {
-      const candidateId = parseInt(match[1], 10);
-      if (!Number.isFinite(candidateId) || candidateId <= 0) {
-        return Promise.resolve(errorResponse(400, "Invalid candidate ID"));
-      }
-      return withAdmin(routeCtx.request, () => handleDismissCandidate(routeCtx.db, candidateId), routeCtx.trustedAdmin);
-    },
-  },
-  {
     pattern: /^\/api\/og\/.+$/,
     handle: (routeCtx) => handleOg(routeCtx.db, routeCtx.url.pathname).then((response) => response ?? errorResponse(404, "Unknown OG route")),
   },
@@ -387,6 +289,14 @@ export function getRouteMatch(path: string): RouteMatch | null {
       endpoint: staticRoute.endpoint,
       dependencies: staticRoute.endpoint.routeDependencies ?? [],
       handle: staticRoute.handler,
+    };
+  }
+
+  const dynamicAdminEndpoint = matchDynamicAdminEndpoint(path);
+  if (dynamicAdminEndpoint?.key === "discovery-candidate-dismiss") {
+    return {
+      dependencies: [],
+      handle: (routeCtx) => handleDiscoveryCandidateDismiss(routeCtx, dynamicAdminEndpoint.candidateId),
     };
   }
 
