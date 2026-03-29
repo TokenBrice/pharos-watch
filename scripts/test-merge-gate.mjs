@@ -27,6 +27,7 @@ export const COMMON_VALIDATE_PREBUILD_COMMANDS = [
   "npm run check:redemption-backstops",
   "npm run check:unused-code",
   "npm run check:hotspot-ratchet",
+  "npm run check:sql-safety",
 ];
 
 export const PAGES_VALIDATE_COMMANDS = [

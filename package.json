@@ -41,6 +41,7 @@
     "check:duplicate-exports": "node scripts/check-duplicate-exports.mjs",
     "check:migrations": "node scripts/check-worker-migrations.mjs",
     "check:cron-connections": "tsx scripts/check-cron-connection-budget.ts",
+    "check:sql-safety": "node scripts/check-sql-interpolation-safety.mjs",
     "seo:check": "node scripts/check-seo-static.mjs",
     "format": "prettier --write .",
     "prepare": "git config core.hooksPath .githooks"
