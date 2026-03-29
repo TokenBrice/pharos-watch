@@ -9,6 +9,10 @@ const STATUS_SEVERITY: Record<PublicStatusTone, number> = {
   stale: 2,
 };
 
+export function getStatusSeverity(status: PublicStatusTone): number {
+  return STATUS_SEVERITY[status];
+}
+
 export function maxPublicStatus(...statuses: PublicStatusTone[]): PublicStatusTone {
   let result: PublicStatusTone = "healthy";
   for (const status of statuses) {

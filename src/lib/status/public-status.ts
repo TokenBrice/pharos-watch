@@ -1,5 +1,5 @@
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
-import { getPublicMintBurnStatus, type PublicStatusTone } from "@shared/lib/public-health";
+import { getPublicMintBurnStatus, getStatusSeverity, type PublicStatusTone } from "@shared/lib/public-health";
 import type { HealthResponse } from "@shared/types";
 import { getCacheFreshnessRatio, getCacheImpactStatus } from "@shared/lib/cache-health";
 
@@ -53,11 +53,6 @@ const CACHE_IMPACT_COPY: Partial<Record<string, { title: string; detail: string 
   },
 };
 
-function getStatusSeverity(status: PublicStatusTone): number {
-  if (status === "stale") return 2;
-  if (status === "degraded") return 1;
-  return 0;
-}
 
 export function getPublicWorstCacheSummary(
   caches: HealthResponse["caches"],

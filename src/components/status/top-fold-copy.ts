@@ -1,3 +1,4 @@
+import { getStatusSeverity } from "@shared/lib/public-health";
 import type { StatusResponse } from "@shared/types";
 
 export interface TopFoldCopy {
@@ -73,11 +74,6 @@ const RECOVERY_HOLD_COPY: Record<Exclude<StatusResponse["rawOverallStatus"], "st
   },
 };
 
-function getStatusSeverity(status: StatusResponse["overallStatus"]): number {
-  if (status === "healthy") return 0;
-  if (status === "degraded") return 1;
-  return 2;
-}
 
 export function isRecoveryHold(
   overallStatus: StatusResponse["overallStatus"],
