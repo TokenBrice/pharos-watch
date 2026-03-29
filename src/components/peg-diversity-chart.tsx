@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { CHART_DRAW_IN } from "@/lib/chart-animation";
+import { CHART_DRAW_IN, CHART_NO_ANIM } from "@/lib/chart-animation";
 import { AreaChart, Area } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -69,7 +69,7 @@ function PegTooltip({ active, payload, label, pegKeys }: PegTooltipProps) {
 export function PegDiversityChart() {
   const { data, isLoading } = useStablecoinCharts();
   const [shouldAnimate, setShouldAnimate] = useState(true);
-  const animProps = shouldAnimate ? CHART_DRAW_IN : { isAnimationActive: false };
+  const animProps = shouldAnimate ? CHART_DRAW_IN : CHART_NO_ANIM;
   const handleAnimationEnd = useCallback(() => {
     setShouldAnimate(false);
   }, []);

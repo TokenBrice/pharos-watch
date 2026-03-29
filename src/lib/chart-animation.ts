@@ -3,3 +3,5 @@ export const CHART_DRAW_IN = {
   animationDuration: 800,
   animationEasing: "ease-out" as const,
 } as const;
+
+export const CHART_NO_ANIM = { isAnimationActive: false } as const;

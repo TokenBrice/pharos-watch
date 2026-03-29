@@ -16,7 +16,7 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { CHART_ORANGE, CHART_BLUE, CHART_CYAN, CHART_GREEN } from "@/lib/chart-colors";
-import { CHART_DRAW_IN } from "@/lib/chart-animation";
+import { CHART_DRAW_IN, CHART_NO_ANIM } from "@/lib/chart-animation";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { formatChartDate, formatCurrency, formatScore } from "@shared/lib/format";
 import { useStabilityIndexDetail, type StabilityContributor } from "@/hooks/api-hooks";
@@ -144,7 +144,7 @@ function ComponentChart({
 }) {
   const { range, setRange, filteredData, options } = useTimeRangeFilter(data, "ts");
   const [shouldAnimate, setShouldAnimate] = useState(true);
-  const animProps = shouldAnimate ? CHART_DRAW_IN : { isAnimationActive: false };
+  const animProps = shouldAnimate ? CHART_DRAW_IN : CHART_NO_ANIM;
   const handleAnimationEnd = useCallback(() => {
     setShouldAnimate(false);
   }, []);
