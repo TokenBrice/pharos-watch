@@ -18,7 +18,7 @@ import type {
   ReserveCompositionRow,
   ReserveSyncStateRecord,
   SnapshotIntegrityIssue,
-} from "./live-reserves-store";
+} from "./live-reserves-store-shared";
 
 const VALID_RISKS = new Set(["very-low", "low", "medium", "high", "very-high"]);
 const VALID_SOURCE_MODELS = new Set<LiveReserveSourceModel>(["dynamic-mix", "validated-static", "single-bucket"]);

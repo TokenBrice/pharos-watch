@@ -188,7 +188,7 @@ Per-coin operational state for the most recent attempt.
 
 Append-only history of all reserve-sync attempts, including `ok`, `degraded`, `error`, and `skipped` outcomes with their warnings, error message, and attempt-scoped metadata. The hourly reserve cron prunes rows older than 90 days.
 
-Freshness and consistency rules live in `worker/src/lib/live-reserves-store.ts`:
+Freshness and consistency rules now live across the `worker/src/lib/live-reserves-store*.ts` helper family, with `worker/src/lib/live-reserves-store.ts` kept as the public facade:
 
 - `LIVE_RESERVE_FRESHNESS_SEC = 172800` (48 hours)
 - A live snapshot only counts as consistent when `reserve_sync_state.last_success_at === reserve_composition.fetched_at`
@@ -371,7 +371,11 @@ Adapter helpers are centralized in `worker/src/cron/reserve-adapters/helpers.ts`
 | `worker/src/cron/sync-live-reserves.ts` | Hourly sync orchestration and cron result statuses |
 | `worker/src/cron/reserve-adapters/index.ts` | Adapter registry |
 | `worker/src/cron/reserve-adapters/helpers.ts` | Shared adapter fetch / normalization helpers |
-| `worker/src/lib/live-reserves-store.ts` | D1 persistence, snapshot resolution, status overview, 48h freshness contract |
+| `worker/src/lib/live-reserves-store.ts` | Public facade over the live-reserve store helpers |
+| `worker/src/lib/live-reserves-store-read.ts` | D1 read/query helpers and authoritative row loaders |
+| `worker/src/lib/live-reserves-store-write.ts` | D1 write paths and history pruning |
+| `worker/src/lib/live-reserves-store-view.ts` | Snapshot resolution, status overview, metadata views, 48h freshness contract |
+| `worker/src/lib/live-reserves-store-shared.ts` | Shared live-reserve store types, constants, and row mapping |
 | `worker/src/api/stablecoin-reserves.ts` | Public API handler |
 | `src/hooks/use-stablecoin-reserves.ts` | Frontend query hook |
 | `src/hooks/use-stablecoin-detail-view-model.ts` | Detail-page integration |

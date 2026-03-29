@@ -3,7 +3,7 @@ import type {
   ReserveSyncAttemptHistoryRecord,
   ReserveSyncAttemptStartRecord,
   ReserveSyncStateRecord,
-} from "./live-reserves-store";
+} from "./live-reserves-store-shared";
 
 const SQLITE_NOW_MS_EXPRESSION = "CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)";
 

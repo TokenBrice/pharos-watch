@@ -24,12 +24,12 @@
     "notes": "Request-entry shell is intentionally thin after router extraction. Any new dispatch logic should move downward."
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 340,
-    "maxFunctionLines": 293,
-    "branchCount": 24,
-    "disposition": "queued-p4",
-    "targetBudget": { "fileLines": 220, "maxFunctionLines": 180, "branchCount": 18 },
-    "notes": "Split orchestration, persistence, and degraded-mode recovery into separate modules after the current tranche of pricing/admin work is stable."
+    "fileLines": 218,
+    "maxFunctionLines": 190,
+    "branchCount": 11,
+    "disposition": "stabilized",
+    "targetBudget": { "fileLines": 218, "maxFunctionLines": 190, "branchCount": 11 },
+    "notes": "The staging split landed. Keep the cron shell focused on phase order and progress coordination; pricing and intake detail should stay in `sync-stablecoins/*` helpers."
   },
   "src/app/methodology/sections/core/stability-index-section.tsx": {
     "fileLines": 225,
@@ -112,12 +112,12 @@
     "notes": "Reference tables are already separated. Keep future lookup tables here rather than regrowing the per-version modules."
   },
   "src/app/coverage/client.tsx": {
-    "fileLines": 441,
-    "maxFunctionLines": 402,
-    "branchCount": 8,
-    "disposition": "deferred",
-    "targetBudget": { "fileLines": 320, "maxFunctionLines": 220, "branchCount": 6 },
-    "notes": "Defer until the methodology/doc-system split settles. When touched next, separate state orchestration from rendering sections."
+    "fileLines": 35,
+    "maxFunctionLines": 23,
+    "branchCount": 0,
+    "disposition": "stabilized",
+    "targetBudget": { "fileLines": 35, "maxFunctionLines": 23, "branchCount": 0 },
+    "notes": "Coverage page orchestration now lives behind a page-model hook plus section components. Keep this file as a route shell that composes the sections."
   },
   "worker/src/cron/daily-digest/collectors.ts": {
     "fileLines": 955,
@@ -128,12 +128,12 @@
     "notes": "Collector family is still broad but already partly modular. Defer deeper split until digest sourcing requirements stop moving."
   },
   "worker/src/cron/daily-digest.ts": {
-    "fileLines": 436,
-    "maxFunctionLines": 381,
-    "branchCount": 54,
-    "disposition": "queued-p4",
-    "targetBudget": { "fileLines": 280, "maxFunctionLines": 200, "branchCount": 30 },
-    "notes": "Split run orchestration, retry/idempotency handling, and delivery concerns. Keep Telegram-specific logic out of the cron shell."
+    "fileLines": 190,
+    "maxFunctionLines": 161,
+    "branchCount": 15,
+    "disposition": "stabilized",
+    "targetBudget": { "fileLines": 190, "maxFunctionLines": 161, "branchCount": 15 },
+    "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
     "fileLines": 370,
@@ -160,12 +160,12 @@
     "notes": "Previously a major hotspot and now materially reduced. Preserve the split; future providers should land in helper modules, not back in this shell."
   },
   "worker/src/cron/sync-blacklist.ts": {
-    "fileLines": 449,
-    "maxFunctionLines": 376,
+    "fileLines": 416,
+    "maxFunctionLines": 346,
     "branchCount": 32,
     "disposition": "queued-p4",
     "targetBudget": { "fileLines": 280, "maxFunctionLines": 200, "branchCount": 20 },
-    "notes": "Separate source crawling, event normalization, and balance hydration into smaller passes before adding more blacklist families."
+    "notes": "Post-fetch balance hydration now lives in `blacklist/post-fetch.ts`. The next pass should still separate source crawling/orchestration from per-family normalization."
   },
   "worker/src/cron/sync-fx-rates.ts": {
     "fileLines": 417,
@@ -184,12 +184,12 @@
     "notes": "Large but comparatively modular. Defer until the yield source inventory stabilizes, then split by source family with explicit manifests."
   },
   "worker/src/lib/live-reserves-store.ts": {
-    "fileLines": 829,
-    "maxFunctionLines": 120,
-    "branchCount": 66,
-    "disposition": "queued-p4",
-    "targetBudget": { "fileLines": 550, "maxFunctionLines": 100, "branchCount": 40 },
-    "notes": "Type-boundary cleanup is done. Next split should separate state queries, write paths, and integrity/reporting helpers."
+    "fileLines": 5,
+    "maxFunctionLines": 0,
+    "branchCount": 0,
+    "disposition": "stabilized",
+    "targetBudget": { "fileLines": 5, "maxFunctionLines": 0, "branchCount": 0 },
+    "notes": "This is now a facade over the live-reserve read/write/view modules. Keep new behavior in the helper family rather than regrowing the public barrel."
   },
   "worker/src/lib/status-evaluation.ts": {
     "fileLines": 239,
@@ -200,11 +200,11 @@
     "notes": "Availability/data-quality state derivation and cause synthesis are now split into dedicated helpers. Keep the file as a composition shell for raw status assembly."
   },
   "worker/src/lib/status-reliability.ts": {
-    "fileLines": 722,
-    "maxFunctionLines": 172,
-    "branchCount": 47,
-    "disposition": "queued-p4",
-    "targetBudget": { "fileLines": 420, "maxFunctionLines": 140, "branchCount": 30 },
-    "notes": "Split persistence, alert-throttling, and discrepancy classification into dedicated helpers; keep the current shared constants in one place."
+    "fileLines": 29,
+    "maxFunctionLines": 0,
+    "branchCount": 0,
+    "disposition": "stabilized",
+    "targetBudget": { "fileLines": 29, "maxFunctionLines": 0, "branchCount": 0 },
+    "notes": "This is now a facade over the split status-reliability helper modules. Preserve it as the import surface and keep implementation detail in the dedicated stores/views."
   }
 }
