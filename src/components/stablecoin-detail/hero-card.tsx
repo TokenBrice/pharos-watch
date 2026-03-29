@@ -286,8 +286,9 @@ export function HeroCard({
       ? primaryComparisonPage.right.symbol
       : primaryComparisonPage.left.symbol
     : null;
+  const LIQUITY_ORIGINALS = new Set(["bold-liquity", "lusd-liquity"]);
   const liquityForkVariant =
-    coin.protocolFamily === "liquity" && (coin.protocolVariant === "v1" || coin.protocolVariant === "v2")
+    coin.protocolFamily === "liquity" && (coin.protocolVariant === "v1" || coin.protocolVariant === "v2") && !LIQUITY_ORIGINALS.has(coin.id)
       ? coin.protocolVariant
       : undefined;
   const hasPrevDay = typeof prevDay === "number" && prevDay > 0;
