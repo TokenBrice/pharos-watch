@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findChainData } from "@/hooks/use-chains";
+import { findCanonicalChainData } from "@shared/lib/chain-circulating";
 
 type ChainCirculating = Record<
   string,
@@ -11,9 +11,9 @@ type ChainCirculating = Record<
   }
 >;
 
-describe("findChainData", () => {
+describe("findCanonicalChainData", () => {
   it("returns null when chainCirculating is empty", () => {
-    const result = findChainData({}, "ethereum");
+    const result = findCanonicalChainData({}, "ethereum");
     expect(result).toBeNull();
   });
 
@@ -21,7 +21,7 @@ describe("findChainData", () => {
     const cc: ChainCirculating = {
       ethereum: { current: 1_000_000, circulatingPrevDay: 990_000, circulatingPrevWeek: 980_000, circulatingPrevMonth: 950_000 },
     };
-    const result = findChainData(cc, "ethereum");
+    const result = findCanonicalChainData(cc, "ethereum");
     expect(result).not.toBeNull();
     expect(result!.current).toBe(1_000_000);
     expect(result!.circulatingPrevDay).toBe(990_000);
@@ -33,7 +33,7 @@ describe("findChainData", () => {
     const cc: ChainCirculating = {
       BSC: { current: 500_000, circulatingPrevDay: 490_000, circulatingPrevWeek: 480_000, circulatingPrevMonth: 470_000 },
     };
-    const result = findChainData(cc, "bsc");
+    const result = findCanonicalChainData(cc, "bsc");
     expect(result).not.toBeNull();
     expect(result!.current).toBe(500_000);
   });
@@ -42,7 +42,7 @@ describe("findChainData", () => {
     const cc: ChainCirculating = {
       "hyperliquid-l1": { current: 200_000, circulatingPrevDay: 195_000, circulatingPrevWeek: 190_000, circulatingPrevMonth: 185_000 },
     };
-    const result = findChainData(cc, "hyperliquid");
+    const result = findCanonicalChainData(cc, "hyperliquid");
     expect(result).not.toBeNull();
     expect(result!.current).toBe(200_000);
   });
@@ -51,7 +51,7 @@ describe("findChainData", () => {
     const cc: ChainCirculating = {
       ethereum: { current: 1_000_000, circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
     };
-    const result = findChainData(cc, "solana");
+    const result = findCanonicalChainData(cc, "solana");
     expect(result).toBeNull();
   });
 
@@ -61,7 +61,7 @@ describe("findChainData", () => {
       "hyperliquid-l1": { current: 100_000, circulatingPrevDay: 90_000, circulatingPrevWeek: 80_000, circulatingPrevMonth: 70_000 },
       hyperliquid: { current: 50_000, circulatingPrevDay: 45_000, circulatingPrevWeek: 40_000, circulatingPrevMonth: 35_000 },
     };
-    const result = findChainData(cc, "hyperliquid");
+    const result = findCanonicalChainData(cc, "hyperliquid");
     expect(result).not.toBeNull();
     expect(result!.current).toBe(150_000);
     expect(result!.circulatingPrevDay).toBe(135_000);
@@ -71,7 +71,7 @@ describe("findChainData", () => {
     const cc: ChainCirculating = {
       ethereum: { current: 500_000 }, // missing prev fields
     };
-    const result = findChainData(cc, "ethereum");
+    const result = findCanonicalChainData(cc, "ethereum");
     expect(result).not.toBeNull();
     expect(result!.current).toBe(500_000);
     expect(result!.circulatingPrevDay).toBe(0);
@@ -83,7 +83,7 @@ describe("findChainData", () => {
     const cc: ChainCirculating = {
       Ethereum: { current: 999_000, circulatingPrevDay: 998_000, circulatingPrevWeek: 997_000, circulatingPrevMonth: 996_000 },
     };
-    const result = findChainData(cc, "ethereum");
+    const result = findCanonicalChainData(cc, "ethereum");
     expect(result).not.toBeNull();
     expect(result!.current).toBe(999_000);
   });
@@ -93,7 +93,7 @@ describe("findChainData", () => {
       ethereum: null as unknown as ChainCirculating["ethereum"],
       solana: { current: 123_000, circulatingPrevDay: 122_000, circulatingPrevWeek: 121_000, circulatingPrevMonth: 120_000 },
     };
-    const result = findChainData(cc, "solana");
+    const result = findCanonicalChainData(cc, "solana");
     expect(result).not.toBeNull();
     expect(result!.current).toBe(123_000);
   });
@@ -102,7 +102,7 @@ describe("findChainData", () => {
     const cc: ChainCirculating = {
       "totally-unknown-chain-xyz": { current: 999, circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
     };
-    const result = findChainData(cc, "ethereum");
+    const result = findCanonicalChainData(cc, "ethereum");
     expect(result).toBeNull();
   });
 });

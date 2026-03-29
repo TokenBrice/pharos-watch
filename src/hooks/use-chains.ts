@@ -36,17 +36,6 @@ export interface ChainStablecoin {
   backing: string | undefined;
 }
 
-/**
- * Find all chainCirculating entries that resolve to the target chain ID.
- * Handles DL display names ("Ethereum", "BSC") and aliases ("hyperliquid-l1").
- * Returns the summed data across all matching keys.
- */
-export function findChainData(
-  cc: RawChainCirculating,
-  targetChainId: string,
-): { current: number; circulatingPrevDay: number; circulatingPrevWeek: number; circulatingPrevMonth: number } | null {
-  return findCanonicalChainData(cc, targetChainId);
-}
 
 export function useChainStablecoins(chainId: string) {
   const { data, isLoading, isError } = useStablecoins();
@@ -63,7 +52,7 @@ export function useChainStablecoins(chainId: string) {
       const cc = asset.chainCirculating;
       if (!cc || typeof cc !== "object") continue;
 
-      const chainData = findChainData(
+      const chainData = findCanonicalChainData(
         cc as RawChainCirculating,
         chainId,
       );
