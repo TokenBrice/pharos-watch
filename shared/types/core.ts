@@ -1,7 +1,9 @@
 import { z } from "zod";
 import type { DependencyType } from "./dependency-types";
 import type { LiveReservesConfig } from "./live-reserves";
+import type { ReserveSlice } from "./reserves";
 export type { DependencyType } from "./dependency-types";
+export type { ReserveRisk, ReserveSlice } from "./reserves";
 export { DEPENDENCY_TYPE_VALUES, DependencyTypeSchema } from "./dependency-types";
 
 // --- Flag-based classification ---
@@ -76,16 +78,6 @@ export interface DependencyWeight {
   id: string;
   weight: number;
   type?: DependencyType;
-}
-
-export type ReserveRisk = "very-low" | "low" | "medium" | "high" | "very-high";
-
-export interface ReserveSlice {
-  name: string;
-  pct: number;
-  risk: ReserveRisk;
-  coinId?: string;
-  depType?: DependencyType;
 }
 
 export type ChainTier = "ethereum" | "stage1-l2" | "mature-alt-l1" | "established-alt-l1" | "unproven";

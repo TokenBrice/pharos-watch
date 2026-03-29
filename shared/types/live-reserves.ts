@@ -1,5 +1,5 @@
-import type { ReserveSlice } from "./core";
 import type { DependencyType } from "./dependency-types";
+import type { ReserveSlice } from "./reserves";
 
 export const LIVE_RESERVE_ADAPTER_KEYS = [
   "accountable",
