@@ -3,27 +3,34 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   evaluateHomepageStartHereCallout,
-  markStartHereOpened,
+  persistStartHereOpened,
   readStartHereCalloutState,
   START_HERE_CALLOUT_SESSION_KEY,
   writeStartHereCalloutState,
 } from "@/lib/start-here-callout";
+import { getWindowStorage, safeStorageGetItem, safeStorageSetItem } from "@/lib/browser-storage";
 
 export function useStartHereCallout() {
   const [shouldShow, setShouldShow] = useState(false);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    const localStorageRef = getWindowStorage("local");
+    const sessionStorageRef = getWindowStorage("session");
+    if (!localStorageRef || !sessionStorageRef) {
+      setShouldShow(true);
+      setIsReady(true);
+      return;
+    }
 
     try {
-      const state = readStartHereCalloutState(window.localStorage);
-      const hasSeenCurrentSession = window.sessionStorage.getItem(START_HERE_CALLOUT_SESSION_KEY) === "true";
+      const state = readStartHereCalloutState(localStorageRef);
+      const hasSeenCurrentSession = safeStorageGetItem(sessionStorageRef, START_HERE_CALLOUT_SESSION_KEY) === "true";
       const evaluation = evaluateHomepageStartHereCallout(state, hasSeenCurrentSession);
 
       if (evaluation.shouldPersist) {
-        writeStartHereCalloutState(window.localStorage, evaluation.nextState);
-        window.sessionStorage.setItem(START_HERE_CALLOUT_SESSION_KEY, "true");
+        writeStartHereCalloutState(localStorageRef, evaluation.nextState);
+        safeStorageSetItem(sessionStorageRef, START_HERE_CALLOUT_SESSION_KEY, "true");
       }
 
       setShouldShow(evaluation.shouldShow);
@@ -35,10 +42,10 @@ export function useStartHereCallout() {
   }, []);
 
   const retireCallout = useCallback(() => {
-    if (typeof window !== "undefined") {
+    const localStorageRef = getWindowStorage("local");
+    if (localStorageRef) {
       try {
-        const nextState = markStartHereOpened(readStartHereCalloutState(window.localStorage));
-        writeStartHereCalloutState(window.localStorage, nextState);
+        persistStartHereOpened(localStorageRef);
       } catch {
         // Ignore unavailable storage and still hide for the current render.
       }

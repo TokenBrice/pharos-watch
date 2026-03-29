@@ -15,6 +15,8 @@ import { ThemeToggle } from "./theme-toggle";
 import { NAV_GROUPS, BOTTOM_NAV_ITEMS, DASHBOARD_NAV_ITEM } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { Menu, Search, X } from "lucide-react";
+import { openCommandPalette } from "@/lib/command-palette";
+import { isRouteActive } from "@/lib/navigation";
 
 function MobileNavLink({ item, active, onNavigate }: { item: NavItem; active: boolean; onNavigate: () => void }) {
   const Icon = item.icon;
@@ -43,11 +45,6 @@ function MobileNavLink({ item, active, onNavigate }: { item: NavItem; active: bo
 export function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-
-  function isActive(href: string) {
-    if (href === "/") return pathname === "/";
-    return pathname === href || pathname.startsWith(href + "/");
-  }
 
   return (
     <header className="md:hidden sticky top-[3px] z-50 border-b border-border/80 bg-background" style={{ boxShadow: "var(--elevation-rest)" }}>
@@ -88,12 +85,12 @@ export function Header() {
                 className="animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards]"
                 style={{ animationDelay: "0ms", animationDuration: "200ms" }}
               >
-                <MobileNavLink item={DASHBOARD_NAV_ITEM} active={isActive(DASHBOARD_NAV_ITEM.href)} onNavigate={() => setOpen(false)} />
+                <MobileNavLink item={DASHBOARD_NAV_ITEM} active={isRouteActive(pathname, DASHBOARD_NAV_ITEM.href)} onNavigate={() => setOpen(false)} />
               </div>
 
               {/* Grouped sections */}
               {NAV_GROUPS.map((group, groupIndex) => {
-                const groupIsActive = group.items.some((item) => isActive(item.href));
+                const groupIsActive = group.items.some((item) => isRouteActive(pathname, item.href));
                 return (
                   <div
                     key={group.label}
@@ -106,7 +103,7 @@ export function Header() {
                       {group.label}
                     </div>
                     {group.items.map((item) => (
-                      <MobileNavLink key={item.href} item={item} active={isActive(item.href)} onNavigate={() => setOpen(false)} />
+                      <MobileNavLink key={item.href} item={item} active={isRouteActive(pathname, item.href)} onNavigate={() => setOpen(false)} />
                     ))}
                   </div>
                 );
@@ -115,7 +112,7 @@ export function Header() {
               {BOTTOM_NAV_ITEMS.length > 0 ? (
                 <div
                   className={`mt-4 animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards] ${
-                    BOTTOM_NAV_ITEMS.some((item) => isActive(item.href)) ? "border-l-2 border-l-frost-blue pl-3" : "pl-[14px]"
+                    BOTTOM_NAV_ITEMS.some((item) => isRouteActive(pathname, item.href)) ? "border-l-2 border-l-frost-blue pl-3" : "pl-[14px]"
                   }`}
                   style={{ animationDelay: `${(NAV_GROUPS.length + 1) * 50}ms`, animationDuration: "200ms" }}
                 >
@@ -123,7 +120,7 @@ export function Header() {
                     Quick Start
                   </div>
                   {BOTTOM_NAV_ITEMS.map((item) => (
-                    <MobileNavLink key={item.href} item={item} active={isActive(item.href)} onNavigate={() => setOpen(false)} />
+                    <MobileNavLink key={item.href} item={item} active={isRouteActive(pathname, item.href)} onNavigate={() => setOpen(false)} />
                   ))}
                 </div>
               ) : null}
@@ -137,7 +134,7 @@ export function Header() {
                 className="gap-2 min-h-11"
                 onClick={() => {
                   setOpen(false);
-                  window.dispatchEvent(new CustomEvent("open-command-palette"));
+                  openCommandPalette();
                 }}
               >
                 <Search className="h-4 w-4" />

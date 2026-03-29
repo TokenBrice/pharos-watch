@@ -15,8 +15,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import StablecoinDetailClient from "./client";
 import { ExploreNextSection } from "@/components/stablecoin-detail/explore-next-section";
 import { PreLaunchDetail } from "@/components/pre-launch-detail";
-import logos from "../../../../data/logos.json";
 import aiSummaries from "../../../../data/ai-summaries.json";
+import { logosById } from "@/lib/logos";
 
 const typedSummaries = aiSummaries as Record<string, { title: string; text: string; updatedAt: string }>;
 
@@ -81,7 +81,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 export default async function StablecoinDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const coin = TRACKED_META_BY_ID.get(id);
-  const typedLogos = logos as Record<string, string>;
 
   if (!coin) {
     return (
@@ -102,9 +101,9 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
     return (
       <PreLaunchDetail
         coin={coin}
-        logoSrc={typedLogos[coin.id]}
+        logoSrc={logosById[coin.id]}
         summary={typedSummaries[id] ?? null}
-        logos={typedLogos}
+        logos={logosById}
       />
     );
   }
@@ -118,9 +117,9 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
         {coin.name} ({coin.symbol}) stablecoin analytics
       </h1>
       <Suspense fallback={
-        <DetailPageShellFallback coin={coin} logoSrc={typedLogos[coin.id]} />
+        <DetailPageShellFallback coin={coin} logoSrc={logosById[coin.id]} />
       }>
-        <StablecoinDetailClient id={id} summary={typedSummaries[id] ?? null} coin={coin} logoSrc={typedLogos[coin.id]} />
+        <StablecoinDetailClient id={id} summary={typedSummaries[id] ?? null} coin={coin} logoSrc={logosById[coin.id]} />
       </Suspense>
       <ExploreNextSection
         coin={coin}
@@ -131,7 +130,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
           leftId: page.left.id,
           rightId: page.right.id,
         }))}
-        logos={typedLogos}
+        logos={logosById}
       />
       <BreadcrumbJsonLd name={`${coin.name} (${coin.symbol})`} path={buildStablecoinUrl(id)} />
       <script

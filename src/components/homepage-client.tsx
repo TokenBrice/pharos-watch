@@ -26,6 +26,7 @@ import { derivePegRates } from "@shared/lib/peg-rates";
 import { FILTER_TAG_LABELS } from "@shared/types";
 import { buildTrackedIdSet, filterStablecoins } from "@/components/stablecoin-table-logic";
 import { buildPegSummaryCoinMap, buildReportCardMap } from "@/lib/stablecoin-lookups";
+import { openCommandPalette } from "@/lib/command-palette";
 
 const CEFI_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized").length;
 const CEFI_DEP_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").length;
@@ -263,7 +264,7 @@ function StartHereCallout({ onOpenStartHere }: { onOpenStartHere: () => void }) 
             type="button"
             variant="outline"
             className="h-10 rounded-full px-5"
-            onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
+            onClick={openCommandPalette}
           >
             <Search className="h-4 w-4" />
             Search a coin

@@ -11,6 +11,7 @@ import { useLogos } from "@/hooks/use-logos";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useCommandPaletteHistory } from "@/hooks/use-command-palette-history";
+import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/command-palette";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -90,8 +91,8 @@ export function CommandPalette() {
 
   useEffect(() => {
     const handler = () => openPalette();
-    window.addEventListener("open-command-palette", handler);
-    return () => window.removeEventListener("open-command-palette", handler);
+    window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, handler);
+    return () => window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, handler);
   }, [openPalette]);
 
   // ── Restore focus on close and auto-focus input when open ────────────────────

@@ -27,6 +27,14 @@ export const HEALTH_TEXT_CLASSES: Record<HealthBand, string> = {
   concentrated: "text-red-600 dark:text-red-400",
 };
 
+export const HEALTH_FILL_CLASSES: Record<HealthBand, string> = {
+  robust: "bg-emerald-500",
+  healthy: "bg-sky-500",
+  mixed: "bg-amber-500",
+  fragile: "bg-orange-500",
+  concentrated: "bg-red-500",
+};
+
 export function trendColor(value: number): string {
   return value >= 0
     ? "text-emerald-600 dark:text-emerald-400"

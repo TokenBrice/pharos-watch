@@ -28,10 +28,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { LaunchPhase } from "@shared/types";
-import logos from "../../data/logos.json";
 import aiSummaries from "../../data/ai-summaries.json";
+import { logosById } from "@/lib/logos";
 
-const typedLogos = logos as Record<string, string>;
+const typedLogos = logosById;
 const typedSummaries = aiSummaries as Record<
   string,
   { title?: string; text?: string; updatedAt?: string }

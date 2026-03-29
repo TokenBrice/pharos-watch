@@ -17,7 +17,7 @@ import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { CHAIN_META } from "@shared/lib/chains";
 import type { HealthBand, ChainSummary } from "@shared/types/chains";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import logos from "../../../data/logos.json";
+import { logosById } from "@/lib/logos";
 
 /** Muted oklch palette for the dominance breakdown bar — distinct but not decorative. */
 const DOMINANCE_COLORS = [
@@ -308,7 +308,7 @@ export function ChainsLeaderboardClient() {
                 <TableCell className="hidden lg:table-cell">
                   <div className="flex items-center gap-2">
                     <StablecoinLogo 
-                      src={(logos as Record<string, string>)[chain.dominantStablecoin.id]} 
+                      src={logosById[chain.dominantStablecoin.id]} 
                       name={chain.dominantStablecoin.symbol} 
                       size={18} 
                     />

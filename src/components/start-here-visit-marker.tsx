@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect } from "react";
-import { markStartHereOpened, readStartHereCalloutState, writeStartHereCalloutState } from "@/lib/start-here-callout";
+import { persistStartHereOpened } from "@/lib/start-here-callout";
+import { getWindowStorage } from "@/lib/browser-storage";
 
 export function StartHereVisitMarker() {
   useEffect(() => {
+    const localStorageRef = getWindowStorage("local");
+    if (!localStorageRef) return;
     try {
-      const nextState = markStartHereOpened(readStartHereCalloutState(window.localStorage));
-      writeStartHereCalloutState(window.localStorage, nextState);
+      persistStartHereOpened(localStorageRef);
     } catch {
       // Ignore unavailable storage; the homepage hook will still fall back safely.
     }

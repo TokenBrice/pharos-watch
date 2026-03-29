@@ -74,3 +74,8 @@ export function markStartHereOpened(state: StartHereCalloutState): StartHereCall
     hasOpenedStartHere: true,
   };
 }
+
+export function persistStartHereOpened(storage: Storage): void {
+  const nextState = markStartHereOpened(readStartHereCalloutState(storage));
+  writeStartHereCalloutState(storage, nextState);
+}

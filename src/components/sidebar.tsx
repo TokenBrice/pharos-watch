@@ -9,6 +9,9 @@ import { ChevronsLeft, ChevronsRight, Moon, Search, Sun } from "lucide-react";
 import { NAV_GROUPS, BOTTOM_NAV_ITEMS, DASHBOARD_NAV_ITEM } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { trackEvent } from "@/lib/analytics";
+import { getWindowStorage, safeStorageGetItem, safeStorageSetItem } from "@/lib/browser-storage";
+import { openCommandPalette } from "@/lib/command-palette";
+import { isRouteActive } from "@/lib/navigation";
 
 const STORAGE_KEY = "pharos-sidebar-expanded";
 const HOVER_DELAY = 200;
@@ -35,8 +38,8 @@ function useSidebar() {
 
 function useExpanded(): SidebarState {
   const [pinned, setPinned] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return localStorage.getItem(STORAGE_KEY) !== "false";
+    const storage = getWindowStorage("local");
+    return safeStorageGetItem(storage, STORAGE_KEY) !== "false";
   });
   const [hovered, setHovered] = useState(false);
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -44,7 +47,7 @@ function useExpanded(): SidebarState {
   const togglePin = useCallback(() => {
     setPinned((prev) => {
       const next = !prev;
-      localStorage.setItem(STORAGE_KEY, String(next));
+      safeStorageSetItem(getWindowStorage("local"), STORAGE_KEY, String(next));
       return next;
     });
   }, []);
@@ -205,11 +208,6 @@ export function Sidebar() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [togglePin]);
 
-  function isActive(href: string) {
-    if (href === "/") return pathname === "/";
-    return pathname === href || pathname.startsWith(href + "/");
-  }
-
   return (
     <aside
       className="hidden md:flex flex-col fixed top-[3px] left-0 h-[calc(100vh-3px)] border-r border-border/70 bg-card shadow-[0_0_0_1px_oklch(1_0_0_/0.03),0_20px_35px_oklch(0_0_0_/0.2)] z-40 transition-all duration-200"
@@ -228,7 +226,7 @@ export function Sidebar() {
 
       {/* Search */}
       <button
-        onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
+        onClick={openCommandPalette}
         title={expanded ? undefined : "Search (Ctrl+K)"}
         aria-label="Search (Ctrl+K)"
         className={`pharos-focus-ring flex items-center gap-3 rounded-md border-l-[3px] border-l-transparent text-muted-foreground transition-[background-color,border-color,color,box-shadow] duration-200 hover:border-l-border/80 hover:bg-muted/45 hover:text-foreground ${
@@ -248,7 +246,7 @@ export function Sidebar() {
       <nav className="flex-1 overflow-y-auto py-2 space-y-4" aria-label="Main navigation">
         {/* Dashboard standalone */}
         <div className="space-y-0.5">
-          <SidebarNavItem item={DASHBOARD_NAV_ITEM} expanded={expanded} isActive={isActive(DASHBOARD_NAV_ITEM.href)} />
+          <SidebarNavItem item={DASHBOARD_NAV_ITEM} expanded={expanded} isActive={isRouteActive(pathname, DASHBOARD_NAV_ITEM.href)} />
         </div>
         {NAV_GROUPS.map((group) => (
           <div key={group.label}>
@@ -263,7 +261,7 @@ export function Sidebar() {
                   key={item.href}
                   item={item}
                   expanded={expanded}
-                  isActive={isActive(item.href)}
+                  isActive={isRouteActive(pathname, item.href)}
                 />
               ))}
             </div>
@@ -278,7 +276,7 @@ export function Sidebar() {
             key={item.href}
             item={item}
             expanded={expanded}
-            isActive={isActive(item.href)}
+            isActive={isRouteActive(pathname, item.href)}
           />
         ))}
         <SidebarSocialLinks expanded={expanded} />

@@ -7,6 +7,7 @@ import { CommandPalette } from "./command-palette";
 import { ToastContainer } from "./toast-container";
 import { KeyboardShortcuts, useGlobalShortcuts } from "./keyboard-shortcuts";
 import { useToast } from "@/hooks/use-toast";
+import { openCommandPalette } from "@/lib/command-palette";
 
 // Create a context for toast functionality
 import { createContext, useContext } from "react";
@@ -34,8 +35,7 @@ function AppProviders({ children }: { children: React.ReactNode }) {
   }, [theme, setTheme, addToast]);
 
   const handleFocusSearch = useCallback(() => {
-    // Dispatch event to open command palette
-    window.dispatchEvent(new CustomEvent("open-command-palette"));
+    openCommandPalette();
   }, []);
 
   const handleFocusTable = useCallback(() => {

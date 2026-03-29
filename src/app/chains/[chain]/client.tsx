@@ -13,6 +13,7 @@ import {
   CONCENTRATION_WEIGHT,
   PEG_STABILITY_WEIGHT,
   BACKING_DIVERSITY_WEIGHT,
+  getHealthBand,
 } from "@shared/lib/chain-health";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -20,14 +21,14 @@ import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { formatChainUsd, formatRatioPct, HEALTH_BADGE_CLASSES, HEALTH_TEXT_CLASSES, trendColor } from "@/lib/chain-ui";
+import { formatChainUsd, formatRatioPct, HEALTH_BADGE_CLASSES, HEALTH_FILL_CLASSES, HEALTH_TEXT_CLASSES, trendColor } from "@/lib/chain-ui";
 import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { MethodologyLabel, MethodologyHint, MethodologyCardActions } from "@/components/methodology-hint";
-import type { ChainSummary } from "@shared/types/chains";
+import type { ChainSummary, HealthBand } from "@shared/types/chains";
 import { TrendingUp, TrendingDown, Minus, ChevronRight, Info, CheckCircle2, AlertCircle, AlertTriangle, XCircle } from "lucide-react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import logos from "../../../../data/logos.json";
+import { logosById } from "@/lib/logos";
 
 const BACKING_BAR_COLORS: Record<string, string> = {
   "rwa-backed": "bg-sky-500",
@@ -43,26 +44,24 @@ const BACKING_FILTER_COLORS: Record<string, string> = {
   other: "bg-zinc-500/15 text-zinc-700 dark:text-zinc-400 border-zinc-500/30 hover:bg-zinc-500/20",
 };
 
-
-function getScoreColorClass(score: number): string {
-  if (score >= 80) return "bg-emerald-500";
-  if (score >= 60) return "bg-amber-500";
-  if (score >= 40) return "bg-orange-500";
-  return "bg-red-500";
+function resolveScoreBand(score: number): HealthBand {
+  return getHealthBand(score) ?? "concentrated";
 }
 
-function getScoreTextClass(score: number): string {
-  if (score >= 80) return "text-emerald-600 dark:text-emerald-400";
-  if (score >= 60) return "text-amber-600 dark:text-amber-400";
-  if (score >= 40) return "text-orange-600 dark:text-orange-400";
-  return "text-red-600 dark:text-red-400";
-}
-
-function ScoreIcon({ score }: { score: number }) {
-  if (score >= 80) return <><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" aria-hidden="true" /><span className="sr-only">Healthy</span></>;
-  if (score >= 60) return <><AlertCircle className="h-3.5 w-3.5 text-amber-500" aria-hidden="true" /><span className="sr-only">Warning</span></>;
-  if (score >= 40) return <><AlertTriangle className="h-3.5 w-3.5 text-orange-500" aria-hidden="true" /><span className="sr-only">Degraded</span></>;
-  return <><XCircle className="h-3.5 w-3.5 text-red-500" aria-hidden="true" /><span className="sr-only">Critical</span></>;
+function ScoreIcon({ band }: { band: HealthBand }) {
+  if (band === "robust") {
+    return <><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" aria-hidden="true" /><span className="sr-only">Robust</span></>;
+  }
+  if (band === "healthy") {
+    return <><AlertCircle className="h-3.5 w-3.5 text-sky-500" aria-hidden="true" /><span className="sr-only">Healthy</span></>;
+  }
+  if (band === "mixed") {
+    return <><AlertTriangle className="h-3.5 w-3.5 text-amber-500" aria-hidden="true" /><span className="sr-only">Mixed</span></>;
+  }
+  if (band === "fragile") {
+    return <><AlertTriangle className="h-3.5 w-3.5 text-orange-500" aria-hidden="true" /><span className="sr-only">Fragile</span></>;
+  }
+  return <><XCircle className="h-3.5 w-3.5 text-red-500" aria-hidden="true" /><span className="sr-only">Concentrated</span></>;
 }
 
 function FactorGauge({
@@ -75,14 +74,15 @@ function FactorGauge({
   methodologyKey?: "chainHealthQuality" | "chainHealthEnvironment" | "chainHealthConcentration" | "chainHealthPegStability" | "chainHealthBackingDiversity";
 }) {
   const hasScore = score != null;
-  const colorClass = hasScore ? getScoreColorClass(score) : "bg-muted-foreground/30";
-  const textClass = hasScore ? getScoreTextClass(score) : "text-muted-foreground";
+  const scoreBand = hasScore ? resolveScoreBand(score) : null;
+  const colorClass = scoreBand ? HEALTH_FILL_CLASSES[scoreBand] : "bg-muted-foreground/30";
+  const textClass = scoreBand ? HEALTH_TEXT_CLASSES[scoreBand] : "text-muted-foreground";
   
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-1.5">
-          {hasScore && <ScoreIcon score={score} />}
+          {scoreBand && <ScoreIcon band={scoreBand} />}
           {methodologyKey ? (
             <MethodologyLabel topic={methodologyKey} className="text-xs">
               <span className="pharos-kicker cursor-help">{label}</span>
@@ -390,7 +390,7 @@ function CompositionSection({ chainId }: { chainId: string }) {
                 href={buildStablecoinUrl(coin.id)}
                 className="pharos-focus-ring inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
               >
-                <StablecoinLogo src={(logos as Record<string, string>)[coin.id]} name={coin.name} size={16} />
+                <StablecoinLogo src={logosById[coin.id]} name={coin.name} size={16} />
                 <span className="font-medium">{coin.symbol}</span>
                 <span className="tabular-nums">{(coin.chainShare * 100).toFixed(1)}%</span>
               </Link>
@@ -433,7 +433,7 @@ function CompositionBlock({
       }}
       title={`${coin.name} (${coin.symbol}) - ${(percentage * 100).toFixed(1)}% - Click to view details`}
     >
-      <StablecoinLogo src={(logos as Record<string, string>)[coin.id]} name={coin.name} size={logoSize} />
+      <StablecoinLogo src={logosById[coin.id]} name={coin.name} size={logoSize} />
       <span className={cn("mt-1.5 font-semibold", shouldSpan ? "text-base" : "text-sm")}>{coin.symbol}</span>
       <span className={cn("text-muted-foreground", shouldSpan && "text-sm")}>
         {(percentage * 100).toFixed(1)}%
@@ -504,7 +504,7 @@ function CompositionOthersBlock({
             {previewCoins.map((coin) => (
               <div key={coin.id} className="flex items-center justify-between text-xs">
                 <span className="flex items-center gap-1.5">
-                  <StablecoinLogo src={(logos as Record<string, string>)[coin.id]} name={coin.name} size={14} />
+                  <StablecoinLogo src={logosById[coin.id]} name={coin.name} size={14} />
                   <span className="text-muted-foreground">{coin.symbol}</span>
                 </span>
                 <span className="font-mono text-muted-foreground">{(coin.chainShare * 100).toFixed(1)}%</span>
@@ -693,7 +693,7 @@ function StablecoinTable({
                   <TableCell className="tabular-nums text-muted-foreground">{i + 1}</TableCell>
                   <TableCell>
                     <span className="flex items-center gap-2 font-medium group-hover:text-primary">
-                      <StablecoinLogo src={(logos as Record<string, string>)[coin.id]} name={coin.name} size={24} />
+                      <StablecoinLogo src={logosById[coin.id]} name={coin.name} size={24} />
                       <span className="hidden sm:inline">{coin.name}</span>
                       <span className="text-muted-foreground">({coin.symbol})</span>
                       <ChevronRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-50" />

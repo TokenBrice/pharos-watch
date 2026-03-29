@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { getWindowStorage, safeStorageGetItem, safeStorageSetItem } from "@/lib/browser-storage";
 import { cn } from "@/lib/utils";
 
 type MethodologyMode = "reader" | "analyst";
@@ -20,10 +21,7 @@ function applyMethodologyMode(mode: MethodologyMode) {
 
 export function MethodologyModeToggle({ className }: { className?: string }) {
   const [mode, setMode] = useState<MethodologyMode>(() => {
-    if (typeof window === "undefined") {
-      return "reader";
-    }
-    return window.localStorage.getItem(STORAGE_KEY) === "analyst" ? "analyst" : "reader";
+    return safeStorageGetItem(getWindowStorage("local"), STORAGE_KEY) === "analyst" ? "analyst" : "reader";
   });
 
   useEffect(() => {
@@ -32,7 +30,7 @@ export function MethodologyModeToggle({ className }: { className?: string }) {
 
   const setAndApplyMode = useCallback((nextMode: MethodologyMode) => {
     setMode(nextMode);
-    window.localStorage.setItem(STORAGE_KEY, nextMode);
+    safeStorageSetItem(getWindowStorage("local"), STORAGE_KEY, nextMode);
   }, []);
 
   return (

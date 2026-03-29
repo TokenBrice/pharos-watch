@@ -1,6 +1,16 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { getWindowStorage, safeStorageGetItem, safeStorageRemoveItem, safeStorageSetItem } from "@/lib/browser-storage";
+export {
+  ALL_COLUMNS,
+  DEFAULT_VISIBLE_COLUMNS,
+  MOBILE_DEFAULT_COLUMNS,
+  normalizeVisibleColumns,
+  isColumnId,
+  LOCKED_COLUMNS,
+  type ColumnId,
+} from "@/lib/column-visibility";
 
 interface UsePreferenceOptions<T> {
   decode?: (raw: unknown) => T;
@@ -16,9 +26,10 @@ export function usePreference<T>(
   options: UsePreferenceOptions<T> = {},
 ): [T, (value: T | ((prev: T) => T)) => void, () => void] {
   const [value, setValue] = useState<T>(() => {
-    if (typeof window === "undefined") return defaultValue;
+    const storage = getWindowStorage("local");
+    if (!storage) return defaultValue;
     try {
-      const stored = localStorage.getItem(key);
+      const stored = safeStorageGetItem(storage, key);
       if (stored === null) {
         return defaultValue;
       }
@@ -33,101 +44,15 @@ export function usePreference<T>(
 
   // Persist to localStorage on change
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch {
-      // Ignore quota errors
-    }
+    const storage = getWindowStorage("local");
+    if (!storage) return;
+    safeStorageSetItem(storage, key, JSON.stringify(value));
   }, [key, value]);
 
   const reset = useCallback(() => {
     setValue(defaultValue);
-    try {
-      localStorage.removeItem(key);
-    } catch {
-      // Ignore
-    }
+    safeStorageRemoveItem(getWindowStorage("local"), key);
   }, [key, defaultValue]);
 
   return [value, setValue, reset];
-}
-
-/* ─── Column Visibility Types ─────────────────────────────── */
-
-export type ColumnId =
-  | "rank"
-  | "name"
-  | "price"
-  | "peg"
-  | "mcap"
-  | "change24h"
-  | "change7d"
-  | "grade"
-  | "stability"
-  | "liquidity"
-  | "blacklistable"
-  | "backing"
-  | "type"
-  | "flags";
-
-interface ColumnDef {
-  id: ColumnId;
-  label: string;
-  /** Always visible — cannot be toggled off */
-  locked?: boolean;
-  /** Hidden by default on mobile */
-  hiddenMobile?: boolean;
-}
-
-export const ALL_COLUMNS: ColumnDef[] = [
-  { id: "rank", label: "#", locked: true },
-  { id: "name", label: "Name", locked: true },
-  { id: "price", label: "Price" },
-  { id: "peg", label: "Peg", hiddenMobile: true },
-  { id: "mcap", label: "Market Cap" },
-  { id: "change24h", label: "24h" },
-  { id: "change7d", label: "7d", hiddenMobile: true },
-  { id: "grade", label: "Grade", hiddenMobile: true },
-  { id: "stability", label: "Peg Score", hiddenMobile: true },
-  { id: "liquidity", label: "Liq", hiddenMobile: true },
-  { id: "blacklistable", label: "Blacklistable", hiddenMobile: true },
-  { id: "backing", label: "Backing", hiddenMobile: true },
-  { id: "type", label: "Type", hiddenMobile: true },
-  { id: "flags", label: "Flags", hiddenMobile: true },
-];
-
-export const DEFAULT_VISIBLE_COLUMNS: ColumnId[] = ALL_COLUMNS
-  .filter((c) => c.id !== "flags")
-  .map((c) => c.id);
-
-export const MOBILE_DEFAULT_COLUMNS: ColumnId[] = ALL_COLUMNS
-  .filter((c) => !c.hiddenMobile && c.id !== "flags")
-  .map((c) => c.id);
-
-export const LOCKED_COLUMNS: Set<ColumnId> = new Set(
-  ALL_COLUMNS.filter((c) => c.locked).map((c) => c.id)
-);
-
-const COLUMN_IDS = new Set<ColumnId>(ALL_COLUMNS.map((c) => c.id));
-
-export function isColumnId(value: unknown): value is ColumnId {
-  return typeof value === "string" && COLUMN_IDS.has(value as ColumnId);
-}
-
-export function normalizeVisibleColumns(raw: unknown, fallback: readonly ColumnId[]): ColumnId[] {
-  if (!Array.isArray(raw)) {
-    return [...fallback];
-  }
-
-  const selected = new Set<ColumnId>(LOCKED_COLUMNS);
-  for (const value of raw) {
-    if (isColumnId(value)) {
-      selected.add(value);
-    }
-  }
-
-  return ALL_COLUMNS
-    .map((column) => column.id)
-    .filter((id) => selected.has(id));
 }

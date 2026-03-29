@@ -19,6 +19,7 @@ import {
   parsePortfolioUrlParam,
   type PortfolioHolding,
 } from "@/lib/portfolio-codec";
+import { getWindowStorage, safeStorageGetItem, safeStorageSetItem } from "@/lib/browser-storage";
 
 export { categorizeCollateral, computeGroupedExposure, type UpstreamExposure } from "@/lib/portfolio-analysis";
 
@@ -46,9 +47,10 @@ interface PortfolioState {
 const STORAGE_KEY = "pharos:portfolio";
 
 function loadFromStorage(): PortfolioHolding[] {
-  if (typeof window === "undefined") return [];
+  const storage = getWindowStorage("local");
+  if (!storage) return [];
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = safeStorageGetItem(storage, STORAGE_KEY);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -70,12 +72,7 @@ function loadFromStorage(): PortfolioHolding[] {
 }
 
 function saveToStorage(holdings: PortfolioHolding[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(holdings));
-  } catch {
-    // Storage full or unavailable — silently ignore
-  }
+  safeStorageSetItem(getWindowStorage("local"), STORAGE_KEY, JSON.stringify(holdings));
 }
 
 function getInitialPortfolioState(): {

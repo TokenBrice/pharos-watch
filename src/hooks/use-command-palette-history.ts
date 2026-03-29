@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from "react";
+import { getWindowStorage, safeStorageGetItem, safeStorageRemoveItem, safeStorageSetItem } from "@/lib/browser-storage";
 
 const STORAGE_KEY = "pharos-command-palette-history";
 const MAX_HISTORY = 5;
@@ -49,9 +50,10 @@ function cacheHistorySnapshot(rawHistory: string | null, history: HistoryItem[])
 }
 
 function readHistorySnapshot(): HistoryItem[] {
-  if (typeof window === "undefined") return EMPTY_HISTORY;
+  const storage = getWindowStorage("local");
+  if (!storage) return EMPTY_HISTORY;
 
-  const stored = localStorage.getItem(STORAGE_KEY);
+  const stored = safeStorageGetItem(storage, STORAGE_KEY);
   if (stored === cachedRawHistory) {
     return cachedHistorySnapshot;
   }
@@ -72,14 +74,19 @@ function publishHistoryChange() {
 }
 
 function persistHistory(history: HistoryItem[]) {
+  const storage = getWindowStorage("local");
   const snapshot = history.length > 0 ? history : EMPTY_HISTORY;
   const serialized = history.length > 0 ? JSON.stringify(history) : null;
   cacheHistorySnapshot(serialized, snapshot);
 
+  if (!storage) {
+    publishHistoryChange();
+    return;
+  }
   if (serialized) {
-    localStorage.setItem(STORAGE_KEY, serialized);
+    safeStorageSetItem(storage, STORAGE_KEY, serialized);
   } else {
-    localStorage.removeItem(STORAGE_KEY);
+    safeStorageRemoveItem(storage, STORAGE_KEY);
   }
 
   publishHistoryChange();
