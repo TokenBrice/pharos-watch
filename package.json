@@ -42,6 +42,7 @@
     "check:migrations": "node scripts/check-worker-migrations.mjs",
     "check:cron-connections": "tsx scripts/check-cron-connection-budget.ts",
     "check:sql-safety": "node scripts/check-sql-interpolation-safety.mjs",
+    "check:stablecoin-data": "tsx scripts/check-stablecoin-data.ts",
     "seo:check": "node scripts/check-seo-static.mjs",
     "format": "prettier --write .",
     "prepare": "git config core.hooksPath .githooks"
