@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  compareMethodologyVersions,
   createMethodologyVersion,
   toMethodologyVersionLabel,
   type MethodologyChangelogEntry,
@@ -44,6 +45,47 @@ describe("createMethodologyVersion", () => {
     expect(mv.changelogPath).toBe("/methodology/test-changelog/");
   });
 
+  it("sorts changelog versions numerically, not lexically", () => {
+    const sorted = createMethodologyVersion({
+      currentVersion: "2.10",
+      changelogPath: "/methodology/test-changelog/",
+      changelog: [
+        {
+          version: "2.9",
+          title: "Older minor",
+          date: "2026-03-01",
+          effectiveAt: 900,
+          summary: "Older version",
+          impact: [],
+          commits: [],
+          reconstructed: false,
+        },
+        {
+          version: "2.10",
+          title: "Newer minor",
+          date: "2026-03-02",
+          effectiveAt: 1000,
+          summary: "Newer version",
+          impact: [],
+          commits: [],
+          reconstructed: false,
+        },
+        {
+          version: "2.17",
+          title: "Newest minor",
+          date: "2026-03-03",
+          effectiveAt: 1100,
+          summary: "Newest version",
+          impact: [],
+          commits: [],
+          reconstructed: false,
+        },
+      ],
+    });
+
+    expect(sorted.changelog.map((entry) => entry.version)).toEqual(["2.17", "2.10", "2.9"]);
+  });
+
   it("resolves version at timestamp", () => {
     expect(mv.getVersionAt(499)).toBe("1.0");
     expect(mv.getVersionAt(500)).toBe("1.0");
@@ -65,6 +107,15 @@ describe("createMethodologyVersion", () => {
       changelog: [],
     });
     expect(empty.getVersionAt(999)).toBe("1.0");
+  });
+});
+
+describe("compareMethodologyVersions", () => {
+  it("compares dotted numeric versions segment-by-segment", () => {
+    expect(compareMethodologyVersions("2.10", "2.9")).toBeGreaterThan(0);
+    expect(compareMethodologyVersions("5.17", "5.10")).toBeGreaterThan(0);
+    expect(compareMethodologyVersions("4.10", "4.9")).toBeGreaterThan(0);
+    expect(compareMethodologyVersions("1.0", "1.0.0")).toBe(0);
   });
 });
 

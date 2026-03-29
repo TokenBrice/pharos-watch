@@ -37,11 +37,35 @@ export interface MethodologyVersion {
   getVersionAt: (unixSeconds: number) => string;
 }
 
+function parseMethodologyVersion(version: string): number[] {
+  return version.split(".").map((segment) => {
+    const value = Number.parseInt(segment, 10);
+    return Number.isFinite(value) ? value : 0;
+  });
+}
+
+export function compareMethodologyVersions(a: string, b: string): number {
+  const aParts = parseMethodologyVersion(a);
+  const bParts = parseMethodologyVersion(b);
+  const maxLength = Math.max(aParts.length, bParts.length);
+
+  for (let index = 0; index < maxLength; index += 1) {
+    const diff = (aParts[index] ?? 0) - (bParts[index] ?? 0);
+    if (diff !== 0) return diff;
+  }
+
+  return 0;
+}
+
 export function createMethodologyVersion(config: MethodologyVersionConfig): MethodologyVersion {
   const { currentVersion, changelogPath, changelog } = config;
   const versionLabel = `v${currentVersion}`;
+  const sortedChangelog = [...changelog].sort((a, b) => {
+    const versionDiff = compareMethodologyVersions(b.version, a.version);
+    return versionDiff !== 0 ? versionDiff : b.effectiveAt - a.effectiveAt;
+  });
 
-  const windows: VersionWindow[] = changelog
+  const windows: VersionWindow[] = sortedChangelog
     .map((entry) => ({ version: entry.version, effectiveAt: entry.effectiveAt }))
     .sort((a, b) => a.effectiveAt - b.effectiveAt);
 
@@ -59,7 +83,7 @@ export function createMethodologyVersion(config: MethodologyVersionConfig): Meth
     return resolved;
   }
 
-  return { currentVersion, versionLabel, changelogPath, changelog, getVersionAt };
+  return { currentVersion, versionLabel, changelogPath, changelog: sortedChangelog, getVersionAt };
 }
 
 export function toMethodologyVersionLabel(version: string): string {
