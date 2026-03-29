@@ -6,7 +6,7 @@ import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./s
 import { runQuarterHourlySlot } from "./scheduled/quarter-hourly";
 import { runHourlyBlacklistSlot } from "./scheduled/hourly-blacklist";
 import { runTwentyMinuteMintBurnCriticalSlot } from "./scheduled/twenty-minute-mint-burn-critical";
-import { runTwentyMinuteDexDiscoverySlot } from "./scheduled/twenty-minute-dex-discovery";
+import { runThirtyMinuteDexDiscoverySlot } from "./scheduled/thirty-minute-dex-discovery";
 import { runTwentyMinuteMintBurnExtendedSlot } from "./scheduled/twenty-minute-mint-burn-extended";
 import { runHalfHourlySlot } from "./scheduled/half-hourly";
 import { runHourlyReserveSyncSlot } from "./scheduled/hourly-live-reserves";
@@ -23,7 +23,7 @@ const SLOT_RUNNER_BY_KEY = {
   quarterHourly: runQuarterHourlySlot,
   hourlyBlacklist: runHourlyBlacklistSlot,
   twentyMinuteMintBurn: runTwentyMinuteMintBurnCriticalSlot,
-  thirtyMinuteDexDiscovery: runTwentyMinuteDexDiscoverySlot,
+  thirtyMinuteDexDiscovery: runThirtyMinuteDexDiscoverySlot,
   twentyMinuteExtendedOffset: runTwentyMinuteMintBurnExtendedSlot,
   halfHourlyOffset: runHalfHourlySlot,
   hourlyReserveSync: runHourlyReserveSyncSlot,
