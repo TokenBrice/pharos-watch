@@ -222,7 +222,9 @@ Cloudflare D1 (SQLite database)
   ├── supply_history       → daily per-coin supply snapshots from cached stablecoins data (08:00 UTC + retry upserts)
   ├── chain_supply_history → daily per-chain supply aggregates for historical analysis
   ├── reserve_composition  → live reserve slices per coin for live-enabled assets
+  ├── reserve_composition_history → historical reserve composition snapshots per coin per attempt
   ├── reserve_sync_state   → per-coin reserve-sync freshness, status, and warnings
+  ├── reserve_sync_attempt_history → per-attempt history for reserve syncs
   ├── redemption_backstop  → current modeled redemption-route / effective-exit snapshot per configured coin
   ├── redemption_backstop_history → daily redemption-route history snapshot per configured coin
   ├── stability_index      → daily ecosystem health scores (0–100) with trend band
@@ -239,12 +241,14 @@ Cloudflare D1 (SQLite database)
   ├── telegram_subscribers → Telegram bot subscriber registrations
   ├── telegram_subscriptions → per-subscriber alert preferences
   ├── telegram_pending_alerts → overflow alert queue
+  ├── telegram_pending_disambiguation → pending command disambiguation state
   ├── safety_grade_history → daily safety grade change snapshots
   ├── status_state         → cron/system status state machine
   ├── status_transitions   → status transition log
   ├── status_probe_runs    → external endpoint probe results
   ├── status_discrepancy_state → data quality discrepancy tracking
   ├── dex_pool_staging     → DEX discovery staging table
+  ├── dex_discovery_meta   → DEX discovery backoff tracking per coin per source
   ├── discovery_candidates → candidate pools pending verification
   ├── block_timestamp_cache → cached block-to-timestamp mappings
   ├── cron_leases          → single-writer cron execution fencing
@@ -253,7 +257,8 @@ Cloudflare D1 (SQLite database)
   ├── daily_digest         → AI-generated daily market summaries
   ├── admin_idempotency_keys → idempotency keys for admin mutations
   ├── feedback_rate_limit  → IP-based rate limiting for feedback submissions
-  └── public_api_rate_limit → Distributed per-minute buckets for non-admin public API traffic
+  ├── public_api_rate_limit → Distributed per-minute buckets for non-admin public API traffic
+  └── kv_config            → general key-value config store for runtime settings
 
 Cloudflare Pages
   └── Static export from Next.js
