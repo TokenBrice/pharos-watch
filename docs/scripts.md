@@ -131,6 +131,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 ### `smoke-api.mjs`
 
 - Validates `/api/health` and every strict contract endpoint derived from `shared/lib/api-endpoints.ts`.
+- Can target either production or a Worker preview URL via `--base-url` / `SMOKE_API_BASE`; the deploy workflow now uses it both before production promotion and after cutover.
 - Executes strict endpoint checks sequentially to avoid post-deploy request fan-out against a freshly deployed worker.
 - Retries transient request failures once by default (timeouts/network errors/5xx/429/408); tune with `SMOKE_API_RETRY_COUNT` and `SMOKE_API_RETRY_DELAY_MS`.
 - Per-request timeout defaults to `12000ms`; tune with `SMOKE_API_TIMEOUT_MS`.

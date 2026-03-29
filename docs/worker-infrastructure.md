@@ -10,7 +10,7 @@ Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trig
 
 ## Runtime Limits and Observability
 
-Worker runtime safety and telemetry controls are declared in `worker/wrangler.toml` and should be managed in git (the CI deploy job runs `wrangler deploy` and then `wrangler triggers deploy`, so dashboard-only edits can be overwritten on the next deployment).
+Worker runtime safety and telemetry controls are declared in `worker/wrangler.toml` and should be managed in git (the CI deploy job now runs `wrangler versions upload`, preview smoke against the uploaded candidate, `wrangler versions deploy`, and then `wrangler triggers deploy`, so dashboard-only edits can be overwritten on the next deployment).
 
 ```toml
 [limits]
@@ -29,6 +29,7 @@ invocation_logs = true
 - `observability.enabled`: enables Worker traces.
 - `head_sampling_rate = 0.1`: samples 10% of traces.
 - `observability.logs.enabled` + `invocation_logs = true`: enables Workers Logs in dashboard.
+- `preview_urls = true`: keeps per-version preview URLs available so CI can smoke an uploaded Worker version before production promotion.
 
 ---
 

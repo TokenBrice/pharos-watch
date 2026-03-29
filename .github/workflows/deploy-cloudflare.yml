@@ -45,11 +45,91 @@ jobs:
     steps:
       - run: echo "No Pages or worker deploy surfaces changed in this push; skipping the production workflow."
 
-  deploy-worker:
+  upload-worker-version:
     needs:
       - detect-changes
       - validate
     if: ${{ needs.detect-changes.outputs.worker_changed == 'true' }}
+    runs-on: ubuntu-latest
+    outputs:
+      previous_version_id: ${{ steps.current-deployment.outputs.previous_version_id }}
+      version_id: ${{ steps.upload-version.outputs.version_id }}
+      preview_url: ${{ steps.upload-version.outputs.preview_url }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - name: Capture current production version
+        id: current-deployment
+        run: |
+          cd worker
+          npx --no-install wrangler deployments status --json > /tmp/wrangler-deployment-status.json
+          node <<'NODE' >> "$GITHUB_OUTPUT"
+          const fs = require("node:fs");
+          const status = JSON.parse(fs.readFileSync("/tmp/wrangler-deployment-status.json", "utf8"));
+          const previousVersionId =
+            status?.versions?.find((entry) => entry?.percentage === 100)?.version_id ?? "";
+          process.stdout.write(`previous_version_id=${previousVersionId}\n`);
+          NODE
+      - name: Apply D1 migrations
+        run: cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote
+      - name: Upload candidate worker version
+        id: upload-version
+        env:
+          WRANGLER_OUTPUT_FILE_PATH: /tmp/wrangler-output.jsonl
+        run: |
+          rm -f "$WRANGLER_OUTPUT_FILE_PATH"
+          cd worker
+          npx --no-install wrangler versions upload --message "GitHub Actions candidate ${GITHUB_SHA}"
+          node <<'NODE' >> "$GITHUB_OUTPUT"
+          const fs = require("node:fs");
+          const entries = fs
+            .readFileSync("/tmp/wrangler-output.jsonl", "utf8")
+            .split("\n")
+            .filter(Boolean)
+            .map((line) => JSON.parse(line));
+          const uploadEvent = [...entries].reverse().find((entry) => entry.type === "version-upload");
+          if (!uploadEvent?.version_id) {
+            throw new Error("Missing version-upload event in Wrangler output");
+          }
+          if (!uploadEvent?.preview_url) {
+            throw new Error("Missing preview URL in Wrangler version-upload output");
+          }
+          process.stdout.write(`version_id=${uploadEvent.version_id}\n`);
+          process.stdout.write(`preview_url=${uploadEvent.preview_url}\n`);
+          NODE
+
+  smoke-api-preview:
+    needs:
+      - upload-worker-version
+      - detect-changes
+    if: ${{ needs.detect-changes.outputs.worker_changed == 'true' && needs.upload-worker-version.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run test:smoke-api
+        env:
+          SMOKE_API_BASE: ${{ needs.upload-worker-version.outputs.preview_url }}
+
+  deploy-worker:
+    needs:
+      - upload-worker-version
+      - smoke-api-preview
+      - detect-changes
+    if: ${{ needs.detect-changes.outputs.worker_changed == 'true' && needs.smoke-api-preview.result == 'success' }}
     runs-on: ubuntu-latest
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -62,10 +142,13 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci
-      - name: Apply D1 migrations
-        run: cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote
-      - name: Deploy worker
-        run: cd worker && npx --no-install wrangler deploy
+      - name: Promote uploaded worker version to production
+        env:
+          WRANGLER_OUTPUT_FILE_PATH: /tmp/wrangler-output.jsonl
+        run: |
+          rm -f "$WRANGLER_OUTPUT_FILE_PATH"
+          cd worker
+          npx --no-install wrangler versions deploy "${{ needs.upload-worker-version.outputs.version_id }}@100" --message "GitHub Actions deploy ${GITHUB_SHA}" --yes
       - name: Sync worker triggers
         run: cd worker && npx --no-install wrangler triggers deploy
 
@@ -86,6 +169,39 @@ jobs:
       - run: npm run test:smoke-api
         env:
           SMOKE_API_BASE: ${{ vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+
+  rollback-worker:
+    needs:
+      - detect-changes
+      - upload-worker-version
+      - deploy-worker
+      - smoke-api
+    if: >-
+      ${{
+        always()
+        && needs.detect-changes.outputs.worker_changed == 'true'
+        && needs.deploy-worker.result == 'success'
+        && needs.smoke-api.result == 'failure'
+        && needs.upload-worker-version.outputs.previous_version_id != ''
+      }}
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - name: Roll back production worker to previous stable version
+        run: >-
+          cd worker
+          && npx --no-install wrangler rollback "${{ needs.upload-worker-version.outputs.previous_version_id }}"
+          --message "Auto rollback after smoke-api failure for ${GITHUB_SHA}"
+          --yes
 
   pages-release:
     needs:
