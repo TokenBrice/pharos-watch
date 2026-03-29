@@ -108,6 +108,7 @@ export async function generateDailyDigest(
     digestExtended: digestCopy.digestExtended || null,
     digestMeta: digestCopy.digestMeta,
   });
+  // SAFETY: DAILY_FILTER is a hardcoded SQL fragment (line 101), not derived from user input.
   const countResult = await db.prepare(`SELECT COUNT(*) as cnt FROM daily_digest WHERE ${DAILY_FILTER}`).all<{ cnt: number }>();
   const editionNumber = (countResult.results?.[0] as { cnt: number } | undefined)?.cnt ?? null;
 

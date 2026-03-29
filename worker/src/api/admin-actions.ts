@@ -75,10 +75,7 @@ export const handleTriggerDigest = makeAdminRoute(
   "route-trigger-digest",
   async ({ db, execCtx, request, anthropicApiKey, telegramCreds }: TriggerDigestRouteContext) =>
     runIdempotentAdminAction(db, "trigger-digest", request, async () => {
-      const cryptoObj = globalThis as typeof globalThis & {
-        crypto?: { randomUUID?: () => string };
-      };
-      const requestId = cryptoObj.crypto?.randomUUID?.() ?? `manual-digest-${Date.now()}`;
+      const requestId = `manual-digest-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
       execCtx.waitUntil(
         runManualDigestTrigger(db, anthropicApiKey ?? null, telegramCreds ?? null, requestId)
           .catch((err) => {
