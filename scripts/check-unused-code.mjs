@@ -211,11 +211,6 @@ for (const file of files) {
   }
 }
 
-if (deadModules.length === 0 && unusedExports.length === 0) {
-  console.log("No dead internal modules or unused named exports found.");
-  process.exit(0);
-}
-
 if (deadModules.length > 0) {
   console.error("Dead internal modules:");
   for (const moduleEntry of deadModules) {
@@ -228,6 +223,39 @@ if (unusedExports.length > 0) {
   for (const item of unusedExports) {
     console.error(`  ${item.file} :: ${item.name}`);
   }
+}
+
+if (process.argv.includes("--audit-allowlist")) {
+  const stale = [];
+  for (const entry of EXPORT_ALLOWLIST) {
+    const [file] = entry.split("::");
+    try {
+      statSync(file);
+    } catch {
+      stale.push({ entry, reason: "file does not exist" });
+    }
+  }
+  for (const mod of MODULE_ALLOWLIST) {
+    try {
+      statSync(mod);
+    } catch {
+      stale.push({ entry: mod, reason: "module does not exist" });
+    }
+  }
+  if (stale.length > 0) {
+    process.stderr.write("\nStale allowlist entries:\n");
+    for (const s of stale) {
+      process.stderr.write(`  ${s.entry} — ${s.reason}\n`);
+    }
+    process.stderr.write(`\n${stale.length} stale entry/entries.\n`);
+    process.exit(1);
+  }
+  process.stdout.write("Allowlist audit: all entries valid.\n");
+}
+
+if (deadModules.length === 0 && unusedExports.length === 0) {
+  console.log("No dead internal modules or unused named exports found.");
+  process.exit(0);
 }
 
 process.exit(1);
