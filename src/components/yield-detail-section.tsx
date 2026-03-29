@@ -15,7 +15,7 @@ import { formatYieldWarningSignal, getPysColor, computePysBreakdown } from "@/li
 import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
 import { cn } from "@/lib/utils";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
-import { formatCurrency, formatPercent, formatSignedPercent } from "@shared/lib/format";
+import { formatCurrency, formatPercent, formatSignedPercent as sharedFormatSignedPercent } from "@shared/lib/format";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { PYS_BENCHMARK_SPREAD_WEIGHT } from "@shared/lib/yield-scoring";
 import type { AltYieldSource } from "@shared/types";
@@ -54,6 +54,10 @@ const DATA_SOURCE_BADGES: Record<string, { label: string; badge: string }> = {
   },
 };
 
+function formatSignedPercent(value: number | null) {
+  if (value === null) return "\u2014";
+  return sharedFormatSignedPercent(value);
+}
 
 function PysBreakdown({
   score,
