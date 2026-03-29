@@ -698,7 +698,7 @@
     },
     "yieldConfig": {
       "yieldSource": "Frankencoin Savings",
-      "yieldType": "governance-set"
+      "yieldType": "lending-vault"
     }
   },
   {

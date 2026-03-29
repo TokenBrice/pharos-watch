@@ -3470,7 +3470,7 @@
     },
     "yieldConfig": {
       "yieldSource": "f(x) Protocol Stability Pool",
-      "yieldType": "governance-set"
+      "yieldType": "lending-vault"
     }
   },
   {
