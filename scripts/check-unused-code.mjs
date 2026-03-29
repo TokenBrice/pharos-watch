@@ -150,7 +150,6 @@ const EXPORT_ALLOWLIST = new Set([
   "worker/src/lib/og-templates/shared.tsx::BG",
   "worker/src/lib/og-templates/shared.tsx::TEXT_PRIMARY",
   "worker/src/lib/og-templates/shared.tsx::BORDER",
-  "worker/src/lib/runtime-credentials.ts::buildTwitterCreds",
   "worker/src/lib/schemas.ts::CronMetadataSchema",
   "worker/src/lib/stability-index.ts::BAND_COLORS",
   "worker/src/__mocks__/resvg-stub.ts::Resvg",

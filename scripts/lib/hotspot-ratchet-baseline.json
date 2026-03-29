@@ -2,86 +2,209 @@
   "worker/src/api/stablecoin-detail.ts": {
     "fileLines": 76,
     "maxFunctionLines": 60,
-    "branchCount": 4
+    "branchCount": 4,
+    "disposition": "stabilized",
+    "targetBudget": { "fileLines": 76, "maxFunctionLines": 60, "branchCount": 4 },
+    "notes": "Small API surface. Keep at or below the current shape unless route responsibilities expand materially."
   },
   "worker/src/api/feedback.ts": {
     "fileLines": 27,
     "maxFunctionLines": 15,
-    "branchCount": 3
+    "branchCount": 3,
+    "disposition": "stabilized",
+    "targetBudget": { "fileLines": 27, "maxFunctionLines": 15, "branchCount": 3 },
+    "notes": "Already within budget. Prefer keeping validation and persistence in helper modules rather than growing the handler."
   },
   "worker/src/handlers/http.ts": {
     "fileLines": 54,
     "maxFunctionLines": 45,
-    "branchCount": 6
+    "branchCount": 6,
+    "disposition": "stabilized",
+    "targetBudget": { "fileLines": 54, "maxFunctionLines": 45, "branchCount": 6 },
+    "notes": "Request-entry shell is intentionally thin after router extraction. Any new dispatch logic should move downward."
   },
   "worker/src/cron/sync-stablecoins.ts": {
     "fileLines": 340,
     "maxFunctionLines": 293,
-    "branchCount": 24
+    "branchCount": 24,
+    "disposition": "queued-p4",
+    "targetBudget": { "fileLines": 220, "maxFunctionLines": 180, "branchCount": 18 },
+    "notes": "Split orchestration, persistence, and degraded-mode recovery into separate modules after the current tranche of pricing/admin work is stable."
   },
-  "src/app/methodology/sections/core-sections.tsx": {
-    "fileLines": 1291,
-    "maxFunctionLines": 1269,
-    "branchCount": 0
+  "src/app/methodology/sections/core/stability-index-section.tsx": {
+    "fileLines": 225,
+    "maxFunctionLines": 211,
+    "branchCount": 0,
+    "disposition": "stabilized",
+    "targetBudget": { "fileLines": 225, "maxFunctionLines": 211, "branchCount": 0 },
+    "notes": "Section body is now isolated from the methodology shell. Keep future PSI copy changes local to this module unless composition order changes."
   },
-  "src/app/methodology/sections/monitoring-sections.tsx": {
-    "fileLines": 1069,
-    "maxFunctionLines": 1050,
-    "branchCount": 0
+  "src/app/methodology/sections/core/safety-scores-section.tsx": {
+    "fileLines": 499,
+    "maxFunctionLines": 485,
+    "branchCount": 0,
+    "disposition": "queued-p4",
+    "targetBudget": { "fileLines": 360, "maxFunctionLines": 220, "branchCount": 0 },
+    "notes": "The shell split landed, but the Safety Scores body is still the largest methodology section. Next pass should separate calculator wiring, grading pipeline copy, and tables."
   },
-  "src/app/methodology/scoring-changelog/page.tsx": {
-    "fileLines": 1235,
-    "maxFunctionLines": 1106,
-    "branchCount": 1
+  "src/app/methodology/sections/core/liquidity-section.tsx": {
+    "fileLines": 253,
+    "maxFunctionLines": 241,
+    "branchCount": 0,
+    "disposition": "queued-p4",
+    "targetBudget": { "fileLines": 220, "maxFunctionLines": 180, "branchCount": 0 },
+    "notes": "Liquidity copy is isolated now. A follow-up split should extract long table-heavy detail blocks if the section grows again."
+  },
+  "src/app/methodology/sections/core/mint-burn-flow-section.tsx": {
+    "fileLines": 310,
+    "maxFunctionLines": 298,
+    "branchCount": 0,
+    "disposition": "queued-p4",
+    "targetBudget": { "fileLines": 240, "maxFunctionLines": 200, "branchCount": 0 },
+    "notes": "Mint/burn copy is localized, but still larger than the desired long-term budget. Split the detailed pipeline tables from the overview copy when touched next."
+  },
+  "src/app/methodology/sections/monitoring/yield-intelligence-section.tsx": {
+    "fileLines": 253,
+    "maxFunctionLines": 239,
+    "branchCount": 0,
+    "disposition": "queued-p4",
+    "targetBudget": { "fileLines": 220, "maxFunctionLines": 200, "branchCount": 0 },
+    "notes": "Yield methodology is now its own module. If more source-policy copy lands, extract the arbitration and PYS formula blocks into smaller subcomponents."
+  },
+  "src/app/methodology/sections/monitoring/pegscore-dews-section.tsx": {
+    "fileLines": 460,
+    "maxFunctionLines": 448,
+    "branchCount": 0,
+    "disposition": "queued-p4",
+    "targetBudget": { "fileLines": 320, "maxFunctionLines": 220, "branchCount": 0 },
+    "notes": "PegScore and DEWS now share an isolated section body, but the dual-surface copy is still oversized. Split PegScore-specific and DEWS-specific detail blocks before adding more content."
+  },
+  "src/app/methodology/scoring-changelog/content-v6.tsx": {
+    "fileLines": 275,
+    "maxFunctionLines": 272,
+    "branchCount": 0,
+    "disposition": "queued-p4",
+    "targetBudget": { "fileLines": 220, "maxFunctionLines": 200, "branchCount": 0 },
+    "notes": "The changelog shell now composes by major version. Keep v6 additions in this module or split again if another large tranche lands."
+  },
+  "src/app/methodology/scoring-changelog/content-v5.tsx": {
+    "fileLines": 305,
+    "maxFunctionLines": 302,
+    "branchCount": 0,
+    "disposition": "queued-p4",
+    "targetBudget": { "fileLines": 240, "maxFunctionLines": 220, "branchCount": 0 },
+    "notes": "v5 remains large after the first split. Extract reference-heavy cards again if more v5 corrective history is added."
+  },
+  "src/app/methodology/scoring-changelog/content-legacy.tsx": {
+    "fileLines": 355,
+    "maxFunctionLines": 352,
+    "branchCount": 0,
+    "disposition": "queued-p4",
+    "targetBudget": { "fileLines": 260, "maxFunctionLines": 220, "branchCount": 0 },
+    "notes": "Legacy safety-score history is now isolated from current changes. Keep new work out of this file unless an explicit historical correction is needed."
+  },
+  "src/app/methodology/scoring-changelog/content-summary.tsx": {
+    "fileLines": 149,
+    "maxFunctionLines": 145,
+    "branchCount": 0,
+    "disposition": "stabilized",
+    "targetBudget": { "fileLines": 149, "maxFunctionLines": 145, "branchCount": 0 },
+    "notes": "Reference tables are already separated. Keep future lookup tables here rather than regrowing the per-version modules."
   },
   "src/app/coverage/client.tsx": {
     "fileLines": 441,
     "maxFunctionLines": 402,
-    "branchCount": 8
+    "branchCount": 8,
+    "disposition": "deferred",
+    "targetBudget": { "fileLines": 320, "maxFunctionLines": 220, "branchCount": 6 },
+    "notes": "Defer until the methodology/doc-system split settles. When touched next, separate state orchestration from rendering sections."
   },
   "worker/src/cron/daily-digest/collectors.ts": {
     "fileLines": 955,
     "maxFunctionLines": 121,
-    "branchCount": 85
+    "branchCount": 85,
+    "disposition": "deferred",
+    "targetBudget": { "fileLines": 650, "maxFunctionLines": 100, "branchCount": 50 },
+    "notes": "Collector family is still broad but already partly modular. Defer deeper split until digest sourcing requirements stop moving."
   },
   "worker/src/cron/daily-digest.ts": {
-    "fileLines": 833,
-    "maxFunctionLines": 425,
-    "branchCount": 128
+    "fileLines": 436,
+    "maxFunctionLines": 381,
+    "branchCount": 54,
+    "disposition": "queued-p4",
+    "targetBudget": { "fileLines": 280, "maxFunctionLines": 200, "branchCount": 30 },
+    "notes": "Split run orchestration, retry/idempotency handling, and delivery concerns. Keep Telegram-specific logic out of the cron shell."
+  },
+  "worker/src/cron/dex-liquidity/orchestrator.ts": {
+    "fileLines": 370,
+    "maxFunctionLines": 256,
+    "branchCount": 15,
+    "disposition": "stabilized",
+    "targetBudget": { "fileLines": 370, "maxFunctionLines": 256, "branchCount": 15 },
+    "notes": "Post-score baselines, drift guards, and metadata assembly now live in dedicated helpers. Keep the entrypoint focused on phase order, abort boundaries, and persistence sequencing."
+  },
+  "worker/src/cron/sync-mint-burn.ts": {
+    "fileLines": 345,
+    "maxFunctionLines": 255,
+    "branchCount": 16,
+    "disposition": "stabilized",
+    "targetBudget": { "fileLines": 345, "maxFunctionLines": 255, "branchCount": 16 },
+    "notes": "Config execution and post-run completion logic now live in `mint-burn/*` helpers. Keep the cron shell as queue setup plus progress coordination instead of regrowing per-config or epilogue logic."
   },
   "worker/src/cron/sync-stablecoins/enrich-prices.ts": {
-    "fileLines": 865,
-    "maxFunctionLines": 447,
-    "branchCount": 131
+    "fileLines": 132,
+    "maxFunctionLines": 97,
+    "branchCount": 15,
+    "disposition": "stabilized",
+    "targetBudget": { "fileLines": 132, "maxFunctionLines": 97, "branchCount": 15 },
+    "notes": "Previously a major hotspot and now materially reduced. Preserve the split; future providers should land in helper modules, not back in this shell."
   },
   "worker/src/cron/sync-blacklist.ts": {
-    "fileLines": 937,
+    "fileLines": 449,
     "maxFunctionLines": 376,
-    "branchCount": 92
+    "branchCount": 32,
+    "disposition": "queued-p4",
+    "targetBudget": { "fileLines": 280, "maxFunctionLines": 200, "branchCount": 20 },
+    "notes": "Separate source crawling, event normalization, and balance hydration into smaller passes before adding more blacklist families."
   },
   "worker/src/cron/sync-fx-rates.ts": {
     "fileLines": 417,
     "maxFunctionLines": 188,
-    "branchCount": 34
+    "branchCount": 34,
+    "disposition": "queued-p4",
+    "targetBudget": { "fileLines": 300, "maxFunctionLines": 140, "branchCount": 24 },
+    "notes": "Core helpers are already extracted. Next split should isolate orchestration, persistence, and fallback policy from the cron entrypoint."
   },
   "worker/src/cron/yield-sync/sources.ts": {
-    "fileLines": 1529,
+    "fileLines": 804,
     "maxFunctionLines": 136,
-    "branchCount": 194
+    "branchCount": 80,
+    "disposition": "deferred",
+    "targetBudget": { "fileLines": 500, "maxFunctionLines": 110, "branchCount": 50 },
+    "notes": "Large but comparatively modular. Defer until the yield source inventory stabilizes, then split by source family with explicit manifests."
   },
   "worker/src/lib/live-reserves-store.ts": {
-    "fileLines": 1363,
+    "fileLines": 829,
     "maxFunctionLines": 120,
-    "branchCount": 105
+    "branchCount": 66,
+    "disposition": "queued-p4",
+    "targetBudget": { "fileLines": 550, "maxFunctionLines": 100, "branchCount": 40 },
+    "notes": "Type-boundary cleanup is done. Next split should separate state queries, write paths, and integrity/reporting helpers."
   },
   "worker/src/lib/status-evaluation.ts": {
-    "fileLines": 584,
-    "maxFunctionLines": 434,
-    "branchCount": 56
+    "fileLines": 239,
+    "maxFunctionLines": 134,
+    "branchCount": 11,
+    "disposition": "stabilized",
+    "targetBudget": { "fileLines": 239, "maxFunctionLines": 134, "branchCount": 11 },
+    "notes": "Availability/data-quality state derivation and cause synthesis are now split into dedicated helpers. Keep the file as a composition shell for raw status assembly."
   },
   "worker/src/lib/status-reliability.ts": {
-    "fileLines": 781,
-    "maxFunctionLines": 202,
-    "branchCount": 51
+    "fileLines": 722,
+    "maxFunctionLines": 172,
+    "branchCount": 47,
+    "disposition": "queued-p4",
+    "targetBudget": { "fileLines": 420, "maxFunctionLines": 140, "branchCount": 30 },
+    "notes": "Split persistence, alert-throttling, and discrepancy classification into dedicated helpers; keep the current shared constants in one place."
   }
 }

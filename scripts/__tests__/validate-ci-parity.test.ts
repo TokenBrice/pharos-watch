@@ -53,13 +53,35 @@ function extractRunSteps(yaml) {
   return steps;
 }
 
+function extractJobBlock(yaml: string, jobName: string, nextJobName?: string): string {
+  const startMarker = `  ${jobName}:`;
+  const start = yaml.indexOf(startMarker);
+  if (start === -1) {
+    throw new Error(`Missing workflow job block: ${jobName}`);
+  }
+  if (!nextJobName) {
+    return yaml.slice(start);
+  }
+  const endMarker = `  ${nextJobName}:`;
+  const end = yaml.indexOf(endMarker, start);
+  return end === -1 ? yaml.slice(start) : yaml.slice(start, end);
+}
+
 describe("validate-ci parity", () => {
   it("keeps the shared CI validate workflow aligned with the merge-gate command contract", () => {
     const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
+    const validateJob = extractJobBlock(workflow, "validate", "validate-node24");
+    const validateNode24Job = extractJobBlock(workflow, "validate-node24");
 
-    expect(extractRunSteps(workflow)).toEqual([
+    expect(extractRunSteps(validateJob)).toEqual([
       { cmd: "npm ci", condition: null },
       ...buildCiValidateStepPlan(),
+    ]);
+
+    expect(extractRunSteps(validateNode24Job)).toEqual([
+      { cmd: "npm ci", condition: null },
+      { cmd: "npm run lint", condition: null },
+      { cmd: "npm run typecheck", condition: null },
     ]);
   });
 });

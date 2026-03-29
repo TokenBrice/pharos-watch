@@ -7,12 +7,21 @@ export const TARGET_FILES = [
   "worker/src/api/feedback.ts",
   "worker/src/handlers/http.ts",
   "worker/src/cron/sync-stablecoins.ts",
-  "src/app/methodology/sections/core-sections.tsx",
-  "src/app/methodology/sections/monitoring-sections.tsx",
-  "src/app/methodology/scoring-changelog/page.tsx",
+  "src/app/methodology/sections/core/stability-index-section.tsx",
+  "src/app/methodology/sections/core/safety-scores-section.tsx",
+  "src/app/methodology/sections/core/liquidity-section.tsx",
+  "src/app/methodology/sections/core/mint-burn-flow-section.tsx",
+  "src/app/methodology/sections/monitoring/yield-intelligence-section.tsx",
+  "src/app/methodology/sections/monitoring/pegscore-dews-section.tsx",
+  "src/app/methodology/scoring-changelog/content-v6.tsx",
+  "src/app/methodology/scoring-changelog/content-v5.tsx",
+  "src/app/methodology/scoring-changelog/content-legacy.tsx",
+  "src/app/methodology/scoring-changelog/content-summary.tsx",
   "src/app/coverage/client.tsx",
   "worker/src/cron/daily-digest/collectors.ts",
   "worker/src/cron/daily-digest.ts",
+  "worker/src/cron/dex-liquidity/orchestrator.ts",
+  "worker/src/cron/sync-mint-burn.ts",
   "worker/src/cron/sync-stablecoins/enrich-prices.ts",
   "worker/src/cron/sync-blacklist.ts",
   "worker/src/cron/sync-fx-rates.ts",
@@ -23,6 +32,8 @@ export const TARGET_FILES = [
 ];
 
 export const BASELINE_PATH = resolve(process.cwd(), "scripts/lib/hotspot-ratchet-baseline.json");
+const HOTSPOT_METRIC_KEYS = ["fileLines", "maxFunctionLines", "branchCount"];
+const HOTSPOT_DISPOSITIONS = new Set(["stabilized", "queued-p4", "deferred"]);
 
 export function collectHotspotMetrics(relPath) {
   const filePath = resolve(process.cwd(), relPath);
@@ -74,7 +85,7 @@ export function compareHotspotMetrics(current, baseline) {
       continue;
     }
 
-    for (const metric of ["fileLines", "maxFunctionLines", "branchCount"]) {
+    for (const metric of HOTSPOT_METRIC_KEYS) {
       if (currentMetrics[metric] > baselineMetrics[metric]) {
         regressions.push({
           file,
@@ -87,6 +98,46 @@ export function compareHotspotMetrics(current, baseline) {
   }
 
   return regressions;
+}
+
+export function validateHotspotBaselineMetadata(baseline) {
+  const errors = [];
+
+  for (const file of TARGET_FILES) {
+    const entry = baseline[file];
+    if (!entry) {
+      errors.push(`${file}: missing baseline entry`);
+      continue;
+    }
+
+    for (const metric of HOTSPOT_METRIC_KEYS) {
+      if (typeof entry[metric] !== "number" || !Number.isFinite(entry[metric])) {
+        errors.push(`${file}: missing numeric ${metric}`);
+      }
+    }
+
+    if (!HOTSPOT_DISPOSITIONS.has(entry.disposition)) {
+      errors.push(`${file}: invalid disposition "${entry.disposition ?? "missing"}"`);
+    }
+
+    if (!entry.targetBudget || typeof entry.targetBudget !== "object") {
+      errors.push(`${file}: missing targetBudget`);
+      continue;
+    }
+
+    for (const metric of HOTSPOT_METRIC_KEYS) {
+      const targetValue = entry.targetBudget[metric];
+      if (typeof targetValue !== "number" || !Number.isFinite(targetValue)) {
+        errors.push(`${file}: missing numeric targetBudget.${metric}`);
+      }
+    }
+
+    if (typeof entry.notes !== "string" || entry.notes.trim().length === 0) {
+      errors.push(`${file}: missing notes`);
+    }
+  }
+
+  return errors;
 }
 
 function isFunctionLike(node) {

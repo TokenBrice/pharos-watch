@@ -6,7 +6,7 @@
     "worker"
   ],
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=22 <25"
   },
   "scripts": {
     "dev": "next dev",
@@ -14,6 +14,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "audit:deps": "npm audit --audit-level=high --omit=dev",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",

@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import origins from "../shared/lib/runtime-origins.json" with { type: "json" };
 
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -53,7 +54,7 @@ function buildContentType(filePath) {
 
 function getProxyBaseUrl() {
   const configured = (process.env.STATIC_EXPORT_API_BASE ?? "").trim();
-  return configured || "https://api.pharos.watch";
+  return configured || origins.apiOrigin;
 }
 
 async function proxyApiRequest(targetUrl, method) {
