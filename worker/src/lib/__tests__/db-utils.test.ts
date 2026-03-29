@@ -59,6 +59,22 @@ function makeDb(opts?: {
             .filter((row): row is T => row != null);
           return { results: rows, success: true, meta: {} };
         }
+        if (sql.includes("source, confidence, observed_at")) {
+          return {
+            results: (opts?.priceRows ?? []).map((r) => ({
+              ...r,
+              source: null,
+              confidence: null,
+              observed_at: null,
+              observed_at_mode: null,
+              synced_at: null,
+              agree_sources_json: null,
+              consensus_sources_json: null,
+            })) as T[],
+            success: true,
+            meta: {},
+          };
+        }
         if (sql.includes("SELECT asset_id, price, updated_at FROM price_cache")) {
           return { results: (opts?.priceRows ?? []) as T[], success: true, meta: {} };
         }

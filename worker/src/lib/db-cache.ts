@@ -64,31 +64,18 @@ function parseJsonStringArray(value: string | null | undefined): string[] {
 }
 
 export async function getPriceCache(db: D1Database): Promise<Map<string, PriceCacheEntry>> {
-  const result = await db
-    .prepare("SELECT asset_id, price, updated_at FROM price_cache")
-    .all<{ asset_id: string; price: number; updated_at: number }>();
   const map = new Map<string, PriceCacheEntry>();
-  for (const row of result.results ?? []) {
-    map.set(row.asset_id, {
-      price: row.price,
-      updatedAt: row.updated_at,
-      source: null,
-      confidence: null,
-      observedAt: row.updated_at,
-      observedAtMode: null,
-      syncedAt: row.updated_at,
-      agreeSources: [],
-      consensusSources: [],
-    });
-  }
 
+  // Try full-column query first (preferred — single D1 read).
   try {
-    const metadataResult = await db
+    const result = await db
       .prepare(
-        "SELECT asset_id, source, confidence, observed_at, observed_at_mode, synced_at, agree_sources_json, consensus_sources_json FROM price_cache",
+        "SELECT asset_id, price, updated_at, source, confidence, observed_at, observed_at_mode, synced_at, agree_sources_json, consensus_sources_json FROM price_cache",
       )
       .all<{
         asset_id: string;
+        price: number;
+        updated_at: number;
         source: string | null;
         confidence: PriceConfidence | null;
         observed_at: number | null;
@@ -97,22 +84,48 @@ export async function getPriceCache(db: D1Database): Promise<Map<string, PriceCa
         agree_sources_json: string | null;
         consensus_sources_json: string | null;
       }>();
-    for (const row of metadataResult.results ?? []) {
-      const existing = map.get(row.asset_id);
-      if (!existing) continue;
-      existing.source = row.source ?? null;
-      existing.confidence = row.confidence ?? null;
-      existing.observedAt = row.observed_at ?? existing.updatedAt;
-      existing.observedAtMode = row.observed_at_mode ?? null;
-      existing.syncedAt = row.synced_at ?? existing.updatedAt;
-      existing.agreeSources = parseJsonStringArray(row.agree_sources_json);
-      existing.consensusSources = parseJsonStringArray(row.consensus_sources_json);
+    for (const row of result.results ?? []) {
+      map.set(row.asset_id, {
+        price: row.price,
+        updatedAt: row.updated_at,
+        source: row.source ?? null,
+        confidence: row.confidence ?? null,
+        observedAt: row.observed_at ?? row.updated_at,
+        observedAtMode: row.observed_at_mode ?? null,
+        syncedAt: row.synced_at ?? row.updated_at,
+        agreeSources: parseJsonStringArray(row.agree_sources_json),
+        consensusSources: parseJsonStringArray(row.consensus_sources_json),
+      });
     }
+    return map;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (!msg.includes("no such column")) {
-      console.warn("[db-cache] Failed to load price_cache metadata:", msg);
+      console.warn("[db-cache] Full-column price_cache query failed, trying core-only fallback:", msg);
     }
+  }
+
+  // Fallback: core columns only (schema may be missing metadata columns,
+  // or the full-column query hit a transient D1 error).
+  try {
+    const result = await db
+      .prepare("SELECT asset_id, price, updated_at FROM price_cache")
+      .all<{ asset_id: string; price: number; updated_at: number }>();
+    for (const row of result.results ?? []) {
+      map.set(row.asset_id, {
+        price: row.price,
+        updatedAt: row.updated_at,
+        source: null,
+        confidence: null,
+        observedAt: row.updated_at,
+        observedAtMode: null,
+        syncedAt: row.updated_at,
+        agreeSources: [],
+        consensusSources: [],
+      });
+    }
+  } catch (err) {
+    console.warn("[db-cache] Failed to load price_cache:", err instanceof Error ? err.message : String(err));
   }
   return map;
 }

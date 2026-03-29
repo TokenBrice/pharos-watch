@@ -61,14 +61,23 @@ function makeDb(opts: {
           ]) as T[],
         };
       }
+      if (sql.includes("source, confidence, observed_at")) {
+        return {
+          results: (opts.priceCacheRows ?? []).map((r) => ({
+            ...r,
+            source: null,
+            confidence: null,
+            observed_at: null,
+            observed_at_mode: null,
+            synced_at: null,
+            agree_sources_json: null,
+            consensus_sources_json: null,
+          })) as T[],
+        };
+      }
       if (sql.includes("SELECT asset_id, price, updated_at FROM price_cache")) {
         return {
           results: (opts.priceCacheRows ?? []) as T[],
-        };
-      }
-      if (sql.includes("SELECT asset_id, source, confidence")) {
-        return {
-          results: [] as T[],
         };
       }
       if (sql.includes("FROM stress_signals")) {

@@ -745,23 +745,16 @@ describe("syncStablecoins", () => {
         first: null,
       },
       {
-        match: "SELECT asset_id, price, updated_at FROM price_cache",
+        match: "SELECT asset_id, price, updated_at, source, confidence, observed_at, observed_at_mode, synced_at, agree_sources_json, consensus_sources_json FROM price_cache",
         rows: [
           {
             asset_id: "usdt-tether",
             price: 0.25580214,
             updated_at: nowSec - 3600,
-          },
-        ],
-      },
-      {
-        match: "SELECT asset_id, source, confidence, observed_at, observed_at_mode, synced_at, agree_sources_json, consensus_sources_json FROM price_cache",
-        rows: [
-          {
-            asset_id: "usdt-tether",
             source: "defillama-list+pyth",
             confidence: "high",
             observed_at: nowSec - 3600,
+            observed_at_mode: null,
             synced_at: nowSec - 3615,
             agree_sources_json: JSON.stringify(["defillama-list", "pyth"]),
             consensus_sources_json: JSON.stringify(["coingecko", "defillama-list", "pyth"]),
@@ -1314,8 +1307,8 @@ describe("syncStablecoins", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
-        match: "SELECT asset_id, price, updated_at FROM price_cache",
-        rows: [{ asset_id: "usdt-tether", price: 0.999, updated_at: nowSec - 60 }],
+        match: "SELECT asset_id, price, updated_at, source, confidence, observed_at, observed_at_mode, synced_at, agree_sources_json, consensus_sources_json FROM price_cache",
+        rows: [{ asset_id: "usdt-tether", price: 0.999, updated_at: nowSec - 60, source: null, confidence: null, observed_at: null, observed_at_mode: null, synced_at: null, agree_sources_json: null, consensus_sources_json: null }],
       },
       { match: "cache", rows: [] },
       { match: "supply_history", rows: [] },
@@ -1395,16 +1388,15 @@ describe("syncStablecoins", () => {
         first: { value: JSON.stringify(previousStablecoinsPayload), updated_at: nowSec - 240 },
       },
       {
-        match: "SELECT asset_id, price, updated_at FROM price_cache",
-        rows: [{ asset_id: "usdt-tether", price: 0.3, updated_at: nowSec - 120 }],
-      },
-      {
-        match: "SELECT asset_id, source, confidence, observed_at, observed_at_mode, synced_at, agree_sources_json, consensus_sources_json FROM price_cache",
+        match: "SELECT asset_id, price, updated_at, source, confidence, observed_at, observed_at_mode, synced_at, agree_sources_json, consensus_sources_json FROM price_cache",
         rows: [{
           asset_id: "usdt-tether",
+          price: 0.3,
+          updated_at: nowSec - 120,
           source: "coingecko+pyth",
           confidence: "high",
           observed_at: nowSec - 120,
+          observed_at_mode: null,
           synced_at: nowSec - 120,
           agree_sources_json: "[\"coingecko\",\"pyth\"]",
           consensus_sources_json: "[\"coingecko\",\"pyth\"]",
@@ -1456,8 +1448,8 @@ describe("syncStablecoins", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
-        match: "SELECT asset_id, price, updated_at FROM price_cache",
-        rows: [{ asset_id: "usdt-tether", price: 0.999, updated_at: nowSec - (7 * 3600) }],
+        match: "SELECT asset_id, price, updated_at, source, confidence, observed_at, observed_at_mode, synced_at, agree_sources_json, consensus_sources_json FROM price_cache",
+        rows: [{ asset_id: "usdt-tether", price: 0.999, updated_at: nowSec - (7 * 3600), source: null, confidence: null, observed_at: null, observed_at_mode: null, synced_at: null, agree_sources_json: null, consensus_sources_json: null }],
       },
       { match: "cache", rows: [] },
       { match: "supply_history", rows: [] },
@@ -1739,8 +1731,8 @@ describe("syncStablecoins", () => {
         first: { value: JSON.stringify({ peggedUSD: 1 }), updated_at: nowSec - 60 },
       },
       {
-        match: "SELECT asset_id, price, updated_at FROM price_cache",
-        rows: [{ asset_id: "fb-0", price: 1.01, updated_at: nowSec - 120 }],
+        match: "SELECT asset_id, price, updated_at, source, confidence, observed_at, observed_at_mode, synced_at, agree_sources_json, consensus_sources_json FROM price_cache",
+        rows: [{ asset_id: "fb-0", price: 1.01, updated_at: nowSec - 120, source: null, confidence: null, observed_at: null, observed_at_mode: null, synced_at: null, agree_sources_json: null, consensus_sources_json: null }],
       },
       { match: "INSERT OR REPLACE INTO price_cache", rows: [], runMeta: { changes: 1 } },
       { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
