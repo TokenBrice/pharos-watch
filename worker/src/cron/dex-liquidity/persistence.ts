@@ -171,15 +171,23 @@ export async function persistScores(
   // These can accumulate when coins are removed from ACTIVE_STABLECOINS.
   const validIds = new Set(ACTIVE_STABLECOINS.map((m) => m.id));
   validIds.add("__global__");
+  const DEX_LIQUIDITY_TABLES = new Set([
+    "dex_liquidity",
+    "dex_liquidity_history",
+    "dex_discovery_meta",
+  ] as const);
   try {
     const tables = ["dex_liquidity", "dex_liquidity_history", "dex_discovery_meta"] as const;
     for (const table of tables) {
+      if (!DEX_LIQUIDITY_TABLES.has(table)) throw new Error(`Invalid DEX liquidity table: ${table}`);
       const existingRows = await db
+        // SAFETY: validated against DEX_LIQUIDITY_TABLES allowlist above.
         .prepare(`SELECT DISTINCT stablecoin_id FROM ${table}`)
         .all<{ stablecoin_id: string }>();
       for (const row of existingRows.results ?? []) {
         if (!validIds.has(row.stablecoin_id)) {
           stmts.push(
+            // SAFETY: validated against DEX_LIQUIDITY_TABLES allowlist above.
             db.prepare(`DELETE FROM ${table} WHERE stablecoin_id = ?`).bind(row.stablecoin_id),
           );
         }
