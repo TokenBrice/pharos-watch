@@ -1,2 +1,4 @@
-export const DEPEG_THRESHOLD_BPS = 100;
-export const DEPEG_THRESHOLD_BPS_NON_USD = 150;
+export {
+  DEPEG_THRESHOLD_BPS,
+  DEPEG_THRESHOLD_BPS_NON_USD,
+} from "@shared/lib/depeg-config";

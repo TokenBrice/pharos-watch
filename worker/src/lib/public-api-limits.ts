@@ -1,2 +1,4 @@
-export const PUBLIC_API_RATE_LIMIT_MAX_REQUESTS = 300;
-export const PUBLIC_API_RATE_LIMIT_WINDOW_SEC = 60;
+export {
+  PUBLIC_API_RATE_LIMIT_MAX_REQUESTS,
+  PUBLIC_API_RATE_LIMIT_WINDOW_SEC,
+} from "@shared/lib/ops-limits";

@@ -3,16 +3,32 @@ import {
   DEPEG_THRESHOLD_BPS,
   DEPEG_THRESHOLD_BPS_NON_USD,
 } from "./depeg-config";
+import {
+  DEX_FRESHNESS_SEC,
+  DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD,
+  DEPEG_CONFIRMATION_SUPPLY_THRESHOLD,
+  DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
+  DEPEG_EXTREME_MOVE_BPS,
+  DEPEG_PENDING_MIN_AGE_SEC,
+  DEPEG_PENDING_EXPIRY_SEC,
+  DEPEG_SECONDARY_THRESHOLD_RATIO,
+} from "@shared/lib/depeg-detection-config";
 
 /** Returns the appropriate depeg threshold for a given peg type */
 export function getDepegThresholdBps(pegType: string | undefined): number {
   return pegType === "peggedUSD" ? DEPEG_THRESHOLD_BPS : DEPEG_THRESHOLD_BPS_NON_USD;
 }
 
-/** Maximum age (in seconds) for a DEX price observation to be considered fresh.
- *  Set to 35 min to cover the full 30-min scoring cron cycle + 5 min buffer (M-1). */
-export const DEX_FRESHNESS_SEC = 2100;
-
+export {
+  DEX_FRESHNESS_SEC,
+  DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD,
+  DEPEG_CONFIRMATION_SUPPLY_THRESHOLD,
+  DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
+  DEPEG_EXTREME_MOVE_BPS,
+  DEPEG_PENDING_MIN_AGE_SEC,
+  DEPEG_PENDING_EXPIRY_SEC,
+  DEPEG_SECONDARY_THRESHOLD_RATIO,
+};
 /** Minimum per-pool liquidity required for a DEX price observation to be stored. */
 export const DEX_PRICE_OBSERVATION_MIN_TVL_USD = 50_000;
 
@@ -25,9 +41,6 @@ export const DEX_PRICE_CHECK_FRESHNESS_SEC = 3600;
 
 /** Minimum aggregate DEX source TVL required before showing a UI-facing DEX price check. */
 export const DEX_PRICE_CHECK_UI_MIN_TVL_USD = 250_000;
-
-/** Minimum aggregate DEX source TVL required before depeg logic trusts a DEX price row. */
-export const DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD = 1_000_000;
 
 /** D1 batch statement limit per db.batch() call */
 export const D1_BATCH_SIZE = 100;
@@ -73,27 +86,6 @@ export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = {
 };
 
 // --- Depeg multi-source confirmation (>$1B coins) ---
-
-// Coins above $1B circulating supply require confirmation from a second price source
-// (DEX or next sync cycle) before a depeg event is created. Below $1B, single-source
-// detection is acceptable because false alerts have lower blast radius.
-// $1B threshold covers ~top-10 stablecoins where false positives are most damaging.
-export const DEPEG_CONFIRMATION_SUPPLY_THRESHOLD = 1_000_000_000; // $1B
-
-/** Maximum age for a primary price to be trusted directly in depeg detection. */
-export const DEPEG_PRIMARY_PRICE_MAX_AGE_SEC = 1800; // 30 min
-
-/** Extreme-move lane: very large deviations must be second-source confirmed. */
-export const DEPEG_EXTREME_MOVE_BPS = 5000; // 50%
-
-/** Minimum age (seconds) before a pending depeg can be promoted */
-export const DEPEG_PENDING_MIN_AGE_SEC = 900; // 15 min (1 sync cycle)
-
-/** Maximum age (seconds) before an unconfirmed pending depeg expires */
-export const DEPEG_PENDING_EXPIRY_SEC = 2700; // 45 min (3 sync cycles)
-
-/** Secondary source agreement threshold as fraction of primary threshold */
-export const DEPEG_SECONDARY_THRESHOLD_RATIO = 0.5;
 
 // --- Yield Intelligence ---
 

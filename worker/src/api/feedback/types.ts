@@ -1,4 +1,8 @@
 import { z } from "zod";
+export {
+  FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS,
+  FEEDBACK_RATE_LIMIT_WINDOW_SEC,
+} from "@shared/lib/ops-limits";
 
 export const FeedbackBodySchema = z.object({
   type: z.enum(["bug", "data-correction", "feature-request"], {
@@ -39,5 +43,3 @@ export interface PreparedFeedbackSubmission {
 
 export const GITHUB_OWNER = "TokenBrice";
 export const GITHUB_REPO = "stablecoin-dashboard";
-export const FEEDBACK_RATE_LIMIT_WINDOW_SEC = 600;
-export const FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS = 3;

@@ -12,15 +12,19 @@ import {
 import {
   CIRCUIT_OPEN_THRESHOLD,
   CIRCUIT_PROBE_INTERVAL_SEC,
-} from "../../../worker/src/lib/circuit-config";
+  FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS,
+  FEEDBACK_RATE_LIMIT_WINDOW_SEC,
+  PUBLIC_API_RATE_LIMIT_MAX_REQUESTS,
+  PUBLIC_API_RATE_LIMIT_WINDOW_SEC,
+} from "../../../shared/lib/ops-limits";
 import {
   DEWS_SIGNAL_WEIGHTS,
   DEWS_THREAT_BANDS,
-} from "../../../worker/src/lib/dews-config";
+} from "../../../shared/lib/dews-config";
 import {
   DURABILITY_COMPONENT_WEIGHTS,
-  LIQUIDITY_COMPONENT_WEIGHTS,
-} from "../../../worker/src/cron/dex-liquidity/score-weights";
+  LIQUIDITY_SCORE_WEIGHTS,
+} from "../../../shared/lib/liquidity-score-weights";
 import {
   DEPEG_CONFIRMATION_SUPPLY_THRESHOLD,
   DEPEG_EXTREME_MOVE_BPS,
@@ -30,19 +34,11 @@ import {
   DEPEG_SECONDARY_THRESHOLD_RATIO,
   DEX_FRESHNESS_SEC,
   DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD,
-} from "../../../worker/src/lib/constants";
+} from "../../../shared/lib/depeg-detection-config";
 import {
   DEPEG_THRESHOLD_BPS,
   DEPEG_THRESHOLD_BPS_NON_USD,
-} from "../../../worker/src/lib/depeg-config";
-import {
-  FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS,
-  FEEDBACK_RATE_LIMIT_WINDOW_SEC,
-} from "../../../worker/src/api/feedback/types";
-import {
-  PUBLIC_API_RATE_LIMIT_MAX_REQUESTS,
-  PUBLIC_API_RATE_LIMIT_WINDOW_SEC,
-} from "../../../worker/src/lib/public-api-limits";
+} from "../../../shared/lib/depeg-config";
 import { THREAT_BAND_HEX } from "../../../shared/lib/classification";
 import { CRON_SCHEDULES } from "../../../shared/lib/cron-jobs";
 import {
@@ -211,11 +207,11 @@ function checkLiquidityDoc(failures: Failure[]): void {
   const doc = read(file);
 
   const componentRows = [
-    { row: "**TVL Depth**", label: "liquidity component TVL Depth", expected: LIQUIDITY_COMPONENT_WEIGHTS.tvlDepth * 100 },
-    { row: "**Volume Activity**", label: "liquidity component Volume Activity", expected: LIQUIDITY_COMPONENT_WEIGHTS.volumeActivity * 100 },
-    { row: "**Pool Quality**", label: "liquidity component Pool Quality", expected: LIQUIDITY_COMPONENT_WEIGHTS.poolQuality * 100 },
-    { row: "**Durability**", label: "liquidity component Durability", expected: LIQUIDITY_COMPONENT_WEIGHTS.durability * 100 },
-    { row: "**Pair Diversity**", label: "liquidity component Pair Diversity", expected: LIQUIDITY_COMPONENT_WEIGHTS.pairDiversity * 100 },
+    { row: "**TVL Depth**", label: "liquidity component TVL Depth", expected: LIQUIDITY_SCORE_WEIGHTS[0].weight * 100 },
+    { row: "**Volume Activity**", label: "liquidity component Volume Activity", expected: LIQUIDITY_SCORE_WEIGHTS[1].weight * 100 },
+    { row: "**Pool Quality**", label: "liquidity component Pool Quality", expected: LIQUIDITY_SCORE_WEIGHTS[2].weight * 100 },
+    { row: "**Durability**", label: "liquidity component Durability", expected: LIQUIDITY_SCORE_WEIGHTS[3].weight * 100 },
+    { row: "**Pair Diversity**", label: "liquidity component Pair Diversity", expected: LIQUIDITY_SCORE_WEIGHTS[4].weight * 100 },
   ];
 
   for (const component of componentRows) {

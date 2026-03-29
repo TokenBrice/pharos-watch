@@ -12,3 +12,10 @@ export const LIQUIDITY_SCORE_WEIGHTS = [
 ] as const;
 
 export type LiquidityScoreComponentKey = (typeof LIQUIDITY_SCORE_WEIGHTS)[number]["key"];
+
+export const DURABILITY_COMPONENT_WEIGHTS = {
+  organicFraction: 0.15,
+  tvlStability: 0.35,
+  volumeConsistency: 0.25,
+  maturity: 0.25,
+} as const;
