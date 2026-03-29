@@ -2,45 +2,84 @@
 
 This note turns the hotspot ratchet into an explicit simplification program. The source of truth for tracked files and current metrics remains [`scripts/lib/hotspot-ratchet-baseline.json`](/Users/ahirice/Documents/git/stablecoin-dashboard/scripts/lib/hotspot-ratchet-baseline.json); this note summarizes the intended next move for each queued or deferred hotspot.
 
+Each entry now carries three planning fields:
+- `Owner lane`: the area responsible for the next split.
+- `Next split`: the concrete decomposition target.
+- `Validation`: the checks that must stay green before the backlog note and ratchet baseline are updated.
+
 ## Immediate P4 Queue
 
 - `worker/src/cron/sync-stablecoins.ts`
-  - Split orchestration from persistence and degraded-mode recovery.
+  - Owner lane: worker data pipeline.
+  - Next split: separate orchestration from persistence and degraded-mode recovery.
+  - Validation: `npm test -- worker/src/cron/__tests__/sync-stablecoins.test.ts`, `cd worker && npx tsc --noEmit`.
 - `src/app/methodology/sections/core/safety-scores-section.tsx`
-  - Next split should isolate calculator wiring, grading pipeline copy, and large tables.
+  - Owner lane: methodology content UI.
+  - Next split: isolate calculator wiring, grading pipeline copy, and large tables.
+  - Validation: `npm test -- src/app/methodology`, `npm run build`.
 - `src/app/methodology/sections/core/liquidity-section.tsx`
-  - Follow-up should separate table-heavy technical detail from the overview shell.
+  - Owner lane: methodology content UI.
+  - Next split: separate table-heavy technical detail from the overview shell.
+  - Validation: `npm test -- src/app/methodology`, `npm run build`.
 - `src/app/methodology/sections/core/mint-burn-flow-section.tsx`
-  - Keep the shell split; next pass should isolate the detailed pipeline/tables block.
+  - Owner lane: methodology content UI.
+  - Next split: isolate the detailed pipeline/tables block from the shell.
+  - Validation: `npm test -- src/app/methodology`, `npm run build`.
 - `src/app/methodology/sections/monitoring/yield-intelligence-section.tsx`
-  - Extract source-arbitration and PYS deep-dive blocks if the section grows again.
+  - Owner lane: methodology content UI.
+  - Next split: extract source-arbitration and PYS deep-dive blocks if the section grows again.
+  - Validation: `npm test -- src/app/methodology`, `npm run build`.
 - `src/app/methodology/sections/monitoring/pegscore-dews-section.tsx`
-  - Split PegScore-specific and DEWS-specific detail blocks before adding more copy.
+  - Owner lane: methodology content UI.
+  - Next split: separate PegScore-specific and DEWS-specific detail blocks before adding more copy.
+  - Validation: `npm test -- src/app/methodology`, `npm run build`.
 - `src/app/methodology/scoring-changelog/content-v6.tsx`
-  - Keep major-version grouping; split again only if another large v6 tranche lands.
+  - Owner lane: methodology docs.
+  - Next split: preserve major-version grouping and split again only if another large v6 tranche lands.
+  - Validation: `npm run build`, `npm run check:doc-sync`.
 - `src/app/methodology/scoring-changelog/content-v5.tsx`
-  - Legacy v5 history is still dense enough to justify another grouping pass if edited.
+  - Owner lane: methodology docs.
+  - Next split: keep legacy v5 grouped, but do another grouping pass if that file changes materially.
+  - Validation: `npm run build`, `npm run check:doc-sync`.
 - `src/app/methodology/scoring-changelog/content-legacy.tsx`
-  - Preserve the legacy split and avoid mixing current methodology changes into it.
+  - Owner lane: methodology docs.
+  - Next split: preserve the legacy split and avoid mixing current methodology changes into it.
+  - Validation: `npm run build`, `npm run check:doc-sync`.
 - `worker/src/cron/daily-digest.ts`
-  - Isolate cron orchestration from delivery/idempotency concerns.
+  - Owner lane: worker notifications.
+  - Next split: isolate cron orchestration from delivery and idempotency concerns.
+  - Validation: `npm test -- worker/src/cron/__tests__/daily-digest.test.ts`, `cd worker && npx tsc --noEmit`.
 - `worker/src/cron/sync-blacklist.ts`
-  - Separate crawling, normalization, and balance hydration phases.
+  - Owner lane: worker monitoring pipeline.
+  - Next split: separate crawling, normalization, and balance hydration phases.
+  - Validation: `npm test -- worker/src/cron/blacklist`, `cd worker && npx tsc --noEmit`.
 - `worker/src/cron/sync-fx-rates.ts`
-  - Keep helper extraction; next split should reduce orchestration size.
+  - Owner lane: worker pricing pipeline.
+  - Next split: keep helper extraction and reduce orchestration size in the next pass.
+  - Validation: `npm test -- worker/src/cron/__tests__/sync-fx-rates.test.ts`, `cd worker && npx tsc --noEmit`.
 - `worker/src/lib/live-reserves-store.ts`
-  - Separate read/query helpers, write paths, and integrity reporting.
+  - Owner lane: worker reserves pipeline.
+  - Next split: separate read/query helpers, write paths, and integrity reporting.
+  - Validation: `npm test -- worker/src/lib/__tests__/live-reserves-store.test.ts`, `cd worker && npx tsc --noEmit`.
 - `worker/src/lib/status-reliability.ts`
-  - Extract persistence and alert-throttling from discrepancy classification.
+  - Owner lane: ops status pipeline.
+  - Next split: extract persistence and alert-throttling from discrepancy classification.
+  - Validation: `npm test -- worker/src/lib/__tests__/status-reliability.test.ts`, `cd worker && npx tsc --noEmit`.
 
 ## Deferred Queue
 
 - `src/app/coverage/client.tsx`
-  - Defer until the methodology/content split settles; then split state orchestration from rendering.
+  - Owner lane: frontend coverage surface.
+  - Next split: defer until the methodology/content split settles, then separate state orchestration from rendering.
+  - Validation: `npm test -- src/app/coverage`, `npm run build`.
 - `worker/src/cron/daily-digest/collectors.ts`
-  - Defer until digest-source scope stabilizes; then split by collector family.
+  - Owner lane: worker notifications.
+  - Next split: defer until digest-source scope stabilizes, then split by collector family.
+  - Validation: `npm test -- worker/src/cron/__tests__/daily-digest.test.ts`, `cd worker && npx tsc --noEmit`.
 - `worker/src/cron/yield-sync/sources.ts`
-  - Defer until the yield-source inventory is stable; then split by source family and manifest.
+  - Owner lane: worker yield pipeline.
+  - Next split: defer until the yield-source inventory is stable, then split by source family and manifest.
+  - Validation: `npm test -- worker/src/cron/__tests__/yield-sync`, `cd worker && npx tsc --noEmit`.
 
 ## Stabilized Files
 
