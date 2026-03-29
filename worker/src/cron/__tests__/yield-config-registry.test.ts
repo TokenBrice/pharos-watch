@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import {
+  EXPLICIT_YIELD_SOURCE_POOL_MAP,
   AUTO_LENDING_POOL_MAP,
   AUTO_LENDING_SAFETY_BYPASS_IDS,
   LENDING_PROTOCOL_ALLOWLIST,
@@ -110,5 +111,18 @@ describe("yield config registry", () => {
       expect(LENDING_PROTOCOL_ALLOWLIST.has(slug), slug).toBe(true);
       expect(LENDING_PROTOCOL_LABELS[slug], slug).toBeTruthy();
     }
+  });
+
+  it("pins BOLD's Liquity alt source to the explicit K3 sBOLD wrapper label", () => {
+    expect(EXPLICIT_YIELD_SOURCE_POOL_MAP["bold-liquity"]).toContainEqual(
+      expect.objectContaining({
+        poolId: "dac71f4f-7b97-463a-b19f-9796c56c21f1",
+        yieldSource: "Liquity Stability Pool (via K3 sBOLD)",
+        yieldType: "lending-vault",
+        dataSource: "defillama-auto",
+        expectedProject: "liquity-v2",
+        expectedChain: "ethereum",
+      }),
+    );
   });
 });

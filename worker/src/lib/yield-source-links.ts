@@ -10,6 +10,7 @@ const YIELD_SOURCE_URLS: Record<string, string> = {
   "BIMA savings (sUSBD)": "https://bima.money/earn",
   "Hashnote USYC": "https://usyc.hashnote.com/",
   "K3: sBOLD": "https://liquity.app/earn/sbold",
+  "Liquity Stability Pool (via K3 sBOLD)": "https://liquity.app/earn/sbold",
   "Ondo USDY Oracle": "https://ondo.finance/usdy",
   Beefy: "https://app.beefy.com/",
   BENQI: "https://app.benqi.fi/",

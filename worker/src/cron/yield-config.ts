@@ -384,6 +384,17 @@ export const YIELD_POOL_MAP: Record<string, string> = {
  * the generic stablecoin auto-discovery universe.
  */
 export const EXPLICIT_YIELD_SOURCE_POOL_MAP: Record<string, ExplicitYieldPoolConfig[]> = {
+  "bold-liquity": [
+    {
+      // BOLD - Liquity Stability Pool via K3 sBOLD wrapper on Ethereum
+      poolId: "dac71f4f-7b97-463a-b19f-9796c56c21f1",
+      yieldSource: "Liquity Stability Pool (via K3 sBOLD)",
+      yieldType: "lending-vault",
+      dataSource: "defillama-auto",
+      expectedProject: "liquity-v2",
+      expectedChain: "ethereum",
+    },
+  ],
   "xaut-tether": [
     {
       // XAUT - Yo Protocol isolated lending market on Ethereum
