@@ -2,7 +2,7 @@ import { SECONDS } from "./time-constants";
 import {
   DEPEG_THRESHOLD_BPS,
   DEPEG_THRESHOLD_BPS_NON_USD,
-} from "./depeg-config";
+} from "@shared/lib/depeg-config";
 import {
   DEX_FRESHNESS_SEC,
   DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD,

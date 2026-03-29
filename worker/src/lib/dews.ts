@@ -12,7 +12,7 @@ import { clamp } from "@shared/lib/math";
 import {
   DEWS_SIGNAL_WEIGHTS,
   DEWS_THREAT_BANDS,
-} from "./dews-config";
+} from "@shared/lib/dews-config";
 
 // ---------------------------------------------------------------------------
 // Types
