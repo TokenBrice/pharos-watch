@@ -4,7 +4,7 @@ import { fetchWithRetry } from "./fetch-retry";
 
 interface JsonRpcEnvelope<T> {
   result?: T;
-  error?: { message?: string };
+  error?: { code?: number; message?: string };
 }
 
 export interface EvmRpcOptions {
@@ -65,6 +65,7 @@ async function fetchJsonRpcResult<T>(
 ): Promise<T | null> {
   const timeoutMs = options?.timeoutMs ?? 10_000;
   const maxRetries = options?.maxRetries ?? 1;
+  const failures: string[] = [];
 
   for (const rpcUrl of urls) {
     try {
@@ -85,18 +86,31 @@ async function fetchJsonRpcResult<T>(
         { timeoutMs },
       );
 
-      if (!res?.ok) continue;
+      if (!res?.ok) {
+        failures.push(`${rpcUrl}: HTTP ${res?.status ?? "no-response"}`);
+        continue;
+      }
 
       const body = await res.json() as JsonRpcEnvelope<T>;
-      if (body.error) continue;
-      if (body.result == null) continue;
+      if (body.error) {
+        failures.push(`${rpcUrl}: RPC error ${body.error.code ?? ""} ${body.error.message ?? ""}`);
+        continue;
+      }
+      if (body.result == null) {
+        failures.push(`${rpcUrl}: null result`);
+        continue;
+      }
 
       return body.result;
-    } catch {
+    } catch (err) {
+      failures.push(`${rpcUrl}: ${err instanceof Error ? err.message : String(err)}`);
       continue;
     }
   }
 
+  if (failures.length > 0) {
+    console.warn(`[evm-rpc] ${method} failed across ${urls.length} RPCs: ${failures.join("; ")}`);
+  }
   return null;
 }
 
@@ -152,6 +166,7 @@ export async function fetchEvmCallHexAtBlock(
   const maxRetries = options?.maxRetries ?? 1;
 
   // Try each RPC URL, skipping empty/revert results ("0x") so fallbacks are tried
+  const failures: string[] = [];
   for (const rpcUrl of urls) {
     try {
       const res = await fetchWithRetry(
@@ -165,15 +180,28 @@ export async function fetchEvmCallHexAtBlock(
         maxRetries,
         { timeoutMs },
       );
-      if (!res?.ok) continue;
+      if (!res?.ok) {
+        failures.push(`${rpcUrl}: HTTP ${res?.status ?? "no-response"}`);
+        continue;
+      }
       const body = await res.json() as JsonRpcEnvelope<string>;
-      if (body.error) continue;
+      if (body.error) {
+        failures.push(`${rpcUrl}: RPC error ${body.error.code ?? ""} ${body.error.message ?? ""}`);
+        continue;
+      }
       const result = body.result ?? null;
-      if (!isHexResult(result ?? undefined) || result === "0x") continue;
+      if (!isHexResult(result ?? undefined) || result === "0x") {
+        failures.push(`${rpcUrl}: null result`);
+        continue;
+      }
       return result as `0x${string}`;
-    } catch {
+    } catch (err) {
+      failures.push(`${rpcUrl}: ${err instanceof Error ? err.message : String(err)}`);
       continue;
     }
+  }
+  if (failures.length > 0) {
+    console.warn(`[evm-rpc] eth_call failed across ${urls.length} RPCs: ${failures.join("; ")}`);
   }
   return null;
 }
