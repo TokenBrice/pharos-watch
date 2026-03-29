@@ -695,19 +695,15 @@ Dashed reference line at the benchmark frame rate. On benchmark-homogeneous scop
 
 ### `YieldLeaderboard` (`src/components/yield-leaderboard.tsx`)
 
-Tabbed, sortable, paginated table (25 rows/page). Default sort: PYS descending. Table headers for `PYS`, `Stability`, and `Signals` now use the shared methodology-hint trigger so users can read the local definition without leaving the leaderboard.
+Sortable, paginated table (25 rows/page). Default sort: PYS descending. Table headers for `PYS`, `Stability`, and `Signals` use the shared methodology-hint trigger so users can read the local definition without leaving the leaderboard.
 
-The leaderboard is split into two source-aware tabs:
+The filter row above the table now combines:
 
-- `Native Yield` — best-source rows where `dataSource !== "defillama-auto"`
-- `Lending Opportunities` — auto-discovered rows where `dataSource === "defillama-auto"`
-
-Each tab includes a filter row above the table:
-
-- **Yield type pills (multi-select):** One pill per yield type present in the current tab's data (not global). Active pills use `YIELD_TYPE_STYLES[type].badge`; inactive pills use a muted outline. Users can toggle any subset on/off.
+- **Stablecoin search:** inline search input with a popover for the top symbol/name matches; selecting a result clears the query, expands that row, and scrolls it into view.
+- **Yield type pills (multi-select):** One pill per yield type present in the currently visible dataset. Active pills use `YIELD_TYPE_STYLES[type].badge`; inactive pills use a muted outline.
 - **Hide warned checkbox:** Excludes rows with one or more active warning signals (`warningSignals.length > 0`) when enabled.
 
-Tab selection and both filters feed rows into the shared sort/pagination pipeline. With `resetPageOnTotalChange: true`, page index automatically resets to 0 whenever those controls change the input row count.
+Search and both filters feed rows into the shared sort/pagination pipeline. With `resetPageOnTotalChange: true`, page index automatically resets to 0 whenever those controls change the input row count.
 
 **Columns:** Rank, Coin (logo + symbol), APY (30d), Grade, PYS, Source, Type (badge), TVL, Stability (bar + %), 30d Range, Signals, and a trailing chevron for row expansion.
 
@@ -717,7 +713,7 @@ Stability display multiplies the raw 0–1 value by 100 for both the bar width a
 
 **Signals column (desktop/tablet):** Rows with no active warnings show an em dash. Rows with one warning show an amber outline alert icon. Rows with two or more warnings show a filled amber icon and an additional subtle amber left border on the row. Hovering the icon opens a tooltip with human-readable warning descriptions (`yield-spike`, `yield-divergence`, `negative-trend`, `reward-heavy`, `tvl-outflow`, `zero-yield`, `data-stale`).
 
-**Alt-sources badge:** When a coin has `altSources.length > 0`, a `+N` pill badge appears next to the source name in the Source column. Clicking it opens a small inline popover listing each alternative source name, clickable source link, and current APY.
+**Source inspection:** The table row delegates source inspection to the shared `YieldSourceSheet`, which opens from the retained source controls in the row/expanded state instead of the old inline `+N` popover.
 
 **Inline expansion:** Clicking a leaderboard row toggles an inline `YieldHistoryChart` panel directly beneath that row. The expanded panel repeats the selected source as a clickable link above the chart, passes the selected row benchmark, `medianApy`, and available source list into compact mode, and only one row can remain expanded at a time.
 

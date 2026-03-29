@@ -9,7 +9,8 @@
 - **Route shell:** `src/app/methodology/page.tsx` (metadata, breadcrumb JSON-LD, FAQ JSON-LD, hero/reader-guide shell)
 - **Shared helpers + section metadata:** `src/app/methodology/methodology-shared.tsx`
 - **Section composition module:** `src/app/methodology/methodology-sections.tsx`
-- **Section content groups:** `src/app/methodology/sections/core-sections.tsx`, `src/app/methodology/sections/core-sections-pricing.tsx`, and `src/app/methodology/sections/monitoring-sections.tsx`
+- **Section composition shells:** `src/app/methodology/sections/core-sections.tsx`, `src/app/methodology/sections/core-sections-pricing.tsx`, and `src/app/methodology/sections/monitoring-sections.tsx`
+- **Per-section body modules:** `src/app/methodology/sections/core/*.tsx` and `src/app/methodology/sections/monitoring/*.tsx`
 - **Navigation model:** `METHODOLOGY_SECTIONS` + `LongformScrollspyNav`
 - **Mode switching:** `MethodologyModeToggle`; mobile renders the toggle inside the hero guide card, `md+` renders it in the jump rail
 - **Mode persistence contract:** `MethodologyModeToggle` stores `pharos.methodology.mode` in `localStorage` and opens/closes authored `details` blocks via the `data-methodology-details` / `data-methodology-worked-example` attributes emitted by `MethodologyDetails` and `WorkedExample`
@@ -18,7 +19,7 @@
 - **Version metadata:** per-system version modules in `shared/lib/*-version.ts`, mostly built on top of `shared/lib/methodology-version.ts`
 - **Public changelog routes:** pricing pipeline, stability index, scoring, liquidity score, mint/burn flow, yield, depeg, blacklist tracker, and chain health all live under `src/app/methodology/*-changelog/page.tsx`
 - **Changelog wrappers:** most changelog routes use `src/app/methodology/changelog-route-factory.tsx`; the shared shell is `src/components/methodology-changelog-page.tsx`
-- **Scoring changelog special case:** `src/app/methodology/scoring-changelog/page.tsx` uses the shared route factory for metadata + shell wiring while still authoring its nav entries and version cards locally
+- **Scoring changelog special case:** `src/app/methodology/scoring-changelog/page.tsx` still owns the route wiring and local nav metadata, while `src/app/methodology/scoring-changelog/content.tsx` composes the authored version cards from `content-v6.tsx`, `content-v5.tsx`, `content-legacy.tsx`, and `content-summary.tsx`
 - **Cross-app methodology links:** `src/lib/methodology-context.ts` hard-codes methodology anchors and imports shared changelog-path constants from `shared/lib/*-version.ts`; `src/components/methodology-hint.tsx` renders those resolved links for cards/tooltips across the app
 
 ---
@@ -46,7 +47,7 @@ When changing any methodology surface, update the runtime implementation, the de
 
 1. Runtime implementation (source file above).
 2. Detailed methodology doc (`docs/*.md` for that system).
-3. `/methodology` page copy and worked examples in the relevant section module under `src/app/methodology/sections/` (`core-sections.tsx`, `core-sections-pricing.tsx`, or `monitoring-sections.tsx`). Use `src/app/methodology/methodology-sections.tsx` only when changing section composition or order.
+3. `/methodology` page copy and worked examples in the relevant section body module under `src/app/methodology/sections/core/` or `src/app/methodology/sections/monitoring/`. Use `core-sections.tsx`, `core-sections-pricing.tsx`, `monitoring-sections.tsx`, or `src/app/methodology/methodology-sections.tsx` only when changing section composition or order.
 
 If a versioned methodology changes, bump the corresponding version module in `shared/lib/*-version.ts` so badges/changelog links stay consistent.
 
@@ -77,7 +78,7 @@ If the pricing pipeline's source roster or live-price selection semantics change
 For the safety-score changelog specifically, update both:
 
 1. `shared/lib/safety-score-version.ts` for shared route metadata / navigation versions.
-2. `src/app/methodology/scoring-changelog/page.tsx` for the authored long-form version cards and reference tables.
+2. `src/app/methodology/scoring-changelog/content.tsx` plus the split `content-v6.tsx`, `content-v5.tsx`, `content-legacy.tsx`, and `content-summary.tsx` modules for the authored long-form version cards and reference tables.
 
 ---
 

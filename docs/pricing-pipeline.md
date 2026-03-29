@@ -218,7 +218,7 @@ When changing live pricing behavior, update all relevant surfaces in the same ch
 1. runtime implementation in `worker/src/cron/sync-stablecoins/enrich-prices.ts` or related provider modules
 2. this document for canonical pricing behavior
 3. [data-pipeline.md](./data-pipeline.md) if broader sync/integrity semantics changed
-4. `/methodology` pricing copy in `src/app/methodology/sections/core-sections.tsx`
+4. `/methodology` pricing copy in `src/app/methodology/sections/core-sections-pricing.tsx`
 5. `shared/lib/pricing-pipeline-version.ts` and [pricing-pipeline-timeline.md](./pricing-pipeline-timeline.md) if methodology semantics changed
 6. [about-page.md](./about-page.md) and `src/app/about/page.tsx` when externally visible data sources change
 
@@ -238,4 +238,4 @@ When changing live pricing behavior, update all relevant surfaces in the same ch
 | `worker/src/lib/curve-onchain.ts` | Curve on-chain price reads |
 | `worker/src/lib/price-validation.ts` | Peg-aware reasonableness validation |
 | `shared/lib/pricing-pipeline-version.ts` | Methodology version metadata and changelog route |
-| `src/app/methodology/sections/core-sections.tsx` | Public longform pricing-pipeline methodology copy |
+| `src/app/methodology/sections/core-sections-pricing.tsx` | Public longform pricing-pipeline methodology copy |
