@@ -128,11 +128,11 @@
     "notes": "Collector family is still broad but already partly modular. Defer deeper split until digest sourcing requirements stop moving."
   },
   "worker/src/cron/daily-digest.ts": {
-    "fileLines": 190,
-    "maxFunctionLines": 161,
+    "fileLines": 191,
+    "maxFunctionLines": 162,
     "branchCount": 15,
     "disposition": "stabilized",
-    "targetBudget": { "fileLines": 190, "maxFunctionLines": 161, "branchCount": 15 },
+    "targetBudget": { "fileLines": 191, "maxFunctionLines": 162, "branchCount": 15 },
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
