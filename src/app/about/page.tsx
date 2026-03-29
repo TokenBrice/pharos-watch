@@ -11,7 +11,7 @@ import {
   Flame,
   FlaskConical,
   Gauge,
-  Github,
+  GitBranch,
   Globe,
   Layers,
   Network,
@@ -657,7 +657,7 @@ export default function AboutPage() {
             <div className="flex flex-wrap gap-2">
               <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
                 <a href="https://github.com/TokenBrice/stablecoin-dashboard" target="_blank" rel="noopener noreferrer">
-                  <Github className="h-4 w-4" />
+                  <GitBranch className="h-4 w-4" />
                   View on GitHub
                   <ExternalLink className="h-4 w-4" />
                 </a>

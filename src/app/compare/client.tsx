@@ -12,7 +12,7 @@ import { formatCurrency } from "@shared/lib/format";
 import { CoinSelector } from "@/components/coin-selector";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartSkeleton } from "@/components/chart-skeleton";
-import { Share2, Twitter, Download } from "lucide-react";
+import { Share2, X, Download } from "lucide-react";
 import { DIMENSION_ORDER, DIMENSION_SHORT_LABELS } from "@shared/lib/report-cards";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
@@ -250,7 +250,7 @@ export function CompareClient() {
             aria-label="Share comparison on Twitter"
             title="Share on Twitter/X"
           >
-            <Twitter className="h-3.5 w-3.5" />
+            <X className="h-3.5 w-3.5" />
             Tweet
           </button>
           <button
