@@ -1,9 +1,9 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
+import { ScoringChangelogV69Entry } from "./content-v6-9";
 
 export function ScoringChangelogV6Entries() {
   return (
     <>
-            {/* ──────────── v6.8 ──────────── */}
             <VersionCard
               entry={getScoringEntry("6.8")}
               accent="border-l-amber-500"
@@ -29,7 +29,6 @@ export function ScoringChangelogV6Entries() {
               </ul>
             </VersionCard>
 
-            {/* ──────────── v6.6 ──────────── */}
             <VersionCard
               entry={getScoringEntry("6.6")}
               accent="border-l-amber-500"
@@ -60,7 +59,6 @@ export function ScoringChangelogV6Entries() {
               </ul>
             </VersionCard>
 
-            {/* ──────────── v6.5 ──────────── */}
             <VersionCard
               entry={getScoringEntry("6.5")}
               accent="border-l-amber-500"
@@ -95,7 +93,6 @@ export function ScoringChangelogV6Entries() {
               </ul>
             </VersionCard>
 
-            {/* ──────────── v6.4 ──────────── */}
             <VersionCard
               entry={getScoringEntry("6.4")}
               accent="border-l-amber-500"
@@ -125,7 +122,6 @@ export function ScoringChangelogV6Entries() {
               </ul>
             </VersionCard>
 
-            {/* ──────────── v6.3 ──────────── */}
             <VersionCard
               entry={getScoringEntry("6.3")}
               accent="border-l-amber-500"
@@ -154,7 +150,6 @@ export function ScoringChangelogV6Entries() {
               </ul>
             </VersionCard>
 
-            {/* ──────────── v6.2 ──────────── */}
             <VersionCard
               entry={getScoringEntry("6.2")}
               accent="border-l-amber-500"
@@ -186,7 +181,6 @@ export function ScoringChangelogV6Entries() {
               </ul>
             </VersionCard>
 
-            {/* ──────────── v6.1 ──────────── */}
             <VersionCard
               entry={getScoringEntry("6.1")}
               accent="border-l-amber-500"
@@ -211,7 +205,6 @@ export function ScoringChangelogV6Entries() {
               </ul>
             </VersionCard>
 
-            {/* ──────────── v6.0 ──────────── */}
             <VersionCard
               entry={getScoringEntry("6.0")}
               accent="border-l-amber-500"
@@ -243,29 +236,8 @@ export function ScoringChangelogV6Entries() {
               </ul>
             </VersionCard>
 
-            <VersionCard
-              entry={getScoringEntry("6.9")}
-              accent="border-l-amber-500"
-            >
-              <p>
-                Blacklistability attribution now separates mutable-contract risk from collateral-inherited freeze risk.
-              </p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>
-                  Shared blacklistability resolution no longer treats <code className="text-xs bg-muted px-1 py-0.5 rounded">centralized-dependent</code>{" "}
-                  governance as enough evidence for <code className="text-xs bg-muted px-1 py-0.5 rounded">possible</code> on its own.
-                </li>
-                <li>
-                  Reserve-heavy downstream freeze exposure now surfaces as <code className="text-xs bg-muted px-1 py-0.5 rounded">inherited</code>, which is distinct from mutable-contract risk.
-                </li>
-                <li>
-                  Inherited status now requires majority reserve exposure and can use curated reserve-slice <code className="text-xs bg-muted px-1 py-0.5 rounded">blacklistable</code>{" "}
-                  markers in addition to upstream stablecoin links.
-                </li>
-              </ul>
-            </VersionCard>
+            <ScoringChangelogV69Entry />
 
-            {/* ──────────── v6.7 ──────────── */}
             <VersionCard
               entry={getScoringEntry("6.7")}
               accent="border-l-amber-500"
