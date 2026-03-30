@@ -210,6 +210,222 @@ function createStatus(
   };
 }
 
+interface CoverageStatusPreset {
+  kind: string;
+  label: string;
+  tone: CoverageTone;
+  available: boolean;
+  sortRank: number;
+  detail: string;
+  spokenLabel?: string;
+}
+
+function createPresetStatus(preset: CoverageStatusPreset): CoverageStatus {
+  return createStatus(
+    preset.kind,
+    preset.label,
+    preset.tone,
+    preset.available,
+    preset.sortRank,
+    preset.detail,
+    preset.spokenLabel,
+  );
+}
+
+const SAFETY_STATUS_PRESETS = {
+  rated: {
+    kind: "rated",
+    label: "Rated",
+    tone: "emerald",
+    available: true,
+    sortRank: 2,
+    detail: "This asset currently receives an overall Safety Score.",
+  },
+  nr: {
+    kind: "nr",
+    label: "NR",
+    tone: "slate",
+    available: false,
+    sortRank: 0,
+    detail: "No overall Safety Score is currently assigned.",
+    spokenLabel: "Not rated",
+  },
+} satisfies Record<string, CoverageStatusPreset>;
+
+const DEX_STATUS_PRESETS = {
+  primary: {
+    kind: "primary",
+    label: "Primary",
+    tone: "emerald",
+    available: true,
+    sortRank: 4,
+    detail: "Observed with primary DEX-liquidity source coverage.",
+  },
+  mixed: {
+    kind: "mixed",
+    label: "Mixed",
+    tone: "sky",
+    available: true,
+    sortRank: 3,
+    detail: "Observed across a mix of primary and fallback DEX-liquidity sources.",
+  },
+  fallback: {
+    kind: "fallback",
+    label: "Fallback",
+    tone: "amber",
+    available: true,
+    sortRank: 2,
+    detail: "Observed via fallback DEX-liquidity discovery only.",
+  },
+  legacy: {
+    kind: "legacy",
+    label: "Legacy",
+    tone: "violet",
+    available: true,
+    sortRank: 1,
+    detail: "Legacy liquidity history exists, but the row predates the current coverage model.",
+  },
+  unobserved: {
+    kind: "unobserved",
+    label: "NR",
+    tone: "slate",
+    available: false,
+    sortRank: 0,
+    detail: "No observed DEX-liquidity row is currently available.",
+    spokenLabel: "Not rated",
+  },
+  unknown: {
+    kind: "unknown",
+    label: "Unknown",
+    tone: "slate",
+    available: false,
+    sortRank: 0,
+    detail: "DEX-liquidity coverage data is unavailable right now.",
+  },
+} satisfies Record<string, CoverageStatusPreset>;
+
+const FLOW_STATUS_PRESETS = {
+  full: {
+    kind: "full",
+    label: "Full",
+    tone: "emerald",
+    available: true,
+    sortRank: 4,
+    detail: "Ethereum mint/burn tracking has full 30-day baseline coverage.",
+  },
+  "partial-history": {
+    kind: "partial-history",
+    label: "Partial",
+    tone: "sky",
+    available: true,
+    sortRank: 3,
+    detail: "Ethereum mint/burn tracking exists, but the full history window is not yet complete.",
+  },
+  lagging: {
+    kind: "lagging",
+    label: "Lagging",
+    tone: "amber",
+    available: true,
+    sortRank: 2,
+    detail: "Ethereum mint/burn tracking exists, but sync progress is currently lagging.",
+  },
+  bootstrapping: {
+    kind: "bootstrapping",
+    label: "Bootstr.",
+    tone: "violet",
+    available: true,
+    sortRank: 1,
+    detail: "Ethereum mint/burn tracking is configured, but coverage is still bootstrapping.",
+    spokenLabel: "Bootstrapping",
+  },
+  disabled: {
+    kind: "disabled",
+    label: "Disabled",
+    tone: "rose",
+    available: false,
+    sortRank: 0,
+    detail: "Mint/burn tracking is configured in principle but currently disabled.",
+  },
+  none: {
+    kind: "none",
+    label: "—",
+    tone: "slate",
+    available: false,
+    sortRank: 0,
+    detail: "No Ethereum mint/burn flow tracking is currently configured.",
+    spokenLabel: "Not tracked",
+  },
+} satisfies Record<string, CoverageStatusPreset>;
+
+const REDEMPTION_ROUTE_STATUS_PRESETS = {
+  "offchain-issuer": {
+    kind: "offchain-issuer",
+    label: "Issuer",
+    tone: "amber",
+    available: true,
+    sortRank: 2,
+    detail: "Issuer or institutional redemption path is modeled.",
+  },
+  "psm-swap": {
+    kind: "psm-swap",
+    label: "PSM",
+    tone: "sky",
+    available: true,
+    sortRank: 3,
+    detail: "Protocol swap or PSM-style redemption floor is modeled.",
+  },
+  "queue-redeem": {
+    kind: "queue-redeem",
+    label: "Queue",
+    tone: "violet",
+    available: true,
+    sortRank: 1,
+    detail: "Queued protocol redemption path is modeled.",
+  },
+  "collateral-redeem": {
+    kind: "collateral-redeem",
+    label: "Collat.",
+    tone: "sky",
+    available: true,
+    sortRank: 3,
+    detail: "Direct collateral redemption path is modeled.",
+    spokenLabel: "Collateral redeem",
+  },
+  "stablecoin-redeem": {
+    kind: "stablecoin-redeem",
+    label: "Stable",
+    tone: "emerald",
+    available: true,
+    sortRank: 3,
+    detail: "Direct stablecoin redemption path is modeled.",
+    spokenLabel: "Stablecoin redeem",
+  },
+  "basket-redeem": {
+    kind: "basket-redeem",
+    label: "Basket",
+    tone: "sky",
+    available: true,
+    sortRank: 2,
+    detail: "Basket redemption path is modeled.",
+  },
+  modeled: {
+    kind: "modeled",
+    label: "Modeled",
+    tone: "rose",
+    available: true,
+    sortRank: 1,
+    detail: "Redemption-backstop route is modeled.",
+  },
+} satisfies Record<string, CoverageStatusPreset>;
+
+function resolveBooleanCoverageStatus(
+  enabled: boolean,
+  availablePreset: CoverageStatusPreset,
+  missingPreset: CoverageStatusPreset,
+): CoverageStatus {
+  return createPresetStatus(enabled ? availablePreset : missingPreset);
+}
+
 export function resolvePriceCoverage(
   coin: StablecoinMeta,
   hasPegCoverage: boolean,
@@ -259,88 +475,13 @@ export function resolvePriceCoverage(
 export function resolveSafetyCoverage(
   safetyScore: number | null | undefined,
 ): CoverageStatus {
-  if (safetyScore != null) {
-    return createStatus(
-      "rated",
-      "Rated",
-      "emerald",
-      true,
-      2,
-      "This asset currently receives an overall Safety Score.",
-    );
-  }
-
-  return createStatus(
-    "nr",
-    "NR",
-    "slate",
-    false,
-    0,
-    "No overall Safety Score is currently assigned.",
-    "Not rated",
-  );
+  return createPresetStatus(safetyScore != null ? SAFETY_STATUS_PRESETS.rated : SAFETY_STATUS_PRESETS.nr);
 }
 
 export function resolveDexCoverage(
   coverageClass: LiquidityCoverageClass | null | undefined,
 ): CoverageStatus {
-  switch (coverageClass) {
-    case "primary":
-      return createStatus(
-        "primary",
-        "Primary",
-        "emerald",
-        true,
-        4,
-        "Observed with primary DEX-liquidity source coverage.",
-      );
-    case "mixed":
-      return createStatus(
-        "mixed",
-        "Mixed",
-        "sky",
-        true,
-        3,
-        "Observed across a mix of primary and fallback DEX-liquidity sources.",
-      );
-    case "fallback":
-      return createStatus(
-        "fallback",
-        "Fallback",
-        "amber",
-        true,
-        2,
-        "Observed via fallback DEX-liquidity discovery only.",
-      );
-    case "legacy":
-      return createStatus(
-        "legacy",
-        "Legacy",
-        "violet",
-        true,
-        1,
-        "Legacy liquidity history exists, but the row predates the current coverage model.",
-      );
-    case "unobserved":
-      return createStatus(
-        "unobserved",
-        "NR",
-        "slate",
-        false,
-        0,
-        "No observed DEX-liquidity row is currently available.",
-        "Not rated",
-      );
-    default:
-      return createStatus(
-        "unknown",
-        "Unknown",
-        "slate",
-        false,
-        0,
-        "DEX-liquidity coverage data is unavailable right now.",
-      );
-  }
+  return createPresetStatus(DEX_STATUS_PRESETS[coverageClass ?? "unknown"] ?? DEX_STATUS_PRESETS.unknown);
 }
 
 export function resolveReserveCoverage(coin: StablecoinMeta): CoverageStatus {
@@ -392,25 +533,25 @@ export function resolveReserveCoverage(coin: StablecoinMeta): CoverageStatus {
 export function resolveYieldCoverage(
   hasYieldCoverage: boolean,
 ): CoverageStatus {
-  if (hasYieldCoverage) {
-    return createStatus(
-      "ranked",
-      "Ranked",
-      "emerald",
-      true,
-      1,
-      "This asset currently appears in the Yield Intelligence rankings.",
-    );
-  }
-
-  return createStatus(
-    "none",
-    "—",
-    "slate",
-    false,
-    0,
-    "This asset is not currently present in the Yield Intelligence rankings.",
-    "Not ranked",
+  return resolveBooleanCoverageStatus(
+    hasYieldCoverage,
+    {
+      kind: "ranked",
+      label: "Ranked",
+      tone: "emerald",
+      available: true,
+      sortRank: 1,
+      detail: "This asset currently appears in the Yield Intelligence rankings.",
+    },
+    {
+      kind: "none",
+      label: "—",
+      tone: "slate",
+      available: false,
+      sortRank: 0,
+      detail: "This asset is not currently present in the Yield Intelligence rankings.",
+      spokenLabel: "Not ranked",
+    },
   );
 }
 
@@ -453,185 +594,64 @@ export function resolveRedemptionCoverage(
     );
   }
 
-  switch (entry.routeFamily) {
-    case "offchain-issuer":
-      return createStatus(
-        "offchain-issuer",
-        "Issuer",
-        "amber",
-        true,
-        2,
-        "Issuer or institutional redemption path is modeled.",
-      );
-    case "psm-swap":
-      return createStatus(
-        "psm-swap",
-        "PSM",
-        "sky",
-        true,
-        3,
-        "Protocol swap or PSM-style redemption floor is modeled.",
-      );
-    case "queue-redeem":
-      return createStatus(
-        "queue-redeem",
-        "Queue",
-        "violet",
-        true,
-        1,
-        "Queued protocol redemption path is modeled.",
-      );
-    case "collateral-redeem":
-      return createStatus(
-        "collateral-redeem",
-        "Collat.",
-        "sky",
-        true,
-        3,
-        "Direct collateral redemption path is modeled.",
-        "Collateral redeem",
-      );
-    case "stablecoin-redeem":
-      return createStatus(
-        "stablecoin-redeem",
-        "Stable",
-        "emerald",
-        true,
-        3,
-        "Direct stablecoin redemption path is modeled.",
-        "Stablecoin redeem",
-      );
-    case "basket-redeem":
-      return createStatus(
-        "basket-redeem",
-        "Basket",
-        "sky",
-        true,
-        2,
-        "Basket redemption path is modeled.",
-      );
-    default:
-      return createStatus(
-        "modeled",
-        "Modeled",
-        "rose",
-        true,
-        1,
-        "Redemption-backstop route is modeled.",
-      );
-  }
+  return createPresetStatus(
+    REDEMPTION_ROUTE_STATUS_PRESETS[entry.routeFamily] ?? REDEMPTION_ROUTE_STATUS_PRESETS.modeled,
+  );
 }
 
 export function resolveFlowCoverage(
   flowCoverageStatus: MintBurnCoverageStatus | null | undefined,
 ): CoverageStatus {
-  switch (flowCoverageStatus) {
-    case "full":
-      return createStatus(
-        "full",
-        "Full",
-        "emerald",
-        true,
-        4,
-        "Ethereum mint/burn tracking has full 30-day baseline coverage.",
-      );
-    case "partial-history":
-      return createStatus(
-        "partial-history",
-        "Partial",
-        "sky",
-        true,
-        3,
-        "Ethereum mint/burn tracking exists, but the full history window is not yet complete.",
-      );
-    case "lagging":
-      return createStatus(
-        "lagging",
-        "Lagging",
-        "amber",
-        true,
-        2,
-        "Ethereum mint/burn tracking exists, but sync progress is currently lagging.",
-      );
-    case "bootstrapping":
-      return createStatus(
-        "bootstrapping",
-        "Bootstr.",
-        "violet",
-        true,
-        1,
-        "Ethereum mint/burn tracking is configured, but coverage is still bootstrapping.",
-        "Bootstrapping",
-      );
-    case "disabled":
-      return createStatus(
-        "disabled",
-        "Disabled",
-        "rose",
-        false,
-        0,
-        "Mint/burn tracking is configured in principle but currently disabled.",
-      );
-    default:
-      return createStatus(
-        "none",
-        "—",
-        "slate",
-        false,
-        0,
-        "No Ethereum mint/burn flow tracking is currently configured.",
-        "Not tracked",
-      );
-  }
+  return createPresetStatus(FLOW_STATUS_PRESETS[flowCoverageStatus ?? "none"] ?? FLOW_STATUS_PRESETS.none);
 }
 
 export function resolveBlacklistCoverage(
   coin: StablecoinMeta,
 ): CoverageStatus {
-  if (BLACKLIST_SYMBOLS.has(coin.symbol)) {
-    return createStatus(
-      "tracked",
-      "Tracked",
-      "amber",
-      true,
-      1,
-      "Freeze / blacklist events are tracked for this issuer contract family.",
-    );
-  }
-
-  return createStatus(
-    "none",
-    "—",
-    "slate",
-    false,
-    0,
-    "No dedicated blacklist / freeze tracker coverage is configured for this asset.",
-    "Not tracked",
+  return resolveBooleanCoverageStatus(
+    BLACKLIST_SYMBOLS.has(coin.symbol),
+    {
+      kind: "tracked",
+      label: "Tracked",
+      tone: "amber",
+      available: true,
+      sortRank: 1,
+      detail: "Freeze / blacklist events are tracked for this issuer contract family.",
+    },
+    {
+      kind: "none",
+      label: "—",
+      tone: "slate",
+      available: false,
+      sortRank: 0,
+      detail: "No dedicated blacklist / freeze tracker coverage is configured for this asset.",
+      spokenLabel: "Not tracked",
+    },
   );
 }
 
 export function resolveDependencyCoverage(
   hasDependencyCoverage: boolean,
 ): CoverageStatus {
-  if (hasDependencyCoverage) {
-    return createStatus(
-      "node",
-      "Node",
-      "amber",
-      true,
-      1,
-      "This asset participates in the report-card dependency graph.",
-    );
-  }
-
-  return createStatus(
-    "none",
-    "—",
-    "slate",
-    false,
-    0,
-    "This asset currently has no dependency-graph edge coverage.",
-    "Not included",
+  return resolveBooleanCoverageStatus(
+    hasDependencyCoverage,
+    {
+      kind: "node",
+      label: "Node",
+      tone: "amber",
+      available: true,
+      sortRank: 1,
+      detail: "This asset participates in the report-card dependency graph.",
+    },
+    {
+      kind: "none",
+      label: "—",
+      tone: "slate",
+      available: false,
+      sortRank: 0,
+      detail: "This asset currently has no dependency-graph edge coverage.",
+      spokenLabel: "Not included",
+    },
   );
 }
 

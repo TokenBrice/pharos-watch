@@ -18,15 +18,13 @@ import { FilterBar } from "@/components/filter-bar";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { UpcomingStablecoinsSection } from "@/components/upcoming-stablecoins-section";
-import { PEG_CURRENCY_COUNT, getDewsRiskLevel, isThreatBand } from "@shared/lib/classification";
+import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { ACTIVE_PEGS, PEG_LABELS_SHORT, PEG_SLUGS, pegCoinCount } from "@/lib/peg-landing";
-import { derivePegRates } from "@shared/lib/peg-rates";
 import { FILTER_TAG_LABELS } from "@shared/types";
-import { buildTrackedIdSet, filterStablecoins } from "@/components/stablecoin-table-logic";
-import { buildPegSummaryCoinMap, buildReportCardMap } from "@/lib/stablecoin-lookups";
 import { openCommandPalette } from "@/lib/command-palette";
+import { buildHomepageViewModel } from "@/components/homepage-client-view-model";
 
 const CEFI_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized").length;
 const CEFI_DEP_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").length;
@@ -324,25 +322,21 @@ export function HomepageClient() {
   } = useReportCards();
   const { data: stressData } = useStressSignals();
 
-  const dewsRiskLevel = useMemo(
-    () => getDewsRiskLevel(
-      stressData?.signals
-        ? Object.values(stressData.signals).map((s) => s.band).filter(isThreatBand)
-        : [],
-    ),
-    [stressData],
-  );
-  const pegScores = useMemo(() => buildPegSummaryCoinMap(pegSummaryData?.coins), [pegSummaryData?.coins]);
-  const reportCardMap = useMemo(() => buildReportCardMap(reportCardsData?.cards), [reportCardsData?.cards]);
-  const { rates: pegRates } = useMemo(
-    () => derivePegRates(data?.peggedAssets ?? [], TRACKED_META_BY_ID, data?.fxFallbackRates),
-    [data],
-  );
   const filters = useHomepageFilters();
-  const filteredRowCount = useMemo(() => {
-    const trackedIds = buildTrackedIdSet(filters.activeFilters, reportCardMap);
-    return filterStablecoins(data?.peggedAssets, trackedIds, filters.searchQuery).length;
-  }, [data?.peggedAssets, filters.activeFilters, filters.searchQuery, reportCardMap]);
+  const { dewsRiskLevel, filteredRowCount, pegRates, pegScores, reportCardMap } = useMemo(
+    () => buildHomepageViewModel({
+      stablecoinsData: data,
+      pegSummaryData,
+      reportCardsData,
+      stressData,
+      dexLiquidity,
+      filters: {
+        activeFilters: filters.activeFilters,
+        searchQuery: filters.searchQuery,
+      },
+    }),
+    [data, dexLiquidity, filters.activeFilters, filters.searchQuery, pegSummaryData, reportCardsData, stressData],
+  );
   const globalError = pricesError ?? pegError ?? liquidityError ?? reportCardsError;
   const handleRetry = useCallback(() => {
     void Promise.allSettled([refetchPrices(), refetchPeg(), refetchLiquidity(), refetchReportCards()]);

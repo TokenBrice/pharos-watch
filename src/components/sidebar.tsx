@@ -4,14 +4,13 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PharosLogo } from "@/components/pharos-logo";
-import { useTheme } from "next-themes";
 import { ChevronsLeft, ChevronsRight, Moon, Search, Sun } from "lucide-react";
 import { NAV_GROUPS, BOTTOM_NAV_ITEMS, DASHBOARD_NAV_ITEM } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
-import { trackEvent } from "@/lib/analytics";
 import { getWindowStorage, safeStorageGetItem, safeStorageSetItem } from "@/lib/browser-storage";
 import { openCommandPalette } from "@/lib/command-palette";
 import { isRouteActive } from "@/lib/navigation";
+import { useThemeToggle } from "@/hooks/use-theme-toggle";
 
 const STORAGE_KEY = "pharos-sidebar-expanded";
 const HOVER_DELAY = 200;
@@ -106,21 +105,11 @@ function SidebarNavItem({ item, expanded, isActive }: { item: NavItem; expanded:
 }
 
 function ThemeSidebarItem({ expanded }: { expanded: boolean }) {
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => setMounted(true), []);
-
-  const isDark = mounted ? theme === "dark" : false;
-  const label = isDark ? "Light mode" : "Dark mode";
+  const { isDark, label, toggleTheme } = useThemeToggle();
 
   return (
     <button
-      onClick={() => {
-        const next = isDark ? "light" : "dark";
-        trackEvent("theme_toggled", { theme: next });
-        setTheme(next);
-      }}
+      onClick={toggleTheme}
       title={expanded ? undefined : label}
       aria-label={label}
       className={`pharos-focus-ring flex items-center gap-3 rounded-md border-l-[3px] border-l-transparent text-muted-foreground transition-[background-color,border-color,color,box-shadow] duration-200 hover:border-l-border/80 hover:bg-muted/45 hover:text-foreground ${

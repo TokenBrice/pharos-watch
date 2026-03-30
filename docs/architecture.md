@@ -6,7 +6,7 @@ Curated architecture-significant routes. Start with the [Documentation Index](./
 
 ## Route Definition Model
 
-Static route metadata is declared once in `shared/lib/api-endpoints.ts`. That shared descriptor list now carries path, method, admin/cache/probe/status-action metadata, shared dynamic-admin path matching, plus the worker dependency-hydration hints needed for static routes. `worker/src/route-registry.ts` stays as the binding layer from shared endpoint keys to worker handlers, while `worker/src/router.ts` stays focused on method validation, generic dispatch, and delegating dynamic-match resolution. The route-context dependency hydrators now live behind an exhaustive keyed map in `worker/src/handlers/http/context.ts`, so adding a new `EndpointDependency` without wiring hydration fails at compile time instead of silently defaulting.
+Static route metadata is declared once in `shared/lib/api-endpoints.ts`. That shared descriptor list carries path, method, admin/cache/probe/status-action metadata, shared dynamic-admin path matching, plus the worker dependency-hydration hints needed for static routes. `worker/src/route-registry.ts` now binds shared endpoint keys directly to handlers through a single `STATIC_ROUTES` definition list, while `worker/src/router.ts` stays focused on method validation, generic dispatch, and dynamic-match resolution. Route-context dependency hydration remains exhaustive and keyed by `EndpointDependency`, so adding a new dependency without wiring hydration still fails at compile time instead of silently defaulting.
 
 Cron trigger metadata follows the same single-source pattern. `shared/lib/cron-jobs.ts` remains the schedule authority, while `shared/lib/scheduled-runner-registry.ts` binds each cron expression to a symbolic scheduled-runner key that both the worker scheduler and `scripts/check-cron-schedule-sync.ts` consume. That keeps `worker/wrangler.toml`, shared cron metadata, and scheduled-runner dispatch in lockstep.
 
@@ -430,7 +430,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
 ├── migrations/                   # D1 baseline + post-squash SQL migrations plus MANIFEST.md
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
-    ├── route-registry.ts         # Static route binding registry keyed by shared endpoint metadata + dependency descriptors
+    ├── route-registry.ts         # Single worker-side static route definition list keyed by shared endpoint metadata
     ├── handlers/
     │   ├── http.ts               # HTTP orchestration: preflight, gates, edge cache, route-context build, router dispatch
     │   ├── http/                 # Focused HTTP helper modules
@@ -445,7 +445,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── sync-stablecoins.ts   # DefiLlama + CoinGecko gold → D1 (orchestrator with explicit stage boundaries)
     │   ├── sync-stablecoins/
     │   │   ├── intake.ts         # Intake/fallback gate: DL fetch, structural validation, canonical remap, supplemental merge
-    │   │   ├── enrich-prices.ts  # Dual-primary price validation + 4-pass enrichment pipeline orchestration
+    │   │   ├── enrich-prices.ts  # Dual-primary price validation + manifest-driven fallback-pass orchestration
     │   │   ├── enrich-prices-primary.ts # Primary-source fetch + validation passes used by enrichment
     │   │   ├── enrich-prices-passes.ts # CoinMarketCap, Jupiter, and DexScreener fallback passes
     │   │   ├── enrich-prices-shared.ts # Shared enrichment types/helpers and request guards

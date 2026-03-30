@@ -1,7 +1,7 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
-import { buildAdminApiPath, buildAdminFetchInit, getAdminQueryScope, type AdminAccess } from "@/lib/admin-access";
+import { buildAdminApiPath, buildAdminFetchInit, type AdminAccess } from "@/lib/admin-access";
 import { buildRequestUrl } from "@/lib/api";
 import { getProbePaths } from "@shared/lib/api-endpoints";
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
@@ -33,6 +33,20 @@ export const ENDPOINT_PROBE_CONCURRENCY = 6;
 
 function getProbeTimeoutMs(path: string): number {
   return ADMIN_PATHS.has(path) ? ADMIN_PROBE_TIMEOUT_MS : PUBLIC_PROBE_TIMEOUT_MS;
+}
+
+function buildProbeRequest(path: string, adminAccess?: AdminAccess): {
+  path: string;
+  headers?: HeadersInit;
+} {
+  if (!ADMIN_PATHS.has(path)) {
+    return { path };
+  }
+
+  return {
+    path: buildAdminApiPath(path, adminAccess!),
+    headers: buildAdminFetchInit().headers,
+  };
 }
 
 function getProbeErrorMessage(err: unknown, signal: AbortSignal): string {
@@ -158,15 +172,10 @@ async function probeEndpoint(
   const start = performance.now();
 
   try {
-    const requestPath = ADMIN_PATHS.has(path)
-      ? buildAdminApiPath(path, adminAccess!)
-      : path;
-    const requestInit = ADMIN_PATHS.has(path)
-      ? buildAdminFetchInit()
-      : undefined;
-    const res = await fetch(buildRequestUrl(requestPath), {
+    const request = buildProbeRequest(path, adminAccess);
+    const res = await fetch(buildRequestUrl(request.path), {
       signal: controller.signal,
-      headers: requestInit?.headers,
+      headers: request.headers,
     });
     const latencyMs = Math.round(performance.now() - start);
     const parser = SEMANTIC_PROBE_PARSERS.get(path);
@@ -229,7 +238,7 @@ export function useEndpointProbes(
   adminAccess: AdminAccess,
 ): UseQueryResult<EndpointProbeResult[], Error> {
   return usePollingQuery(
-    ["endpoint-probes", getAdminQueryScope()],
+    ["endpoint-probes", "ops-proxy"],
     () => collectEndpointProbes(ALL_ENDPOINTS, adminAccess),
     CRON_1MIN,
     { enabled: true, retry: 0 },

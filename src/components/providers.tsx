@@ -1,12 +1,13 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ThemeProvider, useTheme } from "next-themes";
+import { ThemeProvider } from "next-themes";
 import { useState, useCallback } from "react";
 import { CommandPalette } from "./command-palette";
 import { ToastContainer } from "./toast-container";
 import { KeyboardShortcuts, useGlobalShortcuts } from "./keyboard-shortcuts";
 import { useToast } from "@/hooks/use-toast";
+import { useThemeToggle } from "@/hooks/use-theme-toggle";
 import { openCommandPalette } from "@/lib/command-palette";
 
 // Create a context for toast functionality
@@ -26,13 +27,8 @@ export function useToastContext() {
 
 // Inner component that has access to theme
 function AppProviders({ children }: { children: React.ReactNode }) {
-  const { theme, setTheme } = useTheme();
   const { toasts, addToast, removeToast } = useToast();
-
-  const handleToggleTheme = useCallback(() => {
-    setTheme(theme === "dark" ? "light" : "dark");
-    addToast(`Switched to ${theme === "dark" ? "light" : "dark"} mode`, "info");
-  }, [theme, setTheme, addToast]);
+  const { toggleTheme } = useThemeToggle({ toast: addToast });
 
   const handleFocusSearch = useCallback(() => {
     openCommandPalette();
@@ -44,7 +40,7 @@ function AppProviders({ children }: { children: React.ReactNode }) {
   }, []);
 
   useGlobalShortcuts({
-    onToggleTheme: handleToggleTheme,
+    onToggleTheme: toggleTheme,
     onFocusSearch: handleFocusSearch,
     onFocusTable: handleFocusTable,
   });

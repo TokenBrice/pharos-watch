@@ -2,10 +2,9 @@
 
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { StatusHistoryResponse } from "@shared/types";
-import { buildAdminApiPath, buildAdminFetchInit, getAdminQueryScope, type AdminAccess } from "@/lib/admin-access";
-import { apiFetch } from "@/lib/api";
-import { usePollingQuery } from "./use-api-query";
+import type { AdminAccess } from "@/lib/admin-access";
 import { CRON_1MIN } from "@/lib/cron-intervals";
+import { useAdminPollingQuery } from "./use-admin-polling-query";
 
 export type StatusHistoryWindow = "6h" | "24h" | "7d" | "30d";
 
@@ -30,14 +29,10 @@ export function useStatusHistory(
   adminAccess: AdminAccess,
   window: StatusHistoryWindow,
 ): UseQueryResult<StatusHistoryResponse, Error> {
-  return usePollingQuery<StatusHistoryResponse>(
-    ["status-history", getAdminQueryScope(), window],
-    () => apiFetch<StatusHistoryResponse>(
-      buildAdminApiPath(buildStatusHistoryPath(window), adminAccess),
-      undefined,
-      buildAdminFetchInit(),
-    ),
+  return useAdminPollingQuery<StatusHistoryResponse>(
+    adminAccess,
+    ["status-history", window],
+    buildStatusHistoryPath(window),
     CRON_1MIN,
-    { enabled: true, retry: 0 },
   );
 }

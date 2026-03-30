@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
 import Image from "next/image";
 import { Moon, Sun, FileText, Coins, Clock, Trash2, Search } from "lucide-react";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
@@ -12,6 +11,7 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useCommandPaletteHistory } from "@/hooks/use-command-palette-history";
 import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/command-palette";
+import { useThemeToggle } from "@/hooks/use-theme-toggle";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,7 +48,7 @@ export function CommandPalette() {
   const listRef = useRef<HTMLDivElement>(null);
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
+  const { isDark, toggleTheme } = useThemeToggle();
   const { data: logos } = useLogos();
   const { history, addToHistory, clearHistory } = useCommandPaletteHistory();
 
@@ -193,7 +193,6 @@ export function CommandPalette() {
       fuzzyMatch(q, "light") ||
       fuzzyMatch(q, "theme")
     ) {
-      const isDark = theme === "dark";
       items.push({
         id: "action-theme",
         label: isDark ? "Switch to light mode" : "Switch to dark mode",
@@ -205,14 +204,14 @@ export function CommandPalette() {
           <Moon className="h-4 w-4" />
         ),
         onSelect: () => {
-          setTheme(isDark ? "light" : "dark");
+          toggleTheme();
           closePalette();
         },
       });
     }
 
     return items;
-  }, [query, logos, theme, setTheme, router, closePalette, history, addToHistory]);
+  }, [query, logos, isDark, toggleTheme, router, closePalette, history, addToHistory]);
 
   // ── Grouped results for rendering ──────────────────────────────────────
 

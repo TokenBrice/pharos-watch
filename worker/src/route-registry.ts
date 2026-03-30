@@ -121,8 +121,6 @@ export type FullRouteContext = RouteContext &
 
 export type StaticRouteHandler = (context: FullRouteContext) => Promise<Response>;
 
-type StaticRouteHandlerMap = Partial<Record<EndpointKey, StaticRouteHandler>>;
-
 export interface StaticRouteDefinition {
   endpoint: EndpointDefinition;
   handler: StaticRouteHandler;
@@ -140,98 +138,126 @@ export interface RouteMatch {
   handle: (routeCtx: FullRouteContext) => Promise<Response>;
 }
 
-const STATIC_ROUTE_HANDLERS_BY_KEY = {
-  stablecoins: ({ db }) => handleStablecoins(db),
-  "stablecoin-detail-canary": ({ db, execCtx, coingeckoApiKey }) =>
-    handleStablecoinDetail(db, "usdt-tether", execCtx, coingeckoApiKey),
-  "stablecoin-summary-canary": ({ db }) => handleStablecoinSummary(db, "usdt-tether"),
-  "stablecoin-reserves-canary": ({ db }) => handleStablecoinReserves(db, "iusd-infinifi"),
-  "stablecoin-charts": ({ db }) => handleStablecoinCharts(db),
-  blacklist: ({ db, url }) => handleBlacklist(db, url),
-  "blacklist-summary": ({ db }) => handleBlacklistSummary(db),
-  "depeg-events": ({ db, url }) => handleDepegEvents(db, url),
-  "backfill-depegs": makeIdempotentAdminRoute("backfill-depegs", "backfill-depegs", ({ db, url, trustedAdmin, request }) =>
-    handleBackfillDepegs(db, url, trustedAdmin, request),
-  ),
-  "backfill-supply-history": makeIdempotentAdminRoute("backfill-supply-history", "backfill-supply-history", ({ db, url, trustedAdmin, request, coingeckoApiKey }) =>
-    handleBackfillSupplyHistory(db, url, trustedAdmin, request, coingeckoApiKey),
-  ),
-  "peg-summary": ({ db }) => handlePegSummary(db),
-  health: ({ db, mintBurnFreshnessConfig }) => handleHealth(db, { mintBurnConfig: mintBurnFreshnessConfig }),
-  "usds-status": ({ db }) => handleUsdsStatus(db),
-  "bluechip-ratings": ({ db }) => handleBluechipRatings(db),
-  "dex-liquidity": ({ db }) => handleDexLiquidity(db),
-  "dex-liquidity-history": ({ db, url }) => handleDexLiquidityHistory(db, url),
-  "supply-history": ({ db, url }) => handleSupplyHistory(db, url),
-  status: ({ db, trustedAdmin, request, coingeckoApiKey }) => handleStatus(db, trustedAdmin, request, coingeckoApiKey),
-  "status-history": ({ db, trustedAdmin, request }) => handleStatusHistory(db, trustedAdmin, request),
-  "daily-digest": ({ db }) => handleDailyDigest(db),
-  "digest-archive": ({ db }) => handleDigestArchive(db),
-  "digest-snapshot": ({ db, url }) => handleDigestSnapshot(db, url),
-  "stability-index": ({ db, url }) => handleStabilityIndex(db, url),
-  "backfill-stability-index": makeIdempotentAdminRoute("backfill-stability-index", "backfill-stability-index", ({ db, trustedAdmin, request }) =>
-    handleBackfillStabilityIndex(db, trustedAdmin, request),
-  ),
-  "audit-depeg-history": makeConditionalIdempotentAdminRoute(
+function requireEndpoint(key: EndpointKey): EndpointDefinition {
+  const endpoint = getEndpointDefinitionByKey(key);
+  if (!endpoint) {
+    throw new Error(`Router endpoint key "${key}" must be declared in ENDPOINT_DEFINITIONS`);
+  }
+  return endpoint;
+}
+
+function defineStaticRoute(key: EndpointKey, handler: StaticRouteHandler): StaticRouteDefinition {
+  return {
+    endpoint: requireEndpoint(key),
+    handler,
+  };
+}
+
+const STATIC_ROUTES = [
+  defineStaticRoute("stablecoins", ({ db }) => handleStablecoins(db)),
+  defineStaticRoute("stablecoin-detail-canary", ({ db, execCtx, coingeckoApiKey }) =>
+    handleStablecoinDetail(db, "usdt-tether", execCtx, coingeckoApiKey)),
+  defineStaticRoute("stablecoin-summary-canary", ({ db }) => handleStablecoinSummary(db, "usdt-tether")),
+  defineStaticRoute("stablecoin-reserves-canary", ({ db }) => handleStablecoinReserves(db, "iusd-infinifi")),
+  defineStaticRoute("stablecoin-charts", ({ db }) => handleStablecoinCharts(db)),
+  defineStaticRoute("blacklist", ({ db, url }) => handleBlacklist(db, url)),
+  defineStaticRoute("blacklist-summary", ({ db }) => handleBlacklistSummary(db)),
+  defineStaticRoute("depeg-events", ({ db, url }) => handleDepegEvents(db, url)),
+  defineStaticRoute("backfill-depegs", makeIdempotentAdminRoute(
+    "backfill-depegs",
+    "backfill-depegs",
+    ({ db, url, trustedAdmin, request }) => handleBackfillDepegs(db, url, trustedAdmin, request),
+  )),
+  defineStaticRoute("backfill-supply-history", makeIdempotentAdminRoute(
+    "backfill-supply-history",
+    "backfill-supply-history",
+    ({ db, url, trustedAdmin, request, coingeckoApiKey }) =>
+      handleBackfillSupplyHistory(db, url, trustedAdmin, request, coingeckoApiKey),
+  )),
+  defineStaticRoute("peg-summary", ({ db }) => handlePegSummary(db)),
+  defineStaticRoute("health", ({ db, mintBurnFreshnessConfig }) => handleHealth(db, { mintBurnConfig: mintBurnFreshnessConfig })),
+  defineStaticRoute("usds-status", ({ db }) => handleUsdsStatus(db)),
+  defineStaticRoute("bluechip-ratings", ({ db }) => handleBluechipRatings(db)),
+  defineStaticRoute("dex-liquidity", ({ db }) => handleDexLiquidity(db)),
+  defineStaticRoute("dex-liquidity-history", ({ db, url }) => handleDexLiquidityHistory(db, url)),
+  defineStaticRoute("supply-history", ({ db, url }) => handleSupplyHistory(db, url)),
+  defineStaticRoute("status", ({ db, trustedAdmin, request, coingeckoApiKey }) =>
+    handleStatus(db, trustedAdmin, request, coingeckoApiKey)),
+  defineStaticRoute("status-history", ({ db, trustedAdmin, request }) => handleStatusHistory(db, trustedAdmin, request)),
+  defineStaticRoute("daily-digest", ({ db }) => handleDailyDigest(db)),
+  defineStaticRoute("digest-archive", ({ db }) => handleDigestArchive(db)),
+  defineStaticRoute("digest-snapshot", ({ db, url }) => handleDigestSnapshot(db, url)),
+  defineStaticRoute("stability-index", ({ db, url }) => handleStabilityIndex(db, url)),
+  defineStaticRoute("backfill-stability-index", makeIdempotentAdminRoute(
+    "backfill-stability-index",
+    "backfill-stability-index",
+    ({ db, trustedAdmin, request }) => handleBackfillStabilityIndex(db, trustedAdmin, request),
+  )),
+  defineStaticRoute("audit-depeg-history", makeConditionalIdempotentAdminRoute(
     "audit-depeg-history",
     "audit-depeg-history",
     ({ request }) => request.method === "POST",
     ({ db, url, trustedAdmin, request }) => handleAuditDepegHistory(db, url, trustedAdmin, request),
-  ),
-  "report-cards": ({ db }) => handleReportCards(db),
-  "redemption-backstops": ({ db }) => handleRedemptionBackstops(db),
-  "yield-rankings": ({ db }) => handleYieldRankings(db),
-  "yield-history": ({ db, url }) => handleYieldHistory(db, url),
-  "safety-score-history": ({ db, url }) => handleSafetyScoreHistory(db, url),
-  "mint-burn-flows": ({ db, url }) => handleMintBurnFlows(db, url),
-  "mint-burn-events": ({ db, url }) => handleMintBurnEvents(db, url),
-  "backfill-cg-prices": makeIdempotentAdminRoute("backfill-cg-prices", "backfill-cg-prices", ({ db, url, trustedAdmin, request, coingeckoApiKey }) =>
-    handleBackfillCgPrices(db, url, trustedAdmin, request, coingeckoApiKey),
-  ),
-  "backfill-mint-burn-prices": makeIdempotentAdminRoute("backfill-mint-burn-prices", "backfill-mint-burn-prices", ({ db, url, trustedAdmin, request }) =>
-    handleBackfillMintBurnPrices(db, url, trustedAdmin, request),
-  ),
-  "backfill-mint-burn": makeIdempotentAdminRoute("backfill-mint-burn", "backfill-mint-burn", ({ db, url, trustedAdmin, request, alchemyApiKey }) =>
-    handleBackfillMintBurn(db, url, trustedAdmin, request, alchemyApiKey ?? null),
-  ),
-  "reclassify-atomic-roundtrips": makeIdempotentAdminRoute(
+  )),
+  defineStaticRoute("report-cards", ({ db }) => handleReportCards(db)),
+  defineStaticRoute("redemption-backstops", ({ db }) => handleRedemptionBackstops(db)),
+  defineStaticRoute("yield-rankings", ({ db }) => handleYieldRankings(db)),
+  defineStaticRoute("yield-history", ({ db, url }) => handleYieldHistory(db, url)),
+  defineStaticRoute("safety-score-history", ({ db, url }) => handleSafetyScoreHistory(db, url)),
+  defineStaticRoute("mint-burn-flows", ({ db, url }) => handleMintBurnFlows(db, url)),
+  defineStaticRoute("mint-burn-events", ({ db, url }) => handleMintBurnEvents(db, url)),
+  defineStaticRoute("backfill-cg-prices", makeIdempotentAdminRoute(
+    "backfill-cg-prices",
+    "backfill-cg-prices",
+    ({ db, url, trustedAdmin, request, coingeckoApiKey }) =>
+      handleBackfillCgPrices(db, url, trustedAdmin, request, coingeckoApiKey),
+  )),
+  defineStaticRoute("backfill-mint-burn-prices", makeIdempotentAdminRoute(
+    "backfill-mint-burn-prices",
+    "backfill-mint-burn-prices",
+    ({ db, url, trustedAdmin, request }) => handleBackfillMintBurnPrices(db, url, trustedAdmin, request),
+  )),
+  defineStaticRoute("backfill-mint-burn", makeIdempotentAdminRoute(
+    "backfill-mint-burn",
+    "backfill-mint-burn",
+    ({ db, url, trustedAdmin, request, alchemyApiKey }) =>
+      handleBackfillMintBurn(db, url, trustedAdmin, request, alchemyApiKey ?? null),
+  )),
+  defineStaticRoute("reclassify-atomic-roundtrips", makeIdempotentAdminRoute(
     "reclassify-atomic-roundtrips",
     "reclassify-atomic-roundtrips",
-    ({ db, url, trustedAdmin, request }) =>
-      handleReclassifyAtomicRoundtrips(db, url, trustedAdmin, request),
-  ),
-  "stress-signals": ({ db, url }) => handleStressSignals(db, url),
-  chains: ({ db }) => handleChains(db),
-  "non-usd-share": ({ db, url }) => handleNonUsdShare(db, url),
-  "backfill-dews": ({ db, url, trustedAdmin, request }) => handleBackfillDEWS(db, url, trustedAdmin, request),
-  feedback: ({ db, request, feedbackEnv }) => handleFeedback(db, request, feedbackEnv ?? {}),
-  "telegram-webhook": ({ db, request, telegramWebhookSecret, telegramBotToken }) =>
-    handleTelegramWebhook(db, request, telegramWebhookSecret, telegramBotToken),
-  "trigger-digest": handleTriggerDigest,
-  "reset-blacklist-sync": handleResetBlacklistSync,
-  "debug-sync-state": handleDebugSyncState,
-  "remediate-blacklist-amount-gaps": makeIdempotentAdminRoute(
+    ({ db, url, trustedAdmin, request }) => handleReclassifyAtomicRoundtrips(db, url, trustedAdmin, request),
+  )),
+  defineStaticRoute("stress-signals", ({ db, url }) => handleStressSignals(db, url)),
+  defineStaticRoute("chains", ({ db }) => handleChains(db)),
+  defineStaticRoute("non-usd-share", ({ db, url }) => handleNonUsdShare(db, url)),
+  defineStaticRoute("backfill-dews", ({ db, url, trustedAdmin, request }) => handleBackfillDEWS(db, url, trustedAdmin, request)),
+  defineStaticRoute("feedback", ({ db, request, feedbackEnv }) => handleFeedback(db, request, feedbackEnv ?? {})),
+  defineStaticRoute("telegram-webhook", ({ db, request, telegramWebhookSecret, telegramBotToken }) =>
+    handleTelegramWebhook(db, request, telegramWebhookSecret, telegramBotToken)),
+  defineStaticRoute("trigger-digest", handleTriggerDigest),
+  defineStaticRoute("reset-blacklist-sync", handleResetBlacklistSync),
+  defineStaticRoute("debug-sync-state", handleDebugSyncState),
+  defineStaticRoute("remediate-blacklist-amount-gaps", makeIdempotentAdminRoute(
     "route-remediate-blacklist-amount-gaps",
     "remediate-blacklist-amount-gaps",
     ({ db, url, trustedAdmin, request, chainRpcs }) =>
       handleRemediateBlacklistAmountGaps(db, url, trustedAdmin, request, chainRpcs),
-  ),
-  "backfill-blacklist-current-balances": makeIdempotentAdminRoute(
+  )),
+  defineStaticRoute("backfill-blacklist-current-balances", makeIdempotentAdminRoute(
     "route-backfill-blacklist-current-balances",
     "backfill-blacklist-current-balances",
     ({ db, url, trustedAdmin, request, chainRpcs }) =>
       handleBackfillBlacklistCurrentBalances(db, url, trustedAdmin, request, chainRpcs),
-  ),
-  "discovery-candidates": makeAdminRoute("route-discovery-candidates", ({ db, url }) =>
-    handleDiscoveryCandidates(db, url),
-  ),
-} satisfies StaticRouteHandlerMap;
+  )),
+  defineStaticRoute("discovery-candidates", makeAdminRoute(
+    "route-discovery-candidates",
+    ({ db, url }) => handleDiscoveryCandidates(db, url),
+  )),
+] as const satisfies readonly StaticRouteDefinition[];
 
 const STATIC_ROUTE_DEFINITIONS = new Map<string, StaticRouteDefinition>(
-  ENDPOINT_DEFINITIONS.flatMap((endpoint) => {
-    const handler = (STATIC_ROUTE_HANDLERS_BY_KEY as Record<string, StaticRouteHandler | undefined>)[endpoint.key];
-    return handler ? [[endpoint.path, { endpoint, handler }] as const] : [];
-  }),
+  STATIC_ROUTES.map((route) => [route.endpoint.path, route] as const),
 );
 
 function resolveDynamicStablecoinRoute(
@@ -321,18 +347,12 @@ export function getRouteDependencies(path: string): readonly RouteDependency[] |
 
 export const ROUTER_STATIC_PATHS = [...STATIC_ROUTE_DEFINITIONS.keys()];
 
-for (const key of Object.keys(STATIC_ROUTE_HANDLERS_BY_KEY) as Array<keyof typeof STATIC_ROUTE_HANDLERS_BY_KEY>) {
-  if (!getEndpointDefinitionByKey(key)) {
-    throw new Error(`Router endpoint key "${key}" must be declared in ENDPOINT_DEFINITIONS`);
-  }
-}
-
 // Reverse check: verify all non-dynamic endpoints have handlers
+const STATIC_ROUTE_KEYS = new Set(STATIC_ROUTES.map((route) => route.endpoint.key));
 for (const ep of ENDPOINT_DEFINITIONS) {
   if (!ep.path.includes(":") && !ep.path.includes("*")) {
-    const key = ep.key as keyof typeof STATIC_ROUTE_HANDLERS_BY_KEY;
-    if (!(key in STATIC_ROUTE_HANDLERS_BY_KEY)) {
-      throw new Error(`Endpoint "${ep.key}" is defined but has no handler in STATIC_ROUTE_HANDLERS_BY_KEY`);
+    if (!STATIC_ROUTE_KEYS.has(ep.key)) {
+      throw new Error(`Endpoint "${ep.key}" is defined but has no handler in STATIC_ROUTES`);
     }
   }
 }

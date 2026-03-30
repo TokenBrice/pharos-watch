@@ -10,15 +10,16 @@ import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useCountUp } from "@/hooks/use-count-up";
 import { useEntranceSequence } from "@/hooks/use-entrance-sequence";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { formatCurrency, getNetColor, getNetPrefix } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
-import {
-  getDisplayedPsi,
-  getPsiBandStreak,
-  getPsiCompletedDayPoint,
-} from "@shared/lib/psi-view-model";
 import { THREAT_BAND_COLORS, type ThreatBand } from "@shared/lib/classification";
+import {
+  buildDewsBandCounts,
+  buildDexSnapshot,
+  buildFlowSnapshot,
+  buildPsiSnapshot,
+  buildStablecoinSnapshot,
+} from "@/components/kpi-bar-view-model";
 
 type TrendDirection = "up" | "down" | "flat";
 type ElevatedThreatBand = Extract<ThreatBand, "DANGER" | "ALERT" | "WARNING">;
@@ -303,82 +304,17 @@ export function KpiBar() {
   const primaryError = stablecoinsQuery.error || psiQuery.error || pegError || dexError || flowError || stressError;
   const hasPrimaryData = !!psiData || !!stablecoinsData;
 
-  const { totalMcap, mcapChange24hPct, mcapChange7dPct, usdtUsdcSharePct } = useMemo(() => {
-    if (!stablecoinsData?.peggedAssets) {
-      return {
-        totalMcap: 0,
-        mcapChange24hPct: 0,
-        mcapChange7dPct: 0,
-        usdtUsdcSharePct: 0,
-      };
-    }
-
-    let total = 0;
-    let totalPrev = 0;
-    let totalPrevWeek = 0;
-    let usdtUsdcTotal = 0;
-
-    for (const coin of stablecoinsData.peggedAssets) {
-      const supply = getCirculatingRaw(coin);
-      total += supply;
-      totalPrev += getPrevDayRaw(coin);
-      totalPrevWeek += getPrevWeekRaw(coin);
-      const symbol = coin.symbol?.toUpperCase();
-      if (symbol === "USDT" || symbol === "USDC") {
-        usdtUsdcTotal += supply;
-      }
-    }
-
-    const pct24h = totalPrev > 0 ? ((total - totalPrev) / totalPrev) * 100 : 0;
-    const pct7d = totalPrevWeek > 0 ? ((total - totalPrevWeek) / totalPrevWeek) * 100 : 0;
-
-    return {
-      totalMcap: total,
-      mcapChange24hPct: pct24h,
-      mcapChange7dPct: pct7d,
-      usdtUsdcSharePct: total > 0 ? (usdtUsdcTotal / total) * 100 : 0,
-    };
-  }, [stablecoinsData]);
-
-  const { totalVol24h, volVs7dAvgPct, turnoverPct } = useMemo(() => {
-    if (!dexData) return { totalVol24h: 0, volVs7dAvgPct: 0, turnoverPct: 0 };
-
-    let vol24h = 0;
-    let vol7d = 0;
-    for (const liq of Object.values(dexData)) {
-      vol24h += liq.totalVolume24hUsd;
-      vol7d += liq.totalVolume7dUsd;
-    }
-
-    const avg7d = vol7d / 7;
-    const pct = avg7d > 0 ? ((vol24h - avg7d) / avg7d) * 100 : 0;
-    const turnover = totalMcap > 0 ? (vol24h / totalMcap) * 100 : 0;
-    return { totalVol24h: vol24h, volVs7dAvgPct: pct, turnoverPct: turnover };
-  }, [dexData, totalMcap]);
-
-  const { netFlow24h, netFlow7d } = useMemo(() => {
-    if (!flowData?.coins?.length) {
-      return { netFlow24h: 0, netFlow7d: 0 };
-    }
-
-    let total24h = 0;
-    let total7d = 0;
-    for (const coin of flowData.coins) {
-      total24h += coin.netFlow24hUsd;
-      total7d += coin.netFlow7dUsd;
-    }
-
-    return {
-      netFlow24h: total24h,
-      netFlow7d: total7d,
-    };
-  }, [flowData]);
-
-  const psiCurrent = psiData?.current;
-  const displayedPsi = psiCurrent ? getDisplayedPsi(psiCurrent) : null;
-  const psiScoreNum = displayedPsi?.score ?? null;
-  const psiBand = displayedPsi?.band ?? "";
-  const psiDayAnchor = psiCurrent?.computedAt ?? null;
+  const { totalMcap, mcapChange24hPct, mcapChange7dPct, usdtUsdcSharePct } = useMemo(
+    () => buildStablecoinSnapshot(stablecoinsData),
+    [stablecoinsData],
+  );
+  const { totalVol24h, volVs7dAvgPct, turnoverPct } = useMemo(
+    () => buildDexSnapshot(dexData, totalMcap),
+    [dexData, totalMcap],
+  );
+  const { netFlow24h, netFlow7d } = useMemo(() => buildFlowSnapshot(flowData), [flowData]);
+  const { psiCurrent, psiScoreNum, psiBand, psiDaysInBand, psiDelta24h, psiDelta7d, psiDelta30d } =
+    useMemo(() => buildPsiSnapshot(psiData), [psiData]);
   const psiColorClass = psiBand && psiBand in PSI_BAND_CLASSES ? PSI_BAND_CLASSES[psiBand as ConditionBand] : "";
   const hasStablecoinsData = !!stablecoinsData?.peggedAssets;
   const hasPsiData = !!psiCurrent;
@@ -412,35 +348,7 @@ export function KpiBar() {
         ? "negative"
         : "neutral";
 
-  const { psiDaysInBand, psiDelta24h, psiDelta7d, psiDelta30d } = useMemo(() => {
-    if (!psiBand || !psiData?.history || psiScoreNum === null || psiDayAnchor === null) {
-      return { psiDaysInBand: 0, psiDelta24h: null, psiDelta7d: null, psiDelta30d: null };
-    }
-
-    const previousDay = getPsiCompletedDayPoint(psiData.history, psiDayAnchor, 1);
-    const previousWeek = getPsiCompletedDayPoint(psiData.history, psiDayAnchor, 7);
-    const previousMonth = getPsiCompletedDayPoint(psiData.history, psiDayAnchor, 30);
-
-    return {
-      psiDaysInBand: getPsiBandStreak(psiData.history, psiDayAnchor, psiBand),
-      psiDelta24h: previousDay ? psiScoreNum - previousDay.score : null,
-      psiDelta7d: previousWeek ? psiScoreNum - previousWeek.score : null,
-      psiDelta30d: previousMonth ? psiScoreNum - previousMonth.score : null,
-    };
-  }, [psiBand, psiData, psiDayAnchor, psiScoreNum]);
-
-  const dewsBandCounts = useMemo(() => {
-    if (!stressData?.signals) return null;
-    let danger = 0;
-    let alert = 0;
-    let warning = 0;
-    for (const entry of Object.values(stressData.signals)) {
-      if (entry.band === "DANGER") danger++;
-      else if (entry.band === "ALERT") alert++;
-      else if (entry.band === "WARNING") warning++;
-    }
-    return { danger, alert, warning };
-  }, [stressData]);
+  const dewsBandCounts = useMemo(() => buildDewsBandCounts(stressData), [stressData]);
 
   /* ---------- entrance choreography (hooks must be called unconditionally) ---------- */
   const { delayFor } = useEntranceSequence();

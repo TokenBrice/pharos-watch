@@ -29,6 +29,7 @@ import type { ChainSummary, HealthBand } from "@shared/types/chains";
 import { TrendingUp, TrendingDown, Minus, ChevronRight, Info, CheckCircle2, AlertCircle, AlertTriangle, XCircle } from "lucide-react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { logosById } from "@/lib/logos";
+import { buildBackingTotals, buildCompositionLayout } from "./view-model";
 
 const BACKING_BAR_COLORS: Record<string, string> = {
   "rwa-backed": "bg-sky-500",
@@ -285,56 +286,7 @@ function HealthBreakdownCard({ chain }: { chain: ChainSummary }) {
 function CompositionSection({ chainId }: { chainId: string }) {
   const { coins, totalUsd } = useChainStablecoins(chainId);
 
-  // Dynamic layout calculation to fill grid completely with no dead zones
-  const layout = useMemo(() => {
-    const totalCoins = coins.length;
-    if (totalCoins === 0) return { displayCoins: [], rest: [], restTotal: 0, cols: 2, rows: 1 };
-
-    // Determine grid dimensions based on total available coins
-    // Goal: fill the grid completely with display coins + optional Others block
-    let cols: number;
-    let rows: number;
-    let maxDisplay: number;
-
-    if (totalCoins <= 3) {
-      // Small chains: 2 columns, 1-2 rows
-      cols = 2;
-      rows = totalCoins <= 2 ? 1 : 2;
-      maxDisplay = totalCoins; // Show all, no Others needed
-    } else if (totalCoins <= 6) {
-      // Medium chains: 3 columns, 2 rows = 6 cells
-      cols = 3;
-      rows = 2;
-      // Reserve 1 cell for Others if we have more than 5 coins
-      maxDisplay = totalCoins > 6 ? 5 : totalCoins;
-    } else if (totalCoins <= 8) {
-      // Larger medium: 4 columns, 2 rows = 8 cells
-      cols = 4;
-      rows = 2;
-      maxDisplay = totalCoins > 8 ? 7 : totalCoins;
-    } else if (totalCoins <= 11) {
-      // Large chains: 4 columns, 3 rows = 12 cells, but cap at 11 coins + Others
-      cols = 4;
-      rows = 3;
-      maxDisplay = totalCoins > 11 ? 10 : totalCoins;
-    } else {
-      // Very large chains: 4 columns, 3 rows, show top 11 + Others
-      cols = 4;
-      rows = 3;
-      maxDisplay = 11;
-    }
-
-    const needsOthers = totalCoins > maxDisplay;
-    // If we need Others, reduce display count by 1 to make room
-    const finalDisplayCount = needsOthers ? Math.min(maxDisplay - 1, totalCoins) : totalCoins;
-    const actualDisplayCount = Math.min(finalDisplayCount, totalCoins);
-
-    const displayCoins = coins.slice(0, actualDisplayCount);
-    const rest = coins.slice(actualDisplayCount);
-    const restTotal = rest.reduce((s, c) => s + c.supplyOnChain, 0);
-
-    return { displayCoins, rest, restTotal, cols, rows };
-  }, [coins]);
+  const layout = useMemo(() => buildCompositionLayout(coins), [coins]);
 
   const { displayCoins, rest, restTotal, cols, rows } = layout;
   const showOthers = rest.length > 0;
@@ -534,14 +486,7 @@ function BackingBreakdown({
 }) {
   const { coins, totalUsd } = useChainStablecoins(chainId);
 
-  const backingTotals = useMemo(() => {
-    const totals: Record<string, number> = { "rwa-backed": 0, "crypto-backed": 0, algorithmic: 0, other: 0 };
-    for (const coin of coins) {
-      const key = coin.backing && coin.backing in totals ? coin.backing : "other";
-      totals[key] += coin.supplyOnChain;
-    }
-    return totals;
-  }, [coins]);
+  const backingTotals = useMemo(() => buildBackingTotals(coins), [coins]);
 
   const hasData = Object.values(backingTotals).some((v) => v > 0);
   if (!hasData) return null;
