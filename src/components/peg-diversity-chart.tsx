@@ -20,11 +20,15 @@ function pegKeyToCode(key: string): string {
   return key.replace(/^pegged/, "");
 }
 
+const OTHER_HEX = "#64748b";
+
 function pegKeyToHex(key: string): string {
+  if (key === "peggedOther") return OTHER_HEX;
   return PEG_CHART_COLORS[pegKeyToCode(key)]?.hex ?? "#64748b";
 }
 
 function pegKeyToLabel(key: string): string {
+  if (key === "peggedOther") return "Other";
   const code = pegKeyToCode(key);
   return PEG_CHART_COLORS[code]?.label ?? code;
 }
@@ -75,8 +79,11 @@ export function PegDiversityChart() {
   }, []);
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
-  const { chartData, pegKeys, totalNonUsd, pegCount } = useMemo(() => {
-    if (!Array.isArray(data) || data.length === 0) return { chartData: [], pegKeys: [], totalNonUsd: 0, pegCount: 0 };
+  const OTHER_KEY = "peggedOther";
+  const OTHER_THRESHOLD = 5_000_000;
+
+  const { chartData, pegKeys, totalNonUsd, pegCount, otherLabels } = useMemo(() => {
+    if (!Array.isArray(data) || data.length === 0) return { chartData: [], pegKeys: [], totalNonUsd: 0, pegCount: 0, otherLabels: [] as string[] };
 
     // Discover all non-USD peg keys
     const keySet = new Set<string>();
@@ -90,11 +97,33 @@ export function PegDiversityChart() {
     const latest = data[data.length - 1]!.totalCirculatingUSD;
     const sorted = [...keySet].sort((a, b) => (latest[b] ?? 0) - (latest[a] ?? 0));
 
+    // Split into major (≥$5M) and minor (<$5M) currencies
+    const majorKeys: string[] = [];
+    const minorKeys: string[] = [];
+    for (const key of sorted) {
+      if ((latest[key] ?? 0) >= OTHER_THRESHOLD) {
+        majorKeys.push(key);
+      } else {
+        minorKeys.push(key);
+      }
+    }
+
+    // Merge minor currencies into "Other" if there are any
+    const hasOther = minorKeys.length > 0;
+    const displayKeys = hasOther ? [...majorKeys, OTHER_KEY] : majorKeys;
+
     // Build chart points
     const points = data.map((point) => {
       const row: Record<string, number> = { ts: point.date * 1000 };
-      for (const key of sorted) {
+      for (const key of majorKeys) {
         row[key] = point.totalCirculatingUSD[key] ?? 0;
+      }
+      if (hasOther) {
+        let otherSum = 0;
+        for (const key of minorKeys) {
+          otherSum += point.totalCirculatingUSD[key] ?? 0;
+        }
+        row[OTHER_KEY] = otherSum;
       }
       return row;
     });
@@ -107,9 +136,10 @@ export function PegDiversityChart() {
 
     return {
       chartData: points,
-      pegKeys: sorted,
+      pegKeys: displayKeys,
       totalNonUsd: total,
       pegCount: sorted.length,
+      otherLabels: minorKeys.map((k) => pegKeyToLabel(k)),
     };
   }, [data]);
 
@@ -216,6 +246,9 @@ export function PegDiversityChart() {
                     style={{ backgroundColor: pegKeyToHex(key) }}
                   />
                   {pegKeyToLabel(key)}
+                  {key === OTHER_KEY && otherLabels.length > 0 && (
+                    <span className="text-muted-foreground/60">({otherLabels.join(", ")})</span>
+                  )}
                 </span>
               ))}
             </div>
