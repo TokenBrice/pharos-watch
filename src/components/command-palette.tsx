@@ -295,7 +295,7 @@ export function CommandPalette() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
-        className="z-[100] mx-auto mt-[18vh] w-full max-w-lg overflow-hidden rounded-xl border border-border/75 bg-card p-0 shadow-[0_28px_50px_oklch(0_0_0_/0.35)]"
+        className="top-2 translate-y-0 sm:top-[50%] sm:translate-y-[-50%] sm:mt-[18vh] z-[100] mx-auto w-full max-w-lg overflow-hidden rounded-xl border border-border/75 bg-card p-0 shadow-[0_28px_50px_oklch(0_0_0_/0.35)]"
         showCloseButton={false}
         onOpenAutoFocus={(event) => {
           event.preventDefault();
@@ -331,7 +331,7 @@ export function CommandPalette() {
           ref={listRef}
           id="command-palette-results"
           role="listbox"
-          className="max-h-[60vh] overflow-y-auto py-2"
+          className="max-h-[40vh] sm:max-h-[60vh] overflow-y-auto py-2"
         >
           {query.trim() && flatResults.length === 0 && (
             <div className="px-4 py-8 text-center">
