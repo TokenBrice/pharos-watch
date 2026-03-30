@@ -39,7 +39,7 @@ export type ReserveAdapterRunner = (
   adapter: ReserveAdapterDefinition,
 ) => Promise<AdapterResult>;
 
-export const D1_WRITE_FINALIZE_TIMEOUT_MS = 30_000;
+const D1_WRITE_FINALIZE_TIMEOUT_MS = 30_000;
 
 export async function syncReserveCoin(args: {
   db: D1Database;

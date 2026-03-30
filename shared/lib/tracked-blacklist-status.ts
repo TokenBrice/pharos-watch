@@ -4,7 +4,7 @@ import {
   type BlacklistStatus,
 } from "./report-card-blacklist-risk";
 
-export const TRACKED_BLACKLIST_STATUS_BY_ID = resolveBlacklistStatuses(
+const TRACKED_BLACKLIST_STATUS_BY_ID = resolveBlacklistStatuses(
   TRACKED_STABLECOINS,
   { trackedMetaById: TRACKED_META_BY_ID },
 );

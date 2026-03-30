@@ -36,13 +36,10 @@ export {
 export { scoreDependencyRisk } from "./report-card-dependency";
 export { computeOverallGrade, computeStressedGrades } from "./report-card-overall";
 export {
-  createBlacklistResolutionContext,
-  enrichReserveSlicesForBlacklist,
   enrichLiveSlicesForBlacklist,
   getBlacklistStatusLabel,
   INHERITED_BLACKLIST_THRESHOLD_PCT,
   isBlacklistable,
-  resolveBlacklistStatus,
   resolveBlacklistStatuses,
   type BlacklistStatus,
 } from "./report-card-blacklist-risk";

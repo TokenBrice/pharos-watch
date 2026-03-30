@@ -158,7 +158,7 @@ function reserveSliceBlacklistRisk(
   return "none";
 }
 
-export function createBlacklistResolutionContext(
+function createBlacklistResolutionContext(
   blacklistableIds: ReadonlySet<string>,
   trackedMetaById: ReadonlyMap<string, StablecoinMeta>,
 ): BlacklistResolutionContext {
@@ -179,7 +179,7 @@ export function createBlacklistResolutionContext(
   };
 }
 
-export function enrichReserveSlicesForBlacklist(
+function enrichReserveSlicesForBlacklist(
   reserveSlices: readonly ReserveSlice[],
   context: BlacklistResolutionContext,
 ): ReserveSlice[] {
@@ -208,7 +208,7 @@ export function getBlacklistStatusLabel(status: BlacklistStatus): "Yes" | "Possi
   return "No";
 }
 
-export function resolveBlacklistStatus(
+function resolveBlacklistStatus(
   meta: StablecoinMeta,
   options: ResolveBlacklistStatusOptions = {},
 ): BlacklistStatus {
