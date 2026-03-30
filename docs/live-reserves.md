@@ -48,10 +48,12 @@ The shared registry in `shared/lib/live-reserve-adapters.ts` defines two importa
 
 - `dynamic-mix`: independently measured reserve compositions. These can be `independent` evidence for scoring when the sync state is clean.
 - `validated-static`: live validation/probe adapters over curated/static slices. These remain authoritative for the reserve detail API, but they are tagged `static-validated` and do not count as independent live collateral inputs for report-card scoring.
-- `single-bucket`: one-slice live proofs/attestations. Some are true independent evidence (`chainlink-nav`, `chainlink-por`, `erc4626-single-asset`, `btcfi`, `sgforge-coinvertible`), while weak liveness-only probes such as `single-asset` and generic attestation summaries such as `tether` are tagged `weak-live-probe`.
+- `single-bucket`: one-slice live proofs/attestations. Some are true independent evidence (`chainlink-nav`, `chainlink-por`, `erc4626-single-asset`, `btcfi`, `sgforge-coinvertible`), while weak liveness-only probes such as `single-asset` and coarse issuer attestation summaries such as `tether` are tagged `weak-live-probe`.
 - `independent`: scoring-eligible live evidence when the snapshot is fresh, authoritative, and the most recent sync status is `ok`.
 - `static-validated`, `weak-live-probe`: detail/status-visible evidence classes that never override curated collateral scoring.
 - `source-invariant`: opt-in within-run result sharing for adapters whose returned payload is coin-invariant. All other adapters run per coin even when configs look similar.
+
+`single-asset` now supports optional `reserveProbe`, `supplyProbe`, and `timestampProbe` paths so weak single-bucket feeds can persist honest reserve/supply ratio telemetry when the upstream exposes it. The family remains `weak-live-probe` unless the source is strong enough to justify promotion into a more independent adapter class.
 
 ### Fallback Inputs
 
@@ -82,14 +84,18 @@ Common metadata fields:
 |-------|---------|
 | `sourceTimestamp` | Upstream disclosure timestamp, when independently verified |
 | `freshnessMode` | `verified`, `unverified`, or `not-applicable` |
+| `collateralizationRatio` | Reserve / liability or reserve / supply ratio when the adapter can quantify both sides honestly |
 | `details.freshnessSource` / `details.freshnessReason` | Adapter-supplied explanation when freshness is explicitly unverified |
 | `unknownExposurePct` | Share of reserve value that could not be mapped cleanly |
-| `supplyUsd`, `totalReserveUsd` | Adapter-level balance-sheet totals when exposed |
+| `supplyUsd`, `totalReserveUsd` | Adapter-level reserve / supply totals when exposed |
+| `totalAssetsUsd`, `totalLiabilitiesUsd`, `shareholderEquityUsd` | Raw attestation balance-sheet totals for coarse issuer feeds |
 | `immediateRedeemableUsd`, `immediateRedeemableRatio` | Current redeemable-capacity telemetry reused by redemption backstops |
 | `redemptionFeeBps` | Current live redemption fee telemetry when the source exposes it |
 | `buyFeeBpsMin`, `buyFeeBpsMax` | Optional raw buy-fee range context retained alongside normalized `redemptionFeeBps` |
 
 `freshnessMode = "not-applicable"` is the expected scoring-eligible path for intrinsically current on-chain reads such as `evm-branch-balances`, where reserve composition comes from latest-state contract balances rather than a separately timestamped disclosure.
+
+The registry now also declares the admissible `freshnessMode` set per adapter family so timestamp-backed disclosures, latest-state on-chain proofs, and explicitly unverified dashboard/API feeds cannot silently drift into undocumented freshness semantics.
 
 Warnings now carry both a display `severity` and an execution `effect`:
 
@@ -123,8 +129,16 @@ Adapters can also declare shared validation policy in the registry:
 
 - `maxSourceAgeSec`: if adapter metadata includes `sourceTimestamp` and the upstream disclosure is older than the policy allows, the sync is marked `degraded`
 - `maxUnknownExposurePct`: if adapter metadata includes `unknownExposurePct` and unmapped reserve exposure is material, the sync is marked `degraded`
+- `allowedFreshnessModes`: explicit per-adapter freshness contract enforced by output validation
 - when `maxSourceAgeSec` exists but the adapter can only attest freshness heuristically, `freshnessMode = "unverified"` produces an informational `freshness-unverified` warning instead of forcing a degraded status on the sync itself
 - timestamp-less dashboard/API feeds should also populate `details.freshnessSource` / `details.freshnessReason` so the lack of verified recency is explicit in stored metadata
+
+Unknown exposure now follows one repo-wide policy:
+
+- quantify it and persist `unknownExposurePct` when the adapter can do so honestly
+- emit an explicit unknown slice when the reserve mix would otherwise hide that exposure
+- use threshold-driven warning effects so immaterial unknowns stay informational and material unknowns degrade the sync
+- fail closed when the adapter cannot quantify the missing exposure without inventing precision
 
 These policy warnings still preserve the last-known live snapshot for detail/status surfaces, but they keep the snapshot out of report-card collateral passthrough because scoring only accepts independent snapshots whose latest sync state is `ok`.
 
@@ -327,16 +341,16 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 GHO-specific note:
 the `gho` adapter now values reviewed mainnet GSM backing directly from live onchain GSM state and leaves the remainder of GHO supply in an aggregated residual issuance / reserve-buffer slice. `immediateRedeemableUsd` only counts GSM modules that are not frozen or seized, while `redemptionFeeBps` is normalized to the current worst tracked GSM buy fee and the raw min/max values are retained as `buyFeeBpsMin` / `buyFeeBpsMax`.
 
-Adapter helpers are centralized in `worker/src/cron/reserve-adapters/helpers.ts`:
+Adapter helpers now live in a small helper family, with `worker/src/cron/reserve-adapters/helpers.ts` kept as the shared import surface:
 
 - HTTP JSON / HTML fetch wrappers (`fetchJsonWithRetry`, `fetchTextWithRetry`)
 - HTML parser failure helpers that distinguish upstream layout drift (`layout-changed`) from content decoding failures (`parse-failed`) so attempt logs are more actionable for scraped disclosures
-- Shared bucketed-composition accumulation for adapters that classify many raw assets into a smaller reserve-bucket surface while tracking unknown exposure consistently
+- Shared bucketed-composition accumulation and classification helpers (`classification.ts`) for adapters that collapse many raw assets into a smaller reserve-bucket surface while tracking unknown exposure consistently
 - Shared unverified-freshness metadata helper so timestamp-less dashboard feeds explain why they remain non-scoring
 - DefiLlama spot-price loading for valuation (`fetchDefiLlamaPrices`), with fixed-price overrides supported for wrapper branches in `evm-branch-balances`
 - EVM balance, total-supply, and hex-call reads (`fetchErc20Balance`, `fetchErc20TotalSupply`)
 - Input-kind type guards and validators (`requireJsonInput`, `requireJsonInputFromConfig`, etc.)
-- Slice normalization with configurable precision (`normalizeSlices`, `slicesFromValues`)
+- Slice normalization / valuation / unknown-exposure math (`slice-math.ts`) with configurable precision (`normalizeSlices`, `slicesFromValues`, `valueUsdFromBigIntPrice`)
 - Risk validation (`isReserveRisk`)
 
 `worker/src/cron/reserve-adapters/evm.ts` provides hex-level EVM call helpers for ERC-4626 vault introspection.

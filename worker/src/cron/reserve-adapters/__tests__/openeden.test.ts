@@ -18,9 +18,9 @@ describe("adaptOpenEdenUsdo", () => {
 
     expect(result.slices).toEqual([
       { name: "OpenEden TBILL", pct: 74.9, risk: "very-low", coinId: "tbill-openeden" },
-      { name: "BlackRock BUIDL", pct: 7.3, risk: "low", coinId: "buidl-blackrock" },
       { name: "OpenEden VBILL", pct: 10.2, risk: "low" },
       { name: "USDC buffer", pct: 7.6, risk: "low", coinId: "usdc-circle" },
+      { name: "BlackRock BUIDL", pct: 7.3, risk: "low", coinId: "buidl-blackrock" },
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",

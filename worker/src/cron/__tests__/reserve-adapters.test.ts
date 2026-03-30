@@ -35,9 +35,9 @@ describe("adaptTetherTransparency", () => {
     const result = adaptTetherTransparency(payload);
 
     expect(result.slices).toHaveLength(1);
-    expect(result.slices[0].name).toContain("Treasury Bills");
+    expect(result.slices[0].name).toContain("Issuer-attested reserves");
     expect(result.slices[0].pct).toBe(100);
-    expect(result.slices[0].risk).toBe("very-low");
+    expect(result.slices[0].risk).toBe("medium");
 
     expect(result.metadata).toBeDefined();
     expect(result.metadata!.totalAssetsUsd).toBe(118536043000);

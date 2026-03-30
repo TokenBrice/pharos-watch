@@ -74,10 +74,15 @@ describe("fetchErc4626SingleAssetReserves", () => {
     ]);
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
+      freshnessMode: "not-applicable",
       chain: "ethereum",
       contractAddress: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
       assetAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       totalAssetsRaw: "100",
+      details: {
+        proofKind: "erc4626-total-assets",
+        assetAddressMatchesExpected: true,
+      },
     });
   });
 

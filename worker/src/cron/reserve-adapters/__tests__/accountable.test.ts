@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { adaptAccountableTypeBreakdown } from "../accountable";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { fetchAccountableReserves } from "../accountable";
+
+const signal = AbortSignal.timeout(5_000);
 
 describe("adaptAccountableTypeBreakdown", () => {
   it("maps the type breakdown into reserve slices", () => {
@@ -140,8 +144,8 @@ describe("adaptAccountableTypeBreakdown", () => {
 
     expect(slices).toEqual([
       { name: "Stablecoin reserves", pct: 88, risk: "low" },
-      { name: "ETH", pct: 4, risk: "very-low" },
       { name: "OTC Aggregate", pct: 6, risk: "high" },
+      { name: "ETH", pct: 4, risk: "very-low" },
       { name: "Other", pct: 2, risk: "high" },
     ]);
   });
@@ -180,5 +184,55 @@ describe("adaptAccountableTypeBreakdown", () => {
       { name: "[Maple]_syrupUSDT_Loop", pct: 30, risk: "high" },
       { name: "Fluid fUSDT0", pct: 20, risk: "low" },
     ]);
+  });
+
+  it("preserves unmapped buckets as explicit unknown exposure instead of defaulting them to medium risk", async () => {
+    const config: LiveReservesConfig = {
+      adapter: "accountable",
+      version: 1,
+      semantics: "protocol-reserve",
+      inputs: { primary: { kind: "http-json", url: "https://example.com" } },
+      params: {
+        bucket: "type",
+        riskMap: { Stablecoin: "low" },
+      },
+    };
+
+    const result = await fetchAccountableReserves(
+      {} as never,
+      config,
+      signal,
+      {
+        requestCache: new Map([
+          ["json-get:https://example.com:12000", Promise.resolve({
+            res: "ok",
+            data: {
+              collateralization: 1.01,
+              ts: "2026-03-20T00:00:00Z",
+              reserves: {
+                type: {
+                  Stablecoin: 70,
+                  "New Bucket": 30,
+                },
+              },
+            },
+          })],
+        ]),
+      },
+    );
+
+    expect(result.slices).toEqual([
+      { name: "Stablecoin", pct: 70, risk: "low" },
+      { name: "Unknown / unmapped Accountable buckets", pct: 30, risk: "high" },
+    ]);
+    expect(result.metadata).toMatchObject({
+      unknownBucketCount: 1,
+      unknownBucketNames: ["New Bucket"],
+      unknownExposurePct: 30,
+    });
+    expect(result.warnings?.[0]).toMatchObject({
+      code: "unmapped-bucket",
+      effect: "degraded",
+    });
   });
 });

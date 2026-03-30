@@ -2,6 +2,8 @@ import type { ReserveRisk, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildUnknownExposureWarning,
+  computeUnknownExposurePct,
   fetchJsonWithRetry,
   getAdapterTimeout,
   requireJsonInputFromConfig,
@@ -61,13 +63,15 @@ export function buildUsddHistoryUrl(latestUrl: string): string {
   return history.toString();
 }
 
-function createUnknownVaultWarning(unknownVaultTypes: Iterable<string>): LiveReserveWarning {
-  return {
+function createUnknownVaultWarning(
+  unknownVaultTypes: Iterable<string>,
+  unknownExposurePct: number,
+): LiveReserveWarning {
+  return buildUnknownExposureWarning({
     code: "unknown-vault-type",
     message: `USDD collateral feed includes unmapped vault types: ${Array.from(unknownVaultTypes).sort().join(", ")}`,
-    severity: "info",
-    effect: "info",
-  };
+    unknownExposurePct,
+  });
 }
 
 export function adaptUsddLatestCollateral(
@@ -168,8 +172,9 @@ export function adaptUsddLatestCollateral(
         }]
       : []),
   ];
+  const unknownExposurePct = computeUnknownExposurePct(unknownVaultUsd, totalVaultUsd);
   const warnings: LiveReserveWarning[] = unknownVaultTypes.size > 0
-    ? [createUnknownVaultWarning(unknownVaultTypes)]
+    ? [createUnknownVaultWarning(unknownVaultTypes, unknownExposurePct)]
     : [];
 
   return {
@@ -180,7 +185,7 @@ export function adaptUsddLatestCollateral(
       trackedVaultCount: 5,
       ...(unknownVaultCount > 0 ? { unknownVaultCount } : {}),
       ...(unknownVaultTypes.size > 0 ? { unknownVaultTypes: Array.from(unknownVaultTypes).sort() } : {}),
-      ...(totalVaultUsd > 0 ? { unknownExposurePct: (unknownVaultUsd / totalVaultUsd) * 100 } : {}),
+      ...(unknownExposurePct > 0 ? { unknownExposurePct } : {}),
       ...(typeof statisticTimeMs === "number" && Number.isFinite(statisticTimeMs)
         ? {
             sourceTimestamp: Math.floor(statisticTimeMs / 1000),

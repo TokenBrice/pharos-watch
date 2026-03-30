@@ -1,4 +1,4 @@
-import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
+import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput, LiveReservesConfig } from "@shared/types/live-reserves";
 import { DEFILLAMA_COINS } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
@@ -9,6 +9,23 @@ import {
   fetchEtherscanProxyHex,
 } from "../../lib/evm-rpc";
 import type { AdapterContext } from "./types";
+import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
+export {
+  accumulateBucketedExposure,
+  classifyBucketedValues,
+} from "./classification";
+export {
+  buildUnknownExposureWarning,
+  computeUnknownExposurePct,
+  decimalNumberFromBigInt,
+  decimalStringFromBigInt,
+  isReserveRisk,
+  normalizeSlices,
+  parsePositiveNumericLike,
+  slicesFromPercentages,
+  slicesFromValues,
+  valueUsdFromBigIntPrice,
+} from "./slice-math";
 export {
   parseTimestampLikeToUnixSeconds,
   notApplicableFreshnessMetadata,
@@ -16,7 +33,7 @@ export {
   verifiedFreshnessMetadata,
 } from "./freshness";
 export { htmlLayoutChangedError, htmlParseError } from "./html";
-export { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
+export { reserveDegradedWarning, reserveInfoWarning };
 
 const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
 const BALANCE_OF_SELECTOR = "0x70a08231";
@@ -43,14 +60,6 @@ interface OnchainRateProbe {
   contract: string;
   selector: string;
   decimals?: number;
-}
-
-interface BucketedExposureOptions<Item, Bucket extends string> {
-  items: Item[];
-  getValue: (item: Item) => number;
-  getBucket: (item: Item) => Bucket;
-  isUnknown?: (item: Item, bucket: Bucket) => boolean;
-  getUnknownKey?: (item: Item) => string;
 }
 
 const ADAPTER_USER_AGENT = "Mozilla/5.0";
@@ -93,43 +102,6 @@ function getCachedRequest<T>(
   });
   cache.set(key, promise);
   return promise;
-}
-
-export function accumulateBucketedExposure<Item, Bucket extends string>({
-  items,
-  getValue,
-  getBucket,
-  isUnknown,
-  getUnknownKey,
-}: BucketedExposureOptions<Item, Bucket>): {
-  bucketTotals: Map<Bucket, number>;
-  totalValue: number;
-  unknownValue: number;
-  unknownValuesByKey: Map<string, number>;
-} {
-  const bucketTotals = new Map<Bucket, number>();
-  const unknownValuesByKey = new Map<string, number>();
-  let totalValue = 0;
-  let unknownValue = 0;
-
-  for (const item of items) {
-    const value = getValue(item);
-    if (!Number.isFinite(value) || value <= 0) continue;
-
-    totalValue += value;
-    const bucket = getBucket(item);
-    bucketTotals.set(bucket, (bucketTotals.get(bucket) ?? 0) + value);
-
-    if (isUnknown?.(item, bucket)) {
-      unknownValue += value;
-      const key = getUnknownKey?.(item);
-      if (key) {
-        unknownValuesByKey.set(key, (unknownValuesByKey.get(key) ?? 0) + value);
-      }
-    }
-  }
-
-  return { bucketTotals, totalValue, unknownValue, unknownValuesByKey };
 }
 
 export function isHttpJsonInput(input: LiveReserveInput): input is JsonInput {
@@ -498,164 +470,6 @@ export async function probeOnchainTotalSupply(
   return supply;
 }
 
-/**
- * Deduplicate and normalize reserve slices so percentages sum to exactly 100%.
- * Slices sharing the same (name, risk, coinId, depType) key are merged by summing pct.
- * After rounding, the largest slice absorbs any remainder to maintain the 100% invariant.
- * Returns slices sorted by pct descending.
- */
-export function normalizeSlices(slices: ReserveSlice[], decimals = 1): ReserveSlice[] {
-  const factor = 10 ** decimals;
-  const grouped = new Map<string, ReserveSlice>();
-
-  for (const slice of slices) {
-    if (!Number.isFinite(slice.pct) || slice.pct <= 0) continue;
-    const key = `${slice.name}|${slice.risk}|${slice.coinId ?? ""}|${slice.depType ?? ""}`;
-    const existing = grouped.get(key);
-    if (existing) {
-      existing.pct += slice.pct;
-    } else {
-      grouped.set(key, { ...slice });
-    }
-  }
-
-  const normalized = Array.from(grouped.values())
-    .map((slice) => ({ ...slice, pctUnits: Math.round(slice.pct * factor) }))
-    .filter((slice) => slice.pctUnits > 0);
-
-  if (normalized.length === 0) return [];
-
-  const sumUnits = normalized.reduce((acc, slice) => acc + slice.pctUnits, 0);
-  const maxIdx = normalized.reduce(
-    (maxIndex, slice, index, arr) => (slice.pctUnits > arr[maxIndex].pctUnits ? index : maxIndex),
-    0,
-  );
-  normalized[maxIdx].pctUnits += (100 * factor) - sumUnits;
-
-  return normalized
-    .map(({ pctUnits, ...slice }) => ({ ...slice, pct: pctUnits / factor }))
-    .filter((slice) => slice.pct > 0)
-    .sort((a, b) => b.pct - a.pct);
-}
-
-export function decimalNumberFromBigInt(value: bigint, decimals: number): number {
-  if (decimals === 0) return Number(value);
-
-  const negative = value < 0n;
-  const absolute = negative ? -value : value;
-  const digits = absolute.toString().padStart(decimals + 1, "0");
-  const integerPart = digits.slice(0, digits.length - decimals) || "0";
-  const fractionalPart = digits.slice(digits.length - decimals).replace(/0+$/, "");
-  const formatted = fractionalPart.length > 0
-    ? `${negative ? "-" : ""}${integerPart}.${fractionalPart}`
-    : `${negative ? "-" : ""}${integerPart}`;
-
-  return Number(formatted);
-}
-
-export function parsePositiveNumericLike(value: unknown): number | null {
-  if (typeof value === "number") {
-    return Number.isFinite(value) && value > 0 ? value : null;
-  }
-
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-    const parsed = Number(trimmed);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-  }
-
-  return null;
-}
-
-export function slicesFromPercentages(
-  values: Array<{
-    pct: number;
-    name: string;
-    risk: ReserveSlice["risk"];
-    coinId?: string;
-    depType?: ReserveSlice["depType"];
-    blacklistable?: boolean;
-  }>,
-  options?: {
-    decimals?: number;
-    tolerancePct?: number;
-    context?: string;
-  },
-): ReserveSlice[] {
-  const filtered = values.filter((value) => Number.isFinite(value.pct) && value.pct > 0);
-  const total = filtered.reduce((acc, value) => acc + value.pct, 0);
-  if (total <= 0) return [];
-
-  const tolerancePct = options?.tolerancePct ?? 1.5;
-  if (Math.abs(total - 100) > tolerancePct) {
-    throw new Error(
-      `${options?.context ?? "reserve percentages"} sum to ${total.toFixed(1)}% (expected 100% ± ${tolerancePct}%)`,
-    );
-  }
-
-  return normalizeSlices(
-    filtered.map((value) => ({
-      name: value.name,
-      pct: value.pct,
-      risk: value.risk,
-      ...(value.coinId ? { coinId: value.coinId } : {}),
-      ...(value.depType ? { depType: value.depType } : {}),
-      ...(value.blacklistable != null ? { blacklistable: value.blacklistable } : {}),
-    })),
-    options?.decimals ?? 1,
-  );
-}
-
-/**
- * Convert absolute values into percentage-based ReserveSlice[].
- * Filters out zero-value entries, calculates pct relative to total, and normalizes
- * so percentages sum to 100%. Used by adapters that receive dollar amounts from APIs.
- */
-export function slicesFromValues(
-  values: Array<{
-    value: number;
-    name: string;
-    risk: ReserveSlice["risk"];
-    coinId?: string;
-    depType?: ReserveSlice["depType"];
-    blacklistable?: boolean;
-  }>,
-  decimals = 1,
-): ReserveSlice[] {
-  const filtered = values.filter((v) => Number.isFinite(v.value) && v.value > 0);
-  const total = filtered.reduce((acc, v) => acc + v.value, 0);
-  if (total <= 0) return [];
-
-  const factor = 10 ** decimals;
-  const slices: ReserveSlice[] = filtered.map((v) => ({
-    name: v.name,
-    pct: Math.round(((v.value / total) * 100) * factor) / factor,
-    risk: v.risk,
-    ...(v.coinId ? { coinId: v.coinId } : {}),
-    ...(v.depType ? { depType: v.depType } : {}),
-    ...(v.blacklistable != null ? { blacklistable: v.blacklistable } : {}),
-  }));
-
-  const nonZero = slices.filter((s) => s.pct > 0);
-  if (nonZero.length === 0) return [];
-
-  const roundedTotal = nonZero.reduce((acc, s) => acc + s.pct, 0);
-  const adjustment = Math.round((100 - roundedTotal) * factor) / factor;
-  if (adjustment !== 0) {
-    const maxIdx = nonZero.reduce(
-      (mi, s, i, arr) => (s.pct > arr[mi].pct ? i : mi),
-      0,
-    );
-    const nextPct = Math.round((nonZero[maxIdx].pct + adjustment) * factor) / factor;
-    if (nextPct > 0) {
-      nonZero[maxIdx].pct = nextPct;
-    }
-  }
-
-  return nonZero;
-}
-
 export function getJsonPath(root: unknown, path: string[]): unknown {
   let current: unknown = root;
   for (const part of path) {
@@ -663,12 +477,4 @@ export function getJsonPath(root: unknown, path: string[]): unknown {
     current = (current as JsonObject)[part];
   }
   return current;
-}
-
-export function isReserveRisk(value: unknown): value is ReserveSlice["risk"] {
-  return value === "very-low"
-    || value === "low"
-    || value === "medium"
-    || value === "high"
-    || value === "very-high";
 }

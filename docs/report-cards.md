@@ -96,7 +96,9 @@ independent:
 - authoritative = fresh (< 48h), non-empty, and matched to `reserve_sync_state.last_success_at`
 - clean = `reserve_sync_state.last_status === "ok"`; warning-bearing `degraded` snapshots stay visible on reserve detail/status surfaces but do not drive scoring
 - independent = adapter `evidenceClass` is `independent`
+- scoring-eligible freshness = `freshnessMode === "verified"` or `freshnessMode === "not-applicable"`; `freshnessMode === "unverified"` stays detail-visible but does not drive scoring
 - `validated-static` feeds (for example `curated-validated` and `frax`) and `weak-live-probe` feeds (for example `single-asset` and `tether`) remain authoritative for reserve detail/status surfaces, but they do not override curated collateral scoring
+- the live reserve registry now enforces an explicit per-adapter freshness contract, so latest-state on-chain proofs, timestamp-backed disclosures, and explicitly unverified dashboard feeds cannot silently drift into undocumented freshness semantics
 
 This prevents collateral scores from drifting as protocol reserve compositions evolve.
 

@@ -44,6 +44,13 @@ describe("fetchSingleAssetReserves", () => {
     expect(result.slices).toEqual([
       { name: "ETH collateral", pct: 100, risk: "low" },
     ]);
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "unverified",
+      details: {
+        proofKind: "single-asset-liveness-probe",
+        reserveSourceLabel: "ETH collateral",
+      },
+    });
   });
 
   it("preserves optional coinId and depType in the slice", async () => {
@@ -115,7 +122,7 @@ describe("fetchSingleAssetReserves", () => {
     };
 
     await expect(fetchSingleAssetReserves(makeCoin(), config, signal))
-      .rejects.toThrow("params.probe.kind = json-path");
+      .rejects.toThrow("params.probe/reserveProbe or params.supplyProbe");
   });
 
   it("throws on invalid risk value", async () => {
@@ -162,6 +169,12 @@ describe("fetchSingleAssetReserves", () => {
     expect(result.slices).toEqual([
       { name: "ETH collateral", pct: 100, risk: "low" },
     ]);
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "not-applicable",
+      details: {
+        proofKind: "erc20-total-supply-liveness",
+      },
+    });
   });
 
   it("includes live redemption fee metadata when a probe is configured", async () => {
@@ -188,7 +201,79 @@ describe("fetchSingleAssetReserves", () => {
       signal,
     );
 
-    expect(result.metadata).toEqual({ freshnessMode: "not-applicable", redemptionFeeBps: 50 });
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "not-applicable",
+      redemptionFeeBps: 50,
+      details: {
+        proofKind: "erc20-total-supply-liveness",
+      },
+    });
+  });
+
+  it("computes reserve and supply metadata when richer json probes are configured", async () => {
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue({
+      reserve_total: "105000000",
+      supply_total: "100000000",
+      asOf: "2026-03-20T12:00:00Z",
+    });
+    const config: LiveReservesConfig = {
+      adapter: "single-asset",
+      version: 1,
+      semantics: "single-asset",
+      inputs: { primary: { kind: "http-json", url: "https://example.com/api" } },
+      params: {
+        label: "Treasury reserve",
+        risk: "very-low",
+        reserveProbe: { kind: "json-path", path: ["reserve_total"] },
+        supplyProbe: { kind: "json-path", path: ["supply_total"] },
+        timestampProbe: { kind: "json-path", path: ["asOf"] },
+        reserveSourceLabel: "Issuer reserve dashboard",
+      },
+    };
+
+    const result = await fetchSingleAssetReserves(makeCoin(), config, signal);
+    expect(result.metadata).toMatchObject({
+      totalReserveUsd: 105000000,
+      supplyUsd: 100000000,
+      collateralizationRatio: 1.05,
+      sourceTimestamp: Date.parse("2026-03-20T12:00:00Z") / 1000,
+      freshnessMode: "verified",
+      details: {
+        proofKind: "reserve-and-supply-probe",
+        reserveSourceLabel: "Issuer reserve dashboard",
+      },
+    });
+  });
+
+  it("marks timestamp-backed liveness probes as freshness-verified even without reserve totals", async () => {
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue({
+      data: {
+        price: "1.120735576038699094",
+        timestamp: "1774874195",
+      },
+    });
+    const config: LiveReservesConfig = {
+      adapter: "single-asset",
+      version: 1,
+      semantics: "single-asset",
+      inputs: { primary: { kind: "http-json", url: "https://example.com/api" } },
+      params: {
+        label: "Treasury reserve",
+        risk: "very-low",
+        probe: { kind: "json-path", path: ["data", "price"] },
+        timestampProbe: { kind: "json-path", path: ["data", "timestamp"] },
+      },
+    };
+
+    const result = await fetchSingleAssetReserves(makeCoin(), config, signal);
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: 1_774_874_195,
+      freshnessMode: "verified",
+      details: {
+        proofKind: "single-asset-liveness-probe",
+        reserveSourceLabel: "Treasury reserve",
+      },
+    });
   });
 
   it("throws when on-chain probe fails", async () => {

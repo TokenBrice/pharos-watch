@@ -9,9 +9,19 @@ import {
   getJsonPath,
   isHttpJsonInput,
   parsePositiveNumericLike,
+  parseTimestampLikeToUnixSeconds,
   probeOnchainTotalSupply,
   requireOnchainInput,
+  notApplicableFreshnessMetadata,
+  unverifiedFreshnessMetadata,
+  verifiedFreshnessMetadata,
 } from "./helpers";
+
+interface JsonPathProbe {
+  kind: "json-path";
+  path: string[];
+  scale?: number;
+}
 
 interface SingleAssetParams {
   label: string;
@@ -20,10 +30,11 @@ interface SingleAssetParams {
   depType?: ReserveSlice["depType"];
   rpcUrl?: string;
   fallbackRpcUrl?: string;
-  probe?: {
-    kind: "json-path";
-    path: string[];
-  };
+  probe?: JsonPathProbe;
+  reserveProbe?: JsonPathProbe;
+  supplyProbe?: JsonPathProbe;
+  timestampProbe?: JsonPathProbe;
+  reserveSourceLabel?: string;
   redemptionRateProbe?: {
     contract: string;
     selector: string;
@@ -33,6 +44,16 @@ interface SingleAssetParams {
 
 function readParams(config: LiveReservesConfig): SingleAssetParams {
   return parseLiveReserveAdapterParams("single-asset", config.params);
+}
+
+function readScaledProbeValue(payload: Record<string, unknown>, probe: JsonPathProbe, label: string): number {
+  const rawValue = getJsonPath(payload, probe.path);
+  const parsed = parsePositiveNumericLike(rawValue);
+  if (parsed == null) {
+    throw new Error(`single-asset source returned zero/empty ${label} probe value`);
+  }
+  const scale = probe.scale ?? 1;
+  return parsed / scale;
 }
 
 export async function fetchSingleAssetReserves(
@@ -45,9 +66,9 @@ export async function fetchSingleAssetReserves(
   const primary = config.inputs.primary;
 
   if (isHttpJsonInput(primary)) {
-    const probe = params.probe;
-    if (!probe || probe.kind !== "json-path") {
-      throw new Error("single-asset http-json mode requires params.probe.kind = json-path");
+    const reserveProbe = params.reserveProbe ?? params.probe;
+    if (!reserveProbe && !params.supplyProbe) {
+      throw new Error("single-asset http-json mode requires params.probe/reserveProbe or params.supplyProbe");
     }
     const payload = await fetchJsonWithRetry<Record<string, unknown>>(
       primary.url,
@@ -55,10 +76,53 @@ export async function fetchSingleAssetReserves(
       getAdapterTimeout(config, 12_000),
       ctx,
     );
-    const value = getJsonPath(payload, probe.path);
-    if (parsePositiveNumericLike(value) == null) {
-      throw new Error("single-asset source returned zero/empty probe value");
+    const totalReserveUsd = reserveProbe
+      ? readScaledProbeValue(payload, reserveProbe, "reserve")
+      : null;
+    const supplyUsd = params.supplyProbe
+      ? readScaledProbeValue(payload, params.supplyProbe, "supply")
+      : null;
+    const timestampRaw = params.timestampProbe
+      ? getJsonPath(payload, params.timestampProbe.path)
+      : null;
+    const sourceTimestamp = params.timestampProbe
+      ? parseTimestampLikeToUnixSeconds(timestampRaw)
+      : null;
+
+    if (params.timestampProbe && sourceTimestamp == null) {
+      throw new Error("single-asset source returned unreadable timestamp probe value");
     }
+
+    const freshnessMetadata = sourceTimestamp != null
+      ? verifiedFreshnessMetadata(sourceTimestamp)
+      : unverifiedFreshnessMetadata(
+          "single-asset-json-probe",
+          "The configured single-asset reserve probe does not include a trustworthy source timestamp",
+        );
+
+    return {
+      slices: [{
+        name: params.label,
+        pct: 100,
+        risk: params.risk,
+        ...(params.coinId ? { coinId: params.coinId } : {}),
+        ...(params.depType ? { depType: params.depType } : {}),
+      }],
+      metadata: {
+        ...freshnessMetadata,
+        ...(totalReserveUsd != null ? { totalReserveUsd } : {}),
+        ...(supplyUsd != null ? { supplyUsd } : {}),
+        ...(totalReserveUsd != null && supplyUsd != null && supplyUsd > 0
+          ? { collateralizationRatio: totalReserveUsd / supplyUsd }
+          : {}),
+        details: {
+          proofKind: totalReserveUsd != null && supplyUsd != null
+            ? "reserve-and-supply-probe"
+            : "single-asset-liveness-probe",
+          reserveSourceLabel: params.reserveSourceLabel ?? params.label,
+        },
+      },
+    };
   } else {
     const onchainInput = requireOnchainInput(primary, "single-asset");
     const supplyProbe = probeOnchainTotalSupply(
@@ -92,22 +156,12 @@ export async function fetchSingleAssetReserves(
         ...(params.depType ? { depType: params.depType } : {}),
       }],
       metadata: {
-        freshnessMode: "not-applicable",
+        ...notApplicableFreshnessMetadata({
+          proofKind: "erc20-total-supply-liveness",
+          reserveSourceLabel: params.reserveSourceLabel ?? params.label,
+        }),
         ...(redemptionFeeBps != null ? { redemptionFeeBps } : {}),
       },
     };
   }
-
-  return {
-    slices: [{
-      name: params.label,
-      pct: 100,
-      risk: params.risk,
-      ...(params.coinId ? { coinId: params.coinId } : {}),
-      ...(params.depType ? { depType: params.depType } : {}),
-    }],
-    metadata: {
-      freshnessMode: "unverified",
-    },
-  };
 }

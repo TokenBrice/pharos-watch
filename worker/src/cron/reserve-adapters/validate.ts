@@ -45,6 +45,10 @@ function getMetadataDetails(metadata: Record<string, unknown> | undefined): Reco
     : null;
 }
 
+function describeAdapter(adapter: ReserveAdapterDefinition | undefined): string {
+  return adapter ? ` for ${adapter.sourceModel}/${adapter.evidenceClass}` : "";
+}
+
 export function validateAdapterOutput(
   input: ValidationInput,
   options?: ValidationOptions,
@@ -66,9 +70,7 @@ export function validateAdapterOutput(
 
   const sum = input.slices.reduce((s, r) => s + r.pct, 0);
   const deviation = Math.abs(sum - 100);
-  const adapterLabel = options?.adapter
-    ? ` for ${options.adapter.sourceModel}/${options.adapter.evidenceClass}`
-    : "";
+  const adapterLabel = describeAdapter(options?.adapter);
   if (deviation > PCT_SUM_ERROR_TOLERANCE) {
     return {
       valid: false,
@@ -113,6 +115,19 @@ export function validateAdapterOutput(
   }
 
   const freshnessMode = input.metadata?.freshnessMode;
+  const allowedFreshnessModes = options?.adapter?.validation?.allowedFreshnessModes;
+  if (
+    Array.isArray(allowedFreshnessModes)
+    && allowedFreshnessModes.length > 0
+    && typeof freshnessMode === "string"
+    && !allowedFreshnessModes.includes(freshnessMode as (typeof allowedFreshnessModes)[number])
+  ) {
+    warnings.push(degradedWarning(
+      "freshness-mode-disallowed",
+      `Live reserve output emitted freshnessMode=${freshnessMode}${adapterLabel}, allowed modes: ${allowedFreshnessModes.join(", ")}`,
+    ));
+  }
+
   if (options?.adapter?.evidenceClass === "independent") {
     if (freshnessMode === "verified" && sourceTimestamp == null) {
       return {

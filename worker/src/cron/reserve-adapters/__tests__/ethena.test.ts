@@ -18,8 +18,8 @@ describe("adaptEthenaCollateral", () => {
 
     expect(result.slices).toEqual([
       { name: "Liquid stables / cash equivalents", pct: 35, risk: "low" },
-      { name: "BTC collateral", pct: 20, risk: "medium" },
       { name: "ETH / liquid staking collateral", pct: 30, risk: "medium" },
+      { name: "BTC collateral", pct: 20, risk: "medium" },
       { name: "Other crypto collateral", pct: 15, risk: "high" },
     ]);
     expect(result.metadata).toMatchObject({

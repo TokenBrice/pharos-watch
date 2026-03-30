@@ -1,14 +1,16 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
-  decimalNumberFromBigInt,
   fetchDefiLlamaPrices,
   fetchErc20Balance,
   fetchOnchainRateBps,
+  notApplicableFreshnessMetadata,
   requireOnchainInput,
   slicesFromValues,
+  valueUsdFromBigIntPrice,
 } from "./helpers";
 
 interface BranchConfig {
@@ -50,6 +52,13 @@ function readParams(config: LiveReservesConfig): BranchBalanceParams {
   return params;
 }
 
+function getCoinIdFallbackPriceUsd(coinId: string | undefined): number | null {
+  if (!coinId) return null;
+  const meta = TRACKED_META_BY_ID.get(coinId);
+  if (!meta) return null;
+  return meta.flags.pegCurrency === "USD" ? 1 : null;
+}
+
 export async function fetchEvmBranchBalancesReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
@@ -73,7 +82,7 @@ export async function fetchEvmBranchBalancesReserves(
         );
         return {
           branch,
-          balance: raw == null ? null : decimalNumberFromBigInt(raw, branch.token.decimals),
+          balanceRaw: raw,
         };
       }),
     ),
@@ -90,13 +99,13 @@ export async function fetchEvmBranchBalancesReserves(
   ]);
 
   const unreadableBranches = balances
-    .filter((entry) => entry.balance == null)
+    .filter((entry) => entry.balanceRaw == null)
     .map((entry) => entry.branch.name);
   if (unreadableBranches.length > 0) {
     throw new Error(`evm-branch-balances adapter could not read balances for: ${unreadableBranches.join(", ")}`);
   }
 
-  const pricedBranches = balances.filter((entry) => entry.balance != null && entry.balance > 0);
+  const pricedBranches = balances.filter((entry) => entry.balanceRaw != null && entry.balanceRaw > 0n);
   if (pricedBranches.length === 0) {
     throw new Error("evm-branch-balances adapter found no non-zero balances");
   }
@@ -113,13 +122,13 @@ export async function fetchEvmBranchBalancesReserves(
   );
 
   const slices = slicesFromValues(
-    pricedBranches.map(({ branch, balance }) => {
-      const price = branch.priceUsd ?? priceMap.get(branch.name);
+    pricedBranches.map(({ branch, balanceRaw }) => {
+      const price = branch.priceUsd ?? priceMap.get(branch.name) ?? getCoinIdFallbackPriceUsd(branch.coinId);
       if (price == null) {
         throw new Error(`Missing DefiLlama price for ${branch.name}`);
       }
       return {
-        value: (balance ?? 0) * price,
+        value: valueUsdFromBigIntPrice(balanceRaw ?? 0n, branch.token.decimals, price),
         name: branch.name,
         risk: branch.risk,
         ...(branch.coinId ? { coinId: branch.coinId } : {}),
@@ -132,7 +141,9 @@ export async function fetchEvmBranchBalancesReserves(
     slices,
     metadata: {
       branchCount: pricedBranches.length,
-      freshnessMode: "not-applicable",
+      ...notApplicableFreshnessMetadata({
+        proofKind: "onchain-branch-balances",
+      }),
       ...(redemptionFeeBps != null ? { redemptionFeeBps } : {}),
     },
   };

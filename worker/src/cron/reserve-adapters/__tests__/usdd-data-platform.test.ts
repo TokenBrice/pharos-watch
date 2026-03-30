@@ -95,9 +95,9 @@ describe("adaptUsddLatestCollateral", () => {
     ]);
     expect(result.warnings).toEqual([{
       code: "unknown-vault-type",
-      message: "USDD collateral feed includes unmapped vault types: RWA-A",
-      severity: "info",
-      effect: "info",
+      message: "USDD collateral feed includes unmapped vault types: RWA-A (25.00% of reserves)",
+      severity: "warning",
+      effect: "degraded",
     }]);
     expect(result.metadata).toMatchObject({
       vaultCount: 2,

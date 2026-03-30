@@ -203,6 +203,28 @@ describe("validateAdapterOutput", () => {
     expect(result.warnings.some((warning) => warning.code === "freshness-reason-missing")).toBe(true);
   });
 
+  it("rejects outputs whose freshnessMode is disallowed by the adapter definition", () => {
+    const result = validateAdapterOutput(
+      {
+        slices: [{ name: "A", pct: 100, risk: "low" }],
+        metadata: { freshnessMode: "verified", sourceTimestamp: 1_000 },
+      },
+      {
+        adapter: {
+          key: "fx",
+          fetch: async () => ({ slices: [] }),
+          sourceModel: LIVE_RESERVE_ADAPTER_DEFINITIONS.fx.sourceModel,
+          evidenceClass: LIVE_RESERVE_ADAPTER_DEFINITIONS.fx.evidenceClass,
+          sharedSourceMode: LIVE_RESERVE_ADAPTER_DEFINITIONS.fx.sharedSourceMode,
+          validation: LIVE_RESERVE_ADAPTER_DEFINITIONS.fx.validation,
+        },
+      },
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.warnings.some((warning) => warning.code === "freshness-mode-disallowed")).toBe(true);
+  });
+
   it("warns when material unknown exposure exceeds the adapter threshold", () => {
     const result = validateAdapterOutput(
       {

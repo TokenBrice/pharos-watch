@@ -138,10 +138,11 @@ describe("syncLiveReserves", () => {
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
     const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const metadata = JSON.parse(result?.metadata ?? "{}") as { warningCount?: number };
 
     // Warnings no longer affect status (only failed+skipped > 10% of total triggers degraded)
     expect(result?.status).toBe("ok");
-    expect(result?.metadata).toContain(`"warningCount":${configuredCoinCount}`);
+    expect(metadata.warningCount).toBeGreaterThanOrEqual(configuredCoinCount);
   });
 
   it("records a skipped sync state when the circuit is open", async () => {

@@ -19,7 +19,7 @@ const SAMPLE_RESPONSE: ReservoirReservesResponse = {
 
 describe("adaptReservoirReserves", () => {
   it("groups live balance-sheet assets into reserve slices", () => {
-    const { slices, immediateRedeemableUsd, supplyUsd } = adaptReservoirReserves(SAMPLE_RESPONSE);
+    const { slices, immediateRedeemableUsd, supplyUsd, unknownExposurePct } = adaptReservoirReserves(SAMPLE_RESPONSE);
 
     expect(slices).toEqual([
       { name: "USD1 lending markets", pct: 30, risk: "medium", coinId: "usd1-world-liberty-financial", depType: "wrapper" },
@@ -31,6 +31,7 @@ describe("adaptReservoirReserves", () => {
     ]);
     expect(immediateRedeemableUsd).toBe(5);
     expect(supplyUsd).toBe(95);
+    expect(unknownExposurePct).toBe(0);
   });
 
   it("returns empty slices for zero total assets", () => {
@@ -56,13 +57,14 @@ describe("adaptReservoirReserves", () => {
   });
 
   it("returns unmapped assets separately for operator review", () => {
-    const { unknownAssets } = adaptReservoirReserves({
+    const { unknownAssets, unknownExposurePct } = adaptReservoirReserves({
       ...SAMPLE_RESPONSE,
       assets: [...SAMPLE_RESPONSE.assets, { label: "Mystery Adapter", totalBalanceValue: "3" }],
       totalAssets: "103",
     });
 
     expect(unknownAssets).toContain("Mystery Adapter");
+    expect(unknownExposurePct).toBeCloseTo((3 / 103) * 100, 6);
   });
 
   it("handles non-integer percentages correctly via normalizeSlices", () => {
@@ -105,6 +107,46 @@ describe("adaptReservoirReserves", () => {
       details: {
         freshnessSource: "protocol-balance-sheet-api",
       },
+      totalAssetsUsd: 100,
+      totalLiabilitiesUsd: 95,
+      shareholderEquityUsd: 5,
+      collateralizationRatio: 100 / 95,
+    });
+  });
+
+  it("aggregates unknown exposure into one warning instead of one warning per position", async () => {
+    const result = await fetchReservoirReserves(
+      { id: "r" } as never,
+      {
+        adapter: "reservoir",
+        version: 1,
+        semantics: "protocol-reserve",
+        inputs: { primary: { kind: "http-json", url: "https://example.com/reservoir" } },
+      },
+      new AbortController().signal,
+      {
+        requestCache: new Map([
+          ["json-get:https://example.com/reservoir:12000", Promise.resolve({
+            ...SAMPLE_RESPONSE,
+            assets: [
+              ...SAMPLE_RESPONSE.assets,
+              { label: "Mystery Adapter A", totalBalanceValue: "3" },
+              { label: "Mystery Adapter B", totalBalanceValue: "2" },
+            ],
+            totalAssets: "105",
+          })],
+        ]),
+      } as never,
+    );
+
+    expect(result.warnings).toEqual([expect.objectContaining({
+      code: "unknown-position",
+      message: expect.stringContaining("Mystery Adapter A, Mystery Adapter B"),
+    })]);
+    expect(result.metadata).toMatchObject({
+      unknownAssetCount: 2,
+      unknownAssetLabels: ["Mystery Adapter A", "Mystery Adapter B"],
+      unknownExposurePct: (5 / 105) * 100,
     });
   });
 });

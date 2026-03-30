@@ -2,11 +2,11 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildUnknownExposureWarning,
   fetchJsonWithRetry,
   getAdapterTimeout,
   isHttpJsonInput,
   normalizeSlices,
-  reserveDegradedWarning,
   unverifiedFreshnessMetadata,
 } from "./helpers";
 import { cefiPositionMeta, wrapperAssetMeta } from "./wrapper-assets";
@@ -70,6 +70,7 @@ export interface AdaptInfiniFiResult {
   /** Farm names not found in FARM_RISK_MAP (for operator awareness). */
   unknownFarms: string[];
   unknownExposurePct: number;
+  activeFarmCount: number;
   immediateRedeemableUsd: number;
   supplyUsd?: number;
 }
@@ -82,6 +83,7 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
       slices: [],
       unknownFarms: [],
       unknownExposurePct: 0,
+      activeFarmCount: 0,
       immediateRedeemableUsd: payload.data.stats.asset.totalLiquidAssetNormalized ?? 0,
       ...(payload.data.receipt?.totalSupplyNormalized != null ? { supplyUsd: payload.data.receipt.totalSupplyNormalized } : {}),
     };
@@ -119,6 +121,7 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
     slices: normalizeSlices(rawSlices),
     unknownFarms,
     unknownExposurePct,
+    activeFarmCount: activeFarms.length,
     immediateRedeemableUsd: payload.data.stats.asset.totalLiquidAssetNormalized ?? 0,
     ...(payload.data.receipt?.totalSupplyNormalized != null ? { supplyUsd: payload.data.receipt.totalSupplyNormalized } : {}),
   };
@@ -140,10 +143,13 @@ export async function fetchInfiniFiReserves(
   const payload = await fetchJsonWithRetry<InfiniFiProtocolData>(url, signal, getAdapterTimeout(config, 12_000), ctx);
   if (payload.code !== "OK") throw new Error("infiniFi API returned non-OK code");
   const adapted = adaptInfiniFi(payload);
-  const warnings: LiveReserveWarning[] = adapted.unknownFarms.map((farmName) => reserveDegradedWarning(
-    "unknown-position",
-    `Unmapped reserve position: ${farmName}`,
-  ));
+  const warnings: LiveReserveWarning[] = adapted.unknownFarms.length > 0
+    ? [buildUnknownExposureWarning({
+        code: "unknown-position",
+        message: `Unmapped reserve positions: ${adapted.unknownFarms.sort().join(", ")}`,
+        unknownExposurePct: adapted.unknownExposurePct,
+      })]
+    : [];
 
   const totalReserveUsd = payload.data.stats.asset.totalTVLAssetNormalized;
   const illiquidReserveUsd = payload.data.stats.asset.totalIlliquidAssetNormalized ?? 0;
@@ -153,7 +159,7 @@ export async function fetchInfiniFiReserves(
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       farmCount: payload.data.farms.length,
-      activeFarmCount: adapted.slices.length,
+      activeFarmCount: adapted.activeFarmCount,
       unknownFarmCount: adapted.unknownFarms.length,
       unknownExposurePct: adapted.unknownExposurePct,
       ...unverifiedFreshnessMetadata(

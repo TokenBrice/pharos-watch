@@ -27,6 +27,13 @@ export function ScoringChangelogV70Entry() {
           Live reserve enrichment and curated reserve evaluation now share the same direct clue detection
           for named stablecoin baskets and explicit custody/CEX descriptors.
         </li>
+        <li>
+          This does not relax the collateral passthrough gate:{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">static-validated</code>,{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">weak-live-probe</code>, and{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">freshnessMode=unverified</code>{" "}
+          reserve feeds remain detail-visible only.
+        </li>
       </ul>
     </VersionCard>
   );

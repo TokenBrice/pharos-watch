@@ -9,6 +9,10 @@ vi.mock("../../../lib/fetch-retry", () => ({
 import { fetchWithRetry } from "../../../lib/fetch-retry";
 import {
   accumulateBucketedExposure,
+  buildUnknownExposureWarning,
+  classifyBucketedValues,
+  computeUnknownExposurePct,
+  decimalStringFromBigInt,
   fetchJsonWithRetry,
   getAdapterTimeout,
   isReserveRisk,
@@ -18,6 +22,7 @@ import {
   parseTimestampLikeToUnixSeconds,
   slicesFromValues,
   unverifiedFreshnessMetadata,
+  valueUsdFromBigIntPrice,
   verifiedFreshnessMetadata,
 } from "../helpers";
 
@@ -55,6 +60,15 @@ describe("normalizeSlices", () => {
     expect(result).toHaveLength(2);
     expect(result.find((s) => s.name === "USDC")?.pct).toBe(50);
     expect(result.find((s) => s.name === "T-Bills")?.pct).toBe(50);
+  });
+
+  it("keeps blacklistable slices distinct from non-blacklistable slices", () => {
+    const result = normalizeSlices([
+      { name: "USDC", pct: 50, risk: "low", coinId: "usdc-circle", blacklistable: true },
+      { name: "USDC", pct: 50, risk: "low", coinId: "usdc-circle" },
+    ]);
+
+    expect(result).toHaveLength(2);
   });
 
   it("filters zero and negative slices", () => {
@@ -104,6 +118,46 @@ describe("accumulateBucketedExposure", () => {
     expect(result.bucketTotals.get("other")).toBe(40);
     expect(result.unknownValue).toBe(15);
     expect(Array.from(result.unknownValuesByKey.entries())).toEqual([["MYSTERY", 15]]);
+  });
+});
+
+describe("classifyBucketedValues", () => {
+  it("groups matched items into configured buckets and emits a shared unknown slice", () => {
+    const result = classifyBucketedValues({
+      items: [
+        { symbol: "USDC", label: "USDC", value: 60 },
+        { symbol: "PYUSD", label: "PYUSD", value: 30 },
+        { symbol: "MYSTERY", label: "Mystery venue", value: 10 },
+      ],
+      rules: [
+        {
+          key: "usdc",
+          name: "USDC positions",
+          risk: "low",
+          coinId: "usdc-circle",
+          match: (item) => item.symbol === "USDC",
+        },
+        {
+          key: "pyusd",
+          name: "PYUSD positions",
+          risk: "medium",
+          coinId: "pyusd-paypal",
+          match: (item) => item.symbol === "PYUSD",
+        },
+      ] as const,
+      getValue: (item) => item.value,
+      getUnknownLabel: (item) => item.label,
+      totalValue: 100,
+    });
+
+    expect(result.bucketTotals.get("usdc")).toBe(60);
+    expect(result.unknownItems).toEqual(["Mystery venue"]);
+    expect(result.unknownExposurePct).toBe(10);
+    expect(result.slices).toEqual([
+      { name: "USDC positions", pct: 60, risk: "low", coinId: "usdc-circle" },
+      { name: "PYUSD positions", pct: 30, risk: "medium", coinId: "pyusd-paypal" },
+      { name: "Unmapped reserve positions", pct: 10, risk: "high" },
+    ]);
   });
 });
 
@@ -237,6 +291,36 @@ describe("parsePositiveNumericLike", () => {
     expect(parsePositiveNumericLike("-1")).toBeNull();
     expect(parsePositiveNumericLike("")).toBeNull();
     expect(parsePositiveNumericLike({ value: 1 })).toBeNull();
+  });
+});
+
+describe("decimal helpers", () => {
+  it("formats bigint decimals without losing structural precision", () => {
+    expect(decimalStringFromBigInt(1_234_500_000_000_000_000n, 18)).toBe("1.2345");
+  });
+
+  it("values scaled bigint balances against usd prices without converting to decimal numbers first", () => {
+    expect(valueUsdFromBigIntPrice(100_000_000n, 8, 60_000)).toBe(60_000);
+  });
+});
+
+describe("unknown exposure helpers", () => {
+  it("computes unknown exposure pct defensively", () => {
+    expect(computeUnknownExposurePct(25, 100)).toBe(25);
+    expect(computeUnknownExposurePct(0, 100)).toBe(0);
+  });
+
+  it("escalates warning effect when unknown exposure is material", () => {
+    expect(buildUnknownExposureWarning({
+      code: "unknown",
+      message: "unknown buckets",
+      unknownExposurePct: 2,
+    }).effect).toBe("info");
+    expect(buildUnknownExposureWarning({
+      code: "unknown",
+      message: "unknown buckets",
+      unknownExposurePct: 7,
+    }).effect).toBe("degraded");
   });
 });
 

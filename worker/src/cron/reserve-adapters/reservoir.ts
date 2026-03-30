@@ -2,13 +2,14 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildUnknownExposureWarning,
+  classifyBucketedValues,
   fetchJsonWithRetry,
   getAdapterTimeout,
   isHttpJsonInput,
-  normalizeSlices,
-  reserveDegradedWarning,
   unverifiedFreshnessMetadata,
 } from "./helpers";
+import type { ValueBucketRule } from "./classification";
 import { wrapperAssetMeta } from "./wrapper-assets";
 
 interface ReservoirBalanceItem {
@@ -24,61 +25,54 @@ export interface ReservoirReservesResponse {
   equity: string;
 }
 
-interface ReservoirBucketConfig {
-  key: string;
-  label: string;
-  risk: ReserveSlice["risk"];
-  coinId?: string;
-  depType?: ReserveSlice["depType"];
-  match: (item: ReservoirBalanceItem) => boolean;
-}
+type ReservoirBucketKey = "usd1" | "pyusd" | "rlusd" | "gho" | "usdt" | "usdc" | "rusd";
 
-const RESERVOIR_BUCKETS: ReservoirBucketConfig[] = [
+const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, ReservoirBucketKey>[] = [
   {
     key: "usd1",
-    label: "USD1 lending markets",
+    name: "USD1 lending markets",
     risk: "medium",
     ...wrapperAssetMeta("usd1"),
     match: (item) => item.label.includes("USD1"),
   },
   {
     key: "pyusd",
-    label: "PYUSD lending markets",
+    name: "PYUSD lending markets",
     risk: "medium",
     ...wrapperAssetMeta("pyusd"),
     match: (item) => item.label.includes("PYUSD"),
   },
   {
     key: "rlusd",
-    label: "RLUSD lending markets",
+    name: "RLUSD lending markets",
     risk: "medium",
     ...wrapperAssetMeta("rlusd"),
     match: (item) => item.label.includes("RLUSD"),
   },
   {
     key: "gho",
-    label: "GHO lending markets",
+    name: "GHO lending markets",
     risk: "medium",
     ...wrapperAssetMeta("gho"),
     match: (item) => item.label.includes("GHO"),
   },
   {
     key: "usdt",
-    label: "USDT / USDT0 positions",
+    name: "USDT / USDT0 positions",
     risk: "medium",
     ...wrapperAssetMeta("usdt"),
     match: (item) => item.label.includes("USDT0") || item.label === "USDT",
   },
   {
     key: "usdc",
-    label: "USDC positions",
+    name: "USDC positions",
     risk: "medium",
     ...wrapperAssetMeta("usdc"),
     match: (item) => item.label.includes("USDC"),
   },
   {
     key: "rusd",
-    label: "rUSD strategy vaults",
+    name: "rUSD strategy vaults",
     risk: "medium",
     match: (item) => item.label.includes("RUSD"),
   },
@@ -87,6 +81,7 @@ const RESERVOIR_BUCKETS: ReservoirBucketConfig[] = [
 export interface AdaptReservoirResult {
   slices: ReserveSlice[];
   unknownAssets: string[];
+  unknownExposurePct: number;
   immediateRedeemableUsd: number;
   supplyUsd: number | null;
 }
@@ -94,62 +89,26 @@ export interface AdaptReservoirResult {
 export function adaptReservoirReserves(payload: ReservoirReservesResponse): AdaptReservoirResult {
   const totalAssets = Number(payload.totalAssets);
   if (!Number.isFinite(totalAssets) || totalAssets <= 0) {
-    return { slices: [], unknownAssets: [], immediateRedeemableUsd: 0, supplyUsd: null };
+    return { slices: [], unknownAssets: [], unknownExposurePct: 0, immediateRedeemableUsd: 0, supplyUsd: null };
   }
 
-  const bucketTotals = new Map<string, number>();
-  const unknownAssets: string[] = [];
-  let unknownAssetsUsd = 0;
-
-  for (const asset of payload.assets) {
-    const value = Number(asset.totalBalanceValue);
-    if (!Number.isFinite(value) || value <= 0) continue;
-
-    const bucket = RESERVOIR_BUCKETS.find((candidate) => candidate.match(asset));
-    if (!bucket) {
-      unknownAssets.push(asset.label);
-      unknownAssetsUsd += value;
-      continue;
-    }
-
-    bucketTotals.set(bucket.key, (bucketTotals.get(bucket.key) ?? 0) + value);
-  }
-
-  const slices = Array.from(bucketTotals.entries())
-    .map(([bucketKey, bucketValue]) => {
-      const config = RESERVOIR_BUCKETS.find((bucket) => bucket.key === bucketKey)!;
-      return {
-        name: config.label,
-        pct: (bucketValue / totalAssets) * 100,
-        risk: config.risk,
-        ...(config.coinId ? { coinId: config.coinId } : {}),
-        ...(config.depType ? { depType: config.depType } : {}),
-      } satisfies ReserveSlice;
-    })
-    .sort((a, b) => b.pct - a.pct);
-
-  if (unknownAssetsUsd > 0) {
-    slices.push({
-      name: "Unmapped reserve positions",
-      pct: (unknownAssetsUsd / totalAssets) * 100,
-      risk: "high",
-    });
-  }
+  const classified = classifyBucketedValues({
+    items: payload.assets,
+    rules: RESERVOIR_BUCKETS,
+    getValue: (asset) => Number(asset.totalBalanceValue),
+    getUnknownLabel: (asset) => asset.label,
+    totalValue: totalAssets,
+    unknownSliceName: "Unmapped reserve positions",
+  });
 
   const totalLiabilities = Number(payload.totalLiabilities);
   const supplyUsd = Number.isFinite(totalLiabilities) && totalLiabilities > 0 ? totalLiabilities : null;
-  const usdcBucket = RESERVOIR_BUCKETS.find((bucket) => bucket.key === "usdc");
-  const immediateRedeemableUsd = usdcBucket
-    ? payload.assets.reduce((sum, asset) => {
-        if (!usdcBucket.match(asset)) return sum;
-        const value = Number(asset.totalBalanceValue);
-        return Number.isFinite(value) && value > 0 ? sum + value : sum;
-      }, 0)
-    : 0;
+  const immediateRedeemableUsd = classified.bucketTotals.get("usdc") ?? 0;
 
   return {
-    slices: normalizeSlices(slices),
-    unknownAssets,
+    slices: classified.slices,
+    unknownAssets: classified.unknownItems,
+    unknownExposurePct: classified.unknownExposurePct,
     immediateRedeemableUsd,
     supplyUsd,
   };
@@ -173,10 +132,16 @@ export async function fetchReservoirReserves(
     ctx,
   );
   const adapted = adaptReservoirReserves(payload);
-  const warnings: LiveReserveWarning[] = adapted.unknownAssets.map((label) => reserveDegradedWarning(
-    "unknown-position",
-    `Unmapped reserve position: ${label}`,
-  ));
+  const totalAssetsUsd = Number(payload.totalAssets);
+  const totalLiabilitiesUsd = Number(payload.totalLiabilities);
+  const shareholderEquityUsd = Number(payload.equity);
+  const warnings: LiveReserveWarning[] = adapted.unknownAssets.length > 0
+    ? [buildUnknownExposureWarning({
+        code: "unknown-position",
+        message: `Unmapped reserve positions: ${adapted.unknownAssets.join(", ")}`,
+        unknownExposurePct: adapted.unknownExposurePct,
+      })]
+    : [];
 
   return {
     slices: adapted.slices,
@@ -188,16 +153,18 @@ export async function fetchReservoirReserves(
       totalLiabilities: payload.totalLiabilities,
       equity: payload.equity,
       unknownAssetCount: adapted.unknownAssets.length,
+      ...(adapted.unknownAssets.length > 0 ? { unknownAssetLabels: adapted.unknownAssets } : {}),
       ...unverifiedFreshnessMetadata(
         "protocol-balance-sheet-api",
         "Reservoir balance-sheet payload does not include a trustworthy source timestamp",
       ),
-      unknownExposurePct:
-        Number(payload.totalAssets) > 0
-          ? adapted.slices
-            .filter((slice) => slice.name === "Unmapped reserve positions")
-            .reduce((sum, slice) => sum + slice.pct, 0)
-          : 0,
+      unknownExposurePct: adapted.unknownExposurePct,
+      ...(Number.isFinite(totalAssetsUsd) && totalAssetsUsd > 0 ? { totalAssetsUsd } : {}),
+      ...(Number.isFinite(totalLiabilitiesUsd) && totalLiabilitiesUsd > 0 ? { totalLiabilitiesUsd } : {}),
+      ...(Number.isFinite(shareholderEquityUsd) ? { shareholderEquityUsd } : {}),
+      ...(Number.isFinite(totalAssetsUsd) && totalAssetsUsd > 0 && Number.isFinite(totalLiabilitiesUsd) && totalLiabilitiesUsd > 0
+        ? { collateralizationRatio: totalAssetsUsd / totalLiabilitiesUsd }
+        : {}),
       ...(adapted.supplyUsd != null
         ? {
             supplyUsd: adapted.supplyUsd,

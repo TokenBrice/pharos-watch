@@ -1477,6 +1477,10 @@
         "probe": {
           "kind": "json-path",
           "path": ["data", "price"]
+        },
+        "timestampProbe": {
+          "kind": "json-path",
+          "path": ["data", "timestamp"]
         }
       }
     },

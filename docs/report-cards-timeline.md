@@ -310,6 +310,7 @@ Safety Score structure is unchanged, but blacklistability attribution now scans 
 - `isBlacklistable()` returns `possible` when reserve slices or reserve-rail text imply blacklist or custodial-freeze exposure below the inherited threshold
 - Inherited status still requires majority direct reserve exposure, but curated and live reserve names now share the same direct blacklist clue detection instead of relying only on `coinId` or explicit `blacklistable` flags
 - Only coins with no explicit blacklist function, no reserve-side blacklist clues, and no CEX custody signal remain in the `no` bucket unless an explicit `false` override applies
+- The collateral passthrough gate itself is unchanged: `static-validated`, `weak-live-probe`, and `freshnessMode=unverified` reserve feeds remain detail-visible only and do not override curated collateral scoring
 
 Weights and grade thresholds are unchanged from v6.9.
 

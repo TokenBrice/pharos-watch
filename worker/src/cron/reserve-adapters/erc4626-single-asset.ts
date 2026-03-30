@@ -6,6 +6,7 @@ import { parseEvmAddressResult, resolveCoinContractAddress } from "./evm";
 import {
   fetchOnchainRawCall,
   getAdapterTimeout,
+  notApplicableFreshnessMetadata,
   requireOnchainInput,
   reserveDegradedWarning,
 } from "./helpers";
@@ -110,7 +111,12 @@ export async function fetchErc4626SingleAssetReserves(
     ],
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
-      freshnessMode: "not-applicable",
+      ...notApplicableFreshnessMetadata({
+        proofKind: "erc4626-total-assets",
+        ...(assetAddress
+          ? { assetAddressMatchesExpected: sliceConfig.expectedAssetAddress == null || assetAddress === sliceConfig.expectedAssetAddress }
+          : {}),
+      }),
       chain: primaryInput.chain,
       contractAddress,
       totalAssetsRaw: totalAssetsRaw.toString(),

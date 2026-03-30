@@ -14,8 +14,8 @@ describe("adaptFx", () => {
 
     expect(result).toEqual({
       balances: [
-        { key: "wstETH", amount: 4420.184046004807 },
-        { key: "wbtc", amount: 217.13855211 },
+        { key: "wstETH", amountRaw: 4420184046004807062590n },
+        { key: "wbtc", amountRaw: 21713855211n },
       ],
       unknownKeys: [],
     });
@@ -32,7 +32,7 @@ describe("adaptFx", () => {
     });
 
     expect(result).toEqual({
-      balances: [{ key: "wstETH", amount: 1 }],
+      balances: [{ key: "wstETH", amountRaw: 1000000000000000000n }],
       unknownKeys: ["unexpectedAsset"],
     });
   });

@@ -9,6 +9,7 @@ import {
   requireJsonInput,
   slicesFromValues,
   unverifiedFreshnessMetadata,
+  valueUsdFromBigIntPrice,
 } from "./helpers";
 
 interface FxPoolInfo {
@@ -27,7 +28,7 @@ const TOKEN_META = {
 };
 
 export function adaptFx(payload: FxPayload): {
-  balances: Array<{ key: keyof typeof TOKEN_META; amount: number }>;
+  balances: Array<{ key: keyof typeof TOKEN_META; amountRaw: bigint }>;
   unknownKeys: string[];
 } {
   const poolInfo = payload.data?.poolInfo ?? {};
@@ -39,14 +40,16 @@ export function adaptFx(payload: FxPayload): {
   return {
     balances: (Object.keys(TOKEN_META) as Array<keyof typeof TOKEN_META>)
     .map((key) => {
-      const balance = Number(poolInfo[key]?.collateralBalance ?? "0");
-      const decimals = TOKEN_META[key].decimals;
+      const rawBalance = poolInfo[key]?.collateralBalance ?? "0";
+      const balance = typeof rawBalance === "string" && /^\d+$/.test(rawBalance)
+        ? BigInt(rawBalance)
+        : 0n;
       return {
         key,
-        amount: Number.isFinite(balance) && balance > 0 ? balance / (10 ** decimals) : 0,
+        amountRaw: balance > 0n ? balance : 0n,
       };
     })
-    .filter((entry) => entry.amount > 0),
+    .filter((entry) => entry.amountRaw > 0n),
     unknownKeys: unexpectedPositiveKeys,
   };
 }
@@ -61,9 +64,7 @@ export async function fetchFxReserves(
   const payload = await fetchJsonWithRetry<FxPayload>(input.url, signal, getAdapterTimeout(config, 12_000), ctx);
   const { balances, unknownKeys } = adaptFx(payload);
   if (unknownKeys.length > 0) {
-    // The payload does not provide decimals/price metadata for unmapped keys, so
-    // treating them as a quantified reserve slice would fabricate precision.
-    throw new Error(`fx returned unmapped positive collateral keys: ${unknownKeys.join(", ")}`);
+    throw new Error(`fx returned unmapped positive collateral keys with unquantified exposure: ${unknownKeys.join(", ")}`);
   }
   const priceMap = await fetchDefiLlamaPrices(
     balances.map(({ key }) => ({
@@ -75,13 +76,13 @@ export async function fetchFxReserves(
     ctx,
   );
 
-  const knownValues = balances.map(({ key, amount }) => {
+  const knownValues = balances.map(({ key, amountRaw }) => {
     const price = priceMap.get(key);
     if (price == null) {
       throw new Error(`Missing DefiLlama price for ${key}`);
     }
     return {
-      value: amount * price,
+      value: valueUsdFromBigIntPrice(amountRaw, TOKEN_META[key].decimals, price),
       name: TOKEN_META[key].name,
       risk: TOKEN_META[key].risk,
     };

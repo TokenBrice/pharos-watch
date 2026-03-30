@@ -16,7 +16,10 @@ describe("adaptTetherTransparency", () => {
     const result = adaptTetherTransparency(SAMPLE);
     expect(result.slices).toHaveLength(1);
     expect(result.slices[0].pct).toBe(100);
-    expect(result.slices[0].risk).toBe("very-low");
+    expect(result.slices[0]).toMatchObject({
+      name: "Issuer-attested reserves (coarse composition undisclosed in this feed)",
+      risk: "medium",
+    });
   });
 
   it("includes collateralization metadata", () => {
@@ -24,6 +27,12 @@ describe("adaptTetherTransparency", () => {
     expect(result.metadata?.totalAssetsUsd).toBe(145_000_000_000);
     expect(result.metadata?.totalLiabilitiesUsd).toBe(144_500_000_000);
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.00346, 4);
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "unverified",
+      details: {
+        freshnessSource: "issuer-transparency-api",
+      },
+    });
   });
 
   it("throws on missing usdt data", () => {

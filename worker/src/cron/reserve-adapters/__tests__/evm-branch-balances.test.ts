@@ -66,19 +66,21 @@ describe("fetchEvmBranchBalancesReserves", () => {
     const sum = Math.round(result.slices.reduce((s, r) => s + r.pct, 0) * 10) / 10;
     expect(sum).toBe(100);
 
-    // slicesFromValues preserves insertion order (no sorting)
-    expect(result.slices[0].name).toBe("wstETH");
-    expect(result.slices[0].risk).toBe("low");
-    expect(result.slices[1].name).toBe("WBTC");
-    expect(result.slices[1].risk).toBe("medium");
+    expect(result.slices[0].name).toBe("WBTC");
+    expect(result.slices[0].risk).toBe("medium");
+    expect(result.slices[1].name).toBe("wstETH");
+    expect(result.slices[1].risk).toBe("low");
 
     // WBTC value = 60000 (96.8%), wstETH = 2000 (3.2%)
-    expect(result.slices[0].pct).toBeCloseTo(3.2, 0);
-    expect(result.slices[1].pct).toBeCloseTo(96.8, 0);
+    expect(result.slices[0].pct).toBeCloseTo(96.8, 0);
+    expect(result.slices[1].pct).toBeCloseTo(3.2, 0);
 
-    expect(result.metadata).toEqual({
+    expect(result.metadata).toMatchObject({
       branchCount: 2,
       freshnessMode: "not-applicable",
+      details: {
+        proofKind: "onchain-branch-balances",
+      },
     });
   });
 
@@ -113,10 +115,13 @@ describe("fetchEvmBranchBalancesReserves", () => {
     };
 
     const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
-    expect(result.metadata).toEqual({
+    expect(result.metadata).toMatchObject({
       branchCount: 1,
       freshnessMode: "not-applicable",
       redemptionFeeBps: 50,
+      details: {
+        proofKind: "onchain-branch-balances",
+      },
     });
   });
 
@@ -324,8 +329,8 @@ describe("fetchEvmBranchBalancesReserves", () => {
 
     const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
     expect(result.slices).toEqual([
-      { name: "USYC", pct: 35.9, risk: "low" },
       { name: "Wrapped stable", pct: 64.1, risk: "low" },
+      { name: "USYC", pct: 35.9, risk: "low" },
     ]);
     expect(fetchDefiLlamaPrices).toHaveBeenCalledWith(
       [
@@ -338,6 +343,36 @@ describe("fetchEvmBranchBalancesReserves", () => {
       signal,
       undefined,
     );
+  });
+
+  it("falls back to a tracked USD peg when a branch has coinId metadata but no DefiLlama price", async () => {
+    vi.mocked(fetchErc20Balance).mockResolvedValue(50_000_000n);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map());
+
+    const config: LiveReservesConfig = {
+      adapter: "evm-branch-balances",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+      },
+      params: {
+        branches: [
+          {
+            name: "USDC branch",
+            holder: "0xAAA",
+            token: { chain: "ethereum", address: "0xBBB", decimals: 6 },
+            risk: "low",
+            coinId: "usdc-circle",
+          },
+        ],
+      },
+    };
+
+    const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
+    expect(result.slices).toEqual([
+      { name: "USDC branch", pct: 100, risk: "low", coinId: "usdc-circle" },
+    ]);
   });
 
   it("throws when params.branches is missing", async () => {

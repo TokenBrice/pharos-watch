@@ -3,12 +3,14 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildUnknownExposureWarning,
+  computeUnknownExposurePct,
   fetchJsonWithRetry,
   getAdapterTimeout,
   parseTimestampLikeToUnixSeconds,
-  reserveDegradedWarning,
   requireJsonInputFromConfig,
   slicesFromValues,
+  unverifiedFreshnessMetadata,
 } from "./helpers";
 import { toFiniteNumber } from "../../lib/number-utils";
 
@@ -47,22 +49,24 @@ function parseAccountableParams(config: LiveReservesConfig): AccountableParams {
   return params;
 }
 
-function extractNestedNumericValue(value: unknown, depth = 0): number | null {
+function extractAccountableBucketValue(value: unknown, depth = 0): number | null {
   const direct = toFiniteNumber(value);
   if (direct != null) return direct;
-  if (depth > 4) return null;
+  if (depth > 1) return null;
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
 
-  let total = 0;
-  let found = false;
-  for (const nested of Object.values(value)) {
-    const numeric = extractNestedNumericValue(nested, depth + 1);
-    if (numeric == null) continue;
-    total += numeric;
-    found = true;
+  const record = value as Record<string, unknown>;
+  for (const key of ["value", "usd", "amount", "total"]) {
+    const numeric = toFiniteNumber(record[key]);
+    if (numeric != null) return numeric;
   }
 
-  return found ? total : null;
+  const numericChildren = Object.values(record)
+    .map((nested) => extractAccountableBucketValue(nested, depth + 1))
+    .filter((numeric): numeric is number => numeric != null);
+
+  if (numericChildren.length === 0) return null;
+  return numericChildren.reduce((sum, numeric) => sum + numeric, 0);
 }
 
 function extractBucketEntries(
@@ -83,7 +87,7 @@ function extractBucketEntries(
       return Object.entries(reserves.stablecoin_split ?? {}).map(([name, value]) => ({ name, value }));
     case "exposure_split":
       return Object.entries(reserves.exposure_split ?? {})
-        .map(([name, value]) => ({ name, value: extractNestedNumericValue(value) ?? 0 }));
+        .map(([name, value]) => ({ name, value: extractAccountableBucketValue(value) ?? 0 }));
     default:
       return [];
   }
@@ -105,17 +109,30 @@ function adaptAccountableDashboard(
 
   const riskMap = params.riskMap ?? {};
   const renameMap = params.renameMap ?? {};
-  const warnings = breakdown
-    .filter(({ name }) => !(name in riskMap))
-    .map((entry) => reserveDegradedWarning(
-      "unmapped-bucket",
-      `Accountable bucket defaulted to medium risk: ${entry.name}`,
-    ));
+  const mapped = breakdown.filter(({ name }) => name in riskMap);
+  const unknown = breakdown.filter(({ name }) => !(name in riskMap));
+  const totalValue = breakdown.reduce((sum, entry) => sum + entry.value, 0);
+  const unknownValue = unknown.reduce((sum, entry) => sum + entry.value, 0);
+  const unknownExposurePct = computeUnknownExposurePct(unknownValue, totalValue);
+
   const slices = slicesFromValues(
-    breakdown.map(({ name, value }) => ({
+    [
+      ...mapped.map(({ name, value }) => ({
+        name: renameMap[name] ?? name,
+        value,
+        risk: riskMap[name]!,
+      })),
+      ...(unknownValue > 0
+        ? [{
+            name: "Unknown / unmapped Accountable buckets",
+            value: unknownValue,
+            risk: "high" as const,
+          }]
+        : []),
+    ].map(({ name, value, risk }) => ({
       name: renameMap[name] ?? name,
       value,
-      risk: riskMap[name] ?? "medium",
+      risk,
     })),
   );
 
@@ -127,10 +144,22 @@ function adaptAccountableDashboard(
 
   return {
     slices,
-    ...(warnings.length > 0 ? { warnings } : {}),
+    ...(unknownExposurePct > 0
+      ? {
+          warnings: [buildUnknownExposureWarning({
+            code: "unmapped-bucket",
+            message: `Accountable bucket mapping is missing: ${unknown.map((entry) => entry.name).sort().join(", ")}`,
+            unknownExposurePct,
+          })],
+        }
+      : {}),
     metadata: {
       bucket,
       breakdownCount: breakdown.length,
+      mappedBucketCount: mapped.length,
+      ...(unknown.length > 0 ? { unknownBucketCount: unknown.length } : {}),
+      ...(unknown.length > 0 ? { unknownBucketNames: unknown.map((entry) => entry.name).sort() } : {}),
+      ...(unknownExposurePct > 0 ? { unknownExposurePct } : {}),
       collateralization: payload.data.collateralization,
       interval: payload.data.reserves.interval,
       verifiability: payload.data.reserves.verifiability,
@@ -138,7 +167,10 @@ function adaptAccountableDashboard(
       dashboardTimestamp: payload.data.ts,
       ...(sourceTimestamp != null
         ? { sourceTimestamp, freshnessMode: "verified" as const }
-        : { freshnessMode: "unverified" as const }),
+        : unverifiedFreshnessMetadata(
+            "accountable-dashboard",
+            "Accountable dashboard payload does not expose a readable upstream timestamp",
+          )),
     },
   };
 }

@@ -1,7 +1,12 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
-import { fetchJsonWithRetry, getAdapterTimeout, requireJsonInputFromConfig } from "./helpers";
+import {
+  fetchJsonWithRetry,
+  getAdapterTimeout,
+  requireJsonInputFromConfig,
+  unverifiedFreshnessMetadata,
+} from "./helpers";
 
 export interface TetherTransparencyResponse {
   data: {
@@ -34,13 +39,16 @@ export function adaptTetherTransparency(payload: TetherTransparencyResponse): Ad
   return {
     slices: [
       {
-        name: "U.S. Treasury Bills, repos, cash, and other reserves",
+        name: "Issuer-attested reserves (coarse composition undisclosed in this feed)",
         pct: 100,
-        risk: "very-low",
+        risk: "medium",
       },
     ],
     metadata: {
-      freshnessMode: "unverified",
+      ...unverifiedFreshnessMetadata(
+        "issuer-transparency-api",
+        "Tether transparency totals do not disclose a reserve-category mix or trustworthy source timestamp",
+      ),
       totalAssetsUsd: total_assets,
       totalLiabilitiesUsd: total_liabilities,
       shareholderEquityUsd: shareholder_eq,

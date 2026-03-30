@@ -7,6 +7,7 @@ import {
   decimalNumberFromBigInt,
   fetchOnchainRawCall,
   fetchOnchainUint256,
+  notApplicableFreshnessMetadata,
   reserveDegradedWarning,
   reserveInfoWarning,
   requireOnchainInput,
@@ -436,7 +437,9 @@ export function adaptGhoFacilitators(data: GhoFacilitatorData): AdapterResult {
   return {
     slices: slicesFromValues(values),
     metadata: {
-      freshnessMode: "not-applicable",
+      ...notApplicableFreshnessMetadata({
+        proofKind: "aave-gho-onchain-facilitators",
+      }),
       facilitatorCount: data.facilitators.length,
       activeFacilitatorCount: activeFacilitators.length,
       trackedGsmCount: data.trackedModules.length,
