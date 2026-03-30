@@ -2,6 +2,7 @@ import { getConfiguredRedemptionBackstopIds, getRedemptionBackstopConfig } from 
 import type { CronResult } from "../lib/cron-logger";
 import { batchExecute } from "../lib/db";
 import { loadDexLiquiditySnapshot } from "../lib/dex-liquidity";
+import { loadReserveSnapshotMetadataMap } from "../lib/live-reserves-store";
 import { upsertRedemptionBackstopSnapshots } from "../lib/redemption-backstops-store";
 import {
   buildFailedRedemptionBackstopEntry,
@@ -48,6 +49,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   );
   const stablecoinAssetById = new Map(stablecoinsCache.payload.peggedAssets.map((asset) => [asset.id, asset]));
   const { map: dexLiquidityMap, latestUpdatedAt } = await loadDexLiquiditySnapshot(db);
+  const reserveSnapshotMetadataById = await loadReserveSnapshotMetadataMap(db, configuredIds);
   const now = Math.floor(Date.now() / 1000);
 
   let liquidityStale = false;
@@ -74,12 +76,14 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
 
       if (asset) {
         resolved = await resolveRedemptionBackstopEntry(db, asset, dexLiquidityScore, now, {
+          reserveSnapshotMetadata: reserveSnapshotMetadataById.get(stablecoinId) ?? null,
           suppressEffectiveExitScore: liquidityStale,
         });
       } else {
         const config = configById.get(stablecoinId);
         if (config) {
           resolved = await buildRedemptionBackstopEntry(db, stablecoinId, config, null, dexLiquidityScore, now, {
+            reserveSnapshotMetadata: reserveSnapshotMetadataById.get(stablecoinId) ?? null,
             suppressEffectiveExitScore: liquidityStale,
           });
         }

@@ -1,13 +1,11 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { adaptMentoReserveComposition, parseMentoReserveComposition } from "../mento";
 
-const SAMPLE_HTML = `
-<html><body>
-<script>
-self.__next_f.push([1,"...\\"reserveComposition\\":[{\\"symbol\\":\\"sUSDS\\",\\"percent\\":54.8},{\\"symbol\\":\\"EURC\\",\\"percent\\":19.9},{\\"symbol\\":\\"CELO\\",\\"percent\\":13.5},{\\"symbol\\":\\"USDGLO\\",\\"percent\\":5.0},{\\"symbol\\":\\"stETH\\",\\"percent\\":2.6},{\\"symbol\\":\\"USDT\\",\\"percent\\":2.1},{\\"symbol\\":\\"USDC\\",\\"percent\\":1.2},{\\"symbol\\":\\"ETH\\",\\"percent\\":0.9}],\\"reserveHoldings\\":{}..."]);
-</script>
-</body></html>
-`;
+const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+const SAMPLE_HTML = readFileSync(join(FIXTURES_DIR, "mento-reserve-composition.html"), "utf8");
 
 describe("mento adapter", () => {
   it("parses reserveComposition from the server-rendered payload", () => {

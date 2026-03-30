@@ -1,11 +1,8 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { sumPegBuckets } from "@shared/lib/supply";
 import {
   deriveModelConfidence,
   resolveCapacityConfidence,
   resolveCapacitySemantics,
-  resolveFeeConfidence,
-  resolveFeeModelKind,
 } from "@shared/lib/redemption-backstop-confidence";
 import {
   computeCapacityScore,
@@ -19,8 +16,6 @@ import {
 import {
   getRedemptionBackstopConfig,
   type RedemptionBackstopConfig,
-  type RedemptionCapacityModel,
-  type RedemptionCostModel,
 } from "@shared/lib/redemption-backstops";
 import { REDEMPTION_BACKSTOP_VERSION } from "@shared/lib/redemption-backstop-version";
 import type { StablecoinData } from "@shared/types/market";
@@ -29,396 +24,35 @@ import {
   getLatestSuccessfulReserveSnapshotMetadata,
   type ReserveSnapshotMetadataRecord,
 } from "./live-reserves-store";
-import { readRedemptionBackstopLiveMetadata } from "./redemption-backstop-live-metadata";
-
-interface CapacityResolution {
-  immediateCapacityUsd: number | null;
-  immediateCapacityRatio: number | null;
-  scoringCapacityUsd: number | null;
-  scoringCapacityRatio: number | null;
-  provider: string;
-  sourceMode: RedemptionBackstopEntry["sourceMode"];
-  resolutionState: RedemptionBackstopEntry["resolutionState"];
-  capacityConfidence: RedemptionBackstopEntry["capacityConfidence"];
-  capacitySemantics: RedemptionBackstopEntry["capacitySemantics"];
-  notes: string[];
-}
-
-interface RedemptionBackstopBuildOptions {
-  reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null;
-  suppressEffectiveExitScore?: boolean;
-}
-
-interface RedemptionStaticFields {
-  accessScore: number;
-  settlementScore: number;
-  executionCertaintyScore: number;
-  outputAssetQualityScore: number;
-  costScore: number;
-  feeBps: number | null;
-  feeDescription?: string;
-  feeConfidence: RedemptionBackstopEntry["feeConfidence"];
-  feeModelKind: RedemptionBackstopEntry["feeModelKind"];
-  docs?: RedemptionBackstopEntry["docs"];
-  queueEnabled: boolean;
-  notes: string[];
-}
-
-function resolveDocs(
-  stablecoinId: string,
-  config: RedemptionBackstopConfig,
-): RedemptionBackstopEntry["docs"] | undefined {
-  function buildDocs(
-    provenance: NonNullable<NonNullable<RedemptionBackstopEntry["docs"]>["provenance"]>,
-    sources: NonNullable<NonNullable<RedemptionBackstopEntry["docs"]>["sources"]>,
-  ): RedemptionBackstopEntry["docs"] | undefined {
-    if (sources.length === 0) return undefined;
-    const [primary] = sources;
-    return {
-      label: primary.label,
-      url: primary.url,
-      provenance,
-      ...(config.reviewedAt ? { reviewedAt: config.reviewedAt } : {}),
-      sources,
-    };
-  }
-
-  const meta = TRACKED_META_BY_ID.get(stablecoinId);
-  if (config.docs && config.docs.length > 0) {
-    return buildDocs("config-reviewed", config.docs);
-  }
-
-  if (!meta) return undefined;
-
-  const sources: NonNullable<NonNullable<RedemptionBackstopEntry["docs"]>["sources"]> = [];
-  const seen = new Set<string>();
-  const pushSource = (source: NonNullable<NonNullable<RedemptionBackstopEntry["docs"]>["sources"]>[number]) => {
-    const key = `${source.label}:${source.url}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-    sources.push(source);
-  };
-
-  if (
-    config.capacityModel.kind === "reserve-sync-metadata" &&
-    meta.liveReservesConfig?.display?.url
-  ) {
-    pushSource({
-      label: meta.liveReservesConfig.display.label ?? "Live reserve source",
-      url: meta.liveReservesConfig.display.url,
-      supports: ["capacity"],
-    });
-  }
-
-  if (meta.proofOfReserves?.url) {
-    pushSource({
-      label: meta.proofOfReserves.provider ? `${meta.proofOfReserves.provider} feed` : "Reserve feed",
-      url: meta.proofOfReserves.url,
-      supports: ["capacity"],
-    });
-  }
-
-  const preferredLink = meta.links?.find(
-    (link) =>
-      link.label === "Docs" ||
-      link.label === "Proof of Reserve" ||
-      link.label === "Transparency" ||
-      link.label === "Website",
-  );
-  if (preferredLink) {
-    pushSource({
-      label: preferredLink.label,
-      url: preferredLink.url,
-    });
-  }
-
-  if (sources.length === 0) return undefined;
-  if (config.capacityModel.kind === "reserve-sync-metadata" && meta.liveReservesConfig?.display?.url) {
-    return buildDocs("live-reserve-display", sources);
-  }
-  if (meta.proofOfReserves?.url) {
-    return buildDocs("proof-of-reserves", sources);
-  }
-  return buildDocs("preferred-link", sources);
-}
-
-function resolveBoundedFeeScore(feeBps: number): number {
-  if (feeBps <= 10) return 100;
-  if (feeBps <= 50) return 80;
-  if (feeBps <= 100) return 60;
-  return 40;
-}
-
-function resolveCostScore(
-  costModel: RedemptionCostModel,
-  reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null,
-  now = Math.floor(Date.now() / 1000),
-): {
-  score: number;
-  feeBps: number | null;
-  feeDescription?: string;
-  feeConfidence: RedemptionBackstopEntry["feeConfidence"];
-  feeModelKind: RedemptionBackstopEntry["feeModelKind"];
-  notes: string[];
-} {
-  const feeConfidence = resolveFeeConfidence(costModel);
-  const feeModelKind = resolveFeeModelKind(costModel);
-  const liveMetadata = readRedemptionBackstopLiveMetadata(reserveSnapshotMetadata, now);
-
-  if (
-    liveMetadata.isFresh
-    && liveMetadata.redemptionFeeBps != null
-    && costModel.kind === "dynamic-or-unclear"
-    && feeConfidence === "formula"
-  ) {
-    const feeBps = Math.max(0, Math.round(liveMetadata.redemptionFeeBps));
-    return {
-      score: resolveBoundedFeeScore(feeBps),
-      feeBps,
-      feeConfidence,
-      feeModelKind,
-      ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
-      notes: [],
-    };
-  }
-
-  if (liveMetadata.isFresh && liveMetadata.redemptionFeeBps != null && costModel.kind === "fee-bps") {
-    const feeBps = Math.max(0, Math.round(liveMetadata.redemptionFeeBps));
-    return {
-      score: resolveBoundedFeeScore(feeBps),
-      feeBps,
-      feeConfidence,
-      feeModelKind,
-      ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
-      notes:
-        feeBps !== Math.max(0, costModel.feeBps)
-          ? ["Using fresh live redemption fee telemetry in place of the reviewed fallback bound"]
-          : [],
-    };
-  }
-
-  if (costModel.kind === "dynamic-or-unclear") {
-    // Documented variable fees score higher than truly opaque ones
-    const score = costModel.feeDescription && costModel.confidence !== "undisclosed-reviewed" ? 60 : 40;
-    return {
-      score,
-      feeBps: null,
-      feeConfidence,
-      feeModelKind,
-      ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
-      notes:
-        feeConfidence === "formula" && liveMetadata.updatedAt != null && !liveMetadata.isFresh
-          ? ["Live redemption fee telemetry stale; using reviewed fee model instead"]
-          : [],
-    };
-  }
-
-  const feeBps = Math.max(0, costModel.feeBps);
-  const base = {
-    feeBps,
-    feeConfidence,
-    feeModelKind,
-    ...(costModel.feeDescription ? { feeDescription: costModel.feeDescription } : {}),
-    notes: [] as string[],
-  };
-  return { score: resolveBoundedFeeScore(feeBps), ...base };
-}
+import {
+  resolveCapacityBasis,
+  resolveRedemptionCapacity,
+  resolveReserveSyncCapacityConfidence,
+  type RedemptionBackstopBuildOptions,
+} from "./redemption-backstop-capacity";
+import { resolveRedemptionStaticFields } from "./redemption-backstop-cost";
 
 function resolveStaticFields(
   stablecoinId: string,
   config: RedemptionBackstopConfig,
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null,
   now = Math.floor(Date.now() / 1000),
-): RedemptionStaticFields {
+){
   const accessScore = REDEMPTION_ACCESS_SCORES[config.accessModel];
   const settlementScore = REDEMPTION_SETTLEMENT_SCORES[config.settlementModel];
   const executionCertaintyScore = REDEMPTION_EXECUTION_SCORES[config.executionModel];
   const outputAssetQualityScore = REDEMPTION_OUTPUT_ASSET_SCORES[config.outputAssetType];
-  const {
-    score: costScore,
-    feeBps,
-    feeDescription,
-    feeConfidence,
-    feeModelKind,
-    notes,
-  } = resolveCostScore(config.costModel, reserveSnapshotMetadata, now);
-
-  return {
-    accessScore,
-    settlementScore,
-    executionCertaintyScore,
-    outputAssetQualityScore,
-    costScore,
-    feeBps,
-    feeDescription,
-    feeConfidence,
-    feeModelKind,
-    docs: resolveDocs(stablecoinId, config),
-    queueEnabled: config.routeFamily === "queue-redeem" || config.settlementModel === "queued",
-    notes,
-  };
-}
-
-async function resolveCapacityFromReserveSyncMetadata(
-  db: D1Database,
-  stablecoinId: string,
-  supplyUsd: number | null,
-  fallbackRatio: number | undefined,
-  now: number,
-  reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null,
-): Promise<CapacityResolution> {
-  const liveCapacityConfidence: RedemptionBackstopEntry["capacityConfidence"] = "dynamic";
-  const fallbackCapacityConfidence: RedemptionBackstopEntry["capacityConfidence"] = "heuristic";
-  const capacitySemantics = resolveCapacitySemantics({
-    kind: "reserve-sync-metadata",
-    fallbackRatio,
-  });
-  const snapshotMetadata = reserveSnapshotMetadata !== undefined
-    ? reserveSnapshotMetadata
-    : await getLatestSuccessfulReserveSnapshotMetadata(db, stablecoinId);
-  const liveMetadata = readRedemptionBackstopLiveMetadata(snapshotMetadata, now);
-
-  if (
-    liveMetadata.isFresh
-    && (liveMetadata.immediateRedeemableUsd != null || (liveMetadata.immediateRedeemableRatio != null && supplyUsd != null))
-  ) {
-    const immediateCapacityUsd =
-      liveMetadata.immediateRedeemableUsd != null
-        ? liveMetadata.immediateRedeemableUsd
-        : (supplyUsd as number) * (liveMetadata.immediateRedeemableRatio as number);
-    const derivedRatio =
-      liveMetadata.immediateRedeemableRatio != null
-        ? Math.max(0, Math.min(1, liveMetadata.immediateRedeemableRatio))
-        : supplyUsd != null && supplyUsd > 0
-          ? Math.max(0, Math.min(1, immediateCapacityUsd / supplyUsd))
-          : null;
-
-    return {
-      immediateCapacityUsd,
-      immediateCapacityRatio: derivedRatio,
-      scoringCapacityUsd: immediateCapacityUsd,
-      scoringCapacityRatio: derivedRatio,
-      provider: "reserve-sync-metadata",
-      sourceMode: "dynamic",
-      resolutionState: "resolved",
-      capacityConfidence: liveCapacityConfidence,
-      capacitySemantics,
-      notes: [],
-    };
-  }
-
-  if (fallbackRatio != null && supplyUsd != null && supplyUsd > 0) {
-    return {
-      immediateCapacityUsd: supplyUsd * fallbackRatio,
-      immediateCapacityRatio: fallbackRatio,
-      scoringCapacityUsd: supplyUsd * fallbackRatio,
-      scoringCapacityRatio: fallbackRatio,
-      provider: "reserve-sync-fallback",
-      sourceMode: "estimated",
-      resolutionState: "resolved",
-      capacityConfidence: fallbackCapacityConfidence,
-      capacitySemantics,
-      notes: [
-        liveMetadata.updatedAt != null && !liveMetadata.isFresh
-          ? "Live reserve metadata stale; using configured fallback ratio"
-          : "Live reserve metadata unavailable; using configured fallback ratio",
-      ],
-    };
-  }
-
-  return {
-    immediateCapacityUsd: null,
-    immediateCapacityRatio: null,
-    scoringCapacityUsd: null,
-    scoringCapacityRatio: null,
-    provider: "reserve-sync-metadata",
-    sourceMode: "static",
-    resolutionState: supplyUsd == null ? "missing-cache" : "missing-capacity",
-    capacityConfidence: liveCapacityConfidence,
-    capacitySemantics,
-    notes: [
-      liveMetadata.updatedAt != null && !liveMetadata.isFresh
-        ? "Live reserve metadata stale; fresh metadata required"
-        : "Live reserve metadata unavailable",
-    ],
-  };
-}
-
-async function resolveCapacity(
-  db: D1Database,
-  stablecoinId: string,
-  model: RedemptionCapacityModel,
-  supplyUsd: number | null,
-  now: number,
-  options: RedemptionBackstopBuildOptions = {},
-): Promise<CapacityResolution> {
-  const capacityConfidence = resolveCapacityConfidence(model);
-  const capacitySemantics = resolveCapacitySemantics(model);
-  if (model.kind === "supply-full") {
-    if (supplyUsd == null) {
-      return {
-        immediateCapacityUsd: null,
-        immediateCapacityRatio: null,
-        scoringCapacityUsd: null,
-        scoringCapacityRatio: null,
-        provider: "supply-full-model",
-        sourceMode: "static",
-        resolutionState: "missing-cache",
-        capacityConfidence,
-        capacitySemantics,
-        notes: ["Stablecoins cache missing current supply; route retained as configured but unrated"],
-      };
-    }
-    return {
-      immediateCapacityUsd: null,
-      immediateCapacityRatio: null,
-      scoringCapacityUsd: supplyUsd,
-      scoringCapacityRatio: supplyUsd > 0 ? 1 : null,
-      provider: "supply-full-model",
-      sourceMode: "estimated",
-      resolutionState: "resolved",
-      capacityConfidence,
-      capacitySemantics,
-      notes: ["Modeled as eventual redeemability of current supply; immediate liquidity is not separately quantified"],
-    };
-  }
-
-  if (model.kind === "supply-ratio") {
-    if (supplyUsd == null) {
-      return {
-        immediateCapacityUsd: null,
-        immediateCapacityRatio: null,
-        scoringCapacityUsd: null,
-        scoringCapacityRatio: null,
-        provider: "supply-ratio-model",
-        sourceMode: "static",
-        resolutionState: "missing-cache",
-        capacityConfidence,
-        capacitySemantics,
-        notes: ["Stablecoins cache missing current supply; route retained as configured but unrated"],
-      };
-    }
-    return {
-      immediateCapacityUsd: supplyUsd * model.ratio,
-      immediateCapacityRatio: model.ratio,
-      scoringCapacityUsd: supplyUsd * model.ratio,
-      scoringCapacityRatio: model.ratio,
-      provider: "supply-ratio-model",
-      sourceMode: "estimated",
-      resolutionState: "resolved",
-      capacityConfidence,
-      capacitySemantics,
-      notes: [],
-    };
-  }
-
-  return resolveCapacityFromReserveSyncMetadata(
-    db,
+  return resolveRedemptionStaticFields(
     stablecoinId,
-    supplyUsd,
-    model.fallbackRatio,
+    config,
+    {
+      accessScore,
+      settlementScore,
+      executionCertaintyScore,
+      outputAssetQualityScore,
+    },
+    reserveSnapshotMetadata,
     now,
-    options.reserveSnapshotMetadata,
   );
 }
 
@@ -456,7 +90,7 @@ export async function buildRedemptionBackstopEntry(
     options.reserveSnapshotMetadata !== undefined
       ? options.reserveSnapshotMetadata
       : await getLatestSuccessfulReserveSnapshotMetadata(db, stablecoinId);
-  const capacity = await resolveCapacity(db, stablecoinId, config.capacityModel, supplyUsd, now, {
+  const capacity = await resolveRedemptionCapacity(db, stablecoinId, config.capacityModel, supplyUsd, now, {
     ...options,
     reserveSnapshotMetadata,
   });
@@ -485,6 +119,7 @@ export async function buildRedemptionBackstopEntry(
     resolutionState === "resolved" && !options.suppressEffectiveExitScore
       ? computeEffectiveExitScore(dexLiquidityScore, scored.score)
       : null;
+  const capacityBasis = resolveCapacityBasis(config.routeFamily, config.capacityModel, capacity.capacityConfidence);
 
   return {
     stablecoinId,
@@ -506,6 +141,7 @@ export async function buildRedemptionBackstopEntry(
     sourceMode: capacity.sourceMode,
     resolutionState,
     capacityConfidence: capacity.capacityConfidence,
+    ...(capacityBasis ? { capacityBasis } : {}),
     capacitySemantics: capacity.capacitySemantics,
     feeConfidence: staticFields.feeConfidence,
     feeModelKind: staticFields.feeModelKind,
@@ -533,7 +169,11 @@ export function buildFailedRedemptionBackstopEntry(
   now = Math.floor(Date.now() / 1000),
 ): RedemptionBackstopEntry {
   const staticFields = resolveStaticFields(stablecoinId, config);
-  const capacityConfidence = resolveCapacityConfidence(config.capacityModel);
+  const capacityConfidence =
+    config.capacityModel.kind === "reserve-sync-metadata"
+      ? resolveReserveSyncCapacityConfidence(stablecoinId)
+      : resolveCapacityConfidence(config.capacityModel);
+  const capacityBasis = resolveCapacityBasis(config.routeFamily, config.capacityModel, capacityConfidence);
   const capacitySemantics = resolveCapacitySemantics(config.capacityModel);
   const resolutionState: RedemptionBackstopEntry["resolutionState"] = "failed";
 
@@ -557,6 +197,7 @@ export function buildFailedRedemptionBackstopEntry(
     sourceMode: "static",
     resolutionState,
     capacityConfidence,
+    ...(capacityBasis ? { capacityBasis } : {}),
     capacitySemantics,
     feeConfidence: staticFields.feeConfidence,
     feeModelKind: staticFields.feeModelKind,

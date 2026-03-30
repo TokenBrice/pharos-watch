@@ -1,5 +1,6 @@
 import type { RedemptionBackstopConfig } from "./shared";
 import {
+  applyTrackedReviewedDocs,
   commodityIssuerBase,
   documentedBoundSupplyFull,
   documentedVariableFee,
@@ -11,6 +12,7 @@ import {
 } from "./shared";
 
 const REVIEWED_DIRECT_REDEMPTION_AT = "2026-03-23";
+const REVIEWED_REMEDIATION_AT = "2026-03-30";
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_DIRECT_REDEMPTION_AT,
 );
@@ -327,15 +329,14 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
   },
   "pusd-plume": {
     ...issuerBase,
-    capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 1 },
+    ...reviewedDirectRedemptionSupplyFull,
     costModel: fixedFee(0, "Zero-fee mint/redeem at 1:1 for USDC per Plume documentation"),
-    reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
     docs: [
       sourceRef("Plume pUSD docs", "https://docs.plume.org/plume/tokens/plume-usd", ["route", "capacity", "fees"]),
       sourceRef("Plume pUSD page", "https://plume.org/pusd", ["route"]),
     ],
     notes: [
-      "Fresh live reserve metadata can score against the tracked single-asset USDC BoringVault backing; the 100% fallback reflects the documented 1:1 USDC redemption rail when live metadata is unavailable",
+      "Route is modeled as the documented 1:1 issuer redemption rail into USDC; the single-asset reserve adapter remains reserve-detail telemetry only and is no longer treated as live redeemable-capacity evidence",
     ],
   },
   "gyen-gyen": {
@@ -849,3 +850,36 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
     ],
   },
 };
+
+applyTrackedReviewedDocs(OFFCHAIN_ISSUER_BACKSTOP_CONFIGS, [
+  "usdt-tether",
+  "usdc-circle",
+  "pyusd-paypal",
+  "fdusd-first-digital",
+  "rlusd-ripple",
+  "eurc-circle",
+  "usdg-paxos",
+  "usd1-world-liberty-financial",
+  "ausd-agora",
+  "tusd-trueusd",
+  "brz-transfero",
+  "a7a5-old-vector",
+  "ylds-figure",
+  "usdtb-ethena",
+  "gusd-gate",
+  "usyc-hashnote",
+  "ustb-superstate",
+  "buidl-blackrock",
+  "usdy-ondo-finance",
+  "paxg-paxos",
+  "xaut-tether",
+  "kau-kinesis",
+  "kag-kinesis",
+]);
+
+applyTrackedReviewedDocs(OFFCHAIN_ISSUER_BACKSTOP_CONFIGS, [
+  "zarp-zarp",
+  "cetes-etherfuse",
+  "cgo-comtech",
+  "dgld-gold-token-sa",
+], REVIEWED_REMEDIATION_AT);

@@ -120,6 +120,7 @@ describe("RedemptionBackstopCard", () => {
           docs: {
             label: "Reserve feed",
             url: "https://example.com/reserves",
+            reviewedAt: "2026-03-30",
             provenance: "proof-of-reserves",
             sources: [
               {
@@ -135,6 +136,7 @@ describe("RedemptionBackstopCard", () => {
 
     expect(html).toContain("Reserve feed");
     expect(html).toContain("Supports capacity");
+    expect(html).toContain("Reviewed 2026-03-30");
     expect(html).toContain("Fallback proof-of-reserves source");
   });
 });

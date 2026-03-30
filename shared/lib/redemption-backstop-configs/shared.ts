@@ -1,5 +1,7 @@
+import { TRACKED_META_BY_ID } from "../stablecoins";
 import type {
   RedemptionAccessModel,
+  RedemptionCapacityBasis,
   RedemptionCapacityConfidence,
   RedemptionDocSource,
   RedemptionDocSourceSupport,
@@ -26,16 +28,22 @@ export type RedemptionCostModel =
     };
 
 export type RedemptionCapacityModel =
-  | { kind: "supply-full"; confidence?: RedemptionCapacityConfidence }
+  | {
+      kind: "supply-full";
+      confidence?: RedemptionCapacityConfidence;
+      basis?: RedemptionCapacityBasis;
+    }
   | {
       kind: "supply-ratio";
       ratio: number;
       confidence?: RedemptionCapacityConfidence;
+      basis?: RedemptionCapacityBasis;
     }
   | {
       kind: "reserve-sync-metadata";
       fallbackRatio?: number;
       confidence?: RedemptionCapacityConfidence;
+      basis?: RedemptionCapacityBasis;
     };
 
 export interface RedemptionBackstopConfig {
@@ -50,6 +58,23 @@ export interface RedemptionBackstopConfig {
   docs?: RedemptionDocSource[];
   reviewedAt?: string;
   notes?: string[];
+}
+
+export function applyTrackedReviewedDocs(
+  configs: Record<string, RedemptionBackstopConfig>,
+  stablecoinIds: readonly string[],
+  reviewedAt?: string,
+): void {
+  for (const stablecoinId of stablecoinIds) {
+    const config = configs[stablecoinId];
+    if (!config) continue;
+    if (reviewedAt) {
+      config.reviewedAt ??= reviewedAt;
+    }
+    if (!config.docs || config.docs.length === 0) {
+      config.docs = trackedReviewedDocs(stablecoinId);
+    }
+  }
 }
 
 export function expandIds(
@@ -69,7 +94,11 @@ export function documentedBoundSupplyFull(
   reviewedAt: string,
 ): Pick<RedemptionBackstopConfig, "capacityModel" | "reviewedAt"> {
   return {
-    capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+    capacityModel: {
+      kind: "supply-full",
+      confidence: "documented-bound",
+      basis: "issuer-term-redemption",
+    },
     reviewedAt,
   };
 }
@@ -95,6 +124,53 @@ export function sourceRef(
   return supports && supports.length > 0 ? { label, url, supports } : { label, url };
 }
 
+function trackedReviewedDocs(
+  stablecoinId: string,
+): RedemptionDocSource[] {
+  const meta = TRACKED_META_BY_ID.get(stablecoinId);
+  if (!meta) {
+    throw new Error(`Unknown tracked stablecoin id "${stablecoinId}" while building redemption docs`);
+  }
+
+  const docs: RedemptionDocSource[] = [];
+  const seen = new Set<string>();
+  const push = (doc: RedemptionDocSource) => {
+    const key = `${doc.label}:${doc.url}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    docs.push(doc);
+  };
+
+  if (meta.liveReservesConfig?.display?.url) {
+    push(sourceRef(
+      meta.liveReservesConfig.display.label ?? "Live reserve source",
+      meta.liveReservesConfig.display.url,
+      ["capacity"],
+    ));
+  }
+
+  if (meta.proofOfReserves?.url) {
+    push(sourceRef(
+      meta.proofOfReserves.provider ? `${meta.proofOfReserves.provider} feed` : "Reserve feed",
+      meta.proofOfReserves.url,
+      ["capacity"],
+    ));
+  }
+
+  for (const link of meta.links ?? []) {
+    if (
+      link.label === "Docs"
+      || link.label === "Proof of Reserve"
+      || link.label === "Transparency"
+      || link.label === "Website"
+    ) {
+      push(sourceRef(link.label, link.url));
+    }
+  }
+
+  return docs;
+}
+
 export const NO_PUBLIC_NUMERIC_REDEMPTION_FEE = "Public docs reviewed do not publish a numeric redemption fee.";
 
 export const LIQUITY_STYLE_REDEMPTION_FEE = "Minimum 50 bps + baseRate (decays over time).";
@@ -109,7 +185,7 @@ export const issuerBase: RedemptionBackstopConfig = {
   settlementModel: "same-day",
   executionModel: "rules-based-nav",
   outputAssetType: "stable-single",
-  capacityModel: { kind: "supply-full" },
+  capacityModel: { kind: "supply-full", basis: "issuer-term-redemption" },
   costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
 };
 
@@ -125,7 +201,7 @@ export const stablecoinRedeemBase: RedemptionBackstopConfig = {
   settlementModel: "atomic",
   executionModel: "deterministic-onchain",
   outputAssetType: "stable-single",
-  capacityModel: { kind: "supply-full" },
+  capacityModel: { kind: "supply-full", basis: "issuer-term-redemption" },
   costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
 };
 
@@ -135,7 +211,7 @@ export const collateralRedeemBase: RedemptionBackstopConfig = {
   settlementModel: "atomic",
   executionModel: "deterministic-onchain",
   outputAssetType: "bluechip-collateral",
-  capacityModel: { kind: "supply-full" },
+  capacityModel: { kind: "supply-full", basis: "full-system-eventual" },
   costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
 };
 
@@ -145,7 +221,7 @@ export const psmSwapBase: RedemptionBackstopConfig = {
   settlementModel: "atomic",
   executionModel: "deterministic-onchain",
   outputAssetType: "stable-single",
-  capacityModel: { kind: "supply-full" },
+  capacityModel: { kind: "supply-full", basis: "full-system-eventual" },
   costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
 };
 
@@ -155,7 +231,7 @@ export const basketRedeemBase: RedemptionBackstopConfig = {
   settlementModel: "atomic",
   executionModel: "deterministic-basket",
   outputAssetType: "stable-basket",
-  capacityModel: { kind: "supply-full" },
+  capacityModel: { kind: "supply-full", basis: "full-system-eventual" },
   costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
 };
 
@@ -165,6 +241,6 @@ export const queueRedeemBase: RedemptionBackstopConfig = {
   settlementModel: "queued",
   executionModel: "rules-based-nav",
   outputAssetType: "stable-single",
-  capacityModel: { kind: "supply-ratio", ratio: 0.1 },
+  capacityModel: { kind: "supply-ratio", ratio: 0.1, basis: "strategy-buffer" },
   costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
 };

@@ -1,5 +1,6 @@
 import type { RedemptionBackstopConfig } from "./shared";
 import {
+  applyTrackedReviewedDocs,
   collateralRedeemBase,
   documentedBoundSupplyFull,
   documentedVariableFee,
@@ -11,6 +12,7 @@ import {
 } from "./shared";
 
 const REVIEWED_DIRECT_REDEMPTION_AT = "2026-03-23";
+const REVIEWED_REMEDIATION_AT = "2026-03-30";
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_DIRECT_REDEMPTION_AT,
 );
@@ -199,3 +201,18 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     ],
   },
 };
+
+applyTrackedReviewedDocs(COLLATERAL_REDEEM_BACKSTOP_CONFIGS, [
+  "feusd-felix",
+  "meusd-mezo",
+  "nect-beraborrow",
+  "usdq-quill",
+  "usdk-orki",
+  "usdaf-asymmetry",
+  "usnd-nerite",
+  "ebusd-ebisu",
+  "reusd-resupply",
+  "satusd-river",
+]);
+
+applyTrackedReviewedDocs(COLLATERAL_REDEEM_BACKSTOP_CONFIGS, ["ussd-sonic-labs", "usdp-parallel"], REVIEWED_REMEDIATION_AT);

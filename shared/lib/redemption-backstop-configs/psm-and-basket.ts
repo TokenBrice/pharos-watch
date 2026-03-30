@@ -1,5 +1,6 @@
 import type { RedemptionBackstopConfig } from "./shared";
 import {
+  applyTrackedReviewedDocs,
   basketRedeemBase,
   documentedBoundSupplyFull,
   documentedVariableFee,
@@ -9,6 +10,7 @@ import {
 } from "./shared";
 
 const REVIEWED_BASKET_REDEMPTION_AT = "2026-03-23";
+const REVIEWED_REMEDIATION_AT = "2026-03-30";
 const reviewedBasketRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_BASKET_REDEMPTION_AT,
 );
@@ -174,3 +176,5 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   },
 };
+
+applyTrackedReviewedDocs(PSM_AND_BASKET_BACKSTOP_CONFIGS, ["dai-makerdao", "usds-sky", "dusd-alto"], REVIEWED_REMEDIATION_AT);

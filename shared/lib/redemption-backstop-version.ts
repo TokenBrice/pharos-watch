@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "1.20",
+  currentVersion: "1.21",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "1.21",
+      title: "Live-capacity truth-boundary hardening and registry cleanup",
+      date: "2026-03-30",
+      effectiveAt: 1774821600,
+      summary:
+        "Reserve-backed redemption routes now use stricter live-metadata eligibility, explicit live-direct vs live-proxy confidence, and reviewed source-link guardrails.",
+      impact: [
+        "Reserve-sync capacity now requires fresh `ok` snapshots, no degrading reserve warnings, scoring-grade freshness evidence, and an adapter that explicitly exposes redeemable-capacity telemetry",
+        "Live-backed routes now distinguish `live-direct` from `live-proxy`, and only direct live capacity can resolve high confidence; `pUSD Plume` is corrected back to a reviewed documented-bound issuer rail instead of a fake dynamic route",
+        "Reviewed documented-bound and reserve-sync routes now require explicit `docs[]`, unreviewed routes are closed or downgraded, and stored/API snapshot details preserve richer fidelity metadata including capacity basis and live-capacity classification",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "1.20",
       title: "Issuer and route-review medium-confidence tranche",

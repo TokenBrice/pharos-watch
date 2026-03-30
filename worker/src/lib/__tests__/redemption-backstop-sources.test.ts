@@ -211,7 +211,7 @@ describe("buildRedemptionBackstopEntry", () => {
   it("scores formula-confidence dynamic fees as 60", async () => {
     const entry = await buildRedemptionBackstopEntry(
       mockD1(),
-      "test-coin",
+      "bold-liquity",
       {
         routeFamily: "collateral-redeem",
         accessModel: "permissionless-onchain",
@@ -256,14 +256,14 @@ describe("buildRedemptionBackstopEntry", () => {
       now,
       {
         reserveSnapshotMetadata: {
-          stablecoinId: "test-coin",
+          stablecoinId: "bold-liquity",
           fetchedAt: now - 300,
           source: "single-asset",
-          metadata: { redemptionFeeBps: 50 },
+          metadata: { redemptionFeeBps: 50, freshnessMode: "not-applicable" },
           warningCount: 0,
           warnings: [],
           sourceModel: "single-bucket",
-          evidenceClass: "weak-live-probe",
+          evidenceClass: "independent",
           syncStatus: "ok",
         },
       },
@@ -304,7 +304,7 @@ describe("buildRedemptionBackstopEntry", () => {
   it("resolves reserve-sync-metadata capacity with fresh data", async () => {
     const entry = await buildRedemptionBackstopEntry(
       mockD1(),
-      "test-coin",
+      "usdo-openeden",
       {
         routeFamily: "queue-redeem",
         accessModel: "permissionless-onchain",
@@ -319,12 +319,13 @@ describe("buildRedemptionBackstopEntry", () => {
       now,
       {
         reserveSnapshotMetadata: {
-          stablecoinId: "test-coin",
+          stablecoinId: "usdo-openeden",
           fetchedAt: now - 1800,
           source: "test",
           metadata: {
             immediateRedeemableUsd: 7_500_000,
             immediateRedeemableRatio: 0.15,
+            sourceTimestamp: now - 1800,
           },
           warningCount: 0,
           warnings: [],
@@ -339,7 +340,7 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.resolutionState).toBe("resolved");
     expect(entry.immediateCapacityUsd).toBe(7_500_000);
     expect(entry.immediateCapacityRatio).toBe(0.15);
-    expect(entry.capacityConfidence).toBe("dynamic");
+    expect(entry.capacityConfidence).toBe("live-direct");
     expect(entry.capacitySemantics).toBe("immediate-bounded");
   });
 
@@ -443,7 +444,7 @@ describe("buildRedemptionBackstopEntry", () => {
     // Dynamic capacity + fixed fee → high
     const highEntry = await buildRedemptionBackstopEntry(
       mockD1(),
-      "test-coin",
+      "usdo-openeden",
       {
         routeFamily: "queue-redeem",
         accessModel: "permissionless-onchain",
@@ -458,10 +459,14 @@ describe("buildRedemptionBackstopEntry", () => {
       now,
       {
         reserveSnapshotMetadata: {
-          stablecoinId: "test-coin",
+          stablecoinId: "usdo-openeden",
           fetchedAt: now - 100,
           source: "test",
-          metadata: { immediateRedeemableUsd: 5_000_000, immediateRedeemableRatio: 0.1 },
+          metadata: {
+            immediateRedeemableUsd: 5_000_000,
+            immediateRedeemableRatio: 0.1,
+            sourceTimestamp: now - 100,
+          },
           warningCount: 0,
           warnings: [],
           sourceModel: "dynamic-mix",
@@ -519,7 +524,7 @@ describe("buildRedemptionBackstopEntry", () => {
   it("stops using stale reserve capacity metadata when no safe fallback exists", async () => {
     const entry = await buildRedemptionBackstopEntry(
       mockD1(),
-      "test-coin",
+      "gho-aave",
       {
         routeFamily: "psm-swap",
         accessModel: "permissionless-onchain",
@@ -574,10 +579,10 @@ describe("buildRedemptionBackstopEntry", () => {
       now,
       {
         reserveSnapshotMetadata: {
-          stablecoinId: "test-coin",
+          stablecoinId: "gho-aave",
           fetchedAt: now - 120,
           source: "test",
-          metadata: { redemptionFeeBps: 7 },
+          metadata: { redemptionFeeBps: 7, sourceTimestamp: now - 120 },
           warningCount: 0,
           warnings: [],
           sourceModel: "dynamic-mix",

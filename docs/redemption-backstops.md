@@ -6,7 +6,7 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v1.20`
+- **Current methodology version:** `v1.21`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
@@ -151,6 +151,8 @@ Each row also carries:
 - `capacitySemantics`:
   - `immediate-bounded` when the model is intended to represent a current redeemable buffer
   - `eventual-only` when the route is scored as eventual redeemability rather than immediate same-size liquidity
+- `capacityBasis`:
+  - typed evidence basis such as `issuer-term-redemption`, `full-system-eventual`, `psm-balance-share`, `strategy-buffer`, `hot-buffer`, `daily-limit`, `live-direct-telemetry`, or `live-proxy-buffer`
 - `feeConfidence`:
   - `fixed` for bounded bps schedules
   - `formula` for disclosed formulas such as Liquity-style base-rate fees
@@ -222,7 +224,7 @@ Key columns:
 - `methodology_version`
 - `details_json`
 
-`details_json` now also stores `routeFamily`, route attributes, provider/source provenance, component subscores, immediate-capacity fields, fee fields, `resolutionState`, `capacityConfidence`, `capacitySemantics`, `feeConfidence`, `feeModelKind`, `modelConfidence`, and `feeDescription` alongside `docs`, `notes`, and `capsApplied`, so richer runtime context survives current-snapshot and history writes without a schema migration.
+`details_json` now also stores `routeFamily`, provider/source provenance, immediate-capacity fields, fee fields, `resolutionState`, `capacityConfidence`, `capacityBasis`, `capacitySemantics`, `feeConfidence`, `feeModelKind`, `modelConfidence`, and `feeDescription` alongside `docs`, `notes`, and `capsApplied`, so richer runtime context survives current-snapshot and history writes without a schema migration.
 
 ### `redemption_backstop_history`
 

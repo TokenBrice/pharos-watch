@@ -240,7 +240,7 @@ function buildReserveSnapshotMetadataRecord(
   };
 }
 
-async function loadReserveSnapshotMetadataMap(
+export async function loadReserveSnapshotMetadataMap(
   db: D1Database,
   stablecoinIds: readonly string[],
 ): Promise<Map<string, ReserveSnapshotMetadataRecord>> {

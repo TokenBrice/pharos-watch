@@ -1,5 +1,6 @@
 import type { RedemptionBackstopConfig } from "./shared";
 import {
+  applyTrackedReviewedDocs,
   documentedBoundSupplyFull,
   documentedVariableFee,
   fixedFee,
@@ -9,6 +10,7 @@ import {
 } from "./shared";
 
 const REVIEWED_DIRECT_REDEMPTION_AT = "2026-03-23";
+const REVIEWED_REMEDIATION_AT = "2026-03-30";
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_DIRECT_REDEMPTION_AT,
 );
@@ -334,3 +336,7 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     notes: ["Retail users primarily access apxUSD via the Curve pool, while direct minting and redemption are reserved for whitelisted participants who rebalance the market"],
   },
 };
+
+applyTrackedReviewedDocs(STABLECOIN_REDEEM_BACKSTOP_CONFIGS, ["ousg-ondo-finance", "u-united-stables", "usd0-usual"]);
+
+applyTrackedReviewedDocs(STABLECOIN_REDEEM_BACKSTOP_CONFIGS, ["dusd-dtrinity", "yousd-yield-optimizer"], REVIEWED_REMEDIATION_AT);

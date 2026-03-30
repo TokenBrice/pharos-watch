@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { resolveCapacityConfidence, resolveFeeConfidence } from "@shared/lib/redemption-backstop-confidence";
 import { COLLATERAL_REDEEM_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/collateral-redeem";
 import { OFFCHAIN_ISSUER_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/offchain-issuer";
@@ -219,6 +220,35 @@ describe("redemption backstop config consistency", () => {
     const violations = entries
       .filter(([, c]) => c.costModel.kind === "dynamic-or-unclear" && !c.costModel.feeDescription)
       .map(([id]) => id);
+    expect(violations).toEqual([]);
+  });
+
+  it("documented-bound routes always carry reviewedAt and explicit docs", () => {
+    const violations = entries
+      .filter(([, c]) => c.capacityModel.confidence === "documented-bound" && (!c.reviewedAt || !c.docs || c.docs.length === 0))
+      .map(([id, c]) => `${id}: reviewedAt=${c.reviewedAt ?? "missing"} docs=${c.docs?.length ?? 0}`);
+    expect(violations).toEqual([]);
+  });
+
+  it("reserve-sync routes point only at adapters with redeemable-capacity telemetry and reviewed docs", () => {
+    const violations = entries
+      .filter(([, c]) => c.capacityModel.kind === "reserve-sync-metadata")
+      .flatMap(([id, c]) => {
+        const adapterKey = TRACKED_META_BY_ID.get(id)?.liveReservesConfig?.adapter;
+        if (!adapterKey) return [`${id}: missing live-reserves adapter`];
+        const telemetry = getLiveReserveAdapterDefinition(adapterKey).redemptionTelemetry;
+        const issues: string[] = [];
+        if (telemetry.capacity === "none") {
+          issues.push(`${id}: adapter ${adapterKey} has no capacity telemetry`);
+        }
+        if (!c.reviewedAt) {
+          issues.push(`${id}: missing reviewedAt`);
+        }
+        if (!c.docs || c.docs.length === 0) {
+          issues.push(`${id}: missing docs[]`);
+        }
+        return issues;
+      });
     expect(violations).toEqual([]);
   });
 

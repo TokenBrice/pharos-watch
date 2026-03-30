@@ -296,7 +296,7 @@ describe("syncRedemptionBackstops", () => {
       null,
       47,
       expect.any(Number),
-      { suppressEffectiveExitScore: false },
+      { reserveSnapshotMetadata: null, suppressEffectiveExitScore: false },
     );
     expect(upsertRedemptionBackstopSnapshotsMock).toHaveBeenCalledWith(
       expect.anything(),

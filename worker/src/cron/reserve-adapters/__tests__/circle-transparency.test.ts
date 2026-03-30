@@ -1,39 +1,14 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 import { adaptCircleTransparency } from "../circle-transparency";
 
-const USDC_HTML = `
-<canvas id="usdc_chartjs_canvas"
-  data-usdc-us-treasuries="47.08"
-  data-usdc-months="19.87"
-  data-usdc-cash="11.35"
-  data-usdc-in-circulation="21.70">
-</canvas>
-`;
-
-const USDC_AMOUNT_HTML = `
-<span data-coin="usdc" data-point="79.13" id="usdc-in-circulation"></span>
-<canvas id="usdc_chartjs_canvas"
-  data-usdc-in-circulation="0.63"
-  data-usdc-cash="11.77"
-  data-usdc-us-treasuries="45.3"
-  data-usdc-months="21.66">
-</canvas>
-`;
-
-const EURC_HTML = `
-<canvas id="eurocoin_chartjs_canvas"
-  data-eurocoin-cash="80.34"
-  data-eurocoin-tokens="19.66">
-</canvas>
-`;
-
-const EURC_AMOUNT_HTML = `
-<span data-coin="euro" id="euro-in-circulation" data-point="370.7"></span>
-<canvas id="eurocoin_chartjs_canvas"
-  data-eurocoin-tokens="4.82"
-  data-eurocoin-cash="373.63">
-</canvas>
-`;
+const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+const USDC_HTML = readFileSync(join(FIXTURES_DIR, "circle-usdc.html"), "utf8");
+const USDC_AMOUNT_HTML = readFileSync(join(FIXTURES_DIR, "circle-usdc-absolute.html"), "utf8");
+const EURC_HTML = readFileSync(join(FIXTURES_DIR, "circle-eurc.html"), "utf8");
+const EURC_AMOUNT_HTML = readFileSync(join(FIXTURES_DIR, "circle-eurc-absolute.html"), "utf8");
 
 const AMBIGUOUS_NEAR_PERCENT_HTML = `
 <span data-coin="usdc" data-point="100.8" id="usdc-in-circulation"></span>

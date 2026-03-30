@@ -69,6 +69,7 @@ Endpoints backed by `createCacheHandler()` inject a `_meta` object into plain-ob
 | `GET /api/bluechip-ratings`  | 43200         | `createCacheHandler`                         |
 | `GET /api/usds-status`       | 86400         | `createCacheHandler`                         |
 | `GET /api/yield-rankings`    | 3600          | Manual injection after live safety hydration |
+| `GET /api/treasury-stable-exposure` | 86400    | Manual validation + `_meta` injection        |
 
 Array-typed responses (e.g., endpoints returning a JSON array at the top level) receive only the HTTP headers (`X-Data-Age`, `Warning`) and do not include `_meta`.
 
@@ -86,7 +87,7 @@ These profiles apply while the dataset is within its endpoint freshness budget. 
 | standard | `public, s-maxage=300, max-age=60`   | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals                                                                                                                   |
 | custom   | `public, s-maxage=300, max-age=300`  | dex-liquidity (browser-side max-age extended to match CDN TTL)                                                                                                                                                                                                                       |
 | per-coin | `public, s-maxage=300, max-age=10`   | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                           |
-| slow     | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history                                                                                                                                                                                         |
+| slow     | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, treasury-stable-exposure                                                                                                                                                              |
 | archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot                                                                                                                                                                                                                                                                     |
 | no-store | `no-store`                           | health plus admin GET routes after router override (`status`, `status-history`, `debug-sync-state`, `backfill-dews`, `audit-depeg-history?dry-run=true`, `discovery-candidates`) |
 
@@ -258,6 +259,60 @@ All upstream calls use `fetchWithRetry` with explicit per-request timeouts; on u
 For regular stablecoins the response still includes the raw DefiLlama detail fields, but the worker now also materializes `totalCirculatingUSD` and `totalCirculating` on each token row for contract consistency. Commodity and CG-only tokens are returned directly in the normalized shape above.
 
 For non-USD pegs, `totalCirculating` remains in native units while `totalCirculatingUSD` is converted to USD using the current token price before caching, so the USD field always reflects market cap regardless of peg type.
+
+---
+
+### `GET /api/treasury-stable-exposure`
+
+Daily snapshot of reviewed protocol and DAO treasury stablecoin sleeves. This endpoint is intentionally scoped to public onchain treasury wallets, EVM-first, and best-effort coverage.
+
+**Cache:** slow — `X-Data-Age`, `Warning`, and `_meta` included.
+
+**Response**
+
+```json
+{
+  "entities": [
+    {
+      "protocolId": "maker",
+      "name": "Sky / Maker",
+      "treasuryUsd": 123456789,
+      "stablecoinSleeveUsd": 45678901,
+      "trackedStableUsd": 43000000,
+      "decentralizedStableUsd": 21000000,
+      "decentralizedStablePctOfTreasury": 17.0,
+      "decentralizedStablePctOfStableSleeve": 46.0,
+      "weightedSafetyScore": 82.4,
+      "weightedSafetyGrade": "B+",
+      "holdings": []
+    }
+  ],
+  "updatedAt": 1743321600,
+  "coverage": {
+    "entityCount": 12,
+    "registryCount": 14,
+    "launchEligibleCount": 12,
+    "ownerChainTuples": 54,
+    "launchOwnerChainTuples": 42,
+    "evmOnly": true,
+    "extractionModes": {
+      "staticSeeded": 14,
+      "customReviewed": 0,
+      "dynamicUnresolved": 0,
+      "missing": 0
+    }
+  }
+}
+```
+
+Important response semantics:
+
+- `treasuryUsd` is the full wallet-balance denominator from the same provider snapshot used for the stable sleeve.
+- `stablecoinSleeveUsd` includes all stablecoins returned by the provider’s stablecoin filter, even when some are not mapped to Pharos IDs.
+- `trackedStableUsd` is the subset of the stable sleeve that Pharos can map to tracked stablecoins.
+- `decentralizedStablePctOfStableSleeve` therefore uses the full stable sleeve denominator, not only the tracked subset.
+- `coverage.untrackedStableUsd` discloses the stablecoin value that could not be mapped into a Pharos stablecoin ID.
+- `weightedSafetyScore` is USD-weighted across tracked stable holdings that have a current report card; `coverage.ratedTrackedStablePct` shows how much of the tracked sleeve that score covers.
 
 **Error responses:** `502` when DefiLlama/CoinGecko is unavailable and neither cached detail nor `supply_history` fallback data exists; stale cache is returned in preference to an error.
 

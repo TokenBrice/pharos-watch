@@ -2,6 +2,7 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { getLiveReserveAdapterDefinition } from "../shared/lib/live-reserve-adapters";
 import { COLLATERAL_REDEEM_BACKSTOP_CONFIGS } from "../shared/lib/redemption-backstop-configs/collateral-redeem";
 import { OFFCHAIN_ISSUER_BACKSTOP_CONFIGS } from "../shared/lib/redemption-backstop-configs/offchain-issuer";
 import { PSM_AND_BASKET_BACKSTOP_CONFIGS } from "../shared/lib/redemption-backstop-configs/psm-and-basket";
@@ -12,7 +13,9 @@ import { REDEMPTION_BACKSTOP_CONFIGS } from "../shared/lib/redemption-backstops"
 
 const ROOT = process.cwd();
 const DOC_PATH = resolve(ROOT, "docs/redemption-backstops.md");
+const API_DOC_PATH = resolve(ROOT, "docs/api-reference.md");
 const docs = readFileSync(DOC_PATH, "utf8");
+const apiDocs = readFileSync(API_DOC_PATH, "utf8");
 
 const familyModules = [
   {
@@ -107,6 +110,43 @@ for (const [id, config] of Object.entries(REDEMPTION_BACKSTOP_CONFIGS)) {
     (config.capacityModel.ratio <= 0 || config.capacityModel.ratio > 1)
   ) {
     errors.push(`${id}: supply-ratio out of range (${config.capacityModel.ratio})`);
+  }
+  if (config.capacityModel.confidence === "documented-bound") {
+    if (!config.reviewedAt) {
+      errors.push(`${id}: documented-bound route missing reviewedAt`);
+    }
+    if (!config.docs || config.docs.length === 0) {
+      errors.push(`${id}: documented-bound route missing explicit docs[]`);
+    }
+  }
+  if (config.reviewedAt && (!config.docs || config.docs.length === 0)) {
+    errors.push(`${id}: reviewed route missing docs[]`);
+  }
+  if (config.capacityModel.kind === "reserve-sync-metadata") {
+    const adapterKey = TRACKED_META_BY_ID.get(id)?.liveReservesConfig?.adapter;
+    if (!adapterKey) {
+      errors.push(`${id}: reserve-sync-metadata route missing liveReservesConfig adapter`);
+      continue;
+    }
+    const telemetry = getLiveReserveAdapterDefinition(adapterKey).redemptionTelemetry;
+    if (telemetry.capacity === "none") {
+      errors.push(`${id}: reserve-sync-metadata route points to fee-only/no-capacity adapter (${adapterKey})`);
+    }
+    if (!config.reviewedAt) {
+      errors.push(`${id}: reserve-sync-metadata route missing reviewedAt`);
+    }
+    if (!config.docs || config.docs.length === 0) {
+      errors.push(`${id}: reserve-sync-metadata route missing explicit docs[]`);
+    }
+  }
+}
+
+for (const requiredTerm of ["live-direct", "live-proxy"]) {
+  if (!docs.includes(requiredTerm)) {
+    errors.push(`docs/redemption-backstops.md missing capacity-confidence term ${requiredTerm}`);
+  }
+  if (!apiDocs.includes(requiredTerm)) {
+    errors.push(`docs/api-reference.md missing capacity-confidence term ${requiredTerm}`);
   }
 }
 

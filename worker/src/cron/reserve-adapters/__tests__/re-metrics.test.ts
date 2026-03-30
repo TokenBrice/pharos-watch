@@ -1,55 +1,12 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { adaptReMetrics } from "../re-metrics";
 
-const SAMPLE_HTML = `
-<html>
-  <body>
-    <script>
-      self.__next_f.push([1,"...\\\"series\\\":[
-        {\\\"seriesKey\\\":\\\"onchain_capital\\\",\\\"stats\\\":{\\\"current\\\":196774098.53541508}},
-        {\\\"seriesKey\\\":\\\"offchain_capital\\\",\\\"stats\\\":{\\\"current\\\":73740021.94399603},\\\"points\\\":[{\\\"date\\\":\\\"2026-03-24T00:00:00.000Z\\\",\\\"value\\\":73740021.94399603}]}
-      ],\\\"initialChainBreakdowns\\\":{
-        \\\"1\\\":{\\\"asOf\\\":\\\"2026-03-24T20:58:49.097Z\\\",\\\"rows\\\":[
-          {\\\"tokenSymbol\\\":\\\"sUSDe\\\",\\\"valueWei\\\":\\\"41917634941411512501575501\\\",\\\"valueKnown\\\":true},
-          {\\\"tokenSymbol\\\":\\\"USDe\\\",\\\"valueWei\\\":\\\"573788025310890800000000\\\",\\\"valueKnown\\\":true},
-          {\\\"tokenSymbol\\\":\\\"USDC\\\",\\\"valueWei\\\":\\\"68244636644367639420000000\\\",\\\"valueKnown\\\":true},
-          {\\\"tokenSymbol\\\":\\\"USDT\\\",\\\"valueWei\\\":\\\"13455641816862621677240000\\\",\\\"valueKnown\\\":true},
-          {\\\"tokenSymbol\\\":\\\"reUSD/sUSDe\\\",\\\"valueWei\\\":\\\"1403639729413091693911484\\\",\\\"valueKnown\\\":true}
-        ]},
-        \\\"8453\\\":{\\\"asOf\\\":\\\"2026-03-24T20:58:48.611Z\\\",\\\"rows\\\":[
-          {\\\"tokenSymbol\\\":\\\"sUSDe\\\",\\\"valueWei\\\":\\\"502502319142590750000000\\\",\\\"valueKnown\\\":true},
-          {\\\"tokenSymbol\\\":\\\"USDC\\\",\\\"valueWei\\\":\\\"99102317929486495000000\\\",\\\"valueKnown\\\":true}
-        ]}
-      }..."]);
-    </script>
-  </body>
-</html>
-`;
-
-const SAMPLE_HTML_INITIAL_TVL_DATA = `
-<html>
-  <body>
-    <script>
-      self.__next_f.push([1,"...\\\"initialTvlData\\\":[
-        {\\\"date\\\":\\\"2026-03-23T00:00:00.000Z\\\",\\\"offchain_capital\\\":73740020.46412033,\\\"total_tvl\\\":488348352.1356877},
-        {\\\"date\\\":\\\"2026-03-24T00:00:00.000Z\\\",\\\"offchain_capital\\\":73740021.94399603,\\\"total_tvl\\\":485795807.4290642}
-      ],\\\"initialChainBreakdowns\\\":{
-        \\\"1\\\":{\\\"asOf\\\":\\\"2026-03-24T20:58:49.097Z\\\",\\\"rows\\\":[
-          {\\\"tokenSymbol\\\":\\\"sUSDe\\\",\\\"valueWei\\\":\\\"41917634941411512501575501\\\",\\\"valueKnown\\\":true},
-          {\\\"tokenSymbol\\\":\\\"USDe\\\",\\\"valueWei\\\":\\\"573788025310890800000000\\\",\\\"valueKnown\\\":true},
-          {\\\"tokenSymbol\\\":\\\"USDC\\\",\\\"valueWei\\\":\\\"68244636644367639420000000\\\",\\\"valueKnown\\\":true},
-          {\\\"tokenSymbol\\\":\\\"USDT\\\",\\\"valueWei\\\":\\\"13455641816862621677240000\\\",\\\"valueKnown\\\":true},
-          {\\\"tokenSymbol\\\":\\\"reUSD/sUSDe\\\",\\\"valueWei\\\":\\\"1403639729413091693911484\\\",\\\"valueKnown\\\":true}
-        ]},
-        \\\"8453\\\":{\\\"asOf\\\":\\\"2026-03-24T20:58:48.611Z\\\",\\\"rows\\\":[
-          {\\\"tokenSymbol\\\":\\\"sUSDe\\\",\\\"valueWei\\\":\\\"502502319142590750000000\\\",\\\"valueKnown\\\":true},
-          {\\\"tokenSymbol\\\":\\\"USDC\\\",\\\"valueWei\\\":\\\"99102317929486495000000\\\",\\\"valueKnown\\\":true}
-        ]}
-      }..."]);
-    </script>
-  </body>
-</html>
-`;
+const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+const SAMPLE_HTML = readFileSync(join(FIXTURES_DIR, "re-metrics-series.html"), "utf8");
+const SAMPLE_HTML_INITIAL_TVL_DATA = readFileSync(join(FIXTURES_DIR, "re-metrics-initial-tvl.html"), "utf8");
 
 describe("adaptReMetrics", () => {
   it("maps the Re metrics payload into live reserve slices", () => {

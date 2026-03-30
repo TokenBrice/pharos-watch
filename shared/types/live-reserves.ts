@@ -104,6 +104,10 @@ export interface LiveReserveSnapshotMetadata extends Record<string, unknown> {
   unknownExposurePct?: number;
   supplyUsd?: number;
   totalReserveUsd?: number;
+  totalAssetsUsd?: number;
+  totalLiabilitiesUsd?: number;
+  shareholderEquityUsd?: number;
+  collateralizationRatio?: number;
   immediateRedeemableUsd?: number;
   immediateRedeemableRatio?: number;
   redemptionFeeBps?: number;
@@ -115,6 +119,7 @@ export interface LiveReserveSnapshotMetadata extends Record<string, unknown> {
 export interface LiveReserveAdapterValidationPolicy {
   maxSourceAgeSec?: number;
   maxUnknownExposurePct?: number;
+  allowedFreshnessModes?: LiveReserveFreshnessMode[];
 }
 
 export interface LiveReserveDisplay {

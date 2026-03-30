@@ -84,6 +84,7 @@ type RedemptionBackstopDetails = Partial<
     | "notes"
     | "capsApplied"
     | "feeDescription"
+    | "capacityBasis"
     | "resolutionState"
     | "capacityConfidence"
     | "capacitySemantics"
@@ -99,6 +100,7 @@ function pickValidDetails(raw: Record<string, unknown>): RedemptionBackstopDetai
   if (Array.isArray(raw.notes)) result.notes = raw.notes;
   if (Array.isArray(raw.capsApplied)) result.capsApplied = raw.capsApplied;
   if (typeof raw.feeDescription === "string") result.feeDescription = raw.feeDescription;
+  if (typeof raw.capacityBasis === "string") result.capacityBasis = raw.capacityBasis as RedemptionBackstopEntry["capacityBasis"];
   if (typeof raw.resolutionState === "string") result.resolutionState = raw.resolutionState as RedemptionResolutionState;
   if (typeof raw.capacityConfidence === "string") result.capacityConfidence = raw.capacityConfidence as RedemptionCapacityConfidence;
   if (typeof raw.capacitySemantics === "string") result.capacitySemantics = raw.capacitySemantics as RedemptionCapacitySemantics;
@@ -189,10 +191,17 @@ function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
   return JSON.stringify({
     resolutionState: record.resolutionState,
     capacityConfidence: record.capacityConfidence,
+    ...(record.capacityBasis ? { capacityBasis: record.capacityBasis } : {}),
     capacitySemantics: record.capacitySemantics,
     feeConfidence: record.feeConfidence,
     feeModelKind: record.feeModelKind,
     modelConfidence: record.modelConfidence,
+    routeFamily: record.routeFamily,
+    provider: record.provider,
+    sourceMode: record.sourceMode,
+    immediateCapacityUsd: record.immediateCapacityUsd,
+    immediateCapacityRatio: record.immediateCapacityRatio,
+    feeBps: record.feeBps,
     ...(record.docs ? { docs: record.docs } : {}),
     ...(record.notes ? { notes: record.notes } : {}),
     ...(record.capsApplied ? { capsApplied: record.capsApplied } : {}),

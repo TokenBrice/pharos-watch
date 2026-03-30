@@ -63,6 +63,8 @@ export type RedemptionResolutionState = z.infer<
 >;
 
 export const RedemptionCapacityConfidenceSchema = z.enum([
+  "live-direct",
+  "live-proxy",
   "dynamic",
   "documented-bound",
   "heuristic",
@@ -70,6 +72,18 @@ export const RedemptionCapacityConfidenceSchema = z.enum([
 export type RedemptionCapacityConfidence = z.infer<
   typeof RedemptionCapacityConfidenceSchema
 >;
+
+export const RedemptionCapacityBasisSchema = z.enum([
+  "issuer-term-redemption",
+  "full-system-eventual",
+  "daily-limit",
+  "hot-buffer",
+  "psm-balance-share",
+  "strategy-buffer",
+  "live-direct-telemetry",
+  "live-proxy-buffer",
+]);
+export type RedemptionCapacityBasis = z.infer<typeof RedemptionCapacityBasisSchema>;
 
 export const RedemptionCapacitySemanticsSchema = z.enum([
   "immediate-bounded",
@@ -163,6 +177,7 @@ export const RedemptionBackstopEntrySchema = z.object({
   sourceMode: RedemptionSourceModeSchema,
   resolutionState: RedemptionResolutionStateSchema,
   capacityConfidence: RedemptionCapacityConfidenceSchema,
+  capacityBasis: RedemptionCapacityBasisSchema.optional(),
   capacitySemantics: RedemptionCapacitySemanticsSchema,
   feeConfidence: RedemptionFeeConfidenceSchema,
   feeModelKind: RedemptionFeeModelKindSchema,

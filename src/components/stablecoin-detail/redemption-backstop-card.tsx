@@ -128,23 +128,34 @@ function getCapacitySummary(entry: RedemptionBackstopEntry): {
       ? `${(entry.immediateCapacityRatio * 100).toFixed(1)}% of supply`
       : null;
 
+  const capacityEvidence =
+    entry.capacityConfidence === "live-direct"
+      ? "Live direct redemption telemetry."
+      : entry.capacityConfidence === "live-proxy"
+        ? "Live proxy liquidity telemetry."
+        : entry.capacityConfidence === "documented-bound"
+          ? "Reviewed documented redemption bound."
+          : entry.capacityConfidence === "dynamic"
+            ? "Legacy live-capacity classification."
+            : "Heuristic capacity assumption.";
+
   if (entry.capacitySemantics === "eventual-only") {
     return {
       headline: "Not separately quantified",
-      detail: "Modeled as eventual redeemability of current supply, not as an immediate cash buffer.",
+      detail: `${capacityEvidence} Modeled as eventual redeemability of current supply, not as an immediate cash buffer.`,
     };
   }
 
   if (capacityUsd || capacityRatio) {
     return {
       headline: [capacityUsd, capacityRatio].filter(Boolean).join(" · "),
-      detail: "Current modeled immediate redeemable capacity.",
+      detail: `${capacityEvidence} Current modeled immediate redeemable capacity.`,
     };
   }
 
   return {
     headline: "Unavailable",
-    detail: "Current snapshot did not produce a usable immediate-capacity estimate.",
+    detail: `${capacityEvidence} Current snapshot did not produce a usable immediate-capacity estimate.`,
   };
 }
 
@@ -323,7 +334,8 @@ export function RedemptionBackstopCard({
             })}
             {docs?.reviewedAt ? (
               <p className="text-xs text-muted-foreground">Reviewed {docs.reviewedAt}</p>
-            ) : docs?.provenance ? (
+            ) : null}
+            {docs?.provenance ? (
               <p className="text-xs text-muted-foreground">{formatDocsProvenance(docs.provenance)}</p>
             ) : null}
           </div>

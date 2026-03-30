@@ -213,7 +213,7 @@ describe("getRedemptionBackstopConfig", () => {
 
     expect(getRedemptionBackstopConfig("pusd-plume")).toMatchObject({
       routeFamily: "offchain-issuer",
-      capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 1 },
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
       costModel: { kind: "fee-bps", feeBps: 0 },
       reviewedAt: "2026-03-23",
     });

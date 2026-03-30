@@ -76,7 +76,7 @@ export function deriveModelConfidence(args: {
 }): RedemptionModelConfidence {
   if (args.resolutionState !== "resolved") return "low";
   if (args.capacityConfidence === "heuristic") return "low";
-  if (args.capacityConfidence === "dynamic" && args.feeConfidence !== "undisclosed-reviewed") {
+  if (args.capacityConfidence === "live-direct" && args.feeConfidence !== "undisclosed-reviewed") {
     return "high";
   }
   return "medium";

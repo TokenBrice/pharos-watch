@@ -231,6 +231,16 @@ export const ENDPOINT_ASSERTIONS = {
     );
     return `${entries.length} redemption entries`;
   },
+  "/api/treasury-stable-exposure": (result) => {
+    assert(result.status === 200, `/api/treasury-stable-exposure returned ${result.status}`);
+    const body = stripMeta(result.body);
+    assert(body && Array.isArray(body.rows), "/api/treasury-stable-exposure missing rows[]");
+    assert(
+      body.methodology && typeof body.methodology.version === "string" && body.methodology.version.length > 0,
+      "/api/treasury-stable-exposure missing methodology.version",
+    );
+    return `${body.rows.length} treasury exposure rows`;
+  },
   "/api/stress-signals": (result) => {
     assert(result.status === 200, `/api/stress-signals returned ${result.status}`);
     const body = stripMeta(result.body);

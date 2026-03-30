@@ -15,6 +15,9 @@ import {
   type LiveReserveSourceSharingMode,
 } from "../types/live-reserves";
 
+export type LiveReserveRedemptionCapacityTelemetry = "direct" | "proxy" | "none";
+export type LiveReserveRedemptionFeeTelemetry = "current-bps" | "none";
+
 const LiveReserveSemanticsSchema = z.enum(LIVE_RESERVE_SEMANTICS_VALUES);
 const LiveReserveRpcModeSchema = z.enum(LIVE_RESERVE_RPC_MODE_VALUES);
 const LiveReserveRiskSchema = z.enum(LIVE_RESERVE_RISK_VALUES);
@@ -115,6 +118,12 @@ const redemptionRateProbeSchema = z.object({
   decimals: z.number().int().positive().optional(),
 }).strict();
 
+const singleAssetProbeSchema = z.object({
+  kind: z.literal("json-path"),
+  path: z.array(z.string()).min(1),
+  scale: z.number().positive().optional(),
+}).strict();
+
 const erc4626SingleAssetParamsSchema = z.object({
   slice: reserveSliceDescriptorSchema,
   rpcUrl: z.string().optional(),
@@ -159,11 +168,6 @@ const sgForgeCoinvertibleParamsSchema = z.object({
   coinType: z.enum(["eur", "usd"]).optional(),
 }).strict();
 
-const singleAssetProbeSchema = z.object({
-  kind: z.literal("json-path"),
-  path: z.array(z.string()).min(1),
-}).strict();
-
 const singleAssetParamsSchema = z.object({
   label: z.string(),
   risk: LiveReserveRiskSchema,
@@ -172,6 +176,10 @@ const singleAssetParamsSchema = z.object({
   rpcUrl: z.string().optional(),
   fallbackRpcUrl: z.string().optional(),
   probe: singleAssetProbeSchema.optional(),
+  reserveProbe: singleAssetProbeSchema.optional(),
+  supplyProbe: singleAssetProbeSchema.optional(),
+  timestampProbe: singleAssetProbeSchema.optional(),
+  reserveSourceLabel: z.string().optional(),
   redemptionRateProbe: redemptionRateProbeSchema.optional(),
 }).strict();
 
@@ -227,156 +235,280 @@ export type LiveReserveAdapterParams = LiveReserveAdapterParamsByKey[LiveReserve
 const MATERIAL_UNKNOWN_EXPOSURE_PCT = 5;
 const DASHBOARD_SOURCE_MAX_AGE_SEC = 3 * DAY_SECONDS;
 const DISCLOSURE_SOURCE_MAX_AGE_SEC = 7 * DAY_SECONDS;
+const VERIFIED_OR_UNVERIFIED_FRESHNESS = ["verified", "unverified"] satisfies LiveReserveAdapterValidationPolicy["allowedFreshnessModes"];
+const VERIFIED_ONLY_FRESHNESS = ["verified"] satisfies LiveReserveAdapterValidationPolicy["allowedFreshnessModes"];
+const UNVERIFIED_ONLY_FRESHNESS = ["unverified"] satisfies LiveReserveAdapterValidationPolicy["allowedFreshnessModes"];
+const NOT_APPLICABLE_ONLY_FRESHNESS = ["not-applicable"] satisfies LiveReserveAdapterValidationPolicy["allowedFreshnessModes"];
 
 export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
   accountable: {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    validation: { maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC },
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
   },
-  asymmetry: { sourceModel: "dynamic-mix", evidenceClass: "independent", sharedSourceMode: "none" },
-  btcfi: { sourceModel: "single-bucket", evidenceClass: "independent", sharedSourceMode: "none" },
-  "chainlink-nav": { sourceModel: "single-bucket", evidenceClass: "independent", sharedSourceMode: "none" },
-  "chainlink-por": { sourceModel: "single-bucket", evidenceClass: "independent", sharedSourceMode: "none" },
+  asymmetry: {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: { allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS },
+  },
+  btcfi: {
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: { allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS },
+  },
+  "chainlink-nav": {
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: { allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS },
+  },
+  "chainlink-por": {
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: { allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS },
+  },
   "circle-transparency": {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    validation: { maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC },
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
+    },
   },
   "collateral-positions-api": {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    validation: { maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT },
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+      allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
+    },
   },
   crvusd: {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    validation: { maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT },
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+      allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
+    },
   },
-  "curated-validated": { sourceModel: "validated-static", evidenceClass: "static-validated", sharedSourceMode: "none" },
+  "curated-validated": {
+    sourceModel: "validated-static",
+    evidenceClass: "static-validated",
+    sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+  },
   "dola-inverse": {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    validation: { maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC },
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
   },
-  "erc4626-single-asset": { sourceModel: "single-bucket", evidenceClass: "independent", sharedSourceMode: "none" },
+  "erc4626-single-asset": {
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
+  },
   ethena: {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
-  "evm-branch-balances": { sourceModel: "dynamic-mix", evidenceClass: "independent", sharedSourceMode: "none" },
+  "evm-branch-balances": {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "none", fee: "current-bps" },
+    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
+  },
   falcon: {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
   "fdusd-transparency": {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    validation: { maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC },
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
   },
   frax: {
     sourceModel: "validated-static",
     evidenceClass: "static-validated",
     sharedSourceMode: "none",
-    validation: { maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC },
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
+    },
   },
   fx: {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    validation: { maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC },
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
+    },
   },
-  gho: { sourceModel: "dynamic-mix", evidenceClass: "independent", sharedSourceMode: "none" },
+  gho: {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
+  },
   infinifi: {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+      allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
     },
   },
   m0: {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "source-invariant",
-    validation: { maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC },
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
+    },
   },
   mento: {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "source-invariant",
-    validation: { maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC },
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
+    },
   },
   "openeden-usdo": {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    validation: { maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC },
+    redemptionTelemetry: { capacity: "direct", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
   },
   "re-metrics": {
     sourceModel: "dynamic-mix",
     evidenceClass: "static-validated",
     sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC },
   },
   reservoir: {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+      allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
     },
   },
   "sgforge-coinvertible": {
     sourceModel: "single-bucket",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    validation: { maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC },
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
   },
-  "single-asset": { sourceModel: "single-bucket", evidenceClass: "weak-live-probe", sharedSourceMode: "none" },
+  "single-asset": {
+    sourceModel: "single-bucket",
+    evidenceClass: "weak-live-probe",
+    sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "none", fee: "current-bps" },
+  },
   "sky-makercore": {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "source-invariant",
+    redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
   tether: {
     sourceModel: "single-bucket",
     evidenceClass: "weak-live-probe",
     sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC },
   },
   "usdd-data-platform": {
     sourceModel: "dynamic-mix",
     evidenceClass: "static-validated",
     sharedSourceMode: "none",
-    validation: { maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC },
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
   },
 } as const satisfies Record<LiveReserveAdapterKey, {
   sourceModel: LiveReserveSourceModel;
   evidenceClass: LiveReserveEvidenceClass;
   sharedSourceMode: LiveReserveSourceSharingMode;
+  redemptionTelemetry: {
+    capacity: LiveReserveRedemptionCapacityTelemetry;
+    fee: LiveReserveRedemptionFeeTelemetry;
+  };
   validation?: LiveReserveAdapterValidationPolicy;
 }>;
 

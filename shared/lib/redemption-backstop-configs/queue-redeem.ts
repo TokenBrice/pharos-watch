@@ -1,5 +1,6 @@
 import type { RedemptionBackstopConfig } from "./shared";
 import {
+  applyTrackedReviewedDocs,
   documentedBoundSupplyFull,
   documentedVariableFee,
   fixedFee,
@@ -9,6 +10,7 @@ import {
 } from "./shared";
 
 const REVIEWED_QUEUE_REDEMPTION_AT = "2026-03-23";
+const REVIEWED_REMEDIATION_AT = "2026-03-30";
 const reviewedQueueRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_QUEUE_REDEMPTION_AT,
 );
@@ -270,3 +272,5 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     notes: ["Neutrl docs establish a dual-path redemption system with instant execution when AssetReserve liquidity is available and an onchain queued fallback when it is not; current model scores eventual redeemability rather than a separately measured live instant buffer"],
   },
 };
+
+applyTrackedReviewedDocs(QUEUE_REDEEM_BACKSTOP_CONFIGS, ["iusd-infinifi"], REVIEWED_REMEDIATION_AT);
