@@ -1276,6 +1276,62 @@ describe("syncStablecoins", () => {
     expect(cacheWrites.map((write) => write.key)).not.toContain("stablecoins");
   });
 
+  it("degrades cleanly when the previous stablecoins cache is malformed", async () => {
+    const dlData = makeDlResponse(60);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [{ value: "{not-json", updated_at: Math.floor(Date.now() / 1000) - (8 * 3600) }],
+        first: { value: "{not-json", updated_at: Math.floor(Date.now() / 1000) - (8 * 3600) },
+      },
+      { match: "supply_history", rows: [] },
+      { match: "price_cache", rows: [] },
+      { match: "circuit", rows: [] },
+      { match: "cache", rows: [] },
+    ]);
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.itemCount).toBe(60);
+    expect(result.status ?? "ok").toBe("ok");
+  });
+
+  it("ignores a malformed previous stablecoins cache during the staleness check", async () => {
+    const dlData = makeDlResponse(60);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [{ value: "{not-json", updated_at: Math.floor(Date.now() / 1000) - (8 * 3600) }],
+        first: { value: "{not-json", updated_at: Math.floor(Date.now() / 1000) - (8 * 3600) },
+      },
+      { match: "supply_history", rows: [] },
+      { match: "price_cache", rows: [] },
+      { match: "circuit", rows: [] },
+      { match: "cache", rows: [] },
+    ]);
+    const cacheWrites = trackCacheWrites(db);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.status).toBe("ok");
+    expect(result.itemCount).toBe(60);
+    expect(cacheWrites.map((write) => write.key)).toContain("stablecoins");
+    expect(warnSpy).toHaveBeenCalledWith("[sync-stablecoins] Failed to parse previous stablecoins cache in staleness check");
+  });
+
   it("fills missing circulatingPrev buckets from supply_history snapshots", async () => {
     const dlData = makeDlResponse(60);
     const target = dlData.peggedAssets[0] as unknown as Record<string, unknown>;

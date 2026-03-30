@@ -33,6 +33,19 @@ interface SyncCapabilities {
   depegPipeline: boolean;
 }
 
+export function parseStablecoinsCachePayload(value: string): StablecoinsPayload | null {
+  try {
+    const parsed = JSON.parse(value) as { peggedAssets?: PeggedAsset[]; fxFallbackRates?: Record<string, number> };
+    if (!Array.isArray(parsed.peggedAssets)) return null;
+    return {
+      peggedAssets: parsed.peggedAssets,
+      fxFallbackRates: parsed.fxFallbackRates,
+    };
+  } catch {
+    return null;
+  }
+}
+
 function resolveGeckoId(asset: PeggedAsset): string | undefined {
   if (typeof asset.geckoId === "string" && asset.geckoId.length > 0) {
     return asset.geckoId;
@@ -215,8 +228,8 @@ export async function loadPreviousStablecoinsById(db: D1Database): Promise<Map<s
   try {
     const prevCache = await getCache(db, "stablecoins");
     if (!prevCache) return new Map();
-    const prevData = JSON.parse(prevCache.value) as { peggedAssets?: PeggedAsset[] };
-    if (!Array.isArray(prevData.peggedAssets)) return new Map();
+    const prevData = parseStablecoinsCachePayload(prevCache.value);
+    if (!prevData) return new Map();
     return new Map(prevData.peggedAssets.map((asset) => [String(asset.id), asset]));
   } catch (err) {
     console.warn("[sync-stablecoins] Failed to parse previous stablecoins cache:", err);

@@ -1362,7 +1362,7 @@ describe("syncYieldData", () => {
     expect(batchExecute).not.toHaveBeenCalled();
   });
 
-  it("ignores an invalid previous yield-rankings cache payload", async () => {
+  it("marks the run degraded when the previous yield-rankings cache payload is malformed", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
@@ -1400,16 +1400,11 @@ describe("syncYieldData", () => {
     ]);
 
     const result = await syncYieldData(db);
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      sourceCoverage?: {
-        previousPublishedYieldBearingCount?: number;
-        publishedYieldBearingCount?: number;
-      };
-    };
+    const metadata = JSON.parse(result.metadata ?? "{}") as { reason?: string };
 
-    expect(metadata.sourceCoverage?.previousPublishedYieldBearingCount).toBe(0);
-    expect(metadata.sourceCoverage?.publishedYieldBearingCount).toBe(1);
-    expect(batchExecute).toHaveBeenCalled();
+    expect(result.status).toBe("degraded");
+    expect(metadata.reason).toBe("previous-yield-rankings-cache-invalid");
+    expect(batchExecute).not.toHaveBeenCalled();
   });
 
   it("returns early when tracked yield coverage regresses below the guard threshold", async () => {

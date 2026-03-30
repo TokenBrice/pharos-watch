@@ -30,6 +30,7 @@ import {
 } from "./runtime";
 import {
   loadFreshFxRates,
+  parseStablecoinsCachePayload,
   loadReplayPriceCacheForTrustedContinuity,
   stampPriceMetadata,
   type CronResult,
@@ -312,8 +313,11 @@ export async function detectPriceStaleness(
   const previousCache = await getCache(db, "stablecoins");
   if (!previousCache) return null;
 
-  const previousData = JSON.parse(previousCache.value) as { peggedAssets?: PeggedAsset[] };
-  if (!previousData.peggedAssets) return null;
+  const previousData = parseStablecoinsCachePayload(previousCache.value);
+  if (!previousData) {
+    console.warn("[sync-stablecoins] Failed to parse previous stablecoins cache in staleness check");
+    return null;
+  }
 
   return computePriceStalenessSummary(previousData.peggedAssets, currentAssets);
 }

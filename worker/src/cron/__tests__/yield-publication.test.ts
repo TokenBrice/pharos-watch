@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
+import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import {
   PRICE_DERIVED_STALE_THRESHOLD_MS,
   STALE_THRESHOLD_MS,
@@ -7,7 +8,10 @@ import {
 } from "../yield-helpers";
 import { buildHistoryKey, type EvaluatedYieldSource } from "../yield-sync/evaluation";
 import type { ParsedYieldBenchmarkMeta, ParsedYieldBenchmarkRegistry } from "../yield-sync/benchmarks";
-import { buildYieldRankingsPayloadFromEvaluatedSources } from "../yield-sync/publication";
+import {
+  buildYieldRankingsPayloadFromEvaluatedSources,
+  validateYieldRankingsPayloadForPublish,
+} from "../yield-sync/publication";
 
 const FIXED_NOW = new Date("2026-03-26T12:00:00.000Z");
 
@@ -236,5 +240,27 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
     );
 
     expect(payload.rankings[0]?.warningSignals).not.toContain("data-stale");
+  });
+});
+
+describe("validateYieldRankingsPayloadForPublish", () => {
+  it("blocks publish when the previous rankings cache is malformed", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["yield-rankings"],
+        rows: [{ value: "{not-json", updated_at: Math.floor(FIXED_NOW.getTime() / 1000) }],
+        first: { value: "{not-json", updated_at: Math.floor(FIXED_NOW.getTime() / 1000) },
+      },
+    ]);
+    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000));
+
+    const result = await validateYieldRankingsPayloadForPublish(db, payload);
+
+    expect(result).toEqual({
+      ok: false,
+      validationFailures: 1,
+      reason: "previous-rankings-cache-invalid",
+    });
   });
 });

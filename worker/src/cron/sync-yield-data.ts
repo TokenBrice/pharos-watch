@@ -34,6 +34,7 @@ import { buildYieldSourceProvenance } from "./yield-sync/provenance";
 import {
   buildYieldRankingsPayloadFromEvaluatedSources,
   persistEvaluatedYieldSources,
+  readPreviousYieldRankingsCount,
   pruneYieldTables,
   validateYieldRankingsPayloadForPublish,
   writeYieldRankingsCache,
@@ -520,19 +521,17 @@ export async function syncYieldData(
     startSec,
   });
 
-  const previousRankingsCache = await getCache(db, "yield-rankings");
-  let previousPublishedYieldBearingCount = 0;
-  if (previousRankingsCache) {
-    try {
-      const parsed = JSON.parse(previousRankingsCache.value) as { rankings?: Array<{ id?: string }> };
-      previousPublishedYieldBearingCount = (parsed.rankings ?? [])
-        .filter((ranking) => typeof ranking.id === "string" && yieldCoinIdSet.has(ranking.id))
-        .length;
-    } catch (err) {
-      console.warn(`[sync-yield-data] Failed to parse previous yield-rankings cache: ${err instanceof Error ? err.message : String(err)}`);
-      previousPublishedYieldBearingCount = 0;
-    }
+  const previousRankingsState = await readPreviousYieldRankingsCount(db, { allowedIds: yieldCoinIdSet });
+  if (previousRankingsState.malformed) {
+    return {
+      status: "degraded",
+      itemCount: previewRankingsPayload.rankings.filter((ranking) => yieldCoinIdSet.has(ranking.id)).length,
+      metadata: JSON.stringify({
+        reason: "previous-yield-rankings-cache-invalid",
+      }),
+    };
   }
+  const previousPublishedYieldBearingCount = previousRankingsState.count;
   const currentPublishedYieldBearingCount = previewRankingsPayload.rankings
     .filter((ranking) => yieldCoinIdSet.has(ranking.id))
     .length;

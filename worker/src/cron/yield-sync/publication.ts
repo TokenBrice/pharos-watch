@@ -3,13 +3,46 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { batchExecute } from "../../lib/db";
 import { getCache, setCache } from "../../lib/db-cache";
-import { validatePayloadWithSchema } from "../../lib/api-utils";
+import { readCachedJson, validatePayloadWithSchema } from "../../lib/api-utils";
 import { PYS_SCALING_FACTOR } from "../../lib/constants";
 import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
 import { detectWarningSignals, getRankingStaleThresholdMs } from "../yield-helpers";
 import { deleteOrphanYieldRows, deleteStaleYieldRows } from "./history";
 import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
 import { buildYieldSourceProvenance } from "./provenance";
+
+function countYieldRankings(
+  rankingsPayload: { rankings?: Array<{ id?: string }> },
+  options?: { allowedIds?: Set<string> },
+): { count: number; malformed: boolean } {
+  if (!Array.isArray(rankingsPayload.rankings)) {
+    return { count: 0, malformed: true };
+  }
+
+  const rankings = options?.allowedIds
+    ? rankingsPayload.rankings.filter((ranking) => typeof ranking.id === "string" && options.allowedIds?.has(ranking.id))
+    : rankingsPayload.rankings.filter((ranking) => typeof ranking.id === "string");
+  return { count: rankings.length, malformed: false };
+}
+
+export async function readPreviousYieldRankingsCount(
+  db: D1Database,
+  options?: { allowedIds?: Set<string> },
+): Promise<{ count: number; malformed: boolean }> {
+  const previousCache = await getCache(db, "yield-rankings");
+  const previousRankings = readCachedJson<{ rankings?: Array<{ id?: string }> }>(
+    "yield-sync",
+    "yield-rankings",
+    previousCache,
+  );
+  if (previousRankings.status === "missing") {
+    return { count: 0, malformed: false };
+  }
+  if (previousRankings.status === "malformed") {
+    return { count: 0, malformed: true };
+  }
+  return countYieldRankings(previousRankings.data, options);
+}
 
 function evaluatedSourceToRanking(
   source: EvaluatedYieldSource,
@@ -163,17 +196,16 @@ export async function validateYieldRankingsPayloadForPublish(
   }
 
   const currentRankings = validation.data.rankings.length;
-  const previousCache = await getCache(db, "yield-rankings");
-  let previousRankings = 0;
-  if (previousCache) {
-    try {
-      const parsed = JSON.parse(previousCache.value) as { rankings?: unknown[] };
-      if (Array.isArray(parsed.rankings)) previousRankings = parsed.rankings.length;
-    } catch (err) {
-      console.warn(`[yield-sync] Failed to parse previous yield-rankings cache: ${err instanceof Error ? err.message : String(err)}`);
-      previousRankings = 0;
-    }
+  const previousRankingsState = await readPreviousYieldRankingsCount(db);
+  if (previousRankingsState.malformed) {
+    console.warn("[sync-yield-data] Skipped yield-rankings cache write due to malformed previous cache");
+    return {
+      ok: false,
+      validationFailures: 1,
+      reason: "previous-rankings-cache-invalid",
+    };
   }
+  const previousRankings = previousRankingsState.count;
   const severeShrink =
     previousRankings >= 5 &&
     currentRankings < Math.ceil(previousRankings * 0.4);
