@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { topologicalOrder } from "../report-cards-snapshot";
-import { isBlacklistable } from "@shared/lib/report-cards";
+import { resolveBlacklistStatuses } from "@shared/lib/report-cards";
 import type { StablecoinMeta, GovernanceType } from "@shared/types/core";
 
 function makeMeta(
@@ -65,17 +65,13 @@ describe("topologicalOrder", () => {
 });
 
 describe("transitive blacklist inheritance", () => {
-  /** Simulate the transitive set-growing loop from buildReportCardsSnapshot. */
   function buildTransitiveSet(metas: StablecoinMeta[]): Set<string> {
-    const sorted = topologicalOrder([...metas]);
-    const blacklistableIds = new Set(
-      metas.filter((m) => isBlacklistable(m) === true).map((m) => m.id),
+    const resolved = resolveBlacklistStatuses(metas);
+    return new Set(
+      Array.from(resolved.entries())
+        .filter(([, status]) => status === true || status === "inherited")
+        .map(([id]) => id),
     );
-    for (const m of sorted) {
-      const bl = isBlacklistable(m, blacklistableIds);
-      if (bl === true || bl === "inherited") blacklistableIds.add(m.id);
-    }
-    return blacklistableIds;
   }
 
   it("second-order coin inherits through an intermediate", () => {
@@ -121,5 +117,27 @@ describe("transitive blacklist inheritance", () => {
     expect(ids.has("root")).toBe(true);
     expect(ids.has("middle")).toBe(false);
     expect(ids.has("leaf")).toBe(false);
+  });
+
+  it("resolves cyclic dependencies to a fixed point instead of order-dependent false negatives", () => {
+    const metas = [
+      makeMeta("a", [
+        { name: "USDC", pct: 60, risk: "low" },
+        { coinId: "b", pct: 40, name: "B", risk: "low" },
+      ], {
+        governance: "decentralized",
+      }),
+      makeMeta("b", [
+        { coinId: "a", pct: 80, name: "A", risk: "low" },
+        { name: "ETH", pct: 20, risk: "low" },
+      ], {
+        governance: "decentralized",
+      }),
+    ];
+
+    const resolved = resolveBlacklistStatuses(metas);
+
+    expect(resolved.get("a")).toBe("inherited");
+    expect(resolved.get("b")).toBe("inherited");
   });
 });

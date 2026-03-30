@@ -127,12 +127,13 @@ or explicit CEX/custodian descriptors. This ensures that composition shifts
 detected by live adapters are reflected in blacklist status without waiting for
 curated data updates.
 
-The lookup set is built transitively during topological processing — inherited
-coins are added after evaluation so downstream coins see the full closure.
-When no live reserves exist, curated `StablecoinMeta.reserves` are used as
-fallback, and the same reserve-name heuristics are applied there as well. The
-collateral drift alert (>15pt divergence) helps operators detect when curated
-metadata needs updating for other scoring dimensions.
+The resolver now converges to a fixed point across the tracked coin set rather
+than relying on a single order-sensitive pass, so cyclic reserve graphs do not
+produce traversal-dependent blacklist statuses. When no live reserves exist,
+curated `StablecoinMeta.reserves` are used as fallback, and the same reserve-name
+heuristics are applied there as well. The collateral drift alert (>15pt
+divergence) helps operators detect when curated metadata needs updating for
+other scoring dimensions.
 
 | Reserve Risk Tier | Score | Description                        | Examples                                                                      |
 | ----------------- | ----- | ---------------------------------- | ----------------------------------------------------------------------------- |

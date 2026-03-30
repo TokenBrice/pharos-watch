@@ -1,6 +1,7 @@
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { StablecoinMeta } from "@shared/types";
+import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { trimTextAtWordBoundary } from "@/lib/page-metadata";
 import { buildStablecoinUrl } from "@/lib/urls";
 
@@ -49,9 +50,11 @@ function buildComparisonSlug(left: StablecoinMeta, right: StablecoinMeta): strin
 }
 
 function describeBlacklistability(coin: StablecoinMeta): string {
-  if (coin.canBeBlacklisted === true) return "Issuer blacklist controls";
-  if (coin.canBeBlacklisted === "possible") return "Blacklist controls possible";
-  return "No explicit blacklist flag";
+  const status = getResolvedBlacklistStatus(coin.id);
+  if (status === true) return "Issuer blacklist controls";
+  if (status === "inherited") return "Upstream freeze exposure";
+  if (status === "possible") return "Blacklist or freeze exposure possible";
+  return "No clear blacklist signal";
 }
 
 function describeReserveSignal(coin: StablecoinMeta): string {

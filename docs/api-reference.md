@@ -1376,6 +1376,8 @@ The Liquidity dimension now represents `effectiveExitScore`: the public DEX liqu
 | `dependencies`                     | `DependencyWeight[]`                            |
 | `navToken`                         | `boolean`                                       |
 
+`rawInputs.canBeBlacklisted` is the canonical resolved blacklist status used by report-card-backed product surfaces. It can therefore differ from the raw `StablecoinMeta.canBeBlacklisted` override field, which only carries manual metadata and never stores computed `"inherited"` values.
+
 **Dimensions:** `pegStability`, `liquidity`, `resilience`, `decentralization`, `dependencyRisk`
 
 ---

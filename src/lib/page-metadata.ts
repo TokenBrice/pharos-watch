@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { API_ORIGIN } from "@shared/lib/runtime-origins";
 import type { BackingType, StablecoinMeta } from "@shared/types";
+import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { buildStablecoinUrl } from "@/lib/urls";
 
 interface BuildPageMetadataInput {
@@ -67,6 +68,8 @@ function getReserveDifferentiator(coin: StablecoinMeta): string | null {
 }
 
 function getMetadataDifferentiator(coin: StablecoinMeta): string | null {
+  const blacklistStatus = getResolvedBlacklistStatus(coin.id);
+
   if (coin.flags.yieldBearing) {
     const source = coin.yieldConfig?.yieldSource;
     return source ? `Yield-bearing via ${source}.` : "Yield-bearing design.";
@@ -80,12 +83,16 @@ function getMetadataDifferentiator(coin: StablecoinMeta): string | null {
     return `${coin.proofOfReserves.provider} reserve attestations.`;
   }
 
-  if (coin.canBeBlacklisted === true) {
+  if (blacklistStatus === true) {
     return "Issuer can freeze addresses.";
   }
 
-  if (coin.canBeBlacklisted === "possible") {
-    return "Upgrade path could enable blacklisting.";
+  if (blacklistStatus === "inherited") {
+    return "Freeze risk inherited from upstream collateral.";
+  }
+
+  if (blacklistStatus === "possible") {
+    return "Blacklist or freeze exposure is possible.";
   }
 
   if (coin.flags.rwa) {
@@ -106,8 +113,8 @@ export function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
   const differentiator = getMetadataDifferentiator(coin);
   const description = [
     `${coin.name} (${coin.symbol}) analytics for this ${structure}.`,
-    "Peg score, liquidity, supply trends, and risk profile.",
     differentiator,
+    "Peg score, liquidity, supply trends, and risk profile.",
   ]
     .filter(Boolean)
     .join(" ");

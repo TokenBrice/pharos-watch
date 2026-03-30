@@ -23,7 +23,7 @@ import {
   GOVERNANCE_LABELS_SHORT,
 } from "@shared/lib/classification";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
-import { isBlacklistable } from "@shared/lib/report-cards";
+import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -368,9 +368,7 @@ export function StablecoinTable({
               const prevDay = getPrevDayRaw(coin);
               const prevWeek = getPrevWeekRaw(coin);
               const meta = metaById.get(coin.id);
-              const blacklistStatus = meta
-                ? reportCards?.[coin.id]?.rawInputs.canBeBlacklisted ?? isBlacklistable(meta)
-                : null;
+              const blacklistStatus = getResolvedBlacklistStatus(coin.id, reportCards?.[coin.id]);
               const change24h = prevDay > 0 ? ((circulating - prevDay) / prevDay) * 100 : 0;
               const change7d = prevWeek > 0 ? ((circulating - prevWeek) / prevWeek) * 100 : 0;
 

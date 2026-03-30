@@ -61,6 +61,34 @@ Each entry now carries three planning fields:
   - Owner lane: worker yield pipeline.
   - Next split: defer until the yield-source inventory is stable, then split by source family and manifest.
   - Validation: `npm test -- worker/src/cron/__tests__/yield-sync`, `cd worker && npx tsc --noEmit`.
+- `shared/lib/report-cards.ts`
+  - Owner lane: shared scoring and report cards.
+  - Next split: separate scoring families, blacklist/live-slice enrichment, and response shaping from the main module.
+  - Validation: `npm test -- shared/lib/__tests__/report-cards.test.ts worker/src/api/__tests__/report-cards.test.ts`, `npm run typecheck`.
+- `src/components/contagion-graph.tsx`
+  - Owner lane: frontend analytics UI.
+  - Next split: extract graph math, legend/filter state, and rendering layers into dedicated helpers/components.
+  - Validation: `npm test -- src/components`, `npm run build`.
+- `src/app/chains/[chain]/client.tsx`
+  - Owner lane: frontend chain detail route.
+  - Next split: keep route-level tests in place and continue extracting section-local view models from the route shell.
+  - Validation: `npm test -- src/app/chains/[chain]/client.test.tsx`, `npm run build`.
+- `worker/src/cron/dispatch-telegram-alerts.ts`
+  - Owner lane: worker notifications.
+  - Next split: isolate alert candidate selection, message rendering, and delivery policy into separate modules.
+  - Validation: `npm test -- worker/src/cron/__tests__/dispatch-telegram-alerts.test.ts`, `cd worker && npx tsc --noEmit`.
+- `worker/src/cron/dex-liquidity/scoring.ts`
+  - Owner lane: worker liquidity pipeline.
+  - Next split: split score-family calculations and reusable transforms before adding more heuristics.
+  - Validation: `npm test -- worker/src/cron/__tests__/dex-liquidity-scoring.test.ts`, `cd worker && npx tsc --noEmit`.
+- `worker/src/cron/sync-live-reserves.ts`
+  - Owner lane: worker reserves pipeline.
+  - Next split: separate adapter execution, persistence, and summary/publication assembly from the cron shell.
+  - Validation: `npm test -- worker/src/cron/__tests__/sync-live-reserves.test.ts`, `cd worker && npx tsc --noEmit`.
+- `worker/src/cron/yield-config.ts`
+  - Owner lane: worker yield pipeline.
+  - Next split: split the adapter registry into manifest families before the config surface grows further.
+  - Validation: `npm test -- worker/src/cron/__tests__/yield-config-registry.test.ts`, `cd worker && npx tsc --noEmit`.
 
 ## Stabilized Files
 

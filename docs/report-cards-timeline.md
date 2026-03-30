@@ -310,6 +310,7 @@ Safety Score structure is unchanged, but blacklistability attribution is now mor
 - `isBlacklistable()` no longer treats `centralized-dependent` governance as `possible` by default
 - Computed inherited blacklistability now resolves to `inherited`, separating upstream freeze risk from mutable-contract risk
 - Inherited status now requires majority reserve exposure and can be driven by curated reserve-slice `blacklistable` markers in addition to upstream stablecoin `coinId` links
+- The shared resolver now converges to a fixed point across the tracked graph, and enriched live reserve names can contribute to blacklist attribution when report cards have live reserve input
 
 Weights and grade thresholds are unchanged from v6.8.
 

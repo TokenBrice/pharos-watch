@@ -26,7 +26,7 @@ import {
   formatSupply,
 } from "@shared/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
-import { isBlacklistable } from "@shared/lib/report-cards";
+import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import type {
@@ -278,7 +278,7 @@ export function HeroCard({
 }: HeroCardProps) {
   const protocolLabel = getProtocolFamilyLabel(coin);
   const chainCount = coinData?.chains?.length ?? 0;
-  const blacklistStatus = reportCard?.rawInputs.canBeBlacklisted ?? isBlacklistable(coin);
+  const blacklistStatus = getResolvedBlacklistStatus(coin.id, reportCard);
   const primaryComparisonPage = getPrimaryStaticComparisonPageForCoin(coin.id);
   const compareHref = primaryComparisonPage?.href ?? buildLiveCompareUrl([coin.id]);
   const benchmarkSymbol = primaryComparisonPage

@@ -8,9 +8,11 @@ import {
   scoreResilience,
   scoreDecentralization,
   chainInfraScore,
+  getBlacklistStatusLabel,
   isBlacklistable,
   enrichLiveSlicesForBlacklist,
   GRADE_THRESHOLDS,
+  resolveBlacklistStatuses,
 } from "../report-cards";
 import type { ReportCard } from "../../types/report-cards";
 
@@ -657,5 +659,47 @@ describe("enrichLiveSlicesForBlacklist", () => {
     ];
     const enriched = enrichLiveSlicesForBlacklist(live, blacklistableIds, trackedMetaById);
     expect(isBlacklistable(meta as never, blacklistableIds, enriched)).toBe("inherited");
+  });
+});
+
+describe("resolveBlacklistStatuses", () => {
+  it("resolves cyclic inherited exposure to a fixed point", () => {
+    const metas = [
+      {
+        id: "a",
+        name: "A",
+        symbol: "A",
+        flags: { governance: "decentralized" as const },
+        reserves: [
+          { name: "USDC", pct: 60, risk: "low" as const },
+          { name: "B", pct: 40, risk: "low" as const, coinId: "b" },
+        ],
+      },
+      {
+        id: "b",
+        name: "B",
+        symbol: "B",
+        flags: { governance: "decentralized" as const },
+        reserves: [
+          { name: "A", pct: 80, risk: "low" as const, coinId: "a" },
+          { name: "ETH", pct: 20, risk: "very-low" as const },
+        ],
+      },
+    ];
+
+    const resolved = resolveBlacklistStatuses(metas as never);
+
+    expect(resolved.get("a")).toBe("inherited");
+    expect(resolved.get("b")).toBe("inherited");
+  });
+});
+
+describe("getBlacklistStatusLabel", () => {
+  it("formats inherited as Upstream", () => {
+    expect(getBlacklistStatusLabel("inherited")).toBe("Upstream");
+  });
+
+  it("formats explicit false as No", () => {
+    expect(getBlacklistStatusLabel(false)).toBe("No");
   });
 });

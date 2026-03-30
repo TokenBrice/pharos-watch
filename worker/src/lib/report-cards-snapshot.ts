@@ -31,8 +31,8 @@ import {
   computeOverallGrade,
   resolveResilienceFactors,
   resolveGovernanceQuality,
-  isBlacklistable,
-  enrichLiveSlicesForBlacklist,
+  resolveBlacklistStatuses,
+  type BlacklistStatus,
 } from "@shared/lib/report-cards";
 import { loadStablecoinsCache, type StablecoinsCacheLoadOk } from "./stablecoins-cache";
 import type {
@@ -198,11 +198,12 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
   });
   const pegDataById = pegAnalytics.pegDataById;
 
-  // Seed with first-order blacklistable coins; grows transitively below.
-  const blacklistableIds: Set<string> = new Set(
-    ACTIVE_STABLECOINS
-      .filter((meta) => isBlacklistable(meta) === true)
-      .map((meta) => meta.id),
+  const resolvedBlacklistStatuses = resolveBlacklistStatuses(
+    ACTIVE_STABLECOINS,
+    {
+      reserveSlicesById: liveReserveMap,
+      trackedMetaById: ACTIVE_META_BY_ID,
+    },
   );
 
   const sortedMetas = topologicalOrder([...ACTIVE_STABLECOINS]);
@@ -217,19 +218,13 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
       redemptionBackstopMap,
       bluechipMap,
       overallScores,
-      blacklistableIds,
+      blacklistStatus: resolvedBlacklistStatuses.get(meta.id) ?? false,
       liveReserveMap,
       liquidityStale,
     });
     liveCards.push(card);
     if (card.overallScore !== null) {
       overallScores.set(card.id, card.overallScore);
-    }
-    // Grow the set transitively: downstream coins processed later will see
-    // this coin as blacklistable in their reserve-slice coinId lookups.
-    const bl = card.rawInputs.canBeBlacklisted;
-    if (bl === true || bl === "inherited") {
-      blacklistableIds.add(card.id);
     }
   }
 
@@ -319,7 +314,7 @@ interface ComputeCardInput {
   redemptionBackstopMap: Record<string, RedemptionBackstopEntry>;
   bluechipMap: Record<string, BluechipRating>;
   overallScores: Map<string, number>;
-  blacklistableIds: ReadonlySet<string>;
+  blacklistStatus: BlacklistStatus;
   liveReserveMap: Map<string, ReserveSlice[]>;
   liquidityStale: boolean;
 }
@@ -332,7 +327,7 @@ function computeCard(input: ComputeCardInput): ReportCard {
     redemptionBackstopMap,
     bluechipMap,
     overallScores,
-    blacklistableIds,
+    blacklistStatus,
     liveReserveMap,
     liquidityStale,
   } = input;
@@ -345,16 +340,12 @@ function computeCard(input: ComputeCardInput): ReportCard {
 
   const resilienceFactors = resolveResilienceFactors(meta);
   const liveSlices = liveReserveMap.get(meta.id);
-  const enrichedLiveSlices = liveSlices
-    ? enrichLiveSlicesForBlacklist(liveSlices, blacklistableIds, ACTIVE_META_BY_ID)
-    : undefined;
-  const canBeBlacklisted = isBlacklistable(meta, blacklistableIds, enrichedLiveSlices);
   const deps = deriveDependencies(meta);
 
   const dimensions: Record<DimensionKey, ReturnType<typeof scorePegStability>> = {
     pegStability: scorePegStability(peg, meta),
     liquidity: scoreLiquidity(liq, redemption),
-    resilience: scoreResilience(meta, canBeBlacklisted, enrichedLiveSlices ?? liveSlices),
+    resilience: scoreResilience(meta, blacklistStatus, liveSlices),
     decentralization: scoreDecentralization(meta.flags.governance as GovernanceType, meta),
     dependencyRisk: scoreDependencyRisk(meta, overallScores),
   };
@@ -377,7 +368,7 @@ function computeCard(input: ComputeCardInput): ReportCard {
     redemptionImmediateCapacityRatio: redemption?.immediateCapacityRatio ?? null,
     concentrationHhi: liq?.concentrationHhi ?? null,
     bluechipGrade: rating?.grade ?? null,
-    canBeBlacklisted,
+    canBeBlacklisted: blacklistStatus,
     chainTier: resilienceFactors.chainTier,
     deploymentModel: resilienceFactors.deploymentModel,
     collateralQuality: resilienceFactors.collateralQuality,

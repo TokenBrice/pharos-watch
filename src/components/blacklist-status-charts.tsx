@@ -10,8 +10,8 @@ import { useReportCards } from "@/hooks/api-hooks";
 import { formatCurrency } from "@shared/lib/format";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { isBlacklistable } from "@shared/lib/report-cards";
 import { buildReportCardMap } from "@/lib/stablecoin-lookups";
+import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 
 type BlacklistStatus = "yes" | "possible" | "upstream" | "no";
@@ -186,9 +186,9 @@ export function BlacklistStatusCharts() {
     };
 
     for (const coin of ACTIVE_STABLECOINS) {
-      const meta = TRACKED_META_BY_ID.get(coin.id);
-      if (!meta) continue;
-      const resolved = reportCards?.[coin.id]?.rawInputs.canBeBlacklisted ?? isBlacklistable(meta);
+      if (!TRACKED_META_BY_ID.has(coin.id)) continue;
+      const resolved = getResolvedBlacklistStatus(coin.id, reportCards?.[coin.id]);
+      if (resolved === null) continue;
       const status = resolveStatus(resolved);
       counts[status].count += 1;
       counts[status].marketCap += supplyById.get(coin.id) ?? 0;

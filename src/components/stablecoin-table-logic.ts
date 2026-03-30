@@ -1,8 +1,8 @@
 import { downloadCsv } from "@/lib/csv-export";
 import { createTableComparator } from "@/lib/table-comparator";
+import { getResolvedBlacklistStatus, getResolvedBlacklistStatusLabel } from "@/lib/blacklist-status";
 import type { ColumnId } from "@/hooks/use-preferences";
 import { getPegReference } from "@shared/lib/peg-rates";
-import { isBlacklistable } from "@shared/lib/report-cards";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { ACTIVE_IDS, TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { DexLiquidityMap, FilterTag, PegSummaryCoin, ReportCard, StablecoinData } from "@shared/types";
@@ -133,9 +133,8 @@ export function sortStablecoins({
     liquidity: (r) => dexLiquidity?.[r.id]?.liquidityScore ?? null,
     grade: (r) => reportCards?.[r.id]?.overallScore ?? null,
     blacklistable: (r) => {
-      const meta = metaById.get(r.id);
-      if (!meta) return null;
-      const status = reportCards?.[r.id]?.rawInputs.canBeBlacklisted ?? isBlacklistable(meta);
+      const status = getResolvedBlacklistStatus(r.id, reportCards?.[r.id]);
+      if (status === null) return null;
       if (status === true) return 2;
       if (status === "possible" || status === "inherited") return 1;
       return 0;
@@ -189,10 +188,8 @@ export function exportStablecoinsCsv(
       {
         header: "Blacklistable",
         accessor: (row) => {
-          const meta = TRACKED_META_BY_ID.get(row.id);
-          if (!meta) return null;
-          const status = reportCards?.[row.id]?.rawInputs.canBeBlacklisted ?? isBlacklistable(meta);
-          return status === true ? "Yes" : status === false ? "No" : status === "inherited" ? "Upstream" : "Possible";
+          if (!TRACKED_META_BY_ID.has(row.id)) return null;
+          return getResolvedBlacklistStatusLabel(row.id, reportCards?.[row.id]);
         },
       },
       { header: "Grade", accessor: (row) => reportCards?.[row.id]?.overallGrade ?? null },
