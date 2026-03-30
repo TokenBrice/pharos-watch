@@ -192,7 +192,7 @@ export function exportStablecoinsCsv(
           const meta = TRACKED_META_BY_ID.get(row.id);
           if (!meta) return null;
           const status = reportCards?.[row.id]?.rawInputs.canBeBlacklisted ?? isBlacklistable(meta);
-          return status === true ? "Yes" : status === false ? "No" : status === "inherited" ? "Inherited" : "Possible";
+          return status === true ? "Yes" : status === false ? "No" : status === "inherited" ? "Upstream" : "Possible";
         },
       },
       { header: "Grade", accessor: (row) => reportCards?.[row.id]?.overallGrade ?? null },

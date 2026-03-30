@@ -564,7 +564,7 @@ export function StablecoinTable({
                       ) : blacklistStatus === "possible" ? (
                         <span className="text-amber-700 dark:text-amber-400">Possible</span>
                       ) : blacklistStatus === "inherited" ? (
-                        <span className="text-amber-700 dark:text-amber-400">Inherited</span>
+                        <span className="text-amber-700 dark:text-amber-400">Upstream</span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}

@@ -365,7 +365,7 @@ export function HeroCard({
         };
       case "inherited":
         return {
-          value: "Inherited",
+          value: "Upstream",
           sub: undefined,
           color: "text-amber-700 dark:text-amber-400",
         };

@@ -235,7 +235,7 @@ describe("computeOverallGrade — no-liquidity penalty", () => {
 describe("scoreResilience — inherited blacklist label", () => {
   it("labels Inherited descriptively for inherited blacklist risk", () => {
     const result = scoreResilience(makeMeta(), "inherited");
-    expect(result.detail).toContain("Blacklist: Inherited (descriptive only)");
+    expect(result.detail).toContain("Blacklist: Upstream (descriptive only)");
   });
 });
 

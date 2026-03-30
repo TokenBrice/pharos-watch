@@ -542,7 +542,7 @@ export function scoreResilience(
       : canBeBlacklisted === "possible"
         ? "Possible (mutable contract)"
         : canBeBlacklisted === "inherited"
-          ? "Inherited"
+          ? "Upstream"
           : "No";
 
   const custodyScore = CUSTODY_MODEL_SCORE[factors.custodyModel];

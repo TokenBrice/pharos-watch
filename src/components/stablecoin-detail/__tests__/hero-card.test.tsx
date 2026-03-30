@@ -289,7 +289,7 @@ describe("HeroCard", () => {
     );
 
     expect(html).toContain("Blacklistable");
-    expect(html).toContain("Inherited");
+    expect(html).toContain("Upstream");
     expect(html).not.toContain("No issuer controls");
   });
 
