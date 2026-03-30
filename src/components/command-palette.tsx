@@ -295,7 +295,7 @@ export function CommandPalette() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
-        className="top-2 translate-y-0 sm:top-[50%] sm:translate-y-[-50%] sm:mt-[18vh] z-[100] mx-auto w-full max-w-lg overflow-hidden rounded-xl border border-border/75 bg-card p-0 shadow-[0_28px_50px_oklch(0_0_0_/0.35)]"
+        className="inset-x-0 top-0 translate-x-0 translate-y-0 flex h-[100dvh] max-w-none flex-col rounded-none border-0 sm:inset-x-auto sm:top-[50%] sm:left-[50%] sm:h-auto sm:max-h-none sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-[-50%] sm:mt-[18vh] sm:rounded-xl sm:border sm:border-border/75 z-[100] overflow-hidden bg-card p-0 shadow-[0_28px_50px_oklch(0_0_0_/0.35)]"
         showCloseButton={false}
         onOpenAutoFocus={(event) => {
           event.preventDefault();
@@ -305,7 +305,7 @@ export function CommandPalette() {
       >
         <DialogTitle className="sr-only">Command palette</DialogTitle>
         {/* Search input */}
-        <div className="relative">
+        <div className="relative shrink-0">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             ref={inputRef}
@@ -331,7 +331,7 @@ export function CommandPalette() {
           ref={listRef}
           id="command-palette-results"
           role="listbox"
-          className="max-h-[40vh] sm:max-h-[60vh] overflow-y-auto py-2"
+          className="min-h-0 flex-1 overflow-y-auto py-2 sm:max-h-[60vh] sm:flex-initial"
         >
           {query.trim() && flatResults.length === 0 && (
             <div className="px-4 py-8 text-center">
@@ -429,7 +429,7 @@ export function CommandPalette() {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-4 border-t border-border/70 bg-muted/15 px-4 py-2 text-xs text-muted-foreground">
+        <div className="flex shrink-0 items-center gap-4 border-t border-border/70 bg-muted/15 px-4 py-2 text-xs text-muted-foreground">
           <span>
             <kbd className="rounded border border-border/70 bg-background/55 px-1 py-0.5 font-mono">&#8593;&#8595;</kbd> navigate
           </span>
