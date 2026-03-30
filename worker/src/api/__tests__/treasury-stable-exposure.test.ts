@@ -23,9 +23,20 @@ describe("handleTreasuryStableExposure", () => {
     vi.useRealTimers();
   });
 
-  it("returns 503 when cache is empty", async () => {
+  it("returns an empty 200 payload when cache is empty", async () => {
     const res = await handleTreasuryStableExposure(mockD1());
-    expect(res.status).toBe(503);
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      entities: unknown[];
+      updatedAt: number;
+      _meta: { status: string };
+      coverage: { entityCount: number; registryCount: number };
+    };
+    expect(body.entities).toEqual([]);
+    expect(body.updatedAt).toBe(0);
+    expect(body.coverage.entityCount).toBe(0);
+    expect(body.coverage.registryCount).toBeGreaterThan(0);
+    expect(body._meta.status).toBe("stale");
   });
 
   it("returns 200 with freshness metadata for a valid cached payload", async () => {

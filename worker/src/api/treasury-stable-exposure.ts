@@ -1,11 +1,12 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { TREASURY_SEEDS } from "@shared/lib/treasury-seeds";
+import { buildTreasuryStableExposureSnapshot } from "@shared/lib/treasury-stable-exposure";
 import { TreasuryStableExposureResponseSchema } from "@shared/types";
 import {
   addFreshnessHeaders,
   buildFreshnessMeta,
   errorResponse,
   jsonResponse,
-  readCachedJsonOr503,
   validatePayloadWithSchema,
   withErrorHandler,
 } from "../lib/api-utils";
@@ -19,17 +20,29 @@ export const handleTreasuryStableExposure = withErrorHandler(
   async (db: D1Database): Promise<Response> => {
     const cached = await getCache(db, "treasury-stable-exposure");
     if (!cached) {
-      return errorResponse(503, "Data not yet available");
+      const body = {
+        ...buildTreasuryStableExposureSnapshot(TREASURY_SEEDS, [], 0),
+        _meta: buildFreshnessMeta(0, MAX_AGE_SEC),
+      };
+      return jsonResponse(
+        body,
+        addFreshnessHeaders({
+          "Content-Type": "application/json",
+          "Cache-Control": CACHE_PROFILES.slow,
+        }, 0, MAX_AGE_SEC),
+      );
     }
 
-    const parsed = readCachedJsonOr503<unknown>("treasury-stable-exposure", "treasury-stable-exposure", cached);
-    if (!parsed.ok) {
-      return parsed.response;
+    let parsedData: unknown;
+    try {
+      parsedData = JSON.parse(cached.value) as unknown;
+    } catch {
+      return errorResponse(503, "Cached treasury-stable-exposure payload is malformed");
     }
 
     const validation = validatePayloadWithSchema(
       TreasuryStableExposureResponseSchema,
-      parsed.data,
+      parsedData,
       "treasury-stable-exposure:cache-read",
     );
     if (!validation.ok) {

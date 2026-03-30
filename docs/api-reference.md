@@ -314,7 +314,9 @@ Important response semantics:
 - `coverage.untrackedStableUsd` discloses the stablecoin value that could not be mapped into a Pharos stablecoin ID.
 - `weightedSafetyScore` is USD-weighted across tracked stable holdings that have a current report card; `coverage.ratedTrackedStablePct` shows how much of the tracked sleeve that score covers.
 
-**Error responses:** `502` when DefiLlama/CoinGecko is unavailable and neither cached detail nor `supply_history` fallback data exists; stale cache is returned in preference to an error.
+Cold-start behavior: if no treasury snapshot has been published yet, the endpoint returns `200` with `entities: []` plus stale `_meta` freshness fields so UI and smoke checks can treat the dataset as temporarily empty rather than transport-failed.
+
+**Error responses:** `503` only when the cached treasury snapshot exists but is structurally malformed.
 
 For integrations that only need current per-coin metrics (without full historical arrays), prefer `GET /api/stablecoin-summary/:id`.
 
