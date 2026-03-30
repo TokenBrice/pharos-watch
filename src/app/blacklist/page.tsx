@@ -10,6 +10,7 @@ import { EurcBlacklistCard } from "@/components/eurc-blacklist-card";
 import { BlacklistStats } from "@/components/blacklist-stats";
 import { BlacklistChart } from "@/components/blacklist-chart";
 import { BlacklistStatusCharts } from "@/components/blacklist-status-charts";
+import { BlacklistStatusDrilldown } from "@/components/blacklist-status-drilldown";
 import { BlacklistFilters } from "@/components/blacklist-filters";
 import { BlacklistTable } from "@/components/blacklist-table";
 import { TablePagination } from "@/components/table-pagination";
@@ -28,6 +29,7 @@ import {
   type BlacklistSortKey,
 } from "@shared/types";
 import { trackEvent, trackSearch } from "@/lib/analytics";
+import { type BlacklistStatusBucketKey } from "@/lib/blacklist-status-buckets";
 
 const PAGE_SIZE = 50;
 
@@ -35,6 +37,7 @@ const VALID_STABLECOINS = new Set<BlacklistStablecoin | "all">(["all", ...BLACKL
 const VALID_EVENT_TYPES = new Set(["all", "blacklist", "unblacklist", "destroy"]);
 const VALID_SORT_KEYS = new Set<BlacklistSortKey>(["date", "stablecoin", "chain", "event"]);
 const VALID_SORT_DIRECTIONS = new Set<BlacklistSortDirection>(["asc", "desc"]);
+const VALID_STATUS_BUCKETS = new Set<BlacklistStatusBucketKey>(["yes", "possible", "upstream", "no"]);
 
 type FilterState = {
   stablecoinFilter: BlacklistStablecoin | "all";
@@ -44,6 +47,7 @@ type FilterState = {
   sortDirection: BlacklistSortDirection;
   page: number;
   searchQuery: string;
+  statusBucket: BlacklistStatusBucketKey | null;
 };
 
 function parseFilters(search: string): FilterState {
@@ -55,6 +59,7 @@ function parseFilters(search: string): FilterState {
   const rawSortDirection = params.get("sortDirection") ?? "desc";
   const rawPage = params.get("page");
   const rawQuery = params.get("q") ?? "";
+  const rawStatusBucket = params.get("status");
   const normalizedStablecoin = rawStablecoin === "all" ? "all" : rawStablecoin.toUpperCase();
 
   const stablecoinFilter = (
@@ -69,6 +74,9 @@ function parseFilters(search: string): FilterState {
   const parsed = Number(rawPage);
   const page = rawPage && Number.isFinite(parsed) && parsed >= 1 ? Math.max(1, Math.floor(parsed)) : 1;
   const searchQuery = rawQuery === "all" ? "" : rawQuery;
+  const statusBucket = VALID_STATUS_BUCKETS.has(rawStatusBucket as BlacklistStatusBucketKey)
+    ? (rawStatusBucket as BlacklistStatusBucketKey)
+    : null;
 
   return {
     stablecoinFilter,
@@ -78,6 +86,7 @@ function parseFilters(search: string): FilterState {
     sortDirection,
     page,
     searchQuery,
+    statusBucket,
   };
 }
 
@@ -93,7 +102,10 @@ function BlacklistPageInner() {
   const { searchParams, replaceParams } = useUrlFilters();
   const parsedFilters = useMemo(() => parseFilters(searchParams.toString()), [searchParams]);
 
-  const { stablecoinFilter, chainFilter, eventTypeFilter, sortKey, sortDirection, page, searchQuery } = parsedFilters;
+  const { stablecoinFilter, chainFilter, eventTypeFilter, sortKey, sortDirection, page, searchQuery, statusBucket } =
+    parsedFilters;
+  const drilldownRef = useRef<HTMLDivElement>(null);
+  const previousStatusBucketRef = useRef<BlacklistStatusBucketKey | null>(statusBucket);
 
   // Local search state for instant input, debounced sync to URL + API
   const [searchInput, setSearchInput] = useState(() => searchQuery);
@@ -158,10 +170,20 @@ function BlacklistPageInner() {
         const query = next.searchQuery.trim();
         if (query) params.set("q", query);
         else params.delete("q");
+
+        if (next.statusBucket) params.set("status", next.statusBucket);
+        else params.delete("status");
       });
     },
     [parsedFilters, replaceParams],
   );
+
+  useEffect(() => {
+    if (statusBucket && previousStatusBucketRef.current !== statusBucket) {
+      drilldownRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    previousStatusBucketRef.current = statusBucket;
+  }, [statusBucket]);
 
   const handleStablecoinChange = useCallback(
     (v: BlacklistStablecoin | "all") => {
@@ -210,6 +232,18 @@ function BlacklistPageInner() {
     [updateFilters],
   );
 
+  const handleStatusBucketChange = useCallback(
+    (status: BlacklistStatusBucketKey) => {
+      trackEvent("filter_applied", { page: "blacklist", filter_type: "blacklist_status", filter_value: status });
+      updateFilters({ statusBucket: status });
+    },
+    [updateFilters],
+  );
+
+  const handleStatusBucketClear = useCallback(() => {
+    updateFilters({ statusBucket: null });
+  }, [updateFilters]);
+
   const total = pageData?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const clampedPage = Math.min(page, totalPages);
@@ -248,7 +282,13 @@ function BlacklistPageInner() {
 
       <BlacklistStats stats={summary?.stats} isLoading={summaryLoading} />
 
-      <BlacklistStatusCharts />
+      <BlacklistStatusCharts selectedStatus={statusBucket} onStatusSelect={handleStatusBucketChange} />
+
+      {statusBucket ? (
+        <div ref={drilldownRef}>
+          <BlacklistStatusDrilldown status={statusBucket} onClear={handleStatusBucketClear} />
+        </div>
+      ) : null}
 
       <BlacklistChart chart={summary?.chart} isLoading={summaryLoading} />
 

@@ -8,43 +8,16 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useReportCards } from "@/hooks/api-hooks";
 import { formatCurrency } from "@shared/lib/format";
-import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import { getCirculatingRaw } from "@shared/lib/supply";
 import { buildReportCardMap } from "@/lib/stablecoin-lookups";
-import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
-
-type BlacklistStatus = "yes" | "possible" | "upstream" | "no";
-
-interface StatusBucket {
-  status: string;
-  key: BlacklistStatus;
-  count: number;
-  marketCap: number;
-}
-
-const STATUS_ORDER: readonly BlacklistStatus[] = ["yes", "possible", "upstream", "no"];
-
-const STATUS_COLORS: Record<BlacklistStatus, string> = {
-  yes: "#ef4444",       // red-500
-  possible: "#f59e0b",  // amber-500
-  upstream: "#f97316",  // orange-500
-  no: "#22c55e",        // green-500
-};
-
-const STATUS_LABELS: Record<BlacklistStatus, string> = {
-  yes: "Yes",
-  possible: "Possible",
-  upstream: "Upstream",
-  no: "No",
-};
-
-function resolveStatus(value: boolean | "possible" | "inherited"): BlacklistStatus {
-  if (value === true) return "yes";
-  if (value === "possible") return "possible";
-  if (value === "inherited") return "upstream";
-  return "no";
-}
+import {
+  BLACKLIST_STATUS_BUCKET_COLORS,
+  BLACKLIST_STATUS_BUCKET_LABELS,
+  BLACKLIST_STATUS_BUCKET_ORDER,
+  buildBlacklistStatusBuckets,
+  type BlacklistStatusBucket,
+  type BlacklistStatusBucketKey,
+} from "@/lib/blacklist-status-buckets";
 
 const CHART_HEIGHT = "h-[200px] sm:h-[240px]";
 
@@ -55,13 +28,17 @@ function StatusBarChart({
   dataKey,
   formatter,
   ariaLabel,
+  selectedStatus,
+  onStatusSelect,
 }: {
   title: string;
   subtitle: string;
-  data: StatusBucket[];
+  data: BlacklistStatusBucket[];
   dataKey: "count" | "marketCap";
   formatter: (value: number) => string;
   ariaLabel: string;
+  selectedStatus?: BlacklistStatusBucketKey | null;
+  onStatusSelect?: (status: BlacklistStatusBucketKey) => void;
 }) {
   const { ref, ready, width, height } = useChartContainerReady<HTMLDivElement>();
 
@@ -71,17 +48,20 @@ function StatusBarChart({
         <div className="space-y-1">
           <CardTitle as="h2" className="pharos-kicker">{title}</CardTitle>
           <p className="text-sm text-muted-foreground">{subtitle}</p>
+          {onStatusSelect ? (
+            <p className="text-xs text-muted-foreground">Click a bar to view matching stablecoins below.</p>
+          ) : null}
         </div>
       </CardHeader>
       <CardContent>
         <div className="mb-3 flex flex-wrap gap-2">
-          {STATUS_ORDER.map((key) => (
+          {BLACKLIST_STATUS_BUCKET_ORDER.map((key) => (
             <div key={key} className="pharos-chart-legend-chip">
               <span
                 className="inline-block h-2.5 w-2.5 rounded-sm"
-                style={{ backgroundColor: STATUS_COLORS[key] }}
+                style={{ backgroundColor: BLACKLIST_STATUS_BUCKET_COLORS[key] }}
               />
-              {STATUS_LABELS[key]}
+              {BLACKLIST_STATUS_BUCKET_LABELS[key]}
             </div>
           ))}
         </div>
@@ -121,7 +101,16 @@ function StatusBarChart({
               />
               <Bar dataKey={dataKey} radius={[3, 3, 0, 0]} fillOpacity={0.75}>
                 {data.map((entry) => (
-                  <Cell key={entry.key} fill={STATUS_COLORS[entry.key]} />
+                  <Cell
+                    key={entry.key}
+                    fill={BLACKLIST_STATUS_BUCKET_COLORS[entry.key]}
+                    fillOpacity={selectedStatus && selectedStatus !== entry.key ? 0.45 : 0.82}
+                    stroke={selectedStatus === entry.key ? "var(--color-foreground)" : undefined}
+                    strokeWidth={selectedStatus === entry.key ? 1.25 : 0}
+                    cursor={onStatusSelect ? "pointer" : undefined}
+                    aria-label={onStatusSelect ? `Show ${entry.status} stablecoins` : undefined}
+                    onClick={onStatusSelect ? () => onStatusSelect(entry.key) : undefined}
+                  />
                 ))}
               </Bar>
             </BarChart>
@@ -142,7 +131,7 @@ function StatusTooltip({
   formatter,
 }: {
   active?: boolean;
-  payload?: Array<{ payload: StatusBucket }>;
+  payload?: Array<{ payload: BlacklistStatusBucket }>;
   label?: string;
   dataKey: "count" | "marketCap";
   formatter: (value: number) => string;
@@ -154,7 +143,7 @@ function StatusTooltip({
     <PharosChartTooltip active={active}>
       <TooltipLabel>{label}</TooltipLabel>
       <TooltipRow
-        color={STATUS_COLORS[bucket.key]}
+        color={BLACKLIST_STATUS_BUCKET_COLORS[bucket.key]}
         label={dataKey === "count" ? "Stablecoins" : "Market cap"}
         value={formatter(bucket[dataKey])}
       />
@@ -165,43 +154,21 @@ function StatusTooltip({
   );
 }
 
-export function BlacklistStatusCharts() {
+export function BlacklistStatusCharts({
+  selectedStatus = null,
+  onStatusSelect,
+}: {
+  selectedStatus?: BlacklistStatusBucketKey | null;
+  onStatusSelect?: (status: BlacklistStatusBucketKey) => void;
+}) {
   const { data: stablecoinData, isLoading: supplyLoading } = useStablecoins();
   const { data: reportCardsData, isLoading: rcLoading } = useReportCards();
   const isLoading = supplyLoading || rcLoading;
 
   const buckets = useMemo(() => {
     if (!stablecoinData) return null;
-
     const reportCards = buildReportCardMap(reportCardsData?.cards);
-    const supplyById = new Map(
-      stablecoinData.peggedAssets.map((a) => [a.id, getCirculatingRaw(a)]),
-    );
-
-    const counts: Record<BlacklistStatus, { count: number; marketCap: number }> = {
-      yes: { count: 0, marketCap: 0 },
-      possible: { count: 0, marketCap: 0 },
-      upstream: { count: 0, marketCap: 0 },
-      no: { count: 0, marketCap: 0 },
-    };
-
-    for (const coin of ACTIVE_STABLECOINS) {
-      if (!TRACKED_META_BY_ID.has(coin.id)) continue;
-      const resolved = getResolvedBlacklistStatus(coin.id, reportCards?.[coin.id]);
-      if (resolved === null) continue;
-      const status = resolveStatus(resolved);
-      counts[status].count += 1;
-      counts[status].marketCap += supplyById.get(coin.id) ?? 0;
-    }
-
-    return STATUS_ORDER.map(
-      (key): StatusBucket => ({
-        status: STATUS_LABELS[key],
-        key,
-        count: counts[key].count,
-        marketCap: counts[key].marketCap,
-      }),
-    );
+    return buildBlacklistStatusBuckets(stablecoinData?.peggedAssets, reportCards);
   }, [stablecoinData, reportCardsData]);
 
   if (isLoading || !buckets) {
@@ -226,6 +193,8 @@ export function BlacklistStatusCharts() {
         dataKey="count"
         formatter={(v) => String(v)}
         ariaLabel="Bar chart showing stablecoin count by blacklistable status"
+        selectedStatus={selectedStatus}
+        onStatusSelect={onStatusSelect}
       />
       <StatusBarChart
         title="Blacklistable Status by Market Cap"
@@ -234,6 +203,8 @@ export function BlacklistStatusCharts() {
         dataKey="marketCap"
         formatter={(v) => formatCurrency(v, 0)}
         ariaLabel="Bar chart showing market capitalization by blacklistable status"
+        selectedStatus={selectedStatus}
+        onStatusSelect={onStatusSelect}
       />
     </div>
   );
