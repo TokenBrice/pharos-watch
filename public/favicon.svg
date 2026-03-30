@@ -15,7 +15,9 @@
     </linearGradient>
   </defs>
 
-  <!-- Dark circle background -->
+  <!-- Full-bleed dark background (no white corners) -->
+  <rect width="88" height="88" fill="#050a14"/>
+  <!-- Dark circle with radial gradient -->
   <circle cx="44" cy="44" r="43" fill="url(#bg)"/>
 
   <!-- Icon group, shifted down 5px to optically center within circle -->
