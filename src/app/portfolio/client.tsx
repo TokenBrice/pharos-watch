@@ -25,6 +25,8 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
 import { encodePortfolioHoldings } from "@/lib/portfolio-codec";
 import { PortfolioEmptyState } from "@/components/portfolio-empty-state";
 import type { PortfolioPreset } from "@/components/portfolio-empty-state";
+import { useTreasuryStableExposure } from "@/hooks/use-treasury-stable-exposure";
+import { TreasuryStableExposureTable } from "@/components/treasury-stable-exposure-table";
 
 // ---------------------------------------------------------------------------
 // Coin options (built once at module level)
@@ -252,6 +254,13 @@ export function PortfolioClient() {
   const [toast, setToast] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
   const [showUpstreamDetail, setShowUpstreamDetail] = useState(false);
+  const {
+    data: treasuryData,
+    dataUpdatedAt: treasuryUpdatedAt,
+    error: treasuryError,
+    refetch: refetchTreasury,
+    meta: treasuryMeta,
+  } = useTreasuryStableExposure();
 
   const portfolio = usePortfolio(reportData?.cards);
 
@@ -391,6 +400,14 @@ export function PortfolioClient() {
             error: reportCardsError,
             hasData: !!reportData?.cards?.length,
             meta: reportCardsMeta,
+          },
+          {
+            label: "Treasury stable exposure",
+            dataUpdatedAt: treasuryUpdatedAt,
+            staleTime: 24 * 60 * 60 * 1000,
+            error: treasuryError,
+            hasData: !!treasuryData?.entities?.length,
+            meta: treasuryMeta,
           },
         ]}
       />
@@ -551,6 +568,36 @@ export function PortfolioClient() {
           )}
         </>
       )}
+
+      <Card>
+        <CardHeader className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <CardTitle className="pharos-kicker">Protocol Treasury Stable Exposure</CardTitle>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Compare public protocol and DAO treasuries by decentralized stablecoin dollars, treasury share,
+                and stable-sleeve mix.
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-0">
+          <QueryErrorNotice
+            error={treasuryError}
+            hasData={!!treasuryData?.entities?.length}
+            onRetry={() => {
+              void refetchTreasury();
+            }}
+          />
+          {treasuryData?.entities?.length ? (
+            <TreasuryStableExposureTable data={treasuryData} logos={logos} />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Treasury rankings will appear here once the daily treasury snapshot is available.
+            </p>
+          )}
+        </CardContent>
+      </Card>
     </div>
     </SectionErrorBoundary>
   );
