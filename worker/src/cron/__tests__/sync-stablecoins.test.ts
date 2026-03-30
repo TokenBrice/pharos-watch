@@ -59,6 +59,20 @@ vi.mock("@shared/lib/stablecoins", () => {
       flags: { pegCurrency: "USD", backing: "fiat-backed", yieldBearing: false, navToken: false, governance: "centralized" },
     },
     {
+      id: "eurcv-societe-generale-forge",
+      name: "EUR CoinVertible",
+      symbol: "EURCV",
+      geckoId: "societe-generale-forge-eurcv",
+      detailProvider: "defillama",
+      contracts: [
+        { chain: "ethereum", address: "0x5f7827fdeb7c20b443265fc2f40845b715385ff2", decimals: 18 },
+        { chain: "xrpl", address: "EURCV.XRPL", decimals: 0 },
+        { chain: "stellar", address: "EURCV.STELLAR", decimals: 7 },
+        { chain: "solana", address: "EURCV.SOL", decimals: 2 },
+      ],
+      flags: { pegCurrency: "EUR", backing: "fiat-backed", yieldBearing: false, navToken: false, governance: "centralized" },
+    },
+    {
       id: "dgld-gold-token-sa",
       name: "DGLD Tokenized Gold",
       symbol: "DGLD",
@@ -94,6 +108,18 @@ vi.mock("@shared/lib/stablecoins", () => {
     TRACKED_META_BY_ID: new Map([
       ["usdt-tether", { geckoId: "tether", cmcSlug: undefined }],
       ["usdc-circle", { geckoId: "usd-coin", cmcSlug: undefined }],
+      ["eurcv-societe-generale-forge", {
+        geckoId: "societe-generale-forge-eurcv",
+        cmcSlug: undefined,
+        contracts: [
+          { chain: "ethereum", address: "0x5f7827fdeb7c20b443265fc2f40845b715385ff2", decimals: 18 },
+          { chain: "xrpl", address: "EURCV.XRPL", decimals: 0 },
+          { chain: "stellar", address: "EURCV.STELLAR", decimals: 7 },
+          { chain: "solana", address: "EURCV.SOL", decimals: 2 },
+        ],
+        detailProvider: "defillama",
+        flags: { navToken: false, pegCurrency: "EUR", backing: "fiat-backed", yieldBearing: false, governance: "centralized" },
+      }],
       ["dgld-gold-token-sa", {
         geckoId: "gold-token-sa-dgld-tokenized-gold",
         cmcSlug: undefined,
@@ -1520,6 +1546,90 @@ describe("syncStablecoins", () => {
     const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
     const normalized = payload?.peggedAssets.find((a) => a.id === "jpyc-jpyc");
     expect(normalized?.price).toBe(0.0005);
+  });
+
+  it("reconciles tracked DefiLlama supply gaps from CoinGecko history when tracked deployments are missing", async () => {
+    const db = makeDb();
+    const dlData = makeDlResponse(60);
+    const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
+
+    dlData.peggedAssets[0] = {
+      id: "eurcv-societe-generale-forge",
+      name: "EUR CoinVertible",
+      symbol: "EURCV",
+      geckoId: "societe-generale-forge-eurcv",
+      price: 1.146,
+      priceSource: "defillama",
+      priceConfidence: "single-source",
+      supplySource: "defillama",
+      pegType: "peggedEUR",
+      pegMechanism: "fiat-backed",
+      circulating: { peggedEUR: 76_959_279.2855894 },
+      circulatingPrevDay: { peggedEUR: 76_452_843.42798373 },
+      circulatingPrevWeek: { peggedEUR: 77_730_394.74632101 },
+      circulatingPrevMonth: { peggedEUR: 64_940_946.17329877 },
+      chainCirculating: {
+        Ethereum: {
+          current: { peggedEUR: 65_558_870.064894676 },
+          circulatingPrevDay: { peggedEUR: 65_052_434.20728901 },
+          circulatingPrevWeek: { peggedEUR: 66_329_985.525626294 },
+          circulatingPrevMonth: { peggedEUR: 53_540_536.95260405 },
+        },
+        Solana: {
+          current: { peggedEUR: 11_400_409.220694723 },
+          circulatingPrevDay: { peggedEUR: 11_400_409.220694723 },
+          circulatingPrevWeek: { peggedEUR: 11_400_409.220694723 },
+          circulatingPrevMonth: { peggedEUR: 11_400_409.220694723 },
+        },
+      },
+      chains: ["Ethereum", "Solana"],
+    } as unknown as (typeof dlData.peggedAssets)[0];
+
+    const nowMs = Date.now();
+    mockFetch([
+      {
+        match: "simple/price?ids=societe-generale-forge-eurcv",
+        body: {
+          "societe-generale-forge-eurcv": {
+            usd: 1.14,
+            usd_market_cap: 106_720_303.28574413,
+          },
+        },
+      },
+      {
+        match: "coins/societe-generale-forge-eurcv/market_chart",
+        body: {
+          market_caps: [
+            [nowMs - (30 * 24 * 60 * 60 * 1000), 101_100_000],
+            [nowMs - (7 * 24 * 60 * 60 * 1000), 105_500_000],
+            [nowMs - (24 * 60 * 60 * 1000), 106_300_000],
+            [nowMs, 106_720_303.28574413],
+          ],
+        },
+      },
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.status).toBe("ok");
+
+    const finalValidationCall = validateSpy.mock.calls.find(
+      (call) => call[2] === "sync-stablecoins:stablecoins",
+    );
+    const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
+    const eurcv = payload?.peggedAssets.find((asset) => asset.id === "eurcv-societe-generale-forge");
+
+    expect(eurcv).toBeDefined();
+    expect(eurcv?.supplySource).toBe("coingecko-gap-fill");
+    expect(eurcv?.circulating).toEqual({ peggedEUR: 106_720_303.28574413 });
+    expect(eurcv?.circulatingPrevDay).toEqual({ peggedEUR: 106_300_000 });
+    expect(eurcv?.circulatingPrevWeek).toEqual({ peggedEUR: 105_500_000 });
+    expect(eurcv?.circulatingPrevMonth).toEqual({ peggedEUR: 101_100_000 });
+    expect(eurcv?.chains).toEqual(["Ethereum", "Solana", "XRP Ledger", "Stellar"]);
+    expect(Object.keys((eurcv?.chainCirculating as Record<string, unknown>) ?? {})).toEqual(["Ethereum", "Solana"]);
   });
 
   it("adds tracked gold supplemental assets when DefiLlama price data is empty but CoinGecko still has price and market cap", async () => {

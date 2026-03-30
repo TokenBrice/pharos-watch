@@ -118,6 +118,8 @@ CREATE TABLE IF NOT EXISTS chain_supply_history (
 
 **Primary source:** DefiLlama list API (`stablecoins.llama.fi/stablecoins`), cached every 15 minutes by `syncStablecoins()`.
 
+**Tracked gap-fill exception:** when a tracked DefiLlama-backed asset is missing one or more known metadata deployments from DefiLlama's `chainCirculating`, and CoinGecko reports a materially higher total market cap, `syncStablecoins()` now repairs the current plus 1d/7d/30d total supply buckets from recent CoinGecko market-cap history and tags the asset `supplySource = "coingecko-gap-fill"`. This fixes undercounted multichain totals such as issuer-backed coins whose XRPL / Stellar supply lags or is absent in DefiLlama coverage. The snapshot cron then records that repaired USD total as-is.
+
 **Key gotcha:** The list endpoint returns `circulating` values already in USD for all peg types. Do **not** multiply by price --- that double-converts. The detail endpoint (`stablecoins.llama.fi/stablecoin/{id}`) returns native currency values for non-USD pegs, but the list endpoint is already converted.
 
 ### sumPegBuckets()

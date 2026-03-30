@@ -17,6 +17,7 @@ import {
   fetchSupplementalTrackedTokens,
   type CoinGeckoMcapData,
 } from "./supplemental-assets";
+import { reconcileTrackedSupplyGaps } from "./supply-gap-reconciliation";
 import {
   hydrateGeckoIdAliases,
   loadPreviousStablecoinsById,
@@ -204,6 +205,18 @@ export async function loadStablecoinsIntake(
   }
 
   applyTrackedAssetOverrides(llamaData.peggedAssets);
+
+  const supplyGapReconciliation = await reconcileTrackedSupplyGaps(
+    llamaData.peggedAssets,
+    input.signal,
+    input.coingeckoApiKey,
+  );
+  if (supplyGapReconciliation.reconciledCount > 0) {
+    console.warn(
+      `[sync-stablecoins] Reconciled ${supplyGapReconciliation.reconciledCount} tracked supply gap(s) from CoinGecko history: ` +
+      supplyGapReconciliation.reconciledIds.join(", "),
+    );
+  }
 
   return {
     kind: "main",
