@@ -15,9 +15,8 @@ import {
   requestDigestCopy,
   runDigestChannelDelivery,
 } from "./digest/platform";
-import {
-  logDailyDigestLlmCall,
-} from "./daily-digest/runtime-helpers";
+import { logDailyDigestLlmCall } from "./daily-digest/runtime-helpers";
+import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
 
 export { classifyRegime } from "./daily-digest/prompt";
 
@@ -98,7 +97,6 @@ export async function generateDailyDigest(
   }
 
   const now = Math.floor(Date.now() / 1000);
-  const DAILY_FILTER = "digest_meta IS NULL OR json_extract(digest_meta, '$.type') IS NULL OR json_extract(digest_meta, '$.type') != 'weekly'";
   await insertDigestRecord({
     db,
     generatedAt: now,
@@ -108,8 +106,10 @@ export async function generateDailyDigest(
     digestExtended: digestCopy.digestExtended || null,
     digestMeta: digestCopy.digestMeta,
   });
-  // SAFETY: DAILY_FILTER is a hardcoded SQL fragment (line 101), not derived from user input.
-  const countResult = await db.prepare(`SELECT COUNT(*) as cnt FROM daily_digest WHERE ${DAILY_FILTER}`).all<{ cnt: number }>();
+  // SAFETY: NON_WEEKLY_DIGEST_SQL_FILTER is a hardcoded SQL fragment, not derived from user input.
+  const countResult = await db
+    .prepare(`SELECT COUNT(*) as cnt FROM daily_digest WHERE ${NON_WEEKLY_DIGEST_SQL_FILTER}`)
+    .all<{ cnt: number }>();
   const editionNumber = (countResult.results?.[0] as { cnt: number } | undefined)?.cnt ?? null;
 
   const tweetStatus = await runDigestChannelDelivery({
@@ -171,9 +171,7 @@ export async function generateDailyDigest(
           console.error("[daily-digest] Failed to commit Telegram digest appendix state:", err);
         }
       }
-      if (sentMarker) {
-        return "skipped: already-sent";
-      }
+      if (sentMarker) return "skipped: already-sent";
       const appendixSuffix = telegramAppendices?.metadata.hasAppendix
         ? `+appendix(cemetery=${telegramAppendices.metadata.cemeteryDetected},tracked=${telegramAppendices.metadata.trackedDetected},prelaunch=${telegramAppendices.metadata.preLaunchDetected})`
         : "";

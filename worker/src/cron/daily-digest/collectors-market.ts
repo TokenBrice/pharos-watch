@@ -1,0 +1,314 @@
+import type { DigestInputData } from "@shared/types/digest";
+import { getCirculatingRaw } from "@shared/lib/supply";
+import { buildInClause } from "../../lib/db";
+import { computeFlowIntensity, computeGaugeScore, getGaugeBand, detectFlightToQuality } from "../../lib/mint-burn-scoring";
+import { SECONDS } from "../../lib/time-constants";
+import { computeDigestMintBurnFtqFlows } from "./mint-burn-ftq";
+import { collectorDegraded, collectorOk, type CollectorContext, type CollectorResult } from "./collectors-shared";
+
+export async function collectActiveDepegs(
+  ctx: CollectorContext,
+): Promise<CollectorResult<{ activeDepegCount: number; topDepegs: DigestInputData["topDepegs"] }>> {
+  try {
+    const activeDepegs = await ctx.db
+      .prepare("SELECT stablecoin_id, symbol, peak_deviation_bps FROM depeg_events WHERE ended_at IS NULL")
+      .all<{ stablecoin_id: string; symbol: string; peak_deviation_bps: number }>();
+    const rows = activeDepegs.results ?? [];
+
+    const withImpact = rows.map((row) => {
+      const mcapUsd = ctx.mcapById.get(row.stablecoin_id) ?? 0;
+      return {
+        symbol: row.symbol,
+        bps: row.peak_deviation_bps,
+        mcapUsd,
+        impact: row.peak_deviation_bps * mcapUsd,
+      };
+    });
+    withImpact.sort((a, b) => b.impact - a.impact);
+    const topDepegs = withImpact.slice(0, 3).map(({ symbol, bps, mcapUsd }) => ({ symbol, bps, mcapUsd }));
+
+    return collectorOk({ activeDepegCount: rows.length, topDepegs });
+  } catch (error) {
+    console.error("[daily-digest] Failed to query active depegs:", error);
+    return collectorDegraded({ activeDepegCount: 0, topDepegs: [] }, "active-depegs-query");
+  }
+}
+
+export async function collectBlacklistActivity(
+  ctx: CollectorContext,
+): Promise<CollectorResult<DigestInputData["blacklistActivity"]>> {
+  try {
+    const blRows = await ctx.db
+      .prepare(
+        "SELECT stablecoin AS symbol, chain_name, event_type, amount_usd_at_event FROM blacklist_events WHERE timestamp >= ? AND timestamp < ? ORDER BY amount_usd_at_event DESC",
+      )
+      .bind(ctx.todayTs - SECONDS.ONE_DAY, ctx.todayTs)
+      .all<{ symbol: string; chain_name: string; event_type: string; amount_usd_at_event: number | null }>();
+    const blEvents = blRows.results ?? [];
+    if (blEvents.length > 0) {
+      const eventCount = blEvents.length;
+      const totalAmountUsd = blEvents.reduce((sum, event) => sum + (event.amount_usd_at_event ?? 0), 0);
+      const hasLargeEvent = blEvents.some((event) => (event.amount_usd_at_event ?? 0) > 10_000_000);
+      if (eventCount >= 2 || hasLargeEvent) {
+        return collectorOk({
+          eventCount,
+          totalAmountUsd,
+          topEvents: blEvents
+            .filter((event) => event.event_type === "blacklist" || event.event_type === "destroy")
+            .slice(0, 5)
+            .map((event) => ({
+              symbol: event.symbol,
+              chain: event.chain_name,
+              type: event.event_type as "blacklist" | "destroy",
+              amountUsd: event.amount_usd_at_event ?? 0,
+            })),
+        });
+      }
+    }
+  } catch (error) {
+    console.error("[daily-digest] Failed to query blacklist events:", error);
+    return collectorDegraded(undefined, "blacklist-activity-query");
+  }
+  return collectorOk(undefined);
+}
+
+export async function collectSupplyVelocity(
+  ctx: CollectorContext,
+): Promise<CollectorResult<DigestInputData["supplyVelocity"]>> {
+  try {
+    const top10 = ctx.trackedStablecoinAssets
+      .map((coin) => ({ id: coin.id, symbol: coin.symbol, mcap: getCirculatingRaw(coin) }))
+      .sort((a, b) => b.mcap - a.mcap)
+      .slice(0, 10);
+
+    if (top10.length > 0) {
+      const yesterday = ctx.todayTs - SECONDS.ONE_DAY;
+      const weekAgo = ctx.todayTs - 7 * SECONDS.ONE_DAY;
+      const top10IdInClause = buildInClause(top10.map((coin) => coin.id));
+      const supplyRows = await ctx.db
+        .prepare(
+          `SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history WHERE stablecoin_id IN (${top10IdInClause.sql}) AND snapshot_date IN (?, ?, ?)`,
+        )
+        .bind(...top10IdInClause.binds, ctx.todayTs, yesterday, weekAgo)
+        .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number }>();
+
+      const snapMap = new Map<string, Map<number, number>>();
+      for (const row of supplyRows.results ?? []) {
+        let byDate = snapMap.get(row.stablecoin_id);
+        if (!byDate) {
+          byDate = new Map();
+          snapMap.set(row.stablecoin_id, byDate);
+        }
+        byDate.set(row.snapshot_date, row.circulating_usd);
+      }
+
+      const velocitySignals: NonNullable<DigestInputData["supplyVelocity"]> = [];
+      for (const coin of top10) {
+        const byDate = snapMap.get(coin.id);
+        if (!byDate) continue;
+        const todayVal = byDate.get(ctx.todayTs);
+        const yesterdayVal = byDate.get(yesterday);
+        const weekAgoVal = byDate.get(weekAgo);
+        if (todayVal == null || yesterdayVal == null || weekAgoVal == null) continue;
+
+        const change1d = todayVal - yesterdayVal;
+        const change7d = todayVal - weekAgoVal;
+        const dailyAvg7d = change7d / 7;
+        const directionReversed = (change1d > 0 && change7d < 0) || (change1d < 0 && change7d > 0);
+        const velocityRatio = dailyAvg7d !== 0 ? Math.abs(change1d / dailyAvg7d) : 0;
+
+        if (Math.abs(change1d) < 1_000_000 || Math.abs(change1d) < coin.mcap * 0.001) continue;
+
+        if (directionReversed || velocityRatio > 2.5) {
+          const signal = directionReversed
+            ? "reversed"
+            : velocityRatio > 2.5 && Math.abs(change1d) > Math.abs(dailyAvg7d)
+              ? "accelerating"
+              : "decelerating";
+          velocitySignals.push({ coin: coin.symbol, change1d, change7d, signal });
+        }
+      }
+
+      if (velocitySignals.length > 0) {
+        return collectorOk(velocitySignals);
+      }
+    }
+  } catch (error) {
+    console.error("[daily-digest] Failed to compute supply velocity:", error);
+    return collectorDegraded(undefined, "supply-velocity-query");
+  }
+  return collectorOk(undefined);
+}
+
+export async function collectResolvedDepegs(
+  ctx: CollectorContext,
+): Promise<DigestInputData["resolvedDepegs"]> {
+  try {
+    const cutoff48h = ctx.nowSec - SECONDS.TWO_DAYS;
+    const resolvedRows = await ctx.db
+      .prepare(
+        `SELECT symbol, peak_deviation_bps, started_at, ended_at, stablecoin_id
+         FROM depeg_events
+         WHERE ended_at IS NOT NULL AND ended_at >= ?
+         ORDER BY peak_deviation_bps DESC
+         LIMIT 10`,
+      )
+      .bind(cutoff48h)
+      .all<{ symbol: string; peak_deviation_bps: number; started_at: number; ended_at: number; stablecoin_id: string }>();
+
+    const candidates = (resolvedRows.results ?? [])
+      .map((row) => ({
+        symbol: row.symbol,
+        peakBps: Math.abs(row.peak_deviation_bps),
+        durationHours: Math.round((row.ended_at - row.started_at) / SECONDS.ONE_HOUR),
+        mcapUsd: ctx.mcapById.get(row.stablecoin_id) ?? 0,
+      }))
+      .filter((row) => row.peakBps > 100 && row.mcapUsd > 20_000_000)
+      .slice(0, 5);
+
+    if (candidates.length > 0) {
+      return candidates;
+    }
+  } catch (error) {
+    console.error("[daily-digest] Failed to query resolved depegs:", error);
+  }
+  return undefined;
+}
+
+export async function collectMintBurnFlows(
+  ctx: CollectorContext,
+): Promise<DigestInputData["mintBurnFlows"]> {
+  try {
+    const cutoff24h = ctx.nowSec - SECONDS.ONE_DAY;
+    const cutoff30d = ctx.nowSec - 30 * SECONDS.ONE_DAY;
+
+    const flow24hRows = await ctx.db
+      .prepare(
+        `SELECT stablecoin_id,
+                SUM(mint_volume_usd) as mint_24h,
+                SUM(burn_volume_usd) as burn_24h,
+                SUM(net_flow_usd) as net_24h
+         FROM mint_burn_hourly
+         WHERE hour_ts >= ?
+         GROUP BY stablecoin_id`,
+      )
+      .bind(cutoff24h)
+      .all<{ stablecoin_id: string; mint_24h: number; burn_24h: number; net_24h: number }>();
+
+    const flow30dRows = await ctx.db
+      .prepare(
+        `SELECT stablecoin_id,
+                SUM(net_flow_usd) / 30.0 as avg_daily_net,
+                SUM(mint_volume_usd + burn_volume_usd) / 30.0 as avg_daily_abs,
+                COUNT(DISTINCT CAST(hour_ts / 86400 AS INTEGER)) as data_days
+         FROM mint_burn_hourly
+         WHERE hour_ts >= ?
+         GROUP BY stablecoin_id`,
+      )
+      .bind(cutoff30d)
+      .all<{ stablecoin_id: string; avg_daily_net: number; avg_daily_abs: number; data_days: number }>();
+
+    const flow24h = new Map((flow24hRows.results ?? []).map((row) => [row.stablecoin_id, row]));
+    const flow30d = new Map((flow30dRows.results ?? []).map((row) => [row.stablecoin_id, row]));
+
+    const coinIntensities: { id: string; symbol: string; intensity: number | null; net24h: number; mcap: number }[] = [];
+    let mintBurnExcluded = 0;
+    for (const [id, flow24] of flow24h) {
+      const flow30 = flow30d.get(id);
+      if (!flow30) {
+        mintBurnExcluded++;
+        continue;
+      }
+      const coin = ctx.trackedStablecoinAssets.find((candidate) => candidate.id === id);
+      if (!coin) continue;
+      const intensity = computeFlowIntensity({
+        currentDailyNet: flow24.net_24h,
+        baselineDailyNet: flow30.avg_daily_net,
+        baselineDailyAbs: flow30.avg_daily_abs,
+        dataAgeDays: flow30.data_days,
+        currentDailyAbs: flow24.mint_24h + flow24.burn_24h,
+      });
+      coinIntensities.push({ id, symbol: coin.symbol, intensity, net24h: flow24.net_24h, mcap: getCirculatingRaw(coin) });
+    }
+    if (mintBurnExcluded > 0) {
+      console.log(`[daily-digest] mint-burn: excluded ${mintBurnExcluded} coins without 30d baseline`);
+    }
+
+    const gaugeScore = computeGaugeScore(coinIntensities.map((coin) => ({ intensity: coin.intensity, mcap: coin.mcap })));
+    if (gaugeScore !== null) {
+      const { safeNet24h, riskyNet24h } = await computeDigestMintBurnFtqFlows(ctx.db, coinIntensities);
+      const ftq = detectFlightToQuality({ safeNet24h, riskyNet24h });
+      const topPressure = coinIntensities
+        .filter((coin) => coin.intensity !== null && Math.abs(coin.intensity) > 20)
+        .sort((a, b) => Math.abs(b.intensity!) - Math.abs(a.intensity!))
+        .slice(0, 3)
+        .map((coin) => ({ symbol: coin.symbol, intensity: coin.intensity!, net24hUsd: coin.net24h }));
+
+      return {
+        gaugeScore,
+        gaugeBand: getGaugeBand(gaugeScore).label,
+        flightToQuality: { active: ftq.active, safeNetUsd: safeNet24h, riskyNetUsd: riskyNet24h },
+        topPressure,
+      };
+    }
+  } catch (error) {
+    console.error("[daily-digest] Failed to collect mint-burn flows:", error);
+  }
+  return undefined;
+}
+
+export async function collectLiquidityShifts(
+  ctx: CollectorContext,
+): Promise<DigestInputData["liquidityShifts"]> {
+  try {
+    const lookbackStart = ctx.yesterdayTs - 2 * SECONDS.ONE_DAY;
+    const rows = await ctx.db
+      .prepare(
+        `SELECT h.stablecoin_id, h.liquidity_score, h.total_tvl_usd, h.snapshot_date
+         FROM dex_liquidity_history h
+         WHERE h.snapshot_date <= ? AND h.snapshot_date > ?
+           AND h.liquidity_score IS NOT NULL
+         ORDER BY h.stablecoin_id, h.snapshot_date DESC`,
+      )
+      .bind(ctx.yesterdayTs, lookbackStart)
+      .all<{ stablecoin_id: string; liquidity_score: number; total_tvl_usd: number; snapshot_date: number }>();
+
+    type LiqRow = (typeof rows.results)[number];
+    const byId = new Map<string, { latest?: LiqRow; previous?: LiqRow }>();
+    for (const row of rows.results ?? []) {
+      const entry = byId.get(row.stablecoin_id) ?? {};
+      if (!entry.latest) entry.latest = row;
+      else if (!entry.previous) entry.previous = row;
+      byId.set(row.stablecoin_id, entry);
+    }
+
+    const shifts: NonNullable<DigestInputData["liquidityShifts"]> = [];
+    for (const [id, { latest, previous }] of byId) {
+      if (!latest || !previous) continue;
+      const delta = latest.liquidity_score - previous.liquidity_score;
+      if (Math.abs(delta) < 8) continue;
+
+      const mcapUsd = ctx.mcapById.get(id) ?? 0;
+      if (mcapUsd < 10_000_000) continue;
+
+      const coin = ctx.trackedStablecoinAssets.find((candidate) => candidate.id === id);
+      if (!coin) continue;
+
+      shifts.push({
+        symbol: coin.symbol,
+        currentScore: latest.liquidity_score,
+        previousScore: previous.liquidity_score,
+        scoreDelta: delta,
+        currentTvl: latest.total_tvl_usd,
+        previousTvl: previous.total_tvl_usd,
+        mcapUsd,
+      });
+    }
+
+    shifts.sort((a, b) => Math.abs(b.scoreDelta) * b.mcapUsd - Math.abs(a.scoreDelta) * a.mcapUsd);
+    return shifts.length > 0 ? shifts.slice(0, 5) : undefined;
+  } catch (error) {
+    console.error("[daily-digest] Failed to collect liquidity shifts:", error);
+  }
+  return undefined;
+}
