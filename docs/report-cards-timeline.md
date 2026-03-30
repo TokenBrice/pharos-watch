@@ -1,6 +1,6 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.8 (2026-02-25 → 2026-03-25).
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.0 (2026-02-25 → 2026-03-30).
 
 ---
 
@@ -303,6 +303,16 @@ Weights and grade thresholds are unchanged from v5.8.
 - Wrapper governance exempted from chain infrastructure penalty
 - Deployment multipliers: canonical-bridge 0.85→0.90, native-multichain 0.40→0.75
 
+## v7.0 — Reserve-side blacklist exposure heuristics (2026-03-30)
+
+Safety Score structure is unchanged, but blacklistability attribution now scans curated and live reserve labels plus reserve-rail text for stablecoin, wrapper, and CEX custody clues:
+
+- `isBlacklistable()` returns `possible` when reserve slices or reserve-rail text imply blacklist or custodial-freeze exposure below the inherited threshold
+- Inherited status still requires majority direct reserve exposure, but curated and live reserve names now share the same direct blacklist clue detection instead of relying only on `coinId` or explicit `blacklistable` flags
+- Only coins with no explicit blacklist function, no reserve-side blacklist clues, and no CEX custody signal remain in the `no` bucket unless an explicit `false` override applies
+
+Weights and grade thresholds are unchanged from v6.9.
+
 ## v6.9 — Explicit inherited blacklistability (2026-03-30)
 
 Safety Score structure is unchanged, but blacklistability attribution is now more explicit for decentralized protocols with freeze-prone collateral:
@@ -397,17 +407,17 @@ Weights and grade thresholds are unchanged from v6.0.
 
 ## Quick Reference: Weight Evolution
 
-| Version    | Peg        | Liquidity | Safety  | Resilience | Decentralization | Dep Risk |
-|------------|------------|-----------|---------|------------|------------------|----------|
-| v1.0       | 25%        | 25%       | 20%     | 15%        | 10%              | 5%       |
-| v1.0 patch | 25%        | 25%       | 20%     | 10%        | 5%               | 15%      |
-| v2.0       | 25%        | 25%       | removed | 15%        | 10%              | 25%      |
-| v3.0       | 25%        | 20%       | —       | 20%        | 10%              | 25%      |
-| v3.3       | 25%        | 20%       | —       | 20%        | 15%              | 25%      |
-| v4.0       | multiplier | 25%       | —       | 25%        | 10%              | 30%      |
-| v4.1       | multiplier | 30%       | —       | 20%        | 15%              | 25%      |
-| v5.0–5.8 | multiplier | 30% | — | 20%  | 15%          | 25%  |
-| **v6.0–6.5** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
+| Version     | Peg        | Exit Liquidity | Safety  | Resilience | Decentralization | Dep Risk |
+|-------------|------------|----------------|---------|------------|------------------|----------|
+| v1.0        | 25%        | 25%            | 20%     | 15%        | 10%              | 5%       |
+| v1.0 patch  | 25%        | 25%            | 20%     | 10%        | 5%               | 15%      |
+| v2.0        | 25%        | 25%            | removed | 15%        | 10%              | 25%      |
+| v3.0        | 25%        | 20%            | —       | 20%        | 10%              | 25%      |
+| v3.3        | 25%        | 20%            | —       | 20%        | 15%              | 25%      |
+| v4.0        | multiplier | 25%            | —       | 25%        | 10%              | 30%      |
+| v4.1        | multiplier | 30%            | —       | 20%        | 15%              | 25%      |
+| v5.0–5.8    | multiplier | 30%            | —       | 20%        | 15%              | 25%      |
+| **v6.0–7.0** | **multiplier** | **30%**  | **—**   | **20%**    | **15%**          | **25%**  |
 
 ## Quick Reference: Grade Thresholds
 

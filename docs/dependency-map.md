@@ -26,7 +26,7 @@ Market-cap map construction lives in `src/app/dependency-map/client.tsx` and use
 Graph construction logic lives in `src/lib/contagion-layout.ts` (called via `useMemo` from `ContagionGraph`):
 
 - Filters out `isDefunct` report cards.
-- Builds a live dependency edge set from `ACTIVE_STABLECOINS` + `deriveDependencies(meta)` (live source and live target only).
+- Builds a live dependency edge set from `ACTIVE_STABLECOINS` via `buildDependencyGraphEdges()` + `filterDependencyGraphEdgesToLive()` from `@shared/lib/dependency-graph` (live source and live target only).
 - Removes coins with no incoming and no outgoing live dependency edges.
 - Sorts remaining coins by market cap descending.
 - Takes top `MAX_NODES = 50`, then iteratively prunes coins that are isolated inside the displayed subset and backfills from lower-ranked candidates.
@@ -131,6 +131,6 @@ When a node is hovered, the graph visualizes how stress could propagate through 
 ## Scope and Limits
 
 - The map is intentionally scoped to the largest 50 live dependency-linked coins for readability.
-- Dependencies are metadata/reserve-derived (`deriveDependencies`), not discovered from live on-chain graph traversal.
+- Dependencies are metadata/reserve-derived (`buildDependencyGraphEdges`), not discovered from live on-chain graph traversal.
 - The live reserve sync feature now affects the stablecoin detail-page reserve card plus report-card collateral quality for eligible independent live feeds. The dependency map still derives links from curated static reserve metadata and manual dependencies.
 - Defunct coins are excluded from the graph.

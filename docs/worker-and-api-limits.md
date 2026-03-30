@@ -87,11 +87,11 @@ The same rule applies to Worker-side integration clients. Telegram delivery, X p
 | CoinGecko backfill throttle           | `200 ms` between requests                                                    | `worker/src/lib/rate-limit.ts`            | Used by CoinGecko backfill/admin flows                                                                             |
 | GeckoTerminal crawl throttle          | `2000 ms` between requests                                                   | `worker/src/lib/rate-limit.ts`            | Conservative crawl pacing                                                                                          |
 | GeckoTerminal crawl budget            | `3 minutes`                                                                  | `worker/src/lib/rate-limit.ts`            | Per-source crawl budget                                                                                            |
-| GeckoTerminal probe budget            | `3 minutes` per `sync-stablecoins` run                                       | `worker/src/lib/geckoterminal-price-probe.ts` | Prevents the serialized soft-source cross-check from consuming the full 8-minute stablecoin sync timeout           |
+| GeckoTerminal probe budget            | `3 minutes` per `sync-stablecoins` run                                       | `worker/src/lib/constants.ts`             | Prevents the serialized soft-source cross-check from consuming the full 8-minute stablecoin sync timeout           |
 | DexScreener discovery fallback budget | `2 minutes` shared fallback window                                           | `worker/src/lib/rate-limit.ts`            | Shared with other late-stage discovery fallbacks                                                                   |
-| Jupiter price fallback                | `50` ids/request, `5 s` timeout/request, `0` retries                         | `worker/src/cron/enrich-prices-passes.ts` | Solana-only enrichment pass between CMC and DexScreener                                                            |
-| DexScreener price-enrichment pass     | `10` total requests, `5 s` timeout/request, `45 s` total budget, `0` retries | `worker/src/cron/sync-stablecoins/enrich-prices.ts` | Best-effort final fallback for missing prices; exact token-address lookups run before symbol search when available |
-| CoinMarketCap fallback                | `1 call / hour`, `10 s` timeout, `0` retries                                 | `worker/src/cron/sync-stablecoins/enrich-prices.ts` | Rate-limited through cache key `cmc_last_fetch`                                                                    |
+| Jupiter price fallback                | `50` ids/request, `5 s` timeout/request, `0` retries                         | `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts` | Solana-only enrichment pass between CMC and DexScreener                                                            |
+| DexScreener price-enrichment pass     | `10` total requests, `5 s` timeout/request, `45 s` total budget, `0` retries | `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts` | Best-effort final fallback for missing prices; exact token-address lookups run before symbol search when available |
+| CoinMarketCap fallback                | `1 call / hour`, `10 s` timeout, `0` retries                                 | `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts` | Rate-limited through cache key `cmc_last_fetch`                                                                    |
 | Generic circuit breaker               | opens after `3` consecutive failures, probes every `30 minutes`              | `worker/src/lib/circuit-breaker.ts`       | Used to stop hammering degraded upstreams                                                                          |
 
 ### What this means operationally
@@ -107,13 +107,13 @@ The same rule applies to Worker-side integration clients. Telegram delivery, X p
 
 | Area                                | Current timeout              | Source                                            |
 | ----------------------------------- | ---------------------------- | ------------------------------------------------- |
-| CoinMarketCap price fallback        | `10_000 ms`                  | `worker/src/cron/sync-stablecoins/enrich-prices.ts`                |
-| Jupiter price fallback              | `5_000 ms`                   | `worker/src/cron/enrich-prices-passes.ts`         |
-| DexScreener price fallback requests | up to `5_000 ms` per request | `worker/src/cron/sync-stablecoins/enrich-prices.ts`                |
-| Live reserve adapter attempt        | `20_000 ms`                  | `worker/src/cron/sync-live-reserves.ts`           |
-| Live reserve D1 finalize timeout    | `30_000 ms`                  | `worker/src/cron/sync-live-reserves.ts`           |
-| Blacklist explorer / RPC reads      | `15_000 ms`                  | `worker/src/lib/fetch-retry.ts` (default timeout) |
-| Daily digest LLM call               | `120_000 ms`                 | `worker/src/cron/daily-digest.ts`                 |
+| CoinMarketCap price fallback        | `10_000 ms`                  | `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts` |
+| Jupiter price fallback              | `5_000 ms`                   | `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts` |
+| DexScreener price fallback requests | up to `5_000 ms` per request | `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts` |
+| Live reserve adapter attempt        | `20_000 ms`                  | `worker/src/cron/sync-live-reserves.ts`                    |
+| Live reserve D1 finalize timeout    | `30_000 ms`                  | `worker/src/cron/sync-live-reserves-core.ts`               |
+| Blacklist explorer / RPC reads      | `15_000 ms`                  | `worker/src/lib/fetch-retry.ts` (default timeout)          |
+| Daily digest LLM call               | `120_000 ms`                 | `worker/src/lib/constants.ts`                              |
 
 ---
 
@@ -125,7 +125,7 @@ Current digest generation constraints that are actually encoded in repo code:
 - timeout: `120_000 ms`
 - cadence: daily scheduled run plus manual admin trigger
 
-Source: `worker/src/cron/daily-digest.ts`
+Source: `worker/src/lib/constants.ts` (timeout/retries), `worker/src/cron/digest/platform.ts` (model)
 
 This doc deliberately does not restate Anthropic account-tier RPM / token-plan numbers because those are not repo-enforced.
 

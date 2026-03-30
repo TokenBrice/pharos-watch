@@ -313,13 +313,13 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 | `fx` | `http-json` | `collateral-mix` | 1 |
 | `gho` | `onchain-evm` | `protocol-reserve` | 1 |
 | `infinifi` | `http-json` | `collateral-mix` | 1 |
-| `m0` | `http-json` | `protocol-reserve` | 3 |
-| `mento` | `http-html` | `collateral-mix` | 2 |
+| `m0` | `http-json` | `protocol-reserve` | 4 |
+| `mento` | `http-html` | `collateral-mix` | 3 |
 | `openeden-usdo` | `http-json` | `collateral-mix` | 1 |
 | `re-metrics` | `http-html` | `collateral-mix` | 1 |
 | `reservoir` | `http-json` | `protocol-reserve` | 1 |
 | `sgforge-coinvertible` | `http-html` | `attestation-mix` | 1 |
-| `single-asset` | `onchain-evm` / `http-json` | `single-asset` | 47 |
+| `single-asset` | `onchain-evm` / `http-json` | `single-asset` | 48 |
 | `sky-makercore` | `http-json` | `collateral-mix` | 2 |
 | `tether` | `http-json` | `attestation-mix` | 1 |
 | `usdd-data-platform` | `http-json` | `collateral-mix` | 1 |

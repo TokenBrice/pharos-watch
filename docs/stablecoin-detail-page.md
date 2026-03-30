@@ -72,11 +72,11 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 5. `LongformScrollspyNav`
 6. `ReportCardDetail` + `SafetyScoreHistorySection`
 7. `NoticesAndSummarySection` (wraps `OverviewSection`, `CoinNotices`, and the nested `PriceTransparencyCard` anchor)
-8. `McapChart`
-9. `DistributionSection`
-10. `KeyInfoCard`
-11. `CollateralUsageSection` when the coin is used as tracked collateral elsewhere
-12. `YieldDetailSection` when the coin is marked `yieldBearing` or the cached yield rankings include a live row for that coin
+8. `KeyInfoCard`
+9. `CollateralUsageSection` when the coin is used as tracked collateral elsewhere
+10. `YieldDetailSection` when the coin is marked `yieldBearing` or the cached yield rankings include a live row for that coin
+11. `McapChart`
+12. `DistributionSection`
 13. `DexLiquidityCard`
 14. `FlowsSection`
 15. `DepegHistory` (suppressed for NAV tokens)
@@ -87,7 +87,7 @@ The server shell then appends `ExploreNextSection` after the client-rendered ana
 ### Rail vs section rules
 
 - `LongformScrollspyNav` does not mirror every rendered section. Its top-level entries are `report-card`, `overview`, `chart`, optional `yield`, `liquidity`, `info`, and `history`.
-- `DistributionSection` renders between the chart and the details stack, but it is not a top-level scrollspy entry.
+- `DistributionSection` renders after the chart, but it is not a top-level scrollspy entry.
 - `CollateralUsageSection` renders only when at least one other tracked stablecoin derives a dependency on the current coin, and it is also outside the top-level rail.
 - `FlowsSection` renders after liquidity, outside the top-level rail. When flow coverage exists it owns both `#flows` and `#flow-history`.
 - `PriceTransparencyCard` lives inside `OverviewSection` under the nested `price-transparency` anchor and is hidden when `coinData.price == null`.
@@ -166,9 +166,9 @@ That shared retry is used by the page-level error surfaces.
 | `SafetyScoreHistorySection` | Grade-transition timeline                                                                                                                                                                                                                                                                                                                                                              |
 | `OverviewSection`           | AI summary, reserve treemap, reserve/live-fallback notices, redemption-backstop card with explicit fixed or documented variable fee messaging, eventual-only vs immediate-capacity messaging, reviewed source context, and resolution / confidence state when the route is configured but currently unrated, DEWS detail, and the nested `price-transparency` anchor when price data exists |
 | `CoinNotices`               | Coin-specific warnings/info blocks from metadata                                                                                                                                                                                                                                                                                                                                       |
-| `McapChart`                 | Historical supply / market-cap chart                                                                                                                                                                                                                                                                                                                                                   |
-| `DistributionSection`       | Holder and supply distribution view between market history and the metadata stack                                                                                                                                                                                                                                                                                                       |
 | `KeyInfoCard`               | Classification, collateral, peg mechanism, links, proof-of-reserves, jurisdiction                                                                                                                                                                                                                                                                                                      |
+| `McapChart`                 | Historical supply / market-cap chart                                                                                                                                                                                                                                                                                                                                                   |
+| `DistributionSection`       | Holder and supply distribution view after market history                                                                                                                                                                                                                                                                                                                               |
 | `PriceTransparencyCard`     | Current price, source label, confidence badge, update recency, and a table of all known price sources with their status (Used/Available/No data). It is rendered inside `OverviewSection` under the `price-transparency` anchor. When protocol-redeem overrides are active, all market sources show "Not applicable". DEX Price Check section renders when `dexPriceCheck` data exists |
 | `YieldDetailSection`        | Yield rankings row, clickable source links, warnings, history chart, alt-source/provenance detail, and contextual PYS / Stability help. Renders for statically yield-bearing coins and for non-yield-bearing coins that currently have a published yield ranking (for example auto-discovered lending coverage).                                                                 |
 | `DexLiquidityCard`          | Liquidity score, top pools, DEX-implied price context, and contextual methodology hints / footer links                                                                                                                                                                                                                                                                                 |
