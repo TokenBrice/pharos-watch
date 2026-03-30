@@ -1,9 +1,12 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
+import { ScoringChangelogV70Entry } from "./content-v7-0";
 import { ScoringChangelogV69Entry } from "./content-v6-9";
 
 export function ScoringChangelogV6Entries() {
   return (
     <>
+            <ScoringChangelogV70Entry />
+
             <VersionCard
               entry={getScoringEntry("6.8")}
               accent="border-l-amber-500"

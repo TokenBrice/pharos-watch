@@ -447,10 +447,11 @@ export function SafetyScoresMethodologySection() {
                     <li>Decentralization score is structural, not a value judgment</li>
                     <li>
                       Blacklist capability is reported descriptively only and does not affect the Resilience score.
-                      Only explicit contract-level evidence surfaces as &ldquo;possible&rdquo; blacklistability.
-                      Stablecoins where a majority of reserves (by weight) are backed by explicitly blacklistable
-                      collateral or first-order blacklistable upstream assets are flagged as &ldquo;inherited&rdquo;
-                      blacklist risk
+                      Explicit mutable-contract overrides still surface as &ldquo;possible&rdquo;, but reserve-side
+                      stablecoin and custody/CEX clues can now also resolve to &ldquo;possible&rdquo; when exposure is
+                      below the inherited threshold. Stablecoins where a majority of reserves (by weight) are backed by
+                      directly blacklistable collateral or already-blacklistable upstream assets are flagged as
+                      &ldquo;inherited&rdquo; blacklist risk
                     </li>
                   </ul>
                 </div>

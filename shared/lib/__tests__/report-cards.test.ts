@@ -533,7 +533,57 @@ describe("isBlacklistable", () => {
     expect(isBlacklistable(meta as never, new Set(["usdc-circle"]))).toBe("inherited");
   });
 
-  it("returns false for centralized-dependent governance without explicit or inherited risk", () => {
+  it("returns possible for direct reserve exposure below the inherited threshold", () => {
+    const meta = {
+      flags: { governance: "centralized-dependent" as const },
+      canBeBlacklisted: undefined,
+      reserves: [
+        { name: "USDC buffer", pct: 35, risk: "low" },
+        { name: "ETH", pct: 65, risk: "very-low" },
+      ],
+    };
+    expect(isBlacklistable(meta as never)).toBe("possible");
+  });
+
+  it("returns possible for cex-backed reserve rails even without explicit reserve annotations", () => {
+    const meta = {
+      flags: { governance: "centralized-dependent" as const },
+      canBeBlacklisted: undefined,
+      custodyModel: "cex" as const,
+      reserves: [
+        { name: "Short perp margin (Copper/Ceffu off-exchange)", pct: 20, risk: "high" },
+        { name: "JLP basket", pct: 80, risk: "high" },
+      ],
+    };
+    expect(isBlacklistable(meta as never)).toBe("possible");
+  });
+
+  it("returns inherited when most reserves sit in named stablecoin baskets", () => {
+    const meta = {
+      flags: { governance: "centralized-dependent" as const },
+      canBeBlacklisted: undefined,
+      reserves: [
+        { name: "JLP (Jupiter Perps LP: BTC, ETH, SOL, USDC basket)", pct: 80, risk: "high" },
+        { name: "Short perp margin", pct: 20, risk: "high" },
+      ],
+    };
+    expect(isBlacklistable(meta as never)).toBe("inherited");
+  });
+
+  it("returns inherited for majority reserves in stablecoin plus custodial wrapper collateral", () => {
+    const meta = {
+      flags: { governance: "centralized-dependent" as const },
+      canBeBlacklisted: undefined,
+      reserves: [
+        { name: "FBTC (tokenized BTC via Cobo custody)", pct: 45, risk: "medium" },
+        { name: "USDT (1:1 minted deposits)", pct: 40, risk: "low" },
+        { name: "BTC LSTs", pct: 15, risk: "high" },
+      ],
+    };
+    expect(isBlacklistable(meta as never)).toBe("inherited");
+  });
+
+  it("returns false for centralized-dependent governance without explicit, reserve, or custody risk", () => {
     const meta = {
       flags: { governance: "centralized-dependent" as const },
       canBeBlacklisted: undefined,
@@ -566,6 +616,12 @@ describe("enrichLiveSlicesForBlacklist", () => {
 
   it("tags slice when coinId points to blacklistable coin", () => {
     const live = [{ name: "stataUSDC GSM", pct: 25, risk: "low" as const, coinId: "usdc-circle" }];
+    const result = enrichLiveSlicesForBlacklist(live, blacklistableIds, trackedMetaById);
+    expect(result[0].blacklistable).toBe(true);
+  });
+
+  it("tags live slice when the reserve name contains direct stablecoin basket clues", () => {
+    const live = [{ name: "JLP (Jupiter Perps LP: BTC, ETH, SOL, USDC basket)", pct: 80, risk: "high" as const }];
     const result = enrichLiveSlicesForBlacklist(live, blacklistableIds, trackedMetaById);
     expect(result[0].blacklistable).toBe(true);
   });

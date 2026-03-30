@@ -68,7 +68,7 @@ describe("scoreResilience — blacklist descriptive only (v6)", () => {
 
   it("reports blacklist descriptively for possibly blacklistable coins", () => {
     const result = scoreResilience(meta, "possible");
-    expect(result.detail).toContain("Blacklist: Possible (mutable contract) (descriptive only)");
+    expect(result.detail).toContain("Blacklist: Possible (descriptive only)");
   });
 
   it("reports blacklist descriptively for non-blacklistable coins", () => {
@@ -266,7 +266,7 @@ describe("isBlacklistable — inherited risk from reserves", () => {
     expect(isBlacklistable(meta, blacklistableIds)).toBe("inherited");
   });
 
-  it("returns false when blacklistable reserve share is below the majority threshold", () => {
+  it("returns possible when direct blacklistable reserve share is below the majority threshold", () => {
     const meta = makeMeta({
       flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
       reserves: [
@@ -275,7 +275,7 @@ describe("isBlacklistable — inherited risk from reserves", () => {
       ],
     });
     const blacklistableIds = new Set(["usdc-circle"]);
-    expect(isBlacklistable(meta, blacklistableIds)).toBe(false);
+    expect(isBlacklistable(meta, blacklistableIds)).toBe("possible");
   });
 
   it("counts explicit reserve-slice blacklistability even without coinId links", () => {
@@ -301,7 +301,7 @@ describe("isBlacklistable — inherited risk from reserves", () => {
     expect(isBlacklistable(meta, blacklistableIds)).toBe(false);
   });
 
-  it("returns false when reserves have coinIds but none are in the blacklistable index", () => {
+  it("returns possible when reserve names imply upstream blacklist risk even without an indexed coinId", () => {
     const meta = makeMeta({
       flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
       reserves: [
@@ -310,10 +310,10 @@ describe("isBlacklistable — inherited risk from reserves", () => {
       ],
     });
     const blacklistableIds = new Set(["usdc-circle", "usdt-tether"]);
-    expect(isBlacklistable(meta, blacklistableIds)).toBe(false);
+    expect(isBlacklistable(meta, blacklistableIds)).toBe("possible");
   });
 
-  it("ignores non-blacklistable reserve slices without coinId when computing inherited share", () => {
+  it("returns possible for unlabeled centralized-stable reserve slices below the inherited threshold", () => {
     const meta = makeMeta({
       flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
       reserves: [
@@ -322,7 +322,18 @@ describe("isBlacklistable — inherited risk from reserves", () => {
       ],
     });
     const blacklistableIds = new Set(["usdc-circle"]);
-    expect(isBlacklistable(meta, blacklistableIds)).toBe(false);
+    expect(isBlacklistable(meta, blacklistableIds)).toBe("possible");
+  });
+
+  it("returns possible for cex custody even when reserve slices are generic", () => {
+    const meta = makeMeta({
+      custodyModel: "cex",
+      flags: { governance: "centralized-dependent", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
+      reserves: [
+        { name: "Delta-neutral basis trade", pct: 100, risk: "high" },
+      ],
+    });
+    expect(isBlacklistable(meta)).toBe("possible");
   });
 });
 

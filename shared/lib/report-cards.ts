@@ -28,6 +28,11 @@ import type {
 import { deriveDependencies } from "./reserve-templates";
 import { SAFETY_SCORE_VERSION } from "./safety-score-version";
 import { computeEffectiveExitScore, REDEMPTION_ROUTE_FAMILY_LABELS } from "./redemption-backstop-scoring";
+export {
+  enrichLiveSlicesForBlacklist,
+  INHERITED_BLACKLIST_THRESHOLD_PCT,
+  isBlacklistable,
+} from "./report-card-blacklist-risk";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -477,86 +482,6 @@ export function resolveResilienceFactors(meta: StablecoinMeta): {
 // Blacklist capability helpers
 // ---------------------------------------------------------------------------
 
-/** Minimum % of reserves backed by blacklistable coinIds to trigger inherited risk. */
-export const INHERITED_BLACKLIST_THRESHOLD_PCT = 50;
-
-/** Minimum symbol length considered for name-based blacklist detection (avoids false positives). */
-const MIN_SYMBOL_LENGTH_FOR_DETECTION = 3;
-
-/**
- * Enrich live reserve slices with `blacklistable: true` when their names
- * mention known blacklistable coin symbols. This bridges the gap between
- * live adapters (accurate percentages, no metadata) and curated templates
- * (stale percentages, has coinId/blacklistable annotations).
- */
-export function enrichLiveSlicesForBlacklist(
-  liveSlices: readonly ReserveSlice[],
-  blacklistableIds: ReadonlySet<string>,
-  trackedMetaById: ReadonlyMap<string, StablecoinMeta>,
-): ReserveSlice[] {
-  const blacklistableSymbols = new Map<string, string>();
-  for (const coinId of blacklistableIds) {
-    const meta = trackedMetaById.get(coinId);
-    if (meta && meta.symbol.length >= MIN_SYMBOL_LENGTH_FOR_DETECTION) {
-      blacklistableSymbols.set(meta.symbol.toLowerCase(), coinId);
-    }
-  }
-
-  return liveSlices.map((ls) => {
-    if (ls.blacklistable) return ls;
-    if (ls.coinId && blacklistableIds.has(ls.coinId)) return { ...ls, blacklistable: true };
-
-    const lowerName = ls.name.toLowerCase();
-    for (const [symbol] of blacklistableSymbols) {
-      if (lowerName.includes(symbol)) {
-        return { ...ls, blacklistable: true };
-      }
-    }
-    return ls;
-  });
-}
-
-function reserveSliceCanInheritBlacklistRisk(
-  slice: ReserveSlice,
-  blacklistableIds?: ReadonlySet<string>,
-): boolean {
-  if (slice.blacklistable === true) return true;
-  return slice.coinId !== undefined && blacklistableIds?.has(slice.coinId) === true;
-}
-
-/**
- * Resolves the blacklist risk tier for a coin.
- *
- * Resolution order:
- *   1. Explicit meta.canBeBlacklisted override
- *   2. Centralized governance → true
- *   3. Inherited: ≥ INHERITED_BLACKLIST_THRESHOLD_PCT of reserves are backed
- *      by reserve slices that are explicitly blacklistable or by blacklistable
- *      coins (matched by coinId)
- *   4. false
- *
- * `blacklistableIds` is iteratively grown during topological processing in
- * `buildReportCardsSnapshot`. First-order coins (explicit + centralized) seed
- * the set; inherited coins are added after evaluation, so downstream coins
- * see the full transitive closure.
- */
-export function isBlacklistable(
-  meta: StablecoinMeta,
-  blacklistableIds?: ReadonlySet<string>,
-  reserveSlices?: readonly ReserveSlice[],
-): boolean | "possible" | "inherited" {
-  if (meta.canBeBlacklisted !== undefined) return meta.canBeBlacklisted;
-  if (meta.flags.governance === "centralized") return true;
-  const effectiveReserves = reserveSlices ?? meta.reserves;
-  if (effectiveReserves) {
-    const inheritedPct = effectiveReserves
-      .filter((slice) => reserveSliceCanInheritBlacklistRisk(slice, blacklistableIds))
-      .reduce((sum, r) => sum + r.pct, 0);
-    if (inheritedPct > INHERITED_BLACKLIST_THRESHOLD_PCT) return "inherited";
-  }
-  return false;
-}
-
 /**
  * Resilience: 2-factor solvency measure.
  *
@@ -578,7 +503,7 @@ export function scoreResilience(
     canBeBlacklisted === true
       ? "Yes"
       : canBeBlacklisted === "possible"
-        ? "Possible (mutable contract)"
+        ? "Possible"
         : canBeBlacklisted === "inherited"
           ? "Upstream"
           : "No";

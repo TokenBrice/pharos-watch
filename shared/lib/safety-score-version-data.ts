@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "6.9",
+  currentVersion: "7.0",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.0",
+      title: "Reserve-side blacklist exposure heuristics",
+      date: "2026-03-30",
+      effectiveAt: 1774832400,
+      summary:
+        "Blacklistability attribution now scans curated and live reserve labels plus reserve-rail text for stablecoin, wrapper, and CEX custody clues, so sub-majority reserve exposure resolves to possible instead of incorrectly falling through to no.",
+      impact: [
+        "Shared isBlacklistable() logic now returns possible when reserve slices or reserve-rail text imply blacklist or custodial-freeze exposure below the inherited threshold",
+        "Inherited status still requires majority direct reserve exposure, but curated and live reserve names now share the same direct blacklist clue detection instead of relying only on coinId or explicit blacklistable flags",
+        "Only coins with no explicit blacklist function, no reserve-side blacklist clues, and no CEX custody signal remain in the no bucket unless an explicit false override applies",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "6.9",
       title: "Explicit inherited blacklistability",

@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v6.9)
+## Overall Grade (v7.0)
 
 Three-step computation:
 
@@ -12,7 +12,7 @@ Three-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v6.9 keeps the v6.4 structure. LUSD and BOLD still use documented-bound eventual redemption capacity, and when fresh live reserve telemetry exists their current on-chain redemption fee bps is used for cost scoring instead of a flat formula placeholder. Collateral-quality passthrough now only accepts fresh authoritative independent live reserve snapshots whose latest sync state is `ok` and whose freshness evidence is scoring-eligible; `validated-static`, `weak-live-probe`, and `unverified` reserve feeds remain visible on reserve detail surfaces but no longer override curated collateral scoring. Blacklist attribution now distinguishes mutable-contract risk (`Possible`) from majority upstream freeze exposure (`Inherited`) and no longer treats `centralized-dependent` governance as sufficient evidence on its own.
+Current-version note: v7.0 keeps the v6.4 structure. LUSD and BOLD still use documented-bound eventual redemption capacity, and when fresh live reserve telemetry exists their current on-chain redemption fee bps is used for cost scoring instead of a flat formula placeholder. Collateral-quality passthrough now only accepts fresh authoritative independent live reserve snapshots whose latest sync state is `ok` and whose freshness evidence is scoring-eligible; `validated-static`, `weak-live-probe`, and `unverified` reserve feeds remain visible on reserve detail surfaces but no longer override curated collateral scoring. Blacklist attribution now distinguishes mutable-contract risk (`Possible`) from majority upstream freeze exposure (`Inherited`), treats reserve-side stablecoin and custody/CEX clues as `Possible` instead of `No`, and no longer treats `centralized-dependent` governance as sufficient evidence on its own.
 
 ## Dimensions
 
@@ -76,11 +76,11 @@ Blacklist capability is reported descriptively only and does not affect the Resi
 | Value                       | Score | Condition                                                             |
 | --------------------------- | ----- | --------------------------------------------------------------------- |
 | Yes                         | 33    | `canBeBlacklisted: true` (explicit) or `governance === "centralized"` |
-| Possible (mutable contract) | 66    | `canBeBlacklisted: "possible"` (explicit override)                    |
-| Upstream                    | 66    | >50% of reserves are explicitly blacklistable or backed by blacklistable upstream assets (resolved transitively) |
+| Possible                    | 66    | Explicit `canBeBlacklisted: "possible"` override, sub-majority reserve exposure to blacklistable/custodial assets, or reserve-rail text that clearly implies CEX/custody freeze exposure |
+| Upstream                    | 66    | >50% of reserves are directly tied to explicitly blacklistable or already-blacklistable upstream assets (resolved transitively) |
 | No                          | 100   | None of the above                                                     |
 
-`"inherited"` is a **computed** value only — it never appears as a manual override in stablecoin metadata. The `canBeBlacklisted` field in `StablecoinMeta` only accepts `boolean | "possible"`. The inherited tier is derived at scoring time when reserve compositions show that a majority of a coin's reserves are either explicitly marked blacklistable or backed by upstream assets that are themselves blacklistable.
+`"inherited"` is a **computed** value only — it never appears as a manual override in stablecoin metadata. The `canBeBlacklisted` field in `StablecoinMeta` only accepts `boolean | "possible"`. The inherited tier is derived at scoring time when reserve compositions show that a majority of a coin's reserves are either explicitly marked blacklistable or backed by upstream assets that are themselves blacklistable. Coins with reserve-side blacklist clues below that majority threshold now resolve to `"possible"` rather than incorrectly falling through to `"no"`.
 
 #### Collateral Quality: Reserve-Derived Scoring (v3.3)
 
@@ -117,20 +117,22 @@ If the live reserve snapshot loader is temporarily unavailable at read time, rep
 continue serving from curated reserve metadata and mark the affected coins in
 `liveToFallbackCoins` for operator visibility instead of failing the endpoint.
 
-**Blacklist Upstream: Live Reserve Enrichment**
+**Blacklist Reserve Enrichment**
 
 When live reserve data is available, `isBlacklistable()` uses enriched live
 slices instead of curated reserves. The enrichment scans live slice names for
 known blacklistable coin symbols (e.g., "sUSDe" matches USDe, "stataUSDC"
-matches USDC) and tags matching slices with `blacklistable: true`. This
-ensures that composition shifts detected by live adapters are reflected in
-blacklist status without waiting for curated data updates.
+matches USDC) plus direct stablecoin/custody clues such as named USDC baskets
+or explicit CEX/custodian descriptors. This ensures that composition shifts
+detected by live adapters are reflected in blacklist status without waiting for
+curated data updates.
 
 The lookup set is built transitively during topological processing — inherited
 coins are added after evaluation so downstream coins see the full closure.
 When no live reserves exist, curated `StablecoinMeta.reserves` are used as
-fallback. The collateral drift alert (>15pt divergence) helps operators detect
-when curated metadata needs updating for other scoring dimensions.
+fallback, and the same reserve-name heuristics are applied there as well. The
+collateral drift alert (>15pt divergence) helps operators detect when curated
+metadata needs updating for other scoring dimensions.
 
 | Reserve Risk Tier | Score | Description                        | Examples                                                                      |
 | ----------------- | ----- | ---------------------------------- | ----------------------------------------------------------------------------- |
