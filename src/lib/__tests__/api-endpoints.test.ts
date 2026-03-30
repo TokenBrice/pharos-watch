@@ -41,6 +41,7 @@ describe("api endpoint registry", () => {
       "/api/mint-burn-events?stablecoin=usdt-tether",
       "/api/stress-signals",
       "/api/chains",
+      "/api/non-usd-share?days=90",
     ]);
 
     expect(getProbePaths("admin")).toEqual([

@@ -112,6 +112,7 @@ export const API_PATHS = {
   stressSignals: (stablecoinId?: string, days?: number) =>
     buildQueryPath("/api/stress-signals", { stablecoin: stablecoinId, days }),
   chains: () => "/api/chains",
+  nonUsdShare: (days?: number) => buildQueryPath("/api/non-usd-share", days ? { days } : undefined),
 } as const;
 
 export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
@@ -384,6 +385,16 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     mutatingAdmin: false,
     cacheBypass: false,
     probeGroup: "public",
+  },
+  {
+    key: "non-usd-share",
+    path: "/api/non-usd-share",
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+    probeGroup: "public",
+    probePath: "/api/non-usd-share?days=90",
   },
   {
     key: "feedback",

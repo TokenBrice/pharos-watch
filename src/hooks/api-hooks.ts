@@ -165,6 +165,17 @@ export function useStablecoinCharts() {
   return useApiQuery<StablecoinChartPoint[]>(["stablecoin-charts"], API_PATHS.stablecoinCharts(), CRON_1H);
 }
 
+export interface NonUsdSharePoint {
+  date: number;
+  share: number;
+  nonUsd: number;
+  total: number;
+}
+
+export function useNonUsdShare() {
+  return useApiQuery<NonUsdSharePoint[]>(["non-usd-share"], API_PATHS.nonUsdShare(), CRON_24H);
+}
+
 export function useStabilityIndex() {
   return useApiQueryWithMeta<StabilityIndexResponse>(
     ["stability-index"],

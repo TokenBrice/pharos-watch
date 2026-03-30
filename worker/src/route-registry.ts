@@ -48,6 +48,7 @@ import { handleBackfillBlacklistCurrentBalances } from "./api/backfill-blacklist
 import { handleReclassifyAtomicRoundtrips } from "./api/reclassify-atomic-roundtrips";
 import { handleStressSignals } from "./api/stress-signals";
 import { handleChains } from "./api/chains";
+import { handleNonUsdShare } from "./api/non-usd-share";
 import { handleBackfillDEWS } from "./api/backfill-dews";
 import {
   handleDebugSyncState,
@@ -201,6 +202,7 @@ const STATIC_ROUTE_HANDLERS_BY_KEY = {
   ),
   "stress-signals": ({ db, url }) => handleStressSignals(db, url),
   chains: ({ db }) => handleChains(db),
+  "non-usd-share": ({ db, url }) => handleNonUsdShare(db, url),
   "backfill-dews": ({ db, url, trustedAdmin, request }) => handleBackfillDEWS(db, url, trustedAdmin, request),
   feedback: ({ db, request, feedbackEnv }) => handleFeedback(db, request, feedbackEnv ?? {}),
   "telegram-webhook": ({ db, request, telegramWebhookSecret, telegramBotToken }) =>

@@ -145,6 +145,13 @@ const PegDiversityChart = dynamic(
   },
 );
 
+const NonUsdShareChart = dynamic(
+  () => import("@/components/non-usd-share-chart").then((mod) => mod.NonUsdShareChart),
+  {
+    loading: () => <ChartSkeleton className="h-[360px] w-full" type="area" />,
+  },
+);
+
 const DailyDigest = dynamic(() => import("@/components/daily-digest").then((mod) => mod.DailyDigest), {
   loading: () => <SectionSkeleton className="h-[220px] w-full rounded-xl" />,
 });
@@ -573,6 +580,10 @@ export function HomepageClient() {
 
         <SectionErrorBoundary name="peg-diversity">
           <PegDiversityChart />
+        </SectionErrorBoundary>
+
+        <SectionErrorBoundary name="non-usd-share">
+          <NonUsdShareChart />
         </SectionErrorBoundary>
       </section>
 

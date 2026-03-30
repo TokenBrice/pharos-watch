@@ -25,5 +25,6 @@ export const API_FRESHNESS_MAX_AGE_SEC = {
   digestArchive: DAY_SECONDS,
   bluechip: 43200,
   usdsStatus: DAY_SECONDS,
+  nonUsdShare: DAY_SECONDS,
 } as const;
 
