@@ -2718,7 +2718,8 @@
       {
         "name": "Yield-bearing stablecoin GSMs",
         "pct": 13,
-        "risk": "low"
+        "risk": "low",
+        "blacklistable": true
       },
       {
         "name": "Other Aave V3 Collateral",

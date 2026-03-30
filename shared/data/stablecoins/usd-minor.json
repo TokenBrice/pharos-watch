@@ -108,7 +108,8 @@
       {
         "name": "USTB (Superstate tokenized T-bills)",
         "pct": 50,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "ustb-superstate"
       },
       {
         "name": "BUIDL (BlackRock tokenized T-bills/cash/repos)",
@@ -1053,7 +1054,8 @@
       {
         "name": "Superstate USTB (tokenized T-bills)",
         "pct": 20,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "ustb-superstate"
       },
       {
         "name": "Circle USDC",
@@ -1154,7 +1156,8 @@
       {
         "name": "Aggregated treasury-backed stablecoins (100+ via Multipli)",
         "pct": 25,
-        "risk": "medium"
+        "risk": "medium",
+        "blacklistable": true
       },
       {
         "name": "Tokenized gold assets (10+ aggregated)",
@@ -3858,7 +3861,8 @@
         "name": "DAI / sDAI (via MakerDAO DSR)",
         "pct": 60,
         "risk": "low",
-        "coinId": "dai-makerdao"
+        "coinId": "dai-makerdao",
+        "blacklistable": true
       },
       {
         "name": "USDC (bridged)",
@@ -4148,7 +4152,8 @@
         "name": "sDAI (DAI Savings Rate)",
         "pct": 40,
         "risk": "low",
-        "coinId": "dai-makerdao"
+        "coinId": "dai-makerdao",
+        "blacklistable": true
       },
       {
         "name": "USDC (via Aave/Flux)",
@@ -5099,7 +5104,8 @@
       {
         "name": "XAUt0 (tokenized gold)",
         "pct": 23.6,
-        "risk": "medium"
+        "risk": "medium",
+        "coinId": "xaut-tether"
       },
       {
         "name": "stcUSD",
@@ -7256,7 +7262,8 @@
       {
         "name": "sfrxUSD (Staked Frax USD)",
         "pct": 42,
-        "risk": "medium"
+        "risk": "medium",
+        "coinId": "frxusd-frax"
       },
       {
         "name": "Curve AMO positions (dUSD/sfrxUSD LP)",
@@ -7266,12 +7273,14 @@
       {
         "name": "frxUSD / DAI / sDAI (Fraxtal)",
         "pct": 14,
-        "risk": "medium"
+        "risk": "medium",
+        "coinId": "frxusd-frax"
       },
       {
         "name": "vbUSDT / vbUSDC (Katana Vault Bridge)",
         "pct": 6,
-        "risk": "medium"
+        "risk": "medium",
+        "coinId": "usdt-tether"
       },
       {
         "name": "sUSDS (Sky Savings Rate)",

@@ -77,7 +77,7 @@ Blacklist capability is reported descriptively only and does not affect the Resi
 | --------------------------- | ----- | --------------------------------------------------------------------- |
 | Yes                         | 33    | `canBeBlacklisted: true` (explicit) or `governance === "centralized"` |
 | Possible (mutable contract) | 66    | `canBeBlacklisted: "possible"` (explicit override)                    |
-| Inherited                   | 66    | >50% of reserves are explicitly blacklistable or backed by blacklistable upstream assets |
+| Upstream                    | 66    | >50% of reserves are explicitly blacklistable or backed by blacklistable upstream assets (resolved transitively) |
 | No                          | 100   | None of the above                                                     |
 
 `"inherited"` is a **computed** value only — it never appears as a manual override in stablecoin metadata. The `canBeBlacklisted` field in `StablecoinMeta` only accepts `boolean | "possible"`. The inherited tier is derived at scoring time when reserve compositions show that a majority of a coin's reserves are either explicitly marked blacklistable or backed by upstream assets that are themselves blacklistable.
@@ -117,11 +117,13 @@ If the live reserve snapshot loader is temporarily unavailable at read time, rep
 continue serving from curated reserve metadata and mark the affected coins in
 `liveToFallbackCoins` for operator visibility instead of failing the endpoint.
 
-**Known Limitation: Blacklist Inherited Uses Curated Data**
+**Known Limitation: Blacklist Upstream Uses Curated Data**
 
 `isBlacklistable()` computes `"inherited"` blacklistability from curated
 `StablecoinMeta.reserves`, using either reserve-slice `blacklistable: true`
-markers or `coinId` links to upstream blacklistable assets. Live adapter
+markers or `coinId` links to upstream blacklistable assets. The lookup set
+is built transitively during topological processing — inherited coins are
+added after evaluation so downstream coins see the full closure. Live adapter
 snapshots currently do not participate in that calculation.
 
 This means the blacklist capability sub-factor and the collateral quality sub-factor

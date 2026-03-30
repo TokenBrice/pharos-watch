@@ -197,7 +197,8 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
   });
   const pegDataById = pegAnalytics.pegDataById;
 
-  const blacklistableIds: ReadonlySet<string> = new Set(
+  // Seed with first-order blacklistable coins; grows transitively below.
+  const blacklistableIds: Set<string> = new Set(
     ACTIVE_STABLECOINS
       .filter((meta) => isBlacklistable(meta) === true)
       .map((meta) => meta.id),
@@ -222,6 +223,12 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
     liveCards.push(card);
     if (card.overallScore !== null) {
       overallScores.set(card.id, card.overallScore);
+    }
+    // Grow the set transitively: downstream coins processed later will see
+    // this coin as blacklistable in their reserve-slice coinId lookups.
+    const bl = card.rawInputs.canBeBlacklisted;
+    if (bl === true || bl === "inherited") {
+      blacklistableIds.add(card.id);
     }
   }
 

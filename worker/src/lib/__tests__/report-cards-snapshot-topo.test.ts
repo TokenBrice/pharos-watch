@@ -1,17 +1,20 @@
 import { describe, it, expect } from "vitest";
 import { topologicalOrder } from "../report-cards-snapshot";
-import type { StablecoinMeta } from "@shared/types/core";
+import { isBlacklistable } from "@shared/lib/report-cards";
+import type { StablecoinMeta, GovernanceType } from "@shared/types/core";
 
 function makeMeta(
   id: string,
-  reserves?: Array<{ coinId?: string; pct: number; name: string; risk: "low" }>,
+  reserves?: Array<{ coinId?: string; pct: number; name: string; risk: "low"; blacklistable?: boolean }>,
+  overrides?: { governance?: GovernanceType; canBeBlacklisted?: boolean | "possible" },
 ): StablecoinMeta {
   return {
     id,
     name: id,
     symbol: id.toUpperCase(),
-    flags: { governance: "centralized", backing: "rwa-backed" },
+    flags: { governance: overrides?.governance ?? "centralized", backing: "rwa-backed" },
     reserves: reserves ?? [],
+    ...(overrides?.canBeBlacklisted !== undefined && { canBeBlacklisted: overrides.canBeBlacklisted }),
   } as unknown as StablecoinMeta;
 }
 
@@ -58,5 +61,65 @@ describe("topologicalOrder", () => {
     // Should not hang — visited set prevents infinite recursion
     const sorted = topologicalOrder(metas);
     expect(sorted).toHaveLength(2);
+  });
+});
+
+describe("transitive blacklist inheritance", () => {
+  /** Simulate the transitive set-growing loop from buildReportCardsSnapshot. */
+  function buildTransitiveSet(metas: StablecoinMeta[]): Set<string> {
+    const sorted = topologicalOrder([...metas]);
+    const blacklistableIds = new Set(
+      metas.filter((m) => isBlacklistable(m) === true).map((m) => m.id),
+    );
+    for (const m of sorted) {
+      const bl = isBlacklistable(m, blacklistableIds);
+      if (bl === true || bl === "inherited") blacklistableIds.add(m.id);
+    }
+    return blacklistableIds;
+  }
+
+  it("second-order coin inherits through an intermediate", () => {
+    const metas = [
+      makeMeta("centralized-coin", []),
+      makeMeta("middle", [{ coinId: "centralized-coin", pct: 60, name: "X", risk: "low" }], {
+        governance: "centralized-dependent",
+      }),
+      makeMeta("downstream", [{ coinId: "middle", pct: 80, name: "Y", risk: "low" }], {
+        governance: "decentralized",
+      }),
+    ];
+    const ids = buildTransitiveSet(metas);
+    expect(ids.has("centralized-coin")).toBe(true);
+    expect(ids.has("middle")).toBe(true);
+    expect(ids.has("downstream")).toBe(true);
+  });
+
+  it("does not add coins below the 50% threshold", () => {
+    const metas = [
+      makeMeta("upstream", []),
+      makeMeta("downstream", [{ coinId: "upstream", pct: 40, name: "X", risk: "low" }], {
+        governance: "decentralized",
+      }),
+    ];
+    const ids = buildTransitiveSet(metas);
+    expect(ids.has("upstream")).toBe(true);
+    expect(ids.has("downstream")).toBe(false);
+  });
+
+  it("explicit canBeBlacklisted: false blocks transitivity", () => {
+    const metas = [
+      makeMeta("root", []),
+      makeMeta("middle", [{ coinId: "root", pct: 100, name: "X", risk: "low" }], {
+        governance: "centralized-dependent",
+        canBeBlacklisted: false,
+      }),
+      makeMeta("leaf", [{ coinId: "middle", pct: 80, name: "Y", risk: "low" }], {
+        governance: "decentralized",
+      }),
+    ];
+    const ids = buildTransitiveSet(metas);
+    expect(ids.has("root")).toBe(true);
+    expect(ids.has("middle")).toBe(false);
+    expect(ids.has("leaf")).toBe(false);
   });
 });

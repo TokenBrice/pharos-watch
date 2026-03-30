@@ -495,12 +495,14 @@ function reserveSliceCanInheritBlacklistRisk(
  *   1. Explicit meta.canBeBlacklisted override
  *   2. Centralized governance → true
  *   3. Inherited: ≥ INHERITED_BLACKLIST_THRESHOLD_PCT of reserves are backed
- *      by reserve slices that are explicitly blacklistable or by first-order
- *      blacklistable coins (matched by coinId)
+ *      by reserve slices that are explicitly blacklistable or by blacklistable
+ *      coins (matched by coinId)
  *   4. false
  *
- * Pass `blacklistableIds` built from first-order coins only (explicit + centralized,
- * no index arg) to avoid recursive/circular inheritance.
+ * `blacklistableIds` is iteratively grown during topological processing in
+ * `buildReportCardsSnapshot`. First-order coins (explicit + centralized) seed
+ * the set; inherited coins are added after evaluation, so downstream coins
+ * see the full transitive closure.
  */
 export function isBlacklistable(
   meta: StablecoinMeta,
