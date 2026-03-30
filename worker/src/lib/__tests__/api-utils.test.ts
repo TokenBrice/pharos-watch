@@ -13,6 +13,7 @@ import {
   jsonResponse,
   validatePayloadWithSchema,
   buildCacheStatuses,
+  readCachedJson,
 } from "../api-utils";
 
 describe("errorResponse", () => {
@@ -27,6 +28,29 @@ describe("errorResponse", () => {
   it("returns 503 for service unavailable", async () => {
     const res = errorResponse(503, "Data not yet available");
     expect(res.status).toBe(503);
+  });
+});
+
+describe("readCachedJson", () => {
+  it("returns missing when the cache row is absent", () => {
+    expect(readCachedJson("status", "stablecoins", null)).toEqual({ status: "missing" });
+  });
+
+  it("returns parsed data for valid cached json", () => {
+    expect(readCachedJson<{ ok: boolean }>("status", "stablecoins", {
+      value: JSON.stringify({ ok: true }),
+    })).toEqual({
+      status: "ok",
+      data: { ok: true },
+    });
+  });
+
+  it("returns malformed when the cached json is invalid", () => {
+    const result = readCachedJson("status", "stablecoins", { value: "{bad-json" });
+    expect(result.status).toBe("malformed");
+    if (result.status === "malformed") {
+      expect(result.message).toMatch(/Unexpected|JSON|Expected/i);
+    }
   });
 });
 

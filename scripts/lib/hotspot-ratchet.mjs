@@ -3,9 +3,12 @@ import { resolve } from "path";
 import ts from "typescript";
 
 export const TARGET_FILES = [
+  "shared/lib/report-cards.ts",
   "worker/src/api/stablecoin-detail.ts",
   "worker/src/api/feedback.ts",
   "worker/src/handlers/http.ts",
+  "src/components/contagion-graph.tsx",
+  "src/app/chains/[chain]/client.tsx",
   "worker/src/cron/sync-stablecoins.ts",
   "src/app/methodology/sections/core/stability-index-section.tsx",
   "src/app/methodology/sections/core/safety-scores-section.tsx",
@@ -20,11 +23,15 @@ export const TARGET_FILES = [
   "src/app/coverage/client.tsx",
   "worker/src/cron/daily-digest/collectors.ts",
   "worker/src/cron/daily-digest.ts",
+  "worker/src/cron/dispatch-telegram-alerts.ts",
+  "worker/src/cron/dex-liquidity/scoring.ts",
   "worker/src/cron/dex-liquidity/orchestrator.ts",
   "worker/src/cron/sync-mint-burn.ts",
+  "worker/src/cron/sync-live-reserves.ts",
   "worker/src/cron/sync-stablecoins/enrich-prices.ts",
   "worker/src/cron/sync-blacklist.ts",
   "worker/src/cron/sync-fx-rates.ts",
+  "worker/src/cron/yield-config.ts",
   "worker/src/cron/yield-sync/sources.ts",
   "worker/src/lib/live-reserves-store.ts",
   "worker/src/lib/status-evaluation.ts",

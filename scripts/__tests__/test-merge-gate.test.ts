@@ -1,14 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildCommandPlan,
+} from "../test-merge-gate.mjs";
+import { getCommandEnv } from "../test-merge-gate.mjs";
+import {
   buildCiValidateCommands,
   buildCiValidateStepPlan,
-  buildCommandPlan,
   COMMON_VALIDATE_POSTBUILD_COMMANDS,
   COMMON_VALIDATE_PREBUILD_COMMANDS,
-  getCommandEnv,
   PAGES_VALIDATE_COMMANDS,
   WORKER_VALIDATE_COMMANDS,
-} from "../test-merge-gate.mjs";
+} from "../lib/validate-contract.mjs";
 
 describe("buildCommandPlan", () => {
   it("skips the merge gate when no deploy surfaces changed", () => {

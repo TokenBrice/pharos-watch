@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildCiValidateStepPlan } from "../test-merge-gate.mjs";
+import { buildCiValidateStepPlan } from "../lib/validate-contract.mjs";
 
 function extractRunSteps(yaml) {
   const lines = yaml.split(/\r?\n/g);
@@ -82,6 +82,8 @@ describe("validate-ci parity", () => {
       { cmd: "npm ci", condition: null },
       { cmd: "npm run lint", condition: null },
       { cmd: "npm run typecheck", condition: null },
+      { cmd: "npm run build", condition: null },
+      { cmd: "npm run test:critical-contracts", condition: null },
     ]);
   });
 });

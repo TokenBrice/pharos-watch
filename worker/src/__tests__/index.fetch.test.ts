@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../index";
 import { mockD1 } from "../api/__tests__/helpers/mock-d1";
+import { resetRateLimitStateForTests } from "../lib/rate-limit";
 
 function makeCtx() {
   const waits: Promise<unknown>[] = [];
@@ -29,6 +30,7 @@ describe("worker.fetch", () => {
   const cachePut = vi.fn(async () => undefined);
 
   beforeEach(() => {
+    resetRateLimitStateForTests();
     vi.restoreAllMocks();
     cacheMatch.mockReset();
     cachePut.mockReset();
@@ -164,6 +166,29 @@ describe("worker.fetch", () => {
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://pharos.watch");
     expect(cacheMatch).not.toHaveBeenCalled();
     expect(cachePut).not.toHaveBeenCalled();
+  });
+
+  it("enters a bounded emergency block after repeated distributed rate-limit failures", async () => {
+    const env = makeEnv({
+      DB: mockD1([], { requireMatch: true }),
+    });
+    const { ctx } = makeCtx();
+    cacheMatch.mockResolvedValue(new Response(JSON.stringify({ cached: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+
+    const request = new Request("https://api.pharos.watch/api/stablecoins", { method: "GET" });
+
+    const first = await worker.fetch(request, env as never, ctx);
+    const second = await worker.fetch(request, env as never, ctx);
+    const third = await worker.fetch(request, env as never, ctx);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(third.status).toBe(503);
+    expect(third.headers.get("Retry-After")).toBe("60");
+    await expect(third.json()).resolves.toEqual({ error: "Public API temporarily unavailable" });
   });
 
   it("returns a maintenance response before routing or cache lookup", async () => {

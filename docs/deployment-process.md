@@ -95,6 +95,7 @@ Useful merge-gate controls:
 Defined across:
 
 - `.github/workflows/validate-ci.yml` for the shared validate gate
+- `.github/workflows/dependency-audit.yml` for the scheduled full dependency audit
 - `.github/workflows/pull-request-checks.yml` for pull-request validation on `main`
 - `.github/workflows/deploy-cloudflare.yml` for push/manual production deploys that reuse the same validate gate
 - `.github/workflows/pages-release.yml` for the shared Pages build/smoke/deploy path
@@ -114,6 +115,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - includes `npm run build` + `npm run seo:check` only when `pages_changed=true`
    - includes `cd worker && npx tsc --noEmit` only when `worker_changed=true`
    - pull requests still call the same reusable workflow with default inputs, so PR validation stays full-strength
+   - the parallel `validate-node24` job also runs `npm run build` and `npm run test:critical-contracts`
 3. `no-deploy-required`
    - runs only when `deploy_required=false`
    - records an explicit no-op outcome for docs-only or other non-deploy pushes to `main`
@@ -148,6 +150,8 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - private post-deploy ops smoke against `ops.pharos.watch/admin/` and `ops-api.pharos.watch`
    - requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
    - UI check accepts either an Access redirect or a token-backed HTML response, so CI does not depend on the UI app also granting `Service Auth`
+
+Separate from the deploy path, `.github/workflows/dependency-audit.yml` runs `npm audit --audit-level=high` on the full lockfile weekly and on manual dispatch so devDependency advisories are surfaced without turning them into a blocking production deploy gate.
 
 Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`:
 

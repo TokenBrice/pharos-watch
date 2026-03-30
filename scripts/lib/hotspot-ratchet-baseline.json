@@ -1,4 +1,12 @@
 {
+  "shared/lib/report-cards.ts": {
+    "fileLines": 946,
+    "maxFunctionLines": 82,
+    "branchCount": 104,
+    "disposition": "queued-p4",
+    "targetBudget": { "fileLines": 700, "maxFunctionLines": 70, "branchCount": 70 },
+    "notes": "Report-card scoring and projection logic are still concentrated here. The next pass should separate scoring families, blacklist/live-slice enrichment, and presentation-oriented shaping."
+  },
   "worker/src/api/stablecoin-detail.ts": {
     "fileLines": 76,
     "maxFunctionLines": 60,
@@ -22,6 +30,22 @@
     "disposition": "stabilized",
     "targetBudget": { "fileLines": 54, "maxFunctionLines": 45, "branchCount": 6 },
     "notes": "Request-entry shell is intentionally thin after router extraction. Any new dispatch logic should move downward."
+  },
+  "src/components/contagion-graph.tsx": {
+    "fileLines": 804,
+    "maxFunctionLines": 731,
+    "branchCount": 112,
+    "disposition": "deferred",
+    "targetBudget": { "fileLines": 560, "maxFunctionLines": 320, "branchCount": 80 },
+    "notes": "The graph renderer still mixes data shaping, simulation wiring, and view concerns. Split graph math, legend controls, and rendering shells before growing the feature further."
+  },
+  "src/app/chains/[chain]/client.tsx": {
+    "fileLines": 789,
+    "maxFunctionLines": 124,
+    "branchCount": 59,
+    "disposition": "queued-p4",
+    "targetBudget": { "fileLines": 620, "maxFunctionLines": 100, "branchCount": 45 },
+    "notes": "The chain detail route now has dedicated tests, but it still combines hero, health, composition, filtering, and table behavior in one client module. Continue splitting view-model and section concerns out of the route shell."
   },
   "worker/src/cron/sync-stablecoins.ts": {
     "fileLines": 218,
@@ -135,6 +159,22 @@
     "targetBudget": { "fileLines": 191, "maxFunctionLines": 162, "branchCount": 15 },
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
+  "worker/src/cron/dispatch-telegram-alerts.ts": {
+    "fileLines": 826,
+    "maxFunctionLines": 536,
+    "branchCount": 79,
+    "disposition": "deferred",
+    "targetBudget": { "fileLines": 540, "maxFunctionLines": 260, "branchCount": 55 },
+    "notes": "Alert orchestration, suppression logic, payload shaping, and delivery policy remain intertwined. The next split should isolate candidate selection, rendering, and delivery-side effects."
+  },
+  "worker/src/cron/dex-liquidity/scoring.ts": {
+    "fileLines": 844,
+    "maxFunctionLines": 162,
+    "branchCount": 88,
+    "disposition": "deferred",
+    "targetBudget": { "fileLines": 620, "maxFunctionLines": 120, "branchCount": 60 },
+    "notes": "Pool scoring and heuristic normalization still live in one large module. Split score families and reusable transforms before adding more model inputs."
+  },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
     "fileLines": 370,
     "maxFunctionLines": 256,
@@ -150,6 +190,14 @@
     "disposition": "stabilized",
     "targetBudget": { "fileLines": 345, "maxFunctionLines": 255, "branchCount": 16 },
     "notes": "Config execution and post-run completion logic now live in `mint-burn/*` helpers. Keep the cron shell as queue setup plus progress coordination instead of regrowing per-config or epilogue logic."
+  },
+  "worker/src/cron/sync-live-reserves.ts": {
+    "fileLines": 529,
+    "maxFunctionLines": 342,
+    "branchCount": 47,
+    "disposition": "queued-p4",
+    "targetBudget": { "fileLines": 380, "maxFunctionLines": 220, "branchCount": 32 },
+    "notes": "Reserve adapter orchestration, persistence, and publication policy are still concentrated in the cron shell. Next pass should separate adapter execution from persistence and summary assembly."
   },
   "worker/src/cron/sync-stablecoins/enrich-prices.ts": {
     "fileLines": 132,
@@ -174,6 +222,14 @@
     "disposition": "queued-p4",
     "targetBudget": { "fileLines": 300, "maxFunctionLines": 140, "branchCount": 24 },
     "notes": "Core helpers are already extracted. Next split should isolate orchestration, persistence, and fallback policy from the cron entrypoint."
+  },
+  "worker/src/cron/yield-config.ts": {
+    "fileLines": 854,
+    "maxFunctionLines": 84,
+    "branchCount": 10,
+    "disposition": "deferred",
+    "targetBudget": { "fileLines": 650, "maxFunctionLines": 70, "branchCount": 10 },
+    "notes": "The yield adapter registry is large but mostly data-heavy. Keep additions structured, and extract manifest families before allowing the registry file to grow further."
   },
   "worker/src/cron/yield-sync/sources.ts": {
     "fileLines": 804,

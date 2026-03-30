@@ -620,21 +620,42 @@ export function validatePayloadWithSchema<T>(
   return { ok: false, issues };
 }
 
+export type CachedJsonReadResult<T> =
+  | { status: "missing" }
+  | { status: "ok"; data: T }
+  | { status: "malformed"; message: string };
+
+export function readCachedJson<T>(
+  endpoint: string,
+  cacheKey: string,
+  cached: { value: string } | null,
+): CachedJsonReadResult<T> {
+  if (!cached) {
+    return { status: "missing" };
+  }
+
+  try {
+    return { status: "ok", data: JSON.parse(cached.value) as T };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`[cache] Failed to parse ${endpoint} cached payload (${cacheKey}):`, message);
+    return { status: "malformed", message };
+  }
+}
+
 export function readCachedJsonOr503<T>(
   endpoint: string,
   cacheKey: string,
   cached: { value: string },
 ): { ok: true; data: T } | { ok: false; response: Response } {
-  try {
-    return { ok: true, data: JSON.parse(cached.value) as T };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.warn(`[cache] Failed to parse ${endpoint} cached payload (${cacheKey}):`, message);
-    return {
-      ok: false,
-      response: errorResponse(503, `Cached ${cacheKey} payload is malformed`),
-    };
+  const parsed = readCachedJson<T>(endpoint, cacheKey, cached);
+  if (parsed.status === "ok") {
+    return { ok: true, data: parsed.data };
   }
+  return {
+    ok: false,
+    response: errorResponse(503, `Cached ${cacheKey} payload is malformed`),
+  };
 }
 
 /**

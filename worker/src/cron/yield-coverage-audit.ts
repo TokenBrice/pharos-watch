@@ -8,6 +8,7 @@
  */
 
 import type { CronResult } from "../lib/cron-logger";
+import { readCachedJson } from "../lib/api-utils";
 import { getCache, setCache } from "../lib/db-cache";
 import { loadDlStablecoinPools } from "./yield-sync/sources";
 import {
@@ -164,19 +165,18 @@ export async function runYieldCoverageAudit(
     .map((entry) => entry.stablecoinId);
 
   let publishedYieldIds = new Set<string>();
-  const rankingsCache = await getCache(db, "yield-rankings");
-  if (rankingsCache) {
-    try {
-      const parsed = JSON.parse(rankingsCache.value) as { rankings?: Array<{ id?: string }> };
+  const rankingsCache = readCachedJson<{ rankings?: Array<{ id?: string }> }>(
+    "yield-coverage-audit",
+    "yield-rankings",
+    await getCache(db, "yield-rankings"),
+  );
+  if (rankingsCache.status === "ok") {
+    const parsed = rankingsCache.data;
       publishedYieldIds = new Set(
         (parsed.rankings ?? [])
           .map((ranking) => ranking.id)
           .filter((id): id is string => typeof id === "string"),
       );
-    } catch (err) {
-      console.warn(`[yield-coverage-audit] Failed to parse yield-rankings cache: ${err instanceof Error ? err.message : String(err)}`);
-      publishedYieldIds = new Set<string>();
-    }
   }
 
   const yieldBearingMissingFromRankings = ACTIVE_YIELD_BEARING_STABLECOINS

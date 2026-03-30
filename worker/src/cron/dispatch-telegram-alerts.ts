@@ -1,6 +1,7 @@
 import { THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
 import { TRACKED_META_BY_ID, ACTIVE_IDS, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";
 import { throwIfAborted } from "../lib/abort";
+import { readCachedJson } from "../lib/api-utils";
 import { getCache } from "../lib/db-cache";
 import { sendBatch } from "../lib/telegram";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
@@ -508,10 +509,14 @@ export async function dispatchTelegramAlerts(
     }
 
     // -- Detect launch promotions (pre-launch coins that moved to active) -----
-    const prevLaunchCache = await getCache(db, SNAPSHOT_KEYS.launch);
-    const prevLaunchIds: Set<string> = prevLaunchCache
-      ? new Set(JSON.parse(prevLaunchCache.value) as string[])
-      : new Set();
+    const previousLaunchSnapshot = readCachedJson<string[]>(
+      "dispatch-telegram-alerts",
+      SNAPSHOT_KEYS.launch,
+      await getCache(db, SNAPSHOT_KEYS.launch),
+    );
+    const prevLaunchIds = previousLaunchSnapshot.status === "ok" && Array.isArray(previousLaunchSnapshot.data)
+      ? new Set(previousLaunchSnapshot.data)
+      : new Set<string>();
     const currentLaunchIds = new Set(PRE_LAUNCH_STABLECOINS.map((c) => c.id));
 
     const launchPromoted: LaunchAlert[] = [];

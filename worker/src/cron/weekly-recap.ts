@@ -10,6 +10,7 @@ import {
   requestDigestCopy,
   runDigestChannelDelivery,
 } from "./digest/platform";
+import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
 
 const WEEKLY_SYSTEM_PROMPT =
   "You write the weekly editorial recap for Pharos, a stablecoin analytics dashboard. " +
@@ -166,7 +167,7 @@ export async function generateWeeklyRecap(
     .prepare(
       `SELECT generated_at, digest_title, digest_text, digest_extended, input_data
        FROM daily_digest
-       WHERE generated_at >= ? AND (digest_meta IS NULL OR json_extract(digest_meta, '$.type') IS NULL OR json_extract(digest_meta, '$.type') != 'weekly')
+       WHERE generated_at >= ? AND (${NON_WEEKLY_DIGEST_SQL_FILTER})
        ORDER BY generated_at ASC`,
     )
     .bind(cutoff)

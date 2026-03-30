@@ -11,22 +11,23 @@ const DATA_DIR = "shared/data/stablecoins";
 interface DataFile {
   file: string;
   schema: z.ZodType;
-  label: string;
 }
 
 const DATA_FILES: DataFile[] = [
-  { file: "usd-major.json", schema: StablecoinMetaAssetArraySchema, label: "USD major" },
-  { file: "usd-minor.json", schema: StablecoinMetaAssetArraySchema, label: "USD minor" },
-  { file: "non-usd.json", schema: StablecoinMetaAssetArraySchema, label: "non-USD" },
-  { file: "commodity.json", schema: StablecoinMetaAssetArraySchema, label: "commodity" },
-  { file: "canonical-order.json", schema: CanonicalOrderAssetSchema, label: "canonical order" },
+  { file: "usd-major.json", schema: StablecoinMetaAssetArraySchema },
+  { file: "usd-minor.json", schema: StablecoinMetaAssetArraySchema },
+  { file: "non-usd.json", schema: StablecoinMetaAssetArraySchema },
+  { file: "commodity.json", schema: StablecoinMetaAssetArraySchema },
+  { file: "canonical-order.json", schema: CanonicalOrderAssetSchema },
 ];
 
 let errorCount = 0;
 
-for (const { file, schema, label } of DATA_FILES) {
+for (const { file, schema } of DATA_FILES) {
   const path = join(DATA_DIR, file);
   try {
+    // Repo-owned validation only reads from the curated stablecoin data directory.
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     const raw = readFileSync(path, "utf8");
     const parsed = JSON.parse(raw) as unknown;
 

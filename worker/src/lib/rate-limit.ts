@@ -13,9 +13,12 @@ interface RateLimitDb {
 }
 
 const PUBLIC_API_PRUNE_WINDOW_MULTIPLIER = 10;
+const PUBLIC_API_EMERGENCY_BLOCK_AFTER_FAILURES = 3;
+const PUBLIC_API_EMERGENCY_RETRY_AFTER_SEC = 60;
 let lastPublicApiPruneBucket: number | null = null;
 let publicApiPruneFailures = 0;
 let feedbackPruneFailures = 0;
+let consecutivePublicApiRateLimitFailures = 0;
 let pendingPublicPrune: Promise<void> | null = null;
 let pendingFeedbackPrune: Promise<void> | null = null;
 
@@ -38,6 +41,24 @@ function buildRateLimitExceededResponse(retryAfterSec: number): Response {
   });
   resp.headers.set("Retry-After", String(Math.max(1, retryAfterSec)));
   return resp;
+}
+
+function buildRateLimitUnavailableResponse(retryAfterSec = PUBLIC_API_EMERGENCY_RETRY_AFTER_SEC): Response {
+  const resp = new Response(JSON.stringify({ error: "Public API temporarily unavailable" }), {
+    status: 503,
+    headers: { "Content-Type": "application/json" },
+  });
+  resp.headers.set("Retry-After", String(Math.max(1, retryAfterSec)));
+  return resp;
+}
+
+export function resetRateLimitStateForTests(): void {
+  lastPublicApiPruneBucket = null;
+  publicApiPruneFailures = 0;
+  feedbackPruneFailures = 0;
+  consecutivePublicApiRateLimitFailures = 0;
+  pendingPublicPrune = null;
+  pendingFeedbackPrune = null;
 }
 
 /** Centralized rate-limit and crawl-budget constants for external APIs */
@@ -108,6 +129,7 @@ export async function checkPublicApiRateLimit(
         });
     }
 
+    consecutivePublicApiRateLimitFailures = 0;
     const count = row?.count ?? 0;
     if (count > limit) {
       return buildRateLimitExceededResponse(bucketStart + windowSec - nowSec);
@@ -115,9 +137,14 @@ export async function checkPublicApiRateLimit(
 
     return null;
   } catch (err) {
-    // D1 failure is transient — allow the request through rather than
-    // maintaining an unreliable isolate-local Map with module-scope state.
-    console.warn("[public-api] distributed rate limit unavailable, allowing request:", err);
+    consecutivePublicApiRateLimitFailures++;
+    console.warn(
+      `[public-api] distributed rate limit unavailable (${consecutivePublicApiRateLimitFailures} consecutive):`,
+      err,
+    );
+    if (consecutivePublicApiRateLimitFailures >= PUBLIC_API_EMERGENCY_BLOCK_AFTER_FAILURES) {
+      return buildRateLimitUnavailableResponse();
+    }
     return null;
   }
 }
