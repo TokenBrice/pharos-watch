@@ -38,13 +38,13 @@ Operational and CI helper scripts live in `scripts/`. They support build integri
 
 ## CI-Critical Scripts
 
-These are wired into the GitHub Actions CI workflows (`.github/workflows/validate-ci.yml`, `.github/workflows/dependency-audit.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-release.yml`, and `.github/workflows/rebuild-pages.yml`) directly, or indirectly through `npm run build`:
+These are wired into the GitHub Actions CI workflows (`.github/workflows/validate-ci.yml`, `.github/workflows/dependency-audit.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-prepare.yml`, `.github/workflows/pages-publish.yml`, `.github/workflows/pages-release.yml`, and `.github/workflows/rebuild-pages.yml`) directly, or indirectly through `npm run build`:
 
-- `sync-digests.ts` in the `build-pages` Pages-release job before the build artifact is created
+- `sync-digests.ts` in the `build-pages` Pages-prepare job before the build artifact is created
 - `generate-redirects.ts` via the `prebuild` hook that runs automatically before `npm run build`
 - `check-seo-static.mjs` via `npm run seo:check`
 - `classify-deploy-changes.mjs` via the `detect-changes` job in `.github/workflows/deploy-cloudflare.yml`
-- `serve-static-export.mjs` via the pre-deploy `smoke-ui` job inside `.github/workflows/pages-release.yml`
+- `serve-static-export.mjs` via the pre-deploy `smoke-ui` job inside `.github/workflows/pages-prepare.yml`
 - `smoke-api.mjs` via `npm run test:smoke-api`
 - `smoke-ops.mjs` via `npm run test:smoke-ops`
 - `smoke-ui.mjs` via `npm run test:smoke-ui`
@@ -67,7 +67,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 
 - Requires an explicit digest API source via `--api-url` or `DIGEST_API_URL`; falls back to `SMOKE_API_BASE` or `API_BASE_URL` when those are already set by CI/local shell context.
 - Accepts `--output` so CI can write digest data into an artifact path before the Pages build job runs.
-- The shared Pages release workflow now runs this once inside `build-pages`, writing the normalized digest JSON directly to `data/digests.json` before `npm run build`.
+- The shared Pages prepare workflow now runs this once inside `build-pages`, writing the normalized digest JSON directly to `data/digests.json` before `npm run build`.
 
 ### `backfill-gold-depegs.sh`
 
@@ -95,8 +95,9 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 ### `smoke-ui.mjs`
 
 - Uses Playwright CLI in a temporary session, but now collapses the smoke flow into one `run-code` browser session instead of repeated per-route CLI round-trips.
-- In CI deploys, the browser now targets a locally served `out/` export before Pages production deploy; `scripts/serve-static-export.mjs` proxies `/api/*` to the configured public API base so the smoke still exercises live API responses against the exact built frontend artifact.
-- The shared Pages release workflow also runs the same smoke script against `https://pharos.watch` after `deploy-pages`, so the pipeline checks both the pre-publish artifact and the real public host.
+- In CI deploys, the browser now targets a locally served `out/` export before Pages production deploy; `scripts/serve-static-export.mjs` proxies `/api/*` to the configured API base so the smoke still exercises live API responses against the exact built frontend artifact.
+- On combined worker + Pages deploys, the Pages-prepare workflow points that local proxy at the uploaded worker preview URL so the predeploy artifact rehearsal happens against the exact worker candidate while promotion continues in parallel.
+- The shared Pages publish workflow also runs the same smoke script against `https://pharos.watch` after `deploy-pages`, so the pipeline checks both the pre-publish artifact and the real public host.
 - Verifies homepage is not in outage/empty state (`Failed to load data` or `Failed to load this dataset`, `stablecoins:404`, `Data not yet available` or `Waiting for first sync`, `Connection issue` or `Unable to reach the Pharos data API right now.`, `No stablecoin data available`, missing rows/ticker).
 - Homepage data wait retries once on timeout by default (configurable via `SMOKE_UI_RETRY_COUNT` / `SMOKE_UI_RETRY_DELAY_MS`) and includes a compact DOM text preview in timeout diagnostics.
 - Local mode runs mobile overflow checks at `390x844` on a default critical route set:

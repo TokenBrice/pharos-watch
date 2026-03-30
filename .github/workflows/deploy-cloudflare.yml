@@ -105,31 +105,16 @@ jobs:
           process.stdout.write(`version_id=${uploadEvent.version_id}\n`);
           process.stdout.write(`preview_url=${uploadEvent.preview_url}\n`);
           NODE
-
-  smoke-api-preview:
-    needs:
-      - upload-worker-version
-      - detect-changes
-    if: ${{ needs.detect-changes.outputs.worker_changed == 'true' && needs.upload-worker-version.result == 'success' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: package-lock.json
-      - run: npm ci
-      - run: npm run test:smoke-api
+      - name: Smoke uploaded preview worker
+        run: npm run test:smoke-api
         env:
-          SMOKE_API_BASE: ${{ needs.upload-worker-version.outputs.preview_url }}
+          SMOKE_API_BASE: ${{ steps.upload-version.outputs.preview_url }}
 
   deploy-worker:
     needs:
       - upload-worker-version
-      - smoke-api-preview
       - detect-changes
-    if: ${{ needs.detect-changes.outputs.worker_changed == 'true' && needs.smoke-api-preview.result == 'success' }}
+    if: ${{ needs.detect-changes.outputs.worker_changed == 'true' && needs.upload-worker-version.result == 'success' }}
     runs-on: ubuntu-latest
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -203,11 +188,11 @@ jobs:
           --message "Auto rollback after smoke-api failure for ${GITHUB_SHA}"
           --yes
 
-  pages-release:
+  pages-prepare:
     needs:
       - detect-changes
       - validate
-      - smoke-api
+      - upload-worker-version
     if: >-
       ${{
         always()
@@ -216,10 +201,31 @@ jobs:
         && needs.detect-changes.outputs.pages_changed == 'true'
         && (
           needs.detect-changes.outputs.worker_changed != 'true'
+          || needs.upload-worker-version.result == 'success'
+        )
+      }}
+    uses: ./.github/workflows/pages-prepare.yml
+    with:
+      api_base_url: ${{ needs.detect-changes.outputs.worker_changed == 'true' && needs.upload-worker-version.outputs.preview_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+    secrets: inherit
+
+  pages-publish:
+    needs:
+      - detect-changes
+      - pages-prepare
+      - smoke-api
+    if: >-
+      ${{
+        always()
+        && needs.detect-changes.result == 'success'
+        && needs.detect-changes.outputs.pages_changed == 'true'
+        && needs.pages-prepare.result == 'success'
+        && (
+          needs.detect-changes.outputs.worker_changed != 'true'
           || needs.smoke-api.result == 'success'
         )
       }}
-    uses: ./.github/workflows/pages-release.yml
+    uses: ./.github/workflows/pages-publish.yml
     secrets: inherit
 
   smoke-ui-live:
@@ -240,7 +246,7 @@ jobs:
   smoke-ops:
     needs:
       - detect-changes
-      - pages-release
+      - pages-publish
       - smoke-api
       - smoke-ui-live
     if: >-
@@ -250,7 +256,7 @@ jobs:
         && (
           (
             needs.detect-changes.outputs.pages_changed == 'true'
-            && needs.pages-release.result == 'success'
+            && needs.pages-publish.result == 'success'
           )
           || (
             needs.detect-changes.outputs.pages_changed != 'true'

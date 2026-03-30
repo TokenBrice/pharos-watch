@@ -1,0 +1,90 @@
+name: Pages Prepare
+
+on:
+  workflow_call:
+    inputs:
+      api_base_url:
+        description: Optional API base used for digest sync and local artifact smoke.
+        required: false
+        default: ""
+        type: string
+      artifact_name:
+        description: Artifact name for the built static export.
+        required: false
+        default: pages-static-export
+        type: string
+
+jobs:
+  build-pages:
+    runs-on: ubuntu-latest
+    env:
+      DIGEST_API_URL: ${{ inputs.api_base_url != '' && inputs.api_base_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+      NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: |
+            .next/cache
+            .cache/eslint
+            *.tsbuildinfo
+            worker/*.tsbuildinfo
+          key: tooling-cache-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}
+          restore-keys: |
+            tooling-cache-${{ runner.os }}-
+      - run: npm ci
+      - name: Fetch digests from the target API environment
+        run: npx tsx scripts/sync-digests.ts --output data/digests.json
+      - run: npm run build
+      - run: npm run seo:check
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: out
+          if-no-files-found: error
+
+  smoke-ui:
+    needs: build-pages
+    runs-on: ubuntu-latest
+    env:
+      SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: out
+      - name: Start local export smoke server
+        env:
+          STATIC_EXPORT_API_BASE: ${{ inputs.api_base_url != '' && inputs.api_base_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+          STATIC_EXPORT_HOST: 127.0.0.1
+          STATIC_EXPORT_PORT: "4173"
+        run: |
+          node scripts/serve-static-export.mjs > /tmp/pages-smoke-server.log 2>&1 &
+          echo $! > /tmp/pages-smoke-server.pid
+          for attempt in $(seq 1 30); do
+            if node -e "fetch('http://127.0.0.1:4173/').then((res) => process.exit(res.ok ? 0 : 1)).catch(() => process.exit(1));"; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/pages-smoke-server.log
+          exit 1
+      - run: npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local
+      - name: Dump local export smoke server log
+        if: failure()
+        run: cat /tmp/pages-smoke-server.log
+      - name: Stop local export smoke server
+        if: always()
+        run: |
+          if [ -f /tmp/pages-smoke-server.pid ]; then
+            kill "$(cat /tmp/pages-smoke-server.pid)" || true
+          fi

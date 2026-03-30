@@ -13,7 +13,7 @@
     "prebuild": "tsx scripts/generate-redirects.ts",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint . --max-warnings=0",
+    "lint": "eslint . --cache --cache-strategy content --cache-location .cache/eslint/ --max-warnings=0",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "audit:deps": "npm audit --audit-level=high --omit=dev",
     "test": "vitest run",

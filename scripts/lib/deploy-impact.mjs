@@ -24,6 +24,8 @@ const FULL_DEPLOY_INFRA_PATHS = new Set([
 ]);
 
 const PAGES_ONLY_INFRA_PATHS = new Set([
+  ".github/workflows/pages-prepare.yml",
+  ".github/workflows/pages-publish.yml",
   ".github/workflows/pages-release.yml",
   ".github/workflows/rebuild-pages.yml",
 ]);
