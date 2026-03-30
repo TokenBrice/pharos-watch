@@ -65,10 +65,10 @@ export function NonUsdShareChart() {
 
     const points: SharePoint[] = data.map((point) => ({
       ts: point.date * 1000,
-      commodityShare: point.commodityShare,
-      fiatNonUsdShare: point.fiatNonUsdShare,
-      commodity: point.commodity,
-      fiatNonUsd: point.fiatNonUsd,
+      commodityShare: point.commodityShare ?? 0,
+      fiatNonUsdShare: point.fiatNonUsdShare ?? 0,
+      commodity: point.commodity ?? 0,
+      fiatNonUsd: point.fiatNonUsd ?? 0,
       total: point.total,
     }));
 
