@@ -47,11 +47,6 @@ export const PEG_SLUGS: Partial<Record<PegCurrency, string>> = Object.fromEntrie
   ACTIVE_PEGS.map((peg) => [peg, ALL_SLUGS[peg]]),
 );
 
-/** URL slug → PegCurrency (only active pegs). */
-export const SLUG_TO_PEG: Record<string, PegCurrency> = Object.fromEntries(
-  ACTIVE_PEGS.map((peg) => [ALL_SLUGS[peg], peg]),
-);
-
 /** Number of tracked stablecoins per peg currency. */
 export function pegCoinCount(peg: PegCurrency): number {
   return ACTIVE_STABLECOINS.filter((c) => c.flags.pegCurrency === peg).length;
