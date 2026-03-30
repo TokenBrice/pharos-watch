@@ -34,7 +34,11 @@ import {
   isGtProbeEligibleSingleSource,
   isPoolChallengeEligibleConsensus,
 } from "../../lib/pricing-source-policy";
-import { buildPrimarySourceCandidates, type PrimaryCollectedQuotes } from "../../lib/primary-price-collector";
+import {
+  buildPrimarySourceCandidates,
+  type DlListQuote,
+  type PrimaryCollectedQuotes,
+} from "../../lib/primary-price-collector";
 import { aggregateProtocolPrices, computeWeightedMedianPrice } from "../../lib/dex-price-estimators";
 import type { PeggedAsset } from "./enrich-prices-shared";
 
@@ -42,6 +46,7 @@ export interface PrimaryPriceResult {
   price: number;
   source: string;
   selectedSource?: string;
+  priceEstimator?: "selected_source" | "cluster_median";
   confidence: PriceConfidence;
   dlPrice: number | null;
   cgPrice: number | null;
@@ -95,9 +100,21 @@ export async function fetchPrimaryPrices(
   references?: PriceValidationReferences,
   coingeckoApiKey?: string | null,
   chainRpcs?: Map<string, ChainRpcConfig>,
-  dlListPrices?: Map<string, number>,
+  dlListPrices?: Map<string, number | DlListQuote>,
 ): Promise<{ results: Map<string, PrimaryPriceResult>; stats: PriceValidationStats; cgPrices: Map<string, number> }> {
   throwIfAborted(signal);
+  const resolveDlListQuote = (assetId: string): DlListQuote | undefined => {
+    const entry = dlListPrices?.get(assetId);
+    if (entry == null) return undefined;
+    if (typeof entry === "number") {
+      return {
+        price: entry,
+        observedAt: null,
+        observedAtMode: "unknown",
+      };
+    }
+    return entry;
+  };
   const results = new Map<string, PrimaryPriceResult>();
   const stats: PriceValidationStats = { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, low: 0 };
   const metaById = new Map(ACTIVE_STABLECOINS.map((m) => [m.id, m]));
@@ -394,7 +411,7 @@ export async function fetchPrimaryPrices(
       cgObservedAt,
       cgTickerPrice: cgTickerPrices.get(asset.id) ?? null,
       cgTickerObservedAt,
-      dlListPrice: dlListPrices?.get(asset.id) ?? null,
+      dlListQuote: resolveDlListQuote(asset.id),
       pythQuote: pythPrices.get(asset.id),
       binancePrice: binancePrices.get(asset.symbol.toUpperCase()) ?? null,
       binanceObservedAt,
@@ -445,8 +462,9 @@ export async function fetchPrimaryPrices(
       price: consensus.price,
       source: consensus.source,
       selectedSource: consensus.selectedSource,
+      priceEstimator: consensus.priceEstimator,
       confidence: consensus.confidence,
-      dlPrice: dlListPrices?.get(asset.id) ?? null,
+      dlPrice: resolveDlListQuote(asset.id)?.price ?? null,
       cgPrice: cg ?? null,
       candidateSources: sources.map((s) => s.source),
       agreeSources: consensus.agreeSources,
@@ -587,6 +605,7 @@ export function applyPoolChallenge(
           result.price = replacementPrice;
           result.source = "pool-tvl-weighted";
           result.selectedSource = "pool-tvl-weighted";
+          result.priceEstimator = "selected_source";
           const poolObservedAts = divergentPoolGroups
             .map((group) => group.observedAt)
             .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
@@ -594,6 +613,9 @@ export function applyPoolChallenge(
             ? Math.min(...poolObservedAts)
             : result.observedAt;
           result.observedAtMode = "local_fetch";
+          result.candidateSources = [...new Set([...result.candidateSources, "pool-tvl-weighted"])];
+          result.agreeSources = ["pool-tvl-weighted"];
+          result.disagreeSources = result.candidateSources.filter((source) => source !== "pool-tvl-weighted");
         }
       }
     }
@@ -683,6 +705,7 @@ export async function runGtProbePass(
     primary.price = consensus.price;
     primary.source = consensus.source;
     primary.selectedSource = consensus.selectedSource;
+    primary.priceEstimator = consensus.priceEstimator;
     primary.confidence = consensus.confidence;
     primary.candidateSources = sources.map((s) => s.source);
     primary.agreeSources = consensus.agreeSources;

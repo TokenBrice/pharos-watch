@@ -25,7 +25,8 @@ export function PricingPipelineMethodologySection() {
     >
         <p>
           Every score Pharos computes starts with a price. The pricing pipeline collects quotes from more than a dozen
-          live voices, requires fully pairwise agreement inside each cluster, and selects the highest-confidence result.
+          live voices, requires fully pairwise agreement inside each cluster, and publishes the highest-confidence result
+          with explicit source-freshness semantics.
         </p>
 
         <p>
@@ -41,9 +42,9 @@ export function PricingPipelineMethodologySection() {
 
         <p>
           <strong className="text-foreground">Pool challenge.</strong>{" "}
-          A pool challenge guard downgrades confidence and replaces the price with a TVL-weighted pool average when large
-          DEX pools diverge from aggregator consensus, including DEX-inclusive soft clusters unless an exempt hard source
-          is present.
+          A pool challenge guard downgrades confidence and replaces the price with a protocol-aware TVL-weighted median
+          only when large DEX pools from at least two independent protocols diverge from soft consensus, including
+          DEX-inclusive soft clusters unless an exempt hard source is present.
         </p>
 
         <p>
@@ -61,7 +62,9 @@ export function PricingPipelineMethodologySection() {
           <strong className="text-foreground">Freshness tracking.</strong>{" "}
           The live payload distinguishes true upstream observation timestamps from locally stamped fetch-time freshness via{" "}
           <code className="mx-1 text-xs">priceObservedAtMode</code>, so a hard single-source print only becomes
-          depeg-authoritative when its freshness is source-native rather than inferred from local collection time.
+          depeg-authoritative when its freshness is source-native rather than inferred from local collection time. The
+          source registry now also records each provider&apos;s freshness kind, maximum trusted age, and whether it truly
+          supports upstream timestamps.
         </p>
 
         <p>
@@ -71,7 +74,9 @@ export function PricingPipelineMethodologySection() {
           unless it comes from an explicit protocol redemption or pool-challenge replacement mark. When a confirmed severe
           depeg briefly loses corroboration, the pipeline preserves trusted continuity from fresh replay-safe{" "}
           <code className="mx-1 text-xs">price_cache</code> rows instead of letting the asset flap to{" "}
-          <code className="mx-1 text-xs">N/A</code>.
+          <code className="mx-1 text-xs">N/A</code>. DefiLlama contract fallbacks must now pass the same peg-aware
+          plausibility gates before they can resolve an asset, and DexScreener symbol search is reserved for addressless
+          assets rather than downgrading exact-token candidates to symbol-only identity.
         </p>
         <MethodologyFacts
           facts={[
@@ -93,7 +98,7 @@ export function PricingPipelineMethodologySection() {
             ]}
           />
         </div>
-        <WorkedExample summary="Worked example: USDC price consensus across 6 sources">
+        <WorkedExample summary="Worked example: USDC price consensus across 7 sources">
           <p className="font-mono">
             Sources: CoinGecko=1.0001 (w2), DL-list=0.9999 (w1), Pyth=1.0002 (w2), Binance=1.0001 (w2),
             Kraken=1.0000 (w2), Coinbase=0.9998 (w2), Curve=1.0003 (w3)
@@ -102,10 +107,10 @@ export function PricingPipelineMethodologySection() {
             Peg ref=1.0, threshold=50 bps. All 7 within 50 bps of each other &rarr; single cluster of 7.
           </p>
           <p className="font-mono">
-            Highest weight in cluster: Curve (w3) &rarr; price=1.0003
+            Published price = cluster median = 1.0001. Internal selected source for provenance = Curve (highest-weight member).
           </p>
           <p>
-            Result: <span className="text-foreground">price 1.0003, confidence &ldquo;high&rdquo;, source &ldquo;binance+coingecko+coinbase+curve+defillama+kraken+pyth&rdquo;</span>.
+            Result: <span className="text-foreground">price 1.0001, confidence &ldquo;high&rdquo;, source label from the full agreeing cluster</span>.
           </p>
         </WorkedExample>
 
@@ -122,7 +127,7 @@ export function PricingPipelineMethodologySection() {
               <MethodologyDiagramCard title="On-chain" subtitle={<><span>Curve (w3)</span><br /><span>DEX agg (w1), protocol DEX (w2-w3), GT (w1)</span></>} />
             </div>
             <MethodologyDiagramArrow />
-            <MethodologyDiagramCard className="w-80" title="N-Source Consensus" subtitle="Pairwise clusters, then size/weight/spread tie-breaks" />
+            <MethodologyDiagramCard className="w-80" title="N-Source Consensus" subtitle="Pairwise clusters; publish cluster median, keep best member for provenance" />
             <MethodologyDiagramArrow />
             <MethodologyDiagramCard className="w-80 border-orange-500/40" title="Pool Challenge" subtitle="Soft-only consensus challenged; replacement uses protocol-aware weighted medians" />
             <MethodologyDiagramArrow />
@@ -141,7 +146,7 @@ export function PricingPipelineMethodologySection() {
               <MethodologyDiagramCard title="On-chain" titleClassName="text-xs text-foreground font-medium" subtitle="Curve (w3), DEX agg (w1), protocol DEX (w2-w3), GT (w1)" subtitleClassName="text-xs text-muted-foreground" />
             </div>
             <MethodologyDiagramArrow />
-            <MethodologyDiagramCard className="w-full" title="N-Source Consensus" subtitle="Pairwise clusters, then size/weight/spread tie-breaks" />
+            <MethodologyDiagramCard className="w-full" title="N-Source Consensus" subtitle="Pairwise clusters; publish cluster median, keep best member for provenance" />
             <MethodologyDiagramArrow />
             <MethodologyDiagramCard className="w-full border-orange-500/40" title="Pool Challenge" subtitle="Soft-only → replace with protocol-aware weighted medians" />
             <MethodologyDiagramArrow />
@@ -166,14 +171,16 @@ export function PricingPipelineMethodologySection() {
                 </thead>
                 <tbody className="divide-y">
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">CoinGecko</td><td className="py-2 pr-4">2</td><td className="py-2 pr-4">Aggregator</td><td className="py-2">Primary market data via <code className="text-xs">/simple/price</code></td></tr>
+                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">CoinGecko ticker</td><td className="py-2 pr-4">2</td><td className="py-2 pr-4">Exchange ticker</td><td className="py-2">Curated ticker corroboration path for tracked exchange pairs</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">DefiLlama (list)</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">Aggregator</td><td className="py-2">Independent stablecoins list price via <code className="text-xs">stablecoins.llama.fi</code></td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Pyth Network</td><td className="py-2 pr-4">2</td><td className="py-2 pr-4">Oracle</td><td className="py-2">Hermes endpoint with confidence intervals</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Binance</td><td className="py-2 pr-4">2</td><td className="py-2 pr-4">CEX</td><td className="py-2">Single batch call for all spot tickers</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Kraken</td><td className="py-2 pr-4">2</td><td className="py-2 pr-4">CEX</td><td className="py-2">Explicit pair mapping with alias-safe response handling</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Bitstamp</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">CEX</td><td className="py-2">Lower-weight corroboration via the all-tickers endpoint</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Coinbase</td><td className="py-2 pr-4">2</td><td className="py-2 pr-4">CEX</td><td className="py-2">Per-symbol spot prices</td></tr>
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">RedStone</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">Oracle</td><td className="py-2">Per-venue breakdown with agreement %</td></tr>
+                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">RedStone</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">Oracle</td><td className="py-2">Per-venue breakdown; requires at least 2 venues and 60% agreement</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Curve on-chain</td><td className="py-2 pr-4">3</td><td className="py-2 pr-4">On-chain</td><td className="py-2">StableSwap implied prices via <code className="text-xs">get_dy()</code></td></tr>
+                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Curve oracle</td><td className="py-2 pr-4">3</td><td className="py-2 pr-4">On-chain</td><td className="py-2">Additional primary-consensus voice for <code className="text-xs">crvusd-curve</code></td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">DEX pools</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">On-chain</td><td className="py-2">Aggregate DEX voice, but withheld when overlapping protocol-level DEX bridge data exists</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">Protocol DEX APIs</td><td className="py-2 pr-4">2-3</td><td className="py-2 pr-4">On-chain / pool-state API</td><td className="py-2">One aggregated source per protocol from Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, and Velodrome Slipstream; only promoted when corroborated or when no non-DEX voice exists</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-foreground">GeckoTerminal</td><td className="py-2 pr-4">1</td><td className="py-2 pr-4">On-chain</td><td className="py-2">Pool-level cross-check for weak CG / DL-list soft-source outcomes (&ge;$10K TVL)</td></tr>
@@ -189,7 +196,8 @@ export function PricingPipelineMethodologySection() {
               <li>Collect all source prices with non-failed circuit breakers</li>
               <li>Find the largest fully pairwise cluster of sources that agree within <code className="text-xs">50 bps</code> (fixed pegs) or <code className="text-xs">500 bps</code> (NAV tokens)</li>
               <li>Break equal-size clusters by total weight, then tighter spread, then peg proximity when available</li>
-              <li>Within the winning cluster, select the best trusted source, then break ties by weight and peg proximity</li>
+              <li>If the winning cluster has 2+ members, publish its median price and separately keep the best cluster member for provenance</li>
+              <li>Choose that internal selected source by weight, then trust tier, then peg proximity, then source key</li>
               <li>If no cluster of 2+ forms, fixed pegs stay on fixed-peg rules and fall back to the best trusted single source</li>
               <li><span className="text-foreground font-medium">Pool challenge:</span> if all agreeing sources are challenge-eligible (CG, DL-list, DEX average, or promoted protocol DEX sources without a hard-source corroborator), check each large priced DEX pool (&ge;$100K TVL) from the published challenger snapshot built from the full retained pool set. If any diverges &ge;500 bps from the weak result, downgrade to <code className="text-xs">low</code>, and only replace the price when at least two independent protocols corroborate that divergence &mdash; on-chain liquidity is a more honest signal when aggregators share upstream data, but a single protocol can still be wrong</li>
             </ol>
@@ -213,11 +221,11 @@ export function PricingPipelineMethodologySection() {
             <h3 className="text-foreground font-medium">Enrichment Pipeline (5-pass fallback)</h3>
             <p>Assets still missing prices after primary consensus go through a staged enrichment pipeline:</p>
             <ol className="list-decimal list-inside space-y-1">
-              <li><span className="text-foreground font-medium">Pass 1:</span> Contract address &rarr; DefiLlama coins API</li>
-              <li><span className="text-foreground font-medium">Pass 1b:</span> Tracked alternate deployment fallback only (no synthetic same-address cross-chain probing)</li>
+              <li><span className="text-foreground font-medium">Pass 1:</span> Canonical tracked contract identity &rarr; DefiLlama coins API, but only prices that pass peg-aware validation can resolve the asset</li>
+              <li><span className="text-foreground font-medium">Pass 1b:</span> Tracked alternate deployment fallback only (no synthetic same-address cross-chain probing; same validation gate as pass 1)</li>
               <li><span className="text-foreground font-medium">Pass 2:</span> CoinMarketCap batch listings (slug first; symbol fallback only when the tracked symbol is unique, rate-limited to 1 call/hour)</li>
               <li><span className="text-foreground font-medium">Pass 3:</span> Jupiter Price API for tracked Solana mints (liquidity-gated)</li>
-              <li><span className="text-foreground font-medium">Pass 4:</span> DexScreener exact token-address pools first, then unique-symbol search (filtered by &gt;$50K liquidity, capped at 10 requests per run)</li>
+              <li><span className="text-foreground font-medium">Pass 4:</span> DexScreener exact token-address pools first; unique-symbol search is reserved for addressless assets and stays filtered by &gt;$50K liquidity, capped at 10 requests per run with exact-target and larger-circulating assets prioritized first</li>
             </ol>
           </div>
 
@@ -233,7 +241,7 @@ export function PricingPipelineMethodologySection() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-green-700 dark:text-green-400 font-medium">high</td><td className="py-2 pr-4">&ge;2 sources agree within threshold</td><td className="py-2">Full trust for depeg detection and scoring</td></tr>
+                  <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-green-700 dark:text-green-400 font-medium">high</td><td className="py-2 pr-4">&ge;2 sources agree within threshold</td><td className="py-2">Published as the agreeing cluster median; full trust for depeg detection and scoring</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-yellow-700 dark:text-yellow-400 font-medium">single-source</td><td className="py-2 pr-4">Only 1 source returned a price</td><td className="py-2">Depeg detection requires pending confirmation</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-orange-700 dark:text-orange-400 font-medium">low</td><td className="py-2 pr-4">Sources disagree beyond threshold, or pool challenge fired</td><td className="py-2">Pool challenge: TVL-weighted pool price used; otherwise closest to peg reference; depeg requires confirmation</td></tr>
                   <tr className="hover:bg-muted/40 transition-colors"><td className="py-2 pr-4 text-red-700 dark:text-red-400 font-medium">fallback</td><td className="py-2 pr-4">All primary sources down; enrichment or cache used</td><td className="py-2">Depeg mutations blocked; stale banner shown on frontend</td></tr>

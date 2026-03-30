@@ -10,8 +10,8 @@ For supply fallback behavior and broader cache/integrity guardrails, see [data-p
 
 Pharos uses a two-stage pricing system:
 
-1. **Primary consensus** in `fetchPrimaryPrices()` (`worker/src/cron/sync-stablecoins/enrich-prices.ts`)
-2. **Fallback enrichment** in `enrichMissingPrices()` (`worker/src/cron/sync-stablecoins/enrich-prices.ts`)
+1. **Primary consensus** in `fetchPrimaryPrices()` (`worker/src/cron/sync-stablecoins/enrich-prices-primary.ts`)
+2. **Fallback enrichment** in `enrichMissingPrices()` (`worker/src/cron/sync-stablecoins/enrich-prices-passes.ts`)
 
 The output is the cached `price`, `priceSource`, `priceConfidence`, `priceObservedAt`, `priceObservedAtMode`, `priceSyncedAt`, and compatibility `priceUpdatedAt` fields served through `/api/stablecoins`.
 
@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v2.17`
+- **Current methodology version:** `v2.19`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -37,7 +37,8 @@ When an asset still has no usable current price after validation and fallback re
 | Source | Weight | Module / Origin | Notes |
 |--------|--------|-----------------|-------|
 | CoinGecko `/simple/price` | 2 | built-in fetch path | Primary market-data voice |
-| DefiLlama stablecoins list | 1 | Extracted from DL stablecoins endpoint | Independent DL aggregation for assets with `llamaId` |
+| CoinGecko ticker | 2 | `worker/src/lib/cg-ticker.ts` | Exchange-ticker corroboration path for the curated tracked subset |
+| DefiLlama stablecoins list | 1 | Typed quote extracted from DL stablecoins endpoint | Independent DL aggregation with explicit observed-time provenance |
 | Pyth Hermes | 2 | `worker/src/lib/pyth.ts` | Oracle input with confidence intervals |
 | Binance spot | 2 | `worker/src/lib/cex-tickers.ts` | Batch venue input |
 | Kraken spot | 2 | `worker/src/lib/cex-tickers.ts` | Explicit-pair venue input with alias-safe symbol mapping |
@@ -45,7 +46,7 @@ When an asset still has no usable current price after validation and fallback re
 | Coinbase spot | 2 | `worker/src/lib/cex-tickers.ts` | Per-symbol venue input |
 | RedStone | 1 | `worker/src/lib/redstone.ts` | Fresh per-venue oracle snapshot with venue-agreement gating |
 | Curve on-chain | 3 | `worker/src/lib/curve-onchain.ts` | Highest-weight on-chain voice for supported pools |
-| Curve oracle (`crvusd-curve` only) | 3 | `worker/src/cron/sync-stablecoins/enrich-prices.ts` | Additional primary-consensus voice for crvUSD |
+| Curve oracle (`crvusd-curve` only) | 3 | `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts` | Additional primary-consensus voice for crvUSD |
 | Trusted promoted DEX prices | 1 | `worker/src/lib/depeg-helpers.ts` | Only used when no promoted per-protocol DEX bridge source exists for the same asset |
 | Fluid DEX (via `dex_prices`) | 3 | `worker/src/lib/depeg-helpers.ts` | One aggregated Fluid price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
 | Balancer DEX (via `dex_prices`) | 3 | `worker/src/lib/depeg-helpers.ts` | One aggregated Balancer price per asset from `price_sources_json`; admitted only when corroborated or when no non-DEX voices exist |
@@ -63,7 +64,7 @@ When an asset still has no usable current price after validation and fallback re
 1. 0 sources -> no result
 2. 1 source -> `single-source`
 3. 2+ sources -> build fully pairwise agreement clusters within a peg-aware threshold
-4. best cluster with 2+ members -> `high` confidence and choose the best trusted member inside that cluster
+4. best cluster with 2+ members -> `high` confidence, publish the cluster median, and keep the best trusted member as internal provenance
 5. no 2+ cluster:
    - fixed pegs -> stay in fixed-peg mode even if the reference price is temporarily unavailable; choose the best trusted fallback source and mark `low`
    - NAV tokens -> use a wider 500 bps cluster threshold first, otherwise choose the best trusted fallback source and mark `low`
@@ -79,6 +80,18 @@ Source labels list all agreeing sources alphabetically:
 
 - 1 source: source name directly
 - 2+ sources: `sourceA+sourceB+sourceC` (full list, no truncation)
+
+High-confidence consensus now separates:
+
+- the **published price**: the median of the agreeing winning cluster
+- the **selected source**: the best cluster member kept internally for provenance and downstream trust policy
+
+Inside the winning cluster, the selected source is chosen by:
+
+1. higher configured weight
+2. stronger trust tier
+3. closer distance to the reference price
+4. alphabetical source key
 
 ### Pool Challenge (Soft-Source Guard)
 
@@ -109,7 +122,9 @@ Several live providers need normalization before their prices can safely enter c
 - **RedStone symbols:** `worker/src/lib/redstone.ts` only queries the exact-case tracked subset in `REDSTONE_TRACKED_SYMBOL_ALLOWLIST` (22 symbols including `USDe`, `crvUSD`, and `fxUSD`). Unsupported symbols are filtered out before transport, and test coverage now guards the allowlist against stale untracked entries. Where metadata symbols differ from RedStone API symbols (e.g., `FRXUSD` → `frxUSD`, `EURC` → `EUROC`, `XAUT` → `XAUt`), the module translates via `REDSTONE_SYMBOL_CONFIG` entries (each carrying `metaSymbol` and `apiSymbol` fields) and keys results by metadata symbol so callers don't need to know the mapping.
 - **RedStone request shape:** RedStone requests are sent in sequential batches of 10 symbols; any symbol missing from a batch response is retried once as a single-symbol request.
 - **RedStone freshness + transparency gate:** RedStone entries are only admitted when they carry a timestamp newer than 5 minutes and a usable per-venue price breakdown. Timestamp-less or opaque aggregate-only responses are rejected.
-- **RedStone multi-venue gate:** RedStone prices now need at least 2 venues and at least 50% venue agreement before they can enter primary consensus; a single venue is treated as insufficient corroboration, and the published RedStone price is derived from the venue median instead of the provider aggregate.
+- **RedStone multi-venue gate:** RedStone prices now need at least 2 venues and at least 60% venue agreement before they can enter primary consensus; a single venue is treated as insufficient corroboration, and the published RedStone price is derived from the venue median instead of the provider aggregate.
+- **CEX capability semantics:** Binance, Kraken, Bitstamp, and Coinbase are all still treated as hard-market voices, but their registry metadata now makes their actual capabilities explicit. Binance is modeled as last-trade-only without bid/ask depth, while Kraken, Bitstamp, and Coinbase expose bid/ask-derived spot surfaces but still retain local-fetch freshness semantics in the current implementation.
+- **Pyth confidence weighting:** Pyth is no longer dropped abruptly at modest confidence widths. Medium-confidence prints are now downweighted smoothly, and only very wide confidence intervals are excluded entirely.
 - **Jupiter Price API V3 freshness semantics:** Jupiter documents `blockId` as the recency field for V3 responses. The fallback path therefore does not reject quotes based on optional `createdAt` metadata and instead relies on Jupiter's own price heuristics, liquidity gating, and peg-aware validation.
 - **Chainlink reference overlay:** `worker/src/cron/sync-fx-rates.ts` overlays curated Chainlink EUR/USD, GBP/USD, JPY/USD, XAU/USD, and XAG/USD feeds onto the shared `fx-rates` cache when their on-chain quotes are fresh and within 5% of the current reference stack. The worker now tries dedicated dRPC `eth_call` transport for the supported Base / Ethereum / Arbitrum feeds before falling back to the shared chain RPC pool and then the existing Etherscan V2 proxy path, so the Chainlink overlay can still recover when earlier quarter-hour jobs have already saturated the shared Alchemy/public RPC budget. Frankfurter / secondary FX APIs and `gold-api.com` remain fallback sources for uncovered or divergent feeds, and commodity pegs now also have a stablecoins-cache peer-median recovery path when the anonymous metals endpoint is unavailable from Workers. These independent recovery probes still run during cached-fallback FX runs so a stale intraday subset can recover without waiting for the full Frankfurter stack.
 - **Secondary + tertiary FX fallbacks:** `sync-fx-rates.ts` compares the jsDelivr `@fawazahmed0/currency-api` mirror with the direct `latest.currency-api.pages.dev` endpoint and persists the fresher valid dated snapshot. CNH/RUB/UAH/ARS always use this daily secondary path, and when Frankfurter is unavailable the same feed can temporarily backstop the wider fiat FX set. If both Frankfurter and the secondary mirrors are unavailable, the worker falls through to ExchangeRate-API's daily USD snapshot before dropping into cached-fallback mode.
@@ -124,6 +139,7 @@ Several live providers need normalization before their prices can safely enter c
 - **Direct-API DEX bridge:** per-protocol DEX prices are aggregated before they enter primary consensus, so one Fluid/Balancer/Raydium/Orca/Meteora/PancakeSwap/Slipstream protocol can contribute at most one elevated source per asset.
 - **DEX bridge overlap guard:** when a promoted per-protocol DEX bridge source exists for an asset, the overlapping `dex-promoted` aggregate is withheld so the same bridge observation family cannot self-confirm.
 - **Promoted DEX corroboration gate:** a lone promoted DEX protocol is only admitted into primary consensus when it agrees with another promoted DEX protocol, agrees with a non-DEX source within the live threshold, or no non-DEX source exists for that asset.
+- **DEX bridge freshness preservation:** primary pricing now keeps the per-source `updatedAt` values already stored inside `dex_prices.price_sources_json` when rebuilding promoted DEX sources. It only falls back to the row write time when a source-specific timestamp is missing or invalid, so freshness is no longer flattened across the entire bridge row.
 - **Direct-API tracked quote pricing:** direct-API pair conversion now prefers only fresh authoritative tracked stablecoin prices from the cached stablecoins payload for quote legs before falling back to peg references. Weak or stale tracked prices no longer feed back into the DEX bridge, and unknown addressed `USDC`/`USDT`-style tokens still do not get unconditional `$1` treatment.
 - **DEX token matching and dedupe:** direct-API, staged, and fallback DEX pools resolve tracked assets by `chain + address` first. If an upstream token already carries an address and that address is unknown to the canonical registry, it is dropped instead of falling back to symbol; symbol fallback is reserved for addressless rows and must still be unique within the same chain. Repeated observations of the same physical pool are collapsed by exact pool id or a conservative derived identity before they enter `dex_prices`.
 - **Direct-API pair conversion:** non-USD tracked stablecoin pairs use peg-reference-aware conversion rather than treating every tracked stablecoin counterparty as `$1`.
@@ -160,18 +176,18 @@ The same registry also supports historical replay for backfills so admin rebuild
 
 Assets still missing prices after primary consensus run through `enrichMissingPrices()`:
 
-1. **Pass 1:** DefiLlama `coins.llama.fi` by current contract address
+1. **Pass 1:** DefiLlama `coins.llama.fi` by canonical tracked contract identity; quotes are validated against shared peg-aware bounds before they can resolve the asset, and assets can probe multiple exact tracked coin ids when needed
 2. **Pass 1b:** alternate tracked deployment fallback via DefiLlama; only known tracked deployments are probed, never synthetic same-address cross-chain identities
 3. **Pass 2:** CoinMarketCap stablecoins category batch (`v1/cryptocurrency/category?id=604f2753ebccdd50cd175fc1&limit=300&convert=USD`) — prefers `cmcSlug`-based matching over symbol, and symbol fallback is only allowed when the tracked symbol is unique. Rate-limited to 1 call/hour via D1 cache (see data-pipeline.md)
 4. **Pass 3:** Jupiter Price API for tracked Solana mints — liquidity-gated and still subject to peg-aware validation
-5. **Pass 4:** DexScreener exact token-address pool lookup when chain+address are available, falling back to symbol search only for unique tracked symbols under the same liquidity and peg-aware validation gates
+5. **Pass 4:** DexScreener exact token-address pool lookup when chain+address are available. Unique-symbol search is now reserved for addressless assets only; if an exact target exists and fails, Pharos does not downgrade to symbol-only identity under the same request budget. Under the shared request cap, exact-target assets and larger circulating names are also prioritized first.
 
 Operationally, missing-price enrichment runs before the slower GeckoTerminal soft-source cross-check so recovery of unpriced assets stays on the critical path; the GT probe still reruns consensus later for weak CG / DL-list outcomes, self-stops once its 3-minute budget is exhausted, and protocol overrides still apply after that probe.
 
 The enrichment path is intentionally narrower than primary pricing:
 
 - it exists to fill holes, not overrule good consensus
-- fallback results are validated before they enter `price_cache`
+- fallback results are validated before they can claim an asset and before they enter `price_cache`
 - replay cache only stores replay-safe prices (no `low`, no `fallback`, no fragile search-derived sources), expires after 6 hours, and now preserves source/confidence/timestamp/source-list provenance
 - previous-trusted continuity now merges the last authoritative stablecoins publication with fresh replay-safe `price_cache` rows, so a temporarily `low` or unusable publication does not make an already-confirmed severe depeg forget its prior corroborated state on the next run
 - replay-safe cached fallback is applied to any asset that is still missing after post-validation, including assets that became missing later in the same sync run because a current-run candidate was rejected
@@ -186,6 +202,7 @@ The enrichment path is intentionally narrower than primary pricing:
 - `priceObservedAtMode = "unknown"`: legacy or carried-forward metadata did not preserve freshness provenance explicitly
 - `priceSyncedAt`: when Pharos selected and wrote the price during the current sync
 - `priceUpdatedAt`: compatibility alias for the effective observation timestamp, preserved so existing consumers do not interpret sync-write time as source freshness
+- high-confidence cluster labels can describe multiple agreeing sources even when the published price is the cluster median rather than any one constituent source price
 
 ### Downstream Trust Semantics
 
@@ -215,7 +232,7 @@ Downstream consumers use these tags for display, depeg confirmation, and risk ha
 
 When changing live pricing behavior, update all relevant surfaces in the same change:
 
-1. runtime implementation in `worker/src/cron/sync-stablecoins/enrich-prices.ts` or related provider modules
+1. runtime implementation in `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts`, `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts`, or related provider modules
 2. this document for canonical pricing behavior
 3. [data-pipeline.md](./data-pipeline.md) if broader sync/integrity semantics changed
 4. `/methodology` pricing copy in `src/app/methodology/sections/core-sections-pricing.tsx`
@@ -228,7 +245,8 @@ When changing live pricing behavior, update all relevant surfaces in the same ch
 
 | File | Role |
 |------|------|
-| `worker/src/cron/sync-stablecoins/enrich-prices.ts` | Primary consensus orchestration and fallback enrichment |
+| `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts` | Primary live-price collection, source assembly, consensus, GT probe, and pool challenge |
+| `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts` | Ordered fallback enrichment passes for still-missing prices |
 | `worker/src/lib/price-consensus.ts` | N-source clustering and confidence resolution |
 | `worker/src/lib/authoritative-price-sources.ts` | Redeem-quote live/historical override registry |
 | `worker/src/lib/pyth.ts` | Pyth Hermes integration and feed-ID normalization |

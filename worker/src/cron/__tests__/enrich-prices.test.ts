@@ -331,6 +331,45 @@ describe("enrichMissingPrices", () => {
     expect(stats.finalMissing).toBe(0);
   });
 
+  it("rejects unreasonable DefiLlama contract prices and allows later fallback passes to resolve", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "jpyc-jpyc", name: "JPYC", symbol: "JPYC", price: 0,
+        address: "ethereum:0xjpyc",
+        pegType: "peggedJPY", circulating: {},
+      },
+    ];
+
+    mockFetch([
+      {
+        match: "coins.llama.fi/prices",
+        body: {
+          coins: {
+            "ethereum:0xjpyc": { price: 0.5, symbol: "JPYC", timestamp: 1718650000, confidence: 0.99 },
+          },
+        },
+      },
+      {
+        match: "pro-api.coinmarketcap.com",
+        body: {
+          data: {
+            coins: [
+              { slug: "jpyc", symbol: "JPYC", quote: { USD: { price: 0.0068 } } },
+            ],
+          },
+        },
+      },
+    ]);
+
+    const stats = await enrichMissingPrices(assets, "test-cmc-key");
+
+    expect(stats.pass1).toBe(0);
+    expect(stats.passCmc).toBe(1);
+    expect(stats.finalMissing).toBe(0);
+    expect(assets[0].price).toBe(0.0068);
+    expect(assets[0].priceSource).toBe("coinmarketcap");
+  });
+
   it("does not enrich assets with 'wrong' geckoId via contract passes — falls through to CMC/DexScreener", async () => {
     const assets: PeggedAsset[] = [
       {
@@ -502,6 +541,50 @@ describe("enrichMissingPrices", () => {
     expect(stats.finalMissing).toBe(1);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(fetchSpy.mock.calls[0]?.[0]).toContain("dexscreener.com");
+  });
+
+  it("does not fall back to DexScreener symbol search when an exact token target exists", async () => {
+    const assets: PeggedAsset[] = [
+      {
+        id: "usdg-paxos",
+        name: "USDG",
+        symbol: "USDG",
+        price: 0,
+        address: "0xabc",
+        chains: ["Base"],
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+
+    const fetchSpy = vi.fn(async (url: string) => {
+      if (url.includes("api.dexscreener.com/tokens/v1/base/0xabc")) {
+        return new Response(JSON.stringify([]), { status: 200 });
+      }
+      if (url.includes("dexscreener.com/latest/dex/search")) {
+        return new Response(JSON.stringify({
+          pairs: [
+            {
+              baseToken: { symbol: "USDG" },
+              quoteToken: { symbol: "USDC" },
+              priceUsd: "1.0003",
+              liquidity: { usd: 250_000 },
+              chainId: "base",
+            },
+          ],
+        }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const result = await runDexScreenerPass(assets, undefined, undefined);
+
+    expect(result.resolved).toBe(0);
+    expect(assets[0].price).toBe(0);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy.mock.calls[0]?.[0]).toContain("api.dexscreener.com/tokens/v1/base/0xabc");
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("latest/dex/search"))).toBe(false);
   });
 
   it("prefers cmcSlug-based matching over symbol for CMC fallback (BUG-1)", async () => {
@@ -837,7 +920,7 @@ describe("fetchPrimaryPrices", () => {
     expect(result!.candidateSources).toEqual(["coingecko", "balancer-dex"]);
     expect(result!.confidence).toBe("high");
     expect(result!.source).toBe("balancer-dex+coingecko");
-    expect(result!.price).toBe(1.0001);
+    expect(result!.price).toBe(1.0002);
   });
 
   it("downgrades CG+DL-only consensus to single-source (DESIGN-4)", async () => {
@@ -863,7 +946,7 @@ describe("fetchPrimaryPrices", () => {
     // CG+DL-only gets downgraded from high to single-source
     expect(result.confidence).toBe("single-source");
     expect(result.source).toBe("coingecko+defillama-list");
-    expect(result.price).toBe(1.0001);
+    expect(result.price).toBe(1.0002);
     expect(cgPrices.get("tether")).toBe(1.0001);
     expect(stats.high).toBe(0);
     expect(stats.singleSource).toBe(1);

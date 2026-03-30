@@ -44,6 +44,7 @@ jobs:
             tooling-cache-${{ runner.os }}-
       - run: npm ci
       - run: npm run audit:deps
+      - run: npm run audit:pricing-providers
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run check:worker-boundary

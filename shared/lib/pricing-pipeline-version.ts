@@ -3,9 +3,47 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "2.17",
+  currentVersion: "2.19",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "2.19",
+      title: "Explicit source semantics, cluster-median publication, and fallback identity hardening",
+      date: "2026-03-30",
+      effectiveAt: 1774832400,
+      summary:
+        "Made source freshness and trust semantics explicit, changed high-confidence consensus to publish the agreeing cluster median instead of a single member price, " +
+        "and hardened fallback identity/order handling for DefiLlama and DexScreener.",
+      impact: [
+        "Pricing sources now carry explicit freshness kind, max trusted age, upstream-timestamp support, single-source authority, and market-capability metadata in the canonical registry",
+        "High-confidence consensus now publishes the winning cluster median while preserving the internally selected cluster member for provenance and downstream policy",
+        "DefiLlama list quotes now enter primary pricing as typed inputs with explicit observed-time provenance instead of inheriting mutable asset-state timestamps",
+        "DEX bridge source freshness now preserves per-source timestamps from `price_sources_json` instead of flattening everything to the row write time",
+        "DefiLlama contract fallback now prefers canonical tracked deployment identities, validates each quote before claiming the asset, and can probe multiple exact tracked coin ids when needed",
+        "DexScreener fallback now prioritizes exact-target assets under the request cap and keeps symbol search reserved for addressless assets only",
+        "Pyth confidence weighting is now smoother across medium-confidence prints, and RedStone requires at least 60% venue agreement before entering primary consensus",
+        "The provider-config pricing audit is now part of CI validation instead of remaining a local-only check",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
+      version: "2.18",
+      title: "Validated DefiLlama fallback admission and exact-target DexScreener gating",
+      date: "2026-03-30",
+      effectiveAt: 1774828800,
+      summary:
+        "Hardened late-stage price enrichment so unreasonable DefiLlama contract quotes can no longer claim an asset before validation, " +
+        "and DexScreener symbol search no longer runs for assets that already have canonical exact token-address targets.",
+      impact: [
+        "DefiLlama pass 1 and pass 1b now validate quotes against the shared peg-aware bounds before marking an asset as resolved",
+        "A bad DL contract response can no longer block later CoinMarketCap, Jupiter, or DexScreener fallback passes in the same run",
+        "DexScreener symbol search now stays disabled whenever the asset already has a canonical chain+address lookup path; only addressless assets can use the unique-symbol search fallback",
+        "This reduces wrong-identity recovery risk while preserving the exact-address DexScreener recovery path for assets with tracked deployments",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "2.17",
       title: "Protocol-aware DEX hardening estimators and provider-config cleanup",

@@ -70,6 +70,13 @@ function addressToCoinId(address: string): string {
   }
 }
 
+function sumCirculatingValue(asset: PeggedAsset): number {
+  if (!asset.circulating || typeof asset.circulating !== "object") return 0;
+  return Object.values(asset.circulating).reduce((sum, value) => (
+    sum + (typeof value === "number" && Number.isFinite(value) ? value : 0)
+  ), 0);
+}
+
 function parseDefiLlamaPriceMap(json: unknown): Map<string, number> {
   const prices = new Map<string, number>();
   const { coins } = DLPriceResponseSchema.parse(json);
@@ -185,6 +192,40 @@ function buildTrackedDeploymentCoinIds(asset: PeggedAsset): string[] {
   return [...ids];
 }
 
+function buildPrimaryContractCoinIds(asset: PeggedAsset): string[] {
+  const rawAddress = asset.address?.trim();
+  if (!rawAddress) return [];
+  if (rawAddress.includes(":")) {
+    return [addressToCoinId(rawAddress)];
+  }
+
+  const meta = ACTIVE_META_BY_ID.get(asset.id);
+  const matchedDeploymentIds = new Set<string>();
+  const normalizedAddress = rawAddress.toLowerCase();
+  for (const deployment of [...(meta?.contracts ?? []), ...(meta?.tradedContracts ?? [])]) {
+    const chain = resolveChainId(deployment.chain);
+    const address = deployment.address?.trim();
+    if (!chain || !address) continue;
+    if (address.toLowerCase() !== normalizedAddress) continue;
+    matchedDeploymentIds.add(buildDefiLlamaCoinIdForChainAddress(chain, address));
+  }
+  if (matchedDeploymentIds.size > 0) {
+    return [...matchedDeploymentIds];
+  }
+
+  const explicitChainIds = new Set<string>();
+  for (const rawChain of asset.chains ?? []) {
+    const chain = resolveChainId(rawChain);
+    if (!chain) continue;
+    explicitChainIds.add(buildDefiLlamaCoinIdForChainAddress(chain, rawAddress));
+  }
+  if (explicitChainIds.size > 0) {
+    return [...explicitChainIds];
+  }
+
+  return [addressToCoinId(rawAddress)];
+}
+
 function buildAllowedDexSearchChains(asset: PeggedAsset): Set<string> {
   const allowed = new Set<string>();
   for (const rawChain of asset.chains ?? []) {
@@ -244,6 +285,19 @@ function medianDexPrice(prices: number[]): number | null {
   return sorted[Math.floor(sorted.length / 2)] ?? null;
 }
 
+function isUsableFallbackPrice(
+  asset: PeggedAsset,
+  price: number,
+  fxRates: Record<string, number> | undefined,
+): boolean {
+  return isReasonablePrice(
+    price,
+    asset.pegType as string | undefined,
+    fxRates,
+    buildPriceReasonablenessOptions(asset),
+  );
+}
+
 function resolveDexScreenerAddressPrice(
   asset: PeggedAsset,
   trackedAddress: string,
@@ -271,18 +325,27 @@ function resolveDexScreenerAddressPrice(
     : null;
 }
 
+function shouldAllowDexScreenerSymbolSearch(asset: PeggedAsset, exactTargets: DexScreenerTarget[]): boolean {
+  if (exactTargets.length > 0) {
+    return false;
+  }
+
+  return UNIQUE_ACTIVE_SYMBOLS.has(asset.symbol.toUpperCase());
+}
+
 // ── Pass 1 + 1b: DefiLlama contract addresses ──────────────────────
 
 /**
  * Resolve prices for assets that have a contract address via the
- * DefiLlama coins API. Pass 1b attempts multi-chain fallback for
- * Ethereum addresses that failed in pass 1.
+ * DefiLlama coins API. Pass 1b attempts tracked alternate deployment
+ * fallback for assets that remain unresolved after pass 1.
  *
  * Throws on abort-signal; all other errors are caught internally
  * and reported via `failures`.
  */
 export async function runDlContractPasses(
   assets: PeggedAsset[],
+  fxRates: Record<string, number> | undefined,
   signal?: AbortSignal,
 ): Promise<DlContractPassResult> {
   let pass1Count = 0;
@@ -294,7 +357,9 @@ export async function runDlContractPasses(
     for (let i = 0; i < assets.length; i++) {
       const a = assets[i];
       if (!hasMissingPrice(a) || !a.address) continue;
-      withAddress.push({ index: i, coinId: addressToCoinId(a.address) });
+      for (const coinId of buildPrimaryContractCoinIds(a)) {
+        withAddress.push({ index: i, coinId });
+      }
     }
 
     if (withAddress.length > 0) {
@@ -307,11 +372,14 @@ export async function runDlContractPasses(
         signal,
       });
       if (pass1Prices) {
+        const resolved = new Set<number>();
         for (const m of withAddress) {
+          if (resolved.has(m.index)) continue;
           const price = pass1Prices.get(m.coinId);
-          if (price != null) {
+          if (price != null && isUsableFallbackPrice(assets[m.index], price, fxRates)) {
             applyResolvedPrice(assets[m.index], price, "defillama-contract", "single-source");
             pass1Count++;
+            resolved.add(m.index);
           }
         }
       }
@@ -344,7 +412,7 @@ export async function runDlContractPasses(
           for (const m of altLookups) {
             if (resolved.has(m.index)) continue;
             const price = pass1bPrices.get(m.coinId);
-            if (price != null) {
+            if (price != null && isUsableFallbackPrice(assets[m.index], price, fxRates)) {
               applyResolvedPrice(assets[m.index], price, "defillama-contract", "single-source");
               pass1bCount++;
               resolved.add(m.index);
@@ -491,7 +559,8 @@ export async function runCmcPass(
 
 /**
  * Best-effort fallback: try exact DexScreener token-pair lookups when the
- * asset has a usable chain+address, then fall back to symbol search.
+ * asset has a usable chain+address, then fall back to symbol search only
+ * for addressless assets with a unique tracked symbol.
  * Capped at {@link DEXSCREENER_MAX_REQUESTS} total requests with a total
  * pass budget of 45 seconds.
  *
@@ -522,7 +591,23 @@ export async function runDexScreenerPass(
   let dexAttempts = 0;
   let dexSuccessfulCalls = 0;
   if (dexscreenerAllowed) {
-    const dexCandidates = stillMissing.slice(0, DEXSCREENER_MAX_REQUESTS);
+    const dexCandidates = [...stillMissing]
+      .sort((left, right) => {
+        const leftExactTargets = buildDexScreenerTargets(left.asset).length;
+        const rightExactTargets = buildDexScreenerTargets(right.asset).length;
+        if (rightExactTargets !== leftExactTargets) {
+          return rightExactTargets - leftExactTargets;
+        }
+
+        const leftCirculating = sumCirculatingValue(left.asset);
+        const rightCirculating = sumCirculatingValue(right.asset);
+        if (rightCirculating !== leftCirculating) {
+          return rightCirculating - leftCirculating;
+        }
+
+        return left.asset.id.localeCompare(right.asset.id);
+      })
+      .slice(0, DEXSCREENER_MAX_REQUESTS);
     const dexBudgetDeadlineMs = Date.now() + DEXSCREENER_PASS_BUDGET_MS;
     for (const m of dexCandidates) {
       if (dexAttempts >= DEXSCREENER_MAX_REQUESTS) break;
@@ -578,10 +663,10 @@ export async function runDexScreenerPass(
           break;
         }
 
-        const symbolKey = m.asset.symbol.toUpperCase();
-        if (!UNIQUE_ACTIVE_SYMBOLS.has(symbolKey)) {
+        if (!shouldAllowDexScreenerSymbolSearch(m.asset, exactTargets)) {
           continue;
         }
+        const symbolKey = m.asset.symbol.toUpperCase();
 
         const allowedChains = buildAllowedDexSearchChains(m.asset);
 
@@ -628,12 +713,7 @@ export async function runDexScreenerPass(
         );
         if (price == null) continue;
         // Sanity check: peg-type-aware range
-        if (isReasonablePrice(
-          price,
-          m.asset.pegType as string | undefined,
-          fxRates,
-          buildPriceReasonablenessOptions(m.asset),
-        )) {
+        if (isUsableFallbackPrice(m.asset, price, fxRates)) {
           applyResolvedPrice(assets[m.index], price, "dexscreener", "fallback");
           resolved++;
         }

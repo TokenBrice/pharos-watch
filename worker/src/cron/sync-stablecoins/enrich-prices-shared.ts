@@ -18,6 +18,7 @@ export interface PeggedAsset {
   priceObservedAt?: number | null;
   priceObservedAtMode?: PriceObservedAtMode | null;
   priceSyncedAt?: number | null;
+  priceSelectedSource?: string | null;
   supplySource?: string;
   pegType?: string;
   pegMechanism?: string;
@@ -45,6 +46,7 @@ export function applyResolvedPrice(
 ): void {
   asset.price = price;
   asset.priceSource = source;
+  asset.priceSelectedSource = source;
   asset.priceConfidence = confidence;
   asset.priceUpdatedAt = updatedAtSec;
   asset.priceObservedAt = updatedAtSec;

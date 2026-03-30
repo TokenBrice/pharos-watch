@@ -178,7 +178,10 @@ export async function loadDexPriceSources(
         row.stablecoin_id,
         decoded.payload.map((source) => ({
           ...source,
-          updatedAt: row.updated_at,
+          updatedAt:
+            typeof source.updatedAt === "number" && Number.isFinite(source.updatedAt) && source.updatedAt > 0
+              ? source.updatedAt
+              : row.updated_at,
         })),
       );
     }

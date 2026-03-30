@@ -43,24 +43,31 @@ Before the enrichment pipeline runs, `fetchPrimaryPrices()` collects prices from
 | Source | Weight | Module | Notes |
 |--------|--------|--------|-------|
 | CoinGecko `/simple/price` | 2 | built-in | Primary market data |
-| DefiLlama `coins.llama.fi` | 1 | built-in | Cross-validation |
+| CoinGecko ticker | 2 | `worker/src/lib/cg-ticker.ts` | Curated ticker corroboration surface for tracked exchange pairs |
+| DefiLlama stablecoins list | 1 | built-in | Independent typed DL-list quote with explicit freshness provenance |
 | Pyth Network Hermes | 2 | `worker/src/lib/pyth.ts` | Oracle prices with confidence intervals; coverage is driven by curated `pythFeedId` entries in the stablecoin metadata assets (`shared/data/stablecoins/*.json` via `shared/lib/stablecoins/index.ts`) |
 | Binance spot tickers | 2 | `worker/src/lib/cex-tickers.ts` | Direct CEX prices (single batch call) |
+| Kraken spot tickers | 2 | `worker/src/lib/cex-tickers.ts` | Alias-safe explicit pair mapping |
+| Bitstamp spot tickers | 1 | `worker/src/lib/cex-tickers.ts` | Lower-weight all-tickers corroboration venue |
 | Coinbase spot tickers | 2 | `worker/src/lib/cex-tickers.ts` | Direct CEX prices (per-symbol) |
 | RedStone oracle | 1 | `worker/src/lib/redstone.ts` | Per-venue breakdown + agreement % for exact-case tracked symbols in `REDSTONE_TRACKED_SYMBOL_ALLOWLIST` |
 | Curve on-chain `get_dy()` | 3 | `worker/src/lib/curve-onchain.ts` | StableSwap implied prices |
-| DEX promoted prices | 1 | `worker/src/lib/depeg-helpers.ts` | Promoted from depeg-only to primary voice |
+| Curve oracle (`crvusd-curve`) | 3 | `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts` | Additional primary-consensus voice for crvUSD |
+| DEX promoted prices | 1 | `worker/src/lib/depeg-helpers.ts` | Aggregate DEX voice when no overlapping promoted protocol-level DEX source exists |
+| Promoted protocol-level DEX prices | 2-3 | `worker/src/lib/depeg-helpers.ts` | One aggregated source per protocol; freshness now preserved per source from `price_sources_json` |
 
 **Consensus algorithm** (`worker/src/lib/price-consensus.ts`):
 
 - Collects all available source prices for each asset
 - Groups sources into agreement clusters within a configurable threshold (default 50 bps for pegged tokens, 500 bps for NAV tokens)
-- Picks the largest agreeing cluster; within that cluster, selects the highest-weight source
-- If no cluster forms, picks the source closest to the asset's canonical peg reference
+- Picks the largest agreeing cluster; for 2+ source winners, publishes the cluster median and keeps the best member internally for provenance
+- If no 2+ cluster forms, picks the best trusted fallback source for publication
 - **≥2 sources agree** → `priceConfidence: "high"`
 - **Single source only** → `priceConfidence: "single-source"`
-- **Sources disagree** → `priceConfidence: "low"`, closest to peg reference used
+- **Sources disagree** → `priceConfidence: "low"`, best trusted fallback source used
 - **All sources down** → skip, falls through to enrichment pipeline
+
+Cluster selection breaks ties by size, then total cluster weight, then tighter spread, then peg proximity. The internal selected source inside the winning cluster is chosen by weight, trust tier, reference proximity, and finally source key, but that selected source is no longer forced to be the published high-confidence price.
 
 Each asset gets tagged with `priceConfidence` (high/single-source/low/fallback) and `supplySource` (`defillama`, `coingecko-fallback`, or `onchain-total-supply`). The `onchain-total-supply` path is used for supplemental assets whose circulating supply is derived from an on-chain total-supply probe instead of an upstream market-cap field; preview-only fiat CoinGecko assets can use that path with the existing FX reference for USD normalization while still keeping `price = null`.
 
@@ -72,11 +79,14 @@ After N-source consensus, each asset receives a `consensusSources: string[]` fie
 Primary pricing also includes a few source-specific normalization rules that are easy to miss when reading the high-level algorithm:
 
 - **Pyth Hermes feed IDs** are normalized to lowercase with any leading `0x` stripped before matching back to tracked assets. Hermes can return feed IDs in either form.
+- **Pyth confidence weighting** now degrades smoothly as confidence intervals widen instead of dropping medium-confidence quotes abruptly.
 - **Coinbase** uses uppercased product symbols.
 - **RedStone** uses exact-case tracked symbols only. The worker filters requests through `REDSTONE_TRACKED_SYMBOL_ALLOWLIST`, sends them in sequential batches of 10, and retries any batch-dropped symbol individually once.
+- **RedStone admission** now requires at least 2 venues and at least 60% venue agreement before the quote can enter primary consensus.
 - **Breaker accounting for sparse responses** is data-aware: Pyth and RedStone only count as successful breaker outcomes when they return at least one usable price, not merely a 200 transport response.
+- **CEX freshness semantics** are explicit: Binance/Kraken/Bitstamp/Coinbase still use local-fetch observation times in the current implementation, with registry metadata recording whether the feed is last-trade-only or exposes bid/ask-style spot data.
 
-These rules live in `worker/src/lib/pyth.ts`, `worker/src/lib/redstone.ts`, and the `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts` module (re-exported through `enrich-prices.ts`).
+These rules live in `worker/src/lib/pyth.ts`, `worker/src/lib/redstone.ts`, and the `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts` module.
 
 ### Authoritative Price Source Registry
 
@@ -96,13 +106,13 @@ The registry lives in `worker/src/lib/authoritative-price-sources.ts` and suppor
 
 ### Enrichment Pipeline
 
-`enrichMissingPrices()` in `worker/src/cron/sync-stablecoins/enrich-prices.ts` now runs an ordered fallback-pass manifest for assets still missing prices after primary fetch. The sequence is unchanged, but the orchestration is centralized in one pass list instead of one ad hoc block per provider:
+`enrichMissingPrices()` in `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts` now runs an ordered fallback-pass manifest for assets still missing prices after primary fetch. The sequence is unchanged, but the orchestration is centralized in one pass list instead of one ad hoc block per provider:
 
-1. **Pass 1:** Contract address -> DefiLlama coins API
-2. **Pass 1b:** Multi-chain contract address fallback (tries alternate chain addresses via DefiLlama coins API)
+1. **Pass 1:** Canonical tracked contract identity -> DefiLlama coins API, but only quotes that pass peg-aware validation can claim the asset
+2. **Pass 1b:** Tracked alternate deployment fallback (tries exact tracked deployment ids via DefiLlama coins API under the same validation gate)
 3. **Pass 2:** CoinMarketCap category batch (`cryptocurrency/category?id=604f2753ebccdd50cd175fc1&limit=300&convert=USD`) — prefers per-asset `cmcSlug` matching before symbol fallback, covering all CMC-listed stablecoins in one call (rate-limited to 1 call/hour via D1 cache timestamp, single 10s attempt)
 4. **Pass 3:** Jupiter Price API for tracked Solana mints (liquidity-gated and peg-aware; V3 responses are not rejected solely because optional `createdAt` metadata is old)
-5. **Pass 4:** DexScreener exact token-address pool lookups when a resolvable chain+address exists, falling back to symbol search under the same >$50K liquidity and peg-aware validation gates; capped at 10 total requests per run, no retries, 5s per-request timeout, 45s total pass budget
+5. **Pass 4:** DexScreener exact token-address pool lookups when a resolvable chain+address exists. Symbol search is reserved for addressless assets with a unique tracked symbol under the same >$50K liquidity and peg-aware validation gates; capped at 10 total requests per run, no retries, 5s per-request timeout, 45s total pass budget. Under that cap, exact-target assets and larger circulating names are prioritized first.
 
 Note: DexScreener's **batch token API** (`/tokens/v1/{chainId}/{addresses}`) is also used in `syncDexLiquidity()` for DEX-implied price observations. Price enrichment now reuses the same exact-address surface before falling back to search.
 

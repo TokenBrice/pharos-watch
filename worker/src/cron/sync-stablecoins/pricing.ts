@@ -7,6 +7,7 @@ import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices";
 import { clearPriceMetadata, stampPriceMetadata } from "./shared";
 import { classifyPrimaryDepegTrust } from "../../lib/depeg-helpers";
 import type { PriceCacheEntry } from "../../lib/db-cache";
+import type { DlListQuote } from "../../lib/primary-price-collector";
 import {
   type TrustedPriceReference,
   validatePrimaryPriceCandidate,
@@ -44,8 +45,8 @@ export function createValidationContextResolver(): ValidationContextResolver {
   };
 }
 
-export function buildDlListPrices(assets: PeggedAsset[]): Map<string, number> {
-  const dlListPrices = new Map<string, number>();
+export function buildDlListPrices(assets: PeggedAsset[]): Map<string, DlListQuote> {
+  const dlListPrices = new Map<string, DlListQuote>();
   for (const asset of assets) {
     if (
       asset.supplySource !== "coingecko-fallback" &&
@@ -54,7 +55,11 @@ export function buildDlListPrices(assets: PeggedAsset[]): Map<string, number> {
       Number.isFinite(asset.price) &&
       asset.price > 0
     ) {
-      dlListPrices.set(asset.id, asset.price);
+      dlListPrices.set(asset.id, {
+        price: asset.price,
+        observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
+        observedAtMode: asset.priceObservedAtMode ?? "unknown",
+      });
     }
   }
   return dlListPrices;
@@ -71,6 +76,7 @@ function stampExistingSingleSource(asset: PeggedAsset, syncStartSec: number): vo
     [source],
     [source],
     syncStartSec,
+    asset.priceSelectedSource ?? source,
   );
 }
 
@@ -116,6 +122,7 @@ function applyPrimaryCandidate(input: ApplyPrimaryCandidateInput): string | null
     candidate.candidateSources,
     candidate.agreeSources,
     syncStartSec,
+    candidate.selectedSource ?? candidate.source,
   );
   return null;
 }
@@ -416,7 +423,17 @@ export function applyProtocolPriceOverrides(input: {
     }
 
     asset.price = override.price;
-    stampPriceMetadata(asset, override.source, override.confidence, syncStartSec, "local_fetch", [override.source], [override.source], syncStartSec);
+    stampPriceMetadata(
+      asset,
+      override.source,
+      override.confidence,
+      syncStartSec,
+      "local_fetch",
+      [override.source],
+      [override.source],
+      syncStartSec,
+      override.source,
+    );
     appliedCount++;
   }
 

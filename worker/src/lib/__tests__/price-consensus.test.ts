@@ -9,7 +9,8 @@ describe("computePriceConsensus", () => {
     ];
     const result = computePriceConsensus(sources, 1.0, 50);
     expect(result!.confidence).toBe("high");
-    expect(result!.price).toBeCloseTo(1.0001, 4);
+    expect(result!.price).toBeCloseTo(1.0003, 4);
+    expect(result!.selectedSource).toBe("coingecko");
     expect(result!.source).toContain("coingecko");
   });
 
@@ -66,7 +67,8 @@ describe("computePriceConsensus", () => {
     expect(result!.agreeSources).toEqual(expect.arrayContaining(["coingecko", "defillama"]));
     expect(result!.agreeSources).not.toContain("pyth");
     expect(result!.disagreeSources).toContain("pyth");
-    expect(result!.price).toBe(1.0);
+    expect(result!.price).toBe(1.004);
+    expect(result!.selectedSource).toBe("coingecko");
   });
 
   it("breaks equal-size cluster ties by total cluster weight before peg proximity", () => {
@@ -132,7 +134,8 @@ describe("computePriceConsensus", () => {
     const result = computePriceConsensus(sources, 1.0, 50);
     expect(result!.confidence).toBe("high");
     // Binance (1.001) is closer to peg 1.0 than CoinGecko (1.003), same weight
-    expect(result!.price).toBe(1.001);
+    expect(result!.price).toBe(1.002);
+    expect(result!.selectedSource).toBe("binance");
   });
 
   it("breaks weight tie for NAV tokens by choosing source closest to cluster median", () => {
@@ -143,8 +146,8 @@ describe("computePriceConsensus", () => {
     ];
     const result = computePriceConsensus(sources, null, 50);
     expect(result!.confidence).toBe("high");
-    // Both CG and Binance are equidistant from median 1.11, so either is acceptable
-    expect([1.12, 1.10]).toContain(result!.price);
+    expect(result!.price).toBe(1.11);
+    expect([ "coingecko", "binance" ]).toContain(result!.selectedSource);
   });
 
   it("agrees at exactly 50bps boundary (inclusive)", () => {

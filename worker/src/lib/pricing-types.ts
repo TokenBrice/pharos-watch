@@ -7,8 +7,22 @@ export interface PriceSourceDiagnostics {
   observedAtModeBySource?: Record<string, PriceObservedAtMode | null>;
 }
 
+export interface SelectedPrice {
+  price: number;
+  source: string;
+  selectedSource: string;
+  confidence: PriceConfidence;
+  observedAt: number | null;
+  observedAtMode: PriceObservedAtMode | null;
+  syncedAt: number | null;
+  consensusSources?: string[];
+  agreeSources?: string[];
+  diagnostics?: PriceSourceDiagnostics;
+}
+
 export interface PriceMetadata {
   source: string;
+  selectedSource?: string | null;
   confidence: PriceConfidence | null;
   observedAt: number | null;
   observedAtMode: PriceObservedAtMode | null;

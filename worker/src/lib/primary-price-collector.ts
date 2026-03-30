@@ -6,9 +6,6 @@ interface PrimaryPriceAssetLike {
   id: string;
   symbol: string;
   geckoId?: string | null;
-  priceObservedAt?: number | null;
-  priceObservedAtMode?: PriceObservedAtMode | null;
-  priceUpdatedAt?: number | null;
 }
 
 interface PythQuote {
@@ -39,12 +36,18 @@ interface DexAggregateQuote {
   source_total_tvl: number;
 }
 
+export interface DlListQuote {
+  price: number;
+  observedAt: number | null;
+  observedAtMode: PriceObservedAtMode | null;
+}
+
 export interface PrimaryCollectedQuotes {
   cgPrice: number | null;
   cgObservedAt: number | null;
   cgTickerPrice: number | null;
   cgTickerObservedAt: number | null;
-  dlListPrice: number | null;
+  dlListQuote?: DlListQuote;
   pythQuote?: PythQuote;
   binancePrice: number | null;
   binanceObservedAt: number | null;
@@ -91,6 +94,19 @@ function buildSourcePrice(input: {
   };
 }
 
+function getAdjustedPythWeight(confidenceBps: number, baseWeight: number): number {
+  if (!Number.isFinite(confidenceBps) || confidenceBps < 0) {
+    return baseWeight;
+  }
+  if (confidenceBps >= 250) {
+    return 0;
+  }
+
+  const confidencePenalty = Math.min(0.85, confidenceBps / 250);
+  const adjustedWeight = baseWeight * (1 - confidencePenalty);
+  return Math.max(0.25, Number(adjustedWeight.toFixed(3)));
+}
+
 function pricesAgreeWithinBps(left: number, right: number, thresholdBps: number): boolean {
   const mid = (left + right) / 2;
   if (mid <= 0) return false;
@@ -118,9 +134,9 @@ export function buildPrimarySourceCandidates(
     }),
     buildSourcePrice({
       source: "defillama-list",
-      price: collected.dlListPrice,
-      observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
-      observedAtMode: asset.priceObservedAtMode ?? "unknown",
+      price: collected.dlListQuote?.price ?? null,
+      observedAt: collected.dlListQuote?.observedAt ?? null,
+      observedAtMode: collected.dlListQuote?.observedAtMode ?? "unknown",
     }),
     buildSourcePrice({
       source: "binance",
@@ -157,7 +173,10 @@ export function buildPrimarySourceCandidates(
 
   const pythQuote = collected.pythQuote;
   if (pythQuote) {
-    const pythWeight = pythQuote.confidenceBps > 200 ? 0 : pythQuote.confidenceBps > 100 ? 1 : undefined;
+    const pythWeight = getAdjustedPythWeight(
+      pythQuote.confidenceBps,
+      getPricingSourceRegistryEntry("pyth")?.defaultWeight ?? 2,
+    );
     const pythSource = buildSourcePrice({
       source: "pyth",
       price: pythQuote.price,
@@ -171,7 +190,7 @@ export function buildPrimarySourceCandidates(
   }
 
   const redstoneQuote = collected.redstoneQuote;
-  if (redstoneQuote && redstoneQuote.venueCount >= 2 && redstoneQuote.venueAgreementPct >= 50) {
+  if (redstoneQuote && redstoneQuote.venueCount >= 2 && redstoneQuote.venueAgreementPct >= 60) {
     const redstoneSource = buildSourcePrice({
       source: "redstone",
       price: redstoneQuote.price,

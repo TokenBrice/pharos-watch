@@ -1,6 +1,32 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v2.17` (2026-02-01 -> 2026-03-24).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v2.19` (2026-02-01 -> 2026-03-30).
+
+---
+
+## v2.19 - Explicit source semantics, cluster-median publication, and fallback identity hardening (Mar 30, 2026)
+
+**Commit:** `unreleased`
+
+- Pricing sources now carry explicit freshness kind, max trusted age, upstream-timestamp support, single-source authority, and market-capability metadata in the canonical registry
+- High-confidence consensus now publishes the winning cluster median instead of one agreeing member's raw price
+- The internally selected best cluster member is still preserved for provenance and downstream policy, separate from the published cluster-median mark
+- DefiLlama list quotes now enter primary pricing as typed inputs with explicit observed-time provenance
+- DEX bridge freshness now preserves per-source timestamps from `price_sources_json` instead of flattening them to the row write time
+- DefiLlama contract fallback now prefers canonical tracked deployment identities, validates quotes before claiming the asset, and can probe multiple exact tracked coin ids
+- DexScreener fallback now prioritizes exact-target assets under the request cap and still keeps symbol search reserved for addressless assets only
+- Pyth confidence weighting is now smoother across medium-confidence prints, RedStone now needs at least 60% venue agreement, and pricing provider audits now run in CI
+
+---
+
+## v2.18 - Validated DefiLlama fallback admission and exact-target DexScreener gating (Mar 30, 2026)
+
+**Commit:** `unreleased`
+
+- DefiLlama pass 1 and pass 1b now validate quotes against peg-aware bounds before marking an asset as resolved
+- An unreasonable DL contract quote can no longer block later CoinMarketCap, Jupiter, or DexScreener fallbacks in the same run
+- DexScreener symbol search is now disabled whenever the asset already has a canonical exact chain+address lookup path
+- Symbol-only DexScreener recovery remains available only for addressless assets with a unique tracked symbol
 
 ---
 
@@ -226,4 +252,4 @@ Internal changelog reconstructed from the machine-readable methodology version s
 ## Notes
 
 - Canonical machine-readable source: `shared/lib/pricing-pipeline-version.ts`
-- Live consensus and enrichment logic runs through `worker/src/lib/price-consensus.ts` and `worker/src/cron/sync-stablecoins/enrich-prices.ts`
+- Live consensus and enrichment logic runs through `worker/src/lib/price-consensus.ts`, `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts`, and `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts`

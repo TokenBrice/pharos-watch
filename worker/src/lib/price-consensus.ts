@@ -37,6 +37,7 @@ export interface ConsensusResult {
   price: number;
   source: string;
   selectedSource: string;
+  priceEstimator: "selected_source" | "cluster_median";
   confidence: PriceConfidence;
   agreeSources: string[];
   disagreeSources: string[];
@@ -91,6 +92,7 @@ export function computePriceConsensus(
       price: s.price,
       source: s.source,
       selectedSource: s.source,
+      priceEstimator: "selected_source",
       confidence: "single-source",
       agreeSources: [s.source],
       disagreeSources: [],
@@ -116,12 +118,14 @@ export function computePriceConsensus(
 
   if (bestCluster.length >= 2) {
     const clusterRef = pegRef != null && pegRef > 0 ? pegRef : medianPrice(bestCluster);
+    const clusterPrice = medianPrice(bestCluster);
     const chosen = pickBestClusterSource(bestCluster, clusterRef);
     const agreeSources = bestCluster.map((s) => s.source);
     return {
-      price: chosen.price,
+      price: clusterPrice,
       source: buildSourceLabel(bestCluster),
       selectedSource: chosen.source,
+      priceEstimator: "cluster_median",
       confidence: "high",
       agreeSources,
       disagreeSources,
@@ -139,6 +143,7 @@ export function computePriceConsensus(
     price: chosen.price,
     source: chosen.source,
     selectedSource: chosen.source,
+    priceEstimator: "selected_source",
     confidence: "low",
     agreeSources: [chosen.source],
     disagreeSources: sources.filter((s) => s !== chosen).map((s) => s.source),
@@ -320,13 +325,13 @@ function getSourceTrustPriority(source: string): number {
 
 function pickBestClusterSource(cluster: SourcePrice[], ref: number): SourcePrice {
   return cluster.reduce((best, candidate) => {
+    if (candidate.weight !== best.weight) {
+      return candidate.weight > best.weight ? candidate : best;
+    }
     const candidateTrust = getSourceTrustPriority(candidate.source);
     const bestTrust = getSourceTrustPriority(best.source);
     if (candidateTrust !== bestTrust) {
       return candidateTrust < bestTrust ? candidate : best;
-    }
-    if (candidate.weight !== best.weight) {
-      return candidate.weight > best.weight ? candidate : best;
     }
     const candidateDistance = Math.abs(candidate.price - ref);
     const bestDistance = Math.abs(best.price - ref);

@@ -90,6 +90,10 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload): Stable
         typeof asset.priceSyncedAt === "number" && Number.isFinite(asset.priceSyncedAt)
           ? asset.priceSyncedAt
           : null;
+      const priceSelectedSource =
+        typeof asset.priceSelectedSource === "string" && asset.priceSelectedSource.length > 0
+          ? asset.priceSelectedSource
+          : asset.priceSource ?? MISSING_PRICE_SOURCE;
       const normalizedConfidence =
         confidence === "high" || confidence === "single-source" || confidence === "low" || confidence === "fallback"
           ? confidence
@@ -104,6 +108,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload): Stable
         priceObservedAt,
         priceObservedAtMode,
         priceSyncedAt,
+        priceSelectedSource,
         circulatingPrevDay: toPegBuckets(asset.circulatingPrevDay),
         circulatingPrevWeek: toPegBuckets(asset.circulatingPrevWeek),
         circulatingPrevMonth: toPegBuckets(asset.circulatingPrevMonth),
@@ -182,8 +187,10 @@ export function stampPriceMetadata(
   consensusSources?: string[],
   agreeSources?: string[],
   syncedAt?: number | null,
+  selectedSource?: string | null,
 ): void {
   asset.priceSource = source;
+  asset.priceSelectedSource = selectedSource ?? source;
   asset.priceConfidence = confidence ?? null;
   asset.priceObservedAt = observedAt;
   asset.priceObservedAtMode = observedAtMode ?? null;
@@ -200,6 +207,7 @@ export function stampPriceMetadata(
 export function clearPriceMetadata(asset: PeggedAsset): void {
   asset.price = null;
   asset.priceSource = undefined;
+  asset.priceSelectedSource = null;
   asset.priceConfidence = null;
   asset.priceUpdatedAt = null;
   asset.priceObservedAt = null;
@@ -275,6 +283,7 @@ export function mergeSupplementalLastKnownGood(
       if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
         merged.price = asset.price;
         merged.priceSource = asset.priceSource;
+        merged.priceSelectedSource = asset.priceSelectedSource ?? null;
         merged.priceConfidence = asset.priceConfidence ?? null;
         merged.priceUpdatedAt = asset.priceUpdatedAt ?? null;
         merged.priceObservedAt = asset.priceObservedAt ?? asset.priceUpdatedAt ?? null;
