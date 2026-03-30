@@ -1,5 +1,6 @@
 export const COMMON_VALIDATE_PREBUILD_COMMANDS = [
   "npm run audit:deps",
+  "npm run audit:pricing-providers",
   "npm run lint",
   "npm run typecheck",
   "npm run check:worker-boundary",
@@ -50,4 +51,3 @@ export function buildCiValidateStepPlan({
 export function buildCiValidateCommands() {
   return buildCiValidateStepPlan().map((step) => step.cmd);
 }
-
