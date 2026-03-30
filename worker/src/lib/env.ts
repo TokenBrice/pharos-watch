@@ -33,6 +33,7 @@ export interface Env {
   MINT_BURN_STALE_CRIT_SEC?: string;
   MINT_BURN_ALERT_COOLDOWN_SEC?: string;
   OPENEXCHANGERATES_API_KEY?: string;
+  SIM_API_KEY?: string;
   MAINTENANCE_MODE?: string;
 }
 
@@ -71,6 +72,7 @@ export const WORKER_OPTIONAL_ENV_KEYS = [
   "MINT_BURN_STALE_CRIT_SEC",
   "MINT_BURN_ALERT_COOLDOWN_SEC",
   "OPENEXCHANGERATES_API_KEY",
+  "SIM_API_KEY",
   "MAINTENANCE_MODE",
 ] as const;
 

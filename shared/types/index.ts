@@ -9,3 +9,4 @@ export * from "./yield";
 export * from "./mint-burn";
 export * from "./redemption";
 export * from "./chains";
+export * from "./treasury-stable-exposure";

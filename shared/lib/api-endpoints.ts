@@ -107,6 +107,7 @@ export const API_PATHS = {
   stabilityIndex: (detail = false) => buildQueryPath("/api/stability-index", detail ? { detail: true } : undefined),
   reportCards: () => "/api/report-cards",
   redemptionBackstops: () => "/api/redemption-backstops",
+  treasuryStableExposure: () => "/api/treasury-stable-exposure",
   mintBurnFlows: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/mint-burn-flows", params),
   mintBurnEvents: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/mint-burn-events", params),
   stressSignals: (stablecoinId?: string, days?: number) =>
@@ -340,6 +341,16 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
   {
     key: "redemption-backstops",
     path: API_PATHS.redemptionBackstops(),
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+    strictContract: true,
+    probeGroup: "public",
+  },
+  {
+    key: "treasury-stable-exposure",
+    path: API_PATHS.treasuryStableExposure(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,

@@ -54,6 +54,9 @@ export const DEFILLAMA_COINS = "https://coins.llama.fi";
 export const DEFILLAMA_API = "https://api.llama.fi";
 
 export const USER_AGENT = "Pharos/1.0 (stablecoin analytics)";
+export const SIM_BALANCES_BASE_URL = "https://api.sim.dune.com/v1/evm/balances";
+export const SIM_BALANCES_REQUEST_TIMEOUT_MS = 12_000;
+export const SIM_BALANCES_MAX_RETRIES = 1;
 
 export const RUB_FALLBACK = 0.011;
 
@@ -83,6 +86,7 @@ export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = {
   "dex-liquidity": SECONDS.TWELVE_HOURS,
   "yield-data": SECONDS.ONE_HOUR,
   dews: SECONDS.THIRTY_MINUTES,
+  "treasury-stable-exposure": SECONDS.ONE_DAY,
 };
 
 // --- Depeg multi-source confirmation (>$1B coins) ---
@@ -163,6 +167,7 @@ export const CIRCUIT_SOURCE = {
   TRONGRID: "trongrid",
   ANTHROPIC: "anthropic-api",
   BLUECHIP: "bluechip-api",
+  SIM_BALANCES: "sim-balances",
   CG_TICKER: "coingecko-ticker",
   KINESIS_KAU: "kinesis-kau-horizon",
   KINESIS_KAG: "kinesis-kag-horizon",

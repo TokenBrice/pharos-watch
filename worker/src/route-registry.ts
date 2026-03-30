@@ -50,6 +50,7 @@ import { handleStressSignals } from "./api/stress-signals";
 import { handleChains } from "./api/chains";
 import { handleNonUsdShare } from "./api/non-usd-share";
 import { handleBackfillDEWS } from "./api/backfill-dews";
+import { handleTreasuryStableExposure } from "./api/treasury-stable-exposure";
 import {
   handleDebugSyncState,
   handleDiscoveryCandidateDismiss,
@@ -201,6 +202,7 @@ const STATIC_ROUTES = [
   )),
   defineStaticRoute("report-cards", ({ db }) => handleReportCards(db)),
   defineStaticRoute("redemption-backstops", ({ db }) => handleRedemptionBackstops(db)),
+  defineStaticRoute("treasury-stable-exposure", ({ db }) => handleTreasuryStableExposure(db)),
   defineStaticRoute("yield-rankings", ({ db }) => handleYieldRankings(db)),
   defineStaticRoute("yield-history", ({ db, url }) => handleYieldHistory(db, url)),
   defineStaticRoute("safety-score-history", ({ db, url }) => handleSafetyScoreHistory(db, url)),

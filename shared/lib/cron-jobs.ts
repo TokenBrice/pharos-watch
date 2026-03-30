@@ -316,6 +316,15 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     maxConnections: 1, // Sequential Etherscan eth_getStorageAt + eth_call probes
   },
   {
+    job: "sync-treasury-stable-exposure",
+    label: "Treasury stable exposure",
+    group: "daily",
+    intervalSec: DAY_SECONDS,
+    scheduleKey: "daily0800Utc",
+    triggerMode: "shared",
+    maxConnections: 2, // Per owner group: full balances + stablecoin balances, fetched sequentially
+  },
+  {
     job: "sync-live-reserves",
     label: "Live reserve sync",
     group: "hourly",
