@@ -102,6 +102,7 @@ describe("ops admin proxy", () => {
   });
 
   it("returns 502 when the upstream fetch itself fails", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.stubGlobal("fetch", vi.fn(async () => {
       throw new Error("network down");
     }));
@@ -114,6 +115,7 @@ describe("ops admin proxy", () => {
 
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ error: "Operator API upstream fetch failed" });
+    expect(warnSpy).toHaveBeenCalledWith("[ops-proxy] upstream fetch failed (Error): network down");
   });
 
   it("returns 504 when the upstream request times out", async () => {

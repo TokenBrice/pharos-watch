@@ -1,5 +1,5 @@
 import { isAdminPath, validateEndpointMethod } from "@shared/lib/api-endpoints";
-import { resolveOpsUiOrigin } from "../../lib/ops-origin";
+import { rejectIfNotOpsUiOrigin } from "../../lib/ops-origin";
 import {
   resolveOpsApiOrigin,
   validatePagesOpsProxyEnv,
@@ -96,11 +96,22 @@ function buildProxyResponse(upstreamResponse: Response, method: string): Respons
   });
 }
 
+function summarizeFetchError(error: unknown): { kind: string; message: string } {
+  if (error instanceof DOMException) {
+    return { kind: error.name, message: error.message };
+  }
+  if (error instanceof Error) {
+    return { kind: error.name, message: error.message };
+  }
+  return { kind: typeof error, message: String(error) };
+}
+
 export const onRequest = async (context: OpsAdminProxyContext): Promise<Response> => {
   const { request, env, params } = context;
   const requestUrl = new URL(request.url);
-  if (requestUrl.origin !== resolveOpsUiOrigin(env)) {
-    return jsonError(404, "Not found");
+  const rejected = rejectIfNotOpsUiOrigin(request, env, () => jsonError(404, "Not found"));
+  if (rejected) {
+    return rejected;
   }
 
   for (const issue of validatePagesOpsProxyEnv(env)) {
@@ -139,7 +150,9 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
       redirect: "manual",
       signal: timeout.signal,
     });
-  } catch {
+  } catch (error) {
+    const summary = summarizeFetchError(error);
+    console.warn(`[ops-proxy] upstream fetch failed (${summary.kind}): ${summary.message}`);
     if (timeout.isTimedOut()) {
       return jsonError(504, "Operator API upstream timed out");
     }

@@ -6,3 +6,11 @@ export { normalizeOrigin };
 export function resolveOpsUiOrigin(env: { OPS_UI_ORIGIN?: string }): string {
   return resolveOrigin(env.OPS_UI_ORIGIN, DEFAULT_OPS_UI_ORIGIN);
 }
+
+export function rejectIfNotOpsUiOrigin(
+  request: Request,
+  env: { OPS_UI_ORIGIN?: string },
+  notFound: () => Response,
+): Response | null {
+  return new URL(request.url).origin === resolveOpsUiOrigin(env) ? null : notFound();
+}

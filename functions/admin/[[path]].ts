@@ -1,4 +1,4 @@
-import { resolveOpsUiOrigin } from "../lib/ops-origin";
+import { rejectIfNotOpsUiOrigin } from "../lib/ops-origin";
 
 interface AdminHostGateEnv {
   ASSETS: {
@@ -8,16 +8,16 @@ interface AdminHostGateEnv {
 }
 
 export const onRequest = async ({ request, env }: { request: Request; env: AdminHostGateEnv }) => {
-  const requestUrl = new URL(request.url);
-  if (requestUrl.origin !== resolveOpsUiOrigin(env)) {
-    return new Response("Not found", {
+  const rejected = rejectIfNotOpsUiOrigin(request, env, () => new Response("Not found", {
       status: 404,
       headers: {
         "Cache-Control": "no-store",
         "Content-Type": "text/plain; charset=utf-8",
         "X-Robots-Tag": "noindex, nofollow",
       },
-    });
+    }));
+  if (rejected) {
+    return rejected;
   }
 
   return env.ASSETS.fetch(request);
