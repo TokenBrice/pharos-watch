@@ -9,6 +9,7 @@ import { UsdsStatusCard } from "@/components/usds-status-card";
 import { EurcBlacklistCard } from "@/components/eurc-blacklist-card";
 import { BlacklistStats } from "@/components/blacklist-stats";
 import { BlacklistChart } from "@/components/blacklist-chart";
+import { BlacklistStatusCharts } from "@/components/blacklist-status-charts";
 import { BlacklistFilters } from "@/components/blacklist-filters";
 import { BlacklistTable } from "@/components/blacklist-table";
 import { TablePagination } from "@/components/table-pagination";
@@ -246,6 +247,8 @@ function BlacklistPageInner() {
       />
 
       <BlacklistStats stats={summary?.stats} isLoading={summaryLoading} />
+
+      <BlacklistStatusCharts />
 
       <BlacklistChart chart={summary?.chart} isLoading={summaryLoading} />
 
