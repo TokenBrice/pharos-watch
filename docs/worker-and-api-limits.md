@@ -27,6 +27,7 @@ It intentionally does **not** treat vendor pricing-plan quotas as source of trut
 - `worker/src/cron/daily-digest.ts`
 - `worker/src/cron/sync-yield-data.ts`
 - `worker/src/cron/sync-yield-supplemental.ts`
+- `worker/src/cron/sync-treasury-stable-exposure.ts`
 
 ---
 
@@ -66,6 +67,7 @@ The same rule applies to Worker-side integration clients. Telegram delivery, X p
 | Live reserve sync overall deadline     | `12 minutes`        | `worker/src/lib/cron-lease.ts`                                    | Explicit wrapper budget for the serialized reserve loop before the rest of the hourly slot |
 | Yield publication overall deadline     | `10 minutes`        | `worker/src/lib/cron-lease.ts`                                    | Dedicated hourly `sync-yield-data` timeout after moving off the half-hourly lane |
 | Yield supplemental overall deadline    | `12 minutes`        | `worker/src/lib/cron-lease.ts`                                    | Dedicated 4-hour `sync-yield-supplemental` timeout for optional protocol families |
+| Treasury stable exposure deadline      | `8 minutes`         | `worker/src/lib/cron-lease.ts`                                    | Daily treasury snapshot budget, bounded by the reviewed owner-chain launch allowlist |
 | Live reserve history retention         | `90 days`           | `worker/src/lib/live-reserves-store-write.ts`                     | `reserve_composition_history` and `reserve_sync_attempt_history` are pruned during reserve-sync cleanup |
 | Blacklist sync runtime budget          | `7 minutes`         | `worker/src/cron/sync-blacklist.ts`                               | Guardrail before the trigger wrapper times out                              |
 | Blacklist sync subrequest budget       | `900`               | `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/evm-logs.ts` | Covers explorer/RPC calls for a single run                                  |
@@ -92,6 +94,7 @@ The same rule applies to Worker-side integration clients. Telegram delivery, X p
 | Jupiter price fallback                | `50` ids/request, `5 s` timeout/request, `0` retries                         | `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts` | Solana-only enrichment pass between CMC and DexScreener                                                            |
 | DexScreener price-enrichment pass     | `10` total requests, `5 s` timeout/request, `45 s` total budget, `0` retries | `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts` | Best-effort final fallback for missing prices; exact token-address lookups run first, and symbol search is reserved for addressless assets |
 | CoinMarketCap fallback                | `1 call / hour`, `10 s` timeout, `0` retries                                 | `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts` | Rate-limited through cache key `cmc_last_fetch`                                                                    |
+| Sim balances treasury snapshot        | `12 s` timeout/request, `1` retry, `2` peak connections in daily 08:00 lane  | `worker/src/lib/constants.ts`, `shared/lib/cron-jobs.ts`   | Each owner group issues one full-balances read plus one stablecoin-only read; launch scope is capped by reviewed owner-chain tuples |
 | Generic circuit breaker               | opens after `3` consecutive failures, probes every `30 minutes`              | `worker/src/lib/circuit-breaker.ts`       | Used to stop hammering degraded upstreams                                                                          |
 
 ### What this means operationally

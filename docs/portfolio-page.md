@@ -23,6 +23,7 @@ The interactive page depends on three local/runtime sources:
 1. `useReportCards()` for live stablecoin grades and per-dimension scores.
 2. `useLogos()` for static logo assets from `data/logos.json`.
 3. `usePortfolio(reportData?.cards)` for holdings state, browser persistence, portfolio grade math, and upstream exposure derivation.
+4. `useTreasuryStableExposure()` for the daily protocol-treasury stablecoin leaderboard rendered below the personal holdings tools.
 
 There is no dedicated `/api/portfolio` endpoint. Portfolio holdings stay client-side.
 
@@ -46,6 +47,7 @@ There is no dedicated `/api/portfolio` endpoint. Portfolio holdings stay client-
 - preset loading (`CeFi Core`, `Treasury Heavy`, `DeFi Native`, `Barbell Mix`)
 - aggregate portfolio grade and radar chart
 - upstream exposure view (grouped or detailed)
+- treasury stable-exposure leaderboard (fetched, read-only, cache-backed)
 - share link generation
 - empty-state onboarding via `src/components/portfolio-empty-state.tsx`
 
@@ -60,7 +62,8 @@ When changing portfolio behavior, update this doc alongside the relevant runtime
 1. Route-shell metadata or noindex behavior -> `src/app/portfolio/page.tsx`
 2. Holdings persistence / share encoding -> `src/hooks/use-portfolio.ts`, `src/lib/portfolio-codec.ts`
 3. Exposure math or grouping -> `src/lib/portfolio-analysis.ts`
-4. Portfolio-grade semantics -> `docs/report-cards.md` and any affected methodology copy
+4. Treasury leaderboard/API contract -> `src/hooks/use-treasury-stable-exposure.ts`, `src/components/treasury-stable-exposure-table.tsx`, worker treasury endpoint docs
+5. Portfolio-grade semantics -> `docs/report-cards.md` and any affected methodology copy
 
 ---
 
@@ -71,7 +74,9 @@ When changing portfolio behavior, update this doc alongside the relevant runtime
 | `src/app/portfolio/page.tsx` | Static route shell, metadata, breadcrumb/shell config |
 | `src/app/portfolio/client.tsx` | Interactive holdings editor, presets, grade/exposure presentation |
 | `src/hooks/use-portfolio.ts` | Browser persistence, share-link helpers, portfolio score derivation |
+| `src/hooks/use-treasury-stable-exposure.ts` | Daily treasury stable-exposure query + freshness metadata |
 | `src/lib/portfolio-codec.ts` | Query/localStorage encoding + canonical-ID migration |
 | `src/lib/portfolio-analysis.ts` | Upstream exposure grouping and collateral categorization |
+| `src/components/treasury-stable-exposure-table.tsx` | Treasury leaderboard sorting, coverage disclosure, holdings expansion |
 | `src/components/portfolio-empty-state.tsx` | Preset-first onboarding and empty-state copy |
 | `docs/report-cards.md` | Underlying scoring model consumed by the portfolio page |

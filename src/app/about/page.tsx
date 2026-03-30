@@ -46,7 +46,7 @@ const DATA_SOURCE_GROUPS = [
   {
     label: "On-chain Reads & Events",
     sources:
-      "Etherscan v2 (freeze events), TronGrid, Alchemy, dRPC, selected public chain RPCs (EVM RPCs, including Ethereum mint/burn flows and direct Liquity/B.Protocol reads), and reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist coverage",
+      "Sim by Dune wallet balances, reviewed DefiLlama treasury adapters on GitHub, Etherscan v2 (freeze events), TronGrid, Alchemy, dRPC, selected public chain RPCs (EVM RPCs, including Ethereum mint/burn flows and direct Liquity/B.Protocol reads), and reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist coverage",
   },
   {
     label: "Ratings & Reference",
@@ -358,6 +358,14 @@ export default function AboutPage() {
       icon: Layers,
       href: "/safety-scores/",
       linkLabel: "Open stress panel",
+    },
+    {
+      title: "Protocol Treasury Stable Exposure",
+      description:
+        "A ranked view of public protocol and DAO treasuries by decentralized stablecoin dollars, treasury share, stable-sleeve mix, and weighted stablecoin grade.",
+      icon: GitBranch,
+      href: "/portfolio/",
+      linkLabel: "Open portfolio lab",
     },
     {
       title: "Depeg Early Warning (DEWS)",

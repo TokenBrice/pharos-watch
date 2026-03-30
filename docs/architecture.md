@@ -40,6 +40,7 @@ Cron trigger metadata follows the same single-source pattern. `shared/lib/cron-j
 | `GET /api/safety-score-history`              | Per-coin Safety Score grade transition history (`?stablecoin=ID&days=N`)                                                                                                                                                       |
 | `GET /api/yield-rankings`                    | Cache-backed yield rankings with live-hydrated Safety Scores and risk-adjusted metrics                                                                                                                                         |
 | `GET /api/yield-history`                     | Per-coin historical yield data (`?stablecoin=ID&days=90`)                                                                                                                                                                      |
+| `GET /api/treasury-stable-exposure`          | Daily snapshot of reviewed protocol / DAO treasury stablecoin sleeves, decentralized stable exposure, and stable-sleeve weighted grades                                                                                        |
 | `GET /api/mint-burn-flows`                   | Mint/burn flow data with gauge score, per-coin net-flow + pressure-shift signals, hourly timeseries (`?stablecoin=ID`, `?hours=N`)                                                                                             |
 | `GET /api/mint-burn-events`                  | Individual mint/burn transfer events for a stablecoin (`?stablecoin=ID`, `?direction=`, `?chain=ethereum`, `?burnType=`, `?scope=all or counted`, `?minAmount=`, `?limit=N&offset=M`)                                       |
 | `GET /api/stress-signals`                    | DEWS stress signal scores per coin (`?stablecoin=ID`, `?days=N`)                                                                                                                                                               |
@@ -224,6 +225,7 @@ src/                              # Next.js frontend (static export)
 │   ├── blacklist-table-logic.ts  # Blacklist table sorting helpers
 │   ├── yield-table-logic.ts      # Yield leaderboard sorting helpers
 │   ├── stablecoin-table-column-visibility.tsx # Stablecoin table column picker UI
+│   ├── treasury-stable-exposure-table.tsx # Portfolio treasury leaderboard + holdings expansion
 │   ├── status/                   # Status dashboard component decomposition
 │   │   ├── page-primitives.tsx   # Status-page-only shell pieces (summary badge, section shell, notice rail, lane links)
 │   │   ├── top-fold-copy.ts      # Status top-fold tone/copy config
@@ -353,6 +355,7 @@ src/                              # Next.js frontend (static export)
 │   ├── use-api-query.ts          # Generic typed fetch + polling helper wrapping TanStack Query, including shared admin-auth query helpers
 │   ├── use-url-filters.ts        # Shared URL search param management (getParam, setParam, setParams, replaceParams)
 │   ├── use-portfolio.ts          # Portfolio holdings state + browser persistence; delegates codec/analysis to src/lib/portfolio-*.ts
+│   ├── use-treasury-stable-exposure.ts # GET /api/treasury-stable-exposure
 │   ├── use-preferences.ts        # User preference state (persistent settings)
 │   ├── use-stress-test.ts        # Stress test state, computeStressedGrades invocation, impact calculation
 │   └── use-status-history.ts     # GET /api/status-history through the ops-host same-origin proxy
@@ -467,6 +470,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── sync-redemption-backstops.ts # Redemption backstop + effective-exit snapshot sync → D1 (hourly, reserve lane)
     │   ├── sync-blacklist.ts     # Etherscan/TronGrid/dRPC → D1 (incremental)
     │   ├── sync-usds-status.ts   # USDS protocol status → D1 (daily, 8AM UTC)
+    │   ├── sync-treasury-stable-exposure.ts # Daily Sim-backed treasury stablecoin snapshot publisher
     │   ├── sync-fx-rates.ts      # ECB + gold-api.com → D1 FX/commodity rates (15min, metals per-run)
     │   ├── sync-bluechip.ts      # Bluechip safety ratings → D1 (daily, 08:05 UTC)
     │   ├── dex-discovery/        # Independent 30-min staged-pool discovery pipeline
@@ -546,6 +550,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── stress-signals.ts    # GET /api/stress-signals (DEWS scores)
     │   ├── discovery.ts         # GET /api/discovery-candidates + POST /api/discovery-candidates/:id/dismiss
     │   ├── yield-history.ts     # GET /api/yield-history
+    │   ├── treasury-stable-exposure.ts # GET /api/treasury-stable-exposure
     │   ├── mint-burn-flows.ts    # GET /api/mint-burn-flows (route-level aggregate/per-coin orchestration)
     │   ├── mint-burn-flows-shared.ts # Shared mint/burn cache, baseline, and coverage helpers
     │   ├── mint-burn-events.ts   # GET /api/mint-burn-events (paginated event log)
