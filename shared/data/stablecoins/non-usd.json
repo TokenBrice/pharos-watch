@@ -1532,7 +1532,6 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": "possible",
     "chainTier": "established-alt-l1",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "reserves": [
@@ -3247,7 +3246,6 @@
     "contracts": [
       { "chain": "celo", "address": "0xccf663b1ff11028f0b19058d0f7b674004a40746", "decimals": 18 }
     ],
-    "canBeBlacklisted": "possible",
     "chainTier": "established-alt-l1",
     "deploymentModel": "single-chain",
     "custodyModel": "onchain",

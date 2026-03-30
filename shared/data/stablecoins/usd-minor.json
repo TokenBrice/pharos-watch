@@ -665,7 +665,6 @@
         "decimals": 6
       }
     ],
-    "canBeBlacklisted": "possible",
     "dependencies": [
       {
         "id": "usdt-tether",
@@ -1429,7 +1428,6 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": "possible",
     "deploymentModel": "native-multichain",
     "collateralQuality": "exotic",
     "liveReservesConfig": {
@@ -1924,7 +1922,6 @@
         "decimals": 6
       }
     ],
-    "canBeBlacklisted": "possible",
     "dependencies": [
       {
         "id": "usdc-circle",
@@ -2100,7 +2097,6 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": "possible",
     "chainTier": "mature-alt-l1",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "reserves": [
@@ -3025,6 +3021,7 @@
       "rwa": false,
       "navToken": false
     },
+    "canBeBlacklisted": "possible",
     "collateral": "SNX, ETH, and USDC/stataUSDC via Synthetix V3; direct SNX minting deprecated in 2025; sUSD now backed primarily by delta-neutral basis-trade vaults and protocol treasury activity",
     "pegMechanism": "Overcollateralization via C-ratio (200%+); V3 expanded collateral to SNX, ETH, USDC/stataUSDC; sUSD minting against SNX deprecated in 2025; peg sustained via SLP Vault basis-trade strategy and protocol fee buybacks",
     "llamaId": "22",
@@ -4234,17 +4231,20 @@
       {
         "name": "iBGT (Infrared liquid staked BGT)",
         "pct": 40,
-        "risk": "high"
+        "risk": "high",
+        "blacklistable": true
       },
       {
         "name": "iBERA / WBERA (Berachain native)",
         "pct": 25,
-        "risk": "high"
+        "risk": "high",
+        "blacklistable": true
       },
       {
         "name": "Wrapped BTC variants (pumpBTC, solvBTC, uniBTC)",
         "pct": 15,
-        "risk": "high"
+        "risk": "high",
+        "blacklistable": true
       },
       {
         "name": "ETH variants (beraETH, WETH, ylstETH, rsETH)",
@@ -4254,7 +4254,8 @@
       {
         "name": "Kodiak LP positions (WBTC-HONEY, WETH-HONEY, WETH-WBTC)",
         "pct": 10,
-        "risk": "high"
+        "risk": "high",
+        "blacklistable": true
       }
     ]
   },
@@ -5266,7 +5267,6 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": "possible",
     "chainTier": "unproven",
     "collateralQuality": "exotic",
     "reserves": [
@@ -5576,7 +5576,6 @@
         "decimals": 24
       }
     ],
-    "canBeBlacklisted": "possible",
     "chainTier": "established-alt-l1",
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "alt-lst-bridged-or-mixed",
@@ -6915,7 +6914,7 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": "possible",
+    "canBeBlacklisted": true,
     "collateralQuality": "exotic",
     "custodyModel": "institutional-regulated",
     "reserves": [
@@ -7342,7 +7341,6 @@
         "decimals": 18
       }
     ],
-    "canBeBlacklisted": "possible",
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
@@ -7723,7 +7721,7 @@
         "decimals": 6
       }
     ],
-    "canBeBlacklisted": "possible",
+    "canBeBlacklisted": true,
     "deploymentModel": "native-multichain",
     "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
@@ -8973,7 +8971,7 @@
         "decimals": 6
       }
     ],
-    "canBeBlacklisted": "possible",
+    "canBeBlacklisted": true,
     "collateralQuality": "exotic",
     "custodyModel": "onchain",
     "governanceQuality": "single-entity",
@@ -9109,7 +9107,6 @@
         "decimals": 8
       }
     ],
-    "canBeBlacklisted": "possible",
     "collateralQuality": "exotic",
     "custodyModel": "cex",
     "governanceQuality": "single-entity",
@@ -9246,7 +9243,7 @@
         "decimals": 6
       }
     ],
-    "canBeBlacklisted": "possible",
+    "canBeBlacklisted": true,
     "custodyModel": "institutional-regulated",
     "governanceQuality": "regulated-entity",
     "collateralQuality": "rwa",
