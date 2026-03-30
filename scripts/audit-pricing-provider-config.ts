@@ -16,21 +16,52 @@ interface AuditSection {
   notes: string[];
 }
 
+class HttpFetchError extends Error {
+  status: number;
+  url: string;
+
+  constructor(url: string, status: number) {
+    super(`${url} returned ${status}`);
+    this.name = "HttpFetchError";
+    this.status = status;
+    this.url = url;
+  }
+}
+
 async function fetchJson<T>(url: string): Promise<T> {
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(15_000),
   });
   if (!response.ok) {
-    throw new Error(`${url} returned ${response.status}`);
+    throw new HttpFetchError(url, response.status);
   }
   return response.json() as Promise<T>;
 }
 
 async function auditBinance(): Promise<AuditSection> {
-  const payload = await fetchJson<{ symbols?: Array<{ symbol?: string; status?: string }> }>(
-    CEX_PROVIDER_AUDIT_CONFIG.binance.metadataUrl,
-  );
+  let payload: { symbols?: Array<{ symbol?: string; status?: string }> };
+  try {
+    payload = await fetchJson<{ symbols?: Array<{ symbol?: string; status?: string }> }>(
+      CEX_PROVIDER_AUDIT_CONFIG.binance.metadataUrl,
+    );
+  } catch (error) {
+    if (
+      error instanceof HttpFetchError &&
+      error.url === CEX_PROVIDER_AUDIT_CONFIG.binance.metadataUrl &&
+      (error.status === 403 || error.status === 451)
+    ) {
+      return {
+        provider: "binance",
+        ok: true,
+        checked: BINANCE_MARKETS.length,
+        missing: [],
+        notes: [`Skipped live metadata audit because Binance returned ${error.status} for this runner region`],
+      };
+    }
+    throw error;
+  }
+
   const tradablePairs = new Set(
     (payload.symbols ?? [])
       .filter((entry) => entry.symbol && (entry.status == null || entry.status === "TRADING"))
