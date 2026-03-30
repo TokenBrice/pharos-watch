@@ -1,5 +1,5 @@
 import { getCache } from "./db-cache";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
 import { buildDependencyGraphEdges } from "@shared/lib/dependency-graph";
 import { deriveDependencies } from "@shared/lib/reserve-templates";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
@@ -32,6 +32,7 @@ import {
   resolveResilienceFactors,
   resolveGovernanceQuality,
   isBlacklistable,
+  enrichLiveSlicesForBlacklist,
 } from "@shared/lib/report-cards";
 import { loadStablecoinsCache, type StablecoinsCacheLoadOk } from "./stablecoins-cache";
 import type {
@@ -342,15 +343,18 @@ function computeCard(input: ComputeCardInput): ReportCard {
   const redemptionUsedForLiquidity =
     redemption?.resolutionState === "resolved" && redemption?.modelConfidence !== "low";
 
-  const canBeBlacklisted = isBlacklistable(meta, blacklistableIds);
   const resilienceFactors = resolveResilienceFactors(meta);
   const liveSlices = liveReserveMap.get(meta.id);
+  const enrichedLiveSlices = liveSlices
+    ? enrichLiveSlicesForBlacklist(liveSlices, blacklistableIds, ACTIVE_META_BY_ID)
+    : undefined;
+  const canBeBlacklisted = isBlacklistable(meta, blacklistableIds, enrichedLiveSlices);
   const deps = deriveDependencies(meta);
 
   const dimensions: Record<DimensionKey, ReturnType<typeof scorePegStability>> = {
     pegStability: scorePegStability(peg, meta),
     liquidity: scoreLiquidity(liq, redemption),
-    resilience: scoreResilience(meta, canBeBlacklisted, liveSlices),
+    resilience: scoreResilience(meta, canBeBlacklisted, enrichedLiveSlices ?? liveSlices),
     decentralization: scoreDecentralization(meta.flags.governance as GovernanceType, meta),
     dependencyRisk: scoreDependencyRisk(meta, overallScores),
   };

@@ -9,6 +9,7 @@ import {
   scoreDecentralization,
   chainInfraScore,
   isBlacklistable,
+  enrichLiveSlicesForBlacklist,
   GRADE_THRESHOLDS,
 } from "../report-cards";
 import type { ReportCard } from "../../types/report-cards";
@@ -541,5 +542,64 @@ describe("isBlacklistable", () => {
       ],
     };
     expect(isBlacklistable(meta as never)).toBe(false);
+  });
+});
+
+describe("enrichLiveSlicesForBlacklist", () => {
+  function metaStub(id: string, symbol: string) {
+    return { id, symbol } as never;
+  }
+
+  const blacklistableIds = new Set(["usdc-circle", "usde-ethena", "crvusd-curve"]);
+  const trackedMetaById = new Map([
+    ["usdc-circle", metaStub("usdc-circle", "USDC")],
+    ["usde-ethena", metaStub("usde-ethena", "USDe")],
+    ["crvusd-curve", metaStub("crvusd-curve", "crvUSD")],
+    ["xy-coin", metaStub("xy-coin", "XY")], // 2-char symbol, should be skipped
+  ]);
+
+  it("tags slice when name contains a blacklistable symbol", () => {
+    const live = [{ name: "Stablecoin collateral (sUSDe, sUSDS, crvUSD)", pct: 96.6, risk: "low" as const }];
+    const result = enrichLiveSlicesForBlacklist(live, blacklistableIds, trackedMetaById);
+    expect(result[0].blacklistable).toBe(true);
+  });
+
+  it("tags slice when coinId points to blacklistable coin", () => {
+    const live = [{ name: "stataUSDC GSM", pct: 25, risk: "low" as const, coinId: "usdc-circle" }];
+    const result = enrichLiveSlicesForBlacklist(live, blacklistableIds, trackedMetaById);
+    expect(result[0].blacklistable).toBe(true);
+  });
+
+  it("does not tag slice without blacklistable symbols", () => {
+    const live = [{ name: "ETH / wstETH", pct: 34, risk: "low" as const }];
+    const result = enrichLiveSlicesForBlacklist(live, blacklistableIds, trackedMetaById);
+    expect(result[0].blacklistable).toBeUndefined();
+  });
+
+  it("returns already-annotated slices unchanged", () => {
+    const live = [{ name: "Some reserves", pct: 50, risk: "low" as const, blacklistable: true }];
+    const result = enrichLiveSlicesForBlacklist(live, blacklistableIds, trackedMetaById);
+    expect(result[0]).toBe(live[0]); // same reference, no copy
+  });
+
+  it("skips symbols shorter than 3 characters", () => {
+    const idsWithShort = new Set([...blacklistableIds, "xy-coin"]);
+    const live = [{ name: "XY token pool", pct: 80, risk: "low" as const }];
+    const result = enrichLiveSlicesForBlacklist(live, idsWithShort, trackedMetaById);
+    expect(result[0].blacklistable).toBeUndefined();
+  });
+
+  it("enables inherited detection when combined with isBlacklistable", () => {
+    const meta = {
+      flags: { governance: "centralized-dependent" as const },
+      canBeBlacklisted: undefined,
+      reserves: [{ name: "sUSDe", pct: 15, risk: "medium", coinId: "usde-ethena" }],
+    };
+    const live = [
+      { name: "Stablecoin collateral (sUSDe, sUSDS, crvUSD)", pct: 96.6, risk: "low" as const },
+      { name: "ETH / Liquid staking", pct: 3.4, risk: "low" as const },
+    ];
+    const enriched = enrichLiveSlicesForBlacklist(live, blacklistableIds, trackedMetaById);
+    expect(isBlacklistable(meta as never, blacklistableIds, enriched)).toBe("inherited");
   });
 });

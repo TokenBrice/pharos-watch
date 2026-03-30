@@ -480,6 +480,42 @@ export function resolveResilienceFactors(meta: StablecoinMeta): {
 /** Minimum % of reserves backed by blacklistable coinIds to trigger inherited risk. */
 export const INHERITED_BLACKLIST_THRESHOLD_PCT = 50;
 
+/** Minimum symbol length considered for name-based blacklist detection (avoids false positives). */
+const MIN_SYMBOL_LENGTH_FOR_DETECTION = 3;
+
+/**
+ * Enrich live reserve slices with `blacklistable: true` when their names
+ * mention known blacklistable coin symbols. This bridges the gap between
+ * live adapters (accurate percentages, no metadata) and curated templates
+ * (stale percentages, has coinId/blacklistable annotations).
+ */
+export function enrichLiveSlicesForBlacklist(
+  liveSlices: readonly ReserveSlice[],
+  blacklistableIds: ReadonlySet<string>,
+  trackedMetaById: ReadonlyMap<string, StablecoinMeta>,
+): ReserveSlice[] {
+  const blacklistableSymbols = new Map<string, string>();
+  for (const coinId of blacklistableIds) {
+    const meta = trackedMetaById.get(coinId);
+    if (meta && meta.symbol.length >= MIN_SYMBOL_LENGTH_FOR_DETECTION) {
+      blacklistableSymbols.set(meta.symbol.toLowerCase(), coinId);
+    }
+  }
+
+  return liveSlices.map((ls) => {
+    if (ls.blacklistable) return ls;
+    if (ls.coinId && blacklistableIds.has(ls.coinId)) return { ...ls, blacklistable: true };
+
+    const lowerName = ls.name.toLowerCase();
+    for (const [symbol] of blacklistableSymbols) {
+      if (lowerName.includes(symbol)) {
+        return { ...ls, blacklistable: true };
+      }
+    }
+    return ls;
+  });
+}
+
 function reserveSliceCanInheritBlacklistRisk(
   slice: ReserveSlice,
   blacklistableIds?: ReadonlySet<string>,

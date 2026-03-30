@@ -117,21 +117,20 @@ If the live reserve snapshot loader is temporarily unavailable at read time, rep
 continue serving from curated reserve metadata and mark the affected coins in
 `liveToFallbackCoins` for operator visibility instead of failing the endpoint.
 
-**Known Limitation: Blacklist Upstream Uses Curated Data**
+**Blacklist Upstream: Live Reserve Enrichment**
 
-`isBlacklistable()` computes `"inherited"` blacklistability from curated
-`StablecoinMeta.reserves`, using either reserve-slice `blacklistable: true`
-markers or `coinId` links to upstream blacklistable assets. The lookup set
-is built transitively during topological processing — inherited coins are
-added after evaluation so downstream coins see the full closure. Live adapter
-snapshots currently do not participate in that calculation.
+When live reserve data is available, `isBlacklistable()` uses enriched live
+slices instead of curated reserves. The enrichment scans live slice names for
+known blacklistable coin symbols (e.g., "sUSDe" matches USDe, "stataUSDC"
+matches USDC) and tags matching slices with `blacklistable: true`. This
+ensures that composition shifts detected by live adapters are reflected in
+blacklist status without waiting for curated data updates.
 
-This means the blacklist capability sub-factor and the collateral quality sub-factor
-within Resilience can see different reserve compositions when live data diverges from
-curated. Independent live passthrough intentionally does not alter dependency or
-blacklist-inherited logic. The collateral drift alert (>15pt divergence) helps
-operators detect when curated metadata needs updating, which also refreshes the
-blacklist-inherited calculation.
+The lookup set is built transitively during topological processing — inherited
+coins are added after evaluation so downstream coins see the full closure.
+When no live reserves exist, curated `StablecoinMeta.reserves` are used as
+fallback. The collateral drift alert (>15pt divergence) helps operators detect
+when curated metadata needs updating for other scoring dimensions.
 
 | Reserve Risk Tier | Score | Description                        | Examples                                                                      |
 | ----------------- | ----- | ---------------------------------- | ----------------------------------------------------------------------------- |

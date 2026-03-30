@@ -575,6 +575,7 @@ export function slicesFromPercentages(
     risk: ReserveSlice["risk"];
     coinId?: string;
     depType?: ReserveSlice["depType"];
+    blacklistable?: boolean;
   }>,
   options?: {
     decimals?: number;
@@ -600,6 +601,7 @@ export function slicesFromPercentages(
       risk: value.risk,
       ...(value.coinId ? { coinId: value.coinId } : {}),
       ...(value.depType ? { depType: value.depType } : {}),
+      ...(value.blacklistable != null ? { blacklistable: value.blacklistable } : {}),
     })),
     options?.decimals ?? 1,
   );
@@ -617,6 +619,7 @@ export function slicesFromValues(
     risk: ReserveSlice["risk"];
     coinId?: string;
     depType?: ReserveSlice["depType"];
+    blacklistable?: boolean;
   }>,
   decimals = 1,
 ): ReserveSlice[] {
@@ -631,6 +634,7 @@ export function slicesFromValues(
     risk: v.risk,
     ...(v.coinId ? { coinId: v.coinId } : {}),
     ...(v.depType ? { depType: v.depType } : {}),
+    ...(v.blacklistable != null ? { blacklistable: v.blacklistable } : {}),
   }));
 
   const nonZero = slices.filter((s) => s.pct > 0);
