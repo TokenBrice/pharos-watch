@@ -9,7 +9,7 @@ import {
   reserveDegradedWarning,
   unverifiedFreshnessMetadata,
 } from "./helpers";
-import { wrapperAssetMeta } from "./wrapper-assets";
+import { cefiPositionMeta, wrapperAssetMeta } from "./wrapper-assets";
 
 interface InfiniFiFarm {
   name: string;
@@ -41,14 +41,15 @@ interface FarmRiskConfig {
   risk: ReserveSlice["risk"];
   coinId?: string;
   depType?: ReserveSlice["depType"];
+  blacklistable?: boolean;
 }
 
 const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
-  "fasanara-rwa-farm":       { risk: "high" },
-  "fasanara-gdaf":           { risk: "high" },
-  "falconx-farm":            { risk: "high" },
+  "fasanara-rwa-farm":       { risk: "high", ...cefiPositionMeta() },
+  "fasanara-gdaf":           { risk: "high", ...cefiPositionMeta() },
+  "falconx-farm":            { risk: "high", ...cefiPositionMeta() },
   "morpho-v2-sentora-pyusd": { risk: "high", ...wrapperAssetMeta("pyusd") },
-  "maple-farm-institutional": { risk: "high" },
+  "maple-farm-institutional": { risk: "high", ...cefiPositionMeta() },
   "maple-farm-syrup":        { risk: "high", ...wrapperAssetMeta("usdc") },
   "spark-sUSDC-refcode":     { risk: "low", ...wrapperAssetMeta("usdc") },
   "fluid-fUSDC":             { risk: "low", ...wrapperAssetMeta("usdc") },
@@ -110,6 +111,7 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
       risk,
       ...(config?.coinId ? { coinId: config.coinId } : {}),
       ...(config?.depType ? { depType: config.depType } : {}),
+      ...(config?.blacklistable != null ? { blacklistable: config.blacklistable } : {}),
     } satisfies ReserveSlice);
   }
 

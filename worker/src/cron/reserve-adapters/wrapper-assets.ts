@@ -26,3 +26,14 @@ export function wrapperAssetMeta(key: WrapperAssetKey): {
 } {
   return WRAPPER_ASSET_META[key];
 }
+
+/**
+ * Mark a reserve slice as blacklistable without linking to a specific tracked
+ * stablecoin. Use for CeFi/institutional positions (prime brokers, private
+ * credit, centralized custody) whose underlying assets are USD-denominated
+ * and held at centralized venues — they carry freeze/seizure risk even though
+ * they don't map to a single stablecoin coinId.
+ */
+export function cefiPositionMeta(): { blacklistable: true } {
+  return { blacklistable: true };
+}
