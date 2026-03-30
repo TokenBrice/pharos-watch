@@ -40,6 +40,8 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../lib/constants";
 import { chunkArray } from "../lib/collections";
 import { getCache, setCache } from "../lib/db-cache";
+import { decodeJsonString } from "../lib/cache-json";
+import { logMalformedJsonPath } from "../lib/json-decode-observability";
 
 const RawPoolDataSchema = z.object({
   tvlUsd: z.number().default(0),
@@ -77,6 +79,12 @@ interface SourceFailure {
   source: string;
   reason: string;
   bootstrapAllowed: boolean;
+}
+
+type PersistedJsonDecodeReason = "missing" | "json-parse-failed" | "invalid-shape";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 function isMissingTableError(error: unknown): boolean {
@@ -153,7 +161,15 @@ export async function computeAndStoreDEWS(
   const eligibleIds = new Set(PSI_ELIGIBLE_STABLECOINS.map((meta) => meta.id));
   const sourceFailures: SourceFailure[] = [];
   const sourceCoverage: Record<string, number> = {};
+  const malformedPersistedInputs: Array<{
+    source: string;
+    context: string;
+    stablecoinId: string;
+    updatedAt: number | null;
+    degradesRun: boolean;
+  }> = [];
   let validationFailures = 0;
+  let malformedCoreInputRows = 0;
 
   // 1. Read stablecoins cache
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
@@ -195,6 +211,38 @@ export async function computeAndStoreDEWS(
       bootstrapAllowed,
     });
     console.warn(`[dews] ${source} unavailable${bootstrapAllowed ? " (bootstrap-allowed)" : ""}:`, error);
+  };
+  const registerMalformedPersistedInput = (options: {
+    source: string;
+    context: string;
+    stablecoinId: string;
+    updatedAt?: number | null;
+    reason: PersistedJsonDecodeReason;
+    degradesRun: boolean;
+  }): void => {
+    validationFailures++;
+    if (options.degradesRun) {
+      malformedCoreInputRows++;
+    }
+    malformedPersistedInputs.push({
+      source: options.source,
+      context: options.context,
+      stablecoinId: options.stablecoinId,
+      updatedAt: options.updatedAt ?? null,
+      degradesRun: options.degradesRun,
+    });
+    logMalformedJsonPath({
+      scope: "cron",
+      owner: "compute-dews",
+      context: options.context,
+      reason: options.reason,
+      source: options.source,
+      updatedAt: options.updatedAt ?? null,
+      extra: {
+        stablecoinId: options.stablecoinId,
+        degradesRun: options.degradesRun,
+      },
+    });
   };
 
   // Derive peg rates for non-USD reference prices
@@ -354,21 +402,43 @@ export async function computeAndStoreDEWS(
   try {
     const prevRows = await db
       .prepare(
-        `SELECT s.stablecoin_id, s.signals_json, s.band
+        `SELECT s.stablecoin_id, s.signals_json, s.band, s.computed_at
          FROM stress_signals s
          INNER JOIN (
            SELECT stablecoin_id, MAX(computed_at) as max_at
            FROM stress_signals GROUP BY stablecoin_id
          ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
       )
-      .all<{ stablecoin_id: string; signals_json: string; band: string }>();
+      .all<{ stablecoin_id: string; signals_json: string; band: string; computed_at: number }>();
     prevSignalRowsRead = prevRows.results.length;
     for (const row of prevRows.results) {
-      try {
-        prevSignals.set(row.stablecoin_id, JSON.parse(row.signals_json));
-      } catch { /* expected: malformed signals_json from previous cycle */
-        validationFailures++;
+      const decoded = decodeJsonString<Record<string, unknown>, PersistedJsonDecodeReason>(
+        row.signals_json,
+        {
+          mode: "degraded",
+          updatedAt: row.computed_at,
+          missingReason: "missing",
+          parseErrorReason: "json-parse-failed",
+          normalize: (parsed) => {
+            if (!isRecord(parsed)) {
+              return { ok: false, reason: "invalid-shape" };
+            }
+            return { ok: true, payload: parsed };
+          },
+        },
+      );
+      if (!decoded.ok) {
+        registerMalformedPersistedInput({
+          source: "stress_signals",
+          context: "stress_signals.signals_json",
+          stablecoinId: row.stablecoin_id,
+          updatedAt: row.computed_at,
+          reason: decoded.reason,
+          degradesRun: true,
+        });
+        continue;
       }
+      prevSignals.set(row.stablecoin_id, decoded.payload as Record<string, { value: number }>);
     }
   } catch (error) {
     registerSourceFailure("stress-signals", error);
@@ -447,12 +517,28 @@ export async function computeAndStoreDEWS(
       .all<{ stablecoin_id: string; warning_signals: string }>();
     yieldWarningRowsRead = yieldRows.results.length;
     for (const row of yieldRows.results) {
-      try {
-        const parsed = JSON.parse(row.warning_signals);
-        if (Array.isArray(parsed)) yieldWarnings.set(row.stablecoin_id, parsed);
-      } catch { /* expected: malformed warning_signals JSON */
-        validationFailures++;
+      const decoded = decodeJsonString<string[], PersistedJsonDecodeReason>(row.warning_signals, {
+        mode: "degraded",
+        missingReason: "missing",
+        parseErrorReason: "json-parse-failed",
+        normalize: (parsed) => {
+          if (!Array.isArray(parsed) || !parsed.every((signal) => typeof signal === "string")) {
+            return { ok: false, reason: "invalid-shape" };
+          }
+          return { ok: true, payload: parsed };
+        },
+      });
+      if (!decoded.ok) {
+        registerMalformedPersistedInput({
+          source: "yield_data",
+          context: "yield_data.warning_signals",
+          stablecoinId: row.stablecoin_id,
+          reason: decoded.reason,
+          degradesRun: true,
+        });
+        continue;
       }
+      yieldWarnings.set(row.stablecoin_id, decoded.payload);
     }
   } catch (error) {
     registerSourceFailure("yield-data", error, {
@@ -517,17 +603,32 @@ export async function computeAndStoreDEWS(
     // Parse top pools
     let topPools: PoolEntry[] | null = null;
     if (dexLiq?.top_pools_json) {
-      try {
-        const parsed = JSON.parse(dexLiq.top_pools_json);
-        topPools = (Array.isArray(parsed) ? parsed : []).map((raw) => {
+      const decoded = decodeJsonString<unknown[], PersistedJsonDecodeReason>(dexLiq.top_pools_json, {
+        mode: "degraded",
+        updatedAt: dexLiq.updated_at ?? null,
+        missingReason: "missing",
+        parseErrorReason: "json-parse-failed",
+        normalize: (parsed) => Array.isArray(parsed)
+          ? { ok: true, payload: parsed }
+          : { ok: false, reason: "invalid-shape" },
+      });
+      if (!decoded.ok) {
+        registerMalformedPersistedInput({
+          source: "dex_liquidity",
+          context: "dex_liquidity.top_pools_json",
+          stablecoinId: meta.id,
+          updatedAt: dexLiq.updated_at ?? null,
+          reason: decoded.reason,
+          degradesRun: false,
+        });
+      } else {
+        topPools = decoded.payload.map((raw) => {
           const p = RawPoolDataSchema.safeParse(raw);
           return {
             tvlUsd: p.success ? p.data.tvlUsd : 0,
             balanceRatio: p.success ? (p.data.extra?.balanceRatio ?? 1.0) : 1.0,
           };
         });
-      } catch { /* expected: malformed top_pools_json */
-        validationFailures++;
       }
     }
 
@@ -648,6 +749,8 @@ export async function computeAndStoreDEWS(
   }
 
   const hardFailures = sourceFailures.filter((failure) => !failure.bootstrapAllowed);
+  const degradedByMalformedInputs = malformedCoreInputRows > 0;
+  const degraded = hardFailures.length > 0 || degradedByMalformedInputs;
   sourceCoverage.liquidityHistoryCoveragePct = Number((liqHistCoverage * 100).toFixed(2));
   sourceCoverage.coinsComputed = results.length;
   sourceCoverage.coinsSkippedInsufficientData = insufficientDataCount;
@@ -662,7 +765,7 @@ export async function computeAndStoreDEWS(
   }
   return {
     itemCount: results.length,
-    ...(hardFailures.length > 0 ? { status: "degraded" as const } : {}),
+    ...(degraded ? { status: "degraded" as const } : {}),
     metadata: JSON.stringify({
       rowsRead: assets.length + dexLiqRows.results.length + liqHistRowsRead,
       rowsWritten: results.length,
@@ -670,8 +773,15 @@ export async function computeAndStoreDEWS(
       rowsDropped,
       sourceCoverage,
       sourceFailures,
-      fallbackMode: hardFailures.length > 0 ? "degraded-inputs" : null,
+      fallbackMode:
+        hardFailures.length > 0
+          ? "degraded-inputs"
+          : degradedByMalformedInputs
+            ? "malformed-persisted-inputs"
+            : null,
       validationFailures,
+      malformedCoreInputRows,
+      malformedPersistedInputs,
       bootstrapPending,
     }),
   };

@@ -2,23 +2,14 @@
 // Static configuration for the yield intelligence pipeline.
 
 import type { YieldType } from "@shared/types/core";
-import type { YieldBenchmarkKey } from "@shared/types/yield";
 import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
-
-/** Yield variant: maps a tracked Pharos coin to its untracked yield wrapper. */
-export interface YieldVariant {
-  variantSymbol: string;
-  /** Phase 2: used for on-chain rate queries when expanding Tier 1 coverage. */
-  variantAddress?: string;
-  /** Phase 2: chain for on-chain rate queries. */
-  variantChain?: string;
-  /** Optional DeFiLlama project pin when the same wrapper token appears across multiple venues. */
-  variantProject?: string;
-  /** Label used as yield_source when this wrapper is the source row. */
-  yieldSource?: string;
-  /** Yield mechanism type for this wrapper. */
-  yieldType?: YieldType;
-}
+import {
+  deriveYieldRegistry,
+  type OnChainRateConfig,
+  type RateDerivedConfig,
+  type YieldAdapterManifestEntry,
+  type YieldVariant,
+} from "./yield-config-registry";
 
 /**
  * Explicit single-pool overrides for tracked assets whose valid yield venue is
@@ -41,7 +32,7 @@ export interface ExplicitYieldPoolConfig {
  * Used for DL pool matching (search variantSymbol) and on-chain rate queries.
  * Coins NOT here are their own yield token (e.g., USDY, OUSD, BUIDL).
  */
-export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
+const RAW_YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
   // USDe -> sUSDe (Ethena staked wrapper)
   "usde-ethena": {
     variantSymbol: "sUSDe",
@@ -263,7 +254,7 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
  *   - Prefer highest-TVL pool on the primary chain (usually Ethereum)
  *   - For yield-wrapper coins, use the wrapper's native staking pool
  */
-export const YIELD_POOL_MAP: Record<string, string> = {
+const RAW_YIELD_POOL_MAP: Record<string, string> = {
   // USDe (sUSDe) - ethena-usde native staking, Ethereum, $3.5B TVL, ~3.6% APY
   "usde-ethena": "66985a81-9c51-46ca-9977-42b4fe7bc6df",
 
@@ -409,23 +400,11 @@ export const EXPLICIT_YIELD_SOURCE_POOL_MAP: Record<string, ExplicitYieldPoolCon
   ],
 };
 
-/** On-chain exchange rate config for Tier 1 vault tokens. */
-export interface OnChainRateConfig {
-  stablecoinId: string;
-  chain: string;
-  contract: string;
-  /** 4-byte function selector (e.g., "0x07a2d13a" for convertToAssets) */
-  selector: string;
-  decimals: number;
-  /** Hex-encoded input amount (e.g., 1e18 = "0x0de0b6b3a7640000") */
-  inputAmount: string;
-}
-
 /**
  * Tier 1: On-chain exchange rate sources.
  * These produce the highest-fidelity APY by reading vault exchange rates directly.
  */
-export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
+const RAW_ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
   {
     stablecoinId: "usde-ethena", // USDe -> sUSDe
     chain: "ethereum",
@@ -562,29 +541,12 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
  * Deterministic price-derived fallback for yield-bearing coins that have no
  * usable on-chain rate source and no DeFiLlama pool.
  */
-export const PRICE_DERIVED_FALLBACK_IDS = new Set([
+const RAW_PRICE_DERIVED_FALLBACK_IDS = new Set([
   "usdb-blast", // USDB - Blast native yield (not tracked in DL Yields)
   "usda-avalon", // USDa - Avalon (no DL protocol pool; sUSDa Pendle pool too small at $55K)
 ]);
 
-/**
- * Rate-derived yield config for dividend-distributing tokens (rebasing at $1 NAV)
- * and T-bill-backed NAV tokens whose yield mechanically tracks short-term rates.
- *
- * APY = max(0, selectedBenchmarkRate - spreadBps / 100).
- * Uses the benchmark registry already cached daily by fetch-tbill-rate.
- */
-export interface RateDerivedConfig {
-  stablecoinId: string;
-  /** Basis points subtracted from the selected benchmark rate (management fee / spread). */
-  spreadBps: number;
-  /** Human-readable label surfaced as yield_source in yield_data. */
-  label: string;
-  /** Optional explicit benchmark override; otherwise the coin's peg-currency benchmark is used when available. */
-  benchmarkCurrency?: YieldBenchmarkKey;
-}
-
-export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
+const RAW_RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
   { stablecoinId: "buidl-blackrock", spreadBps: 20, label: "T-bill proxy (net of 0.20% fee)" },
   { stablecoinId: "usyc-hashnote", spreadBps: 50, label: "T-bill proxy (net of 0.50% performance fee)" },
   { stablecoinId: "ylds-figure", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)" },
@@ -683,7 +645,7 @@ export const LENDING_PROTOCOL_LABELS: Record<string, string> = Object.fromEntrie
  * - pool project must be allowlisted
  * - pool must satisfy minimum APY and TVL thresholds
  */
-export const AUTO_LENDING_POOL_MAP: Record<string, string> = {
+const RAW_AUTO_LENDING_POOL_MAP: Record<string, string> = {
   // U (United Stables) - venus-core-pool on BSC, ~$15M TVL, ~2.4% APY
   "u-united-stables": "d8e9bb79-79d3-4897-8a4f-8d489040097d",
   // pUSD - silo-v2 on Sonic, yield-bearing coin with missing report-card row
@@ -708,7 +670,7 @@ export const AUTO_LENDING_POOL_MAP: Record<string, string> = {
  * Deterministic IDs that may bypass MIN_SAFETY_SCORE_FOR_YIELD.
  * Reserved for explicit edge-case inclusions.
  */
-export const AUTO_LENDING_SAFETY_BYPASS_IDS = new Set([
+const RAW_AUTO_LENDING_SAFETY_BYPASS_IDS = new Set([
   "u-united-stables", // U: explicitly requested inclusion despite D-grade score
   "pusd-polaris", // Yield-bearing coin with missing report-card coverage; vetted Silo market keeps native yield visibility intact.
   "usdx-hex-trust", // Large protocol-native USDX market; keep visible despite D-grade issuer risk.
@@ -716,42 +678,10 @@ export const AUTO_LENDING_SAFETY_BYPASS_IDS = new Set([
   "usdm-moneta", // Exact single-asset Liqwid market; explicit edge-case inclusion for yield coverage.
 ]);
 
-export interface YieldAdapterManifestEntry {
-  stablecoinId: string;
-  status: "covered" | "intentional-gap";
-  strategies: YieldStrategyDescriptor[];
-  variant?: YieldVariant;
-  nativePoolId?: string;
-  onChainRate?: OnChainRateConfig;
-  priceDerivedFallback?: boolean;
-  rateDerived?: RateDerivedConfig;
-  autoLendingPoolId?: string;
-  bypassesAutoLendingSafety?: boolean;
-  deterministicQuarantineReason?: string;
-}
-
 const QUARANTINED_DETERMINISTIC_ADAPTERS: Record<string, string> = {
   "dusd-dtrinity": "generic convertToAssets probe reverts; requires protocol-specific deterministic reader",
   "reusd-re-protocol": "generic convertToAssets probe returns empty data; requires protocol-specific deterministic reader",
 };
-
-export type YieldStrategyKind =
-  | "native-pool"
-  | "variant-pool"
-  | "deterministic-onchain"
-  | "protocol-api"
-  | "price-derived"
-  | "rate-derived"
-  | "auto-discovery-override"
-  | "quarantined"
-  | "intentional-gap";
-
-export interface YieldStrategyDescriptor {
-  kind: YieldStrategyKind;
-  label: string;
-  rationale?: string;
-  priority: number;
-}
 
 const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
   "lusd-liquity": "B.Protocol LQTY-only",
@@ -765,89 +695,31 @@ const INTENTIONAL_GAP_REASONS: Record<string, string> = {
   "usg-tangent": "pre-launch asset with no reliable runtime yield source yet",
 };
 
-export const YIELD_ADAPTER_MANIFEST: YieldAdapterManifestEntry[] = YIELD_BEARING_STABLECOINS
-  .map((meta) => {
-    const stablecoinId = meta.id;
-    const strategies: YieldStrategyDescriptor[] = [];
+const derivedYieldConfig = deriveYieldRegistry({
+  yieldBearingIds: YIELD_BEARING_STABLECOINS.map((meta) => meta.id),
+  navTokenIds: new Set(
+    YIELD_BEARING_STABLECOINS
+      .filter((meta) => meta.flags.navToken)
+      .map((meta) => meta.id),
+  ),
+  variantMap: RAW_YIELD_VARIANT_MAP,
+  poolMap: RAW_YIELD_POOL_MAP,
+  onChainRateConfigs: RAW_ON_CHAIN_RATE_CONFIGS,
+  directProtocolApiStrategies: DIRECT_PROTOCOL_API_STRATEGIES,
+  priceDerivedFallbackIds: RAW_PRICE_DERIVED_FALLBACK_IDS,
+  rateDerivedConfigs: RAW_RATE_DERIVED_CONFIGS,
+  autoLendingPoolMap: RAW_AUTO_LENDING_POOL_MAP,
+  autoLendingSafetyBypassIds: RAW_AUTO_LENDING_SAFETY_BYPASS_IDS,
+  quarantinedDeterministicAdapters: QUARANTINED_DETERMINISTIC_ADAPTERS,
+  intentionalGapReasons: INTENTIONAL_GAP_REASONS,
+});
 
-    if (YIELD_POOL_MAP[stablecoinId]) {
-      strategies.push({
-        kind: "native-pool",
-        label: "Curated DeFiLlama pool UUID",
-        priority: 10,
-      });
-    }
-    if (YIELD_VARIANT_MAP[stablecoinId]) {
-      strategies.push({
-        kind: "variant-pool",
-        label: YIELD_VARIANT_MAP[stablecoinId].variantSymbol,
-        priority: 20,
-      });
-    }
-    if (ON_CHAIN_RATE_CONFIGS.some((config) => config.stablecoinId === stablecoinId)) {
-      strategies.push({
-        kind: "deterministic-onchain",
-        label: "On-chain exchange-rate reader",
-        priority: 30,
-      });
-    }
-    if (DIRECT_PROTOCOL_API_STRATEGIES[stablecoinId]) {
-      strategies.push({
-        kind: "protocol-api",
-        label: DIRECT_PROTOCOL_API_STRATEGIES[stablecoinId],
-        priority: 40,
-      });
-    }
-    if (RATE_DERIVED_CONFIGS.some((config) => config.stablecoinId === stablecoinId)) {
-      strategies.push({
-        kind: "rate-derived",
-        label: "Benchmark-linked rate fallback",
-        priority: 50,
-      });
-    }
-    if (meta.flags.navToken || PRICE_DERIVED_FALLBACK_IDS.has(stablecoinId)) {
-      strategies.push({
-        kind: "price-derived",
-        label: "Supply-history NAV appreciation fallback",
-        priority: 60,
-      });
-    }
-    if (AUTO_LENDING_POOL_MAP[stablecoinId]) {
-      strategies.push({
-        kind: "auto-discovery-override",
-        label: "Explicit lending override pool",
-        priority: 70,
-      });
-    }
-    if (QUARANTINED_DETERMINISTIC_ADAPTERS[stablecoinId]) {
-      strategies.push({
-        kind: "quarantined",
-        label: "Quarantined deterministic reader",
-        rationale: QUARANTINED_DETERMINISTIC_ADAPTERS[stablecoinId],
-        priority: 80,
-      });
-    }
-    if (INTENTIONAL_GAP_REASONS[stablecoinId]) {
-      strategies.push({
-        kind: "intentional-gap",
-        label: "Intentional coverage gap",
-        rationale: INTENTIONAL_GAP_REASONS[stablecoinId],
-        priority: 90,
-      });
-    }
-
-    return {
-      stablecoinId,
-      status: INTENTIONAL_GAP_REASONS[stablecoinId] ? "intentional-gap" as const : "covered" as const,
-      strategies: strategies.sort((a, b) => a.priority - b.priority),
-      variant: YIELD_VARIANT_MAP[stablecoinId],
-      nativePoolId: YIELD_POOL_MAP[stablecoinId],
-      onChainRate: ON_CHAIN_RATE_CONFIGS.find((config) => config.stablecoinId === stablecoinId),
-      priceDerivedFallback: (meta.flags.navToken || PRICE_DERIVED_FALLBACK_IDS.has(stablecoinId)) || undefined,
-      rateDerived: RATE_DERIVED_CONFIGS.find((config) => config.stablecoinId === stablecoinId),
-      autoLendingPoolId: AUTO_LENDING_POOL_MAP[stablecoinId],
-      bypassesAutoLendingSafety: AUTO_LENDING_SAFETY_BYPASS_IDS.has(stablecoinId) || undefined,
-      deterministicQuarantineReason: QUARANTINED_DETERMINISTIC_ADAPTERS[stablecoinId],
-    };
-  })
-  .sort((a, b) => a.stablecoinId.localeCompare(b.stablecoinId));
+export const YIELD_SOURCE_REGISTRY = derivedYieldConfig.registry;
+export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = derivedYieldConfig.variantMap;
+export const YIELD_POOL_MAP: Record<string, string> = derivedYieldConfig.poolMap;
+export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = derivedYieldConfig.onChainRateConfigs;
+export const PRICE_DERIVED_FALLBACK_IDS = derivedYieldConfig.priceDerivedFallbackIds;
+export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = derivedYieldConfig.rateDerivedConfigs;
+export const AUTO_LENDING_POOL_MAP: Record<string, string> = derivedYieldConfig.autoLendingPoolMap;
+export const AUTO_LENDING_SAFETY_BYPASS_IDS = derivedYieldConfig.autoLendingSafetyBypassIds;
+export const YIELD_ADAPTER_MANIFEST: YieldAdapterManifestEntry[] = derivedYieldConfig.manifest;

@@ -6,7 +6,6 @@ import {
   ApiFetchError,
   resolveApiBase,
   SchemaValidationError,
-  STRICT_CONTRACT_PATHS,
 } from "../api";
 
 describe("api contract validation policy", () => {
@@ -117,16 +116,6 @@ describe("api contract validation policy", () => {
 
     expect(result.data).toEqual({ summary: null, coins: [] });
     expect(result.meta).toEqual({ updatedAt: 200, ageSeconds: 20, status: "degraded" });
-  });
-
-  it("contains all required strict paths", () => {
-    expect(STRICT_CONTRACT_PATHS.has("/api/stablecoins")).toBe(true);
-    expect(STRICT_CONTRACT_PATHS.has("/api/peg-summary")).toBe(true);
-    expect(STRICT_CONTRACT_PATHS.has("/api/report-cards")).toBe(true);
-    expect(STRICT_CONTRACT_PATHS.has("/api/stability-index")).toBe(true);
-    expect(STRICT_CONTRACT_PATHS.has("/api/dex-liquidity")).toBe(true);
-    expect(STRICT_CONTRACT_PATHS.has("/api/stress-signals")).toBe(true);
-    expect(STRICT_CONTRACT_PATHS.has("/api/mint-burn-flows")).toBe(true);
   });
 
   it("resolves production API base from known hostnames when env is empty", () => {

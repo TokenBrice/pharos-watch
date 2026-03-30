@@ -1,6 +1,8 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { batchExecute } from "../../lib/db";
 import { requireFiniteNumber } from "../../lib/number-utils";
+import { decodeJsonString } from "../../lib/cache-json";
+import { logMalformedJsonPath } from "../../lib/json-decode-observability";
 import type { PoolEntry } from "./types";
 
 export interface DexPriceChallengerPoolRow {
@@ -85,8 +87,43 @@ interface LegacyDexPoolSource {
   tvl: number;
 }
 
+type LegacyJsonDecodeReason = "missing" | "json-parse-failed" | "invalid-shape";
+
 const CHALLENGER_COVERAGE_TARGET = 0.95;
 const CHALLENGER_HARD_CAP = 50;
+
+function decodeLegacyJsonArray<T>(
+  value: string,
+  options: {
+    stablecoinId: string;
+    source: "dex_liquidity" | "dex_prices";
+    context: "dex_liquidity.top_pools_json" | "dex_prices.price_sources_json";
+    updatedAt: number;
+  },
+): T[] | null {
+  const decoded = decodeJsonString<T[], LegacyJsonDecodeReason>(value, {
+    mode: "degraded",
+    updatedAt: options.updatedAt,
+    missingReason: "missing",
+    parseErrorReason: "json-parse-failed",
+    normalize: (parsed) => Array.isArray(parsed)
+      ? { ok: true, payload: parsed as T[] }
+      : { ok: false, reason: "invalid-shape" },
+  });
+  if (!decoded.ok) {
+    logMalformedJsonPath({
+      scope: "cron",
+      owner: "challenger-persistence",
+      context: options.context,
+      reason: decoded.reason,
+      source: options.source,
+      updatedAt: options.updatedAt,
+      extra: { stablecoinId: options.stablecoinId },
+    });
+    return null;
+  }
+  return decoded.payload;
+}
 
 /** Return the writable publication sequence with payload rows first and snapshot metadata last. */
 export function getDexPriceChallengerPublicationStatements(
@@ -327,11 +364,16 @@ async function loadLegacyDexPoolChallengers(
 
     for (const row of rows.results ?? []) {
       if (nowSec - row.updated_at > maxAgeSec) continue;
-      let pools: Array<{ project?: unknown; chain?: unknown; tvlUsd?: unknown; price?: unknown; poolId?: unknown }>;
-      try {
-        pools = JSON.parse(row.top_pools_json);
-      } catch (err) {
-        console.warn(`[challenger-persistence] Failed to parse top_pools_json for ${row.stablecoin_id}: ${err instanceof Error ? err.message : String(err)}`);
+      const pools = decodeLegacyJsonArray<Array<{ project?: unknown; chain?: unknown; tvlUsd?: unknown; price?: unknown; poolId?: unknown }>[number]>(
+        row.top_pools_json,
+        {
+          stablecoinId: row.stablecoin_id,
+          source: "dex_liquidity",
+          context: "dex_liquidity.top_pools_json",
+          updatedAt: row.updated_at,
+        },
+      );
+      if (pools == null) {
         continue;
       }
       if (!Array.isArray(pools) || pools.length === 0) continue;
@@ -373,11 +415,13 @@ async function loadLegacyDexPoolChallengers(
     for (const row of rows.results ?? []) {
       if (nowSec - row.updated_at > maxAgeSec) continue;
       if (challengersByStablecoin.has(row.stablecoin_id)) continue;
-      let sources: LegacyDexPoolSource[];
-      try {
-        sources = JSON.parse(row.price_sources_json);
-      } catch (err) {
-        console.warn(`[challenger-persistence] Failed to parse price_sources_json for ${row.stablecoin_id}: ${err instanceof Error ? err.message : String(err)}`);
+      const sources = decodeLegacyJsonArray<LegacyDexPoolSource>(row.price_sources_json, {
+        stablecoinId: row.stablecoin_id,
+        source: "dex_prices",
+        context: "dex_prices.price_sources_json",
+        updatedAt: row.updated_at,
+      });
+      if (sources == null) {
         continue;
       }
       if (!Array.isArray(sources) || sources.length === 0) continue;

@@ -1,6 +1,5 @@
 import { z, type ZodType } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints";
-import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 import { resolvePublicApiBase } from "@shared/lib/runtime-origins";
 
@@ -15,8 +14,6 @@ export function resolveApiBase(
 
 const browserHostname = typeof window !== "undefined" ? window.location.hostname : null;
 export const API_BASE = resolveApiBase(browserHostname);
-
-export const STRICT_CONTRACT_PATHS = new Set(STRICT_CONTRACT_PATHS_LIST);
 
 export function buildApiUrl(path: string): string {
   return `${API_BASE}${path}`;

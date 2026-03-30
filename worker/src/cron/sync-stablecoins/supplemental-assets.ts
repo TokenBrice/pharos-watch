@@ -87,51 +87,126 @@ function buildSupplementalAsset(input: {
   } as PeggedAsset;
 }
 
-async function fetchSilverTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal, coingeckoApiKey?: string | null): Promise<PeggedAsset[]> {
+async function fetchSupplementalPriceData(
+  metas: StablecoinMeta[],
+  logPrefix: string,
+  signal?: AbortSignal,
+): Promise<{ coins: Record<string, DefiLlamaCoinPrice> }> {
+  if (metas.length === 0) return { coins: {} };
+
+  const coinIds = metas.map((token) => token.geckoId).filter(Boolean).map((id) => `coingecko:${id}`).join(",");
+  if (!coinIds) return { coins: {} };
+
+  const priceRes = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`, signal ? { signal } : undefined);
+  if (!priceRes || !priceRes.ok) {
+    console.warn(
+      `[${logPrefix}] Price fetch failed: ${priceRes?.status ?? "no response"}; using CoinGecko simple price fallback when available`,
+    );
+    priceRes?.body?.cancel();
+    return { coins: {} };
+  }
+
+  return (await priceRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
+}
+
+async function fetchCoinGeckoCirculatingSupplyMap(
+  metas: StablecoinMeta[],
+  logPrefix: string,
+  signal?: AbortSignal,
+  coingeckoApiKey?: string | null,
+): Promise<Map<string, number>> {
+  const cgIds = metas.map((token) => token.geckoId).filter(Boolean).join(",");
+  if (!cgIds) return new Map();
+
+  const cgMarketsRes = await fetchWithRetry(
+    cgUrl(`/coins/markets?vs_currency=usd&ids=${cgIds}`, coingeckoApiKey ?? null),
+    {
+      headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
+      signal,
+    },
+  );
+
+  if (!cgMarketsRes?.ok) {
+    console.warn(
+      `[${logPrefix}] CG markets fetch failed (${cgMarketsRes?.status ?? "no response"}), falling back to cgData mcap`,
+    );
+    return new Map();
+  }
+
+  const cgMarketsRaw = await cgMarketsRes.json();
+  if (!Array.isArray(cgMarketsRaw)) {
+    console.warn(`[${logPrefix}] CG markets returned unexpected shape, falling back to cgData mcap`);
+    return new Map();
+  }
+
+  const supplyMap = new Map<string, number>();
+  for (const item of cgMarketsRaw as Array<{ id: string; circulating_supply?: number }>) {
+    if (item.circulating_supply != null && item.circulating_supply > 0) {
+      supplyMap.set(item.id, item.circulating_supply);
+    }
+  }
+  return supplyMap;
+}
+
+function buildPricedSupplementalAsset(
+  meta: StablecoinMeta,
+  priceData: { coins: Record<string, DefiLlamaCoinPrice> },
+  cgData: CoinGeckoMcapData,
+  input: {
+    mcap: number;
+    supplySource: string;
+    circulatingPrevDay?: number | null;
+    circulatingPrevWeek?: number | null;
+    circulatingPrevMonth?: number | null;
+  },
+): PeggedAsset | null {
+  const priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
+  if (!priceResolution) return null;
+
+  return buildSupplementalAsset({
+    meta,
+    priceResolution,
+    mcap: input.mcap,
+    supplySource: input.supplySource,
+    circulatingPrevDay: input.circulatingPrevDay,
+    circulatingPrevWeek: input.circulatingPrevWeek,
+    circulatingPrevMonth: input.circulatingPrevMonth,
+  });
+}
+
+function findNearestTvl(
+  history: { date: number; totalLiquidityUSD: number }[],
+  targetSec: number,
+): number | null {
+  if (history.length === 0) return null;
+
+  let closest: { date: number; totalLiquidityUSD: number } | null = null;
+  let closestDist = Infinity;
+
+  for (const point of history) {
+    const dist = Math.abs(point.date - targetSec);
+    if (dist < closestDist) {
+      closestDist = dist;
+      closest = point;
+    }
+  }
+
+  return closest && closestDist < 2 * DAY_SECONDS ? closest.totalLiquidityUSD : null;
+}
+
+async function fetchSilverTokens(
+  cgData: CoinGeckoMcapData,
+  signal?: AbortSignal,
+  coingeckoApiKey?: string | null,
+): Promise<PeggedAsset[]> {
   if (SILVER_METAS.length === 0) return [];
   throwIfAborted(signal);
 
   try {
-    const coinIds = SILVER_METAS.map((token) => `coingecko:${token.geckoId}`).join(",");
-    const cgIds = SILVER_METAS.map((token) => token.geckoId).filter(Boolean).join(",");
-
-    const [priceRes, cgMarketsRes] = await Promise.all([
-      fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`, signal ? { signal } : undefined),
-      cgIds
-        ? fetchWithRetry(
-            cgUrl(`/coins/markets?vs_currency=usd&ids=${cgIds}`, coingeckoApiKey ?? null),
-            {
-              headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
-              signal,
-            },
-          )
-        : Promise.resolve(null),
+    const [priceData, cgSupplyMap] = await Promise.all([
+      fetchSupplementalPriceData(SILVER_METAS, "silver", signal),
+      fetchCoinGeckoCirculatingSupplyMap(SILVER_METAS, "silver", signal, coingeckoApiKey),
     ]);
-
-    let priceData: { coins: Record<string, DefiLlamaCoinPrice> } = { coins: {} };
-    if (!priceRes || !priceRes.ok) {
-      console.warn(`[silver] Price fetch failed: ${priceRes?.status ?? "no response"}; using CoinGecko simple price fallback when available`);
-      priceRes?.body?.cancel();
-    } else {
-      priceData = (await priceRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
-    }
-
-    const cgSupplyMap = new Map<string, number>();
-    if (cgMarketsRes?.ok) {
-      const cgMarketsRaw = await cgMarketsRes.json();
-      if (!Array.isArray(cgMarketsRaw)) {
-        console.warn("[silver] CG markets returned unexpected shape, falling back to cgData mcap");
-      } else {
-        const cgMarketsData = cgMarketsRaw as { id: string; circulating_supply?: number }[];
-        for (const item of cgMarketsData) {
-          if (item.circulating_supply != null && item.circulating_supply > 0) {
-            cgSupplyMap.set(item.id, item.circulating_supply);
-          }
-        }
-      }
-    } else {
-      console.warn(`[silver] CG markets fetch failed (${cgMarketsRes?.status ?? "no response"}), falling back to cgData mcap`);
-    }
 
     const mcapMap: Record<string, number> = {};
     for (const token of SILVER_METAS) {
@@ -154,17 +229,12 @@ async function fetchSilverTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal
 
     return SILVER_METAS
       .map((meta) => {
-        const priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
-        if (!priceResolution) return null;
-
         const mcap = mcapMap[meta.id] ?? 0;
         if (!mcap) {
           console.warn(`[silver] No mcap for ${meta.symbol}, including with mcap=0`);
         }
 
-        return buildSupplementalAsset({
-          meta,
-          priceResolution,
+        return buildPricedSupplementalAsset(meta, priceData, cgData, {
           mcap,
           supplySource: "coingecko-fallback",
         });
@@ -180,16 +250,7 @@ async function fetchSilverTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal
 async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal): Promise<PeggedAsset[]> {
   throwIfAborted(signal);
   try {
-    const coinIds = GOLD_METAS.map((token) => `coingecko:${token.geckoId}`).join(",");
-    const priceRes = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`, signal ? { signal } : undefined);
-
-    let priceData: { coins: Record<string, DefiLlamaCoinPrice> } = { coins: {} };
-    if (!priceRes || !priceRes.ok) {
-      console.warn(`[gold] Price fetch failed: ${priceRes?.status ?? "no response"}; using CoinGecko simple price fallback when available`);
-      priceRes?.body?.cancel();
-    } else {
-      priceData = (await priceRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
-    }
+    const priceData = await fetchSupplementalPriceData(GOLD_METAS, "gold", signal);
 
     const mcapMap: Record<string, number> = {};
     const mcapSourceById: Record<string, "defillama" | "coingecko-fallback"> = {};
@@ -233,31 +294,8 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal):
     const weekAgo = nowSec - 7 * DAY_SECONDS;
     const monthAgo = nowSec - 30 * DAY_SECONDS;
 
-    const findNearestTvl = (
-      history: { date: number; totalLiquidityUSD: number }[],
-      targetSec: number,
-    ): number | null => {
-      if (!history || history.length === 0) return null;
-
-      let closest: { date: number; totalLiquidityUSD: number } | null = null;
-      let closestDist = Infinity;
-
-      for (const point of history) {
-        const dist = Math.abs(point.date - targetSec);
-        if (dist < closestDist) {
-          closestDist = dist;
-          closest = point;
-        }
-      }
-
-      return closest && closestDist < 2 * DAY_SECONDS ? closest.totalLiquidityUSD : null;
-    };
-
     return GOLD_METAS
       .map((meta) => {
-        const priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
-        if (!priceResolution) return null;
-
         const mcap = mcapMap[meta.id] ?? 0;
         if (!mcap) {
           console.warn(`[gold] No mcap for ${meta.symbol}, including with mcap=0`);
@@ -280,9 +318,7 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal):
         const prevWeek = usableHistory ? findNearestTvl(usableHistory, weekAgo) : null;
         const prevMonth = usableHistory ? findNearestTvl(usableHistory, monthAgo) : null;
 
-        return buildSupplementalAsset({
-          meta,
-          priceResolution,
+        return buildPricedSupplementalAsset(meta, priceData, cgData, {
           mcap,
           supplySource: mcapSourceById[meta.id] ?? "coingecko-fallback",
           circulatingPrevDay: prevDay,
@@ -340,16 +376,7 @@ async function fetchFiatCoinGeckoTokens(
   throwIfAborted(signal);
 
   try {
-    const coinIds = FIAT_CG_METAS.map((token) => `coingecko:${token.geckoId}`).join(",");
-    const priceRes = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`, signal ? { signal } : undefined);
-
-    let priceData: { coins: Record<string, DefiLlamaCoinPrice> } = { coins: {} };
-    if (!priceRes || !priceRes.ok) {
-      console.warn(`[fiat-cg] Price fetch failed: ${priceRes?.status ?? "no response"}; using CoinGecko simple price fallback when available`);
-      priceRes?.body?.cancel();
-    } else {
-      priceData = (await priceRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
-    }
+    const priceData = await fetchSupplementalPriceData(FIAT_CG_METAS, "fiat-cg", signal);
 
     const mcapMap: Record<string, number> = {};
     for (const token of FIAT_CG_METAS) {

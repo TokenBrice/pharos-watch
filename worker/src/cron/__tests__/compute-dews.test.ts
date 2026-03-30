@@ -99,6 +99,16 @@ interface MakeDbOptions {
   dexPriceRows?: Array<{ stablecoin_id: string; dex_price_usd: number; updated_at: number }>;
   blacklist24hRows?: Array<{ stablecoin: string; cnt: number }>;
   blacklist7dRows?: Array<{ stablecoin: string; cnt: number }>;
+  prevSignalRows?: Array<{
+    stablecoin_id: string;
+    signals_json: string;
+    band: string;
+    computed_at: number;
+  }>;
+  yieldWarningRows?: Array<{
+    stablecoin_id: string;
+    warning_signals: string;
+  }>;
   signalIds?: string[];
   historyIds?: string[];
   onBind?: (sql: string, args: unknown[]) => void;
@@ -144,6 +154,11 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
           results: (opts.dexPriceRows ?? []) as T[],
         };
       }
+      if (sql.includes("FROM stress_signals s")) {
+        return {
+          results: (opts.prevSignalRows ?? []) as T[],
+        };
+      }
       if (sql.includes("FROM dex_liquidity_history")) {
         return {
           results: [
@@ -162,6 +177,11 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
         const sevenDayCutoff = nowSec - 7 * 86400;
         return {
           results: (cutoff === sevenDayCutoff ? (opts.blacklist7dRows ?? []) : (opts.blacklist24hRows ?? [])) as T[],
+        };
+      }
+      if (sql.includes("FROM yield_data")) {
+        return {
+          results: (opts.yieldWarningRows ?? []) as T[],
         };
       }
       return { results: [] as T[] };
@@ -265,6 +285,67 @@ describe("computeAndStoreDEWS", () => {
       sourceFailures: Array<{ source: string; bootstrapAllowed: boolean }>;
     };
     expect(metadata.sourceFailures.some((failure) => failure.source === "dex-liquidity")).toBe(true);
+  });
+
+  it("marks run degraded when previous stress_signals JSON is malformed", async () => {
+    const sqlSeen: string[] = [];
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeDb(sqlSeen, {
+      prevSignalRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          signals_json: "{bad-json",
+          band: "CALM",
+          computed_at: nowSec - 900,
+        },
+      ],
+    });
+
+    const result = await computeAndStoreDEWS(db);
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      fallbackMode: string | null;
+      malformedCoreInputRows: number;
+      malformedPersistedInputs: Array<{ source: string; stablecoinId: string; context: string }>;
+    };
+    expect(metadata.fallbackMode).toBe("malformed-persisted-inputs");
+    expect(metadata.malformedCoreInputRows).toBe(1);
+    expect(metadata.malformedPersistedInputs).toContainEqual(
+      expect.objectContaining({
+        source: "stress_signals",
+        stablecoinId: "usdt-tether",
+        context: "stress_signals.signals_json",
+      }),
+    );
+  });
+
+  it("marks run degraded when yield warning JSON is malformed", async () => {
+    const sqlSeen: string[] = [];
+    const db = makeDb(sqlSeen, {
+      yieldWarningRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          warning_signals: "{\"not\":\"an-array\"}",
+        },
+      ],
+    });
+
+    const result = await computeAndStoreDEWS(db);
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      malformedCoreInputRows: number;
+      malformedPersistedInputs: Array<{ source: string; stablecoinId: string; context: string }>;
+    };
+    expect(metadata.malformedCoreInputRows).toBe(1);
+    expect(metadata.malformedPersistedInputs).toContainEqual(
+      expect.objectContaining({
+        source: "yield_data",
+        stablecoinId: "usdt-tether",
+        context: "yield_data.warning_signals",
+      }),
+    );
   });
 
   it("stops bootstrap-allowing missing optional tables after the DEWS bootstrap sentinel exists", async () => {

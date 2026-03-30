@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   buildDexPriceChallengerPublicationPlan,
   getDexPriceChallengerPublicationStatements,
@@ -339,5 +339,57 @@ describe("challenger persistence", () => {
         tvlUsd: 40_000,
       }),
     ]);
+  });
+
+  it("logs and skips malformed legacy challenger JSON payloads", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const db = mockD1(
+      [
+        {
+          match: "FROM sqlite_master",
+          rows: [],
+        },
+        {
+          match: "FROM dex_liquidity",
+          rows: [
+            {
+              stablecoin_id: "coin-z",
+              top_pools_json: "{bad-json",
+              updated_at: 100,
+            },
+          ],
+        },
+        {
+          match: "FROM dex_prices",
+          rows: [
+            {
+              stablecoin_id: "coin-y",
+              price_sources_json: "{bad-json",
+              updated_at: 100,
+            },
+          ],
+        },
+      ],
+      { requireMatch: true },
+    );
+
+    const result = await loadPublishedDexPoolChallengers(db, 20_000, 1_000, 120);
+
+    expect(result.diagnostics.mode).toBe("absent");
+    expect(result.challengersByStablecoin.size).toBe(0);
+    expect(
+      warnSpy.mock.calls.some(([message]) =>
+        String(message).includes("owner=challenger-persistence")
+        && String(message).includes("context=dex_liquidity.top_pools_json"),
+      ),
+    ).toBe(true);
+    expect(
+      warnSpy.mock.calls.some(([message]) =>
+        String(message).includes("owner=challenger-persistence")
+        && String(message).includes("context=dex_prices.price_sources_json"),
+      ),
+    ).toBe(true);
+
+    warnSpy.mockRestore();
   });
 });

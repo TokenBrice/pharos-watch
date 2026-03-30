@@ -354,8 +354,12 @@ rg --files src shared worker/src functions scripts | rg '(^|/)__tests__/|\\.(tes
 | `src/components/__tests__/overview-section.test.tsx`             | Stablecoin-detail overview section rendering, reserve fallback labels, and summary-state composition       |
 | `src/components/__tests__/safety-score-history-section.test.tsx` | Safety Score detail timeline seed/transition labeling and conditional suppression when loading/error/empty |
 | `src/hooks/__tests__/use-count-up.test.ts`                       | Opt-in jsdom hook test for count-up animation timing and reduced-motion behavior                           |
+| `src/hooks/__tests__/use-depeg-events.test.tsx`                 | Infinite depeg-event pagination flattening, query wiring, and auto-load-all behavior                       |
 | `src/hooks/__tests__/use-entrance-sequence.test.ts`              | Opt-in jsdom hook test for staged reveal sequencing                                                        |
+| `src/hooks/__tests__/use-chains.test.tsx`                       | Chains endpoint polling contract plus per-chain stablecoin derivation and share math                       |
+| `src/hooks/__tests__/use-mint-burn-flows.test.tsx`              | Mint/burn normalization semantics, derived activity fields, and event query wiring                         |
 | `src/hooks/__tests__/use-start-here-callout.test.ts`             | Hook-level Start Here onboarding state integration                                                         |
+| `src/hooks/__tests__/use-stablecoin-reserves.test.tsx`          | Live-vs-fallback reserve polling cadence and public reserve-result mapping                                 |
 | `src/hooks/__tests__/use-url-filters.test.ts`                    | URL param state helpers and encoding rules                                                                 |
 | `src/hooks/__tests__/query-polling-policy.test.ts`               | Shared polling policy wiring (`staleTime`, `refetchInterval`, `retry`) for status-page hooks               |
 | `src/hooks/__tests__/use-safety-score-history.test.ts`           | Safety Score history hook query-key scoping, daily polling policy, and endpoint path wiring                |
@@ -717,7 +721,7 @@ Schema validation in hooks is done via `useApiQuery(..., { schema })`. Current s
 - `StressSignalsAllResponseSchema`
 - `StressSignalDetailResponseSchema`
 
-On validation failure, hooks log warnings and return data in degraded mode rather than hard-crashing the UI.
+When a schema is provided, frontend API helpers now validate in `strict` mode by default and throw on schema mismatch. Use `contractMode: "warn"` only for explicitly degraded surfaces where returning raw data is acceptable.
 
 When adding a new API endpoint:
 

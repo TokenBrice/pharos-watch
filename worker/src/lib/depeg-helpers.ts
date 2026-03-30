@@ -17,6 +17,8 @@ import {
   loadPublishedDexPoolChallengers,
   type DexPriceChallengerLoadRow,
 } from "../cron/dex-liquidity/challenger-persistence";
+import { decodeJsonString } from "./cache-json";
+import { logMalformedJsonPath } from "./json-decode-observability";
 
 /** D1 row shape for the depeg_events table (snake_case columns) */
 export interface DepegRow {
@@ -81,6 +83,8 @@ export interface DexPoolSource {
   tvl: number;
   updatedAt: number;
 }
+
+type DexJsonDecodeReason = "missing" | "json-parse-failed" | "invalid-shape";
 
 /**
  * Load all qualifying individual pool prices per asset from the published challenger snapshot,
@@ -148,12 +152,31 @@ export async function loadDexPriceSources(
     const result = new Map<string, DexPoolSource[]>();
     for (const row of rows.results ?? []) {
       if (nowSec - row.updated_at > maxAgeSec) continue;
-      let sources: DexPoolSource[];
-      try { sources = JSON.parse(row.price_sources_json); } catch { continue; }
-      if (!Array.isArray(sources) || sources.length === 0) continue;
+      const decoded = decodeJsonString<DexPoolSource[], DexJsonDecodeReason>(row.price_sources_json, {
+        mode: "degraded",
+        updatedAt: row.updated_at,
+        missingReason: "missing",
+        parseErrorReason: "json-parse-failed",
+        normalize: (parsed) => Array.isArray(parsed)
+          ? { ok: true, payload: parsed as DexPoolSource[] }
+          : { ok: false, reason: "invalid-shape" },
+      });
+      if (!decoded.ok) {
+        logMalformedJsonPath({
+          scope: "lib",
+          owner: "depeg-helpers",
+          context: "dex_prices.price_sources_json",
+          reason: decoded.reason,
+          source: "dex_prices",
+          updatedAt: row.updated_at,
+          extra: { stablecoinId: row.stablecoin_id },
+        });
+        continue;
+      }
+      if (decoded.payload.length === 0) continue;
       result.set(
         row.stablecoin_id,
-        sources.map((source) => ({
+        decoded.payload.map((source) => ({
           ...source,
           updatedAt: row.updated_at,
         })),
