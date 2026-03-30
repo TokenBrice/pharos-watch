@@ -39,7 +39,7 @@ The page is organized into these sections, in order:
 
 ## Design And Interaction Rules
 
-- The dedicated `Who Is Building Pharos?` section keeps the contributor/logo strip beside the copy until `lg`, then stacks cleanly on smaller widths so the text column does not get crushed.
+- The dedicated `Who Is Building Pharos?` section uses `lg:grid-cols-[auto_minmax(0,1fr)]` to place the contributor/logo strip beside the copy on `lg+`, stacking vertically below `lg` so the text column does not get crushed.
 - `What Pharos Tracks` and `What Pharos Computes` use full-row links instead of small linked headings. This preserves larger touch targets on mobile and reduces the repeated tile-grid feel.
 - CTA buttons keep `min-h-11` on mobile so the tap target does not collapse below the 44px floor.
 - Accent use is reduced to a small set of section tones:

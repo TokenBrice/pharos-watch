@@ -76,7 +76,7 @@ Primary pricing also includes a few source-specific normalization rules that are
 - **RedStone** uses exact-case tracked symbols only. The worker filters requests through `REDSTONE_TRACKED_SYMBOL_ALLOWLIST`, sends them in sequential batches of 10, and retries any batch-dropped symbol individually once.
 - **Breaker accounting for sparse responses** is data-aware: Pyth and RedStone only count as successful breaker outcomes when they return at least one usable price, not merely a 200 transport response.
 
-These rules live in `worker/src/lib/pyth.ts`, `worker/src/lib/redstone.ts`, and `worker/src/cron/sync-stablecoins/enrich-prices.ts`.
+These rules live in `worker/src/lib/pyth.ts`, `worker/src/lib/redstone.ts`, and the `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts` module (re-exported through `enrich-prices.ts`).
 
 ### Authoritative Price Source Registry
 
@@ -192,13 +192,13 @@ The live `/price/` endpoint requires no API key and is called every 15-minute sy
 
 **Band classification:** `BEDROCK` (90–100), `STEADY` (75–89), `TREMOR` (60–74), `FRACTURE` (40–59), `CRISIS` (20–39), `MELTDOWN` (0–19)
 
-**Storage:** 30-minute samples go into `stability_index_samples` (migration 0026); daily averages are aggregated by `snapshotPsiDaily()` into `stability_index` (migration 0022). Both tables store `score`, `band`, `components` (JSON), `input_snapshot` (JSON).
+**Storage:** 30-minute samples go into `stability_index_samples`; daily averages are aggregated by `snapshotPsiDaily()` into `stability_index`. Both tables store `score`, `band`, `components` (JSON), `input_snapshot` (JSON). Schema definitions are in `worker/migrations/0000_baseline.sql`.
 
 ## Pending Depeg Confirmation
 
 For stablecoins with >$1B circulating supply, depeg detection uses a two-phase confirmation system:
 
-1. **Phase 1** (`detect-depegs.ts`): When a coin requires confirmation instead of direct mutation, a record is inserted into `depeg_pending` (migration 0023 + reason column in migration 0061). This now covers three cases: `>$1B` supply, low-confidence/cached/stale primary prices, and extreme moves (`abs(bps) >= 5000`)
+1. **Phase 1** (`detect-depegs.ts`): When a coin requires confirmation instead of direct mutation, a record is inserted into `depeg_pending` (schema in `worker/migrations/0000_baseline.sql`). This now covers three cases: `>$1B` supply, low-confidence/cached/stale primary prices, and extreme moves (`abs(bps) >= 5000`)
 2. **Phase 2** (`confirm-pending-depegs.ts`): On the next cron cycle, pending records are re-checked. If the depeg persists and a secondary source agrees, a real depeg event is opened. If an **authoritative** primary price recovered, the pending record is deleted
 
 This prevents false positive depeg events for systemically important stablecoins during brief price feed glitches.

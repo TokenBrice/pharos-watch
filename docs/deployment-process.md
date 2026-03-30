@@ -60,9 +60,10 @@ Hook behavior:
 Default policy:
 
 1. If the diff does not touch Pages or worker deploy surfaces, print the changed-file set and skip the gate.
-2. For deploy-impacting diffs, always run the shared validate core:
+2. For deploy-impacting diffs, always run the shared validate pre-build checks:
    - `npm run audit:deps`
    - `npm run lint`
+   - `npm run typecheck`
    - `npm run check:worker-boundary`
    - `npm run check:shared-cycles`
    - `npm run check:migrations`
@@ -74,12 +75,15 @@ Default policy:
    - `npm run check:redemption-backstops`
    - `npm run check:unused-code`
    - `npm run check:hotspot-ratchet`
-   - `npm test`
-   - `npm run coverage:critical`
+   - `npm run check:sql-safety`
+   - `npm run check:stablecoin-data`
 3. If Pages-impacting files changed, additionally run:
    - `npm run build`
    - `npm run seo:check`
-4. If worker-impacting files changed, additionally run:
+4. Always run the shared validate post-build checks:
+   - `npm test`
+   - `npm run coverage:critical`
+5. If worker-impacting files changed, additionally run:
    - `cd worker && npx tsc --noEmit`
 
 Pages-impacting files now use the same broad matcher as CI deploy classification: any `src/`, `shared/`, `functions/`, `public/`, or `data/` path, selected build/config scripts, and the Pages release workflow files all require local export validation. Worker-impacting files use the same worker/shared/deploy-infra matcher as CI. The gate still skips deploy-time smoke suites locally.

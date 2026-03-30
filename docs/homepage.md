@@ -100,11 +100,12 @@ Managed by `src/hooks/use-homepage-filters.ts` and `src/hooks/use-url-filters.ts
 - `type` -> one active governance filter
 - `backing` -> one active backing filter
 - `grade` -> one active score-tier filter
+- `liquity forks` -> one active Liquity protocol-lineage filter (`liquity-v1`, `liquity-v2`)
 
 Rules:
 
 - only one value per filter group is active at a time
-- the homepage peg rail exposes `USD`, `Gold`, `EUR`, and `Other`; `Other` includes GBP/CHF and the longer tail of non-USD pegs
+- the homepage peg rail groups pegs into `Fiat`, `Commodity`, and `Other` categories, displaying all active pegs through `PEG_LABELS_SHORT`
 - `"all"` and empty-string values clear the param instead of persisting it
 - updates use `window.history.replaceState(...)`, so filter changes do not create extra history entries or scroll jumps
 
@@ -177,8 +178,9 @@ This band contains:
 - `CategoryStats`
 - `TotalMcapChart`
 - `PegDiversityChart`
+- `NonUsdShareChart`
 
-`CategoryStats` and `TotalMcapChart` are wrapped in `SectionErrorBoundary`. `PegDiversityChart` currently renders directly, so a failure there is not isolated by a band-level boundary.
+All four components are wrapped in individual `SectionErrorBoundary` instances.
 
 ---
 
@@ -194,6 +196,7 @@ The heavier homepage sections are dynamically imported in `src/components/homepa
 - `HomepageFlowOverview`
 - `HomepageSafetyOverview`
 - `PegDiversityChart`
+- `NonUsdShareChart`
 - `DailyDigest`
 
 Each dynamic module uses a shape-matched skeleton rather than blocking the full page render.

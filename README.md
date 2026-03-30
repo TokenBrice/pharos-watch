@@ -199,7 +199,7 @@ Cloudflare Worker (API layer)
   ├── Cron: 6,36 * * * *                         → DEX discovery staging (30 min)
   ├── Cron: 13,33,53 * * * *                    → mint/burn extended lane
   ├── Cron: 10,40 * * * *                       → stablecoin charts + DEX liquidity + DEWS + PSI
-  ├── Cron: 11 * * * *                          → live reserve sync + redemption backstop snapshots + Kinesis supply
+  ├── Cron: 11 * * * *                          → live reserve sync + redemption backstop snapshots + Kinesis supply + collateral drift check
   ├── Cron: 20 * * * *                          → yield sync
   ├── Cron: 25 */4 * * *                        → supplemental yield sync
   ├── Cron: 2,7,12,17,22,27,32,37,42,47,52,57 * * * * → Telegram subscriber alerts
@@ -210,6 +210,7 @@ Cloudflare Worker (API layer)
 Cloudflare D1 (SQLite database)
   ├── cache                → JSON blobs (stablecoin list, per-coin detail, charts, FX/status/ranking caches) with CAS write guard
   ├── blacklist_events     → normalized freeze/blacklist events
+  ├── blacklist_current_balances → active blacklist address current-balance cache
   ├── blacklist_sync_state → incremental sync progress (block numbers for EVM, timestamps for Tron)
   ├── depeg_events         → peg deviation events with unique constraint + direction tracking
   ├── price_cache          → historical price snapshots for depeg detection
@@ -256,6 +257,7 @@ Cloudflare D1 (SQLite database)
   ├── cron_run_progress    → per-job cron progress tracking
   ├── daily_digest         → AI-generated daily market summaries
   ├── admin_idempotency_keys → idempotency keys for admin mutations
+  ├── feedback_submissions → durable feedback submission log
   ├── feedback_rate_limit  → IP-based rate limiting for feedback submissions
   ├── public_api_rate_limit → Distributed per-minute buckets for non-admin public API traffic
   └── kv_config            → general key-value config store for runtime settings
@@ -284,13 +286,13 @@ The data pipeline includes multiple guardrails designed for research-grade accur
 
 ## Deployment
 
-GitHub Actions now runs the shared validate gate on pull requests to `main` via `.github/workflows/pull-request-checks.yml`, while production deploys still run only from `.github/workflows/deploy-cloudflare.yml` on push to `main`, the daily scheduled rebuild, or manual `workflow_dispatch`:
+GitHub Actions now runs the shared validate gate on pull requests to `main` via `.github/workflows/pull-request-checks.yml`, while production deploys run from `.github/workflows/deploy-cloudflare.yml` on push to `main` or manual `workflow_dispatch`. A separate `.github/workflows/rebuild-pages.yml` handles the daily scheduled Pages rebuild (08:15 UTC, after digest generation):
 
 For the canonical delivery workflow (including worktree merge flow and the repo pre-push merge gate), see [docs/deployment-process.md](./docs/deployment-process.md).
 For the full Worker, Pages Functions, and frontend runtime binding table, see [.env.example](./.env.example) and [docs/worker-infrastructure.md](./docs/worker-infrastructure.md).
 For mint/burn ingestion diagnostics and recovery, see `agents/process/mint-burn-ingestion.md`.
 
-1. **Validate gate:** `npm run audit:deps` → `npm run lint` → `npm run check:worker-boundary` → `npm run check:shared-cycles` → `npm run check:migrations` → `npm run check:cron-sync` → `npm run check:cron-connections` → `npm run check:doc-counts` → `npm run check:doc-sync` → `npm run check:duplicate-exports` → `npm run check:redemption-backstops` → `npm run check:unused-code` → `npm run check:hotspot-ratchet` → `npm test` → `npm run coverage:critical` → `npm run build` → `npm run seo:check` when Pages-impacting files changed → `cd worker && npx tsc --noEmit` when worker-impacting files changed
+1. **Validate gate:** `npm run audit:deps` → `npm run lint` → `npm run typecheck` → `npm run check:worker-boundary` → `npm run check:shared-cycles` → `npm run check:migrations` → `npm run check:cron-sync` → `npm run check:cron-connections` → `npm run check:doc-counts` → `npm run check:doc-sync` → `npm run check:duplicate-exports` → `npm run check:redemption-backstops` → `npm run check:unused-code` → `npm run check:hotspot-ratchet` → `npm run check:sql-safety` → `npm run check:stablecoin-data` → `npm run build` + `npm run seo:check` when Pages-impacting files changed → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit` when worker-impacting files changed
 2. **Worker candidate upload + preview smoke:** `npm ci` → capture the currently live Worker version ID → `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote` → `cd worker && npx --no-install wrangler versions upload` → `npm run test:smoke-api` against that uploaded preview URL
 3. **Worker promotion:** `cd worker && npx --no-install wrangler versions deploy <uploaded-version>@100` → `cd worker && npx --no-install wrangler triggers deploy`
 4. **Production API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE` (fed from GitHub variable `SMOKE_API_BASE_URL`, fallback `API_BASE_URL`); if this fails after promotion, CI auto-rolls the Worker back to the previously live version

@@ -36,9 +36,9 @@ Light mode keeps the same hierarchy as dark mode, but status/accent text is cali
 Public pages use this shell:
 
 ```tsx
-<header className="md:hidden sticky top-[3px] z-50 border-b border-border/80 bg-background/88 backdrop-blur-xl supports-[backdrop-filter]:bg-background/72" style={{ boxShadow: "var(--elevation-rest)" }} />
+<header className="md:hidden sticky top-[3px] z-50 border-b border-border/80 bg-background" style={{ boxShadow: "var(--elevation-rest)" }} />
 <div className="flex min-h-screen">
-  <aside className="hidden md:flex flex-col fixed top-[3px] left-0 h-[calc(100vh-3px)] border-r border-border/70 bg-card/92 backdrop-blur-xl z-40 transition-all duration-200" />
+  <aside className="hidden md:flex flex-col fixed top-[3px] left-0 h-[calc(100vh-3px)] border-r border-border/70 bg-card shadow-[0_0_0_1px_oklch(1_0_0_/0.03),0_20px_35px_oklch(0_0_0_/0.2)] z-40 transition-all duration-200" />
   <div className="hidden md:block shrink-0 transition-all duration-200 w-[var(--sidebar-width-expanded)]" />
 
   <div className="flex-1 flex flex-col min-w-0">
@@ -46,7 +46,7 @@ Public pages use this shell:
       {/* route content */}
     </main>
 
-    <footer className="border-t border-border/70 bg-muted/10 py-8 sm:py-10" />
+    <footer className="border-t border-border/70 py-8 sm:py-10" />
   </div>
 </div>
 ```

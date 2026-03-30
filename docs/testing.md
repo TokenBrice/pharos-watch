@@ -46,6 +46,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 2. `validate` (runs before any deployment):
    - `npm run audit:deps`
    - `npm run lint`
+   - `npm run typecheck`
    - `npm run check:worker-boundary`
    - `npm run check:shared-cycles`
    - `npm run check:migrations`
@@ -57,9 +58,11 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - `npm run check:redemption-backstops`
    - `npm run check:unused-code`
    - `npm run check:hotspot-ratchet`
+   - `npm run check:sql-safety`
+   - `npm run check:stablecoin-data`
+   - `npm run build` + `npm run seo:check` when `pages_changed=true` (always true on PR validate, diff-aware on deploy pushes)
    - `npm test`
    - `npm run coverage:critical`
-   - `npm run build` + `npm run seo:check` when `pages_changed=true` (always true on PR validate, diff-aware on deploy pushes)
    - `cd worker && npx tsc --noEmit` when `worker_changed=true` (always true on PR validate, diff-aware on deploy pushes)
 3. `detect-changes` (push/manual deploy workflow only):
    - Diffs `github.event.before..github.sha` on `push`
@@ -162,17 +165,36 @@ const isWorktreeCheckout = normalizedRoot.includes("/.worktrees/") || normalized
 const worktreeExcludes = isWorktreeCheckout ? [] : [".worktrees/**", "worktrees/**"];
 
 export default defineConfig({
+  plugins: [wasmStubPlugin()],
   test: {
-    exclude: [...worktreeExcludes, ".next/**", "out/**", "coverage/**"],
+    exclude: [
+      ...configDefaults.exclude,
+      ...worktreeExcludes,
+      ".claude/**",
+      ".next/**",
+      "out/**",
+      "coverage/**",
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
+      exclude: [/* mirrors test.exclude */],
       thresholds: { lines: 66 }, // Local full-suite coverage reference; CI enforces the critical coverage gate separately
     },
   },
-  resolve: { alias: { "@": path.resolve(__dirname, "src"), "@shared": path.resolve(__dirname, "shared") } },
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "src"),
+      "@shared": path.resolve(__dirname, "shared"),
+      // Stub WASM-dependent packages (satori, resvg) for Node-based vitest runs
+      "satori/standalone": path.resolve(__dirname, "worker/src/__mocks__/satori-stub.ts"),
+      // ... additional WASM alias stubs
+    },
+  },
 });
 ```
+
+The config also includes a `wasmStubPlugin()` Vite plugin that stubs `.wasm` imports for Node compatibility and resolve aliases for `satori/standalone`, `satori/yoga.wasm`, `@cf-wasm/resvg/workerd`, and `@resvg/resvg-wasm`.
 
 When the checkout itself lives under `/.worktrees/`, Vitest now drops those glob exclusions so coverage still includes the active repository files; nested worktree directories remain excluded in a normal top-level checkout.
 
