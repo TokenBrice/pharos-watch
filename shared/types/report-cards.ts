@@ -54,6 +54,15 @@ const DependencyWeightSchema = z.object({
   type: DependencyTypeSchema.optional(),
 });
 
+// Wire-compatible schema: accepts legacy "possible-inherited" from old snapshots
+// and maps it to the clearer "inherited" label.
+const ReportCardBlacklistStatusSchema = z.union([
+  z.boolean(),
+  z.literal("possible"),
+  z.literal("inherited"),
+  z.literal("possible-inherited").transform((): "inherited" => "inherited"),
+]);
+
 // Wire-compatible schema: accepts legacy "institutional" from old worker snapshots
 // and maps it to "institutional-regulated". Remove once all D1 rows are refreshed.
 const CustodyModelWireSchema = CustodyModelSchema.or(
@@ -75,7 +84,7 @@ const RawDimensionInputsSchema = z.object({
   redemptionImmediateCapacityRatio: z.number().nullable(),
   concentrationHhi: z.number().nullable(),
   bluechipGrade: BluechipGradeSchema.nullable(),
-  canBeBlacklisted: z.union([z.boolean(), z.literal("possible"), z.literal("possible-inherited")]),
+  canBeBlacklisted: ReportCardBlacklistStatusSchema,
   chainTier: ChainTierSchema,
   deploymentModel: DeploymentModelSchema,
   collateralQuality: CollateralQualitySchema,

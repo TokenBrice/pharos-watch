@@ -232,16 +232,16 @@ describe("computeOverallGrade — no-liquidity penalty", () => {
   });
 });
 
-describe("scoreResilience — possible-inherited blacklist label", () => {
-  it("labels Possible (inherited) descriptively for possible-inherited", () => {
-    const result = scoreResilience(makeMeta(), "possible-inherited");
-    expect(result.detail).toContain("Blacklist: Possible (inherited) (descriptive only)");
+describe("scoreResilience — inherited blacklist label", () => {
+  it("labels Inherited descriptively for inherited blacklist risk", () => {
+    const result = scoreResilience(makeMeta(), "inherited");
+    expect(result.detail).toContain("Blacklist: Inherited (descriptive only)");
   });
 });
 
 describe("isBlacklistable — inherited risk from reserves", () => {
-  it("exports INHERITED_BLACKLIST_THRESHOLD_PCT as 25", () => {
-    expect(INHERITED_BLACKLIST_THRESHOLD_PCT).toBe(25);
+  it("exports INHERITED_BLACKLIST_THRESHOLD_PCT as 50", () => {
+    expect(INHERITED_BLACKLIST_THRESHOLD_PCT).toBe(50);
   });
 
   it("returns true for centralized governance (no index needed)", () => {
@@ -254,28 +254,39 @@ describe("isBlacklistable — inherited risk from reserves", () => {
     expect(isBlacklistable(meta)).toBe(false);
   });
 
-  it("returns possible-inherited when ≥25% of reserves link to blacklistable coinIds", () => {
+  it("returns inherited when a majority of reserves link to blacklistable coinIds", () => {
     const meta = makeMeta({
       flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
       reserves: [
-        { name: "USDC via PSM", pct: 33, risk: "low", coinId: "usdc-circle" },
-        { name: "ETH", pct: 67, risk: "medium" },
+        { name: "USDC via PSM", pct: 55, risk: "low", coinId: "usdc-circle" },
+        { name: "ETH", pct: 45, risk: "medium" },
       ],
     });
     const blacklistableIds = new Set(["usdc-circle"]);
-    expect(isBlacklistable(meta, blacklistableIds)).toBe("possible-inherited");
+    expect(isBlacklistable(meta, blacklistableIds)).toBe("inherited");
   });
 
-  it("returns false when blacklistable reserve share is below threshold (24%)", () => {
+  it("returns false when blacklistable reserve share is below the majority threshold", () => {
     const meta = makeMeta({
       flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
       reserves: [
-        { name: "USDC buffer", pct: 24, risk: "low", coinId: "usdc-circle" },
-        { name: "ETH", pct: 76, risk: "medium" },
+        { name: "USDC buffer", pct: 49, risk: "low", coinId: "usdc-circle" },
+        { name: "ETH", pct: 51, risk: "medium" },
       ],
     });
     const blacklistableIds = new Set(["usdc-circle"]);
     expect(isBlacklistable(meta, blacklistableIds)).toBe(false);
+  });
+
+  it("counts explicit reserve-slice blacklistability even without coinId links", () => {
+    const meta = makeMeta({
+      flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
+      reserves: [
+        { name: "WBTC", pct: 58, risk: "medium", blacklistable: true },
+        { name: "wstETH", pct: 42, risk: "low" },
+      ],
+    });
+    expect(isBlacklistable(meta)).toBe("inherited");
   });
 
   it("explicit canBeBlacklisted: false override wins even with heavy blacklistable reserves", () => {
@@ -302,7 +313,7 @@ describe("isBlacklistable — inherited risk from reserves", () => {
     expect(isBlacklistable(meta, blacklistableIds)).toBe(false);
   });
 
-  it("ignores reserve slices without coinId when computing inherited share", () => {
+  it("ignores non-blacklistable reserve slices without coinId when computing inherited share", () => {
     const meta = makeMeta({
       flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
       reserves: [

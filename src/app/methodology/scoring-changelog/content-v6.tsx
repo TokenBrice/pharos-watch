@@ -1,9 +1,9 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
+import { ScoringChangelogV69Entry } from "./content-v6-9";
 
 export function ScoringChangelogV6Entries() {
   return (
     <>
-            {/* ──────────── v6.8 ──────────── */}
             <VersionCard
               entry={getScoringEntry("6.8")}
               accent="border-l-amber-500"
@@ -29,7 +29,6 @@ export function ScoringChangelogV6Entries() {
               </ul>
             </VersionCard>
 
-            {/* ──────────── v6.6 ──────────── */}
             <VersionCard
               entry={getScoringEntry("6.6")}
               accent="border-l-amber-500"
@@ -60,7 +59,6 @@ export function ScoringChangelogV6Entries() {
               </ul>
             </VersionCard>
 
-            {/* ──────────── v6.5 ──────────── */}
             <VersionCard
               entry={getScoringEntry("6.5")}
               accent="border-l-amber-500"
@@ -95,7 +93,6 @@ export function ScoringChangelogV6Entries() {
               </ul>
             </VersionCard>
 
-            {/* ──────────── v6.4 ──────────── */}
             <VersionCard
               entry={getScoringEntry("6.4")}
               accent="border-l-amber-500"
@@ -125,7 +122,6 @@ export function ScoringChangelogV6Entries() {
               </ul>
             </VersionCard>
 
-            {/* ──────────── v6.3 ──────────── */}
             <VersionCard
               entry={getScoringEntry("6.3")}
               accent="border-l-amber-500"
@@ -154,7 +150,6 @@ export function ScoringChangelogV6Entries() {
               </ul>
             </VersionCard>
 
-            {/* ──────────── v6.2 ──────────── */}
             <VersionCard
               entry={getScoringEntry("6.2")}
               accent="border-l-amber-500"
@@ -186,7 +181,6 @@ export function ScoringChangelogV6Entries() {
               </ul>
             </VersionCard>
 
-            {/* ──────────── v6.1 ──────────── */}
             <VersionCard
               entry={getScoringEntry("6.1")}
               accent="border-l-amber-500"
@@ -211,7 +205,6 @@ export function ScoringChangelogV6Entries() {
               </ul>
             </VersionCard>
 
-            {/* ──────────── v6.0 ──────────── */}
             <VersionCard
               entry={getScoringEntry("6.0")}
               accent="border-l-amber-500"
@@ -243,7 +236,8 @@ export function ScoringChangelogV6Entries() {
               </ul>
             </VersionCard>
 
-            {/* ──────────── v6.7 ──────────── */}
+            <ScoringChangelogV69Entry />
+
             <VersionCard
               entry={getScoringEntry("6.7")}
               accent="border-l-amber-500"

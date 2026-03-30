@@ -100,6 +100,7 @@ const ReserveSliceAssetSchema = z.object({
   risk: z.enum(RESERVE_RISK_VALUES),
   coinId: z.string().optional(),
   depType: z.enum(DEPENDENCY_TYPE_VALUES).optional(),
+  blacklistable: z.boolean().optional(),
 }).strict();
 
 const CoinNoticeAssetSchema = z.object({

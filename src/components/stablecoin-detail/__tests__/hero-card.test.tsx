@@ -152,7 +152,7 @@ const reportCardWithInheritedBlacklistRisk: ReportCard = {
     redemptionImmediateCapacityRatio: null,
     concentrationHhi: 0.2,
     bluechipGrade: null,
-    canBeBlacklisted: "possible-inherited",
+    canBeBlacklisted: "inherited",
     chainTier: "ethereum",
     deploymentModel: "multi-chain",
     collateralQuality: "mixed",
@@ -289,8 +289,7 @@ describe("HeroCard", () => {
     );
 
     expect(html).toContain("Blacklistable");
-    expect(html).toContain("Possible");
-    expect(html).not.toContain("Inherited");
+    expect(html).toContain("Inherited");
     expect(html).not.toContain("No issuer controls");
   });
 

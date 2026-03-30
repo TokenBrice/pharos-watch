@@ -3444,7 +3444,8 @@
       {
         "name": "WBTC",
         "pct": 58,
-        "risk": "medium"
+        "risk": "medium",
+        "blacklistable": true
       },
       {
         "name": "wstETH (Lido)",

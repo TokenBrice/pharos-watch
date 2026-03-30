@@ -3339,31 +3339,14 @@
         "decimals": 18
       }
     ],
-    "dependencies": [
-      {
-        "id": "usdt-tether",
-        "weight": 0.1
-      },
-      {
-        "id": "usdc-circle",
-        "weight": 0.1
-      },
-      {
-        "id": "pyusd-paypal",
-        "weight": 0.1
-      },
-      {
-        "id": "frxusd-frax",
-        "weight": 0.1
-      }
-    ],
     "deploymentModel": "canonical-bridge",
     "governanceQuality": "dao-governance",
     "reserves": [
       {
         "name": "WBTC / cbBTC",
         "pct": 69,
-        "risk": "medium"
+        "risk": "medium",
+        "blacklistable": true
       },
       {
         "name": "tBTC",

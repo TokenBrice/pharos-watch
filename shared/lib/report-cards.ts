@@ -478,7 +478,15 @@ export function resolveResilienceFactors(meta: StablecoinMeta): {
 // ---------------------------------------------------------------------------
 
 /** Minimum % of reserves backed by blacklistable coinIds to trigger inherited risk. */
-export const INHERITED_BLACKLIST_THRESHOLD_PCT = 25;
+export const INHERITED_BLACKLIST_THRESHOLD_PCT = 50;
+
+function reserveSliceCanInheritBlacklistRisk(
+  slice: ReserveSlice,
+  blacklistableIds?: ReadonlySet<string>,
+): boolean {
+  if (slice.blacklistable === true) return true;
+  return slice.coinId !== undefined && blacklistableIds?.has(slice.coinId) === true;
+}
 
 /**
  * Resolves the blacklist risk tier for a coin.
@@ -487,9 +495,9 @@ export const INHERITED_BLACKLIST_THRESHOLD_PCT = 25;
  *   1. Explicit meta.canBeBlacklisted override
  *   2. Centralized governance → true
  *   3. Inherited: ≥ INHERITED_BLACKLIST_THRESHOLD_PCT of reserves are backed
- *      by first-order blacklistable coins (matched by coinId)
- *   4. Centralized-dependent governance → possible
- *   5. false
+ *      by reserve slices that are explicitly blacklistable or by first-order
+ *      blacklistable coins (matched by coinId)
+ *   4. false
  *
  * Pass `blacklistableIds` built from first-order coins only (explicit + centralized,
  * no index arg) to avoid recursive/circular inheritance.
@@ -497,16 +505,17 @@ export const INHERITED_BLACKLIST_THRESHOLD_PCT = 25;
 export function isBlacklistable(
   meta: StablecoinMeta,
   blacklistableIds?: ReadonlySet<string>,
-): boolean | "possible" | "possible-inherited" {
+  reserveSlices?: readonly ReserveSlice[],
+): boolean | "possible" | "inherited" {
   if (meta.canBeBlacklisted !== undefined) return meta.canBeBlacklisted;
   if (meta.flags.governance === "centralized") return true;
-  if (blacklistableIds && meta.reserves) {
-    const inheritedPct = meta.reserves
-      .filter((r) => r.coinId !== undefined && blacklistableIds.has(r.coinId))
+  const effectiveReserves = reserveSlices ?? meta.reserves;
+  if (effectiveReserves) {
+    const inheritedPct = effectiveReserves
+      .filter((slice) => reserveSliceCanInheritBlacklistRisk(slice, blacklistableIds))
       .reduce((sum, r) => sum + r.pct, 0);
-    if (inheritedPct >= INHERITED_BLACKLIST_THRESHOLD_PCT) return "possible-inherited";
+    if (inheritedPct > INHERITED_BLACKLIST_THRESHOLD_PCT) return "inherited";
   }
-  if (meta.flags.governance === "centralized-dependent") return "possible";
   return false;
 }
 
@@ -523,7 +532,7 @@ export function isBlacklistable(
  */
 export function scoreResilience(
   meta: StablecoinMeta,
-  canBeBlacklisted: boolean | "possible" | "possible-inherited",
+  canBeBlacklisted: boolean | "possible" | "inherited",
   liveReserveSlices?: ReserveSlice[],
 ): ReportCardDimension {
   const factors = resolveResilienceFactors(meta);
@@ -532,8 +541,8 @@ export function scoreResilience(
       ? "Yes"
       : canBeBlacklisted === "possible"
         ? "Possible (mutable contract)"
-        : canBeBlacklisted === "possible-inherited"
-          ? "Possible (inherited)"
+        : canBeBlacklisted === "inherited"
+          ? "Inherited"
           : "No";
 
   const custodyScore = CUSTODY_MODEL_SCORE[factors.custodyModel];
