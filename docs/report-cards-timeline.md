@@ -303,6 +303,16 @@ Weights and grade thresholds are unchanged from v5.8.
 - Wrapper governance exempted from chain infrastructure penalty
 - Deployment multipliers: canonical-bridge 0.85→0.90, native-multichain 0.40→0.75
 
+## v6.9 — Explicit inherited blacklistability (2026-03-30)
+
+Safety Score structure is unchanged, but blacklistability attribution is now more explicit for decentralized protocols with freeze-prone collateral:
+
+- `isBlacklistable()` no longer treats `centralized-dependent` governance as `possible` by default
+- Computed inherited blacklistability now resolves to `inherited`, separating upstream freeze risk from mutable-contract risk
+- Inherited status now requires majority reserve exposure and can be driven by curated reserve-slice `blacklistable` markers in addition to upstream stablecoin `coinId` links
+
+Weights and grade thresholds are unchanged from v6.8.
+
 ## v6.8 — On-chain reserve freshness alignment (2026-03-25)
 
 Safety Score structure is unchanged, but the live reserve freshness contract is refined for direct on-chain adapters:

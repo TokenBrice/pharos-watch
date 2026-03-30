@@ -513,22 +513,33 @@ describe("isBlacklistable", () => {
     expect(isBlacklistable(meta as never)).toBe(false);
   });
 
-  it("returns possible for centralized-dependent governance", () => {
+  it("returns possible when an explicit override marks the coin as mutable", () => {
     const meta = {
       flags: { governance: "centralized-dependent" as const },
-      canBeBlacklisted: undefined,
+      canBeBlacklisted: "possible" as const,
     };
     expect(isBlacklistable(meta as never)).toBe("possible");
   });
 
-  it("prefers inherited risk over the generic centralized-dependent fallback", () => {
+  it("returns inherited for majority reserve exposure even when governance is centralized-dependent", () => {
     const meta = {
       flags: { governance: "centralized-dependent" as const },
       canBeBlacklisted: undefined,
       reserves: [
-        { name: "USDC", pct: 30, risk: "low", coinId: "usdc-circle" },
+        { name: "Wrapped BTC", pct: 60, risk: "medium", blacklistable: true },
       ],
     };
-    expect(isBlacklistable(meta as never, new Set(["usdc-circle"]))).toBe("possible-inherited");
+    expect(isBlacklistable(meta as never, new Set(["usdc-circle"]))).toBe("inherited");
+  });
+
+  it("returns false for centralized-dependent governance without explicit or inherited risk", () => {
+    const meta = {
+      flags: { governance: "centralized-dependent" as const },
+      canBeBlacklisted: undefined,
+      reserves: [
+        { name: "ETH", pct: 100, risk: "very-low" },
+      ],
+    };
+    expect(isBlacklistable(meta as never)).toBe(false);
   });
 });

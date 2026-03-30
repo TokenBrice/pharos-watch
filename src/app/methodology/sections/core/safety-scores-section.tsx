@@ -447,11 +447,10 @@ export function SafetyScoresMethodologySection() {
                     <li>Decentralization score is structural, not a value judgment</li>
                     <li>
                       Blacklist capability is reported descriptively only and does not affect the Resilience score.
-                      Stablecoins with <code className="text-xs bg-muted px-1 py-0.5 rounded">centralized-dependent</code>{" "}
-                      governance default to &ldquo;possible&rdquo; blacklistability unless an explicit override says
-                      otherwise.
-                      Stablecoins where &ge;25% of reserves (by weight) are backed by first-order
-                      blacklistable coins are flagged as &ldquo;possible-inherited&rdquo; blacklist risk
+                      Only explicit contract-level evidence surfaces as &ldquo;possible&rdquo; blacklistability.
+                      Stablecoins where a majority of reserves (by weight) are backed by explicitly blacklistable
+                      collateral or first-order blacklistable upstream assets are flagged as &ldquo;inherited&rdquo;
+                      blacklist risk
                     </li>
                   </ul>
                 </div>

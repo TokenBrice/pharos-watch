@@ -137,7 +137,7 @@ export function sortStablecoins({
       if (!meta) return null;
       const status = reportCards?.[r.id]?.rawInputs.canBeBlacklisted ?? isBlacklistable(meta);
       if (status === true) return 2;
-      if (status === "possible" || status === "possible-inherited") return 1;
+      if (status === "possible" || status === "inherited") return 1;
       return 0;
     },
     peg: (r) => {
@@ -192,7 +192,7 @@ export function exportStablecoinsCsv(
           const meta = TRACKED_META_BY_ID.get(row.id);
           if (!meta) return null;
           const status = reportCards?.[row.id]?.rawInputs.canBeBlacklisted ?? isBlacklistable(meta);
-          return status === true ? "Yes" : status === false ? "No" : "Possible";
+          return status === true ? "Yes" : status === false ? "No" : status === "inherited" ? "Inherited" : "Possible";
         },
       },
       { header: "Grade", accessor: (row) => reportCards?.[row.id]?.overallGrade ?? null },

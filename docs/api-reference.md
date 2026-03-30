@@ -1366,7 +1366,7 @@ The Liquidity dimension now represents `effectiveExitScore`: the public DEX liqu
 | `redemptionImmediateCapacityRatio` | `number \| null`                                |
 | `concentrationHhi`                 | `number \| null`                                |
 | `bluechipGrade`                    | `BluechipGrade \| null`                         |
-| `canBeBlacklisted`                 | `boolean \| "possible" \| "possible-inherited"` |
+| `canBeBlacklisted`                 | `boolean \| "possible" \| "inherited"` |
 | `chainTier`                        | `ChainTier`                                     |
 | `deploymentModel`                  | `DeploymentModel`                               |
 | `collateralQuality`                | `CollateralQuality`                             |

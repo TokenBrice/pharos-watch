@@ -8,4 +8,5 @@ export interface ReserveSlice {
   risk: ReserveRisk;
   coinId?: string;
   depType?: DependencyType;
+  blacklistable?: boolean;
 }

@@ -77,10 +77,10 @@ Blacklist capability is reported descriptively only and does not affect the Resi
 | --------------------------- | ----- | --------------------------------------------------------------------- |
 | Yes                         | 33    | `canBeBlacklisted: true` (explicit) or `governance === "centralized"` |
 | Possible (mutable contract) | 66    | `canBeBlacklisted: "possible"` (explicit override)                    |
-| Possible (inherited)        | 66    | ≥25% of reserves backed by blacklistable coins (via `coinId` lookup)  |
+| Inherited                   | 66    | >50% of reserves are explicitly blacklistable or backed by blacklistable upstream assets |
 | No                          | 100   | None of the above                                                     |
 
-`"possible-inherited"` is a **computed** value only — it never appears as a manual override in `stablecoins.ts`. The `canBeBlacklisted` field in `StablecoinMeta` only accepts `boolean | "possible"`. The inherited tier is derived at scoring time when reserve compositions show that at least 25% of a coin's reserves are backed by stablecoins that are themselves blacklistable.
+`"inherited"` is a **computed** value only — it never appears as a manual override in stablecoin metadata. The `canBeBlacklisted` field in `StablecoinMeta` only accepts `boolean | "possible"`. The inherited tier is derived at scoring time when reserve compositions show that a majority of a coin's reserves are either explicitly marked blacklistable or backed by upstream assets that are themselves blacklistable.
 
 #### Collateral Quality: Reserve-Derived Scoring (v3.3)
 
@@ -119,10 +119,10 @@ continue serving from curated reserve metadata and mark the affected coins in
 
 **Known Limitation: Blacklist Inherited Uses Curated Data**
 
-`isBlacklistable()` computes `"possible-inherited"` blacklistability from curated
-`StablecoinMeta.reserves` (which carry `coinId` links), not from live adapter
-snapshots. Live adapter slices do not carry `coinId` because adapters return generic
-slice names without linking to tracked Pharos stablecoin IDs.
+`isBlacklistable()` computes `"inherited"` blacklistability from curated
+`StablecoinMeta.reserves`, using either reserve-slice `blacklistable: true`
+markers or `coinId` links to upstream blacklistable assets. Live adapter
+snapshots currently do not participate in that calculation.
 
 This means the blacklist capability sub-factor and the collateral quality sub-factor
 within Resilience can see different reserve compositions when live data diverges from

@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "6.8",
+  currentVersion: "6.9",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "6.9",
+      title: "Explicit inherited blacklistability",
+      date: "2026-03-30",
+      effectiveAt: 1774828800,
+      summary:
+        "Blacklistability attribution now separates mutable-contract risk from inherited collateral freeze risk, and no longer treats centralized-dependent governance as enough evidence on its own.",
+      impact: [
+        "Shared isBlacklistable() logic no longer defaults centralized-dependent governance to possible",
+        "Reserve-heavy downstream freeze exposure now resolves to inherited instead of possible-inherited",
+        "Inherited detection now requires majority reserve exposure and can use curated reserve-slice blacklistable markers alongside upstream stablecoin coinId links",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "6.8",
       title: "On-chain reserve freshness alignment",

@@ -363,9 +363,9 @@ export function HeroCard({
           sub: undefined,
           color: "text-amber-700 dark:text-amber-400",
         };
-      case "possible-inherited":
+      case "inherited":
         return {
-          value: "Possible",
+          value: "Inherited",
           sub: undefined,
           color: "text-amber-700 dark:text-amber-400",
         };
