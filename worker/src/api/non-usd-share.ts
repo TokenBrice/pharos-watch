@@ -3,15 +3,23 @@ import { buildInClause } from "../lib/db";
 import { jsonResponse, withErrorHandler } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 
-/** IDs of all active non-USD stablecoins (fiat non-USD + commodity + VAR). */
-const NON_USD_IDS = ACTIVE_STABLECOINS
-  .filter((c) => c.flags.pegCurrency !== "USD")
+const COMMODITY_PEGS = new Set(["GOLD", "SILVER"]);
+
+/** IDs of commodity-pegged stablecoins (gold, silver). */
+const COMMODITY_IDS = ACTIVE_STABLECOINS
+  .filter((c) => COMMODITY_PEGS.has(c.flags.pegCurrency))
+  .map((c) => c.id);
+
+/** IDs of fiat non-USD stablecoins (EUR, GBP, BRL, VAR, etc.). */
+const FIAT_NON_USD_IDS = ACTIVE_STABLECOINS
+  .filter((c) => c.flags.pegCurrency !== "USD" && !COMMODITY_PEGS.has(c.flags.pegCurrency))
   .map((c) => c.id);
 
 interface AggRow {
   snapshot_date: number;
   total: number;
-  non_usd: number;
+  commodity: number;
+  fiat_non_usd: number;
 }
 
 export const handleNonUsdShare = withErrorHandler(
@@ -21,20 +29,22 @@ export const handleNonUsdShare = withErrorHandler(
     const days = Math.min(Math.max(Number(daysParam) || 1825, 30), 1825);
     const cutoff = Math.floor(Date.now() / 1000) - days * 86400;
 
-    const inClause = buildInClause(NON_USD_IDS);
+    const commodityIn = buildInClause(COMMODITY_IDS);
+    const fiatIn = buildInClause(FIAT_NON_USD_IDS);
 
     const result = await db
       .prepare(
         `SELECT
            snapshot_date,
            ROUND(SUM(circulating_usd), 2) AS total,
-           ROUND(SUM(CASE WHEN stablecoin_id IN (${inClause.sql}) THEN circulating_usd ELSE 0 END), 2) AS non_usd
+           ROUND(SUM(CASE WHEN stablecoin_id IN (${commodityIn.sql}) THEN circulating_usd ELSE 0 END), 2) AS commodity,
+           ROUND(SUM(CASE WHEN stablecoin_id IN (${fiatIn.sql}) THEN circulating_usd ELSE 0 END), 2) AS fiat_non_usd
          FROM supply_history
          WHERE snapshot_date >= ?
          GROUP BY snapshot_date
          ORDER BY snapshot_date ASC`,
       )
-      .bind(...inClause.binds, cutoff)
+      .bind(...commodityIn.binds, ...fiatIn.binds, cutoff)
       .all<AggRow>();
 
     const rows = result.results ?? [];
@@ -44,7 +54,14 @@ export const handleNonUsdShare = withErrorHandler(
     const ninetyDaysAgo = nowSec - 90 * 86400;
     const twoYearsAgo = nowSec - 2 * 365 * 86400;
 
-    const points: Array<{ date: number; share: number; nonUsd: number; total: number }> = [];
+    const points: Array<{
+      date: number;
+      commodityShare: number;
+      fiatNonUsdShare: number;
+      commodity: number;
+      fiatNonUsd: number;
+      total: number;
+    }> = [];
     let lastKeptDate = 0;
 
     for (const row of rows) {
@@ -62,8 +79,10 @@ export const handleNonUsdShare = withErrorHandler(
       if (row.snapshot_date - lastKeptDate >= interval) {
         points.push({
           date: row.snapshot_date,
-          share: Math.round(((row.non_usd / row.total) * 100) * 10000) / 10000,
-          nonUsd: row.non_usd,
+          commodityShare: Math.round(((row.commodity / row.total) * 100) * 10000) / 10000,
+          fiatNonUsdShare: Math.round(((row.fiat_non_usd / row.total) * 100) * 10000) / 10000,
+          commodity: row.commodity,
+          fiatNonUsd: row.fiat_non_usd,
           total: row.total,
         });
         lastKeptDate = row.snapshot_date;

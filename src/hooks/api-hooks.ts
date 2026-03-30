@@ -167,8 +167,10 @@ export function useStablecoinCharts() {
 
 export interface NonUsdSharePoint {
   date: number;
-  share: number;
-  nonUsd: number;
+  commodityShare: number;
+  fiatNonUsdShare: number;
+  commodity: number;
+  fiatNonUsd: number;
   total: number;
 }
 
