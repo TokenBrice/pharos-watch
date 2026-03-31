@@ -3,7 +3,6 @@ import {
   DEPEG_CONFIRMATION_SUPPLY_THRESHOLD,
   DEPEG_EXTREME_MOVE_BPS,
 } from "../lib/constants";
-import { SECONDS } from "../lib/time-constants";
 import { batchExecute } from "../lib/db";
 import { throwIfAborted } from "../lib/abort";
 import {
@@ -67,7 +66,7 @@ interface LoopContext {
 
 /**
  * Handles an existing open event where deviation still exceeds threshold.
- * Covers same-direction peak updates, direction changes, and DEX false-positive auto-close.
+ * Covers same-direction peak updates and direction changes.
  * Returns statements to batch and an updated `seen` set action.
  */
 function handleExistingEvent(
@@ -126,28 +125,16 @@ function handleExistingEvent(
     );
   }
 
-  // DEX cross-validation for ongoing events
+  // Keep the event open when the current primary sample still shows a same-direction depeg.
+  // Aggregate DEX disagreement can still suppress brand-new events and confirm recoveries,
+  // but it should not manufacture a recovery boundary on an already-open event.
   if (isDexFresh(dexRow, dexAbsBps, now) && dexRow && dexAbsBps != null && dexAbsBps < threshold) {
     const eventAge = now - existing.started_at;
-    if (eventAge >= SECONDS.THIRTY_MINUTES) {
-      // Event open 30+ min AND DEX has >=$1M TVL — auto-close
-      console.warn(
-        `[depeg] Auto-closing false-positive event for ${asset.symbol} (id=${existing.id}): ` +
-        `primary=${bps}bps but DEX=${dexAbsBps}bps for ${Math.round(eventAge / 60)}min ` +
-        `(${dexRow.source_pool_count} pools, $${(dexRow.source_total_tvl / 1e6).toFixed(1)}M TVL)`
-      );
-      stmts.push(
-        db.prepare(
-          "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
-        ).bind(now, dexRow.dex_price_usd, existing.id)
-      );
-      seen.delete(existing.id); // Remove from seen since we're closing it
-    } else {
-      console.warn(
-        `[depeg] DEX disagrees with ongoing event for ${asset.symbol}: ` +
-        `primary=${bps}bps vs DEX=${dexAbsBps}bps (event age ${Math.round(eventAge / 60)}min)`
-      );
-    }
+    console.warn(
+      `[depeg] DEX disagrees with ongoing event for ${asset.symbol}: ` +
+      `primary=${bps}bps vs DEX=${dexAbsBps}bps (event age ${Math.round(eventAge / 60)}min); ` +
+      "keeping event open until the recovery path confirms resolution"
+    );
   }
 
   return stmts;

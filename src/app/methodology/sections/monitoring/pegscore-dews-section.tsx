@@ -43,6 +43,11 @@ export function PegScoreDewsMethodologySection() {
                 non-trivial floor of $250K.
               </p>
               <p>
+                For already-open depegs, same-direction aggregate DEX disagreement is now treated as advisory rather than a
+                synthetic recovery signal. Open events stay continuous until the normal recovery path confirms that the coin
+                is back inside threshold.
+              </p>
+              <p>
                 DEWS (Depeg Early Warning System) computes forward-looking stress every 30 minutes from market, liquidity,
                 confidence, flow, and yield signals, with optional PSI-based amplification during systemic stress.
               </p>

@@ -96,7 +96,7 @@ The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts
 3. Load DEX prices from `dex_prices` table (silently skip if table missing)
 4. Merge duplicate open events: for each coin with multiple open events, keep earliest, absorb worst peak, delete rest
 
-`dex_prices` rows are only trusted for depeg logic when they are both fresh (`updated_at < 35 min`) and deep enough (`source_total_tvl >= $1M`). Thin DEX rows remain visible in storage for analytics, but they do not suppress, confirm, or auto-close events.
+`dex_prices` rows are only trusted for depeg logic when they are both fresh (`updated_at < 35 min`) and deep enough (`source_total_tvl >= $1M`). Thin DEX rows remain visible in storage for analytics, but they do not suppress or confirm events.
 
 ### Per-Asset Processing
 
@@ -128,7 +128,7 @@ direction = bps >= 0 ? "above" : "below"
 - If direction changed and the primary price is authoritative (or a trusted DEX row corroborates it): close the old event and open the replacement immediately
 - If direction changed but the primary price is `confirm_required`: retire the stale live row immediately and route the replacement move through `depeg_pending` instead of leaving the wrong direction active
 - Same direction: mark as legitimately open (add to `seen` set); update peak only when the primary input is authoritative or a trusted DEX row corroborates the move
-- DEX cross-validation for ongoing events: if a **trusted** DEX row disagrees AND event is >= 30 min old, auto-close the event
+- Same-direction DEX disagreement is now advisory only: detection logs the mismatch but does **not** auto-close the event from that contradiction alone
 
 **Path B -- Deviation >= threshold AND no event open**
 
@@ -254,7 +254,7 @@ While event is open:
   - Peak deviation updated if worse price seen
   - Direction change with authoritative or DEX-confirmed input: close old, open new
   - Direction change with `confirm_required` input: close old, insert replacement pending candidate
-  - Trusted DEX row disagrees + event >= 30min: auto-close
+  - Trusted DEX disagreement on the same side is logged, but does not by itself close the event
   - Price recovers below threshold: close with recovery_price
 
 Orphan cleanup:

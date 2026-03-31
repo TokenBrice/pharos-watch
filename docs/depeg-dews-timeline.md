@@ -1,8 +1,16 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v5.0` (2026-02-18 -> 2026-03-28).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v5.1` (2026-02-18 -> 2026-03-31).
 
 ---
+
+## v5.1 — Ongoing depeg continuity over DEX-only contradiction (Mar 31, 2026)
+
+**Commit:** `unreleased`
+
+- Same-direction DEX disagreement no longer auto-closes an already-open depeg event
+- Open events now stay continuous until the normal recovery path confirms resolution below threshold
+- Prevents repeated event splitting when aggregate DEX pricing temporarily snaps back toward peg while the stablecoin remains clearly depegged elsewhere
 
 ## v5.0 — DEWS blacklist coverage parity and thin-peg FX fallback parity (Mar 28, 2026)
 

@@ -636,7 +636,7 @@ describe("detectDepegEvents", () => {
     expect(preparedSqls.some((sql) => sql.includes("UPDATE depeg_events SET peak_deviation_bps"))).toBe(true);
   });
 
-  it("auto-closes false-positive via DEX cross-validation after 30 min", async () => {
+  it("keeps an ongoing event open when only aggregate DEX disagrees", async () => {
     const now = Math.floor(Date.now() / 1000);
     const preparedSqls: string[] = [];
     const db = mockD1([
@@ -673,13 +673,10 @@ describe("detectDepegEvents", () => {
 
     await detectDepegEvents(db, assets);
 
-    // Event should be auto-closed because:
-    // - event is 40 min old (>30 min)
-    // - DEX disagrees and has >$1M TVL
     const closures = preparedSqls.filter(s =>
       s.includes("UPDATE depeg_events SET ended_at")
     );
-    expect(closures.length).toBeGreaterThanOrEqual(1);
+    expect(closures).toHaveLength(0);
   });
 
   it("does not orphan-close tracked events during transient data gaps", async () => {

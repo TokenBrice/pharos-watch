@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "5.0",
+  currentVersion: "5.1",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
+  {
+    version: "5.1",
+    title: "Ongoing depeg continuity over DEX-only contradiction",
+    date: "2026-03-31",
+    effectiveAt: 1774915200,
+    summary:
+      "Already-open depeg events no longer auto-close just because a trusted aggregate DEX row temporarily moves back inside the threshold while the primary path still shows the same-direction depeg.",
+    impact: [
+      "Same-direction DEX disagreement is now advisory for ongoing events instead of forcing a synthetic recovery boundary",
+      "Open depeg rows remain continuous until the standard recovery path confirms a sub-threshold resolution",
+      "Prevents repeated event fragmentation on chronically depegged assets when aggregate DEX pricing briefly snaps back toward peg",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.0",
     title: "DEWS blacklist coverage parity and thin-peg FX fallback parity",
