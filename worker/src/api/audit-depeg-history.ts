@@ -17,6 +17,11 @@ import {
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 type Verdict = "false_positive" | "confirmed" | "no_data" | "skipped" | "error";
+type RepairMode = "synthetic-splits";
+
+const SYNTHETIC_SPLIT_MAX_GAP_SEC = 30 * 60;
+const SYNTHETIC_SPLIT_RECOVERY_BAR_BPS = 50;
+const SYNTHETIC_SPLIT_RESUME_MIN_BPS = 500;
 
 interface AuditedEvent {
   id: number;
@@ -36,6 +41,126 @@ interface AuditResult {
   falsePositivesFound: number;
   deletedEvents: { id: number; symbol: string; startedAt: number; peakBps: number }[];
   daysRecomputed: number;
+}
+
+interface SyntheticSplitRepairSummary {
+  stablecoinId: string;
+  symbol: string;
+  direction: string;
+  keeperId: number;
+  mergedIds: number[];
+  eventIds: number[];
+  startedAt: number;
+  endedAt: number | null;
+  peakBps: number;
+  recoveryPrice: number | null;
+  gapSeconds: number[];
+}
+
+interface SyntheticSplitRepairResult {
+  repair: RepairMode;
+  totalMatching: number;
+  offset: number;
+  limit: number;
+  dryRun: boolean;
+  candidateGroups: SyntheticSplitRepairSummary[];
+  repairedGroups: SyntheticSplitRepairSummary[];
+  repairedEventCount: number;
+  daysRecomputed: number;
+}
+
+function getAbsoluteDeviationBps(price: number | null | undefined, pegReference: number): number | null {
+  if (price == null || !Number.isFinite(price) || price <= 0 || !Number.isFinite(pegReference) || pegReference <= 0) {
+    return null;
+  }
+  return Math.abs(Math.round(((price / pegReference) - 1) * 10_000));
+}
+
+function isSyntheticSplitPair(previous: DepegRow, next: DepegRow): boolean {
+  if (previous.source !== "live" || next.source !== "live") return false;
+  if (previous.stablecoin_id !== next.stablecoin_id) return false;
+  if (previous.direction !== next.direction) return false;
+  if (previous.ended_at == null) return false;
+
+  const gapSec = next.started_at - previous.ended_at;
+  if (gapSec < 0 || gapSec > SYNTHETIC_SPLIT_MAX_GAP_SEC) return false;
+
+  const threshold = Math.max(getDepegThresholdBps(next.peg_type), SYNTHETIC_SPLIT_RESUME_MIN_BPS);
+  const recoveryBps = getAbsoluteDeviationBps(previous.recovery_price, previous.peg_reference);
+  const resumeBps = getAbsoluteDeviationBps(next.start_price, next.peg_reference);
+  const previousPeakAbsBps = Math.abs(previous.peak_deviation_bps);
+
+  return (
+    recoveryBps != null &&
+    recoveryBps <= SYNTHETIC_SPLIT_RECOVERY_BAR_BPS &&
+    resumeBps != null &&
+    resumeBps >= threshold &&
+    previousPeakAbsBps >= threshold
+  );
+}
+
+function summarizeSyntheticSplitGroup(rows: DepegRow[]): SyntheticSplitRepairSummary {
+  const keeper = rows[0];
+  const tail = rows[rows.length - 1];
+  let worst = keeper;
+  for (const row of rows) {
+    if (Math.abs(row.peak_deviation_bps) > Math.abs(worst.peak_deviation_bps)) {
+      worst = row;
+    }
+  }
+  const gapSeconds: number[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    gapSeconds.push(Math.max(0, rows[i].started_at - (rows[i - 1].ended_at ?? rows[i].started_at)));
+  }
+  return {
+    stablecoinId: keeper.stablecoin_id,
+    symbol: keeper.symbol,
+    direction: keeper.direction,
+    keeperId: keeper.id,
+    mergedIds: rows.slice(1).map((row) => row.id),
+    eventIds: rows.map((row) => row.id),
+    startedAt: keeper.started_at,
+    endedAt: tail.ended_at,
+    peakBps: worst.peak_deviation_bps,
+    recoveryPrice: tail.ended_at == null ? null : tail.recovery_price,
+    gapSeconds,
+  };
+}
+
+function collectSyntheticSplitGroups(events: DepegRow[]): DepegRow[][] {
+  const byCoin = new Map<string, DepegRow[]>();
+  for (const event of events) {
+    const list = byCoin.get(event.stablecoin_id) ?? [];
+    list.push(event);
+    byCoin.set(event.stablecoin_id, list);
+  }
+
+  const groups: DepegRow[][] = [];
+  for (const rows of byCoin.values()) {
+    rows.sort((a, b) => a.started_at - b.started_at);
+    let currentGroup: DepegRow[] = [];
+    for (const row of rows) {
+      if (currentGroup.length === 0) {
+        currentGroup = [row];
+        continue;
+      }
+      const previous = currentGroup[currentGroup.length - 1];
+      if (isSyntheticSplitPair(previous, row)) {
+        currentGroup.push(row);
+        continue;
+      }
+      if (currentGroup.length > 1) {
+        groups.push(currentGroup);
+      }
+      currentGroup = [row];
+    }
+    if (currentGroup.length > 1) {
+      groups.push(currentGroup);
+    }
+  }
+
+  groups.sort((a, b) => a[0].started_at - b[0].started_at);
+  return groups;
 }
 
 export async function handleAuditDepegHistory(
@@ -58,6 +183,15 @@ export async function handleAuditDepegHistory(
       const minSupply = parsed["min-supply"];
       // Direct delete: ?delete=ID1,ID2 skips CG checks and deletes specified events
       const deleteIds = url.searchParams.get("delete");
+      const repairModeRaw = url.searchParams.get("repair");
+      const repairMode: RepairMode | null =
+        repairModeRaw === "synthetic-splits" ? "synthetic-splits" : null;
+      if (repairModeRaw && repairMode == null) {
+        return errorResponse(400, `Unsupported repair mode: ${repairModeRaw}`);
+      }
+      if (deleteIds && repairMode) {
+        return errorResponse(400, "Use either delete=... or repair=..., not both");
+      }
       // Dry run: preview deletions without touching the DB
       const dryRun = url.searchParams.get("dry-run") === "true";
       const method = request?.method ?? "GET";
@@ -125,6 +259,84 @@ export async function handleAuditDepegHistory(
           })),
           daysRecomputed,
         });
+      }
+
+      if (repairMode === "synthetic-splits") {
+        const liveAndClosedOrOpen = await db
+          .prepare(
+            "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events ORDER BY stablecoin_id, started_at",
+          )
+          .all<DepegRow>();
+        const groupedCandidates = collectSyntheticSplitGroups(
+          (liveAndClosedOrOpen.results ?? []).filter((event) =>
+            symbolFilter ? event.symbol.toUpperCase() === symbolFilter : true,
+          ),
+        );
+        const paginatedGroups = groupedCandidates.slice(offset, offset + limit);
+        const result: SyntheticSplitRepairResult = {
+          repair: repairMode,
+          totalMatching: groupedCandidates.length,
+          offset,
+          limit,
+          dryRun,
+          candidateGroups: paginatedGroups.map((group) => summarizeSyntheticSplitGroup(group)),
+          repairedGroups: [],
+          repairedEventCount: 0,
+          daysRecomputed: 0,
+        };
+
+        if (dryRun || paginatedGroups.length === 0) {
+          return jsonResponse(result);
+        }
+
+        const affectedDays = new Set<number>();
+        const stmts: D1PreparedStatement[] = [];
+        const now = Math.floor(Date.now() / 1000);
+
+        for (const group of paginatedGroups) {
+          const summary = summarizeSyntheticSplitGroup(group);
+          const keeper = group[0];
+          const tail = group[group.length - 1];
+          let worst = keeper;
+          for (const row of group) {
+            if (Math.abs(row.peak_deviation_bps) > Math.abs(worst.peak_deviation_bps)) {
+              worst = row;
+            }
+          }
+
+          stmts.push(
+            db
+              .prepare(
+                "UPDATE depeg_events SET peak_deviation_bps = ?, peak_price = ?, ended_at = ?, recovery_price = ? WHERE id = ?",
+              )
+              .bind(
+                worst.peak_deviation_bps,
+                worst.peak_price ?? worst.start_price,
+                tail.ended_at,
+                tail.ended_at == null ? null : tail.recovery_price,
+                keeper.id,
+              ),
+          );
+          for (const mergedId of summary.mergedIds) {
+            stmts.push(db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(mergedId));
+          }
+
+          const startDay = Math.floor(summary.startedAt / DAY_SECONDS) * DAY_SECONDS;
+          const endTs = summary.endedAt ?? now;
+          const endDay = Math.floor(endTs / DAY_SECONDS) * DAY_SECONDS;
+          for (let day = startDay; day <= endDay; day += DAY_SECONDS) {
+            affectedDays.add(day);
+          }
+
+          result.repairedGroups.push(summary);
+          result.repairedEventCount += summary.mergedIds.length;
+        }
+
+        await batchExecute(db, stmts);
+        if (affectedDays.size > 0) {
+          result.daysRecomputed = await recomputeStabilityDays(db, affectedDays);
+        }
+        return jsonResponse(result);
       }
 
       // Build supply lookup only when min-supply > 0

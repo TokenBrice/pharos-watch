@@ -2551,6 +2551,8 @@ The endpoint processes up to 1000 `(tx_hash, stablecoin_id)` groups per request.
 
 Dry-run preview for the depeg audit endpoint. This is the only supported `GET` mode for `/api/audit-depeg-history`; all mutating executions require `POST`.
 
+The same endpoint also supports a dry-run historical repair preview with `repair=synthetic-splits`, which surfaces adjacent same-direction live events that were likely split by the old DEX-only auto-close behavior.
+
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 **Query parameters**
@@ -2562,10 +2564,13 @@ Dry-run preview for the depeg audit endpoint. This is the only supported `GET` m
 | `dry-run`    | `"true"`  | required | Must be exactly `"true"` for `GET`       |
 | `min-supply` | `number`  | `0`      | Minimum supply (USD) to include in audit |
 | `symbol`     | `string`  | —        | Filter by symbol (case-insensitive)      |
+| `repair`     | `"synthetic-splits"` | — | Preview synthetic split-event consolidation candidates instead of the CoinGecko false-positive audit |
 
 ### `POST /api/audit-depeg-history`
 
 Audits existing depeg events against CoinGecko historical price data to detect false positives.
+
+`POST /api/audit-depeg-history?repair=synthetic-splits` instead runs a historical repair pass that consolidates adjacent same-direction live events when the earlier event was closed near peg and the next event reopened one sync later with a still-severe deviation. This is intended for repairing synthetic splits caused by the retired DEX-only auto-close behavior.
 
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
@@ -2581,6 +2586,7 @@ Audits existing depeg events against CoinGecko historical price data to detect f
 | `dry-run`    | `"true"`  | —       | When `"true"`, preview deletions without touching DB. Default behavior deletes false positives |
 | `min-supply` | `number`  | `0`     | Minimum supply (USD) to include in audit                                                       |
 | `symbol`     | `string`  | —       | Filter by symbol (case-insensitive)                                                            |
+| `repair`     | `"synthetic-splits"` | — | Run synthetic split-event consolidation instead of the CoinGecko false-positive audit          |
 
 ### `POST /api/trigger-digest`
 
