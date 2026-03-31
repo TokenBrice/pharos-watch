@@ -17,6 +17,12 @@ export interface YieldHistorySnapshotRow {
   exchange_rate?: number | null;
 }
 
+function appendRows<T>(target: T[], rows: readonly T[]): void {
+  for (const row of rows) {
+    target.push(row);
+  }
+}
+
 export async function loadYieldHistorySnapshots(
   db: D1Database,
   resolvedIds: string[],
@@ -63,9 +69,9 @@ export async function loadYieldHistorySnapshots(
         .all<YieldHistorySnapshotRow>(),
     ]);
 
-    historyRows.push(...(historyResult.results ?? []));
-    prevTvlRows.push(...(prevTvlResult.results ?? []));
-    prevBestRows.push(...(prevBestResult.results ?? []));
+    appendRows(historyRows, historyResult.results ?? []);
+    appendRows(prevTvlRows, prevTvlResult.results ?? []);
+    appendRows(prevBestRows, prevBestResult.results ?? []);
   }
 
   return { historyRows, prevTvlRows, prevBestRows };
