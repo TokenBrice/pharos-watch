@@ -38,14 +38,7 @@ export function PegScoreDewsMethodologySection() {
                 of leaving the wrong direction active.
               </p>
               <p>
-                DEX cross-validation uses explicit trust gates. Detection and pending confirmation only trust fresh DEX rows
-                with at least $1M of aggregate source TVL, while the public DEX Price Check UI requires a lighter but still
-                non-trivial floor of $250K.
-              </p>
-              <p>
-                For already-open depegs, same-direction aggregate DEX disagreement is now treated as advisory rather than a
-                synthetic recovery signal. Open events stay continuous until the normal recovery path confirms that the coin
-                is back inside threshold.
+                DEX cross-validation uses explicit trust gates: detection and pending confirmation only trust fresh DEX rows with at least $1M of aggregate source TVL, while the public DEX Price Check UI requires a lighter but still non-trivial floor of $250K. For already-open depegs, same-direction aggregate DEX disagreement is advisory rather than a synthetic recovery signal, so events stay continuous until the normal recovery path confirms the coin is back inside threshold.
               </p>
               <p>
                 DEWS (Depeg Early Warning System) computes forward-looking stress every 30 minutes from market, liquidity,
