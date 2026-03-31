@@ -57,6 +57,7 @@ export const USER_AGENT = "Pharos/1.0 (stablecoin analytics)";
 export const SIM_BALANCES_BASE_URL = "https://api.sim.dune.com/v1/evm/balances";
 export const SIM_BALANCES_REQUEST_TIMEOUT_MS = 12_000;
 export const SIM_BALANCES_MAX_RETRIES = 1;
+export const SIM_BALANCES_OWNER_GROUP_DELAY_MS = 1_000;
 
 export const RUB_FALLBACK = 0.011;
 

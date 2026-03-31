@@ -8,7 +8,8 @@ import { setCacheIfNewer, shouldSkipFreshCache } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
-import { CIRCUIT_SOURCE } from "../lib/constants";
+import { sleepWithSignal } from "../lib/abort";
+import { CIRCUIT_SOURCE, SIM_BALANCES_OWNER_GROUP_DELAY_MS } from "../lib/constants";
 import { fetchSimWalletBalances } from "../lib/sim-balances";
 
 const CACHE_KEY = "treasury-stable-exposure";
@@ -79,7 +80,7 @@ export async function syncTreasuryStableExposure(
       const groupedOwners = groupOwners(seed.name, seed.owners);
       const walletSnapshots = [];
 
-      for (const owner of groupedOwners) {
+      for (const [ownerIndex, owner] of groupedOwners.entries()) {
         const [treasuryBalances, stablecoinBalances] = await Promise.all([
           fetchSimWalletBalances({
             apiKey: simApiKey,
@@ -101,6 +102,10 @@ export async function syncTreasuryStableExposure(
           stablecoinBalances: stablecoinBalances.balances,
           warnings: [...treasuryBalances.warnings, ...stablecoinBalances.warnings],
         });
+
+        if (ownerIndex < groupedOwners.length - 1) {
+          await sleepWithSignal(SIM_BALANCES_OWNER_GROUP_DELAY_MS, signal);
+        }
       }
 
       entities.push(computeTreasuryStableExposureEntity(seed, walletSnapshots, reportCardsSnapshot.cards));
