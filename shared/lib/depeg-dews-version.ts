@@ -1,11 +1,11 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "4.10",
+  currentVersion: "5.0",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
   {
-    version: "4.10",
+    version: "5.0",
     title: "DEWS blacklist coverage parity and thin-peg FX fallback parity",
     date: "2026-03-28",
     effectiveAt: 1774656000,

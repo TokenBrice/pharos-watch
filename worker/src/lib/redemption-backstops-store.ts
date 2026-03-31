@@ -21,6 +21,7 @@ import {
   REDEMPTION_BACKSTOP_VERSION,
   REDEMPTION_BACKSTOP_VERSION_LABEL,
   getRedemptionBackstopVersionAt,
+  toRedemptionBackstopVersionLabel,
 } from "@shared/lib/redemption-backstop-version";
 import {
   EFFECTIVE_EXIT_WEIGHTS,
@@ -218,7 +219,7 @@ function resolveSnapshotMethodologyVersion(
     if (latestEntry?.methodologyVersion) {
       return {
         version: latestEntry.methodologyVersion,
-        versionLabel: `v${latestEntry.methodologyVersion}`,
+        versionLabel: toRedemptionBackstopVersionLabel(latestEntry.methodologyVersion),
       };
     }
   }
@@ -226,7 +227,7 @@ function resolveSnapshotMethodologyVersion(
   const version = getRedemptionBackstopVersionAt(updatedAt);
   return {
     version,
-    versionLabel: `v${version}`,
+    versionLabel: toRedemptionBackstopVersionLabel(version),
   };
 }
 

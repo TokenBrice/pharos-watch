@@ -1,11 +1,11 @@
-import { createMethodologyVersion } from "./methodology-version";
+import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "1.21",
+  currentVersion: "3.1",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
     {
-      version: "1.21",
+      version: "3.1",
       title: "Live-capacity truth-boundary hardening and registry cleanup",
       date: "2026-03-30",
       effectiveAt: 1774821600,
@@ -20,7 +20,7 @@ const redemptionBackstop = createMethodologyVersion({
       reconstructed: false,
     },
     {
-      version: "1.20",
+      version: "3.0",
       title: "Issuer and route-review medium-confidence tranche",
       date: "2026-03-24",
       effectiveAt: 1774368000,
@@ -35,7 +35,7 @@ const redemptionBackstop = createMethodologyVersion({
       reconstructed: false,
     },
     {
-      version: "1.19",
+      version: "2.9",
       title: "Semantics correction for non-deterministic HOLLAR exit",
       date: "2026-03-24",
       effectiveAt: 1774364400,
@@ -50,7 +50,7 @@ const redemptionBackstop = createMethodologyVersion({
       reconstructed: false,
     },
     {
-      version: "1.18",
+      version: "2.8",
       title: "Second medium-confidence redemption cleanup tranche",
       date: "2026-03-24",
       effectiveAt: 1774360800,
@@ -65,7 +65,7 @@ const redemptionBackstop = createMethodologyVersion({
       reconstructed: false,
     },
     {
-      version: "1.17",
+      version: "2.7",
       title: "Buffer-backed medium-confidence redemption tranche",
       date: "2026-03-24",
       effectiveAt: 1774353600,
@@ -80,7 +80,7 @@ const redemptionBackstop = createMethodologyVersion({
       reconstructed: false,
     },
     {
-      version: "1.16",
+      version: "2.6",
       title: "Moderate-effort redemption confidence tranche",
       date: "2026-03-23",
       effectiveAt: 1774314000,
@@ -95,7 +95,7 @@ const redemptionBackstop = createMethodologyVersion({
       reconstructed: false,
     },
     {
-      version: "1.15",
+      version: "2.5",
       title: "Reviewed docs-backed quick-win redemption tranche",
       date: "2026-03-23",
       effectiveAt: 1774306800,
@@ -110,7 +110,7 @@ const redemptionBackstop = createMethodologyVersion({
       reconstructed: false,
     },
     {
-      version: "1.14",
+      version: "2.4",
       title: "Maple syrup withdrawal route correction",
       date: "2026-03-23",
       effectiveAt: 1774303200,
@@ -125,7 +125,7 @@ const redemptionBackstop = createMethodologyVersion({
       reconstructed: false,
     },
     {
-      version: "1.13",
+      version: "2.3",
       title: "Reviewed lower-cap redemption cleanup tranche",
       date: "2026-03-23",
       effectiveAt: 1774296000,
@@ -140,7 +140,7 @@ const redemptionBackstop = createMethodologyVersion({
       reconstructed: false,
     },
     {
-      version: "1.12",
+      version: "2.2",
       title: "Live-buffer routes for Ethena and Falcon synthetics",
       date: "2026-03-23",
       effectiveAt: 1774292400,
@@ -155,7 +155,7 @@ const redemptionBackstop = createMethodologyVersion({
       reconstructed: false,
     },
     {
-      version: "1.11",
+      version: "2.1",
       title: "Mid-cap route correction and review tranche",
       date: "2026-03-23",
       effectiveAt: 1774288800,
@@ -170,7 +170,7 @@ const redemptionBackstop = createMethodologyVersion({
       reconstructed: false,
     },
     {
-      version: "1.10",
+      version: "2.0",
       title: "Third lower-cap redemption review tranche",
       date: "2026-03-23",
       effectiveAt: 1774285200,
@@ -348,3 +348,6 @@ export const REDEMPTION_BACKSTOP_METHODOLOGY_PATH = redemptionBackstop.changelog
 
 /** Resolve Redemption Backstop methodology version active at a given Unix timestamp (seconds). */
 export const getRedemptionBackstopVersionAt = redemptionBackstop.getVersionAt;
+
+/** Display-ready label for a historical Redemption Backstop methodology version. */
+export const toRedemptionBackstopVersionLabel = toMethodologyVersionLabel;

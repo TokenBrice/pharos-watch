@@ -3,11 +3,11 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "5.17",
+  currentVersion: "6.9",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
   {
-    version: "5.17",
+    version: "6.9",
     title: "K3 sBOLD Added As A Distinct Native BOLD Yield Source",
     date: "2026-03-28",
     effectiveAt: 1774692000,
@@ -23,7 +23,7 @@ const yieldMethodology = createMethodologyVersion({
     reconstructed: false,
   },
   {
-    version: "5.16",
+    version: "6.8",
     title: "Blocked USR-Linked Lending Suggestions",
     date: "2026-03-28",
     effectiveAt: 1774688400,
@@ -40,7 +40,7 @@ const yieldMethodology = createMethodologyVersion({
     reconstructed: false,
   },
   {
-    version: "5.15",
+    version: "6.7",
     title: "Benchmark-Aware PYS For Cross-Currency Yield Context",
     date: "2026-03-27",
     effectiveAt: 1774609200,
@@ -56,7 +56,7 @@ const yieldMethodology = createMethodologyVersion({
     reconstructed: false,
   },
   {
-    version: "5.14",
+    version: "6.6",
     title: "Supplemental Freshness Windows Match The 4-Hour Cache Lane",
     date: "2026-03-27",
     effectiveAt: 1774602000,
@@ -72,7 +72,7 @@ const yieldMethodology = createMethodologyVersion({
     reconstructed: false,
   },
   {
-    version: "5.13",
+    version: "6.5",
     title: "Optional RPC Hardening And Explicit Wrapper Venue Pins",
     date: "2026-03-27",
     effectiveAt: 1774600200,
@@ -88,7 +88,7 @@ const yieldMethodology = createMethodologyVersion({
     reconstructed: false,
   },
   {
-    version: "5.12",
+    version: "6.4",
     title: "Protocol-Native Lending Readers No Longer Outrank Stronger Native Wrapper Yields",
     date: "2026-03-27",
     effectiveAt: 1774587600,
@@ -104,7 +104,7 @@ const yieldMethodology = createMethodologyVersion({
     reconstructed: false,
   },
   {
-    version: "5.11",
+    version: "6.3",
     title: "Restored Mixed-View Scatter Benchmark Frame",
     date: "2026-03-27",
     effectiveAt: 1774576800,
@@ -120,7 +120,7 @@ const yieldMethodology = createMethodologyVersion({
     reconstructed: false,
   },
   {
-    version: "5.10",
+    version: "6.2",
     title: "Source-Cadence-Aware Freshness Warnings",
     date: "2026-03-26",
     effectiveAt: 1774818000,
@@ -136,7 +136,7 @@ const yieldMethodology = createMethodologyVersion({
     reconstructed: false,
   },
   {
-    version: "5.9",
+    version: "6.1",
     title: "3M Risk-Free Benchmarks For EUR And CHF",
     date: "2026-03-26",
     effectiveAt: 1774814400,
@@ -152,7 +152,7 @@ const yieldMethodology = createMethodologyVersion({
     reconstructed: false,
   },
   {
-    version: "5.8",
+    version: "6.0",
     title: "Asset-Scoped Supplemental Identity and Actionable Coverage Audits",
     date: "2026-03-26",
     effectiveAt: 1774810800,
@@ -168,7 +168,7 @@ const yieldMethodology = createMethodologyVersion({
     reconstructed: false,
   },
   {
-    version: "5.7",
+    version: "5.9",
     title: "Cadence-Aligned Data-Stale Warnings",
     date: "2026-03-26",
     effectiveAt: 1774807200,
@@ -184,7 +184,7 @@ const yieldMethodology = createMethodologyVersion({
     reconstructed: false,
   },
   {
-    version: "5.6",
+    version: "5.8",
     title: "First-Party EUR Benchmarks and Resilient CHF Parsing",
     date: "2026-03-26",
     effectiveAt: 1774803600,
@@ -200,7 +200,7 @@ const yieldMethodology = createMethodologyVersion({
     reconstructed: false,
   },
   {
-    version: "5.5",
+    version: "5.7",
     title: "Safety-Reweighted PYS Curve and Shared Scoring Hydration",
     date: "2026-03-26",
     effectiveAt: 1774800000,
@@ -216,7 +216,7 @@ const yieldMethodology = createMethodologyVersion({
     reconstructed: false,
   },
   {
-    version: "5.4",
+    version: "5.6",
     title: "Currency-Aware Benchmarks For Excess Yield",
     date: "2026-03-26",
     effectiveAt: 1774792800,
@@ -233,7 +233,7 @@ const yieldMethodology = createMethodologyVersion({
     reconstructed: false,
   },
   {
-    version: "5.3",
+    version: "5.5",
     title: "Non-USD Yield Scoping and Exact-Pool Commodity Overrides",
     date: "2026-03-26",
     effectiveAt: 1774785600,
@@ -249,7 +249,7 @@ const yieldMethodology = createMethodologyVersion({
     reconstructed: false,
   },
   {
-    version: "5.2",
+    version: "5.4",
     title: "Address-First Identity, Explicit Coverage, and Publish-Consistent History",
     date: "2026-03-26",
     effectiveAt: 1774778400,
@@ -266,7 +266,7 @@ const yieldMethodology = createMethodologyVersion({
     reconstructed: false,
   },
   {
-    version: "5.1",
+    version: "5.3",
     title: "Yield Infrastructure Automation",
     date: "2026-03-26",
     effectiveAt: 1774771200,
@@ -282,7 +282,7 @@ const yieldMethodology = createMethodologyVersion({
     reconstructed: false,
   },
   {
-    version: "5.0",
+    version: "5.2",
     title: "Yield Coverage Expansion — Protocol-Native API Wave",
     date: "2026-03-25",
     effectiveAt: 1774684800,
@@ -302,7 +302,7 @@ const yieldMethodology = createMethodologyVersion({
     reconstructed: false,
   },
   {
-    version: "4.11",
+    version: "5.1",
     title: "Protocol-native BIMA savings fallback for USBD",
     date: "2026-03-24",
     effectiveAt: 1774418400,
@@ -317,7 +317,7 @@ const yieldMethodology = createMethodologyVersion({
     reconstructed: false,
   },
   {
-    version: "4.10",
+    version: "5.0",
     title: "Richer freshness provenance and curated lending source links",
     date: "2026-03-24",
     effectiveAt: 1774407600,

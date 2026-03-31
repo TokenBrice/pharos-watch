@@ -1,11 +1,11 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.0",
+  currentVersion: "6.91",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
     {
-      version: "7.0",
+      version: "6.91",
       title: "Reserve-side blacklist exposure heuristics",
       date: "2026-03-30",
       effectiveAt: 1774832400,

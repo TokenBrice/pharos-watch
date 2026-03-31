@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v7.0)
+## Overall Grade (v6.91)
 
 Three-step computation:
 
@@ -12,7 +12,7 @@ Three-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.0 keeps the v6.4 structure. LUSD and BOLD still use documented-bound eventual redemption capacity, and when fresh live reserve telemetry exists their current on-chain redemption fee bps is used for cost scoring instead of a flat formula placeholder. Collateral-quality passthrough now only accepts fresh authoritative independent live reserve snapshots whose latest sync state is `ok` and whose freshness evidence is scoring-eligible; `validated-static`, `weak-live-probe`, and `unverified` reserve feeds remain visible on reserve detail surfaces but no longer override curated collateral scoring. Blacklist attribution now distinguishes mutable-contract risk (`Possible`) from majority upstream freeze exposure (`Inherited`), treats reserve-side stablecoin and custody/CEX clues as `Possible` instead of `No`, and no longer treats `centralized-dependent` governance as sufficient evidence on its own.
+Current-version note: v6.91 keeps the v6.4 structure. LUSD and BOLD still use documented-bound eventual redemption capacity, and when fresh live reserve telemetry exists their current on-chain redemption fee bps is used for cost scoring instead of a flat formula placeholder. Collateral-quality passthrough now only accepts fresh authoritative independent live reserve snapshots whose latest sync state is `ok` and whose freshness evidence is scoring-eligible; `validated-static`, `weak-live-probe`, and `unverified` reserve feeds remain visible on reserve detail surfaces but no longer override curated collateral scoring. Blacklist attribution now distinguishes mutable-contract risk (`Possible`) from majority upstream freeze exposure (`Inherited`), treats reserve-side stablecoin and custody/CEX clues as `Possible` instead of `No`, and no longer treats `centralized-dependent` governance as sufficient evidence on its own.
 
 ## Dimensions
 

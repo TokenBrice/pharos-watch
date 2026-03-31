@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v2.19`
+- **Current methodology version:** `v3.9`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`

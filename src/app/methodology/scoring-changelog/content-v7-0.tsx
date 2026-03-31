@@ -1,9 +1,9 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
-export function ScoringChangelogV70Entry() {
+export function ScoringChangelogV691Entry() {
   return (
     <VersionCard
-      entry={getScoringEntry("7.0")}
+      entry={getScoringEntry("6.91")}
       accent="border-l-amber-500"
     >
       <p>

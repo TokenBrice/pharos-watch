@@ -1,17 +1,17 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v5.17` (2026-03-01 -> 2026-03-28).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v6.9` (2026-03-01 -> 2026-03-28).
 
 ---
 
-## v5.17 - K3 sBOLD added as a distinct native BOLD yield source (Mar 28, 2026)
+## v6.9 - K3 sBOLD added as a distinct native BOLD yield source (Mar 28, 2026)
 
 - The supplemental Yearn/Kong feed now recognizes Ethereum `Staked yBOLD` and pins it directly to `bold-liquity`
 - The source publishes as `K3: sBOLD`, giving BOLD a second native wrapper path alongside the base `yBOLD` route
 - `sBOLD` is classified as native `lending-vault` yield because it is another wrapper around the Liquity Stability Pool stack, not a governance-set rate or generic lending opportunity
 - Yield-source links now deep-link this row to Liquity's dedicated `https://liquity.app/earn/sbold` route
 
-## v5.16 - Blocked USR-linked lending suggestions (Mar 28, 2026)
+## v6.8 - Blocked USR-linked lending suggestions (Mar 28, 2026)
 
 - Published `lending-opportunity` suggestions now exclude venues explicitly tied to Resolv / `USR`, `stUSR`, or `wstUSR`
 - Supplemental protocol-API sources such as `Morpho: Resolv USDC` are dropped before ranking publication instead of competing for the best-source slot
@@ -19,81 +19,81 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 - Wrapper-over-native venues such as BOLD / `yBOLD` are treated as native yield rather than governance-set when the wrapper only packages the protocol's own Stability Pool return
 - The filter is scoped to lending suggestions for base assets; native tracked yield assets keep their existing methodology coverage
 
-## v5.15 - Benchmark-aware PYS for cross-currency yield context (Mar 27, 2026)
+## v6.7 - Benchmark-aware PYS for cross-currency yield context (Mar 27, 2026)
 
 - PYS now forms an `effectiveYield` term equal to raw `apy30d` plus 25% of the row's benchmark spread before the safety penalty and consistency multiplier are applied
 - This keeps raw nominal APY as the anchor while giving above-benchmark EUR, CHF, and other non-USD rows explicit credit for clearing their local cash hurdle
 - Read-time `/api/yield-rankings` hydration, leaderboard/detail breakdowns, and methodology docs now use the same benchmark-aware scorer so shipped scores and explanations stay aligned
 - Strong local-rate rows such as EURCV and ZCHF no longer look artificially flat versus same-APY USD rows that clear a much easier benchmark
 
-## v5.14 - Supplemental freshness windows align with the 4-hour cache lane (Mar 27, 2026)
+## v6.6 - Supplemental freshness windows align with the 4-hour cache lane (Mar 27, 2026)
 
 - Read-time `data-stale` warnings now treat supplemental protocol-API rows and optional Aave/Compound rows as 4-hour-family data instead of hourly-family data
 - Supplemental-backed rows now wait 6 hours before going stale, which avoids false warnings during the normal final hour of the supplemental refresh cycle
 - Deterministic hourly on-chain rows keep the 3-hour hourly threshold, so only the slower supplemental families move
 - The methodology and operations docs now spell out the distinct stale windows for hourly, supplemental, and daily yield families
 
-## v5.13 - Optional RPC hardening and explicit wrapper venue pins (Mar 27, 2026)
+## v6.5 - Optional RPC hardening and explicit wrapper venue pins (Mar 27, 2026)
 
 - Compound V3 now probes both configured RPC endpoints instead of only the fallback URL, and Aave V3 plus Compound V3 rotate endpoint order across targets with a slightly deeper retry budget on the supplemental lane
 - `sync-yield-supplemental` metadata now records optional RPC family target counts, attempted counts, resolved target counts, emitted row counts, missing target counts, miss reasons, and per-chain miss breakdowns
 - Layer 2 wrapper matching can now pin a preferred DeFiLlama project in addition to chain and address, keeping shared wrapper tokens fail-closed without attaching to the wrong venue
 - Under-specified wrapper configs now carry explicit live chain/address/project pins for native venues such as `sUSDai`, `sNUSD`, `savUSD`, `sUSDu`, `syzUSD`, `sAID`, `stCUSD`, and `sGHO`
 
-## v5.12 - Protocol-native lending readers no longer outrank stronger native wrapper yields (Mar 27, 2026)
+## v6.4 - Protocol-native lending readers no longer outrank stronger native wrapper yields (Mar 27, 2026)
 
 - Supplemental lending-market readers such as Aave V3 are now classified as curated protocol-native sources instead of Tier 1 deterministic wrapper sources
 - Native wrapper yields such as sDAI no longer lose the primary row to a lower-yield supplemental lending market purely because the supplemental reader queried on-chain state directly
 - Source keys and alternative-source history stay unchanged, so the fix changes arbitration precedence without breaking source continuity
 
-## v5.11 - Restored mixed-view scatter benchmark frame (Mar 27, 2026)
+## v6.3 - Restored mixed-view scatter benchmark frame (Mar 27, 2026)
 
 - The `/yield` scatter plot now restores its horizontal benchmark line and four shaded quadrants on mixed-benchmark scopes instead of dropping them entirely
 - Mixed scopes use the default USD benchmark as the shared visual frame, so the chart stays readable even when rows carry local EUR or CHF hurdles
 - Mixed-view copy now makes the distinction explicit: the background frame is for orientation, while each row's benchmark tag still controls excess-yield interpretation
 
-## v5.10 - Source-cadence-aware freshness warnings (Mar 26, 2026)
+## v6.2 - Source-cadence-aware freshness warnings (Mar 26, 2026)
 
 - Read-time `data-stale` warnings now respect source cadence instead of forcing daily price-derived rows through the hourly publish threshold
 - `price-derived` rows now wait 36 hours before going stale because they are backed by daily `supply_history` snapshots
 - Hourly publication families still mark stale after three missed `sync-yield-data` intervals
 - Healthy daily snapshot rows such as USTB, USDA, and CETES no longer surface false stale warnings after roughly one day of normal operation
 
-## v5.9 - 3M risk-free benchmarks for EUR and CHF (Mar 26, 2026)
+## v6.1 - 3M risk-free benchmarks for EUR and CHF (Mar 26, 2026)
 
 - EUR pegs now benchmark against the ECB's official 3-month compounded €STR series rather than the overnight €STR feed
 - CHF pegs now benchmark against delayed public `SAR3MC` from SIX rather than an SNB policy-rate proxy
 - CHF benchmark rows are no longer marked as proxies, and mixed-benchmark UI copy now names the 3-month compounded EUR/CHF cash hurdles directly
 - The worker now fetches delayed SARON compound-rate files through SIX's guest OAuth plus report-download flow, and the docs/about-page source inventory reflect that pipeline
 
-## v5.8 - Asset-scoped supplemental identity and actionable coverage audits (Mar 26, 2026)
+## v6.0 - Asset-scoped supplemental identity and actionable coverage audits (Mar 26, 2026)
 
 - Aave V3 supplemental rows now use asset-scoped source keys instead of collapsing all same-chain markets into one cached row
 - `sync-yield-supplemental` metadata now reports raw candidate count, deduped candidate count, and dropped-row count so silent row loss is visible in cron history
 - The monthly yield coverage audit now counts explicit auto-discovery overrides and curated exact-pool overrides as covered DL surfaces
 - High-TVL gap reporting now focuses on unsupported protocol families instead of flooding the audit with already-allowlisted markets
 
-## v5.7 - Cadence-aligned data-stale warnings (Mar 26, 2026)
+## v5.9 - Cadence-aligned data-stale warnings (Mar 26, 2026)
 
 - The read-time `data-stale` warning now keys off three `sync-yield-data` intervals instead of a leftover fixed `90 min` threshold from the old half-hourly lane
 - At the current hourly publisher cadence, that means detail-surface stale warnings wait about 3 hours before firing
 - The hourly-source threshold is derived from shared cron metadata, so future schedule changes stay aligned without another manual constant update
 
-## v5.6 - First-party EUR benchmarks and resilient CHF parsing (Mar 26, 2026)
+## v5.8 - First-party EUR benchmarks and resilient CHF parsing (Mar 26, 2026)
 
 - EUR benchmark refreshes now query the ECB's official €STR feed first and only fall back to the FRED mirror when the first-party source is unavailable
 - CHF benchmark parsing now normalizes the SNB current-rates page to text before extracting the policy-rate sentence, so harmless markup changes no longer null out the proxy rate
 - Benchmark degradation metadata now reports explicit EUR and CHF failure modes instead of collapsing first-run outages into a generic `unavailable` bucket
 - The methodology docs, API examples, and about-page source inventory now reflect the ECB Data API and the hardened SNB parser
 
-## v5.5 - Safety-reweighted PYS curve and shared scoring hydration (Mar 26, 2026)
+## v5.7 - Safety-reweighted PYS curve and shared scoring hydration (Mar 26, 2026)
 
 - PYS now divides APY by `riskPenalty ^ 1.75` instead of a linear safety divisor, making weak safety grades earn their place with much larger yield spreads
 - The global PYS scaling factor was retuned from `5` to `8` so score distribution stays readable after the steeper safety curve
 - Live `/api/yield-rankings` hydration now reuses the shared PYS scorer instead of maintaining a duplicated read-time formula
 - Leaderboard and detail breakdown copy now references the adjusted risk penalty explicitly, and the methodology docs / changelog reflect the new formula
 
-## v5.4 - Currency-aware benchmarks for excess yield (Mar 26, 2026)
+## v5.6 - Currency-aware benchmarks for excess yield (Mar 26, 2026)
 
 - Benchmark selection is now row-level: USD pegs use the USD 3M Treasury benchmark, EUR pegs use €STR when available, and CHF pegs use an SNB policy-rate proxy
 - `/api/yield-rankings` now carries row-level benchmark labels, rates, and fallback-selection metadata so `excessYield` stays interpretable on mixed-currency views
@@ -101,13 +101,13 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 - The `/yield` scatter plot now suppresses the single benchmark line on mixed-benchmark scopes and restores it only when the visible filter shares one benchmark
 - CHF support intentionally uses the public SNB policy rate proxy rather than the SNB-published SARON display, whose use is restricted
 
-## v5.3 - Non-USD yield scoping and exact-pool commodity overrides (Mar 26, 2026)
+## v5.5 - Non-USD yield scoping and exact-pool commodity overrides (Mar 26, 2026)
 
 - `/yield` now exposes a shareable peg scope with a `non-usd` preset so the live EUR, CHF, SGD, MXN, and commodity rows can be reviewed as one universe
 - Tier-2 DeFiLlama ingestion now preserves exact curated non-stablecoin pool UUIDs alongside native pool IDs and wrapper-symbol matches
 - Added an exact-pool override lane for assets like `xaut-tether`, while keeping the generic gold/silver auto-discovery exclusion in place so mixed baskets such as Multipli `RWAUSDI` do not get misclassified as single-asset commodity yield sources
 
-## v5.2 - Address-First Identity and Explicit Coverage Truth (Mar 26, 2026)
+## v5.4 - Address-First Identity and Explicit Coverage Truth (Mar 26, 2026)
 
 - DeFiLlama discovery, variant matching, and protocol-native adapters now resolve by chain and address before symbol fallback and drop ambiguous candidates instead of guessing
 - Protocol-native source keys now use full chain-aware identifiers, and source-link resolution understands prefixed labels such as `Morpho: ...`, `Pendle: ...`, `Yearn: ...`, `Kong: ...`, `Beefy: ...`, and chain-qualified labels such as `Aave v3 (base)`
@@ -115,7 +115,7 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 - Warning divergence checks and published `medianApy` now share the same TVL-weighted 30d median benchmark
 - `/api/yield-history` is now bounded to the latest published `/api/yield-rankings` snapshot so history cannot advance past an unpublished cache state
 
-## v5.1 - Yield Infrastructure Automation (Mar 26, 2026)
+## v5.3 - Yield Infrastructure Automation (Mar 26, 2026)
 
 - Chain-scoped Layer 3 symbol matching prevents cross-chain false positives in auto-lending discovery
 - Variant symbol auto-scanner detects new wrapper tokens (sXXX/stXXX/wXXX prefix and SAVE/VAULT/EARN/STAKE suffix patterns) in advisory mode
@@ -124,7 +124,7 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 
 ---
 
-## v5.0 - Yield Coverage Expansion — Protocol-Native API Wave (Mar 25, 2026)
+## v5.2 - Yield Coverage Expansion — Protocol-Native API Wave (Mar 25, 2026)
 
 - 10 protocol-native adapters added: Hashnote USYC, Ondo oracle, Morpho GraphQL, Pendle REST, Yearn Kong GraphQL, Beefy REST, Aave V3 on-chain, Compound V3 on-chain, BIMA Earn
 - USTB + thBILL promoted to on-chain ERC-4626 exchange rate reads (previously T-bill proxy only)
@@ -135,7 +135,7 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 
 ---
 
-## v4.11 - Protocol-native BIMA savings fallback for USBD (Mar 24, 2026)
+## v5.1 - Protocol-native BIMA savings fallback for USBD (Mar 24, 2026)
 
 **Commit:** `unreleased`
 
@@ -143,7 +143,7 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 - Protocol-owned earn APIs are now treated as curated yield sources in the arbitration layer
 - The source-link registry and public about-page data-source copy now include BIMA's earn surface
 
-## v4.10 - Richer freshness provenance and curated lending source links (Mar 24, 2026)
+## v5.0 - Richer freshness provenance and curated lending source links (Mar 24, 2026)
 
 **Commit:** `unreleased`
 

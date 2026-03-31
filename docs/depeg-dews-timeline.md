@@ -1,10 +1,10 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v4.10` (2026-02-18 -> 2026-03-28).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v5.0` (2026-02-18 -> 2026-03-28).
 
 ---
 
-## v4.10 — DEWS blacklist coverage parity and thin-peg FX fallback parity (Mar 28, 2026)
+## v5.0 — DEWS blacklist coverage parity and thin-peg FX fallback parity (Mar 28, 2026)
 
 **Commit:** `unreleased`
 

@@ -1,6 +1,6 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.0 (2026-02-25 → 2026-03-30).
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.91 (2026-02-25 → 2026-03-30).
 
 ---
 
@@ -303,7 +303,7 @@ Weights and grade thresholds are unchanged from v5.8.
 - Wrapper governance exempted from chain infrastructure penalty
 - Deployment multipliers: canonical-bridge 0.85→0.90, native-multichain 0.40→0.75
 
-## v7.0 — Reserve-side blacklist exposure heuristics (2026-03-30)
+## v6.91 — Reserve-side blacklist exposure heuristics (2026-03-30)
 
 Safety Score structure is unchanged, but blacklistability attribution now scans curated and live reserve labels plus reserve-rail text for stablecoin, wrapper, and CEX custody clues:
 
@@ -418,7 +418,7 @@ Weights and grade thresholds are unchanged from v6.0.
 | v4.0        | multiplier | 25%            | —       | 25%        | 10%              | 30%      |
 | v4.1        | multiplier | 30%            | —       | 20%        | 15%              | 25%      |
 | v5.0–5.8    | multiplier | 30%            | —       | 20%        | 15%              | 25%      |
-| **v6.0–7.0** | **multiplier** | **30%**  | **—**   | **20%**    | **15%**          | **25%**  |
+| **v6.0–6.91** | **multiplier** | **30%**  | **—**   | **20%**    | **15%**          | **25%**  |
 
 ## Quick Reference: Grade Thresholds
 

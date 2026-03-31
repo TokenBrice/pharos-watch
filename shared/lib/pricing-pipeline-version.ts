@@ -3,11 +3,11 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "2.19",
+  currentVersion: "3.9",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
     {
-      version: "2.19",
+      version: "3.9",
       title: "Explicit source semantics, cluster-median publication, and fallback identity hardening",
       date: "2026-03-30",
       effectiveAt: 1774832400,
@@ -28,7 +28,7 @@ const pricing = createMethodologyVersion({
       reconstructed: false,
     },
     {
-      version: "2.18",
+      version: "3.8",
       title: "Validated DefiLlama fallback admission and exact-target DexScreener gating",
       date: "2026-03-30",
       effectiveAt: 1774828800,
@@ -45,7 +45,7 @@ const pricing = createMethodologyVersion({
       reconstructed: false,
     },
     {
-      version: "2.17",
+      version: "3.7",
       title: "Protocol-aware DEX hardening estimators and provider-config cleanup",
       date: "2026-03-24",
       effectiveAt: 1774353600,
@@ -62,7 +62,7 @@ const pricing = createMethodologyVersion({
       reconstructed: false,
     },
     {
-      version: "2.16",
+      version: "3.6",
       title: "Explicit source freshness provenance for live prices",
       date: "2026-03-24",
       effectiveAt: 1774350000,
@@ -79,7 +79,7 @@ const pricing = createMethodologyVersion({
       reconstructed: false,
     },
     {
-      version: "2.15",
+      version: "3.5",
       title: "Independent FX recovery during cached fallback",
       date: "2026-03-23",
       effectiveAt: 1774279800,
@@ -96,7 +96,7 @@ const pricing = createMethodologyVersion({
       reconstructed: false,
     },
     {
-      version: "2.14",
+      version: "3.4",
       title: "Replay-safe trusted-price continuity for confirmed depegs",
       date: "2026-03-23",
       effectiveAt: 1774267200,
@@ -113,7 +113,7 @@ const pricing = createMethodologyVersion({
       reconstructed: false,
     },
     {
-      version: "2.13",
+      version: "3.3",
       title: "Source-aware trust, observed-time freshness, and weak-price jump quarantine",
       date: "2026-03-22",
       effectiveAt: 1774230000,
@@ -135,7 +135,7 @@ const pricing = createMethodologyVersion({
       reconstructed: false,
     },
     {
-      version: "2.12",
+      version: "3.2",
       title: "Identity-safe enrichment, severe-downside publication guards, and replay-safe DEX quote derivation",
       date: "2026-03-22",
       effectiveAt: 1774195200,
@@ -158,7 +158,7 @@ const pricing = createMethodologyVersion({
       reconstructed: false,
     },
     {
-      version: "2.11",
+      version: "3.1",
       title: "Canonical DEX token identity and non-overlapping DEX consensus",
       date: "2026-03-22",
       effectiveAt: 1774180800,
@@ -176,7 +176,7 @@ const pricing = createMethodologyVersion({
       reconstructed: false,
     },
     {
-      version: "2.10",
+      version: "3.0",
       title: "Cadence-valid FX carry-forward semantics",
       date: "2026-03-20",
       effectiveAt: 1774014900,

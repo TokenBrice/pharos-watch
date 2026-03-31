@@ -1,10 +1,10 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v2.19` (2026-02-01 -> 2026-03-30).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v3.9` (2026-02-01 -> 2026-03-30).
 
 ---
 
-## v2.19 - Explicit source semantics, cluster-median publication, and fallback identity hardening (Mar 30, 2026)
+## v3.9 - Explicit source semantics, cluster-median publication, and fallback identity hardening (Mar 30, 2026)
 
 **Commit:** `unreleased`
 
@@ -19,7 +19,7 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ---
 
-## v2.18 - Validated DefiLlama fallback admission and exact-target DexScreener gating (Mar 30, 2026)
+## v3.8 - Validated DefiLlama fallback admission and exact-target DexScreener gating (Mar 30, 2026)
 
 **Commit:** `unreleased`
 
@@ -30,7 +30,7 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ---
 
-## v2.17 - Protocol-aware DEX hardening estimators and provider-config cleanup (Mar 24, 2026)
+## v3.7 - Protocol-aware DEX hardening estimators and provider-config cleanup (Mar 24, 2026)
 
 **Commit:** `unreleased`
 
@@ -42,7 +42,7 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ---
 
-## v2.16 - Explicit source freshness provenance for live prices (Mar 24, 2026)
+## v3.6 - Explicit source freshness provenance for live prices (Mar 24, 2026)
 
 **Commit:** `unreleased`
 
@@ -54,7 +54,7 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ---
 
-## v2.15 - Independent FX recovery during cached fallback (Mar 23, 2026)
+## v3.5 - Independent FX recovery during cached fallback (Mar 23, 2026)
 
 **Commit:** `unreleased`
 
@@ -65,7 +65,7 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ---
 
-## v2.14 - Replay-safe trusted-price continuity for confirmed depegs (Mar 23, 2026)
+## v3.4 - Replay-safe trusted-price continuity for confirmed depegs (Mar 23, 2026)
 
 **Commit:** `unreleased`
 
@@ -76,7 +76,7 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ---
 
-## v2.13 - Source-aware trust, observed-time freshness, and weak-price jump quarantine (Mar 22, 2026)
+## v3.3 - Source-aware trust, observed-time freshness, and weak-price jump quarantine (Mar 22, 2026)
 
 **Commit:** `unreleased`
 
@@ -92,7 +92,7 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ---
 
-## v2.12 - Identity-safe enrichment, severe-downside publication guards, and replay-safe DEX quote derivation (Mar 22, 2026)
+## v3.2 - Identity-safe enrichment, severe-downside publication guards, and replay-safe DEX quote derivation (Mar 22, 2026)
 
 **Commit:** `unreleased`
 
@@ -108,7 +108,7 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ---
 
-## v2.11 - Canonical DEX token identity and non-overlapping DEX consensus (Mar 22, 2026)
+## v3.1 - Canonical DEX token identity and non-overlapping DEX consensus (Mar 22, 2026)
 
 **Commit:** `unreleased`
 
@@ -120,7 +120,7 @@ Internal changelog reconstructed from the machine-readable methodology version s
 
 ---
 
-## v2.10 - Cadence-valid FX carry-forward semantics (Mar 20, 2026)
+## v3.0 - Cadence-valid FX carry-forward semantics (Mar 20, 2026)
 
 **Commit:** `unreleased`
 
