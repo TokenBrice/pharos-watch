@@ -34,6 +34,9 @@ export interface Env {
   MINT_BURN_ALERT_COOLDOWN_SEC?: string;
   OPENEXCHANGERATES_API_KEY?: string;
   SIM_API_KEY?: string;
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  CLOUDFLARE_D1_STATUS_API_TOKEN?: string;
+  CLOUDFLARE_D1_DATABASE_ID?: string;
   MAINTENANCE_MODE?: string;
 }
 
@@ -73,6 +76,9 @@ export const WORKER_OPTIONAL_ENV_KEYS = [
   "MINT_BURN_ALERT_COOLDOWN_SEC",
   "OPENEXCHANGERATES_API_KEY",
   "SIM_API_KEY",
+  "CLOUDFLARE_ACCOUNT_ID",
+  "CLOUDFLARE_D1_STATUS_API_TOKEN",
+  "CLOUDFLARE_D1_DATABASE_ID",
   "MAINTENANCE_MODE",
 ] as const;
 
@@ -90,8 +96,21 @@ export const WORKER_ACTIVE_ENV_KEYS = [
 export interface WorkerEnvIssue {
   code:
     | "ops-access-partial-config"
+    | "d1-status-partial-config"
     | "public-api-rate-limit-misconfigured";
   message: string;
+}
+
+export interface CloudflareD1StatusBindings {
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  CLOUDFLARE_D1_STATUS_API_TOKEN?: string;
+  CLOUDFLARE_D1_DATABASE_ID?: string;
+}
+
+export interface CloudflareD1StatusConfig {
+  accountId: string;
+  apiToken: string;
+  databaseId: string;
 }
 
 export interface ResolvedPublicApiRateLimitSalt {
@@ -111,6 +130,29 @@ function hasConfiguredValue(value: string | undefined): boolean {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+export function hasAnyCloudflareD1StatusBinding(env: CloudflareD1StatusBindings): boolean {
+  return hasConfiguredValue(env.CLOUDFLARE_ACCOUNT_ID)
+    || hasConfiguredValue(env.CLOUDFLARE_D1_STATUS_API_TOKEN)
+    || hasConfiguredValue(env.CLOUDFLARE_D1_DATABASE_ID);
+}
+
+export function resolveCloudflareD1StatusConfig(
+  env: CloudflareD1StatusBindings,
+): CloudflareD1StatusConfig | null {
+  if (
+    hasConfiguredValue(env.CLOUDFLARE_ACCOUNT_ID)
+    && hasConfiguredValue(env.CLOUDFLARE_D1_STATUS_API_TOKEN)
+    && hasConfiguredValue(env.CLOUDFLARE_D1_DATABASE_ID)
+  ) {
+    return {
+      accountId: env.CLOUDFLARE_ACCOUNT_ID!.trim(),
+      apiToken: env.CLOUDFLARE_D1_STATUS_API_TOKEN!.trim(),
+      databaseId: env.CLOUDFLARE_D1_DATABASE_ID!.trim(),
+    };
+  }
+  return null;
+}
+
 export function resolvePublicApiRateLimitSalt(
   env: Pick<Env, "PUBLIC_API_RATE_LIMIT_SALT">,
 ): ResolvedPublicApiRateLimitSalt | null {
@@ -124,7 +166,16 @@ export function resolvePublicApiRateLimitSalt(
 }
 
 export function validateWorkerEnvContract(
-  env: Pick<Env, "CF_ACCESS_OPS_API_AUD" | "CF_ACCESS_TEAM_DOMAIN" | "PUBLIC_API_RATE_LIMIT_SALT" | "FEEDBACK_IP_SALT">,
+  env: Pick<
+    Env,
+    | "CF_ACCESS_OPS_API_AUD"
+    | "CF_ACCESS_TEAM_DOMAIN"
+    | "PUBLIC_API_RATE_LIMIT_SALT"
+    | "FEEDBACK_IP_SALT"
+    | "CLOUDFLARE_ACCOUNT_ID"
+    | "CLOUDFLARE_D1_STATUS_API_TOKEN"
+    | "CLOUDFLARE_D1_DATABASE_ID"
+  >,
 ): WorkerEnvIssue[] {
   const issues: WorkerEnvIssue[] = [];
 
@@ -134,6 +185,15 @@ export function validateWorkerEnvContract(
     issues.push({
       code: "ops-access-partial-config",
       message: "CF_ACCESS_OPS_API_AUD and CF_ACCESS_TEAM_DOMAIN must be configured together for ops-api Access JWT verification.",
+    });
+  }
+
+  const hasCloudflareD1StatusBinding = hasAnyCloudflareD1StatusBinding(env);
+  const hasCloudflareD1StatusConfig = resolveCloudflareD1StatusConfig(env) != null;
+  if (hasCloudflareD1StatusBinding && !hasCloudflareD1StatusConfig) {
+    issues.push({
+      code: "d1-status-partial-config",
+      message: "CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_D1_STATUS_API_TOKEN, and CLOUDFLARE_D1_DATABASE_ID must be configured together for admin D1 status metrics.",
     });
   }
 

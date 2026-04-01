@@ -7,6 +7,7 @@ import { ACTIVE_IDS, ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/s
 import type {
   ClassificationWarning,
   CoinGeckoPriceDiff,
+  D1UsageSummary,
   DiscoveryCandidate,
   LiquidityHealth,
   MintBurnReconciliationSummary,
@@ -20,12 +21,18 @@ import { computeCollateralQualityFromReserves } from "@shared/lib/report-cards";
 import { cgHeaders, cgUrl } from "../lib/coingecko";
 import { USER_AGENT } from "../lib/constants";
 import {
+  hasAnyCloudflareD1StatusBinding,
+  resolveCloudflareD1StatusConfig,
+  type CloudflareD1StatusBindings,
+} from "../lib/env";
+import {
   DISCOVERY_CANDIDATE_SELECT_COLUMNS,
   mapDiscoveryCandidateRow,
   type DiscoveryCandidateRow,
 } from "../lib/discovery-candidates";
 import { loadFreshIndependentLiveReserveMap } from "../lib/live-reserves-store";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { getD1UsageSummary } from "../lib/status/d1-usage";
 import { getMintBurnReconciliation } from "../lib/status/derived-data";
 
 function sectionError(code: string, message: string): StatusSectionError {
@@ -36,6 +43,7 @@ export interface StatusSupplements {
   liquidityHealth: LiquidityHealth | null;
   priceSourceHealth: PriceSourceHealth | null;
   coingeckoPriceDiff: CoinGeckoPriceDiff | null;
+  d1Usage: D1UsageSummary | null;
   discoveryCandidates: DiscoveryCandidate[] | null;
   mintBurnReconciliation: MintBurnReconciliationSummary | null;
   reserveDrift?: ReserveDriftEntry[];
@@ -152,6 +160,7 @@ export async function loadStatusSupplements(
   now: number,
   crons: StatusResponse["crons"],
   coingeckoApiKey?: string | null,
+  cloudflareD1StatusBindings?: CloudflareD1StatusBindings,
 ): Promise<StatusSupplements> {
   const sectionErrors: StatusSectionErrors = {};
 
@@ -239,6 +248,27 @@ export async function loadStatusSupplements(
     }
   }
 
+  let d1Usage: D1UsageSummary | null = null;
+  try {
+    const d1StatusConfig = cloudflareD1StatusBindings
+      ? resolveCloudflareD1StatusConfig(cloudflareD1StatusBindings)
+      : null;
+    if (d1StatusConfig) {
+      d1Usage = await getD1UsageSummary(d1StatusConfig, now);
+    } else if (cloudflareD1StatusBindings && hasAnyCloudflareD1StatusBinding(cloudflareD1StatusBindings)) {
+      sectionErrors.d1Usage = sectionError(
+        "cloudflare_d1_status_config_incomplete",
+        "CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_D1_STATUS_API_TOKEN, and CLOUDFLARE_D1_DATABASE_ID must be configured together for admin D1 metrics.",
+      );
+    }
+  } catch (err) {
+    console.warn("[status] D1 usage loader failed:", err);
+    sectionErrors.d1Usage = sectionError(
+      "d1_usage_query_failed",
+      err instanceof Error ? err.message : String(err),
+    );
+  }
+
   let mintBurnReconciliation: MintBurnReconciliationSummary | null = null;
   try {
     mintBurnReconciliation = await getMintBurnReconciliation(db, now);
@@ -303,6 +333,7 @@ export async function loadStatusSupplements(
     liquidityHealth,
     priceSourceHealth,
     coingeckoPriceDiff,
+    d1Usage,
     discoveryCandidates,
     mintBurnReconciliation,
     reserveDrift,

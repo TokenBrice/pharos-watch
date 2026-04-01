@@ -40,6 +40,21 @@ describe("validateWorkerEnvContract", () => {
     ]);
   });
 
+  it("flags partial admin D1 status config", () => {
+    expect(validateWorkerEnvContract({
+      CF_ACCESS_OPS_API_AUD: undefined,
+      CF_ACCESS_TEAM_DOMAIN: undefined,
+      PUBLIC_API_RATE_LIMIT_SALT: "public",
+      FEEDBACK_IP_SALT: "feedback",
+      CLOUDFLARE_ACCOUNT_ID: "acct",
+      CLOUDFLARE_D1_STATUS_API_TOKEN: undefined,
+      CLOUDFLARE_D1_DATABASE_ID: "db-id",
+    })).toContainEqual({
+      code: "d1-status-partial-config",
+      message: "CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_D1_STATUS_API_TOKEN, and CLOUDFLARE_D1_DATABASE_ID must be configured together for admin D1 status metrics.",
+    });
+  });
+
   it("flags missing public API rate-limit salt", () => {
     expect(validateWorkerEnvContract({
       CF_ACCESS_OPS_API_AUD: undefined,

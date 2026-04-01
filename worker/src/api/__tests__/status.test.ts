@@ -192,6 +192,7 @@ describe("handleStatus", () => {
       state: Record<string, unknown>;
       priceSourceHealth: Record<string, unknown> | null;
       coingeckoPriceDiff: Record<string, unknown> | null;
+      d1Usage: Record<string, unknown> | null;
       liquidityHealth: Record<string, unknown> | null;
       discoveryCandidates: Array<Record<string, unknown>> | null;
       mintBurnReconciliation: Record<string, unknown> | null;
@@ -210,6 +211,7 @@ describe("handleStatus", () => {
     expect(body).toHaveProperty("state");
     expect(body).toHaveProperty("priceSourceHealth");
     expect(body).toHaveProperty("coingeckoPriceDiff");
+    expect(body).toHaveProperty("d1Usage");
     expect(body).toHaveProperty("liquidityHealth");
     expect(body).toHaveProperty("discoveryCandidates");
     expect(body).toHaveProperty("mintBurnReconciliation");
@@ -461,6 +463,145 @@ describe("handleStatus", () => {
     expect(body.sectionErrors.coingeckoPriceDiff).toEqual({
       code: "coingecko_price_diff_query_failed",
       message: "CoinGecko simple price fetch failed (503)",
+    });
+  });
+
+  it("surfaces admin D1 usage metrics when Cloudflare bindings are configured", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockFetch([
+      {
+        match: "/d1/database/db-123",
+        body: {
+          success: true,
+          result: {
+            uuid: "db-123",
+            name: "stablecoin-db",
+            file_size: 1_589_248_000,
+            num_tables: 56,
+            region: "EEUR",
+            read_replication: {
+              mode: "disabled",
+            },
+          },
+        },
+      },
+      {
+        match: "/graphql",
+        body: {
+          data: {
+            viewer: {
+              accounts: [{
+                d1AnalyticsAdaptiveGroups: [{
+                  sum: {
+                    readQueries: 942_012,
+                    writeQueries: 709_241,
+                    rowsRead: 1_633_139_670,
+                    rowsWritten: 1_555_568,
+                  },
+                }],
+              }],
+            },
+          },
+        },
+      },
+    ]);
+
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      { match: "dex_liquidity", rows: [], first: { age: 300 } },
+      { match: "yield_data", rows: [], first: { age: 300 } },
+      { match: "stress_signals", rows: [], first: { age: 300 } },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+      { match: "cache", rows: [], first: { value: JSON.stringify({ peggedAssets: [] }), updated_at: now - 60 } },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at >", rows: [] },
+      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(
+      db,
+      true,
+      request,
+      undefined,
+      {
+        CLOUDFLARE_ACCOUNT_ID: "acct-123",
+        CLOUDFLARE_D1_STATUS_API_TOKEN: "cf-token",
+        CLOUDFLARE_D1_DATABASE_ID: "db-123",
+      },
+    );
+    const body = (await res.json()) as {
+      d1Usage: {
+        databaseId: string;
+        databaseName: string | null;
+        databaseSizeBytes: number | null;
+        numTables: number | null;
+        region: string | null;
+        readReplicationMode: string | null;
+        readQueries24h: number | null;
+        writeQueries24h: number | null;
+        rowsRead24h: number | null;
+        rowsWritten24h: number | null;
+      } | null;
+    };
+
+    expect(res.status).toBe(200);
+    expect(body.d1Usage).toMatchObject({
+      databaseId: "db-123",
+      databaseName: "stablecoin-db",
+      databaseSizeBytes: 1_589_248_000,
+      numTables: 56,
+      region: "EEUR",
+      readReplicationMode: "disabled",
+      readQueries24h: 942_012,
+      writeQueries24h: 709_241,
+      rowsRead24h: 1_633_139_670,
+      rowsWritten24h: 1_555_568,
+    });
+  });
+
+  it("surfaces partial admin D1 status config through sectionErrors", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      { match: "dex_liquidity", rows: [], first: { age: 300 } },
+      { match: "yield_data", rows: [], first: { age: 300 } },
+      { match: "stress_signals", rows: [], first: { age: 300 } },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+      { match: "cache", rows: [], first: { value: JSON.stringify({ peggedAssets: [] }), updated_at: now - 60 } },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at >", rows: [] },
+      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(
+      db,
+      true,
+      request,
+      undefined,
+      {
+        CLOUDFLARE_ACCOUNT_ID: "acct-123",
+        CLOUDFLARE_D1_STATUS_API_TOKEN: undefined,
+        CLOUDFLARE_D1_DATABASE_ID: "db-123",
+      },
+    );
+    const body = (await res.json()) as {
+      d1Usage: unknown;
+      sectionErrors: Record<string, { code: string; message: string } | undefined>;
+    };
+
+    expect(res.status).toBe(200);
+    expect(body.d1Usage).toBeNull();
+    expect(body.sectionErrors.d1Usage).toEqual({
+      code: "cloudflare_d1_status_config_incomplete",
+      message: "CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_D1_STATUS_API_TOKEN, and CLOUDFLARE_D1_DATABASE_ID must be configured together for admin D1 metrics.",
     });
   });
 

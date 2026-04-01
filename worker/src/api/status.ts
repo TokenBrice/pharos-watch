@@ -15,10 +15,17 @@ import {
 import { computeRawStatus } from "../lib/status-evaluation";
 import { loadStatusSupplements } from "./status-supplements";
 import type { StatusResponse } from "@shared/types/status";
+import type { CloudflareD1StatusBindings } from "../lib/env";
 
 export const handleStatus = withErrorHandler(
   "status",
-  async (db: D1Database, trustedAdmin?: boolean, request?: Request, coingeckoApiKey?: string | null): Promise<Response> => {
+  async (
+    db: D1Database,
+    trustedAdmin?: boolean,
+    request?: Request,
+    coingeckoApiKey?: string | null,
+    cloudflareD1StatusBindings?: CloudflareD1StatusBindings,
+  ): Promise<Response> => {
     return withAdmin(
       request,
       async () => {
@@ -53,7 +60,13 @@ export const handleStatus = withErrorHandler(
         const discrepancyStreak = await getDiscrepancyStreak(db, collectPersistenceIssue);
         const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak);
         const timeline = await listRecentStatusTransitions(db, 40, undefined, collectPersistenceIssue);
-        const supplements = await loadStatusSupplements(db, now, raw.crons, coingeckoApiKey);
+        const supplements = await loadStatusSupplements(
+          db,
+          now,
+          raw.crons,
+          coingeckoApiKey,
+          cloudflareD1StatusBindings,
+        );
         const statusStateError = summarizeStatusPersistenceIssues(persistenceIssues);
 
         const body: StatusResponse = {
@@ -89,6 +102,7 @@ export const handleStatus = withErrorHandler(
           liquidityHealth: supplements.liquidityHealth,
           priceSourceHealth: supplements.priceSourceHealth,
           coingeckoPriceDiff: supplements.coingeckoPriceDiff,
+          d1Usage: supplements.d1Usage,
           discoveryCandidates: supplements.discoveryCandidates,
           mintBurnReconciliation: supplements.mintBurnReconciliation,
           reserveDrift: supplements.reserveDrift,

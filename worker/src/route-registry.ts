@@ -67,6 +67,7 @@ import {
   makeConditionalIdempotentAdminRoute,
   makeIdempotentAdminRoute,
 } from "./lib/route-wrappers";
+import type { CloudflareD1StatusBindings } from "./lib/env";
 import type { MintBurnFreshnessConfig } from "./lib/mint-burn-health-config";
 import type { TelegramCreds } from "./lib/telegram";
 import type { ChainRpcConfig } from "./lib/chain-registry";
@@ -111,6 +112,10 @@ export interface ChainRpcRouteFields {
   chainRpcs?: Map<string, ChainRpcConfig>;
 }
 
+export interface CloudflareD1StatusRouteFields {
+  cloudflareD1StatusBindings?: CloudflareD1StatusBindings;
+}
+
 export type RouteDependency = EndpointDependency;
 
 /** Full context built by handleHttpRequest — union of core + all domain bags. */
@@ -119,7 +124,8 @@ export type FullRouteContext = RouteContext &
   DigestRouteFields &
   FeedbackRouteFields &
   MintBurnRouteFields &
-  ChainRpcRouteFields;
+  ChainRpcRouteFields &
+  CloudflareD1StatusRouteFields;
 
 export type StaticRouteHandler = (context: FullRouteContext) => Promise<Response>;
 
@@ -183,8 +189,8 @@ const STATIC_ROUTES = [
   defineStaticRoute("dex-liquidity", ({ db }) => handleDexLiquidity(db)),
   defineStaticRoute("dex-liquidity-history", ({ db, url }) => handleDexLiquidityHistory(db, url)),
   defineStaticRoute("supply-history", ({ db, url }) => handleSupplyHistory(db, url)),
-  defineStaticRoute("status", ({ db, trustedAdmin, request, coingeckoApiKey }) =>
-    handleStatus(db, trustedAdmin, request, coingeckoApiKey)),
+  defineStaticRoute("status", ({ db, trustedAdmin, request, coingeckoApiKey, cloudflareD1StatusBindings }) =>
+    handleStatus(db, trustedAdmin, request, coingeckoApiKey, cloudflareD1StatusBindings)),
   defineStaticRoute("status-history", ({ db, trustedAdmin, request }) => handleStatusHistory(db, trustedAdmin, request)),
   defineStaticRoute("request-source-stats", ({ db, trustedAdmin, request }) =>
     handleRequestSourceStats(db, trustedAdmin, request)),

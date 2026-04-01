@@ -44,7 +44,7 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 - `WORKER_RESERVED_ENV_KEYS`
 - `WORKER_ACTIVE_ENV_KEYS` (`required + optional`)
 
-The paired Pages Functions contract lives in `functions/lib/ops-env.ts` with the same `required` / `optional` / `reserved` / `active` shape. Worker runtime validation logs contract errors when Access bindings are only partially configured or when `PUBLIC_API_RATE_LIMIT_SALT` is missing.
+The paired Pages Functions contract lives in `functions/lib/ops-env.ts` with the same `required` / `optional` / `reserved` / `active` shape. Worker runtime validation logs contract errors when Access bindings are only partially configured, when admin D1 status bindings are only partially configured, or when `PUBLIC_API_RATE_LIMIT_SALT` is missing.
 
 | Binding                         | Type       | Required           | Used by                                                                                                                                                                    |
 | ------------------------------- | ---------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -66,6 +66,9 @@ The paired Pages Functions contract lives in `functions/lib/ops-env.ts` with the
 | `CMC_API_KEY`                   | string     | No                 | Price fallback (CoinMarketCap)                                                                                                                                             |
 | `OPENEXCHANGERATES_API_KEY`     | string     | No                 | Real-time FX rate cross-validation (Open Exchange Rates)                                                                                                                   |
 | `COINGECKO_API_KEY`             | string     | No                 | Price enrichment, depeg confirmation                                                                                                                                       |
+| `CLOUDFLARE_ACCOUNT_ID`         | string     | No                 | Admin-only D1 status metrics (`/api/status` -> `d1Usage`) Cloudflare account scope                                                                                        |
+| `CLOUDFLARE_D1_STATUS_API_TOKEN` | string     | No                 | Admin-only D1 status metrics (`/api/status` -> `d1Usage`) token with D1 read + analytics read access                                                                    |
+| `CLOUDFLARE_D1_DATABASE_ID`     | string     | No                 | Admin-only D1 status metrics (`/api/status` -> `d1Usage`) target database id                                                                                              |
 | `SIM_API_KEY`                   | string     | No                 | Treasury stable-exposure snapshot reads against Sim by Dune wallet-balance APIs                                                                                            |
 | `GITHUB_PAT`                    | string     | No (worker contract); Yes for feedback submissions | Feedback → GitHub Issues                                                                                                                                                   |
 | `FEEDBACK_IP_SALT`              | string     | No (worker contract); Yes for feedback submissions | Rate limit IP hashing for `POST /api/feedback`                                                                                                                             |

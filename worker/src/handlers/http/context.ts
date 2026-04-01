@@ -15,6 +15,13 @@ const ROUTE_DEPENDENCY_HYDRATORS = {
   anthropicApiKey(routeCtx, env) {
     routeCtx.anthropicApiKey = env.ANTHROPIC_API_KEY ?? null;
   },
+  cloudflareD1StatusConfig(routeCtx, env) {
+    routeCtx.cloudflareD1StatusBindings = {
+      CLOUDFLARE_ACCOUNT_ID: env.CLOUDFLARE_ACCOUNT_ID,
+      CLOUDFLARE_D1_STATUS_API_TOKEN: env.CLOUDFLARE_D1_STATUS_API_TOKEN,
+      CLOUDFLARE_D1_DATABASE_ID: env.CLOUDFLARE_D1_DATABASE_ID,
+    };
+  },
   chainRpcs(routeCtx, env) {
     routeCtx.chainRpcs = buildChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY);
   },

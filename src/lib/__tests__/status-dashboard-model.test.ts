@@ -106,6 +106,7 @@ const BASE_STATUS: StatusResponse = {
   liquidityHealth: null,
   priceSourceHealth: null,
   coingeckoPriceDiff: null,
+  d1Usage: null,
   discoveryCandidates: null,
   mintBurnReconciliation: null,
   reserveComposition: {

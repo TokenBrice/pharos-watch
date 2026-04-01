@@ -2,6 +2,7 @@ import type { StatusResponse } from "@shared/types";
 import { CoinGeckoPriceDiffCard } from "@/components/status/coingecko-price-diff";
 import { DataQualityCards } from "@/components/status/data-quality-cards";
 import { DatasetFreshnessTable } from "@/components/status/dataset-freshness-table";
+import { D1UsageCard } from "@/components/status/d1-usage-card";
 import { DiscoveryCandidatesCard } from "@/components/status/discovery-candidates";
 import { LiquidityHealthCard } from "@/components/status/liquidity-health";
 import { MintBurnReconciliationCard } from "@/components/status/mint-burn-reconciliation";
@@ -82,9 +83,14 @@ export function PipelineSection({ data, adminAccess, handleRefresh }: PipelineSe
         nowSeconds={data.timestamp}
       />
 
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div className="grid gap-5 xl:grid-cols-3">
         <DatasetFreshnessTable datasetFreshness={data.datasetFreshness} nowSeconds={data.timestamp} />
         <ReserveSyncHealthCard health={data.reserveComposition} nowSeconds={data.timestamp} />
+        <D1UsageCard
+          summary={data.d1Usage}
+          error={data.sectionErrors.d1Usage}
+          nowSeconds={data.timestamp}
+        />
       </div>
 
       <div className="grid gap-5 xl:grid-cols-2">

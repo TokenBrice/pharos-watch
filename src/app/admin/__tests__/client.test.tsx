@@ -58,6 +58,10 @@ vi.mock("@/components/status/dataset-freshness-table", () => ({
   DatasetFreshnessTable: () => <div data-testid="dataset-freshness">dataset freshness</div>,
 }));
 
+vi.mock("@/components/status/d1-usage-card", () => ({
+  D1UsageCard: () => <div data-testid="d1-usage">d1 usage</div>,
+}));
+
 vi.mock("@/components/status/discovery-candidates", () => ({
   DiscoveryCandidatesCard: () => <div data-testid="discovery-candidates">discovery candidates</div>,
 }));
@@ -262,6 +266,7 @@ const BASE_STATUS: StatusResponse = {
   liquidityHealth: null,
   priceSourceHealth: null,
   coingeckoPriceDiff: null,
+  d1Usage: null,
   discoveryCandidates: null,
   mintBurnReconciliation: null,
   reserveComposition: {

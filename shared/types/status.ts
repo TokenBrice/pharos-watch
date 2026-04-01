@@ -301,10 +301,27 @@ export interface CoinGeckoPriceDiff {
   rows: CoinGeckoPriceDiffRow[];
 }
 
+export interface D1UsageSummary {
+  checkedAt: number;
+  windowStart: number;
+  windowEnd: number;
+  databaseId: string;
+  databaseName: string | null;
+  databaseSizeBytes: number | null;
+  numTables: number | null;
+  region: string | null;
+  readReplicationMode: string | null;
+  readQueries24h: number | null;
+  writeQueries24h: number | null;
+  rowsRead24h: number | null;
+  rowsWritten24h: number | null;
+}
+
 export type StatusSectionKey =
   | "statusState"
   | "telegramBot"
   | "reserveComposition"
+  | "d1Usage"
   | "liquidityHealth"
   | "priceSourceHealth"
   | "coingeckoPriceDiff"
@@ -353,6 +370,7 @@ export interface StatusResponse {
   liquidityHealth: LiquidityHealth | null;
   priceSourceHealth: PriceSourceHealth | null;
   coingeckoPriceDiff: CoinGeckoPriceDiff | null;
+  d1Usage: D1UsageSummary | null;
   discoveryCandidates: DiscoveryCandidate[] | null;
   mintBurnReconciliation: MintBurnReconciliationSummary | null;
   reserveComposition: {

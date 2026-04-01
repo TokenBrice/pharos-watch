@@ -3,6 +3,7 @@ export type EndpointProbeGroup = "public" | "admin" | "manual";
 export type EndpointDependency =
   | "alchemyApiKey"
   | "anthropicApiKey"
+  | "cloudflareD1StatusConfig"
   | "chainRpcs"
   | "feedbackEnv"
   | "mintBurnFreshnessConfig"
@@ -440,7 +441,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: false,
     cacheBypass: true,
-    routeDependencies: ["coingeckoApiKey"],
+    routeDependencies: ["coingeckoApiKey", "cloudflareD1StatusConfig"],
     probeGroup: "admin",
   },
   {
