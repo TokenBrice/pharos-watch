@@ -127,7 +127,7 @@ import { createBudget } from "../../lib/evm-logs";
 
 function makeDb(opts: {
   runState?: { nextIndex: number; degradedStreak: number } | null;
-  syncRows?: Array<{ last_block: number }>;
+  syncRows?: Array<{ last_block: number; config_key?: string }>;
 } = {}): D1Database {
   const runState = opts.runState ?? { nextIndex: 0, degradedStreak: 0 };
   return mockD1([
@@ -272,6 +272,28 @@ describe("syncMintBurn", () => {
     const fromBlock = firstCall[3] as number;
     const toBlock = firstCall[4] as number;
     expect(toBlock - fromBlock + 1).toBe(50_000);
+  });
+
+  it("resumes from legacy sync-state progress and rewrites the canonical key", async () => {
+    const db = makeDb({
+      syncRows: [{
+        config_key: "usdt-tether:ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7",
+        last_block: 21_955_000,
+      }],
+    });
+
+    await syncMintBurn(db, "alchemy-key");
+
+    const firstCall = vi.mocked(fetchAlchemyLogs).mock.calls[0];
+    const fromBlock = firstCall[3] as number;
+    expect(fromBlock).toBe(21_955_001);
+
+    const history = (db as ReturnType<typeof makeDb> & { getHistory(): Array<{ sql: string; binds: unknown[] }> }).getHistory();
+    const syncStateUpsert = history.find((entry: { sql: string; binds: unknown[] }) =>
+      entry.sql.includes("INSERT INTO mint_burn_sync_state")
+      && entry.binds[0] === "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
+    );
+    expect(syncStateUpsert).toBeDefined();
   });
 
   it("prioritizes critical configs even when rotation starts with extended", async () => {

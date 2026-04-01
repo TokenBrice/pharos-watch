@@ -15,7 +15,7 @@ import {
 import {
   ensureMintBurnSyncStateRows,
   mintBurnConfigKey,
-  readMintBurnSyncState,
+  readMintBurnSyncStateForConfig,
   readMintBurnSyncStateBatch,
   upsertMintBurnSyncState,
 } from "../lib/mint-burn-pipeline/sync-state";
@@ -150,7 +150,7 @@ export async function handleBackfillMintBurn(
       return errorResponse(400, "Selected config is outside Ethereum-only mint/burn scope");
     }
 
-    const currentLastBlock = await readMintBurnSyncState(db, configKey(config));
+    const currentLastBlock = await readMintBurnSyncStateForConfig(db, config);
     const fromBlock = fromBlockParam >= 0 ? fromBlockParam : (currentLastBlock ?? config.startBlock - 1) + 1;
     const toBlock = toBlockParam >= 0 ? Math.min(toBlockParam, chainHead) : chainHead;
     if (toBlock < fromBlock) {

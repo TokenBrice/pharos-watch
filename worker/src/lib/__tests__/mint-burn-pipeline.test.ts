@@ -50,7 +50,11 @@ import {
   rebuildHourlyForStablecoinIds,
   updateBurnClassifications,
 } from "../mint-burn-pipeline/persistence";
-import { readMintBurnSyncStateBatch, upsertMintBurnSyncState } from "../mint-burn-pipeline/sync-state";
+import {
+  readMintBurnSyncStateBatch,
+  readMintBurnSyncStateForConfig,
+  upsertMintBurnSyncState,
+} from "../mint-burn-pipeline/sync-state";
 import type { MintBurnRow } from "../mint-burn-pipeline/types";
 
 function makeDb(): D1Database {
@@ -605,15 +609,69 @@ describe("mint-burn shared pipeline modules", () => {
 
     const results = await readMintBurnSyncStateBatch(db, configs);
 
-    expect(history).toHaveLength(2);
+    expect(history).toHaveLength(3);
     expect(history[0]?.sql).toContain("WHERE config_key IN");
     expect(history[0]?.binds).toHaveLength(90);
-    expect(history[1]?.binds).toHaveLength(11);
+    expect(history[1]?.binds).toHaveLength(90);
+    expect(history[2]?.binds).toHaveLength(22);
     expect(history[0]?.binds?.[0]).toBe("ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
-    expect(history[1]?.binds?.[history[1].binds.length - 1]).toBe(
-      "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",
+    expect(history.flatMap((entry) => entry.binds)).toContain(
+      "usdc-circle:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    );
+    expect(history[2]?.binds?.[history[2].binds.length - 1]).toBe(
+      "usdt-tether:ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7",
     );
     expect(results.get("ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")).toBe(22_345_678);
     expect(results.get("ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7")).toBe(21_899_999);
+  });
+
+  it("falls back to the legacy sync-state key for existing prod rows", async () => {
+    const config = {
+      chain: {
+        chainId: "ethereum",
+        chainName: "Ethereum",
+        evmChainId: 1,
+        explorerUrl: "https://etherscan.io",
+        type: "evm" as const,
+      },
+      stablecoinId: "usdt-tether",
+      symbol: "USDT",
+      contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      decimals: 6,
+      dustThreshold: 10_000,
+      startBlock: 21_900_000,
+      adapterKind: "mixed" as const,
+      startBlockSource: "reviewed-contract-specific" as const,
+      startBlockConfidence: "high" as const,
+      events: [],
+    };
+
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (..._binds: unknown[]) => ({
+          all: async <T>() => ({
+            results: [{
+              config_key: "usdt-tether:ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7",
+              last_block: 22_345_678,
+            }] as T[],
+            success: true,
+            meta: {},
+          }),
+          first: async <T>() => {
+            if (sql.includes("SELECT last_block FROM mint_burn_sync_state")) {
+              return {
+                last_block: 21_900_123,
+              } as T;
+            }
+            return null as T;
+          },
+        }),
+      }),
+    } as unknown as D1Database;
+
+    await expect(readMintBurnSyncStateForConfig(db, config)).resolves.toBe(22_345_678);
+    await expect(readMintBurnSyncStateBatch(db, [config])).resolves.toEqual(new Map([
+      ["ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7", 22_345_678],
+    ]));
   });
 });

@@ -2,13 +2,13 @@ import type { MintBurnTxContext } from "../../lib/mint-burn-bridge-classifier";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import { reportCronProgress } from "../../lib/cron-progress";
 import { budgetExhausted } from "../../lib/evm-logs";
-import { upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey, upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
 import type { MintBurnAffectedHour, MintBurnPriceContext } from "../../lib/mint-burn-pipeline/types";
 import type { MintBurnContractConfig, MintBurnTier } from "../../lib/mint-burn-contracts";
 import { syncMintBurnConfig, type MintBurnConfigSummary } from "./sync-config";
 
 function configKey(config: MintBurnContractConfig): string {
-  return `${config.stablecoinId}:${config.chain.chainId}:${config.contractAddress.toLowerCase()}`;
+  return mintBurnConfigKey(config);
 }
 
 function configTier(config: MintBurnContractConfig): MintBurnTier {
