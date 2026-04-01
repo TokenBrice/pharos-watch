@@ -43,7 +43,9 @@ export function PricingPipelineMethodologySection() {
         <p>
           <strong className="text-foreground">Pool challenge.</strong>{" "}
           A pool challenge guard downgrades confidence and replaces the price with a protocol-aware TVL-weighted median
-          only when large DEX pools from at least two independent protocols diverge from soft consensus, including
+          only when large DEX pools from at least two independent protocols diverge from soft consensus, with divergence
+          evaluated from one TVL-weighted median per protocol so a single rogue pool cannot make an otherwise agreeing
+          protocol count as corroborating disagreement, including
           DEX-inclusive soft clusters unless an exempt hard source is present.
         </p>
 
@@ -199,7 +201,7 @@ export function PricingPipelineMethodologySection() {
               <li>If the winning cluster has 2+ members, publish its median price and separately keep the best cluster member for provenance</li>
               <li>Choose that internal selected source by weight, then trust tier, then peg proximity, then source key</li>
               <li>If no cluster of 2+ forms, fixed pegs stay on fixed-peg rules and fall back to the best trusted single source</li>
-              <li><span className="text-foreground font-medium">Pool challenge:</span> if all agreeing sources are challenge-eligible (CG, DL-list, DEX average, or promoted protocol DEX sources without a hard-source corroborator), check each large priced DEX pool (&ge;$100K TVL) from the published challenger snapshot built from the full retained pool set. If any diverges &ge;500 bps from the weak result, downgrade to <code className="text-xs">low</code>, and only replace the price when at least two independent protocols corroborate that divergence &mdash; on-chain liquidity is a more honest signal when aggregators share upstream data, but a single protocol can still be wrong</li>
+              <li><span className="text-foreground font-medium">Pool challenge:</span> if all agreeing sources are challenge-eligible (CG, DL-list, DEX average, or promoted protocol DEX sources without a hard-source corroborator), check each large priced DEX pool (&ge;$100K TVL) from the published challenger snapshot built from the full retained pool set. If any diverges &ge;500 bps from the weak result, downgrade to <code className="text-xs">low</code>, and only replace the price when at least two independent protocol-level medians corroborate that divergence &mdash; on-chain liquidity is a more honest signal when aggregators share upstream data, but a single protocol or a single rogue pool can still be wrong</li>
             </ol>
             <code className="block rounded-lg border border-l-[3px] border-l-sky-500 border-border/60 bg-muted/50 px-4 py-3 text-xs font-mono">
               agree(a,b) = |a.price &minus; b.price| / midpoint(a,b) &times; 10000 &le; thresholdBps

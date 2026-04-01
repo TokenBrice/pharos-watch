@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v3.9`
+- **Current methodology version:** `v3.91`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -98,7 +98,7 @@ Inside the winning cluster, the selected source is chosen by:
 After consensus, weak soft-source results where all relevant sources are **pool-challenge eligible** are challenged against current individual priced pools from the published challenger snapshot (`dex_price_challenger_snapshots` + `dex_price_challengers`) that meet the live $100K TVL minimum and are fresh within `DEX_FRESHNESS_SEC`. Eligible source families include CoinGecko, DefiLlama-list, `dex-promoted`, and promoted protocol-level DEX sources (`fluid-dex`, `balancer-dex`, `raydium-dex`, `orca-dex`) as long as no exempt hard source is present. The divergence threshold is **peg-type-aware**: 500 bps for USD pegs, `min(2× depeg threshold, 500)` for non-USD pegs (e.g., 300 bps for JPY/EUR). If ANY qualifying pool diverges from the weak result beyond the threshold:
 
 1. Confidence is always downgraded to `low`.
-2. The price is **replaced** only when diverging pools span **≥2 independent protocols** — a single protocol's pools may share data-quality issues (vault-token counterparties, misconfigured pairs). When replacement fires, Pharos first collapses each protocol to a TVL-weighted median price, then takes the TVL-weighted median across those corroborating protocol groups. When only one protocol diverges, the original price is preserved but confidence stays `low`.
+2. The price is **replaced** only when diverging protocol-level challenger prices span **≥2 independent protocols** — a single protocol's pools may share data-quality issues (vault-token counterparties, misconfigured pairs), and one rogue pool inside an otherwise agreeing protocol does not make that protocol count as corroborating disagreement. When replacement fires, Pharos first collapses each protocol to a TVL-weighted median price, then evaluates divergence and the final replacement from those protocol medians. When only one protocol diverges, the original price is preserved but confidence stays `low`.
 
 The DEX bridge and the pool challenge now deliberately read from different storage views:
 

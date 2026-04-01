@@ -556,22 +556,32 @@ export function applyPoolChallenge(
 
     const pools = poolChallengers.get(assetId);
     if (!pools?.length) continue;
+    const protocolGroups = aggregateProtocolPrices(
+      pools.map((pool) => ({
+        protocol: pool.protocol,
+        price: pool.price,
+        tvl: pool.tvlUsd,
+        chain: pool.chain,
+        observedAt: pool.observedAt,
+      })),
+    );
+    if (protocolGroups.length === 0) continue;
 
     const pegType = assetPegTypes.get(assetId);
     const poolChallengeBps = pegType === "peggedUSD"
       ? 500
       : Math.min(getDepegThresholdBps(pegType) * 2, 500);
 
-    const divergingProtocols = new Set<string>();
-    for (const pool of pools) {
-      const mid = (result.price + pool.price) / 2;
-      if (mid <= 0) continue;
-      const bps = Math.abs(result.price - pool.price) / mid * 10_000;
-      if (bps >= poolChallengeBps) {
-        divergingProtocols.add(pool.protocol);
-      }
-    }
-    if (divergingProtocols.size > 0) {
+    // Evaluate divergence from one protocol-level price, not from any single pool.
+    // A rogue pool inside an otherwise agreeing protocol should not count as
+    // independent corroboration for replacing the published price.
+    const divergingProtocolGroups = protocolGroups.filter((group) => {
+      const mid = (result.price + group.price) / 2;
+      if (mid <= 0) return false;
+      const bps = Math.abs(result.price - group.price) / mid * 10_000;
+      return bps >= poolChallengeBps;
+    });
+    if (divergingProtocolGroups.length > 0) {
       if (result.confidence === "high") {
         result.confidence = "low";
         stats.high--;
@@ -583,20 +593,9 @@ export function applyPoolChallenge(
       }
       downgrades++;
 
-      if (divergingProtocols.size >= 2) {
-        const divergentPoolGroups = aggregateProtocolPrices(
-          pools
-            .filter((pool) => divergingProtocols.has(pool.protocol))
-            .map((pool) => ({
-              protocol: pool.protocol,
-              price: pool.price,
-              tvl: pool.tvlUsd,
-              chain: pool.chain,
-              observedAt: pool.observedAt,
-            })),
-        );
+      if (divergingProtocolGroups.length >= 2) {
         const replacementPrice = computeWeightedMedianPrice(
-          divergentPoolGroups.map((group) => ({
+          divergingProtocolGroups.map((group) => ({
             price: group.price,
             weight: group.tvl,
           })),
@@ -606,7 +605,7 @@ export function applyPoolChallenge(
           result.source = "pool-tvl-weighted";
           result.selectedSource = "pool-tvl-weighted";
           result.priceEstimator = "selected_source";
-          const poolObservedAts = divergentPoolGroups
+          const poolObservedAts = divergingProtocolGroups
             .map((group) => group.observedAt)
             .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
           result.observedAt = poolObservedAts.length > 0

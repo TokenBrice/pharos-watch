@@ -3,9 +3,26 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "3.9",
+  currentVersion: "3.91",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "3.91",
+      title: "Protocol-level pool-challenge divergence gating",
+      date: "2026-04-02",
+      effectiveAt: 1775088000,
+      summary:
+        "Moved pool-challenge divergence evaluation to one TVL-weighted median per protocol, " +
+        "so a single bad challenger pool can no longer make an otherwise agreeing protocol count as independent corroboration for replacement.",
+      impact: [
+        "Pool challenge still downgrades weak soft-source consensus when any qualifying challenger pool diverges beyond the peg-aware threshold",
+        "Price replacement now requires at least two protocol-level challenger medians to diverge, rather than counting divergence from any one pool inside each protocol",
+        "A rogue pool inside an otherwise agreeing protocol no longer drags severe depegs back toward peg on the published stablecoins snapshot",
+        "The final replacement mark remains the TVL-weighted median across the corroborating divergent protocol groups",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.9",
       title: "Explicit source semantics, cluster-median publication, and fallback identity hardening",

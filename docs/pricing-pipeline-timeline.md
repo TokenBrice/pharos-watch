@@ -1,6 +1,17 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v3.9` (2026-02-01 -> 2026-03-30).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v3.91` (2026-02-01 -> 2026-04-02).
+
+---
+
+## v3.91 - Protocol-level pool-challenge divergence gating (Apr 2, 2026)
+
+**Commit:** `unreleased`
+
+- Pool challenge divergence is now evaluated from one TVL-weighted median price per protocol, not from any single challenger pool
+- A lone bad pool can no longer make an otherwise agreeing protocol count as independent corroboration for price replacement
+- Replacement still requires at least two protocol-level challenger medians to diverge, and the final replacement price is still the TVL-weighted median across those corroborating protocol groups
+- This prevents large but malformed pool prints from dragging severe depegs back toward peg on the published stablecoins snapshot
 
 ---
 
