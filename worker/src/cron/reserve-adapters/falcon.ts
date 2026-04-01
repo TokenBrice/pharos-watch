@@ -62,7 +62,7 @@ const FALCON_OTHER_KNOWN = new Set([
   // Popular / meme
   "FLOKI", "TRUMP", "HMSTR", "DEXE", "FET",
   // Other known tokens
-  "LUMIA", "JST", "XDC", "SIREN", "MANTA", "JASMY",
+  "LUMIA", "JST", "XDC", "SIREN", "MANTA", "JASMY", "DUSK",
   "MASK", "IOST", "SUN", "BTTC", "BTT", "WLFI",
   "PROM", "BABY", "DOLO", "LAYER", "PORTAL",
   "MANTRA", "YGG", "API3", "COTI", "MOVE",

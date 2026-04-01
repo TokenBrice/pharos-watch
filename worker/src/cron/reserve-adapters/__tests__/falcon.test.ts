@@ -101,4 +101,28 @@ describe("adaptFalconTransparency", () => {
     const result = adaptFalconTransparency(payload);
     expect(result.warnings).toBeUndefined();
   });
+
+  it("treats DUSK as a reviewed Falcon altcoin instead of degrading the snapshot", () => {
+    const payload: FalconTransparencyResponse = {
+      snapshot_date: 1775023886,
+      usdf: {
+        supply: "1000000000",
+        insurance_fund: "0",
+        breakdown: {
+          assets: [
+            { label: "USDC", ceffu: "998949900" },
+            { label: "DUSK", ceffu: "105100" },
+          ],
+        },
+      },
+    };
+
+    const result = adaptFalconTransparency(payload);
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      immediateRedeemableUsd: 998949900,
+      unknownExposurePct: 0,
+    });
+  });
 });
