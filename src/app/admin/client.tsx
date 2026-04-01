@@ -130,6 +130,9 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
     model,
     probes,
     probesLoading,
+    requestSourceError,
+    requestSourceLoading,
+    requestSourceStats,
     setHistoryWindow,
   } = useStatusDashboardModel(adminAccess);
   const diagnosticsSignal =
@@ -190,6 +193,7 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
   const statusSync = querySyncs.find((sync) => sync.key === "status") ?? null;
   const publicHealthSync = querySyncs.find((sync) => sync.key === "health") ?? null;
   const browserProbeSync = querySyncs.find((sync) => sync.key === "probes") ?? null;
+  const requestSourceSync = querySyncs.find((sync) => sync.key === "requestSource") ?? null;
   const operationalSections = sections.filter((section) => section.id !== "overview" && section.id !== "history" && section.id !== "control");
   const sortedCronGroups = cronGroups
     .map((group) => ({
@@ -236,6 +240,9 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
         setIsReliabilityOpen={setIsReliabilityOpen}
         probes={probes}
         probesLoading={probesLoading}
+        requestSourceStats={requestSourceStats}
+        requestSourceError={requestSourceError instanceof Error ? requestSourceError.message : null}
+        requestSourceLoading={requestSourceLoading}
       />
     ),
     crons: (
@@ -306,6 +313,7 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
               <SummaryBadge label="Status Fetch" value={formatTimestampSeconds(statusSync?.updatedAtSec)} />
               <SummaryBadge label="Health Fetch" value={formatTimestampSeconds(publicHealthSync?.updatedAtSec)} />
               <SummaryBadge label="Probe Fetch" value={formatTimestampSeconds(browserProbeSync?.updatedAtSec)} />
+              <SummaryBadge label="API Mix Fetch" value={formatTimestampSeconds(requestSourceSync?.updatedAtSec)} />
               <SummaryBadge
                 label="Sync Floor"
                 value={`${clientDataAgeSec}s`}

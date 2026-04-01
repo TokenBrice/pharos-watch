@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../index";
 import { mockD1 } from "../api/__tests__/helpers/mock-d1";
 import { resetRateLimitStateForTests } from "../lib/rate-limit";
+import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 
 function makeCtx() {
   const waits: Promise<unknown>[] = [];
@@ -168,9 +169,69 @@ describe("worker.fetch", () => {
     expect(cachePut).not.toHaveBeenCalled();
   });
 
+  it("records first-party request-source telemetry for public API traffic", async () => {
+    cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+
+    const env = makeEnv({
+      DB: mockD1([
+        {
+          match: "public_api_rate_limit",
+          rows: [],
+          first: { count: 1 },
+        },
+        {
+          match: "INSERT INTO api_request_source_stats",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "DELETE FROM api_request_source_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+      ], { requireMatch: true }),
+    });
+    const { ctx, waits } = makeCtx();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/stablecoins", {
+        method: "GET",
+        headers: {
+          Origin: "https://pharos.watch",
+          Accept: `application/json, ${PHAROS_WEB_ACCEPT_MARKER}`,
+          "Sec-Fetch-Site": "same-site",
+        },
+      }),
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(res.status).toBe(200);
+    const history = env.DB.getHistory();
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO api_request_source_stats")
+      && entry.binds[1] === "stablecoins"
+      && entry.binds[2] === "/api/stablecoins"
+      && entry.binds[3] === "web")).toBe(true);
+  });
+
   it("enters a bounded emergency block after repeated distributed rate-limit failures", async () => {
     const env = makeEnv({
-      DB: mockD1([], { requireMatch: true }),
+      DB: mockD1([
+        {
+          match: "INSERT INTO api_request_source_stats",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "DELETE FROM api_request_source_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+      ], { requireMatch: true }),
     });
     const { ctx } = makeCtx();
     cacheMatch.mockResolvedValue(new Response(JSON.stringify({ cached: true }), {
@@ -232,8 +293,8 @@ describe("worker.fetch", () => {
 
     expect(res.status).toBe(200);
     expect(cacheMatch).toHaveBeenCalledTimes(1);
-    // 1 for cache write + 1 for flushPendingPrunes (rate-limit cleanup)
-    expect(ctx.waitUntil).toHaveBeenCalledTimes(2);
+    // 1 for request-source attribution + 1 for cache write + 1 for flushPendingPrunes (rate-limit cleanup)
+    expect(ctx.waitUntil).toHaveBeenCalledTimes(3);
     expect(cachePut).toHaveBeenCalledTimes(1);
   });
 

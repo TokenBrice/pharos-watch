@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import {
   apiFetch,
   apiFetchWithMeta,
@@ -11,6 +12,7 @@ import {
 describe("api contract validation policy", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("throws SchemaValidationError on strict endpoint schema mismatch", async () => {
@@ -130,6 +132,22 @@ describe("api contract validation policy", () => {
 
   it("prefers explicit env API base over hostname inference", () => {
     expect(resolveApiBase("pharos.watch", "https://custom.example")).toBe("https://custom.example");
+  });
+
+  it("adds the Pharos browser Accept marker for browser-side public API requests", async () => {
+    vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await apiFetch("/api/stablecoins", z.object({ ok: z.boolean() }), undefined, "warn");
+
+    const [, init] = fetchSpy.mock.calls[0] ?? [];
+    const headers = new Headers((init as RequestInit | undefined)?.headers);
+    expect(headers.get("Accept")).toContain(PHAROS_WEB_ACCEPT_MARKER);
   });
 
   it("throws ApiFetchError with status on non-OK responses", async () => {

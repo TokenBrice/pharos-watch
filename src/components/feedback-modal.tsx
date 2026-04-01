@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { buildApiUrl } from "@/lib/api";
+import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 
 type FeedbackType = "bug" | "data-correction" | "feature-request";
 
@@ -98,7 +99,10 @@ export function FeedbackModal({
     try {
       const res = await fetch(buildApiUrl("/api/feedback"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: `application/json, ${PHAROS_WEB_ACCEPT_MARKER}`,
+        },
         body: JSON.stringify(body),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string };

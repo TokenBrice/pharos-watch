@@ -98,6 +98,7 @@ describe("api endpoint registry", () => {
     });
     expect(matchDynamicAdminEndpoint("/api/discovery-candidates/not-a-number/dismiss")).toBeNull();
     expect(isAdminPath("/api/status")).toBe(true);
+    expect(isAdminPath("/api/request-source-stats")).toBe(true);
     expect(isAdminPath("/api/discovery-candidates/42/dismiss")).toBe(true);
     expect(isAdminPath("/api/stablecoins")).toBe(false);
   });
@@ -105,6 +106,7 @@ describe("api endpoint registry", () => {
   it("validates endpoint methods from shared definitions", () => {
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoins"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/feedback"), "POST")).toBeNull();
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/request-source-stats"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoin/1"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoin-summary/1"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/discovery-candidates/1/dismiss"), "POST")).toBeNull();

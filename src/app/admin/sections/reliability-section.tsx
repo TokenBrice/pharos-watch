@@ -1,13 +1,18 @@
-import type { EndpointProbeResult, HealthResponse, StatusResponse } from "@shared/types";
+import type { EndpointProbeResult, HealthResponse, PublicApiRequestSourceStatsResponse, StatusResponse } from "@shared/types";
 import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
 import { CircuitBreakerTable } from "@/components/status/circuit-breaker-table";
 import { EndpointHealthGrid } from "@/components/status/endpoint-health-grid";
 import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";
+import { RequestSourceAttributionCard } from "@/components/status/request-source-attribution-card";
 import { getStatusTone } from "@/lib/status-dashboard-model";
+import { formatPercent } from "@shared/lib/format";
 
 export interface ReliabilitySectionProps {
   data: StatusResponse;
   healthData: HealthResponse | null | undefined;
+  requestSourceStats: PublicApiRequestSourceStatsResponse | null | undefined;
+  requestSourceError?: string | null;
+  requestSourceLoading: boolean;
   browserProbeSummary: {
     sampleCount: number;
     passCount: number;
@@ -23,6 +28,9 @@ export interface ReliabilitySectionProps {
 export function ReliabilitySection({
   data,
   healthData,
+  requestSourceStats,
+  requestSourceError,
+  requestSourceLoading,
   browserProbeSummary,
   isReliabilityOpen,
   setIsReliabilityOpen,
@@ -47,6 +55,10 @@ export function ReliabilitySection({
             label="Browser Probes"
             value={browserProbeSummary ? `${browserProbeSummary.passCount}/${browserProbeSummary.sampleCount}` : "—"}
           />
+          <SummaryBadge
+            label="External 24h"
+            value={requestSourceStats ? formatPercent(requestSourceStats.totals.externalSharePct, 1) : "—"}
+          />
           <SummaryBadge label="Worst Cache" value={`${data.summary.worstCacheRatio.toFixed(2)}x`} />
         </>
       }
@@ -64,6 +76,11 @@ export function ReliabilitySection({
             <EndpointHealthGrid probes={probes} isLoading={probesLoading} />
             <CircuitBreakerTable circuits={healthData?.circuits} />
           </div>
+          <RequestSourceAttributionCard
+            stats={requestSourceStats}
+            error={requestSourceError}
+            isLoading={requestSourceLoading}
+          />
           <CacheFreshnessTable caches={data.caches} />
         </div>
       </details>

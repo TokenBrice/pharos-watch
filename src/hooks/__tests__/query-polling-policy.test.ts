@@ -24,6 +24,7 @@ vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
 import { createPollingQueryOptions, createStaticQueryOptions } from "../use-api-query";
 import { CRON_1MIN } from "@/lib/cron-intervals";
 import { useHealth } from "../api-hooks";
+import { useRequestSourceStats } from "../use-request-source-stats";
 import { useStatus } from "../use-status";
 import { useEndpointProbes } from "../use-endpoint-probes";
 import type { AdminAccess } from "@/lib/admin-access";
@@ -99,6 +100,37 @@ describe("query polling policy", () => {
     await options.queryFn();
     const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(path).toBe("/api/admin/status");
+    expect(init.headers).toBeInstanceOf(Headers);
+    expect((init.headers as Headers).has("X-Admin-Key")).toBe(false);
+  });
+
+  it("useRequestSourceStats uses the ops proxy and shared polling policy", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true }),
+    } as Response);
+    const adminAccess: AdminAccess = { mode: "ops-proxy" };
+
+    useRequestSourceStats(adminAccess);
+    const options = useQueryMock.mock.calls[0][0] as {
+      enabled: boolean;
+      retry: number;
+      staleTime: number;
+      refetchInterval: number;
+      queryKey: unknown[];
+      queryFn: () => Promise<unknown>;
+    };
+
+    expect(options.enabled).toBe(true);
+    expect(options.retry).toBe(0);
+    expect(options.staleTime).toBe(CRON_1MIN);
+    expect(options.refetchInterval).toBe(2 * CRON_1MIN);
+    expect(options.queryKey).toEqual(["request-source-stats", 24, 3600, 5, "ops-proxy"]);
+
+    await options.queryFn();
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe("/api/admin/request-source-stats?hours=24&bucketSec=3600&routeLimit=5");
     expect(init.headers).toBeInstanceOf(Headers);
     expect((init.headers as Headers).has("X-Admin-Key")).toBe(false);
   });

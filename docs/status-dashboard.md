@@ -6,7 +6,7 @@ Operational reference for the split status surfaces: public `/status/` read-only
 
 ## Scope
 
-The operator dashboard combines seven signals:
+The operator dashboard combines eight signals:
 
 1. Cache freshness (`/api/status` -> `caches`)
 2. Cron health (`/api/status` -> `crons`)
@@ -15,6 +15,7 @@ The operator dashboard combines seven signals:
 5. Synthetic status probes (`/api/status` -> `probe`, `discrepancy`)
 6. Live reserve sync health (`/api/status` -> `reserveComposition`)
 7. Live endpoint probing (`useEndpointProbes`) + filtered history (`useStatusHistory`)
+8. Public API request-source attribution (`useRequestSourceStats` -> `GET /api/request-source-stats`)
 
 The repo now ships two related surfaces:
 
@@ -82,6 +83,10 @@ The active frontend operator mode is now:
   - Calls `GET /api/status-history` through same-origin `/api/admin/status-history` on `ops.pharos.watch`
   - Query key uses the fixed ops-proxy scope; no browser-held secret is involved
   - Adds rolling windows (`6h`, `24h`, `7d`, `30d`) for timeline drilldown
+- `src/hooks/use-request-source-stats.ts`
+  - Calls `GET /api/request-source-stats` through same-origin `/api/admin/request-source-stats` on `ops.pharos.watch`
+  - Polls the default `24h` window with `1h` buckets and a top-5 route breakdown
+  - Uses the same admin polling cadence as the other operator-only reads (`staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0`)
 - `functions/api/admin/[[path]].ts`
   - Cloudflare Pages Functions catch-all for operator-only admin routes
   - Host-gates to `ops.pharos.watch` so public hostnames cannot use the proxy
@@ -91,7 +96,7 @@ The active frontend operator mode is now:
   - Reflects a narrowed response-header set (`Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, `X-Idempotent-Replay`) back into the app shell
   - Converts upstream timeouts into operator-visible `504` JSON errors; non-timeout fetch failures and Access redirect responses still return `502`
 - `src/hooks/use-status-dashboard-model.ts`
-  - Owns the polling orchestration for `useStatus`, `useHealth`, `useEndpointProbes`, and `useStatusHistory`
+  - Owns the polling orchestration for `useStatus`, `useHealth`, `useEndpointProbes`, `useStatusHistory`, and `useRequestSourceStats`
   - Derives the operational lane summaries, severity-ranked section order, notice rail entries, cross-surface status deltas, and the sync-floor freshness view used by the page shell
 - `src/lib/status/action-recommendations.ts`
   - Shared recommendation engine reused by the status model and status UI components
@@ -117,7 +122,7 @@ The active frontend operator mode is now:
   - `Actions`: manual response tools promoted upward when recommendations exist; Telegram delivery telemetry is now secondary and collapsible
   - `Pipeline`: data-quality threshold board, price-source health, CoinGecko price drift watchlist, liquidity health, pipeline freshness, live reserve sync health, mint/burn reconciliation, metadata-integrity watchlists (`reserveDrift`, `classificationWarnings`), and discovery backlog
   - Mint/burn reconciliation now defaults to the six highest-severity rows and exposes the long insufficient-source tail behind a `See all` disclosure button
-  - `Reliability`: browser probes, circuit breakers, public-health divergence callouts, and cache freshness; manual action routes are no longer rendered as default `Not probed` noise
+  - `Reliability`: browser probes, circuit breakers, public-health divergence callouts, public API request-source attribution (website vs external split, top route groups, recent buckets), and cache freshness; manual action routes are no longer rendered as default `Not probed` noise
   - `Cron Lanes`: grouped cron-card clusters with trigger-theme wrappers; unhealthy/degraded groups sort first and fully healthy groups collapse by default
   - `History`: filtered incident timeline windows
 - Lane order below `Overview` is no longer fixed; `Actions`, `Pipeline`, `Cron Lanes`, and `Reliability` are ranked from current incident severity so the scroll order tapers from urgent action into broader telemetry.

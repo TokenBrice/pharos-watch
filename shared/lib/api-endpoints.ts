@@ -114,6 +114,12 @@ export const API_PATHS = {
     buildQueryPath("/api/stress-signals", { stablecoin: stablecoinId, days }),
   chains: () => "/api/chains",
   nonUsdShare: (days?: number) => buildQueryPath("/api/non-usd-share", days ? { days } : undefined),
+  requestSourceStats: (params?: { hours?: number; bucketSec?: number; routeLimit?: number }) =>
+    buildQueryPath("/api/request-source-stats", {
+      hours: params?.hours,
+      bucketSec: params?.bucketSec,
+      routeLimit: params?.routeLimit,
+    }),
 } as const;
 
 export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
@@ -446,6 +452,14 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     cacheBypass: true,
     probeGroup: "admin",
     probePath: "/api/status-history?limit=10",
+  },
+  {
+    key: "request-source-stats",
+    path: "/api/request-source-stats",
+    methods: ["GET"],
+    adminRequired: true,
+    mutatingAdmin: false,
+    cacheBypass: true,
   },
   {
     key: "trigger-digest",

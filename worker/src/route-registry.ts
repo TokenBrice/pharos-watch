@@ -28,6 +28,7 @@ import { handleDexLiquidityHistory } from "./api/dex-liquidity-history";
 import { handleSupplyHistory } from "./api/supply-history";
 import { handleStatus } from "./api/status";
 import { handleStatusHistory } from "./api/status-history";
+import { handleRequestSourceStats } from "./api/request-source-stats";
 import { handleDailyDigest } from "./api/daily-digest";
 import { handleDigestArchive } from "./api/digest-archive";
 import { handleDigestSnapshot } from "./api/digest-snapshot";
@@ -185,6 +186,8 @@ const STATIC_ROUTES = [
   defineStaticRoute("status", ({ db, trustedAdmin, request, coingeckoApiKey }) =>
     handleStatus(db, trustedAdmin, request, coingeckoApiKey)),
   defineStaticRoute("status-history", ({ db, trustedAdmin, request }) => handleStatusHistory(db, trustedAdmin, request)),
+  defineStaticRoute("request-source-stats", ({ db, trustedAdmin, request }) =>
+    handleRequestSourceStats(db, trustedAdmin, request)),
   defineStaticRoute("daily-digest", ({ db }) => handleDailyDigest(db)),
   defineStaticRoute("digest-archive", ({ db }) => handleDigestArchive(db)),
   defineStaticRoute("digest-snapshot", ({ db, url }) => handleDigestSnapshot(db, url)),

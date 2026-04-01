@@ -125,6 +125,19 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 - If the distributed D1 path fails, `worker/src/lib/rate-limit.ts` logs the failure and returns `null`, which makes the request gate fail open for that request.
 - Requests that are already authorized for the `ops-api.pharos.watch` admin lane bypass this limiter.
 
+### Public API Request-Source Attribution
+
+- `worker/src/handlers/http.ts` records minute-bucketed public API attribution telemetry in `api_request_source_stats`
+- the dataset is scoped to non-admin `/api/*` traffic and excludes `/api/telegram-webhook`
+- source buckets are:
+  - `web` when browser evidence indicates a request originated from `https://pharos.watch`
+  - `external` for everything else in scope
+- first-party website evidence comes from:
+  - `Origin` or `Referer` matching `https://pharos.watch`
+  - or the browser-safe frontend marker `application/vnd.pharos.web+json` in `Accept` combined with `Sec-Fetch-Site: same-site|same-origin`
+- retention is pruned opportunistically to the latest `35` days
+- operators read the aggregate split through `GET /api/request-source-stats` on `ops-api.pharos.watch`
+
 ### CORS Headers
 
 Applied to every response via `addCorsHeaders()`:

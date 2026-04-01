@@ -89,7 +89,7 @@ These profiles apply while the dataset is within its endpoint freshness budget. 
 | per-coin | `public, s-maxage=300, max-age=10`   | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                           |
 | slow     | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, treasury-stable-exposure                                                                                                                                                              |
 | archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot                                                                                                                                                                                                                                                                     |
-| no-store | `no-store`                           | health plus admin GET routes after router override (`status`, `status-history`, `debug-sync-state`, `backfill-dews`, `audit-depeg-history?dry-run=true`, `discovery-candidates`) |
+| no-store | `no-store`                           | health plus admin GET routes after router override (`status`, `status-history`, `request-source-stats`, `debug-sync-state`, `backfill-dews`, `audit-depeg-history?dry-run=true`, `discovery-candidates`) |
 
 `POST /api/feedback`, `POST /api/telegram-webhook`, and admin POST endpoints bypass edge caching because they are non-GET request paths. They are not part of a cacheable `Cache-Control` profile and do not currently rely on an emitted `Cache-Control: no-store` header.
 
@@ -2414,6 +2414,32 @@ Machine-readable status timeline endpoint for tooling and incident analysis.
 | `to`    | `integer \| ISO date` | —       | Optional upper bound for transition `created_at` (Unix seconds/milliseconds or ISO date) |
 
 **Response shape:** `StatusHistoryResponse` (defined in `shared/types/index.ts`)
+
+### `GET /api/request-source-stats`
+
+Admin-only public-API attribution summary. Aggregates minute-bucketed request counts into a requested window so operators can estimate what share of load is coming from the Pharos website versus external consumers.
+
+This dataset excludes admin-only routes and `/api/telegram-webhook`. First-party website traffic is recognized from browser evidence: `Origin` or `Referer` matching `https://pharos.watch`, or the browser-safe frontend `Accept` marker combined with same-site fetch metadata. Everything else in scope is counted as external.
+
+**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
+
+**Query parameters**
+
+| Param        | Type      | Default | Description |
+| ------------ | --------- | ------- | ----------- |
+| `hours`      | `integer` | `24`    | Window size in hours (`1`–`840`, currently 35 days) |
+| `bucketSec`  | `integer` | `3600`  | Time-bucket rollup size in seconds (`60`–`86400`) |
+| `routeLimit` | `integer` | `20`    | Max per-route rows returned in the route breakdown |
+
+**Response shape:** `PublicApiRequestSourceStatsResponse` (defined in `shared/types/index.ts`)
+
+`PublicApiRequestSourceStatsResponse` includes:
+
+- `generatedAt` — Unix seconds when the response was generated
+- `window` — requested `from`/`to`, `durationSec`, `bucketSizeSec`, `routeLimit`, and current `retentionDays`
+- `totals` — aggregate `webRequests`, `externalRequests`, `totalRequests`, `webSharePct`, `externalSharePct`
+- `routes[]` — normalized per-route breakdown sorted by total request volume
+- `buckets[]` — time-series rollups using the requested `bucketSec`
 
 ### `POST /api/backfill-depegs`
 

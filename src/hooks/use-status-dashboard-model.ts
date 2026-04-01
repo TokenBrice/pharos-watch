@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useEndpointProbes } from "@/hooks/use-endpoint-probes";
 import { useHealth } from "@/hooks/api-hooks";
+import { useRequestSourceStats } from "@/hooks/use-request-source-stats";
 import { useStatusHistory, type StatusHistoryWindow } from "@/hooks/use-status-history";
 import { useStatus } from "@/hooks/use-status";
 import type { AdminAccess } from "@/lib/admin-access";
@@ -26,6 +27,13 @@ export function useStatusDashboardModel(adminAccess: AdminAccess) {
     refetch: refetchHistory,
     dataUpdatedAt: historyUpdatedAt,
   } = useStatusHistory(adminAccess, historyWindow);
+  const {
+    data: requestSourceStats,
+    error: requestSourceError,
+    isLoading: requestSourceLoading,
+    refetch: refetchRequestSourceStats,
+    dataUpdatedAt: requestSourceUpdatedAt,
+  } = useRequestSourceStats(adminAccess);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
@@ -38,7 +46,8 @@ export function useStatusDashboardModel(adminAccess: AdminAccess) {
     refetchHealth();
     refetchProbes();
     refetchHistory();
-  }, [refetchHealth, refetchHistory, refetchProbes, refetchStatus]);
+    refetchRequestSourceStats();
+  }, [refetchHealth, refetchHistory, refetchProbes, refetchRequestSourceStats, refetchStatus]);
 
   const criticalUpdatedAts = [statusUpdatedAt ?? 0, healthUpdatedAt ?? 0, probesUpdatedAt ?? 0]
     .filter((value) => value > 0);
@@ -61,6 +70,9 @@ export function useStatusDashboardModel(adminAccess: AdminAccess) {
       probes,
       probesError,
       probesLoading,
+      requestSourceError,
+      requestSourceLoading,
+      requestSourceStats,
       setHistoryWindow,
     };
   }
@@ -86,16 +98,21 @@ export function useStatusDashboardModel(adminAccess: AdminAccess) {
         healthUpdatedAt: healthUpdatedAt ?? 0,
         probesUpdatedAt: probesUpdatedAt ?? 0,
         historyUpdatedAt: historyUpdatedAt ?? 0,
+        requestSourceUpdatedAt: requestSourceUpdatedAt ?? 0,
       },
       nowMs,
       healthError: healthError instanceof Error ? healthError : null,
       probesError: probesError instanceof Error ? probesError : null,
       historyError: historyError instanceof Error ? historyError : null,
+      requestSourceError: requestSourceError instanceof Error ? requestSourceError : null,
       historyTransitions: historyData?.transitions,
     }),
     probes,
     probesError,
     probesLoading,
+    requestSourceError,
+    requestSourceLoading,
+    requestSourceStats,
     setHistoryWindow,
   };
 }

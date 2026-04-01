@@ -1,5 +1,6 @@
 import { z, type ZodType } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints";
+import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 import { resolvePublicApiBase } from "@shared/lib/runtime-origins";
 
@@ -26,11 +27,29 @@ export function buildRequestUrl(path: string): string {
   return buildApiUrl(path);
 }
 
+function withPublicApiAcceptMarker(path: string, init?: RequestInit): RequestInit | undefined {
+  if (typeof window === "undefined") return init;
+  if (!path.startsWith("/api/") || path.startsWith("/api/admin/")) return init;
+
+  const headers = new Headers(init?.headers);
+  const accept = headers.get("Accept");
+  if (!accept) {
+    headers.set("Accept", `application/json, ${PHAROS_WEB_ACCEPT_MARKER}`);
+  } else if (!accept.toLowerCase().includes(PHAROS_WEB_ACCEPT_MARKER)) {
+    headers.set("Accept", `${accept}, ${PHAROS_WEB_ACCEPT_MARKER}`);
+  }
+
+  return {
+    ...init,
+    headers,
+  };
+}
+
 function apiRequest(
   path: string,
   init?: RequestInit,
 ): Promise<Response> {
-  return fetch(buildRequestUrl(path), init);
+  return fetch(buildRequestUrl(path), withPublicApiAcceptMarker(path, init));
 }
 
 export class SchemaValidationError extends Error {

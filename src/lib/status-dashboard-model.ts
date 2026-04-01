@@ -26,7 +26,7 @@ export interface DashboardNotice {
 }
 
 export interface DashboardQuerySync {
-  key: "status" | "health" | "probes" | "history";
+  key: "status" | "health" | "probes" | "history" | "requestSource";
   label: string;
   updatedAtMs: number;
   updatedAtSec: number | null;
@@ -209,11 +209,13 @@ interface BuildStatusDashboardOptions {
     healthUpdatedAt: number;
     probesUpdatedAt: number;
     historyUpdatedAt: number;
+    requestSourceUpdatedAt: number;
   };
   nowMs: number;
   healthError: Error | null;
   probesError: Error | null;
   historyError: Error | null;
+  requestSourceError: Error | null;
   historyTransitions: StatusResponse["timeline"] | undefined;
 }
 
@@ -226,6 +228,7 @@ export function buildStatusDashboardData({
   healthError,
   probesError,
   historyError,
+  requestSourceError,
   historyTransitions,
 }: BuildStatusDashboardOptions) {
   const syncDetails = [
@@ -233,8 +236,9 @@ export function buildStatusDashboardData({
     buildQuerySync("health", "Public health", querySyncs.healthUpdatedAt, nowMs),
     buildQuerySync("probes", "Browser probes", querySyncs.probesUpdatedAt, nowMs),
     buildQuerySync("history", "Status history", querySyncs.historyUpdatedAt, nowMs),
+    buildQuerySync("requestSource", "API attribution", querySyncs.requestSourceUpdatedAt, nowMs),
   ];
-  const criticalSyncs = syncDetails.filter((sync) => sync.key !== "history" && sync.updatedAtMs > 0);
+  const criticalSyncs = syncDetails.filter((sync) => sync.key !== "history" && sync.key !== "requestSource" && sync.updatedAtMs > 0);
   const freshnessFloorMs =
     criticalSyncs.length > 0
       ? Math.min(...criticalSyncs.map((sync) => sync.updatedAtMs))
@@ -292,6 +296,14 @@ export function buildStatusDashboardData({
       id: "history-error",
       title: "Status history unavailable",
       detail: historyError.message,
+      tone: "warning",
+    });
+  }
+  if (requestSourceError) {
+    notices.push({
+      id: "request-source-error",
+      title: "API attribution unavailable",
+      detail: requestSourceError.message,
       tone: "warning",
     });
   }

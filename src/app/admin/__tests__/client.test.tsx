@@ -2,7 +2,7 @@
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { EndpointProbeResult, HealthResponse, StatusCause, StatusResponse } from "@shared/types";
+import type { EndpointProbeResult, HealthResponse, PublicApiRequestSourceStatsResponse, StatusCause, StatusResponse } from "@shared/types";
 
 const { isOpsUiHostMock, useStatusDashboardModelMock } = vi.hoisted(() => ({
   isOpsUiHostMock: vi.fn(),
@@ -80,6 +80,10 @@ vi.mock("@/components/status/metadata-integrity-card", () => ({
 
 vi.mock("@/components/status/price-source-health", () => ({
   PriceSourceHealthCard: () => <div data-testid="price-source-health">price source</div>,
+}));
+
+vi.mock("@/components/status/request-source-attribution-card", () => ({
+  RequestSourceAttributionCard: () => <div data-testid="request-source-attribution">request source attribution</div>,
 }));
 
 vi.mock("@/components/status/reserve-sync-health", () => ({
@@ -320,6 +324,27 @@ const PROBES: EndpointProbeResult[] = [
   },
 ];
 
+const REQUEST_SOURCE_STATS: PublicApiRequestSourceStatsResponse = {
+  generatedAt: 1_700_000_000,
+  window: {
+    from: 1_699_913_600,
+    to: 1_700_000_000,
+    durationSec: 86_400,
+    bucketSizeSec: 3600,
+    routeLimit: 5,
+    retentionDays: 35,
+  },
+  totals: {
+    webRequests: 600,
+    externalRequests: 400,
+    totalRequests: 1000,
+    webSharePct: 60,
+    externalSharePct: 40,
+  },
+  routes: [],
+  buckets: [],
+};
+
 const TOP_CAUSE: StatusCause = {
   layer: "availability",
   code: "probe-degraded",
@@ -364,6 +389,7 @@ function makeModel() {
       { key: "health", label: "Public health", updatedAtMs: 1_700_000_000_000, updatedAtSec: 1_700_000_000, ageSec: 0, stale: false },
       { key: "probes", label: "Browser probes", updatedAtMs: 1_700_000_000_000, updatedAtSec: 1_700_000_000, ageSec: 0, stale: false },
       { key: "history", label: "Status history", updatedAtMs: 1_700_000_000_000, updatedAtSec: 1_700_000_000, ageSec: 0, stale: false },
+      { key: "requestSource", label: "API attribution", updatedAtMs: 1_700_000_000_000, updatedAtSec: 1_700_000_000, ageSec: 0, stale: false },
     ],
     recommendedActions: [],
     runningCrons: 0,
@@ -424,6 +450,9 @@ describe("admin status client", () => {
       model: makeModel(),
       probes: PROBES,
       probesLoading: false,
+      requestSourceError: null,
+      requestSourceLoading: false,
+      requestSourceStats: REQUEST_SOURCE_STATS,
       setHistoryWindow: vi.fn(),
     });
 
@@ -434,6 +463,8 @@ describe("admin status client", () => {
 
     expect(screen.getByText("Current incident picture")).toBeTruthy();
     expect(screen.getByText("Operator warning")).toBeTruthy();
+    expect(screen.getByText("API Mix Fetch")).toBeTruthy();
+    expect(screen.getByTestId("request-source-attribution")).toBeTruthy();
 
     const diagnosticsDetails = screen
       .getByText("State machine, probe, and discrepancy diagnostics")

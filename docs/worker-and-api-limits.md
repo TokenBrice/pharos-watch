@@ -41,6 +41,7 @@ It intentionally does **not** treat vendor pricing-plan quotas as source of trut
 | Runtime jobs actually scheduled  | `28`                                            | `shared/lib/cron-jobs.ts`                                     | Runtime scheduling now matches the shared status metadata set; cemetery/tracking appendices are folded into daily digest delivery instead of a separate cron |
 | Public API limiter               | `300 requests / 60 seconds` per IP hash         | `worker/src/handlers/http.ts`, `worker/src/lib/rate-limit.ts` | Enforced through D1-backed `public_api_rate_limit`; after `3` consecutive D1 limiter failures, the worker enters a bounded `503` emergency block with `Retry-After: 60` |
 | Feedback limiter                 | `3 submissions / 10 minutes` per salted IP hash | `worker/src/api/feedback.ts`, `worker/src/lib/rate-limit.ts`  | Separate from the general public API limiter                                                                                                                 |
+| Request-source telemetry retention | `35 days`                                     | `worker/src/lib/request-source-attribution.ts`                | Public API website-vs-external attribution buckets in `api_request_source_stats` are pruned opportunistically                                              |
 
 ### Connection-budget operating assumption
 
