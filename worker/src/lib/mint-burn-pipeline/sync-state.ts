@@ -12,7 +12,7 @@ export function mintBurnConfigKey(config: MintBurnContractConfig): string {
 
 // Temporary compatibility key for the March 2026 refactor regression that
 // wrote sync state under `stablecoinId:chainId:address`.
-export function legacyMintBurnConfigKey(config: MintBurnContractConfig): string {
+function legacyMintBurnConfigKey(config: MintBurnContractConfig): string {
   return `${config.stablecoinId}:${config.chain.chainId}:${config.contractAddress.toLowerCase()}`;
 }
 
@@ -27,17 +27,6 @@ export async function ensureMintBurnSyncStateRows(
       .bind(mintBurnConfigKey(config), config.startBlock - 1),
   );
   await batchExecute(db, initStateStmts);
-}
-
-export async function readMintBurnSyncState(
-  db: D1Database,
-  configKey: string,
-): Promise<number | null> {
-  const row = await db
-    .prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?")
-    .bind(configKey)
-    .first<{ last_block: number }>();
-  return row?.last_block ?? null;
 }
 
 export async function readMintBurnSyncStateForConfig(
