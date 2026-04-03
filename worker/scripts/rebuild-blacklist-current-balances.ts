@@ -8,6 +8,7 @@ import { buildBlacklistActiveRecords } from "../../shared/lib/blacklist-active-r
 import { getBlacklistConfigsForSymbolAndChain } from "../src/lib/blacklist-contracts";
 import { buildChainRpcs } from "../src/lib/chain-registry";
 import { bigIntToDecimal } from "../src/lib/bigint";
+import { encodeBalanceOfCallData } from "../src/lib/evm-selectors";
 import { createBudget, createRateLimiter } from "../src/lib/evm-logs";
 import {
   fetchEvmTokenCurrentBalance,
@@ -176,7 +177,7 @@ async function fetchTronCurrentBalanceRowsInBatches(
         params: [
           {
             to: contractHex,
-            data: "0x70a08231" + record.address.slice(2).padStart(64, "0"),
+            data: encodeBalanceOfCallData(record.address),
           },
           "latest",
         ],

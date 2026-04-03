@@ -7,11 +7,10 @@ import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { resolveMarketCap } from "../../lib/resolve-market-cap";
 import { throwIfAborted } from "../../lib/abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
+import { TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { DefiLlamaCoinPrice, PeggedAsset } from "./enrich-prices";
-
-const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
 
 const COMMODITY_TOKENS = ACTIVE_STABLECOINS.filter(
   (stablecoin) => stablecoin.flags.pegCurrency === "GOLD" || stablecoin.flags.pegCurrency === "SILVER",

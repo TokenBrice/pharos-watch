@@ -2,12 +2,10 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseChainlinkLatestRoundData } from "./chainlink";
 import { fetchOnchainRawCall, fetchOnchainUint256, requireOnchainInput } from "./helpers";
-
-const DECIMALS_SELECTOR = "0x313ce567";
-const LATEST_ROUND_DATA_SELECTOR = "0xfeaf968c";
 const DEFAULT_MAX_ORACLE_AGE_SEC = 2 * DAY_SECONDS;
 
 export interface ChainlinkPorParams {

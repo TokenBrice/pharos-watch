@@ -1,6 +1,7 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput, LiveReservesConfig } from "@shared/types/live-reserves";
 import { DEFILLAMA_COINS } from "../../lib/constants";
+import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import {
   fetchEtherscanUint256AtBlock,
@@ -34,9 +35,6 @@ export {
 } from "./freshness";
 export { htmlLayoutChangedError, htmlParseError } from "./html";
 export { reserveDegradedWarning, reserveInfoWarning };
-
-const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
-const BALANCE_OF_SELECTOR = "0x70a08231";
 
 type JsonObject = Record<string, unknown>;
 
@@ -412,10 +410,9 @@ export async function fetchErc20Balance(
   rpcUrl?: string,
   fallbackRpcUrl?: string,
 ): Promise<bigint | null> {
-  const address = holder.replace(/^0x/i, "").toLowerCase().padStart(64, "0");
   return fetchOnchainUint256({
     contract,
-    data: `${BALANCE_OF_SELECTOR}${address}`,
+    data: encodeBalanceOfCallData(holder),
     signal,
     ctx,
     rpcUrl,

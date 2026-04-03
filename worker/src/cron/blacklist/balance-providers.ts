@@ -1,5 +1,6 @@
 import type { ContractEventConfig } from "../../lib/blacklist-contracts";
 import { bigIntToDecimal } from "../../lib/bigint";
+import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import {
   type SubrequestBudget,
   type RateLimitedFetch,
@@ -37,9 +38,7 @@ async function fetchEvmBalanceAtTag(
 ): Promise<number | null> {
   if (budgetExhausted(budget)) return null;
 
-  // balanceOf(address) selector = 0x70a08231
-  const addr = (address.startsWith("0x") ? address.slice(2) : address).toLowerCase();
-  const data = "0x70a08231" + addr.padStart(64, "0");
+  const data = encodeBalanceOfCallData(address);
   const blockNumberOrTag = tag === "latest" ? "latest" : Number.parseInt(tag, 16);
 
   try {
@@ -83,8 +82,7 @@ async function fetchBalanceViaDrpc(
   const network = DRPC_NETWORK[chainId];
   if (!network) return null;
 
-  const addr = (address.startsWith("0x") ? address.slice(2) : address).toLowerCase();
-  const data = "0x70a08231" + addr.padStart(64, "0");
+  const data = encodeBalanceOfCallData(address);
   const blockTag = "0x" + blockNumber.toString(16);
 
   try {
@@ -122,8 +120,7 @@ async function fetchBalanceViaChainRpc(
   const rpc = getChainRpc(chainRpcs, chainId);
   if (!rpc) return null;
 
-  const addr = (address.startsWith("0x") ? address.slice(2) : address).toLowerCase();
-  const data = "0x70a08231" + addr.padStart(64, "0");
+  const data = encodeBalanceOfCallData(address);
   const blockTag = blockNumberOrTag === "latest" ? "latest" : "0x" + blockNumberOrTag.toString(16);
   const urls = [rpc.rpcUrl, rpc.fallbackRpcUrl].filter((value): value is string => typeof value === "string" && value.length > 0);
 
@@ -269,7 +266,7 @@ async function fetchTronTokenCurrentBalanceViaJsonRpc(
   };
   if (apiKey) headers["TRON-PRO-API-KEY"] = apiKey;
 
-  const data = "0x70a08231" + accountHex.slice(2).padStart(64, "0");
+  const data = encodeBalanceOfCallData(accountHex);
 
   try {
     budget.count++;

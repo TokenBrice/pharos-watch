@@ -2,9 +2,11 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseChainlinkLatestRoundData } from "./chainlink";
 import {
+  decimalStringFromBigInt,
   fetchOnchainRawCall,
   fetchOnchainUint256,
   requireOnchainInput,
@@ -12,10 +14,6 @@ import {
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
-
-const DECIMALS_SELECTOR = "0x313ce567";
-const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
-const LATEST_ROUND_DATA_SELECTOR = "0xfeaf968c";
 /** Ondo-style getPrice() — returns single uint256 with 18 decimals. */
 const GET_PRICE_SELECTOR = "0x98d5fdca";
 const DEFAULT_MAX_ORACLE_AGE_SEC = 2 * DAY_SECONDS;
@@ -42,15 +40,6 @@ export interface ChainlinkNavData {
   updatedAt: number;
 }
 
-/** Format a bigint with `decimals` fractional digits, trimming trailing zeros. */
-function formatUnits(value: bigint, decimals: number): string {
-  const str = value.toString().padStart(decimals + 1, "0");
-  const intPart = str.slice(0, str.length - decimals) || "0";
-  const fracPart = str.slice(str.length - decimals);
-  const trimmed = fracPart.replace(/0+$/, "");
-  return trimmed ? `${intPart}.${trimmed}` : intPart;
-}
-
 function readParams(config: LiveReservesConfig): ChainlinkNavParams {
   return parseLiveReserveAdapterParams("chainlink-nav", config.params);
 }
@@ -70,8 +59,8 @@ export function adaptChainlinkNavResponse(data: ChainlinkNavData, params: Chainl
       },
     ],
     metadata: {
-      navPerToken: formatUnits(data.navPerToken, data.navDecimals),
-      totalSupplyFormatted: formatUnits(data.totalSupply, data.tokenDecimals),
+      navPerToken: decimalStringFromBigInt(data.navPerToken, data.navDecimals),
+      totalSupplyFormatted: decimalStringFromBigInt(data.totalSupply, data.tokenDecimals),
       totalSupplyRaw: data.totalSupply.toString(),
       navDecimals: data.navDecimals,
       tokenDecimals: data.tokenDecimals,

@@ -1,6 +1,7 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseEvmAddressResult } from "./evm";
 import {
@@ -15,7 +16,6 @@ import {
 } from "./helpers";
 
 const GHO_TOKEN = "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f";
-const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
 const GET_FACILITATORS_LIST_SELECTOR = "0x1ec90f2e";
 const GET_FACILITATOR_SELECTOR = "0xd46ec0ed";
 const GET_USED_SELECTOR = "0x9abeb940";

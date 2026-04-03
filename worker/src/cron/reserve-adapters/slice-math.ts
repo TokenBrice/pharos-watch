@@ -1,6 +1,7 @@
 import type { ReserveSlice } from "@shared/types/core";
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
+export { decimalNumberFromBigInt, decimalStringFromBigInt } from "../../lib/bigint";
 
 interface UnknownExposureWarningOptions {
   code: string;
@@ -56,23 +57,6 @@ export function normalizeSlices(slices: ReserveSlice[], decimals = 1): ReserveSl
     .map(({ pctUnits, ...slice }) => ({ ...slice, pct: pctUnits / factor }))
     .filter((slice) => slice.pct > 0)
     .sort((a, b) => b.pct - a.pct);
-}
-
-export function decimalStringFromBigInt(value: bigint, decimals: number): string {
-  if (decimals === 0) return value.toString();
-
-  const negative = value < 0n;
-  const absolute = negative ? -value : value;
-  const digits = absolute.toString().padStart(decimals + 1, "0");
-  const integerPart = digits.slice(0, digits.length - decimals) || "0";
-  const fractionalPart = digits.slice(digits.length - decimals).replace(/0+$/, "");
-  return fractionalPart.length > 0
-    ? `${negative ? "-" : ""}${integerPart}.${fractionalPart}`
-    : `${negative ? "-" : ""}${integerPart}`;
-}
-
-export function decimalNumberFromBigInt(value: bigint, decimals: number): number {
-  return Number(decimalStringFromBigInt(value, decimals));
 }
 
 export function valueUsdFromBigIntPrice(value: bigint, decimals: number, priceUsd: number): number {

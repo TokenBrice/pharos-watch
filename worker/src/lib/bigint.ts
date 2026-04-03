@@ -1,14 +1,23 @@
+export function decimalStringFromBigInt(value: bigint, decimals: number): string {
+  if (decimals === 0) return value.toString();
+
+  const negative = value < 0n;
+  const absolute = negative ? -value : value;
+  const digits = absolute.toString().padStart(decimals + 1, "0");
+  const integerPart = digits.slice(0, digits.length - decimals) || "0";
+  const fractionalPart = digits.slice(digits.length - decimals).replace(/0+$/, "");
+  return fractionalPart.length > 0
+    ? `${negative ? "-" : ""}${integerPart}.${fractionalPart}`
+    : `${negative ? "-" : ""}${integerPart}`;
+}
+
+export function decimalNumberFromBigInt(value: bigint, decimals: number): number {
+  return Number(decimalStringFromBigInt(value, decimals));
+}
+
 /**
  * Convert a raw BigInt value to a decimal number given the token's decimals.
  */
 export function bigIntToDecimal(raw: bigint, decimals: number): number {
-  // For tokens with ≤15 decimals, direct division is safe.
-  // For >15 decimals (rare), split to avoid precision loss.
-  if (decimals <= 15) {
-    return Number(raw) / 10 ** decimals;
-  }
-  const divisor = BigInt(10) ** BigInt(decimals);
-  const whole = raw / divisor;
-  const remainder = raw % divisor;
-  return Number(whole) + Number(remainder) / Number(divisor);
+  return decimalNumberFromBigInt(raw, decimals);
 }

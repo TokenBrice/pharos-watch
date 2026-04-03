@@ -1,9 +1,10 @@
 import { CHAIN_META } from "@shared/lib/chains";
 import type { ChainRpcConfig } from "./chain-registry";
+import { parseChainlinkLatestRoundData } from "./chainlink-round-data";
 import { fetchEtherscanProxyHex, fetchEvmCallHexAtBlock, fetchJsonRpcHexAtUrl } from "./evm-rpc";
+import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "./evm-selectors";
+export { parseChainlinkLatestRoundData, parseSignedInt256Word } from "./chainlink-round-data";
 
-const DECIMALS_SELECTOR = "0x313ce567";
-const LATEST_ROUND_DATA_SELECTOR = "0xfeaf968c";
 const DRPC_NETWORK: Partial<Record<string, string>> = {
   arbitrum: "arbitrum",
   base: "base",
@@ -84,30 +85,6 @@ export const CHAINLINK_REFERENCE_FEEDS: readonly ChainlinkReferenceFeed[] = [
     staleAfterSec: 12 * 3600,
   },
 ] as const;
-
-function parseHexWord(word: string): bigint {
-  return BigInt(`0x${word}`);
-}
-
-export function parseSignedInt256Word(word: string): bigint {
-  const value = parseHexWord(word);
-  const signBit = 1n << 255n;
-  return (value & signBit) === 0n ? value : value - (1n << 256n);
-}
-
-export function parseChainlinkLatestRoundData(
-  hex: string,
-): { roundId: bigint; answer: bigint; updatedAt: number } {
-  const stripped = hex.startsWith("0x") ? hex.slice(2) : hex;
-  if (stripped.length < 320) {
-    throw new Error(`chainlink-feeds: latestRoundData response too short (${stripped.length} hex chars)`);
-  }
-
-  const roundId = parseHexWord(stripped.slice(0, 64));
-  const answer = parseSignedInt256Word(stripped.slice(64, 128));
-  const updatedAt = Number(parseHexWord(stripped.slice(192, 256)));
-  return { roundId, answer, updatedAt };
-}
 
 async function fetchFeedDecimals(
   feed: ChainlinkReferenceFeed,
