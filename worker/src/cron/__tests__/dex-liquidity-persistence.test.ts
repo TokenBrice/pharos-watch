@@ -101,7 +101,7 @@ describe("dex-liquidity persistence", () => {
     ];
     metrics.effectiveTvl = 100_111.7;
 
-    await persistScores(
+    const result = await persistScores(
       makeDb(),
       new Map([["usdt-tether", metrics]]),
       new Map([
@@ -146,6 +146,12 @@ describe("dex-liquidity persistence", () => {
       },
       1_700_000_000,
     );
+
+    expect(result).toEqual({
+      placeholderCount: ACTIVE_STABLECOINS.length - 1,
+      orphanRowsDeleted: 0,
+      orphanCleanupFailed: false,
+    });
 
     expect(batchExecute).toHaveBeenCalledTimes(1);
     const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
@@ -255,7 +261,7 @@ describe("dex-liquidity persistence", () => {
   });
 
   it("skips historical snapshot writes when today's snapshot is already complete enough", async () => {
-    await writeHistoricalSnapshots(
+    const result = await writeHistoricalSnapshots(
       makeDb({
         historyRow: {
           cnt: ACTIVE_STABLECOINS.length,
@@ -268,6 +274,11 @@ describe("dex-liquidity persistence", () => {
       ]),
     );
 
+    expect(result).toEqual({
+      snapshotRowsWritten: 0,
+      skipped: true,
+      writeFailed: false,
+    });
     expect(batchExecute).not.toHaveBeenCalled();
   });
 
@@ -276,7 +287,7 @@ describe("dex-liquidity persistence", () => {
     vi.spyOn(Date, "now").mockReturnValue(nowMs);
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-    await writeHistoricalSnapshots(
+    const result = await writeHistoricalSnapshots(
       makeDb({
         historyRow: {
           cnt: 10,
@@ -289,6 +300,11 @@ describe("dex-liquidity persistence", () => {
       ]),
     );
 
+    expect(result).toEqual({
+      snapshotRowsWritten: ACTIVE_STABLECOINS.length,
+      skipped: false,
+      writeFailed: false,
+    });
     expect(batchExecute).toHaveBeenCalledTimes(1);
     const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
     const prepared = statements as PreparedStatementWithMeta[];
@@ -327,7 +343,11 @@ describe("dex-liquidity persistence", () => {
         makeDb({ historyError: new Error("snapshot unavailable") }),
         new Map([["usdt-tether", makeFullScoreResult()]]),
       ),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({
+      snapshotRowsWritten: 0,
+      skipped: false,
+      writeFailed: true,
+    });
 
     expect(batchExecute).not.toHaveBeenCalled();
     expect(warnSpy).toHaveBeenCalledWith("[dex-liquidity] Daily snapshot failed:", expect.any(Error));

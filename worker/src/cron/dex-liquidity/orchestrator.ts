@@ -5,19 +5,14 @@ import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { throwIfAborted } from "../../lib/abort";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
 import { buildSymbolLookups, classifyPoolType } from "./pool-helpers";
-import {
-  fetchDataSources, buildCurveLookups, buildKnownPoolAddresses,
-} from "./fetch-primary";
+import { fetchDataSources, buildCurveLookups, buildKnownPoolAddresses } from "./fetch-primary";
 import { publishDexPriceChallengerSnapshots } from "./challenger-persistence";
 import { processPoolMetrics } from "./process-pools";
 import { mergeStagedPools } from "./staging-merge";
 import { computeStablecoinScores, computeDepthStability, computeDexPrices } from "./scoring";
 import { persistScores, writeHistoricalSnapshots } from "./persistence";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import {
-  isPreferredDirectApiPool,
-  type DexApiPool,
-} from "../../lib/dex-api-common";
+import { isPreferredDirectApiPool, type DexApiPool } from "../../lib/dex-api-common";
 import { POOL_CHALLENGE_MIN_TVL } from "../../lib/constants";
 import { buildDirectApiPoolIdentity } from "./direct-source-helpers";
 import {
@@ -36,7 +31,7 @@ import {
   getIdentityDedupReason,
   registerKnownPoolIdentity,
 } from "./pool-identity";
-import { analyzeDexLiquidityPostScoring } from "./orchestrator-metadata";
+import { analyzeDexLiquidityPostScoring, buildDexLiquidityCronMetadata, isDexLiquidityDegraded } from "./orchestrator-metadata";
 
 export function filterPrimaryPoolsPreferDirectApi(
   pools: LlamaPool[],
@@ -311,7 +306,8 @@ export async function syncDexLiquidity(
   throwIfAborted(signal);
 
   // 7. Persist primary tables. D1 in Workers rejects manual SQL transaction statements.
-  await runWithOverloadRetry(() => persistScores(db, metrics, scoreResults, globalAgg, syncStartSec));
+  const persistence = await runWithOverloadRetry(() => persistScores(db, metrics, scoreResults, globalAgg, syncStartSec))
+    ?? { placeholderCount: 0, orphanRowsDeleted: 0, orphanCleanupFailed: false };
   const sourceCoverageCompleteByStablecoin = new Map<string, boolean>(
     ACTIVE_STABLECOINS.map((meta) => {
       const retainedPools = retainedPoolsByStablecoin.get(meta.id) ?? [];
@@ -333,37 +329,35 @@ export async function syncDexLiquidity(
   await computeDexPrices(db, retainedPoolsByStablecoin, syncStartSec);
 
   // 8. Write daily historical snapshots
-  await writeHistoricalSnapshots(db, scoreResults);
+  const historicalSnapshot = await writeHistoricalSnapshots(db, scoreResults)
+    ?? { snapshotRowsWritten: 0, skipped: false, writeFailed: false };
 
   // 9. Compute and persist depth stability (reuses data already loaded during scoring)
   await computeDepthStability(db, tvlStabilityMap);
 
-  const degraded =
-    criticalSourceFailures.length > 0 ||
-    analysis.nearCoverageGuard ||
-    analysis.nearValueGuard ||
-    analysis.nearMajorCoverageGuard;
+  const degraded = isDexLiquidityDegraded({
+    criticalSourceFailures,
+    analysis,
+    persistence,
+    historicalSnapshot,
+  });
 
   return {
     status: degraded ? "degraded" : "ok",
     itemCount: scoreResults.size,
-    metadata: JSON.stringify({
+    metadata: JSON.stringify(buildDexLiquidityCronMetadata({
       rowsRead: dataSources.pools.length,
       rowsWritten: scoreResults.size,
-      rowsDropped: 0,
       stagedPoolsMerged: stagedMergedCount,
       stagedPoolsSkipped: stagedSkippedCount,
       stagedPoolsSkippedByExactIdentity: stagedSkippedByExactIdentityCount,
       stagedPoolsSkippedByUniqueDerivedIdentity: stagedSkippedByUniqueDerivedIdentityCount,
-      sourceCoverage: {
-        ...analysis.sourceCoverage,
-        challengerSnapshotsPublished: challengerPublication.publishedStablecoins,
-        challengerSnapshotsSkipped: challengerPublication.skippedStablecoins,
-        challengerSnapshotTablesMissing: challengerPublication.missingTables,
-      },
-      failedSources: [...new Set(failedSources)],
-      fallbackMode: [...new Set(fallbackSignals)],
-      validationFailures: 0,
-    }),
+      sourceCoverage: analysis.sourceCoverage,
+      challengerPublication,
+      failedSources,
+      fallbackSignals,
+      persistence,
+      historicalSnapshot,
+    })),
   };
 }

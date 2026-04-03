@@ -1,6 +1,10 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
 import type {
+  HistoricalSnapshotWriteResult,
+  PersistScoresResult,
+} from "./persistence";
+import type {
   DexPriceObs,
   FullScoreResult,
   GlobalAgg,
@@ -159,6 +163,68 @@ export interface DexLiquidityPostScoreAnalysis {
       previousMeasuredShare: number | null;
       currentMeasuredShare: number | null;
     }>;
+  };
+}
+
+export function isDexLiquidityDegraded(params: {
+  criticalSourceFailures: string[];
+  analysis: DexLiquidityPostScoreAnalysis;
+  persistence: PersistScoresResult;
+  historicalSnapshot: HistoricalSnapshotWriteResult;
+}): boolean {
+  return (
+    params.criticalSourceFailures.length > 0 ||
+    params.analysis.nearCoverageGuard ||
+    params.analysis.nearValueGuard ||
+    params.analysis.nearMajorCoverageGuard ||
+    params.persistence.orphanCleanupFailed ||
+    params.historicalSnapshot.writeFailed
+  );
+}
+
+export function buildDexLiquidityCronMetadata(params: {
+  rowsRead: number;
+  rowsWritten: number;
+  stagedPoolsMerged: number;
+  stagedPoolsSkipped: number;
+  stagedPoolsSkippedByExactIdentity: number;
+  stagedPoolsSkippedByUniqueDerivedIdentity: number;
+  sourceCoverage: DexLiquidityPostScoreAnalysis["sourceCoverage"];
+  challengerPublication: {
+    publishedStablecoins: number;
+    skippedStablecoins: number;
+    missingTables: boolean;
+  };
+  failedSources: string[];
+  fallbackSignals: string[];
+  persistence: PersistScoresResult;
+  historicalSnapshot: HistoricalSnapshotWriteResult;
+}): Record<string, unknown> {
+  return {
+    rowsRead: params.rowsRead,
+    rowsWritten: params.rowsWritten,
+    rowsDropped: 0,
+    stagedPoolsMerged: params.stagedPoolsMerged,
+    stagedPoolsSkipped: params.stagedPoolsSkipped,
+    stagedPoolsSkippedByExactIdentity: params.stagedPoolsSkippedByExactIdentity,
+    stagedPoolsSkippedByUniqueDerivedIdentity: params.stagedPoolsSkippedByUniqueDerivedIdentity,
+    sourceCoverage: {
+      ...params.sourceCoverage,
+      challengerSnapshotsPublished: params.challengerPublication.publishedStablecoins,
+      challengerSnapshotsSkipped: params.challengerPublication.skippedStablecoins,
+      challengerSnapshotTablesMissing: params.challengerPublication.missingTables,
+    },
+    failedSources: [...new Set(params.failedSources)],
+    fallbackMode: [...new Set(params.fallbackSignals)],
+    persistence: {
+      placeholderRowsWritten: params.persistence.placeholderCount,
+      orphanRowsDeleted: params.persistence.orphanRowsDeleted,
+      orphanCleanupFailed: params.persistence.orphanCleanupFailed,
+      historicalSnapshotRowsWritten: params.historicalSnapshot.snapshotRowsWritten,
+      historicalSnapshotSkipped: params.historicalSnapshot.skipped,
+      historicalSnapshotWriteFailed: params.historicalSnapshot.writeFailed,
+    },
+    validationFailures: 0,
   };
 }
 

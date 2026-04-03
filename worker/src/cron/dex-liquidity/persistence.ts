@@ -41,6 +41,18 @@ ON CONFLICT(stablecoin_id) DO UPDATE SET
   updated_at = excluded.updated_at
 WHERE dex_liquidity.updated_at <= excluded.updated_at`;
 
+export interface PersistScoresResult {
+  placeholderCount: number;
+  orphanRowsDeleted: number;
+  orphanCleanupFailed: boolean;
+}
+
+export interface HistoricalSnapshotWriteResult {
+  snapshotRowsWritten: number;
+  skipped: boolean;
+  writeFailed: boolean;
+}
+
 /** Persist liquidity scores to D1 (both data rows and zero-score rows). */
 export async function persistScores(
   db: D1Database,
@@ -48,9 +60,11 @@ export async function persistScores(
   scoreResults: Map<string, FullScoreResult>,
   globalAgg: GlobalAgg,
   nowSec: number,
-): Promise<void> {
+): Promise<PersistScoresResult> {
   const stmts: D1PreparedStatement[] = [];
   let placeholderCount = 0;
+  let orphanRowsDeleted = 0;
+  let orphanCleanupFailed = false;
 
   for (const [id, m] of metrics) {
     const sr = scoreResults.get(id);
@@ -186,6 +200,7 @@ export async function persistScores(
         .all<{ stablecoin_id: string }>();
       for (const row of existingRows.results ?? []) {
         if (!validIds.has(row.stablecoin_id)) {
+          orphanRowsDeleted++;
           stmts.push(
             // SAFETY: validated against DEX_LIQUIDITY_TABLES allowlist above.
             db.prepare(`DELETE FROM ${table} WHERE stablecoin_id = ?`).bind(row.stablecoin_id),
@@ -194,6 +209,7 @@ export async function persistScores(
       }
     }
   } catch (err) {
+    orphanCleanupFailed = true;
     console.warn("[dex-liquidity] Failed to check for orphaned rows:", err);
   }
 
@@ -201,13 +217,18 @@ export async function persistScores(
   await batchExecute(db, stmts);
 
   console.log(`[dex-liquidity] Wrote ${stmts.length} rows (${metrics.size} with data, ${placeholderCount} zero, 1 global)`);
+  return {
+    placeholderCount,
+    orphanRowsDeleted,
+    orphanCleanupFailed,
+  };
 }
 
 /** Write daily snapshot rows (first sync invocation after UTC midnight). */
 export async function writeHistoricalSnapshots(
   db: D1Database,
   scoreMap: Map<string, FullScoreResult>,
-): Promise<void> {
+): Promise<HistoricalSnapshotWriteResult> {
   const todayMidnight = Math.floor(Date.now() / 86_400_000) * 86_400; // epoch seconds at UTC midnight
   const expectedRowCount = ACTIVE_STABLECOINS.length;
   try {
@@ -228,7 +249,11 @@ export async function writeHistoricalSnapshots(
     // Keep repairing today's snapshot until coverage and scored-coin count are at least
     // as good as the current run (avoids locking in a degraded first post-midnight run).
     if (existingCount >= expectedRowCount && existingScored >= incomingScored) {
-      return;
+      return {
+        snapshotRowsWritten: 0,
+        skipped: true,
+        writeFailed: false,
+      };
     }
 
     const snapStmts: D1PreparedStatement[] = [];
@@ -273,7 +298,17 @@ export async function writeHistoricalSnapshots(
     console.log(
       `[dex-liquidity] Reconciled daily snapshot (${existingCount}/${existingScored} -> ${snapStmts.length}/${incomingScored}) for ${new Date(todayMidnight * 1000).toISOString().slice(0, 10)}`,
     );
+    return {
+      snapshotRowsWritten: snapStmts.length,
+      skipped: false,
+      writeFailed: false,
+    };
   } catch (err) {
     console.warn("[dex-liquidity] Daily snapshot failed:", err);
+    return {
+      snapshotRowsWritten: 0,
+      skipped: false,
+      writeFailed: true,
+    };
   }
 }

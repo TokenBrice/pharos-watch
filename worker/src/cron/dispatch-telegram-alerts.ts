@@ -3,14 +3,11 @@ import { TRACKED_META_BY_ID, ACTIVE_IDS, PRE_LAUNCH_STABLECOINS } from "@shared/
 import { throwIfAborted } from "../lib/abort";
 import { readCachedJson } from "../lib/api-utils";
 import { getCache } from "../lib/db-cache";
-import { sendBatch } from "../lib/telegram";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import {
   isDewsAlertable,
   isDewsDeescalation,
-  formatConsolidatedMessage,
-  splitMessage,
   type ConsolidatedAlerts,
   type DewsChange,
   type DepegAlertPayload,
@@ -39,12 +36,19 @@ import {
   writeSnapshots,
 } from "./telegram-alert-snapshots";
 import {
-  SEND_BATCH_SIZE,
   drainPendingQueue,
   enqueuePendingAlerts,
   cleanupExpiredPendingAlerts,
-  disableBlockedSubscriber,
 } from "./telegram-pending-queue";
+import {
+  buildSubscriberQueue,
+  deliverFreshAlerts,
+  expandSubscriberChunks,
+  routeAlertEvents,
+  splitFreshQueue,
+  type AlertsByChatEntry,
+  type SubscriberRow,
+} from "./dispatch-telegram-routing";
 
 interface DispatchResult {
   eventsDetected: {
@@ -90,38 +94,10 @@ const GLOBAL_ALERT_COLUMN_BY_TYPE = {
   safety: "global_alert_safety",
   launch: "global_alert_launch",
 } as const;
+const VALID_ALERT_COLUMNS = new Set(Object.values(ALERT_COLUMN_BY_TYPE));
+const VALID_GLOBAL_ALERT_COLUMNS = new Set(Object.values(GLOBAL_ALERT_COLUMN_BY_TYPE));
 
 type AlertType = keyof typeof ALERT_COLUMN_BY_TYPE;
-
-interface SubscriberRow {
-  chat_id: string;
-  last_active_at: number;
-  dews_min_band: string | null;
-  safety_mode: string | null;
-  depeg_worsening_bps_step: number | null;
-  quiet_hours_enabled: number | null;
-  quiet_hours_start_utc: number | null;
-  quiet_hours_end_utc: number | null;
-}
-
-interface AlertsByChatEntry {
-  lastActiveAt: number;
-  alerts: ConsolidatedAlerts;
-  quietHoursEnabled: boolean;
-  quietHoursStartUtc: number | null;
-  quietHoursEndUtc: number | null;
-}
-
-function emptyAlerts(): ConsolidatedAlerts {
-  return {
-    dews: [],
-    depegTriggered: [],
-    depegResolved: [],
-    depegWorsening: [],
-    safety: [],
-    launch: [],
-  };
-}
 
 function emptyResult(snapshotSeeded: boolean): DispatchResult {
   return {
@@ -220,9 +196,14 @@ async function loadSubscriberRowsBatch(
 ): Promise<Map<string, SubscriberRow[]>> {
   if (stablecoinIds.length === 0) return new Map();
   const alertColumn = ALERT_COLUMN_BY_TYPE[type];
+  if (!VALID_ALERT_COLUMNS.has(alertColumn)) {
+    throw new Error(`Invalid alert subscription column for ${type}`);
+  }
   const placeholders = stablecoinIds.map(() => "?").join(",");
   const result = await db
     .prepare(
+      // SAFETY: alertColumn comes from ALERT_COLUMN_BY_TYPE and is validated
+      // against the hardcoded allowlist above before interpolation.
       `SELECT sub.stablecoin_id,
               sub.chat_id,
               u.last_active_at,
@@ -263,8 +244,13 @@ async function loadGlobalSubscriberRows(
   type: AlertType,
 ): Promise<SubscriberRow[]> {
   const alertColumn = GLOBAL_ALERT_COLUMN_BY_TYPE[type];
+  if (!VALID_GLOBAL_ALERT_COLUMNS.has(alertColumn)) {
+    throw new Error(`Invalid global alert subscription column for ${type}`);
+  }
   const result = await db
     .prepare(
+      // SAFETY: alertColumn comes from GLOBAL_ALERT_COLUMN_BY_TYPE and is
+      // validated against the hardcoded allowlist above before interpolation.
       `SELECT chat_id,
               last_active_at,
               quiet_hours_enabled,
@@ -557,218 +543,88 @@ export async function dispatchTelegramAlerts(
     throwIfAborted(signal);
 
     const alertsByChat = new Map<string, AlertsByChatEntry>();
+    routeAlertEvents(
+      dewsChanges,
+      dewsSubs,
+      globalDewsSubs,
+      alertsByChat,
+      (alerts) => alerts.dews,
+      (sub, change) => meetsDewsThreshold(change.newBand, sub.dews_min_band),
+    );
+    routeAlertEvents(
+      depegTriggered,
+      depegSubs,
+      globalDepegSubs,
+      alertsByChat,
+      (alerts) => alerts.depegTriggered,
+    );
+    routeAlertEvents(
+      depegResolved,
+      depegSubs,
+      globalDepegSubs,
+      alertsByChat,
+      (alerts) => alerts.depegResolved,
+    );
+    routeAlertEvents(
+      depegWorsening,
+      depegSubs,
+      globalDepegSubs,
+      alertsByChat,
+      (alerts) => alerts.depegWorsening,
+      (sub, event) => crossesDepegWorseningStep(
+        event.previousDeviationBps,
+        event.currentDeviationBps,
+        sub.depeg_worsening_bps_step,
+      ),
+    );
+    routeAlertEvents(
+      safetyChanges,
+      safetySubs,
+      globalSafetySubs,
+      alertsByChat,
+      (alerts) => alerts.safety,
+      (sub, change) => shouldIncludeSafetyChange(change, sub.safety_mode),
+    );
+    routeAlertEvents(
+      launchPromoted,
+      launchSubs,
+      globalLaunchSubs,
+      alertsByChat,
+      (alerts) => alerts.launch,
+    );
 
-    const addToChat = (
-      sub: SubscriberRow,
-      append: (alerts: ConsolidatedAlerts) => unknown[],
-      event: unknown,
-    ): void => {
-      const existing = alertsByChat.get(sub.chat_id);
-      if (existing) {
-        existing.lastActiveAt = Math.max(existing.lastActiveAt, sub.last_active_at);
-        append(existing.alerts).push(event);
-        return;
-      }
-      const alerts = emptyAlerts();
-      append(alerts).push(event);
-      alertsByChat.set(sub.chat_id, {
-        lastActiveAt: sub.last_active_at,
-        alerts,
-        quietHoursEnabled: Boolean(sub.quiet_hours_enabled),
-        quietHoursStartUtc: sub.quiet_hours_start_utc ?? null,
-        quietHoursEndUtc: sub.quiet_hours_end_utc ?? null,
-      });
-    };
-
-    for (const change of dewsChanges) {
-      const specificSubscribers = dewsSubs.get(change.stablecoinId) ?? [];
-      const specificChatIds = new Set(specificSubscribers.map((sub) => sub.chat_id));
-      for (const sub of specificSubscribers) {
-        if (!meetsDewsThreshold(change.newBand, sub.dews_min_band)) continue;
-        addToChat(sub, (alerts) => alerts.dews, change);
-      }
-      for (const sub of globalDewsSubs) {
-        if (specificChatIds.has(sub.chat_id)) continue;
-        addToChat(sub, (alerts) => alerts.dews, change);
-      }
-    }
-    for (const event of depegTriggered) {
-      const specificSubscribers = depegSubs.get(event.stablecoinId) ?? [];
-      const specificChatIds = new Set(specificSubscribers.map((sub) => sub.chat_id));
-      for (const sub of specificSubscribers) {
-        addToChat(sub, (alerts) => alerts.depegTriggered, event);
-      }
-      for (const sub of globalDepegSubs) {
-        if (specificChatIds.has(sub.chat_id)) continue;
-        addToChat(sub, (alerts) => alerts.depegTriggered, event);
-      }
-    }
-    for (const event of depegResolved) {
-      const specificSubscribers = depegSubs.get(event.stablecoinId) ?? [];
-      const specificChatIds = new Set(specificSubscribers.map((sub) => sub.chat_id));
-      for (const sub of specificSubscribers) {
-        addToChat(sub, (alerts) => alerts.depegResolved, event);
-      }
-      for (const sub of globalDepegSubs) {
-        if (specificChatIds.has(sub.chat_id)) continue;
-        addToChat(sub, (alerts) => alerts.depegResolved, event);
-      }
-    }
-    for (const event of depegWorsening) {
-      const specificSubscribers = depegSubs.get(event.stablecoinId) ?? [];
-      const specificChatIds = new Set(specificSubscribers.map((sub) => sub.chat_id));
-      for (const sub of specificSubscribers) {
-        if (!crossesDepegWorseningStep(
-          event.previousDeviationBps,
-          event.currentDeviationBps,
-          sub.depeg_worsening_bps_step,
-        )) {
-          continue;
-        }
-        addToChat(sub, (alerts) => alerts.depegWorsening, event);
-      }
-      for (const sub of globalDepegSubs) {
-        if (specificChatIds.has(sub.chat_id)) continue;
-        if (!crossesDepegWorseningStep(
-          event.previousDeviationBps,
-          event.currentDeviationBps,
-          sub.depeg_worsening_bps_step,
-        )) {
-          continue;
-        }
-        addToChat(sub, (alerts) => alerts.depegWorsening, event);
-      }
-    }
-    for (const change of safetyChanges) {
-      const specificSubscribers = safetySubs.get(change.stablecoinId) ?? [];
-      const specificChatIds = new Set(specificSubscribers.map((sub) => sub.chat_id));
-      for (const sub of specificSubscribers) {
-        if (!shouldIncludeSafetyChange(change, sub.safety_mode)) continue;
-        addToChat(sub, (alerts) => alerts.safety, change);
-      }
-      for (const sub of globalSafetySubs) {
-        if (specificChatIds.has(sub.chat_id)) continue;
-        if (!shouldIncludeSafetyChange(change, sub.safety_mode)) continue;
-        addToChat(sub, (alerts) => alerts.safety, change);
-      }
-    }
-
-    for (const event of launchPromoted) {
-      const specificSubscribers = launchSubs.get(event.stablecoinId) ?? [];
-      const specificChatIds = new Set(specificSubscribers.map((sub) => sub.chat_id));
-      for (const sub of specificSubscribers) {
-        addToChat(sub, (alerts) => alerts.launch, event);
-      }
-      for (const sub of globalLaunchSubs) {
-        if (specificChatIds.has(sub.chat_id)) continue;
-        addToChat(sub, (alerts) => alerts.launch, event);
-      }
-    }
-
-    const subscriberQueue = [...alertsByChat.entries()]
-      .map(([chatId, entry]) => ({
-        chatId,
-        lastActiveAt: entry.lastActiveAt,
-        alerts: entry.alerts,
-        chunks: splitMessage(formatConsolidatedMessage(entry.alerts)),
-        disableNotification:
-          !hasEscalation(entry.alerts) ||
-          isQuietHoursActive(
-            nowSec,
-            entry.quietHoursEnabled,
-            entry.quietHoursStartUtc,
-            entry.quietHoursEndUtc,
-          ),
-      }))
-      .sort((a, b) => b.lastActiveAt - a.lastActiveAt);
+    const subscriberQueue = buildSubscriberQueue(
+      alertsByChat,
+      (entry) =>
+        !hasEscalation(entry.alerts) ||
+        isQuietHoursActive(
+          nowSec,
+          entry.quietHoursEnabled,
+          entry.quietHoursStartUtc,
+          entry.quietHoursEndUtc,
+        ),
+    );
 
     const freshBudget = Math.max(0, MAX_MESSAGES_PER_RUN - drainResult.attempted);
-    const toSend: typeof subscriberQueue = [];
-    const toEnqueue: typeof subscriberQueue = [];
-    let allocatedFreshChunks = 0;
-    for (const sub of subscriberQueue) {
-      if (allocatedFreshChunks + sub.chunks.length <= freshBudget) {
-        toSend.push(sub);
-        allocatedFreshChunks += sub.chunks.length;
-      } else {
-        toEnqueue.push(sub);
-      }
-    }
-
-    const sendList: Array<{ chatId: string; html: string; disableNotification: boolean }> = [];
-    for (const sub of toSend) {
-      for (const chunk of sub.chunks) {
-        sendList.push({
-          chatId: sub.chatId,
-          html: chunk,
-          disableNotification: sub.disableNotification,
-        });
-      }
-    }
-
-    const sendResults = await sendBatch(sendList, botToken, SEND_BATCH_SIZE);
-
-    let subscribersNotified = 0;
-    let freshSent = 0;
-    let freshPermanentFailures = 0;
-    let blockedUsersCleanedUp = drainResult.blocked - drainResult.blockedCleanupFailed;
-    let blockedUsersCleanupFailed = drainResult.blockedCleanupFailed;
-    const blockedChats = new Set<string>();
-    const retryableFreshMessages: Array<{ chatId: string; html: string; disableNotification: boolean }> = [];
-    const resultsByChat = new Map<string, typeof sendResults>();
-
-    for (let index = 0; index < sendResults.length; index += 1) {
-      const result = sendResults[index];
-      const sendPlan = sendList[index];
-      if (!result || !sendPlan) continue;
-
-      const existing = resultsByChat.get(result.chatId) ?? [];
-      existing.push(result);
-      resultsByChat.set(result.chatId, existing);
-
-      if (result.ok) {
-        freshSent++;
-        continue;
-      }
-
-      if (result.blocked) {
-        if (!blockedChats.has(result.chatId)) {
-          blockedChats.add(result.chatId);
-          if (await disableBlockedSubscriber(db, result.chatId)) {
-            blockedUsersCleanedUp++;
-          } else {
-            blockedUsersCleanupFailed++;
-          }
-        }
-        continue;
-      }
-
-      if (result.retryable) {
-        retryableFreshMessages.push(sendPlan);
-      } else {
-        freshPermanentFailures++;
-      }
-    }
-
-    for (const sub of toSend) {
-      if (blockedChats.has(sub.chatId)) continue;
-      const subResults = resultsByChat.get(sub.chatId) ?? [];
-      if (subResults.length === sub.chunks.length && subResults.every((result) => result.ok)) {
-        subscribersNotified++;
-      }
-    }
-
-    const overflowMessages: Array<{ chatId: string; html: string; disableNotification: boolean }> = [];
-    for (const sub of toEnqueue) {
-      if (blockedChats.has(sub.chatId)) continue;
-      for (const chunk of sub.chunks) {
-        overflowMessages.push({
-          chatId: sub.chatId,
-          html: chunk,
-          disableNotification: sub.disableNotification,
-        });
-      }
-    }
+    const { toSend, toEnqueue } = splitFreshQueue(subscriberQueue, freshBudget);
+    const sendList = expandSubscriberChunks(toSend);
+    const {
+      subscribersNotified,
+      freshSent,
+      freshPermanentFailures,
+      blockedUsersCleanedUp,
+      blockedUsersCleanupFailed,
+      blockedChats,
+      retryableFreshMessages,
+    } = await deliverFreshAlerts(
+      db,
+      sendList,
+      toSend,
+      botToken,
+      drainResult.blocked - drainResult.blockedCleanupFailed,
+      drainResult.blockedCleanupFailed,
+    );
+    const overflowMessages = expandSubscriberChunks(toEnqueue, blockedChats);
 
     const freshRetryQueued = retryableFreshMessages.length;
     const pendingEnqueued = overflowMessages.length + retryableFreshMessages.length;
