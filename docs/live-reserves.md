@@ -9,7 +9,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 * * * *` (hourly at :11 UTC)
 - **Shared hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 119 live-enabled stablecoins across 29 registered adapters
+- **Current coverage:** 119 live-enabled stablecoins across 30 registered adapters
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -318,7 +318,7 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 | `circle-transparency`      | `http-html`                 | `attestation-mix`                    | 2                |
 | `collateral-positions-api` | `http-json`                 | `collateral-mix`                     | 2                |
 | `crvusd`                   | `http-json`                 | `collateral-mix`                     | 1                |
-| `curated-validated`        | `onchain-evm`               | `attestation-mix` / `collateral-mix` | 24               |
+| `curated-validated`        | `onchain-evm`               | `attestation-mix` / `collateral-mix` | 23               |
 | `dola-inverse`             | `http-json`                 | `collateral-mix`                     | 1                |
 | `erc4626-single-asset`     | `onchain-evm`               | `single-asset`                       | 2                |
 | `ethena`                   | `http-json`                 | `collateral-mix`                     | 1                |
@@ -338,7 +338,10 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 | `single-asset`             | `onchain-evm` / `http-json` | `single-asset`                       | 48               |
 | `sky-makercore`            | `http-json`                 | `collateral-mix`                     | 2                |
 | `tether`                   | `http-json`                 | `attestation-mix`                    | 1                |
+| `usdai-proof-of-reserves`  | `http-json`                 | `collateral-mix`                     | 1                |
 | `usdd-data-platform`       | `http-json`                 | `collateral-mix`                     | 1                |
+
+`usdai-proof-of-reserves` consumes USD.AI's public proof-of-reserves API, preserves oversized fixed-point `share` integers from the raw JSON payload, groups the many hardware-loan `DEAL` rows into a single high-risk loan slice, and exposes liquid reserve buckets such as PYUSD separately. The endpoint does not publish a trustworthy disclosure timestamp, so snapshots are stored with `freshnessMode = "unverified"`.
 
 `crvusd` now combines the direct Ethereum LLAMMA collateral feed from `https://prices.curve.finance/v1/crvusd/markets` with on-chain Yield Basis exposure. The adapter walks the Ethereum Yield Basis factory (`factory.yieldbasis.eth`), unwraps each market's LT position with `preview_emergency_withdraw(totalSupply)`, values the resulting external asset balances with DefiLlama prices, and folds those balances into the same BTC / ETH reserve buckets as the direct Curve markets. `crvusd-curve` config version `2` marks that semantic expansion.
 

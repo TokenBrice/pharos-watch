@@ -43,11 +43,19 @@ function isTrustworthyExactPoolId(poolId: string | null | undefined): boolean {
   return /^[1-9A-HJ-NP-Za-km-z]{32,64}$/.test(trimmed);
 }
 
-function resolvePoolShapeFamily(poolType?: string | null): string {
+function resolvePoolShapeFamily(poolType?: string | null, protocol?: string | null, isStable?: boolean | null): string {
   const normalized = (poolType ?? "").toLowerCase();
   if (!normalized) return "generic";
   if (normalized.includes("orderbook")) return "orderbook";
-  if (normalized.includes("weighted")) return "weighted";
+  if (normalized.includes("weighted")) {
+    // DL Balancer V3 rows often omit the stable subtype in `project`, so the
+    // stablecoin flag is the only clue that the pool should align with the
+    // direct Balancer stable pool identity rather than a weighted fallback.
+    if (normalizeProtocol(protocol ?? "") === "balancer" && isStable === true) {
+      return "stable";
+    }
+    return "weighted";
+  }
   if (normalized.includes("clmm") || normalized.includes("whirlpool") || normalized.includes("concentrated")) {
     return "concentrated";
   }
@@ -82,37 +90,32 @@ export function buildPoolIdentity(input: {
 }): PoolIdentity {
   const chain = input.chain.toLowerCase();
   const exactPoolId = input.poolAddressOrId?.trim() ?? "";
-  const exactPoolKey = isTrustworthyExactPoolId(exactPoolId)
-    ? `${chain}:${exactPoolId.toLowerCase()}`
-    : null;
+  const exactPoolKey = isTrustworthyExactPoolId(exactPoolId) ? `${chain}:${exactPoolId.toLowerCase()}` : null;
 
   const normalizedTokens = input.tokenAddresses
     .map((token) => normalizeTokenAddress(token))
     .filter(Boolean)
     .sort();
-  const poolShapeFamily = resolvePoolShapeFamily(input.poolType);
+  const poolShapeFamily = resolvePoolShapeFamily(input.poolType, input.protocol, input.isStable);
   const feeTierBucket = resolveFeeTierBucket(input.feeTierBps);
   const stabilityBucket = input.isStable == null ? "na" : input.isStable ? "stable" : "volatile";
   const hasMissingOptionalIdentityFields = feeTierBucket === "na" || input.isStable == null;
 
-  const derivedMatchKey = normalizedTokens.length >= 2
-    ? [
-        chain,
-        normalizeProtocol(input.protocol),
-        normalizedTokens.join(":"),
-        poolShapeFamily,
-        feeTierBucket,
-        stabilityBucket,
-      ].join("|")
-    : null;
-  const optionalWildcardKey = normalizedTokens.length >= 2
-    ? [
-        chain,
-        normalizeProtocol(input.protocol),
-        normalizedTokens.join(":"),
-        poolShapeFamily,
-      ].join("|")
-    : null;
+  const derivedMatchKey =
+    normalizedTokens.length >= 2
+      ? [
+          chain,
+          normalizeProtocol(input.protocol),
+          normalizedTokens.join(":"),
+          poolShapeFamily,
+          feeTierBucket,
+          stabilityBucket,
+        ].join("|")
+      : null;
+  const optionalWildcardKey =
+    normalizedTokens.length >= 2
+      ? [chain, normalizeProtocol(input.protocol), normalizedTokens.join(":"), poolShapeFamily].join("|")
+      : null;
 
   return {
     exactPoolKey,
@@ -120,7 +123,9 @@ export function buildPoolIdentity(input: {
     optionalWildcardKey,
     hasMissingOptionalIdentityFields,
     identitySource: exactPoolKey
-      ? exactPoolId.startsWith("orderbook") ? "native-id" : "address"
+      ? exactPoolId.startsWith("orderbook")
+        ? "native-id"
+        : "address"
       : derivedMatchKey || optionalWildcardKey
         ? "token-shape-heuristic"
         : "none",
@@ -137,18 +142,12 @@ export function buildKnownPoolIdentityIndex(identities: PoolIdentity[]): KnownPo
   return known;
 }
 
-export function registerKnownPoolIdentity(
-  known: KnownPoolIdentityIndex,
-  identity: PoolIdentity,
-): void {
+export function registerKnownPoolIdentity(known: KnownPoolIdentityIndex, identity: PoolIdentity): void {
   if (identity.exactPoolKey) {
     known.exactKeys.add(identity.exactPoolKey);
   }
   if (!identity.derivedMatchKey) return;
-  known.derivedKeyCounts.set(
-    identity.derivedMatchKey,
-    (known.derivedKeyCounts.get(identity.derivedMatchKey) ?? 0) + 1,
-  );
+  known.derivedKeyCounts.set(identity.derivedMatchKey, (known.derivedKeyCounts.get(identity.derivedMatchKey) ?? 0) + 1);
   if (identity.exactPoolKey) {
     const existing = known.derivedToExactKeys.get(identity.derivedMatchKey) ?? new Set<string>();
     existing.add(identity.exactPoolKey);

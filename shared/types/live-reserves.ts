@@ -30,6 +30,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "single-asset",
   "sky-makercore",
   "tether",
+  "usdai-proof-of-reserves",
   "usdd-data-platform",
 ] as const;
 

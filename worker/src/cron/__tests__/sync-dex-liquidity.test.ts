@@ -19,7 +19,11 @@ function deferred<T>() {
 vi.mock("../dex-liquidity/fetch-primary", () => ({
   fetchDataSources: vi.fn(async () => null),
   buildCurveLookups: vi.fn(async () => ({ curvePoolMap: new Map(), priceObservations: new Map() })),
-  fetchUniV3Data: vi.fn(async () => ({ uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(), uniV3PriceObs: new Map() })),
+  fetchUniV3Data: vi.fn(async () => ({
+    uniV3PoolFees: new Map(),
+    uniV3SymbolFees: new Map(),
+    uniV3PriceObs: new Map(),
+  })),
   fetchAerodromeData: vi.fn(async () => ({ aerodromePriceObs: new Map(), aerodromeIsStable: new Map() })),
   buildKnownPoolAddresses: vi.fn(() => ({
     exactKeys: new Set<string>(),
@@ -64,8 +68,12 @@ vi.mock("../dex-liquidity/fetch-balancer", () => ({ fetchBalancerPools: vi.fn(as
 vi.mock("../dex-liquidity/fetch-raydium", () => ({ fetchRaydiumPools: vi.fn(async () => makeDirectApiResult()) }));
 vi.mock("../dex-liquidity/fetch-orca", () => ({ fetchOrcaPools: vi.fn(async () => makeDirectApiResult()) }));
 vi.mock("../dex-liquidity/fetch-meteora", () => ({ fetchMeteoraPools: vi.fn(async () => makeDirectApiResult()) }));
-vi.mock("../dex-liquidity/fetch-pancakeswap", () => ({ fetchPancakeSwapPools: vi.fn(async () => makeDirectApiResult()) }));
-vi.mock("../dex-liquidity/fetch-slipstream", () => ({ fetchSlipstreamPools: vi.fn(async () => makeDirectApiResult()) }));
+vi.mock("../dex-liquidity/fetch-pancakeswap", () => ({
+  fetchPancakeSwapPools: vi.fn(async () => makeDirectApiResult()),
+}));
+vi.mock("../dex-liquidity/fetch-slipstream", () => ({
+  fetchSlipstreamPools: vi.fn(async () => makeDirectApiResult()),
+}));
 vi.mock("../../lib/stablecoins-cache", async () => {
   const actual = await vi.importActual<typeof import("../../lib/stablecoins-cache")>("../../lib/stablecoins-cache");
   return {
@@ -162,9 +170,7 @@ describe("syncDexLiquidity", () => {
 
   it("throws on catastrophic source failure instead of silently returning", async () => {
     vi.mocked(fetchDataSources).mockResolvedValueOnce(null);
-    await expect(syncDexLiquidity(db, "graph-key")).rejects.toThrow(
-      "catastrophic source failure",
-    );
+    await expect(syncDexLiquidity(db, "graph-key")).rejects.toThrow("catastrophic source failure");
   });
 
   it("returns degraded when non-catastrophic critical source family fails", async () => {
@@ -240,9 +246,12 @@ describe("syncDexLiquidity", () => {
   });
 
   it("keeps the run ok when an optional direct API source is unavailable but coverage stays intact", async () => {
-    vi.mocked(fetchRaydiumPools).mockResolvedValueOnce(
-      { pools: [], ok: false, degraded: true, errors: ["query poolType type error"] },
-    );
+    vi.mocked(fetchRaydiumPools).mockResolvedValueOnce({
+      pools: [],
+      ok: false,
+      degraded: true,
+      errors: ["query poolType type error"],
+    });
 
     const result = await syncDexLiquidity(db, "graph-key");
 
@@ -319,13 +328,14 @@ describe("syncDexLiquidity", () => {
         ],
       },
     });
-    vi.mocked(fetchFluidPools).mockResolvedValueOnce({ pools: [fluidPool], ok: true, degraded: false, errors: [] as string[] });
-    vi.mocked(convertToGtNewPools).mockReturnValueOnce(new Map([
-      ["usdc-circle", []],
-    ]));
-    vi.mocked(extractPriceObservations).mockReturnValueOnce(new Map([
-      ["usdc-circle", []],
-    ]));
+    vi.mocked(fetchFluidPools).mockResolvedValueOnce({
+      pools: [fluidPool],
+      ok: true,
+      degraded: false,
+      errors: [] as string[],
+    });
+    vi.mocked(convertToGtNewPools).mockReturnValueOnce(new Map([["usdc-circle", []]]));
+    vi.mocked(extractPriceObservations).mockReturnValueOnce(new Map([["usdc-circle", []]]));
 
     await syncDexLiquidity(db, "graph-key");
 
@@ -369,52 +379,69 @@ describe("syncDexLiquidity", () => {
       dlProtocolsAvailable: true,
     });
     vi.mocked(fetchFluidPools).mockResolvedValueOnce({
-      pools: [{
-        source: "fluid",
-        chain: "Ethereum",
-        poolAddress: "0xfluid-pool",
-        poolType: "fluid",
-        tokens: [
-          { address: "0xusdc", symbol: "USDC", decimals: 6 },
-          { address: "0xusdt", symbol: "USDT", decimals: 6 },
-        ],
-        price: 1,
-        tvlUsd: 100_000,
-        volume24hUsd: 10_000,
-        feeRate: 0.0001,
-        balances: [50_000_000_000, 50_000_000_000],
-      }],
+      pools: [
+        {
+          source: "fluid",
+          chain: "Ethereum",
+          poolAddress: "0xfluid-pool",
+          poolType: "fluid",
+          tokens: [
+            { address: "0xusdc", symbol: "USDC", decimals: 6 },
+            { address: "0xusdt", symbol: "USDT", decimals: 6 },
+          ],
+          price: 1,
+          tvlUsd: 100_000,
+          volume24hUsd: 10_000,
+          feeRate: 0.0001,
+          balances: [50_000_000_000, 50_000_000_000],
+        },
+      ],
       ok: true,
       degraded: false,
       errors: [],
     });
-    vi.mocked(extractPriceObservations).mockReturnValueOnce(new Map([
-      ["usdc-circle", [{
-        sourceFamily: "gecko_terminal",
-        price: 1,
-        tvl: 100,
-        chain: "Ethereum",
-        protocol: "curve",
-      }]],
-    ]));
+    vi.mocked(extractPriceObservations).mockReturnValueOnce(
+      new Map([
+        [
+          "usdc-circle",
+          [
+            {
+              sourceFamily: "gecko_terminal",
+              price: 1,
+              tvl: 100,
+              chain: "Ethereum",
+              protocol: "curve",
+            },
+          ],
+        ],
+      ]),
+    );
     vi.mocked(computeStablecoinScores).mockResolvedValueOnce({
       scores: new Map([
-        ["usdc-circle", {
-          coverageClass: "fallback",
-          coverageConfidence: 0.55,
-          tvl: 100,
-          balanceMeasuredTvlUsd: 0,
-          sourceMix: { gecko_terminal: { poolCount: 1, tvlUsd: 100 } },
-        }],
+        [
+          "usdc-circle",
+          {
+            coverageClass: "fallback",
+            coverageConfidence: 0.55,
+            tvl: 100,
+            balanceMeasuredTvlUsd: 0,
+            sourceMix: { gecko_terminal: { poolCount: 1, tvlUsd: 100 } },
+          },
+        ],
       ]),
       globalAgg: { totalTvl: 100 },
       retainedPoolsByStablecoin: new Map([
-        ["usdc-circle", [{
-          source: "gecko_terminal",
-          tvlUsd: 100,
-          project: "curve",
-          extra: { measurement: { balanceMeasured: false } },
-        }]],
+        [
+          "usdc-circle",
+          [
+            {
+              source: "gecko_terminal",
+              tvlUsd: 100,
+              project: "curve",
+              extra: { measurement: { balanceMeasured: false } },
+            },
+          ],
+        ],
       ]),
       tvlStabilityMap: new Map(),
       diagnostics: {
@@ -455,13 +482,15 @@ describe("syncDexLiquidity", () => {
           return {
             bind: () => ({
               all: async () => ({
-                results: [{
-                  stablecoin_id: "usdc-circle",
-                  pool_count: 5,
-                  coverage_confidence: 0.9,
-                  total_tvl_usd: 100,
-                  balance_measured_tvl_usd: 50,
-                }],
+                results: [
+                  {
+                    stablecoin_id: "usdc-circle",
+                    pool_count: 5,
+                    coverage_confidence: 0.9,
+                    total_tvl_usd: 100,
+                    balance_measured_tvl_usd: 50,
+                  },
+                ],
               }),
             }),
           };
@@ -500,11 +529,9 @@ describe("syncDexLiquidity", () => {
     };
 
     expect(metadata.sourceCoverage?.qualityDriftSeverity).toBe("high");
-    expect(metadata.sourceCoverage?.qualityDriftFlags).toEqual(expect.arrayContaining([
-      "price-observation-drop",
-      "measured-balance-drop",
-      "watchlist-pool-drop:usdc-circle",
-    ]));
+    expect(metadata.sourceCoverage?.qualityDriftFlags).toEqual(
+      expect.arrayContaining(["price-observation-drop", "measured-balance-drop", "watchlist-pool-drop:usdc-circle"]),
+    );
     expect(metadata.sourceCoverage?.coinsWithoutMeasuredBalances).toBe(1);
     expect(metadata.sourceCoverage?.coinsGtOnly).toBe(1);
     expect(metadata.sourceCoverage?.coinsCrawlerOnly).toBe(1);
@@ -527,38 +554,42 @@ describe("syncDexLiquidity", () => {
 
 describe("filterPrimaryPoolsPreferDirectApi", () => {
   it("does not let an absurd direct-API pool suppress a healthy primary pool", () => {
-    const pools: LlamaPool[] = [{
-      pool: "0xpool",
-      chain: "Fantom",
-      project: "balancer-stable",
-      symbol: "USDC-USDT",
-      tvlUsd: 2_500_000,
-      volumeUsd1d: 250_000,
-      volumeUsd7d: 1_500_000,
-      stablecoin: true,
-      underlyingTokens: ["0xusdc", "0xusdt"],
-      apyBase: null,
-      apyReward: null,
-      apy: 0,
-      sigma: 0,
-      exposure: "multi",
-      count: 2,
-    }];
-    const directApiPools: DexApiPool[] = [{
-      source: "balancer",
-      chain: "Fantom",
-      poolAddress: "0xpool",
-      poolType: "balancer-stable",
-      tokens: [
-        { address: "0xusdc", symbol: "USDC", decimals: 6 },
-        { address: "0xusdt", symbol: "USDT", decimals: 6 },
-      ],
-      price: 1,
-      tvlUsd: 337_000_000_000,
-      volume24hUsd: 100_000,
-      feeRate: 0.0001,
-      balances: [1_000_000, 1_000_000],
-    }];
+    const pools: LlamaPool[] = [
+      {
+        pool: "0xpool",
+        chain: "Fantom",
+        project: "balancer-stable",
+        symbol: "USDC-USDT",
+        tvlUsd: 2_500_000,
+        volumeUsd1d: 250_000,
+        volumeUsd7d: 1_500_000,
+        stablecoin: true,
+        underlyingTokens: ["0xusdc", "0xusdt"],
+        apyBase: null,
+        apyReward: null,
+        apy: 0,
+        sigma: 0,
+        exposure: "multi",
+        count: 2,
+      },
+    ];
+    const directApiPools: DexApiPool[] = [
+      {
+        source: "balancer",
+        chain: "Fantom",
+        poolAddress: "0xpool",
+        poolType: "balancer-stable",
+        tokens: [
+          { address: "0xusdc", symbol: "USDC", decimals: 6 },
+          { address: "0xusdt", symbol: "USDT", decimals: 6 },
+        ],
+        price: 1,
+        tvlUsd: 337_000_000_000,
+        volume24hUsd: 100_000,
+        feeRate: 0.0001,
+        balances: [1_000_000, 1_000_000],
+      },
+    ];
 
     const result = filterPrimaryPoolsPreferDirectApi(pools, directApiPools);
 
@@ -569,38 +600,91 @@ describe("filterPrimaryPoolsPreferDirectApi", () => {
   });
 
   it("deduplicates an Orca DL pool via optional wildcard identity when only fee metadata is missing", () => {
-    const pools: LlamaPool[] = [{
-      pool: "4f44c5d5-b1c2-4b1c-a111-123456789abc",
-      chain: "Solana",
-      project: "orca-dex",
-      symbol: "SOL-USDC",
-      tvlUsd: 29_000_000,
-      volumeUsd1d: 2_500_000,
-      volumeUsd7d: 17_000_000,
-      stablecoin: false,
-      underlyingTokens: ["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1"],
-      apyBase: null,
-      apyReward: null,
-      apy: 0,
-      sigma: 0,
-      exposure: "multi",
-      count: 20,
-    }];
-    const directApiPools: DexApiPool[] = [{
-      source: "orca",
-      chain: "solana",
-      poolAddress: "9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc",
-      poolType: "orca-whirlpool",
-      tokens: [
-        { address: "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1", symbol: "USDC", decimals: 6 },
-        { address: "So11111111111111111111111111111111111111112", symbol: "SOL", decimals: 9 },
-      ],
-      price: 150,
-      tvlUsd: 29_000_000,
-      volume24hUsd: 2_500_000,
-      feeRate: 0.0001,
-      balances: [100_000, 200_000],
-    }];
+    const pools: LlamaPool[] = [
+      {
+        pool: "4f44c5d5-b1c2-4b1c-a111-123456789abc",
+        chain: "Solana",
+        project: "orca-dex",
+        symbol: "SOL-USDC",
+        tvlUsd: 29_000_000,
+        volumeUsd1d: 2_500_000,
+        volumeUsd7d: 17_000_000,
+        stablecoin: false,
+        underlyingTokens: [
+          "So11111111111111111111111111111111111111112",
+          "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1",
+        ],
+        apyBase: null,
+        apyReward: null,
+        apy: 0,
+        sigma: 0,
+        exposure: "multi",
+        count: 20,
+      },
+    ];
+    const directApiPools: DexApiPool[] = [
+      {
+        source: "orca",
+        chain: "solana",
+        poolAddress: "9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc",
+        poolType: "orca-whirlpool",
+        tokens: [
+          { address: "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1", symbol: "USDC", decimals: 6 },
+          { address: "So11111111111111111111111111111111111111112", symbol: "SOL", decimals: 9 },
+        ],
+        price: 150,
+        tvlUsd: 29_000_000,
+        volume24hUsd: 2_500_000,
+        feeRate: 0.0001,
+        balances: [100_000, 200_000],
+      },
+    ];
+
+    const result = filterPrimaryPoolsPreferDirectApi(pools, directApiPools);
+
+    expect(result.filteredPools).toHaveLength(0);
+    expect(result.skippedByExactIdentity).toBe(0);
+    expect(result.skippedByUniqueDerivedIdentity).toBe(0);
+    expect(result.skippedByOptionalWildcardIdentity).toBe(1);
+  });
+
+  it("deduplicates a Balancer V3 DL stable pool via optional wildcard identity when DL omits the stable subtype", () => {
+    const pools: LlamaPool[] = [
+      {
+        pool: "0511276f-4d37-4919-95ab-6cdf418ddd08",
+        chain: "Plasma",
+        project: "balancer-v3",
+        symbol: "USDAI-WAPLAUSDT0",
+        tvlUsd: 547_701,
+        volumeUsd1d: null,
+        volumeUsd7d: null,
+        stablecoin: true,
+        underlyingTokens: ["0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", "0xe0126f0c4451b2b917064a93040fd4770d6774b5"],
+        apyBase: null,
+        apyReward: null,
+        apy: 1.39196,
+        sigma: 0,
+        exposure: "multi",
+        count: 180,
+      },
+    ];
+    const directApiPools: DexApiPool[] = [
+      {
+        source: "balancer",
+        chain: "Plasma",
+        poolAddress: "0x01e2c7fcde2b8d5d1413732c4e274ba5b06b1e54",
+        poolType: "balancer-stable",
+        tokens: [
+          { address: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", symbol: "USDai", decimals: 18 },
+          { address: "0xe0126f0c4451b2b917064a93040fd4770d6774b5", symbol: "waPlaUSDT0", decimals: 18 },
+        ],
+        price: 0.999939,
+        tvlUsd: 547_664.8,
+        volume24hUsd: 5_900.52,
+        feeRate: 0.0001,
+        balances: [240_716.79906230856, 301_609.539917],
+      },
+    ];
 
     const result = filterPrimaryPoolsPreferDirectApi(pools, directApiPools);
 
@@ -611,23 +695,28 @@ describe("filterPrimaryPoolsPreferDirectApi", () => {
   });
 
   it("does not use optional wildcard dedup when multiple direct API Orca pools share the same pair", () => {
-    const pools: LlamaPool[] = [{
-      pool: "4f44c5d5-b1c2-4b1c-a111-123456789abc",
-      chain: "Solana",
-      project: "orca-dex",
-      symbol: "SOL-USDC",
-      tvlUsd: 29_000_000,
-      volumeUsd1d: 2_500_000,
-      volumeUsd7d: 17_000_000,
-      stablecoin: false,
-      underlyingTokens: ["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1"],
-      apyBase: null,
-      apyReward: null,
-      apy: 0,
-      sigma: 0,
-      exposure: "multi",
-      count: 20,
-    }];
+    const pools: LlamaPool[] = [
+      {
+        pool: "4f44c5d5-b1c2-4b1c-a111-123456789abc",
+        chain: "Solana",
+        project: "orca-dex",
+        symbol: "SOL-USDC",
+        tvlUsd: 29_000_000,
+        volumeUsd1d: 2_500_000,
+        volumeUsd7d: 17_000_000,
+        stablecoin: false,
+        underlyingTokens: [
+          "So11111111111111111111111111111111111111112",
+          "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1",
+        ],
+        apyBase: null,
+        apyReward: null,
+        apy: 0,
+        sigma: 0,
+        exposure: "multi",
+        count: 20,
+      },
+    ];
     const directApiPools: DexApiPool[] = [
       {
         source: "orca",

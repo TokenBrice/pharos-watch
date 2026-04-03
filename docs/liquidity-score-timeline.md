@@ -1,6 +1,16 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v4.7` (2026-02-19 -> 2026-04-03).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v4.8` (2026-02-19 -> 2026-04-03).
+
+---
+
+## v4.8 - Direct-source duplicate hardening for Balancer and staged exact ids (Apr 3, 2026)
+
+**Commit:** `unreleased`
+
+- All protocol-native direct API pool addresses now reserve their exact ids for later staged/fallback dedupe, even when the direct row itself falls below the scoring floor
+- GeckoTerminal / CoinGecko discovery rows can no longer resurrect the same exact pool with incompatible TVL semantics just because the authoritative direct row was sub-threshold
+- Balancer `balancer-v3` DeFiLlama rows flagged as stablecoin-only now align to a stable-pair dedupe identity when subtype metadata is missing, preventing duplicate stable-pool counts against the Balancer direct API
 
 ---
 

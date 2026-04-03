@@ -223,6 +223,7 @@ const adapterParamsSchemas = {
   "single-asset": singleAssetParamsSchema,
   "sky-makercore": noParamsSchema,
   tether: noParamsSchema,
+  "usdai-proof-of-reserves": noParamsSchema,
   "usdd-data-platform": noParamsSchema,
 } as const satisfies Record<LiveReserveAdapterKey, z.ZodTypeAny>;
 
@@ -490,6 +491,16 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sharedSourceMode: "none",
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC },
+  },
+  "usdai-proof-of-reserves": {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+      allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
+    },
   },
   "usdd-data-platform": {
     sourceModel: "dynamic-mix",

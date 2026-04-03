@@ -30,6 +30,7 @@ import { fetchSgForgeCoinvertibleReserves } from "./sgforge-coinvertible";
 import { fetchSingleAssetReserves } from "./single-asset";
 import { fetchSkyMakercoreReserves } from "./sky-makercore";
 import { fetchTetherReserves } from "./tether";
+import { fetchUsdAiProofOfReserves } from "./usdai-proof-of-reserves";
 import { fetchUsddDataPlatformReserves } from "./usdd-data-platform";
 import type { AdapterFn, ReserveAdapterDefinition } from "./types";
 
@@ -64,6 +65,7 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   "single-asset": fetchSingleAssetReserves,
   "sky-makercore": fetchSkyMakercoreReserves,
   tether: fetchTetherReserves,
+  "usdai-proof-of-reserves": fetchUsdAiProofOfReserves,
   "usdd-data-platform": fetchUsddDataPlatformReserves,
 };
 

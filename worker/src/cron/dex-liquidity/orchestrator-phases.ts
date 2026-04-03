@@ -93,7 +93,9 @@ export async function loadTrackedStablecoinPriceMap(
       );
     }
   } else {
-    console.warn("[dex-liquidity] Stablecoins cache unavailable for tracked quote pricing; using reference-only fallback");
+    console.warn(
+      "[dex-liquidity] Stablecoins cache unavailable for tracked quote pricing; using reference-only fallback",
+    );
   }
 
   return stablecoinPriceById;
@@ -124,26 +126,28 @@ export function buildDexDirectApiFetchers(params: {
     {
       name: "Aerodrome Slipstream",
       circuitKey: CIRCUIT_SOURCE.AERODROME_SLIPSTREAM_API,
-      fn: (signal) => fetchSlipstreamPools(
-        "aerodrome-slipstream",
-        params.chainAddressToId,
-        params.symbolToChainScopedIds,
-        params.stablecoinPriceById,
-        signal,
-        params.chainRpcs,
-      ),
+      fn: (signal) =>
+        fetchSlipstreamPools(
+          "aerodrome-slipstream",
+          params.chainAddressToId,
+          params.symbolToChainScopedIds,
+          params.stablecoinPriceById,
+          signal,
+          params.chainRpcs,
+        ),
     },
     {
       name: "Velodrome Slipstream",
       circuitKey: CIRCUIT_SOURCE.VELODROME_SLIPSTREAM_API,
-      fn: (signal) => fetchSlipstreamPools(
-        "velodrome-slipstream",
-        params.chainAddressToId,
-        params.symbolToChainScopedIds,
-        params.stablecoinPriceById,
-        signal,
-        params.chainRpcs,
-      ),
+      fn: (signal) =>
+        fetchSlipstreamPools(
+          "velodrome-slipstream",
+          params.chainAddressToId,
+          params.symbolToChainScopedIds,
+          params.stablecoinPriceById,
+          signal,
+          params.chainRpcs,
+        ),
     },
   ];
 }
@@ -305,21 +309,20 @@ export function integrateDirectApiLiquidityPhase(params: {
   console.log(`[dex-liquidity] Fetched ${params.directApiPools.length} direct API pools total`);
   hydrateDirectApiPoolMetadata(params.directApiPools, params.contractMetaByChainAddress);
 
+  const allDirectApiIdentities = params.directApiPools.map(buildDirectApiPoolIdentity);
   const eligibleDirectApiPools = params.directApiPools.filter((pool) => isEligibleDirectApiPool(pool));
-  const directApiIdentities = eligibleDirectApiPools.map(buildDirectApiPoolIdentity);
-  const directApiIdentityCounts = countPoolIdentityKeys(directApiIdentities);
+  const eligibleDirectApiIdentities = eligibleDirectApiPools.map(buildDirectApiPoolIdentity);
+  const directApiIdentityCounts = countPoolIdentityKeys(eligibleDirectApiIdentities);
 
   const retainedDirectApiPools: DexApiPool[] = [];
   for (let index = 0; index < eligibleDirectApiPools.length; index++) {
     const pool = eligibleDirectApiPools[index]!;
-    const identity = directApiIdentities[index]!;
+    const identity = eligibleDirectApiIdentities[index]!;
     const dedupReason = getIdentityDedupReason(
       identity,
       params.knownPoolIndex,
       {
-        derived: identity.derivedMatchKey
-          ? (directApiIdentityCounts.derived.get(identity.derivedMatchKey) ?? 0)
-          : 0,
+        derived: identity.derivedMatchKey ? (directApiIdentityCounts.derived.get(identity.derivedMatchKey) ?? 0) : 0,
         wildcard: identity.optionalWildcardKey
           ? (directApiIdentityCounts.wildcard.get(identity.optionalWildcardKey) ?? 0)
           : 0,
@@ -343,6 +346,16 @@ export function integrateDirectApiLiquidityPhase(params: {
     retainedDirectApiPools.push(pool);
   }
 
+  // Staged discovery sources can return the same physical pool with wildly
+  // different TVL semantics. Keep every authoritative direct-API exact pool id
+  // reserved for later exact-address dedupe, even if the direct row itself is
+  // too small to contribute to scoring.
+  for (const identity of allDirectApiIdentities) {
+    if (identity.exactPoolKey) {
+      params.knownPoolIndex.exactKeys.add(identity.exactPoolKey);
+    }
+  }
+
   if (
     directApiDedupSkippedByAddress > 0 ||
     directApiDedupSkippedByDerivedIdentity > 0 ||
@@ -350,8 +363,8 @@ export function integrateDirectApiLiquidityPhase(params: {
   ) {
     console.log(
       `[dex-liquidity] Skipped ${directApiDedupSkippedByAddress} exact, ` +
-      `${directApiDedupSkippedByDerivedIdentity} unique derived, and ` +
-      `${directApiDedupSkippedByOptionalWildcardIdentity} optional wildcard direct API duplicates`,
+        `${directApiDedupSkippedByDerivedIdentity} unique derived, and ` +
+        `${directApiDedupSkippedByOptionalWildcardIdentity} optional wildcard direct API duplicates`,
     );
   }
 
@@ -381,7 +394,7 @@ export function integrateDirectApiLiquidityPhase(params: {
   if (directApiDedupSkippedByAddress > 0 || directApiDedupSkippedByDerivedIdentity > 0) {
     console.log(
       `[dex-liquidity] Skipped ${directApiDedupSkippedByAddress} direct API pools by exact identity and ` +
-      `${directApiDedupSkippedByDerivedIdentity} by unique derived identity`,
+        `${directApiDedupSkippedByDerivedIdentity} by unique derived identity`,
     );
   }
 
@@ -402,7 +415,9 @@ export async function runFallbackCrawlerPhase(params: {
   coingeckoApiKey?: string | null;
 }): Promise<FallbackCrawlerPhaseResult> {
   const weakCoverageTargetIdsBeforeFallback = new Set(
-    getFallbackTargets(params.metrics, params.priceObservations, { requireTrackedContracts: true }).map((meta) => meta.id),
+    getFallbackTargets(params.metrics, params.priceObservations, { requireTrackedContracts: true }).map(
+      (meta) => meta.id,
+    ),
   );
   const fallbackDeadlineMs = Date.now() + CRAWL_BUDGETS.FALLBACK_MS;
   let dsFallbackCoins = 0;
@@ -450,11 +465,13 @@ export async function runFallbackCrawlerPhase(params: {
 
   console.log(
     `[dex-liquidity] After fallbacks: ${params.priceObservations.size} coins with price observations ` +
-    `(DS fallback: ${dsFallbackCoins} coins, CG tickers: ${cgTickerFallbackCoins} coins)`,
+      `(DS fallback: ${dsFallbackCoins} coins, CG tickers: ${cgTickerFallbackCoins} coins)`,
   );
 
   const weakCoverageTargetIdsAfterFallback = new Set(
-    getFallbackTargets(params.metrics, params.priceObservations, { requireTrackedContracts: true }).map((meta) => meta.id),
+    getFallbackTargets(params.metrics, params.priceObservations, { requireTrackedContracts: true }).map(
+      (meta) => meta.id,
+    ),
   );
   let coverageRecoveredCoins = 0;
   for (const stablecoinId of weakCoverageTargetIdsBeforeFallback) {

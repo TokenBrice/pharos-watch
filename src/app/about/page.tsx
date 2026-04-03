@@ -41,7 +41,7 @@ const DATA_SOURCE_GROUPS = [
   {
     label: "Reserve Transparency",
     sources:
-      "Issuer and protocol reserve APIs, dashboards, proof-of-reserve portals, and direct on-chain vault/accounting reads (including live reserve composition feeds from providers such as Ethena, Falcon, infiniFi, M0, Mento Reserve, OpenEden, Re, USDD, Accountable, Tether, Frax, Circle, First Digital Labs, SG-FORGE, Paxos, Sky/MakerDAO, Chainlink PoR/NAV oracles, Aave GHO, and Curve/Yield Basis reserve reads where available)",
+      "Issuer and protocol reserve APIs, dashboards, proof-of-reserve portals, and direct on-chain vault/accounting reads (including live reserve composition feeds from providers such as Ethena, Falcon, infiniFi, M0, Mento Reserve, OpenEden, Re, USDD, USD.AI, Accountable, Tether, Frax, Circle, First Digital Labs, SG-FORGE, Paxos, Sky/MakerDAO, Chainlink PoR/NAV oracles, Aave GHO, and Curve/Yield Basis reserve reads where available)",
   },
   {
     label: "On-chain Reads & Events",

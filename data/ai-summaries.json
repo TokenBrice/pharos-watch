@@ -521,8 +521,8 @@
   },
   "usdai-usd-ai": {
     "title": "GPU Yield in Dollar Clothing",
-    "text": "Peel back the AI branding and USD.AI is a stablecoin backed 56% by M0's T-bill tokens and 43% by PayPal's PYUSD — a surprisingly conventional reserve for a product that markets itself at the intersection of artificial intelligence and finance. The 1% allocated to GPU-collateralized loans — NVIDIA hardware tokenized as warehouse receipts under UCC law — is what makes it interesting, but that's also the only part that justifies the name. The 218 depeg events and a worst deviation of nearly 1500 basis points tell a rougher story than the current peg suggests, and the 30-day redemption windows through a QEV auction mechanism mean exiting USDai is a patience exercise, not a swap. The C- safety grade reflects the accumulated dependency chain: USDai depends on M0, which depends on T-bills in unregulated custody, and on PYUSD, which depends on Paxos — three layers of counterparty risk between a holder and a government bond.",
-    "updatedAt": "2026-03-22"
+    "text": "USD.AI's public proof-of-reserves now shows a reserve dominated by PayPal's PYUSD, with the remainder spread across GPU-backed infrastructure loans secured by NVIDIA hardware. That makes the liquid side cleaner than the older M0-based reserve story, but the product is still not a plain cash-equivalent stablecoin: the distinctive yield comes from a concentrated compute-financing book, not from vanilla money-market exposure. The long depeg history and C- safety grade reflect that tradeoff. Holders are relying on Paxos-linked PYUSD liquidity on one side and a portfolio of private hardware-credit deals on the other, which is simpler than the old stack but still materially more complex than a conventional fiat-backed dollar token.",
+    "updatedAt": "2026-04-03"
   },
   "usx-solstice": {
     "title": "The Solana Wrapper",
