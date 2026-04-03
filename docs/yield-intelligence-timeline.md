@@ -1,8 +1,14 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.0` (2026-03-01 -> 2026-04-03).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.1` (2026-03-01 -> 2026-04-03).
 
 ---
+
+## v7.1 - Explicit intentional gaps for pre-launch yield assets (Apr 3, 2026)
+
+- Pre-launch yield-bearing assets with no live runtime source now publish as explicit intentional manifest gaps instead of appearing as covered entries with zero strategies
+- `bd-basedollar` now follows the same intentional-gap path as `trusd-tori` and `usg-tangent`
+- Coverage audits and operator tooling still inventory every yield-bearing asset, but these pre-launch gaps now fail closed and stay visible as missing runtime coverage
 
 ## v7.0 - Supply-relative size gates for published lending suggestions (Apr 3, 2026)
 

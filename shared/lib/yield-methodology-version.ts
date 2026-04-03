@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "7.0",
+  currentVersion: "7.1",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "7.1",
+    title: "Explicit Intentional Gaps For Pre-Launch Yield Assets",
+    date: "2026-04-03",
+    effectiveAt: 1775214000,
+    summary:
+      "Pre-launch yield-bearing assets without a live runtime source are now emitted as explicit intentional manifest gaps instead of appearing as covered entries with zero strategies.",
+    impact: [
+      "`bd-basedollar` is now classified the same way as other pre-launch yield-bearing assets with no live runtime source, so the manifest no longer reports it as a covered entry with zero strategies",
+      "Coverage audits and operator tooling continue to inventory every yield-bearing asset, but pre-launch gaps are now fail-closed and explicit rather than implicit",
+      "The public yield methodology docs and timeline now call out the intentional-gap treatment for these pre-launch assets",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "7.0",
     title: "Supply-Relative Size Gates For Published Lending Suggestions",

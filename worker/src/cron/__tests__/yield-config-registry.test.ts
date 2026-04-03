@@ -81,16 +81,18 @@ describe("yield config registry", () => {
   });
 
   it("marks intentional manifest gaps explicitly instead of leaving them implicit", () => {
-    expect(
-      YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "usg-tangent"),
-    ).toMatchObject({
-      status: "intentional-gap",
-      strategies: [
-        expect.objectContaining({
-          kind: "intentional-gap",
-        }),
-      ],
-    });
+    for (const stablecoinId of ["bd-basedollar", "trusd-tori", "usg-tangent"]) {
+      expect(
+        YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === stablecoinId),
+      ).toMatchObject({
+        status: "intentional-gap",
+        strategies: [
+          expect.objectContaining({
+            kind: "intentional-gap",
+          }),
+        ],
+      });
+    }
   });
 
   it("documents the quarantined deterministic adapters in the manifest", () => {
