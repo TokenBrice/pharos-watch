@@ -1,6 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v3.92` (2026-02-01 -> 2026-04-03).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v3.93` (2026-02-01 -> 2026-04-03).
+
+---
+
+## v3.93 - RedStone USR provider-config drift cleanup (Apr 3, 2026)
+
+**Commit:** `unreleased`
+
+- Removed `USR` from the exact-case RedStone tracked subset after the live RedStone API stopped returning that symbol
+- The RedStone pricing lane no longer spends transport budget retrying a symbol the provider does not currently serve
+- Provider-config audit and merge-gate validation now pass without masking real RedStone coverage drift
 
 ---
 

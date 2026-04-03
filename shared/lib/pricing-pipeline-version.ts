@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "3.92",
+  currentVersion: "3.93",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "3.93",
+      title: "RedStone USR provider-config drift cleanup",
+      date: "2026-04-03",
+      effectiveAt: 1775221200,
+      summary:
+        "Removed stale RedStone provider config drift after the live API stopped returning USR, " +
+        "so the tracked-symbol allowlist and validation gate match the provider's real coverage again.",
+      impact: [
+        "USR no longer sits in `REDSTONE_TRACKED_SYMBOL_ALLOWLIST` once the live RedStone API stopped serving that exact-case symbol",
+        "The RedStone price lane no longer spends request budget batching and retrying a symbol the provider currently omits",
+        "Pricing-provider audit and merge-gate validation now fail only on live coverage drift that still exists, not on a known stale allowlist entry",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.92",
       title: "Retained-pool DEX bridge publication",

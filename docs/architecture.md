@@ -465,7 +465,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── snapshot-chain-supply.ts # Daily chain-level supply snapshots → chain_supply_history (quarter-hourly slot, DB-only)
     │   ├── snapshot-safety-grade-history.ts # Daily Safety Score grade transition snapshot → D1
     │   ├── sync-live-reserves.ts # Live reserve composition sync → D1 (hourly, reserve lane)
-    │   ├── reserve-adapters/    # Per-protocol live reserve adapters (29 adapters)
+    │   ├── reserve-adapters/    # Per-protocol live reserve adapters (30 adapters)
     │   │   ├── index.ts         # Adapter registry + dispatch
     │   │   ├── types.ts         # Leaf adapter context/result types consumed by adapters without importing the registry barrel
     │   │   └── ...              # Individual adapters (accountable, tether, circle-transparency, gho, etc.)

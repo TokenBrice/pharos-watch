@@ -56,7 +56,6 @@ export const REDSTONE_SYMBOL_CONFIG = [
   { metaSymbol: "USDH", apiSymbol: "USDH" },
   { metaSymbol: "USDT", apiSymbol: "USDT" },
   { metaSymbol: "USDe", apiSymbol: "USDe" },
-  { metaSymbol: "USR", apiSymbol: "USR" },
   { metaSymbol: "XAUT", apiSymbol: "XAUt" },
   { metaSymbol: "crvUSD", apiSymbol: "crvUSD" },
   { metaSymbol: "fxUSD", apiSymbol: "fxUSD" },
