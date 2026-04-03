@@ -6,7 +6,6 @@ import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 import origins from "../shared/lib/runtime-origins.json" with { type: "json" };
-import { resolveSiteDataUpstreamPath } from "../shared/lib/site-data-routes.ts";
 
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -63,6 +62,17 @@ function getSiteProxyBaseUrl() {
   return configured || origins.siteApiOrigin;
 }
 
+let siteDataResolverPromise;
+
+async function getSiteDataResolver() {
+  if (!siteDataResolverPromise) {
+    siteDataResolverPromise = import("../shared/lib/site-data-routes.ts").then(
+      (module) => module.resolveSiteDataUpstreamPath,
+    );
+  }
+  return siteDataResolverPromise;
+}
+
 async function proxyApiRequest(targetUrl, method, headers = {}) {
   return fetch(targetUrl, {
     method,
@@ -95,6 +105,9 @@ export function createStaticExportServer({
     if (requestUrl.pathname.startsWith("/api/") || requestUrl.pathname.startsWith("/_site-data/")) {
       try {
         const isSiteDataRequest = requestUrl.pathname.startsWith("/_site-data/");
+        const resolveSiteDataUpstreamPath = isSiteDataRequest
+          ? await getSiteDataResolver()
+          : null;
         const upstreamPath = isSiteDataRequest
           ? resolveSiteDataUpstreamPath(requestUrl.pathname)
           : requestUrl.pathname;

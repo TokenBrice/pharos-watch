@@ -47,7 +47,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `generate-redirects.ts` via the `prebuild` hook that runs automatically before `npm run build`
 - `check-seo-static.mjs` via `npm run seo:check`
 - `classify-deploy-changes.mjs` via the `detect-changes` job in `.github/workflows/deploy-cloudflare.yml`
-- `serve-static-export.mjs` via the pre-deploy `smoke-ui` job inside `.github/workflows/pages-prepare.yml`
+- `serve-static-export.mjs` via `npm run serve:static-export` in the pre-deploy `smoke-ui` job inside `.github/workflows/pages-prepare.yml`
 - `smoke-api.mjs` via `npm run test:smoke-api`
 - `smoke-ops.mjs` via `npm run test:smoke-ops`
 - `smoke-ui.mjs` via `npm run test:smoke-ui`
@@ -102,7 +102,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 ### `smoke-ui.mjs`
 
 - Uses Playwright CLI in a temporary session, but now collapses the smoke flow into one `run-code` browser session instead of repeated per-route CLI round-trips.
-- In CI deploys, the browser now targets a locally served `out/` export before Pages production deploy; `scripts/serve-static-export.mjs` proxies direct `/api/*` calls to the configured public API base and `/_site-data/*` calls to the configured site-api base so the smoke still exercises the live website data path against the exact built frontend artifact.
+- In CI deploys, the browser now targets a locally served `out/` export before Pages production deploy; `npm run serve:static-export` runs `scripts/serve-static-export.mjs`, which proxies direct `/api/*` calls to the configured public API base and `/_site-data/*` calls to the configured site-api base so the smoke still exercises the live website data path against the exact built frontend artifact.
 - On combined worker + Pages deploys, the Pages-prepare workflow points the local site-data proxy at the uploaded worker preview URL so the predeploy artifact rehearsal happens against the exact worker candidate while promotion continues in parallel.
 - The shared Pages publish workflow also runs the same smoke script against `https://pharos.watch` after `deploy-pages`, so the pipeline checks both the pre-publish artifact and the real public host.
 - Verifies homepage is not in outage/empty state (`Failed to load data` or `Failed to load this dataset`, `stablecoins:404`, `Data not yet available` or `Waiting for first sync`, `Connection issue` or `Unable to reach the Pharos data API right now.`, `No stablecoin data available`, missing rows/ticker).

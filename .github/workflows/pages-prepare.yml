@@ -71,7 +71,7 @@ jobs:
           STATIC_EXPORT_HOST: 127.0.0.1
           STATIC_EXPORT_PORT: "4173"
         run: |
-          node scripts/serve-static-export.mjs > /tmp/pages-smoke-server.log 2>&1 &
+          npm run serve:static-export > /tmp/pages-smoke-server.log 2>&1 &
           echo $! > /tmp/pages-smoke-server.pid
           for attempt in $(seq 1 30); do
             if node -e "fetch('http://127.0.0.1:4173/').then((res) => process.exit(res.ok ? 0 : 1)).catch(() => process.exit(1));"; then

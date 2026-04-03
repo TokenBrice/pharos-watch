@@ -26,6 +26,7 @@
     "test:watch": "vitest",
     "audit:pricing-providers": "tsx scripts/audit-pricing-provider-config.ts",
     "sync:digests": "tsx scripts/sync-digests.ts",
+    "serve:static-export": "tsx scripts/serve-static-export.mjs",
     "test:smoke-api": "tsx scripts/smoke-api.mjs",
     "test:smoke-ops": "node scripts/smoke-ops.mjs",
     "test:smoke-ui": "node scripts/smoke-ui.mjs",
