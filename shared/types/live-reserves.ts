@@ -63,6 +63,12 @@ export const LIVE_RESERVE_FRESHNESS_MODE_VALUES = [
   "not-applicable",
 ] as const;
 
+export const RESERVE_DISPLAY_BADGE_KIND_VALUES = [
+  "live",
+  "curated-validated",
+  "proof",
+] as const;
+
 export const LIVE_RESERVE_SEMANTICS_VALUES = [
   "collateral-mix",
   "protocol-reserve",
@@ -81,6 +87,7 @@ export type LiveReserveEvidenceClass = (typeof LIVE_RESERVE_EVIDENCE_CLASS_VALUE
 export type LiveReserveSourceSharingMode = (typeof LIVE_RESERVE_SHARED_SOURCE_MODE_VALUES)[number];
 export type LiveReserveWarningEffect = (typeof LIVE_RESERVE_WARNING_EFFECT_VALUES)[number];
 export type LiveReserveFreshnessMode = (typeof LIVE_RESERVE_FRESHNESS_MODE_VALUES)[number];
+export type ReserveDisplayBadgeKind = (typeof RESERVE_DISPLAY_BADGE_KIND_VALUES)[number];
 export type LiveReserveSemantics = (typeof LIVE_RESERVE_SEMANTICS_VALUES)[number];
 export type LiveReserveRisk = (typeof LIVE_RESERVE_RISK_VALUES)[number];
 export type LiveReserveRpcMode = (typeof LIVE_RESERVE_RPC_MODE_VALUES)[number];
@@ -168,6 +175,11 @@ export interface ReserveProvenanceView {
   scoringEligible: boolean;
 }
 
+export interface ReserveDisplayBadgeView {
+  kind: ReserveDisplayBadgeKind;
+  label: string;
+}
+
 export interface StablecoinReservesResponse {
   stablecoinId: string;
   mode: ReservePresentationMode;
@@ -179,4 +191,5 @@ export interface StablecoinReservesResponse {
   metadata?: LiveReserveSnapshotMetadata;
   provenance?: ReserveProvenanceView;
   sync?: ReserveSyncStateView;
+  displayBadge?: ReserveDisplayBadgeView;
 }

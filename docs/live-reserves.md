@@ -211,7 +211,7 @@ Freshness and consistency rules now live across the `worker/src/lib/live-reserve
 - `loadFreshIndependentLiveReserveMap()` further filters authoritative snapshots to `evidenceClass = independent`, `reserve_sync_state.last_status = "ok"`, **and** scoring-eligible freshness evidence. In practice that means the snapshot must either carry a verified `sourceTimestamp` path or explicitly mark freshness as `not-applicable` / `verified`; `freshnessMode = "unverified"` no longer qualifies for collateral passthrough.
 - `getLatestSuccessfulReserveSnapshotMetadata()` is the canonical accessor for downstream consumers that need snapshot telemetry such as redeemable capacity or live redemption fees
 - failed `reserve_sync_state` / `reserve_sync_attempt_history` rows now also retain `metadata.failureCategory` so parser drift, network issues, upstream HTTP failures, validation failures, and storage write failures are distinguishable without log grep
-- authoritative `live` / `live-stale` API responses now also carry a `provenance` envelope so the frontend can distinguish independent live disclosure from static-validation and weak-proof paths
+- authoritative `live` / `live-stale` API responses now also carry a `provenance` envelope plus a separate `displayBadge` so the frontend can distinguish true live feeds from curated-validated and proof-style reserve views
 
 `computeReserveCompositionOverview()` aggregates the status-card summary used by `/status`:
 
@@ -274,6 +274,19 @@ The optional `provenance` object is present only when the response is serving an
 | `sourceModel`     | `dynamic-mix`, `validated-static`, or `single-bucket`                                 |
 | `freshnessMode`   | Optional explicit freshness policy (`verified`, `unverified`, `not-applicable`)       |
 | `scoringEligible` | Whether the current snapshot is eligible for collateral-quality passthrough right now |
+
+The optional `displayBadge` object is also present only for authoritative `live` / `live-stale` snapshots:
+
+| Field   | Meaning                                                                                              |
+| ------- | ---------------------------------------------------------------------------------------------------- |
+| `kind`  | `live`, `curated-validated`, or `proof`                                                              |
+| `label` | User-facing badge text rendered on the detail page (`Live`, `Curated-Validated`, or `Proof`)        |
+
+`displayBadge` is intentionally separate from `mode` and `provenance`:
+
+- `mode` answers whether an authoritative snapshot exists and whether it is stale
+- `provenance` answers scoring/evidence semantics
+- `displayBadge` answers the honest user-facing reserve label
 
 The optional `metadata` object is also present only for authoritative `live` / `live-stale` snapshots. It exposes the adapter snapshot metadata already stored with the reserve snapshot row so the UI can surface feed-specific context without re-querying D1. For example, `crvusd` now exposes `yieldBasisCollateralPct` when Yield Basis positions account for part of the live reserve mix.
 
@@ -368,7 +381,7 @@ Adapter helpers now live in a small helper family, with `worker/src/cron/reserve
 
 - `src/hooks/use-stablecoin-reserves.ts` uses mode-aware polling: `live` responses keep `staleTime = 1 hour` / `refetchInterval = 2 hours`, while stale or fallback modes tighten to `1 minute` / `2 minutes` so the UI re-checks recovery faster
 - `src/hooks/use-stablecoin-detail-view-model.ts` injects the reserve result into the detail-page view model
-- `src/lib/coverage.ts` uses `coin.liveReservesConfig` for the structural `Live` reserve-coverage state on `/coverage`
+- `src/lib/coverage.ts` uses the adapter badge taxonomy in `shared/lib/live-reserve-display.ts` so `/coverage` distinguishes true `Live` reserve feeds from `Curated-Validated` and `Proof` reserve-sync paths
 - `worker/src/api/status.ts` uses `computeReserveCompositionOverview()` to surface reserve-sync health on `/status`
 
 ---
