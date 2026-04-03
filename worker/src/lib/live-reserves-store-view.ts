@@ -1,7 +1,7 @@
 import { getReserves, type ReserveResult } from "@shared/lib/reserve-templates";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { ReserveSyncStateView } from "@shared/types/live-reserves";
-import { buildReserveProvenanceView, hasConsistentSnapshotState, hasScoringEligibleLiveReserveFreshness, hasUncertainWriteState, parseReserveCompositionRow } from "./live-reserves-store-parsing";
+import { buildReserveDisplayBadgeView, buildReserveProvenanceView, hasConsistentSnapshotState, hasScoringEligibleLiveReserveFreshness, hasUncertainWriteState, parseReserveCompositionRow } from "./live-reserves-store-parsing";
 import {
   getReserveCompositionRow,
   getReserveSyncState,
@@ -361,6 +361,7 @@ export async function resolveReserveResult(
 
   if (liveSnapshot) {
     const provenance = buildReserveProvenanceView(liveSnapshot, syncState, stale);
+    const displayBadge = buildReserveDisplayBadgeView(liveSnapshot);
     return {
       reserves: liveSnapshot.slices,
       estimated: false,
@@ -368,6 +369,7 @@ export async function resolveReserveResult(
       liveAt: liveSnapshot.fetchedAt,
       source: liveSnapshot.source,
       displayUrl,
+      displayBadge,
       metadata: liveSnapshot.metadata,
       provenance,
       sync: buildSyncView(syncState, stale, {

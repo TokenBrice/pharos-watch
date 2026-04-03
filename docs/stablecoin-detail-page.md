@@ -119,8 +119,9 @@ The detail page prefers live reserve data when the coin is live-enabled:
 
 - `liveReserves` API result wins when available
 - otherwise it falls back to `getReserves(coin)` from curated/template metadata
+- authoritative `live` / `live-stale` reserve responses can carry a separate reserve badge taxonomy: `Live`, `Curated-Validated`, or `Proof`
 
-`OverviewSection` is responsible for translating reserve modes into user-visible notices:
+`OverviewSection` is responsible for translating reserve modes and reserve badge semantics into user-visible notices:
 
 - `live`
 - `live-stale`

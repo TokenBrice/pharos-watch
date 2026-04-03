@@ -91,14 +91,14 @@ describe("coverage helpers", () => {
     expect(resolveDexCoverage("unobserved").available).toBe(false);
   });
 
-  it("marks live reserve sync separately from curated or estimated reserves", () => {
+  it("maps reserve sync coverage into live, curated-validated, proof, curated, or estimated states", () => {
     expect(
       resolveReserveCoverage(
         makeCoin({
           liveReservesConfig: {
-            adapter: "test",
+            adapter: "infinifi",
             version: 1,
-            semantics: "attestation-mix",
+            semantics: "collateral-mix",
             inputs: {
               primary: { kind: "http-json", url: "https://example.com/reserves" },
             },
@@ -106,6 +106,40 @@ describe("coverage helpers", () => {
         }),
       ).kind,
     ).toBe("live");
+
+    expect(
+      resolveReserveCoverage(
+        makeCoin({
+          liveReservesConfig: {
+            adapter: "frax",
+            version: 1,
+            semantics: "attestation-mix",
+            inputs: {
+              primary: { kind: "http-json", url: "https://example.com/frax" },
+            },
+          },
+        }),
+      ).kind,
+    ).toBe("curated-validated");
+
+    expect(
+      resolveReserveCoverage(
+        makeCoin({
+          liveReservesConfig: {
+            adapter: "single-asset",
+            version: 1,
+            semantics: "single-asset",
+            inputs: {
+              primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+            },
+            params: {
+              label: "Issuer reserves",
+              risk: "very-low",
+            },
+          },
+        }),
+      ).kind,
+    ).toBe("proof");
 
     expect(
       resolveReserveCoverage(
@@ -319,15 +353,63 @@ describe("coverage helpers", () => {
           id: "live",
           symbol: "LIVE",
           liveReservesConfig: {
-            adapter: "test",
+            adapter: "infinifi",
             version: 1,
-            semantics: "attestation-mix",
+            semantics: "collateral-mix",
             inputs: {
               primary: { kind: "http-json", url: "https://example.com/reserves" },
             },
           },
         }),
         marketCapUsd: 700,
+        hasPegCoverage: true,
+        safetyScore: 82,
+        dexCoverageClass: "primary",
+        redemptionEntry: null,
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        hasDependencyCoverage: false,
+      }),
+      buildCoverageRow({
+        coin: makeCoin({
+          id: "validated",
+          symbol: "VAL",
+          liveReservesConfig: {
+            adapter: "frax",
+            version: 1,
+            semantics: "attestation-mix",
+            inputs: {
+              primary: { kind: "http-json", url: "https://example.com/validated" },
+            },
+          },
+        }),
+        marketCapUsd: 100,
+        hasPegCoverage: true,
+        safetyScore: 82,
+        dexCoverageClass: "primary",
+        redemptionEntry: null,
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+        hasDependencyCoverage: false,
+      }),
+      buildCoverageRow({
+        coin: makeCoin({
+          id: "proof",
+          symbol: "PROOF",
+          liveReservesConfig: {
+            adapter: "single-asset",
+            version: 1,
+            semantics: "single-asset",
+            inputs: {
+              primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+            },
+            params: {
+              label: "Issuer reserves",
+              risk: "very-low",
+            },
+          },
+        }),
+        marketCapUsd: 100,
         hasPegCoverage: true,
         safetyScore: 82,
         dexCoverageClass: "primary",
@@ -361,11 +443,11 @@ describe("coverage helpers", () => {
 
     expect(summary.countLabel).toBe("Live tracking");
     expect(summary.availableCount).toBe(1);
-    expect(summary.coveragePct).toBe(50);
+    expect(summary.coveragePct).toBe(25);
     expect(summary.mcapSharePct).toBe(70);
-    expect(summary.coverageLabel).toBe("50% with live reserve tracking");
     expect(summary.shareLabel).toBe("Live reserve market-cap reach");
-    expect(summary.breakdown).toBe("live 1 · curated 1 · estimated 0");
+    expect(summary.coverageLabel).toBe("25% with live reserve tracking");
+    expect(summary.breakdown).toBe("live 1 · curated-validated 1 · proof 1 · curated 1 · estimated 0");
   });
 
   it("breaks down redemption coverage by route family", () => {

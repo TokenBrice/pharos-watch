@@ -3,6 +3,7 @@ import {
   GOVERNANCE_LABELS_SHORT,
   PEG_LABELS_SHORT,
 } from "@shared/lib/classification";
+import { getReserveDisplayBadgeKindForAdapter } from "@shared/lib/live-reserve-display";
 import { getReserves } from "@shared/lib/reserve-templates";
 import type {
   LiquidityCoverageClass,
@@ -129,7 +130,7 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     label: "Live Reserves Sync",
     shortLabel: "Live Sync",
     description:
-      "Live reserve-sync coverage on the stablecoin detail page, with curated and estimated reserve views broken out below.",
+      "Reserve-sync coverage on the stablecoin detail page, with true live feeds separated from curated-validated, proof-based, curated, and estimated reserve views.",
     headlineKinds: ["live"],
     headlineCountLabel: "Live tracking",
     headlineCoverageLabel: (coveragePct) =>
@@ -486,13 +487,37 @@ export function resolveDexCoverage(
 
 export function resolveReserveCoverage(coin: StablecoinMeta): CoverageStatus {
   if (coin.liveReservesConfig) {
+    const badgeKind = getReserveDisplayBadgeKindForAdapter(coin.liveReservesConfig.adapter);
+    if (badgeKind === "live") {
+      return createStatus(
+        "live",
+        "Live",
+        "emerald",
+        true,
+        4,
+        "Detail-page reserve composition is sourced from a true live reserve feed or direct onchain reserve/accounting reads.",
+      );
+    }
+
+    if (badgeKind === "curated-validated") {
+      return createStatus(
+        "curated-validated",
+        "Curated-Validated",
+        "sky",
+        true,
+        3,
+        "Detail-page reserve composition uses a reviewed reserve baseline kept current through live validation.",
+        "Curated validated",
+      );
+    }
+
     return createStatus(
-      "live",
-      "Live",
-      "emerald",
+      "proof",
+      "Proof",
+      "violet",
       true,
-      3,
-      "Detail-page reserve composition is backed by a live reserve-sync adapter.",
+      2,
+      "Detail-page reserve composition is backed by a proof, attestation, or liveness path rather than a full live reserve mix.",
     );
   }
 
@@ -686,7 +711,7 @@ function buildCoverageBreakdown(
     return `primary ${breakdownMap.get("primary") ?? 0} · mixed ${breakdownMap.get("mixed") ?? 0} · fallback ${breakdownMap.get("fallback") ?? 0}`;
   }
   if (featureKey === "reserves") {
-    return `live ${breakdownMap.get("live") ?? 0} · curated ${breakdownMap.get("curated") ?? 0} · estimated ${breakdownMap.get("estimated") ?? 0}`;
+    return `live ${breakdownMap.get("live") ?? 0} · curated-validated ${breakdownMap.get("curated-validated") ?? 0} · proof ${breakdownMap.get("proof") ?? 0} · curated ${breakdownMap.get("curated") ?? 0} · estimated ${breakdownMap.get("estimated") ?? 0}`;
   }
   if (featureKey === "redemption") {
     return `heuristic ${breakdownMap.get("modeled-heuristic") ?? 0} · configured ${breakdownMap.get("configured-unrated") ?? 0} · issuer ${breakdownMap.get("offchain-issuer") ?? 0} · psm ${breakdownMap.get("psm-swap") ?? 0} · queue ${breakdownMap.get("queue-redeem") ?? 0} · collateral ${breakdownMap.get("collateral-redeem") ?? 0} · stable ${breakdownMap.get("stablecoin-redeem") ?? 0} · basket ${breakdownMap.get("basket-redeem") ?? 0}`;

@@ -1597,6 +1597,16 @@
         "chain": "arbitrum",
         "address": "0x5018609ab477cc502e170a5accf5312b86a4b94f",
         "decimals": 18
+      },
+      {
+        "chain": "blast",
+        "address": "0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6",
+        "decimals": 18
+      },
+      {
+        "chain": "manta",
+        "address": "0x73d23f3778a90be8846e172354a115543df2a7e4",
+        "decimals": 18
       }
     ],
     "deploymentModel": "third-party-bridge",
@@ -1617,7 +1627,24 @@
         "pct": 5,
         "risk": "very-low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "anzen-usdz",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "usdz-anzen",
+      "display": {
+        "url": "https://rwa.anzen.finance/transparency",
+        "label": "Anzen transparency"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      }
+    }
   },
   {
     "id": "cash-phantom",
@@ -8922,6 +8949,50 @@
         "title": "Tempo mainnet launches; KlarnaUSD not yet migrated from testnet",
         "description": "Tempo L1 goes live with sub-second finality, Machine Payments Protocol for AI agents, and partners including Anthropic, Mastercard, Visa, and Revolut. Klarna absent from mainnet launch partners.",
         "sourceUrl": "https://www.coindesk.com/tech/2026/03/18/stripe-led-payments-blockchain-tempo-goes-live-with-protocol-for-ai-agents"
+      }
+    ]
+  },
+  {
+    "id": "bd-basedollar",
+    "name": "Base Dollar",
+    "symbol": "BD",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": false
+    },
+    "detailProvider": "defillama",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://basedollar.org/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/BaseDollarOrg"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.basedollar.org/"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/basedollar/basedollar"
+      }
+    ],
+    "status": "pre-launch",
+    "launchPhase": "announced",
+    "launchPhaseDetail": "Fork of Liquity V2 on Base; not yet launched",
+    "milestones": [
+      {
+        "date": "2026-04-03",
+        "type": "announcement",
+        "title": "Base Dollar announced as Liquity V2 fork on Base L2",
+        "description": "LP-collateralized stablecoin with yield from AERO farming; revenue shared between users, POL treasury, and BD stakers.",
+        "sourceUrl": "https://docs.basedollar.org/"
       }
     ]
   },

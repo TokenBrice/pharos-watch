@@ -114,6 +114,28 @@ function formatReserveUpdatedAt(timestamp: number | undefined): string {
     : "the previous successful run";
 }
 
+function formatReserveSnapshotFreshLabel(reserves: ReserveResult): string {
+  switch (reserves.displayBadge?.kind) {
+    case "curated-validated":
+      return `Curated-validated as of ${formatReserveUpdatedAt(reserves.liveAt)}`;
+    case "proof":
+      return `Proof refreshed ${formatReserveUpdatedAt(reserves.liveAt)}`;
+    default:
+      return `Updated ${formatReserveUpdatedAt(reserves.liveAt)}`;
+  }
+}
+
+function formatReserveSnapshotStaleLabel(reserves: ReserveResult): string {
+  switch (reserves.displayBadge?.kind) {
+    case "curated-validated":
+      return `Curated-validated snapshot stale; showing last successful sync from ${formatReserveUpdatedAt(reserves.liveAt)}`;
+    case "proof":
+      return `Proof snapshot stale; showing last successful sync from ${formatReserveUpdatedAt(reserves.liveAt)}`;
+    default:
+      return `Live snapshot stale; showing last successful sync from ${formatReserveUpdatedAt(reserves.liveAt)}`;
+  }
+}
+
 function buildReserveCompositionNote(reserves: ReserveResult | null): string | null {
   if (!reserves || (reserves.mode !== "live" && reserves.mode !== "live-stale")) {
     return null;
@@ -135,6 +157,22 @@ function buildReserveProvenanceNotice(
     return null;
   }
 
+  if (reserves.displayBadge?.kind === "curated-validated") {
+    return {
+      title: "Curated-validated reserve baseline",
+      message: "This reserve view uses the reviewed reserve baseline, kept current through live validation rather than a fully independent live reserve composition feed.",
+      toneClass: "border-border/60 bg-muted/30 text-muted-foreground",
+    };
+  }
+
+  if (reserves.displayBadge?.kind === "proof") {
+    return {
+      title: "Proof-based reserve view",
+      message: "This reserve view reflects a live proof, attestation, or liveness check rather than a full live reserve composition feed.",
+      toneClass: "border-border/60 bg-muted/30 text-muted-foreground",
+    };
+  }
+
   switch (reserves.provenance.evidenceClass) {
     case "independent":
       return {
@@ -148,14 +186,14 @@ function buildReserveProvenanceNotice(
       };
     case "static-validated":
       return {
-        title: "Live validation over reviewed reserve baseline",
-        message: "This reserve view keeps the reviewed reserve baseline live through validation data rather than a fully independent live composition feed.",
+        title: "Live reserve disclosure",
+        message: "This reserve view comes from a live reserve feed, but the current source is not treated as independent evidence for collateral scoring.",
         toneClass: "border-border/60 bg-muted/30 text-muted-foreground",
       };
     case "weak-live-probe":
       return {
-        title: "Liveness probe over reviewed reserve baseline",
-        message: "This reserve view reflects a live proof or liveness check over the reviewed reserve baseline, not a full independent live reserve composition feed.",
+        title: "Proof-based reserve view",
+        message: "This reserve view reflects a live proof, attestation, or liveness check rather than a full live reserve composition feed.",
         toneClass: "border-border/60 bg-muted/30 text-muted-foreground",
       };
     default:
@@ -236,14 +274,12 @@ export function OverviewSection({
               <div>
                 <ReserveTreemap
                   reserves={reserves.reserves}
-                  isLive={!!reserves.liveAt}
+                  badge={reserves.displayBadge}
                 />
                 <div className="mt-1 flex items-center justify-center gap-2 text-xs text-muted-foreground">
                   {reserves.mode === "live" ? (
                     <>
-                      <span>
-                        Updated {formatReserveUpdatedAt(reserves.liveAt)}
-                      </span>
+                      <span>{formatReserveSnapshotFreshLabel(reserves)}</span>
                       {reserves.displayUrl && (
                         <>
                           <span aria-hidden>·</span>
@@ -260,9 +296,7 @@ export function OverviewSection({
                     </>
                   ) : reserves.mode === "live-stale" ? (
                     <>
-                      <span>
-                        Live snapshot stale; showing last successful sync from {formatReserveUpdatedAt(reserves.liveAt)}
-                      </span>
+                      <span>{formatReserveSnapshotStaleLabel(reserves)}</span>
                       {reserves.displayUrl && (
                         <>
                           <span aria-hidden>·</span>

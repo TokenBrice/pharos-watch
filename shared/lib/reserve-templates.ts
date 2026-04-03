@@ -1,6 +1,7 @@
 import type {
   DependencyType,
   DependencyWeight,
+  ReserveDisplayBadgeView,
   LiveReserveSnapshotMetadata,
   ReserveProvenanceView,
   ReservePresentationMode,
@@ -19,6 +20,8 @@ export interface ReserveResult {
   source?: string;
   /** Human-readable URL to link to. Present when reserves came from a live sync. */
   displayUrl?: string;
+  /** User-facing badge semantics for authoritative live reserve snapshots. */
+  displayBadge?: ReserveDisplayBadgeView;
   /** Adapter-level metadata for authoritative live reserve snapshots. */
   metadata?: LiveReserveSnapshotMetadata;
   /** Evidence-quality metadata for live reserve snapshots. */

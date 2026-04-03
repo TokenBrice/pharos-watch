@@ -52,6 +52,7 @@ export function useStablecoinReserves(
           liveAt: data.liveAt,
           source: data.source,
           displayUrl: data.displayUrl,
+          displayBadge: data.displayBadge,
           metadata: data.metadata,
           provenance: data.provenance,
           sync: data.sync,

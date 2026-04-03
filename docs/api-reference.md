@@ -465,23 +465,31 @@ Returns the resolved reserve presentation for a stablecoin with `liveReservesCon
 | Field          | Type             | Description                                                                                                                      |
 | -------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `stablecoinId` | `string`         | Pharos coin ID                                                                                                                   |
-| `mode`         | `string`         | One of `live`, `live-stale`, `curated-fallback`, `template-fallback`, `unavailable`                                              |
+| `mode`         | `string`         | One of `live`, `live-stale`, `curated-fallback`, `template-fallback`, `unavailable`. This is snapshot transport/freshness state, not the user-facing reserve badge semantics. |
 | `reserves`     | `ReserveSlice[]` | Reserve slices currently being shown to the user                                                                                 |
 | `estimated`    | `boolean`        | `true` only when using the classification template fallback                                                                      |
 | `liveAt`       | `number?`        | Unix seconds of the last successful live snapshot. Present only when live data exists                                            |
 | `source`       | `string?`        | Adapter key (for example `"infinifi"`, `"m0"`, `"openeden-usdo"`, or `"accountable"`). Present only when live data exists        |
 | `displayUrl`   | `string?`        | Human-readable source link shown in the UI. Present only when configured                                                         |
+| `displayBadge` | `object?`        | User-facing reserve badge semantics for authoritative live snapshots (`live`, `curated-validated`, or `proof`)                  |
 | `metadata`     | `object?`        | Adapter snapshot metadata for authoritative live snapshots. This can include feed-specific context such as `yieldBasisCollateralPct` for `crvusd` |
 | `provenance`   | `object?`        | Evidence-quality envelope for authoritative live snapshots (`evidenceClass`, `sourceModel`, optional `freshnessMode`, `scoringEligible`) |
 | `sync`         | `object?`        | Live sync state (`status`, `bootstrap`, `stale`, `lastAttemptedAt`, `lastSuccessAt`, `warnings`, `lastError`). Present only when live-enabled |
 
 `sync.warnings` can include both adapter-emitted warnings from the latest attempt and storage-integrity warnings when a stored live snapshot is rejected and the endpoint fails closed to a fallback presentation.
 
+When present, `displayBadge` has:
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `kind` | `"live" \| "curated-validated" \| "proof"` | User-facing reserve badge classification |
+| `label` | `string` | Badge label rendered by the frontend (`Live`, `Curated-Validated`, or `Proof`) |
+
 When present, `provenance` has:
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `evidenceClass` | `"independent" \| "static-validated" \| "weak-live-probe"` | Whether the snapshot is independently measured live composition, live validation over reviewed slices, or a weaker proof/liveness path |
+| `evidenceClass` | `"independent" \| "static-validated" \| "weak-live-probe"` | Evidence class used for scoring and provenance. This is related to, but not identical to, the UI badge semantics. |
 | `sourceModel` | `"dynamic-mix" \| "validated-static" \| "single-bucket"` | Structural shape of the reserve feed |
 | `freshnessMode` | `"verified" \| "unverified" \| "not-applicable" \| undefined` | Explicit freshness policy when the adapter emits one |
 | `scoringEligible` | `boolean` | Whether this exact snapshot is currently eligible for collateral-quality passthrough |

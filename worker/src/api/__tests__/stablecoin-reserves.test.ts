@@ -8,9 +8,10 @@ describe("handleStablecoinReserves", () => {
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
     expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=300, max-age=60");
-    const body = (await res.json()) as { mode: string; estimated: boolean; sync?: { bootstrap?: boolean } };
+    const body = (await res.json()) as { mode: string; estimated: boolean; displayBadge?: unknown; sync?: { bootstrap?: boolean } };
     expect(body.mode).toBe("curated-fallback");
     expect(body.estimated).toBe(false);
+    expect(body.displayBadge).toBeUndefined();
     expect(body.sync?.bootstrap).toBe(true);
   });
 
@@ -60,6 +61,10 @@ describe("handleStablecoinReserves", () => {
         freshnessMode?: string;
         yieldBasisCollateralPct?: number;
       };
+      displayBadge?: {
+        kind: string;
+        label: string;
+      };
       provenance?: {
         evidenceClass: string;
         sourceModel: string;
@@ -74,6 +79,10 @@ describe("handleStablecoinReserves", () => {
     expect(body.metadata).toEqual({
       freshnessMode: "not-applicable",
       yieldBasisCollateralPct: 89.7,
+    });
+    expect(body.displayBadge).toEqual({
+      kind: "live",
+      label: "Live",
     });
     expect(body.provenance).toEqual({
       evidenceClass: "independent",

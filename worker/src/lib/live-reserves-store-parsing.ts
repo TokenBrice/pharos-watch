@@ -1,15 +1,22 @@
 import {
   getLiveReserveAdapterDefinition,
 } from "@shared/lib/live-reserve-adapters";
+import {
+  buildReserveDisplayBadge,
+  getReserveDisplayBadgeKindForAdapter,
+  hasReserveDisplayBadgeForAdapter,
+  inferReserveDisplayBadgeKindFromEvidenceClass,
+} from "@shared/lib/live-reserve-display";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type {
   LiveReserveAdapterKey,
   LiveReserveEvidenceClass,
-  ReserveProvenanceView,
   LiveReserveFreshnessMode,
   LiveReserveSnapshotMetadata,
   LiveReserveSourceModel,
   LiveReserveWarning,
+  ReserveDisplayBadgeView,
+  ReserveProvenanceView,
 } from "@shared/types/live-reserves";
 import type { ReserveSlice } from "@shared/types/core";
 import { decodeJsonString } from "./cache-json";
@@ -249,6 +256,15 @@ export function buildReserveProvenanceView(
       && syncState?.lastStatus === "ok"
       && hasScoringEligibleLiveReserveFreshness(record.metadata),
   };
+}
+
+export function buildReserveDisplayBadgeView(
+  record: Pick<ReserveCompositionRecord, "source" | "adapterEvidenceClass">,
+): ReserveDisplayBadgeView {
+  const kind = hasReserveDisplayBadgeForAdapter(record.source)
+    ? getReserveDisplayBadgeKindForAdapter(record.source)
+    : inferReserveDisplayBadgeKindFromEvidenceClass(record.adapterEvidenceClass);
+  return buildReserveDisplayBadge(kind);
 }
 
 function canUseLegacySnapshotFallback(

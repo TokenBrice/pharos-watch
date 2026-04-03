@@ -68,6 +68,10 @@ describe("OverviewSection", () => {
           mode: "live",
           liveAt: 1_700_000_000,
           source: "infinifi",
+          displayBadge: {
+            kind: "live",
+            label: "Live",
+          },
           provenance: {
             evidenceClass: "independent",
             sourceModel: "dynamic-mix",
@@ -82,6 +86,7 @@ describe("OverviewSection", () => {
 
     expect(html).toContain("Independent live reserve disclosure");
     expect(html).toContain("freshness is not verified strongly enough for collateral scoring");
+    expect(html).toContain(">Live</span>");
   });
 
   it("renders a Yield Basis share note when live reserve metadata exposes it", () => {
@@ -99,6 +104,10 @@ describe("OverviewSection", () => {
           mode: "live",
           liveAt: 1_700_000_000,
           source: "crvusd",
+          displayBadge: {
+            kind: "live",
+            label: "Live",
+          },
           metadata: {
             yieldBasisCollateralPct: 89.7,
           },
@@ -126,6 +135,10 @@ describe("OverviewSection", () => {
           mode: "live",
           liveAt: 1_700_000_000,
           source: "frax",
+          displayBadge: {
+            kind: "curated-validated",
+            label: "Curated-Validated",
+          },
           provenance: {
             evidenceClass: "static-validated",
             sourceModel: "validated-static",
@@ -137,7 +150,8 @@ describe("OverviewSection", () => {
       />,
     );
 
-    expect(html).toContain("Live validation over reviewed reserve baseline");
+    expect(html).toContain("Curated-validated reserve baseline");
+    expect(html).toContain("Curated-Validated");
   });
 
   it("renders weak-probe reserve provenance messaging", () => {
@@ -155,6 +169,10 @@ describe("OverviewSection", () => {
           mode: "live",
           liveAt: 1_700_000_000,
           source: "single-asset",
+          displayBadge: {
+            kind: "proof",
+            label: "Proof",
+          },
           provenance: {
             evidenceClass: "weak-live-probe",
             sourceModel: "single-bucket",
@@ -166,7 +184,42 @@ describe("OverviewSection", () => {
       />,
     );
 
-    expect(html).toContain("Liveness probe over reviewed reserve baseline");
+    expect(html).toContain("Proof-based reserve view");
+    expect(html).toContain("Proof");
+  });
+
+  it("renders a live badge for live-fed static-validated sources without calling them curated-validated", () => {
+    const coin = TRACKED_META_BY_ID.get("usdd-tron-dao-reserve");
+    expect(coin).toBeDefined();
+
+    const html = renderToStaticMarkup(
+      <OverviewSection
+        stablecoinId="usdd-tron-dao-reserve"
+        coin={coin!}
+        summary={null}
+        reserves={{
+          reserves: [{ name: "Tracked vaults", pct: 100, risk: "medium" }],
+          estimated: false,
+          mode: "live",
+          liveAt: 1_700_000_000,
+          source: "usdd-data-platform",
+          displayBadge: {
+            kind: "live",
+            label: "Live",
+          },
+          provenance: {
+            evidenceClass: "static-validated",
+            sourceModel: "dynamic-mix",
+            scoringEligible: false,
+          },
+        }}
+        reserveFetchError={null}
+        isNavToken
+      />,
+    );
+
+    expect(html).toContain("Live reserve disclosure");
+    expect(html).toContain(">Live</span>");
   });
 
   it("renders the redemption backstop card when a score is available", () => {

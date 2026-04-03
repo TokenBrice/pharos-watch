@@ -73,6 +73,10 @@ describe("live-reserves-store", () => {
       mode: "live",
       liveAt: 1_000,
       reserves: LIVE_SLICES,
+      displayBadge: {
+        kind: "live",
+        label: "Live",
+      },
       provenance: {
         evidenceClass: "independent",
         sourceModel: "dynamic-mix",
@@ -82,6 +86,150 @@ describe("live-reserves-store", () => {
         status: "ok",
         bootstrap: false,
         stale: false,
+      },
+    });
+  });
+
+  it("maps curated-validated adapters to a curated-validated badge", async () => {
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [],
+        first: {
+          stablecoin_id: "frax-frax",
+          slices: JSON.stringify([{ name: "Reviewed baseline", pct: 100, risk: "low" }]),
+          fetched_at: 1_000,
+          source: "frax",
+          metadata: JSON.stringify({ freshnessMode: "unverified" }),
+          adapter_source_model: "validated-static",
+          adapter_evidence_class: "static-validated",
+        },
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [],
+        first: {
+          stablecoin_id: "frax-frax",
+          adapter_key: "frax",
+          breaker_key: "live-reserves:frax",
+          last_attempted_at: 1_000,
+          last_success_at: 1_000,
+          last_status: "ok",
+          warning_count: 0,
+          warnings: null,
+          last_error: null,
+          metadata: "{}",
+        },
+      },
+    ]);
+
+    const result = await resolveReserveResult(db, "frax-frax", 1_200);
+
+    expect(result).toMatchObject({
+      mode: "live",
+      displayBadge: {
+        kind: "curated-validated",
+        label: "Curated-Validated",
+      },
+      provenance: {
+        evidenceClass: "static-validated",
+        sourceModel: "validated-static",
+      },
+    });
+  });
+
+  it("keeps live badge semantics for live-fed adapters even when evidence class is static-validated", async () => {
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [],
+        first: {
+          stablecoin_id: "usdd-tron-dao-reserve",
+          slices: JSON.stringify([{ name: "Tracked vaults", pct: 100, risk: "medium" }]),
+          fetched_at: 1_000,
+          source: "usdd-data-platform",
+          metadata: JSON.stringify({ freshnessMode: "verified", sourceTimestamp: 1_000 }),
+          adapter_source_model: "dynamic-mix",
+          adapter_evidence_class: "static-validated",
+        },
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [],
+        first: {
+          stablecoin_id: "usdd-tron-dao-reserve",
+          adapter_key: "usdd-data-platform",
+          breaker_key: "live-reserves:usdd-data-platform",
+          last_attempted_at: 1_000,
+          last_success_at: 1_000,
+          last_status: "ok",
+          warning_count: 0,
+          warnings: null,
+          last_error: null,
+          metadata: "{}",
+        },
+      },
+    ]);
+
+    const result = await resolveReserveResult(db, "usdd-tron-dao-reserve", 1_200);
+
+    expect(result).toMatchObject({
+      mode: "live",
+      displayBadge: {
+        kind: "live",
+        label: "Live",
+      },
+      provenance: {
+        evidenceClass: "static-validated",
+        sourceModel: "dynamic-mix",
+      },
+    });
+  });
+
+  it("maps single-asset adapters to a proof badge", async () => {
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [],
+        first: {
+          stablecoin_id: "pyusd-paypal",
+          slices: JSON.stringify([{ name: "Issuer reserves", pct: 100, risk: "very-low" }]),
+          fetched_at: 1_000,
+          source: "single-asset",
+          metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
+          adapter_source_model: "single-bucket",
+          adapter_evidence_class: "weak-live-probe",
+        },
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [],
+        first: {
+          stablecoin_id: "pyusd-paypal",
+          adapter_key: "single-asset",
+          breaker_key: "live-reserves:single-asset",
+          last_attempted_at: 1_000,
+          last_success_at: 1_000,
+          last_status: "ok",
+          warning_count: 0,
+          warnings: null,
+          last_error: null,
+          metadata: "{}",
+        },
+      },
+    ]);
+
+    const result = await resolveReserveResult(db, "pyusd-paypal", 1_200);
+
+    expect(result).toMatchObject({
+      mode: "live",
+      displayBadge: {
+        kind: "proof",
+        label: "Proof",
+      },
+      provenance: {
+        evidenceClass: "weak-live-probe",
+        sourceModel: "single-bucket",
       },
     });
   });

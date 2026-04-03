@@ -8,11 +8,11 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { RISK_COLORS } from "@/lib/chart-colors";
-import type { ReserveSlice, ReserveRisk } from "@shared/types";
+import type { ReserveDisplayBadgeView, ReserveSlice, ReserveRisk } from "@shared/types";
 
 interface ReserveTreemapProps {
   reserves: ReserveSlice[];
-  isLive?: boolean;
+  badge?: ReserveDisplayBadgeView;
 }
 
 const RISK_LABELS: Record<ReserveRisk, string> = {
@@ -21,6 +21,15 @@ const RISK_LABELS: Record<ReserveRisk, string> = {
   medium: "Medium Risk",
   high: "High Risk",
   "very-high": "Very High Risk",
+};
+
+const RESERVE_BADGE_CLASSNAMES: Record<ReserveDisplayBadgeView["kind"], string> = {
+  live:
+    "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 ring-1 ring-inset ring-emerald-500/20",
+  "curated-validated":
+    "bg-sky-500/15 text-sky-700 dark:text-sky-300 ring-1 ring-inset ring-sky-500/20",
+  proof:
+    "bg-violet-500/15 text-violet-700 dark:text-violet-300 ring-1 ring-inset ring-violet-500/20",
 };
 
 function TreemapCell({
@@ -110,7 +119,7 @@ function ReserveTooltip({
   );
 }
 
-export function ReserveTreemap({ reserves, isLive }: ReserveTreemapProps) {
+export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
   const data = useMemo(() => reserves.map((r) => ({ ...r, size: r.pct })), [reserves]);
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
@@ -119,9 +128,9 @@ export function ReserveTreemap({ reserves, isLive }: ReserveTreemapProps) {
       <CardHeader className="pb-2">
         <CardTitle as="h2" className={`${DETAIL_SECTION_TITLE_CLASS} flex items-center gap-2`}>
           Reserve Composition
-          {isLive && (
-            <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
-              Live
+          {badge && (
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${RESERVE_BADGE_CLASSNAMES[badge.kind]}`}>
+              {badge.label}
             </span>
           )}
         </CardTitle>

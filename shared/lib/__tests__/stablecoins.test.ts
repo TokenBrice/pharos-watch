@@ -5,6 +5,7 @@ import commodityAsset from "../../data/stablecoins/commodity.json";
 import nonUsdAsset from "../../data/stablecoins/non-usd.json";
 import usdMajorAsset from "../../data/stablecoins/usd-major.json";
 import usdMinorAsset from "../../data/stablecoins/usd-minor.json";
+import { hasReserveDisplayBadgeForAdapter } from "../live-reserve-display";
 import { CANONICAL_ETH_RESERVE_RISK } from "../reserve-asset-risk";
 import {
   ACTIVE_STABLECOINS,
@@ -163,6 +164,16 @@ describe("tracked stablecoin metadata", () => {
       .map(([scope]) => scope);
 
     expect(overlappingScopes).toEqual([]);
+  });
+
+  it("assigns a reserve display badge to every configured live-reserve adapter", () => {
+    const missingBadgeAdapters = TRACKED_STABLECOINS
+      .filter((coin) => coin.liveReservesConfig)
+      .map((coin) => coin.liveReservesConfig!.adapter)
+      .filter((adapter, index, adapters) => adapters.indexOf(adapter) === index)
+      .filter((adapter) => !hasReserveDisplayBadgeForAdapter(adapter));
+
+    expect(missingBadgeAdapters).toEqual([]);
   });
 
   it("keeps direct ETH and WETH reserve mappings aligned with the canonical ETH risk tier", () => {
