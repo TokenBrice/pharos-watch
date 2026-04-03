@@ -16,12 +16,12 @@ describe("site-data route mapping", () => {
   it("resolves allowlisted site-data requests back to API paths", () => {
     expect(resolveSiteDataUpstreamPath("/_site-data/stablecoins")).toBe("/api/stablecoins");
     expect(resolveSiteDataUpstreamPath("/_site-data/stablecoin/usdt-tether")).toBe("/api/stablecoin/usdt-tether");
+    expect(resolveSiteDataUpstreamPath("/_site-data/stablecoin-summary/usdt-tether")).toBe("/api/stablecoin-summary/usdt-tether");
     expect(resolveSiteDataUpstreamPath("/_site-data/stablecoin-reserves/iusd-infinifi")).toBe("/api/stablecoin-reserves/iusd-infinifi");
   });
 
   it("rejects non-allowlisted or malformed site-data paths", () => {
     expect(resolveSiteDataUpstreamPath("/_site-data")).toBeNull();
-    expect(resolveSiteDataUpstreamPath("/_site-data/stablecoin-summary/usdt-tether")).toBeNull();
     expect(resolveSiteDataUpstreamPath("/_site-data/status")).toBeNull();
     expect(resolveSiteDataUpstreamPath("/api/stablecoins")).toBeNull();
     expect(isSiteDataPath("/_site-data/stablecoins")).toBe(true);
