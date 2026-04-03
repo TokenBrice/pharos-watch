@@ -25,25 +25,25 @@ Live reserve support is declared per coin in `StablecoinMeta.liveReservesConfig`
 
 `LiveReservesConfig` fields:
 
-| Field | Meaning |
-|-------|---------|
-| `adapter` | Registered adapter key from `shared/lib/live-reserve-adapters.ts` |
-| `version` | Increment when adapter semantics or parsing change materially |
-| `semantics` | One of `collateral-mix`, `protocol-reserve`, `attestation-mix`, `single-asset` |
-| `breakerScope` | Optional circuit-breaker grouping override; defaults to adapter key |
-| `display` | Optional UI/source link metadata (`url`, `label`) |
-| `inputs.primary` | Primary source input |
-| `inputs.fallbacks` | Optional fallback inputs |
-| `params` | Adapter-specific validated settings enforced by the shared live-reserve config schema |
+| Field              | Meaning                                                                               |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| `adapter`          | Registered adapter key from `shared/lib/live-reserve-adapters.ts`                     |
+| `version`          | Increment when adapter semantics or parsing change materially                         |
+| `semantics`        | One of `collateral-mix`, `protocol-reserve`, `attestation-mix`, `single-asset`        |
+| `breakerScope`     | Optional circuit-breaker grouping override; defaults to adapter key                   |
+| `display`          | Optional UI/source link metadata (`url`, `label`)                                     |
+| `inputs.primary`   | Primary source input                                                                  |
+| `inputs.fallbacks` | Optional fallback inputs                                                              |
+| `params`           | Adapter-specific validated settings enforced by the shared live-reserve config schema |
 
 ### Registry-Defined Adapter Classes
 
 The shared registry in `shared/lib/live-reserve-adapters.ts` defines two important adapter properties that are not user-configured per coin:
 
-| Property | Meaning |
-|----------|---------|
-| `sourceModel` | Distinguishes `dynamic-mix`, `validated-static`, and `single-bucket` reserve shapes |
-| `evidenceClass` | Distinguishes scoring-eligible `independent` feeds from `static-validated` and `weak-live-probe` feeds |
+| Property           | Meaning                                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `sourceModel`      | Distinguishes `dynamic-mix`, `validated-static`, and `single-bucket` reserve shapes                          |
+| `evidenceClass`    | Distinguishes scoring-eligible `independent` feeds from `static-validated` and `weak-live-probe` feeds       |
 | `sharedSourceMode` | Distinguishes per-coin fetches (`none`) from explicitly source-invariant result sharing (`source-invariant`) |
 
 - `dynamic-mix`: independently measured reserve compositions. These can be `independent` evidence for scoring when the sync state is clean.
@@ -67,11 +67,11 @@ USDD currently uses this path: the cron retries `latest-collateral` on Ethereum 
 
 Supported input kinds:
 
-| Kind | Meaning |
-|------|---------|
-| `http-json` | JSON API endpoint |
-| `http-html` | HTML page parsed by the adapter |
-| `indexer` | Indexed external data feed |
+| Kind          | Meaning                                                              |
+| ------------- | -------------------------------------------------------------------- |
+| `http-json`   | JSON API endpoint                                                    |
+| `http-html`   | HTML page parsed by the adapter                                      |
+| `indexer`     | Indexed external data feed                                           |
 | `onchain-evm` | On-chain EVM reads via `etherscan-proxy`, `alchemy`, or `public-rpc` |
 
 ### Snapshot Metadata and Warning Effects
@@ -80,18 +80,18 @@ Successful adapters can attach structured snapshot metadata that is stored on th
 
 Common metadata fields:
 
-| Field | Meaning |
-|-------|---------|
-| `sourceTimestamp` | Upstream disclosure timestamp, when independently verified |
-| `freshnessMode` | `verified`, `unverified`, or `not-applicable` |
-| `collateralizationRatio` | Reserve / liability or reserve / supply ratio when the adapter can quantify both sides honestly |
-| `details.freshnessSource` / `details.freshnessReason` | Adapter-supplied explanation when freshness is explicitly unverified |
-| `unknownExposurePct` | Share of reserve value that could not be mapped cleanly |
-| `supplyUsd`, `totalReserveUsd` | Adapter-level reserve / supply totals when exposed |
-| `totalAssetsUsd`, `totalLiabilitiesUsd`, `shareholderEquityUsd` | Raw attestation balance-sheet totals for coarse issuer feeds |
-| `immediateRedeemableUsd`, `immediateRedeemableRatio` | Current redeemable-capacity telemetry reused by redemption backstops |
-| `redemptionFeeBps` | Current live redemption fee telemetry when the source exposes it |
-| `buyFeeBpsMin`, `buyFeeBpsMax` | Optional raw buy-fee range context retained alongside normalized `redemptionFeeBps` |
+| Field                                                           | Meaning                                                                                         |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `sourceTimestamp`                                               | Upstream disclosure timestamp, when independently verified                                      |
+| `freshnessMode`                                                 | `verified`, `unverified`, or `not-applicable`                                                   |
+| `collateralizationRatio`                                        | Reserve / liability or reserve / supply ratio when the adapter can quantify both sides honestly |
+| `details.freshnessSource` / `details.freshnessReason`           | Adapter-supplied explanation when freshness is explicitly unverified                            |
+| `unknownExposurePct`                                            | Share of reserve value that could not be mapped cleanly                                         |
+| `supplyUsd`, `totalReserveUsd`                                  | Adapter-level reserve / supply totals when exposed                                              |
+| `totalAssetsUsd`, `totalLiabilitiesUsd`, `shareholderEquityUsd` | Raw attestation balance-sheet totals for coarse issuer feeds                                    |
+| `immediateRedeemableUsd`, `immediateRedeemableRatio`            | Current redeemable-capacity telemetry reused by redemption backstops                            |
+| `redemptionFeeBps`                                              | Current live redemption fee telemetry when the source exposes it                                |
+| `buyFeeBpsMin`, `buyFeeBpsMax`                                  | Optional raw buy-fee range context retained alongside normalized `redemptionFeeBps`             |
 
 `freshnessMode = "not-applicable"` is the expected scoring-eligible path for intrinsically current on-chain reads such as `evm-branch-balances`, where reserve composition comes from latest-state contract balances rather than a separately timestamped disclosure.
 
@@ -99,11 +99,11 @@ The registry now also declares the admissible `freshnessMode` set per adapter fa
 
 Warnings now carry both a display `severity` and an execution `effect`:
 
-| Effect | Meaning |
-|--------|---------|
-| `info` | Informational only; the snapshot can still be stored and remain `ok` |
+| Effect     | Meaning                                                                                                                          |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `info`     | Informational only; the snapshot can still be stored and remain `ok`                                                             |
 | `degraded` | Snapshot is stored, but the per-coin sync state becomes `degraded` and the feed is excluded from independent scoring passthrough |
-| `fatal` | Snapshot is rejected and the attempt is recorded as an `error` |
+| `fatal`    | Snapshot is rejected and the attempt is recorded as an `error`                                                                   |
 
 ---
 
@@ -149,11 +149,11 @@ coins sharing the same breaker key.
 
 Cron result statuses:
 
-| Status | When |
-|--------|------|
-| `ok` | At least one configured coin synced, and `failed + skipped <= ceil(total * 0.1)` |
-| `degraded` | At least one configured coin synced, and `failed + skipped > ceil(total * 0.1)` |
-| `error` | No configured coin synced successfully and at least one coin failed or was skipped |
+| Status     | When                                                                               |
+| ---------- | ---------------------------------------------------------------------------------- |
+| `ok`       | At least one configured coin synced, and `failed + skipped <= ceil(total * 0.1)`   |
+| `degraded` | At least one configured coin synced, and `failed + skipped > ceil(total * 0.1)`    |
+| `error`    | No configured coin synced successfully and at least one coin failed or was skipped |
 
 Per-coin warnings still matter operationally, but they affect `reserve_sync_state.last_status` for that coin (`degraded`) and the cron metadata warning list, not the run-level `CronResult.status`.
 
@@ -167,15 +167,15 @@ The cron loop is sequential. This is deliberate: reserve adapters can hit multip
 
 Latest successful live snapshot per live-enabled coin.
 
-| Column | Meaning |
-|--------|---------|
-| `stablecoin_id` | Canonical Pharos coin ID |
-| `slices` | JSON-serialized `ReserveSlice[]` |
-| `fetched_at` | Unix timestamp of the successful snapshot |
-| `source` | Adapter key that produced the snapshot |
-| `metadata` | Snapshot-scoped adapter telemetry (freshness, redeemable capacity, live fee, disclosure totals, etc.) |
-| `warning_count` / `warnings` | Warning summary persisted alongside the successful snapshot |
-| `adapter_source_model` / `adapter_evidence_class` | Registry-derived classification copied onto the snapshot row for authoritative reads |
+| Column                                            | Meaning                                                                                               |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `stablecoin_id`                                   | Canonical Pharos coin ID                                                                              |
+| `slices`                                          | JSON-serialized `ReserveSlice[]`                                                                      |
+| `fetched_at`                                      | Unix timestamp of the successful snapshot                                                             |
+| `source`                                          | Adapter key that produced the snapshot                                                                |
+| `metadata`                                        | Snapshot-scoped adapter telemetry (freshness, redeemable capacity, live fee, disclosure totals, etc.) |
+| `warning_count` / `warnings`                      | Warning summary persisted alongside the successful snapshot                                           |
+| `adapter_source_model` / `adapter_evidence_class` | Registry-derived classification copied onto the snapshot row for authoritative reads                  |
 
 ### `reserve_composition_history`
 
@@ -185,18 +185,18 @@ Append-only history of successful live snapshots. Every successful upsert also i
 
 Per-coin operational state for the most recent attempt.
 
-| Column | Meaning |
-|--------|---------|
-| `stablecoin_id` | Canonical Pharos coin ID |
-| `adapter_key` | Adapter used for the most recent attempt |
-| `breaker_key` | Per-source circuit-breaker key |
-| `last_attempted_at` | Unix timestamp of the latest attempt |
-| `last_success_at` | Unix timestamp of the latest successful live snapshot |
-| `last_status` | `ok`, `degraded`, `error`, or `skipped` |
-| `warning_count` | Number of adapter warnings |
-| `warnings` | JSON-serialized warning objects |
-| `last_error` | Latest failure message, if any |
-| `metadata` | Attempt-scoped operational metadata only (for example skip/failure reasons or warning-effect counts), not authoritative reserve telemetry |
+| Column              | Meaning                                                                                                                                   |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `stablecoin_id`     | Canonical Pharos coin ID                                                                                                                  |
+| `adapter_key`       | Adapter used for the most recent attempt                                                                                                  |
+| `breaker_key`       | Per-source circuit-breaker key                                                                                                            |
+| `last_attempted_at` | Unix timestamp of the latest attempt                                                                                                      |
+| `last_success_at`   | Unix timestamp of the latest successful live snapshot                                                                                     |
+| `last_status`       | `ok`, `degraded`, `error`, or `skipped`                                                                                                   |
+| `warning_count`     | Number of adapter warnings                                                                                                                |
+| `warnings`          | JSON-serialized warning objects                                                                                                           |
+| `last_error`        | Latest failure message, if any                                                                                                            |
+| `metadata`          | Attempt-scoped operational metadata only (for example skip/failure reasons or warning-effect counts), not authoritative reserve telemetry |
 
 ### `reserve_sync_attempt_history`
 
@@ -249,48 +249,48 @@ When a coin has both an old latest-success snapshot and a newer failing attempt 
 
 Successful responses return `StablecoinReservesResponse` with one of these modes:
 
-| Mode | Meaning |
-|------|---------|
-| `live` | Fresh live snapshot from `reserve_composition` |
-| `live-stale` | Live snapshot exists, but is older than 48 hours |
-| `curated-fallback` | Live snapshot unavailable; falling back to curated `StablecoinMeta.reserves` |
-| `template-fallback` | Live snapshot unavailable; falling back to reserve templates from `getReserves()` |
-| `unavailable` | Coin is live-enabled, but neither live data nor fallback reserve presentation is available |
+| Mode                | Meaning                                                                                    |
+| ------------------- | ------------------------------------------------------------------------------------------ |
+| `live`              | Fresh live snapshot from `reserve_composition`                                             |
+| `live-stale`        | Live snapshot exists, but is older than 48 hours                                           |
+| `curated-fallback`  | Live snapshot unavailable; falling back to curated `StablecoinMeta.reserves`               |
+| `template-fallback` | Live snapshot unavailable; falling back to reserve templates from `getReserves()`          |
+| `unavailable`       | Coin is live-enabled, but neither live data nor fallback reserve presentation is available |
 
 `live` / `live-stale` only apply when the stored snapshot matches the latest successful sync state and passes strict integrity validation. Orphaned partial writes or corrupt stored snapshots fail closed to the fallback modes.
 
 Cache control:
 
-| Response mode | Cache-Control |
-|---------------|---------------|
-| `live` | `public, s-maxage=3600, max-age=300` |
-| `live-stale`, fallback / unavailable modes | `public, s-maxage=300, max-age=60` |
+| Response mode                              | Cache-Control                        |
+| ------------------------------------------ | ------------------------------------ |
+| `live`                                     | `public, s-maxage=3600, max-age=300` |
+| `live-stale`, fallback / unavailable modes | `public, s-maxage=300, max-age=60`   |
 
 The optional `provenance` object is present only when the response is serving an authoritative `live` or `live-stale` snapshot:
 
-| Field | Meaning |
-|-------|---------|
-| `evidenceClass` | `independent`, `static-validated`, or `weak-live-probe` |
-| `sourceModel` | `dynamic-mix`, `validated-static`, or `single-bucket` |
-| `freshnessMode` | Optional explicit freshness policy (`verified`, `unverified`, `not-applicable`) |
+| Field             | Meaning                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------- |
+| `evidenceClass`   | `independent`, `static-validated`, or `weak-live-probe`                               |
+| `sourceModel`     | `dynamic-mix`, `validated-static`, or `single-bucket`                                 |
+| `freshnessMode`   | Optional explicit freshness policy (`verified`, `unverified`, `not-applicable`)       |
 | `scoringEligible` | Whether the current snapshot is eligible for collateral-quality passthrough right now |
 
 The optional `sync` object exposes the last operational state:
 
-| Field | Meaning |
-|-------|---------|
-| `enabled` | Coin is live-enabled |
-| `status` | Last sync status (`ok`, `degraded`, `error`, `skipped`) |
-| `stale` | Latest successful live snapshot is older than 48 hours |
-| `bootstrap` | No successful live snapshot has been recorded yet |
-| `lastAttemptedAt` | Latest attempt timestamp, when present |
-| `lastSuccessAt` | Latest success timestamp, when present |
-| `warnings[]` | Warning messages surfaced by the latest attempt and, when relevant, storage-integrity warnings injected by the fail-closed resolver |
-| `lastError` | Most recent adapter error message (truncated to 200 chars), when present |
+| Field             | Meaning                                                                                                                             |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `enabled`         | Coin is live-enabled                                                                                                                |
+| `status`          | Last sync status (`ok`, `degraded`, `error`, `skipped`)                                                                             |
+| `stale`           | Latest successful live snapshot is older than 48 hours                                                                              |
+| `bootstrap`       | No successful live snapshot has been recorded yet                                                                                   |
+| `lastAttemptedAt` | Latest attempt timestamp, when present                                                                                              |
+| `lastSuccessAt`   | Latest success timestamp, when present                                                                                              |
+| `warnings[]`      | Warning messages surfaced by the latest attempt and, when relevant, storage-integrity warnings injected by the fail-closed resolver |
+| `lastError`       | Most recent adapter error message (truncated to 200 chars), when present                                                            |
 
 ### Edge Cache Implications for Monitoring
 
-When a coin has `mode="live"`, the response is edge-cached for 1 hour (`s-maxage=3600`). If the adapter starts failing *after* a successful response was cached:
+When a coin has `mode="live"`, the response is edge-cached for 1 hour (`s-maxage=3600`). If the adapter starts failing _after_ a successful response was cached:
 
 - The public API will continue serving the **cached successful response** for up to 1 hour
 - The `sync` object in the cached response will show the **previous** sync state, not the current failure
@@ -306,37 +306,39 @@ Fallback/degraded responses use a shorter edge cache (`s-maxage=300`, 5 minutes)
 
 Registered in `worker/src/cron/reserve-adapters/index.ts`.
 
-| Adapter | Primary input | Semantics | Configured coins |
-|---------|---------------|-----------|------------------|
-| `accountable` | `http-json` | `protocol-reserve` | 7 |
-| `asymmetry` | `http-json` | `collateral-mix` | 1 |
-| `btcfi` | `http-json` | `collateral-mix` | 1 |
-| `chainlink-nav` | `onchain-evm` | `single-asset` | 3 |
-| `chainlink-por` | `onchain-evm` | `attestation-mix` | 1 |
-| `circle-transparency` | `http-html` | `attestation-mix` | 2 |
-| `collateral-positions-api` | `http-json` | `collateral-mix` | 2 |
-| `crvusd` | `http-json` | `collateral-mix` | 1 |
-| `curated-validated` | `onchain-evm` | `attestation-mix` / `collateral-mix` | 24 |
-| `dola-inverse` | `http-json` | `collateral-mix` | 1 |
-| `erc4626-single-asset` | `onchain-evm` | `single-asset` | 2 |
-| `ethena` | `http-json` | `collateral-mix` | 1 |
-| `evm-branch-balances` | `onchain-evm` | `collateral-mix` | 3 |
-| `falcon` | `http-json` | `collateral-mix` | 1 |
-| `fdusd-transparency` | `http-html` | `attestation-mix` | 1 |
-| `frax` | `http-json` | `attestation-mix` | 2 |
-| `fx` | `http-json` | `collateral-mix` | 1 |
-| `gho` | `onchain-evm` | `protocol-reserve` | 1 |
-| `infinifi` | `http-json` | `collateral-mix` | 1 |
-| `m0` | `http-json` | `protocol-reserve` | 4 |
-| `mento` | `http-html` | `collateral-mix` | 3 |
-| `openeden-usdo` | `http-json` | `collateral-mix` | 1 |
-| `re-metrics` | `http-html` | `collateral-mix` | 1 |
-| `reservoir` | `http-json` | `protocol-reserve` | 1 |
-| `sgforge-coinvertible` | `http-html` | `attestation-mix` | 1 |
-| `single-asset` | `onchain-evm` / `http-json` | `single-asset` | 48 |
-| `sky-makercore` | `http-json` | `collateral-mix` | 2 |
-| `tether` | `http-json` | `attestation-mix` | 1 |
-| `usdd-data-platform` | `http-json` | `collateral-mix` | 1 |
+| Adapter                    | Primary input               | Semantics                            | Configured coins |
+| -------------------------- | --------------------------- | ------------------------------------ | ---------------- |
+| `accountable`              | `http-json`                 | `protocol-reserve`                   | 7                |
+| `asymmetry`                | `http-json`                 | `collateral-mix`                     | 1                |
+| `btcfi`                    | `http-json`                 | `collateral-mix`                     | 1                |
+| `chainlink-nav`            | `onchain-evm`               | `single-asset`                       | 3                |
+| `chainlink-por`            | `onchain-evm`               | `attestation-mix`                    | 1                |
+| `circle-transparency`      | `http-html`                 | `attestation-mix`                    | 2                |
+| `collateral-positions-api` | `http-json`                 | `collateral-mix`                     | 2                |
+| `crvusd`                   | `http-json`                 | `collateral-mix`                     | 1                |
+| `curated-validated`        | `onchain-evm`               | `attestation-mix` / `collateral-mix` | 24               |
+| `dola-inverse`             | `http-json`                 | `collateral-mix`                     | 1                |
+| `erc4626-single-asset`     | `onchain-evm`               | `single-asset`                       | 2                |
+| `ethena`                   | `http-json`                 | `collateral-mix`                     | 1                |
+| `evm-branch-balances`      | `onchain-evm`               | `collateral-mix`                     | 3                |
+| `falcon`                   | `http-json`                 | `collateral-mix`                     | 1                |
+| `fdusd-transparency`       | `http-html`                 | `attestation-mix`                    | 1                |
+| `frax`                     | `http-json`                 | `attestation-mix`                    | 2                |
+| `fx`                       | `http-json`                 | `collateral-mix`                     | 1                |
+| `gho`                      | `onchain-evm`               | `protocol-reserve`                   | 1                |
+| `infinifi`                 | `http-json`                 | `collateral-mix`                     | 1                |
+| `m0`                       | `http-json`                 | `protocol-reserve`                   | 4                |
+| `mento`                    | `http-html`                 | `collateral-mix`                     | 3                |
+| `openeden-usdo`            | `http-json`                 | `collateral-mix`                     | 1                |
+| `re-metrics`               | `http-html`                 | `collateral-mix`                     | 1                |
+| `reservoir`                | `http-json`                 | `protocol-reserve`                   | 1                |
+| `sgforge-coinvertible`     | `http-html`                 | `attestation-mix`                    | 1                |
+| `single-asset`             | `onchain-evm` / `http-json` | `single-asset`                       | 48               |
+| `sky-makercore`            | `http-json`                 | `collateral-mix`                     | 2                |
+| `tether`                   | `http-json`                 | `attestation-mix`                    | 1                |
+| `usdd-data-platform`       | `http-json`                 | `collateral-mix`                     | 1                |
+
+`crvusd` now combines the direct Ethereum LLAMMA collateral feed from `https://prices.curve.finance/v1/crvusd/markets` with on-chain Yield Basis exposure. The adapter walks the Ethereum Yield Basis factory (`factory.yieldbasis.eth`), unwraps each market's LT position with `preview_emergency_withdraw(totalSupply)`, values the resulting external asset balances with DefiLlama prices, and folds those balances into the same BTC / ETH reserve buckets as the direct Curve markets. `crvusd-curve` config version `2` marks that semantic expansion.
 
 GHO-specific note:
 the `gho` adapter now values reviewed mainnet GSM backing directly from live onchain GSM state and leaves the remainder of GHO supply in an aggregated residual issuance / reserve-buffer slice. `immediateRedeemableUsd` only counts GSM modules that are not frozen or seized, while `redemptionFeeBps` is normalized to the current worst tracked GSM buy fee and the raw min/max values are retained as `buyFeeBpsMin` / `buyFeeBpsMax`.
@@ -377,19 +379,19 @@ Adapter helpers now live in a small helper family, with `worker/src/cron/reserve
 
 ## File Index
 
-| File | Role |
-|------|------|
-| `shared/types/live-reserves.ts` | `LiveReservesConfig`, `StablecoinReservesResponse`, sync-state types |
-| `shared/lib/live-reserve-adapters.ts` | Shared adapter registry, source/evidence classes, validation policy, and config schemas |
-| `shared/lib/stablecoins/index.ts` | Loader for per-coin `liveReservesConfig` declarations backed by `shared/data/stablecoins/*.json` |
-| `worker/src/cron/sync-live-reserves.ts` | Hourly sync orchestration and cron result statuses |
-| `worker/src/cron/reserve-adapters/index.ts` | Adapter registry |
-| `worker/src/cron/reserve-adapters/helpers.ts` | Shared adapter fetch / normalization helpers |
-| `worker/src/lib/live-reserves-store.ts` | Public facade over the live-reserve store helpers |
-| `worker/src/lib/live-reserves-store-read.ts` | D1 read/query helpers and authoritative row loaders |
-| `worker/src/lib/live-reserves-store-write.ts` | D1 write paths and history pruning |
-| `worker/src/lib/live-reserves-store-view.ts` | Snapshot resolution, status overview, metadata views, 48h freshness contract |
-| `worker/src/lib/live-reserves-store-shared.ts` | Shared live-reserve store types, constants, and row mapping |
-| `worker/src/api/stablecoin-reserves.ts` | Public API handler |
-| `src/hooks/use-stablecoin-reserves.ts` | Frontend query hook |
-| `src/hooks/use-stablecoin-detail-view-model.ts` | Detail-page integration |
+| File                                            | Role                                                                                             |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `shared/types/live-reserves.ts`                 | `LiveReservesConfig`, `StablecoinReservesResponse`, sync-state types                             |
+| `shared/lib/live-reserve-adapters.ts`           | Shared adapter registry, source/evidence classes, validation policy, and config schemas          |
+| `shared/lib/stablecoins/index.ts`               | Loader for per-coin `liveReservesConfig` declarations backed by `shared/data/stablecoins/*.json` |
+| `worker/src/cron/sync-live-reserves.ts`         | Hourly sync orchestration and cron result statuses                                               |
+| `worker/src/cron/reserve-adapters/index.ts`     | Adapter registry                                                                                 |
+| `worker/src/cron/reserve-adapters/helpers.ts`   | Shared adapter fetch / normalization helpers                                                     |
+| `worker/src/lib/live-reserves-store.ts`         | Public facade over the live-reserve store helpers                                                |
+| `worker/src/lib/live-reserves-store-read.ts`    | D1 read/query helpers and authoritative row loaders                                              |
+| `worker/src/lib/live-reserves-store-write.ts`   | D1 write paths and history pruning                                                               |
+| `worker/src/lib/live-reserves-store-view.ts`    | Snapshot resolution, status overview, metadata views, 48h freshness contract                     |
+| `worker/src/lib/live-reserves-store-shared.ts`  | Shared live-reserve store types, constants, and row mapping                                      |
+| `worker/src/api/stablecoin-reserves.ts`         | Public API handler                                                                               |
+| `src/hooks/use-stablecoin-reserves.ts`          | Frontend query hook                                                                              |
+| `src/hooks/use-stablecoin-detail-view-model.ts` | Detail-page integration                                                                          |

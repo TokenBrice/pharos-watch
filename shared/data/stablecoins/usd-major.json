@@ -3370,7 +3370,7 @@
     ],
     "liveReservesConfig": {
       "adapter": "crvusd",
-      "version": 1,
+      "version": 2,
       "semantics": "collateral-mix",
       "breakerScope": "crvusd-curve",
       "display": {
