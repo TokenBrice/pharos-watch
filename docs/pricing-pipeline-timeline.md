@@ -1,6 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v3.91` (2026-02-01 -> 2026-04-02).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v3.92` (2026-02-01 -> 2026-04-03).
+
+---
+
+## v3.92 - Retained-pool DEX bridge publication (Apr 3, 2026)
+
+**Commit:** `unreleased`
+
+- `dex_prices` now publishes only from the final retained priced-pool set after the full liquidity scoring filters run
+- Raw discovery observations that fail dedupe or retained-pool admission can no longer leak into promoted DEX bridge sources or `dexPriceCheck`
+- Primary-pricing DEX bridge inputs now stay aligned with challenger publication and liquidity UI detail
 
 ---
 

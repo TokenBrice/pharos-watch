@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "3.91",
+  currentVersion: "3.92",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "3.92",
+      title: "Retained-pool DEX bridge publication",
+      date: "2026-04-03",
+      effectiveAt: 1775217600,
+      summary:
+        "The DEX bridge now publishes only from the final retained pool set, so raw discovery observations that fail dedupe or quality admission can no longer leak into primary-pricing DEX aggregates.",
+      impact: [
+        "dex_prices now rebuilds its aggregate and per-protocol bridge sources from retained priced pools after the full liquidity scoring filters run",
+        "Promoted DEX bridge inputs and peg-summary dexPriceCheck now stay aligned with the same retained pool surface used by challenger publication and liquidity UI detail",
+        "Skipped duplicate or low-quality discovery rows can no longer create synthetic near-peg DEX bridge marks for assets whose retained pools still show a depeg",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.91",
       title: "Protocol-level pool-challenge divergence gating",

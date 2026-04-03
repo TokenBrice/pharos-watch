@@ -12,7 +12,7 @@ import { batchExecute } from "../../lib/db";
 import { getCache } from "../../lib/db-cache";
 import { initMetrics } from "../dex-liquidity/pool-helpers";
 import { computeDepthStability, computeDexPrices, computeStablecoinScores } from "../dex-liquidity/scoring";
-import type { DexPriceObs } from "../dex-liquidity/types";
+import type { PoolEntry } from "../dex-liquidity/types";
 
 interface QueryConfig {
   match: string;
@@ -69,6 +69,22 @@ function makeQueryDb(configs: QueryConfig[]): D1Database & { history: Array<{ sq
     dump: async () => new ArrayBuffer(0),
     history,
   } as unknown as D1Database & { history: Array<{ sql: string; binds: unknown[] }> };
+}
+
+function makeDexPricePool(overrides: Partial<PoolEntry> & Pick<PoolEntry, "poolId" | "project" | "chain" | "tvlUsd">): PoolEntry {
+  return {
+    poolId: overrides.poolId,
+    project: overrides.project,
+    chain: overrides.chain,
+    tvlUsd: overrides.tvlUsd,
+    symbol: overrides.symbol ?? "PAIR",
+    volumeUsd1d: overrides.volumeUsd1d ?? 0,
+    volumeUsd7d: overrides.volumeUsd7d ?? null,
+    poolType: overrides.poolType ?? "generic",
+    source: overrides.source ?? "gecko_terminal",
+    ...(typeof overrides.price === "number" ? { price: overrides.price } : {}),
+    ...(overrides.extra ? { extra: overrides.extra } : {}),
+  };
 }
 
 describe("dex-liquidity scoring", () => {
@@ -486,7 +502,7 @@ describe("dex-liquidity scoring", () => {
   });
 
   it("returns early on empty observations and persists weighted-median DEX prices", async () => {
-    await computeDexPrices(makeQueryDb([]), new Map<string, DexPriceObs[]>(), 1_700_000_000);
+    await computeDexPrices(makeQueryDb([]), new Map<string, PoolEntry[]>(), 1_700_000_000);
 
     expect(getCache).not.toHaveBeenCalled();
     expect(batchExecute).not.toHaveBeenCalled();
@@ -503,19 +519,46 @@ describe("dex-liquidity scoring", () => {
 
     await computeDexPrices(
       makeQueryDb([]),
-      new Map<string, DexPriceObs[]>([
+      new Map<string, PoolEntry[]>([
         [
           "usdt-tether",
           [
-            { price: 0.98, tvl: 40, chain: "Ethereum", protocol: "curve" },
-            { price: 1.0, tvl: 35, chain: "Ethereum", protocol: "curve" },
-            { price: 1.02, tvl: 25, chain: "Base", protocol: "uniswap-v3" },
+            makeDexPricePool({
+              poolId: "ethereum:curve-1",
+              project: "curve",
+              chain: "Ethereum",
+              tvlUsd: 40,
+              price: 0.98,
+              source: "dl",
+            }),
+            makeDexPricePool({
+              poolId: "ethereum:curve-2",
+              project: "curve",
+              chain: "Ethereum",
+              tvlUsd: 35,
+              price: 1.0,
+              source: "dl",
+            }),
+            makeDexPricePool({
+              poolId: "base:uni-1",
+              project: "uniswap-v3",
+              chain: "Base",
+              tvlUsd: 25,
+              price: 1.02,
+              source: "direct_api",
+            }),
           ],
         ],
         [
           "usdc-circle",
           [
-            { price: 1.2, tvl: 10, chain: "Base", protocol: "alien-base" },
+            makeDexPricePool({
+              poolId: "base:alien-1",
+              project: "alien-base",
+              chain: "Base",
+              tvlUsd: 10,
+              price: 1.2,
+            }),
           ],
         ],
       ]),
@@ -562,7 +605,16 @@ describe("dex-liquidity scoring", () => {
     await computeDexPrices(
       makeQueryDb([]),
       new Map([
-        ["usdt-tether", [{ price: 0.99, tvl: 5, chain: "Ethereum", protocol: "curve" }]],
+        ["usdt-tether", [
+          makeDexPricePool({
+            poolId: "ethereum:curve-1",
+            project: "curve",
+            chain: "Ethereum",
+            tvlUsd: 5,
+            price: 0.99,
+            source: "dl",
+          }),
+        ]],
       ]),
       1_700_000_002,
     );
@@ -595,7 +647,16 @@ describe("dex-liquidity scoring", () => {
         },
       ]),
       new Map([
-        ["usdt-tether", [{ price: 0.9999, tvl: 100_000, chain: "Ethereum", protocol: "curve" }]],
+        ["usdt-tether", [
+          makeDexPricePool({
+            poolId: "ethereum:curve-1",
+            project: "curve",
+            chain: "Ethereum",
+            tvlUsd: 100_000,
+            price: 0.9999,
+            source: "dl",
+          }),
+        ]],
       ]),
       1_700_000_003,
     );
@@ -620,7 +681,7 @@ describe("dex-liquidity scoring", () => {
           ],
         },
       ]),
-      new Map<string, DexPriceObs[]>(),
+      new Map<string, PoolEntry[]>(),
       1_700_000_004,
     );
 
@@ -631,5 +692,59 @@ describe("dex-liquidity scoring", () => {
 
     expect(prepared).toHaveLength(2);
     expect(prepared.every((stmt) => stmt.sql.includes("DELETE FROM dex_prices"))).toBe(true);
+  });
+
+  it("publishes dex prices from retained priced pools instead of pre-retention discovery observations", async () => {
+    vi.mocked(getCache).mockResolvedValueOnce({
+      value: JSON.stringify({
+        peggedAssets: [
+          { id: "usr-resolv", symbol: "USR", price: 0.1129 },
+        ],
+      }),
+      updatedAt: 1_700_000_000,
+    });
+
+    await computeDexPrices(
+      makeQueryDb([]),
+      new Map([
+        ["usr-resolv", [
+          makeDexPricePool({
+            poolId: "ethereum:curve-1",
+            project: "curve",
+            chain: "Ethereum",
+            tvlUsd: 64_711,
+            price: 0.1152,
+            source: "dl",
+          }),
+          makeDexPricePool({
+            poolId: "ethereum:uniswap-1",
+            project: "uniswap",
+            chain: "Ethereum",
+            tvlUsd: 627_528,
+            price: 0.115,
+            source: "gecko_terminal",
+          }),
+        ]],
+      ]),
+      1_700_000_005,
+    );
+
+    const latestBatchCall = vi.mocked(batchExecute).mock.calls[vi.mocked(batchExecute).mock.calls.length - 1]!;
+    const [, statements] = latestBatchCall;
+    const upserts = statements as PreparedStatementWithMeta[];
+    expect(upserts[0]?.boundValues).toEqual([
+      "usr-resolv",
+      "USR",
+      0.115,
+      2,
+      692_239,
+      186,
+      0.1129,
+      JSON.stringify([
+        { protocol: "uniswap", chain: "Ethereum", price: 0.115, tvl: 627_528 },
+        { protocol: "curve", chain: "Ethereum", price: 0.1152, tvl: 64_711 },
+      ]),
+      1_700_000_005,
+    ]);
   });
 });

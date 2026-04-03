@@ -213,9 +213,9 @@ export async function mergeStagedPools(
 
     // Extract price observations BEFORE dedup check.
     // DL yields pools provide pool metrics but never prices; CG/GT staged pools
-    // carry priceUsd. Dedup correctly prevents double-counting TVL in dex_liquidity,
-    // but price observations feed a separate table (dex_prices) via TVL-weighted
-    // median that handles multiple observations gracefully.
+    // carry priceUsd. These observations still feed diagnostics and later retained-
+    // pool price eligibility, but dex_prices is now rebuilt only from the final
+    // retained pool set after dedupe and filtering.
     if (
       stagedPool.priceUsd != null &&
       stagedPool.priceUsd > 0 &&

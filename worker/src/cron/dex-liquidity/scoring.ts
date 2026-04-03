@@ -497,6 +497,38 @@ function aggregateProtocolSources(
   return aggregated.sort((a, b) => b.tvl - a.tvl || a.protocol.localeCompare(b.protocol));
 }
 
+function buildDexPriceObservationsFromRetainedPools(
+  retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>,
+): Map<string, DexPriceObs[]> {
+  const observations = new Map<string, DexPriceObs[]>();
+
+  for (const [stablecoinId, pools] of retainedPoolsByStablecoin) {
+    const pricedPools = pools
+      .filter((pool) => (
+        typeof pool.price === "number" &&
+        Number.isFinite(pool.price) &&
+        pool.price > 0 &&
+        Number.isFinite(pool.tvlUsd) &&
+        pool.tvlUsd > 0
+      ))
+      .map((pool) => ({
+        price: pool.price!,
+        tvl: pool.tvlUsd,
+        chain: pool.chain,
+        protocol: pool.project,
+        poolKey: pool.poolId,
+        identityConfidence: "exact" as const,
+        sourceFamily: pool.source,
+      }));
+
+    if (pricedPools.length > 0) {
+      observations.set(stablecoinId, pricedPools);
+    }
+  }
+
+  return observations;
+}
+
 /** Compute HHI, durability, and 6-component composite score per stablecoin. */
 export async function computeStablecoinScores(
   db: D1Database,
@@ -687,12 +719,13 @@ export async function computeDepthStability(
   }
 }
 
-/** Compute DEX-implied prices from all observations (TVL-weighted median) and persist to dex_prices. */
+/** Compute DEX-implied prices from the final retained pool set and persist to dex_prices. */
 export async function computeDexPrices(
   db: D1Database,
-  priceObservations: Map<string, DexPriceObs[]>,
+  retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>,
   nowSec: number,
 ): Promise<void> {
+  const priceObservations = buildDexPriceObservationsFromRetainedPools(retainedPoolsByStablecoin);
   const existingRows = await db
     .prepare("SELECT stablecoin_id FROM dex_prices")
     .all<{ stablecoin_id: string }>();

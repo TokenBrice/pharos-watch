@@ -1,6 +1,16 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v4.6` (2026-02-19 -> 2026-03-24).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v4.7` (2026-02-19 -> 2026-04-03).
+
+---
+
+## v4.7 - Retained-pool DEX price publication (Apr 3, 2026)
+
+**Commit:** `unreleased`
+
+- `dex_prices` is now computed from the final retained priced-pool surface after dedupe, caps, and scoring filters
+- Pools that are skipped as duplicates or dropped by retained-pool quality filters can no longer keep influencing `dexPriceUsd` or `price_sources_json`
+- The published DEX price bridge now matches the same retained pool surface used by challenger publication and liquidity UI detail
 
 ---
 

@@ -317,19 +317,23 @@ The liquidity overview's `Protocol TVL Breakdown` legend is capped at 10 entries
 
 1. Collect price observations from all source families during data fetching phase
 2. Merge all observations into a single map keyed by stablecoin ID
-3. Collapse duplicate observations of the same physical pool (exact pool id or unique derived identity) so one pool only carries weight once
-4. Compute TVL-weighted median per stablecoin (robust against distorted pools from any single source)
-5. Compare with primary price from D1 cache to compute `deviation_from_primary_bps`
-6. Store in `dex_prices` with one aggregated JSON entry per protocol in `price_sources_json`
-7. Publish qualifying challenger pools from the full retained pool set into `dex_price_challenger_snapshots` and `dex_price_challengers`
-8. Retire any pre-existing `dex_prices` rows whose stablecoin has no observations in the latest successful scoring run, so the table reflects current DEX coverage rather than last-seen coverage
+3. Run pool dedupe, retention filters, and protocol-level TVL caps for the main liquidity scoring surface
+4. Rebuild DEX price observations only from retained pools that still carry a usable stablecoin `price`
+5. Collapse any remaining duplicate retained observations of the same physical pool so one pool only carries weight once
+6. Compute TVL-weighted median per stablecoin from that retained priced-pool surface
+7. Compare with primary price from D1 cache to compute `deviation_from_primary_bps`
+8. Store in `dex_prices` with one aggregated JSON entry per protocol in `price_sources_json`
+9. Publish qualifying challenger pools from the full retained pool set into `dex_price_challenger_snapshots` and `dex_price_challengers`
+10. Retire any pre-existing `dex_prices` rows whose stablecoin has no observations in the latest successful scoring run, so the table reflects current DEX coverage rather than last-seen coverage
+
+Raw pre-retention discovery observations no longer write directly into `dex_prices`. If a pool is skipped as a duplicate or dropped by retained-pool quality filters, it cannot keep influencing `dexPriceUsd` or `price_sources_json`.
 
 DEX observation validation now loads the current FX / gold / silver references **once per cron entrypoint** and passes them through the scoring and discovery paths. In normal operation this means:
 
 - fiat pegs validate against live FX references, not only hardcoded fallback ranges
 - gold/silver pegs validate against live spot references, scaled by `commodityOunces` for fractional tokens
 
-The primary-pricing bridge now reads `dex_prices.price_sources_json` as a per-protocol aggregate (`fluid`, `balancer`, `raydium`, `orca`, etc.) rather than as repeated individual pool rows. Individual pool challenge reads instead come from the dedicated challenger tables published from the full retained pool set, so consensus promotion, depeg confirmation, and UI top-pool display no longer share the same storage shape. When a promoted per-protocol bridge source exists for an asset, the overlapping `dex-promoted` aggregate is withheld from primary consensus so the same DEX observation family cannot self-confirm. A lone promoted DEX protocol is also suppressed from primary consensus unless it is corroborated by another promoted DEX protocol, agrees with a non-DEX source inside the live threshold, or no non-DEX source exists for that asset.
+The primary-pricing bridge now reads `dex_prices.price_sources_json` as a per-protocol aggregate (`fluid`, `balancer`, `raydium`, `orca`, etc.) rather than as repeated individual pool rows. Those aggregates are rebuilt from the same retained pool surface used by challenger publication and UI liquidity detail, so skipped discovery rows cannot bypass retained-pool admission just because they emitted an early price observation. Individual pool challenge reads instead come from the dedicated challenger tables published from the full retained pool set, so consensus promotion, depeg confirmation, and UI top-pool display no longer share the same storage shape. When a promoted per-protocol bridge source exists for an asset, the overlapping `dex-promoted` aggregate is withheld from primary consensus so the same DEX observation family cannot self-confirm. A lone promoted DEX protocol is also suppressed from primary consensus unless it is corroborated by another promoted DEX protocol, agrees with a non-DEX source inside the live threshold, or no non-DEX source exists for that asset.
 
 Every source family now uses the same minimum liquidity rule for DEX prices: a pool must contribute at least `$50K` of liquidity at observation time. For staged discovery rows, the floor is applied after freshness confidence decay.
 

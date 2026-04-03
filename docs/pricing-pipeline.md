@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v3.91`
+- **Current methodology version:** `v3.92`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -140,6 +140,7 @@ Several live providers need normalization before their prices can safely enter c
 - **DEX bridge overlap guard:** when a promoted per-protocol DEX bridge source exists for an asset, the overlapping `dex-promoted` aggregate is withheld so the same bridge observation family cannot self-confirm.
 - **Promoted DEX corroboration gate:** a lone promoted DEX protocol is only admitted into primary consensus when it agrees with another promoted DEX protocol, agrees with a non-DEX source within the live threshold, or no non-DEX source exists for that asset.
 - **DEX bridge freshness preservation:** primary pricing now keeps the per-source `updatedAt` values already stored inside `dex_prices.price_sources_json` when rebuilding promoted DEX sources. It only falls back to the row write time when a source-specific timestamp is missing or invalid, so freshness is no longer flattened across the entire bridge row.
+- **Retained-pool DEX bridge publication:** `dex_prices` is now rebuilt from the final retained priced-pool surface after dedupe, caps, and scoring filters. Raw discovery observations that never survive retained-pool admission can no longer leak into promoted DEX bridge sources or `dexPriceCheck`.
 - **Direct-API tracked quote pricing:** direct-API pair conversion now prefers only fresh authoritative tracked stablecoin prices from the cached stablecoins payload for quote legs before falling back to peg references. Weak or stale tracked prices no longer feed back into the DEX bridge, and unknown addressed `USDC`/`USDT`-style tokens still do not get unconditional `$1` treatment.
 - **DEX token matching and dedupe:** direct-API, staged, and fallback DEX pools resolve tracked assets by `chain + address` first. If an upstream token already carries an address and that address is unknown to the canonical registry, it is dropped instead of falling back to symbol; symbol fallback is reserved for addressless rows and must still be unique within the same chain. Repeated observations of the same physical pool are collapsed by exact pool id or a conservative derived identity before they enter `dex_prices`.
 - **Direct-API pair conversion:** non-USD tracked stablecoin pairs use peg-reference-aware conversion rather than treating every tracked stablecoin counterparty as `$1`.

@@ -438,7 +438,8 @@ export function convertToGtNewPools(
 }
 
 /**
- * Extract price observations from DexApiPool[] for computeDexPrices().
+ * Extract price observations from DexApiPool[] for downstream diagnostics and
+ * retained-pool price admission.
  * Applies per-token price inversion and plausibility filtering.
  * Only pools with TVL >= $50K and a valid derived price contribute.
  */

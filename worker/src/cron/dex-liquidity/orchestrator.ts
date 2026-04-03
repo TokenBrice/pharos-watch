@@ -330,7 +330,7 @@ export async function syncDexLiquidity(
     sourceCoverageCompleteByStablecoin,
     minPoolTvlUsd: POOL_CHALLENGE_MIN_TVL,
   });
-  await computeDexPrices(db, priceObservations, syncStartSec);
+  await computeDexPrices(db, retainedPoolsByStablecoin, syncStartSec);
 
   // 8. Write daily historical snapshots
   await writeHistoricalSnapshots(db, scoreResults);

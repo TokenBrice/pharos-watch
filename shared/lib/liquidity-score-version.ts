@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const liquidity = createMethodologyVersion({
-  currentVersion: "4.6",
+  currentVersion: "4.7",
   changelogPath: "/methodology/liquidity-score-changelog/",
   changelog: [
+  {
+    version: "4.7",
+    title: "Retained-pool DEX price publication",
+    date: "2026-04-03",
+    effectiveAt: 1775214000,
+    summary:
+      "DEX implied-price publication now derives from the final retained pool surface after dedupe, caps, and scoring filters, instead of from the earlier raw observation stream.",
+    impact: [
+      "Pools that are skipped as duplicates or dropped by retained-pool quality filters can no longer keep influencing dex_prices",
+      "dexPriceUsd, price_sources_json, and downstream dexPriceCheck consumers now reflect the same retained pool surface used for challenger publication and UI liquidity detail",
+      "High-TVL discovery rows that never survive retained-pool admission can no longer manufacture near-peg DEX aggregates for depegged assets",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.6",
     title: "Protocol-native DEX coverage expansion",
