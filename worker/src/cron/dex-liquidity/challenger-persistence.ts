@@ -1,5 +1,6 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { batchExecute } from "../../lib/db";
+import { isBlockedDexId } from "../../lib/dex-constants";
 import { requireFiniteNumber } from "../../lib/number-utils";
 import { decodeJsonString } from "../../lib/cache-json";
 import { logMalformedJsonPath } from "../../lib/json-decode-observability";
@@ -242,6 +243,7 @@ export function selectDexPriceChallengerRowsFromPools(
 ): DexPriceChallengerPoolRow[] {
   const qualifying = pools
     .filter((pool) =>
+      !isBlockedDexId(pool.project) &&
       Number.isFinite(pool.price) &&
       (pool.price ?? 0) > 0 &&
       Number.isFinite(pool.tvlUsd) &&

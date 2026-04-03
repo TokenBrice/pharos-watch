@@ -95,4 +95,13 @@ export const COMPOSITE_POOL_NAMES: Record<string, string[]> = {
 };
 
 /** Explicitly blocked DEX slugs (dead/deprecated protocols not yet flagged by DeFiLlama) */
-export const BLOCKED_DEX_IDS = new Set(["retro", "retro-finance", "retro-finance-v3"]);
+export const BLOCKED_DEX_IDS = new Set(["retro", "retro-finance", "retro-finance-v3", "bunni"]);
+
+const BLOCKED_DEX_PREFIXES = ["bunni-"];
+
+export function isBlockedDexId(dexId: string | null | undefined): boolean {
+  if (typeof dexId !== "string") return false;
+  const normalized = dexId.trim().toLowerCase();
+  if (!normalized) return false;
+  return BLOCKED_DEX_IDS.has(normalized) || BLOCKED_DEX_PREFIXES.some((prefix) => normalized.startsWith(prefix));
+}

@@ -3,6 +3,7 @@ import {
   buildDexPriceChallengerPublicationPlan,
   getDexPriceChallengerPublicationStatements,
   loadPublishedDexPoolChallengers,
+  selectDexPriceChallengerRowsFromPools,
 } from "../dex-liquidity/challenger-persistence";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 
@@ -391,5 +392,47 @@ describe("challenger persistence", () => {
     ).toBe(true);
 
     warnSpy.mockRestore();
+  });
+
+  it("excludes blocked dead DEX pools from challenger selection", () => {
+    const rows = selectDexPriceChallengerRowsFromPools(
+      "usr-resolv",
+      [
+        {
+          poolId: "ethereum:bunni-1",
+          project: "bunni-ethereum",
+          chain: "Ethereum",
+          tvlUsd: 1_451_774,
+          symbol: "USR-USDC",
+          volumeUsd1d: 12_000,
+          volumeUsd7d: 84_000,
+          poolType: "generic",
+          source: "gecko_terminal",
+          price: 0.9993,
+        },
+        {
+          poolId: "ethereum:curve-1",
+          project: "curve",
+          chain: "Ethereum",
+          tvlUsd: 64_711,
+          symbol: "USR-USDC",
+          volumeUsd1d: 8_000,
+          volumeUsd7d: 56_000,
+          poolType: "curve-stableswap",
+          source: "dl",
+          price: 0.1152,
+        },
+      ],
+      20_000,
+    );
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        poolId: "ethereum:curve-1",
+        protocol: "curve",
+        priceUsd: 0.1152,
+        tvlUsd: 64_711,
+      }),
+    ]);
   });
 });

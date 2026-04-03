@@ -46,7 +46,8 @@ export function PricingPipelineMethodologySection() {
           only when large DEX pools from at least two independent protocols diverge from soft consensus, with divergence
           evaluated from one TVL-weighted median per protocol so a single rogue pool cannot make an otherwise agreeing
           protocol count as corroborating disagreement, including
-          DEX-inclusive soft clusters unless an exempt hard source is present.
+          DEX-inclusive soft clusters unless an exempt hard source is present. Dead blocked DEX slugs such as Bunni are
+          excluded upstream and never qualify as challenger or DEX-bridge inputs.
         </p>
 
         <p>

@@ -4,6 +4,7 @@ import type {
   LiquidityMetrics,
   LiquiditySourceMix,
 } from "./types";
+import { isBlockedDexId } from "../../lib/dex-constants";
 import { normalizeProtocol } from "./pool-helpers";
 
 function getPoolExtraNumber(
@@ -142,6 +143,7 @@ export function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
 
 export function filterRetainedPools(pools: LiquidityMetrics["topPools"]): LiquidityMetrics["topPools"] {
   return pools.filter((pool) => {
+    if (isBlockedDexId(pool.project)) return false;
     const vol = pool.volumeUsd1d || 0;
     if (pool.tvlUsd > 0 && vol / pool.tvlUsd > 50) return false;
     if (pool.tvlUsd > 100_000_000 && vol < 50_000) return false;
@@ -424,6 +426,7 @@ export function buildDexPriceObservationsFromRetainedPools(
   for (const [stablecoinId, pools] of retainedPoolsByStablecoin) {
     const pricedPools = pools
       .filter((pool) => (
+        !isBlockedDexId(pool.project) &&
         typeof pool.price === "number" &&
         Number.isFinite(pool.price) &&
         pool.price > 0 &&

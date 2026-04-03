@@ -363,6 +363,45 @@ describe("processPoolMetrics", () => {
     expect(metrics.get("usdc-circle")?.poolCount).toBe(1);
   });
 
+  it("skips blocked dead DEX variants including bunni", () => {
+    const metrics = processPoolMetrics(
+      [
+        makePool({
+          pool: "0xbunni-root",
+          project: "bunni",
+          symbol: "USDT-USDC",
+          underlyingTokens: ["0xusdt", "0xusdc"],
+        }),
+        makePool({
+          pool: "0xbunni-eth",
+          project: "bunni-ethereum",
+          symbol: "USDT-USDC",
+          underlyingTokens: ["0xusdt", "0xusdc"],
+        }),
+      ],
+      new Set(["bunni", "bunni-ethereum"]),
+      new Map([
+        ["USDT", ["usdt-tether"]],
+        ["USDC", ["usdc-circle"]],
+      ]),
+      buildSymbolToChainScopedIds(new Map([
+        ["USDT", ["usdt-tether"]],
+        ["USDC", ["usdc-circle"]],
+      ]), ["ethereum"]),
+      new Map(),
+      new Map([
+        ["ethereum:0xusdt", "usdt-tether"],
+        ["ethereum:0xusdc", "usdc-circle"],
+      ]),
+      new Map(),
+      new Map(),
+      new Map(),
+      new Map(),
+    );
+
+    expect(metrics.size).toBe(0);
+  });
+
   it("ignores organicFraction when apyBase is NaN", () => {
     const pool = makePool({ apyBase: NaN, apy: 5, symbol: "USDT-USDC" });
     const metrics = processPoolMetrics(

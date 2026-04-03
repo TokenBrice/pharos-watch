@@ -1,6 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v3.93` (2026-02-01 -> 2026-04-03).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v3.94` (2026-02-01 -> 2026-04-03).
+
+---
+
+## v3.94 - Blocked dead Bunni DEX inputs (Apr 3, 2026)
+
+**Commit:** `unreleased`
+
+- Bunni is now blocked from DEX crawl intake and DeFiLlama pool processing instead of being treated as a live venue
+- Retained-pool filtering, challenger publication, and `dex_prices` publication all ignore Bunni even if stale or staged rows try to reintroduce it
+- Pool-challenge replacement marks and promoted DEX bridge inputs can no longer be dragged back toward peg by dead-venue Bunni rows
 
 ---
 

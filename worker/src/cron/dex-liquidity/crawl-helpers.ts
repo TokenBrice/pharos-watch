@@ -1,4 +1,4 @@
-import { BLOCKED_DEX_IDS } from "../../lib/dex-constants";
+import { isBlockedDexId } from "../../lib/dex-constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { throwIfAborted } from "../../lib/abort";
@@ -129,7 +129,7 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
 
         config.stats.poolsSeen++;
         if (!parsed.tvlUsd || parsed.tvlUsd < minTvlUsd || parsed.tvlUsd > 1e12) continue;
-        if (BLOCKED_DEX_IDS.has(parsed.dexId)) continue;
+        if (isBlockedDexId(parsed.dexId)) continue;
 
         if (parsed.dexId.startsWith("curve")) {
           config.stats.poolsSkippedCurve++;

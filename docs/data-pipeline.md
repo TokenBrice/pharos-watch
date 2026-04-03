@@ -56,6 +56,8 @@ Before the enrichment pipeline runs, `fetchPrimaryPrices()` collects prices from
 | DEX promoted prices | 1 | `worker/src/lib/depeg-helpers.ts` | Aggregate DEX voice when no overlapping promoted protocol-level DEX source exists |
 | Promoted protocol-level DEX prices | 2-3 | `worker/src/lib/depeg-helpers.ts` | One aggregated source per protocol; freshness now preserved per source from `price_sources_json` |
 
+Dead or explicitly blocked DEX ids are removed upstream from DEX crawl intake, pool scoring, challenger publication, and `dex_prices` publication. The current runtime blocklist includes Retro variants and Bunni variants, so those venues cannot leak into primary consensus through the DEX bridge or pool challenge.
+
 **Consensus algorithm** (`worker/src/lib/price-consensus.ts`):
 
 - Collects all available source prices for each asset

@@ -747,4 +747,57 @@ describe("dex-liquidity scoring", () => {
       1_700_000_005,
     ]);
   });
+
+  it("ignores blocked dead DEX protocols when publishing dex prices", async () => {
+    vi.mocked(getCache).mockResolvedValueOnce({
+      value: JSON.stringify({
+        peggedAssets: [
+          { id: "usr-resolv", symbol: "USR", price: 0.1129 },
+        ],
+      }),
+      updatedAt: 1_700_000_000,
+    });
+
+    await computeDexPrices(
+      makeQueryDb([]),
+      new Map([
+        ["usr-resolv", [
+          makeDexPricePool({
+            poolId: "ethereum:bunni-1",
+            project: "bunni-ethereum",
+            chain: "Ethereum",
+            tvlUsd: 1_451_774,
+            price: 0.9993,
+            source: "gecko_terminal",
+          }),
+          makeDexPricePool({
+            poolId: "ethereum:curve-1",
+            project: "curve",
+            chain: "Ethereum",
+            tvlUsd: 64_711,
+            price: 0.1152,
+            source: "dl",
+          }),
+        ]],
+      ]),
+      1_700_000_006,
+    );
+
+    const latestBatchCall = vi.mocked(batchExecute).mock.calls[vi.mocked(batchExecute).mock.calls.length - 1]!;
+    const [, statements] = latestBatchCall;
+    const upserts = statements as PreparedStatementWithMeta[];
+    expect(upserts[0]?.boundValues).toEqual([
+      "usr-resolv",
+      "USR",
+      0.1152,
+      1,
+      64_711,
+      204,
+      0.1129,
+      JSON.stringify([
+        { protocol: "curve", chain: "Ethereum", price: 0.1152, tvl: 64_711 },
+      ]),
+      1_700_000_006,
+    ]);
+  });
 });

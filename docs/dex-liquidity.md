@@ -24,6 +24,8 @@ Run metadata now includes `failedSources`, `fallbackMode` signals, staged-pool m
 
 Primary scoring inputs are DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + eight direct protocol-native fetchers (Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap V3, Aerodrome Slipstream, Velodrome Slipstream). The scorer prefers direct-API pools over overlapping DeFiLlama pools via a conservative pool-identity model (exact pool id first, derived token-shape match second) before score computation, but only after those direct-API pools pass the shared TVL sanity gates used elsewhere in the pipeline. Direct-source precedence now also requires measured non-zero 24h volume, which lets pool-state-only sources such as Slipstream expand coverage without replacing stronger overlapping DeFiLlama rows when authoritative volume telemetry is absent. After the primary-source merge, the scoring cron reads fresh rows from `dex_pool_staging` (when present), applies freshness confidence decay to staged TVL/volume, skips staged pools already covered by primary sources, and merges the remaining pools before final scoring.
 
+Dead or explicitly blocked DEX ids are excluded before they can become pool contributions. The live runtime blocklist currently includes Retro variants and Bunni variants, and those blocked venues are also ignored again during retained-pool filtering, challenger publication, and `dex_prices` publication for defense in depth.
+
 ### Direct API Data Sources
 
 Protocol-native DEX sources are fetched directly during the scoring cron (`syncDexLiquidity`), after UniV3/Aerodrome enrichment completes. Results are normalized into a shared `DexApiPool` type (`worker/src/lib/dex-api-common.ts`), token-matched against the stablecoin contract registry via canonical `chain + address` first, and only fall back to chain-scoped unique symbols when the upstream token is addressless. Addressed unknown tokens are dropped instead of being reinterpreted by symbol. These matches are deduplicated against DL via exact or uniquely derived pool identities and merged into the pool scoring pipeline before staged and fallback sources. Source family: `direct_api`.
@@ -103,7 +105,7 @@ For direct APIs, balance health is no longer uniformly neutral. Balancer, Raydiu
 ### Data Quality Filters
 
 - `isBroken === true` Curve pools: skipped
-- Dead/rugged/deprecated protocols: excluded from `dexProjects` set
+- Dead/rugged/deprecated protocols: excluded from `dexProjects` set and the explicit runtime blocklist (currently including Retro and Bunni variants)
 - `exposure === "single"` pools (lending deposits, not DEX liquidity): skipped
 - CryptoSwap pools: correctly classified via `registryId`
 

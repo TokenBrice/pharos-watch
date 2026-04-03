@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "3.93",
+  currentVersion: "3.94",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "3.94",
+      title: "Blocked dead Bunni DEX inputs",
+      date: "2026-04-03",
+      effectiveAt: 1775242800,
+      summary:
+        "Explicitly blocked Bunni from the DEX bridge and pool-challenge surfaces after dead-venue rows kept contaminating retained-pool pricing inputs.",
+      impact: [
+        "Bunni slugs are now rejected during DEX crawl intake and DeFiLlama pool processing, so they no longer spend discovery or scoring budget",
+        "Retained-pool filtering, challenger publication, and dex_prices publication all ignore Bunni even if stale or staged rows try to reintroduce it",
+        "Pool-challenge replacement marks and promoted DEX bridge sources can no longer be pulled back toward peg by Bunni rows",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.93",
       title: "RedStone USR provider-config drift cleanup",

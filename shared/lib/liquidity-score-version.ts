@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const liquidity = createMethodologyVersion({
-  currentVersion: "4.8",
+  currentVersion: "4.9",
   changelogPath: "/methodology/liquidity-score-changelog/",
   changelog: [
+    {
+      version: "4.9",
+      title: "Blocked dead Bunni DEX inputs",
+      date: "2026-04-03",
+      effectiveAt: 1775242800,
+      summary:
+        "Explicitly blocked Bunni from liquidity scoring and DEX implied-price publication after dead-venue rows kept surfacing as retained liquidity.",
+      impact: [
+        "Bunni is now excluded during crawl intake and DeFiLlama pool processing instead of being treated as a live DEX venue",
+        "Retained-pool filters and challenger snapshots ignore Bunni even if stale rows or unexpected inputs survive earlier gates",
+        "Liquidity scores, dexPriceUsd, and downstream DEX cross-checks no longer count Bunni TVL, pool counts, or protocol medians",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "4.8",
       title: "Direct-source duplicate hardening for Balancer and staged exact ids",

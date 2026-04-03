@@ -22,6 +22,10 @@ export function LiquidityMethodologySection() {
         pool data across all major DEXes and chains.
       </p>
       <p>
+        Dead or explicitly blocked DEX slugs such as Bunni are excluded upstream from crawl intake, retained pools,
+        challenger snapshots, and DEX-implied price publication instead of being treated as low-quality live venues.
+      </p>
+      <p>
         Dedicated protocol-native sources (Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap V3, Aerodrome
         Slipstream, and Velodrome Slipstream) are treated as primary-grade inputs and enter scoring before staged or
         fallback discovery sources are merged.

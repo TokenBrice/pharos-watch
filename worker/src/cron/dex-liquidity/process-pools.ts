@@ -1,6 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { BLOCKED_DEX_IDS, QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
+import { QUALITY_MULTIPLIERS, isBlockedDexId } from "../../lib/dex-constants";
 import type { LlamaPool, CurvePoolEntry, LiquidityMetrics } from "./types";
 import {
   parsePoolSymbols, classifyPoolType, getQualityMultiplier,
@@ -36,7 +36,7 @@ export function processPoolMetrics(
    try {
     if (!pool.tvlUsd || pool.tvlUsd < 10_000 || pool.tvlUsd > 1e12) continue; // Skip dust and corrupt values
     if (enforceDexProjectFilter && !dexProjects.has(pool.project)) continue; // Only count DEX pools
-    if (BLOCKED_DEX_IDS.has(pool.project)) continue; // Skip explicitly blocked dead DEXes
+    if (isBlockedDexId(pool.project)) continue; // Skip explicitly blocked dead DEXes
     // v2: skip lending pools (single-asset exposure, not DEX liquidity)
     if (pool.exposure === "single") continue;
 

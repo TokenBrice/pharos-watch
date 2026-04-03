@@ -1,6 +1,16 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v4.8` (2026-02-19 -> 2026-04-03).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v4.9` (2026-02-19 -> 2026-04-03).
+
+---
+
+## v4.9 - Blocked dead Bunni DEX inputs (Apr 3, 2026)
+
+**Commit:** `unreleased`
+
+- Bunni is now blocked during crawl intake and DeFiLlama pool processing instead of being treated as a live DEX venue
+- Retained-pool filters and challenger publication ignore Bunni even if stale rows or unexpected inputs survive earlier gates
+- Liquidity scores, `dexPriceUsd`, and downstream DEX cross-checks no longer count Bunni TVL, pool counts, or protocol medians
 
 ---
 
