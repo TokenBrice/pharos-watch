@@ -127,13 +127,14 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - records an explicit no-op outcome for docs-only or other non-deploy pushes to `main`
 4. `deploy-worker`
    - renamed in practice into a worker candidate + promotion path:
-     - `upload-worker-version` captures the currently live production version ID, applies D1 migrations via `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote`, uploads the candidate with `cd worker && npx --no-install wrangler versions upload`, then runs `npm run test:smoke-api` against that preview URL before the candidate is considered promotable
+     - `upload-worker-version` captures the currently live production version ID, applies D1 migrations via `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote`, uploads the candidate with `cd worker && npx --no-install wrangler versions upload`, then runs `npm run test:smoke-api` against that preview URL with `SMOKE_API_KEY` before the candidate is considered promotable
      - `deploy-worker` promotes that exact preview-smoked uploaded version with `cd worker && npx --no-install wrangler versions deploy <version-id>@100`
    - runs `cd worker && npx --no-install wrangler triggers deploy` after promotion to explicitly sync cron/routes/domain triggers and other non-versioned trigger settings
    - relies on the `check:migrations` rollout-safety contract for new migrations: standard deploy only supports backward-compatible D1 changes because the old worker can still receive traffic until the promoted version is live
    - skipped on Pages-only or non-deploy `push` events where `detect-changes` reports no worker/API-impacting files
 5. `smoke-api`
    - runs after `deploy-worker`, against the real production API host
+   - sends `SMOKE_API_KEY` from GitHub repository secrets so protected public routes can be verified after cutover
    - remains the post-promotion canary for custom-domain/runtime differences that preview URLs do not cover
 6. `rollback-worker`
    - runs only when worker promotion succeeded but the post-promotion `smoke-api` failed
@@ -143,10 +144,10 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - reusable workflow call to `.github/workflows/pages-prepare.yml`
    - runs only when `detect-changes` reports `pages_changed=true`
    - waits for `upload-worker-version` only when worker/API work was also required for the push
-   - on combined worker + Pages deploys, uses the uploaded Worker's preview URL for digest sync and local `/api/*` proxying so CI rehearses the static export against the exact candidate API while `deploy-worker` and `smoke-api` continue in parallel
+   - on combined worker + Pages deploys, uses the uploaded Worker's preview URL for digest sync and local `/_site-data/*` proxying so CI rehearses the static export against the exact candidate API while `deploy-worker` and `smoke-api` continue in parallel
    - executes the predeploy Pages path:
-     - `build-pages` fetches `/api/digest-archive` once from the selected API environment into `data/digests.json`, forwards `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`, and uploads `out/`
-     - `smoke-ui` downloads the same artifact, serves it locally with `scripts/serve-static-export.mjs`, proxies `/api/*` to that same selected API base, and verifies the expected GA snippet when `SMOKE_UI_EXPECT_GA_ID` is configured
+     - `build-pages` fetches `/api/digest-archive` once from the selected API environment into `data/digests.json`, sending `DIGEST_API_KEY` from GitHub repository secrets and forwarding `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`, and uploads `out/`
+     - `smoke-ui` downloads the same artifact, serves it locally with `scripts/serve-static-export.mjs`, proxies direct `/api/*` calls to the selected public API base, proxies `/_site-data/*` to the selected site-api base, injects `SITE_API_SHARED_SECRET` for that hop, and verifies the expected GA snippet when `SMOKE_UI_EXPECT_GA_ID` is configured
 8. `pages-publish`
    - reusable workflow call to `.github/workflows/pages-publish.yml`
    - runs only when `detect-changes` reports `pages_changed=true`
@@ -180,16 +181,17 @@ Cloudflare deployment intentionally uses the local Wrangler CLI instead of `clou
 
 Deployment stops on the first failed job. Pull requests still run the full shared validate gate, while push/manual deploy validation now skips Pages build/SEO on worker-only pushes, skips worker typecheck on Pages-only pushes, and skips the production workflow entirely for non-deploy pushes. The shared Pages release path still fetches digests once inside `build-pages` and still requires the local `smoke-ui` gate before `deploy-pages`, so a bad static export is blocked before Cloudflare Pages production publish and the build itself no longer depends on the live production digest endpoint. On combined worker + Pages deploys, the predeploy Pages path now starts as soon as the worker preview smoke succeeds and runs against that preview URL in parallel with worker promotion and post-promotion API smoke. After publish, the same shared Pages path runs a narrower live public-host canary smoke against `https://pharos.watch`, while the broader overflow sweep remains on the local artifact smoke. On `push`, worker deploy and API smoke are skipped entirely when the diff does not touch worker/shared runtime or worker-deploy infrastructure files, and Pages build/deploy are skipped entirely when the diff does not touch Pages-impacting paths (`src/`, `shared/`, `functions/`, `public/`, `data/`, selected build/config scripts, or Pages/deploy workflow files). Both production-changing workflows also share a `concurrency` group (`production-deploy-${{ github.ref }}`): push/manual deploys cancel superseded in-flight runs on the same ref, while the Pages rebuild workflow waits behind an active production deploy instead of canceling it mid-flight. The worker release path still applies D1 migrations before preview smoke and production promotion, so the normal path explicitly supports only backward-compatible D1 migrations; destructive cleanup requires a separate coordinated rollout after the new worker code is serving.
 
-## Operator Origins
+## Runtime Origins
 
-The operator-origin split is a staged rollout:
+The current origin split is:
 
 - public UI: `pharos.watch`
+- website data API: `site-api.pharos.watch`
 - operator UI: `ops.pharos.watch`
 - public API: `api.pharos.watch`
 - operator API: `ops-api.pharos.watch`
 
-Worker route declarations for `ops-api.pharos.watch` live in `worker/wrangler.toml` and deploy with the normal Worker job. The Pages custom domain plus Cloudflare Access applications are account-side setup and are documented in [operator-origin-access.md](./operator-origin-access.md).
+The browser-facing website data lane is same-origin `/_site-data/*` on the Pages project; Pages Functions proxy that lane to `site-api.pharos.watch` with `SITE_API_SHARED_SECRET`. Worker route declarations for `site-api.pharos.watch` and `ops-api.pharos.watch` live in `worker/wrangler.toml` and deploy with the normal Worker job. The Pages custom domains plus Cloudflare Access applications for the ops surfaces are account-side setup and are documented in [operator-origin-access.md](./operator-origin-access.md).
 
 ## Failure Policy
 

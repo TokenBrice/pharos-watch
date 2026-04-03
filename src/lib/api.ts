@@ -1,8 +1,9 @@
 import { z, type ZodType } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
+import { toSiteDataPath } from "@shared/lib/site-data-routes";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
-import { resolvePublicApiBase } from "@shared/lib/runtime-origins";
+import { isSiteDataUiHostname, resolvePublicApiBase } from "@shared/lib/runtime-origins";
 
 export type ApiContractMode = "strict" | "warn";
 
@@ -13,16 +14,36 @@ export function resolveApiBase(
   return resolvePublicApiBase(hostname, envBase);
 }
 
-const browserHostname = typeof window !== "undefined" ? window.location.hostname : null;
-export const API_BASE = resolveApiBase(browserHostname);
+function getBrowserHostname(): string | null {
+  return typeof window !== "undefined" ? window.location.hostname : null;
+}
+
+export const API_BASE = resolveApiBase(getBrowserHostname());
 
 export function buildApiUrl(path: string): string {
   return `${API_BASE}${path}`;
 }
 
+function shouldUseSiteDataProxy(
+  path: string,
+  hostname?: string | null,
+  envBase: string | undefined = process.env.NEXT_PUBLIC_API_BASE,
+): boolean {
+  if (!path.startsWith("/api/") || path.startsWith("/api/admin/")) {
+    return false;
+  }
+  if ((envBase ?? "").trim()) {
+    return false;
+  }
+  return Boolean(hostname && isSiteDataUiHostname(hostname));
+}
+
 export function buildRequestUrl(path: string): string {
   if (path.startsWith("/api/admin/")) {
     return path;
+  }
+  if (shouldUseSiteDataProxy(path, getBrowserHostname())) {
+    return toSiteDataPath(path);
   }
   return buildApiUrl(path);
 }

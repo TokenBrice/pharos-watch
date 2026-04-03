@@ -5,6 +5,7 @@ import {
   apiFetch,
   apiFetchWithMeta,
   ApiFetchError,
+  buildRequestUrl,
   resolveApiBase,
   SchemaValidationError,
 } from "../api";
@@ -131,6 +132,20 @@ describe("api contract validation policy", () => {
   });
 
   it("prefers explicit env API base over hostname inference", () => {
+    expect(resolveApiBase("pharos.watch", "https://custom.example")).toBe("https://custom.example");
+  });
+
+  it("routes browser data requests through same-origin site-data on the site and ops hosts", () => {
+    vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
+    expect(buildRequestUrl("/api/stablecoins")).toBe("/_site-data/stablecoins");
+
+    vi.stubGlobal("window", { location: { hostname: "ops.pharos.watch" } });
+    expect(buildRequestUrl("/api/stablecoins")).toBe("/_site-data/stablecoins");
+  });
+
+  it("keeps admin and explicit-base requests off the site-data proxy", () => {
+    vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
+    expect(buildRequestUrl("/api/admin/status")).toBe("/api/admin/status");
     expect(resolveApiBase("pharos.watch", "https://custom.example")).toBe("https://custom.example");
   });
 

@@ -9,9 +9,10 @@ export function createRequestSourceRecorder(config: {
   db: D1Database;
   execCtx: ExecutionContext;
   isAdmin: boolean;
+  skip: boolean;
   pathname: string;
 }): () => void {
-  if (config.isAdmin) {
+  if (config.isAdmin || config.skip) {
     return () => {};
   }
 

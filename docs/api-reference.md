@@ -4,7 +4,26 @@ The Pharos API is a REST API served by a Cloudflare Worker backed by a D1 databa
 
 **Base URL:** `https://api.pharos.watch`
 
-Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: `GET /api/og/*` returns `image/png`, and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`. Non-admin public `/api/*` requests are also rate-limited via hashed per-minute D1 buckets and return `429` when exceeded.
+Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: `GET /api/og/*` returns `image/png`, and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`. Protected public `/api/*` traffic on `api.pharos.watch` is API-key-gated via `X-API-Key`; valid keys are rate-limited per minute in D1 and exempt traffic falls back to the legacy hashed-IP limiter.
+
+## Surface Split
+
+The runtime now uses three HTTP lanes:
+
+- `https://api.pharos.watch` is the external integration API. Protected public routes require `X-API-Key`.
+- `https://site-api.pharos.watch` is the website-internal Worker host. It accepts only allowlisted `GET` reads plus `X-Pharos-Site-Proxy-Secret`.
+- `/_site-data/*` is the same-origin Pages Functions proxy used by browsers on `pharos.watch`, `ops.pharos.watch`, and Pages preview hosts.
+
+Browser consumers should use same-origin `/_site-data/*` via the frontend helpers in `src/lib/api.ts`. Direct integrations, CI smoke, and build-time sync scripts should target `https://api.pharos.watch`.
+
+## Public API Auth
+
+Protected public API requests use:
+
+- header: `X-API-Key: ph_live_<16 hex prefix>_<32 char base64url secret>`
+- example shape: `ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF`
+
+The worker stores only the key prefix plus a peppered HMAC of the secret portion. Admin callers create, rotate, and deactivate keys through the operator lane (`ops.pharos.watch` / `ops-api.pharos.watch`); plaintext tokens are returned only once at creation/rotation time.
 
 ---
 
@@ -123,7 +142,7 @@ All error responses use `{ "error": "message" }` JSON format.
 | Status | Meaning               | When                                                                                                                                                                                                     |
 | ------ | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 400    | Bad Request           | Invalid query parameter syntax (missing required parameter, invalid enum value, malformed numeric input, or rejected filter values that no longer coerce silently)                                       |
-| 401    | Unauthorized          | Admin endpoint called without a valid `ops-api` Access JWT (typically obtained through Cloudflare Access user login or service-token auth)                                                               |
+| 401    | Unauthorized          | Protected public endpoint called without a valid `X-API-Key`, or admin endpoint called without a valid `ops-api` Access JWT (typically obtained through Cloudflare Access user login or service-token auth) |
 | 404    | Not Found             | Unknown stablecoin ID or missing resource                                                                                                                                                                |
 | 429    | Too Many Requests     | Rate limit exceeded (global public API limiter or feedback-specific limiter)                                                                                                                             |
 | 500    | Internal Server Error | Unhandled exception (caught by `withErrorHandler`)                                                                                                                                                       |
@@ -140,6 +159,8 @@ HTTP method allowance is defined centrally in `shared/lib/api-endpoints.ts` and 
 
 - `GET` is accepted for read endpoints (plus admin debug/status endpoints and `GET /api/backfill-dews`).
 - `POST` is accepted for mutating admin endpoints, `POST /api/feedback`, and `POST /api/telegram-webhook`.
+- `GET, POST` is accepted on `/api/api-keys` so operators can list keys and create a new key through the same route.
+- `POST` is accepted on `/api/api-keys/:id/update`, `/api/api-keys/:id/deactivate`, and `/api/api-keys/:id/rotate`.
 - `/api/audit-depeg-history` allows `GET` only with `?dry-run=true`; otherwise it is `POST`-only.
 - Unknown `POST` paths return `405` with `Allow: GET`; unsupported verbs return `405` with `Allow: GET, POST`.
 
@@ -148,6 +169,8 @@ The same shared endpoint descriptors now also carry static worker dependency-hyd
 ## Admin Auth And Idempotency
 
 Admin endpoints are authenticated only on the `ops-api.pharos.watch` host. Cloudflare Access must authenticate the caller first, then inject `Cf-Access-Jwt-Assertion` for the worker. `worker/src/lib/auth.ts` verifies that JWT against the configured Access audience (`CF_ACCESS_OPS_API_AUD`) and team domain (`CF_ACCESS_TEAM_DOMAIN`) via `worker/src/lib/jwt-verify.ts`, including signature, `aud`, `exp`, and `iss` checks. Browser operators should use `https://ops.pharos.watch/admin/`, which talks to same-origin `/api/admin/*` Pages Functions routes behind Cloudflare Access.
+
+The website-internal read lane is separate from Cloudflare Access. `site-api.pharos.watch` accepts only allowlisted `GET` public-read paths and requires `X-Pharos-Site-Proxy-Secret`, which the Pages `/_site-data/*` proxy injects server-to-server from `SITE_API_SHARED_SECRET`. Public browser traffic must not call `site-api.pharos.watch` directly.
 
 Many router-dispatched mutating admin endpoints also support optional `Idempotency-Key` handling. Current idempotent routes are:
 
@@ -2467,9 +2490,9 @@ Machine-readable status timeline endpoint for tooling and incident analysis.
 
 ### `GET /api/request-source-stats`
 
-Admin-only public-API attribution summary. Aggregates minute-bucketed request counts into a requested window so operators can estimate what share of load is coming from the Pharos website versus external consumers.
+Admin-only public-API attribution summary. Aggregates minute-bucketed request counts into a requested window so operators can estimate what share of `api.pharos.watch` load is coming from browser-identified Pharos traffic versus external consumers.
 
-This dataset excludes admin-only routes and `/api/telegram-webhook`. First-party website traffic is recognized from browser evidence: `Origin` or `Referer` matching `https://pharos.watch`, or the browser-safe frontend `Accept` marker combined with same-site fetch metadata. Everything else in scope is counted as external.
+This dataset excludes admin-only routes, `/api/telegram-webhook`, and the internal `site-api` / `/_site-data/*` website lane. First-party website traffic on the public API host is recognized from browser evidence: `Origin` or `Referer` matching `https://pharos.watch`, or the browser-safe frontend `Accept` marker combined with same-site fetch metadata. Everything else in scope is counted as external.
 
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
@@ -2490,6 +2513,61 @@ This dataset excludes admin-only routes and `/api/telegram-webhook`. First-party
 - `totals` — aggregate `webRequests`, `externalRequests`, `totalRequests`, `webSharePct`, `externalSharePct`
 - `routes[]` — normalized per-route breakdown sorted by total request volume
 - `buckets[]` — time-series rollups using the requested `bucketSec`
+
+### `GET /api/api-keys`
+
+Admin-only API key inventory. Returns masked tokens plus metadata, but never returns stored secret material.
+
+**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
+
+**Response shape:** `ApiKeyListResponse` (defined in `shared/types/api-keys.ts`)
+
+### `POST /api/api-keys`
+
+Admin-only API key creation route.
+
+**Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
+
+**Body shape:** `ApiKeyCreateRequest`
+
+| Field                | Type      | Required | Description |
+| -------------------- | --------- | -------- | ----------- |
+| `name`               | `string`  | Yes      | Display name for the key |
+| `ownerEmail`         | `string`  | No       | Optional operator / owner contact |
+| `tier`               | `string`  | No       | Free-form tier label; defaults to `"standard"` |
+| `rateLimitPerMinute` | `integer` | No       | Per-key threshold (`1`–`10000`, default `120`) |
+
+**Response shape:** `ApiKeyCreateResponse`
+
+`token` is returned only once. Persist it immediately; later list/read paths expose only `maskedToken`.
+
+### `POST /api/api-keys/:id/update`
+
+Admin-only metadata update for an existing API key.
+
+**Body shape:** `ApiKeyUpdateRequest`
+
+Accepted fields:
+
+- `name`
+- `ownerEmail`
+- `tier`
+- `rateLimitPerMinute`
+- `isActive`
+
+**Response shape:** `ApiKeyMutationResponse`
+
+### `POST /api/api-keys/:id/deactivate`
+
+Admin-only hard deactivation for an existing API key. This sets `isActive=false`; the secret cannot be used afterward.
+
+**Response shape:** `ApiKeyMutationResponse`
+
+### `POST /api/api-keys/:id/rotate`
+
+Admin-only secret rotation. The old token stops working immediately and a new plaintext token is returned once.
+
+**Response shape:** `ApiKeyRotateResponse`
 
 ### `POST /api/backfill-depegs`
 

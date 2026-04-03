@@ -1,7 +1,22 @@
+import { isSiteDataAllowedPath, getPublicApiAccess } from "@shared/lib/api-endpoints";
+import { SITE_API_HOSTNAME } from "@shared/lib/runtime-origins";
 import { errorResponse } from "../../lib/api-utils";
-import { hasValidAdminCredential } from "../../lib/auth";
+import {
+  authenticateApiKey,
+  checkApiKeyRateLimit,
+  recordApiKeyUsage,
+} from "../../lib/api-keys";
+import {
+  hasValidAdminCredential,
+  hasValidSiteProxyCredential,
+  isWorkerPreviewRequest,
+} from "../../lib/auth";
 import { checkPublicApiRateLimit } from "../../lib/rate-limit";
-import { resolvePublicApiRateLimitSalt, validateWorkerEnvContract } from "../../lib/env";
+import {
+  resolvePublicApiAuthMode,
+  resolvePublicApiRateLimitSalt,
+  validateWorkerEnvContract,
+} from "../../lib/env";
 import {
   PUBLIC_API_RATE_LIMIT_MAX_REQUESTS,
   PUBLIC_API_RATE_LIMIT_WINDOW_SEC,
@@ -35,10 +50,73 @@ export async function evaluateAccessGate(
   request: Request,
   url: URL,
   env: Env,
-): Promise<{ isAdmin: boolean; response: Response | null }> {
+): Promise<{ isAdmin: boolean; isSiteProxy: boolean; response: Response | null }> {
   const isAdmin = await hasValidAdminCredential(request, undefined, env);
-  if (!url.pathname.startsWith("/api/") || url.pathname === "/api/telegram-webhook" || isAdmin) {
-    return { isAdmin, response: null };
+  if (isAdmin) {
+    return { isAdmin, isSiteProxy: false, response: null };
+  }
+
+  const isPreviewRequest = isWorkerPreviewRequest(request);
+  const isSiteApiRequest = url.hostname === SITE_API_HOSTNAME;
+  const hasSiteProxyCredential = await hasValidSiteProxyCredential(request, env);
+  if (isSiteApiRequest) {
+    if (!hasSiteProxyCredential) {
+      return { isAdmin, isSiteProxy: false, response: errorResponse(401, "Unauthorized") };
+    }
+    if (!isSiteDataAllowedPath(url.pathname)) {
+      return { isAdmin, isSiteProxy: false, response: notFoundResponse() };
+    }
+    if (request.method !== "GET") {
+      const response = errorResponse(405, "Method not allowed");
+      response.headers.set("Allow", "GET");
+      return { isAdmin, isSiteProxy: false, response };
+    }
+    return { isAdmin, isSiteProxy: true, response: null };
+  }
+
+  if (isPreviewRequest && hasSiteProxyCredential && request.method === "GET" && isSiteDataAllowedPath(url.pathname)) {
+    return { isAdmin, isSiteProxy: true, response: null };
+  }
+
+  if (!url.pathname.startsWith("/api/") || url.pathname === "/api/telegram-webhook") {
+    return { isAdmin, isSiteProxy: false, response: null };
+  }
+
+  const publicApiAccess = getPublicApiAccess(url.pathname);
+  const authMode = resolvePublicApiAuthMode(env);
+  if (publicApiAccess === "protected") {
+    const apiKeyAuth = await authenticateApiKey(
+      env.DB,
+      request.headers.get("X-API-Key"),
+      env.API_KEY_HASH_PEPPER,
+    );
+    if (apiKeyAuth.kind === "valid") {
+      const rateLimitResponse = await checkApiKeyRateLimit(
+        env.DB,
+        apiKeyAuth.key.id,
+        apiKeyAuth.key.rateLimitPerMinute,
+      );
+      if (rateLimitResponse) {
+        return { isAdmin, isSiteProxy: false, response: rateLimitResponse };
+      }
+      await recordApiKeyUsage(env.DB, apiKeyAuth.key, url.pathname);
+      return { isAdmin, isSiteProxy: false, response: null };
+    }
+
+    if (authMode === "enforce") {
+      if (apiKeyAuth.kind === "unavailable") {
+        return {
+          isAdmin,
+          isSiteProxy: false,
+          response: errorResponse(503, "Public API temporarily unavailable"),
+        };
+      }
+      return { isAdmin, isSiteProxy: false, response: errorResponse(401, "Unauthorized") };
+    }
+
+    if (authMode === "report-only" && apiKeyAuth.kind !== "missing") {
+      console.warn(`[public-api-auth] protected request ${apiKeyAuth.kind} on ${url.pathname}`);
+    }
   }
 
   const publicApiRateLimit = resolvePublicApiRateLimitSalt(env);
@@ -46,6 +124,7 @@ export async function evaluateAccessGate(
     console.error("[env] Blocking public API request because PUBLIC_API_RATE_LIMIT_SALT is not configured");
     return {
       isAdmin,
+      isSiteProxy: false,
       response: errorResponse(503, "Public API temporarily unavailable"),
     };
   }
@@ -56,7 +135,7 @@ export async function evaluateAccessGate(
     PUBLIC_API_RATE_LIMIT_MAX_REQUESTS,
     PUBLIC_API_RATE_LIMIT_WINDOW_SEC * 1000,
   );
-  return { isAdmin, response };
+  return { isAdmin, isSiteProxy: false, response };
 }
 
 export function notFoundResponse(): Response {

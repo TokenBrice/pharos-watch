@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  resolvePublicApiAuthMode,
   resolvePublicApiRateLimitSalt,
   validateWorkerEnvContract,
   WORKER_ACTIVE_ENV_KEYS,
@@ -25,12 +26,26 @@ describe("resolvePublicApiRateLimitSalt", () => {
   });
 });
 
+describe("resolvePublicApiAuthMode", () => {
+  it("defaults to off", () => {
+    expect(resolvePublicApiAuthMode({ PUBLIC_API_AUTH_MODE: undefined })).toBe("off");
+  });
+
+  it("accepts the supported auth modes", () => {
+    expect(resolvePublicApiAuthMode({ PUBLIC_API_AUTH_MODE: "report-only" })).toBe("report-only");
+    expect(resolvePublicApiAuthMode({ PUBLIC_API_AUTH_MODE: "enforce" })).toBe("enforce");
+  });
+});
+
 describe("validateWorkerEnvContract", () => {
   it("flags partial Access config", () => {
     expect(validateWorkerEnvContract({
       CF_ACCESS_OPS_API_AUD: "aud",
       CF_ACCESS_TEAM_DOMAIN: undefined,
       PUBLIC_API_RATE_LIMIT_SALT: "public",
+      SITE_API_SHARED_SECRET: "site-secret",
+      API_KEY_HASH_PEPPER: undefined,
+      PUBLIC_API_AUTH_MODE: undefined,
       FEEDBACK_IP_SALT: undefined,
     })).toEqual([
       {
@@ -45,6 +60,9 @@ describe("validateWorkerEnvContract", () => {
       CF_ACCESS_OPS_API_AUD: undefined,
       CF_ACCESS_TEAM_DOMAIN: undefined,
       PUBLIC_API_RATE_LIMIT_SALT: "public",
+      SITE_API_SHARED_SECRET: "site-secret",
+      API_KEY_HASH_PEPPER: undefined,
+      PUBLIC_API_AUTH_MODE: undefined,
       FEEDBACK_IP_SALT: "feedback",
       CLOUDFLARE_ACCOUNT_ID: "acct",
       CLOUDFLARE_D1_STATUS_API_TOKEN: undefined,
@@ -60,10 +78,43 @@ describe("validateWorkerEnvContract", () => {
       CF_ACCESS_OPS_API_AUD: undefined,
       CF_ACCESS_TEAM_DOMAIN: undefined,
       PUBLIC_API_RATE_LIMIT_SALT: undefined,
+      SITE_API_SHARED_SECRET: "site-secret",
+      API_KEY_HASH_PEPPER: undefined,
+      PUBLIC_API_AUTH_MODE: undefined,
       FEEDBACK_IP_SALT: "feedback",
     })).toContainEqual({
       code: "public-api-rate-limit-misconfigured",
       message: "PUBLIC_API_RATE_LIMIT_SALT is unset; public API rate limiting is disabled until the dedicated salt is configured.",
+    });
+  });
+
+  it("flags a missing site-api shared secret", () => {
+    expect(validateWorkerEnvContract({
+      CF_ACCESS_OPS_API_AUD: undefined,
+      CF_ACCESS_TEAM_DOMAIN: undefined,
+      PUBLIC_API_RATE_LIMIT_SALT: "public",
+      SITE_API_SHARED_SECRET: undefined,
+      API_KEY_HASH_PEPPER: undefined,
+      PUBLIC_API_AUTH_MODE: undefined,
+      FEEDBACK_IP_SALT: "feedback",
+    })).toContainEqual({
+      code: "site-api-secret-misconfigured",
+      message: "SITE_API_SHARED_SECRET is unset; the website site-api lane cannot authenticate until the shared secret is configured.",
+    });
+  });
+
+  it("flags auth modes beyond off when the API-key pepper is missing", () => {
+    expect(validateWorkerEnvContract({
+      CF_ACCESS_OPS_API_AUD: undefined,
+      CF_ACCESS_TEAM_DOMAIN: undefined,
+      PUBLIC_API_RATE_LIMIT_SALT: "public",
+      SITE_API_SHARED_SECRET: "site-secret",
+      API_KEY_HASH_PEPPER: undefined,
+      PUBLIC_API_AUTH_MODE: "report-only",
+      FEEDBACK_IP_SALT: "feedback",
+    })).toContainEqual({
+      code: "public-api-auth-pepper-missing",
+      message: "API_KEY_HASH_PEPPER must be configured before public API auth mode can move beyond off.",
     });
   });
 });

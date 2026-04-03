@@ -34,7 +34,7 @@ Cron trigger metadata follows the same single-source pattern. `shared/lib/cron-j
 | `GET /api/health`                            | Worker health check (includes circuit breaker states)                                                                                                                                                                          |
 | `GET /api/status`                            | Admin status dashboard (raw/effective status, causes, confidence, staleness, probes, timeline). Preferred access is `ops.pharos.watch/admin/` (browser) or `ops-api.pharos.watch/api/status` with Access service-token headers |
 | `GET /api/status-history`                    | Admin machine-readable status timeline/probe history (`?limit=N`, max 200). Preferred access is `ops-api.pharos.watch/api/status-history` with Access service-token headers                                                    |
-| `GET /api/request-source-stats`              | Admin machine-readable public API attribution summary (website vs external split, route breakdown, time buckets). Preferred access is `ops-api.pharos.watch/api/request-source-stats` with Access service-token headers           |
+| `GET /api/request-source-stats`              | Admin machine-readable public API attribution summary for `api.pharos.watch` traffic (browser-identified web vs external split, route breakdown, time buckets). Preferred access is `ops-api.pharos.watch/api/request-source-stats` with Access service-token headers |
 | `GET /api/stability-index`                   | Latest Pharos Stability Index sample plus daily history and component breakdowns (`?detail=true` for full history)                                                                                                            |
 | `GET /api/og/*`                              | Dynamic Open Graph PNG images for stablecoin detail, safety scores, depeg, and PSI share cards                                                                                                                                 |
 | `GET /api/report-cards`                      | Stablecoin risk grade cards with dimension scores (peg, liquidity, resilience, decentralization, dependency)                                                                                                                   |
@@ -59,7 +59,11 @@ Cron trigger metadata follows the same single-source pattern. `shared/lib/cron-j
 | `GET /api/backfill-dews`                     | Admin: DEWS backtest audit against historical depeg events (reports true-positive rate and lead time; preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                 |
 | `POST /api/backfill-mint-burn-prices`        | Admin: backfill mint/burn event prices (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                               |
 | `GET /api/debug-sync-state`                  | Admin: view blacklist sync state for all chains (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                      |
-| `GET /api/request-source-stats`              | Admin: public API request-source attribution summary for website vs external traffic                                                                                                                                           |
+| `GET /api/api-keys`                          | Admin: list public API keys (masked token, owner/tier metadata, usage timestamps; preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                   |
+| `POST /api/api-keys`                         | Admin: create a new public API key and return the plaintext token once (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                             |
+| `POST /api/api-keys/:id/update`              | Admin: update public API key metadata / rate limit / active state (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                  |
+| `POST /api/api-keys/:id/deactivate`          | Admin: deactivate a public API key immediately (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                      |
+| `POST /api/api-keys/:id/rotate`              | Admin: rotate a public API key secret and return the new plaintext token once (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                      |
 | `GET /api/discovery-candidates`              | Admin: list stablecoin coverage candidates surfaced by the Monday CoinGecko discovery scan plus quarter-hourly DefiLlama residual intake                                                                                      |
 | `POST /api/discovery-candidates/:id/dismiss` | Admin: dismiss a discovery candidate from the status dashboard                                                                                                                                                                 |
 | `POST /api/feedback`                         | Public: submit feedback (bug, data-correction, feature-request). Rate-limited, auto-verified                                                                                                                                   |
@@ -86,7 +90,7 @@ The Telegram subscriber, disambiguation, and overflow-queue tables are part of t
 
 Representative tree of architecture-significant files and directories. For an exhaustive inventory, use `rg --files src shared worker scripts data functions`.
 
-Shared runtime host/origin defaults now live in `shared/lib/runtime-origins.json` + `shared/lib/runtime-origins.ts`. Frontend API-base inference, ops-host Pages Functions, worker self/probe URLs, and local static-export tooling should consume that shared source instead of embedding production origins ad hoc.
+Shared runtime host/origin defaults now live in `shared/lib/runtime-origins.json` + `shared/lib/runtime-origins.ts`. Frontend API-base inference, `/_site-data/*` Pages Functions, ops-host Pages Functions, worker self/probe URLs, and local static-export tooling should consume that shared source instead of embedding production origins ad hoc.
 
 ```
 src/                              # Next.js frontend (static export)
@@ -398,10 +402,13 @@ src/                              # Next.js frontend (static export)
     ├── stablecoin-detail-derive.ts # Pure stablecoin detail derivations (supply/deviation/90d reference/border classes)
     └── utils.ts                  # cn() helper for Tailwind class merging
 
-functions/                        # Cloudflare Pages Functions for operator-host gating and admin proxying
+functions/                        # Cloudflare Pages Functions for same-origin site-data and operator-host proxying
+├── _site-data/[[path]].ts        # Same-origin public-read proxy from site/ops/Pages hosts to site-api with shared-secret auth
 ├── admin/[[path]].ts             # Host gate for /admin/; serves on ops host, hard-404s elsewhere
 ├── api/admin/[[path]].ts         # Catch-all proxy for ops-only admin routes (`/api/admin/*` -> `ops-api`)
-└── lib/ops-origin.ts             # Shared ops-origin resolution helper
+├── lib/ops-origin.ts             # Shared ops-origin resolution helper
+├── lib/site-api-env.ts           # Pages env contract for the site-data proxy
+└── lib/site-data-origin.ts       # Shared site-data host allowlist helper
 
 shared/                           # Runtime-neutral boundary (import via `@shared/*`)
 ├── types/
@@ -417,10 +424,12 @@ shared/                           # Runtime-neutral boundary (import via `@share
 │   ├── mint-burn.ts              # Mint/burn flow, event, and sync contracts
 │   └── chains.ts                 # ChainSummary, ChainsResponse, ChainHealthFactors, HealthBand
 └── lib/
-    ├── api-endpoints.ts          # Authoritative endpoint metadata + static worker dependency hints + status/smoke/strict-contract helpers
+    ├── api-endpoints.ts          # Authoritative endpoint metadata + public-api/site-data policy + static worker dependency hints + status/smoke/strict-contract helpers
     ├── chain-aggregator.ts       # aggregateChains() — builds ChainSummary list from stablecoins cache + report-card snapshot
     ├── chain-health.ts           # Pure Chain Health Score computation (quality 30%, chain environment 20%, concentration 20%, peg stability 20%, backing diversity 10%)
     ├── chain-provider-registry.ts # Runtime-neutral CoinGecko/DexScreener/GeckoTerminal chain slug registry
+    ├── runtime-origins.ts        # Shared host/origin constants and hostname helpers
+    ├── site-data-routes.ts       # `/api/*` <-> `/_site-data/*` allowlisted mapping
     ├── stablecoins.ts            # Tracked stablecoin metadata list
     ├── stablecoin-id-registry.ts # Canonical/external ID lookup maps + resolution helpers
     ├── supply.ts                 # Supply helper utilities
@@ -436,11 +445,12 @@ worker/                           # Cloudflare Worker (API + cron jobs)
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
     ├── route-registry.ts         # Single worker-side static route definition list keyed by shared endpoint metadata
+    ├── api/api-keys.ts           # Admin API-key CRUD + rotate handlers
     ├── handlers/
     │   ├── http.ts               # HTTP orchestration: preflight, gates, edge cache, route-context build, router dispatch
     │   ├── http/                 # Focused HTTP helper modules
     │   │   ├── cors.ts           # Origin resolution + preflight / response header helpers
-    │   │   ├── gates.ts          # Maintenance mode, public API rate limit, env warnings
+    │   │   ├── gates.ts          # Maintenance mode, admin/site-data/public-API auth gates, env warnings
     │   │   ├── edge-cache.ts     # Edge cache match / store policy
     │   │   └── context.ts        # Route dependency hydration from Env
     │   ├── scheduled.ts          # Thin cron entrypoint: init env-aware clients + dispatch to slot runner registry
@@ -660,7 +670,9 @@ data/
 
 - `src/lib/api.ts` is the frontend runtime source of truth for API origin selection.
 - `NEXT_PUBLIC_API_BASE` is an optional explicit override, mainly for local `next dev` against `wrangler dev`.
-- When `NEXT_PUBLIC_API_BASE` is unset, `resolveApiBase()` routes `*.pharos.watch` and `*.stablecoin-dashboard.pages.dev` to `https://api.pharos.watch`; other hosts fall back to same-origin requests so local proxy and smoke setups still work.
+- When `NEXT_PUBLIC_API_BASE` is unset, `buildRequestUrl()` maps public browser reads on `pharos.watch`, `ops.pharos.watch`, and `*.stablecoin-dashboard.pages.dev` to same-origin `/_site-data/*`, while `buildApiUrl()` still points explicit public-API callsites (for example feedback and OG fetches) at `https://api.pharos.watch`.
+- `functions/_site-data/[[path]].ts` is the browser-facing proxy contract for the website data lane. It accepts only `GET`, allowlists public-read routes through `shared/lib/site-data-routes.ts`, and forwards to `site-api.pharos.watch` using `SITE_API_SHARED_SECRET`.
+- `site-api.pharos.watch` is an internal Worker host, not a browser surface. `worker/src/handlers/http/gates.ts` allows only `GET` allowlisted site-data paths plus the shared-secret header on that lane (or on Worker preview URLs during CI rehearsal).
 - `NEXT_PUBLIC_GA_ID` gates GA4 script injection in `src/app/layout.tsx`. When it is unset, the site still renders normally and no browser analytics events are emitted from `src/lib/analytics.ts`.
 
 ### Metadata and crawl ownership

@@ -1,4 +1,4 @@
-import { OPS_API_HOSTNAME } from "@shared/lib/runtime-origins";
+import { OPS_API_HOSTNAME, SITE_API_HOSTNAME } from "@shared/lib/runtime-origins";
 import { errorResponse } from "./api-utils";
 import { verifyAccessJwt } from "./jwt-verify";
 
@@ -8,10 +8,32 @@ export interface AdminAuthEnv {
   CF_ACCESS_TEAM_DOMAIN?: string;
 }
 
+export interface SiteProxyAuthEnv {
+  SITE_API_SHARED_SECRET?: string;
+}
+
 function isOpsApiRequest(request: Request | undefined): boolean {
   if (!request) return false;
   try {
     return new URL(request.url).hostname === OPS_API_HOSTNAME;
+  } catch {
+    return false;
+  }
+}
+
+export function isWorkerPreviewRequest(request: Request | undefined): boolean {
+  if (!request) return false;
+  try {
+    return new URL(request.url).hostname.endsWith(".workers.dev");
+  } catch {
+    return false;
+  }
+}
+
+function isSiteApiRequest(request: Request | undefined): boolean {
+  if (!request) return false;
+  try {
+    return new URL(request.url).hostname === SITE_API_HOSTNAME;
   } catch {
     return false;
   }
@@ -50,6 +72,23 @@ export async function hasValidAdminCredential(
   env?: AdminAuthEnv,
 ): Promise<boolean> {
   return trustedAdmin === true || hasOpsApiAccessSignal(request, env);
+}
+
+export async function hasValidSiteProxyCredential(
+  request: Request | undefined,
+  env?: SiteProxyAuthEnv,
+): Promise<boolean> {
+  if (!request || (!isSiteApiRequest(request) && !isWorkerPreviewRequest(request))) {
+    return false;
+  }
+
+  const expectedSecret = env?.SITE_API_SHARED_SECRET?.trim();
+  const presentedSecret = request.headers.get("X-Pharos-Site-Proxy-Secret")?.trim();
+  if (!expectedSecret || !presentedSecret) {
+    return false;
+  }
+
+  return timingSafeCompare(presentedSecret, expectedSecret);
 }
 
 /**

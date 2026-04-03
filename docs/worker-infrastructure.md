@@ -4,7 +4,7 @@ Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CO
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
-**Deployed at:** `api.pharos.watch` (public API route) and `ops-api.pharos.watch` (operator-prep route declared in `wrangler.toml`; pair with Cloudflare Access before use)
+**Deployed at:** `api.pharos.watch` (public integration API), `site-api.pharos.watch` (website-internal data lane), and `ops-api.pharos.watch` (operator lane; pair with Cloudflare Access before use)
 
 ---
 
@@ -35,7 +35,7 @@ invocation_logs = true
 
 ## Env Interface
 
-The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worker/src/index.ts` plus the HTTP-request helper stack under `worker/src/handlers/http*.ts` and the scheduled-runtime entrypoint/context (`worker/src/handlers/scheduled.ts`, `worker/src/handlers/scheduled/context.ts`). `DB`, `CORS_ORIGIN`, `SELF_URL`, `CF_ACCESS_TEAM_DOMAIN`, and `CF_ACCESS_OPS_API_AUD` are set in `wrangler.toml`; the remaining active bindings are runtime env values (typically provided via `wrangler secret put`).
+The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worker/src/index.ts` plus the HTTP-request helper stack under `worker/src/handlers/http*.ts` and the scheduled-runtime entrypoint/context (`worker/src/handlers/scheduled.ts`, `worker/src/handlers/scheduled/context.ts`). `DB`, `CORS_ORIGIN`, `SELF_URL`, `CF_ACCESS_TEAM_DOMAIN`, and `CF_ACCESS_OPS_API_AUD` are set in `wrangler.toml`; the remaining active bindings are runtime env values (typically provided via Cloudflare Worker secrets).
 
 `worker/src/lib/env.ts` is now the canonical worker binding contract and exports four groupings:
 
@@ -44,13 +44,16 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 - `WORKER_RESERVED_ENV_KEYS`
 - `WORKER_ACTIVE_ENV_KEYS` (`required + optional`)
 
-The paired Pages Functions contract lives in `functions/lib/ops-env.ts` with the same `required` / `optional` / `reserved` / `active` shape. Worker runtime validation logs contract errors when Access bindings are only partially configured, when admin D1 status bindings are only partially configured, or when `PUBLIC_API_RATE_LIMIT_SALT` is missing.
+The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `functions/lib/site-api-env.ts`, with the same `required` / `optional` / `reserved` / `active` shape. Worker runtime validation logs contract errors when Access bindings are only partially configured, when admin D1 status bindings are only partially configured, when `PUBLIC_API_RATE_LIMIT_SALT` is missing, when `SITE_API_SHARED_SECRET` is missing, or when public API auth mode is configured without `API_KEY_HASH_PEPPER`.
 
 | Binding                          | Type       | Required                                           | Used by                                                                                                                                                                    |
 | -------------------------------- | ---------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DB`                             | D1Database | Yes                                                | All crons and API handlers                                                                                                                                                 |
 | `CORS_ORIGIN`                    | string     | Yes                                                | Comma-separated CORS allowlist. Repo default: `https://pharos.watch,https://ops.pharos.watch`                                                                              |
 | `SELF_URL`                       | string     | No                                                 | Status self-check external probe base URL; the default production origin (`https://api.pharos.watch`) is router-probed internally to avoid custom-domain self-fetch `522`s |
+| `SITE_API_SHARED_SECRET`         | string     | No (worker contract); Yes for the website data lane | Shared secret required for `site-api.pharos.watch` and Worker preview site-data requests authenticated via `X-Pharos-Site-Proxy-Secret`                                        |
+| `API_KEY_HASH_PEPPER`            | string     | No (worker contract); Yes once public auth leaves `off` | Pepper used to HMAC-hash the secret portion of public API keys                                                                                                                    |
+| `PUBLIC_API_AUTH_MODE`           | string     | No                                                 | Public API auth mode: `off`, `report-only`, or `enforce`                                                                                                                          |
 | `OPS_UI_ORIGIN`                  | string     | No                                                 | Reserved on the worker runtime for cross-runtime alignment. The value is active on Pages Functions host gating (`https://ops.pharos.watch`)                                |
 | `OPS_API_ORIGIN`                 | string     | No                                                 | Reserved on the worker runtime for cross-runtime alignment. The value is active on Pages Functions proxying (`https://ops-api.pharos.watch`)                               |
 | `CF_ACCESS_TEAM_DOMAIN`          | string     | No                                                 | Cloudflare Access team domain used by worker-side JWT verification for `ops-api.pharos.watch` admin requests (defaults to `pharos-watch` when unset)                       |
@@ -102,9 +105,15 @@ Three modules derive runtime configuration from `Env` bindings via pure function
 
 These are pure functions. `Env` bindings are only available inside handler functions (not at module initialization time), so values are computed fresh per-request/per-trigger via the context factory. The notable exception is `worker/src/lib/jwt-verify.ts`, which intentionally keeps an in-memory JWKS cache (`cachedJwks`, 1-hour TTL) at module scope to avoid refetching Cloudflare Access signing keys on every admin request.
 
-## Public API Rate Limiting
+## Public API Auth and Rate Limiting
 
-Non-admin public `/api/*` requests are rate-limited through the D1-backed `public_api_rate_limit` table with per-minute hashed IP buckets. The worker now requires a dedicated `PUBLIC_API_RATE_LIMIT_SALT` binding for this path and returns `503` for public API traffic until that binding is configured. `FEEDBACK_IP_SALT` remains scoped to feedback submission hashing only. If the distributed limiter path fails after a valid salt is present, the worker logs the failure and allows the request instead of switching to an isolate-local fallback limiter.
+Protected non-admin public `/api/*` requests can be API-key-gated through `PUBLIC_API_AUTH_MODE`:
+
+- `off`: no key required; all public traffic uses the legacy hashed-IP limiter
+- `report-only`: invalid/missing keys are logged on protected routes, but requests still fall back to the legacy hashed-IP limiter
+- `enforce`: protected routes require a valid `X-API-Key`
+
+When a valid key is present, the worker uses the D1-backed `api_key_rate_limit` table with the per-key threshold stored in `api_keys.rate_limit_per_minute` (default `120/min`) and bypasses the legacy IP limiter. Exempt public routes, and protected routes while auth mode is not enforcing, still use the D1-backed `public_api_rate_limit` hashed-IP limiter. The worker requires a dedicated `PUBLIC_API_RATE_LIMIT_SALT` binding for that legacy path and returns `503` for public API traffic until the salt is configured. `FEEDBACK_IP_SALT` remains scoped to feedback submission hashing only. If the distributed legacy limiter path fails after a valid salt is present, the worker logs the failure and allows the request instead of switching to an isolate-local fallback limiter.
 
 ---
 
@@ -121,17 +130,21 @@ Non-admin public `/api/*` requests are rate-limited through the D1-backed `publi
 
 Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions) are centralized in `shared/lib/api-endpoints.ts` and consumed by both worker and frontend status tooling.
 
-### Public API Rate Limiting
+### Public API Auth and Rate Limiting
 
-- `worker/src/handlers/http/gates.ts` calls `checkPublicApiRateLimit(...)` for non-admin public `/api/*` traffic before router dispatch.
-- Default threshold: `300 requests / 60 seconds` per IP hash, enforced through the D1-backed `public_api_rate_limit` table.
-- If the distributed D1 path fails, `worker/src/lib/rate-limit.ts` logs the failure and returns `null`, which makes the request gate fail open for that request.
-- Requests that are already authorized for the `ops-api.pharos.watch` admin lane bypass this limiter.
+- `worker/src/handlers/http/gates.ts` checks the request lane in this order: `ops-api` Access auth, `site-api` shared-secret auth, protected public API key auth, then legacy public-IP limiting.
+- Protected public routes accept `X-API-Key` tokens in the format `ph_live_<16 hex prefix>_<32 char base64url secret>`.
+- Valid keys are verified from the D1-backed `api_keys` table using `key_prefix` lookup plus an HMAC-SHA256 secret hash with `API_KEY_HASH_PEPPER`.
+- Valid keyed requests use the D1-backed `api_key_rate_limit` table and bypass the legacy `public_api_rate_limit` IP limiter.
+- Default legacy threshold: `300 requests / 60 seconds` per IP hash, enforced through the D1-backed `public_api_rate_limit` table.
+- Requests already authorized for the `ops-api.pharos.watch` admin lane bypass both public limiters.
+- `site-api.pharos.watch` accepts only `GET` requests to allowlisted public-read paths and requires `X-Pharos-Site-Proxy-Secret`.
 
 ### Public API Request-Source Attribution
 
-- `worker/src/handlers/http.ts` records minute-bucketed public API attribution telemetry in `api_request_source_stats`
+- `worker/src/handlers/http/request-dispatch.ts` records minute-bucketed public API attribution telemetry in `api_request_source_stats`
 - the dataset is scoped to non-admin `/api/*` traffic and excludes `/api/telegram-webhook`
+- requests served through the `site-api` / `/_site-data/*` website lane are skipped entirely
 - source buckets are:
   - `web` when browser evidence indicates a request originated from `https://pharos.watch`
   - `external` for everything else in scope
@@ -150,7 +163,7 @@ Applied to every response via `addCorsHeaders()`:
 | `Access-Control-Allow-Origin`   | matching request origin from the `CORS_ORIGIN` allowlist, otherwise the first configured origin |
 | `Vary`                          | `Origin`                                                                                        |
 | `Access-Control-Allow-Methods`  | `GET, POST, OPTIONS`                                                                            |
-| `Access-Control-Allow-Headers`  | `Content-Type, Idempotency-Key`                                                                 |
+| `Access-Control-Allow-Headers`  | `Content-Type, Idempotency-Key, X-API-Key`                                                      |
 | `Access-Control-Expose-Headers` | `X-Data-Age, Warning`                                                                           |
 | `Access-Control-Max-Age`        | `86400`                                                                                         |
 | `X-Content-Type-Options`        | `nosniff`                                                                                       |
@@ -210,6 +223,16 @@ This baseline is enough to catch most abuse, regression, or cache-efficiency pro
 - Returns `null` if authorized, 401 Response if not
 - The worker verifies `Cf-Access-Jwt-Assertion` against `CF_ACCESS_OPS_API_AUD` using the team-domain JWKS and enforces JWT claims including `aud`, `exp`, and `iss`.
 - Cloudflare Access must still stay in front of `ops-api.pharos.watch`, because the worker does not authenticate callers independently of that Access layer.
+
+### Site-Data Auth
+
+**Files:** `functions/_site-data/[[path]].ts`, `worker/src/lib/auth.ts`, `worker/src/handlers/http/gates.ts`
+
+- Pages Functions on `pharos.watch`, `ops.pharos.watch`, and Pages preview hosts proxy same-origin `/_site-data/*` requests to `site-api.pharos.watch`
+- the proxy injects `X-Pharos-Site-Proxy-Secret` from `SITE_API_SHARED_SECRET`
+- the worker accepts that header only on `site-api.pharos.watch` or Worker preview URLs during CI rehearsal
+- the worker allows only `GET` requests to allowlisted public-read routes from `shared/lib/site-data-routes.ts`
+- site-data requests skip public API request-source telemetry so the public API attribution dataset stays scoped to `api.pharos.watch`
 
 ### Router-Dispatched Status Actions
 

@@ -4,6 +4,9 @@ export interface Env {
   SELF_URL?: string;
   OPS_UI_ORIGIN?: string;
   OPS_API_ORIGIN?: string;
+  SITE_API_SHARED_SECRET?: string;
+  API_KEY_HASH_PEPPER?: string;
+  PUBLIC_API_AUTH_MODE?: string;
   CF_ACCESS_TEAM_DOMAIN?: string;
   CF_ACCESS_OPS_UI_AUD?: string;
   CF_ACCESS_OPS_API_AUD?: string;
@@ -47,6 +50,9 @@ export const WORKER_REQUIRED_ENV_KEYS = [
 
 export const WORKER_OPTIONAL_ENV_KEYS = [
   "SELF_URL",
+  "SITE_API_SHARED_SECRET",
+  "API_KEY_HASH_PEPPER",
+  "PUBLIC_API_AUTH_MODE",
   "CF_ACCESS_TEAM_DOMAIN",
   "CF_ACCESS_OPS_API_AUD",
   "ETHERSCAN_API_KEY",
@@ -97,7 +103,10 @@ export interface WorkerEnvIssue {
   code:
     | "ops-access-partial-config"
     | "d1-status-partial-config"
-    | "public-api-rate-limit-misconfigured";
+    | "public-api-rate-limit-misconfigured"
+    | "site-api-secret-misconfigured"
+    | "public-api-auth-mode-invalid"
+    | "public-api-auth-pepper-missing";
   message: string;
 }
 
@@ -117,6 +126,8 @@ export interface ResolvedPublicApiRateLimitSalt {
   salt: string;
   source: "public-api-rate-limit-salt";
 }
+
+export type PublicApiAuthMode = "off" | "report-only" | "enforce";
 
 export function parseCsvEnv(value: string | undefined): string[] {
   if (!value) return [];
@@ -170,12 +181,25 @@ export function resolvePublicApiRateLimitSalt(
   return null;
 }
 
+export function resolvePublicApiAuthMode(
+  env: Pick<Env, "PUBLIC_API_AUTH_MODE">,
+): PublicApiAuthMode {
+  const raw = getConfiguredValue(env.PUBLIC_API_AUTH_MODE)?.toLowerCase();
+  if (raw === "report-only" || raw === "enforce") {
+    return raw;
+  }
+  return "off";
+}
+
 export function validateWorkerEnvContract(
   env: Pick<
     Env,
     | "CF_ACCESS_OPS_API_AUD"
     | "CF_ACCESS_TEAM_DOMAIN"
     | "PUBLIC_API_RATE_LIMIT_SALT"
+    | "SITE_API_SHARED_SECRET"
+    | "API_KEY_HASH_PEPPER"
+    | "PUBLIC_API_AUTH_MODE"
     | "FEEDBACK_IP_SALT"
     | "CLOUDFLARE_ACCOUNT_ID"
     | "CLOUDFLARE_D1_STATUS_API_TOKEN"
@@ -206,6 +230,28 @@ export function validateWorkerEnvContract(
     issues.push({
       code: "public-api-rate-limit-misconfigured",
       message: "PUBLIC_API_RATE_LIMIT_SALT is unset; public API rate limiting is disabled until the dedicated salt is configured.",
+    });
+  }
+
+  if (!hasConfiguredValue(env.SITE_API_SHARED_SECRET)) {
+    issues.push({
+      code: "site-api-secret-misconfigured",
+      message: "SITE_API_SHARED_SECRET is unset; the website site-api lane cannot authenticate until the shared secret is configured.",
+    });
+  }
+
+  const rawAuthMode = getConfiguredValue(env.PUBLIC_API_AUTH_MODE)?.toLowerCase();
+  if (rawAuthMode && rawAuthMode !== "off" && rawAuthMode !== "report-only" && rawAuthMode !== "enforce") {
+    issues.push({
+      code: "public-api-auth-mode-invalid",
+      message: "PUBLIC_API_AUTH_MODE must be one of off, report-only, or enforce.",
+    });
+  }
+
+  if (resolvePublicApiAuthMode(env) !== "off" && !hasConfiguredValue(env.API_KEY_HASH_PEPPER)) {
+    issues.push({
+      code: "public-api-auth-pepper-missing",
+      message: "API_KEY_HASH_PEPPER must be configured before public API auth mode can move beyond off.",
     });
   }
 

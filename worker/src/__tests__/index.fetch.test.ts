@@ -4,6 +4,19 @@ import { mockD1 } from "../api/__tests__/helpers/mock-d1";
 import { resetRateLimitStateForTests } from "../lib/rate-limit";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 
+async function hmacSha256Hex(secret: string, input: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(input));
+  return Array.from(new Uint8Array(signature), (value) => value.toString(16).padStart(2, "0")).join("");
+}
+
 function makeCtx() {
   const waits: Promise<unknown>[] = [];
   return {
@@ -22,6 +35,7 @@ function makeEnv(overrides: Record<string, unknown> = {}) {
     DB: mockD1(),
     CORS_ORIGIN: "https://pharos.watch",
     PUBLIC_API_RATE_LIMIT_SALT: "test-salt",
+    SITE_API_SHARED_SECRET: "site-secret",
     ...overrides,
   } as const;
 }
@@ -55,6 +69,7 @@ describe("worker.fetch", () => {
 
     expect(res.status).toBe(204);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://pharos.watch");
+    expect(res.headers.get("Access-Control-Allow-Headers")).toContain("X-API-Key");
     expect(cacheMatch).not.toHaveBeenCalled();
     expect(cachePut).not.toHaveBeenCalled();
   });
@@ -313,5 +328,135 @@ describe("worker.fetch", () => {
     expect(res.status).toBe(503);
     expect(cacheMatch).not.toHaveBeenCalled();
     expect(cachePut).not.toHaveBeenCalled();
+  });
+
+  it("rejects site-api requests without the shared site-proxy secret", async () => {
+    const env = makeEnv();
+    const { ctx } = makeCtx();
+
+    const res = await worker.fetch(
+      new Request("https://site-api.pharos.watch/api/stablecoins", { method: "GET" }),
+      env as never,
+      ctx,
+    );
+
+    expect(res.status).toBe(401);
+    expect(cacheMatch).not.toHaveBeenCalled();
+  });
+
+  it("serves allowlisted site-api requests with the shared secret and skips request-source stats", async () => {
+    cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+    const env = makeEnv({
+      DB: mockD1([], { requireMatch: true }),
+    });
+    const { ctx, waits } = makeCtx();
+
+    const res = await worker.fetch(
+      new Request("https://site-api.pharos.watch/api/stablecoins", {
+        method: "GET",
+        headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
+      }),
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(res.status).toBe(200);
+    expect(env.DB.getHistory()).toEqual([]);
+  });
+
+  it("enforces API keys on protected public routes when auth mode is enforce", async () => {
+    const env = makeEnv({
+      PUBLIC_API_AUTH_MODE: "enforce",
+      API_KEY_HASH_PEPPER: "pepper",
+    });
+    const { ctx } = makeCtx();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/stablecoins", { method: "GET" }),
+      env as never,
+      ctx,
+    );
+
+    expect(res.status).toBe(401);
+    expect(cacheMatch).not.toHaveBeenCalled();
+  });
+
+  it("accepts a valid API key on protected routes even when auth mode is off", async () => {
+    cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+    const pepper = "pepper";
+    const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
+    const secretHash = await hmacSha256Hex(pepper, secret);
+    const env = makeEnv({
+      PUBLIC_API_AUTH_MODE: "off",
+      API_KEY_HASH_PEPPER: pepper,
+      DB: mockD1([
+        {
+          match: "FROM api_keys",
+          matchBinds: ["0123456789abcdef"],
+          rows: [{
+            id: 7,
+            key_prefix: "0123456789abcdef",
+            secret_hash: secretHash,
+            name: "Smoke",
+            owner_email: "ops@pharos.watch",
+            tier: "ci",
+            rate_limit_per_minute: 180,
+            is_active: 1,
+            created_at: 1,
+            updated_at: 1,
+            last_used_at: null,
+            last_used_route: null,
+          }],
+        },
+        {
+          match: "INSERT INTO api_key_rate_limit",
+          rows: [],
+          first: { count: 1 },
+        },
+        {
+          match: "UPDATE api_keys SET last_used_at = ?, last_used_route = ? WHERE id = ?",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "DELETE FROM api_key_rate_limit",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+        {
+          match: "INSERT INTO api_request_source_stats",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "DELETE FROM api_request_source_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+      ], { requireMatch: true }),
+    });
+    const { ctx, waits } = makeCtx();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/stablecoins", {
+        method: "GET",
+        headers: { "X-API-Key": "ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF" },
+      }),
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(res.status).toBe(200);
+    const history = env.DB.getHistory();
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO api_key_rate_limit"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("public_api_rate_limit"))).toBe(false);
   });
 });

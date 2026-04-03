@@ -29,6 +29,12 @@ import { handleSupplyHistory } from "./api/supply-history";
 import { handleStatus } from "./api/status";
 import { handleStatusHistory } from "./api/status-history";
 import { handleRequestSourceStats } from "./api/request-source-stats";
+import {
+  handleApiKeyDeactivate,
+  handleApiKeyRotate,
+  handleApiKeys,
+  handleApiKeyUpdate,
+} from "./api/api-keys";
 import { handleDailyDigest } from "./api/daily-digest";
 import { handleDigestArchive } from "./api/digest-archive";
 import { handleDigestSnapshot } from "./api/digest-snapshot";
@@ -106,6 +112,10 @@ export interface MintBurnRouteFields {
   mintBurnFreshnessConfig?: MintBurnFreshnessConfig;
 }
 
+export interface ApiKeysRouteFields {
+  apiKeyHashPepper?: string;
+}
+
 /** Domain-specific fields for chain RPC access. */
 export interface ChainRpcRouteFields {
   coingeckoApiKey?: string | null;
@@ -124,6 +134,7 @@ export type FullRouteContext = RouteContext &
   DigestRouteFields &
   FeedbackRouteFields &
   MintBurnRouteFields &
+  ApiKeysRouteFields &
   ChainRpcRouteFields &
   CloudflareD1StatusRouteFields;
 
@@ -194,6 +205,8 @@ const STATIC_ROUTES = [
   defineStaticRoute("status-history", ({ db, trustedAdmin, request }) => handleStatusHistory(db, trustedAdmin, request)),
   defineStaticRoute("request-source-stats", ({ db, trustedAdmin, request }) =>
     handleRequestSourceStats(db, trustedAdmin, request)),
+  defineStaticRoute("api-keys", ({ db, trustedAdmin, request, apiKeyHashPepper }) =>
+    handleApiKeys(db, trustedAdmin, request, apiKeyHashPepper)),
   defineStaticRoute("daily-digest", ({ db }) => handleDailyDigest(db)),
   defineStaticRoute("digest-archive", ({ db }) => handleDigestArchive(db)),
   defineStaticRoute("digest-snapshot", ({ db, url }) => handleDigestSnapshot(db, url)),
@@ -336,6 +349,30 @@ export function getRouteMatch(path: string): RouteMatch | null {
     return {
       dependencies: [],
       handle: (routeCtx) => handleDiscoveryCandidateDismiss(routeCtx, dynamicAdminEndpoint.candidateId),
+    };
+  }
+  if (dynamicAdminEndpoint?.key === "api-key-update") {
+    return {
+      dependencies: ["apiKeyHashPepper"],
+      handle: (routeCtx) => handleApiKeyUpdate(routeCtx.db, dynamicAdminEndpoint.apiKeyId, routeCtx.trustedAdmin, routeCtx.request),
+    };
+  }
+  if (dynamicAdminEndpoint?.key === "api-key-deactivate") {
+    return {
+      dependencies: [],
+      handle: (routeCtx) => handleApiKeyDeactivate(routeCtx.db, dynamicAdminEndpoint.apiKeyId, routeCtx.trustedAdmin, routeCtx.request),
+    };
+  }
+  if (dynamicAdminEndpoint?.key === "api-key-rotate") {
+    return {
+      dependencies: ["apiKeyHashPepper"],
+      handle: (routeCtx) => handleApiKeyRotate(
+        routeCtx.db,
+        dynamicAdminEndpoint.apiKeyId,
+        routeCtx.trustedAdmin,
+        routeCtx.request,
+        routeCtx.apiKeyHashPepper,
+      ),
     };
   }
 

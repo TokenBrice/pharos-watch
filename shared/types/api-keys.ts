@@ -1,0 +1,46 @@
+export interface ApiKeySummary {
+  id: number;
+  keyPrefix: string;
+  maskedToken: string;
+  name: string;
+  ownerEmail: string | null;
+  tier: string;
+  rateLimitPerMinute: number;
+  isActive: boolean;
+  createdAt: number;
+  updatedAt: number;
+  lastUsedAt: number | null;
+  lastUsedRoute: string | null;
+}
+
+export interface ApiKeyListResponse {
+  generatedAt: number;
+  keys: ApiKeySummary[];
+}
+
+export interface ApiKeyCreateRequest {
+  name: string;
+  ownerEmail?: string | null;
+  tier?: string | null;
+  rateLimitPerMinute?: number | null;
+}
+
+export interface ApiKeyUpdateRequest {
+  name?: string | null;
+  ownerEmail?: string | null;
+  tier?: string | null;
+  rateLimitPerMinute?: number | null;
+  isActive?: boolean | null;
+}
+
+export interface ApiKeyMutationResponse {
+  key: ApiKeySummary;
+}
+
+export interface ApiKeyCreateResponse extends ApiKeyMutationResponse {
+  token: string;
+}
+
+export interface ApiKeyRotateResponse extends ApiKeyMutationResponse {
+  token: string;
+}

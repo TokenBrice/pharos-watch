@@ -1,5 +1,6 @@
 import type { StatusResponse } from "@shared/types";
 import { AdminActionsPanel } from "@/components/status/admin-actions-panel";
+import { ApiKeysPanel } from "@/components/status/api-keys-panel";
 import { TelegramBotStats } from "@/components/status/telegram-bot-stats";
 import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";
 import type { AdminAccess } from "@/lib/admin-access";
@@ -37,6 +38,7 @@ export function ControlSection({
         </>
       }
     >
+      <ApiKeysPanel adminAccess={adminAccess} />
       <AdminActionsPanel
         adminAccess={adminAccess}
         status={{ causes: data.causes, crons: data.crons }}

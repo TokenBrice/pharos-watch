@@ -64,10 +64,15 @@ function resolveOutputPath(): URL {
 async function main() {
   const apiUrl = resolveDigestApiUrl();
   const outputPath = resolveOutputPath();
+  const digestApiKey = (process.env.DIGEST_API_KEY ?? "").trim();
 
   console.log("Fetching digest archive...");
   console.log(`Digest source: ${apiUrl}`);
-  const res = await fetch(apiUrl);
+  const headers = new Headers();
+  if (digestApiKey) {
+    headers.set("X-API-Key", digestApiKey);
+  }
+  const res = await fetch(apiUrl, { headers });
   if (!res.ok) throw new Error(`API returned ${res.status}`);
   const { digests } = (await res.json()) as { digests: ApiDigest[] };
   console.log(`Fetched ${digests.length} digests`);

@@ -1,6 +1,9 @@
 type EndpointMethod = "GET" | "POST";
 export type EndpointProbeGroup = "public" | "admin" | "manual";
+export type EndpointPublicApiAccess = "protected" | "exempt";
+export type EndpointSiteDataAccess = "allowed" | "denied";
 export type EndpointDependency =
+  | "apiKeyHashPepper"
   | "alchemyApiKey"
   | "anthropicApiKey"
   | "cloudflareD1StatusConfig"
@@ -27,6 +30,8 @@ export interface EndpointDefinition {
   adminRequired: boolean;
   mutatingAdmin: boolean;
   cacheBypass: boolean;
+  publicApiAccess: EndpointPublicApiAccess;
+  siteDataAccess: EndpointSiteDataAccess;
   strictContract?: boolean;
   probeGroup?: EndpointProbeGroup;
   probePath?: string;
@@ -34,6 +39,8 @@ export interface EndpointDefinition {
   /** Worker-only dependency hydration hints consumed by the route registry/context builder. */
   routeDependencies?: readonly EndpointDependency[];
 }
+
+type BaseEndpointDefinition = Omit<EndpointDefinition, "publicApiAccess" | "siteDataAccess">;
 
 export interface StatusPageAction {
   label: string;
@@ -49,12 +56,19 @@ interface EndpointMethodValidationError {
   allowedMethods: readonly EndpointMethod[];
 }
 
-export interface DynamicAdminEndpointMatch {
-  key: "discovery-candidate-dismiss";
-  path: string;
-  candidateId: number;
-  methods: readonly EndpointMethod[];
-}
+export type DynamicAdminEndpointMatch =
+  | {
+    key: "discovery-candidate-dismiss";
+    path: string;
+    candidateId: number;
+    methods: readonly EndpointMethod[];
+  }
+  | {
+    key: "api-key-update" | "api-key-deactivate" | "api-key-rotate";
+    path: string;
+    apiKeyId: number;
+    methods: readonly EndpointMethod[];
+  };
 
 type QueryParamValue = string | number | boolean | null | undefined;
 
@@ -121,9 +135,13 @@ export const API_PATHS = {
       bucketSec: params?.bucketSec,
       routeLimit: params?.routeLimit,
     }),
+  apiKeys: () => "/api/api-keys",
+  apiKeyUpdate: (id: number) => `/api/api-keys/${id}/update`,
+  apiKeyDeactivate: (id: number) => `/api/api-keys/${id}/deactivate`,
+  apiKeyRotate: (id: number) => `/api/api-keys/${id}/rotate`,
 } as const;
 
-export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
+const BASE_ENDPOINT_DEFINITIONS = [
   // Public endpoints probed by the status dashboard.
   {
     key: "stablecoins",
@@ -463,6 +481,15 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     cacheBypass: true,
   },
   {
+    key: "api-keys",
+    path: "/api/api-keys",
+    methods: ["GET", "POST"],
+    adminRequired: true,
+    mutatingAdmin: false,
+    cacheBypass: true,
+    routeDependencies: ["apiKeyHashPepper"],
+  },
+  {
     key: "trigger-digest",
     path: "/api/trigger-digest",
     methods: ["POST"],
@@ -679,22 +706,73 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     cacheBypass: true,
     probeGroup: "admin",
   },
-] as const;
+] as const satisfies readonly BaseEndpointDefinition[];
 
-export type EndpointKey = (typeof ENDPOINT_DEFINITIONS)[number]["key"];
+export type EndpointKey = (typeof BASE_ENDPOINT_DEFINITIONS)[number]["key"];
+
+const SITE_DATA_ALLOWED_ENDPOINT_KEYS = new Set<EndpointKey>([
+  "stablecoins",
+  "stablecoin-detail-canary",
+  "stablecoin-reserves-canary",
+  "stablecoin-charts",
+  "peg-summary",
+  "health",
+  "blacklist",
+  "blacklist-summary",
+  "depeg-events",
+  "usds-status",
+  "bluechip-ratings",
+  "dex-liquidity",
+  "dex-liquidity-history",
+  "supply-history",
+  "daily-digest",
+  "digest-archive",
+  "digest-snapshot",
+  "yield-rankings",
+  "yield-history",
+  "safety-score-history",
+  "stability-index",
+  "report-cards",
+  "redemption-backstops",
+  "treasury-stable-exposure",
+  "mint-burn-flows",
+  "mint-burn-events",
+  "stress-signals",
+  "chains",
+  "non-usd-share",
+]);
+
+const PUBLIC_API_EXEMPT_ENDPOINT_KEYS = new Set<EndpointKey>([
+  "health",
+  "feedback",
+  "telegram-webhook",
+]);
+
+export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = BASE_ENDPOINT_DEFINITIONS.map((endpoint) => ({
+  ...endpoint,
+  publicApiAccess:
+    endpoint.adminRequired || PUBLIC_API_EXEMPT_ENDPOINT_KEYS.has(endpoint.key)
+      ? "exempt"
+      : "protected",
+  siteDataAccess: SITE_DATA_ALLOWED_ENDPOINT_KEYS.has(endpoint.key) ? "allowed" : "denied",
+}));
 
 const ENDPOINT_DEFINITION_BY_PATH = new Map<string, EndpointDefinition>(
   ENDPOINT_DEFINITIONS.map((endpoint) => [endpoint.path, endpoint]),
 );
 
 const ENDPOINT_DEFINITION_BY_KEY = new Map<EndpointKey, EndpointDefinition>(
-  ENDPOINT_DEFINITIONS.map((endpoint) => [endpoint.key, endpoint]),
+  ENDPOINT_DEFINITIONS.map((endpoint) => [endpoint.key as EndpointKey, endpoint] as const),
 );
 
 const STABLECOIN_DETAIL_PATH_PATTERN = /^\/api\/stablecoin\/[^/]+$/;
 const STABLECOIN_SUMMARY_PATH_PATTERN = /^\/api\/stablecoin-summary\/[^/]+$/;
+const STABLECOIN_RESERVES_PATH_PATTERN = /^\/api\/stablecoin-reserves\/[^/]+$/;
 const OG_IMAGE_PATH_PATTERN = /^\/api\/og\//;
 const DISCOVERY_DISMISS_PATH_PATTERN = /^\/api\/discovery-candidates\/(\d+)\/dismiss$/;
+const API_KEY_UPDATE_PATH_PATTERN = /^\/api\/api-keys\/(\d+)\/update$/;
+const API_KEY_DEACTIVATE_PATH_PATTERN = /^\/api\/api-keys\/(\d+)\/deactivate$/;
+const API_KEY_ROTATE_PATH_PATTERN = /^\/api\/api-keys\/(\d+)\/rotate$/;
 const GET_ONLY_METHODS = ["GET"] as const satisfies readonly EndpointMethod[];
 const POST_ONLY_METHODS = ["POST"] as const satisfies readonly EndpointMethod[];
 const GET_AND_POST_METHODS = ["GET", "POST"] as const satisfies readonly EndpointMethod[];
@@ -720,6 +798,56 @@ export function isCacheBypassPath(path: string): boolean {
   return CACHE_BYPASS_PATHS.has(path);
 }
 
+export function getPublicApiAccess(path: string): EndpointPublicApiAccess | null {
+  const endpoint = getEndpointDefinition(path);
+  if (endpoint) {
+    return endpoint.publicApiAccess;
+  }
+  if (matchDynamicAdminEndpoint(path)) {
+    return "exempt";
+  }
+  if (OG_IMAGE_PATH_PATTERN.test(path)) {
+    return "exempt";
+  }
+  if (
+    STABLECOIN_DETAIL_PATH_PATTERN.test(path) ||
+    STABLECOIN_SUMMARY_PATH_PATTERN.test(path) ||
+    STABLECOIN_RESERVES_PATH_PATTERN.test(path)
+  ) {
+    return "protected";
+  }
+  return null;
+}
+
+export function isProtectedPublicApiPath(path: string): boolean {
+  return getPublicApiAccess(path) === "protected";
+}
+
+export function getSiteDataAccess(path: string): EndpointSiteDataAccess | null {
+  const endpoint = getEndpointDefinition(path);
+  if (endpoint) {
+    return endpoint.siteDataAccess;
+  }
+  if (
+    STABLECOIN_DETAIL_PATH_PATTERN.test(path) ||
+    STABLECOIN_RESERVES_PATH_PATTERN.test(path)
+  ) {
+    return "allowed";
+  }
+  if (
+    matchDynamicAdminEndpoint(path) ||
+    OG_IMAGE_PATH_PATTERN.test(path) ||
+    STABLECOIN_SUMMARY_PATH_PATTERN.test(path)
+  ) {
+    return "denied";
+  }
+  return null;
+}
+
+export function isSiteDataAllowedPath(path: string): boolean {
+  return getSiteDataAccess(path) === "allowed";
+}
+
 export function matchDynamicAdminEndpoint(path: string): DynamicAdminEndpointMatch | null {
   const discoveryDismissMatch = path.match(DISCOVERY_DISMISS_PATH_PATTERN);
   if (discoveryDismissMatch) {
@@ -731,6 +859,26 @@ export function matchDynamicAdminEndpoint(path: string): DynamicAdminEndpointMat
       key: "discovery-candidate-dismiss",
       path,
       candidateId,
+      methods: POST_ONLY_METHODS,
+    };
+  }
+
+  const apiKeyPatterns: Array<[RegExp, "api-key-update" | "api-key-deactivate" | "api-key-rotate"]> = [
+    [API_KEY_UPDATE_PATH_PATTERN, "api-key-update"],
+    [API_KEY_DEACTIVATE_PATH_PATTERN, "api-key-deactivate"],
+    [API_KEY_ROTATE_PATH_PATTERN, "api-key-rotate"],
+  ];
+  for (const [pattern, key] of apiKeyPatterns) {
+    const match = path.match(pattern);
+    if (!match) continue;
+    const apiKeyId = Number.parseInt(match[1] ?? "", 10);
+    if (!Number.isFinite(apiKeyId) || apiKeyId <= 0) {
+      return null;
+    }
+    return {
+      key,
+      path,
+      apiKeyId,
       methods: POST_ONLY_METHODS,
     };
   }

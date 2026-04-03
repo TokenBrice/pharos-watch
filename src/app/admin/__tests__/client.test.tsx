@@ -34,6 +34,10 @@ vi.mock("@/components/status/admin-actions-panel", () => ({
   AdminActionsPanel: () => <div data-testid="admin-actions">admin actions</div>,
 }));
 
+vi.mock("@/components/status/api-keys-panel", () => ({
+  ApiKeysPanel: () => <div data-testid="api-keys-panel">api keys</div>,
+}));
+
 vi.mock("@/components/status/cache-freshness-table", () => ({
   CacheFreshnessTable: () => <div data-testid="cache-freshness">cache freshness</div>,
 }));

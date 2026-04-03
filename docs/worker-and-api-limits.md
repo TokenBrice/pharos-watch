@@ -17,8 +17,9 @@ It intentionally does **not** treat vendor pricing-plan quotas as source of trut
 - `worker/wrangler.toml`
 - `shared/lib/cron-jobs.ts`
 - `worker/src/lib/rate-limit.ts`
+- `worker/src/lib/api-keys.ts`
 - `worker/src/lib/circuit-breaker.ts`
-- `worker/src/handlers/http.ts`
+- `worker/src/handlers/http/gates.ts`
 - `worker/src/cron/sync-blacklist.ts`
 - `worker/src/cron/sync-mint-burn.ts`
 - `worker/src/cron/dex-discovery/orchestrator.ts`
@@ -39,9 +40,10 @@ It intentionally does **not** treat vendor pricing-plan quotas as source of trut
 | Cron expressions / trigger slots | `13`                                            | `worker/wrangler.toml`, `shared/lib/cron-jobs.ts`, `shared/lib/scheduled-runner-registry.ts` | Public status tooling groups around these trigger slots; the shared runner registry is the dispatch authority checked by `npm run check:cron-sync` |
 | Status-tracked cron jobs         | `29`                                            | `shared/lib/cron-jobs.ts`                                     | These are the jobs expected by `/api/status`                                                                                                                 |
 | Runtime jobs actually scheduled  | `29`                                            | `shared/lib/cron-jobs.ts`                                     | Runtime scheduling now matches the shared status metadata set; cemetery/tracking appendices are folded into daily digest delivery instead of a separate cron |
-| Public API limiter               | `300 requests / 60 seconds` per IP hash         | `worker/src/handlers/http.ts`, `worker/src/lib/rate-limit.ts` | Enforced through D1-backed `public_api_rate_limit`; after `3` consecutive D1 limiter failures, the worker enters a bounded `503` emergency block with `Retry-After: 60` |
+| Public API limiter               | `300 requests / 60 seconds` per IP hash         | `worker/src/handlers/http/gates.ts`, `worker/src/lib/rate-limit.ts` | Legacy limiter for exempt public routes and protected routes when API-key auth is not satisfied/enforced; enforced through D1-backed `public_api_rate_limit`; after `3` consecutive D1 limiter failures, the worker enters a bounded `503` emergency block with `Retry-After: 60` |
+| API key default limiter          | `120 requests / 60 seconds` per key             | `worker/src/lib/api-keys.ts`                                   | Protected public routes with a valid `X-API-Key` use the D1-backed `api_key_rate_limit` table; per-key overrides are stored in `api_keys.rate_limit_per_minute`            |
 | Feedback limiter                 | `3 submissions / 10 minutes` per salted IP hash | `worker/src/api/feedback.ts`, `worker/src/lib/rate-limit.ts`  | Separate from the general public API limiter                                                                                                                 |
-| Request-source telemetry retention | `35 days`                                     | `worker/src/lib/request-source-attribution.ts`                | Public API website-vs-external attribution buckets in `api_request_source_stats` are pruned opportunistically                                              |
+| Request-source telemetry retention | `35 days`                                     | `worker/src/lib/request-source-attribution.ts`                | Public API `api.pharos.watch` website-vs-external attribution buckets in `api_request_source_stats` are pruned opportunistically; the internal `site-api` lane is excluded |
 
 ### Connection-budget operating assumption
 

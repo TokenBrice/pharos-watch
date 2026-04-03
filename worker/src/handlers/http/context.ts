@@ -9,6 +9,9 @@ import type { Env } from "../../lib/env";
 type RouteDependencyHydrator = (routeCtx: FullRouteContext, env: Env) => void;
 
 const ROUTE_DEPENDENCY_HYDRATORS = {
+  apiKeyHashPepper(routeCtx, env) {
+    routeCtx.apiKeyHashPepper = env.API_KEY_HASH_PEPPER;
+  },
   alchemyApiKey(routeCtx, env) {
     routeCtx.alchemyApiKey = env.ALCHEMY_API_KEY ?? null;
   },

@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DIGEST_API_URL: ${{ inputs.api_base_url != '' && inputs.api_base_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+      DIGEST_API_KEY: ${{ secrets.DIGEST_API_KEY }}
       NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -65,6 +66,8 @@ jobs:
       - name: Start local export smoke server
         env:
           STATIC_EXPORT_API_BASE: ${{ inputs.api_base_url != '' && inputs.api_base_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+          STATIC_EXPORT_SITE_API_BASE: ${{ inputs.api_base_url != '' && inputs.api_base_url || 'https://site-api.pharos.watch' }}
+          STATIC_EXPORT_SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
           STATIC_EXPORT_HOST: 127.0.0.1
           STATIC_EXPORT_PORT: "4173"
         run: |

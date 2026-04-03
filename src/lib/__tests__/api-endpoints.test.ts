@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  getSiteDataAccess,
+  getPublicApiAccess,
   getProbePaths,
   getStatusPageActions,
   isAdminPath,
   isCacheBypassPath,
   isMutatingAdminPath,
+  isProtectedPublicApiPath,
+  isSiteDataAllowedPath,
   matchDynamicAdminEndpoint,
   validateEndpointMethod,
 } from "@shared/lib/api-endpoints";
@@ -96,8 +100,15 @@ describe("api endpoint registry", () => {
       candidateId: 42,
       methods: ["POST"],
     });
+    expect(matchDynamicAdminEndpoint("/api/api-keys/7/update")).toEqual({
+      key: "api-key-update",
+      path: "/api/api-keys/7/update",
+      apiKeyId: 7,
+      methods: ["POST"],
+    });
     expect(matchDynamicAdminEndpoint("/api/discovery-candidates/not-a-number/dismiss")).toBeNull();
     expect(isAdminPath("/api/status")).toBe(true);
+    expect(isAdminPath("/api/api-keys")).toBe(true);
     expect(isAdminPath("/api/request-source-stats")).toBe(true);
     expect(isAdminPath("/api/discovery-candidates/42/dismiss")).toBe(true);
     expect(isAdminPath("/api/stablecoins")).toBe(false);
@@ -106,10 +117,15 @@ describe("api endpoint registry", () => {
   it("validates endpoint methods from shared definitions", () => {
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoins"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/feedback"), "POST")).toBeNull();
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys"), "GET")).toBeNull();
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys"), "POST")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/request-source-stats"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoin/1"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoin-summary/1"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/discovery-candidates/1/dismiss"), "POST")).toBeNull();
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys/1/update"), "POST")).toBeNull();
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys/1/deactivate"), "POST")).toBeNull();
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys/1/rotate"), "POST")).toBeNull();
     expect(
       validateEndpointMethod(new URL("https://api.pharos.watch/api/audit-depeg-history?dry-run=true"), "GET"),
     ).toBeNull();
@@ -134,6 +150,10 @@ describe("api endpoint registry", () => {
       message: "Method not allowed. Use POST for this endpoint.",
       allowedMethods: ["POST"],
     });
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys/1/rotate"), "GET")).toEqual({
+      message: "Method not allowed. Use POST for this endpoint.",
+      allowedMethods: ["POST"],
+    });
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/unknown"), "POST")).toEqual({
       message: "Method not allowed",
       allowedMethods: ["GET"],
@@ -142,6 +162,20 @@ describe("api endpoint registry", () => {
       message: "Method not allowed",
       allowedMethods: ["GET", "POST"],
     });
+  });
+
+  it("keeps public-auth and site-data policies aligned", () => {
+    expect(getPublicApiAccess("/api/stablecoins")).toBe("protected");
+    expect(getPublicApiAccess("/api/health")).toBe("exempt");
+    expect(getPublicApiAccess("/api/og/stablecoin/usdt-tether")).toBe("exempt");
+    expect(isProtectedPublicApiPath("/api/stablecoins")).toBe(true);
+    expect(isProtectedPublicApiPath("/api/health")).toBe(false);
+    expect(getSiteDataAccess("/api/stablecoins")).toBe("allowed");
+    expect(getSiteDataAccess("/api/stablecoin-summary/usdt-tether")).toBe("denied");
+    expect(isSiteDataAllowedPath("/api/stablecoins")).toBe(true);
+    expect(isSiteDataAllowedPath("/api/stablecoin/usdt-tether")).toBe(true);
+    expect(isSiteDataAllowedPath("/api/stablecoin-summary/usdt-tether")).toBe(false);
+    expect(isSiteDataAllowedPath("/api/status")).toBe(false);
   });
 
   it("provides status-page actions in UI order", () => {

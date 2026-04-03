@@ -21,12 +21,13 @@ export async function handleHttpRequestImpl(
   if (maintenanceResponse) return addCorsHeaders(maintenanceResponse, origin);
 
   const url = new URL(request.url);
-  const { isAdmin, response: gateResponse } = await evaluateAccessGate(request, url, env);
+  const { isAdmin, isSiteProxy, response: gateResponse } = await evaluateAccessGate(request, url, env);
   const recordRequestSource = createRequestSourceRecorder({
     request,
     db: env.DB,
     execCtx: ctx,
     isAdmin,
+    skip: isSiteProxy,
     pathname: url.pathname,
   });
   if (gateResponse) {

@@ -10,7 +10,7 @@
 
 **Squash date:** 2026-03-25 (S-014)
 
-## Individual Migrations (0072–0082)
+## Individual Migrations (0072–0084)
 
 Applied sequentially after the baseline (fresh setup) or after the previous individual migration (existing databases).
 
@@ -27,6 +27,8 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0080     | `0080_live_reserve_attempt_fencing.sql`         | Add live-reserve attempt IDs and authoritative fencing columns                                 |
 | 0081     | `0081_blacklist_current_balances.sql`           | Add active blacklist current-balance cache table and reset legacy Tron derived event amounts   |
 | 0082     | `0082_api_request_source_stats.sql`             | Add minute-bucketed public API request-source attribution telemetry                            |
+| 0083     | `0083_api_keys.sql`                             | Add API key metadata table with prefix + secret-hash storage                                   |
+| 0084     | `0084_api_key_rate_limit.sql`                   | Add per-key minute-bucket rate-limit table                                                     |
 
 ## Known Anomalies
 

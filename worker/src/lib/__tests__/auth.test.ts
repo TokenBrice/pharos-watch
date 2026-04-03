@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { requireAdmin, hasValidAdminCredential } from "../auth";
+import {
+  hasValidAdminCredential,
+  hasValidSiteProxyCredential,
+  isWorkerPreviewRequest,
+  requireAdmin,
+  timingSafeCompare,
+  withAdmin,
+} from "../auth";
 
 vi.mock("../jwt-verify", () => ({
   verifyAccessJwt: vi.fn().mockResolvedValue(true),
@@ -29,6 +36,14 @@ describe("auth helpers", () => {
     expect(result).toBe(false);
   });
 
+  it("rejects malformed admin request URLs", async () => {
+    const malformed = {
+      url: "not a valid url",
+      headers: new Headers({ "Cf-Access-Jwt-Assertion": "some-jwt" }),
+    } as unknown as Request;
+    expect(await hasValidAdminCredential(malformed, false, TEST_ENV)).toBe(false);
+  });
+
   it("rejects ops-api requests without JWT header", async () => {
     const request = new Request("https://ops-api.pharos.watch/api/status");
     const result = await hasValidAdminCredential(request, false, TEST_ENV);
@@ -46,5 +61,65 @@ describe("auth helpers", () => {
   it("accepts trustedAdmin=true regardless of headers", async () => {
     const request = new Request("https://x/admin");
     expect(await hasValidAdminCredential(request, true)).toBe(true);
+  });
+
+  it("runs withAdmin handlers only after auth succeeds", async () => {
+    const handler = vi.fn(async () => new Response("ok", { status: 200 }));
+    const allowed = await withAdmin(new Request("https://x/admin"), handler, true);
+    const denied = await withAdmin(new Request("https://x/admin"), handler, false);
+
+    expect(allowed.status).toBe(200);
+    expect(denied.status).toBe(401);
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it("accepts the shared site-proxy secret on the site-api host", async () => {
+    const request = new Request("https://site-api.pharos.watch/api/stablecoins", {
+      headers: { "X-Pharos-Site-Proxy-Secret": "shared-secret" },
+    });
+    expect(await hasValidSiteProxyCredential(request, { SITE_API_SHARED_SECRET: "shared-secret" })).toBe(true);
+  });
+
+  it("accepts the shared site-proxy secret on worker preview URLs only", async () => {
+    const preview = new Request("https://stablecoin-api.user.workers.dev/api/stablecoins", {
+      headers: { "X-Pharos-Site-Proxy-Secret": "shared-secret" },
+    });
+    const publicHost = new Request("https://api.pharos.watch/api/stablecoins", {
+      headers: { "X-Pharos-Site-Proxy-Secret": "shared-secret" },
+    });
+
+    expect(await hasValidSiteProxyCredential(preview, { SITE_API_SHARED_SECRET: "shared-secret" })).toBe(true);
+    expect(await hasValidSiteProxyCredential(publicHost, { SITE_API_SHARED_SECRET: "shared-secret" })).toBe(false);
+  });
+
+  it("rejects site-proxy auth when the secret is missing or malformed", async () => {
+    const request = new Request("https://site-api.pharos.watch/api/stablecoins");
+    expect(await hasValidSiteProxyCredential(request, { SITE_API_SHARED_SECRET: "shared-secret" })).toBe(false);
+    expect(await hasValidSiteProxyCredential(request, { SITE_API_SHARED_SECRET: " " })).toBe(false);
+    expect(await hasValidSiteProxyCredential(undefined, { SITE_API_SHARED_SECRET: "shared-secret" })).toBe(false);
+  });
+
+  it("rejects malformed site-proxy request URLs", async () => {
+    const malformed = {
+      url: "not a valid url",
+      headers: new Headers({ "X-Pharos-Site-Proxy-Secret": "shared-secret" }),
+    } as unknown as Request;
+    expect(await hasValidSiteProxyCredential(malformed, { SITE_API_SHARED_SECRET: "shared-secret" })).toBe(false);
+  });
+
+  it("recognizes worker preview hosts and rejects malformed URLs", () => {
+    expect(isWorkerPreviewRequest(new Request("https://stablecoin-api.user.workers.dev/api/stablecoins"))).toBe(true);
+    expect(isWorkerPreviewRequest(new Request("https://api.pharos.watch/api/stablecoins"))).toBe(false);
+    expect(isWorkerPreviewRequest({ url: "not a valid url" } as Request)).toBe(false);
+    expect(isWorkerPreviewRequest(undefined)).toBe(false);
+  });
+
+  it("handles timing-safe compare guard paths", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    expect(await timingSafeCompare("shared-secret", "shared-secret")).toBe(true);
+    expect(await timingSafeCompare("shared-secret", "different-secret")).toBe(false);
+    expect(await timingSafeCompare("", "shared-secret")).toBe(false);
+    expect(errorSpy).toHaveBeenCalled();
   });
 });

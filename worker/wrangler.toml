@@ -14,6 +14,7 @@ globs = ["**/*.wasm"]
 
 routes = [
   { pattern = "api.pharos.watch", custom_domain = true },
+  { pattern = "site-api.pharos.watch", custom_domain = true },
   { pattern = "ops-api.pharos.watch", custom_domain = true }
 ]
 

@@ -65,7 +65,15 @@ function ensureBaseUrl(input) {
 
 async function fetchJson(baseUrl, endpointPath, timeoutMs) {
   const url = `${baseUrl}${endpointPath}`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+  const smokeApiKey = (process.env.SMOKE_API_KEY ?? "").trim();
+  const headers = new Headers();
+  if (smokeApiKey) {
+    headers.set("X-API-Key", smokeApiKey);
+  }
+  const res = await fetch(url, {
+    signal: AbortSignal.timeout(timeoutMs),
+    headers,
+  });
 
   let body;
   try {

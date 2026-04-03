@@ -93,7 +93,7 @@ npm install
 NEXT_PUBLIC_API_BASE=http://localhost:8787 npm run dev
 ```
 
-`NEXT_PUBLIC_API_BASE` is mainly a local-dev override for `next dev` against `wrangler dev`. When it is unset, the client runtime auto-targets `https://api.pharos.watch` on `*.pharos.watch` and `*.stablecoin-dashboard.pages.dev`; local static smoke/proxy setups can keep it empty. `NEXT_PUBLIC_GA_ID` is optional and only injects GA4 when set at build time.
+`NEXT_PUBLIC_API_BASE` is mainly a local-dev override for `next dev` against `wrangler dev`. When it is unset, browser reads on `pharos.watch`, `ops.pharos.watch`, and `*.stablecoin-dashboard.pages.dev` go through same-origin `/_site-data/*`, which Pages Functions proxy to `site-api.pharos.watch` using `SITE_API_SHARED_SECRET`. Direct browser calls still use `https://api.pharos.watch` only for exempt public routes such as feedback submission and OG image fetches. Local static smoke/proxy setups can keep `NEXT_PUBLIC_API_BASE` empty. `NEXT_PUBLIC_GA_ID` is optional and only injects GA4 when set at build time.
 
 ### Worker API
 
@@ -153,14 +153,17 @@ src/                              Frontend (Next.js static export)
 ├── hooks/                        Data fetching hooks (TanStack Query) + shared UI hooks (useSort, useUrlFilters, useTimeRangeFilter)
 └── lib/                          Frontend-only utilities (API client, charts/colors, metadata, UI helpers)
 
-functions/                        Cloudflare Pages Functions for ops-host gating and `/api/admin/*` proxying
+functions/                        Cloudflare Pages Functions for same-origin website/ops proxying
+├── _site-data/[[path]].ts        Same-origin website data proxy from `pharos.watch` / `ops.pharos.watch` / Pages preview hosts to `site-api.pharos.watch`
 ├── admin/[[path]].ts             Host gate for `/admin/` on `ops.pharos.watch`
 ├── api/admin/[[path]].ts         Same-origin admin proxy from `ops.pharos.watch` to `ops-api.pharos.watch`
-├── lib/ops-env.ts                Shared Pages Functions env contract for ops-host gating and proxying
-└── lib/ops-origin.ts             Shared ops-origin resolution helper
+├── lib/ops-env.ts                Shared Pages Functions env contract for ops-host gating and admin proxying
+├── lib/ops-origin.ts             Shared ops-origin resolution helper
+├── lib/site-api-env.ts           Shared Pages Functions env contract for the `/_site-data/*` proxy
+└── lib/site-data-origin.ts       Shared site-data host-allowlist helper
 
 shared/                           Runtime-neutral shared boundary (`@shared/*`)
-├── lib/                          Stablecoin metadata, supply/peg/classification/report-card logic, endpoint contract registry
+├── lib/                          Stablecoin metadata, supply/peg/classification/report-card logic, runtime origins, endpoint + site-data route registries
 └── types/                        Shared TypeScript types and schema helpers
 
 worker/                           Cloudflare Worker (API + cron jobs)
@@ -190,6 +193,13 @@ Current source-of-truth product docs live in `/docs/` and this README. `/agents/
 - [docs/methodology-page.md](./docs/methodology-page.md) - `/methodology` section-to-source mapping and update contract
 
 ## Infrastructure
+
+Runtime host split:
+
+- website UI: `https://pharos.watch`
+- website data lane: same-origin `/_site-data/*` -> `https://site-api.pharos.watch`
+- external integration API: `https://api.pharos.watch`
+- operator UI/API: `https://ops.pharos.watch` / `https://ops-api.pharos.watch`
 
 ```
 Cloudflare Worker (API layer)

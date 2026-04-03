@@ -6,6 +6,7 @@ import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 import origins from "../shared/lib/runtime-origins.json" with { type: "json" };
+import { resolveSiteDataUpstreamPath } from "../shared/lib/site-data-routes.ts";
 
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -57,18 +58,25 @@ function getProxyBaseUrl() {
   return configured || origins.apiOrigin;
 }
 
-async function proxyApiRequest(targetUrl, method) {
+function getSiteProxyBaseUrl() {
+  const configured = (process.env.STATIC_EXPORT_SITE_API_BASE ?? "").trim();
+  return configured || origins.siteApiOrigin;
+}
+
+async function proxyApiRequest(targetUrl, method, headers = {}) {
   return fetch(targetUrl, {
     method,
     headers: {
       Accept: "application/json",
       "User-Agent": "pharos-static-export-smoke/1.0",
+      ...headers,
     },
   });
 }
 
 export function createStaticExportServer({
   apiBaseUrl = getProxyBaseUrl(),
+  siteApiBaseUrl = getSiteProxyBaseUrl(),
   host = process.env.STATIC_EXPORT_HOST ?? "127.0.0.1",
   port = Number.parseInt(process.env.STATIC_EXPORT_PORT ?? "4173", 10),
   rootDir = path.resolve(process.cwd(), process.env.STATIC_EXPORT_ROOT ?? "out"),
@@ -84,9 +92,26 @@ export function createStaticExportServer({
       return;
     }
 
-    if (requestUrl.pathname.startsWith("/api/")) {
+    if (requestUrl.pathname.startsWith("/api/") || requestUrl.pathname.startsWith("/_site-data/")) {
       try {
-        const upstream = await proxyApiRequest(`${apiBaseUrl}${requestUrl.pathname}${requestUrl.search}`, method);
+        const isSiteDataRequest = requestUrl.pathname.startsWith("/_site-data/");
+        const upstreamPath = isSiteDataRequest
+          ? resolveSiteDataUpstreamPath(requestUrl.pathname)
+          : requestUrl.pathname;
+        if (!upstreamPath) {
+          res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: "Not found" }));
+          return;
+        }
+
+        const siteProxySecret = (process.env.STATIC_EXPORT_SITE_API_SHARED_SECRET ?? "").trim();
+        const upstream = await proxyApiRequest(
+          `${(isSiteDataRequest ? siteApiBaseUrl : apiBaseUrl)}${upstreamPath}${requestUrl.search}`,
+          method,
+          isSiteDataRequest && siteProxySecret
+            ? { "X-Pharos-Site-Proxy-Secret": siteProxySecret }
+            : {},
+        );
         const body = method === "HEAD" ? null : Buffer.from(await upstream.arrayBuffer());
         const headers = {};
 
@@ -152,6 +177,7 @@ export function createStaticExportServer({
     },
     port,
     rootDir: normalizedRoot,
+    siteApiBaseUrl,
     server,
   };
 }
@@ -162,6 +188,6 @@ if (isDirectRun) {
   const app = createStaticExportServer();
   await app.listen();
   console.log(
-    `[serve-static-export] Serving ${app.rootDir} on http://${app.host}:${app.port} with /api proxy ${getProxyBaseUrl()}`,
+    `[serve-static-export] Serving ${app.rootDir} on http://${app.host}:${app.port} with /api proxy ${getProxyBaseUrl()} and /_site-data proxy ${getSiteProxyBaseUrl()}`,
   );
 }
