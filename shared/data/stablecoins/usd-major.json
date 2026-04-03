@@ -2369,7 +2369,7 @@
       "navToken": false
     },
     "collateral": "Current public proof-of-reserves show USDai backed primarily by PYUSD (PayPal USD) plus a smaller sleeve of GPU-backed infrastructure loans secured by NVIDIA hardware; sUSDai is the yield-bearing vault that allocates into the hardware-backed credit book",
-    "pegMechanism": "Minted and redeemed through the USD.AI platform against supported stablecoins; public proof-of-reserves currently show PYUSD as the liquid reserve bucket, while sUSDai accrues yield from GPU-backed infrastructure loans",
+    "pegMechanism": "Minted and redeemed through the USD.AI platform against PYUSD; base USDai is the instant non-yielding token, while sUSDai is the yield-bearing vault with a roughly 30-day unstaking queue into the GPU-loan reserve stack",
     "llamaId": "309",
     "detailProvider": "defillama",
     "geckoId": "usdai",

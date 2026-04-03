@@ -1,9 +1,24 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "3.1",
+  currentVersion: "3.2",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "3.2",
+      title: "USD.AI redemption rail wording correction",
+      date: "2026-04-03",
+      effectiveAt: 1775167200,
+      summary:
+        "USD.AI's reviewed redemption route now explicitly reflects the live PYUSD-only base-token rail instead of broader multi-stable wording inherited from older docs phrasing.",
+      impact: [
+        "USD.AI still models base USDai as a permissionless atomic stablecoin-redeem route, but the reviewed route notes and fee text now state that direct mint and redeem are against PYUSD specifically rather than generic supported stablecoins",
+        "The slower queue remains scoped to sUSDai unstaking only, preserving the existing base-token route semantics while tightening the evidence trail to the live app flow and current issuer guidance",
+        "No live redemption-capacity telemetry is added here because USD.AI's public API does not currently expose a trustworthy base-token redeemable-buffer or redemption-limit feed",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.1",
       title: "Live-capacity truth-boundary hardening and registry cleanup",

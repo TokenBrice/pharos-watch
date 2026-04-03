@@ -245,18 +245,15 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   "usdai-usd-ai": {
     ...stablecoinRedeemBase,
     ...reviewedDirectRedemptionSupplyFull,
+    reviewedAt: "2026-04-03",
     costModel: documentedVariableFee(
-      "USD.AI docs describe USDai as instantly redeemable by burning into supported stablecoins, while the longer unstaking queue applies to sUSDai rather than base USDai",
+      "USD.AI's current app flow and issuer guidance indicate base USDai is minted and redeemed instantly against PYUSD, while the longer unstaking queue applies to sUSDai rather than base USDai",
     ),
     docs: [
       sourceRef("USD.AI buy / stake", "https://docs.usd.ai/app-guide/buy-stake", ["route", "capacity"]),
-      sourceRef(
-        "USD.AI technical overview",
-        "https://docs.usd.ai/technical-overview/technical-protocol-overview",
-        ["route", "capacity"],
-      ),
+      sourceRef("USD.AI app buy flow", "https://app.usd.ai/buy", ["route"]),
     ],
-    notes: ["Current route models the base USDai burn-and-withdraw path; the asynchronous queue in docs applies to sUSDai unstaking, not direct USDai redemption"],
+    notes: ["Current route models the base USDai burn-and-withdraw path into PYUSD; the asynchronous queue applies to sUSDai unstaking, not direct USDai redemption"],
   },
   "frxusd-frax": {
     ...stablecoinRedeemBase,

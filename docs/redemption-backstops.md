@@ -6,9 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.1`
+- **Current methodology version:** `v3.2`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
+
+Latest `v3.2` correction: USD.AI's reviewed direct route now explicitly tracks the current `PYUSD -> USDai` mint/redeem rail for base `USDai`; the slower queue remains scoped to `sUSDai` unstaking, and no new live-capacity API feed is assumed.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 

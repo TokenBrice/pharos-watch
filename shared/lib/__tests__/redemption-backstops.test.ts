@@ -467,7 +467,7 @@ describe("getRedemptionBackstopConfig", () => {
       outputAssetType: "stable-single",
       capacityModel: { kind: "supply-full", confidence: "documented-bound" },
       costModel: { kind: "dynamic-or-unclear" },
-      reviewedAt: "2026-03-23",
+      reviewedAt: "2026-04-03",
     });
 
     expect(getRedemptionBackstopConfig("nusd-neutrl")).toMatchObject({
