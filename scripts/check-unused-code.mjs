@@ -86,7 +86,6 @@ const EXPORT_ALLOWLIST = new Set([
   "src/lib/coverage.ts::resolveBlacklistCoverage",
   "src/lib/coverage.ts::resolveDependencyCoverage",
   "src/lib/coverage.ts::countAvailableFeatures",
-  "src/lib/digest.ts::EDITORIAL_TITLE_CLASS",
   "src/lib/start-here-callout.ts::START_HERE_CALLOUT_STORAGE_KEY",
   "src/lib/start-here-callout.ts::MAX_START_HERE_HOMEPAGE_SESSIONS",
   "src/lib/status-dashboard-model.ts::getTopCauses",

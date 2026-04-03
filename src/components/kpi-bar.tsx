@@ -10,7 +10,7 @@ import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useCountUp } from "@/hooks/use-count-up";
 import { useEntranceSequence } from "@/hooks/use-entrance-sequence";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { formatCurrency, getNetColor, getNetPrefix } from "@shared/lib/format";
+import { abbreviateNumberParts, formatCurrency, formatSignedCurrency, getNetColor } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import { THREAT_BAND_COLORS, type ThreatBand } from "@shared/lib/classification";
 import {
@@ -39,20 +39,6 @@ function trendTextClass(value: number): string {
   if (value > 0) return "text-[var(--severity-healthy)]";
   if (value < 0) return "text-[var(--severity-severe)]";
   return "text-muted-foreground";
-}
-
-function formatSignedCompactCurrency(value: number, decimals = 1): string {
-  return `${getNetPrefix(value)}${formatCurrency(value, decimals)}`;
-}
-
-/** Decompose a large number into an abbreviated value + suffix (e.g., 234.5B → { short: 234.5, suffix: "B" }). */
-function abbreviate(value: number): { short: number; suffix: string } {
-  const abs = Math.abs(value);
-  if (abs >= 1e12) return { short: value / 1e12, suffix: "T" };
-  if (abs >= 1e9) return { short: value / 1e9, suffix: "B" };
-  if (abs >= 1e6) return { short: value / 1e6, suffix: "M" };
-  if (abs >= 1e3) return { short: value / 1e3, suffix: "K" };
-  return { short: value, suffix: "" };
 }
 
 function TrendChip({ label, value, direction }: { label: string; value: string; direction: TrendDirection }) {
@@ -336,8 +322,8 @@ export function KpiBar() {
   const dexDeltaDisplay = hasDexData ? `${volVs7dAvgPct >= 0 ? "+" : ""}${volVs7dAvgPct.toFixed(1)}%` : "—";
   const turnoverDisplay = hasStablecoinsData && hasDexData && totalMcap > 0 ? `${turnoverPct.toFixed(2)}%` : "—";
   const hasFlowData = !!flowData?.coins?.length;
-  const netFlow24Display = hasFlowData ? formatSignedCompactCurrency(netFlow24h, 1) : "—";
-  const netFlow7Display = hasFlowData ? formatSignedCompactCurrency(netFlow7d, 1) : "—";
+  const netFlow24Display = hasFlowData ? formatSignedCurrency(netFlow24h, 1) : "—";
+  const netFlow7Display = hasFlowData ? formatSignedCurrency(netFlow7d, 1) : "—";
   const netFlow24Class = hasFlowData ? getNetColor(netFlow24h) : "text-muted-foreground";
   const netFlow7Class = hasFlowData ? getNetColor(netFlow7d) : "text-muted-foreground";
   const netFlow7Tone: "neutral" | "positive" | "negative" = !hasFlowData
@@ -354,7 +340,7 @@ export function KpiBar() {
   const { delayFor } = useEntranceSequence();
 
   /* ---------- count-up animations (hooks must be called unconditionally) ---------- */
-  const mcapAbbr = abbreviate(totalMcap);
+  const mcapAbbr = abbreviateNumberParts(totalMcap);
   const animatedPsi = useCountUp(psiScoreNum ?? 0, { decimals: 1 });
   const animatedMcap = useCountUp(mcapAbbr.short, {
     decimals: 1,

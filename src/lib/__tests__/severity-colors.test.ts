@@ -11,6 +11,7 @@ import {
   getScoreColor,
   getScoreTier,
   pegScoreColor,
+  scoreToColorClass,
 } from "../severity-colors";
 
 describe("severity-colors", () => {
@@ -64,5 +65,14 @@ describe("severity-colors", () => {
     expect(getDurabilityBgColor(70)).toBe("bg-emerald-500");
     expect(getDurabilityBgColor(40)).toBe("bg-amber-500");
     expect(getDurabilityBgColor(39)).toBe("bg-red-500");
+  });
+
+  it("supports parametric score color mapping", () => {
+    expect(scoreToColorClass(65, [
+      { min: 80, className: "high" },
+      { min: 50, className: "mid" },
+      { min: Number.NEGATIVE_INFINITY, className: "low" },
+    ])).toBe("mid");
+    expect(scoreToColorClass(null, [{ min: 0, className: "x" }], "fallback")).toBe("fallback");
   });
 });

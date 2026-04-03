@@ -32,9 +32,9 @@ import { TreasuryStableExposureTable } from "@/components/treasury-stable-exposu
 // Coin options (built once at module level)
 // ---------------------------------------------------------------------------
 
-const deadIds = new Set(DEAD_STABLECOINS.filter((d) => d.llamaId).map((d) => d.llamaId!));
+const deadLlamaIds = new Set(DEAD_STABLECOINS.flatMap((coin) => (coin.llamaId ? [coin.llamaId] : [])));
 
-const coinOptions = ACTIVE_STABLECOINS.filter((s) => !deadIds.has(s.id)).map((s) => ({
+const coinOptions = ACTIVE_STABLECOINS.filter((s) => !s.llamaId || !deadLlamaIds.has(s.llamaId)).map((s) => ({
   id: s.id,
   name: s.name,
   symbol: s.symbol,

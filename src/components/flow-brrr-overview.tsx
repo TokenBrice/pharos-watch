@@ -6,6 +6,7 @@ import { FlowMachineScene } from "@/components/flow-machine-scene";
 import { MintingPressureGauge } from "@/components/minting-pressure-gauge";
 import {
   formatCurrency,
+  formatSignedCurrency,
   getNetColor,
   getNetPrefix,
 } from "@shared/lib/format";
@@ -61,10 +62,6 @@ interface FlowSnapshot {
   pressureState: PressureShiftState;
   directionUi: FlowDirectionUi;
   pressureUi: FlowPressureUi;
-}
-
-function formatSignedCurrency(value: number): string {
-  return `${getNetPrefix(value)}${formatCurrency(value)}`;
 }
 
 function formatMaybeCurrency(value: number | null): string {

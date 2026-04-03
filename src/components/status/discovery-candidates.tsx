@@ -7,13 +7,11 @@ import { buildRequestUrl } from "@/lib/api";
 import { DISCOVERY_MIN_MCAP } from "@shared/lib/status-thresholds";
 import type { DiscoveryCandidate, StatusSectionError } from "@shared/types";
 import { useState } from "react";
-import { formatElapsedSeconds } from "@shared/lib/format";
+import { formatCurrency, formatElapsedSeconds } from "@shared/lib/format";
 
 function formatMcap(mcap: number | null): string {
   if (mcap == null) return "—";
-  if (mcap >= 1e9) return `$${(mcap / 1e9).toFixed(1)}B`;
-  if (mcap >= 1e6) return `$${(mcap / 1e6).toFixed(1)}M`;
-  return `$${mcap.toLocaleString()}`;
+  return formatCurrency(mcap, 1);
 }
 
 function SourceBadge({ source }: { source: string }) {

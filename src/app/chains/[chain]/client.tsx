@@ -21,10 +21,11 @@ import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { formatChainUsd, formatRatioPct, HEALTH_BADGE_CLASSES, HEALTH_FILL_CLASSES, HEALTH_TEXT_CLASSES, trendColor } from "@/lib/chain-ui";
+import { formatRatioPct, HEALTH_BADGE_CLASSES, HEALTH_FILL_CLASSES, HEALTH_TEXT_CLASSES, trendColor } from "@/lib/chain-ui";
 import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { MethodologyLabel, MethodologyHint, MethodologyCardActions } from "@/components/methodology-hint";
+import { formatCompactUsd } from "@shared/lib/format";
 import type { ChainSummary, HealthBand } from "@shared/types/chains";
 import { TrendingUp, TrendingDown, Minus, ChevronRight, Info, CheckCircle2, AlertCircle, AlertTriangle, XCircle } from "lucide-react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -181,7 +182,7 @@ function HeroCard({ chain, chainId }: { chain: ChainSummary; chainId: string }) 
           <div className="grid grid-cols-2 gap-x-6 gap-y-4 border-t pt-4 text-sm sm:grid-cols-3 lg:grid-cols-5 lg:border-t-0 lg:border-l lg:pl-6 lg:pt-0">
             <div>
               <p className="pharos-kicker">Total Supply</p>
-              <p className="text-lg font-bold tracking-tight">{formatChainUsd(chain.totalUsd)}</p>
+              <p className="text-lg font-bold tracking-tight">{formatCompactUsd(chain.totalUsd)}</p>
             </div>
             <div>
               <p className="pharos-kicker">Global Share</p>
@@ -391,7 +392,7 @@ function CompositionBlock({
         {(percentage * 100).toFixed(1)}%
       </span>
       <span className="font-mono text-xs transition-opacity opacity-70 group-hover:opacity-100">
-        {formatChainUsd(coin.supplyOnChain)}
+        {formatCompactUsd(coin.supplyOnChain)}
       </span>
       {/* Enhanced click affordance */}
       <div className="absolute right-2 top-2 flex items-center gap-1 transition-all duration-200 -translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-100">
@@ -445,7 +446,7 @@ function CompositionOthersBlock({
       <span className="mt-1 text-sm font-medium text-muted-foreground">Others</span>
       <span className="text-xs text-muted-foreground">{percentage.toFixed(1)}%</span>
       <span className="font-mono text-xs transition-opacity opacity-70 group-hover:opacity-100 group-focus-within:opacity-100">
-        {formatChainUsd(total)}
+        {formatCompactUsd(total)}
       </span>
 
       {/* Tooltip with coin preview */}
@@ -624,7 +625,7 @@ function StablecoinTable({
                 <TableRow
                   key={coin.id}
                   role="link"
-                  aria-label={`${coin.name} (${coin.symbol}) — ${formatChainUsd(coin.supplyOnChain)} on chain`}
+                  aria-label={`${coin.name} (${coin.symbol}) — ${formatCompactUsd(coin.supplyOnChain)} on chain`}
                   className="group cursor-pointer transition-colors hover:bg-muted/40"
                   onClick={() => router.push(buildStablecoinUrl(coin.id))}
                   tabIndex={0}
@@ -644,7 +645,7 @@ function StablecoinTable({
                       <ChevronRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-50" />
                     </span>
                   </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums">{formatChainUsd(coin.supplyOnChain)}</TableCell>
+                  <TableCell className="text-right font-mono tabular-nums">{formatCompactUsd(coin.supplyOnChain)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <div className="h-1.5 w-12 overflow-hidden rounded-full bg-muted">

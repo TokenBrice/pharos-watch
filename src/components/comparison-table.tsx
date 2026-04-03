@@ -4,7 +4,7 @@ import Link from "next/link";
 import { memo, useMemo } from "react";
 import type { StablecoinData, StablecoinMeta, ReportCardGrade } from "@shared/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
-import { formatCurrency, formatNativePrice, formatScore, getNetColor, getNetPrefix } from "@shared/lib/format";
+import { formatCurrency, formatNativePrice, formatScore, formatSignedCurrency, getNetColor } from "@shared/lib/format";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { GOVERNANCE_LABELS_SHORT, BACKING_LABELS_SHORT } from "@shared/lib/classification";
 
@@ -226,7 +226,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
               <dt className="text-muted-foreground">Net Flow 30D</dt>
               <dd className={`text-right font-mono tabular-nums ${i === rowData.bestNetFlow30d ? BEST_CLASS : rowData.netFlow30dValues[i] != null ? getNetColor(rowData.netFlow30dValues[i]!) : ""}`}>
                 {rowData.netFlow30dValues[i] != null
-                  ? `${getNetPrefix(rowData.netFlow30dValues[i]!)}${formatCurrency(rowData.netFlow30dValues[i]!)}`
+                  ? formatSignedCurrency(rowData.netFlow30dValues[i]!)
                   : "—"}
               </dd>
             </dl>
@@ -386,7 +386,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
                     key={coin.id}
                     className={`text-center font-mono tabular-nums ${i === rowData.bestNetFlow30d ? BEST_CLASS : val != null ? getNetColor(val) : ""}`}
                   >
-                    {val != null ? `${getNetPrefix(val)}${formatCurrency(val)}` : "—"}
+                    {val != null ? formatSignedCurrency(val) : "—"}
                   </TableCell>
                 );
               })}

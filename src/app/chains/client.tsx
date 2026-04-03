@@ -12,9 +12,10 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { formatChainUsd, formatRatioPct, HEALTH_BADGE_CLASSES, trendColor } from "@/lib/chain-ui";
+import { formatRatioPct, HEALTH_BADGE_CLASSES, trendColor } from "@/lib/chain-ui";
 import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { CHAIN_META } from "@shared/lib/chains";
+import { formatCompactUsd } from "@shared/lib/format";
 import type { HealthBand, ChainSummary } from "@shared/types/chains";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { logosById } from "@/lib/logos";
@@ -122,7 +123,7 @@ export function ChainsLeaderboardClient() {
           <div>
             <p className="pharos-kicker">Total Stablecoin Supply</p>
             <p className="mt-1 text-3xl font-extrabold font-mono tabular-nums tracking-tight">
-              {formatChainUsd(data.globalTotalUsd)}
+              {formatCompactUsd(data.globalTotalUsd)}
             </p>
           </div>
           <div className="flex items-center gap-5 pb-1 text-sm">
@@ -268,7 +269,7 @@ export function ChainsLeaderboardClient() {
               <TableRow
                 key={chain.id}
                 role="link"
-                aria-label={`${chain.name} — ${formatChainUsd(chain.totalUsd)} supply`}
+                aria-label={`${chain.name} — ${formatCompactUsd(chain.totalUsd)} supply`}
                 className="pharos-focus-ring group cursor-pointer border-l-2 border-l-transparent transition-all duration-150 hover:border-l-frost-blue hover:bg-muted/30 hover:translate-x-[1px] data-[state=selected]:border-l-frost-blue"
                 onClick={() => router.push(`/chains/${chain.id}/`)}
                 tabIndex={0}
@@ -292,7 +293,7 @@ export function ChainsLeaderboardClient() {
                 <TableCell>
                   <HealthBadge score={chain.healthScore} band={chain.healthBand} />
                 </TableCell>
-                <TableCell className="text-right font-mono tabular-nums">{formatChainUsd(chain.totalUsd)}</TableCell>
+                <TableCell className="text-right font-mono tabular-nums">{formatCompactUsd(chain.totalUsd)}</TableCell>
                 <TableCell className={cn("text-right font-mono tabular-nums", trendColor(chain.change7dPct))}>
                   {formatRatioPct(chain.change7dPct)}
                 </TableCell>

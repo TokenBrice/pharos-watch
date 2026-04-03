@@ -147,7 +147,6 @@ This pairing creates a "broadsheet newspaper" aesthetic that signals both author
 **Implementation**: Import styles from `@/lib/digest`:
 - `EDITORIAL_BODY_STYLE` — Courier italic for prose
 - `EDITORIAL_META_STYLE` — Courier upright for labels
-- `EDITORIAL_TITLE_CLASS` — currently `font-serif`; route components can pair it with the `Newsreader` font import when they want the full newspaper headline treatment
 
 ### Cemetery (Special)
 

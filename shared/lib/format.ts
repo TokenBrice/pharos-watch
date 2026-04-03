@@ -18,6 +18,16 @@ export function formatCurrency(value: number, decimals = 2): string {
   return abbreviateNumber(value, decimals, "$");
 }
 
+export function abbreviateNumberParts(value: number): { short: number; suffix: string } {
+  if (!Number.isFinite(value)) return { short: 0, suffix: "" };
+  const abs = Math.abs(value);
+  if (abs >= 1e12) return { short: value / 1e12, suffix: "T" };
+  if (abs >= 1e9) return { short: value / 1e9, suffix: "B" };
+  if (abs >= 1e6) return { short: value / 1e6, suffix: "M" };
+  if (abs >= 1e3) return { short: value / 1e3, suffix: "K" };
+  return { short: value, suffix: "" };
+}
+
 export function formatCompactUsd(value: number): string {
   if (!Number.isFinite(value)) return "N/A";
   if (Math.abs(value) >= 1e12) return abbreviateNumber(value, 2, "$");
@@ -195,15 +205,33 @@ export function timeAgo(epochSec: number): string {
 }
 
 /** Tailwind color class for net flow values (positive = green, negative = red) */
-export function getNetColor(value: number): string {
-  if (value > 0) return "text-emerald-700 dark:text-emerald-400";
-  if (value < 0) return "text-red-700 dark:text-red-400";
-  return "text-muted-foreground";
+interface SignedColorOptions {
+  positiveClass?: string;
+  negativeClass?: string;
+  zeroClass?: string;
+  positiveInclusiveZero?: boolean;
+}
+
+export function getNetColor(value: number, options: SignedColorOptions = {}): string {
+  const {
+    positiveClass = "text-emerald-700 dark:text-emerald-400",
+    negativeClass = "text-red-700 dark:text-red-400",
+    zeroClass = "text-muted-foreground",
+    positiveInclusiveZero = false,
+  } = options;
+
+  if (value > 0 || (positiveInclusiveZero && value === 0)) return positiveClass;
+  if (value < 0) return negativeClass;
+  return zeroClass;
 }
 
 /** Sign prefix for positive net flow values */
 export function getNetPrefix(value: number): string {
   return value > 0 ? "+" : "";
+}
+
+export function formatSignedCurrency(value: number, decimals = 2): string {
+  return `${getNetPrefix(value)}${formatCurrency(value, decimals)}`;
 }
 
 /** Format a percentage to fixed decimals with % suffix. Returns "-" for nullish. */

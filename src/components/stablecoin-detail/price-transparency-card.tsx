@@ -12,6 +12,7 @@ import {
   getPricingSourceLabel,
 } from "@shared/lib/pricing-sources";
 import { CONFIDENCE_LEVEL_COLORS } from "@shared/lib/classification";
+import { timeAgo } from "@shared/lib/format";
 
 type SourceStatus = "used" | "available" | "no-data" | "not-applicable";
 
@@ -25,15 +26,6 @@ function resolveSourceStatus(
   if (agreeSources.includes(sourceKey)) return "used";
   if (consensusSources.includes(sourceKey)) return "available";
   return "no-data";
-}
-
-function formatTimeAgo(updatedAtSec: number | null | undefined): string {
-  if (updatedAtSec == null) return "\u2014";
-  const diffSec = Math.floor(Date.now() / 1000) - updatedAtSec;
-  if (diffSec < 60) return "just now";
-  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
-  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
-  return `${Math.floor(diffSec / 86400)}d ago`;
 }
 
 interface PriceTransparencyCardProps {
@@ -117,7 +109,7 @@ export function PriceTransparencyCard({
                 {availableSources.length} available
               </span>
             )}
-            {!hasNoPrice && <span>· Updated {formatTimeAgo(coinData.priceUpdatedAt)}</span>}
+            {!hasNoPrice && <span>· Updated {coinData.priceUpdatedAt == null ? "\u2014" : timeAgo(coinData.priceUpdatedAt)}</span>}
           </div>
         </div>
 

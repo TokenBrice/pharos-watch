@@ -17,7 +17,7 @@ import {
   useMintBurnFlowsCoin,
 } from "@/hooks/use-mint-burn-flows";
 import {
-  formatCurrency,
+  formatSignedCurrency,
   getNetColor,
   getNetPrefix,
 } from "@shared/lib/format";
@@ -87,7 +87,7 @@ function getBaselineCaption(
       ? ` across ${baselineDataDays} tracked day${baselineDataDays === 1 ? "" : "s"}`
       : "";
 
-  return `${prefix}: ${getNetPrefix(baselineDailyNetUsd)}${formatCurrency(baselineDailyNetUsd)}${daysSuffix}.`;
+  return `${prefix}: ${formatSignedCurrency(baselineDailyNetUsd)}${daysSuffix}.`;
 }
 
 interface FlowSummaryCardProps {
@@ -248,8 +248,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                         netSignal.valueClass,
                       )}
                     >
-                      {getNetPrefix(coin.netFlow24hUsd)}
-                      {formatCurrency(coin.netFlow24hUsd)}
+                      {formatSignedCurrency(coin.netFlow24hUsd)}
                     </p>
                   </div>
                   <span
@@ -320,8 +319,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                     getNetColor(shortNetFlow),
                   )}
                 >
-                  {getNetPrefix(shortNetFlow)}
-                  {formatCurrency(shortNetFlow)}
+                  {formatSignedCurrency(shortNetFlow)}
                 </p>
               </div>
               <div className="space-y-1 rounded-lg border border-border/60 bg-background/30 p-3">
@@ -334,8 +332,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                     getNetColor(longNetFlow),
                   )}
                 >
-                  {getNetPrefix(longNetFlow)}
-                  {formatCurrency(longNetFlow)}
+                  {formatSignedCurrency(longNetFlow)}
                 </p>
               </div>
               <div className="space-y-1 rounded-lg border border-border/60 bg-background/30 p-3">
@@ -348,8 +345,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                     getNetColor(coin.netFlow30dUsd),
                   )}
                 >
-                  {getNetPrefix(coin.netFlow30dUsd)}
-                  {formatCurrency(coin.netFlow30dUsd)}
+                  {formatSignedCurrency(coin.netFlow30dUsd)}
                 </p>
               </div>
               <div className="space-y-1 rounded-lg border border-border/60 bg-background/30 p-3">
@@ -362,8 +358,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                     getNetColor(coin.netFlow90dUsd),
                   )}
                 >
-                  {getNetPrefix(coin.netFlow90dUsd)}
-                  {formatCurrency(coin.netFlow90dUsd)}
+                  {formatSignedCurrency(coin.netFlow90dUsd)}
                 </p>
               </div>
             </div>

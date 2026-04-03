@@ -88,6 +88,42 @@ export const TIER_BORDER: Record<ScoreTier, string> = {
   red: "border-l-red-500",
 };
 
+interface ScoreColorThreshold {
+  min: number;
+  className: string;
+}
+
+export function scoreToColorClass(
+  score: number | null | undefined,
+  thresholds: readonly ScoreColorThreshold[],
+  fallbackClass = "text-muted-foreground",
+): string {
+  if (score == null) return fallbackClass;
+  for (const threshold of thresholds) {
+    if (score >= threshold.min) return threshold.className;
+  }
+  return fallbackClass;
+}
+
+const SCORE_TEXT_THRESHOLDS = [
+  { min: 80, className: TIER_TEXT.green },
+  { min: 60, className: TIER_TEXT.blue },
+  { min: 40, className: TIER_TEXT.amber },
+  { min: Number.NEGATIVE_INFINITY, className: TIER_TEXT.red },
+] as const;
+
+const PEG_SCORE_THRESHOLDS = [
+  { min: 90, className: "text-green-700 dark:text-green-400" },
+  { min: 70, className: "text-amber-700 dark:text-amber-400" },
+  { min: Number.NEGATIVE_INFINITY, className: "text-red-700 dark:text-red-400" },
+] as const;
+
+const DURABILITY_TEXT_THRESHOLDS = [
+  { min: 70, className: "text-emerald-700 dark:text-emerald-400" },
+  { min: 40, className: "text-amber-700 dark:text-amber-400" },
+  { min: Number.NEGATIVE_INFINITY, className: "text-red-700 dark:text-red-400" },
+] as const;
+
 /** Map a 0-100 liquidity/durability score to a tier */
 export function getScoreTier(score: number): ScoreTier {
   if (score >= 80) return "green";
@@ -98,15 +134,12 @@ export function getScoreTier(score: number): ScoreTier {
 
 /** Map a 0-100 liquidity/durability score to a Tailwind text color class */
 export function getScoreColor(score: number): string {
-  return TIER_TEXT[getScoreTier(score)];
+  return scoreToColorClass(score, SCORE_TEXT_THRESHOLDS);
 }
 
 /** Map a peg score (0-100, null) to a Tailwind text color class */
 export function pegScoreColor(score: number | null): string {
-  if (score === null) return "text-muted-foreground";
-  if (score >= 90) return "text-green-700 dark:text-green-400";
-  if (score >= 70) return "text-amber-700 dark:text-amber-400";
-  return "text-red-700 dark:text-red-400";
+  return scoreToColorClass(score, PEG_SCORE_THRESHOLDS);
 }
 
 // ---------------------------------------------------------------------------
@@ -116,9 +149,7 @@ export function pegScoreColor(score: number | null): string {
 
 /** Map a 0-100 durability score to a Tailwind text color class */
 export function getDurabilityColor(score: number): string {
-  if (score >= 70) return "text-emerald-700 dark:text-emerald-400";
-  if (score >= 40) return "text-amber-700 dark:text-amber-400";
-  return "text-red-700 dark:text-red-400";
+  return scoreToColorClass(score, DURABILITY_TEXT_THRESHOLDS);
 }
 
 /** Map a 0-100 durability score to a Tailwind background color class */

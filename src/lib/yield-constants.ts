@@ -1,4 +1,5 @@
 import { computePysComponents, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
+import { scoreToColorClass } from "@/lib/severity-colors";
 
 export const WARNING_SIGNAL_LABELS: Record<string, string> = {
   "yield-spike": "Yield spike",
@@ -16,10 +17,11 @@ export function formatYieldWarningSignal(signal: string) {
 
 /** Static PYS color classes (Tailwind purge-safe). */
 export function getPysColor(pys: number | null): string {
-  if (pys === null) return "text-muted-foreground";
-  if (pys > 40) return "text-emerald-700 dark:text-emerald-400";
-  if (pys > 20) return "text-amber-700 dark:text-amber-400";
-  return "text-red-700 dark:text-red-400";
+  return scoreToColorClass(pys, [
+    { min: 41, className: "text-emerald-700 dark:text-emerald-400" },
+    { min: 21, className: "text-amber-700 dark:text-amber-400" },
+    { min: Number.NEGATIVE_INFINITY, className: "text-red-700 dark:text-red-400" },
+  ]);
 }
 
 /**

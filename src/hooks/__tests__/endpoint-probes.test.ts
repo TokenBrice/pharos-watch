@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { collectEndpointProbes, ENDPOINT_PROBE_CONCURRENCY } from "../use-endpoint-probes";
+import { collectEndpointProbes, ENDPOINT_GROUPS, ENDPOINT_PROBE_CONCURRENCY } from "../use-endpoint-probes";
 
 interface Deferred<T> {
   promise: Promise<T>;
@@ -37,6 +37,24 @@ describe("collectEndpointProbes", () => {
         status: 200,
       }),
     ]);
+  });
+
+  it("falls back to the plain admin path when admin access is unavailable", async () => {
+    const cancel = vi.fn().mockResolvedValue(undefined);
+    const adminPath = ENDPOINT_GROUPS.admin[0]!;
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: { cancel },
+    } as unknown as Response);
+
+    const result = await collectEndpointProbes([adminPath]);
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(adminPath);
+    expect(fetchMock.mock.calls[0]?.[1]).toEqual(expect.objectContaining({ headers: undefined }));
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(result[0]).toEqual(expect.objectContaining({ path: adminPath, status: 200 }));
   });
 
   it("limits concurrent browser probes to avoid transport saturation", async () => {

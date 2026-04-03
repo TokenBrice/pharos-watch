@@ -42,9 +42,12 @@ function buildProbeRequest(path: string, adminAccess?: AdminAccess): {
   if (!ADMIN_PATHS.has(path)) {
     return { path };
   }
+  if (!adminAccess) {
+    return { path };
+  }
 
   return {
-    path: buildAdminApiPath(path, adminAccess!),
+    path: buildAdminApiPath(path, adminAccess),
     headers: buildAdminFetchInit().headers,
   };
 }

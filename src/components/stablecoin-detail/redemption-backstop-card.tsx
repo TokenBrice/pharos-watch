@@ -14,6 +14,7 @@ import {
 import type { RedemptionBackstopEntry } from "@shared/types";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import { scoreToColorClass } from "@/lib/severity-colors";
 
 function formatCapacityUsd(value: number | null): string | null {
   if (value == null || !Number.isFinite(value) || value <= 0) return null;
@@ -22,22 +23,24 @@ function formatCapacityUsd(value: number | null): string | null {
 
 /** Full badge treatment (border + bg + text) for the composite score */
 function scoreToneClass(score: number | null): string {
-  if (score == null) return "border-border/60 bg-muted/30 text-muted-foreground";
-  if (score >= 80) return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
-  if (score >= 65) return "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400";
-  if (score >= 50) return "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400";
-  if (score >= 35) return "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400";
-  return "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400";
+  return scoreToColorClass(score, [
+    { min: 80, className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" },
+    { min: 65, className: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400" },
+    { min: 50, className: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400" },
+    { min: 35, className: "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400" },
+    { min: Number.NEGATIVE_INFINITY, className: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400" },
+  ], "border-border/60 bg-muted/30 text-muted-foreground");
 }
 
 /** Text-only color for sub-score values */
 function scoreTextClass(score: number | null): string {
-  if (score == null) return "text-muted-foreground";
-  if (score >= 80) return "text-emerald-700 dark:text-emerald-400";
-  if (score >= 65) return "text-blue-700 dark:text-blue-400";
-  if (score >= 50) return "text-amber-700 dark:text-amber-400";
-  if (score >= 35) return "text-orange-700 dark:text-orange-400";
-  return "text-red-700 dark:text-red-400";
+  return scoreToColorClass(score, [
+    { min: 80, className: "text-emerald-700 dark:text-emerald-400" },
+    { min: 65, className: "text-blue-700 dark:text-blue-400" },
+    { min: 50, className: "text-amber-700 dark:text-amber-400" },
+    { min: 35, className: "text-orange-700 dark:text-orange-400" },
+    { min: Number.NEGATIVE_INFINITY, className: "text-red-700 dark:text-red-400" },
+  ]);
 }
 
 function formatResolutionState(value: RedemptionBackstopEntry["resolutionState"]): string {

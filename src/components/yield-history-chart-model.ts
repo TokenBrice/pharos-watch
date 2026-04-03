@@ -88,11 +88,19 @@ export function formatTooltipDate(timestamp: number) {
   return DATE_FMT_TOOLTIP.format(timestamp);
 }
 
+const numberFormatterCache = new Map<string, Intl.NumberFormat>();
+
 export function formatChartNumber(value: number, minimumFractionDigits = 2, maximumFractionDigits = 2) {
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits,
-    maximumFractionDigits,
-  }).format(value);
+  const formatterKey = `${minimumFractionDigits}:${maximumFractionDigits}`;
+  let formatter = numberFormatterCache.get(formatterKey);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat("en-US", {
+      minimumFractionDigits,
+      maximumFractionDigits,
+    });
+    numberFormatterCache.set(formatterKey, formatter);
+  }
+  return formatter.format(value);
 }
 
 export function formatTickPercent(value: number) {

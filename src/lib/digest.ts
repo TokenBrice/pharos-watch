@@ -9,9 +9,6 @@
  * both authority and real-time urgency — core to the Pharos brand personality.
  */
 
-/** Style for editorial headlines (Newsreader via next/font) */
-export const EDITORIAL_TITLE_CLASS = "font-serif";
-
 /** Inline style for body text — Courier italic for raw intel aesthetic */
 export const EDITORIAL_BODY_STYLE: React.CSSProperties = {
   fontFamily: "'Courier New', Courier, monospace",

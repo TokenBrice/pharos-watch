@@ -86,12 +86,13 @@ export function PegHeatmap({
   fallbackPegTypes,
   hideFilters,
 }: PegHeatmapProps) {
+  type PegHeatmapCoinWithDeviation = PegSummaryCoin & { currentDeviationBps: number };
   const prefetch = usePrefetchStablecoin();
   const fallbackPegs = useMemo(() => new Set(fallbackPegTypes ?? []), [fallbackPegTypes]);
   const sorted = useMemo(() => {
     return [...coins]
-      .filter((c) => c.currentDeviationBps !== null)
-      .sort((a, b) => Math.abs(b.currentDeviationBps!) - Math.abs(a.currentDeviationBps!));
+      .filter((coin): coin is PegHeatmapCoinWithDeviation => coin.currentDeviationBps !== null)
+      .sort((a, b) => Math.abs(b.currentDeviationBps) - Math.abs(a.currentDeviationBps));
   }, [coins]);
 
   return (
@@ -156,8 +157,8 @@ export function PegHeatmap({
           <>
             <div className="grid grid-cols-2 min-[375px]:grid-cols-3 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
               {sorted.map((coin) => {
-                const absBps = Math.abs(coin.currentDeviationBps!);
-                const sign = coin.currentDeviationBps! >= 0 ? "+" : "";
+                const absBps = Math.abs(coin.currentDeviationBps);
+                const sign = coin.currentDeviationBps >= 0 ? "+" : "";
                 const dex = coin.dexPriceCheck;
                 const dexDisagrees = dex && !dex.agrees;
                 const confirmRequired = coin.primaryTrust === "confirm_required";

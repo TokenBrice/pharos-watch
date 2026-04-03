@@ -1,9 +1,5 @@
-import { formatCompactUsd } from "@shared/lib/format";
+import { getNetColor } from "@shared/lib/format";
 import type { HealthBand } from "@shared/types/chains";
-
-export function formatChainUsd(value: number): string {
-  return formatCompactUsd(value);
-}
 
 export function formatRatioPct(value: number): string {
   const pct = value * 100;
@@ -36,7 +32,10 @@ export const HEALTH_FILL_CLASSES: Record<HealthBand, string> = {
 };
 
 export function trendColor(value: number): string {
-  return value >= 0
-    ? "text-emerald-600 dark:text-emerald-400"
-    : "text-red-600 dark:text-red-400";
+  return getNetColor(value, {
+    positiveClass: "text-emerald-600 dark:text-emerald-400",
+    negativeClass: "text-red-600 dark:text-red-400",
+    zeroClass: "text-emerald-600 dark:text-emerald-400",
+    positiveInclusiveZero: true,
+  });
 }

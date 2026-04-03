@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { formatCurrency, getNetPrefix } from "@shared/lib/format";
+import { formatSignedCurrency, getNetPrefix } from "@shared/lib/format";
 import { getPressureShiftDisplay } from "@/lib/flow-intensity";
 import { buildFlowSummaryNarrative, getFlowDirectionUi, getFlowPressureUi } from "@/lib/flow-signal-ui";
 import type { NetFlowDirection24h, PressureShiftState } from "@shared/lib/mint-burn-signals";
@@ -56,7 +56,7 @@ export function CoinFlowCard({
         <span className={cn("text-xs font-mono tabular-nums font-semibold", directionUi.valueClass)}>
           {netFlowDirection24h === "inactive"
             ? "—"
-            : `${getNetPrefix(netFlow24hUsd)}${formatCurrency(netFlow24hUsd)}`}
+            : formatSignedCurrency(netFlow24hUsd)}
         </span>
       </div>
 

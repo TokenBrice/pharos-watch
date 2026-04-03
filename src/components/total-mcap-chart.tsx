@@ -19,12 +19,6 @@ import { computeChartYDomain } from "@/lib/chart-utils";
 import { buildTotalMcapChartRows } from "@/lib/total-mcap-chart";
 import { CHART_SLATE, USDT_GREEN, USDC_BLUE, SKY_YELLOW } from "@/lib/chart-colors";
 
-/** Format a value as billions with $ prefix, e.g. "$142.5 B" */
-function formatBillions(value: number): string {
-  if (!Number.isFinite(value) || value < 0) return "$0 B";
-  return `$${(value / 1e9).toFixed(1)} B`;
-}
-
 export function TotalMcapChart() {
   const chartRef = useRef<HTMLDivElement>(null);
   const [shouldAnimate, setShouldAnimate] = useState(true);
@@ -91,7 +85,7 @@ export function TotalMcapChart() {
         <div className="space-y-1.5">
           <p className="pharos-kicker">Market Structure</p>
           <CardTitle as="h2" className="pharos-section-title min-w-0">
-            Stablecoin Total Marketcap{latest ? `: ${formatBillions(latest.total)}` : ""}
+            Stablecoin Total Marketcap{latest ? `: ${formatCurrency(latest.total, 1)}` : ""}
           </CardTitle>
           <p className="pharos-meta">
             Stacked cohort framing keeps concentration visible instead of flattening the market into a single
@@ -117,19 +111,19 @@ export function TotalMcapChart() {
             <div className="mb-4 flex flex-wrap gap-2">
               <div className="pharos-chart-legend-chip">
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: USDT_GREEN }} />
-                USDT{latest ? `: ${formatBillions(latest.usdt)}` : ""}
+                USDT{latest ? `: ${formatCurrency(latest.usdt, 1)}` : ""}
               </div>
               <div className="pharos-chart-legend-chip">
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: USDC_BLUE }} />
-                USDC{latest ? `: ${formatBillions(latest.usdc)}` : ""}
+                USDC{latest ? `: ${formatCurrency(latest.usdc, 1)}` : ""}
               </div>
               <div className="pharos-chart-legend-chip">
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: SKY_YELLOW }} />
-                USDS + DAI{latest ? `: ${formatBillions(latest.sky)}` : ""}
+                USDS + DAI{latest ? `: ${formatCurrency(latest.sky, 1)}` : ""}
               </div>
               <div className="pharos-chart-legend-chip">
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CHART_SLATE }} />
-                Others{latest ? `: ${formatBillions(latest.others)}` : ""}
+                Others{latest ? `: ${formatCurrency(latest.others, 1)}` : ""}
               </div>
             </div>
             <div className="pharos-chart-stage">

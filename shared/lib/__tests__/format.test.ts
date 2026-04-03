@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  abbreviateNumberParts,
   formatScore,
   formatChartDate,
   formatPercent,
+  formatSignedCurrency,
   formatSignedPercent,
   formatElapsedSeconds,
   formatCurrency,
@@ -117,6 +119,20 @@ describe("formatCurrency", () => {
   it("respects custom decimals", () => expect(formatCurrency(1.2345e9, 3)).toBe("$1.234B"));
 });
 
+describe("formatSignedCurrency", () => {
+  it("adds a plus sign for positive values", () => {
+    expect(formatSignedCurrency(1.25e9)).toBe("+$1.25B");
+  });
+
+  it("preserves the negative sign for negative values", () => {
+    expect(formatSignedCurrency(-250_000_000)).toBe("-$250.00M");
+  });
+
+  it("does not add a sign for zero", () => {
+    expect(formatSignedCurrency(0)).toBe("$0.00");
+  });
+});
+
 describe("formatCompactUsd", () => {
   it("formats trillions with 2 decimals", () => expect(formatCompactUsd(1.567e12)).toBe("$1.57T"));
   it("formats billions with 2 decimals", () => expect(formatCompactUsd(4.321e9)).toBe("$4.32B"));
@@ -135,6 +151,17 @@ describe("formatCompactCount", () => {
     expect(formatCompactCount(1_500)).toBe("1.5k");
     expect(formatCompactCount(1_000)).toBe("1k");
     expect(formatCompactCount(999)).toBe("999");
+  });
+});
+
+describe("abbreviateNumberParts", () => {
+  it("returns value/suffix pairs for large magnitudes", () => {
+    expect(abbreviateNumberParts(1.5e9)).toEqual({ short: 1.5, suffix: "B" });
+    expect(abbreviateNumberParts(42_000)).toEqual({ short: 42, suffix: "K" });
+  });
+
+  it("returns the raw value for small magnitudes", () => {
+    expect(abbreviateNumberParts(12)).toEqual({ short: 12, suffix: "" });
   });
 });
 
