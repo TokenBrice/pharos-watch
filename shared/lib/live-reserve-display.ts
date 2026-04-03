@@ -7,6 +7,7 @@ import type {
 
 const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayBadgeKind> = {
   accountable: "live",
+  "anzen-usdz": "live",
   asymmetry: "live",
   btcfi: "live",
   "chainlink-nav": "live",

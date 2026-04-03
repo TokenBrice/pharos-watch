@@ -191,6 +191,6 @@ export interface StablecoinReservesResponse {
   displayUrl?: string;
   metadata?: LiveReserveSnapshotMetadata;
   provenance?: ReserveProvenanceView;
-  sync?: ReserveSyncStateView;
   displayBadge?: ReserveDisplayBadgeView;
+  sync?: ReserveSyncStateView;
 }
