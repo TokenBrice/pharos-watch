@@ -171,10 +171,10 @@ describe("api endpoint registry", () => {
     expect(isProtectedPublicApiPath("/api/stablecoins")).toBe(true);
     expect(isProtectedPublicApiPath("/api/health")).toBe(false);
     expect(getSiteDataAccess("/api/stablecoins")).toBe("allowed");
-    expect(getSiteDataAccess("/api/stablecoin-summary/usdt-tether")).toBe("denied");
+    expect(getSiteDataAccess("/api/stablecoin-summary/usdt-tether")).toBe("allowed");
     expect(isSiteDataAllowedPath("/api/stablecoins")).toBe(true);
     expect(isSiteDataAllowedPath("/api/stablecoin/usdt-tether")).toBe(true);
-    expect(isSiteDataAllowedPath("/api/stablecoin-summary/usdt-tether")).toBe(false);
+    expect(isSiteDataAllowedPath("/api/stablecoin-summary/usdt-tether")).toBe(true);
     expect(isSiteDataAllowedPath("/api/status")).toBe(false);
   });
 

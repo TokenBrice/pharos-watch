@@ -358,6 +358,7 @@ For integrations that only need current per-coin metrics (without full historica
 ### `GET /api/stablecoin-summary/:id`
 
 Lightweight per-coin snapshot sourced from cached `stablecoins` data. Designed for integrators that need current price/supply context without transferring full `/api/stablecoin/:id` history payloads.
+Browser surfaces on `pharos.watch` and `ops.pharos.watch` should reach this route through same-origin `/_site-data/stablecoin-summary/:id`, which proxies onto the internal `site-api` lane instead of the external API-key lane.
 
 **Path parameter:** `:id` — Pharos stablecoin ID.
 

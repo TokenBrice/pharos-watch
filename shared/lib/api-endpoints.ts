@@ -713,6 +713,7 @@ export type EndpointKey = (typeof BASE_ENDPOINT_DEFINITIONS)[number]["key"];
 const SITE_DATA_ALLOWED_ENDPOINT_KEYS = new Set<EndpointKey>([
   "stablecoins",
   "stablecoin-detail-canary",
+  "stablecoin-summary-canary",
   "stablecoin-reserves-canary",
   "stablecoin-charts",
   "peg-summary",
@@ -830,14 +831,14 @@ export function getSiteDataAccess(path: string): EndpointSiteDataAccess | null {
   }
   if (
     STABLECOIN_DETAIL_PATH_PATTERN.test(path) ||
+    STABLECOIN_SUMMARY_PATH_PATTERN.test(path) ||
     STABLECOIN_RESERVES_PATH_PATTERN.test(path)
   ) {
     return "allowed";
   }
   if (
     matchDynamicAdminEndpoint(path) ||
-    OG_IMAGE_PATH_PATTERN.test(path) ||
-    STABLECOIN_SUMMARY_PATH_PATTERN.test(path)
+    OG_IMAGE_PATH_PATTERN.test(path)
   ) {
     return "denied";
   }

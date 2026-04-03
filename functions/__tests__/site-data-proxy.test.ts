@@ -41,9 +41,9 @@ describe("site-data proxy", () => {
 
   it("rejects non-allowlisted paths", async () => {
     const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/stablecoin-summary/usdt-tether"),
+      request: new Request("https://pharos.watch/_site-data/status"),
       env: BASE_ENV,
-      params: { path: ["stablecoin-summary", "usdt-tether"] },
+      params: { path: "status" },
     });
 
     expect(response.status).toBe(404);
@@ -95,16 +95,16 @@ describe("site-data proxy", () => {
     vi.stubGlobal("fetch", fetchSpy);
 
     const response = await onRequest({
-      request: new Request("https://ops.pharos.watch/_site-data/stablecoin/usdt-tether?detail=true", {
+      request: new Request("https://ops.pharos.watch/_site-data/stablecoin-summary/usdt-tether", {
         headers: { Accept: "application/json" },
       }),
       env: BASE_ENV,
-      params: { path: ["stablecoin", "usdt-tether"] },
+      params: { path: ["stablecoin-summary", "usdt-tether"] },
     });
 
     expect(response.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
-      "https://site-api.pharos.watch/api/stablecoin/usdt-tether?detail=true",
+      "https://site-api.pharos.watch/api/stablecoin-summary/usdt-tether",
       expect.objectContaining({
         method: "GET",
         headers: expect.any(Headers),
