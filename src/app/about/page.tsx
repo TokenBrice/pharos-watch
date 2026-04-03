@@ -23,6 +23,7 @@ import {
   Skull,
   type LucideIcon,
 } from "lucide-react";
+import { AboutReferenceModule } from "@/components/about-reference-module";
 import { Button } from "@/components/ui/button";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -385,6 +386,7 @@ export default function AboutPage() {
       leadParagraphs={[
         "A practitioner-built watchtower for stablecoins: market structure, peg stress, liquidity, dependency risk, and the failures everyone else stops tracking.",
       ]}
+      headerSupplement={<AboutReferenceModule />}
       preface={
         <script
           type="application/ld+json"

@@ -184,6 +184,9 @@ src/                              # Next.js frontend (static export)
 │   ├── telegram/                 # Telegram alerts + digest landing page
 │   │   └── page.tsx
 │   ├── about/                    # About / product overview
+│   │   ├── api/                  # Public API reference page rendered from docs/api-reference.md
+│   │   │   ├── page.tsx
+│   │   │   └── error.tsx
 │   │   ├── page.tsx
 │   │   └── error.tsx
 │   ├── admin/                    # Access-gated operator admin panel (ops.pharos.watch only)
@@ -213,6 +216,7 @@ src/                              # Next.js frontend (static export)
 │   ├── header.tsx                # Top nav bar
 │   ├── sidebar.tsx               # Sidebar navigation menu
 │   ├── footer.tsx                # Site footer with data attribution
+│   ├── about-reference-module.tsx # About-page reference-card cluster for Methodology / Coverage / Start Here / API
 │   ├── providers.tsx             # TanStack Query + theme providers
 │   ├── start-here-page.tsx       # Static onboarding/orientation page composition
 │   ├── start-here-visit-marker.tsx # Client marker that retires the homepage Start Here callout after /start/ is visited
@@ -392,6 +396,7 @@ src/                              # Next.js frontend (static export)
     ├── json-ld.ts                # safeJsonLd() serializer escaping <, >, / for JSON-LD script injection safety
     ├── flow-intensity.ts         # Mint/burn pressure-shift display + compatibility helpers
     ├── mint-burn-timeframes.ts   # Mint/burn timeframe constants/utilities
+    ├── api-reference-doc.ts      # Build-time parser for docs/api-reference.md -> navigable page sections
     ├── nav-config.ts             # Navigation menu structure (sidebar links, sections)
     ├── page-metadata.ts          # Shared metadata builder + sentence-aware SEO description helpers
     ├── start-here-content.ts     # Curated onboarding copy + route mapping for the Start Here page

@@ -20,6 +20,7 @@ The route shell is owned directly by `src/app/about/page.tsx`.
 
 - `metadata` sets the canonical path `/about/` plus route-specific title/description/Open Graph fields
 - the page renders through `FeaturePageShell` with `breadcrumbName="About Pharos"`, `path="/about/"`, title `About Pharos`, and a single lead paragraph
+- `headerSupplement` renders `AboutReferenceModule` immediately below the title/lead with four reference cards linking to `/methodology/`, `/coverage/`, `/start/`, and `/about/api/`
 - the shell's `preface` injects FAQ JSON-LD describing why Pharos exists, what it tracks, how it classifies coins, and where the data comes from
 
 ## Section Contract
@@ -52,6 +53,8 @@ The page is organized into these sections, in order:
 
 ## Navigation Contract
 
+- `/about/` remains a top-level route, but primary navigation now places it at the end of the `Info` section instead of giving it a dedicated menu group.
+- `/about/` is now the reference hub for low-frequency explainer surfaces. `Methodology`, `Coverage`, and `Start Here` are intentionally grouped here rather than occupying primary menu space, and the API reference lives at `/about/api/`.
 - `Peg Tracker` must link to `/depeg/`, because the dedicated depeg route owns the heatmap and depeg-history surface
 - `Contagion Map` must link to `/dependency-map/`
 - `Systemic Risk Scoreboard` remains linked to `/safety-scores/` because the stress-panel scoreboard lives on that route

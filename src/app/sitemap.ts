@@ -13,6 +13,7 @@ export const dynamic = "force-static";
 /** Actual last-edited dates for static pages (avoid misleading Google with build-time dates). */
 const LAST_EDITED: Record<string, string> = {
   "/about/": "2026-03-10",
+  "/about/api/": "2026-04-04",
   "/coverage/": "2026-03-12",
   "/start/": "2026-03-11",
   "/cemetery/": "2026-02-26",
@@ -206,6 +207,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: `${SITE_URL}/about/`,
       lastModified: new Date(LAST_EDITED["/about/"]!),
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
+    {
+      url: `${SITE_URL}/about/api/`,
+      lastModified: new Date(LAST_EDITED["/about/api/"]!),
       changeFrequency: "monthly",
       priority: 0.5,
     },
