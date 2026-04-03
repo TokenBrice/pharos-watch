@@ -99,7 +99,7 @@ describe("OverviewSection", () => {
         coin={coin!}
         summary={null}
         reserves={{
-          reserves: [{ name: "WBTC / cbBTC / LBTC", pct: 67, risk: "medium" }],
+          reserves: [{ name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 67, risk: "medium" }],
           estimated: false,
           mode: "live",
           liveAt: 1_700_000_000,

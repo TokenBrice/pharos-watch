@@ -55,7 +55,7 @@ describe("adaptCrvUsd", () => {
     });
 
     expect(result.slices).toEqual([
-      { name: "WBTC / cbBTC / LBTC", pct: 70, risk: "medium" },
+      { name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 70, risk: "medium" },
       { name: "wstETH / sfrxETH / weETH", pct: 12, risk: "low" },
       { name: "tBTC", pct: 10, risk: "medium" },
       { name: "ETH", pct: 8, risk: "very-low" },
@@ -91,7 +91,7 @@ describe("adaptCrvUsd", () => {
     );
 
     expect(result.slices).toEqual([
-      { name: "WBTC / cbBTC / LBTC", pct: 66.7, risk: "medium" },
+      { name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 66.7, risk: "medium" },
       { name: "ETH", pct: 33.3, risk: "very-low" },
     ]);
     expect(result.metadata).toMatchObject({
@@ -221,7 +221,7 @@ describe("fetchCrvUsdReserves", () => {
     const result = await fetchCrvUsdReserves({} as never, config, signal);
 
     expect(result.slices).toEqual([
-      { name: "WBTC / cbBTC / LBTC", pct: 66.7, risk: "medium" },
+      { name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 66.7, risk: "medium" },
       { name: "ETH", pct: 33.3, risk: "very-low" },
     ]);
     expect(result.metadata).toMatchObject({
