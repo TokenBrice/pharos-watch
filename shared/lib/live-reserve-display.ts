@@ -39,7 +39,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   "usdd-data-platform": "live",
 };
 
-export const RESERVE_DISPLAY_BADGE_LABELS: Record<ReserveDisplayBadgeKind, string> = {
+const RESERVE_DISPLAY_BADGE_LABELS: Record<ReserveDisplayBadgeKind, string> = {
   live: "Live",
   "curated-validated": "Curated-Validated",
   proof: "Proof",
@@ -51,7 +51,7 @@ export function getReserveDisplayBadgeKindForAdapter(
   return ADAPTER_DISPLAY_BADGE_KINDS[adapterKey];
 }
 
-export function getReserveDisplayBadgeLabel(
+function getReserveDisplayBadgeLabel(
   kind: ReserveDisplayBadgeKind,
 ): string {
   return RESERVE_DISPLAY_BADGE_LABELS[kind];

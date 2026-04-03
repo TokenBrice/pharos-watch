@@ -95,7 +95,7 @@ export const COMPOSITE_POOL_NAMES: Record<string, string[]> = {
 };
 
 /** Explicitly blocked DEX slugs (dead/deprecated protocols not yet flagged by DeFiLlama) */
-export const BLOCKED_DEX_IDS = new Set(["retro", "retro-finance", "retro-finance-v3", "bunni"]);
+const BLOCKED_DEX_IDS = new Set(["retro", "retro-finance", "retro-finance-v3", "bunni"]);
 
 const BLOCKED_DEX_PREFIXES = ["bunni-"];
 
