@@ -6,18 +6,21 @@ import {
   fetchTextWithRetry,
   getAdapterTimeout,
   requireJsonInput,
+  reserveInfoWarning,
   slicesFromPercentages,
   unverifiedFreshnessMetadata,
 } from "./helpers";
 
 const SHARE_SCALE = 10n ** 18n;
 const PCT_MICRO_SCALE = 100_000_000n;
+const PERCENTAGE_TOLERANCE_PCT = 1.5;
 
 interface UsdAiProofOfReservesEntry {
   type?: string;
   name?: string;
   chain?: number;
   share?: string | number;
+  amount?: string | number;
 }
 
 interface ResolvedReserveBucket {
@@ -26,7 +29,9 @@ interface ResolvedReserveBucket {
   coinId?: string;
 }
 
-function parseShare(value: unknown): bigint | null {
+type WeightMode = "share" | "amount";
+
+function parseIntegerLike(value: unknown): bigint | null {
   if (typeof value === "string" && /^\d+$/.test(value.trim())) {
     return BigInt(value.trim());
   }
@@ -38,8 +43,27 @@ function parseShare(value: unknown): bigint | null {
   return null;
 }
 
+function ratioToPct(value: bigint, total: bigint): number {
+  if (value <= 0n || total <= 0n) {
+    return 0;
+  }
+  return Number((value * PCT_MICRO_SCALE + total / 2n) / total) / 1_000_000;
+}
+
 function shareToPct(share: bigint): number {
-  return Number((share * PCT_MICRO_SCALE + SHARE_SCALE / 2n) / SHARE_SCALE) / 1_000_000;
+  return ratioToPct(share, SHARE_SCALE);
+}
+
+function hasFullShareCoverage(totalShare: bigint): boolean {
+  return totalShare > 0n && Math.abs(shareToPct(totalShare) - 100) <= PERCENTAGE_TOLERANCE_PCT;
+}
+
+function pluralizeEntries(count: number): string {
+  return count === 1 ? "entry" : "entries";
+}
+
+function pluralizeIgnoredVerb(count: number): string {
+  return count === 1 ? "was" : "were";
 }
 
 function normalizeBucketKey(name: string): string {
@@ -67,7 +91,7 @@ function resolveTbillBucket(name: string): ResolvedReserveBucket {
 export function parseUsdAiProofOfReserves(raw: string): UsdAiProofOfReservesEntry[] {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(raw.replace(/("share"\s*:\s*)(\d+)/g, '$1"$2"')) as unknown;
+    parsed = JSON.parse(raw.replace(/("(?:share|amount)"\s*:\s*)(\d+)/g, '$1"$2"')) as unknown;
   } catch (error) {
     throw new Error(
       `usdai-proof-of-reserves payload is malformed: ${error instanceof Error ? error.message : String(error)}`,
@@ -86,32 +110,64 @@ export function adaptUsdAiProofOfReserves(entries: UsdAiProofOfReservesEntry[]):
   const tbillBuckets = new Map<string, { share: bigint; bucket: ResolvedReserveBucket }>();
   const unknownTypes = new Set<string>();
   const chains = new Set<number>();
+  const parsedEntries = entries.map((entry) => ({
+    type: typeof entry.type === "string" ? entry.type.trim().toUpperCase() : "",
+    name: typeof entry.name === "string" ? entry.name.trim() : "",
+    chain: typeof entry.chain === "number" && Number.isFinite(entry.chain) ? entry.chain : null,
+    share: parseIntegerLike(entry.share),
+    amount: parseIntegerLike(entry.amount),
+  }));
+  const totalShareDeclared = parsedEntries.reduce(
+    (acc, entry) => acc + (entry.share && entry.share > 0n ? entry.share : 0n),
+    0n,
+  );
+  const totalAmountDeclared = parsedEntries.reduce(
+    (acc, entry) => acc + (entry.amount && entry.amount > 0n ? entry.amount : 0n),
+    0n,
+  );
+  const weightMode: WeightMode = hasFullShareCoverage(totalShareDeclared)
+    ? "share"
+    : totalShareDeclared === 0n && totalAmountDeclared > 0n
+      ? "amount"
+      : (() => {
+          if (totalShareDeclared > 0n) {
+            throw new Error(
+              `usdai-proof-of-reserves share-bearing rows cover only ${shareToPct(totalShareDeclared).toFixed(1)}% of reserves`,
+            );
+          }
+          throw new Error("usdai-proof-of-reserves payload contained no usable share or amount weights");
+        })();
+  const ignoredAmountOnlyEntries = weightMode === "share"
+    ? parsedEntries.filter((entry) => entry.share == null && entry.amount != null && entry.amount > 0n)
+    : [];
   let dealShare = 0n;
   let unknownShare = 0n;
-  let totalShare = 0n;
+  let totalWeight = 0n;
   let dealCount = 0;
 
-  for (const entry of entries) {
-    const type = typeof entry.type === "string" ? entry.type.trim().toUpperCase() : "";
-    const name = typeof entry.name === "string" ? entry.name.trim() : "";
-    const share = parseShare(entry.share);
+  for (const entry of parsedEntries) {
+    const { type, name } = entry;
+    const weight = weightMode === "share" ? entry.share : entry.amount;
 
     if (!type) {
       throw new Error("usdai-proof-of-reserves entry is missing a reserve type");
     }
-    if (share == null) {
-      throw new Error(`usdai-proof-of-reserves entry is missing a valid share: ${name || type}`);
+    if (weight == null) {
+      if (weightMode === "share" && entry.amount != null && entry.amount > 0n) {
+        continue;
+      }
+      throw new Error(`usdai-proof-of-reserves entry is missing a valid ${weightMode}: ${name || type}`);
     }
-    if (share === 0n) continue;
+    if (weight === 0n) continue;
 
-    totalShare += share;
+    totalWeight += weight;
 
-    if (typeof entry.chain === "number" && Number.isFinite(entry.chain)) {
+    if (entry.chain != null) {
       chains.add(entry.chain);
     }
 
     if (type === "DEAL") {
-      dealShare += share;
+      dealShare += weight;
       dealCount += 1;
       continue;
     }
@@ -123,20 +179,37 @@ export function adaptUsdAiProofOfReserves(entries: UsdAiProofOfReservesEntry[]):
       const bucket = resolveTbillBucket(name);
       const existing = tbillBuckets.get(bucket.name);
       if (existing) {
-        existing.share += share;
+        existing.share += weight;
       } else {
-        tbillBuckets.set(bucket.name, { share, bucket });
+        tbillBuckets.set(bucket.name, { share: weight, bucket });
       }
       continue;
     }
 
-    unknownShare += share;
+    unknownShare += weight;
     unknownTypes.add(type);
   }
 
+  if (ignoredAmountOnlyEntries.length > 0) {
+    warnings.push(
+      reserveInfoWarning(
+        "missing-share-rows-ignored",
+        `${ignoredAmountOnlyEntries.length} USD.AI reserve ${pluralizeEntries(ignoredAmountOnlyEntries.length)} `
+        + `lacked composition share weights and ${pluralizeIgnoredVerb(ignoredAmountOnlyEntries.length)} ignored while share-bearing rows already covered `
+        + `${shareToPct(totalShareDeclared).toFixed(2)}% of reserves`,
+      ),
+    );
+  }
+
+  const weightToPct = (value: bigint) => (
+    weightMode === "share"
+      ? shareToPct(value)
+      : ratioToPct(value, totalAmountDeclared)
+  );
+
   const sliceInputs = Array.from(tbillBuckets.values()).map(({ share, bucket }) => ({
     name: bucket.name,
-    pct: shareToPct(share),
+    pct: weightToPct(share),
     risk: bucket.risk,
     ...(bucket.coinId ? { coinId: bucket.coinId } : {}),
   }));
@@ -144,7 +217,7 @@ export function adaptUsdAiProofOfReserves(entries: UsdAiProofOfReservesEntry[]):
   if (dealShare > 0n) {
     sliceInputs.push({
       name: "GPU-backed infrastructure loans (NVIDIA hardware)",
-      pct: shareToPct(dealShare),
+      pct: weightToPct(dealShare),
       risk: "high",
     });
   }
@@ -152,7 +225,7 @@ export function adaptUsdAiProofOfReserves(entries: UsdAiProofOfReservesEntry[]):
   if (unknownShare > 0n) {
     sliceInputs.push({
       name: "Unmapped USD.AI reserve buckets",
-      pct: shareToPct(unknownShare),
+      pct: weightToPct(unknownShare),
       risk: "high",
     });
   }
@@ -170,7 +243,7 @@ export function adaptUsdAiProofOfReserves(entries: UsdAiProofOfReservesEntry[]):
     warnings.push(buildUnknownExposureWarning({
       code: "unknown-reserve-type",
       message: `Unmapped USD.AI reserve types: ${Array.from(unknownTypes).sort().join(", ")}`,
-      unknownExposurePct: shareToPct(unknownShare),
+      unknownExposurePct: weightToPct(unknownShare),
     }));
   }
 
@@ -181,12 +254,14 @@ export function adaptUsdAiProofOfReserves(entries: UsdAiProofOfReservesEntry[]):
       apiEntryCount: entries.length,
       liquidBucketCount: tbillBuckets.size,
       dealCount,
-      declaredSharePct: shareToPct(totalShare),
+      weightingBasis: weightMode,
+      ...(weightMode === "share" ? { declaredSharePct: shareToPct(totalShareDeclared) } : {}),
       unknownTypeCount: unknownTypes.size,
       ...(tbillBuckets.size > 0 ? { liquidReserveLabels: Array.from(tbillBuckets.keys()) } : {}),
       ...(chains.size > 0 ? { chains: Array.from(chains).sort((a, b) => a - b) } : {}),
       ...(unknownTypes.size > 0 ? { unknownReserveTypes: Array.from(unknownTypes).sort() } : {}),
-      unknownExposurePct: shareToPct(unknownShare),
+      ...(ignoredAmountOnlyEntries.length > 0 ? { ignoredMissingShareEntryCount: ignoredAmountOnlyEntries.length } : {}),
+      ...(totalWeight > 0n ? { unknownExposurePct: weightToPct(unknownShare) } : {}),
       ...unverifiedFreshnessMetadata(
         "usdai-proof-of-reserves-api",
         "USD.AI proof-of-reserves API does not expose a trustworthy source timestamp",
