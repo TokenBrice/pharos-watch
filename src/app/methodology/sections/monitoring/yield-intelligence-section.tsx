@@ -76,7 +76,6 @@ export function YieldIntelligenceMethodologySection() {
                   Result: <span className="text-foreground">PYS 32</span>.
                 </p>
               </WorkedExample>
-
               <MethodologyDetails summary="Technical details: APY source resolution, confidence arbitration, PYS formula, NAV handling, and limits">
                 {/* Yield pipeline diagram — desktop: horizontal */}
                 <div className="hidden md:flex items-stretch gap-4">
@@ -99,7 +98,6 @@ export function YieldIntelligenceMethodologySection() {
                   {/* PYS */}
                   <MethodologyDiagramCard className="w-32 flex flex-shrink-0 flex-col justify-center" title="PYS Score" subtitle="0–100" />
                 </div>
-
                 {/* Yield pipeline diagram — mobile: vertical */}
                 <div className="flex flex-col items-center gap-3 md:hidden">
                   <div className="grid grid-cols-3 gap-2 w-full">
@@ -117,7 +115,6 @@ export function YieldIntelligenceMethodologySection() {
                   <MethodologyDiagramArrow />
                   <MethodologyDiagramCard className="w-full" title="PYS Score" subtitle="0–100" />
                 </div>
-
                 {/* APY Resolution tiers */}
                 <div className="space-y-2">
                   <h3 className="text-foreground font-medium">APY Resolution and Source Arbitration</h3>
@@ -182,7 +179,6 @@ export function YieldIntelligenceMethodologySection() {
                     snapshots rather than hourly source observations.
                   </p>
                 </div>
-
                 {/* PYS formula */}
                 <div className="space-y-2">
                   <h3 className="text-foreground font-medium">Pharos Yield Score (PYS)</h3>
@@ -220,7 +216,6 @@ export function YieldIntelligenceMethodologySection() {
                     </li>
                   </ul>
                 </div>
-
                 {/* NAV token note */}
                 <div className="space-y-2">
                   <h3 className="text-foreground font-medium">NAV Token Handling</h3>
@@ -231,7 +226,6 @@ export function YieldIntelligenceMethodologySection() {
                     grading framework expands to cover NAV tokens, their PYS will become more nuanced.
                   </p>
                 </div>
-
                 {/* Limitations */}
                 <div className="space-y-2">
                   <h3 className="text-foreground font-medium">Limitations</h3>
