@@ -368,6 +368,7 @@ export async function resolveReserveResult(
       liveAt: liveSnapshot.fetchedAt,
       source: liveSnapshot.source,
       displayUrl,
+      metadata: liveSnapshot.metadata,
       provenance,
       sync: buildSyncView(syncState, stale, {
         enabled: !!meta.liveReservesConfig,

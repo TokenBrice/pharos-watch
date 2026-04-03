@@ -102,6 +102,8 @@ export interface LiveReserveSnapshotMetadata extends Record<string, unknown> {
   sourceTimestamp?: number;
   freshnessMode?: LiveReserveFreshnessMode;
   unknownExposurePct?: number;
+  yieldBasisCollateralUsd?: number;
+  yieldBasisCollateralPct?: number;
   supplyUsd?: number;
   totalReserveUsd?: number;
   totalAssetsUsd?: number;
@@ -173,6 +175,7 @@ export interface StablecoinReservesResponse {
   liveAt?: number;
   source?: string;
   displayUrl?: string;
+  metadata?: LiveReserveSnapshotMetadata;
   provenance?: ReserveProvenanceView;
   sync?: ReserveSyncStateView;
 }

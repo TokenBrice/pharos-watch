@@ -114,6 +114,20 @@ function formatReserveUpdatedAt(timestamp: number | undefined): string {
     : "the previous successful run";
 }
 
+function buildReserveCompositionNote(reserves: ReserveResult | null): string | null {
+  if (!reserves || (reserves.mode !== "live" && reserves.mode !== "live-stale")) {
+    return null;
+  }
+
+  const yieldBasisShare = reserves.metadata?.yieldBasisCollateralPct;
+  if (typeof yieldBasisShare !== "number" || !Number.isFinite(yieldBasisShare) || yieldBasisShare <= 0) {
+    return null;
+  }
+
+  const formattedShare = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(yieldBasisShare);
+  return `Yield Basis positions account for ${formattedShare}% of this live reserve mix.`;
+}
+
 function buildReserveProvenanceNotice(
   reserves: ReserveResult | null,
 ): { title: string; message: string; toneClass: string } | null {
@@ -169,6 +183,7 @@ export function OverviewSection({
   const reserveFetchNotice = reserveFetchError
     ? buildReserveFetchNotice(reserveFetchError, reserves)
     : null;
+  const reserveCompositionNote = buildReserveCompositionNote(reserves);
   const reserveProvenanceNotice = buildReserveProvenanceNotice(reserves);
 
   const hasRightColumn = hasDews || hasPriceTransparency;
@@ -274,6 +289,9 @@ export function OverviewSection({
                     </span>
                   ) : null}
                 </div>
+                {reserveCompositionNote ? (
+                  <div className="mt-2 text-center text-xs text-muted-foreground">{reserveCompositionNote}</div>
+                ) : null}
                 {reserveProvenanceNotice ? (
                   <div className={`mt-2 rounded-lg border px-4 py-3 text-sm leading-relaxed ${reserveProvenanceNotice.toneClass}`}>
                     <p className="font-medium text-foreground">{reserveProvenanceNotice.title}</p>

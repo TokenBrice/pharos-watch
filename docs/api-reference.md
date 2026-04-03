@@ -471,6 +471,7 @@ Returns the resolved reserve presentation for a stablecoin with `liveReservesCon
 | `liveAt`       | `number?`        | Unix seconds of the last successful live snapshot. Present only when live data exists                                            |
 | `source`       | `string?`        | Adapter key (for example `"infinifi"`, `"m0"`, `"openeden-usdo"`, or `"accountable"`). Present only when live data exists        |
 | `displayUrl`   | `string?`        | Human-readable source link shown in the UI. Present only when configured                                                         |
+| `metadata`     | `object?`        | Adapter snapshot metadata for authoritative live snapshots. This can include feed-specific context such as `yieldBasisCollateralPct` for `crvusd` |
 | `provenance`   | `object?`        | Evidence-quality envelope for authoritative live snapshots (`evidenceClass`, `sourceModel`, optional `freshnessMode`, `scoringEligible`) |
 | `sync`         | `object?`        | Live sync state (`status`, `bootstrap`, `stale`, `lastAttemptedAt`, `lastSuccessAt`, `warnings`, `lastError`). Present only when live-enabled |
 

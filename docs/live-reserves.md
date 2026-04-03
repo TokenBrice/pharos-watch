@@ -275,6 +275,8 @@ The optional `provenance` object is present only when the response is serving an
 | `freshnessMode`   | Optional explicit freshness policy (`verified`, `unverified`, `not-applicable`)       |
 | `scoringEligible` | Whether the current snapshot is eligible for collateral-quality passthrough right now |
 
+The optional `metadata` object is also present only for authoritative `live` / `live-stale` snapshots. It exposes the adapter snapshot metadata already stored with the reserve snapshot row so the UI can surface feed-specific context without re-querying D1. For example, `crvusd` now exposes `yieldBasisCollateralPct` when Yield Basis positions account for part of the live reserve mix.
+
 The optional `sync` object exposes the last operational state:
 
 | Field             | Meaning                                                                                                                             |

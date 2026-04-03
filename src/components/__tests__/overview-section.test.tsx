@@ -84,6 +84,33 @@ describe("OverviewSection", () => {
     expect(html).toContain("freshness is not verified strongly enough for collateral scoring");
   });
 
+  it("renders a Yield Basis share note when live reserve metadata exposes it", () => {
+    const coin = TRACKED_META_BY_ID.get("crvusd-curve");
+    expect(coin).toBeDefined();
+
+    const html = renderToStaticMarkup(
+      <OverviewSection
+        stablecoinId="crvusd-curve"
+        coin={coin!}
+        summary={null}
+        reserves={{
+          reserves: [{ name: "WBTC / cbBTC / LBTC", pct: 67, risk: "medium" }],
+          estimated: false,
+          mode: "live",
+          liveAt: 1_700_000_000,
+          source: "crvusd",
+          metadata: {
+            yieldBasisCollateralPct: 89.7,
+          },
+        }}
+        reserveFetchError={null}
+        isNavToken
+      />,
+    );
+
+    expect(html).toContain("Yield Basis positions account for 89.7% of this live reserve mix.");
+  });
+
   it("renders static-validated reserve provenance messaging", () => {
     const coin = TRACKED_META_BY_ID.get("frax-frax");
     expect(coin).toBeDefined();

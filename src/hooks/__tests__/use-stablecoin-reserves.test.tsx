@@ -30,6 +30,7 @@ describe("useStablecoinReserves", () => {
         liveAt: 1_700_000_000,
         source: "adapter",
         displayUrl: "https://example.com",
+        metadata: { yieldBasisCollateralPct: 89.7 },
         provenance: { method: "api" },
         sync: { lastSuccessfulSyncAt: 1_700_000_000 },
       },
@@ -43,6 +44,7 @@ describe("useStablecoinReserves", () => {
       mode: "live",
       source: "adapter",
       displayUrl: "https://example.com",
+      metadata: { yieldBasisCollateralPct: 89.7 },
     });
     expect(result.current.error).toBeNull();
   });
