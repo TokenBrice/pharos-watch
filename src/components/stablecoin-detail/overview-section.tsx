@@ -216,7 +216,7 @@ export function OverviewSection({
 }: OverviewSectionProps) {
   const hasLeft = !!(summary || reserves || reserveFetchError || redemptionBackstop);
   const hasDews = !isNavToken;
-  const hasPriceTransparency = !!coinData && coinData.price != null;
+  const hasPriceTransparency = !!coinData && (coinData.price != null || !!dexPriceCheck);
   const isLiveEnabled = !!coin.liveReservesConfig;
   const reserveFetchNotice = reserveFetchError
     ? buildReserveFetchNotice(reserveFetchError, reserves)

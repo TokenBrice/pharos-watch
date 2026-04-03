@@ -57,8 +57,7 @@ export function PriceTransparencyCard({
 }: PriceTransparencyCardProps) {
   const [showAll, setShowAll] = useState(false);
 
-  if (coinData.price == null) return null;
-
+  const hasNoPrice = coinData.price == null;
   const isProtocolRedeem = coinData.priceSource === "protocol-redeem";
 
   // If the DEX Price Check has data, dex-promoted is available even if it wasn't
@@ -91,26 +90,34 @@ export function PriceTransparencyCard({
         {/* Summary Bar */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono tabular-nums">${coinData.price.toFixed(4)}</span>
+            {coinData.price != null ? (
+              <span className="text-2xl font-bold font-mono tabular-nums">${coinData.price.toFixed(4)}</span>
+            ) : (
+              <span className="text-2xl font-bold font-mono tabular-nums text-muted-foreground">N/A</span>
+            )}
             <Badge
               variant="outline"
-              className={cn("text-[11px] uppercase", CONFIDENCE_LEVEL_COLORS[coinData.priceConfidence as keyof typeof CONFIDENCE_LEVEL_COLORS] ?? "text-muted-foreground")}
+              className={cn("text-[11px] uppercase", hasNoPrice
+                ? "text-muted-foreground"
+                : CONFIDENCE_LEVEL_COLORS[coinData.priceConfidence as keyof typeof CONFIDENCE_LEVEL_COLORS] ?? "text-muted-foreground")}
             >
-              {coinData.priceConfidence ?? "—"}
+              {hasNoPrice ? "no consensus" : coinData.priceConfidence ?? "—"}
             </Badge>
           </div>
           <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              {usedSources.length} used
-            </span>
+            {!hasNoPrice && (
+              <span className="inline-flex items-center gap-1">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                {usedSources.length} used
+              </span>
+            )}
             {availableSources.length > 0 && (
               <span className="inline-flex items-center gap-1">
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-sky-400" />
                 {availableSources.length} available
               </span>
             )}
-            <span>· Updated {formatTimeAgo(coinData.priceUpdatedAt)}</span>
+            {!hasNoPrice && <span>· Updated {formatTimeAgo(coinData.priceUpdatedAt)}</span>}
           </div>
         </div>
 

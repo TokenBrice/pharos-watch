@@ -23,6 +23,7 @@ export interface PublishablePriceInput {
   source: string | null | undefined;
   confidence: PriceConfidence | null | undefined;
   agreeSources?: string[];
+  candidatePrices?: Record<string, number>;
   mode: "primary_authoritative" | "fallback_enrichment";
   validationContext: PriceValidationContext;
   validationReferences?: PriceValidationReferences;
@@ -71,6 +72,16 @@ function allowsSevereDownsidePublication(input: PublishablePriceInput): boolean 
     )
   ) {
     return true;
+  }
+
+  // Directional corroboration: if 2+ independent candidate sources independently
+  // confirm severe downside, the depeg is real even without a tight-cluster consensus.
+  if (input.candidatePrices) {
+    const severeCount = Object.values(input.candidatePrices).filter(
+      (p) => typeof p === "number" && Number.isFinite(p) && p > 0 &&
+        isSevereFixedPegDownside(p, input.validationContext, input.validationReferences, FIXED_PEG_SEVERE_DOWNSIDE_RATIO),
+    ).length;
+    if (severeCount >= 2) return true;
   }
 
   return false;

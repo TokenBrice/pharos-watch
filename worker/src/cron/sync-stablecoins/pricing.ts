@@ -104,6 +104,7 @@ function applyPrimaryCandidate(input: ApplyPrimaryCandidateInput): string | null
     source: candidate.source,
     confidence: candidate.confidence,
     agreeSources: candidate.agreeSources,
+    candidatePrices: candidate.allPrices,
     validationContext,
     validationReferences,
     previousTrustedPrice,
