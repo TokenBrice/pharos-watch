@@ -1,6 +1,8 @@
-import { SITE_API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
+import { API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
 
-export const DEFAULT_SITE_API_ORIGIN = SITE_API_ORIGIN;
+// Keep the website data lane functional until a dedicated site-api hostname is
+// explicitly provisioned and wired into the Pages environment.
+export const DEFAULT_SITE_API_ORIGIN = API_ORIGIN;
 
 export interface SiteDataProxyEnv {
   SITE_ORIGIN?: string;

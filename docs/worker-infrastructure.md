@@ -228,9 +228,9 @@ This baseline is enough to catch most abuse, regression, or cache-efficiency pro
 
 **Files:** `functions/_site-data/[[path]].ts`, `worker/src/lib/auth.ts`, `worker/src/handlers/http/gates.ts`
 
-- Pages Functions on `pharos.watch`, `ops.pharos.watch`, and Pages preview hosts proxy same-origin `/_site-data/*` requests to `site-api.pharos.watch`
+- Pages Functions on `pharos.watch`, `ops.pharos.watch`, and Pages preview hosts proxy same-origin `/_site-data/*` requests to `SITE_API_ORIGIN` when configured, or `api.pharos.watch` by default until the dedicated site-api host is provisioned
 - the proxy injects `X-Pharos-Site-Proxy-Secret` from `SITE_API_SHARED_SECRET`
-- the worker accepts that header only on `site-api.pharos.watch` or Worker preview URLs during CI rehearsal
+- the worker accepts that header only on `site-api.pharos.watch` or Worker preview URLs during CI rehearsal; the temporary public-API fallback works only while `PUBLIC_API_AUTH_MODE=off`
 - the worker allows only `GET` requests to allowlisted public-read routes from `shared/lib/site-data-routes.ts`
 - site-data requests skip public API request-source telemetry so the public API attribution dataset stays scoped to `api.pharos.watch`
 

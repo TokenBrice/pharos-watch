@@ -11,10 +11,10 @@ Unless noted otherwise, responses are `Content-Type: application/json`. Exceptio
 The runtime now uses three HTTP lanes:
 
 - `https://api.pharos.watch` is the external integration API. Protected public routes require `X-API-Key`.
-- `https://site-api.pharos.watch` is the website-internal Worker host. It accepts only allowlisted `GET` reads plus `X-Pharos-Site-Proxy-Secret`.
+- `https://site-api.pharos.watch` is the intended website-internal Worker host once provisioned. It accepts only allowlisted `GET` reads plus `X-Pharos-Site-Proxy-Secret`.
 - `/_site-data/*` is the same-origin Pages Functions proxy used by browsers on `pharos.watch`, `ops.pharos.watch`, and Pages preview hosts.
 
-Browser consumers should use same-origin `/_site-data/*` via the frontend helpers in `src/lib/api.ts`. Direct integrations, CI smoke, and build-time sync scripts should target `https://api.pharos.watch`.
+Browser consumers should use same-origin `/_site-data/*` via the frontend helpers in `src/lib/api.ts`. That Pages proxy targets `SITE_API_ORIGIN` when configured, or falls back to `https://api.pharos.watch` until the dedicated `site-api` host is live. Direct integrations, CI smoke, and build-time sync scripts should target `https://api.pharos.watch`.
 
 ## Public API Auth
 
@@ -170,7 +170,7 @@ The same shared endpoint descriptors now also carry static worker dependency-hyd
 
 Admin endpoints are authenticated only on the `ops-api.pharos.watch` host. Cloudflare Access must authenticate the caller first, then inject `Cf-Access-Jwt-Assertion` for the worker. `worker/src/lib/auth.ts` verifies that JWT against the configured Access audience (`CF_ACCESS_OPS_API_AUD`) and team domain (`CF_ACCESS_TEAM_DOMAIN`) via `worker/src/lib/jwt-verify.ts`, including signature, `aud`, `exp`, and `iss` checks. Browser operators should use `https://ops.pharos.watch/admin/`, which talks to same-origin `/api/admin/*` Pages Functions routes behind Cloudflare Access.
 
-The website-internal read lane is separate from Cloudflare Access. `site-api.pharos.watch` accepts only allowlisted `GET` public-read paths and requires `X-Pharos-Site-Proxy-Secret`, which the Pages `/_site-data/*` proxy injects server-to-server from `SITE_API_SHARED_SECRET`. Public browser traffic must not call `site-api.pharos.watch` directly.
+The website-internal read lane is separate from Cloudflare Access. `site-api.pharos.watch` accepts only allowlisted `GET` public-read paths and requires `X-Pharos-Site-Proxy-Secret`, which the Pages `/_site-data/*` proxy injects server-to-server from `SITE_API_SHARED_SECRET`. Until that dedicated host is provisioned, the Pages proxy can temporarily fall back to `api.pharos.watch`; do not move `PUBLIC_API_AUTH_MODE` past `off` until `SITE_API_ORIGIN` is pointed at the dedicated site-api host. Public browser traffic must not call `site-api.pharos.watch` directly.
 
 Many router-dispatched mutating admin endpoints also support optional `Idempotency-Key` handling. Current idempotent routes are:
 

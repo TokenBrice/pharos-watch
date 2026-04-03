@@ -93,7 +93,7 @@ npm install
 NEXT_PUBLIC_API_BASE=http://localhost:8787 npm run dev
 ```
 
-`NEXT_PUBLIC_API_BASE` is mainly a local-dev override for `next dev` against `wrangler dev`. When it is unset, browser reads on `pharos.watch`, `ops.pharos.watch`, and `*.stablecoin-dashboard.pages.dev` go through same-origin `/_site-data/*`, which Pages Functions proxy to `site-api.pharos.watch` using `SITE_API_SHARED_SECRET`. Direct browser calls still use `https://api.pharos.watch` only for exempt public routes such as feedback submission and OG image fetches. Local static smoke/proxy setups can keep `NEXT_PUBLIC_API_BASE` empty. `NEXT_PUBLIC_GA_ID` is optional and only injects GA4 when set at build time.
+`NEXT_PUBLIC_API_BASE` is mainly a local-dev override for `next dev` against `wrangler dev`. When it is unset, browser reads on `pharos.watch`, `ops.pharos.watch`, and `*.stablecoin-dashboard.pages.dev` go through same-origin `/_site-data/*`, which Pages Functions proxy with `SITE_API_SHARED_SECRET` to `SITE_API_ORIGIN` when configured, or to `https://api.pharos.watch` by default until the dedicated site-api host is live. Direct browser calls still use `https://api.pharos.watch` only for exempt public routes such as feedback submission and OG image fetches. Local static smoke/proxy setups can keep `NEXT_PUBLIC_API_BASE` empty. `NEXT_PUBLIC_GA_ID` is optional and only injects GA4 when set at build time.
 
 ### Worker API
 
@@ -154,7 +154,7 @@ src/                              Frontend (Next.js static export)
 └── lib/                          Frontend-only utilities (API client, charts/colors, metadata, UI helpers)
 
 functions/                        Cloudflare Pages Functions for same-origin website/ops proxying
-├── _site-data/[[path]].ts        Same-origin website data proxy from `pharos.watch` / `ops.pharos.watch` / Pages preview hosts to `site-api.pharos.watch`
+├── _site-data/[[path]].ts        Same-origin website data proxy from `pharos.watch` / `ops.pharos.watch` / Pages preview hosts to `SITE_API_ORIGIN` or the public API fallback
 ├── admin/[[path]].ts             Host gate for `/admin/` on `ops.pharos.watch`
 ├── api/admin/[[path]].ts         Same-origin admin proxy from `ops.pharos.watch` to `ops-api.pharos.watch`
 ├── lib/ops-env.ts                Shared Pages Functions env contract for ops-host gating and admin proxying
@@ -197,7 +197,7 @@ Current source-of-truth product docs live in `/docs/` and this README. `/agents/
 Runtime host split:
 
 - website UI: `https://pharos.watch`
-- website data lane: same-origin `/_site-data/*` -> `https://site-api.pharos.watch`
+- website data lane: same-origin `/_site-data/*` -> `SITE_API_ORIGIN` when configured, otherwise `https://api.pharos.watch`
 - external integration API: `https://api.pharos.watch`
 - operator UI/API: `https://ops.pharos.watch` / `https://ops-api.pharos.watch`
 

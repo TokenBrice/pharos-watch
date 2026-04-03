@@ -121,6 +121,29 @@ describe("site-data proxy", () => {
     expect(cachePut).toHaveBeenCalledTimes(1);
   });
 
+  it("falls back to the public API origin when SITE_API_ORIGIN is unset", async () => {
+    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/stablecoins"),
+      env: { ...BASE_ENV, SITE_API_ORIGIN: undefined },
+      params: { path: "stablecoins" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "https://api.pharos.watch/api/stablecoins",
+      expect.objectContaining({
+        method: "GET",
+        headers: expect.any(Headers),
+      }),
+    );
+  });
+
   it("returns 500 when the site-proxy secret is missing", async () => {
     const response = await onRequest({
       request: new Request("https://pharos.watch/_site-data/stablecoins"),

@@ -59,7 +59,7 @@ function getProxyBaseUrl() {
 
 function getSiteProxyBaseUrl() {
   const configured = (process.env.STATIC_EXPORT_SITE_API_BASE ?? "").trim();
-  return configured || origins.siteApiOrigin;
+  return configured || getProxyBaseUrl();
 }
 
 let siteDataResolverPromise;

@@ -671,7 +671,7 @@ data/
 - `src/lib/api.ts` is the frontend runtime source of truth for API origin selection.
 - `NEXT_PUBLIC_API_BASE` is an optional explicit override, mainly for local `next dev` against `wrangler dev`.
 - When `NEXT_PUBLIC_API_BASE` is unset, `buildRequestUrl()` maps public browser reads on `pharos.watch`, `ops.pharos.watch`, and `*.stablecoin-dashboard.pages.dev` to same-origin `/_site-data/*`, while `buildApiUrl()` still points explicit public-API callsites (for example feedback and OG fetches) at `https://api.pharos.watch`.
-- `functions/_site-data/[[path]].ts` is the browser-facing proxy contract for the website data lane. It accepts only `GET`, allowlists public-read routes through `shared/lib/site-data-routes.ts`, and forwards to `site-api.pharos.watch` using `SITE_API_SHARED_SECRET`.
+- `functions/_site-data/[[path]].ts` is the browser-facing proxy contract for the website data lane. It accepts only `GET`, allowlists public-read routes through `shared/lib/site-data-routes.ts`, and forwards to `SITE_API_ORIGIN` when configured or to `https://api.pharos.watch` as a temporary fallback, always using `SITE_API_SHARED_SECRET`.
 - `site-api.pharos.watch` is an internal Worker host, not a browser surface. `worker/src/handlers/http/gates.ts` allows only `GET` allowlisted site-data paths plus the shared-secret header on that lane (or on Worker preview URLs during CI rehearsal).
 - `NEXT_PUBLIC_GA_ID` gates GA4 script injection in `src/app/layout.tsx`. When it is unset, the site still renders normally and no browser analytics events are emitted from `src/lib/analytics.ts`.
 

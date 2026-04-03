@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { API_ORIGIN } from "@shared/lib/runtime-origins";
 import {
   DEFAULT_SITE_API_ORIGIN,
   SITE_DATA_FUNCTIONS_ACTIVE_ENV_KEYS,
@@ -18,6 +19,7 @@ describe("site-data env contract", () => {
 
   it("falls back to the default site API origin", () => {
     expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: undefined })).toBe(DEFAULT_SITE_API_ORIGIN);
+    expect(DEFAULT_SITE_API_ORIGIN).toBe(API_ORIGIN);
   });
 
   it("requires the shared secret", () => {

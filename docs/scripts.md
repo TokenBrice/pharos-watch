@@ -102,7 +102,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 ### `smoke-ui.mjs`
 
 - Uses Playwright CLI in a temporary session, but now collapses the smoke flow into one `run-code` browser session instead of repeated per-route CLI round-trips.
-- In CI deploys, the browser now targets a locally served `out/` export before Pages production deploy; `npm run serve:static-export` runs `scripts/serve-static-export.mjs`, which proxies direct `/api/*` calls to the configured public API base and `/_site-data/*` calls to the configured site-api base so the smoke still exercises the live website data path against the exact built frontend artifact.
+- In CI deploys, the browser now targets a locally served `out/` export before Pages production deploy; `npm run serve:static-export` runs `scripts/serve-static-export.mjs`, which proxies direct `/api/*` calls to the configured public API base and `/_site-data/*` calls to `STATIC_EXPORT_SITE_API_BASE` when set or to that same public API base by default so the smoke still exercises the live website data path against the exact built frontend artifact.
 - On combined worker + Pages deploys, the Pages-prepare workflow points the local site-data proxy at the uploaded worker preview URL so the predeploy artifact rehearsal happens against the exact worker candidate while promotion continues in parallel.
 - The shared Pages publish workflow also runs the same smoke script against `https://pharos.watch` after `deploy-pages`, so the pipeline checks both the pre-publish artifact and the real public host.
 - Verifies homepage is not in outage/empty state (`Failed to load data` or `Failed to load this dataset`, `stablecoins:404`, `Data not yet available` or `Waiting for first sync`, `Connection issue` or `Unable to reach the Pharos data API right now.`, `No stablecoin data available`, missing rows/ticker).
@@ -117,7 +117,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 
 - Defaults to serving `out/` on `127.0.0.1:4173`.
 - Proxies `GET`/`HEAD` requests under `/api/*` to `STATIC_EXPORT_API_BASE` (default: `https://api.pharos.watch`).
-- Proxies `GET`/`HEAD` requests under `/_site-data/*` to `STATIC_EXPORT_SITE_API_BASE` (default: `https://site-api.pharos.watch`) and forwards `STATIC_EXPORT_SITE_API_SHARED_SECRET` as `X-Pharos-Site-Proxy-Secret` when set.
+- Proxies `GET`/`HEAD` requests under `/_site-data/*` to `STATIC_EXPORT_SITE_API_BASE` when set, otherwise to the same base as `STATIC_EXPORT_API_BASE`, and forwards `STATIC_EXPORT_SITE_API_SHARED_SECRET` as `X-Pharos-Site-Proxy-Secret` when set.
 - Exists to keep browser smoke pre-deploy while still exercising the same API-backed UI code paths as production.
 
 ### `classify-deploy-changes.mjs`

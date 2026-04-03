@@ -147,7 +147,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - on combined worker + Pages deploys, uses the uploaded Worker's preview URL for digest sync and local `/_site-data/*` proxying so CI rehearses the static export against the exact candidate API while `deploy-worker` and `smoke-api` continue in parallel
    - executes the predeploy Pages path:
      - `build-pages` fetches `/api/digest-archive` once from the selected API environment into `data/digests.json`, sending `DIGEST_API_KEY` from GitHub repository secrets and forwarding `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`, and uploads `out/`
-     - `smoke-ui` downloads the same artifact, serves it locally with `npm run serve:static-export`, proxies direct `/api/*` calls to the selected public API base, proxies `/_site-data/*` to the selected site-api base, injects `SITE_API_SHARED_SECRET` for that hop, and verifies the expected GA snippet when `SMOKE_UI_EXPECT_GA_ID` is configured
+     - `smoke-ui` downloads the same artifact, serves it locally with `npm run serve:static-export`, proxies direct `/api/*` calls to the selected public API base, proxies `/_site-data/*` to `STATIC_EXPORT_SITE_API_BASE` when configured or the same selected API base by default, injects `SITE_API_SHARED_SECRET` for that hop, and verifies the expected GA snippet when `SMOKE_UI_EXPECT_GA_ID` is configured
 8. `pages-publish`
    - reusable workflow call to `.github/workflows/pages-publish.yml`
    - runs only when `detect-changes` reports `pages_changed=true`
@@ -186,12 +186,12 @@ Deployment stops on the first failed job. Pull requests still run the full share
 The current origin split is:
 
 - public UI: `pharos.watch`
-- website data API: `site-api.pharos.watch`
+- website data API target: `site-api.pharos.watch` when provisioned, otherwise the Pages proxy temporarily falls back to `api.pharos.watch`
 - operator UI: `ops.pharos.watch`
 - public API: `api.pharos.watch`
 - operator API: `ops-api.pharos.watch`
 
-The browser-facing website data lane is same-origin `/_site-data/*` on the Pages project; Pages Functions proxy that lane to `site-api.pharos.watch` with `SITE_API_SHARED_SECRET`. Worker route declarations for `site-api.pharos.watch` and `ops-api.pharos.watch` live in `worker/wrangler.toml` and deploy with the normal Worker job. The Pages custom domains plus Cloudflare Access applications for the ops surfaces are account-side setup and are documented in [operator-origin-access.md](./operator-origin-access.md).
+The browser-facing website data lane is same-origin `/_site-data/*` on the Pages project; Pages Functions proxy that lane with `SITE_API_SHARED_SECRET` to `SITE_API_ORIGIN` when configured, or fall back to `api.pharos.watch` until the dedicated `site-api.pharos.watch` host is actually provisioned. Worker route declarations for `site-api.pharos.watch` and `ops-api.pharos.watch` live in `worker/wrangler.toml` and deploy with the normal Worker job. The Pages custom domains plus Cloudflare Access applications for the ops surfaces are account-side setup and are documented in [operator-origin-access.md](./operator-origin-access.md).
 
 ## Failure Policy
 
