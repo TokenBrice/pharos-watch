@@ -1,27 +1,34 @@
 # Pharos API Reference
 
-The Pharos API is a REST API served by a Cloudflare Worker backed by a D1 database. It powers the [pharos.watch](https://pharos.watch) stablecoin analytics dashboard, with public read endpoints plus authenticated/admin and feedback write endpoints.
+The Pharos API is a REST API served by a Cloudflare Worker backed by a D1 database. It powers the [pharos.watch](https://pharos.watch) stablecoin analytics dashboard through a split website-data lane plus an external integration API. On `https://api.pharos.watch`, all public routes are API-key protected unless this reference explicitly marks them as exempt.
 
 **Base URL:** `https://api.pharos.watch`
 
-Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: `GET /api/og/*` returns `image/png`, and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`. Protected public `/api/*` traffic on `api.pharos.watch` is API-key-gated via `X-API-Key`; valid keys are rate-limited per minute in D1 and exempt traffic falls back to the legacy hashed-IP limiter.
+Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: `GET /api/og/*` returns `image/png`, and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`. Protected public `/api/*` traffic on `api.pharos.watch` is API-key-gated via `X-API-Key`; production runs with `PUBLIC_API_AUTH_MODE=enforce`, so missing or invalid keys receive `401 Unauthorized`.
 
 ## Surface Split
 
 The runtime now uses three HTTP lanes:
 
 - `https://api.pharos.watch` is the external integration API. Protected public routes require `X-API-Key`.
-- `https://site-api.pharos.watch` is the intended website-internal Worker host once provisioned. It accepts only allowlisted `GET` reads plus `X-Pharos-Site-Proxy-Secret`.
+- `https://site-api.pharos.watch` is the website-internal Worker host. It accepts only allowlisted `GET` reads plus `X-Pharos-Site-Proxy-Secret`.
 - `/_site-data/*` is the same-origin Pages Functions proxy used by browsers on `pharos.watch`, `ops.pharos.watch`, and Pages preview hosts.
 
-Browser consumers should use same-origin `/_site-data/*` via the frontend helpers in `src/lib/api.ts`. That Pages proxy targets `SITE_API_ORIGIN` when configured, or falls back to `https://api.pharos.watch` until the dedicated `site-api` host is live. Direct integrations, CI smoke, and build-time sync scripts should target `https://api.pharos.watch`.
+Browser consumers should use same-origin `/_site-data/*` via the frontend helpers in `src/lib/api.ts`. In production, that Pages proxy targets `https://site-api.pharos.watch` through `SITE_API_ORIGIN`. Direct integrations, CI smoke, and build-time sync scripts should target `https://api.pharos.watch`.
 
 ## Public API Auth
 
-Protected public API requests use:
+Unless a route is explicitly called out below as exempt, requests to `https://api.pharos.watch` must send:
 
 - header: `X-API-Key: ph_live_<16 hex prefix>_<32 char base64url secret>`
 - example shape: `ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF`
+
+Anonymous public access is limited to these exempt routes:
+
+- `GET /api/health`
+- `GET /api/og/*`
+- `POST /api/feedback`
+- `POST /api/telegram-webhook`
 
 The worker stores only the key prefix plus a peppered HMAC of the secret portion. Admin callers create, rotate, and deactivate keys through the operator lane (`ops.pharos.watch` / `ops-api.pharos.watch`); plaintext tokens are returned only once at creation/rotation time.
 
@@ -196,6 +203,8 @@ The `/admin/` UI now sends an `Idempotency-Key` automatically for supported manu
 ---
 
 ## Public Endpoints
+
+Unless an endpoint section explicitly says `Authentication: exempt`, routes in this section require `X-API-Key` when called on `https://api.pharos.watch`.
 
 ### `GET /api/stablecoins`
 
@@ -1214,6 +1223,8 @@ Contextual data snapshot for a specific digest date — includes the digest's in
 
 Worker health check. Reports cache freshness, blacklist integrity, mint/burn freshness, and circuit-breaker states. Not served from Cloudflare edge cache (`no-store`).
 
+**Authentication:** exempt
+
 **Response**
 
 ```json
@@ -1393,6 +1404,8 @@ Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a comp
 ### `GET /api/og/*`
 
 Dynamic Open Graph PNG images used by share buttons and page metadata.
+
+**Authentication:** exempt
 
 **Supported routes**
 
@@ -2107,6 +2120,8 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
 
 Public feedback ingestion endpoint used by the in-app feedback modal. Validates payloads, applies IP-based rate limiting, and forwards submissions to GitHub Issues.
 
+**Authentication:** exempt
+
 **Cache:** no edge cache (POST passthrough)
 
 **Rate limits**
@@ -2160,7 +2175,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 
 Telegram Bot API webhook endpoint. Receives user messages, processes bot commands, and manages subscriptions.
 
-**Authentication:** `X-Telegram-Bot-Api-Secret-Token` header. Not the standard `X-Admin-Key`.
+**Authentication:** exempt from `X-API-Key`; requires `X-Telegram-Bot-Api-Secret-Token` instead. Not the standard `X-Admin-Key`.
 
 **Rate limiting:** Exempt from IP rate limiter (Telegram sends from fixed IPs).
 
