@@ -20,6 +20,7 @@ export interface FeaturePageShellProps {
   };
   headerActions?: React.ReactNode;
   leadParagraphs?: readonly React.ReactNode[];
+  headerSupplement?: React.ReactNode;
   preface?: React.ReactNode;
   children: React.ReactNode;
 }
@@ -35,6 +36,7 @@ export function FeaturePageShell({
   methodology,
   headerActions,
   leadParagraphs = [],
+  headerSupplement,
   preface,
   children,
 }: FeaturePageShellProps) {
@@ -87,6 +89,7 @@ export function FeaturePageShell({
             ))}
           </div>
         ) : null}
+        {headerSupplement}
       </div>
       {children}
     </div>

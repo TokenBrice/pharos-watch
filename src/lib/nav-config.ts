@@ -8,6 +8,7 @@ import {
   Skull,
   Info,
   Layers,
+  KeyRound,
   BookOpen,
   FlaskConical,
   ArrowLeftRight,
@@ -45,6 +46,13 @@ interface NavGroup {
 
 export const DASHBOARD_NAV_ITEM: NavItem = { href: "/", label: "Dashboard", icon: LayoutDashboard, description: "Live triage surface for market stress, rankings, and first-pass research" };
 
+export const ABOUT_REFERENCE_ITEMS: NavItem[] = [
+  { href: "/methodology", label: "Methodology", icon: BookOpen, description: "Reference manual for formulas, thresholds, and changelogs" },
+  { href: "/coverage", label: "Coverage", icon: TableProperties, description: "Truth surface for what each route can show per coin" },
+  { href: "/start", label: "Start Here", icon: Compass, description: "Shortest route into the product for new or returning users" },
+  { href: "/about/api", label: "API Reference", icon: KeyRound, description: "Auth model, key requirement, and full endpoint reference" },
+];
+
 export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Risk Lab",
@@ -79,22 +87,13 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/upcoming", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch-watch context" },
       { href: "/cemetery", label: "Cemetery", icon: Skull, description: "Failed stablecoins and the lessons they left behind" },
       { href: "/digest", label: "Digest", icon: Newspaper, description: "Daily editorial recap of the stablecoin market" },
-    ],
-  },
-  {
-    label: "About Pharos",
-    items: [
       { href: "/about", label: "About", icon: Info, description: "Scope, data sources, and why Pharos exists" },
-      { href: "/methodology", label: "Methodology", icon: BookOpen, description: "Reference manual for the scoring and monitoring models" },
-      { href: "/coverage", label: "Coverage", icon: TableProperties, description: "Truth surface for what each route can show per coin" },
     ],
   },
 ];
 
 /** Flat list for use in header and command palette */
-export const NAV_ITEMS: NavItem[] = [DASHBOARD_NAV_ITEM, ...NAV_GROUPS.flatMap((g) => g.items)];
+export const NAV_ITEMS: NavItem[] = [DASHBOARD_NAV_ITEM, ...NAV_GROUPS.flatMap((g) => g.items), ...ABOUT_REFERENCE_ITEMS];
 
 /** Bottom items (always shown at sidebar bottom) */
-export const BOTTOM_NAV_ITEMS: NavItem[] = [
-  { href: "/start", label: "Start Here", icon: Compass, description: "Shortest route into the product for new or returning users" },
-];
+export const BOTTOM_NAV_ITEMS: NavItem[] = [];
