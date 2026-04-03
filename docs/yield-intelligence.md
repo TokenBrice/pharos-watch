@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v6.9`
+- **Current methodology version:** `v7.0`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -21,6 +21,7 @@ Rankings provenance now carries source-native freshness for derived sources:
 - protocol-native lending venue readers such as Aave V3 and Compound V3 stay in the curated Tier 2.5 lane rather than inheriting Tier 1 deterministic wrapper precedence, so a lower-yield supplemental market does not displace a stronger native wrapper purely by source family
 - wrapper resolution can now pin the intended DeFiLlama project in addition to chain and address, which keeps shared wrapper tokens fail-closed even when the same wrapper appears across multiple single-exposure venues
 - read-time `data-stale` warnings now follow source cadence: hourly families use the shared three-cycle publish threshold, supplemental families wait 6 hours so they do not false-positive inside their 4-hour refresh window, and `price-derived` rows wait 36 hours because they are backed by daily `supply_history` snapshots
+- published `lending-opportunity` suggestions now require observable venue TVL and a size floor of `max(existing absolute floor, 0.1% of the tracked stablecoin supply)`, so tiny markets do not surface as the live recommendation for large base assets
 - published `lending-opportunity` suggestions now explicitly exclude Resolv / `USR`, `stUSR`, and `wstUSR`-linked venues across both supplemental protocol APIs and auto-discovered DeFiLlama lending pools, so impaired wrapper ecosystems do not surface as recommended base-asset yield routes
 
 ---
@@ -180,7 +181,7 @@ Protocol-specific lending-market readers that query protocol state directly also
 
 This tier can also carry explicit wrapper-over-wrapper native sources when the upstream venue is a distinct managed wrapper around a tracked native yield token. BOLD now uses this path for K3 `sBOLD`, which wraps `yBOLD` while still representing the Liquity Stability Pool yield stack rather than a governance-set rate.
 
-Published lending-opportunity suggestions also apply an explicit venue exclusion for Resolv / `USR`, `stUSR`, and `wstUSR`-linked markets. This filter is scoped to the suggestion layer for base assets such as USDC or USDT; it does not remove native tracked yield assets from the broader methodology inventory.
+Published lending-opportunity suggestions also apply an explicit venue exclusion for Resolv / `USR`, `stUSR`, and `wstUSR`-linked markets. They now also require observable venue TVL and must clear a size floor equal to the higher of the existing absolute floor and `0.1%` of the tracked stablecoin's current supply. These filters are scoped to the suggestion layer for base assets such as USDC or USDT; they do not remove native tracked yield assets from the broader methodology inventory.
 
 **Current adapter:**
 
@@ -243,7 +244,9 @@ For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), 
 | Tier A (2026-03-25, >$50M TVL) | wildcat-protocol, tectonic, upshift, venus-flux, avantis, cap, resupply, zerobase-cedefi |
 | Tier B (2026-03-25, $10M–$50M TVL) | convex-finance, yo-protocol, clearpool-lending, 3jane-lending, hyperlend-pooled, zest-v2, liquity-v2, echelon-market, termmax, beefy, gearbox |
 
-**Discovery logic:** Filters DL pools by `exposure === "single"`, `stablecoin === true`, project in allowlist, and reserved-pool exclusion. Resolution prefers underlying-token address matches over symbol matches. Symbol-only matching is allowed only when the coin remains unambiguous after chain scoping; otherwise the candidate is dropped. Current quality gates require `apy >= 0.1` and `tvlUsd >= 100_000`.
+**Discovery logic:** Filters DL pools by `exposure === "single"`, `stablecoin === true`, project in allowlist, and reserved-pool exclusion. Resolution prefers underlying-token address matches over symbol matches. Symbol-only matching is allowed only when the coin remains unambiguous after chain scoping; otherwise the candidate is dropped. Current quality gates require `apy >= 0.1`, an ecosystem-aware absolute TVL floor (`$100K` standard, `$25K` on the smaller-chain allowlist), and for tracked stablecoins a supply-relative floor of `0.1%` of the asset's current circulating supply.
+
+**Observable size requirement:** Published lending-opportunity suggestions require venue-level `sourceTvlUsd`. Protocol-native lending readers that cannot attach measurable venue TVL are omitted from published suggestion coverage until they can prove size.
 
 **Explicit venue exclusion:** Even when a pool clears the generic quality gates above, published lending-opportunity suggestions exclude venues whose DeFiLlama `poolMeta` or supplemental source label identifies them as Resolv / `USR`, `stUSR`, or `wstUSR` linked.
 

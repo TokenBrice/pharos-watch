@@ -30,8 +30,11 @@ export function YieldIntelligenceMethodologySection() {
                 multiple valid yield paths exist, address-first identity is used before symbol fallback, curated
                 exact-pool overrides can cover named non-stablecoin venues, confidence-weighted arbitration selects
                 the primary row, and published lending suggestions exclude Resolv / USR-linked venues so broken wrapper
-                ecosystems do not surface as recommended base-asset routes. PYS is now benchmark-aware: it keeps raw APY as the base term, adds a modest slice of
-                row-level benchmark spread, and only then applies the safety and consistency penalties.
+                ecosystems do not surface as recommended base-asset routes. Published lending-opportunity rows now also
+                require observable venue TVL and a size floor of at least 0.1% of the tracked stablecoin&apos;s current
+                supply before they can become the live recommendation. PYS is now benchmark-aware: it keeps raw APY as
+                the base term, adds a modest slice of row-level benchmark spread, and only then applies the safety and
+                consistency penalties.
               </p>
               <MethodologyFacts
                 facts={[
@@ -154,7 +157,9 @@ export function YieldIntelligenceMethodologySection() {
                     chooses the best row. Divergent discovered or fallback sources can be demoted or rejected when a
                     canonical source disagrees materially. Protocol-native supplemental lending venues such as Aave V3 do
                     not outrank stronger native wrapper yields purely because they query protocol state directly, and
-                    Resolv / USR-linked lending-opportunity venues are excluded from publication entirely.
+                    Resolv / USR-linked lending-opportunity venues are excluded from publication entirely. Published
+                    lending-opportunity rows also need observable venue TVL and must clear the higher of the absolute
+                    TVL floor or 0.1% of the tracked stablecoin&apos;s current supply.
                   </p>
                   <p>
                     Yield-bearing coverage is now explicitly inventoried per asset. If no reliable runtime source exists,

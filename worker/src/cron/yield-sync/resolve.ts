@@ -5,6 +5,7 @@ import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin
 import { buildInClause } from "../../lib/db";
 import {
   MIN_LENDING_POOL_APY,
+  MIN_LENDING_POOL_TVL_SHARE_OF_STABLECOIN_SUPPLY,
   MIN_LENDING_POOL_TVL_USD,
   MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM,
   MIN_SAFETY_SCORE_FOR_YIELD,
@@ -68,11 +69,69 @@ interface ResolveYieldSourcesParams {
   chainRpcs?: Map<string, ChainRpcConfig>;
   coingeckoApiKey?: string | null;
   supplementalCandidates?: ResolvedYieldCandidate[];
+  stablecoinSupplyById: Map<string, number>;
 }
+
+const SMALL_ECOSYSTEM_CHAINS = new Set(["solana", "sui", "aptos", "cardano", "stacks"]);
 
 function normalizeYieldPoolChain(chain: string | null | undefined): string | null {
   if (!chain) return null;
   return resolveChainId(chain) ?? chain.toLowerCase();
+}
+
+function getLendingOpportunityAbsoluteTvlFloor(chain: string | null | undefined): number {
+  const normalizedChain = normalizeYieldPoolChain(chain);
+  return normalizedChain && SMALL_ECOSYSTEM_CHAINS.has(normalizedChain)
+    ? MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM
+    : MIN_LENDING_POOL_TVL_USD;
+}
+
+function shouldApplyStablecoinSupplySizeGate(stablecoinId: string): boolean {
+  const meta = TRACKED_META_BY_ID.get(stablecoinId);
+  if (!meta) return false;
+  return meta.flags.pegCurrency !== "GOLD" && meta.flags.pegCurrency !== "SILVER";
+}
+
+function getRequiredLendingOpportunityTvlUsd(params: {
+  stablecoinId: string;
+  poolChain?: string | null;
+  baseMinTvlUsd?: number;
+  stablecoinSupplyById: Map<string, number>;
+}): number {
+  const absoluteFloor = params.baseMinTvlUsd ?? getLendingOpportunityAbsoluteTvlFloor(params.poolChain);
+  if (!shouldApplyStablecoinSupplySizeGate(params.stablecoinId)) {
+    return absoluteFloor;
+  }
+
+  const supplyUsd = params.stablecoinSupplyById.get(params.stablecoinId);
+  if (typeof supplyUsd !== "number" || !Number.isFinite(supplyUsd) || supplyUsd <= 0) {
+    return absoluteFloor;
+  }
+
+  return Math.max(absoluteFloor, supplyUsd * MIN_LENDING_POOL_TVL_SHARE_OF_STABLECOIN_SUPPLY);
+}
+
+function passesLendingOpportunitySizeGate(params: {
+  stablecoinId: string;
+  poolChain?: string | null;
+  sourceTvlUsd: number | null | undefined;
+  baseMinTvlUsd?: number;
+  stablecoinSupplyById: Map<string, number>;
+}): boolean {
+  if (!shouldApplyStablecoinSupplySizeGate(params.stablecoinId)) {
+    return true;
+  }
+
+  if (typeof params.sourceTvlUsd !== "number" || !Number.isFinite(params.sourceTvlUsd) || params.sourceTvlUsd <= 0) {
+    return false;
+  }
+
+  return params.sourceTvlUsd >= getRequiredLendingOpportunityTvlUsd({
+    stablecoinId: params.stablecoinId,
+    poolChain: params.poolChain,
+    baseMinTvlUsd: params.baseMinTvlUsd,
+    stablecoinSupplyById: params.stablecoinSupplyById,
+  });
 }
 
 function matchesExplicitYieldPool(
@@ -96,10 +155,12 @@ function appendResolvedYieldCandidates(
   resolved: ResolvedYieldEntry[],
   entries: ResolvedYieldCandidate[],
   identityLookups: ReturnType<typeof buildYieldIdentityLookups>,
+  stablecoinSupplyById: Map<string, number>,
 ): void {
   let blockedDrops = 0;
   let ambiguousDrops = 0;
   let unresolvedDrops = 0;
+  let sizeGateDrops = 0;
 
   for (const entry of entries) {
     if (
@@ -114,6 +175,18 @@ function appendResolvedYieldCandidates(
       const meta = TRACKED_META_BY_ID.get(entry.stablecoinId);
       if (!meta) {
         unresolvedDrops += 1;
+        continue;
+      }
+      if (
+        entry.yield.yieldType === "lending-opportunity" &&
+        !passesLendingOpportunitySizeGate({
+          stablecoinId: entry.stablecoinId,
+          poolChain: entry.chain ?? meta.contracts?.[0]?.chain ?? null,
+          sourceTvlUsd: entry.yield.sourceTvlUsd,
+          stablecoinSupplyById,
+        })
+      ) {
+        sizeGateDrops += 1;
         continue;
       }
       if (resolved.some((resolvedEntry) => resolvedEntry.id === meta.id && resolvedEntry.yield?.sourceKey === entry.yield.sourceKey)) {
@@ -135,15 +208,27 @@ function appendResolvedYieldCandidates(
 
     const meta = TRACKED_META_BY_ID.get(resolution.stablecoinId);
     if (!meta) continue;
+    if (
+      entry.yield.yieldType === "lending-opportunity" &&
+      !passesLendingOpportunitySizeGate({
+        stablecoinId: resolution.stablecoinId,
+        poolChain: entry.chain ?? meta.contracts?.[0]?.chain ?? null,
+        sourceTvlUsd: entry.yield.sourceTvlUsd,
+        stablecoinSupplyById,
+      })
+    ) {
+      sizeGateDrops += 1;
+      continue;
+    }
     if (resolved.some((resolvedEntry) => resolvedEntry.id === meta.id && resolvedEntry.yield?.sourceKey === entry.yield.sourceKey)) {
       continue;
     }
     resolved.push({ id: meta.id, symbol: meta.symbol, yield: entry.yield });
   }
 
-  if (blockedDrops > 0 || ambiguousDrops > 0 || unresolvedDrops > 0) {
+  if (blockedDrops > 0 || ambiguousDrops > 0 || unresolvedDrops > 0 || sizeGateDrops > 0) {
     console.warn(
-      `[yield-sync] Dropped optional protocol candidates: blocked=${blockedDrops}, ambiguous=${ambiguousDrops}, unresolved=${unresolvedDrops}`,
+      `[yield-sync] Dropped optional protocol candidates: blocked=${blockedDrops}, ambiguous=${ambiguousDrops}, unresolved=${unresolvedDrops}, sizeGate=${sizeGateDrops}`,
     );
   }
 }
@@ -212,6 +297,7 @@ export async function resolveYieldSources({
   chainRpcs,
   coingeckoApiKey,
   supplementalCandidates = [],
+  stablecoinSupplyById,
 }: ResolveYieldSourcesParams): Promise<YieldResolutionResult> {
   const resolved: ResolvedYieldEntry[] = [];
   const tier1PrevRates = new Map<string, number | null>();
@@ -547,7 +633,7 @@ export async function resolveYieldSources({
     }
   }
 
-  appendResolvedYieldCandidates(resolved, supplementalCandidates, identityLookups);
+  appendResolvedYieldCandidates(resolved, supplementalCandidates, identityLookups, stablecoinSupplyById);
 
   if (dlPools.length > 0) {
     for (const [stablecoinId, configs] of Object.entries(EXPLICIT_YIELD_SOURCE_POOL_MAP)) {
@@ -561,6 +647,18 @@ export async function resolveYieldSources({
 
         const pool = dlPools.find((entry) => entry.pool === config.poolId);
         if (!pool || !matchesExplicitYieldPool(pool, config)) {
+          continue;
+        }
+        if (
+          config.yieldType === "lending-opportunity" &&
+          !passesLendingOpportunitySizeGate({
+            stablecoinId,
+            poolChain: config.expectedChain ?? pool.chain,
+            sourceTvlUsd: pool.tvlUsd,
+            baseMinTvlUsd: config.minTvlUsd ?? getLendingOpportunityAbsoluteTvlFloor(config.expectedChain ?? pool.chain),
+            stablecoinSupplyById,
+          })
+        ) {
           continue;
         }
 
@@ -600,12 +698,18 @@ export async function resolveYieldSources({
       const bypassSafety = AUTO_LENDING_SAFETY_BYPASS_IDS.has(stablecoinId);
       if (!bypassSafety && safetyScore < MIN_SAFETY_SCORE_FOR_YIELD) continue;
 
+      const requiredMinTvlUsd = getRequiredLendingOpportunityTvlUsd({
+        stablecoinId,
+        poolChain: pool.chain,
+        stablecoinSupplyById,
+      });
+
       const eligible =
         pool.exposure === "single"
         && pool.stablecoin
         && LENDING_PROTOCOL_ALLOWLIST.has(pool.project)
         && pool.apy >= MIN_LENDING_POOL_APY
-        && pool.tvlUsd >= MIN_LENDING_POOL_TVL_USD;
+        && pool.tvlUsd >= requiredMinTvlUsd;
       if (!eligible) continue;
       if (isBlockedYieldOpportunitySource({ poolMeta: pool.poolMeta, symbol: pool.symbol })) continue;
 
@@ -629,13 +733,13 @@ export async function resolveYieldSources({
         && (safetyScores.get(meta.id)?.score ?? 0) >= MIN_SAFETY_SCORE_FOR_YIELD,
     );
 
-    const SMALL_ECOSYSTEM_CHAINS = new Set(["solana", "sui", "aptos", "cardano", "stacks"]);
-
     for (const meta of lendingCandidates) {
       const primaryChain = meta.contracts?.[0]?.chain;
-      const minTvlUsd = primaryChain && SMALL_ECOSYSTEM_CHAINS.has(primaryChain)
-        ? MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM
-        : MIN_LENDING_POOL_TVL_USD;
+      const minTvlUsd = getRequiredLendingOpportunityTvlUsd({
+        stablecoinId: meta.id,
+        poolChain: primaryChain,
+        stablecoinSupplyById,
+      });
 
       const chainFilter = buildDlChainFilter(meta);
       const contractAddresses = getTrackedContractAddresses(meta);

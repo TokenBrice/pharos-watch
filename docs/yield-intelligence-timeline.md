@@ -1,8 +1,15 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v6.9` (2026-03-01 -> 2026-03-28).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.0` (2026-03-01 -> 2026-04-03).
 
 ---
+
+## v7.0 - Supply-relative size gates for published lending suggestions (Apr 3, 2026)
+
+- Published `lending-opportunity` rows now require observable venue TVL before they can surface as live recommendations
+- For tracked stablecoins, the recommendation gate now requires venue TVL to clear `max(existing absolute floor, 0.1% of current supply)`
+- This applies across auto-discovered DeFiLlama lending markets, deterministic exact-pool overrides, and supplemental protocol-native lending venues
+- TVL-less protocol suggestions now fail closed instead of publishing as recommendations until they can prove venue size
 
 ## v6.9 - K3 sBOLD added as a distinct native BOLD yield source (Mar 28, 2026)
 

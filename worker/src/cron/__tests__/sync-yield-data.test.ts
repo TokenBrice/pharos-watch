@@ -242,6 +242,8 @@ vi.mock("../../lib/constants", () => ({
   MIN_SAFETY_SCORE_FOR_YIELD: 50,
   MIN_LENDING_POOL_APY: 0.5,
   MIN_LENDING_POOL_TVL_USD: 1_000_000,
+  MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM: 250_000,
+  MIN_LENDING_POOL_TVL_SHARE_OF_STABLECOIN_SUPPLY: 0.001,
 }));
 
 import { syncYieldData } from "../sync-yield-data";
@@ -337,6 +339,7 @@ describe("syncYieldData", () => {
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
     vi.mocked(recordOutcome).mockReset().mockResolvedValue(undefined);
     vi.mocked(getChainRpc).mockReset().mockReturnValue(undefined);
+    vi.mocked(yieldHelpersModule.findBestLendingPool).mockReset().mockReturnValue(null);
     vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValue({
       kind: "ok",
       mode: "map",
@@ -645,7 +648,7 @@ describe("syncYieldData", () => {
     expect(supplementalRow).toBeDefined();
   });
 
-  it("keeps a higher native wrapper APY ahead of a lower supplemental Aave source", async () => {
+  it("keeps a higher native wrapper APY ahead of a lower supplemental lending source that clears size gates", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
     const poolMap = yieldConfigModule.YIELD_POOL_MAP as typeof yieldConfigModule.YIELD_POOL_MAP;
@@ -689,12 +692,12 @@ describe("syncYieldData", () => {
                   currentApy: 2.23864,
                   apyBase: 2.23864,
                   apyReward: null,
-                  sourcePool: null,
-                  sourceTvlUsd: null,
+                  sourcePool: "vault-sdai-prime",
+                  sourceTvlUsd: 25_000_000,
                   dataSource: "protocol-api",
                   exchangeRate: null,
-                  sourceKey: "aave-v3-onchain:ethereum:0xsdai",
-                  yieldSource: "Aave v3 (ethereum)",
+                  sourceKey: "protocol-api:morpho-vault:ethereum:0xsdai",
+                  yieldSource: "Morpho: sDAI Prime",
                   yieldType: "lending-opportunity",
                   sourceObservedAt: nowSec,
                   comparisonAnchorObservedAt: null,
@@ -718,16 +721,16 @@ describe("syncYieldData", () => {
       const nativeRow = writeStatements.find(
         (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "pool-sdai-native",
       );
-      const aaveRow = writeStatements.find(
-        (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "aave-v3-onchain:ethereum:0xsdai",
+      const supplementalRow = writeStatements.find(
+        (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "protocol-api:morpho-vault:ethereum:0xsdai",
       );
 
       expect(nativeRow?.boundValues?.[8]).toBe("DSR");
       expect(nativeRow?.boundValues?.[12]).toBe("defillama");
       expect(nativeRow?.boundValues?.[25]).toBe(1);
-      expect(aaveRow?.boundValues?.[8]).toBe("Aave v3 (ethereum)");
-      expect(aaveRow?.boundValues?.[12]).toBe("protocol-api");
-      expect(aaveRow?.boundValues?.[25]).toBe(0);
+      expect(supplementalRow?.boundValues?.[8]).toBe("Morpho: sDAI Prime");
+      expect(supplementalRow?.boundValues?.[12]).toBe("protocol-api");
+      expect(supplementalRow?.boundValues?.[25]).toBe(0);
     } finally {
       delete poolMap["100"];
     }
@@ -773,6 +776,62 @@ describe("syncYieldData", () => {
                   currentApy: 3.2,
                   apyBase: 3.2,
                   apyReward: null,
+                  sourcePool: "vault-usdc-prime",
+                  sourceTvlUsd: 30_000_000,
+                  dataSource: "protocol-api",
+                  exchangeRate: null,
+                  sourceKey: "protocol-api:morpho-vault:ethereum:0xusdc-prime",
+                  yieldSource: "Morpho: USDC Prime",
+                  yieldType: "lending-opportunity",
+                  sourceObservedAt: nowSec,
+                  comparisonAnchorObservedAt: null,
+                },
+              },
+            ],
+          }),
+          updatedAt: nowSec,
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    await syncYieldData(db);
+
+    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }>;
+    const blockedRow = writeStatements.find(
+      (stmt) => stmt.boundValues?.[0] === "usdc-circle" && stmt.boundValues?.[1] === "protocol-api:morpho-vault:ethereum:0xresolv",
+    );
+    const allowedRow = writeStatements.find(
+      (stmt) => stmt.boundValues?.[0] === "usdc-circle" && stmt.boundValues?.[1] === "protocol-api:morpho-vault:ethereum:0xusdc-prime",
+    );
+
+    expect(blockedRow).toBeUndefined();
+    expect(allowedRow).toBeDefined();
+  });
+
+  it("drops supplemental lending suggestions when venue TVL is unavailable", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "yield:supplemental-sources:v1") {
+        return {
+          value: JSON.stringify({
+            version: 1,
+            updatedAt: nowSec,
+            source: "sync-yield-supplemental",
+            sourceCount: 1,
+            data: [
+              {
+                symbol: "USDC",
+                chain: "ethereum",
+                address: null,
+                yield: {
+                  currentApy: 3.2,
+                  apyBase: 3.2,
+                  apyReward: null,
                   sourcePool: null,
                   sourceTvlUsd: null,
                   dataSource: "protocol-api",
@@ -796,16 +855,82 @@ describe("syncYieldData", () => {
 
     await syncYieldData(db);
 
-    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }>;
-    const blockedRow = writeStatements.find(
-      (stmt) => stmt.boundValues?.[0] === "usdc-circle" && stmt.boundValues?.[1] === "protocol-api:morpho-vault:ethereum:0xresolv",
-    );
-    const allowedRow = writeStatements.find(
+    const writeStatements =
+      (vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined) ?? [];
+    const droppedRow = writeStatements.find(
       (stmt) => stmt.boundValues?.[0] === "usdc-circle" && stmt.boundValues?.[1] === "aave-v3-onchain:ethereum:0xusdc",
     );
 
-    expect(blockedRow).toBeUndefined();
-    expect(allowedRow).toBeDefined();
+    expect(droppedRow).toBeUndefined();
+  });
+
+  it("drops lending suggestions smaller than 0.1% of tracked stablecoin supply", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "stablecoins") {
+        return {
+          value: JSON.stringify({
+            peggedAssets: [
+              {
+                id: "usdc-circle",
+                symbol: "USDC",
+                name: "USD Coin",
+                price: 1,
+                circulating: { peggedUSD: 20_000_000_000 },
+              },
+            ],
+          }),
+          updatedAt: nowSec,
+        };
+      }
+      if (key === "yield:supplemental-sources:v1") {
+        return {
+          value: JSON.stringify({
+            version: 1,
+            updatedAt: nowSec,
+            source: "sync-yield-supplemental",
+            sourceCount: 1,
+            data: [
+              {
+                symbol: "USDC",
+                chain: "ethereum",
+                address: null,
+                yield: {
+                  currentApy: 4.1,
+                  apyBase: 4.1,
+                  apyReward: null,
+                  sourcePool: "vault-usdc-small",
+                  sourceTvlUsd: 5_000_000,
+                  dataSource: "protocol-api",
+                  exchangeRate: null,
+                  sourceKey: "protocol-api:morpho-vault:ethereum:0xusdc-small",
+                  yieldSource: "Morpho: USDC Small",
+                  yieldType: "lending-opportunity",
+                  sourceObservedAt: nowSec,
+                  comparisonAnchorObservedAt: null,
+                },
+              },
+            ],
+          }),
+          updatedAt: nowSec,
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    await syncYieldData(db);
+
+    const writeStatements =
+      (vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined) ?? [];
+    const droppedRow = writeStatements.find(
+      (stmt) => stmt.boundValues?.[0] === "usdc-circle" && stmt.boundValues?.[1] === "protocol-api:morpho-vault:ethereum:0xusdc-small",
+    );
+
+    expect(droppedRow).toBeUndefined();
   });
 
   it("skips deterministic on-chain reads while cooldown is active", async () => {
@@ -907,7 +1032,21 @@ describe("syncYieldData", () => {
     vi.mocked(getCache).mockImplementation(async (_db, key) => {
       if (key === "dl-stablecoin-pools") {
         return {
-          value: JSON.stringify([]),
+          value: JSON.stringify([
+            {
+              pool: "pool-placeholder",
+              chain: "Ethereum",
+              project: "aave-v3",
+              symbol: "USDC",
+              tvlUsd: 5_000_000,
+              apy: 3.25,
+              apyBase: 3.25,
+              apyReward: null,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ]),
           updatedAt: nowSec - 60,
         };
       }
@@ -2837,6 +2976,65 @@ describe("syncYieldData", () => {
     );
     expect(autoRow?.boundValues?.[8]).toBe("Aave V3");
     expect(autoRow?.boundValues?.[9]).toBe("lending-opportunity");
+  });
+
+  it("passes a supply-relative TVL floor into dynamic lending discovery", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "stablecoins") {
+        return {
+          value: JSON.stringify({
+            peggedAssets: [
+              {
+                id: "usdc-circle",
+                symbol: "USDC",
+                name: "USD Coin",
+                price: 1,
+                circulating: { peggedUSD: 10_000_000_000 },
+              },
+            ],
+          }),
+          updatedAt: nowSec,
+        };
+      }
+      if (key === "dl-stablecoin-pools") {
+        return {
+          value: JSON.stringify([
+            {
+              pool: "pool-placeholder",
+              chain: "Ethereum",
+              project: "aave-v3",
+              symbol: "USDC",
+              tvlUsd: 5_000_000,
+              apy: 3.25,
+              apyBase: 3.25,
+              apyReward: null,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ]),
+          updatedAt: nowSec - 60,
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    vi.mocked(yieldHelpersModule.findBestLendingPool).mockReturnValue(null);
+    mockFetch([]);
+
+    await syncYieldData(db);
+
+    const usdcDiscoveryCall = vi.mocked(yieldHelpersModule.findBestLendingPool).mock.calls.find(
+      (call) => call[0] === "USDC",
+    );
+    expect(usdcDiscoveryCall?.[2]).toEqual(expect.any(Set));
+    expect(usdcDiscoveryCall?.[3]).toMatchObject({
+      minApy: 0.5,
+      minTvlUsd: 10_000_000,
+    });
   });
 
   it("marks the run degraded when a retained benchmark is in fallback mode, even if recent", async () => {

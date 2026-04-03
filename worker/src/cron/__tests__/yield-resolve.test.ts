@@ -254,6 +254,8 @@ vi.mock("../../lib/constants", () => ({
   MIN_SAFETY_SCORE_FOR_YIELD: 50,
   MIN_LENDING_POOL_APY: 0.5,
   MIN_LENDING_POOL_TVL_USD: 1_000_000,
+  MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM: 250_000,
+  MIN_LENDING_POOL_TVL_SHARE_OF_STABLECOIN_SUPPLY: 0.001,
 }));
 
 import { syncYieldData } from "../sync-yield-data";

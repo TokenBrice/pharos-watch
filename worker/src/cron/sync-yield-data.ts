@@ -1,5 +1,6 @@
 // worker/src/cron/sync-yield-data.ts
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { getCache, setCache, setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
@@ -54,6 +55,29 @@ interface YieldSupplementalCacheMeta {
   ageSeconds: number | null;
   sourceCount: number;
   fallbackMode: string | null;
+}
+
+function buildStablecoinSupplyMapFromCacheValue(value: string): Map<string, number> {
+  const parsed = JSON.parse(value) as unknown;
+  const rawAssets =
+    Array.isArray(parsed)
+      ? parsed
+      : (parsed && typeof parsed === "object" && Array.isArray((parsed as { peggedAssets?: unknown }).peggedAssets)
+        ? (parsed as { peggedAssets: unknown[] }).peggedAssets
+        : []);
+  const supplyById = new Map<string, number>();
+
+  for (const asset of rawAssets) {
+    if (!asset || typeof asset !== "object") continue;
+    const id = (asset as { id?: unknown }).id;
+    if (typeof id !== "string" || id.length === 0) continue;
+    const supplyUsd = getCirculatingRaw(asset as Parameters<typeof getCirculatingRaw>[0]);
+    if (supplyUsd > 0) {
+      supplyById.set(id, supplyUsd);
+    }
+  }
+
+  return supplyById;
 }
 
 async function loadYieldSupplementalCandidates(
@@ -254,6 +278,17 @@ export async function syncYieldData(
   const riskFreeRates = await loadRiskFreeRateRegistry(db);
   const riskFreeRateMeta = riskFreeRates.USD;
   const riskFreeRate = riskFreeRateMeta.rate;
+  const stablecoinSupplyById = new Map<string, number>();
+  const stablecoinsCache = await getCache(db, "stablecoins");
+  if (stablecoinsCache?.value) {
+    try {
+      for (const [id, supplyUsd] of buildStablecoinSupplyMapFromCacheValue(stablecoinsCache.value)) {
+        stablecoinSupplyById.set(id, supplyUsd);
+      }
+    } catch (error) {
+      console.warn("[sync-yield-data] Failed to parse stablecoins cache for lending size gates:", error);
+    }
+  }
 
   const safetySnapshot = await computeSafetyScoresSnapshot(db, {
     includeNavTokens: true,
@@ -300,6 +335,7 @@ export async function syncYieldData(
     chainRpcs,
     coingeckoApiKey,
     supplementalCandidates,
+    stablecoinSupplyById,
   });
 
   const resolvedWithYield = resolved.filter((entry) => entry.yield != null);

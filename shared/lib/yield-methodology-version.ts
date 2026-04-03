@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "6.9",
+  currentVersion: "7.0",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "7.0",
+    title: "Supply-Relative Size Gates For Published Lending Suggestions",
+    date: "2026-04-03",
+    effectiveAt: 1775210400,
+    summary:
+      "Published lending-opportunity rows now require observable venue TVL and must be large enough relative to the tracked stablecoin's circulating supply before they can surface as live recommendations.",
+    impact: [
+      "For tracked stablecoins, lending-opportunity rows now require `sourceTvlUsd` and must clear `max(existing absolute floor, 0.1% of current supply)` before publication",
+      "This applies across auto-discovered DeFiLlama lending markets, deterministic exact-pool overrides, and supplemental protocol-native lending venues",
+      "TVL-less protocol suggestions no longer fail open into live recommendations; until venue size is observable they are omitted from published lending-opportunity coverage",
+      "Yield methodology docs and changelog entries now document the new supply-relative recommendation gate explicitly",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "6.9",
     title: "K3 sBOLD Added As A Distinct Native BOLD Yield Source",
