@@ -249,6 +249,10 @@ export async function fetchSimWalletBalances({
     if (!response) {
       throw new Error(`Sim balances request failed for ${address}`);
     }
+    if (!response.ok) {
+      await response.body?.cancel();
+      throw new Error(`Sim balances request returned ${response.status} for ${address}`);
+    }
 
     const json = await response.json() as SimBalancesResponse;
     for (const warning of json.warnings ?? []) {
@@ -285,6 +289,10 @@ export async function fetchSimWalletDefiStableBalances({
 
   if (!response) {
     throw new Error(`Sim DeFi positions request failed for ${address}`);
+  }
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new Error(`Sim DeFi positions request returned ${response.status} for ${address}`);
   }
 
   const json = await response.json() as SimDefiPositionsResponse;

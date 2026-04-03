@@ -75,6 +75,7 @@ export async function collectSafetyScores(
       safetyGrades: allGrades,
     };
   } catch (error) {
+    markCollectorDegraded(degradedReasons, "safety-snapshot-query");
     console.error("[daily-digest] Failed to compute safety scores:", error);
     return { safetyScores: undefined, safetyGrades: undefined };
   }
@@ -206,6 +207,7 @@ export async function collectDewsStress(
       };
     }
   } catch (error) {
+    markCollectorDegraded(degradedReasons, "dews-stress-query");
     console.error("[daily-digest] Failed to collect DEWS stress signals:", error);
   }
   return undefined;
@@ -214,6 +216,7 @@ export async function collectDewsStress(
 export async function collectGradeTransitions(
   ctx: CollectorContext,
   safetyGrades: SafetyGradeRow[] | undefined,
+  degradedReasons?: string[],
 ): Promise<DigestInputData["gradeTransitions"]> {
   try {
     const cutoff48h = ctx.nowSec - 2 * 24 * 60 * 60;
@@ -275,6 +278,7 @@ export async function collectGradeTransitions(
       });
     }
   } catch (error) {
+    markCollectorDegraded(degradedReasons, "grade-transitions-query");
     console.error("[daily-digest] Failed to collect grade transitions:", error);
   }
   return undefined;
@@ -330,6 +334,7 @@ export async function collectYieldAnomalies(
 
     return candidates.length > 0 ? candidates : undefined;
   } catch (error) {
+    markCollectorDegraded(degradedReasons, "yield-anomalies-query");
     console.error("[daily-digest] Failed to collect yield anomalies:", error);
     return undefined;
   }

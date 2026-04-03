@@ -191,7 +191,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   const mintBurnFlows = await collectMintBurnFlows(ctx);
   const dewsStress = await collectDewsStress(ctx, degradedReasons);
   const historicalContext = await collectHistoricalContext(ctx, displayScore, displayBand, biggestSupplyChange);
-  const gradeTransitions = await collectGradeTransitions(ctx, safetyGrades);
+  const gradeTransitions = await collectGradeTransitions(ctx, safetyGrades, degradedReasons);
   const psiContributors = await collectPsiContributors(ctx);
   const yieldAnomalies = await collectYieldAnomalies(ctx, degradedReasons);
   const liquidityShifts = await collectLiquidityShifts(ctx);

@@ -1,6 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import { extractTrackedStableBalancesFromSimDefiPosition } from "../sim-balances";
+
+vi.mock("../fetch-retry", () => ({
+  fetchWithRetry: vi.fn(),
+}));
+
+import { fetchWithRetry } from "../fetch-retry";
+import {
+  extractTrackedStableBalancesFromSimDefiPosition,
+  fetchSimWalletBalances,
+  fetchSimWalletDefiStableBalances,
+} from "../sim-balances";
 
 describe("extractTrackedStableBalancesFromSimDefiPosition", () => {
   it("unwraps tokenized stable positions to the tracked underlying and marks the wrapper for de-duplication", () => {
@@ -76,5 +86,45 @@ describe("extractTrackedStableBalancesFromSimDefiPosition", () => {
     });
 
     expect(balances).toEqual([]);
+  });
+});
+
+describe("Sim fetch helpers", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("rejects non-ok wallet balance responses after cancelling the unread body", async () => {
+    const cancel = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(fetchWithRetry).mockResolvedValue({
+      ok: false,
+      status: 502,
+      body: { cancel },
+    } as unknown as Response);
+
+    await expect(fetchSimWalletBalances({
+      apiKey: "sim-key",
+      address: "0xabc",
+      chainIds: [1],
+    })).rejects.toThrow("Sim balances request returned 502 for 0xabc");
+
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it("rejects non-ok DeFi position responses after cancelling the unread body", async () => {
+    const cancel = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(fetchWithRetry).mockResolvedValue({
+      ok: false,
+      status: 503,
+      body: { cancel },
+    } as unknown as Response);
+
+    await expect(fetchSimWalletDefiStableBalances({
+      apiKey: "sim-key",
+      address: "0xdef",
+      chainIds: [1],
+    })).rejects.toThrow("Sim DeFi positions request returned 503 for 0xdef");
+
+    expect(cancel).toHaveBeenCalledOnce();
   });
 });

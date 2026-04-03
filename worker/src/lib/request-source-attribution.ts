@@ -18,6 +18,9 @@ const STABLECOIN_RESERVES_PATH_PATTERN = /^\/api\/stablecoin-reserves\/[^/]+$/;
 const OG_IMAGE_PATH_PATTERN = /^\/api\/og\//;
 const SAME_SITE_FETCH_VALUES = new Set(["same-site", "same-origin"]);
 
+// These prune guards are isolate-local best effort only. They reduce duplicate
+// DELETE work within one hot isolate, but they are not intended as durable,
+// cross-isolate coordination primitives.
 let lastApiRequestSourcePruneBucket: number | null = null;
 let pendingApiRequestSourcePrune: Promise<void> | null = null;
 

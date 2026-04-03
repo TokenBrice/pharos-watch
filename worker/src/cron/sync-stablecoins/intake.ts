@@ -88,12 +88,22 @@ export async function loadStablecoinsIntake(
     };
   }
 
+  const guardedLlamaRes = llamaRes;
+  if (!guardedLlamaRes) {
+    await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
+    return {
+      kind: "fallback",
+      result: await input.fallbackToCoingecko(cgData),
+      errorMessage: "DefiLlama response was unexpectedly missing",
+    };
+  }
+
   let llamaData: {
     peggedAssets: PeggedAsset[];
     fxFallbackRates?: Record<string, number>;
   };
   try {
-    llamaData = await llamaRes!.json() as typeof llamaData;
+    llamaData = await guardedLlamaRes.json() as typeof llamaData;
   } catch (parseErr) {
     console.error("[sync-stablecoins] DL response body parse failed:", parseErr);
     await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, false);

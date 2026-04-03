@@ -37,8 +37,10 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database, op
         lastDispatchAt: lastDispatch?.started_at ?? null,
         lastDispatchStatus: lastDispatch?.status ?? null,
       };
-    } catch {
-      // Telegram tables may not be migrated yet — silently null
+    } catch (error) {
+      console.warn("[health] telegram summary unavailable:", error);
+      // Telegram tables may not be migrated yet, or the summary queries may be
+      // temporarily unavailable. Keep the endpoint healthy and return null.
     }
   }
 

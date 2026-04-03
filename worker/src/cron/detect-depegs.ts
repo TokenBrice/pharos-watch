@@ -349,6 +349,7 @@ export async function detectDepegEvents(
     // Sort by started_at ascending — keep the earliest event
     rows.sort((a, b) => a.started_at - b.started_at);
     const keeper = rows[0];
+    if (!keeper) continue;
     for (let i = 1; i < rows.length; i++) {
       const dupe = rows[i];
       // Absorb worse peak deviation into the keeper

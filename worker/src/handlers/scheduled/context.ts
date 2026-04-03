@@ -53,6 +53,7 @@ export function parseStablecoinsCapabilities(
       depegPipeline: parsed.capabilities?.depegPipeline === true,
     };
   } catch {
+    // Expected for older cron rows and human-readable metadata strings.
     return {
       stablecoinsCache: false,
       depegPipeline: false,

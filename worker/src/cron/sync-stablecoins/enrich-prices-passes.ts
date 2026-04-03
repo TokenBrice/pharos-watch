@@ -742,8 +742,10 @@ export async function runJupiterPass(
 ): Promise<EnrichPassResult> {
   let resolved = 0;
   const candidates = assets
-    .map((asset, index) => ({ asset, index, mint: SOLANA_MINT_BY_ID.get(asset.id) }))
-    .filter((entry) => hasMissingPrice(entry.asset) && entry.mint);
+    .flatMap((asset, index) => {
+      const mint = SOLANA_MINT_BY_ID.get(asset.id);
+      return hasMissingPrice(asset) && mint ? [{ asset, index, mint }] : [];
+    });
   if (candidates.length === 0) {
     return { resolved, failures: [] };
   }
@@ -757,7 +759,7 @@ export async function runJupiterPass(
   let successfulCalls = 0;
   for (let i = 0; i < candidates.length; i += JUPITER_MAX_IDS_PER_REQUEST) {
     const batch = candidates.slice(i, i + JUPITER_MAX_IDS_PER_REQUEST);
-    const ids = batch.map((entry) => entry.mint!);
+    const ids = batch.map((entry) => entry.mint);
 
     const res = await fetchWithRetry(
       `${JUPITER_PRICE_API}?ids=${encodeURIComponent(ids.join(","))}`,
@@ -774,7 +776,7 @@ export async function runJupiterPass(
     successfulCalls++;
     const data = (await res.json()) as Record<string, JupiterPriceEntry>;
     for (const entry of batch) {
-      const payload = data[entry.mint!];
+      const payload = data[entry.mint];
       const usdPrice = payload?.usdPrice;
       const liquidity = payload?.liquidity;
       if (usdPrice == null || !Number.isFinite(usdPrice) || usdPrice <= 0) continue;

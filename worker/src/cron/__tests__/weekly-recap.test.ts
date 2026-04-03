@@ -157,6 +157,42 @@ describe("generateWeeklyRecap", () => {
     });
   });
 
+  it("prints N/A for weekly market-cap change when the week starts from zero", async () => {
+    const zeroStartRows = buildDailyRows();
+    zeroStartRows[0] = {
+      ...zeroStartRows[0]!,
+      input_data: JSON.stringify({
+        ...JSON.parse(zeroStartRows[0]!.input_data),
+        totalMcapUsd: 0,
+      }),
+    };
+
+    const db = mockD1(makeTables({ dailyRows: zeroStartRows }), { requireMatch: true });
+    vi.mocked(fetchWithRetry).mockResolvedValue(
+      new Response(JSON.stringify({
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              title: "Zero Base Week",
+              text: "USDT and USDC still closed the week above the zero-start baseline.",
+              extended: "USDT and USDC still closed the week above the zero-start baseline.",
+              meta: { lead: "USDT", tone: "dry", coins: ["USDT", "USDC"] },
+            }),
+          },
+        ],
+      }), { status: 200 }),
+    );
+
+    await generateWeeklyRecap(db, "anthropic-key", null);
+
+    const anthropicRequest = vi.mocked(fetchWithRetry).mock.calls[0];
+    const body = anthropicRequest?.[1]?.body;
+    expect(typeof body).toBe("string");
+    expect(body).toContain("(N/A)");
+    expect(body).not.toContain("Infinity");
+  });
+
   it("skips generation cleanly when the Anthropic circuit is open", async () => {
     const db = mockD1(makeTables(), { requireMatch: true });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);

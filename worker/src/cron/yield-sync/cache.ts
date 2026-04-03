@@ -124,6 +124,7 @@ export function parseYieldRankingsPublishedCutoff(
 
     return { status: "ok", updatedAt };
   } catch {
+    // Expected when a stale cache row was written before the current shape.
     return { status: "parse-error", updatedAt: null };
   }
 }
@@ -456,6 +457,7 @@ export function parseDeterministicOnChainHealthState(raw: string): Deterministic
       lastFailureMissingIds: toStringArray(parsed.lastFailureMissingIds),
     };
   } catch {
+    // Expected when the health-state cache is missing, truncated, or from an older schema.
     return getDefaultDeterministicOnChainHealthState();
   }
 }

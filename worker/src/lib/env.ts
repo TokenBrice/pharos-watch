@@ -126,8 +126,12 @@ export function parseCsvEnv(value: string | undefined): string[] {
     .filter((part) => part.length > 0);
 }
 
-function hasConfiguredValue(value: string | undefined): boolean {
+function hasConfiguredValue(value: string | undefined): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function getConfiguredValue(value: string | undefined): string | null {
+  return hasConfiguredValue(value) ? value.trim() : null;
 }
 
 export function hasAnyCloudflareD1StatusBinding(env: CloudflareD1StatusBindings): boolean {
@@ -139,15 +143,15 @@ export function hasAnyCloudflareD1StatusBinding(env: CloudflareD1StatusBindings)
 export function resolveCloudflareD1StatusConfig(
   env: CloudflareD1StatusBindings,
 ): CloudflareD1StatusConfig | null {
-  if (
-    hasConfiguredValue(env.CLOUDFLARE_ACCOUNT_ID)
-    && hasConfiguredValue(env.CLOUDFLARE_D1_STATUS_API_TOKEN)
-    && hasConfiguredValue(env.CLOUDFLARE_D1_DATABASE_ID)
-  ) {
+  const accountId = getConfiguredValue(env.CLOUDFLARE_ACCOUNT_ID);
+  const apiToken = getConfiguredValue(env.CLOUDFLARE_D1_STATUS_API_TOKEN);
+  const databaseId = getConfiguredValue(env.CLOUDFLARE_D1_DATABASE_ID);
+
+  if (accountId && apiToken && databaseId) {
     return {
-      accountId: env.CLOUDFLARE_ACCOUNT_ID!.trim(),
-      apiToken: env.CLOUDFLARE_D1_STATUS_API_TOKEN!.trim(),
-      databaseId: env.CLOUDFLARE_D1_DATABASE_ID!.trim(),
+      accountId,
+      apiToken,
+      databaseId,
     };
   }
   return null;
@@ -156,9 +160,10 @@ export function resolveCloudflareD1StatusConfig(
 export function resolvePublicApiRateLimitSalt(
   env: Pick<Env, "PUBLIC_API_RATE_LIMIT_SALT">,
 ): ResolvedPublicApiRateLimitSalt | null {
-  if (hasConfiguredValue(env.PUBLIC_API_RATE_LIMIT_SALT)) {
+  const salt = getConfiguredValue(env.PUBLIC_API_RATE_LIMIT_SALT);
+  if (salt) {
     return {
-      salt: env.PUBLIC_API_RATE_LIMIT_SALT!.trim(),
+      salt,
       source: "public-api-rate-limit-salt",
     };
   }

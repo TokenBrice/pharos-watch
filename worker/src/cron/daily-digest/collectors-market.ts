@@ -6,6 +6,16 @@ import { SECONDS } from "../../lib/time-constants";
 import { computeDigestMintBurnFtqFlows } from "./mint-burn-ftq";
 import { collectorDegraded, collectorOk, type CollectorContext, type CollectorResult } from "./collectors-shared";
 
+type FlowIntensityRow = {
+  id: string;
+  symbol: string;
+  intensity: number | null;
+  net24h: number;
+  mcap: number;
+};
+
+type FlowIntensityRowWithIntensity = FlowIntensityRow & { intensity: number };
+
 export async function collectActiveDepegs(
   ctx: CollectorContext,
 ): Promise<CollectorResult<{ activeDepegCount: number; topDepegs: DigestInputData["topDepegs"] }>> {
@@ -211,7 +221,7 @@ export async function collectMintBurnFlows(
     const flow24h = new Map((flow24hRows.results ?? []).map((row) => [row.stablecoin_id, row]));
     const flow30d = new Map((flow30dRows.results ?? []).map((row) => [row.stablecoin_id, row]));
 
-    const coinIntensities: { id: string; symbol: string; intensity: number | null; net24h: number; mcap: number }[] = [];
+    const coinIntensities: FlowIntensityRow[] = [];
     let mintBurnExcluded = 0;
     for (const [id, flow24] of flow24h) {
       const flow30 = flow30d.get(id);
@@ -239,10 +249,10 @@ export async function collectMintBurnFlows(
       const { safeNet24h, riskyNet24h } = await computeDigestMintBurnFtqFlows(ctx.db, coinIntensities);
       const ftq = detectFlightToQuality({ safeNet24h, riskyNet24h });
       const topPressure = coinIntensities
-        .filter((coin) => coin.intensity !== null && Math.abs(coin.intensity) > 20)
-        .sort((a, b) => Math.abs(b.intensity!) - Math.abs(a.intensity!))
+        .filter((coin): coin is FlowIntensityRowWithIntensity => coin.intensity !== null && Math.abs(coin.intensity) > 20)
+        .sort((a, b) => Math.abs(b.intensity) - Math.abs(a.intensity))
         .slice(0, 3)
-        .map((coin) => ({ symbol: coin.symbol, intensity: coin.intensity!, net24hUsd: coin.net24h }));
+        .map((coin) => ({ symbol: coin.symbol, intensity: coin.intensity, net24hUsd: coin.net24h }));
 
       return {
         gaugeScore,

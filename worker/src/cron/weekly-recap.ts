@@ -37,7 +37,7 @@ interface WeeklyInputData {
   weekEndDate: string;
   dailyDigests: { date: string; title: string; text: string; inputData: DigestInputData }[];
   psiRange: { min: number; max: number; start: number; end: number; dominantBand: string };
-  mcapRange: { start: number; end: number; netChange: number; pctChange: number };
+  mcapRange: { start: number; end: number; netChange: number; pctChange: number | null };
   totalDepegsThisWeek: number;
   totalBlacklistEventsThisWeek: number;
   gradeTransitionCount: number;
@@ -96,7 +96,9 @@ function buildWeeklyInputData(
       start: mcaps[0],
       end: mcaps[mcaps.length - 1],
       netChange: mcaps[mcaps.length - 1] - mcaps[0],
-      pctChange: ((mcaps[mcaps.length - 1] - mcaps[0]) / mcaps[0]) * 100,
+      pctChange: mcaps[0] === 0
+        ? null
+        : ((mcaps[mcaps.length - 1] - mcaps[0]) / mcaps[0]) * 100,
     },
     totalDepegsThisWeek: totalDepegs,
     totalBlacklistEventsThisWeek: totalBlacklist,
@@ -111,7 +113,7 @@ function buildWeeklyPrompt(data: WeeklyInputData): string {
     "",
     `PSI range: ${data.psiRange.min} to ${data.psiRange.max} (start: ${data.psiRange.start}, end: ${data.psiRange.end})`,
     `Dominant band: ${data.psiRange.dominantBand}`,
-    `Market cap: ${formatCurrency(data.mcapRange.start)} -> ${formatCurrency(data.mcapRange.end)} (${data.mcapRange.pctChange >= 0 ? "+" : ""}${data.mcapRange.pctChange.toFixed(2)}%)`,
+    `Market cap: ${formatCurrency(data.mcapRange.start)} -> ${formatCurrency(data.mcapRange.end)} (${data.mcapRange.pctChange == null ? "N/A" : `${data.mcapRange.pctChange >= 0 ? "+" : ""}${data.mcapRange.pctChange.toFixed(2)}%`})`,
     `Total depeg events across the week: ${data.totalDepegsThisWeek}`,
     `Total blacklist events: ${data.totalBlacklistEventsThisWeek}`,
     `Grade transitions: ${data.gradeTransitionCount}`,

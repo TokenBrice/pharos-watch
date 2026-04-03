@@ -137,6 +137,10 @@ export async function fetchTronEventsIncremental(
       const json: TronEventsResponse | null = await rateLimit(async () => {
         const res = await fetchWithRetry(url!, { headers, signal });
         if (!res) return null;
+        if (!res.ok) {
+          await res.body?.cancel();
+          return null;
+        }
         const raw = await res.json();
         const parsed = TronEventsResponseSchema.safeParse(raw);
         if (!parsed.success) {

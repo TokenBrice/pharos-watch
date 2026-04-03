@@ -404,9 +404,7 @@ export async function resolveYieldSources({
     }
 
     const alreadyResolvedKeys = new Set(
-      resolved
-        .filter((entry) => entry.id === id && entry.yield != null)
-        .map((entry) => entry.yield!.sourceKey),
+      resolved.flatMap((entry) => entry.id === id && entry.yield != null ? [entry.yield.sourceKey] : []),
     );
     const dlSources = matchAllDlPools(id, symbol, dlPools, YIELD_POOL_MAP, YIELD_VARIANT_MAP, {
       chainFilter: buildDlChainFilter(meta),
@@ -450,8 +448,8 @@ export async function resolveYieldSources({
     // the is_best logic pick the higher-APY winner.
     const allDlSourcesZero = hasAnySource
       && resolved
-        .filter((e) => e.id === id && e.yield != null)
-        .every((e) => e.yield!.currentApy === 0);
+        .filter((entry): entry is typeof entry & { yield: NonNullable<typeof entry.yield> } => entry.id === id && entry.yield != null)
+        .every((entry) => entry.yield.currentApy === 0);
 
     const shouldTryPriceDerived =
       (meta.flags.navToken || PRICE_DERIVED_FALLBACK_IDS.has(id))

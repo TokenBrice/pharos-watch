@@ -15,10 +15,12 @@ interface RateLimitDb {
 const PUBLIC_API_PRUNE_WINDOW_MULTIPLIER = 10;
 const PUBLIC_API_EMERGENCY_BLOCK_AFTER_FAILURES = 3;
 const PUBLIC_API_EMERGENCY_RETRY_AFTER_SEC = 60;
+const PUBLIC_API_FAILURE_DECAY_SEC = 5 * 60;
 let lastPublicApiPruneBucket: number | null = null;
 let publicApiPruneFailures = 0;
 let feedbackPruneFailures = 0;
 let consecutivePublicApiRateLimitFailures = 0;
+let lastPublicApiRateLimitFailureAt: number | null = null;
 let pendingPublicPrune: Promise<void> | null = null;
 let pendingFeedbackPrune: Promise<void> | null = null;
 
@@ -57,6 +59,7 @@ export function resetRateLimitStateForTests(): void {
   publicApiPruneFailures = 0;
   feedbackPruneFailures = 0;
   consecutivePublicApiRateLimitFailures = 0;
+  lastPublicApiRateLimitFailureAt = null;
   pendingPublicPrune = null;
   pendingFeedbackPrune = null;
 }
@@ -97,6 +100,10 @@ export async function checkPublicApiRateLimit(
   windowMs = 60_000,
 ): Promise<Response | null> {
   const nowSec = Math.floor(Date.now() / 1000);
+  if (lastPublicApiRateLimitFailureAt != null && nowSec - lastPublicApiRateLimitFailureAt > PUBLIC_API_FAILURE_DECAY_SEC) {
+    consecutivePublicApiRateLimitFailures = 0;
+    lastPublicApiRateLimitFailureAt = null;
+  }
   const windowSec = Math.max(1, Math.ceil(windowMs / 1000));
   const bucketStart = nowSec - (nowSec % windowSec);
   const effectiveSalt = salt.trim();
@@ -130,6 +137,7 @@ export async function checkPublicApiRateLimit(
     }
 
     consecutivePublicApiRateLimitFailures = 0;
+    lastPublicApiRateLimitFailureAt = null;
     const count = row?.count ?? 0;
     if (count > limit) {
       return buildRateLimitExceededResponse(bucketStart + windowSec - nowSec);
@@ -138,6 +146,7 @@ export async function checkPublicApiRateLimit(
     return null;
   } catch (err) {
     consecutivePublicApiRateLimitFailures++;
+    lastPublicApiRateLimitFailureAt = nowSec;
     console.warn(
       `[public-api] distributed rate limit unavailable (${consecutivePublicApiRateLimitFailures} consecutive):`,
       err,
