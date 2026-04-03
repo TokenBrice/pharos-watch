@@ -250,10 +250,16 @@ Live production now leans on a broader shared utility layer for finish-level con
 - `pharos-lead`
 - `pharos-section-title`
 - `pharos-meta`
-- `pharos-control-pill`
+- `pharos-control-pill` / `pharos-control-pill-active`
+- `pharos-toggle-pill`
 - `pharos-chart-stage`
+- `pharos-chart-legend-chip`
 - `pharos-table-shell`
 - `pharos-table-toolbar`
+- `pharos-table-sticky-primary` / `pharos-table-sticky-metric`
+- `pharos-panel-header`
+- `pharos-subtle-band`
+- `pharos-empty-note`
 
 Current high-use areas:
 

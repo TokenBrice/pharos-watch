@@ -86,7 +86,7 @@ The server shell then appends `ExploreNextSection` after the client-rendered ana
 
 ### Rail vs section rules
 
-- `LongformScrollspyNav` does not mirror every rendered section. Its top-level entries are `report-card`, `overview`, `chart`, optional `yield`, `liquidity`, `info`, and `history`.
+- `LongformScrollspyNav` does not mirror every rendered section. Its top-level entries are `report-card`, `overview`, `chart`, optional `yield`, `liquidity`, and `history` (defined in `BASE_DETAIL_SECTIONS` + conditional `YIELD_SECTION` splice).
 - `DistributionSection` renders after the chart, but it is not a top-level scrollspy entry.
 - `CollateralUsageSection` renders only when at least one other tracked stablecoin derives a dependency on the current coin, and it is also outside the top-level rail.
 - `FlowsSection` renders after liquidity, outside the top-level rail. When flow coverage exists it owns both `#flows` and `#flow-history`.

@@ -144,7 +144,7 @@ All in `shared/lib/supply.ts`:
 | `getCirculatingRaw(c)` | Calls `sumPegBuckets(c.circulating)` |
 | `getPrevDayRaw(c)` | Previous day's circulating (for delta calculations) |
 | `getPrevWeekRaw(c)` | Same for week |
-| `getPrevMonthRaw(c)` | Same for month |
+| `getPrevMonthRawOrNull(c)` | Same for month (returns `null` if unavailable) |
 
 ---
 

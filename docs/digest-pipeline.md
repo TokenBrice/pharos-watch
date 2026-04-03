@@ -46,7 +46,7 @@ The cron assembles a `DigestInputData` object from 16 sources before calling the
 | Supply velocity | top 10 coins by mcap | 1d vs 7d changes; signals: "reversed", "accelerating", "decelerating" (threshold: 2.5× weekly avg OR direction reversal) |
 | Safety scores | computed real-time | Report card grades for mentioned coins + 2 "tension" coins (high peg score but low overall grade — structurally fragile despite stable peg) |
 | Resolved depegs | `depeg_events` (last 48h) | Filters: peak >200 bps AND mcap >$50M; top 3 by peak deviation |
-| Mint-burn flows | `mint_burn_hourly` | Bank Run Gauge (mcap-weighted composite), Flight-to-Quality (digest-local safe-haven vs risky net flows from `SAFE_HAVEN_IDS`), top pressure coins (\|FIS\| > 20) |
+| Mint-burn flows | `mint_burn_hourly` | Bank Run Gauge (mcap-weighted composite), Flight-to-Quality (safe-haven vs risky net flows via `buildFlightToQualityClassification()`), top pressure coins (\|FIS\| > 20) |
 | DEWS stress | `stress_signals` + `stress_signal_history` | Band distribution (CALM/WATCH/ALERT/WARNING/DANGER), band changes crossing WATCH/ALERT boundary, elevated coins (ALERT+ with mcap >$10M) |
 | Historical context | `stability_index` + `supply_history` | PSI precedent (last time score was at/below current), band streak, supply mover ATH and largest historical weekly change |
 | Grade transitions | `safety_grade_history` | Report card grade changes (last 48h) with dimensional context; methodology re-grade guard (>10 simultaneous changes excluded) |
@@ -64,7 +64,7 @@ A further enrichment pass added four more optional fields: `psiContributors`, `y
 
 Safety score computation is shared with the yield cron via `worker/src/lib/safety-scores.ts` (`computeSafetyScoresSnapshot()`), so grade lookups use one canonical scoring path.
 
-The digest's Flight-to-Quality collector is not yet wired to the public `/api/mint-burn-flows` classification path. `worker/src/cron/daily-digest/collectors.ts` still buckets safe-haven flows using hardcoded `SAFE_HAVEN_IDS` from `worker/src/lib/mint-burn-contracts.ts`, while the public API now uses report-card-cache classification when available.
+The digest's Flight-to-Quality collector now uses `buildFlightToQualityClassification()` from `worker/src/lib/flight-to-quality-classification.ts` via `worker/src/cron/daily-digest/mint-burn-ftq.ts`, aligned with the public `/api/mint-burn-flows` classification path.
 
 ### LLM call
 

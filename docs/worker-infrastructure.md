@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 28 scheduled runtime jobs across 13 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track the same 28 jobs; cemetery and tracking appendices are now folded into daily digest delivery instead of a separate cron.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 29 scheduled runtime jobs across 13 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track the same 29 jobs; cemetery and tracking appendices are now folded into daily digest delivery instead of a separate cron.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -407,8 +407,9 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 | `snapshot-psi`                  | `snapshotPsiDaily()`           | `worker/src/cron/snapshot-psi.ts`                  | [Pharos Stability Index](./stability-index.md)   |
 | `sync-usds-status`              | `syncUsdsStatus()`             | `worker/src/cron/sync-usds-status.ts`              | This doc (below)                                 |
 | `fetch-tbill-rate`              | `fetchTbillRate()`             | `worker/src/cron/fetch-tbill-rate.ts`              | [Yield Intelligence](./yield-intelligence.md)    |
+| `sync-treasury-stable-exposure` | `syncTreasuryStableExposure()` | `worker/src/cron/sync-treasury-stable-exposure.ts` | [Worker & API Limits](./worker-and-api-limits.md) |
 
-**Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (ECB/FRED/Treasury/SIX benchmark fetches, still serialized inside one job) and `sync-usds-status` (Etherscan) are still executed sequentially on the external-fetch branch to keep this trigger conservative on connection use, but a failed `fetch-tbill-rate` run no longer suppresses `sync-usds-status`.
+**Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (ECB/FRED/Treasury/SIX benchmark fetches, still serialized inside one job), `sync-usds-status` (Etherscan), and `sync-treasury-stable-exposure` (Sim API wallet-balance reads, peak 2 connections) are chained sequentially on the external-fetch branch to keep this trigger conservative on connection use. A failed `fetch-tbill-rate` run no longer suppresses `sync-usds-status`, and a failed `sync-usds-status` no longer suppresses `sync-treasury-stable-exposure`.
 
 ### Trigger 12: `5 8 * * *` (daily at 08:05 UTC — heavy external fetchers)
 
@@ -445,7 +446,7 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 | 8       | `20 * * * *`       |                                      1 (core yield publisher)                                      |    5     |
 | 9       | `25 */4 * * *`     |                                  5 (supplemental yield families)                                   |    1     |
 | 10      | `2,7,…,57 * * * *` |                                  5 (Telegram fan-out batch sends)                                  |    1     |
-| 11      | `0 8 * * *`        |                          1 (benchmark feeds and Etherscan are serialized)                          |    5     |
+| 11      | `0 8 * * *`        |                 2 (benchmark feeds → Etherscan → Sim reads; chained serially, Sim peak = 2)        |    4     |
 | 12      | `5 8 * * *`        |                                5 (bluechip + Anthropic + CoinGecko)                                |    1     |
 | 13      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
 
@@ -1015,6 +1016,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `fetch-tbill-rate`              | 86,400s (24h)    | `0 8 * * *`                                       |
 | `snapshot-psi`                  | 86,400s (24h)    | `0 8 * * *`                                       |
 | `sync-usds-status`              | 86,400s (24h)    | `0 8 * * *`                                       |
+| `sync-treasury-stable-exposure` | 86,400s (24h)    | `0 8 * * *`                                       |
 | `sync-live-reserves`            | 3,600s (1h)      | `11 * * * *`                                      |
 | `sync-redemption-backstops`     | 3,600s (1h)      | `11 * * * *`                                      |
 | `sync-kinesis-supply`           | 3,600s (1h)      | `11 * * * *`                                      |

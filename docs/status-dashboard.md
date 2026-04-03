@@ -67,9 +67,9 @@ The active frontend operator mode is now:
 ### Data hooks
 
 - `src/hooks/use-status.ts`
-  - Calls `GET /api/status` through same-origin `/api/admin/status` on `ops.pharos.watch`
+  - `useStatus(adminAccess: AdminAccess)` — calls `GET /api/status` through same-origin `/api/admin/status` on `ops.pharos.watch` via `useAdminPollingQuery`
   - Query key uses the fixed ops-proxy scope; no browser-held secret is involved
-  - `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0`
+  - `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0` (via `CRON_1MIN` cadence)
 - `src/hooks/api-hooks.ts`
   - Owns the shared low-friction query wrappers for `GET /api/health`, `GET /api/peg-summary`, `GET /api/dex-liquidity`, `GET /api/report-cards`, `GET /api/yield-rankings`, and related read endpoints
   - This is the live source of truth for `useHealth()` / `usePegSummary()` and the other cache-backed read hooks used by the dashboard model

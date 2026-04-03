@@ -10,7 +10,7 @@ The tracker now has two distinct amount layers:
 
 **Cron-backed sync coverage:** USDC, USDT, PAXG, XAUT, PYUSD, USD1.
 
-**Live API/UI filter enum:** USDC, USDT, PAXG, XAUT, PYUSD, USD1 via `BLACKLIST_STABLECOINS` in `shared/types/index.ts`.
+**Live API/UI filter enum:** USDC, USDT, PAXG, XAUT, PYUSD, USD1 via `BLACKLIST_STABLECOINS` in `shared/types/market.ts` (re-exported through `shared/types/index.ts`).
 
 Implementation note: `EURC` is intentionally not live-supported right now. Circle often mirrors the same blacklist action across both USDC and EURC, which creates many zero-balance EURC rows. Pharos will only re-enable EURC if those mirrored no-balance events can be classified without hiding genuine EURC signal.
 

@@ -87,7 +87,7 @@ These profiles apply while the dataset is within its endpoint freshness budget. 
 | standard | `public, s-maxage=300, max-age=60`   | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals                                                                                                                   |
 | custom   | `public, s-maxage=300, max-age=300`  | dex-liquidity (browser-side max-age extended to match CDN TTL)                                                                                                                                                                                                                       |
 | per-coin | `public, s-maxage=300, max-age=10`   | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                           |
-| slow     | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, treasury-stable-exposure                                                                                                                                                              |
+| slow     | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, treasury-stable-exposure, non-usd-share                                                                                                                                              |
 | archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot                                                                                                                                                                                                                                                                     |
 | no-store | `no-store`                           | health plus admin GET routes after router override (`status`, `status-history`, `request-source-stats`, `debug-sync-state`, `backfill-dews`, `audit-depeg-history?dry-run=true`, `discovery-candidates`) |
 
@@ -376,6 +376,29 @@ Lightweight per-coin snapshot sourced from cached `stablecoins` data. Designed f
 | `supplyUsd`       | `object`                 | Aggregate USD supply values and deltas (`current`, `prevDay`, `prevWeek`, `prevMonth`, `change1d`, `change7d`, `change30d`) |
 | `chainCount`      | `number`                 | Number of chains where the asset is deployed                                                                                |
 | `updatedAt`       | `number`                 | Unix seconds of the stablecoins snapshot used for this response                                                             |
+
+---
+
+### `GET /api/non-usd-share`
+
+Returns historical non-USD stablecoin market share data from `supply_history`, split into commodity-pegged (gold/silver) and fiat non-USD buckets. Data is downsampled: daily for the last 90 days, weekly for the last 2 years, monthly beyond that.
+
+**Cache:** slow — `public, s-maxage=3600, max-age=300`
+
+| Param  | Type     | Default | Constraints    | Description                           |
+| ------ | -------- | ------- | -------------- | ------------------------------------- |
+| `days` | `number` | `1825`  | min 30, max 1825 | Lookback window in days             |
+
+**Response:** `Array<{ date, commodityShare, fiatNonUsdShare, commodity, fiatNonUsd, total }>`
+
+| Field              | Type     | Description                                      |
+| ------------------ | -------- | ------------------------------------------------ |
+| `date`             | `number` | Unix seconds (snapshot date)                     |
+| `commodityShare`   | `number` | Commodity-pegged share as % of total supply      |
+| `fiatNonUsdShare`  | `number` | Fiat non-USD share as % of total supply          |
+| `commodity`        | `number` | Commodity-pegged circulating USD                 |
+| `fiatNonUsd`       | `number` | Fiat non-USD circulating USD                     |
+| `total`            | `number` | Total circulating USD across all tracked coins   |
 
 ---
 
