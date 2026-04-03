@@ -275,6 +275,7 @@ function normalizeSeed(
     const chainOwners = [
       ...asStringArray(entry.owners),
       ...asStringArray(entry.owner),
+      ...asStringArray(entry.ownTokenOwners),
     ];
     if (chainOwners.length === 0) continue;
 

@@ -6,6 +6,7 @@ import {
 import {
   DEX_FRESHNESS_SEC,
   DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD,
+  DEPEG_DEX_PROTOCOL_CORROBORATION_MIN,
   DEPEG_CONFIRMATION_SUPPLY_THRESHOLD,
   DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
   DEPEG_EXTREME_MOVE_BPS,
@@ -22,6 +23,7 @@ export function getDepegThresholdBps(pegType: string | undefined): number {
 export {
   DEX_FRESHNESS_SEC,
   DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD,
+  DEPEG_DEX_PROTOCOL_CORROBORATION_MIN,
   DEPEG_CONFIRMATION_SUPPLY_THRESHOLD,
   DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
   DEPEG_EXTREME_MOVE_BPS,
@@ -55,6 +57,7 @@ export const DEFILLAMA_API = "https://api.llama.fi";
 
 export const USER_AGENT = "Pharos/1.0 (stablecoin analytics)";
 export const SIM_BALANCES_BASE_URL = "https://api.sim.dune.com/v1/evm/balances";
+export const SIM_DEFI_POSITIONS_BASE_URL = "https://api.sim.dune.com/v1/evm/defi/positions";
 export const SIM_BALANCES_REQUEST_TIMEOUT_MS = 12_000;
 export const SIM_BALANCES_MAX_RETRIES = 1;
 export const SIM_BALANCES_OWNER_GROUP_DELAY_MS = 1_000;
@@ -123,6 +126,8 @@ export const MIN_LENDING_POOL_APY = 0.1;
 export const MIN_LENDING_POOL_TVL_USD = 100_000;
 /** Lower TVL floor for smaller ecosystems (Solana, Sui, Aptos, Cardano, Stacks). */
 export const MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM = 25_000;
+/** Minimum lending-opportunity venue size relative to the tracked stablecoin's current supply. */
+export const MIN_LENDING_POOL_TVL_SHARE_OF_STABLECOIN_SUPPLY = 0.001;
 
 // --- Circuit breaker source names ---
 

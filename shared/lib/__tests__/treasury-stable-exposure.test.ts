@@ -128,4 +128,55 @@ describe("treasury stable exposure normalization", () => {
       "Stable-sleeve percentages include untracked stablecoins returned by the balance provider.",
     );
   });
+
+  it("de-duplicates wrapper balances when DeFi positions are decomposed to underlying stablecoins", () => {
+    const usdc = TRACKED_META_BY_ID.get("usdc-circle");
+    const usdcContract = usdc?.contracts?.find((deployment) => deployment.chain === "ethereum");
+    expect(usdcContract).toBeTruthy();
+
+    const seed: TreasurySeed = {
+      protocolId: "wrapper-test",
+      slug: "wrapper-test",
+      name: "Wrapper Test",
+      category: "Protocol treasury",
+      launchEligible: true,
+      launchPriority: 1,
+      source: "defillama-github",
+      adapterFile: "test.js",
+      extractionMode: "static-seeded",
+      chains: ["ethereum"],
+      owners: [{ chain: "ethereum", address: "0x1234" }],
+    };
+
+    const entity = computeTreasuryStableExposureEntity(
+      seed,
+      [
+        {
+          treasuryBalances: [
+            { chainId: 1, tokenAddress: "0x000000000000000000000000000000000000beef", usdValue: 800 },
+          ],
+          stablecoinBalances: [
+            { chainId: 1, tokenAddress: "0x000000000000000000000000000000000000beef", usdValue: 800 },
+          ],
+          derivedStablecoinBalances: [
+            {
+              chainId: 1,
+              tokenAddress: usdcContract!.address,
+              usdValue: 800,
+              consumedBalanceKeys: ["1:0x000000000000000000000000000000000000beef"],
+            },
+          ],
+        },
+      ],
+      [makeReportCard("usdc-circle", 92, "A")],
+    );
+
+    expect(entity.treasuryUsd).toBe(800);
+    expect(entity.stablecoinSleeveUsd).toBe(800);
+    expect(entity.trackedStableUsd).toBe(800);
+    expect(entity.coverage.untrackedStableUsd).toBe(0);
+    expect(entity.coverage.notes).toContain(
+      "Stable sleeve includes supported LP, vault, and lending positions decomposed to underlying stablecoins.",
+    );
+  });
 });

@@ -46,47 +46,47 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 
 The paired Pages Functions contract lives in `functions/lib/ops-env.ts` with the same `required` / `optional` / `reserved` / `active` shape. Worker runtime validation logs contract errors when Access bindings are only partially configured, when admin D1 status bindings are only partially configured, or when `PUBLIC_API_RATE_LIMIT_SALT` is missing.
 
-| Binding                         | Type       | Required           | Used by                                                                                                                                                                    |
-| ------------------------------- | ---------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DB`                            | D1Database | Yes                | All crons and API handlers                                                                                                                                                 |
-| `CORS_ORIGIN`                   | string     | Yes                | Comma-separated CORS allowlist. Repo default: `https://pharos.watch,https://ops.pharos.watch`                                                                              |
-| `SELF_URL`                      | string     | No                 | Status self-check external probe base URL; the default production origin (`https://api.pharos.watch`) is router-probed internally to avoid custom-domain self-fetch `522`s |
-| `OPS_UI_ORIGIN`                 | string     | No                 | Reserved on the worker runtime for cross-runtime alignment. The value is active on Pages Functions host gating (`https://ops.pharos.watch`)                                 |
-| `OPS_API_ORIGIN`                | string     | No                 | Reserved on the worker runtime for cross-runtime alignment. The value is active on Pages Functions proxying (`https://ops-api.pharos.watch`)                                |
-| `CF_ACCESS_TEAM_DOMAIN`         | string     | No                 | Cloudflare Access team domain used by worker-side JWT verification for `ops-api.pharos.watch` admin requests (defaults to `pharos-watch` when unset)                    |
-| `CF_ACCESS_OPS_UI_AUD`          | string     | No                 | Reserved on the worker runtime today; active only in the Pages contract once Pages-side UI JWT validation is introduced                                                    |
-| `CF_ACCESS_OPS_API_AUD`         | string     | No                 | Cloudflare Access audience used by `worker/src/lib/auth.ts` to verify `Cf-Access-Jwt-Assertion` on `ops-api.pharos.watch` admin requests                                 |
-| `ETHERSCAN_API_KEY`             | string     | No                 | Blacklist sync, USDS status                                                                                                                                                |
-| `TRONGRID_API_KEY`              | string     | No                 | Blacklist sync (Tron chain)                                                                                                                                                |
-| `DRPC_API_KEY`                  | string     | No                 | L2 archive node balance lookups                                                                                                                                            |
-| `ALCHEMY_API_KEY`               | string     | No                 | Chain RPC primary endpoints                                                                                                                                                |
-| `GRAPH_API_KEY`                 | string     | No                 | DEX liquidity (The Graph subgraphs)                                                                                                                                        |
-| `ALERT_WEBHOOK_URL`             | string     | No                 | Discord/Slack error alerts                                                                                                                                                 |
-| `ANTHROPIC_API_KEY`             | string     | No                 | Daily digest LLM generation                                                                                                                                                |
-| `CMC_API_KEY`                   | string     | No                 | Price fallback (CoinMarketCap)                                                                                                                                             |
-| `OPENEXCHANGERATES_API_KEY`     | string     | No                 | Real-time FX rate cross-validation (Open Exchange Rates)                                                                                                                   |
-| `COINGECKO_API_KEY`             | string     | No                 | Price enrichment, depeg confirmation                                                                                                                                       |
-| `CLOUDFLARE_ACCOUNT_ID`         | string     | No                 | Admin-only D1 status metrics (`/api/status` -> `d1Usage`) Cloudflare account scope                                                                                        |
-| `CLOUDFLARE_D1_STATUS_API_TOKEN` | string     | No                 | Admin-only D1 status metrics (`/api/status` -> `d1Usage`) token with D1 read + analytics read access                                                                    |
-| `CLOUDFLARE_D1_DATABASE_ID`     | string     | No                 | Admin-only D1 status metrics (`/api/status` -> `d1Usage`) target database id                                                                                              |
-| `SIM_API_KEY`                   | string     | No                 | Treasury stable-exposure snapshot reads against Sim by Dune wallet-balance APIs                                                                                            |
-| `GITHUB_PAT`                    | string     | No (worker contract); Yes for feedback submissions | Feedback → GitHub Issues                                                                                                                                                   |
-| `FEEDBACK_IP_SALT`              | string     | No (worker contract); Yes for feedback submissions | Rate limit IP hashing for `POST /api/feedback`                                                                                                                             |
-| `PUBLIC_API_RATE_LIMIT_SALT`    | string     | Yes for deployed public API traffic | Dedicated salt for hashed public API rate limiting. Public `/api/*` traffic returns `503` until this binding is configured.                                |
-| `TWITTER_API_KEY`               | string     | No                 | Digest → Twitter (OAuth consumer key)                                                                                                                                      |
-| `TWITTER_API_SECRET`            | string     | No                 | Digest → Twitter (OAuth consumer secret)                                                                                                                                   |
-| `TWITTER_ACCESS_TOKEN`          | string     | No                 | Digest → Twitter (access token)                                                                                                                                            |
-| `TWITTER_ACCESS_TOKEN_SECRET`   | string     | No                 | Digest → Twitter (access token secret)                                                                                                                                     |
-| `TELEGRAM_BOT_TOKEN`            | string     | No                 | Digest → Telegram, bot chat replies, subscriber alert dispatch                                                                                                             |
-| `TELEGRAM_CHAT_ID`              | string     | No                 | Digest channel posts and cemetery announcements                                                                                                                            |
-| `TELEGRAM_WEBHOOK_SECRET`       | string     | No                 | Telegram webhook secret validation via `X-Telegram-Bot-Api-Secret-Token`                                                                                                   |
-| `MAINTENANCE_MODE`              | `string?`  | No                 | Optional. When set to the exact string `"true"`, the worker returns 503 for all non-`OPTIONS` requests. Used as a kill switch.                                             |
-| `MINT_BURN_DISABLED_IDS`        | string     | No                 | Mint/burn runtime disable list by stablecoin ID (CSV)                                                                                                                      |
-| `MINT_BURN_DISABLED_SYMBOLS`    | string     | No                 | Mint/burn runtime disable list by symbol (CSV)                                                                                                                             |
-| `MINT_BURN_MAJOR_SYMBOLS`       | string     | No                 | Mint/burn health-check major symbols override (CSV)                                                                                                                        |
-| `MINT_BURN_STALE_WARN_SEC`      | string     | No                 | Mint/burn stale-warning threshold override (seconds)                                                                                                                       |
-| `MINT_BURN_STALE_CRIT_SEC`      | string     | No                 | Mint/burn stale-critical threshold override (seconds)                                                                                                                      |
-| `MINT_BURN_ALERT_COOLDOWN_SEC`  | string     | No                 | Mint/burn stale alert dedupe cooldown override (seconds)                                                                                                                   |
+| Binding                          | Type       | Required                                           | Used by                                                                                                                                                                    |
+| -------------------------------- | ---------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DB`                             | D1Database | Yes                                                | All crons and API handlers                                                                                                                                                 |
+| `CORS_ORIGIN`                    | string     | Yes                                                | Comma-separated CORS allowlist. Repo default: `https://pharos.watch,https://ops.pharos.watch`                                                                              |
+| `SELF_URL`                       | string     | No                                                 | Status self-check external probe base URL; the default production origin (`https://api.pharos.watch`) is router-probed internally to avoid custom-domain self-fetch `522`s |
+| `OPS_UI_ORIGIN`                  | string     | No                                                 | Reserved on the worker runtime for cross-runtime alignment. The value is active on Pages Functions host gating (`https://ops.pharos.watch`)                                |
+| `OPS_API_ORIGIN`                 | string     | No                                                 | Reserved on the worker runtime for cross-runtime alignment. The value is active on Pages Functions proxying (`https://ops-api.pharos.watch`)                               |
+| `CF_ACCESS_TEAM_DOMAIN`          | string     | No                                                 | Cloudflare Access team domain used by worker-side JWT verification for `ops-api.pharos.watch` admin requests (defaults to `pharos-watch` when unset)                       |
+| `CF_ACCESS_OPS_UI_AUD`           | string     | No                                                 | Reserved on the worker runtime today; active only in the Pages contract once Pages-side UI JWT validation is introduced                                                    |
+| `CF_ACCESS_OPS_API_AUD`          | string     | No                                                 | Cloudflare Access audience used by `worker/src/lib/auth.ts` to verify `Cf-Access-Jwt-Assertion` on `ops-api.pharos.watch` admin requests                                   |
+| `ETHERSCAN_API_KEY`              | string     | No                                                 | Blacklist sync, USDS status                                                                                                                                                |
+| `TRONGRID_API_KEY`               | string     | No                                                 | Blacklist sync (Tron chain)                                                                                                                                                |
+| `DRPC_API_KEY`                   | string     | No                                                 | L2 archive node balance lookups                                                                                                                                            |
+| `ALCHEMY_API_KEY`                | string     | No                                                 | Chain RPC primary endpoints                                                                                                                                                |
+| `GRAPH_API_KEY`                  | string     | No                                                 | DEX liquidity (The Graph subgraphs)                                                                                                                                        |
+| `ALERT_WEBHOOK_URL`              | string     | No                                                 | Discord/Slack error alerts                                                                                                                                                 |
+| `ANTHROPIC_API_KEY`              | string     | No                                                 | Daily digest LLM generation                                                                                                                                                |
+| `CMC_API_KEY`                    | string     | No                                                 | Price fallback (CoinMarketCap)                                                                                                                                             |
+| `OPENEXCHANGERATES_API_KEY`      | string     | No                                                 | Real-time FX rate cross-validation (Open Exchange Rates)                                                                                                                   |
+| `COINGECKO_API_KEY`              | string     | No                                                 | Price enrichment, depeg confirmation                                                                                                                                       |
+| `CLOUDFLARE_ACCOUNT_ID`          | string     | No                                                 | Admin-only D1 status metrics (`/api/status` -> `d1Usage`) Cloudflare account scope                                                                                         |
+| `CLOUDFLARE_D1_STATUS_API_TOKEN` | string     | No                                                 | Admin-only D1 status metrics (`/api/status` -> `d1Usage`) token with D1 read + analytics read access                                                                       |
+| `CLOUDFLARE_D1_DATABASE_ID`      | string     | No                                                 | Admin-only D1 status metrics (`/api/status` -> `d1Usage`) target database id                                                                                               |
+| `SIM_API_KEY`                    | string     | No                                                 | Treasury stable-exposure snapshot reads against Sim by Dune wallet-balance and DeFi-position APIs                                                                          |
+| `GITHUB_PAT`                     | string     | No (worker contract); Yes for feedback submissions | Feedback → GitHub Issues                                                                                                                                                   |
+| `FEEDBACK_IP_SALT`               | string     | No (worker contract); Yes for feedback submissions | Rate limit IP hashing for `POST /api/feedback`                                                                                                                             |
+| `PUBLIC_API_RATE_LIMIT_SALT`     | string     | Yes for deployed public API traffic                | Dedicated salt for hashed public API rate limiting. Public `/api/*` traffic returns `503` until this binding is configured.                                                |
+| `TWITTER_API_KEY`                | string     | No                                                 | Digest → Twitter (OAuth consumer key)                                                                                                                                      |
+| `TWITTER_API_SECRET`             | string     | No                                                 | Digest → Twitter (OAuth consumer secret)                                                                                                                                   |
+| `TWITTER_ACCESS_TOKEN`           | string     | No                                                 | Digest → Twitter (access token)                                                                                                                                            |
+| `TWITTER_ACCESS_TOKEN_SECRET`    | string     | No                                                 | Digest → Twitter (access token secret)                                                                                                                                     |
+| `TELEGRAM_BOT_TOKEN`             | string     | No                                                 | Digest → Telegram, bot chat replies, subscriber alert dispatch                                                                                                             |
+| `TELEGRAM_CHAT_ID`               | string     | No                                                 | Digest channel posts and cemetery announcements                                                                                                                            |
+| `TELEGRAM_WEBHOOK_SECRET`        | string     | No                                                 | Telegram webhook secret validation via `X-Telegram-Bot-Api-Secret-Token`                                                                                                   |
+| `MAINTENANCE_MODE`               | `string?`  | No                                                 | Optional. When set to the exact string `"true"`, the worker returns 503 for all non-`OPTIONS` requests. Used as a kill switch.                                             |
+| `MINT_BURN_DISABLED_IDS`         | string     | No                                                 | Mint/burn runtime disable list by stablecoin ID (CSV)                                                                                                                      |
+| `MINT_BURN_DISABLED_SYMBOLS`     | string     | No                                                 | Mint/burn runtime disable list by symbol (CSV)                                                                                                                             |
+| `MINT_BURN_MAJOR_SYMBOLS`        | string     | No                                                 | Mint/burn health-check major symbols override (CSV)                                                                                                                        |
+| `MINT_BURN_STALE_WARN_SEC`       | string     | No                                                 | Mint/burn stale-warning threshold override (seconds)                                                                                                                       |
+| `MINT_BURN_STALE_CRIT_SEC`       | string     | No                                                 | Mint/burn stale-critical threshold override (seconds)                                                                                                                      |
+| `MINT_BURN_ALERT_COOLDOWN_SEC`   | string     | No                                                 | Mint/burn stale alert dedupe cooldown override (seconds)                                                                                                                   |
 
 ---
 
@@ -96,9 +96,9 @@ Three modules derive runtime configuration from `Env` bindings via pure function
 
 | Function                                                | Called in             | Purpose                                              |
 | ------------------------------------------------------- | --------------------- | ---------------------------------------------------- |
-| `normalizeCgApiKey(env.COINGECKO_API_KEY)`               | `fetch` + `scheduled` | Returns normalized API key for CoinGecko requests    |
+| `normalizeCgApiKey(env.COINGECKO_API_KEY)`              | `fetch` + `scheduled` | Returns normalized API key for CoinGecko requests    |
 | `buildChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY)` | `fetch` + `scheduled` | Builds chain RPC configs with Alchemy/dRPC primaries |
-| `normalizeWebhookUrl(env.ALERT_WEBHOOK_URL)`             | `scheduled`           | Returns normalized webhook URL for error alerts      |
+| `normalizeWebhookUrl(env.ALERT_WEBHOOK_URL)`            | `scheduled`           | Returns normalized webhook URL for error alerts      |
 
 These are pure functions. `Env` bindings are only available inside handler functions (not at module initialization time), so values are computed fresh per-request/per-trigger via the context factory. The notable exception is `worker/src/lib/jwt-verify.ts`, which intentionally keeps an in-memory JWKS cache (`cachedJwks`, 1-hour TTL) at module scope to avoid refetching Cloudflare Access signing keys on every admin request.
 
@@ -174,14 +174,14 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 
 4. **Cache-Control profiles** (set by individual API handlers):
 
-| Profile  | `Cache-Control` header               | Used by                                                                                                                                                                           |
-| -------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Realtime | `public, s-maxage=60, max-age=10`    | stablecoins, stablecoin-summary, blacklist, depeg-events, peg-summary, mint-burn-events                                                                                           |
-| Per-coin | `public, s-maxage=300, max-age=10`   | stablecoin detail (`/api/stablecoin/:id`)                                                                                                                                         |
-| Standard | `public, s-maxage=300, max-age=60`   | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
-| Custom   | `public, s-maxage=300, max-age=300`  | dex-liquidity                                                                                                                                                      |
-| Slow     | `public, s-maxage=3600, max-age=300` | supply-history, bluechip-ratings, dex-liquidity-history, yield-history, safety-score-history                                                                                      |
-| Archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot                                                                                                                                                  |
+| Profile  | `Cache-Control` header                 | Used by                                                                                                                                                            |
+| -------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Realtime | `public, s-maxage=60, max-age=10`      | stablecoins, stablecoin-summary, blacklist, depeg-events, peg-summary, mint-burn-events                                                                            |
+| Per-coin | `public, s-maxage=300, max-age=10`     | stablecoin detail (`/api/stablecoin/:id`)                                                                                                                          |
+| Standard | `public, s-maxage=300, max-age=60`     | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
+| Custom   | `public, s-maxage=300, max-age=300`    | dex-liquidity                                                                                                                                                      |
+| Slow     | `public, s-maxage=3600, max-age=300`   | supply-history, bluechip-ratings, dex-liquidity-history, yield-history, safety-score-history                                                                       |
+| Archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot                                                                                                                                                    |
 
 Admin `GET` routes are also forced to `Cache-Control: no-store` by `addAdminGetNoStoreHeader()` in `worker/src/router.ts`.
 
@@ -215,11 +215,11 @@ This baseline is enough to catch most abuse, regression, or cache-efficiency pro
 
 Operator admin actions are dispatched through `worker/src/router.ts` using shared endpoint definitions (`shared/lib/api-endpoints.ts`) and worker action handlers under `worker/src/api/admin-actions.ts`. Examples:
 
-| Endpoint                         | Auth                                         | Description                                                             |
-| -------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------- |
+| Endpoint                         | Auth                                         | Description                                                                                      |
+| -------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `POST /api/trigger-digest`       | `ops-api` + Access user/JWT or service token | Queues a leased background digest run with `force=true`, then returns `202 Accepted` immediately |
-| `POST /api/reset-blacklist-sync` | `ops-api` + Access user/JWT or service token | Rolls back sync state: EVM −50,000 blocks, Tron −7 days                 |
-| `GET /api/debug-sync-state`      | `ops-api` + Access user/JWT or service token | Returns all `blacklist_sync_state` rows                                 |
+| `POST /api/reset-blacklist-sync` | `ops-api` + Access user/JWT or service token | Rolls back sync state: EVM −50,000 blocks, Tron −7 days                                          |
+| `GET /api/debug-sync-state`      | `ops-api` + Access user/JWT or service token | Returns all `blacklist_sync_state` rows                                                          |
 
 Additional backfill/audit actions are defined in the same registry and surfaced dynamically on `/admin/`. `POST /api/feedback` is router-dispatched too, but it is not part of the status action registry.
 
@@ -300,14 +300,14 @@ crons = [
 
 ### Trigger 1: `*/15 * * * *` (every 15 minutes)
 
-| Job                              | Function                                              | File                                              | Documentation                                                                |
-| -------------------------------- | ----------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `sync-fx-rates`                  | `syncFxRates()`                                       | `worker/src/cron/sync-fx-rates.ts`                | [Data Pipeline](./data-pipeline.md), [Classification](./classification.md)   |
-| `sync-stablecoins`               | `syncStablecoins()`                                   | `worker/src/cron/sync-stablecoins.ts`             | [Data Pipeline](./data-pipeline.md), [Depeg Detection](./depeg-detection.md) |
-| `snapshot-supply` _(retry path)_ | `snapshotSupply()` (chained after `sync-stablecoins`) | `worker/src/cron/snapshot-supply.ts`              | [Supply Snapshot Pipeline](./supply-snapshot.md)                             |
-| `snapshot-chain-supply`          | `snapshotChainSupply()` (chained after `snapshot-supply`, DB-only, 0 external connections) | `worker/src/cron/snapshot-chain-supply.ts` | [Supply Snapshot Pipeline](./supply-snapshot.md) |
-| `status-self-check`              | `runStatusSelfCheck()`                                | `worker/src/cron/status-self-check.ts`            | [Status Dashboard](./status-dashboard.md)                                    |
-| _(inline)_                       | Stale-cache health alert                              | `worker/src/handlers/scheduled/quarter-hourly.ts` | This doc (below)                                                             |
+| Job                              | Function                                                                                   | File                                              | Documentation                                                                |
+| -------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `sync-fx-rates`                  | `syncFxRates()`                                                                            | `worker/src/cron/sync-fx-rates.ts`                | [Data Pipeline](./data-pipeline.md), [Classification](./classification.md)   |
+| `sync-stablecoins`               | `syncStablecoins()`                                                                        | `worker/src/cron/sync-stablecoins.ts`             | [Data Pipeline](./data-pipeline.md), [Depeg Detection](./depeg-detection.md) |
+| `snapshot-supply` _(retry path)_ | `snapshotSupply()` (chained after `sync-stablecoins`)                                      | `worker/src/cron/snapshot-supply.ts`              | [Supply Snapshot Pipeline](./supply-snapshot.md)                             |
+| `snapshot-chain-supply`          | `snapshotChainSupply()` (chained after `snapshot-supply`, DB-only, 0 external connections) | `worker/src/cron/snapshot-chain-supply.ts`        | [Supply Snapshot Pipeline](./supply-snapshot.md)                             |
+| `status-self-check`              | `runStatusSelfCheck()`                                                                     | `worker/src/cron/status-self-check.ts`            | [Status Dashboard](./status-dashboard.md)                                    |
+| _(inline)_                       | Stale-cache health alert                                                                   | `worker/src/handlers/scheduled/quarter-hourly.ts` | This doc (below)                                                             |
 
 **Execution model:** Jobs in this slot are run sequentially in `worker/src/handlers/scheduled/quarter-hourly.ts` to respect the Workers shared 6-connection fetch pool per cron trigger. `sync-fx-rates` runs first so Chainlink / FX probes get a clean fetch window before the heavier stablecoin pricing pipeline consumes the slot budget. `sync-stablecoins` now reports explicit capability metadata:
 
@@ -353,12 +353,12 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 ### Trigger 6: `10,40 * * * *` (every 30 minutes, at :10/:40)
 
-| Job                      | Function                                | File                                                                  | Documentation                                        |
-| ------------------------ | --------------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------- |
-| `sync-stablecoin-charts` | `syncStablecoinCharts()`                | `worker/src/cron/sync-stablecoin-charts.ts`                           | This doc (below)                                     |
-| `sync-dex-liquidity`     | `syncDexLiquidity()`                    | `worker/src/cron/dex-liquidity/orchestrator.ts`                       | [DEX Liquidity Score](./dex-liquidity.md)            |
-| `compute-dews`           | `computeAndStoreDEWS()`                 | `worker/src/cron/compute-dews.ts`                                     | [DEWS](./dews.md)                                    |
-| `stability-index`        | `computeAndStoreStabilityIndex()`       | `worker/src/cron/stability-index.ts`                                  | [Pharos Stability Index](./stability-index.md)       |
+| Job                      | Function                          | File                                            | Documentation                                  |
+| ------------------------ | --------------------------------- | ----------------------------------------------- | ---------------------------------------------- |
+| `sync-stablecoin-charts` | `syncStablecoinCharts()`          | `worker/src/cron/sync-stablecoin-charts.ts`     | This doc (below)                               |
+| `sync-dex-liquidity`     | `syncDexLiquidity()`              | `worker/src/cron/dex-liquidity/orchestrator.ts` | [DEX Liquidity Score](./dex-liquidity.md)      |
+| `compute-dews`           | `computeAndStoreDEWS()`           | `worker/src/cron/compute-dews.ts`               | [DEWS](./dews.md)                              |
+| `stability-index`        | `computeAndStoreStabilityIndex()` | `worker/src/cron/stability-index.ts`            | [Pharos Stability Index](./stability-index.md) |
 
 **Execution model:** The slot runs in the same sequential order for connection control: charts → dex-liquidity → compute-dews → stability-index. Charts is a single lightweight DL fetch (~2s) that completes quickly and frees the pool. `compute-dews` and `stability-index` are DB-only (0 external connections) and benefit from running after dex-liquidity provides fresh liquidity scores. `sync-stablecoin-charts` enforces a 1-hour cooldown via `stablecoin-charts:last-write` — on the alternate 30-min run, it returns immediately with `cooldown_active`. The reliability change is failure containment: `sync-dex-liquidity` no longer suppresses downstream DEWS / PSI execution for the whole slot when it throws. Downstream jobs still run and make their own degraded/no-write decisions against the latest available tables. `compute-dews` also now treats malformed persisted `stress_signals` and `yield_data.warning_signals` rows as degraded input coverage instead of a validation-only footnote, so operators can see corrupt carry-forward state in cron metadata before it silently distorts the next run. The slot shares the Workers 6-connection limit, so fetch-heavy additions must account for total in-slot concurrency. `sync-dex-liquidity` still stages its protocol-native DEX fetchers only after Curve and subgraph enrichment have consumed their response bodies, and the newer Meteora / PancakeSwap / Slipstream lanes follow the same sequencing rule rather than overlapping the earlier fetch-heavy phase. UniV3 subgraph queries continue to run in parallel across chains for reduced wall-clock time.
 
@@ -384,17 +384,17 @@ This offset schedule exists so long-tail mint/burn backfill pressure cannot star
 
 ### Trigger 9: `25 */4 * * *` (every 4 hours at :25 — yield supplemental lane)
 
-| Job                         | Function                   | File                                            | Documentation                                 |
-| --------------------------- | -------------------------- | ----------------------------------------------- | --------------------------------------------- |
-| `sync-yield-supplemental`   | `syncYieldSupplemental()`  | `worker/src/cron/sync-yield-supplemental.ts`    | [Yield Intelligence](./yield-intelligence.md) |
+| Job                       | Function                  | File                                         | Documentation                                 |
+| ------------------------- | ------------------------- | -------------------------------------------- | --------------------------------------------- |
+| `sync-yield-supplemental` | `syncYieldSupplemental()` | `worker/src/cron/sync-yield-supplemental.ts` | [Yield Intelligence](./yield-intelligence.md) |
 
 **Connection budget:** dedicated multi-hour trigger for the heavier optional yield families (Morpho, Pendle, Yearn/Kong, Beefy, Compound V3, Aave V3). It writes a cache snapshot that the hourly publisher consumes, so protocol-API stalls reduce optional coverage instead of blocking `yield-rankings`.
 
 ### Trigger 10: `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` (Telegram dispatch — dedicated, every 5 min)
 
-| Job                           | Function                      | File                                             | Documentation                                                                                 |
-| ----------------------------- | ----------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| `dispatch-telegram-alerts`    | `dispatchTelegramAlerts()`    | `worker/src/cron/dispatch-telegram-alerts.ts`    | [Telegram Alert Bot](./telegram-alerts.md)                                                    |
+| Job                        | Function                   | File                                          | Documentation                              |
+| -------------------------- | -------------------------- | --------------------------------------------- | ------------------------------------------ |
+| `dispatch-telegram-alerts` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | [Telegram Alert Bot](./telegram-alerts.md) |
 
 Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline so subscriber fan-out gets its own 6-connection pool and CPU budget. Subscriber fan-out uses up to 5 of 6 available connections for parallel `sendBatch()` sends. Up to 200 subscriber message attempts per run; overflow and retryable fresh-send failures are enqueued to `telegram_pending_alerts` in D1 for subsequent runs.
 
@@ -423,9 +423,9 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 
 ### Trigger 13: `0 6 1 * *` (monthly at 06:00 UTC on the 1st)
 
-| Job                    | Function                   | File                                           | Documentation                                   |
-| ---------------------- | -------------------------- | ---------------------------------------------- | ----------------------------------------------- |
-| `yield-coverage-audit` | `runYieldCoverageAudit()`  | `worker/src/handlers/scheduled/monthly-yield-audit.ts` | [Yield Intelligence](./yield-intelligence.md) |
+| Job                    | Function                  | File                                                   | Documentation                                 |
+| ---------------------- | ------------------------- | ------------------------------------------------------ | --------------------------------------------- |
+| `yield-coverage-audit` | `runYieldCoverageAudit()` | `worker/src/handlers/scheduled/monthly-yield-audit.ts` | [Yield Intelligence](./yield-intelligence.md) |
 
 Runs once a month on the 1st at 06:00 UTC. Scans unmatched high-TVL DeFiLlama pools and flags missing protocols as high-confidence or review-needed expansion candidates.
 
@@ -433,23 +433,24 @@ Runs once a month on the 1st at 06:00 UTC. Scans unmatched high-TVL DeFiLlama po
 
 Workers enforce a **6 concurrent fetch connections** limit per cron trigger invocation. All jobs sharing a trigger slot share this pool. Exceeding 6 causes `fetch()` to queue or fail.
 
-| Trigger | Cron Expression | Max Concurrent External Connections | Headroom |
-|---------|----------------|:---:|:---:|
-| 1 | `*/15 * * * *` | 3 (sync-stablecoins + sync-fx-rates + status-self-check; stability-index/compute-dews moved to T6) | 3 |
-| 2 | `3 * * * *` | 4 (multi-chain blacklist scans) | 2 |
-| 3 | `4,24,44 * * * *` | 2 (Alchemy JSON-RPC) | 4 |
-| 4 | `6,36 * * * *` | 1 (sequential CG/GT/DexScreener) | 5 |
-| 5 | `13,33,53 * * * *` | 2 (Alchemy JSON-RPC, extended lane) | 4 |
-| 6 | `10,40 * * * *` | 4 (charts + DEX liquidity + compute-dews(0) + stability-index(0)) | 2 |
-| 7 | `11 * * * *` | 1 (reserve adapters + Kinesis are sequential; redemption is DB-only) | 5 |
-| 8 | `20 * * * *` | 1 (core yield publisher) | 5 |
-| 9 | `25 */4 * * *` | 5 (supplemental yield families) | 1 |
-| 10 | `2,7,…,57 * * * *` | 5 (Telegram fan-out batch sends) | 1 |
-| 11 | `0 8 * * *` | 1 (benchmark feeds and Etherscan are serialized) | 5 |
-| 12 | `5 8 * * *` | 5 (bluechip + Anthropic + CoinGecko) | 1 |
-| 13 | `0 6 1 * *` | 1 (DeFiLlama yield scan) | 5 |
+| Trigger | Cron Expression    |                                Max Concurrent External Connections                                 | Headroom |
+| ------- | ------------------ | :------------------------------------------------------------------------------------------------: | :------: |
+| 1       | `*/15 * * * *`     | 3 (sync-stablecoins + sync-fx-rates + status-self-check; stability-index/compute-dews moved to T6) |    3     |
+| 2       | `3 * * * *`        |                                  4 (multi-chain blacklist scans)                                   |    2     |
+| 3       | `4,24,44 * * * *`  |                                        2 (Alchemy JSON-RPC)                                        |    4     |
+| 4       | `6,36 * * * *`     |                                  1 (sequential CG/GT/DexScreener)                                  |    5     |
+| 5       | `13,33,53 * * * *` |                                2 (Alchemy JSON-RPC, extended lane)                                 |    4     |
+| 6       | `10,40 * * * *`    |                 4 (charts + DEX liquidity + compute-dews(0) + stability-index(0))                  |    2     |
+| 7       | `11 * * * *`       |                1 (reserve adapters + Kinesis are sequential; redemption is DB-only)                |    5     |
+| 8       | `20 * * * *`       |                                      1 (core yield publisher)                                      |    5     |
+| 9       | `25 */4 * * *`     |                                  5 (supplemental yield families)                                   |    1     |
+| 10      | `2,7,…,57 * * * *` |                                  5 (Telegram fan-out batch sends)                                  |    1     |
+| 11      | `0 8 * * *`        |                          1 (benchmark feeds and Etherscan are serialized)                          |    5     |
+| 12      | `5 8 * * *`        |                                5 (bluechip + Anthropic + CoinGecko)                                |    1     |
+| 13      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
 
 **Policy for new jobs:**
+
 - Jobs requiring ≤1 external connection may share any slot with headroom ≥2.
 - Jobs requiring >2 concurrent connections should get a dedicated trigger slot.
 - Never add a fetching job to a slot with headroom ≤1 (Triggers 9, 10, and 12 are effectively full).
@@ -484,7 +485,7 @@ These files are called internally by `syncStablecoins()`, not registered as stan
 | --------------------------------------------------------- | ------------------- | --------------------------------------- |
 | `worker/src/cron/detect-depegs.ts`                        | `syncStablecoins()` | [Depeg Detection](./depeg-detection.md) |
 | `worker/src/cron/confirm-pending-depegs.ts`               | `syncStablecoins()` | [Depeg Detection](./depeg-detection.md) |
-| `worker/src/cron/sync-stablecoins/enrich-prices.ts`      | `syncStablecoins()` | [Data Pipeline](./data-pipeline.md)     |
+| `worker/src/cron/sync-stablecoins/enrich-prices.ts`       | `syncStablecoins()` | [Data Pipeline](./data-pipeline.md)     |
 | `worker/src/cron/sync-stablecoins/supplemental-assets.ts` | `syncStablecoins()` | [Data Pipeline](./data-pipeline.md)     |
 
 ---
@@ -562,7 +563,7 @@ Some long-running jobs also enforce their own earlier wall-clock guard so they c
 | Default                   | 5 min   | Standard jobs complete in <60s                                                                                                                                                                            |
 | `sync-stablecoins`        | 8 min   | Core quarter-hour pipeline entrypoint now includes dual-primary pricing, supplemental overlays, multi-pass enrichment, and depeg processing; explicit headroom avoids timing out on bounded fallback work |
 | `sync-dex-liquidity`      | 13 min  | 150+ pool crawl, with headroom below the platform wall-clock limit                                                                                                                                        |
-| `sync-dex-discovery`      | 13 min  | Multi-source pool staging with explicit 12-minute self-budget so the wrapper still has headroom to log a controlled degraded/error result                                                                  |
+| `sync-dex-discovery`      | 13 min  | Multi-source pool staging with explicit 12-minute self-budget so the wrapper still has headroom to log a controlled degraded/error result                                                                 |
 | `sync-blacklist`          | 12 min  | Multi-chain scan + balance enrichment; isolated trigger allows extended runtime                                                                                                                           |
 | `sync-mint-burn`          | 10 min  | Multi-contract EVM log scan; isolated trigger allows extended runtime                                                                                                                                     |
 | `sync-mint-burn-extended` | 10 min  | Long-tail mint/burn lane with its own run-state                                                                                                                                                           |
@@ -581,37 +582,37 @@ All external data sources are protected by per-source circuit breakers (`worker/
 
 Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 
-| Source key                           | Cache key                     | Used by                                                                      |
-| ------------------------------------ | ----------------------------- | ---------------------------------------------------------------------------- |
-| `DL_STABLECOINS`                     | `defillama-stablecoins`       | `sync-stablecoins`                                                           |
-| `DL_STABLECOIN_DETAIL`               | `defillama-stablecoin-detail` | `GET /api/stablecoin/:id` (DefiLlama detail upstream)                        |
-| `DL_COINS`                           | `defillama-coins`             | `enrich-prices`                                                              |
-| `DL_YIELDS`                          | `defillama-yields`            | `sync-yield-data`, `sync-dex-liquidity`                                      |
-| `DL_PROTOCOLS`                       | `defillama-protocols`         | `sync-dex-liquidity`                                                         |
-| `CG_PRICES`                          | `coingecko-prices`            | `enrich-prices`                                                              |
-| `CG_DETAIL_PLATFORMS`                | `coingecko-detail-platforms`  | `GET /api/stablecoin/:id` (CoinGecko-only detail provider)                   |
-| `CG_MCAP`                            | `coingecko-mcap`              | `sync-stablecoins` (CG supply fallback)                                      |
-| `CG_DISCOVERY`                       | `coingecko-discovery`         | `discovery-scan`                                                             |
-| `CMC_PRICES`                         | `coinmarketcap-prices`        | `enrich-prices` pass 2 fallback                                              |
-| `DEXSCREENER_PRICES`                 | `dexscreener-prices`          | `enrich-prices` pass 3 fallback                                              |
-| `TREASURY_RATES`                     | `treasury-rates`              | `fetch-tbill-rate`                                                           |
-| `ETHERSCAN`                          | `etherscan`                   | `sync-blacklist`                                                             |
-| `TRONGRID`                           | `trongrid`                    | `sync-blacklist` (Tron chains)                                               |
-| `DRPC`                               | `drpc`                        | Blacklist balance enrichment (L2 archive reads)                              |
-| `ALCHEMY`                            | `alchemy`                     | `sync-mint-burn`                                                             |
-| `PYTH_PRICES`                        | `pyth-prices`                 | `enrich-prices` primary consensus                                            |
-| `BINANCE_PRICES`                     | `binance-prices`              | `enrich-prices` primary consensus                                            |
-| `COINBASE_PRICES`                    | `coinbase-prices`             | `enrich-prices` primary consensus                                            |
-| `REDSTONE_PRICES`                    | `redstone-prices`             | `enrich-prices` primary consensus                                            |
-| `CURVE_ONCHAIN`                      | `curve-onchain`               | `enrich-prices` primary consensus                                            |
-| `CURVE_LIQUIDITY_API`                | `curve-liquidity-api`         | `sync-dex-liquidity` (Curve pool liquidity fetch)                            |
-| `FX_FRANKFURTER`                     | `fx-frankfurter`              | `sync-fx-rates` primary Frankfurter API circuit breaker                      |
-| `FX_REALTIME`                        | `fx-realtime`                 | `sync-fx-rates` real-time FX cross-validation                                |
-| `GECKO_TERMINAL_PROBE`               | `geckoterminal-probe`         | `enrich-prices` GeckoTerminal price probe fallback                           |
-| `TWITTER_API`                        | `twitter-api`                 | `daily-digest` social posting                                                |
-| `TELEGRAM_API`                       | `telegram-api`                | `daily-digest` social posting, `dispatch-telegram-alerts` subscriber fan-out |
-| `KINESIS_KAU`                        | `kinesis-kau-horizon`         | `sync-kinesis-supply` KAU chain circulation fetch                            |
-| `KINESIS_KAG`                        | `kinesis-kag-horizon`         | `sync-kinesis-supply` KAG chain circulation fetch                            |
+| Source key                           | Cache key                     | Used by                                                                                                                   |
+| ------------------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `DL_STABLECOINS`                     | `defillama-stablecoins`       | `sync-stablecoins`                                                                                                        |
+| `DL_STABLECOIN_DETAIL`               | `defillama-stablecoin-detail` | `GET /api/stablecoin/:id` (DefiLlama detail upstream)                                                                     |
+| `DL_COINS`                           | `defillama-coins`             | `enrich-prices`                                                                                                           |
+| `DL_YIELDS`                          | `defillama-yields`            | `sync-yield-data`, `sync-dex-liquidity`                                                                                   |
+| `DL_PROTOCOLS`                       | `defillama-protocols`         | `sync-dex-liquidity`                                                                                                      |
+| `CG_PRICES`                          | `coingecko-prices`            | `enrich-prices`                                                                                                           |
+| `CG_DETAIL_PLATFORMS`                | `coingecko-detail-platforms`  | `GET /api/stablecoin/:id` (CoinGecko-only detail provider)                                                                |
+| `CG_MCAP`                            | `coingecko-mcap`              | `sync-stablecoins` (CG supply fallback)                                                                                   |
+| `CG_DISCOVERY`                       | `coingecko-discovery`         | `discovery-scan`                                                                                                          |
+| `CMC_PRICES`                         | `coinmarketcap-prices`        | `enrich-prices` pass 2 fallback                                                                                           |
+| `DEXSCREENER_PRICES`                 | `dexscreener-prices`          | `enrich-prices` pass 3 fallback                                                                                           |
+| `TREASURY_RATES`                     | `treasury-rates`              | `fetch-tbill-rate`                                                                                                        |
+| `ETHERSCAN`                          | `etherscan`                   | `sync-blacklist`                                                                                                          |
+| `TRONGRID`                           | `trongrid`                    | `sync-blacklist` (Tron chains)                                                                                            |
+| `DRPC`                               | `drpc`                        | Blacklist balance enrichment (L2 archive reads)                                                                           |
+| `ALCHEMY`                            | `alchemy`                     | `sync-mint-burn`                                                                                                          |
+| `PYTH_PRICES`                        | `pyth-prices`                 | `enrich-prices` primary consensus                                                                                         |
+| `BINANCE_PRICES`                     | `binance-prices`              | `enrich-prices` primary consensus                                                                                         |
+| `COINBASE_PRICES`                    | `coinbase-prices`             | `enrich-prices` primary consensus                                                                                         |
+| `REDSTONE_PRICES`                    | `redstone-prices`             | `enrich-prices` primary consensus                                                                                         |
+| `CURVE_ONCHAIN`                      | `curve-onchain`               | `enrich-prices` primary consensus                                                                                         |
+| `CURVE_LIQUIDITY_API`                | `curve-liquidity-api`         | `sync-dex-liquidity` (Curve pool liquidity fetch)                                                                         |
+| `FX_FRANKFURTER`                     | `fx-frankfurter`              | `sync-fx-rates` primary Frankfurter API circuit breaker                                                                   |
+| `FX_REALTIME`                        | `fx-realtime`                 | `sync-fx-rates` real-time FX cross-validation                                                                             |
+| `GECKO_TERMINAL_PROBE`               | `geckoterminal-probe`         | `enrich-prices` GeckoTerminal price probe fallback                                                                        |
+| `TWITTER_API`                        | `twitter-api`                 | `daily-digest` social posting                                                                                             |
+| `TELEGRAM_API`                       | `telegram-api`                | `daily-digest` social posting, `dispatch-telegram-alerts` subscriber fan-out                                              |
+| `KINESIS_KAU`                        | `kinesis-kau-horizon`         | `sync-kinesis-supply` KAU chain circulation fetch                                                                         |
+| `KINESIS_KAG`                        | `kinesis-kag-horizon`         | `sync-kinesis-supply` KAG chain circulation fetch                                                                         |
 | Dynamic `live-reserves:<scope>` keys | e.g. `live-reserves:infinifi` | `sync-live-reserves` per configured breaker scope; some adapters also opt into source-invariant within-run result sharing |
 
 Primary-oracle implementation notes:
@@ -628,7 +629,11 @@ Primary-oracle implementation notes:
 
 ```typescript
 export function normalizeWebhookUrl(url: string | undefined): string | null;
-export async function sendAlert(webhookUrl: string | null | undefined, title: string, message: string): Promise<boolean>;
+export async function sendAlert(
+  webhookUrl: string | null | undefined,
+  title: string,
+  message: string,
+): Promise<boolean>;
 ```
 
 Auto-detects webhook format from URL:
@@ -719,13 +724,13 @@ CREATE TABLE IF NOT EXISTS cron_slot_executions (
 );
 ```
 
-| Function                                   | Description                                                                                                                       |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| `acquireCronLease(db, job, owner, ttlSec)` | Acquires lease for a job, or takes over when expired. Returns `true` on success, `false` if another active owner holds the lease. |
-| `renewCronLease(db, job, owner, ttlSec)`   | Extends `lease_until` for the current owner. Returns `false` if ownership was lost.                                               |
-| `releaseCronLease(db, job, owner)`         | Deletes lease row only when caller still owns it.                                                                                 |
-| `runCronWithLease(db, job, fn, opts)`      | Wrapper primitive: acquire → heartbeat renewals → run fn → release; returns `ok` or `skipped_locked` with metadata.               |
-| `runScheduledSlotWithFence(db, slotKey, fn, opts)` | Deduplicates and heartbeats an entire trigger slot before any slot runner work begins.                                    |
+| Function                                           | Description                                                                                                                       |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `acquireCronLease(db, job, owner, ttlSec)`         | Acquires lease for a job, or takes over when expired. Returns `true` on success, `false` if another active owner holds the lease. |
+| `renewCronLease(db, job, owner, ttlSec)`           | Extends `lease_until` for the current owner. Returns `false` if ownership was lost.                                               |
+| `releaseCronLease(db, job, owner)`                 | Deletes lease row only when caller still owns it.                                                                                 |
+| `runCronWithLease(db, job, fn, opts)`              | Wrapper primitive: acquire → heartbeat renewals → run fn → release; returns `ok` or `skipped_locked` with metadata.               |
+| `runScheduledSlotWithFence(db, slotKey, fn, opts)` | Deduplicates and heartbeats an entire trigger slot before any slot runner work begins.                                            |
 
 Default behavior in `runCronWithLease`:
 
@@ -856,33 +861,33 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 
 **Registered adapters:**
 
-| Adapter                    | Coins                                                                    | Source                                                                                                                                                                                                                                                                                                                                                                                                            |
-| -------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `accountable`              | `aznd-mu-digital`, `yusd-aegis`, `usn-noon`, `nusd-neutrl`, `yzusd-yuzu` | `inputs.primary.kind = "http-json"` -> Accountable dashboard JSON feeds such as `https://mu.accountable.capital:10443/dashboard`, `https://aegis.accountable.capital:10443/dashboard/YUSD`, and `https://cache.accountable.capital/dashboard/<slug>` using bucket families like `type`, `reserves_split`, `deployment`, `type_split`, and `exposure_split`; each distinct dashboard URL has its own breaker scope |
-| `asymmetry`                | `usdaf-asymmetry`                                                        | `inputs.primary.kind = "http-json"` -> `https://app.asymmetry.finance/api/stats` (`usdaf.branch`)                                                                                                                                                                                                                                                                                                                 |
-| `btcfi`                    | `btcusd-btcfi`                                                           | `inputs.primary.kind = "http-json"` -> `https://www.btcfi.one/api/getBtcfiMarket?isTestnet=false` + handler metadata                                                                                                                                                                                                                                                                                              |
-| `chainlink-nav`            | `usdy-ondo-finance`, `ustb-superstate`, `mtbill-midas`                   | `inputs.primary.kind = "onchain-evm"` -> Chainlink NAV feed oracle `latestRoundData()` via Etherscan proxy RPC                                                                                                                                                                                                                                                                                                   |
-| `chainlink-por`            | `tusd-trueusd`                                                           | `inputs.primary.kind = "onchain-evm"` -> Chainlink Proof-of-Reserve feed `latestRoundData()` via Etherscan proxy RPC                                                                                                                                                                                                                                                                                             |
-| `circle-transparency`      | `usdc-circle`, `eurc-circle`                                             | `inputs.primary.kind = "http-html"` -> `https://www.circle.com/transparency` (server-rendered HTML reserve data)                                                                                                                                                                                                                                                                                                 |
-| `collateral-positions-api` | `zchf-frankencoin`, `deuro-deuro`                                        | `inputs.primary.kind = "http-json"` -> official ecosystem collateral-position APIs + official price mapping endpoints                                                                                                                                                                                                                                                                                             |
-| `crvusd`                   | `crvusd-curve`                                                           | `inputs.primary.kind = "http-json"` -> `https://prices.curve.finance/v1/crvusd/markets`                                                                                                                                                                                                                                                                                                                           |
-| `ethena`                   | `usde-ethena`                                                            | `inputs.primary.kind = "http-json"` -> `https://app.ethena.fi/api/positions/current/collateral`                                                                                                                                                                                                                                                                                                                   |
-| `evm-branch-balances`      | `bold-liquity`, `usnd-nerite`, `usd0-usual`                              | `inputs.primary.kind = "onchain-evm"` -> branch ERC-20 balances plus DefiLlama valuation, with optional fixed-price overrides for wrapper assets that lack direct DL pricing                                                                                                                                                                                                                                     |
-| `falcon`                   | `usdf-falcon`                                                            | `inputs.primary.kind = "http-json"` -> `https://api.falcon.finance/api/v1/transparency`                                                                                                                                                                                                                                                                                                                          |
-| `fdusd-transparency`       | `fdusd-first-digital`                                                    | `inputs.primary.kind = "http-html"` -> `https://www.firstdigitallabs.com/transparency` (server-rendered reserve composition + as-of date)                                                                                                                                                                                                                                                                        |
-| `frax`                     | `frax-frax`, `frxusd-frax`                                               | `inputs.primary.kind = "http-json"` -> `https://api.frax.finance/combineddata/`                                                                                                                                                                                                                                                                                                                                  |
-| `gho`                      | `gho-aave`                                                               | `inputs.primary.kind = "onchain-evm"` -> Ethereum `eth_call` reads against the GHO token and reviewed mainnet GSM modules; current GSM backing is measured onchain and the remaining supply stays aggregated as residual issuance / reserve buffer                                                                                                                                                                 |
-| `fx`                       | `fxusd-f-x-protocol`                                                     | `inputs.primary.kind = "http-json"` -> `https://api.aladdin.club/api1/get_fx_tvl` (`data.poolInfo`)                                                                                                                                                                                                                                                                                                             |
-| `infinifi` | `iusd-infinifi` | `inputs.primary.kind = "http-json"` -> `https://eth-api.infinifi.xyz/api/protocol/data` |
-| `m0` | `m-m0`, `musd-metamask`, `usdn-noble` | `inputs.primary.kind = "http-json"` -> `https://protocol-api.m0.org/graphql` (`CollateralCurrent`) |
-| `mento` | `cusd-celo`, `ceur-celo` | `inputs.primary.kind = "http-html"` -> `https://reserve.mento.org/` (server-rendered `reserveComposition`) |
-| `openeden-usdo` | `usdo-openeden` | `inputs.primary.kind = "http-json"` -> `https://prod-gw.openeden.com/usdo/sys/reserve-composition-last` |
-| `reservoir` | `wsrusd-reservoir` | `inputs.primary.kind = "http-json"` -> `https://app.reservoir.xyz/api/reserves/raw` |
-| `erc4626-single-asset` | `syrupusdc-maple`, `syrupusdt-maple` | `inputs.primary.kind = "onchain-evm"` -> Ethereum `totalAssets()` / `asset()` calls against the vault contract |
-| `sgforge-coinvertible` | `eurcv-societe-generale-forge` | `inputs.primary.kind = "http-html"` -> `https://www.sgforge.com/product/coinvertible/` (daily CoinVertible circulation/cash disclosure) |
-| `single-asset` | `usyc-hashnote`, `buidl-blackrock`, `lusd-liquity`, `meusd-mezo`, `feusd-felix`, `cetes-etherfuse`, `paxg-paxos`, `usdb-blast` | `inputs.primary.kind = "onchain-evm"` or `http-json` -> single-asset probe with fixed 100% composition |
-| `sky-makercore`            | `usds-sky`, `dai-makerdao`                                               | `inputs.primary.kind = "http-json"` -> `https://api.llama.fi/protocol/makerdao` (DefiLlama protocol TVL breakdown)                                                                                                                                                                                                                                                                                               |
-| `tether`                   | `usdt-tether`                                                            | `inputs.primary.kind = "http-json"` -> `https://app.tether.to/transparency.json`                                                                                                                                                                                                                                                                                                                                 |
+| Adapter                    | Coins                                                                                                                          | Source                                                                                                                                                                                                                                                                                                                                                                                                            |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `accountable`              | `aznd-mu-digital`, `yusd-aegis`, `usn-noon`, `nusd-neutrl`, `yzusd-yuzu`                                                       | `inputs.primary.kind = "http-json"` -> Accountable dashboard JSON feeds such as `https://mu.accountable.capital:10443/dashboard`, `https://aegis.accountable.capital:10443/dashboard/YUSD`, and `https://cache.accountable.capital/dashboard/<slug>` using bucket families like `type`, `reserves_split`, `deployment`, `type_split`, and `exposure_split`; each distinct dashboard URL has its own breaker scope |
+| `asymmetry`                | `usdaf-asymmetry`                                                                                                              | `inputs.primary.kind = "http-json"` -> `https://app.asymmetry.finance/api/stats` (`usdaf.branch`)                                                                                                                                                                                                                                                                                                                 |
+| `btcfi`                    | `btcusd-btcfi`                                                                                                                 | `inputs.primary.kind = "http-json"` -> `https://www.btcfi.one/api/getBtcfiMarket?isTestnet=false` + handler metadata                                                                                                                                                                                                                                                                                              |
+| `chainlink-nav`            | `usdy-ondo-finance`, `ustb-superstate`, `mtbill-midas`                                                                         | `inputs.primary.kind = "onchain-evm"` -> Chainlink NAV feed oracle `latestRoundData()` via Etherscan proxy RPC                                                                                                                                                                                                                                                                                                    |
+| `chainlink-por`            | `tusd-trueusd`                                                                                                                 | `inputs.primary.kind = "onchain-evm"` -> Chainlink Proof-of-Reserve feed `latestRoundData()` via Etherscan proxy RPC                                                                                                                                                                                                                                                                                              |
+| `circle-transparency`      | `usdc-circle`, `eurc-circle`                                                                                                   | `inputs.primary.kind = "http-html"` -> `https://www.circle.com/transparency` (server-rendered HTML reserve data)                                                                                                                                                                                                                                                                                                  |
+| `collateral-positions-api` | `zchf-frankencoin`, `deuro-deuro`                                                                                              | `inputs.primary.kind = "http-json"` -> official ecosystem collateral-position APIs + official price mapping endpoints                                                                                                                                                                                                                                                                                             |
+| `crvusd`                   | `crvusd-curve`                                                                                                                 | `inputs.primary.kind = "http-json"` -> `https://prices.curve.finance/v1/crvusd/markets`, plus direct Ethereum `eth_call` reads against the Yield Basis factory / LT contracts to unwrap indirect crvUSD collateral into external asset balances before DefiLlama valuation                                                                                                                                        |
+| `ethena`                   | `usde-ethena`                                                                                                                  | `inputs.primary.kind = "http-json"` -> `https://app.ethena.fi/api/positions/current/collateral`                                                                                                                                                                                                                                                                                                                   |
+| `evm-branch-balances`      | `bold-liquity`, `usnd-nerite`, `usd0-usual`                                                                                    | `inputs.primary.kind = "onchain-evm"` -> branch ERC-20 balances plus DefiLlama valuation, with optional fixed-price overrides for wrapper assets that lack direct DL pricing                                                                                                                                                                                                                                      |
+| `falcon`                   | `usdf-falcon`                                                                                                                  | `inputs.primary.kind = "http-json"` -> `https://api.falcon.finance/api/v1/transparency`                                                                                                                                                                                                                                                                                                                           |
+| `fdusd-transparency`       | `fdusd-first-digital`                                                                                                          | `inputs.primary.kind = "http-html"` -> `https://www.firstdigitallabs.com/transparency` (server-rendered reserve composition + as-of date)                                                                                                                                                                                                                                                                         |
+| `frax`                     | `frax-frax`, `frxusd-frax`                                                                                                     | `inputs.primary.kind = "http-json"` -> `https://api.frax.finance/combineddata/`                                                                                                                                                                                                                                                                                                                                   |
+| `gho`                      | `gho-aave`                                                                                                                     | `inputs.primary.kind = "onchain-evm"` -> Ethereum `eth_call` reads against the GHO token and reviewed mainnet GSM modules; current GSM backing is measured onchain and the remaining supply stays aggregated as residual issuance / reserve buffer                                                                                                                                                                |
+| `fx`                       | `fxusd-f-x-protocol`                                                                                                           | `inputs.primary.kind = "http-json"` -> `https://api.aladdin.club/api1/get_fx_tvl` (`data.poolInfo`)                                                                                                                                                                                                                                                                                                               |
+| `infinifi`                 | `iusd-infinifi`                                                                                                                | `inputs.primary.kind = "http-json"` -> `https://eth-api.infinifi.xyz/api/protocol/data`                                                                                                                                                                                                                                                                                                                           |
+| `m0`                       | `m-m0`, `musd-metamask`, `usdn-noble`                                                                                          | `inputs.primary.kind = "http-json"` -> `https://protocol-api.m0.org/graphql` (`CollateralCurrent`)                                                                                                                                                                                                                                                                                                                |
+| `mento`                    | `cusd-celo`, `ceur-celo`                                                                                                       | `inputs.primary.kind = "http-html"` -> `https://reserve.mento.org/` (server-rendered `reserveComposition`)                                                                                                                                                                                                                                                                                                        |
+| `openeden-usdo`            | `usdo-openeden`                                                                                                                | `inputs.primary.kind = "http-json"` -> `https://prod-gw.openeden.com/usdo/sys/reserve-composition-last`                                                                                                                                                                                                                                                                                                           |
+| `reservoir`                | `wsrusd-reservoir`                                                                                                             | `inputs.primary.kind = "http-json"` -> `https://app.reservoir.xyz/api/reserves/raw`                                                                                                                                                                                                                                                                                                                               |
+| `erc4626-single-asset`     | `syrupusdc-maple`, `syrupusdt-maple`                                                                                           | `inputs.primary.kind = "onchain-evm"` -> Ethereum `totalAssets()` / `asset()` calls against the vault contract                                                                                                                                                                                                                                                                                                    |
+| `sgforge-coinvertible`     | `eurcv-societe-generale-forge`                                                                                                 | `inputs.primary.kind = "http-html"` -> `https://www.sgforge.com/product/coinvertible/` (daily CoinVertible circulation/cash disclosure)                                                                                                                                                                                                                                                                           |
+| `single-asset`             | `usyc-hashnote`, `buidl-blackrock`, `lusd-liquity`, `meusd-mezo`, `feusd-felix`, `cetes-etherfuse`, `paxg-paxos`, `usdb-blast` | `inputs.primary.kind = "onchain-evm"` or `http-json` -> single-asset probe with fixed 100% composition                                                                                                                                                                                                                                                                                                            |
+| `sky-makercore`            | `usds-sky`, `dai-makerdao`                                                                                                     | `inputs.primary.kind = "http-json"` -> `https://api.llama.fi/protocol/makerdao` (DefiLlama protocol TVL breakdown)                                                                                                                                                                                                                                                                                                |
+| `tether`                   | `usdt-tether`                                                                                                                  | `inputs.primary.kind = "http-json"` -> `https://app.tether.to/transparency.json`                                                                                                                                                                                                                                                                                                                                  |
 
 **Operational behavior:**
 
@@ -917,6 +922,7 @@ Current reserve-sync support distinguishes direct and proxy live-capacity teleme
 **Purpose:** Fetches circulation, cumulative mint, and cumulative redemption totals from the two Kinesis Stellar-fork blockchains. Writes circulation to the `onchain_supply` table for independent supply verification against DefiLlama/CoinGecko. Caches full totals in the `cache` table under `kinesis-kinesis-kau-totals` / `kinesis-kinesis-kag-totals` for future flow-delta computation.
 
 **Endpoints:**
+
 - KAU: `https://kau-mainnet.kinesisgroup.io/coin_in_circulation`
 - KAG: `https://kag-mainnet.kinesisgroup.io/coin_in_circulation`
 
@@ -987,36 +993,36 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 28 cron jobs across 13 triggers via `CRON_INTERVALS` in `shared/lib/cron-jobs.ts`:
 
-| Job                             | Interval       | Trigger                                     |
-| ------------------------------- | -------------- | ------------------------------------------- |
-| `sync-stablecoins`              | 900s (15min)   | `*/15 * * * *`                              |
-| `sync-stablecoin-charts`        | 3,600s (1h)    | `10,40 * * * *` (1h cooldown)               |
-| `sync-fx-rates`                 | 900s (15min)   | `*/15 * * * *`                              |
-| `stability-index`               | 1,800s (30min) | `10,40 * * * *`                             |
-| `compute-dews`                  | 1,800s (30min) | `10,40 * * * *`                             |
-| `status-self-check`             | 900s (15min)   | `*/15 * * * *`                              |
-| `dispatch-telegram-alerts`      | 300s (5min)    | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *` |
-| `sync-blacklist`                | 3,600s (1h)    | `3 * * * *`                                  |
-| `sync-mint-burn`                | 1,200s (20min) | `4,24,44 * * * *`                           |
-| `sync-dex-discovery`            | 1,800s (30min) | `6,36 * * * *`                              |
-| `sync-mint-burn-extended`       | 1,200s (20min) | `13,33,53 * * * *`                          |
-| `sync-dex-liquidity`            | 1,800s (30min) | `10,40 * * * *`                             |
-| `sync-yield-data`               | 3,600s (1h)    | `20 * * * *`                                |
-| `sync-yield-supplemental`       | 14,400s (4h)   | `25 */4 * * *`                              |
-| `snapshot-supply`               | 86,400s (24h)  | `*/15 * * * *` (primary) / `0 8 * * *` (fallback) |
-| `snapshot-chain-supply`         | 86,400s (24h)  | `*/15 * * * *`                              |
-| `snapshot-safety-grade-history` | 86,400s (24h)  | `0 8 * * *`                                 |
-| `fetch-tbill-rate`              | 86,400s (24h)  | `0 8 * * *`                                 |
-| `snapshot-psi`                  | 86,400s (24h)  | `0 8 * * *`                                 |
-| `sync-usds-status`              | 86,400s (24h)  | `0 8 * * *`                                 |
-| `sync-live-reserves`            | 3,600s (1h)    | `11 * * * *`                                |
-| `sync-redemption-backstops`     | 3,600s (1h)    | `11 * * * *`                                |
-| `sync-kinesis-supply`           | 3,600s (1h)    | `11 * * * *`                                |
-| `sync-bluechip`                 | 86,400s (24h)  | `5 8 * * *`                                 |
-| `daily-digest`                  | 86,400s (24h)  | `5 8 * * *`                                 |
-| `weekly-recap`                  | 604,800s (7d)  | `5 8 * * *`                                 |
-| `discovery-scan`                | 604,800s (7d)  | `5 8 * * *` (Monday-only)                   |
-| `yield-coverage-audit`          | 2,592,000s (30d) | `0 6 1 * *`                               |
+| Job                             | Interval         | Trigger                                           |
+| ------------------------------- | ---------------- | ------------------------------------------------- |
+| `sync-stablecoins`              | 900s (15min)     | `*/15 * * * *`                                    |
+| `sync-stablecoin-charts`        | 3,600s (1h)      | `10,40 * * * *` (1h cooldown)                     |
+| `sync-fx-rates`                 | 900s (15min)     | `*/15 * * * *`                                    |
+| `stability-index`               | 1,800s (30min)   | `10,40 * * * *`                                   |
+| `compute-dews`                  | 1,800s (30min)   | `10,40 * * * *`                                   |
+| `status-self-check`             | 900s (15min)     | `*/15 * * * *`                                    |
+| `dispatch-telegram-alerts`      | 300s (5min)      | `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`       |
+| `sync-blacklist`                | 3,600s (1h)      | `3 * * * *`                                       |
+| `sync-mint-burn`                | 1,200s (20min)   | `4,24,44 * * * *`                                 |
+| `sync-dex-discovery`            | 1,800s (30min)   | `6,36 * * * *`                                    |
+| `sync-mint-burn-extended`       | 1,200s (20min)   | `13,33,53 * * * *`                                |
+| `sync-dex-liquidity`            | 1,800s (30min)   | `10,40 * * * *`                                   |
+| `sync-yield-data`               | 3,600s (1h)      | `20 * * * *`                                      |
+| `sync-yield-supplemental`       | 14,400s (4h)     | `25 */4 * * *`                                    |
+| `snapshot-supply`               | 86,400s (24h)    | `*/15 * * * *` (primary) / `0 8 * * *` (fallback) |
+| `snapshot-chain-supply`         | 86,400s (24h)    | `*/15 * * * *`                                    |
+| `snapshot-safety-grade-history` | 86,400s (24h)    | `0 8 * * *`                                       |
+| `fetch-tbill-rate`              | 86,400s (24h)    | `0 8 * * *`                                       |
+| `snapshot-psi`                  | 86,400s (24h)    | `0 8 * * *`                                       |
+| `sync-usds-status`              | 86,400s (24h)    | `0 8 * * *`                                       |
+| `sync-live-reserves`            | 3,600s (1h)      | `11 * * * *`                                      |
+| `sync-redemption-backstops`     | 3,600s (1h)      | `11 * * * *`                                      |
+| `sync-kinesis-supply`           | 3,600s (1h)      | `11 * * * *`                                      |
+| `sync-bluechip`                 | 86,400s (24h)    | `5 8 * * *`                                       |
+| `daily-digest`                  | 86,400s (24h)    | `5 8 * * *`                                       |
+| `weekly-recap`                  | 604,800s (7d)    | `5 8 * * *`                                       |
+| `discovery-scan`                | 604,800s (7d)    | `5 8 * * *` (Monday-only)                         |
+| `yield-coverage-audit`          | 2,592,000s (30d) | `0 6 1 * *`                                       |
 
 A job is marked "unhealthy" if its last run had `status='error'` or if the last run started more than 2× its expected interval ago. `/api/status` now also exposes `crons[*].inFlight` while a long-running leased job is active, including `stage`, `itemsDone/itemsTotal`, the last heartbeat timestamp, and a `stale` flag when the active-progress row stops updating. Only progress rows backed by a still-active matching lease are surfaced this way.
 
@@ -1047,53 +1053,53 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 
 ## File Index
 
-| File                                               | Role                                                                                                                                                                |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `worker/src/index.ts`                              | Thin worker entry: delegates `fetch`/`scheduled` to handler modules                                                                                                 |
-| `worker/src/handlers/http.ts`                      | HTTP request orchestration: preflight, gates, edge cache lookup/write, route-context build, router dispatch                                                        |
-| `worker/src/handlers/http/cors.ts`                 | CORS origin resolution, preflight response, and response-header decoration                                                                                           |
-| `worker/src/handlers/http/gates.ts`                | Maintenance-mode gate, public API rate limiting, and one-time env-contract warnings                                                                                  |
-| `worker/src/handlers/http/context.ts`              | Route dependency hydration from `Env` into `FullRouteContext`                                                                                                        |
-| `worker/src/handlers/http/edge-cache.ts`           | Edge cache match/store policy for cacheable GET requests                                                                                                             |
-| `worker/src/handlers/scheduled.ts`                 | Thin cron entrypoint: env-aware init + cron-expression-to-slot-runner dispatch                                                                                      |
-| `worker/src/handlers/scheduled/context.ts`         | Shared scheduled runtime context: lease-aware `runLeasedCron`, slot config, stablecoins capability parsing                                                          |
+| File                                               | Role                                                                                                                                                                  |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `worker/src/index.ts`                              | Thin worker entry: delegates `fetch`/`scheduled` to handler modules                                                                                                   |
+| `worker/src/handlers/http.ts`                      | HTTP request orchestration: preflight, gates, edge cache lookup/write, route-context build, router dispatch                                                           |
+| `worker/src/handlers/http/cors.ts`                 | CORS origin resolution, preflight response, and response-header decoration                                                                                            |
+| `worker/src/handlers/http/gates.ts`                | Maintenance-mode gate, public API rate limiting, and one-time env-contract warnings                                                                                   |
+| `worker/src/handlers/http/context.ts`              | Route dependency hydration from `Env` into `FullRouteContext`                                                                                                         |
+| `worker/src/handlers/http/edge-cache.ts`           | Edge cache match/store policy for cacheable GET requests                                                                                                              |
+| `worker/src/handlers/scheduled.ts`                 | Thin cron entrypoint: env-aware init + cron-expression-to-slot-runner dispatch                                                                                        |
+| `worker/src/handlers/scheduled/context.ts`         | Shared scheduled runtime context: lease-aware `runLeasedCron`, slot config, stablecoins capability parsing                                                            |
 | `worker/src/handlers/scheduled/*.ts`               | Per-trigger slot runners (quarter-hourly, isolated mint/burn lanes, half-hourly including DEX discovery, hourly blacklist + reserve slots, Telegram, and daily slots) |
-| `worker/src/lib/env.ts`                            | Worker Env interface + `parseCsvEnv()` helper for CSV-based runtime overrides                                                                                       |
-| `worker/wrangler.toml`                             | Deployment config: custom domain, cron triggers, D1 binding, vars                                                                                                   |
-| `worker/src/lib/db.ts`                             | Database helpers: `batchExecute`, block tracking                                                                                                                    |
-| `worker/src/lib/db-cache.ts`                       | Cache CRUD: `getCache`, `setCache`, `setCacheIfNewer`, `getPriceCache`, `savePriceCache`                                                                            |
-| `worker/src/lib/cron-logger.ts`                    | `logCronRun` wrapper and `CronResult` type                                                                                                                          |
-| `worker/src/lib/cron-lease.ts`                     | Cron lease primitives: `acquireCronLease`, `runCronWithLease`, `CRON_TIMEOUT_MS`                                                                                    |
-| `worker/src/lib/auth.ts`                           | Admin auth: verifies the `ops-api` Cloudflare Access JWT (`Cf-Access-Jwt-Assertion`)                                                                               |
-| `worker/src/lib/alerts.ts`                         | Webhook alerts: auto-detects Discord/Slack format                                                                                                                   |
-| `worker/src/lib/constants.ts`                      | Shared constants: API URLs, thresholds, cache profiles                                                                                                              |
-| `shared/lib/cron-jobs.ts`                          | Shared cron expressions, per-job intervals, `CRON_INTERVALS`, and status-page grouping/trigger metadata                                                             |
-| `shared/lib/status-thresholds.ts`                  | Shared status threshold constants for frontend + worker data-quality/status bands                                                                                   |
-| `worker/src/lib/blacklist-gaps.ts`                 | Shared blacklist gap query helper (Tron null-amount exclusion + recent window)                                                                                      |
-| `worker/src/lib/chain-registry.ts`                 | Unified chain mappings + chain RPC configs: Alchemy/dRPC/public fallback for 11 chains                                                                              |
-| `worker/src/lib/coingecko.ts`                      | CoinGecko init: free/pro URL switching, auth headers                                                                                                                |
-| `worker/src/lib/bluechip-slugs.ts`                 | Bluechip slug → canonical Pharos ID mapping (20 coins)                                                                                                              |
-| `worker/src/lib/mint-burn-health-config.ts`        | Shared mint/burn freshness defaults, env override resolver, stale-symbol evaluator                                                                                  |
-| `worker/src/lib/dex-liquidity.ts`                  | Shared `dex_liquidity` table loader (`loadDexLiquidityMap`)                                                                                                         |
-| `worker/src/lib/redemption-backstop-sources.ts`    | Redemption-route resolver: capacity models, docs, costs, and effective-exit scoring inputs                                                                          |
-| `worker/src/lib/redemption-backstops-store.ts`     | D1 snapshot storage + `GET /api/redemption-backstops` response builder                                                                                              |
-| `worker/src/lib/psi-recompute.ts`                  | Shared historical PSI day-input builder used by audit/backfill admin APIs                                                                                           |
-| `worker/src/lib/mint-burn-contracts.ts`            | Mint/burn event configs resolved from shared stablecoin contracts, plus explicit vault overrides, `startBlock`, and per-config tiering metadata                     |
-| `worker/src/lib/mint-burn-scoring.ts`              | FIS computation, gauge bands, flight-to-quality detection (pure functions)                                                                                          |
-| `worker/src/cron/sync-stablecoin-charts.ts`        | Chart sync: DefiLlama charts, FX fix, downsampling                                                                                                                  |
-| `worker/src/cron/sync-mint-burn.ts`                | Mint/burn flow sync: Alchemy log scanning (Transfer + custom topics), hourly aggregation                                                                            |
-| `worker/src/cron/sync-redemption-backstops.ts`     | Hourly redemption-route snapshot sync used by detail pages and report cards                                                                                         |
-| `worker/src/cron/sync-kinesis-supply.ts`           | Hourly Kinesis Horizon supply sync: KAU/KAG circulation, mint, and redemption totals                                                                               |
-| `worker/src/cron/sync-usds-status.ts`              | USDS freeze monitor: ERC-1967 proxy inspection                                                                                                                      |
-| `worker/src/cron/sync-bluechip.ts`                 | Bluechip ratings: batch fetch from bluechip.org                                                                                                                     |
-| `worker/src/cron/snapshot-safety-grade-history.ts` | Daily Safety Score grade history snapshot writer (seed + grade-change events)                                                                                       |
-| `worker/src/cron/status-self-check.ts`             | Status reliability self-check: default-origin internal router probes, external `SELF_URL` HTTP probes, hysteresis persistence, discrepancy + probe-failure alerting |
-| `worker/src/lib/status-reliability.ts`             | Stable facade for status reliability imports                                                                                                                        |
-| `worker/src/lib/status-state-store.ts`             | Status hysteresis state persistence, snapshots, and transition history                                                                                              |
-| `worker/src/lib/status-probe-store.ts`             | Status self-probe persistence helpers                                                                                                                                                                                                     |
-| `worker/src/lib/status-discrepancy-store.ts`       | Divergence/probe-failure streak persistence and alert markers                                                                                                                                                                             |
-| `worker/src/lib/status-discrepancy-view.ts`        | Discrepancy view assembly from effective status + probe summary                                                                                                                                                                           |
-| `worker/migrations/0000_baseline.sql`              | Baseline schema for `cache`, blacklist tables, cron leases, and the rest of the pre-0072 D1 surface                                                                |
+| `worker/src/lib/env.ts`                            | Worker Env interface + `parseCsvEnv()` helper for CSV-based runtime overrides                                                                                         |
+| `worker/wrangler.toml`                             | Deployment config: custom domain, cron triggers, D1 binding, vars                                                                                                     |
+| `worker/src/lib/db.ts`                             | Database helpers: `batchExecute`, block tracking                                                                                                                      |
+| `worker/src/lib/db-cache.ts`                       | Cache CRUD: `getCache`, `setCache`, `setCacheIfNewer`, `getPriceCache`, `savePriceCache`                                                                              |
+| `worker/src/lib/cron-logger.ts`                    | `logCronRun` wrapper and `CronResult` type                                                                                                                            |
+| `worker/src/lib/cron-lease.ts`                     | Cron lease primitives: `acquireCronLease`, `runCronWithLease`, `CRON_TIMEOUT_MS`                                                                                      |
+| `worker/src/lib/auth.ts`                           | Admin auth: verifies the `ops-api` Cloudflare Access JWT (`Cf-Access-Jwt-Assertion`)                                                                                  |
+| `worker/src/lib/alerts.ts`                         | Webhook alerts: auto-detects Discord/Slack format                                                                                                                     |
+| `worker/src/lib/constants.ts`                      | Shared constants: API URLs, thresholds, cache profiles                                                                                                                |
+| `shared/lib/cron-jobs.ts`                          | Shared cron expressions, per-job intervals, `CRON_INTERVALS`, and status-page grouping/trigger metadata                                                               |
+| `shared/lib/status-thresholds.ts`                  | Shared status threshold constants for frontend + worker data-quality/status bands                                                                                     |
+| `worker/src/lib/blacklist-gaps.ts`                 | Shared blacklist gap query helper (Tron null-amount exclusion + recent window)                                                                                        |
+| `worker/src/lib/chain-registry.ts`                 | Unified chain mappings + chain RPC configs: Alchemy/dRPC/public fallback for 11 chains                                                                                |
+| `worker/src/lib/coingecko.ts`                      | CoinGecko init: free/pro URL switching, auth headers                                                                                                                  |
+| `worker/src/lib/bluechip-slugs.ts`                 | Bluechip slug → canonical Pharos ID mapping (20 coins)                                                                                                                |
+| `worker/src/lib/mint-burn-health-config.ts`        | Shared mint/burn freshness defaults, env override resolver, stale-symbol evaluator                                                                                    |
+| `worker/src/lib/dex-liquidity.ts`                  | Shared `dex_liquidity` table loader (`loadDexLiquidityMap`)                                                                                                           |
+| `worker/src/lib/redemption-backstop-sources.ts`    | Redemption-route resolver: capacity models, docs, costs, and effective-exit scoring inputs                                                                            |
+| `worker/src/lib/redemption-backstops-store.ts`     | D1 snapshot storage + `GET /api/redemption-backstops` response builder                                                                                                |
+| `worker/src/lib/psi-recompute.ts`                  | Shared historical PSI day-input builder used by audit/backfill admin APIs                                                                                             |
+| `worker/src/lib/mint-burn-contracts.ts`            | Mint/burn event configs resolved from shared stablecoin contracts, plus explicit vault overrides, `startBlock`, and per-config tiering metadata                       |
+| `worker/src/lib/mint-burn-scoring.ts`              | FIS computation, gauge bands, flight-to-quality detection (pure functions)                                                                                            |
+| `worker/src/cron/sync-stablecoin-charts.ts`        | Chart sync: DefiLlama charts, FX fix, downsampling                                                                                                                    |
+| `worker/src/cron/sync-mint-burn.ts`                | Mint/burn flow sync: Alchemy log scanning (Transfer + custom topics), hourly aggregation                                                                              |
+| `worker/src/cron/sync-redemption-backstops.ts`     | Hourly redemption-route snapshot sync used by detail pages and report cards                                                                                           |
+| `worker/src/cron/sync-kinesis-supply.ts`           | Hourly Kinesis Horizon supply sync: KAU/KAG circulation, mint, and redemption totals                                                                                  |
+| `worker/src/cron/sync-usds-status.ts`              | USDS freeze monitor: ERC-1967 proxy inspection                                                                                                                        |
+| `worker/src/cron/sync-bluechip.ts`                 | Bluechip ratings: batch fetch from bluechip.org                                                                                                                       |
+| `worker/src/cron/snapshot-safety-grade-history.ts` | Daily Safety Score grade history snapshot writer (seed + grade-change events)                                                                                         |
+| `worker/src/cron/status-self-check.ts`             | Status reliability self-check: default-origin internal router probes, external `SELF_URL` HTTP probes, hysteresis persistence, discrepancy + probe-failure alerting   |
+| `worker/src/lib/status-reliability.ts`             | Stable facade for status reliability imports                                                                                                                          |
+| `worker/src/lib/status-state-store.ts`             | Status hysteresis state persistence, snapshots, and transition history                                                                                                |
+| `worker/src/lib/status-probe-store.ts`             | Status self-probe persistence helpers                                                                                                                                 |
+| `worker/src/lib/status-discrepancy-store.ts`       | Divergence/probe-failure streak persistence and alert markers                                                                                                         |
+| `worker/src/lib/status-discrepancy-view.ts`        | Discrepancy view assembly from effective status + probe summary                                                                                                       |
+| `worker/migrations/0000_baseline.sql`              | Baseline schema for `cache`, blacklist tables, cron leases, and the rest of the pre-0072 D1 surface                                                                   |
 
 ---
 

@@ -10,7 +10,7 @@ import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
 import { sleepWithSignal } from "../lib/abort";
 import { CIRCUIT_SOURCE, SIM_BALANCES_OWNER_GROUP_DELAY_MS } from "../lib/constants";
-import { fetchSimWalletBalances } from "../lib/sim-balances";
+import { fetchSimWalletBalances, fetchSimWalletDefiStableBalances } from "../lib/sim-balances";
 
 const CACHE_KEY = "treasury-stable-exposure";
 const STALE_SEC = 20 * 60 * 60;
@@ -81,7 +81,7 @@ export async function syncTreasuryStableExposure(
       const walletSnapshots = [];
 
       for (const [ownerIndex, owner] of groupedOwners.entries()) {
-        const [treasuryBalances, stablecoinBalances] = await Promise.all([
+        const [treasuryBalancesResult, stablecoinBalancesResult, defiStableBalancesResult] = await Promise.allSettled([
           fetchSimWalletBalances({
             apiKey: simApiKey,
             address: owner.address,
@@ -95,12 +95,33 @@ export async function syncTreasuryStableExposure(
             stablecoinOnly: true,
             signal,
           }),
+          fetchSimWalletDefiStableBalances({
+            apiKey: simApiKey,
+            address: owner.address,
+            chainIds: owner.chainIds,
+            signal,
+          }),
         ]);
+
+        if (treasuryBalancesResult.status === "rejected") throw treasuryBalancesResult.reason;
+        if (stablecoinBalancesResult.status === "rejected") throw stablecoinBalancesResult.reason;
+
+        const treasuryBalances = treasuryBalancesResult.value;
+        const stablecoinBalances = stablecoinBalancesResult.value;
+        const defiStableBalances = defiStableBalancesResult.status === "fulfilled"
+          ? defiStableBalancesResult.value
+          : {
+              balances: [],
+              warnings: [
+                "DeFi position supplement failed for one or more treasury owners; LP, vault, and lending exposure may be understated.",
+              ],
+            };
 
         walletSnapshots.push({
           treasuryBalances: treasuryBalances.balances,
           stablecoinBalances: stablecoinBalances.balances,
-          warnings: [...treasuryBalances.warnings, ...stablecoinBalances.warnings],
+          derivedStablecoinBalances: defiStableBalances.balances,
+          warnings: [...treasuryBalances.warnings, ...stablecoinBalances.warnings, ...defiStableBalances.warnings],
         });
 
         if (ownerIndex < groupedOwners.length - 1) {

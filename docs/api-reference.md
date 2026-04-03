@@ -308,10 +308,11 @@ Daily snapshot of reviewed protocol and DAO treasury stablecoin sleeves. This en
 Important response semantics:
 
 - `treasuryUsd` is the full wallet-balance denominator from the same provider snapshot used for the stable sleeve.
-- `stablecoinSleeveUsd` includes all stablecoins returned by the provider’s stablecoin filter, even when some are not mapped to Pharos IDs.
-- `trackedStableUsd` is the subset of the stable sleeve that Pharos can map to tracked stablecoins.
+- `stablecoinSleeveUsd` combines direct stablecoin balances from Sim's stablecoin filter with supported LP, vault, and lending positions decomposed to their underlying stablecoins.
+- `trackedStableUsd` is the subset of the stable sleeve that Pharos can map to tracked stablecoins by `chain + contract`.
 - `decentralizedStablePctOfStableSleeve` therefore uses the full stable sleeve denominator, not only the tracked subset.
 - `coverage.untrackedStableUsd` discloses the stablecoin value that could not be mapped into a Pharos stablecoin ID.
+- `coverage.notes` may state when LP, vault, or lending positions were decomposed into underlying stablecoin exposure, or when that supplement failed and treasury-only coverage remained.
 - `weightedSafetyScore` is USD-weighted across tracked stable holdings that have a current report card; `coverage.ratedTrackedStablePct` shows how much of the tracked sleeve that score covers.
 
 Cold-start behavior: if no treasury snapshot has been published yet, the endpoint returns `200` with `entities: []` plus stale `_meta` freshness fields so UI and smoke checks can treat the dataset as temporarily empty rather than transport-failed.

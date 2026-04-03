@@ -23,7 +23,7 @@ The interactive page depends on three local/runtime sources:
 1. `useReportCards()` for live stablecoin grades and per-dimension scores.
 2. `useLogos()` for static logo assets from `data/logos.json`.
 3. `usePortfolio(reportData?.cards)` for holdings state, browser persistence, portfolio grade math, and upstream exposure derivation.
-4. `useTreasuryStableExposure()` for the daily protocol-treasury stablecoin leaderboard rendered below the personal holdings tools.
+4. `useTreasuryStableExposure()` for the daily protocol-treasury stablecoin leaderboard rendered below the personal holdings tools. The worker snapshot combines direct treasury stablecoin balances with supported LP / vault / lending positions decomposed to underlying stablecoins.
 
 There is no dedicated `/api/portfolio` endpoint. Portfolio holdings stay client-side.
 

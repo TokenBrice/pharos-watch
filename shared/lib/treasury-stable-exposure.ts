@@ -14,11 +14,13 @@ export interface TreasuryBalanceToken {
   chainId: number;
   tokenAddress: string;
   usdValue: number;
+  consumedBalanceKeys?: string[];
 }
 
 export interface TreasuryWalletSnapshot {
   treasuryBalances: TreasuryBalanceToken[];
   stablecoinBalances: TreasuryBalanceToken[];
+  derivedStablecoinBalances?: TreasuryBalanceToken[];
   warnings?: string[];
 }
 
@@ -61,6 +63,10 @@ function toPct(part: number, total: number): number | null {
   return roundPct((part / total) * 100);
 }
 
+function buildBalanceKey(chainId: number, tokenAddress: string): string {
+  return `${chainId}:${tokenAddress.toLowerCase()}`;
+}
+
 export function resolveTrackedTreasuryStablecoin(
   chainId: number,
   tokenAddress: string,
@@ -76,36 +82,60 @@ export function computeTreasuryStableExposureEntity(
 ): TreasuryStableExposureEntity {
   const reportCardById = new Map(cards.map((card) => [card.id, card]));
   const trackedStableUsd = new Map<string, { meta: StablecoinContractRef; usdValue: number }>();
+  const consumedStableBalanceKeys = new Set<string>();
 
   let treasuryUsd = 0;
   let stablecoinSleeveUsd = 0;
   let untrackedStableUsd = 0;
   let untrackedStableCount = 0;
+  let derivedStableBalanceCount = 0;
 
   const notes = new Set(seed.notes ?? []);
+
+  function accumulateStableBalance(balance: TreasuryBalanceToken) {
+    if (!Number.isFinite(balance.usdValue) || balance.usdValue <= 0) return;
+    stablecoinSleeveUsd += balance.usdValue;
+
+    const resolved = resolveTrackedTreasuryStablecoin(balance.chainId, balance.tokenAddress);
+    if (!resolved) {
+      untrackedStableUsd += balance.usdValue;
+      untrackedStableCount += 1;
+      return;
+    }
+
+    const existing = trackedStableUsd.get(resolved.stablecoinId);
+    if (existing) {
+      existing.usdValue += balance.usdValue;
+    } else {
+      trackedStableUsd.set(resolved.stablecoinId, {
+        meta: resolved,
+        usdValue: balance.usdValue,
+      });
+    }
+  }
+
+  for (const wallet of wallets) {
+    for (const balance of wallet.derivedStablecoinBalances ?? []) {
+      for (const consumedBalanceKey of balance.consumedBalanceKeys ?? []) {
+        consumedStableBalanceKeys.add(consumedBalanceKey);
+      }
+    }
+  }
+
   for (const wallet of wallets) {
     for (const balance of wallet.treasuryBalances) {
       if (!Number.isFinite(balance.usdValue) || balance.usdValue <= 0) continue;
       treasuryUsd += balance.usdValue;
     }
     for (const balance of wallet.stablecoinBalances) {
-      if (!Number.isFinite(balance.usdValue) || balance.usdValue <= 0) continue;
-      stablecoinSleeveUsd += balance.usdValue;
-      const resolved = resolveTrackedTreasuryStablecoin(balance.chainId, balance.tokenAddress);
-      if (!resolved) {
-        untrackedStableUsd += balance.usdValue;
-        untrackedStableCount += 1;
+      if (consumedStableBalanceKeys.has(buildBalanceKey(balance.chainId, balance.tokenAddress))) {
         continue;
       }
-      const existing = trackedStableUsd.get(resolved.stablecoinId);
-      if (existing) {
-        existing.usdValue += balance.usdValue;
-      } else {
-        trackedStableUsd.set(resolved.stablecoinId, {
-          meta: resolved,
-          usdValue: balance.usdValue,
-        });
-      }
+      accumulateStableBalance(balance);
+    }
+    for (const balance of wallet.derivedStablecoinBalances ?? []) {
+      derivedStableBalanceCount += 1;
+      accumulateStableBalance(balance);
     }
     for (const warning of wallet.warnings ?? []) notes.add(warning);
   }
@@ -153,6 +183,9 @@ export function computeTreasuryStableExposureEntity(
 
   if (untrackedStableUsd > 0) {
     notes.add("Stable-sleeve percentages include untracked stablecoins returned by the balance provider.");
+  }
+  if (derivedStableBalanceCount > 0) {
+    notes.add("Stable sleeve includes supported LP, vault, and lending positions decomposed to underlying stablecoins.");
   }
 
   return {

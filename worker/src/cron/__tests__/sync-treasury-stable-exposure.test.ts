@@ -4,7 +4,7 @@ import { sleepWithSignal } from "../../lib/abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { setCacheIfNewer, shouldSkipFreshCache } from "../../lib/db-cache";
 import { buildReportCardsSnapshot } from "../../lib/report-cards-snapshot";
-import { fetchSimWalletBalances } from "../../lib/sim-balances";
+import { fetchSimWalletBalances, fetchSimWalletDefiStableBalances } from "../../lib/sim-balances";
 import { SIM_BALANCES_OWNER_GROUP_DELAY_MS } from "../../lib/constants";
 
 vi.mock("@shared/lib/treasury-seeds", () => ({
@@ -60,6 +60,10 @@ vi.mock("../../lib/sim-balances", () => ({
     balances: [],
     warnings: [],
   })),
+  fetchSimWalletDefiStableBalances: vi.fn(async () => ({
+    balances: [],
+    warnings: [],
+  })),
 }));
 
 vi.mock("../../lib/abort", async (importOriginal) => {
@@ -94,6 +98,7 @@ describe("syncTreasuryStableExposure", () => {
     expect(shouldAttemptFetch).toHaveBeenCalledWith(db, "sim-balances");
     expect(buildReportCardsSnapshot).toHaveBeenCalledTimes(1);
     expect(fetchSimWalletBalances).toHaveBeenCalledTimes(4);
+    expect(fetchSimWalletDefiStableBalances).toHaveBeenCalledTimes(2);
     expect(sleepWithSignal).toHaveBeenCalledTimes(1);
     expect(sleepWithSignal).toHaveBeenCalledWith(SIM_BALANCES_OWNER_GROUP_DELAY_MS, undefined);
     expect(setCacheIfNewer).toHaveBeenCalledTimes(1);
