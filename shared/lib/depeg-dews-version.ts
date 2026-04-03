@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "5.1",
+  currentVersion: "5.2",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
+  {
+    version: "5.2",
+    title: "Corroborated DEX recovery gating for live depeg state",
+    date: "2026-04-03",
+    effectiveAt: 1775174400,
+    summary:
+      "Aggregate DEX bridge rows no longer count as sufficient evidence on their own for ambiguous-primary recoveries or recovery-style event suppression.",
+    impact: [
+      "DEX-assisted live recovery now requires at least two corroborating protocol-level DEX groups inside threshold, not just one trusted aggregate row",
+      "Large challenger pools can veto ambiguous-primary DEX recoveries when they still show the old depeg direction",
+      "New-event suppression and other aggregate-DEX-driven state mutations now share that stricter corroboration policy, reducing synthetic split events on chronically depegged coins",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.1",
     title: "Ongoing depeg continuity over DEX-only contradiction",

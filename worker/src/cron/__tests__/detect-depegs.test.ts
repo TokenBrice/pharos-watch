@@ -679,6 +679,169 @@ describe("detectDepegEvents", () => {
     expect(closures).toHaveLength(0);
   });
 
+  it("keeps an ongoing event open when ambiguous recovery is backed by only one near-peg DEX protocol and challengers still show the old depeg", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const preparedSqls: string[] = [];
+    const db = mockD1([
+      {
+        match: "depeg_events",
+        rows: [{
+          id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
+          direction: "below", peak_deviation_bps: -8800, started_at: now - 7200,
+          start_price: 0.12, peak_price: 0.11, peg_reference: 1,
+          recovery_price: null, ended_at: null, source: "live",
+        }],
+      },
+      {
+        match: "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices",
+        rows: [{
+          stablecoin_id: "usdt-tether",
+          dex_price_usd: 0.9993,
+          deviation_from_primary_bps: 5,
+          source_pool_count: 6,
+          source_total_tvl: 2_143_513,
+          updated_at: now - 60,
+        }],
+      },
+      {
+        match: "price_sources_json",
+        rows: [{
+          stablecoin_id: "usdt-tether",
+          price_sources_json: JSON.stringify([
+            { protocol: "bunni-ethereum", chain: "ethereum", price: 0.9993, tvl: 1_451_774 },
+            { protocol: "uniswap-v4-ethereum", chain: "ethereum", price: 0.31388474, tvl: 627_528 },
+            { protocol: "curve", chain: "ethereum", price: 0.111775, tvl: 64_711 },
+          ]),
+          updated_at: now - 60,
+        }],
+      },
+    ]);
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      preparedSqls.push(sql);
+      return origPrepare(sql);
+    }) as typeof db.prepare;
+
+    await detectDepegEvents(db, [
+      makeAsset({
+        id: "usdt-tether",
+        symbol: "USDT",
+        price: 1.0001,
+        priceSource: "cached",
+        priceConfidence: "fallback",
+        priceUpdatedAt: now - 600,
+      }),
+    ]);
+
+    const closures = preparedSqls.filter((sql) =>
+      sql.includes("UPDATE depeg_events SET ended_at")
+    );
+    expect(closures).toHaveLength(0);
+  });
+
+  it("closes an ongoing event when ambiguous recovery is corroborated by multiple DEX protocols with no challenger contradiction", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const preparedSqls: string[] = [];
+    const db = mockD1([
+      {
+        match: "depeg_events",
+        rows: [{
+          id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
+          direction: "below", peak_deviation_bps: -240, started_at: now - 7200,
+          start_price: 0.976, peak_price: 0.976, peg_reference: 1,
+          recovery_price: null, ended_at: null, source: "live",
+        }],
+      },
+      {
+        match: "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices",
+        rows: [{
+          stablecoin_id: "usdt-tether",
+          dex_price_usd: 0.9998,
+          deviation_from_primary_bps: 3,
+          source_pool_count: 4,
+          source_total_tvl: 1_900_000,
+          updated_at: now - 60,
+        }],
+      },
+      {
+        match: "price_sources_json",
+        rows: [{
+          stablecoin_id: "usdt-tether",
+          price_sources_json: JSON.stringify([
+            { protocol: "fluid", chain: "ethereum", price: 0.9997, tvl: 900_000 },
+            { protocol: "balancer", chain: "ethereum", price: 1.0001, tvl: 700_000 },
+            { protocol: "curve", chain: "ethereum", price: 0.9999, tvl: 300_000 },
+          ]),
+          updated_at: now - 60,
+        }],
+      },
+    ]);
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      preparedSqls.push(sql);
+      return origPrepare(sql);
+    }) as typeof db.prepare;
+
+    await detectDepegEvents(db, [
+      makeAsset({
+        id: "usdt-tether",
+        symbol: "USDT",
+        price: 0.9999,
+        priceSource: "cached",
+        priceConfidence: "fallback",
+        priceUpdatedAt: now - 600,
+      }),
+    ]);
+
+    const closures = preparedSqls.filter((sql) =>
+      sql.includes("UPDATE depeg_events SET ended_at")
+    );
+    expect(closures.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("does not suppress a new event when aggregate DEX recovery lacks corroborating protocol support", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const preparedSqls: string[] = [];
+    const db = mockD1([
+      { match: "depeg_events", rows: [] },
+      {
+        match: "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices",
+        rows: [{
+          stablecoin_id: "usdt-tether",
+          dex_price_usd: 0.9993,
+          deviation_from_primary_bps: 5,
+          source_pool_count: 6,
+          source_total_tvl: 2_143_513,
+          updated_at: now - 60,
+        }],
+      },
+      {
+        match: "price_sources_json",
+        rows: [{
+          stablecoin_id: "usdt-tether",
+          price_sources_json: JSON.stringify([
+            { protocol: "bunni-ethereum", chain: "ethereum", price: 0.9993, tvl: 1_451_774 },
+            { protocol: "uniswap-v4-ethereum", chain: "ethereum", price: 0.31388474, tvl: 627_528 },
+            { protocol: "curve", chain: "ethereum", price: 0.111775, tvl: 64_711 },
+          ]),
+          updated_at: now - 60,
+        }],
+      },
+    ]);
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      preparedSqls.push(sql);
+      return origPrepare(sql);
+    }) as typeof db.prepare;
+
+    await detectDepegEvents(db, [
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.98 }),
+    ]);
+
+    const inserts = preparedSqls.filter((sql) => sql.includes("INSERT INTO depeg_events"));
+    expect(inserts.length).toBeGreaterThanOrEqual(1);
+  });
+
   it("does not orphan-close tracked events during transient data gaps", async () => {
     const now = Math.floor(Date.now() / 1000);
     const preparedSqls: string[] = [];

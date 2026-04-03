@@ -1,7 +1,9 @@
 import {
   getDepegThresholdBps,
   DEPEG_CONFIRMATION_SUPPLY_THRESHOLD,
+  DEPEG_DEX_PROTOCOL_CORROBORATION_MIN,
   DEPEG_EXTREME_MOVE_BPS,
+  DEX_FRESHNESS_SEC,
 } from "../lib/constants";
 import { batchExecute } from "../lib/db";
 import { throwIfAborted } from "../lib/abort";
@@ -9,9 +11,12 @@ import {
   buildInsertDepegEventStmt,
   classifyPrimaryDepegTrust,
   isTrustedDexPriceRow,
+  loadDexPoolChallengers,
   loadDexPriceRows,
+  loadDexPriceSources,
   type DepegRow,
   type DexPriceRow,
+  type DexPoolSource,
   type PendingDepegReason,
 } from "../lib/depeg-helpers";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
@@ -19,8 +24,35 @@ import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import type { DepegEvent } from "@shared/types/market";
 import type { PegAssetBase } from "@shared/types/core";
 import { sumPegBuckets } from "@shared/lib/supply";
+import { POOL_CHALLENGE_MIN_TVL } from "../lib/constants";
 
 // --- Helpers ---
+
+interface DexPoolChallenger {
+  price: number;
+  tvlUsd: number;
+  protocol: string;
+  chain: string;
+  observedAt?: number;
+}
+
+interface PriceSignal {
+  bps: number;
+  absBps: number;
+  direction: "above" | "below";
+}
+
+function toPriceSignal(price: number, pegRef: number): PriceSignal | null {
+  if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(pegRef) || pegRef <= 0) {
+    return null;
+  }
+  const bps = Math.round(((price / pegRef) - 1) * 10000);
+  return {
+    bps,
+    absBps: Math.abs(bps),
+    direction: bps >= 0 ? "above" : "below",
+  };
+}
 
 /** Returns true when the DEX price row for this asset is fresh and trusted for depeg decisions. */
 function isDexFresh(
@@ -29,6 +61,44 @@ function isDexFresh(
   now: number,
 ): boolean {
   return dexAbsBps != null && dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg");
+}
+
+function countRecoveryProtocolCorroborations(
+  protocolSources: DexPoolSource[] | undefined,
+  pegRef: number,
+  threshold: number,
+): number {
+  if (!protocolSources || protocolSources.length === 0) return 0;
+  return protocolSources.reduce((count, source) => {
+    const signal = toPriceSignal(source.price, pegRef);
+    return signal != null && signal.absBps < threshold ? count + 1 : count;
+  }, 0);
+}
+
+function countDirectionalProtocolCorroborations(
+  protocolSources: DexPoolSource[] | undefined,
+  pegRef: number,
+  threshold: number,
+  direction: "above" | "below",
+): number {
+  if (!protocolSources || protocolSources.length === 0) return 0;
+  return protocolSources.reduce((count, source) => {
+    const signal = toPriceSignal(source.price, pegRef);
+    return signal != null && signal.absBps >= threshold && signal.direction === direction ? count + 1 : count;
+  }, 0);
+}
+
+function hasRecoveryChallenge(
+  challengers: DexPoolChallenger[] | undefined,
+  pegRef: number,
+  threshold: number,
+  depegDirection: "above" | "below",
+): boolean {
+  if (!challengers || challengers.length === 0) return false;
+  return challengers.some((pool) => {
+    const signal = toPriceSignal(pool.price, pegRef);
+    return signal != null && signal.absBps >= threshold && signal.direction === depegDirection;
+  });
 }
 
 interface LoopContext {
@@ -44,9 +114,12 @@ interface LoopContext {
   supply: number;
   primaryTrust: "authoritative" | "confirm_required";
   dexRow: DexPriceRow | undefined;
-  dexBps: number | null;
   dexAbsBps: number | null;
-  dexConfirmsDirection: boolean;
+  dexDirectionProtocolCount: number;
+  dexRecoveryProtocolCount: number;
+  dexRecoveryChallenged: boolean;
+  dexSupportsDirection: boolean;
+  dexSupportsRecovery: boolean;
   requiresConfirmation: boolean;
   pendingReason: PendingDepegReason;
   buildLiveEvent: (
@@ -76,7 +149,7 @@ function handleExistingEvent(
 ): D1PreparedStatement[] {
   const {
     db, now, asset, price, bps, absBps, direction, threshold,
-    pegRef, primaryTrust, dexRow, dexAbsBps, dexConfirmsDirection,
+    pegRef, primaryTrust, dexRow, dexAbsBps, dexSupportsDirection,
     requiresConfirmation, pendingReason,
     buildLiveEvent, buildInsertPendingStmt,
   } = ctx;
@@ -86,7 +159,7 @@ function handleExistingEvent(
   // Low-confidence contradictory prices still route the replacement through pending
   // confirmation, but they retire the stale live row immediately.
   if (existing.direction !== direction) {
-    if (primaryTrust === "authoritative" || dexConfirmsDirection) {
+    if (primaryTrust === "authoritative" || dexSupportsDirection) {
       stmts.push(
         db.prepare(
           "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
@@ -116,7 +189,7 @@ function handleExistingEvent(
 
   // Same direction — event stays open
   seen.add(existing.id);
-  if ((primaryTrust === "authoritative" || dexConfirmsDirection) && absBps > Math.abs(existing.peak_deviation_bps)) {
+  if ((primaryTrust === "authoritative" || dexSupportsDirection) && absBps > Math.abs(existing.peak_deviation_bps)) {
     // Update peak if this deviation is worse
     stmts.push(
       db.prepare(
@@ -148,8 +221,8 @@ function handleExistingEvent(
  */
 function handleNewDepeg(ctx: LoopContext): D1PreparedStatement[] | null {
   const {
-    db, asset, bps, direction, threshold, pegRef, supply,
-    dexRow, dexAbsBps, dexConfirmsDirection, requiresConfirmation, pendingReason,
+    db, asset, bps, direction, pegRef, supply,
+    dexRow, dexAbsBps, dexSupportsDirection, dexSupportsRecovery, requiresConfirmation, pendingReason,
     buildLiveEvent, buildInsertPendingStmt,
   } = ctx;
   const stmts: D1PreparedStatement[] = [];
@@ -164,7 +237,7 @@ function handleNewDepeg(ctx: LoopContext): D1PreparedStatement[] | null {
   }
 
   if (requiresConfirmation) {
-    if (pendingReason === "extreme-move" && dexConfirmsDirection) {
+    if (pendingReason === "extreme-move" && dexSupportsDirection) {
       stmts.push(buildInsertDepegEventStmt(db, buildLiveEvent(direction, bps, ctx.price, pegRef)));
     } else {
       stmts.push(buildInsertPendingStmt(direction, bps, ctx.price, pegRef, pendingReason));
@@ -174,7 +247,7 @@ function handleNewDepeg(ctx: LoopContext): D1PreparedStatement[] | null {
   }
 
   // <$1B coin, no special confirmation needed — DEX cross-validation then instant event
-  if (isDexFresh(dexRow, dexAbsBps, ctx.now) && dexRow && dexAbsBps != null && dexAbsBps < threshold) {
+  if (isDexFresh(dexRow, dexAbsBps, ctx.now) && dexRow && dexSupportsRecovery) {
     console.log(
       `[depeg] Suppressed new event for ${asset.symbol}: ` +
       `primary=${bps}bps but DEX=${dexAbsBps}bps (${dexRow.source_pool_count} pools, ` +
@@ -196,7 +269,10 @@ function handleRecovery(
   existing: DepegRow,
   seen: Set<number>,
 ): D1PreparedStatement[] {
-  const { db, now, price, threshold, primaryTrust, dexRow, dexAbsBps } = ctx;
+  const {
+    db, now, asset, price, threshold, primaryTrust, dexRow, dexAbsBps,
+    dexRecoveryProtocolCount, dexRecoveryChallenged, dexSupportsRecovery,
+  } = ctx;
   const stmts: D1PreparedStatement[] = [];
 
   if (primaryTrust === "authoritative") {
@@ -206,7 +282,7 @@ function handleRecovery(
         "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
       ).bind(now, price, existing.id)
     );
-  } else if (isDexFresh(dexRow, dexAbsBps, now) && dexRow && dexAbsBps != null && dexAbsBps < threshold) {
+  } else if (isDexFresh(dexRow, dexAbsBps, now) && dexRow && dexSupportsRecovery) {
     stmts.push(
       db.prepare(
         "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
@@ -214,6 +290,13 @@ function handleRecovery(
     );
   } else {
     seen.add(existing.id);
+    if (isDexFresh(dexRow, dexAbsBps, now) && dexRow && dexAbsBps != null && dexAbsBps < threshold) {
+      console.warn(
+        `[depeg] Ignored aggregate DEX recovery for ${asset.symbol}: ` +
+        `${dexRecoveryProtocolCount} corroborating protocol group(s), ` +
+        `challenged=${dexRecoveryChallenged}; keeping event open until corroborated recovery appears`,
+      );
+    }
   }
 
   return stmts;
@@ -236,6 +319,10 @@ export async function detectDepegEvents(
   // loadDexPriceRows handles missing-table fallbacks and logging.
   throwIfAborted(signal);
   const dexPriceRows = await loadDexPriceRows(db);
+  throwIfAborted(signal);
+  const dexPriceSources = await loadDexPriceSources(db);
+  throwIfAborted(signal);
+  const dexPoolChallengers = await loadDexPoolChallengers(db, POOL_CHALLENGE_MIN_TVL, DEX_FRESHNESS_SEC, now);
 
   // Load all open events in one query
   throwIfAborted(signal);
@@ -323,8 +410,25 @@ export async function detectDepegEvents(
       ? Math.round(((dexRow.dex_price_usd / pegRef) - 1) * 10000)
       : null;
     const dexAbsBps = dexBps == null ? null : Math.abs(dexBps);
-    const dexConfirmsDirection =
-      dexBps != null && dexAbsBps != null && dexAbsBps >= threshold && (dexBps >= 0 ? "above" : "below") === direction;
+    const protocolSources = dexPriceSources.get(asset.id);
+    const challengerPools = dexPoolChallengers.get(asset.id);
+    const dexDirectionProtocolCount = countDirectionalProtocolCorroborations(protocolSources, pegRef, threshold, direction);
+    const dexRecoveryProtocolCount = countRecoveryProtocolCorroborations(protocolSources, pegRef, threshold);
+    const recoveryVetoDirection: "above" | "below" =
+      existing?.direction === "above" ? "above" : existing?.direction === "below" ? "below" : direction;
+    const dexRecoveryChallenged = hasRecoveryChallenge(challengerPools, pegRef, threshold, recoveryVetoDirection);
+    const dexSupportsDirection =
+      dexBps != null &&
+      dexAbsBps != null &&
+      dexAbsBps >= threshold &&
+      (dexBps >= 0 ? "above" : "below") === direction &&
+      dexDirectionProtocolCount >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN;
+    const dexSupportsRecovery =
+      dexBps != null &&
+      dexAbsBps != null &&
+      dexAbsBps < threshold &&
+      dexRecoveryProtocolCount >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN &&
+      !dexRecoveryChallenged;
     const requiresConfirmation =
       supply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD ||
       primaryTrust === "confirm_required" ||
@@ -374,8 +478,9 @@ export async function detectDepegEvents(
 
     const ctx: LoopContext = {
       db, now, asset, price, bps, absBps, direction, threshold,
-      pegRef, supply, primaryTrust, dexRow, dexBps, dexAbsBps,
-      dexConfirmsDirection, requiresConfirmation, pendingReason,
+      pegRef, supply, primaryTrust, dexRow, dexAbsBps,
+      dexDirectionProtocolCount, dexRecoveryProtocolCount, dexRecoveryChallenged,
+      dexSupportsDirection, dexSupportsRecovery, requiresConfirmation, pendingReason,
       buildLiveEvent, buildInsertPendingStmt,
     };
 

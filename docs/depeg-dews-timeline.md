@@ -1,8 +1,17 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v5.1` (2026-02-18 -> 2026-03-31).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v5.2` (2026-02-18 -> 2026-04-03).
 
 ---
+
+## v5.2 — Corroborated DEX recovery gating for live depeg state (Apr 3, 2026)
+
+**Commit:** `unreleased`
+
+- Aggregate DEX bridge rows no longer count as sufficient evidence on their own for ambiguous-primary recoveries or recovery-style event suppression
+- DEX-assisted recovery now requires at least 2 corroborating protocol-level DEX groups inside threshold
+- Large challenger pools can veto ambiguous-primary DEX recoveries when they still show the old depeg direction
+- Prevents synthetic live-event splits on chronic depegs where one high-TVL DEX protocol median snaps back toward peg while the broader DEX surface remains broken
 
 ## v5.1 — Ongoing depeg continuity over DEX-only contradiction (Mar 31, 2026)
 

@@ -16,6 +16,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 | `DEPEG_EXTREME_MOVE_BPS` | 5000 (50%) | Severe move threshold routed through dedicated confirmation lane |
 | `DEX_FRESHNESS_SEC` | 2100 (35 min) | DEX prices older than this are ignored |
 | `DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD` | 1,000,000 | Minimum aggregate DEX source TVL required before depeg logic trusts a DEX row |
+| `DEPEG_DEX_PROTOCOL_CORROBORATION_MIN` | 2 protocol groups | Minimum protocol-level DEX corroborations required before aggregate DEX rows can directly suppress or resolve live depeg state |
 
 `getDepegThresholdBps(pegType)` returns 100 for `peggedUSD`, 150 for all other peg types.
 
@@ -125,22 +126,22 @@ direction = bps >= 0 ? "above" : "below"
 
 **Path A -- Deviation >= threshold AND event already open**
 
-- If direction changed and the primary price is authoritative (or a trusted DEX row corroborates it): close the old event and open the replacement immediately
+- If direction changed and the primary price is authoritative (or a trusted aggregate DEX row is corroborated by at least 2 protocol-level DEX groups in the replacement direction): close the old event and open the replacement immediately
 - If direction changed but the primary price is `confirm_required`: retire the stale live row immediately and route the replacement move through `depeg_pending` instead of leaving the wrong direction active
-- Same direction: mark as legitimately open (add to `seen` set); update peak only when the primary input is authoritative or a trusted DEX row corroborates the move
+- Same direction: mark as legitimately open (add to `seen` set); update peak only when the primary input is authoritative or a corroborated trusted DEX row corroborates the move
 - Same-direction DEX disagreement is now advisory only: detection logs the mismatch but does **not** auto-close the event from that contradiction alone
 
 **Path B -- Deviation >= threshold AND no event open**
 
 - If supply >= $1B: insert into `depeg_pending` for multi-source confirmation (`reason = "large-cap"` unless another reason is more specific)
 - If primary trust is `confirm_required`: insert into `depeg_pending` with `reason = "low-confidence"`
-- If `abs(bps) >= 5000`: route through the extreme-move lane (`reason = "extreme-move"`). Trusted DEX corroboration may still promote the move immediately for non-large-cap coins
-- Otherwise (authoritative primary input, non-large-cap, non-extreme): use trusted DEX suppression and insert into `depeg_events` immediately
+- If `abs(bps) >= 5000`: route through the extreme-move lane (`reason = "extreme-move"`). Corroborated trusted DEX depeg agreement may still promote the move immediately for non-large-cap coins
+- Otherwise (authoritative primary input, non-large-cap, non-extreme): use corroborated trusted DEX recovery suppression and insert into `depeg_events` immediately
 
 **Path C -- Deviation < threshold AND event open**
 
 - Close immediately only when the primary price is authoritative
-- If the primary input is ambiguous, close only when a trusted DEX row also shows recovery
+- If the primary input is ambiguous, close only when a trusted aggregate DEX row also shows recovery, at least 2 protocol-level DEX groups are also back inside threshold, and no qualifying challenger pool still shows the old depeg direction
 - Otherwise keep the event open rather than letting cached/low-confidence prices silently resolve it
 
 ### Orphan Cleanup
