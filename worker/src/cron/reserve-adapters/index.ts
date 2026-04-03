@@ -3,6 +3,7 @@ import {
 } from "@shared/lib/live-reserve-adapters";
 import type { LiveReserveAdapterKey } from "@shared/types/live-reserves";
 import { fetchAccountableReserves } from "./accountable";
+import { fetchAnzenUsdzReserves } from "./anzen-usdz";
 import { fetchAsymmetryReserves } from "./asymmetry";
 import { fetchBtcfiReserves } from "./btcfi";
 import { fetchCircleReserves } from "./circle-transparency";
@@ -38,6 +39,7 @@ export type { AdapterContext, AdapterResult, AdapterFn, ReserveAdapterDefinition
 
 const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   accountable: fetchAccountableReserves,
+  "anzen-usdz": fetchAnzenUsdzReserves,
   asymmetry: fetchAsymmetryReserves,
   btcfi: fetchBtcfiReserves,
   "chainlink-nav": fetchChainlinkNavReserves,

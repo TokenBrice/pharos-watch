@@ -13,8 +13,12 @@ import {
 
 const REVIEWED_DIRECT_REDEMPTION_AT = "2026-03-23";
 const REVIEWED_REMEDIATION_AT = "2026-03-30";
+const REVIEWED_ISSUER_API_EXPANSION_AT = "2026-04-03";
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_DIRECT_REDEMPTION_AT,
+);
+const reviewedIssuerApiExpansionSupplyFull = documentedBoundSupplyFull(
+  REVIEWED_ISSUER_API_EXPANSION_AT,
 );
 
 export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
@@ -444,6 +448,45 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
     ),
     docs: [
       sourceRef("Rupiah Token website", "https://www.rupiahtoken.com/", ["route", "capacity"]),
+    ],
+  },
+  "idrx-idrx": {
+    ...issuerBase,
+    ...reviewedIssuerApiExpansionSupplyFull,
+    costModel: documentedVariableFee(
+      "IDRX redemption fees are flat IDR charges that depend on redemption size (Rp5,000 up to Rp250,000,000; Rp35,000 above that during office hours), so the effective bps varies by ticket size",
+    ),
+    docs: [
+      sourceRef("IDRX redeem IDR guide", "https://docs.idrx.co/services/redeem-idr", ["route", "capacity", "settlement"]),
+      sourceRef(
+        "IDRX redeem request API",
+        "https://docs.idrx.co/api/transaction-api/post-api-transaction-redeem-request",
+        ["route", "access", "settlement"],
+      ),
+      sourceRef("IDRX fees", "https://docs.idrx.co/services/fees", ["fees", "settlement"]),
+    ],
+    notes: [
+      "Primary modeled route is the issuer's direct burn-to-bank-account redemption flow for IDRX rather than the separate partner-mediated other-stablecoin off-ramp",
+      "Docs state redemptions up to Rp250,000,000 process in real time while larger bank payouts are handled during office hours, with a stated outer bound of 24 hours after request submission",
+    ],
+  },
+  "mxnb-juno": {
+    ...issuerBase,
+    ...reviewedIssuerApiExpansionSupplyFull,
+    costModel: documentedVariableFee(
+      "Juno documents quote-based MXNB conversions into USDC or USDT with pair-specific min/max limits, but it does not publish a fixed redemption or conversion fee schedule",
+    ),
+    docs: [
+      sourceRef(
+        "Juno MXNB and USD stablecoin conversions",
+        "https://docs.bitso.com/juno/docs/conversions-between-mxnb-and-usd-stablecoins",
+        ["route", "capacity", "fees"],
+      ),
+      sourceRef("MXNB transparency", "https://mxnb.mx/transparency", ["capacity"]),
+    ],
+    notes: [
+      "Modeled as the documented Juno issuer conversion rail between MXNB and USDC/USDT rather than as a separate fiat bank-wire redemption flow",
+      "The published conversion pairs expose explicit per-quote and per-pair min/max limits, which establish reviewed route availability without separately publishing a deterministic fixed-fee schedule",
     ],
   },
   "europ-schuman": {

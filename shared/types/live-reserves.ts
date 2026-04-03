@@ -3,6 +3,7 @@ import type { ReserveSlice } from "./reserves";
 
 export const LIVE_RESERVE_ADAPTER_KEYS = [
   "accountable",
+  "anzen-usdz",
   "asymmetry",
   "btcfi",
   "chainlink-nav",

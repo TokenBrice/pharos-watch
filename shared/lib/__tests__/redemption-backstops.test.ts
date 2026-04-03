@@ -36,6 +36,8 @@ describe("getRedemptionBackstopConfig", () => {
       ["msusd-main-street", "stablecoin-redeem"],
       ["usp-pikudao", "queue-redeem"],
       ["pusd-plume", "offchain-issuer"],
+      ["idrx-idrx", "offchain-issuer"],
+      ["mxnb-juno", "offchain-issuer"],
     ] as const;
 
     for (const [id, routeFamily] of expectedRouteFamilies) {
@@ -254,6 +256,26 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("tgbp-tokenised")).toMatchObject({
       settlementModel: "days",
     });
+  });
+
+  it("models the newly reviewed MXNB and IDRX issuer-api rails with current source-backed constraints", () => {
+    expect(getRedemptionBackstopConfig("idrx-idrx")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      settlementModel: "same-day",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-04-03",
+    });
+    expect(getRedemptionBackstopConfig("idrx-idrx")?.docs?.length).toBeGreaterThanOrEqual(3);
+
+    expect(getRedemptionBackstopConfig("mxnb-juno")).toMatchObject({
+      routeFamily: "offchain-issuer",
+      settlementModel: "same-day",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-04-03",
+    });
+    expect(getRedemptionBackstopConfig("mxnb-juno")?.docs?.length).toBeGreaterThanOrEqual(2);
   });
 
   it("promotes FPI and GYD to reviewed collateral-redemption routes", () => {

@@ -196,6 +196,7 @@ const baseLiveReserveConfigSchema = z.object({
 
 const adapterParamsSchemas = {
   accountable: accountableParamsSchema,
+  "anzen-usdz": noParamsSchema,
   asymmetry: noParamsSchema,
   btcfi: btcfiParamsSchema,
   "chainlink-nav": chainlinkNavParamsSchema,
@@ -250,6 +251,15 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
+  },
+  "anzen-usdz": {
+    sourceModel: "single-bucket",
+    evidenceClass: "weak-live-probe",
+    sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,
     },
   },
   asymmetry: {
