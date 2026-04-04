@@ -454,9 +454,9 @@ export async function recordApiKeyUsage(
     .run();
 }
 
-export type ApiKeyAuditAction = "created" | "updated" | "deactivated" | "rotated";
+type ApiKeyAuditAction = "created" | "updated" | "deactivated" | "rotated";
 
-export async function recordApiKeyAudit(
+async function recordApiKeyAudit(
   db: ApiKeyDb,
   apiKeyId: number,
   action: ApiKeyAuditAction,
