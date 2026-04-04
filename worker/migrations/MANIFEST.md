@@ -33,6 +33,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0086     | `0086_treasury_stable_exposure_history.sql`     | Add daily treasury stable exposure history table for per-entity snapshot auditing              |
 | 0087     | `0087_api_key_expiry.sql`                       | Add nullable API key expiry timestamps for default-expiring and explicit non-expiring keys     |
 | 0088     | `0088_api_key_audit_log.sql`                    | Add API key audit log table for tracking create/update/deactivate/rotate mutations             |
+| 0089     | `0089_api_key_pepper_version.sql`               | Add pepper_version column to api_keys for tracking which pepper generation hashed the secret   |
 
 ## Known Anomalies
 

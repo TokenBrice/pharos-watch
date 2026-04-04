@@ -7,6 +7,7 @@ export interface Env {
   SITE_API_SHARED_SECRET?: string;
   SITE_API_SHARED_SECRET_PREVIOUS?: string;
   API_KEY_HASH_PEPPER?: string;
+  API_KEY_HASH_PEPPER_PREVIOUS?: string;
   PUBLIC_API_AUTH_MODE?: string;
   CF_ACCESS_TEAM_DOMAIN?: string;
   CF_ACCESS_OPS_UI_AUD?: string;
@@ -55,6 +56,7 @@ export const WORKER_OPTIONAL_ENV_KEYS = [
   "SITE_API_SHARED_SECRET",
   "SITE_API_SHARED_SECRET_PREVIOUS",
   "API_KEY_HASH_PEPPER",
+  "API_KEY_HASH_PEPPER_PREVIOUS",
   "PUBLIC_API_AUTH_MODE",
   "CF_ACCESS_TEAM_DOMAIN",
   "CF_ACCESS_OPS_API_AUD",
@@ -110,7 +112,8 @@ export interface WorkerEnvIssue {
     | "public-api-rate-limit-misconfigured"
     | "site-api-secret-misconfigured"
     | "public-api-auth-mode-invalid"
-    | "public-api-auth-pepper-missing";
+    | "public-api-auth-pepper-missing"
+    | "api-key-pepper-noop-rotation";
   message: string;
 }
 
@@ -203,6 +206,7 @@ export function validateWorkerEnvContract(
     | "PUBLIC_API_RATE_LIMIT_SALT"
     | "SITE_API_SHARED_SECRET"
     | "API_KEY_HASH_PEPPER"
+    | "API_KEY_HASH_PEPPER_PREVIOUS"
     | "PUBLIC_API_AUTH_MODE"
     | "FEEDBACK_IP_SALT"
     | "CLOUDFLARE_ACCOUNT_ID"
@@ -256,6 +260,17 @@ export function validateWorkerEnvContract(
     issues.push({
       code: "public-api-auth-pepper-missing",
       message: "API_KEY_HASH_PEPPER must be configured before public API auth mode can move beyond off.",
+    });
+  }
+
+  if (
+    hasConfiguredValue(env.API_KEY_HASH_PEPPER_PREVIOUS) &&
+    hasConfiguredValue(env.API_KEY_HASH_PEPPER) &&
+    env.API_KEY_HASH_PEPPER_PREVIOUS?.trim() === env.API_KEY_HASH_PEPPER?.trim()
+  ) {
+    issues.push({
+      code: "api-key-pepper-noop-rotation",
+      message: "API_KEY_HASH_PEPPER_PREVIOUS is identical to API_KEY_HASH_PEPPER — this is a no-op rotation.",
     });
   }
 
