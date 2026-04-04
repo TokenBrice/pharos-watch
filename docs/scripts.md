@@ -155,6 +155,8 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - Uses Cloudflare Access service-token headers (`OPS_SMOKE_CF_ACCESS_CLIENT_ID` / `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`) rather than raw `ADMIN_KEY`.
 - Defaults to `https://ops.pharos.watch/admin/` and `https://ops-api.pharos.watch`, with overrides via `SMOKE_OPS_UI_URL` / `SMOKE_OPS_API_BASE`.
 - Verifies the operator UI shell plus `/api/status`, `/api/status-history?limit=5`, and the safe dry-run `audit-depeg-history` admin path.
+- When `ops.pharos.watch` returns a token-backed UI shell, the script bootstraps the `CF_Authorization` cookie and uses that browser-style session to smoke same-origin `/api/admin/status`.
+- If `ops.pharos.watch` only returns the interactive Cloudflare Access redirect, the script keeps the shell/access-gate assertion and direct `ops-api` smoke but skips the same-origin proxy assertion instead of failing on a non-browser auth path the Pages proxy cannot use.
 
 ### `smoke-transport.mjs`
 

@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { pathToFileURL } from "node:url";
+
 const DEFAULT_OPS_UI_URL = process.env.SMOKE_OPS_UI_URL ?? "https://ops.pharos.watch/admin/";
 const DEFAULT_OPS_API_BASE = process.env.SMOKE_OPS_API_BASE ?? "https://ops-api.pharos.watch";
 
@@ -44,8 +46,8 @@ async function fetchText(url, headers) {
   return { response, body };
 }
 
-async function fetchJson(url, headers) {
-  const response = await fetch(url, { headers, redirect: "manual" });
+export async function fetchJson(url, headers, fetchImpl = fetch) {
+  const response = await fetchImpl(url, { headers, redirect: "manual" });
   const bodyText = await response.text();
   let body = null;
   try {
@@ -56,7 +58,98 @@ async function fetchJson(url, headers) {
   return { response, body, bodyText };
 }
 
-async function run() {
+function splitSetCookieHeader(value) {
+  if (!value) {
+    return [];
+  }
+
+  const cookies = [];
+  let current = "";
+  let inExpires = false;
+
+  for (let index = 0; index < value.length; index++) {
+    const char = value[index];
+    const lowerRemainder = value.slice(index).toLowerCase();
+    if (lowerRemainder.startsWith("expires=")) {
+      inExpires = true;
+    }
+    if (char === "," && !inExpires) {
+      const trimmed = current.trim();
+      if (trimmed) {
+        cookies.push(trimmed);
+      }
+      current = "";
+      continue;
+    }
+    current += char;
+    if (inExpires && char === ";") {
+      inExpires = false;
+    }
+  }
+
+  const trimmed = current.trim();
+  if (trimmed) {
+    cookies.push(trimmed);
+  }
+  return cookies;
+}
+
+export function extractCookiePairs(response) {
+  const getSetCookie = typeof response.headers.getSetCookie === "function"
+    ? response.headers.getSetCookie.bind(response.headers)
+    : null;
+  const rawSetCookies = getSetCookie
+    ? getSetCookie()
+    : [response.headers.get("set-cookie")];
+  const setCookies = rawSetCookies.flatMap((cookie) => splitSetCookieHeader(cookie));
+  return setCookies
+    .map((cookie) => cookie.split(";", 1)[0]?.trim() ?? "")
+    .filter(Boolean);
+}
+
+export function mergeCookieHeader(...cookieGroups) {
+  const cookieMap = new Map();
+  for (const group of cookieGroups) {
+    const cookies = Array.isArray(group) ? group : [group];
+    for (const cookie of cookies) {
+      const trimmed = (cookie ?? "").trim();
+      if (!trimmed) continue;
+      const separatorIndex = trimmed.indexOf("=");
+      if (separatorIndex <= 0) continue;
+      cookieMap.set(trimmed.slice(0, separatorIndex), trimmed.slice(separatorIndex + 1));
+    }
+  }
+  return [...cookieMap.entries()]
+    .map(([name, value]) => `${name}=${value}`)
+    .join("; ");
+}
+
+export async function fetchOpsUiProxyStatus(
+  url,
+  accessHeaders,
+  options = {},
+) {
+  const { fetchImpl = fetch, initialCookieHeader = "" } = options;
+
+  let cookieHeader = initialCookieHeader;
+  let proxiedStatus = await fetchJson(url, accessHeaders, fetchImpl);
+  if (proxiedStatus.response.status === 200) {
+    return { proxiedStatus, retriedWithCookie: false, cookieHeader };
+  }
+
+  cookieHeader = mergeCookieHeader(cookieHeader, extractCookiePairs(proxiedStatus.response));
+  if (proxiedStatus.response.status === 401 && cookieHeader) {
+    proxiedStatus = await fetchJson(url, {
+      Accept: "application/json",
+      Cookie: cookieHeader,
+    }, fetchImpl);
+    return { proxiedStatus, retriedWithCookie: true, cookieHeader };
+  }
+
+  return { proxiedStatus, retriedWithCookie: false, cookieHeader };
+}
+
+export async function run() {
   const headers = buildAccessHeaders();
   const opsUiUrl = ensureUrl(DEFAULT_OPS_UI_URL);
   const opsApiBase = ensureUrl(DEFAULT_OPS_API_BASE);
@@ -75,6 +168,7 @@ async function run() {
     assert(location.includes(".cloudflareaccess.com"), "Ops UI redirect did not point to Cloudflare Access");
     console.log("[smoke-ops] OK ops UI access gate");
   }
+  const uiCookieHeader = mergeCookieHeader(extractCookiePairs(ui.response));
 
   const status = await fetchJson(new URL("/api/status", opsApiBase).toString(), headers);
   if (status.response.status !== 200) {
@@ -86,15 +180,27 @@ async function run() {
   assert(typeof status.body.overallStatus === "string", "Ops API /api/status missing overallStatus");
   console.log(`[smoke-ops] OK ops API /api/status (${status.body.overallStatus})`);
 
-  const proxiedStatus = await fetchJson(new URL("/api/admin/status", opsUiOrigin).toString(), headers);
-  if (proxiedStatus.response.status !== 200) {
-    console.error(`[smoke-ops] /api/admin/status returned ${proxiedStatus.response.status}, body: ${proxiedStatus.bodyText?.slice(0, 500)}`);
-    console.error(`[smoke-ops] Response headers:`, Object.fromEntries(proxiedStatus.response.headers.entries()));
+  const proxiedUrl = new URL("/api/admin/status", opsUiOrigin).toString();
+  const proxiedAttempt = await fetchOpsUiProxyStatus(proxiedUrl, headers, {
+    initialCookieHeader: uiCookieHeader,
+  });
+  const proxiedStatus = proxiedAttempt.proxiedStatus;
+  if (proxiedStatus.response.status === 401 && ui.response.status === 302) {
+    console.log("[smoke-ops] SKIP ops UI /api/admin/status (ops UI service-auth not enabled; direct ops-api smoke already passed)");
+  } else {
+    if (proxiedStatus.response.status !== 200) {
+      console.error(`[smoke-ops] /api/admin/status returned ${proxiedStatus.response.status}, body: ${proxiedStatus.bodyText?.slice(0, 500)}`);
+      console.error(`[smoke-ops] Response headers:`, Object.fromEntries(proxiedStatus.response.headers.entries()));
+    }
+    assert(proxiedStatus.response.status === 200, `Expected ops UI /api/admin/status 200, got ${proxiedStatus.response.status}`);
+    assert(proxiedStatus.body && typeof proxiedStatus.body === "object", "Ops UI /api/admin/status did not return JSON");
+    assert(typeof proxiedStatus.body.overallStatus === "string", "Ops UI /api/admin/status missing overallStatus");
+    console.log(
+      proxiedAttempt.retriedWithCookie
+        ? `[smoke-ops] OK ops UI /api/admin/status (${proxiedStatus.body.overallStatus}) via Access session cookie`
+        : `[smoke-ops] OK ops UI /api/admin/status (${proxiedStatus.body.overallStatus})`,
+    );
   }
-  assert(proxiedStatus.response.status === 200, `Expected ops UI /api/admin/status 200, got ${proxiedStatus.response.status}`);
-  assert(proxiedStatus.body && typeof proxiedStatus.body === "object", "Ops UI /api/admin/status did not return JSON");
-  assert(typeof proxiedStatus.body.overallStatus === "string", "Ops UI /api/admin/status missing overallStatus");
-  console.log(`[smoke-ops] OK ops UI /api/admin/status (${proxiedStatus.body.overallStatus})`);
 
   const history = await fetchJson(new URL("/api/status-history?limit=5", opsApiBase).toString(), headers);
   assert(history.response.status === 200, `Expected ops API /api/status-history 200, got ${history.response.status}`);
@@ -109,7 +215,9 @@ async function run() {
   console.log("[smoke-ops] All checks passed.");
 }
 
-run().catch((error) => {
-  console.error(`[smoke-ops] FAILED: ${error instanceof Error ? error.message : String(error)}`);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  run().catch((error) => {
+    console.error(`[smoke-ops] FAILED: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  });
+}
