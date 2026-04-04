@@ -192,10 +192,10 @@ export function resolvePublicApiAuthMode(
   env: Pick<Env, "PUBLIC_API_AUTH_MODE">,
 ): PublicApiAuthMode {
   const raw = getConfiguredValue(env.PUBLIC_API_AUTH_MODE)?.toLowerCase();
-  if (raw === "report-only" || raw === "enforce") {
+  if (raw === "off" || raw === "report-only") {
     return raw;
   }
-  return "off";
+  return "enforce";
 }
 
 export function validateWorkerEnvContract(

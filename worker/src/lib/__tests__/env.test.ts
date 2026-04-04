@@ -27,8 +27,12 @@ describe("resolvePublicApiRateLimitSalt", () => {
 });
 
 describe("resolvePublicApiAuthMode", () => {
-  it("defaults to off", () => {
-    expect(resolvePublicApiAuthMode({ PUBLIC_API_AUTH_MODE: undefined })).toBe("off");
+  it("defaults to enforce", () => {
+    expect(resolvePublicApiAuthMode({ PUBLIC_API_AUTH_MODE: undefined })).toBe("enforce");
+  });
+
+  it("accepts off as an explicit escape-hatch override", () => {
+    expect(resolvePublicApiAuthMode({ PUBLIC_API_AUTH_MODE: "off" })).toBe("off");
   });
 
   it("accepts the supported auth modes", () => {
@@ -45,7 +49,7 @@ describe("validateWorkerEnvContract", () => {
       PUBLIC_API_RATE_LIMIT_SALT: "public",
       SITE_API_SHARED_SECRET: "site-secret",
       API_KEY_HASH_PEPPER: undefined,
-      PUBLIC_API_AUTH_MODE: undefined,
+      PUBLIC_API_AUTH_MODE: "off",
       FEEDBACK_IP_SALT: undefined,
     })).toEqual([
       {
