@@ -1,8 +1,11 @@
+import { resolveApiRequestRouteMetric } from "@shared/lib/request-attribution";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { resolveSiteDataUpstreamPath } from "@shared/lib/site-data-routes";
+import { recordSiteDataRequest } from "../lib/request-attribution";
 import { rejectIfNotSiteDataUiOrigin } from "../lib/site-data-origin";
 import {
   resolveSiteApiOrigin,
+  resolveSiteDataUpstreamLane,
   validatePagesSiteDataProxyEnv,
   type SiteDataProxyEnv,
 } from "../lib/site-api-env";
@@ -36,6 +39,7 @@ const FORWARDED_RESPONSE_HEADERS = [
 interface SiteDataProxyContext {
   request: Request;
   env: SiteDataProxyEnv;
+  waitUntil?: (promise: Promise<unknown>) => void;
   params: {
     path?: string | string[];
   };
@@ -125,6 +129,26 @@ function summarizeFetchError(error: unknown): { kind: string; message: string } 
   return { kind: typeof error, message: String(error) };
 }
 
+async function queueSiteDataTelemetry(
+  context: SiteDataProxyContext,
+  upstreamPath: string,
+  deliveryPath: "pages-cache-hit" | "pages-upstream-fetch" | "pages-upstream-timeout" | "pages-upstream-error",
+  upstreamLane: "" | "site-api" | "public-api-fallback" = "",
+): Promise<void> {
+  const route = resolveApiRequestRouteMetric(upstreamPath);
+  if (!route || !context.env.DB) {
+    return;
+  }
+
+  const promise = recordSiteDataRequest(context.env.DB, route, deliveryPath, upstreamLane);
+  if (typeof context.waitUntil === "function") {
+    context.waitUntil(promise);
+    return;
+  }
+
+  await promise;
+}
+
 export const onRequest = async (context: SiteDataProxyContext): Promise<Response> => {
   const { request, env, params } = context;
   const rejected = rejectIfNotSiteDataUiOrigin(request, env, () => jsonError(404, "Not found"));
@@ -149,6 +173,7 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
   const cacheKey = buildCacheKey(request);
   const cached = await getDefaultCache().match(cacheKey);
   if (cached) {
+    await queueSiteDataTelemetry(context, upstreamPath, "pages-cache-hit");
     return cached;
   }
 
@@ -158,6 +183,7 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
   }
 
   const requestUrl = new URL(request.url);
+  const upstreamLane = resolveSiteDataUpstreamLane(env);
   const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, resolveSiteApiOrigin(env));
   const timeout = createTimeoutSignal({
     timeoutMs: UPSTREAM_TIMEOUT_MS,
@@ -177,14 +203,17 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
     const summary = summarizeFetchError(error);
     console.warn(`[site-data-proxy] upstream fetch failed (${summary.kind}): ${summary.message}`);
     if (timeout.isTimedOut()) {
+      await queueSiteDataTelemetry(context, upstreamPath, "pages-upstream-timeout", upstreamLane);
       return jsonError(504, "Site API upstream timed out");
     }
+    await queueSiteDataTelemetry(context, upstreamPath, "pages-upstream-error", upstreamLane);
     return jsonError(502, "Site API upstream fetch failed");
   } finally {
     timeout.dispose();
   }
 
   const response = buildProxyResponse(upstreamResponse);
+  await queueSiteDataTelemetry(context, upstreamPath, "pages-upstream-fetch", upstreamLane);
   if (canCacheResponse(response)) {
     await getDefaultCache().put(cacheKey, response.clone());
   }

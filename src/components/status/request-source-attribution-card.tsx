@@ -1,5 +1,5 @@
 import { formatCompactCount, formatPercent } from "@shared/lib/format";
-import type { PublicApiRequestSourceStatsResponse } from "@shared/types";
+import type { ApiRequestAttributionResponse } from "@shared/types";
 
 function formatBucketLabel(bucketStart: number): string {
   return new Date(bucketStart * 1000).toLocaleTimeString("en-US", {
@@ -8,16 +8,31 @@ function formatBucketLabel(bucketStart: number): string {
   });
 }
 
+function formatLaneLabel(lane: "public-api" | "site-api"): string {
+  return lane === "public-api" ? "Public API" : "Site API";
+}
+
+function metricRow(label: string, value: number) {
+  return (
+    <div className="flex items-center justify-between gap-3 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-mono text-foreground">{formatCompactCount(value)}</span>
+    </div>
+  );
+}
+
 export function RequestSourceAttributionCard({
   stats,
   error,
   isLoading,
 }: {
-  stats: PublicApiRequestSourceStatsResponse | null | undefined;
+  stats: ApiRequestAttributionResponse | null | undefined;
   error?: string | null;
   isLoading?: boolean;
 }) {
   const totals = stats?.totals ?? null;
+  const siteDelivery = stats?.siteDelivery ?? null;
+  const lanes = stats?.lanes ?? [];
   const routes = stats?.routes ?? [];
   const buckets = stats?.buckets ?? [];
   const bucketSizeMinutes = stats ? stats.window.bucketSizeSec / 60 : null;
@@ -27,7 +42,7 @@ export function RequestSourceAttributionCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-base font-semibold tracking-tight text-foreground">API load attribution</h3>
+            <h3 className="text-base font-semibold tracking-tight text-foreground">Site vs external demand</h3>
             {stats ? (
               <span className="rounded-full border border-border/60 bg-background/50 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                 {Math.round(stats.window.durationSec / 3600)}h window
@@ -35,13 +50,21 @@ export function RequestSourceAttributionCard({
             ) : null}
           </div>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Website-vs-external public API split from request metadata and the first-party browser marker.
+            Total request demand across same-origin
+            {" "}
+            <code className="rounded bg-background/60 px-1 py-0.5 font-mono text-[0.92em] text-foreground">/_site-data/*</code>
+            {" "}
+            and
+            {" "}
+            <code className="rounded bg-background/60 px-1 py-0.5 font-mono text-[0.92em] text-foreground">api.pharos.watch</code>
+            .
+            Site demand includes Pages cache hits plus website-owned public API keys; external excludes those keys.
           </p>
         </div>
         {totals ? (
           <div className="flex flex-wrap gap-2">
             <span className="rounded-full border border-sky-500/25 bg-sky-500/10 px-2.5 py-1 text-[11px] font-medium text-sky-700 dark:text-sky-300">
-              Web {formatPercent(totals.webSharePct, 1)}
+              Site {formatPercent(totals.siteSharePct, 1)}
             </span>
             <span className="rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">
               External {formatPercent(totals.externalSharePct, 1)}
@@ -55,23 +78,77 @@ export function RequestSourceAttributionCard({
           {error}
         </div>
       ) : isLoading && !stats ? (
-        <div className="mt-4 text-sm text-muted-foreground">Loading API attribution…</div>
-      ) : !totals ? (
+        <div className="mt-4 text-sm text-muted-foreground">Loading request attribution…</div>
+      ) : !totals || !siteDelivery ? (
         <div className="mt-4 text-sm text-muted-foreground">No attribution data yet.</div>
       ) : (
         <div className="mt-4 space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-border/60 bg-background/45 p-3">
-              <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Total requests</div>
+              <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Total demand</div>
               <div className="mt-1 font-mono text-xl font-semibold text-foreground">{formatCompactCount(totals.totalRequests)}</div>
             </div>
             <div className="rounded-xl border border-border/60 bg-background/45 p-3">
-              <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Website</div>
-              <div className="mt-1 font-mono text-xl font-semibold text-foreground">{formatCompactCount(totals.webRequests)}</div>
+              <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Site</div>
+              <div className="mt-1 font-mono text-xl font-semibold text-foreground">{formatCompactCount(totals.siteRequests)}</div>
             </div>
             <div className="rounded-xl border border-border/60 bg-background/45 p-3">
               <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">External</div>
               <div className="mt-1 font-mono text-xl font-semibold text-foreground">{formatCompactCount(totals.externalRequests)}</div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-xl border border-border/60 bg-background/45 p-3">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div className="text-sm font-medium text-foreground">Site delivery</div>
+                <div className="text-xs text-muted-foreground">
+                  {formatCompactCount(siteDelivery.totalSiteRequests)} site requests
+                </div>
+              </div>
+              <div className="space-y-2">
+                {metricRow("Pages cache hits", siteDelivery.pagesCacheHits)}
+                {metricRow("Pages proxy fetches", siteDelivery.pagesUpstreamFetches)}
+                {metricRow("Pages timeouts", siteDelivery.pagesUpstreamTimeouts)}
+                {metricRow("Pages upstream errors", siteDelivery.pagesUpstreamErrors)}
+                {metricRow("Public API site requests", siteDelivery.publicApiSiteRequests)}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border/60 bg-background/45 p-3">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div className="text-sm font-medium text-foreground">Worker lanes</div>
+                <div className="text-xs text-muted-foreground">Actual worker load</div>
+              </div>
+              <div className="space-y-2">
+                {lanes.length > 0 ? lanes.map((lane) => (
+                  <div key={lane.lane} className="rounded-lg border border-border/50 bg-background/40 px-3 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <div className="text-sm text-foreground">{formatLaneLabel(lane.lane)}</div>
+                        <div className="text-[11px] text-muted-foreground">
+                          site {formatPercent(lane.siteSharePct, 1)} · external {formatPercent(lane.externalSharePct, 1)}
+                        </div>
+                      </div>
+                      <div className="font-mono text-sm text-foreground">{formatCompactCount(lane.totalRequests)}</div>
+                    </div>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted/70">
+                      <div className="flex h-full">
+                        <div
+                          className="bg-sky-500/70"
+                          style={{ width: `${lane.siteSharePct}%` }}
+                        />
+                        <div
+                          className="bg-amber-500/70"
+                          style={{ width: `${lane.externalSharePct}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="text-sm text-muted-foreground">No worker-lane data recorded in this window.</div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -98,7 +175,7 @@ export function RequestSourceAttributionCard({
                       <div className="flex h-full">
                         <div
                           className="bg-sky-500/70"
-                          style={{ width: `${route.webSharePct}%` }}
+                          style={{ width: `${route.siteSharePct}%` }}
                         />
                         <div
                           className="bg-amber-500/70"
@@ -129,7 +206,7 @@ export function RequestSourceAttributionCard({
                       <div className="flex h-full">
                         <div
                           className="bg-sky-500/70"
-                          style={{ width: `${bucket.webSharePct}%` }}
+                          style={{ width: `${bucket.siteSharePct}%` }}
                         />
                         <div
                           className="bg-amber-500/70"

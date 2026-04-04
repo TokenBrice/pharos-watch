@@ -1,28 +1,43 @@
-import {
-  classifyPublicApiRequestSource,
-  recordPublicApiRequestSource,
-  resolvePublicApiRouteMetric,
-} from "../../lib/request-source-attribution";
+import { classifyBrowserRequestConsumer, resolveApiRequestRouteMetric } from "@shared/lib/request-attribution";
+import type { ApiKeyTrafficClass } from "@shared/types";
+import { recordWorkerRequestAttribution } from "../../lib/request-source-attribution";
 
 export function createRequestSourceRecorder(config: {
   request: Request;
   db: D1Database;
   execCtx: ExecutionContext;
   isAdmin: boolean;
-  skip: boolean;
+  isSiteProxy: boolean;
+  apiKeyTrafficClass: ApiKeyTrafficClass | null;
+  requestLane: "public-api" | "site-api" | null;
   pathname: string;
 }): () => void {
-  if (config.isAdmin || config.skip) {
+  if (config.isAdmin || !config.requestLane) {
     return () => {};
   }
 
-  const route = resolvePublicApiRouteMetric(config.pathname);
+  const route = resolveApiRequestRouteMetric(config.pathname);
   if (!route) {
     return () => {};
   }
 
-  const source = classifyPublicApiRequestSource(config.request);
+  if (config.requestLane === "site-api") {
+    if (!config.isSiteProxy) {
+      return () => {};
+    }
+
+    return () => {
+      config.execCtx.waitUntil(
+        recordWorkerRequestAttribution(config.db, route, "site-api", "site"),
+      );
+    };
+  }
+
+  const consumerClass =
+    config.apiKeyTrafficClass ?? classifyBrowserRequestConsumer(config.request);
   return () => {
-    config.execCtx.waitUntil(recordPublicApiRequestSource(config.db, route, source));
+    config.execCtx.waitUntil(
+      recordWorkerRequestAttribution(config.db, route, "public-api", consumerClass),
+    );
   };
 }

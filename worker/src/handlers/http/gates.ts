@@ -3,6 +3,7 @@ import { SITE_API_HOSTNAME } from "@shared/lib/runtime-origins";
 import { errorResponse } from "../../lib/api-utils";
 import {
   authenticateApiKey,
+  type AuthenticatedApiKey,
   checkApiKeyRateLimit,
   recordApiKeyUsage,
 } from "../../lib/api-keys";
@@ -50,10 +51,16 @@ export async function evaluateAccessGate(
   request: Request,
   url: URL,
   env: Env,
-): Promise<{ isAdmin: boolean; isSiteProxy: boolean; response: Response | null }> {
+): Promise<{
+  isAdmin: boolean;
+  isSiteProxy: boolean;
+  apiKey: AuthenticatedApiKey | null;
+  requestLane: "public-api" | "site-api" | null;
+  response: Response | null;
+}> {
   const isAdmin = await hasValidAdminCredential(request, undefined, env);
   if (isAdmin) {
-    return { isAdmin, isSiteProxy: false, response: null };
+    return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: null, response: null };
   }
 
   const isPreviewRequest = isWorkerPreviewRequest(request);
@@ -61,25 +68,25 @@ export async function evaluateAccessGate(
   const hasSiteProxyCredential = await hasValidSiteProxyCredential(request, env);
   if (isSiteApiRequest) {
     if (!hasSiteProxyCredential) {
-      return { isAdmin, isSiteProxy: false, response: errorResponse(401, "Unauthorized") };
+      return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "site-api", response: errorResponse(401, "Unauthorized") };
     }
     if (!isSiteDataAllowedPath(url.pathname)) {
-      return { isAdmin, isSiteProxy: false, response: notFoundResponse() };
+      return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "site-api", response: notFoundResponse() };
     }
     if (request.method !== "GET") {
       const response = errorResponse(405, "Method not allowed");
       response.headers.set("Allow", "GET");
-      return { isAdmin, isSiteProxy: false, response };
+      return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "site-api", response };
     }
-    return { isAdmin, isSiteProxy: true, response: null };
+    return { isAdmin, isSiteProxy: true, apiKey: null, requestLane: "site-api", response: null };
   }
 
   if (isPreviewRequest && hasSiteProxyCredential && request.method === "GET" && isSiteDataAllowedPath(url.pathname)) {
-    return { isAdmin, isSiteProxy: true, response: null };
+    return { isAdmin, isSiteProxy: true, apiKey: null, requestLane: "site-api", response: null };
   }
 
   if (!url.pathname.startsWith("/api/") || url.pathname === "/api/telegram-webhook") {
-    return { isAdmin, isSiteProxy: false, response: null };
+    return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: null, response: null };
   }
 
   const publicApiAccess = getPublicApiAccess(url.pathname);
@@ -97,10 +104,10 @@ export async function evaluateAccessGate(
         apiKeyAuth.key.rateLimitPerMinute,
       );
       if (rateLimitResponse) {
-        return { isAdmin, isSiteProxy: false, response: rateLimitResponse };
+        return { isAdmin, isSiteProxy: false, apiKey: apiKeyAuth.key, requestLane: "public-api", response: rateLimitResponse };
       }
       await recordApiKeyUsage(env.DB, apiKeyAuth.key, url.pathname);
-      return { isAdmin, isSiteProxy: false, response: null };
+      return { isAdmin, isSiteProxy: false, apiKey: apiKeyAuth.key, requestLane: "public-api", response: null };
     }
 
     if (authMode === "enforce") {
@@ -108,10 +115,12 @@ export async function evaluateAccessGate(
         return {
           isAdmin,
           isSiteProxy: false,
+          apiKey: null,
+          requestLane: "public-api",
           response: errorResponse(503, "Public API temporarily unavailable"),
         };
       }
-      return { isAdmin, isSiteProxy: false, response: errorResponse(401, "Unauthorized") };
+      return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: errorResponse(401, "Unauthorized") };
     }
 
     if (authMode === "report-only" && apiKeyAuth.kind !== "missing") {
@@ -125,6 +134,8 @@ export async function evaluateAccessGate(
     return {
       isAdmin,
       isSiteProxy: false,
+      apiKey: null,
+      requestLane: "public-api",
       response: errorResponse(503, "Public API temporarily unavailable"),
     };
   }
@@ -135,7 +146,7 @@ export async function evaluateAccessGate(
     PUBLIC_API_RATE_LIMIT_MAX_REQUESTS,
     PUBLIC_API_RATE_LIMIT_WINDOW_SEC * 1000,
   );
-  return { isAdmin, isSiteProxy: false, response };
+  return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response };
 }
 
 export function notFoundResponse(): Response {

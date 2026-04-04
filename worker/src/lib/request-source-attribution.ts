@@ -1,140 +1,66 @@
-import { getEndpointDefinition, matchDynamicAdminEndpoint } from "@shared/lib/api-endpoints";
-import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
-import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import {
+  REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC,
+  REQUEST_ATTRIBUTION_RETENTION_DAYS,
+  type ApiRequestRouteMetric,
+} from "@shared/lib/request-attribution";
 import type {
-  PublicApiRequestSource,
-  PublicApiRequestSourceSplit,
-  PublicApiRequestSourceStatsResponse,
-  PublicApiRequestSourceRouteStat,
-  PublicApiRequestSourceTimeBucket,
+  ApiRequestAttributionLaneStat,
+  ApiRequestAttributionResponse,
+  ApiRequestAttributionRouteStat,
+  ApiRequestAttributionSiteDelivery,
+  ApiRequestAttributionSplit,
+  ApiRequestAttributionTimeBucket,
+  ApiRequestConsumerClass,
+  ApiRequestWorkerLane,
 } from "@shared/types";
 
-export const API_REQUEST_SOURCE_STATS_RETENTION_DAYS = 35;
+export const API_REQUEST_SOURCE_STATS_RETENTION_DAYS = REQUEST_ATTRIBUTION_RETENTION_DAYS;
 const API_REQUEST_SOURCE_STATS_RETENTION_SEC = API_REQUEST_SOURCE_STATS_RETENTION_DAYS * 24 * 60 * 60;
-const API_REQUEST_SOURCE_PRUNE_INTERVAL_SEC = 3600;
-const STABLECOIN_DETAIL_PATH_PATTERN = /^\/api\/stablecoin\/[^/]+$/;
-const STABLECOIN_SUMMARY_PATH_PATTERN = /^\/api\/stablecoin-summary\/[^/]+$/;
-const STABLECOIN_RESERVES_PATH_PATTERN = /^\/api\/stablecoin-reserves\/[^/]+$/;
-const OG_IMAGE_PATH_PATTERN = /^\/api\/og\//;
-const SAME_SITE_FETCH_VALUES = new Set(["same-site", "same-origin"]);
 
-// These prune guards are isolate-local best effort only. They reduce duplicate
-// DELETE work within one hot isolate, but they are not intended as durable,
-// cross-isolate coordination primitives.
 let lastApiRequestSourcePruneBucket: number | null = null;
 let pendingApiRequestSourcePrune: Promise<void> | null = null;
 
-export interface PublicApiRequestRouteMetric {
-  routeKey: string;
-  routePath: string;
+export function resetRequestAttributionStateForTests(): void {
+  lastApiRequestSourcePruneBucket = null;
+  pendingApiRequestSourcePrune = null;
 }
 
-function safeOrigin(value: string | null): string | null {
-  if (!value) return null;
-  try {
-    return new URL(value).origin;
-  } catch {
-    return null;
-  }
-}
-
-export function classifyPublicApiRequestSource(request: Request): PublicApiRequestSource {
-  const accept = request.headers.get("Accept")?.toLowerCase() ?? "";
-  const hasPharosAcceptMarker = accept.includes(PHAROS_WEB_ACCEPT_MARKER);
-  const origin = safeOrigin(request.headers.get("Origin"));
-  const refererOrigin = safeOrigin(request.headers.get("Referer"));
-  const secFetchSite = request.headers.get("Sec-Fetch-Site")?.trim().toLowerCase() ?? "";
-
-  if (origin === SITE_ORIGIN || refererOrigin === SITE_ORIGIN) {
-    return "web";
-  }
-
-  if (hasPharosAcceptMarker && SAME_SITE_FETCH_VALUES.has(secFetchSite)) {
-    return "web";
-  }
-
-  return "external";
-}
-
-export function resolvePublicApiRouteMetric(pathname: string): PublicApiRequestRouteMetric | null {
-  if (!pathname.startsWith("/api/")) return null;
-  if (pathname === "/api/telegram-webhook") return null;
-  if (matchDynamicAdminEndpoint(pathname)) return null;
-
-  if (STABLECOIN_SUMMARY_PATH_PATTERN.test(pathname)) {
-    return {
-      routeKey: "stablecoin-summary",
-      routePath: "/api/stablecoin-summary/:id",
-    };
-  }
-
-  if (STABLECOIN_RESERVES_PATH_PATTERN.test(pathname)) {
-    return {
-      routeKey: "stablecoin-reserves",
-      routePath: "/api/stablecoin-reserves/:id",
-    };
-  }
-
-  if (STABLECOIN_DETAIL_PATH_PATTERN.test(pathname)) {
-    return {
-      routeKey: "stablecoin-detail",
-      routePath: "/api/stablecoin/:id",
-    };
-  }
-
-  if (OG_IMAGE_PATH_PATTERN.test(pathname)) {
-    return {
-      routeKey: "og-image",
-      routePath: "/api/og/*",
-    };
-  }
-
-  const endpoint = getEndpointDefinition(pathname);
-  if (endpoint?.adminRequired) {
-    return null;
-  }
-
-  if (!endpoint) {
-    return {
-      routeKey: "unknown-public-api",
-      routePath: "/api/*",
-    };
-  }
-
-  return {
-    routeKey: endpoint.key,
-    routePath: endpoint.path,
-  };
-}
-
-export async function recordPublicApiRequestSource(
+export async function recordWorkerRequestAttribution(
   db: D1Database,
-  route: PublicApiRequestRouteMetric,
-  source: PublicApiRequestSource,
+  route: ApiRequestRouteMetric,
+  lane: ApiRequestWorkerLane,
+  consumerClass: ApiRequestConsumerClass,
   nowSec = Math.floor(Date.now() / 1000),
 ): Promise<void> {
   const bucketStart = nowSec - (nowSec % 60);
   await db.prepare(
-    `INSERT INTO api_request_source_stats (bucket_start, route_key, route_path, source, request_count)
-     VALUES (?, ?, ?, ?, 1)
-     ON CONFLICT(bucket_start, route_key, source)
+    `INSERT INTO api_request_consumer_stats (
+       bucket_start,
+       route_key,
+       route_path,
+       lane,
+       consumer_class,
+       request_count
+     )
+     VALUES (?, ?, ?, ?, ?, 1)
+     ON CONFLICT(bucket_start, route_key, lane, consumer_class)
      DO UPDATE SET
        request_count = request_count + 1,
        route_path = excluded.route_path`,
   )
-    .bind(bucketStart, route.routeKey, route.routePath, source)
+    .bind(bucketStart, route.routeKey, route.routePath, lane, consumerClass)
     .run();
 
-  const pruneBucket = nowSec - (nowSec % API_REQUEST_SOURCE_PRUNE_INTERVAL_SEC);
+  const pruneBucket = nowSec - (nowSec % REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC);
   if (lastApiRequestSourcePruneBucket !== pruneBucket && !pendingApiRequestSourcePrune) {
     lastApiRequestSourcePruneBucket = pruneBucket;
     const prunePromise = db
-      .prepare("DELETE FROM api_request_source_stats WHERE bucket_start < ?")
+      .prepare("DELETE FROM api_request_consumer_stats WHERE bucket_start < ?")
       .bind(nowSec - API_REQUEST_SOURCE_STATS_RETENTION_SEC)
       .run()
       .then(() => {})
       .catch((error) => {
-        console.warn("[request-source] prune failed:", error);
+        console.warn("[request-attribution] worker prune failed:", error);
       })
       .finally(() => {
         if (pendingApiRequestSourcePrune === prunePromise) {
@@ -153,56 +79,95 @@ function roundPct(value: number): number {
   return Number(value.toFixed(2));
 }
 
-export function buildPublicApiRequestSourceSplit(
-  webRequests: number,
-  externalRequests: number,
-): PublicApiRequestSourceSplit {
-  const totalRequests = webRequests + externalRequests;
-  const webSharePct = totalRequests > 0 ? roundPct((webRequests / totalRequests) * 100) : 0;
-  const externalSharePct = totalRequests > 0 ? roundPct((externalRequests / totalRequests) * 100) : 0;
-
-  return {
-    webRequests,
-    externalRequests,
-    totalRequests,
-    webSharePct,
-    externalSharePct,
-  };
-}
-
 function toCount(value: number | null | undefined): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
+export function buildApiRequestAttributionSplit(
+  siteRequests: number,
+  externalRequests: number,
+): ApiRequestAttributionSplit {
+  const totalRequests = siteRequests + externalRequests;
+  const siteSharePct = totalRequests > 0 ? roundPct((siteRequests / totalRequests) * 100) : 0;
+  const externalSharePct = totalRequests > 0 ? roundPct((externalRequests / totalRequests) * 100) : 0;
+
+  return {
+    siteRequests,
+    externalRequests,
+    totalRequests,
+    siteSharePct,
+    externalSharePct,
+  };
+}
+
 export function mapRouteStatsRows(
-  rows: Array<{ route_key: string; route_path: string; web_requests: number | null; external_requests: number | null }>,
-): PublicApiRequestSourceRouteStat[] {
+  rows: Array<{ route_key: string; route_path: string; site_requests: number | null; external_requests: number | null }>,
+): ApiRequestAttributionRouteStat[] {
   return rows.map((row) => ({
     routeKey: row.route_key,
     routePath: row.route_path,
-    ...buildPublicApiRequestSourceSplit(toCount(row.web_requests), toCount(row.external_requests)),
+    ...buildApiRequestAttributionSplit(toCount(row.site_requests), toCount(row.external_requests)),
   }));
 }
 
 export function mapTimeBucketRows(
-  rows: Array<{ bucket_start: number; web_requests: number | null; external_requests: number | null }>,
-): PublicApiRequestSourceTimeBucket[] {
+  rows: Array<{ bucket_start: number; site_requests: number | null; external_requests: number | null }>,
+): ApiRequestAttributionTimeBucket[] {
   return rows.map((row) => ({
     bucketStart: row.bucket_start,
-    ...buildPublicApiRequestSourceSplit(toCount(row.web_requests), toCount(row.external_requests)),
+    ...buildApiRequestAttributionSplit(toCount(row.site_requests), toCount(row.external_requests)),
   }));
 }
 
-export function buildPublicApiRequestSourceStatsResponse(config: {
+export function mapLaneStatsRows(
+  rows: Array<{ lane: ApiRequestWorkerLane; site_requests: number | null; external_requests: number | null }>,
+): ApiRequestAttributionLaneStat[] {
+  return rows.map((row) => ({
+    lane: row.lane,
+    ...buildApiRequestAttributionSplit(toCount(row.site_requests), toCount(row.external_requests)),
+  }));
+}
+
+function buildSiteDelivery(config: {
+  pagesSiteRequests: number;
+  publicApiSiteRequests: number;
+  pagesCacheHits: number;
+  pagesUpstreamFetches: number;
+  pagesUpstreamTimeouts: number;
+  pagesUpstreamErrors: number;
+}): ApiRequestAttributionSiteDelivery {
+  return {
+    totalSiteRequests: config.pagesSiteRequests + config.publicApiSiteRequests,
+    pagesCacheHits: config.pagesCacheHits,
+    pagesUpstreamFetches: config.pagesUpstreamFetches,
+    pagesUpstreamTimeouts: config.pagesUpstreamTimeouts,
+    pagesUpstreamErrors: config.pagesUpstreamErrors,
+    publicApiSiteRequests: config.publicApiSiteRequests,
+  };
+}
+
+export function buildApiRequestAttributionResponse(config: {
   generatedAt: number;
   from: number;
   to: number;
   bucketSizeSec: number;
   routeLimit: number;
-  totals: { webRequests: number; externalRequests: number };
-  routes: PublicApiRequestSourceRouteStat[];
-  buckets: PublicApiRequestSourceTimeBucket[];
-}): PublicApiRequestSourceStatsResponse {
+  totals: {
+    siteRequests: number;
+    externalRequests: number;
+  };
+  siteDelivery: {
+    pagesSiteRequests: number;
+    publicApiSiteRequests: number;
+    pagesCacheHits: number;
+    pagesUpstreamFetches: number;
+    pagesUpstreamTimeouts: number;
+    pagesUpstreamErrors: number;
+  };
+  lanes: ApiRequestAttributionLaneStat[];
+  routes: ApiRequestAttributionRouteStat[];
+  buckets: ApiRequestAttributionTimeBucket[];
+}): ApiRequestAttributionResponse {
   return {
     generatedAt: config.generatedAt,
     window: {
@@ -213,8 +178,15 @@ export function buildPublicApiRequestSourceStatsResponse(config: {
       routeLimit: config.routeLimit,
       retentionDays: API_REQUEST_SOURCE_STATS_RETENTION_DAYS,
     },
-    totals: buildPublicApiRequestSourceSplit(config.totals.webRequests, config.totals.externalRequests),
+    totals: buildApiRequestAttributionSplit(config.totals.siteRequests, config.totals.externalRequests),
+    siteDelivery: buildSiteDelivery(config.siteDelivery),
+    lanes: config.lanes,
     routes: config.routes,
     buckets: config.buckets,
+    scope: {
+      countsTotalSiteDemand: true,
+      countsWorkerLoad: true,
+      includesPagesProxyCacheHits: true,
+    },
   };
 }

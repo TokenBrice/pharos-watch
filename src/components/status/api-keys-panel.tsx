@@ -6,6 +6,7 @@ import type {
   ApiKeyMutationResponse,
   ApiKeyRotateResponse,
   ApiKeySummary,
+  ApiKeyTrafficClass,
 } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ interface EditableKeyState {
   name: string;
   ownerEmail: string;
   tier: string;
+  trafficClass: ApiKeyTrafficClass;
   rateLimitPerMinute: string;
 }
 
@@ -31,6 +33,7 @@ function buildEditableState(key: ApiKeySummary): EditableKeyState {
     name: key.name,
     ownerEmail: key.ownerEmail ?? "",
     tier: key.tier,
+    trafficClass: key.trafficClass,
     rateLimitPerMinute: String(key.rateLimitPerMinute),
   };
 }
@@ -76,6 +79,7 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
   const [createName, setCreateName] = useState("");
   const [createOwnerEmail, setCreateOwnerEmail] = useState("");
   const [createTier, setCreateTier] = useState("standard");
+  const [createTrafficClass, setCreateTrafficClass] = useState<ApiKeyTrafficClass>("external");
   const [createRateLimit, setCreateRateLimit] = useState("120");
   const [drafts, setDrafts] = useState<Record<number, EditableKeyState>>({});
   const [busyKeyId, setBusyKeyId] = useState<number | null>(null);
@@ -115,12 +119,14 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
         name: createName,
         ownerEmail: createOwnerEmail || null,
         tier: createTier,
+        trafficClass: createTrafficClass,
         rateLimitPerMinute: Number.parseInt(createRateLimit, 10),
       });
       setRevealedToken({ label: `Created ${response.key.name}`, token: response.token });
       setCreateName("");
       setCreateOwnerEmail("");
       setCreateTier("standard");
+      setCreateTrafficClass("external");
       setCreateRateLimit("120");
       await refetch();
     } catch (err) {
@@ -143,7 +149,7 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
               Tokens are shown once. Store them outside Pharos after creation or rotation.
             </p>
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3 lg:grid-cols-3">
             <label className="space-y-1">
               <span className="text-xs font-medium text-muted-foreground">Name</span>
               <input className={fieldClassName()} value={createName} onChange={(event) => setCreateName(event.target.value)} />
@@ -155,6 +161,13 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
             <label className="space-y-1">
               <span className="text-xs font-medium text-muted-foreground">Tier</span>
               <input className={fieldClassName()} value={createTier} onChange={(event) => setCreateTier(event.target.value)} />
+            </label>
+            <label className="space-y-1">
+              <span className="text-xs font-medium text-muted-foreground">Traffic Class</span>
+              <select className={fieldClassName()} value={createTrafficClass} onChange={(event) => setCreateTrafficClass(event.target.value as ApiKeyTrafficClass)}>
+                <option value="external">external</option>
+                <option value="site">site</option>
+              </select>
             </label>
             <label className="space-y-1">
               <span className="text-xs font-medium text-muted-foreground">Rate Limit / Minute</span>
@@ -219,7 +232,7 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
                     </span>
                   </div>
 
-                  <div className="grid gap-3 md:grid-cols-2">
+                  <div className="grid gap-3 lg:grid-cols-3">
                     <label className="space-y-1">
                       <span className="text-xs font-medium text-muted-foreground">Name</span>
                       <input
@@ -243,6 +256,20 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
                         value={draft.tier}
                         onChange={(event) => setDrafts((prev) => ({ ...prev, [key.id]: { ...draft, tier: event.target.value } }))}
                       />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-xs font-medium text-muted-foreground">Traffic Class</span>
+                      <select
+                        className={fieldClassName()}
+                        value={draft.trafficClass}
+                        onChange={(event) => setDrafts((prev) => ({
+                          ...prev,
+                          [key.id]: { ...draft, trafficClass: event.target.value as ApiKeyTrafficClass },
+                        }))}
+                      >
+                        <option value="external">external</option>
+                        <option value="site">site</option>
+                      </select>
                     </label>
                     <label className="space-y-1">
                       <span className="text-xs font-medium text-muted-foreground">Rate Limit / Minute</span>
@@ -272,6 +299,7 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
                             name: draft.name,
                             ownerEmail: draft.ownerEmail || null,
                             tier: draft.tier,
+                            trafficClass: draft.trafficClass,
                             rateLimitPerMinute: Number.parseInt(draft.rateLimitPerMinute, 10),
                           },
                         );

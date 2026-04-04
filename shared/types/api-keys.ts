@@ -1,3 +1,5 @@
+export type ApiKeyTrafficClass = "external" | "site";
+
 export interface ApiKeySummary {
   id: number;
   keyPrefix: string;
@@ -5,6 +7,7 @@ export interface ApiKeySummary {
   name: string;
   ownerEmail: string | null;
   tier: string;
+  trafficClass: ApiKeyTrafficClass;
   rateLimitPerMinute: number;
   isActive: boolean;
   createdAt: number;
@@ -22,6 +25,7 @@ export interface ApiKeyCreateRequest {
   name: string;
   ownerEmail?: string | null;
   tier?: string | null;
+  trafficClass?: ApiKeyTrafficClass | null;
   rateLimitPerMinute?: number | null;
 }
 
@@ -29,6 +33,7 @@ export interface ApiKeyUpdateRequest {
   name?: string | null;
   ownerEmail?: string | null;
   tier?: string | null;
+  trafficClass?: ApiKeyTrafficClass | null;
   rateLimitPerMinute?: number | null;
   isActive?: boolean | null;
 }

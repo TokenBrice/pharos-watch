@@ -5,6 +5,7 @@ import type {
   ApiKeyMutationResponse,
   ApiKeyRotateResponse,
   ApiKeySummary,
+  ApiKeyTrafficClass,
   ApiKeyUpdateRequest,
 } from "@shared/types";
 import { errorResponse } from "./api-utils";
@@ -20,6 +21,7 @@ const API_KEY_MAX_RATE_LIMIT_PER_MINUTE = 10_000;
 const API_KEY_NAME_MAX_LENGTH = 80;
 const API_KEY_OWNER_EMAIL_MAX_LENGTH = 200;
 const API_KEY_TIER_MAX_LENGTH = 40;
+const API_KEY_TRAFFIC_CLASS_DEFAULT: ApiKeyTrafficClass = "external";
 const API_KEY_CACHE_TTL_MS = 5_000;
 const API_KEY_USAGE_UPDATE_WINDOW_SEC = 120;
 const API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER = 10;
@@ -50,6 +52,7 @@ interface ApiKeyRow {
   name: string;
   owner_email: string | null;
   tier: string;
+  traffic_class: ApiKeyTrafficClass;
   rate_limit_per_minute: number;
   is_active: number;
   created_at: number;
@@ -77,6 +80,7 @@ export interface AuthenticatedApiKey {
   name: string;
   ownerEmail: string | null;
   tier: string;
+  trafficClass: ApiKeyTrafficClass;
   rateLimitPerMinute: number;
   isActive: boolean;
 }
@@ -114,6 +118,17 @@ function normalizeRequiredName(value: unknown): string | Response {
 
 function normalizeTier(value: unknown): string {
   return normalizeOptionalString(value, API_KEY_TIER_MAX_LENGTH) ?? "standard";
+}
+
+function normalizeTrafficClass(value: unknown): ApiKeyTrafficClass | Response {
+  const trimmed = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (!trimmed) {
+    return API_KEY_TRAFFIC_CLASS_DEFAULT;
+  }
+  if (trimmed === "external" || trimmed === "site") {
+    return trimmed;
+  }
+  return errorResponse(400, "trafficClass must be either site or external");
 }
 
 function normalizeRateLimit(value: unknown): number | Response {
@@ -210,6 +225,7 @@ function mapRowToSummary(row: ApiKeyPublicRow): ApiKeySummary {
     name: row.name,
     ownerEmail: row.owner_email,
     tier: row.tier,
+    trafficClass: row.traffic_class,
     rateLimitPerMinute: row.rate_limit_per_minute,
     isActive: row.is_active === 1,
     createdAt: row.created_at,
@@ -226,6 +242,7 @@ function mapRowToAuthenticatedKey(row: ApiKeyRow): AuthenticatedApiKey {
     name: row.name,
     ownerEmail: row.owner_email,
     tier: row.tier,
+    trafficClass: row.traffic_class,
     rateLimitPerMinute: row.rate_limit_per_minute,
     isActive: row.is_active === 1,
   };
@@ -250,6 +267,7 @@ async function lookupApiKeyByPrefix(db: ApiKeyDb, keyPrefix: string): Promise<Ap
        name,
        owner_email,
        tier,
+       traffic_class,
        rate_limit_per_minute,
        is_active,
        created_at,
@@ -377,10 +395,16 @@ function normalizeCreateInput(body: Record<string, unknown>): ApiKeyCreateReques
     return rateLimitPerMinute;
   }
 
+  const trafficClass = normalizeTrafficClass(body.trafficClass);
+  if (trafficClass instanceof Response) {
+    return trafficClass;
+  }
+
   return {
     name,
     ownerEmail: normalizeOwnerEmail(body.ownerEmail),
     tier: normalizeTier(body.tier),
+    trafficClass,
     rateLimitPerMinute,
   };
 }
@@ -402,6 +426,14 @@ function normalizeUpdateInput(body: Record<string, unknown>): ApiKeyUpdateReques
 
   if ("tier" in body) {
     next.tier = normalizeTier(body.tier);
+  }
+
+  if ("trafficClass" in body) {
+    const normalized = normalizeTrafficClass(body.trafficClass);
+    if (normalized instanceof Response) {
+      return normalized;
+    }
+    next.trafficClass = normalized;
   }
 
   if ("rateLimitPerMinute" in body) {
@@ -435,6 +467,7 @@ async function selectApiKeyById(db: ApiKeyDb, id: number): Promise<ApiKeyRow | n
        name,
        owner_email,
        tier,
+       traffic_class,
        rate_limit_per_minute,
        is_active,
        created_at,
@@ -456,6 +489,7 @@ async function selectPublicApiKeyById(db: ApiKeyDb, id: number): Promise<ApiKeyP
        name,
        owner_email,
        tier,
+       traffic_class,
        rate_limit_per_minute,
        is_active,
        created_at,
@@ -482,6 +516,7 @@ export async function listApiKeys(db: ApiKeyDb, nowSec = getNowSec()): Promise<A
        name,
        owner_email,
        tier,
+       traffic_class,
        rate_limit_per_minute,
        is_active,
        created_at,
@@ -522,18 +557,20 @@ export async function createApiKey(
        name,
        owner_email,
        tier,
+       traffic_class,
        rate_limit_per_minute,
        is_active,
        created_at,
        updated_at
      )
-     VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
      RETURNING
        id,
        key_prefix,
        name,
        owner_email,
        tier,
+       traffic_class,
        rate_limit_per_minute,
        is_active,
        created_at,
@@ -547,6 +584,7 @@ export async function createApiKey(
       parsed.name,
       parsed.ownerEmail ?? null,
       parsed.tier ?? "standard",
+      parsed.trafficClass ?? API_KEY_TRAFFIC_CLASS_DEFAULT,
       parsed.rateLimitPerMinute ?? API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
       nowSec,
       nowSec,
@@ -586,6 +624,7 @@ export async function updateApiKey(
       name = ?,
       owner_email = ?,
       tier = ?,
+      traffic_class = ?,
        rate_limit_per_minute = ?,
        is_active = ?,
        updated_at = ?
@@ -595,6 +634,7 @@ export async function updateApiKey(
       parsed.name ?? existing.name,
       Object.prototype.hasOwnProperty.call(parsed, "ownerEmail") ? parsed.ownerEmail ?? null : existing.owner_email,
       parsed.tier ?? existing.tier,
+      parsed.trafficClass ?? existing.traffic_class,
       parsed.rateLimitPerMinute ?? existing.rate_limit_per_minute,
       parsed.isActive == null ? existing.is_active : parsed.isActive ? 1 : 0,
       nowSec,

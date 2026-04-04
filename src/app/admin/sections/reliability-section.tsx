@@ -1,4 +1,4 @@
-import type { EndpointProbeResult, HealthResponse, PublicApiRequestSourceStatsResponse, StatusResponse } from "@shared/types";
+import type { ApiRequestAttributionResponse, EndpointProbeResult, HealthResponse, StatusResponse } from "@shared/types";
 import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
 import { CircuitBreakerTable } from "@/components/status/circuit-breaker-table";
 import { EndpointHealthGrid } from "@/components/status/endpoint-health-grid";
@@ -10,7 +10,7 @@ import { formatPercent } from "@shared/lib/format";
 export interface ReliabilitySectionProps {
   data: StatusResponse;
   healthData: HealthResponse | null | undefined;
-  requestSourceStats: PublicApiRequestSourceStatsResponse | null | undefined;
+  requestSourceStats: ApiRequestAttributionResponse | null | undefined;
   requestSourceError?: string | null;
   requestSourceLoading: boolean;
   browserProbeSummary: {
@@ -56,7 +56,7 @@ export function ReliabilitySection({
             value={browserProbeSummary ? `${browserProbeSummary.passCount}/${browserProbeSummary.sampleCount}` : "—"}
           />
           <SummaryBadge
-            label="External 24h"
+            label="External Demand 24h"
             value={requestSourceStats ? formatPercent(requestSourceStats.totals.externalSharePct, 1) : "—"}
           />
           <SummaryBadge label="Worst Cache" value={`${data.summary.worstCacheRatio.toFixed(2)}x`} />

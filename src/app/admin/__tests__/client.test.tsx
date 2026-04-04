@@ -2,7 +2,7 @@
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { EndpointProbeResult, HealthResponse, PublicApiRequestSourceStatsResponse, StatusCause, StatusResponse } from "@shared/types";
+import type { ApiRequestAttributionResponse, EndpointProbeResult, HealthResponse, StatusCause, StatusResponse } from "@shared/types";
 
 const { isOpsUiHostMock, useStatusDashboardModelMock } = vi.hoisted(() => ({
   isOpsUiHostMock: vi.fn(),
@@ -333,7 +333,7 @@ const PROBES: EndpointProbeResult[] = [
   },
 ];
 
-const REQUEST_SOURCE_STATS: PublicApiRequestSourceStatsResponse = {
+const REQUEST_SOURCE_STATS: ApiRequestAttributionResponse = {
   generatedAt: 1_700_000_000,
   window: {
     from: 1_699_913_600,
@@ -344,14 +344,28 @@ const REQUEST_SOURCE_STATS: PublicApiRequestSourceStatsResponse = {
     retentionDays: 35,
   },
   totals: {
-    webRequests: 600,
+    siteRequests: 600,
     externalRequests: 400,
     totalRequests: 1000,
-    webSharePct: 60,
+    siteSharePct: 60,
     externalSharePct: 40,
   },
+  siteDelivery: {
+    totalSiteRequests: 600,
+    pagesCacheHits: 420,
+    pagesUpstreamFetches: 150,
+    pagesUpstreamTimeouts: 20,
+    pagesUpstreamErrors: 10,
+    publicApiSiteRequests: 120,
+  },
+  lanes: [],
   routes: [],
   buckets: [],
+  scope: {
+    countsTotalSiteDemand: true,
+    countsWorkerLoad: true,
+    includesPagesProxyCacheHits: true,
+  },
 };
 
 const TOP_CAUSE: StatusCause = {

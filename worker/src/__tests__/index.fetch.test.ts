@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../index";
 import { mockD1 } from "../api/__tests__/helpers/mock-d1";
 import { resetRateLimitStateForTests } from "../lib/rate-limit";
+import { resetRequestAttributionStateForTests } from "../lib/request-source-attribution";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 
 async function hmacSha256Hex(secret: string, input: string): Promise<string> {
@@ -46,6 +47,7 @@ describe("worker.fetch", () => {
 
   beforeEach(() => {
     resetRateLimitStateForTests();
+    resetRequestAttributionStateForTests();
     vi.restoreAllMocks();
     cacheMatch.mockReset();
     cachePut.mockReset();
@@ -184,7 +186,7 @@ describe("worker.fetch", () => {
     expect(cachePut).not.toHaveBeenCalled();
   });
 
-  it("records first-party request-source telemetry for public API traffic", async () => {
+  it("records first-party request attribution telemetry for public API traffic", async () => {
     cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
@@ -198,12 +200,12 @@ describe("worker.fetch", () => {
           first: { count: 1 },
         },
         {
-          match: "INSERT INTO api_request_source_stats",
+          match: "INSERT INTO api_request_consumer_stats",
           rows: [],
           runMeta: { changes: 1 },
         },
         {
-          match: "DELETE FROM api_request_source_stats",
+          match: "DELETE FROM api_request_consumer_stats",
           rows: [],
           runMeta: { changes: 0 },
         },
@@ -227,22 +229,23 @@ describe("worker.fetch", () => {
 
     expect(res.status).toBe(200);
     const history = env.DB.getHistory();
-    expect(history.some((entry) => entry.sql.includes("INSERT INTO api_request_source_stats")
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO api_request_consumer_stats")
       && entry.binds[1] === "stablecoins"
       && entry.binds[2] === "/api/stablecoins"
-      && entry.binds[3] === "web")).toBe(true);
+      && entry.binds[3] === "public-api"
+      && entry.binds[4] === "site")).toBe(true);
   });
 
   it("enters a bounded emergency block after repeated distributed rate-limit failures", async () => {
     const env = makeEnv({
       DB: mockD1([
         {
-          match: "INSERT INTO api_request_source_stats",
+          match: "INSERT INTO api_request_consumer_stats",
           rows: [],
           runMeta: { changes: 1 },
         },
         {
-          match: "DELETE FROM api_request_source_stats",
+          match: "DELETE FROM api_request_consumer_stats",
           rows: [],
           runMeta: { changes: 0 },
         },
@@ -344,13 +347,24 @@ describe("worker.fetch", () => {
     expect(cacheMatch).not.toHaveBeenCalled();
   });
 
-  it("serves allowlisted site-api requests with the shared secret and skips request-source stats", async () => {
+  it("records authenticated site-api requests as site worker-lane load", async () => {
     cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     }));
     const env = makeEnv({
-      DB: mockD1([], { requireMatch: true }),
+      DB: mockD1([
+        {
+          match: "INSERT INTO api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "DELETE FROM api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+      ], { requireMatch: true }),
     });
     const { ctx, waits } = makeCtx();
 
@@ -365,7 +379,12 @@ describe("worker.fetch", () => {
     await Promise.all(waits);
 
     expect(res.status).toBe(200);
-    expect(env.DB.getHistory()).toEqual([]);
+    const history = env.DB.getHistory();
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO api_request_consumer_stats")
+      && entry.binds[1] === "stablecoins"
+      && entry.binds[2] === "/api/stablecoins"
+      && entry.binds[3] === "site-api"
+      && entry.binds[4] === "site")).toBe(true);
   });
 
   it("enforces API keys on protected public routes when auth mode is enforce", async () => {
@@ -407,6 +426,7 @@ describe("worker.fetch", () => {
             name: "Smoke",
             owner_email: "ops@pharos.watch",
             tier: "ci",
+            traffic_class: "external",
             rate_limit_per_minute: 180,
             is_active: 1,
             created_at: 1,
@@ -431,12 +451,12 @@ describe("worker.fetch", () => {
           runMeta: { changes: 0 },
         },
         {
-          match: "INSERT INTO api_request_source_stats",
+          match: "INSERT INTO api_request_consumer_stats",
           rows: [],
           runMeta: { changes: 1 },
         },
         {
-          match: "DELETE FROM api_request_source_stats",
+          match: "DELETE FROM api_request_consumer_stats",
           rows: [],
           runMeta: { changes: 0 },
         },

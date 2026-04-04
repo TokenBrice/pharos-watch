@@ -6,6 +6,7 @@ import {
   SITE_DATA_FUNCTIONS_OPTIONAL_ENV_KEYS,
   SITE_DATA_FUNCTIONS_REQUIRED_ENV_KEYS,
   resolveSiteApiOrigin,
+  resolveSiteDataUpstreamLane,
   validatePagesSiteDataProxyEnv,
 } from "../lib/site-api-env";
 
@@ -20,13 +21,19 @@ describe("site-data env contract", () => {
   it("falls back to the default site API origin", () => {
     expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: undefined })).toBe(DEFAULT_SITE_API_ORIGIN);
     expect(DEFAULT_SITE_API_ORIGIN).toBe(API_ORIGIN);
+    expect(resolveSiteDataUpstreamLane({ SITE_API_ORIGIN: undefined })).toBe("public-api-fallback");
+    expect(resolveSiteDataUpstreamLane({ SITE_API_ORIGIN: "https://site-api.pharos.watch" })).toBe("site-api");
   });
 
-  it("requires the shared secret", () => {
-    expect(validatePagesSiteDataProxyEnv({ SITE_API_SHARED_SECRET: undefined })).toEqual([
+  it("requires the shared secret and Pages DB binding", () => {
+    expect(validatePagesSiteDataProxyEnv({ SITE_API_SHARED_SECRET: undefined, DB: undefined })).toEqual([
       {
         code: "site-api-secret-missing",
         message: "SITE_API_SHARED_SECRET must be configured for the site-data proxy.",
+      },
+      {
+        code: "site-data-db-missing",
+        message: "DB must be bound on the Pages project for durable site-data attribution telemetry.",
       },
     ]);
   });
