@@ -795,7 +795,24 @@
         "pct": 15,
         "risk": "medium"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "curated-validated",
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "satusd-river",
+      "display": {
+        "url": "https://river.inc/",
+        "label": "River Dashboard"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      }
+    }
   },
   {
     "id": "gusd-gate",
@@ -9266,7 +9283,23 @@
         "pct": 100,
         "risk": "very-low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "m0",
+      "version": 1,
+      "semantics": "protocol-reserve",
+      "breakerScope": "m0",
+      "display": {
+        "url": "https://dashboard.m0.org/",
+        "label": "M0 Dashboard"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://protocol-api.m0.org/graphql"
+        }
+      }
+    }
   },
   {
     "id": "ctusd-citrea",
