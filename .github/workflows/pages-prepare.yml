@@ -14,6 +14,9 @@ on:
         default: pages-static-export
         type: string
 
+permissions:
+  contents: read
+
 jobs:
   build-pages:
     runs-on: ubuntu-latest

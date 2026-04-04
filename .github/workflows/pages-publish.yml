@@ -9,6 +9,9 @@ on:
         default: pages-static-export
         type: string
 
+permissions:
+  contents: read
+
 jobs:
   deploy-pages:
     runs-on: ubuntu-latest

@@ -9,6 +9,9 @@ concurrency:
   group: pull-request-checks-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     uses: ./.github/workflows/validate-ci.yml

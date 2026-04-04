@@ -9,6 +9,9 @@ concurrency:
   group: production-deploy-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   pages-release:
     uses: ./.github/workflows/pages-release.yml
