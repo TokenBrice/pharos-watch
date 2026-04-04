@@ -35,8 +35,27 @@ import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stable
 import { getD1UsageSummary } from "../lib/status/d1-usage";
 import { getMintBurnReconciliation } from "../lib/status/derived-data";
 
-function sectionError(code: string, message: string): StatusSectionError {
-  return { code, message };
+function sectionError(code: string, message?: string): StatusSectionError {
+  const safeMessage = message ?? (
+    code === "discovery_candidates_query_failed"
+      ? "Discovery candidates unavailable."
+      : code === "liquidity_health_extraction_failed"
+        ? "Liquidity health data unavailable."
+        : code === "price_source_health_extraction_failed"
+          ? "Price source health data unavailable."
+          : code === "coingecko_price_diff_query_failed"
+            ? "CoinGecko price diff unavailable."
+            : code === "d1_usage_query_failed"
+              ? "D1 usage metrics unavailable."
+              : code === "mint_burn_reconciliation_query_failed"
+                ? "Mint/burn reconciliation unavailable."
+                : code === "reserve_drift_computation_failed"
+                  ? "Reserve drift diagnostics unavailable."
+                  : code === "classification_warnings_computation_failed"
+                    ? "Classification warnings unavailable."
+                    : "Section unavailable."
+  );
+  return { code, message: safeMessage };
 }
 
 export interface StatusSupplements {
@@ -174,7 +193,6 @@ export async function loadStatusSupplements(
     console.warn("[status] Discovery candidates query failed:", err);
     sectionErrors.discoveryCandidates = sectionError(
       "discovery_candidates_query_failed",
-      err instanceof Error ? err.message : String(err),
     );
   }
 
@@ -216,7 +234,6 @@ export async function loadStatusSupplements(
     console.warn("[status] Liquidity health extraction failed:", err);
     sectionErrors.liquidityHealth = sectionError(
       "liquidity_health_extraction_failed",
-      err instanceof Error ? err.message : String(err),
     );
   }
 
@@ -231,7 +248,6 @@ export async function loadStatusSupplements(
     console.warn("[status] Price source health extraction failed:", err);
     sectionErrors.priceSourceHealth = sectionError(
       "price_source_health_extraction_failed",
-      err instanceof Error ? err.message : String(err),
     );
   }
 
@@ -243,7 +259,6 @@ export async function loadStatusSupplements(
       console.warn("[status] CoinGecko price diff query failed:", err);
       sectionErrors.coingeckoPriceDiff = sectionError(
         "coingecko_price_diff_query_failed",
-        err instanceof Error ? err.message : String(err),
       );
     }
   }
@@ -265,7 +280,6 @@ export async function loadStatusSupplements(
     console.warn("[status] D1 usage loader failed:", err);
     sectionErrors.d1Usage = sectionError(
       "d1_usage_query_failed",
-      err instanceof Error ? err.message : String(err),
     );
   }
 
@@ -276,7 +290,6 @@ export async function loadStatusSupplements(
     console.warn("[status] Mint/burn reconciliation query failed:", err);
     sectionErrors.mintBurnReconciliation = sectionError(
       "mint_burn_reconciliation_query_failed",
-      err instanceof Error ? err.message : String(err),
     );
   }
 
@@ -300,7 +313,6 @@ export async function loadStatusSupplements(
     console.warn("[status] Reserve drift computation failed:", err);
     sectionErrors.reserveDrift = sectionError(
       "reserve_drift_computation_failed",
-      err instanceof Error ? err.message : String(err),
     );
   }
 
@@ -325,7 +337,6 @@ export async function loadStatusSupplements(
     console.warn("[status] Classification warnings computation failed:", err);
     sectionErrors.classificationWarnings = sectionError(
       "classification_warnings_computation_failed",
-      err instanceof Error ? err.message : String(err),
     );
   }
 

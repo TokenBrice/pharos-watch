@@ -154,7 +154,7 @@ describe("handleHealth", () => {
 
     expect(body.status).toBe("stale");
     expect(body.caches).toEqual({});
-    expect(body.warnings[0]).toContain("db-unhealthy:");
+    expect(body.warnings).toContain("db-unhealthy");
   });
 
   it("degrades and surfaces warnings when subqueries fail", async () => {
@@ -194,7 +194,8 @@ describe("handleHealth", () => {
     };
 
     expect(body.status).toBe("degraded");
-    expect(body.warnings.some((warning) => warning.startsWith("blacklist-query-failed:"))).toBe(true);
+    expect(body.warnings).toContain("blacklist-query-failed");
+    expect(body.warnings.join(" ")).not.toContain("blacklist failed");
   });
 
   it("keeps health degraded rather than stale when FX is in repeated cached-fallback with fresh usable sync", async () => {

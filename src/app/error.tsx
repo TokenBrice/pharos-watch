@@ -9,12 +9,17 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const message =
+    process.env.NODE_ENV === "development"
+      ? (error.message || "An unexpected error occurred.")
+      : "Something went wrong while loading this page.";
+
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6">
       <div className="text-center space-y-2">
         <h1 className="text-4xl font-bold font-mono tracking-tight">Something went wrong</h1>
         <p className="text-muted-foreground text-sm max-w-md">
-          {error.message || "An unexpected error occurred."}
+          {message}
         </p>
       </div>
       <div className="flex gap-4">

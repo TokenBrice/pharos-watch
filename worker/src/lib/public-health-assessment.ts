@@ -68,8 +68,17 @@ export interface PublicHealthAssessment {
   circuitQueryError: string | null;
 }
 
-function formatError(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
+function publicHealthErrorMessage(kind: "blacklist" | "circuit" | "db" | "mint-burn"): string {
+  switch (kind) {
+    case "blacklist":
+      return "Blacklist health data unavailable.";
+    case "circuit":
+      return "Circuit breaker diagnostics unavailable.";
+    case "db":
+      return "Primary database unavailable.";
+    case "mint-burn":
+      return "Mint/burn health data unavailable.";
+  }
 }
 
 function completeCircuitStates(
@@ -97,7 +106,7 @@ async function checkDbHealth(
     console.error(`[${logPrefix}] DB health sentinel failed:`, err);
     return {
       dbHealthy: false,
-      warning: `db-unhealthy: ${formatError(err)}`,
+      warning: "db-unhealthy",
     };
   }
 }
@@ -186,10 +195,11 @@ async function loadMintBurnHealth(
       mintBurnBootstrap: latestRun?.status == null && latestSuccessfulSyncAt == null,
     };
   } catch (err) {
+    console.error("[health] Mint/burn health query failed:", err);
     return {
       mintBurn: { ...EMPTY_MINT_BURN_HEALTH },
       mintBurnImpactStatus: "degraded",
-      mintBurnQueryError: formatError(err),
+      mintBurnQueryError: publicHealthErrorMessage("mint-burn"),
       mintBurnLastRunStatus: null,
       mintBurnBootstrap: false,
     };
@@ -250,11 +260,17 @@ export async function assessPublicHealth(
     buildCacheStatuses(db, now),
     queryBlacklistGapMetrics(db, now)
       .then((metrics) => ({ metrics, error: null as string | null }))
-      .catch((err) => ({ metrics: null, error: formatError(err) })),
+      .catch((err) => {
+        console.error(`[${logPrefix}] Failed to query blacklist counts:`, err);
+        return { metrics: null, error: publicHealthErrorMessage("blacklist") };
+      }),
     loadMintBurnHealth(db, now, mintBurnConfig),
     getCircuitStates(db)
       .then((circuits) => ({ circuits: completeCircuitStates(circuits), error: null as string | null }))
-      .catch((err) => ({ circuits: {}, error: formatError(err) })),
+      .catch((err) => {
+        console.error(`[${logPrefix}] Failed to query circuit states:`, err);
+        return { circuits: {}, error: publicHealthErrorMessage("circuit") };
+      }),
   ]);
 
   const cacheImpactStatus = getOverallCacheImpactStatus(cacheAssessment.caches);
@@ -275,13 +291,11 @@ export async function assessPublicHealth(
         missingRatio: blacklistResult.metrics.missingRatio,
       };
   if (blacklistResult.error) {
-    console.error(`[${logPrefix}] Failed to query blacklist counts:`, blacklistResult.error);
-    warnings.push(`blacklist-query-failed: ${blacklistResult.error}`);
+    warnings.push("blacklist-query-failed");
   }
 
   if (mintBurnResult.mintBurnQueryError) {
-    console.error(`[${logPrefix}] Failed to query mint/burn counts:`, mintBurnResult.mintBurnQueryError);
-    warnings.push(`mint-burn-query-failed: ${mintBurnResult.mintBurnQueryError}`);
+    warnings.push("mint-burn-query-failed");
   }
 
   const openCircuitCount = Object.values(circuitResult.circuits).filter((circuit) => circuit.state === "open").length;
@@ -289,8 +303,7 @@ export async function assessPublicHealth(
     ? "degraded"
     : getCircuitImpactStatus(openCircuitCount);
   if (circuitResult.error) {
-    console.error(`[${logPrefix}] Failed to query circuit states:`, circuitResult.error);
-    warnings.push(`circuit-query-failed: ${circuitResult.error}`);
+    warnings.push("circuit-query-failed");
   }
 
   const overallStatus = maxPublicStatus(

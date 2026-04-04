@@ -150,16 +150,9 @@ export function summarizeStatusPersistenceIssues(
   issues: StatusPersistenceIssue[],
 ): StatusSectionError | undefined {
   if (issues.length === 0) return undefined;
-  const distinctOperations = [...new Set(issues.map((issue) => issue.operation))];
-  if (issues.length === 1) {
-    return {
-      code: issues[0]!.code,
-      message: `Status persistence degraded during ${issues[0]!.operation}: ${issues[0]!.message}`,
-    };
-  }
   return {
-    code: "status_persistence_degraded",
-    message: `Status persistence degraded across ${distinctOperations.join(", ")}. First issue: ${issues[0]!.message}`,
+    code: issues.length === 1 ? issues[0]!.code : "status_persistence_degraded",
+    message: "Status persistence degraded.",
   };
 }
 

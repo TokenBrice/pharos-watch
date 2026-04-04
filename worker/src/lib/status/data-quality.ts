@@ -14,14 +14,22 @@ type DataQualitySourceKey = StatusResponse["dataQuality"]["sourceFailures"][numb
 function recordDataQualityFailure(
   bucket: StatusResponse["dataQuality"]["sourceFailures"],
   source: DataQualitySourceKey,
-  err: unknown,
+  _err: unknown,
 ): void {
   if (bucket.some((entry) => entry.source === source)) {
     return;
   }
+  const message =
+    source === "stablecoins-cache"
+      ? "Stablecoins cache unavailable."
+      : source === "blacklist-gaps"
+        ? "Blacklist gap metrics unavailable."
+        : source === "active-depegs"
+          ? "Active depeg metrics unavailable."
+          : "Onchain supply diagnostics unavailable.";
   bucket.push({
     source,
-    message: err instanceof Error ? err.message : String(err),
+    message,
   });
 }
 

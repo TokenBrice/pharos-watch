@@ -47,6 +47,17 @@ export interface RawStatusComputation {
   reserveComposition: StatusResponse["reserveComposition"];
 }
 
+function statusSectionMessage(code: keyof StatusResponse["sectionErrors"]): string {
+  switch (code) {
+    case "reserveComposition":
+      return "Reserve composition overview unavailable.";
+    case "telegramBot":
+      return "Telegram bot diagnostics unavailable.";
+    default:
+      return "Status section unavailable.";
+  }
+}
+
 function buildDbUnavailableRawStatus(): RawStatusComputation {
   const availabilityCauses: StatusCause[] = [{
     code: "db_unhealthy",
@@ -131,7 +142,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     console.warn("[status] Telegram bot stats unavailable:", err);
     sectionErrors.telegramBot = {
       code: "telegram_bot_stats_query_failed",
-      message: err instanceof Error ? err.message : String(err),
+      message: statusSectionMessage("telegramBot"),
     };
   }
   const datasetFreshness = await getDatasetFreshness(db);
@@ -144,7 +155,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     console.warn("[status] Reserve composition overview unavailable:", err);
     sectionErrors.reserveComposition = {
       code: "reserve_composition_query_failed",
-      message: err instanceof Error ? err.message : String(err),
+      message: statusSectionMessage("reserveComposition"),
     };
   }
   const missingPriceRatio =

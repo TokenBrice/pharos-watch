@@ -18,6 +18,19 @@ function pushCause(bucket: StatusCause[], cause: StatusCause): void {
   bucket.push(cause);
 }
 
+function sourceFailureMessage(source: DataQuality["sourceFailures"][number]["source"]): string {
+  switch (source) {
+    case "active-depegs":
+      return "Active depeg metrics unavailable.";
+    case "blacklist-gaps":
+      return "Blacklist gap metrics unavailable.";
+    case "onchain-supply":
+      return "Onchain supply diagnostics unavailable.";
+    case "stablecoins-cache":
+      return "Stablecoins cache unavailable.";
+  }
+}
+
 export function synthesizeOverallCauses(
   availability: StatusCause[],
   dataQuality: StatusCause[],
@@ -136,7 +149,7 @@ export function buildAvailabilityCauses(input: {
       code: "mint_burn_health_query_failed",
       layer: "availability",
       severity: "info",
-      message: `Mint/burn health query failed: ${input.publicHealth.mintBurnQueryError}`,
+      message: "Mint/burn health query failed; diagnostics are temporarily unavailable.",
     });
   } else if (!input.publicHealth.mintBurnBootstrap && input.publicHealth.mintBurnImpactStatus === "stale") {
     pushCause(availabilityCauses, {
@@ -163,7 +176,7 @@ export function buildAvailabilityCauses(input: {
       code: "circuit_query_failed",
       layer: "availability",
       severity: "warning",
-      message: `Circuit breaker diagnostics failed: ${input.publicHealth.circuitQueryError}`,
+      message: "Circuit breaker diagnostics failed; availability details may be incomplete.",
     });
   } else if (input.publicHealth.openCircuitCount >= 3) {
     pushCause(availabilityCauses, {
@@ -285,7 +298,7 @@ export function buildDataQualityCauses(input: {
       code,
       layer: "data-quality",
       severity: "warning",
-      message: `${failure.source} query failed: ${failure.message}`,
+      message: sourceFailureMessage(failure.source),
     });
   }
 

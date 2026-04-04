@@ -462,7 +462,7 @@ describe("handleStatus", () => {
     expect(body.coingeckoPriceDiff).toBeNull();
     expect(body.sectionErrors.coingeckoPriceDiff).toEqual({
       code: "coingecko_price_diff_query_failed",
-      message: "CoinGecko simple price fetch failed (503)",
+      message: "CoinGecko price diff unavailable.",
     });
   });
 
@@ -824,7 +824,7 @@ describe("handleStatus", () => {
       sectionErrors: Record<string, { code: string; message: string } | undefined>;
     };
     expect(body.sectionErrors.statusState?.code).toBe("status_persistence_degraded");
-    expect(body.sectionErrors.statusState?.message).toMatch(/status_state/i);
+    expect(body.sectionErrors.statusState?.message).toBe("Status persistence degraded.");
   });
 
   it("uses writer timestamps for event-backed freshness rows", async () => {
@@ -976,7 +976,7 @@ describe("handleStatus", () => {
     expect(body.dataQuality.blacklistGapStatus).toBe("failed");
     expect(body.dataQuality.sourceFailures).toContainEqual({
       source: "blacklist-gaps",
-      message: "blacklist query failed",
+      message: "Blacklist gap metrics unavailable.",
     });
     expect(body.causes.dataQuality.some((cause) => cause.code === "blacklist_gap_query_failed")).toBe(true);
   });
@@ -1348,11 +1348,11 @@ describe("handleStatus", () => {
     expect(body.telegramBot).toBeNull();
     expect(body.sectionErrors.discoveryCandidates).toEqual({
       code: "discovery_candidates_query_failed",
-      message: "discovery query exploded",
+      message: "Discovery candidates unavailable.",
     });
     expect(body.sectionErrors.telegramBot).toEqual({
       code: "telegram_bot_stats_query_failed",
-      message: "no such table: telegram_subscribers",
+      message: "Telegram bot diagnostics unavailable.",
     });
   });
 

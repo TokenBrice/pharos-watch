@@ -457,7 +457,7 @@ describe("status-reliability", () => {
     expect(issues.some((issue) => issue.code === "status_state_persistence_failed")).toBe(true);
     expect(issues.some((issue) => issue.code === "status_state_snapshot_failed")).toBe(true);
     expect(summary?.code).toBe("status_persistence_degraded");
-    expect(summary?.message).toMatch(/load-status-state/);
+    expect(summary?.message).toBe("Status persistence degraded.");
   });
 
   it("builds fallback state from the canonical hysteresis policy", () => {
