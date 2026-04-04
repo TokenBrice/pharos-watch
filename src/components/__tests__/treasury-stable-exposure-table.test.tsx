@@ -1,7 +1,5 @@
 // @vitest-environment jsdom
 
-// @vitest-environment jsdom
-
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { TreasuryStableExposureTable } from "@/components/treasury-stable-exposure-table";
@@ -22,6 +20,7 @@ function makeResponse(): TreasuryStableExposureResponse {
         source: "defillama-github",
         adapterFile: "alpha.js",
         chains: ["ethereum"],
+        directWalletUsd: 10_000_000,
         treasuryUsd: 10_000_000,
         stablecoinSleeveUsd: 2_000_000,
         trackedStableUsd: 1_900_000,
@@ -40,14 +39,21 @@ function makeResponse(): TreasuryStableExposureResponse {
           extractionMode: "static-seeded",
           ownerCount: 1,
           ownerChainCount: 1,
+          denominatorStatus: "direct-only",
+          directWalletUsd: 10_000_000,
+          defiPositionUsd: 0,
+          consumedDirectBalanceUsd: 0,
           trackedStableUsd: 1_900_000,
           stablecoinSleeveUsd: 2_000_000,
           untrackedStableUsd: 100_000,
+          derivedUntrackedStableUsd: 0,
           ratedTrackedStableUsd: 1_900_000,
           trackedStablePctOfTreasury: 19,
           trackedStablePctOfStableSleeve: 95,
           ratedTrackedStablePct: 100,
           untrackedStableCount: 1,
+          derivedUntrackedStableCount: 0,
+          skippedDerivedPositionCount: 0,
           notes: [],
         },
       },
@@ -59,11 +65,12 @@ function makeResponse(): TreasuryStableExposureResponse {
         source: "defillama-github",
         adapterFile: "beta.js",
         chains: ["ethereum"],
-        treasuryUsd: 4_000_000,
+        directWalletUsd: 4_000_000,
+        treasuryUsd: null,
         stablecoinSleeveUsd: 800_000,
         trackedStableUsd: 800_000,
         decentralizedStableUsd: 300_000,
-        decentralizedStablePctOfTreasury: 7.5,
+        decentralizedStablePctOfTreasury: null,
         decentralizedStablePctOfStableSleeve: 37.5,
         weightedSafetyScore: 91,
         weightedSafetyGrade: "A-",
@@ -77,15 +84,22 @@ function makeResponse(): TreasuryStableExposureResponse {
           extractionMode: "static-seeded",
           ownerCount: 1,
           ownerChainCount: 1,
+          denominatorStatus: "partial",
+          directWalletUsd: 4_000_000,
+          defiPositionUsd: 300_000,
+          consumedDirectBalanceUsd: 100_000,
           trackedStableUsd: 800_000,
           stablecoinSleeveUsd: 800_000,
           untrackedStableUsd: 0,
+          derivedUntrackedStableUsd: 25_000,
           ratedTrackedStableUsd: 800_000,
-          trackedStablePctOfTreasury: 20,
+          trackedStablePctOfTreasury: null,
           trackedStablePctOfStableSleeve: 100,
           ratedTrackedStablePct: 100,
           untrackedStableCount: 0,
-          notes: [],
+          derivedUntrackedStableCount: 1,
+          skippedDerivedPositionCount: 1,
+          notes: ["Treasury-relative metrics are unavailable because one or more derived positions could not be valued end to end."],
         },
       },
     ],
@@ -96,6 +110,10 @@ function makeResponse(): TreasuryStableExposureResponse {
       launchEligibleCount: 2,
       ownerChainTuples: 5,
       launchOwnerChainTuples: 2,
+      comparableEntityCount: 1,
+      partialEntityCount: 1,
+      invalidEntityCount: 0,
+      supplementedEntityCount: 1,
       evmOnly: true,
       extractionModes: {
         staticSeeded: 3,
@@ -122,5 +140,14 @@ describe("TreasuryStableExposureTable", () => {
     rowButtons = screen.getAllByRole("button", { expanded: false });
     expect(rowButtons[0]?.textContent).toContain("Beta Labs");
     expect(rowButtons[1]?.textContent).toContain("Alpha DAO");
+  });
+
+  it("surfaces partial rows as sleeve-only and excludes them from treasury-share summary counts", () => {
+    render(<TreasuryStableExposureTable data={makeResponse()} logos={{}} />);
+
+    expect(screen.getAllByText(/1 treasury-comparable rows and 1 partial or invalid rows/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Partial denominator").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/1 comparable entities currently show at least 5% decentralized stable exposure/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
   });
 });

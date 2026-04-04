@@ -1,6 +1,9 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { TREASURY_SEEDS } from "@shared/lib/treasury-seeds";
-import { buildTreasuryStableExposureSnapshot } from "@shared/lib/treasury-stable-exposure";
+import {
+  buildTreasuryStableExposureSnapshot,
+  getTreasuryStableExposureResponseInvariantIssues,
+} from "@shared/lib/treasury-stable-exposure";
 import { TreasuryStableExposureResponseSchema } from "@shared/types";
 import {
   addFreshnessHeaders,
@@ -46,6 +49,9 @@ export const handleTreasuryStableExposure = withErrorHandler(
       "treasury-stable-exposure:cache-read",
     );
     if (!validation.ok) {
+      return errorResponse(503, "Cached treasury-stable-exposure payload is malformed");
+    }
+    if (getTreasuryStableExposureResponseInvariantIssues(validation.data).length > 0) {
       return errorResponse(503, "Cached treasury-stable-exposure payload is malformed");
     }
 

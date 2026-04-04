@@ -7,18 +7,18 @@ vi.mock("../fetch-retry", () => ({
 
 import { fetchWithRetry } from "../fetch-retry";
 import {
-  extractTrackedStableBalancesFromSimDefiPosition,
+  extractTreasuryDerivedPositionFromSimDefiPosition,
   fetchSimWalletBalances,
-  fetchSimWalletDefiStableBalances,
+  fetchSimWalletDefiTreasuryPositions,
 } from "../sim-balances";
 
-describe("extractTrackedStableBalancesFromSimDefiPosition", () => {
+describe("extractTreasuryDerivedPositionFromSimDefiPosition", () => {
   it("unwraps tokenized stable positions to the tracked underlying and marks the wrapper for de-duplication", () => {
     const usdc = TRACKED_META_BY_ID.get("usdc-circle");
     const usdcContract = usdc?.contracts?.find((deployment) => deployment.chain === "ethereum");
     expect(usdcContract).toBeTruthy();
 
-    const balances = extractTrackedStableBalancesFromSimDefiPosition({
+    const position = extractTreasuryDerivedPositionFromSimDefiPosition("0xabc", {
       chain_id: 1,
       value_usd: 1_250,
       token: {
@@ -29,29 +29,37 @@ describe("extractTrackedStableBalancesFromSimDefiPosition", () => {
       },
     });
 
-    expect(balances).toEqual([
-      {
-        chainId: 1,
-        tokenAddress: usdcContract!.address,
-        usdValue: 1_250,
-        consumedBalanceKeys: ["1:0x000000000000000000000000000000000000beef"],
-      },
-    ]);
+    expect(position).toEqual({
+      positionUsd: 1_250,
+      stableLegs: [
+        {
+          chainId: 1,
+          tokenAddress: usdcContract!.address,
+          usdValue: 1_250,
+          balanceKey: `0xabc:1:${usdcContract!.address.toLowerCase()}`,
+        },
+      ],
+      consumedBalanceKeys: ["0xabc:1:0x000000000000000000000000000000000000beef"],
+      partialStableExposure: false,
+      warnings: [],
+    });
   });
 
-  it("extracts tracked stable legs from LP-style positions", () => {
+  it("extracts stable legs from LP-style positions and preserves the total position value", () => {
     const usdc = TRACKED_META_BY_ID.get("usdc-circle");
     const usdcContract = usdc?.contracts?.find((deployment) => deployment.chain === "ethereum");
     expect(usdcContract).toBeTruthy();
 
-    const balances = extractTrackedStableBalancesFromSimDefiPosition({
+    const position = extractTreasuryDerivedPositionFromSimDefiPosition("0xabc", {
       chain_id: 1,
+      value_usd: 2_500,
       token0: {
         address: usdcContract!.address,
         price_usd: 1,
       },
       token1: {
         address: "0x000000000000000000000000000000000000cafe",
+        symbol: "ETH",
         price_usd: 2_000,
       },
       positions: [
@@ -66,26 +74,55 @@ describe("extractTrackedStableBalancesFromSimDefiPosition", () => {
       ],
     });
 
-    expect(balances).toEqual([
+    expect(position.positionUsd).toBe(2_500);
+    expect(position.partialStableExposure).toBe(false);
+    expect(position.stableLegs).toEqual([
       {
         chainId: 1,
         tokenAddress: usdcContract!.address,
         usdValue: 500,
-        consumedBalanceKeys: undefined,
+        balanceKey: `0xabc:1:${usdcContract!.address.toLowerCase()}`,
       },
     ]);
   });
 
-  it("ignores positions whose underlying token does not resolve to a tracked stablecoin", () => {
-    const balances = extractTrackedStableBalancesFromSimDefiPosition({
+  it("preserves provider-identified stable legs that do not resolve to a tracked Pharos contract", () => {
+    const position = extractTreasuryDerivedPositionFromSimDefiPosition("0xabc", {
       chain_id: 1,
       value_usd: 800,
-      underlying_token: {
+      asset: {
         address: "0x000000000000000000000000000000000000dead",
+        symbol: "USDC",
+        asset_class: "stablecoin",
       },
     });
 
-    expect(balances).toEqual([]);
+    expect(position.partialStableExposure).toBe(false);
+    expect(position.stableLegs).toEqual([
+      {
+        chainId: 1,
+        tokenAddress: "0x000000000000000000000000000000000000dead",
+        usdValue: 800,
+        balanceKey: "0xabc:1:0x000000000000000000000000000000000000dead",
+      },
+    ]);
+  });
+
+  it("marks the position partial when a stable-like leg lacks a usable USD value", () => {
+    const position = extractTreasuryDerivedPositionFromSimDefiPosition("0xabc", {
+      chain_id: 1,
+      underlying_token: {
+        symbol: "USDC",
+        asset_class: "stablecoin",
+      },
+    });
+
+    expect(position.positionUsd).toBeNull();
+    expect(position.stableLegs).toEqual([]);
+    expect(position.partialStableExposure).toBe(true);
+    expect(position.warnings).toContain(
+      "Derived treasury position omitted a stable-like underlying token without a usable USD value.",
+    );
   });
 });
 
@@ -119,7 +156,7 @@ describe("Sim fetch helpers", () => {
       body: { cancel },
     } as unknown as Response);
 
-    await expect(fetchSimWalletDefiStableBalances({
+    await expect(fetchSimWalletDefiTreasuryPositions({
       apiKey: "sim-key",
       address: "0xdef",
       chainIds: [1],

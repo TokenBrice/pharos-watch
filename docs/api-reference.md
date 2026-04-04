@@ -308,6 +308,7 @@ Daily snapshot of reviewed protocol and DAO treasury stablecoin sleeves. This en
     {
       "protocolId": "maker",
       "name": "Sky / Maker",
+      "directWalletUsd": 123456789,
       "treasuryUsd": 123456789,
       "stablecoinSleeveUsd": 45678901,
       "trackedStableUsd": 43000000,
@@ -326,6 +327,10 @@ Daily snapshot of reviewed protocol and DAO treasury stablecoin sleeves. This en
     "launchEligibleCount": 12,
     "ownerChainTuples": 54,
     "launchOwnerChainTuples": 42,
+    "comparableEntityCount": 9,
+    "partialEntityCount": 2,
+    "invalidEntityCount": 1,
+    "supplementedEntityCount": 5,
     "evmOnly": true,
     "extractionModes": {
       "staticSeeded": 14,
@@ -339,17 +344,26 @@ Daily snapshot of reviewed protocol and DAO treasury stablecoin sleeves. This en
 
 Important response semantics:
 
-- `treasuryUsd` is the full wallet-balance denominator from the same provider snapshot used for the stable sleeve.
+- `directWalletUsd` is the flat wallet-balance total from Sim's balances endpoint before any DeFi-position replacement logic.
+- `treasuryUsd` is the effective denominator actually used for treasury-relative percentages. It is nullable.
+- `coverage.denominatorStatus` tells you whether the row is treasury-comparable:
+  - `direct-only`: no DeFi supplement was needed; `treasuryUsd` equals `directWalletUsd`
+  - `adjusted-with-defi`: wrapper balances were replaced with DeFi-position totals and the denominator validated cleanly
+  - `partial`: stable-sleeve metrics are still published, but `treasuryUsd` and all `% of treasury` fields are `null`
+  - `invalid`: the derived denominator failed invariants, so `treasuryUsd` and all `% of treasury` fields are `null`
 - `stablecoinSleeveUsd` combines direct stablecoin balances from Sim's stablecoin filter with supported LP, vault, and lending positions decomposed to their underlying stablecoins.
 - `trackedStableUsd` is the subset of the stable sleeve that Pharos can map to tracked stablecoins by `chain + contract`.
 - `decentralizedStablePctOfStableSleeve` therefore uses the full stable sleeve denominator, not only the tracked subset.
 - `coverage.untrackedStableUsd` discloses the stablecoin value that could not be mapped into a Pharos stablecoin ID.
-- `coverage.notes` may state when LP, vault, or lending positions were decomposed into underlying stablecoin exposure, or when that supplement failed and treasury-only coverage remained.
+- `coverage.derivedUntrackedStableUsd` isolates the portion of untracked stable exposure that came specifically from derived LP, vault, or lending positions.
+- `coverage.defiPositionUsd` is the total USD value of derived positions included in the denominator when `denominatorStatus = "adjusted-with-defi"`.
+- `coverage.consumedDirectBalanceUsd` is the direct wallet-balance value replaced by derived position totals to avoid double counting wrapper balances.
+- `coverage.notes` may state when LP, vault, or lending positions were decomposed to underlying stablecoins, when derived legs could not be mapped cleanly, or when treasury-relative metrics were suppressed.
 - `weightedSafetyScore` is USD-weighted across tracked stable holdings that have a current report card; `coverage.ratedTrackedStablePct` shows how much of the tracked sleeve that score covers.
 
 Cold-start behavior: if no treasury snapshot has been published yet, the endpoint returns `200` with `entities: []` plus stale `_meta` freshness fields so UI and smoke checks can treat the dataset as temporarily empty rather than transport-failed.
 
-**Error responses:** `503` only when the cached treasury snapshot exists but is structurally malformed.
+**Error responses:** `503` when the cached treasury snapshot exists but is either structurally malformed or fails the treasury invariant checks.
 
 For integrations that only need current per-coin metrics (without full historical arrays), prefer `GET /api/stablecoin-summary/:id`.
 

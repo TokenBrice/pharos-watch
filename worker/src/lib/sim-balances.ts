@@ -1,4 +1,6 @@
 import { resolveTrackedTreasuryStablecoin } from "@shared/lib/treasury-stable-exposure";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import type { TreasuryBalanceToken, TreasuryDerivedPosition } from "@shared/lib/treasury-stable-exposure";
 import { fetchWithRetry } from "./fetch-retry";
 import {
   SIM_BALANCES_BASE_URL,
@@ -26,6 +28,10 @@ interface SimBalancesResponse {
 
 interface SimDefiPositionTokenRef {
   address?: string;
+  symbol?: string;
+  name?: string;
+  asset_class?: string;
+  is_stablecoin?: boolean;
   price_usd?: number;
   holdings?: number;
 }
@@ -62,23 +68,22 @@ interface SimDefiPositionsResponse {
   warnings?: SimWarning[];
 }
 
-export interface SimWalletBalance {
-  chainId: number;
-  tokenAddress: string;
-  usdValue: number;
-}
+const KNOWN_STABLE_SYMBOLS = new Set(
+  ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.symbol.trim().toUpperCase()),
+);
+const KNOWN_STABLE_NAMES = new Set(
+  ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.name.trim().toLowerCase()),
+);
 
-export interface SimDerivedStableBalance extends SimWalletBalance {
-  consumedBalanceKeys?: string[];
-}
+export type SimWalletBalance = TreasuryBalanceToken;
 
 export interface SimWalletBalancesResult {
   balances: SimWalletBalance[];
   warnings: string[];
 }
 
-export interface SimWalletDefiStableBalancesResult {
-  balances: SimDerivedStableBalance[];
+export interface SimWalletDefiTreasuryPositionsResult {
+  positions: TreasuryDerivedPosition[];
   warnings: string[];
 }
 
@@ -88,6 +93,12 @@ interface FetchSimWalletBalancesOptions {
   chainIds: number[];
   stablecoinOnly?: boolean;
   signal?: AbortSignal;
+}
+
+interface StableCandidateAssessment {
+  stableLeg: TreasuryBalanceToken | null;
+  stableLike: boolean;
+  missingUsd: boolean;
 }
 
 function buildBalancesUrl(address: string, chainIds: number[], stablecoinOnly: boolean, offset?: string): string {
@@ -108,11 +119,11 @@ function buildDefiPositionsUrl(address: string, chainIds: number[]): string {
   return `${SIM_DEFI_POSITIONS_BASE_URL}/${address}?${params.toString()}`;
 }
 
-function buildBalanceKey(chainId: number, tokenAddress: string): string {
-  return `${chainId}:${tokenAddress.toLowerCase()}`;
+function buildOwnedBalanceKey(ownerAddress: string, chainId: number, tokenAddress: string): string {
+  return `${ownerAddress.toLowerCase()}:${chainId}:${tokenAddress.toLowerCase()}`;
 }
 
-function normalizeBalance(record: SimBalanceRecord): SimWalletBalance | null {
+function normalizeBalance(record: SimBalanceRecord, ownerAddress: string): SimWalletBalance | null {
   if (
     !Number.isFinite(record.chain_id)
     || typeof record.address !== "string"
@@ -124,6 +135,7 @@ function normalizeBalance(record: SimBalanceRecord): SimWalletBalance | null {
     chainId: record.chain_id!,
     tokenAddress: record.address,
     usdValue: record.value_usd!,
+    balanceKey: buildOwnedBalanceKey(ownerAddress, record.chain_id!, record.address),
   };
 }
 
@@ -131,21 +143,86 @@ function getPositiveNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
 }
 
-function normalizeTrackedStableBalance(
+function normalizeStableName(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed.toLowerCase() : null;
+}
+
+function normalizeStableSymbol(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed.toUpperCase() : null;
+}
+
+function tokenLooksStable(token: SimDefiPositionTokenRef | undefined): boolean {
+  if (!token) return false;
+  if (token.is_stablecoin === true) return true;
+  if (token.asset_class?.trim().toLowerCase() === "stablecoin") return true;
+
+  const symbol = normalizeStableSymbol(token.symbol);
+  if (symbol && KNOWN_STABLE_SYMBOLS.has(symbol)) return true;
+
+  const name = normalizeStableName(token.name);
+  if (name && KNOWN_STABLE_NAMES.has(name)) return true;
+
+  return false;
+}
+
+function buildSyntheticUntrackedStableAddress(
   chainId: number,
-  tokenAddress: string | undefined,
+  token: SimDefiPositionTokenRef | undefined,
+): string {
+  const symbol = normalizeStableSymbol(token?.symbol)?.toLowerCase();
+  const name = normalizeStableName(token?.name)?.replace(/[^a-z0-9]+/g, "-");
+  const suffix = symbol ?? name ?? "unknown";
+  return `untracked-stable:${chainId}:${suffix}`;
+}
+
+function assessStableCandidate(
+  ownerAddress: string,
+  chainId: number,
+  token: SimDefiPositionTokenRef | undefined,
   usdValue: number | null,
-  consumedTokenAddress?: string,
-): SimDerivedStableBalance | null {
-  if (!tokenAddress || usdValue == null || !resolveTrackedTreasuryStablecoin(chainId, tokenAddress)) {
-    return null;
+): StableCandidateAssessment {
+  const tokenAddress = typeof token?.address === "string" && token.address.length > 0 ? token.address : null;
+
+  if (tokenAddress && resolveTrackedTreasuryStablecoin(chainId, tokenAddress)) {
+    if (usdValue == null) {
+      return { stableLeg: null, stableLike: true, missingUsd: true };
+    }
+    return {
+      stableLeg: {
+        chainId,
+        tokenAddress,
+        usdValue,
+        balanceKey: buildOwnedBalanceKey(ownerAddress, chainId, tokenAddress),
+      },
+      stableLike: true,
+      missingUsd: false,
+    };
   }
 
+  if (!tokenLooksStable(token)) {
+    return {
+      stableLeg: null,
+      stableLike: false,
+      missingUsd: false,
+    };
+  }
+
+  if (usdValue == null) {
+    return { stableLeg: null, stableLike: true, missingUsd: true };
+  }
+
+  const unresolvedAddress = tokenAddress ?? buildSyntheticUntrackedStableAddress(chainId, token);
   return {
-    chainId,
-    tokenAddress,
-    usdValue,
-    consumedBalanceKeys: consumedTokenAddress ? [buildBalanceKey(chainId, consumedTokenAddress)] : undefined,
+    stableLeg: {
+      chainId,
+      tokenAddress: unresolvedAddress,
+      usdValue,
+      balanceKey: buildOwnedBalanceKey(ownerAddress, chainId, unresolvedAddress),
+    },
+    stableLike: true,
+    missingUsd: false,
   };
 }
 
@@ -159,39 +236,56 @@ function extractPairLegUsd(
   return holdings * priceUsd;
 }
 
-export function extractTrackedStableBalancesFromSimDefiPosition(
+export function extractTreasuryDerivedPositionFromSimDefiPosition(
+  ownerAddress: string,
   position: SimDefiPositionRecord,
-): SimDerivedStableBalance[] {
+): TreasuryDerivedPosition {
   const chainId = getPositiveNumber(position.chain_id);
-  if (chainId == null) return [];
+  if (chainId == null) {
+    return {
+      positionUsd: null,
+      stableLegs: [],
+      partialStableExposure: false,
+      warnings: [],
+    };
+  }
 
-  const balances: SimDerivedStableBalance[] = [];
-  const consumedTokenAddress = position.token?.address;
+  const stableLegs: TreasuryBalanceToken[] = [];
+  const warnings: string[] = [];
+  const consumedBalanceKeys = typeof position.token?.address === "string" && position.token.address.length > 0
+    ? [buildOwnedBalanceKey(ownerAddress, chainId, position.token.address)]
+    : [];
+
+  let partialStableExposure = false;
+  const positionUsd = getPositiveNumber(position.supply?.value_usd) ?? getPositiveNumber(position.value_usd);
 
   const directUnderlyingCandidates = [
     {
-      tokenAddress: position.underlying_token?.address,
+      label: "underlying token",
+      token: position.underlying_token,
       usdValue: getPositiveNumber(position.supply?.value_usd) ?? getPositiveNumber(position.value_usd),
     },
     {
-      tokenAddress: position.loan_token?.address,
+      label: "loan token",
+      token: position.loan_token,
       usdValue: getPositiveNumber(position.supply?.value_usd) ?? getPositiveNumber(position.value_usd),
     },
     {
-      tokenAddress: position.asset?.address,
+      label: "asset token",
+      token: position.asset,
       usdValue: getPositiveNumber(position.value_usd),
     },
   ];
 
   for (const candidate of directUnderlyingCandidates) {
-    const normalized = normalizeTrackedStableBalance(
-      chainId,
-      candidate.tokenAddress,
-      candidate.usdValue,
-      consumedTokenAddress,
-    );
-    if (normalized) {
-      balances.push(normalized);
+    const assessment = assessStableCandidate(ownerAddress, chainId, candidate.token, candidate.usdValue);
+    if (assessment.stableLeg) {
+      stableLegs.push(assessment.stableLeg);
+      break;
+    }
+    if (assessment.stableLike && assessment.missingUsd) {
+      partialStableExposure = true;
+      warnings.push(`Derived treasury position omitted a stable-like ${candidate.label} without a usable USD value.`);
       break;
     }
   }
@@ -201,24 +295,45 @@ export function extractTrackedStableBalancesFromSimDefiPosition(
     : [{ token0: position.token0, token1: position.token1 }];
 
   for (const range of ranges) {
-    const token0Balance = normalizeTrackedStableBalance(
+    const token0Assessment = assessStableCandidate(
+      ownerAddress,
       chainId,
-      position.token0?.address,
+      position.token0,
       extractPairLegUsd(position.token0, range.token0),
-      consumedTokenAddress,
     );
-    if (token0Balance) balances.push(token0Balance);
+    if (token0Assessment.stableLeg) {
+      stableLegs.push(token0Assessment.stableLeg);
+    } else if (token0Assessment.stableLike && token0Assessment.missingUsd) {
+      partialStableExposure = true;
+      warnings.push("Derived treasury LP position omitted a stable-like token0 leg without a usable USD value.");
+    }
 
-    const token1Balance = normalizeTrackedStableBalance(
+    const token1Assessment = assessStableCandidate(
+      ownerAddress,
       chainId,
-      position.token1?.address,
+      position.token1,
       extractPairLegUsd(position.token1, range.token1),
-      consumedTokenAddress,
     );
-    if (token1Balance) balances.push(token1Balance);
+    if (token1Assessment.stableLeg) {
+      stableLegs.push(token1Assessment.stableLeg);
+    } else if (token1Assessment.stableLike && token1Assessment.missingUsd) {
+      partialStableExposure = true;
+      warnings.push("Derived treasury LP position omitted a stable-like token1 leg without a usable USD value.");
+    }
   }
 
-  return balances;
+  if (stableLegs.length > 0 && positionUsd == null) {
+    partialStableExposure = true;
+    warnings.push("Derived treasury position contributed stable exposure but did not expose a total USD position value.");
+  }
+
+  return {
+    positionUsd,
+    stableLegs,
+    consumedBalanceKeys,
+    partialStableExposure,
+    warnings,
+  };
 }
 
 export async function fetchSimWalletBalances({
@@ -259,7 +374,7 @@ export async function fetchSimWalletBalances({
       if (warning.message) warnings.push(warning.message);
     }
     for (const record of json.balances ?? []) {
-      const normalized = normalizeBalance(record);
+      const normalized = normalizeBalance(record, address);
       if (normalized) balances.push(normalized);
     }
     offset = json.next_offset || undefined;
@@ -268,12 +383,12 @@ export async function fetchSimWalletBalances({
   return { balances, warnings };
 }
 
-export async function fetchSimWalletDefiStableBalances({
+export async function fetchSimWalletDefiTreasuryPositions({
   apiKey,
   address,
   chainIds,
   signal,
-}: Omit<FetchSimWalletBalancesOptions, "stablecoinOnly">): Promise<SimWalletDefiStableBalancesResult> {
+}: Omit<FetchSimWalletBalancesOptions, "stablecoinOnly">): Promise<SimWalletDefiTreasuryPositionsResult> {
   const response = await fetchWithRetry(
     buildDefiPositionsUrl(address, chainIds),
     {
@@ -301,6 +416,6 @@ export async function fetchSimWalletDefiStableBalances({
     if (warning.message) warnings.push(warning.message);
   }
 
-  const balances = (json.positions ?? []).flatMap(extractTrackedStableBalancesFromSimDefiPosition);
-  return { balances, warnings };
+  const positions = (json.positions ?? []).map((position) => extractTreasuryDerivedPositionFromSimDefiPosition(address, position));
+  return { positions, warnings };
 }

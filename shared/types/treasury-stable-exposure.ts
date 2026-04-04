@@ -41,6 +41,15 @@ export interface TreasurySeed extends z.infer<typeof TreasurySeedSchema> {
 export const TreasurySeedRegistrySchema = z.array(TreasurySeedSchema);
 export type TreasurySeedRegistry = z.infer<typeof TreasurySeedRegistrySchema>;
 
+export const TreasuryDenominatorStatusSchema = z.enum([
+  "direct-only",
+  "adjusted-with-defi",
+  "partial",
+  "invalid",
+]);
+
+export type TreasuryDenominatorStatus = z.infer<typeof TreasuryDenominatorStatusSchema>;
+
 export const TreasuryStableExposureHoldingSchema = z.object({
   stablecoinId: z.string(),
   name: z.string(),
@@ -59,14 +68,21 @@ export const TreasuryStableExposureCoverageSchema = z.object({
   extractionMode: TreasurySeedExtractionModeSchema,
   ownerCount: z.number().int(),
   ownerChainCount: z.number().int(),
+  denominatorStatus: TreasuryDenominatorStatusSchema,
+  directWalletUsd: z.number(),
+  defiPositionUsd: z.number(),
+  consumedDirectBalanceUsd: z.number(),
   trackedStableUsd: z.number(),
   stablecoinSleeveUsd: z.number(),
   untrackedStableUsd: z.number(),
+  derivedUntrackedStableUsd: z.number(),
   ratedTrackedStableUsd: z.number(),
   trackedStablePctOfTreasury: z.number().nullable(),
   trackedStablePctOfStableSleeve: z.number().nullable(),
   ratedTrackedStablePct: z.number().nullable(),
   untrackedStableCount: z.number().int(),
+  derivedUntrackedStableCount: z.number().int(),
+  skippedDerivedPositionCount: z.number().int(),
   notes: z.array(z.string()),
 });
 
@@ -88,7 +104,8 @@ export const TreasuryStableExposureEntitySchema = z.object({
   source: z.literal("defillama-github"),
   adapterFile: z.string().nullable(),
   chains: z.array(z.string()),
-  treasuryUsd: z.number(),
+  directWalletUsd: z.number(),
+  treasuryUsd: z.number().nullable(),
   stablecoinSleeveUsd: z.number(),
   trackedStableUsd: z.number(),
   decentralizedStableUsd: z.number(),
@@ -115,6 +132,10 @@ export const TreasuryStableExposureResponseSchema = z.object({
     launchEligibleCount: z.number().int(),
     ownerChainTuples: z.number().int(),
     launchOwnerChainTuples: z.number().int(),
+    comparableEntityCount: z.number().int(),
+    partialEntityCount: z.number().int(),
+    invalidEntityCount: z.number().int(),
+    supplementedEntityCount: z.number().int(),
     evmOnly: z.boolean(),
     extractionModes: z.object({
       staticSeeded: z.number().int(),

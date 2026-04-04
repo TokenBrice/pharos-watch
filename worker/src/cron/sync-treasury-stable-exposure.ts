@@ -2,15 +2,18 @@ import { TREASURY_LAUNCH_SEEDS, TREASURY_SEEDS } from "@shared/lib/treasury-seed
 import {
   buildTreasuryStableExposureSnapshot,
   computeTreasuryStableExposureEntity,
+  isTreasuryComparableEntity,
 } from "@shared/lib/treasury-stable-exposure";
 import { CHAIN_META } from "@shared/lib/chains";
+import type { TreasuryStableExposureEntity } from "@shared/types";
 import { setCacheIfNewer, shouldSkipFreshCache } from "../lib/db-cache";
+import { batchExecute } from "../lib/db";
 import type { CronResult } from "../lib/cron-logger";
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../lib/circuit-breaker";
 import { sleepWithSignal } from "../lib/abort";
 import { CIRCUIT_SOURCE, SIM_BALANCES_OWNER_GROUP_DELAY_MS } from "../lib/constants";
-import { fetchSimWalletBalances, fetchSimWalletDefiStableBalances } from "../lib/sim-balances";
+import { fetchSimWalletBalances, fetchSimWalletDefiTreasuryPositions } from "../lib/sim-balances";
 
 const CACHE_KEY = "treasury-stable-exposure";
 const STALE_SEC = 20 * 60 * 60;
@@ -40,6 +43,59 @@ function groupOwners(protocolName: string, owners: readonly { chain: string; add
       chainIds: [...chainIds].sort((a, b) => a - b),
     }))
     .sort((a, b) => a.address.localeCompare(b.address));
+}
+
+function compareEntitiesForPublish(a: TreasuryStableExposureEntity, b: TreasuryStableExposureEntity): number {
+  const decentralizedDiff = b.decentralizedStableUsd - a.decentralizedStableUsd;
+  if (decentralizedDiff !== 0) return decentralizedDiff;
+
+  const comparableDiff = Number(isTreasuryComparableEntity(b)) - Number(isTreasuryComparableEntity(a));
+  if (comparableDiff !== 0) return comparableDiff;
+
+  const pctDiff = (b.decentralizedStablePctOfTreasury ?? -1) - (a.decentralizedStablePctOfTreasury ?? -1);
+  if (pctDiff !== 0) return pctDiff;
+
+  return a.name.localeCompare(b.name);
+}
+
+async function persistTreasuryStableExposureHistory(
+  db: D1Database,
+  snapshotAt: number,
+  entities: readonly TreasuryStableExposureEntity[],
+): Promise<number> {
+  const statements = entities.map((entity) =>
+    db
+      .prepare(
+        `INSERT OR REPLACE INTO treasury_stable_exposure_history (
+           snapshot_at,
+           protocol_id,
+           slug,
+           denominator_status,
+           direct_wallet_usd,
+           treasury_usd,
+           stablecoin_sleeve_usd,
+           tracked_stable_usd,
+           decentralized_stable_usd,
+           coverage_json,
+           holdings_json
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        snapshotAt,
+        entity.protocolId,
+        entity.slug,
+        entity.coverage.denominatorStatus,
+        entity.directWalletUsd,
+        entity.treasuryUsd,
+        entity.stablecoinSleeveUsd,
+        entity.trackedStableUsd,
+        entity.decentralizedStableUsd,
+        JSON.stringify(entity.coverage),
+        JSON.stringify(entity.holdings),
+      )
+  );
+
+  return batchExecute(db, statements);
 }
 
 export async function syncTreasuryStableExposure(
@@ -74,14 +130,14 @@ export async function syncTreasuryStableExposure(
 
   try {
     const reportCardsSnapshot = await buildReportCardsSnapshot(db);
-    const entities = [];
+    const entities: TreasuryStableExposureEntity[] = [];
 
     for (const seed of TREASURY_LAUNCH_SEEDS) {
       const groupedOwners = groupOwners(seed.name, seed.owners);
       const walletSnapshots = [];
 
       for (const [ownerIndex, owner] of groupedOwners.entries()) {
-        const [treasuryBalancesResult, stablecoinBalancesResult, defiStableBalancesResult] = await Promise.allSettled([
+        const [treasuryBalancesResult, stablecoinBalancesResult, defiTreasuryPositionsResult] = await Promise.allSettled([
           fetchSimWalletBalances({
             apiKey: simApiKey,
             address: owner.address,
@@ -95,7 +151,7 @@ export async function syncTreasuryStableExposure(
             stablecoinOnly: true,
             signal,
           }),
-          fetchSimWalletDefiStableBalances({
+          fetchSimWalletDefiTreasuryPositions({
             apiKey: simApiKey,
             address: owner.address,
             chainIds: owner.chainIds,
@@ -108,10 +164,10 @@ export async function syncTreasuryStableExposure(
 
         const treasuryBalances = treasuryBalancesResult.value;
         const stablecoinBalances = stablecoinBalancesResult.value;
-        const defiStableBalances = defiStableBalancesResult.status === "fulfilled"
-          ? defiStableBalancesResult.value
+        const defiTreasuryPositions = defiTreasuryPositionsResult.status === "fulfilled"
+          ? defiTreasuryPositionsResult.value
           : {
-              balances: [],
+              positions: [],
               warnings: [
                 "DeFi position supplement failed for one or more treasury owners; LP, vault, and lending exposure may be understated.",
               ],
@@ -120,8 +176,8 @@ export async function syncTreasuryStableExposure(
         walletSnapshots.push({
           treasuryBalances: treasuryBalances.balances,
           stablecoinBalances: stablecoinBalances.balances,
-          derivedStablecoinBalances: defiStableBalances.balances,
-          warnings: [...treasuryBalances.warnings, ...stablecoinBalances.warnings, ...defiStableBalances.warnings],
+          derivedPositions: defiTreasuryPositions.positions,
+          warnings: [...treasuryBalances.warnings, ...stablecoinBalances.warnings, ...defiTreasuryPositions.warnings],
         });
 
         if (ownerIndex < groupedOwners.length - 1) {
@@ -132,16 +188,11 @@ export async function syncTreasuryStableExposure(
       entities.push(computeTreasuryStableExposureEntity(seed, walletSnapshots, reportCardsSnapshot.cards));
     }
 
-    entities.sort((a, b) => {
-      const decentralizedDiff = b.decentralizedStableUsd - a.decentralizedStableUsd;
-      if (decentralizedDiff !== 0) return decentralizedDiff;
-      const pctDiff = (b.decentralizedStablePctOfTreasury ?? -1) - (a.decentralizedStablePctOfTreasury ?? -1);
-      if (pctDiff !== 0) return pctDiff;
-      return a.name.localeCompare(b.name);
-    });
+    entities.sort(compareEntitiesForPublish);
 
     const snapshot = buildTreasuryStableExposureSnapshot(TREASURY_SEEDS, entities, syncStartSec);
     await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(snapshot), syncStartSec);
+    const historyRowsWritten = await persistTreasuryStableExposureHistory(db, syncStartSec, entities);
     await recordOutcomeSafe(db, CIRCUIT_SOURCE.SIM_BALANCES, true);
 
     return {
@@ -149,6 +200,11 @@ export async function syncTreasuryStableExposure(
       metadata: JSON.stringify({
         entityCount: entities.length,
         ownerChainTuples: snapshot.coverage.launchOwnerChainTuples,
+        comparableEntityCount: snapshot.coverage.comparableEntityCount,
+        partialEntityCount: snapshot.coverage.partialEntityCount,
+        invalidEntityCount: snapshot.coverage.invalidEntityCount,
+        supplementedEntityCount: snapshot.coverage.supplementedEntityCount,
+        historyRowsWritten,
       }),
     };
   } catch (error) {

@@ -23,7 +23,10 @@ The interactive page depends on three local/runtime sources:
 1. `useReportCards()` for live stablecoin grades and per-dimension scores.
 2. `useLogos()` for static logo assets from `data/logos.json`.
 3. `usePortfolio(reportData?.cards)` for holdings state, browser persistence, portfolio grade math, and upstream exposure derivation.
-4. `useTreasuryStableExposure()` for the daily protocol-treasury stablecoin leaderboard rendered below the personal holdings tools. The worker snapshot combines direct treasury stablecoin balances with supported LP / vault / lending positions decomposed to underlying stablecoins.
+4. `useTreasuryStableExposure()` for the daily protocol-treasury stablecoin leaderboard rendered below the personal holdings tools. The worker snapshot combines direct treasury stablecoin balances with supported LP / vault / lending positions decomposed to underlying stablecoins, but now distinguishes:
+   - `directWalletUsd` for the raw flat-balance total
+   - `treasuryUsd` for the effective treasury-relative denominator
+   - `coverage.denominatorStatus` for whether a row is treasury-comparable, partial, or invalid
 
 There is no dedicated `/api/portfolio` endpoint. Portfolio holdings stay client-side.
 
@@ -47,7 +50,7 @@ There is no dedicated `/api/portfolio` endpoint. Portfolio holdings stay client-
 - preset loading (`CeFi Core`, `Treasury Heavy`, `DeFi Native`, `Barbell Mix`)
 - aggregate portfolio grade and radar chart
 - upstream exposure view (grouped or detailed)
-- treasury stable-exposure leaderboard (fetched, read-only, cache-backed)
+- treasury stable-exposure leaderboard (fetched, read-only, cache-backed, with explicit denominator-quality states)
 - share link generation
 - empty-state onboarding via `src/components/portfolio-empty-state.tsx`
 

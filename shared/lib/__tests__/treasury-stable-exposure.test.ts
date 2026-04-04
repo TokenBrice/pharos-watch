@@ -49,6 +49,22 @@ function makeReportCard(id: string, overallScore: number | null, overallGrade: R
   };
 }
 
+function makeSeed(): TreasurySeed {
+  return {
+    protocolId: "test-protocol",
+    slug: "test-protocol",
+    name: "Test Protocol",
+    category: "Protocol treasury",
+    launchEligible: true,
+    launchPriority: 1,
+    source: "defillama-github",
+    adapterFile: "test.js",
+    extractionMode: "static-seeded",
+    chains: ["ethereum"],
+    owners: [{ chain: "ethereum", address: "0x1234" }],
+  };
+}
+
 describe("treasury stable exposure normalization", () => {
   it("resolves tracked stablecoins by evm chain id and contract address", () => {
     const usdc = TRACKED_META_BY_ID.get("usdc-circle");
@@ -60,7 +76,7 @@ describe("treasury stable exposure normalization", () => {
     expect(resolved?.governance).toBe("centralized");
   });
 
-  it("computes treasury totals, stable sleeve percentages, and weighted safety", () => {
+  it("computes direct-only treasury totals, sleeve percentages, and weighted safety", () => {
     const decentralizedCoin = ACTIVE_STABLECOINS.find(
       (stablecoin) =>
         stablecoin.flags.governance === "decentralized"
@@ -75,22 +91,8 @@ describe("treasury stable exposure normalization", () => {
     expect(usdcContract).toBeTruthy();
     expect(decentralizedContract).toBeTruthy();
 
-    const seed: TreasurySeed = {
-      protocolId: "test-protocol",
-      slug: "test-protocol",
-      name: "Test Protocol",
-      category: "Protocol treasury",
-      launchEligible: true,
-      launchPriority: 1,
-      source: "defillama-github",
-      adapterFile: "test.js",
-      extractionMode: "static-seeded",
-      chains: ["ethereum"],
-      owners: [{ chain: "ethereum", address: "0x1234" }],
-    };
-
     const entity = computeTreasuryStableExposureEntity(
-      seed,
+      makeSeed(),
       [
         {
           treasuryBalances: [
@@ -112,7 +114,9 @@ describe("treasury stable exposure normalization", () => {
       ],
     );
 
+    expect(entity.directWalletUsd).toBe(5_000);
     expect(entity.treasuryUsd).toBe(5_000);
+    expect(entity.coverage.denominatorStatus).toBe("direct-only");
     expect(entity.stablecoinSleeveUsd).toBe(1_750);
     expect(entity.trackedStableUsd).toBe(1_500);
     expect(entity.coverage.untrackedStableUsd).toBe(250);
@@ -125,31 +129,74 @@ describe("treasury stable exposure normalization", () => {
     expect(entity.holdings[0]?.stablecoinId).toBe("usdc-circle");
     expect(entity.holdings[1]?.stablecoinId).toBe(decentralizedCoin!.id);
     expect(entity.coverage.notes).toContain(
-      "Stable-sleeve percentages include untracked stablecoins returned by the balance provider.",
+      "Stable-sleeve percentages include stable exposure that could not be mapped to a tracked Pharos stablecoin.",
     );
   });
 
-  it("de-duplicates wrapper balances when DeFi positions are decomposed to underlying stablecoins", () => {
+  it("adjusts the treasury denominator when DeFi positions replace consumed direct balances", () => {
     const usdc = TRACKED_META_BY_ID.get("usdc-circle");
     const usdcContract = usdc?.contracts?.find((deployment) => deployment.chain === "ethereum");
     expect(usdcContract).toBeTruthy();
 
-    const seed: TreasurySeed = {
-      protocolId: "wrapper-test",
-      slug: "wrapper-test",
-      name: "Wrapper Test",
-      category: "Protocol treasury",
-      launchEligible: true,
-      launchPriority: 1,
-      source: "defillama-github",
-      adapterFile: "test.js",
-      extractionMode: "static-seeded",
-      chains: ["ethereum"],
-      owners: [{ chain: "ethereum", address: "0x1234" }],
-    };
+    const entity = computeTreasuryStableExposureEntity(
+      makeSeed(),
+      [
+        {
+          treasuryBalances: [
+            {
+              chainId: 1,
+              tokenAddress: "0x000000000000000000000000000000000000beef",
+              usdValue: 800,
+              balanceKey: "0x1234:1:0x000000000000000000000000000000000000beef",
+            },
+            { chainId: 1, tokenAddress: "native", usdValue: 200, balanceKey: "0x1234:1:native" },
+          ],
+          stablecoinBalances: [
+            {
+              chainId: 1,
+              tokenAddress: "0x000000000000000000000000000000000000beef",
+              usdValue: 800,
+              balanceKey: "0x1234:1:0x000000000000000000000000000000000000beef",
+            },
+          ],
+          derivedPositions: [
+            {
+              positionUsd: 1_200,
+              stableLegs: [
+                {
+                  chainId: 1,
+                  tokenAddress: usdcContract!.address,
+                  usdValue: 800,
+                  balanceKey: `0x1234:1:${usdcContract!.address.toLowerCase()}`,
+                },
+              ],
+              consumedBalanceKeys: ["0x1234:1:0x000000000000000000000000000000000000beef"],
+            },
+          ],
+        },
+      ],
+      [makeReportCard("usdc-circle", 92, "A")],
+    );
+
+    expect(entity.directWalletUsd).toBe(1_000);
+    expect(entity.treasuryUsd).toBe(1_400);
+    expect(entity.coverage.denominatorStatus).toBe("adjusted-with-defi");
+    expect(entity.coverage.consumedDirectBalanceUsd).toBe(800);
+    expect(entity.coverage.defiPositionUsd).toBe(1_200);
+    expect(entity.stablecoinSleeveUsd).toBe(800);
+    expect(entity.coverage.trackedStablePctOfTreasury).toBeCloseTo(57.14, 2);
+    expect(entity.coverage.notes).toContain(
+      "Stable sleeve includes supported LP, vault, and lending positions decomposed to underlying stablecoins.",
+    );
+  });
+
+  it("publishes sleeve-only metrics when DeFi stable exposure cannot support a treasury denominator", () => {
+    const usdc = TRACKED_META_BY_ID.get("usdc-circle");
+    const usdcContract = usdc?.contracts?.find((deployment) => deployment.chain === "ethereum");
+    expect(usdcContract).toBeTruthy();
 
     const entity = computeTreasuryStableExposureEntity(
-      seed,
+      makeSeed(),
       [
         {
           treasuryBalances: [
@@ -158,12 +205,18 @@ describe("treasury stable exposure normalization", () => {
           stablecoinBalances: [
             { chainId: 1, tokenAddress: "0x000000000000000000000000000000000000beef", usdValue: 800 },
           ],
-          derivedStablecoinBalances: [
+          derivedPositions: [
             {
-              chainId: 1,
-              tokenAddress: usdcContract!.address,
-              usdValue: 800,
+              positionUsd: null,
+              stableLegs: [
+                {
+                  chainId: 1,
+                  tokenAddress: usdcContract!.address,
+                  usdValue: 800,
+                },
+              ],
               consumedBalanceKeys: ["1:0x000000000000000000000000000000000000beef"],
+              partialStableExposure: true,
             },
           ],
         },
@@ -171,12 +224,45 @@ describe("treasury stable exposure normalization", () => {
       [makeReportCard("usdc-circle", 92, "A")],
     );
 
-    expect(entity.treasuryUsd).toBe(800);
-    expect(entity.stablecoinSleeveUsd).toBe(800);
-    expect(entity.trackedStableUsd).toBe(800);
-    expect(entity.coverage.untrackedStableUsd).toBe(0);
+    expect(entity.directWalletUsd).toBe(800);
+    expect(entity.treasuryUsd).toBeNull();
+    expect(entity.coverage.denominatorStatus).toBe("partial");
+    expect(entity.coverage.trackedStablePctOfTreasury).toBeNull();
+    expect(entity.holdings[0]?.pctOfTreasury).toBeNull();
+    expect(entity.coverage.skippedDerivedPositionCount).toBe(1);
     expect(entity.coverage.notes).toContain(
-      "Stable sleeve includes supported LP, vault, and lending positions decomposed to underlying stablecoins.",
+      "Treasury-relative metrics are unavailable because one or more derived positions could not be valued end to end.",
+    );
+  });
+
+  it("downgrades mathematically impossible rows to invalid and filters rounded-zero holdings", () => {
+    const usdc = TRACKED_META_BY_ID.get("usdc-circle");
+    const usdcContract = usdc?.contracts?.find((deployment) => deployment.chain === "ethereum");
+    expect(usdcContract).toBeTruthy();
+
+    const entity = computeTreasuryStableExposureEntity(
+      makeSeed(),
+      [
+        {
+          treasuryBalances: [
+            { chainId: 1, tokenAddress: "native", usdValue: 100 },
+          ],
+          stablecoinBalances: [
+            { chainId: 1, tokenAddress: usdcContract!.address, usdValue: 200 },
+            { chainId: 1, tokenAddress: usdcContract!.address, usdValue: 0.001 },
+          ],
+        },
+      ],
+      [makeReportCard("usdc-circle", 92, "A")],
+    );
+
+    expect(entity.coverage.denominatorStatus).toBe("invalid");
+    expect(entity.treasuryUsd).toBeNull();
+    expect(entity.decentralizedStablePctOfTreasury).toBeNull();
+    expect(entity.coverage.trackedStablePctOfTreasury).toBeNull();
+    expect(entity.holdings).toHaveLength(1);
+    expect(entity.coverage.notes).toContain(
+      "Treasury-relative metrics are suppressed because the effective treasury denominator failed validation.",
     );
   });
 });

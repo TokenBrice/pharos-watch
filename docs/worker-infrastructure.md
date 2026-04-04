@@ -440,6 +440,11 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 
 **Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (ECB/FRED/Treasury/SIX benchmark fetches, still serialized inside one job), `sync-usds-status` (Etherscan), and `sync-treasury-stable-exposure` (Sim API wallet-balance reads, peak 2 connections) are chained sequentially on the external-fetch branch to keep this trigger conservative on connection use. A failed `fetch-tbill-rate` run no longer suppresses `sync-usds-status`, and a failed `sync-usds-status` no longer suppresses `sync-treasury-stable-exposure`.
 
+`sync-treasury-stable-exposure` now publishes two artifacts per daily run:
+
+- the cache-backed `/api/treasury-stable-exposure` snapshot
+- additive `treasury_stable_exposure_history` rows in D1 for per-entity daily auditability
+
 ### Trigger 12: `5 8 * * *` (daily at 08:05 UTC — heavy external fetchers)
 
 | Job              | Function                | File                                | Documentation                           |
