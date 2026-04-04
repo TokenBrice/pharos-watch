@@ -2422,7 +2422,24 @@
         "risk": "low",
         "coinId": "pyusd-paypal"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "curated-validated",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "usdai-usd-ai",
+      "display": {
+        "url": "https://app.usd.ai/reserves",
+        "label": "USD.AI Reserves"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      }
+    }
   },
   {
     "id": "susdai-usd-ai",
