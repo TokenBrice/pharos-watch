@@ -8967,6 +8967,7 @@
       "rwa": false,
       "navToken": false
     },
+    "collateral": "LP-collateralized stablecoin forking Liquity V2 on Base L2; yield generated from AERO farming, with revenue split between users, protocol-owned liquidity treasury, and BD stakers",
     "detailProvider": "defillama",
     "links": [
       {
@@ -8987,6 +8988,7 @@
       }
     ],
     "status": "pre-launch",
+    "expectedLaunchDate": "2026-Q2",
     "launchPhase": "announced",
     "launchPhaseDetail": "Fork of Liquity V2 on Base; not yet launched",
     "milestones": [
