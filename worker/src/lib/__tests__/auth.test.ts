@@ -169,4 +169,9 @@ describe("auth helpers", () => {
     expect(await timingSafeCompare("", "shared-secret")).toBe(false);
     expect(errorSpy).toHaveBeenCalled();
   });
+
+  it("returns false for different-length strings without leaking length", async () => {
+    expect(await timingSafeCompare("short", "a-much-longer-secret-value")).toBe(false);
+    expect(await timingSafeCompare("a-much-longer-secret-value", "short")).toBe(false);
+  });
 });

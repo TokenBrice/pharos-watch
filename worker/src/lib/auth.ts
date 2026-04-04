@@ -138,23 +138,26 @@ export async function withAdmin(
   return handler();
 }
 
-/** Timing-safe string comparison using Web Crypto API. */
+/** Timing-safe string comparison using Web Crypto API.
+ *
+ * HMACs both inputs with an ephemeral key so the comparison always
+ * operates on fixed-length (32-byte) digests — no early return on
+ * length mismatch, no timing leak on input length.
+ */
 export async function timingSafeCompare(a: string, b: string): Promise<boolean> {
   if (a.length === 0 || b.length === 0) {
     console.error("[auth] timingSafeCompare called with empty string — possible misconfiguration");
     return false;
   }
   const encoder = new TextEncoder();
-  const aBuf = encoder.encode(a);
-  const bBuf = encoder.encode(b);
-  if (aBuf.byteLength !== bBuf.byteLength) return false;
-  const aKey = await crypto.subtle.importKey("raw", aBuf, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const sig = await crypto.subtle.sign("HMAC", aKey, bBuf);
-  const expected = await crypto.subtle.sign("HMAC", aKey, aBuf);
-  const sigArr = new Uint8Array(sig);
-  const expArr = new Uint8Array(expected);
-  if (sigArr.byteLength !== expArr.byteLength) return false;
+  const ephemeralKey = await crypto.subtle.generateKey(
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const aSig = new Uint8Array(await crypto.subtle.sign("HMAC", ephemeralKey, encoder.encode(a)));
+  const bSig = new Uint8Array(await crypto.subtle.sign("HMAC", ephemeralKey, encoder.encode(b)));
   let result = 0;
-  for (let i = 0; i < sigArr.byteLength; i++) result |= sigArr[i] ^ expArr[i];
+  for (let i = 0; i < aSig.byteLength; i++) result |= aSig[i] ^ bSig[i];
   return result === 0;
 }
