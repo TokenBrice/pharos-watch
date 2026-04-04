@@ -102,7 +102,7 @@ export function isTreasuryComparableEntity(entity: TreasuryStableExposureEntity)
     && (entity.coverage.denominatorStatus === "direct-only" || entity.coverage.denominatorStatus === "adjusted-with-defi");
 }
 
-export function getTreasuryStableExposureEntityInvariantIssues(
+function getTreasuryStableExposureEntityInvariantIssues(
   entity: TreasuryStableExposureEntity,
 ): TreasuryStableExposureInvariantIssue[] {
   const issues: TreasuryStableExposureInvariantIssue[] = [];
