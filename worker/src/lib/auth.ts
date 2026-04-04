@@ -154,7 +154,7 @@ export async function timingSafeCompare(a: string, b: string): Promise<boolean> 
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"],
-  );
+  ) as CryptoKey;
   const aSig = new Uint8Array(await crypto.subtle.sign("HMAC", ephemeralKey, encoder.encode(a)));
   const bSig = new Uint8Array(await crypto.subtle.sign("HMAC", ephemeralKey, encoder.encode(b)));
   let result = 0;
