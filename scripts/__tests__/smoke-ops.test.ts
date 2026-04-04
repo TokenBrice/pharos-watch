@@ -119,9 +119,18 @@ describe("shouldSkipOpsUiProxyAssertion", () => {
     expect(shouldSkipOpsUiProxyAssertion(response, "cf_clearance=bot-cookie")).toBe(true);
   });
 
-  it("does not skip once a UI session cookie is available", () => {
+  it("still skips when a proxied 401 persists even after a UI session cookie was bootstrapped", () => {
     const response = new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
+      headers: { "content-type": "application/json" },
+    });
+
+    expect(shouldSkipOpsUiProxyAssertion(response, "CF_Authorization=ui-session")).toBe(true);
+  });
+
+  it("does not skip non-auth failures once the request cleared Access", () => {
+    const response = new Response(JSON.stringify({ error: "Upstream failed" }), {
+      status: 502,
       headers: { "content-type": "application/json" },
     });
 

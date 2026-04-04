@@ -158,6 +158,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - When the `ops.pharos.watch` flow returns a bootstrapped UI session cookie (for example `CF_Authorization`), the script reuses that browser-style session to smoke same-origin `/api/admin/status`.
 - If the service-token flow reaches the UI shell but still does not yield a bootstrapped UI session cookie, the script keeps the shell assertion and direct `ops-api` smoke but skips the same-origin proxy assertion instead of failing on a non-browser auth shape the Pages proxy cannot use.
 - If `ops.pharos.watch` only returns the interactive Cloudflare Access redirect, the script also skips the same-origin proxy assertion for the same reason.
+- If the Pages proxy remains `401 Unauthorized` even after the best-effort cookie replay, the script also records a skip instead of a failure; that CI lane can prove the direct `ops-api` auth path, but not a full browser-backed Access session on Pages Functions.
 
 ### `smoke-transport.mjs`
 

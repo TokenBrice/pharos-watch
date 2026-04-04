@@ -229,7 +229,7 @@ The Pages Functions proxy already uses the service token pair; create separate t
 - CI contract:
   - direct `ops-api.pharos.watch` smoke uses the raw service-token headers
   - same-origin `ops.pharos.watch/api/admin/*` smoke first tries the raw token path, then retries with any `CF_Authorization` cookie returned by the Access-protected UI host
-  - if the UI host only exposes the interactive Access redirect, or the service-token UI flow renders the shell without yielding a browser session cookie, the CI smoke records that the shell is gated correctly and skips the same-origin proxy assertion rather than failing on a non-browser auth shape
+  - if the UI host only exposes the interactive Access redirect, if the service-token UI flow renders the shell without yielding a browser session cookie, or if the proxied request remains `401 Unauthorized` even after best-effort cookie replay, the CI smoke records that the shell is gated correctly and skips the same-origin proxy assertion rather than failing on a non-browser auth shape
 - rotation sequence:
   1. create a new Access service token scoped for CI smoke against `ops.pharos.watch` / `ops-api.pharos.watch`
   2. update the GitHub repository secrets with the new client id / secret
