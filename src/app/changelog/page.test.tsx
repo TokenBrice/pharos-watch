@@ -17,7 +17,7 @@ describe("ChangelogPage", () => {
 
   it("renders at least one changelog entry", () => {
     const html = renderToStaticMarkup(<ChangelogPage />);
-    expect(html).toContain("Mar 17");
-    expect(html).toContain("Broader coverage");
+    expect(html).toContain("Mar 25");
+    expect(html).toContain("Yield intelligence overhaul");
   });
 });

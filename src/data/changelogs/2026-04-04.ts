@@ -2,6 +2,7 @@ import type { ChangelogEntry } from "./types";
 
 export const entry: ChangelogEntry = {
   dateRange: { from: "2026-03-25", to: "2026-04-04" },
+  headline: "Yield intelligence rebuilt from the ground up, API auth goes live, and a 100+ fix security audit lands.",
   summary: [
     { label: "Yield intelligence overhaul", description: "10+ protocol-native adapters (Aave V3, Compound V3, Morpho, Pendle, Beefy, Yearn Kong), benchmark-aware scoring, coverage audits, and 365-day backfill charts" },
     { label: "API key authentication", description: "Full auth gate on protected endpoints with key rotation, audit logging, dual-pepper hashing, and rate limiting" },

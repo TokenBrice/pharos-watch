@@ -35,21 +35,26 @@ Generate a complete changelog entry for a given period. Defaults to the last 7 d
    - Testing / quality
    - Documentation
 
-5. **Write editorial summary**: For each cluster, write one `SummaryItem`:
+5. **Write headline**: Write a single `headline` sentence (≤ 120 chars) that captures the 2-3 most significant changes in the release. This is the thesis the reader sees before the detail bullets — it should answer "what's the big deal this week?" in plain language. Examples:
+   - "Yield intelligence rebuilt from the ground up, API auth goes live, and a 100+ fix security audit lands."
+   - "Four new DEX APIs feed pricing consensus, Safety Score hits v6.0, and live reserves double to 114 coins."
+
+6. **Write editorial summary**: For each cluster, write one `SummaryItem`:
    - `label`: 2-4 word punchy theme name (e.g. "Broader coverage", "Stronger pipelines")
    - `description`: One concise sentence summarizing the cluster's impact
    - Voice: confident, product-update style. Not technical jargon -- user-facing impact.
    - Omit clusters with fewer than 3 commits unless they represent a notable user-facing change.
 
-6. **Build commit list**: Collect all commits as `CommitRef[]` with 7-char `hash` and first-line `message`.
+7. **Build commit list**: Collect all commits as `CommitRef[]` with 7-char `hash` and first-line `message`.
 
-7. **Generate entry file**: Write the `ChangelogEntry` to `src/data/changelogs/YYYY-MM-DD.ts` (using the `to` date as filename). Follow this exact structure:
+8. **Generate entry file**: Write the `ChangelogEntry` to `src/data/changelogs/YYYY-MM-DD.ts` (using the `to` date as filename). Follow this exact structure:
 
    ```ts
    import type { ChangelogEntry } from "./types";
 
    export const entry: ChangelogEntry = {
      dateRange: { from: "<from>", to: "<to>" },
+     headline: "<one-sentence thesis>",
      summary: [
        { label: "...", description: "..." },
        // ...
@@ -62,14 +67,14 @@ Generate a complete changelog entry for a given period. Defaults to the last 7 d
    };
    ```
 
-8. **Update barrel**: Add an import line and array entry to `src/data/changelogs/index.ts`:
+9. **Update barrel**: Add an import line and array entry to `src/data/changelogs/index.ts`:
    - Import: `import { entry as e<YYYYMMDD> } from "./<YYYY-MM-DD>";`
    - Add `e<YYYYMMDD>` to the `all` array.
    - The barrel's `.sort()` handles ordering -- just append to the array.
 
-9. **Verify**: Run `npm test -- src/data/changelogs/` to ensure tests still pass.
+10. **Verify**: Run `npm test -- src/data/changelogs/` to ensure tests still pass.
 
-10. **Commit**:
+11. **Commit**:
     ```bash
     git add src/data/changelogs/
     git commit -m "docs(changelog): add changelog for <from> to <to>"

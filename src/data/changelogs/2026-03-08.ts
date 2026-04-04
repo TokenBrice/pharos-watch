@@ -2,6 +2,7 @@ import type { ChangelogEntry } from "./types";
 
 export const entry: ChangelogEntry = {
   dateRange: { from: "2026-03-01", to: "2026-03-08" },
+  headline: "Dynamic social cards, motion design overhaul, DEWS radar redesign, and mint/burn flows rebuilt on Alchemy.",
   summary: [
     { label: "Dynamic OG images", description: "Worker-generated social cards with Satori + resvg-wasm for stablecoin, safety, depeg, and PSI pages with one-click sharing" },
     { label: "Homepage motion design", description: "Entrance choreography, animated counters, grade badge pop, chart draw-in, contagion ripple, and intelligence briefing module" },

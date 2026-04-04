@@ -2,6 +2,7 @@ import type { ChangelogEntry } from "./types";
 
 export const entry: ChangelogEntry = {
   dateRange: { from: "2026-03-17", to: "2026-03-24" },
+  headline: "Four new DEX APIs feed pricing consensus, Safety Score hits v6.0, and live reserves double to 114 coins.",
   summary: [
     { label: "Multi-DEX API integration", description: "Fluid, Balancer, Raydium, and Orca direct API fetchers with per-protocol price disaggregation into pricing consensus" },
     { label: "Pricing source expansion", description: "Kraken, Bitstamp, Jupiter, and Chainlink added to consensus; tertiary FX fallback for multi-source outages" },

@@ -2,6 +2,7 @@ import type { ChangelogEntry } from "./types";
 
 export const entry: ChangelogEntry = {
   dateRange: { from: "2026-03-09", to: "2026-03-16" },
+  headline: "Chain analytics and multi-source pricing launch alongside a major live-reserve and audit push.",
   summary: [
     { label: "Chain analytics launch", description: "New /chains/ leaderboard and per-chain profile pages with health scores, supply snapshots, and cross-linked stablecoin detail" },
     { label: "Multi-source pricing", description: "N-source consensus module integrating Pyth, RedStone, Binance, Coinbase, Curve on-chain prices, and real-time FX rates" },
