@@ -9,7 +9,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 * * * *` (hourly at :11 UTC)
 - **Shared hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 120 live-enabled stablecoins across 31 registered adapters
+- **Current coverage:** 120 live-enabled stablecoins across 32 registered adapters
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -48,7 +48,7 @@ The shared registry in `shared/lib/live-reserve-adapters.ts` defines two importa
 
 - `dynamic-mix`: independently measured reserve compositions. These can be `independent` evidence for scoring when the sync state is clean.
 - `validated-static`: live validation/probe adapters over curated/static slices. These remain authoritative for the reserve detail API, but they are tagged `static-validated` and do not count as independent live collateral inputs for report-card scoring.
-- `single-bucket`: one-slice live proofs/attestations. Some are true independent evidence (`chainlink-nav`, `chainlink-por`, `erc4626-single-asset`, `btcfi`, `sgforge-coinvertible`), while weak liveness-only probes such as `single-asset` and coarse issuer attestation summaries such as `tether` are tagged `weak-live-probe`.
+- `single-bucket`: one-slice live proofs/attestations. Some are true independent evidence (`chainlink-nav`, `chainlink-por`, `erc4626-single-asset`, `btcfi`, `liquity-v1`, `sgforge-coinvertible`), while weak liveness-only probes such as `single-asset` and coarse issuer attestation summaries such as `tether` are tagged `weak-live-probe`.
 - `independent`: scoring-eligible live evidence when the snapshot is fresh, authoritative, and the most recent sync status is `ok`.
 - `static-validated`, `weak-live-probe`: detail/status-visible evidence classes that never override curated collateral scoring.
 - `source-invariant`: opt-in within-run result sharing for adapters whose returned payload is coin-invariant. All other adapters run per coin even when configs look similar.
@@ -93,7 +93,7 @@ Common metadata fields:
 | `redemptionFeeBps`                                              | Current live redemption fee telemetry when the source exposes it                                |
 | `buyFeeBpsMin`, `buyFeeBpsMax`                                  | Optional raw buy-fee range context retained alongside normalized `redemptionFeeBps`             |
 
-`freshnessMode = "not-applicable"` is the expected scoring-eligible path for intrinsically current on-chain reads such as `evm-branch-balances`, where reserve composition comes from latest-state contract balances rather than a separately timestamped disclosure.
+`freshnessMode = "not-applicable"` is the expected scoring-eligible path for intrinsically current on-chain reads such as `evm-branch-balances` and `liquity-v1`, where reserve composition comes from latest-state contract balances rather than a separately timestamped disclosure.
 
 The registry now also declares the admissible `freshnessMode` set per adapter family so timestamp-backed disclosures, latest-state on-chain proofs, and explicitly unverified dashboard/API feeds cannot silently drift into undocumented freshness semantics.
 
@@ -342,24 +342,28 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 | `fx`                       | `http-json`                 | `collateral-mix`                     | 1                |
 | `gho`                      | `onchain-evm`               | `protocol-reserve`                   | 1                |
 | `infinifi`                 | `http-json`                 | `collateral-mix`                     | 1                |
+| `liquity-v1`               | `onchain-evm`               | `single-asset`                       | 1                |
 | `m0`                       | `http-json`                 | `protocol-reserve`                   | 4                |
 | `mento`                    | `http-html`                 | `collateral-mix`                     | 3                |
 | `openeden-usdo`            | `http-json`                 | `collateral-mix`                     | 1                |
 | `re-metrics`               | `http-html`                 | `collateral-mix`                     | 1                |
 | `reservoir`                | `http-json`                 | `protocol-reserve`                   | 1                |
 | `sgforge-coinvertible`     | `http-html`                 | `attestation-mix`                    | 1                |
-| `single-asset`             | `onchain-evm` / `http-json` | `single-asset`                       | 48               |
+| `single-asset`             | `onchain-evm` / `http-json` | `single-asset`                       | 47               |
 | `sky-makercore`            | `http-json`                 | `collateral-mix`                     | 2                |
 | `tether`                   | `http-json`                 | `attestation-mix`                    | 1                |
 | `usdai-proof-of-reserves`  | `http-json`                 | `collateral-mix`                     | 1                |
 | `usdd-data-platform`       | `http-json`                 | `collateral-mix`                     | 1                |
 
-`usdai-proof-of-reserves` consumes USD.AI's public proof-of-reserves API, preserves oversized fixed-point `share` and `amount` integers from the raw JSON payload, groups the many hardware-loan `DEAL` rows into a single high-risk loan slice, and exposes liquid reserve buckets such as PYUSD separately. The adapter prefers explicit `share` weights when the share-bearing rows already cover the full published mix, ignores auxiliary amount-only rows in that case with an informational warning, and falls back to `amount` weighting only if the feed stops publishing share values entirely. The endpoint does not publish a trustworthy disclosure timestamp, so snapshots are stored with `freshnessMode = "unverified"`.
+`usdai-proof-of-reserves` consumes USD.AI's public proof-of-reserves API, preserves oversized fixed-point `share` and `amount` integers from the raw JSON payload, groups the many hardware-loan `DEAL` rows into a single high-risk loan slice, and exposes liquid reserve buckets such as PYUSD separately. The adapter prefers explicit `share` weights when the share-bearing rows already cover the full published mix, ignores auxiliary amount-only rows in that case with an informational warning, and falls back to `amount` weighting only if the feed stops publishing share values entirely. The endpoint does not publish a trustworthy disclosure timestamp, so snapshots are stored with `freshnessMode = "unverified"`. As of April 4, 2026, Pharos binds this mixed reserve feed to `susdai-usd-ai`, not to base `usdai-usd-ai`, because the public API is protocol/yield-side collateral rather than a clean base-token reserve proof.
 
 `crvusd` now combines the direct Ethereum LLAMMA collateral feed from `https://prices.curve.finance/v1/crvusd/markets` with on-chain Yield Basis exposure. The adapter walks the Ethereum Yield Basis factory (`factory.yieldbasis.eth`), unwraps each market's LT position with `preview_emergency_withdraw(totalSupply)`, values the resulting external asset balances with DefiLlama prices, and folds those balances into the same BTC / ETH reserve buckets as the direct Curve markets. `crvusd-curve` config version `2` marks that semantic expansion.
 
 GHO-specific note:
 the `gho` adapter now values reviewed mainnet GSM backing directly from live onchain GSM state and leaves the remainder of GHO supply in an aggregated residual issuance / reserve-buffer slice. `immediateRedeemableUsd` only counts GSM modules that are not frozen or seized, while `redemptionFeeBps` is normalized to the current worst tracked GSM buy fee and the raw min/max values are retained as `buyFeeBpsMin` / `buyFeeBpsMax`.
+
+Liquity v1 note:
+the `liquity-v1` adapter now covers `lusd-liquity` by reading `getEntireSystemColl()` and `getEntireSystemDebt()` from the official Ethereum `TroveManager`, preserving LUSD as a one-slice 100% ETH reserve view while classifying the feed as independent latest-state on-chain evidence rather than a generic ERC-20 liveness probe.
 
 Adapter helpers now live in a small helper family, with `worker/src/cron/reserve-adapters/helpers.ts` kept as the shared import surface:
 

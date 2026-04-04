@@ -1,6 +1,14 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.91 (2026-02-25 → 2026-03-30).
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.92 (2026-02-25 → 2026-04-04).
+
+## v6.92 — Direct Liquity v1 reserve observation for LUSD (2026-04-04)
+
+Safety Score structure is unchanged, but LUSD's reserve telemetry is now promoted from a proof-style liveness probe to direct independent on-chain observation:
+
+- LUSD now uses a dedicated `liquity-v1` live reserve adapter that reads `getEntireSystemColl()` and `getEntireSystemDebt()` from the official Ethereum `TroveManager`
+- Clean authoritative LUSD reserve snapshots now qualify as independent single-bucket live evidence for collateral-quality passthrough instead of remaining stuck in the generic `weak-live-probe` family
+- This is a targeted adapter upgrade only; the generic `single-asset` family still remains proof/detail-visible unless the underlying source is strong enough to justify a dedicated independent adapter
 
 ---
 
@@ -418,7 +426,7 @@ Weights and grade thresholds are unchanged from v6.0.
 | v4.0        | multiplier | 25%            | —       | 25%        | 10%              | 30%      |
 | v4.1        | multiplier | 30%            | —       | 20%        | 15%              | 25%      |
 | v5.0–5.8    | multiplier | 30%            | —       | 20%        | 15%              | 25%      |
-| **v6.0–6.91** | **multiplier** | **30%**  | **—**   | **20%**    | **15%**          | **25%**  |
+| **v6.0–6.92** | **multiplier** | **30%**  | **—**   | **20%**    | **15%**          | **25%**  |
 
 ## Quick Reference: Grade Thresholds
 

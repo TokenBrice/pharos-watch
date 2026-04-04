@@ -1,5 +1,37 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV692Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("6.92")}
+      accent="border-l-amber-500"
+    >
+      <p>
+        LUSD now uses direct Liquity v1 system-collateral reads instead of the generic proof-style
+        liveness probe, so clean snapshots qualify as independent live reserve evidence.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          The dedicated <code className="text-xs bg-muted px-1 py-0.5 rounded">liquity-v1</code>{" "}
+          adapter reads <code className="text-xs bg-muted px-1 py-0.5 rounded">getEntireSystemColl()</code>{" "}
+          and <code className="text-xs bg-muted px-1 py-0.5 rounded">getEntireSystemDebt()</code>{" "}
+          from the official Ethereum <code className="text-xs bg-muted px-1 py-0.5 rounded">TroveManager</code>.
+        </li>
+        <li>
+          LUSD reserve snapshots remain a single-bucket 100% ETH view, but the adapter is now registered
+          as <code className="text-xs bg-muted px-1 py-0.5 rounded">independent</code> instead of{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">weak-live-probe</code>.
+        </li>
+        <li>
+          This promotes LUSD&apos;s clean authoritative reserve snapshots into collateral-quality live
+          passthrough without relaxing the generic gate for other{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">single-asset</code> probes.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV691Entry() {
   return (
     <VersionCard

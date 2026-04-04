@@ -223,7 +223,7 @@ When the checkout itself lives under `/.worktrees/`, Vitest now drops those glob
 - `shared/lib/__tests__/` — shared library tests (format, classification invariants, peg rates, stablecoin registry, timeout helpers)
 - `scripts/__tests__/` — repo policy / guardrail tests for CI and developer tooling
 - `src/components/stablecoin-detail/__tests__/` — stablecoin detail component tests
-- `worker/src/cron/reserve-adapters/__tests__/` — reserve adapter tests (29 adapters)
+- `worker/src/cron/reserve-adapters/__tests__/` — reserve adapter tests (30 adapters)
 - `worker/src/cron/dex-discovery/__tests__/` — DEX discovery module tests
 - `worker/src/cron/dex-liquidity/__tests__/` — DEX liquidity scoring module tests
 

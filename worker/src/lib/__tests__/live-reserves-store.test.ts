@@ -234,6 +234,55 @@ describe("live-reserves-store", () => {
     });
   });
 
+  it("maps Liquity v1 system collateral adapters to a live badge", async () => {
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [],
+        first: {
+          stablecoin_id: "lusd-liquity",
+          slices: JSON.stringify([{ name: "ETH", pct: 100, risk: "very-low" }]),
+          fetched_at: 1_000,
+          source: "liquity-v1",
+          metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
+          adapter_source_model: "single-bucket",
+          adapter_evidence_class: "independent",
+        },
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [],
+        first: {
+          stablecoin_id: "lusd-liquity",
+          adapter_key: "liquity-v1",
+          breaker_key: "live-reserves:lusd-liquity",
+          last_attempted_at: 1_000,
+          last_success_at: 1_000,
+          last_status: "ok",
+          warning_count: 0,
+          warnings: null,
+          last_error: null,
+          metadata: "{}",
+        },
+      },
+    ]);
+
+    const result = await resolveReserveResult(db, "lusd-liquity", 1_200);
+
+    expect(result).toMatchObject({
+      mode: "live",
+      displayBadge: {
+        kind: "live",
+        label: "Live",
+      },
+      provenance: {
+        evidenceClass: "independent",
+        sourceModel: "single-bucket",
+        freshnessMode: "not-applicable",
+      },
+    });
+  });
+
   it("treats inconsistent live snapshots as missing in the reserve overview", async () => {
     const emptyOverview = await computeReserveCompositionOverview(mockD1(), 2_000);
     const db = mockD1([
@@ -725,6 +774,18 @@ describe("live-reserves-store", () => {
             last_error: null,
             metadata: "{}",
           },
+          {
+            stablecoin_id: "lusd-liquity",
+            adapter_key: "liquity-v1",
+            breaker_key: "live-reserves:lusd-liquity",
+            last_attempted_at: now,
+            last_success_at: now,
+            last_status: "ok",
+            warning_count: 0,
+            warnings: null,
+            last_error: null,
+            metadata: "{}",
+          },
         ],
       },
       {
@@ -742,6 +803,15 @@ describe("live-reserves-store", () => {
             fetched_at: now,
             source: "single-asset",
           },
+          {
+            stablecoin_id: "lusd-liquity",
+            slices: JSON.stringify([{ name: "ETH", pct: 100, risk: "very-low" }]),
+            fetched_at: now,
+            source: "liquity-v1",
+            metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
+            adapter_source_model: "single-bucket",
+            adapter_evidence_class: "independent",
+          },
         ],
       },
     ]);
@@ -749,6 +819,7 @@ describe("live-reserves-store", () => {
     const scoringMap = await loadFreshIndependentLiveReserveMap(db, now + 100);
     expect(scoringMap.has("iusd-infinifi")).toBe(false);
     expect(scoringMap.has("pyusd-paypal")).toBe(false);
+    expect(scoringMap.get("lusd-liquity")).toEqual([{ name: "ETH", pct: 100, risk: "very-low" }]);
   });
 
   it("requires timestamp-backed or explicitly on-chain freshness metadata for scoring passthrough", async () => {

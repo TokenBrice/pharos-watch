@@ -164,6 +164,14 @@ const ghoParamsSchema = z.object({
   gsmModules: z.array(ghoGsmModuleSchema).min(1),
 }).strict();
 
+const liquityV1ParamsSchema = z.object({
+  troveManagerAddress: z.string(),
+  slice: reserveSliceDescriptorSchema,
+  rpcUrl: z.string().optional(),
+  fallbackRpcUrl: z.string().optional(),
+  redemptionRateProbe: redemptionRateProbeSchema.optional(),
+}).strict();
+
 const sgForgeCoinvertibleParamsSchema = z.object({
   coinType: z.enum(["eur", "usd"]).optional(),
 }).strict();
@@ -215,6 +223,7 @@ const adapterParamsSchemas = {
   fx: noParamsSchema,
   gho: ghoParamsSchema,
   infinifi: noParamsSchema,
+  "liquity-v1": liquityV1ParamsSchema,
   m0: noParamsSchema,
   mento: noParamsSchema,
   "openeden-usdo": noParamsSchema,
@@ -419,6 +428,13 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
       allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
     },
+  },
+  "liquity-v1": {
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "none", fee: "current-bps" },
+    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
   m0: {
     sourceModel: "dynamic-mix",

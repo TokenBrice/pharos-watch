@@ -26,6 +26,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   fx: "live",
   gho: "live",
   infinifi: "live",
+  "liquity-v1": "live",
   m0: "live",
   mento: "live",
   "openeden-usdo": "live",

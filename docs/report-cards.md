@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v6.91)
+## Overall Grade (v6.92)
 
 Three-step computation:
 
@@ -12,7 +12,7 @@ Three-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v6.91 keeps the v6.4 structure. LUSD and BOLD still use documented-bound eventual redemption capacity, and when fresh live reserve telemetry exists their current on-chain redemption fee bps is used for cost scoring instead of a flat formula placeholder. Collateral-quality passthrough now only accepts fresh authoritative independent live reserve snapshots whose latest sync state is `ok` and whose freshness evidence is scoring-eligible; `validated-static`, `weak-live-probe`, and `unverified` reserve feeds remain visible on reserve detail surfaces but no longer override curated collateral scoring. Blacklist attribution now distinguishes mutable-contract risk (`Possible`) from majority upstream freeze exposure (`Inherited`), treats reserve-side stablecoin and custody/CEX clues as `Possible` instead of `No`, and no longer treats `centralized-dependent` governance as sufficient evidence on its own.
+Current-version note: v6.92 keeps the v6.4 structure. LUSD and BOLD still use documented-bound eventual redemption capacity, and when fresh live reserve telemetry exists their current on-chain redemption fee bps is used for cost scoring instead of a flat formula placeholder. LUSD now reaches that live-reserve path through direct Liquity v1 system-collateral reads rather than the generic proof-style liveness probe, so its clean authoritative reserve snapshots qualify as independent live evidence. Collateral-quality passthrough still only accepts fresh authoritative independent live reserve snapshots whose latest sync state is `ok` and whose freshness evidence is scoring-eligible; `validated-static`, `weak-live-probe`, and `unverified` reserve feeds remain visible on reserve detail surfaces but no longer override curated collateral scoring. Blacklist attribution now distinguishes mutable-contract risk (`Possible`) from majority upstream freeze exposure (`Inherited`), treats reserve-side stablecoin and custody/CEX clues as `Possible` instead of `No`, and no longer treats `centralized-dependent` governance as sufficient evidence on its own.
 
 ## Dimensions
 
@@ -97,6 +97,7 @@ independent:
 - clean = `reserve_sync_state.last_status === "ok"`; warning-bearing `degraded` snapshots stay visible on reserve detail/status surfaces but do not drive scoring
 - independent = adapter `evidenceClass` is `independent`
 - scoring-eligible freshness = `freshnessMode === "verified"` or `freshnessMode === "not-applicable"`; `freshnessMode === "unverified"` stays detail-visible but does not drive scoring
+- direct one-bucket on-chain reserve proofs can qualify when they are registered as independent (for example LUSD's dedicated `liquity-v1` adapter); generic liveness probes do not qualify just because they are on-chain
 - `validated-static` feeds (for example `curated-validated` and `frax`) and `weak-live-probe` feeds (for example `single-asset` and `tether`) remain authoritative for reserve detail/status surfaces, but they do not override curated collateral scoring
 - the live reserve registry now enforces an explicit per-adapter freshness contract, so latest-state on-chain proofs, timestamp-backed disclosures, and explicitly unverified dashboard feeds cannot silently drift into undocumented freshness semantics
 
@@ -363,7 +364,7 @@ Users simulate a grade downgrade for any upstream coin and watch cascading grade
 
 - **Coin selector**: Filtered to coins appearing as `from` in `dependencyGraph.edges`, sorted by dependent count.
 - **Grade selector**: Only downgrades from the coin's current grade to F.
-- **Recomputation**: `computeStressedGrades()` injects a synthetic score, recomputes only the Dependency Risk dimension for affected downstream coins. The current snapshot size is 268 cards (186 tracked + 82 cemetery) × 5 dimensions, which remains comfortably sub-millisecond in practice.
+- **Recomputation**: `computeStressedGrades()` injects a synthetic score, recomputes only the Dependency Risk dimension for affected downstream coins. The current snapshot size is 269 cards (187 tracked + 82 cemetery) × 5 dimensions, which remains comfortably sub-millisecond in practice.
 - **Two display modes**: Portfolio mode (dollar-denominated, scoped to held coins in impact table) vs ecosystem mode (all affected coins with market cap).
 - **Card grid simulation**: ALL affected coins show dashed amber borders + "Simulated" badge regardless of portfolio mode. Unaffected cards dimmed. Sticky banner with clear button.
 

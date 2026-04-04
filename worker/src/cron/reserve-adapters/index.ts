@@ -21,6 +21,7 @@ import { fetchFraxReserves } from "./frax";
 import { fetchFxReserves } from "./fx";
 import { fetchGhoReserves } from "./gho";
 import { fetchInfiniFiReserves } from "./infinifi";
+import { fetchLiquityV1Reserves } from "./liquity-v1";
 import { fetchM0Reserves } from "./m0";
 import { fetchMentoReserves } from "./mento";
 import { fetchOpenEdenUsdoReserves } from "./openeden";
@@ -58,6 +59,7 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   fx: fetchFxReserves,
   gho: fetchGhoReserves,
   infinifi: fetchInfiniFiReserves,
+  "liquity-v1": fetchLiquityV1Reserves,
   m0: fetchM0Reserves,
   mento: fetchMentoReserves,
   "openeden-usdo": fetchOpenEdenUsdoReserves,

@@ -4,14 +4,14 @@ import { ScoringChangelogContent, scoringAnchorId } from "./content";
 
 describe("ScoringChangelogContent", () => {
   it("preserves the version anchor and quick-reference rendering contracts", () => {
-    expect(scoringAnchorId("v6.91")).toBe("scoring-v6-91");
+    expect(scoringAnchorId("v6.92")).toBe("scoring-v6-92");
     expect(scoringAnchorId("v6.8")).toBe("scoring-v6-8");
     expect(scoringAnchorId("6.8")).toBe("scoring-6-8");
 
     const html = renderToStaticMarkup(<ScoringChangelogContent />);
 
-    expect(html).toContain('id="scoring-v6-91"');
-    expect(html).toContain("v6.91");
+    expect(html).toContain('id="scoring-v6-92"');
+    expect(html).toContain("v6.92");
     expect(html).toContain('id="scoring-v6-8"');
     expect(html).toContain("v6.8");
     expect(html).toContain("Quick Reference");

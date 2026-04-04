@@ -6,6 +6,8 @@ export function CollateralQualityMethodologyCopy() {
       reserve sync. For report-card scoring, that live snapshot must also carry scoring-eligible freshness
       evidence: either a verified timestamp path or an explicit on-chain latest-state{" "}
       <code className="text-xs bg-muted px-1 py-0.5 rounded">not-applicable</code> freshness mode.
+      Direct one-bucket on-chain reserve proofs such as Liquity v1 can qualify when the adapter is
+      classified as independent, but weak probe families do not qualify just because they are on-chain.
       Detail-only <code className="text-xs bg-muted px-1 py-0.5 rounded">static-validated</code> and{" "}
       <code className="text-xs bg-muted px-1 py-0.5 rounded">weak-live-probe</code> feeds remain visible
       on reserve surfaces, but they never override curated collateral scoring.

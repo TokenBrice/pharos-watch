@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "6.91",
+  currentVersion: "6.92",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "6.92",
+      title: "Direct Liquity v1 reserve observation for LUSD",
+      date: "2026-04-04",
+      effectiveAt: 1775260800,
+      summary:
+        "LUSD now uses direct on-chain Liquity v1 system-collateral telemetry instead of the generic proof-style liveness probe, so fresh clean snapshots qualify as independent live reserve evidence.",
+      impact: [
+        "LUSD live reserve sync now reads TroveManager getEntireSystemColl() and getEntireSystemDebt() directly from Ethereum",
+        "The reserve detail badge for clean authoritative LUSD snapshots now resolves to live instead of proof because the adapter is classified as independent single-bucket evidence",
+        "Weak single-asset probes remain excluded from collateral-quality passthrough; this is a targeted Liquity v1 adapter upgrade rather than a reclassification of the generic family",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "6.91",
       title: "Reserve-side blacklist exposure heuristics",
