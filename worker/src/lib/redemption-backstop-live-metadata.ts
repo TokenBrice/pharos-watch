@@ -12,6 +12,7 @@ export interface RedemptionBackstopLiveMetadata {
   isFresh: boolean;
   hasScoringEligibleFreshness: boolean;
   hasBlockingWarnings: boolean;
+  capacityNotes: string[];
   capacityConfidence: Exclude<RedemptionCapacityConfidence, "documented-bound" | "heuristic"> | null;
   canUseCapacity: boolean;
   canUseFee: boolean;
@@ -29,10 +30,53 @@ function coerceFiniteNumber(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function hasBlockingRedemptionWarnings(warnings: LiveReserveWarning[], warningCount: number): boolean {
+const CAPACITY_WARNING_EXCEPTIONS: Partial<Record<string, Partial<Record<string, string>>>> = {
+  "gho-aave": {
+    "aggregated-residual-issuance":
+      "Using tracked live GSM backing as a lower-bound redemption capacity despite aggregated residual issuance outside configured GSM modules",
+  },
+};
+
+function isAllowedCapacityWarning(stablecoinId: string, warning: LiveReserveWarning): boolean {
+  return warning.effect !== "info" && !!CAPACITY_WARNING_EXCEPTIONS[stablecoinId]?.[warning.code];
+}
+
+function hasBlockingRedemptionWarnings(
+  stablecoinId: string,
+  warnings: LiveReserveWarning[],
+  warningCount: number,
+): boolean {
   if (warningCount <= 0) return false;
   if (warnings.length === 0) return true;
-  return warnings.some((warning) => warning.effect !== "info");
+  return warnings.some((warning) => warning.effect !== "info" && !isAllowedCapacityWarning(stablecoinId, warning));
+}
+
+function canUseCapacityDespiteDegradedSync(
+  stablecoinId: string,
+  snapshotMetadata: ReserveSnapshotMetadataRecord | null | undefined,
+): boolean {
+  if (!snapshotMetadata || snapshotMetadata.syncStatus !== "degraded" || snapshotMetadata.warningCount <= 0) return false;
+  if (snapshotMetadata.warnings.length === 0) return false;
+  let foundAllowedBlockingWarning = false;
+  for (const warning of snapshotMetadata.warnings) {
+    if (warning.effect === "info") continue;
+    if (!isAllowedCapacityWarning(stablecoinId, warning)) return false;
+    foundAllowedBlockingWarning = true;
+  }
+  return foundAllowedBlockingWarning;
+}
+
+function resolveCapacityNotes(
+  stablecoinId: string,
+  snapshotMetadata: ReserveSnapshotMetadataRecord | null | undefined,
+): string[] {
+  if (!canUseCapacityDespiteDegradedSync(stablecoinId, snapshotMetadata)) return [];
+  const notes = new Set<string>();
+  for (const warning of snapshotMetadata?.warnings ?? []) {
+    const note = CAPACITY_WARNING_EXCEPTIONS[stablecoinId]?.[warning.code];
+    if (note) notes.add(note);
+  }
+  return [...notes];
 }
 
 function resolveCapacityReason(args: {
@@ -43,10 +87,13 @@ function resolveCapacityReason(args: {
   telemetryCapacity: "direct" | "proxy" | "none";
   fallbackTelemetryAvailable: boolean;
   stablecoinId: string;
+  canUseDegradedSyncCapacity: boolean;
 }): string | null {
   if (!args.snapshotMetadata) return "Live reserve metadata unavailable";
   if (!args.isFresh) return "Live reserve metadata stale; fresh metadata required";
-  if (args.snapshotMetadata.syncStatus !== "ok") return "Live reserve metadata degraded; latest snapshot not in ok state";
+  if (args.snapshotMetadata.syncStatus !== "ok" && !args.canUseDegradedSyncCapacity) {
+    return "Live reserve metadata degraded; latest snapshot not in ok state";
+  }
   if (args.hasBlockingWarnings) return "Live reserve metadata degraded by reserve warnings";
   if (!SCORING_LIVE_RESERVE_EVIDENCE_CLASSES.includes(args.snapshotMetadata.evidenceClass)) {
     return "Live reserve metadata uses weak or non-scoring evidence for redemption capacity";
@@ -94,10 +141,13 @@ export function readRedemptionBackstopLiveMetadata(
   const adapterDefinition = adapterKey ? getLiveReserveAdapterDefinition(adapterKey) : null;
   const isFresh = updatedAt != null && now - updatedAt <= LIVE_RESERVE_FRESHNESS_SEC;
   const hasScoringEligibleFreshness = hasScoringEligibleLiveReserveFreshness(metadata);
+  const canUseDegradedSyncCapacity = canUseCapacityDespiteDegradedSync(stablecoinId, snapshotMetadata);
   const hasBlockingWarnings = hasBlockingRedemptionWarnings(
+    stablecoinId,
     snapshotMetadata?.warnings ?? [],
     snapshotMetadata?.warningCount ?? 0,
   );
+  const capacityNotes = resolveCapacityNotes(stablecoinId, snapshotMetadata);
   const telemetryCapacity = adapterDefinition?.redemptionTelemetry.capacity ?? "none";
   const telemetryFee = adapterDefinition?.redemptionTelemetry.fee ?? "none";
   const fallbackCapacityTelemetryAvailable =
@@ -111,6 +161,7 @@ export function readRedemptionBackstopLiveMetadata(
     telemetryCapacity,
     fallbackTelemetryAvailable: fallbackCapacityTelemetryAvailable,
     stablecoinId,
+    canUseDegradedSyncCapacity,
   });
   const feeReason = resolveFeeReason({
     snapshotMetadata,
@@ -127,6 +178,7 @@ export function readRedemptionBackstopLiveMetadata(
     isFresh,
     hasScoringEligibleFreshness,
     hasBlockingWarnings,
+    capacityNotes,
     capacityConfidence:
       telemetryCapacity === "direct"
         ? "live-direct"

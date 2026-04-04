@@ -309,6 +309,9 @@ function summarizeRedemptionBackstops(metadata: Record<string, unknown>): string
   const failed = readNumber(metadata.failed);
   const resolved = readNumber(metadata.resolved);
   const unresolved = readNumber(metadata.unresolved);
+  const unresolvedMissingCapacity = readNumber(metadata.unresolvedMissingCapacity);
+  const unresolvedCritical = readNumber(metadata.unresolvedCritical);
+  const missingCapacityOkThreshold = readNumber(metadata.missingCapacityOkThreshold);
   const coverageRatio = readNumber(metadata.coverageRatio);
   const dynamic = readNumber(metadata.dynamic);
   const estimated = readNumber(metadata.estimated);
@@ -321,6 +324,9 @@ function summarizeRedemptionBackstops(metadata: Record<string, unknown>): string
       : null,
     resolved != null
       ? `resolved ${resolved}${configured != null ? `/${configured}` : ""}${coverageRatio != null ? ` (${Math.round(coverageRatio * 100)}%)` : ""}${unresolved != null && unresolved > 0 ? `, unrated ${unresolved}` : ""}`
+      : null,
+    unresolvedMissingCapacity != null && unresolvedMissingCapacity > 0 && unresolvedCritical === 0 && missingCapacityOkThreshold != null
+      ? `missing-capacity tail ${unresolvedMissingCapacity}${unresolvedMissingCapacity <= missingCapacityOkThreshold ? ` within ${missingCapacityOkThreshold}-coin tolerance` : ` exceeds ${missingCapacityOkThreshold}-coin tolerance`}`
       : null,
     dynamic != null || estimated != null || staticCount != null
       ? `source mix${dynamic != null ? ` dynamic ${dynamic}` : ""}${estimated != null ? `, estimated ${estimated}` : ""}${staticCount != null ? `, static ${staticCount}` : ""}`

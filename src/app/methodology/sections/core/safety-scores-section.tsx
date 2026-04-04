@@ -214,6 +214,7 @@ export function SafetyScoresMethodologySection() {
                     liquid. Low-confidence redemption routes stay visible on the site but do not uplift the Safety Score
                     liquidity dimension, stale DEX inputs are not blended into effective exit, stale live reserve metadata ages out instead of staying resolved indefinitely, fresh live fee telemetry can replace reviewed fallback fee buckets when available, and eventual issuer redemption is reported separately from immediate redeemable buffer capacity.
                     Reviewed `documented-bound` eventual redemption routes can still count as medium-confidence evidence even when no separate live instant buffer is measured, and explicitly published primary-market liquidity-buffer ratios can also graduate out of the heuristic bucket when the underlying source is strong enough. Strategy-backed delta-neutral rails still need an explicit published buffer or live telemetry before they stop being treated as heuristic capacity.
+                    Reserve-backed routes still fail closed on degraded live evidence by default, but a route can keep a live lower bound when the only blocking warning says reserve coverage is incomplete rather than that the measured redeemable buffer is invalid.
                   </p>
                 </div>
                 {/* Peg multiplier */}

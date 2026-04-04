@@ -935,7 +935,13 @@ Only coins with `liveReservesConfig` set in their metadata appear in this table.
 
 **Purpose:** Builds the current `redemption_backstop` dataset for redeemable assets and writes daily rows to `redemption_backstop_history`. This sync is deliberately separate from report-card generation so redeemability remains a first-class worker dataset with its own cron visibility, API surface, and methodology versioning.
 
-Current reserve-sync support distinguishes direct and proxy live-capacity telemetry. Only adapters that explicitly expose immediate redemption capacity can drive `sourceMode = dynamic`, while fee-only adapters (for example `single-asset`) are now restricted to fee telemetry only. Reserve-sync routes require a fresh `ok` authoritative reserve snapshot; degraded snapshots, stale rows, and rows without scoring-grade freshness evidence now fall back conservatively or leave the route unrated.
+Current reserve-sync support distinguishes direct and proxy live-capacity telemetry. Only adapters that explicitly expose immediate redemption capacity can drive `sourceMode = dynamic`, while fee-only adapters (for example `single-asset`) are now restricted to fee telemetry only. Reserve-sync routes require a fresh authoritative snapshot with scoring-grade freshness evidence; degraded snapshots still fail closed by default, but redemption can selectively keep a live lower bound when the only blocking warning class is explicitly allowlisted as a reserve-completeness issue rather than a broken-capacity signal. When public docs publish a hard primary-market buffer floor, reserve-sync routes can also fall back to a reviewed documented ratio instead of remaining unrated.
+
+Cron result status is thresholded rather than all-or-nothing:
+
+- `ok` when all routes resolve cleanly, or when the only unrated rows are a tiny `missing-capacity` tail within `ceil(configured * 1%)`
+- `degraded` when any route fails, is missing from cache, hits another unresolved state, the `missing-capacity` tail exceeds that budget, or DEX liquidity input freshness is stale
+- `error` when zero routes resolve to usable scored rows
 
 ### sync-kinesis-supply
 

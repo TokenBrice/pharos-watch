@@ -11,6 +11,7 @@ import {
 
 const REVIEWED_BASKET_REDEMPTION_AT = "2026-03-23";
 const REVIEWED_REMEDIATION_AT = "2026-03-30";
+const REVIEWED_ROUTE_TUNING_AT = "2026-04-04";
 const reviewedBasketRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_BASKET_REDEMPTION_AT,
 );
@@ -78,12 +79,13 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       10,
       "Fresh live mainnet GSM telemetry uses the current worst tracked buy fee; the reviewed fallback bound is 10 bps when telemetry is unavailable",
     ),
-    reviewedAt: "2026-03-22",
+    reviewedAt: REVIEWED_ROUTE_TUNING_AT,
     docs: [
       sourceRef("Aave Stability Module", "https://aave.com/help/gho-stablecoin/stability-module", ["route", "fees"]),
     ],
     notes: [
-      "Immediate capacity is sourced from live onchain mainnet GSM backing and excludes frozen or seized modules at runtime",
+      "Immediate capacity is sourced from live tracked mainnet GSM backing and excludes frozen or seized modules at runtime",
+      "When reserve sync is degraded only because residual GHO issuance remains outside configured GSM modules, redemption still uses the tracked swappable GSM backing as a conservative live lower bound instead of dropping the route entirely",
     ],
   },
   "usdd-tron-dao-reserve": {

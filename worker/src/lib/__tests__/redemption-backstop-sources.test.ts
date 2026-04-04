@@ -370,6 +370,39 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.capacityConfidence).toBe("heuristic");
   });
 
+  it("uses reviewed fallback confidence and basis for reserve-sync fallback ratios", async () => {
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "test-coin",
+      {
+        routeFamily: "stablecoin-redeem",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "rules-based-nav",
+        outputAssetType: "stable-single",
+        capacityModel: {
+          kind: "reserve-sync-metadata",
+          fallbackRatio: 0.0025,
+          confidence: "documented-bound",
+          basis: "hot-buffer",
+        },
+        costModel: { kind: "dynamic-or-unclear", feeDescription: "Reviewed route" },
+        reviewedAt: "2026-04-04",
+        docs: [{ label: "Reviewed source", url: "https://example.com" }],
+      },
+      100_000_000,
+      null,
+      now,
+      { reserveSnapshotMetadata: null },
+    );
+
+    expect(entry.provider).toBe("reserve-sync-fallback");
+    expect(entry.sourceMode).toBe("estimated");
+    expect(entry.capacityConfidence).toBe("documented-bound");
+    expect(entry.capacityBasis).toBe("hot-buffer");
+    expect(entry.immediateCapacityUsd).toBe(250_000);
+  });
+
   it("returns missing-capacity when reserve-sync has no data and no fallback", async () => {
     const entry = await buildRedemptionBackstopEntry(
       mockD1(),
@@ -555,6 +588,110 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.resolutionState).toBe("missing-capacity");
     expect(entry.score).toBeNull();
     expect(entry.notes).toContain("Live reserve metadata stale; fresh metadata required");
+  });
+
+  it("keeps GHO resolved when the only live warning is aggregated residual issuance", async () => {
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "gho-aave",
+      {
+        routeFamily: "psm-swap",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-onchain",
+        outputAssetType: "stable-single",
+        capacityModel: { kind: "reserve-sync-metadata" },
+        costModel: { kind: "fee-bps", feeBps: 10 },
+      },
+      584_000_000,
+      null,
+      now,
+      {
+        reserveSnapshotMetadata: {
+          stablecoinId: "gho-aave",
+          fetchedAt: now - 120,
+          source: "gho",
+          metadata: {
+            immediateRedeemableUsd: 212_370_000,
+            immediateRedeemableRatio: 212_370_000 / 584_000_000,
+            redemptionFeeBps: 10,
+            freshnessMode: "not-applicable",
+          },
+          warningCount: 1,
+          warnings: [
+            {
+              code: "aggregated-residual-issuance",
+              message: "Residual GHO issuance outside tracked GSM backing remains aggregated (63.63%)",
+              severity: "warning",
+              effect: "degraded",
+            },
+          ],
+          sourceModel: "dynamic-mix",
+          evidenceClass: "independent",
+          syncStatus: "degraded",
+        },
+      },
+    );
+
+    expect(entry.resolutionState).toBe("resolved");
+    expect(entry.provider).toBe("reserve-sync-metadata");
+    expect(entry.capacityConfidence).toBe("live-direct");
+    expect(entry.immediateCapacityUsd).toBe(212_370_000);
+    expect(entry.notes).toContain(
+      "Using tracked live GSM backing as a lower-bound redemption capacity despite aggregated residual issuance outside configured GSM modules",
+    );
+  });
+
+  it("still blocks GHO when degraded live metadata includes non-allowlisted warnings", async () => {
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "gho-aave",
+      {
+        routeFamily: "psm-swap",
+        accessModel: "permissionless-onchain",
+        settlementModel: "atomic",
+        executionModel: "deterministic-onchain",
+        outputAssetType: "stable-single",
+        capacityModel: { kind: "reserve-sync-metadata" },
+        costModel: { kind: "fee-bps", feeBps: 10 },
+      },
+      584_000_000,
+      null,
+      now,
+      {
+        reserveSnapshotMetadata: {
+          stablecoinId: "gho-aave",
+          fetchedAt: now - 120,
+          source: "gho",
+          metadata: {
+            immediateRedeemableUsd: 212_370_000,
+            immediateRedeemableRatio: 212_370_000 / 584_000_000,
+            freshnessMode: "not-applicable",
+          },
+          warningCount: 2,
+          warnings: [
+            {
+              code: "aggregated-residual-issuance",
+              message: "Residual GHO issuance outside tracked GSM backing remains aggregated (63.63%)",
+              severity: "warning",
+              effect: "degraded",
+            },
+            {
+              code: "tracked-gsm-read-failed",
+              message: "Tracked GSM module could not be read",
+              severity: "warning",
+              effect: "degraded",
+            },
+          ],
+          sourceModel: "dynamic-mix",
+          evidenceClass: "independent",
+          syncStatus: "degraded",
+        },
+      },
+    );
+
+    expect(entry.resolutionState).toBe("missing-capacity");
+    expect(entry.notes).toContain("Live reserve metadata degraded; latest snapshot not in ok state");
   });
 
   it("uses fresh live redemption fee telemetry for fixed-fee routes", async () => {

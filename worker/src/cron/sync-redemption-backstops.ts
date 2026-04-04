@@ -11,6 +11,13 @@ import {
 } from "../lib/redemption-backstop-sources";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 
+const MISSING_CAPACITY_OK_RATIO = 0.01;
+
+function getAllowedMissingCapacityCount(configuredCount: number): number {
+  if (configuredCount <= 0) return 0;
+  return Math.max(1, Math.ceil(configuredCount * MISSING_CAPACITY_OK_RATIO));
+}
+
 async function pruneRemovedRedemptionBackstops(
   db: D1Database,
   configuredIds: readonly string[],
@@ -108,13 +115,23 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   const staticCount = snapshots.filter((entry) => entry.sourceMode === "static").length;
   const resolvedCount = snapshots.filter((entry) => entry.resolutionState === "resolved").length;
   const unresolvedCount = snapshots.length - resolvedCount;
+  const missingCapacityCount = snapshots.filter((entry) => entry.resolutionState === "missing-capacity").length;
+  const criticalUnresolvedCount = snapshots.filter(
+    (entry) => entry.resolutionState !== "resolved" && entry.resolutionState !== "missing-capacity",
+  ).length;
   const missingFromCache = configuredIds.filter((stablecoinId) => !stablecoinAssetById.has(stablecoinId));
   const coverageRatio = configuredIds.length > 0 ? resolvedCount / configuredIds.length : 1;
+  const allowedMissingCapacityCount = getAllowedMissingCapacityCount(configuredIds.length);
+  const missingCapacityWithinTolerance = missingCapacityCount <= allowedMissingCapacityCount;
 
   const status: CronResult["status"] =
     resolvedCount === 0 && (failedIds.length > 0 || missingFromCache.length > 0 || unresolvedCount > 0)
       ? "error"
-      : failedIds.length > 0 || missingFromCache.length > 0 || unresolvedCount > 0 || liquidityStale
+      : failedIds.length > 0
+        || missingFromCache.length > 0
+        || criticalUnresolvedCount > 0
+        || !missingCapacityWithinTolerance
+        || liquidityStale
         ? "degraded"
         : "ok";
 
@@ -127,6 +144,9 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
       configured: configuredIds.length,
       resolved: resolvedCount,
       unresolved: unresolvedCount,
+      unresolvedMissingCapacity: missingCapacityCount,
+      unresolvedCritical: criticalUnresolvedCount,
+      missingCapacityOkThreshold: allowedMissingCapacityCount,
       coverageRatio,
       dynamic: dynamicCount,
       estimated: estimatedCount,

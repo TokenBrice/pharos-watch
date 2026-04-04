@@ -6,11 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.2`
+- **Current methodology version:** `v3.3`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v3.2` correction: USD.AI's reviewed direct route now explicitly tracks the current `PYUSD -> USDai` mint/redeem rail for base `USDai`; the slower queue remains scoped to `sUSDai` unstaking, and no new live-capacity API feed is assumed.
+Latest `v3.3` update: `gho-aave` can again score against the tracked live GSM lower bound when reserve sync is degraded only by aggregated residual issuance outside the configured GSM set, while `wsrusd-reservoir` now falls back to Reservoir's reviewed 25 bps minimum USDC PSM balance when the live balance-sheet API lacks scoring-grade freshness evidence.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 
@@ -45,11 +45,11 @@ No external HTTP calls happen during the redemption-backstop pass itself; any li
 
 Status semantics:
 
-- `ok` when every configured route resolves to a usable scored row and the DEX liquidity input used for effective-exit context is fresh
-- `degraded` when at least one row is written but any configured route is missing from cache, unresolved, fails, or the reused DEX liquidity snapshot is stale
+- `ok` when every configured route resolves to a usable scored row and the DEX liquidity input used for effective-exit context is fresh, or when the only unresolved rows are a tiny `missing-capacity` tail within the current tolerance budget (`ceil(configured * 1%)`)
+- `degraded` when at least one row is written but any configured route fails, is missing from cache, hits a non-`missing-capacity` unresolved state, the `missing-capacity` tail exceeds that tolerance budget, or the reused DEX liquidity snapshot is stale
 - `error` when zero routes resolve to a usable scored row
 
-Cron metadata includes `synced`, `resolved`, `unresolved`, `coverageRatio`, `failed`, `configured`, `dynamic`, `estimated`, `static`, and `liquidityStale`, plus `failedIds` or `missingFromCache` when relevant.
+Cron metadata includes `synced`, `resolved`, `unresolved`, `unresolvedMissingCapacity`, `unresolvedCritical`, `missingCapacityOkThreshold`, `coverageRatio`, `failed`, `configured`, `dynamic`, `estimated`, `static`, and `liquidityStale`, plus `failedIds` or `missingFromCache` when relevant.
 
 ---
 
@@ -123,9 +123,11 @@ Capacity resolution happens in `worker/src/lib/redemption-backstop-sources.ts`.
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `supply-full`           | Scores against full current supply as eventual redeemability, but leaves `immediateCapacity*` empty because immediate buffer is not separately quantified |
 | `supply-ratio`          | Immediate modeled capacity equals `supplyUsd * ratio`; this is heuristic unless the config explicitly opts into stronger confidence |
-| `reserve-sync-metadata` | Reads `reserve_composition.metadata.immediateRedeemableUsd` / `immediateRedeemableRatio` from the latest fresh `ok` live snapshot only when the adapter explicitly exposes redemption-capacity telemetry and the snapshot carries scoring-grade freshness evidence; otherwise falls back to a configured ratio when provided or leaves the route unrated |
+| `reserve-sync-metadata` | Reads `reserve_composition.metadata.immediateRedeemableUsd` / `immediateRedeemableRatio` from the latest fresh live snapshot only when the adapter explicitly exposes redemption-capacity telemetry and the snapshot carries scoring-grade freshness evidence; degraded snapshots still fail closed by default, but specific lower-bound-only warning classes can be allowlisted per route when they indicate reserve completeness limits rather than broken telemetry. Routes can also fall back to a reviewed configured ratio when public docs publish a hard primary-market buffer floor. |
 
 Sky `DAI` and `USDS` now use the live `sky-makercore` PSM `USDC` balance as their immediate redeemable bound when that telemetry is fresh, with the prior 33% reviewed heuristic retained only as fallback.
+`GHO` now uses tracked swappable GSM backing as a live lower bound even when reserve sync is degraded solely by aggregated residual issuance outside the configured GSM set, because that warning reflects reserve completeness rather than invalid tracked telemetry.
+`wsrUSD` continues to prefer live Reservoir USDC balance telemetry when available, but now falls back to Reservoir's documented 25 bps minimum USDC PSM balance instead of remaining unrated when the live feed lacks a trustworthy source timestamp.
 Reviewed bounded primary-market liquidity buffers published by protocols or issuers, such as DOLA's USDS PSM share or JupUSD's USDC buffer, can also use `documented-bound` ratio semantics when the underlying source is explicit enough to avoid pretending the ratio is merely a blind heuristic.
 Reviewed route docs alone are not enough to promote delta-neutral or strategy-backed rails into `documented-bound` full-supply semantics; those routes still need either an explicitly published immediate buffer bound or fresh live reserve telemetry.
 
@@ -148,7 +150,7 @@ Each row also carries:
   - `dynamic` only as a legacy / unresolved reserve-sync bucket when older stored rows lack the richer live-capacity classification
   - `documented-bound` when a bounded model is explicitly configured that way after source review, including reviewed full-supply redeemability where official issuer or protocol terms establish eventual redemption of outstanding supply
   - `heuristic` by default for `supply-full`, `supply-ratio`, and inferred legacy rows without stronger evidence
-- Reserve-sync capacity now ignores degraded snapshots, weak fee-only adapters, and snapshots that do not carry scoring-grade freshness evidence. This makes the redemption trust boundary match the live-reserve scoring boundary more closely instead of trusting `fetchedAt` alone.
+- Reserve-sync capacity now ignores degraded snapshots, weak fee-only adapters, and snapshots that do not carry scoring-grade freshness evidence by default. The only exceptions are route-specific lower-bound warning classes that explicitly preserve a trustworthy redeemable-capacity floor while keeping reserve sync itself degraded for completeness review.
 - Immutable fully on-chain systems and reviewed direct issuer / direct redeem routes can use `documented-bound` with `eventual-only` semantics when protocol mechanics or issuer terms establish full-system redeemability directly, even if no separate immediate buffer is measured
 - `capacitySemantics`:
   - `immediate-bounded` when the model is intended to represent a current redeemable buffer

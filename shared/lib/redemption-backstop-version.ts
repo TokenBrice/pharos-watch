@@ -1,9 +1,24 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "3.2",
+  currentVersion: "3.3",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "3.3",
+      title: "Selective lower-bound recovery for GHO and Reservoir fallback hardening",
+      date: "2026-04-04",
+      effectiveAt: 1775260800,
+      summary:
+        "Two reserve-backed redemption routes now recover from the v3.1 trust-boundary tightening without weakening reserve-sync scoring globally.",
+      impact: [
+        "GHO can again use tracked live GSM backing as an immediate redemption lower bound when reserve sync is degraded only because residual issuance outside the configured GSM set remains aggregated",
+        "wsrUSD now falls back to Reservoir's reviewed 25 bps minimum USDC PSM balance when the live balance-sheet API lacks scoring-grade freshness evidence, instead of remaining unrated",
+        "Reserve-sync fallback ratios can now preserve reviewed `documented-bound` confidence and basis metadata instead of being forced into the generic heuristic bucket",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.2",
       title: "USD.AI redemption rail wording correction",

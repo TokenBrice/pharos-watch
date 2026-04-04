@@ -51,8 +51,10 @@ export function resolveCapacityBasis(
   capacityConfidence?: RedemptionBackstopEntry["capacityConfidence"],
 ): RedemptionBackstopEntry["capacityBasis"] | undefined {
   if (model.kind === "reserve-sync-metadata") {
+    if (capacityConfidence === "live-direct") return "live-direct-telemetry";
+    if (capacityConfidence === "live-proxy") return "live-proxy-buffer";
     if (model.basis) return model.basis;
-    return capacityConfidence === "live-direct" ? "live-direct-telemetry" : "live-proxy-buffer";
+    return "live-proxy-buffer";
   }
 
   if (model.basis) return model.basis;
@@ -70,16 +72,19 @@ export function resolveCapacityBasis(
 async function resolveCapacityFromReserveSyncMetadata(
   db: D1Database,
   stablecoinId: string,
+  model: Extract<RedemptionCapacityModel, { kind: "reserve-sync-metadata" }>,
   supplyUsd: number | null,
-  fallbackRatio: number | undefined,
   now: number,
   reserveSnapshotMetadata?: ReserveSnapshotMetadataRecord | null,
 ): Promise<CapacityResolution> {
   const liveCapacityConfidence = resolveReserveSyncCapacityConfidence(stablecoinId);
-  const fallbackCapacityConfidence: RedemptionBackstopEntry["capacityConfidence"] = "heuristic";
+  const fallbackCapacityConfidence: RedemptionBackstopEntry["capacityConfidence"] =
+    model.confidence === "documented-bound" || model.confidence === "heuristic"
+      ? model.confidence
+      : "heuristic";
   const capacitySemantics = resolveCapacitySemantics({
     kind: "reserve-sync-metadata",
-    fallbackRatio,
+    fallbackRatio: model.fallbackRatio,
   });
   const snapshotMetadata = reserveSnapshotMetadata !== undefined
     ? reserveSnapshotMetadata
@@ -111,23 +116,23 @@ async function resolveCapacityFromReserveSyncMetadata(
       sourceMode: "dynamic",
       resolutionState: "resolved",
       capacityConfidence: liveMetadata.capacityConfidence,
-      capacityBasis: resolveCapacityBasis(null, { kind: "reserve-sync-metadata", fallbackRatio }, liveMetadata.capacityConfidence),
+      capacityBasis: resolveCapacityBasis(null, model, liveMetadata.capacityConfidence),
       capacitySemantics,
-      notes: [],
+      notes: liveMetadata.capacityNotes,
     };
   }
 
-  if (fallbackRatio != null && supplyUsd != null && supplyUsd > 0) {
+  if (model.fallbackRatio != null && supplyUsd != null && supplyUsd > 0) {
     return {
-      immediateCapacityUsd: supplyUsd * fallbackRatio,
-      immediateCapacityRatio: fallbackRatio,
-      scoringCapacityUsd: supplyUsd * fallbackRatio,
-      scoringCapacityRatio: fallbackRatio,
+      immediateCapacityUsd: supplyUsd * model.fallbackRatio,
+      immediateCapacityRatio: model.fallbackRatio,
+      scoringCapacityUsd: supplyUsd * model.fallbackRatio,
+      scoringCapacityRatio: model.fallbackRatio,
       provider: "reserve-sync-fallback",
       sourceMode: "estimated",
       resolutionState: "resolved",
       capacityConfidence: fallbackCapacityConfidence,
-      capacityBasis: resolveCapacityBasis(null, { kind: "reserve-sync-metadata", fallbackRatio }, fallbackCapacityConfidence),
+      capacityBasis: resolveCapacityBasis(null, model, fallbackCapacityConfidence),
       capacitySemantics,
       notes: [
         liveMetadata.capacityReason
@@ -146,7 +151,7 @@ async function resolveCapacityFromReserveSyncMetadata(
     sourceMode: "static",
     resolutionState: supplyUsd == null ? "missing-cache" : "missing-capacity",
     capacityConfidence: liveCapacityConfidence,
-    capacityBasis: resolveCapacityBasis(null, { kind: "reserve-sync-metadata", fallbackRatio }, liveCapacityConfidence),
+    capacityBasis: resolveCapacityBasis(null, model, liveCapacityConfidence),
     capacitySemantics,
     notes: [liveMetadata.capacityReason ?? "Live reserve metadata unavailable"],
   };
@@ -223,8 +228,8 @@ export async function resolveRedemptionCapacity(
   return resolveCapacityFromReserveSyncMetadata(
     db,
     stablecoinId,
+    model,
     supplyUsd,
-    model.fallbackRatio,
     now,
     options.reserveSnapshotMetadata,
   );
