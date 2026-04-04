@@ -124,6 +124,13 @@ export function mergeCookieHeader(...cookieGroups) {
     .join("; ");
 }
 
+export function hasOpsUiAccessSessionCookie(cookieHeader) {
+  return cookieHeader
+    .split(";")
+    .map((cookie) => cookie.trim())
+    .some((cookie) => cookie.startsWith("CF_Authorization="));
+}
+
 export async function fetchOpsUiProxyStatus(
   url,
   accessHeaders,
@@ -138,7 +145,7 @@ export async function fetchOpsUiProxyStatus(
   }
 
   cookieHeader = mergeCookieHeader(cookieHeader, extractCookiePairs(proxiedStatus.response));
-  if (proxiedStatus.response.status === 401 && cookieHeader) {
+  if (proxiedStatus.response.status === 401 && hasOpsUiAccessSessionCookie(cookieHeader)) {
     proxiedStatus = await fetchJson(url, {
       Accept: "application/json",
       Cookie: cookieHeader,
@@ -150,7 +157,7 @@ export async function fetchOpsUiProxyStatus(
 }
 
 export function shouldSkipOpsUiProxyAssertion(response, cookieHeader) {
-  if ((cookieHeader ?? "").trim()) {
+  if (hasOpsUiAccessSessionCookie(cookieHeader ?? "")) {
     return false;
   }
 

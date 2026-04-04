@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   extractCookiePairs,
   fetchOpsUiProxyStatus,
+  hasOpsUiAccessSessionCookie,
   mergeCookieHeader,
   shouldSkipOpsUiProxyAssertion,
 } from "../smoke-ops.mjs";
@@ -75,6 +76,37 @@ describe("fetchOpsUiProxyStatus", () => {
       },
     });
   });
+
+  it("does not retry a 401 when only non-Access cookies are present", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: {
+          "content-type": "application/json",
+          "set-cookie": "cf_clearance=bot-cookie; Path=/; Secure",
+        },
+      }));
+
+    const result = await fetchOpsUiProxyStatus(
+      "https://ops.pharos.watch/api/admin/status",
+      {
+        "CF-Access-Client-Id": "id",
+        "CF-Access-Client-Secret": "secret",
+      },
+      { fetchImpl: fetchMock },
+    );
+
+    expect(result.retriedWithCookie).toBe(false);
+    expect(result.cookieHeader).toBe("cf_clearance=bot-cookie");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("hasOpsUiAccessSessionCookie", () => {
+  it("only treats CF_Authorization as a bootstrapped Access session", () => {
+    expect(hasOpsUiAccessSessionCookie("cf_clearance=bot-cookie")).toBe(false);
+    expect(hasOpsUiAccessSessionCookie("cf_clearance=bot-cookie; CF_Authorization=ui-session")).toBe(true);
+  });
 });
 
 describe("shouldSkipOpsUiProxyAssertion", () => {
@@ -84,7 +116,7 @@ describe("shouldSkipOpsUiProxyAssertion", () => {
       headers: { "content-type": "application/json" },
     });
 
-    expect(shouldSkipOpsUiProxyAssertion(response, "")).toBe(true);
+    expect(shouldSkipOpsUiProxyAssertion(response, "cf_clearance=bot-cookie")).toBe(true);
   });
 
   it("does not skip once a UI session cookie is available", () => {
