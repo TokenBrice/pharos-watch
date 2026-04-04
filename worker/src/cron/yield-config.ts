@@ -536,6 +536,7 @@ const RAW_ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
 const RAW_PRICE_DERIVED_FALLBACK_IDS = new Set([
   "usdb-blast", // USDB - Blast native yield (not tracked in DL Yields)
   "usda-avalon", // USDa - Avalon (no DL protocol pool; sUSDa Pendle pool too small at $55K)
+  "buck-buck-assets", // BUCK - Strategy preferred stock dividends (rebase, no DL pool)
 ]);
 
 const RAW_RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [

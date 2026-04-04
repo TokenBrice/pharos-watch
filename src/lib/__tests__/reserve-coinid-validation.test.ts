@@ -34,7 +34,7 @@ describe("reserve coinId validation", () => {
   it("no coin has both dependencies and reserve-linked coinIds (unless allowed)", () => {
     // Coins that intentionally use both: dependencies for dependency-map
     // weights and coinId on reserves for blacklist inheritance.
-    const ALLOWED_BOTH = new Set(["dusd-dtrinity"]);
+    const ALLOWED_BOTH = new Set(["dusd-dtrinity", "buck-buck-assets"]);
     const conflicts: string[] = [];
     for (const meta of TRACKED_STABLECOINS) {
       if (ALLOWED_BOTH.has(meta.id)) continue;
