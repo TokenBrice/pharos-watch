@@ -9,6 +9,7 @@ const CARD_ACCENTS = [
   { icon: "text-emerald-600 dark:text-emerald-400", hover: "hover:border-emerald-500/40" },
   { icon: "text-sky-600 dark:text-frost-blue", hover: "hover:border-frost-blue/40" },
   { icon: "text-violet-600 dark:text-violet-400", hover: "hover:border-violet-500/40" },
+  { icon: "text-rose-600 dark:text-rose-400", hover: "hover:border-rose-500/40" },
 ] as const;
 
 export function AboutReferenceModule() {
@@ -23,7 +24,7 @@ export function AboutReferenceModule() {
         <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
         {ABOUT_REFERENCE_ITEMS.map((item, i) => {
           const Icon = item.icon;
           const accent = CARD_ACCENTS[i % CARD_ACCENTS.length];
