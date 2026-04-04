@@ -29,6 +29,7 @@ import {
 } from "./status/evaluation-causes";
 import { assessOnchainDataQuality } from "./status/onchain-data-quality";
 import { loadCronHealth } from "./status/cron-health";
+import { getStatusSectionMessage } from "./status/section-errors";
 
 export interface RawStatusComputation {
   dbHealthy: boolean;
@@ -45,17 +46,6 @@ export interface RawStatusComputation {
   datasetFreshness: StatusResponse["datasetFreshness"];
   summary: StatusResponse["summary"];
   reserveComposition: StatusResponse["reserveComposition"];
-}
-
-function statusSectionMessage(code: keyof StatusResponse["sectionErrors"]): string {
-  switch (code) {
-    case "reserveComposition":
-      return "Reserve composition overview unavailable.";
-    case "telegramBot":
-      return "Telegram bot diagnostics unavailable.";
-    default:
-      return "Status section unavailable.";
-  }
 }
 
 function buildDbUnavailableRawStatus(): RawStatusComputation {
@@ -142,7 +132,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     console.warn("[status] Telegram bot stats unavailable:", err);
     sectionErrors.telegramBot = {
       code: "telegram_bot_stats_query_failed",
-      message: statusSectionMessage("telegramBot"),
+      message: getStatusSectionMessage("telegramBot"),
     };
   }
   const datasetFreshness = await getDatasetFreshness(db);
@@ -155,7 +145,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     console.warn("[status] Reserve composition overview unavailable:", err);
     sectionErrors.reserveComposition = {
       code: "reserve_composition_query_failed",
-      message: statusSectionMessage("reserveComposition"),
+      message: getStatusSectionMessage("reserveComposition"),
     };
   }
   const missingPriceRatio =
@@ -179,7 +169,6 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     anyCronError,
     unhealthyCrons,
   });
-
   const dataQualityStatus = deriveDataQualityStatus({
     dataQuality,
     missingPriceRatio,
@@ -191,7 +180,6 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
   });
 
   const rawOverallStatus = maxStatus(availabilityStatus, dataQualityStatus);
-
   const availabilityCauses = buildAvailabilityCauses({
     publicHealth,
     unhealthyCrons,
