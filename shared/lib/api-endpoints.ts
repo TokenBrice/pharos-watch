@@ -490,6 +490,14 @@ const BASE_ENDPOINT_DEFINITIONS = [
     routeDependencies: ["apiKeyHashPepper"],
   },
   {
+    key: "api-key-audit-log",
+    path: "/api/api-keys/audit-log",
+    methods: ["GET"],
+    adminRequired: true,
+    mutatingAdmin: false,
+    cacheBypass: true,
+  },
+  {
     key: "trigger-digest",
     path: "/api/trigger-digest",
     methods: ["POST"],

@@ -35,6 +35,7 @@ import {
   handleApiKeys,
   handleApiKeyUpdate,
 } from "./api/api-keys";
+import { handleApiKeyAuditLog } from "./api/api-key-audit-log";
 import { handleDailyDigest } from "./api/daily-digest";
 import { handleDigestArchive } from "./api/digest-archive";
 import { handleDigestSnapshot } from "./api/digest-snapshot";
@@ -208,6 +209,8 @@ const STATIC_ROUTES = [
     handleRequestSourceStats(db, trustedAdmin, request)),
   defineStaticRoute("api-keys", ({ db, trustedAdmin, request, apiKeyHashPepper }) =>
     handleApiKeys(db, trustedAdmin, request, apiKeyHashPepper)),
+  defineStaticRoute("api-key-audit-log", ({ db, trustedAdmin, request }) =>
+    handleApiKeyAuditLog(db, trustedAdmin, request)),
   defineStaticRoute("daily-digest", ({ db }) => handleDailyDigest(db)),
   defineStaticRoute("digest-archive", ({ db }) => handleDigestArchive(db)),
   defineStaticRoute("digest-snapshot", ({ db, url }) => handleDigestSnapshot(db, url)),
