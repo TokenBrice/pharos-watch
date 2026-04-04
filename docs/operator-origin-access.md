@@ -18,7 +18,7 @@ Still true:
 
 - Cloudflare Access remains the intended human-entry gate for the operator UI and operator API
 - scripts and automation should use `ops-api.pharos.watch` plus Access service-token headers
-- same-origin `/api/admin/*` smoke on `ops.pharos.watch` may require a bootstrapped `CF_Authorization` session cookie even when the same CI token can reach the UI shell
+- same-origin `/api/admin/*` smoke on `ops.pharos.watch` may require a bootstrapped `CF_Authorization` session cookie even when the same CI token can reach the UI shell; a token-backed HTML response alone does not guarantee that Pages Functions receives `Cf-Access-Jwt-Assertion`
 
 ---
 
@@ -229,7 +229,7 @@ The Pages Functions proxy already uses the service token pair; create separate t
 - CI contract:
   - direct `ops-api.pharos.watch` smoke uses the raw service-token headers
   - same-origin `ops.pharos.watch/api/admin/*` smoke first tries the raw token path, then retries with any `CF_Authorization` cookie returned by the Access-protected UI host
-  - if the UI host only exposes the interactive Access redirect and never yields a token-backed session cookie, the CI smoke records that the shell is gated correctly and skips the same-origin proxy assertion rather than failing on a non-browser auth shape
+  - if the UI host only exposes the interactive Access redirect, or the service-token UI flow renders the shell without yielding a browser session cookie, the CI smoke records that the shell is gated correctly and skips the same-origin proxy assertion rather than failing on a non-browser auth shape
 - rotation sequence:
   1. create a new Access service token scoped for CI smoke against `ops.pharos.watch` / `ops-api.pharos.watch`
   2. update the GitHub repository secrets with the new client id / secret

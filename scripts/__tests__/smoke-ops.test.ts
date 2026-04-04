@@ -4,6 +4,7 @@ import {
   extractCookiePairs,
   fetchOpsUiProxyStatus,
   mergeCookieHeader,
+  shouldSkipOpsUiProxyAssertion,
 } from "../smoke-ops.mjs";
 
 describe("extractCookiePairs", () => {
@@ -73,5 +74,25 @@ describe("fetchOpsUiProxyStatus", () => {
         Cookie: "CF_Authorization=ui-session",
       },
     });
+  });
+});
+
+describe("shouldSkipOpsUiProxyAssertion", () => {
+  it("skips when the proxied request is unauthorized and no UI session cookie was bootstrapped", () => {
+    const response = new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "content-type": "application/json" },
+    });
+
+    expect(shouldSkipOpsUiProxyAssertion(response, "")).toBe(true);
+  });
+
+  it("does not skip once a UI session cookie is available", () => {
+    const response = new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "content-type": "application/json" },
+    });
+
+    expect(shouldSkipOpsUiProxyAssertion(response, "CF_Authorization=ui-session")).toBe(false);
   });
 });
