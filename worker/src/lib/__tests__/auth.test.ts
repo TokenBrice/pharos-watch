@@ -8,7 +8,7 @@ import {
   withAdmin,
 } from "../auth";
 
-vi.mock("../jwt-verify", () => ({
+vi.mock("@shared/lib/cloudflare-access-jwt", () => ({
   verifyAccessJwt: vi.fn().mockResolvedValue(true),
 }));
 
