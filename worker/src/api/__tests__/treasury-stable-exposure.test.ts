@@ -96,6 +96,77 @@ function makeValidPayload(updatedAt: number) {
   };
 }
 
+function makeLegacyPayload(updatedAt: number) {
+  return {
+    entities: [
+      {
+        protocolId: "alpha",
+        slug: "alpha",
+        name: "Alpha Treasury",
+        category: "Protocol treasury",
+        source: "defillama-github",
+        adapterFile: "alpha.js",
+        chains: ["ethereum"],
+        treasuryUsd: 1_000,
+        stablecoinSleeveUsd: 100,
+        trackedStableUsd: 100,
+        decentralizedStableUsd: 10,
+        decentralizedStablePctOfTreasury: 1,
+        decentralizedStablePctOfStableSleeve: 10,
+        weightedSafetyScore: 82,
+        weightedSafetyGrade: "A-",
+        governanceBuckets: {
+          centralizedUsd: 90,
+          centralizedDependentUsd: 0,
+          decentralizedUsd: 10,
+        },
+        holdings: [
+          {
+            stablecoinId: "usdc-circle",
+            name: "USD Coin",
+            symbol: "USDC",
+            governance: "centralized",
+            usdValue: 100,
+            pctOfTreasury: 10,
+            pctOfStableSleeve: 100,
+            safetyScore: 82,
+            safetyGrade: "A-",
+          },
+        ],
+        coverage: {
+          extractionMode: "static-seeded",
+          ownerCount: 1,
+          ownerChainCount: 1,
+          trackedStableUsd: 100,
+          stablecoinSleeveUsd: 100,
+          untrackedStableUsd: 0,
+          ratedTrackedStableUsd: 100,
+          trackedStablePctOfTreasury: 10,
+          trackedStablePctOfStableSleeve: 100,
+          ratedTrackedStablePct: 100,
+          untrackedStableCount: 0,
+          notes: [],
+        },
+      },
+    ],
+    updatedAt,
+    coverage: {
+      entityCount: 1,
+      registryCount: 1,
+      launchEligibleCount: 1,
+      ownerChainTuples: 2,
+      launchOwnerChainTuples: 2,
+      evmOnly: true,
+      extractionModes: {
+        staticSeeded: 1,
+        customReviewed: 0,
+        dynamicUnresolved: 0,
+        missing: 0,
+      },
+    },
+  };
+}
+
 describe("handleTreasuryStableExposure", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -160,5 +231,66 @@ describe("handleTreasuryStableExposure", () => {
     await expect(res.json()).resolves.toEqual({
       error: "Cached treasury-stable-exposure payload is malformed",
     });
+  });
+
+  it("returns 200 for a legacy cached payload by normalizing it to the new schema", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const updatedAt = nowSec - 120;
+    const res = await handleTreasuryStableExposure(makeCacheDb(makeLegacyPayload(updatedAt), updatedAt));
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      entities: Array<{
+        directWalletUsd: number;
+        treasuryUsd: number | null;
+        coverage: {
+          denominatorStatus: string;
+          directWalletUsd: number;
+          notes: string[];
+        };
+      }>;
+    };
+    expect(body.entities[0]?.directWalletUsd).toBe(1_000);
+    expect(body.entities[0]?.treasuryUsd).toBe(1_000);
+    expect(body.entities[0]?.coverage.denominatorStatus).toBe("direct-only");
+    expect(body.entities[0]?.coverage.directWalletUsd).toBe(1_000);
+    expect(body.entities[0]?.coverage.notes).toContain(
+      "Legacy treasury cache normalized during worker rollout; denominator diagnostics refresh after the next treasury sync.",
+    );
+  });
+
+  it("returns 200 for a legacy cached payload with an impossible treasury denominator by downgrading it to invalid", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const updatedAt = nowSec - 120;
+    const legacyInvalid = makeLegacyPayload(updatedAt);
+    legacyInvalid.entities[0]!.stablecoinSleeveUsd = 1_200;
+    legacyInvalid.entities[0]!.decentralizedStablePctOfTreasury = 120;
+    legacyInvalid.entities[0]!.holdings[0]!.pctOfTreasury = 120;
+    legacyInvalid.entities[0]!.coverage.stablecoinSleeveUsd = 1_200;
+    legacyInvalid.entities[0]!.coverage.trackedStablePctOfTreasury = 120;
+
+    const res = await handleTreasuryStableExposure(makeCacheDb(legacyInvalid, updatedAt));
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      entities: Array<{
+        treasuryUsd: number | null;
+        decentralizedStablePctOfTreasury: number | null;
+        holdings: Array<{ pctOfTreasury: number | null }>;
+        coverage: {
+          denominatorStatus: string;
+          trackedStablePctOfTreasury: number | null;
+          notes: string[];
+        };
+      }>;
+    };
+    expect(body.entities[0]?.treasuryUsd).toBeNull();
+    expect(body.entities[0]?.decentralizedStablePctOfTreasury).toBeNull();
+    expect(body.entities[0]?.holdings[0]?.pctOfTreasury).toBeNull();
+    expect(body.entities[0]?.coverage.denominatorStatus).toBe("invalid");
+    expect(body.entities[0]?.coverage.trackedStablePctOfTreasury).toBeNull();
+    expect(body.entities[0]?.coverage.notes).toContain(
+      "Treasury-relative metrics are suppressed until the next treasury sync republishes this row with the new denominator model.",
+    );
   });
 });
