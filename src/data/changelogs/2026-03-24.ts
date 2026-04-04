@@ -3,13 +3,14 @@ import type { ChangelogEntry } from "./types";
 export const entry: ChangelogEntry = {
   dateRange: { from: "2026-03-17", to: "2026-03-24" },
   summary: [
-    { label: "Broader coverage", description: "DUSD, USSD, USBD added, live reserves expanded to 114 coins" },
-    { label: "Stronger pipelines", description: "Fewer data gaps across pricing, DEX liquidity, yield, and more" },
-    { label: "Pre-launch asset pages", description: "Detail views, /upcoming, milestone tracking, and launch alerts" },
-    { label: "Richer stablecoin pages", description: "Collateral context, rewritten summaries" },
-    { label: "Cleaner UI", description: "Refined layouts, standardized charts, better tables and error states" },
-    { label: "More visible risk reasoning", description: "PSI replay, DEX confidence signals, safety score calculator" },
-    { label: "Reliability improvements", description: "Across crons, deploys, and test coverage" },
+    { label: "Multi-DEX API integration", description: "Fluid, Balancer, Raydium, and Orca direct API fetchers with per-protocol price disaggregation into pricing consensus" },
+    { label: "Pricing source expansion", description: "Kraken, Bitstamp, Jupiter, and Chainlink added to consensus; tertiary FX fallback for multi-source outages" },
+    { label: "Redemption backstop coverage", description: "Expanded from 66 to 136 coins with BUIDL, NAV-based, AMM, and on-chain backstop configs plus fee accuracy fixes" },
+    { label: "Safety Score v6.0", description: "Custody tiers, mature-alt-L1 classification, 2-factor Resilience scoring, and custodyModel overrides for all remaining coins" },
+    { label: "Pre-launch module", description: "New /upcoming page with milestone tracking, Telegram launch alerts, pre-launch detail views, and curation skill" },
+    { label: "Live reserve expansion", description: "Coverage expanded from 54 to 114 coins with curated-validated adapters, display blocks, and risk validation" },
+    { label: "Design polish", description: "RegimeBar PSI indicator, confidence typography, chart tooltip standardization, table density toggle, and command palette history" },
+    { label: "Stablecoin additions", description: "DUSD, USSD, USBD added; all 174 AI editorial summaries rewritten; new collateral-as-dependency section on detail pages" },
   ],
   stats: { totalCommits: 311 },
   commits: [
