@@ -1045,37 +1045,37 @@
     "governanceQuality": "dao-governance",
     "reserves": [
       {
-        "name": "BlackRock BUIDL (U.S. Treasuries/repos via Securitize)",
-        "pct": 55,
-        "risk": "low",
-        "coinId": "buidl-blackrock"
+        "name": "WTGXX (WisdomTree Government Money Market)",
+        "pct": 48,
+        "risk": "low"
       },
       {
-        "name": "Superstate USTB (tokenized T-bills)",
-        "pct": 20,
+        "name": "USTB (Superstate tokenized T-bills)",
+        "pct": 37,
         "risk": "low",
         "coinId": "ustb-superstate"
       },
       {
-        "name": "Circle USDC",
-        "pct": 10,
+        "name": "BUIDL (BlackRock tokenized T-bills)",
+        "pct": 13,
+        "risk": "low",
+        "coinId": "buidl-blackrock"
+      },
+      {
+        "name": "USDB (DBS tokenized deposits)",
+        "pct": 2,
+        "risk": "low"
+      },
+      {
+        "name": "USDC (Circle)",
+        "pct": 0,
         "risk": "low",
         "coinId": "usdc-circle"
-      },
-      {
-        "name": "Superstate USCC (U.S. government securities + crypto carry)",
-        "pct": 5,
-        "risk": "medium"
-      },
-      {
-        "name": "Other custodians (AUSD, JTRSY, WTGXX, USDB)",
-        "pct": 10,
-        "risk": "low"
       }
     ],
     "liveReservesConfig": {
       "adapter": "frax",
-      "version": 1,
+      "version": 2,
       "semantics": "attestation-mix",
       "breakerScope": "frxusd-frax",
       "display": {
@@ -1085,7 +1085,7 @@
       "inputs": {
         "primary": {
           "kind": "http-json",
-          "url": "https://api.frax.finance/combineddata/"
+          "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
         }
       }
     },
