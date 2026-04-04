@@ -75,7 +75,7 @@ describe("api key helpers", () => {
     await expect(authenticateApiKey(db, null, pepper)).resolves.toEqual({ kind: "missing" });
     await expect(authenticateApiKey(db, "ph_live_ffffffffffffffff_abcdefghijklmnopqrstuvwxyzABCDEF", pepper)).resolves.toEqual({ kind: "invalid" });
     await expect(
-      authenticateApiKey(db, "ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF", pepper, 1_700),
+      authenticateApiKey(db, "ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF", pepper, undefined, 1_700),
     ).resolves.toEqual({
       kind: "valid",
       key: {
@@ -120,7 +120,7 @@ describe("api key helpers", () => {
     ], { requireMatch: true });
 
     await expect(
-      authenticateApiKey(db, "ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF", pepper, 1_000),
+      authenticateApiKey(db, "ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF", pepper, undefined, 1_000),
     ).resolves.toEqual({ kind: "invalid" });
   });
 
@@ -478,6 +478,60 @@ describe("api key helpers", () => {
     await expect(
       authenticateApiKey(dbHit, `ph_live_${prefix}_${secret}`, pepper),
     ).resolves.toMatchObject({ kind: "valid" });
+  });
+
+  it("authenticates with previous pepper and opportunistically re-hashes", async () => {
+    const oldPepper = "old-pepper";
+    const newPepper = "new-pepper";
+    const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
+    const oldSecretHash = await hmacSha256Hex(oldPepper, secret);
+    const prefix = "0123456789abcdef";
+
+    const db = mockD1([
+      {
+        match: "FROM api_keys",
+        matchBinds: [prefix],
+        rows: [{
+          id: 7,
+          key_prefix: prefix,
+          secret_hash: oldSecretHash,
+          name: "Legacy",
+          owner_email: null,
+          tier: "standard",
+          traffic_class: "external",
+          rate_limit_per_minute: 120,
+          is_active: 1,
+          expires_at: null,
+          created_at: 1,
+          updated_at: 1,
+          last_used_at: null,
+          last_used_route: null,
+          pepper_version: 1,
+        }],
+      },
+      {
+        match: "UPDATE api_keys SET secret_hash",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+    ], { requireMatch: true });
+
+    const result = await authenticateApiKey(
+      db,
+      `ph_live_${prefix}_${secret}`,
+      newPepper,
+      oldPepper,
+      1_000,
+    );
+
+    expect(result).toMatchObject({ kind: "valid" });
+
+    // Verify the re-hash UPDATE was issued
+    const rehashQuery = db.getHistory().find((entry) =>
+      entry.sql.includes("UPDATE api_keys SET secret_hash"),
+    );
+    expect(rehashQuery).toBeDefined();
+    expect(rehashQuery?.binds[0]).toBe(await hmacSha256Hex(newPepper, secret));
   });
 
   it("records an audit log entry when creating a key", async () => {

@@ -61,6 +61,7 @@ interface ApiKeyRow {
   updated_at: number;
   last_used_at: number | null;
   last_used_route: string | null;
+  pepper_version?: number;
 }
 
 type ApiKeyPublicRow = Omit<ApiKeyRow, "secret_hash">;
@@ -315,7 +316,8 @@ async function lookupApiKeyByPrefix(db: ApiKeyDb, keyPrefix: string): Promise<Ap
        created_at,
        updated_at,
        last_used_at,
-       last_used_route
+       last_used_route,
+       pepper_version
      FROM api_keys
      WHERE key_prefix = ?`,
   )
@@ -335,6 +337,7 @@ export async function authenticateApiKey(
   db: ApiKeyDb,
   apiKeyHeader: string | null,
   pepper: string | undefined,
+  pepperPrevious?: string,
   nowSec = getNowSec(),
 ): Promise<ApiKeyAuthenticationResult> {
   const parsed = parseApiKeyToken(apiKeyHeader);
@@ -356,14 +359,33 @@ export async function authenticateApiKey(
   }
 
   const expectedHash = await hmacSha256Hex(effectivePepper, parsed.secret);
-  if (!(await timingSafeCompare(expectedHash, row.secret_hash))) {
-    return { kind: "invalid" };
+  if (await timingSafeCompare(expectedHash, row.secret_hash)) {
+    return {
+      kind: "valid",
+      key: mapRowToAuthenticatedKey(row),
+    };
   }
 
-  return {
-    kind: "valid",
-    key: mapRowToAuthenticatedKey(row),
-  };
+  // Try previous pepper for zero-downtime rotation
+  const effectivePreviousPepper = pepperPrevious?.trim();
+  if (effectivePreviousPepper) {
+    const previousHash = await hmacSha256Hex(effectivePreviousPepper, parsed.secret);
+    if (await timingSafeCompare(previousHash, row.secret_hash)) {
+      // Opportunistic re-hash: migrate this key to the current pepper
+      await db.prepare(
+        "UPDATE api_keys SET secret_hash = ?, pepper_version = pepper_version + 1, updated_at = ? WHERE id = ?",
+      )
+        .bind(expectedHash, nowSec, row.id)
+        .run();
+      clearApiKeyCache(parsed.prefix);
+      return {
+        kind: "valid",
+        key: mapRowToAuthenticatedKey(row),
+      };
+    }
+  }
+
+  return { kind: "invalid" };
 }
 
 export async function checkApiKeyRateLimit(

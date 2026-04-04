@@ -96,6 +96,7 @@ export async function evaluateAccessGate(
       env.DB,
       request.headers.get("X-API-Key"),
       env.API_KEY_HASH_PEPPER,
+      env.API_KEY_HASH_PEPPER_PREVIOUS,
     );
     if (apiKeyAuth.kind === "valid") {
       const rateLimitResponse = await checkApiKeyRateLimit(
