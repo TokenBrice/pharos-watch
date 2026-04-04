@@ -191,7 +191,7 @@ The current origin split is:
 - public API: `api.pharos.watch`
 - operator API: `ops-api.pharos.watch`
 
-The browser-facing website data lane is same-origin `/_site-data/*` on the Pages project; Pages Functions proxy that lane with `SITE_API_SHARED_SECRET` to `SITE_API_ORIGIN` when configured, or fall back to `api.pharos.watch` until the dedicated `site-api.pharos.watch` host is actually provisioned. Worker route declarations for `site-api.pharos.watch` and `ops-api.pharos.watch` live in `worker/wrangler.toml` and deploy with the normal Worker job. The Pages custom domains plus Cloudflare Access applications for the ops surfaces are account-side setup and are documented in [operator-origin-access.md](./operator-origin-access.md).
+The browser-facing website data lane is same-origin `/_site-data/*` on the Pages project; Pages Functions proxy that lane with `SITE_API_SHARED_SECRET` to `SITE_API_ORIGIN` when configured, or fall back to `api.pharos.watch` until the dedicated `site-api.pharos.watch` host is actually provisioned. The Pages project must also bind the shared D1 database as `DB` so `/_site-data/*` cache hits and proxy outcomes are recorded for `/api/request-source-stats`. Worker route declarations for `site-api.pharos.watch` and `ops-api.pharos.watch` live in `worker/wrangler.toml` and deploy with the normal Worker job. The Pages custom domains plus Cloudflare Access applications for the ops surfaces are account-side setup and are documented in [operator-origin-access.md](./operator-origin-access.md).
 
 ## Failure Policy
 

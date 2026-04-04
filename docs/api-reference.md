@@ -2506,9 +2506,15 @@ Machine-readable status timeline endpoint for tooling and incident analysis.
 
 ### `GET /api/request-source-stats`
 
-Admin-only public-API attribution summary. Aggregates minute-bucketed request counts into a requested window so operators can estimate what share of `api.pharos.watch` load is coming from browser-identified Pharos traffic versus external consumers.
+Admin-only site-vs-external demand attribution summary. Aggregates minute-bucketed request counts into a requested window so operators can estimate what share of total request demand is coming from the website itself versus external consumers.
 
-This dataset excludes admin-only routes, `/api/telegram-webhook`, and the internal `site-api` / `/_site-data/*` website lane. First-party website traffic on the public API host is recognized from browser evidence: `Origin` or `Referer` matching `https://pharos.watch`, or the browser-safe frontend `Accept` marker combined with same-site fetch metadata. Everything else in scope is counted as external.
+The top-line `site` bucket combines:
+
+- same-origin `/_site-data/*` demand recorded by the Pages Function, including Pages cache hits and upstream proxy attempts
+- `api.pharos.watch` requests attributed to browser evidence (`Origin` / `Referer` / frontend `Accept` marker + same-site fetch metadata)
+- `api.pharos.watch` requests authenticated with API keys explicitly marked `trafficClass="site"`
+
+The top-line `external` bucket is `api.pharos.watch` traffic not classified as site. Admin-only routes and `/api/telegram-webhook` remain excluded. The response also includes worker-lane telemetry so operators can distinguish total demand from actual `public-api` vs `site-api` worker load.
 
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
@@ -2520,15 +2526,18 @@ This dataset excludes admin-only routes, `/api/telegram-webhook`, and the intern
 | `bucketSec`  | `integer` | `3600`  | Time-bucket rollup size in seconds (`60`–`86400`) |
 | `routeLimit` | `integer` | `20`    | Max per-route rows returned in the route breakdown |
 
-**Response shape:** `PublicApiRequestSourceStatsResponse` (defined in `shared/types/index.ts`)
+**Response shape:** `ApiRequestAttributionResponse` (defined in `shared/types/index.ts`)
 
-`PublicApiRequestSourceStatsResponse` includes:
+`ApiRequestAttributionResponse` includes:
 
 - `generatedAt` — Unix seconds when the response was generated
 - `window` — requested `from`/`to`, `durationSec`, `bucketSizeSec`, `routeLimit`, and current `retentionDays`
-- `totals` — aggregate `webRequests`, `externalRequests`, `totalRequests`, `webSharePct`, `externalSharePct`
-- `routes[]` — normalized per-route breakdown sorted by total request volume
+- `totals` — aggregate `siteRequests`, `externalRequests`, `totalRequests`, `siteSharePct`, `externalSharePct`
+- `siteDelivery` — Pages delivery-path counters (`pagesCacheHits`, `pagesUpstreamFetches`, `pagesUpstreamTimeouts`, `pagesUpstreamErrors`) plus `publicApiSiteRequests`
+- `lanes[]` — worker-load split by `lane` (`public-api`, `site-api`) with the same site/external counters
+- `routes[]` — normalized per-route breakdown sorted by total demand volume
 - `buckets[]` — time-series rollups using the requested `bucketSec`
+- `scope` — explicit booleans describing that the response counts total site demand, worker load, and Pages proxy cache hits
 
 ### `GET /api/api-keys`
 
@@ -2551,6 +2560,7 @@ Admin-only API key creation route.
 | `name`               | `string`  | Yes      | Display name for the key |
 | `ownerEmail`         | `string`  | No       | Optional operator / owner contact |
 | `tier`               | `string`  | No       | Free-form tier label; defaults to `"standard"` |
+| `trafficClass`       | `"external" \| "site"` | No | Attribution class for demand accounting. Use `"site"` for website-owned automation or browser-adjacent keys; defaults to `"external"` |
 | `rateLimitPerMinute` | `integer` | No       | Per-key threshold (`1`–`10000`, default `120`) |
 
 **Response shape:** `ApiKeyCreateResponse`
@@ -2568,6 +2578,7 @@ Accepted fields:
 - `name`
 - `ownerEmail`
 - `tier`
+- `trafficClass`
 - `rateLimitPerMinute`
 - `isActive`
 

@@ -44,7 +44,7 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 - `WORKER_RESERVED_ENV_KEYS`
 - `WORKER_ACTIVE_ENV_KEYS` (`required + optional`)
 
-The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `functions/lib/site-api-env.ts`, with the same `required` / `optional` / `reserved` / `active` shape. Worker runtime validation logs contract errors when Access bindings are only partially configured, when admin D1 status bindings are only partially configured, when `PUBLIC_API_RATE_LIMIT_SALT` is missing, when `SITE_API_SHARED_SECRET` is missing, or when public API auth mode is configured without `API_KEY_HASH_PEPPER`.
+The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `functions/lib/site-api-env.ts`, with the same `required` / `optional` / `reserved` / `active` shape. Worker runtime validation logs contract errors when Access bindings are only partially configured, when admin D1 status bindings are only partially configured, when `PUBLIC_API_RATE_LIMIT_SALT` is missing, when `SITE_API_SHARED_SECRET` is missing, or when public API auth mode is configured without `API_KEY_HASH_PEPPER`. The Pages `site-data` contract now also expects a `DB` binding on the Pages project so same-origin demand telemetry can be written into the shared D1 database.
 
 | Binding                          | Type       | Required                                           | Used by                                                                                                                                                                    |
 | -------------------------------- | ---------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -113,7 +113,7 @@ Protected non-admin public `/api/*` requests can be API-key-gated through `PUBLI
 - `report-only`: invalid/missing keys are logged on protected routes, but requests still fall back to the legacy hashed-IP limiter
 - `enforce`: protected routes require a valid `X-API-Key`
 
-When a valid key is present, the worker uses the D1-backed `api_key_rate_limit` table with the per-key threshold stored in `api_keys.rate_limit_per_minute` (default `120/min`) and bypasses the legacy IP limiter. Exempt public routes, and protected routes while auth mode is not enforcing, still use the D1-backed `public_api_rate_limit` hashed-IP limiter. The worker requires a dedicated `PUBLIC_API_RATE_LIMIT_SALT` binding for that legacy path and returns `503` for public API traffic until the salt is configured. `FEEDBACK_IP_SALT` remains scoped to feedback submission hashing only. If the distributed legacy limiter path fails after a valid salt is present, the worker logs the failure and allows the request instead of switching to an isolate-local fallback limiter.
+When a valid key is present, the worker uses the D1-backed `api_key_rate_limit` table with the per-key threshold stored in `api_keys.rate_limit_per_minute` (default `120/min`) and bypasses the legacy IP limiter. API keys also now carry `api_keys.traffic_class` (`external` or `site`) so request attribution can treat website-owned automation separately from third-party consumers. Exempt public routes, and protected routes while auth mode is not enforcing, still use the D1-backed `public_api_rate_limit` hashed-IP limiter. The worker requires a dedicated `PUBLIC_API_RATE_LIMIT_SALT` binding for that legacy path and returns `503` for public API traffic until the salt is configured. `FEEDBACK_IP_SALT` remains scoped to feedback submission hashing only. If the distributed legacy limiter path fails after a valid salt is present, the worker logs the failure and allows the request instead of switching to an isolate-local fallback limiter.
 
 ---
 
@@ -140,17 +140,23 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 - Requests already authorized for the `ops-api.pharos.watch` admin lane bypass both public limiters.
 - `site-api.pharos.watch` accepts only `GET` requests to allowlisted public-read paths and requires `X-Pharos-Site-Proxy-Secret`.
 
-### Public API Request-Source Attribution
+### Request Attribution
 
-- `worker/src/handlers/http/request-dispatch.ts` records minute-bucketed public API attribution telemetry in `api_request_source_stats`
-- the dataset is scoped to non-admin `/api/*` traffic and excludes `/api/telegram-webhook`
-- requests served through the `site-api` / `/_site-data/*` website lane are skipped entirely
-- source buckets are:
-  - `web` when browser evidence indicates a request originated from `https://pharos.watch`
-  - `external` for everything else in scope
-- first-party website evidence comes from:
-  - `Origin` or `Referer` matching `https://pharos.watch`
-  - or the browser-safe frontend marker `application/vnd.pharos.web+json` in `Accept` combined with `Sec-Fetch-Site: same-site|same-origin`
+- Worker-side request attribution now writes minute-bucketed worker load into `api_request_consumer_stats`
+- Pages `functions/_site-data/[[path]].ts` writes same-origin site demand into `site_data_request_stats`
+- both datasets are scoped to non-admin public-read traffic and exclude `/api/telegram-webhook`
+- worker load is stored by:
+  - `lane`: `public-api` or `site-api`
+  - `consumer_class`: `site` or `external`
+- site demand on the public API host is recognized from:
+  - `api_keys.traffic_class = 'site'` for authenticated requests
+  - or browser evidence (`Origin` / `Referer` matching `https://pharos.watch`, or the frontend `Accept` marker with `Sec-Fetch-Site: same-site|same-origin`)
+- Pages demand records delivery-path outcomes separately:
+  - `pages-cache-hit`
+  - `pages-upstream-fetch`
+  - `pages-upstream-timeout`
+  - `pages-upstream-error`
+- this lets `/api/request-source-stats` report total site-vs-external demand while still surfacing actual worker pressure on `public-api` vs `site-api`
 - retention is pruned opportunistically to the latest `35` days
 - operators read the aggregate split through `GET /api/request-source-stats` on `ops-api.pharos.watch`
 
