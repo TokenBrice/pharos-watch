@@ -39,7 +39,9 @@ If the operator API hostname still does not resolve afterward, finish the custom
 
 - parses the configured origins
 - echoes the request `Origin` when it is allowlisted
-- falls back to the first configured origin when there is no matching browser origin
+- falls back to the first configured origin when there is no `Origin` header at all
+- omits `Access-Control-Allow-Origin` for foreign browser origins
+- returns `403` for disallowed `OPTIONS` preflights
 - sets `Vary: Origin`
 
 The production repo default is now:
@@ -82,18 +84,26 @@ Use those exports as the source of truth when auditing Cloudflare bindings befor
 - Pages Functions forwarding to `ops-api.pharos.watch`
 - service-token auth from Pages Functions to the operator API host
 
-The current proxy trusts the Cloudflare Access-protected `ops.pharos.watch` host as the human-entry gate and does not try to re-validate the UI JWT inside the function itself.
+The current proxy now fails closed on its own trust boundary:
+
+- it verifies the inbound UI `Cf-Access-Jwt-Assertion` against `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD`
+- it requires same-origin `Origin` evidence for mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`)
+- it still injects the Pages-managed service token pair only on the server-to-server hop to `ops-api.pharos.watch`
 
 ### Proxy contract
 
 - Allowed upstream paths are limited to admin routes and shared dynamic-admin matchers exported from `shared/lib/api-endpoints.ts` (including `/api/discovery-candidates/:id/dismiss`).
 - HTTP method rules are enforced by `validateEndpointMethod()`, so the proxy returns `405` with `Allow` when a caller uses the wrong verb for an otherwise valid admin route.
+- The proxy verifies the inbound UI JWT before the upstream fetch. Missing or invalid `Cf-Access-Jwt-Assertion` returns `401`.
+- Mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) must include a same-origin `Origin` header matching `OPS_UI_ORIGIN`; missing or foreign origins return `403`.
 - The proxy forwards only `Accept`, `Content-Type`, and `Idempotency-Key` from the browser request. It adds `CF-Access-Client-Id` and `CF-Access-Client-Secret` from Pages env itself; browser callers never supply those directly.
 - The proxy reflects only a narrow response-header set back to the browser: `Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, and `X-Idempotent-Replay`.
 - Failure policy is explicit:
   - `404` for non-ops origins or non-allowlisted paths
+  - `401` for missing or invalid UI JWT
+  - `403` for mutating requests without same-origin `Origin`
   - `405` for method mismatch
-  - `500` when the Pages-side service token pair is not configured
+  - `500` when the Pages-side service token pair or UI JWT verification bindings are not configured
   - `504` when the upstream fetch hits the proxy timeout budget
   - `502` when the upstream fetch fails or Cloudflare Access responds with an auth redirect from `ops-api`
 
@@ -103,6 +113,8 @@ Required active bindings:
 
 - `OPS_API_SERVICE_TOKEN_ID`
 - `OPS_API_SERVICE_TOKEN_SECRET`
+- `CF_ACCESS_TEAM_DOMAIN`
+- `CF_ACCESS_OPS_UI_AUD`
 
 Optional active overrides (the proxy has production defaults for these already):
 
@@ -111,11 +123,9 @@ Optional active overrides (the proxy has production defaults for these already):
 
 Reserved but currently unused by the Pages proxy/runtime:
 
-- `CF_ACCESS_TEAM_DOMAIN`
-- `CF_ACCESS_OPS_UI_AUD`
 - `CF_ACCESS_OPS_API_AUD`
 
-Set the required service-token bindings on the Pages project before deploying the ops-host frontend, otherwise `/api/admin/*` will return a configuration error.
+Set the required Pages bindings before deploying the ops-host frontend, otherwise `/api/admin/*` will fail closed with a configuration error.
 
 ---
 
@@ -197,6 +207,33 @@ Create at least one Access service token for:
 
 The Pages Functions proxy already uses the service token pair; create separate tokens only when you need distinct scopes for CI or operator tooling.
 
+### Service-token ownership and rotation
+
+#### Pages -> `ops-api` service token
+
+- owner: Cloudflare Pages project `stablecoin-dashboard` production secrets `OPS_API_SERVICE_TOKEN_ID` / `OPS_API_SERVICE_TOKEN_SECRET`
+- rotation sequence:
+  1. create a new Access service token for `https://ops-api.pharos.watch/*`
+  2. update the Pages project production secrets with the new client id / secret
+  3. deploy the Pages project so `/api/admin/*` starts using the new token
+  4. validate same-origin `https://ops.pharos.watch/api/admin/status` through `npm run test:smoke-ops` or an equivalent authenticated smoke
+  5. revoke the old token only after the new token-backed proxy path is confirmed working
+- rollback:
+  - restore the previous Pages secrets if the new token fails before the old token is revoked
+  - if the old token was already revoked, mint another replacement token and repeat the sequence
+
+#### CI `smoke-ops` service token
+
+- owner: GitHub repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` / `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
+- rotation sequence:
+  1. create a new Access service token scoped for CI smoke against `ops.pharos.watch` / `ops-api.pharos.watch`
+  2. update the GitHub repository secrets with the new client id / secret
+  3. run the `smoke-ops` lane through workflow dispatch or an equivalent local invocation
+  4. revoke the old token only after the smoke lane succeeds with the new credentials
+- rollback:
+  - restore the prior GitHub secrets if the new token fails and the old token still exists
+  - otherwise create another CI token and re-run the smoke lane before revoking anything else
+
 ### 6. Record the Access values
 
 Capture and store:
@@ -208,6 +245,33 @@ Capture and store:
 - service-token client secret
 
 These are the values the current service-token flow and any later Access-aware enforcement work may need in runtime env.
+
+### 7. Add API-host HTTP to HTTPS redirects
+
+At the Cloudflare zone/rules layer for `pharos.watch`, add edge redirects so:
+
+- `http://api.pharos.watch/...` -> `https://api.pharos.watch/...`
+- `http://site-api.pharos.watch/...` -> `https://site-api.pharos.watch/...`
+
+Contract:
+
+- return `308`
+- preserve host, path, and query
+- upgrade only the scheme
+- fire before Worker auth or application logic responds
+
+Repo smoke coverage for this contract lives in `npm run test:smoke-transport`.
+
+### 8. Rotate the site-data shared secret
+
+When `SITE_API_SHARED_SECRET` changes, use a 24-hour overlap window:
+
+1. Copy the retiring current value into `SITE_API_SHARED_SECRET_PREVIOUS`.
+2. Deploy the new current value everywhere that emits `X-Pharos-Site-Proxy-Secret`.
+3. Keep both values configured for 24 hours so the worker can accept either secret during the cutover.
+4. Remove `SITE_API_SHARED_SECRET_PREVIOUS` after the overlap window ends.
+
+Pages proxy code and smoke tooling continue emitting only the current secret throughout the rotation.
 
 ---
 
@@ -229,6 +293,9 @@ These are the values the current service-token flow and any later Access-aware e
 
 - UI session should be shorter than the old browser-held key fallback
 - MFA should be enforced for all human operators
+- owner: Cloudflare Zero Trust Access application policy for `https://ops.pharos.watch/*`
+- observed current session duration: 4 hours on April 4, 2026
+- repo code does not invalidate or shorten an active Cloudflare Access session; logout/session-duration changes must be made in the Zero Trust policy, not in the Pages or Worker codepaths
 
 ---
 
@@ -285,6 +352,20 @@ Expected:
 
 - `Access-Control-Allow-Origin: https://ops.pharos.watch`
 - `Vary: Origin`
+
+### Transport verification
+
+After the zone-level redirect rule is configured:
+
+```bash
+npm run test:smoke-transport
+```
+
+Expected:
+
+- `http://api.pharos.watch/...` returns `308` to the matching `https://api.pharos.watch/...`
+- `http://site-api.pharos.watch/...` returns `308` to the matching `https://site-api.pharos.watch/...`
+- no plaintext HTTP request reaches Worker auth or app handlers anymore
 
 ---
 

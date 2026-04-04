@@ -163,6 +163,11 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - private post-deploy ops smoke against `ops.pharos.watch/admin/` and `ops-api.pharos.watch`
    - requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
    - UI check accepts either an Access redirect or a token-backed HTML response, so CI does not depend on the UI app also granting `Service Auth`
+11. `smoke-transport`
+   - runs after the same production-changing gates as `smoke-ops`
+   - runs `npm run test:smoke-transport`
+   - verifies `http://api.pharos.watch/...` and `http://site-api.pharos.watch/...` return `308` with a scheme-only upgrade before any application auth or worker logic responds
+   - intentionally fails the workflow on redirect regressions once the zone-level transport rule is configured
 
 Separate from the deploy path, `.github/workflows/dependency-audit.yml` runs `npm audit --audit-level=high` on the full lockfile weekly and on manual dispatch so devDependency advisories are surfaced without turning them into a blocking production deploy gate.
 
@@ -172,8 +177,10 @@ Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`
    - reuses the same `.github/workflows/pages-release.yml` wrapper as push/manual production deploys, which composes `.github/workflows/pages-prepare.yml` and `.github/workflows/pages-publish.yml` into the standard build/smoke/deploy path including the post-publish live public-host smoke
 2. `smoke-ops`
    - runs the normal post-deploy ops smoke
+3. `smoke-transport`
+   - runs the same transport redirect smoke used by the main production workflow
 
-This workflow intentionally skips `validate`, `deploy-worker`, and `smoke-api`; it exists to refresh the Pages export after digest generation without redeploying unchanged worker code.
+This workflow intentionally skips `validate`, `deploy-worker`, and `smoke-api`; it exists to refresh the Pages export after digest generation without redeploying unchanged worker code. It still runs the ops and transport post-deploy smoke lanes so custom-domain regressions fail visibly.
 
 GitHub-owned JS actions in this workflow are pinned by full commit SHA. When bumping an action version, resolve the tag against the upstream action repo and pin that real commit SHA, not an unavailable tarball or transient hash.
 

@@ -28,6 +28,7 @@ npm run coverage:critical # Critical-suite coverage run + critical-path line-cov
 npm run test:merge-gate # Delta-aware local gate before pushing merged worktree changes
 npm run test:smoke-api -- --base-url https://api.pharos.watch # HTTP smoke checks for critical API endpoints (set SMOKE_API_KEY when protected routes are enforced)
 npm run test:smoke-ops # Private ops-host and ops-api smoke checks through Cloudflare Access
+npm run test:smoke-transport # HTTP->HTTPS edge redirect smoke for api.pharos.watch and site-api.pharos.watch
 npm run test:smoke-ui -- --url https://pharos.watch --mode live # Browser-level UI smoke check; local mode runs the full overflow sweep, live mode runs a narrower canary smoke
 ```
 
@@ -58,7 +59,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - `npm run check:redemption-backstops`
    - `npm run check:unused-code`
    - `npm run check:hotspot-ratchet`
-   - `npm run check:sql-safety`
+   - `npm run check:sql-safety` (scans `worker/src/**` and `worker/scripts/**` for unsafe SQL template interpolation; regression fixtures live in `scripts/__tests__/fixtures/sql-safety/`)
    - `npm run check:stablecoin-data`
    - `npm run build` + `npm run seo:check` when `pages_changed=true` (always true on PR validate, diff-aware on deploy pushes)
    - `npm test`
@@ -124,27 +125,46 @@ For deployment/worktree operating procedure (including the local merge gate befo
 - Runs after `pages-publish` on Pages-including deploys, or after `smoke-api` + `smoke-ui-live` on worker-only deploys
 - Verifies the ops UI host is Access-gated (or service-token-accessible, if configured) plus `status`, `status-history`, and a safe dry-run admin path on the operator API host
 
-12. `Rebuild Pages`:
+12. `smoke-transport`:
+
+- Run `npm run test:smoke-transport`
+- Verifies `http://api.pharos.watch/...` and `http://site-api.pharos.watch/...` return `308` before application auth or worker logic responds
+- Runs after the same production-changing gate as `smoke-ops`
+- Fails the workflow on redirect regressions once the zone-level redirect rule is in place
+
+13. `Rebuild Pages`:
 
 - defined in `.github/workflows/rebuild-pages.yml`
 - runs on the daily schedule and on manual dispatch
 - skips `validate`, `deploy-worker`, and `smoke-api`
-- runs the shared `pages-release` wrapper workflow and then `smoke-ops`
+- runs the shared `pages-release` wrapper workflow and then `smoke-ops` plus `smoke-transport`
 
-13. `CodeQL`:
+14. `CodeQL`:
 
 - defined in `.github/workflows/codeql.yml`
 - runs on pushes to `main`, pull requests to `main`, and a weekly Monday schedule
 - analyzes the JavaScript/TypeScript codebase separately from the deploy pipeline
 
-14. `Dependency Audit`:
+15. `Dependency Audit`:
 
 - defined in `.github/workflows/dependency-audit.yml`
 - runs on a weekly Monday schedule and on manual dispatch
 - installs from the root lockfile and runs `npm audit --audit-level=high`
 - complements the blocking production-only `npm run audit:deps` gate by covering devDependencies too
+- owner: the maintainer driving the next production deploy or dependency update
+- response expectation:
+  - blocking `npm run audit:deps` failures are stop-ship until fixed, pinned away, or explicitly risk-accepted
+  - scheduled dependency-audit findings must get a tracked triage note or remediation issue the same business day
+  - do not leave a new high/critical finding unowned between audit detection and the next production deploy
 
-This arrangement keeps pull-request validation full-strength, makes deploy-path validation conditional on the surfaces that actually changed, skips the production workflow entirely for non-deploy pushes, proves the static export build and SEO gate before merge and on Pages-impacting deploys, fetches digest data once inside the Pages build job so the build itself is network-independent with respect to digest data, forwards the configured GA measurement ID into CI builds so the static artifact matches production analytics posture, smokes the exact candidate Worker version on its preview URL before production traffic is shifted, overlaps the Pages build + local smoke path with worker promotion and production API smoke when both surfaces changed, keeps the broad overflow sweep on the local artifact smoke before Pages production deploy, verifies the real `pharos.watch` host after each Pages publish with a narrower live canary smoke, keeps the scheduled digest rebuild off the worker deploy path, and still runs the post-deploy ops-surface smoke after each production-changing workflow.
+16. `Secret Scan`:
+
+- defined in `.github/workflows/secret-scan.yml`
+- runs on a weekly Monday schedule and on manual dispatch
+- checks out full git history and runs pinned `gitleaks` `8.30.0`
+- scans commit history for accidentally committed secrets and fails on live findings
+
+This arrangement keeps pull-request validation full-strength, makes deploy-path validation conditional on the surfaces that actually changed, skips the production workflow entirely for non-deploy pushes, proves the static export build and SEO gate before merge and on Pages-impacting deploys, fetches digest data once inside the Pages build job so the build itself is network-independent with respect to digest data, forwards the configured GA measurement ID into CI builds so the static artifact matches production analytics posture, smokes the exact candidate Worker version on its preview URL before production traffic is shifted, overlaps the Pages build + local smoke path with worker promotion and production API smoke when both surfaces changed, keeps the broad overflow sweep on the local artifact smoke before Pages production deploy, verifies the real `pharos.watch` host after each Pages publish with a narrower live canary smoke, keeps the scheduled digest rebuild off the worker deploy path, still runs the post-deploy ops-surface plus transport smoke after each production-changing workflow, and adds separate weekly/manual lanes for dependency auditing and history-aware secret scanning.
 
 Current GitHub repository secrets required by the deploy path:
 
@@ -152,6 +172,25 @@ Current GitHub repository secrets required by the deploy path:
 - `DIGEST_API_KEY` for Pages digest sync against protected public API routes
 - `SITE_API_SHARED_SECRET` for local artifact smoke through `/_site-data/*`
 - `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET` for `smoke-ops`
+
+Cloudflare Access ownership split:
+
+- Pages -> `ops-api` service token lives in the Cloudflare Pages project secrets, not in GitHub
+- CI `smoke-ops` credentials live in the GitHub repository secrets listed above
+- operator session duration is owned by the Cloudflare Zero Trust Access policy for `ops.pharos.watch`, not by repo code or CI
+
+Rotation note for `smoke-ops` secrets:
+
+1. Create a replacement Access service token for `https://ops-api.pharos.watch/*`.
+2. Update both GitHub secrets together.
+3. Run the production deploy workflow or `Rebuild Pages` via `workflow_dispatch` so `smoke-ops` verifies the new pair.
+4. Revoke the old token only after the workflow passes.
+
+Rollback:
+
+1. Restore the previous GitHub secret pair.
+2. Re-run the workflow manually.
+3. Leave the replacement token active until verification succeeds.
 
 The workflows pin `actions/checkout@v6`, `actions/setup-node@v6`, and `actions/cache@v4` by commit SHA and run project tooling on Node 22 (`node-version: 22`). The compatibility lane on Node 24 now also runs `npm run build` and `npm run test:critical-contracts`, so the published engine range is exercised beyond lint and typecheck. The validate and Pages-build lanes restore caches for `.next/cache`, `.cache/eslint`, and `*.tsbuildinfo` outputs to avoid rebuilding or relinting unchanged work from scratch on every run. Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler with `npx --no-install`. `npm run audit:deps` also runs in the validate job so high-severity production advisories fail the push/manual deploy pipeline before deploy, and the scheduled dependency-audit workflow covers devDependencies separately. The production-changing workflows also share a `concurrency` group (`production-deploy-${{ github.ref }}`): push/manual deploys cancel superseded in-flight runs, while the scheduled/manual Pages rebuild queues behind an active production deploy instead of interrupting it.
 
@@ -637,7 +676,8 @@ Current critical file set:
 - `npm run test:invariants` covers numerical/schema invariants and cache-write validation guards in critical cron paths.
 - `npm run test:merge-gate` runs a delta-aware local gate for merged worktree changes. It skips cleanly when no deploy surfaces changed, runs the shared validate core for deploy-impacting diffs, adds `build` + `seo:check` for Pages-impacting changes, and adds worker typecheck for worker-impacting changes. Useful controls: `npm run test:merge-gate -- --staged`, `MERGE_GATE_BASE_REF=<ref>`, and `MERGE_GATE_DRY_RUN=1`.
 - `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health` plus every strict contract path derived from `shared/lib/api-endpoints.ts` (currently including `stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `redemption-backstops`, `stress-signals`, and `mint-burn-flows`) with shape/range assertions, sequential endpoint execution, and bounded retries for transient failures.
-- `npm run test:smoke-ops` performs private post-deploy checks against the operator surfaces through Cloudflare Access. In service-token mode, Access consumes `CF-Access-Client-Id` / `CF-Access-Client-Secret`, injects `Cf-Access-Jwt-Assertion`, and the worker verifies that JWT before serving `ops-api` routes. The smoke test accepts either a Cloudflare Access redirect or a successful token-backed HTML response for `ops.pharos.watch/admin/`, then validates `ops-api.pharos.watch/api/status`, `ops-api.pharos.watch/api/status-history`, and the safe dry-run `audit-depeg-history` path.
+- `npm run test:smoke-ops` performs private post-deploy checks against the operator surfaces through Cloudflare Access. In service-token mode, Access consumes `CF-Access-Client-Id` / `CF-Access-Client-Secret`, injects `Cf-Access-Jwt-Assertion`, and the worker verifies that JWT before serving `ops-api` routes. The smoke test accepts either a Cloudflare Access redirect or a successful token-backed HTML response for `ops.pharos.watch/admin/`, then validates same-origin `https://ops.pharos.watch/api/admin/status`, direct `ops-api.pharos.watch/api/status`, `ops-api.pharos.watch/api/status-history`, and the safe dry-run `audit-depeg-history` path.
+- `npm run test:smoke-transport` performs manual-redirect `HEAD` checks against `http://api.pharos.watch/...` and `http://site-api.pharos.watch/...`, requiring `308` plus an exact `Location` match that preserves host, path, and query while upgrading only to `https`.
 - `npm run test:smoke-ui` performs a fast browser smoke check in either local or live mode. Local mode keeps the full tracked mobile overflow route sweep against the built artifact, while live mode keeps the homepage/GA checks and a single mobile canary route against the real host. Both modes fail on homepage outage/empty states (`Failed to load data` or `Failed to load this dataset`, `stablecoins:404`, `Data not yet available` or `Waiting for first sync`, `Connection issue` or `Unable to reach the Pharos data API right now.`, `No stablecoin data available`).
 
 ### Tier-3 Structural Refactor Targeted Suites

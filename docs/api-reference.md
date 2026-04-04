@@ -4,7 +4,7 @@ The Pharos API is a REST API served by a Cloudflare Worker backed by a D1 databa
 
 **Base URL:** `https://api.pharos.watch`
 
-Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: `GET /api/og/*` returns `image/png`, and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`. Protected public `/api/*` traffic on `api.pharos.watch` is API-key-gated via `X-API-Key`; production runs with `PUBLIC_API_AUTH_MODE=enforce`, so missing or invalid keys receive `401 Unauthorized`.
+Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: `GET /api/og/*` returns `image/png`, and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`; when a request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin`, and `OPTIONS` preflights from foreign origins receive `403`. Requests without an `Origin` header keep the existing first-allowlisted-origin fallback. Protected public `/api/*` traffic on `api.pharos.watch` is API-key-gated via `X-API-Key`; production runs with `PUBLIC_API_AUTH_MODE=enforce`, so missing or invalid keys receive `401 Unauthorized`.
 
 ## Surface Split
 
@@ -175,7 +175,7 @@ The same shared endpoint descriptors now also carry static worker dependency-hyd
 
 ## Admin Auth And Idempotency
 
-Admin endpoints are authenticated only on the `ops-api.pharos.watch` host. Cloudflare Access must authenticate the caller first, then inject `Cf-Access-Jwt-Assertion` for the worker. `worker/src/lib/auth.ts` verifies that JWT against the configured Access audience (`CF_ACCESS_OPS_API_AUD`) and team domain (`CF_ACCESS_TEAM_DOMAIN`) via `worker/src/lib/jwt-verify.ts`, including signature, `aud`, `exp`, and `iss` checks. Browser operators should use `https://ops.pharos.watch/admin/`, which talks to same-origin `/api/admin/*` Pages Functions routes behind Cloudflare Access.
+Admin endpoints are authenticated only on the `ops-api.pharos.watch` host. Cloudflare Access must authenticate the caller first, then inject `Cf-Access-Jwt-Assertion` for the worker. `worker/src/lib/auth.ts` verifies that JWT against the configured Access audience (`CF_ACCESS_OPS_API_AUD`) and team domain (`CF_ACCESS_TEAM_DOMAIN`) via `worker/src/lib/jwt-verify.ts`, including signature, `aud`, `exp`, and `iss` checks. Browser operators should use `https://ops.pharos.watch/admin/`, which talks to same-origin `/api/admin/*` Pages Functions routes behind Cloudflare Access; the Pages proxy now also verifies the inbound UI JWT against `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD` and rejects mutating requests without same-origin `Origin`.
 
 The website-internal read lane is separate from Cloudflare Access. `site-api.pharos.watch` accepts only allowlisted `GET` public-read paths and requires `X-Pharos-Site-Proxy-Secret`, which the Pages `/_site-data/*` proxy injects server-to-server from `SITE_API_SHARED_SECRET`. Until that dedicated host is provisioned, the Pages proxy can temporarily fall back to `api.pharos.watch`; do not move `PUBLIC_API_AUTH_MODE` past `off` until `SITE_API_ORIGIN` is pointed at the dedicated site-api host. Public browser traffic must not call `site-api.pharos.watch` directly.
 
@@ -1305,7 +1305,7 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
 | ------------------------------------ | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `status`                             | `string`                           | `"healthy"` / `"degraded"` / `"stale"`                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `timestamp`                          | `number`                           | Unix seconds at time of response                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `warnings`                           | `string[]`                         | Best-effort diagnostics when health subqueries fail but the endpoint can still return a non-500 payload                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `warnings`                           | `string[]`                         | Best-effort machine-readable warnings when health subqueries fail but the endpoint can still return a non-500 payload. Messages are sanitized for public output and do not include raw exception text, SQL fragments, or table names.                                                                                                                                                                                                                                                                             |
 | `caches`                             | `Record<string, CacheStatus>`      | Per-cache freshness status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `caches["fx-rates"]`                 | `CacheStatus`                      | FX cache freshness plus source-cadence diagnostics (`mode`, `sourceUpdatedAt`, `sourceAgeSeconds`, `sourceStatus`, `warning`, `consecutiveFallbackRuns`)                                                                                                                                                                                                                                                                                                                                                             |
 | `blacklist.totalEvents`              | `number`                           | Total events in blacklist table                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
@@ -2484,7 +2484,7 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 
 `telegramBot` is `null` when the Telegram tables are unavailable in the current environment (for example, migrations not yet applied in dev/staging). The rest of `/api/status` still resolves normally.
 
-`sectionErrors` is a machine-readable map of subsection loader failures. When an individual status subsection fails (for example Telegram stats, discovery backlog, CoinGecko price drift, D1 usage telemetry, liquidity health, reserve drift, or mint/burn reconciliation), `/api/status` still returns `200`, keeps the unaffected sections intact, and records the degraded subsection under `sectionErrors` with a stable `code` plus an operator-facing `message`.
+`sectionErrors` is a machine-readable map of subsection loader failures. When an individual status subsection fails (for example Telegram stats, discovery backlog, CoinGecko price drift, D1 usage telemetry, liquidity health, reserve drift, or mint/burn reconciliation), `/api/status` still returns `200`, keeps the unaffected sections intact, and records the degraded subsection under `sectionErrors` with a stable `code` plus an operator-facing sanitized `message`. Raw exception text, SQL fragments, and table names stay in logs, not in the response body.
 
 `crons["dispatch-telegram-alerts"].lastRun.metadata` now carries a richer delivery breakdown, including fields such as `freshAttempted`, `freshSent`, `freshRetryQueued`, `freshPermanentFailures`, `pendingAttempted`, `pendingDrained`, `pendingRetryQueued`, `pendingDropped`, `pendingEnqueued`, and expanded `eventsDetected` counters (`depegTriggered`, `depegResolved`, `depegWorsening`, `suppressedMethodologyChanges`).
 
@@ -2555,7 +2555,7 @@ The top-line `external` bucket is `api.pharos.watch` traffic not classified as s
 
 ### `GET /api/api-keys`
 
-Admin-only API key inventory. Returns masked tokens plus metadata, but never returns stored secret material.
+Admin-only API key inventory. Returns masked tokens plus metadata, but never returns stored secret material. Expired keys remain listed for operator review; callers should use `isActive` plus `expiresAt` to distinguish `active`, `expired`, and deliberate non-expiring exceptions.
 
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
@@ -2576,10 +2576,11 @@ Admin-only API key creation route.
 | `tier`               | `string`  | No       | Free-form tier label; defaults to `"standard"` |
 | `trafficClass`       | `"external" \| "site"` | No | Attribution class for demand accounting. Use `"site"` for website-owned automation or browser-adjacent keys; defaults to `"external"` |
 | `rateLimitPerMinute` | `integer` | No       | Per-key threshold (`1`–`10000`, default `120`) |
+| `expiresAt`          | `integer \| null` | No | Unix timestamp when the key should expire. Omit to use the default 90-day expiry. Send `null` only for a deliberate non-expiring exception. |
 
 **Response shape:** `ApiKeyCreateResponse`
 
-`token` is returned only once. Persist it immediately; later list/read paths expose only `maskedToken`.
+`token` is returned only once. Persist it immediately; later list/read paths expose only `maskedToken`. `key.expiresAt` in the response reflects the stored expiry after the default-90-day fallback is applied.
 
 ### `POST /api/api-keys/:id/update`
 
@@ -2595,8 +2596,11 @@ Accepted fields:
 - `trafficClass`
 - `rateLimitPerMinute`
 - `isActive`
+- `expiresAt`
 
 **Response shape:** `ApiKeyMutationResponse`
+
+Send `expiresAt: null` only for a deliberate non-expiring exception. Existing keys created before the expiry migration keep `expiresAt = null` until an operator changes them.
 
 ### `POST /api/api-keys/:id/deactivate`
 
@@ -2606,7 +2610,7 @@ Admin-only hard deactivation for an existing API key. This sets `isActive=false`
 
 ### `POST /api/api-keys/:id/rotate`
 
-Admin-only secret rotation. The old token stops working immediately and a new plaintext token is returned once.
+Admin-only secret rotation. The old token stops working immediately and a new plaintext token is returned once. Rotation does not accept expiry input and preserves the current `expiresAt`.
 
 **Response shape:** `ApiKeyRotateResponse`
 

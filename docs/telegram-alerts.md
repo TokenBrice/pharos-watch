@@ -57,6 +57,7 @@ The webhook also uses the generic `cache` table key `telegram:last-update-id` to
 |---------|----------|---------|
 | `TELEGRAM_BOT_TOKEN` | Yes | Webhook replies, digest posting (including appended cemetery / tracking notices), subscriber alert fan-out |
 | `TELEGRAM_WEBHOOK_SECRET` | Yes | Telegram webhook secret validation for `POST /api/telegram-webhook` via `X-Telegram-Bot-Api-Secret-Token` |
+| `TELEGRAM_WEBHOOK_SECRET_PREVIOUS` | No | Temporary 24-hour overlap secret accepted by `POST /api/telegram-webhook` during secret rotation; registration still emits only `TELEGRAM_WEBHOOK_SECRET` |
 | `TELEGRAM_CHAT_ID` | No | Daily digest channel posting, including appended cemetery and tracking notices |
 
 Webhook registration is handled by `scripts/register-telegram-webhook.sh`, which calls Telegram `setWebhook` with the webhook URL and the JSON `secret_token` field:
@@ -66,11 +67,23 @@ Webhook registration is handled by `scripts/register-telegram-webhook.sh`, which
 
 The dedicated five-minute Telegram worker lane now also reconciles the webhook registration in production on a cache-backed cadence. That means the live Worker periodically re-applies the configured webhook URL and secret token via Telegram `setWebhook`, which self-heals webhook-secret drift without requiring a separate manual script run.
 
+### Webhook Secret Rotation
+
+Telegram secret rotation uses a short overlap window:
+
+1. Set the new `TELEGRAM_WEBHOOK_SECRET`.
+2. Move the prior value into `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`.
+3. Run the reconciliation flow so Telegram starts sending only the new current secret.
+4. Keep the previous secret configured for up to 24 hours.
+5. Remove `TELEGRAM_WEBHOOK_SECRET_PREVIOUS` after the overlap window ends.
+
+Receiver behavior accepts either current or previous secret during the overlap window. Registration and reconciliation always send only the current `TELEGRAM_WEBHOOK_SECRET`.
+
 ## Webhook Command Flow
 
 `worker/src/api/telegram-webhook.ts` now acts as a thin ingress coordinator. Command parsing, message formatting, and D1 persistence live in the adjacent `telegram-webhook-*` helper modules so command behavior can be tested without editing the transport entrypoint.
 
-The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Token`. Invalid secrets, missing bot token, malformed JSON, and non-command messages all return `200 ok` without side effects so Telegram does not keep retrying.
+The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Token`. During rotation it accepts either `TELEGRAM_WEBHOOK_SECRET` or `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`. Invalid secrets, missing bot token, malformed JSON, and non-command messages all return `200 ok` without side effects so Telegram does not keep retrying.
 
 ### Supported Commands
 

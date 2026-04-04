@@ -44,7 +44,7 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 - `WORKER_RESERVED_ENV_KEYS`
 - `WORKER_ACTIVE_ENV_KEYS` (`required + optional`)
 
-The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `functions/lib/site-api-env.ts`, with the same `required` / `optional` / `reserved` / `active` shape. Worker runtime validation logs contract errors when Access bindings are only partially configured, when admin D1 status bindings are only partially configured, when `PUBLIC_API_RATE_LIMIT_SALT` is missing, when `SITE_API_SHARED_SECRET` is missing, or when public API auth mode is configured without `API_KEY_HASH_PEPPER`. The Pages `site-data` contract now also expects a `DB` binding on the Pages project so same-origin demand telemetry can be written into the shared D1 database.
+The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `functions/lib/site-api-env.ts`, with the same `required` / `optional` / `reserved` / `active` shape. Worker runtime validation logs contract errors when Access bindings are only partially configured, when admin D1 status bindings are only partially configured, when `PUBLIC_API_RATE_LIMIT_SALT` is missing, when `SITE_API_SHARED_SECRET` is missing, or when public API auth mode is configured without `API_KEY_HASH_PEPPER`. The Pages ops-proxy contract now actively requires `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD` for inbound UI JWT verification, and the Pages `site-data` contract expects a `DB` binding so same-origin demand telemetry can be written into the shared D1 database.
 
 | Binding                          | Type       | Required                                           | Used by                                                                                                                                                                    |
 | -------------------------------- | ---------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -52,6 +52,7 @@ The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `fun
 | `CORS_ORIGIN`                    | string     | Yes                                                | Comma-separated CORS allowlist. Repo default: `https://pharos.watch,https://ops.pharos.watch`                                                                              |
 | `SELF_URL`                       | string     | No                                                 | Status self-check external probe base URL; the default production origin (`https://api.pharos.watch`) is router-probed internally to avoid custom-domain self-fetch `522`s |
 | `SITE_API_SHARED_SECRET`         | string     | No (worker contract); Yes for the website data lane | Shared secret required for `site-api.pharos.watch` and Worker preview site-data requests authenticated via `X-Pharos-Site-Proxy-Secret`                                        |
+| `SITE_API_SHARED_SECRET_PREVIOUS` | string     | No                                                 | Optional overlap secret accepted alongside `SITE_API_SHARED_SECRET` during a 24-hour rotation window                                                                          |
 | `API_KEY_HASH_PEPPER`            | string     | No (worker contract); Yes once public auth leaves `off` | Pepper used to HMAC-hash the secret portion of public API keys                                                                                                                    |
 | `PUBLIC_API_AUTH_MODE`           | string     | No                                                 | Public API auth mode: `off`, `report-only`, or `enforce`                                                                                                                          |
 | `OPS_UI_ORIGIN`                  | string     | No                                                 | Reserved on the worker runtime for cross-runtime alignment. The value is active on Pages Functions host gating (`https://ops.pharos.watch`)                                |
@@ -82,7 +83,8 @@ The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `fun
 | `TWITTER_ACCESS_TOKEN_SECRET`    | string     | No                                                 | Digest → Twitter (access token secret)                                                                                                                                     |
 | `TELEGRAM_BOT_TOKEN`             | string     | No                                                 | Digest → Telegram, bot chat replies, subscriber alert dispatch                                                                                                             |
 | `TELEGRAM_CHAT_ID`               | string     | No                                                 | Digest channel posts and cemetery announcements                                                                                                                            |
-| `TELEGRAM_WEBHOOK_SECRET`        | string     | No                                                 | Telegram webhook secret validation via `X-Telegram-Bot-Api-Secret-Token`                                                                                                   |
+| `TELEGRAM_WEBHOOK_SECRET`        | string     | No                                                 | Telegram webhook secret validation via `X-Telegram-Bot-Api-Secret-Token`; registration and reconciliation emit this current secret                                          |
+| `TELEGRAM_WEBHOOK_SECRET_PREVIOUS` | string   | No                                                 | Optional 24-hour overlap secret accepted by the Telegram webhook receiver during secret rotation                                                                             |
 | `MAINTENANCE_MODE`               | `string?`  | No                                                 | Optional. When set to the exact string `"true"`, the worker returns 503 for all non-`OPTIONS` requests. Used as a kill switch.                                             |
 | `MINT_BURN_DISABLED_IDS`         | string     | No                                                 | Mint/burn runtime disable list by stablecoin ID (CSV)                                                                                                                      |
 | `MINT_BURN_DISABLED_SYMBOLS`     | string     | No                                                 | Mint/burn runtime disable list by symbol (CSV)                                                                                                                             |
@@ -177,7 +179,7 @@ Applied to every response via `addCorsHeaders()`:
 | `Referrer-Policy`               | `strict-origin-when-cross-origin`                                                               |
 | `Content-Security-Policy`       | `default-src 'none'; frame-ancestors 'none'`                                                    |
 
-`CORS_ORIGIN` is now treated as a comma-separated allowlist. If the incoming request includes an `Origin` header that matches one of the configured entries, the Worker echoes that specific origin. Otherwise it falls back to the first configured origin.
+`CORS_ORIGIN` is now treated as a comma-separated allowlist. If the incoming request includes an `Origin` header that matches one of the configured entries, the Worker echoes that specific origin. If the request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin` and rejects `OPTIONS` preflights with `403`. Requests without an `Origin` header keep the existing first-allowlisted-origin fallback.
 
 ### Edge Cache Strategy
 
@@ -235,10 +237,11 @@ This baseline is enough to catch most abuse, regression, or cache-efficiency pro
 **Files:** `functions/_site-data/[[path]].ts`, `worker/src/lib/auth.ts`, `worker/src/handlers/http/gates.ts`
 
 - Pages Functions on `pharos.watch`, `ops.pharos.watch`, and Pages preview hosts proxy same-origin `/_site-data/*` requests to `SITE_API_ORIGIN` when configured, or `api.pharos.watch` by default until the dedicated site-api host is provisioned
-- the proxy injects `X-Pharos-Site-Proxy-Secret` from `SITE_API_SHARED_SECRET`
-- the worker accepts that header only on `site-api.pharos.watch` or Worker preview URLs during CI rehearsal; the temporary public-API fallback works only while `PUBLIC_API_AUTH_MODE=off`
+- the proxy injects `X-Pharos-Site-Proxy-Secret` from `SITE_API_SHARED_SECRET` and continues to emit only the current secret during rotations
+- the worker accepts that header only on `site-api.pharos.watch` or Worker preview URLs during CI rehearsal; it accepts either `SITE_API_SHARED_SECRET` or `SITE_API_SHARED_SECRET_PREVIOUS` during the 24-hour overlap window, while the temporary public-API fallback works only while `PUBLIC_API_AUTH_MODE=off`
 - the worker allows only `GET` requests to allowlisted public-read routes from `shared/lib/site-data-routes.ts`
 - site-data requests skip public API request-source telemetry so the public API attribution dataset stays scoped to `api.pharos.watch`
+- overlap sequence: set `SITE_API_SHARED_SECRET_PREVIOUS` to the retiring value, deploy the new current secret everywhere that emits `X-Pharos-Site-Proxy-Secret`, keep both values active for 24 hours, then remove `SITE_API_SHARED_SECRET_PREVIOUS`
 
 ### Router-Dispatched Status Actions
 
@@ -1029,7 +1032,7 @@ Returns cache freshness for key data sources, with per-source staleness threshol
 
 Health freshness checks for mint/burn major symbols and scheduler stale alerts use the same shared resolver in `worker/src/lib/mint-burn-health-config.ts`, including env overrides (`MINT_BURN_MAJOR_SYMBOLS`, `MINT_BURN_STALE_WARN_SEC`, `MINT_BURN_STALE_CRIT_SEC`, `MINT_BURN_ALERT_COOLDOWN_SEC`). The public `/api/health` status itself now follows critical-lane sync freshness (`lastSuccessfulSyncAt` + latest run status) rather than raw event recency, so quiet majors do not produce false stale health.
 
-`/api/health` also returns a `warnings: string[]` field. Subquery failures (for example blacklist or circuit-state lookups) no longer silently degrade to zero-like values; instead the endpoint downgrades `status` and emits machine-readable warning strings while still returning `200`.
+`/api/health` also returns a `warnings: string[]` field. Subquery failures (for example blacklist or circuit-state lookups) no longer silently degrade to zero-like values; instead the endpoint downgrades `status` and emits machine-readable warning strings while still returning `200`. Those warning strings are intentionally sanitized for public output; raw exception detail stays in worker logs.
 
 ### GET /api/status
 
@@ -1069,7 +1072,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 
 A job is marked "unhealthy" if its last run had `status='error'` or if the last run started more than 2× its expected interval ago. `/api/status` now also exposes `crons[*].inFlight` while a long-running leased job is active, including `stage`, `itemsDone/itemsTotal`, the last heartbeat timestamp, and a `stale` flag when the active-progress row stops updating. Only progress rows backed by a still-active matching lease are surfaced this way.
 
-The status handler now surfaces per-subsection loader failures through `sectionErrors` instead of silently swallowing them. When a subsection query fails, the affected field degrades to `null`/empty and the response still returns `200` with a machine-readable error entry for that subsection.
+The status handler now surfaces per-subsection loader failures through `sectionErrors` instead of silently swallowing them. When a subsection query fails, the affected field degrades to `null`/empty and the response still returns `200` with a machine-readable error entry for that subsection. Those subsection messages are sanitized summaries rather than raw SQL / exception text.
 
 ### GET /api/status-history
 
