@@ -20,6 +20,7 @@ import {
   Network,
   TrendingUp,
   TableProperties,
+  ScrollText,
   createLucideIcon,
 } from "lucide-react";
 
@@ -51,6 +52,7 @@ export const ABOUT_REFERENCE_ITEMS: NavItem[] = [
   { href: "/coverage", label: "Coverage", icon: TableProperties, description: "Truth surface for what each route can show per coin" },
   { href: "/start", label: "Start Here", icon: Compass, description: "Shortest route into the product for new or returning users" },
   { href: "/about/api", label: "API Reference", icon: KeyRound, description: "Auth model, key requirement, and full endpoint reference" },
+  { href: "/changelog", label: "Changelog", icon: ScrollText, description: "Weekly release notes and feature updates" },
 ];
 
 export const NAV_GROUPS: NavGroup[] = [
