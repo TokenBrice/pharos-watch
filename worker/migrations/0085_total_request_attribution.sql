@@ -23,7 +23,7 @@ CREATE INDEX IF NOT EXISTS idx_api_request_consumer_stats_route
 CREATE INDEX IF NOT EXISTS idx_api_request_consumer_stats_lane
   ON api_request_consumer_stats(lane, bucket_start);
 
-INSERT INTO api_request_consumer_stats (
+INSERT OR REPLACE INTO api_request_consumer_stats (
   bucket_start,
   route_key,
   route_path,
@@ -41,11 +41,7 @@ SELECT
     ELSE 'external'
   END,
   request_count
-FROM api_request_source_stats
-ON CONFLICT (bucket_start, route_key, lane, consumer_class)
-DO UPDATE SET
-  route_path = excluded.route_path,
-  request_count = excluded.request_count;
+FROM api_request_source_stats;
 
 CREATE TABLE IF NOT EXISTS site_data_request_stats (
   bucket_start INTEGER NOT NULL,
