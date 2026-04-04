@@ -27,11 +27,11 @@ describe("tracked stablecoin metadata", () => {
     const commodity = parseStablecoinMetaAssets(commodityAsset, "commodity");
     const canonicalOrder = parseCanonicalOrderAsset(canonicalOrderAsset, "canonical-order");
 
-    expect(usdMajor).toHaveLength(28);
+    expect(usdMajor).toHaveLength(29);
     expect(usdMinor).toHaveLength(107);
     expect(nonUsd).toHaveLength(41);
     expect(commodity).toHaveLength(10);
-    expect(canonicalOrder).toHaveLength(186);
+    expect(canonicalOrder).toHaveLength(187);
     expect(usdMajor.length + usdMinor.length + nonUsd.length + commodity.length).toBe(canonicalOrder.length);
     expect(parseDeadStablecoinAssets(deadStablecoinAsset, "dead-stablecoins")).toHaveLength(87);
   });
@@ -48,8 +48,8 @@ describe("tracked stablecoin metadata", () => {
   });
 
   it("keeps active and pre-launch partitions unchanged after the JSON migration", () => {
-    expect(TRACKED_STABLECOINS).toHaveLength(186);
-    expect(ACTIVE_STABLECOINS).toHaveLength(176);
+    expect(TRACKED_STABLECOINS).toHaveLength(187);
+    expect(ACTIVE_STABLECOINS).toHaveLength(177);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
       "usdpt-western-union",
       "roughrider-bnd",

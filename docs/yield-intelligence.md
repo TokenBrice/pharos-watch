@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v7.1`
+- **Current methodology version:** `v7.2`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -16,6 +16,7 @@ Rankings provenance now carries source-native freshness for derived sources:
 
 - `sourceObservedAt` / `sourceAgeSeconds` reflect the actual latest observation backing the ranking, not just the cron run time
 - `comparisonAnchorObservedAt` / `comparisonAnchorAgeSeconds` are included when APY is derived from a prior anchor, such as price-derived and on-chain exchange-rate calculations
+- `sUSDai` is now a first-class tracked yield-bearing NAV token, so base `USDai` no longer inherits the USD.AI savings venue through `YIELD_VARIANT_MAP`
 - PYS now keeps raw APY as the base yield term, then adds 25% of the row's benchmark spread before applying the safety and consistency penalties
 - supplemental protocol families now keep asset-scoped source identity for same-chain markets (notably Aave V3), preventing cross-coin cache collapse and preserving per-asset alternative-source coverage
 - protocol-native lending venue readers such as Aave V3 and Compound V3 stay in the curated Tier 2.5 lane rather than inheriting Tier 1 deterministic wrapper precedence, so a lower-yield supplemental market does not displace a stronger native wrapper purely by source family
@@ -157,7 +158,6 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 | USBD (253)            | sUSBD   | BIMA savings wrapper        |
 | reUSD (339)           | stUSR   | Resolv staking wrapper      |
 | AZND (327)            | loAZND  | Mu Digital locked wrapper   |
-| USD.AI (309)          | sUSDai  | GAIB USD.AI savings         |
 | Neutrl USD (346)      | sNUSD   | Neutrl staked USD           |
 | Avalon USDa (220)     | sUSDa   | Avalon staked USDa          |
 | infiniFi USD (298)    | siUSD   | infiniFi savings            |
@@ -168,6 +168,8 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 | fxUSD (168)           | fxSAVE  | Concentrator savings        |
 | Noon USN (230)        | sUSN    | Noon savings                |
 | Main Street USD (297) | msY   | Main Street savings         |
+
+`YIELD_VARIANT_MAP` is only used when the yield-bearing wrapper is not already modeled as its own tracked asset. As of April 4, 2026, `sUSDai` is tracked directly, so base `USDai` no longer resolves through the wrapper map.
 | GAIB AID (353)        | sAID    | GAIB AID staking            |
 | Parallel USDp         | sUSDp   | Parallel savings wrapper    |
 | dUSD (dTRINITY)       | sdUSD   | dTRINITY dStake vault       |

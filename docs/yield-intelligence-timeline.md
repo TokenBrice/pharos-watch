@@ -1,6 +1,15 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.1` (2026-03-01 -> 2026-04-03).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.2` (2026-03-01 -> 2026-04-04).
+
+---
+
+## v7.2 - USD.AI base/yield token split (Apr 4, 2026)
+
+- Yield coverage now treats `sUSDai` as its own tracked yield-bearing NAV token instead of hanging the USD.AI savings pool off base `USDai`
+- Base `usdai-usd-ai` no longer inherits the `sUSDai` savings venue through `YIELD_VARIANT_MAP`
+- New tracked asset `susdai-usd-ai` now owns the USD.AI savings pool mapping directly, aligning yield rankings with the dedicated `sUSDai` detail page
+- The stale wrapper config that pointed the supposed `sUSDai` variant address at Arbitrum `PYUSD` was removed
 
 ---
 

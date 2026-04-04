@@ -104,14 +104,6 @@ const RAW_YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     yieldType: "lending-vault",
   },
 
-  // USD.AI -> sUSDai (savings wrapper, $338M TVL on Stablewatch)
-  "usdai-usd-ai": {
-    variantSymbol: "sUSDai",
-    variantAddress: "0x46850aD61C2B7d64d08c9C754F45254596696984",
-    variantChain: "arbitrum",
-    yieldSource: "USD.AI savings (sUSDai)",
-    yieldType: "lending-vault",
-  },
   // Neutrl USD -> sNUSD (savings wrapper, $188M TVL)
   "nusd-neutrl": {
     variantSymbol: "sNUSD",
@@ -345,8 +337,8 @@ const RAW_YIELD_POOL_MAP: Record<string, string> = {
   // OUSG - ondo-yield-assets native, Ethereum, $519M TVL, ~3.1% APY
   "ousg-ondo-finance": "7436db9b-2872-46c8-81a2-da6baff902b7",
 
-  // USD.AI -> sUSDai - usd-ai native savings, Arbitrum, $217M TVL, ~7.7% APY
-  "usdai-usd-ai": "712ce948-bd9e-4f4a-8916-b72c447f7578",
+  // sUSDai - usd-ai native savings, Arbitrum, $217M TVL, ~7.7% APY
+  "susdai-usd-ai": "712ce948-bd9e-4f4a-8916-b72c447f7578",
 
   // wsrUSD - reservoir-protocol native, Ethereum, $159M TVL, ~4.8% APY
   "wsrusd-reservoir": "d646f32f-d5af-4e34-a29f-8ebeea6a8520",

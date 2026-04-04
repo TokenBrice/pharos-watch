@@ -14,6 +14,7 @@ describe("getRedemptionBackstopConfig", () => {
       ["usx-solstice", "stablecoin-redeem"],
       ["usda-avalon", "stablecoin-redeem"],
       ["usdai-usd-ai", "stablecoin-redeem"],
+      ["susdai-usd-ai", "queue-redeem"],
       ["nusd-neutrl", "queue-redeem"],
       ["usde-ethena", "stablecoin-redeem"],
       ["usdf-falcon", "queue-redeem"],
@@ -492,6 +493,17 @@ describe("getRedemptionBackstopConfig", () => {
       reviewedAt: "2026-04-03",
     });
 
+    expect(getRedemptionBackstopConfig("susdai-usd-ai")).toMatchObject({
+      routeFamily: "queue-redeem",
+      accessModel: "permissionless-onchain",
+      settlementModel: "queued",
+      executionModel: "rules-based-nav",
+      outputAssetType: "stable-single",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-04-04",
+    });
+
     expect(getRedemptionBackstopConfig("nusd-neutrl")).toMatchObject({
       routeFamily: "queue-redeem",
       accessModel: "whitelisted-onchain",
@@ -503,7 +515,7 @@ describe("getRedemptionBackstopConfig", () => {
       reviewedAt: "2026-03-23",
     });
 
-    for (const id of ["usx-solstice", "usda-avalon", "usdai-usd-ai", "nusd-neutrl"] as const) {
+    for (const id of ["usx-solstice", "usda-avalon", "usdai-usd-ai", "susdai-usd-ai", "nusd-neutrl"] as const) {
       expect(getRedemptionBackstopConfig(id)?.docs?.length).toBeGreaterThan(0);
     }
   });

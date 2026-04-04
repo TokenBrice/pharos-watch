@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "7.1",
+  currentVersion: "7.2",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "7.2",
+    title: "USD.AI Base/Yield Token Split",
+    date: "2026-04-04",
+    effectiveAt: 1775314800,
+    summary:
+      "Yield coverage now treats sUSDai as its own tracked yield-bearing NAV token instead of hanging the savings venue off the base USDai page via wrapper indirection.",
+    impact: [
+      "`usdai-usd-ai` is no longer treated as a yield-bearing wrapper host, so base USDai stops inheriting sUSDai's savings pool as its native yield source",
+      "New tracked asset `susdai-usd-ai` now owns the existing USD.AI savings pool mapping directly, aligning yield rankings with the dedicated sUSDai detail page and nav-token semantics",
+      "The stale USD.AI wrapper config that pointed at Arbitrum PYUSD as the `sUSDai` variant address is removed, eliminating a concrete address-level misbinding",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "7.1",
     title: "Explicit Intentional Gaps For Pre-Launch Yield Assets",

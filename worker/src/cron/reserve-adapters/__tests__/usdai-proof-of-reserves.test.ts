@@ -162,7 +162,7 @@ describe("usdai-proof-of-reserves adapter", () => {
 
   it("fetches the raw API payload through the shared text cache and adapts it", async () => {
     const result = await fetchUsdAiProofOfReserves(
-      { id: "usdai-usd-ai" } as never,
+      { id: "susdai-usd-ai" } as never,
       {
         adapter: "usdai-proof-of-reserves",
         version: 2,

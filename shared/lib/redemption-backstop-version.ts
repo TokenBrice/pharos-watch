@@ -1,9 +1,24 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "3.3",
+  currentVersion: "3.4",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "3.4",
+      title: "USD.AI base-token and sUSDai route split",
+      date: "2026-04-04",
+      effectiveAt: 1775311200,
+      summary:
+        "USD.AI no longer overloads the base token and yield token onto one redemption model: base USDai keeps the direct PYUSD-side rail, while sUSDai now has its own documented queued exit.",
+      impact: [
+        "Base `usdai-usd-ai` remains a permissionless atomic stablecoin-redeem route scoped to the liquid base token rather than to the yield product",
+        "New `susdai-usd-ai` now models the documented 30-day queued unstake flow back into USDai instead of inheriting base-token semantics",
+        "Because public USD.AI materials do not publish a trustworthy numeric instant-liquidity bound for sUSDai, the new route is scored as documented-bound eventual capacity rather than as a measured immediate buffer",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.3",
       title: "Selective lower-bound recovery for GHO and Reservoir fallback hardening",

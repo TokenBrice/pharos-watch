@@ -520,9 +520,14 @@
     "updatedAt": "2026-03-23"
   },
   "usdai-usd-ai": {
-    "title": "GPU Yield in Dollar Clothing",
-    "text": "USD.AI's public proof-of-reserves now shows a reserve dominated by PayPal's PYUSD, with the remainder spread across GPU-backed infrastructure loans secured by NVIDIA hardware. That makes the liquid side cleaner than the older M0-based reserve story, but the product is still not a plain cash-equivalent stablecoin: the distinctive yield comes from a concentrated compute-financing book, not from vanilla money-market exposure. The long depeg history and C- safety grade reflect that tradeoff. Holders are relying on Paxos-linked PYUSD liquidity on one side and a portfolio of private hardware-credit deals on the other, which is simpler than the old stack but still materially more complex than a conventional fiat-backed dollar token.",
-    "updatedAt": "2026-04-03"
+    "title": "The Liquid Half of USD.AI",
+    "text": "Base USDai is the low-risk side of the USD.AI stack: a liquid, non-yielding token that current issuer materials frame around a PYUSD-led settlement rail rather than around the GPU-credit book itself. That distinction matters. The queue, the AI-infrastructure yield, and the GPU-loan underwriting risk belong to sUSDai, not to the base token holders using USDai as a transactional dollar. The remaining question is operational rather than conceptual: how durable the PYUSD-side redemption rail stays under stress, and how tightly the market continues to trust the separation between the liquid stablecoin layer and the higher-risk yield layer sitting beside it.",
+    "updatedAt": "2026-04-04"
+  },
+  "susdai-usd-ai": {
+    "title": "The GPU-Credit Sleeve",
+    "text": "sUSDai is where USD.AI stops behaving like a plain stablecoin and starts looking like a structured credit product wrapped in token form. Holders are opting into yield sourced from GPU-backed infrastructure loans and accepting the trade-off that exits are governed by a queued unstake flow rather than the base token's instant redeem rail. The reserve mix still includes a large PYUSD sleeve, which softens liquidity management, but the defining exposure is the private compute-financing book. That makes sUSDai less a digital cash instrument than a NAV-style income token whose real question is how resilient that GPU-credit pipeline remains through borrower stress, collateral liquidation, and scaling cycles.",
+    "updatedAt": "2026-04-04"
   },
   "usx-solstice": {
     "title": "The Solana Wrapper",

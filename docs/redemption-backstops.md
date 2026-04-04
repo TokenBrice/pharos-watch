@@ -6,11 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.3`
+- **Current methodology version:** `v3.4`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v3.3` update: `gho-aave` can again score against the tracked live GSM lower bound when reserve sync is degraded only by aggregated residual issuance outside the configured GSM set, while `wsrusd-reservoir` now falls back to Reservoir's reviewed 25 bps minimum USDC PSM balance when the live balance-sheet API lacks scoring-grade freshness evidence.
+Latest `v3.4` update: base `usdai-usd-ai` keeps the direct PYUSD-side redeem rail, while new `susdai-usd-ai` now has its own documented queue-based unstake route back into `USDai`; because public USD.AI materials still do not publish a trustworthy numeric instant-liquidity bound for `sUSDai`, that new route is scored as documented-bound eventual capacity rather than as a measured immediate buffer.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 
@@ -20,8 +20,8 @@ There is no standalone changelog page yet. The public methodology link currently
 
 Configured coverage is defined statically behind the thin facade in `shared/lib/redemption-backstops.ts`, with route-family modules under `shared/lib/redemption-backstop-configs/`.
 
-- **Configured coins:** 146
-- **Route families:** 81 `offchain-issuer`, 20 `stablecoin-redeem`, 20 `collateral-redeem`, 14 `queue-redeem`, 8 `psm-swap`, 3 `basket-redeem`
+- **Configured coins:** 147
+- **Route families:** 81 `offchain-issuer`, 20 `stablecoin-redeem`, 20 `collateral-redeem`, 15 `queue-redeem`, 8 `psm-swap`, 3 `basket-redeem`
 - **No discovery layer:** only coins present in `REDEMPTION_BACKSTOP_CONFIGS` are modeled
 
 The config registry is validated at module load time against `TRACKED_META_BY_ID`, so unknown IDs fail fast during build/test/runtime startup.

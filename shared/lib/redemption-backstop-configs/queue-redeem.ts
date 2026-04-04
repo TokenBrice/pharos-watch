@@ -127,6 +127,21 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       "The reviewed 20% bound matches the tracked USDC instant-redemption buffer rather than assuming the full reUSD reserve stack is immediately withdrawable",
     ],
   },
+  "susdai-usd-ai": {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull("2026-04-04"),
+    costModel: documentedVariableFee(
+      "USD.AI documents sUSDai unstaking as a queued withdrawal into USDai with fixed 30-day processing windows; public docs reviewed do not publish a numeric redemption fee or a quantified instant-liquidity bound",
+    ),
+    docs: [
+      sourceRef("USD.AI FAQ", "https://docs.usd.ai/faq/usdai-and-susdai-101", ["route", "capacity", "settlement"]),
+      sourceRef("USDai product page", "https://usd.ai/usdai", ["route", "settlement"]),
+    ],
+    notes: [
+      "Current route models sUSDai as an eventual queued exit back into USDai rather than as an immediate stablecoin redemption rail",
+      "Issuer docs describe a limited instant-liquidity buffer, but Pharos does not assign a numeric immediate-capacity bound until a trustworthy public figure exists",
+    ],
+  },
   "cgusd-cygnus-finance": {
     ...queueRedeemBase,
     ...reviewedQueueRedemptionSupplyFull,
