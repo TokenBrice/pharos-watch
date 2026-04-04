@@ -60,9 +60,7 @@ export function SafetyScoresMethodologySection() {
                 </p>
               </WorkedExample>
 
-              <MethodologyDetails summary="Interactive calculator: explore how weights and thresholds shape the grade">
-                <SafetyScoreCalculator />
-              </MethodologyDetails>
+              <MethodologyDetails summary="Interactive calculator: explore how weights and thresholds shape the grade"><SafetyScoreCalculator /></MethodologyDetails>
 
               <MethodologyDetails summary="Technical details: full pipeline, dimension formulas, thresholds, and caveats">
                 {/* Scoring pipeline diagram — desktop: horizontal dimension row then vertical flow */}
