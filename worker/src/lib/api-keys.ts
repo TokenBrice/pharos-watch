@@ -22,6 +22,7 @@ const API_KEY_NAME_MAX_LENGTH = 80;
 const API_KEY_OWNER_EMAIL_MAX_LENGTH = 200;
 const API_KEY_TIER_MAX_LENGTH = 40;
 const API_KEY_TRAFFIC_CLASS_DEFAULT: ApiKeyTrafficClass = "external";
+const API_KEY_DEFAULT_EXPIRY_SEC = 90 * 24 * 60 * 60;
 const API_KEY_CACHE_TTL_MS = 5_000;
 const API_KEY_USAGE_UPDATE_WINDOW_SEC = 120;
 const API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER = 10;
@@ -55,6 +56,7 @@ interface ApiKeyRow {
   traffic_class: ApiKeyTrafficClass;
   rate_limit_per_minute: number;
   is_active: number;
+  expires_at: number | null;
   created_at: number;
   updated_at: number;
   last_used_at: number | null;
@@ -64,7 +66,7 @@ interface ApiKeyRow {
 type ApiKeyPublicRow = Omit<ApiKeyRow, "secret_hash">;
 
 interface CachedApiKeyEntry {
-  expiresAt: number;
+  cacheExpiresAt: number;
   row: ApiKeyRow | null;
 }
 
@@ -83,6 +85,7 @@ export interface AuthenticatedApiKey {
   trafficClass: ApiKeyTrafficClass;
   rateLimitPerMinute: number;
   isActive: boolean;
+  expiresAt: number | null;
 }
 
 export type ApiKeyAuthenticationResult =
@@ -95,6 +98,13 @@ const apiKeyCache = new Map<string, CachedApiKeyEntry>();
 const apiKeyLastUsageUpdateById = new Map<number, number>();
 let lastApiKeyRateLimitPruneBucket: number | null = null;
 let pendingApiKeyPrune: Promise<void> | null = null;
+
+export function resetApiKeyStateForTests(): void {
+  apiKeyCache.clear();
+  apiKeyLastUsageUpdateById.clear();
+  lastApiKeyRateLimitPruneBucket = null;
+  pendingApiKeyPrune = null;
+}
 
 function getNowSec(nowSec?: number): number {
   return nowSec ?? Math.floor(Date.now() / 1000);
@@ -148,6 +158,35 @@ function normalizeRateLimit(value: unknown): number | Response {
 function normalizeOwnerEmail(value: unknown): string | null {
   const normalized = normalizeOptionalString(value, API_KEY_OWNER_EMAIL_MAX_LENGTH);
   return normalized ? normalized.toLowerCase() : null;
+}
+
+function normalizeOptionalExpiresAt(
+  value: unknown,
+  fieldName: "expiresAt",
+): number | null | undefined | Response {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+  if (typeof value === "number") {
+    if (!Number.isInteger(value) || !Number.isFinite(value)) {
+      return errorResponse(400, `${fieldName} must be an integer Unix timestamp or null`);
+    }
+    return value;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return errorResponse(400, `${fieldName} must be an integer Unix timestamp or null`);
+    }
+    if (!/^-?\d+$/.test(trimmed)) {
+      return errorResponse(400, `${fieldName} must be an integer Unix timestamp or null`);
+    }
+    return Number.parseInt(trimmed, 10);
+  }
+  return errorResponse(400, `${fieldName} must be an integer Unix timestamp or null`);
 }
 
 function bytesToHex(bytes: Uint8Array): string {
@@ -228,6 +267,7 @@ function mapRowToSummary(row: ApiKeyPublicRow): ApiKeySummary {
     trafficClass: row.traffic_class,
     rateLimitPerMinute: row.rate_limit_per_minute,
     isActive: row.is_active === 1,
+    expiresAt: row.expires_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     lastUsedAt: row.last_used_at,
@@ -245,6 +285,7 @@ function mapRowToAuthenticatedKey(row: ApiKeyRow): AuthenticatedApiKey {
     trafficClass: row.traffic_class,
     rateLimitPerMinute: row.rate_limit_per_minute,
     isActive: row.is_active === 1,
+    expiresAt: row.expires_at,
   };
 }
 
@@ -255,7 +296,7 @@ function clearApiKeyCache(keyPrefix: string): void {
 async function lookupApiKeyByPrefix(db: ApiKeyDb, keyPrefix: string): Promise<ApiKeyRow | null> {
   const now = Date.now();
   const cached = apiKeyCache.get(keyPrefix);
-  if (cached && cached.expiresAt > now) {
+  if (cached && cached.cacheExpiresAt > now) {
     return cached.row;
   }
 
@@ -270,6 +311,7 @@ async function lookupApiKeyByPrefix(db: ApiKeyDb, keyPrefix: string): Promise<Ap
        traffic_class,
        rate_limit_per_minute,
        is_active,
+       expires_at,
        created_at,
        updated_at,
        last_used_at,
@@ -281,7 +323,7 @@ async function lookupApiKeyByPrefix(db: ApiKeyDb, keyPrefix: string): Promise<Ap
     .first<ApiKeyRow>();
 
   apiKeyCache.set(keyPrefix, {
-    expiresAt: now + API_KEY_CACHE_TTL_MS,
+    cacheExpiresAt: now + API_KEY_CACHE_TTL_MS,
     row,
   });
   return row;
@@ -291,6 +333,7 @@ export async function authenticateApiKey(
   db: ApiKeyDb,
   apiKeyHeader: string | null,
   pepper: string | undefined,
+  nowSec = getNowSec(),
 ): Promise<ApiKeyAuthenticationResult> {
   const parsed = parseApiKeyToken(apiKeyHeader);
   if (!parsed) {
@@ -304,6 +347,9 @@ export async function authenticateApiKey(
 
   const row = await lookupApiKeyByPrefix(db, parsed.prefix);
   if (!row || row.is_active !== 1) {
+    return { kind: "invalid" };
+  }
+  if (row.expires_at != null && row.expires_at <= nowSec) {
     return { kind: "invalid" };
   }
 
@@ -400,12 +446,18 @@ function normalizeCreateInput(body: Record<string, unknown>): ApiKeyCreateReques
     return trafficClass;
   }
 
+  const expiresAt = normalizeOptionalExpiresAt(body.expiresAt, "expiresAt");
+  if (expiresAt instanceof Response) {
+    return expiresAt;
+  }
+
   return {
     name,
     ownerEmail: normalizeOwnerEmail(body.ownerEmail),
     tier: normalizeTier(body.tier),
     trafficClass,
     rateLimitPerMinute,
+    expiresAt,
   };
 }
 
@@ -451,6 +503,14 @@ function normalizeUpdateInput(body: Record<string, unknown>): ApiKeyUpdateReques
     next.isActive = body.isActive;
   }
 
+  if ("expiresAt" in body) {
+    const normalized = normalizeOptionalExpiresAt(body.expiresAt, "expiresAt");
+    if (normalized instanceof Response) {
+      return normalized;
+    }
+    next.expiresAt = normalized ?? null;
+  }
+
   if (Object.keys(next).length === 0) {
     return errorResponse(400, "No API key fields were provided");
   }
@@ -470,6 +530,7 @@ async function selectApiKeyById(db: ApiKeyDb, id: number): Promise<ApiKeyRow | n
        traffic_class,
        rate_limit_per_minute,
        is_active,
+       expires_at,
        created_at,
        updated_at,
        last_used_at,
@@ -492,6 +553,7 @@ async function selectPublicApiKeyById(db: ApiKeyDb, id: number): Promise<ApiKeyP
        traffic_class,
        rate_limit_per_minute,
        is_active,
+       expires_at,
        created_at,
        updated_at,
        last_used_at,
@@ -519,6 +581,7 @@ export async function listApiKeys(db: ApiKeyDb, nowSec = getNowSec()): Promise<A
        traffic_class,
        rate_limit_per_minute,
        is_active,
+       expires_at,
        created_at,
        updated_at,
        last_used_at,
@@ -550,6 +613,9 @@ export async function createApiKey(
   }
 
   const material = await buildApiKeyMaterial(effectivePepper);
+  const expiresAt = parsed.expiresAt === undefined
+    ? nowSec + API_KEY_DEFAULT_EXPIRY_SEC
+    : parsed.expiresAt;
   const createdRow = await db.prepare(
     `INSERT INTO api_keys (
        key_prefix,
@@ -560,10 +626,11 @@ export async function createApiKey(
        traffic_class,
        rate_limit_per_minute,
        is_active,
+       expires_at,
        created_at,
        updated_at
      )
-     VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
      RETURNING
        id,
        key_prefix,
@@ -573,6 +640,7 @@ export async function createApiKey(
        traffic_class,
        rate_limit_per_minute,
        is_active,
+       expires_at,
        created_at,
        updated_at,
        last_used_at,
@@ -586,6 +654,7 @@ export async function createApiKey(
       parsed.tier ?? "standard",
       parsed.trafficClass ?? API_KEY_TRAFFIC_CLASS_DEFAULT,
       parsed.rateLimitPerMinute ?? API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE,
+      expiresAt ?? null,
       nowSec,
       nowSec,
     )
@@ -625,9 +694,10 @@ export async function updateApiKey(
       owner_email = ?,
       tier = ?,
       traffic_class = ?,
-       rate_limit_per_minute = ?,
-       is_active = ?,
-       updated_at = ?
+      rate_limit_per_minute = ?,
+      is_active = ?,
+      expires_at = ?,
+      updated_at = ?
      WHERE id = ?`,
   )
     .bind(
@@ -637,6 +707,7 @@ export async function updateApiKey(
       parsed.trafficClass ?? existing.traffic_class,
       parsed.rateLimitPerMinute ?? existing.rate_limit_per_minute,
       parsed.isActive == null ? existing.is_active : parsed.isActive ? 1 : 0,
+      Object.prototype.hasOwnProperty.call(parsed, "expiresAt") ? parsed.expiresAt ?? null : existing.expires_at,
       nowSec,
       id,
     )

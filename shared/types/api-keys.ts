@@ -10,6 +10,7 @@ export interface ApiKeySummary {
   trafficClass: ApiKeyTrafficClass;
   rateLimitPerMinute: number;
   isActive: boolean;
+  expiresAt: number | null;
   createdAt: number;
   updatedAt: number;
   lastUsedAt: number | null;
@@ -27,6 +28,7 @@ export interface ApiKeyCreateRequest {
   tier?: string | null;
   trafficClass?: ApiKeyTrafficClass | null;
   rateLimitPerMinute?: number | null;
+  expiresAt?: number | null;
 }
 
 export interface ApiKeyUpdateRequest {
@@ -36,6 +38,7 @@ export interface ApiKeyUpdateRequest {
   trafficClass?: ApiKeyTrafficClass | null;
   rateLimitPerMinute?: number | null;
   isActive?: boolean | null;
+  expiresAt?: number | null;
 }
 
 export interface ApiKeyMutationResponse {

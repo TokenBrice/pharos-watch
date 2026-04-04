@@ -10,7 +10,7 @@
 
 **Squash date:** 2026-03-25 (S-014)
 
-## Individual Migrations (0072–0086)
+## Individual Migrations (0072–0087)
 
 Applied sequentially after the baseline (fresh setup) or after the previous individual migration (existing databases).
 
@@ -31,6 +31,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0084     | `0084_api_key_rate_limit.sql`                   | Add per-key minute-bucket rate-limit table                                                     |
 | 0085     | `0085_total_request_attribution.sql`            | Add total site-vs-external attribution tables and explicit API key traffic classification      |
 | 0086     | `0086_treasury_stable_exposure_history.sql`     | Add daily treasury stable exposure history table for per-entity snapshot auditing              |
+| 0087     | `0087_api_key_expiry.sql`                       | Add nullable API key expiry timestamps for default-expiring and explicit non-expiring keys     |
 
 ## Known Anomalies
 

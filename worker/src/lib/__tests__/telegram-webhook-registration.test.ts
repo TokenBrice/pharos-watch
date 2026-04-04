@@ -92,6 +92,31 @@ describe("reconcileTelegramWebhookRegistration", () => {
     expect(typeof writes[0]?.binds[2]).toBe("number");
   });
 
+  it("continues registering only the current secret token", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:webhook-reconciled"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+        rows: [],
+      },
+    ]);
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    await reconcileTelegramWebhookRegistration(db, {
+      botToken: "bot-token",
+      webhookSecret: "current-secret",
+      selfUrl: "https://api.pharos.watch",
+    });
+
+    const body = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
+    expect(body.secret_token).toBe("current-secret");
+  });
+
   it("throws when Telegram rejects the registration", async () => {
     const db = mockD1([
       {

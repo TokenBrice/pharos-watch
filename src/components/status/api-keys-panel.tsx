@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { formatElapsedSeconds } from "@shared/lib/format";
+import { WEEK_SECONDS } from "@shared/lib/time-constants";
 import type {
   ApiKeyCreateResponse,
   ApiKeyMutationResponse,
@@ -24,9 +26,14 @@ interface EditableKeyState {
   tier: string;
   trafficClass: ApiKeyTrafficClass;
   rateLimitPerMinute: string;
+  expiryMode: "custom" | "non-expiring";
+  expiresAtInput: string;
 }
 
+type CreateExpiryMode = "default" | "custom" | "non-expiring";
+
 const EMPTY_KEYS: readonly ApiKeySummary[] = [];
+const API_KEY_EXPIRING_SOON_WINDOW_SEC = WEEK_SECONDS;
 
 function buildEditableState(key: ApiKeySummary): EditableKeyState {
   return {
@@ -35,11 +42,79 @@ function buildEditableState(key: ApiKeySummary): EditableKeyState {
     tier: key.tier,
     trafficClass: key.trafficClass,
     rateLimitPerMinute: String(key.rateLimitPerMinute),
+    expiryMode: key.expiresAt == null ? "non-expiring" : "custom",
+    expiresAtInput: key.expiresAt == null ? "" : formatDateTimeLocalValue(key.expiresAt),
   };
 }
 
 function fieldClassName() {
   return "w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring";
+}
+
+function padTwo(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+function formatDateTimeLocalValue(epochSeconds: number): string {
+  const date = new Date(epochSeconds * 1000);
+  return `${date.getFullYear()}-${padTwo(date.getMonth() + 1)}-${padTwo(date.getDate())}T${padTwo(date.getHours())}:${padTwo(date.getMinutes())}`;
+}
+
+function parseDateTimeLocalValue(value: string): number | null {
+  const trimmed = value.trim();
+  const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+  if (!match) {
+    return null;
+  }
+  const [, year, month, day, hour, minute] = match;
+  const epochMs = new Date(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour),
+    Number(minute),
+    0,
+    0,
+  ).getTime();
+  return Number.isFinite(epochMs) ? Math.floor(epochMs / 1000) : null;
+}
+
+function getKeyStatus(key: ApiKeySummary, nowSeconds: number): "inactive" | "expired" | "active" {
+  if (!key.isActive) {
+    return "inactive";
+  }
+  if (key.expiresAt != null && key.expiresAt <= nowSeconds) {
+    return "expired";
+  }
+  return "active";
+}
+
+function isExpiringSoon(key: ApiKeySummary, nowSeconds: number): boolean {
+  return key.isActive
+    && key.expiresAt != null
+    && key.expiresAt > nowSeconds
+    && key.expiresAt - nowSeconds <= API_KEY_EXPIRING_SOON_WINDOW_SEC;
+}
+
+function statusBadgeClassName(status: "inactive" | "expired" | "active"): string {
+  if (status === "active") {
+    return "bg-green-500/15 text-green-700 dark:text-green-400";
+  }
+  if (status === "expired") {
+    return "bg-red-500/15 text-red-700 dark:text-red-400";
+  }
+  return "bg-muted text-muted-foreground";
+}
+
+function formatExpirySummary(key: ApiKeySummary, nowSeconds: number): string {
+  if (key.expiresAt == null) {
+    return "Non-expiring exception";
+  }
+  const absolute = new Date(key.expiresAt * 1000).toLocaleString();
+  if (key.expiresAt <= nowSeconds) {
+    return `Expired ${formatElapsedSeconds(nowSeconds - key.expiresAt)} ago at ${absolute}`;
+  }
+  return `Expires ${absolute} (${formatElapsedSeconds(key.expiresAt - nowSeconds)} remaining)`;
 }
 
 async function postAdminJson<T>(
@@ -81,6 +156,8 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
   const [createTier, setCreateTier] = useState("standard");
   const [createTrafficClass, setCreateTrafficClass] = useState<ApiKeyTrafficClass>("external");
   const [createRateLimit, setCreateRateLimit] = useState("120");
+  const [createExpiryMode, setCreateExpiryMode] = useState<CreateExpiryMode>("default");
+  const [createExpiresAtInput, setCreateExpiresAtInput] = useState("");
   const [drafts, setDrafts] = useState<Record<number, EditableKeyState>>({});
   const [busyKeyId, setBusyKeyId] = useState<number | null>(null);
   const [createBusy, setCreateBusy] = useState(false);
@@ -88,6 +165,7 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
   const [revealedToken, setRevealedToken] = useState<{ label: string; token: string } | null>(null);
 
   const keys = data?.keys ?? EMPTY_KEYS;
+  const nowSeconds = data?.generatedAt ?? Math.floor(Date.now() / 1000);
   const draftState = useMemo(() => {
     const next: Record<number, EditableKeyState> = {};
     for (const key of keys) {
@@ -115,12 +193,25 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
     setErrorMessage(null);
     setCreateBusy(true);
     try {
-      const response = await postAdminJson<ApiKeyCreateResponse>(adminAccess, "/api/api-keys", {
+      const createPayload: Record<string, unknown> = {
         name: createName,
         ownerEmail: createOwnerEmail || null,
         tier: createTier,
         trafficClass: createTrafficClass,
         rateLimitPerMinute: Number.parseInt(createRateLimit, 10),
+      };
+      if (createExpiryMode === "custom") {
+        const parsedExpiry = parseDateTimeLocalValue(createExpiresAtInput);
+        if (parsedExpiry == null) {
+          throw new Error("Custom expiry requires a valid date and time");
+        }
+        createPayload.expiresAt = parsedExpiry;
+      } else if (createExpiryMode === "non-expiring") {
+        createPayload.expiresAt = null;
+      }
+
+      const response = await postAdminJson<ApiKeyCreateResponse>(adminAccess, "/api/api-keys", {
+        ...createPayload,
       });
       setRevealedToken({ label: `Created ${response.key.name}`, token: response.token });
       setCreateName("");
@@ -128,6 +219,8 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
       setCreateTier("standard");
       setCreateTrafficClass("external");
       setCreateRateLimit("120");
+      setCreateExpiryMode("default");
+      setCreateExpiresAtInput("");
       await refetch();
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Unknown error");
@@ -173,6 +266,33 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
               <span className="text-xs font-medium text-muted-foreground">Rate Limit / Minute</span>
               <input className={fieldClassName()} value={createRateLimit} onChange={(event) => setCreateRateLimit(event.target.value)} />
             </label>
+            <label className="space-y-1">
+              <span className="text-xs font-medium text-muted-foreground">Expiry Policy</span>
+              <select className={fieldClassName()} value={createExpiryMode} onChange={(event) => setCreateExpiryMode(event.target.value as CreateExpiryMode)}>
+                <option value="default">Default 90 days</option>
+                <option value="custom">Custom expiry</option>
+                <option value="non-expiring">Non-expiring exception</option>
+              </select>
+            </label>
+            {createExpiryMode === "custom" && (
+              <label className="space-y-1">
+                <span className="text-xs font-medium text-muted-foreground">Expires At</span>
+                <input
+                  type="datetime-local"
+                  step={60}
+                  className={fieldClassName()}
+                  value={createExpiresAtInput}
+                  onChange={(event) => setCreateExpiresAtInput(event.target.value)}
+                />
+              </label>
+            )}
+          </div>
+          <div className="rounded-md border border-border/60 bg-background/35 px-3 py-2 text-xs text-muted-foreground">
+            {createExpiryMode === "default"
+              ? "Default 90 days from creation. The request omits expiresAt and the worker applies the standard lifecycle."
+              : createExpiryMode === "custom"
+                ? "Custom expiry is converted from your local datetime to UTC epoch seconds before save."
+                : "Non-expiring exception. Use only when lifecycle management is intentionally handled outside the default 90-day policy."}
           </div>
           <div className="flex justify-end">
             <Button onClick={handleCreate} disabled={createBusy} aria-busy={createBusy}>
@@ -213,6 +333,8 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
             {keys.map((key) => {
               const draft = draftState[key.id] ?? buildEditableState(key);
               const isBusy = busyKeyId === key.id;
+              const keyStatus = getKeyStatus(key, nowSeconds);
+              const expiringSoon = isExpiringSoon(key, nowSeconds);
 
               return (
                 <div key={key.id} className="space-y-3 rounded-lg border border-border/60 p-4">
@@ -221,18 +343,24 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
                       <div className="text-sm font-medium text-foreground">{key.name}</div>
                       <div className="font-mono text-xs text-muted-foreground">{key.maskedToken}</div>
                     </div>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                        key.isActive
-                          ? "bg-green-500/15 text-green-700 dark:text-green-400"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {key.isActive ? "active" : "inactive"}
-                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${statusBadgeClassName(keyStatus)}`}>
+                        {keyStatus}
+                      </span>
+                      {expiringSoon && (
+                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+                          expiring soon
+                        </span>
+                      )}
+                      {key.expiresAt == null && (
+                        <span className="rounded-full bg-muted/70 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                          non-expiring exception
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="grid gap-3 lg:grid-cols-3">
+                  <div className="grid gap-3 lg:grid-cols-4">
                     <label className="space-y-1">
                       <span className="text-xs font-medium text-muted-foreground">Name</span>
                       <input
@@ -279,12 +407,45 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
                         onChange={(event) => setDrafts((prev) => ({ ...prev, [key.id]: { ...draft, rateLimitPerMinute: event.target.value } }))}
                       />
                     </label>
+                    <label className="space-y-1">
+                      <span className="text-xs font-medium text-muted-foreground">Expiry</span>
+                      <select
+                        className={fieldClassName()}
+                        value={draft.expiryMode}
+                        onChange={(event) => setDrafts((prev) => ({
+                          ...prev,
+                          [key.id]: { ...draft, expiryMode: event.target.value as EditableKeyState["expiryMode"] },
+                        }))}
+                      >
+                        <option value="custom">Custom expiry</option>
+                        <option value="non-expiring">Non-expiring exception</option>
+                      </select>
+                    </label>
+                    {draft.expiryMode === "custom" && (
+                      <label className="space-y-1">
+                        <span className="text-xs font-medium text-muted-foreground">Expires At</span>
+                        <input
+                          type="datetime-local"
+                          step={60}
+                          className={fieldClassName()}
+                          value={draft.expiresAtInput}
+                          onChange={(event) => setDrafts((prev) => ({ ...prev, [key.id]: { ...draft, expiresAtInput: event.target.value } }))}
+                        />
+                      </label>
+                    )}
                   </div>
 
                   <div className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+                    <div>Expiry: {formatExpirySummary(key, nowSeconds)}</div>
                     <div>Last used route: {key.lastUsedRoute ?? "never"}</div>
                     <div>Last used at: {key.lastUsedAt ? new Date(key.lastUsedAt * 1000).toISOString() : "never"}</div>
                   </div>
+
+                  {draft.expiryMode === "non-expiring" && (
+                    <div className="rounded-md border border-amber-500/25 bg-amber-500/8 px-3 py-2 text-xs text-muted-foreground">
+                      Saving will persist <span className="font-mono">expiresAt: null</span> as an explicit non-expiring exception.
+                    </div>
+                  )}
 
                   <div className="flex flex-wrap gap-2">
                     <Button
@@ -292,6 +453,12 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
                       variant="outline"
                       disabled={isBusy}
                       onClick={() => runKeyAction(async () => {
+                        const expiresAt = draft.expiryMode === "custom"
+                          ? parseDateTimeLocalValue(draft.expiresAtInput)
+                          : null;
+                        if (draft.expiryMode === "custom" && expiresAt == null) {
+                          throw new Error("Custom expiry requires a valid date and time");
+                        }
                         const response = await postAdminJson<ApiKeyMutationResponse>(
                           adminAccess,
                           `/api/api-keys/${key.id}/update`,
@@ -301,6 +468,7 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
                             tier: draft.tier,
                             trafficClass: draft.trafficClass,
                             rateLimitPerMinute: Number.parseInt(draft.rateLimitPerMinute, 10),
+                            expiresAt,
                           },
                         );
                         setDrafts((prev) => ({ ...prev, [key.id]: buildEditableState(response.key) }));

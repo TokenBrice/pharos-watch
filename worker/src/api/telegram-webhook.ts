@@ -50,12 +50,24 @@ import { runCoinResolutionFlow } from "./telegram-webhook-resolution";
 
 export const handleTelegramWebhook = withErrorHandler(
   "telegram-webhook",
-  async (db: D1Database, request: Request, webhookSecret?: string, botToken?: string): Promise<Response> => {
+  async (
+    db: D1Database,
+    request: Request,
+    webhookSecret?: string,
+    botToken?: string,
+    previousWebhookSecret?: string,
+  ): Promise<Response> => {
     const ok = () => new Response("ok", { status: 200 });
 
     const providedSecret =
       request.headers.get("X-Telegram-Bot-Api-Secret-Token") ?? "";
-    if (!webhookSecret || !(await timingSafeCompare(providedSecret, webhookSecret))) {
+    const validCurrentSecret = webhookSecret
+      ? await timingSafeCompare(providedSecret, webhookSecret)
+      : false;
+    const validPreviousSecret = previousWebhookSecret
+      ? await timingSafeCompare(providedSecret, previousWebhookSecret)
+      : false;
+    if (!validCurrentSecret && !validPreviousSecret) {
       return ok();
     }
     if (!botToken) return ok();

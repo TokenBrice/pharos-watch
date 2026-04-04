@@ -50,6 +50,21 @@ describe("handleTelegramWebhook", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("accepts the previous webhook secret during the overlap window", async () => {
+    const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(123, "/start", "old-secret"),
+      "test-secret",
+      "bot-token",
+      "old-secret",
+    );
+
+    expect(res.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(sentMessageBody().text).toContain("Welcome");
+  });
+
   it("returns 200 for non-command text", async () => {
     const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
     const res = await handleTelegramWebhook(db, makeWebhookRequest(123, "hello"), "test-secret", "bot-token");

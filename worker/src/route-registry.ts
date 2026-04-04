@@ -91,6 +91,7 @@ export interface RouteContext {
 /** Domain-specific fields for telegram webhook handlers. */
 export interface TelegramRouteFields {
   telegramWebhookSecret?: string;
+  telegramWebhookSecretPrevious?: string;
   telegramBotToken?: string;
   telegramCreds?: TelegramCreds | null;
 }
@@ -257,8 +258,8 @@ const STATIC_ROUTES = [
   defineStaticRoute("non-usd-share", ({ db, url }) => handleNonUsdShare(db, url)),
   defineStaticRoute("backfill-dews", ({ db, url, trustedAdmin, request }) => handleBackfillDEWS(db, url, trustedAdmin, request)),
   defineStaticRoute("feedback", ({ db, request, feedbackEnv }) => handleFeedback(db, request, feedbackEnv ?? {})),
-  defineStaticRoute("telegram-webhook", ({ db, request, telegramWebhookSecret, telegramBotToken }) =>
-    handleTelegramWebhook(db, request, telegramWebhookSecret, telegramBotToken)),
+  defineStaticRoute("telegram-webhook", ({ db, request, telegramWebhookSecret, telegramBotToken, telegramWebhookSecretPrevious }) =>
+    handleTelegramWebhook(db, request, telegramWebhookSecret, telegramBotToken, telegramWebhookSecretPrevious)),
   defineStaticRoute("trigger-digest", handleTriggerDigest),
   defineStaticRoute("reset-blacklist-sync", handleResetBlacklistSync),
   defineStaticRoute("debug-sync-state", handleDebugSyncState),
