@@ -409,4 +409,54 @@ describe("api key helpers", () => {
 
     expect(db.getHistory().filter((entry) => entry.sql.includes("UPDATE api_keys SET last_used_at"))).toHaveLength(1);
   });
+
+  it("does not cache misses so newly created keys authenticate immediately", async () => {
+    const pepper = "pepper";
+    const secret = "abcdefghijklmnopqrstuvwxyzABCDEF";
+    const secretHash = await hmacSha256Hex(pepper, secret);
+    const prefix = "aabbccddeeff0011";
+
+    // First call: prefix not found (miss)
+    const dbMiss = mockD1([
+      {
+        match: "FROM api_keys",
+        matchBinds: [prefix],
+        rows: [],
+        first: null,
+      },
+    ], { requireMatch: true });
+
+    await expect(
+      authenticateApiKey(dbMiss, `ph_live_${prefix}_${secret}`, pepper),
+    ).resolves.toEqual({ kind: "invalid" });
+
+    // Second call immediately after: prefix now exists (simulating key creation)
+    const dbHit = mockD1([
+      {
+        match: "FROM api_keys",
+        matchBinds: [prefix],
+        rows: [{
+          id: 99,
+          key_prefix: prefix,
+          secret_hash: secretHash,
+          name: "Just Created",
+          owner_email: null,
+          tier: "standard",
+          traffic_class: "external",
+          rate_limit_per_minute: 120,
+          is_active: 1,
+          expires_at: null,
+          created_at: 1_000,
+          updated_at: 1_000,
+          last_used_at: null,
+          last_used_route: null,
+        }],
+      },
+    ], { requireMatch: true });
+
+    // Must hit DB again (not return cached null)
+    await expect(
+      authenticateApiKey(dbHit, `ph_live_${prefix}_${secret}`, pepper),
+    ).resolves.toMatchObject({ kind: "valid" });
+  });
 });

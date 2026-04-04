@@ -322,10 +322,12 @@ async function lookupApiKeyByPrefix(db: ApiKeyDb, keyPrefix: string): Promise<Ap
     .bind(keyPrefix)
     .first<ApiKeyRow>();
 
-  apiKeyCache.set(keyPrefix, {
-    cacheExpiresAt: now + API_KEY_CACHE_TTL_MS,
-    row,
-  });
+  if (row) {
+    apiKeyCache.set(keyPrefix, {
+      cacheExpiresAt: now + API_KEY_CACHE_TTL_MS,
+      row,
+    });
+  }
   return row;
 }
 
