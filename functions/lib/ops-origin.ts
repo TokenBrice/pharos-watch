@@ -14,3 +14,14 @@ export function rejectIfNotOpsUiOrigin(
 ): Response | null {
   return new URL(request.url).origin === resolveOpsUiOrigin(env) ? null : notFound();
 }
+
+export function hasMatchingOpsUiOriginHeader(
+  request: Request,
+  env: { OPS_UI_ORIGIN?: string },
+): boolean {
+  const requestOrigin = request.headers.get("Origin")?.trim();
+  if (!requestOrigin) {
+    return false;
+  }
+  return normalizeOrigin(requestOrigin) === normalizeOrigin(resolveOpsUiOrigin(env));
+}

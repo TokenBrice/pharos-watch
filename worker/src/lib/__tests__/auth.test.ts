@@ -36,6 +36,14 @@ describe("auth helpers", () => {
     expect(result).toBe(false);
   });
 
+  it("rejects ops-api requests when the audience is configured but the team domain is missing", async () => {
+    const request = new Request("https://ops-api.pharos.watch/api/status", {
+      headers: { "Cf-Access-Jwt-Assertion": "some-jwt" },
+    });
+    const result = await hasValidAdminCredential(request, false, { CF_ACCESS_OPS_API_AUD: "test-aud" });
+    expect(result).toBe(false);
+  });
+
   it("rejects malformed admin request URLs", async () => {
     const malformed = {
       url: "not a valid url",
@@ -78,6 +86,25 @@ describe("auth helpers", () => {
       headers: { "X-Pharos-Site-Proxy-Secret": "shared-secret" },
     });
     expect(await hasValidSiteProxyCredential(request, { SITE_API_SHARED_SECRET: "shared-secret" })).toBe(true);
+  });
+
+  it("accepts the previous site-proxy secret during the overlap window", async () => {
+    const request = new Request("https://site-api.pharos.watch/api/stablecoins", {
+      headers: { "X-Pharos-Site-Proxy-Secret": "previous-secret" },
+    });
+    expect(await hasValidSiteProxyCredential(request, {
+      SITE_API_SHARED_SECRET: "shared-secret",
+      SITE_API_SHARED_SECRET_PREVIOUS: "previous-secret",
+    })).toBe(true);
+  });
+
+  it("accepts the previous site-proxy secret even if the current secret is temporarily absent", async () => {
+    const request = new Request("https://site-api.pharos.watch/api/stablecoins", {
+      headers: { "X-Pharos-Site-Proxy-Secret": "previous-secret" },
+    });
+    expect(await hasValidSiteProxyCredential(request, {
+      SITE_API_SHARED_SECRET_PREVIOUS: "previous-secret",
+    })).toBe(true);
   });
 
   it("accepts the shared site-proxy secret on worker preview URLs only", async () => {

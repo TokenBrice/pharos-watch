@@ -10,6 +10,7 @@ export interface AdminAuthEnv {
 
 export interface SiteProxyAuthEnv {
   SITE_API_SHARED_SECRET?: string;
+  SITE_API_SHARED_SECRET_PREVIOUS?: string;
 }
 
 function isOpsApiRequest(request: Request | undefined): boolean {
@@ -57,12 +58,12 @@ async function hasOpsApiAccessSignal(
   if (!isOpsApiRequest(request)) return false;
 
   const accessJwt = request?.headers.get("Cf-Access-Jwt-Assertion")?.trim();
-  if (!accessJwt || !env?.CF_ACCESS_OPS_API_AUD) return false;
+  if (!accessJwt || !env?.CF_ACCESS_OPS_API_AUD || !env.CF_ACCESS_TEAM_DOMAIN) return false;
 
   return verifyAccessJwt({
     token: accessJwt,
     aud: env.CF_ACCESS_OPS_API_AUD,
-    teamDomain: env.CF_ACCESS_TEAM_DOMAIN ?? "pharos-watch",
+    teamDomain: env.CF_ACCESS_TEAM_DOMAIN,
   });
 }
 
@@ -83,12 +84,23 @@ export async function hasValidSiteProxyCredential(
   }
 
   const expectedSecret = env?.SITE_API_SHARED_SECRET?.trim();
+  const previousSecret = env?.SITE_API_SHARED_SECRET_PREVIOUS?.trim();
   const presentedSecret = request.headers.get("X-Pharos-Site-Proxy-Secret")?.trim();
-  if (!expectedSecret || !presentedSecret) {
+  if (!presentedSecret) {
     return false;
   }
 
-  return timingSafeCompare(presentedSecret, expectedSecret);
+  const acceptedSecrets = [expectedSecret, previousSecret].filter((secret): secret is string => Boolean(secret));
+  if (acceptedSecrets.length === 0) {
+    return false;
+  }
+
+  for (const secret of acceptedSecrets) {
+    if (await timingSafeCompare(presentedSecret, secret)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**

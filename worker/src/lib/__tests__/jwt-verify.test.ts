@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { verifyAccessJwt, _resetJwksCache } from "../jwt-verify";
+import { verifyAccessJwt, _resetJwksCache } from "@shared/lib/cloudflare-access-jwt";
 
 // ── Helpers ─────────────────────────────────────────────────────────
 

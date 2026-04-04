@@ -60,6 +60,7 @@ async function run() {
   const headers = buildAccessHeaders();
   const opsUiUrl = ensureUrl(DEFAULT_OPS_UI_URL);
   const opsApiBase = ensureUrl(DEFAULT_OPS_API_BASE);
+  const opsUiOrigin = new URL(opsUiUrl).origin;
 
   console.log(`[smoke-ops] Running checks against ${opsUiUrl} and ${opsApiBase}`);
 
@@ -84,6 +85,16 @@ async function run() {
   assert(status.body && typeof status.body === "object", "Ops API /api/status did not return JSON");
   assert(typeof status.body.overallStatus === "string", "Ops API /api/status missing overallStatus");
   console.log(`[smoke-ops] OK ops API /api/status (${status.body.overallStatus})`);
+
+  const proxiedStatus = await fetchJson(new URL("/api/admin/status", opsUiOrigin).toString(), headers);
+  if (proxiedStatus.response.status !== 200) {
+    console.error(`[smoke-ops] /api/admin/status returned ${proxiedStatus.response.status}, body: ${proxiedStatus.bodyText?.slice(0, 500)}`);
+    console.error(`[smoke-ops] Response headers:`, Object.fromEntries(proxiedStatus.response.headers.entries()));
+  }
+  assert(proxiedStatus.response.status === 200, `Expected ops UI /api/admin/status 200, got ${proxiedStatus.response.status}`);
+  assert(proxiedStatus.body && typeof proxiedStatus.body === "object", "Ops UI /api/admin/status did not return JSON");
+  assert(typeof proxiedStatus.body.overallStatus === "string", "Ops UI /api/admin/status missing overallStatus");
+  console.log(`[smoke-ops] OK ops UI /api/admin/status (${proxiedStatus.body.overallStatus})`);
 
   const history = await fetchJson(new URL("/api/status-history?limit=5", opsApiBase).toString(), headers);
   assert(history.response.status === 200, `Expected ops API /api/status-history 200, got ${history.response.status}`);

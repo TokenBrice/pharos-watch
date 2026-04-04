@@ -103,6 +103,10 @@ describe("validateWorkerEnvContract", () => {
     });
   });
 
+  it("keeps the site-api overlap secret in the active worker binding set", () => {
+    expect(WORKER_ACTIVE_ENV_KEYS).toContain("SITE_API_SHARED_SECRET_PREVIOUS");
+  });
+
   it("flags auth modes beyond off when the API-key pepper is missing", () => {
     expect(validateWorkerEnvContract({
       CF_ACCESS_OPS_API_AUD: undefined,

@@ -12,13 +12,20 @@ export interface OpsAdminProxyEnv {
 }
 
 export interface OpsProxyEnvIssue {
-  code: "ops-service-token-incomplete" | "ops-access-ui-partial-config";
+  code: "ops-service-token-incomplete" | "ops-access-ui-incomplete";
   message: string;
+}
+
+export interface ResolvedPagesOpsUiAccessConfig {
+  teamDomain: string;
+  aud: string;
 }
 
 export const PAGES_FUNCTIONS_REQUIRED_ENV_KEYS = [
   "OPS_API_SERVICE_TOKEN_ID",
   "OPS_API_SERVICE_TOKEN_SECRET",
+  "CF_ACCESS_TEAM_DOMAIN",
+  "CF_ACCESS_OPS_UI_AUD",
 ] as const;
 
 export const PAGES_FUNCTIONS_OPTIONAL_ENV_KEYS = [
@@ -26,10 +33,7 @@ export const PAGES_FUNCTIONS_OPTIONAL_ENV_KEYS = [
   "OPS_API_ORIGIN",
 ] as const;
 
-export const PAGES_FUNCTIONS_RESERVED_ENV_KEYS = [
-  "CF_ACCESS_TEAM_DOMAIN",
-  "CF_ACCESS_OPS_UI_AUD",
-] as const;
+export const PAGES_FUNCTIONS_RESERVED_ENV_KEYS = [] as const;
 
 export const PAGES_FUNCTIONS_ACTIVE_ENV_KEYS = [
   ...PAGES_FUNCTIONS_REQUIRED_ENV_KEYS,
@@ -38,6 +42,23 @@ export const PAGES_FUNCTIONS_ACTIVE_ENV_KEYS = [
 
 export function resolveOpsApiOrigin(env: Pick<OpsAdminProxyEnv, "OPS_API_ORIGIN">): string {
   return resolveOrigin(env.OPS_API_ORIGIN, DEFAULT_OPS_API_ORIGIN);
+}
+
+function getConfiguredValue(value: string | undefined): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+export function resolvePagesOpsUiAccessConfig(
+  env: Pick<OpsAdminProxyEnv, "CF_ACCESS_TEAM_DOMAIN" | "CF_ACCESS_OPS_UI_AUD">,
+): ResolvedPagesOpsUiAccessConfig | null {
+  const teamDomain = getConfiguredValue(env.CF_ACCESS_TEAM_DOMAIN);
+  const aud = getConfiguredValue(env.CF_ACCESS_OPS_UI_AUD);
+  if (!teamDomain || !aud) {
+    return null;
+  }
+  return { teamDomain, aud };
 }
 
 export function validatePagesOpsProxyEnv(env: OpsAdminProxyEnv): OpsProxyEnvIssue[] {
@@ -54,10 +75,10 @@ export function validatePagesOpsProxyEnv(env: OpsAdminProxyEnv): OpsProxyEnvIssu
 
   const hasAccessTeamDomain = typeof env.CF_ACCESS_TEAM_DOMAIN === "string" && env.CF_ACCESS_TEAM_DOMAIN.trim().length > 0;
   const hasOpsUiAud = typeof env.CF_ACCESS_OPS_UI_AUD === "string" && env.CF_ACCESS_OPS_UI_AUD.trim().length > 0;
-  if (hasAccessTeamDomain !== hasOpsUiAud) {
+  if (!hasAccessTeamDomain || !hasOpsUiAud) {
     issues.push({
-      code: "ops-access-ui-partial-config",
-      message: "CF_ACCESS_TEAM_DOMAIN and CF_ACCESS_OPS_UI_AUD are reserved together for future Pages-side Access validation.",
+      code: "ops-access-ui-incomplete",
+      message: "CF_ACCESS_TEAM_DOMAIN and CF_ACCESS_OPS_UI_AUD must be configured together for Pages-side Access JWT verification.",
     });
   }
 

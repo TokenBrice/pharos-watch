@@ -1,6 +1,8 @@
 import { isAdminPath, validateEndpointMethod } from "@shared/lib/api-endpoints";
-import { rejectIfNotOpsUiOrigin } from "../../lib/ops-origin";
+import { verifyAccessJwt } from "@shared/lib/cloudflare-access-jwt";
+import { hasMatchingOpsUiOriginHeader, rejectIfNotOpsUiOrigin } from "../../lib/ops-origin";
 import {
+  resolvePagesOpsUiAccessConfig,
   resolveOpsApiOrigin,
   validatePagesOpsProxyEnv,
   type OpsAdminProxyEnv,
@@ -22,6 +24,7 @@ const FORWARDED_RESPONSE_HEADERS = [
   "X-Data-Age",
   "X-Idempotent-Replay",
 ] as const;
+const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 interface OpsAdminProxyContext {
   request: Request;
@@ -106,6 +109,34 @@ function summarizeFetchError(error: unknown): { kind: string; message: string } 
   return { kind: typeof error, message: String(error) };
 }
 
+async function requireValidOpsUiJwt(request: Request, env: OpsAdminProxyEnv): Promise<Response | null> {
+  const accessConfig = resolvePagesOpsUiAccessConfig(env);
+  if (!accessConfig) {
+    return jsonError(500, "Ops UI Access validation is not configured");
+  }
+
+  const accessJwt = request.headers.get("Cf-Access-Jwt-Assertion")?.trim();
+  if (!accessJwt) {
+    return jsonError(401, "Unauthorized");
+  }
+
+  const isValid = await verifyAccessJwt({
+    token: accessJwt,
+    aud: accessConfig.aud,
+    teamDomain: accessConfig.teamDomain,
+  });
+  return isValid ? null : jsonError(401, "Unauthorized");
+}
+
+function requireSameOriginForMutatingRequest(request: Request, env: OpsAdminProxyEnv): Response | null {
+  if (!MUTATING_METHODS.has(request.method)) {
+    return null;
+  }
+  return hasMatchingOpsUiOriginHeader(request, env)
+    ? null
+    : jsonError(403, "Forbidden");
+}
+
 export const onRequest = async (context: OpsAdminProxyContext): Promise<Response> => {
   const { request, env, params } = context;
   const requestUrl = new URL(request.url);
@@ -129,6 +160,16 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
     const response = jsonError(405, methodValidation.message);
     response.headers.set("Allow", methodValidation.allowedMethods.join(", "));
     return response;
+  }
+
+  const authError = await requireValidOpsUiJwt(request, env);
+  if (authError) {
+    return authError;
+  }
+
+  const originError = requireSameOriginForMutatingRequest(request, env);
+  if (originError) {
+    return originError;
   }
 
   const upstreamHeaders = buildUpstreamHeaders(request, env);

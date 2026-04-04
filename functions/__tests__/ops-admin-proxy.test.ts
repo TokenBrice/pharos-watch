@@ -1,17 +1,39 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { onRequest } from "../api/admin/[[path]].ts";
 
+const { verifyAccessJwt } = vi.hoisted(() => ({
+  verifyAccessJwt: vi.fn(),
+}));
+vi.mock("@shared/lib/cloudflare-access-jwt", () => ({
+  verifyAccessJwt,
+}));
+
 const BASE_ENV = {
   OPS_UI_ORIGIN: "https://ops.pharos.watch",
   OPS_API_ORIGIN: "https://ops-api.pharos.watch",
+  CF_ACCESS_TEAM_DOMAIN: "pharos-watch",
+  CF_ACCESS_OPS_UI_AUD: "ui-aud",
   OPS_API_SERVICE_TOKEN_ID: "id",
   OPS_API_SERVICE_TOKEN_SECRET: "secret",
 };
+
+function makeAuthedRequest(url: string, init: RequestInit = {}) {
+  const headers = new Headers(init.headers);
+  if (!headers.has("Cf-Access-Jwt-Assertion")) {
+    headers.set("Cf-Access-Jwt-Assertion", "valid-ui-jwt");
+  }
+  return new Request(url, {
+    ...init,
+    headers,
+  });
+}
 
 describe("ops admin proxy", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
+    verifyAccessJwt.mockReset();
+    verifyAccessJwt.mockResolvedValue(true);
   });
 
   it("rejects requests from non-ops hosts", async () => {
@@ -34,6 +56,37 @@ describe("ops admin proxy", () => {
     expect(response.status).toBe(404);
   });
 
+  it("returns 401 before proxying when the UI JWT is missing", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: new Request("https://ops.pharos.watch/api/admin/status"),
+      env: BASE_ENV,
+      params: { path: "status" },
+    });
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: "Unauthorized" });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 before proxying when the UI JWT is invalid", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    verifyAccessJwt.mockResolvedValueOnce(false);
+
+    const response = await onRequest({
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
+      env: BASE_ENV,
+      params: { path: "status" },
+    });
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: "Unauthorized" });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("enforces endpoint method rules before proxying upstream", async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
@@ -49,6 +102,39 @@ describe("ops admin proxy", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("returns 403 before proxying mutating requests without a same-origin Origin header", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/discovery-candidates/42/dismiss", { method: "POST" }),
+      env: BASE_ENV,
+      params: { path: ["discovery-candidates", "42", "dismiss"] },
+    });
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "Forbidden" });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 before proxying mutating requests with a foreign Origin header", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/discovery-candidates/42/dismiss", {
+        method: "POST",
+        headers: { Origin: "https://evil.example" },
+      }),
+      env: BASE_ENV,
+      params: { path: ["discovery-candidates", "42", "dismiss"] },
+    });
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "Forbidden" });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("allowlists shared dynamic admin routes", async () => {
     const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
       status: 200,
@@ -57,7 +143,10 @@ describe("ops admin proxy", () => {
     vi.stubGlobal("fetch", fetchSpy);
 
     const response = await onRequest({
-      request: new Request("https://ops.pharos.watch/api/admin/discovery-candidates/42/dismiss", { method: "POST" }),
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/discovery-candidates/42/dismiss", {
+        method: "POST",
+        headers: { Origin: "https://ops.pharos.watch" },
+      }),
       env: BASE_ENV,
       params: { path: ["discovery-candidates", "42", "dismiss"] },
     });
@@ -73,7 +162,7 @@ describe("ops admin proxy", () => {
 
   it("returns 500 when the service-token pair is incomplete", async () => {
     const response = await onRequest({
-      request: new Request("https://ops.pharos.watch/api/admin/status"),
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
       env: {
         ...BASE_ENV,
         OPS_API_SERVICE_TOKEN_SECRET: undefined,
@@ -85,6 +174,24 @@ describe("ops admin proxy", () => {
     expect(await response.json()).toEqual({ error: "Ops API proxy is not configured" });
   });
 
+  it("returns 500 when UI Access validation bindings are missing", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
+      env: {
+        ...BASE_ENV,
+        CF_ACCESS_OPS_UI_AUD: undefined,
+      },
+      params: { path: "status" },
+    });
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Ops UI Access validation is not configured" });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("translates Cloudflare Access redirects to 502", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(null, {
       status: 302,
@@ -92,7 +199,7 @@ describe("ops admin proxy", () => {
     })));
 
     const response = await onRequest({
-      request: new Request("https://ops.pharos.watch/api/admin/status"),
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
       env: BASE_ENV,
       params: { path: "status" },
     });
@@ -108,7 +215,7 @@ describe("ops admin proxy", () => {
     }));
 
     const response = await onRequest({
-      request: new Request("https://ops.pharos.watch/api/admin/status"),
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
       env: BASE_ENV,
       params: { path: "status" },
     });
@@ -129,7 +236,7 @@ describe("ops admin proxy", () => {
     )));
 
     const responsePromise = onRequest({
-      request: new Request("https://ops.pharos.watch/api/admin/status"),
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
       env: BASE_ENV,
       params: { path: "status" },
     });
