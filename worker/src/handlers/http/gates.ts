@@ -111,7 +111,7 @@ export async function evaluateAccessGate(
       return { isAdmin, isSiteProxy: false, apiKey: apiKeyAuth.key, requestLane: "public-api", response: null };
     }
 
-    if (authMode === "enforce") {
+    if (authMode !== "off") {
       if (apiKeyAuth.kind === "unavailable") {
         return {
           isAdmin,
@@ -121,11 +121,10 @@ export async function evaluateAccessGate(
           response: errorResponse(503, "Public API temporarily unavailable"),
         };
       }
+      if (authMode === "report-only" && apiKeyAuth.kind !== "missing") {
+        console.warn(`[public-api-auth] rejected ${apiKeyAuth.kind} request on ${url.pathname}`);
+      }
       return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: errorResponse(401, "Unauthorized") };
-    }
-
-    if (authMode === "report-only" && apiKeyAuth.kind !== "missing") {
-      console.warn(`[public-api-auth] protected request ${apiKeyAuth.kind} on ${url.pathname}`);
     }
   }
 

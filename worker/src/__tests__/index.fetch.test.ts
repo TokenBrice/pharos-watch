@@ -112,7 +112,7 @@ describe("worker.fetch", () => {
   });
 
   it("rejects POST on read-only endpoints", async () => {
-    const env = makeEnv();
+    const env = makeEnv({ PUBLIC_API_AUTH_MODE: "off" });
     const { ctx } = makeCtx();
 
     const res = await worker.fetch(
@@ -131,7 +131,7 @@ describe("worker.fetch", () => {
       headers: { "Content-Type": "application/json" },
     }));
 
-    const env = makeEnv();
+    const env = makeEnv({ PUBLIC_API_AUTH_MODE: "off" });
     const { ctx } = makeCtx();
 
     const res = await worker.fetch(
@@ -164,6 +164,7 @@ describe("worker.fetch", () => {
 
   it("applies the distributed public API rate limit before routing", async () => {
     const env = makeEnv({
+      PUBLIC_API_AUTH_MODE: "off",
       DB: mockD1([
         {
           match: "public_api_rate_limit",
@@ -193,6 +194,7 @@ describe("worker.fetch", () => {
     }));
 
     const env = makeEnv({
+      PUBLIC_API_AUTH_MODE: "off",
       DB: mockD1([
         {
           match: "public_api_rate_limit",
@@ -238,6 +240,7 @@ describe("worker.fetch", () => {
 
   it("enters a bounded emergency block after repeated distributed rate-limit failures", async () => {
     const env = makeEnv({
+      PUBLIC_API_AUTH_MODE: "off",
       DB: mockD1([
         {
           match: "INSERT INTO api_request_consumer_stats",
@@ -292,6 +295,7 @@ describe("worker.fetch", () => {
   it("writes cache on cacheable GET misses", async () => {
     const now = Math.floor(Date.now() / 1000);
     const env = makeEnv({
+      PUBLIC_API_AUTH_MODE: "off",
       DB: mockD1([
         {
           match: "cache",
@@ -318,6 +322,7 @@ describe("worker.fetch", () => {
 
   it("returns 503 for public API requests when the rate-limit salt is missing", async () => {
     const env = makeEnv({
+      PUBLIC_API_AUTH_MODE: "off",
       PUBLIC_API_RATE_LIMIT_SALT: undefined,
     });
     const { ctx } = makeCtx();
