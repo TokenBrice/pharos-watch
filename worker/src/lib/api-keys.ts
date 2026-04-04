@@ -375,7 +375,7 @@ export async function checkApiKeyRateLimit(
     `INSERT INTO api_key_rate_limit (api_key_id, bucket_start, count, last_seen_at)
      VALUES (?, ?, 1, ?)
      ON CONFLICT(api_key_id, bucket_start)
-     DO UPDATE SET count = count + 1, last_seen_at = excluded.last_seen_at
+     DO UPDATE SET count = MIN(count + 1, 2147483647), last_seen_at = excluded.last_seen_at
      RETURNING count`,
   )
     .bind(apiKeyId, bucketStart, nowSec)
