@@ -18,10 +18,17 @@ const baseConfig: NextConfig = {
 };
 
 async function devRewrites() {
+  // When SITE_API_SHARED_SECRET is configured in .env.local, route through
+  // the local dev proxy (scripts/dev-api-proxy.mjs) which injects the secret
+  // header — mimicking the production Pages Functions site-data proxy.
+  // Without the secret, fall back to the direct (unauthenticated) rewrite.
+  const proxyPort = process.env.SITE_API_SHARED_SECRET?.trim() ? 3001 : 0;
   return [
     {
       source: "/api/:path*",
-      destination: "https://api.pharos.watch/api/:path*",
+      destination: proxyPort
+        ? `http://localhost:${proxyPort}/api/:path*`
+        : "https://api.pharos.watch/api/:path*",
     },
   ];
 }

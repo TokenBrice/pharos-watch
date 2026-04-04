@@ -9,7 +9,9 @@
     "node": ">=22 <25"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "node --env-file-if-exists=.env.local scripts/dev-api-proxy.mjs & next dev",
+    "dev:next": "next dev",
+    "dev:proxy": "node --env-file-if-exists=.env.local scripts/dev-api-proxy.mjs",
     "prebuild": "tsx scripts/generate-redirects.ts",
     "build": "next build",
     "start": "next start",
