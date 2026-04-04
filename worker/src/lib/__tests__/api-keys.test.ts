@@ -145,6 +145,11 @@ describe("api key helpers", () => {
         },
         rows: [],
       },
+      {
+        match: "INSERT INTO api_key_audit_log",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
     ], { requireMatch: true });
 
     const created = await createApiKey(db, "pepper", {
@@ -194,6 +199,11 @@ describe("api key helpers", () => {
         },
         rows: [],
       },
+      {
+        match: "INSERT INTO api_key_audit_log",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
     ], { requireMatch: true });
 
     const created = await createApiKey(db, "pepper", {
@@ -231,6 +241,11 @@ describe("api key helpers", () => {
       },
       {
         match: "UPDATE api_keys",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+      {
+        match: "INSERT INTO api_key_audit_log",
         rows: [],
         runMeta: { changes: 1 },
       },
@@ -334,6 +349,11 @@ describe("api key helpers", () => {
       },
       {
         match: "UPDATE api_keys",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+      {
+        match: "INSERT INTO api_key_audit_log",
         rows: [],
         runMeta: { changes: 1 },
       },
@@ -458,5 +478,42 @@ describe("api key helpers", () => {
     await expect(
       authenticateApiKey(dbHit, `ph_live_${prefix}_${secret}`, pepper),
     ).resolves.toMatchObject({ kind: "valid" });
+  });
+
+  it("records an audit log entry when creating a key", async () => {
+    const db = mockD1([
+      {
+        match: "INSERT INTO api_keys",
+        first: {
+          id: 5,
+          key_prefix: "fedcba9876543210",
+          name: "Audited",
+          owner_email: null,
+          tier: "standard",
+          traffic_class: "external",
+          rate_limit_per_minute: 120,
+          is_active: 1,
+          expires_at: 333 + (90 * 24 * 60 * 60),
+          created_at: 333,
+          updated_at: 333,
+          last_used_at: null,
+          last_used_route: null,
+        },
+        rows: [],
+      },
+      {
+        match: "INSERT INTO api_key_audit_log",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+    ], { requireMatch: true });
+
+    const created = await createApiKey(db, "pepper", { name: "Audited" }, 333);
+    expect(created).not.toBeInstanceOf(Response);
+
+    const auditInsert = db.getHistory().find((entry) => entry.sql.includes("api_key_audit_log"));
+    expect(auditInsert).toBeDefined();
+    expect(auditInsert?.binds[0]).toBe(5);
+    expect(auditInsert?.binds[1]).toBe("created");
   });
 });

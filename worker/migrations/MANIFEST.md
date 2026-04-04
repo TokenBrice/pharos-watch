@@ -32,6 +32,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0085     | `0085_total_request_attribution.sql`            | Add total site-vs-external attribution tables and explicit API key traffic classification      |
 | 0086     | `0086_treasury_stable_exposure_history.sql`     | Add daily treasury stable exposure history table for per-entity snapshot auditing              |
 | 0087     | `0087_api_key_expiry.sql`                       | Add nullable API key expiry timestamps for default-expiring and explicit non-expiring keys     |
+| 0088     | `0088_api_key_audit_log.sql`                    | Add API key audit log table for tracking create/update/deactivate/rotate mutations             |
 
 ## Known Anomalies
 

@@ -432,6 +432,23 @@ export async function recordApiKeyUsage(
     .run();
 }
 
+export type ApiKeyAuditAction = "created" | "updated" | "deactivated" | "rotated";
+
+export async function recordApiKeyAudit(
+  db: ApiKeyDb,
+  apiKeyId: number,
+  action: ApiKeyAuditAction,
+  detail?: Record<string, unknown>,
+  nowSec = getNowSec(),
+): Promise<void> {
+  await db.prepare(
+    `INSERT INTO api_key_audit_log (api_key_id, action, actor, detail_json, created_at)
+     VALUES (?, ?, 'admin', ?, ?)`,
+  )
+    .bind(apiKeyId, action, detail ? JSON.stringify(detail) : null, nowSec)
+    .run();
+}
+
 function normalizeCreateInput(body: Record<string, unknown>): ApiKeyCreateRequest | Response {
   const name = normalizeRequiredName(body.name);
   if (name instanceof Response) {
@@ -667,6 +684,7 @@ export async function createApiKey(
   }
 
   clearApiKeyCache(material.keyPrefix);
+  await recordApiKeyAudit(db, createdRow.id, "created", { name: parsed.name, tier: parsed.tier ?? "standard" }, nowSec);
   return {
     key: mapRowToSummary(createdRow),
     token: material.token,
@@ -717,6 +735,7 @@ export async function updateApiKey(
 
   clearApiKeyCache(existing.key_prefix);
   apiKeyLastUsageUpdateById.delete(id);
+  await recordApiKeyAudit(db, id, "updated", parsed as Record<string, unknown>, nowSec);
   const updated = await selectPublicApiKeyById(db, id);
   if (!updated) {
     return errorResponse(500, "Failed to update API key");
@@ -743,6 +762,7 @@ export async function deactivateApiKey(
 
   clearApiKeyCache(existing.key_prefix);
   apiKeyLastUsageUpdateById.delete(id);
+  await recordApiKeyAudit(db, id, "deactivated", undefined, nowSec);
   const updated = await selectPublicApiKeyById(db, id);
   if (!updated) {
     return errorResponse(500, "Failed to deactivate API key");
@@ -784,6 +804,7 @@ export async function rotateApiKey(
   clearApiKeyCache(existing.key_prefix);
   clearApiKeyCache(material.keyPrefix);
   apiKeyLastUsageUpdateById.delete(id);
+  await recordApiKeyAudit(db, id, "rotated", undefined, nowSec);
   const updated = await selectPublicApiKeyById(db, id);
   if (!updated) {
     return errorResponse(500, "Failed to rotate API key");
