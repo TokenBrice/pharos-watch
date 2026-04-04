@@ -126,6 +126,26 @@ describe("auth helpers", () => {
     expect(await hasValidSiteProxyCredential(undefined, { SITE_API_SHARED_SECRET: "shared-secret" })).toBe(false);
   });
 
+  it("rejects site-proxy auth when no usable secret is configured", async () => {
+    const request = new Request("https://site-api.pharos.watch/api/stablecoins", {
+      headers: { "X-Pharos-Site-Proxy-Secret": "presented-secret" },
+    });
+    expect(await hasValidSiteProxyCredential(request, {
+      SITE_API_SHARED_SECRET: " ",
+      SITE_API_SHARED_SECRET_PREVIOUS: " ",
+    })).toBe(false);
+  });
+
+  it("rejects site-proxy auth when the presented secret matches neither current nor previous", async () => {
+    const request = new Request("https://site-api.pharos.watch/api/stablecoins", {
+      headers: { "X-Pharos-Site-Proxy-Secret": "wrong-secret" },
+    });
+    expect(await hasValidSiteProxyCredential(request, {
+      SITE_API_SHARED_SECRET: "shared-secret",
+      SITE_API_SHARED_SECRET_PREVIOUS: "previous-secret",
+    })).toBe(false);
+  });
+
   it("rejects malformed site-proxy request URLs", async () => {
     const malformed = {
       url: "not a valid url",
