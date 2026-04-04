@@ -73,12 +73,18 @@ async function getSiteDataResolver() {
   return siteDataResolverPromise;
 }
 
+function getProxyApiKey() {
+  return (process.env.STATIC_EXPORT_API_KEY ?? "").trim();
+}
+
 async function proxyApiRequest(targetUrl, method, headers = {}) {
+  const apiKey = getProxyApiKey();
   return fetch(targetUrl, {
     method,
     headers: {
       Accept: "application/json",
       "User-Agent": "pharos-static-export-smoke/1.0",
+      ...(apiKey ? { "X-API-Key": apiKey } : {}),
       ...headers,
     },
   });

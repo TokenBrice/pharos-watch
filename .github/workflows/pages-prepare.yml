@@ -71,6 +71,7 @@ jobs:
           STATIC_EXPORT_API_BASE: ${{ inputs.api_base_url != '' && inputs.api_base_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
           STATIC_EXPORT_SITE_API_BASE: ${{ inputs.api_base_url != '' && inputs.api_base_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
           STATIC_EXPORT_SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
+          STATIC_EXPORT_API_KEY: ${{ secrets.SMOKE_API_KEY }}
           STATIC_EXPORT_HOST: 127.0.0.1
           STATIC_EXPORT_PORT: "4173"
         run: |
