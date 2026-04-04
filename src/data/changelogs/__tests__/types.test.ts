@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ChangelogEntry, CommitRef, SummaryItem } from "../types";
+import type { ChangelogEntry } from "../types";
 
 describe("ChangelogEntry type", () => {
   it("accepts a well-formed entry", () => {
