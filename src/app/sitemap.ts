@@ -205,6 +205,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.4,
     },
     {
+      url: `${SITE_URL}/changelog/`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.5,
+    },
+    {
       url: `${SITE_URL}/about/`,
       lastModified: new Date(LAST_EDITED["/about/"]!),
       changeFrequency: "monthly",
