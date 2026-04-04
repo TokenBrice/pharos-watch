@@ -124,6 +124,11 @@ describe("api key handlers", () => {
         },
         rows: [],
       },
+      {
+        match: "INSERT INTO api_key_audit_log",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
     ], { requireMatch: true });
 
     vi.useFakeTimers();
@@ -172,6 +177,11 @@ describe("api key handlers", () => {
       },
       {
         match: "UPDATE api_keys",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+      {
+        match: "INSERT INTO api_key_audit_log",
         rows: [],
         runMeta: { changes: 1 },
       },
@@ -239,6 +249,11 @@ describe("api key handlers", () => {
       },
       {
         match: "UPDATE api_keys",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+      {
+        match: "INSERT INTO api_key_audit_log",
         rows: [],
         runMeta: { changes: 1 },
       },
