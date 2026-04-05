@@ -4379,7 +4379,88 @@
         "risk": "low",
         "coinId": "usdt-tether"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "evm-branch-balances",
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "eusd-electronic-usd",
+      "display": {
+        "url": "https://app.reserve.org/ethereum/token/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f/overview",
+        "label": "Reserve Protocol"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "branches": [
+          {
+            "name": "Static Aave USDC (saEthUSDC) — Primary BM",
+            "holder": "0xF014FEF41cCB703975827C8569a3f0940cFD80A4",
+            "token": {
+              "chain": "ethereum",
+              "address": "0x0adc69041a2b086f8772acce2a754f410f211bed",
+              "decimals": 6
+            },
+            "risk": "low",
+            "coinId": "usdc-circle",
+            "depType": "wrapper"
+          },
+          {
+            "name": "Static Aave USDC (saEthUSDC) — Secondary BM",
+            "holder": "0x4B0b3d40b0623f3a9eac09d2E01F592710ee59F0",
+            "token": {
+              "chain": "ethereum",
+              "address": "0x0adc69041a2b086f8772acce2a754f410f211bed",
+              "decimals": 6
+            },
+            "risk": "low",
+            "coinId": "usdc-circle",
+            "depType": "wrapper"
+          },
+          {
+            "name": "Wrapped Compound USDC (wcUSDCv3) — Primary BM",
+            "holder": "0xF014FEF41cCB703975827C8569a3f0940cFD80A4",
+            "token": {
+              "chain": "ethereum",
+              "address": "0x27f2f159fe990ba83d57f39fd69661764bebf37a",
+              "decimals": 6
+            },
+            "risk": "low",
+            "coinId": "usdc-circle",
+            "depType": "wrapper"
+          },
+          {
+            "name": "Wrapped Compound USDC (wcUSDCv3) — Secondary BM",
+            "holder": "0x4B0b3d40b0623f3a9eac09d2E01F592710ee59F0",
+            "token": {
+              "chain": "ethereum",
+              "address": "0x27f2f159fe990ba83d57f39fd69661764bebf37a",
+              "decimals": 6
+            },
+            "risk": "low",
+            "coinId": "usdc-circle",
+            "depType": "wrapper"
+          },
+          {
+            "name": "Wrapped Compound USDT (wcUSDTv3)",
+            "holder": "0xF014FEF41cCB703975827C8569a3f0940cFD80A4",
+            "token": {
+              "chain": "ethereum",
+              "address": "0xeb74ec1d4c1dab412d5d6674f6833fd19d3118ce",
+              "decimals": 6
+            },
+            "risk": "low",
+            "coinId": "usdt-tether",
+            "depType": "wrapper"
+          }
+        ]
+      }
+    }
   },
   {
     "id": "buck-bucket-protocol",
