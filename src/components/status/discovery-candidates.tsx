@@ -9,11 +9,6 @@ import type { DiscoveryCandidate, StatusSectionError } from "@shared/types";
 import { useState } from "react";
 import { formatCurrency, formatElapsedSeconds } from "@shared/lib/format";
 
-function formatMcap(mcap: number | null): string {
-  if (mcap == null) return "—";
-  return formatCurrency(mcap, 1);
-}
-
 function SourceBadge({ source }: { source: string }) {
   const colors: Record<string, string> = {
     both: "border-green-500/40 text-green-600 dark:text-green-400",
@@ -53,7 +48,7 @@ export function DiscoveryCandidatesCard({
           <p className="text-sm text-muted-foreground">
             {error
               ? `Discovery candidate loader failed: ${error.message}`
-              : `No untracked stablecoins above ${formatMcap(DISCOVERY_MIN_MCAP)} found.`}
+              : `No untracked stablecoins above ${formatCurrency(DISCOVERY_MIN_MCAP, 1)} found.`}
           </p>
         </CardContent>
       </Card>
@@ -103,7 +98,7 @@ export function DiscoveryCandidatesCard({
               <SourceBadge source={c.source} />
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              <span className="font-mono text-xs">{formatMcap(c.marketCap)}</span>
+              <span className="font-mono text-xs">{c.marketCap == null ? "—" : formatCurrency(c.marketCap, 1)}</span>
               <span className="text-[10px] text-muted-foreground">{c.daysSeen}d seen</span>
               <span className="text-[10px] text-muted-foreground">
                 seen {formatElapsedSeconds(Math.max(0, nowSeconds - c.lastSeen))} ago

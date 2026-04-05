@@ -3,27 +3,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { LiquidityHealth, StatusSectionError } from "@shared/types";
 import { formatCurrency } from "@shared/lib/format";
+import { StatusMetricCard } from "./status-metric-card";
 
 function guardTone(active: boolean): string {
   return active ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground";
-}
-
-function Metric({
-  label,
-  value,
-  subtext,
-}: {
-  label: string;
-  value: string;
-  subtext?: string;
-}) {
-  return (
-    <div className="rounded-lg border border-border/50 p-3">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="font-mono text-xl font-bold">{value}</div>
-      {subtext ? <div className="text-xs text-muted-foreground">{subtext}</div> : null}
-    </div>
-  );
 }
 
 export function LiquidityHealthCard({
@@ -63,7 +46,7 @@ export function LiquidityHealthCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <Metric
+          <StatusMetricCard
             label="Covered Coins"
             value={String(health.currentCoverage)}
             subtext={
@@ -72,7 +55,7 @@ export function LiquidityHealthCard({
                 : undefined
             }
           />
-          <Metric
+          <StatusMetricCard
             label="Global DEX TVL"
             value={health.currentGlobalTvl != null ? formatCurrency(health.currentGlobalTvl) : "—"}
             subtext={
@@ -81,7 +64,7 @@ export function LiquidityHealthCard({
                 : undefined
             }
           />
-          <Metric
+          <StatusMetricCard
             label="Top 10 Covered TVL"
             value={health.currentTop10CoveredTvl != null ? formatCurrency(health.currentTop10CoveredTvl) : "—"}
             subtext={
@@ -90,7 +73,7 @@ export function LiquidityHealthCard({
                 : undefined
             }
           />
-          <Metric
+          <StatusMetricCard
             label="Failed Sources"
             value={String(health.failedSources.length)}
             subtext={health.failedSources.length > 0 ? health.failedSources.join(", ") : "none"}

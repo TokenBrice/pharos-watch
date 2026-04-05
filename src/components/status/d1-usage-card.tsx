@@ -1,6 +1,7 @@
 import { formatElapsedSeconds } from "@shared/lib/format";
 import type { D1UsageSummary, StatusSectionError } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusMetricCard } from "./status-metric-card";
 
 function formatBytes(value: number | null): string {
   if (value == null || !Number.isFinite(value) || value < 0) return "—";
@@ -18,24 +19,6 @@ function formatBytes(value: number | null): string {
 function formatCount(value: number | null): string {
   if (value == null || !Number.isFinite(value)) return "—";
   return Math.round(value).toLocaleString();
-}
-
-function Metric({
-  label,
-  value,
-  subtext,
-}: {
-  label: string;
-  value: string;
-  subtext?: string;
-}) {
-  return (
-    <div className="rounded-lg border border-border/50 p-3">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="font-mono text-xl font-bold">{value}</div>
-      {subtext ? <div className="text-xs text-muted-foreground">{subtext}</div> : null}
-    </div>
-  );
 }
 
 export function D1UsageCard({
@@ -78,22 +61,22 @@ export function D1UsageCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <Metric
+          <StatusMetricCard
             label="Database Size"
             value={formatBytes(summary.databaseSizeBytes)}
             subtext={summary.numTables != null ? `${formatCount(summary.numTables)} tables` : undefined}
           />
-          <Metric
+          <StatusMetricCard
             label="Rows Read (24h)"
             value={formatCount(summary.rowsRead24h)}
             subtext={`${formatCount(summary.readQueries24h)} read queries`}
           />
-          <Metric
+          <StatusMetricCard
             label="Rows Written (24h)"
             value={formatCount(summary.rowsWritten24h)}
             subtext={`${formatCount(summary.writeQueries24h)} write queries`}
           />
-          <Metric
+          <StatusMetricCard
             label="Replication"
             value={summary.readReplicationMode ?? "—"}
             subtext={summary.region ?? undefined}

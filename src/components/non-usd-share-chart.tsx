@@ -1,11 +1,10 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { AreaChart, Area } from "recharts";
-import { CHART_DRAW_IN, CHART_NO_ANIM } from "@/lib/chart-animation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
+import { useChartShell } from "@/hooks/use-chart-shell";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { formatCurrency, formatChartDate, formatPercent } from "@shared/lib/format";
@@ -52,12 +51,7 @@ function ShareTooltip({ active, payload, label }: ShareTooltipProps) {
 
 export function NonUsdShareChart() {
   const { data, isLoading } = useNonUsdShare();
-  const [shouldAnimate, setShouldAnimate] = useState(true);
-  const animProps = shouldAnimate ? CHART_DRAW_IN : CHART_NO_ANIM;
-  const handleAnimationEnd = useCallback(() => {
-    setShouldAnimate(false);
-  }, []);
-  const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
+  const { animProps, handleAnimationEnd, chartContainerRef, isChartReady, width, height } = useChartShell<HTMLDivElement>();
 
   const { chartData, latestShare, latestNonUsd, latestTotal } = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0)

@@ -1,14 +1,13 @@
 "use client";
 
-import { useMemo, useState, useRef, useCallback } from "react";
-import { CHART_DRAW_IN, CHART_NO_ANIM } from "@/lib/chart-animation";
+import { useMemo, useRef, useCallback } from "react";
 import { AreaChart, Area, ReferenceArea, ReferenceLine } from "recharts";
 import { Camera } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { downloadChartPng } from "@/lib/chart-export";
 import { ChartSkeleton } from "@/components/chart-skeleton";
-import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
+import { useChartShell } from "@/hooks/use-chart-shell";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
@@ -148,17 +147,12 @@ export function ScoreChart({
   showHeader?: boolean;
 }) {
   const chartRef = useRef<HTMLDivElement>(null);
-  const [shouldAnimate, setShouldAnimate] = useState(true);
-  const animProps = shouldAnimate ? CHART_DRAW_IN : CHART_NO_ANIM;
-  const handleAnimationEnd = useCallback(() => {
-    setShouldAnimate(false);
-  }, []);
   const handlePngExport = useCallback(() => {
     downloadChartPng(chartRef, "pharos-psi-history");
   }, []);
   const { range, setRange, filteredData, options } = useTimeRangeFilter(data, "ts");
   const isMobile = useIsMobile();
-  const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
+  const { animProps, handleAnimationEnd, chartContainerRef, isChartReady, width, height } = useChartShell<HTMLDivElement>();
 
   /* Hide overlapping event labels when zoomed into a tight range */
   const visibleEvents = useMemo(() => {

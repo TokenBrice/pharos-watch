@@ -16,11 +16,6 @@ import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 import { scoreToColorClass } from "@/lib/severity-colors";
 
-function formatCapacityUsd(value: number | null): string | null {
-  if (value == null || !Number.isFinite(value) || value <= 0) return null;
-  return formatCurrency(value, 1);
-}
-
 /** Full badge treatment (border + bg + text) for the composite score */
 function scoreToneClass(score: number | null): string {
   return scoreToColorClass(score, [
@@ -125,7 +120,12 @@ function getCapacitySummary(entry: RedemptionBackstopEntry): {
   headline: string;
   detail: string;
 } {
-  const capacityUsd = formatCapacityUsd(entry.immediateCapacityUsd);
+  const capacityUsd =
+    entry.immediateCapacityUsd != null
+    && Number.isFinite(entry.immediateCapacityUsd)
+    && entry.immediateCapacityUsd > 0
+      ? formatCurrency(entry.immediateCapacityUsd, 1)
+      : null;
   const capacityRatio =
     entry.immediateCapacityRatio != null && Number.isFinite(entry.immediateCapacityRatio)
       ? `${(entry.immediateCapacityRatio * 100).toFixed(1)}% of supply`

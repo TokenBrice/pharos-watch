@@ -1,14 +1,13 @@
 "use client";
 
-import { useMemo, useRef, useState, useCallback } from "react";
-import { CHART_DRAW_IN, CHART_NO_ANIM } from "@/lib/chart-animation";
+import { useMemo, useRef, useCallback } from "react";
 import { AreaChart, Area } from "recharts";
 import { Camera } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { downloadChartPng } from "@/lib/chart-export";
 import { ChartSkeleton } from "@/components/chart-skeleton";
-import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
+import { useChartShell } from "@/hooks/use-chart-shell";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@shared/lib/format";
@@ -21,11 +20,6 @@ import { CHART_SLATE, USDT_GREEN, USDC_BLUE, SKY_YELLOW } from "@/lib/chart-colo
 
 export function TotalMcapChart() {
   const chartRef = useRef<HTMLDivElement>(null);
-  const [shouldAnimate, setShouldAnimate] = useState(true);
-  const animProps = shouldAnimate ? CHART_DRAW_IN : CHART_NO_ANIM;
-  const handleAnimationEnd = useCallback(() => {
-    setShouldAnimate(false);
-  }, []);
   const handlePngExport = useCallback(() => {
     downloadChartPng(chartRef, "pharos-total-mcap");
   }, []);
@@ -34,7 +28,7 @@ export function TotalMcapChart() {
   const { data: usdcHistory } = useStablecoinDetailHistory("usdc-circle");
   const { data: usdsHistory } = useStablecoinDetailHistory("usds-sky");
   const { data: daiHistory } = useStablecoinDetailHistory("dai-makerdao");
-  const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
+  const { animProps, handleAnimationEnd, chartContainerRef, isChartReady, width, height } = useChartShell<HTMLDivElement>();
 
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
