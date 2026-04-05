@@ -39,9 +39,9 @@ export function StatusSection({
   children,
 }: {
   id: DashboardSectionId;
-  kicker: string;
+  kicker?: string;
   title: string;
-  description: string;
+  description?: string;
   accentClassName: string;
   summary?: ReactNode;
   children: ReactNode;
@@ -54,13 +54,11 @@ export function StatusSection({
         accentClassName,
       )}
     >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-2">
-          <p className="pharos-kicker">{kicker}</p>
-          <div className="space-y-1">
-            <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-[1.35rem]">{title}</h2>
-            <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{description}</p>
-          </div>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-1">
+          {kicker && <p className="pharos-kicker">{kicker}</p>}
+          <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-[1.35rem]">{title}</h2>
+          {description && <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{description}</p>}
         </div>
         {summary ? <div className="flex flex-wrap gap-2 lg:justify-end">{summary}</div> : null}
       </div>

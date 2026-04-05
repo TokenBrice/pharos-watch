@@ -26,9 +26,8 @@ export function PublicTransitionTimeline({
   isLoading,
 }: PublicTransitionTimelineProps) {
   return (
-    <article className="rounded-[1.35rem] border border-black/7 bg-[linear-gradient(180deg,oklch(0.995_0.004_248_/_0.96),oklch(0.972_0.01_248_/_0.99))] p-5 shadow-[inset_0_1px_0_oklch(1_0_0_/0.72),0_16px_36px_oklch(0_0_0_/0.08)] dark:border-white/10 dark:bg-[linear-gradient(180deg,oklch(0.16_0.014_248_/_0.78),oklch(0.12_0.01_248_/_0.9))] dark:shadow-[0_16px_36px_oklch(0_0_0_/0.12)]">
+    <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-base font-semibold tracking-tight text-foreground">Status Changes</h3>
         <div className="flex flex-wrap gap-2">
           {HISTORY_WINDOWS.map((option) => (
             <button
@@ -91,6 +90,6 @@ export function PublicTransitionTimeline({
           </div>
         )}
       </div>
-    </article>
+    </div>
   );
 }

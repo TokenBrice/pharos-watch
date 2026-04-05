@@ -2,7 +2,6 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
-import { formatElapsedSeconds } from "@shared/lib/format";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
 import { CircuitBreakerTable } from "@/components/status/circuit-breaker-table";
@@ -22,31 +21,21 @@ import {
 } from "@/lib/status/public-status";
 
 function PublicSignalCard({
-  kicker,
   title,
   badges,
-  description,
   children,
 }: {
-  kicker: string;
   title: string;
   badges?: ReactNode;
-  description: string;
   children: ReactNode;
 }) {
   return (
-    <article className="rounded-[1.35rem] border border-black/7 bg-[linear-gradient(180deg,oklch(0.995_0.004_248_/_0.96),oklch(0.972_0.01_248_/_0.99))] p-5 shadow-[inset_0_1px_0_oklch(1_0_0_/0.72),0_16px_36px_oklch(0_0_0_/0.08)] dark:border-white/10 dark:bg-[linear-gradient(180deg,oklch(0.16_0.014_248_/_0.78),oklch(0.12_0.01_248_/_0.9))] dark:shadow-[0_16px_36px_oklch(0_0_0_/0.12)]">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-2">
-          <p className="pharos-kicker">{kicker}</p>
-          <div className="space-y-2">
-            <h3 className="text-xl font-semibold tracking-tight text-foreground">{title}</h3>
-            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p>
-          </div>
-        </div>
+    <article className="rounded-xl border border-border/50 bg-card/60 p-5 dark:bg-card/30">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-base font-semibold tracking-tight text-foreground">{title}</h3>
         {badges ? <div className="flex flex-wrap gap-2">{badges}</div> : null}
       </div>
-      <div className="mt-5 space-y-4">{children}</div>
+      <div className="mt-4 space-y-4">{children}</div>
     </article>
   );
 }
@@ -165,10 +154,6 @@ export default function StatusClient() {
   const probeSummary = buildBrowserProbeSummary(probes, probesUpdatedAt ?? 0);
   const openCircuits = Object.values(healthData.circuits).filter((circuit) => circuit.state === "open").length;
   const halfOpenCircuits = Object.values(healthData.circuits).filter((circuit) => circuit.state === "half-open").length;
-  const lastSuccessfulMintBurnSyncAge =
-    healthData.mintBurn.sync.lastSuccessfulSyncAt != null
-      ? formatElapsedSeconds(Math.max(0, healthData.timestamp - healthData.mintBurn.sync.lastSuccessfulSyncAt))
-      : "—";
   const impactedPublicSurfaces = getImpactedPublicSurfaces(healthData);
   const blacklistStatus = getBlacklistGapStatus({
     missingRatio: healthData.blacklist.missingRatio,
@@ -196,32 +181,39 @@ export default function StatusClient() {
           impactedCacheLanes={worstCache.impactedCount}
           openCircuits={openCircuits}
           halfOpenCircuits={halfOpenCircuits}
-          lastSuccessfulMintBurnSyncAge={lastSuccessfulMintBurnSyncAge}
           onRefresh={handleRefresh}
+        />
+
+        <UptimeBar
+          transitions={historyData?.transitions ?? []}
+          currentStatus={historyData?.currentStatus ?? healthData.status}
+          lastChangedAt={historyData?.lastChangedAt ?? null}
         />
 
         <NoticeRail notices={notices} />
 
         <StatusSection
           id="overview"
-          kicker="Current Picture"
           title="Public service summary"
-          description="The public read path reduced to the signals most likely to affect downstream trust."
           accentClassName="border-l-frost-blue bg-[linear-gradient(180deg,oklch(0.988_0.008_248_/_0.98),oklch(0.956_0.012_248_/_0.99))] shadow-[0_18px_40px_oklch(0_0_0_/0.08)] dark:bg-[linear-gradient(180deg,rgba(11,18,32,0.88),rgba(4,10,20,0.94))] dark:shadow-[0_18px_40px_oklch(0_0_0_/0.14)]"
           summary={
             <>
               <SummaryBadge label="Status" value={statusTone.label} className={statusTone.badgeClassName} />
-              <SummaryBadge
-                label="Blacklist Gaps"
-                value={String(healthData.blacklist.missingAmounts)}
-                className={blacklistStatus !== "healthy" ? getStatusTone(blacklistStatus).badgeClassName : undefined}
-              />
-              <SummaryBadge label="Major Mint/Burn Stale" value={String(healthData.mintBurn.majorStaleCount)} />
-              {telegramSummary && (
+              {blacklistStatus !== "healthy" && (
+                <SummaryBadge
+                  label="Blacklist Gaps"
+                  value={String(healthData.blacklist.missingAmounts)}
+                  className={getStatusTone(blacklistStatus).badgeClassName}
+                />
+              )}
+              {healthData.mintBurn.majorStaleCount > 0 && (
+                <SummaryBadge label="Major Mint/Burn Stale" value={String(healthData.mintBurn.majorStaleCount)} className={getStatusTone("degraded").badgeClassName} />
+              )}
+              {telegramSummary && telegramSummary.pendingDeliveries > 0 && (
                 <SummaryBadge
                   label="Alert Queue"
                   value={String(telegramSummary.pendingDeliveries)}
-                  className={telegramSummary.pendingDeliveries > 0 ? getStatusTone("degraded").badgeClassName : undefined}
+                  className={getStatusTone("degraded").badgeClassName}
                 />
               )}
             </>
@@ -229,19 +221,18 @@ export default function StatusClient() {
         >
           <div className="grid gap-5 xl:grid-cols-2">
             <PublicSignalCard
-              kicker="Sync Watch"
               title="Mint/Burn Sync"
-              description="Critical mint/burn writer freshness and latest run health determine whether the public flows surface is current."
               badges={
-                <div className="flex flex-wrap gap-2">
-                  <SummaryBadge
-                    label="Writer"
-                    value={mintBurnStatus}
-                    className={getStatusTone(mintBurnStatus).badgeClassName}
-                  />
-                  <SummaryBadge label="Freshness" value={healthData.mintBurn.sync.freshnessStatus} />
-                  <SummaryBadge label="Major Stale" value={String(healthData.mintBurn.majorStaleCount)} />
-                </div>
+                mintBurnStatus !== "healthy" || healthData.mintBurn.majorStaleCount > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {mintBurnStatus !== "healthy" && (
+                      <SummaryBadge label="Writer" value={mintBurnStatus} className={getStatusTone(mintBurnStatus).badgeClassName} />
+                    )}
+                    {healthData.mintBurn.majorStaleCount > 0 && (
+                      <SummaryBadge label="Major Stale" value={String(healthData.mintBurn.majorStaleCount)} className={getStatusTone("degraded").badgeClassName} />
+                    )}
+                  </div>
+                ) : undefined
               }
             >
               <p className="text-sm leading-relaxed text-muted-foreground">
@@ -249,13 +240,13 @@ export default function StatusClient() {
                   ?? "Critical mint/burn lanes are within their expected freshness and run-health windows."}
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-[1rem] border border-border/60 bg-background/78 p-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.58)] dark:bg-background/35 dark:shadow-none">
+                <div className="rounded-lg border border-border/40 bg-background/60 p-3 dark:bg-background/20">
                   <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Last Successful Sync</div>
                   <div className="mt-2 font-mono text-sm text-foreground">
                     {formatTimestampSeconds(healthData.mintBurn.sync.lastSuccessfulSyncAt)}
                   </div>
                 </div>
-                <div className="rounded-[1rem] border border-border/60 bg-background/78 p-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.58)] dark:bg-background/35 dark:shadow-none">
+                <div className="rounded-lg border border-border/40 bg-background/60 p-3 dark:bg-background/20">
                   <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Latest Hourly Sample</div>
                   <div className="mt-2 font-mono text-sm text-foreground">
                     {formatTimestampSeconds(healthData.mintBurn.latestHourlyTs)}
@@ -270,25 +261,23 @@ export default function StatusClient() {
             </PublicSignalCard>
 
             <PublicSignalCard
-              kicker="Data Integrity"
               title="Blacklist Ingestion"
-              description="Blacklist amount gaps stay visible here, but only recent or high-ratio gaps should escalate the public health signal."
               badges={
-                <div className="flex flex-wrap gap-2">
-                  <SummaryBadge
-                    label="Missing Amounts"
-                    value={String(healthData.blacklist.missingAmounts)}
-                    className={blacklistStatus !== "healthy" ? getStatusTone(blacklistStatus).badgeClassName : undefined}
-                  />
-                  <SummaryBadge label="Tracked Events" value={String(healthData.blacklist.totalEvents)} />
-                  <SummaryBadge label="Recent Window" value={`${blacklistWindowHours}h`} />
-                </div>
+                blacklistStatus !== "healthy" ? (
+                  <div className="flex flex-wrap gap-2">
+                    <SummaryBadge
+                      label="Missing Amounts"
+                      value={String(healthData.blacklist.missingAmounts)}
+                      className={getStatusTone(blacklistStatus).badgeClassName}
+                    />
+                  </div>
+                ) : undefined
               }
             >
               <p className="text-sm leading-relaxed text-muted-foreground">
                 Missing blacklist amounts surface here because they directly affect public data quality and downstream risk calculations.
               </p>
-              <div className="rounded-[1rem] border border-border/60 bg-background/78 p-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.58)] dark:bg-background/35 dark:shadow-none">
+              <div className="rounded-lg border border-border/40 bg-background/60 p-3 dark:bg-background/20">
                 <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Public Health Interpretation</div>
                 <div className="mt-2 leading-relaxed text-foreground">
                   {healthData.blacklist.missingAmounts > 0
@@ -310,33 +299,26 @@ export default function StatusClient() {
 
           {telegramSummary && (
             <PublicSignalCard
-              kicker="Alert Delivery"
               title="Telegram Bot Health"
-              description="Aggregate delivery stats for the Pharos Telegram alert bot. Detailed dispatch telemetry is on the operator admin page."
               badges={
-                <div className="flex flex-wrap gap-2">
-                  <SummaryBadge label="Subscribers" value={String(telegramSummary.totalChats)} />
-                  <SummaryBadge
-                    label="Pending"
-                    value={String(telegramSummary.pendingDeliveries)}
-                    className={telegramSummary.pendingDeliveries > 0 ? getStatusTone("degraded").badgeClassName : undefined}
-                  />
-                  {telegramSummary.lastDispatchStatus && (
-                    <SummaryBadge
-                      label="Last Dispatch"
-                      value={telegramSummary.lastDispatchStatus}
-                      className={telegramSummary.lastDispatchStatus !== "ok" ? getStatusTone("stale").badgeClassName : undefined}
-                    />
-                  )}
-                </div>
+                telegramSummary.pendingDeliveries > 0 || (telegramSummary.lastDispatchStatus && telegramSummary.lastDispatchStatus !== "ok") ? (
+                  <div className="flex flex-wrap gap-2">
+                    {telegramSummary.pendingDeliveries > 0 && (
+                      <SummaryBadge label="Pending" value={String(telegramSummary.pendingDeliveries)} className={getStatusTone("degraded").badgeClassName} />
+                    )}
+                    {telegramSummary.lastDispatchStatus && telegramSummary.lastDispatchStatus !== "ok" && (
+                      <SummaryBadge label="Last Dispatch" value={telegramSummary.lastDispatchStatus} className={getStatusTone("stale").badgeClassName} />
+                    )}
+                  </div>
+                ) : undefined
               }
             >
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-[1rem] border border-border/60 bg-background/78 p-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.58)] dark:bg-background/35 dark:shadow-none">
+                <div className="rounded-lg border border-border/40 bg-background/60 p-3 dark:bg-background/20">
                   <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Subscribers</div>
                   <div className="mt-2 font-mono text-sm text-foreground">{telegramSummary.totalChats} chats registered</div>
                 </div>
-                <div className="rounded-[1rem] border border-border/60 bg-background/78 p-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.58)] dark:bg-background/35 dark:shadow-none">
+                <div className="rounded-lg border border-border/40 bg-background/60 p-3 dark:bg-background/20">
                   <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Last Dispatch</div>
                   <div className="mt-2 font-mono text-sm text-foreground">
                     {telegramSummary.lastDispatchAt
@@ -354,19 +336,17 @@ export default function StatusClient() {
           )}
 
           <PublicSignalCard
-            kicker="Surface Impact"
-            title="Which public surfaces are affected"
-            description="This translates the raw health signals into the public routes and read paths most likely to be misleading right now."
+            title="Impacted public surfaces"
             badges={
-              <div className="flex flex-wrap gap-2">
-                <SummaryBadge label="Impacted Surfaces" value={String(impactedPublicSurfaces.length)} />
-              </div>
+              impactedPublicSurfaces.length > 0 ? (
+                <SummaryBadge label="Impacted Surfaces" value={String(impactedPublicSurfaces.length)} className={getStatusTone("degraded").badgeClassName} />
+              ) : undefined
             }
           >
             {impactedPublicSurfaces.length > 0 ? (
               <div className="grid gap-3 lg:grid-cols-2">
                 {impactedPublicSurfaces.map((surface) => (
-                  <div key={surface.id} className="rounded-[1rem] border border-border/60 bg-background/78 p-3 shadow-[inset_0_1px_0_oklch(1_0_0_/0.58)] dark:bg-background/35 dark:shadow-none">
+                  <div key={surface.id} className="rounded-lg border border-border/40 bg-background/60 p-3 dark:bg-background/20">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="text-sm font-medium text-foreground">{surface.title}</div>
                       <SummaryBadge
@@ -380,7 +360,7 @@ export default function StatusClient() {
                 ))}
               </div>
             ) : (
-              <div className="rounded-[1rem] border border-border/60 bg-background/78 p-3 text-sm leading-relaxed text-muted-foreground shadow-[inset_0_1px_0_oklch(1_0_0_/0.58)] dark:bg-background/35 dark:shadow-none">
+              <div className="rounded-lg border border-border/40 bg-background/60 p-3 text-sm leading-relaxed text-muted-foreground dark:bg-background/20">
                 No current public surface impact flags are active beyond the hero summary.
               </div>
             )}
@@ -389,19 +369,23 @@ export default function StatusClient() {
 
         <StatusSection
           id="reliability"
-          kicker="Reliability"
           title="Route probes, breakers, and cache pressure"
-          description="Browser canary reachability, worker cache pressure, and breaker posture for the public edge."
           accentClassName="border-l-amber-500 bg-[linear-gradient(180deg,oklch(0.99_0.006_80_/_0.98),oklch(0.968_0.012_80_/_0.98)_46%,oklch(0.952_0.014_248_/_0.99))] shadow-[0_18px_40px_oklch(0_0_0_/0.08)] dark:bg-[linear-gradient(180deg,rgba(24,18,10,0.42),rgba(7,10,18,0.94))] dark:shadow-[0_18px_40px_oklch(0_0_0_/0.14)]"
           summary={
             <>
-              <SummaryBadge
-                label="Probe Pass"
-                value={probeSummary ? `${probeSummary.passCount}/${probeSummary.sampleCount}` : "—"}
-                className={probeSummary && probeSummary.failCount > 0 ? getStatusTone("degraded").badgeClassName : undefined}
-              />
-              <SummaryBadge label="Open Breakers" value={String(openCircuits)} />
-              <SummaryBadge label="Half-open" value={String(halfOpenCircuits)} />
+              {probeSummary && probeSummary.failCount > 0 && (
+                <SummaryBadge
+                  label="Probe Failures"
+                  value={`${probeSummary.failCount}/${probeSummary.sampleCount}`}
+                  className={getStatusTone("degraded").badgeClassName}
+                />
+              )}
+              {openCircuits > 0 && (
+                <SummaryBadge label="Open Breakers" value={String(openCircuits)} className={getStatusTone("stale").badgeClassName} />
+              )}
+              {halfOpenCircuits > 0 && (
+                <SummaryBadge label="Half-open" value={String(halfOpenCircuits)} className={getStatusTone("degraded").badgeClassName} />
+              )}
             </>
           }
         >
@@ -420,25 +404,17 @@ export default function StatusClient() {
 
         <StatusSection
           id="history"
-          kicker="Availability"
-          title="Uptime and incident history"
-          description="Trailing system availability and recent status transitions over the public monitoring window."
-          accentClassName="border-l-rose-500 bg-[linear-gradient(180deg,oklch(0.99_0.006_12_/_0.98),oklch(0.968_0.012_12_/_0.98)_46%,oklch(0.952_0.014_248_/_0.99))] shadow-[0_18px_40px_oklch(0_0_0_/0.08)] dark:bg-[linear-gradient(180deg,rgba(24,12,14,0.42),rgba(7,10,18,0.94))] dark:shadow-[0_18px_40px_oklch(0_0_0_/0.14)]"
+          title="Status transitions"
+          accentClassName="border-l-slate-400 dark:border-l-slate-600 bg-[linear-gradient(180deg,oklch(0.99_0.002_248_/_0.98),oklch(0.968_0.006_248_/_0.98)_46%,oklch(0.952_0.008_248_/_0.99))] shadow-[0_18px_40px_oklch(0_0_0_/0.08)] dark:bg-[linear-gradient(180deg,rgba(14,16,22,0.42),rgba(7,10,18,0.94))] dark:shadow-[0_18px_40px_oklch(0_0_0_/0.14)]"
           summary={
-            <>
-              <SummaryBadge label="Window" value={historyWindow} />
+            (historyData?.transitions.length ?? 0) > 0 ? (
               <SummaryBadge
                 label="Transitions"
                 value={String(historyData?.transitions.length ?? 0)}
               />
-            </>
+            ) : undefined
           }
         >
-          <UptimeBar
-            transitions={historyData?.transitions ?? []}
-            currentStatus={historyData?.currentStatus ?? healthData.status}
-            lastChangedAt={historyData?.lastChangedAt ?? null}
-          />
           <PublicTransitionTimeline
             transitions={historyData?.transitions ?? []}
             window={historyWindow}
