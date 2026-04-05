@@ -77,6 +77,7 @@ export function CollateralUsageSection({ stablecoinId }: CollateralUsageSectionP
   const usage = useCollateralUsage(stablecoinId);
   const { data: logos } = useLogos();
   const [showAll, setShowAll] = useState(false);
+  const ticker = TRACKED_STABLECOINS.find((c) => c.id === stablecoinId)?.symbol ?? "This Stablecoin";
 
   if (usage.length === 0) return null;
 
@@ -109,7 +110,7 @@ export function CollateralUsageSection({ stablecoinId }: CollateralUsageSectionP
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
             <CardTitle as="h2" className={DETAIL_SECTION_TITLE_CLASS}>
-              Used as Collateral
+              {ticker} Is Used as Collateral by:
             </CardTitle>
             <Badge variant="outline" className="text-[11px]">
               {usage.length} {usage.length === 1 ? "stablecoin" : "stablecoins"}
