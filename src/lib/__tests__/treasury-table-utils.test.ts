@@ -6,7 +6,6 @@ import {
   formatTreasuryUsdNullable,
   formatTreasuryPct,
   denominatorStatusLabel,
-  denominatorStatusClassName,
   coverageSummary,
   sortTreasuryExposureEntities,
 } from "@/lib/treasury-table-utils";
