@@ -1,0 +1,133 @@
+"use client";
+
+import { useMemo } from "react";
+import type { PublicStatusTransition } from "@shared/types";
+import { cn } from "@/lib/utils";
+
+interface UptimeBarProps {
+  transitions: PublicStatusTransition[];
+  currentStatus: "healthy" | "degraded" | "stale";
+  lastChangedAt: number | null;
+}
+
+interface DaySegment {
+  date: string; // YYYY-MM-DD
+  status: "healthy" | "degraded" | "stale" | "unknown";
+}
+
+const STATUS_COLORS: Record<DaySegment["status"], string> = {
+  healthy: "bg-emerald-500",
+  degraded: "bg-amber-500",
+  stale: "bg-red-500",
+  unknown: "bg-slate-300 dark:bg-slate-600",
+};
+
+const STATUS_LABELS: Record<DaySegment["status"], string> = {
+  healthy: "Healthy",
+  degraded: "Degraded",
+  stale: "Stale",
+  unknown: "No data",
+};
+
+function buildDaySegments(
+  transitions: PublicStatusTransition[],
+  currentStatus: "healthy" | "degraded" | "stale",
+): DaySegment[] {
+  const now = new Date();
+  const days: DaySegment[] = [];
+
+  // Build 30 day slots (oldest first)
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    days.push({
+      date: d.toISOString().slice(0, 10),
+      status: "unknown",
+    });
+  }
+
+  if (transitions.length === 0) {
+    // If no transitions, fill everything with current status
+    for (const day of days) day.status = currentStatus;
+    return days;
+  }
+
+  // Sort transitions chronologically (oldest first)
+  const sorted = [...transitions].sort((a, b) => a.at - b.at);
+
+  // Determine initial status: the state before the oldest transition
+  // That's the `from` of the first transition, or "unknown" if init
+  let runningStatus: DaySegment["status"] =
+    sorted[0].transitionType === "init"
+      ? (sorted[0].to as DaySegment["status"])
+      : (sorted[0].from as DaySegment["status"]) ?? "unknown";
+
+  for (const day of days) {
+    const dayStart = new Date(day.date).getTime() / 1000;
+    const dayEnd = dayStart + 86400;
+
+    // Apply any transitions that happened before or during this day
+    for (const t of sorted) {
+      if (t.at < dayEnd) {
+        runningStatus = t.to as DaySegment["status"];
+      }
+    }
+
+    day.status = runningStatus;
+  }
+
+  return days;
+}
+
+export function UptimeBar({ transitions, currentStatus, lastChangedAt }: UptimeBarProps) {
+  const segments = useMemo(
+    () => buildDaySegments(transitions, currentStatus),
+    [transitions, currentStatus],
+  );
+
+  // Compute holding days from the last segment's date as a pure proxy for "now"
+  const holdingDays = useMemo(() => {
+    if (lastChangedAt == null || segments.length === 0) return null;
+    const todayEpoch = new Date(segments[segments.length - 1].date).getTime() / 1000;
+    return Math.max(0, Math.floor((todayEpoch + 86400 - lastChangedAt) / 86400));
+  }, [lastChangedAt, segments]);
+
+  const { summaryParts } = useMemo(() => {
+    const c = { healthy: 0, degraded: 0, stale: 0, unknown: 0 };
+    for (const s of segments) c[s.status]++;
+
+    const parts: string[] = [];
+    if (c.healthy === 30) {
+      parts.push("100% healthy over the last 30 days");
+    } else {
+      if (c.healthy > 0) parts.push(`${c.healthy}d healthy`);
+      if (c.degraded > 0) parts.push(`${c.degraded}d degraded`);
+      if (c.stale > 0) parts.push(`${c.stale}d stale`);
+      if (c.unknown > 0) parts.push(`${c.unknown}d no data`);
+    }
+
+    return { counts: c, summaryParts: parts };
+  }, [segments]);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-1.5" role="img" aria-label={`30-day uptime: ${summaryParts.join(", ")}`}>
+        {segments.map((segment) => (
+          <div
+            key={segment.date}
+            className={cn("h-2 flex-1 rounded-full transition-colors", STATUS_COLORS[segment.status])}
+            title={`${segment.date}: ${STATUS_LABELS[segment.status]}`}
+          />
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+        <span>{summaryParts.join(" · ")}</span>
+        {holdingDays != null && holdingDays > 0 && (
+          <span className="font-mono tabular-nums">
+            {currentStatus} for {holdingDays}d
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}

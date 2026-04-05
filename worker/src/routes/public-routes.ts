@@ -23,6 +23,7 @@ import { handleStressSignals } from "../api/stress-signals";
 import { handleChains } from "../api/chains";
 import { handleNonUsdShare } from "../api/non-usd-share";
 import { handleTreasuryStableExposure } from "../api/treasury-stable-exposure";
+import { handlePublicStatusHistory } from "../api/public-status-history";
 import { handleStablecoinDetail } from "../api/stablecoin-detail";
 import { defineStaticRoute, type StaticRouteDefinition } from "./shared";
 
@@ -58,4 +59,5 @@ export const PUBLIC_STATIC_ROUTES = [
   defineStaticRoute("stress-signals", ({ db, url }) => handleStressSignals(db, url)),
   defineStaticRoute("chains", ({ db }) => handleChains(db)),
   defineStaticRoute("non-usd-share", ({ db, url }) => handleNonUsdShare(db, url)),
+  defineStaticRoute("public-status-history", ({ db, request }) => handlePublicStatusHistory(db, undefined, request)),
 ] as const satisfies readonly StaticRouteDefinition[];

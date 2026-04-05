@@ -25,6 +25,7 @@ describe("api endpoint registry", () => {
       "/api/stablecoin-charts",
       "/api/peg-summary",
       "/api/health",
+      "/api/public-status-history",
       "/api/blacklist",
       "/api/blacklist-summary",
       "/api/depeg-events",

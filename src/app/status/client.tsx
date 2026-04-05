@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { FeaturePageShell } from "@/components/feature-page-shell";
@@ -8,9 +8,12 @@ import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
 import { CircuitBreakerTable } from "@/components/status/circuit-breaker-table";
 import { EndpointHealthGrid } from "@/components/status/endpoint-health-grid";
 import { PublicStatusHero } from "@/components/status/public-status-hero";
+import { PublicTransitionTimeline } from "@/components/status/public-transition-timeline";
+import { UptimeBar } from "@/components/status/uptime-bar";
 import { NoticeRail, StatusSection, SummaryBadge } from "@/components/status/page-primitives";
 import { useHealth } from "@/hooks/api-hooks";
 import { usePublicEndpointProbes } from "@/hooks/use-endpoint-probes";
+import { usePublicStatusHistory, type PublicHistoryWindow } from "@/hooks/use-public-status-history";
 import { buildBrowserProbeSummary, formatTimestampSeconds, getStatusTone } from "@/lib/status-dashboard-model";
 import {
   getImpactedPublicSurfaces,
@@ -49,6 +52,7 @@ function PublicSignalCard({
 }
 
 export default function StatusClient() {
+  const [historyWindow, setHistoryWindow] = useState<PublicHistoryWindow>("7d");
   const {
     data: healthData,
     error: healthError,
@@ -63,6 +67,7 @@ export default function StatusClient() {
     refetch: refetchProbes,
     dataUpdatedAt: probesUpdatedAt,
   } = usePublicEndpointProbes();
+  const { data: historyData, isLoading: historyLoading } = usePublicStatusHistory(historyWindow);
 
   const handleRefresh = () => {
     void refetchHealth();
@@ -411,6 +416,35 @@ export default function StatusClient() {
             <CircuitBreakerTable circuits={healthData.circuits} />
           </div>
           <CacheFreshnessTable caches={healthData.caches} />
+        </StatusSection>
+
+        <StatusSection
+          id="history"
+          kicker="Availability"
+          title="Uptime and incident history"
+          description="Trailing system availability and recent status transitions over the public monitoring window."
+          accentClassName="border-l-rose-500 bg-[linear-gradient(180deg,oklch(0.99_0.006_12_/_0.98),oklch(0.968_0.012_12_/_0.98)_46%,oklch(0.952_0.014_248_/_0.99))] shadow-[0_18px_40px_oklch(0_0_0_/0.08)] dark:bg-[linear-gradient(180deg,rgba(24,12,14,0.42),rgba(7,10,18,0.94))] dark:shadow-[0_18px_40px_oklch(0_0_0_/0.14)]"
+          summary={
+            <>
+              <SummaryBadge label="Window" value={historyWindow} />
+              <SummaryBadge
+                label="Transitions"
+                value={String(historyData?.transitions.length ?? 0)}
+              />
+            </>
+          }
+        >
+          <UptimeBar
+            transitions={historyData?.transitions ?? []}
+            currentStatus={historyData?.currentStatus ?? healthData.status}
+            lastChangedAt={historyData?.lastChangedAt ?? null}
+          />
+          <PublicTransitionTimeline
+            transitions={historyData?.transitions ?? []}
+            window={historyWindow}
+            onWindowChange={setHistoryWindow}
+            isLoading={historyLoading}
+          />
         </StatusSection>
       </div>
     </FeaturePageShell>

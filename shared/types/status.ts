@@ -402,6 +402,22 @@ export interface StatusHistoryResponse {
   transitions: StatusTransition[];
 }
 
+export interface PublicStatusTransition {
+  id: number;
+  from: string | null;
+  to: string;
+  transitionType: "degrade" | "recover" | "init";
+  reason: string;
+  at: number;
+}
+
+export interface PublicStatusHistoryResponse {
+  timestamp: number;
+  currentStatus: "healthy" | "degraded" | "stale";
+  lastChangedAt: number | null;
+  transitions: PublicStatusTransition[];
+}
+
 export interface CircuitRecord {
   state: "closed" | "half-open" | "open";
   consecutiveFailures: number;

@@ -129,6 +129,7 @@ export const API_PATHS = {
     buildQueryPath("/api/stress-signals", { stablecoin: stablecoinId, days }),
   chains: () => "/api/chains",
   nonUsdShare: (days?: number) => buildQueryPath("/api/non-usd-share", days ? { days } : undefined),
+  publicStatusHistory: (params?: { limit?: number }) => buildQueryPath("/api/public-status-history", { limit: params?.limit }),
   requestSourceStats: (params?: { hours?: number; bucketSec?: number; routeLimit?: number }) =>
     buildQueryPath("/api/request-source-stats", {
       hours: params?.hours,
@@ -210,6 +211,15 @@ const BASE_ENDPOINT_DEFINITIONS = [
     mutatingAdmin: false,
     cacheBypass: true,
     routeDependencies: ["mintBurnFreshnessConfig"],
+    probeGroup: "public",
+  },
+  {
+    key: "public-status-history",
+    path: API_PATHS.publicStatusHistory(),
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
     probeGroup: "public",
   },
   {
@@ -749,10 +759,12 @@ const SITE_DATA_ALLOWED_ENDPOINT_KEYS = new Set<EndpointKey>([
   "stress-signals",
   "chains",
   "non-usd-share",
+  "public-status-history",
 ]);
 
 const PUBLIC_API_EXEMPT_ENDPOINT_KEYS = new Set<EndpointKey>([
   "health",
+  "public-status-history",
   "feedback",
   "telegram-webhook",
 ]);
