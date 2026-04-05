@@ -7,7 +7,7 @@ import { useTreasuryStableExposure } from "@/hooks/use-treasury-stable-exposure"
 import { useLogos } from "@/hooks/use-logos";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StaleDataBanner } from "@/components/stale-data-banner";
-import { SectionErrorBoundary } from "@/components/section-error-boundary";
+
 import { Landmark } from "lucide-react";
 
 export function TreasuriesClient() {
@@ -31,8 +31,7 @@ export function TreasuriesClient() {
   }
 
   return (
-    <SectionErrorBoundary name="Treasuries">
-      <div className="space-y-6">
+    <div className="space-y-6">
         <StaleDataBanner
           queries={[
             {
@@ -69,7 +68,6 @@ export function TreasuriesClient() {
             )}
           </CardContent>
         </Card>
-      </div>
-    </SectionErrorBoundary>
+    </div>
   );
 }
