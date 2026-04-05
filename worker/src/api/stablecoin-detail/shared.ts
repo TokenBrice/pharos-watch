@@ -11,6 +11,15 @@ const DETAIL_HISTORY_MAX_AGE_SECONDS = 3 * DAY_SECONDS;
 
 type DetailCacheEntry = { value: string; updatedAt: number } | null;
 type DetailTokens = Record<string, unknown>[];
+type DefiLlamaCoinChartPricePoint = { timestamp: number; price: number };
+
+interface DefiLlamaCoinChartEntry {
+  prices?: DefiLlamaCoinChartPricePoint[];
+}
+
+interface DefiLlamaCoinChartResponse {
+  coins?: Record<string, DefiLlamaCoinChartEntry | undefined>;
+}
 
 export interface DetailResponseHelpers {
   cached: DetailCacheEntry;
@@ -209,6 +218,26 @@ export function buildPriceMapByDate(
     }
   }
   return priceMap;
+}
+
+export function extractDefiLlamaCoinChartPrices(
+  payload: unknown,
+  geckoId: string,
+): DefiLlamaCoinChartPricePoint[] {
+  if (!payload || typeof payload !== "object") return [];
+
+  const coins = (payload as DefiLlamaCoinChartResponse).coins;
+  const prices = coins?.[`coingecko:${geckoId}`]?.prices;
+  if (!Array.isArray(prices)) return [];
+
+  return prices
+    .filter((point): point is DefiLlamaCoinChartPricePoint => (
+      typeof point?.timestamp === "number"
+      && Number.isFinite(point.timestamp)
+      && typeof point?.price === "number"
+      && Number.isFinite(point.price)
+    ))
+    .sort((left, right) => left.timestamp - right.timestamp);
 }
 
 function getLatestDetailTokenDate(tokens: ReadonlyArray<Record<string, unknown>>): number | null {

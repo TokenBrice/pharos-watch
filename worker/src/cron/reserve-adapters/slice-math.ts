@@ -158,6 +158,34 @@ export function slicesFromValues(
   })), decimals);
 }
 
+export function buildBucketSlices<Bucket extends string>(
+  bucketTotals: ReadonlyMap<Bucket, number>,
+  values: Array<{
+    name: string;
+    risk: ReserveSlice["risk"];
+    bucket?: Bucket;
+    value?: number;
+    coinId?: string;
+    depType?: ReserveSlice["depType"];
+    blacklistable?: boolean;
+  }>,
+  immediateRedeemableBucket: Bucket,
+  decimals = 1,
+): { slices: ReserveSlice[]; immediateRedeemableUsd: number } {
+  const immediateRedeemableUsd = bucketTotals.get(immediateRedeemableBucket) ?? 0;
+
+  return {
+    slices: slicesFromValues(
+      values.map((value) => ({
+        ...value,
+        value: value.value ?? (value.bucket ? bucketTotals.get(value.bucket) ?? 0 : 0),
+      })),
+      decimals,
+    ),
+    immediateRedeemableUsd,
+  };
+}
+
 export function isReserveRisk(value: unknown): value is ReserveSlice["risk"] {
   return value === "very-low"
     || value === "low"

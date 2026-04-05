@@ -9,6 +9,7 @@ vi.mock("../../../lib/fetch-retry", () => ({
 import { fetchWithRetry } from "../../../lib/fetch-retry";
 import {
   accumulateBucketedExposure,
+  buildBucketSlices,
   buildUnknownExposureWarning,
   classifyBucketedValues,
   computeUnknownExposurePct,
@@ -213,6 +214,60 @@ describe("slicesFromValues", () => {
     ]);
     const sum = result.reduce((acc, s) => acc + s.pct, 0);
     expect(sum).toBeCloseTo(100.0, 1);
+  });
+});
+
+describe("buildBucketSlices", () => {
+  it("builds slices from bucket totals and returns the immediate redeemable bucket value", () => {
+    const bucketTotals = new Map([
+      ["stable", 60],
+      ["btc", 30],
+      ["other", 10],
+    ] as const);
+
+    const result = buildBucketSlices(
+      bucketTotals,
+      [
+        { name: "Stable", bucket: "stable", risk: "low" },
+        { name: "BTC", bucket: "btc", risk: "medium" },
+        { name: "Other", bucket: "other", risk: "high" },
+      ],
+      "stable",
+    );
+
+    expect(result.immediateRedeemableUsd).toBe(60);
+    expect(result.slices).toEqual([
+      { name: "Stable", pct: 60, risk: "low" },
+      { name: "BTC", pct: 30, risk: "medium" },
+      { name: "Other", pct: 10, risk: "high" },
+    ]);
+  });
+
+  it("supports explicit slice values alongside bucket-backed slices", () => {
+    const bucketTotals = new Map([
+      ["stable", 50],
+      ["btc", 25],
+      ["other", 20],
+    ] as const);
+
+    const result = buildBucketSlices(
+      bucketTotals,
+      [
+        { name: "Stable", bucket: "stable", risk: "low" },
+        { name: "BTC", bucket: "btc", risk: "medium" },
+        { name: "Other", bucket: "other", risk: "high" },
+        { name: "Insurance", value: 5, risk: "medium" },
+      ],
+      "stable",
+    );
+
+    expect(result.immediateRedeemableUsd).toBe(50);
+    expect(result.slices).toEqual([
+      { name: "Stable", pct: 50, risk: "low" },
+      { name: "BTC", pct: 25, risk: "medium" },
+      { name: "Other", pct: 20, risk: "high" },
+      { name: "Insurance", pct: 5, risk: "medium" },
+    ]);
   });
 });
 

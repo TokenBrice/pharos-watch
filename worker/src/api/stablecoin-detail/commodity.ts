@@ -9,6 +9,7 @@ import {
   type DetailResponseHelpers,
   DETAIL_UPSTREAM_MAX_RETRIES,
   DETAIL_UPSTREAM_TIMEOUT_MS,
+  extractDefiLlamaCoinChartPrices,
   findNearestPrice,
   logUpstreamFailure,
   logUpstreamException,
@@ -49,14 +50,7 @@ export async function fetchCommodityTokens(
 
   let prices: { timestamp: number; price: number }[] = [];
   if (priceRes?.ok) {
-    const priceData = (await priceRes.json()) as {
-      coins: Record<
-        string,
-        { prices: { timestamp: number; price: number }[] }
-      >;
-    };
-    prices =
-      priceData.coins?.[`coingecko:${config.geckoId}`]?.prices ?? [];
+    prices = extractDefiLlamaCoinChartPrices(await priceRes.json(), config.geckoId);
   } else {
     logUpstreamFailure("defillama-coins-chart", config.stablecoinId, priceRes?.status ?? "no-response");
   }

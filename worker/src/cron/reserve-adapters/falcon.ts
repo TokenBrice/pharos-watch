@@ -3,11 +3,11 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   accumulateBucketedExposure,
+  buildBucketSlices,
   fetchJsonWithRetry,
   getAdapterTimeout,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
-  slicesFromValues,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
@@ -134,40 +134,42 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
     typeof payload.usdf?.supply === "string"
       ? Number(payload.usdf.supply)
       : NaN;
-  const stableBucketUsd = bucketTotals.get("stable") ?? 0;
-
-  const slices = slicesFromValues([
-    {
-      name: "Stablecoins / cash equivalents",
-      value: stableBucketUsd,
-      risk: "low",
-    },
-    {
-      name: "BTC collateral",
-      value: bucketTotals.get("btc") ?? 0,
-      risk: "medium",
-    },
-    {
-      name: "ETH / liquid staking collateral",
-      value: bucketTotals.get("eth") ?? 0,
-      risk: "medium",
-    },
-    {
-      name: "Tokenized RWA / credit assets",
-      value: bucketTotals.get("rwa") ?? 0,
-      risk: "medium",
-    },
-    {
-      name: "Other crypto / tokenized assets",
-      value: bucketTotals.get("other") ?? 0,
-      risk: "high",
-    },
-    {
-      name: "Insurance fund",
-      value: Number.isFinite(insuranceFund) && insuranceFund > 0 ? insuranceFund : 0,
-      risk: "medium",
-    },
-  ]);
+  const { slices, immediateRedeemableUsd: stableBucketUsd } = buildBucketSlices(
+    bucketTotals,
+    [
+      {
+        name: "Stablecoins / cash equivalents",
+        bucket: "stable",
+        risk: "low",
+      },
+      {
+        name: "BTC collateral",
+        bucket: "btc",
+        risk: "medium",
+      },
+      {
+        name: "ETH / liquid staking collateral",
+        bucket: "eth",
+        risk: "medium",
+      },
+      {
+        name: "Tokenized RWA / credit assets",
+        bucket: "rwa",
+        risk: "medium",
+      },
+      {
+        name: "Other crypto / tokenized assets",
+        bucket: "other",
+        risk: "high",
+      },
+      {
+        name: "Insurance fund",
+        value: Number.isFinite(insuranceFund) && insuranceFund > 0 ? insuranceFund : 0,
+        risk: "medium",
+      },
+    ],
+    "stable",
+  );
 
   return {
     slices,

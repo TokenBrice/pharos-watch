@@ -3,11 +3,11 @@ import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   accumulateBucketedExposure,
+  buildBucketSlices,
   fetchJsonWithRetry,
   getAdapterTimeout,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
-  slicesFromValues,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
 } from "./helpers";
@@ -78,29 +78,32 @@ export function adaptEthenaCollateral(payload: EthenaCollateralResponse): Adapte
     );
   }
 
-  const stableBucketUsd = bucketTotals.get("stable") ?? 0;
-  const slices = slicesFromValues([
-    {
-      name: "Liquid stables / cash equivalents",
-      value: stableBucketUsd,
-      risk: "low",
-    },
-    {
-      name: "BTC collateral",
-      value: bucketTotals.get("btc") ?? 0,
-      risk: "medium",
-    },
-    {
-      name: "ETH / liquid staking collateral",
-      value: bucketTotals.get("eth") ?? 0,
-      risk: "medium",
-    },
-    {
-      name: "Other crypto collateral",
-      value: bucketTotals.get("other") ?? 0,
-      risk: "high",
-    },
-  ]);
+  const { slices, immediateRedeemableUsd: stableBucketUsd } = buildBucketSlices(
+    bucketTotals,
+    [
+      {
+        name: "Liquid stables / cash equivalents",
+        bucket: "stable",
+        risk: "low",
+      },
+      {
+        name: "BTC collateral",
+        bucket: "btc",
+        risk: "medium",
+      },
+      {
+        name: "ETH / liquid staking collateral",
+        bucket: "eth",
+        risk: "medium",
+      },
+      {
+        name: "Other crypto collateral",
+        bucket: "other",
+        risk: "high",
+      },
+    ],
+    "stable",
+  );
 
   const assetCount = new Set(payload.collateral.map((row) => row.asset)).size;
   const lastUpdatedAt = payload.collateral.reduce(

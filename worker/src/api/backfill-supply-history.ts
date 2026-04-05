@@ -9,7 +9,7 @@ import { resolveMarketCap } from "../lib/resolve-market-cap";
 import { selectBackfillCoins } from "../lib/backfill-query";
 import { buildAdminJobSummary, noAdminTargetsResponse, runAdminJob } from "../lib/admin-job";
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { buildPriceMapByDate } from "./stablecoin-detail/shared";
+import { buildPriceMapByDate, extractDefiLlamaCoinChartPrices } from "./stablecoin-detail/shared";
 
 const DEFAULT_BATCH_SIZE = 10;
 
@@ -108,11 +108,7 @@ async function backfillCommodity(
 
   let prices: { timestamp: number; price: number }[] = [];
   if (priceRes?.ok) {
-    const priceData = (await priceRes.json()) as {
-      coins: Record<string, { prices: { timestamp: number; price: number }[] }>;
-    };
-    prices = priceData.coins?.[`coingecko:${config.geckoId}`]?.prices ?? [];
-    prices.sort((a, b) => a.timestamp - b.timestamp);
+    prices = extractDefiLlamaCoinChartPrices(await priceRes.json(), config.geckoId);
   }
 
   function findPrice(date: number): number | null {
@@ -245,12 +241,8 @@ export async function handleBackfillSupplyHistory(
           detail = (await detailRes.json()) as StablecoinDetail;
 
           // Parse historical prices if fetched
-          if (responses[1]?.ok) {
-            const priceData = (await responses[1].json()) as {
-              coins: Record<string, { prices: { timestamp: number; price: number }[] }>;
-            };
-            historicalPrices = priceData.coins?.[`coingecko:${geckoId}`]?.prices ?? [];
-            historicalPrices.sort((a, b) => a.timestamp - b.timestamp);
+          if (responses[1]?.ok && geckoId) {
+            historicalPrices = extractDefiLlamaCoinChartPrices(await responses[1].json(), geckoId);
           }
         } catch (err) {
           errors.push(`${meta.symbol}: fetch failed — ${err}`);

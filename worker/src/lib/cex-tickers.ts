@@ -46,6 +46,27 @@ function midpointFromBidAsk(
   return (parsedBid + parsedAsk) / 2;
 }
 
+function applyTickerRows<T>(
+  rows: Iterable<T>,
+  results: Map<string, number>,
+  resolveSymbol: (row: T) => string | undefined,
+  getBid: (row: T) => string | number | null | undefined,
+  getAsk: (row: T) => string | number | null | undefined,
+  getLastTrade: (row: T) => string | number | null | undefined,
+): void {
+  for (const row of rows) {
+    const symbol = resolveSymbol(row);
+    if (!symbol) continue;
+
+    const midpoint = midpointFromBidAsk(getBid(row), getAsk(row));
+    const lastTrade = parsePositiveNumber(getLastTrade(row));
+    const price = midpoint ?? lastTrade;
+    if (price != null) {
+      results.set(symbol, price);
+    }
+  }
+}
+
 async function fetchCexJson<T>(
   url: string,
   signal?: AbortSignal,
@@ -117,16 +138,14 @@ export async function fetchKrakenPrices(
       return results;
     }
 
-    for (const [responseKey, market] of Object.entries(payload.result ?? {})) {
-      const symbol = KRAKEN_RESPONSE_KEY_TO_SYMBOL.get(responseKey);
-      if (!symbol) continue;
-      const midpoint = midpointFromBidAsk(market.b?.[0], market.a?.[0]);
-      const lastTrade = parsePositiveNumber(market.c?.[0]);
-      const price = midpoint ?? lastTrade;
-      if (price != null) {
-        results.set(symbol, price);
-      }
-    }
+    applyTickerRows(
+      Object.entries(payload.result ?? {}),
+      results,
+      ([responseKey]) => KRAKEN_RESPONSE_KEY_TO_SYMBOL.get(responseKey),
+      ([, market]) => market.b?.[0],
+      ([, market]) => market.a?.[0],
+      ([, market]) => market.c?.[0],
+    );
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.warn("[cex-kraken] Fetch failed:", err);
@@ -153,17 +172,17 @@ export async function fetchBitstampPrices(
     );
     if (!tickers) return results;
 
-    for (const ticker of tickers) {
-      const pair = ticker.pair ?? ticker.market;
-      const symbol = pair ? BITSTAMP_PAIR_TO_SYMBOL.get(pair) : undefined;
-      if (!symbol) continue;
-      const midpoint = midpointFromBidAsk(ticker.bid, ticker.ask);
-      const lastTrade = parsePositiveNumber(ticker.last);
-      const price = midpoint ?? lastTrade;
-      if (price != null) {
-        results.set(symbol, price);
-      }
-    }
+    applyTickerRows(
+      tickers,
+      results,
+      (ticker) => {
+        const pair = ticker.pair ?? ticker.market;
+        return pair ? BITSTAMP_PAIR_TO_SYMBOL.get(pair) : undefined;
+      },
+      (ticker) => ticker.bid,
+      (ticker) => ticker.ask,
+      (ticker) => ticker.last,
+    );
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.warn("[cex-bitstamp] Fetch failed:", err);

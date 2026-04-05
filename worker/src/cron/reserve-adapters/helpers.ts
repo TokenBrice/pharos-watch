@@ -17,6 +17,7 @@ export {
 } from "./classification";
 export {
   buildUnknownExposureWarning,
+  buildBucketSlices,
   computeUnknownExposurePct,
   decimalNumberFromBigInt,
   decimalStringFromBigInt,
