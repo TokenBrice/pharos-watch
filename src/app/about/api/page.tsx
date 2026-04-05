@@ -229,9 +229,12 @@ function SectionRenderer({ section }: { section: ApiReferenceSection }) {
   );
 }
 
+const HIDDEN_SECTIONS = new Set(["admin-auth-and-idempotency", "admin-endpoints"]);
+
 export default async function AboutApiPage() {
   const document = await loadApiReferenceDocument();
-  const sidebarSections: SidebarSection[] = document.sections.map((section) => ({
+  const publicSections = document.sections.filter((s) => !HIDDEN_SECTIONS.has(s.id));
+  const sidebarSections: SidebarSection[] = publicSections.map((section) => ({
     id: section.id,
     label: stripMarkdownHeadingFormatting(section.title),
     subsections: section.subsections.map((sub) => ({
@@ -363,7 +366,7 @@ export default async function AboutApiPage() {
 
       {/* Zone 2: Two-column reference body */}
       <ApiReferenceLayout sections={sidebarSections}>
-        {document.sections.map((section) => (
+        {publicSections.map((section) => (
           <SectionRenderer key={section.id} section={section} />
         ))}
       </ApiReferenceLayout>
