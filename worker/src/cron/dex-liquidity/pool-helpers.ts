@@ -95,30 +95,40 @@ export function computeDurabilityScore(
 export function computeLiquidityScore(
   m: LiquidityMetrics,
   durabilityScore: number,
+  circulatingUsd?: number,
 ): { score: number; components: ScoreComponents } {
-  // Component 1: TVL depth (35%) — uses effectiveTvl
+  // Component 1: TVL depth (30%) — uses effectiveTvl
   const tvlInput = m.effectiveTvl > 0 ? m.effectiveTvl : m.totalTvlUsd;
-  const tvlDepth = Math.min(
-    100,
-    Math.max(0, 20 * Math.log10(Math.max(tvlInput, 1) / 100_000) + 20),
-  );
+  let tvlDepth: number;
+  if (circulatingUsd != null && circulatingUsd > 0) {
+    // Size-aware relative formula: depth ratio vs circulating supply
+    const depthRatio = tvlInput / circulatingUsd;
+    tvlDepth = Math.min(100, Math.max(0, 35 * Math.log10(depthRatio / 0.0007)));
+  } else {
+    // Absolute fallback when market cap is unavailable
+    tvlDepth = Math.min(
+      100,
+      Math.max(0, 20 * Math.log10(Math.max(tvlInput, 1) / 100_000) + 20),
+    );
+  }
 
   // Component 2: Volume activity (20%) — log-scale
   const vtRatio = m.totalTvlUsd > 0 ? m.totalVolume24hUsd / m.totalTvlUsd : 0;
   const volumeActivity = vtRatio <= 0
     ? 0
-    : Math.min(100, Math.max(0, 33.3 * Math.log10(vtRatio / 0.005)));
+    : Math.min(100, Math.max(0, 38 * (Math.log10(vtRatio) + 3)));
 
-  // Component 3: Pool quality (22.5%) — quality-adjusted TVL on same log scale
+  // Component 3: Pool quality (20%) — quality retention ratio
+  const qualityRetention = m.totalTvlUsd > 0 ? m.qualityAdjustedTvl / m.totalTvlUsd : 0;
   const poolQuality = Math.min(
     100,
-    Math.max(0, 20 * Math.log10(Math.max(m.qualityAdjustedTvl, 1) / 100_000) + 20),
+    Math.max(0, (qualityRetention - 0.15) / 0.65 * 100),
   );
 
-  // Component 4: Durability (15%) — passed in from durability computation
+  // Component 4: Durability (20%) — passed in from durability computation
   const durability = durabilityScore;
 
-  // Component 5: Pair diversity (7.5%)
+  // Component 5: Pair diversity (10%)
   const pairDiversity = Math.min(100, m.poolCount * 5);
 
   const raw =

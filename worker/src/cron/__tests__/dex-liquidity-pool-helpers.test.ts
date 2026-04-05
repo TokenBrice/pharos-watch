@@ -83,7 +83,7 @@ describe("dex-liquidity pool helpers", () => {
     expect(computeDurabilityScore(rich, 0.9, 0.8)).toBe(90);
 
     const zeroLiquidity = computeLiquidityScore(empty, 41);
-    expect(zeroLiquidity.score).toBe(6);
+    expect(zeroLiquidity.score).toBe(8);
     expect(zeroLiquidity.components).toEqual({
       tvlDepth: 0,
       volumeActivity: 0,
@@ -105,6 +105,69 @@ describe("dex-liquidity pool helpers", () => {
     expect(healthyLiquidity.components.pairDiversity).toBe(40);
     // crossChain should not be present
     expect("crossChain" in healthyLiquidity.components).toBe(false);
+  });
+
+  it("computes size-aware liquidity scores with market cap (v5.0)", () => {
+    const m = initMetrics("test-coin", "TEST");
+    m.effectiveTvl = 10_000_000;
+    m.totalTvlUsd = 20_000_000;
+    m.totalVolume24hUsd = 1_000_000;
+    m.qualityAdjustedTvl = 12_000_000;
+    m.poolCount = 8;
+
+    const circulatingUsd = 100_000_000;
+    const durability = 70;
+
+    const result = computeLiquidityScore(m, durability, circulatingUsd);
+
+    // TVL Depth: 35 * log10(0.10 / 0.0007) = 35 * log10(142.86) = 35 * 2.155 = 75.4 → 75
+    expect(result.components.tvlDepth).toBe(75);
+    // Volume: 38 * (log10(0.05) + 3) = 38 * 1.699 = 64.6 → 65
+    expect(result.components.volumeActivity).toBe(65);
+    // Pool Quality: (0.60 − 0.15) / 0.65 * 100 = 69.2 → 69
+    expect(result.components.poolQuality).toBe(69);
+    expect(result.components.durability).toBe(70);
+    expect(result.components.pairDiversity).toBe(40);
+    // Composite: 75*0.30 + 65*0.20 + 69*0.20 + 70*0.20 + 40*0.10 = 67.3 → 67
+    expect(result.score).toBe(67);
+  });
+
+  it("falls back to absolute TVL depth when market cap is unavailable", () => {
+    const m = initMetrics("unknown-coin", "UNK");
+    m.effectiveTvl = 10_000_000;
+    m.totalTvlUsd = 20_000_000;
+    m.totalVolume24hUsd = 1_000_000;
+    m.qualityAdjustedTvl = 12_000_000;
+    m.poolCount = 8;
+
+    const withMcap = computeLiquidityScore(m, 70, 100_000_000);
+    const withoutMcap = computeLiquidityScore(m, 70);
+
+    expect(withoutMcap.components.tvlDepth).not.toBe(withMcap.components.tvlDepth);
+    // Absolute: 20 * log10(10M / 100K) + 20 = 20 * 2 + 20 = 60
+    expect(withoutMcap.components.tvlDepth).toBe(60);
+  });
+
+  it("clamps pool quality retention to 0-100 range", () => {
+    const m = initMetrics("low-quality", "LOW");
+    m.effectiveTvl = 500_000;
+    m.totalTvlUsd = 10_000_000;
+    m.totalVolume24hUsd = 50_000;
+    m.qualityAdjustedTvl = 1_000_000; // 10% retention → below 15% floor
+    m.poolCount = 3;
+
+    const result = computeLiquidityScore(m, 50, 50_000_000);
+    expect(result.components.poolQuality).toBe(0);
+
+    const mHigh = initMetrics("high-quality", "HIGH");
+    mHigh.effectiveTvl = 8_000_000;
+    mHigh.totalTvlUsd = 10_000_000;
+    mHigh.totalVolume24hUsd = 500_000;
+    mHigh.qualityAdjustedTvl = 9_000_000; // 90% retention → above 80% cap
+    mHigh.poolCount = 10;
+
+    const resultHigh = computeLiquidityScore(mHigh, 80, 50_000_000);
+    expect(resultHigh.components.poolQuality).toBe(100);
   });
 
   it("normalizes protocols and computes pair-quality and stress helpers", () => {
