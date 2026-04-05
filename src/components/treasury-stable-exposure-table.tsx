@@ -3,113 +3,20 @@
 import { useMemo, useState } from "react";
 import { GradeBadge } from "@/components/grade-badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import type { TreasuryStableExposureEntity, TreasuryStableExposureResponse } from "@shared/types";
+import type { TreasuryStableExposureResponse } from "@shared/types";
 import { ChevronDown, ChevronUp } from "lucide-react";
-
-export type TreasuryExposureSortKey =
-  | "decentralizedStableUsd"
-  | "decentralizedStablePctOfTreasury"
-  | "decentralizedStablePctOfStableSleeve"
-  | "trackedStableUsd"
-  | "weightedSafetyScore";
-
-const SORT_OPTIONS: Array<{ value: TreasuryExposureSortKey; label: string }> = [
-  { value: "decentralizedStableUsd", label: "Decentralized Stable $" },
-  { value: "decentralizedStablePctOfTreasury", label: "Decentralized Stable % of Treasury" },
-  { value: "decentralizedStablePctOfStableSleeve", label: "Decentralized Stable % of Stable Sleeve" },
-  { value: "trackedStableUsd", label: "Tracked Stable Sleeve $" },
-  { value: "weightedSafetyScore", label: "Weighted Stable Grade" },
-];
-
-const usdCompactFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 0,
-});
-
-function formatUsd(value: number): string {
-  return usdCompactFormatter.format(value);
-}
-
-function formatUsdNullable(value: number | null): string {
-  return value == null ? "N/A" : formatUsd(value);
-}
-
-function formatPct(value: number | null): string {
-  return value == null ? "N/A" : `${value.toFixed(1)}%`;
-}
-
-function hasComparableTreasuryDenominator(entity: TreasuryStableExposureEntity): boolean {
-  return entity.treasuryUsd != null
-    && (entity.coverage.denominatorStatus === "direct-only" || entity.coverage.denominatorStatus === "adjusted-with-defi");
-}
-
-function coverageSummary(entity: TreasuryStableExposureEntity): string {
-  const trackedPct = entity.coverage.trackedStablePctOfStableSleeve;
-  if (entity.coverage.denominatorStatus === "invalid") return "Invalid treasury denominator";
-  if (entity.coverage.denominatorStatus === "partial") {
-    return trackedPct == null
-      ? "Stable sleeve detected, treasury share unavailable"
-      : `Tracked ${trackedPct.toFixed(1)}% of sleeve, treasury share unavailable`;
-  }
-  if (trackedPct == null) return "No stable sleeve detected";
-  return `Tracked ${trackedPct.toFixed(1)}% of stable sleeve`;
-}
-
-function denominatorStatusLabel(entity: TreasuryStableExposureEntity): string {
-  switch (entity.coverage.denominatorStatus) {
-    case "adjusted-with-defi":
-      return "Treasury-comparable";
-    case "partial":
-      return "Partial denominator";
-    case "invalid":
-      return "Invalid denominator";
-    case "direct-only":
-    default:
-      return "Direct-only denominator";
-  }
-}
-
-function denominatorStatusClassName(entity: TreasuryStableExposureEntity): string {
-  switch (entity.coverage.denominatorStatus) {
-    case "adjusted-with-defi":
-      return "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
-    case "partial":
-      return "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300";
-    case "invalid":
-      return "border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300";
-    case "direct-only":
-    default:
-      return "border-border/70 bg-background/60 text-muted-foreground";
-  }
-}
-
-function compareEntities(a: TreasuryStableExposureEntity, b: TreasuryStableExposureEntity, sortKey: TreasuryExposureSortKey): number {
-  switch (sortKey) {
-    case "decentralizedStablePctOfTreasury":
-      return (b.decentralizedStablePctOfTreasury ?? -1) - (a.decentralizedStablePctOfTreasury ?? -1);
-    case "decentralizedStablePctOfStableSleeve":
-      return (b.decentralizedStablePctOfStableSleeve ?? -1) - (a.decentralizedStablePctOfStableSleeve ?? -1);
-    case "trackedStableUsd":
-      return b.trackedStableUsd - a.trackedStableUsd;
-    case "weightedSafetyScore":
-      return (b.weightedSafetyScore ?? -1) - (a.weightedSafetyScore ?? -1);
-    case "decentralizedStableUsd":
-    default:
-      return b.decentralizedStableUsd - a.decentralizedStableUsd;
-  }
-}
-
-function sortTreasuryExposureEntities(
-  entities: readonly TreasuryStableExposureEntity[],
-  sortKey: TreasuryExposureSortKey,
-): TreasuryStableExposureEntity[] {
-  return [...entities].sort((a, b) => {
-    const sortDiff = compareEntities(a, b, sortKey);
-    if (sortDiff !== 0) return sortDiff;
-    return a.name.localeCompare(b.name);
-  });
-}
+import {
+  type TreasuryExposureSortKey,
+  TREASURY_SORT_OPTIONS,
+  formatTreasuryUsd,
+  formatTreasuryUsdNullable,
+  formatTreasuryPct,
+  isTreasuryComparableEntity,
+  denominatorStatusLabel,
+  denominatorStatusClassName,
+  coverageSummary,
+  sortTreasuryExposureEntities,
+} from "@/lib/treasury-table-utils";
 
 export function TreasuryStableExposureTable({
   data,
@@ -123,7 +30,7 @@ export function TreasuryStableExposureTable({
 
   const rows = useMemo(() => sortTreasuryExposureEntities(data.entities, sortKey), [data.entities, sortKey]);
   const aboveFivePctCount = rows.filter(
-    (row) => hasComparableTreasuryDenominator(row) && (row.decentralizedStablePctOfTreasury ?? 0) >= 5,
+    (row) => isTreasuryComparableEntity(row) && (row.decentralizedStablePctOfTreasury ?? 0) >= 5,
   ).length;
 
   if (rows.length === 0) {
@@ -151,7 +58,7 @@ export function TreasuryStableExposureTable({
             onChange={(event) => setSortKey(event.target.value as TreasuryExposureSortKey)}
             className="pharos-focus-ring rounded-md border bg-background px-3 py-2 text-sm text-foreground outline-none"
           >
-            {SORT_OPTIONS.map((option) => (
+            {TREASURY_SORT_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -196,7 +103,7 @@ export function TreasuryStableExposureTable({
                           <span className={`rounded-full border px-2 py-0.5 ${denominatorStatusClassName(entity)}`}>
                             {denominatorStatusLabel(entity)}
                           </span>
-                          {hasComparableTreasuryDenominator(entity) && (entity.decentralizedStablePctOfTreasury ?? 0) >= 5 ? (
+                          {isTreasuryComparableEntity(entity) && (entity.decentralizedStablePctOfTreasury ?? 0) >= 5 ? (
                             <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-emerald-700 dark:text-emerald-300">
                               5%+ DeFi stable
                             </span>
@@ -210,27 +117,27 @@ export function TreasuryStableExposureTable({
                     <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground md:hidden">
                       <div>
                         <div className="uppercase tracking-[0.16em]">DeFi Stable $</div>
-                        <div className="mt-1 text-sm font-medium text-foreground">{formatUsd(entity.decentralizedStableUsd)}</div>
+                        <div className="mt-1 text-sm font-medium text-foreground">{formatTreasuryUsd(entity.decentralizedStableUsd)}</div>
                       </div>
                       <div>
                         <div className="uppercase tracking-[0.16em]">% Treasury</div>
-                        <div className="mt-1 text-sm font-medium text-foreground">{formatPct(entity.decentralizedStablePctOfTreasury)}</div>
+                        <div className="mt-1 text-sm font-medium text-foreground">{formatTreasuryPct(entity.decentralizedStablePctOfTreasury)}</div>
                       </div>
                       <div>
                         <div className="uppercase tracking-[0.16em]">% Stable Sleeve</div>
-                        <div className="mt-1 text-sm font-medium text-foreground">{formatPct(entity.decentralizedStablePctOfStableSleeve)}</div>
+                        <div className="mt-1 text-sm font-medium text-foreground">{formatTreasuryPct(entity.decentralizedStablePctOfStableSleeve)}</div>
                       </div>
                       <div>
                         <div className="uppercase tracking-[0.16em]">Tracked Sleeve</div>
-                        <div className="mt-1 text-sm font-medium text-foreground">{formatUsd(entity.trackedStableUsd)}</div>
+                        <div className="mt-1 text-sm font-medium text-foreground">{formatTreasuryUsd(entity.trackedStableUsd)}</div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="hidden text-sm font-medium text-foreground md:block">{formatUsd(entity.decentralizedStableUsd)}</div>
-                  <div className="hidden text-sm text-foreground md:block">{formatPct(entity.decentralizedStablePctOfTreasury)}</div>
-                  <div className="hidden text-sm text-foreground md:block">{formatPct(entity.decentralizedStablePctOfStableSleeve)}</div>
-                  <div className="hidden text-sm text-foreground md:block">{formatUsd(entity.trackedStableUsd)}</div>
+                  <div className="hidden text-sm font-medium text-foreground md:block">{formatTreasuryUsd(entity.decentralizedStableUsd)}</div>
+                  <div className="hidden text-sm text-foreground md:block">{formatTreasuryPct(entity.decentralizedStablePctOfTreasury)}</div>
+                  <div className="hidden text-sm text-foreground md:block">{formatTreasuryPct(entity.decentralizedStablePctOfStableSleeve)}</div>
+                  <div className="hidden text-sm text-foreground md:block">{formatTreasuryUsd(entity.trackedStableUsd)}</div>
                   <div className="hidden md:block">
                     <GradeBadge
                       grade={entity.weightedSafetyGrade ?? "NR"}
@@ -240,7 +147,7 @@ export function TreasuryStableExposureTable({
                   <div className="hidden min-w-0 md:block">
                     <div className="truncate text-sm text-foreground">{coverageSummary(entity)}</div>
                     <div className="mt-1 text-xs text-muted-foreground">
-                      {entity.coverage.untrackedStableUsd > 0 ? `${formatUsd(entity.coverage.untrackedStableUsd)} untracked stable` : "No untracked stable detected"}
+                      {entity.coverage.untrackedStableUsd > 0 ? `${formatTreasuryUsd(entity.coverage.untrackedStableUsd)} untracked stable` : "No untracked stable detected"}
                     </div>
                   </div>
                 </div>
@@ -251,9 +158,9 @@ export function TreasuryStableExposureTable({
                   <div className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                        <span>Direct wallet total {formatUsd(entity.directWalletUsd)}</span>
-                        <span>Effective treasury denominator {formatUsdNullable(entity.treasuryUsd)}</span>
-                        <span>Stable sleeve {formatUsd(entity.stablecoinSleeveUsd)}</span>
+                        <span>Direct wallet total {formatTreasuryUsd(entity.directWalletUsd)}</span>
+                        <span>Effective treasury denominator {formatTreasuryUsdNullable(entity.treasuryUsd)}</span>
+                        <span>Stable sleeve {formatTreasuryUsd(entity.stablecoinSleeveUsd)}</span>
                         <span>Owner-chain tuples {entity.coverage.ownerChainCount}</span>
                       </div>
                       <div className="space-y-2">
@@ -269,9 +176,9 @@ export function TreasuryStableExposureTable({
                               </div>
                             </div>
                             <div className="text-right text-xs text-muted-foreground">
-                              <div className="text-sm font-medium text-foreground">{formatUsd(holding.usdValue)}</div>
+                              <div className="text-sm font-medium text-foreground">{formatTreasuryUsd(holding.usdValue)}</div>
                               <div>
-                                {formatPct(holding.pctOfTreasury)} of treasury · {formatPct(holding.pctOfStableSleeve)} of sleeve
+                                {formatTreasuryPct(holding.pctOfTreasury)} of treasury · {formatTreasuryPct(holding.pctOfStableSleeve)} of sleeve
                               </div>
                             </div>
                           </div>
@@ -291,23 +198,23 @@ export function TreasuryStableExposureTable({
                         </div>
                         <div>
                           <div className="uppercase tracking-[0.16em]">DeFi Included</div>
-                          <div className="mt-1 text-sm font-medium text-foreground">{formatUsd(entity.coverage.defiPositionUsd)}</div>
+                          <div className="mt-1 text-sm font-medium text-foreground">{formatTreasuryUsd(entity.coverage.defiPositionUsd)}</div>
                         </div>
                         <div>
                           <div className="uppercase tracking-[0.16em]">Tracked / Treasury</div>
-                          <div className="mt-1 text-sm font-medium text-foreground">{formatPct(entity.coverage.trackedStablePctOfTreasury)}</div>
+                          <div className="mt-1 text-sm font-medium text-foreground">{formatTreasuryPct(entity.coverage.trackedStablePctOfTreasury)}</div>
                         </div>
                         <div>
                           <div className="uppercase tracking-[0.16em]">Rated / Tracked</div>
-                          <div className="mt-1 text-sm font-medium text-foreground">{formatPct(entity.coverage.ratedTrackedStablePct)}</div>
+                          <div className="mt-1 text-sm font-medium text-foreground">{formatTreasuryPct(entity.coverage.ratedTrackedStablePct)}</div>
                         </div>
                         <div>
                           <div className="uppercase tracking-[0.16em]">Consumed Direct</div>
-                          <div className="mt-1 text-sm font-medium text-foreground">{formatUsd(entity.coverage.consumedDirectBalanceUsd)}</div>
+                          <div className="mt-1 text-sm font-medium text-foreground">{formatTreasuryUsd(entity.coverage.consumedDirectBalanceUsd)}</div>
                         </div>
                         <div>
                           <div className="uppercase tracking-[0.16em]">Derived Untracked</div>
-                          <div className="mt-1 text-sm font-medium text-foreground">{formatUsd(entity.coverage.derivedUntrackedStableUsd)}</div>
+                          <div className="mt-1 text-sm font-medium text-foreground">{formatTreasuryUsd(entity.coverage.derivedUntrackedStableUsd)}</div>
                         </div>
                         <div>
                           <div className="uppercase tracking-[0.16em]">Skipped Derived</div>
