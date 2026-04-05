@@ -1,9 +1,24 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "3.4",
+  currentVersion: "3.5",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "3.5",
+      title: "Telemetry-aware freshness gate for reserve-sync capacity",
+      date: "2026-04-05",
+      effectiveAt: 1775397600,
+      summary:
+        "Adapters that declare capacity telemetry (direct or proxy) or physically emit capacity metadata no longer require scoring-grade freshness evidence to use live capacity data for scoring. The temporal quality is already validated by the isFresh gate.",
+      impact: [
+        "iUSD-infiniFi now resolves live-proxy capacity confidence from the infiniFi protocol API instead of falling back to the heuristic 15% ratio, restoring medium model confidence and re-enabling backstop contribution to effective exit scoring",
+        "Any reserve-sync-metadata route whose adapter provides capacity telemetry but uses unverified freshness mode now scores against live capacity data instead of being silently downgraded to a heuristic fallback",
+        "Adapters without declared capacity telemetry or physical capacity metadata still require scoring-grade freshness evidence, preserving the original gate for inferred-capacity routes",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.4",
       title: "USD.AI base-token and sUSDai route split",

@@ -98,10 +98,11 @@ function resolveCapacityReason(args: {
   if (!SCORING_LIVE_RESERVE_EVIDENCE_CLASSES.includes(args.snapshotMetadata.evidenceClass)) {
     return "Live reserve metadata uses weak or non-scoring evidence for redemption capacity";
   }
-  if (!args.hasScoringEligibleFreshness) {
+  const hasCapacityTelemetry = args.telemetryCapacity !== "none" || args.fallbackTelemetryAvailable;
+  if (!args.hasScoringEligibleFreshness && !hasCapacityTelemetry) {
     return "Live reserve metadata lacks scoring-grade freshness evidence";
   }
-  if (args.telemetryCapacity === "none" && !args.fallbackTelemetryAvailable) {
+  if (!hasCapacityTelemetry) {
     return `Live reserve adapter for ${args.stablecoinId} does not expose redeemable-capacity telemetry`;
   }
   return null;
@@ -120,10 +121,11 @@ function resolveFeeReason(args: {
   if (!args.isFresh) return "Live redemption fee telemetry stale; using reviewed fee model instead";
   if (args.snapshotMetadata.syncStatus !== "ok") return "Live redemption fee telemetry degraded; latest snapshot not in ok state";
   if (args.hasBlockingWarnings) return "Live redemption fee telemetry degraded by reserve warnings";
-  if (!args.hasScoringEligibleFreshness) {
+  const hasFeeTelemetry = args.telemetryFee !== "none" || args.fallbackTelemetryAvailable;
+  if (!args.hasScoringEligibleFreshness && !hasFeeTelemetry) {
     return "Live redemption fee telemetry lacks trustworthy freshness evidence";
   }
-  if (args.telemetryFee === "none" && !args.fallbackTelemetryAvailable) {
+  if (!hasFeeTelemetry) {
     return `Live reserve adapter for ${args.stablecoinId} does not expose redemption-fee telemetry`;
   }
   return null;
