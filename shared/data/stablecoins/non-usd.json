@@ -2964,7 +2964,7 @@
     "announcedDate": "2025-09",
     "expectedLaunchDate": "2026-Q4",
     "launchPhase": "announced",
-    "launchPhaseDetail": "12-bank consortium; seeking Dutch Central Bank EMI license under MiCA; launching on Ethereum (primary), Polygon, Base with permissioned KYC layer; exchange partnership negotiations in final stage",
+    "launchPhaseDetail": "12-bank consortium (incl. ING, UniCredit, BNP Paribas, BBVA, CaixaBank); EMI license application with Dutch Central Bank reportedly in final stages; advanced exchange/market-maker discussions (Bit2Me named); CEO warns of 'digital dollarization' risk; launching on Ethereum (primary), Polygon, Base with permissioned KYC layer",
     "featuredContent": [
       {
         "type": "article",
@@ -3002,6 +3002,13 @@
         "title": "Advanced talks with crypto exchanges for day-one liquidity",
         "description": "Qivalis in discussions with exchanges, market makers, and liquidity providers for regulated platform listings.",
         "sourceUrl": "https://www.coindesk.com/business/2026/03/02/eu-banks-euro-pegged-stablecoin-in-talks-with-crypto-exchanges-to-ensure-liquidity"
+      },
+      {
+        "date": "2026-03-31",
+        "type": "milestone",
+        "title": "CEO warns of 'digital dollarization' without euro stablecoin infrastructure",
+        "description": "Jan-Oliver Sell highlights euro's 0.2% on-chain share; EMI license described as in final stages; positions Qivalis as euro infrastructure layer, not just a token.",
+        "sourceUrl": "https://www.coindesk.com/business/2026/03/31/europe-faces-digital-dollarization-without-a-euro-stablecoin-of-its-own-warns-qivalis-ceo"
       }
     ]
   },
