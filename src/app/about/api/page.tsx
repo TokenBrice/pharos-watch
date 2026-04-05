@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Globe, KeyRound, ShieldCheck } from "lucide-react";
-import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
+import { cn } from "@/lib/utils";
+import { CopyButton } from "@/components/copy-button";
+import { ApiReferenceLayout } from "@/components/api-reference-layout";
+import type { SidebarSection } from "@/components/api-reference-sidebar";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { loadApiReferenceDocument, type MarkdownBlock, type ApiReferenceSection } from "@/lib/api-reference-doc";
@@ -153,11 +156,16 @@ function MarkdownBlockRenderer({ block }: { block: MarkdownBlock }) {
   if (block.type === "code") {
     return (
       <div className="overflow-hidden rounded-xl border border-border/60 bg-zinc-950 text-zinc-100 shadow-[0_12px_28px_oklch(0_0_0_/0.18)]">
-        {block.language ? (
-          <div className="border-b border-white/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
-            {block.language}
-          </div>
-        ) : null}
+        <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
+          {block.language ? (
+            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+              {block.language}
+            </span>
+          ) : (
+            <span />
+          )}
+          <CopyButton text={block.code} />
+        </div>
         <pre className="overflow-x-auto px-3 py-3 text-xs leading-relaxed">
           <code>{block.code}</code>
         </pre>
@@ -168,32 +176,9 @@ function MarkdownBlockRenderer({ block }: { block: MarkdownBlock }) {
   return <div className="h-px bg-border/60" aria-hidden="true" />;
 }
 
-function EndpointIndex({ section }: { section: ApiReferenceSection }) {
-  if (section.subsections.length === 0) return null;
-
-  return (
-    <div className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
-      <div className="space-y-2">
-        <p className="pharos-kicker">Jump Within This Section</p>
-        <div className="flex flex-wrap gap-2">
-          {section.subsections.map((subsection) => (
-            <a
-              key={subsection.id}
-              href={`#${subsection.id}`}
-              className="pharos-focus-ring inline-flex min-h-9 items-center rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/20 hover:bg-muted hover:text-foreground"
-            >
-              {stripMarkdownHeadingFormatting(subsection.title)}
-            </a>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function SectionRenderer({ section }: { section: ApiReferenceSection }) {
   return (
-    <section id={section.id} className="scroll-mt-28 space-y-5 rounded-[1.5rem] border border-border/60 bg-card/70 px-4 py-5 shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:px-5 sm:py-6">
+    <section id={section.id} className="space-y-5 rounded-[1.5rem] border border-border/60 bg-card/70 px-4 py-5 shadow-[0_18px_40px_oklch(0_0_0_/0.08)] sm:px-5 sm:py-6">
       <div className="space-y-2">
         <p className="pharos-kicker">Reference Section</p>
         <h2 className="text-2xl font-semibold tracking-tight text-foreground">{renderInlineMarkdown(section.title)}</h2>
@@ -207,24 +192,29 @@ function SectionRenderer({ section }: { section: ApiReferenceSection }) {
         </div>
       ) : null}
 
-      <EndpointIndex section={section} />
-
       {section.subsections.length > 0 ? (
         <div className="space-y-4">
           {section.subsections.map((subsection) => (
             <article
               key={subsection.id}
               id={subsection.id}
-              className="scroll-mt-28 rounded-[1.2rem] border border-border/60 bg-background/45 px-4 py-4"
+              className="rounded-[1.2rem] border border-border/60 bg-background/45 px-4 py-4"
             >
-              <div className="mb-3 flex flex-wrap items-center gap-3">
-                <p className="pharos-kicker">Endpoint</p>
-                <div className="h-px min-w-12 flex-1 bg-gradient-to-r from-border to-transparent" />
-              </div>
-              <h3 className="mb-4 text-base font-semibold tracking-tight text-foreground">
-                <span className="inline-flex rounded-full border border-border/60 bg-background/70 px-3 py-1 font-mono text-[0.92rem]">
-                  {stripMarkdownHeadingFormatting(subsection.title)}
-                </span>
+              <h3 className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
+                {subsection.method ? (
+                  <span
+                    className={cn(
+                      "inline-flex shrink-0 rounded-full border px-2 py-0.5 font-mono text-[11px] font-bold leading-tight",
+                      subsection.method === "GET" && "border-emerald-500/25 bg-emerald-500/15 text-emerald-400",
+                      subsection.method === "POST" && "border-amber-500/25 bg-amber-500/15 text-amber-400",
+                    )}
+                  >
+                    {subsection.method}
+                  </span>
+                ) : null}
+                <code className="font-mono text-[0.92rem]">
+                  {stripMarkdownHeadingFormatting(subsection.title).replace(/^(GET|POST)\s+/, "")}
+                </code>
               </h3>
               <div className="space-y-4">
                 {subsection.blocks.map((block, index) => (
@@ -241,9 +231,14 @@ function SectionRenderer({ section }: { section: ApiReferenceSection }) {
 
 export default async function AboutApiPage() {
   const document = await loadApiReferenceDocument();
-  const navSections = document.sections.map((section) => ({
+  const sidebarSections: SidebarSection[] = document.sections.map((section) => ({
     id: section.id,
     label: stripMarkdownHeadingFormatting(section.title),
+    subsections: section.subsections.map((sub) => ({
+      id: sub.id,
+      label: stripMarkdownHeadingFormatting(sub.title).replace(/^(GET|POST)\s+/, ""),
+      method: sub.method,
+    })),
   }));
 
   return (
@@ -366,17 +361,12 @@ export default async function AboutApiPage() {
         </section>
       ) : null}
 
-      <LongformScrollspyNav
-        sections={navSections}
-        railLabel="Jump to Section"
-        navAriaLabel="API reference section controls"
-      />
-
-      <div className="space-y-6">
+      {/* Zone 2: Two-column reference body */}
+      <ApiReferenceLayout sections={sidebarSections}>
         {document.sections.map((section) => (
           <SectionRenderer key={section.id} section={section} />
         ))}
-      </div>
+      </ApiReferenceLayout>
     </div>
   );
 }

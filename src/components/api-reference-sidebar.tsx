@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -47,34 +47,19 @@ function findParentSectionId(sections: SidebarSection[], activeId: string): stri
 
 export function ApiReferenceSidebar({ sections, activeId, onNavigate, className }: ApiReferenceSidebarProps) {
   const activeParent = findParentSectionId(sections, activeId);
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
-    const initial = new Set<string>();
-    if (activeParent) initial.add(activeParent);
-    return initial;
-  });
+  // Track only manual toggles; activeParent auto-expands without setState-in-effect
+  const [manualToggles, setManualToggles] = useState<Record<string, boolean>>({});
 
-  // Auto-expand the group containing the active item when activeId changes
-  useEffect(() => {
-    if (activeParent) {
-      setExpandedGroups((prev) => {
-        if (prev.has(activeParent)) return prev;
-        const next = new Set(prev);
-        next.add(activeParent);
-        return next;
-      });
-    }
-  }, [activeParent]);
+  const isGroupExpanded = (sectionId: string) => {
+    if (sectionId in manualToggles) return manualToggles[sectionId];
+    return sectionId === activeParent;
+  };
 
   const toggleGroup = (sectionId: string) => {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(sectionId)) {
-        next.delete(sectionId);
-      } else {
-        next.add(sectionId);
-      }
-      return next;
-    });
+    setManualToggles((prev) => ({
+      ...prev,
+      [sectionId]: !isGroupExpanded(sectionId),
+    }));
   };
 
   return (
@@ -84,7 +69,7 @@ export function ApiReferenceSidebar({ sections, activeId, onNavigate, className 
       </p>
       {sections.map((section) => {
         const hasChildren = section.subsections.length > 0;
-        const isExpanded = expandedGroups.has(section.id);
+        const isExpanded = isGroupExpanded(section.id);
         const isActive = activeId === section.id;
 
         if (!hasChildren) {
