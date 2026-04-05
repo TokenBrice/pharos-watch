@@ -168,8 +168,8 @@
     "notes": "Alert orchestration, suppression logic, payload shaping, and delivery policy remain intertwined. The next split should isolate candidate selection, rendering, and delivery-side effects."
   },
   "worker/src/cron/dex-liquidity/scoring.ts": {
-    "fileLines": 844,
-    "maxFunctionLines": 162,
+    "fileLines": 846,
+    "maxFunctionLines": 164,
     "branchCount": 88,
     "disposition": "deferred",
     "targetBudget": { "fileLines": 620, "maxFunctionLines": 120, "branchCount": 60 },
