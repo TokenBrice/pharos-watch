@@ -468,10 +468,13 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
   },
   "re-metrics": {
     sourceModel: "dynamic-mix",
-    evidenceClass: "static-validated",
+    evidenceClass: "independent",
     sharedSourceMode: "none",
     redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: { maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+    },
   },
   reservoir: {
     sourceModel: "dynamic-mix",
@@ -530,7 +533,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
   },
   "usdd-data-platform": {
     sourceModel: "dynamic-mix",
-    evidenceClass: "static-validated",
+    evidenceClass: "independent",
     sharedSourceMode: "none",
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
