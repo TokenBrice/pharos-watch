@@ -14,13 +14,13 @@ Direct protocol-native API outages are tracked in `failedSources` / `fallbackMod
 
 Run metadata now includes `failedSources`, `fallbackMode` signals, staged-pool merge counters (`stagedPoolsMerged`, `stagedPoolsSkipped`, `stagedPoolsSkippedByExactIdentity`, `stagedPoolsSkippedByUniqueDerivedIdentity`), challenger publish counters, and detailed `sourceCoverage` values (`currentCoverage`, `previousCoverage`, `minExpectedCoverage`, `nearCoverageGuard`, `currentGlobalTvl`, `previousGlobalTvl`, `nearValueGuard`, `currentTop10CoveredTvl`, `previousTop10CoveredTvl`, `nearMajorCoverageGuard`, `currentCoverageClasses`, `previousCoverageClasses`, `priceObservationCoins`, `dsFallbackCoins`, `cgTickerFallbackCoins`).
 
-| Component           | Weight | Source                     | How Computed                                                                                                           |
-| ------------------- | ------ | -------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| **TVL Depth**       | 35%    | DeFiLlama Yields           | Log-scale using effective TVL (quality-adjusted, metapool-deduped): $100K->20, $1M->40, $10M->60, $100M->80, $1B+->100 |
-| **Volume Activity** | 20%    | DeFiLlama Yields           | Log-scale V/T ratio: 33.3\*log10(vtRatio/0.005). ~0.5%->0, ~5%->33, ~50%->67                                           |
-| **Pool Quality**    | 22.5%  | Curve API + DeFiLlama      | Quality-adjusted TVL using mechanism x balance health x pair quality multipliers (see below)                           |
-| **Durability**      | 15%    | DeFiLlama Yields + History | 35% TVL stability, 25% volume consistency, 25% maturity, 15% organic fraction (sqrt curve)                             |
-| **Pair Diversity**  | 7.5%   | DeFiLlama Yields           | Pool count, diminishing returns: min(100, poolCount x 5)                                                               |
+| Component           | Weight | Source                     | How Computed                                                                                                                                             |
+| ------------------- | ------ | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **TVL Depth**       | 30%    | DeFiLlama Yields           | Ratio-based log-scale: `35 * log10(depthRatio / 0.0007)` where `depthRatio = effectiveTvl / circulatingUsd`. ~0.5%->30, ~1.5%->47, ~6%->67, ~14%->80, ~25%+->90+. Falls back to absolute log-scale formula when market cap is unavailable. |
+| **Volume Activity** | 20%    | DeFiLlama Yields           | Log-scale V/T ratio: `38 * (log10(vtRatio) + 3)`. ~0.1%->0, ~0.3%->18, ~3.5%->59, ~19%->86, ~32%+->100                                                |
+| **Pool Quality**    | 20%    | Curve API + DeFiLlama      | Venue quality retention ratio: `(qualityAdjustedTvl/totalTvlUsd - 0.15) / 0.65 * 100`, rescaled from 15–80% range to 0–100 (see below)                 |
+| **Durability**      | 20%    | DeFiLlama Yields + History | 35% TVL stability, 25% volume consistency, 25% maturity, 15% organic fraction (sqrt curve)                                                              |
+| **Pair Diversity**  | 10%    | DeFiLlama Yields           | Pool count, diminishing returns: min(100, poolCount x 5)                                                                                                 |
 
 Primary scoring inputs are DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + eight direct protocol-native fetchers (Fluid, Balancer, Raydium, Orca, Meteora, PancakeSwap V3, Aerodrome Slipstream, Velodrome Slipstream). The scorer prefers direct-API pools over overlapping DeFiLlama pools via a conservative pool-identity model (exact pool id first, derived token-shape match second) before score computation, but only after those direct-API pools pass the shared TVL sanity gates used elsewhere in the pipeline. Direct-source precedence now also requires measured non-zero 24h volume, which lets pool-state-only sources such as Slipstream expand coverage without replacing stronger overlapping DeFiLlama rows when authoritative volume telemetry is absent. After the primary-source merge, the scoring cron reads fresh rows from `dex_pool_staging` (when present), applies freshness confidence decay to staged TVL/volume, skips staged pools already covered by primary sources, and merges the remaining pools before final scoring.
 
@@ -183,11 +183,11 @@ Per-stablecoin durability metric combining: TVL stability from 30-day CV (35%), 
 
 #### Pool Quality Formula
 
-Pool Quality uses the same log-scale formula as TVL Depth, applied to quality-adjusted TVL:
+Pool Quality measures the venue quality retention ratio: the fraction of total TVL that survives after applying mechanism, balance health, and pair quality multipliers.
 
-`poolQuality = min(100, max(0, 20 * log10(max(qualityAdjustedTvl, 1) / 100_000) + 20))`
+`poolQuality = min(100, max(0, (qualityAdjustedTvl / totalTvlUsd - 0.15) / 0.65 * 100))`
 
-Where `qualityAdjustedTvl` applies mechanism, balance health, and pair quality multipliers to raw TVL. Examples: $100K→20, $1M→40, $10M→60, $100M→80.
+Where `qualityAdjustedTvl` applies mechanism, balance health, and pair quality multipliers to raw TVL, and `totalTvlUsd` is the pre-adjustment sum across all pools. The linear rescaling maps the 15–80% retention range to 0–100, so a pool set retaining 15% or less of its raw TVL after quality adjustment scores 0, and one retaining 80% or more scores 100.
 
 #### Durability Sub-Component Weights
 
