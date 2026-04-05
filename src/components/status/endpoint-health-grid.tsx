@@ -1,7 +1,6 @@
 import { ENDPOINT_GROUPS } from "@/hooks/use-endpoint-probes";
 import type { EndpointProbeResult } from "@shared/types";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getProbeStatusDetail, getProbeStatusLabel, isProbePassing } from "@/lib/status-dashboard-model";
 
 const GROUP_LABELS: Array<{ key: keyof typeof ENDPOINT_GROUPS; label: string }> = [
@@ -27,14 +26,10 @@ export function EndpointHealthGrid({
 }: EndpointHealthGridProps) {
   if (isLoading && !probes) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Browser Endpoint Probes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">Probing endpoints...</p>
-        </CardContent>
-      </Card>
+      <article className="rounded-[1.35rem] border border-black/7 bg-[linear-gradient(180deg,oklch(0.995_0.004_248_/_0.96),oklch(0.972_0.01_248_/_0.99))] p-5 shadow-[inset_0_1px_0_oklch(1_0_0_/0.72),0_16px_36px_oklch(0_0_0_/0.08)] dark:border-white/10 dark:bg-[linear-gradient(180deg,oklch(0.16_0.014_248_/_0.78),oklch(0.12_0.01_248_/_0.9))] dark:shadow-[0_16px_36px_oklch(0_0_0_/0.12)]">
+        <h3 className="text-base font-semibold tracking-tight text-foreground">Browser Endpoint Probes</h3>
+        <p className="mt-3 text-sm text-muted-foreground">Probing endpoints...</p>
+      </article>
     );
   }
 
@@ -57,11 +52,9 @@ export function EndpointHealthGrid({
       : "Shows public canary coverage only. Admin and manual action routes are intentionally excluded.");
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Browser Endpoint Probes</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <article className="rounded-[1.35rem] border border-black/7 bg-[linear-gradient(180deg,oklch(0.995_0.004_248_/_0.96),oklch(0.972_0.01_248_/_0.99))] p-5 shadow-[inset_0_1px_0_oklch(1_0_0_/0.72),0_16px_36px_oklch(0_0_0_/0.08)] dark:border-white/10 dark:bg-[linear-gradient(180deg,oklch(0.16_0.014_248_/_0.78),oklch(0.12_0.01_248_/_0.9))] dark:shadow-[0_16px_36px_oklch(0_0_0_/0.12)]">
+      <h3 className="text-base font-semibold tracking-tight text-foreground">Browser Endpoint Probes</h3>
+      <div className="mt-4 space-y-4">
         <p className="text-xs text-muted-foreground">
           {description ??
             (isAdminView
@@ -156,7 +149,7 @@ export function EndpointHealthGrid({
             </div>
           );
         })}
-      </CardContent>
-    </Card>
+      </div>
+    </article>
   );
 }

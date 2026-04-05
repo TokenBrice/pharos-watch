@@ -278,8 +278,7 @@ export function PublicStatusHero({
           <div className="mt-5 rounded-[1.15rem] border border-black/8 bg-white/55 p-4 dark:border-white/10 dark:bg-black/18">
             <div className="text-[11px] uppercase tracking-[0.22em] text-slate-500 dark:text-white/50">Operator handoff</div>
             <p className="mt-2 text-sm leading-relaxed text-slate-700 dark:text-white/70">
-              Recovery controls stay on the Access-protected ops host under{" "}
-              <code className="font-mono text-slate-950 dark:text-white">/admin/</code>.
+              Pipeline recovery controls are available to Pharos operators on the access-protected ops console.
             </p>
           </div>
         </aside>
