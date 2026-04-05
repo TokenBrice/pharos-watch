@@ -7,7 +7,7 @@ export function LiquidityTechnicalDetails() {
         <div className="grid grid-cols-5 gap-3 w-full">
           <div className="rounded-lg border p-3 text-center">
             <p className="text-foreground font-medium">TVL Depth</p>
-            <p className="text-xs text-muted-foreground mt-0.5">35%</p>
+            <p className="text-xs text-muted-foreground mt-0.5">30%</p>
           </div>
           <div className="rounded-lg border p-3 text-center">
             <p className="text-foreground font-medium">Volume Activity</p>
@@ -15,15 +15,15 @@ export function LiquidityTechnicalDetails() {
           </div>
           <div className="rounded-lg border p-3 text-center">
             <p className="text-foreground font-medium">Pool Quality</p>
-            <p className="text-xs text-muted-foreground mt-0.5">22.5%</p>
+            <p className="text-xs text-muted-foreground mt-0.5">20%</p>
           </div>
           <div className="rounded-lg border p-3 text-center">
             <p className="text-foreground font-medium">Durability</p>
-            <p className="text-xs text-muted-foreground mt-0.5">15%</p>
+            <p className="text-xs text-muted-foreground mt-0.5">20%</p>
           </div>
           <div className="rounded-lg border p-3 text-center">
             <p className="text-foreground font-medium">Pair Diversity</p>
-            <p className="text-xs text-muted-foreground mt-0.5">7.5%</p>
+            <p className="text-xs text-muted-foreground mt-0.5">10%</p>
           </div>
         </div>
         <div className="text-muted-foreground text-xl font-bold">&darr;</div>
@@ -37,7 +37,7 @@ export function LiquidityTechnicalDetails() {
         <div className="grid grid-cols-2 gap-2 w-full">
           <div className="rounded-lg border p-3 text-center">
             <p className="text-foreground font-medium text-xs">TVL Depth</p>
-            <p className="text-xs text-muted-foreground">35%</p>
+            <p className="text-xs text-muted-foreground">30%</p>
           </div>
           <div className="rounded-lg border p-3 text-center">
             <p className="text-foreground font-medium text-xs">Vol. Activity</p>
@@ -45,15 +45,15 @@ export function LiquidityTechnicalDetails() {
           </div>
           <div className="rounded-lg border p-3 text-center">
             <p className="text-foreground font-medium text-xs">Pool Quality</p>
-            <p className="text-xs text-muted-foreground">22.5%</p>
+            <p className="text-xs text-muted-foreground">20%</p>
           </div>
           <div className="rounded-lg border p-3 text-center">
             <p className="text-foreground font-medium text-xs">Durability</p>
-            <p className="text-xs text-muted-foreground">15%</p>
+            <p className="text-xs text-muted-foreground">20%</p>
           </div>
           <div className="rounded-lg border p-3 text-center col-span-2">
             <p className="text-foreground font-medium text-xs">Pair Diversity</p>
-            <p className="text-xs text-muted-foreground">7.5%</p>
+            <p className="text-xs text-muted-foreground">10%</p>
           </div>
         </div>
         <div className="text-muted-foreground text-xl font-bold">&darr;</div>
@@ -83,31 +83,33 @@ export function LiquidityTechnicalDetails() {
             <tbody className="divide-y">
               <tr className="hover:bg-muted/40 transition-colors">
                 <td className="py-2 pr-4 text-foreground">TVL Depth</td>
-                <td className="py-2 pr-4">35%</td>
+                <td className="py-2 pr-4">30%</td>
                 <td className="py-2">
-                  Log-scale effective TVL (quality-adjusted, metapool-deduped): $100K&rarr;20, $1M&rarr;40,
-                  $10M&rarr;60, $100M&rarr;80, $1B+&rarr;100
+                  Effective TVL relative to market cap (log-scale): 35&times;log10(depthRatio/0.0007). ~0.5%&rarr;30,
+                  ~1.5%&rarr;47, ~6%&rarr;67, ~14%&rarr;80, ~25%+&rarr;90+. Falls back to absolute TVL scale when
+                  market cap is unavailable.
                 </td>
               </tr>
               <tr className="hover:bg-muted/40 transition-colors">
                 <td className="py-2 pr-4 text-foreground">Volume Activity</td>
                 <td className="py-2 pr-4">20%</td>
                 <td className="py-2">
-                  Log-scale V/T ratio: 33.3&times;log10(vtRatio/0.005). ~0.5%&rarr;13, ~5%&rarr;56, ~50%&rarr;100
+                  Log-scale V/T ratio: 38&times;(log10(vtRatio)+3). ~0.3%&rarr;18, ~3.5%&rarr;59, ~19%&rarr;86,
+                  ~32%+&rarr;100
                 </td>
               </tr>
               <tr className="hover:bg-muted/40 transition-colors">
                 <td className="py-2 pr-4 text-foreground">Pool Quality</td>
-                <td className="py-2 pr-4">22.5%</td>
+                <td className="py-2 pr-4">20%</td>
                 <td className="py-2">
-                  Quality-adjusted TVL using pool mechanism multiplier &times; balance health &times; pair quality.
-                  Curve StableSwap (A&ge;500) = 1.0&times;, Uni V3 and Pancake/Slipstream 1bp pools = 1.1&times;,
-                  Meteora and other concentrated-liquidity direct sources = 0.85&times;, and generic AMM = 0.3&times;
+                  Venue quality retention: qualityAdjustedTvl/totalTvl, rescaled from the realistic 15&ndash;80% range
+                  to 0&ndash;100. Measures mechanism multiplier &times; balance health; pair quality is captured in TVL
+                  Depth via effectiveTvl.
                 </td>
               </tr>
               <tr className="hover:bg-muted/40 transition-colors">
                 <td className="py-2 pr-4 text-foreground">Durability</td>
-                <td className="py-2 pr-4">15%</td>
+                <td className="py-2 pr-4">20%</td>
                 <td className="py-2">
                   TVL stability (35%), volume consistency (25%), pool maturity (25%), organic fee fraction with sqrt
                   curve (15%)
@@ -115,7 +117,7 @@ export function LiquidityTechnicalDetails() {
               </tr>
               <tr className="hover:bg-muted/40 transition-colors">
                 <td className="py-2 pr-4 text-foreground">Pair Diversity</td>
-                <td className="py-2 pr-4">7.5%</td>
+                <td className="py-2 pr-4">10%</td>
                 <td className="py-2">Pool count with diminishing returns: min(100, poolCount &times; 5)</td>
               </tr>
             </tbody>

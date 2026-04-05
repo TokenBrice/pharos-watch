@@ -77,7 +77,7 @@ export function LiquidityMethodologySection() {
       <MethodologyFacts
         facts={[
           { label: "Update cadence", value: "30m refresh" },
-          { label: "Signal mix", value: "6 weighted liquidity components" },
+          { label: "Signal mix", value: "5 weighted liquidity components" },
           { label: "Output", value: "0-100 DEX depth score" },
         ]}
       />
@@ -102,12 +102,15 @@ export function LiquidityMethodologySection() {
       </div>
       <WorkedExample summary="Worked example (verified against computeLiquidityScore)">
         <p className="font-mono">
-          Inputs: effectiveTVL=$25M, TVL=$20M, volume24h=$8M, qualityTVL=$18M, durability=68, pools=12
+          Inputs: effectiveTVL=$10M, TVL=$20M, marketCap=$100M, volume24h=$1M, qualityTVL=$12M, durability=70, pools=8
         </p>
-        <p className="font-mono">tvlDepth=67.96, volume=63.37, quality=65.11, pair=60</p>
-        <p className="font-mono">score=round(0.35*67.96+0.20*63.37+0.225*65.11+0.15*68+0.075*60)=66</p>
+        <p className="font-mono">depthRatio=10M/100M=10%, tvlDepth=35&times;log10(0.10/0.0007)=75</p>
+        <p className="font-mono">vtRatio=1M/20M=5%, volume=38&times;(log10(0.05)+3)=65</p>
+        <p className="font-mono">retention=12M/20M=60%, quality=(0.60&minus;0.15)/0.65&times;100=69</p>
+        <p className="font-mono">diversity=min(100,8&times;5)=40</p>
+        <p className="font-mono">score=round(0.30&times;75+0.20&times;65+0.20&times;69+0.20&times;70+0.10&times;40)=67</p>
         <p>
-          Result: <span className="text-foreground">Liquidity score 66</span>.
+          Result: <span className="text-foreground">Liquidity score 67</span>.
         </p>
       </WorkedExample>
 
