@@ -4,9 +4,10 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PharosLogo } from "@/components/pharos-logo";
-import { ChevronsLeft, ChevronsRight, Moon, Search, Sun } from "lucide-react";
-import { NAV_GROUPS, BOTTOM_NAV_ITEMS, DASHBOARD_NAV_ITEM } from "@/lib/nav-config";
+import { ChevronsLeft, ChevronsRight, ChevronRight, Moon, Search, Sun } from "lucide-react";
+import { NAV_GROUPS, ABOUT_NAV_GROUP, BOTTOM_NAV_ITEMS, DASHBOARD_NAV_ITEM } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
+import { useNavCollapse } from "@/hooks/use-nav-collapse";
 import { getWindowStorage, safeStorageGetItem, safeStorageSetItem } from "@/lib/browser-storage";
 import { openCommandPalette } from "@/lib/command-palette";
 import { isRouteActive } from "@/lib/navigation";
@@ -177,9 +178,114 @@ function SidebarSocialLinks({ expanded }: { expanded: boolean }) {
   );
 }
 
+function SidebarGroup({
+  groupKey, label, items, expanded: sidebarExpanded, isGroupExpanded, onToggle, pathname,
+}: {
+  groupKey: string; label: string; items: NavItem[]; expanded: boolean;
+  isGroupExpanded: boolean; onToggle: () => void; pathname: string;
+}) {
+  return (
+    <div>
+      {sidebarExpanded && (
+        <button
+          onClick={onToggle}
+          className="flex w-full items-center justify-between px-5 pb-1.5 text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground/65 hover:text-muted-foreground transition-colors"
+          aria-expanded={isGroupExpanded}
+          aria-controls={`nav-group-${groupKey}`}
+        >
+          {label}
+          <ChevronRight className={`h-3 w-3 transition-transform duration-200 ${isGroupExpanded ? "rotate-90" : ""}`} />
+        </button>
+      )}
+      {sidebarExpanded ? (
+        <>
+          <div className={`grid transition-[grid-template-rows] duration-200 ease-[var(--motion-ease-standard)] ${isGroupExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+            <div className="overflow-hidden">
+              <div id={`nav-group-${groupKey}`} className="space-y-0.5">
+                {items.map((item) => (
+                  <SidebarNavItem key={item.href} item={item} expanded={sidebarExpanded} isActive={isRouteActive(pathname, item.href)} />
+                ))}
+              </div>
+            </div>
+          </div>
+          {!isGroupExpanded && (
+            <div className="px-5 text-[11px] italic text-muted-foreground/40">{items.length} pages</div>
+          )}
+        </>
+      ) : (
+        <div className="space-y-0.5">
+          {items.map((item) => (
+            <SidebarNavItem key={item.href} item={item} expanded={false} isActive={isRouteActive(pathname, item.href)} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SidebarAboutGroup({
+  expanded: sidebarExpanded, isGroupExpanded, onToggle, pathname,
+}: {
+  expanded: boolean; isGroupExpanded: boolean; onToggle: () => void; pathname: string;
+}) {
+  const isAboutActive = isRouteActive(pathname, ABOUT_NAV_GROUP.href);
+  return (
+    <div>
+      {sidebarExpanded ? (
+        <div className="flex items-center justify-between px-5 pb-1.5 text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground/65">
+          <Link
+            href={ABOUT_NAV_GROUP.href}
+            className={`pharos-focus-ring rounded-sm underline underline-offset-3 hover:text-muted-foreground transition-colors ${isAboutActive ? "text-foreground" : ""}`}
+          >
+            {ABOUT_NAV_GROUP.label}
+          </Link>
+          <button
+            onClick={onToggle}
+            className="pharos-focus-ring rounded-sm p-0.5 hover:text-muted-foreground transition-colors"
+            aria-expanded={isGroupExpanded}
+            aria-controls="nav-group-about"
+            aria-label={isGroupExpanded ? "Collapse About section" : "Expand About section"}
+          >
+            <ChevronRight className={`h-3 w-3 transition-transform duration-200 ${isGroupExpanded ? "rotate-90" : ""}`} />
+          </button>
+        </div>
+      ) : (
+        <SidebarNavItem
+          item={{ href: ABOUT_NAV_GROUP.href, label: ABOUT_NAV_GROUP.label, icon: ABOUT_NAV_GROUP.icon }}
+          expanded={false}
+          isActive={isAboutActive}
+        />
+      )}
+      {sidebarExpanded ? (
+        <>
+          <div className={`grid transition-[grid-template-rows] duration-200 ease-[var(--motion-ease-standard)] ${isGroupExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+            <div className="overflow-hidden">
+              <div id="nav-group-about" className="space-y-0.5">
+                {ABOUT_NAV_GROUP.children.map((item) => (
+                  <SidebarNavItem key={item.href} item={item} expanded={sidebarExpanded} isActive={isRouteActive(pathname, item.href)} />
+                ))}
+              </div>
+            </div>
+          </div>
+          {!isGroupExpanded && (
+            <div className="px-5 text-[11px] italic text-muted-foreground/40">{ABOUT_NAV_GROUP.children.length} pages</div>
+          )}
+        </>
+      ) : (
+        <div className="space-y-0.5">
+          {ABOUT_NAV_GROUP.children.map((item) => (
+            <SidebarNavItem key={item.href} item={item} expanded={false} isActive={isRouteActive(pathname, item.href)} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Sidebar() {
   const { expanded, pinned, togglePin, onMouseEnter, onMouseLeave } = useSidebar();
   const pathname = usePathname();
+  const { isExpanded: isGroupExpanded, toggle } = useNavCollapse();
 
   // Keyboard shortcut: [ and ] toggle sidebar pin state.
   // Inputs/textareas are excluded. No modifier key is used intentionally
@@ -238,28 +344,27 @@ export function Sidebar() {
           <SidebarNavItem item={DASHBOARD_NAV_ITEM} expanded={expanded} isActive={isRouteActive(pathname, DASHBOARD_NAV_ITEM.href)} />
         </div>
         {NAV_GROUPS.map((group) => (
-          <div key={group.label}>
-            {expanded && (
-              <div className="px-5 pb-1.5 text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground/65">
-                {group.label}
-              </div>
-            )}
-            <div className="space-y-0.5">
-              {group.items.map((item) => (
-                <SidebarNavItem
-                  key={item.href}
-                  item={item}
-                  expanded={expanded}
-                  isActive={isRouteActive(pathname, item.href)}
-                />
-              ))}
-            </div>
-          </div>
+          <SidebarGroup
+            key={group.key}
+            groupKey={group.key}
+            label={group.label}
+            items={group.items}
+            expanded={expanded}
+            isGroupExpanded={isGroupExpanded(group.key)}
+            onToggle={() => toggle(group.key)}
+            pathname={pathname}
+          />
         ))}
       </nav>
 
       {/* Bottom section */}
       <div className="shrink-0 border-t border-border/65 bg-muted/15 py-2 space-y-0.5">
+        <SidebarAboutGroup
+          expanded={expanded}
+          isGroupExpanded={isGroupExpanded("about")}
+          onToggle={() => toggle("about")}
+          pathname={pathname}
+        />
         {BOTTOM_NAV_ITEMS.map((item) => (
           <SidebarNavItem
             key={item.href}
