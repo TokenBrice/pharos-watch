@@ -290,11 +290,13 @@ function evaluateFxSourceFreshness(
   if (normalizedCadence === "business-daily" && sourceDaySec != null) {
     const expectedDaySec = resolveBusinessDailyExpectedDaySec(nowSec);
     const missedPublishes = countBusinessDaysBehind(sourceDaySec, expectedDaySec);
-    if (missedPublishes <= 0) {
+    if (missedPublishes <= 1) {
+      // Tolerate 1 missed business day — covers market holidays (Good Friday,
+      // Easter Monday, etc.) that the weekend-only calendar cannot predict.
       return { status: "fresh", ageSec, cadence: normalizedCadence, warning: null };
     }
     return {
-      status: missedPublishes === 1 ? "degraded" : "stale",
+      status: missedPublishes === 2 ? "degraded" : "stale",
       ageSec,
       cadence: normalizedCadence,
       warning:

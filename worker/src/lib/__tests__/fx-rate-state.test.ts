@@ -60,6 +60,50 @@ describe("fx-rate-state cadence-aware freshness", () => {
     expect(buildFxCacheStatus(state, 1800, nowSec).cacheStatus.sourceStatus).toBe("fresh");
   });
 
+  it("tolerates 1 missed business-daily publish for market holidays", () => {
+    // Good Friday 2026-04-03: latest source is Thursday 2026-04-02,
+    // expected would naively be Friday, but we tolerate 1 missed day.
+    vi.setSystemTime(new Date("2026-04-05T19:00:00Z"));
+    const nowSec = Math.floor(Date.now() / 1000);
+    const state = buildState(
+      {
+        usableSyncAt: nowSec - 60,
+        mode: "live",
+        sourceUpdatedAtByPeg: { peggedAUD: nowSec - (48 * 3600) },
+        sourceModeByPeg: { peggedAUD: "live" },
+        sourceCadenceByPeg: { peggedAUD: "business-daily" },
+        sourceDateByPeg: { peggedAUD: "2026-04-02" },
+        consecutiveFallbackRuns: 0,
+      },
+      { peggedAUD: 0.64 },
+    );
+
+    expect(state).not.toBeNull();
+    expect(getFxReferenceTypeFromState(state, "peggedAUD", 6 * 3600, nowSec)).toBe("fresh");
+    expect(buildFxCacheStatus(state, 1800, nowSec).cacheStatus.sourceStatus).toBe("fresh");
+  });
+
+  it("flags 2 missed business-daily publishes as degraded", () => {
+    // Wednesday source date, Friday after publish window → 2 missed
+    vi.setSystemTime(new Date("2026-04-10T18:00:00Z"));
+    const nowSec = Math.floor(Date.now() / 1000);
+    const state = buildState(
+      {
+        usableSyncAt: nowSec - 60,
+        mode: "live",
+        sourceUpdatedAtByPeg: { peggedEUR: nowSec - (72 * 3600) },
+        sourceModeByPeg: { peggedEUR: "live" },
+        sourceCadenceByPeg: { peggedEUR: "business-daily" },
+        sourceDateByPeg: { peggedEUR: "2026-04-08" },
+        consecutiveFallbackRuns: 0,
+      },
+      { peggedEUR: 1.08 },
+    );
+
+    expect(state).not.toBeNull();
+    expect(buildFxCacheStatus(state, 1800, nowSec).cacheStatus.sourceStatus).toBe("degraded");
+  });
+
   it("keeps intraday degradation visible in health while treating it as stale for strict reference checks", () => {
     vi.setSystemTime(new Date("2026-03-11T08:00:00Z"));
     const nowSec = Math.floor(Date.now() / 1000);
