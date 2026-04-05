@@ -19,6 +19,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "falcon",
   "fdusd-transparency",
   "frax",
+  "frax-balance-sheet",
   "fx",
   "gho",
   "infinifi",

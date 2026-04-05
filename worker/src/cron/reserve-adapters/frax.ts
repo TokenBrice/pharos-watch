@@ -156,3 +156,28 @@ export async function fetchFraxReserves(
   }
   return adaptFraxCombinedData(payload as FraxCombinedDataResponse, coin);
 }
+
+
+/**
+ * Dedicated balance-sheet adapter entrypoint for coins using the Frax v2
+ * balance-sheet API with independent evidence class (e.g. frxUSD).
+ */
+export async function fetchFraxBalanceSheetReserves(
+  _coin: StablecoinMeta,
+  config: LiveReservesConfig,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<AdapterResult> {
+  const primaryInput = requireJsonInputFromConfig(config, "frax-balance-sheet");
+  const payload = await fetchJsonWithRetry<FraxBalanceSheetResponse>(
+    primaryInput.url,
+    signal,
+    getAdapterTimeout(config, 12_000),
+    ctx,
+  );
+
+  if (!isBalanceSheetResponse(payload)) {
+    throw new Error("frax-balance-sheet adapter requires a v2 balance-sheet API response");
+  }
+  return adaptFraxBalanceSheet(payload);
+}

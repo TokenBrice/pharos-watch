@@ -220,6 +220,7 @@ const adapterParamsSchemas = {
   falcon: noParamsSchema,
   "fdusd-transparency": noParamsSchema,
   frax: noParamsSchema,
+  "frax-balance-sheet": noParamsSchema,
   fx: noParamsSchema,
   gho: ghoParamsSchema,
   infinifi: noParamsSchema,
@@ -399,6 +400,17 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
+    },
+  },
+  "frax-balance-sheet": {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
   fx: {

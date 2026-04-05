@@ -1091,7 +1091,7 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "frax",
+      "adapter": "frax-balance-sheet",
       "version": 2,
       "semantics": "attestation-mix",
       "breakerScope": "frxusd-frax",
@@ -8393,7 +8393,11 @@
       "yieldType": "lending-vault"
     },
     "reserves": [
-      { "name": "GPU compute leases & accepted stablecoin deposits", "pct": 100, "risk": "medium" }
+      {
+        "name": "GPU compute leases & accepted stablecoin deposits",
+        "pct": 100,
+        "risk": "medium"
+      }
     ],
     "liveReservesConfig": {
       "adapter": "single-asset",

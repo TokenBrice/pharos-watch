@@ -23,6 +23,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   falcon: "live",
   "fdusd-transparency": "live",
   frax: "curated-validated",
+  "frax-balance-sheet": "live",
   fx: "live",
   gho: "live",
   infinifi: "live",

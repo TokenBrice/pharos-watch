@@ -1476,11 +1476,17 @@
         "risk": "very-low",
         "probe": {
           "kind": "json-path",
-          "path": ["data", "price"]
+          "path": [
+            "data",
+            "price"
+          ]
         },
         "timestampProbe": {
           "kind": "json-path",
-          "path": ["data", "timestamp"]
+          "path": [
+            "data",
+            "timestamp"
+          ]
         }
       }
     },
@@ -2424,9 +2430,9 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "curated-validated",
-      "version": 1,
-      "semantics": "single-asset",
+      "adapter": "usdai-proof-of-reserves",
+      "version": 2,
+      "semantics": "collateral-mix",
       "breakerScope": "usdai-usd-ai",
       "display": {
         "url": "https://app.usd.ai/reserves",
@@ -2434,9 +2440,8 @@
       },
       "inputs": {
         "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
+          "kind": "http-json",
+          "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161"
         }
       }
     }

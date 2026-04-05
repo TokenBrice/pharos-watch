@@ -17,7 +17,7 @@ import { fetchEvmBranchBalancesReserves } from "./evm-branch-balances";
 import { fetchEthenaReserves } from "./ethena";
 import { fetchFalconReserves } from "./falcon";
 import { fetchFdusdTransparencyReserves } from "./fdusd-transparency";
-import { fetchFraxReserves } from "./frax";
+import { fetchFraxReserves, fetchFraxBalanceSheetReserves } from "./frax";
 import { fetchFxReserves } from "./fx";
 import { fetchGhoReserves } from "./gho";
 import { fetchInfiniFiReserves } from "./infinifi";
@@ -56,6 +56,7 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   falcon: fetchFalconReserves,
   "fdusd-transparency": fetchFdusdTransparencyReserves,
   frax: fetchFraxReserves,
+  "frax-balance-sheet": fetchFraxBalanceSheetReserves,
   fx: fetchFxReserves,
   gho: fetchGhoReserves,
   infinifi: fetchInfiniFiReserves,
