@@ -99,7 +99,7 @@ describe("dex-liquidity pool helpers", () => {
     rich.poolCount = 8;
     rich.chains = new Set(["Ethereum", "Base", "Arbitrum"]);
 
-    // V/T = 1M/5M = 0.2 -> log-scale: 33.3*log10(0.2/0.005) = 33.3*log10(40) = 33.3*1.602 = 53.3
+    // V/T = 1M/5M = 0.2 -> log-scale: 38*(log10(0.2)+3) = 38*2.301 = 87.4 → 87
     const healthyLiquidity = computeLiquidityScore(rich, 90);
     expect(healthyLiquidity.score).toBeGreaterThan(60);
     expect(healthyLiquidity.components.pairDiversity).toBe(40);
