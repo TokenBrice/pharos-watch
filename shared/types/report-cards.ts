@@ -72,6 +72,7 @@ const CustodyModelWireSchema = CustodyModelSchema.or(
 const RawDimensionInputsSchema = z.object({
   pegScore: z.number().nullable(),
   activeDepeg: z.boolean(),
+  activeDepegBps: z.number().nullable().optional().default(null),
   depegEventCount: z.number(),
   lastEventAt: z.number().nullable(),
   liquidityScore: z.number().nullable(),

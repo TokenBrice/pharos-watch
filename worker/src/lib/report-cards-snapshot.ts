@@ -254,6 +254,7 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
       rawInputs: {
         pegScore: null,
         activeDepeg: false,
+        activeDepegBps: null,
         depegEventCount: 0,
         lastEventAt: null,
         liquidityScore: null,
@@ -351,11 +352,17 @@ function computeCard(input: ComputeCardInput): ReportCard {
   };
 
   const navToken = !!meta.flags.navToken;
-  const overall = computeOverallGrade(dimensions, { navToken });
+  const activeDepegBps = peg?.activeDepeg && peg?.currentDeviationBps != null
+    ? Math.abs(peg.currentDeviationBps)
+    : null;
+  const overall = computeOverallGrade(dimensions, { navToken, activeDepegBps });
 
   const rawInputs: RawDimensionInputs = {
     pegScore: peg?.pegScore ?? null,
     activeDepeg: peg?.activeDepeg ?? false,
+    activeDepegBps: peg?.activeDepeg && peg?.currentDeviationBps != null
+      ? Math.abs(peg.currentDeviationBps)
+      : null,
     depegEventCount: peg?.eventCount ?? 0,
     lastEventAt: peg?.lastEventAt ?? null,
     liquidityScore: liq?.liquidityScore ?? null,

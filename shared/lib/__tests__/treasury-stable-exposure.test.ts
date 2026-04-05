@@ -22,6 +22,7 @@ function makeReportCard(id: string, overallScore: number | null, overallGrade: R
     rawInputs: {
       pegScore: null,
       activeDepeg: false,
+      activeDepegBps: null,
       depegEventCount: 0,
       lastEventAt: null,
       liquidityScore: null,

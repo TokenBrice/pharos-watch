@@ -5,6 +5,10 @@ import type {
   ReportCardGrade,
 } from "../types";
 import {
+  ACTIVE_DEPEG_CAP_D_BPS,
+  ACTIVE_DEPEG_CAP_D_SCORE,
+  ACTIVE_DEPEG_CAP_F_BPS,
+  ACTIVE_DEPEG_CAP_F_SCORE,
   DIMENSION_WEIGHTS,
   NO_LIQUIDITY_PENALTY,
   PEG_MULTIPLIER_EXPONENT,
@@ -14,7 +18,7 @@ import { scoreDependencyRisk } from "./report-card-dependency";
 
 export function computeOverallGrade(
   dimensions: Record<DimensionKey, ReportCardDimension>,
-  options?: { navToken?: boolean },
+  options?: { navToken?: boolean; activeDepegBps?: number | null },
 ): { grade: ReportCardGrade; score: number | null; baseScore: number | null; ratedDimensions: number } {
   const keys = Object.keys(DIMENSION_WEIGHTS) as DimensionKey[];
 
@@ -48,6 +52,16 @@ export function computeOverallGrade(
 
   if (dimensions.liquidity.score === null) {
     score *= NO_LIQUIDITY_PENALTY;
+  }
+
+  // Active depeg cap: hard-cap overall score for severe ongoing depegs
+  const depegBps = options?.activeDepegBps;
+  if (depegBps != null) {
+    if (depegBps >= ACTIVE_DEPEG_CAP_F_BPS) {
+      score = Math.min(score, ACTIVE_DEPEG_CAP_F_SCORE);
+    } else if (depegBps >= ACTIVE_DEPEG_CAP_D_BPS) {
+      score = Math.min(score, ACTIVE_DEPEG_CAP_D_SCORE);
+    }
   }
 
   const clamped = Math.max(0, Math.min(100, Math.round(score)));
@@ -98,7 +112,10 @@ export function computeStressedGrades(
       };
       const dependencyRisk = scoreDependencyRisk(meta, overallScores);
       const dimensions = { ...card.dimensions, dependencyRisk };
-      const overall = computeOverallGrade(dimensions, { navToken: card.rawInputs.navToken });
+      const overall = computeOverallGrade(dimensions, {
+        navToken: card.rawInputs.navToken,
+        activeDepegBps: card.rawInputs.activeDepegBps ?? null,
+      });
       return {
         ...card,
         dimensions,

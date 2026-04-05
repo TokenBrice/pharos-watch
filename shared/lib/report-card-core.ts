@@ -11,8 +11,14 @@ export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
   dependencyRisk: 0.25,
 };
 
-export const PEG_MULTIPLIER_EXPONENT = 0.2;
+export const PEG_MULTIPLIER_EXPONENT = 0.4;
 export const NO_LIQUIDITY_PENALTY = 0.9;
+
+/** Overall score cap when an active depeg exceeds these thresholds (absolute bps). */
+export const ACTIVE_DEPEG_CAP_F_BPS = 2500;
+export const ACTIVE_DEPEG_CAP_D_BPS = 1000;
+export const ACTIVE_DEPEG_CAP_F_SCORE = 39;
+export const ACTIVE_DEPEG_CAP_D_SCORE = 49;
 
 export const DIMENSION_LABELS: Record<DimensionKey, string> = {
   pegStability: "Peg Stability",

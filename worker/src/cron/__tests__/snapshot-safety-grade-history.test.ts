@@ -44,6 +44,7 @@ function makeCard(
     rawInputs: {
       pegScore: null,
       activeDepeg: false,
+      activeDepegBps: null,
       depegEventCount: 0,
       lastEventAt: null,
       liquidityScore: null,

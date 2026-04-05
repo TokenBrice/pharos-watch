@@ -220,10 +220,11 @@ export function SafetyScoresMethodologySection() {
                   <h3 className="text-foreground font-medium">Peg Stability Multiplier</h3>
                   <p>
                     After computing the base score, peg stability is applied as a power-curve multiplier:
-                    final&nbsp;=&nbsp;base&nbsp;&times;&nbsp;(pegScore&nbsp;/&nbsp;100)<sup>0.20</sup>. Coins with strong
-                    pegs (90+) are barely affected (~2% penalty), while coins with broken pegs are properly penalized (e.g.
-                    pegScore&nbsp;10 &rarr; 37% penalty). NAV tokens (pegScore&nbsp;=&nbsp;NR) receive multiplier&nbsp;1.0
-                    since peg tracking does not apply to them.
+                    final&nbsp;=&nbsp;base&nbsp;&times;&nbsp;(pegScore&nbsp;/&nbsp;100)<sup>0.40</sup>. Coins with strong
+                    pegs (90+) are barely affected (~4% penalty), while coins with broken pegs are sharply penalized (e.g.
+                    pegScore&nbsp;10 &rarr; 60% penalty). NAV tokens (pegScore&nbsp;=&nbsp;NR) receive multiplier&nbsp;1.0
+                    since peg tracking does not apply to them. Severe active depegs are also hard-capped:
+                    &ge;&nbsp;2500&nbsp;bps (25%+) caps the overall score at F, &ge;&nbsp;1000&nbsp;bps (10%+) caps at D.
                   </p>
                 </div>
                 {/* No-liquidity penalty */}

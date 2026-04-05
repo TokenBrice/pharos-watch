@@ -13,6 +13,7 @@ import {
   enrichLiveSlicesForBlacklist,
   GRADE_THRESHOLDS,
   resolveBlacklistStatuses,
+  PEG_MULTIPLIER_EXPONENT,
 } from "../report-cards";
 import type { ReportCard } from "../../types/report-cards";
 
@@ -40,6 +41,12 @@ describe("scoreToGrade", () => {
 
   it("returns F for score 0", () => {
     expect(scoreToGrade(0)).toBe("F");
+  });
+});
+
+describe("PEG_MULTIPLIER_EXPONENT", () => {
+  it("is 0.4", () => {
+    expect(PEG_MULTIPLIER_EXPONENT).toBe(0.4);
   });
 });
 
@@ -74,6 +81,52 @@ describe("computeOverallGrade", () => {
     expect(result.grade).not.toBe("NR");
     expect(result.score).toBeGreaterThan(0);
     expect(result.score).toBeLessThanOrEqual(100);
+  });
+});
+
+describe("computeOverallGrade — active depeg cap", () => {
+  const makeDimension = (score: number | null) => ({
+    grade: score !== null ? scoreToGrade(score) : ("NR" as const),
+    score,
+    detail: "test",
+  });
+
+  const highBaseDims = {
+    pegStability: makeDimension(50),
+    liquidity: makeDimension(90),
+    resilience: makeDimension(90),
+    decentralization: makeDimension(80),
+    dependencyRisk: makeDimension(95),
+  };
+
+  it("caps at F (39) for active depeg >= 2500 bps", () => {
+    const result = computeOverallGrade(highBaseDims as never, { activeDepegBps: 7600 });
+    expect(result.score).toBeLessThanOrEqual(39);
+    expect(result.grade).toBe("F");
+  });
+
+  it("caps at D (49) for active depeg >= 1000 bps but < 2500 bps", () => {
+    const result = computeOverallGrade(highBaseDims as never, { activeDepegBps: 1500 });
+    expect(result.score).toBeLessThanOrEqual(49);
+    expect(result.grade).not.toBe("NR");
+    expect(["D", "F"]).toContain(result.grade);
+  });
+
+  it("does not cap for active depeg < 1000 bps", () => {
+    const result = computeOverallGrade(highBaseDims as never, { activeDepegBps: 500 });
+    const uncapped = computeOverallGrade(highBaseDims as never);
+    expect(result.score).toBe(uncapped.score);
+  });
+
+  it("does not cap when activeDepegBps is null", () => {
+    const result = computeOverallGrade(highBaseDims as never, { activeDepegBps: null });
+    const uncapped = computeOverallGrade(highBaseDims as never);
+    expect(result.score).toBe(uncapped.score);
+  });
+
+  it("does not cap when activeDepegBps is not provided", () => {
+    const result = computeOverallGrade(highBaseDims as never);
+    expect(result.score).not.toBeNull();
   });
 });
 
@@ -227,6 +280,7 @@ describe("computeStressedGrades", () => {
     rawInputs: overrides.rawInputs ?? {
       pegScore: 90,
       activeDepeg: false,
+      activeDepegBps: null,
       depegEventCount: 0,
       lastEventAt: null,
       liquidityScore: 80,
@@ -295,6 +349,7 @@ describe("computeStressedGrades", () => {
       rawInputs: {
         pegScore: 90,
         activeDepeg: false,
+        activeDepegBps: null,
         depegEventCount: 0,
         lastEventAt: null,
         liquidityScore: 80,
@@ -328,6 +383,7 @@ describe("computeStressedGrades", () => {
       rawInputs: {
         pegScore: 90,
         activeDepeg: false,
+        activeDepegBps: null,
         depegEventCount: 0,
         lastEventAt: null,
         liquidityScore: 80,

@@ -2,17 +2,18 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v6.92)
+## Overall Grade (v6.93)
 
 Three-step computation:
 
 1. **Base score**: weighted average of 4 base dimensions (each 0–100). NR dimensions have their weight redistributed proportionally among rated ones. Requires at least 2 rated base dimensions; otherwise overall = NR.
-2. **Peg multiplier**: `final = base × (pegScore / 100) ^ 0.20`. Coins with good pegs (90+) barely affected (~2% penalty). Coins with broken pegs get properly penalized (pegScore 10 → 37% penalty). pegScore = NR (NAV tokens) → multiplier 1.0 (no penalty). pegScore = 0 → multiplier 0.
-3. **No-liquidity penalty**: `final × 0.9` when the Liquidity / Exit dimension is NR (no DEX or redemption-backstop signal at all). No free pass — as coverage matures, absence of any exit signal is increasingly suspicious. Implemented via `NO_LIQUIDITY_PENALTY = 0.9` in `report-cards.ts`.
+2. **Peg multiplier**: `final = base × (pegScore / 100) ^ 0.40`. Coins with good pegs (90+) barely affected (~4% penalty). Coins with broken pegs get sharply penalized (pegScore 10 → 60% penalty). pegScore = NR (NAV tokens) → multiplier 1.0 (no penalty). pegScore = 0 → multiplier 0.
+3. **Active depeg cap**: coins with a severe ongoing depeg are hard-capped regardless of base score — depegs ≥ 2500 bps (25%+) cap at F (39), ≥ 1000 bps (10%+) cap at D (49).
+4. **No-liquidity penalty**: `final × 0.9` when the Liquidity / Exit dimension is NR (no DEX or redemption-backstop signal at all). No free pass — as coverage matures, absence of any exit signal is increasingly suspicious. Implemented via `NO_LIQUIDITY_PENALTY = 0.9` in `report-cards.ts`.
 
 Cemetery coins get a permanent F.
 
-Current-version note: v6.92 keeps the v6.4 structure. LUSD and BOLD still use documented-bound eventual redemption capacity, and when fresh live reserve telemetry exists their current on-chain redemption fee bps is used for cost scoring instead of a flat formula placeholder. LUSD now reaches that live-reserve path through direct Liquity v1 system-collateral reads rather than the generic proof-style liveness probe, so its clean authoritative reserve snapshots qualify as independent live evidence. Collateral-quality passthrough still only accepts fresh authoritative independent live reserve snapshots whose latest sync state is `ok` and whose freshness evidence is scoring-eligible; `validated-static`, `weak-live-probe`, and `unverified` reserve feeds remain visible on reserve detail surfaces but no longer override curated collateral scoring. Blacklist attribution now distinguishes mutable-contract risk (`Possible`) from majority upstream freeze exposure (`Inherited`), treats reserve-side stablecoin and custody/CEX clues as `Possible` instead of `No`, and no longer treats `centralized-dependent` governance as sufficient evidence on its own.
+Current-version note: v6.93 raises the peg multiplier exponent from 0.20 to 0.40 and adds graduated active-depeg overall-score caps (≥ 2500 bps → F, ≥ 1000 bps → D). This ensures catastrophic depegs like USR at -7600 bps correctly produce an F instead of being softened by strong base dimensions. The `activeDepegBps` field is added to `RawDimensionInputs` so stressed-grade recomputations and the frontend can apply the same cap.
 
 ## Dimensions
 
@@ -29,7 +30,7 @@ Current-version note: v6.92 keeps the v6.4 structure. LUSD and BOLD still use do
 
 | Source                      | Scoring                                                                                  |
 | --------------------------- | ---------------------------------------------------------------------------------------- |
-| `pegScore` from peg summary | Applied as `(pegScore/100)^0.20` multiplier to base score. NAV tokens → 1.0 (no penalty) |
+| `pegScore` from peg summary | Applied as `(pegScore/100)^0.40` multiplier to base score. NAV tokens → 1.0 (no penalty). Active depegs ≥ 2500 bps cap overall at F; ≥ 1000 bps cap at D |
 
 ### Peg Stability Details
 
