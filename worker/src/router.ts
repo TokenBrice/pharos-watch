@@ -3,12 +3,14 @@ import {
   validateEndpointMethod,
 } from "@shared/lib/api-endpoints";
 
+import { errorResponse } from "./lib/api-utils";
 import {
-  type FullRouteContext,
   getRouteDependencies as getRegisteredRouteDependencies,
   getRouteMatch,
+  ROUTER_STATIC_PATHS,
+  type FullRouteContext,
+  type RouteDependency,
 } from "./route-registry";
-import { errorResponse } from "./lib/api-utils";
 
 function addAdminGetNoStoreHeader(path: string, request: Request | undefined, response: Response): Response {
   if (request?.method !== "GET") return response;
@@ -19,7 +21,7 @@ function addAdminGetNoStoreHeader(path: string, request: Request | undefined, re
   return response;
 }
 
-export function getRouteDependencies(url: URL): readonly import("./route-registry").RouteDependency[] | null {
+export function getRouteDependencies(url: URL): readonly RouteDependency[] | null {
   return getRegisteredRouteDependencies(url.pathname);
 }
 
@@ -40,5 +42,4 @@ export function route(routeCtx: FullRouteContext): Promise<Response> | null {
 
   return null;
 }
-
-export { ROUTER_STATIC_PATHS } from "./route-registry";
+export { ROUTER_STATIC_PATHS };

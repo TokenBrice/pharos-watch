@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ENDPOINT_DEFINITIONS } from "@shared/lib/api-endpoints";
 import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
 import { route, ROUTER_STATIC_PATHS } from "../../router";
-import type { FullRouteContext } from "../../route-registry";
+import type { FullRouteContext } from "../../routes/shared";
 import { mockD1 } from "./helpers/mock-d1";
 
 vi.stubGlobal("fetch", vi.fn(async () => (
