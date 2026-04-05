@@ -2,83 +2,112 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
-  accumulateBucketedExposure,
   fetchJsonWithRetry,
   getAdapterTimeout,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
   slicesFromValues,
-  unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
+  unverifiedFreshnessMetadata,
 } from "./helpers";
 
-interface DefiLlamaProtocolResponse {
-  tokensInUsd: Array<{
-    date: number;
-    tokens: Record<string, number>;
-  }>;
+// ---------------------------------------------------------------------------
+// Block Analitica groups API response
+// ---------------------------------------------------------------------------
+
+export interface SkyGroupResult {
+  group: string;
+  group_name: string;
+  debt: string;
+  collateral: string;
+  datetime: string;
 }
 
-type SkyBucket = "stablecoins" | "eth-lsd" | "btc" | "other";
-
-const STABLECOIN_TOKENS = new Set(["USDC", "GUSD", "USDP", "DAI", "USDT", "TUSD"]);
-const ETH_TOKENS = new Set(["WETH", "WSTETH", "RETH"]);
-const BTC_TOKENS = new Set(["WBTC", "RENBTC"]);
-
-const KNOWN_TOKENS = new Set([...STABLECOIN_TOKENS, ...ETH_TOKENS, ...BTC_TOKENS,
-  "LINK", "UNI", "COMP", "BAT", "YFI", "AAVE", "ZRX", "BAL", "WMATIC", "LRC", "KNC", "MANA",
-]);
-
-function bucketForToken(token: string): SkyBucket {
-  const upper = token.toUpperCase();
-  if (STABLECOIN_TOKENS.has(upper)) return "stablecoins";
-  if (ETH_TOKENS.has(upper)) return "eth-lsd";
-  if (BTC_TOKENS.has(upper)) return "btc";
-  return "other";
+interface BlockAnaliticaGroupsResponse {
+  count: number;
+  results: SkyGroupResult[];
 }
 
-export function resolveSkyImmediateRedeemableUsd(tokens: Record<string, number>): number {
-  // DefiLlama's Maker methodology explicitly includes PSM USDC balance.
-  const usdcUsd = tokens.USDC;
-  return Number.isFinite(usdcUsd) && usdcUsd > 0 ? usdcUsd : 0;
+// ---------------------------------------------------------------------------
+// Module → slice mapping
+// ---------------------------------------------------------------------------
+
+interface ModuleSpec {
+  name: string;
+  risk: "very-low" | "low" | "medium" | "high" | "very-high";
+  coinId?: string;
+  depType?: "mechanism";
 }
 
-export function listUnexpectedTokens(tokens: Record<string, number>): string[] {
-  return Object.keys(tokens).filter((t) => !KNOWN_TOKENS.has(t.toUpperCase()));
+const MODULE_MAP: Record<string, ModuleSpec> = {
+  stablecoins: { name: "Stablecoins (PSM)", risk: "very-low", coinId: "usdc-circle", depType: "mechanism" },
+  spark:       { name: "Spark (lending)", risk: "low" },
+  grove:       { name: "Grove (RWA)", risk: "low" },
+  obex:        { name: "Obex", risk: "medium" },
+  core:        { name: "Core (crypto vaults)", risk: "medium" },
+  staked:      { name: "Staking Engine", risk: "high" },
+  "legacy-rwa":{ name: "Legacy RWA", risk: "low" },
+};
+
+const KNOWN_GROUPS = new Set(Object.keys(MODULE_MAP));
+
+function parseDebt(raw: string): number {
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
-export function adaptSkyCollateral(tokens: Record<string, number>): AdapterResult["slices"] {
-  const { bucketTotals } = accumulateBucketedExposure({
-    items: Object.entries(tokens),
-    getValue: ([, value]) => value,
-    getBucket: ([token]) => bucketForToken(token),
-  });
-
-  return slicesFromValues([
-    {
-      name: "Stablecoins (USDC via PSM)",
-      value: bucketTotals.get("stablecoins") ?? 0,
-      risk: "low",
-      coinId: "usdc-circle",
-      depType: "mechanism" as const,
-    },
-    {
-      name: "ETH / liquid staking (wstETH, rETH)",
-      value: bucketTotals.get("eth-lsd") ?? 0,
-      risk: "low",
-    },
-    {
-      name: "BTC collateral (WBTC)",
-      value: bucketTotals.get("btc") ?? 0,
-      risk: "medium",
-    },
-    {
-      name: "Other DeFi tokens",
-      value: bucketTotals.get("other") ?? 0,
-      risk: "high",
-    },
-  ]);
+function parseCollateral(raw: string): number {
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : 0;
 }
+
+// ---------------------------------------------------------------------------
+// Pure helpers (exported for tests)
+// ---------------------------------------------------------------------------
+
+export function adaptSkyModules(groups: SkyGroupResult[]): AdapterResult["slices"] {
+  const knownValues: Array<{
+    value: number;
+    name: string;
+    risk: "very-low" | "low" | "medium" | "high" | "very-high";
+    coinId?: string;
+    depType?: "mechanism";
+  }> = [];
+
+  let unknownDebtTotal = 0;
+
+  for (const g of groups) {
+    const debt = parseDebt(g.debt);
+    if (debt <= 0) continue;
+
+    const spec = MODULE_MAP[g.group];
+    if (spec) {
+      knownValues.push({ value: debt, ...spec });
+    } else {
+      unknownDebtTotal += debt;
+    }
+  }
+
+  if (unknownDebtTotal > 0) {
+    knownValues.push({ value: unknownDebtTotal, name: "Other modules", risk: "high" });
+  }
+
+  return slicesFromValues(knownValues);
+}
+
+export function resolveSkyImmediateRedeemableUsd(groups: SkyGroupResult[]): number {
+  const stableGroup = groups.find((g) => g.group === "stablecoins");
+  if (!stableGroup) return 0;
+  return parseCollateral(stableGroup.collateral);
+}
+
+export function listUnknownGroups(groups: SkyGroupResult[]): string[] {
+  return groups.filter((g) => !KNOWN_GROUPS.has(g.group)).map((g) => g.group);
+}
+
+// ---------------------------------------------------------------------------
+// Adapter entry point
+// ---------------------------------------------------------------------------
 
 export async function fetchSkyMakercoreReserves(
   _coin: StablecoinMeta,
@@ -87,60 +116,52 @@ export async function fetchSkyMakercoreReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const primaryInput = requireJsonInputFromConfig(config, "sky-makercore");
-  const payload = await fetchJsonWithRetry<DefiLlamaProtocolResponse>(
+  const payload = await fetchJsonWithRetry<BlockAnaliticaGroupsResponse>(
     primaryInput.url,
     signal,
     getAdapterTimeout(config, 15_000),
     ctx,
   );
 
-  const entries = payload.tokensInUsd;
-  if (!Array.isArray(entries) || entries.length === 0) {
-    throw new Error("sky-makercore: tokensInUsd array is empty or missing");
+  const groups = payload.results;
+  if (!Array.isArray(groups) || groups.length === 0) {
+    throw new Error("sky-makercore: groups results array is empty or missing");
   }
 
-  const latest = entries.reduce((maxEntry, entry) => (
-    entry.date > maxEntry.date ? entry : maxEntry
-  ));
-  const tokens = latest.tokens;
-  if (!tokens || typeof tokens !== "object") {
-    throw new Error("sky-makercore: latest tokensInUsd entry has no tokens object");
-  }
-
-  const slices = adaptSkyCollateral(tokens);
+  const slices = adaptSkyModules(groups);
   if (slices.length === 0) {
-    throw new Error("sky-makercore: all token values are zero or invalid");
+    throw new Error("sky-makercore: all module debt values are zero or invalid");
   }
 
-  const totalUsd = Object.values(tokens).reduce((sum, v) => sum + (Number.isFinite(v) ? v : 0), 0);
-  const immediateRedeemableUsd = resolveSkyImmediateRedeemableUsd(tokens);
-  const { unknownValue: unknownExposureUsd, unknownValuesByKey } = accumulateBucketedExposure({
-    items: Object.entries(tokens),
-    getValue: ([, value]) => value,
-    getBucket: ([token]) => bucketForToken(token),
-    isUnknown: ([token]) => !KNOWN_TOKENS.has(token.toUpperCase()),
-    getUnknownKey: ([token]) => token,
-  });
-  const unknown = Array.from(unknownValuesByKey.keys());
-  const warnings: LiveReserveWarning[] = unknown.map((token) => reserveDegradedWarning(
-    "unknown-asset",
-    `Sky collateral token bucketed into other: ${token}`,
-  ));
+  const totalCollateralUsd = groups.reduce((sum, g) => sum + parseCollateral(g.collateral), 0);
+  const immediateRedeemableUsd = resolveSkyImmediateRedeemableUsd(groups);
+
+  // Snapshot timestamp from the first result's datetime field
+  const datetimeStr = groups[0].datetime;
+  const snapshotEpoch = datetimeStr ? Math.floor(new Date(datetimeStr + "Z").getTime() / 1000) : 0;
+
+  const unknown = listUnknownGroups(groups);
+  const warnings: LiveReserveWarning[] = unknown.map((group) =>
+    reserveDegradedWarning("unknown-asset", `Sky module bucketed into other: ${group}`),
+  );
+
+  const totalDebt = groups.reduce((sum, g) => sum + parseDebt(g.debt), 0);
+  const unknownDebt = groups.filter((g) => !KNOWN_GROUPS.has(g.group)).reduce((sum, g) => sum + parseDebt(g.debt), 0);
 
   return {
     slices,
     metadata: {
-      tokenCount: Object.keys(tokens).length,
-      totalCollateralUsd: Math.round(totalUsd),
+      tokenCount: groups.length,
+      totalCollateralUsd: Math.round(totalCollateralUsd),
       immediateRedeemableUsd,
-      snapshotDate: latest.date,
-      ...(latest.date > 0
-        ? verifiedFreshnessMetadata(latest.date)
+      snapshotDate: snapshotEpoch,
+      ...(snapshotEpoch > 0
+        ? verifiedFreshnessMetadata(snapshotEpoch)
         : unverifiedFreshnessMetadata(
-            "protocol-history-api",
-            "Sky tokensInUsd payload did not expose a trustworthy snapshot timestamp",
+            "module-groups-api",
+            "Sky groups payload did not expose a trustworthy snapshot timestamp",
           )),
-      unknownExposurePct: totalUsd > 0 ? (unknownExposureUsd / totalUsd) * 100 : 0,
+      unknownExposurePct: totalDebt > 0 ? (unknownDebt / totalDebt) * 100 : 0,
     },
     ...(warnings.length > 0 ? { warnings } : {}),
   };

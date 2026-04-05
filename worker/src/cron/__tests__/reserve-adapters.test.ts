@@ -14,7 +14,7 @@ import {
   listUnexpectedEthenaAssets,
   type EthenaCollateralResponse,
 } from "../reserve-adapters/ethena";
-import { adaptSkyCollateral, listUnexpectedTokens } from "../reserve-adapters/sky-makercore";
+import { adaptSkyModules, listUnknownGroups, type SkyGroupResult } from "../reserve-adapters/sky-makercore";
 import { adaptFraxCombinedData, type FraxCombinedDataResponse } from "../reserve-adapters/frax";
 import { adaptGhoFacilitators, type GhoFacilitatorData } from "../reserve-adapters/gho";
 
@@ -307,101 +307,75 @@ describe("listUnexpectedEthenaAssets", () => {
 
 // --- Sky/MakerDAO adapter tests ---
 
-describe("adaptSkyCollateral", () => {
-  it("buckets MakerDAO vault collateral into 4 categories", () => {
-    const tokens: Record<string, number> = {
-      USDC: 3_000_000_000,
-      WETH: 1_000_000_000,
-      WSTETH: 500_000_000,
-      WBTC: 200_000_000,
-      LINK: 100_000_000,
-    };
+const SKY_SAMPLE_GROUPS: SkyGroupResult[] = [
+  { group: "stablecoins", group_name: "Stablecoins", debt: "4848053264.74", collateral: "4848920495.92", datetime: "2026-04-05T17:33:24" },
+  { group: "spark", group_name: "Spark", debt: "3604127984.82", collateral: "3604127984.82", datetime: "2026-04-05T17:33:24" },
+  { group: "grove", group_name: "Grove", debt: "2942299611.45", collateral: "2942299611.45", datetime: "2026-04-05T17:33:24" },
+  { group: "obex", group_name: "Obex", debt: "605813016.00", collateral: "605813016.00", datetime: "2026-04-05T17:33:24" },
+  { group: "core", group_name: "Core", debt: "524177048.08", collateral: "1744997221.98", datetime: "2026-04-05T17:33:24" },
+  { group: "staked", group_name: "Staking Engine", debt: "153348644.44", collateral: "1213000185.95", datetime: "2026-04-05T17:33:24" },
+  { group: "legacy-rwa", group_name: "Legacy RWA", debt: "104787191.81", collateral: "104787191.81", datetime: "2026-04-05T17:33:24" },
+];
 
-    const slices = adaptSkyCollateral(tokens);
+describe("adaptSkyModules", () => {
+  it("maps Sky module groups into risk-labeled slices", () => {
+    const slices = adaptSkyModules(SKY_SAMPLE_GROUPS);
 
-    // Should have at most 4 buckets
-    expect(slices.length).toBeLessThanOrEqual(4);
+    expect(slices).toHaveLength(7);
 
-    // Stablecoins should be the largest bucket
     const stableSlice = slices.find((s) => s.name.includes("Stablecoins"));
     expect(stableSlice).toBeDefined();
-    expect(stableSlice!.risk).toBe("low");
+    expect(stableSlice!.risk).toBe("very-low");
     expect(stableSlice!.coinId).toBe("usdc-circle");
     expect(stableSlice!.depType).toBe("mechanism");
 
-    // ETH/LSD bucket
-    const ethSlice = slices.find((s) => s.name.includes("ETH"));
-    expect(ethSlice).toBeDefined();
-    expect(ethSlice!.risk).toBe("low");
+    const sparkSlice = slices.find((s) => s.name.includes("Spark"));
+    expect(sparkSlice).toBeDefined();
+    expect(sparkSlice!.risk).toBe("low");
 
-    // BTC bucket
-    const btcSlice = slices.find((s) => s.name.includes("BTC"));
-    expect(btcSlice).toBeDefined();
-    expect(btcSlice!.risk).toBe("medium");
+    const coreSlice = slices.find((s) => s.name.includes("Core"));
+    expect(coreSlice).toBeDefined();
+    expect(coreSlice!.risk).toBe("medium");
 
-    // Other bucket
-    const otherSlice = slices.find((s) => s.name.includes("Other"));
-    expect(otherSlice).toBeDefined();
-    expect(otherSlice!.risk).toBe("high");
+    const stakedSlice = slices.find((s) => s.name.includes("Staking Engine"));
+    expect(stakedSlice).toBeDefined();
+    expect(stakedSlice!.risk).toBe("high");
 
-    // Total should be 100%
     const totalPct = slices.reduce((sum, s) => sum + s.pct, 0);
     expect(totalPct).toBeCloseTo(100, 0);
   });
 
-  it("skips tokens with zero or negative values", () => {
-    const tokens: Record<string, number> = {
-      USDC: 1_000_000,
-      WETH: 0,
-      WBTC: -500,
-    };
-
-    const slices = adaptSkyCollateral(tokens);
-    expect(slices.length).toBe(1);
-    expect(slices[0].pct).toBe(100);
-    expect(slices[0].name).toContain("Stablecoins");
-  });
-
-  it("groups multiple stablecoin tokens into one bucket", () => {
-    const tokens: Record<string, number> = {
-      USDC: 500_000_000,
-      USDT: 300_000_000,
-      GUSD: 50_000_000,
-      USDP: 150_000_000,
-    };
-
-    const slices = adaptSkyCollateral(tokens);
-    expect(slices.length).toBe(1);
-    expect(slices[0].name).toContain("Stablecoins");
+  it("omits modules with zero debt", () => {
+    const withZero: SkyGroupResult[] = [
+      { group: "stablecoins", group_name: "Stablecoins", debt: "1000000000", collateral: "1000000000", datetime: "2026-04-05T17:33:24" },
+      { group: "legacy-rwa", group_name: "Legacy RWA", debt: "0", collateral: "0", datetime: "2026-04-05T17:33:24" },
+    ];
+    const slices = adaptSkyModules(withZero);
+    expect(slices).toHaveLength(1);
     expect(slices[0].pct).toBe(100);
   });
 
-  it("returns empty array when all values are zero", () => {
-    const slices = adaptSkyCollateral({ USDC: 0, WETH: 0 });
-    expect(slices).toEqual([]);
+  it("returns empty array when all debts are zero", () => {
+    const allZero: SkyGroupResult[] = [
+      { group: "stablecoins", group_name: "Stablecoins", debt: "0", collateral: "0", datetime: "2026-04-05T17:33:24" },
+    ];
+    expect(adaptSkyModules(allZero)).toEqual([]);
   });
 });
 
-describe("listUnexpectedTokens (Sky)", () => {
-  it("returns empty for known tokens", () => {
-    expect(listUnexpectedTokens({ USDC: 100, WETH: 50, LINK: 25 })).toEqual([]);
+describe("listUnknownGroups (Sky)", () => {
+  it("returns empty for known groups", () => {
+    expect(listUnknownGroups(SKY_SAMPLE_GROUPS)).toEqual([]);
   });
 
-  it("identifies tokens not in the known set", () => {
-    const unknown = listUnexpectedTokens({
-      USDC: 100,
-      PEPE: 50,
-      SHIB: 25,
-    });
-    expect(unknown).toContain("PEPE");
-    expect(unknown).toContain("SHIB");
-    expect(unknown).not.toContain("USDC");
-  });
-
-  it("is case-insensitive in the lookup", () => {
-    // KNOWN_TOKENS uses uppercase; listUnexpectedTokens upper-cases the input
-    const unknown = listUnexpectedTokens({ usdc: 100, weth: 50 });
-    expect(unknown).toEqual([]);
+  it("identifies groups not in the known set", () => {
+    const groups: SkyGroupResult[] = [
+      ...SKY_SAMPLE_GROUPS,
+      { group: "new-thing", group_name: "New Thing", debt: "100", collateral: "100", datetime: "2026-04-05T17:33:24" },
+    ];
+    const unknown = listUnknownGroups(groups);
+    expect(unknown).toContain("new-thing");
+    expect(unknown).not.toContain("stablecoins");
   });
 });
 
