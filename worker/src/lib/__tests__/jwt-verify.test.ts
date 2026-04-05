@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { verifyAccessJwt, _resetJwksCache } from "@shared/lib/cloudflare-access-jwt";
+import { verifyAccessJwt, normalizeTeamDomain, _resetJwksCache } from "@shared/lib/cloudflare-access-jwt";
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -64,6 +64,28 @@ const MOCK_JWKS = {
 };
 
 // ── Tests ───────────────────────────────────────────────────────────
+
+describe("normalizeTeamDomain", () => {
+  it("passes through a bare team name", () => {
+    expect(normalizeTeamDomain("pharos-watch")).toBe("pharos-watch");
+  });
+
+  it("extracts team name from a full https URL", () => {
+    expect(normalizeTeamDomain("https://pharos-watch.cloudflareaccess.com")).toBe("pharos-watch");
+  });
+
+  it("extracts team name from an http URL", () => {
+    expect(normalizeTeamDomain("http://pharos-watch.cloudflareaccess.com")).toBe("pharos-watch");
+  });
+
+  it("handles trailing path in the URL", () => {
+    expect(normalizeTeamDomain("https://pharos-watch.cloudflareaccess.com/cdn-cgi/access/certs")).toBe("pharos-watch");
+  });
+
+  it("trims whitespace", () => {
+    expect(normalizeTeamDomain("  pharos-watch  ")).toBe("pharos-watch");
+  });
+});
 
 describe("verifyAccessJwt", () => {
   beforeEach(() => {
@@ -144,6 +166,14 @@ describe("verifyAccessJwt", () => {
     it("rejects token with wrong issuer", async () => {
       const { token } = makeJwtParts(validHeader(), validClaims({ iss: "https://evil.cloudflareaccess.com" }));
       expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
+    });
+
+    it("normalizes a full URL teamDomain before issuer comparison", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(MOCK_JWKS), { status: 200 })));
+      const { token } = makeJwtParts(validHeader(), validClaims());
+      // Passing the full URL should still reach JWKS fetch (claims pass)
+      await verifyAccessJwt({ token, aud: AUD, teamDomain: `https://${TEAM_DOMAIN}.cloudflareaccess.com` });
+      expect(fetch).toHaveBeenCalledWith(JWKS_URL);
     });
 
     it("rejects token with nbf in the future", async () => {

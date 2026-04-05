@@ -139,8 +139,25 @@ async function importPublicKey(jwk: JwksKey): Promise<CryptoKey | null> {
   }
 }
 
+/**
+ * Extracts the bare team name from a CF Access team domain value.
+ *
+ * Accepts either the bare name ("pharos-watch") or a full URL
+ * ("https://pharos-watch.cloudflareaccess.com") and normalizes to just
+ * the team name. This guards against misconfiguration where someone
+ * pastes the full issuer URL into CF_ACCESS_TEAM_DOMAIN.
+ */
+export function normalizeTeamDomain(input: string): string {
+  const trimmed = input.trim();
+  const match = trimmed.match(
+    /^https?:\/\/([^.]+)\.cloudflareaccess\.com/,
+  );
+  return match ? match[1] : trimmed;
+}
+
 export async function verifyAccessJwt(options: JwtVerifyOptions): Promise<boolean> {
-  const { token, aud, teamDomain } = options;
+  const { token, aud } = options;
+  const teamDomain = normalizeTeamDomain(options.teamDomain);
 
   const parts = token.split(".");
   if (parts.length !== 3) return false;

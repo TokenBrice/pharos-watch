@@ -4,9 +4,10 @@ import { onRequest } from "../api/admin/[[path]].ts";
 const { verifyAccessJwt } = vi.hoisted(() => ({
   verifyAccessJwt: vi.fn(),
 }));
-vi.mock("@shared/lib/cloudflare-access-jwt", () => ({
-  verifyAccessJwt,
-}));
+vi.mock("@shared/lib/cloudflare-access-jwt", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@shared/lib/cloudflare-access-jwt")>();
+  return { ...actual, verifyAccessJwt };
+});
 
 const BASE_ENV = {
   OPS_UI_ORIGIN: "https://ops.pharos.watch",

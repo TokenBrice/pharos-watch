@@ -1,3 +1,4 @@
+import { normalizeTeamDomain } from "@shared/lib/cloudflare-access-jwt";
 import { OPS_API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
 
 export const DEFAULT_OPS_API_ORIGIN = OPS_API_ORIGIN;
@@ -53,12 +54,12 @@ function getConfiguredValue(value: string | undefined): string | null {
 export function resolvePagesOpsUiAccessConfig(
   env: Pick<OpsAdminProxyEnv, "CF_ACCESS_TEAM_DOMAIN" | "CF_ACCESS_OPS_UI_AUD">,
 ): ResolvedPagesOpsUiAccessConfig | null {
-  const teamDomain = getConfiguredValue(env.CF_ACCESS_TEAM_DOMAIN);
+  const rawTeamDomain = getConfiguredValue(env.CF_ACCESS_TEAM_DOMAIN);
   const aud = getConfiguredValue(env.CF_ACCESS_OPS_UI_AUD);
-  if (!teamDomain || !aud) {
+  if (!rawTeamDomain || !aud) {
     return null;
   }
-  return { teamDomain, aud };
+  return { teamDomain: normalizeTeamDomain(rawTeamDomain), aud };
 }
 
 export function validatePagesOpsProxyEnv(env: OpsAdminProxyEnv): OpsProxyEnvIssue[] {
