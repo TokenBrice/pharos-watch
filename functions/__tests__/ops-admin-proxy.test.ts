@@ -28,6 +28,17 @@ function makeAuthedRequest(url: string, init: RequestInit = {}) {
   });
 }
 
+function makeCookieAuthedRequest(url: string, init: RequestInit = {}) {
+  const headers = new Headers(init.headers);
+  if (!headers.has("Cookie")) {
+    headers.set("Cookie", "CF_Authorization=valid-ui-jwt");
+  }
+  return new Request(url, {
+    ...init,
+    headers,
+  });
+}
+
 describe("ops admin proxy", () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -85,6 +96,33 @@ describe("ops admin proxy", () => {
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "Unauthorized" });
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("accepts a bootstrapped Access session cookie when the assertion header is absent", async () => {
+    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: makeCookieAuthedRequest("https://ops.pharos.watch/api/admin/status"),
+      env: BASE_ENV,
+      params: { path: "status" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(verifyAccessJwt).toHaveBeenCalledWith({
+      token: "valid-ui-jwt",
+      aud: "ui-aud",
+      teamDomain: "pharos-watch",
+    });
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "https://ops-api.pharos.watch/api/status",
+      expect.objectContaining({
+        method: "GET",
+      }),
+    );
   });
 
   it("enforces endpoint method rules before proxying upstream", async () => {

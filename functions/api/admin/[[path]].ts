@@ -25,6 +25,7 @@ const FORWARDED_RESPONSE_HEADERS = [
   "X-Idempotent-Replay",
 ] as const;
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+const ACCESS_SESSION_COOKIE = "CF_Authorization";
 
 interface OpsAdminProxyContext {
   request: Request;
@@ -109,13 +110,43 @@ function summarizeFetchError(error: unknown): { kind: string; message: string } 
   return { kind: typeof error, message: String(error) };
 }
 
+function getCookieValue(cookieHeader: string | null, name: string): string | null {
+  if (!cookieHeader) {
+    return null;
+  }
+
+  for (const entry of cookieHeader.split(";")) {
+    const trimmed = entry.trim();
+    if (trimmed.startsWith(`${name}=`)) {
+      const value = trimmed.slice(name.length + 1).trim();
+      return value.length > 0 ? value : null;
+    }
+  }
+
+  return null;
+}
+
+function getPresentedOpsUiAccessToken(request: Request): string | null {
+  const assertionHeader = request.headers.get("Cf-Access-Jwt-Assertion")?.trim();
+  if (assertionHeader) {
+    return assertionHeader;
+  }
+
+  const accessTokenHeader = request.headers.get("cf-access-token")?.trim();
+  if (accessTokenHeader) {
+    return accessTokenHeader;
+  }
+
+  return getCookieValue(request.headers.get("Cookie"), ACCESS_SESSION_COOKIE);
+}
+
 async function requireValidOpsUiJwt(request: Request, env: OpsAdminProxyEnv): Promise<Response | null> {
   const accessConfig = resolvePagesOpsUiAccessConfig(env);
   if (!accessConfig) {
     return jsonError(500, "Ops UI Access validation is not configured");
   }
 
-  const accessJwt = request.headers.get("Cf-Access-Jwt-Assertion")?.trim();
+  const accessJwt = getPresentedOpsUiAccessToken(request);
   if (!accessJwt) {
     return jsonError(401, "Unauthorized");
   }

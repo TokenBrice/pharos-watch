@@ -87,7 +87,8 @@ Use those exports as the source of truth when auditing Cloudflare bindings befor
 
 The current proxy now fails closed on its own trust boundary:
 
-- it verifies the inbound UI `Cf-Access-Jwt-Assertion` against `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD`
+- it verifies the inbound UI Access token against `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD`
+- it accepts that token from `Cf-Access-Jwt-Assertion` when Cloudflare forwards the assertion header, or from same-origin `cf-access-token` / `CF_Authorization` when the request is backed by an existing Access session cookie
 - it requires same-origin `Origin` evidence for mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`)
 - it still injects the Pages-managed service token pair only on the server-to-server hop to `ops-api.pharos.watch`
 
@@ -95,7 +96,7 @@ The current proxy now fails closed on its own trust boundary:
 
 - Allowed upstream paths are limited to admin routes and shared dynamic-admin matchers exported from `shared/lib/api-endpoints.ts` (including `/api/discovery-candidates/:id/dismiss`).
 - HTTP method rules are enforced by `validateEndpointMethod()`, so the proxy returns `405` with `Allow` when a caller uses the wrong verb for an otherwise valid admin route.
-- The proxy verifies the inbound UI JWT before the upstream fetch. Missing or invalid `Cf-Access-Jwt-Assertion` returns `401`.
+- The proxy verifies the inbound UI Access token before the upstream fetch. Missing or invalid Access token evidence (`Cf-Access-Jwt-Assertion`, `cf-access-token`, or `CF_Authorization`) returns `401`.
 - Mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) must include a same-origin `Origin` header matching `OPS_UI_ORIGIN`; missing or foreign origins return `403`.
 - The proxy forwards only `Accept`, `Content-Type`, and `Idempotency-Key` from the browser request. It adds `CF-Access-Client-Id` and `CF-Access-Client-Secret` from Pages env itself; browser callers never supply those directly.
 - The proxy reflects only a narrow response-header set back to the browser: `Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, and `X-Idempotent-Replay`.

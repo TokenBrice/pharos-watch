@@ -95,6 +95,7 @@ The active frontend operator mode is now:
   - Host-gates to `ops.pharos.watch` so public hostnames cannot use the proxy
   - Strips `/api/admin` and forwards to `ops-api.pharos.watch` with `CF-Access-Client-Id` / `CF-Access-Client-Secret`
   - Allows only admin routes and shared dynamic-admin matches from `shared/lib/api-endpoints.ts`
+  - Verifies the operator's UI Access token against `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD`, accepting either `Cf-Access-Jwt-Assertion` or a same-origin `cf-access-token` / `CF_Authorization` session token when the assertion header is absent
   - Forwards only `Accept`, `Content-Type`, and `Idempotency-Key` from the browser request; browser callers never send Access service-token headers directly
   - Reflects a narrowed response-header set (`Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, `X-Idempotent-Replay`) back into the app shell
   - Converts upstream timeouts into operator-visible `504` JSON errors; non-timeout fetch failures and Access redirect responses still return `502`
