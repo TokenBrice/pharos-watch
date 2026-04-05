@@ -194,7 +194,7 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/remediate-blacklist-amount-gaps`
 - `POST /api/backfill-blacklist-current-balances`
 
-When an `Idempotency-Key` is supplied on one of those routes, successful responses echo `Idempotency-Key` plus `X-Idempotent-Replay`, and conflicting reuse returns `409`.
+When an `Idempotency-Key` is supplied on one of those routes, successful responses echo `Idempotency-Key` plus `X-Idempotent-Replay`, and conflicting reuse returns `409`. If a handler throws and the worker can clear the pending reservation cleanly, the same key may be retried normally. If cleanup cannot be confirmed, the worker downgrades that key to a stored failure replay and repeats with the same key return a deterministic `500` replay with `X-Idempotent-Replay: true` until the reservation expires.
 
 The worker’s idempotent admin route helpers now authenticate first and only then enter idempotency bookkeeping. That keeps the helper contract aligned with its name and prevents future admin endpoints from accidentally becoming “idempotent but unauthenticated” through wrapper misuse.
 

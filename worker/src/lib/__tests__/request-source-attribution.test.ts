@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC,
   REQUEST_ATTRIBUTION_RETENTION_DAYS,
   classifyBrowserRequestConsumer,
   resolveApiRequestRouteMetric,
 } from "@shared/lib/request-attribution";
+import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import {
   API_REQUEST_SOURCE_STATS_RETENTION_DAYS,
@@ -11,9 +13,16 @@ import {
   mapLaneStatsRows,
   mapRouteStatsRows,
   mapTimeBucketRows,
+  recordWorkerRequestAttribution,
+  resetRequestAttributionStateForTests,
 } from "../request-source-attribution";
 
 describe("request-source-attribution", () => {
+  beforeEach(() => {
+    resetRequestAttributionStateForTests();
+    vi.restoreAllMocks();
+  });
+
   it("classifies Pharos browser requests by Origin as site", () => {
     const request = new Request("https://api.pharos.watch/api/stablecoins", {
       headers: { Origin: "https://pharos.watch" },
@@ -150,5 +159,82 @@ describe("request-source-attribution", () => {
     ]);
 
     expect(API_REQUEST_SOURCE_STATS_RETENTION_DAYS).toBe(REQUEST_ATTRIBUTION_RETENTION_DAYS);
+  });
+
+  it("records stats rows and schedules prune only once per prune bucket", async () => {
+    const db = mockD1([
+      {
+        match: "INSERT INTO api_request_consumer_stats",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+      {
+        match: "DELETE FROM api_request_consumer_stats",
+        rows: [],
+        runMeta: { changes: 3 },
+      },
+    ], { requireMatch: true });
+
+    await recordWorkerRequestAttribution(
+      db,
+      { routeKey: "stablecoins", routePath: "/api/stablecoins" },
+      "public-api",
+      "site",
+      1_710_000_000,
+    );
+    await recordWorkerRequestAttribution(
+      db,
+      { routeKey: "stablecoins", routePath: "/api/stablecoins" },
+      "public-api",
+      "site",
+      1_710_000_030,
+    );
+
+    const history = db.getHistory();
+    const insertStatements = history.filter((entry) => entry.sql.includes("INSERT INTO api_request_consumer_stats"));
+    const pruneStatements = history.filter((entry) => entry.sql.includes("DELETE FROM api_request_consumer_stats"));
+
+    expect(insertStatements).toHaveLength(2);
+    expect(insertStatements[0]?.binds.slice(1)).toEqual(["stablecoins", "/api/stablecoins", "public-api", "site"]);
+    expect(pruneStatements).toHaveLength(1);
+  });
+
+  it("logs prune failures and resets pending prune state for the next prune window", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const db = mockD1([
+      {
+        match: "INSERT INTO api_request_consumer_stats",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+      {
+        match: "DELETE FROM api_request_consumer_stats",
+        rows: [],
+        throwError: new Error("prune failed"),
+      },
+    ], { requireMatch: true });
+
+    const baseNowSec = 1_710_000_000;
+
+    await recordWorkerRequestAttribution(
+      db,
+      { routeKey: "stablecoins", routePath: "/api/stablecoins" },
+      "public-api",
+      "external",
+      baseNowSec,
+    );
+    await recordWorkerRequestAttribution(
+      db,
+      { routeKey: "stablecoins", routePath: "/api/stablecoins" },
+      "public-api",
+      "external",
+      baseNowSec + REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC,
+    );
+
+    const pruneStatements = db.getHistory().filter((entry) => entry.sql.includes("DELETE FROM api_request_consumer_stats"));
+
+    expect(pruneStatements).toHaveLength(2);
+    expect(warnSpy).toHaveBeenCalledTimes(2);
+    expect(warnSpy.mock.calls[0]?.[0]).toBe("[request-attribution] worker prune failed:");
   });
 });

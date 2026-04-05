@@ -62,6 +62,7 @@ Default policy:
 1. If the diff does not touch Pages or worker deploy surfaces, print the changed-file set and skip the gate.
 2. For deploy-impacting diffs, always run the shared validate pre-build checks:
    - `npm run audit:deps`
+   - `npm run audit:pricing-providers`
    - `npm run lint`
    - `npm run typecheck`
    - `npm run check:worker-boundary`
@@ -117,7 +118,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - defaults to the full deploy path on `workflow_dispatch`
 2. `validate`
    - runs only when `deploy_required=true`
-   - always includes `npm run audit:deps`, lint, policy/guardrail checks, `npm test`, and `npm run coverage:critical`
+   - always includes `npm run audit:deps`, `npm run audit:pricing-providers`, lint, policy/guardrail checks, `npm test`, and `npm run coverage:critical`
    - includes `npm run build` + `npm run seo:check` only when `pages_changed=true`
    - includes `cd worker && npx tsc --noEmit` only when `worker_changed=true`
    - pull requests still call the same reusable workflow with default inputs, so PR validation stays full-strength

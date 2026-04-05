@@ -274,7 +274,7 @@ These router-dispatched admin routes honor an optional `Idempotency-Key` header:
 - `POST /api/remediate-blacklist-amount-gaps`
 - `POST /api/backfill-blacklist-current-balances`
 
-The worker fingerprints method + path + sorted query + body for a given action key. Replays return the stored response with `X-Idempotent-Replay: true`; conflicting reuse returns `409`.
+The worker fingerprints method + path + sorted query + body for a given action key. Replays return the stored response with `X-Idempotent-Replay: true`; conflicting reuse returns `409`. When handler execution throws, the worker first tries to clear the pending reservation so the same key can be retried normally. If that cleanup cannot be confirmed, it stores a deterministic failure replay for that key and subsequent repeats return a replayed `500` response until the reservation expires.
 
 ### Backfill Query Helper
 

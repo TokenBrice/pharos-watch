@@ -9,6 +9,9 @@ interface IdempotencyRecord {
 }
 
 const PENDING_RESPONSE_STATUS = -1;
+const FAILED_RESPONSE_STATUS = -2;
+const FAILED_RESPONSE_HTTP_STATUS = 500;
+const FAILED_RESPONSE_MESSAGE = "Previous idempotent attempt failed before cleanup could be confirmed. Retry with a new Idempotency-Key.";
 
 async function sha256Hex(input: string): Promise<string> {
   const bytes = new TextEncoder().encode(input);
@@ -37,6 +40,17 @@ function withIdempotencyHeaders(response: Response, key: string, replayed: boole
   });
 }
 
+function buildStoredFailureBody(): string {
+  return JSON.stringify({ error: FAILED_RESPONSE_MESSAGE });
+}
+
+function buildStoredFailureResponse(body = buildStoredFailureBody()): Response {
+  return new Response(body, {
+    status: FAILED_RESPONSE_HTTP_STATUS,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 async function requestFingerprint(request: Request): Promise<string> {
   const clone = request.clone();
   const body = await clone.text().catch(() => "");
@@ -45,6 +59,19 @@ async function requestFingerprint(request: Request): Promise<string> {
   sortedSearchParams.sort();
   const canonical = `${request.method}\n${url.pathname}\n${sortedSearchParams.toString()}\n${body}`;
   return sha256Hex(canonical);
+}
+
+async function loadIdempotencyRecord(
+  db: D1Database,
+  action: string,
+  key: string,
+): Promise<IdempotencyRecord | null> {
+  return db
+    .prepare(
+      "SELECT request_hash, response_status, response_body, created_at FROM admin_idempotency_keys WHERE action = ? AND idempotency_key = ?",
+    )
+    .bind(action, key)
+    .first<IdempotencyRecord>();
 }
 
 export async function runIdempotentAdminAction(
@@ -68,12 +95,7 @@ export async function runIdempotentAdminAction(
     .run();
   const insertedReservation = (reserveResult.meta?.changes ?? 0) > 0;
 
-  const existing = await db
-    .prepare(
-      "SELECT request_hash, response_status, response_body, created_at FROM admin_idempotency_keys WHERE action = ? AND idempotency_key = ?",
-    )
-    .bind(action, key)
-    .first<IdempotencyRecord>();
+  const existing = await loadIdempotencyRecord(db, action, key);
 
   if (!existing) {
     return errorResponse(500, "Failed to reserve idempotency key");
@@ -98,6 +120,14 @@ export async function runIdempotentAdminAction(
     );
   }
 
+  if (existing.response_status === FAILED_RESPONSE_STATUS) {
+    return withIdempotencyHeaders(
+      buildStoredFailureResponse(existing.response_body),
+      key,
+      true,
+    );
+  }
+
   if (existing.response_status !== PENDING_RESPONSE_STATUS) {
     return withIdempotencyHeaders(
       new Response(existing.response_body, {
@@ -113,13 +143,64 @@ export async function runIdempotentAdminAction(
   try {
     response = await execute();
   } catch (err) {
-    await db
-      .prepare(
-        "DELETE FROM admin_idempotency_keys WHERE action = ? AND idempotency_key = ? AND request_hash = ? AND response_status = ?",
-      )
-      .bind(action, key, fingerprint, PENDING_RESPONSE_STATUS)
-      .run()
-      .catch((e) => { console.warn("[idempotency] cleanup after execution error failed — key may be stuck in PENDING:", e); });
+    let pendingReservationCleared = false;
+
+    try {
+      const cleanupResult = await db
+        .prepare(
+          "DELETE FROM admin_idempotency_keys WHERE action = ? AND idempotency_key = ? AND request_hash = ? AND response_status = ?",
+        )
+        .bind(action, key, fingerprint, PENDING_RESPONSE_STATUS)
+        .run();
+      pendingReservationCleared = (cleanupResult.meta?.changes ?? 0) > 0;
+    } catch (cleanupError) {
+      console.warn("[idempotency] cleanup after execution error failed; attempting terminal failure replay:", cleanupError);
+    }
+
+    if (pendingReservationCleared) {
+      throw err;
+    }
+
+    const remaining = await loadIdempotencyRecord(db, action, key).catch((loadError) => {
+      console.error("[idempotency] failed to reload reservation after execution error:", loadError);
+      return null;
+    });
+
+    if (!remaining || remaining.response_status !== PENDING_RESPONSE_STATUS) {
+      throw err;
+    }
+
+    const failureBody = buildStoredFailureBody();
+
+    try {
+      const failureUpdate = await db
+        .prepare(
+          "UPDATE admin_idempotency_keys SET response_status = ?, response_body = ?, created_at = ? WHERE action = ? AND idempotency_key = ? AND request_hash = ? AND response_status = ?",
+        )
+        .bind(FAILED_RESPONSE_STATUS, failureBody, now, action, key, fingerprint, PENDING_RESPONSE_STATUS)
+        .run();
+
+      if ((failureUpdate.meta?.changes ?? 0) > 0) {
+        return withIdempotencyHeaders(buildStoredFailureResponse(failureBody), key, false);
+      }
+    } catch (failureUpdateError) {
+      console.error("[idempotency] failed to persist terminal failure replay after execution error:", failureUpdateError);
+    }
+
+    try {
+      const finalCleanup = await db
+        .prepare("DELETE FROM admin_idempotency_keys WHERE action = ? AND idempotency_key = ? AND request_hash = ?")
+        .bind(action, key, fingerprint)
+        .run();
+
+      if ((finalCleanup.meta?.changes ?? 0) > 0) {
+        throw err;
+      }
+    } catch (finalCleanupError) {
+      console.error("[idempotency] final cleanup after execution error failed:", finalCleanupError);
+    }
+
+    console.error("[idempotency] reservation state after execution error could not be confirmed; propagating original error");
     throw err;
   }
   const responseBody = await response.clone().text();
