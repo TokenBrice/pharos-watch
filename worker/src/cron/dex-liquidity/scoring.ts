@@ -104,6 +104,7 @@ export async function computeStablecoinScores(
   db: D1Database,
   metrics: Map<string, LiquidityMetrics>,
   protocolTvlCaps: Map<string, number>,
+  mcapById?: Map<string, number>,
 ): Promise<{
   scores: Map<string, FullScoreResult>;
   globalAgg: GlobalAgg;
@@ -163,7 +164,8 @@ export async function computeStablecoinScores(
     const durability = computeDurabilityScore(m, tvlStab, volStab);
 
     // v2: Compute 6-component score
-    const { score, components } = computeLiquidityScore(m, durability);
+    const circulatingUsd = mcapById?.get(id);
+    const { score, components } = computeLiquidityScore(m, durability, circulatingUsd);
 
     // v2: Compute aggregate metrics
     const weightedBalanceRatio = m.totalTvlForBalance > 0

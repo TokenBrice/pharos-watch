@@ -2,6 +2,7 @@ import { CRAWL_BUDGETS } from "../../lib/rate-limit";
 import { rethrowIfAborted } from "../../lib/abort";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import { classifyPrimaryDepegTrust } from "../../lib/depeg-helpers";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
@@ -99,6 +100,24 @@ export async function loadTrackedStablecoinPriceMap(
   }
 
   return stablecoinPriceById;
+}
+
+export async function loadTrackedStablecoinMcapMap(
+  db: D1Database,
+): Promise<Map<string, number>> {
+  const mcapById = new Map<string, number>();
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+  if (hasUsableStablecoinsPayload(stablecoinsCache)) {
+    for (const asset of stablecoinsCache.payload.peggedAssets) {
+      const mcap = getCirculatingRaw(asset);
+      if (mcap > 0) {
+        mcapById.set(asset.id, mcap);
+      }
+    }
+  } else {
+    console.warn("[dex-liquidity] Stablecoins cache unavailable for market cap data; TVL depth will use absolute fallback");
+  }
+  return mcapById;
 }
 
 export function buildDexDirectApiFetchers(params: {

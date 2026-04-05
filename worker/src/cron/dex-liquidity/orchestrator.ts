@@ -19,6 +19,7 @@ import {
   buildDexDirectApiFetchers,
   fetchSubgraphEnrichmentPhase,
   integrateDirectApiLiquidityPhase,
+  loadTrackedStablecoinMcapMap,
   loadTrackedStablecoinPriceMap,
   mergeDexPriceObservationMap,
   runDirectApiFetchPhase,
@@ -121,6 +122,7 @@ export async function syncDexLiquidity(
   throwIfAborted(signal);
   const validationReferences = await loadPriceValidationReferences(db);
   const stablecoinPriceById = await loadTrackedStablecoinPriceMap(db, syncStartSec);
+  const stablecoinMcapById = await loadTrackedStablecoinMcapMap(db);
 
   // 1. Fetch all external data sources
   const dataSources = await fetchDataSources(graphApiKey, db, signal);
@@ -266,7 +268,7 @@ export async function syncDexLiquidity(
     retainedPoolsByStablecoin = new Map<string, LiquidityMetrics["topPools"]>(),
     tvlStabilityMap = new Map<string, number>(),
     diagnostics,
-  } = await computeStablecoinScores(db, metrics, dataSources.protocolTvlCaps);
+  } = await computeStablecoinScores(db, metrics, dataSources.protocolTvlCaps, stablecoinMcapById);
   const analysis = await analyzeDexLiquidityPostScoring({
     db,
     scoreResults,
