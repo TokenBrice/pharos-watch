@@ -1,0 +1,51 @@
+name: Setup Workspace
+description: Shared Node, optional tooling cache, and optional npm install scaffolding for GitHub Actions jobs.
+
+inputs:
+  node-version:
+    description: Node.js version to install.
+    required: false
+    default: "22"
+  cache-npm:
+    description: Whether to enable setup-node npm cache.
+    required: false
+    default: "true"
+  tooling-cache:
+    description: Whether to restore the shared tooling cache.
+    required: false
+    default: "false"
+  install-deps:
+    description: Whether to run npm ci after setup.
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - if: ${{ inputs.cache-npm == 'true' }}
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: npm
+        cache-dependency-path: package-lock.json
+
+    - if: ${{ inputs.cache-npm != 'true' }}
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - if: ${{ inputs.tooling-cache == 'true' }}
+      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+      with:
+        path: |
+          .next/cache
+          .cache/eslint
+          *.tsbuildinfo
+          worker/*.tsbuildinfo
+        key: tooling-cache-${{ runner.os }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}
+        restore-keys: |
+          tooling-cache-${{ runner.os }}-
+
+    - if: ${{ inputs.install-deps == 'true' }}
+      shell: bash
+      run: npm ci

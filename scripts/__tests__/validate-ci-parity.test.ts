@@ -70,15 +70,20 @@ function extractJobBlock(yaml: string, jobName: string, nextJobName?: string): s
 describe("validate-ci parity", () => {
   it("keeps the shared CI validate workflow aligned with the merge-gate command contract", () => {
     const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
+    const setupWorkspaceAction = readFileSync(
+      resolve(process.cwd(), ".github/actions/setup-workspace/action.yml"),
+      "utf8",
+    );
     const validateJob = extractJobBlock(workflow, "validate", "validate-node24");
     const validateNode24Job = extractJobBlock(workflow, "validate-node24");
+    const setupWorkspaceRunSteps = extractRunSteps(setupWorkspaceAction);
 
-    expect(extractRunSteps(validateJob)).toEqual([
+    expect([...setupWorkspaceRunSteps, ...extractRunSteps(validateJob)]).toEqual([
       { cmd: "npm ci", condition: null },
       ...buildCiValidateStepPlan(),
     ]);
 
-    expect(extractRunSteps(validateNode24Job)).toEqual([
+    expect([...setupWorkspaceRunSteps, ...extractRunSteps(validateNode24Job)]).toEqual([
       { cmd: "npm ci", condition: null },
       { cmd: "npm run lint", condition: null },
       { cmd: "npm run typecheck", condition: null },
