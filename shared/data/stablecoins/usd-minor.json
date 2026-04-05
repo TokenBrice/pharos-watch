@@ -3857,7 +3857,72 @@
         "risk": "high",
         "coinId": "usde-ethena"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "evm-branch-balances",
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "honey-berachain",
+      "display": {
+        "url": "https://honey.berachain.com/",
+        "label": "Berachain Honey"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "berachain",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "rpcUrl": "https://rpc.berachain.com",
+        "branches": [
+          {
+            "name": "USDe (Ethena)",
+            "holder": "0x551fb0309dd7e1c6e1a59d9389ef10da864a552e",
+            "token": {
+              "chain": "berachain",
+              "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+              "decimals": 18
+            },
+            "risk": "high",
+            "coinId": "usde-ethena"
+          },
+          {
+            "name": "USDC.e (bridged Circle)",
+            "holder": "0x90bc07408f5b5eac4de38af76ea6069e1fcee363",
+            "token": {
+              "chain": "berachain",
+              "address": "0x549943e04f40284185054145c6e4e9568c1d3241",
+              "decimals": 6
+            },
+            "risk": "low",
+            "coinId": "usdc-circle"
+          },
+          {
+            "name": "USD₮0 (Tether via LayerZero)",
+            "holder": "0xcf02d03cfaeb8a8419bf718e92875b0187d3b190",
+            "token": {
+              "chain": "berachain",
+              "address": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
+              "decimals": 6
+            },
+            "risk": "low",
+            "coinId": "usdt-tether"
+          },
+          {
+            "name": "BYUSD (Berachain Yield USD)",
+            "holder": "0x36a9975acd3b6f2e2cad4e191967ebf80f99d7ce",
+            "token": {
+              "chain": "berachain",
+              "address": "0x688e72142674041f8f6af4c808a4045ca1d6ac82",
+              "decimals": 6
+            },
+            "risk": "low"
+          }
+        ]
+      }
+    }
   },
   {
     "id": "usdb-blast",
@@ -7343,7 +7408,23 @@
         "pct": 20,
         "risk": "low"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "frax-balance-sheet",
+      "version": 1,
+      "semantics": "attestation-mix",
+      "breakerScope": "ussd-sonic-labs",
+      "display": {
+        "url": "https://net.frax.com/embed/balance-sheet/0x000000000eCcFf26B795F73fb0A70d48da657fEf",
+        "label": "Frax Balance Sheet"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+        }
+      }
+    }
   },
   {
     "id": "dusd-dtrinity",
