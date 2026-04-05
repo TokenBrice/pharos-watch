@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { ABOUT_REFERENCE_ITEMS } from "@/lib/nav-config";
+import { ABOUT_NAV_GROUP } from "@/lib/nav-config";
 import { cn } from "@/lib/utils";
 
 /** Per-card accent drawn from the tone palette used across the about page. */
@@ -25,7 +25,7 @@ export function AboutReferenceModule() {
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
-        {ABOUT_REFERENCE_ITEMS.map((item, i) => {
+        {ABOUT_NAV_GROUP.children.map((item, i) => {
           const Icon = item.icon;
           const accent = CARD_ACCENTS[i % CARD_ACCENTS.length];
 

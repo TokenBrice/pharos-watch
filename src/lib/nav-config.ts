@@ -41,23 +41,26 @@ export interface NavItem {
   description?: string;
 }
 
-interface NavGroup {
+export interface NavGroup {
+  key: string;
   label: string;
   items: NavItem[];
 }
 
-export const DASHBOARD_NAV_ITEM: NavItem = { href: "/", label: "Dashboard", icon: LayoutDashboard, description: "Live triage surface for market stress, rankings, and first-pass research" };
+export interface AboutNavGroup {
+  key: "about";
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  description: string;
+  children: NavItem[];
+}
 
-export const ABOUT_REFERENCE_ITEMS: NavItem[] = [
-  { href: "/methodology", label: "Methodology", icon: BookOpen, description: "Reference manual for formulas, thresholds, and changelogs" },
-  { href: "/coverage", label: "Coverage", icon: TableProperties, description: "Truth surface for what each route can show per coin" },
-  { href: "/start", label: "Start Here", icon: Compass, description: "Shortest route into the product for new or returning users" },
-  { href: "/about/api", label: "API Reference", icon: KeyRound, description: "Auth model, key requirement, and full endpoint reference" },
-  { href: "/changelog", label: "Changelog", icon: ScrollText, description: "Weekly release notes and feature updates" },
-];
+export const DASHBOARD_NAV_ITEM: NavItem = { href: "/", label: "Dashboard", icon: LayoutDashboard, description: "Live triage surface for market stress, rankings, and first-pass research" };
 
 export const NAV_GROUPS: NavGroup[] = [
   {
+    key: "risk-lab",
     label: "Risk Lab",
     items: [
       { href: "/stability-index", label: "Stability Index", icon: LighthouseIcon, description: "Market-regime read for the stablecoin system" },
@@ -66,6 +69,7 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    key: "data",
     label: "Data",
     items: [
       { href: "/chains/", label: "Stable per Chain", icon: Layers, description: "Chain-by-chain stablecoin share, mix, and health" },
@@ -74,30 +78,52 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/flows", label: "Mint/Burn Flows", icon: ArrowUpDown, description: "Ethereum issuance and redemption pressure" },
       { href: "/blacklist", label: "Blacklist Tracker", icon: ShieldBan, description: "Freeze activity and issuer control events" },
       { href: "/treasuries", label: "Treasuries", icon: Landmark, description: "Protocol and DAO treasuries ranked by stablecoin exposure" },
+      { href: "/upcoming", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch-watch context" },
+      { href: "/cemetery", label: "Cemetery", icon: Skull, description: "Failed stablecoins and the lessons they left behind" },
     ],
   },
   {
+    key: "tools",
     label: "Tools",
     items: [
       { href: "/portfolio", label: "Portfolio Audit", icon: Wallet, description: "Look through your holdings as one combined stablecoin book" },
       { href: "/compare", label: "Compare", icon: ArrowLeftRight, description: "Build a live peer set and judge substitutes side by side" },
       { href: "/dependency-map", label: "Dependency Map", icon: Network, description: "Collateral graph for hidden upstream stablecoin risk" },
       { href: "/telegram", label: "Telegram Alerts", icon: Send, description: "Push alerts for depegs, DEWS shifts, and the daily digest" },
-    ],
-  },
-  {
-    label: "Info",
-    items: [
-      { href: "/upcoming", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch-watch context" },
-      { href: "/cemetery", label: "Cemetery", icon: Skull, description: "Failed stablecoins and the lessons they left behind" },
       { href: "/digest", label: "Digest", icon: Newspaper, description: "Daily editorial recap of the stablecoin market" },
-      { href: "/about", label: "About", icon: Info, description: "Scope, data sources, and why Pharos exists" },
     ],
   },
 ];
 
+export const ABOUT_NAV_GROUP: AboutNavGroup = {
+  key: "about",
+  href: "/about",
+  label: "About",
+  icon: Info,
+  description: "Scope, data sources, and why Pharos exists",
+  children: [
+    { href: "/methodology", label: "Methodology", icon: BookOpen, description: "Reference manual for formulas, thresholds, and changelogs" },
+    { href: "/coverage", label: "Coverage", icon: TableProperties, description: "Truth surface for what each route can show per coin" },
+    { href: "/start", label: "Start Here", icon: Compass, description: "Shortest route into the product for new or returning users" },
+    { href: "/about/api", label: "API Reference", icon: KeyRound, description: "Auth model, key requirement, and full endpoint reference" },
+    { href: "/changelog", label: "Changelog", icon: ScrollText, description: "Weekly release notes and feature updates" },
+  ],
+};
+
+export const DEFAULT_EXPANDED: Record<string, boolean> = {
+  "risk-lab": true,
+  data: false,
+  tools: false,
+  about: false,
+};
+
 /** Flat list for use in header and command palette */
-export const NAV_ITEMS: NavItem[] = [DASHBOARD_NAV_ITEM, ...NAV_GROUPS.flatMap((g) => g.items), ...ABOUT_REFERENCE_ITEMS];
+export const NAV_ITEMS: NavItem[] = [
+  DASHBOARD_NAV_ITEM,
+  ...NAV_GROUPS.flatMap((g) => g.items),
+  { href: ABOUT_NAV_GROUP.href, label: ABOUT_NAV_GROUP.label, icon: ABOUT_NAV_GROUP.icon, description: ABOUT_NAV_GROUP.description },
+  ...ABOUT_NAV_GROUP.children,
+];
 
 /** Bottom items (always shown at sidebar bottom) */
 export const BOTTOM_NAV_ITEMS: NavItem[] = [];
