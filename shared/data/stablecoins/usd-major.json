@@ -855,26 +855,41 @@
     "governanceQuality": "dao-governance",
     "reserves": [
       {
-        "name": "RWA (U.S. Treasuries)",
-        "pct": 40,
-        "risk": "low"
-      },
-      {
-        "name": "USDC via PSM",
-        "pct": 30,
-        "risk": "low",
+        "name": "Stablecoins (PSM)",
+        "pct": 38,
+        "risk": "very-low",
         "coinId": "usdc-circle",
         "depType": "mechanism"
       },
       {
-        "name": "ETH / wstETH",
-        "pct": 20,
+        "name": "Spark (lending)",
+        "pct": 28,
         "risk": "low"
       },
       {
-        "name": "Other Vaults",
-        "pct": 10,
+        "name": "Grove (RWA)",
+        "pct": 23,
+        "risk": "low"
+      },
+      {
+        "name": "Obex",
+        "pct": 5,
+        "risk": "medium"
+      },
+      {
+        "name": "Core (crypto vaults)",
+        "pct": 4,
+        "risk": "medium"
+      },
+      {
+        "name": "Staking Engine",
+        "pct": 1,
         "risk": "high"
+      },
+      {
+        "name": "Legacy RWA",
+        "pct": 1,
+        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -889,7 +904,7 @@
       "inputs": {
         "primary": {
           "kind": "http-json",
-          "url": "https://api.llama.fi/protocol/makerdao"
+          "url": "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt"
         }
       }
     },
@@ -1127,31 +1142,41 @@
     "governanceQuality": "dao-governance",
     "reserves": [
       {
-        "name": "RWA (U.S. Treasuries)",
-        "pct": 40,
-        "risk": "low"
-      },
-      {
-        "name": "USDC via PSM",
-        "pct": 33,
-        "risk": "low",
+        "name": "Stablecoins (PSM)",
+        "pct": 38,
+        "risk": "very-low",
         "coinId": "usdc-circle",
         "depType": "mechanism"
       },
       {
-        "name": "ETH / wstETH",
-        "pct": 20,
+        "name": "Spark (lending)",
+        "pct": 28,
         "risk": "low"
       },
       {
-        "name": "WBTC",
+        "name": "Grove (RWA)",
+        "pct": 23,
+        "risk": "low"
+      },
+      {
+        "name": "Obex",
         "pct": 5,
         "risk": "medium"
       },
       {
-        "name": "Other Vaults",
-        "pct": 2,
+        "name": "Core (crypto vaults)",
+        "pct": 4,
+        "risk": "medium"
+      },
+      {
+        "name": "Staking Engine",
+        "pct": 1,
         "risk": "high"
+      },
+      {
+        "name": "Legacy RWA",
+        "pct": 1,
+        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -1166,7 +1191,7 @@
       "inputs": {
         "primary": {
           "kind": "http-json",
-          "url": "https://api.llama.fi/protocol/makerdao"
+          "url": "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt"
         }
       }
     },
