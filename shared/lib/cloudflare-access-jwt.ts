@@ -48,6 +48,7 @@ interface CachedJwksEntry {
 
 const jwksCache = new Map<string, CachedJwksEntry>();
 const JWKS_CACHE_TTL_MS = 60 * 60 * 1000;
+const JWKS_FETCH_TIMEOUT_MS = 5_000;
 
 export function _resetJwksCache(): void {
   jwksCache.clear();
@@ -88,7 +89,7 @@ async function fetchJwks(
 
   try {
     const url = `https://${teamDomain}.cloudflareaccess.com/cdn-cgi/access/certs`;
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: AbortSignal.timeout(JWKS_FETCH_TIMEOUT_MS) });
     if (!response.ok) return null;
     const jwks = (await response.json()) as JwksResponse;
     if (!jwks.keys || !Array.isArray(jwks.keys)) return null;

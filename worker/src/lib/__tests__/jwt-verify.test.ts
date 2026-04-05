@@ -173,7 +173,7 @@ describe("verifyAccessJwt", () => {
       const { token } = makeJwtParts(validHeader(), validClaims());
       // Passing the full URL should still reach JWKS fetch (claims pass)
       await verifyAccessJwt({ token, aud: AUD, teamDomain: `https://${TEAM_DOMAIN}.cloudflareaccess.com` });
-      expect(fetch).toHaveBeenCalledWith(JWKS_URL);
+      expect(fetch).toHaveBeenCalledWith(JWKS_URL, expect.objectContaining({ signal: expect.any(AbortSignal) }));
     });
 
     it("rejects token with nbf in the future", async () => {
@@ -193,7 +193,7 @@ describe("verifyAccessJwt", () => {
       await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN });
       // We can't easily distinguish "claim pass but crypto fail" from claim rejection
       // in the boolean API, but we know the fetch was called (meaning claims passed)
-      expect(fetch).toHaveBeenCalledWith(JWKS_URL);
+      expect(fetch).toHaveBeenCalledWith(JWKS_URL, expect.objectContaining({ signal: expect.any(AbortSignal) }));
     });
   });
 
@@ -242,8 +242,8 @@ describe("verifyAccessJwt", () => {
       const { token: rotatedToken } = makeJwtParts(validHeader({ kid: "rotated-kid" }), validClaims());
       expect(await verifyAccessJwt({ token: rotatedToken, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
       expect(fetchMock).toHaveBeenCalledTimes(2);
-      expect(fetchMock).toHaveBeenNthCalledWith(1, JWKS_URL);
-      expect(fetchMock).toHaveBeenNthCalledWith(2, JWKS_URL);
+      expect(fetchMock).toHaveBeenNthCalledWith(1, JWKS_URL, expect.objectContaining({ signal: expect.any(AbortSignal) }));
+      expect(fetchMock).toHaveBeenNthCalledWith(2, JWKS_URL, expect.objectContaining({ signal: expect.any(AbortSignal) }));
     });
 
     it("returns false when JWKS response has no keys array", async () => {
@@ -307,8 +307,8 @@ describe("verifyAccessJwt", () => {
       await verifyAccessJwt({ token: token3, aud: AUD, teamDomain: TEAM_DOMAIN });
 
       expect(fetchMock).toHaveBeenCalledTimes(2);
-      expect(fetchMock).toHaveBeenNthCalledWith(1, JWKS_URL);
-      expect(fetchMock).toHaveBeenNthCalledWith(2, OTHER_JWKS_URL);
+      expect(fetchMock).toHaveBeenNthCalledWith(1, JWKS_URL, expect.objectContaining({ signal: expect.any(AbortSignal) }));
+      expect(fetchMock).toHaveBeenNthCalledWith(2, OTHER_JWKS_URL, expect.objectContaining({ signal: expect.any(AbortSignal) }));
     });
   });
 
