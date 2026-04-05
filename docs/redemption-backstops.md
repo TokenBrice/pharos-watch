@@ -6,11 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.4`
+- **Current methodology version:** `v3.5`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v3.4` update: base `usdai-usd-ai` keeps the direct PYUSD-side redeem rail, while new `susdai-usd-ai` now has its own documented queue-based unstake route back into `USDai`; because public USD.AI materials still do not publish a trustworthy numeric instant-liquidity bound for `sUSDai`, that new route is scored as documented-bound eventual capacity rather than as a measured immediate buffer.
+Latest `v3.5` update: adapters that declare capacity telemetry (direct or proxy) or physically emit capacity metadata no longer require scoring-grade freshness evidence to use live capacity data for scoring — the temporal quality is already validated by the isFresh gate. This restores live-proxy capacity confidence for iUSD-infiniFi and any similar reserve-sync-metadata route whose adapter provides capacity telemetry but previously used unverified freshness mode.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 
