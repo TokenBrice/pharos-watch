@@ -397,8 +397,9 @@
     "protocolId": "aave",
     "slug": "aave",
     "name": "Aave",
-    "category": "Protocol treasury",
-    "launchEligible": false,
+    "category": "Stablecoin issuer",
+    "launchEligible": true,
+    "launchPriority": 135,
     "source": "defillama-github",
     "adapterFile": "aave.js",
     "extractionMode": "static-seeded",
@@ -459,9 +460,403 @@
         "chain": "polygon",
         "address": "0xe8599F3cc5D38a9aD6F3684cd5CEa72f10Dbc383"
       }
+    ]
+  },
+  {
+    "protocolId": "usual",
+    "slug": "usual",
+    "name": "Usual",
+    "category": "Stablecoin issuer",
+    "launchEligible": true,
+    "launchPriority": 140,
+    "source": "defillama-github",
+    "adapterFile": "usual.js",
+    "extractionMode": "static-seeded",
+    "chains": [
+      "ethereum"
+    ],
+    "owners": [
+      {
+        "chain": "ethereum",
+        "address": "0x81ad394C0Fa87e99Ca46E1aca093BEe020f203f4"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xc32e2a2F03d41768095e67b62C9c739f2C2Bc4aA"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xcbf85D44178c01765Ab32Af72D5E291dcd39A06B"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe3FD5A2cA538904A9e967CBd9e64518369e5a03f"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xF3D913De4B23ddB9CfdFAF955BAC5634CbAE95F4"
+      }
+    ]
+  },
+  {
+    "protocolId": "synthetix",
+    "slug": "synthetix",
+    "name": "Synthetix",
+    "category": "Stablecoin issuer",
+    "launchEligible": true,
+    "launchPriority": 150,
+    "source": "defillama-github",
+    "adapterFile": "synthetix.js",
+    "extractionMode": "static-seeded",
+    "chains": [
+      "ethereum"
+    ],
+    "owners": [
+      {
+        "chain": "ethereum",
+        "address": "0x99f4176ee457afedffcb1839c7ab7a030a5e4a92"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xeb3107117fead7de89cd14d463d340a2e6917769"
+      }
+    ]
+  },
+  {
+    "protocolId": "abracadabra",
+    "slug": "abracadabra",
+    "name": "Abracadabra",
+    "category": "Stablecoin issuer",
+    "launchEligible": true,
+    "launchPriority": 160,
+    "source": "defillama-github",
+    "adapterFile": "abracadabra.js",
+    "extractionMode": "static-seeded",
+    "chains": [
+      "arbitrum",
+      "ethereum"
+    ],
+    "owners": [
+      {
+        "chain": "arbitrum",
+        "address": "0xA71A021EF66B03E45E0d85590432DFCfa1b7174C"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5A7C5505f3CFB9a0D9A8493EC41bf27EE48c406D"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xdf2c270f610dc35d8ffda5b453e74db5471e126b"
+      }
+    ]
+  },
+  {
+    "protocolId": "alchemix",
+    "slug": "alchemix",
+    "name": "Alchemix",
+    "category": "Stablecoin issuer",
+    "launchEligible": true,
+    "launchPriority": 170,
+    "source": "defillama-github",
+    "adapterFile": "alchemix.js",
+    "extractionMode": "static-seeded",
+    "chains": [
+      "ethereum",
+      "fantom",
+      "optimism"
+    ],
+    "owners": [
+      {
+        "chain": "ethereum",
+        "address": "0x06378717d86B8cd2DBa58c87383dA1EDA92d3495"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3216D2A52f0094AA860ca090BC5C335dE36e6273"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x8392F6669292fA56123F71949B52d883aE57e225"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x9735F7d3Ea56b454b24fFD74C58E9bD85cfaD31B"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x9e2b6378ee8ad2A4A95Fe481d63CAba8FB0EBBF9"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe761bf731A06fE8259FeE05897B2687D56933110"
+      },
+      {
+        "chain": "fantom",
+        "address": "0x6b291cf19370a14bbb4491b01091e1e29335e605"
+      },
+      {
+        "chain": "optimism",
+        "address": "0xc224bf25dcc99236f00843c7d8c4194abe8aa94a"
+      }
+    ]
+  },
+  {
+    "protocolId": "inverse-finance",
+    "slug": "inverse-finance",
+    "name": "Inverse Finance",
+    "category": "Stablecoin issuer",
+    "launchEligible": true,
+    "launchPriority": 180,
+    "source": "defillama-github",
+    "adapterFile": "inverse.js",
+    "extractionMode": "static-seeded",
+    "chains": [
+      "arbitrum",
+      "avalanche",
+      "base",
+      "bsc",
+      "ethereum",
+      "optimism",
+      "polygon"
+    ],
+    "owners": [
+      {
+        "chain": "arbitrum",
+        "address": "0x233Ca46D4882609C53fcbD2FCFaAe92D2eA89538"
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x23dEDab98D7828AFBD2B7Ab8C71089f2C517774a"
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x1A927B237a57421C414EB511a33C4B82C2718677"
+      },
+      {
+        "chain": "base",
+        "address": "0x586CF50c2874f3e3997660c0FD0996B090FB9764"
+      },
+      {
+        "chain": "bsc",
+        "address": "0xf7da4bc9b7a6bb3653221ae333a9d2a2c2d5bda7"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x4b6c63e6a94ef26e2df60b89372db2d8e211f1b7"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x8f97cca30dbe80e7a8b462f1dd1a51c32accdfc8"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x926df14a23be491164dcf93f4c468a50ef659d5b"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x943dbdc995add25a1728a482322f9b3c575b16fb"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x9D5Df30F475CEA915b1ed4C0CCa59255C897b61B"
+      },
+      {
+        "chain": "optimism",
+        "address": "0xa283139017a2f5bade8d8e25412c600055d318f8"
+      },
+      {
+        "chain": "polygon",
+        "address": "0x5D18b089e838DFFbb417A87874435175F3A9B000"
+      }
+    ]
+  },
+  {
+    "protocolId": "resupply",
+    "slug": "resupply",
+    "name": "Resupply",
+    "category": "Stablecoin issuer",
+    "launchEligible": true,
+    "launchPriority": 190,
+    "source": "defillama-github",
+    "adapterFile": "resupply.js",
+    "extractionMode": "static-seeded",
+    "chains": [
+      "ethereum"
+    ],
+    "owners": [
+      {
+        "chain": "ethereum",
+        "address": "0x4444444455bF42de586A88426E5412971eA48324"
+      }
+    ]
+  },
+  {
+    "protocolId": "gyroscope",
+    "slug": "gyroscope",
+    "name": "Gyroscope",
+    "category": "Stablecoin issuer",
+    "launchEligible": true,
+    "launchPriority": 200,
+    "source": "defillama-github",
+    "adapterFile": "gyro.js",
+    "extractionMode": "static-seeded",
+    "chains": [
+      "bsc"
+    ],
+    "owners": [
+      {
+        "chain": "bsc",
+        "address": "0x8b1522402fece066d83e0f6c97024248be3c8c01"
+      }
+    ]
+  },
+  {
+    "protocolId": "flying-tulip",
+    "slug": "flying-tulip",
+    "name": "Flying Tulip",
+    "category": "Stablecoin issuer",
+    "launchEligible": true,
+    "launchPriority": 210,
+    "source": "defillama-github",
+    "adapterFile": "flying-tulip.js",
+    "extractionMode": "static-seeded",
+    "chains": [
+      "avalanche",
+      "base",
+      "bsc",
+      "ethereum",
+      "sonic"
+    ],
+    "owners": [
+      {
+        "chain": "avalanche",
+        "address": "0x1118e1c057211306a40A4d7006C040dbfE1370Cb"
+      },
+      {
+        "chain": "base",
+        "address": "0x1118e1c057211306a40A4d7006C040dbfE1370Cb"
+      },
+      {
+        "chain": "bsc",
+        "address": "0x1118e1c057211306a40A4d7006C040dbfE1370Cb"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x1118e1c057211306a40A4d7006C040dbfE1370Cb"
+      },
+      {
+        "chain": "sonic",
+        "address": "0x1118e1c057211306a40A4d7006C040dbfE1370Cb"
+      }
+    ]
+  },
+  {
+    "protocolId": "jupiter",
+    "slug": "jupiter",
+    "name": "Jupiter",
+    "category": "Stablecoin issuer",
+    "launchEligible": true,
+    "launchPriority": 220,
+    "source": "defillama-github",
+    "adapterFile": "jupiter.js",
+    "extractionMode": "static-seeded",
+    "chains": [],
+    "owners": [],
+    "notes": [
+      "Solana-native protocol. Adapter may contain only non-EVM addresses, resulting in zero EVM owners.",
+      "Skipped unsupported or non-EVM chain \"solana\" from jupiter.js."
+    ]
+  },
+  {
+    "protocolId": "maple",
+    "slug": "maple",
+    "name": "Maple",
+    "category": "Stablecoin issuer",
+    "launchEligible": true,
+    "launchPriority": 230,
+    "source": "defillama-github",
+    "adapterFile": "maple.js",
+    "extractionMode": "static-seeded",
+    "chains": [
+      "ethereum"
+    ],
+    "owners": [
+      {
+        "chain": "ethereum",
+        "address": "0xa9466EaBd096449d650D5AEB0dD3dA6F52FD0B19"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xd6d4Bcde6c816F17889f1Dd3000aF0261B03a196"
+      }
+    ]
+  },
+  {
+    "protocolId": "metronome",
+    "slug": "metronome",
+    "name": "Metronome",
+    "category": "Stablecoin issuer",
+    "launchEligible": true,
+    "launchPriority": 240,
+    "source": "defillama-github",
+    "adapterFile": "metronome.js",
+    "extractionMode": "static-seeded",
+    "chains": [
+      "ethereum"
+    ],
+    "owners": [
+      {
+        "chain": "ethereum",
+        "address": "0xc897b98272aa23714464ea2a0bd5180f1b8c0025"
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33"
+      }
+    ]
+  },
+  {
+    "protocolId": "unitas",
+    "slug": "unitas",
+    "name": "Unitas",
+    "category": "Stablecoin issuer",
+    "launchEligible": true,
+    "launchPriority": 250,
+    "source": "defillama-github",
+    "adapterFile": "unitas.js",
+    "extractionMode": "static-seeded",
+    "chains": [
+      "bsc"
+    ],
+    "owners": [
+      {
+        "chain": "bsc",
+        "address": "0xB464C9890604926bd5Fa7b66Bf15d26BCD0eD3A9"
+      }
     ],
     "notes": [
-      "Valid static treasury adapter, but held out of the launch allowlist due to a larger owner-chain surface."
+      "Skipped unsupported or non-EVM chain \"solana\" from unitas.js."
+    ]
+  },
+  {
+    "protocolId": "alto",
+    "slug": "alto",
+    "name": "Alto",
+    "category": "Stablecoin issuer",
+    "launchEligible": true,
+    "launchPriority": 260,
+    "source": "defillama-github",
+    "adapterFile": "alto.js",
+    "extractionMode": "static-seeded",
+    "chains": [
+      "ethereum"
+    ],
+    "owners": [
+      {
+        "chain": "ethereum",
+        "address": "0xA1148A1b94262540994Cf9Aa431A13ad39764228"
+      }
     ]
   }
 ]

@@ -138,10 +138,128 @@ const MANIFEST: TreasurySeedManifestEntry[] = [
     protocolId: "aave",
     slug: "aave",
     name: "Aave",
-    category: "Protocol treasury",
-    launchEligible: false,
+    category: "Stablecoin issuer",
+    launchEligible: true,
+    launchPriority: 135,
     adapterFile: "aave.js",
-    notes: ["Valid static treasury adapter, but held out of the launch allowlist due to a larger owner-chain surface."],
+  },
+  {
+    protocolId: "usual",
+    slug: "usual",
+    name: "Usual",
+    category: "Stablecoin issuer",
+    launchEligible: true,
+    launchPriority: 140,
+    adapterFile: "usual.js",
+  },
+  {
+    protocolId: "synthetix",
+    slug: "synthetix",
+    name: "Synthetix",
+    category: "Stablecoin issuer",
+    launchEligible: true,
+    launchPriority: 150,
+    adapterFile: "synthetix.js",
+  },
+  {
+    protocolId: "abracadabra",
+    slug: "abracadabra",
+    name: "Abracadabra",
+    category: "Stablecoin issuer",
+    launchEligible: true,
+    launchPriority: 160,
+    adapterFile: "abracadabra.js",
+  },
+  {
+    protocolId: "alchemix",
+    slug: "alchemix",
+    name: "Alchemix",
+    category: "Stablecoin issuer",
+    launchEligible: true,
+    launchPriority: 170,
+    adapterFile: "alchemix.js",
+  },
+  {
+    protocolId: "inverse-finance",
+    slug: "inverse-finance",
+    name: "Inverse Finance",
+    category: "Stablecoin issuer",
+    launchEligible: true,
+    launchPriority: 180,
+    adapterFile: "inverse.js",
+  },
+  {
+    protocolId: "resupply",
+    slug: "resupply",
+    name: "Resupply",
+    category: "Stablecoin issuer",
+    launchEligible: true,
+    launchPriority: 190,
+    adapterFile: "resupply.js",
+  },
+  {
+    protocolId: "gyroscope",
+    slug: "gyroscope",
+    name: "Gyroscope",
+    category: "Stablecoin issuer",
+    launchEligible: true,
+    launchPriority: 200,
+    adapterFile: "gyro.js",
+  },
+  {
+    protocolId: "flying-tulip",
+    slug: "flying-tulip",
+    name: "Flying Tulip",
+    category: "Stablecoin issuer",
+    launchEligible: true,
+    launchPriority: 210,
+    adapterFile: "flying-tulip.js",
+  },
+  {
+    protocolId: "jupiter",
+    slug: "jupiter",
+    name: "Jupiter",
+    category: "Stablecoin issuer",
+    launchEligible: true,
+    launchPriority: 220,
+    adapterFile: "jupiter.js",
+    notes: ["Solana-native protocol. Adapter may contain only non-EVM addresses, resulting in zero EVM owners."],
+  },
+  {
+    protocolId: "maple",
+    slug: "maple",
+    name: "Maple",
+    category: "Stablecoin issuer",
+    launchEligible: true,
+    launchPriority: 230,
+    adapterFile: "maple.js",
+  },
+  {
+    protocolId: "metronome",
+    slug: "metronome",
+    name: "Metronome",
+    category: "Stablecoin issuer",
+    launchEligible: true,
+    launchPriority: 240,
+    adapterFile: "metronome.js",
+  },
+  {
+    protocolId: "unitas",
+    slug: "unitas",
+    name: "Unitas",
+    category: "Stablecoin issuer",
+    launchEligible: true,
+    launchPriority: 250,
+    adapterFile: "unitas.js",
+  },
+  {
+    protocolId: "alto",
+    slug: "alto",
+    name: "Alto",
+    category: "Stablecoin issuer",
+    launchEligible: true,
+    launchPriority: 260,
+    adapterFile: "alto.js",
   },
 ];
 
@@ -229,6 +347,18 @@ function extractAdapterConfig(source: string, adapterFile: string): Record<strin
       if (request.endsWith("/helper/utils")) {
         return {
           mergeExports,
+        };
+      }
+      if (request === "@defillama/sdk") {
+        return {
+          util: {
+            sumChainTvls: (..._fns: unknown[]) => async () => ({}),
+          },
+        };
+      }
+      if (request.includes("/fira/")) {
+        return {
+          addFiraTreasuryPositions: async () => ({}),
         };
       }
       throw new Error(`Unsupported adapter dependency in ${adapterFile}: ${request}`);
