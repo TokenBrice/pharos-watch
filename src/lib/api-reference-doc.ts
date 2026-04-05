@@ -43,7 +43,6 @@ export interface ApiReferenceSection {
   subsections: Array<{
     id: string;
     title: string;
-    method: "GET" | "POST" | null;
     blocks: MarkdownBlock[];
   }>;
 }
@@ -317,12 +316,9 @@ function parseApiReferenceDocument(markdown: string): ApiReferenceDocument {
     if (isSubsectionLine(line)) {
       flushBuffer();
       if (!currentSection) continue;
-      const rawTitle = line.slice(4).trim();
-      const methodMatch = rawTitle.replace(/`/g, "").match(/^(GET|POST)\s+/);
       currentSubsection = {
-        id: slugifyHeading(rawTitle),
-        title: rawTitle,
-        method: methodMatch ? (methodMatch[1] as "GET" | "POST") : null,
+        id: slugifyHeading(line.slice(4).trim()),
+        title: line.slice(4).trim(),
         blocks: [],
       };
       currentSection.subsections.push(currentSubsection);
