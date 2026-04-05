@@ -45,26 +45,42 @@ export default function ChangelogPage() {
       {changelogs.length >= 4 && (
         <nav
           aria-label="Jump to release"
-          className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground"
+          className="flex flex-wrap gap-x-1 gap-y-1 text-xs font-mono text-muted-foreground"
         >
-          {changelogs.map((entry) => (
+          {changelogs.map((entry, i) => (
             <a
               key={entry.dateRange.to}
               href={`#${entry.dateRange.to}`}
-              className="pharos-focus-ring rounded-sm hover:text-foreground transition-colors"
+              className="pharos-focus-ring rounded-md px-2 py-1 hover:bg-muted hover:text-foreground transition-colors"
             >
               {formatDateRange(entry.dateRange.from, entry.dateRange.to)}
+              {i === 0 && (
+                <span className="ml-1.5 text-[10px] font-sans font-medium text-frost-blue">
+                  latest
+                </span>
+              )}
             </a>
           ))}
         </nav>
       )}
-      <div className="divide-y divide-border">
+      <ol className="relative ml-1.5 border-l border-border/50">
         {changelogs.map((entry, i) => (
-          <div key={entry.dateRange.to} className="py-10 first:pt-0 last:pb-0">
+          <li
+            key={entry.dateRange.to}
+            className={`relative pl-8 ${i > 0 ? "mt-14" : ""}`}
+          >
+            <div
+              className={`absolute -left-[5px] top-[7px] size-2.5 rounded-full ${
+                i === 0
+                  ? "bg-frost-blue shadow-[0_0_0_4px_oklch(0.72_0.14_248/0.12)]"
+                  : "border-2 border-border bg-background"
+              }`}
+              aria-hidden
+            />
             <ChangelogEntryCard entry={entry} isLatest={i === 0} />
-          </div>
+          </li>
         ))}
-      </div>
+      </ol>
     </FeaturePageShell>
   );
 }

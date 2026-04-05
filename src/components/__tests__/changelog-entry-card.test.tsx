@@ -37,9 +37,10 @@ describe("ChangelogEntryCard", () => {
     expect(html).toContain("Bug fix");
   });
 
-  it("renders commit count in details summary", () => {
+  it("renders total commit count and show-commits toggle", () => {
     const html = renderToStaticMarkup(<ChangelogEntryCard entry={MOCK_ENTRY} />);
-    expect(html).toContain("2 commits");
+    expect(html).toContain("42 commits");
+    expect(html).toContain("Show commits");
   });
 
   it("renders collapsible commit list", () => {

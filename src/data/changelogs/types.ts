@@ -3,9 +3,12 @@ export interface CommitRef {
   message: string;
 }
 
+export type SummaryTag = "feature" | "security" | "coverage" | "infra" | "design";
+
 export interface SummaryItem {
   label: string;
   description: string;
+  tag?: SummaryTag;
 }
 
 export interface ChangelogEntry {

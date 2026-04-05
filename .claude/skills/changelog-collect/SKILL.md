@@ -41,6 +41,12 @@ Generate a complete changelog entry for a given period. Defaults to the last 7 d
 
 6. **Write editorial summary**: For each cluster, write one `SummaryItem`:
    - `label`: 2-4 word punchy theme name (e.g. "Broader coverage", "Stronger pipelines")
+   - `tag`: One of `"feature" | "security" | "coverage" | "infra" | "design"` — assign the tag that best fits the cluster:
+     - `feature` — new capabilities, scoring updates, integrations
+     - `security` — auth, hardening, audit remediation
+     - `coverage` — stablecoin additions, reserve expansion, data sources
+     - `infra` — pipeline reliability, cron, sync, CI, status page
+     - `design` — UI/UX polish, onboarding, changelog, motion
    - `description`: One concise sentence summarizing the cluster's impact
    - Voice: confident, product-update style. Not technical jargon -- user-facing impact.
    - Omit clusters with fewer than 3 commits unless they represent a notable user-facing change.
@@ -56,7 +62,7 @@ Generate a complete changelog entry for a given period. Defaults to the last 7 d
      dateRange: { from: "<from>", to: "<to>" },
      headline: "<one-sentence thesis>",
      summary: [
-       { label: "...", description: "..." },
+       { label: "...", tag: "feature", description: "..." },
        // ...
      ],
      stats: { totalCommits: <N> },
