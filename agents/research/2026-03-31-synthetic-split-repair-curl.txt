@@ -1,0 +1,64 @@
+USR-only dry run:
+
+set -a
+source .dev.vars
+set +a
+curl -sS \
+  -H "CF-Access-Client-Id: $OPS_API_SERVICE_TOKEN_ID" \
+  -H "CF-Access-Client-Secret: $OPS_API_SERVICE_TOKEN_SECRET" \
+  -H "Accept: application/json" \
+  "https://ops-api.pharos.watch/api/audit-depeg-history?dry-run=true&repair=synthetic-splits&symbol=USR" | jq '.'
+
+
+All synthetic-split candidates dry run:
+
+set -a
+source .dev.vars
+set +a
+curl -sS \
+  -H "CF-Access-Client-Id: $OPS_API_SERVICE_TOKEN_ID" \
+  -H "CF-Access-Client-Secret: $OPS_API_SERVICE_TOKEN_SECRET" \
+  -H "Accept: application/json" \
+  "https://ops-api.pharos.watch/api/audit-depeg-history?dry-run=true&repair=synthetic-splits" | jq '.'
+
+
+USR-only execute repair:
+
+set -a
+source .dev.vars
+set +a
+curl -sS -X POST \
+  -H "CF-Access-Client-Id: $OPS_API_SERVICE_TOKEN_ID" \
+  -H "CF-Access-Client-Secret: $OPS_API_SERVICE_TOKEN_SECRET" \
+  -H "Accept: application/json" \
+  "https://ops-api.pharos.watch/api/audit-depeg-history?repair=synthetic-splits&symbol=USR" | jq '.'
+
+
+All synthetic-split candidates execute repair:
+
+set -a
+source .dev.vars
+set +a
+curl -sS -X POST \
+  -H "CF-Access-Client-Id: $OPS_API_SERVICE_TOKEN_ID" \
+  -H "CF-Access-Client-Secret: $OPS_API_SERVICE_TOKEN_SECRET" \
+  -H "Accept: application/json" \
+  "https://ops-api.pharos.watch/api/audit-depeg-history?repair=synthetic-splits" | jq '.'
+
+
+Debug version for USR-only dry run:
+
+set -a
+source .dev.vars
+set +a
+curl -sS \
+  -D /tmp/pharos-repair-headers.txt \
+  -o /tmp/pharos-repair-body.json \
+  -H "CF-Access-Client-Id: $OPS_API_SERVICE_TOKEN_ID" \
+  -H "CF-Access-Client-Secret: $OPS_API_SERVICE_TOKEN_SECRET" \
+  -H "Accept: application/json" \
+  "https://ops-api.pharos.watch/api/audit-depeg-history?dry-run=true&repair=synthetic-splits&symbol=USR"
+
+cat /tmp/pharos-repair-headers.txt
+echo
+cat /tmp/pharos-repair-body.json | jq '.'
