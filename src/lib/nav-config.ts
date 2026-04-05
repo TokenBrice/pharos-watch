@@ -47,15 +47,6 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-export interface AboutNavGroup {
-  key: "about";
-  href: string;
-  label: string;
-  icon: LucideIcon;
-  description: string;
-  children: NavItem[];
-}
-
 export const DASHBOARD_NAV_ITEM: NavItem = { href: "/", label: "Dashboard", icon: LayoutDashboard, description: "Live triage surface for market stress, rankings, and first-pass research" };
 
 export const NAV_GROUPS: NavGroup[] = [
@@ -93,27 +84,24 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/digest", label: "Digest", icon: Newspaper, description: "Daily editorial recap of the stablecoin market" },
     ],
   },
+  {
+    key: "info",
+    label: "Info",
+    items: [
+      { href: "/about", label: "About", icon: Info, description: "Scope, data sources, and why Pharos exists" },
+      { href: "/methodology", label: "Methodology", icon: BookOpen, description: "Reference manual for formulas, thresholds, and changelogs" },
+      { href: "/coverage", label: "Coverage", icon: TableProperties, description: "Truth surface for what each route can show per coin" },
+      { href: "/about/api", label: "API Reference", icon: KeyRound, description: "Auth model, key requirement, and full endpoint reference" },
+      { href: "/changelog", label: "Changelog", icon: ScrollText, description: "Weekly release notes and feature updates" },
+    ],
+  },
 ];
-
-export const ABOUT_NAV_GROUP: AboutNavGroup = {
-  key: "about",
-  href: "/about",
-  label: "About",
-  icon: Info,
-  description: "Scope, data sources, and why Pharos exists",
-  children: [
-    { href: "/methodology", label: "Methodology", icon: BookOpen, description: "Reference manual for formulas, thresholds, and changelogs" },
-    { href: "/coverage", label: "Coverage", icon: TableProperties, description: "Truth surface for what each route can show per coin" },
-    { href: "/about/api", label: "API Reference", icon: KeyRound, description: "Auth model, key requirement, and full endpoint reference" },
-    { href: "/changelog", label: "Changelog", icon: ScrollText, description: "Weekly release notes and feature updates" },
-  ],
-};
 
 export const DEFAULT_EXPANDED: Record<string, boolean> = {
   "risk-lab": true,
   data: false,
   tools: false,
-  about: false,
+  info: false,
 };
 
 /** Bottom items (always shown at sidebar bottom, near social links) */
@@ -126,6 +114,4 @@ export const NAV_ITEMS: NavItem[] = [
   DASHBOARD_NAV_ITEM,
   ...NAV_GROUPS.flatMap((g) => g.items),
   ...BOTTOM_NAV_ITEMS,
-  { href: ABOUT_NAV_GROUP.href, label: ABOUT_NAV_GROUP.label, icon: ABOUT_NAV_GROUP.icon, description: ABOUT_NAV_GROUP.description },
-  ...ABOUT_NAV_GROUP.children,
 ];

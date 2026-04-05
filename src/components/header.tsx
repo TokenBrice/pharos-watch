@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
-import { NAV_GROUPS, ABOUT_NAV_GROUP, BOTTOM_NAV_ITEMS, DASHBOARD_NAV_ITEM } from "@/lib/nav-config";
+import { NAV_GROUPS, BOTTOM_NAV_ITEMS, DASHBOARD_NAV_ITEM } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { Menu, Search, X, ChevronRight } from "lucide-react";
 import { openCommandPalette } from "@/lib/command-palette";
@@ -124,42 +124,12 @@ export function Header() {
                 );
               })}
 
-              {/* About group — link + expansion row */}
-              <div
-                className={`mt-4 animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards] ${
-                  isRouteActive(pathname, ABOUT_NAV_GROUP.href) || ABOUT_NAV_GROUP.children.some((c) => isRouteActive(pathname, c.href))
-                    ? "border-l-2 border-l-frost-blue pl-3" : "pl-[14px]"
-                }`}
-                style={{ animationDelay: `${(NAV_GROUPS.length + 1) * 50}ms`, animationDuration: "200ms" }}
-              >
-                <MobileNavLink
-                  item={{ href: ABOUT_NAV_GROUP.href, label: ABOUT_NAV_GROUP.label, icon: ABOUT_NAV_GROUP.icon, description: ABOUT_NAV_GROUP.description }}
-                  active={isRouteActive(pathname, ABOUT_NAV_GROUP.href)}
-                  onNavigate={() => setOpen(false)}
-                />
-                <button
-                  onClick={() => toggle("about")}
-                  className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
-                  aria-expanded={isGroupExpanded("about")}
-                >
-                  <span>Methodology, API, Changelog…</span>
-                  <ChevronRight className={`h-3 w-3 transition-transform duration-200 ${isGroupExpanded("about") ? "rotate-90" : ""}`} />
-                </button>
-                <div className={`grid transition-[grid-template-rows] duration-200 ease-[var(--motion-ease-standard)] ${isGroupExpanded("about") ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
-                  <div className="overflow-hidden ml-2">
-                    {ABOUT_NAV_GROUP.children.map((item) => (
-                      <MobileNavLink key={item.href} item={item} active={isRouteActive(pathname, item.href)} onNavigate={() => setOpen(false)} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-
               {BOTTOM_NAV_ITEMS.length > 0 ? (
                 <div
                   className={`mt-4 animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards] ${
                     BOTTOM_NAV_ITEMS.some((item) => isRouteActive(pathname, item.href)) ? "border-l-2 border-l-frost-blue pl-3" : "pl-[14px]"
                   }`}
-                  style={{ animationDelay: `${(NAV_GROUPS.length + 2) * 50}ms`, animationDuration: "200ms" }}
+                  style={{ animationDelay: `${(NAV_GROUPS.length + 1) * 50}ms`, animationDuration: "200ms" }}
                 >
                   {BOTTOM_NAV_ITEMS.map((item) => (
                     <MobileNavLink key={item.href} item={item} active={isRouteActive(pathname, item.href)} onNavigate={() => setOpen(false)} />

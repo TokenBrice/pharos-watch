@@ -34,7 +34,7 @@ describe("getExpandedState", () => {
     expect(state["risk-lab"]).toBe(true);
     expect(state["data"]).toBe(false);
     expect(state["tools"]).toBe(false);
-    expect(state["about"]).toBe(false);
+    expect(state["info"]).toBe(false);
   });
 
   it("merges persisted state over defaults", () => {

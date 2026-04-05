@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { NAV_GROUPS, ABOUT_NAV_GROUP, DEFAULT_EXPANDED } from "@/lib/nav-config";
+import { NAV_GROUPS, DEFAULT_EXPANDED } from "@/lib/nav-config";
 import { getWindowStorage, safeStorageGetItem, safeStorageSetItem } from "@/lib/browser-storage";
 import { isRouteActive } from "@/lib/navigation";
 
@@ -33,9 +33,6 @@ export function setExpandedState(state: Record<string, boolean>): void {
 function findGroupKeyForRoute(pathname: string): string | null {
   for (const group of NAV_GROUPS) {
     if (group.items.some((item) => isRouteActive(pathname, item.href))) return group.key;
-  }
-  if (isRouteActive(pathname, ABOUT_NAV_GROUP.href) || ABOUT_NAV_GROUP.children.some((item) => isRouteActive(pathname, item.href))) {
-    return "about";
   }
   return null;
 }
