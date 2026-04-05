@@ -104,7 +104,6 @@ export const ABOUT_NAV_GROUP: AboutNavGroup = {
   children: [
     { href: "/methodology", label: "Methodology", icon: BookOpen, description: "Reference manual for formulas, thresholds, and changelogs" },
     { href: "/coverage", label: "Coverage", icon: TableProperties, description: "Truth surface for what each route can show per coin" },
-    { href: "/start", label: "Start Here", icon: Compass, description: "Shortest route into the product for new or returning users" },
     { href: "/about/api", label: "API Reference", icon: KeyRound, description: "Auth model, key requirement, and full endpoint reference" },
     { href: "/changelog", label: "Changelog", icon: ScrollText, description: "Weekly release notes and feature updates" },
   ],
@@ -117,13 +116,16 @@ export const DEFAULT_EXPANDED: Record<string, boolean> = {
   about: false,
 };
 
+/** Bottom items (always shown at sidebar bottom, near social links) */
+export const BOTTOM_NAV_ITEMS: NavItem[] = [
+  { href: "/start", label: "Start Here", icon: Compass, description: "Shortest route into the product for new or returning users" },
+];
+
 /** Flat list for use in header and command palette */
 export const NAV_ITEMS: NavItem[] = [
   DASHBOARD_NAV_ITEM,
   ...NAV_GROUPS.flatMap((g) => g.items),
+  ...BOTTOM_NAV_ITEMS,
   { href: ABOUT_NAV_GROUP.href, label: ABOUT_NAV_GROUP.label, icon: ABOUT_NAV_GROUP.icon, description: ABOUT_NAV_GROUP.description },
   ...ABOUT_NAV_GROUP.children,
 ];
-
-/** Bottom items (always shown at sidebar bottom) */
-export const BOTTOM_NAV_ITEMS: NavItem[] = [];

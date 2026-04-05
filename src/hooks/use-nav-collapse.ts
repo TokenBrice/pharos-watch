@@ -45,27 +45,36 @@ function findGroupKeyForRoute(pathname: string): string | null {
 export function useNavCollapse() {
   const pathname = usePathname();
   const [state, setState] = useState(getExpandedState);
+  // Groups the user has explicitly collapsed while the active page is inside them
+  const [manualOverrides, setManualOverrides] = useState<Record<string, boolean>>({});
 
   const activeGroupKey = useMemo(() => findGroupKeyForRoute(pathname), [pathname]);
 
   const isExpanded = useCallback(
     (key: string): boolean => {
-      // Active group always shows expanded
+      // If user explicitly collapsed the active group, respect that
+      if (key === activeGroupKey && manualOverrides[key] === false) return false;
+      // Otherwise, active group auto-expands
       if (key === activeGroupKey) return true;
       return state[key] ?? DEFAULT_EXPANDED[key] ?? false;
     },
-    [state, activeGroupKey],
+    [state, activeGroupKey, manualOverrides],
   );
 
   const toggle = useCallback(
     (key: string) => {
+      const currentlyExpanded = isExpanded(key);
+      // Track manual override when collapsing the active group
+      if (key === activeGroupKey) {
+        setManualOverrides((prev) => ({ ...prev, [key]: !currentlyExpanded }));
+      }
       setState((prev) => {
-        const next = { ...prev, [key]: !isExpanded(key) };
+        const next = { ...prev, [key]: !currentlyExpanded };
         setExpandedState(next);
         return next;
       });
     },
-    [isExpanded],
+    [isExpanded, activeGroupKey],
   );
 
   return { isExpanded, toggle, activeGroupKey };
