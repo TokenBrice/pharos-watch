@@ -72,7 +72,7 @@ describe("public status helpers", () => {
     });
   });
 
-  it("keeps source-floor degradation visible even when the cache age ratio is still fresh", () => {
+  it("treats source-degraded as informational — fresh cache stays healthy impact", () => {
     const ratio = 120 / 3_600;
     const summary = getPublicWorstCacheSummary({
       "fx-rates": {
@@ -85,8 +85,8 @@ describe("public status helpers", () => {
 
     expect(summary).toEqual({
       ratio,
-      status: "degraded",
-      impactedCount: 1,
+      status: "healthy",
+      impactedCount: 0,
     });
 
     const impacted = getImpactedPublicSurfaces({
@@ -101,6 +101,6 @@ describe("public status helpers", () => {
       },
     });
 
-    expect(impacted).toContainEqual(expect.objectContaining({ id: "cache-fx-rates", tone: "degraded" }));
+    expect(impacted).not.toContainEqual(expect.objectContaining({ id: "cache-fx-rates", tone: "degraded" }));
   });
 });

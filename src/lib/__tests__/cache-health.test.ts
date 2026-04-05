@@ -31,4 +31,15 @@ describe("cache-health", () => {
       }),
     ).toBe("degraded");
   });
+
+  it("treats source-degraded as informational — fresh cache stays healthy impact", () => {
+    expect(
+      getCacheImpactStatus({
+        ageSeconds: 600,
+        maxAge: 1800,
+        healthy: true,
+        sourceStatus: "degraded",
+      }),
+    ).toBe("healthy");
+  });
 });

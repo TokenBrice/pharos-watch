@@ -26,7 +26,6 @@ export function getCacheImpactStatus(cache: CacheStatus): "healthy" | "degraded"
   if (
     freshnessStatus === "degraded"
     || cache.mode === "cached-fallback"
-    || cache.sourceStatus === "degraded"
   ) {
     return "degraded";
   }
