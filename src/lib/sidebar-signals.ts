@@ -1,5 +1,6 @@
 import { formatCompactCount } from "@shared/lib/format";
 import type { ConditionBand } from "@shared/lib/psi-colors";
+import { PSI_BORDER_CLASSES } from "@shared/lib/psi-colors";
 import { getDisplayedPsi } from "@shared/lib/psi-view-model";
 import type {
   BlacklistSummaryResponse,
@@ -9,10 +10,12 @@ import type {
 } from "@shared/types";
 
 export interface SidebarNavSignal {
-  kind: "badge" | "dot";
+  kind: "badge" | "dot" | "accent";
   text?: string;
   title: string;
   tone: "neutral" | "info" | "healthy" | "warning" | "danger";
+  /** Tailwind border-l class for accent-colored left border overlay. */
+  accentClass?: string;
 }
 
 export const SIDEBAR_DIGEST_SEEN_STORAGE_KEY = "pharos-sidebar-digest-seen-generated-at";
@@ -62,10 +65,10 @@ export function getStabilityIndexNavSignal(stabilityIndex: StabilityIndexRespons
 
   const displayed = getDisplayedPsi(current);
   return {
-    kind: "badge",
-    text: displayed.score.toFixed(1),
+    kind: "accent",
     title: `PSI ${displayed.score.toFixed(1)} (${displayed.band})`,
     tone: getPsiSignalTone(displayed.band),
+    accentClass: PSI_BORDER_CLASSES[displayed.band as ConditionBand],
   };
 }
 

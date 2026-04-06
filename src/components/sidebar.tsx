@@ -95,6 +95,8 @@ const SIDEBAR_SIGNAL_TONE_CLASS: Record<SidebarNavSignal["tone"], string> = {
 };
 
 function SidebarNavSignalIndicator({ signal }: { signal: SidebarNavSignal }) {
+  if (signal.kind === "accent") return null;
+
   if (signal.kind === "dot") {
     return (
       <span className="ml-auto flex items-center" title={signal.title} aria-hidden="true">
@@ -129,6 +131,7 @@ function SidebarNavItem({
   signal?: SidebarNavSignal | null;
 }) {
   const Icon = item.icon;
+  const accentBorder = signal?.accentClass;
   const title = expanded ? undefined : signal ? `${item.label} — ${signal.title}` : item.label;
   const ariaLabel = signal ? `${item.label} — ${signal.title}` : item.label;
 
@@ -141,9 +144,11 @@ function SidebarNavItem({
       className={`pharos-focus-ring flex items-center gap-3 rounded-md border-l-[3px] transition-[background-color,border-color,color,box-shadow] duration-200 ${
         expanded ? "mx-2 px-3 py-2.5" : "mx-auto px-0 py-2 justify-center w-10"
       } ${
-        isActive
-          ? "border-l-frost-blue bg-muted/60 text-foreground shadow-sm"
-          : "border-l-transparent text-muted-foreground hover:border-l-border/80 hover:bg-muted/45 hover:text-foreground"
+        accentBorder
+          ? `${accentBorder} ${isActive ? "bg-muted/60 text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/45 hover:text-foreground"}`
+          : isActive
+            ? "border-l-frost-blue bg-muted/60 text-foreground shadow-sm"
+            : "border-l-transparent text-muted-foreground hover:border-l-border/80 hover:bg-muted/45 hover:text-foreground"
       }`}
     >
       <Icon className="h-4 w-4 shrink-0" />
