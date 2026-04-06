@@ -389,6 +389,7 @@ export interface StatusResponse {
     lastSuccessAt: number | null;
     oldestFreshAgeSec: number | null;
   };
+  cacheBlobSizes?: Record<string, number>;
   reserveDrift?: ReserveDriftEntry[];
   classificationWarnings?: ClassificationWarning[];
 }

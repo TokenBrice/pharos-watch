@@ -104,6 +104,7 @@ export const handleStatus = withErrorHandler(
           coingeckoPriceDiff: supplements.coingeckoPriceDiff,
           d1Usage: supplements.d1Usage,
           discoveryCandidates: supplements.discoveryCandidates,
+          cacheBlobSizes: supplements.cacheBlobSizes,
           mintBurnReconciliation: supplements.mintBurnReconciliation,
           reserveDrift: supplements.reserveDrift,
           classificationWarnings: supplements.classificationWarnings,
