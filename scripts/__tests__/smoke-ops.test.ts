@@ -3,9 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 import {
   extractCookiePairs,
   fetchOpsUiProxyStatus,
+  fetchOpsUiProxyStatusWithRetry,
   hasOpsUiAccessSessionCookie,
   mergeCookieHeader,
   shouldSkipOpsUiProxyAssertion,
+  shouldRetryOpsUiProxyStatus,
 } from "../smoke-ops.mjs";
 
 describe("extractCookiePairs", () => {
@@ -102,6 +104,78 @@ describe("fetchOpsUiProxyStatus", () => {
   });
 });
 
+describe("fetchOpsUiProxyStatusWithRetry", () => {
+  it("retries a transient proxied 504 once before failing the smoke", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("gateway timeout", {
+        status: 504,
+        headers: { "content-type": "text/plain" },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ overallStatus: "degraded" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }));
+    const sleepMock = vi.fn().mockResolvedValue(undefined);
+    const onRetry = vi.fn();
+
+    const result = await fetchOpsUiProxyStatusWithRetry(
+      "https://ops.pharos.watch/api/admin/status",
+      {
+        "CF-Access-Client-Id": "id",
+        "CF-Access-Client-Secret": "secret",
+      },
+      {
+        fetchImpl: fetchMock,
+        retryCount: 1,
+        retryDelayMs: 2_000,
+        sleepImpl: sleepMock,
+        onRetry,
+      },
+    );
+
+    expect(result.proxiedStatus.response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(sleepMock).toHaveBeenCalledWith(2_000);
+    expect(onRetry).toHaveBeenCalledWith({
+      attemptNumber: 1,
+      retryCount: 1,
+      retryDelayMs: 2_000,
+      status: 504,
+    });
+  });
+
+  it("still returns the last failure when the proxied 504 persists after the retry budget", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("gateway timeout", {
+        status: 504,
+        headers: { "content-type": "text/plain" },
+      }))
+      .mockResolvedValueOnce(new Response("gateway timeout", {
+        status: 504,
+        headers: { "content-type": "text/plain" },
+      }));
+    const sleepMock = vi.fn().mockResolvedValue(undefined);
+
+    const result = await fetchOpsUiProxyStatusWithRetry(
+      "https://ops.pharos.watch/api/admin/status",
+      {
+        "CF-Access-Client-Id": "id",
+        "CF-Access-Client-Secret": "secret",
+      },
+      {
+        fetchImpl: fetchMock,
+        retryCount: 1,
+        retryDelayMs: 2_000,
+        sleepImpl: sleepMock,
+      },
+    );
+
+    expect(result.proxiedStatus.response.status).toBe(504);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(sleepMock).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("hasOpsUiAccessSessionCookie", () => {
   it("only treats CF_Authorization as a bootstrapped Access session", () => {
     expect(hasOpsUiAccessSessionCookie("cf_clearance=bot-cookie")).toBe(false);
@@ -135,5 +209,15 @@ describe("shouldSkipOpsUiProxyAssertion", () => {
     });
 
     expect(shouldSkipOpsUiProxyAssertion(response, "CF_Authorization=ui-session")).toBe(false);
+  });
+});
+
+describe("shouldRetryOpsUiProxyStatus", () => {
+  it("retries only transient gateway timeouts", () => {
+    expect(shouldRetryOpsUiProxyStatus(new Response("gateway timeout", { status: 504 }))).toBe(true);
+    expect(shouldRetryOpsUiProxyStatus(new Response(JSON.stringify({ error: "upstream failed" }), {
+      status: 502,
+      headers: { "content-type": "application/json" },
+    }))).toBe(false);
   });
 });

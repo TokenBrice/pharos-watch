@@ -4,6 +4,9 @@ import { pathToFileURL } from "node:url";
 
 const DEFAULT_OPS_UI_URL = process.env.SMOKE_OPS_UI_URL ?? "https://ops.pharos.watch/admin/";
 const DEFAULT_OPS_API_BASE = process.env.SMOKE_OPS_API_BASE ?? "https://ops-api.pharos.watch";
+const OPS_UI_PROXY_RETRY_STATUS = 504;
+const OPS_UI_PROXY_RETRY_COUNT = 1;
+const OPS_UI_PROXY_RETRY_DELAY_MS = 2_000;
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -44,6 +47,10 @@ async function fetchText(url, headers) {
   const response = await fetch(url, { headers, redirect: "manual" });
   const body = await response.text();
   return { response, body };
+}
+
+function sleep(delayMs) {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 
 export async function fetchJson(url, headers, fetchImpl = fetch) {
@@ -156,6 +163,54 @@ export async function fetchOpsUiProxyStatus(
   return { proxiedStatus, retriedWithCookie: false, cookieHeader };
 }
 
+export function shouldRetryOpsUiProxyStatus(response) {
+  return response.status === OPS_UI_PROXY_RETRY_STATUS;
+}
+
+export async function fetchOpsUiProxyStatusWithRetry(
+  url,
+  accessHeaders,
+  options = {},
+) {
+  const {
+    fetchImpl = fetch,
+    initialCookieHeader = "",
+    retryCount = OPS_UI_PROXY_RETRY_COUNT,
+    retryDelayMs = OPS_UI_PROXY_RETRY_DELAY_MS,
+    sleepImpl = sleep,
+    onRetry = null,
+  } = options;
+
+  let cookieHeader = initialCookieHeader;
+  let attempt = await fetchOpsUiProxyStatus(url, accessHeaders, {
+    fetchImpl,
+    initialCookieHeader: cookieHeader,
+  });
+  cookieHeader = attempt.cookieHeader;
+
+  for (let retryIndex = 0; retryIndex < retryCount; retryIndex++) {
+    if (!shouldRetryOpsUiProxyStatus(attempt.proxiedStatus.response)) {
+      return attempt;
+    }
+    if (typeof onRetry === "function") {
+      onRetry({
+        attemptNumber: retryIndex + 1,
+        retryCount,
+        retryDelayMs,
+        status: attempt.proxiedStatus.response.status,
+      });
+    }
+    await sleepImpl(retryDelayMs);
+    attempt = await fetchOpsUiProxyStatus(url, accessHeaders, {
+      fetchImpl,
+      initialCookieHeader: cookieHeader,
+    });
+    cookieHeader = attempt.cookieHeader;
+  }
+
+  return attempt;
+}
+
 export function shouldSkipOpsUiProxyAssertion(response, cookieHeader) {
   const location = response.headers.get("Location") ?? "";
   return response.status === 401
@@ -198,8 +253,13 @@ export async function run() {
   console.log(`[smoke-ops] OK ops API /api/status (${status.body.overallStatus})`);
 
   const proxiedUrl = new URL("/api/admin/status", opsUiOrigin).toString();
-  const proxiedAttempt = await fetchOpsUiProxyStatus(proxiedUrl, headers, {
+  const proxiedAttempt = await fetchOpsUiProxyStatusWithRetry(proxiedUrl, headers, {
     initialCookieHeader: uiCookieHeader,
+    onRetry: ({ attemptNumber, retryCount, retryDelayMs, status }) => {
+      console.warn(
+        `[smoke-ops] /api/admin/status returned ${status}; retrying ${attemptNumber}/${retryCount} after ${retryDelayMs}ms to absorb post-deploy warmup`,
+      );
+    },
   });
   const proxiedStatus = proxiedAttempt.proxiedStatus;
   if (shouldSkipOpsUiProxyAssertion(proxiedStatus.response, proxiedAttempt.cookieHeader)) {
