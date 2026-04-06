@@ -110,6 +110,51 @@ describe("tracked stablecoin metadata", () => {
     });
   });
 
+  it("keeps base USDAI on the curated PYUSD reserve path while sUSDai owns the mixed protocol feed", () => {
+    const usdai = TRACKED_META_BY_ID.get("usdai-usd-ai");
+    const susdai = TRACKED_META_BY_ID.get("susdai-usd-ai");
+
+    expect(usdai?.reserves).toEqual([
+      {
+        name: "PYUSD (PayPal USD)",
+        pct: 100,
+        risk: "low",
+        coinId: "pyusd-paypal",
+      },
+    ]);
+    expect(usdai?.liveReservesConfig).toMatchObject({
+      adapter: "curated-validated",
+      semantics: "single-asset",
+      breakerScope: "usdai-usd-ai",
+      display: {
+        url: "https://usd.ai/usdai",
+        label: "USD.AI USDai",
+      },
+      inputs: {
+        primary: {
+          kind: "onchain-evm",
+          chain: "arbitrum",
+          rpcMode: "public-rpc",
+        },
+      },
+    });
+
+    expect(susdai?.liveReservesConfig).toMatchObject({
+      adapter: "usdai-proof-of-reserves",
+      breakerScope: "susdai-usd-ai",
+      display: {
+        url: "https://app.usd.ai/reserves",
+        label: "USD.AI Reserves",
+      },
+      inputs: {
+        primary: {
+          kind: "http-json",
+          url: "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
+        },
+      },
+    });
+  });
+
   it("uses explicit breaker scopes when a live-reserve adapter is reused across multiple coins", () => {
     const liveCoins = TRACKED_STABLECOINS.filter((coin) => coin.liveReservesConfig);
     const adapterUsage = new Map<string, string[]>();

@@ -2455,18 +2455,19 @@
       }
     ],
     "liveReservesConfig": {
-      "adapter": "usdai-proof-of-reserves",
+      "adapter": "curated-validated",
       "version": 2,
-      "semantics": "collateral-mix",
+      "semantics": "single-asset",
       "breakerScope": "usdai-usd-ai",
       "display": {
-        "url": "https://app.usd.ai/reserves",
-        "label": "USD.AI Reserves"
+        "url": "https://usd.ai/usdai",
+        "label": "USD.AI USDai"
       },
       "inputs": {
         "primary": {
-          "kind": "http-json",
-          "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161"
+          "kind": "onchain-evm",
+          "chain": "arbitrum",
+          "rpcMode": "public-rpc"
         }
       }
     }

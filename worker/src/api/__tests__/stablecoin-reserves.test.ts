@@ -3,6 +3,38 @@ import { mockD1 } from "./helpers/mock-d1";
 import { handleStablecoinReserves } from "../stablecoin-reserves";
 
 describe("handleStablecoinReserves", () => {
+  it("keeps USDAI on the reserve endpoint with the curated PYUSD fallback until a validated snapshot is synced", async () => {
+    const db = mockD1();
+    const res = await handleStablecoinReserves(db, "usdai-usd-ai");
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=300, max-age=60");
+    const body = (await res.json()) as {
+      mode: string;
+      estimated: boolean;
+      reserves: Array<{ name: string; pct: number; risk: string; coinId?: string }>;
+      displayUrl?: string;
+      sync?: { enabled?: boolean; bootstrap?: boolean };
+    };
+    expect(body).toMatchObject({
+      mode: "curated-fallback",
+      estimated: false,
+      displayUrl: "https://usd.ai/usdai",
+      reserves: [
+        {
+          name: "PYUSD (PayPal USD)",
+          pct: 100,
+          risk: "low",
+          coinId: "pyusd-paypal",
+        },
+      ],
+      sync: {
+        enabled: true,
+        bootstrap: true,
+      },
+    });
+  });
+
   it("returns a curated fallback payload when no live data exists in D1 yet", async () => {
     const db = mockD1();
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
