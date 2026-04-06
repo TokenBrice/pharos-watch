@@ -85,9 +85,9 @@
     "updatedAt": "2026-03-23"
   },
   "eurs-stasis": {
-    "title": "MiCA's Biggest Winner",
-    "text": "Stasis Euro went from afterthought to contender because MiCA regulation cleared the field and EURS was already compliant — Malta MFSA licensed, BDO Malta audited, with 100% of reserves in euro balances at licensed European institutions including Central Bank accounts. The C- safety grade at 52 and active depeg trading over 800 basis points above its euro peg tell a more complicated story: 2,694 depeg events (712 in the four-year window) and a peg score of 38 make EURS one of the most frequently depegged stablecoins on the dashboard, with volatility that reflects both thin DEX liquidity and the challenge of maintaining an EUR peg against a dollar-denominated reference. The irony is that EURS's explosive growth happened not because the product changed, but because competitors got disqualified under MiCA. The looming threat is a consortium of European banks planning their own MiCA-compliant euro stablecoins, which would bring the kind of distribution and liquidity depth that Stasis cannot match.",
-    "updatedAt": "2026-03-23"
+    "title": "MiCA’s Biggest Winner",
+    "text": "Stasis Euro went from afterthought to contender because MiCA regulation cleared the field and EURS was already compliant — Malta MFSA licensed, BDO Malta audited, with 100% of reserves in euro balances at licensed European institutions including Central Bank accounts. The D safety grade tells a more complicated story: hundreds of depeg events in the four-year window and persistent peg stress reflect both thin DEX liquidity and the structural challenge of maintaining an EUR peg against dollar-denominated reference rates. The irony is that EURS’s explosive growth happened not because the product changed, but because competitors got disqualified under MiCA — which makes the quality gap all the more conspicuous as better-credentialed entrants like Circle’s EURC and SocGen’s EURCV build out their euro liquidity. Deployed across three chains, the looming threat is a consortium of European banks planning their own MiCA-compliant euro stablecoins, which would bring the kind of distribution and liquidity depth that Stasis cannot match.",
+    "updatedAt": "2026-04-06"
   },
   "ceur-celo": {
     "title": "The Other Mento Euro",
@@ -120,9 +120,9 @@
     "updatedAt": "2026-03-23"
   },
   "eure-monerium": {
-    "title": "Monerium's Electronic Money",
-    "text": "Monerium's EURe is one of the few stablecoins licensed as electronic money under MiCA, with 70% of reserves in a State Street AAA-rated EUR liquidity fund and 30% in bank deposits at Arion Bank and LHV Bank — institutional-top custody that earns an A+ in both resilience and dependency risk. The direct SEPA-to-IBAN integration makes fiat on/off-ramps seamless in a way most stablecoins only promise, and the eight-chain deployment across Ethereum, Polygon, Gnosis, and others gives EURe the broadest distribution of any euro stablecoin outside Circle's EURC. The C+ safety grade at 64 is dragged down by the F in decentralization and a D in liquidity — the persistent challenge of euro stablecoins that are well-backed but thinly traded. EURe is what euro stablecoins look like when they actually comply with European financial law — Iceland's FSA license may lack the prestige of France's ACPR, but the product is structurally sound.",
-    "updatedAt": "2026-03-23"
+    "title": "Monerium’s Electronic Money",
+    "text": "Monerium’s EURe is one of the few stablecoins licensed as electronic money under MiCA, with 70% of reserves in a State Street AAA-rated EUR liquidity fund and 30% in bank deposits at Arion Bank and LHV Bank — institutional-top custody that earns the highest marks in both resilience and dependency risk. The direct SEPA-to-IBAN integration makes fiat on/off-ramps seamless in a way most stablecoins only promise, and the seven-chain deployment across Ethereum, Polygon, Gnosis, Arbitrum, and others gives EURe one of the broadest distributions of any euro stablecoin outside Circle’s EURC. The B- safety grade represents a solid showing for a euro stablecoin, though the persistent F in decentralization and modest liquidity depth reflect the structural limitations of regulated fiat tokens in DeFi. EURe is what euro stablecoins look like when they actually comply with European financial law — Iceland’s FSA license may lack the prestige of France’s ACPR, but the product is structurally sound.",
+    "updatedAt": "2026-04-06"
   },
   "eusd-electronic-usd": {
     "title": "Reserve's Yield Basket",
@@ -171,8 +171,8 @@
   },
   "aeur-anchored-coins": {
     "title": "The Swiss Euro, Winding Down",
-    "text": "Anchored Coins' AEUR is in terminal decline: FlowBank SA, which held 15% of AEUR's euro reserves, declared bankruptcy in June 2024, locking a portion of collateral in proceedings. Anchored Coins has ceased new issuance and was delisted from Binance EEA in March 2025, leaving 85% of reserves at Swissquote Bank SA intact but the product functionally winding down. The peg score of 29 and 216 depeg events including one that spiked over 8,400 basis points reflect the chaos of a stablecoin whose reserve partner failed. AEUR is now less a competitive euro stablecoin and more a cautionary tale about single-custodian concentration risk — the kind of counterparty failure that every stablecoin investor assumes won't happen until it does.",
-    "updatedAt": "2026-03-23"
+    "text": "Anchored Coins’ AEUR is in terminal decline: FlowBank SA, which held 15% of AEUR’s euro reserves, declared bankruptcy in June 2024, locking a portion of collateral in proceedings. Anchored Coins has ceased new issuance and was delisted from Binance EEA in March 2025, leaving 85% of reserves at Swissquote Bank SA intact but the product functionally winding down. The F safety grade and persistent DEWS Watch band reflect the ongoing stress of a stablecoin whose reserve partner failed, with one historical depeg spiking over 8,500 basis points that captured the moment the news hit the secondary market. AEUR is now less a competitive euro stablecoin and more a cautionary tale about single-custodian concentration risk — the kind of counterparty failure that every stablecoin investor assumes won’t happen until it does.",
+    "updatedAt": "2026-04-06"
   },
   "buck-bucket-protocol": {
     "title": "Sui's CDP Experiment",
@@ -296,8 +296,8 @@
   },
   "zchf-frankencoin": {
     "title": "Swiss Stubbornness, Tokenized",
-    "text": "Frankencoin is a genuinely decentralized Swiss franc stablecoin — no foundation, no team tokens, no VC backing — earning an A in decentralization that puts it alongside LUSD and BOLD in the tiny club of stablecoins with credible governance independence. The collateral is omnivorous: 45% wrapped BTC, 30% ETH derivatives, 10% gold tokens (PAXG, XAUT), 10% tokenized RWAs, and even CRV and GNO — all valued through oracle-free auction-based liquidation that avoids price feed manipulation at the cost of capital efficiency. The 502 depeg events and a peg score of 81 reflect the inherent challenge of maintaining a CHF peg against a dollar-denominated reference rate, amplified by thin DEX liquidity on eight chains. Frankencoin proves that small, well-designed protocols can survive without a marketing budget, though the B- safety grade acknowledges that ideological purity doesn't eliminate the liquidity constraints of a niche-currency stablecoin.",
-    "updatedAt": "2026-03-23"
+    "text": "Frankencoin is a genuinely decentralized Swiss franc stablecoin — no foundation, no team tokens, no VC backing — earning an A in decentralization that puts it alongside LUSD and BOLD in the tiny club of stablecoins with credible governance independence. The collateral is omnivorous: 45% wrapped BTC, 30% ETH derivatives, 10% gold tokens (PAXG, XAUT), 10% tokenized RWAs, and even CRV and GNO — all valued through oracle-free auction-based liquidation that avoids price feed manipulation at the cost of capital efficiency. The peg track record is tighter than you’d expect from a niche-currency stablecoin, with deviations that reflect the inherent challenge of pricing CHF against dollar-denominated reference rates on thin DEX liquidity rather than any structural flaw in the mechanism. Frankencoin proves that small, well-designed protocols can survive without a marketing budget, and the B- safety grade acknowledges that ideological purity doesn’t eliminate the liquidity constraints of a CHF token deployed across four chains.",
+    "updatedAt": "2026-04-06"
   },
   "usn-noon": {
     "title": "The Rotating Yield Engine",
@@ -355,9 +355,9 @@
     "updatedAt": "2026-03-23"
   },
   "brz-transfero": {
-    "title": "Latin America's Bridge",
-    "text": "BRZ gives Brazil's crypto traders a real-denominated on-ramp, and its thousands of depeg events — the most of any stablecoin on the dashboard by a wide margin — tell you everything about what happens when you peg a token to a currency as volatile as the Brazilian real against a dollar-denominated reference rate. Backed 100% by BRL cash at a Central Bank of Brazil-authorized institution with a Swiss VQF registration, the reserve is straightforward; the F in peg stability reflects FX volatility rather than reserve inadequacy. The DEX liquidity is vanishingly thin, and the 1% redemption fee through Transfero means the secondary market is the practical exit for most holders — a market with barely enough depth to absorb a single large order. BRZ serves a genuine need in one of crypto's largest retail markets, but the D safety grade is a reminder that non-USD stablecoins carry FX risk that no amount of institutional backing can eliminate.",
-    "updatedAt": "2026-03-23"
+    "title": "Latin America’s Bridge",
+    "text": "BRZ gives Brazil’s crypto traders a real-denominated on-ramp, and its prolific depeg history — among the longest on the dashboard — tells you everything about what happens when you peg a token to a currency as volatile as the Brazilian real against a dollar-denominated reference rate. Backed 100% by BRL cash at a Central Bank of Brazil-authorized institution with a Swiss VQF registration, the reserve is straightforward; the F safety grade reflects FX volatility rather than reserve inadequacy. The DEX liquidity is vanishingly thin, and the 1% redemption fee through Transfero means the secondary market is the practical exit for most holders — a market with barely enough depth to absorb a single large order. BRZ serves a genuine need in one of crypto’s largest retail markets, deployed across seven chains including Ethereum, Polygon, and Solana, but the safety profile is a reminder that non-USD stablecoins carry FX risk that no amount of institutional backing can eliminate.",
+    "updatedAt": "2026-04-06"
   },
   "rlusd-ripple": {
     "title": "Ripple's Dollar Bet",
@@ -375,9 +375,9 @@
     "updatedAt": "2026-03-23"
   },
   "eurcv-societe-generale-forge": {
-    "title": "SocGen's Blockchain Experiment",
-    "text": "EUR CoinVertible is issued by SG-FORGE, the digital asset arm of a systemically important European bank, with reserves held 100% in euro cash at Société Générale itself — institutional-top custody that earns an A+ in both resilience and dependency risk, the highest marks available. The B- safety grade at 65 is dragged down by the F in decentralization and a liquidity score of 48 that reflects thin DEX pools relative to institutional backing, but the DEWS score of 1 — the lowest stress reading on the entire dashboard — suggests the product is operationally serene. Deployed across Ethereum, XRPL, Stellar, and Solana with MiCA EMI licensing from France's ACPR, EURCV is what happens when a 160-year-old bank decides to issue tokens on public blockchains. Whether this is the future of tokenized money or a corporate innovation lab's pet project depends on whether SocGen commits distribution resources that match its regulatory credentials.",
-    "updatedAt": "2026-03-23"
+    "title": "SocGen’s Blockchain Experiment",
+    "text": "EUR CoinVertible is issued by SG-FORGE, the digital asset arm of a systemically important European bank, with reserves held 100% in euro cash at Société Générale itself — institutional-top custody that earns the highest marks available in both resilience and dependency risk. The B safety grade makes EURCV one of the highest-rated euro stablecoins on Pharos, held back primarily by the expected F in decentralization — an inevitable trade-off when a 160-year-old bank decides to issue tokens on public blockchains. The DEWS stress reading is among the lowest on the entire dashboard, suggesting the product is operationally serene despite the thin DEX liquidity that plagues most euro stablecoins. Deployed across Ethereum, XRPL, Stellar, and Solana with MiCA EMI licensing from France’s ACPR, whether EURCV is the future of tokenized money or a corporate innovation lab’s pet project depends on whether SocGen commits distribution resources that match its regulatory credentials.",
+    "updatedAt": "2026-04-06"
   },
   "yusd-aegis": {
     "title": "Bitcoin-Margined Stability",
@@ -570,9 +570,9 @@
     "updatedAt": "2026-03-23"
   },
   "euri-banking-circle": {
-    "title": "Binance's Euro",
-    "text": "Eurite is the euro stablecoin endorsed by Binance, issued by Banking Circle S.A. under a Luxembourg CSSF credit institution license with MiCA compliance — 70% euro cash in segregated fiduciary accounts and 30% in EU government securities, attested by Ernst & Young. The C+ safety grade at 61 pairs an A+ peg score of 98 with an F-adjacent liquidity score of 32, reflecting the gap between institutional backing and thin on-chain trading depth that plagues most euro stablecoins. Binance's distribution muscle gives EURI instant access to the world's largest exchange, but the DEWS Watch band and 38 depeg events suggest the secondary market hasn't yet achieved the depth that exchange endorsement was supposed to provide. Whether the Binance imprimatur can make a euro stablecoin stick where Circle's EURC and SocGen's EURCV are also competing remains the central question for the entire euro stablecoin market.",
-    "updatedAt": "2026-03-23"
+    "title": "Binance’s Euro",
+    "text": "Eurite is the euro stablecoin endorsed by Binance, issued by Banking Circle S.A. under a Luxembourg CSSF credit institution license with MiCA compliance — 70% euro cash in segregated fiduciary accounts and 30% in EU government securities, attested by Ernst & Young. The peg record is among the cleanest of any euro stablecoin tracked by Pharos, with minimal depeg events and low stress readings that suggest the institutional plumbing works as designed. The C+ safety grade is held back not by peg instability but by a liquidity score that reflects thin on-chain trading depth relative to the institutional backing — the persistent gap between having Binance’s distribution muscle and actually generating organic DEX volume. Whether the Binance imprimatur can make a euro stablecoin stick where Circle’s EURC and SocGen’s EURCV are also competing remains the central question for the entire euro stablecoin market.",
+    "updatedAt": "2026-04-06"
   },
   "msusd-metronome": {
     "title": "Synths Still Standing",
