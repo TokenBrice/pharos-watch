@@ -68,6 +68,7 @@ export const handleTelegramWebhook = withErrorHandler(
       ? await timingSafeCompare(providedSecret, previousWebhookSecret)
       : false;
     if (!validCurrentSecret && !validPreviousSecret) {
+      console.warn("[telegram-webhook] auth validation failed — returning 200 to prevent retry storm");
       return ok();
     }
     if (!botToken) return ok();

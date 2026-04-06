@@ -84,6 +84,7 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
   try {
     raw = (await res.json()) as RawChartPoint[];
   } catch {
+    /* non-blocking: DL charts API returned non-JSON; degrade gracefully so other cron jobs continue */
     console.error(`[sync-charts] Failed to parse JSON from DefiLlama charts API: ${res.status}`);
     return {
       status: "degraded",

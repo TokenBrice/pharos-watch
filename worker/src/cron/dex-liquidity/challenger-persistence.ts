@@ -154,6 +154,7 @@ export async function detectDexPriceChallengerTableState(db: D1Database): Promis
       snapshotsTable: names.has("dex_price_challenger_snapshots"),
     };
   } catch {
+    /* non-blocking: challenger tables may not exist yet; treat as absent so callers skip challenger logic */
     return { challengersTable: false, snapshotsTable: false };
   }
 }
