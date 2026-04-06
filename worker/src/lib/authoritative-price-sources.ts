@@ -1,6 +1,7 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { PriceConfidence, StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../cron/sync-stablecoins/enrich-prices-shared";
+import { fetchMarketBackfillPriceSeries } from "../api/backfill-price-sources";
 import { binarySearchNearest } from "./binary-search";
 import { fetchEvmCallHexAtBlock, resolveClosestBlockAtOrBeforeTimestamp, type EvmBlockSearchCache } from "./evm-rpc";
 import { getArchiveFallbackRpcUrls } from "./public-rpc-registry";
@@ -10,6 +11,8 @@ const ETHEREUM_CHAIN = "ethereum";
 const PROTOCOL_REDEEM_SOURCE = "protocol-redeem";
 const CAP_CUSD_ID = "cusd-cap";
 const IUSD_INFINIFI_ID = "iusd-infinifi";
+const USDAI_USD_AI_ID = "usdai-usd-ai";
+const PYUSD_PAYPAL_ID = "pyusd-paypal";
 const USDC_CIRCLE_ID = "usdc-circle";
 const CAP_GET_BURN_AMOUNT_SELECTOR = "0xb7c4a6bf"; // getBurnAmount(address,uint256)
 const IUSD_RECEIPT_TO_ASSET_SELECTOR = "0xf308cf65"; // receiptToAsset(uint256)
@@ -52,10 +55,18 @@ export interface HistoricalPriceResolution {
   prices: HistoricalPricePoint[] | null;
 }
 
+interface LivePriceContext {
+  assetsById: Map<string, PeggedAsset>;
+}
+
 interface PriceSourceProvider {
   source: string;
   matches(stablecoinId: string): boolean;
-  fetchLivePrice?(asset: PeggedAsset, signal?: AbortSignal): Promise<CurrentPriceOverride | null>;
+  fetchLivePrice?(
+    asset: PeggedAsset,
+    context: LivePriceContext,
+    signal?: AbortSignal,
+  ): Promise<CurrentPriceOverride | null>;
   fetchHistoricalPrices?(meta: StablecoinMeta, context: HistoricalPriceContext): Promise<HistoricalPricePoint[] | null>;
 }
 
@@ -119,6 +130,11 @@ function clampSampleNotionalUsd(supplyUsd: number | null): number {
       : CAP_SAMPLE_NOTIONAL_MAX_USD;
 
   return Math.max(CAP_SAMPLE_NOTIONAL_MIN_USD, Math.min(CAP_SAMPLE_NOTIONAL_MAX_USD, scaled));
+}
+
+function getFinitePositivePrice(asset: Pick<PeggedAsset, "price"> | undefined): number | null {
+  const price = asset?.price;
+  return typeof price === "number" && Number.isFinite(price) && price > 0 ? price : null;
 }
 
 function findNearestSupply(snapshots: HistoricalSupplySnapshot[] | undefined, timestamp: number): number | null {
@@ -230,7 +246,7 @@ const capCusdProvider: PriceSourceProvider = {
   matches(stablecoinId: string): boolean {
     return stablecoinId === CAP_CUSD_ID;
   },
-  async fetchLivePrice(asset: PeggedAsset, signal?: AbortSignal): Promise<CurrentPriceOverride | null> {
+  async fetchLivePrice(asset: PeggedAsset, _context: LivePriceContext, signal?: AbortSignal): Promise<CurrentPriceOverride | null> {
     const sampleNotionalUsd = clampSampleNotionalUsd(sumCirculatingUsd(asset));
     const price = await fetchCapRedeemQuote(sampleNotionalUsd, "latest", signal);
     if (price == null) return null;
@@ -246,8 +262,8 @@ const capCusdProvider: PriceSourceProvider = {
     context: HistoricalPriceContext,
   ): Promise<HistoricalPricePoint[] | null> {
     return collectHistoricalBlockPrices(context, async (blockNumber, timestamp, signal) => {
-        const supplyUsd = findNearestSupply(context.supplySnapshots, timestamp);
-        const sampleNotionalUsd = clampSampleNotionalUsd(supplyUsd);
+      const supplyUsd = findNearestSupply(context.supplySnapshots, timestamp);
+      const sampleNotionalUsd = clampSampleNotionalUsd(supplyUsd);
       return fetchCapRedeemQuote(sampleNotionalUsd, blockNumber, signal);
     });
   },
@@ -291,7 +307,11 @@ const iusdInfinifiProvider: PriceSourceProvider = {
   matches(stablecoinId: string): boolean {
     return stablecoinId === IUSD_INFINIFI_ID;
   },
-  async fetchLivePrice(_asset: PeggedAsset, signal?: AbortSignal): Promise<CurrentPriceOverride | null> {
+  async fetchLivePrice(
+    _asset: PeggedAsset,
+    _context: LivePriceContext,
+    signal?: AbortSignal,
+  ): Promise<CurrentPriceOverride | null> {
     const price = await fetchInfiniFiRedeemQuote("latest", signal);
     if (price == null) return null;
 
@@ -312,20 +332,56 @@ const iusdInfinifiProvider: PriceSourceProvider = {
   },
 };
 
-const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [capCusdProvider, iusdInfinifiProvider];
+const usdaiPyusdProvider: PriceSourceProvider = {
+  source: PROTOCOL_REDEEM_SOURCE,
+  matches(stablecoinId: string): boolean {
+    return stablecoinId === USDAI_USD_AI_ID;
+  },
+  async fetchLivePrice(
+    _asset: PeggedAsset,
+    context: LivePriceContext,
+  ): Promise<CurrentPriceOverride | null> {
+    const pyusdAsset = context.assetsById.get(PYUSD_PAYPAL_ID);
+    const price = getFinitePositivePrice(pyusdAsset);
+    if (price == null) return null;
+
+    return {
+      price,
+      source: PROTOCOL_REDEEM_SOURCE,
+      confidence: "high",
+    };
+  },
+  async fetchHistoricalPrices(): Promise<HistoricalPricePoint[] | null> {
+    // Base USDAI is modeled as an instantly redeemable PYUSD wrapper, so replay the tracked PYUSD series.
+    const pyusdMeta = TRACKED_META_BY_ID.get(PYUSD_PAYPAL_ID);
+    if (!pyusdMeta?.geckoId) return null;
+
+    const series = await fetchMarketBackfillPriceSeries(pyusdMeta, pyusdMeta.geckoId, { granularity: "hourly" });
+    return series.prices;
+  },
+};
+
+const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
+  capCusdProvider,
+  iusdInfinifiProvider,
+  usdaiPyusdProvider,
+];
 
 export async function fetchAuthoritativeLivePriceOverrides(
   assets: PeggedAsset[],
   signal?: AbortSignal,
 ): Promise<Map<string, CurrentPriceOverride>> {
   const results = new Map<string, CurrentPriceOverride>();
+  const liveContext: LivePriceContext = {
+    assetsById: new Map(assets.map((asset) => [asset.id, asset])),
+  };
 
   for (const asset of assets) {
     const provider = AUTHORITATIVE_PRICE_PROVIDERS.find((candidate) => candidate.matches(asset.id));
     if (!provider?.fetchLivePrice) continue;
 
     try {
-      const override = await provider.fetchLivePrice(asset, signal);
+      const override = await provider.fetchLivePrice(asset, liveContext, signal);
       if (override) {
         results.set(asset.id, override);
       }

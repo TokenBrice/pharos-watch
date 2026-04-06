@@ -1,6 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v3.94` (2026-02-01 -> 2026-04-03).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v3.95` (2026-02-01 -> 2026-04-06).
+
+---
+
+## v3.95 - USDAI inherits PYUSD redemption pricing (Apr 6, 2026)
+
+**Commit:** `unreleased`
+
+- Base `usdai-usd-ai` now inherits tracked `pyusd-paypal` pricing in the authoritative override layer instead of trusting thin USDAI secondary-market prints
+- Historical USDAI depeg backfills now replay the tracked PYUSD market series, so wrapper-specific CoinGecko/DefiLlama history no longer manufactures long false depeg streaks
+- This keeps USDAI PegScore aligned with the token's documented instant-redemption semantics rather than with noise from sparse wrapper venues
 
 ---
 

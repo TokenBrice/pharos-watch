@@ -130,15 +130,6 @@ export async function syncViaCoingeckoFallback(
   );
   const validationContexts = createValidationContextResolver();
   const previousTrustedPrices = buildPreviousTrustedPriceLookup(previousAssetsById, syncStartSec);
-  const authoritativeOverrides = await fetchAuthoritativeLivePriceOverrides(assets, signal);
-  const authoritativeOverrideCount = applyProtocolPriceOverrides({
-    assets,
-    overrides: authoritativeOverrides,
-    previousTrustedPrices,
-    validationContexts,
-    validationReferences,
-    syncStartSec,
-  });
 
   for (const asset of assets) {
     if (!asset.supplySource) {
@@ -171,6 +162,16 @@ export async function syncViaCoingeckoFallback(
       stampPriceMetadata(asset, asset.priceSource || "unknown", "fallback", syncStartSec);
     }
   }
+
+  const authoritativeOverrides = await fetchAuthoritativeLivePriceOverrides(assets, signal);
+  const authoritativeOverrideCount = applyProtocolPriceOverrides({
+    assets,
+    overrides: authoritativeOverrides,
+    previousTrustedPrices,
+    validationContexts,
+    validationReferences,
+    syncStartSec,
+  });
 
   const priceResult = await runPostEnrichmentPricePipeline({
     assets,

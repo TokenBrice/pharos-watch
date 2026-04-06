@@ -464,7 +464,6 @@ export async function runStablecoinsPricingStage(
     options.chainRpcs,
     dlListPrices,
   );
-  const protocolPriceOverrides = await fetchAuthoritativeLivePriceOverrides(options.assets, options.signal);
   applyPrimaryPriceResults({
     assets: options.assets,
     primaryPriceResults,
@@ -519,6 +518,7 @@ export async function runStablecoinsPricingStage(
     console.warn("[sync-stablecoins] GT probe failed (non-fatal):", err);
   }
 
+  const protocolPriceOverrides = await fetchAuthoritativeLivePriceOverrides(options.assets, options.signal);
   const protocolOverrideCount = applyProtocolPriceOverrides({
     assets: options.assets,
     overrides: protocolPriceOverrides,

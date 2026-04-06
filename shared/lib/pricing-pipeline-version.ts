@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "3.94",
+  currentVersion: "3.95",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "3.95",
+      title: "USDAI inherits PYUSD redemption pricing",
+      date: "2026-04-06",
+      effectiveAt: 1775433600,
+      summary:
+        "Moved base USDAI onto the authoritative redemption-price family by inheriting tracked PYUSD live pricing and historical replay, " +
+        "so thin secondary-market USDAI prints no longer create synthetic peg damage for a wrapper-style redeemable token.",
+      impact: [
+        "Live pricing now treats `usdai-usd-ai` as a redeemable PYUSD wrapper and publishes it from the authoritative `protocol-redeem` lane when tracked PYUSD pricing is available",
+        "Historical depeg backfills for `usdai-usd-ai` now replay the tracked PYUSD market series instead of trusting USDAI's own thin secondary-market history",
+        "USDAI PegScore and depeg event history no longer inherit obvious false positives from wrapper-specific market dislocations that conflict with the token's instant-redemption semantics",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.94",
       title: "Blocked dead Bunni DEX inputs",

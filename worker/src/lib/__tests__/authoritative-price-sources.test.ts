@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const fetchEvmCallHexAtBlockMock = vi.fn();
 const resolveClosestBlockAtOrBeforeTimestampMock = vi.fn();
+const fetchMarketBackfillPriceSeriesMock = vi.fn();
 
 vi.mock("@shared/lib/stablecoins", () => ({
   TRACKED_META_BY_ID: new Map([
@@ -20,6 +21,20 @@ vi.mock("@shared/lib/stablecoins", () => ({
       },
     ],
     [
+      "pyusd-paypal",
+      {
+        id: "pyusd-paypal",
+        geckoId: "paypal-usd",
+      },
+    ],
+    [
+      "usdai-usd-ai",
+      {
+        id: "usdai-usd-ai",
+        geckoId: "usdai",
+      },
+    ],
+    [
       "usdc-circle",
       {
         id: "usdc-circle",
@@ -32,6 +47,10 @@ vi.mock("@shared/lib/stablecoins", () => ({
 vi.mock("../evm-rpc", () => ({
   fetchEvmCallHexAtBlock: (...args: unknown[]) => fetchEvmCallHexAtBlockMock(...args),
   resolveClosestBlockAtOrBeforeTimestamp: (...args: unknown[]) => resolveClosestBlockAtOrBeforeTimestampMock(...args),
+}));
+
+vi.mock("../../api/backfill-price-sources", () => ({
+  fetchMarketBackfillPriceSeries: (...args: unknown[]) => fetchMarketBackfillPriceSeriesMock(...args),
 }));
 
 import {
@@ -47,6 +66,7 @@ describe("authoritative-price-sources", () => {
   beforeEach(() => {
     fetchEvmCallHexAtBlockMock.mockReset();
     resolveClosestBlockAtOrBeforeTimestampMock.mockReset();
+    fetchMarketBackfillPriceSeriesMock.mockReset();
   });
 
   it("returns a live cUSD override from the authoritative redemption quote", async () => {
@@ -165,6 +185,33 @@ describe("authoritative-price-sources", () => {
     });
   });
 
+  it("returns a live USDAI override from tracked PYUSD pricing", async () => {
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "usdai-usd-ai",
+        name: "USDai",
+        symbol: "USDai",
+        circulating: { peggedUSD: 27_000_000 },
+      },
+      {
+        id: "pyusd-paypal",
+        name: "PayPal USD",
+        symbol: "PYUSD",
+        price: 1.00006543,
+        priceSource: "coingecko+defillama-list+pyth",
+        priceConfidence: "high",
+        circulating: { peggedUSD: 880_000_000 },
+      },
+    ]);
+
+    expect(overrides.get("usdai-usd-ai")).toEqual({
+      price: 1.00006543,
+      source: "protocol-redeem",
+      confidence: "high",
+    });
+    expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+  });
+
   it("replays historical iUSD prices through the infiniFi redeem quote", async () => {
     resolveClosestBlockAtOrBeforeTimestampMock.mockResolvedValueOnce(24_133_673).mockResolvedValueOnce(24_209_239);
     fetchEvmCallHexAtBlockMock.mockResolvedValue(IUSD_QUOTE_HEX);
@@ -208,6 +255,60 @@ describe("authoritative-price-sources", () => {
         extraRpcUrls: ["https://ethereum-rpc.publicnode.com"],
       }),
     );
+  });
+
+  it("replays historical USDAI prices from the tracked PYUSD market series", async () => {
+    fetchMarketBackfillPriceSeriesMock.mockResolvedValue({
+      prices: [
+        { timestamp: 1_759_363_200, price: 0.99994 },
+        { timestamp: 1_759_366_800, price: 1.00011 },
+      ],
+      diagnostics: {
+        granularity: "hourly",
+        sourcesUsed: ["coingecko"],
+        mergeReasons: [],
+        perSourceStats: [],
+        policyAdjustments: [],
+        finalPointCount: 2,
+      },
+    });
+
+    const result = await fetchAuthoritativeHistoricalPriceSeries(
+      {
+        id: "usdai-usd-ai",
+        name: "USDai",
+        symbol: "USDai",
+        flags: {
+          pegCurrency: "USD",
+          backing: "rwa-backed",
+          governance: "centralized-dependent",
+          yieldBearing: false,
+          rwa: false,
+          navToken: false,
+        },
+      },
+      {
+        candidateTimestamps: [1_759_363_200, 1_759_366_800],
+      },
+    );
+
+    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenCalledTimes(1);
+    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "pyusd-paypal",
+        geckoId: "paypal-usd",
+      }),
+      "paypal-usd",
+      { granularity: "hourly" },
+    );
+    expect(result).toEqual({
+      matched: true,
+      source: "protocol-redeem",
+      prices: [
+        { timestamp: 1_759_363_200, price: 0.99994 },
+        { timestamp: 1_759_366_800, price: 1.00011 },
+      ],
+    });
   });
 
   it("does not return a crvUSD override (demoted to regular consensus source)", async () => {

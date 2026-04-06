@@ -99,11 +99,12 @@ The registry lives in `worker/src/lib/authoritative-price-sources.ts` and suppor
 - **Live override** — used by `syncStablecoins()` to replace the current cached price
 - **Historical replay** — used by `backfill-depegs.ts` so historical rebuilds can consult the same authoritative provider instead of drifting back to CoinGecko/DefiLlama for those assets
 
-- **Current scope:** `cusd-cap`, `iusd-infinifi` (crvUSD was migrated out of the authoritative override registry and into primary consensus as a `curve-oracle` source at weight 3; see [Pricing Pipeline](./pricing-pipeline.md))
-- **Source:** direct Ethereum `eth_call` against protocol redemption paths:
+- **Current scope:** `cusd-cap`, `iusd-infinifi`, `usdai-usd-ai` (crvUSD was migrated out of the authoritative override registry and into primary consensus as a `curve-oracle` source at weight 3; see [Pricing Pipeline](./pricing-pipeline.md))
+- **Source:** either direct Ethereum `eth_call` redemption quotes or tracked-base inheritance when a redeemable wrapper should shadow another tracked asset:
   - Cap `getBurnAmount(address,uint256)` for `cUSD -> USDC`
   - infiniFi `RedeemController.receiptToAsset(uint256)` for `iUSD -> USDC`
-- **Reason:** CG/DL can overweight thin secondary-market liquidity for wrapper-style assets whose real executable value is set by direct protocol redemption
+  - USDAI inherits the tracked `PYUSD` live price and historical market replay because the base token is treated as an instantly redeemable PYUSD wrapper rather than a free-floating market-priced asset
+- **Reason:** CG/DL can overweight thin secondary-market liquidity for wrapper-style assets whose real executable value is set by direct protocol redemption or by an instantly redeemable base asset
 - **Result:** the final cached asset keeps `priceSource = "protocol-redeem"` and `priceConfidence = "high"` when the quote validates against peg bounds
 
 ### Enrichment Pipeline
