@@ -33,6 +33,21 @@ const FAQ_ITEMS = [
     answer:
       "The contagion simulator models cascading failures in the stablecoin ecosystem. You select a stablecoin to \"fail\" and the simulation traces dependency chains: if stablecoin A uses stablecoin B as collateral, and B fails, A's grade degrades proportionally to its exposure. This reveals hidden systemic risk: which coins look safe in isolation but are fragile under stress.",
   },
+  {
+    question: "How often do safety grades change?",
+    answer:
+      "Grades are recomputed every cron cycle (roughly every 30 minutes) as new data arrives. In practice, most grades are stable day-to-day. Significant shifts happen when peg deviations spike, liquidity pools drain, or governance changes are enacted. You can set up Telegram alerts to get notified the moment a grade changes.",
+  },
+  {
+    question: "What should I do with this information?",
+    answer:
+      "Safety grades are one input into your own risk assessment, not financial advice. Use them to identify which stablecoins carry hidden dependency risk, compare liquidity depth before choosing an exit route, and stress-test your portfolio assumptions with the contagion simulator. The grade breakdown on each coin's detail page explains exactly what drove the score.",
+  },
+  {
+    question: "Why do most stablecoins receive a C grade?",
+    answer:
+      "A C grade (score 50\u201364) is the statistical center of the grading distribution. It means the coin meets baseline requirements but has meaningful weaknesses in at least one dimension \u2014 typically limited liquidity, moderate dependency risk, or weaker decentralization. Only coins that excel across all five dimensions reach A or B territory.",
+  },
 ] as const satisfies readonly FaqItem[];
 
 export default createClientFeaturePage({
@@ -49,20 +64,21 @@ export default createClientFeaturePage({
     },
     headerActions: <ShareButton ogPath="/api/og/safety-scores" />,
     leadParagraphs: [
-      "Safety grades and contagion simulation for every tracked stablecoin.",
-      "Each stablecoin receives a letter grade from A+ to F based on five dimensions: peg stability, liquidity depth, transparency, resilience, and regulatory standing. The contagion simulator lets you model what happens to the broader market when a major stablecoin fails, revealing hidden dependency chains and systemic risk.",
+      "Letter grades from A+ to F for every tracked stablecoin, plus contagion simulation to model cascading failures.",
     ],
   },
-  beforeClient: (
-    <CalloutBanner icon={<Bell className="h-4 w-4" />} className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300">
-      Get notified when a safety grade changes.{" "}
-      <Link
-        href="/telegram#bot"
-        className="text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
-      >
-        Set up alerts&nbsp;&rarr;
-      </Link>
-    </CalloutBanner>
+  afterClient: (
+    <>
+      <CalloutBanner icon={<Bell className="h-4 w-4" />} className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300">
+        Get notified when a safety grade changes.{" "}
+        <Link
+          href="/telegram#bot"
+          className="text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
+        >
+          Set up alerts&nbsp;&rarr;
+        </Link>
+      </CalloutBanner>
+      <FaqSection items={FAQ_ITEMS} includeJsonLd />
+    </>
   ),
-  afterClient: <FaqSection items={FAQ_ITEMS} includeJsonLd />,
 });
