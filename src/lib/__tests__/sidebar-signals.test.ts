@@ -46,10 +46,10 @@ describe("sidebar-signals", () => {
     } as StabilityIndexResponse;
 
     expect(getStabilityIndexNavSignal(response)).toEqual({
-      kind: "badge",
-      text: "77.2",
+      kind: "accent",
       title: "PSI 77.2 (TREMOR)",
       tone: "warning",
+      accentClass: "border-l-yellow-500",
     });
   });
 
