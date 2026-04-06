@@ -5,6 +5,8 @@ export const START_MESSAGE = `<b>Welcome to PharosWatchBot</b>
 
 I send opt-in alerts for the stablecoins you follow, or for all tracked stablecoins by alert type.
 
+Join <a href="https://t.me/pharoswatch">@pharoswatch</a> for Pharos updates and <a href="https://t.me/pharoswatchers">@pharoswatchers</a> for community discussion about Pharos.
+
 <b>Alert types</b>
 - <b>dews</b> — DEWS reaches ALERT, WARNING, or DANGER
 - <b>depeg</b> — Depeg triggered, worsened, or resolved

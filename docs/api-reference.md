@@ -2204,7 +2204,7 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 
 **Commands handled:**
 
-- `/start` — Welcome message
+- `/start` — Welcome message with onboarding examples plus `@pharoswatch` and `@pharoswatchers` links
 - `/subscribe <types> <tickers>` — Subscribe to alerts (types: dews, depeg, safety, launch)
 - `/subscribe <types> all` — Enable one or more alert types across all tracked stablecoins
 - `/unsubscribe <tickers>` — Remove coin subscriptions

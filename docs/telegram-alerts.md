@@ -89,7 +89,7 @@ The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Toke
 
 | Command | Behavior |
 |---------|----------|
-| `/start` | Sends onboarding copy and example usage |
+| `/start` | Sends onboarding copy, example usage, and links to `@pharoswatch` and `@pharoswatchers` |
 | `/help` | Sends command reference |
 | `/list` | Returns enabled alert types plus subscribed coins for the chat |
 | `/subscribe <types> <tickers>` | Enables one or more alert types and subscribes the chat to one or more coins |

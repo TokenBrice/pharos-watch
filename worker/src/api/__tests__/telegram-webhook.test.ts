@@ -80,6 +80,8 @@ describe("handleTelegramWebhook", () => {
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(sentMessageBody().text).toContain("Welcome");
+    expect(sentMessageBody().text).toContain("@pharoswatch");
+    expect(sentMessageBody().text).toContain("@pharoswatchers");
   });
 
   it("replies to /help", async () => {
