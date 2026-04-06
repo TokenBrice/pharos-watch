@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Compass, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowRight, SlidersHorizontal, X } from "lucide-react";
 import { useDexLiquidity, usePegSummary, useReportCards, useStressSignals } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
@@ -16,91 +16,20 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { FilterBar } from "@/components/filter-bar";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
+import { SectionSkeleton, ChartSkeleton } from "@/components/homepage-skeletons";
+import { PegBrowseStrip } from "@/components/peg-distribution-grid";
+import { StartHereCallout, HomepageSectionBand } from "@/components/homepage-sections";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { UpcomingStablecoinsSection } from "@/components/upcoming-stablecoins-section";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
-import { ACTIVE_PEGS, PEG_LABELS_SHORT, PEG_SLUGS, pegCoinCount } from "@/lib/peg-landing";
+import { ACTIVE_PEGS, pegCoinCount } from "@/lib/peg-landing";
 import { FILTER_TAG_LABELS } from "@shared/types";
-import { openCommandPalette } from "@/lib/command-palette";
 import { buildHomepageViewModel } from "@/components/homepage-client-view-model";
 
 const CEFI_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized").length;
 const CEFI_DEP_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").length;
 const DEFI_COUNT = ACTIVE_STABLECOINS.filter((s) => s.flags.governance === "decentralized").length;
-
-function SectionSkeleton({ className }: { className: string }) {
-  return <Skeleton className={className} />;
-}
-
-function ChartSkeleton({ className, type = "area", height = "h-[300px]" }: { className?: string; type?: "area" | "bar" | "radar"; height?: string }) {
-  return (
-    <div className={`relative overflow-hidden rounded-xl border border-border/50 bg-card/50 ${className}`}>
-      {/* Chart header placeholder */}
-      <div className="flex items-center justify-between border-b border-border/30 px-4 py-3">
-        <Skeleton className="h-5 w-32" />
-        <Skeleton className="h-8 w-24 rounded-md" />
-      </div>
-      {/* Chart area placeholder */}
-      <div className="relative px-4 pb-4 pt-3">
-        {/* Y-axis labels */}
-        <div className="absolute left-4 top-3 bottom-4 flex flex-col justify-between py-2">
-          <Skeleton className="h-3 w-8" />
-          <Skeleton className="h-3 w-8" />
-          <Skeleton className="h-3 w-8" />
-          <Skeleton className="h-3 w-6" />
-        </div>
-        {/* Chart content */}
-        <div className={`ml-12 ${height} relative`}>
-          {type === "area" && (
-            <>
-              <div className="absolute inset-0 bg-gradient-to-b from-muted/60 via-muted/30 to-transparent rounded-lg" />
-              <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-muted/40 to-transparent rounded-b-lg" />
-              {/* Simulated line path */}
-              <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-                <path
-                  d="M0,80 C50,70 100,90 150,60 S250,40 300,50 S400,30 450,45 S550,35 600,40"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="text-muted-foreground/30"
-                />
-              </svg>
-            </>
-          )}
-          {type === "radar" && (
-            <div className="flex h-full items-center justify-center">
-              <div className="relative h-4/5 w-4/5">
-                <div className="absolute inset-0 rounded-full border-2 border-dashed border-muted-foreground/20" />
-                <div className="absolute inset-[15%] rounded-full border-2 border-dashed border-muted-foreground/20" />
-                <div className="absolute inset-[30%] rounded-full border-2 border-dashed border-muted-foreground/20" />
-                <div className="absolute inset-[45%] rounded-full bg-muted-foreground/10" />
-              </div>
-            </div>
-          )}
-          {type === "bar" && (
-            <div className="flex h-full items-end justify-around gap-2 px-4">
-              <Skeleton variant="shimmer" className="h-[40%] w-8" />
-              <Skeleton variant="shimmer" className="h-[65%] w-8" />
-              <Skeleton variant="shimmer" className="h-[50%] w-8" />
-              <Skeleton variant="shimmer" className="h-[80%] w-8" />
-              <Skeleton variant="shimmer" className="h-[45%] w-8" />
-              <Skeleton variant="shimmer" className="h-[70%] w-8" />
-            </div>
-          )}
-          {/* X-axis labels */}
-          <div className="absolute -bottom-6 left-0 right-0 flex justify-between">
-            <Skeleton className="h-3 w-10" />
-            <Skeleton className="h-3 w-10" />
-            <Skeleton className="h-3 w-10" />
-            <Skeleton className="h-3 w-10" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 const StablecoinTable = dynamic(() => import("@/components/stablecoin-table").then((mod) => mod.StablecoinTable), {
   loading: () => <SectionSkeleton className="h-[720px] w-full rounded-xl" />,
@@ -153,152 +82,6 @@ const NonUsdShareChart = dynamic(
 const DailyDigest = dynamic(() => import("@/components/daily-digest").then((mod) => mod.DailyDigest), {
   loading: () => <SectionSkeleton className="h-[220px] w-full rounded-xl" />,
 });
-
-const PEG_PILL_CLASS =
-  "pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-border hover:bg-accent/65 hover:text-foreground sm:min-h-9 sm:py-1";
-
-/** Group pegs into semantic categories for the browse strip. */
-type PegGroup = { label: string; pegs: typeof ACTIVE_PEGS };
-function groupPegs(pegs: typeof ACTIVE_PEGS): PegGroup[] {
-  const fiat: typeof ACTIVE_PEGS = [];
-  const commodity: typeof ACTIVE_PEGS = [];
-  const other: typeof ACTIVE_PEGS = [];
-  for (const peg of pegs) {
-    if (peg === "GOLD" || peg === "SILVER") commodity.push(peg);
-    else if (peg === "VAR" || peg === "OTHER") other.push(peg);
-    else fiat.push(peg);
-  }
-  const groups: PegGroup[] = [];
-  if (fiat.length > 0) groups.push({ label: "Fiat", pegs: fiat });
-  if (commodity.length > 0) groups.push({ label: "Commodity", pegs: commodity });
-  if (other.length > 0) groups.push({ label: "Other", pegs: other });
-  return groups;
-}
-
-const PEG_PREVIEW_FIAT = 4;
-
-function PegBrowseStrip({
-  pegs,
-  pegCoinCount: countFn,
-}: {
-  pegs: typeof ACTIVE_PEGS;
-  pegCoinCount: (peg: (typeof ACTIVE_PEGS)[number]) => number;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const groups = useMemo(() => groupPegs(pegs), [pegs]);
-
-  // Collapsed: first N fiat + all commodity/other
-  const collapsedFiatCount = PEG_PREVIEW_FIAT;
-  const hasFiatOverflow = groups[0]?.pegs.length > collapsedFiatCount;
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <h3 className="pharos-kicker">Browse by peg</h3>
-        {hasFiatOverflow && (
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="pharos-focus-ring text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {expanded ? "Show fewer" : `+${groups[0].pegs.length - collapsedFiatCount} more pegs`}
-          </button>
-        )}
-      </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        {groups.map((group) => {
-          const visiblePegs =
-            !expanded && group.label === "Fiat"
-              ? group.pegs.slice(0, collapsedFiatCount)
-              : group.pegs;
-          return (
-            <div key={group.label} className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mr-0.5">
-                {group.label}
-              </span>
-              {visiblePegs.map((peg) => {
-                const slug = PEG_SLUGS[peg];
-                if (!slug) return null;
-                return (
-                  <Link
-                    key={peg}
-                    href={`/stablecoins/${slug}/`}
-                    className={PEG_PILL_CLASS}
-                  >
-                    {PEG_LABELS_SHORT[peg]} ({countFn(peg)})
-                  </Link>
-                );
-              })}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function StartHereCallout({ onOpenStartHere }: { onOpenStartHere: () => void }) {
-  return (
-    <section
-      className="pharos-card-shell overflow-hidden border border-border/40 px-4 py-4 sm:px-5"
-      style={{ background: 'var(--surface-onboarding-gradient)', boxShadow: 'var(--elevation-rest)' }}
-    >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="min-w-0 flex-1 space-y-2">
-          <div className="flex items-center gap-2 text-[var(--brand-accent)]">
-            <Compass className="h-4 w-4" aria-hidden="true" />
-            <p className="pharos-kicker text-[var(--brand-accent)]">New to Pharos?</p>
-          </div>
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-              Start with the route that matches your job, not the full feature list.
-            </h2>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              The /start/ page explains what the core signals mean and points you to the right surface for market
-              monitoring, single-coin research, yield, comparison, or alerts.
-            </p>
-          </div>
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <Button asChild className="h-10 rounded-full bg-primary px-5 text-primary-foreground hover:bg-primary/90">
-            <Link href="/start/" onClick={onOpenStartHere}>
-              Start Here
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="h-10 rounded-full px-5"
-            onClick={openCommandPalette}
-          >
-            <Search className="h-4 w-4" />
-            Search a coin
-          </Button>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function HomepageSectionBand({
-  eyebrow,
-  title,
-  description,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <p className="pharos-kicker">{eyebrow}</p>
-      <div className="space-y-1">
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h2>
-        <p className="text-sm text-muted-foreground">{description}</p>
-      </div>
-    </div>
-  );
-}
 
 export function HomepageClient() {
   const { isReady: startHereReady, shouldShow: shouldShowStartHereCallout, retireCallout } = useStartHereCallout();

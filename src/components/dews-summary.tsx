@@ -8,190 +8,42 @@ import { useStablecoins } from "@/hooks/use-stablecoins";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@/lib/urls";
-import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { THREAT_BAND_HEX, THREAT_BAND_LABELS } from "@shared/lib/classification";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import type { ThreatBand } from "@shared/lib/classification";
 import {
-  scoreToRadius,
-  deterministicOffset,
-  deterministicRadiusOffset,
-  distributeAngles,
   highestBand,
   sweepDuration,
   pulseDuration,
 } from "@/lib/dews-radar-utils";
+import {
+  CX,
+  CY,
+  OUTER_R,
+  VB_W,
+  VB_H,
+  RING_BANDS,
+  LEGEND_BANDS,
+  RING_RADII,
+  CALM_INNER_R,
+  SPOKES,
+  WAKE_PATH,
+  mcapDotRadius,
+  computePositions,
+  computeCalmDots,
+  computeBandCounts,
+  resolveRadarClick,
+  type ElevatedBand,
+  type BandCounts,
+  type CalmDot,
+  type ElevatedCoin,
+} from "@/components/dews-summary-model";
 import { MethodologyLabel } from "@/components/methodology-hint";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const CX = 280;
-const CY = 240;
-const OUTER_R = 240;
-const VB_W = 560;
-const VB_H = 500;
-
-type ElevatedBand = Exclude<ThreatBand, "CALM">;
-type BandCounts = Record<ThreatBand, number>;
-
-const RING_BANDS: ElevatedBand[] = ["WATCH", "ALERT", "WARNING", "DANGER"];
-const LEGEND_BANDS: ThreatBand[] = ["DANGER", "WARNING", "ALERT", "WATCH", "CALM"];
-const RING_RADII: Record<ElevatedBand, number> = {
-  DANGER: 45,
-  WARNING: 95,
-  ALERT: 143,
-  WATCH: 178,
-};
-
-const CALM_INNER_R = 212;
-const CALM_ZONE_WIDTH = 26; // outer edge 238 − inner edge 212
-
-interface CalmDot {
-  x: number;
-  y: number;
-}
-
-// 8 spokes at 45° intervals, from r=10 to OUTER_R
-const SPOKES = Array.from({ length: 8 }, (_, i) => {
-  const a = (i * Math.PI) / 4;
-  return {
-    x1: CX + 10 * Math.cos(a),
-    y1: CY + 10 * Math.sin(a),
-    x2: CX + OUTER_R * Math.cos(a),
-    y2: CY + OUTER_R * Math.sin(a),
-  };
-});
-
-// Wake arc: 90° sector from 12 o'clock to 3 o'clock in the sweep group's local frame.
-// The sweep line points right (0°). The wake is the quadrant behind it (-90° to 0°).
-const WAKE_PATH = `M ${CX} ${CY} L ${CX} ${CY - OUTER_R} A ${OUTER_R} ${OUTER_R} 0 0 1 ${CX + OUTER_R} ${CY} Z`;
+// Re-export pure helpers consumed by tests and sibling components
+export { computeBandCounts, resolveRadarClick } from "@/components/dews-summary-model";
 
 // DEWS radar keyframes are defined in globals.css under "DEWS Radar animations".
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface ElevatedCoin {
-  id: string;
-  score: number;
-  band: ElevatedBand;
-  symbol: string;
-  name: string;
-  logoUrl?: string;
-  mcap?: number;
-  x: number;
-  y: number;
-}
-
-/** Map a circulating supply (USD) to a dot radius. 4 tiers, fallback = undefined (caller uses band-based default). */
-function mcapDotRadius(mcap: number | undefined): number | undefined {
-  if (mcap == null) return undefined;
-  if (mcap >= 5_000_000_000) return 13; // mega: >$5B
-  if (mcap >= 500_000_000) return 10;   // large: >$500M
-  if (mcap >= 50_000_000) return 7;     // mid:   >$50M
-  return 5;                              // small: ≤$50M
-}
-
-interface RadarClickOutcome {
-  shouldNavigate: boolean;
-  nextHoveredId: string | null;
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function computePositions(
-  signals: Record<string, { score: number; band: string }>,
-  logos: Record<string, string> | undefined,
-  mcapById?: Map<string, number>,
-): ElevatedCoin[] {
-  const byBand: Record<ElevatedBand, Array<{ id: string; score: number }>> = {
-    WATCH: [],
-    ALERT: [],
-    WARNING: [],
-    DANGER: [],
-  };
-
-  for (const [id, entry] of Object.entries(signals)) {
-    if (entry.band === "CALM") continue;
-    const b = entry.band as ElevatedBand;
-    if (byBand[b]) byBand[b].push({ id, score: entry.score });
-  }
-
-  const result: ElevatedCoin[] = [];
-
-  for (const band of RING_BANDS) {
-    const coins = byBand[band];
-    const angles = distributeAngles(coins.length);
-    coins.forEach((coin, i) => {
-      const r = scoreToRadius(coin.score, band);
-      const angle = angles[i] + deterministicOffset(coin.id);
-      const meta = PSI_ELIGIBLE_META_BY_ID.get(coin.id);
-      result.push({
-        id: coin.id,
-        score: coin.score,
-        band,
-        symbol: meta?.symbol ?? coin.id,
-        name: meta?.name ?? coin.id,
-        logoUrl: logos?.[coin.id],
-        mcap: mcapById?.get(coin.id),
-        x: CX + r * Math.cos(angle),
-        y: CY + r * Math.sin(angle),
-      });
-    });
-  }
-
-  return result;
-}
-
-function computeCalmDots(signals: Record<string, { score: number; band: string }>): CalmDot[] {
-  const calmIds = Object.keys(signals).filter((id) => signals[id].band === "CALM");
-  const angles = distributeAngles(calmIds.length);
-  return calmIds.map((id, i) => {
-    const r = CALM_INNER_R + deterministicRadiusOffset(id, CALM_ZONE_WIDTH);
-    const angle = angles[i] + deterministicOffset(id);
-    return {
-      x: CX + r * Math.cos(angle),
-      y: CY + r * Math.sin(angle),
-    };
-  });
-}
-
-export function computeBandCounts(signals: Record<string, { score: number; band: string }>): BandCounts {
-  const counts: BandCounts = {
-    CALM: 0,
-    WATCH: 0,
-    ALERT: 0,
-    WARNING: 0,
-    DANGER: 0,
-  };
-
-  for (const { band } of Object.values(signals)) {
-    if (band in counts) {
-      counts[band as ThreatBand] += 1;
-    }
-  }
-
-  return counts;
-}
-
-export function resolveRadarClick(
-  isFinePointer: boolean,
-  hoveredId: string | null,
-  tappedId: string,
-): RadarClickOutcome {
-  if (isFinePointer) {
-    return { shouldNavigate: true, nextHoveredId: hoveredId };
-  }
-  if (hoveredId === tappedId) {
-    return { shouldNavigate: true, nextHoveredId: null };
-  }
-  return { shouldNavigate: false, nextHoveredId: tappedId };
-}
 
 // ---------------------------------------------------------------------------
 // Sub-components (unexported)
