@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
 import { handleApiKeyAuditLog } from "../api-key-audit-log";
 
@@ -49,5 +49,35 @@ describe("api-key-audit-log handler", () => {
     const request = new Request("https://api.pharos.watch/api/api-keys/audit-log?apiKeyId=7");
     const response = await handleApiKeyAuditLog(db, true, request);
     expect(response.status).toBe(200);
+  });
+
+  it("keeps the handler healthy when detail_json is malformed", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const db = mockD1([
+      {
+        match: "FROM api_key_audit_log",
+        rows: [
+          {
+            id: 2,
+            api_key_id: 7,
+            action: "updated",
+            actor: "admin",
+            detail_json: "{bad-json",
+            created_at: 1001,
+          },
+        ],
+      },
+    ]);
+
+    const request = new Request("https://api.pharos.watch/api/api-keys/audit-log");
+    const response = await handleApiKeyAuditLog(db, true, request);
+
+    expect(response.status).toBe(200);
+    const body = await response.json() as { entries: Array<{ detail: unknown }> };
+    expect(body.entries[0]?.detail).toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      "[api-key-audit-log] Failed to parse detail_json for row 2:",
+      expect.any(String),
+    );
   });
 });

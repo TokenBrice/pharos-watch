@@ -129,7 +129,7 @@ async function postAdminJson<T>(
     },
     body: body ? JSON.stringify(body) : undefined,
   });
-  const response = await fetch(buildRequestUrl(buildAdminApiPath(path, adminAccess)), init);
+  const response = await fetch(buildRequestUrl(buildAdminApiPath(path)), init);
   const text = await response.text();
   let parsed: unknown = null;
   try {

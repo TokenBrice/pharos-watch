@@ -1,8 +1,7 @@
 import { OPS_UI_HOSTNAME } from "@shared/lib/runtime-origins";
 
-export interface AdminAccess {
-  mode: "ops-proxy";
-}
+const ADMIN_QUERY_SCOPE = "ops-proxy";
+export type AdminAccess = typeof ADMIN_QUERY_SCOPE;
 
 export function isOpsUiHost(
   hostname: string | null = typeof window !== "undefined" ? window.location.hostname : null,
@@ -10,10 +9,7 @@ export function isOpsUiHost(
   return hostname === OPS_UI_HOSTNAME;
 }
 
-export function buildAdminApiPath(path: string, adminAccess: AdminAccess): string {
-  if (adminAccess.mode !== "ops-proxy") {
-    return path;
-  }
+export function buildAdminApiPath(path: string): string {
   if (!path.startsWith("/api/")) {
     throw new Error(`Admin API path must start with /api/: ${path}`);
   }
@@ -30,6 +26,6 @@ export function buildAdminFetchInit(
   };
 }
 
-export function getAdminQueryScope(): "ops-proxy" {
-  return "ops-proxy";
+export function getAdminQueryScope(): AdminAccess {
+  return ADMIN_QUERY_SCOPE;
 }

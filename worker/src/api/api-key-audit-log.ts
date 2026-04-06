@@ -13,6 +13,19 @@ interface AuditLogRow {
 const AUDIT_LOG_DEFAULT_LIMIT = 50;
 const AUDIT_LOG_MAX_LIMIT = 200;
 
+function parseAuditDetail(row: AuditLogRow): unknown {
+  if (!row.detail_json) return null;
+  try {
+    return JSON.parse(row.detail_json) as unknown;
+  } catch (error) {
+    console.warn(
+      `[api-key-audit-log] Failed to parse detail_json for row ${row.id}:`,
+      error instanceof Error ? error.message : String(error),
+    );
+    return null;
+  }
+}
+
 export const handleApiKeyAuditLog = withErrorHandler(
   "api-key-audit-log",
   async (db: D1Database, trustedAdmin: boolean = false, request?: Request): Promise<Response> => {
@@ -55,7 +68,7 @@ export const handleApiKeyAuditLog = withErrorHandler(
         apiKeyId: row.api_key_id,
         action: row.action,
         actor: row.actor,
-        detail: row.detail_json ? JSON.parse(row.detail_json) : null,
+        detail: parseAuditDetail(row),
         createdAt: row.created_at,
       }));
 

@@ -48,6 +48,7 @@ describe("api endpoint registry", () => {
       "/api/stress-signals",
       "/api/chains",
       "/api/non-usd-share?days=90",
+      "/api/telegram-pulse",
     ]);
 
     expect(getProbePaths("admin")).toEqual([

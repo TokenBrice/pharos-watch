@@ -25,7 +25,7 @@ function SourceBadge({ source }: { source: string }) {
 export function DiscoveryCandidatesCard({
   candidates,
   error,
-  adminAccess,
+  adminAccess: _adminAccess,
   nowSeconds,
   onDismissed,
 }: {
@@ -58,7 +58,7 @@ export function DiscoveryCandidatesCard({
   const handleDismiss = async (id: number) => {
     setDismissError(null);
     try {
-      const res = await fetch(buildRequestUrl(buildAdminApiPath(`/api/discovery-candidates/${id}/dismiss`, adminAccess)), {
+      const res = await fetch(buildRequestUrl(buildAdminApiPath(`/api/discovery-candidates/${id}/dismiss`)), {
         method: "POST",
         ...buildAdminFetchInit(),
       });

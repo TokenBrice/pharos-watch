@@ -35,7 +35,7 @@ The delivery system is worker-owned. The frontend exposes a static `/telegram/` 
 `src/app/telegram/page.tsx` is a static product-facing explainer for the Telegram feature set.
 
 - Route: `/telegram/`
-- Covers both the public `@pharoswatch` digest channel and the `@PharosWatchBot` subscription bot
+- Covers the public `@pharoswatch` digest channel, the `@pharoswatchers` community channel, and the `@PharosWatchBot` subscription bot
 - Does not call worker APIs; it links users to Telegram plus the on-site digest archive
 
 ## D1 Schema

@@ -79,7 +79,7 @@ describe("query polling policy", () => {
       status: 200,
       json: async () => ({ ok: true }),
     } as Response);
-    const adminAccess: AdminAccess = { mode: "ops-proxy" };
+    const adminAccess: AdminAccess = "ops-proxy";
 
     useStatus(adminAccess);
     const options = useQueryMock.mock.calls[0][0] as {
@@ -110,7 +110,7 @@ describe("query polling policy", () => {
       status: 200,
       json: async () => ({ ok: true }),
     } as Response);
-    const adminAccess: AdminAccess = { mode: "ops-proxy" };
+    const adminAccess: AdminAccess = "ops-proxy";
 
     useRequestSourceStats(adminAccess);
     const options = useQueryMock.mock.calls[0][0] as {
@@ -141,7 +141,7 @@ describe("query polling policy", () => {
       status: 200,
       json: async () => ({ ok: true }),
     } as Response);
-    const adminAccess: AdminAccess = { mode: "ops-proxy" };
+    const adminAccess: AdminAccess = "ops-proxy";
 
     useEndpointProbes(adminAccess);
     const options = useQueryMock.mock.calls[0][0] as {
@@ -177,7 +177,7 @@ describe("query polling policy", () => {
         });
       })
     ));
-    const adminAccess: AdminAccess = { mode: "ops-proxy" };
+    const adminAccess: AdminAccess = "ops-proxy";
 
     useEndpointProbes(adminAccess);
     const options = useQueryMock.mock.calls[0][0] as {

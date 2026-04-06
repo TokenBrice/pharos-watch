@@ -14,7 +14,7 @@ import { getTopFoldCopy, isRecoveryHold as isRecoveryHoldState } from "@/compone
 import { NoticeRail, PriorityLaneLink, SummaryBadge } from "@/components/status/page-primitives";
 import { Button } from "@/components/ui/button";
 import { useStatusDashboardModel } from "@/hooks/use-status-dashboard-model";
-import { isOpsUiHost, type AdminAccess } from "@/lib/admin-access";
+import { getAdminQueryScope, isOpsUiHost, type AdminAccess } from "@/lib/admin-access";
 import {
   type DashboardSectionId,
   formatTimestampSeconds,
@@ -44,7 +44,7 @@ export default function StatusClient() {
     () => isOpsUiHost(),
     () => null,
   );
-  const adminAccess: AdminAccess = { mode: "ops-proxy" };
+  const adminAccess: AdminAccess = getAdminQueryScope();
   const handleOpsSignOut = () => {
     window.location.assign("/cdn-cgi/access/logout");
   };

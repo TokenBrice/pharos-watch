@@ -14,7 +14,7 @@ vi.mock("@/hooks/use-api-keys", () => ({
 
 const { ApiKeysPanel } = await import("../api-keys-panel");
 
-const ADMIN_ACCESS = { mode: "ops-proxy" } as const;
+const ADMIN_ACCESS = "ops-proxy" as const;
 const GENERATED_AT = 1_700_000_000;
 
 function makeKey(overrides: Partial<ApiKeySummary> = {}): ApiKeySummary {

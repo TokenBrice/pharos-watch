@@ -32,7 +32,7 @@ interface AdminActionButtonProps {
 
 export function AdminActionButton({
   action,
-  adminAccess,
+  adminAccess: _adminAccess,
   buttonClassName,
   fullWidth = true,
   onFinished,
@@ -63,7 +63,7 @@ export function AdminActionButton({
           ? crypto.randomUUID()
           : `${action.path}:${Date.now()}`,
       );
-      const res = await fetch(buildRequestUrl(buildAdminApiPath(effectivePath, adminAccess)), {
+      const res = await fetch(buildRequestUrl(buildAdminApiPath(effectivePath)), {
         ...requestInit,
         headers,
       });

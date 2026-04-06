@@ -1,28 +1,10 @@
-function readNumber(value: unknown): number | null {
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function readString(value: unknown): string | null {
-  return typeof value === "string" && value.length > 0 ? value : null;
-}
-
-function readRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
-}
-
-function readArray(value: unknown): unknown[] | null {
-  return Array.isArray(value) ? value : null;
-}
-
-function readBoolean(value: unknown): boolean | null {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "string") {
-    if (value === "true") return true;
-    if (value === "false") return false;
-  }
-  return null;
-}
+import {
+  readMetadataArray as readArray,
+  readMetadataBoolean as readBoolean,
+  readMetadataNumber as readNumber,
+  readMetadataRecord as readRecord,
+  readMetadataString as readString,
+} from "@shared/lib/status-metadata";
 
 function formatApiErrorClasses(value: unknown): string | null {
   const record = readRecord(value);

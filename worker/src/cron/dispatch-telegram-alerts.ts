@@ -1,5 +1,6 @@
 import { THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
 import { TRACKED_META_BY_ID, ACTIVE_IDS, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";
+import type { TelegramDispatchCronResult } from "@shared/types";
 import { throwIfAborted } from "../lib/abort";
 import { readCachedJson } from "../lib/api-utils";
 import { getCache } from "../lib/db-cache";
@@ -50,34 +51,7 @@ import {
   type SubscriberRow,
 } from "./dispatch-telegram-routing";
 
-interface DispatchResult {
-  eventsDetected: {
-    dews: number;
-    depeg: number;
-    depegTriggered: number;
-    depegResolved: number;
-    depegWorsening: number;
-    safety: number;
-    launch: number;
-    suppressedMethodologyChanges: number;
-  };
-  subscribersNotified: number;
-  messagesSent: number;
-  blockedUsersCleanedUp: number;
-  blockedUsersCleanupFailed: number;
-  cappedAtLimit: boolean;
-  snapshotSeeded: boolean;
-  pendingAttempted: number;
-  pendingDrained: number;
-  pendingRetryQueued: number;
-  pendingDropped: number;
-  pendingEnqueued: number;
-  pendingExpired: number;
-  freshAttempted: number;
-  freshSent: number;
-  freshRetryQueued: number;
-  freshPermanentFailures: number;
-}
+type DispatchResult = TelegramDispatchCronResult;
 
 const MAX_MESSAGES_PER_RUN = 200;
 

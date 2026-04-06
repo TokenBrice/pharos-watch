@@ -47,7 +47,7 @@ function buildProbeRequest(path: string, adminAccess?: AdminAccess): {
   }
 
   return {
-    path: buildAdminApiPath(path, adminAccess),
+    path: buildAdminApiPath(path),
     headers: buildAdminFetchInit().headers,
   };
 }

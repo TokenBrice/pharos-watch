@@ -396,17 +396,94 @@ describe("worker.fetch", () => {
     const env = makeEnv({
       PUBLIC_API_AUTH_MODE: "enforce",
       API_KEY_HASH_PEPPER: "pepper",
+      DB: mockD1([
+        {
+          match: "public_api_rate_limit",
+          rows: [],
+          first: { count: 1 },
+        },
+        {
+          match: "DELETE FROM public_api_rate_limit",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+        {
+          match: "INSERT INTO api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "DELETE FROM api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+      ], { requireMatch: true }),
     });
-    const { ctx } = makeCtx();
+    const { ctx, waits } = makeCtx();
 
     const res = await worker.fetch(
-      new Request("https://api.pharos.watch/api/stablecoins", { method: "GET" }),
+      new Request("https://api.pharos.watch/api/stablecoins", {
+        method: "GET",
+        headers: { "X-API-Key": "invalid-key" },
+      }),
       env as never,
       ctx,
     );
+    await Promise.all(waits);
 
     expect(res.status).toBe(401);
+    expect(env.DB.getHistory().some((entry) => entry.sql.includes("public_api_rate_limit"))).toBe(true);
     expect(cacheMatch).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the public limiter for invalid protected-route keys in report-only mode", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+    const env = makeEnv({
+      PUBLIC_API_AUTH_MODE: "report-only",
+      API_KEY_HASH_PEPPER: "pepper",
+      DB: mockD1([
+        {
+          match: "public_api_rate_limit",
+          rows: [],
+          first: { count: 1 },
+        },
+        {
+          match: "DELETE FROM public_api_rate_limit",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+        {
+          match: "INSERT INTO api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "DELETE FROM api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+      ], { requireMatch: true }),
+    });
+    const { ctx, waits } = makeCtx();
+
+    const res = await worker.fetch(
+      new Request("https://api.pharos.watch/api/stablecoins", {
+        method: "GET",
+        headers: { "X-API-Key": "invalid-key" },
+      }),
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ cached: true });
+    expect(env.DB.getHistory().some((entry) => entry.sql.includes("public_api_rate_limit"))).toBe(true);
+    expect(warn).toHaveBeenCalledWith("[public-api-auth] rejected invalid request on /api/stablecoins");
   });
 
   it("accepts a valid API key on protected routes even when auth mode is off", async () => {

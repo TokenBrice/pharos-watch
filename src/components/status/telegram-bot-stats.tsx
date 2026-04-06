@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
 import type { StatusResponse, StatusSectionError } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
 
@@ -10,79 +11,8 @@ interface TelegramBotStatsProps {
   nowSeconds: number;
 }
 
-interface DispatchMetadata {
-  subscribersNotified: number | null;
-  messagesSent: number | null;
-  blockedUsersCleanedUp: number | null;
-  cappedAtLimit: boolean;
-  snapshotSeeded: boolean;
-  skipped: string | null;
-  freshAttempted: number | null;
-  freshSent: number | null;
-  freshRetryQueued: number | null;
-  freshPermanentFailures: number | null;
-  pendingAttempted: number | null;
-  pendingDrained: number | null;
-  pendingRetryQueued: number | null;
-  pendingDropped: number | null;
-  pendingEnqueued: number | null;
-  eventsDetected: {
-    dews: number | null;
-    depeg: number | null;
-    depegTriggered: number | null;
-    depegResolved: number | null;
-    depegWorsening: number | null;
-    safety: number | null;
-    suppressedMethodologyChanges: number | null;
-  } | null;
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
-}
-
-function readNumber(value: unknown): number | null {
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 function formatMetric(value: number): string {
   return Number.isInteger(value) ? value.toString() : value.toFixed(1);
-}
-
-function parseDispatchMetadata(value: unknown): DispatchMetadata | null {
-  const record = asRecord(value);
-  if (!record) return null;
-
-  const eventsRecord = asRecord(record.eventsDetected);
-  return {
-    subscribersNotified: readNumber(record.subscribersNotified),
-    messagesSent: readNumber(record.messagesSent),
-    blockedUsersCleanedUp: readNumber(record.blockedUsersCleanedUp),
-    cappedAtLimit: record.cappedAtLimit === true,
-    snapshotSeeded: record.snapshotSeeded === true,
-    skipped: typeof record.skipped === "string" ? record.skipped : null,
-    freshAttempted: readNumber(record.freshAttempted),
-    freshSent: readNumber(record.freshSent),
-    freshRetryQueued: readNumber(record.freshRetryQueued),
-    freshPermanentFailures: readNumber(record.freshPermanentFailures),
-    pendingAttempted: readNumber(record.pendingAttempted),
-    pendingDrained: readNumber(record.pendingDrained),
-    pendingRetryQueued: readNumber(record.pendingRetryQueued),
-    pendingDropped: readNumber(record.pendingDropped),
-    pendingEnqueued: readNumber(record.pendingEnqueued),
-    eventsDetected: eventsRecord
-      ? {
-          dews: readNumber(eventsRecord.dews),
-          depeg: readNumber(eventsRecord.depeg),
-          depegTriggered: readNumber(eventsRecord.depegTriggered),
-          depegResolved: readNumber(eventsRecord.depegResolved),
-          depegWorsening: readNumber(eventsRecord.depegWorsening),
-          safety: readNumber(eventsRecord.safety),
-          suppressedMethodologyChanges: readNumber(eventsRecord.suppressedMethodologyChanges),
-        }
-      : null,
-  };
 }
 
 function renderDelta(label: string, value: number | null) {
@@ -108,7 +38,7 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
   }
 
   const lastDispatch = dispatchCron?.lastRun ?? null;
-  const dispatchMeta = parseDispatchMetadata(lastDispatch?.metadata);
+  const dispatchMeta = parseTelegramDispatchCronMetadata(lastDispatch?.metadata);
   const dispatchStatusClass = !lastDispatch
     ? "bg-muted text-muted-foreground"
     : lastDispatch.status === "ok"

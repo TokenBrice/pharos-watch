@@ -91,6 +91,7 @@ export async function evaluateAccessGate(
 
   const publicApiAccess = getPublicApiAccess(url.pathname);
   const authMode = resolvePublicApiAuthMode(env);
+  let protectedRouteAuthFailure: "invalid" | "missing" | null = null;
   if (publicApiAccess === "protected") {
     const apiKeyAuth = await authenticateApiKey(
       env.DB,
@@ -121,10 +122,10 @@ export async function evaluateAccessGate(
           response: errorResponse(503, "Public API temporarily unavailable"),
         };
       }
-      if (authMode === "report-only" && apiKeyAuth.kind !== "missing") {
+      if (authMode === "report-only") {
         console.warn(`[public-api-auth] rejected ${apiKeyAuth.kind} request on ${url.pathname}`);
       }
-      return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: errorResponse(401, "Unauthorized") };
+      protectedRouteAuthFailure = apiKeyAuth.kind;
     }
   }
 
@@ -146,7 +147,19 @@ export async function evaluateAccessGate(
     PUBLIC_API_RATE_LIMIT_MAX_REQUESTS,
     PUBLIC_API_RATE_LIMIT_WINDOW_SEC * 1000,
   );
-  return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response };
+  if (response) {
+    return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response };
+  }
+  if (protectedRouteAuthFailure && authMode === "enforce") {
+    return {
+      isAdmin,
+      isSiteProxy: false,
+      apiKey: null,
+      requestLane: "public-api",
+      response: errorResponse(401, "Unauthorized"),
+    };
+  }
+  return { isAdmin, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: null };
 }
 
 export function notFoundResponse(): Response {

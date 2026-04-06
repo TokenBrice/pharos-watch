@@ -1,0 +1,492 @@
+import type {
+  ApiKeyCreateRequest,
+  ApiKeySummary,
+  ApiKeyTrafficClass,
+  ApiKeyUpdateRequest,
+} from "@shared/types";
+import { errorResponse } from "./api-utils";
+import { IsolateLocalState } from "./isolate-local-state";
+
+const API_KEY_PREFIX_BYTES = 8;
+const API_KEY_SECRET_BYTES = 24;
+const API_KEY_TOKEN_PREFIX = "ph_live";
+export const API_KEY_TOKEN_PATTERN = /^ph_live_([0-9a-f]{16})_([A-Za-z0-9_-]{32})$/;
+const API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE = 120;
+const API_KEY_MIN_RATE_LIMIT_PER_MINUTE = 1;
+const API_KEY_MAX_RATE_LIMIT_PER_MINUTE = 10_000;
+const API_KEY_NAME_MAX_LENGTH = 80;
+const API_KEY_OWNER_EMAIL_MAX_LENGTH = 200;
+const API_KEY_TIER_MAX_LENGTH = 40;
+const API_KEY_TRAFFIC_CLASS_DEFAULT: ApiKeyTrafficClass = "external";
+const API_KEY_DEFAULT_EXPIRY_SEC = 90 * 24 * 60 * 60;
+const API_KEY_CACHE_TTL_MS = 5_000;
+const API_KEY_USAGE_UPDATE_WINDOW_SEC = 120;
+const API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER = 10;
+
+interface StatementRunResult {
+  meta?: { changes?: number };
+}
+
+interface StatementResult<T> {
+  results?: T[];
+}
+
+interface ApiKeyStatement {
+  bind(...values: unknown[]): ApiKeyStatement;
+  first<T>(): Promise<T | null>;
+  all<T>(): Promise<StatementResult<T>>;
+  run(): Promise<StatementRunResult>;
+}
+
+export interface ApiKeyDb {
+  prepare(query: string): ApiKeyStatement;
+}
+
+export interface ApiKeyRow {
+  id: number;
+  key_prefix: string;
+  secret_hash: string;
+  name: string;
+  owner_email: string | null;
+  tier: string;
+  traffic_class: ApiKeyTrafficClass;
+  rate_limit_per_minute: number;
+  is_active: number;
+  expires_at: number | null;
+  created_at: number;
+  updated_at: number;
+  last_used_at: number | null;
+  last_used_route: string | null;
+  pepper_version?: number;
+}
+
+export type ApiKeyPublicRow = Omit<ApiKeyRow, "secret_hash">;
+
+interface CachedApiKeyEntry {
+  cacheExpiresAt: number;
+  row: ApiKeyRow | null;
+}
+
+export interface ParsedApiKeyToken {
+  prefix: string;
+  secret: string;
+  token: string;
+}
+
+export interface AuthenticatedApiKey {
+  id: number;
+  keyPrefix: string;
+  name: string;
+  ownerEmail: string | null;
+  tier: string;
+  trafficClass: ApiKeyTrafficClass;
+  rateLimitPerMinute: number;
+  isActive: boolean;
+  expiresAt: number | null;
+}
+
+export type ApiKeyAuthenticationResult =
+  | { kind: "missing" }
+  | { kind: "invalid" }
+  | { kind: "unavailable" }
+  | { kind: "valid"; key: AuthenticatedApiKey };
+
+type ApiKeyAuditAction = "created" | "updated" | "deactivated" | "rotated";
+
+const _ak = new IsolateLocalState(() => ({
+  apiKeyCache: new Map<string, CachedApiKeyEntry>(),
+  apiKeyLastUsageUpdateById: new Map<number, number>(),
+  lastApiKeyRateLimitPruneBucket: null as number | null,
+  pendingApiKeyPrune: null as Promise<void> | null,
+}));
+
+export function getApiKeyRuntimeState() {
+  return _ak.state;
+}
+
+export function resetApiKeyStateForTests(): void {
+  _ak.reset();
+}
+
+export function getNowSec(nowSec?: number): number {
+  return nowSec ?? Math.floor(Date.now() / 1000);
+}
+
+function normalizeOptionalString(value: unknown, maxLength: number): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  return trimmed.slice(0, maxLength);
+}
+
+function normalizeRequiredName(value: unknown): string | Response {
+  const normalized = normalizeOptionalString(value, API_KEY_NAME_MAX_LENGTH);
+  return normalized ?? errorResponse(400, "API key name is required");
+}
+
+function normalizeTier(value: unknown): string {
+  return normalizeOptionalString(value, API_KEY_TIER_MAX_LENGTH) ?? "standard";
+}
+
+function normalizeTrafficClass(value: unknown): ApiKeyTrafficClass | Response {
+  const trimmed = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (!trimmed) {
+    return API_KEY_TRAFFIC_CLASS_DEFAULT;
+  }
+  if (trimmed === "external" || trimmed === "site") {
+    return trimmed;
+  }
+  return errorResponse(400, "trafficClass must be either site or external");
+}
+
+function normalizeRateLimit(value: unknown): number | Response {
+  if (value == null || value === "") {
+    return API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE;
+  }
+  const parsed = Number.parseInt(String(value), 10);
+  if (!Number.isFinite(parsed) || parsed < API_KEY_MIN_RATE_LIMIT_PER_MINUTE || parsed > API_KEY_MAX_RATE_LIMIT_PER_MINUTE) {
+    return errorResponse(
+      400,
+      `rateLimitPerMinute must be between ${API_KEY_MIN_RATE_LIMIT_PER_MINUTE} and ${API_KEY_MAX_RATE_LIMIT_PER_MINUTE}`,
+    );
+  }
+  return parsed;
+}
+
+function normalizeOwnerEmail(value: unknown): string | null {
+  const normalized = normalizeOptionalString(value, API_KEY_OWNER_EMAIL_MAX_LENGTH);
+  return normalized ? normalized.toLowerCase() : null;
+}
+
+function normalizeOptionalExpiresAt(
+  value: unknown,
+  fieldName: "expiresAt",
+): number | null | undefined | Response {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+  if (typeof value === "number") {
+    if (!Number.isInteger(value) || !Number.isFinite(value)) {
+      return errorResponse(400, `${fieldName} must be an integer Unix timestamp or null`);
+    }
+    return value;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return errorResponse(400, `${fieldName} must be an integer Unix timestamp or null`);
+    }
+    if (!/^-?\d+$/.test(trimmed)) {
+      return errorResponse(400, `${fieldName} must be an integer Unix timestamp or null`);
+    }
+    return Number.parseInt(trimmed, 10);
+  }
+  return errorResponse(400, `${fieldName} must be an integer Unix timestamp or null`);
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+}
+
+function bytesToBase64Url(bytes: Uint8Array): string {
+  let binary = "";
+  for (const value of bytes) {
+    binary += String.fromCharCode(value);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function randomBytes(length: number): Uint8Array {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return bytes;
+}
+
+export async function hmacSha256Hex(secret: string, input: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(input));
+  return bytesToHex(new Uint8Array(signature));
+}
+
+export async function buildApiKeyMaterial(pepper: string): Promise<{
+  keyPrefix: string;
+  secretHash: string;
+  token: string;
+}> {
+  const keyPrefix = bytesToHex(randomBytes(API_KEY_PREFIX_BYTES));
+  const secret = bytesToBase64Url(randomBytes(API_KEY_SECRET_BYTES));
+  return {
+    keyPrefix,
+    secretHash: await hmacSha256Hex(pepper, secret),
+    token: `${API_KEY_TOKEN_PREFIX}_${keyPrefix}_${secret}`,
+  };
+}
+
+function maskApiKeyToken(keyPrefix: string): string {
+  return `${API_KEY_TOKEN_PREFIX}_${keyPrefix}_********`;
+}
+
+export function mapRowToSummary(row: ApiKeyPublicRow): ApiKeySummary {
+  return {
+    id: row.id,
+    keyPrefix: row.key_prefix,
+    maskedToken: maskApiKeyToken(row.key_prefix),
+    name: row.name,
+    ownerEmail: row.owner_email,
+    tier: row.tier,
+    trafficClass: row.traffic_class,
+    rateLimitPerMinute: row.rate_limit_per_minute,
+    isActive: row.is_active === 1,
+    expiresAt: row.expires_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    lastUsedAt: row.last_used_at,
+    lastUsedRoute: row.last_used_route,
+  };
+}
+
+export function mapRowToAuthenticatedKey(row: ApiKeyRow): AuthenticatedApiKey {
+  return {
+    id: row.id,
+    keyPrefix: row.key_prefix,
+    name: row.name,
+    ownerEmail: row.owner_email,
+    tier: row.tier,
+    trafficClass: row.traffic_class,
+    rateLimitPerMinute: row.rate_limit_per_minute,
+    isActive: row.is_active === 1,
+    expiresAt: row.expires_at,
+  };
+}
+
+export function clearApiKeyCache(keyPrefix: string): void {
+  getApiKeyRuntimeState().apiKeyCache.delete(keyPrefix);
+}
+
+export async function lookupApiKeyByPrefix(db: ApiKeyDb, keyPrefix: string): Promise<ApiKeyRow | null> {
+  const now = Date.now();
+  const cached = getApiKeyRuntimeState().apiKeyCache.get(keyPrefix);
+  if (cached && cached.cacheExpiresAt > now) {
+    return cached.row;
+  }
+
+  const row = await db.prepare(
+    `SELECT
+       id,
+       key_prefix,
+       secret_hash,
+       name,
+       owner_email,
+       tier,
+       traffic_class,
+       rate_limit_per_minute,
+       is_active,
+       expires_at,
+       created_at,
+       updated_at,
+       last_used_at,
+       last_used_route,
+       pepper_version
+     FROM api_keys
+     WHERE key_prefix = ?`,
+  )
+    .bind(keyPrefix)
+    .first<ApiKeyRow>();
+
+  if (row) {
+    getApiKeyRuntimeState().apiKeyCache.set(keyPrefix, {
+      cacheExpiresAt: now + API_KEY_CACHE_TTL_MS,
+      row,
+    });
+  }
+  return row;
+}
+
+export async function recordApiKeyAudit(
+  db: ApiKeyDb,
+  apiKeyId: number,
+  action: ApiKeyAuditAction,
+  detail?: Record<string, unknown>,
+  nowSec = getNowSec(),
+): Promise<void> {
+  await db.prepare(
+    `INSERT INTO api_key_audit_log (api_key_id, action, actor, detail_json, created_at)
+     VALUES (?, ?, 'admin', ?, ?)`,
+  )
+    .bind(apiKeyId, action, detail ? JSON.stringify(detail) : null, nowSec)
+    .run();
+}
+
+export function normalizeCreateInput(body: Record<string, unknown>): ApiKeyCreateRequest | Response {
+  const name = normalizeRequiredName(body.name);
+  if (name instanceof Response) {
+    return name;
+  }
+
+  const rateLimitPerMinute = normalizeRateLimit(body.rateLimitPerMinute);
+  if (rateLimitPerMinute instanceof Response) {
+    return rateLimitPerMinute;
+  }
+
+  const trafficClass = normalizeTrafficClass(body.trafficClass);
+  if (trafficClass instanceof Response) {
+    return trafficClass;
+  }
+
+  const expiresAt = normalizeOptionalExpiresAt(body.expiresAt, "expiresAt");
+  if (expiresAt instanceof Response) {
+    return expiresAt;
+  }
+
+  return {
+    name,
+    ownerEmail: normalizeOwnerEmail(body.ownerEmail),
+    tier: normalizeTier(body.tier),
+    trafficClass,
+    rateLimitPerMinute,
+    expiresAt,
+  };
+}
+
+export function normalizeUpdateInput(body: Record<string, unknown>): ApiKeyUpdateRequest | Response {
+  const next: ApiKeyUpdateRequest = {};
+
+  if ("name" in body) {
+    const normalized = normalizeOptionalString(body.name, API_KEY_NAME_MAX_LENGTH);
+    if (!normalized) {
+      return errorResponse(400, "API key name cannot be empty");
+    }
+    next.name = normalized;
+  }
+
+  if ("ownerEmail" in body) {
+    next.ownerEmail = normalizeOwnerEmail(body.ownerEmail);
+  }
+
+  if ("tier" in body) {
+    next.tier = normalizeTier(body.tier);
+  }
+
+  if ("trafficClass" in body) {
+    const normalized = normalizeTrafficClass(body.trafficClass);
+    if (normalized instanceof Response) {
+      return normalized;
+    }
+    next.trafficClass = normalized;
+  }
+
+  if ("rateLimitPerMinute" in body) {
+    const normalized = normalizeRateLimit(body.rateLimitPerMinute);
+    if (normalized instanceof Response) {
+      return normalized;
+    }
+    next.rateLimitPerMinute = normalized;
+  }
+
+  if ("isActive" in body) {
+    if (typeof body.isActive !== "boolean") {
+      return errorResponse(400, "isActive must be a boolean");
+    }
+    next.isActive = body.isActive;
+  }
+
+  if ("expiresAt" in body) {
+    const normalized = normalizeOptionalExpiresAt(body.expiresAt, "expiresAt");
+    if (normalized instanceof Response) {
+      return normalized;
+    }
+    next.expiresAt = normalized ?? null;
+  }
+
+  if (Object.keys(next).length === 0) {
+    return errorResponse(400, "No API key fields were provided");
+  }
+
+  return next;
+}
+
+export async function selectApiKeyById(db: ApiKeyDb, id: number): Promise<ApiKeyRow | null> {
+  return db.prepare(
+    `SELECT
+       id,
+       key_prefix,
+       secret_hash,
+       name,
+       owner_email,
+       tier,
+       traffic_class,
+       rate_limit_per_minute,
+       is_active,
+       expires_at,
+       created_at,
+       updated_at,
+       last_used_at,
+       last_used_route
+     FROM api_keys
+     WHERE id = ?`,
+  )
+    .bind(id)
+    .first<ApiKeyRow>();
+}
+
+export async function selectPublicApiKeyById(db: ApiKeyDb, id: number): Promise<ApiKeyPublicRow | null> {
+  return db.prepare(
+    `SELECT
+       id,
+       key_prefix,
+       name,
+       owner_email,
+       tier,
+       traffic_class,
+       rate_limit_per_minute,
+       is_active,
+       expires_at,
+       created_at,
+       updated_at,
+       last_used_at,
+       last_used_route
+     FROM api_keys
+     WHERE id = ?`,
+  )
+    .bind(id)
+    .first<ApiKeyPublicRow>();
+}
+
+export function requireApiKeyPepper(pepper: string | undefined): string | Response {
+  const effectivePepper = pepper?.trim();
+  return effectivePepper ? effectivePepper : errorResponse(500, "API key hashing is not configured");
+}
+
+export function getApiKeyDefaultExpirySec(): number {
+  return API_KEY_DEFAULT_EXPIRY_SEC;
+}
+
+export function getApiKeyDefaultRateLimitPerMinute(): number {
+  return API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE;
+}
+
+export function getApiKeyTrafficClassDefault(): ApiKeyTrafficClass {
+  return API_KEY_TRAFFIC_CLASS_DEFAULT;
+}
+
+export function getApiKeyUsageUpdateWindowSec(): number {
+  return API_KEY_USAGE_UPDATE_WINDOW_SEC;
+}
+
+export function getApiKeyRateLimitPruneWindowMultiplier(): number {
+  return API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER;
+}
