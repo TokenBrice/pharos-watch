@@ -25,6 +25,7 @@ import { handleNonUsdShare } from "../api/non-usd-share";
 import { handleTreasuryStableExposure } from "../api/treasury-stable-exposure";
 import { handlePublicStatusHistory } from "../api/public-status-history";
 import { handleStablecoinDetail } from "../api/stablecoin-detail";
+import { handleTelegramPulse } from "../api/telegram-pulse";
 import { defineStaticRoute, type StaticRouteDefinition } from "./shared";
 
 export const PUBLIC_STATIC_ROUTES = [
@@ -60,4 +61,5 @@ export const PUBLIC_STATIC_ROUTES = [
   defineStaticRoute("chains", ({ db }) => handleChains(db)),
   defineStaticRoute("non-usd-share", ({ db, url }) => handleNonUsdShare(db, url)),
   defineStaticRoute("public-status-history", ({ db, request }) => handlePublicStatusHistory(db, undefined, request)),
+  defineStaticRoute("telegram-pulse", ({ db }) => handleTelegramPulse(db)),
 ] as const satisfies readonly StaticRouteDefinition[];

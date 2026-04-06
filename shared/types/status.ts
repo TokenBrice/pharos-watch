@@ -199,6 +199,77 @@ export interface TelegramBotStats {
   topStablecoins: TelegramBotTopStablecoin[];
 }
 
+/** Slim public-facing stats for the /telegram landing page. */
+export interface TelegramPulse {
+  activeWatchers: number;
+  coinSubscriptions: number;
+  topCoins: string[];
+}
+
+export interface TelegramDispatchEventsDetected {
+  dews: number;
+  depeg: number;
+  depegTriggered: number;
+  depegResolved: number;
+  depegWorsening: number;
+  safety: number;
+  launch: number;
+  suppressedMethodologyChanges: number;
+}
+
+export interface TelegramDispatchCronResult {
+  subscribersNotified: number;
+  messagesSent: number;
+  blockedUsersCleanedUp: number;
+  blockedUsersCleanupFailed: number;
+  cappedAtLimit: boolean;
+  snapshotSeeded: boolean;
+  skipped?: string | null;
+  freshAttempted: number;
+  freshSent: number;
+  freshRetryQueued: number;
+  freshPermanentFailures: number;
+  pendingAttempted: number;
+  pendingDrained: number;
+  pendingRetryQueued: number;
+  pendingDropped: number;
+  pendingEnqueued: number;
+  pendingExpired: number;
+  eventsDetected: TelegramDispatchEventsDetected;
+}
+
+export interface ParsedTelegramDispatchEventsDetected {
+  dews: number | null;
+  depeg: number | null;
+  depegTriggered: number | null;
+  depegResolved: number | null;
+  depegWorsening: number | null;
+  safety: number | null;
+  launch: number | null;
+  suppressedMethodologyChanges: number | null;
+}
+
+export interface TelegramDispatchCronMetadata {
+  subscribersNotified: number | null;
+  messagesSent: number | null;
+  blockedUsersCleanedUp: number | null;
+  blockedUsersCleanupFailed: number | null;
+  cappedAtLimit: boolean;
+  snapshotSeeded: boolean;
+  skipped: string | null;
+  freshAttempted: number | null;
+  freshSent: number | null;
+  freshRetryQueued: number | null;
+  freshPermanentFailures: number | null;
+  pendingAttempted: number | null;
+  pendingDrained: number | null;
+  pendingRetryQueued: number | null;
+  pendingDropped: number | null;
+  pendingEnqueued: number | null;
+  pendingExpired: number | null;
+  eventsDetected: ParsedTelegramDispatchEventsDetected | null;
+}
+
 export interface DiscoveryCandidate {
   id: number;
   geckoId: string | null;

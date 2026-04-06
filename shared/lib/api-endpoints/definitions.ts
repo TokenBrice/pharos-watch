@@ -373,6 +373,15 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probePath: "/api/non-usd-share?days=90",
   },
   {
+    key: "telegram-pulse",
+    path: API_PATHS.telegramPulse(),
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+    probeGroup: "public",
+  },
+  {
     key: "feedback",
     path: "/api/feedback",
     methods: ["POST"],
@@ -690,11 +699,13 @@ const SITE_DATA_ALLOWED_ENDPOINT_KEYS = new Set<EndpointKey>([
   "chains",
   "non-usd-share",
   "public-status-history",
+  "telegram-pulse",
 ]);
 
 const PUBLIC_API_EXEMPT_ENDPOINT_KEYS = new Set<EndpointKey>([
   "health",
   "public-status-history",
+  "telegram-pulse",
   "feedback",
   "telegram-webhook",
 ]);
