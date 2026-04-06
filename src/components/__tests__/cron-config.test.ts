@@ -60,11 +60,11 @@ describe("status cron config", () => {
     });
   });
 
-  it("keeps daily chained jobs in the daily group on the consolidated trigger", () => {
+  it("keeps daily chained jobs in the daily group across both triggers", () => {
     expect(getStatusCronDisplay("discovery-scan")).toEqual({
       group: "daily",
       label: "Coverage discovery",
-      schedule: "0 8 * * *",
+      schedule: "5 8 * * *",
       triggerMode: "shared",
     });
   });
