@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -370,6 +370,60 @@ function ShowDefunctToggle({
 }
 
 // ---------------------------------------------------------------------------
+// Grade-grouped grid helpers
+// ---------------------------------------------------------------------------
+
+const GRADE_SECTION_DESCRIPTIONS: Record<string, string> = {
+  A: "Top tier \u2014 strong across all dimensions",
+  B: "Above average \u2014 solid fundamentals with minor gaps",
+  C: "Middle ground \u2014 meets baseline but has weaknesses",
+  D: "Below average \u2014 significant risk in multiple areas",
+  F: "Critical \u2014 major concerns across dimensions",
+  NR: "Not yet rated \u2014 insufficient data",
+};
+
+function GradeSectionHeader({ grade, count }: { grade: string; count: number }) {
+  return (
+    <div className="col-span-full flex items-center gap-3 pt-2">
+      <span
+        className={cn(
+          "flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold font-mono text-white",
+          GRADE_BAR_COLORS[grade]?.split(" ")[0] ?? "bg-muted",
+        )}
+      >
+        {grade}
+      </span>
+      <div className="min-w-0">
+        <span className="text-sm font-medium">
+          {count} {count === 1 ? "coin" : "coins"}
+        </span>
+        <span className="text-xs text-muted-foreground ml-2">
+          {GRADE_SECTION_DESCRIPTIONS[grade] ?? ""}
+        </span>
+      </div>
+      <div className="flex-1 border-t border-border/40" />
+    </div>
+  );
+}
+
+function groupByGrade(cards: ReportCard[]): { grade: string; cards: ReportCard[] }[] {
+  const groups = new Map<string, ReportCard[]>();
+  for (const card of cards) {
+    const range = gradeRange(card.overallGrade);
+    const existing = groups.get(range);
+    if (existing) {
+      existing.push(card);
+    } else {
+      groups.set(range, [card]);
+    }
+  }
+  return GRADE_RANGES.filter((g) => groups.has(g)).map((g) => ({
+    grade: g,
+    cards: groups.get(g)!,
+  }));
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -681,7 +735,30 @@ export function ReportCardsClient() {
             </Button>
           )}
         </div>
+      ) : gradeFilter === "all" && !isSimulating ? (
+        /* Grouped by grade tier */
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+          {groupByGrade(filteredCards).map((group) => (
+            <Fragment key={group.grade}>
+              <GradeSectionHeader grade={group.grade} count={group.cards.length} />
+              {group.cards.map((card, i) => (
+                <LazyCard key={card.id}>
+                  <ReportCardMini
+                    card={card}
+                    logo={logos?.[card.id]}
+                    isSimulated={affectedIds.has(card.id)}
+                    isSimulating={isSimulating}
+                    originalGrade={originalCardMap.get(card.id)?.overallGrade}
+                    originalScore={originalCardMap.get(card.id)?.overallScore}
+                    animIndex={i % 5}
+                  />
+                </LazyCard>
+              ))}
+            </Fragment>
+          ))}
+        </div>
       ) : (
+        /* Flat grid (filtered or simulating) */
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
           {filteredCards.map((card, i) => (
             <LazyCard key={card.id}>
