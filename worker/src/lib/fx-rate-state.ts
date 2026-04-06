@@ -219,19 +219,66 @@ function isWeekendDay(dayStartSec: number): boolean {
   return day === 0 || day === 6;
 }
 
-function previousBusinessDaySec(dayStartSec: number): number {
+const targetClosingDaysByYear = new Map<number, Set<string>>();
+
+function computeEasterSundayDayStartSec(year: number): number {
+  // Meeus/Jones/Butcher Gregorian computus.
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return Math.floor(Date.UTC(year, month - 1, day) / 1000);
+}
+
+function getTargetClosingDays(year: number): Set<string> {
+  const cached = targetClosingDaysByYear.get(year);
+  if (cached) return cached;
+
+  const easterSundaySec = computeEasterSundayDayStartSec(year);
+  const closingDays = new Set<string>([
+    `${year}-01-01`,
+    `${year}-05-01`,
+    `${year}-12-25`,
+    `${year}-12-26`,
+    formatUtcDate(easterSundaySec - (2 * DAY_SECONDS)),
+    formatUtcDate(easterSundaySec + DAY_SECONDS),
+  ]);
+  targetClosingDaysByYear.set(year, closingDays);
+  return closingDays;
+}
+
+function isTargetClosingDay(dayStartSec: number): boolean {
+  const day = new Date(dayStartSec * 1000);
+  return getTargetClosingDays(day.getUTCFullYear()).has(formatUtcDate(dayStartSec));
+}
+
+function isBusinessDailyPublishDay(dayStartSec: number): boolean {
+  return !isWeekendDay(dayStartSec) && !isTargetClosingDay(dayStartSec);
+}
+
+function previousBusinessDailyPublishDaySec(dayStartSec: number): number {
   let current = dayStartSec - DAY_SECONDS;
-  while (isWeekendDay(current)) {
+  while (!isBusinessDailyPublishDay(current)) {
     current -= DAY_SECONDS;
   }
   return current;
 }
 
-function countBusinessDaysBehind(sourceDaySec: number, expectedDaySec: number): number {
+function countBusinessDailyPublishesBehind(sourceDaySec: number, expectedDaySec: number): number {
   if (sourceDaySec >= expectedDaySec) return 0;
   let missed = 0;
   for (let cursor = sourceDaySec + DAY_SECONDS; cursor <= expectedDaySec; cursor += DAY_SECONDS) {
-    if (!isWeekendDay(cursor)) {
+    if (isBusinessDailyPublishDay(cursor)) {
       missed++;
     }
   }
@@ -240,17 +287,13 @@ function countBusinessDaysBehind(sourceDaySec: number, expectedDaySec: number): 
 
 function resolveBusinessDailyExpectedDaySec(nowSec: number): number {
   const dayStartSec = startOfUtcDaySec(nowSec);
-  if (isWeekendDay(dayStartSec)) {
-    let expected = dayStartSec;
-    while (isWeekendDay(expected)) {
-      expected -= DAY_SECONDS;
-    }
-    return expected;
+  if (!isBusinessDailyPublishDay(dayStartSec)) {
+    return previousBusinessDailyPublishDaySec(dayStartSec);
   }
   const hourUtc = new Date(nowSec * 1000).getUTCHours();
   return hourUtc >= FX_BUSINESS_DAILY_PUBLISH_HOUR_UTC
     ? dayStartSec
-    : previousBusinessDaySec(dayStartSec);
+    : previousBusinessDailyPublishDaySec(dayStartSec);
 }
 
 function resolveCalendarDailyExpectedDaySec(nowSec: number): number {
@@ -289,14 +332,12 @@ function evaluateFxSourceFreshness(
 
   if (normalizedCadence === "business-daily" && sourceDaySec != null) {
     const expectedDaySec = resolveBusinessDailyExpectedDaySec(nowSec);
-    const missedPublishes = countBusinessDaysBehind(sourceDaySec, expectedDaySec);
-    if (missedPublishes <= 1) {
-      // Tolerate 1 missed business day — covers market holidays (Good Friday,
-      // Easter Monday, etc.) that the weekend-only calendar cannot predict.
+    const missedPublishes = countBusinessDailyPublishesBehind(sourceDaySec, expectedDaySec);
+    if (missedPublishes === 0) {
       return { status: "fresh", ageSec, cadence: normalizedCadence, warning: null };
     }
     return {
-      status: missedPublishes === 2 ? "degraded" : "stale",
+      status: missedPublishes === 1 ? "degraded" : "stale",
       ageSec,
       cadence: normalizedCadence,
       warning:

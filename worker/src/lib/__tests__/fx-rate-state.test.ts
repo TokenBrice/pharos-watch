@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { buildFxCacheStatus, getFxReferenceTypeFromState, hydrateFxRateState } from "../fx-rate-state";
 
 function buildState(meta: Record<string, unknown>, rates: Record<string, number>) {
@@ -60,10 +61,11 @@ describe("fx-rate-state cadence-aware freshness", () => {
     expect(buildFxCacheStatus(state, 1800, nowSec).cacheStatus.sourceStatus).toBe("fresh");
   });
 
-  it("tolerates 1 missed business-daily publish for market holidays", () => {
-    // Good Friday 2026-04-03: latest source is Thursday 2026-04-02,
-    // expected would naively be Friday, but we tolerate 1 missed day.
-    vi.setSystemTime(new Date("2026-04-05T19:00:00Z"));
+  it("keeps business-daily references fresh through TARGET closing days", () => {
+    // The ECB page still shows 2026-04-02 on Easter Monday because both
+    // 2026-04-03 (Good Friday) and 2026-04-06 (Easter Monday) are TARGET
+    // closing days and therefore not publish days.
+    vi.setSystemTime(new Date("2026-04-06T19:00:00Z"));
     const nowSec = Math.floor(Date.now() / 1000);
     const state = buildState(
       {
@@ -83,18 +85,58 @@ describe("fx-rate-state cadence-aware freshness", () => {
     expect(buildFxCacheStatus(state, 1800, nowSec).cacheStatus.sourceStatus).toBe("fresh");
   });
 
-  it("flags 2 missed business-daily publishes as degraded", () => {
-    // Wednesday source date, Friday after publish window → 2 missed
-    vi.setSystemTime(new Date("2026-04-10T18:00:00Z"));
+  it("flags 1 missed business-daily publish as degraded", () => {
+    vi.setSystemTime(new Date("2026-04-07T18:00:00Z"));
     const nowSec = Math.floor(Date.now() / 1000);
     const state = buildState(
       {
         usableSyncAt: nowSec - 60,
         mode: "live",
-        sourceUpdatedAtByPeg: { peggedEUR: nowSec - (72 * 3600) },
+        sourceUpdatedAtByPeg: { peggedAUD: nowSec - (5 * DAY_SECONDS) },
+        sourceModeByPeg: { peggedAUD: "live" },
+        sourceCadenceByPeg: { peggedAUD: "business-daily" },
+        sourceDateByPeg: { peggedAUD: "2026-04-02" },
+        consecutiveFallbackRuns: 0,
+      },
+      { peggedAUD: 0.64 },
+    );
+
+    expect(state).not.toBeNull();
+    expect(buildFxCacheStatus(state, 1800, nowSec).cacheStatus.sourceStatus).toBe("degraded");
+  });
+
+  it("flags 2 missed business-daily publishes as stale", () => {
+    vi.setSystemTime(new Date("2026-04-08T18:00:00Z"));
+    const nowSec = Math.floor(Date.now() / 1000);
+    const state = buildState(
+      {
+        usableSyncAt: nowSec - 60,
+        mode: "live",
+        sourceUpdatedAtByPeg: { peggedAUD: nowSec - (6 * DAY_SECONDS) },
+        sourceModeByPeg: { peggedAUD: "live" },
+        sourceCadenceByPeg: { peggedAUD: "business-daily" },
+        sourceDateByPeg: { peggedAUD: "2026-04-02" },
+        consecutiveFallbackRuns: 0,
+      },
+      { peggedAUD: 0.64 },
+    );
+
+    expect(state).not.toBeNull();
+    expect(getFxReferenceTypeFromState(state, "peggedAUD", 6 * 3600, nowSec)).toBe("stale");
+    expect(buildFxCacheStatus(state, 1800, nowSec).cacheStatus.sourceStatus).toBe("stale");
+  });
+
+  it("flags 1 normal business-daily publish lag as degraded", () => {
+    vi.setSystemTime(new Date("2026-03-12T18:00:00Z"));
+    const nowSec = Math.floor(Date.now() / 1000);
+    const state = buildState(
+      {
+        usableSyncAt: nowSec - 60,
+        mode: "live",
+        sourceUpdatedAtByPeg: { peggedEUR: nowSec - (48 * 3600) },
         sourceModeByPeg: { peggedEUR: "live" },
         sourceCadenceByPeg: { peggedEUR: "business-daily" },
-        sourceDateByPeg: { peggedEUR: "2026-04-08" },
+        sourceDateByPeg: { peggedEUR: "2026-03-11" },
         consecutiveFallbackRuns: 0,
       },
       { peggedEUR: 1.08 },
