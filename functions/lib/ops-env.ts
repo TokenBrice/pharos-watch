@@ -1,4 +1,5 @@
 import { normalizeTeamDomain } from "@shared/lib/cloudflare-access-jwt";
+import { getConfiguredValue } from "@shared/lib/env-utils";
 import { OPS_API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
 
 export const DEFAULT_OPS_API_ORIGIN = OPS_API_ORIGIN;
@@ -43,12 +44,6 @@ export const PAGES_FUNCTIONS_ACTIVE_ENV_KEYS = [
 
 export function resolveOpsApiOrigin(env: Pick<OpsAdminProxyEnv, "OPS_API_ORIGIN">): string {
   return resolveOrigin(env.OPS_API_ORIGIN, DEFAULT_OPS_API_ORIGIN);
-}
-
-function getConfiguredValue(value: string | undefined): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
 }
 
 export function resolvePagesOpsUiAccessConfig(
