@@ -512,7 +512,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.snapshotPsiDaily).toHaveBeenCalledTimes(1);
   });
 
-  it("contains individual daily 08:05 failures and continues the other jobs", async () => {
+  it("contains individual daily 08:05 failures and continues the other jobs (consolidated into 08:00)", async () => {
     cronMocks.generateDailyDigest.mockRejectedValueOnce(new Error("digest failed"));
 
     const { ctx, waits } = makeCtx();
@@ -523,12 +523,17 @@ describe("worker.scheduled", () => {
     } as const;
 
     await worker.scheduled(
-      { cron: "5 8 * * *" } as ScheduledEvent,
+      { cron: "0 8 * * *" } as ScheduledEvent,
       env as never,
       ctx,
     );
     await Promise.all(waits);
 
+    // Phase 1 (0800) jobs
+    expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
+    expect(cronMocks.snapshotSafetyGradeHistory).toHaveBeenCalledTimes(1);
+    expect(cronMocks.snapshotPsiDaily).toHaveBeenCalledTimes(1);
+    // Phase 2 (former 0805) jobs
     expect(cronMocks.syncBluechip).toHaveBeenCalledTimes(1);
     expect(cronMocks.generateDailyDigest).toHaveBeenCalledTimes(1);
     expect(cronMocks.generateWeeklyRecap).toHaveBeenCalledTimes(1);

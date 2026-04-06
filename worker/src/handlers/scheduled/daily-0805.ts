@@ -16,7 +16,8 @@ import { buildTelegramCreds } from "../../lib/runtime-credentials";
 import type { ScheduledRuntimeContext } from "./context";
 import { runBestEffortScheduledJob } from "./run-best-effort-job";
 
-export async function runDaily0805Slot(runtime: ScheduledRuntimeContext): Promise<void> {
+/** Runs the former 08:05 jobs; called from the consolidated 08:00 slot. */
+export async function runDaily0805Jobs(runtime: ScheduledRuntimeContext): Promise<void> {
   await Promise.all([
     runBestEffortScheduledJob(runtime, "daily 08:05 slot", "sync-bluechip", (signal) => syncBluechip(runtime.db, signal)),
     (async () => {
