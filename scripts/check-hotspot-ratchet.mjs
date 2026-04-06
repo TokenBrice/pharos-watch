@@ -32,4 +32,7 @@ for (const regression of regressions) {
     `  ${regression.file} ${regression.metric}: current=${regression.current} baseline=${regression.baseline}`,
   );
 }
+console.error("");
+console.error("If these changes are intentional, update the baseline:");
+console.error("  npm run check:hotspot-ratchet:update-baseline");
 process.exit(1);

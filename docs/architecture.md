@@ -684,11 +684,27 @@ data/
 
 - `src/lib/page-metadata.ts` is the shared helper for per-route canonical metadata, Open Graph images, Twitter cards, and sentence-aware description trimming.
 - `src/app/layout.tsx` owns the sitewide metadata baseline, icons, `api.pharos.watch` preconnect, and root JSON-LD (`WebSite`, `Organization`, `WebApplication`, `SearchAction`).
-- `src/app/sitemap.ts` owns indexable-route sitemap output and the `LAST_EDITED` map for static long-lived pages. Update `LAST_EDITED` when changing those routes' durable copy or methodology changelog pages so `lastModified` stays honest.
+- `src/app/sitemap.ts` owns indexable-route sitemap output. `LAST_EDITED` dates are auto-generated from git history during prebuild (`scripts/generate-sitemap-dates.ts`) and written to `src/generated/sitemap-dates.json`.
 - `src/app/robots.ts` publishes the global crawl policy (`allow: /`) and the sitemap location.
+
+---
+
+## CSS Build Pipeline
+
+Styling runs through **PostCSS** with the `@tailwindcss/postcss` plugin (configured in `postcss.config.mjs`). This is the Tailwind CSS v4 integration path -- there is no standalone `tailwind.config` file; Tailwind v4 reads design tokens and `@theme` directives directly from `src/app/globals.css`. The `cn()` utility in `src/lib/utils.ts` uses `tailwind-merge` for safe class deduplication at runtime.
+
+Reminder: Tailwind classes must be static strings -- never construct class names dynamically, as the CSS purge pass cannot detect them.
+
+---
+
+## Worker Coding Conventions
+
+### Loose-equality null guard (`!= null`)
+
+The worker codebase deliberately uses `!= null` (loose equality) as the standard null/undefined guard for D1 query results. D1 can return either `null` or `undefined` for absent column values depending on the query path and column type, and `value != null` catches both in a single check. This is intentional -- do not "fix" these to `!== null` or `!== undefined`.
 
 ---
 
 ## TypeScript Target Constraints
 
-Root tsconfig targets ES2017 (for browser compatibility via Next.js). Worker tsconfig targets ES2021 (Cloudflare Workers runtime). Shared modules in `shared/lib/` MUST be ES2017-compatible as they compile under both targets — avoid `??=`, `||=`, `Array.at()`, and other post-ES2017 features in shared code.
+Root tsconfig targets ES2017 (for browser compatibility via Next.js). Worker tsconfig targets ES2021 (Cloudflare Workers runtime). Shared modules in `shared/lib/` MUST be ES2017-compatible as they compile under both targets -- avoid `??=`, `||=`, `Array.at()`, and other post-ES2017 features in shared code.

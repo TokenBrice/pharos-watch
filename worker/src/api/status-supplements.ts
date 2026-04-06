@@ -32,7 +32,7 @@ import {
 } from "../lib/discovery-candidates";
 import { loadFreshIndependentLiveReserveMap } from "../lib/live-reserves-store";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { getD1UsageSummary } from "../lib/status/d1-usage";
+import { getCacheBlobSizes, getD1UsageSummary } from "../lib/status/d1-usage";
 import { getMintBurnReconciliation } from "../lib/status/derived-data";
 
 function sectionError(code: string, message?: string): StatusSectionError {
@@ -63,6 +63,7 @@ export interface StatusSupplements {
   priceSourceHealth: PriceSourceHealth | null;
   coingeckoPriceDiff: CoinGeckoPriceDiff | null;
   d1Usage: D1UsageSummary | null;
+  cacheBlobSizes?: Record<string, number>;
   discoveryCandidates: DiscoveryCandidate[] | null;
   mintBurnReconciliation: MintBurnReconciliationSummary | null;
   reserveDrift?: ReserveDriftEntry[];
@@ -283,6 +284,13 @@ export async function loadStatusSupplements(
     );
   }
 
+  let cacheBlobSizes: Record<string, number> | undefined;
+  try {
+    cacheBlobSizes = await getCacheBlobSizes(db);
+  } catch (err) {
+    console.warn("[status] Cache blob sizes query failed:", err);
+  }
+
   let mintBurnReconciliation: MintBurnReconciliationSummary | null = null;
   try {
     mintBurnReconciliation = await getMintBurnReconciliation(db, now);
@@ -345,6 +353,7 @@ export async function loadStatusSupplements(
     priceSourceHealth,
     coingeckoPriceDiff,
     d1Usage,
+    cacheBlobSizes,
     discoveryCandidates,
     mintBurnReconciliation,
     reserveDrift,
