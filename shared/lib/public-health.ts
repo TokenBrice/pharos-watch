@@ -52,7 +52,7 @@ export function getCircuitImpactStatus(openCircuitCount: number): PublicStatusTo
   return openCircuitCount >= 3 ? "degraded" : "healthy";
 }
 
-export function isPublicImpactCircuitKey(key: string): boolean {
+function isPublicImpactCircuitKey(key: string): boolean {
   return !key.startsWith("live-reserves:");
 }
 
