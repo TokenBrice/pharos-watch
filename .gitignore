@@ -20,8 +20,9 @@
 /.next/
 /out/
 
-# generated build artifacts
-/src/generated/
+# generated build artifacts (keep .d.ts declarations for typecheck)
+/src/generated/*
+!/src/generated/*.d.ts
 
 # production
 /build
