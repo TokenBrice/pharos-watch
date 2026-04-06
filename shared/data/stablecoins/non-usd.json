@@ -678,7 +678,7 @@
     ],
     "liveReservesConfig": {
       "adapter": "collateral-positions-api",
-      "version": 1,
+      "version": 2,
       "semantics": "collateral-mix",
       "breakerScope": "zchf-frankencoin",
       "display": {
@@ -693,7 +693,14 @@
       },
       "params": {
         "pricesUrl": "https://api.frankencoin.com/prices/mapping",
-        "otherThresholdPct": 2
+        "otherThresholdPct": 2,
+        "redemptionBridge": {
+          "chain": "ethereum",
+          "rpcMode": "public-rpc",
+          "holder": "0x3b71ba73299f925a837836160c3e1fec74340403",
+          "tokenAddress": "0x79d4f0232a66c4c91b89c76362016a1707cfbf4f",
+          "tokenDecimals": 18
+        }
       }
     },
     "yieldConfig": {

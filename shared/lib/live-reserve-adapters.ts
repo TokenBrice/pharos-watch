@@ -94,9 +94,21 @@ const circleTransparencyParamsSchema = z.object({
   coinType: z.enum(["usdc", "eurc"]),
 }).strict();
 
+const collateralPositionsRedemptionBridgeSchema = z.object({
+  chain: z.string(),
+  rpcMode: LiveReserveRpcModeSchema,
+  holder: z.string(),
+  tokenAddress: z.string(),
+  tokenDecimals: z.number().int().nonnegative(),
+  priceAddress: z.string().optional(),
+  rpcUrl: z.string().optional(),
+  fallbackRpcUrl: z.string().optional(),
+}).strict();
+
 const collateralPositionsParamsSchema = z.object({
   pricesUrl: z.string(),
   otherThresholdPct: z.number().positive().optional(),
+  redemptionBridge: collateralPositionsRedemptionBridgeSchema.optional(),
 }).strict();
 
 const curatedValidatedParamsSchema = z.object({
@@ -314,7 +326,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
       allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,

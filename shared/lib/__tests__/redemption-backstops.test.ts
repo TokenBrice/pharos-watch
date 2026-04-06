@@ -39,6 +39,7 @@ describe("getRedemptionBackstopConfig", () => {
       ["pusd-plume", "offchain-issuer"],
       ["idrx-idrx", "offchain-issuer"],
       ["mxnb-juno", "offchain-issuer"],
+      ["zchf-frankencoin", "stablecoin-redeem"],
     ] as const;
 
     for (const [id, routeFamily] of expectedRouteFamilies) {
@@ -102,6 +103,17 @@ describe("getRedemptionBackstopConfig", () => {
       routeFamily: "basket-redeem",
       executionModel: "deterministic-basket",
       outputAssetType: "stable-basket",
+    });
+
+    expect(getRedemptionBackstopConfig("zchf-frankencoin")).toMatchObject({
+      routeFamily: "stablecoin-redeem",
+      accessModel: "permissionless-onchain",
+      settlementModel: "atomic",
+      executionModel: "deterministic-onchain",
+      outputAssetType: "stable-single",
+      capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.014 },
+      costModel: { kind: "fee-bps", feeBps: 0 },
+      reviewedAt: "2026-04-06",
     });
   });
 

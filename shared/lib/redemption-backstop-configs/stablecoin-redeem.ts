@@ -11,6 +11,7 @@ import {
 
 const REVIEWED_DIRECT_REDEMPTION_AT = "2026-03-23";
 const REVIEWED_REMEDIATION_AT = "2026-03-30";
+const REVIEWED_ZCHF_BRIDGE_AT = "2026-04-06";
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_DIRECT_REDEMPTION_AT,
 );
@@ -87,6 +88,36 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     ],
     notes: [
       "Fresh live reserve metadata scores against Ethena's current Liquid Cash bucket, while the 0.5% fallback ratio reflects the smaller hot-contract stable buffer documented for on-demand redemptions",
+    ],
+  },
+  "zchf-frankencoin": {
+    ...stablecoinRedeemBase,
+    capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.014 },
+    costModel: fixedFee(
+      0,
+      "Reviewed StablecoinBridge source burns ZCHF and transfers the same amount of VCHF with no fee logic",
+    ),
+    reviewedAt: REVIEWED_ZCHF_BRIDGE_AT,
+    docs: [
+      sourceRef(
+        "Frankencoin StablecoinBridge (VCHF)",
+        "https://etherscan.io/address/0x3b71ba73299f925a837836160c3e1fec74340403",
+        ["route", "capacity", "fees"],
+      ),
+      sourceRef(
+        "Frankencoin overview",
+        "https://docs.frankencoin.com/",
+        ["route"],
+      ),
+      sourceRef(
+        "VNX docs",
+        "https://vnx.gitbook.io/vnx-platform/",
+        ["capacity"],
+      ),
+    ],
+    notes: [
+      "Fresh live reserve metadata uses the bridge's current VCHF balance as the immediate redeemable lower bound for permissionless ZCHF -> VCHF exits",
+      "Fallback retains a conservative 1.4% bridge-buffer ratio derived from the reviewed bridge inventory relative to ZCHF supply on April 6, 2026",
     ],
   },
   "yousd-yield-optimizer": {

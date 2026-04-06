@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 
 const getReserveSyncStateMock = vi.fn();
@@ -342,6 +343,45 @@ describe("buildRedemptionBackstopEntry", () => {
     expect(entry.immediateCapacityRatio).toBe(0.15);
     expect(entry.capacityConfidence).toBe("live-direct");
     expect(entry.capacitySemantics).toBe("immediate-bounded");
+  });
+
+  it("models the ZCHF StablecoinBridge route with live bridge capacity and zero fee", async () => {
+    const config = getRedemptionBackstopConfig("zchf-frankencoin");
+    expect(config).not.toBeNull();
+
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "zchf-frankencoin",
+      config!,
+      27_682_881.200551473,
+      35,
+      now,
+      {
+        reserveSnapshotMetadata: {
+          stablecoinId: "zchf-frankencoin",
+          fetchedAt: now - 300,
+          source: "collateral-positions-api",
+          metadata: {
+            immediateRedeemableUsd: 494_182.68,
+            freshnessMode: "unverified",
+          },
+          warningCount: 0,
+          warnings: [],
+          sourceModel: "dynamic-mix",
+          evidenceClass: "independent",
+          syncStatus: "ok",
+        },
+      },
+    );
+
+    expect(entry.routeFamily).toBe("stablecoin-redeem");
+    expect(entry.resolutionState).toBe("resolved");
+    expect(entry.provider).toBe("reserve-sync-metadata");
+    expect(entry.capacityConfidence).toBe("live-direct");
+    expect(entry.immediateCapacityUsd).toBe(494_182.68);
+    expect(entry.feeBps).toBe(0);
+    expect(entry.feeConfidence).toBe("fixed");
+    expect(entry.modelConfidence).toBe("high");
   });
 
   it("falls back to ratio when reserve-sync has no immediate capacity data", async () => {

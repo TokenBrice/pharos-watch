@@ -1,14 +1,16 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
-import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReserveInput, LiveReserveRpcMode, LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  fetchErc20Balance,
   fetchJsonWithRetry,
   normalizeSlices,
   requireJsonInput,
   reserveDegradedWarning,
   unverifiedFreshnessMetadata,
+  valueUsdFromBigIntPrice,
 } from "./helpers";
 
 interface PositionDetailsEntry {
@@ -29,6 +31,16 @@ type PriceMappingPayload = Record<string, { price?: { usd?: number; eur?: number
 interface PositionsApiParams {
   pricesUrl: string;
   otherThresholdPct?: number;
+  redemptionBridge?: {
+    chain: string;
+    rpcMode: LiveReserveRpcMode;
+    holder: string;
+    tokenAddress: string;
+    tokenDecimals: number;
+    priceAddress?: string;
+    rpcUrl?: string;
+    fallbackRpcUrl?: string;
+  };
 }
 
 interface ProtocolAssetConfig {
@@ -109,6 +121,7 @@ export function adaptCollateralPositions(
   details: PositionDetailsPayload,
   prices: PriceMappingPayload,
   otherThresholdPct = 2,
+  immediateRedeemableUsd?: number | null,
 ): AdapterResult {
   const warnings: LiveReserveWarning[] = [];
   const values: Array<{
@@ -205,12 +218,46 @@ export function adaptCollateralPositions(
       missingPriceCount: missingPriceSymbols.size,
       unknownAssetCount: warnings.length,
       unknownExposurePct: total > 0 ? (unknownExposureUsd / total) * 100 : 0,
+      ...(immediateRedeemableUsd != null ? { immediateRedeemableUsd } : {}),
       ...unverifiedFreshnessMetadata(
         "position-and-price-apis",
         "Collateral positions and price payloads do not expose a trustworthy source timestamp",
       ),
     },
   };
+}
+
+async function fetchBridgeImmediateRedeemableUsd(
+  bridge: NonNullable<PositionsApiParams["redemptionBridge"]>,
+  prices: PriceMappingPayload,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<number | null> {
+  const onchainInput: LiveReserveInput = {
+    kind: "onchain-evm",
+    chain: bridge.chain,
+    rpcMode: bridge.rpcMode,
+  };
+
+  const balance = await fetchErc20Balance(
+    onchainInput,
+    bridge.tokenAddress,
+    bridge.holder,
+    signal,
+    ctx,
+    bridge.rpcUrl,
+    bridge.fallbackRpcUrl,
+  );
+
+  if (balance == null) return null;
+  if (balance <= 0n) return 0;
+
+  const priceInfo = prices[(bridge.priceAddress ?? bridge.tokenAddress).toLowerCase()];
+  const usdPrice = priceInfo?.price?.usd;
+  if (typeof usdPrice !== "number" || usdPrice <= 0) return null;
+
+  const usdValue = valueUsdFromBigIntPrice(balance, bridge.tokenDecimals, usdPrice);
+  return Number.isFinite(usdValue) && usdValue >= 0 ? usdValue : null;
 }
 
 export async function fetchCollateralPositionsApiReserves(
@@ -228,5 +275,14 @@ export async function fetchCollateralPositionsApiReserves(
     fetchJsonWithRetry<PriceMappingPayload>(params.pricesUrl, signal, timeout, ctx),
   ]);
 
-  return adaptCollateralPositions(details, prices, params.otherThresholdPct ?? 2);
+  const immediateRedeemableUsd = params.redemptionBridge
+    ? await fetchBridgeImmediateRedeemableUsd(params.redemptionBridge, prices, signal, ctx)
+    : null;
+
+  return adaptCollateralPositions(
+    details,
+    prices,
+    params.otherThresholdPct ?? 2,
+    immediateRedeemableUsd,
+  );
 }

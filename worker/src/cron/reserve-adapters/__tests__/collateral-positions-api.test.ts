@@ -119,4 +119,27 @@ describe("adaptCollateralPositions", () => {
       depType: "wrapper",
     });
   });
+
+  it("attaches optional bridge-backed redeemable capacity metadata", () => {
+    const result = adaptCollateralPositions(
+      {
+        "0xbtc": {
+          address: "0xBTC",
+          name: "Wrapped BTC",
+          symbol: "WBTC",
+          decimals: 8,
+          positions: [{ collateralBalance: "100000000" }],
+        },
+      },
+      {
+        "0xbtc": { price: { usd: 100000 } },
+      },
+      2,
+      395_346.145491,
+    );
+
+    expect(result.metadata).toMatchObject({
+      immediateRedeemableUsd: 395_346.145491,
+    });
+  });
 });

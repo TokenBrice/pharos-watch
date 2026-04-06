@@ -1,9 +1,24 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "3.5",
+  currentVersion: "3.6",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "3.6",
+      title: "ZCHF VCHF bridge route added with live bridge-capacity telemetry",
+      date: "2026-04-06",
+      effectiveAt: 1775484000,
+      summary:
+        "Frankencoin ZCHF now models its permissionless onchain StablecoinBridge exit into VCHF instead of remaining uncovered in redemption backstops.",
+      impact: [
+        "`zchf-frankencoin` now uses a reviewed `stablecoin-redeem` route for the public ZCHF -> VCHF burn-and-withdraw bridge contract",
+        "The existing Frankencoin collateral-positions reserve adapter now emits the bridge's live VCHF inventory as immediate redeemable capacity telemetry, so fresh hourly reserve sync can drive current bridge-buffer sizing directly",
+        "When live bridge telemetry is temporarily unavailable, the route falls back to a conservative reviewed 1.4% bridge-buffer ratio instead of disappearing entirely",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.5",
       title: "Telemetry-aware freshness gate for reserve-sync capacity",
