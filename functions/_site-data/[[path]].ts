@@ -1,6 +1,12 @@
 import { resolveApiRequestRouteMetric } from "@shared/lib/request-attribution";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { resolveSiteDataUpstreamPath } from "@shared/lib/site-data-routes";
+import {
+  jsonError,
+  summarizeFetchError,
+  buildUpstreamHeaders as buildUpstreamHeadersShared,
+  buildProxyResponse as buildProxyResponseShared,
+} from "../lib/proxy-utils";
 import { recordSiteDataRequest } from "../lib/request-attribution";
 import { rejectIfNotSiteDataUiOrigin } from "../lib/site-data-origin";
 import {
@@ -45,17 +51,6 @@ interface SiteDataProxyContext {
   };
 }
 
-function jsonError(status: number, message: string, headers?: HeadersInit): Response {
-  return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: {
-      "Cache-Control": "no-store",
-      "Content-Type": "application/json",
-      ...headers,
-    },
-  });
-}
-
 function methodNotAllowed(): Response {
   return jsonError(405, "Method not allowed", { Allow: "GET" });
 }
@@ -80,31 +75,13 @@ function buildUpstreamHeaders(
     return jsonError(500, "Site API proxy is not configured");
   }
 
-  const headers = new Headers();
-  for (const headerName of FORWARDED_REQUEST_HEADERS) {
-    const value = request.headers.get(headerName);
-    if (value) {
-      headers.set(headerName, value);
-    }
-  }
-  headers.set(SITE_PROXY_HEADER, secret);
-  return headers;
+  return buildUpstreamHeadersShared(request, FORWARDED_REQUEST_HEADERS, {
+    [SITE_PROXY_HEADER]: secret,
+  });
 }
 
 function buildProxyResponse(upstreamResponse: Response): Response {
-  const headers = new Headers();
-  for (const headerName of FORWARDED_RESPONSE_HEADERS) {
-    const value = upstreamResponse.headers.get(headerName);
-    if (value) {
-      headers.set(headerName, value);
-    }
-  }
-
-  return new Response(upstreamResponse.body, {
-    status: upstreamResponse.status,
-    statusText: upstreamResponse.statusText,
-    headers,
-  });
+  return buildProxyResponseShared(upstreamResponse, FORWARDED_RESPONSE_HEADERS);
 }
 
 function buildCacheKey(request: Request): Request {
@@ -117,16 +94,6 @@ function getDefaultCache(): Cache {
 
 function canCacheResponse(response: Response): boolean {
   return response.ok && !response.headers.has("Set-Cookie");
-}
-
-function summarizeFetchError(error: unknown): { kind: string; message: string } {
-  if (error instanceof DOMException) {
-    return { kind: error.name, message: error.message };
-  }
-  if (error instanceof Error) {
-    return { kind: error.name, message: error.message };
-  }
-  return { kind: typeof error, message: String(error) };
 }
 
 async function queueSiteDataTelemetry(
