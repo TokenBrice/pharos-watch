@@ -207,6 +207,8 @@ Computed from the shared public-health floor plus cron availability:
 
 `degraded` cron runs are counted separately in `summary.degradedCrons` and shown in cron cards, but do not by themselves mark availability degraded.
 
+`openCircuitGroups` here means public-impact circuit groups only. Dynamic per-coin `live-reserves:*` breakers still render in the reliability tables, but they do not degrade availability on their own because reserve sync already has its own data-quality lane and thresholds.
+
 FX source freshness is also cadence-aware now. `/api/health` and `/api/status` still expose `fx-rates.sourceStatus`, but intraday sources use age windows while ECB/secondary daily sources compare their published source date against the next expected business-day or calendar-day rollover. Realtime OXR / Chainlink overlays no longer erase a fresh daily fiat source date when they are only refining the current daily reference stack, and commodity pegs can now refresh from the fresh `stablecoins` cache when `gold-api.com` is unavailable from Workers, so the status surface does not fall into false intraday staleness during later provider outages. One-step daily lag stays operator-visible as `degraded`, while only `stale` FX sources are excluded from downstream price validation.
 
 ### Data quality status

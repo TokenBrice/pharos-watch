@@ -1,5 +1,5 @@
 import { getCacheImpactStatus } from "./cache-health";
-import type { CacheStatus, HealthResponse } from "../types/status";
+import type { CacheStatus, CircuitRecord, HealthResponse } from "../types/status";
 
 export type PublicStatusTone = HealthResponse["status"];
 
@@ -50,4 +50,16 @@ export function getOverallCacheImpactStatus(
 
 export function getCircuitImpactStatus(openCircuitCount: number): PublicStatusTone {
   return openCircuitCount >= 3 ? "degraded" : "healthy";
+}
+
+export function isPublicImpactCircuitKey(key: string): boolean {
+  return !key.startsWith("live-reserves:");
+}
+
+export function countPublicImpactOpenCircuits(
+  circuits: Record<string, CircuitRecord>,
+): number {
+  return Object.entries(circuits).filter(
+    ([key, circuit]) => isPublicImpactCircuitKey(key) && circuit.state === "open",
+  ).length;
 }

@@ -1349,9 +1349,11 @@ The `/status/` page consumes the richer blacklist fields directly so it can dist
 
 **Overall status logic:**
 
-- `healthy` — every cache impact is healthy, the public mint/burn lane is healthy, fewer than 3 circuit groups are open, and the health subqueries all resolved cleanly
-- `degraded` — any cache impact is degraded (including FX cached-fallback or source-cadence lag), any of the blacklist/mint-burn/circuit health subqueries failed, the public mint/burn lane is warning-only, or 3+ circuit groups are open
+- `healthy` — every cache impact is healthy, the public mint/burn lane is healthy, fewer than 3 public-impact circuit groups are open, and the health subqueries all resolved cleanly
+- `degraded` — any cache impact is degraded (including FX cached-fallback or source-cadence lag), any of the blacklist/mint-burn/circuit health subqueries failed, the public mint/burn lane is warning-only, or 3+ public-impact circuit groups are open
 - `stale` — any cache impact is stale, or the public mint/burn lane is stale versus its critical-lane cadence
+
+`/api/health` still emits every circuit record under `circuits`, including dynamic per-coin `live-reserves:*` scopes, but those reserve-specific breakers do not change the top-level public status on their own; reserve sync health is evaluated on the dedicated reserve/data-quality lanes instead.
 
 Blacklist ratio fields are still emitted here for the public surface, but threshold-based blacklist severity lives under `/api/status` data-quality; `/api/health` only escalates its top-level status when the blacklist health loader itself fails.
 
@@ -2474,7 +2476,7 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 
 `crons[*].healthy` reflects availability impact. Fresh cron runs with `status="degraded"` are warning-only and counted in `summary.degradedCrons`, but they do not mark availability unhealthy on their own.
 
-`availabilityStatus` also inherits the shared public-health floor used by `/api/health`: cache-impact status, the critical mint/burn lane's public warning/staleness contract, and 3+ open circuit groups can degrade availability even when cron freshness alone is still green.
+`availabilityStatus` also inherits the shared public-health floor used by `/api/health`: cache-impact status, the critical mint/burn lane's public warning/staleness contract, and 3+ public-impact open circuit groups can degrade availability even when cron freshness alone is still green. Dynamic per-coin `live-reserves:*` breakers remain visible in `circuits`, but they do not change `availabilityStatus` on their own.
 
 `crons[*].inFlight` is present when a leased cron is actively reporting `cron_run_progress` and the matching `cron_leases` row is still active for the same owner. It includes `startedAt`, `updatedAt`, `stage`, optional `itemsDone/itemsTotal`, optional `message/metadata`, and a `stale` flag when the heartbeat stops updating.
 

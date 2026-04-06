@@ -1,4 +1,10 @@
-import { getCircuitImpactStatus, getOverallCacheImpactStatus, getPublicMintBurnStatus, maxPublicStatus } from "@shared/lib/public-health";
+import {
+  countPublicImpactOpenCircuits,
+  getCircuitImpactStatus,
+  getOverallCacheImpactStatus,
+  getPublicMintBurnStatus,
+  maxPublicStatus,
+} from "@shared/lib/public-health";
 import type { HealthResponse } from "@shared/types/status";
 import { buildCacheStatuses, type CacheStatusFailure } from "./api-utils";
 import { queryBlacklistGapMetrics, type BlacklistGapMetrics } from "./blacklist-gaps";
@@ -298,7 +304,7 @@ export async function assessPublicHealth(
     warnings.push("mint-burn-query-failed");
   }
 
-  const openCircuitCount = Object.values(circuitResult.circuits).filter((circuit) => circuit.state === "open").length;
+  const openCircuitCount = countPublicImpactOpenCircuits(circuitResult.circuits);
   const circuitImpactStatus = circuitResult.error
     ? "degraded"
     : getCircuitImpactStatus(openCircuitCount);

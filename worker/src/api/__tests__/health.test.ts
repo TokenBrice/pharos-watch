@@ -298,6 +298,57 @@ describe("handleHealth", () => {
     expect(Object.values(body.circuits).filter((circuit) => circuit.state === "open")).toHaveLength(3);
   });
 
+  it("keeps public health healthy when only live-reserve circuit groups are open", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const openCircuitValue = (openedAt: number) => JSON.stringify({
+      state: "open",
+      consecutiveFailures: 3,
+      lastFailureAt: openedAt - 30,
+      lastSuccessAt: null,
+      openedAt,
+    });
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          { key: "stablecoins", updated_at: now - 60, value: "{}" },
+          { key: "stablecoin-charts", updated_at: now - 60, value: "{}" },
+          { key: "usds-status", updated_at: now - 60, value: "{}" },
+          { key: "fx-rates", updated_at: now - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
+          { key: "treasury-stable-exposure", updated_at: now - 60, value: "[]" },
+          { key: "bluechip-ratings", updated_at: now - 60, value: "{}" },
+        ],
+      },
+      { match: "dex_liquidity", rows: [], first: { age: 60 } },
+      { match: "yield_data", rows: [], first: { age: 60 } },
+      { match: "stress_signals", rows: [], first: { age: 60 } },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+      { match: "mint_burn_hourly", rows: [], first: { total: 1234 } },
+      { match: "SELECT MAX(timestamp) as latest FROM mint_burn_events", rows: [], first: { latest: now - 30 } },
+      { match: "SELECT MAX(hour_ts) as latest FROM mint_burn_hourly", rows: [], first: { latest: now - 3600 } },
+      { match: "SELECT symbol, MAX(timestamp) as latest", rows: [{ symbol: "USDT", latest: now - 600 }] },
+      { match: "SELECT status", rows: [], first: { status: "ok" } },
+      { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
+      {
+        match: "key LIKE 'circuit:%'",
+        rows: [
+          { key: "circuit:live-reserves:ethena", value: openCircuitValue(now - 600) },
+          { key: "circuit:live-reserves:feusd-felix", value: openCircuitValue(now - 540) },
+          { key: "circuit:live-reserves:mtbill-midas", value: openCircuitValue(now - 480) },
+        ],
+      },
+    ]);
+
+    const res = await handleHealth(db);
+    const body = (await res.json()) as {
+      status: "healthy" | "degraded" | "stale";
+      circuits: Record<string, { state: string }>;
+    };
+
+    expect(body.status).toBe("healthy");
+    expect(Object.values(body.circuits).filter((circuit) => circuit.state === "open")).toHaveLength(3);
+  });
+
   it("includes telegramSummary when telegram tables exist", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([

@@ -13,6 +13,7 @@ import {
   classifyBucketedValues,
   computeUnknownExposurePct,
   decimalStringFromBigInt,
+  fetchDefiLlamaPrices,
   fetchJsonWithRetry,
 
   isReserveRisk,
@@ -426,5 +427,42 @@ describe("fetchJsonWithRetry", () => {
     }
     expect(error.message).toContain("JSON parse failed for https://example.com/api (text/html; charset=utf-8)");
     expect(error.message).toContain("body starts with: <!DOCTYPE html><html><body>blocked</body></html>");
+  });
+});
+
+describe("fetchDefiLlamaPrices", () => {
+  const signal = AbortSignal.timeout(5000);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("normalizes HyperEVM assets to DefiLlama's hyperliquid chain slug", async () => {
+    vi.mocked(fetchWithRetry).mockResolvedValue(
+      new Response(JSON.stringify({
+        coins: {
+          "hyperliquid:0x5555555555555555555555555555555555555555": { price: 37.27 },
+        },
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const prices = await fetchDefiLlamaPrices([
+      {
+        key: "WHYPE",
+        chain: "hyperevm",
+        address: "0x5555555555555555555555555555555555555555",
+      },
+    ], signal);
+
+    expect(prices.get("WHYPE")).toBe(37.27);
+    expect(fetchWithRetry).toHaveBeenCalledWith(
+      "https://coins.llama.fi/prices/current/hyperliquid:0x5555555555555555555555555555555555555555",
+      { signal },
+      2,
+      { timeoutMs: 10_000 },
+    );
   });
 });

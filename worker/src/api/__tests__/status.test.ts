@@ -1859,6 +1859,64 @@ describe("handleStatus", () => {
     expect(body.causes.availability.some((cause) => cause.code === "open_circuit_groups")).toBe(true);
   });
 
+  it("keeps availability healthy when only live-reserve circuit groups are open", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const cronRows = Object.keys(CRON_INTERVALS).map((job) => makeCronRow(job, "ok", 60));
+    const openCircuitValue = (openedAt: number) => JSON.stringify({
+      state: "open",
+      consecutiveFailures: 3,
+      lastFailureAt: openedAt - 30,
+      lastSuccessAt: null,
+      openedAt,
+    });
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          makeCacheRow("stablecoins"),
+          makeCacheRow("stablecoin-charts"),
+          makeCacheRow("usds-status"),
+          makeCacheRow("fx-rates"),
+          makeCacheRow("treasury-stable-exposure"),
+          makeCacheRow("bluechip-ratings"),
+        ],
+      },
+      { match: "dex_liquidity", rows: [], first: { age: 60 } },
+      { match: "yield_data", rows: [], first: { age: 60 } },
+      { match: "stress_signals", rows: [], first: { age: 60 } },
+      { match: "cron_runs", rows: cronRows },
+      {
+        match: "key LIKE 'circuit:%'",
+        rows: [
+          { key: "circuit:live-reserves:ethena", value: openCircuitValue(now - 600) },
+          { key: "circuit:live-reserves:feusd-felix", value: openCircuitValue(now - 540) },
+          { key: "circuit:live-reserves:mtbill-midas", value: openCircuitValue(now - 480) },
+        ],
+      },
+      {
+        match: "cache",
+        rows: [],
+        first: { value: stablecoinsCache, updated_at: now - 60 },
+      },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request);
+    const body = (await res.json()) as {
+      availabilityStatus: string;
+      causes: { availability: Array<{ code: string }> };
+    };
+
+    expect(body.availabilityStatus).toBe("healthy");
+    expect(body.causes.availability.some((cause) => cause.code === "open_circuit_groups")).toBe(false);
+  });
+
   it("keeps data quality healthy when blacklist gaps are low-ratio and not recent", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({

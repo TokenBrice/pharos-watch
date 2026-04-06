@@ -63,6 +63,9 @@ interface OnchainRateProbe {
 }
 
 const ADAPTER_USER_AGENT = "Mozilla/5.0";
+const DEFILLAMA_PRICE_CHAIN_ALIASES: Record<string, string> = {
+  hyperevm: "hyperliquid",
+};
 
 function summarizeResponseBody(raw: string, limit = 120): string {
   return raw.replace(/\s+/g, " ").trim().slice(0, limit);
@@ -102,6 +105,11 @@ function getCachedRequest<T>(
   });
   cache.set(key, promise);
   return promise;
+}
+
+function getDefiLlamaPriceAssetKey(chain: string, address: string): string {
+  const resolvedChain = DEFILLAMA_PRICE_CHAIN_ALIASES[chain] ?? chain;
+  return `${resolvedChain}:${address.toLowerCase()}`;
 }
 
 export function isHttpJsonInput(input: LiveReserveInput): input is JsonInput {
@@ -256,7 +264,7 @@ export async function fetchDefiLlamaPrices(
 ): Promise<Map<string, number>> {
   if (assets.length === 0) return new Map();
 
-  const assetKeys = assets.map(({ chain, address }) => `${chain}:${address.toLowerCase()}`);
+  const assetKeys = assets.map(({ chain, address }) => getDefiLlamaPriceAssetKey(chain, address));
   return getCachedRequest(
     `defillama-prices:${assetKeys.join(",")}`,
     async () => {
@@ -280,7 +288,7 @@ export async function fetchDefiLlamaPrices(
       const priceMap = new Map<string, number>();
 
       for (const asset of assets) {
-        const lookupKey = `${asset.chain}:${asset.address.toLowerCase()}`;
+        const lookupKey = getDefiLlamaPriceAssetKey(asset.chain, asset.address);
         const price = body.coins?.[lookupKey]?.price;
         if (typeof price === "number" && price > 0) {
           priceMap.set(asset.key, price);
