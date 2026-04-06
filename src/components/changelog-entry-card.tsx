@@ -24,13 +24,25 @@ const TAG_COLOR: Record<SummaryTag, string> = {
   design: "bg-sky-500/80",
 };
 
-export function formatDateRange(from: string, to: string): string {
+export function formatDateRange(
+  from: string,
+  to: string,
+  options?: { compact?: boolean },
+): string {
   const fromDate = new Date(from + "T00:00:00");
   const toDate = new Date(to + "T00:00:00");
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
   const fromStr = fromDate.toLocaleDateString("en-US", opts);
 
   const sameMonth = fromDate.getMonth() === toDate.getMonth();
+
+  if (options?.compact) {
+    const toStr = sameMonth
+      ? String(toDate.getDate())
+      : toDate.toLocaleDateString("en-US", opts);
+    return `${fromStr} – ${toStr}`;
+  }
+
   const toStr = sameMonth
     ? `${toDate.getDate()}, ${toDate.getFullYear()}`
     : toDate.toLocaleDateString("en-US", { ...opts, year: "numeric" });
@@ -78,7 +90,7 @@ export function ChangelogEntryCard({
             className="pharos-focus-ring rounded-sm no-underline hover:underline underline-offset-4"
           >
             <time dateTime={isoDate(dateRange.from)}>
-              {formatDateRange(dateRange.from, dateRange.to)}
+              {formatDateRange(dateRange.from, dateRange.to, { compact: true })}
             </time>
             <span
               className="ml-2 opacity-0 group-hover/heading:opacity-60 transition-opacity text-muted-foreground select-none"
@@ -128,8 +140,20 @@ export function ChangelogEntryCard({
         })}
       </ul>
 
-      <details className="group">
-        <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors select-none">
+      <details className="group/commits">
+        <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors select-none [&::-webkit-details-marker]:hidden">
+          <svg
+            className="size-3 shrink-0 transition-transform duration-150 group-open/commits:rotate-90"
+            viewBox="0 0 12 12"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M4.5 2.5L8 6l-3.5 3.5" />
+          </svg>
           Show commits
         </summary>
         <ul className="mt-3 space-y-1 text-xs font-mono text-muted-foreground">
