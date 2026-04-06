@@ -99,6 +99,8 @@ The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts
 
 `dex_prices` rows are only trusted for depeg logic when they are both fresh (`updated_at < 35 min`) and deep enough (`source_total_tvl >= $1M`). Thin DEX rows remain visible in storage for analytics, but they do not suppress or confirm events.
 
+The stablecoin detail page can still show the live price deviation for a tracked coin below the live depeg-event floor, but that state is explicitly labelled as coverage-limited. Low-cap tracked coins can therefore look off-peg in the detail UI without opening a `depeg_events` row.
+
 ### Per-Asset Processing
 
 Validation gates (skip if any fail):
@@ -106,7 +108,7 @@ Validation gates (skip if any fail):
 - Must be in `PSI_ELIGIBLE_STABLECOINS`
 - Not a NAV token (`meta.flags.navToken`)
 - Price valid: non-null, is a number, not NaN, > 0
-- Supply >= $1M (via `sumPegBuckets`)
+- Supply >= $1M (via `sumPegBuckets`) for live event recording
 - Peg reference valid: finite and > 0
 
 Primary-price trust gates:
@@ -391,7 +393,7 @@ Returns `null` if < 7 days tracking. Scores based on 7–30 days are flagged as 
 |----------|----------|
 | Duplicate events | Unique index (`stablecoin_id`, `started_at`, `source`) + merge at run start |
 | NAV tokens | Skipped (expected to appreciate, depeg detection N/A) |
-| Supply < $1M | Skipped (prevents micro-cap noise) |
+| Supply < $1M | Skipped for live event recording (prevents micro-cap noise); detail UI may still show current price deviation with an explicit coverage-limited note |
 | Missing/invalid prices | Multiple null/NaN/<= 0 checks |
 | Peg reference validation | Must be finite and > 0 |
 | DEX freshness | Prices > 35 min old ignored |

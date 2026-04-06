@@ -248,4 +248,32 @@ describe("handlePegSummary", () => {
     };
     expect(body.summary.coinsAtPeg).toBeGreaterThanOrEqual(1);
   });
+
+  it("marks low-cap coins as depeg-event coverage limited", async () => {
+    const asset = makeAsset({
+      id: "cjpy-yamato",
+      symbol: "CJPY",
+      name: "Convertible JPY Token",
+      pegType: "peggedJPY",
+      price: 0.005,
+      priceSource: "coingecko",
+      priceConfidence: "single-source",
+      priceUpdatedAt: nowSec,
+      circulating: { peggedJPY: 500_000 },
+    });
+    const db = makePegSummaryDb([asset]);
+    const res = await handlePegSummary(db);
+    const body = (await res.json()) as {
+      coins: Array<{
+        id: string;
+        currentDeviationBps: number | null;
+        depegEventCoverageLimited?: boolean;
+      }>;
+    };
+    const coin = body.coins.find((c) => c.id === "cjpy-yamato");
+    expect(coin).toMatchObject({
+      currentDeviationBps: null,
+      depegEventCoverageLimited: true,
+    });
+  });
 });

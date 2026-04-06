@@ -101,5 +101,25 @@ describe("derivePegAnalyticsSnapshot", () => {
     expect(snapshot.pegDataById.has("usdt-tether")).toBe(true);
     expect(snapshot.pegDataById.has("usdc-circle")).toBe(false); // nav token excluded by default
     expect(snapshot.pegDataById.get("usdt-tether")?.currentDeviationBps).toBe(100);
+    expect(snapshot.pegDataById.get("usdt-tether")?.depegEventCoverageLimited).toBe(false);
+  });
+
+  it("flags low-cap coins as coverage-limited while keeping current deviation null", async () => {
+    const snapshot = await derivePegAnalyticsSnapshot(db, {
+      peggedAssets: [
+        {
+          id: "usdt-tether",
+          symbol: "AAA",
+          name: "AAA Stable",
+          pegType: "peggedUSD",
+          price: 0.9,
+          circulating: { peggedUSD: 500_000 },
+        } as never,
+      ],
+      methodologyAsOf: 1_700_000_000,
+    });
+
+    expect(snapshot.pegDataById.get("usdt-tether")?.currentDeviationBps).toBeNull();
+    expect(snapshot.pegDataById.get("usdt-tether")?.depegEventCoverageLimited).toBe(true);
   });
 });

@@ -21,6 +21,7 @@ import {
   getDepegDewsMethodologyVersionAt,
 } from "@shared/lib/depeg-dews-version";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
+import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-detection-config";
 
 function pegTypeFromCurrency(pegCurrency: string): string | null {
   switch (pegCurrency) {
@@ -131,6 +132,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     pegCurrency: string;
       governance: string;
       currentDeviationBps: number | null;
+      depegEventCoverageLimited?: boolean;
       pegScore: number | null;
       priceSource?: string;
       priceConfidence?: StablecoinData["priceConfidence"];
@@ -180,7 +182,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     const supply = asset?.circulating
       ? sumPegBuckets(asset.circulating)
       : 0;
-    if (dexRow && supply >= 1_000_000 && isTrustedDexPriceRow(dexRow, now, "ui")) {
+    if (dexRow && supply >= DEPEG_EVENT_MIN_SUPPLY_USD && isTrustedDexPriceRow(dexRow, now, "ui")) {
       const pegType = pegData.pegType || asset?.pegType || pegTypeFromCurrency(meta.flags.pegCurrency);
       const dexBps = deriveDexDeviationBps(
         dexRow.dex_price_usd,
@@ -214,6 +216,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       pegCurrency: meta.flags.pegCurrency,
       governance: meta.flags.governance,
       currentDeviationBps: currentBps,
+      depegEventCoverageLimited: pegData.depegEventCoverageLimited,
       pegScore: pegData.pegScore,
       priceSource: asset?.priceSource,
       priceConfidence: asset?.priceConfidence ?? null,

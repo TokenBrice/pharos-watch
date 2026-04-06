@@ -362,6 +362,7 @@ const PegSummaryCoinSchema = z.object({
   pegCurrency: z.string(),
   governance: z.string(),
   currentDeviationBps: z.number().nullable(),
+  depegEventCoverageLimited: z.boolean().optional(),
   pegScore: z.number().nullable(),
   priceSource: z.string().optional(),
   priceConfidence: PriceConfidenceSchema.nullable().optional(),

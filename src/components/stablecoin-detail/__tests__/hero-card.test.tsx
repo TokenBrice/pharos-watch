@@ -346,4 +346,33 @@ describe("HeroCard", () => {
     expect(html).toContain("1Y vs USD");
     expect(html).toContain("+12.34%");
   });
+
+  it("renders a limited depeg coverage note for sub-floor off-peg coins", () => {
+    const html = renderToStaticMarkup(
+      <HeroCard
+        coin={coin}
+        coinData={{ ...coinData, price: 0.97, circulating: { peggedUSD: 500_000 } }}
+        logoSrc="/logos/usdc.svg"
+        isNavToken={false}
+        mcap={500_000}
+        supply={500_000}
+        prevDay={495_000}
+        prevWeek={490_000}
+        prevMonth={480_000}
+        performanceVsUsd1y={null}
+        pegRef={1}
+        deviationBps={-300}
+        gaugeDeviationBps={-300}
+        pegScoreResult={{ ...pegScoreResult, activeDepeg: false, depegEventCoverageLimited: true }}
+        recordedDepegEventCount={0}
+        liquidityData={liquidityData}
+        yieldRanking={yieldRanking}
+        stressSignal={stressSignal}
+        reportCard={reportCardWithInheritedBlacklistRisk}
+        onOpenFeedback={() => {}}
+      />,
+    );
+
+    expect(html).toContain("Below $1.00M live-event floor. Deviation is shown, but event history may stay empty.");
+  });
 });

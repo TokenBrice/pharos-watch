@@ -5,6 +5,7 @@ import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { getDepegDewsMethodologyVersionAt } from "@shared/lib/depeg-dews-version";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { DepegEvent, PegSummaryCoin, StablecoinData } from "@shared/types/market";
+import { DEPEG_EVENT_MIN_SUPPLY_USD } from "./constants";
 import { type DepegRow, rowToDepegEvent } from "./depeg-helpers";
 import { getFirstSeenDates } from "./db";
 
@@ -56,11 +57,15 @@ export async function derivePegAnalyticsSnapshot(
 
     const asset = priceById.get(meta.id);
     const events = eventsByCoin.get(meta.id) ?? [];
+    const supply = asset?.circulating ? sumPegBuckets(asset.circulating) : 0;
+    const depegEventCoverageLimited =
+      !meta.flags.navToken &&
+      supply > 0 &&
+      supply < DEPEG_EVENT_MIN_SUPPLY_USD;
 
     let currentDeviationBps: number | null = null;
     if (asset?.price != null && typeof asset.price === "number" && Number.isFinite(asset.price)) {
-      const supply = asset.circulating ? sumPegBuckets(asset.circulating) : 0;
-      if (supply >= 1_000_000) {
+      if (supply >= DEPEG_EVENT_MIN_SUPPLY_USD) {
         const pegRef = getPegReference(asset.pegType, pegRates, meta.commodityOunces);
         if (pegRef > 0) {
           currentDeviationBps = Math.round(((asset.price / pegRef) - 1) * 10000);
@@ -79,6 +84,7 @@ export async function derivePegAnalyticsSnapshot(
       pegCurrency: meta.flags.pegCurrency,
       governance: meta.flags.governance,
       currentDeviationBps,
+      depegEventCoverageLimited,
       pegScore: scoreResult.pegScore,
       pegPct: scoreResult.pegPct,
       severityScore: scoreResult.severityScore,

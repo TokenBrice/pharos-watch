@@ -12,6 +12,7 @@ Internal changelog reconstructed from git history. Covers `v1.0` through `v5.2` 
 - DEX-assisted recovery now requires at least 2 corroborating protocol-level DEX groups inside threshold
 - Large challenger pools can veto ambiguous-primary DEX recoveries when they still show the old depeg direction
 - Prevents synthetic live-event splits on chronic depegs where one high-TVL DEX protocol median snaps back toward peg while the broader DEX surface remains broken
+- The detail/API surface now explicitly marks coins below the `$1M` live-event floor so empty depeg history no longer implies that a low-cap off-peg coin necessarily maintained peg
 
 ## v5.1 — Ongoing depeg continuity over DEX-only contradiction (Mar 31, 2026)
 

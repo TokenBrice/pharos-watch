@@ -25,6 +25,11 @@ import {
   formatSignedPercent,
   formatSupply,
 } from "@shared/lib/format";
+import {
+  DEPEG_THRESHOLD_BPS,
+  DEPEG_THRESHOLD_BPS_NON_USD,
+} from "@shared/lib/depeg-config";
+import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-detection-config";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { confidenceClass } from "@/lib/confidence";
@@ -440,6 +445,15 @@ export function HeroCard({
     if (stressSignal.band === "WARNING") return "border-l-2 border-l-orange-500";
     return undefined;
   })();
+  const depegThresholdBps = coinData.pegType === "peggedUSD"
+    ? DEPEG_THRESHOLD_BPS
+    : DEPEG_THRESHOLD_BPS_NON_USD;
+  const limitedDepegCoverageNote =
+    !isNavToken &&
+    pegScoreResult?.depegEventCoverageLimited === true &&
+    Math.abs(deviationBps) >= depegThresholdBps
+      ? `Below ${formatCurrency(DEPEG_EVENT_MIN_SUPPLY_USD)} live-event floor. Deviation is shown, but event history may stay empty.`
+      : null;
 
   const tertiaryMetrics: TertiaryMetricConfig[] = [
     {
@@ -567,6 +581,11 @@ export function HeroCard({
             <p className={`text-xs font-mono mt-1 ${isNavToken ? "text-green-700 dark:text-green-400" : deviationColorClass(Math.abs(deviationBps))}`}>
               {formatPegDeviation(coinData.price, pegRef)}
             </p>
+            {limitedDepegCoverageNote ? (
+              <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">
+                {limitedDepegCoverageNote}
+              </p>
+            ) : null}
           </div>
 
           {/* Market Cap */}
@@ -654,6 +673,11 @@ export function HeroCard({
                       <p className={`text-xs font-mono mt-0.5 ${isNavToken ? "text-green-700 dark:text-green-400" : deviationColorClass(Math.abs(deviationBps))}`}>
                         {formatPegDeviation(coinData.price, pegRef)}
                       </p>
+                      {limitedDepegCoverageNote ? (
+                        <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">
+                          {limitedDepegCoverageNote}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 </div>

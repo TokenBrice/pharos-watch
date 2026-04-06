@@ -78,7 +78,11 @@ export function loadHotspotBaseline() {
 }
 
 export function writeHotspotBaseline(metrics) {
-  writeFileSync(BASELINE_PATH, `${JSON.stringify(metrics, null, 2)}\n`);
+  const existingBaseline = loadHotspotBaseline();
+  const mergedBaseline = Object.fromEntries(
+    TARGET_FILES.map((file) => [file, { ...existingBaseline[file], ...metrics[file] }]),
+  );
+  writeFileSync(BASELINE_PATH, `${JSON.stringify(mergedBaseline, null, 2)}\n`);
 }
 
 export function compareHotspotMetrics(current, baseline) {

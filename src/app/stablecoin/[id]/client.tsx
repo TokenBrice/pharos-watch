@@ -328,6 +328,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
               stablecoinId={viewModel.id}
               earliestTrackingDate={viewModel.earliestTrackingDate}
               hasPriceData={viewModel.coinData.price != null}
+              depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
             />
           </section>
         </div>

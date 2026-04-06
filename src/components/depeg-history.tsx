@@ -17,7 +17,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
-import { formatDuration, formatNativePrice, formatEventDate, formatBps } from "@shared/lib/format";
+import { formatDuration, formatNativePrice, formatEventDate, formatBps, formatCurrency } from "@shared/lib/format";
+import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-detection-config";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { computePegStability } from "@/lib/peg-stability";
@@ -49,7 +50,17 @@ function DepegHistoryIntro() {
   );
 }
 
-export function DepegHistory({ stablecoinId, earliestTrackingDate, hasPriceData = true }: { stablecoinId: string; earliestTrackingDate?: number | null; hasPriceData?: boolean }) {
+export function DepegHistory({
+  stablecoinId,
+  earliestTrackingDate,
+  hasPriceData = true,
+  depegEventCoverageLimited = false,
+}: {
+  stablecoinId: string;
+  earliestTrackingDate?: number | null;
+  hasPriceData?: boolean;
+  depegEventCoverageLimited?: boolean;
+}) {
   const {
     data,
     isLoading,
@@ -110,6 +121,12 @@ export function DepegHistory({ stablecoinId, earliestTrackingDate, hasPriceData 
           <div className="rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
             <p className="text-sm text-muted-foreground">
               No depeg events recorded. No price data available to verify peg status.
+            </p>
+          </div>
+        ) : depegEventCoverageLimited ? (
+          <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+            <p className="text-sm text-amber-700 dark:text-amber-400">
+              No depeg events recorded. This coin is currently below the {formatCurrency(DEPEG_EVENT_MIN_SUPPLY_USD)} live depeg-event floor, so Pharos shows the price deviation but does not open live depeg events at this size.
             </p>
           </div>
         ) : (

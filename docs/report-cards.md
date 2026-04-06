@@ -13,7 +13,7 @@ Three-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v6.93 raised the peg multiplier exponent from 0.20 to 0.40 and added graduated active-depeg overall-score caps (≥ 2500 bps → F, ≥ 1000 bps → D). v6.94 keeps that stronger peg treatment but closes the NAV-wrapper loophole: configured NAV wrappers can inherit peg stability from a referenced base stablecoin, while genuine fund-share NAV tokens still remain neutral. The `activeDepegBps` field remains in `RawDimensionInputs` so stressed-grade recomputations and the frontend can apply the same cap.
+Current-version note: v6.94 keeps the stronger peg treatment introduced in v6.93 and closes the NAV-wrapper loophole: configured NAV wrappers can inherit peg stability from a referenced base stablecoin, while genuine fund-share NAV tokens still remain neutral. The `activeDepegBps` field remains in `RawDimensionInputs` so stressed-grade recomputations and the frontend can apply the same cap.
 
 ## Dimensions
 

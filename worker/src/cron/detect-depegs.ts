@@ -1,4 +1,5 @@
 import {
+  DEPEG_EVENT_MIN_SUPPLY_USD,
   getDepegThresholdBps,
   DEPEG_CONFIRMATION_SUPPLY_THRESHOLD,
   DEPEG_DEX_PROTOCOL_CORROBORATION_MIN,
@@ -396,7 +397,7 @@ export async function detectDepegEvents(
     }
 
     const supply = sumPegBuckets(asset.circulating);
-    if (supply < 1_000_000) continue;
+    if (supply < DEPEG_EVENT_MIN_SUPPLY_USD) continue;
 
     const pegRef = getPegReference(asset.pegType, pegRates, meta.commodityOunces);
     if (!Number.isFinite(pegRef) || pegRef <= 0) continue;
