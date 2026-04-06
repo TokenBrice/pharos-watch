@@ -136,20 +136,14 @@ export interface ResolvedPublicApiRateLimitSalt {
 
 export type PublicApiAuthMode = "off" | "report-only" | "enforce";
 
+import { hasConfiguredValue, getConfiguredValue } from "@shared/lib/env-utils";
+
 export function parseCsvEnv(value: string | undefined): string[] {
   if (!value) return [];
   return value
     .split(",")
     .map((part) => part.trim())
     .filter((part) => part.length > 0);
-}
-
-function hasConfiguredValue(value: string | undefined): value is string {
-  return typeof value === "string" && value.trim().length > 0;
-}
-
-function getConfiguredValue(value: string | undefined): string | null {
-  return hasConfiguredValue(value) ? value.trim() : null;
 }
 
 export function hasAnyCloudflareD1StatusBinding(env: CloudflareD1StatusBindings): boolean {

@@ -1,5 +1,6 @@
 import { isAdminPath, validateEndpointMethod } from "@shared/lib/api-endpoints";
 import { verifyAccessJwt } from "@shared/lib/cloudflare-access-jwt";
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { hasMatchingOpsUiOriginHeader, rejectIfNotOpsUiOrigin } from "../../lib/ops-origin";
 import {
   resolvePagesOpsUiAccessConfig,
@@ -7,7 +8,12 @@ import {
   validatePagesOpsProxyEnv,
   type OpsAdminProxyEnv,
 } from "../../lib/ops-env";
-import { createTimeoutSignal } from "@shared/lib/timeout-signal";
+import {
+  jsonError,
+  summarizeFetchError,
+  buildUpstreamHeaders as buildUpstreamHeadersShared,
+  buildProxyResponse as buildProxyResponseShared,
+} from "../../lib/proxy-utils";
 
 const UPSTREAM_TIMEOUT_MS = 10_000;
 const FORWARDED_REQUEST_HEADERS = [
@@ -35,16 +41,6 @@ interface OpsAdminProxyContext {
   };
 }
 
-function jsonError(status: number, message: string): Response {
-  return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: {
-      "Cache-Control": "no-store",
-      "Content-Type": "application/json",
-    },
-  });
-}
-
 function resolveUpstreamPath(params: OpsAdminProxyContext["params"]): string | null {
   const path = params.path;
   if (Array.isArray(path)) {
@@ -68,46 +64,17 @@ function buildUpstreamHeaders(
     return jsonError(500, "Ops API proxy is not configured");
   }
 
-  const headers = new Headers();
-  for (const headerName of FORWARDED_REQUEST_HEADERS) {
-    const value = request.headers.get(headerName);
-    if (value) {
-      headers.set(headerName, value);
-    }
-  }
-  headers.set("CF-Access-Client-Id", env.OPS_API_SERVICE_TOKEN_ID);
-  headers.set("CF-Access-Client-Secret", env.OPS_API_SERVICE_TOKEN_SECRET);
-
-  return headers;
-}
-
-function buildProxyResponse(upstreamResponse: Response, method: string): Response {
-  const headers = new Headers();
-  for (const headerName of FORWARDED_RESPONSE_HEADERS) {
-    const value = upstreamResponse.headers.get(headerName);
-    if (value) {
-      headers.set(headerName, value);
-    }
-  }
-  if (!headers.has("Cache-Control") && method === "GET") {
-    headers.set("Cache-Control", "no-store");
-  }
-
-  return new Response(method === "HEAD" ? null : upstreamResponse.body, {
-    status: upstreamResponse.status,
-    statusText: upstreamResponse.statusText,
-    headers,
+  return buildUpstreamHeadersShared(request, FORWARDED_REQUEST_HEADERS, {
+    "CF-Access-Client-Id": env.OPS_API_SERVICE_TOKEN_ID,
+    "CF-Access-Client-Secret": env.OPS_API_SERVICE_TOKEN_SECRET,
   });
 }
 
-function summarizeFetchError(error: unknown): { kind: string; message: string } {
-  if (error instanceof DOMException) {
-    return { kind: error.name, message: error.message };
-  }
-  if (error instanceof Error) {
-    return { kind: error.name, message: error.message };
-  }
-  return { kind: typeof error, message: String(error) };
+function buildProxyResponse(upstreamResponse: Response, method: string): Response {
+  return buildProxyResponseShared(upstreamResponse, FORWARDED_RESPONSE_HEADERS, {
+    method,
+    defaultCacheControl: method === "GET" ? "no-store" : undefined,
+  });
 }
 
 function getCookieValue(cookieHeader: string | null, name: string): string | null {
