@@ -53,11 +53,14 @@ The active frontend operator mode is now:
 - `/admin/` disables indexing (`robots: { index: false, follow: false }`)
 - `/status/` stays read-only, uses only public read endpoints, and also disables indexing (`robots: { index: false, follow: false }`)
 - The public `/status/` top fold now keeps browser-sync metadata inside a dedicated `Live watch` side panel instead of the page-title row, so the page title stays stable at narrow and medium widths
+- The public `/status/` top fold also keeps the `Status runway` explicitly fixed to the last 30 days; the `24h` / `7d` / `30d` pills now belong only to the transition log below so filter changes do not silently reframe the hero summary
 - `src/components/status/public-status-hero.tsx`
   - Renders the public-monitor hero with:
     - a status narrative headline instead of the old single-word + four-card metric template
     - a lead-signal panel for the first public warning or steady-state watch note
     - a live-watch side panel for health sample time, public-query sync floor, browser probe summary, circuit-breaker posture, refresh control, and operator-handoff note
+- `src/components/status/uptime-bar.tsx`
+  - Renders the fixed 30-day public `Status runway` with explicit labeling (`Last 30d`) so the hero summary keeps a stable scope even while the transition table is filtered
 - The public `Overview` lane now uses flatter signal cards for mint/burn sync, blacklist ingestion, and a dedicated impacted-surfaces card that translates raw health flags into the public routes most likely to mislead readers
 - The public blacklist-ingestion card keeps historical low-ratio amount gaps visible, but only recent or threshold-crossing gaps inherit warning/stale treatment; this matches the shared blacklist gap thresholds instead of flagging any non-zero backlog as degraded
 - Public cache freshness tables still show the shared cache-age ratio bands (`>1.5x` degraded, `>2.0x` stale), but the hero and impacted-surface callouts now follow the full shared cache-impact floor: missing cache rows remain stale, and source-freshness or repeated cached-fallback mode can degrade/stale a lane even when the age ratio is still inside target
@@ -79,6 +82,10 @@ The active frontend operator mode is now:
   - Manual/admin mutation actions are listed but intentionally not auto-probed
   - `/api/health` and `/api/status` are parsed semantically, so `200` responses with `status/overallStatus = degraded|stale` count as unhealthy in the browser probe summaries
   - Also exports `usePublicEndpointProbes()` for the public `/status/` page, which probes only the public endpoint group
+- `src/hooks/use-public-status-history.ts`
+  - Calls `GET /api/public-status-history` over the public read lane
+  - Uses the endpoint's explicit `window=24h|7d|30d` filter instead of approximating windows with row-count-only limits
+  - The public page binds one fixed `30d` query for the runway and a separate user-selected query for the transition log, so the hero summary and history table no longer fight over the same state
 - `src/hooks/use-status-history.ts`
   - Calls `GET /api/status-history` through same-origin `/api/admin/status-history` on `ops.pharos.watch`
   - Query key uses the fixed ops-proxy scope; no browser-held secret is involved

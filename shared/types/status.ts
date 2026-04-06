@@ -419,6 +419,10 @@ export interface PublicStatusTransition {
   at: number;
 }
 
+export const PUBLIC_STATUS_HISTORY_WINDOWS = ["24h", "7d", "30d"] as const;
+
+export type PublicStatusHistoryWindow = (typeof PUBLIC_STATUS_HISTORY_WINDOWS)[number];
+
 export interface PublicStatusHistoryResponse {
   timestamp: number;
   currentStatus: "healthy" | "degraded" | "stale";

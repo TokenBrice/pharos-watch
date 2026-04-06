@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import type { PublicStatusHistoryWindow } from "@shared/types";
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
@@ -12,13 +13,15 @@ import { UptimeBar } from "@/components/status/uptime-bar";
 import { NoticeRail, StatusSection, SummaryBadge } from "@/components/status/page-primitives";
 import { useHealth } from "@/hooks/api-hooks";
 import { usePublicEndpointProbes } from "@/hooks/use-endpoint-probes";
-import { usePublicStatusHistory, type PublicHistoryWindow } from "@/hooks/use-public-status-history";
+import { usePublicStatusHistory } from "@/hooks/use-public-status-history";
 import { buildBrowserProbeSummary, formatTimestampSeconds, getStatusTone } from "@/lib/status-dashboard-model";
 import {
   getImpactedPublicSurfaces,
   getPublicMintBurnStatus,
   getPublicWorstCacheSummary,
 } from "@/lib/status/public-status";
+
+const RUNWAY_WINDOW: PublicStatusHistoryWindow = "30d";
 
 function PublicSignalCard({
   title,
@@ -41,7 +44,7 @@ function PublicSignalCard({
 }
 
 export default function StatusClient() {
-  const [historyWindow, setHistoryWindow] = useState<PublicHistoryWindow>("7d");
+  const [historyWindow, setHistoryWindow] = useState<PublicStatusHistoryWindow>("7d");
   const {
     data: healthData,
     error: healthError,
@@ -56,6 +59,7 @@ export default function StatusClient() {
     refetch: refetchProbes,
     dataUpdatedAt: probesUpdatedAt,
   } = usePublicEndpointProbes();
+  const { data: runwayHistoryData } = usePublicStatusHistory(RUNWAY_WINDOW);
   const { data: historyData, isLoading: historyLoading } = usePublicStatusHistory(historyWindow);
 
   const handleRefresh = () => {
@@ -185,9 +189,9 @@ export default function StatusClient() {
         />
 
         <UptimeBar
-          transitions={historyData?.transitions ?? []}
-          currentStatus={historyData?.currentStatus ?? healthData.status}
-          lastChangedAt={historyData?.lastChangedAt ?? null}
+          transitions={runwayHistoryData?.transitions ?? []}
+          currentStatus={runwayHistoryData?.currentStatus ?? healthData.status}
+          lastChangedAt={runwayHistoryData?.lastChangedAt ?? null}
         />
 
         <NoticeRail notices={notices} />

@@ -1,12 +1,29 @@
-import { parseQueryParams, withErrorHandler, jsonResponse } from "../lib/api-utils";
+import {
+  parseEnumParam,
+  parseQueryParams,
+  withErrorHandler,
+  jsonResponse,
+} from "../lib/api-utils";
 import {
   getStatusStateSnapshot,
   listRecentStatusTransitions,
 } from "../lib/status-reliability";
-import type { PublicStatusHistoryResponse, PublicStatusTransition, StatusTransition } from "@shared/types/status";
+import {
+  PUBLIC_STATUS_HISTORY_WINDOWS,
+  type PublicStatusHistoryResponse,
+  type PublicStatusHistoryWindow,
+  type PublicStatusTransition,
+  type StatusTransition,
+} from "@shared/types/status";
 
-const MAX_WINDOW_SEC = 30 * 24 * 60 * 60; // 30 days
-const MAX_LIMIT = 50;
+const MAX_LIMIT = 200;
+const DEFAULT_WINDOW: PublicStatusHistoryWindow = "30d";
+const WINDOW_TO_SECONDS: Record<PublicStatusHistoryWindow, number> = {
+  "24h": 24 * 60 * 60,
+  "7d": 7 * 24 * 60 * 60,
+  "30d": 30 * 24 * 60 * 60,
+};
+const VALID_WINDOWS = new Set<PublicStatusHistoryWindow>(PUBLIC_STATUS_HISTORY_WINDOWS);
 
 function toPublicTransition(t: StatusTransition): PublicStatusTransition {
   return {
@@ -28,8 +45,10 @@ export const handlePublicStatusHistory = withErrorHandler(
       limit: { type: "int", default: 50, min: 1, max: MAX_LIMIT },
     });
     if (parsed instanceof Response) return parsed;
+    const window = parseEnumParam(url.searchParams.get("window"), VALID_WINDOWS, "window", DEFAULT_WINDOW);
+    if (window instanceof Response) return window;
 
-    const from = now - MAX_WINDOW_SEC;
+    const from = now - WINDOW_TO_SECONDS[window];
 
     const [{ state }, transitions] = await Promise.all([
       getStatusStateSnapshot(db, now),

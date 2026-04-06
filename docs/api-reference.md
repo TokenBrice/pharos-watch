@@ -1360,6 +1360,50 @@ Blacklist ratio fields are still emitted here for the public surface, but thresh
 
 ---
 
+### `GET /api/public-status-history`
+
+Public transition history for the read-only `/status/` page. Returns the current public status plus recent state transitions within a requested time window. Not edge-cached beyond the standard 60-second response cache.
+
+**Authentication:** exempt
+
+**Query parameters**
+
+| Param    | Type                  | Default | Description |
+| -------- | --------------------- | ------- | ----------- |
+| `window` | `"24h" \| "7d" \| "30d"` | `"30d"` | Transition time window applied server-side before rows are returned |
+| `limit`  | `integer`             | `50`    | Max transitions returned after the time-window filter (1–200) |
+
+**Response**
+
+```json
+{
+  "timestamp": 1771856453,
+  "currentStatus": "healthy",
+  "lastChangedAt": 1771770000,
+  "transitions": [
+    {
+      "id": 418,
+      "from": "degraded",
+      "to": "healthy",
+      "transitionType": "recover",
+      "reason": "raw-healthy-recovery-threshold",
+      "at": 1771770000
+    }
+  ]
+}
+```
+
+| Field           | Type                                | Description |
+| --------------- | ----------------------------------- | ----------- |
+| `timestamp`     | `number`                            | Unix seconds at time of response |
+| `currentStatus` | `"healthy" \| "degraded" \| "stale"` | Current public status |
+| `lastChangedAt` | `number \| null`                    | Unix seconds for the latest public status change, if known |
+| `transitions`   | `PublicStatusTransition[]`          | Recent transitions inside the requested window, newest first |
+
+This endpoint powers two separate public `/status/` views: the hero `Status runway` always uses `window=30d`, while the transition table owns its own user-selected `24h` / `7d` / `30d` filter.
+
+---
+
 ### `GET /api/stability-index`
 
 Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a composite ecosystem health score (0–100) computed from active depeg severity, affected-market breadth, DEWS stress breadth, and 7-day ecosystem trend across the PSI-eligible universe (tracked coins plus shadow assets used for historical continuity).

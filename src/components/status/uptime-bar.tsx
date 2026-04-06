@@ -8,6 +8,7 @@ interface UptimeBarProps {
   transitions: PublicStatusTransition[];
   currentStatus: "healthy" | "degraded" | "stale";
   lastChangedAt: number | null;
+  days?: number;
 }
 
 interface DaySegment {
@@ -32,24 +33,24 @@ const STATUS_LABELS: Record<DaySegment["status"], string> = {
 function buildDaySegments(
   transitions: PublicStatusTransition[],
   currentStatus: "healthy" | "degraded" | "stale",
+  days: number,
 ): DaySegment[] {
   const now = new Date();
-  const days: DaySegment[] = [];
+  const segments: DaySegment[] = [];
 
-  // Build 30 day slots (oldest first)
-  for (let i = 29; i >= 0; i--) {
+  // Build daily slots (oldest first).
+  for (let i = days - 1; i >= 0; i--) {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
-    days.push({
+    segments.push({
       date: d.toISOString().slice(0, 10),
       status: "unknown",
     });
   }
 
   if (transitions.length === 0) {
-    // If no transitions, fill everything with current status
-    for (const day of days) day.status = currentStatus;
-    return days;
+    for (const day of segments) day.status = currentStatus;
+    return segments;
   }
 
   // Sort transitions chronologically (oldest first)
@@ -62,7 +63,7 @@ function buildDaySegments(
       ? (sorted[0].to as DaySegment["status"])
       : (sorted[0].from as DaySegment["status"]) ?? "unknown";
 
-  for (const day of days) {
+  for (const day of segments) {
     const dayStart = new Date(day.date).getTime() / 1000;
     const dayEnd = dayStart + 86400;
 
@@ -76,13 +77,18 @@ function buildDaySegments(
     day.status = runningStatus;
   }
 
-  return days;
+  return segments;
 }
 
-export function UptimeBar({ transitions, currentStatus, lastChangedAt }: UptimeBarProps) {
+export function UptimeBar({
+  transitions,
+  currentStatus,
+  lastChangedAt,
+  days = 30,
+}: UptimeBarProps) {
   const segments = useMemo(
-    () => buildDaySegments(transitions, currentStatus),
-    [transitions, currentStatus],
+    () => buildDaySegments(transitions, currentStatus, days),
+    [currentStatus, days, transitions],
   );
 
   // Compute holding days from the last segment's date as a pure proxy for "now"
@@ -97,8 +103,8 @@ export function UptimeBar({ transitions, currentStatus, lastChangedAt }: UptimeB
     for (const s of segments) c[s.status]++;
 
     const parts: string[] = [];
-    if (c.healthy === 30) {
-      parts.push("100% healthy over the last 30 days");
+    if (c.healthy === days) {
+      parts.push(`100% healthy over the last ${days} days`);
     } else {
       if (c.healthy > 0) parts.push(`${c.healthy}d healthy`);
       if (c.degraded > 0) parts.push(`${c.degraded}d degraded`);
@@ -107,11 +113,31 @@ export function UptimeBar({ transitions, currentStatus, lastChangedAt }: UptimeB
     }
 
     return { counts: c, summaryParts: parts };
-  }, [segments]);
+  }, [days, segments]);
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-1.5" role="img" aria-label={`30-day uptime: ${summaryParts.join(", ")}`}>
+    <div className="space-y-3 rounded-xl border border-border/50 bg-card/60 p-4 dark:bg-card/30">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Status runway</div>
+          <div className="mt-1 text-sm text-muted-foreground">Daily posture over the last {days} days.</div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <span className="rounded-full border border-border/70 px-3 py-1 text-xs font-medium text-foreground">
+            Last {days}d
+          </span>
+          {holdingDays != null && holdingDays > 0 && (
+            <span className="rounded-full border border-border/70 px-3 py-1 font-mono text-xs tabular-nums text-muted-foreground">
+              {currentStatus} for {holdingDays}d
+            </span>
+          )}
+        </div>
+      </div>
+      <div
+        className="flex items-center gap-1.5"
+        role="img"
+        aria-label={`${days}-day status runway: ${summaryParts.join(", ")}`}
+      >
         {segments.map((segment) => (
           <div
             key={segment.date}
@@ -122,11 +148,6 @@ export function UptimeBar({ transitions, currentStatus, lastChangedAt }: UptimeB
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
         <span>{summaryParts.join(" · ")}</span>
-        {holdingDays != null && holdingDays > 0 && (
-          <span className="font-mono tabular-nums">
-            {currentStatus} for {holdingDays}d
-          </span>
-        )}
       </div>
     </div>
   );

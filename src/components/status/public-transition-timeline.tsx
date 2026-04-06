@@ -1,10 +1,11 @@
 "use client";
 
-import type { PublicStatusTransition } from "@shared/types";
-import type { PublicHistoryWindow } from "@/hooks/use-public-status-history";
+import {
+  PUBLIC_STATUS_HISTORY_WINDOWS,
+  type PublicStatusHistoryWindow,
+  type PublicStatusTransition,
+} from "@shared/types";
 import { getStatusTone } from "@/lib/status-dashboard-model";
-
-const HISTORY_WINDOWS: readonly PublicHistoryWindow[] = ["24h", "7d", "30d"];
 
 const TYPE_LABELS: Record<string, string> = {
   degrade: "Degradation",
@@ -14,8 +15,8 @@ const TYPE_LABELS: Record<string, string> = {
 
 interface PublicTransitionTimelineProps {
   transitions: PublicStatusTransition[];
-  window: PublicHistoryWindow;
-  onWindowChange: (window: PublicHistoryWindow) => void;
+  window: PublicStatusHistoryWindow;
+  onWindowChange: (window: PublicStatusHistoryWindow) => void;
   isLoading: boolean;
 }
 
@@ -27,9 +28,15 @@ export function PublicTransitionTimeline({
 }: PublicTransitionTimelineProps) {
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">Transition log</p>
+          <p className="text-xs text-muted-foreground">
+            Window filters this table only. The runway above always summarizes the last 30 days.
+          </p>
+        </div>
         <div className="flex flex-wrap gap-2">
-          {HISTORY_WINDOWS.map((option) => (
+          {PUBLIC_STATUS_HISTORY_WINDOWS.map((option) => (
             <button
               key={option}
               type="button"

@@ -57,7 +57,11 @@ export const API_PATHS = {
     buildQueryPath("/api/stress-signals", { stablecoin: stablecoinId, days }),
   chains: () => "/api/chains",
   nonUsdShare: (days?: number) => buildQueryPath("/api/non-usd-share", days ? { days } : undefined),
-  publicStatusHistory: (params?: { limit?: number }) => buildQueryPath("/api/public-status-history", { limit: params?.limit }),
+  publicStatusHistory: (params?: { limit?: number; window?: "24h" | "7d" | "30d" }) =>
+    buildQueryPath("/api/public-status-history", {
+      limit: params?.limit,
+      window: params?.window,
+    }),
   requestSourceStats: (params?: { hours?: number; bucketSec?: number; routeLimit?: number }) =>
     buildQueryPath("/api/request-source-stats", {
       hours: params?.hours,
