@@ -5,6 +5,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
+import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import type { PeggedAsset } from "./enrich-prices";
 
 const COINGECKO_GAP_THRESHOLD_RATIO = 1.05;
@@ -125,7 +126,7 @@ async function fetchCurrentCoinGeckoMarketCaps(
     console.warn(
       `[sync-stablecoins] CoinGecko current market-cap fetch failed for supply gap reconciliation: ${response?.status ?? "no response"}`,
     );
-    response?.body?.cancel();
+    await cancelResponseBodyQuietly(response);
     return {};
   }
 
@@ -157,7 +158,7 @@ async function fetchRecentCoinGeckoMarketCaps(
     console.warn(
       `[sync-stablecoins] CoinGecko market chart fetch failed for ${geckoId}: ${response?.status ?? "no response"}`,
     );
-    response?.body?.cancel();
+    await cancelResponseBodyQuietly(response);
     return [];
   }
 

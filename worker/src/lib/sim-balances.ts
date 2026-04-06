@@ -2,6 +2,7 @@ import { resolveTrackedTreasuryStablecoin } from "@shared/lib/treasury-stable-ex
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { TreasuryBalanceToken, TreasuryDerivedPosition } from "@shared/lib/treasury-stable-exposure";
 import { fetchWithRetry } from "./fetch-retry";
+import { cancelResponseBodyQuietly } from "./response-body";
 import {
   SIM_BALANCES_BASE_URL,
   SIM_DEFI_POSITIONS_BASE_URL,
@@ -365,7 +366,7 @@ export async function fetchSimWalletBalances({
       throw new Error(`Sim balances request failed for ${address}`);
     }
     if (!response.ok) {
-      await response.body?.cancel();
+      await cancelResponseBodyQuietly(response);
       throw new Error(`Sim balances request returned ${response.status} for ${address}`);
     }
 
@@ -406,7 +407,7 @@ export async function fetchSimWalletDefiTreasuryPositions({
     throw new Error(`Sim DeFi positions request failed for ${address}`);
   }
   if (!response.ok) {
-    await response.body?.cancel();
+    await cancelResponseBodyQuietly(response);
     throw new Error(`Sim DeFi positions request returned ${response.status} for ${address}`);
   }
 

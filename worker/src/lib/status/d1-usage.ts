@@ -1,5 +1,6 @@
 import type { D1UsageSummary } from "@shared/types/status";
 import type { CloudflareD1StatusConfig } from "../env";
+import { cancelResponseBodyQuietly } from "../response-body";
 
 interface CloudflareApiEnvelope<T> {
   success?: boolean;
@@ -56,7 +57,7 @@ async function fetchJson<T>(url: string, init: RequestInit, errorPrefix: string)
     signal: AbortSignal.timeout(5_000),
   });
   if (!response.ok) {
-    await response.body?.cancel();
+    await cancelResponseBodyQuietly(response);
     throw new Error(`${errorPrefix} (${response.status})`);
   }
   return await response.json() as T;

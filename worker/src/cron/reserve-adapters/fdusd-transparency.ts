@@ -3,7 +3,6 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchTextWithRetry,
-  getAdapterTimeout,
   htmlLayoutChangedError,
   parseTimestampLikeToUnixSeconds,
   requireHtmlInput,
@@ -88,7 +87,7 @@ export async function fetchFdusdTransparencyReserves(
   const html = await fetchTextWithRetry(
     input.url,
     signal,
-    getAdapterTimeout(config, 15_000),
+    15_000,
     ctx,
   );
   return adaptFdusdTransparency(html);

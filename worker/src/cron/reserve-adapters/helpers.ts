@@ -3,6 +3,7 @@ import type { LiveReserveInput, LiveReservesConfig } from "@shared/types/live-re
 import { DEFILLAMA_COINS } from "../../lib/constants";
 import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import { fetchWithRetry } from "../../lib/fetch-retry";
+import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import {
   fetchEtherscanUint256AtBlock,
   fetchEvmUint256AtBlock,
@@ -136,13 +137,6 @@ export function requireOnchainInput(input: LiveReserveInput, adapterName: string
   return input;
 }
 
-const DEFAULT_ADAPTER_TIMEOUT_MS = 10_000;
-/** Returns the adapter's explicit fallback timeout or the shared 10s default. */
-export function getAdapterTimeout(config: LiveReservesConfig, fallbackMs = DEFAULT_ADAPTER_TIMEOUT_MS): number {
-  void config;
-  return fallbackMs;
-}
-
 export function requireJsonInputFromConfig(
   config: LiveReservesConfig,
   adapterName: string,
@@ -175,7 +169,7 @@ export async function fetchJsonWithRetry<T>(
         throw new Error(`Fetch failed for ${url}`);
       }
       if (!res.ok) {
-        await res.body?.cancel();
+        await cancelResponseBodyQuietly(res);
         throw new Error(`HTTP ${res.status} for ${url}`);
       }
       const raw = await res.text();
@@ -215,7 +209,7 @@ export async function fetchJsonPostWithRetry<T>(
         throw new Error(`POST fetch failed for ${url}`);
       }
       if (!res.ok) {
-        await res.body?.cancel();
+        await cancelResponseBodyQuietly(res);
         throw new Error(`HTTP ${res.status} for POST ${url}`);
       }
       return res.json() as Promise<T>;
@@ -246,7 +240,7 @@ export async function fetchTextWithRetry(
         throw new Error(`Fetch failed for ${url}`);
       }
       if (!res.ok) {
-        await res.body?.cancel();
+        await cancelResponseBodyQuietly(res);
         throw new Error(`HTTP ${res.status} for ${url}`);
       }
       return res.text();
@@ -276,7 +270,7 @@ export async function fetchDefiLlamaPrices(
         throw new Error("DefiLlama price fetch failed (no-response)");
       }
       if (!res.ok) {
-        await res.body?.cancel();
+        await cancelResponseBodyQuietly(res);
         throw new Error(`DefiLlama price fetch failed (${res.status})`);
       }
 

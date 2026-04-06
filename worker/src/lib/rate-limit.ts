@@ -1,3 +1,5 @@
+import { IsolateLocalState } from "./isolate-local-state";
+
 interface RateLimitRunResult {
   meta?: { changes?: number };
 }
@@ -16,13 +18,16 @@ const PUBLIC_API_PRUNE_WINDOW_MULTIPLIER = 10;
 const PUBLIC_API_EMERGENCY_BLOCK_AFTER_FAILURES = 3;
 const PUBLIC_API_EMERGENCY_RETRY_AFTER_SEC = 60;
 const PUBLIC_API_FAILURE_DECAY_SEC = 5 * 60;
-let lastPublicApiPruneBucket: number | null = null;
-let publicApiPruneFailures = 0;
-let feedbackPruneFailures = 0;
-let consecutivePublicApiRateLimitFailures = 0;
-let lastPublicApiRateLimitFailureAt: number | null = null;
-let pendingPublicPrune: Promise<void> | null = null;
-let pendingFeedbackPrune: Promise<void> | null = null;
+
+const _rl = new IsolateLocalState(() => ({
+  lastPublicApiPruneBucket: null as number | null,
+  publicApiPruneFailures: 0,
+  feedbackPruneFailures: 0,
+  consecutivePublicApiRateLimitFailures: 0,
+  lastPublicApiRateLimitFailureAt: null as number | null,
+  pendingPublicPrune: null as Promise<void> | null,
+  pendingFeedbackPrune: null as Promise<void> | null,
+}));
 
 /**
  * Flush any pending rate-limit prune promises.
@@ -31,8 +36,8 @@ let pendingFeedbackPrune: Promise<void> | null = null;
  */
 export function flushPendingPrunes(): Promise<void> {
   const promises: Promise<void>[] = [];
-  if (pendingPublicPrune) { promises.push(pendingPublicPrune); pendingPublicPrune = null; }
-  if (pendingFeedbackPrune) { promises.push(pendingFeedbackPrune); pendingFeedbackPrune = null; }
+  if (_rl.state.pendingPublicPrune) { promises.push(_rl.state.pendingPublicPrune); _rl.state.pendingPublicPrune = null; }
+  if (_rl.state.pendingFeedbackPrune) { promises.push(_rl.state.pendingFeedbackPrune); _rl.state.pendingFeedbackPrune = null; }
   return promises.length > 0 ? Promise.all(promises).then(() => {}) : Promise.resolve();
 }
 
@@ -55,13 +60,7 @@ function buildRateLimitUnavailableResponse(retryAfterSec = PUBLIC_API_EMERGENCY_
 }
 
 export function resetRateLimitStateForTests(): void {
-  lastPublicApiPruneBucket = null;
-  publicApiPruneFailures = 0;
-  feedbackPruneFailures = 0;
-  consecutivePublicApiRateLimitFailures = 0;
-  lastPublicApiRateLimitFailureAt = null;
-  pendingPublicPrune = null;
-  pendingFeedbackPrune = null;
+  _rl.reset();
 }
 
 /** Centralized rate-limit and crawl-budget constants for external APIs */
@@ -100,9 +99,9 @@ export async function checkPublicApiRateLimit(
   windowMs = 60_000,
 ): Promise<Response | null> {
   const nowSec = Math.floor(Date.now() / 1000);
-  if (lastPublicApiRateLimitFailureAt != null && nowSec - lastPublicApiRateLimitFailureAt > PUBLIC_API_FAILURE_DECAY_SEC) {
-    consecutivePublicApiRateLimitFailures = 0;
-    lastPublicApiRateLimitFailureAt = null;
+  if (_rl.state.lastPublicApiRateLimitFailureAt != null && nowSec - _rl.state.lastPublicApiRateLimitFailureAt > PUBLIC_API_FAILURE_DECAY_SEC) {
+    _rl.state.consecutivePublicApiRateLimitFailures = 0;
+    _rl.state.lastPublicApiRateLimitFailureAt = null;
   }
   const windowSec = Math.max(1, Math.ceil(windowMs / 1000));
   const bucketStart = nowSec - (nowSec % windowSec);
@@ -124,20 +123,20 @@ export async function checkPublicApiRateLimit(
       .bind(ipHash, bucketStart, nowSec)
       .first<{ count: number | null }>();
 
-    if (lastPublicApiPruneBucket !== bucketStart) {
-      lastPublicApiPruneBucket = bucketStart;
-      pendingPublicPrune = db.prepare("DELETE FROM public_api_rate_limit WHERE bucket_start < ?")
+    if (_rl.state.lastPublicApiPruneBucket !== bucketStart) {
+      _rl.state.lastPublicApiPruneBucket = bucketStart;
+      _rl.state.pendingPublicPrune = db.prepare("DELETE FROM public_api_rate_limit WHERE bucket_start < ?")
         .bind(bucketStart - windowSec * PUBLIC_API_PRUNE_WINDOW_MULTIPLIER)
         .run()
-        .then(() => { publicApiPruneFailures = 0; })
+        .then(() => { _rl.state.publicApiPruneFailures = 0; })
         .catch((e) => {
-          publicApiPruneFailures++;
-          console.warn(`[public-api] rate-limit prune failed (${publicApiPruneFailures} consecutive):`, e);
+          _rl.state.publicApiPruneFailures++;
+          console.warn(`[public-api] rate-limit prune failed (${_rl.state.publicApiPruneFailures} consecutive):`, e);
         });
     }
 
-    consecutivePublicApiRateLimitFailures = 0;
-    lastPublicApiRateLimitFailureAt = null;
+    _rl.state.consecutivePublicApiRateLimitFailures = 0;
+    _rl.state.lastPublicApiRateLimitFailureAt = null;
     const count = row?.count ?? 0;
     if (count > limit) {
       return buildRateLimitExceededResponse(bucketStart + windowSec - nowSec);
@@ -145,13 +144,13 @@ export async function checkPublicApiRateLimit(
 
     return null;
   } catch (err) {
-    consecutivePublicApiRateLimitFailures++;
-    lastPublicApiRateLimitFailureAt = nowSec;
+    _rl.state.consecutivePublicApiRateLimitFailures++;
+    _rl.state.lastPublicApiRateLimitFailureAt = nowSec;
     console.warn(
-      `[public-api] distributed rate limit unavailable (${consecutivePublicApiRateLimitFailures} consecutive):`,
+      `[public-api] distributed rate limit unavailable (${_rl.state.consecutivePublicApiRateLimitFailures} consecutive):`,
       err,
     );
-    if (consecutivePublicApiRateLimitFailures >= PUBLIC_API_EMERGENCY_BLOCK_AFTER_FAILURES) {
+    if (_rl.state.consecutivePublicApiRateLimitFailures >= PUBLIC_API_EMERGENCY_BLOCK_AFTER_FAILURES) {
       return buildRateLimitUnavailableResponse();
     }
     return null;
@@ -189,13 +188,13 @@ export async function checkFeedbackRateLimit(
     return false;
   }
 
-  pendingFeedbackPrune = db.prepare("DELETE FROM feedback_rate_limit WHERE submitted_at < ?")
+  _rl.state.pendingFeedbackPrune = db.prepare("DELETE FROM feedback_rate_limit WHERE submitted_at < ?")
     .bind(now - 3600)
     .run()
-    .then(() => { feedbackPruneFailures = 0; })
+    .then(() => { _rl.state.feedbackPruneFailures = 0; })
     .catch((e) => {
-      feedbackPruneFailures++;
-      console.warn(`[feedback] rate-limit prune failed (${feedbackPruneFailures} consecutive):`, e);
+      _rl.state.feedbackPruneFailures++;
+      console.warn(`[feedback] rate-limit prune failed (${_rl.state.feedbackPruneFailures} consecutive):`, e);
     });
 
   return true;

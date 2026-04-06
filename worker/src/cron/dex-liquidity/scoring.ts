@@ -117,7 +117,7 @@ export async function computeStablecoinScores(
   try {
     ({ tvlStabilityMap, volumeStabilityMap } = await loadConfidentHistoryStability(db));
   } catch {
-    // First run / pre-migration state — fall back to neutral defaults downstream.
+    /* non-blocking: history stability table may not exist yet (first run / pre-migration); fall back to neutral defaults */
   }
 
   const results = new Map<string, FullScoreResult>();

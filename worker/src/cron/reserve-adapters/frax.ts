@@ -5,7 +5,6 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   requireJsonInputFromConfig,
   fetchJsonWithRetry,
-  getAdapterTimeout,
   normalizeSlices,
   reserveDegradedWarning,
   unverifiedFreshnessMetadata,
@@ -147,7 +146,7 @@ export async function fetchFraxReserves(
   const payload = await fetchJsonWithRetry<FraxBalanceSheetResponse | FraxCombinedDataResponse>(
     primaryInput.url,
     signal,
-    getAdapterTimeout(config, 12_000),
+    12_000,
     ctx,
   );
 
@@ -172,7 +171,7 @@ export async function fetchFraxBalanceSheetReserves(
   const payload = await fetchJsonWithRetry<FraxBalanceSheetResponse>(
     primaryInput.url,
     signal,
-    getAdapterTimeout(config, 12_000),
+    12_000,
     ctx,
   );
 

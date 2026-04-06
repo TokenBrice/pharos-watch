@@ -2,6 +2,7 @@ import { ALCHEMY_CHAINS } from "./chain-registry";
 import type { SubrequestBudget, TopicFilter } from "./evm-logs";
 import { budgetExhausted } from "./evm-logs";
 import { buildInClause } from "./db";
+import { cancelResponseBodyQuietly } from "./response-body";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 // --- Types ---
@@ -91,7 +92,8 @@ async function jsonRpcCall<T>(
       body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
       signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
     });
-  } catch {
+  } catch (err) {
+    console.debug("[alchemy-logs] JSON-RPC fetch failed", err);
     return {
       result: null,
       error: { code: -1, message: "network failure" },
@@ -105,7 +107,8 @@ async function jsonRpcCall<T>(
   let json: JsonRpcResponse<T> | null = null;
   try {
     json = (await res.json()) as JsonRpcResponse<T>;
-  } catch {
+  } catch (err) {
+    console.debug("[alchemy-logs] JSON-RPC response body parse failed", err);
     if (transientHttpError) {
       console.warn(`[alchemy-logs] ${method} HTTP ${res.status} non-JSON body`);
       return {
@@ -164,7 +167,8 @@ export async function getAlchemyBlockNumber(
     const rpc = await jsonRpcCall<string>(alchemyUrl, "eth_blockNumber", [], signal);
     if (!rpc.result || !rpc.result.startsWith("0x")) return null;
     return parseInt(rpc.result, 16);
-  } catch {
+  } catch (err) {
+    console.debug("[alchemy-logs] eth_blockNumber failed", err);
     return null;
   }
 }
@@ -185,7 +189,8 @@ export async function getAlchemyTransactionByHash(
       signal,
     );
     return rpc.result ?? null;
-  } catch {
+  } catch (err) {
+    console.debug("[alchemy-logs] eth_getTransactionByHash failed", err);
     return null;
   }
 }
@@ -206,7 +211,8 @@ export async function getAlchemyTransactionReceipt(
       signal,
     );
     return rpc.result ?? null;
-  } catch {
+  } catch (err) {
+    console.debug("[alchemy-logs] eth_getTransactionReceipt failed", err);
     return null;
   }
 }
@@ -440,7 +446,7 @@ export async function resolveBlockTimestamps(
       });
       if (!res.ok) {
         console.warn(`[alchemy-logs] batch eth_getBlockByNumber HTTP ${res.status}`);
-        await res.body?.cancel();
+        await cancelResponseBodyQuietly(res);
         continue;
       }
       const parsed = await res.json() as unknown;

@@ -1,6 +1,7 @@
 import { USER_AGENT } from "./constants";
 import { cgHeaders, cgUrl } from "./coingecko";
 import { fetchWithRetry } from "./fetch-retry";
+import { cancelResponseBodyQuietly } from "./response-body";
 
 export interface CoinGeckoMarketHistorySnapshot {
   marketCaps: [number, number][];
@@ -42,7 +43,7 @@ export async function fetchCoinGeckoMarketHistory(
   ]);
 
   if (!marketChartRes?.ok) {
-    await coinRes?.body?.cancel();
+    await cancelResponseBodyQuietly(coinRes);
     return null;
   }
 
@@ -59,7 +60,7 @@ export async function fetchCoinGeckoMarketHistory(
     circulatingSupply = coinData.market_data?.circulating_supply ?? undefined;
   } else {
     options.onCoinDetailFailure?.(coinRes?.status ?? "no-response");
-    await coinRes?.body?.cancel();
+    await cancelResponseBodyQuietly(coinRes);
   }
 
   return {

@@ -4,7 +4,6 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchTextWithRetry,
-  getAdapterTimeout,
   htmlLayoutChangedError,
   requireHtmlInput,
   slicesFromPercentages,
@@ -137,7 +136,7 @@ export async function fetchCircleReserves(
   const html = await fetchTextWithRetry(
     input.url,
     signal,
-    getAdapterTimeout(config, 15_000),
+    15_000,
     ctx,
   );
   const { coinType } = parseLiveReserveAdapterParams("circle-transparency", config.params);

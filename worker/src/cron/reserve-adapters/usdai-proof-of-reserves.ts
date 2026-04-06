@@ -4,7 +4,6 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildUnknownExposureWarning,
   fetchTextWithRetry,
-  getAdapterTimeout,
   requireJsonInput,
   reserveInfoWarning,
   slicesFromPercentages,
@@ -277,6 +276,6 @@ export async function fetchUsdAiProofOfReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "usdai-proof-of-reserves");
-  const raw = await fetchTextWithRetry(input.url, signal, getAdapterTimeout(config, 12_000), ctx);
+  const raw = await fetchTextWithRetry(input.url, signal, 12_000, ctx);
   return adaptUsdAiProofOfReserves(parseUsdAiProofOfReserves(raw));
 }

@@ -1,6 +1,7 @@
 import { ETHERSCAN_V2_BASE } from "./constants";
 import { bigIntToDecimal } from "./bigint";
 import { fetchWithRetry } from "./fetch-retry";
+import { cancelResponseBodyQuietly } from "./response-body";
 
 const MAX_RECURSION_DEPTH = 8;
 const ETHERSCAN_MAX_RESULTS = 1000;
@@ -89,7 +90,7 @@ export async function getEvmBlockNumber(
     budget.count++;
     const json = await rateLimit(async () => {
       const res = await fetch(`${ETHERSCAN_V2_BASE}?${params}`, { signal });
-      if (!res.ok) { await res.body?.cancel(); return null; }
+      if (!res.ok) { await cancelResponseBodyQuietly(res); return null; }
       return res.json() as Promise<{ result?: string }>;
     });
     if (!json?.result || !json.result.startsWith("0x")) return null;
@@ -215,7 +216,7 @@ export async function fetchEvmLogsForTopics(
     if (!res || !res.ok) {
       if (res) {
         console.warn(`[evm-logs] Etherscan v2 (chain ${evmChainId}) HTTP ${res.status}`);
-        await res.body?.cancel();
+        await cancelResponseBodyQuietly(res);
       }
       return null;
     }

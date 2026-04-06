@@ -12,7 +12,6 @@ export const SCHEDULED_RUNNER_KEYS_BY_SCHEDULE = {
   [CRON_SCHEDULES.fourHourlyYieldSupplemental]: "fourHourlyYieldSupplemental",
   [CRON_SCHEDULES.fiveMinuteTelegramAlerts]: "fiveMinuteTelegramAlerts",
   [CRON_SCHEDULES.daily0800Utc]: "daily0800Utc",
-  [CRON_SCHEDULES.daily0805Utc]: "daily0805Utc",
   [CRON_SCHEDULES.monthlyYieldAudit]: "monthlyYieldAudit",
 } as const;
 

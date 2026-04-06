@@ -5,7 +5,6 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchDefiLlamaPrices,
   fetchJsonWithRetry,
-  getAdapterTimeout,
   requireJsonInput,
   slicesFromValues,
   unverifiedFreshnessMetadata,
@@ -61,7 +60,7 @@ export async function fetchFxReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "fx");
-  const payload = await fetchJsonWithRetry<FxPayload>(input.url, signal, getAdapterTimeout(config, 12_000), ctx);
+  const payload = await fetchJsonWithRetry<FxPayload>(input.url, signal, 12_000, ctx);
   const { balances, unknownKeys } = adaptFx(payload);
   if (unknownKeys.length > 0) {
     throw new Error(`fx returned unmapped positive collateral keys with unquantified exposure: ${unknownKeys.join(", ")}`);

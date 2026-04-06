@@ -6,7 +6,6 @@ vi.mock("../helpers", async (importOriginal) => {
   return {
     ...actual,
     fetchJsonWithRetry: vi.fn(),
-    getAdapterTimeout: vi.fn(() => 12_000),
   };
 });
 

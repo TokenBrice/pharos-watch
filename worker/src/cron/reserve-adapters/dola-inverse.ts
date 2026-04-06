@@ -5,7 +5,6 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   accumulateBucketedExposure,
   fetchJsonWithRetry,
-  getAdapterTimeout,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
   slicesFromValues,
@@ -145,7 +144,7 @@ export async function fetchDolaInverseReserves(
   const payload = await fetchJsonWithRetry<FirmMarketsResponse>(
     primaryInput.url,
     signal,
-    getAdapterTimeout(config, 12_000),
+    12_000,
     ctx,
   );
   const adapted = adaptFirmMarkets(payload);

@@ -4,7 +4,6 @@ import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@share
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchTextWithRetry,
-  getAdapterTimeout,
   htmlLayoutChangedError,
   htmlParseError,
   requireHtmlInput,
@@ -119,6 +118,6 @@ export async function fetchMentoReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireHtmlInput(config.inputs.primary, "mento");
-  const html = await fetchTextWithRetry(input.url, signal, getAdapterTimeout(config, 12_000), ctx);
+  const html = await fetchTextWithRetry(input.url, signal, 12_000, ctx);
   return adaptMentoReserveComposition(html);
 }

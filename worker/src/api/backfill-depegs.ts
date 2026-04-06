@@ -1,6 +1,7 @@
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DAY_SECONDS, DAY_MS } from "@shared/lib/time-constants";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
+import { cancelResponseBodyQuietly } from "../lib/response-body";
 import {
   getDepegThresholdBps,
   DEFILLAMA_BASE,
@@ -174,7 +175,7 @@ export async function handleBackfillDepegs(
               detail = raw as CoinDetail;
             }
           } else {
-            await res.body?.cancel();
+            await cancelResponseBodyQuietly(res);
           }
         } catch (err) {
           console.error(`[backfill-depegs] Failed to fetch detail for ${meta.symbol}:`, err);
@@ -219,7 +220,7 @@ export async function handleBackfillDepegs(
                 earliestDate = defaultStartDate;
               }
             } else {
-              await cgRes?.body?.cancel();
+              await cancelResponseBodyQuietly(cgRes);
               earliestDate = defaultStartDate;
             }
           } catch {

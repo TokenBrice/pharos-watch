@@ -5,7 +5,6 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchOnchainRateBps,
   fetchOnchainUint256,
-  getAdapterTimeout,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
 } from "./helpers";
@@ -42,7 +41,7 @@ export async function fetchLiquityV1Reserves(
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, "liquity-v1");
   const params = readParams(config);
-  const timeoutMs = getAdapterTimeout(config, 12_000);
+  const timeoutMs = 12_000;
 
   const [totalCollateralRaw, totalDebtRaw, redemptionFeeBps] = await Promise.all([
     fetchOnchainUint256({

@@ -4,7 +4,6 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
-  getAdapterTimeout,
   requireJsonInput,
   reserveDegradedWarning,
   unverifiedFreshnessMetadata,
@@ -93,7 +92,7 @@ export async function fetchBtcfiReserves(
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "btcfi");
   const params = readParams(config);
-  const timeout = getAdapterTimeout(config, 12_000);
+  const timeout = 12_000;
   const [market, handlers] = await Promise.all([
     fetchJsonWithRetry<BtcfiMarketRow[]>(input.url, signal, timeout, ctx),
     fetchJsonWithRetry<BtcfiHandlerRow[]>(params.handlersUrl, signal, timeout, ctx),

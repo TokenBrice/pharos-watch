@@ -1,6 +1,7 @@
 import type { BlacklistEventType } from "@shared/types/market";
 import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
 import { computeBlacklistAmountUsdAtEvent } from "@shared/lib/blacklist";
+import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { TronEventsResponseSchema } from "../../lib/external-api-schemas";
 import type { ContractEventConfig } from "../../lib/blacklist-contracts";
 import { getBlacklistEventBySignature } from "../../lib/blacklist-contracts";
@@ -138,7 +139,7 @@ export async function fetchTronEventsIncremental(
         const res = await fetchWithRetry(url!, { headers, signal });
         if (!res) return null;
         if (!res.ok) {
-          await res.body?.cancel();
+          await cancelResponseBodyQuietly(res);
           return null;
         }
         const raw = await res.json();

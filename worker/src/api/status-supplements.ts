@@ -20,6 +20,7 @@ import type {
 import { computeCollateralQualityFromReserves } from "@shared/lib/report-cards";
 import { cgHeaders, cgUrl } from "../lib/coingecko";
 import { USER_AGENT } from "../lib/constants";
+import { cancelResponseBodyQuietly } from "../lib/response-body";
 import {
   hasAnyCloudflareD1StatusBinding,
   resolveCloudflareD1StatusConfig,
@@ -89,7 +90,7 @@ async function fetchCoinGeckoUsdPrices(
       signal: AbortSignal.timeout(5_000),
     });
     if (!response.ok) {
-      await response.body?.cancel();
+      await cancelResponseBodyQuietly(response);
       throw new Error(`CoinGecko simple price fetch failed (${response.status})`);
     }
 

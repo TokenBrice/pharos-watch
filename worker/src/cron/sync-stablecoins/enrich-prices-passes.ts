@@ -8,6 +8,7 @@
  */
 import { DEFILLAMA_COINS, USER_AGENT, DEXSCREENER_MIN_LIQUIDITY_USD, CIRCUIT_SOURCE } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
+import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../../lib/circuit-breaker";
 import { getCache, setCache } from "../../lib/db-cache";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
@@ -110,7 +111,7 @@ async function fetchPriceMapByIds(config: FetchPriceMapByIdsConfig): Promise<Map
     Object.keys(requestInit).length > 0 ? requestInit : undefined,
   );
   if (!res?.ok) {
-    await res?.body?.cancel();
+    await cancelResponseBodyQuietly(res);
     config.onFetchFailure?.(res?.status ?? null);
     return null;
   }
@@ -686,7 +687,7 @@ export async function runDexScreenerPass(
           continue;
         }
         if (!res.ok) {
-          await res.body?.cancel();
+          await cancelResponseBodyQuietly(res);
           console.warn(`[enrich] DexScreener returned ${res.status} for ${m.asset.symbol}`);
           continue;
         }
@@ -768,7 +769,7 @@ export async function runJupiterPass(
       { timeoutMs: JUPITER_REQUEST_TIMEOUT_MS },
     );
     if (!res?.ok) {
-      await res?.body?.cancel();
+      await cancelResponseBodyQuietly(res);
       console.warn(`[enrich] Jupiter returned ${res?.status ?? "no response"} for batch of ${ids.length}`);
       continue;
     }

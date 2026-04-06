@@ -3,7 +3,6 @@ import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchTextWithRetry,
-  getAdapterTimeout,
   htmlLayoutChangedError,
   htmlParseError,
   parseTimestampLikeToUnixSeconds,
@@ -283,7 +282,7 @@ export async function fetchReMetricsReserves(
   const html = await fetchTextWithRetry(
     input.url,
     signal,
-    getAdapterTimeout(config, 15_000),
+    15_000,
     ctx,
   );
   return adaptReMetrics(html);

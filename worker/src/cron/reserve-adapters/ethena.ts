@@ -5,7 +5,6 @@ import {
   accumulateBucketedExposure,
   buildBucketSlices,
   fetchJsonWithRetry,
-  getAdapterTimeout,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
   unverifiedFreshnessMetadata,
@@ -146,7 +145,7 @@ export async function fetchEthenaReserves(
   const payload = await fetchJsonWithRetry<EthenaCollateralResponse>(
     primaryInput.url,
     signal,
-    getAdapterTimeout(config, 12_000),
+    12_000,
     ctx,
   );
   const adapted = adaptEthenaCollateral(payload);

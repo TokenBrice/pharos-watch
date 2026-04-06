@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { decodeFunctionData, encodeFunctionResult, parseAbi } from "viem";
+import { decodeFunctionData, encodeFunctionResult, parseAbi } from "viem/utils";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 
 vi.mock("../helpers", async (importOriginal) => {

@@ -22,7 +22,6 @@ export const CRON_SCHEDULES = {
   fourHourlyYieldSupplemental: "25 */4 * * *",
   fiveMinuteTelegramAlerts: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
   daily0800Utc: "0 8 * * *",
-  daily0805Utc: "5 8 * * *",
   monthlyYieldAudit: "0 6 1 * *",
 } as const;
 
@@ -42,7 +41,6 @@ const CRON_SCHEDULE_BUCKETS = {
   fourHourlyYieldSupplemental: { intervalSec: 4 * 3600, offsetSec: 25 * 60 },
   fiveMinuteTelegramAlerts: { intervalSec: 300, offsetSec: 2 * 60 },
   daily0800Utc: { intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 },
-  daily0805Utc: { intervalSec: DAY_SECONDS, offsetSec: 8 * 3600 + 5 * 60 },
   monthlyYieldAudit: { intervalSec: 30 * 86400, offsetSec: 6 * 3600 },
 } as const satisfies Record<CronScheduleKey, { intervalSec: number; offsetSec: number }>;
 
@@ -121,7 +119,7 @@ export const CRON_GROUPS: readonly CronGroupDefinition[] = [
     key: "daily",
     title: "Daily slot",
     badge: "~08:00",
-    description: "Snapshots, slower monitors, digest generation, and coverage discovery. Split across 08:00 and 08:05 triggers for connection-pool headroom.",
+    description: "Snapshots, slower monitors, digest generation, and coverage discovery. Consolidated on the 08:00 trigger with phased execution.",
   },
   {
     key: "other",
@@ -356,7 +354,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     label: "Bluechip sync",
     group: "daily",
     intervalSec: DAY_SECONDS,
-    scheduleKey: "daily0805Utc",
+    scheduleKey: "daily0800Utc",
     triggerMode: "shared",
     maxConnections: 1, // Sequential batched bluechip API fetches
   },
@@ -365,7 +363,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     label: "Daily digest",
     group: "daily",
     intervalSec: DAY_SECONDS,
-    scheduleKey: "daily0805Utc",
+    scheduleKey: "daily0800Utc",
     triggerMode: "shared",
     maxConnections: 1, // Anthropic LLM call, then Twitter + Telegram posts (sequential)
   },
@@ -374,7 +372,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     label: "Weekly recap",
     group: "daily",
     intervalSec: 604800,
-    scheduleKey: "daily0805Utc",
+    scheduleKey: "daily0800Utc",
     triggerMode: "shared",
     maxConnections: 1, // Anthropic LLM call, then Telegram post (sequential)
   },
@@ -383,7 +381,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     label: "Coverage discovery",
     group: "daily",
     intervalSec: 604800,
-    scheduleKey: "daily0805Utc",
+    scheduleKey: "daily0800Utc",
     triggerMode: "shared",
     maxConnections: 1, // CoinGecko stablecoins market list fetch
   },

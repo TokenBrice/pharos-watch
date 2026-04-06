@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReserveSlice } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
 
 vi.mock("../../../lib/fetch-retry", () => ({
   fetchWithRetry: vi.fn(),
@@ -15,7 +14,7 @@ import {
   computeUnknownExposurePct,
   decimalStringFromBigInt,
   fetchJsonWithRetry,
-  getAdapterTimeout,
+
   isReserveRisk,
   normalizeSlices,
   notApplicableFreshnessMetadata,
@@ -286,23 +285,6 @@ describe("isReserveRisk", () => {
     expect(isReserveRisk(null)).toBe(false);
     expect(isReserveRisk(undefined)).toBe(false);
     expect(isReserveRisk(42)).toBe(false);
-  });
-});
-
-describe("getAdapterTimeout", () => {
-  const baseConfig = {
-    adapter: "single-asset",
-    version: 1,
-    semantics: "single-asset" as const,
-    inputs: { primary: { kind: "http-json" as const, url: "https://example.com" } },
-  } satisfies LiveReservesConfig;
-
-  it("returns fallback when params.timeoutMs is not set", () => {
-    expect(getAdapterTimeout(baseConfig, 12_000)).toBe(12_000);
-  });
-
-  it("returns default 10s when no fallback specified", () => {
-    expect(getAdapterTimeout(baseConfig)).toBe(10_000);
   });
 });
 

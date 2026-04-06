@@ -5,7 +5,6 @@ import {
   buildUnknownExposureWarning,
   computeUnknownExposurePct,
   fetchJsonWithRetry,
-  getAdapterTimeout,
   requireJsonInputFromConfig,
   slicesFromValues,
 } from "./helpers";
@@ -209,7 +208,7 @@ export async function fetchUsddDataPlatformReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireJsonInputFromConfig(config, "usdd-data-platform");
-  const timeout = getAdapterTimeout(config, 12_000);
+  const timeout = 12_000;
   const historyUrl = buildUsddHistoryUrl(input.url);
   const [latest, history] = await Promise.all([
     fetchJsonWithRetry<UsddLatestCollateralResponse>(input.url, signal, timeout, ctx),
