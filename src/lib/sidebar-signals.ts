@@ -1,6 +1,6 @@
 import { formatCompactCount } from "@shared/lib/format";
 import type { ConditionBand } from "@shared/lib/psi-colors";
-import { PSI_BORDER_CLASSES } from "@shared/lib/psi-colors";
+import { PSI_BG_OVERLAY_CLASSES } from "@shared/lib/psi-colors";
 import { getDisplayedPsi } from "@shared/lib/psi-view-model";
 import type {
   BlacklistSummaryResponse,
@@ -68,7 +68,7 @@ export function getStabilityIndexNavSignal(stabilityIndex: StabilityIndexRespons
     kind: "accent",
     title: `PSI ${displayed.score.toFixed(1)} (${displayed.band})`,
     tone: getPsiSignalTone(displayed.band),
-    accentClass: PSI_BORDER_CLASSES[displayed.band as ConditionBand],
+    accentClass: PSI_BG_OVERLAY_CLASSES[displayed.band as ConditionBand],
   };
 }
 

@@ -49,7 +49,7 @@ describe("sidebar-signals", () => {
       kind: "accent",
       title: "PSI 77.2 (TREMOR)",
       tone: "warning",
-      accentClass: "border-l-yellow-500",
+      accentClass: "bg-yellow-500/15",
     });
   });
 

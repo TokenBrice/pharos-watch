@@ -32,6 +32,16 @@ export const PSI_BORDER_CLASSES: Record<ConditionBand, string> = {
   MELTDOWN: "border-l-red-800",
 };
 
+/** Static Tailwind background overlay classes for each PSI condition band (low opacity for nav accent). */
+export const PSI_BG_OVERLAY_CLASSES: Record<ConditionBand, string> = {
+  BEDROCK: "bg-green-500/15",
+  STEADY: "bg-teal-500/15",
+  TREMOR: "bg-yellow-500/15",
+  FRACTURE: "bg-orange-500/15",
+  CRISIS: "bg-red-500/15",
+  MELTDOWN: "bg-red-800/20",
+};
+
 /** Pulse animation duration (seconds) per band — faster = more urgent. */
 export const PSI_PULSE_DURATION: Record<ConditionBand, number> = {
   BEDROCK: 3,
