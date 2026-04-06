@@ -47,7 +47,7 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-export const DASHBOARD_NAV_ITEM: NavItem = { href: "/", label: "Dashboard", icon: LayoutDashboard, description: "Live triage surface for market stress, rankings, and first-pass research" };
+const DASHBOARD_NAV_ITEM: NavItem = { href: "/", label: "Dashboard", icon: LayoutDashboard, description: "Live triage surface for market stress, rankings, and first-pass research" };
 
 export const PRIMARY_NAV_ITEMS: NavItem[] = [
   DASHBOARD_NAV_ITEM,

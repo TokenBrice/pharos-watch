@@ -26,8 +26,7 @@ const MOCK_ENTRY: ChangelogEntry = {
 describe("ChangelogEntryCard", () => {
   it("renders the date range", () => {
     const html = renderToStaticMarkup(<ChangelogEntryCard entry={MOCK_ENTRY} />);
-    expect(html).toContain("Mar 17");
-    expect(html).toContain("24, 2026");
+    expect(html).toContain("Mar 17 – 24");
   });
 
   it("renders summary items with labels", () => {

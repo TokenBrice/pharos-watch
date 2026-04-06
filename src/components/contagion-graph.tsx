@@ -4,6 +4,14 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
+  computeRippleState,
+  computeVisibleGraph,
+  findDirectionalNeighbor,
+  resolveGraphLinks,
+  type FocusMode,
+  type ResolvedLink,
+} from "@/components/contagion-graph-graph";
+import {
   buildGraphData,
   buildSupernodeState,
   runSimulation,
@@ -14,30 +22,13 @@ import {
   RING_WIDTH,
   HUB_LABEL_FONT_SIZE,
   clampGraphPosition,
-  type GraphNode,
   type HubTier,
   type SupernodeState,
 } from "@/lib/contagion-layout";
 import { formatCurrency } from "@shared/lib/format";
 import { GRADE_RADAR_COLORS } from "@shared/lib/report-cards";
 import { gradeColor, TYPE_COLORS, TYPE_DASH } from "@/components/contagion-graph-model";
-import type { DependencyType, ReportCard, ReportCardsResponse } from "@shared/types";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface ResolvedLink {
-  index: number;
-  srcId: string;
-  tgtId: string;
-  weight: number;
-  type: DependencyType;
-  srcTier: HubTier;
-  tgtTier: HubTier;
-}
-
-type FocusMode = "all" | "hub" | "neighborhood";
+import type { ReportCard, ReportCardsResponse } from "@shared/types";
 
 interface ContagionGraphProps {
   cards: ReportCard[];
@@ -53,8 +44,6 @@ interface ContagionGraphProps {
 export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos }: ContagionGraphProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const prevTierByIdRef = useRef<Map<string, HubTier>>(new Map());
-
-
 
   // Prepare graph data
   const { nodes, links } = useMemo(
@@ -89,29 +78,47 @@ export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos }: Conta
       .map((n) => ({ id: n.id, symbol: n.symbol, mcap: n.mcap })),
     [nodes],
   );
-
-  useEffect(() => {
-    if (!nodes.length) {
-      setSelectedNeighborhoodId(null);
-      return;
+  const effectiveSelectedNeighborhoodId = useMemo(() => {
+    if (!nodes.length) return null;
+    if (selectedNeighborhoodId && nodes.some((node) => node.id === selectedNeighborhoodId)) {
+      return selectedNeighborhoodId;
     }
-
-    setSelectedNeighborhoodId((prev) => {
-      if (prev && nodes.some((n) => n.id === prev)) return prev;
-      return hubIdsByScore[0] ?? nodes[0].id;
-    });
-  }, [nodes, hubIdsByScore]);
+    return hubIdsByScore[0] ?? nodes[0].id;
+  }, [nodes, hubIdsByScore, selectedNeighborhoodId]);
 
   // Fast node lookup by id (avoids O(n) find inside render loops)
   const nodeMap = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
 
-  // Run simulation
-  const [positions, setPositions] = useState<Map<string, { x: number; y: number }>>(new Map());
+  const basePositions = useMemo(
+    () => (nodes.length === 0 ? new Map<string, { x: number; y: number }>() : runSimulation(nodes, links, supernodeState)),
+    [nodes, links, supernodeState],
+  );
+  const simulationKey = useMemo(
+    () => [
+      nodes.map((node) => node.id).join("|"),
+      links.length,
+      [...supernodeState.tierById.entries()].map(([id, tier]) => `${id}:${tier}`).join("|"),
+    ].join("::"),
+    [nodes, links.length, supernodeState.tierById],
+  );
+  const [draggedPositions, setDraggedPositions] = useState<{
+    baseKey: string;
+    positions: Map<string, { x: number; y: number }>;
+  }>({
+    baseKey: "",
+    positions: new Map(),
+  });
+  const positions = useMemo(() => {
+    if (draggedPositions.baseKey !== simulationKey || draggedPositions.positions.size === 0) {
+      return basePositions;
+    }
 
-  useEffect(() => {
-    if (nodes.length === 0) return;
-    setPositions(runSimulation(nodes, links, supernodeState));
-  }, [nodes, links, supernodeState]);
+    const next = new Map(basePositions);
+    for (const [id, position] of draggedPositions.positions) {
+      if (next.has(id)) next.set(id, position);
+    }
+    return next;
+  }, [basePositions, draggedPositions, simulationKey]);
 
   // Drag state
   const [dragId, setDragId] = useState<string | null>(null);
@@ -146,14 +153,17 @@ export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos }: Conta
     if (!svgP) return;
     const dx = svgP.x - dragStart.current.mx;
     const dy = svgP.y - dragStart.current.my;
-    setPositions((prev) => {
-      const next = new Map(prev);
+    setDraggedPositions((prev) => {
+      const next = prev.baseKey === simulationKey ? new Map(prev.positions) : new Map<string, { x: number; y: number }>();
       const r = nodeMap.get(dragId)?.r ?? MIN_RADIUS;
       const ds = dragStart.current;
       if (ds) next.set(dragId, clampGraphPosition(ds.nx + dx, ds.ny + dy, r));
-      return next;
+      return {
+        baseKey: simulationKey,
+        positions: next,
+      };
     });
-  }, [dragId, nodeMap, projectClientPoint]);
+  }, [dragId, nodeMap, projectClientPoint, simulationKey]);
 
   const handlePointerUp = useCallback(() => {
     setDragId(null);
@@ -164,6 +174,11 @@ export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos }: Conta
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [hoveredEdge, setHoveredEdge] = useState<number | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
+
+  const resolvedLinks = useMemo(
+    () => resolveGraphLinks(links, supernodeState.tierById),
+    [links, supernodeState.tierById],
+  );
 
   // Keyboard navigation for graph nodes
   const handleNodeKeyDown = useCallback((e: React.KeyboardEvent, nodeId: string) => {
@@ -178,230 +193,73 @@ export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos }: Conta
 
     if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) return;
     e.preventDefault();
-
-    // Find connected nodes via links
-    const connectedIds = new Set<string>();
-    for (const link of links) {
-      const srcId = typeof link.source === "string" ? link.source : (link.source as GraphNode).id;
-      const tgtId = typeof link.target === "string" ? link.target : (link.target as GraphNode).id;
-      if (srcId === nodeId) connectedIds.add(tgtId);
-      if (tgtId === nodeId) connectedIds.add(srcId);
-    }
-
-    if (connectedIds.size === 0) return;
-
-    const currentPos = positions.get(nodeId);
-    if (!currentPos) return;
-
-    // Find the best neighbor in the arrow key direction
-    let bestId: string | null = null;
-    let bestScore = -Infinity;
-
-    for (const cId of connectedIds) {
-      const cPos = positions.get(cId);
-      if (!cPos) continue;
-      const dx = cPos.x - currentPos.x;
-      const dy = cPos.y - currentPos.y;
-      let score = 0;
-      switch (e.key) {
-        case "ArrowRight": score = dx; break;
-        case "ArrowLeft": score = -dx; break;
-        case "ArrowDown": score = dy; break;
-        case "ArrowUp": score = -dy; break;
-      }
-      if (score > 0 && score > bestScore) {
-        bestScore = score;
-        bestId = cId;
-      }
-    }
+    const bestId = findDirectionalNeighbor({
+      nodeId,
+      direction: e.key as "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight",
+      links: resolvedLinks,
+      positions,
+    });
 
     if (bestId) {
       const target = svgRef.current?.querySelector(`[data-node-id="${bestId}"]`) as HTMLElement | null;
       target?.focus();
     }
-  }, [focusMode, links, positions, setSelectedNeighborhoodId]);
+  }, [focusMode, positions, resolvedLinks, setSelectedNeighborhoodId]);
 
   const neighborhoodFocusId = focusMode === "neighborhood"
-    ? (selectedNeighborhoodId ?? hubIdsByScore[0] ?? nodes[0]?.id ?? null)
+    ? effectiveSelectedNeighborhoodId
     : null;
-
-  const resolvedLinks = useMemo<ResolvedLink[]>(
-    () => links.map((link, index) => {
-      const srcId = typeof link.source === "string" ? link.source : (link.source as GraphNode).id;
-      const tgtId = typeof link.target === "string" ? link.target : (link.target as GraphNode).id;
-      return {
-        index,
-        srcId,
-        tgtId,
-        weight: link.weight,
-        type: link.type,
-        srcTier: supernodeState.tierById.get(srcId) ?? 0,
-        tgtTier: supernodeState.tierById.get(tgtId) ?? 0,
-      };
-    }),
-    [links, supernodeState.tierById],
-  );
 
   const resolvedLinkByIndex = useMemo(
     () => new Map<number, ResolvedLink>(resolvedLinks.map((l) => [l.index, l])),
     [resolvedLinks],
   );
 
-  const { visibleLinks, visibleLinkIndices, visibleNodeIds } = useMemo(() => {
-    const scopeNodeIds = new Set<string>();
-    const visible = [] as ResolvedLink[];
-    const visibleIndices = new Set<number>();
+  const { visibleLinks, visibleLinkIndices, visibleNodeIds } = useMemo(
+    () => computeVisibleGraph({
+      resolvedLinks,
+      focusMode,
+      neighborhoodFocusId,
+      nodes,
+      hubIdsByScore,
+    }),
+    [resolvedLinks, focusMode, neighborhoodFocusId, nodes, hubIdsByScore],
+  );
 
-    for (const link of resolvedLinks) {
-      const inScope = focusMode === "all"
-        ? true
-        : focusMode === "hub"
-          ? (link.srcTier > 0 || link.tgtTier > 0)
-          : neighborhoodFocusId !== null
-            ? (link.srcId === neighborhoodFocusId || link.tgtId === neighborhoodFocusId)
-            : false;
-      if (!inScope) continue;
-
-      scopeNodeIds.add(link.srcId);
-      scopeNodeIds.add(link.tgtId);
-
-      visible.push(link);
-      visibleIndices.add(link.index);
-    }
-
-    const nodeIds = new Set<string>();
-    for (const link of visible) {
-      nodeIds.add(link.srcId);
-      nodeIds.add(link.tgtId);
-    }
-
-    if (focusMode === "all") {
-      for (const n of nodes) nodeIds.add(n.id);
-    } else if (focusMode === "hub") {
-      for (const id of scopeNodeIds) nodeIds.add(id);
-      for (const id of hubIdsByScore) nodeIds.add(id);
-    } else {
-      for (const id of scopeNodeIds) nodeIds.add(id);
-      if (neighborhoodFocusId) nodeIds.add(neighborhoodFocusId);
-    }
-
-    return {
-      visibleLinks: visible,
-      visibleLinkIndices: visibleIndices,
-      visibleNodeIds: nodeIds,
-    };
-  }, [resolvedLinks, focusMode, neighborhoodFocusId, nodes, hubIdsByScore]);
-
-  useEffect(() => {
-    if (hoveredEdge !== null && !visibleLinkIndices.has(hoveredEdge)) setHoveredEdge(null);
-  }, [hoveredEdge, visibleLinkIndices]);
-
-  useEffect(() => {
-    if (hoveredId !== null && !visibleNodeIds.has(hoveredId)) setHoveredId(null);
-  }, [hoveredId, visibleNodeIds]);
+  const activeHoveredEdge = hoveredEdge !== null && visibleLinkIndices.has(hoveredEdge)
+    ? hoveredEdge
+    : null;
+  const activeHoveredId = hoveredId !== null && visibleNodeIds.has(hoveredId)
+    ? hoveredId
+    : null;
 
   // Compute connected nodes/edges for node-hover spotlight with multi-hop
   // contagion ripple. BFS follows the dependency direction: if the hovered
   // node is collateral (tgtId), contagion ripples to dependents (srcId),
   // then transitively through further dependency chains.  Direct neighbors
   // in both directions are included at distance 1 for visual context.
-  const MAX_RIPPLE_HOPS = 4;
   const RIPPLE_HOP_DELAY_MS = 100;
 
-  const { connectedNodes, connectedEdges, nodeDistance, edgeDistance } = useMemo(() => {
-    const emptyResult = {
-      connectedNodes: new Set<string>(),
-      connectedEdges: new Set<number>(),
-      nodeDistance: new Map<string, number>(),
-      edgeDistance: new Map<number, number>(),
-    };
-    if (!hoveredId) return emptyResult;
-
-    // Build adjacency: downstream = edges where node is target (dependents)
-    const downstreamByTarget = new Map<string, ResolvedLink[]>();
-    // Also track direct connections in both directions for distance-1
-    const directByNode = new Map<string, ResolvedLink[]>();
-
-    for (const link of visibleLinks) {
-      // Downstream: hovered is collateral (tgtId), dependents are srcId
-      let list = downstreamByTarget.get(link.tgtId);
-      if (!list) { list = []; downstreamByTarget.set(link.tgtId, list); }
-      list.push(link);
-
-      // Direct connections (both directions)
-      let srcList = directByNode.get(link.srcId);
-      if (!srcList) { srcList = []; directByNode.set(link.srcId, srcList); }
-      srcList.push(link);
-
-      let tgtList = directByNode.get(link.tgtId);
-      if (!tgtList) { tgtList = []; directByNode.set(link.tgtId, tgtList); }
-      tgtList.push(link);
-    }
-
-    const nodeDist = new Map<string, number>();
-    const edgeDist = new Map<number, number>();
-    nodeDist.set(hoveredId, 0);
-
-    // Distance 1: all direct neighbors (both directions)
-    const directLinks = directByNode.get(hoveredId) ?? [];
-    for (const link of directLinks) {
-      const neighborId = link.srcId === hoveredId ? link.tgtId : link.srcId;
-      if (!nodeDist.has(neighborId)) nodeDist.set(neighborId, 1);
-      if (!edgeDist.has(link.index)) edgeDist.set(link.index, 1);
-    }
-
-    // BFS for downstream contagion (hops 2+): from each downstream node at
-    // distance d, follow further downstream edges to distance d+1
-    const queue: string[] = [];
-    const queued = new Set<string>();
-
-    // Seed BFS with downstream neighbors at distance 1
-    const downstreamFromHovered = downstreamByTarget.get(hoveredId) ?? [];
-    for (const link of downstreamFromHovered) {
-      if (!queued.has(link.srcId)) {
-        queued.add(link.srcId);
-        queue.push(link.srcId);
-      }
-    }
-
-    let queueStart = 0;
-    while (queueStart < queue.length) {
-      const nodeId = queue[queueStart++];
-      const currentDist = nodeDist.get(nodeId) ?? 1;
-      if (currentDist >= MAX_RIPPLE_HOPS) continue;
-
-      const nextDist = currentDist + 1;
-      const downstream = downstreamByTarget.get(nodeId) ?? [];
-      for (const link of downstream) {
-        if (!edgeDist.has(link.index)) edgeDist.set(link.index, nextDist);
-        if (!nodeDist.has(link.srcId)) {
-          nodeDist.set(link.srcId, nextDist);
-          queue.push(link.srcId);
-        }
-      }
-    }
-
-    const cNodes = new Set<string>(nodeDist.keys());
-    const cEdges = new Set<number>(edgeDist.keys());
-
-    return { connectedNodes: cNodes, connectedEdges: cEdges, nodeDistance: nodeDist, edgeDistance: edgeDist };
-  }, [hoveredId, visibleLinks]);
+  const { connectedNodes, connectedEdges, nodeDistance, edgeDistance } = useMemo(
+    () => computeRippleState(activeHoveredId, visibleLinks),
+    [activeHoveredId, visibleLinks],
+  );
 
   if (nodes.length === 0) return null;
 
   // Screen-reader tooltip announcement (polite live region)
   const tooltipAnnouncement = (() => {
-    if (hoveredEdge !== null) {
-      const link = resolvedLinkByIndex.get(hoveredEdge);
+    if (activeHoveredEdge !== null) {
+      const link = resolvedLinkByIndex.get(activeHoveredEdge);
       if (!link) return "";
       const fromNode = nodeMap.get(link.tgtId);
       const toNode = nodeMap.get(link.srcId);
       if (!fromNode || !toNode) return "";
       return `${fromNode.symbol} to ${toNode.symbol}, ${Math.round(link.weight * 100)}% ${link.type} dependency`;
     }
-    if (hoveredId) {
-      const node = nodeMap.get(hoveredId);
-      const card = cards.find((c) => c.id === hoveredId);
+    if (activeHoveredId) {
+      const node = nodeMap.get(activeHoveredId);
+      const card = cards.find((c) => c.id === activeHoveredId);
       if (!node) return "";
       return `${node.symbol}, Grade ${card?.overallGrade ?? "NR"}, market cap ${formatCurrency(node.mcap)}`;
     }
@@ -410,11 +268,11 @@ export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos }: Conta
 
   // Pre-compute tooltip elements for cleaner JSX
   const nodeTooltipEl = (() => {
-    if (!hoveredId || hoveredEdge !== null) return null;
-    const node = nodeMap.get(hoveredId);
-    const pos = positions.get(hoveredId);
+    if (!activeHoveredId || activeHoveredEdge !== null) return null;
+    const node = nodeMap.get(activeHoveredId);
+    const pos = positions.get(activeHoveredId);
     if (!node || !pos) return null;
-    const card = cards.find((c) => c.id === hoveredId);
+    const card = cards.find((c) => c.id === activeHoveredId);
     const tx = Math.min(pos.x + node.r + 8, WIDTH - 135);
     const ty = Math.max(PAD, pos.y - 20);
     return (
@@ -435,8 +293,8 @@ export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos }: Conta
   })();
 
   const edgeTooltipEl = (() => {
-    if (hoveredEdge === null) return null;
-    const link = resolvedLinkByIndex.get(hoveredEdge);
+    if (activeHoveredEdge === null) return null;
+    const link = resolvedLinkByIndex.get(activeHoveredEdge);
     if (!link) return null;
     const fromPos = positions.get(link.tgtId);
     const toPos = positions.get(link.srcId);
@@ -493,7 +351,7 @@ export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos }: Conta
                 Coin
                 <select
                   className="h-9 max-w-full rounded-md border bg-background px-2 text-[11px] text-foreground md:h-7"
-                  value={neighborhoodFocusId ?? ""}
+                  value={effectiveSelectedNeighborhoodId ?? ""}
                   onChange={(e) => setSelectedNeighborhoodId(e.target.value || null)}
                 >
                   {nodeSelectOptions.map((node) => (
@@ -569,9 +427,9 @@ export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos }: Conta
               const posB = positions.get(tgtId);
               if (!posA || !posB) return null;
 
-              const isEdgeDirectHovered = hoveredEdge === link.index;
+              const isEdgeDirectHovered = activeHoveredEdge === link.index;
               const isConnected = connectedEdges.has(link.index);
-              const isNodeHovered = !!hoveredId;
+              const isNodeHovered = activeHoveredId !== null;
               const srcTier = link.srcTier;
               const tgtTier = link.tgtTier;
               const isHubEdge = srcTier > 0 || tgtTier > 0;
@@ -631,8 +489,8 @@ export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos }: Conta
             {nodes.filter((node) => visibleNodeIds.has(node.id)).map((node) => {
               const pos = positions.get(node.id);
               if (!pos) return null;
-              const isHovered = hoveredId === node.id;
-              const isNodeDimmed = hoveredId !== null && hoveredId !== node.id && !connectedNodes.has(node.id);
+              const isHovered = activeHoveredId === node.id;
+              const isNodeDimmed = activeHoveredId !== null && activeHoveredId !== node.id && !connectedNodes.has(node.id);
               const tier = supernodeState.tierById.get(node.id) ?? 0;
               const isHub = tier > 0;
               const isCoreHub = tier === 2;
@@ -643,7 +501,7 @@ export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos }: Conta
 
               // Contagion ripple: staggered delay based on graph distance
               const hopDist = nodeDistance.get(node.id);
-              const isInRipple = hoveredId !== null && hopDist != null && hopDist > 0;
+              const isInRipple = activeHoveredId !== null && hopDist != null && hopDist > 0;
               const nodeDelay = isInRipple ? hopDist * RIPPLE_HOP_DELAY_MS : 0;
 
               // Multi-hop connected nodes get slightly less emphasis further out
