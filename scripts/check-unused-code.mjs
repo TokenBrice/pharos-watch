@@ -23,7 +23,13 @@ const MODULE_ALLOWLIST = new Set([
   "worker/src/__mocks__/wasm-module-stub.ts",
 ]);
 const EXPORT_ALLOWLIST = new Set([
-  "shared/lib/api-endpoints.ts::getStrictContractPaths",
+  "shared/lib/api-endpoints/index.ts::buildQueryPath",
+  "shared/lib/api-endpoints/index.ts::getStrictContractPaths",
+  "shared/lib/api-endpoints/index.ts::DynamicAdminEndpointMatch",
+  "shared/lib/api-endpoints/index.ts::EndpointMethodValidationError",
+  "shared/lib/api-endpoints/index.ts::EndpointProbeGroup",
+  "shared/lib/api-endpoints/index.ts::EndpointPublicApiAccess",
+  "shared/lib/api-endpoints/index.ts::EndpointSiteDataAccess",
   "shared/lib/chain-health-version.ts::getChainHealthMethodologyVersionAt",
   "shared/lib/chains.ts::CHAIN_RESILIENCE_TIER",
   "shared/lib/mint-burn-signals.ts::COIN_FLOW_COMPOSITE_STATE_VALUES",
