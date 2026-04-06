@@ -95,13 +95,13 @@ function d1ExecFile(statements: string[]): void {
   if (statements.length === 0) return;
   const tmpFile = join(tmpdir(), `depeg-fx-fix-${Date.now()}.sql`);
   try {
-    writeFileSync(tmpFile, statements.join("\n"));
+    writeFileSync(tmpFile, statements.join("\n")); // eslint-disable-line security/detect-non-literal-fs-filename
     execSync(
       `npx wrangler d1 execute ${DB_NAME} --remote --file ${JSON.stringify(tmpFile)} --json`,
       { encoding: "utf-8", maxBuffer: 50 * 1024 * 1024, stdio: "pipe" },
     );
   } finally {
-    try { unlinkSync(tmpFile); } catch {}
+    try { unlinkSync(tmpFile); } catch {} // eslint-disable-line security/detect-non-literal-fs-filename
   }
 }
 
