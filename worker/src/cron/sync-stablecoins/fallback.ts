@@ -2,7 +2,7 @@ import { enrichMissingPrices, hasMissingPrice } from "./enrich-prices";
 import {
   applyTrackedAssetOverrides,
   fillMissingSupplyHistory,
-} from "./stages";
+} from "./phase-helpers";
 import type { CoinGeckoMcapData } from "./supplemental-assets";
 import {
   buildSyncMetadata,

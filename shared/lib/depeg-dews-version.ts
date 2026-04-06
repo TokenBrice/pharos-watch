@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "5.2",
+  currentVersion: "5.3",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
+  {
+    version: "5.3",
+    title: "DEWS flow baseline continuity on quiet 24-hour windows",
+    date: "2026-04-06",
+    effectiveAt: 1775433600,
+    summary:
+      "DEWS no longer drops the mint/burn flow signal just because the latest 24-hour window had zero activity while a mature 30-day baseline still exists.",
+    impact: [
+      "Coins with >= 7 days of mint/burn history now keep the flow signal available even when the latest 24-hour bucket is quiet",
+      "A zero-flow day now contributes zero flow stress instead of silently redistributing the flow weight away from the score",
+      "DEWS cron assembly now reflects the documented mint/burn-baseline semantics for mature tracked coins",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.2",
     title: "Corroborated DEX recovery gating for live depeg state",

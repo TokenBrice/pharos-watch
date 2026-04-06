@@ -304,6 +304,22 @@ describe("computeDEWS", () => {
     expect(result.signals.flow.available).toBe(false);
   });
 
+  it("treats a mature baseline with zero recent mint/burn flow as available", () => {
+    const result = computeDews(
+      baseInput({
+        burnVolume24hUsd: 0,
+        mintVolume24hUsd: 0,
+        burnBaseline30dUsd: 5e8,
+        flowDataAgeDays: 14,
+      }),
+    );
+
+    expect(result.signals.flow.available).toBe(true);
+    expect(result.signals.flow.value).toBe(0);
+    expect(result.signals.flow.burnSurge).toBe(0);
+    expect(result.signals.flow.burnToMintRatio).toBe(0);
+  });
+
   it("marks flow unavailable when data too young (<7 days)", () => {
     const result = computeDews(
       baseInput({

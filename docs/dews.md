@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) estimating depeg probability. Com
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/depeg-dews-version.ts`.
 
-- **Current methodology version:** `v5.2`
+- **Current methodology version:** `v5.3`
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/depeg-dews-version.ts`
 
@@ -108,7 +108,7 @@ Only for blacklist-tracked coins (currently USDC, USDT, PAXG, XAUT, PYUSD, and U
 
 ### S_flow — Mint/Burn Flow
 
-Available only when `mint_burn_hourly` data exists and is >= 7 days old. Measures:
+Available only when `mint_burn_hourly` data exists and is >= 7 days old. A mature 30-day baseline with zero mint/burn activity in the latest 24h window still counts as available data and contributes zero flow stress. Measures:
 
 - **Burn surge:** 24h burn volume / 30d daily average
 - **Burn-to-mint ratio:** 24h burns / 24h mints

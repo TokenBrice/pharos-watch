@@ -45,3 +45,13 @@ export interface ResolvedYieldEntry {
   symbol: string;
   yield: ResolvedYield | null;
 }
+
+export interface SafetyScoreSnapshot {
+  score: number;
+  grade: string;
+}
+
+export interface YieldResolutionResult {
+  resolved: ResolvedYieldEntry[];
+  tier1PrevRates: Map<string, number | null>;
+}

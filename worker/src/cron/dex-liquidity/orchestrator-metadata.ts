@@ -77,6 +77,7 @@ function emptyCoverageClasses(): CoverageClasses {
 export interface DexLiquidityPostScoreAnalysis {
   currentCoverage: number;
   previousCoverage: number;
+  previousCoverageBaselineAvailable: boolean;
   minExpectedCoverage: number;
   currentGlobalTvl: number;
   previousGlobalTvl: number | null;
@@ -93,6 +94,7 @@ export interface DexLiquidityPostScoreAnalysis {
     dlProtocolsAvailable: boolean;
     currentCoverage: number;
     previousCoverage: number;
+    previousCoverageBaselineAvailable: boolean;
     minExpectedCoverage: number;
     nearCoverageGuard: boolean;
     currentGlobalTvl: number;
@@ -174,6 +176,7 @@ export function isDexLiquidityDegraded(params: {
 }): boolean {
   return (
     params.criticalSourceFailures.length > 0 ||
+    !params.analysis.previousCoverageBaselineAvailable ||
     params.analysis.nearCoverageGuard ||
     params.analysis.nearValueGuard ||
     params.analysis.nearMajorCoverageGuard ||
@@ -265,8 +268,8 @@ export async function analyzeDexLiquidityPostScoring(params: {
       .prepare("SELECT COUNT(*) as cnt FROM dex_liquidity WHERE stablecoin_id != '__global__' AND liquidity_score IS NOT NULL")
       .first<{ cnt: number }>()
       .catch((e) => {
-        console.warn("[dex-liquidity] Failed to read previous coverage count — using safe high fallback:", e instanceof Error ? e.message : e);
-        return { cnt: 9999 };
+        console.warn("[dex-liquidity] Failed to read previous coverage count:", e instanceof Error ? e.message : e);
+        return null;
       }),
     params.db
       .prepare("SELECT total_tvl_usd FROM dex_liquidity WHERE stablecoin_id = '__global__'")
@@ -339,9 +342,14 @@ export async function analyzeDexLiquidityPostScoring(params: {
       }),
   ]);
 
+  const previousCoverageBaselineAvailable = previousCoverageRow != null;
   const previousCoverage = previousCoverageRow?.cnt ?? 0;
-  const minExpectedCoverage = Math.max(1, Math.floor(previousCoverage * 0.6));
-  const nearCoverageGuard = previousCoverage >= 10 && currentCoverage < Math.floor(previousCoverage * 0.8);
+  const minExpectedCoverage = previousCoverageBaselineAvailable
+    ? Math.max(1, Math.floor(previousCoverage * 0.6))
+    : 0;
+  const nearCoverageGuard = previousCoverageBaselineAvailable
+    && previousCoverage >= 10
+    && currentCoverage < Math.floor(previousCoverage * 0.8);
 
   const currentGlobalTvl = params.globalAgg.totalTvl;
   const previousGlobalTvl = previousGlobalRow?.total_tvl_usd ?? null;
@@ -551,6 +559,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
   return {
     currentCoverage,
     previousCoverage,
+    previousCoverageBaselineAvailable,
     minExpectedCoverage,
     currentGlobalTvl,
     previousGlobalTvl,
@@ -567,6 +576,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       dlProtocolsAvailable: params.dlProtocolsAvailable,
       currentCoverage,
       previousCoverage,
+      previousCoverageBaselineAvailable,
       minExpectedCoverage,
       nearCoverageGuard,
       currentGlobalTvl,

@@ -11,7 +11,7 @@ import {
   dedupeCanonicalAssets,
   filterStructurallyValidAssets,
   normalizeChainCirculating,
-} from "./stages";
+} from "./phase-helpers";
 import {
   fetchCoinGeckoMarketData,
   fetchSupplementalTrackedTokens,

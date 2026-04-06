@@ -1,23 +1,10 @@
 // worker/src/cron/sync-yield-data.ts
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
-import { getCirculatingRaw } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { getCache, setCache, setCacheIfNewer } from "../lib/db-cache";
+import { setCache } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
-import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
 import { ON_CHAIN_RATE_CONFIGS } from "./yield-config";
 import type { ChainRpcConfig } from "../lib/chain-registry";
-import {
-  getDefaultDeterministicOnChainHealthState,
-  parseDeterministicOnChainHealthState,
-  parseYieldSupplementalSourcesCache,
-  serializeDeterministicOnChainHealthState,
-} from "./yield-sync/cache";
-import {
-  fetchOnChainRates,
-  loadDlStablecoinPools,
-  loadRiskFreeRateRegistry,
-} from "./yield-sync/sources";
 import { toYieldBenchmarkRegistry } from "./yield-sync/benchmarks";
 import { resolveYieldSources } from "./yield-sync/resolve";
 import {
@@ -29,9 +16,13 @@ import {
   buildHistoryKey,
   isLegacyDeterministicOnChainSourceKey,
   normalizePreviousBestSourceKey,
-  shouldDegradeForRiskFreeRate,
 } from "./yield-sync/evaluation";
 import { buildYieldSourceProvenance } from "./yield-sync/provenance";
+import {
+  buildYieldDegradationReasons,
+  buildYieldSafetySnapshotMeta,
+  buildYieldSyncMetadata,
+} from "./yield-sync/coordinator-metadata";
 import {
   buildYieldRankingsPayloadFromEvaluatedSources,
   persistEvaluatedYieldSources,
@@ -40,187 +31,11 @@ import {
   validateYieldRankingsPayloadForPublish,
   writeYieldRankingsCache,
 } from "./yield-sync/publication";
-import type { ResolvedYieldCandidate } from "./yield-sync/types";
-
-const MIN_SAFETY_SCORE_COVERAGE_RATIO = 0.75;
-const YIELD_SUPPLEMENTAL_CACHE_KEY = "yield:supplemental-sources:v1";
-const DETERMINISTIC_ONCHAIN_HEALTH_CACHE_KEY = "yield:onchain-health:v1";
-const YIELD_SUPPLEMENTAL_MAX_AGE_SEC = 12 * 3600;
-const DETERMINISTIC_ONCHAIN_COOLDOWN_THRESHOLD = 2;
-const DETERMINISTIC_ONCHAIN_COOLDOWN_SEC = 6 * 3600;
-
-interface YieldSupplementalCacheMeta {
-  mode: "cache" | "stale-cache" | "unavailable";
-  updatedAt: number | null;
-  ageSeconds: number | null;
-  sourceCount: number;
-  fallbackMode: string | null;
-}
-
-function buildStablecoinSupplyMapFromCacheValue(value: string): Map<string, number> {
-  const parsed = JSON.parse(value) as unknown;
-  const rawAssets =
-    Array.isArray(parsed)
-      ? parsed
-      : (parsed && typeof parsed === "object" && Array.isArray((parsed as { peggedAssets?: unknown }).peggedAssets)
-        ? (parsed as { peggedAssets: unknown[] }).peggedAssets
-        : []);
-  const supplyById = new Map<string, number>();
-
-  for (const asset of rawAssets) {
-    if (!asset || typeof asset !== "object") continue;
-    const id = (asset as { id?: unknown }).id;
-    if (typeof id !== "string" || id.length === 0) continue;
-    const supplyUsd = getCirculatingRaw(asset as Parameters<typeof getCirculatingRaw>[0]);
-    if (supplyUsd > 0) {
-      supplyById.set(id, supplyUsd);
-    }
-  }
-
-  return supplyById;
-}
-
-async function loadYieldSupplementalCandidates(
-  db: D1Database,
-  startSec: number,
-): Promise<{ candidates: ResolvedYieldCandidate[]; meta: YieldSupplementalCacheMeta }> {
-  const cached = await getCache(db, YIELD_SUPPLEMENTAL_CACHE_KEY);
-  if (!cached) {
-    return {
-      candidates: [],
-      meta: {
-        mode: "unavailable",
-        updatedAt: null,
-        ageSeconds: null,
-        sourceCount: 0,
-        fallbackMode: "missing-cache",
-      },
-    };
-  }
-
-  const parsed = parseYieldSupplementalSourcesCache(cached.value, cached.updatedAt, startSec);
-  if (!parsed) {
-    return {
-      candidates: [],
-      meta: {
-        mode: "unavailable",
-        updatedAt: cached.updatedAt,
-        ageSeconds: Math.max(0, startSec - cached.updatedAt),
-        sourceCount: 0,
-        fallbackMode: "invalid-cache",
-      },
-    };
-  }
-
-  if (parsed.ageSeconds > YIELD_SUPPLEMENTAL_MAX_AGE_SEC) {
-    return {
-      candidates: [],
-      meta: {
-        mode: "stale-cache",
-        updatedAt: parsed.updatedAt,
-        ageSeconds: parsed.ageSeconds,
-        sourceCount: parsed.sourceCount,
-        fallbackMode: "stale-cache",
-      },
-    };
-  }
-
-  return {
-    candidates: parsed.candidates,
-    meta: {
-      mode: "cache",
-      updatedAt: parsed.updatedAt,
-      ageSeconds: parsed.ageSeconds,
-      sourceCount: parsed.sourceCount,
-      fallbackMode: null,
-    },
-  };
-}
-
-function buildNextDeterministicOnChainHealthState(params: {
-  deterministicConfigCount: number;
-  previous: ReturnType<typeof getDefaultDeterministicOnChainHealthState>;
-  startSec: number;
-  onChainAttemptedCount: number;
-  onChainRatesResolved: number;
-  allDeterministicFailed: boolean;
-  maskedAllDeterministicFailure: boolean;
-  onChainAlternativeCoverageMissingIds: string[];
-  onChainSkippedDueToCooldown: boolean;
-}) {
-  const {
-    deterministicConfigCount,
-    previous,
-    startSec,
-    onChainAttemptedCount,
-    onChainRatesResolved,
-    allDeterministicFailed,
-    maskedAllDeterministicFailure,
-    onChainAlternativeCoverageMissingIds,
-    onChainSkippedDueToCooldown,
-  } = params;
-
-  if (deterministicConfigCount === 0) {
-    return getDefaultDeterministicOnChainHealthState();
-  }
-
-  if (onChainSkippedDueToCooldown) {
-    if (onChainAlternativeCoverageMissingIds.length > 0) {
-      return {
-        ...getDefaultDeterministicOnChainHealthState(),
-        lastSkippedAt: startSec,
-        lastFailureMissingIds: onChainAlternativeCoverageMissingIds,
-      };
-    }
-    return {
-      ...previous,
-      lastSkippedAt: startSec,
-    };
-  }
-
-  if (onChainAttemptedCount === 0) {
-    return {
-      ...previous,
-      cooldownUntil:
-        previous.cooldownUntil != null && previous.cooldownUntil > startSec
-          ? previous.cooldownUntil
-          : null,
-    };
-  }
-
-  if (onChainRatesResolved > 0) {
-    return {
-      ...getDefaultDeterministicOnChainHealthState(),
-      lastAttemptedAt: startSec,
-      lastSuccessAt: startSec,
-    };
-  }
-
-  if (allDeterministicFailed) {
-    const consecutiveAllFailRuns = previous.consecutiveAllFailRuns + 1;
-    const consecutiveMaskedAllFailRuns = maskedAllDeterministicFailure
-      ? previous.consecutiveMaskedAllFailRuns + 1
-      : 0;
-    return {
-      consecutiveAllFailRuns,
-      consecutiveMaskedAllFailRuns,
-      cooldownUntil:
-        maskedAllDeterministicFailure && consecutiveMaskedAllFailRuns >= DETERMINISTIC_ONCHAIN_COOLDOWN_THRESHOLD
-          ? startSec + DETERMINISTIC_ONCHAIN_COOLDOWN_SEC
-          : null,
-      lastAttemptedAt: startSec,
-      lastAllFailedAt: startSec,
-      lastSuccessAt: previous.lastSuccessAt,
-      lastSkippedAt: previous.lastSkippedAt,
-      lastFailureMissingIds: onChainAlternativeCoverageMissingIds,
-    };
-  }
-
-  return {
-    ...getDefaultDeterministicOnChainHealthState(),
-    lastAttemptedAt: startSec,
-  };
-}
+import {
+  buildNextDeterministicOnChainHealthState,
+  loadYieldSyncState,
+  persistDeterministicOnChainHealthState,
+} from "./yield-sync/state-loading";
 // -- Main sync function ------------------------------------------------------
 
 export async function syncYieldData(
@@ -239,65 +54,37 @@ export async function syncYieldData(
     return { itemCount: 0, metadata: "no yield-bearing coins" };
   }
 
-  const { pools: dlPools, meta: dlPoolsMeta } = await loadDlStablecoinPools(db, signal);
-  const { candidates: supplementalCandidates, meta: supplementalMeta } = await loadYieldSupplementalCandidates(
+  const {
+    dlPools,
+    dlPoolsMeta,
+    supplementalCandidates,
+    supplementalMeta,
+    onChainHealthState,
+    onChainCooldownActive,
+    onChainCooldownRemainingSec,
+    onChainSkippedDueToCooldown,
+    onChainRates,
+    onChainFailures,
+    onChainAttemptedCount,
+    allDeterministicFailed,
+    onChainExplorerAttemptedCount,
+    onChainExplorerResolvedCount,
+    riskFreeRates,
+    riskFreeRateMeta,
+    stablecoinSupplyById,
+    safetySnapshot,
+    safetyScores,
+    safetyCoverageRatio,
+    safetySnapshotDegraded,
+    scoresObj,
+  } = await loadYieldSyncState({
     db,
     startSec,
-  );
-  const onChainHealthCache = await getCache(db, DETERMINISTIC_ONCHAIN_HEALTH_CACHE_KEY);
-  const onChainHealthState = onChainHealthCache
-    ? parseDeterministicOnChainHealthState(onChainHealthCache.value)
-    : getDefaultDeterministicOnChainHealthState();
-  const onChainCooldownActive =
-    ON_CHAIN_RATE_CONFIGS.length > 0 &&
-    onChainHealthState.cooldownUntil != null &&
-    onChainHealthState.cooldownUntil > startSec;
-  const onChainCooldownRemainingSec =
-    onChainCooldownActive && onChainHealthState.cooldownUntil != null
-      ? Math.max(0, onChainHealthState.cooldownUntil - startSec)
-      : 0;
-  const onChainSkippedDueToCooldown = onChainCooldownActive;
-  const onChainFetchResult = onChainSkippedDueToCooldown
-    ? {
-      rates: new Map<string, { rate: number }>(),
-      failureBreakdown: null as Record<string, number> | null,
-      attemptedCount: 0,
-      allDeterministicFailed: false,
-      explorerAttemptedCount: 0,
-      explorerResolvedCount: 0,
-    }
-    : await fetchOnChainRates(signal, chainRpcs, etherscanApiKey);
-  const {
-    rates: onChainRates,
-    failureBreakdown: onChainFailures,
-    attemptedCount: onChainAttemptedCount = 0,
-    allDeterministicFailed = false,
-    explorerAttemptedCount: onChainExplorerAttemptedCount = 0,
-    explorerResolvedCount: onChainExplorerResolvedCount = 0,
-  } = onChainFetchResult;
-  const riskFreeRates = await loadRiskFreeRateRegistry(db);
-  const riskFreeRateMeta = riskFreeRates.USD;
-  const riskFreeRate = riskFreeRateMeta.rate;
-  const stablecoinSupplyById = new Map<string, number>();
-  const stablecoinsCache = await getCache(db, "stablecoins");
-  if (stablecoinsCache?.value) {
-    try {
-      for (const [id, supplyUsd] of buildStablecoinSupplyMapFromCacheValue(stablecoinsCache.value)) {
-        stablecoinSupplyById.set(id, supplyUsd);
-      }
-    } catch (error) {
-      console.warn("[sync-yield-data] Failed to parse stablecoins cache for lending size gates:", error);
-    }
-  }
-
-  const safetySnapshot = await computeSafetyScoresSnapshot(db, {
-    includeNavTokens: true,
-    outputMode: "map",
+    signal,
+    chainRpcs,
+    etherscanApiKey,
   });
-  const safetyScores = safetySnapshot.scores;
-  const safetyCoverageRatio = safetySnapshot.coverageRatio;
-  const safetySnapshotDegraded =
-    safetySnapshot.kind !== "ok" || safetyCoverageRatio < MIN_SAFETY_SCORE_COVERAGE_RATIO;
+  const riskFreeRate = riskFreeRateMeta.rate;
 
   if (safetySnapshotDegraded) {
     console.warn(
@@ -306,10 +93,6 @@ export async function syncYieldData(
     );
   }
 
-  const scoresObj: Record<string, { score: number; grade: string }> = {};
-  for (const [id, val] of safetyScores) {
-    scoresObj[id] = val;
-  }
   if (!safetySnapshotDegraded) {
     await setCache(
       db,
@@ -470,12 +253,7 @@ export async function syncYieldData(
     !onChainCooldownActive &&
     nextOnChainHealthState.cooldownUntil != null &&
     nextOnChainHealthState.cooldownUntil > startSec;
-  await setCacheIfNewer(
-    db,
-    DETERMINISTIC_ONCHAIN_HEALTH_CACHE_KEY,
-    serializeDeterministicOnChainHealthState(nextOnChainHealthState),
-    startSec,
-  );
+  await persistDeterministicOnChainHealthState(db, startSec, nextOnChainHealthState);
 
   {
     const nativeApyByCoin = new Map<string, number>();
@@ -522,13 +300,13 @@ export async function syncYieldData(
     };
   }
 
-  const safetySnapshotMeta = {
+  const safetySnapshotMeta = buildYieldSafetySnapshotMeta({
     kind: safetySnapshot.kind,
-    coverageRatio: Number(safetyCoverageRatio.toFixed(4)),
+    coverageRatio: safetyCoverageRatio,
     coveredCount: safetySnapshot.coveredCount,
     trackedCount: safetySnapshot.trackedCount,
     reason: safetySnapshot.reason ?? null,
-  } as const;
+  });
 
   const previewRankingProvenanceByKey = new Map<string, Record<string, unknown>>();
   for (const source of evaluatedSources) {
@@ -586,31 +364,21 @@ export async function syncYieldData(
     };
   }
 
-  const degradationReasons: string[] = [];
-  if (safetySnapshotDegraded) {
-    degradationReasons.push("safety-snapshot-coverage");
-    if (safetySnapshot.reason) {
-      degradationReasons.push(`safety-snapshot:${safetySnapshot.reason}`);
-    }
+  if (allDeterministicFailed && maskedAllDeterministicFailure) {
+    console.warn(
+      "[sync-yield-data] Deterministic on-chain lane failed, but all configured coins retained non-onchain yield coverage",
+    );
   }
-  if (shouldDegradeForRiskFreeRate(riskFreeRateMeta)) {
-    degradationReasons.push(`risk-free-rate:${riskFreeRateMeta.fallbackMode}`);
-  }
-  if (dlPoolsMeta.mode === "unavailable" || dlPoolsMeta.fallbackMode === "cache-parse-failed") {
-    degradationReasons.push(`dl-pools:${dlPoolsMeta.fallbackMode ?? dlPoolsMeta.mode}`);
-  }
-  if (allDeterministicFailed) {
-    if (maskedAllDeterministicFailure) {
-      console.warn(
-        "[sync-yield-data] Deterministic on-chain lane failed, but all configured coins retained non-onchain yield coverage",
-      );
-    } else {
-      degradationReasons.push("onchain-rates:all-deterministic-failed");
-    }
-  }
-  if (onChainSkippedDueToCooldown && onChainAlternativeCoverageMissingIds.length > 0) {
-    degradationReasons.push("onchain-rates:cooldown-coverage-gap");
-  }
+  const degradationReasons = buildYieldDegradationReasons({
+    safetySnapshotDegraded,
+    safetySnapshotReason: safetySnapshot.reason ?? null,
+    riskFreeRateMeta,
+    dlPoolsMeta,
+    allDeterministicFailed,
+    maskedAllDeterministicFailure,
+    onChainSkippedDueToCooldown,
+    onChainAlternativeCoverageMissingIds,
+  });
 
   const previewPublishability = await validateYieldRankingsPayloadForPublish(db, previewRankingsPayload);
   if (!previewPublishability.ok) {
@@ -655,44 +423,36 @@ export async function syncYieldData(
   return {
     itemCount: updatedCount,
     ...(status === "degraded" ? { status: "degraded" as const } : {}),
-    metadata: JSON.stringify({
+    metadata: buildYieldSyncMetadata({
       rowsRead: yieldCoins.length,
       rowsWritten: updatedCount,
-      rowsDropped: rowsRejected,
       rowsRejected,
       divergenceFlags,
       sourceSwitches,
       defaultSafetyCoinCount: defaultSafetyIds.size,
-      sourceCoverage: {
-        safetyScoresComputed: safetySnapshot.coveredCount,
-        safetyScoresExpected: safetySnapshot.trackedCount,
-        safetyCoverageRatio: Number(safetyCoverageRatio.toFixed(4)),
-        resolvedYieldBearingCount: resolvedYieldBearingIds.size,
-        expectedYieldBearingCount: yieldCoins.length,
-        publishedYieldBearingCount: currentPublishedYieldBearingCount,
-        previousPublishedYieldBearingCount,
-        dlPoolCount: dlPoolsMeta.poolCount,
-        supplementalSourceMode: supplementalMeta.mode,
-        supplementalSourceUpdatedAt: supplementalMeta.updatedAt,
-        supplementalSourceAgeSeconds: supplementalMeta.ageSeconds,
-        supplementalSourceCount: supplementalMeta.sourceCount,
-        onChainRatesResolved: onChainRates.size,
-        onChainRatesConfigured: ON_CHAIN_RATE_CONFIGS.length,
-        onChainAttempted: onChainAttemptedCount,
-        onChainAllDeterministicFailed: allDeterministicFailed,
-        onChainExplorerAttempted: onChainExplorerAttemptedCount,
-        onChainExplorerResolved: onChainExplorerResolvedCount,
-        onChainFailureMaskedByAlternativeCoverage: maskedAllDeterministicFailure,
-        onChainAlternativeCoverageMissingIds,
-        onChainFailures: onChainFailures,
-        onChainSkippedDueToCooldown,
-        onChainCooldownActive,
-        onChainCooldownTriggered,
-        onChainCooldownUntil: nextOnChainHealthState.cooldownUntil,
-        onChainCooldownRemainingSec,
-        onChainConsecutiveAllFailRuns: nextOnChainHealthState.consecutiveAllFailRuns,
-        onChainConsecutiveMaskedAllFailRuns: nextOnChainHealthState.consecutiveMaskedAllFailRuns,
-      },
+      safetySnapshot: safetySnapshotMeta,
+      resolvedYieldBearingCount: resolvedYieldBearingIds.size,
+      expectedYieldBearingCount: yieldCoins.length,
+      publishedYieldBearingCount: currentPublishedYieldBearingCount,
+      previousPublishedYieldBearingCount,
+      dlPoolsMeta,
+      supplementalMeta,
+      onChainRatesResolved: onChainRates.size,
+      onChainRatesConfigured: ON_CHAIN_RATE_CONFIGS.length,
+      onChainAttempted: onChainAttemptedCount,
+      onChainAllDeterministicFailed: allDeterministicFailed,
+      onChainExplorerAttempted: onChainExplorerAttemptedCount,
+      onChainExplorerResolved: onChainExplorerResolvedCount,
+      onChainFailureMaskedByAlternativeCoverage: maskedAllDeterministicFailure,
+      onChainAlternativeCoverageMissingIds,
+      onChainFailures,
+      onChainSkippedDueToCooldown,
+      onChainCooldownActive,
+      onChainCooldownTriggered,
+      onChainCooldownUntil: nextOnChainHealthState.cooldownUntil,
+      onChainCooldownRemainingSec,
+      onChainConsecutiveAllFailRuns: nextOnChainHealthState.consecutiveAllFailRuns,
+      onChainConsecutiveMaskedAllFailRuns: nextOnChainHealthState.consecutiveMaskedAllFailRuns,
       fallbackMode: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
       validationFailures,
       riskFreeRate,

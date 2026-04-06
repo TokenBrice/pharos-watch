@@ -408,7 +408,8 @@ export function PegScoreDewsMethodologySection() {
                     </li>
                     <li>
                       <span className="text-foreground">Mint/Burn Flow (0.10)</span> &mdash; redemption surge vs minting
-                      from on-chain Transfer event data
+                      from on-chain Transfer event data; mature 30-day coverage stays available even when the latest
+                      24-hour window is quiet, contributing zero flow stress instead of disappearing
                     </li>
                     <li>
                       <span className="text-foreground">Yield Anomaly (0.05)</span> &mdash; warning-signal accumulation from

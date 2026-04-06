@@ -1,8 +1,15 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v5.2` (2026-02-18 -> 2026-04-03).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v5.3` (2026-02-18 -> 2026-04-06).
 
 ---
+## v5.3 — DEWS flow baseline continuity on quiet 24-hour windows (Apr 6, 2026)
+
+**Commit:** `unreleased`
+
+- DEWS no longer drops the mint/burn flow signal just because the latest 24-hour window has zero activity
+- Coins with >= 7 days of mint/burn history now keep the flow signal available as long as the 30-day baseline exists
+- A quiet day now contributes zero flow stress instead of redistributing the flow weight away from the final score
 
 ## v5.2 — Corroborated DEX recovery gating for live depeg state (Apr 3, 2026)
 

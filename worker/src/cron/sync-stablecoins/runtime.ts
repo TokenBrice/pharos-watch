@@ -1,8 +1,14 @@
 import { buildSyncMetadata } from "./shared";
-import { detectPriceStaleness, fillMissingSupplyHistory } from "./stages";
-import { reportCronProgress } from "../../lib/cron-progress";
+import { detectPriceStaleness, fillMissingSupplyHistory } from "./phase-helpers";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import type { PeggedAsset } from "./enrich-prices";
+import {
+  buildAbortedCronStageResult,
+  reportCronStage,
+  returnIfCronStageAborted,
+  type CronStageContext,
+  type CronStageProgress,
+} from "../shared/stage-contracts";
 
 const SEVERE_PRICE_STALENESS_RATIO = 0.98;
 
@@ -16,13 +22,9 @@ export async function reportStablecoinsStage(
   reportProgress: CronProgressReporter | undefined,
   stage: string,
   message: string,
-  options?: {
-    itemsDone?: number;
-    itemsTotal?: number;
-    metadata?: Record<string, unknown>;
-  },
+  options?: Omit<CronStageProgress, "stage" | "message">,
 ): Promise<void> {
-  await reportCronProgress(reportProgress, {
+  await reportCronStage(reportProgress, {
     stage,
     message,
     itemsDone: options?.itemsDone,
@@ -32,23 +34,19 @@ export async function reportStablecoinsStage(
 }
 
 export function abortResult(signal: AbortSignal | undefined, stage: string): CronResult {
-  const reasonRaw = signal?.reason;
-  const reason =
-    reasonRaw instanceof Error
-      ? reasonRaw.message
-      : typeof reasonRaw === "string" && reasonRaw.length > 0
-        ? reasonRaw
-        : "aborted";
-  return {
-    status: "degraded",
-    itemCount: 0,
-    metadata: buildSyncMetadata({ reason: "aborted", stage, detail: reason }),
-  };
+  return buildAbortedCronStageResult({
+    signal,
+    stage,
+    serializeMetadata: (metadata) => buildSyncMetadata({ ...metadata }),
+  });
 }
 
 export function returnIfAborted(signal: AbortSignal | undefined, stage: string): CronResult | null {
-  if (!signal?.aborted) return null;
-  return abortResult(signal, stage);
+  return returnIfCronStageAborted({
+    signal,
+    stage,
+    serializeMetadata: (metadata) => buildSyncMetadata({ ...metadata }),
+  });
 }
 
 export async function fillStablecoinsSupplyHistoryStage(
@@ -88,8 +86,8 @@ function buildStalenessSummaryMetadata(staleness: {
 export async function checkStablecoinsPriceStaleness(params: {
   db: D1Database;
   assets: PeggedAsset[];
-  signal?: AbortSignal;
-  reportProgress?: CronProgressReporter;
+  signal?: CronStageContext["signal"];
+  reportProgress?: CronStageContext["reportProgress"];
   progressStage: string;
   progressMessage: string;
   abortStage: string;

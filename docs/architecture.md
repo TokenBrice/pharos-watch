@@ -92,6 +92,8 @@ Representative tree of architecture-significant files and directories. For an ex
 
 Shared runtime host/origin defaults now live in `shared/lib/runtime-origins.json` + `shared/lib/runtime-origins.ts`. Frontend API-base inference, `/_site-data/*` Pages Functions, ops-host Pages Functions, worker self/probe URLs, and local static-export tooling should consume that shared source instead of embedding production origins ad hoc.
 
+Worker cron refactors should place reusable stage contracts under `worker/src/cron/shared/`. The seed contract layer in `worker/src/cron/shared/stage-contracts.ts` defines the shared vocabulary for stage progress, abort results, and handoff context so large cron decompositions do not each invent incompatible result shapes.
+
 ```
 src/                              # Next.js frontend (static export)
 ├── app/
@@ -516,6 +518,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── weekly-recap.ts      # AI-generated weekly market recap via Claude API (Mondays, 08:05 UTC)
     │   ├── discovery-scan.ts     # Weekly stablecoin coverage discovery → D1 (Mondays, 08:05 UTC)
     │   ├── compute-dews.ts       # DEWS computation cron (every 30 min, after sync-dex-liquidity)
+    │   ├── dews/                 # DEWS source-loading, signal-assembly, and persistence helpers
     │   ├── dispatch-telegram-alerts.ts # Subscriber alert fan-out for DEWS/depeg/safety shifts plus launch promotions (dedicated every-5-minute trigger)
     │   ├── yield-config.ts       # Yield source configs: pool UUIDs, source types, scoring params
     │   ├── yield-helpers.ts      # Pure yield computation helpers: Pharos Yield Score, excess yield, stability

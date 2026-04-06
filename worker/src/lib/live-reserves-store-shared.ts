@@ -7,7 +7,6 @@ import type {
   LiveReserveSourceModel,
   LiveReserveWarning,
 } from "@shared/types/live-reserves";
-import { parseSnapshotMetadata, parseWarnings } from "./live-reserves-store-parsing";
 
 export const LIVE_RESERVE_FRESHNESS_SEC = 2 * DAY_SECONDS;
 export const LIVE_RESERVE_HISTORY_RETENTION_SEC = 90 * DAY_SECONDS;
@@ -184,22 +183,4 @@ export function didReserveSyncAttemptFinalizeAsSuccess(
   attemptId: string,
 ): boolean {
   return syncState?.lastSuccessAttemptId === attemptId;
-}
-
-export function mapReserveSyncStateRow(row: ReserveSyncStateRow): ReserveSyncStateRecord {
-  return {
-    stablecoinId: row.stablecoin_id,
-    adapterKey: row.adapter_key,
-    breakerKey: row.breaker_key,
-    lastAttemptedAt: row.last_attempted_at,
-    lastSuccessAt: row.last_success_at,
-    lastStatus: row.last_status,
-    warningCount: row.warning_count,
-    warnings: parseWarnings(row.warnings),
-    lastError: row.last_error,
-    metadata: parseSnapshotMetadata(row.metadata),
-    lastAttemptId: row.last_attempt_id ?? null,
-    pendingAttemptId: row.pending_attempt_id ?? null,
-    lastSuccessAttemptId: row.last_success_attempt_id ?? null,
-  };
 }

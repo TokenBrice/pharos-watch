@@ -41,6 +41,7 @@ export const DexLiquidityCronMetadataSchema = z.object({
     .object({
       currentCoverage: z.number().optional(),
       previousCoverage: z.number().optional(),
+      previousCoverageBaselineAvailable: z.boolean().optional(),
       minExpectedCoverage: z.number().optional(),
       priceObservationCoins: z.number().optional(),
       weakCoverageCoins: z.number().optional(),

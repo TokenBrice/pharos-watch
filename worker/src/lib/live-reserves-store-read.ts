@@ -1,14 +1,35 @@
 import { buildInClause } from "./db";
 import { chunkArray } from "./collections";
-import { parseReserveCompositionRow } from "./live-reserves-store-parsing";
 import {
-  mapReserveSyncStateRow,
+  parseReserveCompositionRow,
+  parseSnapshotMetadata,
+  parseWarnings,
+} from "./live-reserves-store-parsing";
+import {
   RESERVE_SYNC_STATE_SELECT_COLUMNS,
   type ReserveCompositionRecord,
   type ReserveCompositionRow,
   type ReserveSyncStateRecord,
   type ReserveSyncStateRow,
 } from "./live-reserves-store-shared";
+
+function mapReserveSyncStateRow(row: ReserveSyncStateRow): ReserveSyncStateRecord {
+  return {
+    stablecoinId: row.stablecoin_id,
+    adapterKey: row.adapter_key,
+    breakerKey: row.breaker_key,
+    lastAttemptedAt: row.last_attempted_at,
+    lastSuccessAt: row.last_success_at,
+    lastStatus: row.last_status,
+    warningCount: row.warning_count,
+    warnings: parseWarnings(row.warnings),
+    lastError: row.last_error,
+    metadata: parseSnapshotMetadata(row.metadata),
+    lastAttemptId: row.last_attempt_id ?? null,
+    pendingAttemptId: row.pending_attempt_id ?? null,
+    lastSuccessAttemptId: row.last_success_attempt_id ?? null,
+  };
+}
 
 export async function getReserveCompositionRow(
   db: D1Database,

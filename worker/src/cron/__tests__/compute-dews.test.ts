@@ -97,6 +97,13 @@ interface MakeDbOptions {
   failDexLiquidity?: boolean;
   failDexPricesMissingTable?: boolean;
   dexPriceRows?: Array<{ stablecoin_id: string; dex_price_usd: number; updated_at: number }>;
+  mintBurn24hRows?: Array<{ stablecoin_id: string; total_burn: number; total_mint: number }>;
+  mintBurn30dRows?: Array<{
+    stablecoin_id: string;
+    avg_burn: number;
+    avg_mint: number;
+    days_with_data: number;
+  }>;
   blacklist24hRows?: Array<{ stablecoin: string; cnt: number }>;
   blacklist7dRows?: Array<{ stablecoin: string; cnt: number }>;
   prevSignalRows?: Array<{
@@ -182,6 +189,16 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
       if (sql.includes("FROM yield_data")) {
         return {
           results: (opts.yieldWarningRows ?? []) as T[],
+        };
+      }
+      if (sql.includes("FROM mint_burn_hourly")) {
+        if (sql.includes("days_with_data")) {
+          return {
+            results: (opts.mintBurn30dRows ?? []) as T[],
+          };
+        }
+        return {
+          results: (opts.mintBurn24hRows ?? []) as T[],
         };
       }
       return { results: [] as T[] };
@@ -271,6 +288,32 @@ describe("computeAndStoreDEWS", () => {
       expect.any(Array),
       expect.any(Map),
       { peggedEUR: 1.08 },
+    );
+  });
+
+  it("keeps a mature mint/burn baseline when the latest 24h window is quiet", async () => {
+    const sqlSeen: string[] = [];
+    const db = makeDb(sqlSeen, {
+      mintBurn30dRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          avg_burn: 250_000,
+          avg_mint: 150_000,
+          days_with_data: 14,
+        },
+      ],
+    });
+
+    await computeAndStoreDEWS(db);
+
+    expect(computeDEWS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stablecoinId: "usdt-tether",
+        burnVolume24hUsd: 0,
+        mintVolume24hUsd: 0,
+        burnBaseline30dUsd: 250_000,
+        flowDataAgeDays: 14,
+      }),
     );
   });
 

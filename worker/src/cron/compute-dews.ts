@@ -26,104 +26,22 @@
 // (same pattern as stability-index).
 // Reads existing D1 tables, computes DEWS per eligible coin,
 // writes to stress_signals + stress_signal_history.
-import { z } from "zod";
-import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
-import { BLACKLIST_STABLECOINS } from "@shared/types/market";
-import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
-import { batchExecute, buildInClause } from "../lib/db";
+import { derivePegRates } from "@shared/lib/peg-rates";
 import type { CronResult } from "../lib/cron-logger";
-import { computeDEWS } from "../lib/dews";
-import type { DEWSInput, PoolEntry } from "../lib/dews";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../lib/constants";
-import { chunkArray } from "../lib/collections";
 import { getCache, setCache } from "../lib/db-cache";
-import { decodeJsonString } from "../lib/cache-json";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
+import { loadDewsSourceState } from "./dews/source-state";
+import { buildDewsScoringResult } from "./dews/scoring";
+import { persistDewsResults } from "./dews/persistence";
+import type {
+  MalformedPersistedInput,
+  PersistedJsonDecodeReason,
+  SourceFailure,
+} from "./dews/contracts";
 
-const RawPoolDataSchema = z.object({
-  tvlUsd: z.number().default(0),
-  extra: z.object({
-    balanceRatio: z.number(),
-  }).optional(),
-});
-
-const BLACKLIST_SYMBOL_SET = new Set<string>(BLACKLIST_STABLECOINS);
-const BLACKLIST_ID_TO_SYMBOL = new Map<string, string>();
-for (const meta of PSI_ELIGIBLE_STABLECOINS) {
-  const symbol = typeof meta.symbol === "string" ? meta.symbol.toUpperCase() : "";
-  if (!BLACKLIST_SYMBOL_SET.has(symbol)) continue;
-  // Keep DEWS blacklist coverage aligned with the live tracker's shared symbol set.
-  BLACKLIST_ID_TO_SYMBOL.set(meta.id, symbol);
-}
-
-const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
 const DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY = "dews:bootstrap-complete";
-const DEWS_STALE_DEX_LIQUIDITY_SEC = 2 * 3600;
-const DEWS_TABLES = new Set([
-  "stress_signals",
-  "stress_signal_history",
-]);
-const BOOTSTRAP_ALLOWED_MISSING_TABLE_SOURCES = new Set([
-  "dex-prices",
-  "dex-liquidity-history",
-  "blacklist-events",
-  "mint-burn-hourly",
-  "yield-data",
-  "stability-index-samples",
-]);
-
-interface SourceFailure {
-  source: string;
-  reason: string;
-  bootstrapAllowed: boolean;
-}
-
-type PersistedJsonDecodeReason = "missing" | "json-parse-failed" | "invalid-shape";
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function isMissingTableError(error: unknown): boolean {
-  return String(error).toLowerCase().includes("no such table");
-}
-
-function isBootstrapAllowedMissingTableSource(source: string): boolean {
-  return BOOTSTRAP_ALLOWED_MISSING_TABLE_SOURCES.has(source);
-}
-
-async function deleteOrphansForTable(
-  db: D1Database,
-  table: string,
-  eligibleIds: Set<string>,
-): Promise<number> {
-  if (!DEWS_TABLES.has(table)) throw new Error(`Invalid DEWS table: ${table}`);
-
-  const existingIds = await db
-    // SAFETY: validated against DEWS_TABLES allowlist above.
-    .prepare(`SELECT DISTINCT stablecoin_id FROM ${table}`)
-    .all<{ stablecoin_id: string }>();
-  const orphanIds = (existingIds.results ?? [])
-    .map((row) => row.stablecoin_id)
-    .filter((id) => !eligibleIds.has(id));
-
-  if (orphanIds.length === 0) return 0;
-
-  let deleted = 0;
-  for (const idChunk of chunkArray(orphanIds, D1_SAFE_SQL_IN_CHUNK_SIZE)) {
-    const inClause = buildInClause(idChunk);
-    const result = await db
-      // SAFETY: validated against DEWS_TABLES allowlist above.
-      .prepare(`DELETE FROM ${table} WHERE stablecoin_id IN (${inClause.sql})`)
-      .bind(...inClause.binds)
-      .run();
-    deleted += result.meta?.changes ?? 0;
-  }
-  return deleted;
-}
 
 /**
  * Main cron entry point: reads all signal sources from D1, computes DEWS for
@@ -161,13 +79,7 @@ export async function computeAndStoreDEWS(
   const eligibleIds = new Set(PSI_ELIGIBLE_STABLECOINS.map((meta) => meta.id));
   const sourceFailures: SourceFailure[] = [];
   const sourceCoverage: Record<string, number> = {};
-  const malformedPersistedInputs: Array<{
-    source: string;
-    context: string;
-    stablecoinId: string;
-    updatedAt: number | null;
-    degradesRun: boolean;
-  }> = [];
+  const malformedPersistedInputs: MalformedPersistedInput[] = [];
   let validationFailures = 0;
   let malformedCoreInputRows = 0;
 
@@ -248,498 +160,27 @@ export async function computeAndStoreDEWS(
   // Derive peg rates for non-USD reference prices
   const { rates: pegRates } = derivePegRates(assets, PSI_ELIGIBLE_META_BY_ID, fxFallbackRates);
 
-  // 2. Read dex_liquidity
-  let dexLiqRows = {
-    results: [] as Array<{
-      stablecoin_id: string;
-      weighted_balance_ratio: number | null;
-      avg_pool_stress: number | null;
-      top_pools_json: string | null;
-      liquidity_score: number | null;
-      total_tvl_usd: number | null;
-      updated_at: number | null;
-    }>,
-  };
-  try {
-    dexLiqRows = await db
-      .prepare(
-        "SELECT stablecoin_id, weighted_balance_ratio, avg_pool_stress, top_pools_json, liquidity_score, total_tvl_usd, updated_at FROM dex_liquidity",
-      )
-      .all<{
-        stablecoin_id: string;
-        weighted_balance_ratio: number | null;
-        avg_pool_stress: number | null;
-        top_pools_json: string | null;
-        liquidity_score: number | null;
-        total_tvl_usd: number | null;
-        updated_at: number | null;
-      }>();
-  } catch (error) {
-    registerSourceFailure("dex-liquidity", error);
-  }
-  sourceCoverage.dexLiquidity = dexLiqRows.results.length;
-  const dexLiqMap = new Map(dexLiqRows.results.map((r) => [r.stablecoin_id, r]));
-  const dexLiquidityUpdatedAt = dexLiqRows.results.reduce<number | null>(
-    (latest, row) => {
-      if (row.updated_at == null || !Number.isFinite(row.updated_at)) return latest;
-      if (latest == null || row.updated_at > latest) return row.updated_at;
-      return latest;
-    },
-    null,
-  );
-  const dexLiquidityAgeSec = dexLiquidityUpdatedAt != null ? Math.max(0, nowSec - dexLiquidityUpdatedAt) : null;
-  if (dexLiquidityAgeSec != null) {
-    sourceCoverage.dexLiquidityAgeSec = dexLiquidityAgeSec;
-    if (dexLiquidityAgeSec > DEWS_STALE_DEX_LIQUIDITY_SEC) {
-      registerSourceFailure(
-        "dex-liquidity-freshness",
-        `dex_liquidity age ${dexLiquidityAgeSec}s exceeds ${DEWS_STALE_DEX_LIQUIDITY_SEC}s`,
-      );
-    }
-  }
+  const sourceState = await loadDewsSourceState({
+    db,
+    nowSec,
+    bootstrapPending,
+    registerSourceFailure,
+    registerMalformedPersistedInput,
+  });
+  Object.assign(sourceCoverage, sourceState.sourceCoverage);
 
-  // 3. Read dex_prices
-  let dexPriceMap = new Map<string, number>();
-  try {
-    const dexPriceRows = await db
-      .prepare("SELECT stablecoin_id, dex_price_usd, updated_at FROM dex_prices")
-      .all<{ stablecoin_id: string; dex_price_usd: number; updated_at: number }>();
-    dexPriceMap = new Map(
-      (dexPriceRows.results ?? [])
-        .filter((row) => (nowSec - row.updated_at) < DEX_PRICE_CHECK_FRESHNESS_SEC)
-        .map((row) => [row.stablecoin_id, row.dex_price_usd]),
-    );
-    sourceCoverage.dexPrices = dexPriceMap.size;
-  } catch (error) {
-    registerSourceFailure("dex-prices", error, {
-      bootstrapAllowed:
-        bootstrapPending &&
-        isMissingTableError(error) &&
-        isBootstrapAllowedMissingTableSource("dex-prices"),
-    });
-    sourceCoverage.dexPrices = 0;
-  }
-
-  // 4. Read dex_liquidity_history (7d lookback)
-  const liqHistCutoff = nowSec - 8 * DAY_SECONDS;
-  const target7d = nowSec - 7 * DAY_SECONDS;
-  const liqHist7dMap = new Map<string, { score: number | null; tvl: number | null; date: number }>();
-  let liqHistRowsRead = 0;
-  try {
-    const liqHistRows = await db
-      .prepare(
-        "SELECT stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd FROM dex_liquidity_history WHERE snapshot_date >= ? ORDER BY snapshot_date ASC",
-      )
-      .bind(liqHistCutoff)
-      .all<{
-        stablecoin_id: string;
-        snapshot_date: number;
-        liquidity_score: number | null;
-        total_tvl_usd: number | null;
-      }>();
-    liqHistRowsRead = liqHistRows.results.length;
-
-    for (const row of liqHistRows.results) {
-      const existing = liqHist7dMap.get(row.stablecoin_id);
-      if (!existing || Math.abs(row.snapshot_date - target7d) < Math.abs(existing.date - target7d)) {
-        liqHist7dMap.set(row.stablecoin_id, {
-          score: row.liquidity_score ?? null,
-          tvl: row.total_tvl_usd ?? null,
-          date: row.snapshot_date,
-        });
-      }
-    }
-  } catch (error) {
-    registerSourceFailure("dex-liquidity-history", error, {
-      bootstrapAllowed:
-        bootstrapPending &&
-        isMissingTableError(error) &&
-        isBootstrapAllowedMissingTableSource("dex-liquidity-history"),
-    });
-  }
-  sourceCoverage.dexLiquidityHistory = liqHistRowsRead;
-
-  // 5. Read blacklist_events counts (24h + 7d)
-  const blacklistCounts = new Map<string, { count24h: number; count7d: number }>();
-  let blacklistRowsRead = 0;
-  try {
-    const bl7d = await db
-      .prepare(
-        "SELECT stablecoin, COUNT(*) as cnt FROM blacklist_events WHERE timestamp >= ? GROUP BY stablecoin",
-      )
-      .bind(nowSec - 7 * DAY_SECONDS)
-      .all<{ stablecoin: string; cnt: number }>();
-    const bl24h = await db
-      .prepare(
-        "SELECT stablecoin, COUNT(*) as cnt FROM blacklist_events WHERE timestamp >= ? GROUP BY stablecoin",
-      )
-      .bind(nowSec - DAY_SECONDS)
-      .all<{ stablecoin: string; cnt: number }>();
-    blacklistRowsRead = (bl7d.results?.length ?? 0) + (bl24h.results?.length ?? 0);
-
-    const map7d = new Map(bl7d.results.map((r) => [r.stablecoin, r.cnt]));
-    const map24h = new Map(bl24h.results.map((r) => [r.stablecoin, r.cnt]));
-
-    for (const [symbol, count7d] of map7d) {
-      blacklistCounts.set(symbol, {
-        count24h: map24h.get(symbol) ?? 0,
-        count7d,
-      });
-    }
-  } catch (error) {
-    registerSourceFailure("blacklist-events", error, {
-      bootstrapAllowed:
-        bootstrapPending &&
-        isMissingTableError(error) &&
-        isBootstrapAllowedMissingTableSource("blacklist-events"),
-    });
-  }
-  sourceCoverage.blacklistEvents = blacklistRowsRead;
-
-  // 6. Read previous stress_signals (for smoothing S_pool, S_diverg)
-  const prevSignals = new Map<string, Record<string, { value: number }>>();
-  let prevSignalRowsRead = 0;
-  try {
-    const prevRows = await db
-      .prepare(
-        `SELECT s.stablecoin_id, s.signals_json, s.band, s.computed_at
-         FROM stress_signals s
-         INNER JOIN (
-           SELECT stablecoin_id, MAX(computed_at) as max_at
-           FROM stress_signals GROUP BY stablecoin_id
-         ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
-      )
-      .all<{ stablecoin_id: string; signals_json: string; band: string; computed_at: number }>();
-    prevSignalRowsRead = prevRows.results.length;
-    for (const row of prevRows.results) {
-      const decoded = decodeJsonString<Record<string, unknown>, PersistedJsonDecodeReason>(
-        row.signals_json,
-        {
-          mode: "degraded",
-          updatedAt: row.computed_at,
-          missingReason: "missing",
-          parseErrorReason: "json-parse-failed",
-          normalize: (parsed) => {
-            if (!isRecord(parsed)) {
-              return { ok: false, reason: "invalid-shape" };
-            }
-            return { ok: true, payload: parsed };
-          },
-        },
-      );
-      if (!decoded.ok) {
-        registerMalformedPersistedInput({
-          source: "stress_signals",
-          context: "stress_signals.signals_json",
-          stablecoinId: row.stablecoin_id,
-          updatedAt: row.computed_at,
-          reason: decoded.reason,
-          degradesRun: true,
-        });
-        continue;
-      }
-      prevSignals.set(row.stablecoin_id, decoded.payload as Record<string, { value: number }>);
-    }
-  } catch (error) {
-    registerSourceFailure("stress-signals", error);
-  }
-  sourceCoverage.previousStressSignals = prevSignalRowsRead;
-
-  // 7. Read mint/burn hourly aggregates (24h + 30d baselines)
-  const mintBurnMap = new Map<
-    string,
-    {
-      burn24h: number;
-      mint24h: number;
-      burnBaseline: number;
-      mintBaseline: number;
-      dataAgeDays: number;
-    }
-  >();
-  let mintBurnRowsRead = 0;
-  try {
-    const mb24h = await db
-      .prepare(
-        `SELECT stablecoin_id,
-                SUM(CASE WHEN burn_volume_usd IS NOT NULL THEN burn_volume_usd ELSE 0 END) as total_burn,
-                SUM(CASE WHEN mint_volume_usd IS NOT NULL THEN mint_volume_usd ELSE 0 END) as total_mint
-         FROM mint_burn_hourly WHERE hour_ts >= ? GROUP BY stablecoin_id`,
-      )
-      .bind(nowSec - DAY_SECONDS)
-      .all<{ stablecoin_id: string; total_burn: number; total_mint: number }>();
-
-    const mb30d = await db
-      .prepare(
-        `SELECT stablecoin_id,
-                SUM(CASE WHEN burn_volume_usd IS NOT NULL THEN burn_volume_usd ELSE 0 END) / 30.0 as avg_burn,
-                SUM(CASE WHEN mint_volume_usd IS NOT NULL THEN mint_volume_usd ELSE 0 END) / 30.0 as avg_mint,
-                COUNT(DISTINCT date(hour_ts, 'unixepoch')) as days_with_data
-         FROM mint_burn_hourly WHERE hour_ts >= ? GROUP BY stablecoin_id`,
-      )
-      .bind(nowSec - 30 * DAY_SECONDS)
-      .all<{
-        stablecoin_id: string;
-        avg_burn: number;
-        avg_mint: number;
-        days_with_data: number;
-      }>();
-    mintBurnRowsRead = (mb24h.results?.length ?? 0) + (mb30d.results?.length ?? 0);
-
-    const mb24hMap = new Map(mb24h.results.map((r) => [r.stablecoin_id, r]));
-    const mb30dMap = new Map(mb30d.results.map((r) => [r.stablecoin_id, r]));
-
-    for (const [id, d24] of mb24hMap) {
-      const d30 = mb30dMap.get(id);
-      mintBurnMap.set(id, {
-        burn24h: d24.total_burn,
-        mint24h: d24.total_mint,
-        burnBaseline: d30?.avg_burn ?? 0,
-        mintBaseline: d30?.avg_mint ?? 0,
-        dataAgeDays: d30?.days_with_data ?? 0,
-      });
-    }
-  } catch (error) {
-    registerSourceFailure("mint-burn-hourly", error, {
-      bootstrapAllowed:
-        bootstrapPending &&
-        isMissingTableError(error) &&
-        isBootstrapAllowedMissingTableSource("mint-burn-hourly"),
-    });
-  }
-  sourceCoverage.mintBurnHourly = mintBurnRowsRead;
-
-  // 7b. Read yield warnings
-  const yieldWarnings = new Map<string, string[]>();
-  let yieldWarningRowsRead = 0;
-  try {
-    const yieldRows = await db
-      .prepare("SELECT stablecoin_id, warning_signals FROM yield_data WHERE warning_signals IS NOT NULL")
-      .all<{ stablecoin_id: string; warning_signals: string }>();
-    yieldWarningRowsRead = yieldRows.results.length;
-    for (const row of yieldRows.results) {
-      const decoded = decodeJsonString<string[], PersistedJsonDecodeReason>(row.warning_signals, {
-        mode: "degraded",
-        missingReason: "missing",
-        parseErrorReason: "json-parse-failed",
-        normalize: (parsed) => {
-          if (!Array.isArray(parsed) || !parsed.every((signal) => typeof signal === "string")) {
-            return { ok: false, reason: "invalid-shape" };
-          }
-          return { ok: true, payload: parsed };
-        },
-      });
-      if (!decoded.ok) {
-        registerMalformedPersistedInput({
-          source: "yield_data",
-          context: "yield_data.warning_signals",
-          stablecoinId: row.stablecoin_id,
-          reason: decoded.reason,
-          degradesRun: true,
-        });
-        continue;
-      }
-      yieldWarnings.set(row.stablecoin_id, decoded.payload);
-    }
-  } catch (error) {
-    registerSourceFailure("yield-data", error, {
-      bootstrapAllowed:
-        bootstrapPending &&
-        isMissingTableError(error) &&
-        isBootstrapAllowedMissingTableSource("yield-data"),
-    });
-  }
-  sourceCoverage.yieldWarnings = yieldWarningRowsRead;
-
-  // 7c. Read latest PSI score (from previous cycle)
-  let latestPsiScore: number | null = null;
-  try {
-    const psiRow = await db
-      .prepare("SELECT score FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
-      .first<{ score: number }>();
-    if (psiRow) latestPsiScore = psiRow.score;
-  } catch (error) {
-    registerSourceFailure("stability-index-samples", error, {
-      bootstrapAllowed:
-        bootstrapPending &&
-        isMissingTableError(error) &&
-        isBootstrapAllowedMissingTableSource("stability-index-samples"),
-    });
-  }
-
-  // 8. Compute DEWS for each eligible coin
-  const results: {
-    stablecoinId: string;
-    score: number;
-    band: string;
-    signals: Record<string, unknown>;
-  }[] = [];
-  let liqHistCoverageCount = 0;
-  let insufficientDataCount = 0;
-
-  for (const meta of PSI_ELIGIBLE_STABLECOINS) {
-    // Skip NAV tokens (price appreciates, not pegged to $1)
-    if (meta.flags?.navToken) continue;
-
-    const asset = assetById.get(meta.id);
-    if (!asset) continue;
-
-    const current = getCirculatingRaw(asset);
-    if (current <= 0) continue;
-
-    const prevDay = getPrevDayRaw(asset);
-    const prevWeek = getPrevWeekRaw(asset);
-
-    const dexLiq = dexLiqMap.get(meta.id);
-    const dexPrice = dexPriceMap.get(meta.id);
-    const liqHist = liqHist7dMap.get(meta.id);
-    if (liqHist) liqHistCoverageCount++;
-    const prev = prevSignals.get(meta.id);
-    const mb = mintBurnMap.get(meta.id);
-
-    // Blacklist tracking
-    const blSymbol = BLACKLIST_ID_TO_SYMBOL.get(meta.id);
-    const blCounts = blSymbol ? blacklistCounts.get(blSymbol) : undefined;
-
-    // Parse top pools
-    let topPools: PoolEntry[] | null = null;
-    if (dexLiq?.top_pools_json) {
-      const decoded = decodeJsonString<unknown[], PersistedJsonDecodeReason>(dexLiq.top_pools_json, {
-        mode: "degraded",
-        updatedAt: dexLiq.updated_at ?? null,
-        missingReason: "missing",
-        parseErrorReason: "json-parse-failed",
-        normalize: (parsed) => Array.isArray(parsed)
-          ? { ok: true, payload: parsed }
-          : { ok: false, reason: "invalid-shape" },
-      });
-      if (!decoded.ok) {
-        registerMalformedPersistedInput({
-          source: "dex_liquidity",
-          context: "dex_liquidity.top_pools_json",
-          stablecoinId: meta.id,
-          updatedAt: dexLiq.updated_at ?? null,
-          reason: decoded.reason,
-          degradesRun: false,
-        });
-      } else {
-        topPools = decoded.payload.map((raw) => {
-          const p = RawPoolDataSchema.safeParse(raw);
-          return {
-            tvlUsd: p.success ? p.data.tvlUsd : 0,
-            balanceRatio: p.success ? (p.data.extra?.balanceRatio ?? 1.0) : 1.0,
-          };
-        });
-      }
-    }
-
-    const pegRef = getPegReference(
-      asset.pegType,
-      pegRates,
-      meta.commodityOunces,
-    );
-
-    const input: DEWSInput = {
-      stablecoinId: meta.id,
-      mcapUsd: current,
-      pegType: asset.pegType ?? "peggedUSD",
-      circulatingCurrent: current,
-      circulatingPrevDay: prevDay || current,
-      circulatingPrevWeek: prevWeek || current,
-      weightedBalanceRatio: dexLiq?.weighted_balance_ratio ?? null,
-      avgPoolStress: dexLiq?.avg_pool_stress ?? null,
-      topPools,
-      liquidityScore: dexLiq?.liquidity_score ?? null,
-      liquidityScore7dAgo: liqHist?.score ?? null,
-      tvlCurrent: dexLiq?.total_tvl_usd ?? null,
-      tvl7dAgo: liqHist?.tvl ?? null,
-      priceConfidence: asset.priceConfidence ?? null,
-      prevPriceConfidence: (prev?.price as { confidence?: string })?.confidence ?? null,
-      price: asset.price ?? null,
-      pegRef: pegRef ?? 1.0,
-      dexPriceUsd: dexPrice ?? null,
-      blacklistEvents24h: blCounts?.count24h ?? 0,
-      blacklistEvents7d: blCounts?.count7d ?? 0,
-      hasBlacklistTracking: !!blSymbol,
-      burnVolume24hUsd: mb?.burn24h ?? null,
-      mintVolume24hUsd: mb?.mint24h ?? null,
-      burnBaseline30dUsd: mb?.burnBaseline ?? null,
-      flowDataAgeDays: mb?.dataAgeDays ?? 0,
-      yieldWarnings: yieldWarnings.get(meta.id) ?? [],
-      psiScore: latestPsiScore,
-      prevPoolValue: (prev?.pool as { value?: number })?.value,
-      prevDivergValue: (prev?.diverg as { value?: number })?.value,
-    };
-
-    const result = computeDEWS(input);
-    if (!result) {
-      insufficientDataCount++;
-      continue;
-    }
-    results.push({
-      stablecoinId: meta.id,
-      score: result.score,
-      band: result.band,
-      signals: result.signals,
-    });
-  }
-
-  // 9. Batch INSERT OR REPLACE
-  if (results.length > 0) {
-    const stmts = results.map((r) =>
-      db
-        .prepare(
-          "INSERT OR REPLACE INTO stress_signals (stablecoin_id, computed_at, score, band, signals_json) VALUES (?, ?, ?, ?, ?)",
-        )
-        .bind(r.stablecoinId, nowSec, r.score, r.band, JSON.stringify(r.signals)),
-    );
-    await batchExecute(db, stmts);
-  }
-
-  // 10. Daily snapshot (first run of UTC day)
-  const nowUtc = new Date();
-  const todayMidnight = Math.floor(
-    Date.UTC(nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate()) / 1000,
-  );
-  const existing = await db
-    .prepare("SELECT COUNT(*) as cnt FROM stress_signal_history WHERE snapshot_date = ?")
-    .bind(todayMidnight)
-    .first<{ cnt: number }>();
-  const existingCount = existing?.cnt ?? 0;
-
-  if (results.length > 0 && existingCount < results.length) {
-    const histStmts = results.map((r) =>
-      db
-        .prepare(
-          "INSERT OR REPLACE INTO stress_signal_history (stablecoin_id, snapshot_date, score, band, signals_json) VALUES (?, ?, ?, ?, ?)",
-        )
-        .bind(r.stablecoinId, todayMidnight, r.score, r.band, JSON.stringify(r.signals)),
-    );
-    await batchExecute(db, histStmts);
-    console.log(
-      `[dews] Reconciled daily snapshot (${existingCount} -> ${histStmts.length}) for ${new Date(todayMidnight * 1000).toISOString().slice(0, 10)}`,
-    );
-  }
-
-  let rowsDropped = 0;
-
-  // 11. Remove orphan rows for coins no longer in the PSI universe.
-  // Keep deletes chunked because D1 has a low bind-variable ceiling.
-  if (eligibleIds.size > 0) {
-    rowsDropped += await deleteOrphansForTable(db, "stress_signals", eligibleIds);
-    rowsDropped += await deleteOrphansForTable(db, "stress_signal_history", eligibleIds);
-  }
-
-  // 12. Prune old data (7 days for signals, 365 for history)
-  const oldSignals = await db
-    .prepare("DELETE FROM stress_signals WHERE computed_at < ?")
-    .bind(nowSec - 7 * DAY_SECONDS)
-    .run();
-  rowsDropped += oldSignals.meta?.changes ?? 0;
-  const oldHistory = await db
-    .prepare("DELETE FROM stress_signal_history WHERE snapshot_date < ?")
-    .bind(nowSec - 365 * DAY_SECONDS)
-    .run();
-  rowsDropped += oldHistory.meta?.changes ?? 0;
+  const { results, liqHistCoverageCount, insufficientDataCount } = buildDewsScoringResult({
+    assetById,
+    pegRates,
+    sourceState,
+    registerMalformedPersistedInput,
+  });
+  const { rowsDropped } = await persistDewsResults({
+    db,
+    results,
+    eligibleIds,
+    nowSec,
+  });
 
   const liqHistCoverage = results.length > 0 ? liqHistCoverageCount / results.length : 0;
   if (results.length > 0 && liqHistCoverage < 0.5) {
@@ -767,7 +208,7 @@ export async function computeAndStoreDEWS(
     itemCount: results.length,
     ...(degraded ? { status: "degraded" as const } : {}),
     metadata: JSON.stringify({
-      rowsRead: assets.length + dexLiqRows.results.length + liqHistRowsRead,
+      rowsRead: assets.length + sourceState.dexLiqRows.results.length + sourceState.liqHistRowsRead,
       rowsWritten: results.length,
       rowsSkippedInsufficientData: insufficientDataCount,
       rowsDropped,

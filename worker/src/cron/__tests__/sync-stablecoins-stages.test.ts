@@ -27,7 +27,7 @@ import {
   dedupeCanonicalAssets,
   filterStructurallyValidAssets,
   normalizeChainCirculating,
-} from "../sync-stablecoins/stages";
+} from "../sync-stablecoins/phase-helpers";
 
 describe("sync-stablecoins stage helpers", () => {
   it("filters malformed assets while preserving structurally valid rows", () => {

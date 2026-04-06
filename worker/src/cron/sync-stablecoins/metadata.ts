@@ -1,6 +1,6 @@
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices";
 import { buildSyncMetadata, type CronResult, type PriceSourceHealth } from "./shared";
-import type { CanonicalDeduplicationResult } from "./stages";
+import type { CanonicalDeduplicationResult } from "./phase-helpers";
 import type { GtProbeStats } from "../../lib/geckoterminal-price-probe";
 import {
   createEmptyPriceSourceHealthDistribution,
