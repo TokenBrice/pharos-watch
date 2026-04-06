@@ -4,7 +4,6 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchTextWithRetry,
-  getAdapterTimeout,
   htmlLayoutChangedError,
   htmlParseError,
   parseTimestampLikeToUnixSeconds,
@@ -113,7 +112,7 @@ export async function fetchSgForgeCoinvertibleReserves(
   const html = await fetchTextWithRetry(
     input.url,
     signal,
-    getAdapterTimeout(config, 15_000),
+    15_000,
   );
   return adaptSgForgeCoinvertible(html, readCoinType(config));
 }

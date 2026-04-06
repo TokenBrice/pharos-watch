@@ -5,7 +5,6 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchOnchainRateBps,
   fetchJsonWithRetry,
-  getAdapterTimeout,
   getJsonPath,
   isHttpJsonInput,
   parsePositiveNumericLike,
@@ -73,7 +72,7 @@ export async function fetchSingleAssetReserves(
     const payload = await fetchJsonWithRetry<Record<string, unknown>>(
       primary.url,
       signal,
-      getAdapterTimeout(config, 12_000),
+      12_000,
       ctx,
     );
     const totalReserveUsd = reserveProbe

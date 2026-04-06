@@ -3,7 +3,6 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
-  getAdapterTimeout,
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
   slicesFromValues,
@@ -126,7 +125,7 @@ export async function fetchOpenEdenUsdoReserves(
   const payload = await fetchJsonWithRetry<OpenEdenReserveCompositionResponse>(
     primaryInput.url,
     signal,
-    getAdapterTimeout(config, 12_000),
+    12_000,
     ctx,
   );
   return adaptOpenEdenReserveComposition(payload);

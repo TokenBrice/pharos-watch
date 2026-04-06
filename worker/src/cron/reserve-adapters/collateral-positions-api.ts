@@ -5,7 +5,6 @@ import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
-  getAdapterTimeout,
   normalizeSlices,
   requireJsonInput,
   reserveDegradedWarning,
@@ -200,7 +199,7 @@ export async function fetchCollateralPositionsApiReserves(
   const input = requireJsonInput(config.inputs.primary, "collateral-positions-api");
   const params = readParams(config);
 
-  const timeout = getAdapterTimeout(config, 12_000);
+  const timeout = 12_000;
   const [details, prices] = await Promise.all([
     fetchJsonWithRetry<PositionDetailsPayload>(input.url, signal, timeout, ctx),
     fetchJsonWithRetry<PriceMappingPayload>(params.pricesUrl, signal, timeout, ctx),

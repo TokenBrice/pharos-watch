@@ -5,7 +5,6 @@ import {
   buildUnknownExposureWarning,
   classifyBucketedValues,
   fetchJsonWithRetry,
-  getAdapterTimeout,
   isHttpJsonInput,
   unverifiedFreshnessMetadata,
 } from "./helpers";
@@ -128,7 +127,7 @@ export async function fetchReservoirReserves(
   const payload = await fetchJsonWithRetry<ReservoirReservesResponse>(
     primaryInput.url,
     signal,
-    getAdapterTimeout(config, 12_000),
+    12_000,
     ctx,
   );
   const adapted = adaptReservoirReserves(payload);

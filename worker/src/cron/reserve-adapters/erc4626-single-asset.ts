@@ -5,7 +5,6 @@ import type { AdapterContext, AdapterResult } from "./types";
 import { parseEvmAddressResult, resolveCoinContractAddress } from "./evm";
 import {
   fetchOnchainRawCall,
-  getAdapterTimeout,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
   reserveDegradedWarning,
@@ -52,7 +51,7 @@ export async function fetchErc4626SingleAssetReserves(
     throw new Error(`No ${primaryInput.chain} contract configured for ${coin.id}`);
   }
 
-  const timeout = getAdapterTimeout(config, 12_000);
+  const timeout = 12_000;
   const [assetResult, totalAssetsResult] = await Promise.all([
     fetchOnchainRawCall({
       contract: contractAddress,

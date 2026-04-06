@@ -3,7 +3,6 @@ import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
-  getAdapterTimeout,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
   slicesFromValues,
@@ -119,7 +118,7 @@ export async function fetchSkyMakercoreReserves(
   const payload = await fetchJsonWithRetry<BlockAnaliticaGroupsResponse>(
     primaryInput.url,
     signal,
-    getAdapterTimeout(config, 15_000),
+    15_000,
     ctx,
   );
 

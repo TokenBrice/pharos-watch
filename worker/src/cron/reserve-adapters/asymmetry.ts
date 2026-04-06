@@ -5,7 +5,6 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   requireJsonInput,
   fetchJsonWithRetry,
-  getAdapterTimeout,
   normalizeSlices,
   reserveDegradedWarning,
   unverifiedFreshnessMetadata,
@@ -90,6 +89,6 @@ export async function fetchAsymmetryReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "asymmetry");
-  const payload = await fetchJsonWithRetry<AsymmetryPayload>(input.url, signal, getAdapterTimeout(config, 12_000), ctx);
+  const payload = await fetchJsonWithRetry<AsymmetryPayload>(input.url, signal, 12_000, ctx);
   return adaptAsymmetry(payload);
 }

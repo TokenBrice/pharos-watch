@@ -6,7 +6,6 @@ import {
   buildUnknownExposureWarning,
   computeUnknownExposurePct,
   fetchJsonWithRetry,
-  getAdapterTimeout,
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
   slicesFromValues,
@@ -193,7 +192,7 @@ export async function fetchAccountableReserves(
   const payload = await fetchJsonWithRetry<AccountableDashboardResponse>(
     primaryInput.url,
     signal,
-    getAdapterTimeout(config, 12_000),
+    12_000,
     ctx,
   );
   return adaptAccountableDashboard(payload, params);

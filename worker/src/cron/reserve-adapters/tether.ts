@@ -3,7 +3,6 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
-  getAdapterTimeout,
   requireJsonInputFromConfig,
   unverifiedFreshnessMetadata,
 } from "./helpers";
@@ -67,7 +66,7 @@ export async function fetchTetherReserves(
   const payload = await fetchJsonWithRetry<TetherTransparencyResponse>(
       primaryInput.url,
       signal,
-      getAdapterTimeout(config, 12_000),
+      12_000,
       ctx,
   );
   return adaptTetherTransparency(payload);

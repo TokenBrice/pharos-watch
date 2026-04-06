@@ -5,7 +5,6 @@ import {
   accumulateBucketedExposure,
   buildBucketSlices,
   fetchJsonWithRetry,
-  getAdapterTimeout,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
   unverifiedFreshnessMetadata,
@@ -205,7 +204,7 @@ export async function fetchFalconReserves(
   const payload = await fetchJsonWithRetry<FalconTransparencyResponse>(
     primaryInput.url,
     signal,
-    getAdapterTimeout(config, 12_000),
+    12_000,
     ctx,
   );
   return adaptFalconTransparency(payload);

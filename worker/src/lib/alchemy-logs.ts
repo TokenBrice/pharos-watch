@@ -2,6 +2,7 @@ import { ALCHEMY_CHAINS } from "./chain-registry";
 import type { SubrequestBudget, TopicFilter } from "./evm-logs";
 import { budgetExhausted } from "./evm-logs";
 import { buildInClause } from "./db";
+import { cancelResponseBodyQuietly } from "./response-body";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 // --- Types ---
@@ -440,7 +441,7 @@ export async function resolveBlockTimestamps(
       });
       if (!res.ok) {
         console.warn(`[alchemy-logs] batch eth_getBlockByNumber HTTP ${res.status}`);
-        await res.body?.cancel();
+        await cancelResponseBodyQuietly(res);
         continue;
       }
       const parsed = await res.json() as unknown;

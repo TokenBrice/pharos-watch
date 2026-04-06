@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { encodeFunctionResult, parseAbi } from "viem";
+import { encodeFunctionResult, parseAbi } from "viem/utils";
 
 vi.mock("../../../lib/evm-rpc", () => ({
   fetchEvmCallHexAtBlock: vi.fn(),

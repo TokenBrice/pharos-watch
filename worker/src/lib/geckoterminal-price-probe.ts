@@ -1,6 +1,7 @@
 import { GT_API_BASE } from "./dex-constants";
 import { RATE_LIMITS } from "./rate-limit";
 import { fetchWithRetry } from "./fetch-retry";
+import { cancelResponseBodyQuietly } from "./response-body";
 import { cgHeaders, cgUrl } from "./coingecko";
 import {
   USER_AGENT,
@@ -207,11 +208,11 @@ async function fetchProbeOutcome(
     if (!res?.ok) {
       if (isGtLookupMissStatus(res?.status)) {
         transportStats.lookupMisses++;
-        await res?.body?.cancel();
+        await cancelResponseBodyQuietly(res);
         return { kind: "lookup-miss", transport };
       }
       transportStats.upstreamErrors++;
-      await res?.body?.cancel();
+      await cancelResponseBodyQuietly(res);
       return { kind: "upstream-error", transport };
     }
 

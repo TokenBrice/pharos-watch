@@ -4,7 +4,6 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildUnknownExposureWarning,
   fetchJsonWithRetry,
-  getAdapterTimeout,
   isHttpJsonInput,
   normalizeSlices,
   unverifiedFreshnessMetadata,
@@ -140,7 +139,7 @@ export async function fetchInfiniFiReserves(
   }
 
   const url = primaryInput.url;
-  const payload = await fetchJsonWithRetry<InfiniFiProtocolData>(url, signal, getAdapterTimeout(config, 12_000), ctx);
+  const payload = await fetchJsonWithRetry<InfiniFiProtocolData>(url, signal, 12_000, ctx);
   if (payload.code !== "OK") throw new Error("infiniFi API returned non-OK code");
   const adapted = adaptInfiniFi(payload);
   const warnings: LiveReserveWarning[] = adapted.unknownFarms.length > 0

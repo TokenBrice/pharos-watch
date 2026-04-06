@@ -2,6 +2,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { StablecoinMeta } from "@shared/types/core";
 import { fetchWithRetry } from "../../lib/fetch-retry";
+import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { CIRCUIT_SOURCE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../../lib/constants";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { resolveMarketCap } from "../../lib/resolve-market-cap";
@@ -101,7 +102,7 @@ async function fetchSupplementalPriceData(
     console.warn(
       `[${logPrefix}] Price fetch failed: ${priceRes?.status ?? "no response"}; using CoinGecko simple price fallback when available`,
     );
-    priceRes?.body?.cancel();
+    await cancelResponseBodyQuietly(priceRes);
     return { coins: {} };
   }
 

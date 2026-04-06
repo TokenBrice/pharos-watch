@@ -1,14 +1,14 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { CANONICAL_ETH_RESERVE_RISK, getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
-import { decodeFunctionResult, encodeFunctionData, parseAbi, type Abi } from "viem";
+import type { Abi } from "abitype";
+import { decodeFunctionResult, encodeFunctionData, parseAbi } from "viem/utils";
 import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
 import { getPublicRpcUrl, getSecondaryFallbackRpcUrl } from "../../lib/public-rpc-registry";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchDefiLlamaPrices,
   fetchJsonWithRetry,
-  getAdapterTimeout,
   normalizeSlices,
   requireJsonInput,
   reserveDegradedWarning,
@@ -345,7 +345,7 @@ export async function fetchCrvUsdReserves(
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "crvusd");
   const [payload, yieldBasisMarkets] = await Promise.all([
-    fetchJsonWithRetry<CurveMarketsPayload>(input.url, signal, getAdapterTimeout(config, 12_000), ctx),
+    fetchJsonWithRetry<CurveMarketsPayload>(input.url, signal, 12_000, ctx),
     fetchYieldBasisMarketExposures(signal, ctx),
   ]);
   return adaptCrvUsd(payload, yieldBasisMarkets);

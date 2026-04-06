@@ -3,7 +3,6 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonPostWithRetry,
-  getAdapterTimeout,
   requireJsonInputFromConfig,
   slicesFromValues,
   unverifiedFreshnessMetadata,
@@ -137,7 +136,7 @@ export async function fetchM0Reserves(
     primaryInput.url,
     { query: M0_COLLATERAL_QUERY },
     signal,
-    getAdapterTimeout(config, 12_000),
+    12_000,
     ctx,
   );
   if (payload.errors?.length) {
