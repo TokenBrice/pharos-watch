@@ -42,6 +42,9 @@ export function emptyReserveComposition(): StatusResponse["reserveComposition"] 
     writeTimeoutUncertain: 0,
     lastSuccessAt: null,
     oldestFreshAgeSec: null,
+    status: "healthy",
+    freshCoverageRatio: 0,
+    authoritativeFreshCoverageRatio: 0,
   };
 }
 

@@ -78,6 +78,7 @@ export function deriveStatusActionRecommendations(
   const recommendations = new Map<string, StatusActionRecommendation>();
 
   for (const cause of status.causes.overall) {
+    if (cause.severity === "info") continue;
     for (const action of getRecommendedActionsForCause(cause)) {
       pushRecommendation(recommendations, {
         action,
@@ -91,6 +92,7 @@ export function deriveStatusActionRecommendations(
 
   for (const [job, cron] of Object.entries(status.crons)) {
     if (cron.healthy) continue;
+    if (getCronJobMeta(job)?.statusImpact !== "critical") continue;
 
     const actions = CRON_ACTION_PATHS[job] ?? [];
     const jobMeta = getCronJobMeta(job);

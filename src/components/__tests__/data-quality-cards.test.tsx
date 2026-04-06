@@ -104,4 +104,39 @@ describe("DataQualityCards", () => {
     expect(html).not.toContain("text-red-600");
     expect(html).not.toContain("text-amber-600");
   });
+
+  it("renders diagnostic query failures as watch-level amber instead of incident red", () => {
+    const html = renderToStaticMarkup(
+      <DataQualityCards
+        dq={{
+          nowSeconds: 1_772_100_000,
+          stablecoinsCacheStatus: "ok",
+          stablecoinsCacheReason: null,
+          blacklistGapStatus: "failed",
+          activeDepegStatus: "ok",
+          onchainSupplyQueryStatus: "ok",
+          sourceFailures: [{ source: "blacklist-gaps", message: "Blacklist gap metrics unavailable." }],
+          totalStablecoins: 156,
+          missingPrices: 0,
+          blacklistMissingAmounts: 0,
+          blacklistRecentMissingAmounts: 0,
+          blacklistRecentWindowSec: 86_400,
+          blacklistMissingRatio: 0,
+          blacklistTotal: 1000,
+          onchainSupplyDivergences: 0,
+          onchainDivergenceRatio: 0,
+          onchainSupplyMonitoring: "active",
+          onchainSupplyLatestAt: 1_772_099_000,
+          onchainSupplyTrackedCoins: 12,
+          activeDepegs: 0,
+          staleOnchainSupply: 0,
+          onchainStaleRatio: 0,
+        }}
+      />,
+    );
+
+    expect(html).toContain("query failed: Blacklist gap metrics unavailable.");
+    expect(html).toContain("text-amber-600");
+    expect(html).not.toContain("text-red-600");
+  });
 });

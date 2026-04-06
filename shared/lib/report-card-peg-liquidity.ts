@@ -8,27 +8,16 @@ import type {
 import { computeEffectiveExitScore, REDEMPTION_ROUTE_FAMILY_LABELS } from "./redemption-backstop-scoring";
 import { scoreToGrade } from "./report-card-core";
 
-export function scorePegStability(
-  peg: PegSummaryCoin | undefined,
+function buildPegStabilityDimension(
+  peg: PegSummaryCoin,
   meta: StablecoinMeta,
+  label: string,
 ): ReportCardDimension {
-  if (meta.flags.navToken) {
-    return { grade: "NR", score: null, detail: "NAV token - peg tracking not applicable" };
-  }
-
-  if (!peg || peg.pegScore === null) {
-    return { grade: "NR", score: null, detail: "Insufficient peg tracking data" };
-  }
-
-  if (peg.currentDeviationBps === null && peg.eventCount === 0) {
-    return { grade: "NR", score: null, detail: "No price data available for peg evaluation" };
-  }
-
-  let score = Math.round(Math.max(0, Math.min(100, peg.pegScore)));
+  let score = Math.round(Math.max(0, Math.min(100, peg.pegScore ?? 0)));
   if (peg.activeDepeg) score = Math.min(65, score);
 
   const parts: string[] = [];
-  parts.push(`Peg score: ${score}/100`);
+  parts.push(`${label}: ${score}/100`);
   if (peg.activeDepeg) parts.push("(active depeg, capped at C)");
   if (peg.eventCount === 0) {
     parts.push("No depeg events recorded");
@@ -45,6 +34,32 @@ export function scorePegStability(
   }
 
   return { grade: scoreToGrade(score), score, detail };
+}
+
+export function scorePegStability(
+  peg: PegSummaryCoin | undefined,
+  meta: StablecoinMeta,
+  options?: {
+    inheritedFromReference?: boolean;
+    pegReferenceMeta?: Pick<StablecoinMeta, "id" | "symbol" | "name"> | null;
+  },
+): ReportCardDimension {
+  if (meta.flags.navToken) {
+    return { grade: "NR", score: null, detail: "NAV token - peg tracking not applicable" };
+  }
+
+  if (!peg || peg.pegScore === null) {
+    return { grade: "NR", score: null, detail: "Insufficient peg tracking data" };
+  }
+
+  if (peg.currentDeviationBps === null && peg.eventCount === 0 && !options?.inheritedFromReference) {
+    return { grade: "NR", score: null, detail: "No price data available for peg evaluation" };
+  }
+
+  const label = options?.inheritedFromReference && options.pegReferenceMeta
+    ? `Peg reference (${options.pegReferenceMeta.symbol})`
+    : "Peg score";
+  return buildPegStabilityDimension(peg, meta, label);
 }
 
 function formatCapacityUsd(value: number): string {

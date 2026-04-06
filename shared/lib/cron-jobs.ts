@@ -29,6 +29,7 @@ export const CRON_SCHEDULES = {
 export type CronScheduleKey = keyof typeof CRON_SCHEDULES;
 export type CronScheduleExpression = (typeof CRON_SCHEDULES)[CronScheduleKey];
 export type CronTriggerMode = "shared" | "isolated";
+export type CronStatusImpact = "critical" | "watch";
 
 const CRON_SCHEDULE_BUCKETS = {
   quarterHourly: { intervalSec: 900, offsetSec: 0 },
@@ -78,6 +79,7 @@ export interface CronJobDefinition {
 
 export interface CronJobMeta extends CronJobDefinition {
   schedule: CronScheduleExpression;
+  statusImpact: CronStatusImpact;
 }
 
 export const CRON_GROUPS: readonly CronGroupDefinition[] = [
@@ -401,6 +403,13 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
 export const CRON_JOB_DEFINITIONS: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS_BASE.map((definition) => ({
   ...definition,
   schedule: CRON_SCHEDULES[definition.scheduleKey],
+  statusImpact:
+    definition.job === "sync-stablecoins"
+    || definition.job === "sync-fx-rates"
+    || definition.job === "sync-blacklist"
+    || definition.job === "sync-mint-burn"
+      ? "critical"
+      : "watch",
 }));
 
 /** Job name → expected interval in seconds, derived from definitions. */
@@ -417,6 +426,10 @@ const CRON_SCHEDULE_KEY_BY_EXPRESSION = new Map<string, CronScheduleKey>(
 
 export function getCronJobMeta(job: string): CronJobMeta | null {
   return CRON_JOB_META_BY_ID.get(job) ?? null;
+}
+
+export function getCronStatusImpact(job: string): CronStatusImpact {
+  return getCronJobMeta(job)?.statusImpact ?? "watch";
 }
 
 export function getCronScheduleKey(expression: string): CronScheduleKey | null {

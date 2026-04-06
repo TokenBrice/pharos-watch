@@ -82,7 +82,7 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
         ? `query failed: ${dq.sourceFailures.find((failure) => failure.source === "blacklist-gaps")?.message ?? "blacklist gaps unavailable"}`
         : `${dq.blacklistMissingAmounts}/${dq.blacklistTotal} (${(dq.blacklistMissingRatio * 100).toFixed(2)}%) · recent ${dq.blacklistRecentMissingAmounts}/${Math.round(dq.blacklistRecentWindowSec / HOUR_SECONDS)}h · warn >=${(STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded * 100).toFixed(1)}%, stale >=${(STATUS_BLACKLIST_THRESHOLDS.missingRatioStale * 100).toFixed(0)}%`,
       severity: blacklistQueryFailed
-        ? "red"
+        ? "amber"
         : dq.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale
         ? "red"
         : dq.blacklistRecentMissingAmounts > 0 || dq.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded
@@ -102,7 +102,7 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
               : onchainLowSampleDetail
           }`,
       severity: onchainQueryFailed
-        ? "red"
+        ? "amber"
         : onchainUnavailable
         ? "neutral"
         : !onchainRatioRepresentative
@@ -119,7 +119,7 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
       detail: activeDepegQueryFailed
         ? `query failed: ${dq.sourceFailures.find((failure) => failure.source === "active-depegs")?.message ?? "active depegs unavailable"}`
         : "informational only; active depegs do not change /status health",
-      severity: activeDepegQueryFailed ? "red" : "neutral",
+      severity: activeDepegQueryFailed ? "amber" : "neutral",
     },
     {
       label: "Stale On-chain",
@@ -136,7 +136,7 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
               : onchainLowSampleDetail
           }`,
       severity: onchainQueryFailed
-        ? "red"
+        ? "amber"
         : onchainUnavailable
         ? "neutral"
         : !onchainRatioRepresentative

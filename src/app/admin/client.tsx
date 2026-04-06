@@ -179,6 +179,7 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
     latestTransition,
     notices,
     overallCauseCount,
+    watchCauseCount,
     overallTone,
     querySyncs,
     recommendedActions,
@@ -367,11 +368,20 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
                   }
                 />
                 <SummaryBadge
-                  label="Active Causes"
+                  label="Blockers"
                   value={String(overallCauseCount)}
                   className={
                     overallCauseCount > 0
                       ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                      : undefined
+                  }
+                />
+                <SummaryBadge
+                  label="Watch Items"
+                  value={String(watchCauseCount)}
+                  className={
+                    overallCauseCount === 0 && watchCauseCount > 0
+                      ? "border-border/60 bg-background/55 text-muted-foreground"
                       : undefined
                   }
                 />
@@ -418,7 +428,7 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
                     </h3>
                   </div>
                   <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-muted-foreground">
-                    {topCauses.length > 0 ? `${Math.min(topCauses.length, 3)} immediate` : "clear"}
+                    {topCauses.length > 0 ? `${Math.min(topCauses.length, 3)} immediate` : watchCauseCount > 0 ? "watch-only" : "clear"}
                   </span>
                 </div>
 
@@ -446,7 +456,9 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
                     ))
                   ) : (
                     <div className="rounded-xl border border-border/60 bg-background/45 p-3 text-sm leading-relaxed text-muted-foreground">
-                      No active causes. Current state has held for {formatElapsedSeconds(statusHoldingAge)}.
+                      {watchCauseCount > 0
+                        ? `No active blockers. ${watchCauseCount} watch item(s) remain. Current state has held for ${formatElapsedSeconds(statusHoldingAge)}.`
+                        : `No active blockers. Current state has held for ${formatElapsedSeconds(statusHoldingAge)}.`}
                     </div>
                   )}
                 </div>

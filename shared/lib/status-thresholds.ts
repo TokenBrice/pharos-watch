@@ -94,5 +94,11 @@ export function isReserveDriftThresholdExceeded(delta: number): boolean {
   return delta > STATUS_RESERVE_DRIFT_THRESHOLD_POINTS;
 }
 
+// --- Reserve sync coverage thresholds ---
+export const STATUS_RESERVE_COMPOSITION_THRESHOLDS = {
+  degradedFreshCoverageRatio: 0.75,
+  degradedAuthoritativeCoverageRatio: 0.5,
+} as const;
+
 // --- Discovery scan ---
 export const DISCOVERY_MIN_MCAP = 5_000_000;

@@ -57,7 +57,8 @@ export function CronsSection({
       accentClassName="border-l-orange-500"
       summary={
         <>
-          <SummaryBadge label="Unhealthy" value={String(data.summary.unhealthyCrons)} />
+          <SummaryBadge label="Impacting" value={String(data.summary.availabilityImpactingUnhealthyCrons)} />
+          <SummaryBadge label="Watch" value={String(data.summary.watchUnhealthyCrons)} />
           <SummaryBadge label="Degraded" value={String(data.summary.degradedCrons)} />
           <SummaryBadge label="Running" value={String(runningCrons)} />
         </>

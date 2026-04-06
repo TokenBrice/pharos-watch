@@ -48,11 +48,32 @@ describe("status action recommendations", () => {
       },
     });
 
-    expect(recommendations.map((item) => item.action.path)).toEqual([
-      "/api/reset-blacklist-sync",
-      "/api/backfill-dews",
-    ]);
+    expect(recommendations.map((item) => item.action.path)).toEqual(["/api/reset-blacklist-sync"]);
     expect(recommendations[0]?.severity).toBe("critical");
-    expect(recommendations[1]?.severity).toBe("warning");
+  });
+
+  it("ignores info-only causes and watch-tier cron failures in the promoted action strip", () => {
+    const recommendations = deriveStatusActionRecommendations({
+      causes: {
+        availability: [],
+        dataQuality: [],
+        overall: [
+          {
+            code: "onchain_monitor_unavailable",
+            layer: "data-quality",
+            severity: "info",
+            message: "On-chain diagnostics unavailable.",
+          },
+        ],
+      },
+      crons: {
+        "sync-live-reserves": makeCronStatus({
+          healthy: false,
+          recentRuns: [{ startedAt: 10, durationMs: 1, status: "error" }],
+        }),
+      },
+    });
+
+    expect(recommendations).toEqual([]);
   });
 });

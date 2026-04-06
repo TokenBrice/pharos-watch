@@ -2,15 +2,17 @@ import type {
   StatusCause,
   StatusResponse,
 } from "@shared/types/status";
-import { computeReserveCompositionOverview } from "./live-reserves-store";
 import { assessPublicHealth } from "./public-health-assessment";
 import {
   emptyDatasetFreshness,
   emptyReserveComposition,
-  getDatasetFreshness,
-  getTelegramBotStats,
 } from "./status/derived-data";
 import { emptyDataQuality, getDataQuality } from "./status/data-quality";
+import {
+  countDiagnosticIssues,
+  deriveStatusAssessmentInputs,
+  loadSupplementalStatusSections,
+} from "./status/evaluation-context";
 import {
   reconcileStatusState,
   type StatusLevel,
@@ -18,7 +20,7 @@ import {
 import {
   deriveAvailabilityStatus,
   deriveDataQualityStatus,
-  deriveReserveCompositionFlags,
+  deriveReserveCompositionStatus,
   maxStatus,
   scoreStatusConfidence,
 } from "./status/evaluation-state";
@@ -27,9 +29,7 @@ import {
   buildDataQualityCauses,
   synthesizeOverallCauses,
 } from "./status/evaluation-causes";
-import { assessOnchainDataQuality } from "./status/onchain-data-quality";
 import { loadCronHealth } from "./status/cron-health";
-import { getStatusSectionMessage } from "./status/section-errors";
 
 export interface RawStatusComputation {
   dbHealthy: boolean;
@@ -81,8 +81,12 @@ function buildDbUnavailableRawStatus(): RawStatusComputation {
     datasetFreshness: emptyDatasetFreshness(),
     summary: {
       unhealthyCrons: 0,
+      availabilityImpactingUnhealthyCrons: 0,
+      watchUnhealthyCrons: 0,
       degradedCrons: 0,
       cronErrors: 0,
+      availabilityImpactingCronErrors: 0,
+      diagnosticIssueCount: 0,
       worstCacheRatio: 0,
     },
     reserveComposition: emptyReserveComposition(),
@@ -113,10 +117,12 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
   const worstCacheRatio = publicHealth.worstCacheRatio;
   const {
     crons,
-    anyCronError,
     unhealthyCrons,
+    availabilityImpactingUnhealthyCrons,
+    watchUnhealthyCrons,
     degradedCronRuns,
     cronErrorCount,
+    availabilityImpactingCronErrors,
     cronHistoryQueryFailed,
     cronProgressQueryFailed,
   } = await loadCronHealth(db, now);
@@ -124,50 +130,33 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
   const dataQuality = await getDataQuality(db, now, {
     blacklistMetrics: publicHealth.blacklistMetrics,
   });
-  const sectionErrors: StatusResponse["sectionErrors"] = {};
-  let telegramBot: StatusResponse["telegramBot"] = null;
-  try {
-    telegramBot = await getTelegramBotStats(db, now);
-  } catch (err) {
-    console.warn("[status] Telegram bot stats unavailable:", err);
-    sectionErrors.telegramBot = {
-      code: "telegram_bot_stats_query_failed",
-      message: getStatusSectionMessage("telegramBot"),
-    };
-  }
-  const datasetFreshness = await getDatasetFreshness(db);
-  let reserveComposition = emptyReserveComposition();
-  let reserveCompositionQueryFailed = false;
-  try {
-    reserveComposition = await computeReserveCompositionOverview(db, now);
-  } catch (err) {
-    reserveCompositionQueryFailed = true;
-    console.warn("[status] Reserve composition overview unavailable:", err);
-    sectionErrors.reserveComposition = {
-      code: "reserve_composition_query_failed",
-      message: getStatusSectionMessage("reserveComposition"),
-    };
-  }
-  const missingPriceRatio =
-    dataQuality.totalStablecoins > 0 ? dataQuality.missingPrices / dataQuality.totalStablecoins : 0;
-  const blacklistMissingRatio = dataQuality.blacklistMissingRatio;
-  const blacklistRecentMissing = dataQuality.blacklistRecentMissingAmounts;
-  const hasActiveOnchainMonitor = dataQuality.onchainSupplyMonitoring === "active";
-  const trackedOnchainCoins = hasActiveOnchainMonitor ? dataQuality.onchainSupplyTrackedCoins : 0;
-  const onchainAssessment = assessOnchainDataQuality({
-    monitoring: dataQuality.onchainSupplyMonitoring,
-    trackedCoins: trackedOnchainCoins,
-    staleSupply: hasActiveOnchainMonitor ? dataQuality.staleOnchainSupply : 0,
-    staleRatio: hasActiveOnchainMonitor ? dataQuality.onchainStaleRatio : 0,
-    divergences: hasActiveOnchainMonitor ? dataQuality.onchainSupplyDivergences : 0,
-    divergenceRatio: hasActiveOnchainMonitor ? dataQuality.onchainDivergenceRatio : 0,
+  const {
+    sectionErrors,
+    telegramBot,
+    datasetFreshness,
+    reserveComposition,
+    reserveCompositionQueryFailed,
+  } = await loadSupplementalStatusSections(db, now);
+  const {
+    missingPriceRatio,
+    blacklistMissingRatio,
+    blacklistRecentMissing,
+    hasActiveOnchainMonitor,
+    onchainAssessment,
+  } = deriveStatusAssessmentInputs(dataQuality);
+  const reserveAssessment = deriveReserveCompositionStatus(reserveComposition);
+  const diagnosticIssueCount = countDiagnosticIssues({
+    publicHealth,
+    dataQuality,
+    reserveCompositionQueryFailed,
+    cronHistoryQueryFailed,
+    cronProgressQueryFailed,
   });
-  const reserveFlags = deriveReserveCompositionFlags(reserveComposition);
 
   const availabilityStatus = deriveAvailabilityStatus({
     publicHealth,
-    anyCronError,
-    unhealthyCrons,
+    availabilityImpactingCronErrors,
+    availabilityImpactingUnhealthyCrons,
   });
   const dataQualityStatus = deriveDataQualityStatus({
     dataQuality,
@@ -175,16 +164,17 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     blacklistMissingRatio,
     blacklistRecentMissing,
     onchainAssessment,
-    reserveCompositionQueryFailed,
-    reserveFlags,
+    reserveCompositionStatus: reserveAssessment.status,
   });
 
   const rawOverallStatus = maxStatus(availabilityStatus, dataQualityStatus);
   const availabilityCauses = buildAvailabilityCauses({
     publicHealth,
-    unhealthyCrons,
+    availabilityImpactingUnhealthyCrons,
+    watchUnhealthyCrons,
     degradedCronRuns,
     cronErrorCount,
+    availabilityImpactingCronErrors,
     cronHistoryQueryFailed,
     cronProgressQueryFailed,
   });
@@ -195,8 +185,6 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     blacklistRecentMissing,
     onchainAssessmentCauses: onchainAssessment.causes,
     reserveCompositionQueryFailed,
-    reserveCompositionCritical: reserveFlags.critical,
-    reserveCompositionWarning: reserveFlags.warning,
     reserveComposition,
   });
 
@@ -205,6 +193,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     dataQualityStatus,
     unhealthyCrons,
     degradedCrons: degradedCronRuns,
+    diagnosticIssueCount,
     missingPriceRatio,
     onchainMonitoringActive: hasActiveOnchainMonitor,
   });
@@ -229,8 +218,12 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     reserveComposition,
     summary: {
       unhealthyCrons,
+      availabilityImpactingUnhealthyCrons,
+      watchUnhealthyCrons,
       degradedCrons: degradedCronRuns,
       cronErrors: cronErrorCount,
+      availabilityImpactingCronErrors,
+      diagnosticIssueCount,
       worstCacheRatio,
     },
   };

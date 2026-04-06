@@ -13,10 +13,22 @@ function formatLastSuccess(lastSuccessAt: number | null, nowSeconds: number): st
 }
 
 export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthCardProps) {
+  const statusTone =
+    health.status === "stale"
+      ? "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300"
+      : health.status === "degraded"
+        ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+        : "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300";
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Live Reserve Sync</CardTitle>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <CardTitle className="text-base">Live Reserve Sync</CardTitle>
+          <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusTone}`}>
+            {health.status}
+          </span>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-7">
@@ -54,6 +66,9 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
           <div>Last success: {formatLastSuccess(health.lastSuccessAt, nowSeconds)}</div>
           <div>
             Oldest fresh snapshot age: {health.oldestFreshAgeSec != null ? formatElapsedSeconds(health.oldestFreshAgeSec) : "—"}
+          </div>
+          <div>
+            Coverage: {(health.freshCoverageRatio * 100).toFixed(0)}% fresh, {(health.authoritativeFreshCoverageRatio * 100).toFixed(0)}% authoritative
           </div>
         </div>
 

@@ -45,9 +45,9 @@ The active frontend operator mode is now:
 - Decomposed UI components: `src/components/status/*`
 - The `/admin/` page shell adds a command-center top fold above the widget stack:
   - a compact triage utility bar for refresh/auth state (`RefreshCountdown`, sign-out, state-evaluation/status-payload/per-lane fetch chips, and a sync-floor age chip based on the oldest critical query)
-  - consolidated overall-status hero (`StatusBanner`) + a short blocker watchlist
+  - consolidated overall-status hero (`StatusBanner`) + a short blocker-first watchlist
   - when hysteresis is still holding `overallStatus` above `rawOverallStatus`, the hero switches into recovery-hold copy instead of reusing the active-incident stale headline
-  - a promoted `Recommended now` action strip derived from active causes / unhealthy cron lanes
+  - a promoted `Recommended now` action strip derived from blocking causes and availability-impacting cron lanes only
   - a `Follow this order` lane list that mirrors the priority-ranked section order
   - a sticky `LongformScrollspyNav` rail for section-level navigation while scrolling
 - `/admin/` disables indexing (`robots: { index: false, follow: false }`)
@@ -191,29 +191,31 @@ For the split DEX pipeline:
 
 ### Availability status
 
-Computed from the shared public-health floor plus cron availability:
+Computed from the shared public-health floor plus availability-impacting cron availability:
 
 - `stale` if any of:
   - any shared cache impact is `stale`
   - the public mint/burn lane is `stale`
-  - any cron lastRun status is `error`
-  - `unhealthyCrons >= 3`
+  - any `statusImpact="critical"` cron lastRun status is `error`
+  - `availabilityImpactingUnhealthyCrons >= 2`
 - `degraded` if any of:
   - any shared cache impact is `degraded`
   - the public mint/burn lane is `degraded` (once the lane has emitted real sync telemetry)
   - `openCircuitGroups >= 3`
-  - `unhealthyCrons > 0`
+  - `availabilityImpactingUnhealthyCrons > 0`
 - else `healthy`
 
-`degraded` cron runs are counted separately in `summary.degradedCrons` and shown in cron cards, but do not by themselves mark availability degraded.
+`degraded` cron runs are counted separately in `summary.degradedCrons` and shown in cron cards, but they do not by themselves mark availability degraded.
 
 `openCircuitGroups` here means public-impact circuit groups only. Dynamic per-coin `live-reserves:*` breakers still render in the reliability tables, but they do not degrade availability on their own because reserve sync already has its own data-quality lane and thresholds.
+
+Each cron definition now carries `statusImpact: "critical" | "watch"` in `shared/lib/cron-jobs.ts`. Only critical lanes can degrade `availabilityStatus`; watch-tier cron failures stay operator-visible through cron cards, info causes, `summary.watchUnhealthyCrons`, and `summary.cronErrors`.
 
 FX source freshness is also cadence-aware now. `/api/health` and `/api/status` still expose `fx-rates.sourceStatus`, but intraday sources use age windows while ECB/secondary daily sources compare their published source date against the next expected business-day or calendar-day rollover. Realtime OXR / Chainlink overlays no longer erase a fresh daily fiat source date when they are only refining the current daily reference stack, and commodity pegs can now refresh from the fresh `stablecoins` cache when `gold-api.com` is unavailable from Workers, so the status surface does not fall into false intraday staleness during later provider outages. One-step daily lag stays operator-visible as `degraded`, while only `stale` FX sources are excluded from downstream price validation.
 
 ### Data quality status
 
-Computed from missing prices + blacklist gaps + on-chain supply monitor:
+Computed from missing prices + blacklist gaps + on-chain supply monitor, with best-effort query failures treated as diagnostics instead of automatic degradation:
 
 - `stale` if any of:
   - stablecoins cache is unavailable/corrupt (`dataQuality.stablecoinsCacheStatus === "error"`)
@@ -224,15 +226,18 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor:
   - `onchainSupplyDivergences >= 25`
   - `onchainStaleRatio >= 0.25` when `onchainSupplyTrackedCoins >= 10`
   - `onchainDivergenceRatio >= 0.25` when `onchainSupplyTrackedCoins >= 10`
+  - `reserveComposition.status === "stale"`
 - `degraded` if any of:
   - stablecoins cache is degraded but still usable (`dataQuality.stablecoinsCacheStatus === "degraded"`, currently legacy-array payloads only)
-  - any critical data-quality subquery failed (`dataQuality.sourceFailures.length > 0`)
   - `missingPriceRatio > 0.15`
   - `blacklistRecentMissingAmounts > 0` (last 24h)
   - `blacklistMissingRatio >= 0.01` (1%)
   - `onchainStaleRatio >= 0.1` when `onchainSupplyTrackedCoins >= 10`
   - `onchainDivergenceRatio >= 0.1` when `onchainSupplyTrackedCoins >= 10`
+  - `reserveComposition.status === "degraded"`
 - else `healthy`
+
+`dataQuality.sourceFailures` still records failed data-quality subqueries, but those failures now emit info-level causes and increment `summary.diagnosticIssueCount` instead of degrading `dataQualityStatus` on their own. Only the stablecoins cache remains a hard dependency in this path.
 
 Mint/burn freshness uses shared defaults from `worker/src/lib/mint-burn-health-config.ts`:
 
@@ -242,7 +247,7 @@ Mint/burn freshness uses shared defaults from `worker/src/lib/mint-burn-health-c
 
 The public `/api/health` lane now keys mint/burn freshness to the critical-lane sync timestamp / latest run status rather than raw event timestamps, matching the `/flows` semantics and avoiding quiet-period false stale alerts.
 
-`dataQuality.onchainSupplyMonitoring === "unavailable"` renders in the quality cards and emits an info-level `onchain_monitor_unavailable` cause. This cause appears in the blocker list but does not affect health status.
+`dataQuality.onchainSupplyMonitoring === "unavailable"` renders in the quality cards and emits an info-level `onchain_monitor_unavailable` cause. This cause appears in the diagnostics watch list but does not affect health status.
 
 `onchainSupplyTrackedCoins` now counts only stablecoins with at least one `onchain_supply` update inside the active monitoring window (`3d`). Older historical rows stay in D1 for audit/debug use, but they no longer count toward `staleOnchainSupply` or `onchainStaleRatio`.
 
@@ -280,8 +285,8 @@ Additional response fields:
 - `timeline`: recent status transitions
 - `telegramBot`: admin-only Telegram bot subscriber aggregates (`null` when Telegram tables are unavailable)
 - `datasetFreshness`: last successful writer-evaluation timestamps for key operational domains (`stablecoins`, `blacklist`, `mintBurn`, `supply`, `safetyGrades`, `yield`, `depegs`, `dews`, `digest`, `discoveryCandidates`)
-- `summary`: compact availability rollup (`unhealthyCrons`, `degradedCrons`, `cronErrors`, `worstCacheRatio`)
-- `reserveComposition`: live reserve sync coverage summary (`configuredCoins`, `freshCoins`, `staleCoins`, `missingCoins`, `degradedCoins`, `errorCoins`, `corruptCoins`, `independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`, `weakProbeFresh`, `writeTimeoutUncertain`, `lastSuccessAt`, `oldestFreshAgeSec`)
+- `summary`: compact availability and diagnostics rollup (`unhealthyCrons`, `availabilityImpactingUnhealthyCrons`, `watchUnhealthyCrons`, `degradedCrons`, `cronErrors`, `availabilityImpactingCronErrors`, `diagnosticIssueCount`, `worstCacheRatio`)
+- `reserveComposition`: live reserve sync coverage summary (`configuredCoins`, `freshCoins`, `staleCoins`, `missingCoins`, `degradedCoins`, `errorCoins`, `corruptCoins`, `independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`, `weakProbeFresh`, `writeTimeoutUncertain`, `lastSuccessAt`, `oldestFreshAgeSec`, `status`, `freshCoverageRatio`, `authoritativeFreshCoverageRatio`)
 - `coingeckoPriceDiff`: admin-only live CoinGecko comparison summary for active tracked assets with `geckoId`, including the compare count, mismatch count, threshold, and the flagged rows where the Pharos reported price is more than 5% away from CoinGecko spot
 - `d1Usage`: admin-only live D1 database telemetry (`databaseSizeBytes`, `numTables`, `readReplicationMode`, `readQueries24h`, `writeQueries24h`, `rowsRead24h`, `rowsWritten24h`) sourced from Cloudflare's D1 control-plane and analytics APIs when the dedicated worker bindings are configured
 - `reserveDrift`: optional array of coins where the independent live-derived collateral quality score diverges from curated by more than 15 points (`coinId`, `liveCollateralScore`, `curatedCollateralScore`, `delta`), sorted by delta descending. Omitted when no drift exceeds the threshold.
@@ -301,13 +306,13 @@ For event-backed domains, `datasetFreshness` follows the writer rather than the 
 - `blacklistGapStatus`: `ok | failed`
 - `activeDepegStatus`: `ok | failed`
 - `onchainSupplyQueryStatus`: `ok | failed | unavailable`
-- `sourceFailures`: list of failed critical subqueries with machine-readable source keys and error messages
+- `sourceFailures`: list of failed best-effort subqueries with machine-readable source keys and error messages
 
 This prevents `/status` from silently treating a broken stablecoins cache as `0 / 0` healthy price coverage.
 
-When one of those critical subqueries fails, `/api/status` now degrades `dataQualityStatus` and the status cards render `ERR` for the affected metric instead of showing a misleading `0`.
+When one of those best-effort subqueries fails, `/api/status` keeps unaffected status lanes healthy, records the issue under `sourceFailures` / `sectionErrors`, increments `summary.diagnosticIssueCount`, and renders the affected card as diagnostic amber instead of silently showing a misleading `0`.
 
-Cache freshness subqueries are now also explicit. If a dedicated-table freshness lookup fails, `/api/status` adds a `cache_freshness_query_failed` availability cause instead of only surfacing a stale ratio.
+Cache freshness subqueries are now also explicit. If a dedicated-table freshness lookup fails, `/api/status` adds a `cache_freshness_query_failed` info cause instead of only surfacing a stale ratio.
 
 The public `/api/health` companion endpoint now returns a `warnings` array for these best-effort failures, and the status page model treats that as additional public-health context instead of assuming zero-like data is real.
 
@@ -324,7 +329,11 @@ Behavior:
 - bootstrap is suppressed until the first successful live reserve sync exists
 - only matched `reserve_composition` + `reserve_sync_state.last_success_at` pairs count as live snapshots; orphaned or split-write rows are treated as missing
 - coins currently failing before their first successful snapshot count as `errorCoins`, not `missingCoins`
-- after bootstrap, stale/degraded/missing live reserve feeds can degrade `dataQualityStatus`
+- after bootstrap, reserve health is coverage-based:
+  - `status: "stale"` when `freshCoins === 0`
+  - `status: "degraded"` when `freshCoverageRatio < 0.75` or `authoritativeFreshCoverageRatio < 0.5`
+  - `status: "healthy"` otherwise
+- low raw counts of degraded/missing reserve feeds no longer degrade `dataQualityStatus` on their own if coverage remains above those thresholds
 - the page renders a dedicated `Live Reserve Sync` card in the pipeline lane
 - the card also breaks fresh clean snapshots into evidence-quality cohorts: `independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`, and `weakProbeFresh`
 - `writeTimeoutUncertain` counts coins whose latest attempt hit the D1 write-timeout / finalize-rejection path, meaning ops should treat the authoritative state as ambiguous until the next clean run
@@ -443,7 +452,7 @@ Status-page manual actions are router-dispatched from shared endpoint metadata (
 The UI now uses these actions in two ways:
 
 - a complete operator tool shelf (`All actions`)
-- contextual recommendations derived from active causes and unhealthy cron lanes (`Recommended now`)
+- contextual recommendations derived from blocking causes and availability-impacting cron lanes (`Recommended now`)
 
 The complete operator tool shelf is grouped into recovery/backfill, audit/diagnostic, and communication actions.
 

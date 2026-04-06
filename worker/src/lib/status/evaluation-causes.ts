@@ -44,9 +44,11 @@ export function synthesizeOverallCauses(
 
 export function buildAvailabilityCauses(input: {
   publicHealth: PublicHealthAssessment;
-  unhealthyCrons: number;
+  availabilityImpactingUnhealthyCrons: number;
+  watchUnhealthyCrons: number;
   degradedCronRuns: number;
   cronErrorCount: number;
+  availabilityImpactingCronErrors: number;
   cronHistoryQueryFailed: boolean;
   cronProgressQueryFailed: boolean;
 }): StatusCause[] {
@@ -87,7 +89,7 @@ export function buildAvailabilityCauses(input: {
     pushCause(availabilityCauses, {
       code: "cache_freshness_query_failed",
       layer: "availability",
-      severity: "warning",
+      severity: "info",
       message: `Cache freshness diagnostics were incomplete for: ${cacheTargets}.`,
     });
   }
@@ -175,7 +177,7 @@ export function buildAvailabilityCauses(input: {
     pushCause(availabilityCauses, {
       code: "circuit_query_failed",
       layer: "availability",
-      severity: "warning",
+      severity: "info",
       message: "Circuit breaker diagnostics failed; availability details may be incomplete.",
     });
   } else if (input.publicHealth.openCircuitCount >= 3) {
@@ -194,7 +196,7 @@ export function buildAvailabilityCauses(input: {
     pushCause(availabilityCauses, {
       code: "cron_history_query_failed",
       layer: "availability",
-      severity: "warning",
+      severity: "info",
       message: "Cron history query failed; cron health is temporarily unknown rather than unhealthy.",
     });
   }
@@ -208,36 +210,61 @@ export function buildAvailabilityCauses(input: {
     });
   }
 
-  if (input.cronErrorCount > 0) {
+  if (input.availabilityImpactingCronErrors > 0) {
     pushCause(availabilityCauses, {
       code: "cron_error_runs",
       layer: "availability",
       severity: "critical",
-      message: `${input.cronErrorCount} cron job(s) currently have last-run status=error.`,
-      metric: "cronErrors",
-      value: input.cronErrorCount,
+      message: `${input.availabilityImpactingCronErrors} availability-impacting cron job(s) currently have last-run status=error.`,
+      metric: "availabilityImpactingCronErrors",
+      value: input.availabilityImpactingCronErrors,
       threshold: 1,
     });
   }
 
-  if (input.unhealthyCrons >= 3) {
+  const watchCronErrors = Math.max(0, input.cronErrorCount - input.availabilityImpactingCronErrors);
+  if (watchCronErrors > 0) {
+    pushCause(availabilityCauses, {
+      code: "watch_cron_error_runs",
+      layer: "availability",
+      severity: "info",
+      message: `${watchCronErrors} watch-tier cron job(s) currently have last-run status=error.`,
+      metric: "watchCronErrors",
+      value: watchCronErrors,
+      threshold: 1,
+    });
+  }
+
+  if (input.availabilityImpactingUnhealthyCrons >= 2) {
     pushCause(availabilityCauses, {
       code: "multiple_unhealthy_crons",
       layer: "availability",
       severity: "critical",
-      message: `${input.unhealthyCrons} cron jobs are unavailable/stale.`,
-      metric: "unhealthyCrons",
-      value: input.unhealthyCrons,
-      threshold: 3,
+      message: `${input.availabilityImpactingUnhealthyCrons} availability-impacting cron jobs are unavailable/stale.`,
+      metric: "availabilityImpactingUnhealthyCrons",
+      value: input.availabilityImpactingUnhealthyCrons,
+      threshold: 2,
     });
-  } else if (input.unhealthyCrons > 0) {
+  } else if (input.availabilityImpactingUnhealthyCrons > 0) {
     pushCause(availabilityCauses, {
       code: "unhealthy_crons_present",
       layer: "availability",
       severity: "warning",
-      message: `${input.unhealthyCrons} cron job(s) are unavailable/stale.`,
-      metric: "unhealthyCrons",
-      value: input.unhealthyCrons,
+      message: `${input.availabilityImpactingUnhealthyCrons} availability-impacting cron job(s) are unavailable/stale.`,
+      metric: "availabilityImpactingUnhealthyCrons",
+      value: input.availabilityImpactingUnhealthyCrons,
+      threshold: 1,
+    });
+  }
+
+  if (input.watchUnhealthyCrons > 0) {
+    pushCause(availabilityCauses, {
+      code: "watch_unhealthy_crons_present",
+      layer: "availability",
+      severity: "info",
+      message: `${input.watchUnhealthyCrons} watch-tier cron job(s) are unavailable/stale.`,
+      metric: "watchUnhealthyCrons",
+      value: input.watchUnhealthyCrons,
       threshold: 1,
     });
   }
@@ -264,8 +291,6 @@ export function buildDataQualityCauses(input: {
   blacklistRecentMissing: number;
   onchainAssessmentCauses: StatusCause[];
   reserveCompositionQueryFailed: boolean;
-  reserveCompositionCritical: boolean;
-  reserveCompositionWarning: boolean;
   reserveComposition: StatusResponse["reserveComposition"];
 }): StatusCause[] {
   const dataQualityCauses: StatusCause[] = [];
@@ -297,7 +322,7 @@ export function buildDataQualityCauses(input: {
     pushCause(dataQualityCauses, {
       code,
       layer: "data-quality",
-      severity: "warning",
+      severity: "info",
       message: sourceFailureMessage(failure.source),
     });
   }
@@ -306,7 +331,7 @@ export function buildDataQualityCauses(input: {
     pushCause(dataQualityCauses, {
       code: "reserve_sync_query_failed",
       layer: "data-quality",
-      severity: "warning",
+      severity: "info",
       message: "Live reserve composition overview query failed; reserve freshness status may be incomplete.",
     });
   }
@@ -373,19 +398,21 @@ export function buildDataQualityCauses(input: {
     pushCause(dataQualityCauses, cause);
   }
 
-  if (input.reserveCompositionCritical) {
+  if (input.reserveComposition.status === "stale") {
     pushCause(dataQualityCauses, {
       code: "reserve_sync_stale",
       layer: "data-quality",
       severity: "critical",
       message: "All configured live reserve feeds are missing, stale, or degraded.",
     });
-  } else if (input.reserveCompositionWarning) {
+  } else if (input.reserveComposition.status === "degraded") {
     pushCause(dataQualityCauses, {
       code: "reserve_sync_degraded",
       layer: "data-quality",
       severity: "warning",
       message:
+        `Live reserve coverage is degraded (${formatRatio(input.reserveComposition.freshCoverageRatio)} fresh, ` +
+        `${formatRatio(input.reserveComposition.authoritativeFreshCoverageRatio)} authoritative). ` +
         `${input.reserveComposition.errorCoins} error, ${input.reserveComposition.missingCoins} missing, ` +
         `${input.reserveComposition.staleCoins} stale, ${input.reserveComposition.degradedCoins} degraded, ` +
         `${input.reserveComposition.corruptCoins} corrupt live reserve feed(s).`,

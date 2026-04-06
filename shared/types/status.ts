@@ -363,8 +363,12 @@ export interface StatusResponse {
   datasetFreshness: DatasetFreshness;
   summary: {
     unhealthyCrons: number;
+    availabilityImpactingUnhealthyCrons: number;
+    watchUnhealthyCrons: number;
     degradedCrons: number;
     cronErrors: number;
+    availabilityImpactingCronErrors: number;
+    diagnosticIssueCount: number;
     worstCacheRatio: number;
   };
   liquidityHealth: LiquidityHealth | null;
@@ -388,6 +392,9 @@ export interface StatusResponse {
     writeTimeoutUncertain: number;
     lastSuccessAt: number | null;
     oldestFreshAgeSec: number | null;
+    status: "healthy" | "degraded" | "stale";
+    freshCoverageRatio: number;
+    authoritativeFreshCoverageRatio: number;
   };
   cacheBlobSizes?: Record<string, number>;
   reserveDrift?: ReserveDriftEntry[];

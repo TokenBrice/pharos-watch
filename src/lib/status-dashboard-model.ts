@@ -182,10 +182,10 @@ export function getNoticeTone(tone: DashboardNotice["tone"]): string {
   return "border-border/60 bg-muted/30 text-muted-foreground";
 }
 
-export function getTopCauses(causes: StatusResponse["causes"], limit: number): StatusCause[] {
+function dedupeCauses(causes: StatusCause[]): StatusCause[] {
   const deduped = new Map<string, StatusCause>();
 
-  for (const cause of [...causes.overall, ...causes.availability, ...causes.dataQuality]) {
+  for (const cause of causes) {
     const key = `${cause.layer}:${cause.code}:${cause.message}`;
     if (!deduped.has(key)) {
       deduped.set(key, cause);
@@ -197,8 +197,23 @@ export function getTopCauses(causes: StatusResponse["causes"], limit: number): S
       const severityDelta = SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity];
       if (severityDelta !== 0) return severityDelta;
       return a.code.localeCompare(b.code);
-    })
-    .slice(0, limit);
+    });
+}
+
+export function getBlockerCauses(causes: StatusResponse["causes"]): StatusCause[] {
+  return dedupeCauses(
+    [...causes.overall, ...causes.availability, ...causes.dataQuality].filter((cause) => cause.severity !== "info"),
+  );
+}
+
+export function getWatchCauses(causes: StatusResponse["causes"]): StatusCause[] {
+  return dedupeCauses(
+    [...causes.overall, ...causes.availability, ...causes.dataQuality].filter((cause) => cause.severity === "info"),
+  );
+}
+
+export function getTopCauses(causes: StatusResponse["causes"], limit: number): StatusCause[] {
+  return getBlockerCauses(causes).slice(0, limit);
 }
 
 interface BuildStatusDashboardOptions {
@@ -259,8 +274,11 @@ export function buildStatusDashboardData({
   const allTransitions = historyTransitions ?? data.timeline;
   const latestTransition = allTransitions[0] ?? null;
   const recommendedActions = deriveStatusActionRecommendations({ causes: data.causes, crons: data.crons });
-  const topCauses = getTopCauses(data.causes, 4);
-  const overallCauseCount = data.causes.availability.length + data.causes.dataQuality.length;
+  const blockerCauses = getBlockerCauses(data.causes);
+  const watchCauses = getWatchCauses(data.causes);
+  const topCauses = blockerCauses.slice(0, 4);
+  const overallCauseCount = blockerCauses.length;
+  const watchCauseCount = watchCauses.length;
   const statusHoldingAge = Math.max(0, data.timestamp - data.state.lastChangedAt);
   const overallTone = getStatusTone(data.overallStatus);
   const staleQuerySyncs = criticalSyncs.filter((sync) => sync.stale);
@@ -334,14 +352,21 @@ export function buildStatusDashboardData({
     browserProbeSummary && browserProbeSummary.failCount > 0 ? 1 : 0,
     data.summary.worstCacheRatio > 2 ? 2 : data.summary.worstCacheRatio > 1.5 ? 1 : 0,
   );
-  const cronStatus = data.summary.cronErrors > 0 ? 2 : data.summary.unhealthyCrons > 0 ? 1 : data.summary.degradedCrons > 0 ? 1 : 0;
+  const cronStatus =
+    data.summary.availabilityImpactingCronErrors > 0
+      ? 2
+      : data.summary.availabilityImpactingUnhealthyCrons > 0
+        ? 1
+        : data.summary.degradedCrons > 0 || data.summary.watchUnhealthyCrons > 0
+          ? 1
+          : 0;
   const controlStatus = recommendedActions.length > 0 ? 2 : 0;
   const sectionPriority: Record<DashboardSectionId, number> = {
     overview: 999,
     control: controlStatus * 100 + recommendedActions.length,
-    pipeline: STATUS_PRIORITY[data.dataQualityStatus] * 100 + data.causes.dataQuality.length,
-    crons: cronStatus * 100 + data.summary.unhealthyCrons * 10 + data.summary.cronErrors,
-    reliability: reliabilityStatus * 100 + (browserProbeSummary?.failCount ?? 0) + data.summary.cronErrors,
+    pipeline: STATUS_PRIORITY[data.dataQualityStatus] * 100 + blockerCauses.filter((cause) => cause.layer === "data-quality").length,
+    crons: cronStatus * 100 + data.summary.availabilityImpactingUnhealthyCrons * 10 + data.summary.availabilityImpactingCronErrors,
+    reliability: reliabilityStatus * 100 + (browserProbeSummary?.failCount ?? 0) + data.summary.availabilityImpactingCronErrors,
     history: -1,
   };
   const sectionOrder: DashboardSectionId[] = ["overview", "control", "pipeline", "crons", "reliability", "history"];
@@ -355,7 +380,7 @@ export function buildStatusDashboardData({
       accentClassName: "border-l-frost-blue",
       value: overallTone.label,
       valueClassName: overallTone.valueClassName,
-      summary: `${overallCauseCount} active causes, confidence ${(data.confidence * 100).toFixed(1)}%, last change ${formatElapsedSeconds(statusHoldingAge)} ago`,
+      summary: `${overallCauseCount} blockers, ${watchCauseCount} watch items, confidence ${(data.confidence * 100).toFixed(1)}%, last change ${formatElapsedSeconds(statusHoldingAge)} ago`,
     },
     {
       id: "pipeline",
@@ -380,7 +405,7 @@ export function buildStatusDashboardData({
         browserProbeSummary && browserProbeSummary.failCount > 0
           ? "text-amber-700 dark:text-amber-400"
           : "text-foreground",
-      summary: `${data.summary.cronErrors} cron errors, ${browserProbeSummary?.failCount ?? 0} failing browser probes, worst cache ${data.summary.worstCacheRatio.toFixed(2)}x`,
+      summary: `${data.summary.availabilityImpactingCronErrors} impacting cron errors, ${browserProbeSummary?.failCount ?? 0} failing browser probes, worst cache ${data.summary.worstCacheRatio.toFixed(2)}x`,
     },
     {
       id: "crons",
@@ -389,10 +414,12 @@ export function buildStatusDashboardData({
       title: "Worker job lanes",
       description: "Grouped by trigger theme so failures, degraded runs, and in-flight leases are easier to scan.",
       accentClassName: "border-l-orange-500",
-      value: `${data.summary.unhealthyCrons} unhealthy`,
+      value: `${data.summary.availabilityImpactingUnhealthyCrons} impacting`,
       valueClassName:
-        data.summary.unhealthyCrons > 0 ? "text-red-700 dark:text-red-400" : "text-green-700 dark:text-green-400",
-      summary: `${cronGroups.length} groups, ${data.summary.degradedCrons} degraded jobs, ${runningCrons} running now`,
+        data.summary.availabilityImpactingUnhealthyCrons > 0
+          ? "text-red-700 dark:text-red-400"
+          : "text-green-700 dark:text-green-400",
+      summary: `${cronGroups.length} groups, ${data.summary.watchUnhealthyCrons} watch unhealthy, ${data.summary.degradedCrons} degraded jobs, ${runningCrons} running now`,
     },
     {
       id: "control",
@@ -442,6 +469,7 @@ export function buildStatusDashboardData({
     latestTransition,
     notices,
     overallCauseCount,
+    watchCauseCount,
     overallTone,
     publicHealthNeedsCallout,
     querySyncs: syncDetails,

@@ -1,6 +1,7 @@
 import {
   STATUS_BLACKLIST_THRESHOLDS,
   STATUS_MISSING_PRICE_THRESHOLDS,
+  STATUS_RESERVE_COMPOSITION_THRESHOLDS,
 } from "@shared/lib/status-thresholds";
 import { maxPublicStatus } from "@shared/lib/public-health";
 import type { DataQuality, StatusResponse } from "@shared/types/status";
@@ -19,52 +20,59 @@ export function maxStatus(a: StatusLevel, b: StatusLevel): StatusLevel {
   return STATUS_SEVERITY[a] >= STATUS_SEVERITY[b] ? a : b;
 }
 
-export interface ReserveCompositionFlags {
+export interface ReserveCompositionAssessment {
   bootstrap: boolean;
-  critical: boolean;
-  warning: boolean;
+  status: StatusResponse["reserveComposition"]["status"];
+  freshCoverageRatio: number;
+  authoritativeFreshCoverageRatio: number;
 }
 
-export function deriveReserveCompositionFlags(
+export function deriveReserveCompositionStatus(
   reserveComposition: StatusResponse["reserveComposition"],
-): ReserveCompositionFlags {
-  const reserveCompositionBootstrap =
+): ReserveCompositionAssessment {
+  const bootstrap =
     reserveComposition.configuredCoins > 0 && reserveComposition.lastSuccessAt == null;
-  const reserveIssueCount =
-    reserveComposition.missingCoins
-    + reserveComposition.staleCoins
-    + reserveComposition.degradedCoins
-    + reserveComposition.errorCoins
-    + reserveComposition.corruptCoins;
-  const reserveCompositionCritical =
-    !reserveCompositionBootstrap
-    && reserveComposition.configuredCoins > 0
-    && reserveComposition.freshCoins === 0
-    && reserveIssueCount > 0;
-  const reserveWarningFloor = Math.max(3, Math.ceil(reserveComposition.configuredCoins * 0.1));
-  const reserveCompositionWarning =
-    !reserveCompositionBootstrap && reserveIssueCount >= reserveWarningFloor;
+  const authoritativeFreshCoins =
+    reserveComposition.independentFreshEligible
+    + reserveComposition.independentFreshUnverified
+    + reserveComposition.staticValidatedFresh;
+  const freshCoverageRatio =
+    reserveComposition.configuredCoins > 0 ? reserveComposition.freshCoins / reserveComposition.configuredCoins : 0;
+  const authoritativeFreshCoverageRatio =
+    reserveComposition.configuredCoins > 0 ? authoritativeFreshCoins / reserveComposition.configuredCoins : 0;
+  const status: StatusResponse["reserveComposition"]["status"] =
+    bootstrap || reserveComposition.configuredCoins === 0
+      ? "healthy"
+      : reserveComposition.freshCoins === 0
+        ? "stale"
+        : freshCoverageRatio < STATUS_RESERVE_COMPOSITION_THRESHOLDS.degradedFreshCoverageRatio
+            || authoritativeFreshCoverageRatio < STATUS_RESERVE_COMPOSITION_THRESHOLDS.degradedAuthoritativeCoverageRatio
+          ? "degraded"
+          : "healthy";
 
   return {
-    bootstrap: reserveCompositionBootstrap,
-    critical: reserveCompositionCritical,
-    warning: reserveCompositionWarning,
+    bootstrap,
+    status,
+    freshCoverageRatio,
+    authoritativeFreshCoverageRatio,
   };
 }
 
 export function deriveAvailabilityStatus(input: {
   publicHealth: PublicHealthAssessment;
-  anyCronError: boolean;
-  unhealthyCrons: number;
+  availabilityImpactingCronErrors: number;
+  availabilityImpactingUnhealthyCrons: number;
 }): StatusResponse["availabilityStatus"] {
   const baseAvailabilityStatus: StatusResponse["availabilityStatus"] =
-    input.publicHealth.cacheImpactStatus === "stale" || input.anyCronError || input.unhealthyCrons >= 3
+    input.publicHealth.cacheImpactStatus === "stale"
+    || input.availabilityImpactingCronErrors > 0
+    || input.availabilityImpactingUnhealthyCrons >= 2
       ? "stale"
-      : input.publicHealth.cacheImpactStatus === "degraded" || input.unhealthyCrons > 0
+      : input.publicHealth.cacheImpactStatus === "degraded" || input.availabilityImpactingUnhealthyCrons > 0
         ? "degraded"
         : "healthy";
   const publicAvailabilityFloor = maxPublicStatus(
-    input.publicHealth.circuitImpactStatus,
+    input.publicHealth.circuitQueryError == null ? input.publicHealth.circuitImpactStatus : "healthy",
     input.publicHealth.mintBurnQueryError == null && !input.publicHealth.mintBurnBootstrap
       ? input.publicHealth.mintBurnImpactStatus
       : "healthy",
@@ -78,24 +86,21 @@ export function deriveDataQualityStatus(input: {
   blacklistMissingRatio: number;
   blacklistRecentMissing: number;
   onchainAssessment: OnchainDataQualityAssessment;
-  reserveCompositionQueryFailed: boolean;
-  reserveFlags: ReserveCompositionFlags;
+  reserveCompositionStatus: StatusResponse["reserveComposition"]["status"];
 }): StatusResponse["dataQualityStatus"] {
   return input.dataQuality.stablecoinsCacheStatus === "error" ||
     input.missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioStale ||
     input.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale ||
     input.blacklistRecentMissing >= STATUS_BLACKLIST_THRESHOLDS.missingRecentStale ||
     input.onchainAssessment.status === "stale" ||
-    input.reserveFlags.critical
+    input.reserveCompositionStatus === "stale"
     ? "stale"
     : input.dataQuality.stablecoinsCacheStatus === "degraded" ||
-        input.dataQuality.sourceFailures.length > 0 ||
         input.missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded ||
         input.blacklistRecentMissing > 0 ||
         input.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded ||
         input.onchainAssessment.status === "degraded" ||
-        input.reserveFlags.warning ||
-        input.reserveCompositionQueryFailed
+        input.reserveCompositionStatus === "degraded"
       ? "degraded"
       : "healthy";
 }
@@ -105,6 +110,7 @@ export function scoreStatusConfidence(input: {
   dataQualityStatus: StatusLevel;
   unhealthyCrons: number;
   degradedCrons: number;
+  diagnosticIssueCount: number;
   missingPriceRatio: number;
   onchainMonitoringActive: boolean;
 }): number {
@@ -117,6 +123,7 @@ export function scoreStatusConfidence(input: {
 
   confidence -= Math.min(0.2, input.unhealthyCrons * 0.03);
   confidence -= Math.min(0.08, input.degradedCrons * 0.01);
+  confidence -= Math.min(0.09, input.diagnosticIssueCount * 0.03);
   confidence -= Math.min(0.18, input.missingPriceRatio * 0.35);
   if (!input.onchainMonitoringActive) confidence -= 0.03;
 

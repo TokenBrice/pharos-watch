@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { EndpointProbeResult, HealthResponse, StatusResponse } from "@shared/types";
-import { buildBrowserProbeSummary, buildStatusDashboardData } from "../status-dashboard-model";
+import { buildBrowserProbeSummary, buildStatusDashboardData, getTopCauses } from "../status-dashboard-model";
 
 const BASE_STATUS: StatusResponse = {
   timestamp: 1_700_000_000,
@@ -99,8 +99,12 @@ const BASE_STATUS: StatusResponse = {
   },
   summary: {
     unhealthyCrons: 0,
+    availabilityImpactingUnhealthyCrons: 0,
+    watchUnhealthyCrons: 0,
     degradedCrons: 0,
     cronErrors: 0,
+    availabilityImpactingCronErrors: 0,
+    diagnosticIssueCount: 0,
     worstCacheRatio: 0,
   },
   liquidityHealth: null,
@@ -124,6 +128,9 @@ const BASE_STATUS: StatusResponse = {
     writeTimeoutUncertain: 0,
     lastSuccessAt: null,
     oldestFreshAgeSec: null,
+    status: "healthy",
+    freshCoverageRatio: 0,
+    authoritativeFreshCoverageRatio: 0,
   },
   reserveDrift: [],
   classificationWarnings: [],
@@ -198,11 +205,13 @@ describe("status dashboard model", () => {
         healthUpdatedAt: 870_000,
         probesUpdatedAt: 900_000,
         historyUpdatedAt: 900_000,
+        requestSourceUpdatedAt: 900_000,
       },
       nowMs: 1_000_000,
       healthError: null,
       probesError: null,
       historyError: null,
+      requestSourceError: null,
       historyTransitions: undefined,
     });
 
@@ -210,5 +219,21 @@ describe("status dashboard model", () => {
     expect(model.clientDataStale).toBe(true);
     expect(model.querySyncs.find((sync) => sync.key === "health")?.stale).toBe(true);
     expect(model.notices.some((notice) => notice.id === "client-stale")).toBe(true);
+  });
+
+  it("excludes info-only causes from blocker-first top causes", () => {
+    const topCauses = getTopCauses({
+      availability: [
+        { code: "degraded_cron_warning", layer: "availability", severity: "info", message: "Watch-only degraded cron." },
+      ],
+      dataQuality: [
+        { code: "blacklist_gap_query_failed", layer: "data-quality", severity: "info", message: "Blacklist diagnostics unavailable." },
+        { code: "missing_prices_degraded", layer: "data-quality", severity: "warning", message: "Missing prices elevated." },
+      ],
+      overall: [],
+    }, 4);
+
+    expect(topCauses).toHaveLength(1);
+    expect(topCauses[0]?.code).toBe("missing_prices_degraded");
   });
 });

@@ -1,13 +1,15 @@
-import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { CRON_INTERVALS, getCronStatusImpact } from "@shared/lib/cron-jobs";
 import type { CronInFlight, CronRun, CronStatus } from "@shared/types/status";
 import { buildInClause } from "../db";
 
 export interface CronHealthSnapshot {
   crons: Record<string, CronStatus>;
-  anyCronError: boolean;
   unhealthyCrons: number;
+  availabilityImpactingUnhealthyCrons: number;
+  watchUnhealthyCrons: number;
   degradedCronRuns: number;
   cronErrorCount: number;
+  availabilityImpactingCronErrors: number;
   cronHistoryQueryFailed: boolean;
   cronProgressQueryFailed: boolean;
 }
@@ -168,10 +170,12 @@ export async function loadCronHealth(
   }
 
   const crons: Record<string, CronStatus> = {};
-  let anyCronError = false;
   let unhealthyCrons = 0;
+  let availabilityImpactingUnhealthyCrons = 0;
+  let watchUnhealthyCrons = 0;
   let degradedCronRuns = 0;
   let cronErrorCount = 0;
+  let availabilityImpactingCronErrors = 0;
 
   for (const [job, interval] of Object.entries(CRON_INTERVALS)) {
     const runs = cronByJob.get(job) ?? [];
@@ -189,12 +193,22 @@ export async function loadCronHealth(
         (lastRun.status === "skipped_locked" && hasFreshOk));
     const healthy = telemetryUnknown ? true : inFlightFresh || availabilityHealthyFromLastRun;
     const availabilityUnhealthy = !telemetryUnknown && !healthy;
+    const statusImpact = getCronStatusImpact(job);
 
-    if (availabilityUnhealthy) unhealthyCrons++;
+    if (availabilityUnhealthy) {
+      unhealthyCrons++;
+      if (statusImpact === "critical") {
+        availabilityImpactingUnhealthyCrons++;
+      } else {
+        watchUnhealthyCrons++;
+      }
+    }
     if (!telemetryUnknown && lastRun?.status === "degraded" && isFresh) degradedCronRuns++;
     if (!telemetryUnknown && lastRun?.status === "error" && !inFlightFresh) {
-      anyCronError = true;
       cronErrorCount++;
+      if (statusImpact === "critical") {
+        availabilityImpactingCronErrors++;
+      }
     }
 
     crons[job] = {
@@ -215,10 +229,12 @@ export async function loadCronHealth(
 
   return {
     crons,
-    anyCronError,
     unhealthyCrons,
+    availabilityImpactingUnhealthyCrons,
+    watchUnhealthyCrons,
     degradedCronRuns,
     cronErrorCount,
+    availabilityImpactingCronErrors,
     cronHistoryQueryFailed,
     cronProgressQueryFailed,
   };

@@ -5,6 +5,7 @@ import type { StatusCause, StatusResponse } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminAccess } from "@/lib/admin-access";
 import { getRecommendedActionsForCause } from "@/lib/status/action-recommendations";
+import { getBlockerCauses, getWatchCauses } from "@/lib/status-dashboard-model";
 import { AdminActionButton } from "./admin-action-button";
 
 interface StatusFactsProps {
@@ -28,12 +29,18 @@ function formatCauseMetric(cause: StatusCause): string | null {
   return cause.metric ? `${cause.metric}: ${value} (threshold ${threshold})` : `value ${value} / threshold ${threshold}`;
 }
 
-function BlockerList({
+function CauseList({
   causes,
+  title,
+  description,
+  emptyMessage,
   adminAccess,
   onActionFinished,
 }: {
   causes: StatusCause[];
+  title: string;
+  description: string;
+  emptyMessage: string;
   adminAccess: AdminAccess;
   onActionFinished?: () => void;
 }) {
@@ -46,14 +53,12 @@ function BlockerList({
   return (
     <div className="space-y-3">
       <div>
-        <h3 className="text-sm font-medium">Current blockers</h3>
-        <p className="text-xs text-muted-foreground">
-          Severity wins over subsystem. Fix the top rows first.
-        </p>
+        <h3 className="text-sm font-medium">{title}</h3>
+        <p className="text-xs text-muted-foreground">{description}</p>
       </div>
       {orderedCauses.length === 0 ? (
         <div className="rounded-md border border-border/60 px-3 py-2 text-sm text-muted-foreground">
-          No active blockers.
+          {emptyMessage}
         </div>
       ) : (
         <div className="space-y-2">
@@ -126,14 +131,28 @@ export function StatusFacts({
           : "text-green-600 dark:text-green-400",
     },
     {
-      label: "Unhealthy Crons",
-      value: String(summary.unhealthyCrons),
-      tone: summary.unhealthyCrons > 0 ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400",
+      label: "Impacting Crons",
+      value: String(summary.availabilityImpactingUnhealthyCrons),
+      tone: summary.availabilityImpactingUnhealthyCrons > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400",
+    },
+    {
+      label: "Watch Crons",
+      value: String(summary.watchUnhealthyCrons),
+      tone: summary.watchUnhealthyCrons > 0 ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400",
+    },
+    {
+      label: "Diag Gaps",
+      value: String(summary.diagnosticIssueCount),
+      tone: summary.diagnosticIssueCount > 0 ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400",
     },
     {
       label: "Cron Errors",
-      value: String(summary.cronErrors),
-      tone: summary.cronErrors > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400",
+      value: `${summary.availabilityImpactingCronErrors}/${summary.cronErrors}`,
+      tone: summary.availabilityImpactingCronErrors > 0
+        ? "text-red-600 dark:text-red-400"
+        : summary.cronErrors > 0
+          ? "text-amber-600 dark:text-amber-400"
+          : "text-green-600 dark:text-green-400",
     },
     {
       label: "DB",
@@ -141,7 +160,8 @@ export function StatusFacts({
       tone: dbHealthy ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400",
     },
   ];
-  const activeCauses = causes.overall;
+  const blockerCauses = getBlockerCauses(causes);
+  const watchCauses = getWatchCauses(causes);
 
   return (
     <Card>
@@ -149,7 +169,7 @@ export function StatusFacts({
         <CardTitle className="text-base">Incident Detail</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           {summaryCards.map((card) => (
             <div key={card.label} className="rounded-lg border border-border/60 p-3">
               <div className="text-xs text-muted-foreground">{card.label}</div>
@@ -157,7 +177,22 @@ export function StatusFacts({
             </div>
           ))}
         </div>
-        <BlockerList causes={activeCauses} adminAccess={adminAccess} onActionFinished={onActionFinished} />
+        <CauseList
+          causes={blockerCauses}
+          title="Current blockers"
+          description="Severity wins over subsystem. Fix the top rows first."
+          emptyMessage="No active blockers."
+          adminAccess={adminAccess}
+          onActionFinished={onActionFinished}
+        />
+        <CauseList
+          causes={watchCauses}
+          title="Diagnostics watch"
+          description="Visible uncertainty and advisory telemetry that do not change the global incident state by themselves."
+          emptyMessage="No advisory watch items."
+          adminAccess={adminAccess}
+          onActionFinished={onActionFinished}
+        />
       </CardContent>
     </Card>
   );

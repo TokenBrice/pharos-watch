@@ -939,7 +939,7 @@ describe("handleStatus", () => {
     expect(body.causes.dataQuality.some((cause) => cause.code === "stablecoins_cache_unavailable")).toBe(true);
   });
 
-  it("marks data quality degraded when the blacklist-gap query fails", async () => {
+  it("keeps data quality healthy when the blacklist-gap query fails but core data remains usable", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
@@ -969,16 +969,62 @@ describe("handleStatus", () => {
         blacklistGapStatus: string;
         sourceFailures: Array<{ source: string; message: string }>;
       };
-      causes: { dataQuality: Array<{ code: string }> };
+      causes: { dataQuality: Array<{ code: string; severity: string }> };
+      summary: { diagnosticIssueCount: number };
     };
 
-    expect(body.dataQualityStatus).toBe("degraded");
+    expect(body.dataQualityStatus).toBe("healthy");
     expect(body.dataQuality.blacklistGapStatus).toBe("failed");
     expect(body.dataQuality.sourceFailures).toContainEqual({
       source: "blacklist-gaps",
       message: "Blacklist gap metrics unavailable.",
     });
-    expect(body.causes.dataQuality.some((cause) => cause.code === "blacklist_gap_query_failed")).toBe(true);
+    expect(
+      body.causes.dataQuality.some((cause) => cause.code === "blacklist_gap_query_failed" && cause.severity === "info"),
+    ).toBe(true);
+    expect(body.summary.diagnosticIssueCount).toBeGreaterThanOrEqual(1);
+  });
+
+  it("keeps data quality healthy when reserve overview diagnostics fail", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const cronRows = Object.keys(CRON_INTERVALS).map((job) => makeCronRow(job, "ok", 30));
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      { match: "dex_liquidity", rows: [], first: { age: 60 } },
+      { match: "yield_data", rows: [], first: { age: 60 } },
+      { match: "stress_signals", rows: [], first: { age: 60 } },
+      { match: "cron_runs", rows: cronRows },
+      {
+        match: "cache",
+        rows: [],
+        first: { value: stablecoinsCache, updated_at: now - 60 },
+      },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 60, tracked: 12 } },
+      { match: "FROM reserve_sync_state", rows: [], throwError: "reserve sync unavailable" },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request);
+    const body = (await res.json()) as {
+      dataQualityStatus: string;
+      reserveComposition: { status: string };
+      summary: { diagnosticIssueCount: number };
+      causes: { dataQuality: Array<{ code: string; severity: string }> };
+      sectionErrors: Record<string, unknown>;
+    };
+
+    expect(body.dataQualityStatus).toBe("healthy");
+    expect(body.reserveComposition.status).toBe("healthy");
+    expect(body.summary.diagnosticIssueCount).toBeGreaterThanOrEqual(1);
+    expect(
+      body.causes.dataQuality.some((cause) => cause.code === "reserve_sync_query_failed" && cause.severity === "info"),
+    ).toBe(true);
+    expect(body.sectionErrors).toHaveProperty("reserveComposition");
   });
 
   it("returns Cache-Control: no-store", async () => {
@@ -1197,6 +1243,63 @@ describe("handleStatus", () => {
     expect(body.crons["sync-blacklist"]?.healthy).toBe(false);
     expect(body.summary.unhealthyCrons).toBeGreaterThan(0);
     expect(body.availabilityStatus).toBe("stale");
+  });
+
+  it("keeps availability healthy when only a watch-tier cron is unhealthy", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const cronRows = Object.keys(CRON_INTERVALS).map((job) =>
+      makeCronRow(job, job === "sync-live-reserves" ? "error" : "ok", 60),
+    );
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          makeCacheRow("stablecoins"),
+          makeCacheRow("stablecoin-charts"),
+          makeCacheRow("usds-status"),
+          makeCacheRow("fx-rates"),
+          makeCacheRow("treasury-stable-exposure"),
+          makeCacheRow("bluechip-ratings"),
+        ],
+      },
+      { match: "dex_liquidity", rows: [], first: { age: 60 } },
+      { match: "yield_data", rows: [], first: { age: 60 } },
+      { match: "stress_signals", rows: [], first: { age: 60 } },
+      { match: "cron_runs", rows: cronRows },
+      {
+        match: "cache",
+        rows: [],
+        first: { value: stablecoinsCache, updated_at: now - 60 },
+      },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, true, request);
+    const body = (await res.json()) as {
+      availabilityStatus: string;
+      summary: {
+        unhealthyCrons: number;
+        availabilityImpactingUnhealthyCrons: number;
+        watchUnhealthyCrons: number;
+        availabilityImpactingCronErrors: number;
+      };
+      causes: { availability: Array<{ code: string; severity: string }> };
+    };
+
+    expect(body.availabilityStatus).toBe("healthy");
+    expect(body.summary.unhealthyCrons).toBe(1);
+    expect(body.summary.availabilityImpactingUnhealthyCrons).toBe(0);
+    expect(body.summary.watchUnhealthyCrons).toBe(1);
+    expect(body.summary.availabilityImpactingCronErrors).toBe(0);
+    expect(
+      body.causes.availability.some((cause) => cause.code === "watch_unhealthy_crons_present" && cause.severity === "info"),
+    ).toBe(true);
   });
 
   it("includes Telegram bot subscriber stats when Telegram tables are present", async () => {
