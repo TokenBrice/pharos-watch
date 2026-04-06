@@ -246,6 +246,18 @@ export function formatSignedPercent(value: number | null | undefined, decimals =
   return `${sign}${value.toFixed(decimals)}%`;
 }
 
+/**
+ * Format a ratio (0-1 scale) as a percentage string.
+ * Multiplies by 100 internally — callers should NOT pre-multiply.
+ */
+export function formatPercentFromRatio(
+  ratio: number | null | undefined,
+  decimals = 2,
+): string {
+  if (ratio == null) return "-";
+  return `${(ratio * 100).toFixed(decimals)}%`;
+}
+
 /** Format a number as a percentage string for chart axes.
  *  Includes sign prefix for non-zero values. */
 export function formatChartPercent(value: number, decimals = 1): string {

@@ -5,6 +5,7 @@ import {
   formatScore,
   formatChartDate,
   formatPercent,
+  formatPercentFromRatio,
   formatSignedCurrency,
   formatSignedPercent,
   formatElapsedSeconds,
@@ -319,6 +320,22 @@ describe("timeAgo", () => {
   });
   it("returns N/A for Infinity", () => {
     expect(timeAgo(Infinity)).toBe("N/A");
+  });
+});
+
+describe("formatPercentFromRatio", () => {
+  it("formats a ratio as a percentage", () => {
+    expect(formatPercentFromRatio(0.1234)).toBe("12.34%");
+    expect(formatPercentFromRatio(1)).toBe("100.00%");
+    expect(formatPercentFromRatio(0)).toBe("0.00%");
+  });
+  it("respects decimal precision", () => {
+    expect(formatPercentFromRatio(0.1234, 1)).toBe("12.3%");
+    expect(formatPercentFromRatio(0.1234, 0)).toBe("12%");
+  });
+  it("returns dash for nullish", () => {
+    expect(formatPercentFromRatio(null)).toBe("-");
+    expect(formatPercentFromRatio(undefined)).toBe("-");
   });
 });
 
