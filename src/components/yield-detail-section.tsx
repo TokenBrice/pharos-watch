@@ -15,7 +15,7 @@ import { formatYieldWarningSignal, getPysColor, computePysBreakdown } from "@/li
 import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
 import { cn } from "@/lib/utils";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
-import { formatCurrency, formatPercent } from "@shared/lib/format";
+import { formatCurrency, formatPercent, formatPercentFromRatio } from "@shared/lib/format";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { PYS_BENCHMARK_SPREAD_WEIGHT } from "@shared/lib/yield-scoring";
 import {
@@ -73,7 +73,7 @@ function PysBreakdown({
         <div className="space-y-1.5 rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
           <div>
             <span className="text-muted-foreground">Effective Yield: </span>
-            <span className="font-mono">{effectiveYield.toFixed(1)}%</span>
+            <span className="font-mono">{formatPercent(effectiveYield, 1)}</span>
           </div>
           {benchmarkSpread !== null ? (
             <div>
@@ -81,7 +81,7 @@ function PysBreakdown({
               <span className="font-mono">{formatSignedPercent(benchmarkAdjustment)}</span>
               <span className="text-muted-foreground">
                 {" "}
-                ({(PYS_BENCHMARK_SPREAD_WEIGHT * 100).toFixed(0)}% of {formatSignedPercent(benchmarkSpread)}
+                ({formatPercentFromRatio(PYS_BENCHMARK_SPREAD_WEIGHT, 0)} of {formatSignedPercent(benchmarkSpread)}
                 {benchmarkLabel ? ` vs ${benchmarkLabel}` : " spread"})
               </span>
             </div>
@@ -102,7 +102,7 @@ function PysBreakdown({
           </div>
           <div>
             <span className="text-muted-foreground">Consistency: </span>
-            <span className="font-mono">{(sustainabilityMult * 100).toFixed(0)}%</span>
+            <span className="font-mono">{formatPercentFromRatio(sustainabilityMult, 0)}</span>
           </div>
         </div>
       </div>
@@ -399,7 +399,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
     ranking.benchmarkRate,
   );
   const pysColor = getPysColor(ranking.pharosYieldScore);
-  const stabilityValue = ranking.yieldStability !== null ? `${(ranking.yieldStability * 100).toFixed(0)}%` : "—";
+  const stabilityValue = ranking.yieldStability !== null ? formatPercentFromRatio(ranking.yieldStability, 0) : "—";
   const dataSourceMeta = DATA_SOURCE_BADGES[ranking.dataSource] ?? DATA_SOURCE_BADGES.defillama;
   const singleWarning = ranking.warningSignals.length === 1 ? ranking.warningSignals[0] : null;
   const historySources = [

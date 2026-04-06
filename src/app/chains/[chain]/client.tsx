@@ -21,7 +21,8 @@ import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { formatRatioPct, HEALTH_BADGE_CLASSES, HEALTH_FILL_CLASSES, HEALTH_TEXT_CLASSES, trendColor } from "@/lib/chain-ui";
+import { HEALTH_BADGE_CLASSES, HEALTH_FILL_CLASSES, HEALTH_TEXT_CLASSES, trendColor } from "@/lib/chain-ui";
+import { formatSignedPercent } from "@shared/lib/format";
 import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { MethodologyLabel, MethodologyHint, MethodologyCardActions } from "@/components/methodology-hint";
@@ -205,7 +206,7 @@ function TrendMetric({ label, value }: { label: string; value: number }) {
       <p className="pharos-kicker">{label}</p>
       <div className="flex items-center gap-1">
         <Icon className={cn("h-3.5 w-3.5", trendColor(value))} aria-hidden="true" />
-        <p className={cn("font-mono font-medium", trendColor(value))}>{formatRatioPct(value)}</p>
+        <p className={cn("font-mono font-medium", trendColor(value))}>{formatSignedPercent(value * 100, 2)}</p>
       </div>
     </div>
   );
@@ -660,10 +661,10 @@ function StablecoinTable({
                     </div>
                   </TableCell>
                   <TableCell className={cn("text-right font-mono tabular-nums", trendColor(coin.change7dPct))}>
-                    {formatRatioPct(coin.change7dPct)}
+                    {formatSignedPercent(coin.change7dPct * 100, 2)}
                   </TableCell>
                   <TableCell className={cn("text-right font-mono tabular-nums", trendColor(coin.change30dPct))}>
-                    {formatRatioPct(coin.change30dPct)}
+                    {formatSignedPercent(coin.change30dPct * 100, 2)}
                   </TableCell>
                 </TableRow>
               ))}

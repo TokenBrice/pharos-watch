@@ -1,12 +1,6 @@
 import { getNetColor } from "@shared/lib/format";
 import type { HealthBand } from "@shared/types/chains";
 
-export function formatRatioPct(value: number): string {
-  const pct = value * 100;
-  const sign = pct >= 0 ? "+" : "";
-  return `${sign}${pct.toFixed(2)}%`;
-}
-
 export const HEALTH_BADGE_CLASSES: Record<HealthBand, string> = {
   robust: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
   healthy: "bg-sky-500/15 text-sky-700 dark:text-sky-400",

@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 import {
   formatTreasuryUsd,
   formatTreasuryUsdNullable,
-  formatTreasuryPct,
   denominatorStatusLabel,
   coverageSummary,
   sortTreasuryExposureEntities,
@@ -79,16 +78,6 @@ describe("treasury-table-utils", () => {
 
     it("formats number values", () => {
       expect(formatTreasuryUsdNullable(500)).toBe("$500");
-    });
-  });
-
-  describe("formatTreasuryPct", () => {
-    it("returns N/A for null", () => {
-      expect(formatTreasuryPct(null)).toBe("N/A");
-    });
-
-    it("formats percentage with one decimal", () => {
-      expect(formatTreasuryPct(12.34)).toBe("12.3%");
     });
   });
 

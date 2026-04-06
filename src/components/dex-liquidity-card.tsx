@@ -14,7 +14,7 @@ import {
 } from "@/components/liquidity-breakdown";
 import { useDexLiquidity, useDexLiquidityHistory } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
-import { formatCurrency, formatChartDate } from "@shared/lib/format";
+import { formatCurrency, formatChartDate, formatPercentFromRatio } from "@shared/lib/format";
 import { RECHARTS_TOOLTIP_STYLES, CHART_BLUE } from "@/lib/chart-colors";
 import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
 import {
@@ -549,13 +549,13 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
                       return (
                         <span className="text-muted-foreground">
                           Concentration: <span className={`font-medium ${color}`}>{label}</span>
-                          <span className="text-xs ml-1 font-mono">({(liq.concentrationHhi * 100).toFixed(0)}%)</span>
+                          <span className="text-xs ml-1 font-mono">({formatPercentFromRatio(liq.concentrationHhi, 0)})</span>
                         </span>
                       );
                     })()}
                   {liq.depthStability != null && (
                     <span className="text-muted-foreground">
-                      Depth Stability: <span className="font-medium font-mono">{(liq.depthStability * 100).toFixed(0)}%</span>
+                      Depth Stability: <span className="font-medium font-mono">{formatPercentFromRatio(liq.depthStability, 0)}</span>
                     </span>
                   )}
                 </div>
@@ -580,7 +580,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
                       <span
                         className={`font-mono tabular-nums ${ratioQualityColor(liq.organicFraction)}`}
                       >
-                        {Math.round(liq.organicFraction * 100)}%
+                        {formatPercentFromRatio(liq.organicFraction, 0)}
                       </span>
                     </div>
                   )}
