@@ -3,6 +3,7 @@ import {
   REQUEST_ATTRIBUTION_RETENTION_DAYS,
   type ApiRequestRouteMetric,
 } from "@shared/lib/request-attribution";
+import { IsolateLocalState } from "./isolate-local-state";
 import type {
   ApiRequestAttributionLaneStat,
   ApiRequestAttributionResponse,
@@ -17,12 +18,13 @@ import type {
 export const API_REQUEST_SOURCE_STATS_RETENTION_DAYS = REQUEST_ATTRIBUTION_RETENTION_DAYS;
 const API_REQUEST_SOURCE_STATS_RETENTION_SEC = API_REQUEST_SOURCE_STATS_RETENTION_DAYS * 24 * 60 * 60;
 
-let lastApiRequestSourcePruneBucket: number | null = null;
-let pendingApiRequestSourcePrune: Promise<void> | null = null;
+const _rsa = new IsolateLocalState(() => ({
+  lastApiRequestSourcePruneBucket: null as number | null,
+  pendingApiRequestSourcePrune: null as Promise<void> | null,
+}));
 
 export function resetRequestAttributionStateForTests(): void {
-  lastApiRequestSourcePruneBucket = null;
-  pendingApiRequestSourcePrune = null;
+  _rsa.reset();
 }
 
 export async function recordWorkerRequestAttribution(
@@ -52,8 +54,8 @@ export async function recordWorkerRequestAttribution(
     .run();
 
   const pruneBucket = nowSec - (nowSec % REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC);
-  if (lastApiRequestSourcePruneBucket !== pruneBucket && !pendingApiRequestSourcePrune) {
-    lastApiRequestSourcePruneBucket = pruneBucket;
+  if (_rsa.state.lastApiRequestSourcePruneBucket !== pruneBucket && !_rsa.state.pendingApiRequestSourcePrune) {
+    _rsa.state.lastApiRequestSourcePruneBucket = pruneBucket;
     const prunePromise = db
       .prepare("DELETE FROM api_request_consumer_stats WHERE bucket_start < ?")
       .bind(nowSec - API_REQUEST_SOURCE_STATS_RETENTION_SEC)
@@ -63,15 +65,15 @@ export async function recordWorkerRequestAttribution(
         console.warn("[request-attribution] worker prune failed:", error);
       })
       .finally(() => {
-        if (pendingApiRequestSourcePrune === prunePromise) {
-          pendingApiRequestSourcePrune = null;
+        if (_rsa.state.pendingApiRequestSourcePrune === prunePromise) {
+          _rsa.state.pendingApiRequestSourcePrune = null;
         }
       });
-    pendingApiRequestSourcePrune = prunePromise;
+    _rsa.state.pendingApiRequestSourcePrune = prunePromise;
   }
 
-  if (pendingApiRequestSourcePrune) {
-    await pendingApiRequestSourcePrune;
+  if (_rsa.state.pendingApiRequestSourcePrune) {
+    await _rsa.state.pendingApiRequestSourcePrune;
   }
 }
 

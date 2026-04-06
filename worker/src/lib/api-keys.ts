@@ -1,3 +1,4 @@
+import { IsolateLocalState } from "./isolate-local-state";
 import type {
   ApiKeyCreateRequest,
   ApiKeyCreateResponse,
@@ -95,16 +96,15 @@ export type ApiKeyAuthenticationResult =
   | { kind: "unavailable" }
   | { kind: "valid"; key: AuthenticatedApiKey };
 
-const apiKeyCache = new Map<string, CachedApiKeyEntry>();
-const apiKeyLastUsageUpdateById = new Map<number, number>();
-let lastApiKeyRateLimitPruneBucket: number | null = null;
-let pendingApiKeyPrune: Promise<void> | null = null;
+const _ak = new IsolateLocalState(() => ({
+  apiKeyCache: new Map<string, CachedApiKeyEntry>(),
+  apiKeyLastUsageUpdateById: new Map<number, number>(),
+  lastApiKeyRateLimitPruneBucket: null as number | null,
+  pendingApiKeyPrune: null as Promise<void> | null,
+}));
 
 export function resetApiKeyStateForTests(): void {
-  apiKeyCache.clear();
-  apiKeyLastUsageUpdateById.clear();
-  lastApiKeyRateLimitPruneBucket = null;
-  pendingApiKeyPrune = null;
+  _ak.reset();
 }
 
 function getNowSec(nowSec?: number): number {
@@ -291,12 +291,12 @@ function mapRowToAuthenticatedKey(row: ApiKeyRow): AuthenticatedApiKey {
 }
 
 function clearApiKeyCache(keyPrefix: string): void {
-  apiKeyCache.delete(keyPrefix);
+  _ak.state.apiKeyCache.delete(keyPrefix);
 }
 
 async function lookupApiKeyByPrefix(db: ApiKeyDb, keyPrefix: string): Promise<ApiKeyRow | null> {
   const now = Date.now();
-  const cached = apiKeyCache.get(keyPrefix);
+  const cached = _ak.state.apiKeyCache.get(keyPrefix);
   if (cached && cached.cacheExpiresAt > now) {
     return cached.row;
   }
@@ -325,7 +325,7 @@ async function lookupApiKeyByPrefix(db: ApiKeyDb, keyPrefix: string): Promise<Ap
     .first<ApiKeyRow>();
 
   if (row) {
-    apiKeyCache.set(keyPrefix, {
+    _ak.state.apiKeyCache.set(keyPrefix, {
       cacheExpiresAt: now + API_KEY_CACHE_TTL_MS,
       row,
     });
@@ -405,9 +405,9 @@ export async function checkApiKeyRateLimit(
     .bind(apiKeyId, bucketStart, nowSec)
     .first<{ count: number | null }>();
 
-  if (lastApiKeyRateLimitPruneBucket !== bucketStart) {
-    lastApiKeyRateLimitPruneBucket = bucketStart;
-    pendingApiKeyPrune = db.prepare("DELETE FROM api_key_rate_limit WHERE bucket_start < ?")
+  if (_ak.state.lastApiKeyRateLimitPruneBucket !== bucketStart) {
+    _ak.state.lastApiKeyRateLimitPruneBucket = bucketStart;
+    _ak.state.pendingApiKeyPrune = db.prepare("DELETE FROM api_key_rate_limit WHERE bucket_start < ?")
       .bind(bucketStart - (60 * API_KEY_RATE_LIMIT_PRUNE_WINDOW_MULTIPLIER))
       .run()
       .then(() => {})
@@ -415,8 +415,8 @@ export async function checkApiKeyRateLimit(
         console.warn("[api-keys] rate-limit prune failed:", error);
       })
       .finally(() => {
-        if (pendingApiKeyPrune) {
-          pendingApiKeyPrune = null;
+        if (_ak.state.pendingApiKeyPrune) {
+          _ak.state.pendingApiKeyPrune = null;
         }
       });
   }
@@ -441,12 +441,12 @@ export async function recordApiKeyUsage(
   routePath: string,
   nowSec = getNowSec(),
 ): Promise<void> {
-  const lastUpdatedAt = apiKeyLastUsageUpdateById.get(key.id) ?? 0;
+  const lastUpdatedAt = _ak.state.apiKeyLastUsageUpdateById.get(key.id) ?? 0;
   if (nowSec - lastUpdatedAt < API_KEY_USAGE_UPDATE_WINDOW_SEC) {
     return;
   }
 
-  apiKeyLastUsageUpdateById.set(key.id, nowSec);
+  _ak.state.apiKeyLastUsageUpdateById.set(key.id, nowSec);
   await db.prepare(
     "UPDATE api_keys SET last_used_at = ?, last_used_route = ? WHERE id = ?",
   )
@@ -756,7 +756,7 @@ export async function updateApiKey(
     .run();
 
   clearApiKeyCache(existing.key_prefix);
-  apiKeyLastUsageUpdateById.delete(id);
+  _ak.state.apiKeyLastUsageUpdateById.delete(id);
   await recordApiKeyAudit(db, id, "updated", parsed as Record<string, unknown>, nowSec);
   const updated = await selectPublicApiKeyById(db, id);
   if (!updated) {
@@ -783,7 +783,7 @@ export async function deactivateApiKey(
     .run();
 
   clearApiKeyCache(existing.key_prefix);
-  apiKeyLastUsageUpdateById.delete(id);
+  _ak.state.apiKeyLastUsageUpdateById.delete(id);
   await recordApiKeyAudit(db, id, "deactivated", undefined, nowSec);
   const updated = await selectPublicApiKeyById(db, id);
   if (!updated) {
@@ -825,7 +825,7 @@ export async function rotateApiKey(
 
   clearApiKeyCache(existing.key_prefix);
   clearApiKeyCache(material.keyPrefix);
-  apiKeyLastUsageUpdateById.delete(id);
+  _ak.state.apiKeyLastUsageUpdateById.delete(id);
   await recordApiKeyAudit(db, id, "rotated", undefined, nowSec);
   const updated = await selectPublicApiKeyById(db, id);
   if (!updated) {
