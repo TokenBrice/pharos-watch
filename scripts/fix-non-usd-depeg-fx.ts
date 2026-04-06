@@ -1,0 +1,265 @@
+#!/usr/bin/env npx tsx
+/**
+ * Retroactively corrects non-USD backfill depeg events that used nearest-neighbor
+ * FX lookup (up to 12h timing mismatch) by recalculating deviation with linear
+ * interpolation of daily ECB FX rates.
+ *
+ * For each event:
+ * - Fetches the same Frankfurter daily FX data the backfill used
+ * - Linearly interpolates the correct FX rate at the event's timestamp
+ * - Recalculates deviation_bps = (price / corrected_peg_ref - 1) * 10000
+ * - Deletes events that fall below the non-USD threshold (150 bps)
+ * - Updates remaining events with corrected peg_reference and deviation
+ *
+ * Only touches source='backfill' rows. Live events are never modified.
+ *
+ * Usage:
+ *   cd worker && npx tsx ../scripts/fix-non-usd-depeg-fx.ts [--dry-run]
+ */
+
+import { execSync } from "child_process";
+import { writeFileSync, unlinkSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
+
+const DRY_RUN = process.argv.includes("--dry-run");
+const NON_USD_THRESHOLD_BPS = 150;
+const DB_NAME = "stablecoin-db";
+const SQL_BATCH_SIZE = 200; // statements per --file execution
+
+// ── FX rate helpers ──────────────────────────────────────────────────
+
+interface FxPoint {
+  timestamp: number;
+  rate: number; // USD per unit
+}
+
+function interpolateFx(series: FxPoint[], timestamp: number): number | null {
+  if (series.length === 0) return null;
+  if (timestamp <= series[0].timestamp) return series[0].rate;
+  if (timestamp >= series[series.length - 1].timestamp) return series[series.length - 1].rate;
+
+  let lo = 0;
+  let hi = series.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (series[mid].timestamp < timestamp) lo = mid + 1;
+    else hi = mid;
+  }
+  if (series[lo].timestamp === timestamp) return series[lo].rate;
+
+  const prev = series[lo - 1];
+  const next = series[lo];
+  const t = (timestamp - prev.timestamp) / (next.timestamp - prev.timestamp);
+  return prev.rate + t * (next.rate - prev.rate);
+}
+
+async function fetchFxSeries(currency: string, startDate: string, endDate: string): Promise<FxPoint[]> {
+  const url = `https://api.frankfurter.dev/v1/${startDate}..${endDate}?base=USD&symbols=${currency}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    console.error(`  Frankfurter ${res.status} for ${currency}`);
+    return [];
+  }
+  const data = await res.json() as { rates: Record<string, Record<string, number>> };
+  const series: FxPoint[] = [];
+  for (const [dateStr, dayRates] of Object.entries(data.rates)) {
+    const ts = Math.floor(new Date(dateStr + "T00:00:00Z").getTime() / 1000);
+    const unitsPerUsd = dayRates[currency];
+    if (unitsPerUsd > 0) {
+      series.push({ timestamp: ts, rate: 1 / unitsPerUsd });
+    }
+  }
+  series.sort((a, b) => a.timestamp - b.timestamp);
+  return series;
+}
+
+// ── D1 helpers ───────────────────────────────────────────────────────
+
+function d1Query(sql: string): string {
+  const result = execSync(
+    `npx wrangler d1 execute ${DB_NAME} --remote --command ${JSON.stringify(sql)} --json`,
+    { encoding: "utf-8", maxBuffer: 50 * 1024 * 1024 },
+  );
+  return result;
+}
+
+function d1QueryParsed<T>(sql: string): T[] {
+  const raw = d1Query(sql);
+  const parsed = JSON.parse(raw);
+  return parsed[0]?.results ?? [];
+}
+
+/** Write SQL statements to a temp file and execute via --file for bulk operations. */
+function d1ExecFile(statements: string[]): void {
+  if (statements.length === 0) return;
+  const tmpFile = join(tmpdir(), `depeg-fx-fix-${Date.now()}.sql`);
+  try {
+    writeFileSync(tmpFile, statements.join("\n"));
+    execSync(
+      `npx wrangler d1 execute ${DB_NAME} --remote --file ${JSON.stringify(tmpFile)} --json`,
+      { encoding: "utf-8", maxBuffer: 50 * 1024 * 1024, stdio: "pipe" },
+    );
+  } finally {
+    try { unlinkSync(tmpFile); } catch {}
+  }
+}
+
+/** Execute statements in batches via --file for speed. */
+function d1BatchExec(statements: string[]): void {
+  for (let i = 0; i < statements.length; i += SQL_BATCH_SIZE) {
+    const chunk = statements.slice(i, i + SQL_BATCH_SIZE);
+    d1ExecFile(chunk);
+    if (i + SQL_BATCH_SIZE < statements.length) {
+      process.stdout.write(`    batch ${Math.floor(i / SQL_BATCH_SIZE) + 1}/${Math.ceil(statements.length / SQL_BATCH_SIZE)}...\r`);
+    }
+  }
+}
+
+// ── Peg currency → Frankfurter code mapping ──────────────────────────
+
+const PEG_TO_FX: Record<string, string> = {
+  peggedEUR: "EUR", peggedGBP: "GBP", peggedCHF: "CHF", peggedBRL: "BRL",
+  peggedJPY: "JPY", peggedIDR: "IDR", peggedSGD: "SGD", peggedTRY: "TRY",
+  peggedAUD: "AUD", peggedZAR: "ZAR", peggedCAD: "CAD", peggedCNY: "CNY",
+  peggedCNH: "CNY", peggedPHP: "PHP", peggedMXN: "MXN",
+};
+
+// ── Main ─────────────────────────────────────────────────────────────
+
+async function main() {
+  console.log(`Mode: ${DRY_RUN ? "DRY RUN" : "LIVE"}`);
+  console.log("---");
+
+  // 1. Get all non-USD backfill events grouped by peg_type
+  const pegTypes = d1QueryParsed<{ peg_type: string; cnt: number }>(
+    "SELECT peg_type, COUNT(*) as cnt FROM depeg_events WHERE source = 'backfill' AND peg_type != 'peggedUSD' GROUP BY peg_type ORDER BY cnt DESC",
+  );
+
+  console.log("Non-USD peg types with backfill events:");
+  for (const { peg_type, cnt } of pegTypes) {
+    console.log(`  ${peg_type}: ${cnt} events`);
+  }
+  console.log("");
+
+  let totalDeleted = 0;
+  let totalUpdated = 0;
+  let totalUnchanged = 0;
+  let totalSkipped = 0;
+
+  for (const { peg_type } of pegTypes) {
+    const fxCode = PEG_TO_FX[peg_type];
+    if (!fxCode) {
+      // Skip commodity pegs (GOLD, SILVER) and VAR — those use peer-median, not ECB FX
+      console.log(`[${peg_type}] Skipping — no ECB FX source (uses peer-median or other reference)`);
+      const skipCount = d1QueryParsed<{ cnt: number }>(
+        `SELECT COUNT(*) as cnt FROM depeg_events WHERE source = 'backfill' AND peg_type = '${peg_type}'`,
+      )[0]?.cnt ?? 0;
+      totalSkipped += skipCount;
+      continue;
+    }
+
+    // 2. Fetch all events for this peg type
+    const events = d1QueryParsed<{
+      id: number;
+      stablecoin_id: string;
+      symbol: string;
+      direction: string;
+      peak_deviation_bps: number;
+      started_at: number;
+      ended_at: number | null;
+      start_price: number;
+      peak_price: number;
+      recovery_price: number | null;
+      peg_reference: number;
+    }>(
+      `SELECT id, stablecoin_id, symbol, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference FROM depeg_events WHERE source = 'backfill' AND peg_type = '${peg_type}' ORDER BY started_at`,
+    );
+
+    if (events.length === 0) {
+      console.log(`[${peg_type}] No events`);
+      continue;
+    }
+
+    // 3. Fetch FX series covering the full event range
+    const minTs = events[0].started_at;
+    const maxTs = events[events.length - 1].started_at;
+    // Add 2 days buffer on each side for interpolation at boundaries
+    const startDate = new Date((minTs - 2 * 86400) * 1000).toISOString().slice(0, 10);
+    const endDate = new Date((maxTs + 2 * 86400) * 1000).toISOString().slice(0, 10);
+
+    console.log(`[${peg_type}/${fxCode}] Fetching FX rates ${startDate} → ${endDate} for ${events.length} events...`);
+    const fxSeries = await fetchFxSeries(fxCode, startDate, endDate);
+    if (fxSeries.length === 0) {
+      console.log(`  ⚠ No FX data — skipping`);
+      totalSkipped += events.length;
+      continue;
+    }
+    console.log(`  ${fxSeries.length} daily FX points`);
+
+    // 4. Recalculate each event
+    const toDelete: number[] = [];
+    const toUpdate: { id: number; newBps: number; newRef: number }[] = [];
+    let unchanged = 0;
+
+    for (const ev of events) {
+      const correctedRef = interpolateFx(fxSeries, ev.started_at);
+      if (correctedRef === null || correctedRef <= 0) {
+        unchanged++;
+        continue;
+      }
+
+      // Recalculate using peak_price (the most extreme price during the event)
+      const peakPrice = ev.peak_price ?? ev.start_price;
+      const newBps = Math.round((peakPrice / correctedRef - 1) * 10000);
+      const absNewBps = Math.abs(newBps);
+
+      if (absNewBps < NON_USD_THRESHOLD_BPS) {
+        toDelete.push(ev.id);
+      } else if (Math.abs(newBps - ev.peak_deviation_bps) > 1) {
+        // Only update if deviation changed meaningfully (>1 bps)
+        toUpdate.push({ id: ev.id, newBps, newRef: correctedRef });
+      } else {
+        unchanged++;
+      }
+    }
+
+    console.log(`  → Delete: ${toDelete.length} | Update: ${toUpdate.length} | Unchanged: ${unchanged}`);
+
+    if (!DRY_RUN) {
+      // Build all SQL statements for this peg type
+      const statements: string[] = [];
+
+      // Deletes: batch IDs into IN clauses (50 IDs per statement)
+      for (let i = 0; i < toDelete.length; i += 50) {
+        const ids = toDelete.slice(i, i + 50).join(",");
+        statements.push(`DELETE FROM depeg_events WHERE id IN (${ids});`);
+      }
+
+      // Updates: one statement per event
+      for (const { id, newBps, newRef } of toUpdate) {
+        statements.push(
+          `UPDATE depeg_events SET peak_deviation_bps = ${newBps}, peg_reference = ${newRef} WHERE id = ${id};`,
+        );
+      }
+
+      console.log(`  Executing ${statements.length} SQL statements...`);
+      d1BatchExec(statements);
+    }
+
+    totalDeleted += toDelete.length;
+    totalUpdated += toUpdate.length;
+    totalUnchanged += unchanged;
+  }
+
+  console.log("\n===");
+  console.log(`Total: ${totalDeleted} deleted, ${totalUpdated} updated, ${totalUnchanged} unchanged, ${totalSkipped} skipped (non-ECB pegs)`);
+  if (DRY_RUN) {
+    console.log("(DRY RUN — no changes made)");
+  }
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

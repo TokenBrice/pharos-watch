@@ -2,7 +2,6 @@ import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins"
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { COMMODITY_MEDIAN_EXCLUDES } from "@shared/lib/peg-rates";
 import { USER_AGENT } from "../lib/constants";
-import { binarySearchNearest } from "../lib/binary-search";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { getCache, setCache } from "../lib/db-cache";
 import { FrankfurterTimeSeriesSchema } from "../lib/external-api-schemas";
@@ -305,12 +304,38 @@ export async function buildCommodityMedianSeriesFromCg(): Promise<Record<string,
 
 /**
  * Build a lookup function that returns the FX rate (USD per unit) at a given
- * timestamp, using binary search nearest-neighbor on the daily ECB series.
+ * timestamp, using linear interpolation between the two surrounding daily ECB
+ * snapshots.  Nearest-neighbor caused up to 12 h timing mismatch with hourly
+ * CoinGecko prices, adding ~50-80 bps of noise that inflated non-USD depeg
+ * event counts.  Linear interpolation reduces that error to ~5-15 bps.
+ *
+ * Outside the series range the boundary rate is returned (no extrapolation).
  * If the series is empty, returns the static fallback.
  */
 export function buildFxLookup(series: FxTimeSeries[], fallback: number): (timestamp: number) => number {
   if (series.length === 0) return () => fallback;
 
-  return (timestamp: number): number =>
-    binarySearchNearest(series, timestamp, (s) => s.timestamp)?.rate ?? fallback;
+  return (timestamp: number): number => {
+    // Clamp to boundaries — no extrapolation
+    if (timestamp <= series[0].timestamp) return series[0].rate;
+    if (timestamp >= series[series.length - 1].timestamp) return series[series.length - 1].rate;
+
+    // Binary search: find first entry with timestamp >= target
+    let lo = 0;
+    let hi = series.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (series[mid].timestamp < timestamp) lo = mid + 1;
+      else hi = mid;
+    }
+
+    // Exact match — no interpolation needed
+    if (series[lo].timestamp === timestamp) return series[lo].rate;
+
+    // Linearly interpolate between series[lo-1] and series[lo]
+    const prev = series[lo - 1];
+    const next = series[lo];
+    const t = (timestamp - prev.timestamp) / (next.timestamp - prev.timestamp);
+    return prev.rate + t * (next.rate - prev.rate);
+  };
 }

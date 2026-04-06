@@ -52,7 +52,7 @@ describe("buildFxLookup", () => {
     expect(lookup(1_700_000_000)).toBe(1.11);
   });
 
-  it("returns nearest historical rate when a series is available", () => {
+  it("linearly interpolates between surrounding daily FX snapshots", () => {
     const lookup = buildFxLookup(
       [
         { timestamp: 1_000, rate: 1.0 },
@@ -60,7 +60,25 @@ describe("buildFxLookup", () => {
       ],
       1.5,
     );
-    expect(lookup(1_750)).toBe(1.2);
+    // 75% of the way from 1_000 to 2_000 → 1.0 + 0.75 * 0.2 = 1.15
+    expect(lookup(1_750)).toBeCloseTo(1.15, 10);
+    // midpoint → 1.0 + 0.5 * 0.2 = 1.1
+    expect(lookup(1_500)).toBeCloseTo(1.1, 10);
+    // exact match → returns rate directly
+    expect(lookup(1_000)).toBe(1.0);
+    expect(lookup(2_000)).toBe(1.2);
+  });
+
+  it("clamps to boundary rates outside the series range", () => {
+    const lookup = buildFxLookup(
+      [
+        { timestamp: 1_000, rate: 1.0 },
+        { timestamp: 2_000, rate: 1.2 },
+      ],
+      1.5,
+    );
+    expect(lookup(500)).toBe(1.0);
+    expect(lookup(3_000)).toBe(1.2);
   });
 });
 
