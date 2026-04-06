@@ -115,10 +115,12 @@ describe("computeBlacklistSummaryStats", () => {
       makeEvent({ id: "2", stablecoin: "USD1", address: "0xusd1a", timestamp: now - 100 }),
       makeEvent({ id: "3", stablecoin: "USDC", address: "0xusdc1", timestamp: now - 100 }),
       makeEvent({ id: "4", stablecoin: "USDT", address: "0xusdt1", timestamp: now - 100 }),
+      makeEvent({ id: "5", stablecoin: "USDT", address: "0xusdt1", timestamp: now - 90_000 }),
     ];
     const stats = computeBlacklistSummaryStats(events, now);
     expect(stats.usdcBlacklisted).toBe(1);
     expect(stats.usdtBlacklisted).toBe(1);
     expect(stats.frozenAddresses).toBe(4);
+    expect(stats.recentCount24h).toBe(4);
   });
 });

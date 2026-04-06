@@ -62,9 +62,12 @@ export function evaluateHomepageStartHereCallout(
   return {
     nextState,
     shouldPersist: !hasSeenCurrentSession,
-    shouldShow:
-      !nextState.hasOpenedStartHere && nextState.homepageSessions <= MAX_START_HERE_HOMEPAGE_SESSIONS,
+    shouldShow: shouldShowStartHereNavigation(nextState),
   };
+}
+
+export function shouldShowStartHereNavigation(state: StartHereCalloutState): boolean {
+  return !state.hasOpenedStartHere && state.homepageSessions <= MAX_START_HERE_HOMEPAGE_SESSIONS;
 }
 
 export function markStartHereOpened(state: StartHereCalloutState): StartHereCalloutState {

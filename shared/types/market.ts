@@ -506,6 +506,7 @@ const BlacklistSummaryStatsSchema = z.object({
   trackedFrozenTotal: z.number().optional(),
   trackedAmountGapCount: z.number().optional(),
   recentCount: z.number(),
+  recentCount24h: z.number(),
   recoverableGapCount: z.number(),
 });
 

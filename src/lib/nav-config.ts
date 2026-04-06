@@ -49,25 +49,24 @@ export interface NavGroup {
 
 export const DASHBOARD_NAV_ITEM: NavItem = { href: "/", label: "Dashboard", icon: LayoutDashboard, description: "Live triage surface for market stress, rankings, and first-pass research" };
 
+export const PRIMARY_NAV_ITEMS: NavItem[] = [
+  DASHBOARD_NAV_ITEM,
+  { href: "/stability-index", label: "Stability Index", icon: LighthouseIcon, description: "Market-regime read for the stablecoin system" },
+  { href: "/safety-scores", label: "Safety Scores", icon: FlaskConical, description: "Cross-market safety grades and contagion scenarios" },
+  { href: "/yield", label: "Risk-Adjusted Yield", icon: TrendingUp, description: "Yield ranked after adjusting for stablecoin risk" },
+  { href: "/telegram", label: "Telegram", icon: Send, description: "Push alerts for depegs, DEWS shifts, and the daily digest" },
+];
+
 export const NAV_GROUPS: NavGroup[] = [
   {
-    key: "risk-lab",
-    label: "Risk Lab",
-    items: [
-      { href: "/stability-index", label: "Stability Index", icon: LighthouseIcon, description: "Market-regime read for the stablecoin system" },
-      { href: "/safety-scores", label: "Safety Scores", icon: FlaskConical, description: "Cross-market safety grades and contagion scenarios" },
-      { href: "/yield", label: "Risk-Adjusted Yield", icon: TrendingUp, description: "Yield ranked after adjusting for stablecoin risk" },
-    ],
-  },
-  {
     key: "data",
-    label: "Data",
+    label: "TRACK",
     items: [
       { href: "/chains/", label: "Stable per Chain", icon: Layers, description: "Chain-by-chain stablecoin share, mix, and health" },
-      { href: "/liquidity", label: "Liquidity Tracker", icon: Droplets, description: "DEX depth, durability, and market support" },
-      { href: "/depeg", label: "Depeg Tracker", icon: Activity, description: "Live incident board for peg stress and early warnings" },
+      { href: "/liquidity", label: "Liquidity", icon: Droplets, description: "DEX depth, durability, and market support" },
+      { href: "/depeg", label: "Depeg", icon: Activity, description: "Live incident board for peg stress and early warnings" },
       { href: "/flows", label: "Mint/Burn Flows", icon: ArrowUpDown, description: "Ethereum issuance and redemption pressure" },
-      { href: "/blacklist", label: "Blacklist Tracker", icon: ShieldBan, description: "Freeze activity and issuer control events" },
+      { href: "/blacklist", label: "Blacklist", icon: ShieldBan, description: "Freeze activity and issuer control events" },
       { href: "/treasuries", label: "Treasuries", icon: Landmark, description: "Protocol and DAO treasuries ranked by stablecoin exposure" },
       { href: "/upcoming", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch-watch context" },
       { href: "/cemetery", label: "Cemetery", icon: Skull, description: "Failed stablecoins and the lessons they left behind" },
@@ -75,18 +74,17 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     key: "tools",
-    label: "Tools",
+    label: "Analyze",
     items: [
       { href: "/portfolio", label: "Portfolio Audit", icon: Wallet, description: "Look through your holdings as one combined stablecoin book" },
       { href: "/compare", label: "Compare", icon: ArrowLeftRight, description: "Build a live peer set and judge substitutes side by side" },
       { href: "/dependency-map", label: "Dependency Map", icon: Network, description: "Collateral graph for hidden upstream stablecoin risk" },
-      { href: "/telegram", label: "Telegram Alerts", icon: Send, description: "Push alerts for depegs, DEWS shifts, and the daily digest" },
       { href: "/digest", label: "Digest", icon: Newspaper, description: "Daily editorial recap of the stablecoin market" },
     ],
   },
   {
     key: "info",
-    label: "Info",
+    label: "Reference",
     items: [
       { href: "/about", label: "About", icon: Info, description: "Scope, data sources, and why Pharos exists" },
       { href: "/methodology", label: "Methodology", icon: BookOpen, description: "Reference manual for formulas, thresholds, and changelogs" },
@@ -99,20 +97,19 @@ export const NAV_GROUPS: NavGroup[] = [
 ];
 
 export const DEFAULT_EXPANDED: Record<string, boolean> = {
-  "risk-lab": true,
   data: false,
   tools: false,
   info: false,
 };
 
-/** Bottom items (always shown at sidebar bottom, near social links) */
+/** Bottom items (always shown at sidebar bottom) */
 export const BOTTOM_NAV_ITEMS: NavItem[] = [
   { href: "/start", label: "Start Here", icon: Compass, description: "Shortest route into the product for new or returning users" },
 ];
 
 /** Flat list for use in header and command palette */
 export const NAV_ITEMS: NavItem[] = [
-  DASHBOARD_NAV_ITEM,
+  ...PRIMARY_NAV_ITEMS,
   ...NAV_GROUPS.flatMap((g) => g.items),
   ...BOTTOM_NAV_ITEMS,
 ];

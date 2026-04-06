@@ -12,12 +12,13 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
-import { NAV_GROUPS, BOTTOM_NAV_ITEMS, DASHBOARD_NAV_ITEM } from "@/lib/nav-config";
+import { NAV_GROUPS, BOTTOM_NAV_ITEMS, PRIMARY_NAV_ITEMS } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { Menu, Search, X, ChevronRight } from "lucide-react";
 import { openCommandPalette } from "@/lib/command-palette";
 import { isRouteActive } from "@/lib/navigation";
 import { useNavCollapse } from "@/hooks/use-nav-collapse";
+import { useStartHereNavVisibility } from "@/hooks/use-start-here-nav-visibility";
 
 function MobileNavLink({ item, active, onNavigate }: { item: NavItem; active: boolean; onNavigate: () => void }) {
   const Icon = item.icon;
@@ -47,6 +48,8 @@ export function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const { isExpanded: isGroupExpanded, toggle } = useNavCollapse();
+  const { isReady: startHereReady, shouldShow: shouldShowStartHereNav } = useStartHereNavVisibility();
+  const visibleBottomNavItems = BOTTOM_NAV_ITEMS.filter((item) => item.href !== "/start" || (startHereReady && shouldShowStartHereNav));
 
   return (
     <header className="md:hidden sticky top-[3px] z-50 border-b border-border/80 bg-background" style={{ boxShadow: "var(--elevation-rest)" }}>
@@ -82,13 +85,16 @@ export function Header() {
 
             {/* Navigation */}
             <nav className="flex-1 overflow-y-auto px-4 py-4" aria-label="Main navigation">
-              {/* Dashboard standalone */}
-              <div
-                className="animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards]"
-                style={{ animationDelay: "0ms", animationDuration: "200ms" }}
-              >
-                <MobileNavLink item={DASHBOARD_NAV_ITEM} active={isRouteActive(pathname, DASHBOARD_NAV_ITEM.href)} onNavigate={() => setOpen(false)} />
-              </div>
+              {/* Primary pages */}
+              {PRIMARY_NAV_ITEMS.map((item, index) => (
+                <div
+                  key={item.href}
+                  className="animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards]"
+                  style={{ animationDelay: `${index * 50}ms`, animationDuration: "200ms" }}
+                >
+                  <MobileNavLink item={item} active={isRouteActive(pathname, item.href)} onNavigate={() => setOpen(false)} />
+                </div>
+              ))}
 
               {/* Grouped sections */}
               {NAV_GROUPS.map((group, groupIndex) => {
@@ -100,7 +106,7 @@ export function Header() {
                     className={`mt-4 animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards] ${
                       groupIsActive ? "border-l-2 border-l-frost-blue pl-3" : "pl-[14px]"
                     }`}
-                    style={{ animationDelay: `${(groupIndex + 1) * 50}ms`, animationDuration: "200ms" }}
+                    style={{ animationDelay: `${(PRIMARY_NAV_ITEMS.length + groupIndex) * 50}ms`, animationDuration: "200ms" }}
                   >
                     <button
                       onClick={() => toggle(group.key)}
@@ -124,14 +130,14 @@ export function Header() {
                 );
               })}
 
-              {BOTTOM_NAV_ITEMS.length > 0 ? (
+              {visibleBottomNavItems.length > 0 ? (
                 <div
                   className={`mt-4 animate-in fade-in slide-in-from-left-2 [animation-fill-mode:backwards] ${
-                    BOTTOM_NAV_ITEMS.some((item) => isRouteActive(pathname, item.href)) ? "border-l-2 border-l-frost-blue pl-3" : "pl-[14px]"
+                    visibleBottomNavItems.some((item) => isRouteActive(pathname, item.href)) ? "border-l-2 border-l-frost-blue pl-3" : "pl-[14px]"
                   }`}
-                  style={{ animationDelay: `${(NAV_GROUPS.length + 1) * 50}ms`, animationDuration: "200ms" }}
+                  style={{ animationDelay: `${(PRIMARY_NAV_ITEMS.length + NAV_GROUPS.length) * 50}ms`, animationDuration: "200ms" }}
                 >
-                  {BOTTOM_NAV_ITEMS.map((item) => (
+                  {visibleBottomNavItems.map((item) => (
                     <MobileNavLink key={item.href} item={item} active={isRouteActive(pathname, item.href)} onNavigate={() => setOpen(false)} />
                   ))}
                 </div>

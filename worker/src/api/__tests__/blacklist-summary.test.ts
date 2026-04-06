@@ -61,6 +61,7 @@ describe("handleBlacklistSummary", () => {
         usdtBlacklisted: number;
         usdcBlacklisted: number;
         destroyedTotal: number;
+        recentCount24h: number;
         activeAddressCount: number;
         activeFrozenTotal: number;
         trackedAddressCount: number;
@@ -74,6 +75,7 @@ describe("handleBlacklistSummary", () => {
     expect(body.stats.usdtBlacklisted).toBe(1);
     expect(body.stats.usdcBlacklisted).toBe(0);
     expect(body.stats.destroyedTotal).toBe(500);
+    expect(body.stats.recentCount24h).toBe(2);
     expect(body.stats.activeAddressCount).toBe(1);
     expect(body.stats.activeFrozenTotal).toBe(1250);
     expect(body.stats.trackedAddressCount).toBe(1);

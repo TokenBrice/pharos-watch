@@ -4,7 +4,7 @@ import {
   isGoldBlacklistStablecoin,
   type BlacklistAddressCountMode,
 } from "./blacklist";
-import { THIRTY_DAYS_SECONDS } from "./time-constants";
+import { DAY_SECONDS, THIRTY_DAYS_SECONDS } from "./time-constants";
 import type { BlacklistCurrentBalanceSnapshot } from "./blacklist-active-records";
 import { BLACKLIST_STABLECOINS } from "../types/market";
 import type { BlacklistEvent, BlacklistStablecoin } from "../types/market";
@@ -16,6 +16,7 @@ export interface BlacklistSummaryStats {
   frozenAddresses: number;
   destroyedTotal: number;
   recentCount: number;
+  recentCount24h: number;
   recoverableGapCount: number;
 }
 
@@ -38,6 +39,7 @@ export function computeBlacklistSummaryStats(
   countMode: BlacklistAddressCountMode = "address-chain-stablecoin",
 ): BlacklistSummaryStats {
   const thirtyDaysAgo = nowSeconds - THIRTY_DAYS_SECONDS;
+  const oneDayAgo = nowSeconds - DAY_SECONDS;
   const usdcAddresses = new Map<string, number>();
   const usdtAddresses = new Map<string, number>();
   const goldAddresses = new Map<string, number>();
@@ -45,6 +47,7 @@ export function computeBlacklistSummaryStats(
   const allAddresses = new Map<string, number>();
   let destroyedTotal = 0;
   let recentCount = 0;
+  let recentCount24h = 0;
   let recoverableGapCount = 0;
 
   for (const evt of events) {
@@ -66,6 +69,7 @@ export function computeBlacklistSummaryStats(
     }
 
     if (evt.timestamp >= thirtyDaysAgo) recentCount++;
+    if (evt.timestamp >= oneDayAgo) recentCount24h++;
     if (isBlacklistAmountGapStatus(evt.amountStatus)) {
       recoverableGapCount++;
     }
@@ -78,6 +82,7 @@ export function computeBlacklistSummaryStats(
     frozenAddresses: Array.from(allAddresses.values()).filter((value) => value > 0).length,
     destroyedTotal,
     recentCount,
+    recentCount24h,
     recoverableGapCount,
   };
 }

@@ -114,7 +114,7 @@ Rules:
 
 ## Start Here Callout Contract
 
-The homepage owns the first-session Start Here CTA.
+The homepage owns the first-session Start Here CTA and the shared onboarding-retirement state consumed by the shell navigation.
 
 Files:
 
@@ -130,6 +130,7 @@ Behavior:
 
 - the callout appears only on the first homepage session
 - once `/start/` is opened, `hasOpenedStartHere` is persisted and the callout stays retired on later homepage visits
+- the same persisted state now also retires the shell-level `Start Here` nav shortcut for repeat users, so desktop/sidebar and mobile menu chrome stop advertising onboarding after the user has either opened `/start/` or clearly returned for later sessions
 - clicking the secondary CTA dispatches the `open-command-palette` window event instead of navigating
 
 The `/start/` route is documented in [Start Page](./start-page.md).

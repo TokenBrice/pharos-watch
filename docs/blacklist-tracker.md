@@ -474,6 +474,7 @@ Returns server-side aggregate stats, quarterly chart buckets, supported chain fi
 The summary now mixes two intentionally distinct lenses:
 
 - event-history stats such as `destroyedTotal`
+- recent activity stats such as `recentCount` (30d) and `recentCount24h`
 - local event-state stats such as `activeFrozenTotal`, sourced from Pharos' active blacklist state machine
 - tracked freeze-ledger stats such as `trackedFrozenTotal`, sourced from `blacklist_current_balances`
 - quarterly chart buckets sourced from the tracked freeze ledger and attributed to each row's latest recorded blacklist quarter

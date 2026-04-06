@@ -677,7 +677,7 @@ Freeze, blacklist, and token-destruction events currently ingested for USDC, USD
 
 Server-side aggregates for the Blacklist Tracker overview cards, chart, and filter options. This lets the frontend render summary state without hydrating the full blacklist history first.
 
-`stats.destroyedTotal` remains an event-history total. `stats.activeFrozenTotal` reflects Pharos' local active blacklist state machine. `stats.trackedFrozenTotal` is the persistent freeze-ledger total sourced from `blacklist_current_balances`, including reconciled historical bootstrap rows where later seizures or unblacklists would otherwise hide the frozen amount. The `chart` now uses that same freeze ledger and attributes each tracked balance back to its latest recorded blacklist quarter, so the quarterly buckets explain the `trackedFrozenTotal` headline rather than raw event-time intake.
+`stats.destroyedTotal` remains an event-history total. `stats.activeFrozenTotal` reflects Pharos' local active blacklist state machine. `stats.trackedFrozenTotal` is the persistent freeze-ledger total sourced from `blacklist_current_balances`, including reconciled historical bootstrap rows where later seizures or unblacklists would otherwise hide the frozen amount. `stats.recentCount` covers the last 30 days, while `stats.recentCount24h` is the last-24-hours subset used by chrome-level monitoring surfaces. The `chart` now uses that same freeze ledger and attributes each tracked balance back to its latest recorded blacklist quarter, so the quarterly buckets explain the `trackedFrozenTotal` headline rather than raw event-time intake.
 
 **Cache:** realtime
 
@@ -700,6 +700,7 @@ Server-side aggregates for the Blacklist Tracker overview cards, chart, and filt
     "trackedFrozenTotal": 3235360796.7,
     "trackedAmountGapCount": 0,
     "recentCount": 42,
+    "recentCount24h": 3,
     "recoverableGapCount": 17
   },
   "chart": [

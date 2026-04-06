@@ -24,7 +24,7 @@ The route is static. It does not call worker APIs directly.
 
 ## Homepage Integration
 
-`StartHereVisitMarker` is the bridge between `/start/` and the homepage onboarding callout.
+`StartHereVisitMarker` is the bridge between `/start/` and the shared onboarding-retirement state used by both the homepage callout and the shell navigation shortcut.
 
 On mount it:
 
@@ -33,6 +33,7 @@ On mount it:
 - writes the updated state back
 
 This is what retires the homepage Start Here CTA after the route has been visited once. The homepage-side behavior is documented in [Homepage](./homepage.md).
+This same persisted flag also retires the shell-level `Start Here` shortcut in the desktop sidebar and mobile nav for repeat sessions.
 
 ---
 
@@ -147,6 +148,7 @@ Update this doc when any of these change:
 - section order
 - the curated goal/atlas/shortcut route structure
 - the homepage-callout retirement handshake
+- the shared sidebar/mobile-nav retirement handshake
 - the shared-shell contract for `/start/`
 
 When changing onboarding copy or destinations, update `src/lib/start-here-content.ts` in the same change. If the homepage CTA behavior changes too, update [Homepage](./homepage.md) alongside this document.

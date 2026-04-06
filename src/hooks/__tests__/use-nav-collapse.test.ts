@@ -31,7 +31,6 @@ beforeEach(() => {
 describe("getExpandedState", () => {
   it("returns defaults when localStorage is empty", () => {
     const state = getExpandedState();
-    expect(state["risk-lab"]).toBe(true);
     expect(state["data"]).toBe(false);
     expect(state["tools"]).toBe(false);
     expect(state["info"]).toBe(false);
@@ -40,22 +39,24 @@ describe("getExpandedState", () => {
   it("merges persisted state over defaults", () => {
     mockStorage.setItem(STORAGE_KEY, JSON.stringify({ data: true }));
     const state = getExpandedState();
-    expect(state["risk-lab"]).toBe(true); // default
     expect(state["data"]).toBe(true);     // overridden
     expect(state["tools"]).toBe(false);   // default
+    expect(state["info"]).toBe(false);    // default
   });
 
   it("handles corrupted localStorage gracefully", () => {
     mockStorage.setItem(STORAGE_KEY, "not-json");
     const state = getExpandedState();
-    expect(state["risk-lab"]).toBe(true); // falls back to defaults
+    expect(state["data"]).toBe(false); // falls back to defaults
+    expect(state["tools"]).toBe(false);
+    expect(state["info"]).toBe(false);
   });
 });
 
 describe("setExpandedState", () => {
   it("persists state to localStorage", () => {
-    setExpandedState({ "risk-lab": true, data: true, tools: false, about: false });
+    setExpandedState({ data: true, tools: false, info: true });
     const raw = mockStorage.getItem(STORAGE_KEY);
-    expect(JSON.parse(raw!)).toEqual({ "risk-lab": true, data: true, tools: false, about: false });
+    expect(JSON.parse(raw!)).toEqual({ data: true, tools: false, info: true });
   });
 });

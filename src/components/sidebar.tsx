@@ -5,13 +5,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PharosLogo } from "@/components/pharos-logo";
 import { ChevronsLeft, ChevronsRight, ChevronRight, Moon, Search, Sun } from "lucide-react";
-import { NAV_GROUPS, BOTTOM_NAV_ITEMS, DASHBOARD_NAV_ITEM } from "@/lib/nav-config";
+import { NAV_GROUPS, BOTTOM_NAV_ITEMS, PRIMARY_NAV_ITEMS } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { useNavCollapse } from "@/hooks/use-nav-collapse";
+import { useSidebarNavSignals } from "@/hooks/use-sidebar-nav-signals";
+import { useStartHereNavVisibility } from "@/hooks/use-start-here-nav-visibility";
 import { getWindowStorage, safeStorageGetItem, safeStorageSetItem } from "@/lib/browser-storage";
 import { openCommandPalette } from "@/lib/command-palette";
 import { isRouteActive } from "@/lib/navigation";
+import type { SidebarNavSignal } from "@/lib/sidebar-signals";
 import { useThemeToggle } from "@/hooks/use-theme-toggle";
+import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "pharos-sidebar-expanded";
 const HOVER_DELAY = 200;
@@ -82,14 +86,57 @@ export function SidebarSpacer() {
   );
 }
 
-function SidebarNavItem({ item, expanded, isActive }: { item: NavItem; expanded: boolean; isActive: boolean }) {
+const SIDEBAR_SIGNAL_TONE_CLASS: Record<SidebarNavSignal["tone"], string> = {
+  neutral: "border-border/60 bg-muted/35 text-muted-foreground",
+  info: "border-frost-blue/30 bg-frost-blue/10 text-sky-800 dark:text-sky-200",
+  healthy: "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300",
+  warning: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  danger: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
+};
+
+function SidebarNavSignalIndicator({ signal }: { signal: SidebarNavSignal }) {
+  if (signal.kind === "dot") {
+    return (
+      <span className="ml-auto flex items-center" title={signal.title} aria-hidden="true">
+        <span className={cn("h-2.5 w-2.5 rounded-full border", SIDEBAR_SIGNAL_TONE_CLASS[signal.tone])} />
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className={cn(
+        "ml-auto inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-mono font-semibold tabular-nums",
+        SIDEBAR_SIGNAL_TONE_CLASS[signal.tone],
+      )}
+      title={signal.title}
+      aria-hidden="true"
+    >
+      {signal.text}
+    </span>
+  );
+}
+
+function SidebarNavItem({
+  item,
+  expanded,
+  isActive,
+  signal,
+}: {
+  item: NavItem;
+  expanded: boolean;
+  isActive: boolean;
+  signal?: SidebarNavSignal | null;
+}) {
   const Icon = item.icon;
+  const title = expanded ? undefined : signal ? `${item.label} — ${signal.title}` : item.label;
+  const ariaLabel = signal ? `${item.label} — ${signal.title}` : item.label;
 
   return (
     <Link
       href={item.href}
-      title={expanded ? undefined : item.label}
-      aria-label={item.label}
+      title={title}
+      aria-label={ariaLabel}
       aria-current={isActive ? "page" : undefined}
       className={`pharos-focus-ring flex items-center gap-3 rounded-md border-l-[3px] transition-[background-color,border-color,color,box-shadow] duration-200 ${
         expanded ? "mx-2 px-3 py-2.5" : "mx-auto px-0 py-2 justify-center w-10"
@@ -100,7 +147,8 @@ function SidebarNavItem({ item, expanded, isActive }: { item: NavItem; expanded:
       }`}
     >
       <Icon className="h-4 w-4 shrink-0" />
-      {expanded && <span className="text-sm truncate">{item.label}</span>}
+      {expanded && <span className="min-w-0 text-sm truncate">{item.label}</span>}
+      {expanded && signal ? <SidebarNavSignalIndicator signal={signal} /> : null}
     </Link>
   );
 }
@@ -136,53 +184,11 @@ function ThemeSidebarItem({ expanded }: { expanded: boolean }) {
   );
 }
 
-const SOCIAL_LINKS = [
-  {
-    href: "https://x.com/PharosWatch",
-    label: "Twitter",
-    icon: (
-      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-      </svg>
-    ),
-  },
-  {
-    href: "https://t.me/pharoswatch",
-    label: "Telegram",
-    icon: (
-      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.820 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
-      </svg>
-    ),
-  },
-] as const;
-
-function SidebarSocialLinks({ expanded }: { expanded: boolean }) {
-  return (
-    <div className={`flex items-center ${expanded ? "mx-2 gap-1 px-1 py-1.5" : "justify-center gap-1 py-1.5"}`}>
-      {SOCIAL_LINKS.map((link) => (
-        <a
-          key={link.href}
-          href={link.href}
-          target="_blank"
-          rel="noopener noreferrer"
-          title={link.label}
-          aria-label={`Pharos on ${link.label}`}
-          className="pharos-focus-ring flex items-center gap-2 rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted/45 hover:text-foreground"
-        >
-          {link.icon}
-          {expanded && <span className="text-sm">{link.label}</span>}
-        </a>
-      ))}
-    </div>
-  );
-}
-
 function SidebarGroup({
-  groupKey, label, items, expanded: sidebarExpanded, isGroupExpanded, onToggle, pathname,
+  groupKey, label, items, expanded: sidebarExpanded, isGroupExpanded, onToggle, pathname, navSignals,
 }: {
   groupKey: string; label: string; items: NavItem[]; expanded: boolean;
-  isGroupExpanded: boolean; onToggle: () => void; pathname: string;
+  isGroupExpanded: boolean; onToggle: () => void; pathname: string; navSignals: Record<string, SidebarNavSignal | null>;
 }) {
   return (
     <div>
@@ -203,7 +209,13 @@ function SidebarGroup({
             <div className="overflow-hidden">
               <div id={`nav-group-${groupKey}`} className="space-y-0.5">
                 {items.map((item) => (
-                  <SidebarNavItem key={item.href} item={item} expanded={sidebarExpanded} isActive={isRouteActive(pathname, item.href)} />
+                  <SidebarNavItem
+                    key={item.href}
+                    item={item}
+                    expanded={sidebarExpanded}
+                    isActive={isRouteActive(pathname, item.href)}
+                    signal={navSignals[item.href]}
+                  />
                 ))}
               </div>
             </div>
@@ -215,7 +227,7 @@ function SidebarGroup({
       ) : (
         <div className="space-y-0.5">
           {items.map((item) => (
-            <SidebarNavItem key={item.href} item={item} expanded={false} isActive={isRouteActive(pathname, item.href)} />
+            <SidebarNavItem key={item.href} item={item} expanded={false} isActive={isRouteActive(pathname, item.href)} signal={navSignals[item.href]} />
           ))}
         </div>
       )}
@@ -227,6 +239,9 @@ export function Sidebar() {
   const { expanded, pinned, togglePin, onMouseEnter, onMouseLeave } = useSidebar();
   const pathname = usePathname();
   const { isExpanded: isGroupExpanded, toggle } = useNavCollapse();
+  const navSignals = useSidebarNavSignals();
+  const { isReady: startHereReady, shouldShow: shouldShowStartHereNav } = useStartHereNavVisibility();
+  const visibleBottomNavItems = BOTTOM_NAV_ITEMS.filter((item) => item.href !== "/start" || (startHereReady && shouldShowStartHereNav));
 
   // Keyboard shortcut: [ and ] toggle sidebar pin state.
   // Inputs/textareas are excluded. No modifier key is used intentionally
@@ -280,9 +295,17 @@ export function Sidebar() {
 
       {/* Nav groups */}
       <nav className="flex-1 overflow-y-auto py-2 space-y-4" aria-label="Main navigation">
-        {/* Dashboard standalone */}
+        {/* Primary pages */}
         <div className="space-y-0.5">
-          <SidebarNavItem item={DASHBOARD_NAV_ITEM} expanded={expanded} isActive={isRouteActive(pathname, DASHBOARD_NAV_ITEM.href)} />
+          {PRIMARY_NAV_ITEMS.map((item) => (
+            <SidebarNavItem
+              key={item.href}
+              item={item}
+              expanded={expanded}
+              isActive={isRouteActive(pathname, item.href)}
+              signal={navSignals[item.href]}
+            />
+          ))}
         </div>
         {NAV_GROUPS.map((group) => (
           <SidebarGroup
@@ -294,13 +317,14 @@ export function Sidebar() {
             isGroupExpanded={isGroupExpanded(group.key)}
             onToggle={() => toggle(group.key)}
             pathname={pathname}
+            navSignals={navSignals}
           />
         ))}
       </nav>
 
       {/* Bottom section */}
       <div className="shrink-0 border-t border-border/65 bg-muted/15 py-2 space-y-0.5">
-        {BOTTOM_NAV_ITEMS.map((item) => (
+        {visibleBottomNavItems.map((item) => (
           <SidebarNavItem
             key={item.href}
             item={item}
@@ -308,7 +332,6 @@ export function Sidebar() {
             isActive={isRouteActive(pathname, item.href)}
           />
         ))}
-        <SidebarSocialLinks expanded={expanded} />
         <ThemeSidebarItem expanded={expanded} />
         <button
           onClick={togglePin}

@@ -89,6 +89,7 @@ describe("blacklist-api", () => {
         trackedFrozenTotal: 10_000,
         trackedAmountGapCount: 0,
         recentCount: 4,
+        recentCount24h: 1,
         recoverableGapCount: 0,
       },
       chart: [],
