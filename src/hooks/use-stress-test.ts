@@ -32,6 +32,8 @@ interface SystemicRisk {
   symbol: string;
   affectedCount: number;
   supplyAtRisk: number;
+  /** Supply at risk excluding the target coin's own market cap. */
+  dependentSupplyAtRisk: number;
 }
 
 export interface StressTestState {
@@ -278,11 +280,16 @@ export function useStressTest(
       const stressed = computeStressedGrades(reportData.cards, overrides);
       let affectedCount = 0;
       let supplyAtRisk = 0;
+      let dependentSupplyAtRisk = 0;
 
       for (let i = 0; i < reportData.cards.length; i++) {
         if (reportData.cards[i].overallScore !== stressed[i].overallScore) {
           affectedCount++;
-          supplyAtRisk += mcapMap.get(reportData.cards[i].id) ?? 0;
+          const mcap = mcapMap.get(reportData.cards[i].id) ?? 0;
+          supplyAtRisk += mcap;
+          if (reportData.cards[i].id !== coin.id) {
+            dependentSupplyAtRisk += mcap;
+          }
         }
       }
 
@@ -293,6 +300,7 @@ export function useStressTest(
           symbol: coin.symbol,
           affectedCount,
           supplyAtRisk,
+          dependentSupplyAtRisk,
         });
       }
     }

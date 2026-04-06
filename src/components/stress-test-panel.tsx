@@ -125,17 +125,9 @@ export function StressTestPanel({
                   <div className="flex-1 min-w-0">
                     <span className="font-medium block truncate">{risk.symbol}</span>
                     <span className="text-xs text-muted-foreground">
-                      {risk.affectedCount} dependent{risk.affectedCount !== 1 ? "s" : ""}
+                      {risk.affectedCount} dependent{risk.affectedCount !== 1 ? "s" : ""}{" "}
+                      <span className="font-mono">({formatCurrency(risk.dependentSupplyAtRisk)})</span>
                     </span>
-                  </div>
-                  <div className="text-right">
-                    <span className={cn(
-                      "font-mono text-sm font-semibold block",
-                      i === 0 ? "text-rose-600 dark:text-rose-400" : ""
-                    )}>
-                      {formatCurrency(risk.supplyAtRisk)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">at risk</span>
                   </div>
                   <Button
                     variant="outline"

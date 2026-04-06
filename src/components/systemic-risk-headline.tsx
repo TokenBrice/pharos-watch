@@ -12,6 +12,7 @@ interface SystemicRisk {
   symbol: string;
   affectedCount: number;
   supplyAtRisk: number;
+  dependentSupplyAtRisk: number;
 }
 
 interface SystemicRiskHeadlineProps {
@@ -24,7 +25,7 @@ export function SystemicRiskHeadline({ risks, logos, onOpenSimulator }: Systemic
   const top3 = risks.slice(0, 3);
   if (top3.length === 0) return null;
 
-  const totalAtRisk = top3.reduce((sum, r) => sum + r.supplyAtRisk, 0);
+  const totalAtRisk = top3.reduce((sum, r) => sum + r.dependentSupplyAtRisk, 0);
 
   return (
     <Card className="border-rose-500/15 bg-rose-500/[0.03]">
@@ -76,7 +77,7 @@ export function SystemicRiskHeadline({ risks, logos, onOpenSimulator }: Systemic
                 </span>
               </div>
               <span className="font-mono text-xs font-semibold text-muted-foreground">
-                {formatCurrency(risk.supplyAtRisk)}
+                {formatCurrency(risk.dependentSupplyAtRisk)}
               </span>
             </div>
           ))}
