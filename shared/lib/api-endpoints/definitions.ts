@@ -1,3 +1,5 @@
+import { API_PATHS, buildQueryPath } from "./paths";
+
 type EndpointMethod = "GET" | "POST";
 export type EndpointProbeGroup = "public" | "admin" | "manual";
 export type EndpointPublicApiAccess = "protected" | "exempt";
@@ -51,7 +53,7 @@ export interface StatusPageAction {
   acceptsStablecoinFilter: boolean;
 }
 
-interface EndpointMethodValidationError {
+export interface EndpointMethodValidationError {
   message: string;
   allowedMethods: readonly EndpointMethod[];
 }
@@ -69,78 +71,6 @@ export type DynamicAdminEndpointMatch =
     apiKeyId: number;
     methods: readonly EndpointMethod[];
   };
-
-type QueryParamValue = string | number | boolean | null | undefined;
-
-function buildQueryPath(path: string, params?: Record<string, QueryParamValue>): string {
-  if (!params) return path;
-  const searchParams = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value == null) continue;
-    searchParams.set(key, String(value));
-  }
-  const query = searchParams.toString();
-  return query ? `${path}?${query}` : path;
-}
-
-export const API_PATHS = {
-  stablecoins: () => "/api/stablecoins",
-  stablecoinDetail: (stablecoinId: string) => `/api/stablecoin/${encodeURIComponent(stablecoinId)}`,
-  stablecoinSummary: (stablecoinId: string) => `/api/stablecoin-summary/${encodeURIComponent(stablecoinId)}`,
-  stablecoinReserves: (stablecoinId: string) => `/api/stablecoin-reserves/${encodeURIComponent(stablecoinId)}`,
-  stablecoinCharts: () => "/api/stablecoin-charts",
-  pegSummary: () => "/api/peg-summary",
-  health: () => "/api/health",
-  blacklist: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/blacklist", params),
-  blacklistSummary: () => "/api/blacklist-summary",
-  depegEvents: (params?: { stablecoinId?: string; limit?: number; offset?: number }) =>
-    buildQueryPath("/api/depeg-events", {
-      stablecoin: params?.stablecoinId,
-      limit: params?.limit,
-      offset: params?.offset,
-    }),
-  usdsStatus: () => "/api/usds-status",
-  bluechipRatings: () => "/api/bluechip-ratings",
-  dexLiquidity: () => "/api/dex-liquidity",
-  dexLiquidityHistory: (stablecoinId: string, days = 90) =>
-    buildQueryPath("/api/dex-liquidity-history", { stablecoin: stablecoinId, days }),
-  supplyHistory: (stablecoinId: string, days?: number) =>
-    buildQueryPath("/api/supply-history", { stablecoin: stablecoinId, days }),
-  dailyDigest: () => "/api/daily-digest",
-  digestArchive: () => "/api/digest-archive",
-  digestSnapshot: (date: string) => buildQueryPath("/api/digest-snapshot", { date }),
-  yieldRankings: () => "/api/yield-rankings",
-  yieldHistory: (stablecoinId: string, days = 90, mode?: string, sourceKey?: string) =>
-    buildQueryPath("/api/yield-history", {
-      stablecoin: stablecoinId,
-      days,
-      mode,
-      sourceKey,
-    }),
-  safetyScoreHistory: (stablecoinId: string, days = 3650) =>
-    buildQueryPath("/api/safety-score-history", { stablecoin: stablecoinId, days }),
-  stabilityIndex: (detail = false) => buildQueryPath("/api/stability-index", detail ? { detail: true } : undefined),
-  reportCards: () => "/api/report-cards",
-  redemptionBackstops: () => "/api/redemption-backstops",
-  treasuryStableExposure: () => "/api/treasury-stable-exposure",
-  mintBurnFlows: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/mint-burn-flows", params),
-  mintBurnEvents: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/mint-burn-events", params),
-  stressSignals: (stablecoinId?: string, days?: number) =>
-    buildQueryPath("/api/stress-signals", { stablecoin: stablecoinId, days }),
-  chains: () => "/api/chains",
-  nonUsdShare: (days?: number) => buildQueryPath("/api/non-usd-share", days ? { days } : undefined),
-  publicStatusHistory: (params?: { limit?: number }) => buildQueryPath("/api/public-status-history", { limit: params?.limit }),
-  requestSourceStats: (params?: { hours?: number; bucketSec?: number; routeLimit?: number }) =>
-    buildQueryPath("/api/request-source-stats", {
-      hours: params?.hours,
-      bucketSec: params?.bucketSec,
-      routeLimit: params?.routeLimit,
-    }),
-  apiKeys: () => "/api/api-keys",
-  apiKeyUpdate: (id: number) => `/api/api-keys/${id}/update`,
-  apiKeyDeactivate: (id: number) => `/api/api-keys/${id}/deactivate`,
-  apiKeyRotate: (id: number) => `/api/api-keys/${id}/rotate`,
-} as const;
 
 const BASE_ENDPOINT_DEFINITIONS = [
   // Public endpoints probed by the status dashboard.
@@ -786,19 +716,6 @@ const ENDPOINT_DEFINITION_BY_KEY = new Map<EndpointKey, EndpointDefinition>(
   ENDPOINT_DEFINITIONS.map((endpoint) => [endpoint.key as EndpointKey, endpoint] as const),
 );
 
-const STABLECOIN_DETAIL_PATH_PATTERN = /^\/api\/stablecoin\/[^/]+$/;
-const STABLECOIN_SUMMARY_PATH_PATTERN = /^\/api\/stablecoin-summary\/[^/]+$/;
-const STABLECOIN_RESERVES_PATH_PATTERN = /^\/api\/stablecoin-reserves\/[^/]+$/;
-const OG_IMAGE_PATH_PATTERN = /^\/api\/og\//;
-const DISCOVERY_DISMISS_PATH_PATTERN = /^\/api\/discovery-candidates\/(\d+)\/dismiss$/;
-const API_KEY_UPDATE_PATH_PATTERN = /^\/api\/api-keys\/(\d+)\/update$/;
-const API_KEY_DEACTIVATE_PATH_PATTERN = /^\/api\/api-keys\/(\d+)\/deactivate$/;
-const API_KEY_ROTATE_PATH_PATTERN = /^\/api\/api-keys\/(\d+)\/rotate$/;
-const GET_ONLY_METHODS = ["GET"] as const satisfies readonly EndpointMethod[];
-const POST_ONLY_METHODS = ["POST"] as const satisfies readonly EndpointMethod[];
-const GET_AND_POST_METHODS = ["GET", "POST"] as const satisfies readonly EndpointMethod[];
-const AUDIT_DEPEG_HISTORY_PATH = "/api/audit-depeg-history";
-
 const MUTATING_ADMIN_PATHS = new Set<string>(
   ENDPOINT_DEFINITIONS.filter((endpoint) => endpoint.mutatingAdmin).map((endpoint) => endpoint.path),
 );
@@ -819,98 +736,6 @@ export function isCacheBypassPath(path: string): boolean {
   return CACHE_BYPASS_PATHS.has(path);
 }
 
-export function getPublicApiAccess(path: string): EndpointPublicApiAccess | null {
-  const endpoint = getEndpointDefinition(path);
-  if (endpoint) {
-    return endpoint.publicApiAccess;
-  }
-  if (matchDynamicAdminEndpoint(path)) {
-    return "exempt";
-  }
-  if (OG_IMAGE_PATH_PATTERN.test(path)) {
-    return "exempt";
-  }
-  if (
-    STABLECOIN_DETAIL_PATH_PATTERN.test(path) ||
-    STABLECOIN_SUMMARY_PATH_PATTERN.test(path) ||
-    STABLECOIN_RESERVES_PATH_PATTERN.test(path)
-  ) {
-    return "protected";
-  }
-  return null;
-}
-
-export function isProtectedPublicApiPath(path: string): boolean {
-  return getPublicApiAccess(path) === "protected";
-}
-
-export function getSiteDataAccess(path: string): EndpointSiteDataAccess | null {
-  const endpoint = getEndpointDefinition(path);
-  if (endpoint) {
-    return endpoint.siteDataAccess;
-  }
-  if (
-    STABLECOIN_DETAIL_PATH_PATTERN.test(path) ||
-    STABLECOIN_SUMMARY_PATH_PATTERN.test(path) ||
-    STABLECOIN_RESERVES_PATH_PATTERN.test(path)
-  ) {
-    return "allowed";
-  }
-  if (
-    matchDynamicAdminEndpoint(path) ||
-    OG_IMAGE_PATH_PATTERN.test(path)
-  ) {
-    return "denied";
-  }
-  return null;
-}
-
-export function isSiteDataAllowedPath(path: string): boolean {
-  return getSiteDataAccess(path) === "allowed";
-}
-
-export function matchDynamicAdminEndpoint(path: string): DynamicAdminEndpointMatch | null {
-  const discoveryDismissMatch = path.match(DISCOVERY_DISMISS_PATH_PATTERN);
-  if (discoveryDismissMatch) {
-    const candidateId = Number.parseInt(discoveryDismissMatch[1] ?? "", 10);
-    if (!Number.isFinite(candidateId) || candidateId <= 0) {
-      return null;
-    }
-    return {
-      key: "discovery-candidate-dismiss",
-      path,
-      candidateId,
-      methods: POST_ONLY_METHODS,
-    };
-  }
-
-  const apiKeyPatterns: Array<[RegExp, "api-key-update" | "api-key-deactivate" | "api-key-rotate"]> = [
-    [API_KEY_UPDATE_PATH_PATTERN, "api-key-update"],
-    [API_KEY_DEACTIVATE_PATH_PATTERN, "api-key-deactivate"],
-    [API_KEY_ROTATE_PATH_PATTERN, "api-key-rotate"],
-  ];
-  for (const [pattern, key] of apiKeyPatterns) {
-    const match = path.match(pattern);
-    if (!match) continue;
-    const apiKeyId = Number.parseInt(match[1] ?? "", 10);
-    if (!Number.isFinite(apiKeyId) || apiKeyId <= 0) {
-      return null;
-    }
-    return {
-      key,
-      path,
-      apiKeyId,
-      methods: POST_ONLY_METHODS,
-    };
-  }
-
-  return null;
-}
-
-export function isAdminPath(path: string): boolean {
-  return Boolean(getEndpointDefinition(path)?.adminRequired || matchDynamicAdminEndpoint(path));
-}
-
 export function getEndpointDefinition(path: string): EndpointDefinition | undefined {
   return ENDPOINT_DEFINITION_BY_PATH.get(path);
 }
@@ -925,75 +750,3 @@ export function getStrictContractPaths(): readonly string[] {
 
 /** Pre-computed strict contract paths (module-load-time). */
 export const STRICT_CONTRACT_PATHS_LIST = getStrictContractPaths();
-
-function getAllowedEndpointMethods(url: URL): readonly EndpointMethod[] | null {
-  const definition = getEndpointDefinition(url.pathname);
-  if (definition) {
-    if (url.pathname === AUDIT_DEPEG_HISTORY_PATH && url.searchParams.get("dry-run") !== "true") {
-      return POST_ONLY_METHODS;
-    }
-    return definition.methods;
-  }
-
-  if (STABLECOIN_DETAIL_PATH_PATTERN.test(url.pathname)) {
-    return GET_ONLY_METHODS;
-  }
-  if (STABLECOIN_SUMMARY_PATH_PATTERN.test(url.pathname)) {
-    return GET_ONLY_METHODS;
-  }
-  const dynamicAdminEndpoint = matchDynamicAdminEndpoint(url.pathname);
-  if (dynamicAdminEndpoint) {
-    return dynamicAdminEndpoint.methods;
-  }
-  if (OG_IMAGE_PATH_PATTERN.test(url.pathname)) {
-    return GET_ONLY_METHODS;
-  }
-
-  return null;
-}
-
-export function validateEndpointMethod(url: URL, method: string): EndpointMethodValidationError | null {
-  if (method !== "GET" && method !== "POST") {
-    return { message: "Method not allowed", allowedMethods: GET_AND_POST_METHODS };
-  }
-
-  const allowedMethods = getAllowedEndpointMethods(url);
-  if (!allowedMethods) {
-    if (method === "POST") {
-      return { message: "Method not allowed", allowedMethods: GET_ONLY_METHODS };
-    }
-    return null;
-  }
-
-  if (allowedMethods.includes(method as EndpointMethod)) {
-    return null;
-  }
-
-  const postOnly = method === "GET" && allowedMethods.length === 1 && allowedMethods[0] === "POST";
-  return {
-    message: postOnly ? "Method not allowed. Use POST for this endpoint." : "Method not allowed",
-    allowedMethods,
-  };
-}
-
-export function getProbePaths(group: EndpointProbeGroup): string[] {
-  return ENDPOINT_DEFINITIONS.filter((endpoint) => endpoint.probeGroup === group).map(
-    (endpoint) => endpoint.probePath ?? endpoint.path,
-  );
-}
-
-export function getStatusPageActions(): StatusPageAction[] {
-  return ENDPOINT_DEFINITIONS.flatMap((endpoint) => {
-    if (!endpoint.statusPageAction) return [];
-    return [
-      {
-        label: endpoint.statusPageAction.label,
-        path: endpoint.statusPageAction.path ?? endpoint.probePath ?? endpoint.path,
-        confirm: endpoint.statusPageAction.confirm,
-        destructive: endpoint.statusPageAction.destructive ?? false,
-        method: endpoint.statusPageAction.method,
-        acceptsStablecoinFilter: endpoint.statusPageAction.acceptsStablecoinFilter ?? false,
-      },
-    ];
-  });
-}
