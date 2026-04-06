@@ -95,12 +95,28 @@ describe("adaptCollateralPositions", () => {
           decimals: 18,
           positions: [{ collateralBalance: "1000000000000000000" }],
         },
+        "0xysybold": {
+          address: "0xysybold",
+          name: "Staked yBOLD",
+          symbol: "ysyBOLD",
+          decimals: 18,
+          positions: [{ collateralBalance: "1000000000000000000" }],
+        },
       },
       {
         "0xfps": { price: { usd: 500 } },
         "0xaapl": { price: { usd: 200 } },
+        "0xysybold": { price: { usd: 1.05 } },
       },
+      0,
     );
     expect(result.warnings).toBeUndefined();
+    expect(result.slices).toContainEqual({
+      name: "ysyBOLD (Staked yBOLD)",
+      pct: 0.1,
+      risk: "medium",
+      coinId: "bold-liquity",
+      depType: "wrapper",
+    });
   });
 });

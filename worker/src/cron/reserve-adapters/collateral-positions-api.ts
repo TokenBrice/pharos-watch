@@ -32,6 +32,12 @@ interface PositionsApiParams {
   otherThresholdPct?: number;
 }
 
+interface ProtocolAssetConfig {
+  risk: ReserveSlice["risk"];
+  coinId?: string;
+  depType?: ReserveSlice["depType"];
+}
+
 function readParams(config: LiveReservesConfig): PositionsApiParams {
   return parseLiveReserveAdapterParams("collateral-positions-api", config.params);
 }
@@ -40,42 +46,47 @@ function readParams(config: LiveReservesConfig): PositionsApiParams {
  * Protocol-specific assets used as collateral in Frankencoin / dEURO
  * that are too niche for the canonical risk map.
  */
-const PROTOCOL_ASSET_RISK: Record<string, ReserveSlice["risk"]> = {
+const PROTOCOL_ASSET_CONFIG: Record<string, ProtocolAssetConfig> = {
   // Governance / participation shares
-  FPS: "very-high",
-  WFPS: "very-high",
-  BOSS: "very-high",
+  FPS: { risk: "very-high" },
+  WFPS: { risk: "very-high" },
+  BOSS: { risk: "very-high" },
   // Stablecoins not in canonical map
-  VCHF: "low",
+  VCHF: { risk: "low" },
+  YSYBOLD: { risk: "medium", coinId: "bold-liquity", depType: "wrapper" },
   // Wrapped BTC variants
-  BBTC: "medium",
+  BBTC: { risk: "medium" },
   // Tokenized equities / RWA
-  AAPLX: "high",
-  SPYON: "high",
-  GOOGLX: "high",
-  NVDAX: "high",
-  TSLAX: "high",
-  LENDS: "high",
-  REALU: "high",
-  DQTS: "high",
-  ESC: "high",
+  AAPLX: { risk: "high" },
+  SPYON: { risk: "high" },
+  GOOGLX: { risk: "high" },
+  NVDAX: { risk: "high" },
+  TSLAX: { risk: "high" },
+  LENDS: { risk: "high" },
+  REALU: { risk: "high" },
+  DQTS: { risk: "high" },
+  ESC: { risk: "high" },
 };
 
+function getProtocolAssetConfig(symbol: string): ProtocolAssetConfig | null {
+  return PROTOCOL_ASSET_CONFIG[symbol.toUpperCase()] ?? null;
+}
+
 function isKnownAsset(symbol: string): boolean {
-  const upper = symbol.toUpperCase();
-  return getCanonicalReserveAssetRisk(upper) !== null || upper in PROTOCOL_ASSET_RISK;
+  return getCanonicalReserveAssetRisk(symbol) !== null || getProtocolAssetConfig(symbol) !== null;
 }
 
 function inferRisk(symbol: string): ReserveSlice["risk"] {
-  const upper = symbol.toUpperCase();
-  const canonicalRisk = getCanonicalReserveAssetRisk(upper);
+  const canonicalRisk = getCanonicalReserveAssetRisk(symbol);
   if (canonicalRisk) return canonicalRisk;
-  const protocolRisk = PROTOCOL_ASSET_RISK[upper];
-  if (protocolRisk) return protocolRisk;
+  const protocolConfig = getProtocolAssetConfig(symbol);
+  if (protocolConfig) return protocolConfig.risk;
   return "high";
 }
 
 function inferCoinId(symbol: string): string | undefined {
+  const protocolCoinId = getProtocolAssetConfig(symbol)?.coinId;
+  if (protocolCoinId) return protocolCoinId;
   const upper = symbol.toUpperCase();
   switch (upper) {
     case "USDC":
@@ -91,13 +102,23 @@ function inferCoinId(symbol: string): string | undefined {
   }
 }
 
+function inferDepType(symbol: string): ReserveSlice["depType"] | undefined {
+  return getProtocolAssetConfig(symbol)?.depType;
+}
+
 export function adaptCollateralPositions(
   details: PositionDetailsPayload,
   prices: PriceMappingPayload,
   otherThresholdPct = 2,
 ): AdapterResult {
   const warnings: LiveReserveWarning[] = [];
-  const values: Array<{ name: string; usd: number; risk: ReserveSlice["risk"]; coinId?: string }> = [];
+  const values: Array<{
+    name: string;
+    usd: number;
+    risk: ReserveSlice["risk"];
+    coinId?: string;
+    depType?: ReserveSlice["depType"];
+  }> = [];
   const missingPriceSymbols = new Set<string>();
   let unknownExposureUsd = 0;
   let activePositionCount = 0;
@@ -137,6 +158,7 @@ export function adaptCollateralPositions(
       usd: totalBalance * usdPrice,
       risk,
       coinId: inferCoinId(entry.symbol),
+      depType: inferDepType(entry.symbol),
     });
   }
 
@@ -157,6 +179,7 @@ export function adaptCollateralPositions(
     pct: (value.usd / total) * 100,
     risk: value.risk,
     ...(value.coinId ? { coinId: value.coinId } : {}),
+    ...(value.depType ? { depType: value.depType } : {}),
   }));
 
   if (minor.length > 0) {
