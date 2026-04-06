@@ -148,6 +148,6 @@ describe("TreasuryStableExposureTable", () => {
     expect(screen.getAllByText(/1 treasury-comparable rows and 1 partial or invalid rows/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText("Partial denominator").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/1 comparable entities currently show at least 5% decentralized stable exposure/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("-").length).toBeGreaterThan(0);
   });
 });

@@ -42,7 +42,3 @@ export function decodeStablecoinUrlToken(token: string | null | undefined): stri
   return UNIQUE_SYMBOL_TO_ID.get(symbol) ?? null;
 }
 
-export function isAmbiguousStablecoinSymbol(token: string | null | undefined): boolean {
-  const trimmed = token?.trim();
-  return trimmed ? AMBIGUOUS_SYMBOLS.has(trimmed.toLowerCase()) : false;
-}

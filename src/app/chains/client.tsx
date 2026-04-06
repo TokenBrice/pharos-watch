@@ -12,7 +12,8 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { formatRatioPct, HEALTH_BADGE_CLASSES, trendColor } from "@/lib/chain-ui";
+import { HEALTH_BADGE_CLASSES, trendColor } from "@/lib/chain-ui";
+import { formatSignedPercent } from "@shared/lib/format";
 import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { CHAIN_META } from "@shared/lib/chains";
 import { formatCompactUsd } from "@shared/lib/format";
@@ -295,7 +296,7 @@ export function ChainsLeaderboardClient() {
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums">{formatCompactUsd(chain.totalUsd)}</TableCell>
                 <TableCell className={cn("text-right font-mono tabular-nums", trendColor(chain.change7dPct))}>
-                  {formatRatioPct(chain.change7dPct)}
+                  {formatSignedPercent(chain.change7dPct * 100, 2)}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">

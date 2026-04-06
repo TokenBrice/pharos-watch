@@ -41,9 +41,6 @@ export function formatTreasuryUsdNullable(value: number | null): string {
   return value == null ? "N/A" : formatTreasuryUsd(value);
 }
 
-export function formatTreasuryPct(value: number | null): string {
-  return value == null ? "N/A" : `${value.toFixed(1)}%`;
-}
 
 // ---------------------------------------------------------------------------
 // Denominator status helpers

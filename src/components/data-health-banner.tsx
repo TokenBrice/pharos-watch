@@ -2,10 +2,10 @@
 
 import {
   formatDataHealthTimestamp,
-  formatHealthAge,
   mergeHealthStates,
   type DataHealthInfo,
 } from "@/lib/data-health";
+import { formatElapsedSeconds } from "@shared/lib/format";
 import { DATA_HEALTH_COLORS } from "@shared/lib/classification";
 
 interface DataHealthBannerProps {
@@ -48,7 +48,7 @@ export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHe
     title = "Live refresh is running behind";
     message = `${affected} refreshed later than expected.`;
   } else if (merged.state === "stale") {
-    const age = formatHealthAge(worstAge);
+    const age = worstAge != null ? formatElapsedSeconds(worstAge / 1000) : "unknown";
     title = "Showing an older snapshot";
     message = `${affected} last refreshed over ${age} ago.`;
   } else if (merged.state === "unavailable") {

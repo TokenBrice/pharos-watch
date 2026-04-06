@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   decodeStablecoinUrlToken,
   encodeStablecoinUrlToken,
-  isAmbiguousStablecoinSymbol,
 } from "../stablecoin-url-codec";
 
 describe("stablecoin URL codec", () => {
@@ -17,7 +16,6 @@ describe("stablecoin URL codec", () => {
   });
 
   it("rejects ambiguous legacy symbols", () => {
-    expect(isAmbiguousStablecoinSymbol("usdf")).toBe(true);
     expect(decodeStablecoinUrlToken("usdf")).toBeNull();
     expect(decodeStablecoinUrlToken("cUSD")).toBeNull();
   });

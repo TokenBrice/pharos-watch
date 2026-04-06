@@ -15,48 +15,19 @@ import { formatYieldWarningSignal, getPysColor, computePysBreakdown } from "@/li
 import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
 import { cn } from "@/lib/utils";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
-import { formatCurrency, formatPercent, formatSignedPercent as sharedFormatSignedPercent } from "@shared/lib/format";
+import { formatCurrency, formatPercent, formatPercentFromRatio } from "@shared/lib/format";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { PYS_BENCHMARK_SPREAD_WEIGHT } from "@shared/lib/yield-scoring";
+import {
+  ALT_SOURCE_INITIAL_COUNT,
+  DATA_SOURCE_BADGES,
+  formatSignedPercent,
+} from "@/components/yield-detail-section-model";
 import type { AltYieldSource } from "@shared/types";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 
-const ALT_SOURCE_INITIAL_COUNT = 6;
-
 interface YieldDetailSectionProps {
   stablecoinId: string;
-}
-
-const DATA_SOURCE_BADGES: Record<string, { label: string; badge: string }> = {
-  onchain: {
-    label: "On-chain",
-    badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-  },
-  defillama: {
-    label: "DeFiLlama",
-    badge: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",
-  },
-  "defillama-auto": {
-    label: "DeFiLlama",
-    badge: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",
-  },
-  "protocol-api": {
-    label: "Protocol-native",
-    badge: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20",
-  },
-  "price-derived": {
-    label: "Price-derived",
-    badge: "bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20",
-  },
-  "rate-derived": {
-    label: "Rate-derived",
-    badge: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20",
-  },
-};
-
-function formatSignedPercent(value: number | null) {
-  if (value === null) return "\u2014";
-  return sharedFormatSignedPercent(value);
 }
 
 function PysBreakdown({
@@ -102,7 +73,7 @@ function PysBreakdown({
         <div className="space-y-1.5 rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md">
           <div>
             <span className="text-muted-foreground">Effective Yield: </span>
-            <span className="font-mono">{effectiveYield.toFixed(1)}%</span>
+            <span className="font-mono">{formatPercent(effectiveYield, 1)}</span>
           </div>
           {benchmarkSpread !== null ? (
             <div>
@@ -110,7 +81,7 @@ function PysBreakdown({
               <span className="font-mono">{formatSignedPercent(benchmarkAdjustment)}</span>
               <span className="text-muted-foreground">
                 {" "}
-                ({(PYS_BENCHMARK_SPREAD_WEIGHT * 100).toFixed(0)}% of {formatSignedPercent(benchmarkSpread)}
+                ({formatPercentFromRatio(PYS_BENCHMARK_SPREAD_WEIGHT, 0)} of {formatSignedPercent(benchmarkSpread)}
                 {benchmarkLabel ? ` vs ${benchmarkLabel}` : " spread"})
               </span>
             </div>
@@ -131,7 +102,7 @@ function PysBreakdown({
           </div>
           <div>
             <span className="text-muted-foreground">Consistency: </span>
-            <span className="font-mono">{(sustainabilityMult * 100).toFixed(0)}%</span>
+            <span className="font-mono">{formatPercentFromRatio(sustainabilityMult, 0)}</span>
           </div>
         </div>
       </div>
@@ -428,7 +399,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
     ranking.benchmarkRate,
   );
   const pysColor = getPysColor(ranking.pharosYieldScore);
-  const stabilityValue = ranking.yieldStability !== null ? `${(ranking.yieldStability * 100).toFixed(0)}%` : "—";
+  const stabilityValue = ranking.yieldStability !== null ? formatPercentFromRatio(ranking.yieldStability, 0) : "—";
   const dataSourceMeta = DATA_SOURCE_BADGES[ranking.dataSource] ?? DATA_SOURCE_BADGES.defillama;
   const singleWarning = ranking.warningSignals.length === 1 ? ranking.warningSignals[0] : null;
   const historySources = [

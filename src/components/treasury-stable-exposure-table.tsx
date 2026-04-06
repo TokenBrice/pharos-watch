@@ -10,13 +10,13 @@ import {
   TREASURY_SORT_OPTIONS,
   formatTreasuryUsd,
   formatTreasuryUsdNullable,
-  formatTreasuryPct,
   isTreasuryComparableEntity,
   denominatorStatusLabel,
   denominatorStatusClassName,
   coverageSummary,
   sortTreasuryExposureEntities,
 } from "@/lib/treasury-table-utils";
+import { formatPercent } from "@shared/lib/format";
 
 export function TreasuryStableExposureTable({
   data,
@@ -121,11 +121,11 @@ export function TreasuryStableExposureTable({
                       </div>
                       <div>
                         <div className="uppercase tracking-[0.16em]">% Treasury</div>
-                        <div className="mt-1 text-sm font-medium text-foreground">{formatTreasuryPct(entity.decentralizedStablePctOfTreasury)}</div>
+                        <div className="mt-1 text-sm font-medium text-foreground">{formatPercent(entity.decentralizedStablePctOfTreasury, 1)}</div>
                       </div>
                       <div>
                         <div className="uppercase tracking-[0.16em]">% Stable Sleeve</div>
-                        <div className="mt-1 text-sm font-medium text-foreground">{formatTreasuryPct(entity.decentralizedStablePctOfStableSleeve)}</div>
+                        <div className="mt-1 text-sm font-medium text-foreground">{formatPercent(entity.decentralizedStablePctOfStableSleeve, 1)}</div>
                       </div>
                       <div>
                         <div className="uppercase tracking-[0.16em]">Tracked Sleeve</div>
@@ -135,8 +135,8 @@ export function TreasuryStableExposureTable({
                   </div>
 
                   <div className="hidden text-sm font-medium text-foreground md:block">{formatTreasuryUsd(entity.decentralizedStableUsd)}</div>
-                  <div className="hidden text-sm text-foreground md:block">{formatTreasuryPct(entity.decentralizedStablePctOfTreasury)}</div>
-                  <div className="hidden text-sm text-foreground md:block">{formatTreasuryPct(entity.decentralizedStablePctOfStableSleeve)}</div>
+                  <div className="hidden text-sm text-foreground md:block">{formatPercent(entity.decentralizedStablePctOfTreasury, 1)}</div>
+                  <div className="hidden text-sm text-foreground md:block">{formatPercent(entity.decentralizedStablePctOfStableSleeve, 1)}</div>
                   <div className="hidden text-sm text-foreground md:block">{formatTreasuryUsd(entity.trackedStableUsd)}</div>
                   <div className="hidden md:block">
                     <GradeBadge
@@ -178,7 +178,7 @@ export function TreasuryStableExposureTable({
                             <div className="text-right text-xs text-muted-foreground">
                               <div className="text-sm font-medium text-foreground">{formatTreasuryUsd(holding.usdValue)}</div>
                               <div>
-                                {formatTreasuryPct(holding.pctOfTreasury)} of treasury · {formatTreasuryPct(holding.pctOfStableSleeve)} of sleeve
+                                {formatPercent(holding.pctOfTreasury, 1)} of treasury · {formatPercent(holding.pctOfStableSleeve, 1)} of sleeve
                               </div>
                             </div>
                           </div>
@@ -202,11 +202,11 @@ export function TreasuryStableExposureTable({
                         </div>
                         <div>
                           <div className="uppercase tracking-[0.16em]">Tracked / Treasury</div>
-                          <div className="mt-1 text-sm font-medium text-foreground">{formatTreasuryPct(entity.coverage.trackedStablePctOfTreasury)}</div>
+                          <div className="mt-1 text-sm font-medium text-foreground">{formatPercent(entity.coverage.trackedStablePctOfTreasury, 1)}</div>
                         </div>
                         <div>
                           <div className="uppercase tracking-[0.16em]">Rated / Tracked</div>
-                          <div className="mt-1 text-sm font-medium text-foreground">{formatTreasuryPct(entity.coverage.ratedTrackedStablePct)}</div>
+                          <div className="mt-1 text-sm font-medium text-foreground">{formatPercent(entity.coverage.ratedTrackedStablePct, 1)}</div>
                         </div>
                         <div>
                           <div className="uppercase tracking-[0.16em]">Consumed Direct</div>
