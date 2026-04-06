@@ -89,7 +89,7 @@ function LazyCard({ children, className }: { children: React.ReactNode; classNam
   }, []);
 
   return (
-    <div ref={ref} className={className}>
+    <div ref={ref} className={cn(className, visible && "pharos-card-enter")}>
       {visible ? children : (
         <div className="h-[340px] rounded-xl border bg-muted/20 animate-pulse flex flex-col items-center justify-center gap-2" role="status" aria-busy="true" aria-label="Loading score card">
           <div className="h-8 w-8 rounded-full bg-muted/40" />
@@ -160,7 +160,7 @@ function HeadlineStats({
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="grid grid-cols-3 gap-3 animate-fade-in">
       {stats.map((s) => (
         <div
           key={s.label}
@@ -384,7 +384,7 @@ const GRADE_SECTION_DESCRIPTIONS: Record<string, string> = {
 
 function GradeSectionHeader({ grade, count }: { grade: string; count: number }) {
   return (
-    <div className="col-span-full flex items-center gap-3 pt-4 first:pt-0">
+    <div className="col-span-full flex items-center gap-3 pt-4 first:pt-0 pharos-section-enter">
       <span
         className={cn(
           "flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold font-mono text-white",

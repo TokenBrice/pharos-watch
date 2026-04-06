@@ -576,6 +576,16 @@
     animation: pharos-chip-exit 150ms var(--motion-ease-standard) both;
   }
 
+  /* Score card grid entrance */
+  .pharos-card-enter {
+    animation: pharos-fade-in 200ms var(--motion-ease-standard) both;
+  }
+
+  /* Grade section header entrance */
+  .pharos-section-enter {
+    animation: pharos-fade-in-up 300ms var(--motion-ease-standard) both;
+  }
+
   /* Toast animations */
   @keyframes pharos-toast-enter {
     from {
