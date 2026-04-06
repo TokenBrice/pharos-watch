@@ -66,8 +66,73 @@ const TRACKED_IDS = new Set(MINT_BURN_CONFIGS.map((c) => c.stablecoinId));
 const REPORT_CARD_MAX_AGE_MS = 2 * 60 * 60 * 1000;
 
 // ---------------------------------------------------------------------------
-// DB row types
+// Types
 // ---------------------------------------------------------------------------
+
+interface CoinFlowSummary {
+  stablecoinId: string;
+  symbol: string;
+  flowIntensity: number | null;
+  pressureShiftScore: number | null;
+  pressureShiftState: "improving" | "stable" | "worsening" | "nr";
+  netFlowDirection24h: "minting" | "burning" | "flat" | "inactive";
+  has24hActivity: boolean;
+  baselineDailyNetUsd: number | null;
+  baselineDailyAbsUsd: number | null;
+  baselineDataDays: number | null;
+  netFlow24hUsd: number;
+  mintVolume24hUsd: number;
+  burnVolume24hUsd: number;
+  mintCount24h: number;
+  burnCount24h: number;
+  netFlow7dUsd: number;
+  netFlow30dUsd: number;
+  netFlow90dUsd: number;
+  largestEvent24h: {
+    direction: string;
+    amountUsd: number;
+    txHash: string;
+    timestamp: number;
+  } | null;
+  coverage: {
+    startBlock: number;
+    lastSyncedBlock: number | null;
+    lagBlocks: number | null;
+    historyStartAt: number | null;
+    has24hWindow: boolean;
+    has30dWindow: boolean;
+    has90dWindow: boolean;
+    isPartial: boolean;
+    adapterKinds?: string[];
+    startBlockSource?: string;
+    startBlockConfidence?: "high" | "medium" | "low";
+    status: "full" | "partial-history" | "lagging" | "bootstrapping" | "disabled";
+  };
+}
+
+interface AggregateQueryParams {
+  nowSec: number;
+  windowStart: number;
+  window24h: number;
+  window7d: number;
+  window30d: number;
+  window90d: number;
+  nowDayTs: number;
+  baselineWindowStart: number;
+}
+
+interface AggregateData {
+  hourlyRows: HourlyRow[];
+  hourly24hRows: HourlyRow[];
+  net7dMap: Map<string, number>;
+  net30dMap: Map<string, number>;
+  net90dMap: Map<string, number>;
+  baselineMap: ReturnType<typeof buildBaselineMap>;
+  largestEventMap: ReturnType<typeof selectLargestEvents>;
+  coverageMap: ReturnType<typeof buildCoinCoverageMap>;
+  sync: ReturnType<typeof buildMintBurnSyncHealth>;
+  latestSuccessfulSyncAt: number;
+}
 
 // ---------------------------------------------------------------------------
 // Handler
@@ -96,6 +161,224 @@ export const handleMintBurnFlows = withErrorHandler(
 );
 
 // ---------------------------------------------------------------------------
+// Aggregate mode — data fetching
+// ---------------------------------------------------------------------------
+
+async function fetchAggregateData(
+  db: D1Database,
+  params: AggregateQueryParams,
+): Promise<AggregateData> {
+  const ethereumConfigs = MINT_BURN_CONFIGS.filter((c) => c.chain.chainId === ETHEREUM_CHAIN_ID);
+
+  const [
+    hourlyWindowResult,
+    hourly24hResult,
+    hourly7dResult,
+    hourly30dResult,
+    hourly90dResult,
+    baselineDailyResult,
+    firstSeenResult,
+    largestEventsResult,
+    lastBlocks,
+    latestCronSnapshot,
+    latestSuccessfulSyncAt,
+  ] = await Promise.all([
+    db
+      .prepare(
+         `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+                 mint_volume_usd, burn_volume_usd, net_flow_usd
+          FROM mint_burn_hourly
+         WHERE chain_id = ? AND hour_ts >= ?
+          ORDER BY hour_ts ASC`,
+      )
+      .bind(ETHEREUM_CHAIN_ID, params.windowStart)
+      .all<HourlyRow>(),
+    db
+      .prepare(
+         `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+                 mint_volume_usd, burn_volume_usd, net_flow_usd
+          FROM mint_burn_hourly
+         WHERE chain_id = ? AND hour_ts >= ?
+          ORDER BY hour_ts ASC`,
+      )
+      .bind(ETHEREUM_CHAIN_ID, params.window24h)
+      .all<HourlyRow>(),
+    db
+      .prepare(
+        `SELECT stablecoin_id,
+                SUM(net_flow_usd) as net_flow_usd
+         FROM mint_burn_hourly
+         WHERE chain_id = ? AND hour_ts >= ?
+         GROUP BY stablecoin_id`,
+      )
+      .bind(ETHEREUM_CHAIN_ID, params.window7d)
+      .all<{ stablecoin_id: string; net_flow_usd: number }>(),
+    db
+      .prepare(
+        `SELECT stablecoin_id,
+                SUM(net_flow_usd) as net_flow_usd
+         FROM mint_burn_hourly
+         WHERE chain_id = ? AND hour_ts >= ?
+         GROUP BY stablecoin_id`,
+      )
+      .bind(ETHEREUM_CHAIN_ID, params.window30d)
+      .all<{ stablecoin_id: string; net_flow_usd: number }>(),
+    db
+      .prepare(
+        `SELECT stablecoin_id,
+                SUM(net_flow_usd) as net_flow_usd
+         FROM mint_burn_hourly
+         WHERE chain_id = ? AND hour_ts >= ?
+         GROUP BY stablecoin_id`,
+      )
+      .bind(ETHEREUM_CHAIN_ID, params.window90d)
+      .all<{ stablecoin_id: string; net_flow_usd: number }>(),
+    db
+      .prepare(
+        `SELECT stablecoin_id,
+                (hour_ts / 86400) * 86400 as day_ts,
+                SUM(net_flow_usd) as daily_net,
+                SUM(mint_volume_usd + burn_volume_usd) as daily_abs
+         FROM mint_burn_hourly
+         WHERE chain_id = ? AND hour_ts >= ? AND hour_ts < ?
+         GROUP BY stablecoin_id, day_ts`,
+      )
+      .bind(ETHEREUM_CHAIN_ID, params.baselineWindowStart, params.nowDayTs)
+      .all<DailyBaselineRow>(),
+    db
+      .prepare(
+        `SELECT stablecoin_id, MIN(hour_ts) as first_hour_ts
+         FROM mint_burn_hourly
+         WHERE chain_id = ?
+         GROUP BY stablecoin_id`,
+      )
+      .bind(ETHEREUM_CHAIN_ID)
+      .all<FirstSeenRow>(),
+    db
+      .prepare(
+        `SELECT id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
+                counterparty, tx_hash, block_number, timestamp, explorer_tx_url
+         FROM mint_burn_events
+         WHERE chain_id = ?
+           AND timestamp >= ?
+           AND (direction = 'mint' OR burn_type = 'effective_burn')
+           AND flow_type = 'standard'`,
+      )
+      .bind(ETHEREUM_CHAIN_ID, params.window24h)
+      .all<EventRow>(),
+    readMintBurnSyncStateBatch(db, ethereumConfigs),
+    readMintBurnCronSnapshot(db),
+    getLatestSuccessfulCronTimestamp(db, MINT_BURN_CRON_JOB, params.nowSec),
+  ]);
+
+  return {
+    hourlyRows: hourlyWindowResult.results ?? [],
+    hourly24hRows: hourly24hResult.results ?? [],
+    net7dMap: new Map((hourly7dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd])),
+    net30dMap: new Map((hourly30dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd])),
+    net90dMap: new Map((hourly90dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd])),
+    baselineMap: buildBaselineMap(params.nowSec, baselineDailyResult.results ?? [], firstSeenResult.results ?? []),
+    largestEventMap: selectLargestEvents(largestEventsResult.results ?? []),
+    coverageMap: buildCoinCoverageMap(params.nowSec, firstSeenResult.results ?? [], lastBlocks, latestCronSnapshot.chainHead),
+    sync: buildMintBurnSyncHealth(params.nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status),
+    latestSuccessfulSyncAt,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Aggregate mode — per-coin summary builder
+// ---------------------------------------------------------------------------
+
+function buildCoinSummaries(
+  data: AggregateData,
+  mcapById: Map<string, number>,
+  gradeClassification: ReturnType<typeof buildFlightToQualityClassification> | null,
+): { coins: CoinFlowSummary[]; gaugeInputs: Array<{ intensity: number | null; mcap: number }>; safeNet24h: number; riskyNet24h: number; trackedMcapUsd: number } {
+  const coinAgg = aggregateHourlyRowsByStablecoin(data.hourly24hRows);
+  const coins: CoinFlowSummary[] = [];
+  const gaugeInputs: Array<{ intensity: number | null; mcap: number }> = [];
+  let safeNet24h = 0;
+  let riskyNet24h = 0;
+  let trackedMcapUsd = 0;
+
+  const seenCoinIds = new Set<string>();
+  for (const config of MINT_BURN_CONFIGS) {
+    const id = config.stablecoinId;
+    if (seenCoinIds.has(id)) continue;
+    seenCoinIds.add(id);
+    const agg = coinAgg.get(id);
+    const baseline = data.baselineMap.get(id);
+    const mcap = mcapById.get(id) ?? 0;
+    trackedMcapUsd += mcap;
+
+    const netFlow24h = agg?.netFlow ?? 0;
+    const has24hActivity = (agg?.mintCount ?? 0) > 0
+      || (agg?.burnCount ?? 0) > 0
+      || (agg?.mintVolume ?? 0) > 0
+      || (agg?.burnVolume ?? 0) > 0;
+    const intensity = has24hActivity && baseline
+      ? computeFlowIntensity({
+          currentDailyNet: netFlow24h,
+          baselineDailyNet: baseline.avgNet,
+          baselineDailyAbs: baseline.avgAbs,
+          dataAgeDays: baseline.dataDays,
+          currentDailyAbs: (agg?.mintVolume ?? 0) + (agg?.burnVolume ?? 0),
+        })
+      : null;
+    const pressureShiftScore = intensity;
+
+    gaugeInputs.push({ intensity, mcap });
+
+    if (gradeClassification) {
+      if (gradeClassification.safeIds.has(id)) {
+        safeNet24h += netFlow24h;
+      } else if (gradeClassification.riskyIds.has(id)) {
+        riskyNet24h += netFlow24h;
+      }
+    }
+
+    const largest = data.largestEventMap.get(id);
+    const coverage = data.coverageMap.get(id) ?? {
+      startBlock: 0,
+      lastSyncedBlock: null,
+      lagBlocks: null,
+      historyStartAt: null,
+      has24hWindow: false,
+      has30dWindow: false,
+      has90dWindow: false,
+      isPartial: true,
+      status: "bootstrapping" as const,
+    };
+    coins.push({
+      stablecoinId: id,
+      symbol: config.symbol,
+      flowIntensity: intensity,
+      pressureShiftScore,
+      pressureShiftState: getPressureShiftState(pressureShiftScore),
+      netFlowDirection24h: getNetFlowDirection24h({ netFlow24hUsd: netFlow24h, has24hActivity }),
+      has24hActivity,
+      baselineDailyNetUsd: baseline?.avgNet ?? null,
+      baselineDailyAbsUsd: baseline?.avgAbs ?? null,
+      baselineDataDays: baseline?.dataDays ?? null,
+      netFlow24hUsd: netFlow24h,
+      mintVolume24hUsd: agg?.mintVolume ?? 0,
+      burnVolume24hUsd: agg?.burnVolume ?? 0,
+      mintCount24h: agg?.mintCount ?? 0,
+      burnCount24h: agg?.burnCount ?? 0,
+      netFlow7dUsd: data.net7dMap.get(id) ?? 0,
+      netFlow30dUsd: data.net30dMap.get(id) ?? 0,
+      netFlow90dUsd: data.net90dMap.get(id) ?? 0,
+      largestEvent24h: largest
+        ? { direction: largest.direction, amountUsd: largest.amount_usd ?? largest.amount, txHash: largest.tx_hash, timestamp: largest.timestamp }
+        : null,
+      coverage,
+    });
+  }
+
+  return { coins, gaugeInputs, safeNet24h, riskyNet24h, trackedMcapUsd };
+}
+
+// ---------------------------------------------------------------------------
 // Aggregate mode (no stablecoin param)
 // ---------------------------------------------------------------------------
 
@@ -104,19 +387,28 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
   try {
     const nowSec = Math.floor(Date.now() / 1000);
     const syncStartSec = nowSec;
-    const windowStart = nowSec - hours * 3600;
-    const window24h = nowSec - FLOW_DEFAULT_WINDOW_HOURS * 3600;
-    const window7d  = nowSec - 7  * 24 * 3600;
-    const window30d = nowSec - 30 * 24 * 3600;
-    const window90d = nowSec - 90 * 24 * 3600;
     const nowDayTs = bucketDay(nowSec);
-    const baselineWindowStart = nowDayTs - BASELINE_WINDOW_DAYS * DAY_SECONDS;
+    const params: AggregateQueryParams = {
+      nowSec,
+      windowStart: nowSec - hours * 3600,
+      window24h: nowSec - FLOW_DEFAULT_WINDOW_HOURS * 3600,
+      window7d: nowSec - 7 * 24 * 3600,
+      window30d: nowSec - 30 * 24 * 3600,
+      window90d: nowSec - 90 * 24 * 3600,
+      nowDayTs,
+      baselineWindowStart: nowDayTs - BASELINE_WINDOW_DAYS * DAY_SECONDS,
+    };
 
-    // Load grade-based classification (FTQ disabled when cache unavailable; see classificationWarning)
+    // Load grade-based classification (FTQ disabled when cache unavailable)
     const reportCardCache = await loadReportCardCache(db, { maxAgeMs: REPORT_CARD_MAX_AGE_MS });
     const gradeClassification = reportCardCache.kind === "ok"
       ? buildFlightToQualityClassification(reportCardCache.payload)
       : null;
+    const classificationWarning = reportCardCache.kind === "ok"
+      ? null
+      : `Report-card FTQ classification unavailable (${reportCardCache.reason})`;
+    const classificationSource = reportCardCache.kind === "ok" ? "report-card-cache" : "unavailable";
+    if (classificationWarning) console.warn(`[mint-burn-flows] ${classificationWarning}`);
 
     // Load stablecoins cache for mcap lookup
     const mcapById = new Map<string, number>();
@@ -125,333 +417,41 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
       const cached = await getCache(db, cacheKey);
       if (cached) {
         console.error(
-          `[mint-burn-flows] stablecoins cache ${stablecoinsCacheResult.kind} (${stablecoinsCacheResult.reason}), ` +
-          `serving fallback cache (${cacheKey})`,
+          `[mint-burn-flows] stablecoins cache ${stablecoinsCacheResult.kind} (${stablecoinsCacheResult.reason}), serving fallback cache (${cacheKey})`,
         );
         return cachedFlowFallbackResponse(cached);
       }
       return errorResponse(503, "Stablecoins data not yet available");
     }
     for (const asset of stablecoinsCacheResult.payload.peggedAssets as StablecoinData[]) {
-      if (TRACKED_IDS.has(asset.id)) {
-        mcapById.set(asset.id, sumPegBuckets(asset.circulating));
-      }
-    }
-    const ethereumConfigs = MINT_BURN_CONFIGS.filter((config) => config.chain.chainId === ETHEREUM_CHAIN_ID);
-
-    // Parallel queries:
-    // - hourly data for requested chart window
-    // - hourly data for canonical 24h coin/gauge summaries
-    // - 7d/30d/90d net sums
-    // - daily baseline rows excluding the current UTC day
-    // - first-seen timestamps
-    // - raw 24h event candidates for deterministic largest-event selection
-    // - sync state / cron freshness inputs
-    const [
-      hourlyWindowResult,
-      hourly24hResult,
-      hourly7dResult,
-      hourly30dResult,
-      hourly90dResult,
-      baselineDailyResult,
-      firstSeenResult,
-      largestEventsResult,
-      lastBlocks,
-      latestCronSnapshot,
-      latestSuccessfulSyncAt,
-    ] = await Promise.all([
-      db
-        .prepare(
-           `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
-                   mint_volume_usd, burn_volume_usd, net_flow_usd
-            FROM mint_burn_hourly
-           WHERE chain_id = ? AND hour_ts >= ?
-            ORDER BY hour_ts ASC`,
-        )
-        .bind(ETHEREUM_CHAIN_ID, windowStart)
-        .all<HourlyRow>(),
-      db
-        .prepare(
-           `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
-                   mint_volume_usd, burn_volume_usd, net_flow_usd
-            FROM mint_burn_hourly
-           WHERE chain_id = ? AND hour_ts >= ?
-            ORDER BY hour_ts ASC`,
-        )
-        .bind(ETHEREUM_CHAIN_ID, window24h)
-        .all<HourlyRow>(),
-      db
-        .prepare(
-          `SELECT stablecoin_id,
-                  SUM(net_flow_usd) as net_flow_usd
-           FROM mint_burn_hourly
-           WHERE chain_id = ? AND hour_ts >= ?
-           GROUP BY stablecoin_id`,
-        )
-        .bind(ETHEREUM_CHAIN_ID, window7d)
-        .all<{ stablecoin_id: string; net_flow_usd: number }>(),
-      db
-        .prepare(
-          `SELECT stablecoin_id,
-                  SUM(net_flow_usd) as net_flow_usd
-           FROM mint_burn_hourly
-           WHERE chain_id = ? AND hour_ts >= ?
-           GROUP BY stablecoin_id`,
-        )
-        .bind(ETHEREUM_CHAIN_ID, window30d)
-        .all<{ stablecoin_id: string; net_flow_usd: number }>(),
-      db
-        .prepare(
-          `SELECT stablecoin_id,
-                  SUM(net_flow_usd) as net_flow_usd
-           FROM mint_burn_hourly
-           WHERE chain_id = ? AND hour_ts >= ?
-           GROUP BY stablecoin_id`,
-        )
-        .bind(ETHEREUM_CHAIN_ID, window90d)
-        .all<{ stablecoin_id: string; net_flow_usd: number }>(),
-      db
-        .prepare(
-          `SELECT stablecoin_id,
-                  (hour_ts / 86400) * 86400 as day_ts,
-                  SUM(net_flow_usd) as daily_net,
-                  SUM(mint_volume_usd + burn_volume_usd) as daily_abs
-           FROM mint_burn_hourly
-           WHERE chain_id = ? AND hour_ts >= ? AND hour_ts < ?
-           GROUP BY stablecoin_id, day_ts`,
-        )
-        .bind(ETHEREUM_CHAIN_ID, baselineWindowStart, nowDayTs)
-        .all<DailyBaselineRow>(),
-      db
-        .prepare(
-          `SELECT stablecoin_id, MIN(hour_ts) as first_hour_ts
-           FROM mint_burn_hourly
-           WHERE chain_id = ?
-           GROUP BY stablecoin_id`,
-        )
-        .bind(ETHEREUM_CHAIN_ID)
-        .all<FirstSeenRow>(),
-      db
-        .prepare(
-          `SELECT id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
-                  counterparty, tx_hash, block_number, timestamp, explorer_tx_url
-           FROM mint_burn_events
-           WHERE chain_id = ?
-             AND timestamp >= ?
-             AND (direction = 'mint' OR burn_type = 'effective_burn')
-             AND flow_type = 'standard'`,
-        )
-        .bind(ETHEREUM_CHAIN_ID, window24h)
-        .all<EventRow>(),
-      readMintBurnSyncStateBatch(db, ethereumConfigs),
-      readMintBurnCronSnapshot(db),
-      getLatestSuccessfulCronTimestamp(db, MINT_BURN_CRON_JOB, nowSec),
-    ]);
-
-    const hourlyRows = hourlyWindowResult.results ?? [];
-    const hourly24hRows = hourly24hResult.results ?? [];
-    const net7dMap  = new Map((hourly7dResult.results  ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd]));
-    const net30dMap = new Map((hourly30dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd]));
-    const net90dMap = new Map((hourly90dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd]));
-    const baselineMap = buildBaselineMap(
-      nowSec,
-      baselineDailyResult.results ?? [],
-      firstSeenResult.results ?? [],
-    );
-    const largestEventMap = selectLargestEvents(largestEventsResult.results ?? []);
-    const coverageMap = buildCoinCoverageMap(
-      nowSec,
-      firstSeenResult.results ?? [],
-      lastBlocks,
-      latestCronSnapshot.chainHead,
-    );
-    const sync = buildMintBurnSyncHealth(nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status);
-
-    // Aggregate per-coin summaries from canonical 24h rows
-    const coinAgg = aggregateHourlyRowsByStablecoin(hourly24hRows);
-
-    // Compute FIS and build coin responses
-    const coins: Array<{
-      stablecoinId: string;
-      symbol: string;
-      flowIntensity: number | null;
-      pressureShiftScore: number | null;
-        pressureShiftState: "improving" | "stable" | "worsening" | "nr";
-        netFlowDirection24h: "minting" | "burning" | "flat" | "inactive";
-        has24hActivity: boolean;
-        baselineDailyNetUsd: number | null;
-        baselineDailyAbsUsd: number | null;
-        baselineDataDays: number | null;
-        netFlow24hUsd: number;
-        mintVolume24hUsd: number;
-        burnVolume24hUsd: number;
-      mintCount24h: number;
-      burnCount24h: number;
-      netFlow7dUsd: number;
-      netFlow30dUsd: number;
-      netFlow90dUsd: number;
-        largestEvent24h: {
-          direction: string;
-          amountUsd: number;
-          txHash: string;
-          timestamp: number;
-        } | null;
-        coverage: {
-          startBlock: number;
-          lastSyncedBlock: number | null;
-          lagBlocks: number | null;
-          historyStartAt: number | null;
-          has24hWindow: boolean;
-          has30dWindow: boolean;
-          has90dWindow: boolean;
-          isPartial: boolean;
-          adapterKinds?: string[];
-          startBlockSource?: string;
-          startBlockConfidence?: "high" | "medium" | "low";
-          status: "full" | "partial-history" | "lagging" | "bootstrapping" | "disabled";
-        };
-    }> = [];
-
-    const gaugeInputs: Array<{ intensity: number | null; mcap: number }> = [];
-    let safeNet24h = 0;
-    let riskyNet24h = 0;
-    let trackedMcapUsd = 0;
-
-    const classificationWarning = reportCardCache.kind === "ok"
-      ? null
-      : `Report-card FTQ classification unavailable (${reportCardCache.reason})`;
-    const classificationSource = reportCardCache.kind === "ok" ? "report-card-cache" : "unavailable";
-    if (classificationWarning) {
-      console.warn(`[mint-burn-flows] ${classificationWarning}`);
+      if (TRACKED_IDS.has(asset.id)) mcapById.set(asset.id, sumPegBuckets(asset.circulating));
     }
 
-    const seenCoinIds = new Set<string>();
-    for (const config of MINT_BURN_CONFIGS) {
-      const id = config.stablecoinId;
-      if (seenCoinIds.has(id)) continue;
-      seenCoinIds.add(id);
-      const agg = coinAgg.get(id);
-      const baseline = baselineMap.get(id);
-      const mcap = mcapById.get(id) ?? 0;
-      trackedMcapUsd += mcap;
+    const data = await fetchAggregateData(db, params);
+    const { coins, gaugeInputs, safeNet24h, riskyNet24h, trackedMcapUsd } =
+      buildCoinSummaries(data, mcapById, gradeClassification);
 
-      const netFlow24h = agg?.netFlow ?? 0;
-      const has24hActivity = (agg?.mintCount ?? 0) > 0
-        || (agg?.burnCount ?? 0) > 0
-        || (agg?.mintVolume ?? 0) > 0
-        || (agg?.burnVolume ?? 0) > 0;
-      const intensity = has24hActivity && baseline
-        ? computeFlowIntensity({
-            currentDailyNet: netFlow24h,
-            baselineDailyNet: baseline.avgNet,
-            baselineDailyAbs: baseline.avgAbs,
-            dataAgeDays: baseline.dataDays,
-            currentDailyAbs: (agg?.mintVolume ?? 0) + (agg?.burnVolume ?? 0),
-          })
-        : null;
-      const pressureShiftScore = intensity;
-      const pressureShiftState = getPressureShiftState(pressureShiftScore);
-      const netFlowDirection24h = getNetFlowDirection24h({
-        netFlow24hUsd: netFlow24h,
-        has24hActivity,
-      });
-
-      gaugeInputs.push({ intensity, mcap });
-
-      if (gradeClassification) {
-        // Grade-based: safe (>=65), risky (<50), neutral (50-64) ignored
-        if (gradeClassification.safeIds.has(id)) {
-          safeNet24h += netFlow24h;
-        } else if (gradeClassification.riskyIds.has(id)) {
-          riskyNet24h += netFlow24h;
-        }
-        // Neutral coins don't contribute to FTQ signal
-      }
-
-      const largest = largestEventMap.get(id);
-      const coverage = coverageMap.get(id) ?? {
-        startBlock: 0,
-        lastSyncedBlock: null,
-        lagBlocks: null,
-        historyStartAt: null,
-        has24hWindow: false,
-        has30dWindow: false,
-        has90dWindow: false,
-        isPartial: true,
-        status: "bootstrapping" as const,
-      };
-      coins.push({
-        stablecoinId: id,
-        symbol: config.symbol,
-        flowIntensity: intensity,
-        pressureShiftScore,
-        pressureShiftState,
-        netFlowDirection24h,
-        has24hActivity,
-        baselineDailyNetUsd: baseline?.avgNet ?? null,
-        baselineDailyAbsUsd: baseline?.avgAbs ?? null,
-        baselineDataDays: baseline?.dataDays ?? null,
-        netFlow24hUsd: netFlow24h,
-        mintVolume24hUsd: agg?.mintVolume ?? 0,
-        burnVolume24hUsd: agg?.burnVolume ?? 0,
-        mintCount24h: agg?.mintCount ?? 0,
-        burnCount24h: agg?.burnCount ?? 0,
-        netFlow7dUsd:  net7dMap.get(id)  ?? 0,
-        netFlow30dUsd: net30dMap.get(id) ?? 0,
-        netFlow90dUsd: net90dMap.get(id) ?? 0,
-        largestEvent24h: largest
-          ? {
-              direction: largest.direction,
-              amountUsd: largest.amount_usd ?? largest.amount,
-              txHash: largest.tx_hash,
-              timestamp: largest.timestamp,
-            }
-          : null,
-        coverage,
-      });
-    }
-
-    // Gauge score
     const gaugeScore = computeGaugeScore(gaugeInputs);
     const gaugeBand = gaugeScore !== null ? getGaugeBand(gaugeScore) : null;
-
-    // Flight-to-quality
     const ftq = detectFlightToQuality({ safeNet24h, riskyNet24h });
-
-    // Hourly timeseries (aggregate across all coins)
-    const hourly = buildHourlyFlowSeries(hourlyRows);
-    const updatedAt = resolveFlowUpdatedAt(hourlyRows, nowSec);
+    const hourly = buildHourlyFlowSeries(data.hourlyRows);
+    const updatedAt = resolveFlowUpdatedAt(data.hourlyRows, nowSec);
 
     const body = {
       gauge: {
-        score: gaugeScore,
-        band: gaugeBand?.label ?? null,
-        intensitySemantics: "signed-v2",
-        flightToQuality: ftq.active,
-        flightIntensity: ftq.intensity,
-        classificationSource,
-        // Use deduped stablecoin count (configs can include multiple contracts/chains per coin).
-        trackedCoins: coins.length,
-        trackedMcapUsd,
+        score: gaugeScore, band: gaugeBand?.label ?? null, intensitySemantics: "signed-v2",
+        flightToQuality: ftq.active, flightIntensity: ftq.intensity, classificationSource,
+        trackedCoins: coins.length, trackedMcapUsd,
       },
-      coins,
-      hourly,
-      updatedAt,
-      windowHours: hours,
-      scope: {
-        chainIds: [ETHEREUM_CHAIN_ID],
-        label: "Ethereum-only",
-      },
-      sync: {
-        ...sync,
-        classificationWarning,
-      },
+      coins, hourly, updatedAt, windowHours: hours,
+      scope: { chainIds: [ETHEREUM_CHAIN_ID], label: "Ethereum-only" },
+      sync: { ...data.sync, classificationWarning },
     };
 
     await setCacheIfNewer(db, cacheKey, JSON.stringify(body), syncStartSec);
     return jsonResponse(body, addFreshnessHeaders({
       "Cache-Control": CACHE_PROFILES.standard,
-    }, latestSuccessfulSyncAt, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC));
+    }, data.latestSuccessfulSyncAt, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC));
   } catch (err) {
     const cached = await getCache(db, cacheKey);
     if (cached) {
