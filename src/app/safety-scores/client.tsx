@@ -164,7 +164,7 @@ function HeadlineStats({
       {stats.map((s) => (
         <div
           key={s.label}
-          className="rounded-lg border border-border/50 bg-card/50 px-3 py-2.5 text-center"
+          className="rounded-lg border border-border/50 bg-card/50 px-3 py-3 text-center"
         >
           <p className="pharos-kicker">{s.label}</p>
           <p className="text-lg font-bold font-mono tracking-tight">{s.value}</p>
@@ -384,7 +384,7 @@ const GRADE_SECTION_DESCRIPTIONS: Record<string, string> = {
 
 function GradeSectionHeader({ grade, count }: { grade: string; count: number }) {
   return (
-    <div className="col-span-full flex items-center gap-3 pt-2">
+    <div className="col-span-full flex items-center gap-3 pt-4 first:pt-0">
       <span
         className={cn(
           "flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold font-mono text-white",
@@ -632,7 +632,7 @@ export function ReportCardsClient() {
       </div>
 
       {/* Filter + Sort controls */}
-      <div className="space-y-3">
+      <div className="space-y-3 border-t border-border/30 pt-6">
         {/* Mobile */}
         <details className="rounded-2xl border border-border/60 bg-card/50 px-4 py-3 md:hidden">
           <summary className="pharos-focus-ring cursor-pointer rounded-lg text-sm font-medium text-foreground">
