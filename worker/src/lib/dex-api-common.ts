@@ -55,6 +55,17 @@ function getDisplayTokenSymbol(token: DexApiPoolToken): string {
   return normalizeDexSymbol(token.symbol) || token.address.slice(0, 10);
 }
 
+function resolvePoolTokenSymbol(
+  pool: DexApiPool,
+  token: DexApiPoolToken,
+  contractMetaByChainAddress: SymbolLookups["contractMetaByChainAddress"],
+): string | null {
+  const normalizedSymbol = normalizeDexSymbol(token.symbol);
+  if (normalizedSymbol) return token.symbol;
+  const contractMeta = contractMetaByChainAddress.get(makeChainAddressKey(pool.chain, token.address));
+  return contractMeta?.symbol ?? null;
+}
+
 function resolvePoolTokenDecimals(
   pool: DexApiPool,
   token: DexApiPoolToken,
@@ -72,6 +83,11 @@ export function hydrateDirectApiPoolMetadata(
 ): void {
   for (const pool of pools) {
     for (const token of pool.tokens) {
+      const resolvedSymbol = resolvePoolTokenSymbol(pool, token, contractMetaByChainAddress);
+      if (resolvedSymbol) {
+        token.symbol = resolvedSymbol;
+      }
+
       const resolvedDecimals = resolvePoolTokenDecimals(pool, token, contractMetaByChainAddress);
       if (resolvedDecimals != null) {
         token.decimals = resolvedDecimals;

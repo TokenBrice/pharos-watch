@@ -4,6 +4,7 @@ import {
   extractPriceObservations as extractPriceObservationsImpl,
   DIRECT_API_POOL_MIN_TVL_USD,
   DIRECT_API_PRICE_MIN_TVL_USD,
+  hydrateDirectApiPoolMetadata,
   type DexApiPool,
 } from "../../lib/dex-api-common";
 
@@ -47,6 +48,19 @@ function buildSymbolToChainScopedIds(
       scoped.set(chain.toLowerCase(), [...ids]);
     }
     result.set(symbol.trim().toUpperCase(), scoped);
+  }
+  return result;
+}
+
+function buildContractMetaByChainAddress(
+  entries: Array<[string, { stablecoinId: string; symbol: string; decimals: number | null; source: "contract" | "tradedContract" }]>,
+  chains: string[],
+): Map<string, { stablecoinId: string; symbol: string; decimals: number | null; source: "contract" | "tradedContract" }> {
+  const result = new Map<string, { stablecoinId: string; symbol: string; decimals: number | null; source: "contract" | "tradedContract" }>();
+  for (const chain of chains) {
+    for (const [address, meta] of entries) {
+      result.set(`${chain.toLowerCase()}:${address.toLowerCase()}`, meta);
+    }
   }
   return result;
 }
@@ -255,6 +269,34 @@ describe("convertToGtNewPools", () => {
 
     expect(gtPool.symbol).toContain("0xA0b86991");
     expect(gtPool.price).toBeGreaterThan(0);
+  });
+
+  it("hydrates missing tracked token symbols from contract metadata before formatting pair labels", () => {
+    const pool: DexApiPool = {
+      ...MOCK_POOL,
+      balancesNormalized: true,
+      tokens: [
+        { address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", symbol: "", decimals: 0 },
+        { address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", symbol: "", decimals: 0 },
+      ],
+    };
+    const chains = ["ethereum"];
+    const contractMetaByChainAddress = buildContractMetaByChainAddress([
+      ["0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", { stablecoinId: "usdc", symbol: "USDC", decimals: 6, source: "contract" }],
+      ["0xdAC17F958D2ee523a2206206994597C13D831ec7", { stablecoinId: "usdt", symbol: "USDT", decimals: 6, source: "contract" }],
+    ], chains);
+    hydrateDirectApiPoolMetadata([pool], contractMetaByChainAddress);
+
+    const addressToId = new Map([
+      ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"],
+      ["0xdac17f958d2ee523a2206206994597c13d831ec7", "usdt"],
+    ]);
+    const result = convertToGtNewPools([pool], addressToId, new Map());
+    const gtPool = result.get("usdc")![0];
+
+    expect(pool.tokens[0]?.symbol).toBe("USDC");
+    expect(pool.tokens[0]?.decimals).toBe(6);
+    expect(gtPool.symbol).toBe("USDC / USDT");
   });
 
   it("applies correct quality multiplier for pool type", () => {

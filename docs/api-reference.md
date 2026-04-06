@@ -1012,7 +1012,7 @@ DEX liquidity scores, pool breakdowns, source-confidence metadata, and on-chain 
 | `project`     | `string`              | Protocol slug (e.g. `"curve-dex"`, `"uniswap-v3"`)             |
 | `chain`       | `string`              | Chain name                                                     |
 | `tvlUsd`      | `number`              | Pool TVL (USD)                                                 |
-| `symbol`      | `string`              | Pool pair name (e.g. `"USDC-USDT"`)                            |
+| `symbol`      | `string`              | Pool pair name (e.g. `"USDC-USDT"`), normalized to tracked tickers when direct-API sources only provide token addresses |
 | `volumeUsd1d` | `number`              | 24 h volume (USD)                                              |
 | `poolType`    | `string`              | Pool type (e.g. `"curve-stableswap"`, `"uniswap-v3-5bp"`)      |
 | `source`      | `string \| undefined` | Canonical source family for this retained pool                 |
@@ -2243,17 +2243,17 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
   "dbHealthy": true,
   "availabilityStatus": "healthy",
   "dataQualityStatus": "healthy",
-  "rawOverallStatus": "degraded",
+  "rawOverallStatus": "healthy",
   "overallStatus": "healthy",
   "confidence": 0.94,
   "causes": {
-    "availability": [{ "code": "degraded_cron_warning", "severity": "info" }],
+    "availability": [{ "code": "watch_unhealthy_crons_present", "severity": "info" }],
     "dataQuality": [],
-    "overall": [{ "code": "degraded_cron_warning", "severity": "info" }]
+    "overall": [{ "code": "watch_unhealthy_crons_present", "severity": "info" }]
   },
   "state": {
     "currentStatus": "healthy",
-    "rawStatus": "degraded",
+    "rawStatus": "healthy",
     "lastEvaluatedAt": 1771856453,
     "lastChangedAt": 1771856200,
     "consecutiveRaw": { "healthy": 3, "degraded": 0, "stale": 0 }
@@ -2353,10 +2353,33 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "discoveryCandidates": 1771856400
   },
   "summary": {
-    "unhealthyCrons": 0,
+    "unhealthyCrons": 1,
+    "availabilityImpactingUnhealthyCrons": 0,
+    "watchUnhealthyCrons": 1,
     "degradedCrons": 1,
     "cronErrors": 0,
+    "availabilityImpactingCronErrors": 0,
+    "diagnosticIssueCount": 0,
     "worstCacheRatio": 1.03
+  },
+  "reserveComposition": {
+    "configuredCoins": 18,
+    "freshCoins": 16,
+    "staleCoins": 1,
+    "missingCoins": 0,
+    "degradedCoins": 1,
+    "errorCoins": 0,
+    "corruptCoins": 0,
+    "independentFreshEligible": 9,
+    "independentFreshUnverified": 2,
+    "staticValidatedFresh": 4,
+    "weakProbeFresh": 1,
+    "writeTimeoutUncertain": 0,
+    "lastSuccessAt": 1771855800,
+    "oldestFreshAgeSec": 3100,
+    "status": "healthy",
+    "freshCoverageRatio": 0.89,
+    "authoritativeFreshCoverageRatio": 0.83
   },
   "priceSourceHealth": {
     "sourceDistribution": {
@@ -2473,6 +2496,14 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
 Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSupplyTrackedCoins >= 10`; below that floor, the counts remain visible but do not by themselves escalate `dataQualityStatus`.
 
 `itemCount` and `dataQuality.totalStablecoins` are illustrative example values. In the live handler they reflect the current cached stablecoin payload size, not `TRACKED_STABLECOINS.length`.
+
+`summary.availabilityImpactingUnhealthyCrons` and `summary.availabilityImpactingCronErrors` count only cron jobs tagged `statusImpact="critical"` in `shared/lib/cron-jobs.ts`. `summary.watchUnhealthyCrons` counts the watch-tier jobs that remain visible but do not degrade `availabilityStatus` on their own.
+
+`summary.diagnosticIssueCount` counts best-effort status loader failures such as cache freshness lookups, reserve overview diagnostics, mint/burn diagnostics, and non-stablecoins data-quality subqueries. These issues reduce confidence and appear as info causes, but they do not degrade `availabilityStatus` or `dataQualityStatus` on their own.
+
+`reserveComposition.status` is a derived health signal for live reserve coverage. After bootstrap, it becomes `stale` when `freshCoins === 0`, `degraded` when `freshCoverageRatio < 0.75` or `authoritativeFreshCoverageRatio < 0.5`, and `healthy` otherwise.
+
+`reserveComposition.freshCoverageRatio` is `freshCoins / configuredCoins`. `reserveComposition.authoritativeFreshCoverageRatio` counts only stronger evidence cohorts (`independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`) over `configuredCoins`.
 
 `crons[*].healthy` reflects availability impact. Fresh cron runs with `status="degraded"` are warning-only and counted in `summary.degradedCrons`, but they do not mark availability unhealthy on their own.
 

@@ -204,6 +204,7 @@ export interface SymbolLookups {
   chainAddressToId: Map<string, string>;
   contractMetaByChainAddress: Map<string, {
     stablecoinId: string;
+    symbol: string;
     decimals: number | null;
     source: "contract" | "tradedContract";
   }>;

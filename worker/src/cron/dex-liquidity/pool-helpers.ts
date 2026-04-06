@@ -311,6 +311,7 @@ export function buildSymbolLookups(): SymbolLookups {
   const chainAddressToId = new Map<string, string>();
   const contractMetaByChainAddress = new Map<string, {
     stablecoinId: string;
+    symbol: string;
     decimals: number | null;
     source: "contract" | "tradedContract";
   }>();
@@ -321,6 +322,7 @@ export function buildSymbolLookups(): SymbolLookups {
       chainAddressToId.set(key, meta.id);
       contractMetaByChainAddress.set(key, {
         stablecoinId: meta.id,
+        symbol: meta.symbol,
         decimals: typeof contract.decimals === "number" && Number.isFinite(contract.decimals) ? contract.decimals : null,
         source: "contract",
       });
@@ -334,6 +336,7 @@ export function buildSymbolLookups(): SymbolLookups {
       if (!contractMetaByChainAddress.has(key)) {
         contractMetaByChainAddress.set(key, {
           stablecoinId: meta.id,
+          symbol: meta.symbol,
           decimals: typeof contract.decimals === "number" && Number.isFinite(contract.decimals) ? contract.decimals : null,
           source: "tradedContract",
         });
