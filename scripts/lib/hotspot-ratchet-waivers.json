@@ -1,0 +1,82 @@
+{
+  "src/lib/coverage.ts": {
+    "disposition": "deferred",
+    "notes": "Coverage aggregation and scenario logic are still evolving with the matrix surface. Defer decomposition until the coverage data model settles."
+  },
+  "worker/src/cron/dex-liquidity/fetch-primary.ts": {
+    "disposition": "queued-p4",
+    "notes": "Primary DEX-liquidity fetch fanout remains a large stage after the orchestrator cleanup. Track it for a dedicated fetch-family split rather than folding more logic into the current file."
+  },
+  "src/app/stability-index/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "The PSI route client is still a broad UI composition surface. Keep it waived until the route-level frontend hotspot pass is scheduled."
+  },
+  "src/app/about/page.tsx": {
+    "disposition": "deferred",
+    "notes": "The about page is content-heavy and low-risk operationally. Defer structural cleanup behind higher-value worker and analytics refactors."
+  },
+  "worker/src/lib/api-utils.ts": {
+    "disposition": "deferred",
+    "notes": "This shared response helper surface has broad worker consumers. Defer a split until the current admin/status changes settle to avoid churn across unrelated handlers."
+  },
+  "src/components/stablecoin-detail/hero-card.tsx": {
+    "disposition": "queued-p4",
+    "notes": "The stablecoin detail hero remains a large presentation hotspot. Track it for the planned frontend decomposition lane rather than mixing it into the worker-focused tranche."
+  },
+  "worker/src/cron/sync-stablecoins/enrich-prices-primary.ts": {
+    "disposition": "queued-p4",
+    "notes": "Primary pricing enrichment is still a large hotspot after the pass-family split. Follow up with an internal phase breakdown once the current pricing changes stabilize."
+  },
+  "worker/src/cron/yield-sync/sources-optional-protocols.ts": {
+    "disposition": "deferred",
+    "notes": "Optional yield protocol adapters are still expanding. Defer the source-family split until the inventory settles and the post-C4 resolver work has baked."
+  },
+  "src/components/stablecoin-table.tsx": {
+    "disposition": "queued-p4",
+    "notes": "The main stablecoin table is a known frontend hotspot. Keep it waived pending a dedicated UI decomposition pass."
+  },
+  "worker/src/cron/dex-liquidity/challenger-persistence.ts": {
+    "disposition": "queued-p4",
+    "notes": "Discovery challenger persistence still combines selection, mutation planning, and writeback. Track it for a later persistence-policy split."
+  },
+  "src/app/safety-scores/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "The Safety Scores route client remains a large UI composition file. Track it with the other route-client hotspot follow-ups."
+  },
+  "src/components/kpi-bar.tsx": {
+    "disposition": "deferred",
+    "notes": "KPI layout logic is busy but stable. Defer cleanup until the dashboard presentation lane has capacity."
+  },
+  "worker/src/lib/fx-rate-state.ts": {
+    "disposition": "deferred",
+    "notes": "FX fallback state handling has many branches but a wide caller surface. Defer refactoring until the next pricing/runtime state follow-up."
+  },
+  "src/app/admin/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "The admin client remains a broad operator UI shell even after access cleanup. Track it for a dedicated admin-surface decomposition pass."
+  },
+  "worker/src/cron/sync-stablecoins/supplemental-assets.ts": {
+    "disposition": "deferred",
+    "notes": "Supplemental asset intake still mixes multiple provider families. Defer further splitting until the stablecoin sync surface stabilizes after the current tranche."
+  },
+  "worker/src/cron/dex-discovery/crawl-sources.ts": {
+    "disposition": "queued-p4",
+    "notes": "DEX discovery crawling is still source-dense and branchy. Track it for a later crawler-family extraction rather than expanding the current worker tranche."
+  },
+  "worker/src/cron/sync-yield-data.ts": {
+    "disposition": "queued-p4",
+    "notes": "The yield publication coordinator still owns a large orchestration surface after the resolver split. Track it for a later coordinator decomposition."
+  },
+  "src/components/command-palette.tsx": {
+    "disposition": "deferred",
+    "notes": "The command palette is large but isolated to frontend UX. Defer cleanup behind higher-risk analytics and worker hotspots."
+  },
+  "src/components/status/cron-metadata-summary.ts": {
+    "disposition": "deferred",
+    "notes": "Status metadata summarization has grown with the ops dashboard. Defer structural cleanup until the status surface settles after the current parallel work."
+  },
+  "shared/lib/format.ts": {
+    "disposition": "deferred",
+    "notes": "Shared formatting helpers are branchy but broadly reused. Defer any breakup until a dedicated shared-utility cleanup lane exists."
+  }
+}

@@ -67,11 +67,14 @@ Default policy:
    - `npm run typecheck`
    - `npm run check:worker-boundary`
    - `npm run check:shared-cycles`
+     This blocks on cycles in `shared/`, `worker/src`, and `src`.
    - `npm run check:migrations`
    - `npm run check:cron-sync`
    - `npm run check:cron-connections`
    - `npm run check:doc-counts`
+   - `npm run check:verified-doc-links`
    - `npm run check:doc-sync`
+   - `npm run check:env-contract`
    - `npm run check:duplicate-exports`
    - `npm run check:redemption-backstops`
    - `npm run check:unused-code`
@@ -118,7 +121,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - defaults to the full deploy path on `workflow_dispatch`
 2. `validate`
    - runs only when `deploy_required=true`
-   - always includes `npm run audit:deps`, `npm run audit:pricing-providers`, lint, policy/guardrail checks, `npm test`, and `npm run coverage:critical`
+   - always includes `npm run audit:deps`, `npm run audit:pricing-providers`, lint, policy/guardrail checks (including verified-doc link and env-contract validation), `npm test`, and `npm run coverage:critical`
    - includes `npm run build` + `npm run seo:check` only when `pages_changed=true`
    - includes `cd worker && npx tsc --noEmit` only when `worker_changed=true`
    - pull requests still call the same reusable workflow with default inputs, so PR validation stays full-strength

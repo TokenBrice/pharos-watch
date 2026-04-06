@@ -111,7 +111,7 @@ curl "http://localhost:8787/__scheduled?cron=*/15+*+*+*+*"
 ### Local Development Setup
 
 **Frontend-only (`npm run dev`)**
-Minimum: `NEXT_PUBLIC_API_BASE_URL` -- point to production (`https://api.pharos.watch`) or local worker (`http://localhost:8787`).
+Minimum: `NEXT_PUBLIC_API_BASE` -- point to production (`https://api.pharos.watch`) or local worker (`http://localhost:8787`).
 
 **Worker-only (`cd worker && npx wrangler dev`)**
 Requires D1 bindings and external API keys. See `worker/src/lib/env.ts` for the full binding contract and `.env.example` for all keys.

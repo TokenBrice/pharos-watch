@@ -18,6 +18,7 @@
 
 # next.js
 /.next/
+/worker/.next/
 /out/
 
 # generated build artifacts (keep .d.ts declarations for typecheck)

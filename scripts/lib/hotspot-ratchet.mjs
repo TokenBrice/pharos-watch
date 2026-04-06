@@ -1,5 +1,5 @@
-import { readFileSync, writeFileSync } from "fs";
-import { resolve } from "path";
+import { readFileSync, readdirSync, writeFileSync } from "fs";
+import { extname, join, relative, resolve } from "path";
 import ts from "typescript";
 
 export const TARGET_FILES = [
@@ -28,6 +28,7 @@ export const TARGET_FILES = [
   "worker/src/cron/dex-liquidity/orchestrator.ts",
   "worker/src/cron/sync-mint-burn.ts",
   "worker/src/cron/sync-live-reserves.ts",
+  "worker/src/cron/compute-dews.ts",
   "worker/src/cron/sync-stablecoins/enrich-prices.ts",
   "worker/src/cron/sync-blacklist.ts",
   "worker/src/cron/sync-fx-rates.ts",
@@ -39,8 +40,57 @@ export const TARGET_FILES = [
 ];
 
 export const BASELINE_PATH = resolve(process.cwd(), "scripts/lib/hotspot-ratchet-baseline.json");
+export const WAIVER_PATH = resolve(process.cwd(), "scripts/lib/hotspot-ratchet-waivers.json");
+
+const HOTSPOT_SCAN_ROOTS = ["src", "shared", "worker/src", "functions"];
+const HOTSPOT_SCAN_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts"]);
 const HOTSPOT_METRIC_KEYS = ["fileLines", "maxFunctionLines", "branchCount"];
 const HOTSPOT_DISPOSITIONS = new Set(["stabilized", "queued-p4", "deferred"]);
+const HOTSPOT_WAIVER_DISPOSITIONS = new Set(["queued-p4", "deferred"]);
+const HOTSPOT_CANDIDATE_TOP_N = 12;
+const HOTSPOT_FILELINE_MIN_FUNCTION_LINES = 40;
+const HOTSPOT_FILELINE_MIN_BRANCH_COUNT = 8;
+
+function normalizeRelPath(relPath) {
+  return relPath.replaceAll("\\", "/");
+}
+
+function shouldSkipHotspotScanFile(relPath) {
+  return (
+    relPath.endsWith(".d.ts") ||
+    relPath.includes("/__tests__/") ||
+    relPath.includes("/ui/") ||
+    relPath.startsWith("src/data/") ||
+    /\.(test|spec)\.[cm]?[jt]sx?$/.test(relPath)
+  );
+}
+
+function collectHotspotSourceFiles() {
+  const relPaths = [];
+
+  function walk(absDirPath) {
+    for (const entry of readdirSync(absDirPath, { withFileTypes: true })) {
+      if (entry.name.startsWith(".")) continue;
+      const absPath = join(absDirPath, entry.name);
+      if (entry.isDirectory()) {
+        walk(absPath);
+        continue;
+      }
+
+      if (!HOTSPOT_SCAN_EXTENSIONS.has(extname(entry.name))) continue;
+      const relPath = normalizeRelPath(relative(process.cwd(), absPath));
+      if (shouldSkipHotspotScanFile(relPath)) continue;
+      relPaths.push(relPath);
+    }
+  }
+
+  for (const root of HOTSPOT_SCAN_ROOTS) {
+    walk(resolve(process.cwd(), root));
+  }
+
+  relPaths.sort();
+  return relPaths;
+}
 
 export function collectHotspotMetrics(relPath) {
   const filePath = resolve(process.cwd(), relPath);
@@ -69,12 +119,87 @@ export function collectHotspotMetrics(relPath) {
   return { fileLines, maxFunctionLines, branchCount };
 }
 
+function collectHotspotMetricsForFiles(relPaths) {
+  return Object.fromEntries(relPaths.map((file) => [file, collectHotspotMetrics(file)]));
+}
+
+export function collectAllRepoHotspotMetrics() {
+  return collectHotspotMetricsForFiles(collectHotspotSourceFiles());
+}
+
+export function collectHotspotCandidateRows(repoMetrics = collectAllRepoHotspotMetrics()) {
+  const rows = Object.entries(repoMetrics).map(([file, metrics]) => ({ file, ...metrics }));
+  const candidateMap = new Map();
+  const byFileLines = [...rows]
+    .filter((row) => row.maxFunctionLines >= HOTSPOT_FILELINE_MIN_FUNCTION_LINES || row.branchCount >= HOTSPOT_FILELINE_MIN_BRANCH_COUNT)
+    .sort((left, right) => right.fileLines - left.fileLines)
+    .slice(0, HOTSPOT_CANDIDATE_TOP_N);
+  const byFunctionLines = [...rows]
+    .sort((left, right) => right.maxFunctionLines - left.maxFunctionLines)
+    .slice(0, HOTSPOT_CANDIDATE_TOP_N);
+  const byBranchCount = [...rows]
+    .sort((left, right) => right.branchCount - left.branchCount)
+    .slice(0, HOTSPOT_CANDIDATE_TOP_N);
+
+  for (const [metric, metricRows] of [
+    ["fileLines", byFileLines],
+    ["maxFunctionLines", byFunctionLines],
+    ["branchCount", byBranchCount],
+  ]) {
+    for (const row of metricRows) {
+      const existing = candidateMap.get(row.file) ?? { ...row, metrics: [] };
+      existing.metrics.push(metric);
+      candidateMap.set(row.file, existing);
+    }
+  }
+
+  return [...candidateMap.values()].sort((left, right) =>
+    right.fileLines - left.fileLines ||
+    right.maxFunctionLines - left.maxFunctionLines ||
+    right.branchCount - left.branchCount ||
+    left.file.localeCompare(right.file),
+  );
+}
+
+export function collectHotspotCandidateFiles(repoMetrics = collectAllRepoHotspotMetrics()) {
+  return collectHotspotCandidateRows(repoMetrics).map((row) => row.file);
+}
+
 export function collectAllHotspotMetrics() {
-  return Object.fromEntries(TARGET_FILES.map((file) => [file, collectHotspotMetrics(file)]));
+  return collectHotspotMetricsForFiles(TARGET_FILES);
+}
+
+export function validateHotspotTargetFiles() {
+  return TARGET_FILES.filter((file) => {
+    try {
+      readFileSync(resolve(process.cwd(), file), "utf8");
+      return false;
+    } catch {
+      return true;
+    }
+  });
 }
 
 export function loadHotspotBaseline() {
   return JSON.parse(readFileSync(BASELINE_PATH, "utf8"));
+}
+
+export function loadHotspotWaivers() {
+  return JSON.parse(readFileSync(WAIVER_PATH, "utf8"));
+}
+
+export function findUnexpectedHotspotBaselineEntries(baseline) {
+  return Object.keys(baseline).filter((file) => !TARGET_FILES.includes(file));
+}
+
+export function findStaleHotspotWaiverEntries(waivers, candidateFiles) {
+  const candidateSet = new Set(candidateFiles);
+  return Object.keys(waivers).filter((file) => !candidateSet.has(file));
+}
+
+export function findHotspotCandidatesMissingCoverage(candidateFiles, waivers) {
+  const waiverSet = new Set(Object.keys(waivers));
+  return candidateFiles.filter((file) => !TARGET_FILES.includes(file) && !waiverSet.has(file));
 }
 
 export function writeHotspotBaseline(metrics) {
@@ -145,6 +270,30 @@ export function validateHotspotBaselineMetadata(baseline) {
 
     if (typeof entry.notes !== "string" || entry.notes.trim().length === 0) {
       errors.push(`${file}: missing notes`);
+    }
+  }
+
+  return errors;
+}
+
+export function validateHotspotWaiverMetadata(waivers, candidateFiles) {
+  const errors = [];
+  const candidateSet = new Set(candidateFiles);
+
+  for (const [file, waiver] of Object.entries(waivers)) {
+    if (!candidateSet.has(file)) continue;
+    if (TARGET_FILES.includes(file)) {
+      errors.push(`${file}: already enrolled in hotspot baseline; remove waiver`);
+    }
+    if (!waiver || typeof waiver !== "object") {
+      errors.push(`${file}: missing waiver metadata`);
+      continue;
+    }
+    if (!HOTSPOT_WAIVER_DISPOSITIONS.has(waiver.disposition)) {
+      errors.push(`${file}: invalid waiver disposition "${waiver.disposition ?? "missing"}"`);
+    }
+    if (typeof waiver.notes !== "string" || waiver.notes.trim().length === 0) {
+      errors.push(`${file}: missing waiver notes`);
     }
   }
 

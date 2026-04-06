@@ -144,8 +144,8 @@
     "notes": "Yield methodology is now its own module. If more source-policy copy lands, extract the arbitration and PYS formula blocks into smaller subcomponents."
   },
   "src/app/methodology/sections/monitoring/pegscore-dews-section.tsx": {
-    "fileLines": 461,
-    "maxFunctionLines": 449,
+    "fileLines": 462,
+    "maxFunctionLines": 450,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -298,6 +298,18 @@
       "branchCount": 32
     },
     "notes": "Reserve adapter orchestration, persistence, and publication policy are still concentrated in the cron shell. Next pass should separate adapter execution from persistence and summary assembly."
+  },
+  "worker/src/cron/compute-dews.ts": {
+    "fileLines": 230,
+    "maxFunctionLines": 156,
+    "branchCount": 9,
+    "disposition": "stabilized",
+    "targetBudget": {
+      "fileLines": 260,
+      "maxFunctionLines": 180,
+      "branchCount": 16
+    },
+    "notes": "Source loading, DEWS signal assembly, and persistence now live in `cron/dews/*` helpers. Keep the entrypoint as the coordinator instead of regrowing source-specific reads or writeback logic."
   },
   "worker/src/cron/sync-stablecoins/enrich-prices.ts": {
     "fileLines": 111,
