@@ -153,6 +153,7 @@ describe("tracked stablecoin metadata", () => {
         },
       },
     });
+    expect(susdai?.pegReferenceId).toBe("usdai-usd-ai");
   });
 
   it("uses explicit breaker scopes when a live-reserve adapter is reused across multiple coins", () => {

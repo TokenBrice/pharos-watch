@@ -20,6 +20,10 @@ const loadFreshIndependentLiveReserveMapMock = vi.hoisted(() =>
   vi.fn(),
 );
 
+const derivePegAnalyticsSnapshotMock = vi.hoisted(() =>
+  vi.fn(),
+);
+
 vi.mock("../redemption-backstops-store", async (importOriginal) => {
   const original = await importOriginal<
     typeof import("../redemption-backstops-store")
@@ -47,6 +51,16 @@ vi.mock("../live-reserves-store", async (importOriginal) => {
   return {
     ...original,
     loadFreshIndependentLiveReserveMap: loadFreshIndependentLiveReserveMapMock,
+  };
+});
+
+vi.mock("../peg-analytics", async (importOriginal) => {
+  const original = await importOriginal<
+    typeof import("../peg-analytics")
+  >();
+  return {
+    ...original,
+    derivePegAnalyticsSnapshot: derivePegAnalyticsSnapshotMock,
   };
 });
 
@@ -136,6 +150,17 @@ describe("buildReportCardsSnapshot", () => {
     });
     loadFreshIndependentLiveReserveMapMock.mockReset();
     loadFreshIndependentLiveReserveMapMock.mockResolvedValue(new Map());
+    derivePegAnalyticsSnapshotMock.mockReset();
+    derivePegAnalyticsSnapshotMock.mockResolvedValue({
+      pegDataById: new Map(),
+      methodology: {
+        version: "test",
+        activeDepegThresholdBps: 1000,
+        activeDepegMinDurationMinutes: 60,
+        trackingWindowYears: 4,
+      },
+      updatedAt: nowSec,
+    });
   });
 
   it("throws when stablecoins cache is missing", async () => {
@@ -238,6 +263,71 @@ describe("buildReportCardsSnapshot", () => {
     expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(true);
     expect(card?.rawInputs.effectiveExitScore).toBe(56);
     expect(card?.dimensions.liquidity.score).toBe(56);
+  });
+
+  it("inherits peg risk for configured NAV wrappers from the referenced base stablecoin", async () => {
+    const db = makeReportCardsDb([
+      makeAsset({ id: "usdai-usd-ai", symbol: "USDai", name: "USDai" }),
+      makeAsset({ id: "susdai-usd-ai", symbol: "sUSDai", name: "sUSDai" }),
+    ]);
+    derivePegAnalyticsSnapshotMock.mockResolvedValueOnce({
+      pegDataById: new Map([
+        ["usdai-usd-ai", {
+          id: "usdai-usd-ai",
+          symbol: "USDai",
+          name: "USDai",
+          pegType: "peggedUSD",
+          pegCurrency: "USD",
+          governance: "centralized",
+          currentDeviationBps: 18,
+          pegScore: 82,
+          pegPct: 99,
+          severityScore: 84,
+          spreadPenalty: 0,
+          eventCount: 2,
+          worstDeviationBps: -230,
+          activeDepeg: false,
+          lastEventAt: nowSec - 86400,
+          trackingSpanDays: 365,
+          methodologyVersion: "test",
+        }],
+        ["susdai-usd-ai", {
+          id: "susdai-usd-ai",
+          symbol: "sUSDai",
+          name: "sUSDai",
+          pegType: "peggedUSD",
+          pegCurrency: "USD",
+          governance: "centralized",
+          currentDeviationBps: null,
+          pegScore: null,
+          pegPct: 0,
+          severityScore: 0,
+          spreadPenalty: 0,
+          eventCount: 0,
+          worstDeviationBps: null,
+          activeDepeg: false,
+          lastEventAt: null,
+          trackingSpanDays: 365,
+          methodologyVersion: "test",
+        }],
+      ]),
+      methodology: {
+        version: "test",
+        activeDepegThresholdBps: 1000,
+        activeDepegMinDurationMinutes: 60,
+        trackingWindowYears: 4,
+      },
+      updatedAt: nowSec,
+    });
+
+    const snapshot = await buildReportCardsSnapshot(db);
+    const card = snapshot.cards.find((entry) => entry.id === "susdai-usd-ai");
+
+    expect(card).toBeDefined();
+    expect(card?.rawInputs.navToken).toBe(true);
+    expect(card?.rawInputs.pegScore).toBe(82);
+    expect(card?.dimensions.pegStability.grade).toBe("A-");
+    expect(card?.dimensions.pegStability.detail).toContain("Peg reference (USDai)");
   });
 
   it("throws when the redemption backstop snapshot is unavailable", async () => {

@@ -1470,6 +1470,8 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
 
 The Liquidity dimension now represents `effectiveExitScore`: the public DEX liquidity score remains the floor, while redeemable assets can receive uplift from `redemptionBackstopScore` when a meaningful direct exit path exists. Low-confidence redemption routes stay visible but do not uplift the score, and stale DEX inputs are not blended.
 
+For peg handling, `rawInputs.pegScore` is the effective peg input used by report-card scoring. Most coins use their direct peg-summary value. Configured NAV wrappers can inherit peg stability from a referenced base stablecoin when the wrapper share price is not the right peg-tracking surface; pure NAV tokens without a configured reference remain `null` and keep neutral handling.
+
 `GET /api/report-cards` treats the stablecoins cache and redemption-backstop snapshot as hard dependencies. DEX liquidity, bluechip ratings, and live-reserve inputs are soft dependencies: if one of those loaders is temporarily unavailable, the endpoint continues serving a degraded snapshot instead of failing closed.
 
 **`dependencyGraph.edges`**: Pre-computed forward edges. `from` = upstream stablecoin ID, `to` = dependent stablecoin ID. `weight` and `type` carry the worker's canonical dependency metadata, so frontend graph consumers can use the snapshot directly instead of re-deriving edge semantics from static stablecoin metadata.

@@ -2,18 +2,18 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v6.93)
+## Overall Grade (v6.94)
 
 Three-step computation:
 
 1. **Base score**: weighted average of 4 base dimensions (each 0–100). NR dimensions have their weight redistributed proportionally among rated ones. Requires at least 2 rated base dimensions; otherwise overall = NR.
-2. **Peg multiplier**: `final = base × (pegScore / 100) ^ 0.40`. Coins with good pegs (90+) barely affected (~4% penalty). Coins with broken pegs get sharply penalized (pegScore 10 → 60% penalty). pegScore = NR (NAV tokens) → multiplier 1.0 (no penalty). pegScore = 0 → multiplier 0.
+2. **Peg multiplier**: `final = base × (pegScore / 100) ^ 0.40`. Coins with good pegs (90+) barely affected (~4% penalty). Coins with broken pegs get sharply penalized (pegScore 10 → 60% penalty). pegScore = NR (pure NAV tokens with no configured peg reference) → multiplier 1.0 (no penalty). pegScore = 0 → multiplier 0.
 3. **Active depeg cap**: coins with a severe ongoing depeg are hard-capped regardless of base score — depegs ≥ 2500 bps (25%+) cap at F (39), ≥ 1000 bps (10%+) cap at D (49).
 4. **No-liquidity penalty**: `final × 0.9` when the Liquidity / Exit dimension is NR (no DEX or redemption-backstop signal at all). No free pass — as coverage matures, absence of any exit signal is increasingly suspicious. Implemented via `NO_LIQUIDITY_PENALTY = 0.9` in `report-cards.ts`.
 
 Cemetery coins get a permanent F.
 
-Current-version note: v6.93 raises the peg multiplier exponent from 0.20 to 0.40 and adds graduated active-depeg overall-score caps (≥ 2500 bps → F, ≥ 1000 bps → D). This ensures catastrophic depegs like USR at -7600 bps correctly produce an F instead of being softened by strong base dimensions. The `activeDepegBps` field is added to `RawDimensionInputs` so stressed-grade recomputations and the frontend can apply the same cap.
+Current-version note: v6.93 raised the peg multiplier exponent from 0.20 to 0.40 and added graduated active-depeg overall-score caps (≥ 2500 bps → F, ≥ 1000 bps → D). v6.94 keeps that stronger peg treatment but closes the NAV-wrapper loophole: configured NAV wrappers can inherit peg stability from a referenced base stablecoin, while genuine fund-share NAV tokens still remain neutral. The `activeDepegBps` field remains in `RawDimensionInputs` so stressed-grade recomputations and the frontend can apply the same cap.
 
 ## Dimensions
 
@@ -30,13 +30,14 @@ Current-version note: v6.93 raises the peg multiplier exponent from 0.20 to 0.40
 
 | Source                      | Scoring                                                                                  |
 | --------------------------- | ---------------------------------------------------------------------------------------- |
-| `pegScore` from peg summary | Applied as `(pegScore/100)^0.40` multiplier to base score. NAV tokens → 1.0 (no penalty). Active depegs ≥ 2500 bps cap overall at F; ≥ 1000 bps cap at D |
+| `pegScore` from peg summary | Applied as `(pegScore/100)^0.40` multiplier to base score. Pure NAV tokens stay neutral; configured NAV wrappers can inherit peg risk from a referenced base stablecoin. Active depegs ≥ 2500 bps cap overall at F; ≥ 1000 bps cap at D |
 
 ### Peg Stability Details
 
 - Direct passthrough of `computePegScore()` output (see [Depeg Detection Pipeline](./depeg-detection.md) for the composite formula)
 - v5.5 peg fairness fixes apply automatically: tracking window is capped to coin age (`coinTrackingStart()`), per-event magnitude floors prevent brief severe depegs from being under-penalized, and active-depeg penalties are steeper
-- NAV tokens (yield-accruing, price-appreciating) receive NR — multiplier 1.0, no penalty
+- Pure NAV fund-share tokens (yield-accruing, price-appreciating) receive NR — multiplier 1.0, no penalty
+- Configured NAV wrappers over a stablecoin can inherit peg stability from a referenced base asset instead of receiving a neutral pass
 - Yield-bearing annotation added to detail text
 
 ### Liquidity / Exit Details

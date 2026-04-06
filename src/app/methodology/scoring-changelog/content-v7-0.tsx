@@ -1,5 +1,67 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV694Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("6.94")}
+      accent="border-l-amber-500"
+    >
+      <p>
+        NAV wrappers that explicitly wrap a stablecoin now inherit peg risk from the referenced base
+        asset instead of getting an automatic neutral peg multiplier.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          Configured NAV wrappers can now reuse a referenced base stablecoin&apos;s{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">pegScore</code> in Safety Score
+          report-card scoring.
+        </li>
+        <li>
+          Pure fund-share NAV tokens with no configured peg reference still keep{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">pegScore = NR</code> and the neutral
+          multiplier treatment.
+        </li>
+        <li>
+          This specifically closes the loophole where a wrapped stablecoin NAV structure could avoid the
+          stronger v6.93 peg penalty even when the underlying base stablecoin had clear peg risk.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
+export function ScoringChangelogV693Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("6.93")}
+      accent="border-l-amber-500"
+    >
+      <p>
+        Peg stability now has more weight in the final grade, and severe live depegs can hard-cap the
+        score regardless of otherwise strong base dimensions.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">PEG_MULTIPLIER_EXPONENT</code>{" "}
+          increased from <code className="text-xs bg-muted px-1 py-0.5 rounded">0.20</code> to{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">0.40</code>.
+        </li>
+        <li>
+          Active depegs at or above{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">1000 bps</code> now cap the overall
+          score at D, and active depegs at or above{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">2500 bps</code> cap it at F.
+        </li>
+        <li>
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">activeDepegBps</code> is now exposed
+          in report-card raw inputs so the frontend and stressed-grade recomputation paths apply the same
+          cap logic.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV692Entry() {
   return (
     <VersionCard

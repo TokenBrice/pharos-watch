@@ -192,6 +192,7 @@ export interface StablecoinMeta {
   name: string;
   symbol: string;
   flags: StablecoinFlags;
+  pegReferenceId?: string;
   collateral?: string;
   pegMechanism?: string;
   commodityOunces?: number;

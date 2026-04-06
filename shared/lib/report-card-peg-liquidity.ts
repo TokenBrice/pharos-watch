@@ -44,11 +44,10 @@ export function scorePegStability(
     pegReferenceMeta?: Pick<StablecoinMeta, "id" | "symbol" | "name"> | null;
   },
 ): ReportCardDimension {
-  if (meta.flags.navToken) {
-    return { grade: "NR", score: null, detail: "NAV token - peg tracking not applicable" };
-  }
-
   if (!peg || peg.pegScore === null) {
+    if (meta.flags.navToken) {
+      return { grade: "NR", score: null, detail: "NAV token - peg tracking not applicable" };
+    }
     return { grade: "NR", score: null, detail: "Insufficient peg tracking data" };
   }
 

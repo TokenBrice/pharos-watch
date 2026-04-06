@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "6.93",
+  currentVersion: "6.94",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "6.94",
+      title: "NAV wrappers can inherit peg risk from a referenced base stablecoin",
+      date: "2026-04-06",
+      effectiveAt: 1775476800,
+      summary:
+        "NAV tokens that are explicit wrappers over a stablecoin can now inherit peg stability from a configured base asset instead of receiving an automatic neutral peg multiplier.",
+      impact: [
+        "Configured NAV wrappers can now use a referenced base stablecoin's pegScore in report-card scoring when their own NAV share price is not the right peg-tracking surface",
+        "Pure NAV fund-share tokens with no configured peg reference still remain pegScore = NR and keep the neutral multiplier treatment",
+        "sUSDai now inherits USDAI peg risk, preventing the stronger v6.93 peg multiplier from becoming a free pass for wrapped stablecoin NAV structures",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "6.93",
       title: "Steeper peg multiplier + active depeg grade cap",

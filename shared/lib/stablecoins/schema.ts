@@ -144,6 +144,7 @@ export const StablecoinMetaAssetSchema = z.object({
   name: z.string(),
   symbol: z.string(),
   flags: StablecoinFlagsAssetSchema,
+  pegReferenceId: z.string().optional(),
   collateral: z.string().optional(),
   pegMechanism: z.string().optional(),
   commodityOunces: z.number().optional(),

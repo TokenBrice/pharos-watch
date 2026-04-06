@@ -82,6 +82,41 @@ describe("computeOverallGrade", () => {
     expect(result.score).toBeGreaterThan(0);
     expect(result.score).toBeLessThanOrEqual(100);
   });
+
+  it("keeps unrated NAV tokens neutral when peg stability is genuinely not applicable", () => {
+    const dims = {
+      pegStability: makeDimension(null),
+      liquidity: makeDimension(80),
+      resilience: makeDimension(75),
+      decentralization: makeDimension(70),
+      dependencyRisk: makeDimension(85),
+    };
+    const result = computeOverallGrade(dims as never, { navToken: true });
+
+    expect(result.grade).not.toBe("NR");
+    expect(result.baseScore).toBe(78.6);
+    expect(result.score).toBe(79);
+  });
+
+  it("penalizes NAV wrappers when peg stability is provided", () => {
+    const dims = {
+      pegStability: makeDimension(82),
+      liquidity: makeDimension(80),
+      resilience: makeDimension(75),
+      decentralization: makeDimension(70),
+      dependencyRisk: makeDimension(85),
+    };
+    const neutral = computeOverallGrade({
+      ...dims,
+      pegStability: makeDimension(null),
+    } as never, { navToken: true });
+    const result = computeOverallGrade(dims as never, { navToken: true });
+
+    expect(result.grade).not.toBe("NR");
+    expect(result.baseScore).toBe(neutral.baseScore);
+    expect(result.score).toBeLessThan(neutral.score ?? Infinity);
+    expect(result.score).toBe(73);
+  });
 });
 
 describe("computeOverallGrade — active depeg cap", () => {

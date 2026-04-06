@@ -320,6 +320,40 @@ interface ComputeCardInput {
   liquidityStale: boolean;
 }
 
+function resolvePegInput(
+  meta: StablecoinMeta,
+  pegDataById: Map<string, PegSummaryCoin>,
+): {
+  peg: PegSummaryCoin | undefined;
+  inheritedFromReference: boolean;
+  pegReferenceMeta: StablecoinMeta | null;
+} {
+  const directPeg = pegDataById.get(meta.id);
+  if (directPeg?.pegScore != null || !meta.flags.navToken || !meta.pegReferenceId) {
+    return {
+      peg: directPeg,
+      inheritedFromReference: false,
+      pegReferenceMeta: null,
+    };
+  }
+
+  const pegReferenceMeta = ACTIVE_META_BY_ID.get(meta.pegReferenceId) ?? null;
+  const pegReference = pegDataById.get(meta.pegReferenceId);
+  if (!pegReference || pegReference.pegScore == null) {
+    return {
+      peg: directPeg,
+      inheritedFromReference: false,
+      pegReferenceMeta,
+    };
+  }
+
+  return {
+    peg: pegReference,
+    inheritedFromReference: true,
+    pegReferenceMeta,
+  };
+}
+
 function computeCard(input: ComputeCardInput): ReportCard {
   const {
     meta,
@@ -332,7 +366,8 @@ function computeCard(input: ComputeCardInput): ReportCard {
     liveReserveMap,
     liquidityStale,
   } = input;
-  const peg = pegDataById.get(meta.id);
+  const resolvedPeg = resolvePegInput(meta, pegDataById);
+  const peg = resolvedPeg.peg;
   const liq = liquidityStale ? undefined : dexLiqMap[meta.id];
   const redemption = redemptionBackstopMap[meta.id];
   const rating = bluechipMap[meta.id];
@@ -344,7 +379,10 @@ function computeCard(input: ComputeCardInput): ReportCard {
   const deps = deriveDependencies(meta);
 
   const dimensions: Record<DimensionKey, ReturnType<typeof scorePegStability>> = {
-    pegStability: scorePegStability(peg, meta),
+    pegStability: scorePegStability(peg, meta, {
+      inheritedFromReference: resolvedPeg.inheritedFromReference,
+      pegReferenceMeta: resolvedPeg.pegReferenceMeta,
+    }),
     liquidity: scoreLiquidity(liq, redemption),
     resilience: scoreResilience(meta, blacklistStatus, liveSlices),
     decentralization: scoreDecentralization(meta.flags.governance as GovernanceType, meta),

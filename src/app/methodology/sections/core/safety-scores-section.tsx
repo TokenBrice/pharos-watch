@@ -46,7 +46,7 @@ export function SafetyScoresMethodologySection() {
                     { label: "Required sources", value: "Peg summary, DEX liquidity/redemption data, and dependency/metadata inputs" },
                     {
                       label: "Failure behavior",
-                      value: "NR if peg is missing on non-NAV coins; 0.9 penalty applies when exit liquidity is NR (no DEX data and no redemption backstop signal available)",
+                      value: "NR if peg is missing on non-NAV coins; pure NAV tokens stay neutral when peg tracking is genuinely not applicable, while configured NAV wrappers can inherit peg risk from a referenced base stablecoin; 0.9 penalty applies when exit liquidity is NR (no DEX data and no redemption backstop signal available)",
                     },
                   ]}
                 />
@@ -54,9 +54,9 @@ export function SafetyScoresMethodologySection() {
               <WorkedExample summary="Worked example (verified against computeOverallGrade)">
                 <p className="font-mono">Inputs: DEX 30, Redemption 88, Exit 56, Res 70, Decen 60, Dep 75, Peg 92</p>
                 <p className="font-mono">base=(56*0.30+70*0.20+60*0.15+75*0.25)/0.90=65.06</p>
-                <p className="font-mono">final=round(base*(92/100)^0.20)=round(65.06*0.9835)=64</p>
+                <p className="font-mono">final=round(base*(92/100)^0.40)=round(65.06*0.9672)=63</p>
                 <p>
-                  Result: <span className="text-foreground">Score 64 (grade C+)</span>.
+                  Result: <span className="text-foreground">Score 63 (grade C+)</span>.
                 </p>
               </WorkedExample>
 
@@ -92,7 +92,7 @@ export function SafetyScoresMethodologySection() {
                   <div className="rounded-lg border p-3 text-center w-64">
                     <p className="text-foreground font-medium">&times; Peg Multiplier</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      (pegScore / 100)<sup>0.20</sup>
+                      (pegScore / 100)<sup>0.40</sup>
                     </p>
                   </div>
                   <div className="text-muted-foreground text-xl font-bold">&darr;</div>
@@ -136,7 +136,7 @@ export function SafetyScoresMethodologySection() {
                   <div className="w-full rounded-lg border p-3 text-center">
                     <p className="text-foreground font-medium">&times; Peg Multiplier</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      (pegScore / 100)<sup>0.20</sup>
+                      (pegScore / 100)<sup>0.40</sup>
                     </p>
                   </div>
                   <div className="text-muted-foreground text-xl font-bold">&darr;</div>
@@ -222,8 +222,9 @@ export function SafetyScoresMethodologySection() {
                     After computing the base score, peg stability is applied as a power-curve multiplier:
                     final&nbsp;=&nbsp;base&nbsp;&times;&nbsp;(pegScore&nbsp;/&nbsp;100)<sup>0.40</sup>. Coins with strong
                     pegs (90+) are barely affected (~4% penalty), while coins with broken pegs are sharply penalized (e.g.
-                    pegScore&nbsp;10 &rarr; 60% penalty). NAV tokens (pegScore&nbsp;=&nbsp;NR) receive multiplier&nbsp;1.0
-                    since peg tracking does not apply to them. Severe active depegs are also hard-capped:
+                    pegScore&nbsp;10 &rarr; 60% penalty). Pure NAV fund-share tokens with no configured peg reference keep
+                    pegScore&nbsp;=&nbsp;NR and receive multiplier&nbsp;1.0, while configured NAV wrappers can inherit peg
+                    risk from a referenced base stablecoin. Severe active depegs are also hard-capped:
                     &ge;&nbsp;2500&nbsp;bps (25%+) caps the overall score at F, &ge;&nbsp;1000&nbsp;bps (10%+) caps at D.
                   </p>
                 </div>

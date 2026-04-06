@@ -1,6 +1,26 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.92 (2026-02-25 → 2026-04-04).
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.94 (2026-02-25 → 2026-04-06).
+
+## v6.94 — NAV wrappers inherit peg risk from referenced base stablecoins (2026-04-06)
+
+Safety Score structure is unchanged, but NAV wrappers that are explicit stablecoin wrappers no longer get a neutral peg multiplier just because their own share price is not the right peg-tracking surface:
+
+- Configured NAV wrappers can now inherit `pegScore` from a referenced base stablecoin when the wrapper itself is a NAV/share token over that stable asset
+- Pure fund-share NAV tokens with no configured peg reference still keep `pegScore = NR` and the neutral multiplier treatment
+- sUSDai now inherits USDAI peg risk, so the steeper v6.93 peg multiplier applies consistently to the wrapper stack instead of creating a free pass
+
+---
+
+## v6.93 — Steeper peg multiplier + active depeg grade cap (2026-04-05)
+
+The peg multiplier became meaningfully stronger and severe ongoing depegs now hard-cap the final grade:
+
+- `PEG_MULTIPLIER_EXPONENT` increased from `0.20` to `0.40`, making weak pegs more punitive while leaving strong pegs only lightly affected
+- Active depegs of at least 1000 bps cap the overall score at D (`49`); active depegs of at least 2500 bps cap at F (`39`)
+- `activeDepegBps` was added to report-card raw inputs so the frontend and stressed-grade recomputations apply the same cap logic
+
+---
 
 ## v6.92 — Direct Liquity v1 reserve observation for LUSD (2026-04-04)
 

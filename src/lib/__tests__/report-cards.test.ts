@@ -340,12 +340,43 @@ describe("isBlacklistable — inherited risk from reserves", () => {
 describe("scorePegStability", () => {
   // --- NR cases ---
 
-  it("returns NR for NAV tokens", () => {
+  it("returns NR for NAV tokens without a direct or inherited peg", () => {
     const meta = makeMeta({ flags: { governance: "centralized", backing: "rwa-backed", pegCurrency: "USD", yieldBearing: false, rwa: true, navToken: true } });
-    const result = scorePegStability(makePeg({ pegScore: 95 }), meta);
+    const result = scorePegStability(undefined, meta);
     expect(result.grade).toBe("NR");
     expect(result.score).toBeNull();
     expect(result.detail).toContain("NAV token");
+  });
+
+  it("scores NAV wrappers when peg risk is inherited from a referenced base asset", () => {
+    const meta = makeMeta({
+      symbol: "sUSDai",
+      flags: {
+        governance: "centralized",
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        yieldBearing: true,
+        rwa: true,
+        navToken: true,
+      },
+    });
+    const result = scorePegStability(
+      makePeg({ pegScore: 82, currentDeviationBps: 12, eventCount: 2, worstDeviationBps: -215 }),
+      meta,
+      {
+        inheritedFromReference: true,
+        pegReferenceMeta: makeMeta({
+          id: "usdai-usd-ai",
+          name: "USDai",
+          symbol: "USDai",
+        }),
+      },
+    );
+
+    expect(result.grade).toBe("A-");
+    expect(result.score).toBe(82);
+    expect(result.detail).toContain("Peg reference (USDai)");
+    expect(result.detail).toContain("yield-bearing");
   });
 
   it("returns NR when peg is undefined", () => {
@@ -921,7 +952,7 @@ describe("golden-path: overall grade from realistic coin profiles", () => {
     const result = computeOverallGrade(dims);
 
     // Active depeg caps peg stability at 65, which applies as power-curve multiplier
-    // (65/100)^0.20 ≈ 0.917 — still a meaningful drag, but the exponent is gentle
+    // (65/100)^0.40 ≈ 0.842 — a materially stronger drag than the old 0.20 exponent
     // This should drag the overall grade down noticeably vs the DAI-like test
     expect(result.score).not.toBeNull();
     expect(result.score!).toBeLessThan(90);
