@@ -163,7 +163,8 @@ For deployment/worktree operating procedure (including the local merge gate befo
 - defined in `.github/workflows/secret-scan.yml`
 - runs on a weekly Monday schedule and on manual dispatch
 - checks out full git history and runs pinned `gitleaks` `8.30.0`
-- scans commit history for accidentally committed secrets and fails on live findings
+- uses the root `.gitleaksignore` to suppress reviewed historical false positives by exact fingerprint
+- scans commit history for accidentally committed secrets and fails on any non-allowlisted finding
 
 This arrangement keeps pull-request validation full-strength, makes deploy-path validation conditional on the surfaces that actually changed, skips the production workflow entirely for non-deploy pushes, proves the static export build and SEO gate before merge and on Pages-impacting deploys, fetches digest data once inside the Pages build job so the build itself is network-independent with respect to digest data, forwards the configured GA measurement ID into CI builds so the static artifact matches production analytics posture, smokes the exact candidate Worker version on its preview URL before production traffic is shifted, overlaps the Pages build + local smoke path with worker promotion and production API smoke when both surfaces changed, keeps the broad overflow sweep on the local artifact smoke before Pages production deploy, verifies the real `pharos.watch` host after each Pages publish with a narrower live canary smoke, keeps the scheduled digest rebuild off the worker deploy path, still runs the post-deploy ops-surface plus transport smoke after each production-changing workflow, and adds separate weekly/manual lanes for dependency auditing and history-aware secret scanning.
 
