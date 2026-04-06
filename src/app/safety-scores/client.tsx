@@ -2,28 +2,31 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { useReportCards } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
 import { useStressTest } from "@/hooks/use-stress-test";
 import { ReportCardMini } from "@/components/report-card-mini";
 import { StressTestPanel } from "@/components/stress-test-panel";
-import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { gradeRange, REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
+import {
+  gradeRange,
+  REPORT_CARD_GRADE_COLORS,
+  scoreToGrade,
+  DIMENSION_ORDER,
+  DIMENSION_SHORT_LABELS,
+} from "@shared/lib/report-cards";
+import { formatCurrency } from "@shared/lib/format";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { ReportCard, DimensionKey } from "@shared/types";
 import { encodeStablecoinUrlToken } from "@/lib/stablecoin-url-codec";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { SystemicRiskHeadline } from "@/components/systemic-risk-headline";
 import { cn } from "@/lib/utils";
-import { Trophy, X } from "lucide-react";
+import { X } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -56,8 +59,8 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "pegStability", label: "Peg" },
   { key: "liquidity", label: "Liquidity" },
   { key: "resilience", label: "Resilience" },
-  { key: "decentralization", label: "Decent." },
-  { key: "dependencyRisk", label: "Depend." },
+  { key: "decentralization", label: "Decen." },
+  { key: "dependencyRisk", label: "Dep. Risk" },
   { key: "mcap", label: "MCap" },
 ];
 
@@ -109,44 +112,66 @@ function getSortScore(card: ReportCard, key: SortKey, mcapMap: Map<string, numbe
 }
 
 // ---------------------------------------------------------------------------
-// Top Grade Spotlight Component
+// Headline Stats Component
 // ---------------------------------------------------------------------------
 
-function TopGradeSpotlight({ card, logo, mcap }: { card: ReportCard; logo?: string; mcap?: number }) {
+function HeadlineStats({
+  cards,
+  mcapMap,
+}: {
+  cards: ReportCard[];
+  mcapMap: Map<string, number>;
+}) {
+  const activeCards = cards.filter((c) => !c.isDefunct && c.overallScore != null);
+  if (activeCards.length === 0) return null;
+
+  const avgScore = Math.round(
+    activeCards.reduce((sum, c) => sum + (c.overallScore ?? 0), 0) / activeCards.length,
+  );
+
+  const totalSupply = activeCards.reduce((sum, c) => sum + (mcapMap.get(c.id) ?? 0), 0);
+  const abSupply = activeCards
+    .filter((c) => {
+      const range = gradeRange(c.overallGrade);
+      return range === "A" || range === "B";
+    })
+    .reduce((sum, c) => sum + (mcapMap.get(c.id) ?? 0), 0);
+  const abPct = totalSupply > 0 ? Math.round((abSupply / totalSupply) * 100) : 0;
+
+  const dimAvgs = DIMENSION_ORDER.map((key) => {
+    const scores = activeCards
+      .map((c) => c.dimensions[key].score)
+      .filter((s): s is number => s != null);
+    return {
+      key,
+      avg: scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0,
+    };
+  });
+  const weakest = dimAvgs.reduce((a, b) => (a.avg < b.avg ? a : b));
+
+  const stats = [
+    { label: "Ecosystem avg.", value: String(avgScore), detail: scoreToGrade(avgScore) },
+    { label: "Supply in A/B", value: `${abPct}%`, detail: formatCurrency(abSupply) },
+    {
+      label: "Weakest dimension",
+      value: DIMENSION_SHORT_LABELS[weakest.key],
+      detail: `avg ${Math.round(weakest.avg)}`,
+    },
+  ];
+
   return (
-    <Card className="border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 to-transparent">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15">
-              <Trophy className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div>
-              <p className="pharos-kicker text-emerald-600 dark:text-emerald-400">Top Safety Grade</p>
-              <Link
-                href={buildStablecoinUrl(card.id)}
-                className="pharos-focus-ring group flex items-center gap-2 font-semibold hover:text-emerald-600 dark:hover:text-emerald-400"
-              >
-                <StablecoinLogo src={logo} name={card.name} size={20} />
-                <span>{card.name}</span>
-                <span className="text-xs text-muted-foreground">({card.symbol})</span>
-              </Link>
-            </div>
-          </div>
-          <Badge
-            variant="outline"
-            className={`text-xl font-bold font-mono px-3 py-1 ${REPORT_CARD_GRADE_COLORS[card.overallGrade]}`}
-          >
-            {card.overallGrade}
-          </Badge>
+    <div className="grid grid-cols-3 gap-3">
+      {stats.map((s) => (
+        <div
+          key={s.label}
+          className="rounded-lg border border-border/50 bg-card/50 px-3 py-2.5 text-center"
+        >
+          <p className="pharos-kicker">{s.label}</p>
+          <p className="text-lg font-bold font-mono tracking-tight">{s.value}</p>
+          <p className="text-xs text-muted-foreground font-mono">{s.detail}</p>
         </div>
-        {mcap != null && mcap > 0 && (
-          <p className="mt-2 text-xs text-muted-foreground">
-            Market Cap: <span className="font-mono">${(mcap / 1e9).toFixed(2)}B</span>
-          </p>
-        )}
-      </CardContent>
-    </Card>
+      ))}
+    </div>
   );
 }
 
@@ -424,14 +449,14 @@ export function ReportCardsClient() {
 
   const totalCards = useMemo(() => Object.values(gradeCounts).reduce((s, v) => s + v, 0), [gradeCounts]);
 
-  // Find top grade coin (highest score A grade)
-  const topGradeCoin = useMemo(() => {
-    if (!reportData?.cards) return null;
-    const aGradeCards = reportData.cards
-      .filter((c) => !c.isDefunct && gradeRange(c.overallGrade) === "A")
-      .sort((a, b) => (b.overallScore ?? 0) - (a.overallScore ?? 0));
-    return aGradeCards[0] ?? null;
-  }, [reportData]);
+  // Simulator open state + scroll ref
+  const [simulatorOpen, setSimulatorOpen] = useState(true);
+  const simulatorRef = useRef<HTMLDivElement>(null);
+
+  const handleOpenSimulator = useCallback(() => {
+    setSimulatorOpen(true);
+    simulatorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
   // Filtered + sorted cards (uses simulated cards when stress test is active)
   const filteredCards = useMemo(() => {
@@ -475,7 +500,7 @@ export function ReportCardsClient() {
           </CardContent>
         </Card>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-          {Array.from({ length: 15 }, (_, i) => (
+          {Array.from({ length: 24 }, (_, i) => (
             <Card key={i}>
               <CardContent className="py-4 space-y-2">
                 <Skeleton className="h-8 w-8 rounded-full" />
@@ -515,6 +540,11 @@ export function ReportCardsClient() {
         ]}
       />
 
+      {/* Headline stats */}
+      {reportData?.cards && (
+        <HeadlineStats cards={reportData.cards} mcapMap={mcapMap} />
+      )}
+
       {/* Hero: Grade Distribution */}
       <Card>
         <CardContent className="pt-6 pb-6">
@@ -527,17 +557,25 @@ export function ReportCardsClient() {
         </CardContent>
       </Card>
 
-      {/* Top Grade Spotlight */}
-      {topGradeCoin && !isSimulating && (
-        <TopGradeSpotlight
-          card={topGradeCoin}
-          logo={logos?.[topGradeCoin.id]}
-          mcap={mcapMap.get(topGradeCoin.id)}
+      {/* Systemic risk headline */}
+      {!isSimulating && stressTest.systemicRisks.length > 0 && (
+        <SystemicRiskHeadline
+          risks={stressTest.systemicRisks}
+          logos={logos}
+          onOpenSimulator={handleOpenSimulator}
         />
       )}
 
-      {/* Contagion Map panel */}
-      <StressTestPanel stressTest={stressTest} mcapMap={mcapMap} logos={logos} />
+      {/* Contagion Map panel — default open */}
+      <div ref={simulatorRef}>
+        <StressTestPanel
+          stressTest={stressTest}
+          mcapMap={mcapMap}
+          logos={logos}
+          isOpen={simulatorOpen}
+          onOpenChange={setSimulatorOpen}
+        />
+      </div>
 
       {/* Filter + Sort controls */}
       <div className="space-y-3">
@@ -603,7 +641,7 @@ export function ReportCardsClient() {
 
       {/* Simulation banner */}
       {stressTest.stressedCards && (
-        <div className="sticky top-16 z-30 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex items-center justify-between">
+        <div className="sticky top-14 z-30 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex items-center justify-between">
           <span className="text-sm text-amber-700 dark:text-amber-400 font-medium">
             Viewing simulated contagion results
           </span>
@@ -622,7 +660,8 @@ export function ReportCardsClient() {
       {/* Results count */}
       {filteredCards.length > 0 && (
         <p className="text-sm text-muted-foreground">
-          Showing {filteredCards.length} {filteredCards.length === 1 ? "coin" : "coins"}
+          Showing <span className="font-medium text-foreground">{filteredCards.length}</span>{" "}
+          {filteredCards.length === 1 ? "coin" : "coins"}
           {gradeFilter !== "all" && ` with grade ${gradeFilter}`}
         </p>
       )}

@@ -34,14 +34,26 @@ interface StressTestPanelProps {
   stressTest: StressTestState;
   mcapMap: Map<string, number>;
   logos?: Record<string, string>;
+  /** Controlled open state — when provided, the panel is driven by the parent. */
+  isOpen?: boolean;
+  /** Callback when the panel's open state changes (controlled mode). */
+  onOpenChange?: (open: boolean) => void;
 }
 
 // ---------------------------------------------------------------------------
 // StressTestPanel
 // ---------------------------------------------------------------------------
 
-export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function StressTestPanel({
+  stressTest,
+  mcapMap,
+  logos,
+  isOpen: controlledOpen,
+  onOpenChange,
+}: StressTestPanelProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = controlledOpen ?? internalOpen;
+  const setIsOpen = onOpenChange ?? setInternalOpen;
 
   return (
     <Card>
@@ -51,11 +63,11 @@ export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelP
           type="button"
           className="w-full text-left appearance-none bg-transparent border-none p-0 cursor-pointer select-none"
           aria-expanded={isOpen}
-          onClick={() => setIsOpen((v) => !v)}
+          onClick={() => setIsOpen(!isOpen)}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              setIsOpen((v) => !v);
+              setIsOpen(!isOpen);
             }
           }}
         >
