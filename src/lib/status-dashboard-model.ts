@@ -150,6 +150,7 @@ export function buildBrowserProbeSummary(
   };
 }
 
+/** Status-dashboard-scoped timestamp formatter. Not a candidate for shared extraction. */
 export function formatTimestampSeconds(seconds: number | null | undefined): string {
   if (seconds == null) return "—";
   return new Date(seconds * 1000).toLocaleString();

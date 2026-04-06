@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useYieldHistory } from "@/hooks/api-hooks";
 import { DAY_MS } from "@/lib/constants";
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
+import { formatChartDate } from "@shared/lib/format";
 import type { YieldHistoryPoint } from "@shared/types";
 
 export const BRAND_ACCENT = "oklch(0.72 0.14 248)";
@@ -70,22 +71,12 @@ export function toTimestampMs(value: unknown) {
   return Number.NaN;
 }
 
-const DATE_FMT_MONTH_YEAR = new Intl.DateTimeFormat("en-US", { month: "short", year: "2-digit" });
-const DATE_FMT_MONTH_DAY = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
-const DATE_FMT_TOOLTIP = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-  hour: "numeric",
-  minute: "2-digit",
-});
-
 export function formatAxisDate(timestamp: number, days: number) {
-  return (days === 365 ? DATE_FMT_MONTH_YEAR : DATE_FMT_MONTH_DAY).format(timestamp);
+  return formatChartDate(timestamp, days > 180 ? "compact" : "short");
 }
 
 export function formatTooltipDate(timestamp: number) {
-  return DATE_FMT_TOOLTIP.format(timestamp);
+  return formatChartDate(timestamp, "full");
 }
 
 const numberFormatterCache = new Map<string, Intl.NumberFormat>();

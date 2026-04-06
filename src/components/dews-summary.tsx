@@ -33,7 +33,6 @@ import {
   computeCalmDots,
   computeBandCounts,
   resolveRadarClick,
-  type ElevatedBand,
   type BandCounts,
   type CalmDot,
   type ElevatedCoin,
