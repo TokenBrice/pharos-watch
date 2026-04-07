@@ -8,8 +8,9 @@ import { CHAIN_META } from "@shared/lib/chains";
 
 const PROTOCOL_NAMES: Record<string, string> = {
   curve: "Curve",
+  "uniswap-v2": "Uniswap V2",
   "uniswap-v3": "Uniswap V3",
-  uniswap: "Uniswap",
+  "uniswap-v4": "Uniswap V4",
   fluid: "Fluid",
   balancer: "Balancer",
   aerodrome: "Aerodrome",
@@ -24,8 +25,9 @@ const PROTOCOL_NAMES: Record<string, string> = {
 
 export const PROTOCOL_LOGOS: Record<string, string> = {
   curve: "/dexes/curve.png",
+  "uniswap-v2": "/dexes/uniswap-v2.png",
   "uniswap-v3": "/dexes/uniswap-v3.png",
-  uniswap: "/dexes/uniswap-v3.png",
+  "uniswap-v4": "/dexes/uniswap-v4.png",
   fluid: "/dexes/fluid.png",
   balancer: "/dexes/balancer.png",
   aerodrome: "/dexes/aerodrome.png",
@@ -40,8 +42,9 @@ export const PROTOCOL_LOGOS: Record<string, string> = {
 
 export const PROTOCOL_COLORS: Record<string, string> = {
   curve: "bg-blue-500",
+  "uniswap-v2": "bg-pink-300",
   "uniswap-v3": "bg-pink-500",
-  uniswap: "bg-pink-400",
+  "uniswap-v4": "bg-pink-400",
   fluid: "bg-cyan-500",
   balancer: "bg-violet-500",
   aerodrome: "bg-sky-500",
@@ -89,8 +92,9 @@ export const CHAIN_HEX: Record<string, string> = {
 /** Hex equivalents of PROTOCOL_COLORS for SVG fill attributes (Recharts) */
 export const PROTOCOL_HEX: Record<string, string> = {
   curve:        "#3b82f6",
+  "uniswap-v2": "#f9a8d4",
   "uniswap-v3": "#ec4899",
-  uniswap:      "#f472b6",
+  "uniswap-v4": "#f472b6",
   fluid:        "#06b6d4",
   balancer:     "#8b5cf6",
   aerodrome:    "#0ea5e9",

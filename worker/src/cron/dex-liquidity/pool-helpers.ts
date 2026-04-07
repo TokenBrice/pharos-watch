@@ -183,7 +183,8 @@ export function normalizeProtocol(project: string): string {
   const p = project.toLowerCase();
   if (p.includes("curve")) return "curve";
   if (p.includes("uniswap-v3") || p === "uniswap-v3") return "uniswap-v3";
-  if (p.includes("uniswap")) return "uniswap";
+  if (p.includes("uniswap-v4")) return "uniswap-v4";
+  if (p.includes("uniswap")) return "uniswap-v2";
   if (p.includes("fluid")) return "fluid";
   if (p.includes("meteora")) return "meteora";
   if (p.includes("balancer")) return "balancer";

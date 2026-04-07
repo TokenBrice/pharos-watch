@@ -173,7 +173,8 @@ describe("dex-liquidity pool helpers", () => {
   it("normalizes protocols and computes pair-quality and stress helpers", () => {
     expect(normalizeProtocol("Curve Finance")).toBe("curve");
     expect(normalizeProtocol("Uniswap-v3")).toBe("uniswap-v3");
-    expect(normalizeProtocol("Uniswap-v2")).toBe("uniswap");
+    expect(normalizeProtocol("Uniswap-v2")).toBe("uniswap-v2");
+    expect(normalizeProtocol("uniswap-v4-ethereum")).toBe("uniswap-v4");
     expect(normalizeProtocol("Fluid DEX")).toBe("fluid");
     expect(normalizeProtocol("Balancer V2")).toBe("balancer");
     expect(normalizeProtocol("Aerodrome Slipstream")).toBe("aerodrome");
