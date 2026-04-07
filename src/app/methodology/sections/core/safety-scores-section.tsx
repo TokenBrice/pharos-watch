@@ -169,7 +169,7 @@ export function SafetyScoresMethodologySection() {
                           <td className="py-2 pr-4 text-foreground">Exit Liquidity</td>
                           <td className="py-2 pr-4">30%</td>
                           <td className="py-2 pr-4">DEX liquidity + redemption backstop</td>
-                          <td className="py-2">Uses effective exit: DEX liquidity stays the floor, redemption can improve the dimension when a direct exit path exists</td>
+                          <td className="py-2">Best-path model: exit quality = best available path (DEX or redemption) + diversification bonus for having both</td>
                         </tr>
                         <tr className="hover:bg-muted/40 transition-colors">
                           <td className="py-2 pr-4 text-foreground">Resilience</td>
@@ -197,22 +197,23 @@ export function SafetyScoresMethodologySection() {
                 <div className="space-y-2">
                   <h3 className="text-foreground font-medium">Redemption Backstop and Effective Exit</h3>
                   <p>
-                    The standalone Liquidity Score remains a pure DEX market-depth metric. Safety Scores now use an
-                    <span className="text-foreground font-medium"> effective exit score</span> for the Liquidity dimension:
-                    DEX liquidity is preserved as the floor, while redeemable assets can gain uplift from protocol or issuer
-                    redemption quality when the redemption route is both resolved and supported by more than a heuristic
-                    capacity model.
+                    The standalone Liquidity Score remains a pure DEX market-depth metric. Safety Scores use an
+                    <span className="text-foreground font-medium"> effective exit score</span> for the Liquidity dimension,
+                    built on a best-path model: exit quality equals the best available exit path, with a modest
+                    diversification bonus for having a second viable path.
                   </p>
                   <p className="font-mono">
-                    effectiveExit = max(liquidity, liquidity * 0.55 + redemption * 0.45), with redemption-only capped at 70
+                    effectiveExit = min(100, max(dex, redemption) + min(dex, redemption) &times; 0.10)
+                  </p>
+                  <p>
+                    If only DEX liquidity exists, it is used directly. If only a redemption backstop exists, its score
+                    is used directly &mdash; route family caps (offchain-issuer &le; 65, queue-redeem &le; 70) and component scoring
+                    remain the guardrails against inflation.
                   </p>
                   <p>
                     Redemption backstops are scored across access, settlement, execution certainty, capacity, output-asset
-                    quality, and cost. Queue-based and offchain issuer routes are capped so they do not look unrealistically
-                    liquid. Low-confidence redemption routes stay visible on the site but do not uplift the Safety Score
-                    liquidity dimension, stale DEX inputs are not blended into effective exit, stale live reserve metadata ages out instead of staying resolved indefinitely, fresh live fee telemetry can replace reviewed fallback fee buckets when available, and eventual issuer redemption is reported separately from immediate redeemable buffer capacity.
-                    Reviewed `documented-bound` eventual redemption routes can still count as medium-confidence evidence even when no separate live instant buffer is measured, and explicitly published primary-market liquidity-buffer ratios can also graduate out of the heuristic bucket when the underlying source is strong enough. Strategy-backed delta-neutral rails still need an explicit published buffer or live telemetry before they stop being treated as heuristic capacity.
-                    Reserve-backed routes still fail closed on degraded live evidence by default, but a route can keep a live lower bound when the only blocking warning says reserve coverage is incomplete rather than that the measured redeemable buffer is invalid.
+                    quality, and cost. Low-confidence redemption routes stay visible on the site but do not uplift the Safety Score
+                    liquidity dimension, stale DEX inputs are not used for effective exit, and stale live reserve metadata ages out instead of staying resolved indefinitely.
                   </p>
                 </div>
                 {/* Peg multiplier */}
