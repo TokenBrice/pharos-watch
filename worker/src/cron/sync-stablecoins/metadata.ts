@@ -80,6 +80,8 @@ export function buildStablecoinsSyncResult(input: {
   enrichStats: unknown;
   priceValidationStats: unknown;
   rejectedCount: number;
+  nativePegCorrectionCount?: number;
+  nativePegFillCount?: number;
   stalenessWarning: boolean;
   stalenessSummary?: { compared: number; identical: number; identicalRatio: number } | null;
   gtProbe: { updatedCount: number; stats: GtProbeStats };
@@ -110,6 +112,8 @@ export function buildStablecoinsSyncResult(input: {
     },
     priceValidation: input.priceValidationStats,
     rejectedPrices: input.rejectedCount,
+    nativePegCorrections: input.nativePegCorrectionCount ?? 0,
+    nativePegFills: input.nativePegFillCount ?? 0,
     missingPrices: finalMissing,
     priceSourceHealth,
     upstreamFetchOk: input.upstreamFetchOk ?? true,

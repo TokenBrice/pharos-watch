@@ -82,6 +82,8 @@ export async function syncStablecoins(
     priceValidationStats,
     gtProbe,
     rejectedCount,
+    nativePegCorrectionCount,
+    nativePegFillCount,
   } = pricingStage;
 
   const fillSupplyHistoryResult = await fillStablecoinsSupplyHistoryStage(db, assets, signal);
@@ -195,6 +197,8 @@ export async function syncStablecoins(
     enrichStats,
     priceValidationStats,
     rejectedCount,
+    nativePegCorrectionCount,
+    nativePegFillCount,
     stalenessWarning,
     stalenessSummary,
     gtProbe,

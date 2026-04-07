@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "3.98",
+  currentVersion: "3.99",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "3.99",
+      title: "Native-peg live publication guard and fill lane for non-USD fiat assets",
+      date: "2026-04-07",
+      effectiveAt: 1775584200,
+      summary:
+        "Supported non-USD fiat assets can now use a fresh direct CoinGecko native quote plus fresh FX reference to correct weak live USD publications and fill missing live prices without turning that derived mark into replay-safe consensus state.",
+      impact: [
+        "Live post-enrichment validation now lets supported non-USD fiat assets replace materially divergent weak or mixed-source USD publications when a direct native quote implies a fresher peg-consistent USD mark",
+        "The same native lane can now fill a missing live price for supported non-USD fiat assets when direct native CoinGecko pricing exists and the derived USD mark passes publication validation",
+        "That native-implied mark remains a fresh fallback-validation lane rather than a replay-safe primary consensus source: it is not written into `price_cache`, and later replay cannot publish it as cached continuity",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.98",
       title: "Daily-confirmed native-peg replay for non-USD fiat backfills",

@@ -72,11 +72,12 @@ export function PricingPipelineMethodologySection() {
 
         <p>
           <strong className="text-foreground">Native-peg corroboration.</strong>{" "}
-          For supported non-USD fiat assets with a reliable native-market quote, downstream depeg routing now checks that
-          direct native pair before it trusts a derived <code className="mx-1 text-xs">USD price / FX reference</code>{" "}
-          move on its own. That lane is now generalized across the supported fiat set rather than effectively BRL-only, so
-          fresh direct pairs such as <code className="mx-1 text-xs">BRZ/BRL</code> or <code className="mx-1 text-xs">EURC/EUR</code>{" "}
-          can veto or resolve a derived mismatch even when the published cached USD price still reflects a thin FX-based move.
+          For supported non-USD fiat assets with a reliable native-market quote, the pipeline now derives a fresh{" "}
+          <code className="mx-1 text-xs">native quote × FX reference</code> USD mark during post-enrichment. That lane can
+          correct materially divergent weak or mixed-source live USD publications, fill a missing live price for supported
+          assets, and still veto or resolve downstream depeg mutations when the direct native pair disagrees with a derived{" "}
+          <code className="mx-1 text-xs">USD price / FX reference</code> move. It remains a fresh validation lane rather
+          than a replay-safe primary consensus voice, so it does not become cached continuity on later runs.
         </p>
 
         <p>

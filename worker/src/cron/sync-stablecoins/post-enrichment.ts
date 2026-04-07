@@ -5,6 +5,7 @@
  * Extracted to eliminate code duplication (Q-002, Q-011, CC-001).
  */
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { setCacheIfNewer, getPriceCache, savePriceCache } from "../../lib/db-cache";
 import { validatePayloadWithSchema } from "../../lib/api-utils";
 import { sendAlert } from "../../lib/alerts";
@@ -22,6 +23,12 @@ import {
   validatePublishedAssetPrice,
 } from "../../lib/price-publish-policy";
 import {
+  COINGECKO_NATIVE_IMPLIED_SOURCE,
+  computePriceDivergenceBps,
+  fetchCurrentNativePegImpliedUsdQuotes,
+  NATIVE_PEG_PRICE_GUARD_MAX_DRIFT_BPS,
+} from "../../lib/native-peg-implied-prices";
+import {
   clearPriceMetadata,
   StablecoinListResponseSchema,
   normalizeStablecoinsPayload,
@@ -32,7 +39,11 @@ import {
   type StablecoinsPayload,
   type CronResult,
 } from "./shared";
-import { isReplaySafePriceSource } from "../../lib/pricing-source-policy";
+import {
+  countDepegAuthoritativeSources,
+  isReplaySafePriceSource,
+  isSingleSourceDepegAuthoritative,
+} from "../../lib/pricing-source-policy";
 
 const PRICE_CACHE_TTL = 6 * 60 * 60;
 
@@ -46,6 +57,7 @@ export interface PostEnrichmentInput {
   db: D1Database;
   syncStartSec: number;
   signal?: AbortSignal;
+  coingeckoApiKey?: string | null;
   fxFallbackRates?: Record<string, number>;
   validationReferences?: PriceValidationReferences;
   validationContexts: { get: (asset: PeggedAsset) => PriceValidationContext };
@@ -57,6 +69,8 @@ export interface PostEnrichmentInput {
 export interface PriceValidationResult {
   rejectedCount: number;
   cachedFallbackCount: number;
+  nativePegCorrectionCount: number;
+  nativePegFillCount: number;
 }
 
 export interface DepegPipelineResult {
@@ -89,16 +103,137 @@ export async function runPostEnrichmentPricePipeline(
     assets,
     db,
     signal,
+    coingeckoApiKey,
     validationReferences,
     validationContexts,
     previousTrustedPrices,
     returnIfAborted,
   } = input;
 
+  const getCurrentSourceParts = (asset: PeggedAsset): string[] => (
+    asset.agreeSources && asset.agreeSources.length > 0
+      ? asset.agreeSources
+      : asset.priceSource
+        ? splitCompositePriceSource(asset.priceSource)
+        : []
+  );
+
+  const hasStrongNativePegBypassAuthority = (asset: PeggedAsset): boolean => {
+    if (asset.priceSource === "protocol-redeem" || asset.priceSource === "pool-tvl-weighted") {
+      return true;
+    }
+
+    const currentSourceParts = getCurrentSourceParts(asset);
+    if (asset.priceConfidence === "single-source") {
+      return currentSourceParts.length === 1 &&
+        isSingleSourceDepegAuthoritative(currentSourceParts[0], asset.priceObservedAtMode);
+    }
+
+    if (asset.priceConfidence === "high") {
+      return countDepegAuthoritativeSources(currentSourceParts) >= 2;
+    }
+
+    return false;
+  };
+
+  const nativePegHardeningCandidates = assets.filter((asset) => (
+    validationContexts.get(asset).pegClass === "fiat_fx"
+  ));
+
+  const nativePegImpliedUsdQuotes = await fetchCurrentNativePegImpliedUsdQuotes(
+    nativePegHardeningCandidates.map((asset) => {
+      const meta = TRACKED_META_BY_ID.get(asset.id);
+      const validationContext = validationContexts.get(asset);
+      return {
+        stablecoinId: asset.id,
+        geckoId: meta?.geckoId ?? asset.geckoId ?? null,
+        pegCurrency: meta?.flags?.pegCurrency ?? null,
+        pegType: validationContext.pegType ?? null,
+      };
+    }),
+    validationReferences,
+    signal,
+    coingeckoApiKey,
+  );
+
   // --- Reject unreasonable prices BEFORE caching ---
   let rejectedCount = 0;
+  let nativePegCorrectionCount = 0;
+  let nativePegFillCount = 0;
   for (const asset of assets) {
+    const nativePegImpliedUsd = nativePegImpliedUsdQuotes.get(asset.id);
+    const currentHasPrice = asset.price != null && typeof asset.price === "number";
+    const currentHasStrongBypassAuthority = currentHasPrice && hasStrongNativePegBypassAuthority(asset);
+    const nativePegDivergenceBps =
+      currentHasPrice && nativePegImpliedUsd != null
+        ? computePriceDivergenceBps(asset.price as number, nativePegImpliedUsd.priceUsd)
+        : null;
+
+    const tryApplyNativePegImpliedPrice = (reason: "fill" | "correction"): boolean => {
+      if (nativePegImpliedUsd == null) return false;
+      const nativeDecision = validatePublishedAssetPrice({
+        asset: {
+          price: nativePegImpliedUsd.priceUsd,
+          priceSource: COINGECKO_NATIVE_IMPLIED_SOURCE,
+          priceConfidence: "single-source",
+          agreeSources: [COINGECKO_NATIVE_IMPLIED_SOURCE],
+        },
+        validationContext: validationContexts.get(asset),
+        validationReferences,
+        previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
+      });
+      if (!nativeDecision.accepted) {
+        const action = reason === "fill" ? "fill" : "correction";
+        console.warn(
+          `[sync-stablecoins] Skipped native-peg ${action} for ${asset.symbol} (id=${asset.id}): ` +
+          `${nativeDecision.reason}`,
+        );
+        return false;
+      }
+
+      if (reason === "fill") {
+        console.warn(
+          `[sync-stablecoins] Filled missing non-USD fiat price for ${asset.symbol} (id=${asset.id}): ` +
+          `$${nativePegImpliedUsd.priceUsd.toFixed(6)} via direct ${nativePegImpliedUsd.pegCurrency} quote`,
+        );
+        nativePegFillCount++;
+      } else {
+        console.warn(
+          `[sync-stablecoins] Corrected weak non-USD fiat price for ${asset.symbol} (id=${asset.id}): ` +
+          `$${asset.price} from ${asset.priceSource ?? "unknown"} -> $${nativePegImpliedUsd.priceUsd.toFixed(6)} ` +
+          `via direct ${nativePegImpliedUsd.pegCurrency} quote (${nativePegDivergenceBps}bps divergence)`,
+        );
+        nativePegCorrectionCount++;
+      }
+
+      asset.price = nativePegImpliedUsd.priceUsd;
+      stampPriceMetadata(
+        asset,
+        COINGECKO_NATIVE_IMPLIED_SOURCE,
+        "single-source",
+        nativePegImpliedUsd.updatedAt,
+        "local_fetch",
+        [COINGECKO_NATIVE_IMPLIED_SOURCE],
+        [COINGECKO_NATIVE_IMPLIED_SOURCE],
+        input.syncStartSec,
+        COINGECKO_NATIVE_IMPLIED_SOURCE,
+      );
+      return true;
+    };
+
+    if (!currentHasPrice) {
+      tryApplyNativePegImpliedPrice("fill");
+    } else if (
+      !currentHasStrongBypassAuthority &&
+      nativePegImpliedUsd != null &&
+      nativePegDivergenceBps != null &&
+      nativePegDivergenceBps > NATIVE_PEG_PRICE_GUARD_MAX_DRIFT_BPS
+    ) {
+      tryApplyNativePegImpliedPrice("correction");
+    }
+
     if (asset.price == null || typeof asset.price !== "number") continue;
+
     const decision = validatePublishedAssetPrice({
       asset,
       validationContext: validationContexts.get(asset),
@@ -188,7 +323,7 @@ export async function runPostEnrichmentPricePipeline(
     }
   }
 
-  return { rejectedCount, cachedFallbackCount };
+  return { rejectedCount, cachedFallbackCount, nativePegCorrectionCount, nativePegFillCount };
 }
 
 // ---------------------------------------------------------------------------

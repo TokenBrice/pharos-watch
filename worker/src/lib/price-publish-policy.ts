@@ -37,6 +37,7 @@ export interface PriceAssetPublicationLike {
 
 function priceValidationModeForAsset(asset: PriceAssetPublicationLike): "primary_authoritative" | "fallback_enrichment" {
   return asset.priceConfidence === "fallback" ||
+    asset.priceSource === "coingecko-native-implied" ||
     asset.priceSource === "defillama-contract" ||
     asset.priceSource === "coinmarketcap" ||
     asset.priceSource === "dexscreener" ||

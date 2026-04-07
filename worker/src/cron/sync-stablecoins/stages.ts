@@ -151,6 +151,8 @@ export async function runStablecoinsPricingStage(
       priceValidationStats: Awaited<ReturnType<typeof fetchPrimaryPrices>>["stats"];
       gtProbe: Awaited<ReturnType<typeof runGtProbePass>> | { updatedCount: number; stats: ReturnType<typeof createEmptyGtProbeStats> };
       rejectedCount: number;
+      nativePegCorrectionCount: number;
+      nativePegFillCount: number;
       cachedFallbackCount: number;
     }
 > {
@@ -253,6 +255,7 @@ export async function runStablecoinsPricingStage(
     db: options.db,
     syncStartSec: options.syncStartSec,
     signal: options.signal,
+    coingeckoApiKey: options.coingeckoApiKey,
     fxFallbackRates: options.fxFallbackRates,
     validationReferences: options.validationReferences,
     validationContexts,
@@ -261,9 +264,15 @@ export async function runStablecoinsPricingStage(
     abortResult,
   }, "");
   if (isAbortResult(priceResult)) return priceResult;
-  const { rejectedCount, cachedFallbackCount } = priceResult;
+  const { rejectedCount, cachedFallbackCount, nativePegCorrectionCount, nativePegFillCount } = priceResult;
   if (rejectedCount > 0) {
     console.log(`[sync-stablecoins] Rejected ${rejectedCount} unreasonable prices`);
+  }
+  if (nativePegCorrectionCount > 0) {
+    console.log(`[sync-stablecoins] Corrected ${nativePegCorrectionCount} weak non-USD fiat prices via direct native quotes`);
+  }
+  if (nativePegFillCount > 0) {
+    console.log(`[sync-stablecoins] Filled ${nativePegFillCount} missing non-USD fiat prices via direct native quotes`);
   }
   if (cachedFallbackCount > 0) {
     console.log(`[sync-stablecoins] Applied ${cachedFallbackCount} cached fallback prices`);
@@ -273,6 +282,8 @@ export async function runStablecoinsPricingStage(
     itemsTotal: options.assets.length,
     metadata: {
       rejectedPrices: rejectedCount,
+      nativePegCorrections: nativePegCorrectionCount,
+      nativePegFills: nativePegFillCount,
       cachedFallbackPrices: cachedFallbackCount,
       gtProbeUpdates: gtProbe.updatedCount,
     },
@@ -283,6 +294,8 @@ export async function runStablecoinsPricingStage(
     priceValidationStats,
     gtProbe,
     rejectedCount,
+    nativePegCorrectionCount,
+    nativePegFillCount,
     cachedFallbackCount,
   };
 }

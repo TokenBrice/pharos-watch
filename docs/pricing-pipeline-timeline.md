@@ -1,6 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v3.98` (2026-02-01 -> 2026-04-07).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v3.99` (2026-02-01 -> 2026-04-07).
+
+---
+
+## v3.99 - Native-peg live publication guard and fill lane for non-USD fiat assets (Apr 7, 2026)
+
+**Commit:** `unreleased`
+
+- Supported non-USD fiat assets can now replace materially divergent weak or mixed-source USD publications when a fresh direct native CoinGecko quote plus fresh FX reference implies a better live USD mark
+- The same native lane can now fill a missing live price for supported non-USD fiat assets instead of falling straight to replay cache or `N/A`
+- Native-implied live prices remain a fresh fallback-validation lane rather than a replay-safe consensus source, so they are not written into `price_cache` for later replay publication
 
 ---
 

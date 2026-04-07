@@ -179,6 +179,7 @@ export async function syncViaCoingeckoFallback(
     db,
     syncStartSec,
     signal,
+    coingeckoApiKey,
     fxFallbackRates,
     validationReferences,
     validationContexts,
@@ -187,7 +188,7 @@ export async function syncViaCoingeckoFallback(
     abortResult,
   }, "fallback-");
   if (isAbortResult(priceResult)) return priceResult;
-  const { rejectedCount, cachedFallbackCount } = priceResult;
+  const { rejectedCount, cachedFallbackCount, nativePegCorrectionCount, nativePegFillCount } = priceResult;
   await reportStablecoinsStage(
     reportProgress,
     "fallback-price-validation",
@@ -197,6 +198,8 @@ export async function syncViaCoingeckoFallback(
       itemsTotal: assets.length,
       metadata: {
         rejectedPrices: rejectedCount,
+        nativePegCorrections: nativePegCorrectionCount,
+        nativePegFills: nativePegFillCount,
         cachedFallbackPrices: cachedFallbackCount,
       },
     },
@@ -338,6 +341,8 @@ export async function syncViaCoingeckoFallback(
       validationFailures: 0,
       enrichment: enrichStats,
       rejectedPrices: rejectedCount,
+      nativePegCorrections: nativePegCorrectionCount,
+      nativePegFills: nativePegFillCount,
       cachedFallbackPrices: cachedFallbackCount,
       authoritativeOverrides: authoritativeOverrideCount,
       stalenessWarning,
