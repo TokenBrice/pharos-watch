@@ -48,11 +48,14 @@ function computeHistoricalEventBps(
   if (snapshotPrice != null && event.peg_reference > 0) {
     const historicalBps = Math.round(((snapshotPrice / event.peg_reference) - 1) * 10_000);
     const eventStartDay = Math.floor(event.started_at / DAY_SECONDS) * DAY_SECONDS;
+    const dayEnd = day + DAY_SECONDS;
     const withinPeakFloorWindow =
       day - eventStartDay < HISTORICAL_PEAK_FLOOR_WINDOW_DAYS * DAY_SECONDS;
+    const persistsThroughUtcClose = event.ended_at == null || event.ended_at >= dayEnd;
     if (
       peakDeviationBps != null
       && withinPeakFloorWindow
+      && persistsThroughUtcClose
       && Math.abs(peakDeviationBps) > Math.abs(historicalBps)
     ) {
       return {
