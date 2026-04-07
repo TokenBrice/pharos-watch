@@ -1,6 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v3.96` (2026-02-01 -> 2026-04-07).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v3.97` (2026-02-01 -> 2026-04-07).
+
+---
+
+## v3.97 - Generalized native-peg safeguards for non-USD fiat replay and routing (Apr 7, 2026)
+
+**Commit:** `unreleased`
+
+- Supported non-USD fiat assets such as EUR, CHF, GBP, JPY, SGD, AUD, CAD, BRL, IDR, TRY, ZAR, PHP, MXN, RUB, and CNH/CNY can now consult fresh direct CoinGecko native-peg quotes before downstream depeg logic trusts `USD price / FX reference` on its own
+- Historical backfill now prefers direct CoinGecko native-fiat history for those supported pegs and compares that series to the native `1.0` peg before it falls back to USD-denominated history
+- The published cached USD price path still does not add a second CoinGecko-derived consensus source; this remains a downstream validation and historical replay hardening change
 
 ---
 

@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "5.5",
+  currentVersion: "5.6",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
+  {
+    version: "5.6",
+    title: "Generalized native-peg routing and replay for non-USD fiat assets",
+    date: "2026-04-07",
+    effectiveAt: 1775527200,
+    summary:
+      "Live and pending depeg routing now generalize the native-peg corroboration lane across the supported non-USD fiat set, and historical replay prefers native fiat market history where CoinGecko exposes it.",
+    impact: [
+      "Fresh direct native-peg quotes can now veto, sustain, or resolve live depeg state for supported EUR/CHF/GBP/JPY/SGD/AUD/CAD/BRL/IDR/TRY/ZAR/PHP/MXN/RUB/CNH-style fiat pegs instead of remaining effectively BRL-only",
+      "Pending confirmation prefers that same direct native quote first whenever CoinGecko exposes the matching fiat pair, reducing false confirmations from USD/FX reference drift",
+      "Historical backfill now replays supported non-USD fiat assets against direct native fiat price history and a native `1.0` peg when that series exists, which removes large classes of synthetic backfill events caused by USD/FX mismatch",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.5",
     title: "Direct native-peg corroboration for BRL depeg routing",

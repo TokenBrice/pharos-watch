@@ -111,7 +111,7 @@ Validation gates (skip if any fail):
 - Supply >= $1M (via `sumPegBuckets`) for live event recording
 - Peg reference valid: finite and > 0
 - Non-USD fiat peg references only mutate live state when they come from cached FX fallback or a median built from at least 3 live contributors; thin peer medians fail closed for that cycle
-- Supported non-USD fiat pegs such as BRL also consult a fresh direct native-peg CoinGecko quote before mutating live state; a native quote back inside threshold or pointing the other way vetoes the derived USD/FX move for that cycle
+- Supported non-USD fiat pegs with reliable CoinGecko native pairs also consult a fresh direct native-peg quote before mutating live state; a native quote back inside threshold or pointing the other way vetoes the derived USD/FX move for that cycle
 
 Primary-price trust gates:
 
@@ -179,7 +179,7 @@ Age checks:
 
 **Off-chain check:**
 
-- Preferred path for supported fiat pegs such as `BRZ`: use a fresh direct native-peg quote (for example `BRZ/BRL`) and compare that quote directly to the native `1.0` peg
+- Preferred path for supported non-USD fiat pegs: use a fresh direct native-peg quote (for example `BRZ/BRL` or `EURC/EUR`) and compare that quote directly to the native `1.0` peg
 - Default path: fetch CoinGecko `/simple/price` for the coin's `geckoId`
 - If the current primary price already comes from CoinGecko (`priceSource.startsWith("coingecko")`), switch the confirmer to DefiLlama `coins.llama.fi/prices/current/coingecko:{geckoId}` instead of querying CoinGecko again
 - Calculate deviation against `peg_reference`
@@ -223,9 +223,11 @@ Promotion inserts into `depeg_events` with `started_at` = original `first_seen_a
 
 ## Historical Backfill Validation
 
-Historical backfills in `worker/src/api/backfill-depegs.ts` do **not** reuse the exact same guard as live DEX or fallback enrichment, but they now consult the same authoritative-price provider registry as live sync before falling back to CoinGecko/DefiLlama history.
+Historical backfills in `worker/src/api/backfill-depegs.ts` do **not** reuse the exact same guard as live DEX or fallback enrichment, but they now consult the same authoritative-price provider registry as live sync before falling back to market history.
 
-`POST /api/backfill-depegs?dry-run=true` also accepts `startDay` / `endDay` for bounded replay audits. The handler applies a small context pad around that UTC window and compares only the overlapping stored `source='backfill'` rows, which makes long BRZ history audits feasible without waiting for a full-history HTTP request.
+Supported non-USD fiat backfills now prefer direct CoinGecko native-fiat history first and compare that series against the native `1.0` peg. Only when that native history is unavailable does the replay fall back to USD-denominated CoinGecko/DefiLlama history plus the historical FX reference.
+
+`POST /api/backfill-depegs?dry-run=true` also accepts `startDay` / `endDay` for bounded replay audits, plus optional `contextDays` to widen the replay pad around that UTC window. The handler compares only the overlapping stored `source='backfill'` rows, which makes long-history repairs practical without waiting for a full-coin HTTP request.
 
 When a coin has an authoritative historical provider (for example, protocol redemption quotes replayed at historical blocks), backfill uses that provider first. If the provider cannot return enough historical coverage, the handler preserves existing `source='backfill'` rows instead of rebuilding from a weaker market-data source.
 

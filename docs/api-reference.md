@@ -2699,11 +2699,13 @@ Admin-only secret rotation. The old token stops working immediately and a new pl
 
 Backfills historical depeg events from stored price data.
 
-For coins with a registered authoritative historical price provider, the backfill uses that same provider family first (for example, replayed protocol redemption quotes) before falling back to CoinGecko/DefiLlama market history. If the authoritative provider is configured but unavailable, existing `source='backfill'` rows for that coin are preserved instead of being rebuilt from a weaker source.
+For coins with a registered authoritative historical price provider, the backfill uses that same provider family first (for example, replayed protocol redemption quotes) before falling back to market history. If the authoritative provider is configured but unavailable, existing `source='backfill'` rows for that coin are preserved instead of being rebuilt from a weaker source.
+
+Supported non-USD fiat assets now prefer direct CoinGecko native-fiat history first and compare that series to the native `1.0` peg before they fall back to USD-denominated CoinGecko/DefiLlama history plus historical FX.
 
 `dry-run=true` compares the freshly replayed historical events against the currently stored `source='backfill'` rows without mutating the database. The preview reports whether the replay exactly matches the stored backfill rows, how many stored backfill rows would be removed, how many replayed rows would be added, and the current live-row counts for the same asset.
 
-Bounded replay windows also support `startDay` / `endDay`. The handler replays only that UTC window with a small context pad, which makes long-history audits and repairs such as BRZ practical over `ops-api` without waiting for a full-coin rebuild. In mutating mode, bounded replays only replace overlapping `source='backfill'` rows for that coin and preserve non-overlapping backfill rows plus all `source='live'` rows.
+Bounded replay windows also support `startDay` / `endDay`, plus optional `contextDays` to widen the replay pad around that UTC window. This makes long-history audits and repairs practical over `ops-api` without waiting for a full-coin rebuild. In mutating mode, bounded replays only replace overlapping `source='backfill'` rows for that coin and preserve non-overlapping backfill rows plus all `source='live'` rows.
 
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
@@ -2716,6 +2718,7 @@ Bounded replay windows also support `startDay` / `endDay`. The handler replays o
 | `dry-run`    | `"true"`                            | —       | Preview replay-vs-backfill differences without writing `depeg_events`     |
 | `startDay`   | `integer \| ISO date (YYYY-MM-DD)` | —       | Lower bound for bounded replay compare/mutation                           |
 | `endDay`     | `integer \| ISO date (YYYY-MM-DD)` | —       | Upper bound for bounded replay compare/mutation                           |
+| `contextDays` | `integer`                          | `7`     | Extra replay context days on each side of a bounded window (max `90`)     |
 
 ### `POST /api/backfill-supply-history`
 

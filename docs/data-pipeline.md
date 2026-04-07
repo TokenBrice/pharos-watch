@@ -187,6 +187,7 @@ For fiat FX, Frankfurter remains the preferred ECB-backed source for the busines
 ### Backfill (backfill-depegs.ts)
 
 - `backfill-depegs.ts` now asks the same authoritative-price registry used by live sync for historical series first. If a coin has an authoritative historical provider and that provider cannot return enough coverage, the backfill preserves existing `source='backfill'` rows instead of rebuilding from a known-weaker fallback source.
+- Supported non-USD fiat backfills prefer direct CoinGecko native-fiat history and compare it to the native `1.0` peg before they fall back to USD history plus historical FX.
 - Commodity backfill does **not** call a gold-api.com timeseries endpoint.
 - Instead, it builds daily GOLD/SILVER peg references from CoinGecko historical prices across tracked commodity tokens (`buildCommodityMedianSeriesFromCg()`), normalized to per-troy-ounce and median-aggregated per day.
 - The resulting `{ GOLD: FxTimeSeries[], SILVER: FxTimeSeries[] }` series feeds `buildFxLookup()` for time-varying commodity peg references.
@@ -194,7 +195,7 @@ For fiat FX, Frankfurter remains the preferred ECB-backed source for the busines
 - Secondary historical FX snapshots are cached in D1 by year (`fx-history-secondary:<year>`) so repeated admin backfills do not re-fetch the same daily files.
 - Fallback behavior: if series data is sparse/missing for a timestamp, `buildFxLookup()` falls back to the current peg reference derived from live rates.
 - Historical depeg extraction validates each price point against the **direct peg reference for that timestamp** (`historical_backfill` mode). That preserves confirmed catastrophic downside moves without weakening the tighter fallback/DEX filters used for noisy live sources.
-- Dry-run backfill audits now accept `startDay` / `endDay` and replay only that UTC window with a 7-day context pad, which keeps long-history BRZ audits below `ops-api` timeout limits without changing the full-coin mutation path.
+- Dry-run backfill audits now accept `startDay` / `endDay` plus optional `contextDays`, replay only that UTC window with the requested context pad, and keep long-history non-USD repairs below `ops-api` timeout limits without changing the full-coin mutation path.
 
 ### Budget
 

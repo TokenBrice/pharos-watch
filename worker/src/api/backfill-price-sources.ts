@@ -4,6 +4,7 @@ import { DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
 import { cgHeaders, cgUrl } from "../lib/coingecko";
 import { CoinGeckoMarketChartSchema } from "../lib/external-api-schemas";
 import { fetchWithRetry } from "../lib/fetch-retry";
+import { getNativePegQueryCurrencies } from "../lib/native-peg-quotes";
 import { RATE_LIMITS } from "../lib/rate-limit";
 
 export interface PricePoint {
@@ -11,7 +12,7 @@ export interface PricePoint {
   price: number;
 }
 
-export type HistoricalMarketSource = "coingecko" | "defillama";
+export type HistoricalMarketSource = "coingecko" | "coingecko-native" | "defillama";
 export type HistoricalMarketBackfillGranularity = "daily" | "hourly";
 export interface HistoricalMarketBackfillRange {
   startSec?: number | null;
@@ -39,6 +40,8 @@ export interface HistoricalMarketPolicyAdjustment {
 export interface HistoricalMarketSourceDiagnostics {
   granularity: HistoricalMarketBackfillGranularity;
   sourcesUsed: HistoricalMarketSource[];
+  quoteMode: "usd" | "native-peg";
+  quoteCurrency: string;
   mergeReasons: HistoricalMarketMergeReason[];
   perSourceStats: HistoricalMarketSeriesStats[];
   policyAdjustments: HistoricalMarketPolicyAdjustment[];
@@ -48,6 +51,11 @@ export interface HistoricalMarketSourceDiagnostics {
 export interface HistoricalMarketPriceSeriesResult {
   prices: PricePoint[] | null;
   diagnostics: HistoricalMarketSourceDiagnostics;
+}
+
+interface HistoricalMarketQuoteOptions {
+  pegCurrency?: string | null;
+  useNativePegQuote?: boolean;
 }
 
 interface HistoricalSourcePolicy {
@@ -191,14 +199,15 @@ export function collapsePricesToDailyTimestamps(prices: PricePoint[]): number[] 
 export async function fetchCgPriceHistoryDaily(
   geckoId: string,
   range?: HistoricalMarketBackfillRange,
+  vsCurrency = "usd",
 ): Promise<PricePoint[]> {
   try {
     const startSec = range?.startSec ?? null;
     const endSec = range?.endSec ?? Math.floor(Date.now() / 1000);
     const path =
       startSec != null
-        ? `/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${startSec}&to=${endSec}&precision=full`
-        : `/coins/${geckoId}/market_chart?vs_currency=usd&days=max`;
+        ? `/coins/${geckoId}/market_chart/range?vs_currency=${vsCurrency}&from=${startSec}&to=${endSec}&precision=full`
+        : `/coins/${geckoId}/market_chart?vs_currency=${vsCurrency}&days=max`;
     const res = await fetchWithRetry(
       cgUrl(path),
       { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
@@ -215,7 +224,7 @@ export async function fetchCgPriceHistoryDaily(
       .filter(([, price]) => price > 0)
       .map(([timestampMs, price]) => ({ timestamp: Math.floor(timestampMs / 1000), price }));
   } catch (err) {
-    console.error(`[backfill-pricing] Failed to fetch CG daily price history for ${geckoId}:`, err);
+    console.error(`[backfill-pricing] Failed to fetch CG daily price history for ${geckoId}/${vsCurrency}:`, err);
     return [];
   }
 }
@@ -223,6 +232,7 @@ export async function fetchCgPriceHistoryDaily(
 export async function fetchCgPriceHistoryHourly(
   geckoId: string,
   range?: HistoricalMarketBackfillRange,
+  vsCurrency = "usd",
 ): Promise<PricePoint[]> {
   const seen = new Map<number, number>();
   const HOURLY_EPOCH = Math.floor(new Date("2018-01-30T00:00:00Z").getTime() / 1000);
@@ -240,7 +250,7 @@ export async function fetchCgPriceHistoryHourly(
       await new Promise((resolve) => setTimeout(resolve, RATE_LIMITS.COINGECKO_BACKFILL_MS));
       const phaseOne = await fetchWithRetry(
         cgUrl(
-          `/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${startSec}&to=${Math.min(endSec, HOURLY_EPOCH)}&precision=full`,
+          `/coins/${geckoId}/market_chart/range?vs_currency=${vsCurrency}&from=${startSec}&to=${Math.min(endSec, HOURLY_EPOCH)}&precision=full`,
         ),
         { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
         2,
@@ -266,7 +276,7 @@ export async function fetchCgPriceHistoryHourly(
     try {
       await new Promise((resolve) => setTimeout(resolve, RATE_LIMITS.COINGECKO_BACKFILL_MS));
       const res = await fetchWithRetry(
-        cgUrl(`/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${chunkFrom}&to=${chunkTo}&precision=full`),
+        cgUrl(`/coins/${geckoId}/market_chart/range?vs_currency=${vsCurrency}&from=${chunkFrom}&to=${chunkTo}&precision=full`),
         { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
         2,
         { timeoutMs: 30_000 },
@@ -280,12 +290,12 @@ export async function fetchCgPriceHistoryHourly(
         }
       }
     } catch (err) {
-      console.error(`[backfill-pricing] CG hourly chunk failed for ${geckoId} (${chunkFrom}-${chunkTo}):`, err);
+      console.error(`[backfill-pricing] CG hourly chunk failed for ${geckoId}/${vsCurrency} (${chunkFrom}-${chunkTo}):`, err);
     }
   }
 
   if (seen.size === 0) {
-    return fetchCgPriceHistoryDaily(geckoId);
+    return fetchCgPriceHistoryDaily(geckoId, range, vsCurrency);
   }
 
   return dedupeAndSortPrices(
@@ -325,11 +335,20 @@ export async function fetchMarketBackfillPriceSeries(
     granularity?: HistoricalMarketBackfillGranularity;
     seedCoinGeckoPrices?: PricePoint[];
     range?: HistoricalMarketBackfillRange;
+    quote?: HistoricalMarketQuoteOptions;
   },
 ): Promise<HistoricalMarketPriceSeriesResult> {
   const granularity = options?.granularity ?? "hourly";
+  const nativeQuoteCurrencies = options?.quote?.useNativePegQuote
+    ? getNativePegQueryCurrencies(options?.quote?.pegCurrency ?? meta.flags.pegCurrency)
+    : [];
+  const quoteMode = nativeQuoteCurrencies.length > 0 ? "native-peg" : "usd";
+  let quoteCurrency = nativeQuoteCurrencies[0] ?? "usd";
+  const primarySource: HistoricalMarketSource = quoteMode === "native-peg" ? "coingecko-native" : "coingecko";
   const diagnostics: HistoricalMarketSourceDiagnostics = {
     granularity,
+    quoteMode,
+    quoteCurrency,
     sourcesUsed: [],
     mergeReasons: [],
     perSourceStats: [],
@@ -337,21 +356,33 @@ export async function fetchMarketBackfillPriceSeries(
     finalPointCount: 0,
   };
 
-  const rawCgPrices = options?.seedCoinGeckoPrices
-    ?? (granularity === "daily"
-      ? await fetchCgPriceHistoryDaily(geckoId, options?.range)
-      : await fetchCgPriceHistoryHourly(geckoId, options?.range));
-  const cgAdjusted = applyHistoricalPolicyAdjustments(meta.id, dedupeAndSortPrices(rawCgPrices));
+  let rawCgPrices = options?.seedCoinGeckoPrices ?? null;
+  if (rawCgPrices == null) {
+    const quoteCurrencyCandidates = quoteMode === "native-peg" ? nativeQuoteCurrencies : ["usd"];
+    for (let index = 0; index < quoteCurrencyCandidates.length; index++) {
+      const candidateCurrency = quoteCurrencyCandidates[index]!;
+      const candidatePrices = granularity === "daily"
+        ? await fetchCgPriceHistoryDaily(geckoId, options?.range, candidateCurrency)
+        : await fetchCgPriceHistoryHourly(geckoId, options?.range, candidateCurrency);
+      if (candidatePrices.length > 0 || index === quoteCurrencyCandidates.length - 1) {
+        rawCgPrices = candidatePrices;
+        quoteCurrency = candidateCurrency;
+        diagnostics.quoteCurrency = candidateCurrency;
+        break;
+      }
+    }
+  }
+  const cgAdjusted = applyHistoricalPolicyAdjustments(meta.id, dedupeAndSortPrices(rawCgPrices ?? []));
   const cgPrices = cgAdjusted.prices;
   diagnostics.policyAdjustments.push(...cgAdjusted.adjustments);
-  diagnostics.perSourceStats.push(buildSeriesStats("coingecko", cgPrices));
+  diagnostics.perSourceStats.push(buildSeriesStats(primarySource, cgPrices));
 
   let mergedPrices = cgPrices;
   let shouldMergeDefiLlama = false;
-  if (cgPrices.length === 0) {
+  if (quoteMode === "usd" && cgPrices.length === 0) {
     appendUniqueMergeReason(diagnostics.mergeReasons, "coingecko-empty");
     shouldMergeDefiLlama = true;
-  } else {
+  } else if (quoteMode === "usd") {
     if (isTailStale(cgPrices, granularity)) {
       appendUniqueMergeReason(diagnostics.mergeReasons, "coingecko-tail-stale");
       shouldMergeDefiLlama = true;
@@ -388,7 +419,7 @@ export async function fetchMarketBackfillPriceSeries(
   }
 
   if (cgPrices.length > 0) {
-    appendUniqueSources(diagnostics.sourcesUsed, "coingecko");
+    appendUniqueSources(diagnostics.sourcesUsed, primarySource);
   }
 
   diagnostics.finalPointCount = mergedPrices.length;

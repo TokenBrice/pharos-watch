@@ -28,6 +28,8 @@ vi.mock("../backfill-price-sources", async (importOriginal) => {
       diagnostics: {
         granularity: "hourly",
         sourcesUsed: ["coingecko"],
+        quoteMode: "usd",
+        quoteCurrency: "usd",
         mergeReasons: [],
         perSourceStats: [],
         policyAdjustments: [],
@@ -160,10 +162,12 @@ describe("handleBackfillDepegs replay windows", () => {
       dryRun: boolean;
       startDay: number | null;
       endDay: number | null;
+      contextDays: number | null;
     };
     expect(body.dryRun).toBe(true);
     expect(body.startDay).toBe(day1);
     expect(body.endDay).toBe(day2);
+    expect(body.contextDays).toBe(7);
 
     expect(vi.mocked(fetchMarketBackfillPriceSeries)).toHaveBeenCalledWith(
       expect.anything(),
@@ -173,6 +177,81 @@ describe("handleBackfillDepegs replay windows", () => {
         range: {
           startSec: day1 - 7 * 86400,
           endSec: day2 + (8 * 86400) - 1,
+        },
+      }),
+    );
+  });
+
+  it("supports configurable replay context for bounded dry-run previews", async () => {
+    const day1 = Math.floor(new Date("2025-02-01T00:00:00Z").getTime() / 1000);
+    const day2 = Math.floor(new Date("2025-02-28T00:00:00Z").getTime() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
+        matchBinds: ["usdt-tether"],
+        rows: [],
+      },
+    ]);
+
+    const req = makeApiRequest(`/api/backfill-depegs?stablecoin=usdt-tether&dry-run=true&startDay=${day1}&endDay=${day2}&contextDays=30`, {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleBackfillDepegs(db, makeApiUrl(req.url), true, req);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as {
+      contextDays: number | null;
+    };
+    expect(body.contextDays).toBe(30);
+
+    expect(vi.mocked(fetchMarketBackfillPriceSeries)).toHaveBeenCalledWith(
+      expect.anything(),
+      "tether",
+      expect.objectContaining({
+        range: {
+          startSec: day1 - 30 * 86400,
+          endSec: day2 + (31 * 86400) - 1,
+        },
+      }),
+    );
+  });
+
+  it("requests native-peg market replay for supported non-USD fiat assets", async () => {
+    mockFetch([
+      {
+        match: "/stablecoin/",
+        body: {
+          gecko_id: "euro-coin",
+          tokens: [{ date: "1000", circulating: { peggedUSD: 2_000_000_000 } }],
+        },
+      },
+    ]);
+    const db = mockD1([
+      {
+        match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
+        matchBinds: ["eurc-circle"],
+        rows: [],
+      },
+    ]);
+
+    const req = makeApiRequest("/api/backfill-depegs?stablecoin=eurc-circle&dry-run=true", {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleBackfillDepegs(db, makeApiUrl(req.url), true, req);
+    expect(res.status).toBe(200);
+
+    expect(vi.mocked(fetchMarketBackfillPriceSeries)).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "eurc-circle" }),
+      "euro-coin",
+      expect.objectContaining({
+        granularity: "hourly",
+        quote: {
+          pegCurrency: "EUR",
+          useNativePegQuote: true,
         },
       }),
     );
@@ -199,6 +278,8 @@ describe("handleBackfillDepegs replay windows", () => {
       diagnostics: {
         granularity: "hourly",
         sourcesUsed: ["coingecko"],
+        quoteMode: "usd",
+        quoteCurrency: "usd",
         mergeReasons: [],
         perSourceStats: [],
         policyAdjustments: [],

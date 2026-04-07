@@ -74,8 +74,16 @@ export function PricingPipelineMethodologySection() {
           <strong className="text-foreground">Native-peg corroboration.</strong>{" "}
           For supported non-USD fiat assets with a reliable native-market quote, downstream depeg routing now checks that
           direct native pair before it trusts a derived <code className="mx-1 text-xs">USD price / FX reference</code>{" "}
-          move on its own. For BRZ, a fresh direct <code className="mx-1 text-xs">BRZ/BRL</code> quote can therefore veto
-          or resolve a BRL depeg even when the published cached USD price still reflects a thin derived mismatch.
+          move on its own. That lane is now generalized across the supported fiat set rather than effectively BRL-only, so
+          fresh direct pairs such as <code className="mx-1 text-xs">BRZ/BRL</code> or <code className="mx-1 text-xs">EURC/EUR</code>{" "}
+          can veto or resolve a derived mismatch even when the published cached USD price still reflects a thin FX-based move.
+        </p>
+
+        <p>
+          <strong className="text-foreground">Historical replay parity.</strong>{" "}
+          Supported non-USD fiat backfills now prefer direct CoinGecko native-fiat history and compare that series to the
+          native <code className="mx-1 text-xs">1.0</code> peg before falling back to USD-denominated market history. That
+          removes long synthetic depeg streaks created only by replay-time <code className="mx-1 text-xs">USD / FX</code> mismatch.
         </p>
 
         <p>

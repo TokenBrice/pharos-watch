@@ -4,7 +4,24 @@ import { fetchWithRetry } from "./fetch-retry";
 
 const COINGECKO_NATIVE_PEG_BATCH_SIZE = 50;
 const COINGECKO_NATIVE_PEG_TIMEOUT_MS = 10_000;
-const SUPPORTED_COINGECKO_NATIVE_PEG_CURRENCIES = new Set(["BRL"]);
+const SUPPORTED_COINGECKO_NATIVE_PEG_CURRENCIES = new Map<string, string[]>([
+  ["AUD", ["aud"]],
+  ["BRL", ["brl"]],
+  ["CAD", ["cad"]],
+  ["CHF", ["chf"]],
+  ["CNY", ["cny", "cnh"]],
+  ["CNH", ["cny", "cnh"]],
+  ["EUR", ["eur"]],
+  ["GBP", ["gbp"]],
+  ["IDR", ["idr"]],
+  ["JPY", ["jpy"]],
+  ["MXN", ["mxn"]],
+  ["PHP", ["php"]],
+  ["RUB", ["rub"]],
+  ["SGD", ["sgd"]],
+  ["TRY", ["try"]],
+  ["ZAR", ["zar"]],
+]);
 
 export interface NativePegQuoteRequest {
   stablecoinId: string;
@@ -16,14 +33,29 @@ export interface NativePegQuote {
   stablecoinId: string;
   geckoId: string;
   pegCurrency: string;
+  vsCurrency?: string;
   price: number;
   updatedAt: number;
 }
 
-function normalizeSupportedPegCurrency(pegCurrency: string | null | undefined): string | null {
+export function normalizeSupportedPegCurrency(pegCurrency: string | null | undefined): string | null {
   if (!pegCurrency) return null;
   const normalized = pegCurrency.trim().toUpperCase();
   return SUPPORTED_COINGECKO_NATIVE_PEG_CURRENCIES.has(normalized) ? normalized : null;
+}
+
+export function getNativePegQueryCurrencies(pegCurrency: string | null | undefined): string[] {
+  const normalized = normalizeSupportedPegCurrency(pegCurrency);
+  if (!normalized) return [];
+  return SUPPORTED_COINGECKO_NATIVE_PEG_CURRENCIES.get(normalized) ?? [];
+}
+
+export function getPreferredNativePegQueryCurrency(pegCurrency: string | null | undefined): string | null {
+  return getNativePegQueryCurrencies(pegCurrency)[0] ?? null;
+}
+
+function getQueryCurrenciesForPeg(pegCurrency: string): string[] {
+  return SUPPORTED_COINGECKO_NATIVE_PEG_CURRENCIES.get(pegCurrency) ?? [];
 }
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
@@ -60,67 +92,80 @@ export async function fetchCurrentNativePegQuotes(
   }
 
   for (const [pegCurrency, group] of groupedRequests) {
-    const vsCurrency = pegCurrency.toLowerCase();
+    const queryCurrencies = getQueryCurrenciesForPeg(pegCurrency);
+    if (queryCurrencies.length === 0) continue;
     for (let index = 0; index < group.length; index += COINGECKO_NATIVE_PEG_BATCH_SIZE) {
       const batch = group.slice(index, index + COINGECKO_NATIVE_PEG_BATCH_SIZE);
       const uniqueGeckoIds = Array.from(new Set(batch.map((request) => request.geckoId)));
-      const url = cgUrl(
-        `/simple/price?ids=${encodeURIComponent(uniqueGeckoIds.join(","))}&vs_currencies=${vsCurrency}&include_last_updated_at=true`,
-        coingeckoApiKey ?? null,
-      );
+      for (const vsCurrency of queryCurrencies) {
+        const pendingRequests = batch.filter((request) => !quotes.has(request.stablecoinId));
+        if (pendingRequests.length === 0) break;
 
-      try {
-        const response = await fetchWithRetry(
-          url,
-          {
-            headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
-            signal,
-          },
-          1,
-          { timeoutMs: COINGECKO_NATIVE_PEG_TIMEOUT_MS },
+        const url = cgUrl(
+          `/simple/price?ids=${encodeURIComponent(uniqueGeckoIds.join(","))}&vs_currencies=${vsCurrency}&include_last_updated_at=true`,
+          coingeckoApiKey ?? null,
         );
-        if (!response?.ok) {
-          if (response) {
-            try {
-              await response.text();
-            } catch {
-              // Ignore failed body reads on non-OK responses.
+
+        try {
+          const response = await fetchWithRetry(
+            url,
+            {
+              headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
+              signal,
+            },
+            1,
+            { timeoutMs: COINGECKO_NATIVE_PEG_TIMEOUT_MS },
+          );
+          if (!response?.ok) {
+            if (response) {
+              try {
+                await response.text();
+              } catch {
+                // Ignore failed body reads on non-OK responses.
+              }
             }
+            continue;
           }
-          continue;
-        }
 
-        const payload = await response.json();
-        if (!isObjectRecord(payload)) {
-          continue;
-        }
+          const payload = await response.json();
+          if (!isObjectRecord(payload)) {
+            continue;
+          }
 
-        for (const request of batch) {
-          const rawEntry = payload[request.geckoId];
-          if (!isObjectRecord(rawEntry)) continue;
+          let filledAny = false;
+          for (const request of pendingRequests) {
+            const rawEntry = payload[request.geckoId];
+            if (!isObjectRecord(rawEntry)) continue;
 
-          const price = rawEntry[vsCurrency];
-          const updatedAt = rawEntry.last_updated_at;
-          if (typeof price !== "number" || !Number.isFinite(price) || price <= 0) continue;
-          if (typeof updatedAt !== "number" || !Number.isFinite(updatedAt) || updatedAt <= 0) continue;
-          if (nowSec - updatedAt > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC) continue;
+            const price = rawEntry[vsCurrency];
+            const updatedAt = rawEntry.last_updated_at;
+            if (typeof price !== "number" || !Number.isFinite(price) || price <= 0) continue;
+            if (typeof updatedAt !== "number" || !Number.isFinite(updatedAt) || updatedAt <= 0) continue;
+            if (nowSec - updatedAt > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC) continue;
 
-          quotes.set(request.stablecoinId, {
-            stablecoinId: request.stablecoinId,
-            geckoId: request.geckoId,
-            pegCurrency,
-            price,
-            updatedAt,
-          });
+            quotes.set(request.stablecoinId, {
+              stablecoinId: request.stablecoinId,
+              geckoId: request.geckoId,
+              pegCurrency,
+              vsCurrency,
+              price,
+              updatedAt,
+            });
+            filledAny = true;
+          }
+
+          if (filledAny && batch.every((request) => quotes.has(request.stablecoinId))) {
+            break;
+          }
+        } catch (error) {
+          if (signal?.aborted) {
+            throw error instanceof Error ? error : new Error(String(error));
+          }
+          console.warn(
+            `[native-peg-quotes] CoinGecko ${pegCurrency} quote fetch failed for ${uniqueGeckoIds.join(",")}:`,
+            error,
+          );
         }
-      } catch (error) {
-        if (signal?.aborted) {
-          throw error instanceof Error ? error : new Error(String(error));
-        }
-        console.warn(
-          `[native-peg-quotes] CoinGecko ${pegCurrency} quote fetch failed for ${uniqueGeckoIds.join(",")}:`,
-          error,
-        );
       }
     }
   }

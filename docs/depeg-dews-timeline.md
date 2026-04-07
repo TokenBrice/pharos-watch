@@ -1,8 +1,16 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v5.5` (2026-02-18 -> 2026-04-07).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v5.6` (2026-02-18 -> 2026-04-07).
 
 ---
+## v5.6 — Generalized native-peg routing and replay for non-USD fiat assets (Apr 7, 2026)
+
+**Commit:** `unreleased`
+
+- Fresh direct native-peg quotes can now veto, sustain, or resolve live depeg state across the supported non-USD fiat set instead of remaining effectively BRL-only
+- Pending depeg confirmation now prefers that same direct native quote first whenever CoinGecko exposes the matching fiat pair
+- Historical backfill now replays supported non-USD fiat assets against direct native fiat history and a native `1.0` peg when available, removing large classes of synthetic backfill rows caused only by USD/FX mismatch
+
 ## v5.5 — Direct native-peg corroboration for BRL depeg routing (Apr 7, 2026)
 
 **Commit:** `unreleased`

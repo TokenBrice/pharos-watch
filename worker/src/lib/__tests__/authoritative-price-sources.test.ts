@@ -266,6 +266,8 @@ describe("authoritative-price-sources", () => {
       diagnostics: {
         granularity: "hourly",
         sourcesUsed: ["coingecko"],
+        quoteMode: "usd",
+        quoteCurrency: "usd",
         mergeReasons: [],
         perSourceStats: [],
         policyAdjustments: [],

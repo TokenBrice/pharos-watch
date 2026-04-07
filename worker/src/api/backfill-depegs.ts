@@ -26,6 +26,7 @@ import { selectBackfillCoins } from "../lib/backfill-query";
 import { buildAdminJobSummary, noAdminTargetsResponse, runAdminJob } from "../lib/admin-job";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { fetchAuthoritativeHistoricalPriceSeries } from "../lib/authoritative-price-sources";
+import { normalizeSupportedPegCurrency } from "../lib/native-peg-quotes";
 
 // ── Re-exports from extracted modules (preserve public API) ─────────
 export {
@@ -73,6 +74,7 @@ import {
 const BATCH_SIZE = 3;
 const BATCH_CHUNK_SIZE = 100;
 const BACKFILL_REPLAY_CONTEXT_DAYS = 7;
+const MAX_BACKFILL_REPLAY_CONTEXT_DAYS = 90;
 
 /** Consecutive above-threshold data points needed to confirm a large-cap depeg.
  *  Mirrors the live system's pending → re-check → promote flow. */
@@ -101,6 +103,7 @@ interface PreparedBackfillCoin {
 }
 
 interface BackfillReplayWindow {
+  contextDays: number;
   startDay: number | null;
   endDay: number | null;
   compareStartSec: number | null;
@@ -163,21 +166,34 @@ function parseDayParam(raw: string | null): number | null {
   return Math.floor(parsedMs / 1000 / DAY_SECONDS) * DAY_SECONDS;
 }
 
-function buildReplayWindow(startDay: number | null, endDay: number | null): BackfillReplayWindow {
+function parseContextDaysParam(raw: string | null): number | null {
+  if (!raw) return null;
+  if (!/^\d+$/.test(raw)) return null;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > MAX_BACKFILL_REPLAY_CONTEXT_DAYS) return null;
+  return parsed;
+}
+
+function buildReplayWindow(
+  startDay: number | null,
+  endDay: number | null,
+  contextDays = BACKFILL_REPLAY_CONTEXT_DAYS,
+): BackfillReplayWindow {
   const compareStartSec = startDay;
   const compareEndSec = endDay != null ? endDay + DAY_SECONDS - 1 : null;
   return {
+    contextDays,
     startDay,
     endDay,
     compareStartSec,
     compareEndSec,
     replayStartSec:
       compareStartSec != null
-        ? Math.max(0, compareStartSec - BACKFILL_REPLAY_CONTEXT_DAYS * DAY_SECONDS)
+        ? Math.max(0, compareStartSec - contextDays * DAY_SECONDS)
         : null,
     replayEndSec:
       compareEndSec != null
-        ? compareEndSec + BACKFILL_REPLAY_CONTEXT_DAYS * DAY_SECONDS
+        ? compareEndSec + contextDays * DAY_SECONDS
         : null,
   };
 }
@@ -247,11 +263,18 @@ export async function handleBackfillDepegs(
       const hasExplicitReplayWindow = url.searchParams.has("startDay") || url.searchParams.has("endDay");
       const requestedStartDay = parseDayParam(url.searchParams.get("startDay"));
       const requestedEndDay = parseDayParam(url.searchParams.get("endDay"));
+      const requestedContextDays = parseContextDaysParam(url.searchParams.get("contextDays"));
       if (
         (url.searchParams.get("startDay") && requestedStartDay == null) ||
         (url.searchParams.get("endDay") && requestedEndDay == null)
       ) {
         return errorResponse(400, "Invalid startDay/endDay. Use Unix seconds/milliseconds or YYYY-MM-DD.");
+      }
+      if (url.searchParams.get("contextDays") && requestedContextDays == null) {
+        return errorResponse(
+          400,
+          `Invalid contextDays. Use an integer between 0 and ${MAX_BACKFILL_REPLAY_CONTEXT_DAYS}.`,
+        );
       }
       if (
         requestedStartDay != null &&
@@ -261,7 +284,11 @@ export async function handleBackfillDepegs(
         return errorResponse(400, "Invalid startDay/endDay: startDay must be <= endDay.");
       }
       const replayWindow = hasExplicitReplayWindow
-        ? buildReplayWindow(requestedStartDay, requestedEndDay)
+        ? buildReplayWindow(
+            requestedStartDay,
+            requestedEndDay,
+            requestedContextDays ?? BACKFILL_REPLAY_CONTEXT_DAYS,
+          )
         : null;
 
       const selection = selectBackfillCoins(url, PSI_ELIGIBLE_STABLECOINS, {
@@ -595,6 +622,7 @@ export async function handleBackfillDepegs(
           recomputedBackfillEvents: totalEvents,
           startDay: replayWindow?.startDay ?? null,
           endDay: replayWindow?.endDay ?? null,
+          contextDays: replayWindow?.contextDays ?? null,
           previews,
           skipped,
           errors,
@@ -768,14 +796,18 @@ async function backfillCoin(
   replayWindow?: BackfillReplayWindow | null,
 ): Promise<BackfillCoinReplayResult> {
   const pegType = `pegged${meta.flags.pegCurrency}`;
+  const nativePegCurrency = normalizeSupportedPegCurrency(meta.flags.pegCurrency);
   const candidateSupplySnapshots = replayWindow
     ? supplyByDate.filter((snapshot) => timestampInReplayWindow(snapshot.ts, replayWindow))
     : supplyByDate;
 
   let marketSeries: HistoricalMarketPriceSeriesResult | null = null;
-  const loadMarketSeries = async (): Promise<HistoricalMarketPriceSeriesResult> => {
-    if (marketSeries != null) return marketSeries;
-    marketSeries = await fetchMarketBackfillPriceSeries(meta, geckoId, {
+  const loadMarketSeries = async (
+    quoteMode: "native-peg" | "usd" = "usd",
+  ): Promise<HistoricalMarketPriceSeriesResult> => {
+    if (marketSeries != null && marketSeries.diagnostics.quoteMode === quoteMode) return marketSeries;
+
+    const series = await fetchMarketBackfillPriceSeries(meta, geckoId, {
       granularity: "hourly",
       range: replayWindow
         ? {
@@ -783,24 +815,37 @@ async function backfillCoin(
             endSec: replayWindow.replayEndSec,
           }
         : undefined,
+      quote: {
+        pegCurrency: meta.flags.pegCurrency,
+        useNativePegQuote: quoteMode === "native-peg",
+      },
     });
     if (
-      marketSeries.diagnostics.mergeReasons.length > 0 ||
-      marketSeries.diagnostics.policyAdjustments.length > 0
+      series.diagnostics.mergeReasons.length > 0 ||
+      series.diagnostics.policyAdjustments.length > 0 ||
+      series.diagnostics.quoteMode === "native-peg"
     ) {
       console.log(
-        `[backfill-depegs] ${meta.id} historical market replay used ${marketSeries.diagnostics.sourcesUsed.join("+") || "none"}`
-          + ` mergeReasons=${marketSeries.diagnostics.mergeReasons.join(",") || "none"}`
-          + ` adjustments=${marketSeries.diagnostics.policyAdjustments.length}`,
+        `[backfill-depegs] ${meta.id} historical market replay used ${series.diagnostics.sourcesUsed.join("+") || "none"}`
+          + ` quote=${series.diagnostics.quoteCurrency}`
+          + ` mergeReasons=${series.diagnostics.mergeReasons.join(",") || "none"}`
+          + ` adjustments=${series.diagnostics.policyAdjustments.length}`,
       );
     }
-    return marketSeries;
+    marketSeries = series;
+    return series;
   };
 
-  const candidateTimestamps =
-    candidateSupplySnapshots.length > 0
-      ? candidateSupplySnapshots.map((snapshot) => snapshot.ts)
-      : collapsePricesToDailyTimestamps((await loadMarketSeries()).prices ?? []);
+  let candidateTimestamps: number[];
+  if (candidateSupplySnapshots.length > 0) {
+    candidateTimestamps = candidateSupplySnapshots.map((snapshot) => snapshot.ts);
+  } else {
+    let candidateSeries = nativePegCurrency ? await loadMarketSeries("native-peg") : await loadMarketSeries("usd");
+    if ((!candidateSeries.prices || candidateSeries.prices.length === 0) && nativePegCurrency) {
+      candidateSeries = await loadMarketSeries("usd");
+    }
+    candidateTimestamps = collapsePricesToDailyTimestamps(candidateSeries.prices ?? []);
+  }
 
   const authoritativeHistory = await fetchAuthoritativeHistoricalPriceSeries(meta, {
     candidateTimestamps,
@@ -826,7 +871,11 @@ async function backfillCoin(
     }
     sourceKind = "authoritative";
   } else {
-    const series = await loadMarketSeries();
+    const nativeSeries = nativePegCurrency ? await loadMarketSeries("native-peg") : null;
+    const series =
+      nativeSeries && nativeSeries.prices && nativeSeries.prices.length > 0
+        ? nativeSeries
+        : await loadMarketSeries("usd");
     prices = series.prices;
     marketDiagnostics = series.diagnostics;
     if (!prices || prices.length === 0) {
@@ -846,7 +895,7 @@ async function backfillCoin(
 
   const extractedEvents = extractDepegEvents(
     prices,
-    getPegRef,
+    marketDiagnostics?.quoteMode === "native-peg" ? (() => 1) : getPegRef,
     pegType,
     supplyByDate,
     fxRates,

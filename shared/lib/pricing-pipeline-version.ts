@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "3.96",
+  currentVersion: "3.97",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "3.97",
+      title: "Generalized native-peg safeguards for non-USD fiat replay and routing",
+      date: "2026-04-07",
+      effectiveAt: 1775527200,
+      summary:
+        "Expanded the native-peg hardening lane from BRL-only handling to the wider supported non-USD fiat set, and historical backfill now prefers direct native CoinGecko fiat pairs before falling back to USD history.",
+      impact: [
+        "Supported non-USD fiat assets such as EUR, CHF, GBP, JPY, SGD, AUD, CAD, BRL, IDR, TRY, ZAR, PHP, MXN, RUB, and CNH/CNY can now consult fresh direct native-peg quotes before downstream depeg logic trusts a derived USD-versus-FX move",
+        "Historical market replay now prefers direct CoinGecko native fiat pairs for those supported pegs and compares that native series directly to the `1.0` peg instead of replaying through `USD price / FX reference` when native history exists",
+        "The published live USD price path still does not gain a second CoinGecko-derived consensus voice; this remains a downstream validation and historical-replay hardening change rather than a new cached live source",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.96",
       title: "Direct native-peg BRL corroboration for downstream depeg routing",
