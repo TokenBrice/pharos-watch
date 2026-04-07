@@ -178,4 +178,39 @@ describe("psi-replay", () => {
     expect(replay.result?.band).toBe("MELTDOWN");
     expect(replay.result?.score).toBeLessThan(20);
   });
+
+  it("uses peak deviation as a start-day floor when the daily snapshot misses an intraday shock", () => {
+    const day = 1_678_579_200; // 2023-03-11
+    const now = day + DAY;
+    const supplyByCoin = buildSupplySnapshotMap([
+      { stablecoin_id: "usdc-circle", snapshot_date: day, circulating_usd: 43_000_000_000, price: 0.998 },
+      { stablecoin_id: "usdc-circle", snapshot_date: day - 7 * DAY, circulating_usd: 43_500_000_000, price: 1 },
+      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 73_000_000_000, price: 1.001 },
+      { stablecoin_id: "usdt-tether", snapshot_date: day - 7 * DAY, circulating_usd: 72_000_000_000, price: 1 },
+    ]);
+
+    const replay = replayHistoricalPsiForDay({
+      day,
+      now,
+      methodologyVersion: "3.2",
+      depegEvents: [
+        {
+          stablecoin_id: "usdc-circle",
+          peak_deviation_bps: -1200,
+          peg_reference: 1,
+          started_at: day + 6 * 3600,
+          ended_at: null,
+        },
+      ],
+      supplyByCoin,
+      dewsByDay: buildHistoricalDewsMap([
+        { stablecoin_id: "usdc-circle", snapshot_date: day, band: "WARNING" },
+      ]),
+    });
+
+    expect(replay.input.depegs).toEqual([
+      { bps: -1200, mcapUsd: 43_000_000_000, depegAgeDays: 0 },
+    ]);
+    expect(replay.result?.band).toBe("MELTDOWN");
+  });
 });

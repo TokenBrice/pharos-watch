@@ -14,19 +14,15 @@ import {
   usesHistoricalStressBreadth,
 } from "../lib/psi-replay";
 import { runAdminJob } from "../lib/admin-job";
+import { parseDayParam } from "./backfill-depegs-window";
 
-function parseDayParam(raw: string | null): number | null {
-  if (!raw) return null;
-  if (/^\d+$/.test(raw)) {
-    const parsed = Number(raw);
-    if (!Number.isFinite(parsed)) return null;
-    const seconds = parsed > 1e12 ? Math.floor(parsed / 1000) : parsed;
-    return Math.floor(seconds / DAY_SECONDS) * DAY_SECONDS;
-  }
-
-  const parsedMs = Date.parse(raw);
-  if (Number.isNaN(parsedMs)) return null;
-  return Math.floor(parsedMs / 1000 / DAY_SECONDS) * DAY_SECONDS;
+interface ExistingStabilityIndexRow {
+  computed_at: number;
+  score: number;
+  band: string;
+  components: string | null;
+  input_snapshot: string | null;
+  methodology_version: string | null;
 }
 
 export async function handleBackfillStabilityIndex(
@@ -142,10 +138,10 @@ export async function handleBackfillStabilityIndex(
 
       const existingRows = await db
         .prepare(
-          "SELECT computed_at, score, band, methodology_version FROM stability_index WHERE computed_at >= ? AND computed_at <= ?",
+          "SELECT computed_at, score, band, components, input_snapshot, methodology_version FROM stability_index WHERE computed_at >= ? AND computed_at <= ?",
         )
         .bind(startDay, endDay)
-        .all<{ computed_at: number; score: number; band: string; methodology_version: string | null }>();
+        .all<ExistingStabilityIndexRow>();
       const existingByDay = new Map((existingRows.results ?? []).map((row) => [row.computed_at, row]));
 
       if (!dryRun) {
@@ -172,12 +168,28 @@ export async function handleBackfillStabilityIndex(
           dewsByDay,
         });
         const { input, result } = replay;
+        const existing = existingByDay.get(day);
         if (!result) {
           skippedInsufficientData++;
+          if (!dryRun && existing) {
+            stmts.push(
+              db
+                .prepare(
+                  "INSERT INTO stability_index_rebuild (computed_at, score, band, components, input_snapshot, methodology_version) VALUES (?, ?, ?, ?, ?, ?)",
+                )
+                .bind(
+                  existing.computed_at,
+                  existing.score,
+                  existing.band,
+                  existing.components ?? JSON.stringify({}),
+                  existing.input_snapshot ?? JSON.stringify({}),
+                  existing.methodology_version ?? getPsiMethodologyVersionAt(existing.computed_at),
+                ),
+            );
+          }
           continue;
         }
 
-        const existing = existingByDay.get(day);
         const absoluteDelta = existing ? Math.abs(existing.score - result.score) : Math.abs(result.score);
         if (!existing || existing.band !== result.band || existing.methodology_version !== methodologyVersion || absoluteDelta > 0.0001) {
           daysChanged++;

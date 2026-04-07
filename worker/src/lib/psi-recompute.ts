@@ -6,6 +6,8 @@ import {
 } from "./psi-history-universe";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
+const HISTORICAL_PEAK_FLOOR_WINDOW_DAYS = 1;
+
 export interface PsiDepegEventRow {
   stablecoin_id: string;
   peak_deviation_bps: number;
@@ -40,17 +42,34 @@ export function buildSupplySnapshotMap(rows: PsiSupplyRow[]): SupplySnapshotMap 
 function computeHistoricalEventBps(
   event: PsiDepegEventRow,
   snapshotPrice: number | undefined,
+  day: number,
 ): { bps: number; source: "historical-price" | "peak-fallback" } | null {
+  const peakDeviationBps = Number.isFinite(event.peak_deviation_bps) ? event.peak_deviation_bps : null;
   if (snapshotPrice != null && event.peg_reference > 0) {
+    const historicalBps = Math.round(((snapshotPrice / event.peg_reference) - 1) * 10_000);
+    const eventStartDay = Math.floor(event.started_at / DAY_SECONDS) * DAY_SECONDS;
+    const withinPeakFloorWindow =
+      day - eventStartDay < HISTORICAL_PEAK_FLOOR_WINDOW_DAYS * DAY_SECONDS;
+    if (
+      peakDeviationBps != null
+      && withinPeakFloorWindow
+      && Math.abs(peakDeviationBps) > Math.abs(historicalBps)
+    ) {
+      return {
+        bps: peakDeviationBps,
+        source: "peak-fallback",
+      };
+    }
+
     return {
-      bps: Math.round(((snapshotPrice / event.peg_reference) - 1) * 10_000),
+      bps: historicalBps,
       source: "historical-price",
     };
   }
 
-  if (Number.isFinite(event.peak_deviation_bps)) {
+  if (peakDeviationBps != null) {
     return {
-      bps: event.peak_deviation_bps,
+      bps: peakDeviationBps,
       source: "peak-fallback",
     };
   }
@@ -64,8 +83,9 @@ export function buildStabilityInputForDay(
   depegEvents: PsiDepegEventRow[],
   supplyByCoin: SupplySnapshotMap,
 ): StabilityInputForDay {
+  const dayEnd = day + DAY_SECONDS;
   const activeDepegs = depegEvents.filter(
-    (event) => event.started_at <= day && (event.ended_at === null ? day <= now : event.ended_at > day),
+    (event) => event.started_at < dayEnd && (event.ended_at === null ? day <= now : event.ended_at > day),
   );
 
   const grouped = new Map<string, PsiDepegEventRow[]>();
@@ -87,7 +107,7 @@ export function buildStabilityInputForDay(
     const snapshotPrice = snapshot?.price;
 
     for (const event of events) {
-      const replayBps = computeHistoricalEventBps(event, snapshotPrice);
+      const replayBps = computeHistoricalEventBps(event, snapshotPrice, day);
       if (!replayBps) continue;
       if (Math.abs(replayBps.bps) > Math.abs(worstBps)) {
         worstBps = replayBps.bps;

@@ -42,8 +42,7 @@ The snapshot does **not** call on-chain RPCs --- it relies entirely on DefiLlama
 9. Execute all statements via `batchExecute()` (batch size = 100, D1 limit)
 10. If zero rows were prepared, return cron `status: "degraded"` with `reason: "all_coins_zero_supply"`
 11. Update cache key `snapshot-supply:last-write`
-12. Prune `supply_history` rows older than 2 years
-13. Log item count and date
+12. Log item count and date
 
 ---
 
@@ -167,7 +166,7 @@ Do not assume `18` decimals, or even one fixed decimal count per token across al
 | Param | Required | Default | Constraints |
 |-------|----------|---------|-------------|
 | `stablecoin` | Yes | --- | Canonical Pharos stablecoin ID |
-| `days` | No | 365 | Min 1, max 1825 (5 years requested). In practice the cron prunes `supply_history` to roughly the most recent 2 years, so older dates may simply return no rows. |
+| `days` | No | 365 | Min 1, max 1825 (5 years requested). Older dates depend on how much archival history has been ingested into `supply_history` through the cron plus admin backfills. |
 
 ```sql
 SELECT snapshot_date, circulating_usd, price
@@ -251,7 +250,7 @@ All cron runs are logged to the `cron_runs` table (7-day retention).
 5. DefiLlama-backed non-USD backfills require historical prices for native-to-USD conversion
 6. Daily cron and admin backfill both use `INSERT OR REPLACE` for idempotent re-runs
 7. The write path is intentionally throttled by a 1-hour cooldown cache key even though the cron is chained to more frequent lanes
-8. `supply_history` retention is currently pruned to roughly 2 years
+8. `supply_history` is kept as an archive for downstream historical replays such as PSI backfills; recover older gaps with the admin backfill when needed
 
 ---
 

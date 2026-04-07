@@ -49,7 +49,7 @@ export function StabilityIndexMethodologySection() {
                     {
                       label: "Historical replay",
                       value:
-                        "Backfills use same-day supply_history prices when available, then fall back to peak event deviation only for missing historical price coverage",
+                        "Backfills score any depeg overlapping the UTC day, use same-day supply_history prices when they capture the move, and keep peak event deviation as a start-day floor when a daily snapshot misses an intraday shock",
                     },
                   ]}
                 />
@@ -160,8 +160,9 @@ export function StabilityIndexMethodologySection() {
                     </li>
                     <li>
                       <span className="text-foreground font-medium">Historical rebuild parity:</span> completed-day backfills
-                      replay same-day deviation from `supply_history.price` when possible, with peak-deviation fallback only
-                      when historical day prices are unavailable.
+                      score any depeg overlapping the UTC day, replay same-day deviation from `supply_history.price`
+                      when possible, and keep `peak_deviation_bps` as a start-day floor only when a daily snapshot
+                      misses an intraday shock.
                     </li>
                     <li>
                       <span className="text-foreground font-medium">Age-aware depreciation:</span> fresh depegs get full

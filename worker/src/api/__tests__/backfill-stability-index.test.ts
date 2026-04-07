@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, stubCryptoForAuth } from "./helpers/auth";
 import { handleBackfillStabilityIndex } from "../backfill-stability-index";
+import { computeStabilityIndex } from "../../lib/stability-index";
 
 stubCryptoForAuth();
 
@@ -22,6 +23,8 @@ interface CapturedBackfillState {
     computed_at: number;
     score: number;
     band: string;
+    components?: string | null;
+    input_snapshot?: string | null;
     methodology_version: string | null;
   }>;
   rebuildRows?: Array<{
@@ -53,6 +56,8 @@ function makeDb(options?: {
     computed_at: number;
     score: number;
     band: string;
+    components?: string | null;
+    input_snapshot?: string | null;
     methodology_version: string | null;
   }>;
   captureState?: CapturedBackfillState;
@@ -152,6 +157,8 @@ function makeDb(options?: {
               computed_at: row.computed_at,
               score: row.score,
               band: row.band,
+              components: row.components,
+              input_snapshot: row.input_snapshot,
               methodology_version: row.methodology_version,
             })),
           ].sort((a, b) => a.computed_at - b.computed_at);
@@ -413,6 +420,56 @@ describe("handleBackfillStabilityIndex", () => {
       { computed_at: preservedAfter, score: 33, band: "Stable", methodology_version: "2.0" },
     ]);
     expect(state.stabilityRows?.find((row: { computed_at: number; score: number }) => row.computed_at === targetDay)?.score).not.toBe(22);
+  });
+
+  it("preserves an existing row when replay inputs are insufficient for that day", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const targetDay = Math.floor((nowSec - 2 * 86400) / 86400) * 86400;
+    const state: CapturedBackfillState = {};
+    const preservedRow = {
+      computed_at: targetDay,
+      score: 22,
+      band: "Stable",
+      components: JSON.stringify({ severity: 1, breadth: 2, stressBreadth: 0, trend: 0 }),
+      input_snapshot: JSON.stringify({ preserved: true }),
+      methodology_version: "2.0",
+    };
+
+    vi.mocked(computeStabilityIndex).mockReturnValueOnce(null);
+
+    const db = makeDb({
+      earliest: targetDay,
+      depegRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          peak_deviation_bps: -120,
+          peg_reference: 1,
+          started_at: targetDay,
+          ended_at: null,
+        },
+      ],
+      stabilityRows: [preservedRow],
+      captureState: state,
+    });
+
+    const res = await handleBackfillStabilityIndex(
+      db,
+      true,
+      makeApiRequest(`/api/backfill-stability-index?startDay=${targetDay}&endDay=${targetDay}`, {
+        method: "POST",
+        adminKey: "secret",
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(state.stabilityRows).toEqual([preservedRow]);
+    expect(state.rebuildRows).toEqual([
+      expect.objectContaining({
+        computed_at: targetDay,
+        components: preservedRow.components,
+        input_snapshot: preservedRow.input_snapshot,
+      }),
+    ]);
   });
 
   it("rejects invalid day parameters", async () => {

@@ -208,6 +208,63 @@ describe("buildStabilityInputForDay", () => {
     expect(result.peakDeviationFallbackCount).toBe(1);
   });
 
+  it("counts depegs that start later during the target UTC day", () => {
+    const day = 20 * DAY;
+    const now = day + DAY;
+    const supplyByCoin = buildSupplySnapshotMap([
+      { stablecoin_id: "usdc-circle", snapshot_date: day, circulating_usd: 500_000 },
+      { stablecoin_id: "usdc-circle", snapshot_date: day - 7 * DAY, circulating_usd: 500_000 },
+    ]);
+    const events: PsiDepegEventRow[] = [
+      {
+        stablecoin_id: "usdc-circle",
+        peak_deviation_bps: -180,
+        peg_reference: 1,
+        started_at: day + 12 * 3600,
+        ended_at: day + 18 * 3600,
+      },
+    ];
+
+    const result = buildStabilityInputForDay(day, now, events, supplyByCoin);
+
+    expect(result.depegCount).toBe(1);
+    expect(result.depegs[0]).toEqual({
+      bps: -180,
+      mcapUsd: 500_000,
+      depegAgeDays: 0,
+    });
+  });
+
+  it("uses peak deviation as a start-day floor when the daily snapshot misses an intraday shock", () => {
+    const day = 40 * DAY;
+    const now = day + DAY;
+    const supplyByCoin = buildSupplySnapshotMap([
+      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 2_000_000, price: 0.9995 },
+      { stablecoin_id: "usdt-tether", snapshot_date: day - 7 * DAY, circulating_usd: 1_500_000, price: 1 },
+    ]);
+    const events: PsiDepegEventRow[] = [
+      {
+        stablecoin_id: "usdt-tether",
+        peak_deviation_bps: -1200,
+        peg_reference: 1,
+        started_at: day + 6 * 3600,
+        ended_at: null,
+      },
+    ];
+
+    const result = buildStabilityInputForDay(day, now, events, supplyByCoin);
+
+    expect(result.depegs).toEqual([
+      {
+        bps: -1200,
+        mcapUsd: 2_000_000,
+        depegAgeDays: 0,
+      },
+    ]);
+    expect(result.historicalPriceCoverageCount).toBe(0);
+    expect(result.peakDeviationFallbackCount).toBe(1);
+  });
+
   it("returns 0 mcap7dChangePct when 7d-ago mcap is zero", () => {
     const day = 12 * DAY;
     const now = day + DAY;
