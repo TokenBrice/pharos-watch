@@ -144,8 +144,8 @@
     "notes": "Yield methodology is now its own module. If more source-policy copy lands, extract the arbitration and PYS formula blocks into smaller subcomponents."
   },
   "src/app/methodology/sections/monitoring/pegscore-dews-section.tsx": {
-    "fileLines": 468,
-    "maxFunctionLines": 456,
+    "fileLines": 469,
+    "maxFunctionLines": 457,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {

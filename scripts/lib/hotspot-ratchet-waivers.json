@@ -63,10 +63,6 @@
     "disposition": "queued-p4",
     "notes": "The yield publication coordinator still owns a large orchestration surface after the resolver split. Track it for a later coordinator decomposition."
   },
-  "src/components/command-palette.tsx": {
-    "disposition": "deferred",
-    "notes": "The command palette is large but isolated to frontend UX. Defer cleanup behind higher-risk analytics and worker hotspots."
-  },
   "src/components/status/cron-metadata-summary.ts": {
     "disposition": "deferred",
     "notes": "Status metadata summarization has grown with the ops dashboard. Defer structural cleanup until the status surface settles after the current parallel work."
