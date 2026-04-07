@@ -726,13 +726,15 @@ export function StabilityIndexClient() {
           aria-live="polite"
         >
           {/* Score + gauge — the instrument */}
-          <div className="flex items-center justify-center gap-4 lg:justify-start lg:gap-5">
-            {/* Lighthouse */}
-            <PsiLighthouse band={displayBand} color={hexColor} size={96} />
-            {/* Arc gauge (visual only) */}
-            <ScoreArc score={displayScore} color={hexColor} size={160} />
+          <div className="flex items-center justify-center lg:justify-start">
+            <div className="flex items-center gap-4 lg:gap-5">
+              {/* Lighthouse */}
+              <PsiLighthouse band={displayBand} color={hexColor} size={96} />
+              {/* Arc gauge (visual only) */}
+              <ScoreArc score={displayScore} color={hexColor} size={160} />
+            </div>
             {/* Score + delta stacked to the right of the gauge */}
-            <div className="hidden min-w-0 flex-col gap-1 lg:flex">
+            <div className="hidden shrink-0 flex-col gap-1 pl-3 lg:flex">
               <div className="flex items-baseline gap-2">
                 <span className="text-xs text-muted-foreground">
                   <MethodologyLabel topic="psi">PSI</MethodologyLabel>
