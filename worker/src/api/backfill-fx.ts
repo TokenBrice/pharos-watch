@@ -1,6 +1,12 @@
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { COMMODITY_MEDIAN_EXCLUDES } from "@shared/lib/peg-rates";
+import { buildCommodityPeerMedianSeries } from "@shared/lib/commodity-median";
+import {
+  enumerateDates,
+  interpolateRateAtTimestamp,
+  mergeDateRates,
+  type TimestampedRatePoint,
+} from "@shared/lib/rate-series";
 import { USER_AGENT } from "../lib/constants";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { getCache, setCache } from "../lib/db-cache";
@@ -48,10 +54,7 @@ export const OTHER_COIN_FX: Record<string, string> = {
 /** Commodity peg currencies that need spot price history */
 export const COMMODITY_PEGS = new Set(["GOLD", "SILVER"]);
 
-export interface FxTimeSeries {
-  timestamp: number; // unix seconds
-  rate: number;      // USD per unit
-}
+export type FxTimeSeries = TimestampedRatePoint;
 
 interface SecondaryFxResponse {
   date?: string;
@@ -114,25 +117,6 @@ export async function fetchHistoricalFxRates(
     console.error(`[backfill-depegs] FX fetch failed:`, err);
     return {};
   }
-}
-
-export function enumerateDates(startDate: string, endDate: string): string[] {
-  const dates: string[] = [];
-  const current = new Date(`${startDate}T00:00:00Z`);
-  const end = new Date(`${endDate}T00:00:00Z`);
-  while (current <= end) {
-    dates.push(current.toISOString().slice(0, 10));
-    current.setUTCDate(current.getUTCDate() + 1);
-  }
-  return dates;
-}
-
-export function mergeDateRates(target: Record<string, Record<string, number>>, date: string, rates: Record<string, number> | null): void {
-  if (!rates) return;
-  target[date] = {
-    ...(target[date] ?? {}),
-    ...rates,
-  };
 }
 
 async function fetchHistoricalSecondaryFxDay(date: string): Promise<Record<string, number> | null> {
@@ -241,76 +225,34 @@ export async function fetchHistoricalSecondaryFxRates(
  * causing false depeg events for every gold token simultaneously.
  */
 export async function buildCommodityMedianSeriesFromCg(): Promise<Record<string, FxTimeSeries[]>> {
-  const result: Record<string, FxTimeSeries[]> = { GOLD: [], SILVER: [] };
-
   const allCommodityCoins = ACTIVE_STABLECOINS.filter(
     (m) => COMMODITY_PEGS.has(m.flags.pegCurrency) && !m.flags.navToken
-      && !COMMODITY_MEDIAN_EXCLUDES.has(m.id)
+      && !COMMODITY_MEDIAN_EXCLUDES.has(m.id),
   );
-
-  // Per-coin per-day mean prices (normalised to per-troy-oz).
-  // CG days=max returns different granularities per coin (daily for old coins,
-  // hourly/5-min for newer ones), so we must aggregate per-coin first to give
-  // each coin equal weight in the cross-coin daily median.
-  const coinDailies: Record<string, Map<number, number>[]> = { GOLD: [], SILVER: [] };
+  const sources: Array<{
+    peg: "GOLD" | "SILVER";
+    commodityOunces?: number | null;
+    prices: { timestamp: number; price: number }[];
+  }> = [];
 
   for (const meta of allCommodityCoins) {
     const geckoId = TRACKED_META_BY_ID.get(meta.id)?.geckoId;
     if (!geckoId) continue;
     const prices = await fetchCgPriceHistoryHourly(geckoId);
     if (prices.length === 0) continue;
-
-    const oz = meta.commodityOunces;
-    const peg = meta.flags.pegCurrency;
-    const arr = coinDailies[peg];
-    if (!arr) continue;
-
-    // Bucket this coin's prices by day, compute daily mean
-    const dayBuckets = new Map<number, { sum: number; count: number }>();
-    for (const p of prices) {
-      const perOz = oz && oz > 0 ? p.price / oz : p.price;
-      const day = Math.floor(p.timestamp / DAY_SECONDS) * DAY_SECONDS;
-      const bucket = dayBuckets.get(day) ?? { sum: 0, count: 0 };
-      bucket.sum += perOz;
-      bucket.count++;
-      dayBuckets.set(day, bucket);
-    }
-
-    const dailyMean = new Map<number, number>();
-    for (const [day, { sum, count }] of dayBuckets) {
-      dailyMean.set(day, sum / count);
-    }
-    arr.push(dailyMean);
+    sources.push({
+      peg: meta.flags.pegCurrency as "GOLD" | "SILVER",
+      commodityOunces: meta.commodityOunces,
+      prices,
+    });
   }
 
-  // Cross-coin median: for each day, collect one mean per coin, take the median
+  const result = buildCommodityPeerMedianSeries(sources);
   for (const peg of ["GOLD", "SILVER"] as const) {
-    const coinMaps = coinDailies[peg];
-    if (coinMaps.length === 0) continue;
-
-    // Collect all days that appear in any coin's data
-    const allDays = new Set<number>();
-    for (const m of coinMaps) for (const d of m.keys()) allDays.add(d);
-
-    const series: FxTimeSeries[] = [];
-    for (const day of allDays) {
-      const vals: number[] = [];
-      for (const m of coinMaps) {
-        const v = m.get(day);
-        if (v !== undefined) vals.push(v);
-      }
-      if (vals.length === 0) continue;
-      vals.sort((a, b) => a - b);
-      const mid = Math.floor(vals.length / 2);
-      const median =
-        vals.length % 2 === 0
-          ? (vals[mid - 1] + vals[mid]) / 2
-          : vals[mid];
-      series.push({ timestamp: day, rate: median });
+    const tokenCount = sources.filter((source) => source.peg === peg).length;
+    if (tokenCount > 0) {
+      console.log(`[backfill-depegs] Commodity median (${peg}): ${result[peg].length} daily points from ${tokenCount} tokens`);
     }
-    series.sort((a, b) => a.timestamp - b.timestamp);
-    result[peg] = series;
-    console.log(`[backfill-depegs] Commodity median (${peg}): ${series.length} daily points from ${coinMaps.length} tokens`);
   }
 
   return result;
@@ -330,26 +272,6 @@ export function buildFxLookup(series: FxTimeSeries[], fallback: number): (timest
   if (series.length === 0) return () => fallback;
 
   return (timestamp: number): number => {
-    // Clamp to boundaries — no extrapolation
-    if (timestamp <= series[0].timestamp) return series[0].rate;
-    if (timestamp >= series[series.length - 1].timestamp) return series[series.length - 1].rate;
-
-    // Binary search: find first entry with timestamp >= target
-    let lo = 0;
-    let hi = series.length - 1;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (series[mid].timestamp < timestamp) lo = mid + 1;
-      else hi = mid;
-    }
-
-    // Exact match — no interpolation needed
-    if (series[lo].timestamp === timestamp) return series[lo].rate;
-
-    // Linearly interpolate between series[lo-1] and series[lo]
-    const prev = series[lo - 1];
-    const next = series[lo];
-    const t = (timestamp - prev.timestamp) / (next.timestamp - prev.timestamp);
-    return prev.rate + t * (next.rate - prev.rate);
+    return interpolateRateAtTimestamp(series, timestamp) ?? fallback;
   };
 }
