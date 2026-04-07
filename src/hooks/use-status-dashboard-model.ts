@@ -6,11 +6,10 @@ import { useHealth } from "@/hooks/api-hooks";
 import { useRequestSourceStats } from "@/hooks/use-request-source-stats";
 import { useStatusHistory, type StatusHistoryWindow } from "@/hooks/use-status-history";
 import { useStatus } from "@/hooks/use-status";
-import type { AdminAccess } from "@/lib/admin-access";
 import { buildStatusDashboardData } from "@/lib/status-dashboard-model";
 
-export function useStatusDashboardModel(adminAccess: AdminAccess) {
-  const { data, isLoading, error, refetch: refetchStatus, dataUpdatedAt: statusUpdatedAt } = useStatus(adminAccess);
+export function useStatusDashboardModel() {
+  const { data, isLoading, error, refetch: refetchStatus, dataUpdatedAt: statusUpdatedAt } = useStatus();
   const { data: healthData, error: healthError, refetch: refetchHealth, dataUpdatedAt: healthUpdatedAt } = useHealth();
   const {
     data: probes,
@@ -18,7 +17,7 @@ export function useStatusDashboardModel(adminAccess: AdminAccess) {
     error: probesError,
     refetch: refetchProbes,
     dataUpdatedAt: probesUpdatedAt,
-  } = useEndpointProbes(adminAccess);
+  } = useEndpointProbes();
   const [historyWindow, setHistoryWindow] = useState<StatusHistoryWindow>("24h");
   const {
     data: historyData,
@@ -26,14 +25,14 @@ export function useStatusDashboardModel(adminAccess: AdminAccess) {
     error: historyError,
     refetch: refetchHistory,
     dataUpdatedAt: historyUpdatedAt,
-  } = useStatusHistory(adminAccess, historyWindow);
+  } = useStatusHistory(historyWindow);
   const {
     data: requestSourceStats,
     error: requestSourceError,
     isLoading: requestSourceLoading,
     refetch: refetchRequestSourceStats,
     dataUpdatedAt: requestSourceUpdatedAt,
-  } = useRequestSourceStats(adminAccess);
+  } = useRequestSourceStats();
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {

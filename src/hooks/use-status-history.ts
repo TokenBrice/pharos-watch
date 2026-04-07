@@ -2,7 +2,6 @@
 
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { StatusHistoryResponse } from "@shared/types";
-import type { AdminAccess } from "@/lib/admin-access";
 import { CRON_1MIN } from "@/lib/cron-intervals";
 import { useAdminPollingQuery } from "./use-admin-polling-query";
 
@@ -26,11 +25,9 @@ function buildStatusHistoryPath(window: StatusHistoryWindow): string {
 }
 
 export function useStatusHistory(
-  adminAccess: AdminAccess,
   window: StatusHistoryWindow,
 ): UseQueryResult<StatusHistoryResponse, Error> {
   return useAdminPollingQuery<StatusHistoryResponse>(
-    adminAccess,
     ["status-history", window],
     buildStatusHistoryPath(window),
     CRON_1MIN,

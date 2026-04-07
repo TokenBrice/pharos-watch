@@ -1,4 +1,4 @@
-import { enrichMissingPrices, hasMissingPrice } from "./enrich-prices";
+import { hasMissingPrice } from "./enrich-prices";
 import {
   applyTrackedAssetOverrides,
   fillMissingSupplyHistory,
@@ -8,17 +8,16 @@ import {
   buildSyncMetadata,
   loadFreshFxRates,
   loadPreviousStablecoinsById,
-  stampPriceMetadata,
   type CronResult,
 } from "./shared";
 import {
-  runPostEnrichmentPricePipeline,
+  runMissingPriceEnrichmentPhase,
+  runSharedPriceCompletion,
   validateAndWriteStablecoinsCache,
   runDepegPipeline,
   isAbortResult,
 } from "./post-enrichment";
 import {
-  applyProtocolPriceOverrides,
   buildPreviousTrustedPriceLookup,
   createValidationContextResolver,
   prevalidatePrices,
@@ -30,7 +29,6 @@ import {
   reportStablecoinsStage,
   returnIfAborted,
 } from "./runtime";
-import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
 import { MIN_VALID_ASSET_COUNT } from "../../lib/constants";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
@@ -145,35 +143,24 @@ export async function syncViaCoingeckoFallback(
     logLabel: "Pre-rejected fallback price",
   });
 
-  const missingBefore = new Set(assets.filter(hasMissingPrice).map((asset) => asset.id));
-
-  const enrichAbort = returnIfAborted(signal, "fallback-enrich-prices");
-  if (enrichAbort) return enrichAbort;
   await reportStablecoinsStage(
     reportProgress,
     "fallback-price-enrichment",
     "Enriching CoinGecko fallback prices",
     { itemsTotal: assets.length },
   );
-  const enrichStats = await enrichMissingPrices(assets, cmcApiKey, db, signal);
-
-  for (const asset of assets) {
-    if (missingBefore.has(asset.id) && !hasMissingPrice(asset) && !asset.priceConfidence) {
-      stampPriceMetadata(asset, asset.priceSource || "unknown", "fallback", syncStartSec);
-    }
-  }
-
-  const authoritativeOverrides = await fetchAuthoritativeLivePriceOverrides(assets, signal);
-  const authoritativeOverrideCount = applyProtocolPriceOverrides({
+  const enrichmentPhase = await runMissingPriceEnrichmentPhase({
     assets,
-    overrides: authoritativeOverrides,
-    previousTrustedPrices,
-    validationContexts,
-    validationReferences,
+    db,
     syncStartSec,
-  });
+    signal,
+    cmcApiKey,
+    returnIfAborted,
+  }, "fallback-");
+  if (isAbortResult(enrichmentPhase)) return enrichmentPhase;
+  const { missingBefore, enrichStats } = enrichmentPhase;
 
-  const priceResult = await runPostEnrichmentPricePipeline({
+  const priceCompletion = await runSharedPriceCompletion({
     assets,
     missingBefore,
     db,
@@ -187,8 +174,14 @@ export async function syncViaCoingeckoFallback(
     returnIfAborted,
     abortResult,
   }, "fallback-");
-  if (isAbortResult(priceResult)) return priceResult;
-  const { rejectedCount, cachedFallbackCount, nativePegCorrectionCount, nativePegFillCount } = priceResult;
+  if (isAbortResult(priceCompletion)) return priceCompletion;
+  const {
+    authoritativeOverrideCount,
+    rejectedCount,
+    cachedFallbackCount,
+    nativePegCorrectionCount,
+    nativePegFillCount,
+  } = priceCompletion;
   await reportStablecoinsStage(
     reportProgress,
     "fallback-price-validation",
@@ -197,6 +190,7 @@ export async function syncViaCoingeckoFallback(
       itemsDone: assets.length - assets.filter(hasMissingPrice).length,
       itemsTotal: assets.length,
       metadata: {
+        authoritativeOverrides: authoritativeOverrideCount,
         rejectedPrices: rejectedCount,
         nativePegCorrections: nativePegCorrectionCount,
         nativePegFills: nativePegFillCount,

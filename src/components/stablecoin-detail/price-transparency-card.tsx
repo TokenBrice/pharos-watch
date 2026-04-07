@@ -11,6 +11,7 @@ import {
   PRICE_TRANSPARENCY_SOURCE_KEYS,
   getPricingSourceLabel,
 } from "@shared/lib/pricing-sources";
+import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
 import { CONFIDENCE_LEVEL_COLORS } from "@shared/lib/classification";
 import { timeAgo } from "@shared/lib/format";
 
@@ -50,7 +51,7 @@ export function PriceTransparencyCard({
   const [showAll, setShowAll] = useState(false);
 
   const hasNoPrice = coinData.price == null;
-  const isProtocolRedeem = coinData.priceSource === "protocol-redeem";
+  const isProtocolRedeem = isPricingSourceProtocolOverride(coinData.priceSource);
 
   // If the DEX Price Check has data, dex-promoted is available even if it wasn't
   // included in the consensus sources (the consensus pipeline uses a stricter

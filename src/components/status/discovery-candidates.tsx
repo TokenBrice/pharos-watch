@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { buildAdminApiPath, buildAdminFetchInit, type AdminAccess } from "@/lib/admin-access";
+import { buildAdminApiPath } from "@/lib/admin-access";
 import { buildRequestUrl } from "@/lib/api";
 import { DISCOVERY_MIN_MCAP } from "@shared/lib/status-thresholds";
 import type { DiscoveryCandidate, StatusSectionError } from "@shared/types";
@@ -25,13 +25,11 @@ function SourceBadge({ source }: { source: string }) {
 export function DiscoveryCandidatesCard({
   candidates,
   error,
-  adminAccess: _adminAccess,
   nowSeconds,
   onDismissed,
 }: {
   candidates: DiscoveryCandidate[] | null;
   error?: StatusSectionError;
-  adminAccess: AdminAccess;
   nowSeconds: number;
   onDismissed?: () => void;
 }) {
@@ -60,7 +58,6 @@ export function DiscoveryCandidatesCard({
     try {
       const res = await fetch(buildRequestUrl(buildAdminApiPath(`/api/discovery-candidates/${id}/dismiss`)), {
         method: "POST",
-        ...buildAdminFetchInit(),
       });
       if (res.ok) {
         setDismissed((prev) => new Set([...prev, id]));

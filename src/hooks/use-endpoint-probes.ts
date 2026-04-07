@@ -1,7 +1,7 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
-import { buildAdminApiPath, buildAdminFetchInit, type AdminAccess } from "@/lib/admin-access";
+import { buildAdminApiPath } from "@/lib/admin-access";
 import { buildRequestUrl } from "@/lib/api";
 import { getProbePaths } from "@shared/lib/api-endpoints";
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
@@ -35,20 +35,15 @@ function getProbeTimeoutMs(path: string): number {
   return ADMIN_PATHS.has(path) ? ADMIN_PROBE_TIMEOUT_MS : PUBLIC_PROBE_TIMEOUT_MS;
 }
 
-function buildProbeRequest(path: string, adminAccess?: AdminAccess): {
+function buildProbeRequest(path: string): {
   path: string;
   headers?: HeadersInit;
 } {
   if (!ADMIN_PATHS.has(path)) {
     return { path };
   }
-  if (!adminAccess) {
-    return { path };
-  }
-
   return {
     path: buildAdminApiPath(path),
-    headers: buildAdminFetchInit().headers,
   };
 }
 
@@ -164,7 +159,6 @@ const SEMANTIC_PROBE_PARSERS = new Map<
 
 async function probeEndpoint(
   path: string,
-  adminAccess?: AdminAccess,
 ): Promise<EndpointProbeResult> {
   const controller = new AbortController();
   const timeoutMs = getProbeTimeoutMs(path);
@@ -175,7 +169,7 @@ async function probeEndpoint(
   const start = performance.now();
 
   try {
-    const request = buildProbeRequest(path, adminAccess);
+    const request = buildProbeRequest(path);
     const res = await fetch(buildRequestUrl(request.path), {
       signal: controller.signal,
       headers: request.headers,
@@ -212,7 +206,6 @@ async function probeEndpoint(
 
 export async function collectEndpointProbes(
   paths: readonly string[],
-  adminAccess?: AdminAccess,
 ): Promise<EndpointProbeResult[]> {
   if (paths.length === 0) return [];
 
@@ -225,7 +218,7 @@ export async function collectEndpointProbes(
       while (nextIndex < paths.length) {
         const currentIndex = nextIndex;
         nextIndex += 1;
-        results[currentIndex] = await probeEndpoint(paths[currentIndex]!, adminAccess);
+        results[currentIndex] = await probeEndpoint(paths[currentIndex]!);
       }
     }),
   );
@@ -237,12 +230,10 @@ export async function collectEndpointProbes(
  * Probes all API endpoints in parallel.
  * Auto-refreshes every 60s.
  */
-export function useEndpointProbes(
-  adminAccess: AdminAccess,
-): UseQueryResult<EndpointProbeResult[], Error> {
+export function useEndpointProbes(): UseQueryResult<EndpointProbeResult[], Error> {
   return usePollingQuery(
     ["endpoint-probes", "ops-proxy"],
-    () => collectEndpointProbes(ALL_ENDPOINTS, adminAccess),
+    () => collectEndpointProbes(ALL_ENDPOINTS),
     CRON_1MIN,
     { enabled: true, retry: 0 },
   );

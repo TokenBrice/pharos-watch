@@ -1,3 +1,4 @@
+import { isPricingSourceSoftGuardrailExempt } from "@shared/lib/pricing-source-registry";
 import { isSevereFixedPegDownside, validatePriceCandidate, type PriceValidationContext, type PriceValidationReferences } from "./price-validation";
 import { FIXED_PEG_SEVERE_DOWNSIDE_RATIO, hasDepegAuthoritativeSource } from "./pricing-source-policy";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
@@ -55,7 +56,7 @@ function allowsSevereDownsidePublication(input: PublishablePriceInput): boolean 
     return true;
   }
 
-  if (input.source === "protocol-redeem" || input.source === "pool-tvl-weighted") {
+  if (isPricingSourceSoftGuardrailExempt(input.source)) {
     return true;
   }
 
@@ -103,7 +104,7 @@ function shouldQuarantineTemporalJump(input: PublishablePriceInput): boolean {
   const hasAuthoritativeAgreement =
     (input.confidence === "high" || input.confidence === "single-source") &&
     hasDepegAuthoritativeSource(authoritativeSources);
-  if (hasAuthoritativeAgreement || input.source === "protocol-redeem" || input.source === "pool-tvl-weighted") {
+  if (hasAuthoritativeAgreement || isPricingSourceSoftGuardrailExempt(input.source)) {
     return false;
   }
 

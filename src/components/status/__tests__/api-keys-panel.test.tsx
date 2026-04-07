@@ -14,7 +14,6 @@ vi.mock("@/hooks/use-api-keys", () => ({
 
 const { ApiKeysPanel } = await import("../api-keys-panel");
 
-const ADMIN_ACCESS = "ops-proxy" as const;
 const GENERATED_AT = 1_700_000_000;
 
 function makeKey(overrides: Partial<ApiKeySummary> = {}): ApiKeySummary {
@@ -47,7 +46,7 @@ function renderPanel(keys: ApiKeySummary[], refetch = vi.fn().mockResolvedValue(
     isLoading: false,
     refetch,
   });
-  render(<ApiKeysPanel adminAccess={ADMIN_ACCESS} />);
+  render(<ApiKeysPanel />);
   return { refetch };
 }
 

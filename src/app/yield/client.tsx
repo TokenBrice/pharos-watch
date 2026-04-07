@@ -223,7 +223,6 @@ export function YieldClient() {
   }
 
   return (
-    <SectionErrorBoundary name="Yield">
     <div className="space-y-6">
       <QueryErrorNotice
         error={error}
@@ -425,6 +424,5 @@ export function YieldClient() {
         confidence-aware arbitration. Past yields do not guarantee future returns.
       </p>
     </div>
-    </SectionErrorBoundary>
   );
 }

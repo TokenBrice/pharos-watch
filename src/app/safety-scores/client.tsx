@@ -1,7 +1,6 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,6 +18,7 @@ import { encodeStablecoinUrlToken } from "@/lib/stablecoin-url-codec";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SystemicRiskHeadline } from "@/components/systemic-risk-headline";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 import {
@@ -377,22 +377,21 @@ export function ReportCardsClient() {
   const stressTest = useStressTest(reportData, mcapMap);
 
   // URL sync: keep query string in sync with stress test state
-  const router = useRouter();
+  const { replaceParams } = useUrlFilters();
 
   useEffect(() => {
-    const params = new URLSearchParams();
+    replaceParams((params) => {
+      params.delete("stress");
+      params.delete("grade");
 
-    if (stressTest.targetCoinId) {
-      params.set("stress", encodeStablecoinUrlToken(stressTest.targetCoinId));
-    }
-    if (stressTest.targetGrade) {
-      params.set("grade", stressTest.targetGrade);
-    }
-
-    const qs = params.toString();
-    const newPath = qs ? `/safety-scores/?${qs}` : "/safety-scores/";
-    router.replace(newPath, { scroll: false });
-  }, [stressTest.targetCoinId, stressTest.targetGrade, router]);
+      if (stressTest.targetCoinId) {
+        params.set("stress", encodeStablecoinUrlToken(stressTest.targetCoinId));
+      }
+      if (stressTest.targetGrade) {
+        params.set("grade", stressTest.targetGrade);
+      }
+    });
+  }, [stressTest.targetCoinId, stressTest.targetGrade, replaceParams]);
 
   // When stress test is active, show simulated cards in the grid
   const displayCards = useMemo(

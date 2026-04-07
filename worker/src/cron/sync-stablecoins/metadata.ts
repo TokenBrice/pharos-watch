@@ -79,6 +79,7 @@ export function buildStablecoinsSyncResult(input: {
   canonicalDeduplication: CanonicalDeduplicationResult;
   enrichStats: unknown;
   priceValidationStats: unknown;
+  authoritativeOverrideCount?: number;
   rejectedCount: number;
   nativePegCorrectionCount?: number;
   nativePegFillCount?: number;
@@ -106,6 +107,7 @@ export function buildStablecoinsSyncResult(input: {
     canonicalDeduplication: input.canonicalDeduplication,
     assetCount: input.assets.length,
     enrichment: input.enrichStats,
+    authoritativeOverrides: input.authoritativeOverrideCount ?? 0,
     gtProbe: {
       updatedCount: input.gtProbe.updatedCount,
       ...input.gtProbe.stats,

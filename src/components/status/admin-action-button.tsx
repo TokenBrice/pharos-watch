@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { StatusPageAction } from "@shared/lib/api-endpoints";
-import { buildAdminApiPath, buildAdminFetchInit, type AdminAccess } from "@/lib/admin-access";
+import { buildAdminApiPath } from "@/lib/admin-access";
 import { buildRequestUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +24,6 @@ export interface AdminActionExecution {
 
 interface AdminActionButtonProps {
   action: StatusPageAction;
-  adminAccess: AdminAccess;
   buttonClassName?: string;
   fullWidth?: boolean;
   onFinished?: (execution: AdminActionExecution) => void;
@@ -32,7 +31,6 @@ interface AdminActionButtonProps {
 
 export function AdminActionButton({
   action,
-  adminAccess: _adminAccess,
   buttonClassName,
   fullWidth = true,
   onFinished,
@@ -55,8 +53,7 @@ export function AdminActionButton({
           ? `${action.path}${action.path.includes("?") ? "&" : "?"}stablecoin=${encodeURIComponent(trimmedFilter)}`
           : action.path;
 
-      const requestInit = buildAdminFetchInit({ method: action.method });
-      const headers = new Headers(requestInit.headers);
+      const headers = new Headers();
       headers.set(
         "Idempotency-Key",
         typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
@@ -64,7 +61,7 @@ export function AdminActionButton({
           : `${action.path}:${Date.now()}`,
       );
       const res = await fetch(buildRequestUrl(buildAdminApiPath(effectivePath)), {
-        ...requestInit,
+        method: action.method,
         headers,
       });
       const text = await res.text();

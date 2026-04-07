@@ -35,6 +35,8 @@ export interface PricingSourceRegistryEntry {
   supportsUpstreamObservedAt: boolean;
   requiresObservedAt: boolean;
   isSearchDerived: boolean;
+  isProtocolOverride?: boolean;
+  bypassesSoftValidationGuardrails?: boolean;
   capabilities?: PricingSourceCapabilities;
   defaultObservedAtMode: PriceObservedAtMode | null;
 }
@@ -549,6 +551,8 @@ const REGISTRY = [
     supportsUpstreamObservedAt: false,
     requiresObservedAt: false,
     isSearchDerived: false,
+    isProtocolOverride: true,
+    bypassesSoftValidationGuardrails: true,
     defaultObservedAtMode: "local_fetch",
   },
   {
@@ -568,6 +572,7 @@ const REGISTRY = [
     supportsUpstreamObservedAt: false,
     requiresObservedAt: true,
     isSearchDerived: false,
+    bypassesSoftValidationGuardrails: true,
     defaultObservedAtMode: "local_fetch",
   },
   {
@@ -600,4 +605,14 @@ const REGISTRY_MAP = new Map<string, PricingSourceRegistryEntry>(
 
 export function getPricingSourceRegistryEntry(sourceKey: string): PricingSourceRegistryEntry | undefined {
   return REGISTRY_MAP.get(sourceKey);
+}
+
+export function isPricingSourceProtocolOverride(sourceKey: string | null | undefined): boolean {
+  if (!sourceKey) return false;
+  return getPricingSourceRegistryEntry(sourceKey)?.isProtocolOverride ?? false;
+}
+
+export function isPricingSourceSoftGuardrailExempt(sourceKey: string | null | undefined): boolean {
+  if (!sourceKey) return false;
+  return getPricingSourceRegistryEntry(sourceKey)?.bypassesSoftValidationGuardrails ?? false;
 }

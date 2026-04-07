@@ -232,5 +232,5 @@ Without `FEEDBACK_IP_SALT` or `GITHUB_PAT` the endpoint returns 503.
 | `worker/src/api/feedback/submission.ts` | GitHub routing orchestration |
 | `worker/src/api/feedback/github.ts` | GitHub REST transport helper |
 | `worker/src/api/feedback/format.ts` | Issue body and title formatting |
-| `worker/src/route-registry.ts` | Registers `POST /api/feedback` route to `handleFeedback()` |
+| `worker/src/routes/registry.ts` | Registers `POST /api/feedback` route to `handleFeedback()` |
 | `worker/migrations/0000_baseline.sql` | Baseline D1 rate-limit table schema for feedback submissions |

@@ -10,17 +10,15 @@ import { MetadataIntegrityCard } from "@/components/status/metadata-integrity-ca
 import { PriceSourceHealthCard } from "@/components/status/price-source-health";
 import { ReserveSyncHealthCard } from "@/components/status/reserve-sync-health";
 import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";
-import type { AdminAccess } from "@/lib/admin-access";
 import { getStatusTone } from "@/lib/status-dashboard-model";
 import { cn } from "@/lib/utils";
 
 export interface PipelineSectionProps {
   data: StatusResponse;
-  adminAccess: AdminAccess;
   handleRefresh: () => void;
 }
 
-export function PipelineSection({ data, adminAccess, handleRefresh }: PipelineSectionProps) {
+export function PipelineSection({ data, handleRefresh }: PipelineSectionProps) {
   return (
     <StatusSection
       id="pipeline"
@@ -109,7 +107,6 @@ export function PipelineSection({ data, adminAccess, handleRefresh }: PipelineSe
       <DiscoveryCandidatesCard
         candidates={data.discoveryCandidates}
         error={data.sectionErrors.discoveryCandidates}
-        adminAccess={adminAccess}
         nowSeconds={data.timestamp}
         onDismissed={handleRefresh}
       />

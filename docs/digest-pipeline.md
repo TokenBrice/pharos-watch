@@ -351,7 +351,7 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Twitter and Telegra
 | `worker/src/api/digest-archive.ts` | `GET /api/digest-archive` handler |
 | `worker/src/api/digest-snapshot.ts` | `GET /api/digest-snapshot` handler |
 | `worker/src/handlers/scheduled.ts` | Cron scheduling orchestration (daily digest runs after `snapshot-psi`) |
-| `worker/src/route-registry.ts` | Static worker route bindings keyed by shared endpoint descriptors, including the background `trigger-digest` enqueue path |
+| `worker/src/routes/registry.ts` | Static worker route bindings keyed by shared endpoint descriptors, including the background `trigger-digest` enqueue path |
 | `worker/src/router.ts` | Worker route dispatcher for static registry lookup plus dynamic route matching |
 | `worker/src/lib/env.ts` | `Env` interface used by fetch/scheduled handlers |
 | `worker/migrations/0000_baseline.sql` | Baseline `daily_digest` schema, including the historical title/extended/meta additions |

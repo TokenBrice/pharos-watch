@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useMemo, useState, type ReactNode } from "react";
 import { AlertTriangle, BarChart3, ChevronDown } from "lucide-react";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { QueryErrorNotice } from "@/components/query-error-notice";
@@ -23,6 +22,7 @@ import {
   DATA_SOURCE_BADGES,
   formatSignedPercent,
 } from "@/components/yield-detail-section-model";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 import type { AltYieldSource } from "@shared/types";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 
@@ -290,33 +290,29 @@ function AltSourceTable({
 }
 
 export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionProps) {
-  const searchParams = useSearchParams();
-  const router = useRouter();
+  const { getParam, replaceParams } = useUrlFilters();
   const { data, meta: apiMeta, error, isLoading } = useYieldRankings();
 
   // Multi-select source state — URL-persisted via ?sources= param
-  const initialSources = searchParams.get("sources")?.split(",").filter(Boolean) ?? [];
-  const [selectedSourceKeys, setSelectedSourceKeys] = useState<Set<string>>(
-    () => new Set(initialSources),
+  const selectedSourceKeys = useMemo(
+    () => new Set(getParam("sources").split(",").filter(Boolean)),
+    [getParam],
   );
   const [showAllSources, setShowAllSources] = useState(false);
 
   const toggleSource = (sourceKey: string) => {
-    setSelectedSourceKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(sourceKey)) {
-        next.delete(sourceKey);
-      } else if (next.size < 4) {
-        next.add(sourceKey);
-      }
-      const params = new URLSearchParams(searchParams.toString());
+    const next = new Set(selectedSourceKeys);
+    if (next.has(sourceKey)) {
+      next.delete(sourceKey);
+    } else if (next.size < 4) {
+      next.add(sourceKey);
+    }
+    replaceParams((params) => {
       if (next.size > 0) {
         params.set("sources", [...next].join(","));
       } else {
         params.delete("sources");
       }
-      router.replace(`?${params.toString()}`, { scroll: false });
-      return next;
     });
   };
 

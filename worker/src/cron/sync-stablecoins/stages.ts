@@ -1,5 +1,4 @@
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
 import { createEmptyGtProbeStats } from "../../lib/geckoterminal-price-probe";
 import { syncViaCoingeckoFallback } from "./fallback";
 import { loadStablecoinsIntake } from "./intake";
@@ -9,7 +8,6 @@ import type {
 import {
   applyGtProbeResults,
   applyPrimaryPriceResults,
-  applyProtocolPriceOverrides,
   buildDlListPrices,
   buildPreviousTrustedPriceLookup,
   createValidationContextResolver,
@@ -29,12 +27,12 @@ import {
 import {
   loadFreshFxRates,
   loadReplayPriceCacheForTrustedContinuity,
-  stampPriceMetadata,
   type CronResult,
 } from "./shared";
 import {
   isAbortResult,
-  runPostEnrichmentPricePipeline,
+  runMissingPriceEnrichmentPhase,
+  runSharedPriceCompletion,
 } from "./post-enrichment";
 import type { CoinGeckoMcapData } from "./supplemental-assets";
 import type { PeggedAsset } from "./enrich-prices";
@@ -150,6 +148,7 @@ export async function runStablecoinsPricingStage(
       enrichStats: Awaited<ReturnType<typeof enrichMissingPrices>>;
       priceValidationStats: Awaited<ReturnType<typeof fetchPrimaryPrices>>["stats"];
       gtProbe: Awaited<ReturnType<typeof runGtProbePass>> | { updatedCount: number; stats: ReturnType<typeof createEmptyGtProbeStats> };
+      authoritativeOverrideCount: number;
       rejectedCount: number;
       nativePegCorrectionCount: number;
       nativePegFillCount: number;
@@ -195,17 +194,16 @@ export async function runStablecoinsPricingStage(
     validationReferences: options.validationReferences,
     logLabel: "Pre-rejected bad price",
   });
-  const missingBefore = new Set(
-    options.assets.filter(hasMissingPrice).map((asset) => asset.id),
-  );
-  const enrichAbort = returnIfAborted(options.signal, "enrich-prices");
-  if (enrichAbort) return enrichAbort;
-  const enrichStats = await enrichMissingPrices(options.assets, options.cmcApiKey, options.db, options.signal);
-  for (const asset of options.assets) {
-    if (missingBefore.has(asset.id) && !hasMissingPrice(asset) && !asset.priceConfidence) {
-      stampPriceMetadata(asset, asset.priceSource || "unknown", "fallback", options.syncStartSec);
-    }
-  }
+  const enrichmentPhase = await runMissingPriceEnrichmentPhase({
+    assets: options.assets,
+    db: options.db,
+    syncStartSec: options.syncStartSec,
+    signal: options.signal,
+    cmcApiKey: options.cmcApiKey,
+    returnIfAborted,
+  }, "");
+  if (isAbortResult(enrichmentPhase)) return enrichmentPhase;
+  const { missingBefore, enrichStats } = enrichmentPhase;
 
   const gtProbeAbort = returnIfAborted(options.signal, "gt-probe");
   if (gtProbeAbort) return gtProbeAbort;
@@ -234,22 +232,7 @@ export async function runStablecoinsPricingStage(
     console.warn("[sync-stablecoins] GT probe failed (non-fatal):", err);
   }
 
-  const protocolPriceOverrides = await fetchAuthoritativeLivePriceOverrides(options.assets, options.signal);
-  const protocolOverrideCount = applyProtocolPriceOverrides({
-    assets: options.assets,
-    overrides: protocolPriceOverrides,
-    previousTrustedPrices,
-    validationContexts,
-    validationReferences: options.validationReferences,
-    syncStartSec: options.syncStartSec,
-  });
-  if (protocolOverrideCount > 0) {
-    console.log(
-      `[sync-stablecoins] Applied ${protocolOverrideCount} protocol-backed price override${protocolOverrideCount === 1 ? "" : "s"}`,
-    );
-  }
-
-  const priceResult = await runPostEnrichmentPricePipeline({
+  const priceCompletion = await runSharedPriceCompletion({
     assets: options.assets,
     missingBefore,
     db: options.db,
@@ -263,8 +246,20 @@ export async function runStablecoinsPricingStage(
     returnIfAborted,
     abortResult,
   }, "");
-  if (isAbortResult(priceResult)) return priceResult;
-  const { rejectedCount, cachedFallbackCount, nativePegCorrectionCount, nativePegFillCount } = priceResult;
+  if (isAbortResult(priceCompletion)) return priceCompletion;
+  const {
+    authoritativeOverrideCount,
+    rejectedCount,
+    cachedFallbackCount,
+    nativePegCorrectionCount,
+    nativePegFillCount,
+  } = priceCompletion;
+
+  if (authoritativeOverrideCount > 0) {
+    console.log(
+      `[sync-stablecoins] Applied ${authoritativeOverrideCount} protocol-backed price override${authoritativeOverrideCount === 1 ? "" : "s"}`,
+    );
+  }
   if (rejectedCount > 0) {
     console.log(`[sync-stablecoins] Rejected ${rejectedCount} unreasonable prices`);
   }
@@ -281,6 +276,7 @@ export async function runStablecoinsPricingStage(
     itemsDone: options.assets.length - options.assets.filter(hasMissingPrice).length,
     itemsTotal: options.assets.length,
     metadata: {
+      authoritativeOverrides: authoritativeOverrideCount,
       rejectedPrices: rejectedCount,
       nativePegCorrections: nativePegCorrectionCount,
       nativePegFills: nativePegFillCount,
@@ -293,6 +289,7 @@ export async function runStablecoinsPricingStage(
     enrichStats,
     priceValidationStats,
     gtProbe,
+    authoritativeOverrideCount,
     rejectedCount,
     nativePegCorrectionCount,
     nativePegFillCount,

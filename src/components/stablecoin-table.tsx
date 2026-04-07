@@ -41,6 +41,7 @@ import {
 } from "@/hooks/use-preferences";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { EmptyStateIllustration } from "@/components/empty-state-illustration";
+import { TablePagination } from "@/components/table-pagination";
 import {
   buildTrackedIdSet,
   exportStablecoinsCsv,
@@ -685,15 +686,16 @@ export function StablecoinTable({
 
       {/* Scroll position footer */}
       {sorted.length > 0 && (
-        <div
-          className="flex flex-col gap-1 border-t border-border/60 px-4 py-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between"
-          aria-label="Table pagination"
-        >
-          <span aria-live="polite">
-            Showing {rangeStart}–{rangeEnd} of {sorted.length} stablecoins
-          </span>
-          <span className="pharos-meta">Rows open the detail dossier. Green and red deltas reflect supply expansion and contraction, not price return.</span>
-        </div>
+        <TablePagination
+          page={0}
+          totalPages={1}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          total={sorted.length}
+          noun="stablecoins"
+          showControls={false}
+          supplementaryText="Rows open the detail dossier. Green and red deltas reflect supply expansion and contraction, not price return."
+        />
       )}
     </div>
   );

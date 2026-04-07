@@ -8,10 +8,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
  * - `getParam(key, default?)` — read a param (falls back to default or "")
  * - `setParam(key, value)` — set a single param; deletes it when value is a
  *   "clear" sentinel ("all", "")
- * - `setParams(updates)` — batch-set multiple params in one router.replace()
+ * - `setParams(updates)` — batch-set multiple params in one history.replaceState()
  *
- * All updates use `router.replace` with `{ scroll: false }` to avoid scroll
- * jumps and keep the browser history clean.
+ * All updates use `history.replaceState()` to avoid scroll jumps and keep the
+ * browser history clean without requiring App Router navigation.
  */
 
 export function isUrlFilterClearValue(value: string): boolean {

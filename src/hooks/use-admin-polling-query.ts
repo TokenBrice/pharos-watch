@@ -1,7 +1,7 @@
 "use client";
 
 import type { UseQueryResult } from "@tanstack/react-query";
-import { buildAdminApiPath, buildAdminFetchInit, type AdminAccess } from "@/lib/admin-access";
+import { buildAdminApiPath } from "@/lib/admin-access";
 import { apiFetch } from "@/lib/api";
 import { usePollingQuery } from "./use-api-query";
 
@@ -10,20 +10,17 @@ interface AdminPollingOptions {
   retry?: number | boolean;
 }
 
+const ADMIN_QUERY_SCOPE = "ops-proxy";
+
 export function useAdminPollingQuery<T>(
-  adminAccess: AdminAccess,
   key: readonly unknown[],
   path: string,
   cronInterval: number,
   options?: AdminPollingOptions,
 ): UseQueryResult<T, Error> {
   return usePollingQuery<T>(
-    [...key, adminAccess],
-    () => apiFetch<T>(
-      buildAdminApiPath(path),
-      undefined,
-      buildAdminFetchInit(),
-    ),
+    [...key, ADMIN_QUERY_SCOPE],
+    () => apiFetch<T>(buildAdminApiPath(path)),
     cronInterval,
     {
       enabled: options?.enabled ?? true,

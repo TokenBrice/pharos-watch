@@ -5,12 +5,11 @@ import {
 
 import { errorResponse } from "./lib/api-utils";
 import {
-  getRouteDependencies as getRegisteredRouteDependencies,
   getRouteMatch,
   ROUTER_STATIC_PATHS,
-  type FullRouteContext,
-  type RouteDependency,
-} from "./route-registry";
+  getRouteDependencies as getRegisteredRouteDependencies,
+} from "./routes/registry";
+import type { FullRouteContext, RouteDependency } from "./routes/shared";
 
 function addAdminGetNoStoreHeader(path: string, request: Request | undefined, response: Response): Response {
   if (request?.method !== "GET") return response;

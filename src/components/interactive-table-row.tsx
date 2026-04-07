@@ -8,6 +8,7 @@ interface InteractiveTableRowProps {
   onHover?: () => void;
   className?: string;
   role?: React.AriaRole;
+  ariaLabel?: string;
   children: React.ReactNode;
 }
 
@@ -17,6 +18,7 @@ export function InteractiveTableRow({
   onHover,
   className = "",
   role,
+  ariaLabel,
   children,
 }: InteractiveTableRowProps) {
   return (
@@ -33,6 +35,7 @@ export function InteractiveTableRow({
       }}
       tabIndex={0}
       role={role}
+      aria-label={ariaLabel}
     >
       {children}
     </TableRow>

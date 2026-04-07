@@ -5,8 +5,9 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useChains } from "@/hooks/use-chains";
 import { useSort } from "@/hooks/use-sort";
-import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { SortableTableHead } from "@/components/sortable-table-head";
+import { TableCell } from "@/components/ui/table";
+import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
+import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StaleDataBanner } from "@/components/stale-data-banner";
@@ -31,6 +32,16 @@ const DOMINANCE_COLORS = [
 ];
 
 type ChainSortKey = "totalUsd" | "healthScore" | "change24hPct" | "change7dPct" | "change30dPct" | "stablecoinCount" | "dominanceShare";
+const CHAIN_COLUMNS: readonly DataTableColumn<ChainSortKey>[] = [
+  { id: "rank", label: "#", className: "w-[40px] text-right" },
+  { id: "chain", label: "Chain" },
+  { id: "health", label: "Health", sortKey: "healthScore" },
+  { id: "supply", label: "Supply", sortKey: "totalUsd", className: "text-right" },
+  { id: "change7d", label: "7d", sortKey: "change7dPct", className: "text-right", title: "7-day supply change" },
+  { id: "globalShare", label: "Global Share", sortKey: "dominanceShare", className: "text-right" },
+  { id: "stablecoins", label: "Stablecoins", sortKey: "stablecoinCount", className: "text-right" },
+  { id: "dominant", label: "Dominant", className: "hidden lg:table-cell" },
+] as const;
 
 function HealthBadge({ score, band }: { score: number | null; band: HealthBand | null }) {
   if (score == null || band == null) {
@@ -202,85 +213,30 @@ export function ChainsLeaderboardClient() {
       </div>
 
       {/* Table */}
-      <div className="pharos-table-shell scroll-shadow overflow-x-auto md:max-h-[70vh]">
-        <table className="w-full text-sm pharos-table-striped">
-          <caption className="sr-only">Blockchain networks ranked by stablecoin supply</caption>
-          <TableHeader className="sticky top-0 z-10">
-            <TableRow className="bg-muted">
-              <TableHead className="w-[40px] text-right">#</TableHead>
-              <TableHead>Chain</TableHead>
-              <SortableTableHead<ChainSortKey>
-                sortKey="healthScore"
-                currentSortKey={sortKey}
-                sortDirection={sortDirection}
-                label="Health"
-                toggleSort={toggleSort}
-                getAriaSortValue={getAriaSortValue}
-                handleSortKeyDown={handleSortKeyDown}
-                title="Composite chain health score"
-              />
-              <SortableTableHead<ChainSortKey>
-                sortKey="totalUsd"
-                currentSortKey={sortKey}
-                sortDirection={sortDirection}
-                label="Supply"
-                toggleSort={toggleSort}
-                getAriaSortValue={getAriaSortValue}
-                handleSortKeyDown={handleSortKeyDown}
-                className="text-right"
-              />
-              <SortableTableHead<ChainSortKey>
-                sortKey="change7dPct"
-                currentSortKey={sortKey}
-                sortDirection={sortDirection}
-                label="7d"
-                toggleSort={toggleSort}
-                getAriaSortValue={getAriaSortValue}
-                handleSortKeyDown={handleSortKeyDown}
-                className="text-right"
-                title="7-day supply change"
-              />
-              <SortableTableHead<ChainSortKey>
-                sortKey="dominanceShare"
-                currentSortKey={sortKey}
-                sortDirection={sortDirection}
-                label="Global Share"
-                toggleSort={toggleSort}
-                getAriaSortValue={getAriaSortValue}
-                handleSortKeyDown={handleSortKeyDown}
-                className="text-right"
-              />
-              <SortableTableHead<ChainSortKey>
-                sortKey="stablecoinCount"
-                currentSortKey={sortKey}
-                sortDirection={sortDirection}
-                label="Stablecoins"
-                toggleSort={toggleSort}
-                getAriaSortValue={getAriaSortValue}
-                handleSortKeyDown={handleSortKeyDown}
-                className="text-right"
-              />
-              <TableHead className="hidden lg:table-cell">Dominant</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sorted.map((chain, i) => {
-              const rank = i + 1;
-              return (
-              <TableRow
-                key={chain.id}
-                role="link"
-                aria-label={`${chain.name} — ${formatCompactUsd(chain.totalUsd)} supply`}
-                className="pharos-focus-ring group cursor-pointer border-l-2 border-l-transparent transition-all duration-150 hover:border-l-frost-blue hover:bg-muted/30 hover:translate-x-[1px] data-[state=selected]:border-l-frost-blue"
-                onClick={() => router.push(`/chains/${chain.id}/`)}
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    router.push(`/chains/${chain.id}/`);
-                  }
-                }}
-              >
+      <DataTableShell
+        columns={CHAIN_COLUMNS}
+        striped
+        sort={{
+          sortKey,
+          sortDirection,
+          toggleSort,
+          getAriaSortValue,
+          handleSortKeyDown,
+        }}
+        containerClassName="overflow-y-auto md:max-h-[70vh]"
+        tableClassName="w-full"
+        headerClassName="sticky top-0 z-10"
+      >
+        {sorted.map((chain, i) => {
+          const rank = i + 1;
+          return (
+            <InteractiveTableRow
+              key={chain.id}
+              role="link"
+              ariaLabel={`${chain.name} — ${formatCompactUsd(chain.totalUsd)} supply`}
+              className="group border-l-2 border-l-transparent transition-all duration-150 hover:border-l-frost-blue hover:bg-muted/30 hover:translate-x-[1px] data-[state=selected]:border-l-frost-blue"
+              onActivate={() => router.push(`/chains/${chain.id}/`)}
+            >
                 <TableCell className="text-right tabular-nums text-muted-foreground">
                   {rank}
                 </TableCell>
@@ -309,21 +265,19 @@ export function ChainsLeaderboardClient() {
                 <TableCell className="text-right font-mono tabular-nums">{chain.stablecoinCount}</TableCell>
                 <TableCell className="hidden lg:table-cell">
                   <div className="flex items-center gap-2">
-                    <StablecoinLogo 
-                      src={logosById[chain.dominantStablecoin.id]} 
-                      name={chain.dominantStablecoin.symbol} 
-                      size={18} 
+                    <StablecoinLogo
+                      src={logosById[chain.dominantStablecoin.id]}
+                      name={chain.dominantStablecoin.symbol}
+                      size={18}
                     />
                     <span className="text-sm">{chain.dominantStablecoin.symbol}</span>
                     <span className="text-xs text-muted-foreground">({(chain.dominantStablecoin.share * 100).toFixed(0)}%)</span>
                   </div>
                 </TableCell>
-              </TableRow>
-            );
-            })}
-          </TableBody>
-        </table>
-      </div>
+            </InteractiveTableRow>
+          );
+        })}
+      </DataTableShell>
     </div>
     </SectionErrorBoundary>
   );

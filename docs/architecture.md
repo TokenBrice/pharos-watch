@@ -6,7 +6,7 @@ Curated architecture-significant routes. Start with the [Documentation Index](./
 
 ## Route Definition Model
 
-Static route metadata is declared once in `shared/lib/api-endpoints.ts`. That shared descriptor list carries path, method, admin/cache/probe/status-action metadata, shared dynamic-admin path matching, plus the worker dependency-hydration hints needed for static routes. Worker route primitives now live in `worker/src/routes/shared.ts`, domain route arrays are split under `worker/src/routes/`, and `worker/src/routes/registry.ts` composes them into the dispatch map that `worker/src/router.ts` consumes for method validation and generic dispatch. `worker/src/route-registry.ts` remains a thin compatibility facade, while dependency hydration moved into `worker/src/routes/dependency-hydrators.ts` and stays exhaustive/keyed by `EndpointDependency`, so adding a new dependency without wiring hydration still fails at compile time instead of silently defaulting.
+Static route metadata is declared once in `shared/lib/api-endpoints.ts`. That shared descriptor list carries path, method, admin/cache/probe/status-action metadata, shared dynamic-admin path matching, plus the worker dependency-hydration hints needed for static routes. Worker route primitives now live in `worker/src/routes/shared.ts`, domain route arrays are split under `worker/src/routes/`, and `worker/src/routes/registry.ts` composes them into the dispatch map that `worker/src/router.ts` consumes for method validation and generic dispatch. Dependency hydration lives in `worker/src/routes/dependency-hydrators.ts` and stays exhaustive/keyed by `EndpointDependency`, so adding a new dependency without wiring hydration still fails at compile time instead of silently defaulting.
 
 Cron trigger metadata follows the same single-source pattern. `shared/lib/cron-jobs.ts` remains the schedule authority, while `shared/lib/scheduled-runner-registry.ts` binds each cron expression to a symbolic scheduled-runner key that both the worker scheduler and `scripts/check-cron-schedule-sync.ts` consume. That keeps `worker/wrangler.toml`, shared cron metadata, and scheduled-runner dispatch in lockstep.
 
@@ -452,7 +452,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
 ├── migrations/                   # D1 baseline + post-squash SQL migrations plus MANIFEST.md
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
-    ├── route-registry.ts         # Single worker-side static route definition list keyed by shared endpoint metadata
+    ├── routes/registry.ts        # Static worker route definition list keyed by shared endpoint metadata
     ├── api/api-keys.ts           # Admin API-key CRUD + rotate handlers
     ├── handlers/
     │   ├── http.ts               # HTTP orchestration: preflight, gates, edge cache, route-context build, router dispatch

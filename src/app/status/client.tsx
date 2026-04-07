@@ -22,6 +22,14 @@ import {
 } from "@/lib/status/public-status";
 
 const RUNWAY_WINDOW: PublicStatusHistoryWindow = "30d";
+const STATUS_SHELL_PROPS = {
+  breadcrumbName: "System Status",
+  path: "/status/",
+  title: "System Status",
+  leadParagraphs: [
+    "Live public telemetry for route freshness, browser reachability, and ingestion drift.",
+  ],
+} as const;
 
 function PublicSignalCard({
   title,
@@ -105,76 +113,34 @@ export default function StatusClient() {
     return items;
   }, [healthData, healthError, probesError]);
 
+  let content: ReactNode;
+
   if (healthLoading && !healthData) {
-    return (
-      <FeaturePageShell
-        breadcrumbName="System Status"
-        path="/status/"
-        title="System Status"
-        leadParagraphs={[
-          "Live public telemetry for route freshness, browser reachability, and ingestion drift.",
-        ]}
-      >
-        <div className="py-20 text-center text-muted-foreground">Loading system status...</div>
-      </FeaturePageShell>
+    content = <div className="py-20 text-center text-muted-foreground">Loading system status...</div>;
+  } else if (healthError && !healthData) {
+    content = (
+      <div className="rounded-[1.6rem] border border-red-500/30 bg-red-500/10 p-6 text-red-700 shadow-[0_18px_48px_oklch(0_0_0_/0.16)] dark:text-red-300">
+        Failed to load public status data: {healthError.message}
+      </div>
     );
-  }
+  } else if (!healthData) {
+    content = <div className="py-20 text-center text-muted-foreground">Public health data is unavailable.</div>;
+  } else {
+    const statusTone = getStatusTone(healthData.status);
+    const worstCache = getPublicWorstCacheSummary(healthData.caches);
+    const mintBurnStatus = getPublicMintBurnStatus(healthData.mintBurn.sync);
+    const probeSummary = buildBrowserProbeSummary(probes, probesUpdatedAt ?? 0);
+    const openCircuits = Object.values(healthData.circuits).filter((circuit) => circuit.state === "open").length;
+    const halfOpenCircuits = Object.values(healthData.circuits).filter((circuit) => circuit.state === "half-open").length;
+    const impactedPublicSurfaces = getImpactedPublicSurfaces(healthData);
+    const blacklistStatus = getBlacklistGapStatus({
+      missingRatio: healthData.blacklist.missingRatio,
+      recentMissingAmounts: healthData.blacklist.recentMissingAmounts,
+    });
+    const blacklistWindowHours = Math.max(1, Math.round(healthData.blacklist.recentWindowSec / 3600));
+    const telegramSummary = healthData.telegramSummary ?? null;
 
-  if (healthError && !healthData) {
-    return (
-      <FeaturePageShell
-        breadcrumbName="System Status"
-        path="/status/"
-        title="System Status"
-        leadParagraphs={[
-          "Live public telemetry for route freshness, browser reachability, and ingestion drift.",
-        ]}
-      >
-        <div className="rounded-[1.6rem] border border-red-500/30 bg-red-500/10 p-6 text-red-700 shadow-[0_18px_48px_oklch(0_0_0_/0.16)] dark:text-red-300">
-          Failed to load public status data: {healthError.message}
-        </div>
-      </FeaturePageShell>
-    );
-  }
-
-  if (!healthData) {
-    return (
-      <FeaturePageShell
-        breadcrumbName="System Status"
-        path="/status/"
-        title="System Status"
-        leadParagraphs={[
-          "Live public telemetry for route freshness, browser reachability, and ingestion drift.",
-        ]}
-      >
-        <div className="py-20 text-center text-muted-foreground">Public health data is unavailable.</div>
-      </FeaturePageShell>
-    );
-  }
-
-  const statusTone = getStatusTone(healthData.status);
-  const worstCache = getPublicWorstCacheSummary(healthData.caches);
-  const mintBurnStatus = getPublicMintBurnStatus(healthData.mintBurn.sync);
-  const probeSummary = buildBrowserProbeSummary(probes, probesUpdatedAt ?? 0);
-  const openCircuits = Object.values(healthData.circuits).filter((circuit) => circuit.state === "open").length;
-  const halfOpenCircuits = Object.values(healthData.circuits).filter((circuit) => circuit.state === "half-open").length;
-  const impactedPublicSurfaces = getImpactedPublicSurfaces(healthData);
-  const blacklistStatus = getBlacklistGapStatus({
-    missingRatio: healthData.blacklist.missingRatio,
-    recentMissingAmounts: healthData.blacklist.recentMissingAmounts,
-  });
-  const blacklistWindowHours = Math.max(1, Math.round(healthData.blacklist.recentWindowSec / 3600));
-  const telegramSummary = healthData.telegramSummary ?? null;
-
-  return (
-    <FeaturePageShell
-      breadcrumbName="System Status"
-      path="/status/"
-      title="System Status"
-      leadParagraphs={[
-        "Live public telemetry for route freshness, browser reachability, and ingestion drift.",
-      ]}
-    >
+    content = (
       <div className="space-y-6">
         <PublicStatusHero
           healthData={healthData}
@@ -427,6 +393,12 @@ export default function StatusClient() {
           />
         </StatusSection>
       </div>
+    );
+  }
+
+  return (
+    <FeaturePageShell {...STATUS_SHELL_PROPS}>
+      {content}
     </FeaturePageShell>
   );
 }

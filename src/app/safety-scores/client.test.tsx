@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReportCardsClient } from "./client";
 import type { ReportCard } from "@shared/types";
 
-const replace = vi.fn();
 const refetchReportCards = vi.fn();
 const refetchPrices = vi.fn();
 
@@ -50,10 +49,6 @@ let stressTestState: {
   targetGrade: null,
   clear: vi.fn(),
 };
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace }),
-}));
 
 vi.mock("@/hooks/api-hooks", () => ({
   useReportCards: () => ({
@@ -121,9 +116,9 @@ function makeCard(overrides: Partial<ReportCard> = {}): ReportCard {
 
 describe("ReportCardsClient", () => {
   beforeEach(() => {
-    replace.mockReset();
     refetchReportCards.mockReset();
     refetchPrices.mockReset();
+    window.history.replaceState(null, "", "/safety-scores/");
     reportCardsState = {
       data: {
         cards: [
@@ -196,14 +191,16 @@ describe("ReportCardsClient", () => {
       targetCoinId: "usdc-circle",
       targetGrade: "B",
     };
+    const replaceStateSpy = vi.spyOn(window.history, "replaceState");
 
     render(<ReportCardsClient />);
 
     await waitFor(() => {
-      expect(replace).toHaveBeenCalled();
+      expect(replaceStateSpy).toHaveBeenCalled();
     });
-    const latestPath = replace.mock.calls.at(-1)?.[0] as string;
+    const latestPath = String(replaceStateSpy.mock.calls.at(-1)?.[2] ?? "");
     expect(latestPath).toContain("/safety-scores/?stress=");
     expect(latestPath).toContain("grade=B");
+    expect(window.location.search).toContain("grade=B");
   });
 });

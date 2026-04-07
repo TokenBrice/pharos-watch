@@ -5,13 +5,9 @@ import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useTablePagination } from "@/hooks/use-table-pagination";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { EventPaginationFooter } from "@/components/event-pagination-footer";
+import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import {
-  Table,
-  TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,6 +34,15 @@ const DEPEG_HISTORY_PAGE_SIZE = 25;
 const EMPTY_EVENTS: DepegEvent[] = [];
 const DEPEG_HISTORY_DESCRIPTION =
   "Recorded depeg detections for this stablecoin, sorted newest first. Peg score uses a rolling 4-year window.";
+const DEPEG_HISTORY_COLUMNS: readonly DataTableColumn[] = [
+  { id: "date", label: "Date" },
+  { id: "direction", label: "Direction" },
+  { id: "peakDeviation", label: "Peak Deviation", className: "text-right" },
+  { id: "duration", label: "Duration", className: "text-right" },
+  { id: "startPrice", label: "Start Price", className: "hidden lg:table-cell text-right" },
+  { id: "peakPrice", label: "Peak Price", className: "hidden lg:table-cell text-right" },
+  { id: "recoveryPrice", label: "Recovery Price", className: "hidden lg:table-cell text-right" },
+] as const;
 
 function DepegHistoryIntro() {
   return (
@@ -186,38 +191,25 @@ export function DepegHistory({
           {isFetchingNextPage ? "" : " loaded"}
         </p>
       ) : null}
-      <div className="rounded-xl border overflow-hidden">
-        <Table>
-          <TableHeader className="bg-muted">
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Direction</TableHead>
-              <TableHead className="text-right">Peak Deviation</TableHead>
-              <TableHead className="text-right">Duration</TableHead>
-              <TableHead className="hidden lg:table-cell text-right">Start Price</TableHead>
-              <TableHead className="hidden lg:table-cell text-right">Peak Price</TableHead>
-              <TableHead className="hidden lg:table-cell text-right">Recovery Price</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedRows.map((event) => (
-              <DepegRow key={event.id} event={event} pegCurrency={pegCurrency} />
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-      {isFullyLoaded && totalEvents > 0 ? (
-        <EventPaginationFooter
-          className="mt-3"
-          rangeStart={rangeStart}
-          rangeEnd={rangeEnd}
-          total={totalEvents}
-          onPreviousPage={onPreviousPage}
-          onNextPage={onNextPage}
-          previousDisabled={effectivePage <= 0}
-          nextDisabled={effectivePage >= totalPages - 1}
-        />
-      ) : null}
+      <DataTableShell
+        columns={DEPEG_HISTORY_COLUMNS}
+        containerClassName="rounded-xl border overflow-hidden"
+        tableClassName="min-w-[420px]"
+        pagination={isFullyLoaded && totalEvents > 0 ? {
+          page: effectivePage,
+          totalPages,
+          rangeStart,
+          rangeEnd,
+          total: totalEvents,
+          onPrevious: onPreviousPage,
+          onNext: onNextPage,
+          noun: "events",
+        } : undefined}
+      >
+        {paginatedRows.map((event) => (
+          <DepegRow key={event.id} event={event} pegCurrency={pegCurrency} />
+        ))}
+      </DataTableShell>
     </Card>
   );
 }

@@ -3,12 +3,10 @@ import { AdminActionsPanel } from "@/components/status/admin-actions-panel";
 import { ApiKeysPanel } from "@/components/status/api-keys-panel";
 import { TelegramBotStats } from "@/components/status/telegram-bot-stats";
 import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";
-import type { AdminAccess } from "@/lib/admin-access";
 import type { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";
 
 export interface ControlSectionProps {
   data: StatusResponse;
-  adminAccess: AdminAccess;
   handleRefresh: () => void;
   recommendedActions: ReturnType<typeof deriveStatusActionRecommendations>;
   isTelegramOpen: boolean;
@@ -17,7 +15,6 @@ export interface ControlSectionProps {
 
 export function ControlSection({
   data,
-  adminAccess,
   handleRefresh,
   recommendedActions,
   isTelegramOpen,
@@ -38,9 +35,8 @@ export function ControlSection({
         </>
       }
     >
-      <ApiKeysPanel adminAccess={adminAccess} />
+      <ApiKeysPanel />
       <AdminActionsPanel
-        adminAccess={adminAccess}
         status={{ causes: data.causes, crons: data.crons }}
         nowSeconds={data.timestamp}
         onActionFinished={handleRefresh}

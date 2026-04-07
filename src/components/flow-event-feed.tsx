@@ -2,15 +2,11 @@
 
 import { useState } from "react";
 import {
-  Table,
-  TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { EventPaginationFooter } from "@/components/event-pagination-footer";
+import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, ArrowDownUp } from "lucide-react";
 import { useMintBurnEvents } from "@/hooks/use-mint-burn-flows";
@@ -38,6 +34,13 @@ interface FlowEventFeedProps {
 // ---------------------------------------------------------------------------
 
 const DEFAULT_PAGE_SIZE = 25;
+const FLOW_EVENT_COLUMNS: readonly DataTableColumn[] = [
+  { id: "time", label: "Time" },
+  { id: "direction", label: "Direction" },
+  { id: "amount", label: "Amount", className: "text-right" },
+  { id: "chain", label: "Chain", className: "hidden sm:table-cell" },
+  { id: "tx", label: "Tx", className: "text-center" },
+] as const;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -166,90 +169,77 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
   const showingEnd = Math.min((page + 1) * pageSize, total);
 
   return (
-    <div className="space-y-3">
-      <div className="rounded-xl border overflow-hidden">
-        <Table>
-          <TableHeader className="bg-muted">
-            <TableRow>
-              <TableHead>Time</TableHead>
-              <TableHead>Direction</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-              <TableHead className="hidden sm:table-cell">Chain</TableHead>
-              <TableHead className="text-center">Tx</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {events.map((evt) => {
-              const badge = getEventBadge(evt);
-              return (
-                <TableRow key={evt.id}>
-                  <TableCell
-                    className="whitespace-nowrap text-xs"
-                    title={formatEventDate(evt.timestamp)}
-                  >
-                    <span className="font-mono">{timeAgo(evt.timestamp)}</span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={badge.className}
-                    >
-                      {badge.label}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums text-sm">
-                    {evt.amountUsd != null ? (
-                      formatCurrency(evt.amountUsd)
-                    ) : evt.amount > 0 ? (
-                      <div className="flex flex-col items-end gap-1">
-                        <span>{formatTokenAmount(evt.amount)} {evt.symbol}</span>
-                        <Badge variant="outline" className="text-xs">
-                          Unpriced
-                        </Badge>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">&mdash;</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell text-sm">
-                    {chainName(evt.chainId)}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <a
-                      href={evt.explorerTxUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <span className="hidden md:inline">{formatTxHash(evt.txHash)}</span>
-                      <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                    </a>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-            {events.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-12">
-                  No more events.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {total > 0 && (
-        <EventPaginationFooter
-          rangeStart={showingStart}
-          rangeEnd={showingEnd}
-          total={total}
-          onPreviousPage={() => setPage((p) => Math.max(0, p - 1))}
-          onNextPage={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-          previousDisabled={page <= 0}
-          nextDisabled={page >= totalPages - 1}
-        />
+    <DataTableShell
+      columns={FLOW_EVENT_COLUMNS}
+      containerClassName="rounded-xl border overflow-hidden"
+      tableClassName="min-w-[420px]"
+      pagination={total > 0 ? {
+        page,
+        totalPages,
+        rangeStart: showingStart,
+        rangeEnd: showingEnd,
+        total,
+        onPrevious: () => setPage((p) => Math.max(0, p - 1)),
+        onNext: () => setPage((p) => Math.min(totalPages - 1, p + 1)),
+        noun: "events",
+      } : undefined}
+    >
+      {events.map((evt) => {
+        const badge = getEventBadge(evt);
+        return (
+          <TableRow key={evt.id}>
+            <TableCell
+              className="whitespace-nowrap text-xs"
+              title={formatEventDate(evt.timestamp)}
+            >
+              <span className="font-mono">{timeAgo(evt.timestamp)}</span>
+            </TableCell>
+            <TableCell>
+              <Badge
+                variant="outline"
+                className={badge.className}
+              >
+                {badge.label}
+              </Badge>
+            </TableCell>
+            <TableCell className="text-right font-mono tabular-nums text-sm">
+              {evt.amountUsd != null ? (
+                formatCurrency(evt.amountUsd)
+              ) : evt.amount > 0 ? (
+                <div className="flex flex-col items-end gap-1">
+                  <span>{formatTokenAmount(evt.amount)} {evt.symbol}</span>
+                  <Badge variant="outline" className="text-xs">
+                    Unpriced
+                  </Badge>
+                </div>
+              ) : (
+                <span className="text-muted-foreground">&mdash;</span>
+              )}
+            </TableCell>
+            <TableCell className="hidden sm:table-cell text-sm">
+              {chainName(evt.chainId)}
+            </TableCell>
+            <TableCell className="text-center">
+              <a
+                href={evt.explorerTxUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <span className="hidden md:inline">{formatTxHash(evt.txHash)}</span>
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+              </a>
+            </TableCell>
+          </TableRow>
+        );
+      })}
+      {events.length === 0 && (
+        <TableRow>
+          <TableCell colSpan={FLOW_EVENT_COLUMNS.length} className="py-12 text-center text-muted-foreground">
+            No more events.
+          </TableCell>
+        </TableRow>
       )}
-    </div>
+    </DataTableShell>
   );
 }

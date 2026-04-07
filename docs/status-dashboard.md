@@ -70,7 +70,7 @@ The active frontend operator mode is now:
 ### Data hooks
 
 - `src/hooks/use-status.ts`
-  - `useStatus(adminAccess: AdminAccess)` — calls `GET /api/status` through same-origin `/api/admin/status` on `ops.pharos.watch` via `useAdminPollingQuery`
+  - `useStatus()` — calls `GET /api/status` through same-origin `/api/admin/status` on `ops.pharos.watch` via `useAdminPollingQuery`
   - Query key uses the fixed ops-proxy scope; no browser-held secret is involved
   - `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0` (via `CRON_1MIN` cadence)
 - `src/hooks/api-hooks.ts`
@@ -430,7 +430,7 @@ Three internal health-check registrations in `shared/lib/api-endpoints.ts` use h
 | `stablecoin-summary-canary`  | `/api/stablecoin-summary/usdt-tether`    | (same as path)                 | Snapshot route health check                              |
 | `stablecoin-reserves-canary` | `/api/stablecoin-reserves/iusd-infinifi` | (same as path)                 | Live reserves route health check                         |
 
-Handler bindings are in `worker/src/route-registry.ts`. Each delegates to the same handler as the corresponding dynamic `GET /api/stablecoin/:id` route but with a pre-selected ID.
+Handler bindings are in `worker/src/routes/registry.ts`. Each delegates to the same handler as the corresponding dynamic `GET /api/stablecoin/:id` route but with a pre-selected ID.
 
 These are **not part of the public API contract**. Canary IDs may change without notice if the underlying coins are removed from tracking. External integrators should use the parameterized routes documented in the API reference.
 
@@ -573,7 +573,7 @@ This is an operator integrity signal, not a public user-facing score. Large gaps
 | `shared/lib/status-thresholds.ts`                    | Single source of truth for all status thresholds (cache ratios, missing prices, blacklist gaps, on-chain supply, price confidence bands, reconciliation, discovery mcap) — imported by both worker and frontend                                                                        |
 | `shared/lib/cron-jobs.ts`                            | Shared cron expressions, display grouping, trigger isolation metadata, and per-job intervals used by both frontend and worker                                                                                                                                                          |
 | `shared/lib/api-endpoints.ts`                        | Shared endpoint contract metadata: paths, probe groups, method/cache flags, status-page actions                                                                                                                                                                                        |
-| `worker/src/route-registry.ts`                       | Single worker-side static route definition list keyed by shared endpoint metadata                                                                                                                                                                                                      |
+| `worker/src/routes/registry.ts`                      | Single worker-side static route definition list keyed by shared endpoint metadata                                                                                                                                                                                                      |
 | `worker/src/router.ts`                               | Route dispatcher: static registry lookup plus dynamic stablecoin/discovery/OG matching                                                                                                                                                                                                 |
 | `worker/src/api/status.ts`                           | Raw status synthesis + effective state response                                                                                                                                                                                                                                        |
 | `worker/src/api/status-history.ts`                   | Machine-readable status timeline/history endpoint                                                                                                                                                                                                                                      |

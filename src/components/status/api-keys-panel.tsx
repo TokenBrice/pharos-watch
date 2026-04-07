@@ -12,13 +12,9 @@ import type {
 } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { buildAdminApiPath, buildAdminFetchInit, type AdminAccess } from "@/lib/admin-access";
+import { buildAdminApiPath } from "@/lib/admin-access";
 import { buildRequestUrl } from "@/lib/api";
 import { useApiKeys } from "@/hooks/use-api-keys";
-
-interface ApiKeysPanelProps {
-  adminAccess: AdminAccess;
-}
 
 interface EditableKeyState {
   name: string;
@@ -118,18 +114,16 @@ function formatExpirySummary(key: ApiKeySummary, nowSeconds: number): string {
 }
 
 async function postAdminJson<T>(
-  adminAccess: AdminAccess,
   path: string,
   body?: Record<string, unknown>,
 ): Promise<T> {
-  const init = buildAdminFetchInit({
+  const response = await fetch(buildRequestUrl(buildAdminApiPath(path)), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: body ? JSON.stringify(body) : undefined,
   });
-  const response = await fetch(buildRequestUrl(buildAdminApiPath(path)), init);
   const text = await response.text();
   let parsed: unknown = null;
   try {
@@ -149,8 +143,8 @@ async function postAdminJson<T>(
   return parsed as T;
 }
 
-export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
-  const { data, error, isLoading, refetch } = useApiKeys(adminAccess);
+export function ApiKeysPanel() {
+  const { data, error, isLoading, refetch } = useApiKeys();
   const [createName, setCreateName] = useState("");
   const [createOwnerEmail, setCreateOwnerEmail] = useState("");
   const [createTier, setCreateTier] = useState("standard");
@@ -210,7 +204,7 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
         createPayload.expiresAt = null;
       }
 
-      const response = await postAdminJson<ApiKeyCreateResponse>(adminAccess, "/api/api-keys", {
+      const response = await postAdminJson<ApiKeyCreateResponse>("/api/api-keys", {
         ...createPayload,
       });
       setRevealedToken({ label: `Created ${response.key.name}`, token: response.token });
@@ -459,18 +453,14 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
                         if (draft.expiryMode === "custom" && expiresAt == null) {
                           throw new Error("Custom expiry requires a valid date and time");
                         }
-                        const response = await postAdminJson<ApiKeyMutationResponse>(
-                          adminAccess,
-                          `/api/api-keys/${key.id}/update`,
-                          {
-                            name: draft.name,
-                            ownerEmail: draft.ownerEmail || null,
-                            tier: draft.tier,
-                            trafficClass: draft.trafficClass,
-                            rateLimitPerMinute: Number.parseInt(draft.rateLimitPerMinute, 10),
-                            expiresAt,
-                          },
-                        );
+                        const response = await postAdminJson<ApiKeyMutationResponse>(`/api/api-keys/${key.id}/update`, {
+                          name: draft.name,
+                          ownerEmail: draft.ownerEmail || null,
+                          tier: draft.tier,
+                          trafficClass: draft.trafficClass,
+                          rateLimitPerMinute: Number.parseInt(draft.rateLimitPerMinute, 10),
+                          expiresAt,
+                        });
                         setDrafts((prev) => ({ ...prev, [key.id]: buildEditableState(response.key) }));
                       }, key.id)}
                     >
@@ -481,7 +471,7 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
                       variant="outline"
                       disabled={isBusy || !key.isActive}
                       onClick={() => runKeyAction(async () => {
-                        await postAdminJson<ApiKeyMutationResponse>(adminAccess, `/api/api-keys/${key.id}/deactivate`);
+                        await postAdminJson<ApiKeyMutationResponse>(`/api/api-keys/${key.id}/deactivate`);
                       }, key.id)}
                     >
                       Deactivate
@@ -491,7 +481,7 @@ export function ApiKeysPanel({ adminAccess }: ApiKeysPanelProps) {
                       variant="outline"
                       disabled={isBusy}
                       onClick={() => runKeyAction(async () => {
-                        const response = await postAdminJson<ApiKeyRotateResponse>(adminAccess, `/api/api-keys/${key.id}/rotate`);
+                        const response = await postAdminJson<ApiKeyRotateResponse>(`/api/api-keys/${key.id}/rotate`);
                         setRevealedToken({ label: `Rotated ${response.key.name}`, token: response.token });
                       }, key.id)}
                     >

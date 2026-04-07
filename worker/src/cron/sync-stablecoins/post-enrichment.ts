@@ -4,14 +4,16 @@
  *
  * Extracted to eliminate code duplication (Q-002, Q-011, CC-001).
  */
+import { isPricingSourceSoftGuardrailExempt } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
 import { setCacheIfNewer, getPriceCache, savePriceCache } from "../../lib/db-cache";
 import { validatePayloadWithSchema } from "../../lib/api-utils";
 import { sendAlert } from "../../lib/alerts";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
-import { hasMissingPrice } from "./enrich-prices";
+import { enrichMissingPrices, hasMissingPrice } from "./enrich-prices";
 import type { PeggedAsset } from "./enrich-prices";
 import {
   type PriceValidationContext,
@@ -44,6 +46,7 @@ import {
   isReplaySafePriceSource,
   isSingleSourceDepegAuthoritative,
 } from "../../lib/pricing-source-policy";
+import { applyProtocolPriceOverrides } from "./pricing";
 
 const PRICE_CACHE_TTL = 6 * 60 * 60;
 
@@ -71,6 +74,28 @@ export interface PriceValidationResult {
   cachedFallbackCount: number;
   nativePegCorrectionCount: number;
   nativePegFillCount: number;
+}
+
+export interface SharedPriceCompletionInput extends Omit<PostEnrichmentInput, "missingBefore"> {
+  missingBefore: Set<string>;
+}
+
+export interface SharedPriceCompletionResult extends PriceValidationResult {
+  authoritativeOverrideCount: number;
+}
+
+export interface MissingPriceEnrichmentInput {
+  assets: PeggedAsset[];
+  db: D1Database;
+  syncStartSec: number;
+  signal?: AbortSignal;
+  cmcApiKey?: string;
+  returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
+}
+
+export interface MissingPriceEnrichmentResult {
+  missingBefore: Set<string>;
+  enrichStats: Awaited<ReturnType<typeof enrichMissingPrices>>;
 }
 
 export interface DepegPipelineResult {
@@ -119,7 +144,7 @@ export async function runPostEnrichmentPricePipeline(
   );
 
   const hasStrongNativePegBypassAuthority = (asset: PeggedAsset): boolean => {
-    if (asset.priceSource === "protocol-redeem" || asset.priceSource === "pool-tvl-weighted") {
+    if (isPricingSourceSoftGuardrailExempt(asset.priceSource)) {
       return true;
     }
 
@@ -324,6 +349,54 @@ export async function runPostEnrichmentPricePipeline(
   }
 
   return { rejectedCount, cachedFallbackCount, nativePegCorrectionCount, nativePegFillCount };
+}
+
+export async function runSharedPriceCompletion(
+  input: SharedPriceCompletionInput,
+  abortStagePrefix: string,
+): Promise<SharedPriceCompletionResult | CronResult> {
+  const authoritativeOverrides = await fetchAuthoritativeLivePriceOverrides(input.assets, input.signal);
+  const authoritativeOverrideCount = applyProtocolPriceOverrides({
+    assets: input.assets,
+    overrides: authoritativeOverrides,
+    previousTrustedPrices: input.previousTrustedPrices,
+    validationContexts: input.validationContexts,
+    validationReferences: input.validationReferences,
+    syncStartSec: input.syncStartSec,
+  });
+
+  const priceResult = await runPostEnrichmentPricePipeline({
+    ...input,
+    missingBefore: input.missingBefore,
+  }, abortStagePrefix);
+  if (isAbortResult(priceResult)) return priceResult;
+
+  return {
+    authoritativeOverrideCount,
+    ...priceResult,
+  };
+}
+
+export async function runMissingPriceEnrichmentPhase(
+  input: MissingPriceEnrichmentInput,
+  abortStagePrefix: string,
+): Promise<MissingPriceEnrichmentResult | CronResult> {
+  const missingBefore = new Set(input.assets.filter(hasMissingPrice).map((asset) => asset.id));
+
+  const enrichAbort = input.returnIfAborted(input.signal, `${abortStagePrefix}enrich-prices`);
+  if (enrichAbort) return enrichAbort;
+  const enrichStats = await enrichMissingPrices(input.assets, input.cmcApiKey, input.db, input.signal);
+
+  for (const asset of input.assets) {
+    if (missingBefore.has(asset.id) && !hasMissingPrice(asset) && !asset.priceConfidence) {
+      stampPriceMetadata(asset, asset.priceSource || "unknown", "fallback", input.syncStartSec);
+    }
+  }
+
+  return {
+    missingBefore,
+    enrichStats,
+  };
 }
 
 // ---------------------------------------------------------------------------

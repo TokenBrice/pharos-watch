@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { getStatusPageActions } from "@shared/lib/api-endpoints";
 import type { StatusResponse } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { AdminAccess } from "@/lib/admin-access";
 import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";
 import { AdminActionButton, type AdminActionExecution } from "./admin-action-button";
 import { formatElapsedSeconds } from "@shared/lib/format";
@@ -38,7 +37,6 @@ const ACTION_GROUP_COPY: Record<typeof ACTION_GROUP_ORDER[number], { title: stri
 };
 
 interface AdminActionsPanelProps {
-  adminAccess: AdminAccess;
   status: Pick<StatusResponse, "causes" | "crons">;
   nowSeconds: number;
   onActionFinished?: () => void;
@@ -46,7 +44,6 @@ interface AdminActionsPanelProps {
 }
 
 export function AdminActionsPanel({
-  adminAccess,
   status,
   nowSeconds,
   onActionFinished,
@@ -115,7 +112,6 @@ export function AdminActionsPanel({
                   <div className="mt-3">
                     <AdminActionButton
                       action={recommendation.action}
-                      adminAccess={adminAccess}
                       onFinished={handleFinished}
                     />
                   </div>
@@ -144,7 +140,6 @@ export function AdminActionsPanel({
                     <AdminActionButton
                       key={action.path}
                       action={action}
-                      adminAccess={adminAccess}
                       onFinished={handleFinished}
                     />
                   ))}

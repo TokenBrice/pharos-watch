@@ -3,13 +3,11 @@
 import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import type { StatusCause, StatusResponse } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { AdminAccess } from "@/lib/admin-access";
 import { getRecommendedActionsForCause } from "@/lib/status/action-recommendations";
 import { getBlockerCauses, getWatchCauses } from "@/lib/status-dashboard-model";
 import { AdminActionButton } from "./admin-action-button";
 
 interface StatusFactsProps {
-  adminAccess: AdminAccess;
   dbHealthy: boolean;
   summary: StatusResponse["summary"];
   causes: StatusResponse["causes"];
@@ -34,14 +32,12 @@ function CauseList({
   title,
   description,
   emptyMessage,
-  adminAccess,
   onActionFinished,
 }: {
   causes: StatusCause[];
   title: string;
   description: string;
   emptyMessage: string;
-  adminAccess: AdminAccess;
   onActionFinished?: () => void;
 }) {
   const orderedCauses = [...causes].sort((a, b) => {
@@ -95,7 +91,6 @@ function CauseList({
                         <AdminActionButton
                           key={`${cause.code}-${action.path}`}
                           action={action}
-                          adminAccess={adminAccess}
                           fullWidth={false}
                           buttonClassName="min-w-[9rem]"
                           onFinished={() => onActionFinished?.()}
@@ -114,7 +109,6 @@ function CauseList({
 }
 
 export function StatusFacts({
-  adminAccess,
   dbHealthy,
   summary,
   causes,
@@ -182,7 +176,6 @@ export function StatusFacts({
           title="Current blockers"
           description="Severity wins over subsystem. Fix the top rows first."
           emptyMessage="No active blockers."
-          adminAccess={adminAccess}
           onActionFinished={onActionFinished}
         />
         <CauseList
@@ -190,7 +183,6 @@ export function StatusFacts({
           title="Diagnostics watch"
           description="Visible uncertainty and advisory telemetry that do not change the global incident state by themselves."
           emptyMessage="No advisory watch items."
-          adminAccess={adminAccess}
           onActionFinished={onActionFinished}
         />
       </CardContent>

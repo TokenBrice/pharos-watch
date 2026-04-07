@@ -1,15 +1,12 @@
 import type { StatusActionRecommendation } from "@/lib/status/action-recommendations";
 import { AdminActionButton } from "@/components/status/admin-action-button";
-import type { AdminAccess } from "@/lib/admin-access";
 import { cn } from "@/lib/utils";
 
 export function RecommendedActionStrip({
   recommendations,
-  adminAccess,
   onActionFinished,
 }: {
   recommendations: StatusActionRecommendation[];
-  adminAccess: AdminAccess;
   onActionFinished: () => void;
 }) {
   if (recommendations.length === 0) {
@@ -64,7 +61,6 @@ export function RecommendedActionStrip({
               </div>
               <AdminActionButton
                 action={recommendation.action}
-                adminAccess={adminAccess}
                 fullWidth={false}
                 buttonClassName="min-w-[10rem]"
                 onFinished={() => onActionFinished()}

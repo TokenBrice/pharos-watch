@@ -2,12 +2,10 @@ import type { StatusResponse } from "@shared/types";
 import { StatusFacts } from "@/components/status/status-facts";
 import { SystemDiagnostics } from "@/components/status/system-diagnostics";
 import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";
-import type { AdminAccess } from "@/lib/admin-access";
 import { getStatusTone } from "@/lib/status-dashboard-model";
 
 export interface OverviewSectionProps {
   data: StatusResponse;
-  adminAccess: AdminAccess;
   handleRefresh: () => void;
   overallTone: ReturnType<typeof getStatusTone>;
   isDiagnosticsOpen: boolean;
@@ -26,7 +24,6 @@ export interface OverviewSectionProps {
 
 export function OverviewSection({
   data,
-  adminAccess,
   handleRefresh,
   overallTone,
   isDiagnosticsOpen,
@@ -49,7 +46,6 @@ export function OverviewSection({
       }
     >
       <StatusFacts
-        adminAccess={adminAccess}
         dbHealthy={data.dbHealthy}
         summary={data.summary}
         causes={data.causes}

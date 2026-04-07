@@ -14,7 +14,7 @@ import { getTopFoldCopy, isRecoveryHold as isRecoveryHoldState } from "@/compone
 import { NoticeRail, PriorityLaneLink, SummaryBadge } from "@/components/status/page-primitives";
 import { Button } from "@/components/ui/button";
 import { useStatusDashboardModel } from "@/hooks/use-status-dashboard-model";
-import { getAdminQueryScope, isOpsUiHost, type AdminAccess } from "@/lib/admin-access";
+import { isOpsUiHost } from "@/lib/admin-access";
 import {
   type DashboardSectionId,
   formatTimestampSeconds,
@@ -38,42 +38,33 @@ function getCronSeverity(cron: StatusResponse["crons"][string]): number {
   return 0;
 }
 
+const ADMIN_SHELL_PROPS = {
+  breadcrumbName: "Admin",
+  path: "/admin/",
+  title: "Operator Admin",
+  variant: "auth-gated" as const,
+};
+
 export default function StatusClient() {
   const opsUi = useSyncExternalStore(
     () => () => undefined,
     () => isOpsUiHost(),
     () => null,
   );
-  const adminAccess: AdminAccess = getAdminQueryScope();
   const handleOpsSignOut = () => {
     window.location.assign("/cdn-cgi/access/logout");
   };
 
-  if (opsUi == null) {
-    return (
-      <FeaturePageShell
-        breadcrumbName="Admin"
-        path="/admin/"
-        title="Operator Admin"
-        variant="auth-gated"
-        leadParagraphs={[
-          "Access-protected operator panel for monitoring pipeline health, endpoint reliability, incident state transitions, and manual recovery flows.",
-        ]}
-      >
-        <div className="py-20 text-center text-muted-foreground">Loading status access...</div>
-      </FeaturePageShell>
-    );
-  }
+  let leadParagraphs = [
+    "Access-protected operator panel for monitoring pipeline health, endpoint reliability, incident state transitions, and manual recovery flows.",
+  ];
+  let content: ReactNode;
 
-  if (!opsUi) {
-    return (
-      <FeaturePageShell
-        breadcrumbName="Admin"
-        path="/admin/"
-        title="Operator Admin"
-        variant="auth-gated"
-        leadParagraphs={["This route exists, but the operator control plane only runs on the Access-protected ops host."]}
-      >
+  if (opsUi == null) {
+    content = <div className="py-20 text-center text-muted-foreground">Loading status access...</div>;
+  } else if (!opsUi) {
+    leadParagraphs = ["This route exists, but the operator control plane only runs on the Access-protected ops host."];
+    content = (
         <div className="pt-4">
           <div className="rounded-[1.6rem] border border-border/60 bg-background/35 p-6 shadow-[0_18px_48px_oklch(0_0_0_/0.16)]">
             <div className="space-y-3">
@@ -96,28 +87,19 @@ export default function StatusClient() {
             </div>
           </div>
         </div>
-      </FeaturePageShell>
     );
+  } else {
+    content = <StatusDashboard onSignOut={handleOpsSignOut} />;
   }
 
   return (
-    <FeaturePageShell
-      breadcrumbName="Admin"
-      path="/admin/"
-      title="Operator Admin"
-      variant="auth-gated"
-      leadParagraphs={[
-        opsUi
-          ? "Access-protected operator panel for monitoring pipeline health, endpoint reliability, incident state transitions, and manual recovery flows."
-          : "Private operator panel for monitoring pipeline health, endpoint reliability, incident state transitions, and manual recovery flows.",
-      ]}
-    >
-      <StatusDashboard adminAccess={adminAccess} onSignOut={handleOpsSignOut} />
+    <FeaturePageShell {...ADMIN_SHELL_PROPS} leadParagraphs={leadParagraphs}>
+      {content}
     </FeaturePageShell>
   );
 }
 
-function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess; onSignOut: () => void }) {
+function StatusDashboard({ onSignOut }: { onSignOut: () => void }) {
   const {
     data,
     error,
@@ -134,7 +116,7 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
     requestSourceLoading,
     requestSourceStats,
     setHistoryWindow,
-  } = useStatusDashboardModel(adminAccess);
+  } = useStatusDashboardModel();
   const diagnosticsSignal =
     data?.overallStatus !== "healthy" || (model?.notices.length ?? 0) > 0 || (model?.healthDiffersFromStatus ?? false);
   const reliabilitySignal =
@@ -217,7 +199,6 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
     overview: (
       <OverviewSection
         data={data}
-        adminAccess={adminAccess}
         handleRefresh={handleRefresh}
         overallTone={overallTone}
         isDiagnosticsOpen={isDiagnosticsOpen}
@@ -228,7 +209,6 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
     pipeline: (
       <PipelineSection
         data={data}
-        adminAccess={adminAccess}
         handleRefresh={handleRefresh}
       />
     ),
@@ -259,7 +239,6 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
     control: (
       <ControlSection
         data={data}
-        adminAccess={adminAccess}
         handleRefresh={handleRefresh}
         recommendedActions={recommendedActions}
         isTelegramOpen={isTelegramOpen}
@@ -503,7 +482,6 @@ function StatusDashboard({ adminAccess, onSignOut }: { adminAccess: AdminAccess;
             <div className="space-y-4">
               <RecommendedActionStrip
                 recommendations={recommendedActions}
-                adminAccess={adminAccess}
                 onActionFinished={handleRefresh}
               />
 

@@ -514,7 +514,7 @@ Supported inputs:
 - `onlyMissingProvenance`
 - `maxAttempts`
 
-All blacklist admin endpoints are routed in `worker/src/route-registry.ts` and executed via `worker/src/handlers/http.ts`.
+All blacklist admin endpoints are routed in `worker/src/routes/registry.ts` and executed via `worker/src/handlers/http.ts`.
 
 ---
 
@@ -596,7 +596,7 @@ Both endpoints now emit freshness headers from the same hourly `sync-blacklist` 
 | `worker/src/lib/blacklist-contracts.ts`                    | Blacklist event configs: chains, event signatures, and shared-contract resolution rules    |
 | `worker/src/lib/evm-logs.ts`                               | Etherscan v2 log fetching, recursive splitting, rate limiting, `decodeUint256`             |
 | `worker/src/api/blacklist.ts`                              | `GET /api/blacklist` handler                                                               |
-| `worker/src/route-registry.ts`                             | API route dispatch, including admin endpoints (`reset-blacklist-sync`, `debug-sync-state`, `remediate-blacklist-amount-gaps`) |
+| `worker/src/routes/registry.ts`                            | API route dispatch, including admin endpoints (`reset-blacklist-sync`, `debug-sync-state`, `remediate-blacklist-amount-gaps`) |
 | `worker/src/handlers/scheduled.ts`                         | Cron scheduling orchestration for `sync-blacklist`                                         |
 | `worker/src/lib/db.ts`                                     | `getLastBlock()`, `setLastBlock()`, `batchExecute()`                                       |
 | `worker/migrations/0000_baseline.sql`                      | Baseline blacklist schema, including `blacklist_events`, `blacklist_sync_state`, and the pre-0072 index/version additions |

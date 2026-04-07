@@ -6,6 +6,7 @@ import {
   collectDependencyGraphIds,
   filterDependencyGraphEdgesToLive,
 } from "@shared/lib/dependency-graph";
+import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import {
@@ -101,13 +102,12 @@ export function useCoverageMatrixModel() {
   );
 
   const { pricingSources, authoritativeSources } = useMemo(() => {
-    const AUTHORITATIVE_KEYS = new Set(["protocol-redeem"]);
     const consensusMap = new Map<string, number>();
     const authMap = new Map<string, number>();
 
     for (const coin of pegQuery.data?.coins ?? []) {
       for (const src of coin.consensusSources ?? []) {
-        const target = AUTHORITATIVE_KEYS.has(src) ? authMap : consensusMap;
+        const target = isPricingSourceProtocolOverride(src) ? authMap : consensusMap;
         target.set(src, (target.get(src) ?? 0) + 1);
       }
     }

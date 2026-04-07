@@ -4,14 +4,12 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApiRequestAttributionResponse, EndpointProbeResult, HealthResponse, StatusCause, StatusResponse } from "@shared/types";
 
-const { getAdminQueryScopeMock, isOpsUiHostMock, useStatusDashboardModelMock } = vi.hoisted(() => ({
-  getAdminQueryScopeMock: vi.fn(() => "ops-proxy"),
+const { isOpsUiHostMock, useStatusDashboardModelMock } = vi.hoisted(() => ({
   isOpsUiHostMock: vi.fn(),
   useStatusDashboardModelMock: vi.fn(),
 }));
 
 vi.mock("@/lib/admin-access", () => ({
-  getAdminQueryScope: getAdminQueryScopeMock,
   isOpsUiHost: isOpsUiHostMock,
 }));
 
