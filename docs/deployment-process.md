@@ -176,6 +176,26 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 
 Separate from the deploy path, `.github/workflows/dependency-audit.yml` runs `npm audit --audit-level=high` on the full lockfile weekly and on manual dispatch so devDependency advisories are surfaced without turning them into a blocking production deploy gate.
 
+## Dependency Refresh Cadence
+
+Use dependency maintenance as a dedicated routine, not as incidental churn inside larger refactors.
+
+1. First full week of each month:
+   - land one bounded patch/minor refresh tranche from the root lockfile
+   - keep root testing/tooling and worker infrastructure cohorts separate so rollback stays targeted
+2. Weekly:
+   - review `.github/workflows/dependency-audit.yml` output
+   - treat high/critical vulnerabilities as blocking until fixed, pinned away, or explicitly risk-accepted
+   - treat non-blocking staleness as advisory input for the next monthly patch/minor tranche
+3. Once per quarter, or earlier when upstream support windows force it:
+   - run a dedicated major-upgrade spike for framework/tooling majors
+   - do not combine those majors with hotspot refactors, methodology changes, or deploy-surface behavior changes
+
+Current explicitly deferred major cohort:
+
+- `eslint@10`
+- `typescript@6`
+
 Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`:
 
 1. `pages-release`
