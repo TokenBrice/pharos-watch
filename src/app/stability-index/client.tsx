@@ -726,34 +726,43 @@ export function StabilityIndexClient() {
           aria-live="polite"
         >
           {/* Score + gauge — the instrument */}
-          <div className="flex flex-col items-center gap-1 lg:flex-row lg:gap-5">
-            {/* Lighthouse — larger on desktop */}
+          <div className="flex items-center justify-center gap-4 lg:justify-start lg:gap-5">
+            {/* Lighthouse */}
             <PsiLighthouse band={displayBand} color={hexColor} size={96} />
-            {/* Score cluster */}
-            <div className="flex min-w-0 flex-col items-center lg:items-start">
-              {/* Arc gauge */}
+            {/* Gauge with score nested inside the arc */}
+            <div className="relative flex flex-col items-center">
               <ScoreArc score={displayScore} color={hexColor} size={160} />
-              {/* Score + band overlaid below the arc */}
-              <div className="flex flex-wrap items-baseline justify-center gap-x-2.5 gap-y-1 -mt-1 lg:justify-start">
-                <span className="text-xs text-muted-foreground mr-1">
+              {/* Score sits inside the arc's open bottom */}
+              <div className="absolute inset-0 flex flex-col items-center justify-end pb-1">
+                <span className="text-[10px] text-muted-foreground mb-0.5">
                   <MethodologyLabel topic="psi">PSI</MethodologyLabel>
                 </span>
-                <span className={`text-4xl font-extrabold font-mono tabular-nums leading-none ${colorClass}`}>
+                <span className={`text-3xl font-extrabold font-mono tabular-nums leading-none ${colorClass}`}>
                   {formatScore(displayScore)}
                 </span>
-                <span className={`text-base font-bold uppercase tracking-wide sm:text-lg ${colorClass}`}>
+                <span className={`text-xs font-bold uppercase tracking-wide mt-0.5 ${colorClass}`}>
                   {displayBand}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-1.5 text-sm text-muted-foreground lg:justify-start">
-                {delta !== null && (
-                  <span className={`font-medium tabular-nums ${delta >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>
-                    {delta >= 0 ? "+" : ""}{delta.toFixed(1)} vs yesterday
-                  </span>
-                )}
-                <span>{daysInBand} day{daysInBand !== 1 ? "s" : ""} in {displayBand}</span>
-              </div>
             </div>
+            {/* Delta + streak beside the gauge */}
+            <div className="hidden flex-col gap-1 text-sm text-muted-foreground lg:flex">
+              {delta !== null && (
+                <span className={`font-medium tabular-nums ${delta >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>
+                  {delta >= 0 ? "+" : ""}{delta.toFixed(1)} vs yesterday
+                </span>
+              )}
+              <span>{daysInBand} day{daysInBand !== 1 ? "s" : ""} in {displayBand}</span>
+            </div>
+            {/* Delta + streak — mobile only (below gauge) */}
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground lg:hidden">
+            {delta !== null && (
+              <span className={`font-medium tabular-nums ${delta >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>
+                {delta >= 0 ? "+" : ""}{delta.toFixed(1)} vs yesterday
+              </span>
+            )}
+            <span>{daysInBand} day{daysInBand !== 1 ? "s" : ""} in {displayBand}</span>
           </div>
           {/* Component breakdown — fills the middle */}
           <div className="hidden lg:grid lg:min-w-0 lg:grid-cols-4 lg:gap-x-5 lg:border-l lg:border-border/60 lg:pl-5">
