@@ -86,7 +86,6 @@ export async function syncStablecoins(
     nativePegCorrectionCount,
     nativePegFillCount,
   } = pricingStage;
-
   const fillSupplyHistoryResult = await fillStablecoinsSupplyHistoryStage(db, assets, signal);
   if (fillSupplyHistoryResult) return fillSupplyHistoryResult;
 
@@ -130,7 +129,6 @@ export async function syncStablecoins(
     return stalenessCheck.blockedResult;
   }
   const { stalenessWarning, stalenessSummary } = stalenessCheck;
-
   const validationAbort = returnIfAborted(signal, "validate-stablecoins-payload");
   if (validationAbort) return validationAbort;
   await reportStablecoinsStage(reportProgress, "cache-validation", "Validating stablecoins cache payload", {
