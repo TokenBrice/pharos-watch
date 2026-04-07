@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 const DEFAULT_OPS_UI_URL = process.env.SMOKE_OPS_UI_URL ?? "https://ops.pharos.watch/admin/";
 const DEFAULT_OPS_API_BASE = process.env.SMOKE_OPS_API_BASE ?? "https://ops-api.pharos.watch";
 const OPS_UI_PROXY_RETRY_STATUS = 504;
-const OPS_UI_PROXY_RETRY_COUNT = 1;
+const OPS_UI_PROXY_RETRY_COUNT = 2;
 const OPS_UI_PROXY_RETRY_DELAY_MS = 2_000;
 
 function assert(condition, message) {

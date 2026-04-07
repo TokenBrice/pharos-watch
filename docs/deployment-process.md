@@ -167,7 +167,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - private post-deploy ops smoke against `ops.pharos.watch/admin/` and `ops-api.pharos.watch`
    - requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
    - UI check accepts either an Access redirect or a token-backed HTML response, so CI does not depend on the UI app also granting `Service Auth`
-   - same-origin `ops.pharos.watch/api/admin/status` retries one transient `504` once to absorb operator-status warmup immediately after promotion, but persistent proxy failures still fail the deploy
+   - same-origin `ops.pharos.watch/api/admin/status` retries transient `504` responses up to twice to absorb operator-status warmup immediately after promotion, but persistent proxy failures still fail the deploy
 11. `smoke-transport`
    - runs after the same production-changing gates as `smoke-ops`
    - runs `npm run test:smoke-transport`

@@ -144,8 +144,47 @@ describe("fetchOpsUiProxyStatusWithRetry", () => {
     });
   });
 
+  it("uses the default retry budget when proxied 504s persist", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("gateway timeout", {
+        status: 504,
+        headers: { "content-type": "text/plain" },
+      }))
+      .mockResolvedValueOnce(new Response("gateway timeout", {
+        status: 504,
+        headers: { "content-type": "text/plain" },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ overallStatus: "healthy" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }));
+    const sleepMock = vi.fn().mockResolvedValue(undefined);
+
+    const result = await fetchOpsUiProxyStatusWithRetry(
+      "https://ops.pharos.watch/api/admin/status",
+      {
+        "CF-Access-Client-Id": "id",
+        "CF-Access-Client-Secret": "secret",
+      },
+      {
+        fetchImpl: fetchMock,
+        sleepImpl: sleepMock,
+      },
+    );
+
+    expect(result.proxiedStatus.response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(sleepMock).toHaveBeenCalledTimes(2);
+    expect(sleepMock).toHaveBeenNthCalledWith(1, 2_000);
+    expect(sleepMock).toHaveBeenNthCalledWith(2, 2_000);
+  });
+
   it("still returns the last failure when the proxied 504 persists after the retry budget", async () => {
     const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("gateway timeout", {
+        status: 504,
+        headers: { "content-type": "text/plain" },
+      }))
       .mockResolvedValueOnce(new Response("gateway timeout", {
         status: 504,
         headers: { "content-type": "text/plain" },
@@ -164,15 +203,14 @@ describe("fetchOpsUiProxyStatusWithRetry", () => {
       },
       {
         fetchImpl: fetchMock,
-        retryCount: 1,
         retryDelayMs: 2_000,
         sleepImpl: sleepMock,
       },
     );
 
     expect(result.proxiedStatus.response.status).toBe(504);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(sleepMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(sleepMock).toHaveBeenCalledTimes(2);
   });
 });
 
