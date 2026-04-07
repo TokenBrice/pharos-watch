@@ -223,7 +223,7 @@ export async function loadStablecoinsIntake(
   );
   if (supplyGapReconciliation.reconciledCount > 0) {
     console.warn(
-      `[sync-stablecoins] Reconciled ${supplyGapReconciliation.reconciledCount} tracked supply gap(s) from CoinGecko history: ` +
+      `[sync-stablecoins] Reconciled ${supplyGapReconciliation.reconciledCount} tracked supply gap(s) from history repair: ` +
       supplyGapReconciliation.reconciledIds.join(", "),
     );
   }

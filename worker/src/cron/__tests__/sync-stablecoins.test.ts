@@ -73,6 +73,19 @@ vi.mock("@shared/lib/stablecoins", () => {
       flags: { pegCurrency: "EUR", backing: "fiat-backed", yieldBearing: false, navToken: false, governance: "centralized" },
     },
     {
+      id: "tryb-bilira",
+      name: "BiLira",
+      symbol: "TRYB",
+      geckoId: "bilira",
+      llamaId: "300",
+      detailProvider: "defillama",
+      contracts: [
+        { chain: "ethereum", address: "0x2c537e5624e4af88a7ae4060c022609376c8d0eb", decimals: 6 },
+        { chain: "bsc", address: "0xc1fdbed7dac39cae2ccc0748f7a80dc446f6a594", decimals: 6 },
+      ],
+      flags: { pegCurrency: "TRY", backing: "fiat-backed", yieldBearing: false, navToken: false, governance: "centralized" },
+    },
+    {
       id: "dgld-gold-token-sa",
       name: "DGLD Tokenized Gold",
       symbol: "DGLD",
@@ -119,6 +132,17 @@ vi.mock("@shared/lib/stablecoins", () => {
         ],
         detailProvider: "defillama",
         flags: { navToken: false, pegCurrency: "EUR", backing: "fiat-backed", yieldBearing: false, governance: "centralized" },
+      }],
+      ["tryb-bilira", {
+        geckoId: "bilira",
+        cmcSlug: undefined,
+        llamaId: "300",
+        contracts: [
+          { chain: "ethereum", address: "0x2c537e5624e4af88a7ae4060c022609376c8d0eb", decimals: 6 },
+          { chain: "bsc", address: "0xc1fdbed7dac39cae2ccc0748f7a80dc446f6a594", decimals: 6 },
+        ],
+        detailProvider: "defillama",
+        flags: { navToken: false, pegCurrency: "TRY", backing: "fiat-backed", yieldBearing: false, governance: "centralized" },
       }],
       ["dgld-gold-token-sa", {
         geckoId: "gold-token-sa-dgld-tokenized-gold",
@@ -1687,6 +1711,86 @@ describe("syncStablecoins", () => {
     expect(eurcv?.circulatingPrevMonth).toEqual({ peggedEUR: 101_100_000 });
     expect(eurcv?.chains).toEqual(["Ethereum", "Solana", "XRP Ledger", "Stellar"]);
     expect(Object.keys((eurcv?.chainCirculating as Record<string, unknown>) ?? {})).toEqual(["Ethereum", "Solana"]);
+  });
+
+  it("reconciles tracked zero-supply collapses from DefiLlama chart history", async () => {
+    const db = makeDb();
+    const dlData = makeDlResponse(60);
+    const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
+    const nowMs = Date.now();
+
+    dlData.peggedAssets[0] = {
+      id: "tryb-bilira",
+      name: "Bilira",
+      symbol: "TRYB",
+      geckoId: "bilira",
+      price: 0.0224,
+      priceSource: "defillama",
+      priceConfidence: "single-source",
+      supplySource: "defillama",
+      pegType: "peggedTRY",
+      pegMechanism: "fiat-backed",
+      circulating: { peggedTRY: 0 },
+      circulatingPrevDay: { peggedTRY: 0 },
+      circulatingPrevWeek: { peggedTRY: 0 },
+      circulatingPrevMonth: { peggedTRY: 0 },
+      chainCirculating: {
+        BSC: {
+          current: { peggedTRY: 0 },
+          circulatingPrevDay: { peggedTRY: 0 },
+          circulatingPrevWeek: { peggedTRY: 0 },
+          circulatingPrevMonth: { peggedTRY: 0 },
+        },
+        Ethereum: {
+          current: { peggedTRY: 0 },
+          circulatingPrevDay: { peggedTRY: 0 },
+          circulatingPrevWeek: { peggedTRY: 0 },
+          circulatingPrevMonth: { peggedTRY: 0 },
+        },
+      },
+      chains: ["BSC", "Ethereum"],
+    } as unknown as (typeof dlData.peggedAssets)[0];
+
+    mockFetch([
+      {
+        match: "simple/price?ids=bilira",
+        body: {
+          bilira: {
+            usd: 0.02243281,
+            usd_market_cap: 5_125_478,
+          },
+        },
+      },
+      {
+        match: "stablecoincharts/all?stablecoin=300",
+        body: [
+          { date: Math.floor((nowMs - (30 * 24 * 60 * 60 * 1000)) / 1000), totalCirculatingUSD: { peggedTRY: 14_800_000 } },
+          { date: Math.floor((nowMs - (7 * 24 * 60 * 60 * 1000)) / 1000), totalCirculatingUSD: { peggedTRY: 15_100_000 } },
+          { date: Math.floor((nowMs - (24 * 60 * 60 * 1000)) / 1000), totalCirculatingUSD: { peggedTRY: 15_220_000 } },
+          { date: Math.floor(nowMs / 1000), totalCirculatingUSD: { peggedTRY: 15_260_000 } },
+        ],
+      },
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.status).toBe("ok");
+
+    const finalValidationCall = validateSpy.mock.calls.find(
+      (call) => call[2] === "sync-stablecoins:stablecoins",
+    );
+    const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
+    const tryb = payload?.peggedAssets.find((asset) => asset.id === "tryb-bilira");
+
+    expect(tryb).toBeDefined();
+    expect(tryb?.supplySource).toBe("defillama-history-gap-fill");
+    expect(tryb?.circulating).toEqual({ peggedTRY: 15_260_000 });
+    expect(tryb?.circulatingPrevDay).toEqual({ peggedTRY: 15_220_000 });
+    expect(tryb?.circulatingPrevWeek).toEqual({ peggedTRY: 15_100_000 });
+    expect(tryb?.circulatingPrevMonth).toEqual({ peggedTRY: 14_800_000 });
   });
 
   it("adds tracked gold supplemental assets when DefiLlama price data is empty but CoinGecko still has price and market cap", async () => {

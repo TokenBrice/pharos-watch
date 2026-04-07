@@ -3,13 +3,14 @@ import { CHAIN_META } from "@shared/lib/chains";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
-import { USER_AGENT } from "../../lib/constants";
+import { DEFILLAMA_BASE, USER_AGENT } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import type { PeggedAsset } from "./enrich-prices";
 
 const COINGECKO_GAP_THRESHOLD_RATIO = 1.05;
 const COINGECKO_GAP_HISTORY_DAYS = 40;
+const DEFILLAMA_ZERO_SUPPLY_MIN_MARKET_CAP = 1_000_000;
 const MAX_CURRENT_POINT_AGE_MS = 2 * 24 * 60 * 60 * 1000;
 const MAX_LOOKBACK_POINT_DISTANCE_MS = 3 * 24 * 60 * 60 * 1000;
 
@@ -21,19 +22,32 @@ interface CoinGeckoRecentMarketChart {
   market_caps?: [number, number][];
 }
 
-interface SupplyGapCandidate {
+interface DefiLlamaChartPoint {
+  date?: number | string;
+  totalCirculatingUSD?: Record<string, number>;
+}
+
+interface MissingChainSupplyGapCandidate {
+  kind: "missing-chain";
   asset: PeggedAsset;
   geckoId: string;
   pegKey: string;
   missingChainIds: string[];
-  dlMarketCap: number;
-  cgMarketCap: number;
+}
+
+interface ZeroSupplyCollapseCandidate {
+  kind: "zero-supply-collapse";
+  asset: PeggedAsset;
+  llamaId: string;
+  pegKey: string;
 }
 
 export interface SupplyGapReconciliationResult {
   reconciledCount: number;
   reconciledIds: string[];
 }
+
+type SupplyGapCandidate = MissingChainSupplyGapCandidate | ZeroSupplyCollapseCandidate;
 
 function toPositiveFiniteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
@@ -104,6 +118,14 @@ function findNearestMarketCap(
   return bestDistance <= maxDistanceMs ? bestValue : null;
 }
 
+function normalizeChartTimestampMs(value: unknown): number | null {
+  const numeric = typeof value === "string" ? Number(value) : value;
+  if (typeof numeric !== "number" || !Number.isFinite(numeric) || numeric <= 0) {
+    return null;
+  }
+  return numeric < 1_000_000_000_000 ? numeric * 1000 : numeric;
+}
+
 async function fetchCurrentCoinGeckoMarketCaps(
   geckoIds: string[],
   signal?: AbortSignal,
@@ -171,6 +193,43 @@ async function fetchRecentCoinGeckoMarketCaps(
   }
 }
 
+async function fetchRecentDefiLlamaMarketCaps(
+  llamaId: string,
+  pegKey: string,
+  signal?: AbortSignal,
+): Promise<[number, number][]> {
+  const response = await fetchWithRetry(
+    `${DEFILLAMA_BASE}/stablecoincharts/all?stablecoin=${encodeURIComponent(llamaId)}`,
+    {
+      headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+      signal,
+    },
+  );
+
+  if (!response?.ok) {
+    console.warn(
+      `[sync-stablecoins] DefiLlama chart fetch failed for ${llamaId}: ${response?.status ?? "no response"}`,
+    );
+    await cancelResponseBodyQuietly(response);
+    return [];
+  }
+
+  try {
+    const payload = await response.json();
+    if (!Array.isArray(payload)) return [];
+
+    return payload.flatMap((entry) => {
+      const point = entry as DefiLlamaChartPoint;
+      const timestampMs = normalizeChartTimestampMs(point.date);
+      const marketCap = toPositiveFiniteNumber(point.totalCirculatingUSD?.[pegKey]);
+      return timestampMs != null && marketCap != null ? [[timestampMs, marketCap] as [number, number]] : [];
+    });
+  } catch (error) {
+    console.warn(`[sync-stablecoins] DefiLlama chart payload parse failed for ${llamaId}:`, error);
+    return [];
+  }
+}
+
 function buildSupplyGapCandidates(
   assets: PeggedAsset[],
   currentMarketCaps: Record<string, CoinGeckoCurrentMcapRow>,
@@ -180,44 +239,52 @@ function buildSupplyGapCandidates(
   for (const asset of assets) {
     const assetId = String(asset.id);
     const meta = TRACKED_META_BY_ID.get(assetId);
-    if (!meta || meta.detailProvider !== "defillama" || !meta.geckoId) continue;
+    if (!meta || meta.detailProvider !== "defillama") continue;
 
     const pegKey = asset.pegType ?? Object.keys(asset.circulating ?? {})[0];
     if (!pegKey) continue;
 
     const dlMarketCap = sumPegBuckets(asset.circulating);
-    if (!(dlMarketCap > 0)) continue;
-
     const metadataChainIds = buildMetadataChainIds(assetId);
-    if (metadataChainIds.length === 0) continue;
-
     const knownChainIds = new Set<string>();
     for (const [chainId] of canonicalizeChainCirculating(asset.chainCirculating)) {
       knownChainIds.add(chainId);
     }
-    const missingChainIds = metadataChainIds.filter((chainId) => !knownChainIds.has(chainId));
-    if (missingChainIds.length === 0) continue;
 
-    const cgMarketCap = toPositiveFiniteNumber(currentMarketCaps[meta.geckoId]?.usd_market_cap);
-    if (cgMarketCap == null || cgMarketCap <= dlMarketCap * COINGECKO_GAP_THRESHOLD_RATIO) {
+    if (dlMarketCap > 0 && metadataChainIds.length > 0 && meta.geckoId) {
+      const missingChainIds = metadataChainIds.filter((chainId) => !knownChainIds.has(chainId));
+      if (missingChainIds.length === 0) continue;
+
+      const cgMarketCap = toPositiveFiniteNumber(currentMarketCaps[meta.geckoId]?.usd_market_cap);
+      if (cgMarketCap == null || cgMarketCap <= dlMarketCap * COINGECKO_GAP_THRESHOLD_RATIO) {
+        continue;
+      }
+
+      candidates.push({
+        kind: "missing-chain",
+        asset,
+        geckoId: meta.geckoId,
+        pegKey,
+        missingChainIds,
+      });
       continue;
     }
 
-    candidates.push({
-      asset,
-      geckoId: meta.geckoId,
-      pegKey,
-      missingChainIds,
-      dlMarketCap,
-      cgMarketCap,
-    });
+    if (dlMarketCap <= 0 && meta.llamaId) {
+      candidates.push({
+        kind: "zero-supply-collapse",
+        asset,
+        llamaId: meta.llamaId,
+        pegKey,
+      });
+    }
   }
 
   return candidates;
 }
 
 function applySingleMissingChainRemainder(
-  candidate: SupplyGapCandidate,
+  candidate: MissingChainSupplyGapCandidate,
   totals: { current: number; day: number; week: number; month: number },
 ): void {
   if (candidate.missingChainIds.length !== 1) return;
@@ -264,6 +331,10 @@ export async function reconcileTrackedSupplyGaps(
       const meta = TRACKED_META_BY_ID.get(assetId);
       if (!meta || meta.detailProvider !== "defillama" || !meta.geckoId) return [];
 
+      if (sumPegBuckets(asset.circulating) <= 0) {
+        return [meta.geckoId];
+      }
+
       const metadataChainIds = buildMetadataChainIds(assetId);
       if (metadataChainIds.length === 0) return [];
 
@@ -287,7 +358,9 @@ export async function reconcileTrackedSupplyGaps(
   const reconciledIds: string[] = [];
 
   for (const candidate of candidates) {
-    const marketCaps = await fetchRecentCoinGeckoMarketCaps(candidate.geckoId, signal, coingeckoApiKey);
+    const marketCaps = candidate.kind === "zero-supply-collapse"
+      ? await fetchRecentDefiLlamaMarketCaps(candidate.llamaId, candidate.pegKey, signal)
+      : await fetchRecentCoinGeckoMarketCaps(candidate.geckoId, signal, coingeckoApiKey);
     if (marketCaps.length === 0) continue;
 
     const currentFromHistory = findNearestMarketCap(marketCaps, nowMs, MAX_CURRENT_POINT_AGE_MS);
@@ -296,6 +369,9 @@ export async function reconcileTrackedSupplyGaps(
     const month = findNearestMarketCap(marketCaps, nowMs - (30 * 24 * 60 * 60 * 1000), MAX_LOOKBACK_POINT_DISTANCE_MS);
 
     if (currentFromHistory == null || day == null || week == null || month == null) {
+      continue;
+    }
+    if (candidate.kind === "zero-supply-collapse" && currentFromHistory < DEFILLAMA_ZERO_SUPPLY_MIN_MARKET_CAP) {
       continue;
     }
 
@@ -310,10 +386,14 @@ export async function reconcileTrackedSupplyGaps(
     candidate.asset.circulatingPrevDay = { [candidate.pegKey]: totals.day };
     candidate.asset.circulatingPrevWeek = { [candidate.pegKey]: totals.week };
     candidate.asset.circulatingPrevMonth = { [candidate.pegKey]: totals.month };
-    candidate.asset.supplySource = "coingecko-gap-fill";
+    candidate.asset.supplySource = candidate.kind === "zero-supply-collapse"
+      ? "defillama-history-gap-fill"
+      : "coingecko-gap-fill";
     candidate.asset.chains = buildKnownDisplayChains(candidate.asset.id, candidate.asset.chains);
 
-    applySingleMissingChainRemainder(candidate, totals);
+    if (candidate.kind === "missing-chain") {
+      applySingleMissingChainRemainder(candidate, totals);
+    }
     reconciledIds.push(candidate.asset.id);
   }
 

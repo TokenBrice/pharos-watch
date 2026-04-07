@@ -58,6 +58,14 @@ describe("derivePegRates", () => {
     expect(result.sources.peggedEUR).toBeUndefined();
   });
 
+  it("uses fallback rates for empty peg groups", () => {
+    const result = derivePegRates([], new Map(), { peggedTRY: 0.022417 });
+
+    expect(result.rates.peggedTRY).toBe(0.022417);
+    expect(result.sources.peggedTRY).toBe("fallback");
+    expect(result.counts.peggedTRY).toBe(0);
+  });
+
   it("normalizes gold to per-ounce before median derivation", () => {
     const gramOz = 1 / 31.1034768;
     const metalMeta = new Map<string, StablecoinMeta>([

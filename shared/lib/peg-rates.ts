@@ -98,6 +98,14 @@ export function derivePegRates(
     counts[peg] = prices.length;
   }
 
+  for (const [peg, fallback] of Object.entries(mergedFallbacks)) {
+    if (peg in rates) continue;
+    if (typeof fallback !== "number" || !Number.isFinite(fallback) || fallback <= 0) continue;
+    rates[peg] = fallback;
+    sources[peg] = "fallback";
+    counts[peg] = 0;
+  }
+
   // Fallback: USD is always 1
   if (!rates["peggedUSD"]) rates["peggedUSD"] = 1;
   if (!sources["peggedUSD"]) sources["peggedUSD"] = "median";

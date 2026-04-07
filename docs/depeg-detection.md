@@ -110,7 +110,7 @@ Validation gates (skip if any fail):
 - Price valid: non-null, is a number, not NaN, > 0
 - Supply >= $1M (via `sumPegBuckets`) for live event recording
 - Peg reference valid: finite and > 0
-- Non-USD fiat peg references only mutate live state when they come from cached FX fallback or a median built from at least 3 live contributors; thin peer medians fail closed for that cycle
+- Non-USD fiat peg references only mutate live state when they come from cached FX fallback or a median built from at least 3 live contributors; thin peer medians and empty live peer sets fail closed for that cycle
 - Supported non-USD fiat pegs with reliable CoinGecko native pairs also consult a fresh direct native-peg quote before mutating live state; a native quote back inside threshold or pointing the other way vetoes the derived USD/FX move for that cycle
 
 Primary-price trust gates:
