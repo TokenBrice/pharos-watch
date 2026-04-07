@@ -77,7 +77,6 @@ function getAbsoluteDeviationBps(price: number | null | undefined, pegReference:
 }
 
 function isSyntheticSplitPair(previous: DepegRow, next: DepegRow): boolean {
-  if (previous.source !== "live" || next.source !== "live") return false;
   if (previous.stablecoin_id !== next.stablecoin_id) return false;
   if (previous.direction !== next.direction) return false;
   if (previous.ended_at == null) return false;
@@ -90,17 +89,43 @@ function isSyntheticSplitPair(previous: DepegRow, next: DepegRow): boolean {
   const resumeBps = getAbsoluteDeviationBps(next.start_price, next.peg_reference);
   const previousPeakAbsBps = Math.abs(previous.peak_deviation_bps);
 
-  return (
-    recoveryBps != null &&
-    recoveryBps <= SYNTHETIC_SPLIT_RECOVERY_BAR_BPS &&
+  const resumedSevereDepeg =
     resumeBps != null &&
     resumeBps >= threshold &&
-    previousPeakAbsBps >= threshold
-  );
+    previousPeakAbsBps >= threshold;
+  if (!resumedSevereDepeg) {
+    return false;
+  }
+
+  const sameSourceSyntheticSplit =
+    previous.source === "live" &&
+    next.source === "live" &&
+    recoveryBps != null &&
+    recoveryBps <= SYNTHETIC_SPLIT_RECOVERY_BAR_BPS;
+  if (sameSourceSyntheticSplit) {
+    return true;
+  }
+
+  return previous.source === "backfill" && next.source === "live" && previous.recovery_price == null;
+}
+
+function shouldKeepLiveTailForSyntheticSplit(rows: DepegRow[]): boolean {
+  if (rows.length < 2) return false;
+  const tail = rows[rows.length - 1];
+  if (!tail || tail.source !== "live") return false;
+  return rows.slice(0, -1).every((row) => row.source === "backfill");
+}
+
+function pickSyntheticSplitKeeper(rows: DepegRow[]): DepegRow {
+  if (shouldKeepLiveTailForSyntheticSplit(rows)) {
+    return rows[rows.length - 1];
+  }
+  return rows[0];
 }
 
 function summarizeSyntheticSplitGroup(rows: DepegRow[]): SyntheticSplitRepairSummary {
-  const keeper = rows[0];
+  const keeper = pickSyntheticSplitKeeper(rows);
+  const first = rows[0];
   const tail = rows[rows.length - 1];
   let worst = keeper;
   for (const row of rows) {
@@ -113,13 +138,13 @@ function summarizeSyntheticSplitGroup(rows: DepegRow[]): SyntheticSplitRepairSum
     gapSeconds.push(Math.max(0, rows[i].started_at - (rows[i - 1].ended_at ?? rows[i].started_at)));
   }
   return {
-    stablecoinId: keeper.stablecoin_id,
-    symbol: keeper.symbol,
-    direction: keeper.direction,
+    stablecoinId: first.stablecoin_id,
+    symbol: first.symbol,
+    direction: first.direction,
     keeperId: keeper.id,
-    mergedIds: rows.slice(1).map((row) => row.id),
+    mergedIds: rows.filter((row) => row.id !== keeper.id).map((row) => row.id),
     eventIds: rows.map((row) => row.id),
-    startedAt: keeper.started_at,
+    startedAt: first.started_at,
     endedAt: tail.ended_at,
     peakBps: worst.peak_deviation_bps,
     recoveryPrice: tail.ended_at == null ? null : tail.recovery_price,
@@ -295,7 +320,8 @@ export async function handleAuditDepegHistory(
 
         for (const group of paginatedGroups) {
           const summary = summarizeSyntheticSplitGroup(group);
-          const keeper = group[0];
+          const keeper = pickSyntheticSplitKeeper(group);
+          const first = group[0];
           const tail = group[group.length - 1];
           let worst = keeper;
           for (const row of group) {
@@ -307,9 +333,12 @@ export async function handleAuditDepegHistory(
           stmts.push(
             db
               .prepare(
-                "UPDATE depeg_events SET peak_deviation_bps = ?, peak_price = ?, ended_at = ?, recovery_price = ? WHERE id = ?",
+                "UPDATE depeg_events SET started_at = ?, start_price = ?, peg_reference = ?, peak_deviation_bps = ?, peak_price = ?, ended_at = ?, recovery_price = ? WHERE id = ?",
               )
               .bind(
+                first.started_at,
+                first.start_price,
+                first.peg_reference,
                 worst.peak_deviation_bps,
                 worst.peak_price ?? worst.start_price,
                 tail.ended_at,
@@ -317,8 +346,9 @@ export async function handleAuditDepegHistory(
                 keeper.id,
               ),
           );
-          for (const mergedId of summary.mergedIds) {
-            stmts.push(db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(mergedId));
+          for (const row of group) {
+            if (row.id === keeper.id) continue;
+            stmts.push(db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(row.id));
           }
 
           const startDay = Math.floor(summary.startedAt / DAY_SECONDS) * DAY_SECONDS;

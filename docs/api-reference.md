@@ -2701,7 +2701,7 @@ Backfills historical depeg events from stored price data.
 
 For coins with a registered authoritative historical price provider, the backfill uses that same provider family first (for example, replayed protocol redemption quotes) before falling back to market history. If the authoritative provider is configured but unavailable, existing `source='backfill'` rows for that coin are preserved instead of being rebuilt from a weaker source.
 
-Supported non-USD fiat assets now prefer direct CoinGecko native-fiat history first and compare that series to the native `1.0` peg before they fall back to USD-denominated CoinGecko/DefiLlama history plus historical FX.
+Supported non-USD fiat assets now prefer direct CoinGecko native-fiat history first and compare that series to the native `1.0` peg before they fall back to USD-denominated CoinGecko/DefiLlama history plus historical FX. In that native-fiat mode, backfill uses daily points plus a two-point confirmation window across 36 hours, while still preserving extreme single-point crashes of `>= 5000 bps`.
 
 `dry-run=true` compares the freshly replayed historical events against the currently stored `source='backfill'` rows without mutating the database. The preview reports whether the replay exactly matches the stored backfill rows, how many stored backfill rows would be removed, how many replayed rows would be added, and the current live-row counts for the same asset.
 
@@ -2841,7 +2841,7 @@ The endpoint processes up to 1000 `(tx_hash, stablecoin_id)` groups per request.
 
 Dry-run preview for the depeg audit endpoint. This is the only supported `GET` mode for `/api/audit-depeg-history`; all mutating executions require `POST`.
 
-The same endpoint also supports a dry-run historical repair preview with `repair=synthetic-splits`, which surfaces adjacent same-direction live events that were likely split by the old DEX-only auto-close behavior.
+The same endpoint also supports a dry-run historical repair preview with `repair=synthetic-splits`, which surfaces adjacent same-direction events that were likely split either by the old DEX-only auto-close behavior or by a backfill-to-live handoff where historical replay expired mid-ongoing depeg.
 
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
@@ -2860,7 +2860,12 @@ The same endpoint also supports a dry-run historical repair preview with `repair
 
 Audits existing depeg events against CoinGecko historical price data to detect false positives.
 
-`POST /api/audit-depeg-history?repair=synthetic-splits` instead runs a historical repair pass that consolidates adjacent same-direction live events when the earlier event was closed near peg and the next event reopened one sync later with a still-severe deviation. This is intended for repairing synthetic splits caused by the retired DEX-only auto-close behavior.
+`POST /api/audit-depeg-history?repair=synthetic-splits` instead runs a historical repair pass that consolidates adjacent same-direction events when either:
+
+- a live event was split by the retired DEX-only auto-close behavior after the earlier row closed near peg, or
+- a backfill row ended without recovery and a live row resumed the same severe move within one sync gap because the historical replay window expired mid-event.
+
+When a repair group ends in a live row, the live tail is kept as the canonical record and inherits the earlier start plus worst peak so future backfills do not recreate the split.
 
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
