@@ -83,7 +83,6 @@ function makeChain(overrides: Partial<ChainSummary> = {}): ChainSummary {
     backingDistribution: {
       "rwa-backed": 900_000_000,
       "crypto-backed": 600_000_000,
-      algorithmic: 0,
       other: 0,
     },
     composition: [],

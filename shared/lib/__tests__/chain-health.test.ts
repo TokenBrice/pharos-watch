@@ -33,20 +33,23 @@ describe("computeConcentrationScore", () => {
 
 describe("computeBackingDiversityScore", () => {
   it("returns 0 for monoculture (all one type)", () => {
-    const distribution = { "rwa-backed": 1, "crypto-backed": 0, algorithmic: 0 };
+    const distribution = { "rwa-backed": 1, "crypto-backed": 0 };
     expect(computeBackingDiversityScore(distribution)).toBe(0);
   });
 
-  it("returns 100 for perfect three-way split", () => {
-    const distribution = { "rwa-backed": 1/3, "crypto-backed": 1/3, algorithmic: 1/3 };
+  it("returns 100 for an even RWA/crypto split", () => {
+    const distribution = { "rwa-backed": 0.5, "crypto-backed": 0.5 };
     expect(computeBackingDiversityScore(distribution)).toBe(100);
   });
 
-  it("returns intermediate score for two-type split", () => {
-    const distribution = { "rwa-backed": 0.5, "crypto-backed": 0.5, algorithmic: 0 };
-    const score = computeBackingDiversityScore(distribution);
-    expect(score).toBeGreaterThan(0);
-    expect(score).toBeLessThan(100);
+  it("returns intermediate score for an imbalanced split", () => {
+    const distribution = { "rwa-backed": 0.75, "crypto-backed": 0.25 };
+    expect(computeBackingDiversityScore(distribution)).toBe(81);
+  });
+
+  it("ignores legacy algorithmic weight and renormalizes the active cohorts", () => {
+    const distribution = { "rwa-backed": 0.25, "crypto-backed": 0.25, algorithmic: 0.5 };
+    expect(computeBackingDiversityScore(distribution)).toBe(100);
   });
 });
 

@@ -1,7 +1,7 @@
 import type { ChainResilienceTier } from "./chains";
 import type { ChainHealthFactors, HealthBand } from "../types/chains";
 
-export const HEALTH_METHODOLOGY_VERSION = "1.1";
+export const HEALTH_METHODOLOGY_VERSION = "1.2";
 
 export const QUALITY_WEIGHT = 0.30;
 export const CHAIN_ENVIRONMENT_WEIGHT = 0.20;
@@ -28,14 +28,23 @@ export function computeConcentrationScore(shares: number[]): number {
   return Math.round(100 * (1 - hhi));
 }
 
-/** Backing diversity: normalized Shannon entropy across 3 backing types. */
+const ACTIVE_BACKING_DIVERSITY_TYPES = ["rwa-backed", "crypto-backed"] as const;
+
+/** Backing diversity: normalized Shannon entropy across the active RWA/crypto backing split. */
 export function computeBackingDiversityScore(
   distribution: Record<string, number>,
 ): number {
-  const values = Object.values(distribution).filter((v) => v > 0);
+  const values = ACTIVE_BACKING_DIVERSITY_TYPES
+    .map((type) => distribution[type] ?? 0)
+    .filter((value) => value > 0);
   if (values.length <= 1) return 0;
-  const entropy = -values.reduce((sum, p) => sum + p * Math.log(p), 0);
-  const maxEntropy = Math.log(3); // ln(3) for three backing types
+
+  const total = values.reduce((sum, value) => sum + value, 0);
+  if (total <= 0) return 0;
+
+  const normalizedValues = values.map((value) => value / total);
+  const entropy = -normalizedValues.reduce((sum, share) => sum + share * Math.log(share), 0);
+  const maxEntropy = Math.log(ACTIVE_BACKING_DIVERSITY_TYPES.length);
   return Math.round(100 * (entropy / maxEntropy));
 }
 

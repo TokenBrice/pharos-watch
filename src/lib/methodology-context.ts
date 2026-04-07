@@ -296,7 +296,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   },
   chainHealthBackingDiversity: {
     title: "Backing Diversity",
-    summary: "Shannon entropy across backing types: RWA-backed, crypto-backed, and algorithmic.",
+    summary: "Shannon entropy across the active backing split: RWA-backed vs crypto-backed.",
     detail: "Rewards chains with diverse collateral approaches. Concentrated in one backing type scores lower.",
     methodologyPath: "/methodology/#chain-health-score",
     versionLabel: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,

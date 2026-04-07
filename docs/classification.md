@@ -22,7 +22,8 @@ The key distinction for `centralized-dependent`: these protocols may have on-cha
 |-------|---------|
 | `rwa-backed` | Backed by real-world assets (fiat reserves, treasuries, gold) |
 | `crypto-backed` | Backed by on-chain crypto collateral |
-| `algorithmic` | Maintains peg via algorithmic mechanisms |
+
+Active Pharos taxonomy no longer exposes `algorithmic` as a standalone backing bucket. Coins with programmatic peg controls are classified by their actual collateral base instead. Historical shadow assets kept only for PSI continuity can still carry legacy `algorithmic` metadata.
 
 ### Peg Currency
 

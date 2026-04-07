@@ -512,7 +512,7 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
 | `quality`          | `number \| null` | Supply-weighted average stablecoin quality from report-card grades; `null` when rated supply coverage is below 50% by value |
 | `chainEnvironment` | `number`         | Resilience-tier score for the chain itself (`100` tier 1, `60` tier 2, `20` tier 3)                                         |
 | `pegStability`     | `number`         | Supply-weighted average peg deviation score                                                                                 |
-| `backingDiversity` | `number`         | Shannon entropy of backing types across the chain                                                                           |
+| `backingDiversity` | `number`         | Shannon entropy of the active backing split across the chain (`rwa-backed` vs `crypto-backed`)                             |
 
 ---
 

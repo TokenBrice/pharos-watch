@@ -20,7 +20,7 @@ export const FILTER_GROUPS: FilterGroup[] = [
   },
   {
     label: "Backing",
-    options: ["rwa-backed", "crypto-backed", "algorithmic"],
+    options: ["rwa-backed", "crypto-backed"],
   },
   {
     label: "Grade",

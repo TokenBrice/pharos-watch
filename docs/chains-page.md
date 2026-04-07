@@ -81,7 +81,7 @@ Default sort is `totalUsd desc`.
 
 ## Chain Health Score
 
-Current live methodology version is `1.1`.
+Current live methodology version is `1.2`.
 
 `shared/lib/chain-health.ts` computes the composite as:
 
@@ -99,7 +99,7 @@ Factors:
 - `chainEnvironment`: resilience tier mapping from `shared/lib/chains.ts` (`1 -> 100`, `2 -> 60`, `3 -> 20`)
 - `concentration`: `100 * (1 - HHI)`
 - `pegStability`: supply-weighted peg proximity; missing prices contribute a neutral `50`
-- `backingDiversity`: normalized Shannon entropy across `rwa-backed`, `crypto-backed`, and `algorithmic`. Coins without backing metadata are excluded from the distribution (not defaulted to `rwa-backed`). Weight constants are exported from `chain-health.ts`.
+- `backingDiversity`: normalized Shannon entropy across the two active backing cohorts, `rwa-backed` and `crypto-backed`. Coins without backing metadata are excluded from the distribution (not defaulted to `rwa-backed`). Weight constants are exported from `chain-health.ts`.
 
 Bands:
 

@@ -36,14 +36,12 @@ import { buildBackingTotals, buildCompositionLayout } from "./view-model";
 const BACKING_BAR_COLORS: Record<string, string> = {
   "rwa-backed": "bg-sky-500",
   "crypto-backed": "bg-violet-500",
-  algorithmic: "bg-amber-500",
   other: "bg-zinc-400",
 };
 
 const BACKING_FILTER_COLORS: Record<string, string> = {
   "rwa-backed": "bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30 hover:bg-sky-500/20",
   "crypto-backed": "bg-violet-500/15 text-violet-700 dark:text-violet-400 border-violet-500/30 hover:bg-violet-500/20",
-  algorithmic: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/20",
   other: "bg-zinc-500/15 text-zinc-700 dark:text-zinc-400 border-zinc-500/30 hover:bg-zinc-500/20",
 };
 

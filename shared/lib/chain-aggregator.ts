@@ -111,15 +111,11 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
     const shares = acc.coins.map((c) => c.supplyUsd / acc.totalUsd);
 
     // Backing distribution
-    const backingTotals: Record<string, number> = { "rwa-backed": 0, "crypto-backed": 0, algorithmic: 0 };
+    const backingTotals: Record<string, number> = { "rwa-backed": 0, "crypto-backed": 0 };
     for (const coin of acc.coins) {
       if (coin.backing && coin.backing in backingTotals) {
         backingTotals[coin.backing] += coin.supplyUsd;
       }
-    }
-    const backingDist: Record<string, number> = {};
-    for (const [key, val] of Object.entries(backingTotals)) {
-      backingDist[key] = acc.totalUsd > 0 ? val / acc.totalUsd : 0;
     }
 
     // Peg stability
@@ -142,7 +138,7 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
       concentration: computeConcentrationScore(shares),
       quality: computeQualityScore(qualityCoins),
       pegStability: computePegStabilityScore(pegCoins),
-      backingDiversity: computeBackingDiversityScore(backingDist),
+      backingDiversity: computeBackingDiversityScore(backingTotals),
       chainEnvironment: computeChainEnvironmentScore(resilienceTier),
     };
 

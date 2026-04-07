@@ -1,6 +1,14 @@
 # Chain Health Score Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Chain Health Score `v1.0` through `v1.1` (both released 2026-03-16).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Chain Health Score `v1.0` through `v1.2`.
+
+---
+
+## v1.2 - Two-bucket backing diversity after active taxonomy cleanup (Apr 7, 2026)
+
+- Reclassified `FPI`, `cUSD`, and `CEUR` out of the legacy algorithmic bucket because each is reserve-backed
+- Removed the standalone `algorithmic` backing cohort from active filters and taxonomy pages
+- Backing diversity now normalizes across the two live backing cohorts (`rwa-backed` and `crypto-backed`), so an even split scores `100`
 
 ---
 

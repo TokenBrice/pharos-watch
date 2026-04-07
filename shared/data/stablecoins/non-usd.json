@@ -295,7 +295,7 @@
     "name": "Frax Price Index",
     "symbol": "FPI",
     "flags": {
-      "backing": "algorithmic",
+      "backing": "crypto-backed",
       "pegCurrency": "VAR",
       "governance": "centralized-dependent",
       "yieldBearing": false,
@@ -1498,7 +1498,7 @@
     "name": "Celo Euro",
     "symbol": "CEUR",
     "flags": {
-      "backing": "algorithmic",
+      "backing": "crypto-backed",
       "pegCurrency": "EUR",
       "governance": "centralized-dependent",
       "yieldBearing": false,

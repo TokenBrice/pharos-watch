@@ -126,6 +126,7 @@ export const BACKING_TAXONOMY_PAGES = (Object.entries(BACKING_SLUGS) as [Backing
       coins,
     };
   })
+  .filter((page) => page.coins.length > 0)
   .sort((left, right) => right.coins.length - left.coins.length);
 
 const STABLECOIN_TAXONOMY_PAGES = [...GOVERNANCE_TAXONOMY_PAGES, ...BACKING_TAXONOMY_PAGES];

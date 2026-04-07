@@ -16,7 +16,7 @@ const COVERAGE_FAQ_JSON_LD = buildFaqJsonLd([
   },
   {
     question: "Why do some stablecoins have incomplete coverage?",
-    answer: "Coverage gaps typically stem from three factors: data availability (some newer or smaller stablecoins lack sufficient on-chain history for certain metrics), technical constraints (not all chains support the same level of RPC access for mint/burn tracking), and design differences (algorithmic stablecoins don't have traditional reserves, while many assets do not expose a direct issuer or protocol redemption path). Pharos marks these gaps clearly rather than showing misleading placeholders.",
+    answer: "Coverage gaps typically stem from three factors: data availability (some newer or smaller stablecoins lack sufficient on-chain history for certain metrics), technical constraints (not all chains support the same level of RPC access for mint/burn tracking), and design differences (some wrapper or protocol-native designs do not expose traditional reserve reporting, while many assets do not expose a direct issuer or protocol redemption path). Pharos marks these gaps clearly rather than showing misleading placeholders.",
   },
   {
     question: "How often is coverage data updated?",

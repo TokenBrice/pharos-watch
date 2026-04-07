@@ -64,6 +64,14 @@ describe("tracked stablecoin metadata", () => {
     ]);
   });
 
+  it("keeps the active registry free of standalone algorithmic backing classifications", () => {
+    const algorithmicIds = ACTIVE_STABLECOINS
+      .filter((coin) => coin.flags.backing === "algorithmic")
+      .map((coin) => coin.id);
+
+    expect(algorithmicIds).toEqual([]);
+  });
+
   it("rejects malformed stablecoin assets with readable schema errors", () => {
     expect(() => parseStablecoinMetaAssets([{
       id: "broken-coin",

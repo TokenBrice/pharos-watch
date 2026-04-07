@@ -84,7 +84,7 @@ export function ChainHealthMethodologySection() {
                       <tr>
                         <td className="py-2 pr-4 font-medium">Backing Diversity</td>
                         <td className="py-2 pr-4">10%</td>
-                        <td className="py-2">Normalized Shannon entropy across three backing types (RWA-backed, crypto-backed, algorithmic). 0 for monoculture, 100 for a perfect three-way split.</td>
+                        <td className="py-2">Normalized Shannon entropy across the two active backing types (RWA-backed and crypto-backed). 0 for monoculture, 100 for an even split.</td>
                       </tr>
                     </tbody>
                   </table>

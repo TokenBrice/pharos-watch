@@ -5723,7 +5723,7 @@
     "name": "Celo Dollar",
     "symbol": "cUSD",
     "flags": {
-      "backing": "algorithmic",
+      "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,

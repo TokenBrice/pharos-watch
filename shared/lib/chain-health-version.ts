@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const chainHealth = createMethodologyVersion({
-  currentVersion: "1.1",
+  currentVersion: "1.2",
   changelogPath: "/methodology/chain-health-changelog/",
   changelog: [
+    {
+      version: "1.2",
+      title: "Two-bucket backing diversity after active taxonomy cleanup",
+      date: "2026-04-07",
+      effectiveAt: 1775520000,
+      summary:
+        "Removed the standalone algorithmic bucket from the active backing taxonomy after reclassifying the remaining reserve-backed cases. Chain Health backing diversity now measures only the live RWA-backed vs crypto-backed split.",
+      impact: [
+        "Reclassified FPI, cUSD, and CEUR out of the legacy algorithmic bucket based on their reserve backing",
+        "Active backing filters and taxonomy pages now expose only RWA-backed and crypto-backed cohorts",
+        "Backing diversity now normalizes across the two active backing types, so an even RWA/crypto split scores 100",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "1.1",
       title: "Chain environment factor and weight rebalance",
@@ -34,7 +49,7 @@ const chainHealth = createMethodologyVersion({
         "Quality: supply-weighted average of Pharos Safety Scores (null if < 50% coverage)",
         "Concentration: HHI-based metric rewarding stablecoin diversity",
         "Peg stability: supply-weighted peg proximity across all chain stablecoins",
-        "Backing diversity: Shannon entropy across RWA-backed, crypto-backed, and algorithmic types",
+        "Backing diversity: Shannon entropy across the backing taxonomy active at the time",
         "Health bands: robust (80–100), healthy (60–79), mixed (40–59), fragile (20–39), concentrated (0–19)",
         "Added /api/chains endpoint, /chains/ leaderboard page, and /chains/[chain]/ detail pages",
       ],

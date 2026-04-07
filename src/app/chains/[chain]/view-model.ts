@@ -45,7 +45,6 @@ export function buildBackingTotals(coins: ChainStablecoin[]) {
   const totals: Record<string, number> = {
     "rwa-backed": 0,
     "crypto-backed": 0,
-    algorithmic: 0,
     other: 0,
   };
 
