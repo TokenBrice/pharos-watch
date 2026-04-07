@@ -27,9 +27,6 @@ export function withErrorHandler<T extends unknown[]>(
 }
 
 function isJsonResponseOptions(value: JsonResponseInit): value is JsonResponseOptions {
-  if (!value) {
-    return false;
-  }
   return "status" in value || "headers" in value || "noStore" in value || "retryAfterSec" in value;
 }
 

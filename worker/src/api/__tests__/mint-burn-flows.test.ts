@@ -146,6 +146,16 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body).toHaveProperty("error");
   });
 
+  it("returns 404 for a valid stablecoin that is not tracked for mint/burn flows", async () => {
+    const url = new URL("https://x/api/mint-burn-flows?stablecoin=susdai-usd-ai");
+    const res = await handleMintBurnFlows(db, url);
+
+    expect(res.status).toBe(404);
+    await expect(res.json()).resolves.toEqual({
+      error: 'Stablecoin "susdai-usd-ai" is not tracked for mint/burn flows',
+    });
+  });
+
   it("rejects out-of-range hours instead of clamping them", async () => {
     const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows?hours=9999"));
     expect(res.status).toBe(400);
@@ -999,12 +1009,12 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(res.headers.get("X-Data-Age")).toBe(String(50 * 60));
   });
 
-  it("surfaces a freshness lookup warning and falls back to the latest cron snapshot timestamp", async () => {
+  it("combines degraded freshness with the lookup fallback warning when cron freshness lookup fails", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-11T12:00:00Z"));
 
     const now = Math.floor(Date.now() / 1000);
-    const thirtyMinutesAgo = now - 30 * 60;
+    const fiftyMinutesAgo = now - 50 * 60;
     const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
     const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
     const cache = JSON.stringify({
@@ -1044,8 +1054,8 @@ describe("handleMintBurnFlows contract tests", () => {
       },
       {
         match: "SELECT started_at, status, metadata",
-        rows: [{ started_at: thirtyMinutesAgo, status: "ok", metadata: JSON.stringify({ chainHead: 22_345_999 }) }],
-        first: { started_at: thirtyMinutesAgo, status: "ok", metadata: JSON.stringify({ chainHead: 22_345_999 }) },
+        rows: [{ started_at: fiftyMinutesAgo, status: "ok", metadata: JSON.stringify({ chainHead: 22_345_999 }) }],
+        first: { started_at: fiftyMinutesAgo, status: "ok", metadata: JSON.stringify({ chainHead: 22_345_999 }) },
       },
       {
         match: "MAX(started_at) as started_at FROM cron_runs WHERE job = ? AND status = 'ok'",
@@ -1063,8 +1073,9 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(res.status).toBe(200);
 
     const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    expect(body.sync?.freshnessStatus).toBe("degraded");
+    expect(body.sync?.warning).toContain("Mint/burn sync freshness is degraded");
     expect(body.sync?.warning).toContain("freshness lookup failed");
-    expect(body.sync?.freshnessStatus).toBe("fresh");
-    expect(res.headers.get("X-Data-Age")).toBe(String(30 * 60));
+    expect(res.headers.get("X-Data-Age")).toBe(String(50 * 60));
   });
 });

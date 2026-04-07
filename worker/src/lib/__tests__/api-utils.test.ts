@@ -13,6 +13,7 @@ import {
   parseQueryParams,
   parseStablecoinHistoryQuery,
   jsonResponse,
+  jsonFreshResponse,
   validatePayloadWithSchema,
   buildCacheStatuses,
   readCachedJson,
@@ -532,6 +533,21 @@ describe("jsonResponse", () => {
     expect(res.status).toBe(202);
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(res.headers.get("Retry-After")).toBe("3");
+  });
+});
+
+describe("jsonFreshResponse", () => {
+  it("returns plain JSON when freshness metadata is not provided", async () => {
+    const res = jsonFreshResponse({ ok: true }, {
+      cacheControl: "public, max-age=60",
+      headers: { "X-Test": "1" },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("application/json");
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=60");
+    expect(res.headers.get("X-Test")).toBe("1");
+    expect(res.headers.get("X-Data-Age")).toBeNull();
   });
 });
 
