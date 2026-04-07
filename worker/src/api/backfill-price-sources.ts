@@ -196,7 +196,7 @@ export function collapsePricesToDailyTimestamps(prices: PricePoint[]): number[] 
   return Array.from(byDay.values()).sort((a, b) => a - b);
 }
 
-export async function fetchCgPriceHistoryDaily(
+async function fetchCgPriceHistoryDaily(
   geckoId: string,
   range?: HistoricalMarketBackfillRange,
   vsCurrency = "usd",
@@ -309,7 +309,7 @@ export async function fetchCgPriceHistoryHourly(
   );
 }
 
-export async function fetchDlPriceChart(
+async function fetchDlPriceChart(
   coinId: string,
   start: number,
   end?: number | null,
@@ -436,7 +436,7 @@ export async function fetchMarketBackfillPriceSeries(
   };
 }
 
-export async function fetchMarketBackfillPrices(
+async function fetchMarketBackfillPrices(
   meta: StablecoinMeta,
   geckoId: string,
 ): Promise<PricePoint[] | null> {

@@ -15,7 +15,6 @@ export const WEEK_HOURS = 7 * DAY_HOURS;
 export const THIRTY_DAYS_HOURS = 30 * DAY_HOURS;
 export const NINETY_DAYS_HOURS = 90 * DAY_HOURS;
 export const NINETY_DAYS_MS = 90 * _DM;
-export const THREE_DAYS_MS = 3 * _DM;
 export const YEAR_MS = 365.25 * _DM;
 export const TABLE_PAGE_SIZE = 25;
 

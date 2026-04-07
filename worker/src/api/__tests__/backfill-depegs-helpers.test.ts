@@ -1,12 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { buildFxLookup, fetchHistoricalSecondaryFxRates } from "../backfill-fx";
 import {
-  buildFxLookup,
   extractDepegEvents,
-  fetchHistoricalSecondaryFxRates,
   findNearestSupply,
   parseSupplyData,
-  summarizeBackfillReplayDiff,
-} from "../backfill-depegs";
+} from "../backfill-depegs-extraction";
+import { summarizeBackfillReplayDiff } from "../backfill-depegs-preview";
 import { mockD1 } from "./helpers/mock-d1";
 import { mockFetch } from "./helpers/mock-fetch";
 

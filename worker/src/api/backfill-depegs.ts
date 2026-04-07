@@ -17,28 +17,6 @@ import { selectBackfillCoins } from "../lib/backfill-query";
 import { buildAdminJobSummary, noAdminTargetsResponse, runAdminJob } from "../lib/admin-job";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 
-// ── Re-exports from extracted modules (preserve public API) ─────────
-export {
-  type FxTimeSeries,
-  PEG_TO_FX,
-  SECONDARY_PEG_TO_FX,
-  OTHER_COIN_FX,
-  COMMODITY_PEGS,
-  fetchHistoricalFxRates,
-  fetchHistoricalSecondaryFxRates,
-  buildCommodityMedianSeriesFromCg,
-  buildFxLookup,
-} from "./backfill-fx";
-
-export {
-  type PricePoint,
-  fetchCgPriceHistoryDaily,
-  fetchCgPriceHistoryHourly,
-  fetchDlPriceChart,
-  collapsePricesToDailyTimestamps,
-  fetchMarketBackfillPrices,
-} from "./backfill-price-sources";
-
 // ── Imports from extracted modules (used in this file) ──────────────
 import {
   type FxTimeSeries,
@@ -51,31 +29,6 @@ import {
   buildCommodityMedianSeriesFromCg,
   buildFxLookup,
 } from "./backfill-fx";
-
-export {
-  BACKFILL_REPLAY_CONTEXT_DAYS,
-  MAX_BACKFILL_REPLAY_CONTEXT_DAYS,
-  buildReplayWindow,
-  buildBackfillDeleteStmt,
-  parseContextDaysParam,
-  parseDayParam,
-  type BackfillReplayWindow,
-} from "./backfill-depegs-window";
-
-export {
-  extractDepegEvents,
-  findNearestSupply,
-  parseSupplyData,
-  type BackfillEvent,
-  type BackfillEventExtractionOptions,
-  type SupplyPoint,
-} from "./backfill-depegs-extraction";
-
-export {
-  summarizeBackfillReplayDiff,
-  type BackfillReplayPreview,
-  type ExistingDepegEventRow,
-} from "./backfill-depegs-preview";
 
 import {
   BACKFILL_REPLAY_CONTEXT_DAYS,

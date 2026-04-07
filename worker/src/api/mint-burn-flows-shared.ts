@@ -155,7 +155,7 @@ export function resolveFlowUpdatedAt(rows: HourlyRow[], fallbackTs: number): num
     : fallbackTs;
 }
 
-export function logMintBurnFallbackFailure(
+function logMintBurnFallbackFailure(
   scope: "aggregate" | "per-coin",
   cacheKey: string,
   error: unknown,
