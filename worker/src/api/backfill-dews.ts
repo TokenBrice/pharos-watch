@@ -1,8 +1,8 @@
-import { withErrorHandler, errorResponse, jsonResponse } from "../lib/api-utils";
-import { withAdmin } from "../lib/auth";
+import { errorResponse, jsonResponse } from "../lib/api-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { computeDEWS } from "../lib/dews";
 import type { DEWSInput } from "../lib/dews";
+import { runAdminRoute } from "../lib/route-wrappers";
 
 interface DepegEvent {
   stablecoin_id: string;
@@ -20,10 +20,19 @@ interface EventResult {
   leadTimeDays: number | null;
 }
 
-export const handleBackfillDEWS = withErrorHandler(
-  "backfill-dews",
-  async (db: D1Database, _url: URL, trustedAdmin?: boolean, request?: Request): Promise<Response> => {
-    return withAdmin(request, async () => {
+export function handleBackfillDEWS(
+  db: D1Database,
+  _url: URL,
+  trustedAdmin?: boolean,
+  request?: Request,
+): Promise<Response> {
+  return runAdminRoute(
+    {
+      endpoint: "backfill-dews",
+      request,
+      trustedAdmin,
+    },
+    async () => {
       // Load completed depeg events
       const events = await db
         .prepare(
@@ -182,6 +191,6 @@ export const handleBackfillDEWS = withErrorHandler(
         },
         events: results,
       });
-    }, trustedAdmin);
-  }
-);
+    },
+  );
+}

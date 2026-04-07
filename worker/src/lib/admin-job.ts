@@ -1,5 +1,5 @@
 import { jsonResponse, parseOptionalRequestJsonObject } from "./api-utils";
-import { withAdmin } from "./auth";
+import { runAdminRoute } from "./route-wrappers";
 
 export interface AdminJobContext<TBody extends Record<string, unknown> = Record<string, unknown>> {
   url: URL;
@@ -10,6 +10,7 @@ export interface AdminJobContext<TBody extends Record<string, unknown> = Record<
 }
 
 interface RunAdminJobOptions {
+  endpoint?: string;
   url: URL;
   request?: Request;
   trustedAdmin?: boolean;
@@ -26,21 +27,28 @@ export async function runAdminJob<TBody extends Record<string, unknown> = Record
   options: RunAdminJobOptions,
   handler: (context: AdminJobContext<TBody>) => Promise<Response>,
 ): Promise<Response> {
-  return withAdmin(options.request, async () => {
-    const parsedBody = options.parseBody ? await parseOptionalRequestJsonObject(options.request) : {};
-    if (parsedBody instanceof Response) {
-      return parsedBody;
-    }
-
-    const body = parsedBody as TBody;
-    return handler({
-      url: options.url,
+  return runAdminRoute(
+    {
+      endpoint: options.endpoint ?? "admin-job",
       request: options.request,
       trustedAdmin: options.trustedAdmin,
-      body,
-      dryRun: isTruthyFlag(body.dryRun) || options.url.searchParams.get("dry-run") === "true",
-    });
-  }, options.trustedAdmin);
+    },
+    async () => {
+      const parsedBody = options.parseBody ? await parseOptionalRequestJsonObject(options.request) : {};
+      if (parsedBody instanceof Response) {
+        return parsedBody;
+      }
+
+      const body = parsedBody as TBody;
+      return handler({
+        url: options.url,
+        request: options.request,
+        trustedAdmin: options.trustedAdmin,
+        body,
+        dryRun: isTruthyFlag(body.dryRun) || options.url.searchParams.get("dry-run") === "true",
+      });
+    },
+  );
 }
 
 export function readAdminStringParam(

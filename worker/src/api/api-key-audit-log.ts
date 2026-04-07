@@ -1,5 +1,5 @@
-import { withAdmin } from "../lib/auth";
-import { jsonResponse, withErrorHandler } from "../lib/api-utils";
+import { jsonResponse } from "../lib/api-utils";
+import { runAdminRoute } from "../lib/route-wrappers";
 
 interface AuditLogRow {
   id: number;
@@ -26,10 +26,18 @@ function parseAuditDetail(row: AuditLogRow): unknown {
   }
 }
 
-export const handleApiKeyAuditLog = withErrorHandler(
-  "api-key-audit-log",
-  async (db: D1Database, trustedAdmin: boolean = false, request?: Request): Promise<Response> => {
-    return withAdmin(request, async () => {
+export function handleApiKeyAuditLog(
+  db: D1Database,
+  trustedAdmin: boolean = false,
+  request?: Request,
+): Promise<Response> {
+  return runAdminRoute(
+    {
+      endpoint: "api-key-audit-log",
+      request,
+      trustedAdmin,
+    },
+    async () => {
       const url = new URL(request!.url);
       const limitParam = Number.parseInt(url.searchParams.get("limit") ?? "", 10);
       const limit = Number.isFinite(limitParam) && limitParam > 0
@@ -72,7 +80,7 @@ export const handleApiKeyAuditLog = withErrorHandler(
         createdAt: row.created_at,
       }));
 
-      return jsonResponse({ entries }, { "Cache-Control": "no-store" });
-    }, trustedAdmin);
-  },
-);
+      return jsonResponse({ entries }, { noStore: true });
+    },
+  );
+}

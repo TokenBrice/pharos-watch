@@ -4,7 +4,10 @@ export {
   buildCacheStatuses,
   buildFreshnessMeta,
   getLatestSuccessfulCronTimestamp,
+  getLatestSuccessfulCronTimestampResult,
   type CacheStatusFailure,
+  type CronTimestampLookupResult,
+  type CronTimestampLookupStatus,
   type FreshnessMeta,
 } from "./api-freshness";
 export {

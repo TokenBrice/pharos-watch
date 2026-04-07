@@ -55,3 +55,22 @@ export function buildBackingTotals(coins: ChainStablecoin[]) {
 
   return totals;
 }
+
+export interface ChainRouteViewModel {
+  coins: ChainStablecoin[];
+  totalUsd: number;
+  backingTotals: ReturnType<typeof buildBackingTotals>;
+  compositionLayout: ReturnType<typeof buildCompositionLayout>;
+}
+
+export function buildChainRouteViewModel(
+  coins: ChainStablecoin[],
+  totalUsd: number,
+): ChainRouteViewModel {
+  return {
+    coins,
+    totalUsd,
+    backingTotals: buildBackingTotals(coins),
+    compositionLayout: buildCompositionLayout(coins),
+  };
+}

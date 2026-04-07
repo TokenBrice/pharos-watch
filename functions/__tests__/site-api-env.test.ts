@@ -5,6 +5,7 @@ import {
   SITE_DATA_FUNCTIONS_ACTIVE_ENV_KEYS,
   SITE_DATA_FUNCTIONS_OPTIONAL_ENV_KEYS,
   SITE_DATA_FUNCTIONS_REQUIRED_ENV_KEYS,
+  resolveSiteDataProxyRuntimePolicy,
   resolveSiteApiOrigin,
   resolveSiteDataUpstreamLane,
   validatePagesSiteDataProxyEnv,
@@ -18,11 +19,31 @@ describe("site-data env contract", () => {
     ]);
   });
 
-  it("falls back to the default site API origin", () => {
+  it("falls back to the default site API origin only when the runtime policy allows it", () => {
     expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: undefined })).toBe(DEFAULT_SITE_API_ORIGIN);
     expect(DEFAULT_SITE_API_ORIGIN).toBe(API_ORIGIN);
     expect(resolveSiteDataUpstreamLane({ SITE_API_ORIGIN: undefined })).toBe("public-api-fallback");
     expect(resolveSiteDataUpstreamLane({ SITE_API_ORIGIN: "https://site-api.pharos.watch" })).toBe("site-api");
+    expect(resolveSiteApiOrigin({ SITE_API_ORIGIN: undefined }, { allowPublicApiFallback: false })).toBeNull();
+  });
+
+  it("requires an explicit site-api origin on production Pages hosts only", () => {
+    expect(resolveSiteDataProxyRuntimePolicy(new URL("https://pharos.watch/_site-data/stablecoins"))).toEqual({
+      allowPublicApiFallback: false,
+      hostKind: "production",
+    });
+    expect(resolveSiteDataProxyRuntimePolicy(new URL("https://ops.pharos.watch/_site-data/stablecoins"))).toEqual({
+      allowPublicApiFallback: false,
+      hostKind: "production",
+    });
+    expect(resolveSiteDataProxyRuntimePolicy(new URL("https://stablecoin-dashboard.pages.dev/_site-data/stablecoins"))).toEqual({
+      allowPublicApiFallback: true,
+      hostKind: "preview-or-local",
+    });
+    expect(resolveSiteDataProxyRuntimePolicy(new URL("http://127.0.0.1:8788/_site-data/stablecoins"))).toEqual({
+      allowPublicApiFallback: true,
+      hostKind: "preview-or-local",
+    });
   });
 
   it("requires the shared secret and Pages DB binding", () => {
@@ -34,6 +55,20 @@ describe("site-data env contract", () => {
       {
         code: "site-data-db-missing",
         message: "DB must be bound on the Pages project for durable site-data attribution telemetry.",
+      },
+    ]);
+  });
+
+  it("adds a production-only config error when SITE_API_ORIGIN is missing", () => {
+    expect(
+      validatePagesSiteDataProxyEnv(
+        { SITE_API_ORIGIN: undefined, SITE_API_SHARED_SECRET: "shared-secret", DB: {} as never },
+        { requireSiteApiOrigin: true },
+      ),
+    ).toEqual([
+      {
+        code: "site-api-origin-missing",
+        message: "SITE_API_ORIGIN must be configured for production site-data proxy traffic.",
       },
     ]);
   });

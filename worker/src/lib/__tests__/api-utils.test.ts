@@ -521,6 +521,18 @@ describe("jsonResponse", () => {
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(res.headers.get("Content-Type")).toBe("application/json");
   });
+
+  it("supports status, no-store, and Retry-After options", async () => {
+    const res = jsonResponse({ ok: true }, {
+      status: 202,
+      noStore: true,
+      retryAfterSec: 3,
+    });
+
+    expect(res.status).toBe(202);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(res.headers.get("Retry-After")).toBe("3");
+  });
 });
 
 describe("validatePayloadWithSchema", () => {

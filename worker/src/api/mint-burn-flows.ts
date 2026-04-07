@@ -4,7 +4,7 @@ import {
   resolveOrReject,
   errorResponse,
   parseQueryParams,
-  getLatestSuccessfulCronTimestamp,
+  getLatestSuccessfulCronTimestampResult,
 } from "../lib/api-utils";
 import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
 import { readMintBurnSyncStateBatch } from "../lib/mint-burn-pipeline/sync-state";
@@ -126,7 +126,14 @@ interface AggregateData {
   largestEventMap: ReturnType<typeof selectLargestEvents>;
   coverageMap: ReturnType<typeof buildCoinCoverageMap>;
   sync: ReturnType<typeof buildMintBurnSyncHealth>;
-  latestSuccessfulSyncAt: number;
+  latestSuccessfulSyncAt: number | null;
+  freshnessLookupWarning: string | null;
+}
+
+function appendSyncWarning(baseWarning: string | null, extraWarning: string | null): string | null {
+  if (!baseWarning) return extraWarning;
+  if (!extraWarning) return baseWarning;
+  return `${baseWarning} ${extraWarning}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -176,7 +183,6 @@ async function fetchAggregateData(
     largestEventsResult,
     lastBlocks,
     latestCronSnapshot,
-    latestSuccessfulSyncAt,
   ] = await Promise.all([
     db
       .prepare(
@@ -263,11 +269,20 @@ async function fetchAggregateData(
       .all<EventRow>(),
     readMintBurnSyncStateBatch(db, ethereumConfigs),
     readMintBurnCronSnapshot(db),
-    getLatestSuccessfulCronTimestamp(db, MINT_BURN_CRON_JOB, params.nowSec),
   ]);
 
+  const hourlyRows = hourlyWindowResult.results ?? [];
+  const latestSuccessfulSyncLookup = await getLatestSuccessfulCronTimestampResult(db, MINT_BURN_CRON_JOB);
+  const fallbackSyncAt =
+    latestCronSnapshot.startedAt
+    ?? (hourlyRows.length > 0 ? resolveFlowUpdatedAt(hourlyRows, 0) : null);
+  const latestSuccessfulSyncAt = latestSuccessfulSyncLookup.timestamp ?? fallbackSyncAt;
+  const freshnessLookupWarning = latestSuccessfulSyncLookup.status === "lookup_failed"
+    ? "Mint/burn freshness lookup failed; falling back to cached row timestamps."
+    : null;
+
   return {
-    hourlyRows: hourlyWindowResult.results ?? [],
+    hourlyRows,
     hourly24hRows: hourly24hResult.results ?? [],
     net7dMap: new Map((hourly7dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd])),
     net30dMap: new Map((hourly30dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd])),
@@ -277,6 +292,7 @@ async function fetchAggregateData(
     coverageMap: buildCoinCoverageMap(params.nowSec, firstSeenResult.results ?? [], lastBlocks, latestCronSnapshot.chainHead),
     sync: buildMintBurnSyncHealth(params.nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status),
     latestSuccessfulSyncAt,
+    freshnessLookupWarning,
   };
 }
 
@@ -440,10 +456,14 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
       },
       coins, hourly, updatedAt, windowHours: hours,
       scope: { chainIds: [ETHEREUM_CHAIN_ID], label: "Ethereum-only" },
-      sync: { ...data.sync, classificationWarning },
+      sync: {
+        ...data.sync,
+        warning: appendSyncWarning(data.sync.warning, data.freshnessLookupWarning),
+        classificationWarning,
+      },
     };
 
-    return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, data.latestSuccessfulSyncAt);
+    return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, data.latestSuccessfulSyncAt ?? 0);
   });
 }
 
@@ -467,7 +487,7 @@ async function handlePerCoin(
     const syncStartSec = nowSec;
     const windowStart = nowSec - hours * 3600;
 
-    const [hourlyResult, latestCronSnapshot, latestSuccessfulSyncAt] = await Promise.all([
+    const [hourlyResult, latestCronSnapshot] = await Promise.all([
       db
         .prepare(
           `SELECT chain_id, hour_ts, mint_count, burn_count,
@@ -479,10 +499,18 @@ async function handlePerCoin(
         .bind(ETHEREUM_CHAIN_ID, stablecoinId, windowStart)
         .all<HourlyRow>(),
       readMintBurnCronSnapshot(db),
-      getLatestSuccessfulCronTimestamp(db, MINT_BURN_CRON_JOB, nowSec),
     ]);
 
     const rows = hourlyResult.results ?? [];
+    const latestSuccessfulSyncLookup = await getLatestSuccessfulCronTimestampResult(db, MINT_BURN_CRON_JOB);
+    const fallbackSyncAt =
+      latestCronSnapshot.startedAt
+      ?? (rows.length > 0 ? resolveFlowUpdatedAt(rows, 0) : null);
+    const latestSuccessfulSyncAt = latestSuccessfulSyncLookup.timestamp ?? fallbackSyncAt;
+    const freshnessLookupWarning = latestSuccessfulSyncLookup.status === "lookup_failed"
+      ? "Mint/burn freshness lookup failed; falling back to cached row timestamps."
+      : null;
+    const sync = buildMintBurnSyncHealth(nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status);
 
     // Per-chain breakdown
     const chainMap = aggregateHourlyRowsByChain(rows);
@@ -528,9 +556,12 @@ async function handlePerCoin(
         chainIds: [ETHEREUM_CHAIN_ID],
         label: "Ethereum-only",
       },
-      sync: buildMintBurnSyncHealth(nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status),
+      sync: {
+        ...sync,
+        warning: appendSyncWarning(sync.warning, freshnessLookupWarning),
+      },
     };
 
-    return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, latestSuccessfulSyncAt);
+    return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, latestSuccessfulSyncAt ?? 0);
   });
 }

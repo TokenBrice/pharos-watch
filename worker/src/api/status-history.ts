@@ -1,5 +1,4 @@
-import { parseQueryParams, withErrorHandler, jsonResponse } from "../lib/api-utils";
-import { withAdmin } from "../lib/auth";
+import { parseQueryParams, jsonResponse } from "../lib/api-utils";
 import {
   buildDiscrepancy,
   getDiscrepancyStreak,
@@ -8,6 +7,7 @@ import {
   listRecentStatusTransitions,
 } from "../lib/status-reliability";
 import type { StatusHistoryResponse } from "@shared/types/status";
+import { runAdminRoute } from "../lib/route-wrappers";
 
 function parseTimeParam(value: string | null): number | null {
   if (!value) return null;
@@ -17,7 +17,6 @@ function parseTimeParam(value: string | null): number | null {
   if (/^\d+$/.test(trimmed)) {
     const numeric = Number(trimmed);
     if (!Number.isFinite(numeric)) return null;
-    // Support either seconds or milliseconds.
     return numeric >= 1_000_000_000_000
       ? Math.floor(numeric / 1000)
       : Math.floor(numeric);
@@ -28,10 +27,18 @@ function parseTimeParam(value: string | null): number | null {
   return Math.floor(parsedMs / 1000);
 }
 
-export const handleStatusHistory = withErrorHandler(
-  "status-history",
-  async (db: D1Database, trustedAdmin?: boolean, request?: Request): Promise<Response> => {
-    return withAdmin(request, async () => {
+export function handleStatusHistory(
+  db: D1Database,
+  trustedAdmin?: boolean,
+  request?: Request,
+): Promise<Response> {
+  return runAdminRoute(
+    {
+      endpoint: "status-history",
+      request,
+      trustedAdmin,
+    },
+    async () => {
       const now = Math.floor(Date.now() / 1000);
       const url = new URL(request?.url ?? "https://pharos.watch/api/status-history");
       const from = parseTimeParam(url.searchParams.get("from"));
@@ -61,7 +68,7 @@ export const handleStatusHistory = withErrorHandler(
         transitions,
       };
 
-      return jsonResponse(body, { "Cache-Control": "no-store" });
-    }, trustedAdmin);
-  }
-);
+      return jsonResponse(body, { noStore: true });
+    },
+  );
+}

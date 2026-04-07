@@ -5,9 +5,9 @@ import { USER_AGENT } from "../lib/constants";
 import { batchExecute } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { jsonResponse } from "../lib/api-utils";
-import { withAdmin } from "../lib/auth";
 import { RATE_LIMITS } from "../lib/rate-limit";
 import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
+import { runAdminRoute } from "../lib/route-wrappers";
 import {
   fetchMarketBackfillPriceSeries,
   type HistoricalMarketSourceDiagnostics,
@@ -31,8 +31,12 @@ export async function handleBackfillCgPrices(
   request?: Request,
   cgApiKey?: string | null,
 ): Promise<Response> {
-  return withAdmin(
-    request,
+  return runAdminRoute(
+    {
+      endpoint: "backfill-cg-prices",
+      request,
+      trustedAdmin,
+    },
     async () => {
       const selection = selectBackfillCoins(url, ACTIVE_STABLECOINS, {
         defaultBatchSize: DEFAULT_BATCH_SIZE,
@@ -187,6 +191,5 @@ export async function handleBackfillCgPrices(
         errors: errors.length > 0 ? errors : undefined,
       });
     },
-    trustedAdmin,
   );
 }

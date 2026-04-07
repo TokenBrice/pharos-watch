@@ -1,12 +1,12 @@
 import type { ApiRequestWorkerLane } from "@shared/types";
-import { jsonResponse, parseQueryParams, withErrorHandler } from "../lib/api-utils";
-import { withAdmin } from "../lib/auth";
+import { jsonResponse, parseQueryParams } from "../lib/api-utils";
 import {
   buildApiRequestAttributionResponse,
   mapLaneStatsRows,
   mapRouteStatsRows,
   mapTimeBucketRows,
 } from "../lib/request-source-attribution";
+import { runAdminRoute } from "../lib/route-wrappers";
 
 interface TotalsRow {
   pages_site_requests: number | null;
@@ -41,10 +41,18 @@ interface SiteDeliveryRow {
   pages_upstream_errors: number | null;
 }
 
-export const handleRequestSourceStats = withErrorHandler(
-  "request-source-stats",
-  async (db: D1Database, trustedAdmin?: boolean, request?: Request): Promise<Response> => {
-    return withAdmin(request, async () => {
+export function handleRequestSourceStats(
+  db: D1Database,
+  trustedAdmin?: boolean,
+  request?: Request,
+): Promise<Response> {
+  return runAdminRoute(
+    {
+      endpoint: "request-source-stats",
+      request,
+      trustedAdmin,
+    },
+    async () => {
       const now = Math.floor(Date.now() / 1000);
       const url = new URL(request?.url ?? "https://ops-api.pharos.watch/api/request-source-stats");
       const parsed = parseQueryParams(url.searchParams, {
@@ -215,7 +223,7 @@ export const handleRequestSourceStats = withErrorHandler(
         buckets: mapTimeBucketRows(bucketRows.results ?? []),
       });
 
-      return jsonResponse(body, { "Cache-Control": "no-store" });
-    }, trustedAdmin);
-  },
-);
+      return jsonResponse(body, { noStore: true });
+    },
+  );
+}

@@ -18,6 +18,13 @@ export interface FreshnessMeta {
   status: "fresh" | "degraded" | "stale";
 }
 
+export type CronTimestampLookupStatus = "ok" | "missing" | "lookup_failed";
+
+export interface CronTimestampLookupResult {
+  timestamp: number | null;
+  status: CronTimestampLookupStatus;
+}
+
 export function buildFreshnessMeta(updatedAt: number, maxAgeSec: number): FreshnessMeta {
   const age = Math.floor(Date.now() / 1000) - updatedAt;
   const ratio = age / maxAgeSec;
@@ -162,14 +169,34 @@ export async function getLatestSuccessfulCronTimestamp(
   job: string,
   fallback: number,
 ): Promise<number> {
+  const result = await getLatestSuccessfulCronTimestampResult(db, job);
+  return result.timestamp ?? fallback;
+}
+
+export async function getLatestSuccessfulCronTimestampResult(
+  db: D1Database,
+  job: string,
+): Promise<CronTimestampLookupResult> {
   try {
     const row = await db
       .prepare("SELECT MAX(started_at) as started_at FROM cron_runs WHERE job = ? AND status = 'ok'")
       .bind(job)
       .first<{ started_at: number | null }>();
-    if (row?.started_at != null) return row.started_at;
-  } catch {
-    // Non-blocking: fall back to caller-provided timestamp.
+    if (row?.started_at != null) {
+      return {
+        timestamp: row.started_at,
+        status: "ok",
+      };
+    }
+    return {
+      timestamp: null,
+      status: "missing",
+    };
+  } catch (error) {
+    console.warn(`[api-freshness] Failed to read latest successful cron timestamp for ${job}`, error);
+    return {
+      timestamp: null,
+      status: "lookup_failed",
+    };
   }
-  return fallback;
 }

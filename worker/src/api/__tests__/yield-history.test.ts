@@ -185,4 +185,34 @@ describe("handleYieldHistory", () => {
     const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history"));
     expect(historyQuery?.binds[2]).toBe(latestSuccessfulCronAt);
   });
+
+  it("surfaces a warning and uses cache metadata when the cron timestamp lookup fails", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-28T12:00:00Z"));
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["yield-rankings"],
+        rows: [],
+        first: { value: "{bad-json", updated_at: nowSec - 60 },
+      },
+      {
+        match: "MAX(started_at) as started_at FROM cron_runs",
+        rows: [],
+        throwError: new Error("cron lookup failed"),
+      },
+      { match: "yield_history", rows: [row] },
+    ]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { warning?: string };
+    expect(body.warning).toContain("freshness lookup failed");
+
+    const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history"));
+    expect(historyQuery?.binds[2]).toBe(nowSec - 60);
+  });
 });

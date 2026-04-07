@@ -244,6 +244,82 @@ describe("dispatchTelegramAlerts", () => {
     expect(mockSendToChat.mock.calls[0]?.[0]).toBe("777");
   });
 
+  it("batches resolved depeg lookups into one query", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return {
+          value: JSON.stringify({
+            "usdc-circle": {
+              symbol: "USDC",
+              direction: "below",
+              deviationBps: 125,
+              price: 0.9875,
+              pegReference: 1,
+            },
+            "usdt-tether": {
+              symbol: "USDT",
+              direction: "below",
+              deviationBps: 110,
+              price: 0.989,
+              pegReference: 1,
+            },
+          }),
+          updatedAt: now - 60,
+        };
+      }
+      if (key === "alert:safety-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      {
+        match: "FROM depeg_events event",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            symbol: "USDC",
+            peak_deviation_bps: 125,
+            started_at: now - 3600,
+            ended_at: now - 300,
+            recovery_price: 1,
+          },
+          {
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            peak_deviation_bps: 110,
+            started_at: now - 1800,
+            ended_at: now - 240,
+            recovery_price: 1,
+          },
+        ],
+      },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT id, chat_id, message_html", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      eventsDetected: { depegResolved: number; depeg: number };
+    };
+
+    expect(metadata.eventsDetected.depegResolved).toBe(2);
+    expect(metadata.eventsDetected.depeg).toBe(2);
+
+    const resolvedLookupQueries = db.getHistory().filter((entry) => entry.sql.includes("FROM depeg_events event"));
+    expect(resolvedLookupQueries).toHaveLength(1);
+    expect(resolvedLookupQueries[0]?.binds).toHaveLength(2);
+  });
+
   it("lets a per-coin DEWS threshold override a global all-stablecoin follow", async () => {
     const now = Math.floor(Date.now() / 1000);
 

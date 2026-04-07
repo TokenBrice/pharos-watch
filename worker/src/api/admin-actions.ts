@@ -1,12 +1,11 @@
 import type { TelegramCreds } from "../lib/telegram";
 import { generateDailyDigest } from "../cron/daily-digest";
-import { makeAdminRoute } from "../lib/route-wrappers";
+import { makeAdminRoute, runAdminRoute } from "../lib/route-wrappers";
 import { runIdempotentAdminAction } from "../lib/idempotency";
 import { createLeaseOwner, runCronWithLease } from "../lib/cron-lease";
 import { logCronRun, type CronResult } from "../lib/cron-logger";
 import { normalizeCronMetadata } from "../lib/cron-metadata";
-import { jsonResponse, withErrorHandler } from "../lib/api-utils";
-import { withAdmin } from "../lib/auth";
+import { jsonResponse } from "../lib/api-utils";
 import { handleDismissCandidate } from "./discovery";
 
 interface AdminRouteContext {
@@ -19,16 +18,6 @@ interface TriggerDigestRouteContext extends AdminRouteContext {
   execCtx: ExecutionContext;
   anthropicApiKey?: string | null;
   telegramCreds?: TelegramCreds | null;
-}
-
-function createAcceptedJsonResponse(body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status: 202,
-    headers: {
-      "Cache-Control": "no-store",
-      "Content-Type": "application/json",
-    },
-  });
 }
 
 async function runManualDigestTrigger(
@@ -82,12 +71,12 @@ export const handleTriggerDigest = makeAdminRoute(
             console.error(`[trigger-digest] Manual digest run failed (${requestId}):`, err);
           }),
       );
-      return createAcceptedJsonResponse({
+      return jsonResponse({
         ok: true,
         accepted: true,
         requestId,
         message: "Digest trigger accepted and running in the background.",
-      });
+      }, { status: 202, noStore: true });
     }),
 );
 
@@ -117,11 +106,16 @@ export const handleDebugSyncState = makeAdminRoute(
   },
 );
 
-export const handleDiscoveryCandidateDismiss = withErrorHandler(
-  "route-discovery-candidate-dismiss",
-  async (
-    { db, request, trustedAdmin }: AdminRouteContext,
-    candidateId: number,
-  ): Promise<Response> =>
-    withAdmin(request, () => handleDismissCandidate(db, candidateId), trustedAdmin),
-);
+export function handleDiscoveryCandidateDismiss(
+  { db, request, trustedAdmin }: AdminRouteContext,
+  candidateId: number,
+): Promise<Response> {
+  return runAdminRoute(
+    {
+      endpoint: "route-discovery-candidate-dismiss",
+      request,
+      trustedAdmin,
+    },
+    () => handleDismissCandidate(db, candidateId),
+  );
+}

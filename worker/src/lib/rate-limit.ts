@@ -1,4 +1,5 @@
 import { IsolateLocalState } from "./isolate-local-state";
+import { errorResponse } from "./api-response";
 
 interface RateLimitRunResult {
   meta?: { changes?: number };
@@ -42,21 +43,11 @@ export function flushPendingPrunes(): Promise<void> {
 }
 
 function buildRateLimitExceededResponse(retryAfterSec: number): Response {
-  const resp = new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-    status: 429,
-    headers: { "Content-Type": "application/json" },
-  });
-  resp.headers.set("Retry-After", String(Math.max(1, retryAfterSec)));
-  return resp;
+  return errorResponse(429, "Rate limit exceeded", { retryAfterSec });
 }
 
 function buildRateLimitUnavailableResponse(retryAfterSec = PUBLIC_API_EMERGENCY_RETRY_AFTER_SEC): Response {
-  const resp = new Response(JSON.stringify({ error: "Public API temporarily unavailable" }), {
-    status: 503,
-    headers: { "Content-Type": "application/json" },
-  });
-  resp.headers.set("Retry-After", String(Math.max(1, retryAfterSec)));
-  return resp;
+  return errorResponse(503, "Public API temporarily unavailable", { retryAfterSec });
 }
 
 export function resetRateLimitStateForTests(): void {

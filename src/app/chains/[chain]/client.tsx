@@ -31,7 +31,7 @@ import type { ChainSummary, HealthBand } from "@shared/types/chains";
 import { TrendingUp, TrendingDown, Minus, ChevronRight, Info, CheckCircle2, AlertCircle, AlertTriangle, XCircle } from "lucide-react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { logosById } from "@/lib/logos";
-import { buildBackingTotals, buildCompositionLayout } from "./view-model";
+import { buildChainRouteViewModel, type ChainRouteViewModel } from "./view-model";
 
 const BACKING_BAR_COLORS: Record<string, string> = {
   "rwa-backed": "bg-sky-500",
@@ -283,12 +283,9 @@ function HealthBreakdownCard({ chain }: { chain: ChainSummary }) {
   );
 }
 
-function CompositionSection({ chainId }: { chainId: string }) {
-  const { coins, totalUsd } = useChainStablecoins(chainId);
-
-  const layout = useMemo(() => buildCompositionLayout(coins), [coins]);
-
-  const { displayCoins, rest, restTotal, cols, rows } = layout;
+function CompositionSection({ model }: { model: ChainRouteViewModel }) {
+  const { totalUsd, compositionLayout } = model;
+  const { displayCoins, rest, restTotal, cols, rows } = compositionLayout;
   const showOthers = rest.length > 0;
 
   return (
@@ -476,17 +473,15 @@ function CompositionOthersBlock({
 }
 
 function BackingBreakdown({
-  chainId,
+  model,
   onFilterChange,
   activeFilter,
 }: {
-  chainId: string;
+  model: ChainRouteViewModel;
   onFilterChange: (filter: string | null) => void;
   activeFilter: string | null;
 }) {
-  const { coins, totalUsd } = useChainStablecoins(chainId);
-
-  const backingTotals = useMemo(() => buildBackingTotals(coins), [coins]);
+  const { coins, totalUsd, backingTotals } = model;
 
   const hasData = Object.values(backingTotals).some((v) => v > 0);
   if (!hasData) return null;
@@ -561,19 +556,13 @@ function BackingBreakdown({
 }
 
 function StablecoinTable({
-  chainId,
+  coins,
   backingFilter,
 }: {
-  chainId: string;
+  coins: ChainStablecoin[];
   backingFilter: string | null;
 }) {
   const router = useRouter();
-  const { coins: allCoins } = useChainStablecoins(chainId);
-
-  const coins = useMemo(() => {
-    if (!backingFilter) return allCoins;
-    return allCoins.filter((c) => (c.backing ?? "other") === backingFilter);
-  }, [allCoins, backingFilter]);
 
   if (coins.length === 0) {
     return (
@@ -677,11 +666,24 @@ function StablecoinTable({
 export function ChainProfileClient({ chainId }: { chainId: string }) {
   const { data, isLoading, isError, error, refetch } = useChains();
   const [backingFilter, setBackingFilter] = useState<string | null>(null);
+  const { coins, totalUsd } = useChainStablecoins(chainId);
 
   const chain = useMemo(() => {
     if (!data?.chains) return null;
     return data.chains.find((c) => c.id === chainId) ?? null;
   }, [data, chainId]);
+
+  const routeModel = useMemo(
+    () => buildChainRouteViewModel(coins, totalUsd),
+    [coins, totalUsd],
+  );
+
+  const filteredCoins = useMemo(() => {
+    if (!backingFilter) {
+      return routeModel.coins;
+    }
+    return routeModel.coins.filter((coin) => (coin.backing ?? "other") === backingFilter);
+  }, [routeModel.coins, backingFilter]);
 
   if (isLoading) {
     return (
@@ -720,13 +722,13 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
       <QueryErrorNotice error={error} hasData={!!data?.chains?.length} onRetry={() => { void refetch(); }} />
       <HeroCard chain={chain} chainId={chainId} />
       <HealthBreakdownCard chain={chain} />
-      <CompositionSection chainId={chainId} />
+      <CompositionSection model={routeModel} />
       <BackingBreakdown
-        chainId={chainId}
+        model={routeModel}
         onFilterChange={setBackingFilter}
         activeFilter={backingFilter}
       />
-      <StablecoinTable chainId={chainId} backingFilter={backingFilter} />
+      <StablecoinTable coins={filteredCoins} backingFilter={backingFilter} />
     </div>
     </SectionErrorBoundary>
   );

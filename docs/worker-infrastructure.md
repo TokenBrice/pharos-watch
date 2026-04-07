@@ -126,11 +126,11 @@ When a valid key is present, the worker uses the D1-backed `api_key_rate_limit` 
 | Method    | Handling                                                                                                             |
 | --------- | -------------------------------------------------------------------------------------------------------------------- |
 | `OPTIONS` | Returns 204 with CORS headers (preflight)                                                                            |
-| `POST`    | `/api/feedback`, `/api/telegram-webhook`, and mutating admin endpoints from `shared/lib/api-endpoints.ts`            |
+| `POST`    | `/api/feedback`, `/api/telegram-webhook`, and mutating admin endpoints from `shared/lib/api-endpoints/`            |
 | `GET`     | Read endpoints + admin debug routes; mutating admin routes return 405 except `/api/audit-depeg-history?dry-run=true` |
 | Other     | Returns 405 `{ error: "Method not allowed" }`                                                                        |
 
-Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions) are centralized in `shared/lib/api-endpoints.ts` and consumed by both worker and frontend status tooling.
+Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions) are centralized in the folderized `shared/lib/api-endpoints/` module surface and consumed by both worker and frontend status tooling.
 
 ### Public API Auth and Rate Limiting
 
@@ -187,7 +187,7 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 
 1. **Cache bypass rules**:
    - All non-GET requests bypass edge cache.
-   - GET paths marked `cacheBypass: true` in `shared/lib/api-endpoints.ts` bypass edge cache (health, status, and admin/backfill endpoints like `/api/backfill-*`, `/api/audit-depeg-history`, `/api/backfill-dews`).
+   - GET paths marked `cacheBypass: true` in `shared/lib/api-endpoints/` bypass edge cache (health, status, and admin/backfill endpoints like `/api/backfill-*`, `/api/audit-depeg-history`, `/api/backfill-dews`).
 
 2. **Cache check:** `caches.default.match(cacheKey)` — returns cached response if available
 
@@ -236,16 +236,16 @@ This baseline is enough to catch most abuse, regression, or cache-efficiency pro
 
 **Files:** `functions/_site-data/[[path]].ts`, `worker/src/lib/auth.ts`, `worker/src/handlers/http/gates.ts`
 
-- Pages Functions on `pharos.watch`, `ops.pharos.watch`, and Pages preview hosts proxy same-origin `/_site-data/*` requests to `SITE_API_ORIGIN` when configured, or `api.pharos.watch` by default until the dedicated site-api host is provisioned
+- Pages Functions on `pharos.watch`, `ops.pharos.watch`, and Pages preview hosts proxy same-origin `/_site-data/*` requests with host-aware policy: production hosts require `SITE_API_ORIGIN`, while preview/local rehearsal may intentionally fall back to `api.pharos.watch`
 - the proxy injects `X-Pharos-Site-Proxy-Secret` from `SITE_API_SHARED_SECRET` and continues to emit only the current secret during rotations
-- the worker accepts that header only on `site-api.pharos.watch` or Worker preview URLs during CI rehearsal; it accepts either `SITE_API_SHARED_SECRET` or `SITE_API_SHARED_SECRET_PREVIOUS` during the 24-hour overlap window, while the temporary public-API fallback works only while `PUBLIC_API_AUTH_MODE=off`
+- the worker accepts that header only on `site-api.pharos.watch` or Worker preview URLs during CI rehearsal; it accepts either `SITE_API_SHARED_SECRET` or `SITE_API_SHARED_SECRET_PREVIOUS` during the 24-hour overlap window, while preview/local public-API fallback remains a rehearsal-only path
 - the worker allows only `GET` requests to allowlisted public-read routes from `shared/lib/site-data-routes.ts`
 - site-data requests skip public API request-source telemetry so the public API attribution dataset stays scoped to `api.pharos.watch`
 - overlap sequence: set `SITE_API_SHARED_SECRET_PREVIOUS` to the retiring value, deploy the new current secret everywhere that emits `X-Pharos-Site-Proxy-Secret`, keep both values active for 24 hours, then remove `SITE_API_SHARED_SECRET_PREVIOUS`
 
 ### Router-Dispatched Status Actions
 
-Operator admin actions are dispatched through `worker/src/router.ts` using shared endpoint definitions (`shared/lib/api-endpoints.ts`) and worker action handlers under `worker/src/api/admin-actions.ts`. Examples:
+Operator admin actions are dispatched through `worker/src/router.ts` using shared endpoint definitions from `shared/lib/api-endpoints/` and worker action handlers under `worker/src/api/admin-actions.ts`. Examples:
 
 | Endpoint                         | Auth                                         | Description                                                                                      |
 | -------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------ |

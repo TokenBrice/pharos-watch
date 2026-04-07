@@ -3,7 +3,7 @@ import {
   buildMethodologyEnvelope,
   parseStablecoinHistoryQuery,
   jsonFreshResponse,
-  getLatestSuccessfulCronTimestamp,
+  getLatestSuccessfulCronTimestampResult,
   errorResponse,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
@@ -84,12 +84,18 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
     return errorResponse(400, "Missing ?sourceKey= parameter for source history mode");
   }
 
-  const nowSec = Math.floor(Date.now() / 1000);
   const rankingsCache = await getCache(db, "yield-rankings");
   const publishedCutoffResult = parseYieldRankingsPublishedCutoff(rankingsCache);
+  const publishedCutoffLookup = publishedCutoffResult.status === "ok"
+    ? { timestamp: publishedCutoffResult.updatedAt, status: "ok" as const }
+    : await getLatestSuccessfulCronTimestampResult(db, "sync-yield-data");
+  const fallbackPublishedCutoff = rankingsCache?.updatedAt ?? 0;
   const publishedCutoff = publishedCutoffResult.status === "ok"
     ? publishedCutoffResult.updatedAt
-    : await getLatestSuccessfulCronTimestamp(db, "sync-yield-data", nowSec);
+    : publishedCutoffLookup.timestamp ?? fallbackPublishedCutoff;
+  const freshnessWarning = publishedCutoffLookup.status === "lookup_failed"
+    ? "Yield history freshness lookup failed; falling back to cache metadata."
+    : null;
 
   if (publishedCutoffResult.status !== "ok") {
     logMalformedJsonPath({
@@ -101,6 +107,7 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
       updatedAt: rankingsCache?.updatedAt ?? null,
       extra: {
         fallbackCutoff: publishedCutoff,
+        lookupStatus: publishedCutoffLookup.status,
       },
     });
   }
@@ -152,13 +159,14 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
 
   const latestHistoryTimestamp = history.length > 0
     ? Math.max(...history.map((row) => (typeof row.date === "number" ? row.date : 0)))
-    : await getLatestSuccessfulCronTimestamp(db, "sync-yield-data", nowSec);
+    : publishedCutoff;
 
   const current = history.length > 0 ? history[history.length - 1] ?? null : null;
 
   return jsonFreshResponse({
     current,
     history,
+    ...(freshnessWarning ? { warning: freshnessWarning } : {}),
     methodology: buildMethodologyEnvelope({
       version: YIELD_METHODOLOGY_VERSION,
       versionLabel: YIELD_METHODOLOGY_VERSION_LABEL,

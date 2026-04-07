@@ -3,6 +3,15 @@ import { addFreshnessHeaders } from "./api-freshness";
 
 type ApiHandler<T extends unknown[] = unknown[]> = (...args: T) => Promise<Response>;
 
+export interface JsonResponseOptions {
+  status?: number;
+  headers?: Record<string, string>;
+  noStore?: boolean;
+  retryAfterSec?: number;
+}
+
+type JsonResponseInit = Record<string, string> | JsonResponseOptions | undefined;
+
 export function withErrorHandler<T extends unknown[]>(
   endpoint: string,
   handler: ApiHandler<T>,
@@ -17,16 +26,48 @@ export function withErrorHandler<T extends unknown[]>(
   };
 }
 
-export function errorResponse(status: number, message: string): Response {
-  return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
+function isJsonResponseOptions(value: JsonResponseInit): value is JsonResponseOptions {
+  if (!value) {
+    return false;
+  }
+  return "status" in value || "headers" in value || "noStore" in value || "retryAfterSec" in value;
 }
 
-export function jsonResponse(body: unknown, headers?: Record<string, string>): Response {
+function normalizeJsonResponseOptions(initOrHeaders: JsonResponseInit): JsonResponseOptions {
+  if (!initOrHeaders) {
+    return {};
+  }
+  if (isJsonResponseOptions(initOrHeaders)) {
+    return initOrHeaders;
+  }
+  return { headers: initOrHeaders };
+}
+
+export function errorResponse(
+  status: number,
+  message: string,
+  initOrHeaders?: JsonResponseInit,
+): Response {
+  const options = normalizeJsonResponseOptions(initOrHeaders);
+  return jsonResponse({ error: message }, { ...options, status });
+}
+
+export function jsonResponse(body: unknown, initOrHeaders?: JsonResponseInit): Response {
+  const options = normalizeJsonResponseOptions(initOrHeaders);
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers ?? {}),
+  };
+  if (options.noStore) {
+    headers["Cache-Control"] = "no-store";
+  }
+  if (options.retryAfterSec != null) {
+    headers["Retry-After"] = String(Math.max(1, Math.ceil(options.retryAfterSec)));
+  }
+
   return new Response(JSON.stringify(body), {
-    headers: { "Content-Type": "application/json", ...headers },
+    status: options.status,
+    headers,
   });
 }
 

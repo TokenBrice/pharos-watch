@@ -8,6 +8,7 @@ import {
 import { recordSiteDataRequest } from "../lib/request-attribution";
 import { rejectIfNotSiteDataUiOrigin } from "../lib/site-data-origin";
 import {
+  resolveSiteDataProxyRuntimePolicy,
   resolveSiteApiOrigin,
   resolveSiteDataUpstreamLane,
   validatePagesSiteDataProxyEnv,
@@ -113,6 +114,7 @@ async function queueSiteDataTelemetry(
 
 export const onRequest = async (context: SiteDataProxyContext): Promise<Response> => {
   const { request, env, params } = context;
+  const requestUrl = new URL(request.url);
   const rejected = rejectIfNotSiteDataUiOrigin(request, env, () => jsonError(404, "Not found"));
   if (rejected) {
     return rejected;
@@ -122,8 +124,15 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
     return methodNotAllowed();
   }
 
-  for (const issue of validatePagesSiteDataProxyEnv(env)) {
+  const runtimePolicy = resolveSiteDataProxyRuntimePolicy(requestUrl);
+  const envIssues = validatePagesSiteDataProxyEnv(env, {
+    requireSiteApiOrigin: !runtimePolicy.allowPublicApiFallback,
+  });
+  for (const issue of envIssues) {
     console.warn(`[site-data-proxy] ${issue.message}`);
+  }
+  if (envIssues.some((issue) => issue.code === "site-api-origin-missing")) {
+    return jsonError(500, "Site API proxy is not configured");
   }
 
   const requestedPath = resolveRequestedPath(params);
@@ -144,9 +153,17 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
     return upstreamHeaders;
   }
 
-  const requestUrl = new URL(request.url);
-  const upstreamLane = resolveSiteDataUpstreamLane(env);
-  const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, resolveSiteApiOrigin(env));
+  const upstreamOrigin = resolveSiteApiOrigin(env, {
+    allowPublicApiFallback: runtimePolicy.allowPublicApiFallback,
+  });
+  if (!upstreamOrigin) {
+    return jsonError(500, "Site API proxy is not configured");
+  }
+
+  const upstreamLane = resolveSiteDataUpstreamLane(env, {
+    allowPublicApiFallback: runtimePolicy.allowPublicApiFallback,
+  });
+  const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, upstreamOrigin);
   const upstreamResult = await fetchUpstreamProxy(request, {
     upstreamUrl: upstreamUrl.toString(),
     method: "GET",

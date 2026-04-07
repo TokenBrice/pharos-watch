@@ -6,6 +6,7 @@ import {
   type ApiKeyDb,
   type AuthenticatedApiKey,
 } from "./api-key-core";
+import { errorResponse } from "./api-response";
 
 export async function checkApiKeyRateLimit(
   db: ApiKeyDb,
@@ -42,12 +43,8 @@ export async function checkApiKeyRateLimit(
   }
 
   if ((row?.count ?? 0) > limit) {
-    return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-      status: 429,
-      headers: {
-        "Content-Type": "application/json",
-        "Retry-After": String(Math.max(1, bucketStart + 60 - nowSec)),
-      },
+    return errorResponse(429, "Rate limit exceeded", {
+      retryAfterSec: bucketStart + 60 - nowSec,
     });
   }
 

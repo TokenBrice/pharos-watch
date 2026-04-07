@@ -4,6 +4,7 @@ import type { TelegramDispatchCronResult } from "@shared/types";
 import { throwIfAborted } from "../lib/abort";
 import { readCachedJson } from "../lib/api-utils";
 import { getCache } from "../lib/db-cache";
+import { buildInClause } from "../lib/db";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import {
@@ -403,19 +404,26 @@ export async function dispatchTelegramAlerts(
       });
 
     const depegResolved: DepegResolved[] = [];
-    for (const stablecoinId of previousActiveIds) {
-      if (currentActiveIds.has(stablecoinId)) continue;
+    const resolvedCandidateIds = [...previousActiveIds].filter((stablecoinId) => !currentActiveIds.has(stablecoinId));
+    if (resolvedCandidateIds.length > 0) {
       throwIfAborted(signal);
-
-      const resolved = await db
+      const inClause = buildInClause(resolvedCandidateIds);
+      const resolvedRows = await db
         .prepare(
-          `SELECT stablecoin_id, symbol, peak_deviation_bps, started_at, ended_at, recovery_price
-             FROM depeg_events
-            WHERE stablecoin_id = ? AND ended_at IS NOT NULL
-            ORDER BY ended_at DESC LIMIT 1`,
+          `SELECT event.stablecoin_id, event.symbol, event.peak_deviation_bps, event.started_at, event.ended_at, event.recovery_price
+             FROM depeg_events event
+             JOIN (
+               SELECT stablecoin_id, MAX(ended_at) as ended_at
+                 FROM depeg_events
+                WHERE ended_at IS NOT NULL
+                  AND stablecoin_id IN (${inClause.sql})
+                GROUP BY stablecoin_id
+             ) latest
+               ON latest.stablecoin_id = event.stablecoin_id
+              AND latest.ended_at = event.ended_at`,
         )
-        .bind(stablecoinId)
-        .first<{
+        .bind(...inClause.binds)
+        .all<{
           stablecoin_id: string;
           symbol: string;
           peak_deviation_bps: number;
@@ -423,22 +431,29 @@ export async function dispatchTelegramAlerts(
           ended_at: number;
           recovery_price: number | null;
         }>();
+      const resolvedByStablecoinId = new Map(
+        (resolvedRows.results ?? []).map((row) => [row.stablecoin_id, row] as const),
+      );
 
-      if (!resolved || resolved.ended_at == null || resolved.started_at == null) continue;
+      for (const stablecoinId of resolvedCandidateIds) {
+        throwIfAborted(signal);
+        const resolved = resolvedByStablecoinId.get(stablecoinId);
+        if (!resolved || resolved.ended_at == null || resolved.started_at == null) continue;
 
-      const durationSeconds = Math.max(0, resolved.ended_at - resolved.started_at);
-      const previous = safeDepegSnapshot[stablecoinId];
-      depegResolved.push({
-        stablecoinId,
-        symbol: resolved.symbol ?? previous?.symbol ?? getSymbol(stablecoinId),
-        durationMinutes: Math.max(1, Math.round(durationSeconds / 60)),
-        peakDeviationBps: Math.abs(Number(resolved.peak_deviation_bps ?? 0)),
-        recoveryPrice:
-          resolved.recovery_price ??
-          previous?.price ??
-          previous?.pegReference ??
-          1,
-      });
+        const durationSeconds = Math.max(0, resolved.ended_at - resolved.started_at);
+        const previous = safeDepegSnapshot[stablecoinId];
+        depegResolved.push({
+          stablecoinId,
+          symbol: resolved.symbol ?? previous?.symbol ?? getSymbol(stablecoinId),
+          durationMinutes: Math.max(1, Math.round(durationSeconds / 60)),
+          peakDeviationBps: Math.abs(Number(resolved.peak_deviation_bps ?? 0)),
+          recoveryPrice:
+            resolved.recovery_price ??
+            previous?.price ??
+            previous?.pegReference ??
+            1,
+        });
+      }
     }
 
     const safetyChanges: SafetyChange[] = [];

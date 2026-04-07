@@ -9,6 +9,9 @@ import type { ChainStablecoin } from "@/hooks/use-chains";
 
 const push = vi.fn();
 const refetch = vi.fn();
+const { useChainStablecoinsMock } = vi.hoisted(() => ({
+  useChainStablecoinsMock: vi.fn(),
+}));
 
 let mockChainsState: {
   data: { chains: ChainSummary[] } | undefined;
@@ -57,7 +60,7 @@ vi.mock("@/hooks/use-chains", () => ({
     ...mockChainsState,
     refetch,
   }),
-  useChainStablecoins: () => mockStablecoinsState,
+  useChainStablecoins: useChainStablecoinsMock,
 }));
 
 function makeChain(overrides: Partial<ChainSummary> = {}): ChainSummary {
@@ -126,6 +129,8 @@ describe("ChainProfileClient", () => {
       isLoading: false,
       isError: false,
     };
+    useChainStablecoinsMock.mockReset();
+    useChainStablecoinsMock.mockImplementation(() => mockStablecoinsState);
   });
 
   afterEach(() => {
@@ -196,5 +201,25 @@ describe("ChainProfileClient", () => {
 
     fireEvent.click(screen.getAllByRole("link", { name: /DAI/ }).at(-1)!);
     expect(push).toHaveBeenCalledWith("/stablecoin/dai-maker/");
+  });
+
+  it("derives the per-chain stablecoin model once per render", () => {
+    mockChainsState = {
+      data: { chains: [makeChain()] },
+      isLoading: false,
+      isError: false,
+      error: null,
+    };
+    mockStablecoinsState = {
+      coins: [makeCoin()],
+      totalUsd: 500_000_000,
+      isLoading: false,
+      isError: false,
+    };
+
+    render(<ChainProfileClient chainId="ethereum" />);
+
+    expect(useChainStablecoinsMock).toHaveBeenCalledTimes(1);
+    expect(useChainStablecoinsMock).toHaveBeenCalledWith("ethereum");
   });
 });
