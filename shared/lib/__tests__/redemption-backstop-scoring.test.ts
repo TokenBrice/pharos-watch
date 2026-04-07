@@ -15,31 +15,39 @@ describe("computeEffectiveExitScore", () => {
     expect(computeEffectiveExitScore(0, null)).toBe(0);
   });
 
-  it("caps redemption-only at 70 and applies 0.75 discount", () => {
-    // min(70, 90 * 0.75) = min(70, 67.5) = 68
-    expect(computeEffectiveExitScore(null, 90)).toBe(68);
-    // min(70, 100 * 0.75) = min(70, 75) = 70
-    expect(computeEffectiveExitScore(null, 100)).toBe(70);
-    // min(70, 40 * 0.75) = min(70, 30) = 30
-    expect(computeEffectiveExitScore(null, 40)).toBe(30);
+  it("returns redemption score directly when only redemption available (no cap)", () => {
+    expect(computeEffectiveExitScore(null, 90)).toBe(90);
+    expect(computeEffectiveExitScore(null, 100)).toBe(100);
+    expect(computeEffectiveExitScore(null, 40)).toBe(40);
+    // Route family caps (65/70) are applied upstream, not here
+    expect(computeEffectiveExitScore(null, 70)).toBe(70);
   });
 
-  it("returns max of pure-liquidity vs blend", () => {
-    // liquidity=80, redemption=60 → blend = 80*0.55 + 60*0.45 = 44+27 = 71
-    // max(80, 71) = 80
-    expect(computeEffectiveExitScore(80, 60)).toBe(80);
+  it("uses best path + diversification bonus when both exist", () => {
+    // dex=80, redemption=60 → best=80, bonus=60*0.10=6 → 86
+    expect(computeEffectiveExitScore(80, 60)).toBe(86);
+    // dex=40, redemption=90 → best=90, bonus=40*0.10=4 → 94
+    expect(computeEffectiveExitScore(40, 90)).toBe(94);
+    // dex=51, redemption=90 → best=90, bonus=51*0.10=5.1 → 95
+    expect(computeEffectiveExitScore(51, 90)).toBe(95);
   });
 
-  it("returns blend when blend exceeds pure liquidity", () => {
-    // liquidity=40, redemption=90 → blend = 40*0.55 + 90*0.45 = 22+40.5 = 62.5 → 63
-    // max(40, 63) = 63
-    expect(computeEffectiveExitScore(40, 90)).toBe(63);
-  });
-
-  it("handles edge case where blend equals liquidity", () => {
-    // liquidity=100, redemption=100 → blend = 100*0.55 + 100*0.45 = 100
-    // max(100, 100) = 100
+  it("caps effective score at 100", () => {
+    // dex=95, redemption=98 → best=98, bonus=95*0.10=9.5 → 107.5 → capped at 100
+    expect(computeEffectiveExitScore(95, 98)).toBe(100);
     expect(computeEffectiveExitScore(100, 100)).toBe(100);
+  });
+
+  it("is monotonic — adding any path never lowers the score", () => {
+    // Strong redemption, adding weak DEX should only help
+    const redeemOnly = computeEffectiveExitScore(null, 80)!;
+    const withWeakDex = computeEffectiveExitScore(15, 80)!;
+    expect(withWeakDex).toBeGreaterThanOrEqual(redeemOnly);
+
+    // Strong DEX, adding weak redemption should only help
+    const dexOnly = computeEffectiveExitScore(70, null)!;
+    const withWeakRedeem = computeEffectiveExitScore(70, 20)!;
+    expect(withWeakRedeem).toBeGreaterThanOrEqual(dexOnly);
   });
 
   it("clamps inputs to 0-100", () => {

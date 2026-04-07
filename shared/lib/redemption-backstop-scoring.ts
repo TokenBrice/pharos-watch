@@ -15,10 +15,7 @@ export const REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS = {
   cost: 0.10,
 } as const;
 
-export const EFFECTIVE_EXIT_WEIGHTS = {
-  liquidity: 0.55,
-  redemption: 0.45,
-} as const;
+export const EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR = 0.10;
 
 export const REDEMPTION_ROUTE_FAMILY_CAPS = {
   queueRedeem: 70,
@@ -209,17 +206,13 @@ export function computeEffectiveExitScore(
       : null;
 
   if (liquidity != null && redemption != null) {
-    return Math.round(
-      Math.max(
-        liquidity,
-        (liquidity * EFFECTIVE_EXIT_WEIGHTS.liquidity) +
-          (redemption * EFFECTIVE_EXIT_WEIGHTS.redemption),
-      ),
-    );
+    const bestPath = Math.max(liquidity, redemption);
+    const bonus = Math.min(liquidity, redemption) * EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR;
+    return Math.round(Math.min(100, bestPath + bonus));
   }
 
   if (liquidity != null) return Math.round(liquidity);
-  if (redemption != null) return Math.round(Math.min(70, redemption * 0.75));
+  if (redemption != null) return Math.round(redemption);
   return null;
 }
 
