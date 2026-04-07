@@ -14,10 +14,6 @@ import {
   YIELD_VARIANT_MAP,
 } from "../yield-config";
 import {
-  fetchBimaSusbdSource,
-  fetchBprotocolLqtyOnlySource,
-  fetchHashnoteUsycSource,
-  fetchOndoUsdyOracleSource,
   getPriceDerivedApy,
 } from "./sources";
 import { resolveBenchmarkForStablecoin, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
@@ -28,13 +24,12 @@ import type {
   SafetyScoreSnapshot,
   YieldResolutionResult,
 } from "./types";
-import { buildReservedYieldPoolIds, runTimedOptionalSource } from "./resolve-helpers";
+import { buildReservedYieldPoolIds } from "./resolve-helpers";
+import {
+  STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY,
+  TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID,
+} from "./tracked-optional-source-registry";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-
-const LIQUITY_V1_LUSD_ID = "lusd-liquity";
-const BIMA_USBD_ID = "usbd-bima";
-const HASHNOTE_USYC_ID = "usyc-hashnote";
-const ONDO_USDY_ID = "usdy-ondo-finance";
 
 export async function resolveTrackedYieldSources(params: {
   db: D1Database;
@@ -231,89 +226,23 @@ export async function resolveTrackedYieldSources(params: {
       hasAnySource = true;
     }
 
-    if (
-      id === BIMA_USBD_ID &&
-      !resolved.some((entry) => entry.id === id && entry.yield?.sourceKey === "protocol-api:bima-susbd")
-    ) {
-      const bimaYield = await runTimedOptionalSource(
-        "BIMA sUSBD source",
-        params.signal,
-        (budgetSignal) => fetchBimaSusbdSource(budgetSignal),
-        null,
-      );
-      if (bimaYield) {
-        resolved.push({ id, symbol, yield: bimaYield });
-        hasAnySource = true;
+    const trackedOptionalEntries = TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID.get(id) ?? [];
+    for (const entry of trackedOptionalEntries) {
+      if (resolved.some((resolvedEntry) => resolvedEntry.id === id && resolvedEntry.yield?.sourceKey === entry.sourceKey)) {
+        continue;
       }
-    }
 
-    if (
-      id === HASHNOTE_USYC_ID &&
-      !resolved.some((entry) => entry.id === id && entry.yield?.sourceKey === "protocol-api:hashnote-usyc")
-    ) {
-      const hashnoteYield = await runTimedOptionalSource(
-        "Hashnote USYC source",
-        params.signal,
-        (budgetSignal) => fetchHashnoteUsycSource(budgetSignal),
-        null,
-      );
-      if (hashnoteYield) {
-        resolved.push({ id, symbol, yield: hashnoteYield });
-        hasAnySource = true;
-      }
-    }
+      const optionalYield = await entry.run({
+        db: params.db,
+        startSec: params.startSec,
+        signal: params.signal,
+        chainRpcs: params.chainRpcs,
+        coingeckoApiKey: params.coingeckoApiKey,
+      });
+      if (!optionalYield) continue;
 
-    if (
-      id === ONDO_USDY_ID &&
-      !resolved.some((entry) => entry.id === id && entry.yield?.sourceKey === "protocol-api:ondo-usdy-oracle")
-    ) {
-      const preferredPriorRow = await params.db
-        .prepare(
-          `SELECT exchange_rate, recorded_at FROM yield_history
-           WHERE stablecoin_id = ? AND source_key = 'protocol-api:ondo-usdy-oracle'
-             AND exchange_rate IS NOT NULL
-             AND recorded_at <= ?
-             AND recorded_at >= ?
-           ORDER BY recorded_at DESC LIMIT 1`,
-        )
-        .bind(ONDO_USDY_ID, params.startSec - 7 * DAY_SECONDS, params.startSec - 45 * DAY_SECONDS)
-        .first<{ exchange_rate: number; recorded_at: number }>();
-
-      const fallbackPriorRow = preferredPriorRow
-        ?? await params.db
-          .prepare(
-            `SELECT exchange_rate, recorded_at FROM yield_history
-             WHERE stablecoin_id = ? AND source_key = 'protocol-api:ondo-usdy-oracle'
-               AND exchange_rate IS NOT NULL
-               AND recorded_at <= ?
-               AND recorded_at >= ?
-             ORDER BY recorded_at DESC LIMIT 1`,
-          )
-          .bind(ONDO_USDY_ID, params.startSec - 3 * DAY_SECONDS, params.startSec - 14 * DAY_SECONDS)
-          .first<{ exchange_rate: number; recorded_at: number }>();
-
-      const anchorRow = preferredPriorRow ?? fallbackPriorRow;
-      const prevPriceBigint = anchorRow?.exchange_rate
-        ? BigInt(Math.round(anchorRow.exchange_rate * 1e18))
-        : null;
-      const daysDelta = anchorRow ? (params.startSec - anchorRow.recorded_at) / DAY_SECONDS : 0;
-
-      const ondoYield = await runTimedOptionalSource(
-        "Ondo USDY oracle source",
-        params.signal,
-        (budgetSignal) => fetchOndoUsdyOracleSource(
-          prevPriceBigint,
-          daysDelta,
-          anchorRow?.recorded_at ?? null,
-          budgetSignal,
-          params.chainRpcs,
-        ),
-        null,
-      );
-      if (ondoYield) {
-        resolved.push({ id, symbol, yield: ondoYield });
-        hasAnySource = true;
-      }
+      resolved.push({ id, symbol, yield: optionalYield });
+      hasAnySource = true;
     }
 
     if (!hasAnySource) {
@@ -321,28 +250,27 @@ export async function resolveTrackedYieldSources(params: {
     }
   }
 
-  const lusdMeta = TRACKED_META_BY_ID.get(LIQUITY_V1_LUSD_ID);
-  if (
-    lusdMeta &&
-    !resolved.some(
-      (entry) =>
-        entry.id === LIQUITY_V1_LUSD_ID &&
-        entry.yield?.sourceKey === buildOnChainSourceKey(LIQUITY_V1_LUSD_ID),
-    )
-  ) {
-    const bprotocolYield = await runTimedOptionalSource(
-      "B.Protocol LQTY-only source",
-      params.signal,
-      (budgetSignal) => fetchBprotocolLqtyOnlySource(budgetSignal, params.chainRpcs, params.coingeckoApiKey),
-      null,
-    );
-    if (bprotocolYield) {
-      resolved.push({
-        id: lusdMeta.id,
-        symbol: lusdMeta.symbol,
-        yield: bprotocolYield,
-      });
+  for (const entry of STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY) {
+    const matchingTrackedEntry = TRACKED_META_BY_ID.get(entry.stablecoinId);
+    if (!matchingTrackedEntry) continue;
+    if (resolved.some((resolvedEntry) => resolvedEntry.id === entry.stablecoinId && resolvedEntry.yield?.sourceKey === entry.sourceKey)) {
+      continue;
     }
+
+    const optionalYield = await entry.run({
+      db: params.db,
+      startSec: params.startSec,
+      signal: params.signal,
+      chainRpcs: params.chainRpcs,
+      coingeckoApiKey: params.coingeckoApiKey,
+    });
+    if (!optionalYield) continue;
+
+    resolved.push({
+      id: matchingTrackedEntry.id,
+      symbol: matchingTrackedEntry.symbol,
+      yield: optionalYield,
+    });
   }
 
   return { resolved, tier1PrevRates };

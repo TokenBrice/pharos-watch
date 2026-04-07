@@ -84,6 +84,7 @@ import { setCacheIfNewer } from "../../lib/db-cache";
 import {
   fetchAaveV3SupplyRates,
   fetchBeefySources,
+  fetchMorphoVaultSources,
 } from "../yield-sync/sources";
 import { syncYieldSupplemental } from "../sync-yield-supplemental";
 
@@ -272,5 +273,42 @@ describe("syncYieldSupplemental", () => {
     expect(metadata.sourceCoverage?.dedupedSupplementalCandidates).toBe(2);
     expect(metadata.sourceCoverage?.optionalRpcTelemetry?.compoundV3?.emittedCount).toBe(0);
     expect(metadata.sourceCoverage?.optionalRpcTelemetry?.aaveV3?.emittedCount).toBe(0);
+  });
+
+  it("keeps successful family results when another supplemental family throws", async () => {
+    vi.mocked(fetchMorphoVaultSources).mockRejectedValue(new Error("morpho exploded"));
+    vi.mocked(fetchBeefySources).mockResolvedValue([
+      {
+        symbol: "USDC",
+        chain: "ethereum",
+        address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        yield: {
+          currentApy: 4.1,
+          apyBase: 4.1,
+          apyReward: null,
+          sourcePool: "vault-a",
+          sourceTvlUsd: 1_500_000,
+          dataSource: "protocol-api",
+          exchangeRate: null,
+          sourceKey: "protocol-api:beefy:ethereum:vault-a",
+          yieldSource: "Beefy: vault-a",
+          yieldType: "lending-opportunity",
+          sourceObservedAt: 1_774_526_400,
+          comparisonAnchorObservedAt: null,
+        },
+      },
+    ]);
+
+    const result = await syncYieldSupplemental({} as D1Database, undefined, new Map());
+
+    expect(result.status).toBeUndefined();
+    expect(result.itemCount).toBe(1);
+
+    const payload = JSON.parse(String(vi.mocked(setCacheIfNewer).mock.calls[0]?.[2])) as {
+      sourceCount: number;
+      data: Array<{ yield: { sourceKey: string } }>;
+    };
+    expect(payload.sourceCount).toBe(1);
+    expect(payload.data[0]?.yield.sourceKey).toBe("protocol-api:beefy:ethereum:vault-a");
   });
 });

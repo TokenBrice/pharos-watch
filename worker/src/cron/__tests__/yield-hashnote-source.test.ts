@@ -37,4 +37,23 @@ describe("fetchHashnoteUsycSource", () => {
     mockFetch([{ match: "usyc.hashnote.com", status: 500, body: "" }]);
     await expect(fetchHashnoteUsycSource()).resolves.toBeNull();
   });
+
+  it("returns null when the latest report is stale", async () => {
+    const staleNowSec = 1_780_000_000;
+    vi.useFakeTimers();
+    vi.setSystemTime(staleNowSec * 1000);
+    mockFetch([{
+      match: "usyc.hashnote.com/api/price-reports",
+      body: {
+        entity: "usyc_price_report",
+        data: [
+          { roundId: "100", price: "1.12", timestamp: String(staleNowSec - 4 * 86400) },
+          { roundId: "99", price: "1.11", timestamp: String(staleNowSec - 11 * 86400) },
+        ],
+      },
+    }]);
+
+    await expect(fetchHashnoteUsycSource()).resolves.toBeNull();
+    vi.useRealTimers();
+  });
 });

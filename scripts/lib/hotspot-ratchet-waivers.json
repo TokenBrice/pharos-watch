@@ -3,13 +3,13 @@
     "disposition": "deferred",
     "notes": "Coverage aggregation and scenario logic are still evolving with the matrix surface. Defer decomposition until the coverage data model settles."
   },
-  "worker/src/cron/dex-liquidity/fetch-primary.ts": {
-    "disposition": "queued-p4",
-    "notes": "Primary DEX-liquidity fetch fanout remains a large stage after the orchestrator cleanup. Track it for a dedicated fetch-family split rather than folding more logic into the current file."
-  },
   "src/app/stability-index/client.tsx": {
     "disposition": "queued-p4",
     "notes": "The PSI route client is still a broad UI composition surface. Keep it waived until the route-level frontend hotspot pass is scheduled."
+  },
+  "src/app/safety-scores/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "The safety-scores route still combines query orchestration, filters, and dense presentation. Track it for the next frontend hotspot pass rather than mixing UI decomposition into the worker tranche."
   },
   "src/app/about/page.tsx": {
     "disposition": "deferred",
@@ -23,9 +23,13 @@
     "disposition": "queued-p4",
     "notes": "Primary pricing enrichment is still a large hotspot after the pass-family split. Follow up with an internal phase breakdown once the current pricing changes stabilize."
   },
+  "worker/src/cron/dex-liquidity/orchestrator-metadata.ts": {
+    "disposition": "queued-p4",
+    "notes": "DEX-liquidity metadata assembly is now the main remaining orchestration hotspot after the fetch-family split. Keep it explicitly queued for a follow-on metadata/output decomposition pass."
+  },
   "worker/src/cron/yield-sync/sources-optional-protocols.ts": {
     "disposition": "deferred",
-    "notes": "Optional yield protocol adapters are still expanding. Defer the source-family split until the inventory settles and the post-C4 resolver work has baked."
+    "notes": "Optional yield protocol adapters now share runner and registry scaffolding, but the provider-specific adapter bodies still dominate this file. Defer the next adapter-family split until the current post-P6 surface stabilizes."
   },
   "src/components/stablecoin-table.tsx": {
     "disposition": "queued-p4",
@@ -59,9 +63,9 @@
     "disposition": "queued-p4",
     "notes": "DEX discovery crawling is still source-dense and branchy. Track it for a later crawler-family extraction rather than expanding the current worker tranche."
   },
-  "worker/src/cron/sync-yield-data.ts": {
+  "worker/src/api/audit-depeg-history.ts": {
     "disposition": "queued-p4",
-    "notes": "The yield publication coordinator still owns a large orchestration surface after the resolver split. Track it for a later coordinator decomposition."
+    "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche."
   },
   "src/components/status/cron-metadata-summary.ts": {
     "disposition": "deferred",

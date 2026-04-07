@@ -26,7 +26,6 @@ import type {
 import { scanForNewVariants } from "./variant-scanner";
 
 const SMALL_ECOSYSTEM_CHAINS = new Set(["solana", "sui", "aptos", "cardano", "stacks"]);
-const OPTIONAL_SINGLE_SOURCE_TIMEOUT_MS = 12_000;
 
 export function buildReservedYieldPoolIds(): Set<string> {
   return new Set([
@@ -219,33 +218,6 @@ function appendResolvedAutoDiscoveredYield(
     },
   });
   autoDiscoveredIds.add(meta.id);
-}
-
-export async function runTimedOptionalSource<T>(
-  label: string,
-  signal: AbortSignal | undefined,
-  fn: (budgetSignal: AbortSignal) => Promise<T>,
-  fallback: T,
-): Promise<T> {
-  const budgetController = new AbortController();
-  const timer = setTimeout(() => {
-    budgetController.abort(new Error(`${label} timed out after ${Math.round(OPTIONAL_SINGLE_SOURCE_TIMEOUT_MS / 1000)}s`));
-  }, OPTIONAL_SINGLE_SOURCE_TIMEOUT_MS);
-  const budgetSignal = signal ? AbortSignal.any([signal, budgetController.signal]) : budgetController.signal;
-
-  try {
-    return await fn(budgetSignal);
-  } catch (error) {
-    if (signal?.aborted) {
-      throw error instanceof Error ? error : new Error(String(error));
-    }
-    if (budgetController.signal.aborted) {
-      console.warn(`[yield] ${label} timed out; continuing without this source`);
-    }
-    return fallback;
-  } finally {
-    clearTimeout(timer);
-  }
 }
 
 export function appendPoolFamilyYieldSources(params: {

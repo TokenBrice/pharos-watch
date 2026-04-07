@@ -1,73 +1,12 @@
-import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { normalizeTokenAddress } from "./dex-liquidity/token-resolution";
 import { buildYieldSupplementalSourcesCache } from "./yield-sync/cache";
-import {
-  COMPOUND_V3_COMETS,
-  fetchAaveV3SupplyRates,
-  fetchBeefySources,
-  fetchCompoundV3SupplyRates,
-  fetchMorphoVaultSources,
-  fetchPendleMarketSources,
-  fetchYearnKongSources,
-  type AaveV3RateTarget,
-  type OptionalRpcFamilyTelemetry,
-} from "./yield-sync/sources";
+import { loadSupplementalSourceFamilies } from "./yield-sync/supplemental-source-families";
 import type { ResolvedYieldCandidate } from "./yield-sync/types";
 
 const YIELD_SUPPLEMENTAL_CACHE_KEY = "yield:supplemental-sources:v1";
-const AAVE_SUPPORTED_CHAINS = new Set(["ethereum", "arbitrum", "base"]);
-
-const EMPTY_OPTIONAL_RPC_TELEMETRY: OptionalRpcFamilyTelemetry = {
-  targetCount: 0,
-  attemptedCount: 0,
-  resolvedTargetCount: 0,
-  emittedCount: 0,
-  missingTargetCount: 0,
-  missingByChain: {},
-  missingReasonCounts: {},
-  missingTargets: [],
-  budgetExhausted: false,
-  endpointStrategy: "alternating-fallback-primary",
-};
-
-function getTrackedContractAddress(stablecoinId: string, chain: string): string | null {
-  const meta = TRACKED_META_BY_ID.get(stablecoinId);
-  const contract = meta?.contracts?.find((entry) => entry.chain === chain && entry.address);
-  return contract?.address ?? null;
-}
-
-function buildAaveTargets(): AaveV3RateTarget[] {
-  const targets: AaveV3RateTarget[] = [];
-
-  for (const meta of ACTIVE_STABLECOINS) {
-    for (const contract of meta.contracts ?? []) {
-      if (
-        AAVE_SUPPORTED_CHAINS.has(contract.chain) &&
-        contract.address &&
-        !targets.some((target) => target.stablecoinId === meta.id && target.chain === contract.chain)
-      ) {
-        targets.push({
-          stablecoinId: meta.id,
-          symbol: meta.symbol,
-          chain: contract.chain,
-          assetAddress: contract.address,
-        });
-      }
-    }
-  }
-
-  return targets;
-}
-
-function buildAaveSourceKey(stablecoinId: string, chain: string, assetAddress: string | null): string {
-  const normalizedAddress = normalizeTokenAddress(assetAddress ?? "");
-  return normalizedAddress
-    ? `aave-v3-onchain:${chain}:${normalizedAddress}`
-    : `aave-v3-onchain:${chain}:${stablecoinId}`;
-}
 
 function buildSupplementalCandidateDedupKey(candidate: ResolvedYieldCandidate): string | null {
   const sourceKey = candidate.yield?.sourceKey?.trim();
@@ -114,85 +53,15 @@ export async function syncYieldSupplemental(
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<CronResult> {
   const startSec = Math.floor(Date.now() / 1000);
-  const [morphoVaults, pendleMarkets, yearnKongVaults, beefyVaults] = await Promise.all([
-    fetchMorphoVaultSources(signal),
-    fetchPendleMarketSources(signal),
-    fetchYearnKongSources(signal),
-    fetchBeefySources(signal),
-  ]);
-
-  const sourceFamilyCounts: Record<string, number> = {
-    morpho: morphoVaults.length,
-    pendle: pendleMarkets.length,
-    yearnKong: yearnKongVaults.length,
-    beefy: beefyVaults.length,
-    compoundV3: 0,
-    aaveV3: 0,
-  };
-
-  const candidates: ResolvedYieldCandidate[] = [
-    ...morphoVaults,
-    ...pendleMarkets,
-    ...yearnKongVaults,
-    ...beefyVaults,
-  ];
-
-  const { results: compoundRates, telemetry: compoundTelemetry } = await fetchCompoundV3SupplyRates(
-    [...COMPOUND_V3_COMETS],
+  const {
+    candidates,
+    sourceFamilyCounts,
+    optionalRpcTelemetry,
+  } = await loadSupplementalSourceFamilies({
+    startSec,
     signal,
     chainRpcs,
-  );
-  for (const result of compoundRates) {
-    const target = COMPOUND_V3_COMETS.find(
-      (entry) =>
-        result.yield.sourceKey === `protocol-api:compound-v3-supply:${entry.chain}:${entry.comet.toLowerCase()}`,
-    );
-    if (!target) continue;
-    candidates.push({
-      symbol: target.symbol,
-      chain: target.chain,
-      address: getTrackedContractAddress(result.stablecoinId, target.chain),
-      yield: result.yield,
-    });
-  }
-  sourceFamilyCounts.compoundV3 = compoundRates.length;
-
-  const aaveTargets = buildAaveTargets();
-  let aaveTelemetry: OptionalRpcFamilyTelemetry = EMPTY_OPTIONAL_RPC_TELEMETRY;
-  if (aaveTargets.length > 0) {
-    const aaveResult = await fetchAaveV3SupplyRates(aaveTargets, signal, chainRpcs);
-    const { rates: aaveRates } = aaveResult;
-    aaveTelemetry = aaveResult.telemetry;
-    for (const [stablecoinId, { apy, chain }] of aaveRates) {
-      const meta = TRACKED_META_BY_ID.get(stablecoinId);
-      if (!meta || apy <= 0) continue;
-      const assetAddress = getTrackedContractAddress(stablecoinId, chain);
-      candidates.push({
-        symbol: meta.symbol,
-        chain,
-        address: assetAddress,
-        yield: {
-          currentApy: apy,
-          apyBase: apy,
-          apyReward: null,
-          sourcePool: null,
-          sourceTvlUsd: null,
-          // These are protocol-native lending-market readers, not Tier 1
-          // deterministic wrapper sources like ERC-4626 exchange-rate reads.
-          dataSource: "protocol-api",
-          exchangeRate: null,
-          sourceKey: buildAaveSourceKey(stablecoinId, chain, assetAddress),
-          yieldSource: `Aave v3 (${chain})`,
-          yieldType: "lending-opportunity",
-          sourceObservedAt: startSec,
-          comparisonAnchorObservedAt: null,
-        },
-      });
-    }
-    sourceFamilyCounts.aaveV3 = aaveRates.size;
-  } else {
-    aaveTelemetry = EMPTY_OPTIONAL_RPC_TELEMETRY;
-  }
+  });
 
   const rawCandidateCount = candidates.length;
   const { candidates: dedupedCandidates, droppedCount } = dedupeCandidates(candidates);
@@ -205,17 +74,14 @@ export async function syncYieldSupplemental(
         rowsWritten: 0,
         rowsDropped: droppedCount,
         sourceCoverage: {
-          rawSupplementalCandidates: rawCandidateCount,
-          dedupedSupplementalCandidates: 0,
-          supplementalCandidatesWritten: 0,
-          sourceFamilyCounts,
-          optionalRpcTelemetry: {
-            compoundV3: compoundTelemetry,
-            aaveV3: aaveTelemetry,
-          },
-        },
-        fallbackMode: "empty-snapshot",
-        cacheWriteSkipped: true,
+        rawSupplementalCandidates: rawCandidateCount,
+        dedupedSupplementalCandidates: 0,
+        supplementalCandidatesWritten: 0,
+        sourceFamilyCounts,
+        optionalRpcTelemetry,
+      },
+      fallbackMode: "empty-snapshot",
+      cacheWriteSkipped: true,
       }),
     };
   }
@@ -238,10 +104,7 @@ export async function syncYieldSupplemental(
         dedupedSupplementalCandidates: dedupedCandidates.length,
         supplementalCandidatesWritten: dedupedCandidates.length,
         sourceFamilyCounts,
-        optionalRpcTelemetry: {
-          compoundV3: compoundTelemetry,
-          aaveV3: aaveTelemetry,
-        },
+        optionalRpcTelemetry,
       },
       fallbackMode: null,
       cacheWriteSkipped: false,

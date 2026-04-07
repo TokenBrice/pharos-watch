@@ -75,8 +75,6 @@ export function StabilityIndexMethodologySection() {
                   </code>
                   <p className="text-xs">The final value is clamped to [0, 100] and rounded to one decimal.</p>
                 </div>
-
-                {/* PSI pipeline — desktop */}
                 <div className="hidden md:flex flex-col items-center gap-3">
                   <div className="grid grid-cols-4 gap-3 w-full">
                     <MethodologyDiagramCard title="Severity" subtitle="0–68" />
@@ -89,8 +87,6 @@ export function StabilityIndexMethodologySection() {
                   <MethodologyDiagramArrow />
                   <MethodologyDiagramCard className="w-80 border-cyan-500/40" title="Condition Band" subtitle="BEDROCK through MELTDOWN" />
                 </div>
-
-                {/* PSI pipeline — mobile */}
                 <div className="flex flex-col items-center gap-3 md:hidden">
                   <div className="grid grid-cols-2 gap-2 w-full">
                     <MethodologyDiagramCard title="Severity" titleClassName="text-xs text-foreground font-medium" subtitle="0–68" subtitleClassName="text-xs text-muted-foreground" />

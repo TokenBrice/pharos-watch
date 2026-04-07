@@ -6,6 +6,11 @@ import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { buildOnChainSourceKey } from "../yield-helpers";
 import { createOptionalSourceBudget, resolveCanonicalChain } from "./sources-helpers";
+import {
+  getFiniteNumber,
+  OPTIONAL_PROTOCOL_API_BUDGET_MS,
+  OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS,
+} from "./optional-source-runtime";
 import type { ResolvedYield, ResolvedYieldCandidate } from "./types";
 
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
@@ -32,8 +37,6 @@ const HASHNOTE_PRICE_REPORTS_URL = "https://usyc.hashnote.com/api/price-reports"
 const HASHNOTE_TARGET_LOOKBACK_SEC = 7 * DAY_SECONDS;
 const HASHNOTE_MIN_LOOKBACK_SEC = 5 * DAY_SECONDS;
 const HASHNOTE_MAX_FRESHNESS_SEC = 3 * DAY_SECONDS;
-const OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS = 8_000;
-const OPTIONAL_PROTOCOL_API_BUDGET_MS = 25_000;
 const ONDO_USDY_SOURCE_KEY = "protocol-api:ondo-usdy-oracle";
 const ONDO_USDY_SOURCE_LABEL = "Ondo USDY Oracle";
 const ONDO_USDY_SOURCE_TYPE = "nav-appreciation";
@@ -267,25 +270,19 @@ export async function fetchBimaSusbdSource(signal?: AbortSignal): Promise<Resolv
     });
     if (!pool) return null;
 
-    const unboostedApr =
-      typeof pool.unboostedAPR === "number" && Number.isFinite(pool.unboostedAPR)
-        ? pool.unboostedAPR
-        : null;
-    const boostedApr =
-      typeof pool.boostedAPR === "number" && Number.isFinite(pool.boostedAPR)
-        ? pool.boostedAPR
-        : null;
+    const unboostedApr = getFiniteNumber(pool.unboostedAPR);
+    const boostedApr = getFiniteNumber(pool.boostedAPR);
     const currentApy =
       unboostedApr != null && boostedApr != null
         ? Math.max(unboostedApr, boostedApr)
         : (unboostedApr ?? boostedApr);
     if (currentApy == null || currentApy < BIMA_MIN_APY_PERCENT) return null;
 
-    const sourceTvlUsd =
-      typeof pool.amountTVL === "number" && Number.isFinite(pool.amountTVL) && pool.amountTVL >= BIMA_MIN_TVL_USD
-        ? pool.amountTVL
-        : null;
-    if (sourceTvlUsd == null) return null;
+    const sourceTvlUsd = getFiniteNumber(pool.amountTVL);
+    const qualifiedTvlUsd = sourceTvlUsd != null && sourceTvlUsd >= BIMA_MIN_TVL_USD
+      ? sourceTvlUsd
+      : null;
+    if (qualifiedTvlUsd == null) return null;
 
     return {
       currentApy,
@@ -295,7 +292,7 @@ export async function fetchBimaSusbdSource(signal?: AbortSignal): Promise<Resolv
           ? Math.max(0, boostedApr - unboostedApr)
           : null,
       sourcePool: typeof pool.id === "string" ? pool.id : null,
-      sourceTvlUsd,
+      sourceTvlUsd: qualifiedTvlUsd,
       dataSource: "protocol-api",
       exchangeRate: null,
       sourceKey: BIMA_SUSBD_SOURCE_KEY,

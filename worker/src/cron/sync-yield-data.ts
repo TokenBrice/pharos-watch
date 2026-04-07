@@ -5,7 +5,6 @@ import { setCache } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { ON_CHAIN_RATE_CONFIGS } from "./yield-config";
 import type { ChainRpcConfig } from "../lib/chain-registry";
-import { toYieldBenchmarkRegistry } from "./yield-sync/benchmarks";
 import { resolveYieldSources } from "./yield-sync/resolve";
 import {
   loadYieldHistorySnapshots,
@@ -17,25 +16,26 @@ import {
   isLegacyDeterministicOnChainSourceKey,
   normalizePreviousBestSourceKey,
 } from "./yield-sync/evaluation";
-import { buildYieldSourceProvenance } from "./yield-sync/provenance";
 import {
   buildYieldDegradationReasons,
   buildYieldSafetySnapshotMeta,
   buildYieldSyncMetadata,
 } from "./yield-sync/coordinator-metadata";
 import {
-  buildYieldRankingsPayloadFromEvaluatedSources,
-  persistEvaluatedYieldSources,
-  readPreviousYieldRankingsCount,
-  pruneYieldTables,
-  validateYieldRankingsPayloadForPublish,
-  writeYieldRankingsCache,
-} from "./yield-sync/publication";
-import {
-  buildNextDeterministicOnChainHealthState,
   loadYieldSyncState,
-  persistDeterministicOnChainHealthState,
 } from "./yield-sync/state-loading";
+import {
+  buildPreviewYieldRankingsArtifacts,
+  publishYieldCoordinatorResults,
+} from "./yield-sync/coordinator-persist";
+import {
+  guardPublishedYieldCoverage,
+  guardTrackedYieldCoverage,
+} from "./yield-sync/coordinator-guards";
+import {
+  computeDeterministicOnChainHealth,
+  logYieldApyDivergences,
+} from "./yield-sync/coordinator-health";
 // -- Main sync function ------------------------------------------------------
 
 export async function syncYieldData(
@@ -223,81 +223,31 @@ export async function syncYieldData(
     prevBestSourceKeyByCoin,
   });
 
-  const deterministicSourceIds = Array.from(
-    new Set(ON_CHAIN_RATE_CONFIGS.map((config) => config.stablecoinId)),
-  );
-  const nonOnchainEvaluatedIds = new Set(
-    evaluatedSources
-      .filter((source) => source.dataSource !== "onchain")
-      .map((source) => source.id),
-  );
-  const onChainAlternativeCoverageMissingIds = deterministicSourceIds.filter(
-    (id) => !nonOnchainEvaluatedIds.has(id),
-  );
-  const maskedAllDeterministicFailure =
-    allDeterministicFailed &&
-    deterministicSourceIds.length > 0 &&
-    onChainAlternativeCoverageMissingIds.length === 0;
-  const nextOnChainHealthState = buildNextDeterministicOnChainHealthState({
-    deterministicConfigCount: deterministicSourceIds.length,
-    previous: onChainHealthState,
+  const {
+    maskedAllDeterministicFailure,
+    onChainAlternativeCoverageMissingIds,
+    nextOnChainHealthState,
+    onChainCooldownTriggered,
+  } = await computeDeterministicOnChainHealth({
+    db,
     startSec,
+    evaluatedSources,
+    onChainHealthState,
+    onChainCooldownActive,
+    onChainSkippedDueToCooldown,
     onChainAttemptedCount,
     onChainRatesResolved: onChainRates.size,
     allDeterministicFailed,
-    maskedAllDeterministicFailure,
-    onChainAlternativeCoverageMissingIds,
-    onChainSkippedDueToCooldown,
   });
-  const onChainCooldownTriggered =
-    !onChainCooldownActive &&
-    nextOnChainHealthState.cooldownUntil != null &&
-    nextOnChainHealthState.cooldownUntil > startSec;
-  await persistDeterministicOnChainHealthState(db, startSec, nextOnChainHealthState);
 
-  {
-    const nativeApyByCoin = new Map<string, number>();
-    const lendingApyByCoin = new Map<string, number>();
-    for (const source of evaluatedSources) {
-      if (source.yieldType === "lending-opportunity") {
-        lendingApyByCoin.set(source.id, source.currentApy);
-      } else {
-        nativeApyByCoin.set(source.id, source.currentApy);
-      }
-    }
-    for (const [coinId, nativeApy] of nativeApyByCoin) {
-      const lendingApy = lendingApyByCoin.get(coinId);
-      if (lendingApy != null && nativeApy > 0 && lendingApy > 0) {
-        const divergence = Math.abs(nativeApy - lendingApy) / Math.max(Math.abs(nativeApy), Math.abs(lendingApy), 1e-9);
-        if (divergence > 0.35) {
-          console.warn(
-            `[yield-sync] APY divergence for ${coinId}: native=${nativeApy.toFixed(1)}% vs lending=${lendingApy.toFixed(1)}%`,
-          );
-        }
-      }
-    }
-  }
+  logYieldApyDivergences(evaluatedSources);
 
-  // Coverage regression guard: skip persistence if yield coverage drops below 60%
-  // Only applies when there are enough tracked coins to make the ratio meaningful.
-  const MIN_YIELD_COVERAGE_RATIO = 0.6;
-  const MIN_YIELD_COINS_FOR_GUARD = 10;
-  const yieldCoverageRatio = yieldCoins.length > 0 ? resolvedYieldBearingIds.size / yieldCoins.length : 1;
-  if (yieldCoins.length >= MIN_YIELD_COINS_FOR_GUARD && yieldCoverageRatio < MIN_YIELD_COVERAGE_RATIO) {
-    console.error(
-      `[sync-yield-data] Yield coverage regression: ${resolvedYieldBearingIds.size}/${yieldCoins.length} ` +
-      `(${(yieldCoverageRatio * 100).toFixed(1)}%) — skipping persistence`,
-    );
-    return {
-      status: "degraded" as const,
-      itemCount: resolvedYieldBearingIds.size,
-      metadata: JSON.stringify({
-        reason: "coverage-regression",
-        coverage: yieldCoverageRatio,
-        resolvedCount: resolvedYieldBearingIds.size,
-        totalCount: yieldCoins.length,
-      }),
-    };
+  const trackedCoverageGuard = guardTrackedYieldCoverage({
+    resolvedYieldBearingCount: resolvedYieldBearingIds.size,
+    expectedYieldBearingCount: yieldCoins.length,
+  });
+  if (trackedCoverageGuard) {
+    return trackedCoverageGuard;
   }
 
   const safetySnapshotMeta = buildYieldSafetySnapshotMeta({
@@ -308,67 +258,30 @@ export async function syncYieldData(
     reason: safetySnapshot.reason ?? null,
   });
 
-  const previewRankingProvenanceByKey = new Map<string, Record<string, unknown>>();
-  for (const source of evaluatedSources) {
-    previewRankingProvenanceByKey.set(
-      buildHistoryKey(source.id, source.sourceKey),
-      buildYieldSourceProvenance({
-        source,
-        isBest: bestSourceKeyByCoin.get(source.id) === source.sourceKey,
-        evaluatedSources,
-        startSec,
-        dlPoolsMeta,
-      }),
-    );
-  }
-
-  const previewRankingsPayload = buildYieldRankingsPayloadFromEvaluatedSources({
+  const { previewRankingsPayload } = buildPreviewYieldRankingsArtifacts({
     evaluatedSources,
     bestSourceKeyByCoin,
-    rankingProvenanceByKey: previewRankingProvenanceByKey,
     riskFreeRate,
     riskFreeRateMeta,
-    riskFreeRateRegistry: toYieldBenchmarkRegistry(riskFreeRates),
+    riskFreeRates,
     dlPoolsMeta,
     safetySnapshot: safetySnapshotMeta,
     medianApy,
     startSec,
   });
+  const publishedCoverageGuard = await guardPublishedYieldCoverage({
+    db,
+    previewRankingsPayload,
+    yieldCoinIdSet,
+  });
+  if (publishedCoverageGuard.result) {
+    return publishedCoverageGuard.result;
+  }
+  const {
+    previousPublishedYieldBearingCount,
+    currentPublishedYieldBearingCount,
+  } = publishedCoverageGuard;
 
-  const previousRankingsState = await readPreviousYieldRankingsCount(db, { allowedIds: yieldCoinIdSet });
-  if (previousRankingsState.malformed) {
-    return {
-      status: "degraded",
-      itemCount: previewRankingsPayload.rankings.filter((ranking) => yieldCoinIdSet.has(ranking.id)).length,
-      metadata: JSON.stringify({
-        reason: "previous-yield-rankings-cache-invalid",
-      }),
-    };
-  }
-  const previousPublishedYieldBearingCount = previousRankingsState.count;
-  const currentPublishedYieldBearingCount = previewRankingsPayload.rankings
-    .filter((ranking) => yieldCoinIdSet.has(ranking.id))
-    .length;
-  if (
-    previousPublishedYieldBearingCount >= MIN_YIELD_COINS_FOR_GUARD &&
-    currentPublishedYieldBearingCount < Math.ceil(previousPublishedYieldBearingCount * MIN_YIELD_COVERAGE_RATIO)
-  ) {
-    return {
-      status: "degraded",
-      itemCount: currentPublishedYieldBearingCount,
-      metadata: JSON.stringify({
-        reason: "published-yield-coverage-regression",
-        previousPublishedYieldBearingCount,
-        currentPublishedYieldBearingCount,
-      }),
-    };
-  }
-
-  if (allDeterministicFailed && maskedAllDeterministicFailure) {
-    console.warn(
-      "[sync-yield-data] Deterministic on-chain lane failed, but all configured coins retained non-onchain yield coverage",
-    );
-  }
   const degradationReasons = buildYieldDegradationReasons({
     safetySnapshotDegraded,
     safetySnapshotReason: safetySnapshot.reason ?? null,
@@ -379,53 +292,34 @@ export async function syncYieldData(
     onChainSkippedDueToCooldown,
     onChainAlternativeCoverageMissingIds,
   });
-
-  const previewPublishability = await validateYieldRankingsPayloadForPublish(db, previewRankingsPayload);
-  if (!previewPublishability.ok) {
-    degradationReasons.push(previewPublishability.reason ?? "schema-validation-failed");
-    return {
-      status: "degraded" as const,
-      itemCount: resolvedIds.length,
-      metadata: JSON.stringify({
-        reason: "yield-rankings-preflight-failed",
-        publishFailure: previewPublishability.reason ?? "schema-validation-failed",
-        validationFailures: previewPublishability.validationFailures,
-        rowsRejected,
-        divergenceFlags,
-        sourceSwitches,
-      }),
-    };
-  }
-
-  const {
-    updatedCount,
-  } = await persistEvaluatedYieldSources(db, {
+  const publicationResult = await publishYieldCoordinatorResults({
+    db,
+    previewRankingsPayload,
     evaluatedSources,
     bestSourceKeyByCoin,
     startSec,
     medianApy,
     dlPoolsMeta,
+    degradationReasons,
+    resolvedCount: resolvedIds.length,
+    rowsRejected,
+    divergenceFlags,
+    sourceSwitches,
   });
-
-  const cacheWrite = await writeYieldRankingsCache(db, previewRankingsPayload);
-  if (!cacheWrite.ok) {
-    degradationReasons.push(cacheWrite.reason ?? "schema-validation-failed");
+  if (!publicationResult.ok) {
+    return publicationResult.result;
   }
-  const validationFailures = cacheWrite.validationFailures;
 
-  const shouldRetainPreviousRows = degradationReasons.length > 0;
-  await pruneYieldTables(db, startSec, {
-    allowDestructiveCleanup: !shouldRetainPreviousRows,
-  });
-
-  console.log(`[sync-yield-data] Updated ${updatedCount} source rows (${yieldCoins.length} yield-bearing + auto-discovered)`);
-  const status = degradationReasons.length > 0 ? "degraded" : "ok";
+  console.log(
+    `[sync-yield-data] Updated ${publicationResult.updatedCount} source rows (${yieldCoins.length} yield-bearing + auto-discovered)`,
+  );
+  const status = publicationResult.degradationReasons.length > 0 ? "degraded" : "ok";
   return {
-    itemCount: updatedCount,
+    itemCount: publicationResult.updatedCount,
     ...(status === "degraded" ? { status: "degraded" as const } : {}),
     metadata: buildYieldSyncMetadata({
       rowsRead: yieldCoins.length,
-      rowsWritten: updatedCount,
+      rowsWritten: publicationResult.updatedCount,
       rowsRejected,
       divergenceFlags,
       sourceSwitches,
@@ -453,10 +347,10 @@ export async function syncYieldData(
       onChainCooldownRemainingSec,
       onChainConsecutiveAllFailRuns: nextOnChainHealthState.consecutiveAllFailRuns,
       onChainConsecutiveMaskedAllFailRuns: nextOnChainHealthState.consecutiveMaskedAllFailRuns,
-      fallbackMode: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
-      validationFailures,
+      fallbackMode: publicationResult.degradationReasons.length > 0 ? publicationResult.degradationReasons.join(",") : null,
+      validationFailures: publicationResult.validationFailures,
       riskFreeRate,
-      cacheWriteSkipped: !cacheWrite.ok,
+      cacheWriteSkipped: publicationResult.cacheWriteSkipped,
     }),
   };
 }
