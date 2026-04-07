@@ -6,11 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.6`
+- **Current methodology version:** `v3.7`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v3.6` update: `zchf-frankencoin` now models its reviewed permissionless ZCHF -> VCHF StablecoinBridge route. Fresh hourly reserve sync reuses the bridge's live VCHF inventory as immediate redeemable capacity, while a conservative 1.4% reviewed fallback ratio keeps the route visible when live bridge telemetry is temporarily unavailable.
+Latest `v3.7` update: effective exit scoring now uses a best-path model (`max(dex, redemption) + min(dex, redemption) × 0.10`) instead of the previous weighted blend. Redemption-only coins use the raw backstop score with no cap or discount; route family caps remain as guardrails.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 
