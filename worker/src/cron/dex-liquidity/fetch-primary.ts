@@ -10,8 +10,8 @@ import {
 } from "../../lib/coingecko-onchain";
 import { GT_CHAIN_MAP } from "../../lib/chain-registry";
 import { RATE_LIMITS } from "../../lib/rate-limit";
-import { GT_API_BASE, isUsdReferenceSymbol, normalizeDexSymbol } from "../../lib/dex-constants";
-import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
+import { GT_API_BASE, normalizeDexSymbol } from "../../lib/dex-constants";
+import { sleepWithSignal } from "../../lib/abort";
 import type {
   LlamaPool, CurvePool, CurvePoolEntry, DexPriceObs,
   DataSources, CurveLookups, UniV3Lookups, AerodromeLookups,
@@ -20,15 +20,11 @@ import type {
 import {
   DEFILLAMA_YIELDS_URL, DEFILLAMA_PROTOCOLS_URL,
   CURVE_API_BASE, CURVE_CHAINS,
-  UNIV3_SUBGRAPHS, UNIV3_POOL_QUERY,
-  AERODROME_SUBGRAPHS, AERODROME_PAIR_QUERY,
-  SUBGRAPH_PER_CHAIN_TIMEOUT_MS,
 } from "./constants";
 import {
   normalizeProtocol, getTrackedContracts, classifyPoolType, isCryptoSwap,
 } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
-import { fetchSubgraphEntities, mergePriceObservations, type SubgraphPriceObservation } from "./subgraph-helpers";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import {
   buildPoolIdentity,
@@ -39,7 +35,14 @@ import {
 import {
   resolveTrackedStablecoinId,
 } from "./token-resolution";
-import { appendTokenBatchPriceObservations } from "./token-price-observations";
+import {
+  fetchAerodromeData as fetchAerodromeSubgraphData,
+  fetchUniV3Data as fetchUniV3SubgraphData,
+} from "./subgraph-source-families";
+import {
+  runTokenBatchPriceFetch,
+  type ProviderChainAddress,
+} from "./token-batch-runner";
 
 /** Fetch DeFiLlama Yields, Protocols list, and Curve API data. Returns null only on truly catastrophic failure. */
 export async function fetchDataSources(graphApiKey: string | null, db: D1Database, signal?: AbortSignal): Promise<DataSources | null> {
@@ -314,78 +317,6 @@ export async function buildCurveLookups(
   return { curvePoolMap, priceObservations };
 }
 
-type UniV3SubgraphPool = {
-  id: string;
-  token0: { id: string; symbol: string };
-  token1: { id: string; symbol: string };
-  feeTier: string;
-  totalValueLockedUSD: string;
-  volumeUSD: string;
-  token0Price: string;
-  token1Price: string;
-  totalValueLockedToken0: string;
-  totalValueLockedToken1: string;
-};
-
-type AerodromeSubgraphPair = {
-  id: string;
-  token0: { id: string; symbol: string };
-  token1: { id: string; symbol: string };
-  reserve0: string;
-  reserve1: string;
-  reserveUSD: string;
-  token0Price: string;
-  token1Price: string;
-  isStable: boolean;
-};
-
-function mapTrackedSubgraphPriceObservations(config: {
-  chain: string;
-  protocol: "uniswap-v3" | "aerodrome";
-  tvl: number;
-  tokenEntries: Array<{ symbol: string; address: string; usdPrice: number }>;
-  chainAddressToId: Map<string, string>;
-  symbolToChainScopedIds: Map<string, Map<string, string[]>>;
-  references?: PriceValidationReferences;
-  identity: ReturnType<typeof buildPoolIdentity>;
-}): SubgraphPriceObservation[] {
-  const mapped: SubgraphPriceObservation[] = [];
-  const {
-    chain,
-    protocol,
-    tvl,
-    tokenEntries,
-    chainAddressToId,
-    symbolToChainScopedIds,
-    references,
-    identity,
-  } = config;
-
-  for (const { symbol, address, usdPrice } of tokenEntries) {
-    const resolved = resolveTrackedStablecoinId(
-      { chain, address, symbol },
-      { chainAddressToId, symbolToChainScopedIds },
-    );
-    if (resolved.status !== "matched" || !resolved.stablecoinId) continue;
-    if (!isPlausibleDexObservationPrice(resolved.stablecoinId, usdPrice, references)) continue;
-    mapped.push({
-      stablecoinId: resolved.stablecoinId,
-      obs: {
-        price: usdPrice,
-        tvl,
-        chain,
-        protocol,
-        poolKey: identity.exactPoolKey ?? undefined,
-        derivedMatchKey: identity.derivedMatchKey ?? undefined,
-        identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
-        sourceFamily: "dl",
-      },
-    });
-  }
-
-  return mapped;
-}
-
 /** Fetch Uniswap V3 subgraph data for fee tier enrichment + price observations. */
 export async function fetchUniV3Data(
   graphApiKey: string | null,
@@ -395,99 +326,14 @@ export async function fetchUniV3Data(
   signal?: AbortSignal,
   references?: PriceValidationReferences,
 ): Promise<UniV3Lookups> {
-  const uniV3PoolFees = new Map<string, number>(); // "chain:address" → feeTier
-  const uniV3SymbolFees = new Map<string, number>(); // "chain:SYM0:SYM1" → lowest feeTier
-  const uniV3PriceObs = new Map<string, DexPriceObs[]>();
-
-  if (!graphApiKey) {
-    console.log("[dex-liquidity] No GRAPH_API_KEY, skipping Uni V3 subgraph enrichment");
-    return { uniV3PoolFees, uniV3SymbolFees, uniV3PriceObs };
-  }
-
-  await Promise.all(Object.entries(UNIV3_SUBGRAPHS).map(async ([chain, subgraphId]) => {
-    try {
-    const perChainTimeout = AbortSignal.timeout(SUBGRAPH_PER_CHAIN_TIMEOUT_MS);
-    const combinedSignal = signal
-      ? AbortSignal.any([signal, perChainTimeout])
-      : perChainTimeout;
-    const subgraphUrl = `https://gateway.thegraph.com/api/${graphApiKey}/subgraphs/id/${subgraphId}`;
-    const { entityCount, observationCount, observations, shouldLogIndex } = await fetchSubgraphEntities<UniV3SubgraphPool>({
-      subgraphUrl,
-      sourceLabel: "Uni V3 subgraph",
-      chain,
-      buildQuery: () => UNIV3_POOL_QUERY,
-      signal: combinedSignal,
-      extractEntities: (data) => (data as { pools?: UniV3SubgraphPool[] } | undefined)?.pools,
-      mapEntity: (pool) => {
-        const feeTier = parseInt(pool.feeTier, 10);
-        if (isNaN(feeTier)) return [];
-        const tvl = parseFloat(pool.totalValueLockedUSD);
-
-        // Address-based lookup
-        uniV3PoolFees.set(`${chain}:${pool.id.toLowerCase()}`, feeTier);
-
-        // Symbol-based fallback (keep lowest fee tier per pair = most optimized for stables)
-        const syms = [normalizeDexSymbol(pool.token0.symbol), normalizeDexSymbol(pool.token1.symbol)].sort().join(":");
-        const symKey = `${chain}:${syms}`;
-        const existing = uniV3SymbolFees.get(symKey);
-        if (existing == null || feeTier < existing) {
-          uniV3SymbolFees.set(symKey, feeTier);
-        }
-
-        // Only for pools with TVL >= $50K
-        if (isNaN(tvl) || tvl < DEX_PRICE_OBSERVATION_MIN_TVL_USD) return [];
-
-        const token0Price = parseFloat(pool.token0Price); // token0 per token1
-        const token1Price = parseFloat(pool.token1Price); // token1 per token0
-        if (isNaN(token0Price) || isNaN(token1Price) || token0Price <= 0 || token1Price <= 0) return [];
-
-        const sym0 = normalizeDexSymbol(pool.token0.symbol);
-        const sym1 = normalizeDexSymbol(pool.token1.symbol);
-        const isRef0 = isUsdReferenceSymbol(pool.token0.symbol);
-        const isRef1 = isUsdReferenceSymbol(pool.token1.symbol);
-        if (!isRef0 && !isRef1) return [];
-
-        const pricedTokens: { symbol: string; address: string; usdPrice: number }[] = [];
-        if (isRef1) {
-          pricedTokens.push({ symbol: sym0, address: pool.token0.id, usdPrice: token1Price });
-        }
-        if (isRef0) {
-          pricedTokens.push({ symbol: sym1, address: pool.token1.id, usdPrice: token0Price });
-        }
-
-        const identity = buildPoolIdentity({
-          chain,
-          protocol: "uniswap-v3",
-          poolAddressOrId: pool.id,
-          tokenAddresses: [pool.token0.id, pool.token1.id],
-          feeTierBps: feeTier / 100,
-        });
-        return mapTrackedSubgraphPriceObservations({
-          chain,
-          protocol: "uniswap-v3",
-          tvl,
-          tokenEntries: pricedTokens,
-          chainAddressToId,
-          symbolToChainScopedIds,
-          references,
-          identity,
-        });
-      },
-    });
-
-    mergePriceObservations(uniV3PriceObs, observations);
-    if (shouldLogIndex) {
-      console.log(`[dex-liquidity] Indexed ${entityCount} Uni V3 pools from ${chain} subgraph (${observationCount} price obs)`);
-    }
-    } catch (err) {
-      // Only propagate if the cron-level signal is aborted; per-chain timeouts are non-fatal
-      if (signal?.aborted) throw err;
-      console.warn(`[dex-liquidity] Uni V3 subgraph ${chain} failed (non-fatal):`, err);
-    }
-  }));
-
-  console.log(`[dex-liquidity] Collected ${uniV3PriceObs.size} coins with Uni V3 price observations`);
-  return { uniV3PoolFees, uniV3SymbolFees, uniV3PriceObs };
+  return fetchUniV3SubgraphData(
+    graphApiKey,
+    symbolToIds,
+    symbolToChainScopedIds,
+    chainAddressToId,
+    signal,
+    references,
+  );
 }
 
 /** Fetch Aerodrome subgraph data for price observations and pool stability flags. */
@@ -499,92 +345,14 @@ export async function fetchAerodromeData(
   signal?: AbortSignal,
   references?: PriceValidationReferences,
 ): Promise<AerodromeLookups> {
-  const priceObs = new Map<string, DexPriceObs[]>();
-  const isStableMap = new Map<string, boolean>();
-
-  if (!graphApiKey) return { aerodromePriceObs: priceObs, aerodromeIsStable: isStableMap };
-
-  for (const [chain, subgraphId] of Object.entries(AERODROME_SUBGRAPHS)) {
-    try {
-    const perChainTimeout = AbortSignal.timeout(SUBGRAPH_PER_CHAIN_TIMEOUT_MS);
-    const combinedSignal = signal
-      ? AbortSignal.any([signal, perChainTimeout])
-      : perChainTimeout;
-    const subgraphUrl = `https://gateway.thegraph.com/api/${graphApiKey}/subgraphs/id/${subgraphId}`;
-    const { entityCount, observationCount, observations, shouldLogIndex } = await fetchSubgraphEntities<AerodromeSubgraphPair>({
-      subgraphUrl,
-      sourceLabel: "Aerodrome subgraph",
-      chain,
-      buildQuery: () => AERODROME_PAIR_QUERY,
-      signal: combinedSignal,
-      extractEntities: (data) => (data as { pairs?: AerodromeSubgraphPair[] } | undefined)?.pairs,
-      mapEntity: (pair) => {
-        const reserveUSD = parseFloat(pair.reserveUSD);
-        if (isNaN(reserveUSD) || reserveUSD < DEX_PRICE_OBSERVATION_MIN_TVL_USD) return [];
-
-        // Store isStable flag for pool type refinement in processPoolMetrics
-        isStableMap.set(`${chain}:${pair.id.toLowerCase()}`, pair.isStable);
-
-        // Compute balance ratio from reserves in USD terms
-        const reserve0 = parseFloat(pair.reserve0);
-        const reserve1 = parseFloat(pair.reserve1);
-        const token0Price = parseFloat(pair.token0Price); // token0 per token1
-        const token1Price = parseFloat(pair.token1Price); // token1 per token0
-        if (isNaN(reserve0) || isNaN(reserve1) || reserve0 <= 0 || reserve1 <= 0) return [];
-        if (isNaN(token0Price) || isNaN(token1Price) || token0Price <= 0 || token1Price <= 0) return [];
-
-        const denom = reserve0 * token1Price + reserve1;
-        if (denom <= 0) return [];
-        const price1Usd = reserveUSD / denom;
-        const price0Usd = token1Price * price1Usd;
-        const reserve0Usd = reserve0 * price0Usd;
-        const reserve1Usd = reserve1 * price1Usd;
-
-        // Balance ratio filter
-        const minReserve = Math.min(reserve0Usd, reserve1Usd);
-        const maxReserve = Math.max(reserve0Usd, reserve1Usd);
-        const balanceRatio = maxReserve > 0 ? minReserve / maxReserve : 0;
-        if (balanceRatio < 0.3) return [];
-
-        const sym0 = normalizeDexSymbol(pair.token0.symbol);
-        const sym1 = normalizeDexSymbol(pair.token1.symbol);
-        const pricedTokens = [
-          { symbol: sym0, address: pair.token0.id, usdPrice: price0Usd },
-          { symbol: sym1, address: pair.token1.id, usdPrice: price1Usd },
-        ];
-
-        const identity = buildPoolIdentity({
-          chain,
-          protocol: "aerodrome",
-          poolAddressOrId: pair.id,
-          tokenAddresses: [pair.token0.id, pair.token1.id],
-          isStable: pair.isStable,
-        });
-        return mapTrackedSubgraphPriceObservations({
-          chain,
-          protocol: "aerodrome",
-          tvl: reserveUSD,
-          tokenEntries: pricedTokens,
-          chainAddressToId,
-          symbolToChainScopedIds,
-          references,
-          identity,
-        });
-      },
-    });
-
-    mergePriceObservations(priceObs, observations);
-    if (shouldLogIndex) {
-      console.log(`[dex-liquidity] Indexed ${entityCount} Aerodrome pairs from ${chain} subgraph (${observationCount} price obs)`);
-    }
-    } catch (err) {
-      if (signal?.aborted) throw err;
-      console.warn(`[dex-liquidity] Aerodrome subgraph ${chain} failed (non-fatal):`, err);
-    }
-  }
-
-  console.log(`[dex-liquidity] Collected ${priceObs.size} coins with Aerodrome price observations, ${isStableMap.size} pool stability flags`);
-  return { aerodromePriceObs: priceObs, aerodromeIsStable: isStableMap };
+  return fetchAerodromeSubgraphData(
+    graphApiKey,
+    symbolToIds,
+    symbolToChainScopedIds,
+    chainAddressToId,
+    signal,
+    references,
+  );
 }
 
 /** Collect all pool addresses from existing sources for dedup against GT */
@@ -662,11 +430,7 @@ export function buildKnownPoolAddresses(
   return known;
 }
 
-export interface ProviderChainAddress {
-  chain: string;
-  address: string;
-  stablecoinId: string;
-}
+export type { ProviderChainAddress } from "./token-batch-runner";
 
 /** Build provider chain → tracked token addresses map from canonical chain ids. */
 export function buildChainAddresses(chainMap: Record<string, string>): Map<string, ProviderChainAddress[]> {
@@ -689,59 +453,37 @@ export function buildChainAddresses(chainMap: Record<string, string>): Map<strin
 /** Fetch token-level aggregate data from GT multi-token endpoint.
  *  Returns price observations (one per token per chain). */
 export async function fetchGtTokenBatch(
-  addressToId: Map<string, string>,
+  _addressToId: Map<string, string>,
   signal?: AbortSignal,
   chainAddresses: Map<string, ProviderChainAddress[]> = buildChainAddresses(GT_CHAIN_MAP),
   deadlineMs?: number,
   references?: PriceValidationReferences,
 ): Promise<Map<string, DexPriceObs[]>> {
-  const priceObs = new Map<string, DexPriceObs[]>();
-  let requestCount = 0;
-
-  for (const [gtChain, tokens] of chainAddresses) {
-    throwIfAborted(signal);
-
-    // Batch into groups of 30 (GT limit for multi endpoint)
-    for (let i = 0; i < tokens.length; i += 30) {
-      if (deadlineMs && Date.now() >= deadlineMs) {
-        console.log(`[dex-liquidity] GT token batch budget exhausted after ${requestCount} requests, yielding partial results`);
-        return priceObs;
-      }
-      const batch = tokens.slice(i, i + 30);
-      const addresses = batch.map((t) => t.address).join(",");
-
-      if (requestCount > 0) {
-        await sleepWithSignal(RATE_LIMITS.GECKO_TERMINAL_MS, signal);
-      }
-      requestCount++;
-
-      try {
-        const url = `${GT_API_BASE}/networks/${gtChain}/tokens/multi/${addresses}`;
-        const res = await fetchWithRetry(url, {
-          headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-          signal,
-        });
-        if (!res?.ok) continue;
-
-        const json = (await res.json()) as { data?: GtToken[] };
-        if (!json.data) continue;
-        appendTokenBatchPriceObservations({
-          priceObs,
-          batch,
-          tokens: json.data,
-          sourceLabel: "geckoterminal-aggregate",
-          references,
-          getAddress: (token) => token.attributes.address,
-          getPriceUsd: (token) => parseFloat(token.attributes.price_usd ?? ""),
-          getTvlUsd: (token) => parseFloat(token.attributes.total_reserve_in_usd ?? ""),
-        });
-      } catch (err) {
-        if (signal?.aborted) throw err;
-        console.warn(`[dex-liquidity] GT token batch error for ${gtChain}:`, err);
-      }
-    }
-  }
-
+  const { priceObs, requestCount } = await runTokenBatchPriceFetch<GtToken>({
+    providerLabel: "GT token batch",
+    sourceLabel: "geckoterminal-aggregate",
+    signal,
+    chainAddresses,
+    deadlineMs,
+    references,
+    beforeRequest: (requestCount, requestSignal) =>
+      requestCount > 0
+        ? sleepWithSignal(RATE_LIMITS.GECKO_TERMINAL_MS, requestSignal)
+        : Promise.resolve(),
+    fetchTokens: async (gtChain, addresses, requestSignal) => {
+      const url = `${GT_API_BASE}/networks/${gtChain}/tokens/multi/${addresses.join(",")}`;
+      const res = await fetchWithRetry(url, {
+        headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+        signal: requestSignal,
+      });
+      if (!res?.ok) return [];
+      const json = (await res.json()) as { data?: GtToken[] };
+      return json.data ?? [];
+    },
+    getAddress: (token) => token.attributes.address,
+    getPriceUsd: (token) => parseFloat(token.attributes.price_usd ?? ""),
+    getTvlUsd: (token) => parseFloat(token.attributes.total_reserve_in_usd ?? ""),
+  });
   console.log(`[dex-liquidity] GT token batch: ${priceObs.size} coins with price obs (${requestCount} requests)`);
   return priceObs;
 }
@@ -749,50 +491,27 @@ export async function fetchGtTokenBatch(
 /** Fetch token-level aggregate data from CoinGecko onchain multi-token endpoint.
  *  Returns price observations (one per token per chain). */
 export async function fetchCgTokenBatchPrices(
-  addressToId: Map<string, string>,
+  _addressToId: Map<string, string>,
   signal?: AbortSignal,
   chainAddresses: Map<string, ProviderChainAddress[]> = buildChainAddresses(CG_CHAIN_MAP),
   deadlineMs?: number,
   references?: PriceValidationReferences,
   coingeckoApiKey?: string | null,
 ): Promise<Map<string, DexPriceObs[]>> {
-  const priceObs = new Map<string, DexPriceObs[]>();
-  let requestCount = 0;
-
-  for (const [cgChain, tokens] of chainAddresses) {
-    throwIfAborted(signal);
-
-    // Batch into groups of 30 (CG limit for multi endpoint)
-    for (let i = 0; i < tokens.length; i += 30) {
-      if (deadlineMs && Date.now() >= deadlineMs) {
-        console.log(`[dex-liquidity] CG token batch budget exhausted after ${requestCount} requests, yielding partial results`);
-        return priceObs;
-      }
-      const batch = tokens.slice(i, i + 30);
-      const addresses = batch.map((t) => t.address);
-
-      await onchainRateLimit(requestCount, signal);
-      requestCount++;
-
-      try {
-        const cgTokens = await fetchCgTokensBatch(cgChain, addresses, signal, coingeckoApiKey ?? null);
-        appendTokenBatchPriceObservations({
-          priceObs,
-          batch,
-          tokens: cgTokens,
-          sourceLabel: "coingecko-aggregate",
-          references,
-          getAddress: (token) => token.attributes.address,
-          getPriceUsd: (token) => parseFloat(token.attributes.price_usd ?? ""),
-          getTvlUsd: (token) => parseFloat(token.attributes.total_reserve_in_usd ?? ""),
-        });
-      } catch (err) {
-        if (signal?.aborted) throw err;
-        console.warn(`[dex-liquidity] CG token batch error for ${cgChain}:`, err);
-      }
-    }
-  }
-
+  const { priceObs, requestCount } = await runTokenBatchPriceFetch({
+    providerLabel: "CG token batch",
+    sourceLabel: "coingecko-aggregate",
+    signal,
+    chainAddresses,
+    deadlineMs,
+    references,
+    beforeRequest: (requestCount, requestSignal) => onchainRateLimit(requestCount, requestSignal),
+    fetchTokens: (cgChain, addresses, requestSignal) =>
+      fetchCgTokensBatch(cgChain, addresses, requestSignal, coingeckoApiKey ?? null),
+    getAddress: (token) => token.attributes.address,
+    getPriceUsd: (token) => parseFloat(token.attributes.price_usd ?? ""),
+    getTvlUsd: (token) => parseFloat(token.attributes.total_reserve_in_usd ?? ""),
+  });
   console.log(`[dex-liquidity] CG token batch: ${priceObs.size} coins with price obs (${requestCount} requests)`);
   return priceObs;
 }

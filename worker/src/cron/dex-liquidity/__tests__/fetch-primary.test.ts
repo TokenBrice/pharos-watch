@@ -230,6 +230,48 @@ describe("token batch price observations", () => {
     }]);
   });
 
+  it("returns partial GT token-batch results when the batch deadline expires mid-run", async () => {
+    vi.spyOn(Date, "now")
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(10);
+    vi.mocked(fetchWithRetry).mockResolvedValue(new Response(JSON.stringify({
+      data: [{
+        id: "token-1",
+        type: "token",
+        attributes: {
+          address: "0x0000000000000000000000000000000000000000",
+          name: "USD Coin",
+          symbol: "USDC",
+          coingecko_coin_id: "usd-coin",
+          price_usd: "1.0001",
+          total_reserve_in_usd: "95000",
+          volume_usd: { h24: "10000" },
+        },
+      }],
+    }), { status: 200 }));
+
+    const manyAddresses = Array.from({ length: 31 }, (_, index) => ({
+      chain: "ethereum",
+      address: `0x${index.toString(16).padStart(40, "0")}`,
+      stablecoinId: "usdc-circle",
+    }));
+
+    const observations = await fetchGtTokenBatch(
+      new Map(),
+      undefined,
+      new Map([["ethereum", manyAddresses]]),
+      5,
+    );
+
+    expect(observations.get("usdc-circle")).toEqual([{
+      price: 1.0001,
+      tvl: 95000,
+      chain: "ethereum",
+      protocol: "geckoterminal-aggregate",
+    }]);
+    expect(vi.mocked(fetchWithRetry)).toHaveBeenCalledTimes(1);
+  });
+
   it("maps CoinGecko token batches into DexPriceObs with the same gating rules", async () => {
     vi.mocked(fetchCgTokensBatch).mockResolvedValueOnce([{
       id: "token-1",

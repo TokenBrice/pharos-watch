@@ -1,0 +1,266 @@
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
+import type { PriceValidationReferences } from "../../lib/price-validation";
+import { isUsdReferenceSymbol, normalizeDexSymbol } from "../../lib/dex-constants";
+import { isPlausibleDexObservationPrice } from "./price-sanity";
+import { mergePriceObservations, type SubgraphPriceObservation } from "./subgraph-helpers";
+import type {
+  AerodromeLookups,
+  DexPriceObs,
+  UniV3Lookups,
+} from "./types";
+import {
+  AERODROME_PAIR_QUERY,
+  AERODROME_SUBGRAPHS,
+  UNIV3_POOL_QUERY,
+  UNIV3_SUBGRAPHS,
+} from "./constants";
+import { buildPoolIdentity } from "./pool-identity";
+import { resolveTrackedStablecoinId } from "./token-resolution";
+import { runSubgraphFamily } from "./subgraph-family-runner";
+
+type UniV3SubgraphPool = {
+  id: string;
+  token0: { id: string; symbol: string };
+  token1: { id: string; symbol: string };
+  feeTier: string;
+  totalValueLockedUSD: string;
+  volumeUSD: string;
+  token0Price: string;
+  token1Price: string;
+  totalValueLockedToken0: string;
+  totalValueLockedToken1: string;
+};
+
+type AerodromeSubgraphPair = {
+  id: string;
+  token0: { id: string; symbol: string };
+  token1: { id: string; symbol: string };
+  reserve0: string;
+  reserve1: string;
+  reserveUSD: string;
+  token0Price: string;
+  token1Price: string;
+  isStable: boolean;
+};
+
+function mapTrackedSubgraphPriceObservations(config: {
+  chain: string;
+  protocol: "uniswap-v3" | "aerodrome";
+  tvl: number;
+  tokenEntries: Array<{ symbol: string; address: string; usdPrice: number }>;
+  chainAddressToId: Map<string, string>;
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>;
+  references?: PriceValidationReferences;
+  identity: ReturnType<typeof buildPoolIdentity>;
+}): SubgraphPriceObservation[] {
+  const mapped: SubgraphPriceObservation[] = [];
+  const {
+    chain,
+    protocol,
+    tvl,
+    tokenEntries,
+    chainAddressToId,
+    symbolToChainScopedIds,
+    references,
+    identity,
+  } = config;
+
+  for (const { symbol, address, usdPrice } of tokenEntries) {
+    const resolved = resolveTrackedStablecoinId(
+      { chain, address, symbol },
+      { chainAddressToId, symbolToChainScopedIds },
+    );
+    if (resolved.status !== "matched" || !resolved.stablecoinId) continue;
+    if (!isPlausibleDexObservationPrice(resolved.stablecoinId, usdPrice, references)) continue;
+    mapped.push({
+      stablecoinId: resolved.stablecoinId,
+      obs: {
+        price: usdPrice,
+        tvl,
+        chain,
+        protocol,
+        poolKey: identity.exactPoolKey ?? undefined,
+        derivedMatchKey: identity.derivedMatchKey ?? undefined,
+        identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
+        sourceFamily: "dl",
+      },
+    });
+  }
+
+  return mapped;
+}
+
+export async function fetchUniV3Data(
+  graphApiKey: string | null,
+  _symbolToIds: Map<string, string[]>,
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
+  chainAddressToId: Map<string, string>,
+  signal?: AbortSignal,
+  references?: PriceValidationReferences,
+): Promise<UniV3Lookups> {
+  return runSubgraphFamily<UniV3SubgraphPool, UniV3Lookups>({
+    graphApiKey,
+    signal,
+    subgraphs: UNIV3_SUBGRAPHS,
+    missingApiKeyMessage: "[dex-liquidity] No GRAPH_API_KEY, skipping Uni V3 subgraph enrichment",
+    familyLabel: "Uni V3 subgraph",
+    createLookups: () => ({
+      uniV3PoolFees: new Map<string, number>(),
+      uniV3SymbolFees: new Map<string, number>(),
+      uniV3PriceObs: new Map<string, DexPriceObs[]>(),
+    }),
+    buildConfig: (chain, subgraphUrl, combinedSignal, lookups) => ({
+      subgraphUrl,
+      sourceLabel: "Uni V3 subgraph",
+      chain,
+      buildQuery: () => UNIV3_POOL_QUERY,
+      signal: combinedSignal,
+      extractEntities: (data) => (data as { pools?: UniV3SubgraphPool[] } | undefined)?.pools,
+      mapEntity: (pool) => {
+        const feeTier = parseInt(pool.feeTier, 10);
+        if (isNaN(feeTier)) return [];
+        const tvl = parseFloat(pool.totalValueLockedUSD);
+
+        lookups.uniV3PoolFees.set(`${chain}:${pool.id.toLowerCase()}`, feeTier);
+
+        const syms = [normalizeDexSymbol(pool.token0.symbol), normalizeDexSymbol(pool.token1.symbol)].sort().join(":");
+        const symKey = `${chain}:${syms}`;
+        const existing = lookups.uniV3SymbolFees.get(symKey);
+        if (existing == null || feeTier < existing) {
+          lookups.uniV3SymbolFees.set(symKey, feeTier);
+        }
+
+        if (isNaN(tvl) || tvl < DEX_PRICE_OBSERVATION_MIN_TVL_USD) return [];
+
+        const token0Price = parseFloat(pool.token0Price);
+        const token1Price = parseFloat(pool.token1Price);
+        if (isNaN(token0Price) || isNaN(token1Price) || token0Price <= 0 || token1Price <= 0) return [];
+
+        const sym0 = normalizeDexSymbol(pool.token0.symbol);
+        const sym1 = normalizeDexSymbol(pool.token1.symbol);
+        const isRef0 = isUsdReferenceSymbol(pool.token0.symbol);
+        const isRef1 = isUsdReferenceSymbol(pool.token1.symbol);
+        if (!isRef0 && !isRef1) return [];
+
+        const pricedTokens: { symbol: string; address: string; usdPrice: number }[] = [];
+        if (isRef1) {
+          pricedTokens.push({ symbol: sym0, address: pool.token0.id, usdPrice: token1Price });
+        }
+        if (isRef0) {
+          pricedTokens.push({ symbol: sym1, address: pool.token1.id, usdPrice: token0Price });
+        }
+
+        const identity = buildPoolIdentity({
+          chain,
+          protocol: "uniswap-v3",
+          poolAddressOrId: pool.id,
+          tokenAddresses: [pool.token0.id, pool.token1.id],
+          feeTierBps: feeTier / 100,
+        });
+        return mapTrackedSubgraphPriceObservations({
+          chain,
+          protocol: "uniswap-v3",
+          tvl,
+          tokenEntries: pricedTokens,
+          chainAddressToId,
+          symbolToChainScopedIds,
+          references,
+          identity,
+        });
+      },
+    }),
+    handleResult: (lookups, _chain, result) => {
+      mergePriceObservations(lookups.uniV3PriceObs, result.observations);
+    },
+    buildChainSummary: (chain, result) =>
+      `[dex-liquidity] Indexed ${result.entityCount} Uni V3 pools from ${chain} subgraph (${result.observationCount} price obs)`,
+    buildFinalSummary: (lookups) =>
+      `[dex-liquidity] Collected ${lookups.uniV3PriceObs.size} coins with Uni V3 price observations`,
+  });
+}
+
+export async function fetchAerodromeData(
+  graphApiKey: string | null,
+  _symbolToIds: Map<string, string[]>,
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
+  chainAddressToId: Map<string, string>,
+  signal?: AbortSignal,
+  references?: PriceValidationReferences,
+): Promise<AerodromeLookups> {
+  return runSubgraphFamily<AerodromeSubgraphPair, AerodromeLookups>({
+    graphApiKey,
+    signal,
+    subgraphs: AERODROME_SUBGRAPHS,
+    familyLabel: "Aerodrome subgraph",
+    createLookups: () => ({
+      aerodromePriceObs: new Map<string, DexPriceObs[]>(),
+      aerodromeIsStable: new Map<string, boolean>(),
+    }),
+    buildConfig: (chain, subgraphUrl, combinedSignal, lookups) => ({
+      subgraphUrl,
+      sourceLabel: "Aerodrome subgraph",
+      chain,
+      buildQuery: () => AERODROME_PAIR_QUERY,
+      signal: combinedSignal,
+      extractEntities: (data) => (data as { pairs?: AerodromeSubgraphPair[] } | undefined)?.pairs,
+      mapEntity: (pair) => {
+        const reserveUSD = parseFloat(pair.reserveUSD);
+        if (isNaN(reserveUSD) || reserveUSD < DEX_PRICE_OBSERVATION_MIN_TVL_USD) return [];
+
+        lookups.aerodromeIsStable.set(`${chain}:${pair.id.toLowerCase()}`, pair.isStable);
+
+        const reserve0 = parseFloat(pair.reserve0);
+        const reserve1 = parseFloat(pair.reserve1);
+        const token0Price = parseFloat(pair.token0Price);
+        const token1Price = parseFloat(pair.token1Price);
+        if (isNaN(reserve0) || isNaN(reserve1) || reserve0 <= 0 || reserve1 <= 0) return [];
+        if (isNaN(token0Price) || isNaN(token1Price) || token0Price <= 0 || token1Price <= 0) return [];
+
+        const denom = reserve0 * token1Price + reserve1;
+        if (denom <= 0) return [];
+        const price1Usd = reserveUSD / denom;
+        const price0Usd = token1Price * price1Usd;
+        const reserve0Usd = reserve0 * price0Usd;
+        const reserve1Usd = reserve1 * price1Usd;
+
+        const minReserve = Math.min(reserve0Usd, reserve1Usd);
+        const maxReserve = Math.max(reserve0Usd, reserve1Usd);
+        const balanceRatio = maxReserve > 0 ? minReserve / maxReserve : 0;
+        if (balanceRatio < 0.3) return [];
+
+        const sym0 = normalizeDexSymbol(pair.token0.symbol);
+        const sym1 = normalizeDexSymbol(pair.token1.symbol);
+        const pricedTokens = [
+          { symbol: sym0, address: pair.token0.id, usdPrice: price0Usd },
+          { symbol: sym1, address: pair.token1.id, usdPrice: price1Usd },
+        ];
+
+        const identity = buildPoolIdentity({
+          chain,
+          protocol: "aerodrome",
+          poolAddressOrId: pair.id,
+          tokenAddresses: [pair.token0.id, pair.token1.id],
+          isStable: pair.isStable,
+        });
+        return mapTrackedSubgraphPriceObservations({
+          chain,
+          protocol: "aerodrome",
+          tvl: reserveUSD,
+          tokenEntries: pricedTokens,
+          chainAddressToId,
+          symbolToChainScopedIds,
+          references,
+          identity,
+        });
+      },
+    }),
+    handleResult: (lookups, _chain, result) => {
+      mergePriceObservations(lookups.aerodromePriceObs, result.observations);
+    },
+    buildChainSummary: (chain, result) =>
+      `[dex-liquidity] Indexed ${result.entityCount} Aerodrome pairs from ${chain} subgraph (${result.observationCount} price obs)`,
+    buildFinalSummary: (lookups) =>
+      `[dex-liquidity] Collected ${lookups.aerodromePriceObs.size} coins with Aerodrome price observations, ` +
+      `${lookups.aerodromeIsStable.size} pool stability flags`,
+  });
+}
