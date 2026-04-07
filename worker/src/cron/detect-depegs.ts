@@ -11,6 +11,8 @@ import { throwIfAborted } from "../lib/abort";
 import {
   buildInsertDepegEventStmt,
   classifyPrimaryDepegTrust,
+  hasFreshMultiSourcePrimaryAgreement,
+  isAuthoritativeDepegPegReference,
   isTrustedDexPriceRow,
   loadDexPoolChallengers,
   loadDexPriceRows,
@@ -121,6 +123,7 @@ interface LoopContext {
   dexRecoveryChallenged: boolean;
   dexSupportsDirection: boolean;
   dexSupportsRecovery: boolean;
+  primarySupportsRecovery: boolean;
   requiresConfirmation: boolean;
   pendingReason: PendingDepegReason;
   buildLiveEvent: (
@@ -271,12 +274,12 @@ function handleRecovery(
   seen: Set<number>,
 ): D1PreparedStatement[] {
   const {
-    db, now, asset, price, threshold, primaryTrust, dexRow, dexAbsBps,
+    db, now, asset, price, primarySupportsRecovery, threshold, dexRow, dexAbsBps,
     dexRecoveryProtocolCount, dexRecoveryChallenged, dexSupportsRecovery,
   } = ctx;
   const stmts: D1PreparedStatement[] = [];
 
-  if (primaryTrust === "authoritative") {
+  if (primarySupportsRecovery) {
     // Price recovered — close the event
     stmts.push(
       db.prepare(
@@ -312,7 +315,11 @@ export async function detectDepegEvents(
   signal?: AbortSignal,
 ): Promise<void> {
   throwIfAborted(signal);
-  const { rates: pegRates } = derivePegRates(assets, PSI_ELIGIBLE_META_BY_ID, fxFallbackRates);
+  const {
+    rates: pegRates,
+    sources: pegRateSources,
+    counts: pegRateCounts,
+  } = derivePegRates(assets, PSI_ELIGIBLE_META_BY_ID, fxFallbackRates);
   const syncStart = Math.floor(Date.now() / 1000);
   const now = syncStart;
 
@@ -399,13 +406,30 @@ export async function detectDepegEvents(
     const supply = sumPegBuckets(asset.circulating);
     if (supply < DEPEG_EVENT_MIN_SUPPLY_USD) continue;
 
+    const existing = openEvents.get(asset.id);
+    const pegReferenceIsAuthoritative = isAuthoritativeDepegPegReference({
+      pegCurrency: meta.flags.pegCurrency,
+      pegType: asset.pegType,
+      pegRateSource: asset.pegType ? pegRateSources[asset.pegType] : undefined,
+      pegRateContributorCount: asset.pegType ? pegRateCounts[asset.pegType] : undefined,
+    });
+    if (!pegReferenceIsAuthoritative) {
+      if (existing) {
+        seen.add(existing.id);
+      }
+      console.warn(
+        `[depeg] Skipped live-state mutation for ${asset.symbol}: ` +
+        `thin ${meta.flags.pegCurrency} peg reference lacks FX fallback`
+      );
+      continue;
+    }
+
     const pegRef = getPegReference(asset.pegType, pegRates, meta.commodityOunces);
     if (!Number.isFinite(pegRef) || pegRef <= 0) continue;
 
     const bps = Math.round(((price / pegRef) - 1) * 10000);
     const absBps = Math.abs(bps);
     const direction: "above" | "below" = bps >= 0 ? "above" : "below";
-    const existing = openEvents.get(asset.id);
     const threshold = getDepegThresholdBps(asset.pegType);
     const dexRow = dexPriceRows.get(asset.id);
     const dexBps = dexRow && isTrustedDexPriceRow(dexRow, now, "depeg")
@@ -435,6 +459,9 @@ export async function detectDepegEvents(
       supply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD ||
       primaryTrust === "confirm_required" ||
       absBps >= DEPEG_EXTREME_MOVE_BPS;
+    const primarySupportsRecovery =
+      primaryTrust === "authoritative" ||
+      hasFreshMultiSourcePrimaryAgreement(asset, now);
     const pendingReason: PendingDepegReason =
       absBps >= DEPEG_EXTREME_MOVE_BPS
         ? "extreme-move"
@@ -482,7 +509,7 @@ export async function detectDepegEvents(
       db, now, asset, price, bps, absBps, direction, threshold,
       pegRef, supply, primaryTrust, dexRow, dexAbsBps,
       dexDirectionProtocolCount, dexRecoveryProtocolCount, dexRecoveryChallenged,
-      dexSupportsDirection, dexSupportsRecovery, requiresConfirmation, pendingReason,
+      dexSupportsDirection, dexSupportsRecovery, primarySupportsRecovery, requiresConfirmation, pendingReason,
       buildLiveEvent, buildInsertPendingStmt,
     };
 

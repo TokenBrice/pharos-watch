@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { classifyPrimaryDepegTrust } from "../depeg-helpers";
+import {
+  classifyPrimaryDepegTrust,
+  hasFreshMultiSourcePrimaryAgreement,
+  isAuthoritativeDepegPegReference,
+} from "../depeg-helpers";
 
 describe("classifyPrimaryDepegTrust", () => {
   const nowSec = 1_700_000_000;
@@ -95,5 +99,80 @@ describe("classifyPrimaryDepegTrust", () => {
       priceObservedAt: nowSec - 60,
       agreeSources: ["pyth"],
     }, nowSec)).toBe("authoritative");
+  });
+});
+
+describe("hasFreshMultiSourcePrimaryAgreement", () => {
+  const nowSec = 1_700_000_000;
+
+  it("accepts fresh corroborated soft-source agreement for recovery handling", () => {
+    expect(hasFreshMultiSourcePrimaryAgreement({
+      price: 0.999,
+      priceSource: "coingecko+defillama-list",
+      priceConfidence: "single-source",
+      priceObservedAt: nowSec - 60,
+      agreeSources: ["coingecko", "defillama-list"],
+    }, nowSec)).toBe(true);
+  });
+
+  it("rejects stale or low-confidence price clusters", () => {
+    expect(hasFreshMultiSourcePrimaryAgreement({
+      price: 0.999,
+      priceSource: "coingecko+defillama-list",
+      priceConfidence: "low",
+      priceObservedAt: nowSec - 60,
+      agreeSources: ["coingecko", "defillama-list"],
+    }, nowSec)).toBe(false);
+
+    expect(hasFreshMultiSourcePrimaryAgreement({
+      price: 0.999,
+      priceSource: "coingecko+defillama-list",
+      priceConfidence: "single-source",
+      priceObservedAt: nowSec - (31 * 60),
+      agreeSources: ["coingecko", "defillama-list"],
+    }, nowSec)).toBe(false);
+  });
+});
+
+describe("isAuthoritativeDepegPegReference", () => {
+  it("rejects thin fiat peer medians without an FX fallback", () => {
+    expect(isAuthoritativeDepegPegReference({
+      pegCurrency: "BRL",
+      pegType: "peggedREAL",
+      pegRateSource: "median",
+      pegRateContributorCount: 2,
+    })).toBe(false);
+  });
+
+  it("accepts fallback-backed thin fiat references and robust medians", () => {
+    expect(isAuthoritativeDepegPegReference({
+      pegCurrency: "BRL",
+      pegType: "peggedREAL",
+      pegRateSource: "fallback",
+      pegRateContributorCount: 2,
+    })).toBe(true);
+
+    expect(isAuthoritativeDepegPegReference({
+      pegCurrency: "EUR",
+      pegType: "peggedEUR",
+      pegRateSource: "median",
+      pegRateContributorCount: 4,
+    })).toBe(true);
+  });
+
+  it("leaves USD and commodity references unchanged", () => {
+    expect(isAuthoritativeDepegPegReference({
+      pegCurrency: "USD",
+      pegType: "peggedUSD",
+      pegRateSource: "median",
+      pegRateContributorCount: 1,
+    })).toBe(true);
+
+    expect(isAuthoritativeDepegPegReference({
+      pegCurrency: "GOLD",
+      pegType: "peggedGOLD",
+      pegRateSource: "median",
+      pegRateContributorCount: 1,
+    })).toBe(true);
   });
 });

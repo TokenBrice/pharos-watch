@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "5.3",
+  currentVersion: "5.4",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
+  {
+    version: "5.4",
+    title: "Thin-fiat peg-reference fail-closed and corroborated primary recovery",
+    date: "2026-04-07",
+    effectiveAt: 1775520000,
+    summary:
+      "Live depeg state now fails closed when thin non-USD fiat peg references lose their FX fallback, while fresh multi-source primary agreement can retire stale live rows once the coin is back inside threshold.",
+    impact: [
+      "Thin fiat peg groups with fewer than 3 live contributors now require cached FX fallback before they can open, update, or resolve live depeg state",
+      "Fresh non-cached multi-source primary agreement can now close an already-open live event after recovery even if that source mix is still too soft to open new events directly",
+      "Prevents BRL-style peer-median false positives from both opening new live rows and lingering as active depegs after the peg reference normalizes",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.3",
     title: "DEWS flow baseline continuity on quiet 24-hour windows",

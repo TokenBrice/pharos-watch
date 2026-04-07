@@ -1,8 +1,16 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v5.3` (2026-02-18 -> 2026-04-06).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v5.4` (2026-02-18 -> 2026-04-07).
 
 ---
+## v5.4 — Thin-fiat peg-reference fail-closed and corroborated primary recovery (Apr 7, 2026)
+
+**Commit:** `unreleased`
+
+- Thin non-USD fiat peg groups with fewer than 3 contributors now fail closed for live depeg mutations unless cached FX fallback is available
+- Fresh non-cached multi-source primary agreement can now retire an already-open live row once the coin is back inside threshold
+- Prevents BRL-style peer-median reference glitches from both opening false live rows and leaving them stuck open after FX fallback normalizes
+
 ## v5.3 — DEWS flow baseline continuity on quiet 24-hour windows (Apr 6, 2026)
 
 **Commit:** `unreleased`

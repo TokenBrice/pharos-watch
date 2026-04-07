@@ -13,6 +13,7 @@ export type PegRateSource = "median" | "fallback";
 export interface PegRatesResult {
   rates: Record<string, number>;
   sources: Record<string, PegRateSource>;
+  counts: Record<string, number>;
 }
 
 /**
@@ -67,6 +68,7 @@ export function derivePegRates(
 
   const rates: Record<string, number> = {};
   const sources: Record<string, PegRateSource> = {};
+  const counts: Record<string, number> = {};
   for (const [peg, prices] of Object.entries(groups)) {
     // Guard: skip empty groups (shouldn't happen since we only push non-empty,
     // but defends the median indexing below against an empty array).
@@ -87,18 +89,20 @@ export function derivePegRates(
     if (fallback && prices.length < 3) {
       rates[peg] = fallback;
       sources[peg] = "fallback";
+      counts[peg] = prices.length;
       continue;
     }
 
     rates[peg] = median;
     sources[peg] = "median";
+    counts[peg] = prices.length;
   }
 
   // Fallback: USD is always 1
   if (!rates["peggedUSD"]) rates["peggedUSD"] = 1;
   if (!sources["peggedUSD"]) sources["peggedUSD"] = "median";
 
-  return { rates, sources };
+  return { rates, sources, counts };
 }
 
 /**

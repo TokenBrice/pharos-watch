@@ -1,4 +1,5 @@
 import type { DepegEvent } from "@shared/types/market";
+import type { PegRateSource } from "@shared/lib/peg-rates";
 import {
   DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
   DEX_FRESHNESS_SEC,
@@ -57,6 +58,30 @@ interface PrimaryPriceTrustInput {
   priceObservedAt?: number | null;
   priceObservedAtMode?: PriceObservedAtMode | null;
   agreeSources?: string[] | null;
+}
+
+interface PegReferenceTrustInput {
+  pegCurrency?: string | null;
+  pegType?: string | null;
+  pegRateSource?: PegRateSource | null;
+  pegRateContributorCount?: number | null;
+}
+
+function getPrimaryPriceAgeSec(
+  input: Pick<PrimaryPriceTrustInput, "priceObservedAt" | "priceUpdatedAt">,
+  nowSec: number,
+): number {
+  return typeof input.priceObservedAt === "number" && Number.isFinite(input.priceObservedAt)
+    ? Math.max(0, nowSec - input.priceObservedAt)
+    : typeof input.priceUpdatedAt === "number" && Number.isFinite(input.priceUpdatedAt)
+      ? Math.max(0, nowSec - input.priceUpdatedAt)
+      : Number.POSITIVE_INFINITY;
+}
+
+function getPrimaryTrustSources(input: Pick<PrimaryPriceTrustInput, "agreeSources" | "priceSource">): string[] {
+  return input.agreeSources && input.agreeSources.length > 0
+    ? input.agreeSources
+    : splitCompositePriceSource(input.priceSource ?? "");
 }
 
 export async function loadDexPriceRows(db: D1Database): Promise<Map<string, DexPriceRow>> {
@@ -205,6 +230,46 @@ export function isTrustedDexPriceRow(
   return (nowSec - row.updated_at) < maxAgeSec && row.source_total_tvl >= minTvlUsd;
 }
 
+export function hasFreshMultiSourcePrimaryAgreement(
+  input: PrimaryPriceTrustInput,
+  nowSec: number,
+): boolean {
+  if (input.price == null || !Number.isFinite(input.price) || input.price <= 0) {
+    return false;
+  }
+
+  if (
+    input.priceSource === "cached" ||
+    input.priceConfidence === "fallback" ||
+    input.priceConfidence === "low" ||
+    getPrimaryPriceAgeSec(input, nowSec) > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC
+  ) {
+    return false;
+  }
+
+  return getPrimaryTrustSources(input).length >= 2;
+}
+
+export function isAuthoritativeDepegPegReference(input: PegReferenceTrustInput): boolean {
+  if (!input.pegType || input.pegType === "peggedUSD") {
+    return true;
+  }
+
+  const pegCurrency = input.pegCurrency ?? null;
+  if (
+    pegCurrency == null ||
+    pegCurrency === "USD" ||
+    pegCurrency === "VAR" ||
+    pegCurrency === "OTHER" ||
+    pegCurrency === "GOLD" ||
+    pegCurrency === "SILVER"
+  ) {
+    return true;
+  }
+
+  return input.pegRateSource === "fallback" || (input.pegRateContributorCount ?? 0) >= 3;
+}
+
 export function classifyPrimaryDepegTrust(
   input: PrimaryPriceTrustInput,
   nowSec: number,
@@ -213,16 +278,8 @@ export function classifyPrimaryDepegTrust(
     return "unusable";
   }
 
-  const ageSec =
-    typeof input.priceObservedAt === "number" && Number.isFinite(input.priceObservedAt)
-      ? Math.max(0, nowSec - input.priceObservedAt)
-      : typeof input.priceUpdatedAt === "number" && Number.isFinite(input.priceUpdatedAt)
-        ? Math.max(0, nowSec - input.priceUpdatedAt)
-      : Number.POSITIVE_INFINITY;
-
-  const trustSources = input.agreeSources && input.agreeSources.length > 0
-    ? input.agreeSources
-    : splitCompositePriceSource(input.priceSource ?? "");
+  const ageSec = getPrimaryPriceAgeSec(input, nowSec);
+  const trustSources = getPrimaryTrustSources(input);
 
   if (
     input.priceSource === "cached" ||

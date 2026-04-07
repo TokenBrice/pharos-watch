@@ -41,6 +41,9 @@ export function PegScoreDewsMethodologySection() {
                 DEX cross-validation uses explicit trust gates: detection and pending confirmation only trust fresh DEX rows with at least $1M of aggregate source TVL, while the public DEX Price Check UI requires a lighter but still non-trivial floor of $250K. Aggregate DEX rows also need deeper corroboration before they can mutate live event state: recoveries/suppression now require at least two protocol-level DEX groups inside threshold, and ambiguous-primary recoveries are vetoed when a large challenger pool still shows the old depeg direction. For already-open depegs, same-direction aggregate DEX disagreement is advisory rather than a synthetic recovery signal, so events stay continuous until the normal recovery path confirms the coin is back inside threshold.
               </p>
               <p>
+                Thin non-USD fiat peg groups also fail closed when the live peg reference falls back to a 1&ndash;2 coin peer median instead of cached FX. Once a live row is already open, a fresh non-cached multi-source primary cluster can retire it after recovery even if that source mix is still too soft to open brand-new events directly.
+              </p>
+              <p>
                 Live depeg events still require at least $1M of current circulating supply. Below that floor, the detail page may still show the current price deviation from peg, but it labels live event coverage as limited instead of implying the coin held peg.
               </p>
               <p>

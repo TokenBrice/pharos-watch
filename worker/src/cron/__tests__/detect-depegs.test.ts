@@ -7,19 +7,25 @@ vi.mock("@shared/lib/psi-eligible", () => ({
     { id: "usdt-tether", symbol: "USDT", pegType: "peggedUSD", geckoId: "tether", flags: { navToken: false }, commodityOunces: undefined },
     { id: "usdc-circle", symbol: "USDC", pegType: "peggedUSD", geckoId: "usd-coin", flags: { navToken: false }, commodityOunces: undefined },
     { id: "eurc-circle", symbol: "EUROC", pegType: "peggedEUR", geckoId: "euro-coin", flags: { navToken: false }, commodityOunces: undefined },
+    { id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", geckoId: "brz", flags: { navToken: false, pegCurrency: "BRL" }, commodityOunces: undefined },
     { id: "nav-token-test", symbol: "NAVT", pegType: "peggedUSD", geckoId: "nav-token", flags: { navToken: true }, commodityOunces: undefined },
   ],
   PSI_ELIGIBLE_META_BY_ID: new Map([
-    ["usdt-tether", { id: "usdt-tether", symbol: "USDT", pegType: "peggedUSD", geckoId: "tether", flags: { navToken: false }, commodityOunces: undefined }],
-    ["usdc-circle", { id: "usdc-circle", symbol: "USDC", pegType: "peggedUSD", geckoId: "usd-coin", flags: { navToken: false }, commodityOunces: undefined }],
-    ["eurc-circle", { id: "eurc-circle", symbol: "EUROC", pegType: "peggedEUR", geckoId: "euro-coin", flags: { navToken: false }, commodityOunces: undefined }],
-    ["nav-token-test", { id: "nav-token-test", symbol: "NAVT", pegType: "peggedUSD", geckoId: "nav-token", flags: { navToken: true }, commodityOunces: undefined }],
+    ["usdt-tether", { id: "usdt-tether", symbol: "USDT", pegType: "peggedUSD", geckoId: "tether", flags: { navToken: false, pegCurrency: "USD" }, commodityOunces: undefined }],
+    ["usdc-circle", { id: "usdc-circle", symbol: "USDC", pegType: "peggedUSD", geckoId: "usd-coin", flags: { navToken: false, pegCurrency: "USD" }, commodityOunces: undefined }],
+    ["eurc-circle", { id: "eurc-circle", symbol: "EUROC", pegType: "peggedEUR", geckoId: "euro-coin", flags: { navToken: false, pegCurrency: "EUR" }, commodityOunces: undefined }],
+    ["brz-transfero", { id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", geckoId: "brz", flags: { navToken: false, pegCurrency: "BRL" }, commodityOunces: undefined }],
+    ["nav-token-test", { id: "nav-token-test", symbol: "NAVT", pegType: "peggedUSD", geckoId: "nav-token", flags: { navToken: true, pegCurrency: "USD" }, commodityOunces: undefined }],
   ]),
 }));
 
 // Stub peg-rates
 vi.mock("@shared/lib/peg-rates", () => ({
-  derivePegRates: () => ({ rates: { peggedUSD: 1, peggedEUR: 1.08 } }),
+  derivePegRates: () => ({
+    rates: { peggedUSD: 1, peggedEUR: 1.08, peggedREAL: 0.18765951 },
+    sources: { peggedUSD: "median", peggedEUR: "median", peggedREAL: "median" },
+    counts: { peggedUSD: 4, peggedEUR: 4, peggedREAL: 2 },
+  }),
   getPegReference: (pegType: string, rates: Record<string, number>) => rates[pegType] ?? 1,
 }));
 
@@ -43,6 +49,9 @@ function makeAsset(overrides: {
   priceSource?: string;
   priceConfidence?: "high" | "single-source" | "low" | "fallback";
   priceUpdatedAt?: number;
+  priceObservedAt?: number;
+  priceObservedAtMode?: "upstream" | "local_fetch" | "unknown" | null;
+  agreeSources?: string[];
 }) {
   return {
     id: overrides.id,
@@ -51,6 +60,9 @@ function makeAsset(overrides: {
     priceSource: overrides.priceSource ?? "pyth",
     priceConfidence: overrides.priceConfidence ?? "single-source",
     priceUpdatedAt: overrides.priceUpdatedAt ?? Math.floor(Date.now() / 1000),
+    priceObservedAt: overrides.priceObservedAt,
+    priceObservedAtMode: overrides.priceObservedAtMode,
+    agreeSources: overrides.agreeSources,
     pegType: overrides.pegType ?? "peggedUSD",
     circulating: overrides.circulating ?? { ethereum: 50_000_000 },
   };
@@ -226,6 +238,47 @@ describe("detectDepegEvents", () => {
 
     const closures = preparedSqls.filter(s =>
       s.includes("UPDATE depeg_events SET ended_at")
+    );
+    expect(closures.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("closes a stale live event when fresh multi-source primary agreement is back inside threshold", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const preparedSqls: string[] = [];
+    const db = mockD1([
+      {
+        match: "depeg_events",
+        rows: [{
+          id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
+          direction: "below", peak_deviation_bps: -220, started_at: now - 3600,
+          start_price: 0.978, peak_price: 0.978, peg_reference: 1,
+          recovery_price: null, ended_at: null, source: "live",
+        }],
+      },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      preparedSqls.push(sql);
+      return origPrepare(sql);
+    }) as typeof db.prepare;
+
+    await detectDepegEvents(db, [
+      makeAsset({
+        id: "usdt-tether",
+        symbol: "USDT",
+        pegType: "peggedUSD",
+        price: 0.9992,
+        priceSource: "coingecko+defillama-list",
+        priceConfidence: "single-source",
+        priceObservedAt: now - 60,
+        priceObservedAtMode: "unknown",
+        agreeSources: ["coingecko", "defillama-list"],
+      }),
+    ]);
+
+    const closures = preparedSqls.filter((sql) =>
+      sql.includes("UPDATE depeg_events SET ended_at")
     );
     expect(closures.length).toBeGreaterThanOrEqual(1);
   });
@@ -446,6 +499,35 @@ describe("detectDepegEvents", () => {
 
     const inserts = preparedSqls.filter((sql) => sql.includes("INSERT INTO depeg_events"));
     expect(inserts.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("fails closed for thin fiat peg references that only have a peer median", async () => {
+    const preparedSqls: string[] = [];
+    const db = mockD1([
+      { match: "depeg_events", rows: [] },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      preparedSqls.push(sql);
+      return origPrepare(sql);
+    }) as typeof db.prepare;
+
+    await detectDepegEvents(db, [
+      makeAsset({
+        id: "brz-transfero",
+        symbol: "BRZ",
+        pegType: "peggedREAL",
+        price: 0.190587,
+        priceSource: "pyth",
+        priceConfidence: "single-source",
+      }),
+    ]);
+
+    const inserts = preparedSqls.filter((sql) =>
+      sql.includes("INSERT INTO depeg_events") || sql.includes("INSERT INTO depeg_pending")
+    );
+    expect(inserts).toHaveLength(0);
   });
 
   it("skips NAV tokens", async () => {
@@ -864,7 +946,7 @@ describe("detectDepegEvents", () => {
     }) as typeof db.prepare;
 
     await detectDepegEvents(db, [
-      {
+      makeAsset({
         id: "usdt-tether",
         symbol: "USDT",
         pegType: "peggedUSD",
@@ -873,7 +955,7 @@ describe("detectDepegEvents", () => {
         priceConfidence: "single-source",
         priceUpdatedAt: now,
         circulating: { ethereum: 10_000_000 },
-      } as ReturnType<typeof makeAsset>,
+      }),
     ]);
 
     const orphanClosures = preparedSqls.filter((sql) =>

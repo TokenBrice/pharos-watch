@@ -110,6 +110,7 @@ Validation gates (skip if any fail):
 - Price valid: non-null, is a number, not NaN, > 0
 - Supply >= $1M (via `sumPegBuckets`) for live event recording
 - Peg reference valid: finite and > 0
+- Non-USD fiat peg references only mutate live state when they come from cached FX fallback or a median built from at least 3 live contributors; thin peer medians fail closed for that cycle
 
 Primary-price trust gates:
 
@@ -135,6 +136,7 @@ direction = bps >= 0 ? "above" : "below"
 
 **Path B -- Deviation >= threshold AND no event open**
 
+- If the peg reference is a thin non-USD fiat peer median without FX fallback: skip live-state mutation for this cycle
 - If supply >= $1B: insert into `depeg_pending` for multi-source confirmation (`reason = "large-cap"` unless another reason is more specific)
 - If primary trust is `confirm_required`: insert into `depeg_pending` with `reason = "low-confidence"`
 - If `abs(bps) >= 5000`: route through the extreme-move lane (`reason = "extreme-move"`). Corroborated trusted DEX depeg agreement may still promote the move immediately for non-large-cap coins
@@ -142,8 +144,8 @@ direction = bps >= 0 ? "above" : "below"
 
 **Path C -- Deviation < threshold AND event open**
 
-- Close immediately only when the primary price is authoritative
-- If the primary input is ambiguous, close only when a trusted aggregate DEX row also shows recovery, at least 2 protocol-level DEX groups are also back inside threshold, and no qualifying challenger pool still shows the old depeg direction
+- Close immediately when the primary price is authoritative, or when a fresh non-cached multi-source primary cluster is already back inside threshold
+- If the remaining primary input is ambiguous, close only when a trusted aggregate DEX row also shows recovery, at least 2 protocol-level DEX groups are also back inside threshold, and no qualifying challenger pool still shows the old depeg direction
 - Otherwise keep the event open rather than letting cached/low-confidence prices silently resolve it
 
 ### Orphan Cleanup
