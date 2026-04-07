@@ -435,11 +435,3 @@ export async function fetchMarketBackfillPriceSeries(
     diagnostics,
   };
 }
-
-async function fetchMarketBackfillPrices(
-  meta: StablecoinMeta,
-  geckoId: string,
-): Promise<PricePoint[] | null> {
-  const result = await fetchMarketBackfillPriceSeries(meta, geckoId);
-  return result.prices;
-}
