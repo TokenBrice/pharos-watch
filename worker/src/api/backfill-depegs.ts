@@ -210,6 +210,30 @@ function existingRowOverlapsReplayWindow(
   return true;
 }
 
+function buildBackfillDeleteStmt(
+  db: D1Database,
+  stablecoinId: string,
+  replayWindow: BackfillReplayWindow | null,
+): D1PreparedStatement {
+  if (!replayWindow) {
+    return db
+      .prepare("DELETE FROM depeg_events WHERE stablecoin_id = ? AND source = 'backfill'")
+      .bind(stablecoinId);
+  }
+
+  let sql = "DELETE FROM depeg_events WHERE stablecoin_id = ? AND source = 'backfill'";
+  const binds: unknown[] = [stablecoinId];
+  if (replayWindow.compareStartSec != null) {
+    sql += " AND COALESCE(ended_at, started_at) >= ?";
+    binds.push(replayWindow.compareStartSec);
+  }
+  if (replayWindow.compareEndSec != null) {
+    sql += " AND started_at <= ?";
+    binds.push(replayWindow.compareEndSec);
+  }
+  return db.prepare(sql).bind(...binds);
+}
+
 export async function handleBackfillDepegs(
   db: D1Database,
   url: URL,
@@ -235,9 +259,6 @@ export async function handleBackfillDepegs(
         requestedStartDay > requestedEndDay
       ) {
         return errorResponse(400, "Invalid startDay/endDay: startDay must be <= endDay.");
-      }
-      if (hasExplicitReplayWindow && !dryRun) {
-        return errorResponse(400, "startDay/endDay are currently supported only with dry-run=true.");
       }
       const replayWindow = hasExplicitReplayWindow
         ? buildReplayWindow(requestedStartDay, requestedEndDay)
@@ -531,9 +552,7 @@ export async function handleBackfillDepegs(
 
           // Only replace backfill-sourced events; preserve live-cron-detected events
           // (live cron catches brief intraday depegs that daily backfill data misses).
-          const deleteStmt = db
-            .prepare("DELETE FROM depeg_events WHERE stablecoin_id = ? AND source = 'backfill'")
-            .bind(meta.id);
+          const deleteStmt = buildBackfillDeleteStmt(db, meta.id, replayWindow);
           if (events.length > 0) {
             const insertStmts = events.map((e) =>
               db
