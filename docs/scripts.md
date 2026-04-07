@@ -101,6 +101,8 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 
 - Uses the prod D1 database directly through Wrangler plus Access-protected ops endpoints for PSI recomputation.
 - `--dry-run` compares stored `source='backfill'` rows against the current replay policy without mutating production.
+- Replays each target from its full historical supply or curated launch-date anchor rather than from the currently stored backfill-event window, which avoids split/merge oscillation on sparse non-USD histories.
+- `--existing-window` is the explicit fallback for timeout-prone assets: it constrains replay to the currently stored backfill window plus a 30-day pad on each side.
 - Live mode deletes and rewrites non-USD non-commodity backfill rows under canonical stablecoin IDs, folding known legacy aliases such as `300 -> tryb-bilira` and `cg-idrt -> idrt-rupiah-token`.
 - Known dead orphan IDs such as `eura-angle` are purged instead of replayed back into the active depeg history surface.
 

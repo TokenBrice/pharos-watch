@@ -38,8 +38,8 @@ import { buildPriceReasonablenessOptions } from "../src/lib/price-validation";
 
 const DB_NAME = "stablecoin-db";
 const SQL_BATCH_SIZE = 200;
-const REPLAY_CONTEXT_DAYS = 30;
 const DRY_RUN = process.argv.includes("--dry-run");
+const USE_EXISTING_WINDOW = process.argv.includes("--existing-window");
 const TARGET_IDS = parseListArg("--stablecoin");
 const TARGET_PEGS = parseListArg("--peg");
 const REPO_ROOT = resolve(fileURLToPath(new URL("../..", import.meta.url)));
@@ -73,6 +73,8 @@ interface PreparedCoin {
   geckoId: string;
   supplyByDate: Array<{ ts: number; supply: number }>;
   sourceIds: string[];
+  historicalStartDate: string;
+  deferHistoricalFxPrefetch: boolean;
 }
 
 interface PurgeTarget {
@@ -95,6 +97,13 @@ interface RepairSummary {
   quoteMode: "usd" | "native-peg" | null;
   quoteCurrency: string | null;
   marketSourcesUsed: string[];
+}
+
+function parseLaunchDateSec(raw: string | undefined): number | null {
+  if (!raw) return null;
+  const parsedMs = Date.parse(`${raw}T00:00:00Z`);
+  if (!Number.isFinite(parsedMs)) return null;
+  return Math.floor(parsedMs / 1000);
 }
 
 function parseListArg(flag: string): Set<string> | null {
@@ -478,11 +487,9 @@ async function main(): Promise<void> {
   const targetCounts = d1QueryParsed<{
     stablecoin_id: string;
     cnt: number;
-    min_started_at: number | null;
-    max_ended_at: number | null;
   }>(
     [
-      "SELECT stablecoin_id, COUNT(*) as cnt, MIN(started_at) as min_started_at, MAX(COALESCE(ended_at, started_at)) as max_ended_at",
+      "SELECT stablecoin_id, COUNT(*) as cnt",
       "FROM depeg_events",
       "WHERE source = 'backfill'",
       "AND peg_type NOT IN ('peggedUSD', 'peggedGOLD', 'peggedSILVER')",
@@ -490,8 +497,6 @@ async function main(): Promise<void> {
       "ORDER BY cnt DESC, stablecoin_id ASC",
     ].join(" "),
   );
-
-  const targetStatsById = new Map(targetCounts.map((row) => [row.stablecoin_id, row]));
 
   const matchesTargetFilters = (rawId: string, canonicalId: string, pegCurrency: string): boolean => {
     if (TARGET_IDS) {
@@ -586,20 +591,23 @@ async function main(): Promise<void> {
     }
 
     const supplyByDate = parseSupplyData(detail?.tokens ?? []);
-    preparedCoins.push({ meta, geckoId, supplyByDate, sourceIds: [...target.sourceIds] });
-
-    const earliestRelevantTs = [...target.sourceIds]
-      .map((sourceId) => targetStatsById.get(sourceId)?.min_started_at ?? null)
-      .filter((ts): ts is number => ts != null)
-      .reduce<number | null>((minTs, ts) => (
-        minTs == null ? ts : Math.min(minTs, ts)
-      ), null);
-    const earliestAnchorTs = earliestRelevantTs != null
-      ? Math.max(0, earliestRelevantTs - REPLAY_CONTEXT_DAYS * DAY_SECONDS)
-      : supplyByDate[0]?.ts ?? null;
+    const earliestAnchorTs = parseLaunchDateSec(meta.launchDate) ?? supplyByDate[0]?.ts ?? null;
     const earliestDateText = earliestAnchorTs != null
       ? new Date(earliestAnchorTs * 1000).toISOString().slice(0, 10)
       : defaultStartDate;
+    const deferHistoricalFxPrefetch = normalizeSupportedPegCurrency(meta.flags.pegCurrency) != null;
+    preparedCoins.push({
+      meta,
+      geckoId,
+      supplyByDate,
+      sourceIds: [...target.sourceIds],
+      historicalStartDate: earliestDateText,
+      deferHistoricalFxPrefetch,
+    });
+
+    if (deferHistoricalFxPrefetch) {
+      continue;
+    }
     if (earliestDateText < historicalFxStartDate) {
       historicalFxStartDate = earliestDateText;
     }
@@ -633,18 +641,18 @@ async function main(): Promise<void> {
   let affectedEndDay: number | null = null;
 
   for (const prepared of preparedCoins) {
-    const { meta, geckoId, supplyByDate, sourceIds } = prepared;
+    const { meta, geckoId, supplyByDate, sourceIds, historicalStartDate, deferHistoricalFxPrefetch } = prepared;
     const pegType = `pegged${meta.flags.pegCurrency}`;
     const fxCode = SECONDARY_PEG_TO_FX[meta.flags.pegCurrency]
       ?? PEG_TO_FX[meta.flags.pegCurrency]
       ?? OTHER_COIN_FX[meta.id]
       ?? null;
-    const series = fxCode
+    const eagerSeries = fxCode
       ? (secondaryFxSeries[fxCode] as Array<{ timestamp: number; rate: number }> | undefined)
           ?? fxSeries[fxCode]
           ?? []
       : [];
-    const getPegRef = buildFxLookup(series, pegRates[pegType] ?? 0);
+    let getPegRef = buildFxLookup(eagerSeries, pegRates[pegType] ?? 0);
 
     console.log(`Replaying ${meta.symbol} (${meta.id})...`);
     const existingRows = d1QueryParsed<ExistingDepegEventRow>(
@@ -665,13 +673,14 @@ async function main(): Promise<void> {
       null,
     );
     const replayRange =
-      minExistingStart != null && maxExistingEnd != null
+      USE_EXISTING_WINDOW && minExistingStart != null && maxExistingEnd != null
         ? {
-            startSec: Math.max(0, minExistingStart - REPLAY_CONTEXT_DAYS * DAY_SECONDS),
-            endSec: maxExistingEnd + REPLAY_CONTEXT_DAYS * DAY_SECONDS,
+            startSec: Math.max(0, minExistingStart - 30 * DAY_SECONDS),
+            endSec: maxExistingEnd + 30 * DAY_SECONDS,
           }
         : undefined;
-    const replay = await replayCoinHistory(
+
+    let replay = await replayCoinHistory(
       meta,
       geckoId,
       supplyByDate,
@@ -680,6 +689,22 @@ async function main(): Promise<void> {
       coingeckoApiKey,
       replayRange,
     );
+    if (deferHistoricalFxPrefetch && fxCode && replay.sourceKind === "market" && replay.marketDiagnostics?.quoteMode !== "native-peg") {
+      const fallbackSeries = SECONDARY_PEG_TO_FX[meta.flags.pegCurrency]
+        ? await fetchHistoricalSecondaryFxRatesDirect([fxCode], historicalStartDate, endDate)
+        : await fetchHistoricalFxRates([fxCode], historicalStartDate, endDate);
+      const onDemandSeries = fallbackSeries[fxCode] ?? [];
+      getPegRef = buildFxLookup(onDemandSeries, pegRates[pegType] ?? 0);
+      replay = await replayCoinHistory(
+        meta,
+        geckoId,
+        supplyByDate,
+        getPegRef,
+        stablecoinsPayload.fxFallbackRates,
+        coingeckoApiKey,
+        replayRange,
+      );
+    }
 
     if (!replay.events) {
       totalPreserved += existingRows.length;
