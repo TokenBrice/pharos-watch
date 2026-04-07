@@ -21,7 +21,7 @@ import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-
 import { formatChartDate, formatCurrency, formatScore } from "@shared/lib/format";
 import { useStabilityIndexDetail, type StabilityContributor } from "@/hooks/api-hooks";
 import { PsiLighthouse } from "@/components/stability-index";
-import { PSI_BAND_CLASSES, PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
+import { PSI_BAND_CLASSES, PSI_BG_OVERLAY_CLASSES, PSI_BORDER_CLASSES, PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
 import {
   buildPsiChartData,
   getDisplayedPsi,
@@ -64,14 +64,98 @@ const COMPONENT_DETAIL: Array<{
   { key: "trend", label: "Trend", topic: "psiTrend", sign: "+", color: COMPONENT_COLORS.trend },
 ];
 
-const CONDITION_BANDS: Array<{ range: string; band: ConditionBand; meaning: string }> = [
-  { range: "90 – 100", band: "BEDROCK", meaning: "Exceptional stability across all tracked stablecoins" },
-  { range: "75 – 89", band: "STEADY", meaning: "Normal conditions with minor deviations" },
-  { range: "60 – 74", band: "TREMOR", meaning: "Notable stress in parts of the market" },
-  { range: "40 – 59", band: "FRACTURE", meaning: "Significant depegs affecting multiple assets" },
-  { range: "20 – 39", band: "CRISIS", meaning: "Severe market-wide instability" },
-  { range: "0 – 19", band: "MELTDOWN", meaning: "Systemic failure across stablecoin markets" },
+/* ─── ScoreArc — 240° gauge showing score position across bands ── */
+
+const ARC_BANDS = [
+  { min: 0, max: 20, color: PSI_HEX_COLORS.MELTDOWN },
+  { min: 20, max: 40, color: PSI_HEX_COLORS.CRISIS },
+  { min: 40, max: 60, color: PSI_HEX_COLORS.FRACTURE },
+  { min: 60, max: 75, color: PSI_HEX_COLORS.TREMOR },
+  { min: 75, max: 90, color: PSI_HEX_COLORS.STEADY },
+  { min: 90, max: 100, color: PSI_HEX_COLORS.BEDROCK },
 ];
+
+/** 240° arc gauge — the needle shows where the score sits across all six bands. */
+function ScoreArc({ score, color, size = 140 }: { score: number; color: string; size?: number }) {
+  const r = 44; // radius within 100×100 viewBox
+  const cx = 50;
+  const cy = 54; // shift center down slightly so arc sits above
+  const startAngle = 150; // degrees — 240° sweep from 150° to 390° (=30°)
+  const sweep = 240;
+  const gap = 1.2; // degrees gap between segments
+
+  function polarToXY(angleDeg: number) {
+    const rad = (angleDeg * Math.PI) / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+
+  function arcPath(a1: number, a2: number) {
+    const s = polarToXY(a1);
+    const e = polarToXY(a2);
+    const large = a2 - a1 > 180 ? 1 : 0;
+    return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y}`;
+  }
+
+  // Needle position
+  const clamped = Math.max(0, Math.min(100, score));
+  const needleAngle = startAngle + (clamped / 100) * sweep;
+  const needleTip = polarToXY(needleAngle);
+  // Small offset back from tip for the needle base
+  const needleBase1Angle = needleAngle + 90;
+  const needleBase2Angle = needleAngle - 90;
+  const baseR = 3;
+  const b1 = { x: cx + baseR * Math.cos((needleBase1Angle * Math.PI) / 180), y: cy + baseR * Math.sin((needleBase1Angle * Math.PI) / 180) };
+  const b2 = { x: cx + baseR * Math.cos((needleBase2Angle * Math.PI) / 180), y: cy + baseR * Math.sin((needleBase2Angle * Math.PI) / 180) };
+
+  return (
+    <svg width={size} height={size * 0.72} viewBox="0 0 100 72" fill="none" className="shrink-0">
+      {/* Band segments */}
+      {ARC_BANDS.map((band) => {
+        const segStart = startAngle + (band.min / 100) * sweep + gap / 2;
+        const segEnd = startAngle + (band.max / 100) * sweep - gap / 2;
+        return (
+          <path
+            key={band.min}
+            d={arcPath(segStart, segEnd)}
+            stroke={band.color}
+            strokeWidth={5}
+            strokeLinecap="round"
+            fill="none"
+            opacity={0.35}
+          />
+        );
+      })}
+
+      {/* Active arc — filled portion up to the score */}
+      {ARC_BANDS.map((band) => {
+        const bandStart = startAngle + (band.min / 100) * sweep + gap / 2;
+        const bandEnd = startAngle + (band.max / 100) * sweep - gap / 2;
+        if (clamped <= band.min) return null; // score hasn't reached this band
+        const fillEnd = Math.min(bandEnd, startAngle + (clamped / 100) * sweep);
+        if (fillEnd <= bandStart) return null;
+        return (
+          <path
+            key={`fill-${band.min}`}
+            d={arcPath(bandStart, fillEnd)}
+            stroke={band.color}
+            strokeWidth={5}
+            strokeLinecap="round"
+            fill="none"
+            opacity={0.85}
+          />
+        );
+      })}
+
+      {/* Needle */}
+      <polygon
+        points={`${needleTip.x},${needleTip.y} ${b1.x},${b1.y} ${b2.x},${b2.y}`}
+        fill={color}
+        opacity={0.9}
+      />
+      <circle cx={cx} cy={cy} r={3.5} fill="var(--surface-overlay, #1a1a2e)" stroke={color} strokeWidth={1.5} />
+    </svg>
+  );
+}
 
 /* ─── EventTimeline ─────────────────────────────────────────────── */
 
@@ -81,55 +165,68 @@ function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="pharos-kicker">Notable Events</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {PSI_EVENTS.map((evt) => {
-          const d = new Date(evt.date);
-          const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" };
-          const dateStr = evt.dateEnd
-            ? (() => {
-                const dEnd = new Date(evt.dateEnd);
-                const sameYear = d.getFullYear() === dEnd.getFullYear();
-                const start = d.toLocaleDateString("en-US", sameYear ? { month: "short", day: "numeric" } : opts);
-                const end = dEnd.toLocaleDateString("en-US", opts);
-                return `${start} – ${end}`;
-              })()
-            : d.toLocaleDateString("en-US", opts);
-          // Find the worst (lowest) score within the event window
-          const rangeEnd = evt.dateEnd ?? evt.date + THREE_DAYS_MS;
-          const SLACK = THREE_DAYS_MS;
-          const nearby = data.filter((p) => p.ts >= evt.date - SLACK && p.ts <= rangeEnd + SLACK);
-          const worst = nearby.length > 0
-            ? nearby.reduce((w, p) => (p.score < w.score ? p : w))
-            : null;
-          const psi = worst ? worst.score : null;
-          const psiBand = psi !== null ? BAND_ZONES.find((z) => psi >= z.y1)?.label ?? "" : "";
-          const psiColor = psiBand ? PSI_BAND_CLASSES[psiBand as ConditionBand] ?? "text-muted-foreground" : "text-muted-foreground";
-          return (
-            <div key={evt.label} className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 min-w-0">
-              <span className="text-sm tabular-nums text-muted-foreground shrink-0">{dateStr}</span>
-              <span className="text-sm font-semibold shrink-0">{evt.label}</span>
-              {psi !== null && (
-                <span className={`text-sm tabular-nums font-medium shrink-0 ${psiColor}`}>
-                  PSI {formatScore(psi)}
-                </span>
-              )}
-              <div className="flex gap-x-4 min-w-0 overflow-hidden">
-                {evt.links.map((link) => (
-                  <a
-                    key={link.url}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="pharos-focus-ring text-sm text-blue-700 dark:text-blue-400 hover:underline inline-flex items-center gap-1 min-w-0 shrink rounded-sm"
-                  >
-                    <span className="truncate" title={link.title}>{link.title}</span>
-                    <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
-                  </a>
-                ))}
+      <CardContent>
+        <div className="relative ml-3 border-l border-border/50 pl-5 space-y-5">
+          {PSI_EVENTS.map((evt) => {
+            const d = new Date(evt.date);
+            const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" };
+            const dateStr = evt.dateEnd
+              ? (() => {
+                  const dEnd = new Date(evt.dateEnd);
+                  const sameYear = d.getFullYear() === dEnd.getFullYear();
+                  const start = d.toLocaleDateString("en-US", sameYear ? { month: "short", day: "numeric" } : opts);
+                  const end = dEnd.toLocaleDateString("en-US", opts);
+                  return `${start} – ${end}`;
+                })()
+              : d.toLocaleDateString("en-US", opts);
+            // Find the worst (lowest) score within the event window
+            const rangeEnd = evt.dateEnd ?? evt.date + THREE_DAYS_MS;
+            const SLACK = THREE_DAYS_MS;
+            const nearby = data.filter((p) => p.ts >= evt.date - SLACK && p.ts <= rangeEnd + SLACK);
+            const worst = nearby.length > 0
+              ? nearby.reduce((w, p) => (p.score < w.score ? p : w))
+              : null;
+            const psi = worst ? worst.score : null;
+            const psiBand = psi !== null ? BAND_ZONES.find((z) => psi >= z.y1)?.label ?? "" : "";
+            const psiColor = psiBand ? PSI_BAND_CLASSES[psiBand as ConditionBand] ?? "text-muted-foreground" : "text-muted-foreground";
+            const dotHex = psiBand ? PSI_HEX_COLORS[psiBand as ConditionBand] ?? "var(--muted-foreground)" : "var(--muted-foreground)";
+            return (
+              <div key={evt.label} className="relative min-w-0">
+                {/* Timeline dot — colored by the band during the event */}
+                <span
+                  className="absolute -left-[calc(1.25rem+3.5px)] top-[5px] h-[7px] w-[7px] rounded-full ring-2 ring-background"
+                  style={{ backgroundColor: dotHex }}
+                  aria-hidden="true"
+                />
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                    <span className="text-sm tabular-nums text-muted-foreground shrink-0">{dateStr}</span>
+                    <span className="text-sm font-semibold shrink-0">{evt.label}</span>
+                    {psi !== null && (
+                      <span className={`text-sm tabular-nums font-medium shrink-0 ${psiColor}`}>
+                        PSI {formatScore(psi)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-x-4 min-w-0 overflow-hidden">
+                    {evt.links.map((link) => (
+                      <a
+                        key={link.url}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="pharos-focus-ring text-sm text-blue-700 dark:text-blue-400 hover:underline inline-flex items-center gap-1 min-w-0 shrink rounded-sm"
+                      >
+                        <span className="truncate" title={link.title}>{link.title}</span>
+                        <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </CardContent>
     </Card>
   );
@@ -360,85 +457,22 @@ function Methodology({
           Version increments when formula, caps, or component definitions change.
         </p>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div>
-          <p className="text-sm text-muted-foreground mb-2">
-            The Pharos Stability Index (PSI) is a single 0-100 score reflecting overall stablecoin market health.
-          </p>
-          <code className="block rounded-lg bg-muted px-4 py-3 text-sm font-mono">
-            Score = 100 &minus; severity &minus; breadth &minus; stressBreadth + trend
-          </code>
-        </div>
-
-        <div>
-          <h3 className="pharos-kicker mb-3">Components</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm" aria-label="PSI formula components and their scoring ranges">
-              <thead>
-                <tr className="border-b text-left">
-                  <th className="pb-2 pr-4 font-medium text-muted-foreground">Component</th>
-                  <th className="pb-2 pr-4 font-medium text-muted-foreground">Range</th>
-                  <th className="pb-2 font-medium text-muted-foreground">Description</th>
-                </tr>
-              </thead>
-              <tbody className="text-muted-foreground">
-                <tr className="border-b">
-                  <td className="py-2 pr-4 font-medium text-foreground">Severity</td>
-                  <td className="py-2 pr-4 tabular-nums">0 &ndash; 68</td>
-                  <td className="py-2">Depeg magnitude weighted by market cap significance</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-2 pr-4 font-medium text-foreground">Breadth</td>
-                  <td className="py-2 pr-4 tabular-nums">0 &ndash; 17</td>
-                  <td className="py-2">Number of depegging coins, weighted so micro-caps barely register</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-2 pr-4 font-medium text-foreground">Stress Breadth</td>
-                  <td className="py-2 pr-4 tabular-nums">0 &ndash; 5</td>
-                  <td className="py-2">DEWS-derived breadth of elevated stress before full depegs</td>
-                </tr>
-                <tr>
-                  <td className="py-2 pr-4 font-medium text-foreground">Trend</td>
-                  <td className="py-2 pr-4 tabular-nums">&minus;5 to +5</td>
-                  <td className="py-2">7-day total market cap momentum</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="pharos-kicker mb-3">Depreciation</h3>
-          <p className="text-sm text-muted-foreground mb-2">
-            Chronically depegged coins have their impact reduced over time to prevent zombie stablecoins
-            from permanently dominating the score. Fresh depegs (under 30 days) have full impact. After 30 days,
-            both severity and breadth contributions decay linearly, reaching a 25% floor at 150 days.
-          </p>
-        </div>
-
-        <div>
-          <h3 className="pharos-kicker mb-3">Condition Bands</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm" aria-label="PSI condition bands and their score ranges">
-              <thead>
-                <tr className="border-b text-left">
-                  <th className="pb-2 pr-4 font-medium text-muted-foreground">Range</th>
-                  <th className="pb-2 pr-4 font-medium text-muted-foreground">Band</th>
-                  <th className="pb-2 font-medium text-muted-foreground">Meaning</th>
-                </tr>
-              </thead>
-              <tbody className="text-muted-foreground">
-                {CONDITION_BANDS.map((row, idx) => (
-                  <tr key={row.band} className={idx < CONDITION_BANDS.length - 1 ? "border-b" : ""}>
-                    <td className="py-2 pr-4 tabular-nums">{row.range}</td>
-                    <td className={`py-2 pr-4 font-medium ${PSI_BAND_CLASSES[row.band] ?? ""}`}>{row.band}</td>
-                    <td className="py-2">{row.meaning}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          A single 0–100 score reflecting overall stablecoin market health, updated every 30 minutes.
+        </p>
+        <code className="block rounded-lg bg-muted px-4 py-3 text-sm font-mono">
+          Score = 100 &minus; severity &minus; breadth &minus; stressBreadth + trend
+        </code>
+        <p className="text-sm text-muted-foreground">
+          Chronically depegged coins decay linearly from full impact at 30 days to a 25% floor at 150 days.{" "}
+          <Link
+            href="/methodology/#stability-index"
+            className="pharos-focus-ring text-foreground underline underline-offset-4 hover:text-amber-700 dark:text-amber-400 transition-colors rounded-sm"
+          >
+            Full methodology &rarr;
+          </Link>
+        </p>
       </CardContent>
     </Card>
   );
@@ -679,28 +713,39 @@ export function StabilityIndexClient() {
       <StaleDataBanner
         queries={[{ preset: "stabilityIndex", dataUpdatedAt, error, hasData: !!data?.current, meta }]}
       />
-      {/* Hero — score + components + history stats in one card */}
-      <Card className="rounded-xl py-0">
+      {/* Hero — instrument panel with arc gauge */}
+      <Card
+        className={cn(
+          "rounded-xl py-0 border-l-4 transition-colors duration-500",
+          PSI_BORDER_CLASSES[displayBand as ConditionBand] ?? "",
+          PSI_BG_OVERLAY_CLASSES[displayBand as ConditionBand] ?? "",
+        )}
+      >
         <CardContent
-          className="grid gap-3 py-4 sm:gap-4 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-5"
+          className="grid gap-4 py-5 sm:gap-5 sm:py-6 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-6"
           aria-live="polite"
         >
-          {/* Score + delta */}
-          <div className="flex flex-row items-center justify-center gap-3 sm:gap-4 lg:justify-start">
-            <PsiLighthouse band={displayBand} color={hexColor} size={60} />
-            <div className="flex min-w-0 flex-col items-center gap-1 lg:items-start">
-              <div className="text-xs text-muted-foreground">
-                <MethodologyLabel topic="psi">PSI</MethodologyLabel>
-              </div>
-              <div className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 lg:justify-start">
-                <span className={`text-4xl font-extrabold font-mono tabular-nums leading-none ${colorClass}`}>
+          {/* Score + gauge — the instrument */}
+          <div className="flex flex-col items-center gap-1 lg:flex-row lg:gap-5">
+            {/* Lighthouse — larger on desktop */}
+            <PsiLighthouse band={displayBand} color={hexColor} size={80} />
+            {/* Score cluster */}
+            <div className="flex min-w-0 flex-col items-center lg:items-start">
+              {/* Arc gauge */}
+              <ScoreArc score={displayScore} color={hexColor} size={160} />
+              {/* Score + band overlaid below the arc */}
+              <div className="flex flex-wrap items-baseline justify-center gap-x-2.5 gap-y-1 -mt-3 lg:justify-start">
+                <span className="text-xs text-muted-foreground mr-1">
+                  <MethodologyLabel topic="psi">PSI</MethodologyLabel>
+                </span>
+                <span className={`text-5xl font-extrabold font-mono tabular-nums leading-none ${colorClass}`}>
                   {formatScore(displayScore)}
                 </span>
-                <span className={`text-base font-bold uppercase tracking-wide sm:text-lg ${colorClass}`}>
+                <span className={`text-lg font-bold uppercase tracking-wide ${colorClass}`}>
                   {displayBand}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground lg:justify-start">
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-1.5 text-sm text-muted-foreground lg:justify-start">
                 {delta !== null && (
                   <span className={`font-medium tabular-nums ${delta >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>
                     {delta >= 0 ? "+" : ""}{delta.toFixed(1)} vs yesterday
@@ -734,6 +779,9 @@ export function StabilityIndexClient() {
 
       {/* Score History */}
       <ScoreChart data={chartData} />
+
+      {/* ── Supporting detail zone ── */}
+      <div className="border-t border-border/40 pt-2" />
 
       {/* Notable Events */}
       <EventTimeline data={chartData} />
