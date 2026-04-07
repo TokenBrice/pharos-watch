@@ -217,6 +217,37 @@ describe("handleStablecoinDetail", () => {
     expect(ctx.waitUntil).toHaveBeenCalled();
   });
 
+  it("passes the CoinGecko API key through the commodity detail path", async () => {
+    const db = mockD1([{ match: "cache", rows: [] }]);
+
+    fetchSpy.mockImplementation(async (url: RequestInfo | URL) => {
+      const value = String(url);
+      if (value.includes("coins.llama.fi/chart/coingecko:tether-gold")) {
+        return new Response(JSON.stringify({ coins: {} }), { status: 200 });
+      }
+      if (value.includes("api.llama.fi/protocol/tether-gold")) {
+        return new Response(JSON.stringify({ tvl: [] }), { status: 200 });
+      }
+      if (value.includes("https://pro-api.coingecko.com/api/v3/coins/tether-gold/market_chart")) {
+        return new Response(JSON.stringify({
+          market_caps: [[1_700_000_000_000, 1_000]],
+          prices: [[1_700_000_000_000, 2]],
+        }), { status: 200 });
+      }
+      if (value.includes("https://pro-api.coingecko.com/api/v3/coins/tether-gold?market_data=true")) {
+        return new Response(JSON.stringify({ market_data: { circulating_supply: 200 } }), { status: 200 });
+      }
+      return new Response("Not Found", { status: 404 });
+    });
+
+    const ctx = makeCtx();
+    const res = await handleStablecoinDetail(db, "xaut-tether", ctx, "cg-pro-key");
+
+    expect(res.status).toBe(200);
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("https://pro-api.coingecko.com/api/v3/coins/tether-gold/market_chart"))).toBe(true);
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("https://pro-api.coingecko.com/api/v3/coins/tether-gold?market_data=true"))).toBe(true);
+  });
+
   it("normalizes non-USD DefiLlama detail responses into explicit native and USD token fields", async () => {
     const db = mockD1([{ match: "cache", rows: [] }]);
     const dlBody = JSON.stringify({

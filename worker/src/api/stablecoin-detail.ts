@@ -40,10 +40,11 @@ export const handleStablecoinDetail = withErrorHandler(
     if (isCommodity) {
       return handleCommodityDetail(
         {
-        stablecoinId: id,
-        geckoId,
-        protocolSlug: meta.protocolSlug ?? "",
-        pegType,
+          stablecoinId: id,
+          geckoId,
+          protocolSlug: meta.protocolSlug ?? "",
+          pegType,
+          coingeckoApiKey,
         },
         detail,
       );

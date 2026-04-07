@@ -51,6 +51,38 @@ describe("fetchCommodityTokens", () => {
     ]);
   });
 
+  it("passes the CoinGecko API key through the commodity fallback path", async () => {
+    fetchWithRetryMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({ coins: {} }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ tvl: [] }), { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            market_caps: [[1_700_000_000_000, 1_000]],
+            prices: [[1_700_000_000_000, 2]],
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ market_data: { circulating_supply: 200 } }), { status: 200 }),
+      );
+
+    await fetchCommodityTokens({
+      stablecoinId: "xaut-tether",
+      geckoId: "tether-gold",
+      protocolSlug: "tether-gold",
+      pegType: "peggedGOLD",
+      coingeckoApiKey: "cg-pro-key",
+    });
+
+    const marketChartCall = fetchWithRetryMock.mock.calls[2]?.[0];
+    const detailCall = fetchWithRetryMock.mock.calls[3]?.[0];
+
+    expect(marketChartCall).toContain("https://pro-api.coingecko.com/api/v3/");
+    expect(detailCall).toContain("https://pro-api.coingecko.com/api/v3/");
+  });
+
   it("returns an empty array when CoinGecko market chart fails in fallback", async () => {
     fetchWithRetryMock
       .mockResolvedValueOnce(new Response(JSON.stringify({ coins: {} }), { status: 200 }))

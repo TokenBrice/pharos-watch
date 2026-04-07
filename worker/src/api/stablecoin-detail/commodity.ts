@@ -20,6 +20,7 @@ export interface CommodityDetailConfig {
   geckoId: string;
   protocolSlug: string;
   pegType: string;
+  coingeckoApiKey?: string | null;
 }
 
 /**
@@ -88,6 +89,7 @@ export async function fetchCommodityTokens(
   // Fallback: no protocol TVL → use CoinGecko market_chart with sanity check.
   if (tokens.length === 0) {
     const marketHistory = await fetchCoinGeckoMarketHistory(config.geckoId, {
+      apiKey: config.coingeckoApiKey ?? null,
       retries: DETAIL_UPSTREAM_MAX_RETRIES,
       timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS,
       onCoinDetailFailure: (status) => {
