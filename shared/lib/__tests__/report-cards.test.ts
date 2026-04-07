@@ -237,7 +237,7 @@ describe("scoreLiquidity", () => {
     expect(result.detail).toContain("Stablecoin redeem");
   });
 
-  it("caps and discounts redemption-only scoring correctly", () => {
+  it("uses raw redemption score when only redemption exists (no cap)", () => {
     const result = scoreLiquidity(undefined, {
       score: 90,
       routeFamily: "collateral-redeem",
@@ -248,8 +248,8 @@ describe("scoreLiquidity", () => {
       capacitySemantics: "immediate-bounded",
     });
 
-    // min(70, 90 * 0.75) = min(70, 67.5) = 68
-    expect(result.score).toBe(68);
+    // Best-path model: redemption-only uses raw score (no cap/discount)
+    expect(result.score).toBe(90);
     expect(result.detail).toContain("DEX liquidity unavailable");
     expect(result.detail).toContain("Redemption backstop 90/100");
   });
@@ -268,7 +268,8 @@ describe("scoreLiquidity", () => {
       },
     );
 
-    expect(result.score).toBe(95);
+    // Best-path: max(95, 30) + min(95, 30) × 0.10 = 95 + 3 = 98
+    expect(result.score).toBe(98);
   });
 
   it("does not let low-confidence redemption uplift liquidity", () => {
