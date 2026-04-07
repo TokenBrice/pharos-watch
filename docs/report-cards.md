@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v6.94)
+## Overall Grade (v6.95)
 
 Three-step computation:
 
@@ -13,7 +13,7 @@ Three-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v6.94 keeps the stronger peg treatment introduced in v6.93 and closes the NAV-wrapper loophole: configured NAV wrappers can inherit peg stability from a referenced base stablecoin, while genuine fund-share NAV tokens still remain neutral. The `activeDepegBps` field remains in `RawDimensionInputs` so stressed-grade recomputations and the frontend can apply the same cap.
+Current-version note: v6.95 keeps the stronger peg treatment introduced in v6.93 and the NAV-wrapper peg inheritance from v6.94, and now treats custodied BTC wrappers plus issuer-seizable tokenized collateral as direct inherited freeze exposure for blacklistability attribution when they dominate reserve weight. The `activeDepegBps` field remains in `RawDimensionInputs` so stressed-grade recomputations and the frontend can apply the same cap.
 
 ## Dimensions
 

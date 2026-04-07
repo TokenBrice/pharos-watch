@@ -1,5 +1,41 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV695Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("6.95")}
+      accent="border-l-amber-500"
+    >
+      <p>
+        Direct inherited freeze risk now counts two reserve-side collateral classes that were previously
+        under-attributed: custodied BTC wrappers and issuer-seizable tokenized collateral.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          Shared <code className="text-xs bg-muted px-1 py-0.5 rounded">isBlacklistable()</code>{" "}
+          now treats centralized-custody BTC wrappers such as{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">WBTC</code> and{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">cbBTC</code> as{" "}
+          <span className="text-foreground font-medium">direct</span> inherited freeze exposure rather
+          than only weak possible clues.
+        </li>
+        <li>
+          Issuer-seizable tokenized collateral such as{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">PAXG</code>,{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">XAUT</code>, and reviewed tokenized
+          share symbols such as <code className="text-xs bg-muted px-1 py-0.5 rounded">BOSS</code>{" "}
+          now counts toward the same direct inherited threshold.
+        </li>
+        <li>
+          Coins whose reserve mix crosses the majority threshold because of these assets now resolve to{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">inherited</code> instead of{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">possible</code>.
+        </li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV694Entry() {
   return (
     <VersionCard

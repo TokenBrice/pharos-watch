@@ -676,6 +676,20 @@ describe("isBlacklistable", () => {
     expect(isBlacklistable(meta as never)).toBe("inherited");
   });
 
+  it("returns inherited for majority reserves in custodied BTC wrappers and issuer-seizable tokenized collateral", () => {
+    const meta = {
+      flags: { governance: "decentralized" as const },
+      canBeBlacklisted: undefined,
+      reserves: [
+        { name: "BOSS (Boss Info AG)", pct: 38, risk: "very-high" },
+        { name: "cbBTC (Coinbase Wrapped BTC)", pct: 18, risk: "medium" },
+        { name: "WBTC (Wrapped BTC)", pct: 15, risk: "medium" },
+        { name: "ETH / wstETH", pct: 29, risk: "low" },
+      ],
+    };
+    expect(isBlacklistable(meta as never)).toBe("inherited");
+  });
+
   it("returns false for centralized-dependent governance without explicit, reserve, or custody risk", () => {
     const meta = {
       flags: { governance: "centralized-dependent" as const },
@@ -715,6 +729,18 @@ describe("enrichLiveSlicesForBlacklist", () => {
 
   it("tags live slice when the reserve name contains direct stablecoin basket clues", () => {
     const live = [{ name: "JLP (Jupiter Perps LP: BTC, ETH, SOL, USDC basket)", pct: 80, risk: "high" as const }];
+    const result = enrichLiveSlicesForBlacklist(live, blacklistableIds, trackedMetaById);
+    expect(result[0].blacklistable).toBe(true);
+  });
+
+  it("tags live slice when the reserve name contains a centralized-custody BTC wrapper symbol", () => {
+    const live = [{ name: "cbBTC (Coinbase Wrapped BTC)", pct: 55, risk: "medium" as const }];
+    const result = enrichLiveSlicesForBlacklist(live, blacklistableIds, trackedMetaById);
+    expect(result[0].blacklistable).toBe(true);
+  });
+
+  it("tags live slice when the reserve name contains an issuer-seizable tokenized security symbol", () => {
+    const live = [{ name: "BOSS (Boss Info AG)", pct: 38, risk: "very-high" as const }];
     const result = enrichLiveSlicesForBlacklist(live, blacklistableIds, trackedMetaById);
     expect(result[0].blacklistable).toBe(true);
   });

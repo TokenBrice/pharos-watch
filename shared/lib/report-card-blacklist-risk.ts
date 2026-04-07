@@ -1,3 +1,4 @@
+import { CENTRALIZED_CUSTODY_CRYPTO } from "./centralized-custody";
 import type { ReserveSlice, StablecoinMeta } from "../types";
 
 export type BlacklistStatus = boolean | "possible" | "inherited";
@@ -73,6 +74,26 @@ const POSSIBLE_BLACKLIST_TEXT_PATTERNS: readonly RegExp[] = [
   /\bgsm\b/i,
 ];
 
+const DIRECT_COLLATERAL_BLACKLIST_SYMBOLS = [
+  ...CENTRALIZED_CUSTODY_CRYPTO,
+  "PAXG",
+  "XAUT",
+  "AAPLX",
+  "BOSS",
+  "DQTS",
+  "ESC",
+  "GOOGLX",
+  "LENDS",
+  "NVDAX",
+  "REALU",
+  "SPYON",
+  "TSLAX",
+] as const;
+
+const DIRECT_COLLATERAL_BLACKLIST_PATTERNS = DIRECT_COLLATERAL_BLACKLIST_SYMBOLS.map(
+  (symbol) => buildBlacklistableSymbolPattern(symbol),
+);
+
 const CUSTODY_BLACKLIST_TEXT_PATTERNS: readonly RegExp[] = [
   /binance/i,
   /bybit/i,
@@ -110,6 +131,7 @@ function buildBlacklistableSymbolPattern(symbol: string): RegExp {
 function sliceTextSignalsDirectBlacklistRisk(text: string): boolean {
   return (
     textMatchesAny(text, DIRECT_BLACKLIST_TEXT_PATTERNS) ||
+    DIRECT_COLLATERAL_BLACKLIST_PATTERNS.some((pattern) => pattern.test(text)) ||
     textMatchesAny(text, CUSTODY_BLACKLIST_TEXT_PATTERNS)
   );
 }
@@ -140,6 +162,7 @@ function metaTextSignalsPossibleBlacklistRisk(
       BLACKLIST_BACKING_CONTEXT_PATTERN.test(text) &&
       (
         textMatchesAny(text, DIRECT_BLACKLIST_TEXT_PATTERNS) ||
+        DIRECT_COLLATERAL_BLACKLIST_PATTERNS.some((pattern) => pattern.test(text)) ||
         textSignalsKnownBlacklistableSymbol(text, context)
       )
     )

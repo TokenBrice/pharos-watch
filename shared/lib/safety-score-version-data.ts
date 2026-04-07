@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "6.94",
+  currentVersion: "6.95",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "6.95",
+      title: "Direct inherited freeze risk now counts custodied BTC wrappers and issuer-seizable collateral",
+      date: "2026-04-07",
+      effectiveAt: 1775520000,
+      summary:
+        "Blacklistability attribution now treats centralized-custody BTC wrappers, tokenized gold, and issuer-seizable tokenized collateral as direct reserve-side freeze exposure when they dominate a stablecoin's backing mix.",
+      impact: [
+        "Shared isBlacklistable() logic now counts centralized-custody BTC wrappers such as WBTC and cbBTC as direct reserve-side freeze exposure instead of only possible exposure",
+        "Issuer-seizable tokenized collateral such as tokenized gold and reviewed tokenized share symbols now also counts as direct inherited freeze risk when present in reserve labels",
+        "Coins whose reserve mix crosses the >50% inherited threshold because of these assets now resolve to inherited instead of possible on report-card and table surfaces",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "6.94",
       title: "NAV wrappers can inherit peg risk from a referenced base stablecoin",
