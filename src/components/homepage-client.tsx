@@ -83,6 +83,10 @@ const DailyDigest = dynamic(() => import("@/components/daily-digest").then((mod)
   loading: () => <SectionSkeleton className="h-[220px] w-full rounded-xl" />,
 });
 
+function getHomepageFilterLabel(tag: keyof typeof FILTER_TAG_LABELS) {
+  return tag === "fiat-non-usd-peg" ? "Non USD" : FILTER_TAG_LABELS[tag];
+}
+
 export function HomepageClient() {
   const { isReady: startHereReady, shouldShow: shouldShowStartHereCallout, retireCallout } = useStartHereCallout();
   const [showFilters, setShowFilters] = useState(false);
@@ -203,9 +207,9 @@ export function HomepageClient() {
                           key={tag}
                           onClick={() => group && filters.handleGroupChange(group.label, "all")}
                           className="pharos-focus-ring inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-primary/20"
-                          aria-label={`Remove ${FILTER_TAG_LABELS[tag]} filter`}
+                          aria-label={`Remove ${getHomepageFilterLabel(tag)} filter`}
                         >
-                          {FILTER_TAG_LABELS[tag]}
+                          {getHomepageFilterLabel(tag)}
                           <X className="h-3 w-3 text-muted-foreground" aria-hidden />
                         </button>
                       );

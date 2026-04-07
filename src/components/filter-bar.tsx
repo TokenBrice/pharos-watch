@@ -8,6 +8,7 @@ import type { FilterTag } from "@shared/types";
 import { FILTER_TAG_LABELS } from "@shared/types";
 
 const FILTER_BAR_LABEL_OVERRIDES: Partial<Record<FilterTag, string>> = {
+  "fiat-non-usd-peg": "Non USD",
   "rwa-backed": "RWA",
   "crypto-backed": "Crypto",
   "centralized-dependent": "CeFi-Dep",
