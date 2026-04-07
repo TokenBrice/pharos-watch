@@ -305,7 +305,7 @@ export function useStressTest(
       }
     }
 
-    results.sort((a, b) => b.supplyAtRisk - a.supplyAtRisk);
+    results.sort((a, b) => b.dependentSupplyAtRisk - a.dependentSupplyAtRisk);
     return results.slice(0, 5);
   }, [reportData, mcapMap, targetableCoins]);
 
