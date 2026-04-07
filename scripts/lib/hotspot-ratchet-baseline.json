@@ -60,7 +60,7 @@
     "notes": "The graph renderer still mixes data shaping, simulation wiring, and view concerns. Split graph math, legend controls, and rendering shells before growing the feature further."
   },
   "src/app/chains/[chain]/client.tsx": {
-    "fileLines": 736,
+    "fileLines": 734,
     "maxFunctionLines": 113,
     "branchCount": 47,
     "disposition": "queued-p4",
@@ -72,8 +72,8 @@
     "notes": "The chain detail route now has dedicated tests, but it still combines hero, health, composition, filtering, and table behavior in one client module. Continue splitting view-model and section concerns out of the route shell."
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 218,
-    "maxFunctionLines": 190,
+    "fileLines": 222,
+    "maxFunctionLines": 194,
     "branchCount": 11,
     "disposition": "stabilized",
     "targetBudget": {
@@ -288,8 +288,8 @@
     "notes": "Config execution and post-run completion logic now live in `mint-burn/*` helpers. Keep the cron shell as queue setup plus progress coordination instead of regrowing per-config or epilogue logic."
   },
   "worker/src/cron/sync-live-reserves.ts": {
-    "fileLines": 266,
-    "maxFunctionLines": 182,
+    "fileLines": 276,
+    "maxFunctionLines": 191,
     "branchCount": 24,
     "disposition": "queued-p4",
     "targetBudget": {

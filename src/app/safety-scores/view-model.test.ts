@@ -13,7 +13,7 @@ function makeCard(overrides: Partial<ReportCard> = {}): ReportCard {
     id: overrides.id ?? "usdc-circle",
     name: overrides.name ?? "USD Coin",
     symbol: overrides.symbol ?? "USDC",
-    overallScore: overrides.overallScore ?? 92,
+    overallScore: overrides.overallScore !== undefined ? overrides.overallScore : 92,
     overallGrade: overrides.overallGrade ?? "A",
     isDefunct: overrides.isDefunct ?? false,
     dimensions: overrides.dimensions ?? {

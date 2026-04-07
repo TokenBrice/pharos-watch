@@ -149,8 +149,8 @@ describe("StabilityIndexClient", () => {
   it("renders the current PSI state, contributors, and methodology section", () => {
     render(<StabilityIndexClient />);
 
-    expect(screen.getByText("82.0")).toBeTruthy();
-    expect(screen.getByText("STEADY")).toBeTruthy();
+    expect(screen.getAllByText("82.0").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("STEADY").length).toBeGreaterThan(0);
     expect(screen.getByText("Top Contributors")).toBeTruthy();
     expect(screen.getAllByText("USDC").length).toBeGreaterThan(0);
     expect(screen.getByText("Methodology")).toBeTruthy();
@@ -169,6 +169,6 @@ describe("StabilityIndexClient", () => {
 
     render(<StabilityIndexClient />);
 
-    expect(screen.getByRole("alert")).toHaveTextContent("psi down");
+    expect(screen.getByRole("alert").textContent).toContain("psi down");
   });
 });

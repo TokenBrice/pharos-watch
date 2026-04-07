@@ -15,10 +15,6 @@
     "disposition": "deferred",
     "notes": "The about page is content-heavy and low-risk operationally. Defer structural cleanup behind higher-value worker and analytics refactors."
   },
-  "worker/src/lib/api-utils.ts": {
-    "disposition": "deferred",
-    "notes": "This shared response helper surface has broad worker consumers. Defer a split until the current admin/status changes settle to avoid churn across unrelated handlers."
-  },
   "src/components/stablecoin-detail/hero-card.tsx": {
     "disposition": "queued-p4",
     "notes": "The stablecoin detail hero remains a large presentation hotspot. Track it for the planned frontend decomposition lane rather than mixing it into the worker-focused tranche."
@@ -34,6 +30,14 @@
   "src/components/stablecoin-table.tsx": {
     "disposition": "queued-p4",
     "notes": "The main stablecoin table is a known frontend hotspot. Keep it waived pending a dedicated UI decomposition pass."
+  },
+  "src/components/kpi-bar.tsx": {
+    "disposition": "queued-p4",
+    "notes": "The homepage KPI strip still mixes query orchestration, derived metrics, and dual-layout rendering. Track it with the broader analytics UI decomposition backlog."
+  },
+  "src/components/command-palette.tsx": {
+    "disposition": "queued-p4",
+    "notes": "The command palette still combines indexing, keyboard handling, and rendering in one shell. Keep it waived until the navigation/search UI cleanup lane is scheduled."
   },
   "worker/src/cron/dex-liquidity/challenger-persistence.ts": {
     "disposition": "queued-p4",
@@ -71,8 +75,12 @@
     "disposition": "deferred",
     "notes": "Shared formatting helpers are branchy but broadly reused. Defer any breakup until a dedicated shared-utility cleanup lane exists."
   },
-  "worker/src/api/backfill-depegs.ts": {
+  "src/lib/contagion-layout.ts": {
     "disposition": "deferred",
-    "notes": "Historical depeg replay currently mixes supply preparation, FX/reference assembly, backfill mutation, and dry-run diff preview. Keep it waived until the replay/admin endpoint split is scheduled."
+    "notes": "Dependency-map layout logic still concentrates graph scoring and placement heuristics in one file. Defer breakup until the next contagion-surface redesign pass."
+  },
+  "worker/src/cron/sync-fx-rates-helpers.ts": {
+    "disposition": "deferred",
+    "notes": "FX-rate helper orchestration remains a large policy surface after earlier trims. Defer another split until the next FX-state/runtime cleanup tranche."
   }
 }

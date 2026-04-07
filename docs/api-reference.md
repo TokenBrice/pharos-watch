@@ -148,7 +148,7 @@ All error responses use `{ "error": "message" }` JSON format.
 
 | Status | Meaning               | When                                                                                                                                                                                                     |
 | ------ | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 400    | Bad Request           | Invalid query parameter syntax (missing required parameter, invalid enum value, malformed numeric input, or rejected filter values that no longer coerce silently)                                       |
+| 400    | Bad Request           | Invalid query parameter syntax (missing required parameter, invalid enum value, malformed numeric input, or out-of-range numeric/filter values rejected instead of being clamped or coerced silently)    |
 | 401    | Unauthorized          | Protected public endpoint called without a valid `X-API-Key`, or admin endpoint called without a valid `ops-api` Access JWT (typically obtained through Cloudflare Access user login or service-token auth) |
 | 404    | Not Found             | Unknown stablecoin ID or missing resource                                                                                                                                                                |
 | 429    | Too Many Requests     | Rate limit exceeded (global public API limiter or feedback-specific limiter)                                                                                                                             |
@@ -1407,7 +1407,7 @@ This endpoint powers two separate public `/status/` views: the hero `Status runw
 
 ### `GET /api/stability-index`
 
-Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a composite ecosystem health score (0–100) computed from active depeg severity, affected-market breadth, DEWS stress breadth, and 7-day ecosystem trend across the PSI-eligible universe (tracked coins plus shadow assets used for historical continuity).
+Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a composite ecosystem health score (0–100) computed from active depeg severity, affected-market breadth, DEWS stress breadth, and 7-day ecosystem trend across the PSI-eligible universe (tracked coins plus shadow assets used for historical continuity). If a dependency failure prevents a safe fresh sample, the endpoint continues serving the last healthy stored PSI sample instead of publishing a degraded substitute.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included.
 
@@ -1452,6 +1452,7 @@ Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a comp
 | `current.avg24hBand`           | `string \| undefined` | Condition band for `avg24h`                                                                 |
 | `current.components`           | `object`              | Component breakdown: `severity`, `breadth`, `stressBreadth`, `trend`                        |
 | `current.contributors`         | `array`               | Top per-coin contributors from `input_snapshot.contributors` (empty when unavailable)       |
+| `current.inputDegradation`     | `object \| undefined` | Dependency-loss metadata carried by the served sample when the stored input snapshot recorded degraded upstream inputs |
 | `current.totalMcapUsd`         | `number`              | Total ecosystem market cap from the latest input snapshot (`0` when unavailable)            |
 | `current.computedAt`           | `number`              | Unix seconds of computation                                                                 |
 | `current.methodologyVersion`   | `string`              | Methodology version used to compute the current score                                       |

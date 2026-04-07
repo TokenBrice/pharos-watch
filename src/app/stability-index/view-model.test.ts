@@ -47,7 +47,7 @@ describe("stability index view-model", () => {
       { ts: Date.parse("2023-03-14T00:00:00Z"), score: 62 },
     ]);
 
-    const svb = rows.find((row) => row.label.includes("Silicon Valley Bank"));
+    const svb = rows.find((row) => row.label.includes("SVB Weekend"));
     expect(svb).toMatchObject({
       psi: 35,
       psiBand: "CRISIS",
