@@ -1,4 +1,4 @@
-import { matchDynamicAdminEndpoint } from "@shared/lib/api-endpoints";
+import { matchDynamicAdminEndpoint, type DynamicAdminEndpointMatch } from "@shared/lib/api-endpoints";
 import { handleStablecoinDetail } from "../api/stablecoin-detail";
 import { handleStablecoinSummary } from "../api/stablecoin-summary";
 import { handleStablecoinReserves } from "../api/stablecoin-reserves";
@@ -6,7 +6,7 @@ import { handleOg } from "../api/og";
 import { handleDiscoveryCandidateDismiss } from "../api/admin-actions";
 import { handleApiKeyDeactivate, handleApiKeyRotate, handleApiKeyUpdate } from "../api/api-keys";
 import { errorResponse, resolveOrReject } from "../lib/api-utils";
-import { type DynamicRouteDefinition, type RouteMatch } from "./shared";
+import { defineDynamicRoute, type DynamicRouteDefinition, type RouteDependency, type RouteMatch } from "./shared";
 
 function resolveDynamicStablecoinRoute(
   match: RegExpMatchArray,
@@ -25,58 +25,68 @@ function resolveDynamicStablecoinRoute(
   return handler(resolved.canonicalId);
 }
 
-const DYNAMIC_ROUTE_DEFINITIONS: readonly DynamicRouteDefinition[] = [
-  {
-    pattern: /^\/api\/stablecoin-summary\/(.+)$/,
-    handle: (routeCtx, match) => resolveDynamicStablecoinRoute(
+const DYNAMIC_ROUTE_DEFINITIONS = [
+  defineDynamicRoute(
+    /^\/api\/stablecoin-summary\/(.+)$/,
+    [],
+    (routeCtx, match) => resolveDynamicStablecoinRoute(
       match,
       (canonicalId) => handleStablecoinSummary(routeCtx.db, canonicalId),
     ),
-  },
-  {
-    pattern: /^\/api\/stablecoin-reserves\/(.+)$/,
-    handle: (routeCtx, match) => resolveDynamicStablecoinRoute(
+  ),
+  defineDynamicRoute(
+    /^\/api\/stablecoin-reserves\/(.+)$/,
+    [],
+    (routeCtx, match) => resolveDynamicStablecoinRoute(
       match,
       (canonicalId) => handleStablecoinReserves(routeCtx.db, canonicalId),
     ),
-  },
-  {
-    pattern: /^\/api\/stablecoin\/(.+)$/,
-    dependencies: ["coingeckoApiKey"],
-    handle: (routeCtx, match) => resolveDynamicStablecoinRoute(
+  ),
+  defineDynamicRoute(
+    /^\/api\/stablecoin\/(.+)$/,
+    ["coingeckoApiKey"],
+    (routeCtx, match) => resolveDynamicStablecoinRoute(
       match,
       (canonicalId) => handleStablecoinDetail(routeCtx.db, canonicalId, routeCtx.execCtx, routeCtx.coingeckoApiKey),
     ),
-  },
-  {
-    pattern: /^\/api\/og\/.+$/,
-    handle: (routeCtx) => handleOg(routeCtx.db, routeCtx.url.pathname).then((response) => response ?? errorResponse(404, "Unknown OG route")),
-  },
-] as const;
+  ),
+  defineDynamicRoute(
+    /^\/api\/og\/.+$/,
+    [],
+    (routeCtx) => handleOg(routeCtx.db, routeCtx.url.pathname).then((response) => response ?? errorResponse(404, "Unknown OG route")),
+  ),
+] as const satisfies readonly DynamicRouteDefinition[];
+
+const DYNAMIC_ADMIN_ROUTE_DEPENDENCIES = {
+  "discovery-candidate-dismiss": [],
+  "api-key-update": ["apiKeyHashPepper"],
+  "api-key-deactivate": [],
+  "api-key-rotate": ["apiKeyHashPepper"],
+} as const satisfies Record<DynamicAdminEndpointMatch["key"], readonly RouteDependency[]>;
 
 export function getDynamicRouteMatch(path: string): RouteMatch | null {
   const dynamicAdminEndpoint = matchDynamicAdminEndpoint(path);
   if (dynamicAdminEndpoint?.key === "discovery-candidate-dismiss") {
     return {
-      dependencies: [],
+      dependencies: DYNAMIC_ADMIN_ROUTE_DEPENDENCIES[dynamicAdminEndpoint.key],
       handle: (routeCtx) => handleDiscoveryCandidateDismiss(routeCtx, dynamicAdminEndpoint.candidateId),
     };
   }
   if (dynamicAdminEndpoint?.key === "api-key-update") {
     return {
-      dependencies: ["apiKeyHashPepper"],
+      dependencies: DYNAMIC_ADMIN_ROUTE_DEPENDENCIES[dynamicAdminEndpoint.key],
       handle: (routeCtx) => handleApiKeyUpdate(routeCtx.db, dynamicAdminEndpoint.apiKeyId, routeCtx.trustedAdmin, routeCtx.request),
     };
   }
   if (dynamicAdminEndpoint?.key === "api-key-deactivate") {
     return {
-      dependencies: [],
+      dependencies: DYNAMIC_ADMIN_ROUTE_DEPENDENCIES[dynamicAdminEndpoint.key],
       handle: (routeCtx) => handleApiKeyDeactivate(routeCtx.db, dynamicAdminEndpoint.apiKeyId, routeCtx.trustedAdmin, routeCtx.request),
     };
   }
   if (dynamicAdminEndpoint?.key === "api-key-rotate") {
     return {
-      dependencies: ["apiKeyHashPepper"],
+      dependencies: DYNAMIC_ADMIN_ROUTE_DEPENDENCIES[dynamicAdminEndpoint.key],
       handle: (routeCtx) => handleApiKeyRotate(
         routeCtx.db,
         dynamicAdminEndpoint.apiKeyId,
@@ -91,7 +101,7 @@ export function getDynamicRouteMatch(path: string): RouteMatch | null {
     const match = path.match(definition.pattern);
     if (match) {
       return {
-        dependencies: definition.dependencies ?? [],
+        dependencies: definition.dependencies,
         handle: (routeCtx) => definition.handle(routeCtx, match),
       };
     }

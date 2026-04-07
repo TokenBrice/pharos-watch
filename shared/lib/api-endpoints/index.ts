@@ -9,6 +9,8 @@ export {
   isMutatingAdminPath,
   type DynamicAdminEndpointMatch,
   type EndpointDefinition,
+  type EndpointDefinitionByKey,
+  type EndpointDependenciesForKey,
   type EndpointDependency,
   type EndpointKey,
   type EndpointMethodValidationError,

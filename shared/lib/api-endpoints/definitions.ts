@@ -666,6 +666,13 @@ const BASE_ENDPOINT_DEFINITIONS = [
 ] as const satisfies readonly BaseEndpointDefinition[];
 
 export type EndpointKey = (typeof BASE_ENDPOINT_DEFINITIONS)[number]["key"];
+export type EndpointDefinitionByKey<K extends EndpointKey> = Extract<(typeof ENDPOINT_DEFINITIONS)[number], { key: K }>;
+export type EndpointDependenciesForKey<K extends EndpointKey> =
+  Extract<(typeof BASE_ENDPOINT_DEFINITIONS)[number], { key: K }> extends {
+    routeDependencies: infer Deps extends readonly EndpointDependency[];
+  }
+    ? Deps
+    : readonly [];
 
 const SITE_DATA_ALLOWED_ENDPOINT_KEYS = new Set<EndpointKey>([
   "stablecoins",
