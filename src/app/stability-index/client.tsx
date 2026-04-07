@@ -167,7 +167,7 @@ function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
       </CardHeader>
       <CardContent>
         <div className="relative ml-3 border-l border-border/50 pl-5 space-y-5">
-          {PSI_EVENTS.map((evt) => {
+          {[...PSI_EVENTS].reverse().map((evt) => {
             const d = new Date(evt.date);
             const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" };
             const dateStr = evt.dateEnd
