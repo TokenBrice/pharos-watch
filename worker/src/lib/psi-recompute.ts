@@ -5,6 +5,7 @@ import {
   type SupplySnapshotMap,
 } from "./psi-history-universe";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { canonicalizePsiStablecoinId } from "./psi-stablecoin-ids";
 
 const HISTORICAL_PEAK_FLOOR_WINDOW_DAYS = 1;
 
@@ -47,6 +48,10 @@ function computeHistoricalEventBps(
   const peakDeviationBps = Number.isFinite(event.peak_deviation_bps) ? event.peak_deviation_bps : null;
   if (snapshotPrice != null && event.peg_reference > 0) {
     const historicalBps = Math.round(((snapshotPrice / event.peg_reference) - 1) * 10_000);
+    const boundedHistoricalBps =
+      peakDeviationBps != null && Math.abs(historicalBps) > Math.abs(peakDeviationBps)
+        ? peakDeviationBps
+        : historicalBps;
     const eventStartDay = Math.floor(event.started_at / DAY_SECONDS) * DAY_SECONDS;
     const dayEnd = day + DAY_SECONDS;
     const withinPeakFloorWindow =
@@ -56,7 +61,7 @@ function computeHistoricalEventBps(
       peakDeviationBps != null
       && withinPeakFloorWindow
       && persistsThroughUtcClose
-      && Math.abs(peakDeviationBps) > Math.abs(historicalBps)
+      && Math.abs(peakDeviationBps) > Math.abs(boundedHistoricalBps)
     ) {
       return {
         bps: peakDeviationBps,
@@ -65,8 +70,8 @@ function computeHistoricalEventBps(
     }
 
     return {
-      bps: historicalBps,
-      source: "historical-price",
+      bps: boundedHistoricalBps,
+      source: boundedHistoricalBps === historicalBps ? "historical-price" : "peak-fallback",
     };
   }
 
@@ -93,9 +98,10 @@ export function buildStabilityInputForDay(
 
   const grouped = new Map<string, PsiDepegEventRow[]>();
   for (const event of activeDepegs) {
-    const list = grouped.get(event.stablecoin_id) ?? [];
+    const canonicalId = canonicalizePsiStablecoinId(event.stablecoin_id);
+    const list = grouped.get(canonicalId) ?? [];
     list.push(event);
-    grouped.set(event.stablecoin_id, list);
+    grouped.set(canonicalId, list);
   }
 
   const depegs: Array<{ bps: number; mcapUsd: number; depegAgeDays: number }> = [];

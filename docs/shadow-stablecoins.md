@@ -32,6 +32,7 @@ They are used where historical continuity matters:
 - `detailProvider: "defillama"`
 - `geckoId: "terrausd"`
 - Included in the live DefiLlama-ID registry path via `REGISTRY_BY_LLAMA_ID`
+- Historical PSI replay and live PSI depeg grouping also canonicalize legacy `ust-terra-classic` depeg rows onto `ust-terra` so shadow supply history and collapse-era depegs join back together
 
 ### `iron-iron-finance`
 

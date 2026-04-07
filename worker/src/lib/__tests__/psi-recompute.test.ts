@@ -179,6 +179,36 @@ describe("buildStabilityInputForDay", () => {
     expect(result.peakDeviationFallbackCount).toBe(0);
   });
 
+  it("caps replayed historical deviation at the recorded peak when stored peg reference is stale", () => {
+    const day = 40 * DAY;
+    const now = day + DAY;
+    const supplyByCoin = buildSupplySnapshotMap([
+      { stablecoin_id: "eurs-stasis", snapshot_date: day, circulating_usd: 39_000_000, price: 1.2353 },
+      { stablecoin_id: "eurs-stasis", snapshot_date: day - 7 * DAY, circulating_usd: 38_000_000, price: 1.22 },
+    ]);
+    const events: PsiDepegEventRow[] = [
+      {
+        stablecoin_id: "eurs-stasis",
+        peak_deviation_bps: 189,
+        peg_reference: 1,
+        started_at: day - 2 * DAY,
+        ended_at: day + DAY,
+      },
+    ];
+
+    const result = buildStabilityInputForDay(day, now, events, supplyByCoin);
+
+    expect(result.depegs).toEqual([
+      {
+        bps: 189,
+        mcapUsd: 39_000_000,
+        depegAgeDays: 2,
+      },
+    ]);
+    expect(result.historicalPriceCoverageCount).toBe(0);
+    expect(result.peakDeviationFallbackCount).toBe(1);
+  });
+
   it("includes resolved depegs that are still active on the target day", () => {
     const day = 20 * DAY;
     const now = day + DAY;
@@ -233,6 +263,35 @@ describe("buildStabilityInputForDay", () => {
       mcapUsd: 500_000,
       depegAgeDays: 0,
     });
+  });
+
+  it("maps legacy PSI depeg ids onto canonical shadow supply snapshots", () => {
+    const day = 20 * DAY;
+    const now = day + DAY;
+    const supplyByCoin = buildSupplySnapshotMap([
+      { stablecoin_id: "ust-terra", snapshot_date: day, circulating_usd: 18_000_000_000 },
+      { stablecoin_id: "ust-terra", snapshot_date: day - 7 * DAY, circulating_usd: 17_500_000_000 },
+    ]);
+    const events: PsiDepegEventRow[] = [
+      {
+        stablecoin_id: "ust-terra-classic",
+        peak_deviation_bps: -9900,
+        peg_reference: 1,
+        started_at: day,
+        ended_at: null,
+      },
+    ];
+
+    const result = buildStabilityInputForDay(day, now, events, supplyByCoin);
+
+    expect(result.depegCount).toBe(1);
+    expect(result.depegs).toEqual([
+      {
+        bps: -9900,
+        mcapUsd: 18_000_000_000,
+        depegAgeDays: 0,
+      },
+    ]);
   });
 
   it("uses peak deviation as a start-day floor when the daily snapshot misses an intraday shock", () => {

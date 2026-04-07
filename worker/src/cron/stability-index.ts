@@ -6,6 +6,7 @@ import type { CronResult } from "../lib/cron-logger";
 import { getPriceCache } from "../lib/db-cache";
 import { computeStabilityIndex, getDepreciationFactor } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { canonicalizePsiStablecoinId } from "../lib/psi-stablecoin-ids";
 
 const REPLAY_PRICE_CACHE_TTL_SEC = 6 * 60 * 60;
 
@@ -150,9 +151,10 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   type DepegRow = { stablecoin_id: string; peg_reference: number; started_at: number };
   const grouped = new Map<string, DepegRow[]>();
   for (const r of activeDepegs.results ?? []) {
-    const list = grouped.get(r.stablecoin_id) ?? [];
+    const canonicalId = canonicalizePsiStablecoinId(r.stablecoin_id);
+    const list = grouped.get(canonicalId) ?? [];
     list.push(r);
-    grouped.set(r.stablecoin_id, list);
+    grouped.set(canonicalId, list);
   }
 
   const depegs: { bps: number; mcapUsd: number; depegAgeDays: number }[] = [];

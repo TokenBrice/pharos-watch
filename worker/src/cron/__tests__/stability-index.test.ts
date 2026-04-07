@@ -281,6 +281,61 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(contributors[0]?.bps).toBe(-4587);
   });
 
+  it("maps legacy PSI depeg ids onto the canonical live cache asset", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+      kind: "ok",
+      payload: {
+        peggedAssets: [
+          {
+            id: "ust-terra",
+            name: "TerraUSD",
+            symbol: "UST",
+            geckoId: "terrausd",
+            pegType: "peggedUSD",
+            pegMechanism: "algorithmic",
+            price: 0.12,
+            priceSource: "defillama",
+            priceConfidence: "single-source",
+            priceUpdatedAt: nowSec,
+            priceObservedAt: nowSec,
+            priceObservedAtMode: "upstream",
+            priceSyncedAt: nowSec,
+            consensusSources: [],
+            agreeSources: [],
+            supplySource: "defillama",
+            circulating: { peggedUSD: 15_000_000_000 },
+            circulatingPrevDay: { peggedUSD: 17_000_000_000 },
+            circulatingPrevWeek: { peggedUSD: 18_500_000_000 },
+            circulatingPrevMonth: { peggedUSD: 18_500_000_000 },
+            chainCirculating: {},
+            chains: [],
+          },
+        ],
+      },
+      updatedAt: nowSec,
+    });
+
+    const db = makeDb({
+      depegRows: [
+        {
+          stablecoin_id: "ust-terra-classic",
+          peg_reference: 1,
+          started_at: nowSec - 3_600,
+        },
+      ],
+    });
+
+    await computeAndStoreStabilityIndex(db);
+    const snapshot = readInsertedInputSnapshot(db);
+    const contributors = Array.isArray(snapshot.contributors) ? snapshot.contributors as Array<Record<string, unknown>> : [];
+
+    expect(snapshot.depegCount).toBe(1);
+    expect(contributors).toHaveLength(1);
+    expect(contributors[0]?.id).toBe("ust-terra");
+    expect(contributors[0]?.bps).toBe(-8800);
+  });
+
   it("does not use stale replay-safe cached prices for open depegs", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({

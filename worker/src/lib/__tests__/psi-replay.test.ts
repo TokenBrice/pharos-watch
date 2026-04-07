@@ -213,4 +213,38 @@ describe("psi-replay", () => {
     ]);
     expect(replay.result?.band).toBe("MELTDOWN");
   });
+
+  it("replays legacy UST depeg rows against the canonical shadow asset", () => {
+    const day = 1_652_140_800; // 2022-05-10
+    const now = day + DAY;
+    const supplyByCoin = buildSupplySnapshotMap([
+      { stablecoin_id: "ust-terra", snapshot_date: day, circulating_usd: 15_682_326_993 },
+      { stablecoin_id: "ust-terra", snapshot_date: day - 7 * DAY, circulating_usd: 18_700_360_530 },
+      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 82_000_000_000, price: 1 },
+      { stablecoin_id: "usdt-tether", snapshot_date: day - 7 * DAY, circulating_usd: 81_500_000_000, price: 1 },
+    ]);
+
+    const replay = replayHistoricalPsiForDay({
+      day,
+      now,
+      methodologyVersion: "1.0",
+      depegEvents: [
+        {
+          stablecoin_id: "ust-terra-classic",
+          peak_deviation_bps: -9900,
+          peg_reference: 1,
+          started_at: day - 28_700,
+          ended_at: null,
+        },
+      ],
+      supplyByCoin,
+      dewsByDay: new Map(),
+    });
+
+    expect(replay.input.depegs).toEqual([
+      { bps: -9900, mcapUsd: 15_682_326_993, depegAgeDays: expect.any(Number) },
+    ]);
+    expect(replay.result?.band).toBe("MELTDOWN");
+    expect(replay.result?.score).toBeLessThan(20);
+  });
 });
