@@ -63,7 +63,6 @@ export function StabilityIndexMethodologySection() {
                   Result: <span className="text-foreground">PSI 94.3 (BEDROCK)</span>.
                 </p>
               </WorkedExample>
-
               <MethodologyDetails
                 defaultOpen
                 primary

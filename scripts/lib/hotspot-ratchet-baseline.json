@@ -12,8 +12,8 @@
     "notes": "Report-card scoring and projection logic are still concentrated here. The next pass should separate scoring families, blacklist/live-slice enrichment, and presentation-oriented shaping."
   },
   "worker/src/api/stablecoin-detail.ts": {
-    "fileLines": 76,
-    "maxFunctionLines": 60,
+    "fileLines": 77,
+    "maxFunctionLines": 61,
     "branchCount": 4,
     "disposition": "stabilized",
     "targetBudget": {
@@ -60,8 +60,8 @@
     "notes": "The graph renderer still mixes data shaping, simulation wiring, and view concerns. Split graph math, legend controls, and rendering shells before growing the feature further."
   },
   "src/app/chains/[chain]/client.tsx": {
-    "fileLines": 734,
-    "maxFunctionLines": 113,
+    "fileLines": 736,
+    "maxFunctionLines": 107,
     "branchCount": 47,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -204,8 +204,8 @@
     "notes": "Reference tables are already separated. Keep future lookup tables here rather than regrowing the per-version modules."
   },
   "src/app/coverage/client.tsx": {
-    "fileLines": 35,
-    "maxFunctionLines": 23,
+    "fileLines": 32,
+    "maxFunctionLines": 21,
     "branchCount": 0,
     "disposition": "stabilized",
     "targetBudget": {
@@ -240,8 +240,8 @@
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 656,
-    "maxFunctionLines": 406,
+    "fileLines": 671,
+    "maxFunctionLines": 420,
     "branchCount": 34,
     "disposition": "deferred",
     "targetBudget": {

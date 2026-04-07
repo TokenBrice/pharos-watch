@@ -43,10 +43,6 @@
     "disposition": "queued-p4",
     "notes": "Discovery challenger persistence still combines selection, mutation planning, and writeback. Track it for a later persistence-policy split."
   },
-  "src/app/safety-scores/client.tsx": {
-    "disposition": "queued-p4",
-    "notes": "The Safety Scores route client remains a large UI composition file. Track it with the other route-client hotspot follow-ups."
-  },
   "worker/src/lib/fx-rate-state.ts": {
     "disposition": "deferred",
     "notes": "FX fallback state handling has many branches but a wide caller surface. Defer refactoring until the next pricing/runtime state follow-up."
