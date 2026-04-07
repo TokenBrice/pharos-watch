@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { DexApiPool } from "../../../lib/dex-api-common";
-import { integrateDirectApiLiquidityPhase } from "../orchestrator-phases";
+import {
+  buildAuthoritativeStagedPoolConfirmationIndex,
+  integrateDirectApiLiquidityPhase,
+} from "../orchestrator-phases";
 import { createKnownPoolIdentityIndex } from "../pool-identity";
 
 describe("integrateDirectApiLiquidityPhase", () => {
@@ -44,5 +47,47 @@ describe("integrateDirectApiLiquidityPhase", () => {
     expect(metrics.size).toBe(0);
     expect(priceObservations.size).toBe(0);
     expect(knownPoolIndex.exactKeys.has(`plasma:${poolAddress}`)).toBe(true);
+  });
+});
+
+describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
+  it("enforces confirmation for clean authoritative protocol fetches even when no pools were returned", () => {
+    const index = buildAuthoritativeStagedPoolConfirmationIndex([
+      {
+        name: "Balancer",
+        circuitKey: "balancer-api",
+        normalizedProtocol: "balancer",
+        supportedChains: ["plasma"],
+        result: {
+          pools: [],
+          ok: true,
+          degraded: false,
+          errors: [],
+        },
+      },
+    ]);
+
+    expect(index.enforcedChainsByProtocol.get("balancer")).toEqual(new Set(["plasma"]));
+    expect(index.confirmedExactKeysByProtocol.get("balancer")).toEqual(new Set());
+  });
+
+  it("fails open when the authoritative fetch degraded", () => {
+    const index = buildAuthoritativeStagedPoolConfirmationIndex([
+      {
+        name: "Balancer",
+        circuitKey: "balancer-api",
+        normalizedProtocol: "balancer",
+        supportedChains: ["plasma"],
+        result: {
+          pools: [],
+          ok: true,
+          degraded: true,
+          errors: ["partial"],
+        },
+      },
+    ]);
+
+    expect(index.enforcedChainsByProtocol.size).toBe(0);
+    expect(index.confirmedExactKeysByProtocol.size).toBe(0);
   });
 });

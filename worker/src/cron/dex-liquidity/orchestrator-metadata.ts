@@ -192,6 +192,7 @@ export function buildDexLiquidityCronMetadata(params: {
   stagedPoolsSkipped: number;
   stagedPoolsSkippedByExactIdentity: number;
   stagedPoolsSkippedByUniqueDerivedIdentity: number;
+  stagedPoolsSkippedByAuthoritativeProtocol: number;
   sourceCoverage: DexLiquidityPostScoreAnalysis["sourceCoverage"];
   challengerPublication: {
     publishedStablecoins: number;
@@ -211,6 +212,7 @@ export function buildDexLiquidityCronMetadata(params: {
     stagedPoolsSkipped: params.stagedPoolsSkipped,
     stagedPoolsSkippedByExactIdentity: params.stagedPoolsSkippedByExactIdentity,
     stagedPoolsSkippedByUniqueDerivedIdentity: params.stagedPoolsSkippedByUniqueDerivedIdentity,
+    stagedPoolsSkippedByAuthoritativeProtocol: params.stagedPoolsSkippedByAuthoritativeProtocol,
     sourceCoverage: {
       ...params.sourceCoverage,
       challengerSnapshotsPublished: params.challengerPublication.publishedStablecoins,

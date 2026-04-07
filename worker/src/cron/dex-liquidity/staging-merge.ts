@@ -6,7 +6,8 @@ import { QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
 import { toFiniteNumber } from "../../lib/number-utils";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { mergeCgPools, mergeGtPools } from "./fetch-crawlers";
-import { getGtDexQuality } from "./pool-helpers";
+import type { AuthoritativeStagedPoolConfirmationIndex } from "./orchestrator-phases";
+import { getGtDexQuality, normalizeProtocol } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import type { CgNewPool, GtNewPool, LiquidityMetrics, DexPriceObs } from "./types";
 import {
@@ -122,6 +123,16 @@ function resolveStagedPoolProfile(stagedPool: StagedPool): {
   };
 }
 
+function requiresAuthoritativeProtocolConfirmation(
+  authoritativeConfirmation: AuthoritativeStagedPoolConfirmationIndex | undefined,
+  protocol: string,
+  chain: string,
+): boolean {
+  if (!authoritativeConfirmation) return false;
+  const enforcedChains = authoritativeConfirmation.enforcedChainsByProtocol.get(protocol);
+  return enforcedChains?.has(chain.toLowerCase()) ?? false;
+}
+
 /**
  * Read staged pools from dex_pool_staging (refreshed within 24h),
  * convert to pool entries with confidence decay and defaults,
@@ -136,11 +147,13 @@ export async function mergeStagedPools(
   knownPoolIndex: KnownPoolIdentityIndex,
   nowSec: number,
   references?: PriceValidationReferences,
+  authoritativeConfirmation?: AuthoritativeStagedPoolConfirmationIndex,
 ): Promise<{
   mergedCount: number;
   skippedCount: number;
   skippedByExactIdentityCount: number;
   skippedByUniqueDerivedIdentityCount: number;
+  skippedByAuthoritativeProtocolCount: number;
   priceObservations: Map<string, DexPriceObs[]>;
 }> {
   let rows: StagedPoolRow[];
@@ -161,6 +174,7 @@ export async function mergeStagedPools(
       skippedCount: 0,
       skippedByExactIdentityCount: 0,
       skippedByUniqueDerivedIdentityCount: 0,
+      skippedByAuthoritativeProtocolCount: 0,
       priceObservations: new Map(),
     };
   }
@@ -171,6 +185,7 @@ export async function mergeStagedPools(
   let skippedCount = 0;
   let exactIdentitySkipped = 0;
   let uniqueDerivedIdentitySkipped = 0;
+  let authoritativeProtocolSkipped = 0;
 
   const stagedEntries = rows
     .map((row) => {
@@ -203,6 +218,7 @@ export async function mergeStagedPools(
 
   for (const entry of stagedEntries) {
     const { stagedPool, dexId, poolType, qualityMultiplier, identity } = entry;
+    const normalizedProtocol = normalizeProtocol(stagedPool.protocol || dexId);
 
     // Compute confidence and adjusted TVL early — needed for price observation gate
     const ageHours = (nowSec - stagedPool.refreshedAt) / 3600;
@@ -210,6 +226,15 @@ export async function mergeStagedPools(
     if (confidence === 0) continue;
 
     const adjustedTvl = (stagedPool.tvlUsd ?? 0) * confidence;
+
+    if (requiresAuthoritativeProtocolConfirmation(authoritativeConfirmation, normalizedProtocol, stagedPool.chain)) {
+      const confirmedExactKeys = authoritativeConfirmation?.confirmedExactKeysByProtocol.get(normalizedProtocol);
+      if (!identity.exactPoolKey || !confirmedExactKeys?.has(identity.exactPoolKey)) {
+        skippedCount++;
+        authoritativeProtocolSkipped++;
+        continue;
+      }
+    }
 
     // Extract price observations BEFORE dedup check.
     // DL yields pools provide pool metrics but never prices; CG/GT staged pools
@@ -334,6 +359,11 @@ export async function mergeStagedPools(
   if (uniqueDerivedIdentitySkipped > 0) {
     console.log(`[dex-liquidity] Skipped ${uniqueDerivedIdentitySkipped} staged pools via unique derived identity`);
   }
+  if (authoritativeProtocolSkipped > 0) {
+    console.log(
+      `[dex-liquidity] Skipped ${authoritativeProtocolSkipped} staged pools missing authoritative protocol confirmation`,
+    );
+  }
 
   let mergedCount = 0;
   for (const pools of cgPoolMap.values()) mergedCount += pools.length;
@@ -347,6 +377,7 @@ export async function mergeStagedPools(
     skippedCount,
     skippedByExactIdentityCount: exactIdentitySkipped,
     skippedByUniqueDerivedIdentityCount: uniqueDerivedIdentitySkipped,
+    skippedByAuthoritativeProtocolCount: authoritativeProtocolSkipped,
     priceObservations: stagedPriceObs,
   };
 }

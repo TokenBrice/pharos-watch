@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const liquidity = createMethodologyVersion({
-  currentVersion: "5.0",
+  currentVersion: "5.1",
   changelogPath: "/methodology/liquidity-score-changelog/",
   changelog: [
+    {
+      version: "5.1",
+      title: "Authoritative protocol confirmation for staged discovery",
+      date: "2026-04-07",
+      effectiveAt: 1775520000,
+      summary:
+        "Staged discovery rows can no longer invent new pools inside protocol families that already have a clean protocol-native direct source. When that authoritative fetch succeeds on a supported chain, staged rows must match one of its exact pool ids or they are excluded.",
+      impact: [
+        "GeckoTerminal, CoinGecko Onchain, and DexScreener staging rows that claim Balancer, Fluid, Raydium, Orca, Meteora, PancakeSwap, Aerodrome, or Velodrome liquidity now require authoritative exact-id confirmation when the matching direct fetch succeeded cleanly on that chain",
+        "The guard fails open when the authoritative source is unavailable or degraded, so discovery sources still recover coverage during native-source incidents instead of hard-zeroing the row",
+        "Liquidity cron metadata now records `stagedPoolsSkippedByAuthoritativeProtocol` separately from exact-id and derived-identity dedupe skips",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.0",
       title: "Size-aware scoring: relative TVL depth, recalibrated volume, quality retention",

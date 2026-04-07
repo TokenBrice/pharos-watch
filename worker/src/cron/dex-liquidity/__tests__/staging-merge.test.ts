@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stagedPoolConfidence, stagedPoolMaturityDays } from "../../dex-discovery/types";
 import { mergeStagedPools } from "../staging-merge";
+import type { AuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases";
 import {
   buildPoolIdentity,
   createKnownPoolIdentityIndex,
@@ -45,6 +46,25 @@ function makeKnownPoolIndex(entries: string[] = []): KnownPoolIdentityIndex {
     }));
   }
   return known;
+}
+
+function makeAuthoritativeConfirmationIndex(entries: Array<{
+  protocol: string;
+  chains: string[];
+  exactPoolKeys?: string[];
+}>): AuthoritativeStagedPoolConfirmationIndex {
+  const enforcedChainsByProtocol = new Map<string, Set<string>>();
+  const confirmedExactKeysByProtocol = new Map<string, Set<string>>();
+
+  for (const entry of entries) {
+    enforcedChainsByProtocol.set(entry.protocol, new Set(entry.chains));
+    confirmedExactKeysByProtocol.set(entry.protocol, new Set(entry.exactPoolKeys ?? []));
+  }
+
+  return {
+    enforcedChainsByProtocol,
+    confirmedExactKeysByProtocol,
+  };
 }
 
 describe("stagedPoolConfidence", () => {
@@ -252,6 +272,85 @@ describe("mergeStagedPools", () => {
     expect(metric.topPools).toHaveLength(1);
     expect(metric.topPools[0]?.source).toBe("gecko_terminal");
     expect(metric.topPools[0]?.poolId).toBe("bsc:0xpool1");
+  });
+
+  it("skips staged pools that claim an authoritative protocol without authoritative exact-id confirmation", async () => {
+    const now = 1710000000;
+    const unconfirmedBalancerPool = "0x4ba45fb7de134bcb24a6053bbe21c3a4be9f85ea";
+    const mockDb = createMockDb([{
+      pool_id: `plasma:${unconfirmedBalancerPool}`,
+      stablecoin_id: "usdai-usd-ai",
+      source: "gecko_terminal",
+      chain: "plasma",
+      protocol: "balancer",
+      dex_id: "balancer-v3-plasma",
+      symbol: "USDai/USDT0",
+      tvl_usd: 2250000,
+      volume_24h: 0,
+      quality_multiplier: 0.85,
+      pool_type: "stable",
+      fee_tier: null,
+      balance_ratio: null,
+      is_stable: 1,
+      base_token: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+      quote_token: "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+      quote_symbol: "USDT0",
+      price_usd: 1,
+      locked_liq_pct: null,
+      discovered_at: now - 86400,
+      refreshed_at: now,
+    }]);
+    const metrics = new Map();
+
+    const result = await mergeStagedPools(
+      mockDb,
+      metrics as never,
+      makeKnownPoolIndex(),
+      now,
+      undefined,
+      makeAuthoritativeConfirmationIndex([{ protocol: "balancer", chains: ["plasma"] }]),
+    );
+
+    expect(result.mergedCount).toBe(0);
+    expect(result.skippedCount).toBe(1);
+    expect(result.skippedByAuthoritativeProtocolCount).toBe(1);
+    expect(metrics.size).toBe(0);
+    expect(result.priceObservations.get("usdai-usd-ai")).toBeUndefined();
+  });
+
+  it("fails open for staged pools when authoritative confirmation is unavailable", async () => {
+    const now = 1710000000;
+    const confirmedBalancerPool = "0x01e2c7fcde2b8d5d1413732c4e274ba5b06b1e54";
+    const mockDb = createMockDb([{
+      pool_id: `plasma:${confirmedBalancerPool}`,
+      stablecoin_id: "usdai-usd-ai",
+      source: "gecko_terminal",
+      chain: "plasma",
+      protocol: "balancer",
+      dex_id: "balancer-v3-plasma",
+      symbol: "USDai/USDT0",
+      tvl_usd: 547760,
+      volume_24h: 20190,
+      quality_multiplier: 0.85,
+      pool_type: "stable",
+      fee_tier: null,
+      balance_ratio: null,
+      is_stable: 1,
+      base_token: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
+      quote_token: "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+      quote_symbol: "USDT0",
+      price_usd: 1,
+      locked_liq_pct: null,
+      discovered_at: now - 86400,
+      refreshed_at: now,
+    }]);
+    const metrics = new Map();
+
+    const result = await mergeStagedPools(mockDb, metrics as never, makeKnownPoolIndex(), now);
+
+    expect(result.mergedCount).toBe(1);
+    expect(result.skippedByAuthoritativeProtocolCount).toBe(0);
+    expect(metrics.get("usdai-usd-ai")?.protocolTvl.balancer).toBe(547760);
   });
 
   it("merges CG staged pools and preserves balance ratio and locked liquidity", async () => {

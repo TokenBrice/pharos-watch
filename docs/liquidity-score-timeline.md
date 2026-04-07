@@ -1,6 +1,17 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.0` (2026-02-19 -> 2026-04-05).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.1` (2026-02-19 -> 2026-04-07).
+
+---
+
+## v5.1 - Authoritative protocol confirmation for staged discovery (Apr 7, 2026)
+
+**Commit:** `unreleased`
+
+- Staged discovery rows can no longer invent new pools inside protocol families that already have a clean protocol-native direct source
+- When a direct protocol-native fetch succeeds cleanly on a supported chain, staged GT/CG/DS rows for Balancer, Fluid, Raydium, Orca, Meteora, PancakeSwap, Aerodrome, and Velodrome must match an authoritative exact pool id or they are excluded
+- The guard fails open when the authoritative fetch is degraded or unavailable, so staged discovery still acts as recovery coverage during native-source incidents
+- Liquidity cron metadata now records `stagedPoolsSkippedByAuthoritativeProtocol` separately from normal exact-id and derived-identity dedupe skips
 
 ---
 

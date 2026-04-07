@@ -38,6 +38,8 @@ import type { DexPriceObs, LiquidityMetrics, SymbolLookups } from "./types";
 export interface DirectApiFetcher {
   name: string;
   circuitKey: string;
+  normalizedProtocol: string;
+  supportedChains: string[];
   fn: (signal?: AbortSignal) => Promise<DexApiFetchResult>;
 }
 
@@ -50,9 +52,20 @@ export interface SubgraphEnrichmentPhaseResult {
 }
 
 export interface DirectApiFetchPhaseResult {
-  results: Array<{ name: string; circuitKey: string; result: DexApiFetchResult }>;
+  results: Array<{
+    name: string;
+    circuitKey: string;
+    normalizedProtocol: string;
+    supportedChains: string[];
+    result: DexApiFetchResult;
+  }>;
   failedSources: string[];
   fallbackSignals: string[];
+}
+
+export interface AuthoritativeStagedPoolConfirmationIndex {
+  enforcedChainsByProtocol: Map<string, Set<string>>;
+  confirmedExactKeysByProtocol: Map<string, Set<string>>;
 }
 
 export interface DirectApiIntegrationResult {
@@ -131,20 +144,67 @@ export function buildDexDirectApiFetchers(params: {
     {
       name: "Fluid",
       circuitKey: CIRCUIT_SOURCE.FLUID_DEX_API,
+      normalizedProtocol: "fluid",
+      supportedChains: ["ethereum", "arbitrum", "base", "polygon", "bsc", "plasma"],
       fn: (signal) => fetchFluidPools(signal, params.chainRpcs),
     },
-    { name: "Balancer", circuitKey: CIRCUIT_SOURCE.BALANCER_API, fn: fetchBalancerPools },
+    {
+      name: "Balancer",
+      circuitKey: CIRCUIT_SOURCE.BALANCER_API,
+      normalizedProtocol: "balancer",
+      supportedChains: [
+        "ethereum",
+        "arbitrum",
+        "base",
+        "polygon",
+        "optimism",
+        "gnosis",
+        "avalanche",
+        "sonic",
+        "fantom",
+        "fraxtal",
+        "mode",
+        "polygon-zkevm",
+        "plasma",
+        "monad",
+        "hyperevm",
+        "xlayer",
+      ],
+      fn: fetchBalancerPools,
+    },
     {
       name: "PancakeSwap",
       circuitKey: CIRCUIT_SOURCE.PANCAKESWAP_API,
+      normalizedProtocol: "pancakeswap",
+      supportedChains: ["bsc", "ethereum", "base"],
       fn: (signal) => fetchPancakeSwapPools(params.graphApiKey, signal),
     },
-    { name: "Meteora", circuitKey: CIRCUIT_SOURCE.METEORA_API, fn: fetchMeteoraPools },
-    { name: "Raydium", circuitKey: CIRCUIT_SOURCE.RAYDIUM_API, fn: fetchRaydiumPools },
-    { name: "Orca", circuitKey: CIRCUIT_SOURCE.ORCA_API, fn: fetchOrcaPools },
+    {
+      name: "Meteora",
+      circuitKey: CIRCUIT_SOURCE.METEORA_API,
+      normalizedProtocol: "meteora",
+      supportedChains: ["solana"],
+      fn: fetchMeteoraPools,
+    },
+    {
+      name: "Raydium",
+      circuitKey: CIRCUIT_SOURCE.RAYDIUM_API,
+      normalizedProtocol: "raydium",
+      supportedChains: ["solana"],
+      fn: fetchRaydiumPools,
+    },
+    {
+      name: "Orca",
+      circuitKey: CIRCUIT_SOURCE.ORCA_API,
+      normalizedProtocol: "orca",
+      supportedChains: ["solana"],
+      fn: fetchOrcaPools,
+    },
     {
       name: "Aerodrome Slipstream",
       circuitKey: CIRCUIT_SOURCE.AERODROME_SLIPSTREAM_API,
+      normalizedProtocol: "aerodrome",
+      supportedChains: ["base"],
       fn: (signal) =>
         fetchSlipstreamPools(
           "aerodrome-slipstream",
@@ -158,6 +218,8 @@ export function buildDexDirectApiFetchers(params: {
     {
       name: "Velodrome Slipstream",
       circuitKey: CIRCUIT_SOURCE.VELODROME_SLIPSTREAM_API,
+      normalizedProtocol: "velodrome",
+      supportedChains: ["optimism"],
       fn: (signal) =>
         fetchSlipstreamPools(
           "velodrome-slipstream",
@@ -240,7 +302,7 @@ export async function runDirectApiFetchPhase(
   const failedSources: string[] = [];
   const fallbackSignals: string[] = [];
 
-  for (const { name, circuitKey, fn } of fetchers) {
+  for (const { name, circuitKey, normalizedProtocol, supportedChains, fn } of fetchers) {
     if (!(await shouldAttemptFetch(db, circuitKey))) {
       console.log(`[dex-liquidity] ${name} API circuit open, skipping`);
       failedSources.push(circuitKey);
@@ -248,6 +310,8 @@ export async function runDirectApiFetchPhase(
       results.push({
         name,
         circuitKey,
+        normalizedProtocol,
+        supportedChains,
         result: makeDexApiFetchResult([], {
           ok: false,
           degraded: true,
@@ -268,7 +332,7 @@ export async function runDirectApiFetchPhase(
       } else if (result.degraded) {
         fallbackSignals.push(`${circuitKey}-partial`);
       }
-      results.push({ name, circuitKey, result });
+      results.push({ name, circuitKey, normalizedProtocol, supportedChains, result });
     } catch (err) {
       if (signal?.aborted) throw err;
       console.warn(`[dex-liquidity] ${name} API failed (non-fatal):`, err);
@@ -278,6 +342,8 @@ export async function runDirectApiFetchPhase(
       results.push({
         name,
         circuitKey,
+        normalizedProtocol,
+        supportedChains,
         result: makeDexApiFetchResult([], {
           ok: false,
           degraded: true,
@@ -288,6 +354,39 @@ export async function runDirectApiFetchPhase(
   }
 
   return { results, failedSources, fallbackSignals };
+}
+
+export function buildAuthoritativeStagedPoolConfirmationIndex(
+  results: DirectApiFetchPhaseResult["results"],
+): AuthoritativeStagedPoolConfirmationIndex {
+  const enforcedChainsByProtocol = new Map<string, Set<string>>();
+  const confirmedExactKeysByProtocol = new Map<string, Set<string>>();
+
+  for (const entry of results) {
+    if (!entry.result.ok || entry.result.degraded) {
+      continue;
+    }
+
+    const enforcedChains = enforcedChainsByProtocol.get(entry.normalizedProtocol) ?? new Set<string>();
+    for (const chain of entry.supportedChains) {
+      enforcedChains.add(chain);
+    }
+    enforcedChainsByProtocol.set(entry.normalizedProtocol, enforcedChains);
+
+    const confirmedExactKeys = confirmedExactKeysByProtocol.get(entry.normalizedProtocol) ?? new Set<string>();
+    for (const pool of entry.result.pools) {
+      const exactPoolKey = buildDirectApiPoolIdentity(pool).exactPoolKey;
+      if (exactPoolKey) {
+        confirmedExactKeys.add(exactPoolKey);
+      }
+    }
+    confirmedExactKeysByProtocol.set(entry.normalizedProtocol, confirmedExactKeys);
+  }
+
+  return {
+    enforcedChainsByProtocol,
+    confirmedExactKeysByProtocol,
+  };
 }
 
 export function mergeDexPriceObservationMap(

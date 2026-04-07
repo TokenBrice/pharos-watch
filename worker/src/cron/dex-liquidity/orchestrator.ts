@@ -16,6 +16,7 @@ import { isPreferredDirectApiPool, type DexApiPool } from "../../lib/dex-api-com
 import { POOL_CHALLENGE_MIN_TVL } from "../../lib/constants";
 import { buildDirectApiPoolIdentity } from "./direct-source-helpers";
 import {
+  buildAuthoritativeStagedPoolConfirmationIndex,
   buildDexDirectApiFetchers,
   fetchSubgraphEnrichmentPhase,
   integrateDirectApiLiquidityPhase,
@@ -179,6 +180,7 @@ export async function syncDexLiquidity(
   const directApiPhase = await runDirectApiFetchPhase(db, directApiFetchers, signal);
   failedSources.push(...directApiPhase.failedSources);
   fallbackSignals.push(...directApiPhase.fallbackSignals);
+  const authoritativeConfirmation = buildAuthoritativeStagedPoolConfirmationIndex(directApiPhase.results);
 
   mergeDexPriceObservationMap(priceObservations, subgraphEnrichment.uniV3PriceObs);
   mergeDexPriceObservationMap(priceObservations, subgraphEnrichment.aerodromePriceObs);
@@ -241,9 +243,17 @@ export async function syncDexLiquidity(
     skippedCount: stagedSkippedCount,
     skippedByExactIdentityCount: stagedSkippedByExactIdentityCount,
     skippedByUniqueDerivedIdentityCount: stagedSkippedByUniqueDerivedIdentityCount,
+    skippedByAuthoritativeProtocolCount: stagedSkippedByAuthoritativeProtocolCount,
     priceObservations: stagedPriceObs,
   } =
-    await mergeStagedPools(db, metrics, knownPoolIndex, syncStartSec, validationReferences);
+    await mergeStagedPools(
+      db,
+      metrics,
+      knownPoolIndex,
+      syncStartSec,
+      validationReferences,
+      authoritativeConfirmation,
+    );
   mergeDexPriceObservationMap(priceObservations, stagedPriceObs);
 
   const {
@@ -354,6 +364,7 @@ export async function syncDexLiquidity(
       stagedPoolsSkipped: stagedSkippedCount,
       stagedPoolsSkippedByExactIdentity: stagedSkippedByExactIdentityCount,
       stagedPoolsSkippedByUniqueDerivedIdentity: stagedSkippedByUniqueDerivedIdentityCount,
+      stagedPoolsSkippedByAuthoritativeProtocol: stagedSkippedByAuthoritativeProtocolCount,
       sourceCoverage: analysis.sourceCoverage,
       challengerPublication,
       failedSources,

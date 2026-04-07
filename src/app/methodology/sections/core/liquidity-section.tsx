@@ -50,6 +50,12 @@ export function LiquidityMethodologySection() {
         semantics.
       </p>
       <p>
+        Discovery rows also need authoritative confirmation when they claim a protocol family that already has a clean
+        protocol-native fetch on that chain. In practice, GT/CG/DS staging cannot invent new Balancer, Fluid, Raydium,
+        Orca, Meteora, PancakeSwap, Aerodrome, or Velodrome pools after the native source succeeded; if that native
+        fetch is degraded or unavailable, the scorer fails open and still allows staged recovery rows through.
+      </p>
+      <p>
         When protocol-native sources expose pool inventory, Balancer, Raydium, Orca, Meteora, PancakeSwap V3, and the
         Slipstream integrations now contribute measured balances and fee detail instead of neutral placeholders.
         Balancer weighted pools are normalized against target token weights before the balance ratio is computed. Fluid

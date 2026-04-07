@@ -36,6 +36,7 @@ export const DigestResponseSchema = z.object({
 export const DexLiquidityCronMetadataSchema = z.object({
   stagedPoolsMerged: z.number().optional(),
   stagedPoolsSkipped: z.number().optional(),
+  stagedPoolsSkippedByAuthoritativeProtocol: z.number().optional(),
   failedSources: z.array(z.string()).optional().default([]),
   sourceCoverage: z
     .object({
