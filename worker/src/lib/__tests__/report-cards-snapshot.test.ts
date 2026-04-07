@@ -225,7 +225,7 @@ describe("buildReportCardsSnapshot", () => {
       "cusd-cap": {
         stablecoinId: "cusd-cap",
         score: 88,
-        effectiveExitScore: 56,
+        effectiveExitScore: 91,
         dexLiquidityScore: 29,
         accessScore: 100,
         settlementScore: 100,
@@ -261,8 +261,8 @@ describe("buildReportCardsSnapshot", () => {
     expect(card?.rawInputs.liquidityScore).toBe(29);
     expect(card?.rawInputs.redemptionBackstopScore).toBe(88);
     expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(true);
-    expect(card?.rawInputs.effectiveExitScore).toBe(56);
-    expect(card?.dimensions.liquidity.score).toBe(56);
+    expect(card?.rawInputs.effectiveExitScore).toBe(91);
+    expect(card?.dimensions.liquidity.score).toBe(91);
   });
 
   it("inherits peg risk for configured NAV wrappers from the referenced base stablecoin", async () => {
