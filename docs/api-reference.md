@@ -2701,6 +2701,8 @@ Backfills historical depeg events from stored price data.
 
 For coins with a registered authoritative historical price provider, the backfill uses that same provider family first (for example, replayed protocol redemption quotes) before falling back to CoinGecko/DefiLlama market history. If the authoritative provider is configured but unavailable, existing `source='backfill'` rows for that coin are preserved instead of being rebuilt from a weaker source.
 
+`dry-run=true` compares the freshly replayed historical events against the currently stored `source='backfill'` rows without mutating the database. The preview reports whether the replay exactly matches the stored backfill rows, how many stored backfill rows would be removed, how many replayed rows would be added, and the current live-row counts for the same asset.
+
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 **Query parameters**
@@ -2709,6 +2711,7 @@ For coins with a registered authoritative historical price provider, the backfil
 | ------------ | --------- | ------- | -------------------------------- |
 | `stablecoin` | `string`  | —       | Process a single stablecoin ID   |
 | `batch`      | `integer` | `0`     | Batch offset (3 coins per batch) |
+| `dry-run`    | `"true"`  | —       | Preview replay-vs-backfill differences without writing `depeg_events` |
 
 ### `POST /api/backfill-supply-history`
 

@@ -43,10 +43,6 @@
     "disposition": "queued-p4",
     "notes": "The Safety Scores route client remains a large UI composition file. Track it with the other route-client hotspot follow-ups."
   },
-  "src/components/kpi-bar.tsx": {
-    "disposition": "deferred",
-    "notes": "KPI layout logic is busy but stable. Defer cleanup until the dashboard presentation lane has capacity."
-  },
   "worker/src/lib/fx-rate-state.ts": {
     "disposition": "deferred",
     "notes": "FX fallback state handling has many branches but a wide caller surface. Defer refactoring until the next pricing/runtime state follow-up."
@@ -78,5 +74,9 @@
   "shared/lib/format.ts": {
     "disposition": "deferred",
     "notes": "Shared formatting helpers are branchy but broadly reused. Defer any breakup until a dedicated shared-utility cleanup lane exists."
+  },
+  "worker/src/api/backfill-depegs.ts": {
+    "disposition": "deferred",
+    "notes": "Historical depeg replay currently mixes supply preparation, FX/reference assembly, backfill mutation, and dry-run diff preview. Keep it waived until the replay/admin endpoint split is scheduled."
   }
 }

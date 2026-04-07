@@ -63,6 +63,7 @@ import {
 } from "./backfill-fx";
 
 import {
+  type HistoricalMarketSourceDiagnostics,
   type HistoricalMarketPriceSeriesResult,
   type PricePoint,
   collapsePricesToDailyTimestamps,
@@ -98,6 +99,46 @@ interface PreparedBackfillCoin {
   supplyByDate: SupplySnapshot[];
 }
 
+export interface ExistingDepegEventRow {
+  id: number;
+  stablecoin_id: string;
+  symbol: string;
+  peg_type: string;
+  direction: string;
+  peak_deviation_bps: number;
+  started_at: number;
+  ended_at: number | null;
+  start_price: number;
+  peak_price: number | null;
+  recovery_price: number | null;
+  peg_reference: number;
+  source: string;
+}
+
+interface BackfillReplayPreview {
+  stablecoinId: string;
+  symbol: string;
+  replaySource: "market" | "authoritative" | "preserve-existing";
+  authoritativeSource: string | null;
+  marketSourcesUsed: string[];
+  mergeReasons: string[];
+  policyAdjustmentCount: number;
+  existingBackfillEventCount: number;
+  recomputedBackfillEventCount: number | null;
+  existingLiveEventCount: number;
+  existingOpenLiveEventCount: number;
+  exactMatch: boolean | null;
+  removedBackfillEventCount: number;
+  removedBackfillEventIdsSample: number[];
+  addedBackfillEventCount: number;
+  addedBackfillEventsSample: Array<{
+    direction: string;
+    peakDeviationBps: number;
+    startedAt: number;
+    endedAt: number | null;
+  }>;
+}
+
 export async function handleBackfillDepegs(
   db: D1Database,
   url: URL,
@@ -106,7 +147,8 @@ export async function handleBackfillDepegs(
 ): Promise<Response> {
   return runAdminJob(
     { request, trustedAdmin, url },
-    async () => {
+    async (context) => {
+      const { dryRun } = context;
       const selection = selectBackfillCoins(url, PSI_ELIGIBLE_STABLECOINS, {
         defaultBatchSize: BATCH_SIZE,
         allowBatchSizeOverride: false,
@@ -150,6 +192,7 @@ export async function handleBackfillDepegs(
       let totalEvents = 0;
       const errors: string[] = [];
       const skipped: string[] = [];
+      const previews: BackfillReplayPreview[] = [];
 
       // Collect coin details and historical FX currencies needed by this batch
       const neededFxCurrencies = new Set<string>();
@@ -317,11 +360,74 @@ export async function handleBackfillDepegs(
         }
 
         try {
-          const events = await backfillCoin(meta, geckoId, getPegRef, supplyByDate, fxRates);
+          const replay = await backfillCoin(meta, geckoId, getPegRef, supplyByDate, fxRates);
+          const events = replay.events;
 
           // null = CG had no price data → preserve existing events
           if (events === null) {
+            if (dryRun) {
+              const existingRows = await db
+                .prepare(
+                  "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
+                )
+                .bind(meta.id)
+                .all<ExistingDepegEventRow>();
+              const existingResults = existingRows.results ?? [];
+              const existingBackfillRows = existingResults.filter((row) => row.source === "backfill");
+              const existingLiveRows = existingResults.filter((row) => row.source === "live");
+              previews.push({
+                stablecoinId: meta.id,
+                symbol: meta.symbol,
+                replaySource: replay.sourceKind,
+                authoritativeSource: replay.authoritativeSource,
+                marketSourcesUsed: replay.marketDiagnostics?.sourcesUsed ?? [],
+                mergeReasons: replay.marketDiagnostics?.mergeReasons ?? [],
+                policyAdjustmentCount: replay.marketDiagnostics?.policyAdjustments.length ?? 0,
+                existingBackfillEventCount: existingBackfillRows.length,
+                recomputedBackfillEventCount: null,
+                existingLiveEventCount: existingLiveRows.length,
+                existingOpenLiveEventCount: existingLiveRows.filter((row) => row.ended_at == null).length,
+                exactMatch: null,
+                removedBackfillEventCount: 0,
+                removedBackfillEventIdsSample: [],
+                addedBackfillEventCount: 0,
+                addedBackfillEventsSample: [],
+              });
+            }
             skipped.push(meta.symbol);
+            continue;
+          }
+
+          if (dryRun) {
+            const existingRows = await db
+              .prepare(
+                "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
+              )
+              .bind(meta.id)
+              .all<ExistingDepegEventRow>();
+            const existingResults = existingRows.results ?? [];
+            const existingBackfillRows = existingResults.filter((row) => row.source === "backfill");
+            const existingLiveRows = existingResults.filter((row) => row.source === "live");
+            const diff = summarizeBackfillReplayDiff(existingBackfillRows, events);
+            previews.push({
+              stablecoinId: meta.id,
+              symbol: meta.symbol,
+              replaySource: replay.sourceKind,
+              authoritativeSource: replay.authoritativeSource,
+              marketSourcesUsed: replay.marketDiagnostics?.sourcesUsed ?? [],
+              mergeReasons: replay.marketDiagnostics?.mergeReasons ?? [],
+              policyAdjustmentCount: replay.marketDiagnostics?.policyAdjustments.length ?? 0,
+              existingBackfillEventCount: existingBackfillRows.length,
+              recomputedBackfillEventCount: events.length,
+              existingLiveEventCount: existingLiveRows.length,
+              existingOpenLiveEventCount: existingLiveRows.filter((row) => row.ended_at == null).length,
+              exactMatch: diff.exactMatch,
+              removedBackfillEventCount: diff.removedBackfillEventCount,
+              removedBackfillEventIdsSample: diff.removedBackfillEventIdsSample,
+              addedBackfillEventCount: diff.addedBackfillEventCount,
+              addedBackfillEventsSample: diff.addedBackfillEventsSample,
+            });
+            totalEvents += events.length;
             continue;
           }
 
@@ -365,6 +471,23 @@ export async function handleBackfillDepegs(
         }
       }
 
+      if (dryRun) {
+        return jsonResponse(buildAdminJobSummary({
+          dryRun: true,
+          coinsProcessed: coins.length,
+          recomputedBackfillEvents: totalEvents,
+          previews,
+          skipped,
+          errors,
+          commodities: needsCommodities
+            ? {
+                goldDataPoints: commoditySeries["GOLD"]?.length ?? 0,
+                silverDataPoints: commoditySeries["SILVER"]?.length ?? 0,
+              }
+            : undefined,
+        }));
+      }
+
       return jsonResponse(buildAdminJobSummary({
         coinsProcessed: coins.length,
         eventsCreated: totalEvents,
@@ -381,7 +504,7 @@ export async function handleBackfillDepegs(
   );
 }
 
-interface BackfillEvent {
+export interface BackfillEvent {
   pegType: string;
   direction: string;
   peakDeviationBps: number;
@@ -398,14 +521,132 @@ interface SupplySnapshot {
   supply: number;
 }
 
-/** Returns null when no trusted historical source is available (caller should preserve existing events). */
+interface BackfillCoinReplayResult {
+  events: BackfillEvent[] | null;
+  sourceKind: "market" | "authoritative" | "preserve-existing";
+  authoritativeSource: string | null;
+  marketDiagnostics: HistoricalMarketSourceDiagnostics | null;
+}
+
+const BACKFILL_DIFF_SAMPLE_LIMIT = 20;
+
+function formatBackfillNumber(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return "null";
+  return value.toString();
+}
+
+function buildBackfillEventFingerprint(event: BackfillEvent): string {
+  return [
+    event.direction,
+    event.peakDeviationBps,
+    event.startedAt,
+    event.endedAt ?? "null",
+    formatBackfillNumber(event.startPrice),
+    formatBackfillNumber(event.peakPrice),
+    formatBackfillNumber(event.recoveryPrice),
+    formatBackfillNumber(event.pegRef),
+  ].join("|");
+}
+
+function buildExistingBackfillFingerprint(row: ExistingDepegEventRow): string {
+  return [
+    row.direction,
+    row.peak_deviation_bps,
+    row.started_at,
+    row.ended_at ?? "null",
+    formatBackfillNumber(row.start_price),
+    formatBackfillNumber(row.peak_price),
+    formatBackfillNumber(row.recovery_price),
+    formatBackfillNumber(row.peg_reference),
+  ].join("|");
+}
+
+function incrementCount(target: Map<string, number>, key: string): void {
+  target.set(key, (target.get(key) ?? 0) + 1);
+}
+
+export function summarizeBackfillReplayDiff(
+  existingBackfillRows: ExistingDepegEventRow[],
+  recomputedEvents: BackfillEvent[],
+): {
+  exactMatch: boolean;
+  removedBackfillEventCount: number;
+  removedBackfillEventIdsSample: number[];
+  addedBackfillEventCount: number;
+  addedBackfillEventsSample: Array<{
+    direction: string;
+    peakDeviationBps: number;
+    startedAt: number;
+    endedAt: number | null;
+  }>;
+} {
+  const expectedCounts = new Map<string, number>();
+  for (const event of recomputedEvents) {
+    incrementCount(expectedCounts, buildBackfillEventFingerprint(event));
+  }
+
+  const removedBackfillEventIdsSample: number[] = [];
+  let removedBackfillEventCount = 0;
+  for (const row of existingBackfillRows) {
+    const key = buildExistingBackfillFingerprint(row);
+    const remaining = expectedCounts.get(key) ?? 0;
+    if (remaining > 0) {
+      expectedCounts.set(key, remaining - 1);
+      continue;
+    }
+    removedBackfillEventCount++;
+    if (removedBackfillEventIdsSample.length < BACKFILL_DIFF_SAMPLE_LIMIT) {
+      removedBackfillEventIdsSample.push(row.id);
+    }
+  }
+
+  const existingCounts = new Map<string, number>();
+  for (const row of existingBackfillRows) {
+    incrementCount(existingCounts, buildExistingBackfillFingerprint(row));
+  }
+
+  const addedBackfillEventsSample: Array<{
+    direction: string;
+    peakDeviationBps: number;
+    startedAt: number;
+    endedAt: number | null;
+  }> = [];
+  let addedBackfillEventCount = 0;
+  for (const event of recomputedEvents) {
+    const key = buildBackfillEventFingerprint(event);
+    const remaining = existingCounts.get(key) ?? 0;
+    if (remaining > 0) {
+      existingCounts.set(key, remaining - 1);
+      continue;
+    }
+    addedBackfillEventCount++;
+    if (addedBackfillEventsSample.length < BACKFILL_DIFF_SAMPLE_LIMIT) {
+      addedBackfillEventsSample.push({
+        direction: event.direction,
+        peakDeviationBps: event.peakDeviationBps,
+        startedAt: event.startedAt,
+        endedAt: event.endedAt,
+      });
+    }
+  }
+
+  return {
+    exactMatch: removedBackfillEventCount === 0 && addedBackfillEventCount === 0,
+    removedBackfillEventCount,
+    removedBackfillEventIdsSample,
+    addedBackfillEventCount,
+    addedBackfillEventsSample,
+  };
+}
+
+/** Returns null events when no trusted historical source is available (caller should preserve existing rows). */
 async function backfillCoin(
   meta: StablecoinMeta,
   geckoId: string,
   getPegRef: (timestamp: number) => number,
   supplyByDate: SupplySnapshot[],
   fxRates?: Record<string, number>,
-): Promise<BackfillEvent[] | null> {
+): Promise<BackfillCoinReplayResult> {
   const pegType = `pegged${meta.flags.pegCurrency}`;
 
   let marketSeries: HistoricalMarketPriceSeriesResult | null = null;
@@ -436,6 +677,8 @@ async function backfillCoin(
   });
 
   let prices: PricePoint[] | null;
+  let sourceKind: BackfillCoinReplayResult["sourceKind"];
+  let marketDiagnostics: HistoricalMarketSourceDiagnostics | null = null;
   if (authoritativeHistory.matched) {
     prices = authoritativeHistory.prices;
     if (!prices || prices.length === 0) {
@@ -443,24 +686,45 @@ async function backfillCoin(
         `[backfill-depegs] authoritative historical price source unavailable for ${meta.symbol}` +
           `${authoritativeHistory.source ? ` (${authoritativeHistory.source})` : ""}; preserving existing backfill rows`,
       );
-      return null;
+      return {
+        events: null,
+        sourceKind: "preserve-existing",
+        authoritativeSource: authoritativeHistory.source,
+        marketDiagnostics: null,
+      };
     }
+    sourceKind = "authoritative";
   } else {
-    prices = (await loadMarketSeries()).prices;
-    if (!prices || prices.length === 0) return null;
+    const series = await loadMarketSeries();
+    prices = series.prices;
+    marketDiagnostics = series.diagnostics;
+    if (!prices || prices.length === 0) {
+      return {
+        events: null,
+        sourceKind: "preserve-existing",
+        authoritativeSource: null,
+        marketDiagnostics,
+      };
+    }
+    sourceKind = "market";
   }
 
-  return extractDepegEvents(
-    prices,
-    getPegRef,
-    pegType,
-    supplyByDate,
-    fxRates,
-    buildPriceReasonablenessOptions({
-      navToken: meta.flags.navToken,
-      commodityOunces: meta.commodityOunces,
-    }),
-  );
+  return {
+    events: extractDepegEvents(
+      prices,
+      getPegRef,
+      pegType,
+      supplyByDate,
+      fxRates,
+      buildPriceReasonablenessOptions({
+        navToken: meta.flags.navToken,
+        commodityOunces: meta.commodityOunces,
+      }),
+    ),
+    sourceKind,
+    authoritativeSource: authoritativeHistory.matched ? authoritativeHistory.source : null,
+    marketDiagnostics,
+  };
 }
 
 export function parseSupplyData(tokens: SupplyPoint[]): SupplySnapshot[] {

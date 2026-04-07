@@ -5,6 +5,7 @@ import {
   fetchHistoricalSecondaryFxRates,
   findNearestSupply,
   parseSupplyData,
+  summarizeBackfillReplayDiff,
 } from "../backfill-depegs";
 import { mockD1 } from "./helpers/mock-d1";
 import { mockFetch } from "./helpers/mock-fetch";
@@ -270,5 +271,96 @@ describe("extractDepegEvents", () => {
       startPrice: 0.0005,
       recoveryPrice: 0.0067,
     });
+  });
+});
+
+describe("summarizeBackfillReplayDiff", () => {
+  it("reports an exact match when existing backfill rows match the replayed events", () => {
+    const existingRows = [
+      {
+        id: 10,
+        stablecoin_id: "brz-transfero",
+        symbol: "BRZ",
+        peg_type: "peggedREAL",
+        direction: "below",
+        peak_deviation_bps: -220,
+        started_at: 1_000,
+        ended_at: 2_000,
+        start_price: 0.19,
+        peak_price: 0.188,
+        recovery_price: 0.191,
+        peg_reference: 0.193,
+        source: "backfill",
+      },
+    ];
+
+    const summary = summarizeBackfillReplayDiff(existingRows, [
+      {
+        pegType: "peggedREAL",
+        direction: "below",
+        peakDeviationBps: -220,
+        startedAt: 1_000,
+        endedAt: 2_000,
+        startPrice: 0.19,
+        peakPrice: 0.188,
+        recoveryPrice: 0.191,
+        pegRef: 0.193,
+      },
+    ]);
+
+    expect(summary).toMatchObject({
+      exactMatch: true,
+      removedBackfillEventCount: 0,
+      addedBackfillEventCount: 0,
+      removedBackfillEventIdsSample: [],
+      addedBackfillEventsSample: [],
+    });
+  });
+
+  it("reports removed ids and added event samples when the replay differs", () => {
+    const existingRows = [
+      {
+        id: 10,
+        stablecoin_id: "brz-transfero",
+        symbol: "BRZ",
+        peg_type: "peggedREAL",
+        direction: "below",
+        peak_deviation_bps: -220,
+        started_at: 1_000,
+        ended_at: 2_000,
+        start_price: 0.19,
+        peak_price: 0.188,
+        recovery_price: 0.191,
+        peg_reference: 0.193,
+        source: "backfill",
+      },
+    ];
+
+    const summary = summarizeBackfillReplayDiff(existingRows, [
+      {
+        pegType: "peggedREAL",
+        direction: "above",
+        peakDeviationBps: 180,
+        startedAt: 3_000,
+        endedAt: 4_000,
+        startPrice: 0.194,
+        peakPrice: 0.196,
+        recoveryPrice: 0.193,
+        pegRef: 0.193,
+      },
+    ]);
+
+    expect(summary.exactMatch).toBe(false);
+    expect(summary.removedBackfillEventCount).toBe(1);
+    expect(summary.removedBackfillEventIdsSample).toEqual([10]);
+    expect(summary.addedBackfillEventCount).toBe(1);
+    expect(summary.addedBackfillEventsSample).toEqual([
+      {
+        direction: "above",
+        peakDeviationBps: 180,
+        startedAt: 3_000,
+        endedAt: 4_000,
+      },
+    ]);
   });
 });
