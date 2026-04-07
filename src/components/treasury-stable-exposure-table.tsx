@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { GradeBadge } from "@/components/grade-badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import type { TreasuryStableExposureResponse } from "@shared/types";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import {
   type TreasuryExposureSortKey,
   TREASURY_SORT_OPTIONS,
@@ -16,6 +16,7 @@ import {
   coverageSummary,
   sortTreasuryExposureEntities,
 } from "@/lib/treasury-table-utils";
+import { getTreasuryDebankProfiles } from "@/lib/treasury-debank";
 import { formatPercent } from "@shared/lib/format";
 
 export function TreasuryStableExposureTable({
@@ -81,6 +82,7 @@ export function TreasuryStableExposureTable({
         {rows.map((entity) => {
           const isExpanded = expandedSlug === entity.slug;
           const hasNotes = entity.coverage.notes.length > 0;
+          const debankProfiles = getTreasuryDebankProfiles(entity.slug);
 
           return (
             <div key={entity.slug} className="border-b border-border/60 last:border-b-0">
@@ -220,6 +222,30 @@ export function TreasuryStableExposureTable({
                           <div className="uppercase tracking-[0.16em]">Skipped Derived</div>
                           <div className="mt-1 text-sm font-medium text-foreground">{entity.coverage.skippedDerivedPositionCount}</div>
                         </div>
+                      </div>
+                      <div>
+                        <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">DeBank</div>
+                        {debankProfiles.length > 0 ? (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {debankProfiles.map((profile) => (
+                              <a
+                                key={profile.address.toLowerCase()}
+                                href={profile.href}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="pharos-focus-ring inline-flex items-center gap-2 rounded-full border border-border/70 bg-muted/20 px-3 py-1.5 text-xs text-foreground transition-colors hover:bg-muted/35"
+                              >
+                                <span>{profile.chainLabel}</span>
+                                <span className="font-mono text-[11px] text-muted-foreground">{profile.displayAddress}</span>
+                                <ExternalLink className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
+                              </a>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            No reviewed Debank wallet links are configured for this treasury yet.
+                          </p>
+                        )}
                       </div>
                       {hasNotes ? (
                         <ul className="space-y-2 text-xs text-muted-foreground">

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { TreasuryStableExposureTable } from "@/components/treasury-stable-exposure-table";
 import type { TreasuryStableExposureResponse } from "@shared/types";
@@ -13,13 +13,13 @@ function makeResponse(): TreasuryStableExposureResponse {
   return {
     entities: [
       {
-        protocolId: "alpha",
-        slug: "alpha",
-        name: "Alpha DAO",
+        protocolId: "maker",
+        slug: "maker",
+        name: "Sky / Maker",
         category: "DAO treasury",
         source: "defillama-github",
-        adapterFile: "alpha.js",
-        chains: ["ethereum"],
+        adapterFile: "maker.js",
+        chains: ["arbitrum", "ethereum"],
         directWalletUsd: 10_000_000,
         treasuryUsd: 10_000_000,
         stablecoinSleeveUsd: 2_000_000,
@@ -58,13 +58,13 @@ function makeResponse(): TreasuryStableExposureResponse {
         },
       },
       {
-        protocolId: "beta",
-        slug: "beta",
-        name: "Beta Labs",
+        protocolId: "jupiter",
+        slug: "jupiter",
+        name: "Jupiter",
         category: "Protocol treasury",
         source: "defillama-github",
-        adapterFile: "beta.js",
-        chains: ["ethereum"],
+        adapterFile: "jupiter.js",
+        chains: [],
         directWalletUsd: 4_000_000,
         treasuryUsd: null,
         stablecoinSleeveUsd: 800_000,
@@ -130,16 +130,16 @@ describe("TreasuryStableExposureTable", () => {
     render(<TreasuryStableExposureTable data={makeResponse()} logos={{}} />);
 
     let rowButtons = screen.getAllByRole("button", { expanded: false });
-    expect(rowButtons[0]?.textContent).toContain("Alpha DAO");
-    expect(rowButtons[1]?.textContent).toContain("Beta Labs");
+    expect(rowButtons[0]?.textContent).toContain("Sky / Maker");
+    expect(rowButtons[1]?.textContent).toContain("Jupiter");
 
     fireEvent.change(screen.getByLabelText("Sort by"), {
       target: { value: "weightedSafetyScore" },
     });
 
     rowButtons = screen.getAllByRole("button", { expanded: false });
-    expect(rowButtons[0]?.textContent).toContain("Beta Labs");
-    expect(rowButtons[1]?.textContent).toContain("Alpha DAO");
+    expect(rowButtons[0]?.textContent).toContain("Jupiter");
+    expect(rowButtons[1]?.textContent).toContain("Sky / Maker");
   });
 
   it("surfaces partial rows as sleeve-only and excludes them from treasury-share summary counts", () => {
@@ -149,5 +149,24 @@ describe("TreasuryStableExposureTable", () => {
     expect(screen.getAllByText("Partial denominator").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/1 comparable entities currently show at least 5% decentralized stable exposure/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText("-").length).toBeGreaterThan(0);
+  });
+
+  it("renders Debank links for reviewed owner wallets and a fallback when none are configured", () => {
+    const view = render(<TreasuryStableExposureTable data={makeResponse()} logos={{}} />);
+    const queries = within(view.container);
+    const rowButtons = queries.getAllByRole("button", { expanded: false });
+
+    fireEvent.click(rowButtons[0]!);
+
+    expect(queries.getByRole("link", { name: /Arbitrum/i }).getAttribute("href")).toBe(
+      "https://debank.com/profile/0x10e6593cdda8c58a1d0f14c5164b376352a55f2f",
+    );
+    expect(queries.getByRole("link", { name: /Ethereum/i }).getAttribute("href")).toBe(
+      "https://debank.com/profile/0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+    );
+
+    fireEvent.click(rowButtons[1]!);
+
+    expect(queries.queryByText(/No reviewed Debank wallet links are configured for this treasury yet./i)).not.toBeNull();
   });
 });

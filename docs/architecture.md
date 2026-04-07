@@ -237,7 +237,7 @@ src/                              # Next.js frontend (static export)
 │   ├── blacklist-table-logic.ts  # Blacklist table sorting helpers
 │   ├── yield-table-logic.ts      # Yield leaderboard sorting helpers
 │   ├── stablecoin-table-column-visibility.tsx # Stablecoin table column picker UI
-│   ├── treasury-stable-exposure-table.tsx # Portfolio treasury leaderboard + holdings expansion
+│   ├── treasury-stable-exposure-table.tsx # Treasury leaderboard + holdings expansion, including reviewed DeBank owner-wallet links
 │   ├── status/                   # Status dashboard component decomposition
 │   │   ├── page-primitives.tsx   # Status-page-only shell pieces (summary badge, section shell, notice rail, lane links)
 │   │   ├── top-fold-copy.ts      # Status top-fold tone/copy config
@@ -406,6 +406,7 @@ src/                              # Next.js frontend (static export)
     ├── peg-stability.ts          # Per-coin peg stability metrics
     ├── severity-colors.ts        # Deviation severity color mapping (threshold-based: green/amber/orange/red)
     ├── stablecoin-taxonomy.ts    # Governance/backing taxonomy registry + route helpers
+    ├── treasury-debank.ts        # Frontend mapping from reviewed treasury seed owners to DeBank profile links
     ├── stablecoin-detail-derive.ts # Pure stablecoin detail derivations (supply/deviation/90d reference/border classes)
     └── utils.ts                  # cn() helper for Tailwind class merging
 
