@@ -41,6 +41,11 @@ interface CgTickerResponse {
   tickers?: CgTickerEntry[];
 }
 
+export interface CgTickerFetchResult {
+  prices: Map<string, number>;
+  successfulResponses: number;
+}
+
 /**
  * Pick the best USD ticker: non-stale, target matches, highest volume.
  * Returns the `last` price (already in target currency) or null.
@@ -50,8 +55,9 @@ export function pickBestTicker(
   targetCurrency: string,
   exchangeId?: string,
 ): number | null {
+  const normalizedTarget = targetCurrency.toUpperCase();
   const candidates = tickers.filter((t) => {
-    if (t.target !== targetCurrency) return false;
+    if (t.target.toUpperCase() !== normalizedTarget) return false;
     if (t.is_stale) return false;
     if (exchangeId && t.market.identifier !== exchangeId) return false;
     if (!Number.isFinite(t.last) || t.last <= 0) return false;
@@ -70,12 +76,13 @@ export function pickBestTicker(
  * /coins/{id}/tickers endpoint. Fetches sequentially to respect connection
  * budget (only 2 calls for KAU + KAG).
  */
-export async function fetchCgTickerPrices(
+export async function fetchCgTickerPricesDetailed(
   configs: CgTickerConfig[],
   apiKey: string | null,
   signal?: AbortSignal,
-): Promise<Map<string, number>> {
+): Promise<CgTickerFetchResult> {
   const results = new Map<string, number>();
+  let successfulResponses = 0;
 
   for (const config of configs) {
     try {
@@ -99,6 +106,7 @@ export async function fetchCgTickerPrices(
         continue;
       }
 
+      successfulResponses++;
       const data = (await res.json()) as CgTickerResponse;
       const tickers = data.tickers;
       if (!Array.isArray(tickers) || tickers.length === 0) {
@@ -120,5 +128,16 @@ export async function fetchCgTickerPrices(
     }
   }
 
-  return results;
+  return {
+    prices: results,
+    successfulResponses,
+  };
+}
+
+export async function fetchCgTickerPrices(
+  configs: CgTickerConfig[],
+  apiKey: string | null,
+  signal?: AbortSignal,
+): Promise<Map<string, number>> {
+  return (await fetchCgTickerPricesDetailed(configs, apiKey, signal)).prices;
 }

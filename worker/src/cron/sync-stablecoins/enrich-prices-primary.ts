@@ -7,7 +7,7 @@ import {
   getReferencePriceForContext,
 } from "../../lib/price-validation";
 import { USER_AGENT, CIRCUIT_SOURCE, DEX_FRESHNESS_SEC, POOL_CHALLENGE_MIN_TVL, getDepegThresholdBps } from "../../lib/constants";
-import { CG_TICKER_COINS, fetchCgTickerPrices } from "../../lib/cg-ticker";
+import { CG_TICKER_COINS, fetchCgTickerPricesDetailed } from "../../lib/cg-ticker";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../../lib/coingecko";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
@@ -247,10 +247,14 @@ export async function fetchPrimaryPrices(
     fetches.push(
       (async () => {
         try {
-          const prices = await fetchCgTickerPrices(CG_TICKER_COINS, coingeckoApiKey ?? null, signal);
+          const { prices, successfulResponses } = await fetchCgTickerPricesDetailed(
+            CG_TICKER_COINS,
+            coingeckoApiKey ?? null,
+            signal,
+          );
           for (const [coinId, price] of prices) cgTickerPrices.set(coinId, price);
           if (prices.size > 0) cgTickerObservedAt = Math.floor(Date.now() / 1000);
-          await recordOutcome(db, CIRCUIT_SOURCE.CG_TICKER, prices.size > 0);
+          await recordOutcome(db, CIRCUIT_SOURCE.CG_TICKER, successfulResponses > 0);
         } catch (err) {
           if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
           console.warn("[primary-prices] CG ticker API failed:", err);

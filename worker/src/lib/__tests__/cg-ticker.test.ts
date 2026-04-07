@@ -5,7 +5,12 @@ vi.mock("../fetch-retry", () => ({
 }));
 
 import { fetchWithRetry } from "../fetch-retry";
-import { fetchCgTickerPrices, pickBestTicker, type CgTickerConfig } from "../cg-ticker";
+import {
+  fetchCgTickerPrices,
+  fetchCgTickerPricesDetailed,
+  pickBestTicker,
+  type CgTickerConfig,
+} from "../cg-ticker";
 
 const KAU_CONFIG: CgTickerConfig = {
   stablecoinId: "kau-kinesis",
@@ -81,6 +86,11 @@ describe("pickBestTicker", () => {
       makeTicker({ last: 136.76, converted_volume: { usd: 248_100 }, market: { identifier: "kinesis_money" } }),
     ];
     expect(pickBestTicker(tickers as never[], "USD", "kinesis_money")).toBe(136.76);
+  });
+
+  it("matches ticker targets case-insensitively", () => {
+    const tickers = [makeTicker({ target: "usd" })];
+    expect(pickBestTicker(tickers as never[], "USD")).toBe(136.76);
   });
 
   it("rejects tickers with non-positive price", () => {
@@ -166,5 +176,21 @@ describe("fetchCgTickerPrices", () => {
     await expect(
       fetchCgTickerPrices([KAU_CONFIG], null, controller.signal),
     ).rejects.toThrow("aborted");
+  });
+});
+
+describe("fetchCgTickerPricesDetailed", () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it("counts successful responses even when no fresh ticker is usable", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(fetchWithRetry).mockResolvedValue(
+      makeTickerResponse([makeTicker({ is_stale: true })]),
+    );
+
+    const result = await fetchCgTickerPricesDetailed([KAU_CONFIG], null);
+
+    expect(result.successfulResponses).toBe(1);
+    expect(result.prices.size).toBe(0);
   });
 });
