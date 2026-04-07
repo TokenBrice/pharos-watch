@@ -301,7 +301,10 @@ describe("authoritative-price-sources", () => {
         geckoId: "paypal-usd",
       }),
       "paypal-usd",
-      { granularity: "hourly" },
+      {
+        granularity: "hourly",
+        coingeckoApiKey: null,
+      },
     );
     expect(result).toEqual({
       matched: true,
@@ -311,6 +314,56 @@ describe("authoritative-price-sources", () => {
         { timestamp: 1_759_366_800, price: 1.00011 },
       ],
     });
+  });
+
+  it("passes the CoinGecko API key through authoritative market-history replays", async () => {
+    fetchMarketBackfillPriceSeriesMock.mockResolvedValue({
+      prices: [
+        { timestamp: 1_759_363_200, price: 1 },
+      ],
+      diagnostics: {
+        granularity: "hourly",
+        sourcesUsed: ["coingecko"],
+        quoteMode: "usd",
+        quoteCurrency: "usd",
+        mergeReasons: [],
+        perSourceStats: [],
+        policyAdjustments: [],
+        finalPointCount: 1,
+      },
+    });
+
+    await fetchAuthoritativeHistoricalPriceSeries(
+      {
+        id: "usdai-usd-ai",
+        name: "USDai",
+        symbol: "USDai",
+        flags: {
+          pegCurrency: "USD",
+          backing: "rwa-backed",
+          governance: "centralized-dependent",
+          yieldBearing: false,
+          rwa: false,
+          navToken: false,
+        },
+      },
+      {
+        candidateTimestamps: [1_759_363_200],
+        coingeckoApiKey: "cg-pro-key",
+      },
+    );
+
+    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "pyusd-paypal",
+        geckoId: "paypal-usd",
+      }),
+      "paypal-usd",
+      {
+        granularity: "hourly",
+        coingeckoApiKey: "cg-pro-key",
+      },
+    );
   });
 
   it("does not return a crvUSD override (demoted to regular consensus source)", async () => {

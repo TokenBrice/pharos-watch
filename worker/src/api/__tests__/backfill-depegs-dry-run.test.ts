@@ -248,7 +248,7 @@ describe("handleBackfillDepegs replay windows", () => {
       expect.objectContaining({ id: "eurc-circle" }),
       "euro-coin",
       expect.objectContaining({
-        granularity: "hourly",
+        granularity: "daily",
         quote: {
           pegCurrency: "EUR",
           useNativePegQuote: true,

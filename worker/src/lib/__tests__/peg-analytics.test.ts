@@ -7,6 +7,7 @@ const { STABLECOINS_MOCK } = vi.hoisted(() => ({
       id: "usdt-tether",
       symbol: "AAA",
       name: "AAA Stable",
+      launchDate: "2019-07-19",
       commodityOunces: undefined,
       flags: { pegCurrency: "USD", governance: "centralized", navToken: false },
     },
@@ -59,11 +60,15 @@ vi.mock("../db", async (importOriginal) => {
 });
 
 import { derivePegAnalyticsSnapshot } from "../peg-analytics";
+import { coinTrackingStart } from "@shared/lib/peg-score";
+import { getFirstSeenDates } from "../db";
 
 describe("derivePegAnalyticsSnapshot", () => {
   let db: D1Database;
 
   beforeEach(() => {
+    vi.mocked(getFirstSeenDates).mockResolvedValue(new Map<string, number>());
+    vi.mocked(coinTrackingStart).mockClear();
     db = mockD1([
       {
         match: "depeg_events",
@@ -121,5 +126,31 @@ describe("derivePegAnalyticsSnapshot", () => {
 
     expect(snapshot.pegDataById.get("usdt-tether")?.currentDeviationBps).toBeNull();
     expect(snapshot.pegDataById.get("usdt-tether")?.depegEventCoverageLimited).toBe(true);
+  });
+
+  it("prefers curated launchDate over supply-history firstSeen when anchoring peg tracking", async () => {
+    vi.mocked(getFirstSeenDates).mockResolvedValue(new Map<string, number>([
+      ["usdt-tether", 1_743_120_000],
+    ]));
+
+    await derivePegAnalyticsSnapshot(db, {
+      peggedAssets: [
+        {
+          id: "usdt-tether",
+          symbol: "AAA",
+          name: "AAA Stable",
+          pegType: "peggedUSD",
+          price: 1,
+          circulating: { peggedUSD: 2_000_000 },
+        } as never,
+      ],
+      methodologyAsOf: 1_700_000_000,
+    });
+
+    expect(vi.mocked(coinTrackingStart)).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.any(Number),
+      1_563_494_400,
+    );
   });
 });

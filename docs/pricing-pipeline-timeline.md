@@ -1,6 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v3.97` (2026-02-01 -> 2026-04-07).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v3.98` (2026-02-01 -> 2026-04-07).
+
+---
+
+## v3.98 - Daily-confirmed native-peg replay for non-USD fiat backfills (Apr 7, 2026)
+
+**Commit:** `unreleased`
+
+- Historical CoinGecko market-chart replay now carries the configured CoinGecko API key through the backfill/admin path so native-fiat history can use authenticated transport consistently during broad repairs
+- Supported non-USD fiat backfills now replay native-fiat history at daily cadence with a two-point confirmation window across a 36-hour gap tolerance instead of opening on isolated thin hourly prints
+- Extreme single-point native crashes of 5,000 bps or more are still preserved even when the normal historical confirmation rule would otherwise suppress the event
 
 ---
 

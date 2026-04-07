@@ -220,6 +220,7 @@ export interface StablecoinMeta {
   tags?: string[];
   yieldConfig?: YieldConfig;
   status?: "pre-launch" | "active";
+  launchDate?: string;
   announcedDate?: string;
   expectedLaunchDate?: string;
   launchPhase?: LaunchPhase;

@@ -50,7 +50,7 @@ export default function MethodologyPage() {
             },
             {
               question: "How is the Pharos peg score calculated?",
-              answer: "The peg score is a composite 0–100 measure combining time-at-peg (50%) and event severity (50%), minus penalties for active depegs and erratic behavior. The tracking window spans up to 4 years but is capped at the coin's actual age. It requires at least 7 days of tracking data; scores under 30 days are flagged as early.",
+              answer: "The peg score is a composite 0–100 measure combining time-at-peg (50%) and event severity (50%), minus penalties for active depegs and erratic behavior. The tracking window spans up to 4 years but is capped at the coin's actual age, using a curated launch date when available and otherwise falling back to the earliest supply snapshot. It requires at least 7 days of tracking data; scores under 30 days are flagged as early.",
             },
             {
               question: "How does Pharos measure DEX liquidity?",

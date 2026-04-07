@@ -47,6 +47,7 @@ export interface HistoricalPriceContext {
   candidateTimestamps: number[];
   supplySnapshots?: HistoricalSupplySnapshot[];
   signal?: AbortSignal;
+  coingeckoApiKey?: string | null;
 }
 
 export interface HistoricalPriceResolution {
@@ -351,12 +352,18 @@ const usdaiPyusdProvider: PriceSourceProvider = {
       confidence: "high",
     };
   },
-  async fetchHistoricalPrices(): Promise<HistoricalPricePoint[] | null> {
+  async fetchHistoricalPrices(
+    _meta: StablecoinMeta,
+    context: HistoricalPriceContext,
+  ): Promise<HistoricalPricePoint[] | null> {
     // Base USDAI is modeled as an instantly redeemable PYUSD wrapper, so replay the tracked PYUSD series.
     const pyusdMeta = TRACKED_META_BY_ID.get(PYUSD_PAYPAL_ID);
     if (!pyusdMeta?.geckoId) return null;
 
-    const series = await fetchMarketBackfillPriceSeries(pyusdMeta, pyusdMeta.geckoId, { granularity: "hourly" });
+    const series = await fetchMarketBackfillPriceSeries(pyusdMeta, pyusdMeta.geckoId, {
+      granularity: "hourly",
+      coingeckoApiKey: context.coingeckoApiKey ?? null,
+    });
     return series.prices;
   },
 };

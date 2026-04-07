@@ -225,7 +225,7 @@ Promotion inserts into `depeg_events` with `started_at` = original `first_seen_a
 
 Historical backfills in `worker/src/api/backfill-depegs.ts` do **not** reuse the exact same guard as live DEX or fallback enrichment, but they now consult the same authoritative-price provider registry as live sync before falling back to market history.
 
-Supported non-USD fiat backfills now prefer direct CoinGecko native-fiat history first and compare that series against the native `1.0` peg. Only when that native history is unavailable does the replay fall back to USD-denominated CoinGecko/DefiLlama history plus the historical FX reference.
+Supported non-USD fiat backfills now prefer direct CoinGecko native-fiat history first and compare that series against the native `1.0` peg. In that native-fiat mode, replay uses daily points plus a two-point confirmation window across 36 hours before opening a normal event, while still preserving extreme single-point crashes of `>= 5000 bps`. Only when that native history is unavailable does the replay fall back to USD-denominated CoinGecko/DefiLlama history plus the historical FX reference.
 
 `POST /api/backfill-depegs?dry-run=true` also accepts `startDay` / `endDay` for bounded replay audits, plus optional `contextDays` to widen the replay pad around that UTC window. The handler compares only the overlapping stored `source='backfill'` rows, which makes long-history repairs practical without waiting for a full-coin HTTP request.
 
@@ -386,7 +386,7 @@ activeDepegPenalty = if ongoing: min(50, max(5, |peakBps| / 50))
 pegScore = max(0, min(100, round(0.5*pegPct + 0.5*severityScore - activeDepegPenalty - spreadPenalty)))
 ```
 
-**Tracking window**: `coinTrackingStart()` uses the coin's earliest supply_history snapshot
+**Tracking window**: `coinTrackingStart()` prefers a curated launch date when one is available and otherwise falls back to the coin's earliest `supply_history` snapshot
 (queried via `getFirstSeenDates()`) so young coins aren't diluted across a phantom 4-year window.
 Falls back to earliest depeg event, then to the 4-year lookback cap.
 

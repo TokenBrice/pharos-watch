@@ -16,7 +16,8 @@ export const ADMIN_STATIC_ROUTES = [
   defineStaticRoute("backfill-depegs", makeIdempotentAdminRoute(
     "backfill-depegs",
     "backfill-depegs",
-    ({ db, url, trustedAdmin, request }) => handleBackfillDepegs(db, url, trustedAdmin, request),
+    ({ db, url, trustedAdmin, request, coingeckoApiKey }) =>
+      handleBackfillDepegs(db, url, trustedAdmin, request, coingeckoApiKey),
   )),
   defineStaticRoute("backfill-supply-history", makeIdempotentAdminRoute(
     "backfill-supply-history",

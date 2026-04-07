@@ -1,54 +1,84 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "5.6",
+  currentVersion: "5.8",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
-  {
-    version: "5.6",
-    title: "Generalized native-peg routing and replay for non-USD fiat assets",
-    date: "2026-04-07",
-    effectiveAt: 1775527200,
-    summary:
-      "Live and pending depeg routing now generalize the native-peg corroboration lane across the supported non-USD fiat set, and historical replay prefers native fiat market history where CoinGecko exposes it.",
-    impact: [
-      "Fresh direct native-peg quotes can now veto, sustain, or resolve live depeg state for supported EUR/CHF/GBP/JPY/SGD/AUD/CAD/BRL/IDR/TRY/ZAR/PHP/MXN/RUB/CNH-style fiat pegs instead of remaining effectively BRL-only",
-      "Pending confirmation prefers that same direct native quote first whenever CoinGecko exposes the matching fiat pair, reducing false confirmations from USD/FX reference drift",
-      "Historical backfill now replays supported non-USD fiat assets against direct native fiat price history and a native `1.0` peg when that series exists, which removes large classes of synthetic backfill events caused by USD/FX mismatch",
-    ],
-    commits: [],
-    reconstructed: false,
-  },
-  {
-    version: "5.5",
-    title: "Direct native-peg corroboration for BRL depeg routing",
-    date: "2026-04-07",
-    effectiveAt: 1775523600,
-    summary:
-      "Live and pending depeg routing now checks a fresh direct native-peg quote for supported non-USD fiat assets before trusting a USD-price-versus-FX-reference divergence on its own.",
-    impact: [
-      "BRZ-style depegs can now be vetoed or resolved by a fresh direct BRL quote when the USD/FX-derived signal is back inside threshold or points the other way",
-      "Pending confirmation prefers the fresh direct native-peg quote over a weaker derived USD cross-check when CoinGecko exposes that native pair",
-      "Prevents thin BRL reference mismatches from opening, sustaining, or confirming false depeg rows while still preserving genuine native-peg stress",
-    ],
-    commits: [],
-    reconstructed: false,
-  },
-  {
-    version: "5.4",
-    title: "Thin-fiat peg-reference fail-closed and corroborated primary recovery",
-    date: "2026-04-07",
-    effectiveAt: 1775520000,
-    summary:
-      "Live depeg state now fails closed when thin non-USD fiat peg references lose their FX fallback, while fresh multi-source primary agreement can retire stale live rows once the coin is back inside threshold.",
-    impact: [
-      "Thin fiat peg groups with fewer than 3 live contributors now require cached FX fallback before they can open, update, or resolve live depeg state",
-      "Fresh non-cached multi-source primary agreement can now close an already-open live event after recovery even if that source mix is still too soft to open new events directly",
-      "Prevents BRL-style peer-median false positives from both opening new live rows and lingering as active depegs after the peg reference normalizes",
-    ],
-    commits: [],
-    reconstructed: false,
-  },
+    {
+      version: "5.8",
+      title: "Daily-confirmed native-peg historical replay",
+      date: "2026-04-07",
+      effectiveAt: 1775578800,
+      summary:
+        "Supported non-USD fiat historical replay now treats native-fiat CoinGecko history as a day-scale confirmation lane instead of trusting thin hourly native prints on their own.",
+      impact: [
+        "Historical native-fiat replay now uses daily points plus a two-point confirmation window across 36 hours before opening normal non-USD fiat backfill events",
+        "Extreme single-point native crashes of 5,000 bps or more are still preserved even when the native historical confirmation rule would otherwise suppress them",
+        "Broad non-USD backfill repairs can now use authenticated CoinGecko market-chart transport consistently through the admin/backfill path, reducing false rebuild drift during large historical cleanups",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
+      version: "5.7",
+      title: "Launch-date peg-score anchors for older tracked assets",
+      date: "2026-04-07",
+      effectiveAt: 1775568000,
+      summary:
+        "PegScore tracking windows now prefer curated launch dates over late-arriving supply-history coverage when the asset metadata provides a trustworthy launch anchor.",
+      impact: [
+        "PegScore now uses a curated launch date as the age anchor when one is available, falling back to earliest supply-history coverage only when no launch date is curated",
+        "Older tracked assets with late `supply_history` coverage no longer appear artificially young in the peg-score window",
+        "BRZ now anchors peg-score tracking to its July 19, 2019 launch date instead of a March 2025 supply-history coverage artifact",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
+      version: "5.6",
+      title: "Generalized native-peg routing and replay for non-USD fiat assets",
+      date: "2026-04-07",
+      effectiveAt: 1775527200,
+      summary:
+        "Live and pending depeg routing now generalize the native-peg corroboration lane across the supported non-USD fiat set, and historical replay prefers native fiat market history where CoinGecko exposes it.",
+      impact: [
+        "Fresh direct native-peg quotes can now veto, sustain, or resolve live depeg state for supported EUR/CHF/GBP/JPY/SGD/AUD/CAD/BRL/IDR/TRY/ZAR/PHP/MXN/RUB/CNH-style fiat pegs instead of remaining effectively BRL-only",
+        "Pending confirmation prefers that same direct native quote first whenever CoinGecko exposes the matching fiat pair, reducing false confirmations from USD/FX reference drift",
+        "Historical backfill now replays supported non-USD fiat assets against direct native fiat price history and a native `1.0` peg when that series exists, which removes large classes of synthetic backfill events caused by USD/FX mismatch",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
+      version: "5.5",
+      title: "Direct native-peg corroboration for BRL depeg routing",
+      date: "2026-04-07",
+      effectiveAt: 1775523600,
+      summary:
+        "Live and pending depeg routing now checks a fresh direct native-peg quote for supported non-USD fiat assets before trusting a USD-price-versus-FX-reference divergence on its own.",
+      impact: [
+        "BRZ-style depegs can now be vetoed or resolved by a fresh direct BRL quote when the USD/FX-derived signal is back inside threshold or points the other way",
+        "Pending confirmation prefers the fresh direct native-peg quote over a weaker derived USD cross-check when CoinGecko exposes that native pair",
+        "Prevents thin BRL reference mismatches from opening, sustaining, or confirming false depeg rows while still preserving genuine native-peg stress",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
+      version: "5.4",
+      title: "Thin-fiat peg-reference fail-closed and corroborated primary recovery",
+      date: "2026-04-07",
+      effectiveAt: 1775520000,
+      summary:
+        "Live depeg state now fails closed when thin non-USD fiat peg references lose their FX fallback, while fresh multi-source primary agreement can retire stale live rows once the coin is back inside threshold.",
+      impact: [
+        "Thin fiat peg groups with fewer than 3 live contributors now require cached FX fallback before they can open, update, or resolve live depeg state",
+        "Fresh non-cached multi-source primary agreement can now close an already-open live event after recovery even if that source mix is still too soft to open new events directly",
+        "Prevents BRL-style peer-median false positives from both opening new live rows and lingering as active depegs after the peg reference normalizes",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
   {
     version: "5.3",
     title: "DEWS flow baseline continuity on quiet 24-hour windows",

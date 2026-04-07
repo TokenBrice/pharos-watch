@@ -20,6 +20,7 @@ import { binarySearchNearest } from "../lib/binary-search";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { RATE_LIMITS } from "../lib/rate-limit";
+import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
 import type { StablecoinMeta } from "@shared/types/core";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { selectBackfillCoins } from "../lib/backfill-query";
@@ -83,6 +84,8 @@ const BACKFILL_MIN_CONFIRM_POINTS = 2;
 /** Max gap (seconds) between data points before pending resets.
  *  6h handles CG hourly gaps but resets for day-scale gaps. */
 const BACKFILL_PENDING_MAX_GAP_SEC = 6 * 3600;
+const BACKFILL_NATIVE_PEG_PENDING_MAX_GAP_SEC = 36 * 3600;
+const BACKFILL_NATIVE_PEG_EXTREME_SINGLE_POINT_BPS = 5000;
 
 interface SupplyPoint {
   date: string;
@@ -126,6 +129,13 @@ export interface ExistingDepegEventRow {
   recovery_price: number | null;
   peg_reference: number;
   source: string;
+}
+
+export interface BackfillEventExtractionOptions {
+  forceConfirmation?: boolean;
+  confirmationMinPoints?: number;
+  confirmationMaxGapSec?: number;
+  extremeSinglePointBps?: number | null;
 }
 
 interface BackfillReplayPreview {
@@ -255,6 +265,7 @@ export async function handleBackfillDepegs(
   url: URL,
   trustedAdmin?: boolean,
   request?: Request,
+  coingeckoApiKey?: string | null,
 ): Promise<Response> {
   return runAdminJob(
     { request, trustedAdmin, url },
@@ -386,8 +397,9 @@ export async function handleBackfillDepegs(
             const cgRes = await fetchWithRetry(
               cgUrl(
                 `/coins/${geckoId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`,
+                coingeckoApiKey ?? null,
               ),
-              { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
+              { headers: cgHeaders({ "User-Agent": USER_AGENT }, coingeckoApiKey ?? null) },
               1,
               { timeoutMs: 10_000 },
             );
@@ -502,7 +514,15 @@ export async function handleBackfillDepegs(
         }
 
         try {
-          const replay = await backfillCoin(meta, geckoId, getPegRef, supplyByDate, fxRates, replayWindow);
+          const replay = await backfillCoin(
+            meta,
+            geckoId,
+            getPegRef,
+            supplyByDate,
+            fxRates,
+            replayWindow,
+            coingeckoApiKey ?? null,
+          );
           const events = replay.events;
 
           // null = CG had no price data → preserve existing events
@@ -794,6 +814,7 @@ async function backfillCoin(
   supplyByDate: SupplySnapshot[],
   fxRates?: Record<string, number>,
   replayWindow?: BackfillReplayWindow | null,
+  coingeckoApiKey?: string | null,
 ): Promise<BackfillCoinReplayResult> {
   const pegType = `pegged${meta.flags.pegCurrency}`;
   const nativePegCurrency = normalizeSupportedPegCurrency(meta.flags.pegCurrency);
@@ -808,7 +829,7 @@ async function backfillCoin(
     if (marketSeries != null && marketSeries.diagnostics.quoteMode === quoteMode) return marketSeries;
 
     const series = await fetchMarketBackfillPriceSeries(meta, geckoId, {
-      granularity: "hourly",
+      granularity: quoteMode === "native-peg" ? "daily" : "hourly",
       range: replayWindow
         ? {
             startSec: replayWindow.replayStartSec,
@@ -819,6 +840,7 @@ async function backfillCoin(
         pegCurrency: meta.flags.pegCurrency,
         useNativePegQuote: quoteMode === "native-peg",
       },
+      coingeckoApiKey: coingeckoApiKey ?? null,
     });
     if (
       series.diagnostics.mergeReasons.length > 0 ||
@@ -850,6 +872,7 @@ async function backfillCoin(
   const authoritativeHistory = await fetchAuthoritativeHistoricalPriceSeries(meta, {
     candidateTimestamps,
     supplySnapshots: supplyByDate,
+    coingeckoApiKey: coingeckoApiKey ?? null,
   });
 
   let prices: PricePoint[] | null;
@@ -903,6 +926,14 @@ async function backfillCoin(
       navToken: meta.flags.navToken,
       commodityOunces: meta.commodityOunces,
     }),
+    marketDiagnostics?.quoteMode === "native-peg"
+      ? {
+          forceConfirmation: true,
+          confirmationMinPoints: BACKFILL_MIN_CONFIRM_POINTS,
+          confirmationMaxGapSec: BACKFILL_NATIVE_PEG_PENDING_MAX_GAP_SEC,
+          extremeSinglePointBps: BACKFILL_NATIVE_PEG_EXTREME_SINGLE_POINT_BPS,
+        }
+      : undefined,
   );
   return {
     events: replayWindow
@@ -940,8 +971,12 @@ export function extractDepegEvents(
   supplyByDate: SupplySnapshot[],
   fxRates?: Record<string, number>,
   priceValidationOpts?: PriceReasonablenessOptions,
+  options?: BackfillEventExtractionOptions,
 ): BackfillEvent[] {
   const threshold = getDepegThresholdBps(pegType);
+  const confirmationMinPoints = Math.max(1, options?.confirmationMinPoints ?? BACKFILL_MIN_CONFIRM_POINTS);
+  const confirmationMaxGapSec = Math.max(1, options?.confirmationMaxGapSec ?? BACKFILL_PENDING_MAX_GAP_SEC);
+  const extremeSinglePointBps = options?.extremeSinglePointBps ?? null;
   const events: BackfillEvent[] = [];
   let current: BackfillEvent | null = null;
   const validationContext = buildPriceValidationContext({
@@ -1024,7 +1059,8 @@ export function extractDepegEvents(
       }
 
       // No active event — decide whether to open immediately or require confirmation
-      if (!isLargeCap) {
+      const requiresConfirmation = options?.forceConfirmation === true || isLargeCap;
+      if (!requiresConfirmation || (extremeSinglePointBps != null && absBps >= extremeSinglePointBps)) {
         // Small cap: instant event (existing behavior)
         current = {
           pegType,
@@ -1040,7 +1076,7 @@ export function extractDepegEvents(
         pending = null;
       } else {
         // Large cap: require consecutive confirmation points
-        if (!pending || pending.direction !== direction || timestamp - pending.lastTs > BACKFILL_PENDING_MAX_GAP_SEC) {
+        if (!pending || pending.direction !== direction || timestamp - pending.lastTs > confirmationMaxGapSec) {
           // Start new pending
           pending = {
             direction,
@@ -1060,7 +1096,7 @@ export function extractDepegEvents(
             pending.peakBps = bps;
             pending.peakPrice = price;
           }
-          if (pending.count >= BACKFILL_MIN_CONFIRM_POINTS) {
+          if (pending.count >= confirmationMinPoints) {
             promotePending();
           }
         }

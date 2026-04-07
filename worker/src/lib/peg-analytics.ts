@@ -23,6 +23,12 @@ export interface PegAnalyticsSnapshot {
   pegDataById: Map<string, PegSummaryCoin>;
 }
 
+function parseLaunchDateSec(dateText: string | undefined): number | null {
+  if (!dateText) return null;
+  const parsedMs = Date.parse(`${dateText}T00:00:00Z`);
+  return Number.isFinite(parsedMs) ? Math.floor(parsedMs / 1000) : null;
+}
+
 export async function derivePegAnalyticsSnapshot(
   db: D1Database,
   options: DerivePegAnalyticsOptions,
@@ -73,7 +79,8 @@ export async function derivePegAnalyticsSnapshot(
       }
     }
 
-    const trackingStart = coinTrackingStart(events, trackingFallbackStart, firstSeenMap.get(meta.id));
+    const trackingAnchorSec = parseLaunchDateSec(meta.launchDate) ?? firstSeenMap.get(meta.id) ?? null;
+    const trackingStart = coinTrackingStart(events, trackingFallbackStart, trackingAnchorSec);
     const scoreResult = computePegScore(events, trackingStart, nowSec);
 
     pegDataById.set(meta.id, {

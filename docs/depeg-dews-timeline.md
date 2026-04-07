@@ -1,6 +1,24 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v5.6` (2026-02-18 -> 2026-04-07).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v5.8` (2026-02-18 -> 2026-04-07).
+
+---
+## v5.8 — Daily-confirmed native-peg historical replay (Apr 7, 2026)
+
+**Commit:** `unreleased`
+
+- Supported non-USD fiat historical replay now treats native-fiat CoinGecko history as a day-scale confirmation lane instead of trusting thin hourly native prints on their own
+- Historical native-fiat replay now uses daily points plus a two-point confirmation window across 36 hours before opening normal non-USD fiat backfill events
+- Extreme single-point native crashes of 5,000 bps or more are still preserved, and the admin/backfill path now carries the configured CoinGecko API key through historical market-chart replay during large repairs
+
+---
+## v5.7 — Launch-date peg-score anchors for older tracked assets (Apr 7, 2026)
+
+**Commit:** `unreleased`
+
+- PegScore tracking windows now prefer a curated launch date when the asset metadata provides one, falling back to the earliest `supply_history` snapshot only when no launch date is curated
+- This prevents older tracked assets with late `supply_history` coverage from appearing artificially young in the peg-score window
+- BRZ now uses its July 19, 2019 launch date as the peg-score age anchor instead of a much later coverage-start artifact
 
 ---
 ## v5.6 — Generalized native-peg routing and replay for non-USD fiat assets (Apr 7, 2026)

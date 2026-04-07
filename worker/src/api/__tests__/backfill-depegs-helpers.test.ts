@@ -207,6 +207,64 @@ describe("extractDepegEvents", () => {
     });
   });
 
+  it("supports daily native-peg confirmation windows with wider point gaps", () => {
+    const day = 24 * 3_600;
+    const events = extractDepegEvents(
+      [
+        { timestamp: 1_000, price: 1.02 },
+        { timestamp: 1_000 + day, price: 1.03 },
+        { timestamp: 1_000 + 2 * day, price: 1.0 },
+      ],
+      () => 1,
+      "peggedEUR",
+      [{ ts: 1_000, supply: 50_000_000 }],
+      { peggedEUR: 1.08 },
+      undefined,
+      {
+        forceConfirmation: true,
+        confirmationMinPoints: 2,
+        confirmationMaxGapSec: 36 * 3_600,
+      },
+    );
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      direction: "above",
+      startedAt: 1_000,
+      endedAt: 1_000 + 2 * day,
+      peakPrice: 1.03,
+    });
+  });
+
+  it("keeps extreme single-point native-peg crashes even when confirmation is otherwise required", () => {
+    const events = extractDepegEvents(
+      [
+        { timestamp: 1_000, price: 0.3 },
+        { timestamp: 2_000, price: 1.0 },
+      ],
+      () => 1,
+      "peggedBRL",
+      [{ ts: 1_000, supply: 50_000_000 }],
+      { peggedBRL: 0.19 },
+      undefined,
+      {
+        forceConfirmation: true,
+        confirmationMinPoints: 2,
+        confirmationMaxGapSec: 36 * 3_600,
+        extremeSinglePointBps: 5_000,
+      },
+    );
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      direction: "below",
+      startedAt: 1_000,
+      endedAt: 2_000,
+      startPrice: 0.3,
+      recoveryPrice: 1.0,
+    });
+  });
+
   it("accepts fractional commodity prices when commodityOunces scales the peg", () => {
     const events = extractDepegEvents(
       [

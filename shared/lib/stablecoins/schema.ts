@@ -172,6 +172,7 @@ export const StablecoinMetaAssetSchema = z.object({
   tags: z.array(z.string()).optional(),
   yieldConfig: YieldConfigAssetSchema.optional(),
   status: z.enum(STATUS_VALUES).optional(),
+  launchDate: z.string().optional(),
   announcedDate: z.string().optional(),
   expectedLaunchDate: z.string().optional(),
   launchPhase: z.enum(LAUNCH_PHASE_VALUES).optional(),

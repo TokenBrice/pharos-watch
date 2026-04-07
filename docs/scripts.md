@@ -2,7 +2,7 @@
 
 ## Overview
 
-Operational and CI helper scripts live in `scripts/`. They support build integrity, smoke checks, data sync, and targeted maintenance tasks.
+Operational and CI helper scripts live in `scripts/`, while worker-bound operational tooling that imports `worker/src/**` lives in `worker/scripts/`. Together they support build integrity, smoke checks, data sync, and targeted maintenance tasks.
 
 ## Script Inventory
 
@@ -40,6 +40,7 @@ Operational and CI helper scripts live in `scripts/`. They support build integri
 | `scripts/check-sql-interpolation-safety.mjs`    | Detect unsafe SQL template-literal interpolation in worker runtime and worker scripts (table names must be validated or allowlisted, not dynamically injected)           | `worker/src/**/*.{ts,tsx,js,mjs,cjs,mts,cts}` and `worker/scripts/**/*.{ts,tsx,js,mjs,cjs,mts,cts}` (excluding tests and mocks)                                                                                                                                                                         | Exits non-zero on unguarded dynamic SQL table-name interpolation                                                         |
 | `scripts/check-stablecoin-data.ts`              | Validate stablecoin data JSON files against Zod schemas and cross-check canonical-order references                                                                       | `shared/data/stablecoins/*.json`, `shared/lib/stablecoins/schema.ts`                                                                                                                                                                                                                                      | Exits non-zero on schema violations or canonical-order/data-file mismatches                                              |
 | `scripts/audit-pricing-provider-config.ts`      | Audit CEX and oracle pricing provider configs against live exchange market APIs to detect stale or missing symbol mappings                                                | `shared/lib/pricing-provider-config.ts`, live Binance/Bitstamp/Coinbase/Kraken/RedStone APIs                                                                                                                                                                                                              | Reports missing/stale provider configs, skips Binance when a runner region is geoblocked (`403/451`), and runs in CI validate |
+| `worker/scripts/repair-non-usd-fiat-depeg-history.ts` | Replay and repair non-USD non-commodity backfill depeg history against the current native-fiat historical policy, canonicalizing legacy IDs and purging known dead orphans | `COINGECKO_API_KEY`, `OPS_API_SERVICE_TOKEN_ID`, `OPS_API_SERVICE_TOKEN_SECRET`, Wrangler auth, prod `stablecoin-db`, optional `--dry-run`, `--stablecoin=...`, `--peg=...`                                                                                                                             | Dry-run prints replay deltas; live mode rewrites `depeg_events` `source='backfill'` rows and triggers bounded PSI recomputation |
 | `scripts/screenshot-og.mjs`                     | Capture OG images for public pages                                                                                                                                        | System Playwright install (`/usr/lib/node_modules/playwright/index.mjs`) + live `pharos.watch`                                                                                                                                                                                                             | Writes `public/og-*.png`                                                                                                 |
 
 The SQL safety checker now scans both `worker/src/**` and `worker/scripts/**`, and its regression fixtures live under `scripts/__tests__/fixtures/sql-safety/`.
@@ -95,6 +96,13 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 
 - Designed to run locally (CoinGecko blocks Worker-origin access patterns).
 - Pulls DefiLlama stablecoin list, maps `gecko_id` to internal IDs, then fetches CoinGecko market data in batches.
+
+### `worker/scripts/repair-non-usd-fiat-depeg-history.ts`
+
+- Uses the prod D1 database directly through Wrangler plus Access-protected ops endpoints for PSI recomputation.
+- `--dry-run` compares stored `source='backfill'` rows against the current replay policy without mutating production.
+- Live mode deletes and rewrites non-USD non-commodity backfill rows under canonical stablecoin IDs, folding known legacy aliases such as `300 -> tryb-bilira` and `cg-idrt -> idrt-rupiah-token`.
+- Known dead orphan IDs such as `eura-angle` are purged instead of replayed back into the active depeg history surface.
 
 ### `register-telegram-webhook.sh`
 

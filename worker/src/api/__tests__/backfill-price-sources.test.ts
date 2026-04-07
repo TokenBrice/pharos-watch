@@ -155,4 +155,37 @@ describe("fetchMarketBackfillPriceSeries", () => {
       { timestamp: 1_700_000_000, price: 1.004 },
     ]);
   });
+
+  it("uses the configured CoinGecko API key for historical market-chart fetches", async () => {
+    fetchWithRetryMock.mockResolvedValueOnce(makeJsonResponse({
+      prices: [
+        [1_700_000_000_000, 1.001],
+      ],
+    }));
+
+    await fetchMarketBackfillPriceSeries(
+      makeMeta(),
+      "euro-coin",
+      {
+        granularity: "daily",
+        range: {
+          startSec: 1_700_000_000,
+          endSec: 1_700_000_720,
+        },
+        quote: {
+          pegCurrency: "EUR",
+          useNativePegQuote: true,
+        },
+        coingeckoApiKey: "cg-pro-key",
+      },
+    );
+
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
+    expect(fetchWithRetryMock.mock.calls[0]?.[0]).toContain("https://pro-api.coingecko.com/api/v3/");
+    expect(fetchWithRetryMock.mock.calls[0]?.[1]).toMatchObject({
+      headers: expect.objectContaining({
+        "x-cg-pro-api-key": "cg-pro-key",
+      }),
+    });
+  });
 });

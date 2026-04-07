@@ -5,6 +5,7 @@ import { USER_AGENT } from "../lib/constants";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { getCache, setCache } from "../lib/db-cache";
 import { FrankfurterTimeSeriesSchema } from "../lib/external-api-schemas";
+import type { D1Database } from "@cloudflare/workers-types";
 import { fetchCgPriceHistoryHourly } from "./backfill-price-sources";
 
 const SECONDARY_FX_FETCH_CONCURRENCY = 8;
@@ -70,11 +71,14 @@ export async function fetchHistoricalFxRates(
   if (currencies.length === 0) return {};
   try {
     const url = `https://api.frankfurter.dev/v1/${startDate}..${endDate}?base=USD&symbols=${currencies.join(",")}`;
-    const res = await fetch(url, {
-      headers: { "User-Agent": USER_AGENT },
-    });
-    if (!res.ok) {
-      console.error(`[backfill-depegs] Frankfurter API returned ${res.status}`);
+    const res = await fetchWithRetry(
+      url,
+      { headers: { "User-Agent": USER_AGENT } },
+      2,
+      { timeoutMs: 30_000 },
+    );
+    if (!res || !res.ok) {
+      console.error(`[backfill-depegs] Frankfurter API returned ${res?.status ?? "no response"}`);
       return {};
     }
     const raw = await res.json();
@@ -135,9 +139,19 @@ async function fetchHistoricalSecondaryFxDay(date: string): Promise<Record<strin
   const primaryUrl = `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${date}/v1/currencies/usd.min.json`;
   const fallbackUrl = `https://${date}.currency-api.pages.dev/v1/currencies/usd.min.json`;
 
-  let res = await fetchWithRetry(primaryUrl, { headers: { "User-Agent": USER_AGENT } });
+  let res = await fetchWithRetry(
+    primaryUrl,
+    { headers: { "User-Agent": USER_AGENT } },
+    2,
+    { passthrough404: true, timeoutMs: 20_000 },
+  );
   if (!res || !res.ok) {
-    res = await fetchWithRetry(fallbackUrl, { headers: { "User-Agent": USER_AGENT } });
+    res = await fetchWithRetry(
+      fallbackUrl,
+      { headers: { "User-Agent": USER_AGENT } },
+      2,
+      { passthrough404: true, timeoutMs: 20_000 },
+    );
   }
   if (!res || !res.ok) {
     console.warn(`[backfill-depegs] secondary FX API returned ${res?.status ?? "no response"} for ${date}`);

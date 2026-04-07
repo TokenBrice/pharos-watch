@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "3.97",
+  currentVersion: "3.98",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "3.98",
+      title: "Daily-confirmed native-peg replay for non-USD fiat backfills",
+      date: "2026-04-07",
+      effectiveAt: 1775578800,
+      summary:
+        "Historical non-USD fiat replay now treats CoinGecko native-fiat history as a day-scale corroboration lane rather than trusting thin hourly native prints on their own.",
+      impact: [
+        "Historical CoinGecko market-chart replay now passes the configured CoinGecko API key through the backfill/admin path so native-fiat history can use the authenticated transport consistently during broad repairs",
+        "Supported non-USD fiat backfills now replay native-fiat history at daily cadence with a two-point confirmation window across a 36-hour gap tolerance instead of opening on isolated thin hourly prints",
+        "Extreme single-point native crashes of 5,000 bps or more are still preserved even when the normal historical confirmation rule would otherwise suppress the event",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.97",
       title: "Generalized native-peg safeguards for non-USD fiat replay and routing",
