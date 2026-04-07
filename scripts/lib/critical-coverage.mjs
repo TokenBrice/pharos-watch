@@ -1,6 +1,11 @@
 export const CRITICAL_FILES = [
   "src/lib/api.ts",
-  "worker/src/lib/api-utils.ts",
+  "worker/src/lib/api-cache-read.ts",
+  "worker/src/lib/api-freshness.ts",
+  "worker/src/lib/api-history.ts",
+  "worker/src/lib/api-pagination.ts",
+  "worker/src/lib/api-params.ts",
+  "worker/src/lib/api-response.ts",
   "worker/src/lib/auth.ts",
   "worker/src/lib/evm-rpc.ts",
   "worker/src/lib/stablecoins-cache.ts",
