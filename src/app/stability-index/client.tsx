@@ -728,20 +728,20 @@ export function StabilityIndexClient() {
           {/* Score + gauge — the instrument */}
           <div className="flex flex-col items-center gap-1 lg:flex-row lg:gap-5">
             {/* Lighthouse — larger on desktop */}
-            <PsiLighthouse band={displayBand} color={hexColor} size={80} />
+            <PsiLighthouse band={displayBand} color={hexColor} size={96} />
             {/* Score cluster */}
             <div className="flex min-w-0 flex-col items-center lg:items-start">
               {/* Arc gauge */}
               <ScoreArc score={displayScore} color={hexColor} size={160} />
               {/* Score + band overlaid below the arc */}
-              <div className="flex flex-wrap items-baseline justify-center gap-x-2.5 gap-y-1 -mt-3 lg:justify-start">
+              <div className="flex flex-wrap items-baseline justify-center gap-x-2.5 gap-y-1 -mt-1 lg:justify-start">
                 <span className="text-xs text-muted-foreground mr-1">
                   <MethodologyLabel topic="psi">PSI</MethodologyLabel>
                 </span>
-                <span className={`text-5xl font-extrabold font-mono tabular-nums leading-none ${colorClass}`}>
+                <span className={`text-4xl font-extrabold font-mono tabular-nums leading-none ${colorClass}`}>
                   {formatScore(displayScore)}
                 </span>
-                <span className={`text-lg font-bold uppercase tracking-wide ${colorClass}`}>
+                <span className={`text-base font-bold uppercase tracking-wide sm:text-lg ${colorClass}`}>
                   {displayBand}
                 </span>
               </div>
