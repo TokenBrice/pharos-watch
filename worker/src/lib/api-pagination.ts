@@ -58,8 +58,10 @@ export async function fetchPaginatedEvents<TRow, TEvent>(
     offset: config.offset,
   });
 
+  // SAFETY: `tableName` and every `ORDER BY` clause token are validated against allowlists above.
   const dataSql = `SELECT * FROM ${config.tableName}${where} ORDER BY ${normalizedOrderBy}${limitClause}${offsetClause}`;
   const [countBatch, dataBatch] = await db.batch([
+    // SAFETY: `tableName` has already passed the explicit `PAGINATED_TABLES` allowlist check above.
     db.prepare(`SELECT COUNT(*) as total FROM ${config.tableName}${where}`).bind(...config.filterBindings),
     db.prepare(dataSql).bind(...config.filterBindings, ...paginationBindings),
   ]);
