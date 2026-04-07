@@ -259,6 +259,50 @@ describe("syncBlacklist", () => {
     expect(batchExecute).toHaveBeenCalled();
   });
 
+  it("skips enrichment and cache work for rows already present in blacklist_events", async () => {
+    const duplicateId = "ethereum-0xdup123-0x0";
+    const db = mockD1([
+      { match: "blacklist_sync_state", rows: [] },
+      { match: "SELECT id FROM blacklist_events WHERE id IN", rows: [{ id: duplicateId }] },
+      { match: "blacklist_events", rows: [] },
+    ]);
+
+    vi.mocked(fetchEvmLogsForTopic).mockResolvedValueOnce([
+      {
+        address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        topics: [
+          "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855",
+          "0x000000000000000000000000abcdef1234567890abcdef1234567890abcdef12",
+        ],
+        data: "0x",
+        blockNumber: "0x1312d00",
+        timeStamp: "0x6670a780",
+        transactionHash: "0xdup123",
+        logIndex: "0x0",
+      },
+    ]);
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ success: true, data: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
+    );
+
+    const result = await syncBlacklist(buildTestOpts({ db }));
+
+    expect(result.itemCount).toBe(0);
+    const meta = JSON.parse(result.metadata);
+    expect(meta.rowsWritten).toBe(0);
+    expect(meta.eventsFetched).toBe(1);
+    expect(meta.enrichAttempted).toBe(0);
+    expect(meta.currentBalanceCacheUpdated).toBe(0);
+  });
+
   it("isolates per-chain errors — Etherscan 429 does not block Tron", async () => {
     const db = makeDb();
 
