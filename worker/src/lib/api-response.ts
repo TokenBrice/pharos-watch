@@ -11,6 +11,7 @@ export interface JsonResponseOptions {
 }
 
 type JsonResponseInit = Record<string, string> | JsonResponseOptions | undefined;
+type DefinedJsonResponseInit = Exclude<JsonResponseInit, undefined>;
 
 export function withErrorHandler<T extends unknown[]>(
   endpoint: string,
@@ -26,7 +27,7 @@ export function withErrorHandler<T extends unknown[]>(
   };
 }
 
-function isJsonResponseOptions(value: JsonResponseInit): value is JsonResponseOptions {
+function isJsonResponseOptions(value: DefinedJsonResponseInit): value is JsonResponseOptions {
   return "status" in value || "headers" in value || "noStore" in value || "retryAfterSec" in value;
 }
 
