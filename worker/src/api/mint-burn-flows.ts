@@ -1,20 +1,14 @@
-import { getCache, setCacheIfNewer } from "../lib/db-cache";
+import { getCache } from "../lib/db-cache";
 import {
   withErrorHandler,
-  addFreshnessHeaders,
   resolveOrReject,
   errorResponse,
   parseQueryParams,
-  jsonResponse,
   getLatestSuccessfulCronTimestamp,
 } from "../lib/api-utils";
-import { CACHE_PROFILES } from "../lib/constants";
 import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
 import { readMintBurnSyncStateBatch } from "../lib/mint-burn-pipeline/sync-state";
-import {
-  buildMintBurnSyncHealth,
-  MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC,
-} from "../lib/mint-burn-health-config";
+import { buildMintBurnSyncHealth } from "../lib/mint-burn-health-config";
 import {
   computeFlowIntensity,
   computeGaugeScore,
@@ -44,15 +38,16 @@ import {
   type DailyBaselineRow,
   ETHEREUM_CHAIN_ID,
   type EventRow,
+  finalizeMintBurnFlowResponse,
   type FirstSeenRow,
   FLOW_DEFAULT_WINDOW_HOURS,
   type HourlyRow,
-  logMintBurnFallbackFailure,
   MINT_BURN_CRON_JOB,
   perCoinFlowCacheKey,
   readMintBurnCronSnapshot,
   resolveFlowUpdatedAt,
   selectLargestEvents,
+  withMintBurnFlowFallback,
 } from "./mint-burn-flows-shared";
 
 // ---------------------------------------------------------------------------
@@ -144,7 +139,7 @@ export const handleMintBurnFlows = withErrorHandler(
     const params = url.searchParams;
     const stablecoinParam = params.get("stablecoin");
     const parsed = parseQueryParams(params, {
-      hours: { type: "int", default: 24, min: 1, max: 720 },
+      hours: { type: "int", default: 24, min: 1, max: 720, rangePolicy: "reject" },
     });
     if (parsed instanceof Response) return parsed;
     const { hours } = parsed;
@@ -384,7 +379,7 @@ function buildCoinSummaries(
 
 async function handleAggregate(db: D1Database, hours: number): Promise<Response> {
   const cacheKey = aggregateFlowCacheKey(hours);
-  try {
+  return withMintBurnFlowFallback(db, "aggregate", cacheKey, async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const syncStartSec = nowSec;
     const nowDayTs = bucketDay(nowSec);
@@ -448,18 +443,8 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
       sync: { ...data.sync, classificationWarning },
     };
 
-    await setCacheIfNewer(db, cacheKey, JSON.stringify(body), syncStartSec);
-    return jsonResponse(body, addFreshnessHeaders({
-      "Cache-Control": CACHE_PROFILES.standard,
-    }, data.latestSuccessfulSyncAt, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC));
-  } catch (err) {
-    const cached = await getCache(db, cacheKey);
-    if (cached) {
-      logMintBurnFallbackFailure("aggregate", cacheKey, err);
-      return cachedFlowFallbackResponse(cached);
-    }
-    throw err;
-  }
+    return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, data.latestSuccessfulSyncAt);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -477,7 +462,7 @@ async function handlePerCoin(
   }
 
   const cacheKey = perCoinFlowCacheKey(stablecoinId, hours);
-  try {
+  return withMintBurnFlowFallback(db, "per-coin", cacheKey, async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const syncStartSec = nowSec;
     const windowStart = nowSec - hours * 3600;
@@ -546,16 +531,6 @@ async function handlePerCoin(
       sync: buildMintBurnSyncHealth(nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status),
     };
 
-    await setCacheIfNewer(db, cacheKey, JSON.stringify(body), syncStartSec);
-    return jsonResponse(body, addFreshnessHeaders({
-      "Cache-Control": CACHE_PROFILES.standard,
-    }, latestSuccessfulSyncAt, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC));
-  } catch (err) {
-    const cached = await getCache(db, cacheKey);
-    if (cached) {
-      logMintBurnFallbackFailure("per-coin", cacheKey, err);
-      return cachedFlowFallbackResponse(cached);
-    }
-    throw err;
-  }
+    return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, latestSuccessfulSyncAt);
+  });
 }

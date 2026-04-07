@@ -209,16 +209,10 @@ describe("handleBlacklist", () => {
     expect(age).toBeLessThan(120);
   });
 
-  it("caps oversized limit to 1000", async () => {
-    let dataBinds: unknown[] = [];
-    const db = makeDbWithDataBindCapture((args) => {
-      dataBinds = args;
-    });
-
-    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?limit=999999"));
-    expect(res.status).toBe(200);
-    expect(dataBinds).toContain(1000);
-    expect(dataBinds).not.toContain(999999);
+  it("rejects oversized limit values instead of silently clamping them", async () => {
+    const res = await handleBlacklist(mockD1([]), new URL("https://x/api/blacklist?limit=999999"));
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Invalid limit: must be between 0 and 1000" });
   });
 
   it("maps limit=0 to default limit 1000", async () => {

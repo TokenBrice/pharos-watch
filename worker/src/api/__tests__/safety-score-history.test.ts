@@ -36,6 +36,15 @@ describe("handleSafetyScoreHistory", () => {
     expect(await res.json()).toEqual({ error: "Unknown stablecoin" });
   });
 
+  it("rejects out-of-range day windows instead of clamping them", async () => {
+    const res = await handleSafetyScoreHistory(
+      mockD1([]),
+      new URL("https://x/api/safety-score-history?stablecoin=usdt-tether&days=99999"),
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Invalid days: must be between 1 and 3650" });
+  });
+
   it("returns 200 with history rows mapped to camelCase", async () => {
     const db = mockD1([
       {

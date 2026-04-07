@@ -58,6 +58,13 @@ describe("handleYieldHistory", () => {
     expect(await res.json()).toEqual({ error: "Unknown stablecoin" });
   });
 
+  it("rejects out-of-range day windows instead of clamping them", async () => {
+    const db = mockD1([]);
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether&days=9999"));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Invalid days: must be between 1 and 365" });
+  });
+
   it("maps snake_case to camelCase", async () => {
     const db = mockD1([{ match: "yield_history", rows: [row] }]);
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));

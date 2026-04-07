@@ -75,6 +75,14 @@ describe("parseIntParam", () => {
     expect(parseIntParam("9999", 100, 1, 500)).toBe(500);
   });
 
+  it("rejects out-of-range integers when rangePolicy is reject", async () => {
+    const result = parseIntParam("9999", 100, 1, 500, "limit", { rangePolicy: "reject" });
+    expect(result).toBeInstanceOf(Response);
+    const response = result as Response;
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid limit: must be between 1 and 500" });
+  });
+
   it("returns 400 response for malformed input", async () => {
     const result = parseIntParam("abc", 100, 1, 1000, "limit");
     expect(result).toBeInstanceOf(Response);
@@ -107,6 +115,14 @@ describe("parseFloatParam", () => {
     const response = result as Response;
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Invalid minAmount: must be a number" });
+  });
+
+  it("rejects out-of-range floats when rangePolicy is reject", async () => {
+    const result = parseFloatParam("100.5", 0, 0, 100, "minAmount", { rangePolicy: "reject" });
+    expect(result).toBeInstanceOf(Response);
+    const response = result as Response;
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid minAmount: must be between 0 and 100" });
   });
 });
 
@@ -143,6 +159,17 @@ describe("parseQueryParams", () => {
       threshold: { type: "float", default: 1.0, min: 0, max: 10 },
     });
     expect(result).toEqual({ threshold: 0.5 });
+  });
+
+  it("rejects out-of-range values when a spec opts into reject mode", async () => {
+    const params = new URLSearchParams("limit=250");
+    const result = parseQueryParams(params, {
+      limit: { type: "int", default: 50, min: 1, max: 200, rangePolicy: "reject" },
+    });
+    expect(result).toBeInstanceOf(Response);
+    const response = result as Response;
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid limit: must be between 1 and 200" });
   });
 });
 
@@ -288,7 +315,7 @@ describe("parseStablecoinHistoryQuery", () => {
     expect(await response.json()).toEqual({ error: "Unknown stablecoin" });
   });
 
-  it("applies endpoint-specific default and bounds for days", () => {
+  it("applies endpoint-specific defaults and keeps legacy clamp behavior unless reject mode is requested", () => {
     const bounded = parseStablecoinHistoryQuery(
       new URL("https://x/api/supply-history?stablecoin=usdt-tether&days=9999"),
       { defaultDays: 365, minDays: 1, maxDays: 1825 },
@@ -306,6 +333,17 @@ describe("parseStablecoinHistoryQuery", () => {
       throw new Error("expected parsed query");
     }
     expect(withDefault.days).toBe(90);
+  });
+
+  it("rejects out-of-range days when a public endpoint opts into reject mode", async () => {
+    const result = parseStablecoinHistoryQuery(
+      new URL("https://x/api/yield-history?stablecoin=usdt-tether&days=9999"),
+      { defaultDays: 90, minDays: 1, maxDays: 365, rangePolicy: "reject" },
+    );
+    expect(result).toBeInstanceOf(Response);
+    const response = result as Response;
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid days: must be between 1 and 365" });
   });
 
   it("returns 400 when days is malformed", async () => {

@@ -42,7 +42,7 @@ export const handlePublicStatusHistory = withErrorHandler(
     const now = Math.floor(Date.now() / 1000);
     const url = new URL(request?.url ?? "https://pharos.watch/api/public-status-history");
     const parsed = parseQueryParams(url.searchParams, {
-      limit: { type: "int", default: 50, min: 1, max: MAX_LIMIT },
+      limit: { type: "int", default: 50, min: 1, max: MAX_LIMIT, rangePolicy: "reject" },
     });
     if (parsed instanceof Response) return parsed;
     const window = parseEnumParam(url.searchParams.get("window"), VALID_WINDOWS, "window", DEFAULT_WINDOW);

@@ -68,6 +68,7 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
     defaultDays: 90,
     minDays: 1,
     maxDays: 365,
+    rangePolicy: "reject",
   });
   if (parsed instanceof Response) {
     return parsed;

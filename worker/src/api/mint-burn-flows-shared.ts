@@ -1,5 +1,5 @@
-import { getCache } from "../lib/db-cache";
-import { addFreshnessHeaders, readCachedJsonOr503 } from "../lib/api-utils";
+import { getCache, setCacheIfNewer } from "../lib/db-cache";
+import { addFreshnessHeaders, jsonResponse, readCachedJsonOr503 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "../lib/mint-burn-health-config";
 import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
@@ -294,6 +294,37 @@ export function cachedFlowFallbackResponse(cached: { value: string; updatedAt: n
     "Cache-Control": CACHE_PROFILES.standard,
   }, freshnessTs, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC);
   return new Response(cached.value, { headers });
+}
+
+export async function finalizeMintBurnFlowResponse(
+  db: D1Database,
+  cacheKey: string,
+  syncStartSec: number,
+  body: unknown,
+  freshnessTs: number,
+): Promise<Response> {
+  await setCacheIfNewer(db, cacheKey, JSON.stringify(body), syncStartSec);
+  return jsonResponse(body, addFreshnessHeaders({
+    "Cache-Control": CACHE_PROFILES.standard,
+  }, freshnessTs, MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC));
+}
+
+export async function withMintBurnFlowFallback(
+  db: D1Database,
+  scope: "aggregate" | "per-coin",
+  cacheKey: string,
+  execute: () => Promise<Response>,
+): Promise<Response> {
+  try {
+    return await execute();
+  } catch (err) {
+    const cached = await getCache(db, cacheKey);
+    if (cached) {
+      logMintBurnFallbackFailure(scope, cacheKey, err);
+      return cachedFlowFallbackResponse(cached);
+    }
+    throw err;
+  }
 }
 
 function compareLargestEventRows(a: EventRow, b: EventRow): number {

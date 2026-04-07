@@ -1,6 +1,5 @@
 import { isAdminPath, validateEndpointMethod } from "@shared/lib/api-endpoints";
 import { verifyAccessJwt } from "@shared/lib/cloudflare-access-jwt";
-import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { hasMatchingOpsUiOriginHeader, rejectIfNotOpsUiOrigin } from "../../lib/ops-origin";
 import {
   resolvePagesOpsUiAccessConfig,
@@ -10,12 +9,15 @@ import {
 } from "../../lib/ops-env";
 import {
   jsonError,
-  summarizeFetchError,
   buildUpstreamHeaders as buildUpstreamHeadersShared,
   buildProxyResponse as buildProxyResponseShared,
 } from "../../lib/proxy-utils";
+import {
+  DEFAULT_PROXY_TIMEOUT_MS,
+  fetchUpstreamProxy,
+  resolveWildcardProxyPath,
+} from "../../lib/upstream-proxy";
 
-const UPSTREAM_TIMEOUT_MS = 10_000;
 const FORWARDED_REQUEST_HEADERS = [
   "Accept",
   "Content-Type",
@@ -42,14 +44,7 @@ interface OpsAdminProxyContext {
 }
 
 function resolveUpstreamPath(params: OpsAdminProxyContext["params"]): string | null {
-  const path = params.path;
-  if (Array.isArray(path)) {
-    return path.length > 0 ? `/api/${path.join("/")}` : null;
-  }
-  if (typeof path === "string" && path.length > 0) {
-    return `/api/${path}`;
-  }
-  return null;
+  return resolveWildcardProxyPath(params.path, "/api/");
 }
 
 function isAllowedAdminPath(path: string): boolean {
@@ -175,39 +170,29 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
     return upstreamHeaders;
   }
 
-  let upstreamResponse: Response;
-  const timeout = createTimeoutSignal({
-    timeoutMs: UPSTREAM_TIMEOUT_MS,
+  const upstreamResult = await fetchUpstreamProxy(request, {
+    upstreamUrl: upstreamUrl.toString(),
+    method: request.method,
+    headers: upstreamHeaders,
+    body: request.method === "GET" || request.method === "HEAD" ? undefined : request.body,
+    timeoutMs: DEFAULT_PROXY_TIMEOUT_MS,
     timeoutReason: new DOMException("Operator API upstream timed out", "TimeoutError"),
-    parentSignal: request.signal,
+    logPrefix: "ops-proxy",
+    timeoutMessage: "Operator API upstream timed out",
+    fetchFailedMessage: "Operator API upstream fetch failed",
   });
-  try {
-    upstreamResponse = await fetch(upstreamUrl.toString(), {
-      method: request.method,
-      headers: upstreamHeaders,
-      body: request.method === "GET" || request.method === "HEAD" ? undefined : request.body,
-      redirect: "manual",
-      signal: timeout.signal,
-    });
-  } catch (error) {
-    const summary = summarizeFetchError(error);
-    console.warn(`[ops-proxy] upstream fetch failed (${summary.kind}): ${summary.message}`);
-    if (timeout.isTimedOut()) {
-      return jsonError(504, "Operator API upstream timed out");
-    }
-    return jsonError(502, "Operator API upstream fetch failed");
-  } finally {
-    timeout.dispose();
+  if (!upstreamResult.ok) {
+    return upstreamResult.response;
   }
 
-  const redirectLocation = upstreamResponse.headers.get("Location");
+  const redirectLocation = upstreamResult.response.headers.get("Location");
   if (
-    upstreamResponse.status >= 300 &&
-    upstreamResponse.status < 400 &&
+    upstreamResult.response.status >= 300 &&
+    upstreamResult.response.status < 400 &&
     redirectLocation?.includes(".cloudflareaccess.com")
   ) {
     return jsonError(502, "Operator API upstream auth failed");
   }
 
-  return buildProxyResponse(upstreamResponse, request.method);
+  return buildProxyResponse(upstreamResult.response, request.method);
 };

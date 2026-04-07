@@ -24,7 +24,7 @@ export const handleStressSignals = withErrorHandler(
   async (db: D1Database, url: URL): Promise<Response> => {
     const stablecoinId = url.searchParams.get("stablecoin");
     const parsedParams = parseQueryParams(url.searchParams, {
-      days: { type: "int", default: 30, min: 1, max: 365 },
+      days: { type: "int", default: 30, min: 1, max: 365, rangePolicy: "reject" },
     });
     if (parsedParams instanceof Response) return parsedParams;
     const { days } = parsedParams;

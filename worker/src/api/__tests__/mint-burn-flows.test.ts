@@ -146,6 +146,12 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body).toHaveProperty("error");
   });
 
+  it("rejects out-of-range hours instead of clamping them", async () => {
+    const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows?hours=9999"));
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Invalid hours: must be between 1 and 720" });
+  });
+
   it("returns NR flow intensity for sparse coins with no 24h activity after 7+ tracked days", async () => {
     const now = Math.floor(Date.now() / 1000);
     const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;

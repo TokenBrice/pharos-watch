@@ -1,33 +1,21 @@
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
-import { DAY_SECONDS, DAY_MS } from "@shared/lib/time-constants";
+import { DAY_MS } from "@shared/lib/time-constants";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { cancelResponseBodyQuietly } from "../lib/response-body";
 import {
-  getDepegThresholdBps,
   DEFILLAMA_BASE,
   RUB_FALLBACK,
   USER_AGENT,
-  DEPEG_CONFIRMATION_SUPPLY_THRESHOLD,
 } from "../lib/constants";
-import {
-  buildPriceReasonablenessOptions,
-  buildPriceValidationContext,
-  type PriceReasonablenessOptions,
-  validatePriceCandidateAgainstReference,
-} from "../lib/price-validation";
 import { errorResponse, jsonResponse } from "../lib/api-utils";
-import { binarySearchNearest } from "../lib/binary-search";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { RATE_LIMITS } from "../lib/rate-limit";
-import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
+import type { D1Database } from "@cloudflare/workers-types";
 import type { StablecoinMeta } from "@shared/types/core";
-import { sumPegBuckets } from "@shared/lib/supply";
 import { selectBackfillCoins } from "../lib/backfill-query";
 import { buildAdminJobSummary, noAdminTargetsResponse, runAdminJob } from "../lib/admin-job";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { fetchAuthoritativeHistoricalPriceSeries } from "../lib/authoritative-price-sources";
-import { normalizeSupportedPegCurrency } from "../lib/native-peg-quotes";
 
 // ── Re-exports from extracted modules (preserve public API) ─────────
 export {
@@ -64,34 +52,53 @@ import {
   buildFxLookup,
 } from "./backfill-fx";
 
+export {
+  BACKFILL_REPLAY_CONTEXT_DAYS,
+  MAX_BACKFILL_REPLAY_CONTEXT_DAYS,
+  buildReplayWindow,
+  buildBackfillDeleteStmt,
+  parseContextDaysParam,
+  parseDayParam,
+  type BackfillReplayWindow,
+} from "./backfill-depegs-window";
+
+export {
+  extractDepegEvents,
+  findNearestSupply,
+  parseSupplyData,
+  type BackfillEvent,
+  type BackfillEventExtractionOptions,
+  type SupplyPoint,
+} from "./backfill-depegs-extraction";
+
+export {
+  summarizeBackfillReplayDiff,
+  type BackfillReplayPreview,
+  type ExistingDepegEventRow,
+} from "./backfill-depegs-preview";
+
 import {
-  type HistoricalMarketSourceDiagnostics,
-  type HistoricalMarketPriceSeriesResult,
-  type PricePoint,
-  collapsePricesToDailyTimestamps,
-  fetchMarketBackfillPriceSeries,
-} from "./backfill-price-sources";
+  BACKFILL_REPLAY_CONTEXT_DAYS,
+  MAX_BACKFILL_REPLAY_CONTEXT_DAYS,
+  buildBackfillDeleteStmt,
+  buildReplayWindow,
+  parseContextDaysParam,
+  parseDayParam,
+} from "./backfill-depegs-window";
+import {
+  parseSupplyData,
+  type SupplyPoint,
+  type SupplySnapshot,
+} from "./backfill-depegs-extraction";
+import {
+  buildBackfillReplayPreview,
+  loadExistingReplayRows,
+  type BackfillReplayPreview,
+} from "./backfill-depegs-preview";
+import { backfillCoin } from "./backfill-depegs-replay";
 
 const BATCH_SIZE = 3;
 const BATCH_CHUNK_SIZE = 100;
-const BACKFILL_REPLAY_CONTEXT_DAYS = 7;
-const MAX_BACKFILL_REPLAY_CONTEXT_DAYS = 90;
-
-/** Consecutive above-threshold data points needed to confirm a large-cap depeg.
- *  Mirrors the live system's pending → re-check → promote flow. */
-const BACKFILL_MIN_CONFIRM_POINTS = 2;
-
-/** Max gap (seconds) between data points before pending resets.
- *  6h handles CG hourly gaps but resets for day-scale gaps. */
-const BACKFILL_PENDING_MAX_GAP_SEC = 6 * 3600;
-const BACKFILL_NATIVE_PEG_PENDING_MAX_GAP_SEC = 36 * 3600;
-const BACKFILL_NATIVE_PEG_EXTREME_SINGLE_POINT_BPS = 5000;
-
-interface SupplyPoint {
-  date: string;
-  circulating?: Record<string, number>;
-}
-
 /** Per-coin detail from /stablecoin/:id — includes gecko_id and historical supply */
 interface CoinDetail {
   gecko_id?: string;
@@ -103,161 +110,6 @@ interface PreparedBackfillCoin {
   meta: StablecoinMeta;
   geckoId?: string;
   supplyByDate: SupplySnapshot[];
-}
-
-interface BackfillReplayWindow {
-  contextDays: number;
-  startDay: number | null;
-  endDay: number | null;
-  compareStartSec: number | null;
-  compareEndSec: number | null;
-  replayStartSec: number | null;
-  replayEndSec: number | null;
-}
-
-export interface ExistingDepegEventRow {
-  id: number;
-  stablecoin_id: string;
-  symbol: string;
-  peg_type: string;
-  direction: string;
-  peak_deviation_bps: number;
-  started_at: number;
-  ended_at: number | null;
-  start_price: number;
-  peak_price: number | null;
-  recovery_price: number | null;
-  peg_reference: number;
-  source: string;
-}
-
-export interface BackfillEventExtractionOptions {
-  forceConfirmation?: boolean;
-  confirmationMinPoints?: number;
-  confirmationMaxGapSec?: number;
-  extremeSinglePointBps?: number | null;
-}
-
-interface BackfillReplayPreview {
-  stablecoinId: string;
-  symbol: string;
-  replaySource: "market" | "authoritative" | "preserve-existing";
-  authoritativeSource: string | null;
-  marketSourcesUsed: string[];
-  mergeReasons: string[];
-  policyAdjustmentCount: number;
-  existingBackfillEventCount: number;
-  recomputedBackfillEventCount: number | null;
-  existingLiveEventCount: number;
-  existingOpenLiveEventCount: number;
-  exactMatch: boolean | null;
-  removedBackfillEventCount: number;
-  removedBackfillEventIdsSample: number[];
-  addedBackfillEventCount: number;
-  addedBackfillEventsSample: Array<{
-    direction: string;
-    peakDeviationBps: number;
-    startedAt: number;
-    endedAt: number | null;
-  }>;
-}
-
-function parseDayParam(raw: string | null): number | null {
-  if (!raw) return null;
-  if (/^\d+$/.test(raw)) {
-    const parsed = Number(raw);
-    if (!Number.isFinite(parsed)) return null;
-    const seconds = parsed > 1e12 ? Math.floor(parsed / 1000) : parsed;
-    return Math.floor(seconds / DAY_SECONDS) * DAY_SECONDS;
-  }
-
-  const parsedMs = Date.parse(raw);
-  if (Number.isNaN(parsedMs)) return null;
-  return Math.floor(parsedMs / 1000 / DAY_SECONDS) * DAY_SECONDS;
-}
-
-function parseContextDaysParam(raw: string | null): number | null {
-  if (!raw) return null;
-  if (!/^\d+$/.test(raw)) return null;
-  const parsed = Number(raw);
-  if (!Number.isInteger(parsed) || parsed < 0 || parsed > MAX_BACKFILL_REPLAY_CONTEXT_DAYS) return null;
-  return parsed;
-}
-
-function buildReplayWindow(
-  startDay: number | null,
-  endDay: number | null,
-  contextDays = BACKFILL_REPLAY_CONTEXT_DAYS,
-): BackfillReplayWindow {
-  const compareStartSec = startDay;
-  const compareEndSec = endDay != null ? endDay + DAY_SECONDS - 1 : null;
-  return {
-    contextDays,
-    startDay,
-    endDay,
-    compareStartSec,
-    compareEndSec,
-    replayStartSec:
-      compareStartSec != null
-        ? Math.max(0, compareStartSec - contextDays * DAY_SECONDS)
-        : null,
-    replayEndSec:
-      compareEndSec != null
-        ? compareEndSec + contextDays * DAY_SECONDS
-        : null,
-  };
-}
-
-function timestampInReplayWindow(timestamp: number, replayWindow: BackfillReplayWindow | null): boolean {
-  if (replayWindow?.replayStartSec != null && timestamp < replayWindow.replayStartSec) return false;
-  if (replayWindow?.replayEndSec != null && timestamp > replayWindow.replayEndSec) return false;
-  return true;
-}
-
-function eventOverlapsReplayWindow(
-  event: Pick<BackfillEvent, "startedAt" | "endedAt">,
-  replayWindow: BackfillReplayWindow | null,
-): boolean {
-  if (!replayWindow) return true;
-  const eventEnd = event.endedAt ?? event.startedAt;
-  if (replayWindow.compareStartSec != null && eventEnd < replayWindow.compareStartSec) return false;
-  if (replayWindow.compareEndSec != null && event.startedAt > replayWindow.compareEndSec) return false;
-  return true;
-}
-
-function existingRowOverlapsReplayWindow(
-  row: Pick<ExistingDepegEventRow, "started_at" | "ended_at">,
-  replayWindow: BackfillReplayWindow | null,
-): boolean {
-  if (!replayWindow) return true;
-  const rowEnd = row.ended_at ?? row.started_at;
-  if (replayWindow.compareStartSec != null && rowEnd < replayWindow.compareStartSec) return false;
-  if (replayWindow.compareEndSec != null && row.started_at > replayWindow.compareEndSec) return false;
-  return true;
-}
-
-function buildBackfillDeleteStmt(
-  db: D1Database,
-  stablecoinId: string,
-  replayWindow: BackfillReplayWindow | null,
-): D1PreparedStatement {
-  if (!replayWindow) {
-    return db
-      .prepare("DELETE FROM depeg_events WHERE stablecoin_id = ? AND source = 'backfill'")
-      .bind(stablecoinId);
-  }
-
-  let sql = "DELETE FROM depeg_events WHERE stablecoin_id = ? AND source = 'backfill'";
-  const binds: unknown[] = [stablecoinId];
-  if (replayWindow.compareStartSec != null) {
-    sql += " AND COALESCE(ended_at, started_at) >= ?";
-    binds.push(replayWindow.compareStartSec);
-  }
-  if (replayWindow.compareEndSec != null) {
-    sql += " AND started_at <= ?";
-    binds.push(replayWindow.compareEndSec);
-  }
-  return db.prepare(sql).bind(...binds);
 }
 
 export async function handleBackfillDepegs(
@@ -525,75 +377,27 @@ export async function handleBackfillDepegs(
           );
           const events = replay.events;
 
-          // null = CG had no price data → preserve existing events
-          if (events === null) {
-            if (dryRun) {
-              const existingRows = await db
-                .prepare(
-                  "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
-                )
-                .bind(meta.id)
-                .all<ExistingDepegEventRow>();
-              const existingResults = existingRows.results ?? [];
-              const existingBackfillRows = existingResults.filter((row) => (
-                row.source === "backfill" && existingRowOverlapsReplayWindow(row, replayWindow)
-              ));
-              const existingLiveRows = existingResults.filter((row) => row.source === "live");
-              previews.push({
-                stablecoinId: meta.id,
-                symbol: meta.symbol,
-                replaySource: replay.sourceKind,
-                authoritativeSource: replay.authoritativeSource,
-                marketSourcesUsed: replay.marketDiagnostics?.sourcesUsed ?? [],
-                mergeReasons: replay.marketDiagnostics?.mergeReasons ?? [],
-                policyAdjustmentCount: replay.marketDiagnostics?.policyAdjustments.length ?? 0,
-                existingBackfillEventCount: existingBackfillRows.length,
-                recomputedBackfillEventCount: null,
-                existingLiveEventCount: existingLiveRows.length,
-                existingOpenLiveEventCount: existingLiveRows.filter((row) => row.ended_at == null).length,
-                exactMatch: null,
-                removedBackfillEventCount: 0,
-                removedBackfillEventIdsSample: [],
-                addedBackfillEventCount: 0,
-                addedBackfillEventsSample: [],
-              });
+          if (dryRun) {
+            const existingRows = await loadExistingReplayRows(db, meta.id, replayWindow);
+            previews.push(buildBackfillReplayPreview({
+              meta,
+              sourceKind: replay.sourceKind,
+              authoritativeSource: replay.authoritativeSource,
+              marketDiagnostics: replay.marketDiagnostics,
+              existingRows,
+              events,
+            }));
+            if (events === null) {
+              skipped.push(meta.symbol);
+              continue;
             }
-            skipped.push(meta.symbol);
+            totalEvents += events.length;
             continue;
           }
 
-          if (dryRun) {
-            const existingRows = await db
-              .prepare(
-                "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
-              )
-              .bind(meta.id)
-              .all<ExistingDepegEventRow>();
-            const existingResults = existingRows.results ?? [];
-            const existingBackfillRows = existingResults.filter((row) => (
-              row.source === "backfill" && existingRowOverlapsReplayWindow(row, replayWindow)
-            ));
-            const existingLiveRows = existingResults.filter((row) => row.source === "live");
-            const diff = summarizeBackfillReplayDiff(existingBackfillRows, events);
-            previews.push({
-              stablecoinId: meta.id,
-              symbol: meta.symbol,
-              replaySource: replay.sourceKind,
-              authoritativeSource: replay.authoritativeSource,
-              marketSourcesUsed: replay.marketDiagnostics?.sourcesUsed ?? [],
-              mergeReasons: replay.marketDiagnostics?.mergeReasons ?? [],
-              policyAdjustmentCount: replay.marketDiagnostics?.policyAdjustments.length ?? 0,
-              existingBackfillEventCount: existingBackfillRows.length,
-              recomputedBackfillEventCount: events.length,
-              existingLiveEventCount: existingLiveRows.length,
-              existingOpenLiveEventCount: existingLiveRows.filter((row) => row.ended_at == null).length,
-              exactMatch: diff.exactMatch,
-              removedBackfillEventCount: diff.removedBackfillEventCount,
-              removedBackfillEventIdsSample: diff.removedBackfillEventIdsSample,
-              addedBackfillEventCount: diff.addedBackfillEventCount,
-              addedBackfillEventsSample: diff.addedBackfillEventsSample,
-            });
-            totalEvents += events.length;
+          // null = no trusted historical source available -> preserve existing rows
+          if (events === null) {
+            skipped.push(meta.symbol);
             continue;
           }
 
@@ -669,461 +473,4 @@ export async function handleBackfillDepegs(
       }));
     },
   );
-}
-
-export interface BackfillEvent {
-  pegType: string;
-  direction: string;
-  peakDeviationBps: number;
-  startedAt: number;
-  endedAt: number | null;
-  startPrice: number;
-  peakPrice: number;
-  recoveryPrice: number | null;
-  pegRef: number;
-}
-
-interface SupplySnapshot {
-  ts: number;
-  supply: number;
-}
-
-interface BackfillCoinReplayResult {
-  events: BackfillEvent[] | null;
-  sourceKind: "market" | "authoritative" | "preserve-existing";
-  authoritativeSource: string | null;
-  marketDiagnostics: HistoricalMarketSourceDiagnostics | null;
-}
-
-const BACKFILL_DIFF_SAMPLE_LIMIT = 20;
-
-function formatBackfillNumber(value: number | null | undefined): string {
-  if (value == null || !Number.isFinite(value)) return "null";
-  return value.toString();
-}
-
-function buildBackfillEventFingerprint(event: BackfillEvent): string {
-  return [
-    event.direction,
-    event.peakDeviationBps,
-    event.startedAt,
-    event.endedAt ?? "null",
-    formatBackfillNumber(event.startPrice),
-    formatBackfillNumber(event.peakPrice),
-    formatBackfillNumber(event.recoveryPrice),
-    formatBackfillNumber(event.pegRef),
-  ].join("|");
-}
-
-function buildExistingBackfillFingerprint(row: ExistingDepegEventRow): string {
-  return [
-    row.direction,
-    row.peak_deviation_bps,
-    row.started_at,
-    row.ended_at ?? "null",
-    formatBackfillNumber(row.start_price),
-    formatBackfillNumber(row.peak_price),
-    formatBackfillNumber(row.recovery_price),
-    formatBackfillNumber(row.peg_reference),
-  ].join("|");
-}
-
-function incrementCount(target: Map<string, number>, key: string): void {
-  target.set(key, (target.get(key) ?? 0) + 1);
-}
-
-export function summarizeBackfillReplayDiff(
-  existingBackfillRows: ExistingDepegEventRow[],
-  recomputedEvents: BackfillEvent[],
-): {
-  exactMatch: boolean;
-  removedBackfillEventCount: number;
-  removedBackfillEventIdsSample: number[];
-  addedBackfillEventCount: number;
-  addedBackfillEventsSample: Array<{
-    direction: string;
-    peakDeviationBps: number;
-    startedAt: number;
-    endedAt: number | null;
-  }>;
-} {
-  const expectedCounts = new Map<string, number>();
-  for (const event of recomputedEvents) {
-    incrementCount(expectedCounts, buildBackfillEventFingerprint(event));
-  }
-
-  const removedBackfillEventIdsSample: number[] = [];
-  let removedBackfillEventCount = 0;
-  for (const row of existingBackfillRows) {
-    const key = buildExistingBackfillFingerprint(row);
-    const remaining = expectedCounts.get(key) ?? 0;
-    if (remaining > 0) {
-      expectedCounts.set(key, remaining - 1);
-      continue;
-    }
-    removedBackfillEventCount++;
-    if (removedBackfillEventIdsSample.length < BACKFILL_DIFF_SAMPLE_LIMIT) {
-      removedBackfillEventIdsSample.push(row.id);
-    }
-  }
-
-  const existingCounts = new Map<string, number>();
-  for (const row of existingBackfillRows) {
-    incrementCount(existingCounts, buildExistingBackfillFingerprint(row));
-  }
-
-  const addedBackfillEventsSample: Array<{
-    direction: string;
-    peakDeviationBps: number;
-    startedAt: number;
-    endedAt: number | null;
-  }> = [];
-  let addedBackfillEventCount = 0;
-  for (const event of recomputedEvents) {
-    const key = buildBackfillEventFingerprint(event);
-    const remaining = existingCounts.get(key) ?? 0;
-    if (remaining > 0) {
-      existingCounts.set(key, remaining - 1);
-      continue;
-    }
-    addedBackfillEventCount++;
-    if (addedBackfillEventsSample.length < BACKFILL_DIFF_SAMPLE_LIMIT) {
-      addedBackfillEventsSample.push({
-        direction: event.direction,
-        peakDeviationBps: event.peakDeviationBps,
-        startedAt: event.startedAt,
-        endedAt: event.endedAt,
-      });
-    }
-  }
-
-  return {
-    exactMatch: removedBackfillEventCount === 0 && addedBackfillEventCount === 0,
-    removedBackfillEventCount,
-    removedBackfillEventIdsSample,
-    addedBackfillEventCount,
-    addedBackfillEventsSample,
-  };
-}
-
-/** Returns null events when no trusted historical source is available (caller should preserve existing rows). */
-async function backfillCoin(
-  meta: StablecoinMeta,
-  geckoId: string,
-  getPegRef: (timestamp: number) => number,
-  supplyByDate: SupplySnapshot[],
-  fxRates?: Record<string, number>,
-  replayWindow?: BackfillReplayWindow | null,
-  coingeckoApiKey?: string | null,
-): Promise<BackfillCoinReplayResult> {
-  const pegType = `pegged${meta.flags.pegCurrency}`;
-  const nativePegCurrency = normalizeSupportedPegCurrency(meta.flags.pegCurrency);
-  const candidateSupplySnapshots = replayWindow
-    ? supplyByDate.filter((snapshot) => timestampInReplayWindow(snapshot.ts, replayWindow))
-    : supplyByDate;
-
-  let marketSeries: HistoricalMarketPriceSeriesResult | null = null;
-  const loadMarketSeries = async (
-    quoteMode: "native-peg" | "usd" = "usd",
-  ): Promise<HistoricalMarketPriceSeriesResult> => {
-    if (marketSeries != null && marketSeries.diagnostics.quoteMode === quoteMode) return marketSeries;
-
-    const series = await fetchMarketBackfillPriceSeries(meta, geckoId, {
-      granularity: quoteMode === "native-peg" ? "daily" : "hourly",
-      range: replayWindow
-        ? {
-            startSec: replayWindow.replayStartSec,
-            endSec: replayWindow.replayEndSec,
-          }
-        : undefined,
-      quote: {
-        pegCurrency: meta.flags.pegCurrency,
-        useNativePegQuote: quoteMode === "native-peg",
-      },
-      coingeckoApiKey: coingeckoApiKey ?? null,
-    });
-    if (
-      series.diagnostics.mergeReasons.length > 0 ||
-      series.diagnostics.policyAdjustments.length > 0 ||
-      series.diagnostics.quoteMode === "native-peg"
-    ) {
-      console.log(
-        `[backfill-depegs] ${meta.id} historical market replay used ${series.diagnostics.sourcesUsed.join("+") || "none"}`
-          + ` quote=${series.diagnostics.quoteCurrency}`
-          + ` mergeReasons=${series.diagnostics.mergeReasons.join(",") || "none"}`
-          + ` adjustments=${series.diagnostics.policyAdjustments.length}`,
-      );
-    }
-    marketSeries = series;
-    return series;
-  };
-
-  let candidateTimestamps: number[];
-  if (candidateSupplySnapshots.length > 0) {
-    candidateTimestamps = candidateSupplySnapshots.map((snapshot) => snapshot.ts);
-  } else {
-    let candidateSeries = nativePegCurrency ? await loadMarketSeries("native-peg") : await loadMarketSeries("usd");
-    if ((!candidateSeries.prices || candidateSeries.prices.length === 0) && nativePegCurrency) {
-      candidateSeries = await loadMarketSeries("usd");
-    }
-    candidateTimestamps = collapsePricesToDailyTimestamps(candidateSeries.prices ?? []);
-  }
-
-  const authoritativeHistory = await fetchAuthoritativeHistoricalPriceSeries(meta, {
-    candidateTimestamps,
-    supplySnapshots: supplyByDate,
-    coingeckoApiKey: coingeckoApiKey ?? null,
-  });
-
-  let prices: PricePoint[] | null;
-  let sourceKind: BackfillCoinReplayResult["sourceKind"];
-  let marketDiagnostics: HistoricalMarketSourceDiagnostics | null = null;
-  if (authoritativeHistory.matched) {
-    prices = authoritativeHistory.prices;
-    if (!prices || prices.length === 0) {
-      console.warn(
-        `[backfill-depegs] authoritative historical price source unavailable for ${meta.symbol}` +
-          `${authoritativeHistory.source ? ` (${authoritativeHistory.source})` : ""}; preserving existing backfill rows`,
-      );
-      return {
-        events: null,
-        sourceKind: "preserve-existing",
-        authoritativeSource: authoritativeHistory.source,
-        marketDiagnostics: null,
-      };
-    }
-    sourceKind = "authoritative";
-  } else {
-    const nativeSeries = nativePegCurrency ? await loadMarketSeries("native-peg") : null;
-    const series =
-      nativeSeries && nativeSeries.prices && nativeSeries.prices.length > 0
-        ? nativeSeries
-        : await loadMarketSeries("usd");
-    prices = series.prices;
-    marketDiagnostics = series.diagnostics;
-    if (!prices || prices.length === 0) {
-      return {
-        events: null,
-        sourceKind: "preserve-existing",
-        authoritativeSource: null,
-        marketDiagnostics,
-      };
-    }
-    sourceKind = "market";
-  }
-
-  if (prices && replayWindow) {
-    prices = prices.filter((point) => timestampInReplayWindow(point.timestamp, replayWindow));
-  }
-
-  const extractedEvents = extractDepegEvents(
-    prices,
-    marketDiagnostics?.quoteMode === "native-peg" ? (() => 1) : getPegRef,
-    pegType,
-    supplyByDate,
-    fxRates,
-    buildPriceReasonablenessOptions({
-      navToken: meta.flags.navToken,
-      commodityOunces: meta.commodityOunces,
-    }),
-    marketDiagnostics?.quoteMode === "native-peg"
-      ? {
-          forceConfirmation: true,
-          confirmationMinPoints: BACKFILL_MIN_CONFIRM_POINTS,
-          confirmationMaxGapSec: BACKFILL_NATIVE_PEG_PENDING_MAX_GAP_SEC,
-          extremeSinglePointBps: BACKFILL_NATIVE_PEG_EXTREME_SINGLE_POINT_BPS,
-        }
-      : undefined,
-  );
-  return {
-    events: replayWindow
-      ? extractedEvents.filter((event) => eventOverlapsReplayWindow(event, replayWindow))
-      : extractedEvents,
-    sourceKind,
-    authoritativeSource: authoritativeHistory.matched ? authoritativeHistory.source : null,
-    marketDiagnostics,
-  };
-}
-
-export function parseSupplyData(tokens: SupplyPoint[]): SupplySnapshot[] {
-  const map = new Map<number, number>();
-  for (const point of tokens) {
-    const ts = parseInt(point.date, 10);
-    if (isNaN(ts)) continue;
-    const supply = sumPegBuckets(point.circulating);
-    map.set(ts, supply);
-  }
-  return Array.from(map.entries())
-    .map(([ts, supply]) => ({ ts, supply }))
-    .sort((a, b) => a.ts - b.ts);
-}
-
-export function findNearestSupply(supplyByDate: SupplySnapshot[], timestamp: number): number | null {
-  if (supplyByDate.length === 0) return null;
-  const nearest = binarySearchNearest(supplyByDate, timestamp, (s) => s.ts);
-  return nearest?.supply ?? null;
-}
-
-export function extractDepegEvents(
-  prices: PricePoint[],
-  getPegRef: (timestamp: number) => number,
-  pegType: string,
-  supplyByDate: SupplySnapshot[],
-  fxRates?: Record<string, number>,
-  priceValidationOpts?: PriceReasonablenessOptions,
-  options?: BackfillEventExtractionOptions,
-): BackfillEvent[] {
-  const threshold = getDepegThresholdBps(pegType);
-  const confirmationMinPoints = Math.max(1, options?.confirmationMinPoints ?? BACKFILL_MIN_CONFIRM_POINTS);
-  const confirmationMaxGapSec = Math.max(1, options?.confirmationMaxGapSec ?? BACKFILL_PENDING_MAX_GAP_SEC);
-  const extremeSinglePointBps = options?.extremeSinglePointBps ?? null;
-  const events: BackfillEvent[] = [];
-  let current: BackfillEvent | null = null;
-  const validationContext = buildPriceValidationContext({
-    pegType,
-    navToken: priceValidationOpts?.navToken,
-    commodityOunces: priceValidationOpts?.commodityOunces,
-  });
-
-  // Pending state for large-cap confirmation (mirrors live pending → confirm flow)
-  let pending: {
-    direction: string;
-    count: number;
-    firstTs: number;
-    lastTs: number;
-    peakBps: number;
-    startPrice: number;
-    peakPrice: number;
-    pegRef: number;
-  } | null = null;
-
-  /** Promote pending to an active event */
-  function promotePending(): void {
-    if (!pending) return;
-    current = {
-      pegType,
-      direction: pending.direction,
-      peakDeviationBps: pending.peakBps,
-      startedAt: pending.firstTs,
-      endedAt: null,
-      startPrice: pending.startPrice,
-      peakPrice: pending.peakPrice,
-      recoveryPrice: null,
-      pegRef: pending.pegRef,
-    };
-    pending = null;
-  }
-
-  for (const point of prices) {
-    const { timestamp, price } = point;
-    if (price <= 0) continue;
-
-    if (supplyByDate.length > 0) {
-      const supply = findNearestSupply(supplyByDate, timestamp);
-      if (supply !== null && supply < 1_000_000) continue;
-    }
-
-    const pegRef = getPegRef(timestamp);
-    if (pegRef <= 0) continue;
-    const decision = validatePriceCandidateAgainstReference(price, validationContext, "historical_backfill", {
-      price: pegRef,
-      type: fxRates ? "fresh" : "none",
-    });
-    if (!decision.accepted) continue;
-
-    const bps = Math.round((price / pegRef - 1) * 10000);
-    const absBps = Math.abs(bps);
-    const direction = bps >= 0 ? "above" : "below";
-
-    // Determine if this coin is large-cap at this point in time
-    const supply = findNearestSupply(supplyByDate, timestamp);
-    const isLargeCap = supply !== null && supply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD;
-
-    if (absBps >= threshold) {
-      if (current) {
-        if (current.direction !== direction) {
-          // Direction change: close current event, fall through to "no event" path below
-          current.endedAt = timestamp;
-          current.recoveryPrice = price;
-          events.push(current);
-          current = null;
-          // fall through — will be handled as "no active event" below
-        } else {
-          // Same direction: update peak, continue
-          if (absBps > Math.abs(current.peakDeviationBps)) {
-            current.peakDeviationBps = bps;
-            current.peakPrice = price;
-          }
-          continue;
-        }
-      }
-
-      // No active event — decide whether to open immediately or require confirmation
-      const requiresConfirmation = options?.forceConfirmation === true || isLargeCap;
-      if (!requiresConfirmation || (extremeSinglePointBps != null && absBps >= extremeSinglePointBps)) {
-        // Small cap: instant event (existing behavior)
-        current = {
-          pegType,
-          direction,
-          peakDeviationBps: bps,
-          startedAt: timestamp,
-          endedAt: null,
-          startPrice: price,
-          peakPrice: price,
-          recoveryPrice: null,
-          pegRef,
-        };
-        pending = null;
-      } else {
-        // Large cap: require consecutive confirmation points
-        if (!pending || pending.direction !== direction || timestamp - pending.lastTs > confirmationMaxGapSec) {
-          // Start new pending
-          pending = {
-            direction,
-            count: 1,
-            firstTs: timestamp,
-            lastTs: timestamp,
-            peakBps: bps,
-            startPrice: price,
-            peakPrice: price,
-            pegRef,
-          };
-        } else {
-          // Continue pending
-          pending.count++;
-          pending.lastTs = timestamp;
-          if (absBps > Math.abs(pending.peakBps)) {
-            pending.peakBps = bps;
-            pending.peakPrice = price;
-          }
-          if (pending.count >= confirmationMinPoints) {
-            promotePending();
-          }
-        }
-      }
-    } else {
-      // Below threshold
-      if (current) {
-        current.endedAt = timestamp;
-        current.recoveryPrice = price;
-        events.push(current);
-        current = null;
-      }
-      // Discard pending — recovered before confirmation
-      pending = null;
-    }
-  }
-
-  // Close any remaining active event
-  if (current) {
-    const lastTs = prices[prices.length - 1].timestamp;
-    const now = Math.floor(Date.now() / 1000);
-    if (now - lastTs > 7 * DAY_SECONDS) {
-      current.endedAt = lastTs;
-    }
-    events.push(current);
-  }
-  // Discard any unconfirmed pending at end of series
-
-  return events;
 }

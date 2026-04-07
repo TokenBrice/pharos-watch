@@ -57,9 +57,9 @@ export const handleMintBurnEvents = withErrorHandler(
     const scope = parseEnumParam(params.get("scope"), VALID_SCOPES, "scope", "all");
     if (scope instanceof Response) return scope;
     const numericParams = parseQueryParams(params, {
-      minAmount: { type: "float", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER },
-      limit: { type: "int", default: 50, min: 1, max: 500 },
-      offset: { type: "int", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER },
+      minAmount: { type: "float", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER, rangePolicy: "reject" },
+      limit: { type: "int", default: 50, min: 1, max: 500, rangePolicy: "reject" },
+      offset: { type: "int", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER, rangePolicy: "reject" },
     });
     if (numericParams instanceof Response) return numericParams;
     const { minAmount, limit, offset } = numericParams;

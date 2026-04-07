@@ -56,4 +56,13 @@ describe("handlePublicStatusHistory", () => {
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toEqual({ error: "Invalid window parameter" });
   });
+
+  it("rejects oversized limits instead of silently clamping them", async () => {
+    const db = mockD1([]);
+    const request = new Request("https://pharos.watch/api/public-status-history?limit=999");
+    const res = await handlePublicStatusHistory(db, undefined, request);
+
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Invalid limit: must be between 1 and 200" });
+  });
 });

@@ -1,9 +1,7 @@
 import { resolveApiRequestRouteMetric } from "@shared/lib/request-attribution";
-import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { resolveSiteDataUpstreamPath } from "@shared/lib/site-data-routes";
 import {
   jsonError,
-  summarizeFetchError,
   buildUpstreamHeaders as buildUpstreamHeadersShared,
   buildProxyResponse as buildProxyResponseShared,
 } from "../lib/proxy-utils";
@@ -15,8 +13,12 @@ import {
   validatePagesSiteDataProxyEnv,
   type SiteDataProxyEnv,
 } from "../lib/site-api-env";
+import {
+  DEFAULT_PROXY_TIMEOUT_MS,
+  fetchUpstreamProxy,
+  resolveWildcardProxyPath,
+} from "../lib/upstream-proxy";
 
-const UPSTREAM_TIMEOUT_MS = 10_000;
 const SITE_PROXY_HEADER = "X-Pharos-Site-Proxy-Secret";
 const FORWARDED_REQUEST_HEADERS = [
   "Accept",
@@ -56,14 +58,7 @@ function methodNotAllowed(): Response {
 }
 
 function resolveRequestedPath(params: SiteDataProxyContext["params"]): string | null {
-  const path = params.path;
-  if (Array.isArray(path)) {
-    return path.length > 0 ? `/_site-data/${path.join("/")}` : null;
-  }
-  if (typeof path === "string" && path.length > 0) {
-    return `/_site-data/${path}`;
-  }
-  return null;
+  return resolveWildcardProxyPath(params.path, "/_site-data/");
 }
 
 function buildUpstreamHeaders(
@@ -152,34 +147,27 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
   const requestUrl = new URL(request.url);
   const upstreamLane = resolveSiteDataUpstreamLane(env);
   const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, resolveSiteApiOrigin(env));
-  const timeout = createTimeoutSignal({
-    timeoutMs: UPSTREAM_TIMEOUT_MS,
+  const upstreamResult = await fetchUpstreamProxy(request, {
+    upstreamUrl: upstreamUrl.toString(),
+    method: "GET",
+    headers: upstreamHeaders,
+    timeoutMs: DEFAULT_PROXY_TIMEOUT_MS,
     timeoutReason: new DOMException("Site API upstream timed out", "TimeoutError"),
-    parentSignal: request.signal,
+    logPrefix: "site-data-proxy",
+    timeoutMessage: "Site API upstream timed out",
+    fetchFailedMessage: "Site API upstream fetch failed",
   });
-
-  let upstreamResponse: Response;
-  try {
-    upstreamResponse = await fetch(upstreamUrl.toString(), {
-      method: "GET",
-      headers: upstreamHeaders,
-      redirect: "manual",
-      signal: timeout.signal,
-    });
-  } catch (error) {
-    const summary = summarizeFetchError(error);
-    console.warn(`[site-data-proxy] upstream fetch failed (${summary.kind}): ${summary.message}`);
-    if (timeout.isTimedOut()) {
-      await queueSiteDataTelemetry(context, upstreamPath, "pages-upstream-timeout", upstreamLane);
-      return jsonError(504, "Site API upstream timed out");
-    }
-    await queueSiteDataTelemetry(context, upstreamPath, "pages-upstream-error", upstreamLane);
-    return jsonError(502, "Site API upstream fetch failed");
-  } finally {
-    timeout.dispose();
+  if (!upstreamResult.ok) {
+    await queueSiteDataTelemetry(
+      context,
+      upstreamPath,
+      upstreamResult.errorKind === "timeout" ? "pages-upstream-timeout" : "pages-upstream-error",
+      upstreamLane,
+    );
+    return upstreamResult.response;
   }
 
-  const response = buildProxyResponse(upstreamResponse);
+  const response = buildProxyResponse(upstreamResult.response);
   await queueSiteDataTelemetry(context, upstreamPath, "pages-upstream-fetch", upstreamLane);
   if (canCacheResponse(response)) {
     await getDefaultCache().put(cacheKey, response.clone());

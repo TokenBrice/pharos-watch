@@ -39,6 +39,13 @@ describe("handleSupplyHistory", () => {
     expect(await res.json()).toEqual({ error: "Unknown stablecoin" });
   });
 
+  it("rejects out-of-range day windows instead of clamping them", async () => {
+    const db = mockD1([]);
+    const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether&days=9999"));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Invalid days: must be between 1 and 1825" });
+  });
+
   it("maps snake_case columns to camelCase", async () => {
     const db = mockD1([{ match: "supply_history", rows: [row] }]);
     const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether"));

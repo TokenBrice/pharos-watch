@@ -16,6 +16,7 @@ export const handleSupplyHistory = withErrorHandler("supply-history", async (
       defaultDays: 365,
       minDays: 1,
       maxDays: 1825,
+      rangePolicy: "reject",
     },
     cacheControl: CACHE_PROFILES.slow,
     fetchRows: async ({ db: database, stablecoinId, cutoff }) => {

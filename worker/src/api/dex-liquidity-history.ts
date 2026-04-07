@@ -59,6 +59,7 @@ export const handleDexLiquidityHistory = withErrorHandler("dex-liquidity-history
       defaultDays: 90,
       minDays: 1,
       maxDays: 365,
+      rangePolicy: "reject",
     },
     cacheControl: CACHE_PROFILES.slow,
     fetchRows: async ({ db: database, stablecoinId, cutoff }) => {

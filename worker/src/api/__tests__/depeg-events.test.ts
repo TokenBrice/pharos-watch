@@ -78,4 +78,10 @@ describe("handleDepegEvents", () => {
     const age = Number(res.headers.get("X-Data-Age"));
     expect(age).toBeLessThan(120);
   });
+
+  it("rejects oversized limits instead of coercing them", async () => {
+    const res = await handleDepegEvents(mockD1([]), new URL("https://x/api/depeg-events?limit=1001"));
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Invalid limit: must be between 1 and 1000" });
+  });
 });

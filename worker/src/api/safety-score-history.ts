@@ -24,6 +24,7 @@ export const handleSafetyScoreHistory = withErrorHandler("safety-score-history",
       defaultDays: 365,
       minDays: 1,
       maxDays: 3650,
+      rangePolicy: "reject",
     },
     cacheControl: CACHE_PROFILES.slow,
     fetchRows: async ({ db: database, stablecoinId, cutoff }) => {

@@ -20,8 +20,8 @@ import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;
   const parsed = parseQueryParams(params, {
-    limit: { type: "int", default: 100, min: 1, max: 1000 },
-    offset: { type: "int", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER },
+    limit: { type: "int", default: 100, min: 1, max: 1000, rangePolicy: "reject" },
+    offset: { type: "int", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER, rangePolicy: "reject" },
   });
   if (parsed instanceof Response) return parsed;
   const { limit, offset } = parsed;

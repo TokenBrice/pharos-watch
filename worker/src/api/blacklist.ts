@@ -63,8 +63,8 @@ function isBlacklistStablecoin(value: string): value is BlacklistStablecoin {
 export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;
   const numericParams = parseQueryParams(params, {
-    limit: { type: "int", default: 1000, min: 0, max: 1000 },
-    offset: { type: "int", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER },
+    limit: { type: "int", default: 1000, min: 0, max: 1000, rangePolicy: "reject" },
+    offset: { type: "int", default: 0, min: 0, max: Number.MAX_SAFE_INTEGER, rangePolicy: "reject" },
   });
   if (numericParams instanceof Response) return numericParams;
   const limit = numericParams.limit === 0 ? 1000 : numericParams.limit;
