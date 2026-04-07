@@ -47,7 +47,10 @@ describe("syncLiveReserves", () => {
     .size;
 
   function mockAdapterRegistry(
-    fetchImpl: () => Promise<
+    fetchImpl: (
+      coin?: (typeof ACTIVE_STABLECOINS)[number],
+      config?: NonNullable<(typeof ACTIVE_STABLECOINS)[number]["liveReservesConfig"]>,
+    ) => Promise<
       | {
           slices: Array<{ name: string; pct: number; risk: "low" }>;
           metadata?: Record<string, unknown>;
@@ -59,8 +62,8 @@ describe("syncLiveReserves", () => {
         }
     >,
   ) {
-    const fetch = vi.fn(async () => {
-      const result = await fetchImpl();
+    const fetch = vi.fn(async (coin, config) => {
+      const result = await fetchImpl(coin, config);
       return {
         ...result,
         metadata: result.metadata ?? { freshnessMode: "not-applicable" as const },
@@ -276,6 +279,55 @@ describe("syncLiveReserves", () => {
       stage: "finalizing",
       itemsDone: configuredCoinCount,
       itemsTotal: configuredCoinCount,
+    });
+  });
+
+  it("persists full primary-plus-fallback failure context for reserve source chains", async () => {
+    const fallbackCoin = ACTIVE_STABLECOINS.find((coin) => (
+      (coin.liveReservesConfig?.inputs.fallbacks?.length ?? 0) > 0
+    ));
+    expect(fallbackCoin).toBeDefined();
+
+    mockAdapterRegistry(async (_coin, config) => {
+      const currentInput = config?.inputs.primary;
+      if (!currentInput || (currentInput.kind !== "http-json" && currentInput.kind !== "http-html")) {
+        throw new Error("unexpected input kind");
+      }
+      if (currentInput.url.includes("chain=tron")) {
+        throw new Error("primary reserve source failed");
+      }
+      throw new Error("fallback reserve source failed");
+    });
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1();
+    await syncLiveReserves(db, new AbortController().signal, {});
+
+    const fallbackAttempt = db.getHistory().find((entry) => (
+      entry.sql.includes("reserve_sync_attempt_history")
+      && entry.binds.includes(fallbackCoin!.id)
+      && entry.binds.some((bind) => typeof bind === "string" && bind.includes("\"attemptSummaries\""))
+    ));
+    expect(fallbackAttempt).toBeDefined();
+
+    const metadataJson = fallbackAttempt!.binds.find((bind): bind is string => (
+      typeof bind === "string" && bind.includes("\"attemptSummaries\"")
+    ));
+    expect(metadataJson).toBeDefined();
+    expect(JSON.parse(metadataJson!)).toMatchObject({
+      reason: "adapter-exception",
+      attemptSummaries: [
+        {
+          source: "primary",
+          label: "primary:http-json",
+          message: "primary reserve source failed",
+        },
+        {
+          source: "fallback",
+          label: "fallback#1:http-json",
+          message: "fallback reserve source failed",
+        },
+      ],
     });
   });
 });

@@ -11,6 +11,7 @@ import {
 import { syncReserveCoin } from "./sync-live-reserves-core";
 import {
   buildSharedSourceCacheKey,
+  buildReserveAdapterAttemptChainError,
   breakerKeyForConfig,
   CONFIGURED_COINS,
   type ConfiguredCoin,
@@ -142,13 +143,22 @@ export async function syncLiveReserves(
     try {
       return await tryPrimary(coin, config, adapter);
     } catch (primaryError) {
+      const fallbackAttempts: Array<{
+        input: LiveReserveConfig["inputs"]["primary"];
+        error: unknown;
+        index: number;
+      }> = [];
       for (const fb of config.inputs.fallbacks ?? []) {
         try {
           const fbConfig = { ...config, inputs: { ...config.inputs, primary: fb } };
           return await runAdapterAttempt(coin, fbConfig, adapter, signal, effectiveAdapterCtx);
-        } catch (e) { console.warn(`[sync-live-reserves] Fallback failed for ${coin.id}:`, e); continue; }
+        } catch (e) {
+          fallbackAttempts.push({ input: fb, error: e, index: fallbackAttempts.length });
+          console.warn(`[sync-live-reserves] Fallback failed for ${coin.id}:`, e);
+          continue;
+        }
       }
-      throw primaryError;
+      throw buildReserveAdapterAttemptChainError(config, primaryError, fallbackAttempts);
     }
   };
 

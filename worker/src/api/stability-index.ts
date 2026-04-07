@@ -25,6 +25,32 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 type PsiJsonDecodeReason = "missing" | "json-parse-failed" | "invalid-shape";
 
+interface PsiInputDegradation {
+  dewsUnavailable: boolean;
+  dewsFailureReason: string | null;
+  depegEventsUnavailable: boolean;
+  depegEventsFailureReason: string | null;
+}
+
+function readPsiInputDegradation(snapshot: Record<string, unknown>): PsiInputDegradation | undefined {
+  const degradation: PsiInputDegradation = {
+    dewsUnavailable: snapshot.dewsUnavailable === true,
+    dewsFailureReason: typeof snapshot.dewsFailureReason === "string" ? snapshot.dewsFailureReason : null,
+    depegEventsUnavailable: snapshot.depegEventsUnavailable === true,
+    depegEventsFailureReason:
+      typeof snapshot.depegEventsFailureReason === "string" ? snapshot.depegEventsFailureReason : null,
+  };
+
+  return (
+    degradation.dewsUnavailable
+    || degradation.dewsFailureReason != null
+    || degradation.depegEventsUnavailable
+    || degradation.depegEventsFailureReason != null
+  )
+    ? degradation
+    : undefined;
+}
+
 function decodePsiObjectField(
   value: string | null,
   updatedAt: number,
@@ -127,6 +153,7 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
     return errorResponse(503, "PSI current input snapshot payload is malformed");
   }
   const contributors = Array.isArray(snapshot.value.contributors) ? snapshot.value.contributors : [];
+  const inputDegradation = readPsiInputDegradation(snapshot.value);
 
   const avg24h = avg24hRow?.avg != null ? Math.round(avg24hRow.avg * 10) / 10 : undefined;
   const avg24hBand = avg24h != null ? getConditionBand(avg24h) : undefined;
@@ -197,6 +224,7 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
       avg24hBand,
       components: currentComponents.value,
       contributors,
+      ...(inputDegradation ? { inputDegradation } : {}),
       totalMcapUsd: typeof snapshot.value.totalMcapUsd === "number" ? snapshot.value.totalMcapUsd : 0,
       computedAt,
       methodologyVersion,

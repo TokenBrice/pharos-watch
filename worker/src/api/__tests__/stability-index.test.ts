@@ -193,4 +193,41 @@ describe("handleStabilityIndex contract tests", () => {
     expect(body.history).toEqual([]);
     expect(body.malformedRows).toBe(1);
   });
+
+  it("surfaces degraded input flags when the stored PSI snapshot carries dependency failures", async () => {
+    const degradedSample = {
+      ...sampleRow,
+      input_snapshot: JSON.stringify({
+        totalMcapUsd: 1e11,
+        contributors: [],
+        dewsUnavailable: true,
+        dewsFailureReason: "stress_signals unavailable",
+      }),
+    };
+    const db = mockD1([
+      { match: "stability_index_samples", rows: [degradedSample], first: degradedSample },
+      { match: "stability_index", rows: [historyRow] },
+    ]);
+
+    const res = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as {
+      current: {
+        inputDegradation?: {
+          dewsUnavailable: boolean;
+          dewsFailureReason: string | null;
+          depegEventsUnavailable: boolean;
+          depegEventsFailureReason: string | null;
+        };
+      };
+    };
+
+    expect(body.current.inputDegradation).toEqual({
+      dewsUnavailable: true,
+      dewsFailureReason: "stress_signals unavailable",
+      depegEventsUnavailable: false,
+      depegEventsFailureReason: null,
+    });
+  });
 });

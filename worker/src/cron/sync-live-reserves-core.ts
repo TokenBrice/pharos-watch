@@ -7,6 +7,7 @@ import {
   buildReserveSyncStateRecord,
   breakerKeyForConfig,
   classifyFailure,
+  isReserveAdapterAttemptChainError,
 } from "./sync-live-reserves-shared";
 import {
   beginReserveSyncAttempt,
@@ -223,7 +224,15 @@ export async function syncReserveCoin(args: {
     };
   } catch (error) {
     console.error(`[sync-live-reserves] Failed for ${coin.id}:`, error);
-    await recordFailure("error", error instanceof Error ? error.message : String(error), "adapter-exception");
+    await recordFailure(
+      "error",
+      error instanceof Error ? error.message : String(error),
+      "adapter-exception",
+      [],
+      isReserveAdapterAttemptChainError(error)
+        ? { attemptSummaries: error.attemptSummaries }
+        : undefined,
+    );
     return { breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false };
   }
 }

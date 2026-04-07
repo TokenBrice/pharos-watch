@@ -6,6 +6,16 @@ export const CONFIGURED_COINS = ACTIVE_STABLECOINS.filter((coin) => coin.liveRes
 export type ConfiguredCoin = (typeof CONFIGURED_COINS)[number];
 export type LiveReserveConfig = NonNullable<ConfiguredCoin["liveReservesConfig"]>;
 
+export interface ReserveAttemptFailureSummary {
+  source: "primary" | "fallback";
+  label: string;
+  message: string;
+}
+
+export interface ReserveAdapterAttemptChainError extends Error {
+  attemptSummaries: ReserveAttemptFailureSummary[];
+}
+
 export type ReserveFailureCategory =
   | "adapter-config"
   | "circuit-open"
@@ -101,4 +111,56 @@ export function classifyFailure(reason: string, lastError: string | null): Reser
     return "network";
   }
   return "unknown";
+}
+
+function toAttemptMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function describeReserveInput(
+  input: LiveReserveConfig["inputs"]["primary"],
+  source: ReserveAttemptFailureSummary["source"],
+  fallbackIndex?: number,
+): string {
+  if (source === "fallback") {
+    return `fallback#${(fallbackIndex ?? 0) + 1}:${input.kind}`;
+  }
+  return `primary:${input.kind}`;
+}
+
+export function buildReserveAdapterAttemptChainError(
+  config: LiveReserveConfig,
+  primaryError: unknown,
+  fallbackAttempts: Array<{
+    input: LiveReserveConfig["inputs"]["primary"];
+    error: unknown;
+    index: number;
+  }>,
+): ReserveAdapterAttemptChainError {
+  const attemptSummaries: ReserveAttemptFailureSummary[] = [
+    {
+      source: "primary",
+      label: describeReserveInput(config.inputs.primary, "primary"),
+      message: toAttemptMessage(primaryError),
+    },
+    ...fallbackAttempts.map((attempt) => ({
+      source: "fallback" as const,
+      label: describeReserveInput(attempt.input, "fallback", attempt.index),
+      message: toAttemptMessage(attempt.error),
+    })),
+  ];
+
+  const error = new Error(
+    attemptSummaries.map((attempt) => `${attempt.label}: ${attempt.message}`).join(" | "),
+  ) as ReserveAdapterAttemptChainError;
+  error.name = "ReserveAdapterAttemptChainError";
+  error.attemptSummaries = attemptSummaries;
+  return error;
+}
+
+export function isReserveAdapterAttemptChainError(error: unknown): error is ReserveAdapterAttemptChainError {
+  return (
+    error instanceof Error
+    && Array.isArray((error as Partial<ReserveAdapterAttemptChainError>).attemptSummaries)
+  );
 }

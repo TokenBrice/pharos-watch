@@ -128,7 +128,22 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   } catch (error) {
     dewsUnavailable = true;
     dewsFailureReason = String(error);
-    console.warn("[stability-index] DEWS dependency unavailable; stress breadth defaulted to 0:", error);
+    console.warn("[stability-index] DEWS dependency unavailable; skipping fresh PSI sample publication:", error);
+  }
+
+  if (dewsUnavailable) {
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        fallbackMode: "dews-unavailable",
+        dewsUnavailable,
+        dewsFailureReason,
+        totalMcapUsd,
+        mcap7dChangePct,
+        preservedCurrentSample: true,
+      }),
+    };
   }
 
   // Deduplicate by stablecoin_id: group events, pick worst deviation, earliest start

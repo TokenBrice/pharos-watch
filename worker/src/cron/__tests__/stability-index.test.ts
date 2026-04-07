@@ -168,12 +168,20 @@ describe("computeAndStoreStabilityIndex", () => {
     const result = await computeAndStoreStabilityIndex(db);
 
     expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(0);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
+      fallbackMode: string;
       dewsUnavailable: boolean;
       dewsFailureReason: string | null;
+      preservedCurrentSample: boolean;
     };
+    expect(metadata.fallbackMode).toBe("dews-unavailable");
     expect(metadata.dewsUnavailable).toBe(true);
     expect(metadata.dewsFailureReason).toContain("stress_signals");
+    expect(metadata.preservedCurrentSample).toBe(true);
+    expect(
+      db.runHistory.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO stability_index_samples")),
+    ).toBe(false);
   });
 
   it("fails closed when the active depeg query is unavailable", async () => {

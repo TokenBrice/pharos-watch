@@ -17,6 +17,13 @@ const StabilityContributorSchema = z.object({
   factor: z.number(),
 });
 
+const StabilityIndexInputDegradationSchema = z.object({
+  dewsUnavailable: z.boolean(),
+  dewsFailureReason: z.string().nullable(),
+  depegEventsUnavailable: z.boolean(),
+  depegEventsFailureReason: z.string().nullable(),
+});
+
 const StabilityIndexCurrentSchema = z.object({
   score: z.number(),
   band: z.string(),
@@ -24,6 +31,7 @@ const StabilityIndexCurrentSchema = z.object({
   avg24hBand: z.string().optional(),
   components: StabilityIndexComponentsSchema,
   contributors: z.array(StabilityContributorSchema).optional(),
+  inputDegradation: StabilityIndexInputDegradationSchema.optional(),
   totalMcapUsd: z.number().optional(),
   computedAt: z.number(),
   methodologyVersion: z.string(),
