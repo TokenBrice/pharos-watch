@@ -1,6 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v3.95` (2026-02-01 -> 2026-04-06).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v3.96` (2026-02-01 -> 2026-04-07).
+
+---
+
+## v3.96 - Direct native-peg BRL corroboration for downstream depeg routing (Apr 7, 2026)
+
+**Commit:** `unreleased`
+
+- Supported fiat-pegged assets such as `BRZ` can now consult a fresh direct CoinGecko native-peg quote before downstream depeg logic trusts `USD price / FX reference` on its own
+- Pending depeg confirmation now uses that direct native quote first when it exists, instead of relying only on a derived USD comparison
+- The published cached USD price path does not change; this hardens downstream validation and depeg routing against BRL-style reference drift
 
 ---
 

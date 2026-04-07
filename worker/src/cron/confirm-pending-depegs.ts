@@ -29,6 +29,7 @@ import {
   loadDexPriceRows,
   loadDexPoolChallengers,
 } from "../lib/depeg-helpers";
+import { fetchCurrentNativePegQuotes } from "../lib/native-peg-quotes";
 import type { DepegEvent } from "@shared/types/market";
 import type { PegAssetBase } from "@shared/types/core";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
@@ -44,6 +45,11 @@ interface PendingRow {
   first_price: number;
   peg_reference: number;
   reason?: "large-cap" | "low-confidence" | "extreme-move";
+}
+
+function getNativePegAbsBps(price: number): number | null {
+  if (!Number.isFinite(price) || price <= 0) return null;
+  return Math.abs(Math.round((price - 1) * 10000));
 }
 
 /**
@@ -76,6 +82,18 @@ export async function confirmPendingDepegs(
 
   const now = Math.floor(Date.now() / 1000);
   const assetById = new Map(assets.map((a) => [a.id, a]));
+  const nativePegQuotes = await fetchCurrentNativePegQuotes(
+    rows.map((row) => {
+      const meta = TRACKED_META_BY_ID.get(row.stablecoin_id);
+      return {
+        stablecoinId: row.stablecoin_id,
+        geckoId: meta?.geckoId ?? null,
+        pegCurrency: meta?.flags.pegCurrency ?? null,
+      };
+    }),
+    signal,
+    coingeckoApiKey,
+  );
 
   // Compute peg rates for reference price lookups
   const { rates: pegRates } = derivePegRates(assets, TRACKED_META_BY_ID, fxFallbackRates);
@@ -126,11 +144,23 @@ export async function confirmPendingDepegs(
     const threshold = getDepegThresholdBps(row.peg_type);
     const secondaryBar = Math.round(threshold * DEPEG_SECONDARY_THRESHOLD_RATIO);
     const primaryTrust = asset ? classifyPrimaryDepegTrust(asset, now) : "unusable";
+    const nativePegQuote = nativePegQuotes.get(row.stablecoin_id);
+    const nativePegAbsBps = nativePegQuote ? getNativePegAbsBps(nativePegQuote.price) : null;
+    const nativePegRecovered = nativePegAbsBps != null && nativePegAbsBps < threshold;
+    const nativePegStillDepegged = nativePegAbsBps != null && nativePegAbsBps >= threshold;
 
     // If an open event was created by another path (e.g. direction change), clean up pending
     if (openSet.has(row.stablecoin_id)) {
       stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
       console.log(`[depeg-confirm] Cleaned pending for ${row.symbol}: open event already exists`);
+      continue;
+    }
+
+    if (nativePegRecovered) {
+      stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
+      console.log(
+        `[depeg-confirm] Cleared pending for ${row.symbol}: direct ${nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency ?? "native"} quote recovered to ${nativePegAbsBps}bps`,
+      );
       continue;
     }
 
@@ -141,7 +171,7 @@ export async function confirmPendingDepegs(
         const pegRef = getPegReference(asset.pegType, pegRates, meta?.commodityOunces);
         if (pegRef > 0) {
           const currentBps = Math.abs(Math.round(((price / pegRef) - 1) * 10000));
-          if (currentBps < threshold) {
+          if (currentBps < threshold && !nativePegStillDepegged) {
             stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
             console.log(`[depeg-confirm] Cleared pending for ${row.symbol}: authoritative primary recovered to ${currentBps}bps`);
             continue;
@@ -166,7 +196,13 @@ export async function confirmPendingDepegs(
     // 3. Fetch CoinGecko spot price
     let offchainAgrees: boolean | null = null; // null = no data
     const geckoId = meta?.geckoId;
-    if (geckoId) {
+    if (nativePegQuote && nativePegAbsBps != null) {
+      offchainAgrees = nativePegAbsBps >= secondaryBar;
+      console.log(
+        `[depeg-confirm] ${row.symbol} direct ${nativePegQuote.pegCurrency} check: price=${nativePegQuote.price}, deviation=${nativePegAbsBps}bps, ` +
+        `bar=${secondaryBar}bps, agrees=${offchainAgrees}`,
+      );
+    } else if (geckoId) {
       const primarySource = asset?.priceSource ?? null;
       const useDefiLlamaSecondary =
         primarySource != null && primarySource.startsWith("coingecko");

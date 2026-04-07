@@ -71,6 +71,14 @@ export function PricingPipelineMethodologySection() {
         </p>
 
         <p>
+          <strong className="text-foreground">Native-peg corroboration.</strong>{" "}
+          For supported non-USD fiat assets with a reliable native-market quote, downstream depeg routing now checks that
+          direct native pair before it trusts a derived <code className="mx-1 text-xs">USD price / FX reference</code>{" "}
+          move on its own. For BRZ, a fresh direct <code className="mx-1 text-xs">BRZ/BRL</code> quote can therefore veto
+          or resolve a BRL depeg even when the published cached USD price still reflects a thin derived mismatch.
+        </p>
+
+        <p>
           <strong className="text-foreground">Enrichment &amp; confidence.</strong>{" "}
           A 5-pass enrichment pipeline fills gaps for long-tail coins. Each asset is tagged with a confidence level so
           downstream systems can react to data quality, and severe fixed-peg downside publication now requires corroboration

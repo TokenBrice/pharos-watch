@@ -44,6 +44,9 @@ export function PegScoreDewsMethodologySection() {
                 Thin non-USD fiat peg groups also fail closed when the live peg reference falls back to a 1&ndash;2 coin peer median instead of cached FX. Once a live row is already open, a fresh non-cached multi-source primary cluster can retire it after recovery even if that source mix is still too soft to open brand-new events directly.
               </p>
               <p>
+                For supported fiat pairs with a clean native-market quote, depeg routing now also checks that direct native quote before trusting a derived USD-versus-FX move. That means BRZ-style BRL reference drift can no longer open, sustain, or confirm a live depeg when the fresh direct <code className="mx-1 text-xs">BRZ/BRL</code> quote is already back near parity.
+              </p>
+              <p>
                 Live depeg events still require at least $1M of current circulating supply. Below that floor, the detail page may still show the current price deviation from peg, but it labels live event coverage as limited instead of implying the coin held peg.
               </p>
               <p>

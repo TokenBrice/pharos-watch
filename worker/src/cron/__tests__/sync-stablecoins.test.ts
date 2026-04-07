@@ -343,7 +343,7 @@ describe("syncStablecoins", () => {
     expect(shouldAttemptFetch).toHaveBeenCalledWith(db, "defillama-stablecoins");
     expect(fetchPrimaryPrices).toHaveBeenCalledWith(expect.any(Array), db, undefined, undefined, undefined, undefined, expect.any(Map));
     expect(enrichMissingPrices).toHaveBeenCalledWith(expect.any(Array), undefined, db, undefined);
-    expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined);
+    expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined);
     expect(confirmPendingDepegs).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined);
     const primaryPriceAssets = vi.mocked(fetchPrimaryPrices).mock.calls[0]?.[0] as Array<{ id: string }>;
     expect(primaryPriceAssets).toHaveLength(60);
@@ -952,6 +952,7 @@ describe("syncStablecoins", () => {
     expect((detectArgs?.[1] as unknown[]).length).toBe(60);
     expect(detectArgs?.[2]).toBeUndefined();
     expect(detectArgs?.[3]).toBeUndefined();
+    expect(detectArgs?.[4]).toBeUndefined();
 
     const confirmArgs = vi.mocked(confirmPendingDepegs).mock.calls[0];
     expect(confirmArgs?.[0]).toBe(db);
@@ -2106,7 +2107,7 @@ describe("syncStablecoins", () => {
     expect(payload).toBeDefined();
     const usdtCopies = payload?.peggedAssets.filter((asset) => asset.id === "usdt-tether").length ?? 0;
     expect(usdtCopies).toBe(1);
-    expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined);
+    expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined);
   });
 });
 

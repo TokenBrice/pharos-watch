@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "5.4",
+  currentVersion: "5.5",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
+  {
+    version: "5.5",
+    title: "Direct native-peg corroboration for BRL depeg routing",
+    date: "2026-04-07",
+    effectiveAt: 1775523600,
+    summary:
+      "Live and pending depeg routing now checks a fresh direct native-peg quote for supported non-USD fiat assets before trusting a USD-price-versus-FX-reference divergence on its own.",
+    impact: [
+      "BRZ-style depegs can now be vetoed or resolved by a fresh direct BRL quote when the USD/FX-derived signal is back inside threshold or points the other way",
+      "Pending confirmation prefers the fresh direct native-peg quote over a weaker derived USD cross-check when CoinGecko exposes that native pair",
+      "Prevents thin BRL reference mismatches from opening, sustaining, or confirming false depeg rows while still preserving genuine native-peg stress",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.4",
     title: "Thin-fiat peg-reference fail-closed and corroborated primary recovery",

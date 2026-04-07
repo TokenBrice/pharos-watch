@@ -2703,15 +2703,19 @@ For coins with a registered authoritative historical price provider, the backfil
 
 `dry-run=true` compares the freshly replayed historical events against the currently stored `source='backfill'` rows without mutating the database. The preview reports whether the replay exactly matches the stored backfill rows, how many stored backfill rows would be removed, how many replayed rows would be added, and the current live-row counts for the same asset.
 
+Bounded replay previews now also support `startDay` / `endDay` query params in dry-run mode. The handler replays only that UTC window with a small context pad, which makes long-history audits such as BRZ practical over `ops-api` without waiting for a full-coin rebuild. Windowed replays are currently dry-run only.
+
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
 **Query parameters**
 
-| Param        | Type      | Default | Description                      |
-| ------------ | --------- | ------- | -------------------------------- |
-| `stablecoin` | `string`  | —       | Process a single stablecoin ID   |
-| `batch`      | `integer` | `0`     | Batch offset (3 coins per batch) |
-| `dry-run`    | `"true"`  | —       | Preview replay-vs-backfill differences without writing `depeg_events` |
+| Param        | Type                                | Default | Description                                                               |
+| ------------ | ----------------------------------- | ------- | ------------------------------------------------------------------------- |
+| `stablecoin` | `string`                            | —       | Process a single stablecoin ID                                            |
+| `batch`      | `integer`                           | `0`     | Batch offset (3 coins per batch)                                          |
+| `dry-run`    | `"true"`                            | —       | Preview replay-vs-backfill differences without writing `depeg_events`     |
+| `startDay`   | `integer \| ISO date (YYYY-MM-DD)` | —       | Lower bound for dry-run replay comparison; supported only with `dry-run`  |
+| `endDay`     | `integer \| ISO date (YYYY-MM-DD)` | —       | Upper bound for dry-run replay comparison; supported only with `dry-run`  |
 
 ### `POST /api/backfill-supply-history`
 

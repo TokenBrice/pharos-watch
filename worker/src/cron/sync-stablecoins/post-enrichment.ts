@@ -293,7 +293,7 @@ export async function runDepegPipeline(
   try {
     const depegAbort = returnIfAborted(signal, `${abortStagePrefix}depeg-detection`);
     if (depegAbort) return depegAbort;
-    await detectDepegEvents(db, assets, fxFallbackRates, signal);
+    await detectDepegEvents(db, assets, fxFallbackRates, signal, coingeckoApiKey);
   } catch (err) {
     if (signal?.aborted) return abortResult(signal, `${abortStagePrefix}depeg-detection`);
     console.error(`[sync-stablecoins] Depeg detection failed${logContext}:`, err);

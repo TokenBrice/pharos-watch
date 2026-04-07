@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "3.95",
+  currentVersion: "3.96",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "3.96",
+      title: "Direct native-peg BRL corroboration for downstream depeg routing",
+      date: "2026-04-07",
+      effectiveAt: 1775523600,
+      summary:
+        "Supported non-USD fiat assets can now consult a fresh direct CoinGecko native-peg quote before downstream depeg logic trusts a USD price divided by an FX reference on its own.",
+      impact: [
+        "Live depeg detection now checks a fresh direct `coin/native-peg` quote for supported fiat pegs such as BRL before opening or extending downstream depeg state",
+        "Pending depeg confirmation uses that same direct native quote first, reducing BRZ-style false positives caused by USD/FX reference drift",
+        "The published live price remains the normal USD pipeline output; this change hardens downstream validation rather than introducing a new cached price source",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.95",
       title: "USDAI inherits PYUSD redemption pricing",

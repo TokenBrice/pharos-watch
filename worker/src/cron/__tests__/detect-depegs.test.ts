@@ -21,12 +21,20 @@ vi.mock("@shared/lib/psi-eligible", () => ({
 
 // Stub peg-rates
 vi.mock("@shared/lib/peg-rates", () => ({
-  derivePegRates: () => ({
-    rates: { peggedUSD: 1, peggedEUR: 1.08, peggedREAL: 0.18765951 },
-    sources: { peggedUSD: "median", peggedEUR: "median", peggedREAL: "median" },
+  derivePegRates: (_assets: unknown, _metaById: unknown, fxFallbackRates?: Record<string, number>) => ({
+    rates: { peggedUSD: 1, peggedEUR: 1.08, peggedREAL: fxFallbackRates?.peggedREAL ?? 0.18765951 },
+    sources: {
+      peggedUSD: "median",
+      peggedEUR: "median",
+      peggedREAL: fxFallbackRates?.peggedREAL ? "fallback" : "median",
+    },
     counts: { peggedUSD: 4, peggedEUR: 4, peggedREAL: 2 },
   }),
   getPegReference: (pegType: string, rates: Record<string, number>) => rates[pegType] ?? 1,
+}));
+
+vi.mock("../../lib/native-peg-quotes", () => ({
+  fetchCurrentNativePegQuotes: vi.fn(async () => new Map()),
 }));
 
 // Stub supply
@@ -38,6 +46,7 @@ vi.mock("@shared/lib/supply", () => ({
 }));
 
 import { detectDepegEvents } from "../detect-depegs";
+import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
 
 // Helper to build a minimal asset
 function makeAsset(overrides: {
@@ -72,6 +81,7 @@ describe("detectDepegEvents", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2025-06-15T12:00:00Z"));
+    vi.mocked(fetchCurrentNativePegQuotes).mockReset().mockResolvedValue(new Map());
   });
 
   afterEach(() => {
@@ -528,6 +538,108 @@ describe("detectDepegEvents", () => {
       sql.includes("INSERT INTO depeg_events") || sql.includes("INSERT INTO depeg_pending")
     );
     expect(inserts).toHaveLength(0);
+  });
+
+  it("suppresses a BRZ depeg when the direct BRL quote is back inside threshold", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const preparedSqls: string[] = [];
+    vi.mocked(fetchCurrentNativePegQuotes).mockResolvedValue(new Map([
+      ["brz-transfero", {
+        stablecoinId: "brz-transfero",
+        geckoId: "brz",
+        pegCurrency: "BRL",
+        price: 0.995,
+        updatedAt: now - 60,
+      }],
+    ]));
+
+    const db = mockD1([
+      { match: "depeg_events", rows: [] },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      preparedSqls.push(sql);
+      return origPrepare(sql);
+    }) as typeof db.prepare;
+
+    await detectDepegEvents(
+      db,
+      [
+        makeAsset({
+          id: "brz-transfero",
+          symbol: "BRZ",
+          pegType: "peggedREAL",
+          price: 0.190587,
+          priceSource: "pyth",
+          priceConfidence: "single-source",
+        }),
+      ],
+      { peggedREAL: 0.18765951 },
+    );
+
+    const inserts = preparedSqls.filter((sql) =>
+      sql.includes("INSERT INTO depeg_events") || sql.includes("INSERT INTO depeg_pending")
+    );
+    expect(inserts).toHaveLength(0);
+  });
+
+  it("closes an open BRZ event when the direct BRL quote shows recovery", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const preparedSqls: string[] = [];
+    vi.mocked(fetchCurrentNativePegQuotes).mockResolvedValue(new Map([
+      ["brz-transfero", {
+        stablecoinId: "brz-transfero",
+        geckoId: "brz",
+        pegCurrency: "BRL",
+        price: 0.995,
+        updatedAt: now - 60,
+      }],
+    ]));
+
+    const db = mockD1([
+      {
+        match: "depeg_events",
+        rows: [{
+          id: 1,
+          stablecoin_id: "brz-transfero",
+          symbol: "BRZ",
+          peg_type: "peggedREAL",
+          direction: "above",
+          peak_deviation_bps: 180,
+          started_at: now - 3600,
+          start_price: 0.1909,
+          peak_price: 0.191,
+          peg_reference: 0.18765951,
+          recovery_price: null,
+          ended_at: null,
+          source: "live",
+        }],
+      },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      preparedSqls.push(sql);
+      return origPrepare(sql);
+    }) as typeof db.prepare;
+
+    await detectDepegEvents(
+      db,
+      [
+        makeAsset({
+          id: "brz-transfero",
+          symbol: "BRZ",
+          pegType: "peggedREAL",
+          price: 0.190587,
+          priceSource: "pyth",
+          priceConfidence: "single-source",
+        }),
+      ],
+      { peggedREAL: 0.18765951 },
+    );
+
+    expect(preparedSqls.some((sql) => sql.includes("UPDATE depeg_events SET ended_at"))).toBe(true);
   });
 
   it("skips NAV tokens", async () => {

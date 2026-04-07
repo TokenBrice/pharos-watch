@@ -15,7 +15,7 @@ import {
   type PriceReasonablenessOptions,
   validatePriceCandidateAgainstReference,
 } from "../lib/price-validation";
-import { jsonResponse } from "../lib/api-utils";
+import { errorResponse, jsonResponse } from "../lib/api-utils";
 import { binarySearchNearest } from "../lib/binary-search";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchWithRetry } from "../lib/fetch-retry";
@@ -72,6 +72,7 @@ import {
 
 const BATCH_SIZE = 3;
 const BATCH_CHUNK_SIZE = 100;
+const BACKFILL_REPLAY_CONTEXT_DAYS = 7;
 
 /** Consecutive above-threshold data points needed to confirm a large-cap depeg.
  *  Mirrors the live system's pending → re-check → promote flow. */
@@ -97,6 +98,15 @@ interface PreparedBackfillCoin {
   meta: StablecoinMeta;
   geckoId?: string;
   supplyByDate: SupplySnapshot[];
+}
+
+interface BackfillReplayWindow {
+  startDay: number | null;
+  endDay: number | null;
+  compareStartSec: number | null;
+  compareEndSec: number | null;
+  replayStartSec: number | null;
+  replayEndSec: number | null;
 }
 
 export interface ExistingDepegEventRow {
@@ -139,6 +149,67 @@ interface BackfillReplayPreview {
   }>;
 }
 
+function parseDayParam(raw: string | null): number | null {
+  if (!raw) return null;
+  if (/^\d+$/.test(raw)) {
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return null;
+    const seconds = parsed > 1e12 ? Math.floor(parsed / 1000) : parsed;
+    return Math.floor(seconds / DAY_SECONDS) * DAY_SECONDS;
+  }
+
+  const parsedMs = Date.parse(raw);
+  if (Number.isNaN(parsedMs)) return null;
+  return Math.floor(parsedMs / 1000 / DAY_SECONDS) * DAY_SECONDS;
+}
+
+function buildReplayWindow(startDay: number | null, endDay: number | null): BackfillReplayWindow {
+  const compareStartSec = startDay;
+  const compareEndSec = endDay != null ? endDay + DAY_SECONDS - 1 : null;
+  return {
+    startDay,
+    endDay,
+    compareStartSec,
+    compareEndSec,
+    replayStartSec:
+      compareStartSec != null
+        ? Math.max(0, compareStartSec - BACKFILL_REPLAY_CONTEXT_DAYS * DAY_SECONDS)
+        : null,
+    replayEndSec:
+      compareEndSec != null
+        ? compareEndSec + BACKFILL_REPLAY_CONTEXT_DAYS * DAY_SECONDS
+        : null,
+  };
+}
+
+function timestampInReplayWindow(timestamp: number, replayWindow: BackfillReplayWindow | null): boolean {
+  if (replayWindow?.replayStartSec != null && timestamp < replayWindow.replayStartSec) return false;
+  if (replayWindow?.replayEndSec != null && timestamp > replayWindow.replayEndSec) return false;
+  return true;
+}
+
+function eventOverlapsReplayWindow(
+  event: Pick<BackfillEvent, "startedAt" | "endedAt">,
+  replayWindow: BackfillReplayWindow | null,
+): boolean {
+  if (!replayWindow) return true;
+  const eventEnd = event.endedAt ?? event.startedAt;
+  if (replayWindow.compareStartSec != null && eventEnd < replayWindow.compareStartSec) return false;
+  if (replayWindow.compareEndSec != null && event.startedAt > replayWindow.compareEndSec) return false;
+  return true;
+}
+
+function existingRowOverlapsReplayWindow(
+  row: Pick<ExistingDepegEventRow, "started_at" | "ended_at">,
+  replayWindow: BackfillReplayWindow | null,
+): boolean {
+  if (!replayWindow) return true;
+  const rowEnd = row.ended_at ?? row.started_at;
+  if (replayWindow.compareStartSec != null && rowEnd < replayWindow.compareStartSec) return false;
+  if (replayWindow.compareEndSec != null && row.started_at > replayWindow.compareEndSec) return false;
+  return true;
+}
+
 export async function handleBackfillDepegs(
   db: D1Database,
   url: URL,
@@ -149,6 +220,29 @@ export async function handleBackfillDepegs(
     { request, trustedAdmin, url },
     async (context) => {
       const { dryRun } = context;
+      const hasExplicitReplayWindow = url.searchParams.has("startDay") || url.searchParams.has("endDay");
+      const requestedStartDay = parseDayParam(url.searchParams.get("startDay"));
+      const requestedEndDay = parseDayParam(url.searchParams.get("endDay"));
+      if (
+        (url.searchParams.get("startDay") && requestedStartDay == null) ||
+        (url.searchParams.get("endDay") && requestedEndDay == null)
+      ) {
+        return errorResponse(400, "Invalid startDay/endDay. Use Unix seconds/milliseconds or YYYY-MM-DD.");
+      }
+      if (
+        requestedStartDay != null &&
+        requestedEndDay != null &&
+        requestedStartDay > requestedEndDay
+      ) {
+        return errorResponse(400, "Invalid startDay/endDay: startDay must be <= endDay.");
+      }
+      if (hasExplicitReplayWindow && !dryRun) {
+        return errorResponse(400, "startDay/endDay are currently supported only with dry-run=true.");
+      }
+      const replayWindow = hasExplicitReplayWindow
+        ? buildReplayWindow(requestedStartDay, requestedEndDay)
+        : null;
+
       const selection = selectBackfillCoins(url, PSI_ELIGIBLE_STABLECOINS, {
         defaultBatchSize: BATCH_SIZE,
         allowBatchSizeOverride: false,
@@ -360,7 +454,7 @@ export async function handleBackfillDepegs(
         }
 
         try {
-          const replay = await backfillCoin(meta, geckoId, getPegRef, supplyByDate, fxRates);
+          const replay = await backfillCoin(meta, geckoId, getPegRef, supplyByDate, fxRates, replayWindow);
           const events = replay.events;
 
           // null = CG had no price data → preserve existing events
@@ -373,7 +467,9 @@ export async function handleBackfillDepegs(
                 .bind(meta.id)
                 .all<ExistingDepegEventRow>();
               const existingResults = existingRows.results ?? [];
-              const existingBackfillRows = existingResults.filter((row) => row.source === "backfill");
+              const existingBackfillRows = existingResults.filter((row) => (
+                row.source === "backfill" && existingRowOverlapsReplayWindow(row, replayWindow)
+              ));
               const existingLiveRows = existingResults.filter((row) => row.source === "live");
               previews.push({
                 stablecoinId: meta.id,
@@ -406,7 +502,9 @@ export async function handleBackfillDepegs(
               .bind(meta.id)
               .all<ExistingDepegEventRow>();
             const existingResults = existingRows.results ?? [];
-            const existingBackfillRows = existingResults.filter((row) => row.source === "backfill");
+            const existingBackfillRows = existingResults.filter((row) => (
+              row.source === "backfill" && existingRowOverlapsReplayWindow(row, replayWindow)
+            ));
             const existingLiveRows = existingResults.filter((row) => row.source === "live");
             const diff = summarizeBackfillReplayDiff(existingBackfillRows, events);
             previews.push({
@@ -476,6 +574,8 @@ export async function handleBackfillDepegs(
           dryRun: true,
           coinsProcessed: coins.length,
           recomputedBackfillEvents: totalEvents,
+          startDay: replayWindow?.startDay ?? null,
+          endDay: replayWindow?.endDay ?? null,
           previews,
           skipped,
           errors,
@@ -646,13 +746,25 @@ async function backfillCoin(
   getPegRef: (timestamp: number) => number,
   supplyByDate: SupplySnapshot[],
   fxRates?: Record<string, number>,
+  replayWindow?: BackfillReplayWindow | null,
 ): Promise<BackfillCoinReplayResult> {
   const pegType = `pegged${meta.flags.pegCurrency}`;
+  const candidateSupplySnapshots = replayWindow
+    ? supplyByDate.filter((snapshot) => timestampInReplayWindow(snapshot.ts, replayWindow))
+    : supplyByDate;
 
   let marketSeries: HistoricalMarketPriceSeriesResult | null = null;
   const loadMarketSeries = async (): Promise<HistoricalMarketPriceSeriesResult> => {
     if (marketSeries != null) return marketSeries;
-    marketSeries = await fetchMarketBackfillPriceSeries(meta, geckoId, { granularity: "hourly" });
+    marketSeries = await fetchMarketBackfillPriceSeries(meta, geckoId, {
+      granularity: "hourly",
+      range: replayWindow
+        ? {
+            startSec: replayWindow.replayStartSec,
+            endSec: replayWindow.replayEndSec,
+          }
+        : undefined,
+    });
     if (
       marketSeries.diagnostics.mergeReasons.length > 0 ||
       marketSeries.diagnostics.policyAdjustments.length > 0
@@ -667,8 +779,8 @@ async function backfillCoin(
   };
 
   const candidateTimestamps =
-    supplyByDate.length > 0
-      ? supplyByDate.map((snapshot) => snapshot.ts)
+    candidateSupplySnapshots.length > 0
+      ? candidateSupplySnapshots.map((snapshot) => snapshot.ts)
       : collapsePricesToDailyTimestamps((await loadMarketSeries()).prices ?? []);
 
   const authoritativeHistory = await fetchAuthoritativeHistoricalPriceSeries(meta, {
@@ -709,18 +821,25 @@ async function backfillCoin(
     sourceKind = "market";
   }
 
+  if (prices && replayWindow) {
+    prices = prices.filter((point) => timestampInReplayWindow(point.timestamp, replayWindow));
+  }
+
+  const extractedEvents = extractDepegEvents(
+    prices,
+    getPegRef,
+    pegType,
+    supplyByDate,
+    fxRates,
+    buildPriceReasonablenessOptions({
+      navToken: meta.flags.navToken,
+      commodityOunces: meta.commodityOunces,
+    }),
+  );
   return {
-    events: extractDepegEvents(
-      prices,
-      getPegRef,
-      pegType,
-      supplyByDate,
-      fxRates,
-      buildPriceReasonablenessOptions({
-        navToken: meta.flags.navToken,
-        commodityOunces: meta.commodityOunces,
-      }),
-    ),
+    events: replayWindow
+      ? extractedEvents.filter((event) => eventOverlapsReplayWindow(event, replayWindow))
+      : extractedEvents,
     sourceKind,
     authoritativeSource: authoritativeHistory.matched ? authoritativeHistory.source : null,
     marketDiagnostics,

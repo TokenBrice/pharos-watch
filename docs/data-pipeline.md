@@ -194,6 +194,7 @@ For fiat FX, Frankfurter remains the preferred ECB-backed source for the busines
 - Secondary historical FX snapshots are cached in D1 by year (`fx-history-secondary:<year>`) so repeated admin backfills do not re-fetch the same daily files.
 - Fallback behavior: if series data is sparse/missing for a timestamp, `buildFxLookup()` falls back to the current peg reference derived from live rates.
 - Historical depeg extraction validates each price point against the **direct peg reference for that timestamp** (`historical_backfill` mode). That preserves confirmed catastrophic downside moves without weakening the tighter fallback/DEX filters used for noisy live sources.
+- Dry-run backfill audits now accept `startDay` / `endDay` and replay only that UTC window with a 7-day context pad, which keeps long-history BRZ audits below `ops-api` timeout limits without changing the full-coin mutation path.
 
 ### Budget
 

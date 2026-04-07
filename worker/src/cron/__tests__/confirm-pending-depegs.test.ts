@@ -17,10 +17,15 @@ vi.mock("../../lib/circuit-breaker", () => ({
   recordOutcomeSafe: vi.fn(async () => undefined),
 }));
 
+vi.mock("../../lib/native-peg-quotes", () => ({
+  fetchCurrentNativePegQuotes: vi.fn(async () => new Map()),
+}));
+
 import { batchExecute } from "../../lib/db";
 import { fetchBinancePrices } from "../../lib/cex-tickers";
 import { recordOutcomeSafe } from "../../lib/circuit-breaker";
 import { fetchWithRetry } from "../../lib/fetch-retry";
+import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
 import {
   CIRCUIT_SOURCE,
   DEPEG_PENDING_EXPIRY_SEC,
@@ -139,6 +144,7 @@ describe("confirmPendingDepegs", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
+    vi.mocked(fetchCurrentNativePegQuotes).mockReset().mockResolvedValue(new Map());
   });
 
   it("returns early when there are no pending rows", async () => {
@@ -195,6 +201,60 @@ describe("confirmPendingDepegs", () => {
       .filter((stmt) => stmt.sql.startsWith("DELETE FROM depeg_pending"))
       .map((stmt) => stmt.boundValues[0]);
     expect(deletes).toEqual([1, 2, 3, 5]);
+  });
+
+  it("clears BRZ pending rows when the direct BRL quote is back inside threshold", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.mocked(fetchCurrentNativePegQuotes).mockResolvedValue(new Map([
+      ["brz-transfero", {
+        stablecoinId: "brz-transfero",
+        geckoId: "brz",
+        pegCurrency: "BRL",
+        price: 0.995,
+        updatedAt: nowSec - 60,
+      }],
+    ]));
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 21,
+            stablecoin_id: "brz-transfero",
+            symbol: "BRZ",
+            peg_type: "peggedREAL",
+            direction: "above",
+            first_seen_bps: 180,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.190587,
+            peg_reference: 0.18765951,
+          }),
+        ],
+      }),
+      [
+        makeAsset({
+          id: "brz-transfero",
+          name: "Brazilian Digital",
+          symbol: "BRZ",
+          geckoId: "brz",
+          pegType: "peggedREAL",
+          price: 0.190587,
+          priceSource: "pyth",
+          priceConfidence: "single-source",
+          priceObservedAt: nowSec - 30,
+          priceUpdatedAt: nowSec - 30,
+          priceSyncedAt: nowSec - 30,
+        }),
+      ],
+    );
+
+    expect(fetchWithRetry).not.toHaveBeenCalled();
+    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
+    const deletes = (statements as PreparedStatementWithMeta[])
+      .filter((stmt) => stmt.sql.startsWith("DELETE FROM depeg_pending"))
+      .map((stmt) => stmt.boundValues[0]);
+    expect(deletes).toEqual([21]);
   });
 
   it("promotes or rejects pending rows based on secondary-source agreement", async () => {

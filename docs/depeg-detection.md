@@ -81,8 +81,8 @@ Cleaned up non-USD depeg events with `peak_deviation_bps < 150` when the non-USD
 
 Detection runs as part of the `*/15 * * * *` sync cycle. After `syncStablecoins()` enriches prices, it calls:
 
-1. `detectDepegEvents(db, peggedAssets, fxFallbackRates)` -- detection
-2. `confirmPendingDepegs(db, peggedAssets, fxFallbackRates)` -- confirmation
+1. `detectDepegEvents(db, peggedAssets, fxFallbackRates, signal, coingeckoApiKey)` -- detection
+2. `confirmPendingDepegs(db, peggedAssets, fxFallbackRates, signal, coingeckoApiKey)` -- confirmation
 
 Both calls are in `worker/src/cron/sync-stablecoins.ts`. Errors from either are captured in the sync metadata as `depegErrors` array but do not fail the parent cron.
 
@@ -111,6 +111,7 @@ Validation gates (skip if any fail):
 - Supply >= $1M (via `sumPegBuckets`) for live event recording
 - Peg reference valid: finite and > 0
 - Non-USD fiat peg references only mutate live state when they come from cached FX fallback or a median built from at least 3 live contributors; thin peer medians fail closed for that cycle
+- Supported non-USD fiat pegs such as BRL also consult a fresh direct native-peg CoinGecko quote before mutating live state; a native quote back inside threshold or pointing the other way vetoes the derived USD/FX move for that cycle
 
 Primary-price trust gates:
 
@@ -129,6 +130,8 @@ direction = bps >= 0 ? "above" : "below"
 
 **Path A -- Deviation >= threshold AND event already open**
 
+- If a fresh direct native-peg quote is back inside threshold: close the live row immediately as recovered
+- If a fresh direct native-peg quote still shows a depeg but in a conflicting direction: fail closed and keep the existing row unchanged
 - If direction changed and the primary price is authoritative (or a trusted aggregate DEX row is corroborated by at least 2 protocol-level DEX groups in the replacement direction): close the old event and open the replacement immediately
 - If direction changed but the primary price is `confirm_required`: retire the stale live row immediately and route the replacement move through `depeg_pending` instead of leaving the wrong direction active
 - Same direction: mark as legitimately open (add to `seen` set); update peak only when the primary input is authoritative or a corroborated trusted DEX row corroborates the move
@@ -137,6 +140,7 @@ direction = bps >= 0 ? "above" : "below"
 **Path B -- Deviation >= threshold AND no event open**
 
 - If the peg reference is a thin non-USD fiat peer median without FX fallback: skip live-state mutation for this cycle
+- If a supported direct native-peg quote is back inside threshold or shows the opposite side of the peg: suppress the new event for this cycle
 - If supply >= $1B: insert into `depeg_pending` for multi-source confirmation (`reason = "large-cap"` unless another reason is more specific)
 - If primary trust is `confirm_required`: insert into `depeg_pending` with `reason = "low-confidence"`
 - If `abs(bps) >= 5000`: route through the extreme-move lane (`reason = "extreme-move"`). Corroborated trusted DEX depeg agreement may still promote the move immediately for non-large-cap coins
@@ -144,6 +148,7 @@ direction = bps >= 0 ? "above" : "below"
 
 **Path C -- Deviation < threshold AND event open**
 
+- If a supported direct native-peg quote still shows the same-direction depeg: keep the event open and ignore the derived recovery
 - Close immediately when the primary price is authoritative, or when a fresh non-cached multi-source primary cluster is already back inside threshold
 - If the remaining primary input is ambiguous, close only when a trusted aggregate DEX row also shows recovery, at least 2 protocol-level DEX groups are also back inside threshold, and no qualifying challenger pool still shows the old depeg direction
 - Otherwise keep the event open rather than letting cached/low-confidence prices silently resolve it
@@ -174,6 +179,7 @@ Age checks:
 
 **Off-chain check:**
 
+- Preferred path for supported fiat pegs such as `BRZ`: use a fresh direct native-peg quote (for example `BRZ/BRL`) and compare that quote directly to the native `1.0` peg
 - Default path: fetch CoinGecko `/simple/price` for the coin's `geckoId`
 - If the current primary price already comes from CoinGecko (`priceSource.startsWith("coingecko")`), switch the confirmer to DefiLlama `coins.llama.fi/prices/current/coingecko:{geckoId}` instead of querying CoinGecko again
 - Calculate deviation against `peg_reference`
@@ -218,6 +224,8 @@ Promotion inserts into `depeg_events` with `started_at` = original `first_seen_a
 ## Historical Backfill Validation
 
 Historical backfills in `worker/src/api/backfill-depegs.ts` do **not** reuse the exact same guard as live DEX or fallback enrichment, but they now consult the same authoritative-price provider registry as live sync before falling back to CoinGecko/DefiLlama history.
+
+`POST /api/backfill-depegs?dry-run=true` also accepts `startDay` / `endDay` for bounded replay audits. The handler applies a small context pad around that UTC window and compares only the overlapping stored `source='backfill'` rows, which makes long BRZ history audits feasible without waiting for a full-history HTTP request.
 
 When a coin has an authoritative historical provider (for example, protocol redemption quotes replayed at historical blocks), backfill uses that provider first. If the provider cannot return enough historical coverage, the handler preserves existing `source='backfill'` rows instead of rebuilding from a weaker market-data source.
 

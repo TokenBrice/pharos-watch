@@ -38,6 +38,7 @@ vi.mock("../backfill-price-sources", async (importOriginal) => {
 });
 
 import { handleBackfillDepegs } from "../backfill-depegs";
+import { fetchMarketBackfillPriceSeries } from "../backfill-price-sources";
 
 stubCryptoForAuth();
 
@@ -134,5 +135,46 @@ describe("handleBackfillDepegs dry-run", () => {
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("DELETE FROM depeg_events"))).toBe(false);
     expect(history.some((entry) => entry.sql.includes("INSERT INTO depeg_events"))).toBe(false);
+  });
+
+  it("passes a bounded replay window through dry-run backfill previews", async () => {
+    const day1 = Math.floor(new Date("2025-01-01T00:00:00Z").getTime() / 1000);
+    const day2 = Math.floor(new Date("2025-01-31T00:00:00Z").getTime() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
+        matchBinds: ["usdt-tether"],
+        rows: [],
+      },
+    ]);
+
+    const req = makeApiRequest(`/api/backfill-depegs?stablecoin=usdt-tether&dry-run=true&startDay=${day1}&endDay=${day2}`, {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleBackfillDepegs(db, makeApiUrl(req.url), true, req);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as {
+      dryRun: boolean;
+      startDay: number | null;
+      endDay: number | null;
+    };
+    expect(body.dryRun).toBe(true);
+    expect(body.startDay).toBe(day1);
+    expect(body.endDay).toBe(day2);
+
+    expect(vi.mocked(fetchMarketBackfillPriceSeries)).toHaveBeenCalledWith(
+      expect.anything(),
+      "tether",
+      expect.objectContaining({
+        granularity: "hourly",
+        range: {
+          startSec: day1 - 7 * 86400,
+          endSec: day2 + (8 * 86400) - 1,
+        },
+      }),
+    );
   });
 });

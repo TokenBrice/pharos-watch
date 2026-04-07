@@ -22,6 +22,7 @@ import {
   type DexPoolSource,
   type PendingDepegReason,
 } from "../lib/depeg-helpers";
+import { fetchCurrentNativePegQuotes } from "../lib/native-peg-quotes";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import type { DepegEvent } from "@shared/types/market";
@@ -313,6 +314,7 @@ export async function detectDepegEvents(
   assets: PegAssetBase[],
   fxFallbackRates?: Record<string, number>,
   signal?: AbortSignal,
+  coingeckoApiKey?: string | null,
 ): Promise<void> {
   throwIfAborted(signal);
   const {
@@ -331,6 +333,19 @@ export async function detectDepegEvents(
   const dexPriceSources = await loadDexPriceSources(db);
   throwIfAborted(signal);
   const dexPoolChallengers = await loadDexPoolChallengers(db, POOL_CHALLENGE_MIN_TVL, DEX_FRESHNESS_SEC, now);
+  throwIfAborted(signal);
+  const nativePegQuotes = await fetchCurrentNativePegQuotes(
+    assets.map((asset) => {
+      const meta = PSI_ELIGIBLE_META_BY_ID.get(asset.id);
+      return {
+        stablecoinId: asset.id,
+        geckoId: meta?.geckoId ?? null,
+        pegCurrency: meta?.flags.pegCurrency ?? null,
+      };
+    }),
+    signal,
+    coingeckoApiKey,
+  );
 
   // Load all open events in one query
   throwIfAborted(signal);
@@ -431,6 +446,8 @@ export async function detectDepegEvents(
     const absBps = Math.abs(bps);
     const direction: "above" | "below" = bps >= 0 ? "above" : "below";
     const threshold = getDepegThresholdBps(asset.pegType);
+    const nativePegQuote = nativePegQuotes.get(asset.id);
+    const nativeSignal = nativePegQuote ? toPriceSignal(nativePegQuote.price, 1) : null;
     const dexRow = dexPriceRows.get(asset.id);
     const dexBps = dexRow && isTrustedDexPriceRow(dexRow, now, "depeg")
       ? Math.round(((dexRow.dex_price_usd / pegRef) - 1) * 10000)
@@ -468,6 +485,49 @@ export async function detectDepegEvents(
         : primaryTrust === "confirm_required"
           ? "low-confidence"
           : "large-cap";
+    const nativeSupportsPrimaryDirection =
+      nativeSignal != null &&
+      nativeSignal.absBps >= threshold &&
+      nativeSignal.direction === direction;
+    const nativeShowsRecovery = nativeSignal != null && nativeSignal.absBps < threshold;
+    const nativeSupportsExistingDirection =
+      existing != null &&
+      nativeSignal != null &&
+      nativeSignal.absBps >= threshold &&
+      nativeSignal.direction === existing.direction;
+
+    if (absBps >= threshold && nativeSignal != null && !nativeSupportsPrimaryDirection) {
+      if (nativeShowsRecovery) {
+        if (existing) {
+          stmts.push(
+            db.prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?").bind(now, price, existing.id),
+          );
+        }
+        console.warn(
+          `[depeg] Suppressed live depeg mutation for ${asset.symbol}: ` +
+          `primary=${bps}bps but direct ${nativePegQuote?.pegCurrency ?? meta.flags.pegCurrency} quote=${nativeSignal.bps}bps`,
+        );
+        continue;
+      }
+
+      if (existing && nativeSupportsExistingDirection) {
+        seen.add(existing.id);
+      }
+      console.warn(
+        `[depeg] Suppressed live depeg mutation for ${asset.symbol}: ` +
+        `primary=${bps}bps but direct ${nativePegQuote?.pegCurrency ?? meta.flags.pegCurrency} quote=${nativeSignal.bps}bps`,
+      );
+      continue;
+    }
+
+    if (absBps < threshold && existing && nativeSupportsExistingDirection) {
+      seen.add(existing.id);
+      console.warn(
+        `[depeg] Kept ${asset.symbol} open despite primary recovery: ` +
+        `primary=${bps}bps but direct ${nativePegQuote?.pegCurrency ?? meta.flags.pegCurrency} quote=${nativeSignal?.bps ?? "n/a"}bps`,
+      );
+      continue;
+    }
 
     const buildLiveEvent = (
       dir: "above" | "below",

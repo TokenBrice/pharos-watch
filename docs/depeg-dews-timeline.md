@@ -1,8 +1,16 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v5.4` (2026-02-18 -> 2026-04-07).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v5.5` (2026-02-18 -> 2026-04-07).
 
 ---
+## v5.5 — Direct native-peg corroboration for BRL depeg routing (Apr 7, 2026)
+
+**Commit:** `unreleased`
+
+- Fresh direct native-peg quotes can now veto or resolve BRZ-style live depeg mutations when the USD/FX-derived signal disagrees
+- Pending depeg confirmation now prefers the fresh direct native quote over a weaker derived USD cross-check when that native pair exists
+- This blocks FX-reference mismatches from opening or sustaining false BRL depeg rows while preserving genuine native-peg stress
+
 ## v5.4 — Thin-fiat peg-reference fail-closed and corroborated primary recovery (Apr 7, 2026)
 
 **Commit:** `unreleased`
