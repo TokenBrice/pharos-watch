@@ -43,18 +43,15 @@ Current-version note: v6.95 keeps the stronger peg treatment introduced in v6.93
 ### Liquidity / Exit Details
 
 - The public DEX liquidity dataset stays unchanged and fully market-based (see [DEX Liquidity Score](./dex-liquidity.md))
-- Report cards now use `effectiveExitScore`, not raw `liquidityScore`
-- `effectiveExitScore` blends:
-  - `liquidityScore` from DEX liquidity
-  - `redemptionBackstopScore` from protocol / issuer redemption quality
-- Formula when both exist:
-  - `effectiveExitScore = round(max(liquidityScore, liquidityScore * 0.55 + redemptionBackstopScore * 0.45))`
+- Report cards use `effectiveExitScore`, not raw `liquidityScore`
+- `effectiveExitScore` uses a best-path model:
+  - `effectiveExitScore = round(min(100, max(liquidityScore, redemptionBackstopScore) + min(liquidityScore, redemptionBackstopScore) × 0.10))`
 - If only DEX liquidity exists, `effectiveExitScore = liquidityScore`
-- If only redemption exists, `effectiveExitScore = round(min(70, redemptionBackstopScore * 0.75))`
+- If only redemption exists, `effectiveExitScore = redemptionBackstopScore` (route family caps are the guardrails — offchain-issuer ≤ 65, queue-redeem ≤ 70)
 - Redemption uplift is only used when the redemption route is resolved and above the low-confidence / heuristic tier
 - Low-confidence redemption routes stay visible in the dimension detail, but they do not improve the Safety Score liquidity score
 - Formula-based routes with live on-chain fee telemetry can use the current redemption fee bps for cost scoring while remaining labeled as formula models
-- When DEX liquidity is stale, report cards do not reuse it for blended effective-exit scoring; the dimension falls back to redemption-only or `NR`
+- When DEX liquidity is stale, report cards do not reuse it for effective-exit scoring; the dimension falls back to redemption-only or `NR`
 - If the DEX liquidity snapshot is temporarily unavailable at read time, `/api/report-cards` degrades in place the same way: liquidity inputs are suppressed for that snapshot instead of failing the whole response
 - If a redemption route is configured but currently unrated, the dimension stays `NR` without pretending the route is absent; the detail string calls out the configured-but-unrated state explicitly
 - High concentration (HHI > 0.5) remains descriptive context, not an extra penalty

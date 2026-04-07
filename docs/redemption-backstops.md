@@ -83,16 +83,16 @@ An optional per-config `totalScoreCap` can apply an additional `config-cap`.
 
 ### Effective Exit Score
 
-`computeEffectiveExitScore()` blends modeled redemption quality with observable DEX liquidity:
+`computeEffectiveExitScore()` uses a best-path model to combine modeled redemption quality with observable DEX liquidity:
 
-- If both exist: `max(dexLiquidity, 0.55 * dexLiquidity + 0.45 * redemptionScore)`
+- If both exist: `min(100, max(dexLiquidity, redemptionScore) + min(dexLiquidity, redemptionScore) × 0.10)`
 - If only DEX liquidity exists: passthrough DEX liquidity
-- If only redemption exists: `min(70, redemptionScore * 0.75)`
+- If only redemption exists: passthrough redemption score (route family caps are the guardrails)
 - If neither exists: `null`
 
 The redemption-backstop cron only materializes `effectiveExitScore` on resolved rows when the reused DEX liquidity input is fresh. Report cards then apply their own confidence gating on top, so low-confidence redemption routes stay visible but do not uplift Safety Score liquidity.
 
-These weights are surfaced by `/api/redemption-backstops.methodology.effectiveExitWeights` and reused by report cards.
+The effective exit model parameters are surfaced by `/api/redemption-backstops.methodology.effectiveExitModel` and reused by report cards.
 
 ---
 
