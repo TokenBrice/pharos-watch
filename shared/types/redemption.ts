@@ -210,9 +210,9 @@ export const RedemptionBackstopMethodologySchema = MethodologyEnvelopeSchema.ext
     outputAssetQuality: z.number(),
     cost: z.number(),
   }),
-  effectiveExitWeights: z.object({
-    liquidity: z.number(),
-    redemption: z.number(),
+  effectiveExitModel: z.object({
+    model: z.string(),
+    diversificationFactor: z.number(),
   }),
   routeFamilyCaps: z.object({
     queueRedeem: z.number(),

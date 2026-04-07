@@ -24,7 +24,7 @@ import {
   toRedemptionBackstopVersionLabel,
 } from "@shared/lib/redemption-backstop-version";
 import {
-  EFFECTIVE_EXIT_WEIGHTS,
+  EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR,
   REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS,
   REDEMPTION_ROUTE_FAMILY_CAPS,
 } from "@shared/lib/redemption-backstop-scoring";
@@ -426,9 +426,9 @@ export async function buildRedemptionBackstopsSnapshot(db: D1Database): Promise<
         outputAssetQuality: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.outputAssetQuality,
         cost: REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS.cost,
       },
-      effectiveExitWeights: {
-        liquidity: EFFECTIVE_EXIT_WEIGHTS.liquidity,
-        redemption: EFFECTIVE_EXIT_WEIGHTS.redemption,
+      effectiveExitModel: {
+        model: "best-path",
+        diversificationFactor: EFFECTIVE_EXIT_DIVERSIFICATION_FACTOR,
       },
       routeFamilyCaps: {
         queueRedeem: REDEMPTION_ROUTE_FAMILY_CAPS.queueRedeem,
