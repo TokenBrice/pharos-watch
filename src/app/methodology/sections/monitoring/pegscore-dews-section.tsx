@@ -44,10 +44,7 @@ export function PegScoreDewsMethodologySection() {
                 Thin non-USD fiat peg groups also fail closed when the live peg reference falls back to a 1&ndash;2 coin peer median instead of cached FX. Once a live row is already open, a fresh non-cached multi-source primary cluster can retire it after recovery even if that source mix is still too soft to open brand-new events directly.
               </p>
               <p>
-                For supported fiat pairs with a clean native-market quote, depeg routing now also checks that direct native quote before trusting a derived USD-versus-FX move. That means BRZ-style BRL reference drift can no longer open, sustain, or confirm a live depeg when the fresh direct <code className="mx-1 text-xs">BRZ/BRL</code> quote is already back near parity.
-              </p>
-              <p>
-                Historical backfill now follows the same principle for supported non-USD fiat assets: when CoinGecko exposes a native fiat pair, replay prefers that native history and compares it directly to the native <code className="mx-1 text-xs">1.0</code> peg before falling back to USD-plus-FX reconstruction. That removes large classes of false historical depeg rows that were created only by replay-time FX mismatch.
+                For supported fiat pairs with a clean native-market quote, depeg routing now also checks that direct native quote before trusting a derived USD-versus-FX move. That means BRZ-style BRL reference drift can no longer open, sustain, or confirm a live depeg when the fresh direct <code className="mx-1 text-xs">BRZ/BRL</code> quote is already back near parity. Historical backfill now follows the same principle for supported non-USD fiat assets: when CoinGecko exposes a native fiat pair, replay prefers that native history and compares it directly to the native <code className="mx-1 text-xs">1.0</code> peg before falling back to USD-plus-FX reconstruction.
               </p>
               <p>
                 Live depeg events still require at least $1M of current circulating supply. Below that floor, the detail page may still show the current price deviation from peg, but it labels live event coverage as limited instead of implying the coin held peg.
