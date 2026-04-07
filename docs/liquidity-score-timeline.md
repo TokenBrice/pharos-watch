@@ -1,6 +1,19 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v4.9` (2026-02-19 -> 2026-04-03).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.0` (2026-02-19 -> 2026-04-05).
+
+---
+
+## v5.0 - Size-aware scoring: relative TVL depth, recalibrated volume, quality retention (Apr 5, 2026)
+
+**Commit:** `unreleased`
+
+- All scoring dimensions are now size-independent. TVL Depth measures effective TVL relative to market cap instead of absolute dollar value. Volume Activity has a recalibrated curve with a realistic ceiling (tops out at ~32% V/T instead of ~500%). Pool Quality measures venue quality retention ratio (qualityAdjustedTvl / totalTvl, rescaled) instead of absolute quality-adjusted TVL.
+- TVL Depth uses effective-TVL-to-market-cap ratio on a log scale (`35 × log10(ratio / 0.0007)`), with absolute fallback for coins without market cap data
+- Volume Activity recalibrated: `38 × (log10(V/T) + 3)` — zero line at 0.1% V/T, tops at ~32% V/T. USDC/USDT now score 86-90 instead of 52-56
+- Pool Quality measures quality retention (`qualityAdjustedTvl / totalTvl`, rescaled from 15-80% range to 0-100). Fully size-independent
+- Weights rebalanced from `35/20/22.5/15/7.5` to `30/20/20/20/10` — structural quality (Pool Quality + Durability = 40%) now matches depth + activity (50%)
+- Coins like BOLD and LUSD with high relative depth ratios see significant score improvements; large-cap coins with low relative depth see depth dimension scores decrease but compensate through volume, durability, and diversity
 
 ---
 

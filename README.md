@@ -159,6 +159,8 @@ src/                              Frontend (Next.js static export)
 │   ├── status/                   Public system-status dashboard (read-only, noindex)
 │   ├── telegram/                 Telegram alerts + digest landing page
 │   ├── yield/                    Yield intelligence leaderboard
+│   ├── changelog/                Weekly release notes
+│   ├── treasuries/               Protocol treasury stable-exposure tracker
 │   └── about/                    About / product overview
 ├── components/                   UI components (table, charts, cards, shared sort-icon, time-range-buttons)
 ├── hooks/                        Data fetching hooks (TanStack Query) + shared UI hooks (useSort, useUrlFilters, useTimeRangeFilter)

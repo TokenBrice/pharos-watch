@@ -54,6 +54,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/about/api/` | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md) |
 | `/blacklist/` | [blacklist-tracker.md](./blacklist-tracker.md) |
 | `/cemetery/` | [cemetery-and-compare.md](./cemetery-and-compare.md) |
+| `/changelog/` | [architecture.md](./architecture.md) |
 | `/chains/` | [chains-page.md](./chains-page.md), [api-reference.md](./api-reference.md) |
 | `/chains/[chain]/` | [chains-page.md](./chains-page.md), [api-reference.md](./api-reference.md) |
 | `/compare/` | [cemetery-and-compare.md](./cemetery-and-compare.md) |
@@ -78,6 +79,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/stablecoins/governance/[governance]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
 | `/stablecoins/protocol/[protocol]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
 | `/telegram/` | [telegram-alerts.md](./telegram-alerts.md) |
+| `/treasuries/` | [architecture.md](./architecture.md) |
 | `/upcoming/` | [upcoming-page.md](./upcoming-page.md) |
 | `/yield/` | [yield-intelligence.md](./yield-intelligence.md) |
 

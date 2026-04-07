@@ -58,7 +58,7 @@ Core query inputs:
 
 Derived helpers:
 
-- `buildHomepageViewModel(...)` in `homepage-client-view-model.ts` (calls `derivePegRates(...)` for non-USD peg display context)
+- `buildHomepageViewModel(...)` in `src/components/homepage-client-view-model.ts` (calls `derivePegRates(...)` for non-USD peg display context)
 - `useHomepageFilters()` for URL-backed table filters
 - `useStartHereCallout()` for first-session onboarding behavior
 
