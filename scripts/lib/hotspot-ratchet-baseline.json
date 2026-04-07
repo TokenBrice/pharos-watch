@@ -48,9 +48,9 @@
     "notes": "Request-entry shell is intentionally thin after router extraction. Any new dispatch logic should move downward."
   },
   "src/components/contagion-graph.tsx": {
-    "fileLines": 784,
-    "maxFunctionLines": 731,
-    "branchCount": 112,
+    "fileLines": 642,
+    "maxFunctionLines": 598,
+    "branchCount": 70,
     "disposition": "deferred",
     "targetBudget": {
       "fileLines": 560,
@@ -96,8 +96,8 @@
     "notes": "Section body is now isolated from the methodology shell. Keep future PSI copy changes local to this module unless composition order changes."
   },
   "src/app/methodology/sections/core/safety-scores-section.tsx": {
-    "fileLines": 500,
-    "maxFunctionLines": 486,
+    "fileLines": 502,
+    "maxFunctionLines": 488,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -108,8 +108,8 @@
     "notes": "The shell split landed, but the Safety Scores body is still the largest methodology section. Next pass should separate calculator wiring, grading pipeline copy, and tables."
   },
   "src/app/methodology/sections/core/liquidity-section.tsx": {
-    "fileLines": 121,
-    "maxFunctionLines": 113,
+    "fileLines": 127,
+    "maxFunctionLines": 119,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -156,8 +156,8 @@
     "notes": "PegScore and DEWS now share an isolated section body, but the dual-surface copy is still oversized. Split PegScore-specific and DEWS-specific detail blocks before adding more content."
   },
   "src/app/methodology/scoring-changelog/content-v6.tsx": {
-    "fileLines": 284,
-    "maxFunctionLines": 274,
+    "fileLines": 287,
+    "maxFunctionLines": 276,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -240,7 +240,7 @@
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 682,
+    "fileLines": 656,
     "maxFunctionLines": 406,
     "branchCount": 34,
     "disposition": "deferred",
@@ -264,8 +264,8 @@
     "notes": "Pool scoring and heuristic normalization still live in one large module. Split score families and reusable transforms before adding more model inputs."
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
-    "fileLines": 366,
-    "maxFunctionLines": 256,
+    "fileLines": 377,
+    "maxFunctionLines": 266,
     "branchCount": 15,
     "disposition": "stabilized",
     "targetBudget": {
