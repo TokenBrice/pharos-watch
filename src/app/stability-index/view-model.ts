@@ -1,0 +1,131 @@
+import { formatChartDate, formatScore } from "@shared/lib/format";
+import { PSI_BAND_CLASSES, PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
+import type { StabilityContributor } from "@/hooks/api-hooks";
+import { BAND_ZONES, PSI_EVENTS } from "@/components/psi-history-chart";
+
+const HISTORY_WINDOW_DAYS = 30;
+const SCORE_DECIMAL_PLACES = 1;
+const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+
+export type PsiHistoryPoint = { date: number; score: number; band: string };
+export type PsiChartPoint = { ts: number; score: number };
+
+export interface HistoryStatItem {
+  label: string;
+  value: string;
+  band: string;
+  sub: string | null;
+}
+
+export interface PsiEventTimelineRow {
+  label: string;
+  dateStr: string;
+  links: Array<{ title: string; url: string }>;
+  psi: number | null;
+  psiBand: string;
+  psiColor: string;
+  dotHex: string;
+}
+
+export interface PsiContributorRow extends StabilityContributor {
+  severity: number;
+  breadth: number;
+  total: number;
+}
+
+export function buildPsiComponentData(
+  history: Array<{ date: number; components?: { severity?: number; breadth?: number; stressBreadth?: number; trend?: number } | null }> | undefined,
+  current: { computedAt: number; components: { severity: number; breadth: number; stressBreadth?: number | null; trend: number } } | null | undefined,
+): Array<{ ts: number; severity: number; breadth: number; stressBreadth: number; trend: number }> {
+  if (!current || !history) return [];
+  const reversed = [...history].filter((point) => point.components).reverse();
+  return [
+    ...reversed.map((point) => ({
+      ts: point.date * 1000,
+      severity: point.components?.severity ?? 0,
+      breadth: point.components?.breadth ?? 0,
+      stressBreadth: point.components?.stressBreadth ?? 0,
+      trend: point.components?.trend ?? 0,
+    })),
+    {
+      ts: current.computedAt * 1000,
+      severity: current.components.severity,
+      breadth: current.components.breadth,
+      stressBreadth: current.components.stressBreadth ?? 0,
+      trend: current.components.trend,
+    },
+  ];
+}
+
+export function buildPsiHistoryStats(history: PsiHistoryPoint[]): HistoryStatItem[] {
+  if (!history.length) return [];
+  const last30 = history.slice(0, HISTORY_WINDOW_DAYS);
+  const scores = last30.map((point) => point.score);
+  const high30 = scores.reduce((max, score) => Math.max(max, score), -Infinity);
+  const low30 = scores.reduce((min, score) => Math.min(min, score), Infinity);
+  const factor = 10 ** SCORE_DECIMAL_PLACES;
+  const avg30 = Math.round((scores.reduce((sum, score) => sum + score, 0) / scores.length) * factor) / factor;
+  const avg30Band = BAND_ZONES.find((zone) => avg30 >= zone.y1)?.label ?? "";
+  const high30Band = last30.find((point) => point.score === high30)?.band ?? "";
+  const low30Band = last30.find((point) => point.score === low30)?.band ?? "";
+  const worst = history.reduce((lowest, point) => (point.score < lowest.score ? point : lowest), history[0]);
+  return [
+    { label: "30d High", value: formatScore(high30), band: high30Band, sub: null },
+    { label: "30d Low", value: formatScore(low30), band: low30Band, sub: null },
+    { label: "30d Avg", value: formatScore(avg30), band: avg30Band, sub: null },
+    {
+      label: "ATL",
+      value: formatScore(worst.score),
+      band: worst.band,
+      sub: formatChartDate(worst.date * 1000, "month-year"),
+    },
+  ];
+}
+
+export function buildPsiEventTimelineRows(data: PsiChartPoint[]): PsiEventTimelineRow[] {
+  return [...PSI_EVENTS].reverse().map((event) => {
+    const startDate = new Date(event.date);
+    const formatter: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" };
+    const dateStr = event.dateEnd
+      ? (() => {
+          const endDate = new Date(event.dateEnd);
+          const sameYear = startDate.getFullYear() === endDate.getFullYear();
+          const start = startDate.toLocaleDateString("en-US", sameYear ? { month: "short", day: "numeric" } : formatter);
+          const end = endDate.toLocaleDateString("en-US", formatter);
+          return `${start} – ${end}`;
+        })()
+      : startDate.toLocaleDateString("en-US", formatter);
+    const rangeEnd = event.dateEnd ?? event.date + THREE_DAYS_MS;
+    const nearby = data.filter((point) => point.ts >= event.date - THREE_DAYS_MS && point.ts <= rangeEnd + THREE_DAYS_MS);
+    const worst = nearby.length > 0
+      ? nearby.reduce((lowest, point) => (point.score < lowest.score ? point : lowest))
+      : null;
+    const psi = worst ? worst.score : null;
+    const psiBand = psi !== null ? BAND_ZONES.find((zone) => psi >= zone.y1)?.label ?? "" : "";
+    return {
+      label: event.label,
+      dateStr,
+      links: event.links,
+      psi,
+      psiBand,
+      psiColor: psiBand ? PSI_BAND_CLASSES[psiBand as ConditionBand] ?? "text-muted-foreground" : "text-muted-foreground",
+      dotHex: psiBand ? PSI_HEX_COLORS[psiBand as ConditionBand] ?? "var(--muted-foreground)" : "var(--muted-foreground)",
+    };
+  });
+}
+
+export function buildPsiContributorRows(
+  contributors: StabilityContributor[],
+  totalMcapUsd: number,
+): PsiContributorRow[] {
+  if (!contributors.length) return [];
+  return contributors
+    .map((contributor) => {
+      const share = totalMcapUsd > 0 ? contributor.mcapUsd / totalMcapUsd : 0;
+      const amplifier = Math.log2(1 + contributor.mcapUsd / 1e9);
+      const severity = (Math.abs(contributor.bps) / 100) * share * amplifier * 60 * contributor.factor;
+      const breadth = Math.sqrt(contributor.mcapUsd / 1e9) * 3 * contributor.factor;
+      return { ...contributor, severity, breadth, total: severity + breadth };
+    })
+    .sort((a, b) => b.total - a.total);
+}

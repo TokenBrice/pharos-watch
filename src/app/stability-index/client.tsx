@@ -18,7 +18,7 @@ import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { CHART_ORANGE, CHART_BLUE, CHART_CYAN, CHART_GREEN } from "@/lib/chart-colors";
 import { CHART_DRAW_IN, CHART_NO_ANIM } from "@/lib/chart-animation";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
-import { formatChartDate, formatCurrency, formatScore } from "@shared/lib/format";
+import { formatCurrency, formatScore } from "@shared/lib/format";
 import { useStabilityIndexDetail, type StabilityContributor } from "@/hooks/api-hooks";
 import { PsiLighthouse } from "@/components/stability-index";
 import { PSI_BAND_CLASSES, PSI_BG_OVERLAY_CLASSES, PSI_BORDER_CLASSES, PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
@@ -33,16 +33,20 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
-import { ScoreChart, BAND_ZONES, PSI_EVENTS } from "@/components/psi-history-chart";
+import { ScoreChart } from "@/components/psi-history-chart";
 import { buildStablecoinUrl } from "@/lib/urls";
-import { THREE_DAYS_MS } from "@/lib/constants";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import type { MethodologyContextKey } from "@/lib/methodology-context";
+import {
+  buildPsiComponentData,
+  buildPsiContributorRows,
+  buildPsiEventTimelineRows,
+  buildPsiHistoryStats,
+  type HistoryStatItem,
+  type PsiHistoryPoint,
+} from "./view-model";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
-
-const HISTORY_WINDOW_DAYS = 30;
-const SCORE_DECIMAL_PLACES = 1;
 
 const COMPONENT_COLORS = {
   severity: CHART_ORANGE,
@@ -160,6 +164,7 @@ function ScoreArc({ score, color, size = 140 }: { score: number; color: string; 
 /* ─── EventTimeline ─────────────────────────────────────────────── */
 
 function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
+  const rows = useMemo(() => buildPsiEventTimelineRows(data), [data]);
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="pb-2">
@@ -167,49 +172,27 @@ function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
       </CardHeader>
       <CardContent>
         <div className="relative ml-3 border-l border-border/50 pl-5 space-y-5">
-          {[...PSI_EVENTS].reverse().map((evt) => {
-            const d = new Date(evt.date);
-            const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" };
-            const dateStr = evt.dateEnd
-              ? (() => {
-                  const dEnd = new Date(evt.dateEnd);
-                  const sameYear = d.getFullYear() === dEnd.getFullYear();
-                  const start = d.toLocaleDateString("en-US", sameYear ? { month: "short", day: "numeric" } : opts);
-                  const end = dEnd.toLocaleDateString("en-US", opts);
-                  return `${start} – ${end}`;
-                })()
-              : d.toLocaleDateString("en-US", opts);
-            // Find the worst (lowest) score within the event window
-            const rangeEnd = evt.dateEnd ?? evt.date + THREE_DAYS_MS;
-            const SLACK = THREE_DAYS_MS;
-            const nearby = data.filter((p) => p.ts >= evt.date - SLACK && p.ts <= rangeEnd + SLACK);
-            const worst = nearby.length > 0
-              ? nearby.reduce((w, p) => (p.score < w.score ? p : w))
-              : null;
-            const psi = worst ? worst.score : null;
-            const psiBand = psi !== null ? BAND_ZONES.find((z) => psi >= z.y1)?.label ?? "" : "";
-            const psiColor = psiBand ? PSI_BAND_CLASSES[psiBand as ConditionBand] ?? "text-muted-foreground" : "text-muted-foreground";
-            const dotHex = psiBand ? PSI_HEX_COLORS[psiBand as ConditionBand] ?? "var(--muted-foreground)" : "var(--muted-foreground)";
+          {rows.map((event) => {
             return (
-              <div key={evt.label} className="relative min-w-0">
+              <div key={event.label} className="relative min-w-0">
                 {/* Timeline dot — colored by the band during the event */}
                 <span
                   className="absolute -left-[calc(1.25rem+3.5px)] top-[5px] h-[7px] w-[7px] rounded-full ring-2 ring-background"
-                  style={{ backgroundColor: dotHex }}
+                  style={{ backgroundColor: event.dotHex }}
                   aria-hidden="true"
                 />
                 <div className="flex flex-col gap-0.5">
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-                    <span className="text-sm tabular-nums text-muted-foreground shrink-0">{dateStr}</span>
-                    <span className="text-sm font-semibold shrink-0">{evt.label}</span>
-                    {psi !== null && (
-                      <span className={`text-sm tabular-nums font-medium shrink-0 ${psiColor}`}>
-                        PSI {formatScore(psi)}
+                    <span className="text-sm tabular-nums text-muted-foreground shrink-0">{event.dateStr}</span>
+                    <span className="text-sm font-semibold shrink-0">{event.label}</span>
+                    {event.psi !== null && (
+                      <span className={`text-sm tabular-nums font-medium shrink-0 ${event.psiColor}`}>
+                        PSI {formatScore(event.psi)}
                       </span>
                     )}
                   </div>
                   <div className="flex flex-wrap gap-x-4 min-w-0 overflow-hidden">
-                    {evt.links.map((link) => (
+                    {event.links.map((link) => (
                       <a
                         key={link.url}
                         href={link.url}
@@ -348,46 +331,16 @@ function ComponentChart({
 
 /* ─── HistoryStats ──────────────────────────────────────────────── */
 
-type HistoryPoint = { date: number; score: number; band: string };
-type HistoryStatItem = { label: string; value: string; band: string; sub: string | null };
-
-function useHistoryStats(history: HistoryPoint[]): HistoryStatItem[] {
-  return useMemo(() => {
-    if (!history.length) return [];
-    const last30 = history.slice(0, HISTORY_WINDOW_DAYS);
-    const scores = last30.map((p) => p.score);
-    const high30 = scores.reduce((m, s) => Math.max(m, s), -Infinity);
-    const low30 = scores.reduce((m, s) => Math.min(m, s), Infinity);
-    const factor = 10 ** SCORE_DECIMAL_PLACES;
-    const avg30 = Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * factor) / factor;
-    const avg30Band = BAND_ZONES.find((z) => avg30 >= z.y1)?.label ?? "";
-    const high30Band = last30.find((p) => p.score === high30)?.band ?? "";
-    const low30Band = last30.find((p) => p.score === low30)?.band ?? "";
-    const worst = history.reduce((w, p) => (p.score < w.score ? p : w), history[0]);
-    return [
-      { label: "30d High", value: formatScore(high30), band: high30Band, sub: null },
-      { label: "30d Low", value: formatScore(low30), band: low30Band, sub: null },
-      { label: "30d Avg", value: formatScore(avg30), band: avg30Band, sub: null },
-      {
-        label: "ATL",
-        value: formatScore(worst.score),
-        band: worst.band,
-        sub: formatChartDate(worst.date * 1000, "month-year"),
-      },
-    ];
-  }, [history]);
-}
-
 function HistoryStats({
   history,
   compact = false,
   className,
 }: {
-  history: HistoryPoint[];
+  history: PsiHistoryPoint[];
   compact?: boolean;
   className?: string;
 }) {
-  const items = useHistoryStats(history);
+  const items = useMemo<HistoryStatItem[]>(() => buildPsiHistoryStats(history), [history]);
   if (!items.length) {
     return (
       <div className="text-center py-8 text-muted-foreground text-sm">
@@ -489,18 +442,7 @@ function ContributorsTable({
 }) {
   const { data: logos } = useLogos();
 
-  const rows = useMemo(() => {
-    if (!contributors.length) return [];
-    return contributors
-      .map((c) => {
-        const share = totalMcapUsd > 0 ? c.mcapUsd / totalMcapUsd : 0;
-        const amplifier = Math.log2(1 + c.mcapUsd / 1e9);
-        const severity = (Math.abs(c.bps) / 100) * share * amplifier * 60 * c.factor;
-        const breadth = Math.sqrt(c.mcapUsd / 1e9) * 3 * c.factor;
-        return { ...c, severity, breadth, total: severity + breadth };
-      })
-      .sort((a, b) => b.total - a.total);
-  }, [contributors, totalMcapUsd]);
+  const rows = useMemo(() => buildPsiContributorRows(contributors, totalMcapUsd), [contributors, totalMcapUsd]);
 
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
@@ -616,24 +558,7 @@ export function StabilityIndexClient() {
   }, [current, history]);
 
   const componentData = useMemo(() => {
-    if (!current || !history) return [];
-    const reversed = [...history].filter((p) => p.components).reverse();
-    return [
-      ...reversed.map((p) => ({
-        ts: p.date * 1000,
-        severity: p.components?.severity ?? 0,
-        breadth: p.components?.breadth ?? 0,
-        stressBreadth: p.components?.stressBreadth ?? 0,
-        trend: p.components?.trend ?? 0,
-      })),
-      {
-        ts: current.computedAt * 1000,
-        severity: current.components.severity,
-        breadth: current.components.breadth,
-        stressBreadth: current.components.stressBreadth ?? 0,
-        trend: current.components.trend,
-      },
-    ];
+    return buildPsiComponentData(history, current);
   }, [current, history]);
 
   if (isLoading) {

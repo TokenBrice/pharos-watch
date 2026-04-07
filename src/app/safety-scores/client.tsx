@@ -12,28 +12,29 @@ import { useStressTest } from "@/hooks/use-stress-test";
 import { ReportCardMini } from "@/components/report-card-mini";
 import { StressTestPanel } from "@/components/stress-test-panel";
 import {
-  gradeRange,
   REPORT_CARD_GRADE_COLORS,
-  scoreToGrade,
-  DIMENSION_ORDER,
-  DIMENSION_SHORT_LABELS,
 } from "@shared/lib/report-cards";
-import { formatCurrency } from "@shared/lib/format";
-import { sumPegBuckets } from "@shared/lib/supply";
-import type { ReportCard, DimensionKey } from "@shared/types";
+import type { ReportCard } from "@shared/types";
 import { encodeStablecoinUrlToken } from "@/lib/stablecoin-url-codec";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SystemicRiskHeadline } from "@/components/systemic-risk-headline";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
+import {
+  buildSafetyGradeCounts,
+  buildSafetyHeadlineStats,
+  buildSafetyMcapMap,
+  filterAndSortReportCards,
+  GRADE_RANGES,
+  groupReportCardsByGrade,
+  type GradeFilter,
+  type SortKey,
+} from "./view-model";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-type GradeFilter = "all" | "A" | "B" | "C" | "D" | "F" | "NR";
-type SortKey = "overall" | DimensionKey | "mcap";
 
 // ---------------------------------------------------------------------------
 // Grade distribution bar colors (static Tailwind classes)
@@ -47,8 +48,6 @@ const GRADE_BAR_COLORS: Record<string, string> = {
   F: "bg-red-500 hover:bg-red-400",
   NR: "bg-muted-foreground/40 hover:bg-muted-foreground/50",
 };
-
-const GRADE_RANGES: GradeFilter[] = ["A", "B", "C", "D", "F", "NR"];
 
 // ---------------------------------------------------------------------------
 // Sort button config
@@ -102,16 +101,6 @@ function LazyCard({ children, className }: { children: React.ReactNode; classNam
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function getSortScore(card: ReportCard, key: SortKey, mcapMap: Map<string, number>): number | null {
-  if (key === "overall") return card.overallScore;
-  if (key === "mcap") return mcapMap.get(card.id) ?? 0;
-  return card.dimensions[key].score;
-}
-
-// ---------------------------------------------------------------------------
 // Headline Stats Component
 // ---------------------------------------------------------------------------
 
@@ -122,42 +111,8 @@ function HeadlineStats({
   cards: ReportCard[];
   mcapMap: Map<string, number>;
 }) {
-  const activeCards = cards.filter((c) => !c.isDefunct && c.overallScore != null);
-  if (activeCards.length === 0) return null;
-
-  const avgScore = Math.round(
-    activeCards.reduce((sum, c) => sum + (c.overallScore ?? 0), 0) / activeCards.length,
-  );
-
-  const totalSupply = activeCards.reduce((sum, c) => sum + (mcapMap.get(c.id) ?? 0), 0);
-  const abSupply = activeCards
-    .filter((c) => {
-      const range = gradeRange(c.overallGrade);
-      return range === "A" || range === "B";
-    })
-    .reduce((sum, c) => sum + (mcapMap.get(c.id) ?? 0), 0);
-  const abPct = totalSupply > 0 ? Math.round((abSupply / totalSupply) * 100) : 0;
-
-  const dimAvgs = DIMENSION_ORDER.map((key) => {
-    const scores = activeCards
-      .map((c) => c.dimensions[key].score)
-      .filter((s): s is number => s != null);
-    return {
-      key,
-      avg: scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0,
-    };
-  });
-  const weakest = dimAvgs.reduce((a, b) => (a.avg < b.avg ? a : b));
-
-  const stats = [
-    { label: "Ecosystem avg.", value: String(avgScore), detail: scoreToGrade(avgScore) },
-    { label: "Supply in A/B", value: `${abPct}%`, detail: formatCurrency(abSupply) },
-    {
-      label: "Weakest dimension",
-      value: DIMENSION_SHORT_LABELS[weakest.key],
-      detail: `avg ${Math.round(weakest.avg)}`,
-    },
-  ];
+  const stats = buildSafetyHeadlineStats(cards, mcapMap);
+  if (stats.length === 0) return null;
 
   return (
     <div className="grid grid-cols-3 gap-3 animate-fade-in">
@@ -406,23 +361,6 @@ function GradeSectionHeader({ grade, count }: { grade: string; count: number }) 
   );
 }
 
-function groupByGrade(cards: ReportCard[]): { grade: string; cards: ReportCard[] }[] {
-  const groups = new Map<string, ReportCard[]>();
-  for (const card of cards) {
-    const range = gradeRange(card.overallGrade);
-    const existing = groups.get(range);
-    if (existing) {
-      existing.push(card);
-    } else {
-      groups.set(range, [card]);
-    }
-  }
-  return GRADE_RANGES.filter((g) => groups.has(g)).map((g) => ({
-    grade: g,
-    cards: groups.get(g)!,
-  }));
-}
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -455,8 +393,7 @@ export function ReportCardsClient() {
 
   // Build MCap map from stablecoins data
   const mcapMap = useMemo(() => {
-    if (!stablecoinsData?.peggedAssets) return new Map<string, number>();
-    return new Map(stablecoinsData.peggedAssets.map((a) => [a.id, a.circulating ? sumPegBuckets(a.circulating) : 0]));
+    return buildSafetyMcapMap(stablecoinsData?.peggedAssets);
   }, [stablecoinsData]);
 
   // Stress test
@@ -491,14 +428,7 @@ export function ReportCardsClient() {
 
   // Grade distribution counts
   const gradeCounts = useMemo(() => {
-    const counts: Record<string, number> = { A: 0, B: 0, C: 0, D: 0, F: 0, NR: 0 };
-    if (!reportData?.cards) return counts;
-    for (const card of reportData.cards) {
-      if (!showDefunct && card.isDefunct) continue;
-      const range = gradeRange(card.overallGrade);
-      counts[range] = (counts[range] ?? 0) + 1;
-    }
-    return counts;
+    return buildSafetyGradeCounts(reportData?.cards, showDefunct);
   }, [reportData, showDefunct]);
 
   const totalCards = useMemo(() => Object.values(gradeCounts).reduce((s, v) => s + v, 0), [gradeCounts]);
@@ -514,32 +444,12 @@ export function ReportCardsClient() {
 
   // Filtered + sorted cards (uses simulated cards when stress test is active)
   const filteredCards = useMemo(() => {
-    if (displayCards.length === 0) return [];
-
-    let cards = displayCards;
-
-    // Hide defunct unless toggled
-    if (!showDefunct) {
-      cards = cards.filter((c) => !c.isDefunct);
-    }
-
-    // Grade filter
-    if (gradeFilter !== "all") {
-      cards = cards.filter((c) => gradeRange(c.overallGrade) === gradeFilter);
-    }
-
-    // Sort: NR always to bottom, then by selected key descending
-    cards = [...cards].sort((a, b) => {
-      const sa = getSortScore(a, sortKey, mcapMap);
-      const sb = getSortScore(b, sortKey, mcapMap);
-      // NR (null) to bottom
-      if (sa === null && sb === null) return 0;
-      if (sa === null) return 1;
-      if (sb === null) return -1;
-      return sb - sa;
+    return filterAndSortReportCards(displayCards, {
+      gradeFilter,
+      sortKey,
+      showDefunct,
+      mcapMap,
     });
-
-    return cards;
   }, [displayCards, gradeFilter, sortKey, showDefunct, mcapMap]);
 
   // Loading state
@@ -738,7 +648,7 @@ export function ReportCardsClient() {
       ) : gradeFilter === "all" && !isSimulating ? (
         /* Grouped by grade tier */
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-          {groupByGrade(filteredCards).map((group) => (
+          {groupReportCardsByGrade(filteredCards).map((group) => (
             <Fragment key={group.grade}>
               <GradeSectionHeader grade={group.grade} count={group.cards.length} />
               {group.cards.map((card, i) => (
