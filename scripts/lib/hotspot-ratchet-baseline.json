@@ -96,8 +96,8 @@
     "notes": "Section body is now isolated from the methodology shell. Keep future PSI copy changes local to this module unless composition order changes."
   },
   "src/app/methodology/sections/core/safety-scores-section.tsx": {
-    "fileLines": 502,
-    "maxFunctionLines": 488,
+    "fileLines": 503,
+    "maxFunctionLines": 489,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
