@@ -97,7 +97,7 @@ The homepage table uses browser URL search params as its public state contract.
 Managed by `src/hooks/use-homepage-filters.ts` and `src/hooks/use-url-filters.ts`:
 
 - `q` -> text search
-- `peg` -> one active peg filter
+- `peg` -> one active peg cohort filter (`usd-peg`, `fiat-non-usd-peg`, `commodity-peg`)
 - `type` -> one active governance filter
 - `backing` -> one active backing filter
 - `grade` -> one active score-tier filter
@@ -106,7 +106,8 @@ Managed by `src/hooks/use-homepage-filters.ts` and `src/hooks/use-url-filters.ts
 Rules:
 
 - only one value per filter group is active at a time
-- the homepage peg rail groups pegs into `Fiat`, `Commodity`, and `Other` categories, displaying all active pegs through `PEG_LABELS_SHORT`
+- legacy homepage peg params for specific non-USD buckets (for example `eur-peg`, `gold-peg`, `silver-peg`, `other-peg`) normalize into the current aggregate peg cohorts
+- the homepage peg browse strip groups landing pages into `Fiat`, `Commodity`, and `Other` categories, displaying all active pegs through `PEG_LABELS_SHORT`
 - `"all"` and empty-string values clear the param instead of persisting it
 - updates use `window.history.replaceState(...)`, so filter changes do not create extra history entries or scroll jumps
 

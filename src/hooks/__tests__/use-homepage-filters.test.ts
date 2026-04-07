@@ -31,6 +31,23 @@ describe("parseHomepageParams", () => {
     expect(result.groupSelections["Peg"]).toBe("usd-peg");
   });
 
+  it("parses the new aggregate fiat non-USD peg filter", () => {
+    const params = new URLSearchParams("peg=fiat-non-usd-peg");
+    const result = parseHomepageParams(params);
+    expect(result.groupSelections["Peg"]).toBe("fiat-non-usd-peg");
+  });
+
+  it("maps legacy gold and silver peg filters to commodities", () => {
+    expect(parseHomepageParams(new URLSearchParams("peg=gold-peg")).groupSelections["Peg"]).toBe("commodity-peg");
+    expect(parseHomepageParams(new URLSearchParams("peg=silver-peg")).groupSelections["Peg"]).toBe("commodity-peg");
+  });
+
+  it("maps legacy non-USD non-commodity peg filters to fiat non-USD", () => {
+    expect(parseHomepageParams(new URLSearchParams("peg=eur-peg")).groupSelections["Peg"]).toBe("fiat-non-usd-peg");
+    expect(parseHomepageParams(new URLSearchParams("peg=other-peg")).groupSelections["Peg"]).toBe("fiat-non-usd-peg");
+    expect(parseHomepageParams(new URLSearchParams("peg=var-peg")).groupSelections["Peg"]).toBe("fiat-non-usd-peg");
+  });
+
   it("parses a valid type filter", () => {
     const params = new URLSearchParams("type=decentralized");
     const result = parseHomepageParams(params);
@@ -74,17 +91,17 @@ describe("parseHomepageParams", () => {
   });
 
   it("parses multiple filters simultaneously", () => {
-    const params = new URLSearchParams("peg=gold-peg&type=centralized&backing=rwa-backed");
+    const params = new URLSearchParams("peg=commodity-peg&type=centralized&backing=rwa-backed");
     const result = parseHomepageParams(params);
-    expect(result.groupSelections["Peg"]).toBe("gold-peg");
+    expect(result.groupSelections["Peg"]).toBe("commodity-peg");
     expect(result.groupSelections["Type"]).toBe("centralized");
     expect(result.groupSelections["Backing"]).toBe("rwa-backed");
   });
 
   it("combines filters and search query", () => {
-    const params = new URLSearchParams("peg=eur-peg&q=circle");
+    const params = new URLSearchParams("peg=fiat-non-usd-peg&q=circle");
     const result = parseHomepageParams(params);
-    expect(result.groupSelections["Peg"]).toBe("eur-peg");
+    expect(result.groupSelections["Peg"]).toBe("fiat-non-usd-peg");
     expect(result.searchQuery).toBe("circle");
   });
 
@@ -96,7 +113,7 @@ describe("parseHomepageParams", () => {
 
   it("only allows one selection per group (last valid one in URL wins via URLSearchParams.get)", () => {
     // URLSearchParams.get returns the first occurrence
-    const params = new URLSearchParams("peg=usd-peg&peg=eur-peg");
+    const params = new URLSearchParams("peg=usd-peg&peg=fiat-non-usd-peg");
     const result = parseHomepageParams(params);
     expect(result.groupSelections["Peg"]).toBe("usd-peg");
   });

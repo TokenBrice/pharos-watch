@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import type { FilterTag } from "@shared/types";
+import { COMMODITY_PEG_TAGS, FIAT_NON_USD_PEG_TAGS, type FilterTag } from "@shared/types";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 
 interface FilterGroup {
@@ -12,7 +12,7 @@ interface FilterGroup {
 export const FILTER_GROUPS: FilterGroup[] = [
   {
     label: "Peg",
-    options: ["usd-peg", "gold-peg", "eur-peg", "other-peg"],
+    options: ["usd-peg", "fiat-non-usd-peg", "commodity-peg"],
   },
   {
     label: "Type",
@@ -32,6 +32,22 @@ export const FILTER_GROUPS: FilterGroup[] = [
   },
 ];
 
+function normalizeHomepagePegFilter(raw: string): FilterTag | null {
+  if (raw === "usd-peg" || raw === "fiat-non-usd-peg" || raw === "commodity-peg") {
+    return raw;
+  }
+
+  if (COMMODITY_PEG_TAGS.includes(raw as FilterTag)) {
+    return "commodity-peg";
+  }
+
+  if (FIAT_NON_USD_PEG_TAGS.includes(raw as FilterTag)) {
+    return "fiat-non-usd-peg";
+  }
+
+  return null;
+}
+
 export function parseHomepageParams(searchParams: URLSearchParams): {
   groupSelections: Record<string, FilterTag | "">;
   searchQuery: string;
@@ -42,6 +58,15 @@ export function parseHomepageParams(searchParams: URLSearchParams): {
     const key = group.label.toLowerCase();
     const raw = searchParams.get(key);
     if (!raw) continue;
+
+    if (group.label === "Peg") {
+      const normalized = normalizeHomepagePegFilter(raw);
+      if (normalized) {
+        selections[group.label] = normalized;
+      }
+      continue;
+    }
+
     if (group.options.includes(raw as FilterTag)) {
       selections[group.label] = raw as FilterTag;
     }

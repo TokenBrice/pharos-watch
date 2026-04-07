@@ -232,6 +232,8 @@ export interface StablecoinMeta {
 
 export type FilterTag =
   | "usd-peg"
+  | "fiat-non-usd-peg"
+  | "commodity-peg"
   | "eur-peg"
   | "gold-peg"
   | "chf-peg"
@@ -270,6 +272,31 @@ export type FilterTag =
   | "grade-ge-c-minus"
   | "grade-le-d";
 
+export const COMMODITY_PEG_TAGS: FilterTag[] = ["gold-peg", "silver-peg"];
+
+export const FIAT_NON_USD_PEG_TAGS: FilterTag[] = [
+  "eur-peg",
+  "chf-peg",
+  "gbp-peg",
+  "brl-peg",
+  "rub-peg",
+  "jpy-peg",
+  "idr-peg",
+  "sgd-peg",
+  "try-peg",
+  "aud-peg",
+  "zar-peg",
+  "cad-peg",
+  "cny-peg",
+  "cnh-peg",
+  "php-peg",
+  "mxn-peg",
+  "uah-peg",
+  "ars-peg",
+  "var-peg",
+  "other-peg",
+];
+
 export const OTHER_PEG_TAGS: FilterTag[] = [
   "chf-peg",
   "gbp-peg",
@@ -295,6 +322,8 @@ export const OTHER_PEG_TAGS: FilterTag[] = [
 
 export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
   "usd-peg": "USD",
+  "fiat-non-usd-peg": "Fiat non-USD",
+  "commodity-peg": "Commodities",
   "eur-peg": "EUR",
   "gold-peg": "Gold",
   "chf-peg": "CHF",
@@ -387,7 +416,13 @@ export function pegCurrencyToFilterTag(peg: PegCurrency): FilterTag {
 
 export function getFilterTags(meta: StablecoinMeta): FilterTag[] {
   const tags: FilterTag[] = [];
-  tags.push(pegCurrencyToFilterTag(meta.flags.pegCurrency));
+  const pegTag = pegCurrencyToFilterTag(meta.flags.pegCurrency);
+  tags.push(pegTag);
+  if (COMMODITY_PEG_TAGS.includes(pegTag)) {
+    tags.push("commodity-peg");
+  } else if (pegTag !== "usd-peg") {
+    tags.push("fiat-non-usd-peg");
+  }
   tags.push(meta.flags.governance);
   tags.push(meta.flags.backing);
   if (meta.protocolFamily === "liquity") {

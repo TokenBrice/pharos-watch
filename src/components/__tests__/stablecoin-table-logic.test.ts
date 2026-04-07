@@ -7,7 +7,13 @@ import {
   type StablecoinTableSortKey,
 } from "@/components/stablecoin-table-logic";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
-import { OTHER_PEG_TAGS, getFilterTags, type StablecoinData } from "@shared/types";
+import {
+  COMMODITY_PEG_TAGS,
+  FIAT_NON_USD_PEG_TAGS,
+  OTHER_PEG_TAGS,
+  getFilterTags,
+  type StablecoinData,
+} from "@shared/types";
 import type { ColumnId } from "@/hooks/use-preferences";
 
 // Minimal StablecoinData factory
@@ -88,6 +94,26 @@ describe("buildTrackedIdSet", () => {
 
     expect(activeOtherPegIds.length).toBeGreaterThan(0);
     expect(activeOtherPegIds.every((id) => trackedIds.has(id))).toBe(true);
+  });
+
+  it("returns active gold and silver assets when filtering by commodity-peg", () => {
+    const trackedIds = buildTrackedIdSet(["commodity-peg"]);
+    const activeCommodityIds = ACTIVE_STABLECOINS
+      .filter((coin) => getFilterTags(coin).some((tag) => COMMODITY_PEG_TAGS.includes(tag)))
+      .map((coin) => coin.id);
+
+    expect(activeCommodityIds.length).toBeGreaterThan(0);
+    expect(activeCommodityIds.every((id) => trackedIds.has(id))).toBe(true);
+  });
+
+  it("returns active non-USD non-commodity assets when filtering by fiat-non-usd-peg", () => {
+    const trackedIds = buildTrackedIdSet(["fiat-non-usd-peg"]);
+    const activeFiatNonUsdIds = ACTIVE_STABLECOINS
+      .filter((coin) => getFilterTags(coin).some((tag) => FIAT_NON_USD_PEG_TAGS.includes(tag)))
+      .map((coin) => coin.id);
+
+    expect(activeFiatNonUsdIds.length).toBeGreaterThan(0);
+    expect(activeFiatNonUsdIds.every((id) => trackedIds.has(id))).toBe(true);
   });
 
   it("returns the normalized Liquity-family cohort when filtering by protocol lineage", () => {
