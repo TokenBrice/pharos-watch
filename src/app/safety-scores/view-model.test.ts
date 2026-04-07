@@ -37,7 +37,7 @@ describe("safety score view-model", () => {
     expect(result.get("usdt-tether")).toBe(0);
   });
 
-  it("filters defunct cards, applies grade filters, and keeps NR rows at the bottom", () => {
+  it("always excludes defunct cards, applies grade filters, and keeps NR rows at the bottom", () => {
     const cards = [
       makeCard({ id: "usdc-circle", overallScore: 92, overallGrade: "A" }),
       makeCard({ id: "usdt-tether", symbol: "USDT", overallScore: 80, overallGrade: "B" }),
@@ -48,7 +48,6 @@ describe("safety score view-model", () => {
     const sorted = filterAndSortReportCards(cards, {
       gradeFilter: "all",
       sortKey: "overall",
-      showDefunct: false,
       mcapMap: new Map(),
     });
 
@@ -57,7 +56,6 @@ describe("safety score view-model", () => {
     const filtered = filterAndSortReportCards(cards, {
       gradeFilter: "B",
       sortKey: "overall",
-      showDefunct: true,
       mcapMap: new Map(),
     });
 
@@ -76,7 +74,7 @@ describe("safety score view-model", () => {
       ["frax", 1_000_000_000],
     ]);
 
-    expect(buildSafetyGradeCounts(cards, false)).toEqual({
+    expect(buildSafetyGradeCounts(cards)).toEqual({
       A: 1,
       B: 1,
       C: 1,

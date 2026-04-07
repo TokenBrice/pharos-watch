@@ -302,28 +302,6 @@ function SortButtons({
   );
 }
 
-function ShowDefunctToggle({
-  checked,
-  onChange,
-  label = "Show defunct",
-}: {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  label?: string;
-}) {
-  return (
-    <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="h-4 w-4 rounded border-border bg-background text-primary focus:ring-2 focus:ring-ring focus:ring-offset-2"
-      />
-      {label}
-    </label>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Grade-grouped grid helpers
 // ---------------------------------------------------------------------------
@@ -389,7 +367,6 @@ export function ReportCardsClient() {
 
   const [gradeFilter, setGradeFilter] = useState<GradeFilter>("all");
   const [sortKey, setSortKey] = useState<SortKey>("overall");
-  const [showDefunct, setShowDefunct] = useState(false);
 
   // Build MCap map from stablecoins data
   const mcapMap = useMemo(() => {
@@ -428,8 +405,8 @@ export function ReportCardsClient() {
 
   // Grade distribution counts
   const gradeCounts = useMemo(() => {
-    return buildSafetyGradeCounts(reportData?.cards, showDefunct);
-  }, [reportData, showDefunct]);
+    return buildSafetyGradeCounts(reportData?.cards);
+  }, [reportData]);
 
   const totalCards = useMemo(() => Object.values(gradeCounts).reduce((s, v) => s + v, 0), [gradeCounts]);
 
@@ -447,10 +424,9 @@ export function ReportCardsClient() {
     return filterAndSortReportCards(displayCards, {
       gradeFilter,
       sortKey,
-      showDefunct,
       mcapMap,
     });
-  }, [displayCards, gradeFilter, sortKey, showDefunct, mcapMap]);
+  }, [displayCards, gradeFilter, sortKey, mcapMap]);
 
   // Loading state
   if (isLoadingCards) {
@@ -569,9 +545,6 @@ export function ReportCardsClient() {
                 <SortButtons sortKey={sortKey} onChange={setSortKey} />
               </div>
             </div>
-
-            {/* Show defunct */}
-            <ShowDefunctToggle checked={showDefunct} onChange={setShowDefunct} label="Show defunct coins" />
           </div>
         </details>
 
@@ -595,11 +568,6 @@ export function ReportCardsClient() {
             <span className="pharos-kicker mr-2">Sort:</span>
             <SortButtons sortKey={sortKey} onChange={setSortKey} />
           </div>
-
-          <div className="h-5 w-px bg-border" />
-
-          {/* Show defunct */}
-          <ShowDefunctToggle checked={showDefunct} onChange={setShowDefunct} />
         </div>
       </div>
 

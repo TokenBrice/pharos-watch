@@ -35,12 +35,11 @@ export function getSortScore(card: ReportCard, key: SortKey, mcapMap: Map<string
 
 export function buildSafetyGradeCounts(
   cards: ReportCard[] | undefined,
-  showDefunct: boolean,
 ): Record<Exclude<GradeFilter, "all">, number> {
   const counts: Record<Exclude<GradeFilter, "all">, number> = { A: 0, B: 0, C: 0, D: 0, F: 0, NR: 0 };
   if (!cards) return counts;
   for (const card of cards) {
-    if (!showDefunct && card.isDefunct) continue;
+    if (card.isDefunct) continue;
     const grade = gradeRange(card.overallGrade) as Exclude<GradeFilter, "all">;
     counts[grade] += 1;
   }
@@ -52,20 +51,14 @@ export function filterAndSortReportCards(
   {
     gradeFilter,
     sortKey,
-    showDefunct,
     mcapMap,
   }: {
     gradeFilter: GradeFilter;
     sortKey: SortKey;
-    showDefunct: boolean;
     mcapMap: Map<string, number>;
   },
 ): ReportCard[] {
-  let filtered = cards;
-
-  if (!showDefunct) {
-    filtered = filtered.filter((card) => !card.isDefunct);
-  }
+  let filtered = cards.filter((card) => !card.isDefunct);
 
   if (gradeFilter !== "all") {
     filtered = filtered.filter((card) => gradeRange(card.overallGrade) === gradeFilter);
