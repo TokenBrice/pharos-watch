@@ -32,7 +32,6 @@ export interface MintBurnRunConfigPhaseResult {
   criticalContractsSatisfied: number;
   criticalContractsUnsatisfied: number;
   configBreakdown: MintBurnConfigSummary[];
-  affectedHours: Map<string, MintBurnAffectedHour>;
 }
 
 export async function runMintBurnConfigPhase(input: {
@@ -56,6 +55,7 @@ export async function runMintBurnConfigPhase(input: {
   criticalConfigBudgetLimit: number;
   extendedConfigBudgetLimit: number;
   evmSafetyMarginBlocks: number;
+  affectedHours: Map<string, MintBurnAffectedHour>;
 }): Promise<MintBurnRunConfigPhaseResult> {
   let rowsRead = 0;
   let rowsParsed = 0;
@@ -74,7 +74,7 @@ export async function runMintBurnConfigPhase(input: {
   let criticalContractsUnsatisfied = 0;
 
   const configBreakdown: MintBurnConfigSummary[] = [];
-  const affectedHours = new Map<string, MintBurnAffectedHour>();
+  const affectedHours = input.affectedHours;
 
   for (let i = 0; i < input.configs.length; i++) {
     if (input.signal?.aborted) {
@@ -249,6 +249,5 @@ export async function runMintBurnConfigPhase(input: {
     criticalContractsSatisfied,
     criticalContractsUnsatisfied,
     configBreakdown,
-    affectedHours,
   };
 }

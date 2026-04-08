@@ -10,6 +10,7 @@ import { loadMintBurnPriceContextBatch } from "../lib/mint-burn-pipeline/context
 import {
   recalcAffectedHours,
 } from "../lib/mint-burn-pipeline/persistence";
+import type { MintBurnAffectedHour } from "../lib/mint-burn-pipeline/types";
 import {
   ensureMintBurnSyncStateRows,
   mintBurnConfigKey,
@@ -19,7 +20,7 @@ import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress } from "../lib/cron-progress";
 import { loadMintBurnChainContexts } from "./mint-burn/chain-context";
 import { completeMintBurnRun } from "./mint-burn/run-completion";
-import { runMintBurnConfigPhase } from "./mint-burn/run-configs";
+import { runMintBurnConfigPhase, type MintBurnRunConfigPhaseResult } from "./mint-burn/run-configs";
 import {
   getMintBurnRunState,
   normalizeDisabledConfigIdSet,
@@ -226,43 +227,46 @@ export async function syncMintBurn(
   }, budget);
 
   const criticalContractsEnabled = enabledConfigs.filter((config) => configTier(config) === "critical").length;
-  const {
-    rowsRead,
-    rowsParsed,
-    rowsInserted,
-    rowsIgnored,
-    rowsDropped,
-    contractsProcessed,
-    contractsSkipped,
-    contractsDeferredExtended,
-    apiErrors,
-    effectiveBurns,
-    bridgeBurns,
-    reviewBurns,
-    atomicRoundtripsTotal,
-    criticalContractsSatisfied,
-    criticalContractsUnsatisfied,
-    configBreakdown,
-    affectedHours,
-  } = await runMintBurnConfigPhase({
-    db,
-    configs,
-    lane,
-    jobName,
-    reportProgress,
-    budget,
-    chainContexts,
-    signal,
-    runTimestamp,
-    priceContext: { prices, priceHistory },
-    lastBlocksAfterRun,
-    maxScanRange: MAX_SCAN_RANGE,
-    criticalConfigBudgetLimit: CRITICAL_CONFIG_BUDGET_LIMIT,
-    extendedConfigBudgetLimit: EXTENDED_CONFIG_BUDGET_LIMIT,
-    evmSafetyMarginBlocks: EVM_SAFETY_MARGIN_BLOCKS,
-  });
+  const affectedHours = new Map<string, MintBurnAffectedHour>();
 
-  await recalcAffectedHours(db, affectedHours);
+  let phaseResult!: MintBurnRunConfigPhaseResult;
+  try {
+    phaseResult = await runMintBurnConfigPhase({
+      db,
+      configs,
+      lane,
+      jobName,
+      reportProgress,
+      budget,
+      chainContexts,
+      signal,
+      runTimestamp,
+      priceContext: { prices, priceHistory },
+      lastBlocksAfterRun,
+      maxScanRange: MAX_SCAN_RANGE,
+      criticalConfigBudgetLimit: CRITICAL_CONFIG_BUDGET_LIMIT,
+      extendedConfigBudgetLimit: EXTENDED_CONFIG_BUDGET_LIMIT,
+      evmSafetyMarginBlocks: EVM_SAFETY_MARGIN_BLOCKS,
+      affectedHours,
+    });
+  } finally {
+    if (affectedHours.size > 0) {
+      try {
+        await recalcAffectedHours(db, affectedHours);
+      } catch (recalcError) {
+        console.error("[sync-mint-burn] recalcAffectedHours failed in finally block:", recalcError);
+      }
+    }
+  }
+
+  const {
+    rowsRead, rowsParsed, rowsInserted, rowsIgnored, rowsDropped,
+    contractsProcessed, contractsSkipped, contractsDeferredExtended,
+    apiErrors, effectiveBurns, bridgeBurns, reviewBurns,
+    atomicRoundtripsTotal, criticalContractsSatisfied, criticalContractsUnsatisfied,
+    configBreakdown,
+  } = phaseResult;
+
   await reportCronProgress(reportProgress, {
     stage: "recalc-hours",
     itemsDone: configs.length,
