@@ -36,9 +36,11 @@ export async function disableBlockedSubscriber(db: D1Database, chatId: string): 
               SET alert_dews=0,
                   alert_depeg=0,
                   alert_safety=0,
+                  alert_launch=0,
                   global_alert_dews=0,
                   global_alert_depeg=0,
-                  global_alert_safety=0
+                  global_alert_safety=0,
+                  global_alert_launch=0
             WHERE chat_id=?`,
         )
         .bind(chatId),
@@ -47,7 +49,8 @@ export async function disableBlockedSubscriber(db: D1Database, chatId: string): 
           `UPDATE telegram_subscriptions
               SET alert_dews=0,
                   alert_depeg=0,
-                  alert_safety=0
+                  alert_safety=0,
+                  alert_launch=0
             WHERE chat_id=?`,
         )
         .bind(chatId),
