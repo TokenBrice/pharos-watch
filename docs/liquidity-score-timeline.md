@@ -1,6 +1,17 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.2` (2026-02-19 -> 2026-04-08).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.3` (2026-02-19 -> 2026-04-08).
+
+---
+
+## v5.3 - PancakeSwap trailing-hour volume window (Apr 8, 2026)
+
+**Commit:** `unreleased`
+
+- PancakeSwap V3 direct volume now sums official `poolHourDatas.volumeUSD` buckets across a bounded trailing 24-hour window instead of reading the latest `poolDayDatas` row as if it were rolling 24h volume
+- Intraday PancakeSwap volume no longer undercounts until UTC rollover just because the current UTC day bucket is only partially populated
+- Fresh non-swap day buckets can no longer zero out yesterday's still-relevant trading activity, because the direct fetch now relies on hourly swap buckets instead of latest-day bucket selection
+- The PancakeSwap hourly fetch keeps bounded batching under The Graph's `first: 1000` row cap and avoids adding a historical block lookup dependency
 
 ---
 

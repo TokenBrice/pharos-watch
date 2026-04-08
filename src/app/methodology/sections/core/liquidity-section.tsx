@@ -77,6 +77,11 @@ export function LiquidityMethodologySection() {
         quote assets instead of relying on a legacy badge.
       </p>
       <p>
+        PancakeSwap V3 volume now uses a bounded trailing-hour window from the official subgraph&apos;s
+        `poolHourDatas.volumeUSD` buckets instead of the latest `poolDayDatas` row, so intraday volume no longer
+        decays toward zero between UTC day rollovers.
+      </p>
+      <p>
         After bad pools are filtered and secondary-source TVL caps are applied, every exported aggregate and score input
         is rebuilt from the retained pool set. That keeps filtered or downscaled pools from lingering in the final score
         through stale pre-filter totals.

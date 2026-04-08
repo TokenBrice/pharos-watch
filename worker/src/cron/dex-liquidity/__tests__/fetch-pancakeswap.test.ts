@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 vi.mock("../../../lib/fetch-retry", () => ({
   fetchWithRetry: vi.fn(),
@@ -12,40 +13,60 @@ describe("fetchPancakeSwapPools", () => {
     return new Response(JSON.stringify(body), { status: 200 });
   }
 
+  function makePool(id: string, feeTier = "100") {
+    return {
+      id,
+      feeTier,
+      totalValueLockedUSD: "125000",
+      totalValueLockedToken0: "62500",
+      totalValueLockedToken1: "62500",
+      token0Price: "1",
+      token1Price: "1",
+      token0: { id: `${id}-usdc`, symbol: "USDC", decimals: "6" },
+      token1: { id: `${id}-usdt`, symbol: "USDT", decimals: "6" },
+    };
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
-  it("normalizes v3 pools and latest daily volume", async () => {
+  it("normalizes v3 pools and sums hourly trailing volume across a UTC boundary", async () => {
+    const now = new Date("2026-04-08T13:37:00Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+
+    const currentHourStart = Math.floor(now.getTime() / 1000 / 3600) * 3600;
+    const oldestIncludedHourStart = currentHourStart - DAY_SECONDS;
+
     vi.mocked(fetchWithRetry)
       .mockImplementationOnce(async () => response({
         data: {
-          pools: [{
-            id: "0xpool",
-            feeTier: "100",
-            totalValueLockedUSD: "125000",
-            totalValueLockedToken0: "62500",
-            totalValueLockedToken1: "62500",
-            token0Price: "1",
-            token1Price: "1",
-            token0: { id: "0xusdc", symbol: "USDC", decimals: "6" },
-            token1: { id: "0xusdt", symbol: "USDT", decimals: "6" },
-          }],
+          pools: [makePool("0xpool")],
         },
       }))
-      .mockImplementationOnce(async () => response({
-        data: {
-          poolDayDatas: [{
-            date: 1_700_000_000,
-            volumeUSD: "50000",
-            pool: { id: "0xpool" },
-          }],
-        },
-      }))
+      .mockImplementationOnce(async (_url, init) => {
+        const body = JSON.parse(String(init?.body));
+        expect(body.query).toContain("poolHourDatas");
+        expect(body.query).not.toContain("poolDayDatas");
+        expect(body.query).toContain(`periodStartUnix_gt: ${oldestIncludedHourStart}`);
+        expect(body.query).toContain(`periodStartUnix_lte: ${currentHourStart}`);
+        return response({
+          data: {
+            poolHourDatas: [
+              { periodStartUnix: currentHourStart, volumeUSD: "15000", pool: { id: "0xpool" } },
+              { periodStartUnix: currentHourStart - 13 * 3600, volumeUSD: "25000", pool: { id: "0xpool" } },
+              { periodStartUnix: currentHourStart - 23 * 3600, volumeUSD: "10000", pool: { id: "0xpool" } },
+            ],
+          },
+        });
+      })
       .mockImplementation(async () => response({ data: { pools: [] } }));
 
     const result = await fetchPancakeSwapPools("graph-key");
@@ -59,25 +80,15 @@ describe("fetchPancakeSwapPools", () => {
     expect(pool.feeRate).toBeCloseTo(0.0001);
   });
 
-  it("keeps pool coverage when the dayData query fails for a page", async () => {
+  it("keeps pool coverage when the hourly volume query fails for a page", async () => {
     vi.mocked(fetchWithRetry)
       .mockImplementationOnce(async () => response({
         data: {
-          pools: [{
-            id: "0xpool",
-            feeTier: "500",
-            totalValueLockedUSD: "125000",
-            totalValueLockedToken0: "62500",
-            totalValueLockedToken1: "62500",
-            token0Price: "1",
-            token1Price: "1",
-            token0: { id: "0xusdc", symbol: "USDC", decimals: "6" },
-            token1: { id: "0xusdt", symbol: "USDT", decimals: "6" },
-          }],
+          pools: [makePool("0xpool", "500")],
         },
       }))
       .mockImplementationOnce(async () => {
-        throw new Error("daydata timeout");
+        throw new Error("hourdata timeout");
       })
       .mockImplementation(async () => response({ data: { pools: [] } }));
 
@@ -90,18 +101,8 @@ describe("fetchPancakeSwapPools", () => {
     expect(result.pools[0]?.volume24hUsd).toBe(0);
   });
 
-  it("batches dayData lookups so one page can make multiple volume requests", async () => {
-    const pagePools = Array.from({ length: 51 }, (_, index) => ({
-      id: `0xpool${index}`,
-      feeTier: "100",
-      totalValueLockedUSD: "125000",
-      totalValueLockedToken0: "62500",
-      totalValueLockedToken1: "62500",
-      token0Price: "1",
-      token1Price: "1",
-      token0: { id: `0xusdc${index}`, symbol: "USDC", decimals: "6" },
-      token1: { id: `0xusdt${index}`, symbol: "USDT", decimals: "6" },
-    }));
+  it("batches hourly lookups to stay under the subgraph row cap and sums per-pool rows", async () => {
+    const pagePools = Array.from({ length: 41 }, (_, index) => makePool(`0xpool${index}`));
 
     vi.mocked(fetchWithRetry)
       .mockImplementationOnce(async (_url, init) => {
@@ -111,16 +112,29 @@ describe("fetchPancakeSwapPools", () => {
       })
       .mockImplementationOnce(async (_url, init) => {
         const body = JSON.parse(String(init?.body));
-        expect(body.query).toContain("pool_in");
+        expect(body.query).toContain("poolHourDatas");
         expect(body.query).toContain("\"0xpool0\"");
-        expect(body.query).toContain("\"0xpool49\"");
-        expect(body.query).not.toContain("\"0xpool50\"");
-        return response({ data: { poolDayDatas: [{ date: 1_700_000_000, volumeUSD: "1000", pool: { id: "0xpool0" } }] } });
+        expect(body.query).toContain("\"0xpool39\"");
+        expect(body.query).not.toContain("\"0xpool40\"");
+        return response({
+          data: {
+            poolHourDatas: [
+              { periodStartUnix: 1_700_000_000, volumeUSD: "1000", pool: { id: "0xpool0" } },
+              { periodStartUnix: 1_699_996_400, volumeUSD: "500", pool: { id: "0xpool0" } },
+            ],
+          },
+        });
       })
       .mockImplementationOnce(async (_url, init) => {
         const body = JSON.parse(String(init?.body));
-        expect(body.query).toContain("\"0xpool50\"");
-        return response({ data: { poolDayDatas: [{ date: 1_700_000_000, volumeUSD: "2000", pool: { id: "0xpool50" } }] } });
+        expect(body.query).toContain("\"0xpool40\"");
+        return response({
+          data: {
+            poolHourDatas: [
+              { periodStartUnix: 1_700_000_000, volumeUSD: "2000", pool: { id: "0xpool40" } },
+            ],
+          },
+        });
       })
       .mockImplementation(async () => response({ data: { pools: [] } }));
 
@@ -128,9 +142,9 @@ describe("fetchPancakeSwapPools", () => {
 
     expect(result.ok).toBe(true);
     expect(result.degraded).toBe(false);
-    expect(result.pools).toHaveLength(51);
-    expect(result.pools[0]?.volume24hUsd).toBe(1000);
-    expect(result.pools[50]?.volume24hUsd).toBe(2000);
+    expect(result.pools).toHaveLength(41);
+    expect(result.pools[0]?.volume24hUsd).toBe(1500);
+    expect(result.pools[40]?.volume24hUsd).toBe(2000);
   });
 
   it("surfaces non-json 200 responses as degraded diagnostics instead of throwing a raw parse error", async () => {

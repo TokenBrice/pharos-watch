@@ -6,7 +6,8 @@ import { classifyClPoolType } from "./direct-source-helpers";
 
 const PAGE_SIZE = 250;
 const MAX_PAGES = 8;
-const DAY_DATA_BATCH_SIZE = 50;
+// `poolHourDatas(first: 1000)` can safely cover 40 pools over 24 hourly buckets (40 * 24 = 960 rows max).
+const HOUR_DATA_BATCH_SIZE = 40;
 const SUBGRAPH_TIMEOUT_MS = 15_000;
 
 // Keep Pancake coverage on the subgraphs that stay within the worker cron budget reliably.
@@ -28,8 +29,8 @@ type V3Pool = {
   token1: { id: string; symbol: string; decimals: string };
 };
 
-type PoolDayData = {
-  date: number;
+type PoolHourData = {
+  periodStartUnix: number;
   volumeUSD: string;
   pool: { id: string };
 };
@@ -56,16 +57,20 @@ function buildPoolsQuery(skip: number): string {
   }`;
 }
 
-function buildPoolDayDataQuery(poolIds: string[], cutoff: number): string {
+function buildPoolHourDataQuery(poolIds: string[], oldestIncludedHourStart: number, currentHourStart: number): string {
   const ids = poolIds.map((id) => `"${id.toLowerCase()}"`).join(",");
   return `{
-    poolDayDatas(
+    poolHourDatas(
       first: 1000,
-      orderBy: date,
+      orderBy: periodStartUnix,
       orderDirection: desc,
-      where: { pool_in: [${ids}], date_gte: ${cutoff} }
+      where: {
+        pool_in: [${ids}],
+        periodStartUnix_gt: ${oldestIncludedHourStart},
+        periodStartUnix_lte: ${currentHourStart}
+      }
     ) {
-      date
+      periodStartUnix
       volumeUSD
       pool { id }
     }
@@ -130,6 +135,8 @@ export async function fetchPancakeSwapPools(
   const pools: DexApiPool[] = [];
   const errors: string[] = [];
   let successfulChains = 0;
+  const currentHourStart = Math.floor(Date.now() / 1000 / 3600) * 3600;
+  const oldestIncludedHourStart = currentHourStart - DAY_SECONDS;
 
   for (const { chain, subgraphId } of Object.values(PANCAKESWAP_V3_SUBGRAPHS)) {
     const subgraphUrl = `https://gateway.thegraph.com/api/${graphApiKey}/subgraphs/id/${subgraphId}`;
@@ -140,42 +147,41 @@ export async function fetchPancakeSwapPools(
         const pagePools = data.pools ?? [];
         if (pagePools.length === 0) break;
 
-        const latestVolumeByPool = new Map<string, number>();
-        const cutoff = Math.floor(Date.now() / 1000) - DAY_SECONDS;
-        const dayDataPoolIdBatches = chunkPoolIds(pagePools.map((pool) => pool.id), DAY_DATA_BATCH_SIZE);
-        let failedDayDataBatches = 0;
-        for (let batchIndex = 0; batchIndex < dayDataPoolIdBatches.length; batchIndex++) {
-          const poolIdBatch = dayDataPoolIdBatches[batchIndex]!;
+        const volume24hByPool = new Map<string, number>();
+        const hourDataPoolIdBatches = chunkPoolIds(pagePools.map((pool) => pool.id), HOUR_DATA_BATCH_SIZE);
+        let failedHourDataBatches = 0;
+        for (let batchIndex = 0; batchIndex < hourDataPoolIdBatches.length; batchIndex++) {
+          const poolIdBatch = hourDataPoolIdBatches[batchIndex]!;
           try {
-            const dayData = await fetchSubgraphJson<{ poolDayDatas?: PoolDayData[] }>(
+            const hourData = await fetchSubgraphJson<{ poolHourDatas?: PoolHourData[] }>(
               subgraphUrl,
-              buildPoolDayDataQuery(poolIdBatch, cutoff),
+              buildPoolHourDataQuery(poolIdBatch, oldestIncludedHourStart, currentHourStart),
               signal,
             );
 
-            for (const row of dayData.poolDayDatas ?? []) {
+            for (const row of hourData.poolHourDatas ?? []) {
               const poolId = row.pool.id.toLowerCase();
-              if (latestVolumeByPool.has(poolId)) continue;
               const volume = parseFloat(row.volumeUSD);
-              latestVolumeByPool.set(poolId, Number.isFinite(volume) ? volume : 0);
+              const validVolume = Number.isFinite(volume) ? volume : 0;
+              volume24hByPool.set(poolId, (volume24hByPool.get(poolId) ?? 0) + validVolume);
             }
           } catch (error) {
-            failedDayDataBatches++;
+            failedHourDataBatches++;
             const message = error instanceof Error ? error.message : String(error);
             console.warn(
               "[fetch-pancakeswap]",
               chain,
-              "poolDayDatas",
-              `page ${page + 1} batch ${batchIndex + 1}/${dayDataPoolIdBatches.length}`,
+              "poolHourDatas",
+              `page ${page + 1} batch ${batchIndex + 1}/${hourDataPoolIdBatches.length}`,
               message,
             );
           }
         }
-        if (failedDayDataBatches > 0) {
+        if (failedHourDataBatches > 0) {
           console.warn(
             "[fetch-pancakeswap]",
             chain,
-            `page ${page + 1} completed with ${failedDayDataBatches}/${dayDataPoolIdBatches.length} dayData batch failures`,
+            `page ${page + 1} completed with ${failedHourDataBatches}/${hourDataPoolIdBatches.length} hourData batch failures`,
           );
         }
 
@@ -208,7 +214,7 @@ export async function fetchPancakeSwapPools(
             ],
             price: Number.isFinite(token0Price) && token0Price > 0 ? token0Price : null,
             tvlUsd,
-            volume24hUsd: latestVolumeByPool.get(pool.id.toLowerCase()) ?? 0,
+            volume24hUsd: volume24hByPool.get(pool.id.toLowerCase()) ?? 0,
             feeRate: Number.isFinite(feeTier) && feeTier > 0 ? feeTier / 1_000_000 : null,
             balances: Number.isFinite(reserve0) && Number.isFinite(reserve1) ? [reserve0, reserve1] : null,
           });

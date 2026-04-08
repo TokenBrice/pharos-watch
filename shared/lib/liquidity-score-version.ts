@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const liquidity = createMethodologyVersion({
-  currentVersion: "5.2",
+  currentVersion: "5.3",
   changelogPath: "/methodology/liquidity-score-changelog/",
   changelog: [
+    {
+      version: "5.3",
+      title: "PancakeSwap trailing-hour volume window",
+      date: "2026-04-08",
+      effectiveAt: 1775613600,
+      summary:
+        "PancakeSwap V3 direct volume now sums the official `poolHourDatas.volumeUSD` buckets across a bounded trailing 24-hour window instead of treating the latest `poolDayDatas` row as if it were a rolling 24h metric.",
+      impact: [
+        "Intraday PancakeSwap volume no longer collapses toward zero until UTC rollover just because the current day bucket has only accumulated partial activity",
+        "Fresh non-swap day buckets can no longer zero out yesterday's still-relevant trading activity, because trailing volume now comes from summed hourly swap buckets",
+        "The PancakeSwap direct fetch keeps bounded batching under The Graph row cap while staying on official subgraph entities instead of adding a new historical block lookup dependency",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.2",
       title: "Orderbook ticker contract refresh and Balancer exact-address identity",
