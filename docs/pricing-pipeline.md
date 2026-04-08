@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v4.0`
+- **Current methodology version:** `v4.1`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -190,7 +190,7 @@ Assets still missing prices after primary consensus run through `enrichMissingPr
 2. **Pass 1b:** alternate tracked deployment fallback via DefiLlama; only known tracked deployments are probed, never synthetic same-address cross-chain identities
 3. **Pass 2:** CoinMarketCap stablecoins category batch (`v1/cryptocurrency/category?id=604f2753ebccdd50cd175fc1&limit=300&convert=USD`) — prefers `cmcSlug`-based matching over symbol, and symbol fallback is only allowed when the tracked symbol is unique. Rate-limited to 1 call/hour via D1 cache (see data-pipeline.md)
 4. **Pass 3:** Jupiter Price API for tracked Solana mints — liquidity-gated and still subject to peg-aware validation
-5. **Pass 4:** DexScreener exact token-address pool lookup when chain+address are available. Unique-symbol search is now reserved for addressless assets only; if an exact target exists and fails, Pharos does not downgrade to symbol-only identity under the same request budget. The pass now walks the full sorted missing set and stops after 10 actual DexScreener requests, so skipped high-rank non-unique rows cannot crowd out later exact-target or unique-symbol candidates.
+5. **Pass 4:** DexScreener exact token-address pool lookup when chain+address are available. Unique-symbol search is now reserved for addressless assets only; if an exact target exists and fails, Pharos does not downgrade to symbol-only identity under the same request budget. The pass now walks the full sorted missing set and stops after 10 actual DexScreener requests, so skipped high-rank non-unique rows cannot crowd out later exact-target or unique-symbol candidates. The exact token lookup lane and the symbol-search lane now keep separate circuit-breaker state: `dexscreener-prices` tracks `/tokens/v1/{chain}/{address}`, while `dexscreener-search` tracks the last-resort `/latest/dex/search` path so a flaky search endpoint cannot suppress otherwise healthy exact-address recovery.
 
 Operationally, missing-price enrichment runs before the slower GeckoTerminal soft-source cross-check so recovery of unpriced assets stays on the critical path; the GT probe still reruns consensus later for weak CG / DL-list outcomes, self-stops once its 3-minute budget is exhausted, and protocol overrides still apply after that probe.
 

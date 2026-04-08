@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "4.0",
+  currentVersion: "4.1",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "4.1",
+      title: "Split DexScreener exact-vs-search breaker accounting",
+      date: "2026-04-08",
+      effectiveAt: 1775671200,
+      summary:
+        "The DexScreener fallback now records exact token-address lookups and last-resort symbol search under separate circuit breakers, " +
+        "so a flaky search endpoint cannot suppress otherwise healthy exact-address recovery.",
+      impact: [
+        "`dexscreener-prices` now reflects only `/tokens/v1/{chainId}/{address}` availability in the late-stage stablecoin pricing fallback",
+        "The symbol-search recovery path now records independently under `dexscreener-search`, which keeps search-specific failures visible without poisoning exact-address availability",
+        "Public-health grouping excludes the search-only breaker so a best-effort addressless fallback issue does not count as a separate top-level availability circuit group",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "4.0",
       title: "DexScreener request-budget walk-through for skipped fallback candidates",

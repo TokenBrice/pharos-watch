@@ -1,6 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.0` (2026-02-01 -> 2026-04-08).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.1` (2026-02-01 -> 2026-04-08).
+
+---
+
+## v4.1 - Split DexScreener exact-vs-search breaker accounting (Apr 8, 2026)
+
+**Commit:** `unreleased`
+
+- DexScreener pass 4 now keeps separate breaker state for exact token-address lookups and the last-resort symbol-search endpoint
+- `dexscreener-prices` now reflects `/tokens/v1/{chainId}/{address}` availability only, while `dexscreener-search` tracks `/latest/dex/search`
+- This prevents a flaky search endpoint from opening the same breaker that guards otherwise healthy exact-address recovery
 
 ---
 

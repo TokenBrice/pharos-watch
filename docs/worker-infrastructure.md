@@ -635,7 +635,8 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `CG_MCAP`                            | `coingecko-mcap`              | `sync-stablecoins` (CG supply fallback)                                                                                   |
 | `CG_DISCOVERY`                       | `coingecko-discovery`         | `discovery-scan`                                                                                                          |
 | `CMC_PRICES`                         | `coinmarketcap-prices`        | `enrich-prices` pass 2 fallback                                                                                           |
-| `DEXSCREENER_PRICES`                 | `dexscreener-prices`          | `enrich-prices` pass 3 fallback                                                                                           |
+| `DEXSCREENER_PRICES`                 | `dexscreener-prices`          | `enrich-prices` exact token-address DexScreener fallback                                                                  |
+| `DEXSCREENER_SEARCH`                 | `dexscreener-search`          | `enrich-prices` addressless unique-symbol DexScreener search fallback                                                     |
 | `TREASURY_RATES`                     | `treasury-rates`              | `fetch-tbill-rate`                                                                                                        |
 | `ETHERSCAN`                          | `etherscan`                   | `sync-blacklist`                                                                                                          |
 | `TRONGRID`                           | `trongrid`                    | `sync-blacklist` (Tron chains)                                                                                            |

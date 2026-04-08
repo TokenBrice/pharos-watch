@@ -53,7 +53,9 @@ export function getCircuitImpactStatus(openCircuitCount: number): PublicStatusTo
 }
 
 function isPublicImpactCircuitKey(key: string): boolean {
-  return !key.startsWith("live-reserves:");
+  if (key.startsWith("live-reserves:")) return false;
+  if (key === "dexscreener-search") return false;
+  return true;
 }
 
 export function countPublicImpactOpenCircuits(

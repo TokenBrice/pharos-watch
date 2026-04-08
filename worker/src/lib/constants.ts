@@ -138,6 +138,7 @@ export const CIRCUIT_SOURCE = {
   CG_MCAP: "coingecko-mcap",
   CG_DISCOVERY: "coingecko-discovery",
   DEXSCREENER_PRICES: "dexscreener-prices",
+  DEXSCREENER_SEARCH: "dexscreener-search",
   CMC_PRICES: "coinmarketcap-prices",
   TREASURY_RATES: "treasury-rates",
   ETHERSCAN: "etherscan",

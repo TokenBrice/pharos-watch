@@ -155,10 +155,14 @@ export async function runDexScreenerPass(
 
   const dexscreenerAllowed =
     db != null ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES) : true;
+  const dexscreenerSearchAllowed =
+    db != null ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.DEXSCREENER_SEARCH) : true;
   let dexAttempts = 0;
   let dexSuccessfulCalls = 0;
+  let dexSearchAttempts = 0;
+  let dexSuccessfulSearchCalls = 0;
 
-  if (dexscreenerAllowed) {
+  if (dexscreenerAllowed || dexscreenerSearchAllowed) {
     const dexCandidates = [...stillMissing]
       .sort((left, right) => {
         const leftExactTargets = buildDexScreenerTargets(left.asset).length;
@@ -189,7 +193,7 @@ export async function runDexScreenerPass(
 
         let resolvedFromDex = false;
         const exactTargets = buildDexScreenerTargets(entry.asset);
-        for (const target of exactTargets) {
+        for (const target of dexscreenerAllowed ? exactTargets : []) {
           if (dexAttempts >= DEXSCREENER_MAX_REQUESTS) break;
 
           const exactRemainingBudgetMs = dexBudgetDeadlineMs - Date.now();
@@ -229,6 +233,9 @@ export async function runDexScreenerPass(
         if (!shouldAllowDexScreenerSymbolSearch(entry.asset, exactTargets)) {
           continue;
         }
+        if (!dexscreenerSearchAllowed) {
+          continue;
+        }
 
         const symbolKey = entry.asset.symbol.toUpperCase();
         const allowedChains = buildAllowedDexSearchChains(entry.asset);
@@ -238,6 +245,7 @@ export async function runDexScreenerPass(
         }
 
         dexAttempts += 1;
+        dexSearchAttempts += 1;
         const res = await fetchWithRetry(
           `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(entry.asset.symbol)}`,
           { headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal },
@@ -255,6 +263,7 @@ export async function runDexScreenerPass(
         }
 
         dexSuccessfulCalls += 1;
+        dexSuccessfulSearchCalls += 1;
         const data = (await res.json()) as { pairs?: DexScreenerPair[] };
         if (!data.pairs?.length) continue;
 
@@ -286,8 +295,11 @@ export async function runDexScreenerPass(
     if (dexAttempts > 0 && db) {
       await recordOutcomeSafe(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES, dexSuccessfulCalls > 0);
     }
+    if (dexSearchAttempts > 0 && db) {
+      await recordOutcomeSafe(db, CIRCUIT_SOURCE.DEXSCREENER_SEARCH, dexSuccessfulSearchCalls > 0);
+    }
   } else {
-    console.warn("[enrich] DexScreener circuit open — skipping pass 3");
+    console.warn("[enrich] DexScreener exact and search circuits open — skipping pass 4");
   }
 
   return { resolved, failures: [] };

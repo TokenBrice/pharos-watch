@@ -4,6 +4,7 @@ import type { PeggedAsset, PrimaryPriceResult, PriceValidationStats } from "../s
 import { runCmcPass, runDexScreenerPass, runJupiterPass } from "../sync-stablecoins/enrich-prices-passes";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
 
 describe("PRICE_BOUNDS", () => {
   it("has entries for all major peg types", () => {
@@ -541,6 +542,159 @@ describe("enrichMissingPrices", () => {
     expect(stats.finalMissing).toBe(1);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(fetchSpy.mock.calls[0]?.[0]).toContain("dexscreener.com");
+  });
+
+  it("records DexScreener search breaker state independently from exact token lookups", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+
+    const assets: PeggedAsset[] = [
+      {
+        id: "exact-usd",
+        name: "Exact USD",
+        symbol: "EXACT",
+        price: 0,
+        address: "0xabc",
+        chains: ["Base"],
+        pegType: "peggedUSD",
+        circulating: { total: 100 },
+      },
+      {
+        id: "search-usd",
+        name: "Search USD",
+        symbol: "SUSD",
+        price: 0,
+        pegType: "peggedUSD",
+        circulating: { total: 90 },
+      },
+    ];
+
+    const fetchSpy = vi.fn(async (url: string) => {
+      if (url.includes("api.dexscreener.com/tokens/v1/base/0xabc")) {
+        return new Response(JSON.stringify([
+          {
+            chainId: "base",
+            dexId: "aerodrome",
+            pairAddress: "0xpair",
+            baseToken: { address: "0xabc", name: "Exact USD", symbol: "EXACT" },
+            quoteToken: { address: "0xdef", name: "USD Coin", symbol: "USDC" },
+            priceUsd: "1.0004",
+            priceNative: "1.0004",
+            liquidity: { usd: 250_000, base: 125_000, quote: 125_000 },
+            volume: { h24: 1_000, h6: 500, h1: 100, m5: 10 },
+            pairCreatedAt: Date.now(),
+          },
+        ]), { status: 200 });
+      }
+      if (url.includes("dexscreener.com/latest/dex/search?q=SUSD")) {
+        return new Response("upstream error", { status: 500 });
+      }
+      return new Response("Not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const result = await runDexScreenerPass(assets, undefined, db);
+
+    expect(result.resolved).toBe(1);
+    expect(assets[0].price).toBe(1.0004);
+
+    const circuitWrites = db
+      .getHistory()
+      .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))
+      .map((entry) => String(entry.binds[0]));
+
+    expect(circuitWrites).toContain(`circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`);
+    expect(circuitWrites).toContain(`circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`);
+  });
+
+  it("can still run exact DexScreener lookups when the search breaker is open", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            state: "open",
+            consecutiveFailures: 3,
+            lastFailureAt: nowSec - 60,
+            lastSuccessAt: null,
+            openedAt: nowSec - 60,
+          }),
+          updated_at: nowSec - 60,
+        },
+      },
+    ]);
+
+    const assets: PeggedAsset[] = [
+      {
+        id: "exact-usd",
+        name: "Exact USD",
+        symbol: "EXACT",
+        price: 0,
+        address: "0xabc",
+        chains: ["Base"],
+        pegType: "peggedUSD",
+        circulating: { total: 100 },
+      },
+      {
+        id: "search-usd",
+        name: "Search USD",
+        symbol: "SUSD",
+        price: 0,
+        pegType: "peggedUSD",
+        circulating: { total: 90 },
+      },
+    ];
+
+    const fetchSpy = vi.fn(async (url: string) => {
+      if (url.includes("api.dexscreener.com/tokens/v1/base/0xabc")) {
+        return new Response(JSON.stringify([
+          {
+            chainId: "base",
+            dexId: "aerodrome",
+            pairAddress: "0xpair",
+            baseToken: { address: "0xabc", name: "Exact USD", symbol: "EXACT" },
+            quoteToken: { address: "0xdef", name: "USD Coin", symbol: "USDC" },
+            priceUsd: "1.0004",
+            priceNative: "1.0004",
+            liquidity: { usd: 250_000, base: 125_000, quote: 125_000 },
+            volume: { h24: 1_000, h6: 500, h1: 100, m5: 10 },
+            pairCreatedAt: Date.now(),
+          },
+        ]), { status: 200 });
+      }
+      if (url.includes("dexscreener.com/latest/dex/search")) {
+        throw new Error("search path should have been skipped");
+      }
+      return new Response("Not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const result = await runDexScreenerPass(assets, undefined, db);
+
+    expect(result.resolved).toBe(1);
+    expect(fetchSpy.mock.calls).toHaveLength(1);
+    expect(fetchSpy.mock.calls[0]?.[0]).toContain("api.dexscreener.com/tokens/v1/base/0xabc");
   });
 
   it("does not fall back to DexScreener symbol search when an exact token target exists", async () => {
