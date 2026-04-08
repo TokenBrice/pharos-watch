@@ -664,7 +664,8 @@
       {
         "name": "Gold tokens (PAXG, XAUt)",
         "pct": 10,
-        "risk": "medium"
+        "risk": "medium",
+        "coinId": "paxg-paxos"
       },
       {
         "name": "Tokenized RWAs (SPYon, LENDS, REALU)",
@@ -1552,7 +1553,8 @@
       {
         "name": "EURC (Circle euro stablecoin)",
         "pct": 22,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "eurc-circle"
       },
       {
         "name": "CELO",
@@ -2162,7 +2164,8 @@
       {
         "name": "XAUT (tokenized gold)",
         "pct": 10,
-        "risk": "medium"
+        "risk": "medium",
+        "coinId": "xaut-tether"
       },
       {
         "name": "UNI / ZCHF (governance / other)",
@@ -3099,7 +3102,7 @@
     "governanceQuality": "dao-governance",
     "reserves": [
       { "name": "Overcollateralized vault collateral (ATOM, SCRT, stablecoins)", "pct": 70, "risk": "medium" },
-      { "name": "Stablecoin redemption pools (USDC, other stables)", "pct": 20, "risk": "low" },
+      { "name": "Stablecoin redemption pools (USDC, other stables)", "pct": 20, "risk": "low", "coinId": "usdc-circle" },
       { "name": "SHD governance token (bounded minting backing)", "pct": 10, "risk": "high" }
     ]
   },

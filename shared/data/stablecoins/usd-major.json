@@ -1395,7 +1395,8 @@
       {
         "name": "Tokenized Treasuries (USTB)",
         "pct": 5,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "ustb-superstate"
       }
     ],
     "liveReservesConfig": {
@@ -2361,7 +2362,8 @@
       {
         "name": "USD1 (WLFI stablecoin)",
         "pct": 15,
-        "risk": "medium"
+        "risk": "medium",
+        "coinId": "usd1-world-liberty-financial"
       },
       {
         "name": "Fiat USD / U.S. Treasury Bills",
@@ -3358,6 +3360,22 @@
         "coinId": "usdc-circle"
       }
     ],
+    "liveReservesConfig": {
+      "adapter": "curated-validated",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "ylds-figure",
+      "display": {
+        "url": "https://www.figure.com/yield-dollar",
+        "label": "Figure Markets"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://markets.figure.com"
+        }
+      }
+    },
     "yieldConfig": {
       "yieldSource": "Figure yield fund",
       "yieldType": "nav-appreciation"

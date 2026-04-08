@@ -8,33 +8,13 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "usdu-unitas::JLP (Jupiter Perps LP: BTC, ETH, SOL, USDC basket)::USDC",
     "JLP is a mixed basket reserve slice, not a direct USDC holding.",
   ],
-  [
-    "dusd-dtrinity::Curve AMO positions (dUSD/sfrxUSD LP)::FRXUSD",
-    "Curve AMO LP positions are composite reserves; the primary frxUSD exposure is captured via coinId on the sfrxUSD slice.",
-  ],
-  [
-    "dusd-dtrinity::sUSDS (Sky Savings Rate)::USDS",
-    "sUSDS is a yield-bearing wrapper; the coin already tracks USDS exposure through dependencies.",
-  ],
-  [
-    "ftusd-flying-tulip::USDC (Aave lending positions)::USDC",
-    "ftUSD uses dependency modeling for its USDC/USDT collateral exposure.",
-  ],
-  [
-    "ftusd-flying-tulip::USDT (Aave lending positions)::USDT",
-    "ftUSD uses dependency modeling for its USDC/USDT collateral exposure.",
-  ],
-  [
-    "silk-shade-protocol::Stablecoin redemption pools (USDC, other stables)::USDC",
-    "SILK redemption pools are a mixed basket of stablecoins on Secret Network; no single tracked coinId applies.",
-  ],
 ]);
 
 describe("reserve coinId validation", () => {
   it("no coin has both dependencies and reserve-linked coinIds (unless allowed)", () => {
     // Coins that intentionally use both: dependencies for dependency-map
     // weights and coinId on reserves for blacklist inheritance.
-    const ALLOWED_BOTH = new Set(["dusd-dtrinity", "buck-buck-assets"]);
+    const ALLOWED_BOTH = new Set(["dusd-dtrinity", "buck-buck-assets", "frxusd-frax", "ftusd-flying-tulip"]);
     const conflicts: string[] = [];
     for (const meta of TRACKED_STABLECOINS) {
       if (ALLOWED_BOTH.has(meta.id)) continue;

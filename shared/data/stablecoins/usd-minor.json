@@ -1082,12 +1082,13 @@
         "name": "USDB (DBS tokenized deposits)",
         "pct": 2,
         "risk": "low"
-      },
+      }
+    ],
+    "dependencies": [
       {
-        "name": "USDC (Circle)",
-        "pct": 0,
-        "risk": "low",
-        "coinId": "usdc-circle"
+        "id": "usdc-circle",
+        "weight": 0.01,
+        "type": "collateral"
       }
     ],
     "liveReservesConfig": {
@@ -1637,7 +1638,8 @@
       {
         "name": "Superstate USTB/USCC (tokenized T-bills and crypto carry)",
         "pct": 15,
-        "risk": "medium"
+        "risk": "medium",
+        "coinId": "ustb-superstate"
       },
       {
         "name": "Cash and cash equivalents",
@@ -5783,7 +5785,8 @@
       {
         "name": "EURC (Circle euro stablecoin)",
         "pct": 22,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "eurc-circle"
       },
       {
         "name": "CELO (native token)",
@@ -7519,7 +7522,8 @@
       {
         "name": "Curve AMO positions (dUSD/sfrxUSD LP)",
         "pct": 35,
-        "risk": "high"
+        "risk": "high",
+        "coinId": "frxusd-frax"
       },
       {
         "name": "frxUSD / DAI / sDAI (Fraxtal)",
@@ -7536,7 +7540,8 @@
       {
         "name": "sUSDS (Sky Savings Rate)",
         "pct": 3,
-        "risk": "medium"
+        "risk": "medium",
+        "coinId": "usds-sky"
       }
     ],
     "yieldConfig": {
@@ -9307,12 +9312,14 @@
       {
         "name": "USDC (Aave lending positions)",
         "pct": 50,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "usdc-circle"
       },
       {
         "name": "USDT (Aave lending positions)",
         "pct": 50,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "usdt-tether"
       }
     ],
     "yieldConfig": {
