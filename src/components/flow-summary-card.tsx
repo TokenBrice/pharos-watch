@@ -32,44 +32,14 @@ import {
   getFlowPressureUi,
 } from "@/lib/flow-signal-ui";
 import { cn } from "@/lib/utils";
-import { clamp } from "@shared/lib/math";
-import type { MintBurnCoinFlow } from "@shared/types";
 import {
-  getNetFlowDirection24h,
-  getPressureShiftState,
-  type NetFlowDirection24h,
-  type PressureShiftState,
-} from "@shared/lib/mint-burn-signals";
+  inferHas24hActivity,
+  resolveNetDirection,
+  resolvePressureScore,
+  resolvePressureState,
+} from "@/lib/mint-burn-coin-helpers";
+import { clamp } from "@shared/lib/math";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
-
-function inferHas24hActivity(coin: MintBurnCoinFlow): boolean {
-  if (coin.has24hActivity !== undefined) {
-    return coin.has24hActivity;
-  }
-  return Boolean(
-    coin.mintCount24h
-    || coin.burnCount24h
-    || coin.mintVolume24hUsd
-    || coin.burnVolume24hUsd
-    || coin.netFlow24hUsd,
-  );
-}
-
-function resolveNetDirection(coin: MintBurnCoinFlow): NetFlowDirection24h {
-  return coin.netFlowDirection24h
-    ?? getNetFlowDirection24h({
-      netFlow24hUsd: coin.netFlow24hUsd,
-      has24hActivity: inferHas24hActivity(coin),
-    });
-}
-
-function resolvePressureScore(coin: MintBurnCoinFlow): number | null {
-  return coin.pressureShiftScore ?? coin.flowIntensity;
-}
-
-function resolvePressureState(coin: MintBurnCoinFlow): PressureShiftState {
-  return coin.pressureShiftState ?? getPressureShiftState(resolvePressureScore(coin));
-}
 
 function getBaselineCaption(
   baselineDailyNetUsd: number | null | undefined,

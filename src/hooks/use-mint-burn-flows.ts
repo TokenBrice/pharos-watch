@@ -17,25 +17,13 @@ import {
   normalizeToSignedFlowIntensity,
   type FlowIntensitySemantics,
 } from "@/lib/flow-intensity";
+import { inferHas24hActivity } from "@/lib/mint-burn-coin-helpers";
 import {
   getNetFlowDirection24h,
   getPressureShiftState,
 } from "@shared/lib/mint-burn-signals";
 
 const MINT_BURN_META_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows;
-
-function inferHas24hActivity(
-  coin: MintBurnFlowsResponse["coins"][number],
-): boolean {
-  return Boolean(
-    coin.has24hActivity
-    ?? coin.mintCount24h
-    ?? coin.burnCount24h
-    ?? coin.mintVolume24hUsd
-    ?? coin.burnVolume24hUsd
-    ?? coin.netFlow24hUsd,
-  );
-}
 
 function resolveFlowSemantics(
   response: MintBurnFlowsResponse,

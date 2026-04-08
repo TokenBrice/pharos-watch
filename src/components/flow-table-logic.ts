@@ -1,5 +1,9 @@
-import { getPressureShiftState, PRESSURE_SHIFT_STATE_VALUES, type PressureShiftState } from "@shared/lib/mint-burn-signals";
+import { PRESSURE_SHIFT_STATE_VALUES, type PressureShiftState } from "@shared/lib/mint-burn-signals";
 import { createTableComparator } from "@/lib/table-comparator";
+import {
+  resolvePressureScore as getPressureScore,
+  resolvePressureState as getPressureState,
+} from "@/lib/mint-burn-coin-helpers";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import type { MintBurnCoinFlow } from "@shared/types";
 import { getFlowPressureUi } from "@/lib/flow-signal-ui";
@@ -14,13 +18,7 @@ export type FlowTableSortKey =
   | "largest"
   | "pressure";
 
-export function getPressureScore(coin: MintBurnCoinFlow): number | null {
-  return coin.pressureShiftScore ?? coin.flowIntensity;
-}
-
-export function getPressureState(coin: MintBurnCoinFlow): PressureShiftState {
-  return coin.pressureShiftState ?? getPressureShiftState(getPressureScore(coin));
-}
+export { getPressureScore, getPressureState };
 
 export const PRESSURE_VALUE_CLASS: Record<PressureShiftState, string> = Object.fromEntries(
   PRESSURE_SHIFT_STATE_VALUES.map((s) => [s, getFlowPressureUi(s, "summary").valueClass]),
