@@ -1734,7 +1734,23 @@
         "risk": "low",
         "coinId": "buidl-blackrock"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "curated-validated",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "cash-phantom",
+      "display": {
+        "url": "https://phantom.com/cash",
+        "label": "Phantom Cash"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://phantom.com/cash"
+        }
+      }
+    }
   },
   {
     "id": "mnee-mnee",
@@ -2509,7 +2525,24 @@
         "risk": "high",
         "coinId": "frxusd-frax"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "curated-validated",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "reusd-resupply",
+      "display": {
+        "url": "https://resupply.fi",
+        "label": "Resupply"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      }
+    }
   },
   {
     "id": "gusd-gemini",
@@ -3340,7 +3373,19 @@
         "pct": 10,
         "risk": "high"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "curated-validated",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "hyusd-hylo",
+      "inputs": {
+        "primary": {
+          "kind": "http-json",
+          "url": "https://api.hylo.so/reserves"
+        }
+      }
+    }
   },
   {
     "id": "lusd-liquity",
@@ -4372,7 +4417,23 @@
         "risk": "high",
         "blacklistable": true
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "curated-validated",
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "nect-beraborrow",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "berachain",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "rpcUrl": "https://rpc.berachain.com"
+      }
+    }
   },
   {
     "id": "eusd-electronic-usd",
@@ -6960,6 +7021,23 @@
         "depType": "wrapper"
       }
     ],
+    "liveReservesConfig": {
+      "adapter": "curated-validated",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "ousd-origin-protocol",
+      "display": {
+        "url": "https://analytics.ousd.com",
+        "label": "Origin Analytics"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      }
+    },
     "yieldConfig": {
       "yieldSource": "Origin lending + DeFi strategies",
       "yieldType": "rebase"
@@ -7807,6 +7885,30 @@
         "coinId": "usdc-circle"
       }
     ],
+    "liveReservesConfig": {
+      "adapter": "chainlink-nav",
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "ousg-ondo",
+      "display": {
+        "url": "https://ondo.finance/ousg",
+        "label": "Ondo NAV Oracle"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "etherscan-proxy"
+        }
+      },
+      "params": {
+        "oracleAddress": "0x9Cad45a8BF0Ed41Ff33074449B357C7a1fAb4094",
+        "tokenAddress": "0x1b19c19393e2d034d8ff31ff34c81252fcbbee92",
+        "assetLabel": "BlackRock BUIDL (U.S. T-bills, cash, repos)",
+        "assetRisk": "very-low",
+        "oracleMethod": "getPrice"
+      }
+    },
     "yieldConfig": {
       "yieldSource": "Ondo Finance T-bill fund",
       "yieldType": "nav-appreciation"
