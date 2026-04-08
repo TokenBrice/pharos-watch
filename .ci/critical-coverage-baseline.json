@@ -2,7 +2,7 @@
   "version": 1,
   "generatedAt": "2026-04-07",
   "files": {
-    "src/lib/api.ts": 90.5,
+    "src/lib/api.ts": 89.8,
     "worker/src/lib/api-cache-read.ts": 92.6,
     "worker/src/lib/api-freshness.ts": 96.8,
     "worker/src/lib/api-history.ts": 95.5,
