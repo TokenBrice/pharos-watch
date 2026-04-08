@@ -244,6 +244,68 @@ describe("psi-replay", () => {
     expect(replay.result?.band).toBe("MELTDOWN");
   });
 
+  it("drops near-midnight start-day peaks that do not materially persist into the next UTC day", () => {
+    const day = 1_608_508_800; // 2020-12-21
+    const now = day + DAY;
+    const supplyByCoin = buildSupplySnapshotMap([
+      { stablecoin_id: "susd-synthetix", snapshot_date: day, circulating_usd: 64_026_005, price: 1.0026849879160749 },
+      { stablecoin_id: "susd-synthetix", snapshot_date: day - 7 * DAY, circulating_usd: 58_685_677, price: 1.0285746209170659 },
+    ]);
+
+    const replay = replayHistoricalPsiForDay({
+      day,
+      now,
+      methodologyVersion: "1.0",
+      depegEvents: [
+        {
+          stablecoin_id: "susd-synthetix",
+          peak_deviation_bps: 339,
+          peg_reference: 1,
+          started_at: day + 22 * 3600 + 113,
+          ended_at: day + DAY + 93,
+        },
+      ],
+      supplyByCoin,
+      dewsByDay: new Map(),
+    });
+
+    expect(replay.input.depegs).toEqual([]);
+    expect(replay.input.historicalPriceCoverageCount).toBe(0);
+    expect(replay.input.peakDeviationFallbackCount).toBe(0);
+  });
+
+  it("uses the daily replay price for moderate same-day follow-on depegs", () => {
+    const day = 1_678_665_600; // 2023-03-13
+    const now = day + DAY;
+    const supplyByCoin = buildSupplySnapshotMap([
+      { stablecoin_id: "lusd-liquity", snapshot_date: day, circulating_usd: 247_756_468, price: 1.0134849488335838 },
+      { stablecoin_id: "lusd-liquity", snapshot_date: day - 7 * DAY, circulating_usd: 230_964_010, price: 1.0057375677243316 },
+    ]);
+
+    const replay = replayHistoricalPsiForDay({
+      day,
+      now,
+      methodologyVersion: "1.0",
+      depegEvents: [
+        {
+          stablecoin_id: "lusd-liquity",
+          peak_deviation_bps: 209,
+          peg_reference: 1,
+          started_at: day + 10 * 3600 + 78,
+          ended_at: day + DAY + 9 * 3600 + 130,
+        },
+      ],
+      supplyByCoin,
+      dewsByDay: new Map(),
+    });
+
+    expect(replay.input.depegs).toEqual([
+      { bps: 135, mcapUsd: 247_756_468, depegAgeDays: 0 },
+    ]);
+    expect(replay.input.historicalPriceCoverageCount).toBe(1);
+    expect(replay.input.peakDeviationFallbackCount).toBe(0);
+  });
+
   it("replays legacy UST depeg rows against the canonical shadow asset", () => {
     const day = 1_652_140_800; // 2022-05-10
     const now = day + DAY;

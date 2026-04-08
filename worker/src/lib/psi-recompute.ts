@@ -10,6 +10,7 @@ import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 
 const HISTORICAL_PEAK_FLOOR_WINDOW_DAYS = 1;
+const HISTORICAL_PEAK_FLOOR_MIN_CLOSE_PERSISTENCE_SEC = 6 * 3600;
 
 export interface PsiDepegEventRow {
   stablecoin_id: string;
@@ -59,12 +60,17 @@ function computeHistoricalEventBps(
     const dayEnd = day + DAY_SECONDS;
     const withinPeakFloorWindow =
       day - eventStartDay < HISTORICAL_PEAK_FLOOR_WINDOW_DAYS * DAY_SECONDS;
-    const persistsThroughUtcClose = event.ended_at == null || event.ended_at >= dayEnd;
+    const persistsMateriallyPastUtcClose =
+      event.ended_at == null
+      || event.ended_at >= dayEnd + HISTORICAL_PEAK_FLOOR_MIN_CLOSE_PERSISTENCE_SEC;
+    const materiallyUnderstatesShock =
+      peakDeviationBps != null
+      && Math.abs(peakDeviationBps) - Math.abs(boundedHistoricalBps) >= thresholdBps;
     if (
       peakDeviationBps != null
       && withinPeakFloorWindow
-      && persistsThroughUtcClose
-      && Math.abs(peakDeviationBps) > Math.abs(boundedHistoricalBps)
+      && persistsMateriallyPastUtcClose
+      && materiallyUnderstatesShock
     ) {
       return {
         bps: peakDeviationBps,

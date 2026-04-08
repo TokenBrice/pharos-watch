@@ -324,6 +324,61 @@ describe("buildStabilityInputForDay", () => {
     expect(result.peakDeviationFallbackCount).toBe(1);
   });
 
+  it("drops start-day peaks that only bleed a few seconds past UTC close", () => {
+    const day = 40 * DAY;
+    const now = day + DAY;
+    const supplyByCoin = buildSupplySnapshotMap([
+      { stablecoin_id: "susd-synthetix", snapshot_date: day, circulating_usd: 64_000_000, price: 1.0027 },
+      { stablecoin_id: "susd-synthetix", snapshot_date: day - 7 * DAY, circulating_usd: 63_000_000, price: 1 },
+    ]);
+    const events: PsiDepegEventRow[] = [
+      {
+        stablecoin_id: "susd-synthetix",
+        peak_deviation_bps: 339,
+        peg_reference: 1,
+        started_at: day + 22 * 3600,
+        ended_at: day + DAY + 90,
+      },
+    ];
+
+    const result = buildStabilityInputForDay(day, now, events, supplyByCoin);
+
+    expect(result.depegCount).toBe(0);
+    expect(result.depegs).toEqual([]);
+    expect(result.historicalPriceCoverageCount).toBe(0);
+    expect(result.peakDeviationFallbackCount).toBe(0);
+  });
+
+  it("uses the daily price when a same-day follow-on depeg is already materially captured", () => {
+    const day = 40 * DAY;
+    const now = day + DAY;
+    const supplyByCoin = buildSupplySnapshotMap([
+      { stablecoin_id: "lusd-liquity", snapshot_date: day, circulating_usd: 247_756_468, price: 1.0135 },
+      { stablecoin_id: "lusd-liquity", snapshot_date: day - 7 * DAY, circulating_usd: 241_941_590, price: 0.997 },
+    ]);
+    const events: PsiDepegEventRow[] = [
+      {
+        stablecoin_id: "lusd-liquity",
+        peak_deviation_bps: 209,
+        peg_reference: 1,
+        started_at: day + 10 * 3600,
+        ended_at: day + DAY + 9 * 3600,
+      },
+    ];
+
+    const result = buildStabilityInputForDay(day, now, events, supplyByCoin);
+
+    expect(result.depegs).toEqual([
+      {
+        bps: 135,
+        mcapUsd: 247_756_468,
+        depegAgeDays: 0,
+      },
+    ]);
+    expect(result.historicalPriceCoverageCount).toBe(1);
+    expect(result.peakDeviationFallbackCount).toBe(0);
+  });
+
   it("drops a same-day wick that fully recovers back inside threshold before UTC close", () => {
     const day = 40 * DAY;
     const now = day + DAY;
