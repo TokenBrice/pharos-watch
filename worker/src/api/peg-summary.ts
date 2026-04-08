@@ -13,7 +13,8 @@ import {
 import { CACHE_PROFILES, getDepegThresholdBps } from "../lib/constants";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
-import { classifyPrimaryDepegTrust, isTrustedDexPriceRow } from "../lib/depeg-helpers";
+import { classifyPrimaryDepegTrust, isTrustedDexPriceRow } from "../lib/depeg-trust-policy";
+import { deriveDepegSignal } from "../lib/depeg-signals";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION,
@@ -63,7 +64,7 @@ function deriveDexDeviationBps(
     ? getPegReference(pegType, pegRates, commodityOunces)
     : null;
   if (pegRef != null && Number.isFinite(pegRef) && pegRef > 0 && Number.isFinite(dexPriceUsd) && dexPriceUsd > 0) {
-    return Math.round(((dexPriceUsd / pegRef) - 1) * 10000);
+    return deriveDepegSignal(dexPriceUsd, pegRef)?.bps ?? null;
   }
   if (currentDeviationBps != null && dexVsPrimaryBps != null) {
     const currentMultiplier = 1 + currentDeviationBps / 10000;

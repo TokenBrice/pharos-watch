@@ -5,7 +5,7 @@ import {
 } from "../../lib/price-validation";
 import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices";
 import { clearPriceMetadata, stampPriceMetadata } from "./shared";
-import { classifyPrimaryDepegTrust } from "../../lib/depeg-helpers";
+import { classifyPrimaryDepegTrust } from "../../lib/depeg-trust-policy";
 import type { PriceCacheEntry } from "../../lib/db-cache";
 import type { DlListQuote } from "../../lib/primary-price-collector";
 import {

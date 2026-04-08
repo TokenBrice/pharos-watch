@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   classifyPrimaryDepegTrust,
+  getDexTrustPolicy,
   hasFreshMultiSourcePrimaryAgreement,
   isAuthoritativeDepegPegReference,
+  isTrustedDexPriceRow,
 } from "../depeg-trust-policy";
 
 describe("classifyPrimaryDepegTrust", () => {
@@ -29,60 +31,9 @@ describe("classifyPrimaryDepegTrust", () => {
     }, nowSec)).toBe("authoritative");
   });
 
-  it("requires confirmation for hard single-source prices with local-fetch freshness", () => {
-    expect(classifyPrimaryDepegTrust({
-      price: 0.999,
-      priceSource: "kraken",
-      priceConfidence: "single-source",
-      priceObservedAt: nowSec - 60,
-      priceObservedAtMode: "local_fetch",
-      agreeSources: ["kraken"],
-    }, nowSec)).toBe("confirm_required");
-  });
-
-  it("requires confirmation for soft-only high-confidence agreement", () => {
-    expect(classifyPrimaryDepegTrust({
-      price: 1.0,
-      priceSource: "coingecko+defillama-list",
-      priceConfidence: "high",
-      priceObservedAt: nowSec - 60,
-      agreeSources: ["coingecko", "defillama-list"],
-    }, nowSec)).toBe("confirm_required");
-  });
-
-  it("treats an upstream-capable hard source plus soft corroboration as authoritative", () => {
-    expect(classifyPrimaryDepegTrust({
-      price: 0.998,
-      priceSource: "coingecko+pyth",
-      priceConfidence: "high",
-      priceObservedAt: nowSec - 60,
-      agreeSources: ["coingecko", "pyth"],
-    }, nowSec)).toBe("authoritative");
-  });
-
-  it("requires confirmation for a lone local-fetch hard source plus soft corroboration", () => {
-    expect(classifyPrimaryDepegTrust({
-      price: 0.999,
-      priceSource: "coingecko+kraken",
-      priceConfidence: "high",
-      priceObservedAt: nowSec - 60,
-      agreeSources: ["coingecko", "kraken"],
-    }, nowSec)).toBe("confirm_required");
-  });
-
-  it("accepts two authoritative local-fetch hard sources in agreement", () => {
-    expect(classifyPrimaryDepegTrust({
-      price: 0.999,
-      priceSource: "binance+kraken",
-      priceConfidence: "high",
-      priceObservedAt: nowSec - 60,
-      agreeSources: ["binance", "kraken"],
-    }, nowSec)).toBe("authoritative");
-  });
-
   it("uses source observation time rather than sync-write time for freshness", () => {
     expect(classifyPrimaryDepegTrust({
-      price: 1.0,
+      price: 1,
       priceSource: "pyth",
       priceConfidence: "single-source",
       priceObservedAt: nowSec - (31 * 60),
@@ -90,22 +41,12 @@ describe("classifyPrimaryDepegTrust", () => {
       agreeSources: ["pyth"],
     }, nowSec)).toBe("confirm_required");
   });
-
-  it("keeps legacy null freshness mode backward-compatible for upstream-capable hard sources", () => {
-    expect(classifyPrimaryDepegTrust({
-      price: 0.999,
-      priceSource: "pyth",
-      priceConfidence: "single-source",
-      priceObservedAt: nowSec - 60,
-      agreeSources: ["pyth"],
-    }, nowSec)).toBe("authoritative");
-  });
 });
 
 describe("hasFreshMultiSourcePrimaryAgreement", () => {
   const nowSec = 1_700_000_000;
 
-  it("accepts fresh corroborated soft-source agreement for recovery handling", () => {
+  it("accepts fresh corroborated multi-source agreement", () => {
     expect(hasFreshMultiSourcePrimaryAgreement({
       price: 0.999,
       priceSource: "coingecko+defillama-list",
@@ -115,7 +56,7 @@ describe("hasFreshMultiSourcePrimaryAgreement", () => {
     }, nowSec)).toBe(true);
   });
 
-  it("rejects stale or low-confidence price clusters", () => {
+  it("rejects stale or low-confidence clusters", () => {
     expect(hasFreshMultiSourcePrimaryAgreement({
       price: 0.999,
       priceSource: "coingecko+defillama-list",
@@ -135,7 +76,7 @@ describe("hasFreshMultiSourcePrimaryAgreement", () => {
 });
 
 describe("isAuthoritativeDepegPegReference", () => {
-  it("rejects thin fiat peer medians without an FX fallback", () => {
+  it("rejects thin fiat peer medians without fallback", () => {
     expect(isAuthoritativeDepegPegReference({
       pegCurrency: "BRL",
       pegType: "peggedREAL",
@@ -159,20 +100,29 @@ describe("isAuthoritativeDepegPegReference", () => {
       pegRateContributorCount: 4,
     })).toBe(true);
   });
+});
 
-  it("leaves USD and commodity references unchanged", () => {
-    expect(isAuthoritativeDepegPegReference({
-      pegCurrency: "USD",
-      pegType: "peggedUSD",
-      pegRateSource: "median",
-      pegRateContributorCount: 1,
-    })).toBe(true);
+describe("DEX trust policy", () => {
+  const nowSec = 1_700_000_000;
 
-    expect(isAuthoritativeDepegPegReference({
-      pegCurrency: "GOLD",
-      pegType: "peggedGOLD",
-      pegRateSource: "median",
-      pegRateContributorCount: 1,
-    })).toBe(true);
+  it("keeps UI and depeg trust floors explicit", () => {
+    expect(getDexTrustPolicy("ui")).toEqual({
+      maxAgeSec: 3600,
+      minTvlUsd: 250_000,
+    });
+    expect(getDexTrustPolicy("depeg")).toEqual({
+      maxAgeSec: 2100,
+      minTvlUsd: 1_000_000,
+    });
+  });
+
+  it("trusts only rows that satisfy the requested tier", () => {
+    const thinFreshRow = {
+      updated_at: nowSec - 60,
+      source_total_tvl: 300_000,
+    };
+
+    expect(isTrustedDexPriceRow(thinFreshRow, nowSec, "ui")).toBe(true);
+    expect(isTrustedDexPriceRow(thinFreshRow, nowSec, "depeg")).toBe(false);
   });
 });

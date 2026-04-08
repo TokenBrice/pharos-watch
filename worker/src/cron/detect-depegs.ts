@@ -10,10 +10,6 @@ import { batchExecute } from "../lib/db";
 import { throwIfAborted } from "../lib/abort";
 import {
   buildInsertDepegEventStmt,
-  classifyPrimaryDepegTrust,
-  hasFreshMultiSourcePrimaryAgreement,
-  isAuthoritativeDepegPegReference,
-  isTrustedDexPriceRow,
   loadDexPoolChallengers,
   loadDexPriceRows,
   loadDexPriceSources,
@@ -22,6 +18,18 @@ import {
   type DexPoolSource,
   type PendingDepegReason,
 } from "../lib/depeg-helpers";
+import {
+  classifyPrimaryDepegTrust,
+  hasFreshMultiSourcePrimaryAgreement,
+  isAuthoritativeDepegPegReference,
+  isTrustedDexPriceRow,
+} from "../lib/depeg-trust-policy";
+import {
+  deriveDepegSignal,
+  signalCrossesThreshold,
+  signalsShareDirection,
+} from "../lib/depeg-signals";
+import { buildUpsertPendingDepegStmt } from "../lib/depeg-pending";
 import { fetchCurrentNativePegQuotes } from "../lib/native-peg-quotes";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
@@ -40,24 +48,6 @@ interface DexPoolChallenger {
   observedAt?: number;
 }
 
-interface PriceSignal {
-  bps: number;
-  absBps: number;
-  direction: "above" | "below";
-}
-
-function toPriceSignal(price: number, pegRef: number): PriceSignal | null {
-  if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(pegRef) || pegRef <= 0) {
-    return null;
-  }
-  const bps = Math.round(((price / pegRef) - 1) * 10000);
-  return {
-    bps,
-    absBps: Math.abs(bps),
-    direction: bps >= 0 ? "above" : "below",
-  };
-}
-
 /** Returns true when the DEX price row for this asset is fresh and trusted for depeg decisions. */
 function isDexFresh(
   dexRow: DexPriceRow | undefined,
@@ -74,7 +64,7 @@ function countRecoveryProtocolCorroborations(
 ): number {
   if (!protocolSources || protocolSources.length === 0) return 0;
   return protocolSources.reduce((count, source) => {
-    const signal = toPriceSignal(source.price, pegRef);
+    const signal = deriveDepegSignal(source.price, pegRef);
     return signal != null && signal.absBps < threshold ? count + 1 : count;
   }, 0);
 }
@@ -87,8 +77,8 @@ function countDirectionalProtocolCorroborations(
 ): number {
   if (!protocolSources || protocolSources.length === 0) return 0;
   return protocolSources.reduce((count, source) => {
-    const signal = toPriceSignal(source.price, pegRef);
-    return signal != null && signal.absBps >= threshold && signal.direction === direction ? count + 1 : count;
+    const signal = deriveDepegSignal(source.price, pegRef);
+    return signal != null && signalCrossesThreshold(signal, threshold) && signal.direction === direction ? count + 1 : count;
   }, 0);
 }
 
@@ -100,8 +90,8 @@ function hasRecoveryChallenge(
 ): boolean {
   if (!challengers || challengers.length === 0) return false;
   return challengers.some((pool) => {
-    const signal = toPriceSignal(pool.price, pegRef);
-    return signal != null && signal.absBps >= threshold && signal.direction === depegDirection;
+    const signal = deriveDepegSignal(pool.price, pegRef);
+    return signal != null && signalCrossesThreshold(signal, threshold) && signal.direction === depegDirection;
   });
 }
 
@@ -442,12 +432,12 @@ export async function detectDepegEvents(
     const pegRef = getPegReference(asset.pegType, pegRates, meta.commodityOunces);
     if (!Number.isFinite(pegRef) || pegRef <= 0) continue;
 
-    const bps = Math.round(((price / pegRef) - 1) * 10000);
-    const absBps = Math.abs(bps);
-    const direction: "above" | "below" = bps >= 0 ? "above" : "below";
+    const primarySignal = deriveDepegSignal(price, pegRef);
+    if (primarySignal == null) continue;
+    const { bps, absBps, direction } = primarySignal;
     const threshold = getDepegThresholdBps(asset.pegType);
     const nativePegQuote = nativePegQuotes.get(asset.id);
-    const nativeSignal = nativePegQuote ? toPriceSignal(nativePegQuote.price, 1) : null;
+    const nativeSignal = nativePegQuote ? deriveDepegSignal(nativePegQuote.price, 1) : null;
     const dexRow = dexPriceRows.get(asset.id);
     const dexBps = dexRow && isTrustedDexPriceRow(dexRow, now, "depeg")
       ? Math.round(((dexRow.dex_price_usd / pegRef) - 1) * 10000)
@@ -487,20 +477,20 @@ export async function detectDepegEvents(
           : "large-cap";
     const nativeSupportsPrimaryDirection =
       nativeSignal != null &&
-      nativeSignal.absBps >= threshold &&
-      nativeSignal.direction === direction;
+      signalCrossesThreshold(nativeSignal, threshold) &&
+      signalsShareDirection(nativeSignal, direction);
     const nativeShowsRecovery = nativeSignal != null && nativeSignal.absBps < threshold;
     const nativeSupportsExistingDirection =
       existing != null &&
       nativeSignal != null &&
-      nativeSignal.absBps >= threshold &&
-      nativeSignal.direction === existing.direction;
+      signalCrossesThreshold(nativeSignal, threshold) &&
+      signalsShareDirection(nativeSignal, existing.direction as "above" | "below");
 
     if (absBps >= threshold && nativeSignal != null && !nativeSupportsPrimaryDirection) {
       if (nativeShowsRecovery) {
         if (existing) {
           stmts.push(
-            db.prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?").bind(now, price, existing.id),
+            db.prepare("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL WHERE id = ?").bind(now, existing.id),
           );
         }
         console.warn(
@@ -557,13 +547,17 @@ export async function detectDepegEvents(
       pegReference: number,
       reason: PendingDepegReason,
     ): D1PreparedStatement =>
-      db.prepare(
-        `INSERT INTO depeg_pending (
-           stablecoin_id, symbol, peg_type, direction, first_seen_bps, first_seen_at, first_price, peg_reference, reason
-         )
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(stablecoin_id) DO NOTHING`
-      ).bind(asset.id, asset.symbol, asset.pegType ?? "", dir, devBps, now, eventPrice, pegReference, reason);
+      buildUpsertPendingDepegStmt(db, {
+        stablecoinId: asset.id,
+        symbol: asset.symbol,
+        pegType: asset.pegType ?? "",
+        direction: dir,
+        bps: devBps,
+        seenAt: now,
+        price: eventPrice,
+        pegReference,
+        reason,
+      });
 
     const ctx: LoopContext = {
       db, now, asset, price, bps, absBps, direction, threshold,

@@ -23,7 +23,8 @@ import {
   fetchKrakenPrices,
 } from "../../lib/cex-tickers";
 import { fetchRedstonePrices, REDSTONE_TRACKED_SYMBOL_ALLOWLIST } from "../../lib/redstone";
-import { loadDexPriceRows, isTrustedDexPriceRow, loadDexPoolChallengers, loadDexPriceSources } from "../../lib/depeg-helpers";
+import { loadDexPriceRows, loadDexPoolChallengers, loadDexPriceSources } from "../../lib/depeg-helpers";
+import { isTrustedDexPriceRow } from "../../lib/depeg-trust-policy";
 import { fetchCurveOnchainPrices } from "../../lib/curve-onchain";
 import { CURVE_POOL_CONFIGS } from "../../lib/curve-pool-configs";
 import { CRVUSD_PRICE_AGGREGATOR, CRVUSD_PRICE_SELECTOR } from "../../lib/authoritative-price-sources";

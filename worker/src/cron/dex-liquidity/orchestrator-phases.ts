@@ -3,7 +3,7 @@ import { rethrowIfAborted } from "../../lib/abort";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { classifyPrimaryDepegTrust } from "../../lib/depeg-helpers";
+import { classifyPrimaryDepegTrust } from "../../lib/depeg-trust-policy";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../../lib/circuit-breaker";

@@ -34,6 +34,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0088     | `0088_api_key_audit_log.sql`                    | Add API key audit log table for tracking create/update/deactivate/rotate mutations             |
 | 0089     | `0089_api_key_pepper_version.sql`               | Add pepper_version column to api_keys for tracking which pepper generation hashed the secret   |
 | 0090     | `0090_api_key_request_stats.sql`                | Add retained minute-bucketed per-key request telemetry for admin load reporting                |
+| 0091     | `0091_depeg_pending_state_tracking.sql`         | Add rolling last-seen/peak tracking fields to depeg_pending for refreshable pending incidents  |
 
 ## Retired Individual Migrations
 

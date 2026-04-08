@@ -7,6 +7,7 @@ import { sumPegBuckets } from "@shared/lib/supply";
 import type { DepegEvent, PegSummaryCoin, StablecoinData } from "@shared/types/market";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "./constants";
 import { type DepegRow, rowToDepegEvent } from "./depeg-helpers";
+import { deriveDepegSignal } from "./depeg-signals";
 import { getFirstSeenDates } from "./db";
 
 export interface DerivePegAnalyticsOptions {
@@ -73,9 +74,7 @@ export async function derivePegAnalyticsSnapshot(
     if (asset?.price != null && typeof asset.price === "number" && Number.isFinite(asset.price)) {
       if (supply >= DEPEG_EVENT_MIN_SUPPLY_USD) {
         const pegRef = getPegReference(asset.pegType, pegRates, meta.commodityOunces);
-        if (pegRef > 0) {
-          currentDeviationBps = Math.round(((asset.price / pegRef) - 1) * 10000);
-        }
+        currentDeviationBps = deriveDepegSignal(asset.price, pegRef)?.bps ?? null;
       }
     }
 

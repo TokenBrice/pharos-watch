@@ -445,6 +445,7 @@ describe("detectDepegEvents", () => {
       s.includes("INSERT INTO depeg_pending")
     );
     expect(pendingInserts.length).toBeGreaterThanOrEqual(1);
+    expect(pendingInserts.some((sql) => sql.includes("ON CONFLICT(stablecoin_id) DO UPDATE SET"))).toBe(true);
 
     // Should NOT insert into depeg_events directly
     const eventInserts = preparedSqls.filter(s =>
@@ -639,7 +640,7 @@ describe("detectDepegEvents", () => {
       { peggedREAL: 0.18765951 },
     );
 
-    expect(preparedSqls.some((sql) => sql.includes("UPDATE depeg_events SET ended_at"))).toBe(true);
+    expect(preparedSqls.some((sql) => sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL"))).toBe(true);
   });
 
   it("skips NAV tokens", async () => {

@@ -24,33 +24,27 @@ import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
 import { fetchBinancePrices } from "../lib/cex-tickers";
 import {
   buildInsertDepegEventStmt,
-  classifyPrimaryDepegTrust,
-  isTrustedDexPriceRow,
   loadDexPriceRows,
   loadDexPoolChallengers,
 } from "../lib/depeg-helpers";
+import {
+  classifyPrimaryDepegTrust,
+  isTrustedDexPriceRow,
+} from "../lib/depeg-trust-policy";
 import { fetchCurrentNativePegQuotes } from "../lib/native-peg-quotes";
+import {
+  classifyDirectionalSignal,
+  deriveDepegSignal,
+  pickMoreSevereBps,
+} from "../lib/depeg-signals";
+import {
+  normalizePendingDepegRow,
+  type PendingDepegRow,
+  SELECT_PENDING_DEPEGS_SQL,
+} from "../lib/depeg-pending";
 import type { DepegEvent } from "@shared/types/market";
 import type { PegAssetBase } from "@shared/types/core";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
-
-interface PendingRow {
-  id: number;
-  stablecoin_id: string;
-  symbol: string;
-  peg_type: string;
-  direction: string;
-  first_seen_bps: number;
-  first_seen_at: number;
-  first_price: number;
-  peg_reference: number;
-  reason?: "large-cap" | "low-confidence" | "extreme-move";
-}
-
-function getNativePegAbsBps(price: number): number | null {
-  if (!Number.isFinite(price) || price <= 0) return null;
-  return Math.abs(Math.round((price - 1) * 10000));
-}
 
 /**
  * Process pending depeg records that require secondary confirmation.
@@ -74,8 +68,8 @@ export async function confirmPendingDepegs(
 ): Promise<void> {
   throwIfAborted(signal);
   const pending = await db
-    .prepare("SELECT id, stablecoin_id, symbol, peg_type, direction, first_seen_bps, first_seen_at, first_price, peg_reference, reason FROM depeg_pending")
-    .all<PendingRow>();
+    .prepare(SELECT_PENDING_DEPEGS_SQL)
+    .all<PendingDepegRow>();
 
   const rows = pending.results ?? [];
   if (rows.length === 0) return;
@@ -132,6 +126,7 @@ export async function confirmPendingDepegs(
 
   for (const row of rows) {
     throwIfAborted(signal);
+    const pendingState = normalizePendingDepegRow(row);
     // Guard: peg_reference is used as divisor below — skip if zero/negative
     if (!row.peg_reference || row.peg_reference <= 0) {
       stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
@@ -145,9 +140,10 @@ export async function confirmPendingDepegs(
     const secondaryBar = Math.round(threshold * DEPEG_SECONDARY_THRESHOLD_RATIO);
     const primaryTrust = asset ? classifyPrimaryDepegTrust(asset, now) : "unusable";
     const nativePegQuote = nativePegQuotes.get(row.stablecoin_id);
-    const nativePegAbsBps = nativePegQuote ? getNativePegAbsBps(nativePegQuote.price) : null;
-    const nativePegRecovered = nativePegAbsBps != null && nativePegAbsBps < threshold;
-    const nativePegStillDepegged = nativePegAbsBps != null && nativePegAbsBps >= threshold;
+    const nativeSignal = nativePegQuote ? deriveDepegSignal(nativePegQuote.price, 1) : null;
+    const nativeThresholdStatus = classifyDirectionalSignal(nativeSignal, threshold, pendingState.direction);
+    const nativePegRecovered = nativeThresholdStatus === "recover";
+    const nativePegStillDepegged = nativeThresholdStatus === "confirm";
 
     // If an open event was created by another path (e.g. direction change), clean up pending
     if (openSet.has(row.stablecoin_id)) {
@@ -159,7 +155,7 @@ export async function confirmPendingDepegs(
     if (nativePegRecovered) {
       stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
       console.log(
-        `[depeg-confirm] Cleared pending for ${row.symbol}: direct ${nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency ?? "native"} quote recovered to ${nativePegAbsBps}bps`,
+        `[depeg-confirm] Cleared pending for ${row.symbol}: direct ${nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency ?? "native"} quote recovered to ${nativeSignal?.absBps ?? "n/a"}bps`,
       );
       continue;
     }
@@ -170,10 +166,12 @@ export async function confirmPendingDepegs(
       if (price != null && typeof price === "number" && price > 0) {
         const pegRef = getPegReference(asset.pegType, pegRates, meta?.commodityOunces);
         if (pegRef > 0) {
-          const currentBps = Math.abs(Math.round(((price / pegRef) - 1) * 10000));
-          if (currentBps < threshold && !nativePegStillDepegged) {
+          const currentSignal = deriveDepegSignal(price, pegRef);
+          if (classifyDirectionalSignal(currentSignal, threshold, pendingState.direction) === "recover" && !nativePegStillDepegged) {
             stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
-            console.log(`[depeg-confirm] Cleared pending for ${row.symbol}: authoritative primary recovered to ${currentBps}bps`);
+            console.log(
+              `[depeg-confirm] Cleared pending for ${row.symbol}: authoritative primary recovered to ${currentSignal?.absBps ?? "n/a"}bps`,
+            );
             continue;
           }
         }
@@ -181,7 +179,7 @@ export async function confirmPendingDepegs(
     }
 
     // 2. Check age -- skip if too young (same cycle)
-    const age = now - row.first_seen_at;
+    const age = now - pendingState.firstSeenAt;
     if (age < DEPEG_PENDING_MIN_AGE_SEC) {
       continue; // Wait for next cycle
     }
@@ -194,13 +192,14 @@ export async function confirmPendingDepegs(
     }
 
     // 3. Fetch CoinGecko spot price
-    let offchainAgrees: boolean | null = null; // null = no data
+    let offchainStatus: ReturnType<typeof classifyDirectionalSignal> = "insufficient";
     const geckoId = meta?.geckoId;
-    if (nativePegQuote && nativePegAbsBps != null) {
-      offchainAgrees = nativePegAbsBps >= secondaryBar;
+    if (nativeSignal != null) {
+      offchainStatus = classifyDirectionalSignal(nativeSignal, secondaryBar, pendingState.direction);
       console.log(
-        `[depeg-confirm] ${row.symbol} direct ${nativePegQuote.pegCurrency} check: price=${nativePegQuote.price}, deviation=${nativePegAbsBps}bps, ` +
-        `bar=${secondaryBar}bps, agrees=${offchainAgrees}`,
+        `[depeg-confirm] ${row.symbol} direct ${nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency ?? "native"} check: ` +
+        `price=${nativePegQuote?.price ?? "n/a"}, deviation=${nativeSignal.absBps}bps, ` +
+        `bar=${secondaryBar}bps, status=${offchainStatus}`,
       );
     } else if (geckoId) {
       const primarySource = asset?.priceSource ?? null;
@@ -231,11 +230,11 @@ export async function confirmPendingDepegs(
           }
 
           if (offchainPrice && offchainPrice > 0) {
-            const offchainBps = Math.abs(Math.round(((offchainPrice / row.peg_reference) - 1) * 10000));
-            offchainAgrees = offchainBps >= secondaryBar;
+            const offchainSignal = deriveDepegSignal(offchainPrice, row.peg_reference);
+            offchainStatus = classifyDirectionalSignal(offchainSignal, secondaryBar, pendingState.direction);
             console.log(
-              `[depeg-confirm] ${row.symbol} ${offchainLabel} check: price=$${offchainPrice}, deviation=${offchainBps}bps, ` +
-              `bar=${secondaryBar}bps, agrees=${offchainAgrees}`
+              `[depeg-confirm] ${row.symbol} ${offchainLabel} check: price=$${offchainPrice}, deviation=${offchainSignal?.absBps ?? "n/a"}bps, ` +
+              `bar=${secondaryBar}bps, status=${offchainStatus}`
             );
           }
         }
@@ -246,50 +245,49 @@ export async function confirmPendingDepegs(
     }
 
     // 4. Read DEX median
-    let dexAgrees: boolean | null = null;
+    let dexStatus: ReturnType<typeof classifyDirectionalSignal> = "insufficient";
     const dexRow = dexPriceRows.get(row.stablecoin_id);
     if (dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg")) {
-      const dexBps = Math.abs(Math.round(
-        ((dexRow.dex_price_usd / row.peg_reference) - 1) * 10000
-      ));
-      dexAgrees = dexBps >= secondaryBar;
+      const dexSignal = deriveDepegSignal(dexRow.dex_price_usd, row.peg_reference);
+      dexStatus = classifyDirectionalSignal(dexSignal, secondaryBar, pendingState.direction);
       console.log(
-        `[depeg-confirm] ${row.symbol} DEX check: price=$${dexRow.dex_price_usd}, deviation=${dexBps}bps, ` +
-        `bar=${secondaryBar}bps, agrees=${dexAgrees}`
+        `[depeg-confirm] ${row.symbol} DEX check: price=$${dexRow.dex_price_usd}, deviation=${dexSignal?.absBps ?? "n/a"}bps, ` +
+        `bar=${secondaryBar}bps, status=${dexStatus}`
       );
     }
 
     // 4b. CEX ticker check
-    let cexAgrees: boolean | null = null;
+    let cexStatus: ReturnType<typeof classifyDirectionalSignal> = "insufficient";
     if (cexPrices) {
       const cexPrice = cexPrices.get(row.symbol.toUpperCase());
       if (cexPrice && cexPrice > 0) {
-        const cexBps = Math.abs(Math.round(((cexPrice / row.peg_reference) - 1) * 10000));
-        cexAgrees = cexBps >= secondaryBar;
+        const cexSignal = deriveDepegSignal(cexPrice, row.peg_reference);
+        cexStatus = classifyDirectionalSignal(cexSignal, secondaryBar, pendingState.direction);
         console.log(
-          `[depeg-confirm] ${row.symbol} CEX check: price=$${cexPrice}, deviation=${cexBps}bps, ` +
-          `bar=${secondaryBar}bps, agrees=${cexAgrees}`,
+          `[depeg-confirm] ${row.symbol} CEX check: price=$${cexPrice}, deviation=${cexSignal?.absBps ?? "n/a"}bps, ` +
+          `bar=${secondaryBar}bps, status=${cexStatus}`,
         );
       }
     }
 
     // 4c. Individual DEX pool check
-    let poolAgrees: boolean | null = null;
+    let poolStatus: ReturnType<typeof classifyDirectionalSignal> = "insufficient";
     const pools = poolChallengers.get(row.stablecoin_id);
     if (pools?.length) {
       for (const pool of pools) {
-        const poolBps = Math.abs(Math.round(((pool.price / row.peg_reference) - 1) * 10000));
-        if (poolBps >= secondaryBar) {
-          poolAgrees = true;
+        const poolSignal = deriveDepegSignal(pool.price, row.peg_reference);
+        const currentPoolStatus = classifyDirectionalSignal(poolSignal, secondaryBar, pendingState.direction);
+        if (currentPoolStatus === "confirm") {
+          poolStatus = "confirm";
           console.log(
             `[depeg-confirm] ${row.symbol} pool check: price=$${pool.price} (${pool.protocol}/${pool.chain}), ` +
-            `deviation=${poolBps}bps, bar=${secondaryBar}bps, agrees=true`,
+            `deviation=${poolSignal?.absBps ?? "n/a"}bps, bar=${secondaryBar}bps, status=confirm`,
           );
           break;
         }
       }
-      if (poolAgrees !== true) {
-        poolAgrees = false;
+      if (poolStatus !== "confirm") {
+        poolStatus = "recover";
         console.log(
           `[depeg-confirm] ${row.symbol} pool check: ${pools.length} pools, none diverge ≥${secondaryBar}bps`,
         );
@@ -302,8 +300,11 @@ export async function confirmPendingDepegs(
     // (DL→CG or CG) sources often share the same underlying data, making the
     // confirmation circular rather than independent.  Require at least one
     // hard secondary source (DEX, CEX, or individual pool) to promote.
-    const hasHardConfirmation = dexAgrees === true || cexAgrees === true || poolAgrees === true;
-    if (hasHardConfirmation || (offchainAgrees === true && row.reason !== "low-confidence")) {
+    const hasHardConfirmation =
+      dexStatus === "confirm" ||
+      cexStatus === "confirm" ||
+      poolStatus === "confirm";
+    if (hasHardConfirmation || (offchainStatus === "confirm" && pendingState.reason !== "low-confidence")) {
       // At least one secondary source confirms -- promote to real event (INSERT + DELETE atomically)
       const authoritativePrice =
         asset != null &&
@@ -312,23 +313,32 @@ export async function confirmPendingDepegs(
         typeof asset.price === "number"
           ? asset.price
           : null;
-      const useCurrentPrimary = authoritativePrice != null;
-      const currentPrice = authoritativePrice ?? row.first_price;
-      const currentBps = useCurrentPrimary
-        ? Math.round(((authoritativePrice / row.peg_reference) - 1) * 10000)
-        : row.first_seen_bps;
+      const currentSignal =
+        authoritativePrice != null
+          ? deriveDepegSignal(authoritativePrice, row.peg_reference)
+          : null;
+      const currentDirectionalSignal =
+        classifyDirectionalSignal(currentSignal, threshold, pendingState.direction) === "confirm"
+          ? currentSignal
+          : null;
+      const peakDeviationBps =
+        pickMoreSevereBps(pendingState.peakSeenBps, currentDirectionalSignal?.bps)
+        ?? pendingState.peakSeenBps;
+      const peakPrice =
+        peakDeviationBps === currentDirectionalSignal?.bps
+          ? authoritativePrice ?? pendingState.peakPrice
+          : pendingState.peakPrice;
       const event: DepegEvent = {
         id: 0,
         stablecoinId: row.stablecoin_id,
         symbol: row.symbol,
         pegType: row.peg_type,
-        direction: row.direction as "above" | "below",
-        peakDeviationBps:
-          Math.abs(currentBps) > Math.abs(row.first_seen_bps) ? currentBps : row.first_seen_bps,
-        startedAt: row.first_seen_at,
+        direction: pendingState.direction,
+        peakDeviationBps,
+        startedAt: pendingState.firstSeenAt,
         endedAt: null,
-        startPrice: row.first_price,
-        peakPrice: currentPrice,
+        startPrice: pendingState.firstPrice,
+        peakPrice,
         recoveryPrice: null,
         pegReference: row.peg_reference,
         source: "live",
@@ -340,28 +350,36 @@ export async function confirmPendingDepegs(
       );
 
       const confirmedBy = [
-        offchainAgrees ? (asset?.priceSource?.startsWith("coingecko") ? "DefiLlama" : "CoinGecko") : null,
-        dexAgrees ? "DEX" : null,
-        cexAgrees ? "CEX" : null,
-        poolAgrees ? "Pool" : null,
+        offchainStatus === "confirm" ? (asset?.priceSource?.startsWith("coingecko") ? "DefiLlama" : "CoinGecko") : null,
+        dexStatus === "confirm" ? "DEX" : null,
+        cexStatus === "confirm" ? "CEX" : null,
+        poolStatus === "confirm" ? "Pool" : null,
       ].filter(Boolean).join("+");
       console.log(
-        `[depeg-confirm] PROMOTED ${row.symbol}: ${row.first_seen_bps}bps confirmed by ${confirmedBy}${row.reason ? ` (${row.reason})` : ""}`
+        `[depeg-confirm] PROMOTED ${row.symbol}: ${pendingState.firstSeenBps}bps confirmed by ${confirmedBy}${pendingState.reason ? ` (${pendingState.reason})` : ""}`
       );
-    } else if (offchainAgrees === false && dexAgrees === false) {
+    } else if (
+      (offchainStatus === "recover" || offchainStatus === "contradict")
+      && (dexStatus === "recover" || dexStatus === "contradict")
+    ) {
       // Both secondary sources disagree, pools didn't confirm either -- confirmed false positive
       stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
       console.log(
         `[depeg-confirm] Rejected false positive for ${row.symbol}: both off-chain and DEX checks disagree`
       );
-    } else if (offchainAgrees === false && dexAgrees === null) {
+    } else if (
+      (offchainStatus === "recover" || offchainStatus === "contradict")
+      && dexStatus === "insufficient"
+      && cexStatus !== "confirm"
+      && poolStatus !== "confirm"
+    ) {
       // Off-chain check disagrees, no DEX data, pools didn't confirm -- lean toward false positive
       stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
       console.log(
         `[depeg-confirm] Rejected ${row.symbol}: off-chain check disagrees, no DEX data`
       );
     }
-    // else: offchainAgrees === null and dexAgrees === null (or null+false) -- keep pending, retry next cycle
+    // else: insufficient secondary data or mixed evidence -- keep pending and retry next cycle
   }
 
   // Execute all collected mutations atomically
