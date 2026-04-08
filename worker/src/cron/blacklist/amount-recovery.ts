@@ -103,6 +103,13 @@ export async function enrichRowBalances(
     const blockForBalance = row.block_number - 1;
 
     if (config.chain.type === "tron") {
+      // Tron has no historical balance API — mark blacklist/unblacklist
+      // events as permanently unavailable so they don't re-enter backfill.
+      if (row.event_type !== "destroy") {
+        row.amount_status = "permanently_unavailable";
+        row.amount_source = "unavailable";
+        markRecoveryAttempt(row, "trongrid", "provider_unsupported");
+      }
       continue;
     } else if (config.chain.evmChainId != null) {
       counters.attempted++;
@@ -355,6 +362,18 @@ export async function backfillAmounts(
         }
       }
     } else if (config.chain.type === "tron") {
+      stmts.push(
+        db.prepare(
+          `UPDATE blacklist_events
+           SET amount_status = 'permanently_unavailable',
+               amount_source = 'unavailable',
+               amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
+               amount_last_attempted_at = ?,
+               amount_last_error_class = 'provider_unsupported',
+               amount_last_provider = 'trongrid'
+           WHERE id = ?`,
+        ).bind(attemptAt, row.id),
+      );
       continue;
     } else if (config.chain.evmChainId != null) {
       lastProvider = "chain_rpc";
