@@ -71,7 +71,7 @@ async function fetchEvmBalanceAtTag(
 }
 
 // Fetch historical balanceOf via dRPC archive nodes.
-// dRPC supports eth_call at arbitrary historical blocks on all L2 chains.
+// dRPC supports eth_call at arbitrary historical blocks on all supported EVM chains.
 async function fetchBalanceViaDrpc(
   chainId: string,
   contractAddress: string,
