@@ -334,12 +334,12 @@ export async function fetchTronTokenCurrentBalance(
     });
 
     const balances = json?.data?.[0]?.trc20;
-    if (!Array.isArray(balances) || balances.length === 0) return 0;
+    if (!Array.isArray(balances) || balances.length === 0) return null;
 
     const rawAmount = balances
       .map((entry) => entry[config.contractAddress])
       .find((value): value is string => typeof value === "string" && value.length > 0);
-    if (!rawAmount) return 0;
+    if (!rawAmount) return null;
 
     return bigIntToDecimal(BigInt(rawAmount), config.decimals);
   } catch (error) {

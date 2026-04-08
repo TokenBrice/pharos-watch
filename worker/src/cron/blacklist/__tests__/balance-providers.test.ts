@@ -74,7 +74,7 @@ describe("fetchTronTokenCurrentBalance", () => {
     expect(amount).toBe(50_000_003.770001);
   });
 
-  it("returns zero when the account has no tracked token balance entry", async () => {
+  it("returns null when the account has no tracked token balance entry", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
@@ -98,7 +98,7 @@ describe("fetchTronTokenCurrentBalance", () => {
       createBudget(10),
     );
 
-    expect(amount).toBe(0);
+    expect(amount).toBeNull();
   });
 });
 
