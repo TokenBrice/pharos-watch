@@ -142,6 +142,10 @@ export function computeBlacklistActiveSummaryStats(
   let activeAmountGapCount = 0;
 
   for (const record of activeRecords) {
+    // Destroyed funds are no longer frozen — exclude from the frozen total
+    // and gap counts. Only count toward activeAddressCount (set below from
+    // array length) so the ledger retains a record of all blacklisted addresses.
+    if (record.destroyedAt != null) continue;
     if (record.frozenAmountUsd == null) {
       activeAmountGapCount++;
       continue;

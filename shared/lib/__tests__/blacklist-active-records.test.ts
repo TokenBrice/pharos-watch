@@ -172,6 +172,47 @@ describe("buildBlacklistActiveRecords", () => {
 });
 
 describe("computeBlacklistActiveSummaryStats", () => {
+  it("excludes destroyed records from activeFrozenTotal", () => {
+    const records = [
+      {
+        id: "1",
+        stablecoin: "USDT" as const,
+        chainId: "ethereum",
+        chainName: "Ethereum",
+        address: "0x1",
+        blacklistedAt: 10,
+        blacklistTxHash: "0x1",
+        destroyedAt: null,
+        destroyTxHash: null,
+        frozenAmountNative: 100,
+        frozenAmountUsd: 100,
+        amountStatus: "resolved" as const,
+        amountSource: "event",
+      },
+      {
+        id: "2",
+        stablecoin: "USDT" as const,
+        chainId: "ethereum",
+        chainName: "Ethereum",
+        address: "0x2",
+        blacklistedAt: 11,
+        blacklistTxHash: "0x2",
+        destroyedAt: 12,
+        destroyTxHash: "0x3",
+        frozenAmountNative: 500,
+        frozenAmountUsd: 500,
+        amountStatus: "resolved" as const,
+        amountSource: "destroy_event",
+      },
+    ];
+
+    const stats = computeBlacklistActiveSummaryStats(records);
+    // Only the non-destroyed record contributes to frozen total
+    expect(stats.activeFrozenTotal).toBe(100);
+    // Both records still count as active addresses
+    expect(stats.activeAddressCount).toBe(2);
+  });
+
   it("sums frozen totals and counts gaps", () => {
     const records = [
       {
