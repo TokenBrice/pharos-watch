@@ -62,7 +62,7 @@ describe("handlePegSummary", () => {
     const res = await handlePegSummary(db);
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      coins: Array<{ id: string; methodologyVersion: string }>;
+      coins: Array<{ id: string; methodologyVersion: string; currentDeviationBps: number | null }>;
       summary: {
         activeDepegCount: number;
         medianDeviationBps: number;
@@ -79,7 +79,7 @@ describe("handlePegSummary", () => {
     expect(Array.isArray(body.coins)).toBe(true);
     expect(body.summary.activeDepegCount).toBe(0);
     expect(body.summary.medianDeviationBps).toBe(0);
-    expect(body.summary.totalTracked).toBe(body.coins.length);
+    expect(body.summary.totalTracked).toBe(body.coins.filter((coin) => coin.currentDeviationBps !== null).length);
     expect(body.summary.worstCurrent).toEqual({ id: "usdt-tether", symbol: "USDT", bps: 0 });
     expect(body.coins.some((coin) => coin.id === "usdt-tether")).toBe(true);
     expect(body.coins[0].methodologyVersion).toBe(body.methodology.version);
@@ -224,6 +224,43 @@ describe("handlePegSummary", () => {
     const fpi = data.coins.find((c) => c.id === "fpi-frax");
     expect(fpi).toBeDefined();
     expect(fpi!.currentDeviationBps).toBeNull();
+  });
+
+  it("counts only coins with a live deviation in the summary denominator", async () => {
+    const db = makePegSummaryDb([
+      makeAsset({ id: "usdt-tether", symbol: "USDT" }),
+      makeAsset({
+        id: "fpi-frax",
+        name: "Frax Price Index",
+        symbol: "FPI",
+        pegType: "peggedVAR",
+        price: 1.12,
+      }),
+      makeAsset({
+        id: "cjpy-yamato",
+        symbol: "CJPY",
+        name: "Convertible JPY Token",
+        pegType: "peggedJPY",
+        price: 0.005,
+        priceSource: "coingecko",
+        priceConfidence: "single-source",
+        priceUpdatedAt: nowSec,
+        circulating: { peggedJPY: 500_000 },
+      }),
+    ]);
+    const res = await handlePegSummary(db);
+    const body = (await res.json()) as {
+      coins: Array<{ id: string; currentDeviationBps: number | null }>;
+      summary: {
+        totalTracked: number;
+      };
+    };
+
+    expect(body.coins.length).toBeGreaterThanOrEqual(3);
+    expect(body.coins.find((coin) => coin.id === "usdt-tether")?.currentDeviationBps).not.toBeNull();
+    expect(body.coins.find((coin) => coin.id === "fpi-frax")?.currentDeviationBps).toBeNull();
+    expect(body.coins.find((coin) => coin.id === "cjpy-yamato")?.currentDeviationBps).toBeNull();
+    expect(body.summary.totalTracked).toBe(1);
   });
 
   it("counts non-USD coins within the non-USD threshold as at peg", async () => {

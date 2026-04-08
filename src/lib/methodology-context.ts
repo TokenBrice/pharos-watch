@@ -158,14 +158,14 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   },
   coinsAtPeg: {
     title: "Coins at Peg",
-    summary: "Tracked coins currently inside their peg threshold rather than in an active depeg state.",
+    summary: "Peg-monitored coins currently inside their peg threshold rather than in an active depeg state.",
     methodologyPath: "/methodology/#pegscore-dews-methodology",
     versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   },
   medianDeviation: {
     title: "Median Deviation",
-    summary: "Median current deviation in basis points across tracked coins, used as a market-noise read rather than a score.",
+    summary: "Median current deviation in basis points across peg-monitored coins, used as a market-noise read rather than a score.",
     methodologyPath: "/methodology/#pegscore-dews-methodology",
     versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,

@@ -718,7 +718,7 @@ Results are ordered by `startedAt` descending (most recent first).
 
 ### `GET /api/peg-summary`
 
-Composite peg scores and aggregate statistics for all tracked stablecoins. Scores are computed over a 4-year window from live depeg events, DEX prices, and current prices.
+Composite peg scores and aggregate statistics for tracked stablecoins. Scores are computed over a 4-year window from live depeg events, DEX prices, and current prices. The `coins` array can still include NAV / other non-peg rows with `currentDeviationBps = null`, while the summary counters only cover rows with a live peg-status deviation.
 
 **Cache:** realtime
 
@@ -750,7 +750,7 @@ Composite peg scores and aggregate statistics for all tracked stablecoins. Score
 | `pegType`             | `string`                                                   | DefiLlama peg type                                                                                                                                                  |
 | `pegCurrency`         | `string`                                                   | Peg currency code (`USD`, `EUR`, `GOLD`, etc.)                                                                                                                      |
 | `governance`          | `string`                                                   | `"centralized"`, `"centralized-dependent"`, `"decentralized"`                                                                                                       |
-| `currentDeviationBps` | `number \| null`                                           | Live price deviation from peg (basis points, signed). `null` for coins with current supply below the live depeg-event floor or when price / peg-reference inputs are missing. |
+| `currentDeviationBps` | `number \| null`                                           | Live price deviation from peg (basis points, signed). `null` for NAV / non-fixed-peg rows, for coins with current supply below the live depeg-event floor, or when price / peg-reference inputs are missing. |
 | `depegEventCoverageLimited` | `boolean`                                           | Present when the coin's current supply is below the live depeg-event floor (`$1M`). Use this to distinguish "below coverage floor" from generic missing-price cases when `currentDeviationBps` is `null`. |
 | `priceSource`         | `string`                                                   | Primary price source label used for current deviation (`defillama-list`, `coingecko`, composite agreement labels such as `binance+coingecko+kraken`, `protocol-redeem`, `defillama-contract`, `coinmarketcap`, `dexscreener`, `cached`, etc.). High-confidence consensus can expose the agreeing cluster label even when the published price is the cluster median. |
 | `priceConfidence`     | `"high" \| "single-source" \| "low" \| "fallback" \| null` | Confidence tier attached to the primary price input                                                                                                                 |
@@ -787,10 +787,10 @@ Composite peg scores and aggregate statistics for all tracked stablecoins. Score
 | Field                  | Type                          | Description                                                                                                    |
 | ---------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `activeDepegCount`     | `number`                      | Coins with an open depeg event                                                                                 |
-| `medianDeviationBps`   | `number`                      | Median absolute deviation across all tracked coins                                                             |
-| `worstCurrent`         | `{ id, symbol, bps } \| null` | Coin with the largest current deviation                                                                        |
-| `coinsAtPeg`           | `number`                      | Coins with current deviation below their live depeg threshold (100 bps for USD pegs, 150 bps for non-USD pegs) |
-| `totalTracked`         | `number`                      | Total coins in the response                                                                                    |
+| `medianDeviationBps`   | `number`                      | Median absolute deviation across rows with a live current deviation                                            |
+| `worstCurrent`         | `{ id, symbol, bps } \| null` | Coin with the largest current deviation among rows with a live current deviation                               |
+| `coinsAtPeg`           | `number`                      | Rows with a live current deviation that are below their live depeg threshold (100 bps for USD pegs, 150 bps for non-USD pegs) |
+| `totalTracked`         | `number`                      | Rows included in the live peg-status aggregate (`currentDeviationBps !== null`)                               |
 | `depegEventsToday`     | `number`                      | Number of depeg events whose `startedAt` is in the current UTC day                                             |
 | `depegEventsYesterday` | `number`                      | Number of depeg events whose `startedAt` is in the previous UTC day                                            |
 | `fallbackPegRates`     | `string[]`                    | _(optional)_ pegType keys using stale FX fallback rates                                                        |

@@ -165,6 +165,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
   const allAbsBps: number[] = [];
   let worstCurrent: { id: string; symbol: string; bps: number } | null = null;
   let coinsAtPeg = 0;
+  let totalTracked = 0;
 
   for (const meta of TRACKED_META_BY_ID.values()) {
     const isNavToken = meta.flags.navToken === true;
@@ -242,6 +243,8 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     // Summary aggregation
     if (!isNavToken && pegData.activeDepeg) activeDepegCount++;
     if (currentBps !== null) {
+      // Keep summary aggregates aligned to rows with a live peg status.
+      totalTracked++;
       const absBps = Math.abs(currentBps);
       allAbsBps.push(absBps);
       const pegThreshold = getDepegThresholdBps(pegData.pegType || asset?.pegType);
@@ -282,7 +285,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       medianDeviationBps: medianBps,
       worstCurrent,
       coinsAtPeg,
-      totalTracked: coins.length,
+      totalTracked,
       depegEventsToday,
       depegEventsYesterday,
       ...(fallbackPegTypes.length > 0 ? { fallbackPegRates: fallbackPegTypes } : {}),

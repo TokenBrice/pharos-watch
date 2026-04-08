@@ -30,7 +30,7 @@ export function DepegTrackerStats({ stats }: DepegTrackerStatsProps) {
         title={<MethodologyLabel topic="coinsAtPeg">Coins at Peg</MethodologyLabel>}
         value={stats.coinsAtPeg}
         valueClassName="text-2xl font-bold font-mono tabular-nums"
-        subtext={`of ${stats.totalTracked} tracked`}
+        subtext={`of ${stats.totalTracked} with live peg status`}
       />
 
       <MetricStatCard
@@ -38,15 +38,15 @@ export function DepegTrackerStats({ stats }: DepegTrackerStatsProps) {
         title={<MethodologyLabel topic="medianDeviation">Median Deviation</MethodologyLabel>}
         value={`${stats.medianDeviationBps} bps`}
         valueClassName="text-2xl font-bold font-mono tabular-nums"
-        subtext="across all coins"
+        subtext="across live peg-status rows"
       />
 
       <MetricStatCard
         borderColorClass="border-l-violet-500"
-        title="Total Tracked"
+        title="Peg Monitored"
         value={stats.totalTracked}
         valueClassName="text-2xl font-bold font-mono tabular-nums"
-        subtext="stablecoins monitored"
+        subtext="with live peg status"
       />
 
       <MetricStatCard
