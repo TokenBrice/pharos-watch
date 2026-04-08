@@ -109,7 +109,7 @@ describe("psi-replay", () => {
     expect(replay.input.peakDeviationFallbackCount).toBe(0);
   });
 
-  it("drops replay contributors whose restored daily price is back inside threshold", () => {
+  it("includes multi-day events with sub-threshold daily prices (matching live cron)", () => {
     const day = 1_746_384_000;
     const now = day + DAY;
     const supplyByCoin = buildSupplySnapshotMap([
@@ -134,8 +134,12 @@ describe("psi-replay", () => {
       dewsByDay: new Map(),
     });
 
-    expect(replay.input.depegs).toEqual([]);
-    expect(replay.input.historicalPriceCoverageCount).toBe(0);
+    // Multi-day active events contribute with their daily price regardless
+    // of threshold, matching the live cron behavior.
+    expect(replay.input.depegs).toEqual([
+      { bps: -50, mcapUsd: 100_000_000_000, depegAgeDays: 1 },
+    ]);
+    expect(replay.input.historicalPriceCoverageCount).toBe(1);
     expect(replay.input.peakDeviationFallbackCount).toBe(0);
   });
 

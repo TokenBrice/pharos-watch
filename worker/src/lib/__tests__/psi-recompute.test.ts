@@ -404,7 +404,7 @@ describe("buildStabilityInputForDay", () => {
     expect(result.peakDeviationFallbackCount).toBe(0);
   });
 
-  it("drops later replay days when the restored daily price is back inside threshold", () => {
+  it("includes multi-day events with sub-threshold daily prices (matching live cron behavior)", () => {
     const day = 40 * DAY;
     const now = day + DAY;
     const supplyByCoin = buildSupplySnapshotMap([
@@ -423,9 +423,18 @@ describe("buildStabilityInputForDay", () => {
 
     const result = buildStabilityInputForDay(day, now, events, supplyByCoin);
 
-    expect(result.depegCount).toBe(0);
-    expect(result.depegs).toEqual([]);
-    expect(result.historicalPriceCoverageCount).toBe(0);
+    // Multi-day active events contribute with their daily price deviation
+    // regardless of threshold, matching the live cron which includes all
+    // active depegs without threshold filtering.
+    expect(result.depegCount).toBe(1);
+    expect(result.depegs).toEqual([
+      {
+        bps: -70,
+        mcapUsd: 2_000_000,
+        depegAgeDays: 3,
+      },
+    ]);
+    expect(result.historicalPriceCoverageCount).toBe(1);
     expect(result.peakDeviationFallbackCount).toBe(0);
   });
 

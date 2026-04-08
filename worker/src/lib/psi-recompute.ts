@@ -78,7 +78,11 @@ function computeHistoricalEventBps(
       };
     }
 
-    if (Math.abs(boundedHistoricalBps) < thresholdBps) {
+    // Only gate on threshold within the peak-floor window (start day) to drop
+    // same-day wicks that recover before UTC close.  For multi-day events the
+    // daily price is used regardless of threshold — matching the live cron,
+    // which includes all active depegs without threshold filtering.
+    if (withinPeakFloorWindow && Math.abs(boundedHistoricalBps) < thresholdBps) {
       return null;
     }
 
