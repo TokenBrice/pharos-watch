@@ -67,35 +67,6 @@ export function StatusSection({
   );
 }
 
-function PriorityLaneLink({ section, index }: { section: DashboardSection; index: number }) {
-  return (
-    <a
-      href={`#${section.id}`}
-      className={cn(
-        "pharos-focus-ring group flex items-start justify-between gap-4 border-t border-border/60 py-3.5 first:border-t-0",
-        "transition-colors hover:text-foreground",
-      )}
-    >
-      <div className="min-w-0 space-y-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-base leading-none text-muted-foreground/80 dark:text-white/35">{String(index + 1).padStart(2, "0")}</span>
-          <p className="pharos-kicker">{section.label}</p>
-        </div>
-        <div className="text-base font-semibold tracking-tight text-foreground">{section.title}</div>
-        <div className="text-xs leading-relaxed text-muted-foreground">{section.summary}</div>
-      </div>
-      <span
-        className={cn(
-          "rounded-full border border-border/60 bg-background/55 px-2.5 py-1 text-[11px] font-medium text-foreground",
-          section.valueClassName,
-        )}
-      >
-        {section.value}
-      </span>
-    </a>
-  );
-}
-
 export function NoticeRail({ notices }: { notices: DashboardNotice[] }) {
   if (notices.length === 0) return null;
 
