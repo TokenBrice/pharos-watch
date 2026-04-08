@@ -225,10 +225,10 @@ Uses the structured benchmark cache refreshed daily by `fetch-tbill-rate`. USD d
 | BUIDL | 20 | BlackRock fund, 0.20% management fee |
 | USYC | 50 | Hashnote fund, modeled as ~10% performance fee at a 5% T-bill baseline |
 | YLDS  | 50 | Figure Markets, T-bill rate - 50 bps formula |
-| USTB  | 15 | Superstate, 0.15% management fee |
 | mTBILL | 0 | Midas, tracks T-bill rate directly |
 | OUSG  | 50 | Ondo US Government Bond fund, 0.50% management fee |
-| thBILL | 0 | Theo thBILL, modeled as Treasury-rate passthrough |
+
+Note: USTB and thBILL were previously rate-derived but have been promoted to Tier 1 `ON_CHAIN_RATE_CONFIGS` (ERC-4626 `convertToAssets`).
 
 Rate-derived runs after Tier 3 in the resolution loop and participates in the `is_best` selection like any other source. For tokens that also have price-derived or DL sources, the highest-APY source wins.
 

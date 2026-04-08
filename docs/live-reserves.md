@@ -324,6 +324,7 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 | Adapter                    | Primary input               | Semantics                            | Configured coins |
 | -------------------------- | --------------------------- | ------------------------------------ | ---------------- |
 | `accountable`              | `http-json`                 | `protocol-reserve`                   | 7                |
+| `anzen-usdz`              | `http-json`                 | `single-asset`                       | 1                |
 | `asymmetry`                | `http-json`                 | `collateral-mix`                     | 1                |
 | `btcfi`                    | `http-json`                 | `collateral-mix`                     | 1                |
 | `chainlink-nav`            | `onchain-evm`               | `single-asset`                       | 3                |
@@ -331,19 +332,20 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 | `circle-transparency`      | `http-html`                 | `attestation-mix`                    | 2                |
 | `collateral-positions-api` | `http-json`                 | `collateral-mix`                     | 2                |
 | `crvusd`                   | `http-json`                 | `collateral-mix`                     | 1                |
-| `curated-validated`        | `onchain-evm`               | `attestation-mix` / `collateral-mix` | 23               |
+| `curated-validated`        | `onchain-evm`               | `attestation-mix` / `collateral-mix` | 24               |
 | `dola-inverse`             | `http-json`                 | `collateral-mix`                     | 1                |
 | `erc4626-single-asset`     | `onchain-evm`               | `single-asset`                       | 2                |
 | `ethena`                   | `http-json`                 | `collateral-mix`                     | 1                |
-| `evm-branch-balances`      | `onchain-evm`               | `collateral-mix`                     | 3                |
+| `evm-branch-balances`      | `onchain-evm`               | `collateral-mix`                     | 6                |
 | `falcon`                   | `http-json`                 | `collateral-mix`                     | 1                |
 | `fdusd-transparency`       | `http-html`                 | `attestation-mix`                    | 1                |
-| `frax`                     | `http-json`                 | `attestation-mix`                    | 2                |
+| `frax`                     | `http-json`                 | `attestation-mix`                    | 1                |
+| `frax-balance-sheet`       | `http-json`                 | `attestation-mix`                    | 2                |
 | `fx`                       | `http-json`                 | `collateral-mix`                     | 1                |
 | `gho`                      | `onchain-evm`               | `protocol-reserve`                   | 1                |
 | `infinifi`                 | `http-json`                 | `collateral-mix`                     | 1                |
 | `liquity-v1`               | `onchain-evm`               | `single-asset`                       | 1                |
-| `m0`                       | `http-json`                 | `protocol-reserve`                   | 4                |
+| `m0`                       | `http-json`                 | `protocol-reserve`                   | 5                |
 | `mento`                    | `http-html`                 | `collateral-mix`                     | 3                |
 | `openeden-usdo`            | `http-json`                 | `collateral-mix`                     | 1                |
 | `re-metrics`               | `http-html`                 | `collateral-mix`                     | 1                |

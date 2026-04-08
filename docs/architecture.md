@@ -432,7 +432,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
 │   ├── mint-burn.ts              # Mint/burn flow, event, and sync contracts
 │   └── chains.ts                 # ChainSummary, ChainsResponse, ChainHealthFactors, HealthBand
 └── lib/
-    ├── api-endpoints.ts          # Authoritative endpoint metadata + public-api/site-data policy + static worker dependency hints + status/smoke/strict-contract helpers
+    ├── api-endpoints/             # Authoritative endpoint metadata + public-api/site-data policy + static worker dependency hints + status/smoke/strict-contract helpers (folderized module surface)
     ├── chain-aggregator.ts       # aggregateChains() — builds ChainSummary list from stablecoins cache + report-card snapshot
     ├── chain-health.ts           # Pure Chain Health Score computation (quality 30%, chain environment 20%, concentration 20%, peg stability 20%, backing diversity 10%)
     ├── chain-provider-registry.ts # Runtime-neutral CoinGecko/DexScreener/GeckoTerminal chain slug registry

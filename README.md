@@ -20,7 +20,7 @@ Public-facing analytics dashboard tracking 188 stablecoins in repo metadata: 178
 - **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
 - **Stablecoin Cemetery** — 87 dead stablecoins documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
-- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 144 configured assets
+- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 140 configured assets
 - **Detail pages** — full analytics dossiers for tracked live assets plus dedicated pre-launch detail views, with conditional reserve, redemption backstop, liquidity, and safety surfaces when data exists
 - **Public status page + private operator admin** — read-only system health on `/status/`, plus Access-gated monitoring and recovery controls on `ops.pharos.watch/admin/`
 - **Backing type breakdown** — RWA-backed, crypto-backed, and algorithmic
@@ -65,6 +65,7 @@ All external API calls and on-chain contract reads go through the Cloudflare Wor
 | [CoinMarketCap](https://coinmarketcap.com/)                             | Fallback price enrichment for assets with CMC slugs                                                        | 15 min (rate-limited to 1/hour)   |
 | Direct protocol redemption contract reads                               | Authoritative redeem prices for selected wrapper assets such as Cap cUSD and infiniFi iUSD                | 15 min                            |
 | Protocol reserve APIs, dashboards, and on-chain accounting reads        | Live reserve composition for live-enabled assets                                                           | Hourly                            |
+| [Dune Sim API](https://sim.dune.com/)                                   | EVM token balances and DeFi positions for treasury stable-exposure tracking                                | Daily                             |
 | [Etherscan v2](https://etherscan.io/)                                   | USDC, USDT, PAXG, XAUT, PYUSD, and USD1 freeze/blacklist events (EVM chains)                              | Hourly                            |
 | [TronGrid](https://www.trongrid.io/)                                    | USDT and USD1 freeze/blacklist events on Tron                                                              | Hourly                            |
 | [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/)         | RPC reads for blacklist balance enrichment (dRPC/Alchemy) and Ethereum mint/burn event ingestion (Alchemy) | Hourly / 20 min                   |
@@ -172,6 +173,9 @@ functions/                        Cloudflare Pages Functions for same-origin web
 ├── api/admin/[[path]].ts         Same-origin admin proxy from `ops.pharos.watch` to `ops-api.pharos.watch`
 ├── lib/ops-env.ts                Shared Pages Functions env contract for ops-host gating and admin proxying
 ├── lib/ops-origin.ts             Shared ops-origin resolution helper
+├── lib/proxy-utils.ts            Shared proxy request/response helpers
+├── lib/request-attribution.ts    Request source attribution for analytics counters
+├── lib/upstream-proxy.ts         Generic upstream proxy with shared-secret injection
 ├── lib/site-api-env.ts           Shared Pages Functions env contract for the `/_site-data/*` proxy
 └── lib/site-data-origin.ts       Shared site-data host-allowlist helper
 
@@ -226,7 +230,7 @@ Cloudflare Worker (API layer)
   ├── Cron: 20 * * * *                          → yield sync
   ├── Cron: 25 */4 * * *                        → supplemental yield sync
   ├── Cron: 2,7,12,17,22,27,32,37,42,47,52,57 * * * * → Telegram subscriber alerts
-  ├── Cron: 0 8 * * *                           → supply snapshot + safety-grade snapshot + T-bill rate + PSI daily snapshot + USDS status
+  ├── Cron: 0 8 * * *                           → supply snapshot + safety-grade snapshot + T-bill rate + PSI daily snapshot + USDS status + treasury stable exposure
   ├── Cron: 5 8 * * *                           → Bluechip sync + daily digest + weekly recap (Mondays) + discovery scan (Mondays)
   └── Cron: 0 6 1 * *                           → monthly yield coverage audit
 
@@ -278,11 +282,19 @@ Cloudflare D1 (SQLite database)
   ├── cron_leases          → single-writer cron execution fencing
   ├── cron_runs            → cron execution log for health monitoring
   ├── cron_run_progress    → per-job cron progress tracking
+  ├── cron_slot_executions → cron slot execution deduplication tracking
   ├── daily_digest         → AI-generated daily market summaries
   ├── admin_idempotency_keys → idempotency keys for admin mutations
   ├── feedback_submissions → durable feedback submission log
   ├── feedback_rate_limit  → IP-based rate limiting for feedback submissions
   ├── public_api_rate_limit → Distributed per-minute buckets for non-admin public API traffic
+  ├── api_keys             → API key registrations for authenticated public API access
+  ├── api_key_rate_limit   → per-key rate-limit state for authenticated API consumers
+  ├── api_key_audit_log    → audit trail for API key lifecycle events
+  ├── api_request_source_stats → per-source API request attribution counters
+  ├── api_request_consumer_stats → per-consumer API request attribution counters
+  ├── site_data_request_stats → site-data proxy request attribution counters
+  ├── treasury_stable_exposure_history → daily treasury stablecoin-exposure snapshots
   └── kv_config            → general key-value config store for runtime settings
 
 Cloudflare Pages
@@ -315,7 +327,7 @@ For the canonical delivery workflow (including worktree merge flow and the repo 
 For the full Worker, Pages Functions, and frontend runtime binding table, see [.env.example](./.env.example) and [docs/worker-infrastructure.md](./docs/worker-infrastructure.md).
 For mint/burn ingestion diagnostics and recovery, see `agents/process/mint-burn-ingestion.md`.
 
-1. **Validate gate:** `npm run audit:deps` → `npm run lint` → `npm run typecheck` → `npm run check:worker-boundary` → `npm run check:shared-cycles` → `npm run check:migrations` → `npm run check:cron-sync` → `npm run check:cron-connections` → `npm run check:doc-counts` → `npm run check:doc-sync` → `npm run check:duplicate-exports` → `npm run check:redemption-backstops` → `npm run check:unused-code` → `npm run check:hotspot-ratchet` → `npm run check:sql-safety` → `npm run check:stablecoin-data` → `npm run build` + `npm run seo:check` when Pages-impacting files changed → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit` when worker-impacting files changed
+1. **Validate gate:** `npm run audit:deps` → `npm run audit:pricing-providers` → `npm run lint` → `npm run typecheck` → `npm run check:worker-boundary` → `npm run check:shared-cycles` → `npm run check:migrations` → `npm run check:cron-sync` → `npm run check:cron-connections` → `npm run check:doc-counts` → `npm run check:verified-doc-links` → `npm run check:doc-sync` → `npm run check:env-contract` → `npm run check:duplicate-exports` → `npm run check:redemption-backstops` → `npm run check:unused-code` → `npm run check:hotspot-ratchet` → `npm run check:sql-safety` → `npm run check:stablecoin-data` → `npm run build` + `npm run seo:check` when Pages-impacting files changed → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit` when worker-impacting files changed
 2. **Worker candidate upload + preview smoke:** `npm ci` → capture the currently live Worker version ID → `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote` → `cd worker && npx --no-install wrangler versions upload` → `npm run test:smoke-api` against that uploaded preview URL
 3. **Worker promotion:** `cd worker && npx --no-install wrangler versions deploy <uploaded-version>@100` → `cd worker && npx --no-install wrangler triggers deploy`
 4. **Production API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE` (fed from GitHub variable `SMOKE_API_BASE_URL`, fallback `API_BASE_URL`); if this fails after promotion, CI auto-rolls the Worker back to the previously live version
@@ -325,16 +337,17 @@ For mint/burn ingestion diagnostics and recovery, see `agents/process/mint-burn-
 8. **Post-deploy ops smoke:** `npm run test:smoke-ops` runs after `pages-publish` on Pages-including deploys, or after `smoke-api` + `smoke-ui-live` on worker-only deploys
 
 Required GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
+Optional GitHub secret: `SMOKE_API_KEY` (authenticated smoke tests when public API auth is active)
 Required GitHub variable: `API_BASE_URL`
 Optional GitHub variable: `SMOKE_API_BASE_URL` (recommended when smoke-testing a dedicated API host)
 Optional GitHub variables: `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`
 Required ops smoke secrets: `OPS_SMOKE_CF_ACCESS_CLIENT_ID`, `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
 
-Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `COINGECKO_API_KEY`, `OPENEXCHANGERATES_API_KEY`, `SIM_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `PUBLIC_API_RATE_LIMIT_SALT`
+Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `COINGECKO_API_KEY`, `OPENEXCHANGERATES_API_KEY`, `SIM_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `PUBLIC_API_RATE_LIMIT_SALT`, `SITE_API_SHARED_SECRET`, `API_KEY_HASH_PEPPER`, `CLOUDFLARE_D1_STATUS_API_TOKEN`
 
 `PUBLIC_API_RATE_LIMIT_SALT` is required for deployed public API traffic. If it is unset, the worker logs a configuration error and returns `503` for non-admin public `/api/*` requests instead of falling back to a built-in salt.
 
-Worker vars (see `.env.example` for the current surface): active worker bindings are `CORS_ORIGIN`, `SELF_URL`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_OPS_API_AUD`, and `MAINTENANCE_MODE`. `OPS_UI_ORIGIN`, `OPS_API_ORIGIN`, and `CF_ACCESS_OPS_UI_AUD` remain reserved on the worker side for cross-runtime contract alignment and future Pages-side Access validation.
+Worker vars (see `.env.example` for the current surface): active worker bindings are `CORS_ORIGIN`, `SELF_URL`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_OPS_API_AUD`, `MAINTENANCE_MODE`, `PUBLIC_API_AUTH_MODE`, `CLOUDFLARE_ACCOUNT_ID`, and `CLOUDFLARE_D1_DATABASE_ID`. `OPS_UI_ORIGIN`, `OPS_API_ORIGIN`, and `CF_ACCESS_OPS_UI_AUD` remain reserved on the worker side for cross-runtime contract alignment and future Pages-side Access validation.
 
 Pages Functions secrets for the same-origin ops admin proxy: `OPS_API_SERVICE_TOKEN_ID`, `OPS_API_SERVICE_TOKEN_SECRET`
 

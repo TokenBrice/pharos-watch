@@ -11,7 +11,7 @@ For supply fallback behavior and broader cache/integrity guardrails, see [data-p
 Pharos uses a two-stage pricing system:
 
 1. **Primary consensus** in `fetchPrimaryPrices()` (`worker/src/cron/sync-stablecoins/enrich-prices-primary.ts`)
-2. **Fallback enrichment** in `enrichMissingPrices()` (`worker/src/cron/sync-stablecoins/enrich-prices-passes.ts`)
+2. **Fallback enrichment** in `enrichMissingPrices()` (`worker/src/cron/sync-stablecoins/enrich-prices.ts`)
 
 The output is the cached `price`, `priceSource`, `priceConfidence`, `priceObservedAt`, `priceObservedAtMode`, `priceSyncedAt`, and compatibility `priceUpdatedAt` fields served through `/api/stablecoins`.
 
@@ -257,7 +257,8 @@ When changing live pricing behavior, update all relevant surfaces in the same ch
 | File | Role |
 |------|------|
 | `worker/src/cron/sync-stablecoins/enrich-prices-primary.ts` | Primary live-price collection, source assembly, consensus, GT probe, and pool challenge |
-| `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts` | Ordered fallback enrichment passes for still-missing prices |
+| `worker/src/cron/sync-stablecoins/enrich-prices.ts` | Fallback enrichment orchestrator (`enrichMissingPrices()`) for still-missing prices |
+| `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts` | Barrel re-export for individual pass runners (DefiLlama, CMC, Jupiter, DexScreener) |
 | `worker/src/lib/price-consensus.ts` | N-source clustering and confidence resolution |
 | `worker/src/lib/authoritative-price-sources.ts` | Redeem-quote live/historical override registry |
 | `worker/src/lib/pyth.ts` | Pyth Hermes integration and feed-ID normalization |

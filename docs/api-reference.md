@@ -162,7 +162,7 @@ All error responses use `{ "error": "message" }` JSON format.
 
 ## Method Gating Policy
 
-HTTP method allowance is defined centrally in `shared/lib/api-endpoints.ts` and enforced by `worker/src/router.ts` (`validateEndpointMethod`).
+HTTP method allowance is defined centrally in `shared/lib/api-endpoints/` and enforced by `worker/src/router.ts` (`validateEndpointMethod`).
 
 - `GET` is accepted for read endpoints (plus admin debug/status endpoints and `GET /api/backfill-dews`).
 - `POST` is accepted for mutating admin endpoints, `POST /api/feedback`, and `POST /api/telegram-webhook`.
@@ -1045,7 +1045,7 @@ DEX liquidity scores, pool breakdowns, source-confidence metadata, and on-chain 
 
 Per-coin historical DEX liquidity snapshots. Snapshots are recorded daily (UTC midnight, first sync after day rollover). Baseline consumers should use `coverageClass` / `coverageConfidence` before treating a history point as trend-worthy.
 
-**Cache:** archive
+**Cache:** slow — `public, s-maxage=3600, max-age=300`
 
 **Required query parameter**
 
@@ -1097,7 +1097,7 @@ Per-coin historical DEX liquidity snapshots. Snapshots are recorded daily (UTC m
 
 Per-coin circulating supply and price history, snapshotted once daily at 08:00 UTC.
 
-**Cache:** archive
+**Cache:** slow — `public, s-maxage=3600, max-age=300`
 
 **Required query parameter**
 
