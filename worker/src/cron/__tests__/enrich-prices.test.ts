@@ -741,7 +741,7 @@ describe("enrichMissingPrices", () => {
     expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("latest/dex/search"))).toBe(false);
   });
 
-  it("continues past skipped high-rank assets until it spends the DexScreener request budget", async () => {
+  it("continues past skipped high-rank assets until it spends the DexScreener request budget", { timeout: 15_000 }, async () => {
     const assets: PeggedAsset[] = [
       { id: "deusd-1", name: "DEUSD 1", symbol: "DEUSD", price: 0, pegType: "peggedUSD", circulating: { total: 100 } },
       { id: "bean-1", name: "Bean 1", symbol: "BEAN", price: 0, pegType: "peggedUSD", circulating: { total: 90 } },

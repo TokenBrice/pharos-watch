@@ -8,8 +8,7 @@ import {
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../../lib/circuit-breaker";
-import { sleepWithSignal } from "../../lib/abort";
-import { fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd } from "../../lib/dexscreener";
+import { fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd, dsRateLimit } from "../../lib/dexscreener";
 import {
   applyResolvedPrice,
   hasMissingPrice,
@@ -157,8 +156,8 @@ export async function runDexScreenerPass(
     db != null ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES) : true;
   const dexscreenerSearchAllowed =
     db != null ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.DEXSCREENER_SEARCH) : true;
-  let dexAttempts = 0;
-  let dexSuccessfulCalls = 0;
+  let dexExactAttempts = 0;
+  let dexExactSuccessfulCalls = 0;
   let dexSearchAttempts = 0;
   let dexSuccessfulSearchCalls = 0;
 
@@ -180,37 +179,43 @@ export async function runDexScreenerPass(
         return left.asset.id.localeCompare(right.asset.id);
       });
 
+    const totalAttempts = () => dexExactAttempts + dexSearchAttempts;
     const dexBudgetDeadlineMs = Date.now() + DEXSCREENER_PASS_BUDGET_MS;
     for (const entry of dexCandidates) {
-      if (dexAttempts >= DEXSCREENER_MAX_REQUESTS) break;
+      if (totalAttempts() >= DEXSCREENER_MAX_REQUESTS) break;
 
       try {
         const remainingBudgetMs = dexBudgetDeadlineMs - Date.now();
         if (remainingBudgetMs <= 0) {
-          console.warn(`[enrich] DexScreener pass budget exhausted after ${dexAttempts}/${DEXSCREENER_MAX_REQUESTS} requests`);
+          console.warn(`[enrich] DexScreener pass budget exhausted after ${totalAttempts()}/${DEXSCREENER_MAX_REQUESTS} requests`);
           break;
         }
 
         let resolvedFromDex = false;
         const exactTargets = buildDexScreenerTargets(entry.asset);
         for (const target of dexscreenerAllowed ? exactTargets : []) {
-          if (dexAttempts >= DEXSCREENER_MAX_REQUESTS) break;
+          if (totalAttempts() >= DEXSCREENER_MAX_REQUESTS) break;
 
           const exactRemainingBudgetMs = dexBudgetDeadlineMs - Date.now();
           if (exactRemainingBudgetMs <= 0) break;
 
-          if (dexAttempts > 0) {
-            await sleepWithSignal(200, signal);
+          if (totalAttempts() > 0) {
+            await dsRateLimit(signal);
           }
 
-          dexAttempts += 1;
+          dexExactAttempts += 1;
           const { ok, pairs } = await fetchDsTokenPoolsWithStatus(
             target.chain,
             target.address,
             signal,
             Math.min(DEXSCREENER_REQUEST_TIMEOUT_MS, exactRemainingBudgetMs),
+            DEXSCREENER_MAX_RETRIES,
           );
-          if (ok) dexSuccessfulCalls += 1;
+          if (ok) {
+            dexExactSuccessfulCalls += 1;
+          } else {
+            console.warn(`[enrich] DexScreener exact lookup failed for ${entry.asset.symbol} (${target.chain}:${target.address})`);
+          }
 
           const exactPrice = resolveDexScreenerAddressPrice(entry.asset, target.address, pairs, fxRates);
           if (exactPrice == null) continue;
@@ -221,13 +226,13 @@ export async function runDexScreenerPass(
           break;
         }
 
-        if (resolvedFromDex || dexAttempts >= DEXSCREENER_MAX_REQUESTS) {
+        if (resolvedFromDex || totalAttempts() >= DEXSCREENER_MAX_REQUESTS) {
           continue;
         }
 
         const searchRemainingBudgetMs = dexBudgetDeadlineMs - Date.now();
         if (searchRemainingBudgetMs <= 0) {
-          console.warn(`[enrich] DexScreener pass budget exhausted after ${dexAttempts}/${DEXSCREENER_MAX_REQUESTS} requests`);
+          console.warn(`[enrich] DexScreener pass budget exhausted after ${totalAttempts()}/${DEXSCREENER_MAX_REQUESTS} requests`);
           break;
         }
         if (!shouldAllowDexScreenerSymbolSearch(entry.asset, exactTargets)) {
@@ -240,11 +245,10 @@ export async function runDexScreenerPass(
         const symbolKey = entry.asset.symbol.toUpperCase();
         const allowedChains = buildAllowedDexSearchChains(entry.asset);
 
-        if (dexAttempts > 0) {
-          await sleepWithSignal(200, signal);
+        if (totalAttempts() > 0) {
+          await dsRateLimit(signal);
         }
 
-        dexAttempts += 1;
         dexSearchAttempts += 1;
         const res = await fetchWithRetry(
           `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(entry.asset.symbol)}`,
@@ -262,7 +266,6 @@ export async function runDexScreenerPass(
           continue;
         }
 
-        dexSuccessfulCalls += 1;
         dexSuccessfulSearchCalls += 1;
         const data = (await res.json()) as { pairs?: DexScreenerPair[] };
         if (!data.pairs?.length) continue;
@@ -292,12 +295,13 @@ export async function runDexScreenerPass(
       }
     }
 
-    if (dexAttempts > 0 && db) {
-      await recordOutcomeSafe(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES, dexSuccessfulCalls > 0);
+    if (dexExactAttempts > 0 && db) {
+      await recordOutcomeSafe(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES, dexExactSuccessfulCalls > 0);
     }
     if (dexSearchAttempts > 0 && db) {
       await recordOutcomeSafe(db, CIRCUIT_SOURCE.DEXSCREENER_SEARCH, dexSuccessfulSearchCalls > 0);
     }
+    console.log(`[enrich] DexScreener pass: exact=${dexExactSuccessfulCalls}/${dexExactAttempts} search=${dexSuccessfulSearchCalls}/${dexSearchAttempts} resolved=${resolved}`);
   } else {
     console.warn("[enrich] DexScreener exact and search circuits open — skipping pass 4");
   }

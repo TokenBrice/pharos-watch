@@ -102,10 +102,12 @@ export async function fetchDsTokenPoolsWithStatus(
   if (!dsChain) return { ok: false, pairs: [] };
 
   const url = `${DS_TOKEN_API}/${dsChain}/${tokenAddress}`;
-  const timeout = AbortSignal.timeout(timeoutMs);
+  // Per-request timeout is handled by fetchWithRetry; adding a second outer
+  // timeout here caused retries to be silently killed (the outer fired during
+  // retry waits, producing an AbortError that callers swallowed as a failure).
   const res = await fetchWithRetry(url, {
     headers: { "User-Agent": USER_AGENT },
-    signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+    signal,
   }, maxRetries, { timeoutMs });
   if (!res?.ok) return { ok: false, pairs: [] };
 
