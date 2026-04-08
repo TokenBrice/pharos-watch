@@ -132,6 +132,48 @@ describe("drainPendingQueue", () => {
     expect(result.sent).toBe(0);
   });
 
+  it("stops draining the queue when a 429 rate limit is received", async () => {
+    // SEND_BATCH_SIZE=5, so we need >5 messages to span multiple batches.
+    // First batch (5 msgs): 4 ok + 1 rate_limit. Sets rateLimited=true.
+    // Second batch (3 msgs): never attempted because rateLimited flag breaks the loop.
+    const okResult = {
+      ok: true, blocked: false, retryable: false, permanentFailure: false,
+      statusCode: 200, errorClass: null, delivery: "sent", retryAfterSec: null,
+    };
+    const rateLimitResult = {
+      ok: false, blocked: false, retryable: true, permanentFailure: false,
+      statusCode: 429, errorClass: "rate_limit", delivery: "retryable_failure", retryAfterSec: 30,
+    };
+
+    // First 4 calls succeed, 5th returns 429 (within first batch of 5)
+    mockSendToChat
+      .mockResolvedValueOnce(okResult)
+      .mockResolvedValueOnce(okResult)
+      .mockResolvedValueOnce(okResult)
+      .mockResolvedValueOnce(okResult)
+      .mockResolvedValueOnce(rateLimitResult);
+
+    // 8 pending messages → batch 1 (ids 1-5), batch 2 (ids 6-8)
+    const rows = Array.from({ length: 8 }, (_, i) => ({
+      id: i + 1, chat_id: `chat-${i}`, message_html: `msg${i}`, disable_notification: 0, created_at: 1000, attempts: 0,
+    }));
+
+    const db = mockD1([
+      { match: "SELECT id, chat_id, message_html", rows },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
+      { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] },
+    ]);
+
+    const result = await drainPendingQueue(db, "bot-token", 20);
+
+    // Only first batch of 5 was attempted; second batch of 3 was skipped
+    expect(result.attempted).toBe(5);
+    expect(result.sent).toBe(4);
+    expect(result.retryQueued).toBe(1);
+    // sendToChat was called exactly 5 times (not 8)
+    expect(mockSendToChat).toHaveBeenCalledTimes(5);
+  });
+
   it("returns zeros when queue is empty", async () => {
     const db = mockD1([
       { match: "SELECT id, chat_id, message_html", rows: [] },

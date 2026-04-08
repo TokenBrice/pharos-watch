@@ -94,9 +94,10 @@ export async function drainPendingQueue(
   let dropped = 0;
   const idsToDelete: number[] = [];
   const idsToRetry: number[] = [];
+  let rateLimited = false;
 
   for (let i = 0; i < pending.length; i += SEND_BATCH_SIZE) {
-    if (signal?.aborted) break;
+    if (signal?.aborted || rateLimited) break;
     const batch = pending.slice(i, i + SEND_BATCH_SIZE);
     const results = await Promise.all(
       batch.map(async (row) => {
@@ -122,6 +123,7 @@ export async function drainPendingQueue(
       } else if (result.retryable && result.attempts < 5) {
         retryQueued++;
         idsToRetry.push(result.id);
+        if (result.errorClass === "rate_limit") rateLimited = true;
       } else {
         dropped++;
         idsToDelete.push(result.id);

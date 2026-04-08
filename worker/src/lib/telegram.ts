@@ -280,6 +280,9 @@ export async function sendBatch(messages: BatchMessage[], botToken: string, batc
       }),
     );
     results.push(...batchResults);
+    // Stop sending further batches on rate limit — in-flight parallel sends
+    // within this batch have already completed via Promise.all above.
+    if (batchResults.some((r) => r.errorClass === "rate_limit")) break;
   }
   return results;
 }
