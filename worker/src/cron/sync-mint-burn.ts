@@ -25,6 +25,7 @@ import {
   getMintBurnRunState,
   normalizeDisabledConfigIdSet,
   normalizeDisabledSymbolSet,
+  resolveStartIndex,
   rotateArray,
 } from "./mint-burn/run-state";
 
@@ -182,7 +183,11 @@ export async function syncMintBurn(
 
   const runStateSnapshot = await getMintBurnRunState(db, jobName);
   const runState = runStateSnapshot.state;
-  const startIndex = runState.nextConfigIndex % enabledConfigs.length;
+  const startIndex = resolveStartIndex(
+    runState.lastConfigKey,
+    enabledConfigs,
+    (c) => mintBurnConfigKey(c),
+  );
   const rotatedConfigs = rotateArray(enabledConfigs, startIndex);
   // Always process critical contracts first so extended backlogs cannot starve
   // core coverage when budget pressure is high.

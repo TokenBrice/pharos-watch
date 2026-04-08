@@ -3,6 +3,19 @@ import { normalizeStringSet } from "../../lib/normalizers";
 export interface MintBurnRunStateRow {
   nextConfigIndex: number;
   degradedStreak: number;
+  lastConfigKey: string | null;
+}
+
+/** Find the rotation start index based on last-processed config key. */
+export function resolveStartIndex<T>(
+  lastConfigKey: string | null,
+  configs: T[],
+  keyFn: (config: T) => string,
+): number {
+  if (!lastConfigKey || configs.length === 0) return 0;
+  const idx = configs.findIndex((c) => keyFn(c) === lastConfigKey);
+  if (idx < 0) return 0;
+  return (idx + 1) % configs.length;
 }
 
 export function normalizeDisabledConfigIdSet(values?: Iterable<string>): Set<string> {
@@ -25,21 +38,22 @@ export async function getMintBurnRunState(
 ): Promise<{ state: MintBurnRunStateRow; persistenceFailed: boolean }> {
   try {
     const row = await db
-      .prepare("SELECT next_config_index, degraded_streak FROM mint_burn_run_state WHERE job = ?")
+      .prepare("SELECT next_config_index, degraded_streak, last_config_key FROM mint_burn_run_state WHERE job = ?")
       .bind(jobName)
-      .first<{ next_config_index: number; degraded_streak: number }>();
+      .first<{ next_config_index: number; degraded_streak: number; last_config_key: string | null }>();
 
     return {
       state: {
         nextConfigIndex: row?.next_config_index ?? 0,
         degradedStreak: row?.degraded_streak ?? 0,
+        lastConfigKey: row?.last_config_key ?? null,
       },
       persistenceFailed: false,
     };
   } catch (error) {
     console.warn("[sync-mint-burn] Failed to load run-state; using defaults:", error);
     return {
-      state: { nextConfigIndex: 0, degradedStreak: 0 },
+      state: { nextConfigIndex: 0, degradedStreak: 0, lastConfigKey: null },
       persistenceFailed: true,
     };
   }
@@ -50,19 +64,21 @@ export async function setMintBurnRunState(
   jobName: string,
   nextConfigIndex: number,
   degradedStreak: number,
+  lastConfigKey: string | null = null,
 ): Promise<boolean> {
   try {
     const now = Math.floor(Date.now() / 1000);
     await db
       .prepare(
-        `INSERT INTO mint_burn_run_state (job, next_config_index, degraded_streak, updated_at)
-         VALUES (?, ?, ?, ?)
+        `INSERT INTO mint_burn_run_state (job, next_config_index, degraded_streak, last_config_key, updated_at)
+         VALUES (?, ?, ?, ?, ?)
          ON CONFLICT(job) DO UPDATE SET
            next_config_index = excluded.next_config_index,
            degraded_streak = excluded.degraded_streak,
+           last_config_key = excluded.last_config_key,
            updated_at = excluded.updated_at`,
       )
-      .bind(jobName, nextConfigIndex, degradedStreak, now)
+      .bind(jobName, nextConfigIndex, degradedStreak, lastConfigKey, now)
       .run();
     return true;
   } catch (error) {
