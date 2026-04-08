@@ -1,6 +1,20 @@
 # Blacklist Tracker Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.6` (2026-02-09 -> 2026-03-27).
+Internal changelog reconstructed from git history. Covers Blacklist Tracker `v1.0` through `v3.7` (2026-02-09 -> 2026-04-08).
+
+---
+
+### v3.7 — Balance recovery accuracy and provider resilience (2026-04-08)
+
+- **Invalid block tags rejected** — `fetchEvmBalanceAtTag` now returns null on malformed hex block tags instead of silently falling back to `latest`, preventing silent historical→current balance substitution
+- **Ethereum mainnet dRPC/RPC fallback** — Mainnet historical balance lookups now try dRPC and chain-RPC before Etherscan, eliminating the single-provider-failure blind spot for ~60% of events
+- **Tron REST null-for-missing** — `fetchTronTokenCurrentBalance` REST fallback returns null when the target token is absent from the TRC20 balance array, preventing false zero entries in the freeze ledger
+- **Gold price in enrichment** — `enrichRowBalances` and `backfillAmounts` now receive gold spot price so PAXG/XAUT events get `amount_usd_at_event` during ingest, not only in the freeze-ledger cache
+- **Gold-only zero-balance override** — The `balanceOf() → 0` fallback (for contracts that return 0 for frozen addresses) is now scoped to PAXG/XAUT only, preventing false non-zero cache entries for USDC/USDT/pyUSD/USD1 destroyed addresses
+- **XAUT own price** — XAUT freeze-ledger amounts now use the `xaut-tether` price entry instead of sharing `paxg-paxos`
+- **Destroyed excluded from frozen total** — `activeFrozenTotal` no longer includes destroyed/seized amounts
+- **Tron status reclassification** — New Tron blacklist/unblacklist events are immediately marked `permanently_unavailable` during enrichment instead of cycling through backfill indefinitely
+- **Minor fixes** — block_number guard, destroy event observedAt uses event timestamp, attemptCount accumulates across cycles, Tron address fallback chain cleaned up, dead `otherAddresses` map removed, gap metrics scoped to blacklist+destroy events
 
 ---
 

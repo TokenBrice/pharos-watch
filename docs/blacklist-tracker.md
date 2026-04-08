@@ -36,7 +36,7 @@ Implementation note: `EURC` is intentionally not live-supported right now. Circl
 - Primary source for Ethereum, Arbitrum, and Polygon blacklist log scans
 - Max 1000 logs per request (recursive splitting if exceeded, max depth 8)
 - Operational caveats:
-  - historical `eth_call` is unreliable on L2s (we use dRPC for L2 balance lookups)
+  - historical `eth_call` can be unreliable (dRPC is now the preferred balance source for all EVM chains including mainnet)
   - Base, Optimism, Avalanche, and BSC use chain RPC `eth_getLogs` scans rather than relying on explorer log coverage
 
 ### Chain RPC Log Scans
@@ -47,11 +47,12 @@ Implementation note: `EURC` is intentionally not live-supported right now. Circl
 - Used for both chain-head discovery and log scans; timestamps are resolved via `eth_getBlockByNumber`
 - Range splitting is depth-first/sequential inside `worker/src/lib/alchemy-logs.ts` so one oversized scan cannot burst past the Workers shared fetch-connection pool
 
-### dRPC Archive Nodes (L2-specific)
+### dRPC Archive Nodes (all EVM chains including mainnet)
 
-- For historical balance lookups on L2 chains (Arbitrum, Base, Optimism, Polygon, Avalanche, BSC)
+- For historical balance lookups on all EVM chains (Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC)
 - **Endpoint:** `https://lb.drpc.org/ogrpc?network={network}&dkey={drpcApiKey}`
 - Preferred historical balance source when `DRPC_API_KEY` is configured
+- Ethereum mainnet historical balance lookups now try dRPC and chain-RPC before Etherscan, eliminating the single-provider-failure blind spot that previously affected ~60% of events
 - If dRPC misses, blacklist balance enrichment now falls through to the shared chain registry RPC path (`getChainRpc()`), which means Alchemy primaries are used automatically when `ALCHEMY_API_KEY` is configured, then public RPC fallbacks. Etherscan remains the last best-effort fallback for chains where it can answer historical `eth_call`.
 
 ### TronGrid API
@@ -341,8 +342,7 @@ For RPC log-scan chains (Base, Optimism, Avalanche, BSC), partial `eth_getLogs` 
 
 3. **Balance enrichment** (in-memory, before DB insertion)
    - Enrich parsed rows with balances BEFORE inserting into D1
-   - EVM Ethereum: Etherscan `eth_call` at historical block (`blockNumber - 1`)
-   - EVM L2/sidechain: dRPC archive node first when configured, then `getChainRpc()` (Alchemy/public RPC), then Etherscan best-effort
+   - All EVM chains: dRPC archive node first when configured, then `getChainRpc()` (Alchemy/public RPC), then Etherscan best-effort -- all at historical block (`blockNumber - 1`)
    - Tron: destroy events keep their native event amount; blacklist/unblacklist events are not assigned historical balances from current-state account reads
    - RPC-log chains reuse persistent block-timestamp cache rows to avoid re-resolving the same blocks every run
    - `INSERT OR IGNORE` enriched rows into `blacklist_events`
@@ -383,10 +383,9 @@ Per-chain block margins (`INDEXING_SAFETY_SEC / blockTime`):
 
 ### EVM Strategy
 
-1. **Ethereum mainnet:** Etherscan `eth_call` with historical block tag (`blockNumber - 1`)
-2. **L2 with dRPC key:** dRPC archive node `eth_call` at historical block
-3. **L2 RPC fallback:** if dRPC misses, `getChainRpc()` retries the same historical `eth_call` against the configured chain RPCs (Alchemy primary when available, then public fallback)
-4. **Best-effort explorer fallback:** Etherscan `eth_call` with historical block tag (same code path as Ethereum, but some non-mainnet explorer paths may silently ignore the block tag or reject it entirely)
+1. **All EVM chains with dRPC key:** dRPC archive node `eth_call` at historical block (`blockNumber - 1`) -- preferred source for all chains including Ethereum mainnet
+2. **RPC fallback:** if dRPC misses, `getChainRpc()` retries the same historical `eth_call` against the configured chain RPCs (Alchemy primary when available, then public fallback)
+3. **Best-effort explorer fallback:** Etherscan `eth_call` with historical block tag -- last resort for all chains; some non-mainnet explorer paths may silently ignore the block tag or reject it entirely
 
 ### Tron Strategy
 
@@ -563,7 +562,7 @@ Both endpoints now emit freshness headers from the same hourly `sync-blacklist` 
 | ------------------- | ------ | -------- | -------------------------------------------------------------------- |
 | `ETHERSCAN_API_KEY` | Secret | Yes      | Etherscan v2 API key for supported-chain log scans + L1 calls        |
 | `TRONGRID_API_KEY`  | Secret | No       | TronGrid Pro API key (improves rate limits)                          |
-| `DRPC_API_KEY`      | Secret | No       | dRPC key for L2 archive node balance lookups                         |
+| `DRPC_API_KEY`      | Secret | No       | dRPC key for archive node balance lookups (all EVM chains including mainnet) |
 | `ALCHEMY_API_KEY`   | Secret | No       | Preferred chain RPC source for Base/Optimism/Avalanche/BSC log scans; strongly recommended for faster historical catch-up on zero-cursor configs |
 
 ---
@@ -576,7 +575,7 @@ Both endpoints now emit freshness headers from the same hourly `sync-blacklist` 
 4. **USDT has TWO event patterns:** legacy (`AddedBlackList`, address NOT indexed) and USDT0 (`BlockPlaced`, address indexed). Some chains (Arbitrum, Polygon) emit both.
 5. **PAXG FrozenAddressWiped** has no amount in the event -- must fetch via `balanceOf` at `blockNumber - 1`.
 6. **XAUT uses USDT0 event pattern** (was mistakenly using legacy pattern until 2026-02-11 fix).
-7. **Explorer historical calls on L2s** are not dependable enough to be primary -- rely on dRPC first, then chain-RPC/Alchemy fallback; explorer fallback is best-effort only.
+7. **Explorer historical calls** are not dependable enough to be primary on any chain -- rely on dRPC first, then chain-RPC/Alchemy fallback; explorer fallback is best-effort only.
 8. **Base, Optimism, Avalanche, and BSC log scans** use chain RPC `eth_getLogs` paths instead of depending on explorer log coverage.
 9. **EVM sentinel bug (fixed):** storing `99999999` as `last_block` could cause permanent scan stall.
 10. **Budget limit (900 subrequests)** is shared across ALL configs + backfill per cron cycle.
