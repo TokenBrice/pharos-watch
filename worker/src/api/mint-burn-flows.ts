@@ -205,104 +205,106 @@ async function fetchAggregateData(
   const trackedChainIds = [...new Set(MINT_BURN_CONFIGS.map((config) => config.chain.chainId))];
   const chainInClause = buildInClause(trackedChainIds);
 
-  const [
-    hourlyWindowResult,
-    hourly24hResult,
-    hourly7dResult,
-    hourly30dResult,
-    hourly90dResult,
-    baselineDailyResult,
-    firstSeenResult,
-    largestEventsResult,
-    lastBlocks,
-    latestCronSnapshot,
-  ] = await Promise.all([
-    db
-      .prepare(
-         `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
-                 mint_volume_usd, burn_volume_usd, net_flow_usd
-          FROM mint_burn_hourly
-         WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
-          ORDER BY hour_ts ASC`,
-      )
-      .bind(...chainInClause.binds, params.windowStart)
-      .all<HourlyRow>(),
-    db
-      .prepare(
-         `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
-                 mint_volume_usd, burn_volume_usd, net_flow_usd
-          FROM mint_burn_hourly
-         WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
-          ORDER BY hour_ts ASC`,
-      )
-      .bind(...chainInClause.binds, params.window24h)
-      .all<HourlyRow>(),
-    db
-      .prepare(
-        `SELECT stablecoin_id, chain_id,
-                SUM(net_flow_usd) as net_flow_usd
-         FROM mint_burn_hourly
-         WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
-         GROUP BY stablecoin_id, chain_id`,
-      )
-      .bind(...chainInClause.binds, params.window7d)
-      .all<GroupedNetFlowRow>(),
-    db
-      .prepare(
-        `SELECT stablecoin_id, chain_id,
-                SUM(net_flow_usd) as net_flow_usd
-         FROM mint_burn_hourly
-         WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
-         GROUP BY stablecoin_id, chain_id`,
-      )
-      .bind(...chainInClause.binds, params.window30d)
-      .all<GroupedNetFlowRow>(),
-    db
-      .prepare(
-        `SELECT stablecoin_id, chain_id,
-                SUM(net_flow_usd) as net_flow_usd
-         FROM mint_burn_hourly
-         WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
-         GROUP BY stablecoin_id, chain_id`,
-      )
-      .bind(...chainInClause.binds, params.window90d)
-      .all<GroupedNetFlowRow>(),
-    db
-      .prepare(
-        `SELECT stablecoin_id, chain_id,
-                (hour_ts / 86400) * 86400 as day_ts,
-                SUM(net_flow_usd) as daily_net,
-                SUM(mint_volume_usd + burn_volume_usd) as daily_abs
-         FROM mint_burn_hourly
-         WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ? AND hour_ts < ?
-         GROUP BY stablecoin_id, chain_id, day_ts`,
-      )
-      .bind(...chainInClause.binds, params.baselineWindowStart, params.nowDayTs)
-      .all<DailyBaselineRow>(),
-    db
-      .prepare(
-        `SELECT stablecoin_id, chain_id, MIN(hour_ts) as first_hour_ts
-         FROM mint_burn_hourly
-         WHERE chain_id IN (${chainInClause.sql})
-         GROUP BY stablecoin_id, chain_id`,
-      )
-      .bind(...chainInClause.binds)
-      .all<FirstSeenRow>(),
-    db
-      .prepare(
-        `SELECT id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
-                counterparty, tx_hash, block_number, timestamp, explorer_tx_url
-         FROM mint_burn_events
-         WHERE chain_id IN (${chainInClause.sql})
-           AND timestamp >= ?
-           AND (direction = 'mint' OR burn_type = 'effective_burn')
-           AND flow_type = 'standard'`,
-      )
-      .bind(...chainInClause.binds, params.window24h)
-      .all<EventRow>(),
-    readMintBurnSyncStateBatch(db, MINT_BURN_CONFIGS),
-    readMintBurnCronSnapshot(db),
+  const [batchResults, [lastBlocks, latestCronSnapshot]] = await Promise.all([
+    db.batch([
+      // 0: hourlyWindow
+      db
+        .prepare(
+           `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+                   mint_volume_usd, burn_volume_usd, net_flow_usd
+            FROM mint_burn_hourly
+           WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
+            ORDER BY hour_ts ASC`,
+        )
+        .bind(...chainInClause.binds, params.windowStart),
+      // 1: hourly24h
+      db
+        .prepare(
+           `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+                   mint_volume_usd, burn_volume_usd, net_flow_usd
+            FROM mint_burn_hourly
+           WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
+            ORDER BY hour_ts ASC`,
+        )
+        .bind(...chainInClause.binds, params.window24h),
+      // 2: hourly7d
+      db
+        .prepare(
+          `SELECT stablecoin_id, chain_id,
+                  SUM(net_flow_usd) as net_flow_usd
+           FROM mint_burn_hourly
+           WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
+           GROUP BY stablecoin_id, chain_id`,
+        )
+        .bind(...chainInClause.binds, params.window7d),
+      // 3: hourly30d
+      db
+        .prepare(
+          `SELECT stablecoin_id, chain_id,
+                  SUM(net_flow_usd) as net_flow_usd
+           FROM mint_burn_hourly
+           WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
+           GROUP BY stablecoin_id, chain_id`,
+        )
+        .bind(...chainInClause.binds, params.window30d),
+      // 4: hourly90d
+      db
+        .prepare(
+          `SELECT stablecoin_id, chain_id,
+                  SUM(net_flow_usd) as net_flow_usd
+           FROM mint_burn_hourly
+           WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
+           GROUP BY stablecoin_id, chain_id`,
+        )
+        .bind(...chainInClause.binds, params.window90d),
+      // 5: baselineDaily
+      db
+        .prepare(
+          `SELECT stablecoin_id, chain_id,
+                  (hour_ts / 86400) * 86400 as day_ts,
+                  SUM(net_flow_usd) as daily_net,
+                  SUM(mint_volume_usd + burn_volume_usd) as daily_abs
+           FROM mint_burn_hourly
+           WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ? AND hour_ts < ?
+           GROUP BY stablecoin_id, chain_id, day_ts`,
+        )
+        .bind(...chainInClause.binds, params.baselineWindowStart, params.nowDayTs),
+      // 6: firstSeen
+      db
+        .prepare(
+          `SELECT stablecoin_id, chain_id, MIN(hour_ts) as first_hour_ts
+           FROM mint_burn_hourly
+           WHERE chain_id IN (${chainInClause.sql})
+           GROUP BY stablecoin_id, chain_id`,
+        )
+        .bind(...chainInClause.binds),
+      // 7: largestEvents
+      db
+        .prepare(
+          `SELECT id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
+                  counterparty, tx_hash, block_number, timestamp, explorer_tx_url
+           FROM mint_burn_events
+           WHERE chain_id IN (${chainInClause.sql})
+             AND timestamp >= ?
+             AND (direction = 'mint' OR burn_type = 'effective_burn')
+             AND flow_type = 'standard'`,
+        )
+        .bind(...chainInClause.binds, params.window24h),
+    ]),
+    Promise.all([
+      readMintBurnSyncStateBatch(db, MINT_BURN_CONFIGS),
+      readMintBurnCronSnapshot(db),
+    ]),
   ]);
+
+  const hourlyWindowResult = { results: (batchResults[0].results ?? []) as HourlyRow[] };
+  const hourly24hResult = { results: (batchResults[1].results ?? []) as HourlyRow[] };
+  const hourly7dResult = { results: (batchResults[2].results ?? []) as GroupedNetFlowRow[] };
+  const hourly30dResult = { results: (batchResults[3].results ?? []) as GroupedNetFlowRow[] };
+  const hourly90dResult = { results: (batchResults[4].results ?? []) as GroupedNetFlowRow[] };
+  const baselineDailyResult = { results: (batchResults[5].results ?? []) as DailyBaselineRow[] };
+  const firstSeenResult = { results: (batchResults[6].results ?? []) as FirstSeenRow[] };
+  const largestEventsResult = { results: (batchResults[7].results ?? []) as EventRow[] };
 
   const hourlyRows = filterRowsToTrackedPairs(hourlyWindowResult.results ?? [], trackedPairs);
   const hourly24hRows = filterRowsToTrackedPairs(hourly24hResult.results ?? [], trackedPairs);
