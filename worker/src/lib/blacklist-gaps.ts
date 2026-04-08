@@ -65,7 +65,8 @@ export async function queryBlacklistGapMetrics(
              ELSE 0
            END
          ) as repeated_failures
-       FROM blacklist_events`,
+       FROM blacklist_events
+       WHERE event_type IN ('blacklist', 'destroy')`,
     )
     .bind(now - recentWindowSec, now)
     .first<{

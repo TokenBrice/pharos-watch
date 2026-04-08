@@ -43,7 +43,6 @@ export function computeBlacklistSummaryStats(
   const usdcAddresses = new Map<string, number>();
   const usdtAddresses = new Map<string, number>();
   const goldAddresses = new Map<string, number>();
-  const otherAddresses = new Map<string, number>();
   const allAddresses = new Map<string, number>();
   let destroyedTotal = 0;
   let recentCount = 0;
@@ -56,13 +55,13 @@ export function computeBlacklistSummaryStats(
     const map = isGold ? goldAddresses
       : evt.stablecoin === "USDC" ? usdcAddresses
       : evt.stablecoin === "USDT" ? usdtAddresses
-      : otherAddresses;
+      : null;
 
     if (evt.eventType === "blacklist") {
-      map.set(scopedKey, (map.get(scopedKey) ?? 0) + 1);
+      map?.set(scopedKey, (map.get(scopedKey) ?? 0) + 1);
       allAddresses.set(scopedKey, (allAddresses.get(scopedKey) ?? 0) + 1);
     } else if (evt.eventType === "unblacklist") {
-      map.set(scopedKey, (map.get(scopedKey) ?? 0) - 1);
+      map?.set(scopedKey, (map.get(scopedKey) ?? 0) - 1);
       allAddresses.set(scopedKey, (allAddresses.get(scopedKey) ?? 0) - 1);
     } else if (evt.eventType === "destroy" && evt.amountUsdAtEvent != null) {
       destroyedTotal += evt.amountUsdAtEvent;
