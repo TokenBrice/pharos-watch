@@ -538,5 +538,8 @@ async function handleDisambiguationReply(
 }
 
 async function replyToChat(chatId: string, message: string, botToken: string): Promise<void> {
-  await sendToChat(chatId, message, botToken, { disableWebPagePreview: true });
+  const result = await sendToChat(chatId, message, botToken, { disableWebPagePreview: true });
+  if (!result.ok) {
+    console.warn(`[telegram-webhook] Reply to ${chatId} failed: ${result.errorClass ?? "unknown"} (${result.statusCode})`);
+  }
 }
