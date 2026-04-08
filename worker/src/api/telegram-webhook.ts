@@ -2,6 +2,7 @@ import { timingSafeCompare } from "../lib/auth";
 import { escapeHtml, sendToChat } from "../lib/telegram";
 import {
   formatDisambiguation,
+  parseTargetArgs,
   resolveTicker,
   parseSubscribeArgs,
   validateSubscribeArgs,
@@ -9,19 +10,30 @@ import {
   type ResolvedCoin,
 } from "../lib/telegram-alerts";
 import {
+  listTelegramPresets,
+  resolveTelegramPresetTargets,
+  type TelegramPresetId,
+} from "../lib/telegram-presets";
+import {
   HELP_MESSAGE,
   START_MESSAGE,
   type ParsedSetCommand,
   type PendingAction,
   type PendingActionType,
   type PendingDisambiguationRow,
+  type SubscribeActionPayload,
   type SubscriptionRow,
   type TelegramWebhookUpdate,
+  type UnsubscribeActionPayload,
 } from "./telegram-webhook-shared";
 import {
   buildGlobalAlertSummaryMessage,
   buildListMessage,
   buildNotFoundMessage,
+  buildPresetCatalogMessage,
+  buildPresetSubscriptionSummaryMessage,
+  buildPresetUnavailableMessage,
+  buildPresetUnsubscribeSummaryMessage,
   buildSubscriptionSummaryMessage,
   buildUnsubscribeSuccessMessage,
   formatQuietHours,
@@ -131,6 +143,9 @@ export const handleTelegramWebhook = withErrorHandler(
             await clearPendingDisambiguation(db, chatId);
             await reply("Pending selection cleared.");
             return ok();
+          case "/presets":
+            await reply(buildPresetCatalogMessage(listTelegramPresets()));
+            return ok();
           case "/help":
             await reply(HELP_MESSAGE);
             return ok();
@@ -160,6 +175,9 @@ ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.c
       switch (parsedCommand.command) {
         case "/start":
           await reply(START_MESSAGE);
+          break;
+        case "/presets":
+          await reply(buildPresetCatalogMessage(listTelegramPresets()));
           break;
         case "/help":
           await reply(HELP_MESSAGE);
@@ -212,7 +230,7 @@ async function handleList(db: D1Database, chatId: string, botToken: string): Pro
 
   const rows = subscriptions.results ?? [];
   if (!subscriber && rows.length === 0) {
-    await replyToChat(chatId, "No active subscriptions. Use /subscribe to get started.", botToken);
+    await replyToChat(chatId, "No active subscriptions. Use /subscribe to get started, or try /presets for preset watchlists.", botToken);
     return;
   }
 
@@ -226,13 +244,25 @@ interface TelegramActionContext {
   username: string | null;
 }
 
-type SubscribeActionPayload = { alertTypes: string[] };
-type UnsubscribeActionPayload = Record<string, never>;
 type ActionPayloadMap = {
   subscribe: SubscribeActionPayload;
   unsubscribe: UnsubscribeActionPayload;
   set: ParsedSetCommand;
 };
+
+const TELEGRAM_PRESET_LABEL_BY_ID = new Map(
+  listTelegramPresets().map((definition) => [definition.id, definition.label] as const),
+);
+
+function dedupePresetIds(presetIds: readonly string[]): TelegramPresetId[] {
+  return Array.from(
+    new Set(
+      presetIds.filter((presetId): presetId is TelegramPresetId =>
+        TELEGRAM_PRESET_LABEL_BY_ID.has(presetId as TelegramPresetId),
+      ),
+    ),
+  );
+}
 
 type CompletionHandlerMap = {
   [K in PendingActionType]: (
@@ -246,6 +276,7 @@ type CompletionHandlerMap = {
 const completionHandlers: CompletionHandlerMap = {
   subscribe: async (context, coins, payload, options) => {
     const alertTypes = new Set(payload.alertTypes);
+    const presetIds = dedupePresetIds(payload.presetIds ?? []);
     await upsertSubscriberAndSubscriptions(
       context.db,
       context.chatId,
@@ -259,9 +290,16 @@ const completionHandlers: CompletionHandlerMap = {
       context.chatId,
       coins.map((coin) => coin.id),
     );
+    if (presetIds.length > 0) {
+      return buildPresetSubscriptionSummaryMessage(subscriptions, {
+        presetIds,
+        presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID,
+      });
+    }
     return buildSubscriptionSummaryMessage("Updated subscriptions.", subscriptions);
   },
-  unsubscribe: async (context, coins, _payload, options) => {
+  unsubscribe: async (context, coins, payload, options) => {
+    const presetIds = dedupePresetIds(payload.presetIds ?? []);
     if (options.clearPending) {
       await clearPendingDisambiguation(context.db, context.chatId);
     }
@@ -270,6 +308,12 @@ const completionHandlers: CompletionHandlerMap = {
       context.chatId,
       coins.map((coin) => coin.id),
     );
+    if (presetIds.length > 0) {
+      return buildPresetUnsubscribeSummaryMessage(coins, {
+        presetIds,
+        presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID,
+      });
+    }
     return buildUnsubscribeSuccessMessage(coins);
   },
   set: async (context, coins, payload, options) => {
@@ -311,6 +355,19 @@ function makeActionRunner(context: TelegramActionContext, botToken: string): Bou
     });
 }
 
+async function resolvePresetCoins(
+  db: D1Database,
+  presetIds: readonly TelegramPresetId[],
+): Promise<ResolvedCoin[] | null> {
+  if (presetIds.length === 0) return [];
+
+  const resolvedPresets = await resolveTelegramPresetTargets(db, presetIds);
+  if (resolvedPresets.kind !== "ok") {
+    return null;
+  }
+  return dedupeCoins(resolvedPresets.presets.flatMap((preset) => preset.coins));
+}
+
 async function handleSubscribe(
   db: D1Database,
   chatId: string,
@@ -321,11 +378,11 @@ async function handleSubscribe(
   const parsed = parseSubscribeArgs(args);
   const validationError = validateSubscribeArgs(parsed);
   if (validationError) {
-    if (parsed.invalidTypes.length > 0 && parsed.alertTypes.size > 0) {
-      const invalidTicker = parsed.invalidTypes[0];
-      const match = resolveTicker(invalidTicker);
+    if (parsed.invalidTargets.length > 0 && parsed.alertTypes.size > 0) {
+      const invalidTarget = parsed.invalidTargets[0];
+      const match = resolveTicker(invalidTarget);
       const suggestion = match.status === "not_found" ? match.suggestion : undefined;
-      await replyToChat(chatId, buildNotFoundMessage(invalidTicker, suggestion), botToken);
+      await replyToChat(chatId, buildNotFoundMessage(invalidTarget, suggestion), botToken);
       return;
     }
     await replyToChat(chatId, escapeHtml(validationError), botToken);
@@ -340,26 +397,47 @@ async function handleSubscribe(
       buildGlobalAlertSummaryMessage("Updated all-stablecoin subscriptions.", subscriber),
       botToken,
     );
+      return;
+  }
+
+  const presetIds = dedupePresetIds(parsed.presetIds);
+  const presetCoins = await resolvePresetCoins(db, presetIds);
+  if (presetCoins == null) {
+    await replyToChat(chatId, buildPresetUnavailableMessage(), botToken);
     return;
   }
 
   const runAction = makeActionRunner({ db, chatId, username }, botToken);
   await runAction({
     tickers: parsed.tickers,
+    initialCoins: presetCoins,
     actionType: "subscribe",
-    actionPayload: { alertTypes: [...parsed.alertTypes] },
+    actionPayload: { alertTypes: [...parsed.alertTypes], presetIds },
     alertTypes: parsed.alertTypes,
   });
 }
 
 async function handleUnsubscribe(db: D1Database, chatId: string, args: string, botToken: string): Promise<void> {
-  const trimmedArgs = args.trim();
-  if (!trimmedArgs) {
-    await replyToChat(chatId, "Specify ticker(s) to unsubscribe, or use /unsubscribe all", botToken);
+  const parsed = parseTargetArgs(args);
+  if (args.trim().length === 0) {
+    await replyToChat(chatId, "Specify ticker(s) or preset(s) to unsubscribe, or use /unsubscribe all", botToken);
     return;
   }
 
-  if (trimmedArgs.toLowerCase() === "all") {
+  if (parsed.includeAll && (parsed.tickers.length > 0 || parsed.presetIds.length > 0)) {
+    await replyToChat(chatId, 'Use /unsubscribe all by itself, or specify ticker/preset targets without "all".', botToken);
+    return;
+  }
+
+  if (parsed.invalidTargets.length > 0) {
+    const invalidTarget = parsed.invalidTargets[0];
+    const match = resolveTicker(invalidTarget);
+    const suggestion = match.status === "not_found" ? match.suggestion : undefined;
+    await replyToChat(chatId, buildNotFoundMessage(invalidTarget, suggestion), botToken);
+    return;
+  }
+
+  if (parsed.includeAll) {
     const now = unixNow();
     await db.batch([
       db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(chatId),
@@ -382,11 +460,19 @@ async function handleUnsubscribe(db: D1Database, chatId: string, args: string, b
     return;
   }
 
+  const presetIds = dedupePresetIds(parsed.presetIds);
+  const presetCoins = await resolvePresetCoins(db, presetIds);
+  if (presetCoins == null) {
+    await replyToChat(chatId, buildPresetUnavailableMessage(), botToken);
+    return;
+  }
+
   const runAction = makeActionRunner({ db, chatId, username: null }, botToken);
   await runAction({
-    tickers: trimmedArgs.split(/[\s,]+/).filter(Boolean),
+    tickers: parsed.tickers,
+    initialCoins: presetCoins,
     actionType: "unsubscribe",
-    actionPayload: {},
+    actionPayload: { presetIds },
   });
 }
 
@@ -517,14 +603,14 @@ async function handleDisambiguationReply(
       await runAction({
         ...sharedOpts,
         actionType: "subscribe",
-        actionPayload: { alertTypes: [...pending.alertTypes] },
+        actionPayload: { alertTypes: [...pending.alertTypes], presetIds: pending.presetIds },
         alertTypes: pending.alertTypes,
       });
       return;
     }
     case "unsubscribe": {
       const runAction = makeActionRunner({ db, chatId, username: null }, botToken);
-      await runAction({ ...sharedOpts, actionType: "unsubscribe", actionPayload: {} });
+      await runAction({ ...sharedOpts, actionType: "unsubscribe", actionPayload: { presetIds: pending.presetIds } });
       return;
     }
     case "set": {

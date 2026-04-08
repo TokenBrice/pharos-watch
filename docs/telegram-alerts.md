@@ -9,7 +9,7 @@ The subsystem has four moving parts:
 - `POST /api/telegram-webhook` accepts Telegram commands, validates the shared secret from `X-Telegram-Bot-Api-Secret-Token`, and stores subscriber state in D1.
 - `worker/src/cron/dispatch-telegram-alerts.ts` diffs the latest DEWS, active depeg, and safety-grade snapshots against cached prior snapshots, then fans out consolidated messages to matching subscribers.
 - `worker/src/cron/daily-digest.ts` appends pending cemetery additions and newly tracked coins to the next Telegram digest post after a deploy.
-- `worker/src/lib/telegram.ts`, `worker/src/lib/telegram-alerts.ts`, and `worker/src/lib/telegram-digest-appendices.ts` handle Bot API sends, ticker parsing, message formatting, diffing, and HTML escaping.
+- `worker/src/lib/telegram.ts`, `worker/src/lib/telegram-alerts.ts`, `worker/src/lib/telegram-presets.ts`, and `worker/src/lib/telegram-digest-appendices.ts` handle Bot API sends, ticker parsing, preset resolution, message formatting, diffing, and HTML escaping.
 
 The delivery system is worker-owned. The frontend exposes a static `/telegram/` landing page, but it does not call the bot APIs directly.
 
@@ -24,6 +24,7 @@ The delivery system is worker-owned. The frontend exposes a static `/telegram/` 
 - `worker/src/cron/daily-digest.ts`
 - `worker/src/lib/telegram.ts`
 - `worker/src/lib/telegram-alerts.ts`
+- `worker/src/lib/telegram-presets.ts`
 - `worker/src/lib/telegram-digest-appendices.ts`
 - `src/app/telegram/page.tsx`
 - `worker/migrations/0000_baseline.sql`
@@ -91,10 +92,11 @@ The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Toke
 |---------|----------|
 | `/start` | Sends onboarding copy, example usage, and links to `@pharoswatch` and `@pharoswatchers` |
 | `/help` | Sends command reference |
+| `/presets` | Returns the preset watchlist catalog plus subscribe and unsubscribe examples |
 | `/list` | Returns enabled alert types plus subscribed coins for the chat |
-| `/subscribe <types> <tickers>` | Enables one or more alert types and subscribes the chat to one or more coins |
+| `/subscribe <types> <targets>` | Enables one or more alert types and subscribes the chat to one or more explicit coins or preset watchlists |
 | `/subscribe <types> all` | Enables one or more alert types across all tracked stablecoins |
-| `/unsubscribe <tickers>` | Removes specific coin subscriptions |
+| `/unsubscribe <targets>` | Removes explicit coin subscriptions and can also remove the coins covered by a preset watchlist |
 | `/unsubscribe all` | Clears all per-coin subscriptions and disables the current DEWS/depeg/safety flags; launch flags are not reset by this path today |
 | `/set <ticker> <setting> <value>` | Tunes per-coin settings such as DEWS floor, safety direction mode, or depeg worsening step |
 | `/set all <setting> <value>` | Enables or disables global all-stablecoin alert types (`dews`, `depeg`, `safety`) |
@@ -108,6 +110,19 @@ The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Toke
 - `depeg`
 - `safety`
 - `launch`
+
+### Preset Watchlists
+
+Preset watchlists are a v1 convenience layer on top of the existing per-coin subscription model.
+
+- Supported aliases: `usd-top10`, `usd-top25`, `usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, `mcap-ge-100m`
+- Resolution happens at command time inside `worker/src/lib/telegram-presets.ts`
+- The resolver uses the current strict `stablecoins` cache plus tracked stablecoin metadata to map each preset alias to concrete active coin IDs
+- `/subscribe ... <preset>` expands the preset into normal `telegram_subscriptions` rows; v1 does not add a separate smart-subscription table
+- `/unsubscribe <preset>` resolves the same alias and deletes those matching per-coin rows for the chat
+- `/list` only shows the resulting coin rows; preset membership is not stored separately after expansion
+- `launch` does not accept presets; launch alerts still require explicit ticker or coin-id targets
+- Preset resolution fails closed when the stablecoins cache is unavailable; the bot returns a temporary retry message instead of subscribing stale or incomplete cohorts
 
 Additional alert controls:
 
@@ -126,12 +141,14 @@ Global subscriptions are additive, but explicit per-coin rows take precedence fo
 Ticker parsing lives in `worker/src/lib/telegram-alerts.ts` and is built from `TRACKED_STABLECOINS`.
 
 - Resolution is symbol-first and case-insensitive.
+- Preset aliases are matched before ticker resolution in the shared target parser.
 - Unique matches subscribe immediately.
 - Exact Pharos coin IDs resolve immediately and override symbol ambiguity.
 - Ambiguous symbols create a row in `telegram_pending_disambiguation`.
 - Users reply with `1` or `1,2` style selections.
 - Pending disambiguation rows expire after `5 minutes`.
 - Unknown tickers return a contextual error, with a prefix-based suggestion when available.
+- Unknown preset aliases are reported through the same contextual error path, with `/presets` suggested as the discovery surface.
 - `/cancel` clears a pending selection.
 - `/help`, `/list`, and new mutating commands are not trapped behind pending disambiguation; only plain numeric replies are treated as selections.
 

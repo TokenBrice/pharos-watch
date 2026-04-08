@@ -148,6 +148,7 @@ export function parsePendingDisambiguation(pending: PendingDisambiguationRow): P
     return {
       actionType,
       alertTypes: actionAlertTypes,
+      presetIds: parseStringArray(payload.presetIds),
       resolvedCoins,
       ambiguousTicker: pending.ambiguous_ticker,
       candidates,
@@ -158,6 +159,7 @@ export function parsePendingDisambiguation(pending: PendingDisambiguationRow): P
   if (actionType === "unsubscribe") {
     return {
       actionType,
+      presetIds: parseStringArray(payload.presetIds),
       resolvedCoins,
       ambiguousTicker: pending.ambiguous_ticker,
       candidates,

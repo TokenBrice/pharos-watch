@@ -17,7 +17,7 @@ export async function persistPendingDisambiguation(
   input: {
     chatId: string;
     actionType: PendingActionType;
-    actionPayload: Record<string, unknown>;
+    actionPayload: object;
     resolvedCoins: ResolvedCoin[];
     ambiguousTicker: string;
     candidates: ResolvedCoin[];

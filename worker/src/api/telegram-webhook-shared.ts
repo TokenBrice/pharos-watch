@@ -3,7 +3,7 @@ import type { ResolvedCoin } from "../lib/telegram-alerts";
 
 export const START_MESSAGE = `<b>Welcome to PharosWatchBot</b>
 
-I send opt-in alerts for the stablecoins you follow, or for all tracked stablecoins by alert type.
+I send opt-in alerts for the stablecoins you follow, preset watchlists, or all tracked stablecoins by alert type.
 
 Join <a href="https://t.me/pharoswatch">@pharoswatch</a> for Pharos updates and <a href="https://t.me/pharoswatchers">@pharoswatchers</a> for community discussion about Pharos.
 
@@ -15,23 +15,28 @@ Join <a href="https://t.me/pharoswatch">@pharoswatch</a> for Pharos updates and 
 
 <b>Quick start</b>
 <code>/subscribe dews depeg USDC BOLD</code>
+<code>/subscribe dews usd-top25</code>
+<code>/subscribe safety mcap-ge-1b</code>
 <code>/subscribe launch USDPT</code>
 <code>/subscribe safety all</code>
 <code>/set USDC depeg-step 250</code>
 <code>/mute 22-07</code>
 
-Use /help for commands.`;
+Use /help for commands and /presets for preset watchlists.`;
 
 export const HELP_MESSAGE = `<b>Commands</b>
 
-<code>/subscribe &lt;types&gt; &lt;tickers&gt;</code>
-Enable alert types (dews, depeg, safety, launch) for one or more coins
+<code>/subscribe &lt;types&gt; &lt;targets&gt;</code>
+Enable alert types (dews, depeg, safety, launch) for one or more coins or preset watchlists
 
 <code>/subscribe &lt;types&gt; all</code>
 Enable alert types across all tracked stablecoins
 
-<code>/unsubscribe &lt;tickers&gt;</code>
-Remove specific coin subscriptions
+<code>/presets</code>
+Show the preset watchlist catalog and examples
+
+<code>/unsubscribe &lt;targets&gt;</code>
+Remove specific coin subscriptions or preset-expanded coins
 
 <code>/unsubscribe all</code>
 Remove all per-coin and all-stablecoin subscriptions
@@ -53,7 +58,9 @@ Disable quiet hours
 Show current subscriptions and settings
 
 <code>/cancel</code>
-Cancel a pending selection`;
+Cancel a pending selection
+
+Preset watchlists expand into normal coin follows at subscribe time. Launch alerts require explicit tickers.`;
 
 export const DISAMBIGUATION_TTL_SEC = 5 * 60;
 
@@ -85,6 +92,15 @@ export interface PendingDisambiguationRow {
   candidates: string;
   remaining_tickers: string;
   expires_at: number;
+}
+
+export interface SubscribeActionPayload {
+  alertTypes: string[];
+  presetIds?: string[];
+}
+
+export interface UnsubscribeActionPayload {
+  presetIds?: string[];
 }
 
 export interface SubscriberRow {
@@ -131,6 +147,7 @@ export type PendingAction =
   | {
       actionType: "subscribe";
       alertTypes: Set<string>;
+      presetIds: string[];
       resolvedCoins: ResolvedCoin[];
       ambiguousTicker: string;
       candidates: ResolvedCoin[];
@@ -138,6 +155,7 @@ export type PendingAction =
     }
   | {
       actionType: "unsubscribe";
+      presetIds: string[];
       resolvedCoins: ResolvedCoin[];
       ambiguousTicker: string;
       candidates: ResolvedCoin[];
