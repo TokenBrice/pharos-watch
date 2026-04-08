@@ -2,7 +2,7 @@ import { batchExecute } from "../db";
 import { recalcAffectedHours } from "./persistence";
 import type { MintBurnAffectedHour } from "./types";
 
-const SWEEP_LOOKBACK_SEC = 48 * 3600; // same window as price heal
+const SWEEP_LOOKBACK_SEC = 7 * 24 * 3600; // 7 days; capped by SWEEP_LIMIT per run
 const SWEEP_LIMIT = 200; // keep it lightweight per cron run
 
 export interface RoundtripSweepResult {
@@ -19,8 +19,9 @@ export interface RoundtripSweepResult {
 export async function sweepRecentRoundtrips(
   db: D1Database,
   nowSec: number,
+  lookbackSec = SWEEP_LOOKBACK_SEC,
 ): Promise<RoundtripSweepResult> {
-  const cutoff = nowSec - SWEEP_LOOKBACK_SEC;
+  const cutoff = nowSec - lookbackSec;
 
   const { results: candidates } = await db.prepare(
     `SELECT tx_hash, stablecoin_id, chain_id, MIN(timestamp) as min_ts
