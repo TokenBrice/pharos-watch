@@ -63,6 +63,41 @@ describe("handleRequestSourceStats", () => {
           pages_upstream_errors: 5,
         },
       },
+      {
+        match: "AS keyed_requests",
+        matchBinds: [1_699_913_600, 1_700_000_000],
+        rows: [],
+        first: {
+          keyed_requests: 220,
+          total_keys: 3,
+        },
+      },
+      {
+        match: "FROM api_key_request_stats",
+        matchBinds: [1_699_913_600, 1_700_000_000, 25],
+        rows: [
+          {
+            api_key_id: 7,
+            name: "Partner A",
+            masked_token: "ph_live_0123456789abcdef_********",
+            traffic_class: "external",
+            is_active: 1,
+            expires_at: 1_700_100_000,
+            rate_limit_per_minute: 180,
+            request_count: 150,
+          },
+          {
+            api_key_id: 9,
+            name: "Site Automation",
+            masked_token: "ph_live_fedcba9876543210_********",
+            traffic_class: "site",
+            is_active: 0,
+            expires_at: null,
+            rate_limit_per_minute: 120,
+            request_count: 50,
+          },
+        ],
+      },
     ], { requireMatch: true });
 
     const request = new Request("https://ops-api.pharos.watch/api/request-source-stats?hours=24&bucketSec=3600&routeLimit=2");
@@ -142,6 +177,44 @@ describe("handleRequestSourceStats", () => {
         externalSharePct: 50,
       },
     ]);
+    expect(body.keyedPublicApi).toEqual({
+      keyedRequests: 220,
+      unkeyedRequests: 280,
+      totalRequests: 500,
+      keyedSharePct: 44,
+      unkeyedSharePct: 56,
+      totalKeys: 3,
+      returnedKeys: 2,
+      omittedKeys: 1,
+      omittedRequests: 20,
+      truncated: true,
+    });
+    expect(body.apiKeys).toEqual([
+      {
+        apiKeyId: 7,
+        name: "Partner A",
+        maskedToken: "ph_live_0123456789abcdef_********",
+        trafficClass: "external",
+        isActive: true,
+        expiresAt: 1_700_100_000,
+        rateLimitPerMinute: 180,
+        requestCount: 150,
+        shareOfKeyedRequestsPct: 68.18,
+        shareOfTotalPublicApiRequestsPct: 30,
+      },
+      {
+        apiKeyId: 9,
+        name: "Site Automation",
+        maskedToken: "ph_live_fedcba9876543210_********",
+        trafficClass: "site",
+        isActive: false,
+        expiresAt: null,
+        rateLimitPerMinute: 120,
+        requestCount: 50,
+        shareOfKeyedRequestsPct: 22.73,
+        shareOfTotalPublicApiRequestsPct: 10,
+      },
+    ]);
     expect(body.scope).toEqual({
       countsTotalSiteDemand: true,
       countsWorkerLoad: true,
@@ -153,6 +226,7 @@ describe("handleRequestSourceStats", () => {
       durationSec: 86_400,
       bucketSizeSec: 3600,
       routeLimit: 2,
+      apiKeyLimit: 25,
       retentionDays: 35,
     });
   });

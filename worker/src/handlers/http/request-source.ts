@@ -1,6 +1,9 @@
 import { classifyBrowserRequestConsumer, resolveApiRequestRouteMetric } from "@shared/lib/request-attribution";
 import type { ApiKeyTrafficClass } from "@shared/types";
-import { recordWorkerRequestAttribution } from "../../lib/request-source-attribution";
+import {
+  recordApiKeyRequestAttribution,
+  recordWorkerRequestAttribution,
+} from "../../lib/request-source-attribution";
 
 export function createRequestSourceRecorder(config: {
   request: Request;
@@ -8,6 +11,7 @@ export function createRequestSourceRecorder(config: {
   execCtx: ExecutionContext;
   isAdmin: boolean;
   isSiteProxy: boolean;
+  apiKeyId: number | null;
   apiKeyTrafficClass: ApiKeyTrafficClass | null;
   requestLane: "public-api" | "site-api" | null;
   pathname: string;
@@ -36,8 +40,12 @@ export function createRequestSourceRecorder(config: {
   const consumerClass =
     config.apiKeyTrafficClass ?? classifyBrowserRequestConsumer(config.request);
   return () => {
-    config.execCtx.waitUntil(
+    const attributionWrites: Promise<void>[] = [
       recordWorkerRequestAttribution(config.db, route, "public-api", consumerClass),
-    );
+    ];
+    if (config.apiKeyId != null) {
+      attributionWrites.push(recordApiKeyRequestAttribution(config.db, config.apiKeyId));
+    }
+    config.execCtx.waitUntil(Promise.all(attributionWrites).then(() => {}));
   };
 }

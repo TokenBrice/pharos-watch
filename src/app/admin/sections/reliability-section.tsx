@@ -1,3 +1,4 @@
+import { ApiKeyLoadTable } from "@/components/status/api-key-load-table";
 import type { ApiRequestAttributionResponse, EndpointProbeResult, HealthResponse, StatusResponse } from "@shared/types";
 import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
 import { CircuitBreakerTable } from "@/components/status/circuit-breaker-table";
@@ -77,6 +78,11 @@ export function ReliabilitySection({
             <CircuitBreakerTable circuits={healthData?.circuits} />
           </div>
           <RequestSourceAttributionCard
+            stats={requestSourceStats}
+            error={requestSourceError}
+            isLoading={requestSourceLoading}
+          />
+          <ApiKeyLoadTable
             stats={requestSourceStats}
             error={requestSourceError}
             isLoading={requestSourceLoading}

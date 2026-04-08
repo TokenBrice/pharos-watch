@@ -122,11 +122,11 @@ describe("query polling policy", () => {
     expect(options.retry).toBe(0);
     expect(options.staleTime).toBe(CRON_1MIN);
     expect(options.refetchInterval).toBe(2 * CRON_1MIN);
-    expect(options.queryKey).toEqual(["request-source-stats", 24, 3600, 5, "ops-proxy"]);
+    expect(options.queryKey).toEqual(["request-source-stats", 24, 3600, 5, 25, "ops-proxy"]);
 
     await options.queryFn();
     const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(path).toBe("/api/admin/request-source-stats?hours=24&bucketSec=3600&routeLimit=5");
+    expect(path).toBe("/api/admin/request-source-stats?hours=24&bucketSec=3600&routeLimit=5&apiKeyLimit=25");
     expect(init).toBeUndefined();
   });
 

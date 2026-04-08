@@ -1,3 +1,5 @@
+import type { ApiKeyTrafficClass } from "./api-keys";
+
 export type ApiRequestConsumerClass = "site" | "external";
 
 export type ApiRequestWorkerLane = "public-api" | "site-api";
@@ -46,6 +48,32 @@ export interface ApiRequestAttributionScope {
   includesPagesProxyCacheHits: boolean;
 }
 
+export interface ApiRequestAttributionKeyedPublicApiSummary {
+  keyedRequests: number;
+  unkeyedRequests: number;
+  totalRequests: number;
+  keyedSharePct: number;
+  unkeyedSharePct: number;
+  totalKeys: number;
+  returnedKeys: number;
+  omittedKeys: number;
+  omittedRequests: number;
+  truncated: boolean;
+}
+
+export interface ApiRequestAttributionApiKeyStat {
+  apiKeyId: number;
+  name: string;
+  maskedToken: string;
+  trafficClass: ApiKeyTrafficClass;
+  isActive: boolean;
+  expiresAt: number | null;
+  rateLimitPerMinute: number;
+  requestCount: number;
+  shareOfKeyedRequestsPct: number;
+  shareOfTotalPublicApiRequestsPct: number;
+}
+
 export interface ApiRequestAttributionResponse {
   generatedAt: number;
   window: {
@@ -54,6 +82,7 @@ export interface ApiRequestAttributionResponse {
     durationSec: number;
     bucketSizeSec: number;
     routeLimit: number;
+    apiKeyLimit: number;
     retentionDays: number;
   };
   totals: ApiRequestAttributionSplit;
@@ -61,6 +90,8 @@ export interface ApiRequestAttributionResponse {
   lanes: ApiRequestAttributionLaneStat[];
   routes: ApiRequestAttributionRouteStat[];
   buckets: ApiRequestAttributionTimeBucket[];
+  keyedPublicApi: ApiRequestAttributionKeyedPublicApiSummary;
+  apiKeys: ApiRequestAttributionApiKeyStat[];
   scope: ApiRequestAttributionScope;
 }
 

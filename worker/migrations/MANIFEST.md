@@ -33,6 +33,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0087     | `0087_api_key_expiry.sql`                       | Add nullable API key expiry timestamps for default-expiring and explicit non-expiring keys     |
 | 0088     | `0088_api_key_audit_log.sql`                    | Add API key audit log table for tracking create/update/deactivate/rotate mutations             |
 | 0089     | `0089_api_key_pepper_version.sql`               | Add pepper_version column to api_keys for tracking which pepper generation hashed the secret   |
+| 0090     | `0090_api_key_request_stats.sql`                | Add retained minute-bucketed per-key request telemetry for admin load reporting                |
 
 ## Retired Individual Migrations
 

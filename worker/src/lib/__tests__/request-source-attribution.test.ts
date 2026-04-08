@@ -9,7 +9,10 @@ import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import {
   API_REQUEST_SOURCE_STATS_RETENTION_DAYS,
+  buildApiRequestAttributionKeyedPublicApiSummary,
   buildApiRequestAttributionSplit,
+  mapApiKeyStatsRows,
+  recordApiKeyRequestAttribution,
   mapLaneStatsRows,
   mapRouteStatsRows,
   mapTimeBucketRows,
@@ -158,6 +161,45 @@ describe("request-source-attribution", () => {
       },
     ]);
 
+    expect(buildApiRequestAttributionKeyedPublicApiSummary(30, 100, 4, 3, 24)).toEqual({
+      keyedRequests: 30,
+      unkeyedRequests: 70,
+      totalRequests: 100,
+      keyedSharePct: 30,
+      unkeyedSharePct: 70,
+      totalKeys: 4,
+      returnedKeys: 3,
+      omittedKeys: 1,
+      omittedRequests: 6,
+      truncated: true,
+    });
+
+    expect(mapApiKeyStatsRows([
+      {
+        api_key_id: 7,
+        name: "Partner",
+        masked_token: "ph_live_0123456789abcdef_********",
+        traffic_class: "external",
+        is_active: 1,
+        expires_at: 1_700_100_000,
+        rate_limit_per_minute: 120,
+        request_count: 25,
+      },
+    ], 50, 200)).toEqual([
+      {
+        apiKeyId: 7,
+        name: "Partner",
+        maskedToken: "ph_live_0123456789abcdef_********",
+        trafficClass: "external",
+        isActive: true,
+        expiresAt: 1_700_100_000,
+        rateLimitPerMinute: 120,
+        requestCount: 25,
+        shareOfKeyedRequestsPct: 50,
+        shareOfTotalPublicApiRequestsPct: 12.5,
+      },
+    ]);
+
     expect(API_REQUEST_SOURCE_STATS_RETENTION_DAYS).toBe(REQUEST_ATTRIBUTION_RETENTION_DAYS);
   });
 
@@ -172,6 +214,11 @@ describe("request-source-attribution", () => {
         match: "DELETE FROM api_request_consumer_stats",
         rows: [],
         runMeta: { changes: 3 },
+      },
+      {
+        match: "DELETE FROM api_key_request_stats",
+        rows: [],
+        runMeta: { changes: 0 },
       },
     ], { requireMatch: true });
 
@@ -193,10 +240,12 @@ describe("request-source-attribution", () => {
     const history = db.getHistory();
     const insertStatements = history.filter((entry) => entry.sql.includes("INSERT INTO api_request_consumer_stats"));
     const pruneStatements = history.filter((entry) => entry.sql.includes("DELETE FROM api_request_consumer_stats"));
+    const apiKeyPruneStatements = history.filter((entry) => entry.sql.includes("DELETE FROM api_key_request_stats"));
 
     expect(insertStatements).toHaveLength(2);
     expect(insertStatements[0]?.binds.slice(1)).toEqual(["stablecoins", "/api/stablecoins", "public-api", "site"]);
     expect(pruneStatements).toHaveLength(1);
+    expect(apiKeyPruneStatements).toHaveLength(1);
   });
 
   it("logs prune failures and resets pending prune state for the next prune window", async () => {
@@ -211,6 +260,11 @@ describe("request-source-attribution", () => {
         match: "DELETE FROM api_request_consumer_stats",
         rows: [],
         throwError: new Error("prune failed"),
+      },
+      {
+        match: "DELETE FROM api_key_request_stats",
+        rows: [],
+        runMeta: { changes: 0 },
       },
     ], { requireMatch: true });
 
@@ -236,5 +290,36 @@ describe("request-source-attribution", () => {
     expect(pruneStatements).toHaveLength(2);
     expect(warnSpy).toHaveBeenCalledTimes(2);
     expect(warnSpy.mock.calls[0]?.[0]).toBe("[request-attribution] worker prune failed:");
+  });
+
+  it("records per-key request stats and shares the same prune cadence", async () => {
+    const db = mockD1([
+      {
+        match: "INSERT INTO api_key_request_stats",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+      {
+        match: "DELETE FROM api_request_consumer_stats",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+      {
+        match: "DELETE FROM api_key_request_stats",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+    ], { requireMatch: true });
+
+    await recordApiKeyRequestAttribution(db, 7, 1_710_000_000);
+    await recordApiKeyRequestAttribution(db, 7, 1_710_000_030);
+
+    const history = db.getHistory();
+    const insertStatements = history.filter((entry) => entry.sql.includes("INSERT INTO api_key_request_stats"));
+    const pruneStatements = history.filter((entry) => entry.sql.includes("DELETE FROM api_key_request_stats"));
+
+    expect(insertStatements).toHaveLength(2);
+    expect(insertStatements[0]?.binds).toEqual([7, 1_710_000_000 - (1_710_000_000 % 60)]);
+    expect(pruneStatements).toHaveLength(1);
   });
 });

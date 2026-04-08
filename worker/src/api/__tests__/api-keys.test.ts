@@ -332,6 +332,11 @@ describe("api key handlers", () => {
         rows: [],
         runMeta: { changes: 0 },
       },
+      {
+        match: "DELETE FROM api_key_request_stats",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
     ], { requireMatch: true });
     const { ctx, waits } = makeCtx();
 

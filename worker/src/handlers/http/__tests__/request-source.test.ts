@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   recordWorkerRequestAttribution: vi.fn(() => Promise.resolve()),
+  recordApiKeyRequestAttribution: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock("../../../lib/request-source-attribution", () => ({
   recordWorkerRequestAttribution: mocks.recordWorkerRequestAttribution,
+  recordApiKeyRequestAttribution: mocks.recordApiKeyRequestAttribution,
 }));
 
 import { createRequestSourceRecorder } from "../request-source";
@@ -22,6 +24,7 @@ describe("createRequestSourceRecorder", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.recordWorkerRequestAttribution.mockResolvedValue(undefined);
+    mocks.recordApiKeyRequestAttribution.mockResolvedValue(undefined);
   });
 
   it("returns a no-op recorder for admin requests", () => {
@@ -32,6 +35,7 @@ describe("createRequestSourceRecorder", () => {
       execCtx,
       isAdmin: true,
       isSiteProxy: false,
+      apiKeyId: null,
       apiKeyTrafficClass: null,
       requestLane: "public-api",
       pathname: "/api/stablecoins",
@@ -41,6 +45,7 @@ describe("createRequestSourceRecorder", () => {
 
     expect(execCtx.waitUntil).not.toHaveBeenCalled();
     expect(mocks.recordWorkerRequestAttribution).not.toHaveBeenCalled();
+    expect(mocks.recordApiKeyRequestAttribution).not.toHaveBeenCalled();
   });
 
   it("returns a no-op recorder when no request lane is assigned", () => {
@@ -51,6 +56,7 @@ describe("createRequestSourceRecorder", () => {
       execCtx,
       isAdmin: false,
       isSiteProxy: false,
+      apiKeyId: null,
       apiKeyTrafficClass: null,
       requestLane: null,
       pathname: "/api/stablecoins",
@@ -60,6 +66,7 @@ describe("createRequestSourceRecorder", () => {
 
     expect(execCtx.waitUntil).not.toHaveBeenCalled();
     expect(mocks.recordWorkerRequestAttribution).not.toHaveBeenCalled();
+    expect(mocks.recordApiKeyRequestAttribution).not.toHaveBeenCalled();
   });
 
   it("returns a no-op recorder for site-api traffic without the site proxy credential", () => {
@@ -70,6 +77,7 @@ describe("createRequestSourceRecorder", () => {
       execCtx,
       isAdmin: false,
       isSiteProxy: false,
+      apiKeyId: null,
       apiKeyTrafficClass: null,
       requestLane: "site-api",
       pathname: "/api/stablecoins",
@@ -79,6 +87,7 @@ describe("createRequestSourceRecorder", () => {
 
     expect(execCtx.waitUntil).not.toHaveBeenCalled();
     expect(mocks.recordWorkerRequestAttribution).not.toHaveBeenCalled();
+    expect(mocks.recordApiKeyRequestAttribution).not.toHaveBeenCalled();
   });
 
   it("records site-api traffic as site when the request came through the site proxy", () => {
@@ -89,6 +98,7 @@ describe("createRequestSourceRecorder", () => {
       execCtx,
       isAdmin: false,
       isSiteProxy: true,
+      apiKeyId: null,
       apiKeyTrafficClass: null,
       requestLane: "site-api",
       pathname: "/api/stablecoins",
@@ -103,6 +113,7 @@ describe("createRequestSourceRecorder", () => {
       "site-api",
       "site",
     );
+    expect(mocks.recordApiKeyRequestAttribution).not.toHaveBeenCalled();
   });
 
   it("uses the API-key traffic class for public-api requests when present", () => {
@@ -115,6 +126,7 @@ describe("createRequestSourceRecorder", () => {
       execCtx,
       isAdmin: false,
       isSiteProxy: false,
+      apiKeyId: 7,
       apiKeyTrafficClass: "site",
       requestLane: "public-api",
       pathname: "/api/stablecoins",
@@ -129,6 +141,7 @@ describe("createRequestSourceRecorder", () => {
       "public-api",
       "site",
     );
+    expect(mocks.recordApiKeyRequestAttribution).toHaveBeenCalledWith(db, 7);
   });
 
   it("falls back to browser classification for public-api requests without an API-key class", () => {
@@ -141,6 +154,7 @@ describe("createRequestSourceRecorder", () => {
       execCtx,
       isAdmin: false,
       isSiteProxy: false,
+      apiKeyId: null,
       apiKeyTrafficClass: null,
       requestLane: "public-api",
       pathname: "/api/stablecoins",
@@ -155,5 +169,6 @@ describe("createRequestSourceRecorder", () => {
       "public-api",
       "external",
     );
+    expect(mocks.recordApiKeyRequestAttribution).not.toHaveBeenCalled();
   });
 });

@@ -92,10 +92,10 @@ The active frontend operator mode is now:
   - Adds rolling windows (`6h`, `24h`, `7d`, `30d`) for timeline drilldown
 - `src/hooks/use-request-source-stats.ts`
   - Calls `GET /api/request-source-stats` through same-origin `/api/admin/request-source-stats` on `ops.pharos.watch`
-  - Polls the default `24h` window with `1h` buckets and a top-5 route breakdown
+  - Polls the default `24h` window with `1h` buckets, a top-5 route breakdown, and a top-25 keyed public-API breakdown
   - Measures total site-vs-external demand across same-origin `/_site-data/*` plus `api.pharos.watch`
   - Top-line `site` demand includes Pages cache hits, Pages upstream fetch attempts, and `api.pharos.watch` requests attributed to browser evidence or website-owned API keys
-  - Worker-lane telemetry remains visible separately so operators can distinguish total demand from actual `public-api` vs `site-api` worker load
+  - Worker-lane telemetry remains visible separately so operators can distinguish total demand from actual `public-api` vs `site-api` worker load, and the admin reliability lane now adds an API-key load table for authenticated protected public traffic
   - Uses the same admin polling cadence as the other operator-only reads (`staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0`)
 - `functions/api/admin/[[path]].ts`
   - Cloudflare Pages Functions catch-all for operator-only admin routes
@@ -133,7 +133,7 @@ The active frontend operator mode is now:
   - `Actions`: manual response tools promoted upward when recommendations exist; Telegram delivery telemetry is now secondary and collapsible
   - `Pipeline`: data-quality threshold board, price-source health, CoinGecko price drift watchlist, liquidity health, pipeline freshness, admin-only D1 storage/usage telemetry, live reserve sync health, mint/burn reconciliation, metadata-integrity watchlists (`reserveDrift`, `classificationWarnings`), and discovery backlog
   - Mint/burn reconciliation now defaults to the six highest-severity rows and exposes the long insufficient-source tail behind a `See all` disclosure button
-  - `Reliability`: browser probes, circuit breakers, public-health divergence callouts, total site-vs-external demand attribution (Pages delivery split, worker-lane load, top route groups, recent buckets), and cache freshness; manual action routes are no longer rendered as default `Not probed` noise
+  - `Reliability`: browser probes, circuit breakers, public-health divergence callouts, total site-vs-external demand attribution (Pages delivery split, worker-lane load, top route groups, recent buckets), keyed API-key load, and cache freshness; manual action routes are no longer rendered as default `Not probed` noise
   - `Cron Lanes`: grouped cron-card clusters with trigger-theme wrappers; unhealthy/degraded groups sort first and fully healthy groups collapse by default
   - `History`: filtered incident timeline windows
 - Lane order below `Overview` is no longer fixed; `Actions`, `Pipeline`, `Cron Lanes`, and `Reliability` are ranked from current incident severity so the scroll order tapers from urgent action into broader telemetry.

@@ -2,6 +2,8 @@ import type { ApiRequestWorkerLane } from "@shared/types";
 import { jsonResponse, parseQueryParams } from "../lib/api-utils";
 import {
   buildApiRequestAttributionResponse,
+  buildApiRequestAttributionKeyedPublicApiSummary,
+  mapApiKeyStatsRows,
   mapLaneStatsRows,
   mapRouteStatsRows,
   mapTimeBucketRows,
@@ -41,6 +43,22 @@ interface SiteDeliveryRow {
   pages_upstream_errors: number | null;
 }
 
+interface ApiKeySummaryRow {
+  keyed_requests: number | null;
+  total_keys: number | null;
+}
+
+interface ApiKeyRow {
+  api_key_id: number;
+  name: string;
+  masked_token: string;
+  traffic_class: "external" | "site";
+  is_active: number;
+  expires_at: number | null;
+  rate_limit_per_minute: number;
+  request_count: number | null;
+}
+
 export function handleRequestSourceStats(
   db: D1Database,
   trustedAdmin?: boolean,
@@ -59,14 +77,15 @@ export function handleRequestSourceStats(
         hours: { type: "int", default: 24, min: 1, max: 24 * 35 },
         bucketSec: { type: "int", default: 3600, min: 60, max: 86400, name: "bucketSec" },
         routeLimit: { type: "int", default: 20, min: 1, max: 100, name: "routeLimit" },
+        apiKeyLimit: { type: "int", default: 25, min: 1, max: 100, name: "apiKeyLimit" },
       });
       if (parsed instanceof Response) return parsed;
 
-      const { hours, bucketSec, routeLimit } = parsed;
+      const { hours, bucketSec, routeLimit, apiKeyLimit } = parsed;
       const to = now;
       const from = now - hours * 3600;
 
-      const [totalsRow, routeRows, bucketRows, laneRows, siteDeliveryRow] = await Promise.all([
+      const [totalsRow, routeRows, bucketRows, laneRows, siteDeliveryRow, apiKeySummaryRow, apiKeyRows] = await Promise.all([
         db.prepare(
           `SELECT
              COALESCE((
@@ -194,11 +213,51 @@ export function handleRequestSourceStats(
         )
           .bind(from, to)
           .first<SiteDeliveryRow>(),
+        db.prepare(
+          `SELECT
+             COALESCE(SUM(request_count), 0) AS keyed_requests,
+             COUNT(DISTINCT api_key_id) AS total_keys
+           FROM api_key_request_stats
+           WHERE bucket_start >= ? AND bucket_start < ?`,
+        )
+          .bind(from, to)
+          .first<ApiKeySummaryRow>(),
+        db.prepare(
+          `SELECT
+             stats.api_key_id,
+             keys.name,
+             ('ph_live_' || keys.key_prefix || '_********') AS masked_token,
+             keys.traffic_class,
+             keys.is_active,
+             keys.expires_at,
+             keys.rate_limit_per_minute,
+             stats.request_count
+           FROM (
+             SELECT
+               api_key_id,
+               SUM(request_count) AS request_count
+             FROM api_key_request_stats
+             WHERE bucket_start >= ? AND bucket_start < ?
+             GROUP BY api_key_id
+             ORDER BY SUM(request_count) DESC, api_key_id ASC
+             LIMIT ?
+           ) AS stats
+           INNER JOIN api_keys AS keys
+             ON keys.id = stats.api_key_id
+           ORDER BY stats.request_count DESC, stats.api_key_id ASC`,
+        )
+          .bind(from, to, apiKeyLimit)
+          .all<ApiKeyRow>(),
       ]);
 
       const pagesSiteRequests = totalsRow?.pages_site_requests ?? 0;
       const publicApiSiteRequests = totalsRow?.public_api_site_requests ?? 0;
       const externalRequests = totalsRow?.external_requests ?? 0;
+      const totalPublicApiRequests = publicApiSiteRequests + externalRequests;
+      const keyedRequests = apiKeySummaryRow?.keyed_requests ?? 0;
+      const totalKeys = apiKeySummaryRow?.total_keys ?? 0;
+      const apiKeys = mapApiKeyStatsRows(apiKeyRows.results ?? [], keyedRequests, totalPublicApiRequests);
+      const returnedKeyedRequests = apiKeys.reduce((sum, row) => sum + row.requestCount, 0);
 
       const body = buildApiRequestAttributionResponse({
         generatedAt: now,
@@ -206,6 +265,7 @@ export function handleRequestSourceStats(
         to,
         bucketSizeSec: bucketSec,
         routeLimit,
+        apiKeyLimit,
         totals: {
           siteRequests: pagesSiteRequests + publicApiSiteRequests,
           externalRequests,
@@ -221,6 +281,14 @@ export function handleRequestSourceStats(
         lanes: mapLaneStatsRows(laneRows.results ?? []),
         routes: mapRouteStatsRows(routeRows.results ?? []),
         buckets: mapTimeBucketRows(bucketRows.results ?? []),
+        keyedPublicApi: buildApiRequestAttributionKeyedPublicApiSummary(
+          keyedRequests,
+          totalPublicApiRequests,
+          totalKeys,
+          apiKeys.length,
+          returnedKeyedRequests,
+        ),
+        apiKeys,
       });
 
       return jsonResponse(body, { noStore: true });

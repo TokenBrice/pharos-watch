@@ -34,6 +34,7 @@ export async function handleHttpRequestImpl(
     execCtx: ctx,
     isAdmin,
     isSiteProxy,
+    apiKeyId: apiKey?.id ?? null,
     apiKeyTrafficClass: apiKey?.trafficClass ?? null,
     requestLane,
     pathname: url.pathname,

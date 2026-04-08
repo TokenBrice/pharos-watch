@@ -2545,18 +2545,21 @@ The top-line `external` bucket is `api.pharos.watch` traffic not classified as s
 | `hours`      | `integer` | `24`    | Window size in hours (`1`–`840`, currently 35 days) |
 | `bucketSec`  | `integer` | `3600`  | Time-bucket rollup size in seconds (`60`–`86400`) |
 | `routeLimit` | `integer` | `20`    | Max per-route rows returned in the route breakdown |
+| `apiKeyLimit` | `integer` | `25`   | Max per-key rows returned in the keyed public-API breakdown |
 
 **Response shape:** `ApiRequestAttributionResponse` (defined in `shared/types/index.ts`)
 
 `ApiRequestAttributionResponse` includes:
 
 - `generatedAt` — Unix seconds when the response was generated
-- `window` — requested `from`/`to`, `durationSec`, `bucketSizeSec`, `routeLimit`, and current `retentionDays`
+- `window` — requested `from`/`to`, `durationSec`, `bucketSizeSec`, `routeLimit`, `apiKeyLimit`, and current `retentionDays`
 - `totals` — aggregate `siteRequests`, `externalRequests`, `totalRequests`, `siteSharePct`, `externalSharePct`
 - `siteDelivery` — Pages delivery-path counters (`pagesCacheHits`, `pagesUpstreamFetches`, `pagesUpstreamTimeouts`, `pagesUpstreamErrors`) plus `publicApiSiteRequests`
 - `lanes[]` — worker-load split by `lane` (`public-api`, `site-api`) with the same site/external counters
 - `routes[]` — normalized per-route breakdown sorted by total demand volume
 - `buckets[]` — time-series rollups using the requested `bucketSec`
+- `keyedPublicApi` — summary of authenticated protected `public-api` traffic (`keyedRequests`, `unkeyedRequests`, share percentages, total keys in window, and truncation metadata)
+- `apiKeys[]` — top API keys by keyed request volume with masked token, traffic class, active/expiry metadata, rate limit, request count, and keyed/public-api share percentages
 - `scope` — explicit booleans describing that the response counts total site demand, worker load, and Pages proxy cache hits
 
 ### `GET /api/api-keys`

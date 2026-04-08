@@ -211,6 +211,11 @@ describe("worker.fetch", () => {
           rows: [],
           runMeta: { changes: 0 },
         },
+        {
+          match: "DELETE FROM api_key_request_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
       ], { requireMatch: true }),
     });
     const { ctx, waits } = makeCtx();
@@ -249,6 +254,11 @@ describe("worker.fetch", () => {
         },
         {
           match: "DELETE FROM api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+        {
+          match: "DELETE FROM api_key_request_stats",
           rows: [],
           runMeta: { changes: 0 },
         },
@@ -369,6 +379,11 @@ describe("worker.fetch", () => {
           rows: [],
           runMeta: { changes: 0 },
         },
+        {
+          match: "DELETE FROM api_key_request_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
       ], { requireMatch: true }),
     });
     const { ctx, waits } = makeCtx();
@@ -414,6 +429,11 @@ describe("worker.fetch", () => {
         },
         {
           match: "DELETE FROM api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+        {
+          match: "DELETE FROM api_key_request_stats",
           rows: [],
           runMeta: { changes: 0 },
         },
@@ -463,6 +483,11 @@ describe("worker.fetch", () => {
         },
         {
           match: "DELETE FROM api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+        {
+          match: "DELETE FROM api_key_request_stats",
           rows: [],
           runMeta: { changes: 0 },
         },
@@ -538,7 +563,17 @@ describe("worker.fetch", () => {
           runMeta: { changes: 1 },
         },
         {
+          match: "INSERT INTO api_key_request_stats",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
           match: "DELETE FROM api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+        {
+          match: "DELETE FROM api_key_request_stats",
           rows: [],
           runMeta: { changes: 0 },
         },
@@ -559,6 +594,7 @@ describe("worker.fetch", () => {
     expect(res.status).toBe(200);
     const history = env.DB.getHistory();
     expect(history.some((entry) => entry.sql.includes("INSERT INTO api_key_rate_limit"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO api_key_request_stats") && entry.binds[0] === 7)).toBe(true);
     expect(history.some((entry) => entry.sql.includes("public_api_rate_limit"))).toBe(false);
   });
 });

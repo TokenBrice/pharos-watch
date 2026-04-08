@@ -5,6 +5,8 @@ import {
 } from "@shared/lib/request-attribution";
 import { IsolateLocalState } from "./isolate-local-state";
 import type {
+  ApiRequestAttributionApiKeyStat,
+  ApiRequestAttributionKeyedPublicApiSummary,
   ApiRequestAttributionLaneStat,
   ApiRequestAttributionResponse,
   ApiRequestAttributionRouteStat,
@@ -25,6 +27,38 @@ const _rsa = new IsolateLocalState(() => ({
 
 export function resetRequestAttributionStateForTests(): void {
   _rsa.reset();
+}
+
+async function maybePruneRequestAttributionStats(
+  db: D1Database,
+  nowSec: number,
+): Promise<void> {
+  const pruneBucket = nowSec - (nowSec % REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC);
+  if (_rsa.state.lastApiRequestSourcePruneBucket !== pruneBucket && !_rsa.state.pendingApiRequestSourcePrune) {
+    _rsa.state.lastApiRequestSourcePruneBucket = pruneBucket;
+    const prunePromise = Promise.all([
+      db.prepare("DELETE FROM api_request_consumer_stats WHERE bucket_start < ?")
+        .bind(nowSec - API_REQUEST_SOURCE_STATS_RETENTION_SEC)
+        .run(),
+      db.prepare("DELETE FROM api_key_request_stats WHERE bucket_start < ?")
+        .bind(nowSec - API_REQUEST_SOURCE_STATS_RETENTION_SEC)
+        .run(),
+    ])
+      .then(() => {})
+      .catch((error) => {
+        console.warn("[request-attribution] worker prune failed:", error);
+      })
+      .finally(() => {
+        if (_rsa.state.pendingApiRequestSourcePrune === prunePromise) {
+          _rsa.state.pendingApiRequestSourcePrune = null;
+        }
+      });
+    _rsa.state.pendingApiRequestSourcePrune = prunePromise;
+  }
+
+  if (_rsa.state.pendingApiRequestSourcePrune) {
+    await _rsa.state.pendingApiRequestSourcePrune;
+  }
 }
 
 export async function recordWorkerRequestAttribution(
@@ -53,28 +87,29 @@ export async function recordWorkerRequestAttribution(
     .bind(bucketStart, route.routeKey, route.routePath, lane, consumerClass)
     .run();
 
-  const pruneBucket = nowSec - (nowSec % REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC);
-  if (_rsa.state.lastApiRequestSourcePruneBucket !== pruneBucket && !_rsa.state.pendingApiRequestSourcePrune) {
-    _rsa.state.lastApiRequestSourcePruneBucket = pruneBucket;
-    const prunePromise = db
-      .prepare("DELETE FROM api_request_consumer_stats WHERE bucket_start < ?")
-      .bind(nowSec - API_REQUEST_SOURCE_STATS_RETENTION_SEC)
-      .run()
-      .then(() => {})
-      .catch((error) => {
-        console.warn("[request-attribution] worker prune failed:", error);
-      })
-      .finally(() => {
-        if (_rsa.state.pendingApiRequestSourcePrune === prunePromise) {
-          _rsa.state.pendingApiRequestSourcePrune = null;
-        }
-      });
-    _rsa.state.pendingApiRequestSourcePrune = prunePromise;
-  }
+  await maybePruneRequestAttributionStats(db, nowSec);
+}
 
-  if (_rsa.state.pendingApiRequestSourcePrune) {
-    await _rsa.state.pendingApiRequestSourcePrune;
-  }
+export async function recordApiKeyRequestAttribution(
+  db: D1Database,
+  apiKeyId: number,
+  nowSec = Math.floor(Date.now() / 1000),
+): Promise<void> {
+  const bucketStart = nowSec - (nowSec % 60);
+  await db.prepare(
+    `INSERT INTO api_key_request_stats (
+       api_key_id,
+       bucket_start,
+       request_count
+     )
+     VALUES (?, ?, 1)
+     ON CONFLICT(api_key_id, bucket_start)
+     DO UPDATE SET request_count = request_count + 1`,
+  )
+    .bind(apiKeyId, bucketStart)
+    .run();
+
+  await maybePruneRequestAttributionStats(db, nowSec);
 }
 
 function roundPct(value: number): number {
@@ -148,12 +183,73 @@ function buildSiteDelivery(config: {
   };
 }
 
+export function buildApiRequestAttributionKeyedPublicApiSummary(
+  keyedRequests: number,
+  totalPublicApiRequests: number,
+  totalKeys: number,
+  returnedKeys: number,
+  returnedRequests: number,
+): ApiRequestAttributionKeyedPublicApiSummary {
+  const clampedKeyedRequests = Math.max(0, keyedRequests);
+  const clampedTotalPublicApiRequests = Math.max(0, totalPublicApiRequests);
+  const unkeyedRequests = Math.max(0, clampedTotalPublicApiRequests - clampedKeyedRequests);
+  const totalKeysSafe = Math.max(0, totalKeys);
+  const returnedKeysSafe = Math.min(Math.max(0, returnedKeys), totalKeysSafe);
+  const omittedKeys = Math.max(0, totalKeysSafe - returnedKeysSafe);
+  const omittedRequests = Math.max(0, clampedKeyedRequests - Math.max(0, returnedRequests));
+
+  return {
+    keyedRequests: clampedKeyedRequests,
+    unkeyedRequests,
+    totalRequests: clampedTotalPublicApiRequests,
+    keyedSharePct: clampedTotalPublicApiRequests > 0 ? roundPct((clampedKeyedRequests / clampedTotalPublicApiRequests) * 100) : 0,
+    unkeyedSharePct: clampedTotalPublicApiRequests > 0 ? roundPct((unkeyedRequests / clampedTotalPublicApiRequests) * 100) : 0,
+    totalKeys: totalKeysSafe,
+    returnedKeys: returnedKeysSafe,
+    omittedKeys,
+    omittedRequests,
+    truncated: omittedKeys > 0,
+  };
+}
+
+export function mapApiKeyStatsRows(
+  rows: Array<{
+    api_key_id: number;
+    name: string;
+    masked_token: string;
+    traffic_class: "external" | "site";
+    is_active: number;
+    expires_at: number | null;
+    rate_limit_per_minute: number;
+    request_count: number | null;
+  }>,
+  keyedRequests: number,
+  totalPublicApiRequests: number,
+): ApiRequestAttributionApiKeyStat[] {
+  return rows.map((row) => {
+    const requestCount = toCount(row.request_count);
+    return {
+      apiKeyId: row.api_key_id,
+      name: row.name,
+      maskedToken: row.masked_token,
+      trafficClass: row.traffic_class,
+      isActive: row.is_active === 1,
+      expiresAt: row.expires_at,
+      rateLimitPerMinute: row.rate_limit_per_minute,
+      requestCount,
+      shareOfKeyedRequestsPct: keyedRequests > 0 ? roundPct((requestCount / keyedRequests) * 100) : 0,
+      shareOfTotalPublicApiRequestsPct: totalPublicApiRequests > 0 ? roundPct((requestCount / totalPublicApiRequests) * 100) : 0,
+    };
+  });
+}
+
 export function buildApiRequestAttributionResponse(config: {
   generatedAt: number;
   from: number;
   to: number;
   bucketSizeSec: number;
   routeLimit: number;
+  apiKeyLimit: number;
   totals: {
     siteRequests: number;
     externalRequests: number;
@@ -169,6 +265,8 @@ export function buildApiRequestAttributionResponse(config: {
   lanes: ApiRequestAttributionLaneStat[];
   routes: ApiRequestAttributionRouteStat[];
   buckets: ApiRequestAttributionTimeBucket[];
+  keyedPublicApi: ApiRequestAttributionKeyedPublicApiSummary;
+  apiKeys: ApiRequestAttributionApiKeyStat[];
 }): ApiRequestAttributionResponse {
   return {
     generatedAt: config.generatedAt,
@@ -178,6 +276,7 @@ export function buildApiRequestAttributionResponse(config: {
       durationSec: Math.max(0, config.to - config.from),
       bucketSizeSec: config.bucketSizeSec,
       routeLimit: config.routeLimit,
+      apiKeyLimit: config.apiKeyLimit,
       retentionDays: API_REQUEST_SOURCE_STATS_RETENTION_DAYS,
     },
     totals: buildApiRequestAttributionSplit(config.totals.siteRequests, config.totals.externalRequests),
@@ -185,6 +284,8 @@ export function buildApiRequestAttributionResponse(config: {
     lanes: config.lanes,
     routes: config.routes,
     buckets: config.buckets,
+    keyedPublicApi: config.keyedPublicApi,
+    apiKeys: config.apiKeys,
     scope: {
       countsTotalSiteDemand: true,
       countsWorkerLoad: true,

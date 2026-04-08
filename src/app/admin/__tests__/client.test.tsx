@@ -34,6 +34,10 @@ vi.mock("@/components/status/admin-actions-panel", () => ({
   AdminActionsPanel: () => <div data-testid="admin-actions">admin actions</div>,
 }));
 
+vi.mock("@/components/status/api-key-load-table", () => ({
+  ApiKeyLoadTable: () => <div data-testid="api-key-load-table">api key load</div>,
+}));
+
 vi.mock("@/components/status/api-keys-panel", () => ({
   ApiKeysPanel: () => <div data-testid="api-keys-panel">api keys</div>,
 }));
@@ -348,6 +352,7 @@ const REQUEST_SOURCE_STATS: ApiRequestAttributionResponse = {
     durationSec: 86_400,
     bucketSizeSec: 3600,
     routeLimit: 5,
+    apiKeyLimit: 25,
     retentionDays: 35,
   },
   totals: {
@@ -368,6 +373,32 @@ const REQUEST_SOURCE_STATS: ApiRequestAttributionResponse = {
   lanes: [],
   routes: [],
   buckets: [],
+  keyedPublicApi: {
+    keyedRequests: 220,
+    unkeyedRequests: 280,
+    totalRequests: 500,
+    keyedSharePct: 44,
+    unkeyedSharePct: 56,
+    totalKeys: 3,
+    returnedKeys: 2,
+    omittedKeys: 1,
+    omittedRequests: 20,
+    truncated: true,
+  },
+  apiKeys: [
+    {
+      apiKeyId: 7,
+      name: "Partner A",
+      maskedToken: "ph_live_0123456789abcdef_********",
+      trafficClass: "external",
+      isActive: true,
+      expiresAt: 1_700_100_000,
+      rateLimitPerMinute: 180,
+      requestCount: 150,
+      shareOfKeyedRequestsPct: 68.18,
+      shareOfTotalPublicApiRequestsPct: 30,
+    },
+  ],
   scope: {
     countsTotalSiteDemand: true,
     countsWorkerLoad: true,
@@ -496,6 +527,7 @@ describe("admin status client", () => {
     expect(screen.getByText("Operator warning")).toBeTruthy();
     expect(screen.getByText("API Mix Fetch")).toBeTruthy();
     expect(screen.getByTestId("request-source-attribution")).toBeTruthy();
+    expect(screen.getByTestId("api-key-load-table")).toBeTruthy();
 
     const diagnosticsDetails = screen
       .getByText("State machine, probe, and discrepancy diagnostics")

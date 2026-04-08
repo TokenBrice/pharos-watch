@@ -144,11 +144,15 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 ### Request Attribution
 
 - Worker-side request attribution now writes minute-bucketed worker load into `api_request_consumer_stats`
+- Valid protected `public-api` requests authenticated with API keys also write minute-bucketed per-key load into `api_key_request_stats`
 - Pages `functions/_site-data/[[path]].ts` writes same-origin site demand into `site_data_request_stats`
 - both datasets are scoped to non-admin public-read traffic and exclude `/api/telegram-webhook`
 - worker load is stored by:
   - `lane`: `public-api` or `site-api`
   - `consumer_class`: `site` or `external`
+- keyed load is stored by:
+  - `api_key_id`
+  - `bucket_start`
 - site demand on the public API host is recognized from:
   - `api_keys.traffic_class = 'site'` for authenticated requests
   - or browser evidence (`Origin` / `Referer` matching `https://pharos.watch`, or the frontend `Accept` marker with `Sec-Fetch-Site: same-site|same-origin`)
@@ -158,6 +162,7 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
   - `pages-upstream-timeout`
   - `pages-upstream-error`
 - this lets `/api/request-source-stats` report total site-vs-external demand while still surfacing actual worker pressure on `public-api` vs `site-api`
+- the same endpoint also exposes keyed public-API summaries plus the top per-key load rows used by the `/admin/` reliability table
 - retention is pruned opportunistically to the latest `35` days
 - operators read the aggregate split through `GET /api/request-source-stats` on `ops-api.pharos.watch`
 

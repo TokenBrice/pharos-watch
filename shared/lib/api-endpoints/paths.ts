@@ -62,11 +62,12 @@ export const API_PATHS = {
       window: params?.window,
     }),
   telegramPulse: () => "/api/telegram-pulse",
-  requestSourceStats: (params?: { hours?: number; bucketSec?: number; routeLimit?: number }) =>
+  requestSourceStats: (params?: { hours?: number; bucketSec?: number; routeLimit?: number; apiKeyLimit?: number }) =>
     buildQueryPath("/api/request-source-stats", {
       hours: params?.hours,
       bucketSec: params?.bucketSec,
       routeLimit: params?.routeLimit,
+      apiKeyLimit: params?.apiKeyLimit,
     }),
   apiKeys: () => "/api/api-keys",
   apiKeyUpdate: (id: number) => `/api/api-keys/${id}/update`,
