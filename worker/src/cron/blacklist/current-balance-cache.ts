@@ -167,7 +167,7 @@ export async function syncCurrentBalanceCacheForRows(
         amountUsd: row.amount_usd_at_event ?? computeBlacklistAmountUsdAtEvent(config.stablecoin, row.amount_native, goldPriceUsd),
         source: "destroy_event",
         status: "resolved",
-        observedAt: now,
+        observedAt: row.timestamp,
         attemptCount: 1,
         lastAttemptedAt: now,
         lastErrorClass: null,

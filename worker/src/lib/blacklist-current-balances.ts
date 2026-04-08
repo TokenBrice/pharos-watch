@@ -87,7 +87,7 @@ export async function upsertBlacklistCurrentBalance(
          source = excluded.source,
          status = excluded.status,
          observed_at = excluded.observed_at,
-         attempt_count = excluded.attempt_count,
+         attempt_count = blacklist_current_balances.attempt_count + 1,
          last_attempted_at = excluded.last_attempted_at,
          last_error_class = excluded.last_error_class`,
     )

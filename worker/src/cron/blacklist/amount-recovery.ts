@@ -100,7 +100,7 @@ export async function enrichRowBalances(
     if (row.amount_native != null || row.amount_status === "permanently_unavailable") continue;
     if (row.event_type !== "blacklist" && row.event_type !== "unblacklist" && row.event_type !== "destroy") continue;
 
-    const blockForBalance = row.block_number - 1;
+    const blockForBalance = Math.max(0, row.block_number - 1);
 
     if (config.chain.type === "tron") {
       // Tron has no historical balance API — mark blacklist/unblacklist
@@ -134,7 +134,7 @@ export async function enrichRowBalances(
         }
 
         if (amount == null) {
-          markRecoveryAttempt(row, "chain_rpc", null);
+          markRecoveryAttempt(row, "drpc", null);
           amount = await fetchEvmTokenBalance(
             config,
             row.address,
@@ -323,7 +323,7 @@ export async function backfillAmounts(
     let amountSource: "event" | "historical_balance" | "derived" | "unavailable" = "unavailable";
     let amountStatus: "resolved" | "provider_failed" | "recoverable_pending" | "ambiguous" = "provider_failed";
     let lastErrorClass: BlacklistRecoveryErrorClass | null = "provider_null";
-    let lastProvider: BlacklistRecoveryProvider = "chain_rpc";
+    let lastProvider: BlacklistRecoveryProvider = "drpc";
     const attemptAt = Math.floor(Date.now() / 1000);
 
     if (row.event_type === "destroy" && config.chain.type === "evm" && config.chain.evmChainId != null) {
@@ -344,7 +344,7 @@ export async function backfillAmounts(
         lastErrorClass = null;
       }
       if (amount == null) {
-        lastProvider = "chain_rpc";
+        lastProvider = "drpc";
         amount = await fetchEvmTokenBalance(
           config,
           row.address,
@@ -376,7 +376,7 @@ export async function backfillAmounts(
       );
       continue;
     } else if (config.chain.evmChainId != null) {
-      lastProvider = "chain_rpc";
+      lastProvider = "drpc";
       amount = await fetchEvmTokenBalance(
         config,
         row.address,
