@@ -1,6 +1,5 @@
 import { computeCentralizedCustodyFraction } from "@shared/lib/centralized-custody";
 import {
-  isReserveDriftThresholdExceeded,
   STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT,
 } from "@shared/lib/status-thresholds";
 import { ACTIVE_IDS, ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
@@ -17,9 +16,9 @@ import type {
   StatusSectionError,
   StatusSectionErrors,
 } from "@shared/types/status";
-import { computeCollateralQualityFromReserves } from "@shared/lib/report-cards";
 import { cgHeaders, cgUrl } from "../lib/coingecko";
 import { USER_AGENT } from "../lib/constants";
+import { summarizeCollateralDriftFromLiveReserveMap } from "../lib/collateral-drift";
 import { cancelResponseBodyQuietly } from "../lib/response-body";
 import {
   hasAnyCloudflareD1StatusBinding,
@@ -311,17 +310,13 @@ export async function loadStatusSupplements(
   let reserveDrift: ReserveDriftEntry[] | undefined;
   try {
     const liveReserveMap = await loadFreshIndependentLiveReserveMap(db, now);
-    const driftEntries: ReserveDriftEntry[] = [];
-    for (const [coinId, liveSlices] of liveReserveMap) {
-      const meta = ACTIVE_STABLECOINS.find((c) => c.id === coinId);
-      if (!meta?.reserves?.length) continue;
-      const liveScore = computeCollateralQualityFromReserves(liveSlices);
-      const curatedScore = computeCollateralQualityFromReserves(meta.reserves);
-      const delta = Math.abs(liveScore - curatedScore);
-      if (isReserveDriftThresholdExceeded(delta)) {
-        driftEntries.push({ coinId, liveCollateralScore: liveScore, curatedCollateralScore: curatedScore, delta });
-      }
-    }
+    const { driftCoins } = summarizeCollateralDriftFromLiveReserveMap(liveReserveMap, ACTIVE_STABLECOINS);
+    const driftEntries: ReserveDriftEntry[] = driftCoins.map((entry) => ({
+      coinId: entry.id,
+      liveCollateralScore: entry.liveScore,
+      curatedCollateralScore: entry.curatedScore,
+      delta: entry.delta,
+    }));
     driftEntries.sort((a, b) => b.delta - a.delta);
     if (driftEntries.length > 0) reserveDrift = driftEntries;
   } catch (err) {

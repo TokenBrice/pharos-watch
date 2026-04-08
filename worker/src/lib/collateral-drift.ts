@@ -4,6 +4,8 @@ import { computeCollateralQualityFromReserves } from "@shared/lib/report-cards";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import { loadFreshIndependentLiveReserveMap } from "./live-reserves-store";
 
+export const MIN_COMPARABLE_COLLATERAL_DRIFT_SLICES = 2;
+
 export interface CollateralDriftEntry {
   id: string;
   liveScore: number;
@@ -31,6 +33,9 @@ export function summarizeCollateralDriftFromLiveReserveMap(
       fallbackCoins.push(meta.id);
       continue;
     }
+    if (liveSlices.length < MIN_COMPARABLE_COLLATERAL_DRIFT_SLICES) {
+      continue;
+    }
 
     if (meta.reserves && meta.reserves.length > 0) {
       const liveScore = computeCollateralQualityFromReserves(liveSlices);
@@ -46,7 +51,7 @@ export function summarizeCollateralDriftFromLiveReserveMap(
 }
 
 /**
- * Load fresh live reserves and compare with curated reserve metadata.
+ * Load fresh live reserves and compare comparable multi-slice live mixes with curated reserve metadata.
  * Returns coins with score drift above the shared reserve-drift threshold and coins that fell back to curated.
  */
 export async function checkCollateralDrift(db: D1Database): Promise<CollateralDriftResult> {

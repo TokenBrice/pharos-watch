@@ -2236,7 +2236,7 @@
       {
         "name": "OpenEden TBILL tokens (tokenized U.S. T-bills)",
         "pct": 70,
-        "risk": "low"
+        "risk": "very-low"
       },
       {
         "name": "BlackRock BUIDL (tokenized money market fund)",
@@ -4201,6 +4201,7 @@
           "Private Credit (Fasanara FTAC)": "high",
           "DeFi Lending": "medium",
           "CLOs (JAAA)": "high",
+          "US Treasury Bills": "very-low",
           "Principal Tokens (PTs)": "high",
           "Funding Rate (BTC)": "high"
         }

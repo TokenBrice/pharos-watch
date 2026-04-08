@@ -33,7 +33,7 @@ export function MetadataIntegrityCard({
           <div>
             <h3 className="text-sm font-medium">Curated vs live reserve drift</h3>
             <p className="text-xs text-muted-foreground">
-              Flags coins where live reserve slices shift collateral quality by more than{" "}
+              Flags coins where comparable live reserve mixes shift collateral quality by more than{" "}
               {STATUS_RESERVE_DRIFT_THRESHOLD_POINTS} points versus curated metadata.
             </p>
           </div>
