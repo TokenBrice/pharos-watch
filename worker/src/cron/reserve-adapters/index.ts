@@ -2,6 +2,7 @@ import {
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
 } from "@shared/lib/live-reserve-adapters";
 import type { LiveReserveAdapterKey } from "@shared/types/live-reserves";
+import { fetchAbracadabraReserves } from "./abracadabra";
 import { fetchAccountableReserves } from "./accountable";
 import { fetchAnzenUsdzReserves } from "./anzen-usdz";
 import { fetchAsymmetryReserves } from "./asymmetry";
@@ -21,6 +22,7 @@ import { fetchFraxReserves, fetchFraxBalanceSheetReserves } from "./frax";
 import { fetchFxReserves } from "./fx";
 import { fetchGhoReserves } from "./gho";
 import { fetchInfiniFiReserves } from "./infinifi";
+import { fetchListaReserves } from "./lista";
 import { fetchLiquityV1Reserves } from "./liquity-v1";
 import { fetchM0Reserves } from "./m0";
 import { fetchMentoReserves } from "./mento";
@@ -39,6 +41,7 @@ import type { AdapterFn, ReserveAdapterDefinition } from "./types";
 export type { AdapterContext, AdapterResult, AdapterFn, ReserveAdapterDefinition } from "./types";
 
 const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
+  abracadabra: fetchAbracadabraReserves,
   accountable: fetchAccountableReserves,
   "anzen-usdz": fetchAnzenUsdzReserves,
   asymmetry: fetchAsymmetryReserves,
@@ -60,6 +63,7 @@ const ADAPTER_FNS: Record<LiveReserveAdapterKey, AdapterFn> = {
   fx: fetchFxReserves,
   gho: fetchGhoReserves,
   infinifi: fetchInfiniFiReserves,
+  lista: fetchListaReserves,
   "liquity-v1": fetchLiquityV1Reserves,
   m0: fetchM0Reserves,
   mento: fetchMentoReserves,

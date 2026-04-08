@@ -6,6 +6,7 @@ import type {
 } from "../types/live-reserves";
 
 const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayBadgeKind> = {
+  abracadabra: "live",
   accountable: "live",
   "anzen-usdz": "live",
   asymmetry: "live",
@@ -27,6 +28,7 @@ const ADAPTER_DISPLAY_BADGE_KINDS: Record<LiveReserveAdapterKey, ReserveDisplayB
   fx: "live",
   gho: "live",
   infinifi: "live",
+  lista: "live",
   "liquity-v1": "live",
   m0: "live",
   mento: "live",

@@ -2188,7 +2188,79 @@
         "risk": "low",
         "coinId": "usdt-tether"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "lista",
+      "version": 1,
+      "semantics": "collateral-mix",
+      "display": {
+        "url": "https://lista.org/",
+        "label": "Lista DAO"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "bsc",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "branches": [
+          {
+            "name": "WBNB",
+            "holder": "0x25927bAEC4C9eA87C839c4cf01a7E6E31De0a57d",
+            "token": {
+              "chain": "bsc",
+              "address": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+              "decimals": 18
+            },
+            "risk": "high"
+          },
+          {
+            "name": "slisBNB (Lista BNB LST)",
+            "holder": "0x99e581dEB46DBa390a0B52350f0F145d0AaE5Bfd",
+            "token": {
+              "chain": "bsc",
+              "address": "0xB0b84D294e0C75A6abe60171b70edEb2EFd14A1B",
+              "decimals": 18
+            },
+            "risk": "high"
+          },
+          {
+            "name": "wBETH (Binance ETH LST)",
+            "holder": "0x3A7e68aF69d4C7B29CdD4eBB6a23e74c0a0C5A3d",
+            "token": {
+              "chain": "bsc",
+              "address": "0xa2E3356610840701BDf5611a53974510Ae27E2e1",
+              "decimals": 18
+            },
+            "risk": "medium"
+          },
+          {
+            "name": "BTCB (Binance-wrapped BTC)",
+            "holder": "0x8C7Bb01A8776F95552de1b418DA033456AA85c89",
+            "token": {
+              "chain": "bsc",
+              "address": "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c",
+              "decimals": 18
+            },
+            "risk": "medium"
+          },
+          {
+            "name": "USDT (via PSM)",
+            "holder": "0x2aCA4fEF72baaBa5b2215D8D5e2e3dCBa4bEC147",
+            "token": {
+              "chain": "bsc",
+              "address": "0x55d398326f99059fF775485246999027B3197955",
+              "decimals": 18
+            },
+            "risk": "low",
+            "coinId": "usdt-tether",
+            "priceUsd": 1
+          }
+        ]
+      }
+    }
   },
   {
     "id": "usdo-openeden",

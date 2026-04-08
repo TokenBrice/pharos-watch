@@ -214,7 +214,24 @@ const baseLiveReserveConfigSchema = z.object({
   }).strict(),
 });
 
+const abracadabraCauldronSchema = z.object({
+  address: z.string(),
+  collateralSymbol: z.string(),
+  collateralAddress: z.string(),
+  collateralDecimals: z.number().int().nonnegative(),
+  risk: LiveReserveRiskSchema,
+  coinId: z.string().optional(),
+  depType: LiveReserveDependencyTypeSchema.optional(),
+}).strict();
+
+const abracadabraParamsSchema = z.object({
+  rpcUrl: z.string().optional(),
+  fallbackRpcUrl: z.string().optional(),
+  cauldrons: z.array(abracadabraCauldronSchema).min(1),
+}).strict();
+
 const adapterParamsSchemas = {
+  abracadabra: abracadabraParamsSchema,
   accountable: accountableParamsSchema,
   "anzen-usdz": noParamsSchema,
   asymmetry: noParamsSchema,
@@ -236,6 +253,7 @@ const adapterParamsSchemas = {
   fx: noParamsSchema,
   gho: ghoParamsSchema,
   infinifi: noParamsSchema,
+  lista: evmBranchBalancesParamsSchema,
   "liquity-v1": liquityV1ParamsSchema,
   m0: noParamsSchema,
   mento: noParamsSchema,
@@ -265,6 +283,16 @@ const UNVERIFIED_ONLY_FRESHNESS = ["unverified"] satisfies LiveReserveAdapterVal
 const NOT_APPLICABLE_ONLY_FRESHNESS = ["not-applicable"] satisfies LiveReserveAdapterValidationPolicy["allowedFreshnessModes"];
 
 export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
+  abracadabra: {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
+      allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,
+    },
+  },
   accountable: {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
@@ -452,6 +480,13 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
       allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
     },
+  },
+  lista: {
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
   "liquity-v1": {
     sourceModel: "single-bucket",

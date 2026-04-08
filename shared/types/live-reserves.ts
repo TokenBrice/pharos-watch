@@ -2,6 +2,7 @@ import type { DependencyType } from "./dependency-types";
 import type { ReserveSlice } from "./reserves";
 
 export const LIVE_RESERVE_ADAPTER_KEYS = [
+  "abracadabra",
   "accountable",
   "anzen-usdz",
   "asymmetry",
@@ -23,6 +24,7 @@ export const LIVE_RESERVE_ADAPTER_KEYS = [
   "fx",
   "gho",
   "infinifi",
+  "lista",
   "liquity-v1",
   "m0",
   "mento",
