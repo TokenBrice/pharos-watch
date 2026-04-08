@@ -65,7 +65,6 @@ All external API calls and on-chain contract reads go through the Cloudflare Wor
 | [CoinMarketCap](https://coinmarketcap.com/)                             | Fallback price enrichment for assets with CMC slugs                                                        | 15 min (rate-limited to 1/hour)   |
 | Direct protocol redemption contract reads                               | Authoritative redeem prices for selected wrapper assets such as Cap cUSD and infiniFi iUSD                | 15 min                            |
 | Protocol reserve APIs, dashboards, and on-chain accounting reads        | Live reserve composition for live-enabled assets                                                           | Hourly                            |
-| [Dune Sim API](https://sim.dune.com/)                                   | EVM token balances and DeFi positions for treasury stable-exposure tracking                                | Daily                             |
 | [Etherscan v2](https://etherscan.io/)                                   | USDC, USDT, PAXG, XAUT, PYUSD, and USD1 freeze/blacklist events (EVM chains)                              | Hourly                            |
 | [TronGrid](https://www.trongrid.io/)                                    | USDT and USD1 freeze/blacklist events on Tron                                                              | Hourly                            |
 | [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/)         | RPC reads for blacklist balance enrichment (dRPC/Alchemy) and Ethereum mint/burn event ingestion (Alchemy) | Hourly / 20 min                   |
@@ -161,7 +160,6 @@ src/                              Frontend (Next.js static export)
 │   ├── telegram/                 Telegram alerts + digest landing page
 │   ├── yield/                    Yield intelligence leaderboard
 │   ├── changelog/                Weekly release notes
-│   ├── treasuries/               Protocol treasury stable-exposure tracker
 │   └── about/                    About / product overview
 ├── components/                   UI components (table, charts, cards, shared sort-icon, time-range-buttons)
 ├── hooks/                        Data fetching hooks (TanStack Query) + shared UI hooks (useSort, useUrlFilters, useTimeRangeFilter)
@@ -230,7 +228,7 @@ Cloudflare Worker (API layer)
   ├── Cron: 20 * * * *                          → yield sync
   ├── Cron: 25 */4 * * *                        → supplemental yield sync
   ├── Cron: 2,7,12,17,22,27,32,37,42,47,52,57 * * * * → Telegram subscriber alerts
-  ├── Cron: 0 8 * * *                           → supply snapshot + safety-grade snapshot + T-bill rate + PSI daily snapshot + USDS status + treasury stable exposure
+  ├── Cron: 0 8 * * *                           → supply snapshot + safety-grade snapshot + T-bill rate + PSI daily snapshot + USDS status
   ├── Cron: 5 8 * * *                           → Bluechip sync + daily digest + weekly recap (Mondays) + discovery scan (Mondays)
   └── Cron: 0 6 1 * *                           → monthly yield coverage audit
 
@@ -294,7 +292,6 @@ Cloudflare D1 (SQLite database)
   ├── api_request_source_stats → per-source API request attribution counters
   ├── api_request_consumer_stats → per-consumer API request attribution counters
   ├── site_data_request_stats → site-data proxy request attribution counters
-  ├── treasury_stable_exposure_history → daily treasury stablecoin-exposure snapshots
   └── kv_config            → general key-value config store for runtime settings
 
 Cloudflare Pages
@@ -343,7 +340,7 @@ Optional GitHub variable: `SMOKE_API_BASE_URL` (recommended when smoke-testing a
 Optional GitHub variables: `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`
 Required ops smoke secrets: `OPS_SMOKE_CF_ACCESS_CLIENT_ID`, `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
 
-Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `COINGECKO_API_KEY`, `OPENEXCHANGERATES_API_KEY`, `SIM_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `PUBLIC_API_RATE_LIMIT_SALT`, `SITE_API_SHARED_SECRET`, `API_KEY_HASH_PEPPER`, `CLOUDFLARE_D1_STATUS_API_TOKEN`
+Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `COINGECKO_API_KEY`, `OPENEXCHANGERATES_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `PUBLIC_API_RATE_LIMIT_SALT`, `SITE_API_SHARED_SECRET`, `API_KEY_HASH_PEPPER`, `CLOUDFLARE_D1_STATUS_API_TOKEN`
 
 `PUBLIC_API_RATE_LIMIT_SALT` is required for deployed public API traffic. If it is unset, the worker logs a configuration error and returns `503` for non-admin public `/api/*` requests instead of falling back to a built-in salt.
 

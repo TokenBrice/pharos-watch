@@ -239,25 +239,6 @@ export const ENDPOINT_ASSERTIONS = {
     );
     return `${entries.length} redemption entries`;
   },
-  "/api/treasury-stable-exposure": (result) => {
-    assert(result.status === 200, `/api/treasury-stable-exposure returned ${result.status}`);
-    const body = stripMeta(result.body);
-    assert(body && Array.isArray(body.entities), "/api/treasury-stable-exposure missing entities[]");
-    assert(body.coverage && typeof body.coverage === "object", "/api/treasury-stable-exposure missing coverage");
-    assert(
-      Number.isInteger(body.coverage.entityCount) && body.coverage.entityCount >= 0,
-      "/api/treasury-stable-exposure missing coverage.entityCount",
-    );
-    assert(
-      Number.isInteger(body.coverage.registryCount) && body.coverage.registryCount > 0,
-      "/api/treasury-stable-exposure missing coverage.registryCount",
-    );
-    assert(
-      Number.isInteger(body.updatedAt) && body.updatedAt >= 0,
-      "/api/treasury-stable-exposure missing updatedAt",
-    );
-    return `${body.entities.length} treasury entities`;
-  },
   "/api/stress-signals": (result) => {
     assert(result.status === 200, `/api/stress-signals returned ${result.status}`);
     const body = stripMeta(result.body);

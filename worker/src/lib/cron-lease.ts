@@ -10,7 +10,6 @@ export const CRON_TIMEOUT_MS: Record<string, number> = {
   "sync-yield-data": 10 * 60_000,
   "sync-yield-supplemental": 12 * 60_000,
   "sync-blacklist": 12 * 60_000,
-  "sync-treasury-stable-exposure": 8 * 60_000,
   "sync-mint-burn": 10 * 60_000,
   "sync-mint-burn-extended": 10 * 60_000,
   "daily-digest": 8 * 60_000,

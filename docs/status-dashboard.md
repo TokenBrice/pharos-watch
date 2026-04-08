@@ -101,7 +101,7 @@ The active frontend operator mode is now:
   - Cloudflare Pages Functions catch-all for operator-only admin routes
   - Host-gates to `ops.pharos.watch` so public hostnames cannot use the proxy
   - Strips `/api/admin` and forwards to `ops-api.pharos.watch` with `CF-Access-Client-Id` / `CF-Access-Client-Secret`
-  - Allows only admin routes and shared dynamic-admin matches from `shared/lib/api-endpoints.ts`
+  - Allows only admin routes and shared dynamic-admin matches from `shared/lib/api-endpoints/`
   - Verifies the operator's UI Access token against `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD`, accepting either `Cf-Access-Jwt-Assertion` or a same-origin `cf-access-token` / `CF_Authorization` session token when the assertion header is absent
   - Forwards only `Accept`, `Content-Type`, and `Idempotency-Key` from the browser request; browser callers never send Access service-token headers directly
   - Reflects a narrowed response-header set (`Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, `X-Idempotent-Replay`) back into the app shell
@@ -141,7 +141,7 @@ The active frontend operator mode is now:
 
 ### Endpoint groups
 
-Probe groups are sourced from `shared/lib/api-endpoints.ts`:
+Probe groups are sourced from `shared/lib/api-endpoints/`:
 
 - `public`: user-facing read endpoints
 - `admin`: admin read endpoints
@@ -422,7 +422,7 @@ Source: `src/hooks/use-endpoint-probes.ts`
 
 ### Canary Endpoint Aliases
 
-Three internal health-check registrations in `shared/lib/api-endpoints.ts` use hardcoded stablecoin IDs to probe parameterized routes without requiring dynamic URL construction:
+Three internal health-check registrations in `shared/lib/api-endpoints/` use hardcoded stablecoin IDs to probe parameterized routes without requiring dynamic URL construction:
 
 | Endpoint Key                 | Registered Path                          | Probe Path                     | Rationale                                                |
 | ---------------------------- | ---------------------------------------- | ------------------------------ | -------------------------------------------------------- |
@@ -440,7 +440,7 @@ Manual actions are rendered from `getStatusPageActions()` and executed only on u
 
 ## Inline Admin Actions
 
-Status-page manual actions are router-dispatched from shared endpoint metadata (`shared/lib/api-endpoints.ts`):
+Status-page manual actions are router-dispatched from shared endpoint metadata (`shared/lib/api-endpoints/`):
 
 - `POST /api/trigger-digest`
 - `POST /api/reset-blacklist-sync`
@@ -572,7 +572,7 @@ This is an operator integrity signal, not a public user-facing score. Large gaps
 | `functions/api/admin/[[path]].ts`                    | Pages Functions admin proxy: ops-host gating, upstream method/path allowlisting, and service-token forwarding to `ops-api.pharos.watch`                                                                                                                                                |
 | `shared/lib/status-thresholds.ts`                    | Single source of truth for all status thresholds (cache ratios, missing prices, blacklist gaps, on-chain supply, price confidence bands, reconciliation, discovery mcap) — imported by both worker and frontend                                                                        |
 | `shared/lib/cron-jobs.ts`                            | Shared cron expressions, display grouping, trigger isolation metadata, and per-job intervals used by both frontend and worker                                                                                                                                                          |
-| `shared/lib/api-endpoints.ts`                        | Shared endpoint contract metadata: paths, probe groups, method/cache flags, status-page actions                                                                                                                                                                                        |
+| `shared/lib/api-endpoints/`                        | Shared endpoint contract metadata: paths, probe groups, method/cache flags, status-page actions                                                                                                                                                                                        |
 | `worker/src/routes/registry.ts`                      | Single worker-side static route definition list keyed by shared endpoint metadata                                                                                                                                                                                                      |
 | `worker/src/router.ts`                               | Route dispatcher: static registry lookup plus dynamic stablecoin/discovery/OG matching                                                                                                                                                                                                 |
 | `worker/src/api/status.ts`                           | Raw status synthesis + effective state response                                                                                                                                                                                                                                        |

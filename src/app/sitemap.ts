@@ -112,12 +112,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
     {
-      url: `${SITE_URL}/treasuries/`,
-      lastModified: now,
-      changeFrequency: "daily",
-      priority: 0.6,
-    },
-    {
       url: `${SITE_URL}/status/`,
       lastModified: now,
       changeFrequency: "daily",

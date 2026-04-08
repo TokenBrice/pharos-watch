@@ -726,7 +726,6 @@ describe("buildCacheStatuses", () => {
                         consecutiveFallbackRuns: 4,
                       }),
                     },
-                    { key: "treasury-stable-exposure", updated_at: nowSec - 60, value: "[]" },
                     { key: "bluechip-ratings", updated_at: nowSec - 60, value: "{}" },
                   ] as T[],
                   success: true,

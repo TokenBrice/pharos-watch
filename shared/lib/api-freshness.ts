@@ -26,5 +26,4 @@ export const API_FRESHNESS_MAX_AGE_SEC = {
   bluechip: 43200,
   usdsStatus: DAY_SECONDS,
   nonUsdShare: DAY_SECONDS,
-  treasuryStableExposure: DAY_SECONDS,
 } as const;

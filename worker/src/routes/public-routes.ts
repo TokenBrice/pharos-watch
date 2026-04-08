@@ -22,7 +22,6 @@ import { handleMintBurnEvents } from "../api/mint-burn-events";
 import { handleStressSignals } from "../api/stress-signals";
 import { handleChains } from "../api/chains";
 import { handleNonUsdShare } from "../api/non-usd-share";
-import { handleTreasuryStableExposure } from "../api/treasury-stable-exposure";
 import { handlePublicStatusHistory } from "../api/public-status-history";
 import { handleStablecoinDetail } from "../api/stablecoin-detail";
 import { handleTelegramPulse } from "../api/telegram-pulse";
@@ -51,7 +50,6 @@ export const PUBLIC_STATIC_ROUTES = [
   defineStaticRoute("stability-index", ({ db, url }) => handleStabilityIndex(db, url)),
   defineStaticRoute("report-cards", ({ db }) => handleReportCards(db)),
   defineStaticRoute("redemption-backstops", ({ db }) => handleRedemptionBackstops(db)),
-  defineStaticRoute("treasury-stable-exposure", ({ db }) => handleTreasuryStableExposure(db)),
   defineStaticRoute("yield-rankings", ({ db }) => handleYieldRankings(db)),
   defineStaticRoute("yield-history", ({ db, url }) => handleYieldHistory(db, url)),
   defineStaticRoute("safety-score-history", ({ db, url }) => handleSafetyScoreHistory(db, url)),

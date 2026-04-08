@@ -64,7 +64,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/depeg", label: "Depeg Tracker", icon: Activity, description: "Live incident board for peg stress and early warnings" },
       { href: "/flows", label: "Mint/Burn Flows", icon: ArrowUpDown, description: "Ethereum issuance and redemption pressure" },
       { href: "/blacklist", label: "Blacklist Tracker", icon: ShieldBan, description: "Freeze activity and issuer control events" },
-      { href: "/treasuries", label: "Treasuries", icon: Landmark, description: "Protocol and DAO treasuries ranked by stablecoin exposure" },
       { href: "/upcoming", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch-watch context" },
       { href: "/cemetery", label: "Cemetery", icon: Skull, description: "Failed stablecoins and the lessons they left behind" },
     ],

@@ -50,7 +50,6 @@ export const API_PATHS = {
   stabilityIndex: (detail = false) => buildQueryPath("/api/stability-index", detail ? { detail: true } : undefined),
   reportCards: () => "/api/report-cards",
   redemptionBackstops: () => "/api/redemption-backstops",
-  treasuryStableExposure: () => "/api/treasury-stable-exposure",
   mintBurnFlows: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/mint-burn-flows", params),
   mintBurnEvents: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/mint-burn-events", params),
   stressSignals: (stablecoinId?: string, days?: number) =>

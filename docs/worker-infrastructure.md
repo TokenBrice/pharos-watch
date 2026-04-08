@@ -73,7 +73,6 @@ The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `fun
 | `CLOUDFLARE_ACCOUNT_ID`          | string     | No                                                 | Admin-only D1 status metrics (`/api/status` -> `d1Usage`) Cloudflare account scope                                                                                         |
 | `CLOUDFLARE_D1_STATUS_API_TOKEN` | string     | No                                                 | Admin-only D1 status metrics (`/api/status` -> `d1Usage`) token with D1 read + analytics read access                                                                       |
 | `CLOUDFLARE_D1_DATABASE_ID`      | string     | No                                                 | Admin-only D1 status metrics (`/api/status` -> `d1Usage`) target database id                                                                                               |
-| `SIM_API_KEY`                    | string     | No                                                 | Treasury stable-exposure snapshot reads against Sim by Dune wallet-balance and DeFi-position APIs                                                                          |
 | `GITHUB_PAT`                     | string     | No (worker contract); Yes for feedback submissions | Feedback → GitHub Issues                                                                                                                                                   |
 | `FEEDBACK_IP_SALT`               | string     | No (worker contract); Yes for feedback submissions | Rate limit IP hashing for `POST /api/feedback`                                                                                                                             |
 | `PUBLIC_API_RATE_LIMIT_SALT`     | string     | Yes for deployed public API traffic                | Dedicated salt for hashed public API rate limiting. Public `/api/*` traffic returns `503` until this binding is configured.                                                |
@@ -105,7 +104,7 @@ Three modules derive runtime configuration from `Env` bindings via pure function
 | `buildChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY)` | `fetch` + `scheduled` | Builds chain RPC configs with Alchemy/dRPC primaries |
 | `normalizeWebhookUrl(env.ALERT_WEBHOOK_URL)`            | `scheduled`           | Returns normalized webhook URL for error alerts      |
 
-These are pure functions. `Env` bindings are only available inside handler functions (not at module initialization time), so values are computed fresh per-request/per-trigger via the context factory. The notable exception is `worker/src/lib/jwt-verify.ts`, which intentionally keeps an in-memory JWKS cache (`cachedJwks`, 1-hour TTL) at module scope to avoid refetching Cloudflare Access signing keys on every admin request.
+These are pure functions. `Env` bindings are only available inside handler functions (not at module initialization time), so values are computed fresh per-request/per-trigger via the context factory. The notable exception is `shared/lib/cloudflare-access-jwt.ts`, which intentionally keeps an in-memory JWKS cache (`jwksCache`, 1-hour TTL) at module scope to avoid refetching Cloudflare Access signing keys on every admin request.
 
 ## Public API Auth and Rate Limiting
 
@@ -295,7 +294,7 @@ Current consumers:
 
 Most module-level mutable state was eliminated in the parameter-passing refactor. The remaining intentional cache is:
 
-- `jwt-verify.ts` → module-level `cachedJwks` with a 1-hour TTL for Cloudflare Access signing keys
+- `shared/lib/cloudflare-access-jwt.ts` → module-level `jwksCache` with a 1-hour TTL for Cloudflare Access signing keys
 
 **Constraints:**
 
@@ -439,14 +438,8 @@ Dedicated trigger for Telegram work. Isolated from the quarter-hourly pipeline s
 | `snapshot-psi`                  | `snapshotPsiDaily()`           | `worker/src/cron/snapshot-psi.ts`                  | [Pharos Stability Index](./stability-index.md)   |
 | `sync-usds-status`              | `syncUsdsStatus()`             | `worker/src/cron/sync-usds-status.ts`              | This doc (below)                                 |
 | `fetch-tbill-rate`              | `fetchTbillRate()`             | `worker/src/cron/fetch-tbill-rate.ts`              | [Yield Intelligence](./yield-intelligence.md)    |
-| `sync-treasury-stable-exposure` | `syncTreasuryStableExposure()` | `worker/src/cron/sync-treasury-stable-exposure.ts` | [Worker & API Limits](./worker-and-api-limits.md) |
 
-**Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (ECB/FRED/Treasury/SIX benchmark fetches, still serialized inside one job), `sync-usds-status` (Etherscan), and `sync-treasury-stable-exposure` (Sim API wallet-balance reads, peak 2 connections) are chained sequentially on the external-fetch branch to keep this trigger conservative on connection use. A failed `fetch-tbill-rate` run no longer suppresses `sync-usds-status`, and a failed `sync-usds-status` no longer suppresses `sync-treasury-stable-exposure`.
-
-`sync-treasury-stable-exposure` now publishes two artifacts per daily run:
-
-- the cache-backed `/api/treasury-stable-exposure` snapshot
-- additive `treasury_stable_exposure_history` rows in D1 for per-entity daily auditability
+**Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (ECB/FRED/Treasury/SIX benchmark fetches, still serialized inside one job) and `sync-usds-status` (Etherscan) are chained sequentially on the external-fetch branch to keep this trigger conservative on connection use. A failed `fetch-tbill-rate` run no longer suppresses `sync-usds-status`.
 
 ### Trigger 12: `5 8 * * *` (daily at 08:05 UTC — heavy external fetchers)
 
@@ -640,15 +633,30 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `ALCHEMY`                            | `alchemy`                     | `sync-mint-burn`                                                                                                          |
 | `PYTH_PRICES`                        | `pyth-prices`                 | `enrich-prices` primary consensus                                                                                         |
 | `BINANCE_PRICES`                     | `binance-prices`              | `enrich-prices` primary consensus                                                                                         |
+| `KRAKEN_PRICES`                      | `kraken-prices`               | `enrich-prices` primary consensus                                                                                         |
+| `BITSTAMP_PRICES`                    | `bitstamp-prices`             | `enrich-prices` primary consensus                                                                                         |
 | `COINBASE_PRICES`                    | `coinbase-prices`             | `enrich-prices` primary consensus                                                                                         |
 | `REDSTONE_PRICES`                    | `redstone-prices`             | `enrich-prices` primary consensus                                                                                         |
 | `CURVE_ONCHAIN`                      | `curve-onchain`               | `enrich-prices` primary consensus                                                                                         |
 | `CURVE_LIQUIDITY_API`                | `curve-liquidity-api`         | `sync-dex-liquidity` (Curve pool liquidity fetch)                                                                         |
 | `FX_FRANKFURTER`                     | `fx-frankfurter`              | `sync-fx-rates` primary Frankfurter API circuit breaker                                                                   |
 | `FX_REALTIME`                        | `fx-realtime`                 | `sync-fx-rates` real-time FX cross-validation                                                                             |
+| `CHAINLINK_FEEDS`                    | `chainlink-feeds`             | `sync-fx-rates` Chainlink on-chain FX feed probes                                                                         |
+| `JUPITER_PRICES`                     | `jupiter-prices`              | `enrich-prices` pass 3 Solana price fallback                                                                              |
 | `GECKO_TERMINAL_PROBE`               | `geckoterminal-probe`         | `enrich-prices` GeckoTerminal price probe fallback                                                                        |
+| `FLUID_DEX_API`                      | `fluid-dex-api`               | `sync-dex-liquidity` direct Fluid DEX fetcher                                                                             |
+| `BALANCER_API`                       | `balancer-api`                | `sync-dex-liquidity` direct Balancer API fetcher                                                                          |
+| `RAYDIUM_API`                        | `raydium-api`                 | `sync-dex-liquidity` direct Raydium API fetcher                                                                           |
+| `ORCA_API`                           | `orca-api`                    | `sync-dex-liquidity` direct Orca API fetcher                                                                              |
+| `METEORA_API`                        | `meteora-api`                 | `sync-dex-liquidity` direct Meteora API fetcher                                                                           |
+| `PANCAKESWAP_API`                    | `pancakeswap-api`             | `sync-dex-liquidity` direct PancakeSwap V3 API fetcher                                                                    |
+| `AERODROME_SLIPSTREAM_API`           | `aerodrome-slipstream-api`    | `sync-dex-liquidity` direct Aerodrome Slipstream fetcher                                                                  |
+| `VELODROME_SLIPSTREAM_API`           | `velodrome-slipstream-api`    | `sync-dex-liquidity` direct Velodrome Slipstream fetcher                                                                  |
+| `CG_TICKER`                          | `coingecko-ticker`            | `enrich-prices` primary consensus (curated ticker corroboration)                                                          |
 | `TWITTER_API`                        | `twitter-api`                 | `daily-digest` social posting                                                                                             |
 | `TELEGRAM_API`                       | `telegram-api`                | `daily-digest` social posting, `dispatch-telegram-alerts` subscriber fan-out                                              |
+| `ANTHROPIC`                          | `anthropic-api`               | `daily-digest` LLM generation                                                                                             |
+| `BLUECHIP`                           | `bluechip-api`                | `sync-bluechip` safety rating fetch                                                                                       |
 | `KINESIS_KAU`                        | `kinesis-kau-horizon`         | `sync-kinesis-supply` KAU chain circulation fetch                                                                         |
 | `KINESIS_KAG`                        | `kinesis-kag-horizon`         | `sync-kinesis-supply` KAG chain circulation fetch                                                                         |
 | Dynamic `live-reserves:<scope>` keys | e.g. `live-reserves:infinifi` | `sync-live-reserves` per configured breaker scope; some adapters also opt into source-invariant within-run result sharing |
@@ -1060,7 +1068,6 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `fetch-tbill-rate`              | 86,400s (24h)    | `0 8 * * *`                                       |
 | `snapshot-psi`                  | 86,400s (24h)    | `0 8 * * *`                                       |
 | `sync-usds-status`              | 86,400s (24h)    | `0 8 * * *`                                       |
-| `sync-treasury-stable-exposure` | 86,400s (24h)    | `0 8 * * *`                                       |
 | `sync-live-reserves`            | 3,600s (1h)      | `11 * * * *`                                      |
 | `sync-redemption-backstops`     | 3,600s (1h)      | `11 * * * *`                                      |
 | `sync-kinesis-supply`           | 3,600s (1h)      | `11 * * * *`                                      |
