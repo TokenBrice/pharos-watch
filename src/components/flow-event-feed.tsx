@@ -156,7 +156,7 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
   });
 
   if (isLoading) return <FeedSkeleton />;
-  if (isError) return <FeedError message={error instanceof Error ? error.message : "Unknown error"} />;
+  if (isError) return <FeedError message="Please try again in a few moments." />;
   if (!data || data.events.length === 0) {
     if (page === 0) return <FeedEmpty />;
     // If we paginated past the end, show the table with a "no more" message
