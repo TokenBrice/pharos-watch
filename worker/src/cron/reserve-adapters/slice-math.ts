@@ -3,7 +3,7 @@ import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
 export { decimalNumberFromBigInt, decimalStringFromBigInt } from "../../lib/bigint";
 
-export const RISK_SEVERITY: Record<ReserveSlice["risk"], number> = {
+const RISK_SEVERITY: Record<ReserveSlice["risk"], number> = {
   "very-low": 0,
   low: 1,
   medium: 2,
