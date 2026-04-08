@@ -370,9 +370,11 @@ async function handleUnsubscribe(db: D1Database, chatId: string, args: string, b
             SET alert_dews = 0,
                 alert_depeg = 0,
                 alert_safety = 0,
+                alert_launch = 0,
                 global_alert_dews = 0,
                 global_alert_depeg = 0,
                 global_alert_safety = 0,
+                global_alert_launch = 0,
                 last_active_at = ?
           WHERE chat_id = ?`,
         )

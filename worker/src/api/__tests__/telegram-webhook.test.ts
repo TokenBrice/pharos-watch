@@ -573,6 +573,17 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("Pending selection cleared");
   });
 
+  it("unsubscribe all clears launch alert flags", async () => {
+    const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/unsubscribe all"), "test-secret", "bot-token");
+
+    const history = db.getHistory();
+    const updateSql = history.find((e) => e.sql.includes("UPDATE telegram_subscribers"));
+    expect(updateSql).toBeDefined();
+    expect(updateSql!.sql).toContain("alert_launch = 0");
+    expect(updateSql!.sql).toContain("global_alert_launch = 0");
+  });
+
   it("handles D1 error gracefully", async () => {
     const db = mockD1([]);
     vi.spyOn(db, "prepare").mockImplementationOnce(() => {
