@@ -254,20 +254,20 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     summary.rowsDropped += parsed.dropped;
     summary.rowsParsed += parsed.rows.length;
 
-    const burnCounts = await classifyBridgeBurnRows(
-      parsed.rows,
-      config,
-      alchemyUrl,
-      configBudget,
-      txContextCache,
-      signal,
-    );
-    effectiveBurns += burnCounts.effectiveBurns;
-    bridgeBurns += burnCounts.bridgeBurns;
-    reviewBurns += burnCounts.reviewBurns;
-
     allParsedRows.push(...parsed.rows);
   }
+
+  const burnCounts = await classifyBridgeBurnRows(
+    allParsedRows,
+    config,
+    alchemyUrl,
+    configBudget,
+    txContextCache,
+    signal,
+  );
+  effectiveBurns += burnCounts.effectiveBurns;
+  bridgeBurns += burnCounts.bridgeBurns;
+  reviewBurns += burnCounts.reviewBurns;
 
   for (const row of allParsedRows) {
     summary.maxBlockSeen = Math.max(summary.maxBlockSeen, row.block_number);

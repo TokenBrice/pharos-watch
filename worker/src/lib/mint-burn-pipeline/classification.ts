@@ -35,15 +35,16 @@ async function resolveTxContext(
     getAlchemyTransactionReceipt(alchemyUrl, txHash, budget, signal),
   ]);
 
-  if (!tx || !receipt) {
+  if (!tx && !receipt) {
     txContextCache.set(txHash, null);
     return null;
   }
 
   const context: MintBurnTxContext = {
-    to: tx.to,
-    inputSelector: tx.input?.slice(0, 10) ?? null,
-    logTopics: receipt.logs.flatMap((log) => log.topics ?? []),
+    to: tx?.to ?? receipt?.to ?? null,
+    inputSelector: tx?.input?.slice(0, 10) ?? null,
+    logTopics: receipt?.logs.flatMap((log) => log.topics ?? []) ?? [],
+    logAddresses: receipt?.logs.map((log) => log.address).filter((address): address is string => Boolean(address)) ?? [],
   };
   txContextCache.set(txHash, context);
   return context;
@@ -57,12 +58,12 @@ export async function classifyBridgeBurnRows(
   txContextCache: Map<string, MintBurnTxContext | null>,
   signal?: AbortSignal,
 ): Promise<BurnClassificationCounters> {
-  const burnRows = rows.filter((row) => row.direction === "burn");
-  if (burnRows.length === 0) {
+  if (rows.length === 0) {
     return { effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0 };
   }
 
-  const txHashes = [...new Set(burnRows.map((row) => row.tx_hash))];
+  const burnRows = rows.filter((row) => row.direction === "burn");
+  const txHashes = [...new Set(rows.map((row) => row.tx_hash))];
   const txContextByHash = new Map<string, MintBurnTxContext | null>();
   for (const txHash of txHashes) {
     const context = await resolveTxContext(

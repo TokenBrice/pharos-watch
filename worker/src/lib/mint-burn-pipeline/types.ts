@@ -1,5 +1,7 @@
 import type { MintBurnType } from "../mint-burn-contracts";
 
+export type MintBurnFlowType = "standard" | "atomic_roundtrip" | "bridge_transfer";
+
 export interface MintBurnRow {
   id: string;
   stablecoin_id: string;
@@ -13,7 +15,7 @@ export interface MintBurnRow {
   price_source: string | null;
   burn_type: MintBurnType | null;
   burn_review_reason: string | null;
-  flow_type: "standard" | "atomic_roundtrip";
+  flow_type: MintBurnFlowType;
   counterparty: string | null;
   tx_hash: string;
   block_number: number;

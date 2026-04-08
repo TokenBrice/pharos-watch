@@ -1,6 +1,17 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v4.9` (2026-03-01 -> 2026-03-24).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v5.0` (2026-03-01 -> 2026-04-08).
+
+---
+
+## v5.0 - Bridge-transfer flow exclusion for omnichain tokens (Apr 8, 2026)
+
+**Commit:** `unreleased`
+
+- Bridge-aware classification now excludes mint-side bridge transfers as well as burn-side bridge transfers from counted economic-flow aggregates
+- USDai's Ethereum tracker now recognizes its documented LayerZero OFT / OAdapter path instead of treating equal bridge mints and burns as economic issuance/redemption
+- Bridge classification now runs after all parsed rows for the config chunk are assembled, so the classifier can see bridge mints and burns together
+- Backfill and replay persistence now updates `flow_type` on existing rows, allowing post-deploy repair of previously inserted bridge-transfer noise
 
 ---
 

@@ -252,18 +252,18 @@ export async function handleBackfillMintBurn(
         rowsDropped += parsed.dropped;
         rowsParsed += parsed.rows.length;
 
-        const burnCounts = await classifyBridgeBurnRows(parsed.rows, config, alchemyUrl, budget, txContextCache);
-        effectiveBurns += burnCounts.effectiveBurns;
-        bridgeBurns += burnCounts.bridgeBurns;
-        reviewBurns += burnCounts.reviewBurns;
-
         allParsedRows.push(...parsed.rows);
       }
+
+      const burnCounts = await classifyBridgeBurnRows(allParsedRows, config, alchemyUrl, budget, txContextCache);
+      effectiveBurns += burnCounts.effectiveBurns;
+      bridgeBurns += burnCounts.bridgeBurns;
+      reviewBurns += burnCounts.reviewBurns;
 
       const persistResult = await persistMintBurnRows(db, allParsedRows, affectedHours);
       rowsInserted += persistResult.inserted;
       rowsIgnored += persistResult.ignored;
-      rowsReclassified += persistResult.burnRowsUpdated;
+      rowsReclassified += persistResult.classificationRowsUpdated;
 
       await recalcAffectedHours(db, affectedHours);
       await upsertMintBurnSyncState(db, configKey(config), scanTo, "monotonic-max");

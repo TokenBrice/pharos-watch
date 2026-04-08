@@ -10,13 +10,25 @@ export type MintBurnType = "effective_burn" | "bridge_burn" | "review_required";
 export type MintBurnAdapterKind = "transfer-zero-address" | "custom-events" | "mixed";
 export type MintBurnStartBlockConfidence = "high" | "medium" | "low";
 
-export interface MintBurnBridgeDetectionConfig {
+export interface MintBurnCcipBridgeDetectionConfig {
   protocol: "ccip";
   knownBridgePoolAddresses: string[];
   knownBridgeRouterAddresses: string[];
   bridgeSignalTopics: string[];
   bridgeSignalSelectors: string[];
 }
+
+export interface MintBurnLayerZeroOftBridgeDetectionConfig {
+  protocol: "layerzero-oft";
+  knownBridgeContractAddresses: string[];
+  bridgeSignalEmitterAddresses: string[];
+  bridgeSignalTopics: string[];
+  bridgeSignalSelectors: string[];
+}
+
+export type MintBurnBridgeDetectionConfig =
+  | MintBurnCcipBridgeDetectionConfig
+  | MintBurnLayerZeroOftBridgeDetectionConfig;
 
 export interface MintBurnEventDef {
   signature: string;
@@ -75,6 +87,11 @@ const USDT_REDEEM_TOPIC = "0x702d5967f45f6513a38ffc42d6ba9bf230bd40e8f53b16363c7
 const CCIP_ETHEREUM_ROUTER = "0x80226fc0ee2b096224eeac085bb9a8cba1146f7d";
 const CCIP_SEND_REQUESTED_TOPIC = "0xd0c3c799bf9e2639de44391e7f524d229b2b55f5b1ea94b2bf7da42f7243dddd";
 const CCIP_SEND_SELECTOR = "0x96f4e9f9";
+const LAYERZERO_ENDPOINT_V2 = "0x1a44076050125825900e736c501f859c50fe728c";
+const LAYERZERO_PACKET_SENT_TOPIC = "0x1ab700d4ced0c005b164c0f789fd09fcbb0156d4c2041b8a3bfbcd961cd1567f";
+const LAYERZERO_PACKET_DELIVERED_TOPIC = "0x3cd5e48f9730b129dc7550f0fcea9c767b7be37837cd10e55eb35f734f4bca04";
+const LAYERZERO_SEND_SELECTOR = "0xc7c7f5b3";
+const LAYERZERO_EXECUTE302_SELECTOR = "0xcfc32570";
 
 
 // --- Helpers ---
@@ -112,6 +129,26 @@ function ccipBridgeDetection(
     ],
     bridgeSignalSelectors: [
       CCIP_SEND_SELECTOR,
+    ],
+  };
+}
+
+function layerZeroOftBridgeDetection(
+  knownBridgeContractAddresses: string[],
+): MintBurnBridgeDetectionConfig {
+  return {
+    protocol: "layerzero-oft",
+    knownBridgeContractAddresses,
+    bridgeSignalEmitterAddresses: [
+      LAYERZERO_ENDPOINT_V2,
+    ],
+    bridgeSignalTopics: [
+      LAYERZERO_PACKET_SENT_TOPIC,
+      LAYERZERO_PACKET_DELIVERED_TOPIC,
+    ],
+    bridgeSignalSelectors: [
+      LAYERZERO_SEND_SELECTOR,
+      LAYERZERO_EXECUTE302_SELECTOR,
     ],
   };
 }
@@ -181,10 +218,17 @@ const ETHEREUM = chainConfig("ethereum");
 const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   stablecoinId: string;
   dustThreshold: number;
+  bridgeDetection?: MintBurnBridgeDetectionConfig;
 }> = [
   { stablecoinId: "u-united-stables", dustThreshold: 10_000 },
   { stablecoinId: "a7a5-old-vector", dustThreshold: 10_000 },
-  { stablecoinId: "usdai-usd-ai", dustThreshold: 10_000 },
+  {
+    stablecoinId: "usdai-usd-ai",
+    dustThreshold: 10_000,
+    bridgeDetection: layerZeroOftBridgeDetection([
+      "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
+    ]),
+  },
   { stablecoinId: "usda-avalon", dustThreshold: 10_000 },
   { stablecoinId: "brz-transfero", dustThreshold: 10_000 },
   { stablecoinId: "kag-kinesis", dustThreshold: 10 },
@@ -750,10 +794,11 @@ const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     events: transferMintBurn(),
   },
   ...EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS.map(
-    ({ stablecoinId, dustThreshold }): MintBurnContractConfigSpec => ({
+    ({ stablecoinId, dustThreshold, bridgeDetection }): MintBurnContractConfigSpec => ({
       chain: ETHEREUM,
       stablecoinId,
       dustThreshold,
+      bridgeDetection,
       startBlock: 21_900_000,
       tier: "extended",
       events: transferMintBurn(),

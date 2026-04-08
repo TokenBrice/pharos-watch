@@ -66,9 +66,9 @@ function getEventBadge(event: MintBurnEvent): {
     };
   }
 
-  if (event.direction === "burn" && event.burnType === "bridge_burn") {
+  if (event.flowType === "bridge_transfer") {
     return {
-      label: "Bridge burn",
+      label: "Bridge transfer",
       className: "bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20 text-xs",
     };
   }

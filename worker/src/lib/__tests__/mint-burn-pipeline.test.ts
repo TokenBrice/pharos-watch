@@ -48,7 +48,7 @@ import {
   insertMintBurnRows,
   recalcAffectedHours,
   rebuildHourlyForStablecoinIds,
-  updateBurnClassifications,
+  updateEventClassifications,
 } from "../mint-burn-pipeline/persistence";
 import {
   readMintBurnSyncStateBatch,
@@ -341,8 +341,8 @@ describe("mint-burn shared pipeline modules", () => {
       bridgeBurns: 1,
       reviewBurns: 1,
     });
-    expect(vi.mocked(getAlchemyTransactionByHash)).toHaveBeenCalledTimes(3);
-    expect(vi.mocked(getAlchemyTransactionReceipt)).toHaveBeenCalledTimes(3);
+    expect(vi.mocked(getAlchemyTransactionByHash)).toHaveBeenCalledTimes(4);
+    expect(vi.mocked(getAlchemyTransactionReceipt)).toHaveBeenCalledTimes(4);
     expect(vi.mocked(classifyBridgeAwareBurnRows)).toHaveBeenCalledTimes(1);
     expect(db).toBeDefined();
   });
@@ -474,6 +474,59 @@ describe("mint-burn shared pipeline modules", () => {
     });
   });
 
+  it("excludes bridge-transfer rows from hourly aggregation", async () => {
+    const db = makeAggregationDb();
+    vi.mocked(batchExecute).mockImplementation(async (_db, stmts) => {
+      for (const stmt of stmts) {
+        await stmt.run();
+      }
+      return stmts.length;
+    });
+
+    const rows = [
+      makeRow({ id: "mint-standard", direction: "mint", amount_usd: 100, timestamp: 3_605, tx_hash: "0xmint-standard" }),
+      makeRow({
+        id: "burn-standard",
+        direction: "burn",
+        burn_type: "effective_burn",
+        amount_usd: 25,
+        timestamp: 3_610,
+        tx_hash: "0xburn-standard",
+      }),
+      makeRow({
+        id: "mint-bridge",
+        direction: "mint",
+        amount_usd: 999,
+        timestamp: 3_615,
+        tx_hash: "0xbridge-mint",
+        flow_type: "bridge_transfer",
+      }),
+      makeRow({
+        id: "burn-bridge",
+        direction: "burn",
+        burn_type: "bridge_burn",
+        amount_usd: 777,
+        timestamp: 3_620,
+        tx_hash: "0xbridge-burn",
+        flow_type: "bridge_transfer",
+      }),
+    ];
+
+    await insertMintBurnRows(db, rows);
+    await recalcAffectedHours(db, collectAffectedHours(rows));
+
+    expect(db.hourlyRows.get("usdt-tether-ethereum-3600")).toEqual({
+      stablecoin_id: "usdt-tether",
+      chain_id: "ethereum",
+      hour_ts: 3600,
+      mint_count: 1,
+      burn_count: 1,
+      mint_volume_usd: 100,
+      burn_volume_usd: 25,
+      net_flow_usd: 75,
+    });
+  });
+
   it("removes stale hourly rows when an affected bucket has no rows left after recompute", async () => {
     const db = makeAggregationDb();
     vi.mocked(batchExecute).mockImplementation(async (_db, stmts) => {
@@ -510,21 +563,22 @@ describe("mint-burn shared pipeline modules", () => {
     expect(db.hourlyRows.has("usdt-tether-ethereum-3600")).toBe(false);
   });
 
-  it("updates burn classification rows only for burn events", async () => {
+  it("updates classification rows for burns and non-standard mints", async () => {
     const db = makeDb();
-    vi.mocked(batchExecute).mockResolvedValueOnce(2);
+    vi.mocked(batchExecute).mockResolvedValueOnce(3);
 
     const rows = [
       makeRow({ id: "mint-1", direction: "mint" }),
+      makeRow({ id: "mint-bridge", direction: "mint", flow_type: "bridge_transfer" }),
       makeRow({ id: "burn-1", direction: "burn", burn_type: "effective_burn" }),
       makeRow({ id: "burn-2", direction: "burn", burn_type: "bridge_burn" }),
     ];
 
-    const updated = await updateBurnClassifications(db, rows);
-    expect(updated).toBe(2);
+    const updated = await updateEventClassifications(db, rows);
+    expect(updated).toBe(3);
     expect(vi.mocked(batchExecute)).toHaveBeenCalledTimes(1);
     const firstCall = vi.mocked(batchExecute).mock.calls[0];
-    expect(firstCall[1]).toHaveLength(2);
+    expect(firstCall[1]).toHaveLength(3);
   });
 
   it("uses monotonic sync-state upsert mode for backfill semantics", async () => {

@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const mintBurnFlow = createMethodologyVersion({
-  currentVersion: "4.9",
+  currentVersion: "5.0",
   changelogPath: "/methodology/mint-burn-flow-changelog/",
   changelog: [
+  {
+    version: "5.0",
+    title: "Bridge-transfer flow exclusion for omnichain tokens",
+    date: "2026-04-08",
+    effectiveAt: 1775606400,
+    summary:
+      "Bridge-aware classification now excludes bridge-transfer mints as well as burns, starting with USDai's LayerZero OFT path, and replay/backfill runs can repair previously inserted rows.",
+    impact: [
+      "LayerZero OFT transfers now mark both the mint-side and burn-side event rows as `flowType='bridge_transfer'` so they drop out of counted economic-flow aggregates",
+      "USDai's Ethereum tracker now recognizes the documented USDai OAdapter / LayerZero packet flow instead of treating equal-sized bridge mints and burns as issuance activity",
+      "Bridge classification now runs after all parsed rows are assembled for the config chunk, so mint-side bridge rows are visible to the classifier",
+      "Replay and backfill persistence now updates `flow_type` on existing rows, allowing post-deploy repair of previously ingested bridge-transfer noise",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.9",
     title: "Deterministic repair loops and adapter provenance disclosures",

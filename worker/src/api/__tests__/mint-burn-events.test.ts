@@ -108,6 +108,24 @@ describe("handleMintBurnEvents", () => {
     expect(body.events[0]?.flowType).toBe("atomic_roundtrip");
   });
 
+  it("preserves bridge_transfer flow types for bridge noise rows", async () => {
+    const bridgeRow = makeMintBurnRow({
+      direction: "mint",
+      flow_type: "bridge_transfer",
+    });
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 1 }] },
+      { match: "mint_burn_events", rows: [bridgeRow] },
+    ]);
+    const res = await handleMintBurnEvents(
+      db,
+      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether"),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { events: Array<{ flowType: string }> };
+    expect(body.events[0]?.flowType).toBe("bridge_transfer");
+  });
+
   it("rejects invalid scope with 400", async () => {
     const db = mockD1([]);
     const res = await handleMintBurnEvents(

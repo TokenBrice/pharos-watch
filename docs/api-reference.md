@@ -95,7 +95,6 @@ Endpoints backed by `createCacheHandler()` inject a `_meta` object into plain-ob
 | `GET /api/bluechip-ratings`  | 43200         | `createCacheHandler`                         |
 | `GET /api/usds-status`       | 86400         | `createCacheHandler`                         |
 | `GET /api/yield-rankings`    | 3600          | Manual injection after live safety hydration |
-| `GET /api/treasury-stable-exposure` | 86400    | Manual validation + `_meta` injection        |
 
 Array-typed responses (e.g., endpoints returning a JSON array at the top level) receive only the HTTP headers (`X-Data-Age`, `Warning`) and do not include `_meta`.
 
@@ -113,7 +112,7 @@ These profiles apply while the dataset is within its endpoint freshness budget. 
 | standard | `public, s-maxage=300, max-age=60`   | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals                                                                                                                   |
 | custom   | `public, s-maxage=300, max-age=300`  | dex-liquidity (browser-side max-age extended to match CDN TTL)                                                                                                                                                                                                                       |
 | per-coin | `public, s-maxage=300, max-age=10`   | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                           |
-| slow     | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, treasury-stable-exposure, non-usd-share                                                                                                                                              |
+| slow     | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, non-usd-share                                                                                                                                                                         |
 | archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot                                                                                                                                                                                                                                                                     |
 | no-store | `no-store`                           | health plus admin GET routes after router override (`status`, `status-history`, `request-source-stats`, `debug-sync-state`, `backfill-dews`, `audit-depeg-history?dry-run=true`, `discovery-candidates`) |
 
@@ -291,81 +290,6 @@ All upstream calls use `fetchWithRetry` with explicit per-request timeouts; on u
 For regular stablecoins the response still includes the raw DefiLlama detail fields, but the worker now also materializes `totalCirculatingUSD` and `totalCirculating` on each token row for contract consistency. Commodity and CG-only tokens are returned directly in the normalized shape above.
 
 For non-USD pegs, `totalCirculating` remains in native units while `totalCirculatingUSD` is converted to USD using the current token price before caching, so the USD field always reflects market cap regardless of peg type.
-
----
-
-### `GET /api/treasury-stable-exposure`
-
-Daily snapshot of reviewed protocol and DAO treasury stablecoin sleeves. This endpoint is intentionally scoped to public onchain treasury wallets, EVM-first, and best-effort coverage.
-
-**Cache:** slow — `X-Data-Age`, `Warning`, and `_meta` included.
-
-**Response**
-
-```json
-{
-  "entities": [
-    {
-      "protocolId": "maker",
-      "name": "Sky / Maker",
-      "directWalletUsd": 123456789,
-      "treasuryUsd": 123456789,
-      "stablecoinSleeveUsd": 45678901,
-      "trackedStableUsd": 43000000,
-      "decentralizedStableUsd": 21000000,
-      "decentralizedStablePctOfTreasury": 17.0,
-      "decentralizedStablePctOfStableSleeve": 46.0,
-      "weightedSafetyScore": 82.4,
-      "weightedSafetyGrade": "B+",
-      "holdings": []
-    }
-  ],
-  "updatedAt": 1743321600,
-  "coverage": {
-    "entityCount": 12,
-    "registryCount": 14,
-    "launchEligibleCount": 12,
-    "ownerChainTuples": 54,
-    "launchOwnerChainTuples": 42,
-    "comparableEntityCount": 9,
-    "partialEntityCount": 2,
-    "invalidEntityCount": 1,
-    "supplementedEntityCount": 5,
-    "evmOnly": true,
-    "extractionModes": {
-      "staticSeeded": 14,
-      "customReviewed": 0,
-      "dynamicUnresolved": 0,
-      "missing": 0
-    }
-  }
-}
-```
-
-Important response semantics:
-
-- `directWalletUsd` is the flat wallet-balance total from Sim's balances endpoint before any DeFi-position replacement logic.
-- `treasuryUsd` is the effective denominator actually used for treasury-relative percentages. It is nullable.
-- `coverage.denominatorStatus` tells you whether the row is treasury-comparable:
-  - `direct-only`: no DeFi supplement was needed; `treasuryUsd` equals `directWalletUsd`
-  - `adjusted-with-defi`: wrapper balances were replaced with DeFi-position totals and the denominator validated cleanly
-  - `partial`: stable-sleeve metrics are still published, but `treasuryUsd` and all `% of treasury` fields are `null`
-  - `invalid`: the derived denominator failed invariants, so `treasuryUsd` and all `% of treasury` fields are `null`
-- `stablecoinSleeveUsd` combines direct stablecoin balances from Sim's stablecoin filter with supported LP, vault, and lending positions decomposed to their underlying stablecoins.
-- `trackedStableUsd` is the subset of the stable sleeve that Pharos can map to tracked stablecoins by `chain + contract`.
-- `decentralizedStablePctOfStableSleeve` therefore uses the full stable sleeve denominator, not only the tracked subset.
-- `coverage.untrackedStableUsd` discloses the stablecoin value that could not be mapped into a Pharos stablecoin ID.
-- `coverage.derivedUntrackedStableUsd` isolates the portion of untracked stable exposure that came specifically from derived LP, vault, or lending positions.
-- `coverage.defiPositionUsd` is the total USD value of derived positions included in the denominator when `denominatorStatus = "adjusted-with-defi"`.
-- `coverage.consumedDirectBalanceUsd` is the direct wallet-balance value replaced by derived position totals to avoid double counting wrapper balances.
-- `coverage.notes` may state when LP, vault, or lending positions were decomposed to underlying stablecoins, when derived legs could not be mapped cleanly, or when treasury-relative metrics were suppressed.
-- `weightedSafetyScore` is USD-weighted across tracked stable holdings that have a current report card; `coverage.ratedTrackedStablePct` shows how much of the tracked sleeve that score covers.
-
-Cold-start behavior: if no treasury snapshot has been published yet, the endpoint returns `200` with `entities: []` plus stale `_meta` freshness fields so UI and smoke checks can treat the dataset as temporarily empty rather than transport-failed.
-
-**Error responses:** `503` when the cached treasury snapshot exists but is either structurally malformed or fails the treasury invariant checks.
-
-For integrations that only need current per-coin metrics (without full historical arrays), prefer `GET /api/stablecoin-summary/:id`.
 
 ---
 
@@ -2070,7 +1994,7 @@ Results are ordered by `timestamp` descending (most recent first).
 | `symbol`           | `string`                                                         | Token symbol                                                                                |
 | `chainId`          | `string`                                                         | Chain identifier (e.g. `"ethereum"`)                                                        |
 | `direction`        | `"mint" \| "burn"`                                               | Whether tokens were minted or burned                                                        |
-| `flowType`         | `"standard" \| "atomic_roundtrip"`                               | Flow-noise classification; `atomic_roundtrip` rows are excluded from aggregate flow metrics |
+| `flowType`         | `"standard" \| "bridge_transfer" \| "atomic_roundtrip"`          | Flow-noise classification; `bridge_transfer` and `atomic_roundtrip` rows are excluded from aggregate flow metrics |
 | `amount`           | `number`                                                         | Amount in native token units                                                                |
 | `amountUsd`        | `number \| null`                                                 | USD value at time of event                                                                  |
 | `burnType`         | `"effective_burn" \| "bridge_burn" \| "review_required" \| null` | Burn classification; `null` for mint rows                                                   |

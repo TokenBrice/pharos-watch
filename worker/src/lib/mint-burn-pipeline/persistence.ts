@@ -44,25 +44,28 @@ export async function insertMintBurnRows(
   return { inserted, ignored };
 }
 
-export async function updateBurnClassifications(
+export async function updateEventClassifications(
   db: D1Database,
   rows: MintBurnRow[],
 ): Promise<number> {
-  const burnRows = rows.filter((row) => row.direction === "burn");
-  if (burnRows.length === 0) return 0;
+  const rowsNeedingUpdate = rows.filter((row) =>
+    row.direction === "burn" || row.flow_type !== "standard",
+  );
+  if (rowsNeedingUpdate.length === 0) return 0;
 
-  const updateBurnClassificationStmts = burnRows.map((row) =>
+  const updateClassificationStmts = rowsNeedingUpdate.map((row) =>
     db.prepare(
       `UPDATE mint_burn_events
-       SET burn_type = ?, burn_review_reason = ?
+       SET burn_type = ?, burn_review_reason = ?, flow_type = ?
        WHERE id = ?`,
     ).bind(
       row.burn_type,
       row.burn_review_reason,
+      row.flow_type,
       row.id,
     ),
   );
-  return batchExecute(db, updateBurnClassificationStmts);
+  return batchExecute(db, updateClassificationStmts);
 }
 
 export function collectAffectedHours(
@@ -165,7 +168,7 @@ export async function persistMintBurnRows(
 ): Promise<{
   inserted: number;
   ignored: number;
-  burnRowsUpdated: number;
+  classificationRowsUpdated: number;
   roundtripsDetected: number;
 }> {
   const roundtripsDetected = detectAtomicRoundtrips(rows);
@@ -176,17 +179,17 @@ export async function persistMintBurnRows(
     return {
       inserted: 0,
       ignored: 0,
-      burnRowsUpdated: 0,
+      classificationRowsUpdated: 0,
       roundtripsDetected,
     };
   }
 
   const insertResult = await insertMintBurnRows(db, rows);
-  const burnRowsUpdated = await updateBurnClassifications(db, rows);
+  const classificationRowsUpdated = await updateEventClassifications(db, rows);
   return {
     inserted: insertResult.inserted,
     ignored: insertResult.ignored,
-    burnRowsUpdated,
+    classificationRowsUpdated,
     roundtripsDetected,
   };
 }

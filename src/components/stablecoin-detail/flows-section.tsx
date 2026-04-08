@@ -24,7 +24,7 @@ export function FlowsSection({ stablecoinId, hasFlows }: FlowsSectionProps) {
           <div className="mb-3">
             <h2 className={DETAIL_SECTION_TITLE_CLASS}>Mint &amp; Burn Flow History</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Counted economic flow only. Excludes bridge burns, review-required burns, and atomic roundtrips.
+              Counted economic flow only. Excludes bridge transfers, review-required burns, and atomic roundtrips.
             </p>
           </div>
           <FlowEventFeed stablecoinId={stablecoinId} limit={10} scope="counted" />

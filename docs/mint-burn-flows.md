@@ -17,7 +17,7 @@ Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intention
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.9`
+- **Current methodology version:** `v5.0`
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Internal reconstructed timeline:** [Mint/Burn Flow Methodology Timeline](./mint-burn-flows-timeline.md)
 
@@ -171,7 +171,7 @@ Per-config adapter provenance is now surfaced through coin `coverage` metadata:
 
 Current rule: the March 24 long-tail transfer wave that inherited the blanket `21_900_000` Ethereum floor is labeled `startBlockSource = default-coverage-floor-2026-03-24` and `startBlockConfidence = low`, so the public API no longer implies contract-specific historical certainty where none exists.
 
-Events are also classified by `flow_type` (`standard` or `atomic_roundtrip`) to exclude flash loan / atomic arb noise from aggregation.
+Events are also classified by `flow_type` (`standard`, `bridge_transfer`, or `atomic_roundtrip`) so non-economic bridge transfers and same-tx roundtrip noise stay out of aggregate flow metrics.
 
 ### Event Detection
 
@@ -201,10 +201,10 @@ Events are also classified by `flow_type` (`standard` or `atomic_roundtrip`) to 
 5. **For each contract config:**
    - Skip if `fromBlock > chainHead` or the lane/global budget is exhausted.
    - For each event definition, call Alchemy `eth_getLogs` with adaptive recursive block-range splitting on provider/range failures.
-   - Enforce the per-config request cap while fetching logs, resolving timestamps, and classifying bridge burns so a single config cannot monopolize the lane.
+   - Enforce the per-config request cap while fetching logs, resolving timestamps, and classifying bridge activity so a single config cannot monopolize the lane.
    - Resolve block timestamps — batch `eth_getBlockByNumber` for all unique blocks in the returned logs, using local + persistent (`block_timestamp_cache`) caches.
    - Parse logs per event definition: decode amount (respecting decimals), derive counterparty address, compute `amount_usd = amount * price` (null if no price), and initialize `flow_type='standard'`.
-   - Classify bridge burns per parsed batch to preserve the shared Alchemy transaction-context budget.
+   - Classify bridge transfers after all parsed rows for the config chunk are assembled so bridge-related mints and burns can be tagged together while still sharing the same transaction-context budget.
    - Detect atomic roundtrips after all event definitions for the config are parsed: group rows by `(tx_hash, stablecoin_id)` and flip the whole group to `flow_type='atomic_roundtrip'` when both mint and burn directions appear in the same transaction.
    - Filter out dust events (amount < `dustThreshold`).
    - Batch `INSERT OR IGNORE` into `mint_burn_events`, track parsed vs inserted counts from D1 `meta.changes`.
@@ -214,7 +214,7 @@ Events are also classified by `flow_type` (`standard` or `atomic_roundtrip`) to 
        - If no events: advance to `chainHead - safetyMarginBlocks` (avoids skipping not-yet-indexed events).
      - If any event definition was partial or any block timestamps were unresolved: advance only to the shared safe coverage frontier (`min(scannedToBlock, earliestMissingTimestamp-1)`).
      - If no safe frontier exists for the config in that run: do not advance.
-6. **Recalculate affected hourly buckets** — for each unique `(stablecoinId, chainId, hourTs)` touched, `INSERT OR REPLACE` into `mint_burn_hourly` by re-aggregating from `mint_burn_events`, counting only `flow_type='standard'` rows so atomic roundtrips do not leak into flow statistics.
+6. **Recalculate affected hourly buckets** — for each unique `(stablecoinId, chainId, hourTs)` touched, `INSERT OR REPLACE` into `mint_burn_hourly` by re-aggregating from `mint_burn_events`, counting only `flow_type='standard'` rows so bridge transfers and atomic roundtrips do not leak into flow statistics.
 7. **Auto-heal recent NULL prices** — on non-error runs, query up to 500 events with `amount_usd IS NULL` in the last 48 hours, resolve from `price_cache`, update `amount_usd/price_*` with `price_source=price_cache_heal`, and re-aggregate only newly affected hourly buckets.
    - Cron metadata now includes both `nullPricesHealed` and `nullPriceBacklog` (`recent`, `historical`) so operators can distinguish live healable gaps from older debt.
 8. **Emit active progress** — long runs call the shared cron `reportProgress(...)` hook so `/api/status` can surface the active stage, queue position, and budget heartbeat while the lease is still live.
@@ -245,7 +245,7 @@ Cron (`sync-mint-burn`) and admin backfill (`backfill-mint-burn`) now share a si
 
 Implementation invariant: `worker/src/api/backfill-mint-burn.ts` does not import from `worker/src/cron/sync-mint-burn.ts`; both entrypoints import shared helpers from `mint-burn-pipeline/*`.
 
-`mint_burn_events.flow_type` is orthogonal to `burn_type`: `burn_type` only classifies burns as economic vs bridge/review, while `flow_type` applies to both mints and burns and marks same-transaction mint+burn noise as `atomic_roundtrip`.
+`mint_burn_events.flow_type` is orthogonal to `burn_type`: `burn_type` still classifies burns as economic vs bridge/review, while `flow_type` applies to both mints and burns and now marks tx-level bridge noise as `bridge_transfer` plus same-transaction mint+burn noise as `atomic_roundtrip`.
 
 Cron metadata includes `atomicRoundtripsDetected`, an observability counter for how many rows were tagged during the run.
 
@@ -349,7 +349,7 @@ CREATE TABLE mint_burn_events (
   price_used REAL,                     -- Price at resolution time
   price_timestamp INTEGER,             -- When the price was sourced (cache update time), NOT the event's block timestamp
   price_source TEXT,                   -- "supply-history-daily", "price-cache-current", "price_cache_heal", "backfill-supply-history-daily", or "backfill-derived-amount-usd"
-  flow_type TEXT DEFAULT 'standard',   -- "standard" or "atomic_roundtrip"
+  flow_type TEXT DEFAULT 'standard',   -- "standard", "bridge_transfer", or "atomic_roundtrip"
   counterparty TEXT,                   -- Address that received/sent tokens
   tx_hash TEXT NOT NULL,
   block_number INTEGER NOT NULL,
@@ -462,7 +462,7 @@ Returns: `{ events[], total }`. Events sorted by `timestamp DESC`.
 
 Each event row includes valuation provenance fields (`priceUsed`, `priceTimestamp`, `priceSource`), `flowType`, plus burn classification fields (`burnType`, `burnReviewReason`).
 
-Product note: stablecoin detail-page "Mint & Burn Flow History" uses the counted view so bridge burns, review-required burns, and atomic roundtrips do not appear as ordinary economic flow.
+Product note: stablecoin detail-page "Mint & Burn Flow History" uses the counted view so bridge transfers, review-required burns, and atomic roundtrips do not appear as ordinary economic flow.
 
 **Cache:** `CACHE_PROFILES.realtime` (~900s freshness with 15-min staleness window)
 
