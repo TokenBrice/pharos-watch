@@ -28,7 +28,7 @@ const PUBLIC_ENDPOINTS = [
 
 const ADMIN_PATHS = new Set<string>([...ENDPOINT_GROUPS.admin]);
 const PUBLIC_PROBE_TIMEOUT_MS = 5_000;
-const ADMIN_PROBE_TIMEOUT_MS = 10_000;
+const ADMIN_PROBE_TIMEOUT_MS = 20_000;
 export const ENDPOINT_PROBE_CONCURRENCY = 6;
 
 function getProbeTimeoutMs(path: string): number {

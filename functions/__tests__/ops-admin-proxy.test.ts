@@ -280,6 +280,29 @@ describe("ops admin proxy", () => {
       params: { path: "status" },
     });
 
+    await vi.advanceTimersByTimeAsync(20_000);
+
+    const response = await responsePromise;
+    expect(response.status).toBe(504);
+    expect(await response.json()).toEqual({ error: "Operator API upstream timed out" });
+  });
+
+  it("keeps the default 10s proxy timeout on non-status admin routes", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", vi.fn((_input: RequestInfo | URL, init?: RequestInit) => (
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(init.signal?.reason ?? new DOMException("timed out", "TimeoutError"));
+        });
+      })
+    )));
+
+    const responsePromise = onRequest({
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/request-source-stats"),
+      env: BASE_ENV,
+      params: { path: "request-source-stats" },
+    });
+
     await vi.advanceTimersByTimeAsync(10_000);
 
     const response = await responsePromise;

@@ -411,7 +411,7 @@ Response includes:
 
 Source: `src/hooks/use-endpoint-probes.ts`
 
-- Probe timeout: 5s for public endpoints, 10s for admin endpoints to match the ops proxy timeout budget
+- Probe timeout: 5s for public endpoints, 20s for admin endpoints to match the extended ops status-proxy budget
 - Parallel probing with `Promise.all`
 - Admin probe paths are now same-origin `/api/admin/*` calls on the ops host
 - The dashboard labels these as **browser-origin probes** to distinguish them from the worker-origin `status-self-check` synthetic probe stored in `/api/status`

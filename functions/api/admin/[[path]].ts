@@ -34,6 +34,8 @@ const FORWARDED_RESPONSE_HEADERS = [
 ] as const;
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const ACCESS_SESSION_COOKIE = "CF_Authorization";
+const EXTENDED_STATUS_PROXY_PATHS = new Set(["/api/status", "/api/status-history"]);
+const OPS_STATUS_PROXY_TIMEOUT_MS = 20_000;
 
 interface OpsAdminProxyContext {
   request: Request;
@@ -49,6 +51,12 @@ function resolveUpstreamPath(params: OpsAdminProxyContext["params"]): string | n
 
 function isAllowedAdminPath(path: string): boolean {
   return isAdminPath(path);
+}
+
+function resolveOpsAdminProxyTimeoutMs(upstreamPath: string): number {
+  return EXTENDED_STATUS_PROXY_PATHS.has(upstreamPath)
+    ? OPS_STATUS_PROXY_TIMEOUT_MS
+    : DEFAULT_PROXY_TIMEOUT_MS;
 }
 
 function buildUpstreamHeaders(
@@ -175,7 +183,7 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
     method: request.method,
     headers: upstreamHeaders,
     body: request.method === "GET" || request.method === "HEAD" ? undefined : request.body,
-    timeoutMs: DEFAULT_PROXY_TIMEOUT_MS,
+    timeoutMs: resolveOpsAdminProxyTimeoutMs(upstreamPath),
     timeoutReason: new DOMException("Operator API upstream timed out", "TimeoutError"),
     logPrefix: "ops-proxy",
     timeoutMessage: "Operator API upstream timed out",

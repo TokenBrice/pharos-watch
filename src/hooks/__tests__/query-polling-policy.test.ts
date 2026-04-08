@@ -187,7 +187,7 @@ describe("query polling policy", () => {
     expect(publicSignal?.aborted).toBe(true);
     expect(adminSignal?.aborted).toBe(false);
 
-    await vi.advanceTimersByTimeAsync(5_000);
+    await vi.advanceTimersByTimeAsync(15_000);
     expect(adminSignal?.aborted).toBe(true);
 
     const result = await resultPromise;
