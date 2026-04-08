@@ -35,6 +35,24 @@ export const GOVERNANCE_LABELS_SHORT: Record<GovernanceType, string> = {
 };
 
 // ---------------------------------------------------------------------------
+// Filter option tuples — used by heatmap and depeg filter UIs
+// ---------------------------------------------------------------------------
+
+export const PEG_FILTER_OPTIONS: { value: PegCurrency | "all"; label: string }[] = [
+  { value: "all", label: "All Pegs" },
+  { value: "USD", label: "USD" },
+  { value: "EUR", label: "EUR" },
+  { value: "GOLD", label: "Gold" },
+];
+
+export const GOVERNANCE_FILTER_OPTIONS: { value: GovernanceType | "all"; label: string }[] = [
+  { value: "all", label: "All Types" },
+  { value: "centralized", label: GOVERNANCE_LABELS_SHORT.centralized },
+  { value: "centralized-dependent", label: GOVERNANCE_LABELS_SHORT["centralized-dependent"] },
+  { value: "decentralized", label: GOVERNANCE_LABELS_SHORT.decentralized },
+];
+
+// ---------------------------------------------------------------------------
 // Backing labels
 // ---------------------------------------------------------------------------
 

@@ -122,7 +122,8 @@ export function computePegScore(
   // is not negligible just because it was brief.
   let totalPenalty = 0;
   for (const e of events) {
-    const peakBps = Math.abs(e.peakDeviationBps);
+    const rawBps = Math.abs(e.peakDeviationBps);
+    const peakBps = Number.isFinite(rawBps) ? rawBps : 0;
     const endSec = e.endedAt ?? now;
     const durationDays = Math.min((endSec - e.startedAt) / DAY_SECONDS, 90);
     const yearsAgo = (now - e.startedAt) / (365.25 * DAY_SECONDS);
@@ -139,11 +140,11 @@ export function computePegScore(
   // stddev of |peakDeviationBps| scaled into 0-15 range.
   let spreadPenalty = 0;
   if (events.length >= 2) {
-    const absBpsList = events.map((e) => Math.abs(e.peakDeviationBps));
+    const absBpsList = events.map((e) => { const v = Math.abs(e.peakDeviationBps); return Number.isFinite(v) ? v : 0; });
     const mean = absBpsList.reduce((s, v) => s + v, 0) / absBpsList.length;
     const variance = absBpsList.reduce((s, v) => s + (v - mean) ** 2, 0) / absBpsList.length;
     const stdDev = Math.sqrt(variance);
-    spreadPenalty = Math.min(15, (stdDev / 1000) * 15);
+    spreadPenalty = Number.isFinite(stdDev) ? Math.min(15, (stdDev / 1000) * 15) : 0;
   }
 
   // --- Active depeg penalty ---
@@ -154,7 +155,8 @@ export function computePegScore(
     if (e.endedAt === null) {
       // Scale: 100 bps (threshold) = 5 penalty (floor), 2500+ bps = 50 penalty (hard cap)
       // Use worst active event when multiple concurrent depegs exist.
-      const absBps = Math.abs(e.peakDeviationBps);
+      const rawAbsBps = Math.abs(e.peakDeviationBps);
+      const absBps = Number.isFinite(rawAbsBps) ? rawAbsBps : 0;
       activeDepegPenalty = Math.max(activeDepegPenalty, Math.min(50, Math.max(5, absBps / 50)));
     }
   }

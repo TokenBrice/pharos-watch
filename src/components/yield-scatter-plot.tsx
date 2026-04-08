@@ -222,8 +222,9 @@ export function YieldScatterPlot({
 
   const handleClick = useCallback(
     (entry: unknown) => {
-      const point = entry as Partial<ScatterDataPoint> | undefined;
-      if (point && typeof point.id === "string") onDotClick(point.id);
+      if (entry && typeof entry === "object" && "id" in entry && typeof (entry as { id: unknown }).id === "string") {
+        onDotClick((entry as { id: string }).id);
+      }
     },
     [onDotClick],
   );

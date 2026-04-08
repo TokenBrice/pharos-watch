@@ -55,14 +55,14 @@ export const handleDiscoveryCandidates = withErrorHandler("discovery-candidates"
     ).bind(limit, offset).all<DiscoveryCandidateRow>(),
     db.prepare(
       `SELECT COUNT(*) as total FROM discovery_candidates ${whereClause}`,
-    ).all(),
+    ).all<{ total: number }>(),
   ]);
 
   const candidates: DiscoveryCandidate[] = (rows.results ?? []).map((row) =>
     mapDiscoveryCandidateRow(row, nowSec)
   );
 
-  const total = ((countResult.results?.[0] as Record<string, unknown>)?.total as number) ?? 0;
+  const total = countResult.results?.[0]?.total ?? 0;
 
   return jsonResponse({ candidates, total });
 });

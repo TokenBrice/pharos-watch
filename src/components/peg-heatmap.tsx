@@ -13,7 +13,7 @@ import { formatCurrency, formatNativePrice } from "@shared/lib/format";
 import { deviationBgClass, deviationTileClass } from "@/lib/severity-colors";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { PegSummaryCoin, PegCurrency, GovernanceType } from "@shared/types";
-import { GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
+import { PEG_FILTER_OPTIONS, GOVERNANCE_FILTER_OPTIONS } from "@shared/lib/classification";
 
 interface PegHeatmapProps {
   coins: PegSummaryCoin[];
@@ -28,20 +28,6 @@ interface PegHeatmapProps {
   fallbackPegTypes?: string[];
   hideFilters?: boolean;
 }
-
-const PEG_OPTIONS: { value: PegCurrency | "all"; label: string }[] = [
-  { value: "all", label: "All Pegs" },
-  { value: "USD", label: "USD" },
-  { value: "EUR", label: "EUR" },
-  { value: "GOLD", label: "Gold" },
-];
-
-const TYPE_OPTIONS: { value: GovernanceType | "all"; label: string }[] = [
-  { value: "all", label: "All Types" },
-  { value: "centralized", label: GOVERNANCE_LABELS_SHORT.centralized },
-  { value: "centralized-dependent", label: GOVERNANCE_LABELS_SHORT["centralized-dependent"] },
-  { value: "decentralized", label: GOVERNANCE_LABELS_SHORT.decentralized },
-];
 
 
 function FilterChips<T extends string>({
@@ -112,8 +98,8 @@ export function PegHeatmap({
           </div>
           {!hideFilters && (
             <div className="flex flex-wrap items-center gap-3">
-              <FilterChips options={PEG_OPTIONS} value={pegFilter} onChange={onPegFilterChange} />
-              <FilterChips options={TYPE_OPTIONS} value={typeFilter} onChange={onTypeFilterChange} />
+              <FilterChips options={PEG_FILTER_OPTIONS} value={pegFilter} onChange={onPegFilterChange} />
+              <FilterChips options={GOVERNANCE_FILTER_OPTIONS} value={typeFilter} onChange={onTypeFilterChange} />
               {onSearchChange && (
                 <div className="relative w-full sm:w-44">
                   <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />

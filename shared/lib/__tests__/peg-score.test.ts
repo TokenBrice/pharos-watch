@@ -74,4 +74,27 @@ describe("computePegScore", () => {
     const oldResult = computePegScore(oldEvent as never, start, NOW);
     expect(recentResult.pegScore!).toBeLessThan(oldResult.pegScore!);
   });
+
+  it("handles NaN peakDeviationBps without producing NaN score", () => {
+    const start = NOW - 90 * DAY;
+    const events = [
+      {
+        startedAt: NOW - 30 * DAY,
+        endedAt: NOW - 29 * DAY,
+        peakDeviationBps: NaN,
+        direction: "below" as const,
+      },
+      {
+        startedAt: NOW - 20 * DAY,
+        endedAt: NOW - 19 * DAY,
+        peakDeviationBps: 200,
+        direction: "below" as const,
+      },
+    ];
+    const result = computePegScore(events as never, start, NOW);
+    // Score must be a finite number or null — never NaN
+    if (result.pegScore !== null) {
+      expect(Number.isFinite(result.pegScore)).toBe(true);
+    }
+  });
 });

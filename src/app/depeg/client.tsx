@@ -24,22 +24,9 @@ import { DepegFeed } from "@/components/depeg-feed";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { PegCurrency, GovernanceType } from "@shared/types";
-import { PEG_LABELS_SHORT, GOVERNANCE_LABELS } from "@shared/lib/classification";
+import { PEG_LABELS_SHORT, GOVERNANCE_LABELS, PEG_FILTER_OPTIONS, GOVERNANCE_FILTER_OPTIONS } from "@shared/lib/classification";
 import type { DepegTrackerRow } from "@/components/depeg-tracker-table";
 
-const PEG_FILTERS: { value: PegCurrency | "all"; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "USD", label: "USD" },
-  { value: "EUR", label: "EUR" },
-  { value: "GOLD", label: "Gold" },
-];
-
-const TYPE_FILTERS: { value: GovernanceType | "all"; label: string }[] = [
-  { value: "all", label: "All Types" },
-  { value: "centralized", label: "CeFi" },
-  { value: "centralized-dependent", label: "CeFi-Dep" },
-  { value: "decentralized", label: "DeFi" },
-];
 
 export function DepegClient() {
   const {
@@ -194,7 +181,7 @@ export function DepegClient() {
                 className="flex gap-1"
                 aria-label="Filter by peg currency"
               >
-                {PEG_FILTERS.map((f) => (
+                {PEG_FILTER_OPTIONS.map((f) => (
                   <ToggleGroupItem key={f.value} value={f.value} variant="outline" size="sm" className="text-xs">
                     {f.label}
                   </ToggleGroupItem>
@@ -207,7 +194,7 @@ export function DepegClient() {
                 className="flex gap-1"
                 aria-label="Filter by governance type"
               >
-                {TYPE_FILTERS.map((f) => (
+                {GOVERNANCE_FILTER_OPTIONS.map((f) => (
                   <ToggleGroupItem key={f.value} value={f.value} variant="outline" size="sm" className="text-xs">
                     {f.label}
                   </ToggleGroupItem>

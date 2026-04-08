@@ -68,35 +68,40 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
 
   if (dlYieldsAllowed) {
     if (llamaRes?.ok) {
-      const llamaData = (await llamaRes.json()) as { data: LlamaPool[] };
-      if (llamaData.data && llamaData.data.length >= 1000) {
-        await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, true);
-        pools = llamaData.data;
-        dlYieldsAvailable = true;
-        for (const pool of pools) {
-          if (!pool.project || pool.exposure === "single") continue;
-          fallbackDexProjects.add(pool.project);
-        }
-        console.log(`[dex-liquidity] Got ${pools.length} pools from DeFiLlama yields`);
+      try {
+        const llamaData = (await llamaRes.json()) as { data: LlamaPool[] };
+        if (llamaData.data && llamaData.data.length >= 1000) {
+          await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, true);
+          pools = llamaData.data;
+          dlYieldsAvailable = true;
+          for (const pool of pools) {
+            if (!pool.project || pool.exposure === "single") continue;
+            fallbackDexProjects.add(pool.project);
+          }
+          console.log(`[dex-liquidity] Got ${pools.length} pools from DeFiLlama yields`);
 
-        // Cache minimal stablecoin pool data for yield sync (avoids redundant 13MB re-fetch)
-        try {
-          const minimalPools = pools
-            .filter(isYieldRelevantDlPool)
-            .map((p) => ({
-              pool: p.pool, chain: p.chain, project: p.project, symbol: p.symbol,
-              poolMeta: p.poolMeta ?? null,
-              tvlUsd: p.tvlUsd, apy: p.apy, apyBase: p.apyBase,
-              apyReward: p.apyReward, apyMean30d: p.apyMean30d ?? p.apy, stablecoin: p.stablecoin, exposure: p.exposure,
-              underlyingTokens: p.underlyingTokens ?? null,
-            }));
-          await setCache(db, "dl-stablecoin-pools", buildDlStablecoinPoolsCache(minimalPools));
-        } catch (e) {
-          console.warn("[dex-liquidity] Failed to cache stablecoin pools for yield sync:", e);
+          // Cache minimal stablecoin pool data for yield sync (avoids redundant 13MB re-fetch)
+          try {
+            const minimalPools = pools
+              .filter(isYieldRelevantDlPool)
+              .map((p) => ({
+                pool: p.pool, chain: p.chain, project: p.project, symbol: p.symbol,
+                poolMeta: p.poolMeta ?? null,
+                tvlUsd: p.tvlUsd, apy: p.apy, apyBase: p.apyBase,
+                apyReward: p.apyReward, apyMean30d: p.apyMean30d ?? p.apy, stablecoin: p.stablecoin, exposure: p.exposure,
+                underlyingTokens: p.underlyingTokens ?? null,
+              }));
+            await setCache(db, "dl-stablecoin-pools", buildDlStablecoinPoolsCache(minimalPools));
+          } catch (e) {
+            console.warn("[dex-liquidity] Failed to cache stablecoin pools for yield sync:", e);
+          }
+        } else {
+          await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
+          console.warn(`[dex-liquidity] DeFiLlama returned only ${llamaData.data?.length ?? 0} pools — degraded mode`);
         }
-      } else {
+      } catch (e) {
+        console.warn("[dex-liquidity] DeFiLlama yields response parse failed:", e instanceof Error ? e.message : String(e));
         await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
-        console.warn(`[dex-liquidity] DeFiLlama returned only ${llamaData.data?.length ?? 0} pools — degraded mode`);
       }
     } else {
       console.warn("[dex-liquidity] DeFiLlama yields fetch failed — CG/GT will be primary pool source");
@@ -113,30 +118,35 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
 
   if (dlProtocolsAllowed) {
     if (protocolsRes?.ok) {
-      const protocols = (await protocolsRes.json()) as {
-        slug: string;
-        category?: string;
-        tvl?: number | null;
-        deadFrom?: number | null;
-        rugged?: boolean | null;
-        deprecated?: boolean | null;
-      }[];
-      for (const p of protocols) {
-        if (p.category !== "Dexs") continue;
-        if (p.deadFrom || p.rugged || p.deprecated) continue;
-        dexProjects.add(p.slug);
-        // Store TVL cap keyed by normalized protocol name for CG/GT pool sanity checks
-        if (p.tvl && p.tvl > 0) {
-          const norm = normalizeProtocol(p.slug);
-          protocolTvlCaps.set(norm, (protocolTvlCaps.get(norm) ?? 0) + p.tvl);
+      try {
+        const protocols = (await protocolsRes.json()) as {
+          slug: string;
+          category?: string;
+          tvl?: number | null;
+          deadFrom?: number | null;
+          rugged?: boolean | null;
+          deprecated?: boolean | null;
+        }[];
+        for (const p of protocols) {
+          if (p.category !== "Dexs") continue;
+          if (p.deadFrom || p.rugged || p.deprecated) continue;
+          dexProjects.add(p.slug);
+          // Store TVL cap keyed by normalized protocol name for CG/GT pool sanity checks
+          if (p.tvl && p.tvl > 0) {
+            const norm = normalizeProtocol(p.slug);
+            protocolTvlCaps.set(norm, (protocolTvlCaps.get(norm) ?? 0) + p.tvl);
+          }
         }
-      }
-      dlProtocolsAvailable = dexProjects.size > 0;
-      await recordOutcome(db, CIRCUIT_SOURCE.DL_PROTOCOLS, dlProtocolsAvailable);
-      if (dlProtocolsAvailable) {
-        console.log(`[dex-liquidity] Indexed ${dexProjects.size} active DEX projects, ${protocolTvlCaps.size} with TVL caps`);
-      } else {
-        console.warn("[dex-liquidity] DeFiLlama protocols response had zero active DEX projects — degraded");
+        dlProtocolsAvailable = dexProjects.size > 0;
+        await recordOutcome(db, CIRCUIT_SOURCE.DL_PROTOCOLS, dlProtocolsAvailable);
+        if (dlProtocolsAvailable) {
+          console.log(`[dex-liquidity] Indexed ${dexProjects.size} active DEX projects, ${protocolTvlCaps.size} with TVL caps`);
+        } else {
+          console.warn("[dex-liquidity] DeFiLlama protocols response had zero active DEX projects — degraded");
+        }
+      } catch (e) {
+        console.warn("[dex-liquidity] DeFiLlama protocols response parse failed:", e instanceof Error ? e.message : String(e));
+        await recordOutcome(db, CIRCUIT_SOURCE.DL_PROTOCOLS, false);
       }
     } else {
       console.warn("[dex-liquidity] DeFiLlama protocols fetch failed — dead-protocol filtering degraded");

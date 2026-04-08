@@ -229,12 +229,17 @@ export async function handleAuditDepegHistory(
       // Optional symbol filter: ?symbol=USDC (case-insensitive)
       const symbolFilter = url.searchParams.get("symbol")?.toUpperCase() ?? null;
 
-      // 1. Query all closed depeg events
-      const allEvents = await db
-        .prepare(
-          "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at",
-        )
-        .all<DepegRow>();
+      // 1. Query closed depeg events
+      // Apply pagination only for the default audit path. The delete path
+      // targets events by ID (doesn't need the full set), and the repair path
+      // has its own separate query at line 290.
+      const usePagination = !deleteIds && !repairMode;
+      const eventsSql = "SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at"
+        + (usePagination ? " LIMIT ? OFFSET ?" : "");
+      const eventsStmt = usePagination
+        ? db.prepare(eventsSql).bind(limit, offset)
+        : db.prepare(eventsSql);
+      const allEvents = await eventsStmt.all<DepegRow>();
       const events = allEvents.results ?? [];
 
       // Fast path: direct delete of specific event IDs (pre-verified externally)

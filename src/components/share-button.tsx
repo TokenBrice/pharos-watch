@@ -45,7 +45,8 @@ export function ShareButton({ ogPath, label = "Share" }: ShareButtonProps) {
     try {
       await navigator.clipboard.writeText(window.location.href);
       setStatus("copied");
-    } catch {
+    } catch (err) {
+      console.warn("[share] clipboard write failed:", err instanceof Error ? err.message : String(err));
       setStatus("error");
     }
     resetStatus();
@@ -59,7 +60,8 @@ export function ShareButton({ ogPath, label = "Share" }: ShareButtonProps) {
         new ClipboardItem({ "image/png": blob }),
       ]);
       setStatus("copied");
-    } catch {
+    } catch (err) {
+      console.warn("[share] image copy failed:", err instanceof Error ? err.message : String(err));
       setStatus("error");
     }
     resetStatus();
@@ -76,7 +78,8 @@ export function ShareButton({ ogPath, label = "Share" }: ShareButtonProps) {
       a.click();
       URL.revokeObjectURL(url);
       setStatus("idle");
-    } catch {
+    } catch (err) {
+      console.warn("[share] download failed:", err instanceof Error ? err.message : String(err));
       setStatus("error");
       resetStatus();
     }
