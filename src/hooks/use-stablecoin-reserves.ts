@@ -43,21 +43,10 @@ export function useStablecoinReserves(
     retry: 1,
   });
 
-  return {
-    reserveResult: data
-      ? {
-          reserves: data.reserves,
-          estimated: data.estimated,
-          mode: data.mode,
-          liveAt: data.liveAt,
-          source: data.source,
-          displayUrl: data.displayUrl,
-          displayBadge: data.displayBadge,
-          metadata: data.metadata,
-          provenance: data.provenance,
-          sync: data.sync,
-        }
-      : null,
-    error: error ?? null,
-  };
+  if (!data) return { reserveResult: null, error: error ?? null };
+
+  const { stablecoinId: _id, ...reserveResult } = data;
+  // Type-check: ensure the spread matches ReserveResult exactly.
+  const checked: ReserveResult = reserveResult;
+  return { reserveResult: checked, error: error ?? null };
 }

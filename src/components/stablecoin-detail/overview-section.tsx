@@ -136,6 +136,54 @@ function formatReserveSnapshotStaleLabel(reserves: ReserveResult): string {
   }
 }
 
+function buildReserveFootnote(
+  reserves: ReserveResult,
+  isLiveEnabled: boolean,
+): React.ReactNode | null {
+  const sourceLink = reserves.displayUrl ? (
+    <>
+      <span aria-hidden>·</span>
+      <a
+        href={reserves.displayUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline underline-offset-2 hover:text-foreground transition-colors"
+      >
+        Source
+      </a>
+    </>
+  ) : null;
+
+  switch (reserves.mode) {
+    case "live":
+      return (
+        <>
+          <span>{formatReserveSnapshotFreshLabel(reserves)}</span>
+          {sourceLink}
+        </>
+      );
+    case "live-stale":
+      return (
+        <>
+          <span>{formatReserveSnapshotStaleLabel(reserves)}</span>
+          {sourceLink}
+        </>
+      );
+    case "curated-fallback":
+      return isLiveEnabled ? (
+        <span>Live sync unavailable; showing curated reserve baseline</span>
+      ) : null;
+    case "template-fallback":
+      return isLiveEnabled ? (
+        <span>Live sync unavailable; showing estimated classification template</span>
+      ) : null;
+    case "unavailable":
+      return <span>Reserve composition unavailable</span>;
+    default:
+      return null;
+  }
+}
+
 function buildReserveCompositionNote(reserves: ReserveResult | null): string | null {
   if (!reserves || (reserves.mode !== "live" && reserves.mode !== "live-stale")) {
     return null;
@@ -277,51 +325,13 @@ export function OverviewSection({
                   badge={reserves.displayBadge}
                 />
                 <div className="mt-1 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                  {reserves.mode === "live" ? (
-                    <>
-                      <span>{formatReserveSnapshotFreshLabel(reserves)}</span>
-                      {reserves.displayUrl && (
-                        <>
-                          <span aria-hidden>·</span>
-                          <a
-                            href={reserves.displayUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="underline underline-offset-2 hover:text-foreground transition-colors"
-                          >
-                            Source
-                          </a>
-                        </>
-                      )}
-                    </>
-                  ) : reserves.mode === "live-stale" ? (
-                    <>
-                      <span>{formatReserveSnapshotStaleLabel(reserves)}</span>
-                      {reserves.displayUrl && (
-                        <>
-                          <span aria-hidden>·</span>
-                          <a
-                            href={reserves.displayUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="underline underline-offset-2 hover:text-foreground transition-colors"
-                          >
-                            Source
-                          </a>
-                        </>
-                      )}
-                    </>
-                  ) : isLiveEnabled && reserves.mode === "curated-fallback" ? (
-                    <span>Live sync unavailable; showing curated reserve baseline</span>
-                  ) : isLiveEnabled && reserves.mode === "template-fallback" ? (
-                    <span>Live sync unavailable; showing estimated classification template</span>
-                  ) : reserves.mode === "unavailable" ? (
-                    <span>Reserve composition unavailable</span>
-                  ) : reserves.estimated ? (
-                    <span>
-                      Estimated composition based on {coin.flags.backing.replace("-", " ")} classification
-                    </span>
-                  ) : null}
+                  {buildReserveFootnote(reserves, isLiveEnabled) ?? (
+                    reserves.estimated ? (
+                      <span>
+                        Estimated composition based on {coin.flags.backing.replace("-", " ")} classification
+                      </span>
+                    ) : null
+                  )}
                 </div>
                 {reserveCompositionNote ? (
                   <div className="mt-2 text-center text-xs text-muted-foreground">{reserveCompositionNote}</div>

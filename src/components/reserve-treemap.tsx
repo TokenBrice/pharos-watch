@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { Treemap, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
@@ -120,7 +121,13 @@ function ReserveTooltip({
 }
 
 export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
-  const data = useMemo(() => reserves.map((r) => ({ ...r, size: r.pct })), [reserves]);
+  const data = useMemo(
+    () =>
+      reserves
+        .filter((r) => Number.isFinite(r.pct) && r.pct > 0)
+        .map((r) => ({ ...r, size: r.pct })),
+    [reserves],
+  );
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
   return (
@@ -151,17 +158,22 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
           aria-label={`Reserve composition treemap: ${reserves.map((r) => `${r.name} ${r.pct}%`).join(", ")}`}
         >
           {isChartReady ? (
-            <Treemap
-              width={width}
-              height={height}
-              data={data}
-              dataKey="size"
-              nameKey="name"
-              content={<TreemapCell x={0} y={0} width={0} height={0} name="" risk="low" pct={0} depth={1} />}
-              isAnimationActive={false}
+            <SectionErrorBoundary
+              name="reserve-treemap"
+              supportingText="Reserve composition chart unavailable"
             >
-              <Tooltip content={<ReserveTooltip />} />
-            </Treemap>
+              <Treemap
+                width={width}
+                height={height}
+                data={data}
+                dataKey="size"
+                nameKey="name"
+                content={<TreemapCell x={0} y={0} width={0} height={0} name="" risk="low" pct={0} depth={1} />}
+                isAnimationActive={false}
+              >
+                <Tooltip content={<ReserveTooltip />} />
+              </Treemap>
+            </SectionErrorBoundary>
           ) : (
             <ChartSkeleton className="h-full w-full" />
           )}
