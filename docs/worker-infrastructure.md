@@ -996,7 +996,7 @@ Cron result status is thresholded rather than all-or-nothing:
 **Schedule:** `5 8 * * *` (daily at 08:05 UTC)
 **Data source:** `https://backend.bluechip.org/coin-data/{slug}`
 
-**Purpose:** Fetches safety ratings from bluechip.org for 20 tracked stablecoins.
+**Purpose:** Fetches safety ratings from bluechip.org for 19 tracked stablecoins.
 
 **Constants:**
 
@@ -1011,7 +1011,7 @@ Cron result status is thresholded rather than all-or-nothing:
 **Algorithm:**
 
 1. Check cache freshness: if `bluechip-ratings` cache is <6 hours old, skip
-2. Fetch ratings for all 20 slugs in `BLUECHIP_SLUG_MAP` (file: `worker/src/lib/bluechip-slugs.ts`)
+2. Fetch ratings for all 19 slugs in `BLUECHIP_SLUG_MAP` (file: `worker/src/lib/bluechip-slugs.ts`)
    - Processed in batches of 3, with 500ms delay between batches
    - Each request uses `fetchWithRetry()` with `maxRetries: 2`
 3. For each response, extract:
@@ -1140,7 +1140,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/lib/blacklist-gaps.ts`                 | Shared blacklist gap query helper (Tron null-amount exclusion + recent window)                                                                                        |
 | `worker/src/lib/chain-registry.ts`                 | Unified chain mappings + chain RPC configs: Alchemy/dRPC/public fallback for 11 chains                                                                                |
 | `worker/src/lib/coingecko.ts`                      | CoinGecko init: free/pro URL switching, auth headers                                                                                                                  |
-| `worker/src/lib/bluechip-slugs.ts`                 | Bluechip slug → canonical Pharos ID mapping (20 coins)                                                                                                                |
+| `worker/src/lib/bluechip-slugs.ts`                 | Bluechip slug → canonical Pharos ID mapping (19 coins)                                                                                                                |
 | `worker/src/lib/mint-burn-health-config.ts`        | Shared mint/burn freshness defaults, env override resolver, stale-symbol evaluator                                                                                    |
 | `worker/src/lib/dex-liquidity.ts`                  | Shared `dex_liquidity` table loader (`loadDexLiquidityMap`)                                                                                                           |
 | `worker/src/lib/redemption-backstop-sources.ts`    | Redemption-route resolver: capacity models, docs, costs, and effective-exit scoring inputs                                                                            |

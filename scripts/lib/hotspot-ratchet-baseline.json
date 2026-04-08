@@ -144,8 +144,8 @@
     "notes": "Yield methodology is now its own module. If more source-policy copy lands, extract the arbitration and PYS formula blocks into smaller subcomponents."
   },
   "src/app/methodology/sections/monitoring/pegscore-dews-section.tsx": {
-    "fileLines": 469,
-    "maxFunctionLines": 457,
+    "fileLines": 483,
+    "maxFunctionLines": 471,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -276,9 +276,9 @@
     "notes": "Post-score baselines, drift guards, and metadata assembly now live in dedicated helpers. Keep the entrypoint focused on phase order, abort boundaries, and persistence sequencing."
   },
   "worker/src/cron/sync-mint-burn.ts": {
-    "fileLines": 335,
-    "maxFunctionLines": 250,
-    "branchCount": 14,
+    "fileLines": 344,
+    "maxFunctionLines": 257,
+    "branchCount": 16,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 345,

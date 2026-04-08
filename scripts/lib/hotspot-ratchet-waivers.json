@@ -23,10 +23,6 @@
     "disposition": "queued-p4",
     "notes": "Primary pricing enrichment is still a large hotspot after the pass-family split. Follow up with an internal phase breakdown once the current pricing changes stabilize."
   },
-  "worker/src/cron/dex-liquidity/orchestrator-metadata.ts": {
-    "disposition": "queued-p4",
-    "notes": "DEX-liquidity metadata assembly is now the main remaining orchestration hotspot after the fetch-family split. Keep it explicitly queued for a follow-on metadata/output decomposition pass."
-  },
   "worker/src/cron/yield-sync/sources-optional-protocols.ts": {
     "disposition": "deferred",
     "notes": "Optional yield protocol adapters now share runner and registry scaffolding, but the provider-specific adapter bodies still dominate this file. Defer the next adapter-family split until the current post-P6 surface stabilizes."
