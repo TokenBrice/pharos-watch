@@ -10,6 +10,7 @@ import { selectBackfillCoins } from "../lib/backfill-query";
 import { buildAdminJobSummary, noAdminTargetsResponse, runAdminJob } from "../lib/admin-job";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { buildPriceMapByDate, extractDefiLlamaCoinChartPrices } from "./stablecoin-detail/shared";
+import { fetchMarketBackfillPriceSeries } from "./backfill-price-sources";
 
 const DEFAULT_BATCH_SIZE = 10;
 
@@ -215,35 +216,27 @@ export async function handleBackfillSupplyHistory(
         const geckoId = meta.geckoId ?? PSI_ELIGIBLE_META_BY_ID.get(meta.id)?.geckoId;
         const dlId = meta.llamaId ?? meta.id;
 
-        // Fetch DL detail + historical prices (for non-USD coins) in parallel
-        const fetches: Promise<Response | null>[] = [
-          fetchWithRetry(`${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`, {
-            headers: { "User-Agent": USER_AGENT },
-          }),
-        ];
-        if (needsConversion && geckoId) {
-          fetches.push(
-            fetchWithRetry(`${DEFILLAMA_COINS}/chart/coingecko:${geckoId}?start=0&span=500`, {
-              headers: { "User-Agent": USER_AGENT },
-            }),
-          );
-        }
-
         let detail: StablecoinDetail | null = null;
         let historicalPrices: { timestamp: number; price: number }[] = [];
         try {
-          const responses = await Promise.all(fetches);
-          const detailRes = responses[0];
+          const [detailRes, priceSeries] = await Promise.all([
+            fetchWithRetry(`${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`, {
+              headers: { "User-Agent": USER_AGENT },
+            }),
+            geckoId
+              ? fetchMarketBackfillPriceSeries(meta, geckoId, {
+                granularity: "daily",
+                coingeckoApiKey: cgApiKey ?? null,
+              })
+              : Promise.resolve(null),
+          ]);
           if (!detailRes?.ok) {
             errors.push(`${meta.symbol}: DL returned ${detailRes?.status ?? "no response"}`);
             continue;
           }
           detail = (await detailRes.json()) as StablecoinDetail;
 
-          // Parse historical prices if fetched
-          if (responses[1]?.ok && geckoId) {
-            historicalPrices = extractDefiLlamaCoinChartPrices(await responses[1].json(), geckoId);
-          }
+          historicalPrices = priceSeries?.prices ?? [];
         } catch (err) {
           errors.push(`${meta.symbol}: fetch failed — ${err}`);
           continue;
@@ -276,8 +269,14 @@ export async function handleBackfillSupplyHistory(
           );
         }
 
-        function findHistoricalPrice(date: number): number | null {
-          return binarySearchNearest(historicalPrices, date, (p) => p.timestamp)?.price ?? null;
+        const priceBySnapshotDate = new Map<number, number>();
+        for (const point of historicalPrices) {
+          const snapshotDate = Math.floor(point.timestamp / DAY_SECONDS) * DAY_SECONDS;
+          priceBySnapshotDate.set(snapshotDate, point.price);
+        }
+
+        function findHistoricalPrice(snapshotDate: number): number | null {
+          return priceBySnapshotDate.get(snapshotDate) ?? null;
         }
 
         const stmts: D1PreparedStatement[] = [];
@@ -291,12 +290,13 @@ export async function handleBackfillSupplyHistory(
           const rawSum = Object.values(circ).reduce((sum, v) => sum + (v ?? 0), 0);
           if (rawSum <= 0) continue;
 
+          // Floor to UTC midnight
+          const snapshotDate = Math.floor(entry.date / DAY_SECONDS) * DAY_SECONDS;
           let marketCapUsd: number;
-          let price: number | null = null;
+          let price = findHistoricalPrice(snapshotDate);
 
           if (needsConversion) {
             // Non-USD: multiply native supply by USD price to get market cap
-            price = findHistoricalPrice(entry.date);
             if (price == null && allowConstantPriceFallback && fallbackPrice && entry.date >= fallbackWindowStart) {
               price = fallbackPrice;
             }
@@ -306,9 +306,6 @@ export async function handleBackfillSupplyHistory(
             // USD: rawSum is already in USD
             marketCapUsd = rawSum;
           }
-
-          // Floor to UTC midnight
-          const snapshotDate = Math.floor(entry.date / DAY_SECONDS) * DAY_SECONDS;
 
           stmts.push(
             db

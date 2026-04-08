@@ -6,6 +6,8 @@ import {
 } from "./psi-history-universe";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { canonicalizePsiStablecoinId } from "./psi-stablecoin-ids";
+import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 
 const HISTORICAL_PEAK_FLOOR_WINDOW_DAYS = 1;
 
@@ -44,6 +46,7 @@ function computeHistoricalEventBps(
   event: PsiDepegEventRow,
   snapshotPrice: number | undefined,
   day: number,
+  thresholdBps: number,
 ): { bps: number; source: "historical-price" | "peak-fallback" } | null {
   const peakDeviationBps = Number.isFinite(event.peak_deviation_bps) ? event.peak_deviation_bps : null;
   if (snapshotPrice != null && event.peg_reference > 0) {
@@ -67,6 +70,10 @@ function computeHistoricalEventBps(
         bps: peakDeviationBps,
         source: "peak-fallback",
       };
+    }
+
+    if (Math.abs(boundedHistoricalBps) < thresholdBps) {
+      return null;
     }
 
     return {
@@ -114,9 +121,13 @@ export function buildStabilityInputForDay(
     let usedPeakFallback = false;
     const snapshot = findNearestSupplySnapshot(supplyByCoin.get(coinId), day);
     const snapshotPrice = snapshot?.price;
+    const thresholdBps =
+      PSI_ELIGIBLE_META_BY_ID.get(coinId)?.flags.pegCurrency === "USD"
+        ? DEPEG_THRESHOLD_BPS
+        : DEPEG_THRESHOLD_BPS_NON_USD;
 
     for (const event of events) {
-      const replayBps = computeHistoricalEventBps(event, snapshotPrice, day);
+      const replayBps = computeHistoricalEventBps(event, snapshotPrice, day, thresholdBps);
       if (!replayBps) continue;
       if (Math.abs(replayBps.bps) > Math.abs(worstBps)) {
         worstBps = replayBps.bps;

@@ -101,4 +101,26 @@ describe("handleBackfillCgPrices", () => {
     expect(body.totalRowsInserted).toBe(0);
     expect(body.errors).toBeUndefined();
   });
+
+  it("accepts PSI-only shadow assets for price backfills", async () => {
+    const snapshotDate = Math.floor(1_700_000_000 / 86400) * 86400;
+    const res = await handleBackfillCgPrices(
+      makeDb([{ snapshot_date: snapshotDate, price: null, circulating_usd: 15_000_000_000 }]),
+      makeApiUrl("/api/backfill-cg-prices?stablecoin=ust-terra"),
+      true,
+      makeApiRequest("/api/backfill-cg-prices?stablecoin=ust-terra", { adminKey: "secret" }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      coinsProcessed: number;
+      totalPricesFilled: number;
+      totalRowsInserted: number;
+      errors?: string[];
+    };
+    expect(body.coinsProcessed).toBe(1);
+    expect(body.totalPricesFilled).toBe(1);
+    expect(body.totalRowsInserted).toBe(0);
+    expect(body.errors).toBeUndefined();
+  });
 });

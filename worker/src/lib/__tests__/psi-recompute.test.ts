@@ -153,7 +153,7 @@ describe("buildStabilityInputForDay", () => {
     const day = 40 * DAY;
     const now = day + DAY;
     const supplyByCoin = buildSupplySnapshotMap([
-      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 2_000_000, price: 0.9925 },
+      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 2_000_000, price: 0.985 },
       { stablecoin_id: "usdt-tether", snapshot_date: day - 7 * DAY, circulating_usd: 1_500_000, price: 1 },
     ]);
     const events: PsiDepegEventRow[] = [
@@ -170,7 +170,7 @@ describe("buildStabilityInputForDay", () => {
 
     expect(result.depegs).toEqual([
       {
-        bps: -75,
+        bps: -150,
         mcapUsd: 2_000_000,
         depegAgeDays: 2,
       },
@@ -324,7 +324,7 @@ describe("buildStabilityInputForDay", () => {
     expect(result.peakDeviationFallbackCount).toBe(1);
   });
 
-  it("does not use the start-day peak floor after a same-day wick fully recovers before UTC close", () => {
+  it("drops a same-day wick that fully recovers back inside threshold before UTC close", () => {
     const day = 40 * DAY;
     const now = day + DAY;
     const supplyByCoin = buildSupplySnapshotMap([
@@ -343,14 +343,34 @@ describe("buildStabilityInputForDay", () => {
 
     const result = buildStabilityInputForDay(day, now, events, supplyByCoin);
 
-    expect(result.depegs).toEqual([
-      {
-        bps: -5,
-        mcapUsd: 2_000_000,
-        depegAgeDays: 0,
-      },
+    expect(result.depegCount).toBe(0);
+    expect(result.depegs).toEqual([]);
+    expect(result.historicalPriceCoverageCount).toBe(0);
+    expect(result.peakDeviationFallbackCount).toBe(0);
+  });
+
+  it("drops later replay days when the restored daily price is back inside threshold", () => {
+    const day = 40 * DAY;
+    const now = day + DAY;
+    const supplyByCoin = buildSupplySnapshotMap([
+      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 2_000_000, price: 0.993 },
+      { stablecoin_id: "usdt-tether", snapshot_date: day - 7 * DAY, circulating_usd: 1_500_000, price: 1 },
     ]);
-    expect(result.historicalPriceCoverageCount).toBe(1);
+    const events: PsiDepegEventRow[] = [
+      {
+        stablecoin_id: "usdt-tether",
+        peak_deviation_bps: -1200,
+        peg_reference: 1,
+        started_at: day - 3 * DAY,
+        ended_at: null,
+      },
+    ];
+
+    const result = buildStabilityInputForDay(day, now, events, supplyByCoin);
+
+    expect(result.depegCount).toBe(0);
+    expect(result.depegs).toEqual([]);
+    expect(result.historicalPriceCoverageCount).toBe(0);
     expect(result.peakDeviationFallbackCount).toBe(0);
   });
 

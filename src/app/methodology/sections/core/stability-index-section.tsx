@@ -158,7 +158,10 @@ export function StabilityIndexMethodologySection() {
                       score any depeg overlapping the UTC day, canonicalize legacy depeg IDs into the current PSI
                       universe, replay same-day deviation from `supply_history.price` when possible, never exceed the
                       event&apos;s recorded `peak_deviation_bps`, and keep `peak_deviation_bps` as a start-day floor only
-                      when the event remained active through the UTC close and a daily snapshot misses the move.
+                      when the event remained active through the UTC close and a daily snapshot misses the move. Replay
+                      days whose restored daily price is back inside the configured threshold drop out entirely, and
+                      restore jobs also repair replay-critical daily price coverage, including PSI-only shadow assets,
+                      before the PSI rebuild is rerun.
                     </li>
                     <li>
                       <span className="text-foreground font-medium">Age-aware depreciation:</span> fresh depegs get full

@@ -81,7 +81,7 @@ describe("psi-replay", () => {
     const day = 1_746_384_000;
     const now = day + DAY;
     const supplyByCoin = buildSupplySnapshotMap([
-      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 100_000_000_000, price: 0.995 },
+      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 100_000_000_000, price: 0.985 },
       { stablecoin_id: "usdt-tether", snapshot_date: day - 7 * DAY, circulating_usd: 100_000_000_000, price: 1 },
     ]);
 
@@ -103,9 +103,39 @@ describe("psi-replay", () => {
     });
 
     expect(replay.input.depegs).toEqual([
-      { bps: -50, mcapUsd: 100_000_000_000, depegAgeDays: 1 },
+      { bps: -150, mcapUsd: 100_000_000_000, depegAgeDays: 1 },
     ]);
     expect(replay.input.historicalPriceCoverageCount).toBe(1);
+    expect(replay.input.peakDeviationFallbackCount).toBe(0);
+  });
+
+  it("drops replay contributors whose restored daily price is back inside threshold", () => {
+    const day = 1_746_384_000;
+    const now = day + DAY;
+    const supplyByCoin = buildSupplySnapshotMap([
+      { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 100_000_000_000, price: 0.995 },
+      { stablecoin_id: "usdt-tether", snapshot_date: day - 7 * DAY, circulating_usd: 100_000_000_000, price: 1 },
+    ]);
+
+    const replay = replayHistoricalPsiForDay({
+      day,
+      now,
+      methodologyVersion: "3.2",
+      depegEvents: [
+        {
+          stablecoin_id: "usdt-tether",
+          peak_deviation_bps: -300,
+          peg_reference: 1,
+          started_at: day - DAY,
+          ended_at: null,
+        },
+      ],
+      supplyByCoin,
+      dewsByDay: new Map(),
+    });
+
+    expect(replay.input.depegs).toEqual([]);
+    expect(replay.input.historicalPriceCoverageCount).toBe(0);
     expect(replay.input.peakDeviationFallbackCount).toBe(0);
   });
 

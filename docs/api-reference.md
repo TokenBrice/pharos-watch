@@ -2723,7 +2723,7 @@ Bounded replay windows also support `startDay` / `endDay`, plus optional `contex
 
 ### `POST /api/backfill-supply-history`
 
-Backfills per-coin supply history snapshots.
+Backfills per-coin supply history snapshots. When historical market-price series are available, the endpoint also persists daily `supply_history.price` values on restored rows so historical PSI replay can use day-level deviation instead of blunt peak fallback.
 
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
@@ -2740,7 +2740,7 @@ Backfills per-coin supply history snapshots.
 
 Backfills historical stability index scores from stored depeg events and supply data.
 
-The rebuild now stops at the last completed UTC day; it does not write a `stability_index` row for the current UTC day. Historical market-cap denominators in this replay path are bounded to the PSI-eligible universe (tracked coins plus configured shadow assets). Historical replay treats a depeg as active for any UTC day whose window overlaps the event interval. When a usable same-day `supply_history.price` exists, the replay derives day severity from that price, but on the UTC day the depeg begins it keeps `peak_deviation_bps` as a floor only if the event remained active through that UTC close and the daily snapshot understates the shock. Same-day recovered wicks use the daily historical price instead. Later days fall back to `peak_deviation_bps` only for missing/invalid historical prices. For methodology `v3.0+`, the replay also derives daily `stressBreadth` from `stress_signal_history` rows in `ALERT`, `WARNING`, or `DANGER` bands. If a rebuild day cannot be replayed because archival inputs are unavailable, the endpoint preserves the existing stored row instead of deleting that day. The response includes the evaluated `startDay`/`endDay` so operators can confirm the rebuild window.
+The rebuild now stops at the last completed UTC day; it does not write a `stability_index` row for the current UTC day. Historical market-cap denominators in this replay path are bounded to the PSI-eligible universe (tracked coins plus configured shadow assets). Historical replay treats a depeg as active for any UTC day whose window overlaps the event interval. When a usable same-day `supply_history.price` exists, the replay derives day severity from that price, but on the UTC day the depeg begins it keeps `peak_deviation_bps` as a floor only if the event remained active through that UTC close and the daily snapshot understates the shock. Same-day recovered wicks use the daily historical price instead, and replay days whose restored daily price is back inside the configured depeg threshold are dropped instead of still contributing breadth. Later days fall back to `peak_deviation_bps` only for missing/invalid historical prices. The historical restore path is expected to repair replay-critical `supply_history.price` coverage, including PSI-only shadow assets, before rerunning this rebuild. For methodology `v3.0+`, the replay also derives daily `stressBreadth` from `stress_signal_history` rows in `ALERT`, `WARNING`, or `DANGER` bands. If a rebuild day cannot be replayed because archival inputs are unavailable, the endpoint preserves the existing stored row instead of deleting that day. The response includes the evaluated `startDay`/`endDay` so operators can confirm the rebuild window.
 
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
@@ -2754,7 +2754,7 @@ The rebuild now stops at the last completed UTC day; it does not write a `stabil
 
 ### `POST /api/backfill-cg-prices`
 
-Backfills CoinGecko historical prices into the price_cache table for more accurate depeg detection.
+Backfills historical market prices for the PSI-eligible universe. The endpoint fills NULL `supply_history.price` gaps and can insert missing `supply_history` day rows when market-cap history exists, including PSI-only shadow assets such as `ust-terra`.
 
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 

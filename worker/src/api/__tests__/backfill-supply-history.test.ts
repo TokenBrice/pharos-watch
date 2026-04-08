@@ -4,13 +4,32 @@ import { handleBackfillSupplyHistory } from "../backfill-supply-history";
 
 stubCryptoForAuth();
 
-function makeDb(): D1Database {
+vi.mock("../backfill-price-sources", () => ({
+  fetchMarketBackfillPriceSeries: vi.fn(async () => ({
+    prices: [{ timestamp: 1_700_000_000, price: 1.001 }],
+    diagnostics: {
+      granularity: "daily",
+      sourcesUsed: ["coingecko"],
+      quoteMode: "usd",
+      quoteCurrency: "usd",
+      mergeReasons: [],
+      perSourceStats: [],
+      policyAdjustments: [],
+      finalPointCount: 1,
+    },
+  })),
+}));
+
+function makeDb(capturedStatements: Array<{ sql: string; args: unknown[] }> = []): D1Database {
   const stmt = (_sql: string) => ({
-    bind: (..._args: unknown[]) => ({
+    bind: (...args: unknown[]) => {
+      capturedStatements.push({ sql: _sql, args });
+      return {
       all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
       first: async <T>() => null as T | null,
       run: async () => ({ success: true, meta: { changes: 1 } }),
-    }),
+      };
+    },
     all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
     first: async <T>() => null as T | null,
     run: async () => ({ success: true, meta: { changes: 1 } }),
@@ -67,6 +86,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("inserts rows for a valid USD stablecoin detail payload", async () => {
+    const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -83,7 +103,7 @@ describe("handleBackfillSupplyHistory", () => {
     );
 
     const res = await handleBackfillSupplyHistory(
-      makeDb(),
+      makeDb(capturedStatements),
       makeApiUrl("/api/backfill-supply-history?stablecoin=usdt-tether"),
       true,
       makeApiRequest("/api/backfill-supply-history?stablecoin=usdt-tether", { adminKey: "secret" }),
@@ -98,6 +118,13 @@ describe("handleBackfillSupplyHistory", () => {
     expect(body.coinsProcessed).toBe(1);
     expect(body.rowsInserted).toBe(1);
     expect(body.errors).toBeUndefined();
+    const insertStmt = capturedStatements.find((stmt) => stmt.sql.includes("INSERT OR REPLACE INTO supply_history"));
+    expect(insertStmt?.args).toEqual([
+      "usdt-tether",
+      Math.floor(1_700_000_000 / 86400) * 86400,
+      125_000_000,
+      1.001,
+    ]);
     expect(fetchSpy).toHaveBeenCalledWith(
       expect.stringContaining("/stablecoin/1"),
       expect.objectContaining({

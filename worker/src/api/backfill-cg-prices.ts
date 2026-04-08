@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { USER_AGENT } from "../lib/constants";
@@ -38,7 +38,7 @@ export async function handleBackfillCgPrices(
       trustedAdmin,
     },
     async () => {
-      const selection = selectBackfillCoins(url, ACTIVE_STABLECOINS, {
+      const selection = selectBackfillCoins(url, PSI_ELIGIBLE_STABLECOINS, {
         defaultBatchSize: DEFAULT_BATCH_SIZE,
       });
       if ("response" in selection) {
