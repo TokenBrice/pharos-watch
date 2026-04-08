@@ -114,10 +114,6 @@ vi.mock("@/components/status/refresh-countdown", () => ({
   ),
 }));
 
-vi.mock("@/components/status/status-banner", () => ({
-  StatusBanner: () => <div data-testid="status-banner">status banner</div>,
-}));
-
 vi.mock("@/components/status/status-facts", () => ({
   StatusFacts: () => <div data-testid="status-facts">status facts</div>,
 }));

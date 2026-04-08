@@ -47,10 +47,6 @@
     "disposition": "deferred",
     "notes": "FX fallback state handling has many branches but a wide caller surface. Defer refactoring until the next pricing/runtime state follow-up."
   },
-  "src/app/admin/client.tsx": {
-    "disposition": "queued-p4",
-    "notes": "The admin client remains a broad operator UI shell even after access cleanup. Track it for a dedicated admin-surface decomposition pass."
-  },
   "worker/src/cron/sync-stablecoins/supplemental-assets.ts": {
     "disposition": "deferred",
     "notes": "Supplemental asset intake still mixes multiple provider families. Defer further splitting until the stablecoin sync surface stabilizes after the current tranche."
@@ -78,5 +74,9 @@
   "worker/src/cron/sync-fx-rates-helpers.ts": {
     "disposition": "deferred",
     "notes": "FX-rate helper orchestration remains a large policy surface after earlier trims. Defer another split until the next FX-state/runtime cleanup tranche."
+  },
+  "worker/src/cron/dex-liquidity/orchestrator-metadata.ts": {
+    "disposition": "queued-p4",
+    "notes": "DEX-liquidity metadata orchestration now sits in the candidate set after earlier splits. Track a later pass to separate derivation policy, summary shaping, and operator-facing metadata assembly."
   }
 }
