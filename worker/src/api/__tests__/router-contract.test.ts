@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ENDPOINT_DEFINITIONS } from "@shared/lib/api-endpoints";
 import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
+import { isMutatingAdminGetAllowed } from "@shared/lib/api-endpoints/validation";
 import { route, ROUTER_STATIC_PATHS } from "../../router";
 import type { FullRouteContext } from "../../routes/shared";
 import { mockD1 } from "./helpers/mock-d1";
@@ -61,10 +62,6 @@ describe("router contract: strict frontend paths are routable", () => {
       const path = endpoint.probePath ?? endpoint.path;
       for (const method of endpoint.methods) {
         const request = new Request(`https://api.pharos.watch${path}`, { method });
-        const allowAuditDryRunGet =
-          endpoint.path === "/api/audit-depeg-history" &&
-          method === "GET" &&
-          path.includes("dry-run=true");
         const expectedPublicStatuses =
           endpoint.path === "/api/telegram-webhook"
             ? [200, 400, 501, 502, 503]
@@ -78,7 +75,11 @@ describe("router contract: strict frontend paths are routable", () => {
         }));
         expect(response, `expected route for ${method} ${path}`).not.toBeNull();
 
-        if (method === "GET" && endpoint.mutatingAdmin && !allowAuditDryRunGet) {
+        if (
+          method === "GET"
+          && endpoint.mutatingAdmin
+          && !isMutatingAdminGetAllowed(new URL(`https://api.pharos.watch${path}`))
+        ) {
           expect(response!.status).toBe(405);
         } else if (endpoint.adminRequired) {
           expect(response!.status).toBe(401);
@@ -89,7 +90,7 @@ describe("router contract: strict frontend paths are routable", () => {
     }
   });
 
-  it("enforces mutating admin GET restrictions with audit dry-run exception", async () => {
+  it("enforces mutating admin GET restrictions with path-specific preview exceptions", async () => {
     for (const endpoint of ENDPOINT_DEFINITIONS.filter((item) => item.mutatingAdmin)) {
       const path = endpoint.path;
       const getResult = await route(makeRouteCtx({
@@ -106,6 +107,21 @@ describe("router contract: strict frontend paths are routable", () => {
         }));
         expect(dryRun).not.toBeNull();
         expect(dryRun!.status).not.toBe(405);
+      } else if (path === "/api/backfill-dews") {
+        expect(getResult!.status).not.toBe(405);
+        const repairPreview = await route(makeRouteCtx({
+          url: new URL("https://api.pharos.watch/api/backfill-dews?repair=refresh-current&dry-run=true"),
+          request: new Request("https://api.pharos.watch/api/backfill-dews?repair=refresh-current&dry-run=true", { method: "GET" }),
+        }));
+        expect(repairPreview).not.toBeNull();
+        expect(repairPreview!.status).not.toBe(405);
+
+        const forbiddenRepairGet = await route(makeRouteCtx({
+          url: new URL("https://api.pharos.watch/api/backfill-dews?repair=refresh-current"),
+          request: new Request("https://api.pharos.watch/api/backfill-dews?repair=refresh-current", { method: "GET" }),
+        }));
+        expect(forbiddenRepairGet).not.toBeNull();
+        expect(forbiddenRepairGet!.status).toBe(405);
       } else {
         expect(getResult!.status).toBe(405);
       }

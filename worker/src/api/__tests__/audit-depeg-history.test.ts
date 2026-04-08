@@ -65,6 +65,41 @@ function makeBackfillLiveHandoffRows() {
   return [first, second];
 }
 
+function makeContradictoryRecoveryRows() {
+  return [
+    {
+      id: 21,
+      stablecoin_id: "brz-brazilian-digital-token",
+      symbol: "BRZ",
+      peg_type: "peggedBRL",
+      direction: "below",
+      peak_deviation_bps: -190,
+      started_at: 1_800_100_000,
+      ended_at: 1_800_101_800,
+      start_price: 0.17,
+      peak_price: 0.166,
+      recovery_price: 0.17,
+      peg_reference: 0.2,
+      source: "live",
+    },
+    {
+      id: 22,
+      stablecoin_id: "usdt-tether",
+      symbol: "USDT",
+      peg_type: "peggedUSD",
+      direction: "below",
+      peak_deviation_bps: -250,
+      started_at: 1_800_200_000,
+      ended_at: 1_800_201_800,
+      start_price: 0.98,
+      peak_price: 0.975,
+      recovery_price: 0.9998,
+      peg_reference: 1,
+      source: "live",
+    },
+  ];
+}
+
 describe("handleAuditDepegHistory method safety", () => {
   it("rejects GET mutations when dry-run is not set", async () => {
     const db = mockD1([{ match: "depeg_events", rows: [] }]);
@@ -227,5 +262,57 @@ describe("handleAuditDepegHistory method safety", () => {
       rows[1].id,
     ]);
     expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM depeg_events WHERE id = ?") && entry.binds[0] === 10)).toBe(true);
+  });
+
+  it("surfaces contradictory recovery-price candidates in dry-run mode", async () => {
+    const rows = makeContradictoryRecoveryRows();
+    const db = mockD1([
+      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
+    ]);
+    const req = makeApiRequest("/api/audit-depeg-history?dry-run=true&repair=contradictory-recovery-price", {
+      adminKey: "secret",
+    });
+
+    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      repair: string;
+      totalMatching: number;
+      candidateEvents: Array<{ id: number; symbol: string; recoveryBps: number; thresholdBps: number }>;
+    };
+    expect(body.repair).toBe("contradictory-recovery-price");
+    expect(body.totalMatching).toBe(1);
+    expect(body.candidateEvents).toEqual([
+      expect.objectContaining({
+        id: 21,
+        symbol: "BRZ",
+        recoveryBps: 1500,
+        thresholdBps: 150,
+      }),
+    ]);
+  });
+
+  it("nulls contradictory recovery prices on POST repair", async () => {
+    const rows = makeContradictoryRecoveryRows();
+    const db = mockD1([
+      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
+      { match: "UPDATE depeg_events SET recovery_price = NULL WHERE id = ?", rows: [] },
+    ]) as MockD1Database;
+    const req = makeApiRequest("/api/audit-depeg-history?repair=contradictory-recovery-price", {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleAuditDepegHistory(db, makeApiUrl(req.url), true, req);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      repairedEventCount: number;
+      repairedEvents: Array<{ id: number; symbol: string }>;
+    };
+    expect(body.repairedEventCount).toBe(1);
+    expect(body.repairedEvents).toEqual([expect.objectContaining({ id: 21, symbol: "BRZ" })]);
+    expect(
+      db.getHistory().some((entry) => entry.sql.includes("UPDATE depeg_events SET recovery_price = NULL WHERE id = ?") && entry.binds[0] === 21),
+    ).toBe(true);
   });
 });

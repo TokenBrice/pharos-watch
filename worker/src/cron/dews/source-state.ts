@@ -1,6 +1,6 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../../lib/constants";
 import { decodeJsonString } from "../../lib/cache-json";
+import { isTrustedDexPriceRow } from "../../lib/depeg-trust-policy";
 import { isCanonicalMintBurnPair } from "../../lib/mint-burn-canonical-chain";
 import type {
   DewsSourceState,
@@ -82,15 +82,19 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
     }
   }
 
-  let dexPriceMap = new Map<string, number>();
+  let dexPriceMap = new Map<string, DewsSourceState["dexPriceMap"] extends Map<string, infer T> ? T : never>();
   try {
     const dexPriceRows = await options.db
-      .prepare("SELECT stablecoin_id, dex_price_usd, updated_at FROM dex_prices")
-      .all<{ stablecoin_id: string; dex_price_usd: number; updated_at: number }>();
+      .prepare("SELECT stablecoin_id, dex_price_usd, source_total_tvl, updated_at FROM dex_prices")
+      .all<{ stablecoin_id: string; dex_price_usd: number; source_total_tvl: number; updated_at: number }>();
     dexPriceMap = new Map(
       (dexPriceRows.results ?? [])
-        .filter((row) => (options.nowSec - row.updated_at) < DEX_PRICE_CHECK_FRESHNESS_SEC)
-        .map((row) => [row.stablecoin_id, row.dex_price_usd]),
+        .filter((row) => isTrustedDexPriceRow(row, options.nowSec, "depeg"))
+        .map((row) => [row.stablecoin_id, {
+          dexPriceUsd: row.dex_price_usd,
+          sourceTotalTvl: row.source_total_tvl,
+          updatedAt: row.updated_at,
+        }]),
     );
     sourceCoverage.dexPrices = dexPriceMap.size;
   } catch (error) {

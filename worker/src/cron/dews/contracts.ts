@@ -32,6 +32,12 @@ export interface LiquidityHistorySnapshot {
   date: number;
 }
 
+export interface DexPriceSnapshot {
+  dexPriceUsd: number;
+  sourceTotalTvl: number;
+  updatedAt: number;
+}
+
 export interface MintBurnSnapshot {
   burn24h: number;
   mint24h: number;
@@ -50,7 +56,7 @@ export interface DewsComputedRow {
 export interface DewsSourceState {
   dexLiqRows: { results: DexLiquidityRow[] };
   dexLiqMap: Map<string, DexLiquidityRow>;
-  dexPriceMap: Map<string, number>;
+  dexPriceMap: Map<string, DexPriceSnapshot>;
   liqHist7dMap: Map<string, LiquidityHistorySnapshot>;
   liqHistRowsRead: number;
   blacklistCounts: Map<string, { count24h: number; count7d: number }>;

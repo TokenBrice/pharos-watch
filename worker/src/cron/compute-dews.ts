@@ -2,7 +2,7 @@
  * Dynamic Early Warning Score (DEWS) — composite risk metric cron job.
  *
  * DEWS aggregates multiple real-time signals into a single 0-100 risk score
- * per stablecoin (higher = more risk). Runs every 15 minutes, chained after
+ * per stablecoin (higher = more risk). Runs every 30 minutes, chained after
  * syncStablecoins so fresh supply data is always available.
  *
  * Signal sources (read from D1):
@@ -22,7 +22,7 @@
  * `BOOTSTRAP_ALLOWED_MISSING_TABLE_SOURCES` are tolerated as missing so that
  * DEWS can produce partial scores before all tables are populated.
  */
-// DEWS cron job — runs every 15 minutes, chained after syncStablecoins
+// DEWS cron job — runs every 30 minutes, chained after syncStablecoins
 // (same pattern as stability-index).
 // Reads existing D1 tables, computes DEWS per eligible coin,
 // writes to stress_signals + stress_signal_history.
@@ -50,7 +50,7 @@ const DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY = "dews:bootstrap-complete";
  *
  * Execution steps:
  * 1. Load stablecoins cache (hard dependency — aborts if unavailable).
- * 2. Read DEX liquidity, DEX prices, 7d liquidity history.
+ * 2. Read DEX liquidity, live-depeg-trusted DEX prices, and 7d liquidity history.
  * 3. Read blacklist event counts (24h + 7d per symbol).
  * 4. Read previous stress signals for EMA smoothing of pool/divergence signals.
  * 5. Read mint/burn hourly aggregates (24h totals + 30d daily baselines).

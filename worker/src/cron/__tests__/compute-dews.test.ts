@@ -96,7 +96,12 @@ import { computeAndStoreDEWS } from "../compute-dews";
 interface MakeDbOptions {
   failDexLiquidity?: boolean;
   failDexPricesMissingTable?: boolean;
-  dexPriceRows?: Array<{ stablecoin_id: string; dex_price_usd: number; updated_at: number }>;
+  dexPriceRows?: Array<{
+    stablecoin_id: string;
+    dex_price_usd: number;
+    source_total_tvl?: number;
+    updated_at: number;
+  }>;
   mintBurn24hRows?: Array<{ stablecoin_id: string; chain_id?: string; total_burn: number; total_mint: number }>;
   mintBurn30dRows?: Array<{
     stablecoin_id: string;
@@ -442,7 +447,32 @@ describe("computeAndStoreDEWS", () => {
         {
           stablecoin_id: "usdt-tether",
           dex_price_usd: 0.97,
+          source_total_tvl: 2_000_000,
           updated_at: nowSec - 7200,
+        },
+      ],
+    });
+
+    await computeAndStoreDEWS(db);
+
+    expect(computeDEWS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stablecoinId: "usdt-tether",
+        dexPriceUsd: null,
+      }),
+    );
+  });
+
+  it("ignores fresh dex price rows that do not satisfy the live depeg trust floor", async () => {
+    const sqlSeen: string[] = [];
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeDb(sqlSeen, {
+      dexPriceRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          dex_price_usd: 0.97,
+          source_total_tvl: 250_000,
+          updated_at: nowSec - 60,
         },
       ],
     });

@@ -82,8 +82,8 @@ describe("api endpoint registry", () => {
     expect(isMutatingAdminPath("/api/backfill-depegs")).toBe(true);
     expect(isMutatingAdminPath("/api/backfill-mint-burn")).toBe(true);
     expect(isMutatingAdminPath("/api/trigger-digest")).toBe(true);
+    expect(isMutatingAdminPath("/api/backfill-dews")).toBe(true);
     expect(isMutatingAdminPath("/api/stablecoins")).toBe(false);
-    expect(isMutatingAdminPath("/api/backfill-dews")).toBe(false);
   });
 
   it("flags cache-bypass paths for edge cache skip rules", () => {
@@ -130,12 +130,23 @@ describe("api endpoint registry", () => {
     expect(
       validateEndpointMethod(new URL("https://api.pharos.watch/api/audit-depeg-history?dry-run=true"), "GET"),
     ).toBeNull();
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/backfill-dews"), "GET")).toBeNull();
+    expect(
+      validateEndpointMethod(new URL("https://api.pharos.watch/api/backfill-dews?repair=refresh-current&dry-run=true"), "GET"),
+    ).toBeNull();
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/backfill-dews"), "POST")).toBeNull();
 
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoins"), "POST")).toEqual({
       message: "Method not allowed",
       allowedMethods: ["GET"],
     });
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/trigger-digest"), "GET")).toEqual({
+      message: "Method not allowed. Use POST for this endpoint.",
+      allowedMethods: ["POST"],
+    });
+    expect(
+      validateEndpointMethod(new URL("https://api.pharos.watch/api/backfill-dews?repair=refresh-current"), "GET"),
+    ).toEqual({
       message: "Method not allowed. Use POST for this endpoint.",
       allowedMethods: ["POST"],
     });

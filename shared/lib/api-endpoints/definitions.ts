@@ -633,9 +633,9 @@ const BASE_ENDPOINT_DEFINITIONS = [
   {
     key: "backfill-dews",
     path: "/api/backfill-dews",
-    methods: ["GET"],
+    methods: ["GET", "POST"],
     adminRequired: true,
-    mutatingAdmin: false,
+    mutatingAdmin: true,
     cacheBypass: true,
     probeGroup: "manual",
     statusPageAction: {

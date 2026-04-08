@@ -17,7 +17,7 @@ import {
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 type Verdict = "false_positive" | "confirmed" | "no_data" | "skipped" | "error";
-type RepairMode = "synthetic-splits";
+type RepairMode = "synthetic-splits" | "contradictory-recovery-price";
 
 const SYNTHETIC_SPLIT_MAX_GAP_SEC = 30 * 60;
 const SYNTHETIC_SPLIT_RECOVERY_BAR_BPS = 50;
@@ -67,6 +67,29 @@ interface SyntheticSplitRepairResult {
   repairedGroups: SyntheticSplitRepairSummary[];
   repairedEventCount: number;
   daysRecomputed: number;
+}
+
+interface ContradictoryRecoveryRepairSummary {
+  id: number;
+  stablecoinId: string;
+  symbol: string;
+  direction: string;
+  startedAt: number;
+  endedAt: number;
+  recoveryPrice: number;
+  recoveryBps: number;
+  thresholdBps: number;
+}
+
+interface ContradictoryRecoveryRepairResult {
+  repair: RepairMode;
+  totalMatching: number;
+  offset: number;
+  limit: number;
+  dryRun: boolean;
+  candidateEvents: ContradictoryRecoveryRepairSummary[];
+  repairedEvents: ContradictoryRecoveryRepairSummary[];
+  repairedEventCount: number;
 }
 
 function getAbsoluteDeviationBps(price: number | null | undefined, pegReference: number): number | null {
@@ -188,6 +211,28 @@ function collectSyntheticSplitGroups(events: DepegRow[]): DepegRow[][] {
   return groups;
 }
 
+function summarizeContradictoryRecoveryEvent(event: DepegRow): ContradictoryRecoveryRepairSummary | null {
+  if (event.ended_at == null || event.recovery_price == null) {
+    return null;
+  }
+  const thresholdBps = getDepegThresholdBps(event.peg_type);
+  const recoveryBps = getAbsoluteDeviationBps(event.recovery_price, event.peg_reference);
+  if (recoveryBps == null || recoveryBps < thresholdBps) {
+    return null;
+  }
+  return {
+    id: event.id,
+    stablecoinId: event.stablecoin_id,
+    symbol: event.symbol,
+    direction: event.direction,
+    startedAt: event.started_at,
+    endedAt: event.ended_at,
+    recoveryPrice: event.recovery_price,
+    recoveryBps,
+    thresholdBps,
+  };
+}
+
 export async function handleAuditDepegHistory(
   db: D1Database,
   url: URL,
@@ -210,7 +255,11 @@ export async function handleAuditDepegHistory(
       const deleteIds = url.searchParams.get("delete");
       const repairModeRaw = url.searchParams.get("repair");
       const repairMode: RepairMode | null =
-        repairModeRaw === "synthetic-splits" ? "synthetic-splits" : null;
+        repairModeRaw === "synthetic-splits"
+          ? "synthetic-splits"
+          : repairModeRaw === "contradictory-recovery-price"
+            ? "contradictory-recovery-price"
+            : null;
       if (repairModeRaw && repairMode == null) {
         return errorResponse(400, `Unsupported repair mode: ${repairModeRaw}`);
       }
@@ -371,6 +420,36 @@ export async function handleAuditDepegHistory(
         if (affectedDays.size > 0) {
           result.daysRecomputed = await recomputeStabilityDays(db, affectedDays);
         }
+        return jsonResponse(result);
+      }
+
+      if (repairMode === "contradictory-recovery-price") {
+        const filteredCandidates = events
+          .filter((event) => (symbolFilter ? event.symbol.toUpperCase() === symbolFilter : true))
+          .map((event) => summarizeContradictoryRecoveryEvent(event))
+          .filter((event): event is ContradictoryRecoveryRepairSummary => event !== null);
+        const paginatedCandidates = filteredCandidates.slice(offset, offset + limit);
+        const result: ContradictoryRecoveryRepairResult = {
+          repair: repairMode,
+          totalMatching: filteredCandidates.length,
+          offset,
+          limit,
+          dryRun,
+          candidateEvents: paginatedCandidates,
+          repairedEvents: [],
+          repairedEventCount: 0,
+        };
+
+        if (dryRun || paginatedCandidates.length === 0) {
+          return jsonResponse(result);
+        }
+
+        const stmts = paginatedCandidates.map((candidate) =>
+          db.prepare("UPDATE depeg_events SET recovery_price = NULL WHERE id = ?").bind(candidate.id)
+        );
+        await batchExecute(db, stmts);
+        result.repairedEvents = paginatedCandidates;
+        result.repairedEventCount = paginatedCandidates.length;
         return jsonResponse(result);
       }
 

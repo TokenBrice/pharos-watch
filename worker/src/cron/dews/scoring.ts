@@ -131,7 +131,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       prevPriceConfidence: (prev?.price as { confidence?: string })?.confidence ?? null,
       price: asset.price ?? null,
       pegRef: pegRef ?? 1.0,
-      dexPriceUsd: dexPrice ?? null,
+      dexPriceUsd: dexPrice?.dexPriceUsd ?? null,
       blacklistEvents24h: blacklistCounts?.count24h ?? 0,
       blacklistEvents7d: blacklistCounts?.count7d ?? 0,
       hasBlacklistTracking: Boolean(blacklistSymbol),
@@ -165,4 +165,3 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     insufficientDataCount,
   };
 }
-

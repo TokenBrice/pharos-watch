@@ -58,7 +58,12 @@ export const ADMIN_STATIC_ROUTES = [
     "reclassify-atomic-roundtrips",
     ({ db, url, trustedAdmin, request }) => handleReclassifyAtomicRoundtrips(db, url, trustedAdmin, request),
   )),
-  defineStaticRoute("backfill-dews", ({ db, url, trustedAdmin, request }) => handleBackfillDEWS(db, url, trustedAdmin, request)),
+  defineStaticRoute("backfill-dews", makeConditionalIdempotentAdminRoute(
+    "backfill-dews",
+    "backfill-dews",
+    ({ request }) => request.method === "POST",
+    ({ db, url, trustedAdmin, request }) => handleBackfillDEWS(db, url, trustedAdmin, request),
+  )),
   defineStaticRoute("remediate-blacklist-amount-gaps", makeIdempotentAdminRoute(
     "route-remediate-blacklist-amount-gaps",
     "remediate-blacklist-amount-gaps",

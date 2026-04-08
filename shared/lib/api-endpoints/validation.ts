@@ -22,6 +22,7 @@ const GET_ONLY_METHODS = ["GET"] as const satisfies readonly EndpointMethod[];
 const POST_ONLY_METHODS = ["POST"] as const satisfies readonly EndpointMethod[];
 const GET_AND_POST_METHODS = ["GET", "POST"] as const satisfies readonly EndpointMethod[];
 const AUDIT_DEPEG_HISTORY_PATH = "/api/audit-depeg-history";
+const BACKFILL_DEWS_PATH = "/api/backfill-dews";
 
 export function getPublicApiAccess(path: string): EndpointPublicApiAccess | null {
   const endpoint = getEndpointDefinition(path);
@@ -115,10 +116,20 @@ export function isAdminPath(path: string): boolean {
   return Boolean(getEndpointDefinition(path)?.adminRequired || matchDynamicAdminEndpoint(path));
 }
 
+export function isMutatingAdminGetAllowed(url: URL): boolean {
+  if (url.pathname === AUDIT_DEPEG_HISTORY_PATH) {
+    return url.searchParams.get("dry-run") === "true";
+  }
+  if (url.pathname === BACKFILL_DEWS_PATH) {
+    return !url.searchParams.has("repair") || url.searchParams.get("dry-run") === "true";
+  }
+  return false;
+}
+
 function getAllowedEndpointMethods(url: URL): readonly EndpointMethod[] | null {
   const definition = getEndpointDefinition(url.pathname);
   if (definition) {
-    if (url.pathname === AUDIT_DEPEG_HISTORY_PATH && url.searchParams.get("dry-run") !== "true") {
+    if (definition.mutatingAdmin && definition.methods.includes("GET") && !isMutatingAdminGetAllowed(url)) {
       return POST_ONLY_METHODS;
     }
     return definition.methods;
