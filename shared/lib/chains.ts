@@ -29,6 +29,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   plume:     { name: "Plume",     explorerUrl: "https://explorer.plumenetwork.xyz",evmChainId: 98866, type: "evm",  logoPath: "/chains/plume.png"     },
   hyperevm:       { name: "HyperEVM",       explorerUrl: "https://purrsec.com",                    evmChainId: 999,   type: "evm",   logoPath: "/chains/hyperevm.png"       },
   hyperliquid:      { name: "Hyperliquid L1", explorerUrl: "https://app.hyperliquid.xyz/explorer", evmChainId: null,  type: "other", logoPath: "/chains/hyperliquid-l1.png" },
+  megaeth:   { name: "MegaETH",   explorerUrl: "https://megaexplorer.xyz",          evmChainId: 6342,  type: "evm",  logoPath: "/chains/megaeth.png", darkInvert: true },
   monad:     { name: "Monad",     explorerUrl: "https://explorer.monad.xyz",       evmChainId: 143,   type: "evm",  logoPath: "/chains/monad.png"     },
   xdc:       { name: "XDC Network",explorerUrl: "https://xdcscan.io",             evmChainId: 50,    type: "evm",  logoPath: "/chains/xdc.png"       },
   mantle:    { name: "Mantle",    explorerUrl: "https://mantlescan.xyz",           evmChainId: 5000,  type: "evm",  logoPath: "/chains/mantle.png"    },
