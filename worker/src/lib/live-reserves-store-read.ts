@@ -1,13 +1,11 @@
 import { buildInClause } from "./db";
 import { chunkArray } from "./collections";
 import {
-  parseReserveCompositionRow,
   parseSnapshotMetadata,
   parseWarnings,
 } from "./live-reserves-store-parsing";
 import {
   RESERVE_SYNC_STATE_SELECT_COLUMNS,
-  type ReserveCompositionRecord,
   type ReserveCompositionRow,
   type ReserveSyncStateRecord,
   type ReserveSyncStateRow,
@@ -44,18 +42,6 @@ export async function getReserveCompositionRow(
     )
     .bind(stablecoinId)
     .first<ReserveCompositionRow>();
-}
-
-export async function getReserveComposition(
-  db: D1Database,
-  stablecoinId: string,
-): Promise<ReserveCompositionRecord | null> {
-  const [row, syncState] = await Promise.all([
-    getReserveCompositionRow(db, stablecoinId),
-    getReserveSyncState(db, stablecoinId),
-  ]);
-  if (!row) return null;
-  return parseReserveCompositionRow(row, syncState).record;
 }
 
 export async function getReserveSyncState(

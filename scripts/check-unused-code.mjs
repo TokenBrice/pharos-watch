@@ -146,7 +146,6 @@ const EXPORT_ALLOWLIST = new Set([
   "worker/src/lib/external-api-schemas.ts::TronEventSchema",
   "worker/src/lib/live-reserves-store.ts::getConfiguredLiveReserveCoins",
   "worker/src/lib/live-reserves-store.ts::upsertReserveComposition",
-  "worker/src/lib/live-reserves-store.ts::getReserveComposition",
   "worker/src/lib/mint-burn-health-config.ts::computeMintBurnSyncFreshnessStatus",
   "worker/src/lib/mint-burn-scoring.ts::MIN_ACTIVITY_USD",
   "worker/src/lib/og-templates/shared.tsx::TYPOGRAPHY",

@@ -131,8 +131,12 @@ export async function syncLiveReserves(
     if (cached) return cached;
 
     const resultPromise = runAdapterAttempt(coin, config, adapter, signal, effectiveAdapterCtx);
-    sharedSourceResults.set(cacheKey, resultPromise);
-    return resultPromise;
+    const cachedPromise = resultPromise.catch((error) => {
+      sharedSourceResults.delete(cacheKey);
+      throw error;
+    });
+    sharedSourceResults.set(cacheKey, cachedPromise);
+    return cachedPromise;
   };
 
   const runAdapter = async (
