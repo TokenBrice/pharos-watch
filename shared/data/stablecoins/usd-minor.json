@@ -3820,7 +3820,79 @@
         "pct": 15,
         "risk": "very-high"
       }
-    ]
+    ],
+    "liveReservesConfig": {
+      "adapter": "abracadabra",
+      "version": 1,
+      "semantics": "collateral-mix",
+      "breakerScope": "mim-abracadabra",
+      "display": {
+        "url": "https://abracadabra.money/",
+        "label": "Abracadabra Cauldrons"
+      },
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "cauldrons": [
+          {
+            "address": "0x7b7473a76D6ae86CE19f7352A1E89F6C9dc39020",
+            "collateralSymbol": "yvDAI",
+            "collateralAddress": "0xdA816459F1AB5631232FE5e97a05BBBb94970c95",
+            "collateralDecimals": 18,
+            "risk": "high"
+          },
+          {
+            "address": "0x806e16ec797c69afa8590A55723CE4CC1b54050E",
+            "collateralSymbol": "yvCVXETH",
+            "collateralAddress": "0x1635b506a88fBF428465Ad65d00e8d6B6E5846C3",
+            "collateralDecimals": 18,
+            "risk": "very-high"
+          },
+          {
+            "address": "0x85f60D3ea4E86Af43c9D4E9CC9095281fC2c7F42",
+            "collateralSymbol": "yvstETH",
+            "collateralAddress": "0xdCD90C7f6324cfa40d7169ef80b12031770B4325",
+            "collateralDecimals": 18,
+            "risk": "high"
+          },
+          {
+            "address": "0xc319EEa1e792577C319723b5e60a15dA3857E7da",
+            "collateralSymbol": "sSPELL",
+            "collateralAddress": "0x26FA3fFFB6EfE8c1E69103aCb4044C26B9A106a9",
+            "collateralDecimals": 18,
+            "risk": "very-high"
+          },
+          {
+            "address": "0x9617b633EF905571053f9BCa09300e855F50519E",
+            "collateralSymbol": "yvUSDC",
+            "collateralAddress": "0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE",
+            "collateralDecimals": 6,
+            "risk": "high",
+            "coinId": "usdc-circle"
+          },
+          {
+            "address": "0x003d5A75d284824Af736df51933be522DE9Eed0f",
+            "collateralSymbol": "yvUSDT",
+            "collateralAddress": "0x3B27F92C0e212C671EA351827EDF93DB27cc0c65",
+            "collateralDecimals": 6,
+            "risk": "high",
+            "coinId": "tether"
+          },
+          {
+            "address": "0x920D9BD936Da4eAFb5E25c6bDC9f6CB528953F9f",
+            "collateralSymbol": "yvWETH",
+            "collateralAddress": "0xa258C4606Ca8206D8aA700cE2143D7db854D168c",
+            "collateralDecimals": 18,
+            "risk": "high"
+          }
+        ]
+      }
+    }
   },
   {
     "id": "usdcv-societe-generale-forge",
