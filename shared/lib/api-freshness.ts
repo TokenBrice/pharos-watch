@@ -7,7 +7,7 @@ import { DAY_SECONDS } from "./time-constants";
 export const API_FRESHNESS_MAX_AGE_SEC = {
   stablecoins: 900,
   stablecoinCharts: 3600,
-  chains: 600,
+  chains: 1800,
   pegSummary: 900,
   depegEvents: 900,
   stressSignals: 1800,

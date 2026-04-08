@@ -116,7 +116,7 @@ Bands:
 
 ## API And Freshness
 
-`useChains()` reads `GET /api/chains` with the standard 15-minute cron-aligned query preset and the endpoint's 600-second freshness budget.
+`useChains()` reads `GET /api/chains` with the standard 15-minute cron-aligned query preset and the endpoint's 1800-second freshness budget.
 
 `GET /api/chains` returns body `_meta` freshness metadata plus HTTP freshness headers. When its supporting caches lag, the body `_meta.status` degrades instead of silently appearing fresh. `_meta.dependencies.reportCards` also tells the route whether a missing Chain Health score is due to stale/unavailable report-card inputs versus genuine score-coverage gaps.
 

@@ -384,7 +384,7 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
 
 **Cache:** realtime — `public, s-maxage=60, max-age=10`
 
-**Freshness threshold:** 600 seconds. Returns `503` when the stablecoins cache is unavailable or structurally corrupt. When dependent snapshots lag, the endpoint stays readable but the body `_meta.status` degrades and the frontend surfaces stale-data warnings.
+**Freshness threshold:** 1800 seconds. Returns `503` when the stablecoins cache is unavailable or structurally corrupt. When dependent snapshots lag, the endpoint stays readable but the body `_meta.status` degrades and the frontend surfaces stale-data warnings.
 
 **Status codes:**
 

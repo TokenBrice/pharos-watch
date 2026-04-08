@@ -3,10 +3,11 @@ import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS, type ReportCardCache
 import { aggregateChains } from "@shared/lib/chain-aggregator";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { errorResponse, jsonResponse, withErrorHandler } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 
-const CHAINS_FRESHNESS_MAX_AGE_SEC = 600;
+const CHAINS_FRESHNESS_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.chains;
 const CHAINS_STALE_THRESHOLD_SEC = CHAINS_FRESHNESS_MAX_AGE_SEC * 2;
 
 type ChainsFreshnessStatus = "fresh" | "degraded" | "stale";

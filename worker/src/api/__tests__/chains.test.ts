@@ -138,7 +138,7 @@ describe("handleChains", () => {
     expect(response.headers.get("Cache-Control")).toBe("no-store");
   });
 
-  it("marks the response degraded when the stablecoins snapshot is older than the 600s chains budget", async () => {
+  it("marks the response degraded when the stablecoins snapshot is older than the 1800s chains budget", async () => {
     const payload = {
       peggedAssets: [{
         id: "usdt-tether", symbol: "USDT", name: "Tether", price: 1.0, pegType: "peggedUSD",
@@ -150,7 +150,7 @@ describe("handleChains", () => {
     };
 
     const db = mockD1([
-      freshCache(payload, 601),
+      freshCache(payload, 1801),
       reportCardCache({ "usdt-tether": { score: 75, grade: "B" } }),
     ]);
 
@@ -160,7 +160,7 @@ describe("handleChains", () => {
     };
 
     expect(response.status).toBe(200);
-    expect(body._meta.ageSeconds).toBeGreaterThanOrEqual(601);
+    expect(body._meta.ageSeconds).toBeGreaterThanOrEqual(1801);
     expect(body._meta.status).toBe("degraded");
     expect(response.headers.get("Warning")).toContain("Response is degraded");
     expect(response.headers.get("Cache-Control")).toBe("no-store");
