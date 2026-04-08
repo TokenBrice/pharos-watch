@@ -361,3 +361,29 @@ describe("isDewsDeescalation", () => {
     expect(isDewsDeescalation("CALM", "DANGER")).toBe(false);
   });
 });
+
+describe("splitMessage HTML safety", () => {
+  it("does not break HTML tags at character boundaries", () => {
+    // Build a long line with an HTML tag near the split boundary
+    const longText = "<b>" + "x".repeat(3990) + "</b>" + "\n\n" + "<b>second</b>";
+    const chunks = splitMessage(longText, 4000);
+    // Every chunk with a <b> must also have </b>
+    for (const chunk of chunks) {
+      const opens = (chunk.match(/<b>/g) ?? []).length;
+      const closes = (chunk.match(/<\/b>/g) ?? []).length;
+      expect(opens).toBe(closes);
+    }
+  });
+
+  it("strips tags from chunks that would have broken HTML", () => {
+    // A single long line that forces character-boundary splitting mid-tag
+    const longLine = "x".repeat(3995) + "<b>bold</b>";
+    const chunks = splitMessage(longLine, 4000);
+    expect(chunks.length).toBeGreaterThan(1);
+    for (const chunk of chunks) {
+      const opens = (chunk.match(/<b>/g) ?? []).length;
+      const closes = (chunk.match(/<\/b>/g) ?? []).length;
+      expect(opens).toBe(closes);
+    }
+  });
+});

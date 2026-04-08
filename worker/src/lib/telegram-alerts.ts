@@ -302,6 +302,45 @@ export function formatConsolidatedMessage(alerts: ConsolidatedAlerts): string {
   return `<b>Pharos Alerts</b>\n\n${body}\n\n<a href="${url}">View on Pharos</a>`;
 }
 
+/**
+ * Repair a chunk that may have broken HTML tags from a hard character split.
+ * Assumes input has been through escapeHtml() so literal > is encoded as &gt;.
+ * Only safe for pre-escaped Telegram HTML (the only context splitMessage is used).
+ */
+function repairBrokenHtml(chunk: string): string {
+  // Remove a trailing partial tag (e.g., "<b" or "<a href=\"...")
+  let repaired = chunk.replace(/<[^>]*$/, "");
+  // Remove a leading fragment from a tag that was split (e.g., 'ref="...">text</a>').
+  // Safe because escapeHtml converts literal > to &gt;, so bare > only appears in tags.
+  repaired = repaired.replace(/^[^<]*>/, "");
+
+  // Balance simple tags: <b>, <i>, <code>, <pre>
+  const tags = ["b", "i", "code", "pre"];
+  for (const tag of tags) {
+    const openCount = (repaired.match(new RegExp(`<${tag}[> ]`, "g")) ?? []).length;
+    const closeCount = (repaired.match(new RegExp(`</${tag}>`, "g")) ?? []).length;
+    if (openCount > closeCount) {
+      repaired += `</${tag}>`.repeat(openCount - closeCount);
+    } else if (closeCount > openCount) {
+      repaired = `<${tag}>`.repeat(closeCount - openCount) + repaired;
+    }
+  }
+  // Handle <a> separately (has attributes)
+  const aOpens = (repaired.match(/<a[\s>]/g) ?? []).length;
+  const aCloses = (repaired.match(/<\/a>/g) ?? []).length;
+  if (aOpens > aCloses) {
+    repaired += "</a>".repeat(aOpens - aCloses);
+  } else if (aCloses > aOpens) {
+    // Strip orphaned </a> rather than prepending a fake <a>
+    let surplus = aCloses - aOpens;
+    repaired = repaired.replace(/<\/a>/g, (match) => {
+      if (surplus > 0) { surplus--; return ""; }
+      return match;
+    });
+  }
+  return repaired;
+}
+
 /** Split a message into chunks under the given character limit. */
 export function splitMessage(html: string, limit = 4000): string[] {
   if (html.length <= limit) return [html];
@@ -329,7 +368,7 @@ export function splitMessage(html: string, limit = 4000): string[] {
       }
 
       for (let index = 0; index < line.length; index += limit) {
-        parts.push(line.slice(index, index + limit));
+        parts.push(repairBrokenHtml(line.slice(index, index + limit)));
       }
     }
 
