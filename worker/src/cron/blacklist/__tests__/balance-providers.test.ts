@@ -138,6 +138,28 @@ describe("fetchEvmTokenBalance", () => {
     vi.restoreAllMocks();
   });
 
+  it("tries dRPC and chain-RPC before Etherscan for Ethereum mainnet", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      calls.push(url);
+      // All providers fail
+      return new Response(JSON.stringify({ result: null }), { status: 200 });
+    }));
+
+    await fetchEvmTokenBalance(
+      ethereumConfig,
+      "0x0000000000000000000000000000000000000abc",
+      19000000,
+      null, // no etherscan key
+      "test-drpc-key",
+      async (fn) => fn(),
+      createBudget(10),
+    );
+
+    // dRPC should have been tried for Ethereum mainnet
+    expect(calls.some((url) => url.includes("drpc.org") && url.includes("ethereum"))).toBe(true);
+  });
+
   it("returns null when block number produces an invalid hex tag", async () => {
     vi.stubGlobal("fetch", vi.fn(async () =>
       new Response(JSON.stringify({ status: "1", message: "OK", result: "0x02faf080" }), { status: 200 }),

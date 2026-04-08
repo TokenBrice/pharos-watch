@@ -15,8 +15,9 @@ import {
   tronHexAddressToBase58,
 } from "../../lib/tron-address";
 
-// dRPC network names for L2 chains (used to build RPC URL)
+// dRPC network names for EVM chains (used to build RPC URL)
 const DRPC_NETWORK: Record<string, string> = {
+  ethereum: "ethereum",
   arbitrum: "arbitrum",
   base: "base",
   optimism: "optimism",
@@ -162,39 +163,34 @@ export async function fetchEvmTokenBalance(
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<number | null> {
-  // Non-mainnet EVM chains prefer dRPC archive reads, but keep falling back through the
-  // shared chain registry (Alchemy/public RPC) and Etherscan best-effort paths so one
-  // provider outage does not strand amount backfills indefinitely.
-  if (config.chain.evmChainId !== 1) {
-    if (drpcApiKey) {
-      const drpcAmount = await fetchBalanceViaDrpc(
-        config.chain.chainId,
-        config.contractAddress,
-        address,
-        blockNumber,
-        drpcApiKey,
-        config.decimals,
-        budget,
-        signal,
-      );
-      if (drpcAmount != null) return drpcAmount;
-    }
-
-      const rpcAmount = await fetchBalanceViaChainRpc(
-        config.chain.chainId,
-        config.contractAddress,
-        address,
-        blockNumber,
+  // All EVM chains share the same fallback chain: dRPC -> chain-RPC -> Etherscan.
+  if (drpcApiKey) {
+    const drpcAmount = await fetchBalanceViaDrpc(
+      config.chain.chainId,
+      config.contractAddress,
+      address,
+      blockNumber,
+      drpcApiKey,
       config.decimals,
       budget,
       signal,
-      chainRpcs,
     );
-    if (rpcAmount != null) return rpcAmount;
+    if (drpcAmount != null) return drpcAmount;
   }
 
-  // Ethereum mainnet uses Etherscan directly; non-mainnet chains only reach this point
-  // after dRPC and chain-RPC fallbacks have both missed.
+  const rpcAmount = await fetchBalanceViaChainRpc(
+    config.chain.chainId,
+    config.contractAddress,
+    address,
+    blockNumber,
+    config.decimals,
+    budget,
+    signal,
+    chainRpcs,
+  );
+  if (rpcAmount != null) return rpcAmount;
+
+  // Etherscan is the last-resort fallback for all chains.
   const blockTag = "0x" + blockNumber.toString(16);
   return fetchEvmBalanceAtTag(
     config.chain.evmChainId!,
