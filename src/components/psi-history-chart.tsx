@@ -59,6 +59,22 @@ export const PSI_EVENTS = [
     ],
   },
   {
+    date: Date.UTC(2019, 3, 25),
+    dateEnd: Date.UTC(2019, 3, 30),
+    label: "Bitfinex NY AG",
+    position: "top" as const,
+    links: [
+      {
+        title: "NY AG accused Bitfinex of hiding $850M in losses covered by Tether reserves",
+        url: "https://ag.ny.gov/press-release/2019/attorney-general-james-announces-court-order-against-crypto-currency-company",
+      },
+      {
+        title: "Flight from USDT: USDC, TUSD, and USDP traded 1.5-3.4% above peg for days",
+        url: "https://www.coindesk.com/markets/2019/04/26/tether-says-its-cryptocurrency-is-only-74-backed-by-cash-and-securities",
+      },
+    ],
+  },
+  {
     date: Date.UTC(2020, 2, 12),
     dateEnd: Date.UTC(2020, 2, 16),
     label: "COVID Crash",
@@ -71,6 +87,18 @@ export const PSI_EVENTS = [
       {
         title: "MakerDAO's Black Thursday: $8.3M in DAI auctioned for essentially zero collateral",
         url: "https://medium.com/@whiterabbit_hq/black-thursday-for-makerdao-8-32-million-was-liquidated-for-0-dai-36b83cac56b6",
+      },
+    ],
+  },
+  {
+    date: Date.UTC(2021, 0, 4),
+    dateEnd: Date.UTC(2021, 0, 6),
+    label: "BTC ATH Crash",
+    position: "insideBottom" as const,
+    links: [
+      {
+        title: "BTC crashed 17% from $34K to $28K; USDC dropped to $0.98, broad stablecoin stress",
+        url: "https://www.coindesk.com/markets/2021/01/04/bitcoin-drops-17-from-record-high-bringing-a-sense-of-normalcy-to-crypto",
       },
     ],
   },
