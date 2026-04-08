@@ -15,6 +15,7 @@ import {
   unverifiedFreshnessMetadata,
   valueUsdFromBigIntPrice,
 } from "./helpers";
+import { worseRisk } from "./slice-math";
 
 interface CurveMarketEntry {
   collateral_amount_usd?: number;
@@ -63,18 +64,6 @@ const ERC20_METADATA_ABI = parseAbi([
   "function symbol() view returns (string)",
   "function decimals() view returns (uint8)",
 ]);
-
-const RISK_SEVERITY: Record<ReserveSlice["risk"], number> = {
-  "very-low": 0,
-  low: 1,
-  medium: 2,
-  high: 3,
-  "very-high": 4,
-};
-
-function worseRisk(a: ReserveSlice["risk"], b: ReserveSlice["risk"]): ReserveSlice["risk"] {
-  return RISK_SEVERITY[a] >= RISK_SEVERITY[b] ? a : b;
-}
 
 function classifySymbol(symbol: string): { name: string; risk: ReserveSlice["risk"] } | null {
   const upper = symbol.toUpperCase();

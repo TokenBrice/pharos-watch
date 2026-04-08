@@ -4,8 +4,8 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildUnknownExposureWarning,
   fetchJsonWithRetry,
-  isHttpJsonInput,
   normalizeSlices,
+  requireJsonInputFromConfig,
   unverifiedFreshnessMetadata,
 } from "./helpers";
 import { cefiPositionMeta, wrapperAssetMeta } from "./wrapper-assets";
@@ -133,10 +133,7 @@ export async function fetchInfiniFiReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const primaryInput = config.inputs.primary;
-  if (!isHttpJsonInput(primaryInput)) {
-    throw new Error("infiniFi adapter requires an http-json primary input");
-  }
+  const primaryInput = requireJsonInputFromConfig(config, "infinifi");
 
   const url = primaryInput.url;
   const payload = await fetchJsonWithRetry<InfiniFiProtocolData>(url, signal, 12_000, ctx);

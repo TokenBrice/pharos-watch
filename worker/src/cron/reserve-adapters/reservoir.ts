@@ -5,7 +5,7 @@ import {
   buildUnknownExposureWarning,
   classifyBucketedValues,
   fetchJsonWithRetry,
-  isHttpJsonInput,
+  requireJsonInputFromConfig,
   unverifiedFreshnessMetadata,
 } from "./helpers";
 import type { ValueBucketRule } from "./classification";
@@ -119,10 +119,7 @@ export async function fetchReservoirReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const primaryInput = config.inputs.primary;
-  if (!isHttpJsonInput(primaryInput)) {
-    throw new Error("reservoir adapter requires an http-json primary input");
-  }
+  const primaryInput = requireJsonInputFromConfig(config, "reservoir");
 
   const payload = await fetchJsonWithRetry<ReservoirReservesResponse>(
     primaryInput.url,

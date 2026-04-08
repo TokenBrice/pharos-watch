@@ -7,6 +7,7 @@ import {
   htmlParseError,
   parseTimestampLikeToUnixSeconds,
   requireHtmlInput,
+  reserveDegradedWarning,
   slicesFromValues,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
@@ -222,12 +223,7 @@ export function adaptReMetrics(html: string): AdapterResult {
     ...Array.from(tokenValues.entries()).map(([symbol, value]) => {
       const config = SYMBOL_CONFIG[symbol];
       if (!config) {
-        warnings.push({
-          code: "unmapped-token",
-          message: `Re Metrics token defaulted to medium risk: ${symbol}`,
-          severity: "warning",
-          effect: "degraded",
-        });
+        warnings.push(reserveDegradedWarning("unmapped-token", `Re Metrics token defaulted to medium risk: ${symbol}`));
       }
       return {
         value,

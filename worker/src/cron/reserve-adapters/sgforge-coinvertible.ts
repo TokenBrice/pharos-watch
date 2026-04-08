@@ -106,13 +106,14 @@ export async function fetchSgForgeCoinvertibleReserves(
   _coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
-  _ctx?: AdapterContext,
+  ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireHtmlInput(config.inputs.primary, "sgforge-coinvertible");
   const html = await fetchTextWithRetry(
     input.url,
     signal,
     15_000,
+    ctx,
   );
   return adaptSgForgeCoinvertible(html, readCoinType(config));
 }
