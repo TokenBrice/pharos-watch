@@ -21,6 +21,7 @@ const PROTOCOL_NAMES: Record<string, string> = {
   raydium: "Raydium",
   orca: "Orca",
   quickswap: "QuickSwap",
+  ekubo: "Ekubo",
 };
 
 export const PROTOCOL_LOGOS: Record<string, string> = {
@@ -38,6 +39,7 @@ export const PROTOCOL_LOGOS: Record<string, string> = {
   raydium: "/dexes/raydium.png",
   orca: "/dexes/orca.png",
   quickswap: "/dexes/quickswap.png",
+  ekubo: "/dexes/ekubo.jpeg",
 };
 
 export const PROTOCOL_COLORS: Record<string, string> = {
@@ -55,6 +57,7 @@ export const PROTOCOL_COLORS: Record<string, string> = {
   raydium: "bg-purple-500",
   orca: "bg-teal-400",
   quickswap: "bg-violet-500",
+  ekubo: "bg-orange-500",
 };
 
 export const EXTRA_COLORS = [
@@ -105,6 +108,7 @@ export const PROTOCOL_HEX: Record<string, string> = {
   raydium:      "#a855f7",
   orca:         "#2dd4bf",
   quickswap:    "#8b5cf6",
+  ekubo:        "#f97316",
 };
 
 /** Normalize a chain name to lowercase for color lookup, returning a canonical display name. */

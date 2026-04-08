@@ -196,6 +196,7 @@ export function normalizeProtocol(project: string): string {
   if (p.includes("raydium")) return "raydium";
   if (p.includes("orca")) return "orca";
   if (p.includes("quickswap")) return "quickswap";
+  if (p.includes("ekubo")) return "ekubo";
   // Pass through actual project name (frontend groups small ones into "Other")
   return project;
 }
