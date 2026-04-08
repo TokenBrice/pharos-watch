@@ -148,7 +148,7 @@ The `/start/` route is documented in [Start Page](./start-page.md).
 4. `MarketHighlights`
 5. `Key Stablecoin Data` section
 6. `DailyDigest` in `preview` mode
-7. `UpcomingStablecoinsSection` (includes "View all" link to `/upcoming`)
+7. `UpcomingStablecoinsSection` (includes a `Launch alerts` promo link to `/telegram/#getting-started` plus `View all` to `/upcoming`)
 8. `Core Monitoring` band
 9. `Research Surfaces` band
 10. Bottom summary / last-updated footer copy

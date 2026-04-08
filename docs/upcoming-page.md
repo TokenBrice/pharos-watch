@@ -29,6 +29,9 @@ The route renders through `FeaturePageShell` with:
 - `path="/upcoming/"`
 - title `Upcoming Stablecoins`
 - a single lead paragraph describing the page as the pre-launch tracker
+- a launch-alert callout above the client grid that promotes `@PharosWatchBot`
+- a copyable global command: `/subscribe launch all`
+- copy that points users to individual upcoming coin pages for asset-specific exact commands
 
 Metadata is authored directly in `src/app/upcoming/page.tsx` with canonical `/upcoming/`, route-specific title/description, and the default shared page-metadata helper path.
 
@@ -38,12 +41,12 @@ Metadata is authored directly in `src/app/upcoming/page.tsx` with canonical `/up
 
 `UpcomingClient` builds entirely from checked-in metadata and static assets:
 
-| Source | Used for |
-| --- | --- |
-| `PRE_LAUNCH_STABLECOINS` | the route's full card/filter universe |
-| `data/logos.json` | per-coin logo display |
-| `data/ai-summaries.json` | teaser copy shown on cards when available |
-| `src/lib/pre-launch.ts` | launch-phase labels, drift heuristics, fuzzy-date formatting, teaser truncation, and sort scoring |
+| Source                   | Used for                                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------------------- |
+| `PRE_LAUNCH_STABLECOINS` | the route's full card/filter universe                                                             |
+| `data/logos.json`        | per-coin logo display                                                                             |
+| `data/ai-summaries.json` | teaser copy shown on cards when available                                                         |
+| `src/lib/pre-launch.ts`  | launch-phase labels, drift heuristics, fuzzy-date formatting, teaser truncation, and sort scoring |
 
 The route does not call the Worker API directly. It is a metadata-driven surface over pre-launch stablecoin entries already checked into the repo.
 
@@ -84,6 +87,13 @@ The empty-state copy is:
 
 `No pre-launch stablecoins match the current filters.`
 
+## Launch Alert Promotion
+
+The route now promotes the Telegram launch-alert workflow in two layers:
+
+- a page-level callout, rendered by `src/app/upcoming/page.tsx`, that exposes the copyable global follow command `/subscribe launch all`
+- asset-specific exact commands on the destination pre-launch detail pages, documented in [stablecoin-detail-page.md](./stablecoin-detail-page.md)
+
 ---
 
 ## SEO And Crawlability
@@ -102,6 +112,7 @@ Update this doc when any of these contracts change:
 
 - pre-launch filter dimensions or sort options
 - card fields or badge semantics
+- launch-alert promo placement or command copy on `/upcoming/`
 - the route's canonical metadata or crawlability pattern
 - the source of truth for pre-launch stablecoin membership
 

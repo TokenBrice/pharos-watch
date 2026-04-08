@@ -1,19 +1,9 @@
 import Link from "next/link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";
-import {
-  BACKING_LABELS_SHORT,
-  GOVERNANCE_LABELS_SHORT,
-  PEG_LABELS_SHORT,
-} from "@shared/lib/classification";
+import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { buildStablecoinUrl } from "@/lib/urls";
-import {
-  LAUNCH_PHASE_LABELS,
-  PHASE_BADGE,
-  PHASE_RING,
-  dateScore,
-  formatFuzzyDate,
-} from "@/lib/pre-launch";
+import { LAUNCH_PHASE_LABELS, PHASE_BADGE, PHASE_RING, dateScore, formatFuzzyDate } from "@/lib/pre-launch";
 import { trimTextAtWordBoundary } from "@/lib/page-metadata";
 import type { LaunchPhase, StablecoinMeta } from "@shared/types";
 import aiSummaries from "../../data/ai-summaries.json";
@@ -59,12 +49,7 @@ function TimelineNode({
   const ringClass = phase ? PHASE_RING[phase] : "ring-border/40 hover:ring-border/70";
 
   // Popover alignment — keep it on-screen for edge nodes
-  const popoverAlign =
-    align === "left"
-      ? "left-0"
-      : align === "right"
-        ? "right-0"
-        : "left-1/2 -translate-x-1/2";
+  const popoverAlign = align === "left" ? "left-0" : align === "right" ? "right-0" : "left-1/2 -translate-x-1/2";
 
   return (
     <div className="group/node relative z-0 flex flex-col items-center hover:z-20 focus-within:z-20">
@@ -77,35 +62,21 @@ function TimelineNode({
           <div className="flex items-center gap-2">
             <StablecoinLogo src={logoSrc} name={coin.name} size={26} />
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-foreground">
-                {coin.name}
-              </p>
-              <p className="font-mono text-[11px] text-muted-foreground">
-                {coin.symbol}
-              </p>
+              <p className="truncate text-sm font-semibold text-foreground">{coin.name}</p>
+              <p className="font-mono text-[11px] text-muted-foreground">{coin.symbol}</p>
             </div>
           </div>
 
           {/* Badges */}
           <div className="mt-2 flex flex-wrap gap-1">
-            <ClassificationBadge
-              label={PEG_LABELS_SHORT[coin.flags.pegCurrency]}
-            />
-            <ClassificationBadge
-              label={BACKING_LABELS_SHORT[coin.flags.backing]}
-            />
-            <ClassificationBadge
-              label={GOVERNANCE_LABELS_SHORT[coin.flags.governance]}
-            />
+            <ClassificationBadge label={PEG_LABELS_SHORT[coin.flags.pegCurrency]} />
+            <ClassificationBadge label={BACKING_LABELS_SHORT[coin.flags.backing]} />
+            <ClassificationBadge label={GOVERNANCE_LABELS_SHORT[coin.flags.governance]} />
             {phase && <PhaseBadge phase={phase} />}
           </div>
 
           {/* Teaser */}
-          {teaser && (
-            <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-              {teaser}
-            </p>
-          )}
+          {teaser && <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{teaser}</p>}
 
           {/* Date */}
           {coin.expectedLaunchDate && (
@@ -130,9 +101,7 @@ function TimelineNode({
       </Link>
 
       {/* ── Labels below ─────────────────────────────────────── */}
-      <span className="mt-2 max-w-20 truncate text-center text-[11px] font-medium text-foreground">
-        {coin.symbol}
-      </span>
+      <span className="mt-2 max-w-20 truncate text-center text-[11px] font-medium text-foreground">{coin.symbol}</span>
       {coin.expectedLaunchDate && (
         <span className="font-mono text-[10px] text-muted-foreground/50">
           {formatFuzzyDate(coin.expectedLaunchDate)}
@@ -166,9 +135,7 @@ function MobileEntry({
       aria-label={`${coin.name} (${coin.symbol})${phase ? ` — ${LAUNCH_PHASE_LABELS[phase]}` : ""}`}
     >
       {/* Vertical connector */}
-      {!isLast && (
-        <div className="absolute bottom-0 left-[17px] top-10 w-px bg-border/30" />
-      )}
+      {!isLast && <div className="absolute bottom-0 left-[17px] top-10 w-px bg-border/30" />}
 
       {/* Logo */}
       <div className="shrink-0 pt-0.5">
@@ -178,32 +145,18 @@ function MobileEntry({
       {/* Details */}
       <div className="min-w-0 flex-1 pb-5">
         <div className="flex items-baseline gap-2">
-          <p className="truncate text-sm font-medium text-foreground group-hover:text-foreground/80">
-            {coin.name}
-          </p>
-          <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
-            {coin.symbol}
-          </span>
+          <p className="truncate text-sm font-medium text-foreground group-hover:text-foreground/80">{coin.name}</p>
+          <span className="shrink-0 font-mono text-[11px] text-muted-foreground">{coin.symbol}</span>
         </div>
 
         <div className="mt-1.5 flex flex-wrap gap-1">
-          <ClassificationBadge
-            label={PEG_LABELS_SHORT[coin.flags.pegCurrency]}
-          />
-          <ClassificationBadge
-            label={BACKING_LABELS_SHORT[coin.flags.backing]}
-          />
-          <ClassificationBadge
-            label={GOVERNANCE_LABELS_SHORT[coin.flags.governance]}
-          />
+          <ClassificationBadge label={PEG_LABELS_SHORT[coin.flags.pegCurrency]} />
+          <ClassificationBadge label={BACKING_LABELS_SHORT[coin.flags.backing]} />
+          <ClassificationBadge label={GOVERNANCE_LABELS_SHORT[coin.flags.governance]} />
           {phase && <PhaseBadge phase={phase} />}
         </div>
 
-        {teaser && (
-          <p className="mt-1.5 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">
-            {teaser}
-          </p>
-        )}
+        {teaser && <p className="mt-1.5 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">{teaser}</p>}
 
         {coin.expectedLaunchDate && (
           <p className="mt-1.5 font-mono text-[10px] text-muted-foreground/50">
@@ -226,19 +179,13 @@ interface Props {
 export function UpcomingStablecoinsSection({ logos }: Props) {
   if (PRE_LAUNCH_STABLECOINS.length === 0) return null;
 
-  const summaries = aiSummaries as Record<
-    string,
-    { title?: string; text?: string; updatedAt?: string }
-  >;
+  const summaries = aiSummaries as Record<string, { title?: string; text?: string; updatedAt?: string }>;
   const sorted = [...PRE_LAUNCH_STABLECOINS]
     .sort((a, b) => dateScore(a.expectedLaunchDate) - dateScore(b.expectedLaunchDate))
     .slice(0, 7);
 
   return (
-    <section
-      aria-labelledby="upcoming-heading"
-      className="mt-8 space-y-5 border-t border-border/40 pt-6"
-    >
+    <section aria-labelledby="upcoming-heading" className="mt-8 space-y-5 border-t border-border/40 pt-6">
       <div className="space-y-1.5">
         <p className="pharos-kicker">Upcoming Stablecoins</p>
         <div className="space-y-1">
@@ -246,15 +193,21 @@ export function UpcomingStablecoinsSection({ logos }: Props) {
             <h2 id="upcoming-heading" className="text-2xl font-semibold tracking-tight text-foreground">
               {PRE_LAUNCH_STABLECOINS.length} stablecoins on the horizon
             </h2>
-            <Link
-              href="/upcoming"
-              className="shrink-0 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              View all &rarr;
-            </Link>
+            <div className="flex shrink-0 items-center gap-3 text-sm">
+              <Link
+                href="/telegram/#getting-started"
+                className="text-sky-600 transition-colors hover:text-sky-500 dark:text-sky-400 dark:hover:text-sky-300"
+              >
+                Launch alerts
+              </Link>
+              <Link href="/upcoming" className="text-muted-foreground transition-colors hover:text-foreground">
+                View all &rarr;
+              </Link>
+            </div>
           </div>
           <p className="text-sm text-muted-foreground">
-            Pre-launch projects tracked by Pharos. Hover a coin for details, or click to view the full profile.
+            Pre-launch projects tracked by Pharos. Hover a coin for details, or open the full profile for a copy-ready
+            exact Telegram launch command.
           </p>
         </div>
       </div>
@@ -266,9 +219,7 @@ export function UpcomingStablecoinsSection({ logos }: Props) {
           <div className="absolute inset-x-0 top-[calc(1rem+22px)] h-px bg-gradient-to-r from-indigo-500/30 via-border/50 to-transparent" />
 
           {/* Arrowhead */}
-          <div className="absolute right-0 top-[calc(1rem+18px)] font-mono text-[10px] text-muted-foreground/30">
-            →
-          </div>
+          <div className="absolute right-0 top-[calc(1rem+18px)] font-mono text-[10px] text-muted-foreground/30">→</div>
 
           {/* Nodes */}
           <div className="relative flex justify-around px-4">
@@ -277,18 +228,8 @@ export function UpcomingStablecoinsSection({ logos }: Props) {
                 key={coin.id}
                 coin={coin}
                 logoSrc={logos[coin.id]}
-                teaser={
-                  summaries[coin.id]?.text
-                    ? trimTextAtWordBoundary(summaries[coin.id].text!, 120)
-                    : null
-                }
-                align={
-                  i === 0
-                    ? "left"
-                    : i === sorted.length - 1
-                      ? "right"
-                      : "center"
-                }
+                teaser={summaries[coin.id]?.text ? trimTextAtWordBoundary(summaries[coin.id].text!, 120) : null}
+                align={i === 0 ? "left" : i === sorted.length - 1 ? "right" : "center"}
               />
             ))}
           </div>

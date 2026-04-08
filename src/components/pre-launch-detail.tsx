@@ -2,10 +2,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
 import { Tweet } from "react-tweet";
-import { ExternalLink, Globe, Calendar, Shield, ArrowLeft, FileText, BookOpen, Play } from "lucide-react";
+import { ExternalLink, Globe, Calendar, Shield, ArrowLeft, FileText, BookOpen, Play, Bell } from "lucide-react";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { CopyButton } from "@/components/copy-button";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { buildStablecoinUrl } from "@/lib/urls";
 import {
@@ -67,7 +68,9 @@ function extractTweetId(url: string): string | null {
 
 function LaunchPhaseBadge({ phase }: { phase: LaunchPhase }) {
   return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${PHASE_BADGE[phase]}`}>
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${PHASE_BADGE[phase]}`}
+    >
       {LAUNCH_PHASE_LABELS[phase]}
     </span>
   );
@@ -131,9 +134,7 @@ function InfoGridItem({ label, value }: { label: string; value: string }) {
 // ---------------------------------------------------------------------------
 
 function MilestoneTimeline({ milestones }: { milestones: LaunchMilestone[] }) {
-  const sorted = [...milestones].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-  );
+  const sorted = [...milestones].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
     <div className="space-y-0">
@@ -151,9 +152,7 @@ function MilestoneTimeline({ milestones }: { milestones: LaunchMilestone[] }) {
         return (
           <div key={`${m.date}-${m.title}`} className="relative flex gap-3">
             {/* Vertical connector */}
-            {!isLast && (
-              <div className="absolute bottom-0 left-[7px] top-5 w-px bg-border/40" />
-            )}
+            {!isLast && <div className="absolute bottom-0 left-[7px] top-5 w-px bg-border/40" />}
 
             {/* Dot */}
             <div className="relative mt-1.5 h-3.5 w-3.5 shrink-0 rounded-full border-2 border-border bg-background" />
@@ -161,9 +160,7 @@ function MilestoneTimeline({ milestones }: { milestones: LaunchMilestone[] }) {
             {/* Content */}
             <div className="min-w-0 flex-1 pb-4">
               <div className="flex flex-wrap items-baseline gap-2">
-                <span className="font-mono text-xs text-muted-foreground">
-                  {dateDisplay}
-                </span>
+                <span className="font-mono text-xs text-muted-foreground">{dateDisplay}</span>
                 <span
                   className={`inline-flex rounded-full border px-1.5 py-0.5 text-[10px] font-medium leading-none ${MILESTONE_TYPE_BADGE[m.type]}`}
                 >
@@ -171,11 +168,7 @@ function MilestoneTimeline({ milestones }: { milestones: LaunchMilestone[] }) {
                 </span>
               </div>
               <p className="mt-1 text-sm font-medium text-foreground">{m.title}</p>
-              {m.description && (
-                <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                  {m.description}
-                </p>
-              )}
+              {m.description && <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{m.description}</p>}
               {m.sourceUrl && (
                 <a
                   href={m.sourceUrl}
@@ -214,6 +207,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
   const related = getRelatedStablecoins(coin, { candidates: ACTIVE_STABLECOINS });
   const chains = coin.contracts?.map((c) => c.chain) ?? [];
   const uniqueChains = [...new Set(chains)];
+  const launchAlertCommand = `/subscribe launch ${coin.id}`;
 
   // Build jurisdiction display with regulator if available
   const jurisdictionDisplay = coin.jurisdiction?.regulator
@@ -246,11 +240,72 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
           {coin.launchPhase && <LaunchPhaseBadge phase={coin.launchPhase} />}
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
-          Pharos can still tell you how this asset is supposed to work, when it expects to launch, and what sources to watch.
-          Live market, peg, liquidity, and safety surfaces activate only after the first post-launch data sync.
+          Pharos can still tell you how this asset is supposed to work, when it expects to launch, and what sources to
+          watch. Live market, peg, liquidity, and safety surfaces activate only after the first post-launch data sync.
         </p>
         {coin.launchPhaseDetail && <p className="mt-2 text-sm text-muted-foreground">{coin.launchPhaseDetail}</p>}
       </div>
+
+      {/* ── Launch Alert CTA ──────────────────────────────────────── */}
+      <section className="rounded-xl border border-sky-500/25 bg-sky-500/[0.05] px-4 py-4 sm:px-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-semibold text-sky-700 dark:text-sky-300">
+              <Bell className="h-4 w-4" aria-hidden="true" />
+              <span>Launch Alert</span>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-foreground">
+                Get a Telegram alert when {coin.symbol} becomes tracked on Pharos
+              </p>
+              <p className="max-w-2xl text-sm text-muted-foreground">
+                Copy this exact command and send it to{" "}
+                <a
+                  href="https://t.me/PharosWatchBot"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-foreground underline underline-offset-4 transition-colors hover:text-foreground/80"
+                >
+                  @PharosWatchBot
+                  <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                </a>
+                . It uses this coin&apos;s exact Pharos ID, so it works even when a ticker is ambiguous.
+              </p>
+            </div>
+          </div>
+
+          <div className="min-w-0 rounded-xl border border-border/60 bg-background/55 p-3">
+            <p className="pharos-kicker">Copy Exact Bot Command</p>
+            <div className="mt-2 flex items-center gap-2">
+              <code className="block min-w-0 flex-1 overflow-x-auto whitespace-nowrap rounded-lg bg-background/80 px-3 py-2 text-xs font-mono text-foreground sm:text-sm">
+                {launchAlertCommand}
+              </code>
+              <CopyButton
+                text={launchAlertCommand}
+                className="shrink-0 rounded-lg border border-border/60 bg-background/70 text-muted-foreground hover:bg-background hover:text-foreground"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
+          <a
+            href="https://t.me/PharosWatchBot"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
+          >
+            Open @PharosWatchBot
+            <ExternalLink className="h-3 w-3" aria-hidden="true" />
+          </a>
+          <Link
+            href="/telegram/#getting-started"
+            className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
+          >
+            See all Telegram alert options
+          </Link>
+        </div>
+      </section>
 
       {/* ── Header ────────────────────────────────────────────────── */}
       <header className="flex items-start gap-4">
@@ -287,12 +342,14 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
             {DRIFT_STATUS_LABEL[drift]}
           </span>
         ) : null;
-        const dateTrail = hasDrift && coin.expectedLaunchDate ? (
-          <p className="mt-2 text-xs text-muted-foreground/60">
-            {coin.dateHistory!.map((entry) => formatFuzzyDate(entry.date)).join(" → ")}{" → "}
-            {formatFuzzyDate(coin.expectedLaunchDate)} (current)
-          </p>
-        ) : null;
+        const dateTrail =
+          hasDrift && coin.expectedLaunchDate ? (
+            <p className="mt-2 text-xs text-muted-foreground/60">
+              {coin.dateHistory!.map((entry) => formatFuzzyDate(entry.date)).join(" → ")}
+              {" → "}
+              {formatFuzzyDate(coin.expectedLaunchDate)} (current)
+            </p>
+          ) : null;
 
         if (coin.announcedDate && coin.expectedLaunchDate) {
           return (
