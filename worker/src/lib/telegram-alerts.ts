@@ -315,10 +315,15 @@ function repairBrokenHtml(chunk: string): string {
   repaired = repaired.replace(/^[^<]*>/, "");
 
   // Balance simple tags: <b>, <i>, <code>, <pre>
-  const tags = ["b", "i", "code", "pre"];
-  for (const tag of tags) {
-    const openCount = (repaired.match(new RegExp(`<${tag}[> ]`, "g")) ?? []).length;
-    const closeCount = (repaired.match(new RegExp(`</${tag}>`, "g")) ?? []).length;
+  const TAG_PATTERNS: Array<{ open: RegExp; close: RegExp; tag: string }> = [
+    { open: /<b[> ]/g, close: /<\/b>/g, tag: "b" },
+    { open: /<i[> ]/g, close: /<\/i>/g, tag: "i" },
+    { open: /<code[> ]/g, close: /<\/code>/g, tag: "code" },
+    { open: /<pre[> ]/g, close: /<\/pre>/g, tag: "pre" },
+  ];
+  for (const { open, close, tag } of TAG_PATTERNS) {
+    const openCount = (repaired.match(open) ?? []).length;
+    const closeCount = (repaired.match(close) ?? []).length;
     if (openCount > closeCount) {
       repaired += `</${tag}>`.repeat(openCount - closeCount);
     } else if (closeCount > openCount) {

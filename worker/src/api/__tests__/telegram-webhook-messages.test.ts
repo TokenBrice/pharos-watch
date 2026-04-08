@@ -3,7 +3,6 @@ import {
   buildNotFoundMessage,
   buildUnsubscribeSuccessMessage,
   buildSubscriptionSummaryMessage,
-  buildGlobalAlertSummaryMessage,
   buildListMessage,
   describeSubscriptionSettings,
   describeGlobalAlertSettings,
