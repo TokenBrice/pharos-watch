@@ -218,10 +218,9 @@ const REUSD_INSTANT_REDEEM_TOPIC = "0xa58dba63852b106a5b3bbc558fa3fbcfe606497cbc
 
 const ETHEREUM = chainConfig("ethereum");
 const ARBITRUM = chainConfig("arbitrum");
-// Reviewed Arbitrum activity floor: USDai approval activity is confirmed by
-// block 393,791,324 (2025-10-27), which gives enough history for 90d windows
-// without pretending we have a deployment-level reviewed bound yet.
-const USD_AI_ARBITRUM_ACTIVITY_FLOOR_BLOCK = 393_791_324;
+// Reviewed Arbitrum deployment bound: the USDai proxy is live by block
+// 336,209,932 (2025-05-13), with first observed contract activity the next day.
+const USD_AI_ARBITRUM_DEPLOY_BLOCK = 336_209_932;
 
 const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   stablecoinId: string;
@@ -808,14 +807,14 @@ const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
   {
     chain: ARBITRUM, stablecoinId: "usdai-usd-ai",
     dustThreshold: 10_000,
-    startBlock: USD_AI_ARBITRUM_ACTIVITY_FLOOR_BLOCK,
+    startBlock: USD_AI_ARBITRUM_DEPLOY_BLOCK,
     tier: "extended",
     bridgeDetection: layerZeroOftBridgeDetection([
       "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
       "0x31cae3b7fb82d847621859fb1585353c5720660d",
     ]),
-    startBlockSource: "reviewed-arbitrum-activity-floor-2025-10-27",
-    startBlockConfidence: "medium",
+    startBlockSource: "reviewed-arbitrum-deployment-2025-05-13",
+    startBlockConfidence: "high",
     events: transferMintBurn(),
   },
 

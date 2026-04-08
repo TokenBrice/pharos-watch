@@ -84,9 +84,9 @@ describe("mint-burn-contracts configured scope", () => {
       symbol: "USDai",
       dustThreshold: 10_000,
       tier: "extended",
-      startBlock: 393_791_324,
-      startBlockSource: "reviewed-arbitrum-activity-floor-2025-10-27",
-      startBlockConfidence: "medium",
+      startBlock: 336_209_932,
+      startBlockSource: "reviewed-arbitrum-deployment-2025-05-13",
+      startBlockConfidence: "high",
       bridgeDetection: {
         protocol: "layerzero-oft",
         knownBridgeContractAddresses: [
