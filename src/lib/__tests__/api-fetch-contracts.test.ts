@@ -138,9 +138,13 @@ describe("api contract validation policy", () => {
   it("routes browser data requests through same-origin site-data on the site and ops hosts", () => {
     vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
     expect(buildRequestUrl("/api/stablecoins")).toBe("/_site-data/stablecoins");
+    expect(buildRequestUrl("/api/public-status-history")).toBe("/_site-data/public-status-history");
+    expect(buildRequestUrl("/api/telegram-pulse")).toBe("/_site-data/telegram-pulse");
 
     vi.stubGlobal("window", { location: { hostname: "ops.pharos.watch" } });
     expect(buildRequestUrl("/api/stablecoins")).toBe("/_site-data/stablecoins");
+    expect(buildRequestUrl("/api/public-status-history")).toBe("/_site-data/public-status-history");
+    expect(buildRequestUrl("/api/telegram-pulse")).toBe("/_site-data/telegram-pulse");
   });
 
   it("keeps admin and explicit-base requests off the site-data proxy", () => {
@@ -203,6 +207,36 @@ describe("api contract validation policy", () => {
     const result = await apiFetchWithMeta("/api/daily-digest", z.object({ ok: z.boolean() }), undefined, 900, "warn");
     expect(result.meta?.warning).toContain("Response is stale");
     expect(result.meta?.status).toBe("stale");
+  });
+
+  it("downgrades fresh _meta to degraded when a Warning header is present", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        _meta: { updatedAt: 200, ageSeconds: 20, status: "fresh" },
+        ok: true,
+      }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          Warning: '110 - "Response is degraded (20s old, max 600s)"',
+        },
+      })
+    );
+
+    const result = await apiFetchWithMeta(
+      "/api/chains",
+      z.object({ ok: z.boolean() }),
+      undefined,
+      600,
+      "warn",
+    );
+
+    expect(result.meta).toEqual({
+      updatedAt: 200,
+      ageSeconds: 20,
+      status: "degraded",
+      warning: '110 - "Response is degraded (20s old, max 600s)"',
+    });
   });
 
   it("uses the caller-provided maxAgeSec when deriving freshness from X-Data-Age", async () => {

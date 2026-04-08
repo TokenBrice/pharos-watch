@@ -116,6 +116,8 @@ Protected non-admin public `/api/*` requests can be API-key-gated through `PUBLI
 
 When a valid key is present, the worker uses the D1-backed `api_key_rate_limit` table with the per-key threshold stored in `api_keys.rate_limit_per_minute` (default `120/min`) and bypasses the legacy IP limiter. API keys also now carry `api_keys.traffic_class` (`external` or `site`) so request attribution can treat website-owned automation separately from third-party consumers. Exempt public routes, and protected routes while auth mode is not enforcing, still use the D1-backed `public_api_rate_limit` hashed-IP limiter. The worker requires a dedicated `PUBLIC_API_RATE_LIMIT_SALT` binding for that legacy path and returns `503` for public API traffic until the salt is configured. `FEEDBACK_IP_SALT` remains scoped to feedback submission hashing only. If the distributed legacy limiter path fails after a valid salt is present, the worker logs the failure and allows the request instead of switching to an isolate-local fallback limiter.
 
+The remaining routes on `api.pharos.watch` that do not require `X-API-Key` are `GET /api/health`, `GET /api/og/*`, `POST /api/feedback`, and `POST /api/telegram-webhook`. The Telegram webhook is still authenticated separately through `X-Telegram-Bot-Api-Secret-Token`.
+
 ---
 
 ## HTTP Request Handling
@@ -140,6 +142,7 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 - Default legacy threshold: `300 requests / 60 seconds` per IP hash, enforced through the D1-backed `public_api_rate_limit` table.
 - Requests already authorized for the `ops-api.pharos.watch` admin lane bypass both public limiters.
 - `site-api.pharos.watch` accepts only `GET` requests to allowlisted public-read paths and requires `X-Pharos-Site-Proxy-Secret`.
+- Website-only browser reads such as `public-status-history` and `telegram-pulse` should use same-origin `/_site-data/*` or the `site-api` lane, not anonymous calls to the external API host.
 
 ### Request Attribution
 

@@ -700,8 +700,6 @@ const SITE_DATA_ALLOWED_ENDPOINT_KEYS = new Set<EndpointKey>([
 
 const PUBLIC_API_EXEMPT_ENDPOINT_KEYS = new Set<EndpointKey>([
   "health",
-  "public-status-history",
-  "telegram-pulse",
   "feedback",
   "telegram-webhook",
 ]);

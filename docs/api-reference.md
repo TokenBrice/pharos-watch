@@ -23,12 +23,14 @@ Unless a route is explicitly called out below as exempt, requests to `https://ap
 - header: `X-API-Key: ph_live_<16 hex prefix>_<32 char base64url secret>`
 - example shape: `ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF`
 
-Anonymous public access is limited to these exempt routes:
+Routes on `https://api.pharos.watch` that do not require `X-API-Key` are limited to:
 
 - `GET /api/health`
 - `GET /api/og/*`
 - `POST /api/feedback`
 - `POST /api/telegram-webhook`
+
+`POST /api/telegram-webhook` is externally reachable but not anonymous: it requires `X-Telegram-Bot-Api-Secret-Token` instead of `X-API-Key`.
 
 The worker stores only the key prefix plus a peppered HMAC of the secret portion. Admin callers create, rotate, and deactivate keys through the operator lane (`ops.pharos.watch` / `ops-api.pharos.watch`); plaintext tokens are returned only once at creation/rotation time.
 
@@ -1289,8 +1291,6 @@ Blacklist ratio fields are still emitted here for the public surface, but thresh
 
 Public transition history for the read-only `/status/` page. Returns the current public status plus recent state transitions within a requested time window. Not edge-cached beyond the standard 60-second response cache.
 
-**Authentication:** exempt
-
 **Query parameters**
 
 | Param    | Type                  | Default | Description |
@@ -1326,6 +1326,34 @@ Public transition history for the read-only `/status/` page. Returns the current
 | `transitions`   | `PublicStatusTransition[]`          | Recent transitions inside the requested window, newest first |
 
 This endpoint powers two separate public `/status/` views: the hero `Status runway` always uses `window=30d`, while the transition table owns its own user-selected `24h` / `7d` / `30d` filter.
+
+Browser consumers on `pharos.watch` and `ops.pharos.watch` should use same-origin `/_site-data/public-status-history`, which proxies onto the internal website lane instead of calling the external API host directly.
+
+---
+
+### `GET /api/telegram-pulse`
+
+Lightweight Telegram adoption metrics for the public `/telegram/` landing page. Returns only aggregate watcher/subscription counts plus the most subscribed coin symbols.
+
+**Cache:** `public, max-age=300, s-maxage=300`
+
+**Response**
+
+```json
+{
+  "activeWatchers": 1842,
+  "coinSubscriptions": 5621,
+  "topCoins": ["USDT", "USDC", "USDe"]
+}
+```
+
+| Field               | Type       | Description |
+| ------------------- | ---------- | ----------- |
+| `activeWatchers`    | `number`   | Subscribers with at least one active alert type or per-coin alert |
+| `coinSubscriptions` | `number`   | Total active per-coin subscription rows |
+| `topCoins`          | `string[]` | Up to five most subscribed coin tickers, ordered by subscription count |
+
+Browser consumers on `pharos.watch` and `ops.pharos.watch` should use same-origin `/_site-data/telegram-pulse`, which proxies onto the internal website lane instead of calling the external API host directly.
 
 ---
 

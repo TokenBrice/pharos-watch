@@ -18,6 +18,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   gnosis:    { name: "Gnosis",    explorerUrl: "https://gnosisscan.io",             evmChainId: 100,   type: "evm",  logoPath: "/chains/gnosis.png"    },
   fantom:    { name: "Fantom",    explorerUrl: "https://ftmscan.com",               evmChainId: 250,   type: "evm",  logoPath: "/chains/fantom.png"    },
   celo:      { name: "Celo",      explorerUrl: "https://celoscan.io",               evmChainId: 42220, type: "evm",  logoPath: "/chains/celo.png"      },
+  citrea:    { name: "Citrea Mainnet", explorerUrl: "https://explorer.mainnet.citrea.xyz", evmChainId: 4114, type: "evm", logoPath: "/chains/citrea.svg" },
   zksync:    { name: "zkSync",    explorerUrl: "https://explorer.zksync.io",       evmChainId: 324,   type: "evm",  logoPath: "/chains/zksync.png"    },
   sonic:     { name: "Sonic",     explorerUrl: "https://sonicscan.org",            evmChainId: 146,   type: "evm",  logoPath: "/chains/sonic.png"     },
   sei:       { name: "Sei",       explorerUrl: "https://seitrace.com",             evmChainId: 1329,  type: "evm",  logoPath: "/chains/sei.png"       },
@@ -106,7 +107,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
 };
 
 /** Alias chains that share a display name. Map alias -> canonical key. */
-export const CHAIN_ALIASES: Record<string, string> = {
+const CHAIN_ALIASES: Record<string, string> = {
   "hyperliquid-l1": "hyperliquid",
   // DL display names that differ from our CHAIN_META names
   "OP Mainnet": "optimism",

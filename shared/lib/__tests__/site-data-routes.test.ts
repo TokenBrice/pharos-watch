@@ -18,6 +18,8 @@ describe("site-data route mapping", () => {
     expect(resolveSiteDataUpstreamPath("/_site-data/stablecoin/usdt-tether")).toBe("/api/stablecoin/usdt-tether");
     expect(resolveSiteDataUpstreamPath("/_site-data/stablecoin-summary/usdt-tether")).toBe("/api/stablecoin-summary/usdt-tether");
     expect(resolveSiteDataUpstreamPath("/_site-data/stablecoin-reserves/iusd-infinifi")).toBe("/api/stablecoin-reserves/iusd-infinifi");
+    expect(resolveSiteDataUpstreamPath("/_site-data/public-status-history")).toBe("/api/public-status-history");
+    expect(resolveSiteDataUpstreamPath("/_site-data/telegram-pulse")).toBe("/api/telegram-pulse");
   });
 
   it("rejects non-allowlisted or malformed site-data paths", () => {

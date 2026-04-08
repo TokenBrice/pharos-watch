@@ -168,14 +168,22 @@ describe("api endpoint registry", () => {
   it("keeps public-auth and site-data policies aligned", () => {
     expect(getPublicApiAccess("/api/stablecoins")).toBe("protected");
     expect(getPublicApiAccess("/api/health")).toBe("exempt");
+    expect(getPublicApiAccess("/api/public-status-history")).toBe("protected");
+    expect(getPublicApiAccess("/api/telegram-pulse")).toBe("protected");
     expect(getPublicApiAccess("/api/og/stablecoin/usdt-tether")).toBe("exempt");
     expect(isProtectedPublicApiPath("/api/stablecoins")).toBe(true);
     expect(isProtectedPublicApiPath("/api/health")).toBe(false);
+    expect(isProtectedPublicApiPath("/api/public-status-history")).toBe(true);
+    expect(isProtectedPublicApiPath("/api/telegram-pulse")).toBe(true);
     expect(getSiteDataAccess("/api/stablecoins")).toBe("allowed");
+    expect(getSiteDataAccess("/api/public-status-history")).toBe("allowed");
+    expect(getSiteDataAccess("/api/telegram-pulse")).toBe("allowed");
     expect(getSiteDataAccess("/api/stablecoin-summary/usdt-tether")).toBe("allowed");
     expect(isSiteDataAllowedPath("/api/stablecoins")).toBe(true);
     expect(isSiteDataAllowedPath("/api/stablecoin/usdt-tether")).toBe(true);
     expect(isSiteDataAllowedPath("/api/stablecoin-summary/usdt-tether")).toBe(true);
+    expect(isSiteDataAllowedPath("/api/public-status-history")).toBe(true);
+    expect(isSiteDataAllowedPath("/api/telegram-pulse")).toBe(true);
     expect(isSiteDataAllowedPath("/api/status")).toBe(false);
   });
 

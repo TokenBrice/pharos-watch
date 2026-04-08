@@ -456,6 +456,94 @@ describe("worker.fetch", () => {
     expect(cacheMatch).not.toHaveBeenCalled();
   });
 
+  it("enforces API keys on public-status-history and telegram-pulse when auth mode is enforce", async () => {
+    const env = makeEnv({
+      PUBLIC_API_AUTH_MODE: "enforce",
+      API_KEY_HASH_PEPPER: "pepper",
+      DB: mockD1([
+        {
+          match: "public_api_rate_limit",
+          rows: [],
+          first: { count: 1 },
+        },
+        {
+          match: "DELETE FROM public_api_rate_limit",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+        {
+          match: "INSERT INTO api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 1 },
+        },
+        {
+          match: "DELETE FROM api_request_consumer_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+        {
+          match: "DELETE FROM api_key_request_stats",
+          rows: [],
+          runMeta: { changes: 0 },
+        },
+      ], { requireMatch: true }),
+    });
+    const { ctx, waits } = makeCtx();
+
+    const historyRes = await worker.fetch(
+      new Request("https://api.pharos.watch/api/public-status-history", { method: "GET" }),
+      env as never,
+      ctx,
+    );
+    const pulseRes = await worker.fetch(
+      new Request("https://api.pharos.watch/api/telegram-pulse", { method: "GET" }),
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(historyRes.status).toBe(401);
+    expect(pulseRes.status).toBe(401);
+    expect(env.DB.getHistory().filter((entry) => entry.sql.includes("public_api_rate_limit")).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("allows public-status-history and telegram-pulse on the site-api lane with the shared secret", async () => {
+    cacheMatch
+      .mockResolvedValueOnce(new Response(JSON.stringify({ currentStatus: "healthy", transitions: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ activeWatchers: 10, coinSubscriptions: 20, topCoins: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }));
+
+    const env = makeEnv();
+    const { ctx } = makeCtx();
+
+    const historyRes = await worker.fetch(
+      new Request("https://site-api.pharos.watch/api/public-status-history", {
+        method: "GET",
+        headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
+      }),
+      env as never,
+      ctx,
+    );
+    const pulseRes = await worker.fetch(
+      new Request("https://site-api.pharos.watch/api/telegram-pulse", {
+        method: "GET",
+        headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
+      }),
+      env as never,
+      ctx,
+    );
+
+    expect(historyRes.status).toBe(200);
+    expect(await historyRes.json()).toEqual({ currentStatus: "healthy", transitions: [] });
+    expect(pulseRes.status).toBe(200);
+    expect(await pulseRes.json()).toEqual({ activeWatchers: 10, coinSubscriptions: 20, topCoins: [] });
+  });
+
   it("falls back to the public limiter for invalid protected-route keys in report-only mode", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     cacheMatch.mockResolvedValueOnce(new Response(JSON.stringify({ cached: true }), {

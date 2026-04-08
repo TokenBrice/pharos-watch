@@ -294,7 +294,7 @@ export default async function AboutApiPage() {
                 <span className="font-semibold text-foreground">Public auth:</span> <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground">X-API-Key</code>
               </li>
               <li>
-                <span className="font-semibold text-foreground">Exempt public routes:</span> health, OG images, feedback, Telegram webhook
+                <span className="font-semibold text-foreground">No-key public routes:</span> health, OG images, feedback, Telegram webhook (Telegram secret)
               </li>
               <li>
                 <span className="font-semibold text-foreground">Admin auth:</span> Cloudflare Access on the ops hosts

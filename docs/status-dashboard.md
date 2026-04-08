@@ -83,7 +83,7 @@ The active frontend operator mode is now:
   - `/api/health` and `/api/status` are parsed semantically, so `200` responses with `status/overallStatus = degraded|stale` count as unhealthy in the browser probe summaries
   - Also exports `usePublicEndpointProbes()` for the public `/status/` page, which probes only the public endpoint group
 - `src/hooks/use-public-status-history.ts`
-  - Calls `GET /api/public-status-history` over the public read lane
+  - Calls `GET /api/public-status-history` through same-origin `/_site-data/public-status-history` on website hosts
   - Uses the endpoint's explicit `window=24h|7d|30d` filter instead of approximating windows with row-count-only limits
   - The public page binds one fixed `30d` query for the runway and a separate user-selected query for the transition log, so the hero summary and history table no longer fight over the same state
 - `src/hooks/use-status-history.ts`
