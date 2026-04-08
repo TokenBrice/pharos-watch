@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { CHAIN_META, getActiveChainIds, resolveChainId } from "@shared/lib/chains";
+import {
+  CHAIN_META,
+  getActiveChainIds,
+  resolveChainId,
+} from "@shared/lib/chains";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 
 describe("CHAIN_META", () => {
   it("exposes only lowercase chain keys", () => {
@@ -54,5 +59,24 @@ describe("resolveChainId", () => {
   it("deduplicates the Hyperliquid alias to the canonical key", () => {
     expect(resolveChainId("hyperliquid")).toBe("hyperliquid");
     expect(resolveChainId("hyperliquid-l1")).toBe("hyperliquid");
+  });
+
+  it("resolves the newly tracked citrea chain", () => {
+    expect(resolveChainId("citrea")).toBe("citrea");
+    expect(CHAIN_META.citrea).toBeDefined();
+  });
+});
+
+describe("tracked contract chain coverage", () => {
+  it("keeps every tracked contract chain resolvable through the canonical chain registry", () => {
+    const issues = Array.from(TRACKED_META_BY_ID.values()).flatMap((stablecoin) => (
+      stablecoin.contracts?.flatMap((contract, contractIndex) => (
+        resolveChainId(contract.chain)
+          ? []
+          : [`${stablecoin.id}[${contractIndex}]=${contract.chain}`]
+      )) ?? []
+    ));
+
+    expect(issues).toEqual([]);
   });
 });

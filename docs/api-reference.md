@@ -61,15 +61,15 @@ Endpoints backed by the cron cache include these additional headers:
 | Header       | Description                                                                           |
 | ------------ | ------------------------------------------------------------------------------------- |
 | `X-Data-Age` | Seconds elapsed since the cron last wrote this data to D1                             |
-| `Warning`    | RFC 7234 stale-data warning, present when `X-Data-Age` exceeds the endpoint's max age |
+| `Warning`    | Freshness warning (`110`) when cached data is older than the endpoint max age, plus endpoint-specific advisory warnings (`199`) on a few compute-on-read routes |
 
-When a cache-backed response is stale (`X-Data-Age > max age`), the worker also downgrades `Cache-Control` to `no-store` for that response so edge/browser caches do not keep serving a stale payload after the underlying cron data recovers.
+When a cache-backed response is stale (`X-Data-Age > max age`), the worker also downgrades `Cache-Control` to `no-store` for that response so edge/browser caches do not keep serving a stale payload after the underlying cron data recovers. Some routes also use `Warning` for dependency or quality advisories even when the age is still fresh; clients should treat body `_meta.status` as authoritative when it exists.
 
 ---
 
 ## Response Body Freshness (`_meta`)
 
-Endpoints backed by `createCacheHandler()` inject a `_meta` object into plain-object (non-array) response bodies alongside the HTTP freshness headers above. This provides inline freshness metadata for consumers that prefer not to parse response headers.
+Endpoints that emit `_meta` into plain-object (non-array) response bodies do so through `createCacheHandler()` or route-specific manual injection, alongside the HTTP freshness headers above. This provides inline freshness metadata for consumers that prefer not to parse response headers.
 
 **Shape:**
 
@@ -94,6 +94,7 @@ Endpoints backed by `createCacheHandler()` inject a `_meta` object into plain-ob
 | Endpoint                     | Max Age (sec) | Source                                       |
 | ---------------------------- | ------------- | -------------------------------------------- |
 | `GET /api/stablecoins`       | 600           | `createCacheHandler`                         |
+| `GET /api/chains`            | 600           | `worker/src/api/chains.ts`                  |
 | `GET /api/bluechip-ratings`  | 43200         | `createCacheHandler`                         |
 | `GET /api/usds-status`       | 86400         | `createCacheHandler`                         |
 | `GET /api/yield-rankings`    | 3600          | Manual injection after live safety hydration |
@@ -377,27 +378,39 @@ Returns historical non-USD stablecoin market share data from `supply_history`, s
 
 ### `GET /api/chains`
 
-Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-the-fly from the stablecoins cache and report-card cache (two D1 reads) — no dedicated chain table is required for the live leaderboard.
+Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-the-fly from the stablecoins cache and report-card cache (two D1 reads) — no dedicated chain table is required for the live leaderboard. The response body also carries `_meta`, so the frontend can distinguish fresh, degraded, and missing-dependency states without inferring freshness from fetch timing alone.
 
 **Cache:** realtime — `public, s-maxage=60, max-age=10`
 
-**Freshness threshold:** 600 seconds. Returns `503` when the stablecoins cache is unavailable.
+**Freshness threshold:** 600 seconds. Returns `503` when the stablecoins cache is unavailable or structurally corrupt. When dependent snapshots lag, the endpoint stays readable but the body `_meta.status` degrades and the frontend surfaces stale-data warnings.
 
 **Status codes:**
 
 | Status | Meaning                                                         |
 | ------ | --------------------------------------------------------------- |
-| 200    | Chain aggregates computed successfully                          |
+| 200    | Chain aggregates computed successfully; freshness may still be degraded in `_meta` |
 | 503    | Stablecoins cache unavailable (missing or structurally corrupt) |
 
 **Response (`ChainsResponse`):**
 
 ```json
 {
+  "_meta": {
+    "updatedAt": 1710500000,
+    "ageSeconds": 42,
+    "status": "fresh",
+    "dependencies": {
+      "reportCards": {
+        "updatedAt": 1710499800,
+        "ageSeconds": 242,
+        "status": "fresh"
+      }
+    }
+  },
   "chains": [ChainSummary, ...],
   "globalTotalUsd": 230000000000,
   "updatedAt": 1710500000,
-  "healthMethodologyVersion": "1.1"
+  "healthMethodologyVersion": "1.2"
 }
 ```
 
@@ -406,7 +419,9 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
 | `chains`                   | `ChainSummary[]` | Chains sorted by `totalUsd` descending                     |
 | `globalTotalUsd`           | `number`         | Sum of all chain supply in USD                             |
 | `updatedAt`                | `number`         | Unix epoch seconds of the underlying stablecoins snapshot  |
-| `healthMethodologyVersion` | `string`         | Chain Health Score methodology version (currently `"1.1"`) |
+| `healthMethodologyVersion` | `string`         | Chain Health Score methodology version (currently `"1.2"`) |
+
+`_meta.dependencies.reportCards` is present when the endpoint can determine report-card freshness. When that dependency is stale or unavailable, `healthScore` degrades to `null` and the route UI surfaces the dependency reason instead of pretending the chain is fully fresh.
 
 **`ChainSummary` fields:**
 

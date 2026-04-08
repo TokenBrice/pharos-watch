@@ -25,6 +25,9 @@ export interface LoadReportCardCacheOptions {
   maxAgeMs?: number;
 }
 
+/** Shared max-age budget for report-card-dependent read paths. */
+export const REPORT_CARD_CACHE_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+
 function isValidReportCardCachePayload(value: unknown): value is ReportCardCachePayload {
   if (!value || typeof value !== "object") return false;
   const parsed = value as { scores?: unknown; updatedAt?: unknown };
@@ -58,9 +61,9 @@ export async function loadReportCardCache(
   if (options.maxAgeMs != null) {
     const ageMs = Date.now() - decoded.payload.updatedAt * 1000;
     if (ageMs > options.maxAgeMs) {
-      return { kind: "error", reason: "stale-cache", updatedAt: decoded.updatedAt };
+      return { kind: "error", reason: "stale-cache", updatedAt: decoded.payload.updatedAt };
     }
   }
 
-  return { kind: "ok", payload: decoded.payload, updatedAt: decoded.updatedAt ?? 0 };
+  return { kind: "ok", payload: decoded.payload, updatedAt: decoded.payload.updatedAt };
 }

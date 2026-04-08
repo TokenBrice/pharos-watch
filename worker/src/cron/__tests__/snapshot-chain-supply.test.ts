@@ -29,17 +29,37 @@ describe("snapshotChainSupply", () => {
     expect(result.status).toBe("degraded");
   });
 
-  it("inserts rows for chains with supply", async () => {
+  it("normalizes chain display names through the canonical resolver before snapshotting", async () => {
     const payload = {
       peggedAssets: [
         {
-          id: "usdt-tether", symbol: "USDT", name: "Tether", price: 1.0, pegType: "peggedUSD",
+          id: "usdt-tether",
+          symbol: "USDT",
+          name: "Tether",
+          price: 1.0,
+          pegType: "peggedUSD",
           circulating: { peggedUSD: 100 },
           chainCirculating: {
-            ethereum: { current: 60, circulatingPrevDay: 60, circulatingPrevWeek: 60, circulatingPrevMonth: 60 },
-            bsc: { current: 40, circulatingPrevDay: 40, circulatingPrevWeek: 40, circulatingPrevMonth: 40 },
+            Ethereum: {
+              current: 60,
+              circulatingPrevDay: 60,
+              circulatingPrevWeek: 60,
+              circulatingPrevMonth: 60,
+            },
+            BSC: {
+              current: 40,
+              circulatingPrevDay: 40,
+              circulatingPrevWeek: 40,
+              circulatingPrevMonth: 40,
+            },
+            "Citrea Mainnet": {
+              current: 10,
+              circulatingPrevDay: 10,
+              circulatingPrevWeek: 10,
+              circulatingPrevMonth: 10,
+            },
           },
-          chains: ["ethereum", "bsc"],
+          chains: ["ethereum", "bsc", "citrea"],
         },
       ],
     };
@@ -51,7 +71,13 @@ describe("snapshotChainSupply", () => {
       first: { key: "stablecoins", value: JSON.stringify(payload), updated_at: freshUpdatedAt },
     }]);
     const result = await snapshotChainSupply(db);
-    expect(result.itemCount).toBe(2); // ethereum + bsc
+    expect(result.itemCount).toBe(3);
+
+    const inserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO chain_supply_history"));
+    expect(inserts).toHaveLength(3);
+    expect(inserts.map((entry) => entry.binds[0])).toEqual(["ethereum", "bsc", "citrea"]);
+    expect(inserts.map((entry) => entry.binds[2])).toEqual([60, 40, 10]);
+    expect(inserts.map((entry) => entry.binds[3])).toEqual([1, 1, 1]);
   });
 
   it("returns degraded when the stablecoins cache produces no valid chain rows", async () => {

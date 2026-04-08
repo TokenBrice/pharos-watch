@@ -21,6 +21,7 @@ import {
   DEWS_SIGNAL_WEIGHTS,
   DEWS_THREAT_BANDS,
 } from "../../../shared/lib/dews-config";
+import { HEALTH_METHODOLOGY_VERSION } from "../../../shared/lib/chain-health";
 import {
   DURABILITY_COMPONENT_WEIGHTS,
   LIQUIDITY_SCORE_WEIGHTS,
@@ -272,6 +273,52 @@ function checkWorkerLimitsDoc(failures: Failure[]): void {
   expectNumber(failures, file, "circuit probe interval minutes", circuitNumbers[1] ?? null, CIRCUIT_PROBE_INTERVAL_SEC / 60);
 }
 
+function checkChainsApiDoc(failures: Failure[]): void {
+  const file = "docs/api-reference.md";
+  const doc = read(file);
+
+  expectEqual(
+    failures,
+    file,
+    "chain health methodology version",
+    findLineValue(doc, /"healthMethodologyVersion":\s*"([^"]+)"/),
+    HEALTH_METHODOLOGY_VERSION,
+  );
+
+  const chainsMetaRow = requireTableRow(doc, file, "`GET /api/chains`");
+  expectNumber(failures, file, "/api/chains freshness max age", getFirstNumberFromText(chainsMetaRow[0]), 600);
+  expectEqual(
+    failures,
+    file,
+    "/api/chains freshness metadata source",
+    chainsMetaRow[1],
+    "`worker/src/api/chains.ts`",
+  );
+}
+
+function checkChainsPageDoc(failures: Failure[]): void {
+  const file = "docs/chains-page.md";
+  const doc = read(file);
+
+  if (!doc.includes("`src/app/chains/[chain]/client.tsx` uses `useChainProfileData(chainId)`")) {
+    failures.push({
+      file,
+      label: "profile route coordination hook",
+      expected: "useChainProfileData(chainId)",
+      found: "missing",
+    });
+  }
+
+  if (doc.includes("uses `useChains()` plus `useChainStablecoins(chainId)`")) {
+    failures.push({
+      file,
+      label: "legacy profile hook contract",
+      expected: "removed",
+      found: "uses `useChains()` plus `useChainStablecoins(chainId)`",
+    });
+  }
+}
+
 export function runDocSyncChecks(): Failure[] {
   const failures: Failure[] = [];
 
@@ -281,6 +328,8 @@ export function runDocSyncChecks(): Failure[] {
   checkDewsDoc(failures);
   checkLiquidityDoc(failures);
   checkWorkerLimitsDoc(failures);
+  checkChainsApiDoc(failures);
+  checkChainsPageDoc(failures);
 
   return failures;
 }

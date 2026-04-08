@@ -47,6 +47,25 @@ describe("chain-circulating", () => {
       circulatingPrevWeek: 100,
       circulatingPrevMonth: 90,
     });
+
+    expect(
+      findCanonicalChainData(
+        {
+          "Citrea Mainnet": {
+            current: 42,
+            circulatingPrevDay: 41,
+            circulatingPrevWeek: 40,
+            circulatingPrevMonth: 39,
+          },
+        },
+        "citrea",
+      ),
+    ).toEqual({
+      current: 42,
+      circulatingPrevDay: 41,
+      circulatingPrevWeek: 40,
+      circulatingPrevMonth: 39,
+    });
   });
 
   it("drops unknown chain keys", () => {

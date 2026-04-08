@@ -4,7 +4,7 @@ function main(): void {
   const failures = runDocSyncChecks();
 
   if (failures.length > 0) {
-    console.error("Methodology drift detected:\n");
+    console.error("Doc sync drift detected:\n");
     for (const failure of failures) {
       console.error(
         `  ${failure.file} ${failure.label}: expected="${failure.expected}" actual="${failure.found ?? "null"}"`,
@@ -14,7 +14,7 @@ function main(): void {
     console.error(`${failures.length} doc sync check(s) failed.`);
     console.error("");
     console.error("Fix: update the doc files above to match the source-of-truth values");
-    console.error("in shared/lib/ (version labels, weights, thresholds, etc.).");
+    console.error("in shared/lib/, worker/src/, and the curated docs corpus.");
     process.exit(1);
   }
 

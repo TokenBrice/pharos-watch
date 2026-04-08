@@ -15,6 +15,7 @@ Contract for the public chain analytics surfaces:
 - **Profile shell:** `src/app/chains/[chain]/page.tsx`
 - **Profile client:** `src/app/chains/[chain]/client.tsx`
 - **Data hook:** `src/hooks/use-chains.ts`
+- **Profile coordination hook:** `src/hooks/use-chain-profile-data.ts`
 - **Primary API:** `GET /api/chains`
 - **Methodology version source:** `shared/lib/chain-health-version.ts`
 - **Scoring implementation:** `shared/lib/chain-health.ts`, `shared/lib/chain-aggregator.ts`, `shared/lib/chains.ts`
@@ -65,15 +66,17 @@ Default sort is `totalUsd desc`.
 - statically generates params from `getActiveChainIds()` / the current `CHAIN_META` key set
 - sets canonical metadata at `/chains/[chain]/`
 
-`src/app/chains/[chain]/client.tsx` uses `useChains()` plus `useChainStablecoins(chainId)` and renders, in order:
+`src/app/chains/[chain]/client.tsx` uses `useChainProfileData(chainId)` and renders, in order:
 
 1. `QueryErrorNotice` (inline banner when error + stale data)
 2. hero card with supply, global share, 24h/7d/30d change (all with dark-mode colors via `trendColor()`), health badge, and `dark:invert` logo support
 3. Chain Health breakdown card — weight labels derived dynamically from exported constants in `chain-health.ts`
-4. stablecoin composition treemap — adaptive 2/3/4-column layout with 1-3 rows, optional `Others` aggregation when the chain has more coins than display cells, and dominant span only when a coin exceeds 35% share in a 3+ column layout
-5. backing-type breakdown — unclassified coins shown as "Other" (zinc-colored) bucket
-6. full stablecoin table with a screen-reader-only `<caption>`
+4. stablecoin composition treemap — rendered only when the chain summary snapshot and stablecoins snapshot match exactly; adaptive 2/3/4-column layout with 1-3 rows, optional `Others` aggregation when the chain has more coins than display cells, and dominant span only when a coin exceeds 35% share in a 3+ column layout
+5. backing-type breakdown — rendered only when the route is on a coordinated snapshot; unclassified coins shown as "Other" (zinc-colored) bucket
+6. full stablecoin table with a screen-reader-only `<caption>` — rendered only when the route is on a coordinated snapshot
 7. skeleton loading states (hero + health + composition blocks)
+
+`useChainProfileData()` coordinates `GET /api/chains` and `GET /api/stablecoins` for the route. It renders the summary chain card as soon as the chain snapshot exists, but it keeps the composition/backing/table sections hidden until both snapshots share the same `updatedAt` value and the stablecoins snapshot has authoritative freshness metadata. The route surfaces explicit notices for the three non-happy states: missing detailed stablecoin data, mismatched snapshots, and missing freshness metadata.
 
 `useChainStablecoins()` derives profile rows from `/api/stablecoins`, not `/api/chains`, by summing every `chainCirculating` entry that resolves to the selected canonical chain ID.
 
@@ -113,7 +116,9 @@ Bands:
 
 ## API And Freshness
 
-`useChains()` reads `GET /api/chains` with the standard 15-minute cron-aligned query preset.
+`useChains()` reads `GET /api/chains` with the standard 15-minute cron-aligned query preset and the endpoint's 600-second freshness budget.
+
+`GET /api/chains` returns body `_meta` freshness metadata plus HTTP freshness headers. When its supporting caches lag, the body `_meta.status` degrades instead of silently appearing fresh. `_meta.dependencies.reportCards` also tells the route whether a missing Chain Health score is due to stale/unavailable report-card inputs versus genuine score-coverage gaps.
 
 `worker/src/api/chains.ts`:
 
@@ -122,7 +127,8 @@ Bands:
 - hydrates safety scores from the report-card cache when available
 - computes the response via `aggregateChains(...)`
 - overwrites `updatedAt` with the stablecoins-cache timestamp
-- applies realtime cache headers with `X-Data-Age`
+- applies freshness headers with `X-Data-Age`, exposes report-card dependency freshness in `_meta.dependencies.reportCards`, and downgrades `Cache-Control` to `no-store` when the chain snapshot or health dependency is degraded
+- preserves the detailed-chain data gate in the route client by exposing freshness metadata for `useChainProfileData()`
 
 If the stablecoins cache is unavailable or structurally invalid, the endpoint returns `503`.
 

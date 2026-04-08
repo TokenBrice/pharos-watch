@@ -26,7 +26,7 @@ Cron trigger metadata follows the same single-source pattern. `shared/lib/cron-j
 | `GET /api/bluechip-ratings`                  | Bluechip safety ratings (keyed by Pharos ID)                                                                                                                                                                                   |
 | `GET /api/dex-liquidity`                     | DEX liquidity scores, pool data, protocol/chain breakdowns, HHI, trends (keyed by Pharos ID)                                                                                                                                   |
 | `GET /api/dex-liquidity-history`             | Per-coin historical liquidity data (`?stablecoin=ID&days=90`)                                                                                                                                                                  |
-| `GET /api/chains`                            | Chain-level stablecoin aggregates with Chain Health Scores, computed on-the-fly from stablecoins + report-card caches                                                                                                          |
+| `GET /api/chains`                            | Chain-level stablecoin aggregates with Chain Health Scores, computed on-the-fly from stablecoins + report-card caches and published with freshness metadata (`_meta` / `X-Data-Age`)                                          |
 | `GET /api/supply-history`                    | Per-coin supply history (`?stablecoin=ID&days=N`)                                                                                                                                                                              |
 | `GET /api/daily-digest`                      | AI-generated daily market summary (latest)                                                                                                                                                                                     |
 | `GET /api/digest-archive`                    | All daily digests, newest-first                                                                                                                                                                                                |
@@ -342,6 +342,7 @@ src/                              # Next.js frontend (static export)
 │   └── theme-toggle.tsx          # Dark/light mode toggle
 ├── hooks/
 │   ├── use-stablecoins.ts        # GET /api/stablecoins + useSupplyHistory (`/api/supply-history`)
+│   ├── use-chain-profile-data.ts # Coordinates /api/chains + /api/stablecoins for /chains/[chain] freshness gating
 │   ├── use-chains.ts             # GET /api/chains → useChains() + useChainStablecoins()
 │   ├── api-hooks.ts              # Consolidated low-friction GET hooks wired to shared API path builders, including stress-signal queries
 │   ├── use-mint-burn-flows.ts    # GET /api/mint-burn-flows + GET /api/mint-burn-events
@@ -536,7 +537,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   │   ├── commodity.ts      # Commodity token upstream assembly (DL + CG fallback)
     │   │   ├── coingecko-only.ts # CoinGecko-only token branch assembly
     │   │   └── defillama.ts      # DefiLlama detail normalization (non-USD USD-conversion)
-    │   ├── chains.ts             # GET /api/chains
+    │   ├── chains.ts             # GET /api/chains (freshness metadata + chain aggregate response)
     │   ├── supply-history.ts     # GET /api/supply-history
     │   ├── blacklist.ts          # GET /api/blacklist
     │   ├── blacklist-summary.ts  # GET /api/blacklist-summary

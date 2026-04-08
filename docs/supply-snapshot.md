@@ -99,15 +99,17 @@ CREATE TABLE IF NOT EXISTS chain_supply_history (
 
 | Column | Type | Description |
 |--------|------|-------------|
-| `chain_id` | TEXT | Canonical chain identifier (DefiLlama chain name, e.g. `"Ethereum"`) |
+| `chain_id` | TEXT | Canonical chain identifier after shared resolver normalization (e.g. `ethereum`, `bsc`, `citrea`) |
 | `snapshot_date` | INTEGER | Unix seconds floored to UTC midnight |
 | `total_usd` | REAL | Total stablecoin supply on this chain in USD |
 | `stablecoin_count` | INTEGER | Number of distinct stablecoins contributing supply on this chain |
 
 - **Populated by:** `snapshot-chain-supply` cron stage (`worker/src/cron/snapshot-chain-supply.ts`) running in the `*/15 * * * *` quarter-hourly slot, chained after `snapshot-supply`.
+- **Normalization:** the cron canonicalizes raw DefiLlama chain labels through the shared chain resolver before writing, so display-name aliases and tracked metadata names collapse into the same `chain_id`.
 - **Write pattern:** `INSERT OR REPLACE` — idempotent, re-runs on the same day refresh the row.
 - **Volume:** ~50 rows/day (one row per active chain per UTC day).
 - **Primary use:** future trend charts on chain profile pages (`/chains/[chain]/`). The live `/api/chains` leaderboard does not read this table — it computes aggregates on-the-fly from the stablecoins cache.
+- **Recoverability status:** historical rows written before the 2026-04-08 resolver fix are not approved for public charting. The retained D1 data does not include archived historical `stablecoins` cache payloads, so pre-fix chain splits cannot be reconstructed exactly. Any future public chain-history surface must start from a post-fix baseline date unless an audited export/purge plan is executed first.
 - **Publication guard:** if a fresh stablecoins cache produces zero valid per-chain rows, the cron returns `status: "degraded"` with `reason: "no-valid-chain-rows"` and skips the write instead of overwriting the historical series with an empty snapshot.
 - **Current migration note:** this table is part of `worker/migrations/0000_baseline.sql` in the post-squash migration tree.
 

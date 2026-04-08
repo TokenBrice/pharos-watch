@@ -9,6 +9,7 @@ import { useApiQueryWithMeta } from "./use-api-query";
 import { useStablecoins } from "./use-stablecoins";
 import { CRON_15MIN } from "@/lib/cron-intervals";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import type { ApiMeta } from "@/lib/api";
 
 export function useChains() {
   return useApiQueryWithMeta<ChainsResponse>(
@@ -36,9 +37,27 @@ export interface ChainStablecoin {
   backing: string | undefined;
 }
 
+export interface ChainStablecoinsResult {
+  coins: ChainStablecoin[];
+  totalUsd: number;
+  isLoading: boolean;
+  isError: boolean;
+  error: Error | null;
+  refetch: () => Promise<unknown>;
+  dataUpdatedAt: number;
+  meta: ApiMeta | null;
+}
 
 export function useChainStablecoins(chainId: string) {
-  const { data, isLoading, isError } = useStablecoins();
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    dataUpdatedAt,
+    meta,
+  } = useStablecoins();
 
   const { coins, totalUsd } = useMemo(() => {
     if (!data?.peggedAssets) {
@@ -94,5 +113,14 @@ export function useChainStablecoins(chainId: string) {
     return { coins, totalUsd };
   }, [data, chainId]);
 
-  return { coins, totalUsd, isLoading, isError };
+  return {
+    coins,
+    totalUsd,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    dataUpdatedAt,
+    meta,
+  } satisfies ChainStablecoinsResult;
 }

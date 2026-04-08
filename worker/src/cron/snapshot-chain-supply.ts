@@ -1,8 +1,9 @@
 import { batchExecute } from "../lib/db";
-import { CHAIN_META, CHAIN_ALIASES } from "@shared/lib/chains";
+import { CHAIN_META } from "@shared/lib/chains";
 import type { CronResult } from "../lib/cron-logger";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { getCache, setCache } from "../lib/db-cache";
+import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
 
 export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   if (signal?.aborted) {
@@ -31,21 +32,18 @@ export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal):
   const chainTotals = new Map<string, { totalUsd: number; coinCount: number }>();
 
   for (const asset of cache.payload.peggedAssets) {
-    const cc = asset.chainCirculating;
-    if (!cc || typeof cc !== "object") continue;
+    const canonicalChainCirculating = canonicalizeChainCirculating(asset.chainCirculating);
 
-    for (const [rawId, data] of Object.entries(cc)) {
-      if (!data || typeof data !== "object") continue;
-      const current = (data as { current?: number }).current ?? 0;
+    for (const [chainId, data] of canonicalChainCirculating) {
+      const current = data.current ?? 0;
       if (current <= 0) continue;
 
-      const canonicalId = CHAIN_ALIASES[rawId] ?? rawId;
-      if (!CHAIN_META[canonicalId]) continue;
+      if (!CHAIN_META[chainId]) continue;
 
-      const existing = chainTotals.get(canonicalId) ?? { totalUsd: 0, coinCount: 0 };
+      const existing = chainTotals.get(chainId) ?? { totalUsd: 0, coinCount: 0 };
       existing.totalUsd += current;
       existing.coinCount += 1;
-      chainTotals.set(canonicalId, existing);
+      chainTotals.set(chainId, existing);
     }
   }
 

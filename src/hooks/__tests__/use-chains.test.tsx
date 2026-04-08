@@ -33,7 +33,7 @@ describe("useChains", () => {
       "/api/chains",
       15 * 60 * 1000,
       expect.objectContaining({
-        metaMaxAgeSec: expect.any(Number),
+        metaMaxAgeSec: 600,
       }),
     );
   });

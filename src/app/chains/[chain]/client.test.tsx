@@ -8,34 +8,10 @@ import type { ChainSummary } from "@shared/types/chains";
 import type { ChainStablecoin } from "@/hooks/use-chains";
 
 const push = vi.fn();
-const refetch = vi.fn();
-const { useChainStablecoinsMock } = vi.hoisted(() => ({
-  useChainStablecoinsMock: vi.fn(),
+const refetchAll = vi.fn();
+const { useChainProfileDataMock } = vi.hoisted(() => ({
+  useChainProfileDataMock: vi.fn(),
 }));
-
-let mockChainsState: {
-  data: { chains: ChainSummary[] } | undefined;
-  isLoading: boolean;
-  isError: boolean;
-  error: Error | null;
-} = {
-  data: undefined,
-  isLoading: false,
-  isError: false,
-  error: null,
-};
-
-let mockStablecoinsState: {
-  coins: ChainStablecoin[];
-  totalUsd: number;
-  isLoading: boolean;
-  isError: boolean;
-} = {
-  coins: [],
-  totalUsd: 0,
-  isLoading: false,
-  isError: false,
-};
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
@@ -55,42 +31,41 @@ vi.mock("@/components/methodology-hint", () => ({
   MethodologyCardActions: () => null,
 }));
 
-vi.mock("@/hooks/use-chains", () => ({
-  useChains: () => ({
-    ...mockChainsState,
-    refetch,
-  }),
-  useChainStablecoins: useChainStablecoinsMock,
+vi.mock("@/hooks/use-chain-profile-data", () => ({
+  useChainProfileData: useChainProfileDataMock,
 }));
 
 function makeChain(overrides: Partial<ChainSummary> = {}): ChainSummary {
   return {
     id: "ethereum",
     name: "Ethereum",
-    type: "L1",
+    logoPath: "/chains/ethereum.png",
+    type: "evm",
     totalUsd: 1_500_000_000,
-    dominanceShare: 0.32,
-    stablecoinCount: 2,
+    change24h: 15_000_000,
     change24hPct: 0.01,
+    change7d: 30_000_000,
     change7dPct: 0.02,
+    change30d: 45_000_000,
     change30dPct: 0.03,
+    stablecoinCount: 2,
+    dominantStablecoin: {
+      id: "usdc-circle",
+      symbol: "USDC",
+      share: 0.5,
+    },
+    dominanceShare: 0.32,
     healthScore: 84,
-    healthBand: "healthy",
+    healthBand: "robust",
     healthFactors: {
       quality: 82,
-      environment: 80,
+      chainEnvironment: 80,
       concentration: 78,
       pegStability: 88,
       backingDiversity: 76,
     },
-    backingDistribution: {
-      "rwa-backed": 900_000_000,
-      "crypto-backed": 600_000_000,
-      other: 0,
-    },
-    composition: [],
     ...overrides,
-  } as unknown as ChainSummary;
+  };
 }
 
 function makeCoin(overrides: Partial<ChainStablecoin> = {}): ChainStablecoin {
@@ -113,24 +88,40 @@ function makeCoin(overrides: Partial<ChainStablecoin> = {}): ChainStablecoin {
   };
 }
 
+function makeHookState(overrides: Record<string, unknown> = {}) {
+  return {
+    chain: makeChain(),
+    coins: [makeCoin()],
+    totalUsd: 500_000_000,
+    canRenderDetailedSections: true,
+    canConfirmMissingChain: true,
+    detailedSectionNotice: null,
+    hasAnyData: true,
+    isInitialLoading: false,
+    routeError: null,
+    snapshotConsistency: "matched",
+    chainsQuery: {
+      data: { chains: [makeChain()] },
+      error: null,
+      dataUpdatedAt: 1_710_500_000_000,
+      meta: { updatedAt: 1_710_500_000, ageSeconds: 60, status: "fresh" },
+    },
+    stablecoinsQuery: {
+      error: null,
+      dataUpdatedAt: 1_710_500_000_000,
+      meta: { updatedAt: 1_710_500_000, ageSeconds: 60, status: "fresh" },
+    },
+    refetchAll,
+    ...overrides,
+  };
+}
+
 describe("ChainProfileClient", () => {
   beforeEach(() => {
     push.mockReset();
-    refetch.mockReset();
-    mockChainsState = {
-      data: undefined,
-      isLoading: false,
-      isError: false,
-      error: null,
-    };
-    mockStablecoinsState = {
-      coins: [],
-      totalUsd: 0,
-      isLoading: false,
-      isError: false,
-    };
-    useChainStablecoinsMock.mockReset();
-    useChainStablecoinsMock.mockImplementation(() => mockStablecoinsState);
+    refetchAll.mockReset();
+    useChainProfileDataMock.mockReset();
+    useChainProfileDataMock.mockReturnValue(makeHookState());
   });
 
   afterEach(() => {
@@ -138,12 +129,16 @@ describe("ChainProfileClient", () => {
   });
 
   it("renders the missing-chain fallback when the requested chain is absent", () => {
-    mockChainsState = {
-      data: { chains: [] },
-      isLoading: false,
-      isError: false,
-      error: null,
-    };
+    useChainProfileDataMock.mockReturnValue(makeHookState({
+      chain: null,
+      canConfirmMissingChain: true,
+      chainsQuery: {
+        data: { chains: [] },
+        error: null,
+        dataUpdatedAt: 1_710_500_000_000,
+        meta: { updatedAt: 1_710_500_000, ageSeconds: 60, status: "fresh" },
+      },
+    }));
 
     render(<ChainProfileClient chainId="ethereum" />);
 
@@ -151,13 +146,23 @@ describe("ChainProfileClient", () => {
     expect(screen.getByText("View all chains")).toBeTruthy();
   });
 
-  it("shows a stale-data notice while still rendering the chain when query data exists", () => {
-    mockChainsState = {
-      data: { chains: [makeChain()] },
-      isLoading: false,
-      isError: true,
-      error: new Error("cached response"),
-    };
+  it("shows a query error instead of the missing-chain fallback when chain summaries are unavailable", () => {
+    useChainProfileDataMock.mockReturnValue(makeHookState({
+      chain: null,
+      canConfirmMissingChain: false,
+      routeError: new Error("chains unavailable"),
+    }));
+
+    render(<ChainProfileClient chainId="ethereum" />);
+
+    expect(screen.getByText(/refresh delayed/i)).toBeTruthy();
+    expect(screen.queryByText("No data available for this chain")).toBeNull();
+  });
+
+  it("shows a stale-data notice while still rendering the chain when cached data exists", () => {
+    useChainProfileDataMock.mockReturnValue(makeHookState({
+      routeError: new Error("cached response"),
+    }));
 
     render(<ChainProfileClient chainId="ethereum" />);
 
@@ -165,14 +170,65 @@ describe("ChainProfileClient", () => {
     expect(screen.getByText("Ethereum")).toBeTruthy();
   });
 
+  it("hides detailed sections behind a sync notice when snapshots do not match", () => {
+    useChainProfileDataMock.mockReturnValue(makeHookState({
+      canRenderDetailedSections: false,
+      detailedSectionNotice: "Detailed stablecoin composition is syncing to the latest chain snapshot. Breakdown sections are hidden until both sources match exactly.",
+      snapshotConsistency: "mismatched",
+      stablecoinsQuery: {
+        error: null,
+        dataUpdatedAt: 1_710_499_100_000,
+        meta: { updatedAt: 1_710_499_100, ageSeconds: 960, status: "degraded" },
+      },
+    }));
+
+    render(<ChainProfileClient chainId="ethereum" />);
+
+    expect(screen.getByText(/Detailed stablecoin composition is syncing/i)).toBeTruthy();
+    expect(screen.queryByText("Stablecoin Composition")).toBeNull();
+    expect(screen.queryByText("All Stablecoins")).toBeNull();
+  });
+
+  it("explains when Chain Health is unavailable because report-card inputs are stale", () => {
+    useChainProfileDataMock.mockReturnValue(makeHookState({
+      chain: makeChain({
+        healthScore: null,
+        healthBand: null,
+        healthFactors: {
+          quality: null,
+          chainEnvironment: 80,
+          concentration: 78,
+          pegStability: 88,
+          backingDiversity: 76,
+        },
+      }),
+      chainsQuery: {
+        data: { chains: [makeChain()] },
+        error: null,
+        dataUpdatedAt: 1_710_500_000_000,
+        meta: {
+          updatedAt: 1_710_500_000,
+          ageSeconds: 60,
+          status: "degraded",
+          dependencies: {
+            reportCards: {
+              updatedAt: 1_710_489_200,
+              ageSeconds: 10_800,
+              status: "stale",
+              reason: "stale cache",
+            },
+          },
+        },
+      },
+    }));
+
+    render(<ChainProfileClient chainId="ethereum" />);
+
+    expect(screen.getByText(/report-card inputs are stale/i)).toBeTruthy();
+  });
+
   it("filters stablecoins by backing and navigates on row click", () => {
-    mockChainsState = {
-      data: { chains: [makeChain()] },
-      isLoading: false,
-      isError: false,
-      error: null,
-    };
-    mockStablecoinsState = {
+    useChainProfileDataMock.mockReturnValue(makeHookState({
       coins: [
         makeCoin(),
         makeCoin({
@@ -185,9 +241,7 @@ describe("ChainProfileClient", () => {
         }),
       ],
       totalUsd: 900_000_000,
-      isLoading: false,
-      isError: false,
-    };
+    }));
 
     render(<ChainProfileClient chainId="ethereum" />);
 
@@ -203,23 +257,13 @@ describe("ChainProfileClient", () => {
     expect(push).toHaveBeenCalledWith("/stablecoin/dai-maker/");
   });
 
-  it("derives the per-chain stablecoin model once per render", () => {
-    mockChainsState = {
-      data: { chains: [makeChain()] },
-      isLoading: false,
-      isError: false,
-      error: null,
-    };
-    mockStablecoinsState = {
-      coins: [makeCoin()],
-      totalUsd: 500_000_000,
-      isLoading: false,
-      isError: false,
-    };
+  it("shows a route loading state before both data sources complete initial load", () => {
+    useChainProfileDataMock.mockReturnValue(makeHookState({
+      isInitialLoading: true,
+      hasAnyData: false,
+    }));
 
-    render(<ChainProfileClient chainId="ethereum" />);
-
-    expect(useChainStablecoinsMock).toHaveBeenCalledTimes(1);
-    expect(useChainStablecoinsMock).toHaveBeenCalledWith("ethereum");
+    const { container } = render(<ChainProfileClient chainId="ethereum" />);
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
   });
 });

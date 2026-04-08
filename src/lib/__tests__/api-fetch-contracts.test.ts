@@ -212,7 +212,19 @@ describe("api contract validation policy", () => {
   it("downgrades fresh _meta to degraded when a Warning header is present", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(JSON.stringify({
-        _meta: { updatedAt: 200, ageSeconds: 20, status: "fresh" },
+        _meta: {
+          updatedAt: 200,
+          ageSeconds: 20,
+          status: "fresh",
+          dependencies: {
+            reportCards: {
+              updatedAt: 100,
+              ageSeconds: 120,
+              status: "stale",
+              reason: "stale cache",
+            },
+          },
+        },
         ok: true,
       }), {
         status: 200,
@@ -236,6 +248,44 @@ describe("api contract validation policy", () => {
       ageSeconds: 20,
       status: "degraded",
       warning: '110 - "Response is degraded (20s old, max 600s)"',
+      dependencies: {
+        reportCards: {
+          updatedAt: 100,
+          ageSeconds: 120,
+          status: "stale",
+          reason: "stale cache",
+        },
+      },
+    });
+  });
+
+  it("keeps fresh _meta fresh for non-freshness advisory warnings", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({
+        _meta: { updatedAt: 200, ageSeconds: 20, status: "fresh" },
+        ok: true,
+      }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          Warning: '199 - "Latest sync-dex-liquidity run shows medium quality drift"',
+        },
+      })
+    );
+
+    const result = await apiFetchWithMeta(
+      "/api/dex-liquidity",
+      z.object({ ok: z.boolean() }),
+      undefined,
+      3600,
+      "warn",
+    );
+
+    expect(result.meta).toEqual({
+      updatedAt: 200,
+      ageSeconds: 20,
+      status: "fresh",
+      warning: '199 - "Latest sync-dex-liquidity run shows medium quality drift"',
     });
   });
 

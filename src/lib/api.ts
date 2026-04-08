@@ -105,6 +105,11 @@ function formatIssues(
   return issues.map((i) => `${i.path.map(String).join(".")}: ${i.message}`).join(", ");
 }
 
+function isFreshnessWarningHeader(warningHeader: string): boolean {
+  return /(?:^|,\s*)110\b/.test(warningHeader)
+    || /Response is (?:degraded|stale)/i.test(warningHeader);
+}
+
 async function buildFetchError(path: string, res: Response): Promise<ApiFetchError> {
   let bodyText: string | null = null;
   try {
@@ -122,13 +127,27 @@ export interface ApiMeta {
   ageSeconds: number;
   status: "fresh" | "degraded" | "stale";
   warning?: string | null;
+  dependencies?: Record<string, {
+    updatedAt?: number | null;
+    ageSeconds?: number | null;
+    status: "fresh" | "degraded" | "stale" | "unavailable";
+    reason?: string | null;
+  }> | null;
 }
+
+const ApiDependencyMetaSchema = z.object({
+  updatedAt: z.number().nullable().optional(),
+  ageSeconds: z.number().nullable().optional(),
+  status: z.enum(["fresh", "degraded", "stale", "unavailable"]),
+  reason: z.string().nullish(),
+});
 
 const ApiMetaSchema = z.object({
   updatedAt: z.number(),
   ageSeconds: z.number(),
   status: z.enum(["fresh", "degraded", "stale"]),
   warning: z.string().nullish(),
+  dependencies: z.record(z.string(), ApiDependencyMetaSchema).nullish(),
 });
 
 function resolveContractMode(
@@ -248,9 +267,14 @@ export async function apiFetchWithMeta<T>(
 
   const warningHeader = res.headers.get("Warning");
   if (warningHeader) {
+    const isFreshnessWarning = isFreshnessWarningHeader(warningHeader);
     if (meta) {
-      meta = { ...meta, warning: warningHeader };
-    } else {
+      meta = {
+        ...meta,
+        status: isFreshnessWarning && meta.status === "fresh" ? "degraded" : meta.status,
+        warning: warningHeader,
+      };
+    } else if (isFreshnessWarning) {
       // Preserve warning context even when age metadata is absent.
       meta = {
         updatedAt: Math.floor(Date.now() / 1000),

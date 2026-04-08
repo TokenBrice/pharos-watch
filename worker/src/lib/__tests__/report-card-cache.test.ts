@@ -74,4 +74,28 @@ describe("loadReportCardCache", () => {
       updatedAt: staleUpdatedAt,
     });
   });
+
+  it("uses the payload snapshot timestamp instead of the cache-row write time", async () => {
+    const payloadUpdatedAt = 1_700_000_000;
+    const rowUpdatedAt = payloadUpdatedAt + 900;
+    const result = await loadReportCardCache(
+      makeReportCardDb(JSON.stringify({
+        scores: {
+          "usdt-tether": { score: 71, grade: "B" },
+        },
+        updatedAt: payloadUpdatedAt,
+      }), rowUpdatedAt),
+    );
+
+    expect(result).toEqual({
+      kind: "ok",
+      payload: {
+        scores: {
+          "usdt-tether": { score: 71, grade: "B" },
+        },
+        updatedAt: payloadUpdatedAt,
+      },
+      updatedAt: payloadUpdatedAt,
+    });
+  });
 });
