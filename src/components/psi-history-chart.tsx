@@ -59,6 +59,22 @@ export const PSI_EVENTS = [
     ],
   },
   {
+    date: Date.UTC(2020, 2, 12),
+    dateEnd: Date.UTC(2020, 2, 16),
+    label: "COVID Crash",
+    position: "insideBottom" as const,
+    links: [
+      {
+        title: "BTC crashed 50% in one day; DAI hit $1.06+ as MakerDAO liquidations spiraled",
+        url: "https://www.coindesk.com/markets/2020/03/12/bitcoin-price-drops-to-lowest-since-may-2019-as-global-rout-deepens",
+      },
+      {
+        title: "MakerDAO's Black Thursday: $8.3M in DAI auctioned for essentially zero collateral",
+        url: "https://medium.com/@whiterabbit_hq/black-thursday-for-makerdao-8-32-million-was-liquidated-for-0-dai-36b83cac56b6",
+      },
+    ],
+  },
+  {
     date: Date.UTC(2021, 5, 16),
     dateEnd: Date.UTC(2021, 5, 21),
     label: "IRON Finance",
