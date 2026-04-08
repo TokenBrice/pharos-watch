@@ -432,7 +432,7 @@ export async function loadSubscriptionsByIds(
   const placeholders = uniqueIds.map(() => "?").join(", ");
   const result = await db
     .prepare(
-      `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, dews_min_band, safety_mode, depeg_worsening_bps_step
+      `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, dews_min_band, safety_mode, depeg_worsening_bps_step
          FROM telegram_subscriptions
         WHERE chat_id = ?
           AND stablecoin_id IN (${placeholders})

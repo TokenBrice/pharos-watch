@@ -176,6 +176,41 @@ describe("sendBatch", () => {
     expect(results[2]).toMatchObject({ chatId: "c", ok: true, blocked: false, delivery: "sent" });
   });
 
+  it("marks the untouched tail as retryable after a rate limit stop", async () => {
+    fetchSpy
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response("Too Many Requests", {
+          status: 429,
+          headers: { "Retry-After": "45" },
+        }),
+      );
+
+    const messages = Array.from({ length: 8 }, (_, index) => ({
+      chatId: `chat-${index}`,
+      html: `<b>Alert ${index}</b>`,
+      disableNotification: false,
+    }));
+
+    const results = await sendBatch(messages, "bot-token", 5);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(5);
+    expect(results).toHaveLength(8);
+    expect(results.slice(0, 4).every((result) => result.ok)).toBe(true);
+    expect(results[4]).toMatchObject({
+      chatId: "chat-4",
+      ok: false,
+      retryable: true,
+      errorClass: "rate_limit",
+      retryAfterSec: 45,
+    });
+    expect(results.slice(5).every((result) => result.errorClass === "rate_limit" && result.retryable)).toBe(true);
+    expect(results.slice(5).every((result) => result.retryAfterSec === 45)).toBe(true);
+  });
+
   it("catches transient errors without crashing the batch", async () => {
     fetchSpy
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))

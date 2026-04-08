@@ -844,6 +844,57 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.messagesSent).toBe(0);
   });
 
+  it("requeues the untouched fresh-send tail when batch sending stops on a rate limit", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockSendBatch.mockResolvedValue([
+      { chatId: "chat-1", ok: true, blocked: false, retryable: false, permanentFailure: false, statusCode: 200, errorClass: null, delivery: "sent", retryAfterSec: null },
+      { chatId: "chat-2", ok: true, blocked: false, retryable: false, permanentFailure: false, statusCode: 200, errorClass: null, delivery: "sent", retryAfterSec: null },
+      { chatId: "chat-3", ok: true, blocked: false, retryable: false, permanentFailure: false, statusCode: 200, errorClass: null, delivery: "sent", retryAfterSec: null },
+      { chatId: "chat-4", ok: true, blocked: false, retryable: false, permanentFailure: false, statusCode: 200, errorClass: null, delivery: "sent", retryAfterSec: null },
+      { chatId: "chat-5", ok: false, blocked: false, retryable: true, permanentFailure: false, statusCode: 429, errorClass: "rate_limit", delivery: "retryable_failure", retryAfterSec: 45 },
+      { chatId: "chat-6", ok: false, blocked: false, retryable: true, permanentFailure: false, statusCode: 429, errorClass: "rate_limit", delivery: "retryable_failure", retryAfterSec: 45 },
+      { chatId: "chat-7", ok: false, blocked: false, retryable: true, permanentFailure: false, statusCode: 429, errorClass: "rate_limit", delivery: "retryable_failure", retryAfterSec: 45 },
+      { chatId: "chat-8", ok: false, blocked: false, retryable: true, permanentFailure: false, statusCode: 429, errorClass: "rate_limit", delivery: "retryable_failure", retryAfterSec: 45 },
+    ]);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      if (key === "alert:depeg-snapshot") return { value: "{}", updatedAt: now - 60 };
+      if (key === "alert:safety-snapshot") return { value: "{}", updatedAt: now - 60 };
+      return null;
+    });
+
+    const subscribers = Array.from({ length: 8 }, (_, index) => ({
+      stablecoin_id: "usdc-circle",
+      chat_id: `chat-${index + 1}`,
+      last_active_at: now - index,
+    }));
+
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [{ stablecoin_id: "usdc-circle", score: 55, band: "WARNING", signals_json: "{}" }] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT id, chat_id, message_html", rows: [] },
+      { match: "sub.alert_dews = 1", rows: subscribers },
+      { match: "INSERT INTO telegram_pending_alerts", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      freshSent: number;
+      freshRetryQueued: number;
+      pendingEnqueued: number;
+      messagesSent: number;
+    };
+
+    expect(metadata.freshSent).toBe(4);
+    expect(metadata.freshRetryQueued).toBe(4);
+    expect(metadata.pendingEnqueued).toBe(4);
+    expect(metadata.messagesSent).toBe(4);
+  });
+
   it("emits worsening depeg alerts when the configured bps step is crossed", async () => {
     const now = Math.floor(Date.now() / 1000);
 

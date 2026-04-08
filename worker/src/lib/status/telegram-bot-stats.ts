@@ -11,6 +11,7 @@ interface TelegramBotAggregateRow {
   dews_chats: number | string | null;
   depeg_chats: number | string | null;
   safety_chats: number | string | null;
+  launch_chats: number | string | null;
   all_types_chats: number | string | null;
   total_subscriptions: number | string | null;
   avg_subscriptions_per_subscribed_chat: number | string | null;
@@ -36,9 +37,11 @@ const TELEGRAM_BOT_AGGREGATE_SQL = `SELECT
         OR s.global_alert_dews = 1
         OR s.global_alert_depeg = 1
         OR s.global_alert_safety = 1
+        OR s.global_alert_launch = 1
         OR s.alert_dews = 1
         OR s.alert_depeg = 1
         OR s.alert_safety = 1
+        OR s.alert_launch = 1
       THEN 1 ELSE 0
     END
   ) AS alert_enabled_chats,
@@ -48,16 +51,18 @@ const TELEGRAM_BOT_AGGREGATE_SQL = `SELECT
         OR s.global_alert_dews = 1
         OR s.global_alert_depeg = 1
         OR s.global_alert_safety = 1
+        OR s.global_alert_launch = 1
       THEN 1 ELSE 0
     END
   ) AS deliverable_chats,
   SUM(CASE WHEN COALESCE(sub.sub_count, 0) > 0 THEN 1 ELSE 0 END) AS subscribed_chats,
   SUM(
     CASE
-      WHEN (s.alert_dews = 1 OR s.alert_depeg = 1 OR s.alert_safety = 1)
+      WHEN (s.alert_dews = 1 OR s.alert_depeg = 1 OR s.alert_safety = 1 OR s.alert_launch = 1)
         AND s.global_alert_dews = 0
         AND s.global_alert_depeg = 0
         AND s.global_alert_safety = 0
+        AND s.global_alert_launch = 0
         AND COALESCE(sub.sub_count, 0) = 0
       THEN 1 ELSE 0
     END
@@ -71,11 +76,13 @@ const TELEGRAM_BOT_AGGREGATE_SQL = `SELECT
   SUM(CASE WHEN COALESCE(sub.dews_enabled, 0) = 1 OR s.global_alert_dews = 1 THEN 1 ELSE 0 END) AS dews_chats,
   SUM(CASE WHEN COALESCE(sub.depeg_enabled, 0) = 1 OR s.global_alert_depeg = 1 THEN 1 ELSE 0 END) AS depeg_chats,
   SUM(CASE WHEN COALESCE(sub.safety_enabled, 0) = 1 OR s.global_alert_safety = 1 THEN 1 ELSE 0 END) AS safety_chats,
+  SUM(CASE WHEN COALESCE(sub.launch_enabled, 0) = 1 OR s.global_alert_launch = 1 THEN 1 ELSE 0 END) AS launch_chats,
   SUM(
     CASE
       WHEN (COALESCE(sub.dews_enabled, 0) = 1 OR s.global_alert_dews = 1)
         AND (COALESCE(sub.depeg_enabled, 0) = 1 OR s.global_alert_depeg = 1)
         AND (COALESCE(sub.safety_enabled, 0) = 1 OR s.global_alert_safety = 1)
+        AND (COALESCE(sub.launch_enabled, 0) = 1 OR s.global_alert_launch = 1)
       THEN 1 ELSE 0
     END
   ) AS all_types_chats,
@@ -88,10 +95,16 @@ FROM telegram_subscribers s
 LEFT JOIN (
   SELECT chat_id,
          COUNT(*) AS sub_count,
-         SUM(CASE WHEN alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1 THEN 1 ELSE 0 END) AS active_sub_count,
+         SUM(
+           CASE
+             WHEN alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1 OR alert_launch = 1
+             THEN 1 ELSE 0
+           END
+         ) AS active_sub_count,
          MAX(CASE WHEN alert_dews = 1 THEN 1 ELSE 0 END) AS dews_enabled,
          MAX(CASE WHEN alert_depeg = 1 THEN 1 ELSE 0 END) AS depeg_enabled,
          MAX(CASE WHEN alert_safety = 1 THEN 1 ELSE 0 END) AS safety_enabled,
+         MAX(CASE WHEN alert_launch = 1 THEN 1 ELSE 0 END) AS launch_enabled,
          MAX(
            CASE
              WHEN alert_dews = 0
@@ -113,6 +126,10 @@ const TELEGRAM_PENDING_DELIVERIES_SQL =
   "SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts";
 const TELEGRAM_TOP_STABLECOINS_SQL = `SELECT stablecoin_id, COUNT(*) AS subscribers
   FROM telegram_subscriptions
+ WHERE alert_dews = 1
+    OR alert_depeg = 1
+    OR alert_safety = 1
+    OR alert_launch = 1
  GROUP BY stablecoin_id
  ORDER BY subscribers DESC, stablecoin_id ASC
  LIMIT 5`;
@@ -175,10 +192,11 @@ export function mapTelegramBotStats(input: {
     lastSubscriberActivityAt: coerceNullableTimestamp(aggregate?.last_subscriber_activity_at),
     customPreferenceChats: coerceCount(aggregate?.custom_preference_chats),
     quietHoursEnabledChats: coerceCount(aggregate?.quiet_hours_enabled_chats),
-    alertTypeChats: {
+      alertTypeChats: {
       dews: coerceCount(aggregate?.dews_chats),
       depeg: coerceCount(aggregate?.depeg_chats),
       safety: coerceCount(aggregate?.safety_chats),
+      launch: coerceCount(aggregate?.launch_chats),
       allTypes: coerceCount(aggregate?.all_types_chats),
     },
     topStablecoins: topStablecoins.map((row) => ({

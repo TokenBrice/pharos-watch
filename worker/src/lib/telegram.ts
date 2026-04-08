@@ -282,7 +282,23 @@ export async function sendBatch(messages: BatchMessage[], botToken: string, batc
     results.push(...batchResults);
     // Stop sending further batches on rate limit — in-flight parallel sends
     // within this batch have already completed via Promise.all above.
-    if (batchResults.some((r) => r.errorClass === "rate_limit")) break;
+    const rateLimitedResult = batchResults.find((r) => r.errorClass === "rate_limit");
+    if (rateLimitedResult) {
+      for (const skippedMessage of messages.slice(i + batchSize)) {
+        results.push({
+          chatId: skippedMessage.chatId,
+          ok: false,
+          blocked: false,
+          retryable: true,
+          permanentFailure: false,
+          statusCode: rateLimitedResult.statusCode ?? 429,
+          errorClass: "rate_limit",
+          delivery: "retryable_failure",
+          retryAfterSec: rateLimitedResult.retryAfterSec,
+        });
+      }
+      break;
+    }
   }
   return results;
 }

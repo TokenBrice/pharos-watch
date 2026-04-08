@@ -51,7 +51,7 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
     {
       label: "Subscribers",
       value: telegramBot.totalChats,
-      detail: `${telegramBot.alertEnabledChats} with active per-coin, global, or saved alert defaults`,
+      detail: `${telegramBot.alertEnabledChats} with active per-coin, global, launch, or saved alert defaults`,
     },
     {
       label: "Alert-Ready Chats",
@@ -96,7 +96,8 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
             {renderDelta("DEWS enabled", telegramBot.alertTypeChats.dews)}
             {renderDelta("Depeg enabled", telegramBot.alertTypeChats.depeg)}
             {renderDelta("Safety enabled", telegramBot.alertTypeChats.safety)}
-            {renderDelta("All 3 alert types", telegramBot.alertTypeChats.allTypes)}
+            {renderDelta("Launch enabled", telegramBot.alertTypeChats.launch)}
+            {renderDelta("All 4 alert types", telegramBot.alertTypeChats.allTypes)}
             <div className="border-t pt-3">
               {renderDelta("Custom preference chats", telegramBot.customPreferenceChats)}
               {renderDelta("Quiet hours enabled", telegramBot.quietHoursEnabledChats)}
@@ -140,6 +141,7 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
                 {renderDelta("Depeg changes", dispatchMeta?.eventsDetected?.depeg ?? null)}
                 {renderDelta("Depeg worsening", dispatchMeta?.eventsDetected?.depegWorsening ?? null)}
                 {renderDelta("Safety changes", dispatchMeta?.eventsDetected?.safety ?? null)}
+                {renderDelta("Launch changes", dispatchMeta?.eventsDetected?.launch ?? null)}
                 {renderDelta("Methodology suppressions", dispatchMeta?.eventsDetected?.suppressedMethodologyChanges ?? null)}
                 <div className="flex flex-wrap gap-2 pt-1">
                   {dispatchMeta?.snapshotSeeded ? <Badge variant="secondary">snapshot reseeded</Badge> : null}

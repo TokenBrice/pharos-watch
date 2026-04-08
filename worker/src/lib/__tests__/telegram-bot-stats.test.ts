@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { mapTelegramBotStats } from "../status/telegram-bot-stats";
+import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { getTelegramBotStats, mapTelegramBotStats } from "../status/telegram-bot-stats";
 
 describe("mapTelegramBotStats", () => {
   it("coerces aggregate rows into the public Telegram status shape", () => {
@@ -14,6 +15,7 @@ describe("mapTelegramBotStats", () => {
         dews_chats: "7",
         depeg_chats: "6",
         safety_chats: "5",
+        launch_chats: "4",
         all_types_chats: "4",
         total_subscriptions: "30",
         avg_subscriptions_per_subscribed_chat: "3.46",
@@ -47,6 +49,7 @@ describe("mapTelegramBotStats", () => {
         dews: 7,
         depeg: 6,
         safety: 5,
+        launch: 4,
         allTypes: 4,
       },
       topStablecoins: [
@@ -68,6 +71,7 @@ describe("mapTelegramBotStats", () => {
         dews_chats: null,
         depeg_chats: null,
         safety_chats: null,
+        launch_chats: null,
         all_types_chats: null,
         total_subscriptions: null,
         avg_subscriptions_per_subscribed_chat: "bad",
@@ -98,9 +102,62 @@ describe("mapTelegramBotStats", () => {
         dews: 0,
         depeg: 0,
         safety: 0,
+        launch: 0,
         allTypes: 0,
       },
       topStablecoins: [{ stablecoinId: "usdt-tether", symbol: "USDT", subscribers: 0 }],
+    });
+  });
+});
+
+describe("getTelegramBotStats", () => {
+  it("queries launch-aware aggregates and active top-coin rows", async () => {
+    const db = mockD1([
+      {
+        match: "FROM telegram_subscribers s",
+        first: {
+          total_chats: 3,
+          alert_enabled_chats: 2,
+          deliverable_chats: 2,
+          subscribed_chats: 2,
+          empty_alert_chats: 0,
+          muted_chats_with_subscriptions: 0,
+          dews_chats: 1,
+          depeg_chats: 1,
+          safety_chats: 0,
+          launch_chats: 1,
+          all_types_chats: 0,
+          total_subscriptions: 2,
+          avg_subscriptions_per_subscribed_chat: 1,
+          last_subscriber_activity_at: 1_710_000_000,
+          custom_preference_chats: 0,
+          quiet_hours_enabled_chats: 0,
+        },
+        rows: [],
+      },
+      { match: "FROM telegram_pending_disambiguation", first: { pending_count: 1 }, rows: [] },
+      { match: "FROM telegram_pending_alerts", first: { pending_count: 2 }, rows: [] },
+      { match: "FROM telegram_subscriptions", rows: [{ stablecoin_id: "usdpt-western-union", subscribers: 2 }] },
+    ]);
+
+    const result = await getTelegramBotStats(db, 1_710_000_100);
+
+    const history = db.getHistory();
+    const aggregateQuery = history.find((entry) => entry.sql.includes("FROM telegram_subscribers s"));
+    const topCoinsQuery = history.find(
+      (entry) =>
+        entry.sql.includes("FROM telegram_subscriptions") &&
+        entry.sql.includes("GROUP BY stablecoin_id"),
+    );
+
+    expect(aggregateQuery?.sql).toContain("global_alert_launch");
+    expect(aggregateQuery?.sql).toContain("alert_launch");
+    expect(topCoinsQuery?.sql).toContain("alert_launch = 1");
+    expect(result.alertTypeChats.launch).toBe(1);
+    expect(result.topStablecoins[0]).toEqual({
+      stablecoinId: "usdpt-western-union",
+      symbol: "USDPT",
+      subscribers: 2,
     });
   });
 });

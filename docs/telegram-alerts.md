@@ -11,7 +11,7 @@ The subsystem has four moving parts:
 - `worker/src/cron/daily-digest.ts` appends pending cemetery additions and newly tracked coins to the next Telegram digest post after a deploy.
 - `worker/src/lib/telegram.ts`, `worker/src/lib/telegram-alerts.ts`, `worker/src/lib/telegram-presets.ts`, and `worker/src/lib/telegram-digest-appendices.ts` handle Bot API sends, ticker parsing, preset resolution, message formatting, diffing, and HTML escaping.
 
-The delivery system is worker-owned. The frontend exposes a static `/telegram/` landing page, but it does not call the bot APIs directly.
+The delivery system is worker-owned. The frontend exposes a static `/telegram/` landing page plus a lightweight public telemetry strip sourced from `GET /api/telegram-pulse`; it does not call any mutating bot APIs directly.
 
 ## Files
 
@@ -27,6 +27,9 @@ The delivery system is worker-owned. The frontend exposes a static `/telegram/` 
 - `worker/src/lib/telegram-presets.ts`
 - `worker/src/lib/telegram-digest-appendices.ts`
 - `src/app/telegram/page.tsx`
+- `src/app/telegram/telegram-pulse-strip.tsx`
+- `src/hooks/use-telegram-pulse.ts`
+- `worker/src/api/telegram-pulse.ts`
 - `worker/migrations/0000_baseline.sql`
 - `worker/migrations/MANIFEST.md`
 - `scripts/register-telegram-webhook.sh`
@@ -37,7 +40,8 @@ The delivery system is worker-owned. The frontend exposes a static `/telegram/` 
 
 - Route: `/telegram/`
 - Covers the public `@pharoswatch` digest channel, the `@pharoswatchers` community channel, and the `@PharosWatchBot` subscription bot
-- Does not call worker APIs; it links users to Telegram plus the on-site digest archive
+- Reads `GET /api/telegram-pulse` for the lightweight watcher/subscription pulse strip
+- Does not call the webhook or any other mutating bot API; it links users to Telegram plus the on-site digest archive
 
 ## D1 Schema
 
@@ -97,7 +101,7 @@ The webhook validates the configured secret from `X-Telegram-Bot-Api-Secret-Toke
 | `/subscribe <types> <targets>` | Enables one or more alert types and subscribes the chat to one or more explicit coins or preset watchlists |
 | `/subscribe <types> all` | Enables one or more alert types across all tracked stablecoins |
 | `/unsubscribe <targets>` | Removes explicit coin subscriptions and can also remove the coins covered by a preset watchlist |
-| `/unsubscribe all` | Clears all per-coin subscriptions and disables the current DEWS/depeg/safety flags; launch flags are not reset by this path today |
+| `/unsubscribe all` | Clears all per-coin subscriptions and disables every current alert flag, including launch |
 | `/set <ticker> <setting> <value>` | Tunes per-coin settings such as DEWS floor, safety direction mode, or depeg worsening step |
 | `/set all <setting> <value>` | Enables or disables global all-stablecoin alert types (`dews`, `depeg`, `safety`) |
 | `/mute <start>-<end>` | Enables quiet hours in UTC (messages still deliver, notifications are silenced) |
@@ -144,6 +148,7 @@ Ticker parsing lives in `worker/src/lib/telegram-alerts.ts` and is built from `T
 - Preset aliases are matched before ticker resolution in the shared target parser.
 - Unique matches subscribe immediately.
 - Exact Pharos coin IDs resolve immediately and override symbol ambiguity.
+- Both active and pre-launch tracked assets are eligible for explicit ticker or ID resolution; presets still expand active coins only.
 - Ambiguous symbols create a row in `telegram_pending_disambiguation`.
 - Users reply with `1` or `1,2` style selections.
 - Pending disambiguation rows expire after `5 minutes`.
@@ -309,7 +314,7 @@ When tracked coverage changed, the digest gains a `Tracking Changes` section spl
 - alert-enabled chats vs deliverable chats (per-coin follows and global all-stablecoin follows both count)
 - total `telegram_subscriptions` rows and average follows per subscribed chat
 - pending disambiguation replies still within TTL
-- per-alert-type enablement counts (`dews`, `depeg`, `safety`, all three)
+- per-alert-type enablement counts (`dews`, `depeg`, `safety`, `launch`, all four)
 - top subscribed stablecoins by subscriber count
 
 The status page also reads `crons["dispatch-telegram-alerts"].lastRun.metadata` to show the latest delivery run stats (`subscribersNotified`, `messagesSent`, `blockedUsersCleanedUp`, `eventsDetected`, `snapshotSeeded`, `cappedAtLimit`).

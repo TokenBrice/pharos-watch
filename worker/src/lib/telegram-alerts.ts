@@ -1,5 +1,5 @@
 import { THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { isTelegramPresetAlias, type TelegramPresetId } from "./telegram-presets";
 import { escapeHtml } from "./telegram";
 
@@ -40,10 +40,10 @@ const GLOBAL_SUBSCRIBE_TOKEN = "all";
 
 // ---------- Ticker Resolution ----------
 
-/** Build a map of lowercase symbol → matching coins. Precomputed once at module load. */
+/** Build a map of lowercase symbol → matching tracked coins. Precomputed once at module load. */
 const SYMBOL_INDEX: Map<string, ResolvedCoin[]> = (() => {
   const map = new Map<string, ResolvedCoin[]>();
-  for (const meta of ACTIVE_STABLECOINS) {
+  for (const meta of TRACKED_STABLECOINS) {
     const key = meta.symbol.toLowerCase();
     const coin: ResolvedCoin = { id: meta.id, symbol: meta.symbol, name: meta.name };
     const existing = map.get(key);
@@ -57,7 +57,7 @@ const SYMBOL_INDEX: Map<string, ResolvedCoin[]> = (() => {
 })();
 
 const ID_INDEX: Map<string, ResolvedCoin> = new Map(
-  ACTIVE_STABLECOINS.map((meta) => [
+  TRACKED_STABLECOINS.map((meta) => [
     meta.id.toLowerCase(),
     { id: meta.id, symbol: meta.symbol, name: meta.name },
   ]),

@@ -14,7 +14,7 @@ import { TelegramPulseStrip } from "./telegram-pulse-strip";
 export const metadata: Metadata = buildPageMetadata({
   title: "Telegram Alerts & Digest: Stablecoin Notifications on Telegram",
   description:
-    "Set up Telegram alerts for specific stablecoins, preset watchlists, or all tracked stablecoins by alert type: depeg events, depeg worsening, DEWS threat level changes, and daily safety grade shifts. Plus get the Pharos digest straight in Telegram.",
+    "Set up Telegram alerts for specific stablecoins, preset watchlists, or all tracked stablecoins by alert type: depeg events, depeg worsening, DEWS threat level changes, safety grade shifts, and launch promotions for pre-launch assets. Plus get the Pharos digest straight in Telegram.",
   canonical: "/telegram/",
   ogImage: `${SITE_URL}/og-telegram.png`,
 });
@@ -30,12 +30,10 @@ const ALERT_EXAMPLES = [
     key: "dews",
     label: "DEWS Threat Level",
     tagline: "band boundary crossings with top stress sub-signals",
-    content: `DEWS Band Change: USDT
-WATCH \u2192 ALERT (score: 42)
+    content: `DEWS
 
-Top stress signals:
-  pool_balance_drift: 0.61
-  supply_velocity: 0.48
+USDT — WATCH → ALERT (score: 42)
+Top signals: pool_balance_drift (0.61), supply_velocity (0.48)
 
 View on Pharos: pharos.watch/stablecoin/usdt-tether`,
     time: "09:41",
@@ -44,10 +42,11 @@ View on Pharos: pharos.watch/stablecoin/usdt-tether`,
     key: "depeg",
     label: "Depeg Events",
     tagline: "trigger, worsening milestones, and resolution with price context",
-    content: `Depeg Triggered: USDC
-Direction: below peg
-Deviation: -112 bps
-Price: $0.9888
+    content: `Depeg Detected
+
+USDC — below peg
+Deviation: 1.1% (112 bps)
+Price: $0.9888 (peg: $1.00)
 
 View on Pharos: pharos.watch/stablecoin/usdc-circle`,
     time: "09:43",
@@ -56,12 +55,24 @@ View on Pharos: pharos.watch/stablecoin/usdc-circle`,
     key: "safety",
     label: "Safety Grade Changes",
     tagline: "grade shifts after daily safety snapshot, methodology-only regrades suppressed",
-    content: `Safety Grade Change: DAI
-Grade: A- \u2192 B+
-Score: 71
+    content: `Safety Grade Change
+
+DAI — A- → B+
+Score: 71 → 66
 
 View on Pharos: pharos.watch/stablecoin/dai-makerdao`,
     time: "09:45",
+  },
+  {
+    key: "launch",
+    label: "Launch Promotions",
+    tagline: "pre-launch assets moving live on Pharos, with presets intentionally excluded",
+    content: `Stablecoin Launched
+
+USDPT — US Dollar Payment Token has launched and is now tracked by Pharos
+
+View on Pharos: pharos.watch/stablecoin/usdpt-western-union`,
+    time: "09:47",
   },
 ] as const;
 
@@ -147,7 +158,7 @@ export default function TelegramPage() {
               <span className="text-sky-600 dark:text-sky-400">You&rsquo;ll know first.</span>
             </p>
             <p className="pharos-lead max-w-lg">
-              When a peg breaks, risk spikes, or a safety grade shifts,{" "}
+              When a peg breaks, risk spikes, a safety grade shifts, or a pre-launch asset goes live,{" "}
               <TelegramLink href="https://t.me/PharosWatchBot">@PharosWatchBot</TelegramLink>{" "}
               messages you within the cron cycle &mdash; before you check Twitter.
               Free, configurable, no account needed.
@@ -177,7 +188,7 @@ export default function TelegramPage() {
 
           {/* Right: featured alert bubble */}
           <div className="w-full max-w-xs shrink-0 md:w-72 md:py-2" style={{ "--stagger-index": 1 } as CSSProperties}>
-            <p className="pharos-kicker mb-2.5">DEWS escalation &mdash; real alert format</p>
+            <p className="pharos-kicker mb-2.5">DEWS escalation &mdash; bot-style preview</p>
             <AlertBubble content={ALERT_EXAMPLES[0].content} time={ALERT_EXAMPLES[0].time} />
           </div>
         </section>
@@ -199,8 +210,8 @@ export default function TelegramPage() {
                 </div>
               </div>
               <p className="mt-3 flex-1 text-xs text-muted-foreground leading-relaxed">
-                Per-coin or all-stablecoin alerts for DEWS changes, depegs, and safety-grade moves.
-                Configurable thresholds and quiet hours.
+                Per-coin or all-stablecoin alerts for DEWS changes, depegs, safety-grade moves,
+                and launch promotions for pre-launch assets. Configurable thresholds and quiet hours.
               </p>
               <Button size="sm" asChild className="mt-3 w-full gap-2">
                 <a href="https://t.me/PharosWatchBot" target="_blank" rel="noopener noreferrer">
@@ -271,9 +282,9 @@ export default function TelegramPage() {
         <section className="mt-12" id="alerts">
           <h2 className="pharos-section-title">What You Get</h2>
           <p className="mt-1.5 pharos-lead">
-            Three alert types, each with a real message preview.
+            Four alert types, each shown in the bot&apos;s current message style.
           </p>
-          <div className="pharos-stagger-entrance mt-5 grid grid-cols-1 gap-5 md:grid-cols-3">
+          <div className="pharos-stagger-entrance mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
             {ALERT_EXAMPLES.map((alert, i) => (
               <div key={alert.key} className="space-y-2.5" style={{ "--stagger-index": i } as CSSProperties}>
                 <div>
@@ -328,6 +339,10 @@ export default function TelegramPage() {
                   <div>
                     <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">/subscribe safety all</code>
                     <p className="mt-1 text-xs text-muted-foreground">All-stablecoin alerts by type</p>
+                  </div>
+                  <div>
+                    <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">/subscribe launch USDPT</code>
+                    <p className="mt-1 text-xs text-muted-foreground">Launch alerts for explicit pre-launch tickers or coin IDs</p>
                   </div>
                   <div>
                     <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">/set USDC depeg-step 250</code>
@@ -399,7 +414,7 @@ export default function TelegramPage() {
                   <span className="font-medium text-foreground">Pro tip:</span>{" "}
                   Ticker matching is case-insensitive. Exact Pharos coin IDs also work, which is useful when a ticker is ambiguous. Use{" "}
                   <code className="rounded bg-muted px-1 py-0.5 text-[11px] font-mono text-foreground">all</code>{" "}
-                  to follow an alert type across every tracked stablecoin. Unknown tickers get a closest-match suggestion when possible.
+                  to follow an alert type across every tracked stablecoin. Launch alerts still require explicit tickers or coin IDs and do not support presets. Unknown tickers get a closest-match suggestion when possible.
                 </p>
               </div>
             </div>
@@ -414,7 +429,7 @@ export default function TelegramPage() {
             <div className="space-y-1">
               <h3 className="text-lg font-semibold">{COIN_COUNT} pegs. Zero blind spots.</h3>
               <p className="text-sm text-muted-foreground">
-                Start @PharosWatchBot for instant alerts, join @pharoswatch for the daily digest,
+                Start @PharosWatchBot for instant alerts and launch notices, join @pharoswatch for the daily digest,
                 or drop into @pharoswatchers for the live community feed.
               </p>
             </div>

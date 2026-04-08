@@ -32,6 +32,12 @@ describe("resolveTicker", () => {
     expect(result.matches[0].symbol).toBe("USDC");
   });
 
+  it("resolves pre-launch tickers for explicit launch subscriptions", () => {
+    const result = resolveTicker("USDPT");
+    expect(result.status).toBe("unique");
+    expect(result.matches[0].id).toBe("usdpt-western-union");
+  });
+
   it("returns ambiguous for duplicate tickers", () => {
     const result = resolveTicker("GUSD");
     expect(result.status).toBe("ambiguous");

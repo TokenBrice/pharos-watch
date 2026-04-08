@@ -134,6 +134,36 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("/presets");
   });
 
+  it("shows launch follows in /list and reads alert_launch from the subscription query", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      { match: "FROM telegram_subscribers", rows: [], first: null },
+      {
+        match: "FROM telegram_subscriptions",
+        rows: [
+          {
+            stablecoin_id: "usdpt-western-union",
+            alert_dews: 0,
+            alert_depeg: 0,
+            alert_safety: 0,
+            alert_launch: 1,
+            dews_min_band: null,
+            safety_mode: null,
+            depeg_worsening_bps_step: null,
+          },
+        ],
+      },
+    ]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/list"), "test-secret", "bot-token");
+
+    const history = db.getHistory();
+    const subscriptionsQuery = history.find((entry) => entry.sql.includes("FROM telegram_subscriptions"));
+    expect(subscriptionsQuery?.sql).toContain("alert_launch");
+    expect(sentMessageBody().text).toContain("Launch");
+    expect(sentMessageBody().text).toContain("USDPT");
+  });
+
   it("replies to /presets with the preset catalog", async () => {
     const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/presets"), "test-secret", "bot-token");
@@ -173,6 +203,47 @@ describe("handleTelegramWebhook", () => {
 
     expect(sentMessageBody().text).toContain("Updated subscriptions");
     expect(sentMessageBody().text).toContain("USDC");
+  });
+
+  it("handles /subscribe launch for a pre-launch ticker and includes Launch in the summary", async () => {
+    const launchTarget = resolveTicker("USDPT");
+    if (launchTarget.status !== "unique") {
+      throw new Error("Expected USDPT to resolve uniquely for launch subscription test");
+    }
+
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "FROM telegram_subscriptions",
+        rows: [
+          {
+            stablecoin_id: launchTarget.matches[0].id,
+            alert_dews: 0,
+            alert_depeg: 0,
+            alert_safety: 0,
+            alert_launch: 1,
+            dews_min_band: null,
+            safety_mode: null,
+            depeg_worsening_bps_step: null,
+          },
+        ],
+      },
+    ]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe launch USDPT"), "test-secret", "bot-token");
+
+    const history = db.getHistory();
+    expect(
+      history.some(
+        (entry) =>
+          entry.sql.includes("INSERT INTO telegram_subscriptions") &&
+          entry.binds[1] === launchTarget.matches[0].id,
+      ),
+    ).toBe(true);
+    const subscriptionsQuery = history.find((entry) => entry.sql.includes("FROM telegram_subscriptions"));
+    expect(subscriptionsQuery?.sql).toContain("alert_launch");
+    expect(sentMessageBody().text).toContain("Launch");
+    expect(sentMessageBody().text).toContain("USDPT");
   });
 
   it("handles /subscribe for all stablecoins by alert type", async () => {

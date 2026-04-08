@@ -2227,7 +2227,7 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 - `/subscribe <types> <targets>` — Subscribe to alerts for explicit coins or preset watchlists (types: dews, depeg, safety, launch)
 - `/subscribe <types> all` — Enable one or more alert types across all tracked stablecoins
 - `/unsubscribe <targets>` — Remove explicit coin subscriptions or the concrete coin rows covered by a preset watchlist
-- `/unsubscribe all` — Remove all per-coin subscriptions and disable the current DEWS/depeg/safety flags; launch flags are not reset by this path today
+- `/unsubscribe all` — Remove all per-coin subscriptions and disable every current alert flag, including launch
 - `/set <ticker> <setting> <value>` — Tune per-coin thresholds and modes
 - `/set all <setting> <value>` — Toggle global all-stablecoin alert types
 - `/mute <start>-<end>` — Enable UTC quiet hours
@@ -2353,6 +2353,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "alertTypeChats": {
       "dews": 121,
       "depeg": 118,
+      "launch": 97,
       "safety": 102,
       "allTypes": 95
     },
@@ -2540,7 +2541,7 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 
 `sectionErrors` is a machine-readable map of subsection loader failures. When an individual status subsection fails (for example Telegram stats, discovery backlog, CoinGecko price drift, D1 usage telemetry, liquidity health, reserve drift, or mint/burn reconciliation), `/api/status` still returns `200`, keeps the unaffected sections intact, and records the degraded subsection under `sectionErrors` with a stable `code` plus an operator-facing sanitized `message`. Raw exception text, SQL fragments, and table names stay in logs, not in the response body.
 
-`crons["dispatch-telegram-alerts"].lastRun.metadata` now carries a richer delivery breakdown, including fields such as `freshAttempted`, `freshSent`, `freshRetryQueued`, `freshPermanentFailures`, `pendingAttempted`, `pendingDrained`, `pendingRetryQueued`, `pendingDropped`, `pendingEnqueued`, and expanded `eventsDetected` counters (`depegTriggered`, `depegResolved`, `depegWorsening`, `suppressedMethodologyChanges`).
+`crons["dispatch-telegram-alerts"].lastRun.metadata` now carries a richer delivery breakdown, including fields such as `freshAttempted`, `freshSent`, `freshRetryQueued`, `freshPermanentFailures`, `pendingAttempted`, `pendingDrained`, `pendingRetryQueued`, `pendingDropped`, `pendingEnqueued`, and expanded `eventsDetected` counters (`depegTriggered`, `depegResolved`, `depegWorsening`, `launch`, `suppressedMethodologyChanges`).
 
 `datasetFreshness` covers the key operator-visible datasets written by the pipeline: cache-backed stablecoins, blacklist, mint/burn, supply snapshots, safety-grade history, yield, depeg/dews tables, daily digest, and discovery backlog timestamps.
 

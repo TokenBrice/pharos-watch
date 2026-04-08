@@ -1324,6 +1324,7 @@ describe("handleStatus", () => {
           dews_chats: 8,
           depeg_chats: 7,
           safety_chats: 6,
+          launch_chats: 5,
           all_types_chats: 5,
           total_subscriptions: 37,
           avg_subscriptions_per_subscribed_chat: 3.36,
@@ -1360,7 +1361,7 @@ describe("handleStatus", () => {
         pendingDeliveries: number;
         customPreferenceChats: number;
         quietHoursEnabledChats: number;
-        alertTypeChats: { dews: number; depeg: number; safety: number; allTypes: number };
+        alertTypeChats: { dews: number; depeg: number; safety: number; launch: number; allTypes: number };
         topStablecoins: Array<{ stablecoinId: string; symbol: string; subscribers: number }>;
       } | null;
     };
@@ -1377,6 +1378,7 @@ describe("handleStatus", () => {
       dews: 8,
       depeg: 7,
       safety: 6,
+      launch: 5,
       allTypes: 5,
     });
     expect(body.telegramBot?.topStablecoins).toEqual([

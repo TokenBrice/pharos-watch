@@ -194,6 +194,7 @@ export interface TelegramBotStats {
     dews: number;
     depeg: number;
     safety: number;
+    launch: number;
     allTypes: number;
   };
   topStablecoins: TelegramBotTopStablecoin[];

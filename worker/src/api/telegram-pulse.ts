@@ -18,16 +18,24 @@ export const handleTelegramPulse = withErrorHandler(
                  WHEN s.global_alert_dews = 1
                    OR s.global_alert_depeg = 1
                    OR s.global_alert_safety = 1
+                   OR s.global_alert_launch = 1
                    OR COALESCE(sub.active_sub_count, 0) > 0
                  THEN 1 ELSE 0
                END
              ) AS active_watchers,
-             SUM(COALESCE(sub.sub_count, 0)) AS coin_subscriptions
+             SUM(COALESCE(sub.active_sub_count, 0)) AS coin_subscriptions
            FROM telegram_subscribers s
            LEFT JOIN (
              SELECT chat_id,
-                    COUNT(*) AS sub_count,
-                    SUM(CASE WHEN alert_dews = 1 OR alert_depeg = 1 OR alert_safety = 1 THEN 1 ELSE 0 END) AS active_sub_count
+                    SUM(
+                      CASE
+                        WHEN alert_dews = 1
+                          OR alert_depeg = 1
+                          OR alert_safety = 1
+                          OR alert_launch = 1
+                        THEN 1 ELSE 0
+                      END
+                    ) AS active_sub_count
                FROM telegram_subscriptions
               GROUP BY chat_id
            ) sub ON sub.chat_id = s.chat_id`,
@@ -37,6 +45,10 @@ export const handleTelegramPulse = withErrorHandler(
         .prepare(
           `SELECT stablecoin_id
              FROM telegram_subscriptions
+            WHERE alert_dews = 1
+               OR alert_depeg = 1
+               OR alert_safety = 1
+               OR alert_launch = 1
             GROUP BY stablecoin_id
             ORDER BY COUNT(*) DESC, stablecoin_id ASC
             LIMIT 5`,

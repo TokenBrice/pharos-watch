@@ -25,7 +25,7 @@ export function TelegramPulseStrip() {
       </span>
       <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
       <span className="text-muted-foreground">
-        <span className="font-semibold text-foreground font-mono">{data.coinSubscriptions}</span> coin subscriptions
+        <span className="font-semibold text-foreground font-mono">{data.coinSubscriptions}</span> active coin follows
       </span>
       {data.topCoins.length > 0 && (
         <>

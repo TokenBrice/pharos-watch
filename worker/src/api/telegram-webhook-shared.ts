@@ -60,7 +60,7 @@ Show current subscriptions and settings
 <code>/cancel</code>
 Cancel a pending selection
 
-Preset watchlists expand into normal coin follows at subscribe time. Launch alerts require explicit tickers.`;
+Preset watchlists expand into normal coin follows at subscribe time. Launch alerts require explicit tickers or coin ids.`;
 
 export const DISAMBIGUATION_TTL_SEC = 5 * 60;
 

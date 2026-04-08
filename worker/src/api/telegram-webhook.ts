@@ -220,7 +220,7 @@ async function handleList(db: D1Database, chatId: string, botToken: string): Pro
 
   const subscriptions = await db
     .prepare(
-      `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, dews_min_band, safety_mode, depeg_worsening_bps_step
+      `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, dews_min_band, safety_mode, depeg_worsening_bps_step
          FROM telegram_subscriptions
         WHERE chat_id = ?
         ORDER BY stablecoin_id`,
