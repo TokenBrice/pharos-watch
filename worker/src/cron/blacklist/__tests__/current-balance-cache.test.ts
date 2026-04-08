@@ -190,4 +190,52 @@ describe("syncCurrentBalanceCacheForRows", () => {
       }),
     );
   });
+
+  it("does NOT override genuine zero balance with historical amount for non-gold stablecoins", async () => {
+    vi.mocked(fetchEvmTokenCurrentBalance).mockResolvedValue(0);
+
+    const result = await syncCurrentBalanceCacheForRows(
+      {} as D1Database,
+      ethereumConfig, // USDT — not gold
+      [
+        {
+          id: "4",
+          stablecoin: "USDT",
+          chain_id: "ethereum",
+          chain_name: "Ethereum",
+          event_type: "blacklist",
+          address: "0x444",
+          amount_native: 5000,
+          amount_usd_at_event: 5000,
+          amount_source: "historical_balance",
+          amount_status: "resolved",
+          tx_hash: "0xblacklist2",
+          block_number: 4,
+          timestamp: 13,
+          methodology_version: "3.6",
+          contract_address: ethereumConfig.contractAddress,
+          config_key: ethereumConfig.configKey,
+          event_signature: "AddedBlackList(address)",
+          event_topic0: "0xtopic",
+          amount_attempt_count: 0,
+          amount_last_attempted_at: null,
+          amount_last_error_class: null,
+          amount_last_provider: null,
+          explorer_tx_url: "https://etherscan.io/tx/0xblacklist2",
+          explorer_address_url: "https://etherscan.io/address/0x444",
+        },
+      ],
+      makeContext(),
+    );
+
+    expect(result).toEqual({ updated: 1, deleted: 0, failed: 0 });
+    expect(upsertBlacklistCurrentBalance).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        address: "0x444",
+        amountNative: 0, // genuine zero, NOT overridden to 5000
+        status: "resolved",
+      }),
+    );
+  });
 });

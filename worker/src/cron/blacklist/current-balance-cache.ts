@@ -178,11 +178,12 @@ export async function syncCurrentBalanceCacheForRows(
 
     let amount = await fetchCurrentBalanceForAddress(config, row.address, context);
 
-    // Some contracts (PAXG, XAUT) override balanceOf() to return 0 for frozen
+    // Gold contracts (PAXG, XAUT) override balanceOf() to return 0 for frozen
     // addresses.  When the on-chain balance is 0 but the event captured a
     // pre-freeze amount, use the event-time amount so the freeze ledger
-    // reflects the actual seized value.
-    if ((amount == null || amount === 0) && row.amount_native != null && row.amount_native > 0) {
+    // reflects the actual seized value.  Only apply to gold stablecoins —
+    // for others, a 0 balance means funds were genuinely moved or destroyed.
+    if (isGoldBlacklistStablecoin(config.stablecoin) && (amount == null || amount === 0) && row.amount_native != null && row.amount_native > 0) {
       amount = row.amount_native;
     }
 
