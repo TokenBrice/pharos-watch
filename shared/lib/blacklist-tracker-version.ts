@@ -1,9 +1,29 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const blacklistTracker = createMethodologyVersion({
-  currentVersion: "3.6",
+  currentVersion: "3.7",
   changelogPath: "/methodology/blacklist-tracker-changelog/",
   changelog: [
+  {
+    version: "3.7",
+    title: "Balance recovery accuracy and provider resilience",
+    date: "2026-04-08",
+    effectiveAt: 1775606400, // 2026-04-08T00:00:00Z
+    summary:
+      "Remediates 16 audit findings across the balance recovery pipeline, freeze-ledger cache, and aggregation layer. Eliminates silent wrong-data paths, adds Ethereum mainnet dRPC/chain-RPC fallback, and fixes gold stablecoin USD conversion in all enrichment paths.",
+    impact: [
+      "Invalid block tags now return null instead of silently querying latest balance (Critical)",
+      "Ethereum mainnet historical balance lookups now fall through dRPC and chain-RPC before Etherscan (Critical)",
+      "Tron REST API returns null for missing token entries instead of false zero (Major)",
+      "PAXG/XAUT events now receive USD conversion in enrichment and backfill paths (Major)",
+      "Zero-balance override restricted to gold stablecoins only, preventing false non-zero cache entries (Major)",
+      "XAUT now uses its own price entry instead of PAXG price (Major)",
+      "Destroyed records excluded from activeFrozenTotal (Major)",
+      "New Tron blacklist/unblacklist events immediately marked permanently_unavailable (Major)",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.6",
     title: "Freeze-ledger quarter attribution for the public chart",
