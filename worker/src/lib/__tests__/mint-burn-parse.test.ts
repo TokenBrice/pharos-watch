@@ -286,3 +286,126 @@ describe("parseMintBurnLogs — custom event encodings", () => {
     expect(dropped).toBe(1);
   });
 });
+
+describe("parseMintBurnLogs — price resolution", () => {
+  const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+  const ZERO_PADDED = "0x0000000000000000000000000000000000000000000000000000000000000000";
+
+  const ETHEREUM_CHAIN = {
+    chainId: "ethereum",
+    chainName: "Ethereum",
+    evmChainId: 1,
+    explorerUrl: "https://etherscan.io",
+    type: "evm" as const,
+  };
+
+  const config: MintBurnContractConfig = {
+    stablecoinId: "usdc-circle",
+    symbol: "USDC",
+    chain: ETHEREUM_CHAIN,
+    contractAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    decimals: 6,
+    dustThreshold: 100,
+    startBlock: 21_000_000,
+    adapterKind: "transfer-zero-address",
+    startBlockSource: "reviewed-contract-specific",
+    startBlockConfidence: "high",
+    tier: "critical",
+    events: [],
+  };
+
+  const mintEventDef: MintBurnEventDef = {
+    signature: "Transfer(address,address,uint256)",
+    topicHash: TRANSFER_TOPIC,
+    direction: "mint" as const,
+    amountEncoding: "first-data-uint256" as const,
+  };
+
+  // 1,000 USDC = 1_000_000_000 raw (6 decimals)
+  const AMOUNT_1K_HEX = "0x" + BigInt(1_000_000_000).toString(16).padStart(64, "0");
+
+  const makeTransferLog = (): AlchemyLogEntry => ({
+    address: config.contractAddress,
+    topics: [TRANSFER_TOPIC, ZERO_PADDED, "0x000000000000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
+    data: AMOUNT_1K_HEX,
+    blockNumber: "0x140a001", // 21_012_481
+    logIndex: "0x1",
+    transactionHash: "0xprice100000000000000000000000000000000000000000000000000000000001",
+    blockHash: "0x0",
+    transactionIndex: "0x0",
+    removed: false,
+  });
+
+  const blockTimestamps = new Map([[21_012_481, 1700000000]]);
+  const runTimestamp = 1700000100;
+
+  it("uses current price when no history is available", () => {
+    const prices = new Map([["usdc-circle", 0.9998]]);
+    const priceHistory = new Map<string, { snapshotDate: number; price: number }[]>();
+
+    const { rows } = parseMintBurnLogs(
+      config,
+      mintEventDef,
+      [makeTransferLog()],
+      blockTimestamps,
+      prices,
+      priceHistory,
+      runTimestamp,
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].price_used).toBe(0.9998);
+    expect(rows[0].price_source).toBe("price-cache-current");
+    expect(rows[0].price_timestamp).toBe(runTimestamp);
+    expect(rows[0].amount_usd).toBeCloseTo(999.8, 1);
+  });
+
+  it("uses historical price when available", () => {
+    const dayTs = Math.floor(1700000000 / 86400) * 86400;
+    const prices = new Map([["usdc-circle", 0.9998]]);
+    const priceHistory = new Map([
+      ["usdc-circle", [{ snapshotDate: dayTs, price: 1.0002 }]],
+    ]);
+
+    const { rows } = parseMintBurnLogs(
+      config,
+      mintEventDef,
+      [makeTransferLog()],
+      blockTimestamps,
+      prices,
+      priceHistory,
+      runTimestamp,
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].price_used).toBe(1.0002);
+    expect(rows[0].price_source).toBe("supply-history-daily");
+    expect(rows[0].price_timestamp).toBe(dayTs);
+    expect(rows[0].amount_usd).toBeCloseTo(1000.2, 1);
+  });
+
+  it("falls back to current price when historical price is null at runtime", () => {
+    const dayTs = Math.floor(1700000000 / 86400) * 86400;
+    const prices = new Map([["usdc-circle", 0.9998]]);
+    // Simulate runtime drift: price is null despite the type saying number
+    const priceHistory = new Map([
+      ["usdc-circle", [{ snapshotDate: dayTs, price: null as any }]],
+    ]);
+
+    const { rows } = parseMintBurnLogs(
+      config,
+      mintEventDef,
+      [makeTransferLog()],
+      blockTimestamps,
+      prices,
+      priceHistory,
+      runTimestamp,
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].price_used).toBe(0.9998);
+    expect(rows[0].price_source).toBe("price-cache-current");
+    expect(rows[0].price_timestamp).toBe(runTimestamp);
+    expect(rows[0].amount_usd).toBeCloseTo(999.8, 1);
+  });
+});

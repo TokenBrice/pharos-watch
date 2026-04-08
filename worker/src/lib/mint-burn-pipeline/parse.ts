@@ -18,7 +18,7 @@ function resolveEventPrice(
   runTimestamp: number,
 ): EventPriceResolution {
   const historical = findMintBurnHistoricalPrice(priceHistory, stablecoinId, timestamp);
-  if (historical) {
+  if (historical?.price != null) {
     return {
       price: historical.price,
       priceTimestamp: historical.snapshotDate,
