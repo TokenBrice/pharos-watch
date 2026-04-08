@@ -10,7 +10,7 @@
 
 **Squash date:** 2026-03-25 (S-014)
 
-## Individual Migrations (0072–0087)
+## Individual Migrations (current active files)
 
 Applied sequentially after the baseline (fresh setup) or after the previous individual migration (existing databases).
 
@@ -30,10 +30,15 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0083     | `0083_api_keys.sql`                             | Add API key metadata table with prefix + secret-hash storage                                   |
 | 0084     | `0084_api_key_rate_limit.sql`                   | Add per-key minute-bucket rate-limit table                                                     |
 | 0085     | `0085_total_request_attribution.sql`            | Add total site-vs-external attribution tables and explicit API key traffic classification      |
-| 0086     | `0086_treasury_stable_exposure_history.sql`     | Add daily treasury stable exposure history table for per-entity snapshot auditing              |
 | 0087     | `0087_api_key_expiry.sql`                       | Add nullable API key expiry timestamps for default-expiring and explicit non-expiring keys     |
 | 0088     | `0088_api_key_audit_log.sql`                    | Add API key audit log table for tracking create/update/deactivate/rotate mutations             |
 | 0089     | `0089_api_key_pepper_version.sql`               | Add pepper_version column to api_keys for tracking which pepper generation hashed the secret   |
+
+## Retired Individual Migrations
+
+| Sequence | Former Filename                                | Retirement Note                                                                                                                                 |
+| -------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0086     | `0086_treasury_stable_exposure_history.sql`    | Retired on 2026-04-08 after the treasuries feature removal maintenance window dropped the unused history table and indexes from production D1. |
 
 ## Known Anomalies
 
