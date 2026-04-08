@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import {
   getNoticeTone,
   type DashboardNotice,
-  type DashboardSection,
   type DashboardSectionId,
 } from "@/lib/status-dashboard-model";
 import { cn } from "@/lib/utils";
