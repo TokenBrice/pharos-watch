@@ -174,8 +174,7 @@ export async function runDexScreenerPass(
         }
 
         return left.asset.id.localeCompare(right.asset.id);
-      })
-      .slice(0, DEXSCREENER_MAX_REQUESTS);
+      });
 
     const dexBudgetDeadlineMs = Date.now() + DEXSCREENER_PASS_BUDGET_MS;
     for (const entry of dexCandidates) {

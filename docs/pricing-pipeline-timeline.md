@@ -1,6 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v3.99` (2026-02-01 -> 2026-04-07).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.0` (2026-02-01 -> 2026-04-08).
+
+---
+
+## v4.0 - DexScreener request-budget walk-through for skipped fallback candidates (Apr 8, 2026)
+
+**Commit:** `unreleased`
+
+- DexScreener pass 4 now spends its `10`-request budget on actual outgoing DexScreener calls instead of pre-slicing the first ten missing assets
+- Higher-rank addressless rows that are skipped because their symbol is not unique no longer crowd out later exact-target or unique-symbol fallback candidates such as `CHFAU` or `ctUSD`
+- This reduces false `dexscreener-prices` breaker opens during bad network windows because the pass has more chances to observe a healthy DexScreener response before it gives up
 
 ---
 

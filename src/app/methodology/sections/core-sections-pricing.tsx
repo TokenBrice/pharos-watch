@@ -246,7 +246,7 @@ export function PricingPipelineMethodologySection() {
               <li><span className="text-foreground font-medium">Pass 1b:</span> Tracked alternate deployment fallback only (no synthetic same-address cross-chain probing; same validation gate as pass 1)</li>
               <li><span className="text-foreground font-medium">Pass 2:</span> CoinMarketCap batch listings (slug first; symbol fallback only when the tracked symbol is unique, rate-limited to 1 call/hour)</li>
               <li><span className="text-foreground font-medium">Pass 3:</span> Jupiter Price API for tracked Solana mints (liquidity-gated)</li>
-              <li><span className="text-foreground font-medium">Pass 4:</span> DexScreener exact token-address pools first; unique-symbol search is reserved for addressless assets and stays filtered by &gt;$50K liquidity, capped at 10 requests per run with exact-target and larger-circulating assets prioritized first</li>
+              <li><span className="text-foreground font-medium">Pass 4:</span> DexScreener exact token-address pools first; unique-symbol search is reserved for addressless assets and stays filtered by &gt;$50K liquidity, capped at 10 actual requests per run while the pass walks the full prioritized missing set so skipped non-unique rows do not crowd out later valid candidates</li>
             </ol>
           </div>
 

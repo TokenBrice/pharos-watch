@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "3.99",
+  currentVersion: "4.0",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "4.0",
+      title: "DexScreener request-budget walk-through for skipped fallback candidates",
+      date: "2026-04-08",
+      effectiveAt: 1775665290,
+      summary:
+        "The DexScreener fallback budget now applies to actual outgoing requests instead of the first ten missing assets, " +
+        "so high-rank addressless rows that are skipped for identity reasons cannot crowd out later valid fallback candidates.",
+      impact: [
+        "Pass 4 still prioritizes exact-target assets first and then larger circulating names, but it now walks the full sorted missing set until it spends the 10-request DexScreener budget",
+        "Addressless non-unique symbols that are skipped without making a request no longer consume one of the candidate slots that can reach lower-rank unique-symbol recoveries such as CHFAU or ctUSD",
+        "This reduces false `dexscreener-prices` breaker opens during bad network windows because the pass has more chances to record at least one healthy DexScreener response before giving up",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "3.99",
       title: "Native-peg live publication guard and fill lane for non-USD fiat assets",

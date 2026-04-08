@@ -587,6 +587,51 @@ describe("enrichMissingPrices", () => {
     expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("latest/dex/search"))).toBe(false);
   });
 
+  it("continues past skipped high-rank assets until it spends the DexScreener request budget", async () => {
+    const assets: PeggedAsset[] = [
+      { id: "deusd-1", name: "DEUSD 1", symbol: "DEUSD", price: 0, pegType: "peggedUSD", circulating: { total: 100 } },
+      { id: "bean-1", name: "Bean 1", symbol: "BEAN", price: 0, pegType: "peggedUSD", circulating: { total: 90 } },
+      { id: "usdn-1", name: "USDN 1", symbol: "USDN", price: 0, pegType: "peggedUSD", circulating: { total: 80 }, chains: ["Ethereum"] },
+      { id: "tor-1", name: "TOR 1", symbol: "TOR", price: 0, pegType: "peggedUSD", circulating: { total: 70 } },
+      { id: "usdr-1", name: "USDR 1", symbol: "USDR", price: 0, pegType: "peggedUSD", circulating: { total: 60 }, chains: ["Polygon"] },
+      { id: "pinto-1", name: "Pinto 1", symbol: "PINTO", price: 0, pegType: "peggedUSD", circulating: { total: 50 } },
+      { id: "usbd-1", name: "USBD 1", symbol: "USBD", price: 0, pegType: "peggedUSD", circulating: { total: 40 }, chains: ["Ethereum"] },
+      { id: "usdx-1", name: "USDX 1", symbol: "USDX", price: 0, pegType: "peggedUSD", circulating: { total: 30 }, chains: ["Ethereum"] },
+      { id: "husd-1", name: "HUSD 1", symbol: "HUSD", price: 0, pegType: "peggedUSD", circulating: { total: 20 } },
+      { id: "usx-1", name: "USX 1", symbol: "USX", price: 0, pegType: "peggedUSD", circulating: { total: 10 }, chains: ["Ethereum"] },
+      { id: "chfau-1", name: "CHFAU 1", symbol: "CHFAU", price: 0, pegType: "peggedCHF", circulating: { total: 9 }, chains: ["Ethereum"] },
+    ];
+
+    const fetchSpy = vi.fn(async (url: string) => {
+      if (url.includes("q=USDN") || url.includes("q=USDR") || url.includes("q=USBD") || url.includes("q=USDX") || url.includes("q=USX")) {
+        return new Response("upstream error", { status: 500 });
+      }
+      if (url.includes("q=CHFAU")) {
+        return new Response(JSON.stringify({
+          pairs: [
+            {
+              baseToken: { symbol: "CHFAU" },
+              quoteToken: { symbol: "USDC" },
+              priceUsd: "1.126",
+              liquidity: { usd: 250_000 },
+              chainId: "ethereum",
+            },
+          ],
+        }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const result = await runDexScreenerPass(assets, { peggedCHF: 1.12 }, undefined);
+
+    expect(result.resolved).toBe(1);
+    expect(assets[10].price).toBe(1.126);
+    expect(assets[10].priceSource).toBe("dexscreener");
+    expect(fetchSpy).toHaveBeenCalledTimes(6);
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("q=CHFAU"))).toBe(true);
+  });
+
   it("prefers cmcSlug-based matching over symbol for CMC fallback (BUG-1)", async () => {
     // Two coins share symbol "GUSD" — slug-based matching should pick the right price
     const assets: PeggedAsset[] = [
