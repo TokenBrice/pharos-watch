@@ -16,7 +16,7 @@ export async function completeMintBurnRun(input: {
   budget: { limit: number; count: number };
   lane: MintBurnLane;
   jobName: string;
-  chainHead: number;
+  chainHeads: Map<string, number>;
   startIndex: number;
   enabledConfigs: MintBurnContractConfig[];
   configs: MintBurnContractConfig[];
@@ -49,16 +49,17 @@ export async function completeMintBurnRun(input: {
     .map((config) => {
       const key = mintBurnConfigKey(config);
       const last = input.lastBlocksAfterRun.get(key) ?? (config.startBlock - 1);
+      const head = input.chainHeads.get(config.chain.chainId) ?? null;
       return {
         key,
         symbol: config.symbol,
         chainId: config.chain.chainId,
-        lagBlocks: Math.max(0, input.chainHead - last),
-        head: input.chainHead,
+        lagBlocks: head != null ? Math.max(0, head - last) : null,
+        head,
         lastBlock: last,
       };
     })
-    .sort((a, b) => b.lagBlocks - a.lagBlocks)
+    .sort((a, b) => (b.lagBlocks ?? -1) - (a.lagBlocks ?? -1))
     .slice(0, 6);
 
   const coverageRatio = input.enabledConfigs.length > 0 ? input.contractsProcessed / input.enabledConfigs.length : 1;
@@ -114,10 +115,14 @@ export async function completeMintBurnRun(input: {
     }
   }
 
+  const compatibilityChainHead = input.chainHeads.get("ethereum")
+    ?? Math.max(0, ...input.chainHeads.values());
+
   const metadata = JSON.stringify(withBudgetMetadata(input.budget, {
     lane: input.lane,
     jobName: input.jobName,
-    chainHead: input.chainHead,
+    chainHead: compatibilityChainHead || null,
+    chainHeads: Object.fromEntries(input.chainHeads),
     rowsRead: input.rowsRead,
     rowsParsed: input.rowsParsed,
     rowsInserted: input.rowsInserted,

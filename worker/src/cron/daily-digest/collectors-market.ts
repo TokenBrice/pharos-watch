@@ -2,6 +2,7 @@ import type { DigestInputData } from "@shared/types/digest";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { buildInClause } from "../../lib/db";
 import { computeFlowIntensity, computeGaugeScore, getGaugeBand, detectFlightToQuality } from "../../lib/mint-burn-scoring";
+import { isCanonicalMintBurnPair } from "../../lib/mint-burn-canonical-chain";
 import { SECONDS } from "../../lib/time-constants";
 import { computeDigestMintBurnFtqFlows } from "./mint-burn-ftq";
 import { collectorDegraded, collectorOk, type CollectorContext, type CollectorResult } from "./collectors-shared";
@@ -194,32 +195,48 @@ export async function collectMintBurnFlows(
 
     const flow24hRows = await ctx.db
       .prepare(
-        `SELECT stablecoin_id,
+        `SELECT stablecoin_id, chain_id,
                 SUM(mint_volume_usd) as mint_24h,
                 SUM(burn_volume_usd) as burn_24h,
                 SUM(net_flow_usd) as net_24h
          FROM mint_burn_hourly
          WHERE hour_ts >= ?
-         GROUP BY stablecoin_id`,
+         GROUP BY stablecoin_id, chain_id`,
       )
       .bind(cutoff24h)
-      .all<{ stablecoin_id: string; mint_24h: number; burn_24h: number; net_24h: number }>();
+      .all<{ stablecoin_id: string; chain_id: string; mint_24h: number; burn_24h: number; net_24h: number }>();
 
     const flow30dRows = await ctx.db
       .prepare(
-        `SELECT stablecoin_id,
+        `SELECT stablecoin_id, chain_id,
                 SUM(net_flow_usd) / 30.0 as avg_daily_net,
                 SUM(mint_volume_usd + burn_volume_usd) / 30.0 as avg_daily_abs,
                 COUNT(DISTINCT CAST(hour_ts / 86400 AS INTEGER)) as data_days
          FROM mint_burn_hourly
          WHERE hour_ts >= ?
-         GROUP BY stablecoin_id`,
+         GROUP BY stablecoin_id, chain_id`,
       )
       .bind(cutoff30d)
-      .all<{ stablecoin_id: string; avg_daily_net: number; avg_daily_abs: number; data_days: number }>();
+      .all<{ stablecoin_id: string; chain_id: string; avg_daily_net: number; avg_daily_abs: number; data_days: number }>();
 
-    const flow24h = new Map((flow24hRows.results ?? []).map((row) => [row.stablecoin_id, row]));
-    const flow30d = new Map((flow30dRows.results ?? []).map((row) => [row.stablecoin_id, row]));
+    const flow24h = new Map<string, { net_24h: number; mint_24h: number; burn_24h: number }>();
+    for (const row of flow24hRows.results ?? []) {
+      if (!isCanonicalMintBurnPair(row.stablecoin_id, row.chain_id)) continue;
+      const aggregate = flow24h.get(row.stablecoin_id) ?? { net_24h: 0, mint_24h: 0, burn_24h: 0 };
+      aggregate.net_24h += row.net_24h;
+      aggregate.mint_24h += row.mint_24h;
+      aggregate.burn_24h += row.burn_24h;
+      flow24h.set(row.stablecoin_id, aggregate);
+    }
+    const flow30d = new Map<string, { avg_daily_net: number; avg_daily_abs: number; data_days: number }>();
+    for (const row of flow30dRows.results ?? []) {
+      if (!isCanonicalMintBurnPair(row.stablecoin_id, row.chain_id)) continue;
+      const aggregate = flow30d.get(row.stablecoin_id) ?? { avg_daily_net: 0, avg_daily_abs: 0, data_days: 0 };
+      aggregate.avg_daily_net += row.avg_daily_net;
+      aggregate.avg_daily_abs += row.avg_daily_abs;
+      aggregate.data_days = Math.max(aggregate.data_days, row.data_days);
+      flow30d.set(row.stablecoin_id, aggregate);
+    }
 
     const coinIntensities: FlowIntensityRow[] = [];
     let mintBurnExcluded = 0;

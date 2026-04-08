@@ -495,16 +495,16 @@ describe("generateDailyDigest", () => {
       {
         match: "SUM(mint_volume_usd)",
         rows: [
-          { stablecoin_id: "usdt-tether", mint_24h: 500_000_000, burn_24h: 300_000_000, net_24h: 200_000_000 },
-          { stablecoin_id: "usdc-circle", mint_24h: 100_000_000, burn_24h: 150_000_000, net_24h: -50_000_000 },
+          { stablecoin_id: "usdt-tether", chain_id: "ethereum", mint_24h: 500_000_000, burn_24h: 300_000_000, net_24h: 200_000_000 },
+          { stablecoin_id: "usdc-circle", chain_id: "ethereum", mint_24h: 100_000_000, burn_24h: 150_000_000, net_24h: -50_000_000 },
         ],
       },
       // 30d baseline — match on "/ 30.0" which is unique to this query
       {
         match: "/ 30.0",
         rows: [
-          { stablecoin_id: "usdt-tether", avg_daily_net: 50_000_000, avg_daily_abs: 200_000_000, data_days: 30 },
-          { stablecoin_id: "usdc-circle", avg_daily_net: -10_000_000, avg_daily_abs: 80_000_000, data_days: 25 },
+          { stablecoin_id: "usdt-tether", chain_id: "ethereum", avg_daily_net: 50_000_000, avg_daily_abs: 200_000_000, data_days: 30 },
+          { stablecoin_id: "usdc-circle", chain_id: "ethereum", avg_daily_net: -10_000_000, avg_daily_abs: 80_000_000, data_days: 25 },
         ],
       },
     ]);

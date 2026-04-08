@@ -1,6 +1,17 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v5.0` (2026-03-01 -> 2026-04-08).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v5.1` (2026-03-01 -> 2026-04-08).
+
+---
+
+## v5.1 - Canonical-chain mint/burn scope for native issuance tracking (Apr 8, 2026)
+
+**Commit:** `unreleased`
+
+- USDai mint/burn tracking now runs on native Arbitrum instead of treating Ethereum-side LayerZero bridge flow as primary issuance/redemption
+- Aggregate and per-coin public APIs now read only configured `(stablecoin_id, chain_id)` pairs, so stale non-canonical historical rows no longer leak into counted flow metrics
+- Cron metadata, coverage helpers, status reconciliation, DEWS inputs, and daily digest mint/burn reads now honor chain-aware issuance scope
+- Admin backfill auto-selection and explicit config replay now work across the tracked issuance-chain set instead of Ethereum-only
 
 ---
 

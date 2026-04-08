@@ -1,8 +1,8 @@
 # Mint/Burn Flow Tracker
 
-On-chain mint and burn event tracker for stablecoins on **Ethereum** via Alchemy JSON-RPC. Detects Transfer events (and USDT-specific Issue/Redeem events), aggregates them into hourly flow buckets, exposes per-coin raw `Net Flow` plus baseline-relative `Pressure Shift vs 30D`, computes a market-cap-weighted Bank Run Gauge, and flags flight-to-quality signals. Live ingestion now runs in two lanes: a critical 20-minute lane for major coverage and an offset extended 20-minute lane for long-tail backlog drain.
+On-chain mint and burn event tracker for stablecoins on their **configured issuance chains** via Alchemy JSON-RPC. Detects Transfer events (and USDT-specific Issue/Redeem events), aggregates them into hourly flow buckets, exposes per-coin raw `Net Flow` plus baseline-relative `Pressure Shift vs 30D`, computes a market-cap-weighted Bank Run Gauge, and flags flight-to-quality signals. Live ingestion now runs in two lanes: a critical 20-minute lane for major coverage and an offset extended 20-minute lane for long-tail backlog drain.
 
-Product scope note: the public `/flows` page now labels this feature explicitly as **Ethereum-only** and surfaces per-coin `coverage` metadata so partial history or lagging sync states are visible to users instead of implied as complete market-wide coverage.
+Product scope note: the public `/flows` page now surfaces the configured issuance scope plus per-coin `coverage` metadata so partial history or lagging sync states are visible to users instead of implied as complete market-wide coverage. Current production scope is Ethereum for most tracked assets, with USDai tracked on native Arbitrum as its canonical issuance/redemption chain.
 
 Operational freshness configuration is shared via `worker/src/lib/mint-burn-health-config.ts`:
 - major-symbol baseline (`USDT`, `USDC`, `DAI`, `USDS`, `GHO`, `FRXUSD`, `BOLD`, `reUSD`)
@@ -17,7 +17,7 @@ Public `/api/mint-burn-flows` freshness metadata and the `/flows` page intention
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v5.0`
+- **Current methodology version:** `v5.1`
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Internal reconstructed timeline:** [Mint/Burn Flow Methodology Timeline](./mint-burn-flows-timeline.md)
 
@@ -75,7 +75,7 @@ Token identity now resolves from the shared stablecoin loader in `shared/lib/sta
 
 Current scope: **124 contract configs** across **123 stablecoin IDs** (7 critical + 117 extended).
 
-March 24, 2026 expansion: an additional 40 Ethereum transfer-only configs were added for tracked assets that already had shared Ethereum contract metadata but were not yet wired into the mint/burn registry. This wave includes `U`, `A7A5`, `USDai`, `USDA` (Avalon), `BRZ`, `KAG`, `satUSD`, `rwaUSDi`, `FPI`, `AEUR`, `USDQ`, `USDX`, `MIM`, `USA₮`, `ZeUSD`, `GYD`, `GGBR`, `XSGD`, `IDRT`, `TRYB`, `EURS`, `pUSD` (Plume), `USBD`, `DGLD`, `AxCNH`, `EURQ`, `GYEN`, `USDU Finance`, `ZARP`, `USDp`, `PHT`, `VCHF`, `USSD`, `CADC`, `VEUR`, `dUSD` (dTRINITY), `USDaf`, `EURAU`, `DUSD` (Alto), and `ebUSD`.
+March 24, 2026 expansion: an additional 40 transfer-only configs were added for tracked assets that already had shared contract metadata but were not yet wired into the mint/burn registry. That wave initially included USDai on Ethereum, but canonical USDai issuance tracking now runs on native Arbitrum after LayerZero bridge-transfer filtering work. The broader wave includes `U`, `A7A5`, `USDA` (Avalon), `BRZ`, `KAG`, `satUSD`, `rwaUSDi`, `FPI`, `AEUR`, `USDQ`, `USDX`, `MIM`, `USA₮`, `ZeUSD`, `GYD`, `GGBR`, `XSGD`, `IDRT`, `TRYB`, `EURS`, `pUSD` (Plume), `USBD`, `DGLD`, `AxCNH`, `EURQ`, `GYEN`, `USDU Finance`, `ZARP`, `USDp`, `PHT`, `VCHF`, `USSD`, `CADC`, `VEUR`, `dUSD` (dTRINITY), `USDaf`, `EURAU`, `DUSD` (Alto), and `ebUSD`.
 
 | Symbol | ID | Decimals | Category | Events |
 |--------|----|----------|----------|--------|
@@ -418,7 +418,7 @@ Returns:
 - `hourly[]` — aggregate hourly timeseries: `{ hourTs, netFlowUsd, mintVolumeUsd, burnVolumeUsd }`
 - `updatedAt` — Unix seconds of latest hourly bucket
 - `windowHours` — requested chart window for `hourly[]`
-- `scope` — current ingestion scope (`Ethereum-only`)
+- `scope` — current ingestion scope (for example `Configured issuance chains`, or `Arbitrum-only` on per-coin USDai views)
 - `sync` — latest critical-lane freshness and warning state
 
 **Per-coin mode** (`stablecoin` param provided):
@@ -451,7 +451,7 @@ Paginated event feed for a single stablecoin.
 |-------|------|---------|-------------|
 | `stablecoin` | string | — | Stablecoin ID (required) |
 | `direction` | string | — | Filter: `"mint"` or `"burn"` |
-| `chain` | string | — | Filter by chain ID (`"ethereum"` only in current production scope) |
+| `chain` | string | — | Filter by chain ID within the stablecoin's tracked issuance scope (for example `ethereum` for most coins, `arbitrum` for USDai) |
 | `burnType` | string | — | Burn-only filter: `"effective_burn"`, `"bridge_burn"`, or `"review_required"` |
 | `scope` | string | `"all"` | `"all"` returns the classified raw event stream; `"counted"` returns only rows that contribute to economic-flow aggregates (`flow_type='standard'` and mint/effective-burn semantics) |
 | `minAmount` | number | — | Minimum USD amount; rows with `amount_usd IS NULL` are excluded when this filter is used |
@@ -489,7 +489,7 @@ Controlled ingestion backfill by explicit config/range/chunk, or by automatic co
 - Idempotency: `Idempotency-Key` supported via admin idempotency middleware
 - Parameters: `configKey`, `fromBlock`, `toBlock`, `chunkSize`, `maxChunks`
 - Behavior:
-  - If `configKey` is omitted, the worker auto-selects one Ethereum config using a critical-first / major-symbol-first / most-behind ordering and returns `selectionMode="auto"` plus the chosen `configKey`.
+  - If `configKey` is omitted, the worker auto-selects one tracked config using a critical-first / major-symbol-first / most-behind ordering and returns `selectionMode="auto"` plus the chosen `configKey`.
   - Uses the same shared parse/classification/context/persistence helpers as cron ingestion.
   - Advances `mint_burn_sync_state` with monotonic max semantics (never regresses on partial backfills).
   - Returns `done=false` with `nextFromBlock` when additional calls are needed.
@@ -603,9 +603,9 @@ An Alchemy outage does not block blacklist sync, and vice versa. Each circuit br
 
 ## Future Work
 
-Current production scope is Ethereum-only ingestion. Planned expansions:
+Current production scope already spans configured issuance chains. Planned next expansions:
 
-- **Additional EVM chains:** add contract configs + chain-specific scan policies after reliability gates are met
+- **Additional EVM chains:** add more native issuance configs + chain-specific scan policies after reliability gates are met
 - **Tron support:** USDT Issue/Redeem topic groundwork exists; ingestion path is not wired yet
 - **Curve Finance detection:** DEX-level flow tracking
 

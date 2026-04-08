@@ -57,7 +57,18 @@ function loadCcipCase(stablecoinId: string): CcipCoinCase {
 }
 
 function loadLayerZeroCase(stablecoinId: string): LayerZeroCoinCase {
-  const coin = loadCoinCase(stablecoinId);
+  const config = MINT_BURN_CONFIGS.find(
+    (entry): entry is MintBurnContractConfig =>
+      entry.stablecoinId === stablecoinId && entry.bridgeDetection?.protocol === "layerzero-oft",
+  );
+  if (!config || !config.bridgeDetection || config.bridgeDetection.protocol !== "layerzero-oft") {
+    throw new Error(`Expected LayerZero OFT bridgeDetection config for stablecoin ${stablecoinId}`);
+  }
+  const coin = {
+    stablecoinId: config.stablecoinId,
+    symbol: config.symbol,
+    detection: config.bridgeDetection,
+  };
   if (coin.detection.protocol !== "layerzero-oft") {
     throw new Error(`Expected LayerZero OFT bridgeDetection config for stablecoin ${stablecoinId}`);
   }
@@ -95,7 +106,7 @@ function signalContext(detection: MintBurnCcipBridgeDetectionConfig) {
 function layerZeroSignalContext(detection: MintBurnLayerZeroOftBridgeDetectionConfig) {
   return {
     from: "0xe93685f3bba03016f02bd1828badd6195988d950",
-    to: "0x173272739bd7aa6e4e214714048a9fe699453059",
+    to: detection.knownBridgeContractAddresses[0],
     inputSelector: detection.bridgeSignalSelectors[0],
     logTopics: [detection.bridgeSignalTopics[0]],
     logAddresses: [
@@ -252,6 +263,34 @@ describe("classifyBridgeAwareBurnRows", () => {
 
       expect(burnRow.burn_type).toBe("effective_burn");
       expect(burnRow.flow_type).toBe("standard");
+    });
+
+    it(`[${coin.symbol}] classifies executor-side local compose mints without adapter logs as bridge transfers`, () => {
+      const mintRow = makeBurnRow({
+        tx_hash: `0xexecutor-mint-${coin.stablecoinId}`,
+        direction: "mint",
+        counterparty: "0x24a92e28b4260f89ef62f5f4d7bc8a27c6c44c23",
+      });
+      const executorAddress = coin.detection.knownBridgeContractAddresses[1];
+      const localComposeSelector =
+        coin.detection.bridgeSignalSelectors[coin.detection.bridgeSignalSelectors.length - 1];
+      const contexts = new Map([
+        [
+          mintRow.tx_hash,
+          {
+            from: "0x2cca77f15cd9f7f9c6acd8c062b18561759372a6",
+            to: executorAddress,
+            inputSelector: localComposeSelector,
+            logTopics: [coin.detection.bridgeSignalTopics[0]],
+            logAddresses: [coin.detection.bridgeSignalEmitterAddresses[0], "0x24a92e28b4260f89ef62f5f4d7bc8a27c6c44c23"],
+          },
+        ],
+      ]);
+
+      classifyBridgeAwareBurnRows([mintRow], coin.detection, contexts);
+
+      expect(mintRow.burn_type).toBeNull();
+      expect(mintRow.flow_type).toBe("bridge_transfer");
     });
   }
 });

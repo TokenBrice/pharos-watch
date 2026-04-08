@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const mintBurnFlow = createMethodologyVersion({
-  currentVersion: "5.0",
+  currentVersion: "5.1",
   changelogPath: "/methodology/mint-burn-flow-changelog/",
   changelog: [
+  {
+    version: "5.1",
+    title: "Canonical-chain mint/burn scope for native issuance tracking",
+    date: "2026-04-08",
+    effectiveAt: 1775620800,
+    summary:
+      "Mint/burn coverage now follows each asset's configured issuance chain instead of assuming Ethereum-only scope, with USDai switched to native Arbitrum issuance/redemption tracking and stale non-canonical rows excluded from public aggregates.",
+    impact: [
+      "USDai mint/burn tracking now runs on Arbitrum as the canonical native issuance chain instead of Ethereum bridge-transfer noise",
+      "Aggregate and per-coin APIs now read only configured `(stablecoinId, chainId)` pairs so stale historical rows on non-canonical chains do not contaminate public flow metrics",
+      "Cron metadata, coverage helpers, status reconciliation, daily digest, and DEWS mint/burn inputs now honor chain-aware mint/burn scope",
+      "Admin backfill auto-selection and explicit config replay now work across the configured issuance-chain set instead of Ethereum-only",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "5.0",
     title: "Bridge-transfer flow exclusion for omnichain tokens",

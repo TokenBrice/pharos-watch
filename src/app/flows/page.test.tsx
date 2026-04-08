@@ -67,8 +67,8 @@ function buildFlowData(syncWarning: string | null) {
     updatedAt: Math.floor(Date.now() / 1000),
     windowHours: 24,
     scope: {
-      chainIds: ["ethereum"],
-      label: "Ethereum-only",
+      chainIds: ["ethereum", "arbitrum"],
+      label: "Configured issuance chains",
     },
     sync: {
       lastSuccessfulSyncAt: Math.floor(Date.now() / 1000) - 3_000,

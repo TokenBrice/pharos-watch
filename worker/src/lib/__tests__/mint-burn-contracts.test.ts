@@ -1,7 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { decodeUint256AtSlot } from "../evm-logs";
-import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
+import {
+  buildMintBurnScope,
+  getMintBurnConfigsForStablecoin,
+  MINT_BURN_CONFIGS,
+} from "../mint-burn-contracts";
 
 const REUSD_DEPOSITED_TOPIC = "0x8752a472e571a816aea92eec8dae9baf628e840f4929fbcc2d155e6233ff68a7";
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
@@ -62,10 +66,35 @@ describe("mint-burn-contracts removals", () => {
   });
 });
 
-describe("mint-burn-contracts Ethereum-only scope", () => {
-  it("keeps all tracked configs on ethereum", () => {
+describe("mint-burn-contracts configured scope", () => {
+  it("exposes both Ethereum and Arbitrum tracking after the USDai canonical-chain switch", () => {
     const uniqueChains = new Set(MINT_BURN_CONFIGS.map((c) => c.chain.chainId));
-    expect(uniqueChains).toEqual(new Set(["ethereum"]));
+    expect(uniqueChains).toEqual(new Set(["ethereum", "arbitrum"]));
+    expect(buildMintBurnScope()).toEqual({
+      chainIds: ["ethereum", "arbitrum"],
+      label: "Configured issuance chains",
+    });
+  });
+
+  it("tracks USDai on Arbitrum with LayerZero bridge detection", () => {
+    const configs = getMintBurnConfigsForStablecoin("usdai-usd-ai");
+    expect(configs).toHaveLength(1);
+    expect(configs[0]).toMatchObject({
+      chain: { chainId: "arbitrum" },
+      symbol: "USDai",
+      dustThreshold: 10_000,
+      tier: "extended",
+      startBlock: 393_791_324,
+      startBlockSource: "reviewed-arbitrum-activity-floor-2025-10-27",
+      startBlockConfidence: "medium",
+      bridgeDetection: {
+        protocol: "layerzero-oft",
+        knownBridgeContractAddresses: [
+          "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
+          "0x31cae3b7fb82d847621859fb1585353c5720660d",
+        ],
+      },
+    });
   });
 });
 
@@ -316,7 +345,6 @@ describe("mint-burn-contracts top-200 Ethereum additions", () => {
   const top200EthereumAdditions = [
     { stablecoinId: "u-united-stables", symbol: "U", address: "0xce24439f2d9c6a2289f741120fe202248b666666", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "a7a5-old-vector", symbol: "A7A5", address: "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9", decimals: 6, dustThreshold: 10_000 },
-    { stablecoinId: "usdai-usd-ai", symbol: "USDai", address: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "usda-avalon", symbol: "USDA", address: "0x8a60e489004ca22d775c5f2c657598278d17d9c2", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "brz-transfero", symbol: "BRZ", address: "0x01d33fd36ec67c6ada32cf36b31e88ee190b1839", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "kag-kinesis", symbol: "KAG", address: "0xf94d9b6dc4eacd89fe3235d9a3c2465fea405157", decimals: 9, dustThreshold: 10 },

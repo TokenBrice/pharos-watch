@@ -97,9 +97,10 @@ interface MakeDbOptions {
   failDexLiquidity?: boolean;
   failDexPricesMissingTable?: boolean;
   dexPriceRows?: Array<{ stablecoin_id: string; dex_price_usd: number; updated_at: number }>;
-  mintBurn24hRows?: Array<{ stablecoin_id: string; total_burn: number; total_mint: number }>;
+  mintBurn24hRows?: Array<{ stablecoin_id: string; chain_id?: string; total_burn: number; total_mint: number }>;
   mintBurn30dRows?: Array<{
     stablecoin_id: string;
+    chain_id?: string;
     avg_burn: number;
     avg_mint: number;
     days_with_data: number;
@@ -194,11 +195,11 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
       if (sql.includes("FROM mint_burn_hourly")) {
         if (sql.includes("days_with_data")) {
           return {
-            results: (opts.mintBurn30dRows ?? []) as T[],
+            results: (opts.mintBurn30dRows ?? []).map((row) => ({ chain_id: "ethereum", ...row })) as T[],
           };
         }
         return {
-          results: (opts.mintBurn24hRows ?? []) as T[],
+          results: (opts.mintBurn24hRows ?? []).map((row) => ({ chain_id: "ethereum", ...row })) as T[],
         };
       }
       return { results: [] as T[] };

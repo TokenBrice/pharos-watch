@@ -51,7 +51,7 @@ function FlowsPageInner() {
   const weeklyHourly = (hours === 168 ? chartData?.hourly : weeklyData?.hourly) ?? [];
   const error = summaryError ?? chartError;
   const hasData = !!summaryData || !!chartData;
-  const scopeLabel = summaryData?.scope?.label ?? "Ethereum-only";
+  const scopeLabel = summaryData?.scope?.label ?? "Configured issuance chains";
   const syncWarning = summaryData?.sync?.warning ?? chartData?.sync?.warning ?? null;
   const showDataHealthBanner = !syncWarning;
 
@@ -91,14 +91,14 @@ function FlowsPageInner() {
           </Link>
         </p>
         <p className="text-sm text-muted-foreground">
-          Ethereum minting and redemption flows for tracked stablecoins.
+          Minting and redemption flows on each tracked stablecoin&apos;s configured issuance chain.
         </p>
         <p className="text-sm text-muted-foreground">
           Net flow tells you whether tokens are being minted or burned right
           now. Pressure Shift vs 30D tells you whether today&apos;s activity is
           stronger or weaker than each coin&apos;s recent norm, and the Bank Run
           Gauge aggregates that baseline-relative pressure across tracked
-          Ethereum issuance and redemption activity.
+          issuance and redemption activity.
         </p>
         {syncWarning && (
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">

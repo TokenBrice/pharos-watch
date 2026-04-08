@@ -11,8 +11,9 @@ import {
   fetchPaginatedEvents,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
+import { getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
+import { buildInClause } from "../lib/db";
 
-const ETHEREUM_CHAIN_ID = "ethereum";
 const VALID_DIRECTIONS = new Set(["mint", "burn"]);
 const VALID_BURN_TYPES = new Set(["effective_burn", "bridge_burn", "review_required"]);
 const VALID_SCOPES = new Set(["all", "counted"]);
@@ -49,9 +50,16 @@ export const handleMintBurnEvents = withErrorHandler(
     const direction = parseOptionalEnumParam(params.get("direction"), VALID_DIRECTIONS, "direction");
     if (direction instanceof Response) return direction;
     const chain = params.get("chain");
-    if (chain && chain !== ETHEREUM_CHAIN_ID) {
+    const configs = getMintBurnConfigsForStablecoin(stablecoinId);
+    if (configs.length === 0) {
+      return errorResponse(404, `Stablecoin "${stablecoinId}" is not tracked for mint/burn flows`);
+    }
+    const trackedChainIds = [...new Set(configs.map((config) => config.chain.chainId))];
+    if (chain && !trackedChainIds.includes(chain)) {
       return errorResponse(400, "Invalid chain parameter");
     }
+    const queryChainIds = chain ? [chain] : trackedChainIds;
+    const chainInClause = buildInClause(queryChainIds);
     const burnType = parseOptionalEnumParam(params.get("burnType"), VALID_BURN_TYPES, "burnType");
     if (burnType instanceof Response) return burnType;
     const scope = parseEnumParam(params.get("scope"), VALID_SCOPES, "scope", "all");
@@ -65,8 +73,8 @@ export const handleMintBurnEvents = withErrorHandler(
     const { minAmount, limit, offset } = numericParams;
 
     // Build WHERE conditions
-    const conditions: string[] = ["stablecoin_id = ?", "chain_id = ?"];
-    const filterBindings: (string | number)[] = [stablecoinId, ETHEREUM_CHAIN_ID];
+    const conditions: string[] = ["stablecoin_id = ?", `chain_id IN (${chainInClause.sql})`];
+    const filterBindings: (string | number)[] = [stablecoinId, ...queryChainIds];
 
     if (direction) {
       conditions.push("direction = ?");

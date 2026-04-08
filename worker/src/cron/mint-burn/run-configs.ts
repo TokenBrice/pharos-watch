@@ -42,15 +42,16 @@ export async function runMintBurnConfigPhase(input: {
   jobName: string;
   reportProgress?: CronProgressReporter;
   budget: { limit: number; count: number };
-  chainHead: number;
-  alchemyUrl: string;
+  chainContexts: Map<string, {
+    chainHead: number;
+    alchemyUrl: string;
+    chainTimestampCache: Map<number, number>;
+    txContextCache: Map<string, MintBurnTxContext | null>;
+  }>;
   signal?: AbortSignal;
   runTimestamp: number;
   priceContext: MintBurnPriceContext;
-  chainTimestampCache: Map<number, number>;
-  txContextCache: Map<string, MintBurnTxContext | null>;
   lastBlocksAfterRun: Map<string, number>;
-  ethereumChainId: string;
   maxScanRange: number;
   criticalConfigBudgetLimit: number;
   extendedConfigBudgetLimit: number;
@@ -135,13 +136,6 @@ export async function runMintBurnConfigPhase(input: {
       configBreakdown.push(summary);
     };
 
-    if (config.chain.chainId !== input.ethereumChainId) {
-      summary.skippedReason = "non-ethereum-config";
-      contractsSkipped++;
-      finalizeSummary("unsatisfied");
-      continue;
-    }
-
     if (budgetExhausted(input.budget)) {
       summary.skippedReason = "global-budget-exhausted";
       contractsSkipped++;
@@ -162,8 +156,16 @@ export async function runMintBurnConfigPhase(input: {
       continue;
     }
 
+    const chainContext = input.chainContexts.get(config.chain.chainId);
+    if (!chainContext) {
+      summary.skippedReason = "missing-chain-context";
+      contractsSkipped++;
+      finalizeSummary("unsatisfied");
+      continue;
+    }
+
     const fromBlock = (input.lastBlocksAfterRun.get(key) ?? (config.startBlock - 1)) + 1;
-    if (fromBlock > input.chainHead) {
+    if (fromBlock > chainContext.chainHead) {
       summary.skippedReason = "up-to-date";
       contractsSkipped++;
       finalizeSummary("satisfied");
@@ -172,7 +174,7 @@ export async function runMintBurnConfigPhase(input: {
 
     summary.attempted = true;
     contractsProcessed++;
-    const scanTo = Math.min(fromBlock + input.maxScanRange - 1, input.chainHead);
+    const scanTo = Math.min(fromBlock + input.maxScanRange - 1, chainContext.chainHead);
     const configBudgetLimit = Math.max(
       1,
       Math.min(
@@ -187,14 +189,14 @@ export async function runMintBurnConfigPhase(input: {
       tier,
       fromBlock,
       scanTo,
-      chainHead: input.chainHead,
-      alchemyUrl: input.alchemyUrl,
+      chainHead: chainContext.chainHead,
+      alchemyUrl: chainContext.alchemyUrl,
       signal: input.signal,
       configBudgetLimit,
       runTimestamp: input.runTimestamp,
       priceContext: input.priceContext,
-      chainTimestampCache: input.chainTimestampCache,
-      txContextCache: input.txContextCache,
+      chainTimestampCache: chainContext.chainTimestampCache,
+      txContextCache: chainContext.txContextCache,
       affectedHours,
       safetyMarginBlocks: input.evmSafetyMarginBlocks,
     });

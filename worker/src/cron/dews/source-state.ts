@@ -1,6 +1,7 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../../lib/constants";
 import { decodeJsonString } from "../../lib/cache-json";
+import { isCanonicalMintBurnPair } from "../../lib/mint-burn-canonical-chain";
 import type {
   DewsSourceState,
   PersistedJsonDecodeReason,
@@ -222,28 +223,43 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
   try {
     const mb24h = await options.db
       .prepare(
-        `SELECT stablecoin_id,
+        `SELECT stablecoin_id, chain_id,
                 SUM(CASE WHEN burn_volume_usd IS NOT NULL THEN burn_volume_usd ELSE 0 END) as total_burn,
                 SUM(CASE WHEN mint_volume_usd IS NOT NULL THEN mint_volume_usd ELSE 0 END) as total_mint
-         FROM mint_burn_hourly WHERE hour_ts >= ? GROUP BY stablecoin_id`,
+         FROM mint_burn_hourly WHERE hour_ts >= ? GROUP BY stablecoin_id, chain_id`,
       )
       .bind(options.nowSec - DAY_SECONDS)
-      .all<{ stablecoin_id: string; total_burn: number; total_mint: number }>();
+      .all<{ stablecoin_id: string; chain_id: string; total_burn: number; total_mint: number }>();
 
     const mb30d = await options.db
       .prepare(
-        `SELECT stablecoin_id,
+        `SELECT stablecoin_id, chain_id,
                 SUM(CASE WHEN burn_volume_usd IS NOT NULL THEN burn_volume_usd ELSE 0 END) / 30.0 as avg_burn,
                 SUM(CASE WHEN mint_volume_usd IS NOT NULL THEN mint_volume_usd ELSE 0 END) / 30.0 as avg_mint,
                 COUNT(DISTINCT date(hour_ts, 'unixepoch')) as days_with_data
-         FROM mint_burn_hourly WHERE hour_ts >= ? GROUP BY stablecoin_id`,
+         FROM mint_burn_hourly WHERE hour_ts >= ? GROUP BY stablecoin_id, chain_id`,
       )
       .bind(options.nowSec - 30 * DAY_SECONDS)
-      .all<{ stablecoin_id: string; avg_burn: number; avg_mint: number; days_with_data: number }>();
+      .all<{ stablecoin_id: string; chain_id: string; avg_burn: number; avg_mint: number; days_with_data: number }>();
     mintBurnRowsRead = (mb24h.results?.length ?? 0) + (mb30d.results?.length ?? 0);
 
-    const mb24hMap = new Map(mb24h.results.map((row) => [row.stablecoin_id, row]));
-    const mb30dMap = new Map(mb30d.results.map((row) => [row.stablecoin_id, row]));
+    const mb24hMap = new Map<string, { total_burn: number; total_mint: number }>();
+    for (const row of mb24h.results) {
+      if (!isCanonicalMintBurnPair(row.stablecoin_id, row.chain_id)) continue;
+      const aggregate = mb24hMap.get(row.stablecoin_id) ?? { total_burn: 0, total_mint: 0 };
+      aggregate.total_burn += row.total_burn;
+      aggregate.total_mint += row.total_mint;
+      mb24hMap.set(row.stablecoin_id, aggregate);
+    }
+    const mb30dMap = new Map<string, { avg_burn: number; avg_mint: number; days_with_data: number }>();
+    for (const row of mb30d.results) {
+      if (!isCanonicalMintBurnPair(row.stablecoin_id, row.chain_id)) continue;
+      const aggregate = mb30dMap.get(row.stablecoin_id) ?? { avg_burn: 0, avg_mint: 0, days_with_data: 0 };
+      aggregate.avg_burn += row.avg_burn;
+      aggregate.avg_mint += row.avg_mint;
+      aggregate.days_with_data = Math.max(aggregate.days_with_data, row.days_with_data);
+      mb30dMap.set(row.stablecoin_id, aggregate);
+    }
     const mintBurnIds = new Set([...mb24hMap.keys(), ...mb30dMap.keys()]);
 
     for (const stablecoinId of mintBurnIds) {

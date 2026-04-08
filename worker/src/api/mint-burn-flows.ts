@@ -6,7 +6,12 @@ import {
   parseQueryParams,
   getLatestSuccessfulCronTimestampResult,
 } from "../lib/api-utils";
-import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
+import {
+  buildMintBurnScope,
+  getMintBurnConfigsForStablecoin,
+  getMintBurnTrackedPairs,
+  MINT_BURN_CONFIGS,
+} from "../lib/mint-burn-contracts";
 import { readMintBurnSyncStateBatch } from "../lib/mint-burn-pipeline/sync-state";
 import { buildMintBurnSyncHealth } from "../lib/mint-burn-health-config";
 import {
@@ -25,6 +30,7 @@ import {
 } from "@shared/lib/mint-burn-signals";
 import { loadReportCardCache } from "../lib/report-card-cache";
 import { buildFlightToQualityClassification } from "../lib/flight-to-quality-classification";
+import { buildInClause } from "../lib/db";
 import {
   aggregateFlowCacheKey,
   aggregateHourlyRowsByChain,
@@ -36,13 +42,13 @@ import {
   bucketDay,
   cachedFlowFallbackResponse,
   type DailyBaselineRow,
-  ETHEREUM_CHAIN_ID,
   type EventRow,
   finalizeMintBurnFlowResponse,
   type FirstSeenRow,
   FLOW_DEFAULT_WINDOW_HOURS,
   type HourlyRow,
   MINT_BURN_CRON_JOB,
+  mintBurnPairKey,
   perCoinFlowCacheKey,
   readMintBurnCronSnapshot,
   resolveFlowUpdatedAt,
@@ -130,10 +136,35 @@ interface AggregateData {
   freshnessLookupWarning: string | null;
 }
 
+interface GroupedNetFlowRow {
+  stablecoin_id: string;
+  chain_id: string;
+  net_flow_usd: number;
+}
+
 function appendSyncWarning(baseWarning: string | null, extraWarning: string | null): string | null {
   if (!baseWarning) return extraWarning;
   if (!extraWarning) return baseWarning;
   return `${baseWarning} ${extraWarning}`;
+}
+
+function filterRowsToTrackedPairs<T extends { stablecoin_id: string; chain_id: string }>(
+  rows: T[],
+  trackedPairs: Set<string>,
+): T[] {
+  return rows.filter((row) => trackedPairs.has(mintBurnPairKey(row.stablecoin_id, row.chain_id)));
+}
+
+function buildGroupedNetFlowMap(
+  rows: GroupedNetFlowRow[],
+  trackedPairs: Set<string>,
+): Map<string, number> {
+  const netMap = new Map<string, number>();
+  for (const row of rows) {
+    if (!trackedPairs.has(mintBurnPairKey(row.stablecoin_id, row.chain_id))) continue;
+    netMap.set(row.stablecoin_id, (netMap.get(row.stablecoin_id) ?? 0) + row.net_flow_usd);
+  }
+  return netMap;
 }
 
 // ---------------------------------------------------------------------------
@@ -170,7 +201,9 @@ async function fetchAggregateData(
   db: D1Database,
   params: AggregateQueryParams,
 ): Promise<AggregateData> {
-  const ethereumConfigs = MINT_BURN_CONFIGS.filter((c) => c.chain.chainId === ETHEREUM_CHAIN_ID);
+  const trackedPairs = getMintBurnTrackedPairs();
+  const trackedChainIds = [...new Set(MINT_BURN_CONFIGS.map((config) => config.chain.chainId))];
+  const chainInClause = buildInClause(trackedChainIds);
 
   const [
     hourlyWindowResult,
@@ -189,89 +222,93 @@ async function fetchAggregateData(
          `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
                  mint_volume_usd, burn_volume_usd, net_flow_usd
           FROM mint_burn_hourly
-         WHERE chain_id = ? AND hour_ts >= ?
+         WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
           ORDER BY hour_ts ASC`,
       )
-      .bind(ETHEREUM_CHAIN_ID, params.windowStart)
+      .bind(...chainInClause.binds, params.windowStart)
       .all<HourlyRow>(),
     db
       .prepare(
          `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
                  mint_volume_usd, burn_volume_usd, net_flow_usd
           FROM mint_burn_hourly
-         WHERE chain_id = ? AND hour_ts >= ?
+         WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
           ORDER BY hour_ts ASC`,
       )
-      .bind(ETHEREUM_CHAIN_ID, params.window24h)
+      .bind(...chainInClause.binds, params.window24h)
       .all<HourlyRow>(),
     db
       .prepare(
-        `SELECT stablecoin_id,
+        `SELECT stablecoin_id, chain_id,
                 SUM(net_flow_usd) as net_flow_usd
          FROM mint_burn_hourly
-         WHERE chain_id = ? AND hour_ts >= ?
-         GROUP BY stablecoin_id`,
+         WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
+         GROUP BY stablecoin_id, chain_id`,
       )
-      .bind(ETHEREUM_CHAIN_ID, params.window7d)
-      .all<{ stablecoin_id: string; net_flow_usd: number }>(),
+      .bind(...chainInClause.binds, params.window7d)
+      .all<GroupedNetFlowRow>(),
     db
       .prepare(
-        `SELECT stablecoin_id,
+        `SELECT stablecoin_id, chain_id,
                 SUM(net_flow_usd) as net_flow_usd
          FROM mint_burn_hourly
-         WHERE chain_id = ? AND hour_ts >= ?
-         GROUP BY stablecoin_id`,
+         WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
+         GROUP BY stablecoin_id, chain_id`,
       )
-      .bind(ETHEREUM_CHAIN_ID, params.window30d)
-      .all<{ stablecoin_id: string; net_flow_usd: number }>(),
+      .bind(...chainInClause.binds, params.window30d)
+      .all<GroupedNetFlowRow>(),
     db
       .prepare(
-        `SELECT stablecoin_id,
+        `SELECT stablecoin_id, chain_id,
                 SUM(net_flow_usd) as net_flow_usd
          FROM mint_burn_hourly
-         WHERE chain_id = ? AND hour_ts >= ?
-         GROUP BY stablecoin_id`,
+         WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ?
+         GROUP BY stablecoin_id, chain_id`,
       )
-      .bind(ETHEREUM_CHAIN_ID, params.window90d)
-      .all<{ stablecoin_id: string; net_flow_usd: number }>(),
+      .bind(...chainInClause.binds, params.window90d)
+      .all<GroupedNetFlowRow>(),
     db
       .prepare(
-        `SELECT stablecoin_id,
+        `SELECT stablecoin_id, chain_id,
                 (hour_ts / 86400) * 86400 as day_ts,
                 SUM(net_flow_usd) as daily_net,
                 SUM(mint_volume_usd + burn_volume_usd) as daily_abs
          FROM mint_burn_hourly
-         WHERE chain_id = ? AND hour_ts >= ? AND hour_ts < ?
-         GROUP BY stablecoin_id, day_ts`,
+         WHERE chain_id IN (${chainInClause.sql}) AND hour_ts >= ? AND hour_ts < ?
+         GROUP BY stablecoin_id, chain_id, day_ts`,
       )
-      .bind(ETHEREUM_CHAIN_ID, params.baselineWindowStart, params.nowDayTs)
+      .bind(...chainInClause.binds, params.baselineWindowStart, params.nowDayTs)
       .all<DailyBaselineRow>(),
     db
       .prepare(
-        `SELECT stablecoin_id, MIN(hour_ts) as first_hour_ts
+        `SELECT stablecoin_id, chain_id, MIN(hour_ts) as first_hour_ts
          FROM mint_burn_hourly
-         WHERE chain_id = ?
-         GROUP BY stablecoin_id`,
+         WHERE chain_id IN (${chainInClause.sql})
+         GROUP BY stablecoin_id, chain_id`,
       )
-      .bind(ETHEREUM_CHAIN_ID)
+      .bind(...chainInClause.binds)
       .all<FirstSeenRow>(),
     db
       .prepare(
         `SELECT id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
                 counterparty, tx_hash, block_number, timestamp, explorer_tx_url
          FROM mint_burn_events
-         WHERE chain_id = ?
+         WHERE chain_id IN (${chainInClause.sql})
            AND timestamp >= ?
            AND (direction = 'mint' OR burn_type = 'effective_burn')
            AND flow_type = 'standard'`,
       )
-      .bind(ETHEREUM_CHAIN_ID, params.window24h)
+      .bind(...chainInClause.binds, params.window24h)
       .all<EventRow>(),
-    readMintBurnSyncStateBatch(db, ethereumConfigs),
+    readMintBurnSyncStateBatch(db, MINT_BURN_CONFIGS),
     readMintBurnCronSnapshot(db),
   ]);
 
-  const hourlyRows = hourlyWindowResult.results ?? [];
+  const hourlyRows = filterRowsToTrackedPairs(hourlyWindowResult.results ?? [], trackedPairs);
+  const hourly24hRows = filterRowsToTrackedPairs(hourly24hResult.results ?? [], trackedPairs);
+  const baselineRows = filterRowsToTrackedPairs(baselineDailyResult.results ?? [], trackedPairs);
+  const firstSeenRows = filterRowsToTrackedPairs(firstSeenResult.results ?? [], trackedPairs);
+  const largestEventRows = filterRowsToTrackedPairs(largestEventsResult.results ?? [], trackedPairs);
   const latestSuccessfulSyncLookup = await getLatestSuccessfulCronTimestampResult(db, MINT_BURN_CRON_JOB);
   const fallbackSyncAt =
     latestCronSnapshot.startedAt
@@ -283,13 +320,13 @@ async function fetchAggregateData(
 
   return {
     hourlyRows,
-    hourly24hRows: hourly24hResult.results ?? [],
-    net7dMap: new Map((hourly7dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd])),
-    net30dMap: new Map((hourly30dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd])),
-    net90dMap: new Map((hourly90dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd])),
-    baselineMap: buildBaselineMap(params.nowSec, baselineDailyResult.results ?? [], firstSeenResult.results ?? []),
-    largestEventMap: selectLargestEvents(largestEventsResult.results ?? []),
-    coverageMap: buildCoinCoverageMap(params.nowSec, firstSeenResult.results ?? [], lastBlocks, latestCronSnapshot.chainHead),
+    hourly24hRows,
+    net7dMap: buildGroupedNetFlowMap(hourly7dResult.results ?? [], trackedPairs),
+    net30dMap: buildGroupedNetFlowMap(hourly30dResult.results ?? [], trackedPairs),
+    net90dMap: buildGroupedNetFlowMap(hourly90dResult.results ?? [], trackedPairs),
+    baselineMap: buildBaselineMap(params.nowSec, baselineRows, firstSeenRows),
+    largestEventMap: selectLargestEvents(largestEventRows),
+    coverageMap: buildCoinCoverageMap(params.nowSec, firstSeenRows, lastBlocks, latestCronSnapshot.chainHeads),
     sync: buildMintBurnSyncHealth(params.nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status),
     latestSuccessfulSyncAt,
     freshnessLookupWarning,
@@ -455,7 +492,7 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
         trackedCoins: coins.length, trackedMcapUsd,
       },
       coins, hourly, updatedAt, windowHours: hours,
-      scope: { chainIds: [ETHEREUM_CHAIN_ID], label: "Ethereum-only" },
+      scope: buildMintBurnScope(MINT_BURN_CONFIGS),
       sync: {
         ...data.sync,
         warning: appendSyncWarning(data.sync.warning, data.freshnessLookupWarning),
@@ -476,10 +513,13 @@ async function handlePerCoin(
   stablecoinId: string,
   hours: number,
 ): Promise<Response> {
-  const config = MINT_BURN_CONFIGS.find((c) => c.stablecoinId === stablecoinId);
-  if (!config) {
+  const configs = getMintBurnConfigsForStablecoin(stablecoinId);
+  if (configs.length === 0) {
     return errorResponse(404, `Stablecoin "${stablecoinId}" is not tracked for mint/burn flows`);
   }
+  const symbol = configs[0]!.symbol;
+  const trackedChainIds = [...new Set(configs.map((config) => config.chain.chainId))];
+  const chainInClause = buildInClause(trackedChainIds);
 
   const cacheKey = perCoinFlowCacheKey(stablecoinId, hours);
   return withMintBurnFlowFallback(db, "per-coin", cacheKey, async () => {
@@ -493,10 +533,10 @@ async function handlePerCoin(
           `SELECT chain_id, hour_ts, mint_count, burn_count,
                   mint_volume_usd, burn_volume_usd, net_flow_usd
            FROM mint_burn_hourly
-           WHERE chain_id = ? AND stablecoin_id = ? AND hour_ts >= ?
+           WHERE chain_id IN (${chainInClause.sql}) AND stablecoin_id = ? AND hour_ts >= ?
            ORDER BY hour_ts ASC`,
         )
-        .bind(ETHEREUM_CHAIN_ID, stablecoinId, windowStart)
+        .bind(...chainInClause.binds, stablecoinId, windowStart)
         .all<HourlyRow>(),
       readMintBurnCronSnapshot(db),
     ]);
@@ -542,7 +582,7 @@ async function handlePerCoin(
 
     const body = {
       stablecoinId,
-      symbol: config.symbol,
+      symbol,
       mintVolumeUsd: totalMint,
       burnVolumeUsd: totalBurn,
       netFlowUsd: totalMint - totalBurn,
@@ -553,8 +593,8 @@ async function handlePerCoin(
       updatedAt,
       windowHours: hours,
       scope: {
-        chainIds: [ETHEREUM_CHAIN_ID],
-        label: "Ethereum-only",
+        chainIds: trackedChainIds,
+        label: buildMintBurnScope(configs).label,
       },
       sync: {
         ...sync,

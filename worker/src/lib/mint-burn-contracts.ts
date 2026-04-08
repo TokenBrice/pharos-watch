@@ -1,6 +1,7 @@
 import type { ChainConfig } from "./blacklist-contracts";
 import { chainConfig } from "./blacklist-contracts";
 import { resolveRequiredTrackedContractConfig } from "./tracked-contract-resolution";
+import { CHAIN_META } from "@shared/lib/chains";
 
 // --- Types ---
 
@@ -92,6 +93,7 @@ const LAYERZERO_PACKET_SENT_TOPIC = "0x1ab700d4ced0c005b164c0f789fd09fcbb0156d4c
 const LAYERZERO_PACKET_DELIVERED_TOPIC = "0x3cd5e48f9730b129dc7550f0fcea9c767b7be37837cd10e55eb35f734f4bca04";
 const LAYERZERO_SEND_SELECTOR = "0xc7c7f5b3";
 const LAYERZERO_EXECUTE302_SELECTOR = "0xcfc32570";
+const LAYERZERO_LOCAL_COMPOSE_SELECTOR = "0x7cd44734";
 
 
 // --- Helpers ---
@@ -149,6 +151,7 @@ function layerZeroOftBridgeDetection(
     bridgeSignalSelectors: [
       LAYERZERO_SEND_SELECTOR,
       LAYERZERO_EXECUTE302_SELECTOR,
+      LAYERZERO_LOCAL_COMPOSE_SELECTOR,
     ],
   };
 }
@@ -214,6 +217,11 @@ const REUSD_INSTANT_REDEEM_TOPIC = "0xa58dba63852b106a5b3bbc558fa3fbcfe606497cbc
 // --- Ethereum configs ---
 
 const ETHEREUM = chainConfig("ethereum");
+const ARBITRUM = chainConfig("arbitrum");
+// Reviewed Arbitrum activity floor: USDai approval activity is confirmed by
+// block 393,791,324 (2025-10-27), which gives enough history for 90d windows
+// without pretending we have a deployment-level reviewed bound yet.
+const USD_AI_ARBITRUM_ACTIVITY_FLOOR_BLOCK = 393_791_324;
 
 const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   stablecoinId: string;
@@ -222,13 +230,6 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
 }> = [
   { stablecoinId: "u-united-stables", dustThreshold: 10_000 },
   { stablecoinId: "a7a5-old-vector", dustThreshold: 10_000 },
-  {
-    stablecoinId: "usdai-usd-ai",
-    dustThreshold: 10_000,
-    bridgeDetection: layerZeroOftBridgeDetection([
-      "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
-    ]),
-  },
   { stablecoinId: "usda-avalon", dustThreshold: 10_000 },
   { stablecoinId: "brz-transfero", dustThreshold: 10_000 },
   { stablecoinId: "kag-kinesis", dustThreshold: 10 },
@@ -804,6 +805,19 @@ const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
       events: transferMintBurn(),
     }),
   ),
+  {
+    chain: ARBITRUM, stablecoinId: "usdai-usd-ai",
+    dustThreshold: 10_000,
+    startBlock: USD_AI_ARBITRUM_ACTIVITY_FLOOR_BLOCK,
+    tier: "extended",
+    bridgeDetection: layerZeroOftBridgeDetection([
+      "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
+      "0x31cae3b7fb82d847621859fb1585353c5720660d",
+    ]),
+    startBlockSource: "reviewed-arbitrum-activity-floor-2025-10-27",
+    startBlockConfidence: "medium",
+    events: transferMintBurn(),
+  },
 
   // --- reUSD (Re Protocol, ID 339) — Ethereum only ---
   {
@@ -838,6 +852,36 @@ const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
 export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = MINT_BURN_CONFIG_SPECS.map(
   resolveMintBurnContractConfig,
 );
+
+function uniqueChainIds(configs: MintBurnContractConfig[]): string[] {
+  return [...new Set(configs.map((config) => config.chain.chainId))];
+}
+
+export function getMintBurnConfigsForStablecoin(stablecoinId: string): MintBurnContractConfig[] {
+  return MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === stablecoinId);
+}
+
+export function getMintBurnTrackedPairs(configs: MintBurnContractConfig[] = MINT_BURN_CONFIGS): Set<string> {
+  return new Set(
+    configs.map((config) => `${config.stablecoinId}|${config.chain.chainId}`),
+  );
+}
+
+export function buildMintBurnScope(configs: MintBurnContractConfig[] = MINT_BURN_CONFIGS): {
+  chainIds: string[];
+  label: string;
+} {
+  const chainIds = uniqueChainIds(configs);
+  if (chainIds.length === 0) {
+    return { chainIds, label: "No tracked chains" };
+  }
+  if (chainIds.length === 1) {
+    const chainId = chainIds[0]!;
+    const chainName = CHAIN_META[chainId]?.name ?? chainId;
+    return { chainIds, label: `${chainName}-only` };
+  }
+  return { chainIds, label: "Configured issuance chains" };
+}
 
 /**
  * Hardcoded safe-haven IDs — used as fallback for flight-to-quality detection

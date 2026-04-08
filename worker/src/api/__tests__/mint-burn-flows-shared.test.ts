@@ -119,6 +119,7 @@ describe("readMintBurnCronSnapshot", () => {
       startedAt: 1_700_000_000,
       status: "ok",
       chainHead: null,
+      chainHeads: new Map(),
     });
   });
 
@@ -135,6 +136,7 @@ describe("readMintBurnCronSnapshot", () => {
       startedAt: null,
       status: null,
       chainHead: null,
+      chainHeads: new Map(),
     });
   });
 });
@@ -145,11 +147,11 @@ describe("buildBaselineMap", () => {
     const baseline = buildBaselineMap(
       nowSec,
       [
-        { stablecoin_id: "usdt-tether", day_ts: 1 * DAY_SECONDS, daily_net: 30, daily_abs: 50 },
-        { stablecoin_id: "usdt-tether", day_ts: 2 * DAY_SECONDS, daily_net: -15, daily_abs: 25 },
+        { stablecoin_id: "usdt-tether", chain_id: ETHEREUM_CHAIN_ID, day_ts: 1 * DAY_SECONDS, daily_net: 30, daily_abs: 50 },
+        { stablecoin_id: "usdt-tether", chain_id: ETHEREUM_CHAIN_ID, day_ts: 2 * DAY_SECONDS, daily_net: -15, daily_abs: 25 },
       ],
       [
-        { stablecoin_id: "usdt-tether", first_hour_ts: 1 * DAY_SECONDS + 3600 },
+        { stablecoin_id: "usdt-tether", chain_id: ETHEREUM_CHAIN_ID, first_hour_ts: 1 * DAY_SECONDS + 3600 },
       ],
     );
 
@@ -170,9 +172,9 @@ describe("buildCoinCoverageMap", () => {
     const referenceHead = config.startBlock + 1_000_000;
     const coverage = buildCoinCoverageMap(
       200 * DAY_SECONDS,
-      [{ stablecoin_id: config.stablecoinId, first_hour_ts: 50 * DAY_SECONDS }],
+      [{ stablecoin_id: config.stablecoinId, chain_id: config.chain.chainId, first_hour_ts: 50 * DAY_SECONDS }],
       new Map([[`${config.chain.chainId}-${config.contractAddress}`, referenceHead]]),
-      referenceHead,
+      new Map([[config.chain.chainId, referenceHead]]),
     );
 
     expect(coverage.get(config.stablecoinId)).toMatchObject({

@@ -1866,7 +1866,7 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
   "hourly": [HourlyFlow, ...],
   "updatedAt": 1772000000,
   "windowHours": 24,
-  "scope": { "chainIds": ["ethereum"], "label": "Ethereum-only" },
+  "scope": { "chainIds": ["ethereum", "arbitrum"], "label": "Configured issuance chains" },
   "sync": { "lastSuccessfulSyncAt": 1772000200, "freshnessStatus": "fresh", "warning": null, "criticalLaneHealthy": true }
 }
 ```
@@ -1889,7 +1889,7 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 | Field         | Type     | Description                                                                                  |
 | ------------- | -------- | -------------------------------------------------------------------------------------------- |
 | `windowHours` | `number` | Requested chart window for `hourly[]`                                                        |
-| `scope`       | `object` | Current ingestion scope, currently `{ chainIds: ["ethereum"], label: "Ethereum-only" }`      |
+| `scope`       | `object` | Current ingestion scope, for example `{ chainIds: ["ethereum", "arbitrum"], label: "Configured issuance chains" }` |
 | `sync`        | `object` | Latest critical-lane freshness metadata, warning state, and optional `classificationWarning` |
 
 **`CoinFlow`**
@@ -1967,7 +1967,7 @@ Paginated list of individual mint/burn events for a specific stablecoin. Events 
 | Param       | Type      | Default | Bounds                                                   | Description                                                                                                             |
 | ----------- | --------- | ------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `direction` | `string`  | —       | `"mint"` or `"burn"`                                     | Filter by direction                                                                                                     |
-| `chain`     | `string`  | —       | `"ethereum"`                                             | Filter by chain ID (current production scope is Ethereum only)                                                          |
+| `chain`     | `string`  | —       | tracked chain IDs for the requested stablecoin           | Filter by chain ID within the stablecoin's configured issuance scope                                                    |
 | `burnType`  | `string`  | —       | `"effective_burn"`, `"bridge_burn"`, `"review_required"` | Filter burn rows by classification                                                                                      |
 | `scope`     | `string`  | `"all"` | `"all"` or `"counted"`                                   | `counted` returns only rows used in economic-flow aggregates (`flow_type='standard'` and mint/effective-burn semantics) |
 | `minAmount` | `number`  | —       | —                                                        | Minimum USD amount; unpriced rows are excluded when this filter is used                                                 |
@@ -2729,7 +2729,7 @@ Validates DEWS against historical depeg events. Reports true-positive rate and a
 ### `POST /api/backfill-mint-burn`
 
 Backfills mint/burn event ingestion for a specific contract config using the same parsing/classification pipeline as the cron.
-If `configKey` is omitted, the worker auto-selects one Ethereum config using a critical-first / major-symbol-first / most-behind policy and returns the selected config in the response.
+If `configKey` is omitted, the worker auto-selects one tracked config using a critical-first / major-symbol-first / most-behind policy and returns the selected config in the response.
 
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
@@ -2737,7 +2737,7 @@ If `configKey` is omitted, the worker auto-selects one Ethereum config using a c
 
 | Param       | Type      | Default         | Description                                                                  |
 | ----------- | --------- | --------------- | ---------------------------------------------------------------------------- |
-| `configKey` | `string`  | auto-selected   | Optional config key: `{chainId}-{contractAddress}` (currently Ethereum-only) |
+| `configKey` | `string`  | auto-selected   | Optional config key: `{chainId}-{contractAddress}` across the tracked issuance-chain set |
 | `fromBlock` | `integer` | from sync state | Start block override                                                         |
 | `toBlock`   | `integer` | chain head      | End block override (clamped to chain head)                                   |
 | `chunkSize` | `integer` | `50000`         | Block span per fetch chunk (max 50000)                                       |

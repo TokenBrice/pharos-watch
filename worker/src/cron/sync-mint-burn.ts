@@ -1,8 +1,4 @@
 import {
-  buildAlchemyUrl,
-  getAlchemyBlockNumber,
-} from "../lib/alchemy-logs";
-import {
   createBudget,
 } from "../lib/evm-logs";
 import {
@@ -10,7 +6,6 @@ import {
   type MintBurnContractConfig,
   type MintBurnTier,
 } from "../lib/mint-burn-contracts";
-import type { MintBurnTxContext } from "../lib/mint-burn-bridge-classifier";
 import { loadMintBurnPriceContextBatch } from "../lib/mint-burn-pipeline/context";
 import {
   recalcAffectedHours,
@@ -22,6 +17,7 @@ import {
 } from "../lib/mint-burn-pipeline/sync-state";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress } from "../lib/cron-progress";
+import { loadMintBurnChainContexts } from "./mint-burn/chain-context";
 import { completeMintBurnRun } from "./mint-burn/run-completion";
 import { runMintBurnConfigPhase } from "./mint-burn/run-configs";
 import {
@@ -31,7 +27,6 @@ import {
   rotateArray,
 } from "./mint-burn/run-state";
 
-const ETHEREUM_CHAIN_ID = "ethereum";
 const MAX_SCAN_RANGE = 50_000;
 const EVM_SAFETY_MARGIN_BLOCKS = 75; // Math.ceil(900s indexing safety / 12s block time)
 
@@ -112,7 +107,7 @@ export async function syncMintBurn(
   const disabledSymbols = normalizeDisabledSymbolSet(options.disabledSymbols);
 
   const allTrackableConfigs = MINT_BURN_CONFIGS.filter(
-    (config) => config.chain.chainId === ETHEREUM_CHAIN_ID && laneIncludesConfig(lane, config),
+    (config) => laneIncludesConfig(lane, config),
   );
   const enabledConfigs: MintBurnContractConfig[] = [];
   const disabledConfigReasons = new Map<string, string>();
@@ -160,6 +155,7 @@ export async function syncMintBurn(
       configsDisabled,
       contractsProcessed: 0,
       contractsSkipped: 0,
+      chainHeads: {},
       apiErrors: 0,
       fallbackMode: null,
       validationFailures: 0,
@@ -198,17 +194,15 @@ export async function syncMintBurn(
   const lastBlocks = await readMintBurnSyncStateBatch(db, configs);
   const lastBlocksAfterRun = new Map(lastBlocks);
 
-  const alchemyUrl = buildAlchemyUrl(ETHEREUM_CHAIN_ID, apiKey);
-  if (!alchemyUrl) {
-    throw new Error("Failed to build Ethereum Alchemy URL");
-  }
-  const chainHead = await getAlchemyBlockNumber(alchemyUrl, budget, signal);
-  if (chainHead === null) {
-    throw new Error("Failed to get Ethereum chain head");
-  }
-
-  const chainTimestampCache = new Map<number, number>();
-  const txContextCache = new Map<string, MintBurnTxContext | null>();
+  const chainContexts = await loadMintBurnChainContexts({
+    configs,
+    apiKey,
+    budget,
+    signal,
+  });
+  const chainHeads = new Map(
+    [...chainContexts.entries()].map(([chainId, context]) => [chainId, context.chainHead]),
+  );
 
   const stablecoinIds = [...new Set(configs.map((config) => config.stablecoinId))];
   const runTimestamp = Math.floor(Date.now() / 1000);
@@ -257,15 +251,11 @@ export async function syncMintBurn(
     jobName,
     reportProgress,
     budget,
-    chainHead,
-    alchemyUrl,
+    chainContexts,
     signal,
     runTimestamp,
     priceContext: { prices, priceHistory },
-    chainTimestampCache,
-    txContextCache,
     lastBlocksAfterRun,
-    ethereumChainId: ETHEREUM_CHAIN_ID,
     maxScanRange: MAX_SCAN_RANGE,
     criticalConfigBudgetLimit: CRITICAL_CONFIG_BUDGET_LIMIT,
     extendedConfigBudgetLimit: EXTENDED_CONFIG_BUDGET_LIMIT,
@@ -290,7 +280,7 @@ export async function syncMintBurn(
     budget,
     lane,
     jobName,
-    chainHead,
+    chainHeads,
     startIndex,
     enabledConfigs,
     configs,

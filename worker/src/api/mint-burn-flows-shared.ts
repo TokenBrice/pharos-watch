@@ -19,6 +19,7 @@ export interface HourlyRow {
 
 export interface DailyBaselineRow {
   stablecoin_id: string;
+  chain_id: string;
   day_ts: number;
   daily_net: number;
   daily_abs: number;
@@ -26,6 +27,7 @@ export interface DailyBaselineRow {
 
 export interface FirstSeenRow {
   stablecoin_id: string;
+  chain_id: string;
   first_hour_ts: number;
 }
 
@@ -46,21 +48,17 @@ export interface EventRow {
 
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 export const BASELINE_WINDOW_DAYS = 30;
-export const FLOW_CACHE_PREFIX = "mint-burn-flows:v2";
+export const FLOW_CACHE_PREFIX = "mint-burn-flows:v3";
 export const ETHEREUM_CHAIN_ID = "ethereum";
 export const FLOW_DEFAULT_WINDOW_HOURS = 24;
 export const MINT_BURN_CRON_JOB = "sync-mint-burn";
-const ETH_BLOCK_TIME_SEC = 12;
-const WINDOW_24H_BLOCKS = Math.ceil(24 * 3600 / ETH_BLOCK_TIME_SEC);
-const WINDOW_30D_BLOCKS = Math.ceil(30 * DAY_SECONDS / ETH_BLOCK_TIME_SEC);
-const WINDOW_90D_BLOCKS = Math.ceil(90 * DAY_SECONDS / ETH_BLOCK_TIME_SEC);
-const COVERAGE_LAG_GRACE_BLOCKS = 5_000;
 const COVERAGE_LAG_THRESHOLD_BLOCKS = 10_000;
 
 export interface MintBurnCronSnapshot {
   startedAt: number | null;
   status: string | null;
   chainHead: number | null;
+  chainHeads: Map<string, number>;
 }
 
 export interface FlowAggregate {
@@ -175,6 +173,10 @@ function toFinitePositiveNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
 }
 
+export function mintBurnPairKey(stablecoinId: string, chainId: string): string {
+  return `${stablecoinId}|${chainId}`;
+}
+
 function resolveCachedFlowFreshnessTimestamp(
   payload: unknown,
   fallbackUpdatedAt: number,
@@ -241,8 +243,15 @@ function resolveCachedFlowFreshnessTimestamp(
 function parseMintBurnCronMetadata(
   value: string | null,
   startedAt: number | null,
-): { chainHead: number | null; reason: null | "missing" | "json-parse-failed" | "invalid-shape" } {
-  const decoded = decodeJsonString<{ chainHead: number | null }, "missing" | "json-parse-failed" | "invalid-shape">(
+): {
+  chainHead: number | null;
+  chainHeads: Map<string, number>;
+  reason: null | "missing" | "json-parse-failed" | "invalid-shape";
+} {
+  const decoded = decodeJsonString<{
+    chainHead: number | null;
+    chainHeads?: Record<string, number>;
+  }, "missing" | "json-parse-failed" | "invalid-shape">(
     value,
     {
       mode: "best-effort",
@@ -255,13 +264,36 @@ function parseMintBurnCronMetadata(
         }
 
         const chainHead = parsed.chainHead;
-        if (chainHead == null) {
-          return { ok: true, payload: { chainHead: null } };
+        if (chainHead != null && (typeof chainHead !== "number" || !Number.isFinite(chainHead))) {
+          return { ok: false, reason: "invalid-shape" };
         }
-        if (typeof chainHead === "number" && Number.isFinite(chainHead)) {
-          return { ok: true, payload: { chainHead } };
+
+        const rawChainHeads = parsed.chainHeads;
+        if (rawChainHeads != null && !isRecord(rawChainHeads)) {
+          return { ok: false, reason: "invalid-shape" };
         }
-        return { ok: false, reason: "invalid-shape" };
+
+        const chainHeads: Record<string, number> = {};
+        if (rawChainHeads) {
+          for (const [chainId, head] of Object.entries(rawChainHeads)) {
+            if (typeof head !== "number" || !Number.isFinite(head)) {
+              return { ok: false, reason: "invalid-shape" };
+            }
+            chainHeads[chainId] = head;
+          }
+        }
+
+        if (chainHead != null && chainHeads[ETHEREUM_CHAIN_ID] == null) {
+          chainHeads[ETHEREUM_CHAIN_ID] = chainHead;
+        }
+
+        return {
+          ok: true,
+          payload: {
+            chainHead: chainHead ?? null,
+            chainHeads,
+          },
+        };
       },
     },
   );
@@ -269,12 +301,14 @@ function parseMintBurnCronMetadata(
   if (!decoded.ok) {
     return {
       chainHead: null,
+      chainHeads: new Map(),
       reason: decoded.reason,
     };
   }
 
   return {
     chainHead: decoded.payload.chainHead,
+    chainHeads: new Map(Object.entries(decoded.payload.chainHeads ?? {})),
     reason: null,
   };
 }
@@ -361,7 +395,7 @@ export async function readMintBurnCronSnapshot(db: D1Database): Promise<MintBurn
       .first<{ started_at: number | null; status: string | null; metadata: string | null }>();
 
     if (!row) {
-      return { startedAt: null, status: null, chainHead: null };
+      return { startedAt: null, status: null, chainHead: null, chainHeads: new Map() };
     }
 
     const metadata = parseMintBurnCronMetadata(row.metadata, row.started_at ?? null);
@@ -380,9 +414,10 @@ export async function readMintBurnCronSnapshot(db: D1Database): Promise<MintBurn
       startedAt: row.started_at ?? null,
       status: row.status ?? null,
       chainHead: metadata.chainHead,
+      chainHeads: metadata.chainHeads,
     };
   } catch {
-    return { startedAt: null, status: null, chainHead: null };
+    return { startedAt: null, status: null, chainHead: null, chainHeads: new Map() };
   }
 }
 
@@ -394,6 +429,7 @@ export function buildBaselineMap(
   const nowDayTs = bucketDay(nowSec);
   const baselineEndDayTs = nowDayTs - DAY_SECONDS;
   const byCoinDay = new Map<string, Map<number, { net: number; abs: number }>>();
+  const firstSeenByCoin = new Map<string, number>();
 
   for (const row of dailyRows) {
     if (!Number.isFinite(row.day_ts)) continue;
@@ -406,10 +442,17 @@ export function buildBaselineMap(
     byCoinDay.set(row.stablecoin_id, perDay);
   }
 
-  const baselineMap = new Map<string, { avgNet: number; avgAbs: number; dataDays: number }>();
   for (const row of firstSeenRows) {
     if (!Number.isFinite(row.first_hour_ts)) continue;
-    const firstDayTs = bucketDay(row.first_hour_ts);
+    const previous = firstSeenByCoin.get(row.stablecoin_id);
+    if (previous == null || row.first_hour_ts < previous) {
+      firstSeenByCoin.set(row.stablecoin_id, row.first_hour_ts);
+    }
+  }
+
+  const baselineMap = new Map<string, { avgNet: number; avgAbs: number; dataDays: number }>();
+  for (const [stablecoinId, firstHourTs] of firstSeenByCoin) {
+    const firstDayTs = bucketDay(firstHourTs);
     if (firstDayTs > baselineEndDayTs) continue;
 
     const trackedDays = Math.floor((baselineEndDayTs - firstDayTs) / DAY_SECONDS) + 1;
@@ -417,7 +460,7 @@ export function buildBaselineMap(
     if (dataDays === 0) continue;
 
     const startDayTs = baselineEndDayTs - (dataDays - 1) * DAY_SECONDS;
-    const perDay = byCoinDay.get(row.stablecoin_id);
+    const perDay = byCoinDay.get(stablecoinId);
     let sumNet = 0;
     let sumAbs = 0;
 
@@ -428,7 +471,7 @@ export function buildBaselineMap(
       sumAbs += bucket.abs;
     }
 
-    baselineMap.set(row.stablecoin_id, {
+    baselineMap.set(stablecoinId, {
       avgNet: sumNet / dataDays,
       avgAbs: sumAbs / dataDays,
       dataDays,
@@ -442,22 +485,21 @@ export function buildCoinCoverageMap(
   nowSec: number,
   firstSeenRows: FirstSeenRow[],
   lastBlocks: Map<string, number>,
-  referenceHead: number | null,
+  chainHeads: Map<string, number>,
 ) {
-  const firstSeenMap = new Map(firstSeenRows.map((row) => [row.stablecoin_id, row.first_hour_ts]));
+  const firstSeenMap = new Map<string, number>();
+  for (const row of firstSeenRows) {
+    const previous = firstSeenMap.get(row.stablecoin_id);
+    if (previous == null || row.first_hour_ts < previous) {
+      firstSeenMap.set(row.stablecoin_id, row.first_hour_ts);
+    }
+  }
   const configsByCoin = new Map<string, typeof MINT_BURN_CONFIGS>();
   for (const config of MINT_BURN_CONFIGS) {
-    if (config.chain.chainId !== ETHEREUM_CHAIN_ID) continue;
     const existing = configsByCoin.get(config.stablecoinId) ?? [];
     existing.push(config);
     configsByCoin.set(config.stablecoinId, existing);
   }
-
-  const fallbackHead = referenceHead ?? Math.max(
-    0,
-    ...[...lastBlocks.values()].filter((value) => Number.isFinite(value)),
-  );
-  const effectiveHead = fallbackHead > 0 ? fallbackHead : null;
 
   const coverageMap = new Map<string, {
     startBlock: number;
@@ -476,12 +518,20 @@ export function buildCoinCoverageMap(
 
   for (const [stablecoinId, configs] of configsByCoin) {
     const startBlock = Math.min(...configs.map((config) => config.startBlock));
-    const lastSyncedBlock = Math.min(
-      ...configs.map((config) => lastBlocks.get(`${config.chain.chainId}-${config.contractAddress}`) ?? (config.startBlock - 1)),
+    const lastSyncedBlocks = configs.map((config) =>
+      lastBlocks.get(`${config.chain.chainId}-${config.contractAddress}`) ?? (config.startBlock - 1),
     );
+    const lastSyncedBlock = Math.min(...lastSyncedBlocks);
     const historyStartAt = firstSeenMap.get(stablecoinId) ?? null;
     const disabled = configs.every((config) => config.enabled === false);
-    const lagBlocks = effectiveHead != null ? Math.max(0, effectiveHead - lastSyncedBlock) : null;
+    const lagValues = configs
+      .map((config, index) => {
+        const head = chainHeads.get(config.chain.chainId);
+        if (head == null) return null;
+        return Math.max(0, head - lastSyncedBlocks[index]!);
+      })
+      .filter((value): value is number => value != null);
+    const lagBlocks = lagValues.length > 0 ? Math.max(...lagValues) : null;
     const adapterKinds = [...new Set(configs.map((config) => config.adapterKind))].sort();
     const startBlockSources = [...new Set(configs.map((config) => config.startBlockSource))].sort();
     const startBlockConfidence = configs.some((config) => config.startBlockConfidence === "low")
@@ -490,15 +540,9 @@ export function buildCoinCoverageMap(
       ? "medium"
       : "high";
 
-    const has24hWindow = effectiveHead != null
-      ? startBlock <= effectiveHead - WINDOW_24H_BLOCKS && lastSyncedBlock >= effectiveHead - COVERAGE_LAG_GRACE_BLOCKS
-      : historyStartAt != null && historyStartAt <= nowSec - (24 * 3600);
-    const has30dWindow = effectiveHead != null
-      ? startBlock <= effectiveHead - WINDOW_30D_BLOCKS && lastSyncedBlock >= effectiveHead - COVERAGE_LAG_GRACE_BLOCKS
-      : false;
-    const has90dWindow = effectiveHead != null
-      ? startBlock <= effectiveHead - WINDOW_90D_BLOCKS && lastSyncedBlock >= effectiveHead - COVERAGE_LAG_GRACE_BLOCKS
-      : false;
+    const has24hWindow = historyStartAt != null && historyStartAt <= nowSec - (24 * 3600);
+    const has30dWindow = historyStartAt != null && historyStartAt <= nowSec - (30 * DAY_SECONDS);
+    const has90dWindow = historyStartAt != null && historyStartAt <= nowSec - (90 * DAY_SECONDS);
 
     const status =
       disabled ? "disabled" :

@@ -156,6 +156,84 @@ describe("handleMintBurnFlows contract tests", () => {
     });
   });
 
+  it("filters aggregate flow metrics to configured stablecoin-chain pairs", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
+    const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
+    const cache = JSON.stringify({
+      peggedAssets: [{ id: "usdai-usd-ai", symbol: "USDai", circulating: { peggedUSD: 250_000_000 } }],
+    });
+
+    const scopedDb = mockD1([
+      {
+        match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
+        rows: [
+          {
+            stablecoin_id: "usdai-usd-ai",
+            chain_id: "ethereum",
+            hour_ts: now - 3600,
+            mint_count: 1,
+            burn_count: 0,
+            mint_volume_usd: 5_000_000,
+            burn_volume_usd: 0,
+            net_flow_usd: 5_000_000,
+          },
+          {
+            stablecoin_id: "usdai-usd-ai",
+            chain_id: "arbitrum",
+            hour_ts: now - 1800,
+            mint_count: 1,
+            burn_count: 0,
+            mint_volume_usd: 7_000_000,
+            burn_volume_usd: 0,
+            net_flow_usd: 7_000_000,
+          },
+        ],
+      },
+      {
+        match: "SUM(net_flow_usd) as net_flow_usd",
+        rows: [
+          { stablecoin_id: "usdai-usd-ai", chain_id: "ethereum", net_flow_usd: 5_000_000 },
+          { stablecoin_id: "usdai-usd-ai", chain_id: "arbitrum", net_flow_usd: 7_000_000 },
+        ],
+      },
+      {
+        match: "SUM(net_flow_usd) as daily_net",
+        rows: [
+          { stablecoin_id: "usdai-usd-ai", chain_id: "ethereum", day_ts: tenDaysAgoDay, daily_net: 100_000_000, daily_abs: 100_000_000 },
+          { stablecoin_id: "usdai-usd-ai", chain_id: "arbitrum", day_ts: tenDaysAgoDay, daily_net: 2_000_000, daily_abs: 8_000_000 },
+        ],
+      },
+      {
+        match: "MIN(hour_ts) as first_hour_ts",
+        rows: [
+          { stablecoin_id: "usdai-usd-ai", chain_id: "ethereum", first_hour_ts: tenDaysAgoHour - 30 * 86400 },
+          { stablecoin_id: "usdai-usd-ai", chain_id: "arbitrum", first_hour_ts: tenDaysAgoHour },
+        ],
+      },
+      { match: "mint_burn_events", rows: [] },
+      {
+        match: "cache",
+        rows: [{ key: "stablecoins", value: cache, updated_at: now }],
+        first: { key: "stablecoins", value: cache, updated_at: now },
+      },
+    ]);
+
+    const res = await handleMintBurnFlows(scopedDb, new URL("https://x/api/mint-burn-flows"));
+    expect(res.status).toBe(200);
+
+    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const usdai = body.coins.find((coin) => coin.stablecoinId === "usdai-usd-ai");
+
+    expect(body.scope).toEqual({
+      chainIds: ["ethereum", "arbitrum"],
+      label: "Configured issuance chains",
+    });
+    expect(usdai?.netFlow24hUsd).toBe(7_000_000);
+    expect(usdai?.mintVolume24hUsd).toBe(7_000_000);
+    expect(usdai?.baselineDailyNetUsd).toBe(200_000);
+  });
+
   it("rejects out-of-range hours instead of clamping them", async () => {
     const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows?hours=9999"));
     expect(res.status).toBe(400);
@@ -173,11 +251,11 @@ describe("handleMintBurnFlows contract tests", () => {
     const sparseDb = mockD1([
       {
         match: "SUM(net_flow_usd) as daily_net",
-        rows: [{ stablecoin_id: "usdt-tether", day_ts: tenDaysAgoDay, daily_net: 1_000_000, daily_abs: 1_000_000 }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", day_ts: tenDaysAgoDay, daily_net: 1_000_000, daily_abs: 1_000_000 }],
       },
       {
         match: "MIN(hour_ts) as first_hour_ts",
-        rows: [{ stablecoin_id: "usdt-tether", first_hour_ts: tenDaysAgoHour }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", first_hour_ts: tenDaysAgoHour }],
       },
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
@@ -185,7 +263,7 @@ describe("handleMintBurnFlows contract tests", () => {
       },
       {
         match: "SUM(net_flow_usd) as net_flow_usd",
-        rows: [{ stablecoin_id: "usdt-tether", net_flow_usd: 1_000_000 }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", net_flow_usd: 1_000_000 }],
       },
       { match: "mint_burn_events", rows: [] },
       {
@@ -266,22 +344,22 @@ describe("handleMintBurnFlows contract tests", () => {
       {
         match: "SUM(net_flow_usd) as net_flow_usd",
         rows: [
-          { stablecoin_id: "usdc-circle", net_flow_usd: 150_000_000 },
-          { stablecoin_id: "usdt-tether", net_flow_usd: -200_000_000 },
+          { stablecoin_id: "usdc-circle", chain_id: "ethereum", net_flow_usd: 150_000_000 },
+          { stablecoin_id: "usdt-tether", chain_id: "ethereum", net_flow_usd: -200_000_000 },
         ],
       },
       {
         match: "SUM(net_flow_usd) as daily_net",
         rows: [
-          { stablecoin_id: "usdc-circle", day_ts: tenDaysAgoDay, daily_net: 10_000_000, daily_abs: 190_000_000 },
-          { stablecoin_id: "usdt-tether", day_ts: tenDaysAgoDay, daily_net: -10_000_000, daily_abs: 240_000_000 },
+          { stablecoin_id: "usdc-circle", chain_id: "ethereum", day_ts: tenDaysAgoDay, daily_net: 10_000_000, daily_abs: 190_000_000 },
+          { stablecoin_id: "usdt-tether", chain_id: "ethereum", day_ts: tenDaysAgoDay, daily_net: -10_000_000, daily_abs: 240_000_000 },
         ],
       },
       {
         match: "MIN(hour_ts) as first_hour_ts",
         rows: [
-          { stablecoin_id: "usdc-circle", first_hour_ts: tenDaysAgoHour },
-          { stablecoin_id: "usdt-tether", first_hour_ts: tenDaysAgoHour },
+          { stablecoin_id: "usdc-circle", chain_id: "ethereum", first_hour_ts: tenDaysAgoHour },
+          { stablecoin_id: "usdt-tether", chain_id: "ethereum", first_hour_ts: tenDaysAgoHour },
         ],
       },
       { match: "FROM mint_burn_events", rows: [] },
@@ -339,22 +417,22 @@ describe("handleMintBurnFlows contract tests", () => {
       {
         match: "SUM(net_flow_usd) as net_flow_usd",
         rows: [
-          { stablecoin_id: "usdt-tether", net_flow_usd: 0 },
-          { stablecoin_id: "usdc-circle", net_flow_usd: 60_000_000 },
+          { stablecoin_id: "usdt-tether", chain_id: "ethereum", net_flow_usd: 0 },
+          { stablecoin_id: "usdc-circle", chain_id: "ethereum", net_flow_usd: 60_000_000 },
         ],
       },
       {
         match: "SUM(net_flow_usd) as daily_net",
         rows: [
-          { stablecoin_id: "usdt-tether", day_ts: tenDaysAgoDay, daily_net: 1_000_000, daily_abs: 1_000_000 },
-          { stablecoin_id: "usdc-circle", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 200_000_000 },
+          { stablecoin_id: "usdt-tether", chain_id: "ethereum", day_ts: tenDaysAgoDay, daily_net: 1_000_000, daily_abs: 1_000_000 },
+          { stablecoin_id: "usdc-circle", chain_id: "ethereum", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 200_000_000 },
         ],
       },
       {
         match: "MIN(hour_ts) as first_hour_ts",
         rows: [
-          { stablecoin_id: "usdt-tether", first_hour_ts: tenDaysAgoHour },
-          { stablecoin_id: "usdc-circle", first_hour_ts: tenDaysAgoHour },
+          { stablecoin_id: "usdt-tether", chain_id: "ethereum", first_hour_ts: tenDaysAgoHour },
+          { stablecoin_id: "usdc-circle", chain_id: "ethereum", first_hour_ts: tenDaysAgoHour },
         ],
       },
       { match: "mint_burn_events", rows: [] },
@@ -391,6 +469,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const firstHourTs = nowDay - 9 * 86400;
     const baselineRows = Array.from({ length: 10 }, (_, index) => ({
       stablecoin_id: "usdf-falcon",
+      chain_id: "ethereum",
       day_ts: nowDay - index * 86400,
       daily_net: -7_500_000,
       daily_abs: 40_000_000,
@@ -417,7 +496,7 @@ describe("handleMintBurnFlows contract tests", () => {
       },
       {
         match: "SUM(net_flow_usd) as net_flow_usd",
-        rows: [{ stablecoin_id: "usdf-falcon", net_flow_usd: -200_000 }],
+        rows: [{ stablecoin_id: "usdf-falcon", chain_id: "ethereum", net_flow_usd: -200_000 }],
       },
       {
         match: "SUM(net_flow_usd) as daily_net",
@@ -425,7 +504,7 @@ describe("handleMintBurnFlows contract tests", () => {
       },
       {
         match: "MIN(hour_ts) as first_hour_ts",
-        rows: [{ stablecoin_id: "usdf-falcon", first_hour_ts: firstHourTs }],
+        rows: [{ stablecoin_id: "usdf-falcon", chain_id: "ethereum", first_hour_ts: firstHourTs }],
       },
       { match: "mint_burn_events", rows: [] },
       {
@@ -463,12 +542,14 @@ describe("handleMintBurnFlows contract tests", () => {
     const baselineRows = [
       ...Array.from({ length: 10 }, (_, index) => ({
         stablecoin_id: "usdt-tether",
+        chain_id: "ethereum",
         day_ts: nowDay - ((index + 1) * 86400),
         daily_net: 1_000_000,
         daily_abs: 10_000_000,
       })),
       {
         stablecoin_id: "usdt-tether",
+        chain_id: "ethereum",
         day_ts: nowDay,
         daily_net: 999_000_000,
         daily_abs: 999_000_000,
@@ -496,7 +577,7 @@ describe("handleMintBurnFlows contract tests", () => {
       },
       {
         match: "SUM(net_flow_usd) as net_flow_usd",
-        rows: [{ stablecoin_id: "usdt-tether", net_flow_usd: 1_000_000 }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", net_flow_usd: 1_000_000 }],
       },
       {
         match: "SUM(net_flow_usd) as daily_net",
@@ -504,7 +585,7 @@ describe("handleMintBurnFlows contract tests", () => {
       },
       {
         match: "MIN(hour_ts) as first_hour_ts",
-        rows: [{ stablecoin_id: "usdt-tether", first_hour_ts: firstHourTs }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", first_hour_ts: firstHourTs }],
       },
       { match: "FROM mint_burn_events", rows: [] },
       {
@@ -551,15 +632,15 @@ describe("handleMintBurnFlows contract tests", () => {
       },
       {
         match: "SUM(net_flow_usd) as net_flow_usd",
-        rows: [{ stablecoin_id: "usdt-tether", net_flow_usd: 2_000_000 }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", net_flow_usd: 2_000_000 }],
       },
       {
         match: "SUM(net_flow_usd) as daily_net",
-        rows: [{ stablecoin_id: "usdt-tether", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 2_000_000 }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 2_000_000 }],
       },
       {
         match: "MIN(hour_ts) as first_hour_ts",
-        rows: [{ stablecoin_id: "usdt-tether", first_hour_ts: tenDaysAgoHour }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", first_hour_ts: tenDaysAgoHour }],
       },
       {
         match: "FROM mint_burn_events",
@@ -627,7 +708,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const db = mockD1([
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
-        matchBinds: ["ethereum", sevenDayStart],
+        matchBinds: ["ethereum", "arbitrum", sevenDayStart],
         rows: [
           {
             stablecoin_id: "usdt-tether",
@@ -653,7 +734,7 @@ describe("handleMintBurnFlows contract tests", () => {
       },
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
-        matchBinds: ["ethereum", twentyFourHourStart],
+        matchBinds: ["ethereum", "arbitrum", twentyFourHourStart],
         rows: [
           {
             stablecoin_id: "usdt-tether",
@@ -670,16 +751,16 @@ describe("handleMintBurnFlows contract tests", () => {
       {
         match: "SUM(net_flow_usd) as net_flow_usd",
         rows: [
-          { stablecoin_id: "usdt-tether", net_flow_usd: 40_000_000 },
+          { stablecoin_id: "usdt-tether", chain_id: "ethereum", net_flow_usd: 40_000_000 },
         ],
       },
       {
         match: "SUM(net_flow_usd) as daily_net",
-        rows: [{ stablecoin_id: "usdt-tether", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 20_000_000 }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 20_000_000 }],
       },
       {
         match: "MIN(hour_ts) as first_hour_ts",
-        rows: [{ stablecoin_id: "usdt-tether", first_hour_ts: tenDaysAgoHour }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", first_hour_ts: tenDaysAgoHour }],
       },
       { match: "FROM mint_burn_events", rows: [] },
       {
@@ -731,7 +812,7 @@ describe("handleMintBurnFlows contract tests", () => {
           first: async <T>() => {
             if (sql.includes("SELECT value, updated_at FROM cache WHERE key = ?")) {
               const key = String(args[0] ?? "");
-              if (key.startsWith("mint-burn-flows:v2:aggregate:")) {
+              if (key.startsWith("mint-burn-flows:v3:aggregate:")) {
                 return {
                   value: JSON.stringify(cachedBody),
                   updated_at: now,
@@ -774,7 +855,7 @@ describe("handleMintBurnFlows contract tests", () => {
           first: async <T>() => {
             if (sql.includes("SELECT value, updated_at FROM cache WHERE key = ?")) {
               const key = String(args[0] ?? "");
-              if (key.startsWith("mint-burn-flows:v2:aggregate:")) {
+              if (key.startsWith("mint-burn-flows:v3:aggregate:")) {
                 return {
                   value: "{bad json",
                   updated_at: now,
@@ -828,15 +909,15 @@ describe("handleMintBurnFlows contract tests", () => {
       },
       {
         match: "SUM(net_flow_usd) as net_flow_usd",
-        rows: [{ stablecoin_id: "usdt-tether", net_flow_usd: 10_000_000 }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", net_flow_usd: 10_000_000 }],
       },
       {
         match: "SUM(net_flow_usd) as daily_net",
-        rows: [{ stablecoin_id: "usdt-tether", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 20_000_000 }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 20_000_000 }],
       },
       {
         match: "MIN(hour_ts) as first_hour_ts",
-        rows: [{ stablecoin_id: "usdt-tether", first_hour_ts: tenDaysAgoHour }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", first_hour_ts: tenDaysAgoHour }],
       },
       { match: "FROM mint_burn_events", rows: [] },
       {
@@ -891,15 +972,15 @@ describe("handleMintBurnFlows contract tests", () => {
       },
       {
         match: "SUM(net_flow_usd) as net_flow_usd",
-        rows: [{ stablecoin_id: "usdt-tether", net_flow_usd: 10_000_000 }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", net_flow_usd: 10_000_000 }],
       },
       {
         match: "SUM(net_flow_usd) as daily_net",
-        rows: [{ stablecoin_id: "usdt-tether", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 20_000_000 }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 20_000_000 }],
       },
       {
         match: "MIN(hour_ts) as first_hour_ts",
-        rows: [{ stablecoin_id: "usdt-tether", first_hour_ts: tenDaysAgoHour }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", first_hour_ts: tenDaysAgoHour }],
       },
       { match: "FROM mint_burn_events", rows: [] },
       {
@@ -966,15 +1047,15 @@ describe("handleMintBurnFlows contract tests", () => {
       },
       {
         match: "SUM(net_flow_usd) as net_flow_usd",
-        rows: [{ stablecoin_id: "usdt-tether", net_flow_usd: 10_000_000 }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", net_flow_usd: 10_000_000 }],
       },
       {
         match: "SUM(net_flow_usd) as daily_net",
-        rows: [{ stablecoin_id: "usdt-tether", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 20_000_000 }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 20_000_000 }],
       },
       {
         match: "MIN(hour_ts) as first_hour_ts",
-        rows: [{ stablecoin_id: "usdt-tether", first_hour_ts: tenDaysAgoHour }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", first_hour_ts: tenDaysAgoHour }],
       },
       { match: "FROM mint_burn_events", rows: [] },
       {
@@ -1037,15 +1118,15 @@ describe("handleMintBurnFlows contract tests", () => {
       },
       {
         match: "SUM(net_flow_usd) as net_flow_usd",
-        rows: [{ stablecoin_id: "usdt-tether", net_flow_usd: 10_000_000 }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", net_flow_usd: 10_000_000 }],
       },
       {
         match: "SUM(net_flow_usd) as daily_net",
-        rows: [{ stablecoin_id: "usdt-tether", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 20_000_000 }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 20_000_000 }],
       },
       {
         match: "MIN(hour_ts) as first_hour_ts",
-        rows: [{ stablecoin_id: "usdt-tether", first_hour_ts: tenDaysAgoHour }],
+        rows: [{ stablecoin_id: "usdt-tether", chain_id: "ethereum", first_hour_ts: tenDaysAgoHour }],
       },
       { match: "FROM mint_burn_events", rows: [] },
       {

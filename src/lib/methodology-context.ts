@@ -233,7 +233,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   },
   mintBurnFlows: {
     title: "Mint/Burn Flows",
-    summary: "Ethereum-only issuance and redemption monitoring that pairs raw net flow with baseline-relative pressure signals.",
+    summary: "Configured issuance-chain monitoring that pairs raw net flow with baseline-relative pressure signals.",
     detail: "Current direction and pressure-versus-baseline are related, but they are not the same metric.",
     methodologyPath: "/methodology/#mint-burn-flow-methodology",
     versionLabel: MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,

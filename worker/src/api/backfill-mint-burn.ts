@@ -23,7 +23,6 @@ import type { MintBurnAffectedHour, MintBurnRow } from "../lib/mint-burn-pipelin
 import { resolveMintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 import { readAdminIntegerParam, readAdminStringParam, runAdminJob } from "../lib/admin-job";
 
-const ETHEREUM_CHAIN_ID = "ethereum";
 const ETHEREUM_CHUNK_SIZE = 50_000;
 
 const BACKFILL_BUDGET_LIMIT = 900;
@@ -39,7 +38,7 @@ type BackfillConfigResult =
 
 async function resolveBackfillConfig(
   db: D1Database,
-  chainHead: number,
+  chainHeads: Map<string, number>,
   requestedConfigKey: string | null,
 ): Promise<BackfillConfigResult> {
   if (requestedConfigKey) {
@@ -55,11 +54,9 @@ async function resolveBackfillConfig(
     };
   }
 
-  const eligibleConfigs = MINT_BURN_CONFIGS.filter(
-    (entry) => entry.enabled !== false && entry.chain.chainId === ETHEREUM_CHAIN_ID,
-  );
+  const eligibleConfigs = MINT_BURN_CONFIGS.filter((entry) => entry.enabled !== false);
   if (eligibleConfigs.length === 0) {
-    return { ok: false, response: errorResponse(400, "No eligible Ethereum mint/burn configs are enabled") };
+    return { ok: false, response: errorResponse(400, "No eligible mint/burn configs are enabled") };
   }
 
   await ensureMintBurnSyncStateRows(db, eligibleConfigs);
@@ -77,12 +74,14 @@ async function resolveBackfillConfig(
     const bMajor = majorSymbols.has(b.symbol.toUpperCase()) ? 0 : 1;
     if (aMajor !== bMajor) return aMajor - bMajor;
 
-    const aLag = Math.max(0, chainHead - (syncStateByKey.get(configKey(a)) ?? a.startBlock - 1));
-    const bLag = Math.max(0, chainHead - (syncStateByKey.get(configKey(b)) ?? b.startBlock - 1));
+    const aHead = chainHeads.get(a.chain.chainId) ?? (a.startBlock - 1);
+    const bHead = chainHeads.get(b.chain.chainId) ?? (b.startBlock - 1);
+    const aLag = Math.max(0, aHead - (syncStateByKey.get(configKey(a)) ?? a.startBlock - 1));
+    const bLag = Math.max(0, bHead - (syncStateByKey.get(configKey(b)) ?? b.startBlock - 1));
     return bLag - aLag;
   })[0];
   if (!config) {
-    return { ok: false, response: errorResponse(400, "No eligible Ethereum mint/burn configs are enabled") };
+    return { ok: false, response: errorResponse(400, "No eligible mint/burn configs are enabled") };
   }
 
   return {
@@ -130,24 +129,31 @@ export async function handleBackfillMintBurn(
     const chunkSizeParam = readAdminIntegerParam(body, url.searchParams, "chunkSize") ?? parsedChunkSize;
     const maxChunks = readAdminIntegerParam(body, url.searchParams, "maxChunks") ?? parsedMaxChunks;
 
-    const alchemyUrl = buildAlchemyUrl(ETHEREUM_CHAIN_ID, alchemyApiKey);
-    if (!alchemyUrl) {
-      return errorResponse(400, `Alchemy URL is not configured for chain ${ETHEREUM_CHAIN_ID}`);
-    }
-
     const budget = createBudget(BACKFILL_BUDGET_LIMIT);
-    const chainHead = await getAlchemyBlockNumber(alchemyUrl, budget);
-    if (chainHead == null) {
-      return errorResponse(502, "Failed to fetch chain head for backfill range");
+    const chainHeads = new Map<string, number>();
+    for (const chainId of [...new Set(MINT_BURN_CONFIGS.map((config) => config.chain.chainId))]) {
+      const alchemyUrl = buildAlchemyUrl(chainId, alchemyApiKey);
+      if (!alchemyUrl) {
+        return errorResponse(400, `Alchemy URL is not configured for chain ${chainId}`);
+      }
+      const chainHead = await getAlchemyBlockNumber(alchemyUrl, budget);
+      if (chainHead == null) {
+        return errorResponse(502, `Failed to fetch chain head for ${chainId} backfill range`);
+      }
+      chainHeads.set(chainId, chainHead);
     }
 
-    const selectedConfig = await resolveBackfillConfig(db, chainHead, configKeyParam);
+    const selectedConfig = await resolveBackfillConfig(db, chainHeads, configKeyParam);
     if (!selectedConfig.ok) return selectedConfig.response;
 
     const { config, selectionMode, autoSelectedReason } = selectedConfig;
-
-    if (config.chain.chainId !== ETHEREUM_CHAIN_ID) {
-      return errorResponse(400, "Selected config is outside Ethereum-only mint/burn scope");
+    const alchemyUrl = buildAlchemyUrl(config.chain.chainId, alchemyApiKey);
+    if (!alchemyUrl) {
+      return errorResponse(400, `Alchemy URL is not configured for chain ${config.chain.chainId}`);
+    }
+    const chainHead = chainHeads.get(config.chain.chainId);
+    if (chainHead == null) {
+      return errorResponse(502, `Failed to fetch chain head for chain ${config.chain.chainId}`);
     }
 
     const currentLastBlock = await readMintBurnSyncStateForConfig(db, config);

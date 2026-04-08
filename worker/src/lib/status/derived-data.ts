@@ -172,9 +172,13 @@ export async function getMintBurnReconciliation(
     return null;
   }
 
-  const trackedIds = new Set(
-    MINT_BURN_CONFIGS.filter((config) => config.chain.chainId === "ethereum").map((config) => config.stablecoinId),
-  );
+  const configChainsByStablecoin = new Map<string, Set<string>>();
+  for (const config of MINT_BURN_CONFIGS) {
+    const chains = configChainsByStablecoin.get(config.stablecoinId) ?? new Set<string>();
+    chains.add(config.chain.chainId);
+    configChainsByStablecoin.set(config.stablecoinId, chains);
+  }
+  const trackedIds = new Set(configChainsByStablecoin.keys());
   const assets = (
     stablecoinsCacheResult.payload.peggedAssets as Array<{
       id: string;
@@ -193,34 +197,35 @@ export async function getMintBurnReconciliation(
   const [flowRows, firstSeenRows] = await Promise.all([
     db
       .prepare(
-        `SELECT stablecoin_id, SUM(net_flow_usd) as net_flow_usd
+        `SELECT stablecoin_id, chain_id, SUM(net_flow_usd) as net_flow_usd
          FROM mint_burn_hourly
-         WHERE chain_id = ? AND hour_ts >= ?
-         GROUP BY stablecoin_id`,
+         WHERE hour_ts >= ?
+         GROUP BY stablecoin_id, chain_id`,
       )
-      .bind("ethereum", now - 24 * 3600)
-      .all<{ stablecoin_id: string; net_flow_usd: number }>(),
+      .bind(now - 24 * 3600)
+      .all<{ stablecoin_id: string; chain_id: string; net_flow_usd: number }>(),
     db
       .prepare(
-        `SELECT stablecoin_id, MIN(hour_ts) as first_hour_ts
+        `SELECT stablecoin_id, chain_id, MIN(hour_ts) as first_hour_ts
          FROM mint_burn_hourly
-         WHERE chain_id = ?
-         GROUP BY stablecoin_id`,
+         GROUP BY stablecoin_id, chain_id`,
       )
-      .bind("ethereum")
-      .all<{ stablecoin_id: string; first_hour_ts: number | null }>(),
+      .all<{ stablecoin_id: string; chain_id: string; first_hour_ts: number | null }>(),
   ]);
 
-  const flowMap = new Map((flowRows.results ?? []).map((row) => [row.stablecoin_id, row.net_flow_usd]));
+  const flowMap = new Map(
+    (flowRows.results ?? []).map((row) => [`${row.stablecoin_id}|${row.chain_id}`, row.net_flow_usd]),
+  );
   const firstSeenMap = new Map(
-    (firstSeenRows.results ?? []).map((row) => [row.stablecoin_id, row.first_hour_ts ?? null]),
+    (firstSeenRows.results ?? []).map((row) => [`${row.stablecoin_id}|${row.chain_id}`, row.first_hour_ts ?? null]),
   );
 
   const rows = assets
     .map<MintBurnReconciliationRow>((asset) => {
-      const ethereumSupply = asset.chainCirculating?.ethereum;
-      const flowNet24hUsd = flowMap.get(asset.id) ?? 0;
-      const historyStartAt = firstSeenMap.get(asset.id) ?? null;
+      const canonicalChains = configChainsByStablecoin.get(asset.id) ?? new Set<string>();
+      const canonicalChainId = canonicalChains.size === 1 ? [...canonicalChains][0]! : null;
+      const flowNet24hUsd = canonicalChainId ? (flowMap.get(`${asset.id}|${canonicalChainId}`) ?? 0) : 0;
+      const historyStartAt = canonicalChainId ? (firstSeenMap.get(`${asset.id}|${canonicalChainId}`) ?? null) : null;
       const coverageStatus: MintBurnReconciliationRow["coverageStatus"] =
         historyStartAt == null
           ? "unknown"
@@ -230,9 +235,11 @@ export async function getMintBurnReconciliation(
               ? "partial-history"
               : "full";
 
-      const current = ethereumSupply?.current;
-      const prevDay = ethereumSupply?.circulatingPrevDay;
+      const chainSupply = canonicalChainId ? asset.chainCirculating?.[canonicalChainId] : undefined;
+      const current = chainSupply?.current;
+      const prevDay = chainSupply?.circulatingPrevDay;
       if (
+        canonicalChainId == null ||
         typeof current !== "number" ||
         !Number.isFinite(current) ||
         typeof prevDay !== "number" ||

@@ -59,10 +59,27 @@ describe("handleMintBurnEvents", () => {
     expect(res.status).toBe(400);
   });
 
-  it("rejects non-ethereum chain filter with 400", async () => {
+  it("rejects chain filters outside the tracked scope for the requested stablecoin", async () => {
     const db = mockD1([]);
     const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&chain=base"));
     expect(res.status).toBe(400);
+  });
+
+  it("accepts Arbitrum as the canonical USDai mint/burn chain", async () => {
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 1 }] },
+      { match: "mint_burn_events", rows: [makeMintBurnRow({ stablecoin_id: "usdai-usd-ai", chain_id: "arbitrum", symbol: "USDai" })] },
+    ]) as MockD1Database;
+
+    const res = await handleMintBurnEvents(
+      db,
+      new URL("https://x/api/mint-burn-events?stablecoin=usdai-usd-ai&chain=arbitrum"),
+    );
+
+    expect(res.status).toBe(200);
+    const countQuery = db.getHistory().find((entry) => entry.sql.includes("COUNT(*) as total"));
+    expect(countQuery?.sql).toContain("chain_id IN");
+    expect(countQuery?.binds).toContain("arbitrum");
   });
 
   it("rejects invalid burnType with 400", async () => {
