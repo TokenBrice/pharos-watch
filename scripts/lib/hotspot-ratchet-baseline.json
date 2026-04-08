@@ -60,9 +60,9 @@
     "notes": "The graph renderer still mixes data shaping, simulation wiring, and view concerns. Split graph math, legend controls, and rendering shells before growing the feature further."
   },
   "src/app/chains/[chain]/client.tsx": {
-    "fileLines": 736,
-    "maxFunctionLines": 107,
-    "branchCount": 47,
+    "fileLines": 136,
+    "maxFunctionLines": 115,
+    "branchCount": 7,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 620,
@@ -108,8 +108,8 @@
     "notes": "The shell split landed, but the Safety Scores body is still the largest methodology section. Next pass should separate calculator wiring, grading pipeline copy, and tables."
   },
   "src/app/methodology/sections/core/liquidity-section.tsx": {
-    "fileLines": 127,
-    "maxFunctionLines": 119,
+    "fileLines": 138,
+    "maxFunctionLines": 130,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -276,9 +276,9 @@
     "notes": "Post-score baselines, drift guards, and metadata assembly now live in dedicated helpers. Keep the entrypoint focused on phase order, abort boundaries, and persistence sequencing."
   },
   "worker/src/cron/sync-mint-burn.ts": {
-    "fileLines": 345,
-    "maxFunctionLines": 255,
-    "branchCount": 16,
+    "fileLines": 335,
+    "maxFunctionLines": 250,
+    "branchCount": 14,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 345,
