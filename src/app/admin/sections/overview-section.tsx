@@ -2,7 +2,7 @@ import type { StatusResponse } from "@shared/types";
 import { StatusFacts } from "@/components/status/status-facts";
 import { SystemDiagnostics } from "@/components/status/system-diagnostics";
 import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";
-import { getStatusTone } from "@/lib/status-dashboard-model";
+import { type DashboardQuerySync, formatTimestampSeconds, getStatusTone } from "@/lib/status-dashboard-model";
 
 export interface OverviewSectionProps {
   data: StatusResponse;
@@ -20,6 +20,9 @@ export interface OverviewSectionProps {
     status: "healthy" | "degraded" | "stale";
     updatedAt: number | null;
   } | null;
+  querySyncs: DashboardQuerySync[];
+  clientDataAgeSec: number;
+  clientDataStale: boolean;
 }
 
 export function OverviewSection({
@@ -29,13 +32,20 @@ export function OverviewSection({
   isDiagnosticsOpen,
   setIsDiagnosticsOpen,
   browserProbeSummary,
+  querySyncs,
+  clientDataAgeSec,
+  clientDataStale,
 }: OverviewSectionProps) {
+  const statusSync = querySyncs.find((s) => s.key === "status");
+  const healthSync = querySyncs.find((s) => s.key === "health");
+  const probeSync = querySyncs.find((s) => s.key === "probes");
+  const requestSourceSync = querySyncs.find((s) => s.key === "requestSource");
+
   return (
     <StatusSection
       id="overview"
       kicker="Command Center"
       title="Current incident picture"
-      description="Start here for the state holding, the active blockers, and the short path into deeper diagnostics."
       accentClassName="border-l-frost-blue"
       summary={
         <>
@@ -59,7 +69,20 @@ export function OverviewSection({
         <summary className="cursor-pointer text-sm font-medium text-foreground">
           State machine, probe, and discrepancy diagnostics
         </summary>
-        <div className="mt-4">
+        <div className="mt-4 space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <SummaryBadge label="State Eval" value={formatTimestampSeconds(data.state.lastEvaluatedAt)} />
+            <SummaryBadge label="Status Payload" value={formatTimestampSeconds(data.timestamp)} />
+            <SummaryBadge label="Status Fetch" value={formatTimestampSeconds(statusSync?.updatedAtSec)} />
+            <SummaryBadge label="Health Fetch" value={formatTimestampSeconds(healthSync?.updatedAtSec)} />
+            <SummaryBadge label="Probe Fetch" value={formatTimestampSeconds(probeSync?.updatedAtSec)} />
+            <SummaryBadge label="API Mix Fetch" value={formatTimestampSeconds(requestSourceSync?.updatedAtSec)} />
+            <SummaryBadge
+              label="Sync Floor"
+              value={`${clientDataAgeSec}s`}
+              className={clientDataStale ? "border-amber-500/30 bg-amber-500/10" : undefined}
+            />
+          </div>
           <SystemDiagnostics
             state={data.state}
             staleness={data.staleness}

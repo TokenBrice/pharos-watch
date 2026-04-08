@@ -43,7 +43,6 @@ export function ReliabilitySection({
       id="reliability"
       kicker="Service Health"
       title="Probes, breakers, and cache pressure"
-      description="Use this lane when the issue looks like routing, availability, or public-service degradation."
       accentClassName="border-l-amber-500"
       summary={
         <>
@@ -71,6 +70,14 @@ export function ReliabilitySection({
       >
         <summary className="cursor-pointer text-sm font-medium text-foreground">
           Endpoint probes, circuit breakers, and cache freshness
+          {(browserProbeSummary?.failCount ?? 0) > 0 || (data.summary.worstCacheRatio ?? 0) > 1 ? (
+            <span className="ml-2 text-xs font-normal text-muted-foreground">
+              {[
+                browserProbeSummary && browserProbeSummary.failCount > 0 ? `${browserProbeSummary.failCount} probe fail` : null,
+                data.summary.worstCacheRatio > 1 ? `cache ${data.summary.worstCacheRatio.toFixed(1)}x` : null,
+              ].filter(Boolean).join(" · ")}
+            </span>
+          ) : null}
         </summary>
         <div className="mt-4 space-y-5">
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">

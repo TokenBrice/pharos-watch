@@ -24,7 +24,6 @@ export function PipelineSection({ data, handleRefresh }: PipelineSectionProps) {
       id="pipeline"
       kicker="Data Pipeline"
       title="Freshness and coverage"
-      description="Use this lane when the issue is data quality rather than routing or cron execution."
       accentClassName="border-l-cyan-500"
       summary={
         <>

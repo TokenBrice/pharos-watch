@@ -25,7 +25,6 @@ export function ControlSection({
       id="control"
       kicker="Operations"
       title="Manual response"
-      description="Rarely-used recovery actions and operator controls. Positioned last since these are only needed during active incidents."
       accentClassName="border-l-emerald-500"
       summary={
         <>

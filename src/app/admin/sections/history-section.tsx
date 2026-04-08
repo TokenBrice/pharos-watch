@@ -24,7 +24,6 @@ export function HistorySection({
       id="history"
       kicker="Incident Log"
       title="Timeline and recovery trail"
-      description="Historical context stays last so the page tapers from action into evidence."
       accentClassName="border-l-rose-500"
       summary={
         <>

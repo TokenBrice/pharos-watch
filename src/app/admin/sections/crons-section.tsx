@@ -53,7 +53,6 @@ export function CronsSection({
       id="crons"
       kicker="Schedulers"
       title="Worker job lanes"
-      description="Unhealthy and degraded lanes stay on top. Healthy lanes collapse until you need them."
       accentClassName="border-l-orange-500"
       summary={
         <>
@@ -82,6 +81,9 @@ export function CronsSection({
           >
             <summary className="cursor-pointer text-sm font-medium text-foreground">
               Healthy lanes ({healthyCronGroups.length})
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                {healthyCronGroups.reduce((sum, g) => sum + g.entries.length, 0)} jobs
+              </span>
             </summary>
             <div className="mt-4 space-y-4">
               {healthyCronGroups.map((group) => (
