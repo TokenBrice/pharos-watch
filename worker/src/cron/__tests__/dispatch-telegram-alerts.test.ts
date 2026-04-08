@@ -941,4 +941,39 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.eventsDetected.suppressedMethodologyChanges).toBe(1);
     expect(metadata.messagesSent).toBe(0);
   });
+
+  it("clears launch alert flags when deactivating a blocked subscriber", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    mockSendToChat.mockResolvedValue({
+      ok: false, blocked: true, retryable: false, permanentFailure: true,
+      statusCode: 403, errorClass: "blocked", delivery: "blocked", retryAfterSec: null,
+    });
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") return { value: JSON.stringify({ "usdc-circle": "CALM" }), updatedAt: now - 60 };
+      if (key === "alert:dews-alertable-snapshot") return { value: JSON.stringify({}), updatedAt: now - 60 };
+      if (key === "alert:depeg-snapshot") return { value: JSON.stringify({}), updatedAt: now - 60 };
+      if (key === "alert:safety-snapshot") return { value: JSON.stringify({}), updatedAt: now - 60 };
+      if (key === "alert:launch-snapshot") return { value: JSON.stringify([]), updatedAt: now - 60 };
+      return null;
+    });
+
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [{ stablecoin_id: "usdc-circle", score: 42, band: "ALERT", signals_json: "{}" }] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT id, chat_id, message_html", rows: [] },
+      { match: "sub.alert_dews = 1", matchBinds: ["usdc-circle"], rows: [{ stablecoin_id: "usdc-circle", chat_id: "99999", last_active_at: now }] },
+      { match: "UPDATE telegram_subscribers", rows: [] },
+      { match: "UPDATE telegram_subscriptions", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    await dispatchTelegramAlerts(db, "bot-token");
+
+    const history = db.getHistory();
+    const subscriberUpdate = history.find((e) => e.sql.includes("UPDATE telegram_subscribers") && e.sql.includes("alert_launch"));
+    expect(subscriberUpdate).toBeDefined();
+    expect(subscriberUpdate!.sql).toContain("global_alert_launch=0");
+  });
 });
