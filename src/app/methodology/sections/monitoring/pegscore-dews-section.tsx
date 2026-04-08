@@ -28,14 +28,20 @@ export function PegScoreDewsMethodologySection() {
               <p>
                 Depeg Tracker combines live event detection, secondary-source confirmation rules for large-cap assets,
                 low-confidence primary prices, and extreme moves, plus a per-coin peg score that penalizes time off peg,
-                event severity, active depegs, and unstable event spread. Pending depeg confirmation checks off-chain
-                sources (CoinGecko or DefiLlama), CEX tickers (Binance), and DEX prices before promoting or rejecting
-                candidates.
+                event severity, active depegs, and unstable event spread. Pending depeg confirmation checks
+                same-direction off-chain sources (CoinGecko or DefiLlama), supported native-peg quotes, Binance tickers,
+                trusted aggregate DEX prices, and large challenger pools before promoting or rejecting candidates.
               </p>
               <p>
                 When a live event is later contradicted across the peg by a low-confidence primary price, the detector now
                 retires the stale live row immediately and routes the replacement move through pending confirmation instead
                 of leaving the wrong direction active.
+              </p>
+              <p>
+                Pending incidents are no longer write-once snapshots. While a candidate is waiting for confirmation,
+                Pharos now preserves the original first-seen timestamp, refreshes the current last-seen state, tracks the
+                worst same-direction move, and resets the pending row cleanly if the market flips to the opposite side of
+                the peg.
               </p>
               <p>
                 DEX cross-validation uses explicit trust gates: detection and pending confirmation only trust fresh DEX rows with at least $1M of aggregate source TVL, while the public DEX Price Check UI requires a lighter but still non-trivial floor of $250K. Aggregate DEX rows also need deeper corroboration before they can mutate live event state: recoveries/suppression now require at least two protocol-level DEX groups inside threshold, and ambiguous-primary recoveries are vetoed when a large challenger pool still shows the old depeg direction. For already-open depegs, same-direction aggregate DEX disagreement is advisory rather than a synthetic recovery signal, so events stay continuous until the normal recovery path confirms the coin is back inside threshold.
@@ -51,7 +57,15 @@ export function PegScoreDewsMethodologySection() {
               </p>
               <p>
                 DEWS (Depeg Early Warning System) computes forward-looking stress every 30 minutes from market, liquidity,
-                confidence, flow, and yield signals, with optional PSI-based amplification during systemic stress.
+                confidence, flow, and yield signals, with optional PSI-based amplification during systemic stress. Its
+                divergence input now reuses the live depeg DEX trust floor, so fresh-but-thin DEX rows stay visible for
+                analytics but do not affect the score unless they pass the same `$1M` aggregate-TVL gate.
+              </p>
+              <p>
+                Historical DEWS daily snapshots do not retain the underlying DEX trust metadata needed to replay that gate
+                exactly. When operators remediate the old thin-DEX window, the repair path refreshes current rows and
+                prunes unrecomputable daily history back to the Mar 9, 2026 trust-floor boundary before new snapshots are
+                published under the stricter rule.
               </p>
               <MethodologyFacts
                 facts={[
@@ -103,8 +117,8 @@ export function PegScoreDewsMethodologySection() {
                     spans up to 4 years but is capped at the coin&apos;s actual age. PegScore now prefers a curated
                     launch date when one is available and otherwise falls back to the earliest supply snapshot, so
                     young coins are not diluted across history they didn&apos;t exist for. Requires at least 7 days of tracking
-                    data; returns null otherwise. Scores based on fewer than 30 days are marked as &ldquo;Early score&rdquo;
-                    to signal limited history.
+                    data; returns null otherwise. Scores based on 7&ndash;30 days are marked as &ldquo;Early score&rdquo; to
+                    signal limited history.
                   </p>
                 </div>
 

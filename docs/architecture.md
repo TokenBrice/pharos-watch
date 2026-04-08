@@ -52,12 +52,13 @@ Cron trigger metadata follows the same single-source pattern. `shared/lib/cron-j
 | `POST /api/backfill-cg-prices`               | Admin: backfill CoinGecko historical prices into price_cache (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                         |
 | `POST /api/backfill-mint-burn`               | Admin: controlled mint/burn ingestion backfill by `configKey` (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                        |
 | `POST /api/reclassify-atomic-roundtrips`     | Admin: retroactively tag same-tx mint/burn noise as `flow_type='atomic_roundtrip'` (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                   |
-| `POST /api/audit-depeg-history`              | Admin: audit depeg events against CoinGecko price data for false positive detection (GET supports `dry-run=true` only; preferred access: `ops-api.pharos.watch` + Access service-token headers)                                |
+| `POST /api/audit-depeg-history`              | Admin: audit depeg events against CoinGecko price data for false positive detection, synthetic split consolidation, or contradictory terminal-price repair (GET supports `dry-run=true` previews only; preferred access: `ops-api.pharos.watch` + Access service-token headers) |
 | `POST /api/trigger-digest`                   | Admin: force digest regeneration bypassing 1h dedup (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                  |
 | `POST /api/reset-blacklist-sync`             | Admin: roll back blacklist sync state to re-scan missed events (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                       |
 | `POST /api/remediate-blacklist-amount-gaps`  | Admin: remediate recoverable blacklist amount/provenance gaps (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                       |
 | `POST /api/backfill-blacklist-current-balances` | Admin: rebuild `blacklist_current_balances` rows for matching blacklist configs, with optional `dryRun`, `stablecoin`, `chainId`, and `limit` filters (preferred access: `ops-api.pharos.watch` + Access service-token headers) |
-| `GET /api/backfill-dews`                     | Admin: DEWS backtest audit against historical depeg events (reports true-positive rate and lead time; preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                 |
+| `GET /api/backfill-dews`                     | Admin: DEWS backtest audit against historical depeg events (reports true-positive rate and lead time; `repair=...&dry-run=true` also previews DEWS refresh/prune mutations; preferred access: `ops-api.pharos.watch` + Access service-token headers) |
+| `POST /api/backfill-dews`                    | Admin: DEWS repair surface for current-row refreshes and bounded history pruning under the live trust floor (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                           |
 | `POST /api/backfill-mint-burn-prices`        | Admin: backfill mint/burn event prices (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                               |
 | `GET /api/debug-sync-state`                  | Admin: view blacklist sync state for all chains (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                      |
 | `GET /api/api-keys`                          | Admin: list public API keys (masked token, owner/tier metadata, usage timestamps; preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                   |
@@ -559,8 +560,8 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── backfill-supply-history.ts # POST /api/backfill-supply-history (admin)
     │   ├── backfill-stability-index.ts # POST /api/backfill-stability-index (admin)
     │   ├── backfill-cg-prices.ts # POST /api/backfill-cg-prices (admin)
-    │   ├── audit-depeg-history.ts # POST /api/audit-depeg-history (admin; GET dry-run only)
-    │   ├── backfill-dews.ts     # GET /api/backfill-dews (admin)
+    │   ├── audit-depeg-history.ts # POST /api/audit-depeg-history (admin; GET dry-run previews only)
+    │   ├── backfill-dews.ts     # GET /api/backfill-dews + POST repair modes (admin)
     │   ├── backfill-mint-burn-prices.ts # POST /api/backfill-mint-burn-prices (admin)
     │   ├── backfill-mint-burn.ts # POST /api/backfill-mint-burn (admin)
     │   ├── backfill-blacklist-current-balances.ts # POST /api/backfill-blacklist-current-balances (admin)

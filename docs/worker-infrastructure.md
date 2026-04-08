@@ -128,7 +128,7 @@ The remaining routes on `api.pharos.watch` that do not require `X-API-Key` are `
 | --------- | -------------------------------------------------------------------------------------------------------------------- |
 | `OPTIONS` | Returns 204 with CORS headers (preflight)                                                                            |
 | `POST`    | `/api/feedback`, `/api/telegram-webhook`, and mutating admin endpoints from `shared/lib/api-endpoints/`            |
-| `GET`     | Read endpoints + admin debug routes; mutating admin routes return 405 except `/api/audit-depeg-history?dry-run=true` |
+| `GET`     | Read endpoints + admin debug routes; mutating admin routes return 405 except dry-run previews such as `/api/audit-depeg-history?dry-run=true` and `/api/backfill-dews?repair=...&dry-run=true`, plus the read-only `GET /api/backfill-dews` backtest |
 | Other     | Returns 405 `{ error: "Method not allowed" }`                                                                        |
 
 Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions) are centralized in the folderized `shared/lib/api-endpoints/` module surface and consumed by both worker and frontend status tooling.
@@ -194,7 +194,7 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 
 1. **Cache bypass rules**:
    - All non-GET requests bypass edge cache.
-   - GET paths marked `cacheBypass: true` in `shared/lib/api-endpoints/` bypass edge cache (health, status, and admin/backfill endpoints like `/api/backfill-*`, `/api/audit-depeg-history`, `/api/backfill-dews`).
+   - GET paths marked `cacheBypass: true` in `shared/lib/api-endpoints/` bypass edge cache (health, status, and admin/backfill endpoints like `/api/backfill-*`, `/api/audit-depeg-history`, `/api/backfill-dews`, including their dry-run preview variants).
 
 2. **Cache check:** `caches.default.match(cacheKey)` — returns cached response if available
 
@@ -275,6 +275,7 @@ These router-dispatched admin routes honor an optional `Idempotency-Key` header:
 - `POST /api/backfill-mint-burn-prices`
 - `POST /api/backfill-mint-burn`
 - `POST /api/reclassify-atomic-roundtrips`
+- `POST /api/backfill-dews`
 - `POST /api/audit-depeg-history`
 - `POST /api/trigger-digest`
 - `POST /api/reset-blacklist-sync`

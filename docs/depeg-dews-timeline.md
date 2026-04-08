@@ -1,6 +1,17 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v5.8` (2026-02-18 -> 2026-04-07).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v5.9` (2026-02-18 -> 2026-04-08).
+
+---
+## v5.9 — Direction-true confirmation, pending refreshes, and DEWS live-trust alignment (Apr 8, 2026)
+
+**Commit:** `unreleased`
+
+- Pending depeg rows now refresh live first/last/peak state while they wait for confirmation instead of behaving like write-once snapshots
+- Pending promotion now requires same-direction corroboration; opposite-side native/off-chain/CEX/DEX/pool evidence rejects the candidate instead of confirming it
+- Native-quote recovery no longer persists contradictory `recovery_price` values, and the audit repair path can null legacy rows that still carry a terminal depegged price
+- DEWS divergence now reuses the same `$1M` live depeg DEX trust floor instead of the lighter UI gate
+- Because historical DEWS daily snapshots do not retain that DEX trust metadata, the repair path refreshes current rows and prunes unrecomputable history from the Mar 9, 2026 trust-floor boundary onward
 
 ---
 ## v5.8 — Daily-confirmed native-peg historical replay (Apr 7, 2026)

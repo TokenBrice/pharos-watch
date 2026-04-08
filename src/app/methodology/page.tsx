@@ -56,6 +56,10 @@ export default function MethodologyPage() {
               question: "How does Pharos measure DEX liquidity?",
               answer: "The liquidity score is a composite 0–100 metric combining TVL depth (35%), volume activity (20%), pool quality (22.5%), durability (15%), and pair diversity (7.5%). Volume uses log-scale scoring. Pool quality is adjusted for mechanism type, balance health, and pair quality.",
             },
+            {
+              question: "How does Pharos confirm depegs and maintain DEWS history?",
+              answer: "Pending depegs require same-direction corroboration before promotion. Pharos treats opposite-side secondary evidence as contradiction, not support, and only trusts aggregate DEX confirmation when the row is fresh and backed by at least $1M of source TVL. Historical DEWS snapshots do not retain that DEX trust metadata, so the repair path refreshes current rows and prunes unrecomputable daily history back to the March 9, 2026 trust-floor boundary when needed.",
+            },
           ])),
         }}
       />

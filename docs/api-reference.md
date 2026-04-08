@@ -117,7 +117,7 @@ These profiles apply while the dataset is within its endpoint freshness budget. 
 | per-coin | `public, s-maxage=300, max-age=10`   | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                           |
 | slow     | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, non-usd-share                                                                                                                                                                         |
 | archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot                                                                                                                                                                                                                                                                     |
-| no-store | `no-store`                           | health plus admin GET routes after router override (`status`, `status-history`, `request-source-stats`, `debug-sync-state`, `backfill-dews`, `audit-depeg-history?dry-run=true`, `discovery-candidates`) |
+| no-store | `no-store`                           | health plus admin GET routes after router override (`status`, `status-history`, `request-source-stats`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`, `discovery-candidates`) |
 
 `POST /api/feedback`, `POST /api/telegram-webhook`, and admin POST endpoints bypass edge caching because they are non-GET request paths. They are not part of a cacheable `Cache-Control` profile and do not currently rely on an emitted `Cache-Control: no-store` header.
 
@@ -166,11 +166,12 @@ All error responses use `{ "error": "message" }` JSON format.
 
 HTTP method allowance is defined centrally in `shared/lib/api-endpoints/` and enforced by `worker/src/router.ts` (`validateEndpointMethod`).
 
-- `GET` is accepted for read endpoints (plus admin debug/status endpoints and `GET /api/backfill-dews`).
+- `GET` is accepted for read endpoints (plus admin debug/status endpoints, `GET /api/backfill-dews`, and dry-run repair previews for `GET /api/backfill-dews?repair=...&dry-run=true`).
 - `POST` is accepted for mutating admin endpoints, `POST /api/feedback`, and `POST /api/telegram-webhook`.
 - `GET, POST` is accepted on `/api/api-keys` so operators can list keys and create a new key through the same route.
 - `POST` is accepted on `/api/api-keys/:id/update`, `/api/api-keys/:id/deactivate`, and `/api/api-keys/:id/rotate`.
 - `/api/audit-depeg-history` allows `GET` only with `?dry-run=true`; otherwise it is `POST`-only.
+- `/api/backfill-dews` allows `GET` for the historical backtest and for `repair=...&dry-run=true` previews; mutating repair runs are `POST`-only.
 - Unknown `POST` paths return `405` with `Allow: GET`; unsupported verbs return `405` with `Allow: GET, POST`.
 
 The same shared endpoint descriptors now also carry static worker dependency-hydration hints consumed by `worker/src/routes/registry.ts`, where the worker binds shared endpoint keys directly to handlers through a single static route-definition list. That keeps endpoint metadata, router behavior, method guards, admin status-page actions, and worker-side static route wiring aligned from one source of truth plus one worker binding table.
@@ -190,6 +191,7 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/backfill-mint-burn-prices`
 - `POST /api/backfill-mint-burn`
 - `POST /api/reclassify-atomic-roundtrips`
+- `POST /api/backfill-dews`
 - `POST /api/audit-depeg-history`
 - `POST /api/trigger-digest`
 - `POST /api/reset-blacklist-sync`
@@ -2772,6 +2774,32 @@ Validates DEWS against historical depeg events. Reports true-positive rate and a
 
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
+### `GET /api/backfill-dews?repair=refresh-current&dry-run=true`
+
+Dry-run preview for the current-state DEWS repair. Returns the exact set of stablecoins that would be republished under the live `$1M` DEX trust floor, plus source-coverage / validation diagnostics from the preview computation.
+
+### `POST /api/backfill-dews?repair=refresh-current`
+
+Immediately republishes current `stress_signals` rows under the live `$1M` DEX trust floor. The response includes the dry-run preview payload plus the executed `computeAndStoreDEWS()` summary.
+
+### `GET /api/backfill-dews?repair=prune-history&dry-run=true`
+
+Dry-run preview for bounded DEWS history pruning. Returns the exact `stress_signal_history` rows that fall inside the requested window, optional `stablecoin` filter scope, and the current post-window history boundary.
+
+### `POST /api/backfill-dews?repair=prune-history`
+
+Deletes bounded `stress_signal_history` windows that cannot be deterministically recomputed because historical daily snapshots do not retain the DEX trust metadata required to replay the live `$1M` divergence gate.
+
+**Query parameters**
+
+| Param       | Type      | Default              | Description |
+| ----------- | --------- | -------------------- | ----------- |
+| `repair`    | `"refresh-current" \| "prune-history"` | required for `POST` | Selects the DEWS repair mode |
+| `dry-run`   | `"true"`  | —                    | Required for `GET` repair previews; optional on `POST` to preview without writes |
+| `stablecoin` | `string` | —                    | Optional tracked stablecoin ID for `repair=prune-history` |
+| `startDay`  | `string`  | `2026-03-09`         | Optional prune-window start day (`YYYY-MM-DD`, Unix seconds, or Unix milliseconds) |
+| `endDay`    | `string`  | current UTC day      | Optional prune-window end day (`YYYY-MM-DD`, Unix seconds, or Unix milliseconds) |
+
 ### `POST /api/backfill-mint-burn`
 
 Backfills mint/burn event ingestion for a specific contract config using the same parsing/classification pipeline as the cron.
@@ -2812,7 +2840,10 @@ The endpoint processes up to 1000 `(tx_hash, stablecoin_id)` groups per request.
 
 Dry-run preview for the depeg audit endpoint. This is the only supported `GET` mode for `/api/audit-depeg-history`; all mutating executions require `POST`.
 
-The same endpoint also supports a dry-run historical repair preview with `repair=synthetic-splits`, which surfaces adjacent same-direction events that were likely split either by the old DEX-only auto-close behavior or by a backfill-to-live handoff where historical replay expired mid-ongoing depeg.
+The same endpoint also supports dry-run historical repair previews:
+
+- `repair=synthetic-splits` surfaces adjacent same-direction events that were likely split either by the old DEX-only auto-close behavior or by a backfill-to-live handoff where historical replay expired mid-ongoing depeg
+- `repair=contradictory-recovery-price` surfaces ended events whose stored `recovery_price` is still outside the allowed depeg threshold and should be nulled
 
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
@@ -2825,7 +2856,7 @@ The same endpoint also supports a dry-run historical repair preview with `repair
 | `dry-run`    | `"true"`  | required | Must be exactly `"true"` for `GET`       |
 | `min-supply` | `number`  | `0`      | Minimum supply (USD) to include in audit |
 | `symbol`     | `string`  | —        | Filter by symbol (case-insensitive)      |
-| `repair`     | `"synthetic-splits"` | — | Preview synthetic split-event consolidation candidates instead of the CoinGecko false-positive audit |
+| `repair`     | `"synthetic-splits" \| "contradictory-recovery-price"` | — | Preview synthetic split consolidation or contradictory terminal-price repairs instead of the CoinGecko false-positive audit |
 
 ### `POST /api/audit-depeg-history`
 
@@ -2837,6 +2868,8 @@ Audits existing depeg events against CoinGecko historical price data to detect f
 - a backfill row ended without recovery and a live row resumed the same severe move within one sync gap because the historical replay window expired mid-event.
 
 When a repair group ends in a live row, the live tail is kept as the canonical record and inherits the earlier start plus worst peak so future backfills do not recreate the split.
+
+`POST /api/audit-depeg-history?repair=contradictory-recovery-price` instead nulls ended-event `recovery_price` values that still sit outside the permitted depeg threshold. This is the bounded repair path for legacy rows closed by a native-quote recovery while the stored USD price still looked depegged.
 
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 
@@ -2852,7 +2885,7 @@ When a repair group ends in a live row, the live tail is kept as the canonical r
 | `dry-run`    | `"true"`  | —       | When `"true"`, preview deletions without touching DB. Default behavior deletes false positives |
 | `min-supply` | `number`  | `0`     | Minimum supply (USD) to include in audit                                                       |
 | `symbol`     | `string`  | —       | Filter by symbol (case-insensitive)                                                            |
-| `repair`     | `"synthetic-splits"` | — | Run synthetic split-event consolidation instead of the CoinGecko false-positive audit          |
+| `repair`     | `"synthetic-splits" \| "contradictory-recovery-price"` | — | Run synthetic split consolidation or contradictory terminal-price repair instead of the CoinGecko false-positive audit |
 
 ### `POST /api/trigger-digest`
 

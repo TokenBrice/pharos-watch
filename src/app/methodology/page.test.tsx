@@ -20,5 +20,8 @@ describe("MethodologyPage", () => {
     expect(html).toContain("Safety Scores");
     expect(html).toContain("Reader");
     expect(html).toContain("Analyst");
+    expect(html).toContain("same-direction corroboration");
+    expect(html).toContain("$1M");
+    expect(html).toContain("March 9, 2026 trust-floor boundary");
   });
 });

@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) estimating depeg probability. Com
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/depeg-dews-version.ts`.
 
-- **Current methodology version:** `v5.8`
+- **Current methodology version:** `v5.9`
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/depeg-dews-version.ts`
 
@@ -97,10 +97,12 @@ Maps `priceConfidence` field: high=0, single-source=25, low=60, fallback=80, nul
 
 Max of: primary deviation from peg, DEX deviation from peg, cross-source spread (all in bps).
 
-- DEX input comes only from `dex_prices` rows refreshed within the last 60 minutes; older rows are ignored instead of lingering as live divergence input
+- DEX input comes only from `dex_prices` rows refreshed within the last 60 minutes **and** backed by at least `$1M` of aggregate source TVL, matching the live depeg trust floor
 - **Anchors:** `[0bps, 0] → [25bps, 10] → [50bps, 25] → [75bps, 50] → [100bps, 75] → [200bps, 90] → [500bps, 100]`
 - **Non-USD peg dampening:** `value *= 0.7`
 - Smoothed with previous reading.
+
+Historical `stress_signal_history` rows do not retain the underlying DEX trust metadata (`source_total_tvl`, per-row freshness context) needed to replay this gate exactly. The Wave 5.9 repair path therefore refreshes current rows and prunes unrecomputable daily history from the Mar 9, 2026 trust-floor boundary onward instead of pretending those stored snapshots can be deterministically recomputed.
 
 ### S_black — Blacklist Activity
 
@@ -161,7 +163,7 @@ Score = `min(100, sum of active signal points)`.
 **Data flow:**
 
 1. Read stablecoins cache, derive peg rates with cached `fxFallbackRates` for thin non-USD groups
-2. Read `dex_liquidity`, `dex_prices`, `dex_liquidity_history`
+2. Read `dex_liquidity`, live-depeg-trusted `dex_prices`, and `dex_liquidity_history`
 3. Read `blacklist_events` counts (24h + 7d)
 4. Read previous `stress_signals` for smoothing
 5. Read `mint_burn_hourly` aggregates
@@ -184,12 +186,12 @@ When a coin has insufficient data in a cycle (`computeDEWS() === null`), that ru
 ```json
 {
   "signals": {
-    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "5.0" },
+    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "5.9" },
     ...
   },
   "updatedAt": 1740000000,
   "malformedRows": 0,
-  "methodology": { "version": "5.0", "versionLabel": "...", "currentVersion": "5.0", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "5.9", "versionLabel": "...", "currentVersion": "5.9", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
@@ -199,13 +201,13 @@ Unknown IDs and tracked-but-non-active IDs both return `404` (`Stablecoin not tr
 
 ```json
 {
-  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "5.0" },
+  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "5.9" },
   "history": [
-    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "5.0" },
+    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "5.9" },
     ...
   ],
   "malformedRows": 0,
-  "methodology": { "version": "5.0", "versionLabel": "...", "currentVersion": "5.0", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "5.9", "versionLabel": "...", "currentVersion": "5.9", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
@@ -214,6 +216,15 @@ Unknown IDs and tracked-but-non-active IDs both return `404` (`Stablecoin not tr
 ### `GET /api/backfill-dews` (admin)
 
 Validates DEWS against historical depeg events. Reports TP rate and lead time.
+
+### `GET /api/backfill-dews?repair=...&dry-run=true` / `POST /api/backfill-dews?repair=...` (admin)
+
+Repair modes:
+
+- `repair=refresh-current`: preview or immediately republish current `stress_signals` rows under the live `$1M` DEX trust floor
+- `repair=prune-history`: preview or delete bounded `stress_signal_history` windows that cannot be deterministically recomputed because the retained daily snapshots do not store the underlying DEX trust metadata
+
+`GET` is accepted for the read-only backtest path and for repair previews with `dry-run=true`. Mutating DEWS repair runs require `POST`.
 
 **Direct ops-api CLI example:** `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>`
 

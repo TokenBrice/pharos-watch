@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "5.8",
+  currentVersion: "5.9",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
+    {
+      version: "5.9",
+      title: "Direction-true confirmation, pending refreshes, and DEWS live-trust alignment",
+      date: "2026-04-08",
+      effectiveAt: 1775606400,
+      summary:
+        "Pending depeg incidents now track live first/last/peak state, confirmation requires same-direction corroboration, and DEWS divergence reuses the live depeg DEX trust floor.",
+      impact: [
+        "Pending rows are now refreshed while they wait for confirmation, preserving first-seen timestamps but updating last-seen and worst-seen state for the active direction",
+        "Pending confirmation now treats opposite-side secondary evidence as contradiction instead of support, and native-quote recovery no longer persists contradictory `recovery_price` values",
+        "DEWS divergence now ignores fresh-but-thin DEX rows unless they pass the same `$1M` live depeg trust gate, while the repair path refreshes current rows and prunes unrecomputable daily history from the Mar 9, 2026 trust-floor boundary onward",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.8",
       title: "Daily-confirmed native-peg historical replay",

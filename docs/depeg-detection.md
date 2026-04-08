@@ -130,7 +130,7 @@ direction = bps >= 0 ? "above" : "below"
 
 **Path A -- Deviation >= threshold AND event already open**
 
-- If a fresh direct native-peg quote is back inside threshold: close the live row immediately as recovered
+- If a fresh direct native-peg quote is back inside threshold: close the live row immediately as recovered, but leave `recovery_price = NULL` because the stored USD price still contradicts the native close
 - If a fresh direct native-peg quote still shows a depeg but in a conflicting direction: fail closed and keep the existing row unchanged
 - If direction changed and the primary price is authoritative (or a trusted aggregate DEX row is corroborated by at least 2 protocol-level DEX groups in the replacement direction): close the old event and open the replacement immediately
 - If direction changed but the primary price is `confirm_required`: retire the stale live row immediately and route the replacement move through `depeg_pending` instead of leaving the wrong direction active
@@ -145,6 +145,11 @@ direction = bps >= 0 ? "above" : "below"
 - If primary trust is `confirm_required`: insert into `depeg_pending` with `reason = "low-confidence"`
 - If `abs(bps) >= 5000`: route through the extreme-move lane (`reason = "extreme-move"`). Corroborated trusted DEX depeg agreement may still promote the move immediately for non-large-cap coins
 - Otherwise (authoritative primary input, non-large-cap, non-extreme): use corroborated trusted DEX recovery suppression and insert into `depeg_events` immediately
+
+Whenever a row is written to `depeg_pending`, the worker now upserts directional state instead of treating the table as write-once:
+
+- same direction: preserve `first_seen_*`, refresh `last_seen_*`, and update `peak_seen_*` when the move worsens
+- opposite direction: reset the row as a new incident instead of preserving stale first-seen direction metadata
 
 **Path C -- Deviation < threshold AND event open**
 
@@ -183,43 +188,43 @@ Age checks:
 - Default path: fetch CoinGecko `/simple/price` for the coin's `geckoId`
 - If the current primary price already comes from CoinGecko (`priceSource.startsWith("coingecko")`), switch the confirmer to DefiLlama `coins.llama.fi/prices/current/coingecko:{geckoId}` instead of querying CoinGecko again
 - Calculate deviation against `peg_reference`
-- Agrees if deviation >= `secondaryBar` (50% of primary threshold)
+- Counts as confirmation only when deviation >= `secondaryBar` (50% of primary threshold) **and** it points in the same direction as the pending incident
 - Non-fatal: if fetch fails, the off-chain agreement remains `null`
 
 **CEX ticker check:**
 
 - Fetches Binance spot ticker for the coin's symbol (e.g., `USDTUSDC`) as an additional secondary confirmation source
 - Only attempted for coins with known Binance trading pairs
-- Agrees if deviation >= `secondaryBar`
+- Counts as confirmation only when deviation >= `secondaryBar` and points in the same direction as the pending incident
 - Non-fatal: if the Binance fetch fails, the CEX agreement remains `null`
 
 **DEX check:**
 
 - Read from `dex_prices` table (same data as Stage 1)
 - Must be within 35-minute freshness window and have aggregate source TVL >= $1M
-- Agrees if deviation >= `secondaryBar`
+- Counts as confirmation only when deviation >= `secondaryBar` and points in the same direction as the pending incident
 
 **Pool challenger check:**
 
 - Loads qualifying individual DEX pool challengers from the published challenger snapshot tables via `loadDexPoolChallengers(...)`
 - Uses the same freshness / minimum-TVL guardrail family as the depeg helper layer
-- Agrees if **any** qualifying pool diverges by at least `secondaryBar`
+- Counts as confirmation only when **any** qualifying pool diverges by at least `secondaryBar` in the same direction as the pending incident
 - Non-fatal: missing challenger tables or incomplete published snapshots fall back through the helper's legacy path and still yield `null`/`false` safely
 
 ### Decision Matrix
 
-| Off-chain agrees | CEX agrees | DEX agrees | Pool agrees | Action |
-|------------------|-----------|-----------|-------------|--------|
-| true | any | any | any | PROMOTE to `depeg_events` |
-| any | true | any | any | PROMOTE to `depeg_events` |
-| any | any | true | any | PROMOTE to `depeg_events` |
-| any | any | any | true | PROMOTE to `depeg_events` |
-| false | any | false | any | REJECT (off-chain and aggregate DEX both disagree) |
-| false | any | null | false/null | REJECT (off-chain disagrees and no aggregate DEX confirmation exists) |
-| null | null | false | false/null | Keep pending (retry next cycle) |
-| null | null | null | null | Keep pending (retry next cycle) |
+| Same-direction off-chain | Same-direction CEX | Same-direction DEX | Same-direction pool | Contradiction seen | Action |
+|--------------------------|-------------------|--------------------|---------------------|--------------------|--------|
+| true | any | any | any | any | PROMOTE to `depeg_events` |
+| any | true | any | any | any | PROMOTE to `depeg_events` |
+| any | any | true | any | any | PROMOTE to `depeg_events` |
+| any | any | any | true | any | PROMOTE to `depeg_events` |
+| false | any | false | any | true | REJECT (off-chain and aggregate DEX both oppose the pending direction) |
+| false | any | null | false/null | true | REJECT (directional contradiction with no same-direction rescue signal) |
+| null | null | false | false/null | true | REJECT (available secondary evidence points the other way) |
+| null | null | null | null | false | Keep pending (retry next cycle) |
 
-Promotion inserts into `depeg_events` with `started_at` = original `first_seen_at`, peak = worst of current vs `first_seen`, then deletes from `depeg_pending`.
+Promotion inserts into `depeg_events` with `started_at` = original `first_seen_at`, direction = the active pending direction, and peak = worst of the stored pending peak vs the current trustworthy confirmer state, then deletes from `depeg_pending`.
 
 ## Historical Backfill Validation
 
@@ -336,7 +341,7 @@ Cache: realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers use the
 
 - Fetches `/api/depeg-events` with optional `?stablecoin=` filter
 - TanStack Query: `staleTime` = 15 min, `refetchInterval` = 30 min
-- Companion hook `useInfiniteDepegEvents({ stablecoinId?, autoLoadAll? })` pages through `/api/depeg-events?limit=100&offset=...`
+- Companion hook `useInfiniteDepegEvents({ stablecoinId?, autoLoadAll? })` pages through `/api/depeg-events?limit=100&offset=...`; oversized `limit` values are rejected rather than silently clamped
 - `/depeg` uses the unfiltered infinite hook for the global recent-events feed
 - Stablecoin detail pages use the filtered infinite hook with `autoLoadAll` so the hero can read the full recorded-event `total` while the history table hydrates every page in the background
 
