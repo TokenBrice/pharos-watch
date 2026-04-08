@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   resolveTicker,
-  parseTargetArgs,
   parseSubscribeArgs,
   validateSubscribeArgs,
   formatDisambiguation,
@@ -50,7 +49,6 @@ describe("parseSubscribeArgs", () => {
     const result = parseSubscribeArgs("dews depeg USDC BOLD");
     expect(result.alertTypes).toEqual(new Set(["dews", "depeg"]));
     expect(result.subscribeAll).toBe(false);
-    expect(result.presetIds).toEqual([]);
     expect(result.tickers).toEqual(["USDC", "BOLD"]);
   });
 
@@ -58,7 +56,6 @@ describe("parseSubscribeArgs", () => {
     const result = parseSubscribeArgs("USDC dews BOLD depeg");
     expect(result.alertTypes).toEqual(new Set(["dews", "depeg"]));
     expect(result.subscribeAll).toBe(false);
-    expect(result.presetIds).toEqual([]);
     expect(result.tickers).toEqual(["USDC", "BOLD"]);
   });
 
@@ -71,61 +68,31 @@ describe("parseSubscribeArgs", () => {
     const result = parseSubscribeArgs("dews all");
     expect(result.alertTypes).toEqual(new Set(["dews"]));
     expect(result.subscribeAll).toBe(true);
-    expect(result.presetIds).toEqual([]);
     expect(result.tickers).toEqual([]);
-    expect(result.invalidTargets).toEqual([]);
+    expect(result.invalidTypes).toEqual([]);
   });
 
-  it("classifies preset aliases separately from tickers", () => {
-    const result = parseSubscribeArgs("dews usd-top25 USDC");
-    expect(result.alertTypes).toEqual(new Set(["dews"]));
-    expect(result.subscribeAll).toBe(false);
-    expect(result.presetIds).toEqual(["usd-top25"]);
-    expect(result.tickers).toEqual(["USDC"]);
-    expect(result.invalidTargets).toEqual([]);
-  });
-
-  it("classifies unknown tokens as invalidTargets", () => {
+  it("classifies unknown tokens as invalidTypes", () => {
     const result = parseSubscribeArgs("foo dews USDC");
     expect(result.alertTypes).toEqual(new Set(["dews"]));
     expect(result.subscribeAll).toBe(false);
-    expect(result.presetIds).toEqual([]);
     expect(result.tickers).toEqual(["USDC"]);
-    expect(result.invalidTargets).toEqual(["foo"]);
+    expect(result.invalidTypes).toEqual(["foo"]);
   });
 
   it("classifies completely unknown tokens when no types present", () => {
     const result = parseSubscribeArgs("foo USDC");
     expect(result.alertTypes.size).toBe(0);
     expect(result.subscribeAll).toBe(false);
-    expect(result.presetIds).toEqual([]);
     expect(result.tickers).toEqual(["USDC"]);
-    expect(result.invalidTargets).toEqual(["foo"]);
+    expect(result.invalidTypes).toEqual(["foo"]);
   });
 
   it("handles comma-separated alert types", () => {
     const result = parseSubscribeArgs("dews,depeg USDC");
     expect(result.alertTypes).toEqual(new Set(["dews", "depeg"]));
     expect(result.tickers).toEqual(["USDC"]);
-    expect(result.invalidTargets).toEqual([]);
-  });
-});
-
-describe("parseTargetArgs", () => {
-  it("parses tickers and presets for unsubscribe-style commands", () => {
-    const result = parseTargetArgs("usd-top25 USDC");
-    expect(result.includeAll).toBe(false);
-    expect(result.presetIds).toEqual(["usd-top25"]);
-    expect(result.tickers).toEqual(["USDC"]);
-    expect(result.invalidTargets).toEqual([]);
-  });
-
-  it("recognizes all as an exclusive target token", () => {
-    const result = parseTargetArgs("all");
-    expect(result.includeAll).toBe(true);
-    expect(result.presetIds).toEqual([]);
-    expect(result.tickers).toEqual([]);
-    expect(result.invalidTargets).toEqual([]);
+    expect(result.invalidTypes).toEqual([]);
   });
 });
 
@@ -134,9 +101,8 @@ describe("validateSubscribeArgs", () => {
     const result = validateSubscribeArgs({
       alertTypes: new Set(["dews"]),
       subscribeAll: false,
-      presetIds: [],
       tickers: ["USDC"],
-      invalidTargets: [],
+      invalidTypes: [],
     });
     expect(result).toBeNull();
   });
@@ -145,9 +111,8 @@ describe("validateSubscribeArgs", () => {
     const result = validateSubscribeArgs({
       alertTypes: new Set(),
       subscribeAll: false,
-      presetIds: [],
       tickers: ["USDC"],
-      invalidTargets: [],
+      invalidTypes: [],
     });
     expect(result).toContain("alert type");
   });
@@ -156,20 +121,18 @@ describe("validateSubscribeArgs", () => {
     const result = validateSubscribeArgs({
       alertTypes: new Set(["dews"]),
       subscribeAll: false,
-      presetIds: [],
       tickers: [],
-      invalidTargets: [],
+      invalidTypes: [],
     });
-    expect(result).toContain("ticker or preset");
+    expect(result).toContain("ticker");
   });
 
   it("returns unknown alert type error when no types and invalidTypes present", () => {
     const result = validateSubscribeArgs({
       alertTypes: new Set(),
       subscribeAll: false,
-      presetIds: [],
       tickers: ["USDC"],
-      invalidTargets: ["foo"],
+      invalidTypes: ["foo"],
     });
     expect(result).toContain("Unknown alert type: foo");
     expect(result).toContain("Valid types");
@@ -179,33 +142,20 @@ describe("validateSubscribeArgs", () => {
     const result = validateSubscribeArgs({
       alertTypes: new Set(["dews"]),
       subscribeAll: false,
-      presetIds: [],
       tickers: [],
-      invalidTargets: ["XYZZY"],
+      invalidTypes: ["XYZZY"],
     });
-    expect(result).toContain("Unknown ticker or preset: XYZZY");
+    expect(result).toContain("Unknown ticker: XYZZY");
   });
 
   it("rejects mixing all with explicit tickers", () => {
     const result = validateSubscribeArgs({
       alertTypes: new Set(["dews"]),
       subscribeAll: true,
-      presetIds: [],
       tickers: ["USDC"],
-      invalidTargets: [],
+      invalidTypes: [],
     });
-    expect(result).toContain('either "all" or specific tickers/presets');
-  });
-
-  it("rejects launch alerts with preset watchlists", () => {
-    const result = validateSubscribeArgs({
-      alertTypes: new Set(["launch"]),
-      subscribeAll: false,
-      presetIds: ["usd-top25"],
-      tickers: [],
-      invalidTargets: [],
-    });
-    expect(result).toContain("Preset watchlists support dews, depeg, and safety only");
+    expect(result).toContain('either "all" or specific tickers');
   });
 });
 

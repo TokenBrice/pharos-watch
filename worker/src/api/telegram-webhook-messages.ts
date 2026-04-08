@@ -1,93 +1,35 @@
 import { escapeHtml } from "../lib/telegram";
 import type { ResolvedCoin } from "../lib/telegram-alerts";
-import type {
-  TelegramPresetDefinition,
-  TelegramPresetId,
-} from "../lib/telegram-presets";
 import type { SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
 import { STABLECOIN_BY_ID } from "./telegram-webhook-shared";
 
 export function buildNotFoundMessage(ticker: string, suggestion?: ResolvedCoin): string {
-  const lines = [`Ticker or preset "${ticker}" not found.`];
+  const lines = [`Ticker "${ticker}" not found.`];
   if (suggestion) {
     lines.push(`Did you mean ${suggestion.symbol} (${suggestion.id})?`);
   }
   lines.push("You can also use the exact Pharos coin id when a ticker is ambiguous.");
-  lines.push("Use /presets to browse preset watchlists.");
   return escapeHtml(lines.join("\n"));
 }
 
-interface SubscriptionSummaryOptions {
-  introLines?: string[];
-  maxRows?: number;
-  footerLine?: string;
-}
-
-interface UnsubscribeSummaryOptions {
-  maxRows?: number;
-  footerLine?: string;
-}
-
-function sortSubscriptions(subscriptions: SubscriptionRow[]): SubscriptionRow[] {
-  return [...subscriptions].sort((a, b) => {
-    const aCoin = STABLECOIN_BY_ID.get(a.stablecoin_id);
-    const bCoin = STABLECOIN_BY_ID.get(b.stablecoin_id);
-    const aSymbol = aCoin?.symbol ?? a.stablecoin_id;
-    const bSymbol = bCoin?.symbol ?? b.stablecoin_id;
-    return aSymbol.localeCompare(bSymbol) || a.stablecoin_id.localeCompare(b.stablecoin_id);
-  });
-}
-
-function formatCoinLabel(stablecoinId: string): string {
-  const coin = STABLECOIN_BY_ID.get(stablecoinId);
-  return coin ? `${coin.symbol} (${coin.id})` : stablecoinId;
-}
-
-function formatPresetLabelList(
-  presetIds: readonly TelegramPresetId[],
-  presetLabelById: ReadonlyMap<string, string>,
-): string {
-  return presetIds.map((presetId) => presetLabelById.get(presetId) ?? presetId).join(", ");
-}
-
-function appendTruncationLine(lines: string[], totalCount: number, shownCount: number, footerLine?: string): void {
-  if (shownCount < totalCount) {
-    lines.push(`...and ${totalCount - shownCount} more.`);
-  }
-  if (footerLine) {
-    lines.push(footerLine);
-  }
-}
-
-export function buildUnsubscribeSuccessMessage(
-  coins: ResolvedCoin[],
-  options: UnsubscribeSummaryOptions = {},
-): string {
-  const sortedCoins = [...coins].sort((a, b) => a.symbol.localeCompare(b.symbol) || a.id.localeCompare(b.id));
-  const maxRows = options.maxRows ?? sortedCoins.length;
-  const shownCoins = sortedCoins.slice(0, maxRows);
-  const lines = [
+export function buildUnsubscribeSuccessMessage(coins: ResolvedCoin[]): string {
+  return escapeHtml([
     `Removed ${coins.length} coin subscription${coins.length === 1 ? "" : "s"}.`,
     "Coins:",
-    formatCoinLines(shownCoins),
-  ];
-  appendTruncationLine(lines, sortedCoins.length, shownCoins.length, options.footerLine);
-  return escapeHtml(lines.join("\n"));
+    formatCoinLines(coins),
+  ].join("\n"));
 }
 
 export function buildSubscriptionSummaryMessage(
   header: string,
   subscriptions: SubscriptionRow[],
-  options: SubscriptionSummaryOptions = {},
 ): string {
-  const sorted = sortSubscriptions(subscriptions);
-  const maxRows = options.maxRows ?? sorted.length;
-  const shown = sorted.slice(0, maxRows);
-  const lines = [...(options.introLines ?? []), header, `Coins (${subscriptions.length}):`];
-  for (const row of shown) {
-    lines.push(`- ${formatCoinLabel(row.stablecoin_id)}: ${describeSubscriptionSettings(row)}`);
+  const lines = [header, `Coins (${subscriptions.length}):`];
+  for (const row of subscriptions) {
+    const coin = STABLECOIN_BY_ID.get(row.stablecoin_id);
+    const label = coin ? `${coin.symbol} (${coin.id})` : row.stablecoin_id;
+    lines.push(`- ${label}: ${describeSubscriptionSettings(row)}`);
   }
-  appendTruncationLine(lines, sorted.length, shown.length, options.footerLine);
   return escapeHtml(lines.join("\n"));
 }
 
@@ -111,7 +53,7 @@ export function buildListMessage(
   subscriptions: SubscriptionRow[],
 ): string {
   if (!subscriber && subscriptions.length === 0) {
-    return "No active subscriptions. Use /subscribe to get started, or try /presets for preset watchlists.";
+    return "No active subscriptions. Use /subscribe to get started.";
   }
 
   const lines = [
@@ -127,72 +69,20 @@ export function buildListMessage(
   if (subscriptions.length === 0) {
     lines.push("None");
   } else {
-    const sorted = sortSubscriptions(subscriptions);
+    const sorted = [...subscriptions].sort((a, b) => {
+      const aCoin = STABLECOIN_BY_ID.get(a.stablecoin_id);
+      const bCoin = STABLECOIN_BY_ID.get(b.stablecoin_id);
+      const aSymbol = aCoin?.symbol ?? a.stablecoin_id;
+      const bSymbol = bCoin?.symbol ?? b.stablecoin_id;
+      return aSymbol.localeCompare(bSymbol) || a.stablecoin_id.localeCompare(b.stablecoin_id);
+    });
     for (const row of sorted) {
-      lines.push(`- ${formatCoinLabel(row.stablecoin_id)}: ${describeSubscriptionSettings(row)}`);
+      const coin = STABLECOIN_BY_ID.get(row.stablecoin_id);
+      const label = coin ? `${coin.symbol} (${coin.id})` : row.stablecoin_id;
+      lines.push(`- ${label}: ${describeSubscriptionSettings(row)}`);
     }
   }
 
-  lines.push("Tip: use /presets to browse preset watchlists.");
-  return escapeHtml(lines.join("\n"));
-}
-
-export function buildPresetCatalogMessage(definitions: TelegramPresetDefinition[]): string {
-  const pegPresets = definitions.filter((definition) => definition.category === "peg-leaders");
-  const marketCapPresets = definitions.filter((definition) => definition.category === "market-cap");
-  const lines = [
-    "Preset Watchlists",
-    "",
-    "Peg Leaders:",
-    ...pegPresets.map((definition) => `- ${definition.id}: ${definition.description}`),
-    "",
-    "Market Cap:",
-    ...marketCapPresets.map((definition) => `- ${definition.id}: ${definition.description}`),
-    "",
-    "Examples:",
-    "- /subscribe dews usd-top25",
-    "- /subscribe safety mcap-ge-1b",
-    "- /unsubscribe eur-top10",
-  ];
-  return escapeHtml(lines.join("\n"));
-}
-
-export function buildPresetUnavailableMessage(): string {
-  return escapeHtml(
-    "Preset watchlists are temporarily unavailable because the stablecoin cache could not be loaded. Try again in a few minutes.",
-  );
-}
-
-export function buildPresetSubscriptionSummaryMessage(
-  subscriptions: SubscriptionRow[],
-  options: {
-    presetIds: readonly TelegramPresetId[];
-    presetLabelById: ReadonlyMap<string, string>;
-  },
-): string {
-  return buildSubscriptionSummaryMessage("Updated subscriptions.", subscriptions, {
-    introLines: [`Preset watchlists: ${formatPresetLabelList(options.presetIds, options.presetLabelById)}`],
-    maxRows: 12,
-    footerLine: "Use /list to review the full set and per-coin settings.",
-  });
-}
-
-export function buildPresetUnsubscribeSummaryMessage(
-  coins: ResolvedCoin[],
-  options: {
-    presetIds: readonly TelegramPresetId[];
-    presetLabelById: ReadonlyMap<string, string>;
-  },
-): string {
-  const sortedCoins = [...coins].sort((a, b) => a.symbol.localeCompare(b.symbol) || a.id.localeCompare(b.id));
-  const shownCoins = sortedCoins.slice(0, 12);
-  const lines = [
-    `Preset watchlists removed: ${formatPresetLabelList(options.presetIds, options.presetLabelById)}`,
-    `Removed ${coins.length} coin subscription${coins.length === 1 ? "" : "s"}.`,
-    "Coins:",
-    formatCoinLines(shownCoins),
-  ];
-  appendTruncationLine(lines, sortedCoins.length, shownCoins.length, "Use /list to confirm the remaining subscriptions.");
   return escapeHtml(lines.join("\n"));
 }
 

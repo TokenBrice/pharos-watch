@@ -49,7 +49,7 @@ export function resolveCoinTargets(
   return { kind: "complete", coins };
 }
 
-interface RunCoinResolutionFlowOptions<TActionPayload extends object> {
+interface RunCoinResolutionFlowOptions<TActionPayload extends Record<string, unknown>> {
   db: D1Database;
   chatId: string;
   tickers: string[];
@@ -65,7 +65,7 @@ interface RunCoinResolutionFlowOptions<TActionPayload extends object> {
   clearPendingOnTerminal?: boolean;
 }
 
-export async function runCoinResolutionFlow<TActionPayload extends object>({
+export async function runCoinResolutionFlow<TActionPayload extends Record<string, unknown>>({
   db,
   chatId,
   tickers,

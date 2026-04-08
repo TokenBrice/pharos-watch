@@ -58,19 +58,6 @@ describe("parsePendingDisambiguation", () => {
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("field=resolved_ids"));
   });
 
-  it("preserves preset ids from the stored action payload", () => {
-    const parsed = parsePendingDisambiguation(
-      makePendingRow({
-        action_payload: JSON.stringify({ alertTypes: ["dews"], presetIds: ["usd-top25"] }),
-      }),
-    );
-
-    expect(parsed).toMatchObject({
-      actionType: "subscribe",
-      presetIds: ["usd-top25"],
-    });
-  });
-
   it("returns null when candidates are malformed because selection cannot continue", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
