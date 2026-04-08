@@ -2099,7 +2099,7 @@
       {
         "name": "USDT (direct vaults)",
         "pct": 1,
-        "risk": "high",
+        "risk": "low",
         "coinId": "usdt-tether"
       },
       {

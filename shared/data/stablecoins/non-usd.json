@@ -2648,7 +2648,7 @@
       {
         "name": "Physical gold holdings",
         "pct": 20,
-        "risk": "low"
+        "risk": "very-low"
       },
       {
         "name": "Investment-grade bonds",

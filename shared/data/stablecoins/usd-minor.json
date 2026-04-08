@@ -5805,7 +5805,7 @@
       },
       {
         "name": "USDC",
-        "pct": 1,
+        "pct": 2,
         "risk": "low",
         "coinId": "usdc-circle"
       },
@@ -8696,7 +8696,7 @@
       {
         "name": "U.S. Treasury Bills (liquidity buffer)",
         "pct": 25,
-        "risk": "low"
+        "risk": "very-low"
       }
     ],
     "liveReservesConfig": {
@@ -9388,7 +9388,7 @@
       {
         "name": "Physical gold (LBMA Good Delivery bars)",
         "pct": 100,
-        "risk": "low"
+        "risk": "very-low"
       }
     ]
   },
