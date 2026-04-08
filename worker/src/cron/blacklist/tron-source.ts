@@ -51,7 +51,6 @@ function parseTronEvent(config: ContractEventConfig, evt: TronEventResult): Blac
     || evt.result._user
     || evt.result._blackListedUser
     || evt.result["0"]
-    || evt.result["1"]
     || "";
   const rawAmountStr = evt.result._balance || evt.result._value || evt.result["1"];
   const amount =
