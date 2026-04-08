@@ -40,6 +40,10 @@ async function fetchEvmBalanceAtTag(
 
   const data = encodeBalanceOfCallData(address);
   const blockNumberOrTag = tag === "latest" ? "latest" : Number.parseInt(tag, 16);
+  if (typeof blockNumberOrTag === "number" && !Number.isFinite(blockNumberOrTag)) {
+    console.warn(`[sync-blacklist] fetchEvmBalanceAtTag: invalid block tag "${tag}", returning null`);
+    return null;
+  }
 
   try {
     budget.count++;
@@ -48,7 +52,7 @@ async function fetchEvmBalanceAtTag(
       action: "eth_call",
       to: contractAddress,
       data,
-      blockNumberOrTag: Number.isFinite(blockNumberOrTag) ? blockNumberOrTag : "latest",
+      blockNumberOrTag,
       apiKey,
       signal,
       timeoutMs: 10_000,

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  fetchEvmTokenBalance,
   fetchEvmTokenCurrentBalance,
   fetchTronTokenCurrentBalance,
 } from "../balance-providers";
@@ -129,5 +130,30 @@ describe("fetchEvmTokenCurrentBalance", () => {
     );
 
     expect(amount).toBe(50);
+  });
+});
+
+describe("fetchEvmTokenBalance", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns null when block number produces an invalid hex tag", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(JSON.stringify({ status: "1", message: "OK", result: "0x02faf080" }), { status: 200 }),
+    ));
+
+    const amount = await fetchEvmTokenBalance(
+      ethereumConfig,
+      "0x0000000000000000000000000000000000000abc",
+      -1, // produces blockTag "0x-1" -> parseInt("0x-1", 16) = NaN in fetchEvmBalanceAtTag
+      "test-key",
+      null, // no dRPC
+      async (fn) => fn(),
+      createBudget(10),
+    );
+
+    // Must be null — not a balance from "latest" block
+    expect(amount).toBeNull();
   });
 });
