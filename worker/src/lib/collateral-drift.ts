@@ -4,7 +4,7 @@ import { computeCollateralQualityFromReserves } from "@shared/lib/report-cards";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import { loadFreshIndependentLiveReserveMap } from "./live-reserves-store";
 
-export const MIN_COMPARABLE_COLLATERAL_DRIFT_SLICES = 2;
+const MIN_COMPARABLE_COLLATERAL_DRIFT_SLICES = 2;
 
 export interface CollateralDriftEntry {
   id: string;

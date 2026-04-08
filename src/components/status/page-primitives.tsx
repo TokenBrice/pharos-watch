@@ -67,7 +67,7 @@ export function StatusSection({
   );
 }
 
-export function PriorityLaneLink({ section, index }: { section: DashboardSection; index: number }) {
+function PriorityLaneLink({ section, index }: { section: DashboardSection; index: number }) {
   return (
     <a
       href={`#${section.id}`}
