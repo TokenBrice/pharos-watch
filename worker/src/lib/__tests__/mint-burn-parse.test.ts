@@ -389,6 +389,7 @@ describe("parseMintBurnLogs — price resolution", () => {
     const prices = new Map([["usdc-circle", 0.9998]]);
     // Simulate runtime drift: price is null despite the type saying number
     const priceHistory = new Map([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional: simulates runtime schema drift
       ["usdc-circle", [{ snapshotDate: dayTs, price: null as any }]],
     ]);
 

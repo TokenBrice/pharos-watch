@@ -149,7 +149,7 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
   const pageSize = limit ?? DEFAULT_PAGE_SIZE;
   const [page, setPage] = useState(0);
 
-  const { data, isLoading, isError, error } = useMintBurnEvents(stablecoinId, {
+  const { data, isLoading, isError } = useMintBurnEvents(stablecoinId, {
     scope,
     limit: pageSize,
     offset: page * pageSize,
