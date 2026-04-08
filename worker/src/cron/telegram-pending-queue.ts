@@ -119,7 +119,7 @@ export async function drainPendingQueue(
         if (!(await disableBlockedSubscriber(db, result.chatId))) {
           blockedCleanupFailed++;
         }
-      } else if (result.retryable && result.attempts < 2) {
+      } else if (result.retryable && result.attempts < 5) {
         retryQueued++;
         idsToRetry.push(result.id);
       } else {
