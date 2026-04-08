@@ -1,8 +1,9 @@
+import { isGoldBlacklistStablecoin } from "@shared/lib/blacklist";
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 import { buildInClause } from "../../lib/db";
 import { type RateLimitedFetch, type SubrequestBudget } from "../../lib/evm-logs";
 import { type ChainRpcConfig } from "../../lib/chain-registry";
-import { syncCurrentBalanceCacheForRows } from "./current-balance-cache";
+import { syncCurrentBalanceCacheForRows, fetchGoldPriceFromCache } from "./current-balance-cache";
 import type { BlacklistRow } from "./shared";
 import { enrichRowBalances } from "./amount-recovery";
 import { insertBlacklistRows } from "./persistence";
@@ -83,6 +84,10 @@ export async function processFetchedBlacklistRows(
     };
   }
 
+  const goldPriceUsd = isGoldBlacklistStablecoin(options.config.stablecoin)
+    ? await fetchGoldPriceFromCache(options.db, options.config.stablecoin)
+    : null;
+
   const enrichCounters = await enrichRowBalances(
     newRows,
     options.config,
@@ -93,6 +98,7 @@ export async function processFetchedBlacklistRows(
     options.deadlineMs,
     options.signal,
     options.chainRpcs,
+    goldPriceUsd,
   );
   console.log(
     `[sync-blacklist] enrichRowBalances (${options.chainLabel}): attempted=${enrichCounters.attempted} succeeded=${enrichCounters.succeeded} failed=${enrichCounters.failed}`,

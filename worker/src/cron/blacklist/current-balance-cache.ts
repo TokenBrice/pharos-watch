@@ -101,10 +101,25 @@ async function persistCurrentBalanceResult(
   return "updated";
 }
 
-/** Fetch the gold spot price from price_cache (returns null if unavailable). */
-async function fetchGoldPriceFromCache(db: D1Database): Promise<number | null> {
+/** Map gold-pegged stablecoins to their price_cache asset_id. */
+const GOLD_PRICE_ASSET_IDS: Record<string, string> = {
+  PAXG: "paxg-paxos",
+  XAUT: "xaut-tether",
+};
+
+/**
+ * Fetch the gold spot price from price_cache for a specific stablecoin.
+ * Returns the coin-specific price entry so PAXG and XAUT use their own
+ * market premium rather than sharing a single gold spot price.
+ */
+export async function fetchGoldPriceFromCache(
+  db: D1Database,
+  stablecoin?: string,
+): Promise<number | null> {
+  const assetId = (stablecoin && GOLD_PRICE_ASSET_IDS[stablecoin]) ?? "paxg-paxos";
   const row = await db
-    .prepare("SELECT price FROM price_cache WHERE asset_id = 'paxg-paxos' LIMIT 1")
+    .prepare("SELECT price FROM price_cache WHERE asset_id = ? LIMIT 1")
+    .bind(assetId)
     .first<{ price: number }>();
   return row?.price ?? null;
 }
@@ -130,7 +145,7 @@ export async function syncCurrentBalanceCacheForRows(
 
   // Resolve gold price once if this config is a gold-pegged stablecoin
   const goldPriceUsd = isGoldBlacklistStablecoin(config.stablecoin)
-    ? await fetchGoldPriceFromCache(db)
+    ? await fetchGoldPriceFromCache(db, config.stablecoin)
     : null;
 
   for (const row of latestByAddress.values()) {
