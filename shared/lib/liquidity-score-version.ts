@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const liquidity = createMethodologyVersion({
-  currentVersion: "5.1",
+  currentVersion: "5.2",
   changelogPath: "/methodology/liquidity-score-changelog/",
   changelog: [
+    {
+      version: "5.2",
+      title: "Orderbook ticker contract refresh and Balancer exact-address identity",
+      date: "2026-04-08",
+      effectiveAt: 1775606400,
+      summary:
+        "CoinGecko orderbook fallback now ignores the deprecated `trust_score` field and validates tickers by observable freshness/price/volume fields, while Balancer direct pools now use the API's exact pool address for identity instead of the 32-byte vault pool id.",
+      impact: [
+        "CoinGecko tickers fallback and discovery staging no longer drop every post-March-2026 ticker row just because CoinGecko now returns `trust_score = null`",
+        "Orderbook fallback ticker intake now requires finite USD price/volume plus a stable exchange identifier, improving sanitization without depending on deprecated metadata",
+        "Balancer direct API pools now reserve and dedupe by the true pool address, restoring exact-id confirmation against staged discovery and overlap checks",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.1",
       title: "Authoritative protocol confirmation for staged discovery",

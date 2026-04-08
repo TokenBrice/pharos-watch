@@ -39,7 +39,8 @@ export function LiquidityMethodologySection() {
         Matching is chain-aware: `chain + address` resolves first, and symbol fallback is only allowed when it is unique
         on that chain for addressless tokens. If an upstream token already supplies an unknown address, it is dropped
         instead of being remapped by symbol. Pool dedupe uses exact ids plus conservative derived identity keys, so
-        legitimate same-pair pools are not collapsed just because their token set matches.
+        legitimate same-pair pools are not collapsed just because their token set matches. Balancer direct pools now key
+        exact identity off the API&apos;s real pool `address`, not the 32-byte vault pool id.
       </p>
       <p>
         Direct-source precedence is also measurement-aware now. A protocol-native pool only replaces an overlapping
@@ -69,6 +70,11 @@ export function LiquidityMethodologySection() {
         checks, instead of relying on the visible top-pools subset. Balancer stablecoin pools also get a narrow
         stable-pair identity fallback when DeFiLlama omits the subtype in `balancer-v3`, preventing direct-API stable
         pools from being double-counted as faux weighted rows.
+      </p>
+      <p>
+        Orderbook fallback rows now validate observable ticker quality directly. CoinGecko deprecated `trust_score`, so
+        Pharos filters those tickers by freshness flags, finite USD price/volume, exchange identity, and USD-equivalent
+        quote assets instead of relying on a legacy badge.
       </p>
       <p>
         After bad pools are filtered and secondary-source TVL caps are applied, every exported aggregate and score input

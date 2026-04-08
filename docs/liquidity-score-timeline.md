@@ -1,6 +1,16 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.1` (2026-02-19 -> 2026-04-07).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.2` (2026-02-19 -> 2026-04-08).
+
+---
+
+## v5.2 - Orderbook ticker contract refresh and Balancer exact-address identity (Apr 8, 2026)
+
+**Commit:** `unreleased`
+
+- CoinGecko orderbook fallback no longer depends on the deprecated `trust_score` field, which CoinGecko now returns as `null`
+- Orderbook ticker intake now validates freshness, finite USD price/volume, and exchange identity directly from observed payload fields instead of a legacy trust badge
+- Balancer direct pools now use the API's exact `address` field for identity and dedupe instead of the 32-byte vault pool id, restoring exact-id confirmation against staged discovery and overlap checks
 
 ---
 

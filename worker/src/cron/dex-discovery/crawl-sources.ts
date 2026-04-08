@@ -428,7 +428,7 @@ export async function crawlCoin(
     const geckoId = stablecoinMeta?.geckoId;
     if (geckoId) {
       try {
-        const url = cgUrl(`/coins/${geckoId}/tickers?include_exchange_logo=false&order=trust_score_desc&depth=false`, cgApiKey);
+        const url = cgUrl(`/coins/${geckoId}/tickers?include_exchange_logo=false&depth=false`, cgApiKey);
         const res = await fetchWithRetry(url, {
           headers: cgHeaders({ "User-Agent": USER_AGENT }, cgApiKey),
           signal: buildStageSignal(signal, deadlineMs, DISCOVERY_STAGE_TIMEOUT_MS.cgTickers),

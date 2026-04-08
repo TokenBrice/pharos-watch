@@ -37,6 +37,7 @@ const QUERY = `query($first: Int!, $skip: Int!) {
     where: { minTvl: 10000 }
   ) {
     id
+    address
     type
     chain
     dynamicData { totalLiquidity volume24h swapFee }
@@ -46,10 +47,25 @@ const QUERY = `query($first: Int!, $skip: Int!) {
 
 interface BalancerPool {
   id: string;
+  address?: string | null;
   type: string;
   chain: string;
   dynamicData: { totalLiquidity: string; volume24h: string; swapFee: string };
   poolTokens: { address: string; symbol: string; decimals: number; balance: string; balanceUSD: string; weight?: string | null }[];
+}
+
+function extractBalancerPoolAddress(pool: Pick<BalancerPool, "id" | "address">): string {
+  const directAddress = pool.address?.trim();
+  if (directAddress && /^0x[a-f0-9]{40}$/i.test(directAddress)) {
+    return directAddress.toLowerCase();
+  }
+
+  const poolId = pool.id.trim();
+  if (/^0x[a-f0-9]{64}$/i.test(poolId)) {
+    return poolId.slice(0, 42).toLowerCase();
+  }
+
+  return poolId.toLowerCase();
 }
 
 export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFetchResult> {
@@ -125,7 +141,7 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
       results.push({
         source: "balancer",
         chain,
-        poolAddress: pool.id,
+        poolAddress: extractBalancerPoolAddress(pool),
         poolType,
         tokens: pool.poolTokens.map((t) => {
           const bal = parseFloat(t.balance);

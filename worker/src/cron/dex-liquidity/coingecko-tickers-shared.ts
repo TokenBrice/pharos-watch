@@ -20,15 +20,22 @@ export interface CgTickerExchangeSummary {
 
 export function filterValidCgTickers(tickers: CgTicker[]): CgTicker[] {
   return tickers.filter((ticker) => {
-    if (ticker.is_stale || ticker.is_anomaly || !ticker.trust_score) {
+    const volumeUsd = ticker.converted_volume?.usd;
+    const priceUsd = ticker.converted_last?.usd;
+    const exchangeId = ticker.market?.identifier?.trim();
+
+    if (ticker.is_stale || ticker.is_anomaly) {
       return false;
     }
+    if (!exchangeId) return false;
+    if (!Number.isFinite(volumeUsd) || volumeUsd < 1_000) return false;
+    if (!Number.isFinite(priceUsd) || priceUsd <= 0) return false;
 
     const isUsdQuote =
       ticker.target === "USD" ||
       (ticker.target_coin_id != null && USD_QUOTE_COIN_IDS.has(ticker.target_coin_id));
 
-    return isUsdQuote && ticker.converted_volume.usd >= 1_000;
+    return isUsdQuote;
   });
 }
 

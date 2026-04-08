@@ -288,7 +288,7 @@ export async function fetchCgTickersFallback(
       return { newPools, priceObs };
     }
     try {
-      const url = cgUrl(`/coins/${meta.geckoId}/tickers?include_exchange_logo=false&order=trust_score_desc&depth=false`, coingeckoApiKey ?? null);
+      const url = cgUrl(`/coins/${meta.geckoId}/tickers?include_exchange_logo=false&depth=false`, coingeckoApiKey ?? null);
       const timeout = AbortSignal.timeout(10_000);
       const res = await fetchWithRetry(url, {
         headers: cgHeaders({ "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),

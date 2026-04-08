@@ -183,7 +183,7 @@ describe("crawlCoin DexScreener hardening", () => {
         target_coin_id: undefined,
         is_anomaly: false,
         is_stale: false,
-        trust_score: "green",
+        trust_score: null,
       }, {
         base: "USDC",
         target: "USDT",
@@ -193,7 +193,7 @@ describe("crawlCoin DexScreener hardening", () => {
         target_coin_id: "tether",
         is_anomaly: false,
         is_stale: false,
-        trust_score: "green",
+        trust_score: null,
       }],
     }), { status: 200 }));
 

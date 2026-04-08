@@ -18,7 +18,7 @@ function makeTicker(overrides: Partial<CgTicker> = {}): CgTicker {
     bid_ask_spread_percentage: 0.1,
     is_anomaly: false,
     is_stale: false,
-    trust_score: "green",
+    trust_score: null,
     ...overrides,
   };
 }
@@ -29,13 +29,15 @@ describe("CoinGecko tickers shared helpers", () => {
       makeTicker(),
       makeTicker({ is_stale: true, market: { name: "Stale", identifier: "stale" } }),
       makeTicker({ is_anomaly: true, market: { name: "Anomaly", identifier: "anomaly" } }),
-      makeTicker({ trust_score: null, market: { name: "No Trust", identifier: "no-trust" } }),
+      makeTicker({ market: { name: "No Trust", identifier: "no-trust" } }),
       makeTicker({ target: "EUR", target_coin_id: undefined, market: { name: "EUR", identifier: "eur" } }),
       makeTicker({ target: "USDT", target_coin_id: "tether", market: { name: "USDT", identifier: "usdt" } }),
       makeTicker({ converted_volume: { usd: 999 }, market: { name: "Tiny", identifier: "tiny" } }),
+      makeTicker({ converted_last: { usd: 0 }, market: { name: "Zero Price", identifier: "zero-price" } }),
+      makeTicker({ market: { name: "Missing Id", identifier: "" } }),
     ]);
 
-    expect(filtered.map((ticker) => ticker.market.identifier)).toEqual(["example", "usdt"]);
+    expect(filtered.map((ticker) => ticker.market.identifier)).toEqual(["example", "no-trust", "usdt"]);
   });
 
   it("aggregates valid tickers by exchange and computes weighted prices", () => {

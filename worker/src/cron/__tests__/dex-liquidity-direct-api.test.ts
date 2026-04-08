@@ -320,6 +320,7 @@ describe("fetchBalancerPools", () => {
     mockJsonFetch({
       data: { poolGetPools: [{
         id: "0xpool",
+        address: "0x0000000000000000000000000000000000000abc",
         type: "STABLE",
         chain: "MAINNET",
         dynamicData: { totalLiquidity: "1000000", volume24h: "50000", swapFee: "0.0001" },
@@ -336,7 +337,28 @@ describe("fetchBalancerPools", () => {
     expect(pools.pools[0].poolType).toBe("balancer-stable");
     expect(pools.pools[0].tvlUsd).toBe(1000000);
     expect(pools.pools[0].feeRate).toBeCloseTo(0.0001);
+    expect(pools.pools[0].poolAddress).toBe("0x0000000000000000000000000000000000000abc");
     expect(pools.pools[0].balances).toEqual([500000, 500000]);
+  });
+
+  it("uses the exact pool address exposed by the API instead of the 32-byte vault pool id", async () => {
+    const { fetchBalancerPools } = await import("../dex-liquidity/fetch-balancer");
+    mockJsonFetch({
+      data: { poolGetPools: [{
+        id: "0x4e415957aa4fd703ad701e43ee5335d1d7891d8300020000000000000000053b",
+        address: "0x4e415957aa4fd703ad701e43ee5335d1d7891d83",
+        type: "STABLE",
+        chain: "MAINNET",
+        dynamicData: { totalLiquidity: "100000", volume24h: "1000", swapFee: "0.0001" },
+        poolTokens: [
+          { address: "0xa", symbol: "USDC", decimals: 6, balance: "50000", balanceUSD: "50000" },
+          { address: "0xb", symbol: "USDT", decimals: 6, balance: "50000", balanceUSD: "50000" },
+        ],
+      }]},
+    });
+
+    const pools = await fetchBalancerPools();
+    expect(pools.pools[0].poolAddress).toBe("0x4e415957aa4fd703ad701e43ee5335d1d7891d83");
   });
 
   it("classifies WEIGHTED pools correctly", async () => {
