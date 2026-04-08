@@ -11,7 +11,7 @@ Route contract for `/about/api/`, the public-facing API reference page for exter
 - **Error boundary:** `src/app/about/api/error.tsx`
 - **Build-time doc parser:** `src/lib/api-reference-doc.ts`
 - **Reference source of truth:** `docs/api-reference.md`
-- **Navigation rail:** `src/components/longform-scrollspy-nav.tsx`
+- **Navigation rail:** `src/components/api-reference-layout.tsx` and `src/components/api-reference-sidebar.tsx`
 
 The route is a static build-time page. It reads the checked-in API reference markdown from `docs/api-reference.md`, parses the supported markdown subset (paragraphs, lists, tables, code fences, rules, H2/H3 headings), and renders that content inside the public site chrome.
 

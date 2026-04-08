@@ -41,7 +41,7 @@ Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins/inde
 
 | Type                  | Label        | Description                                                    |
 | --------------------- | ------------ | -------------------------------------------------------------- |
-| `lending-vault`       | Lending      | Deposited into lending protocols or vault strategies           |
+| `lending-vault`       | Native       | Deposited into lending protocols or vault strategies           |
 | `rebase`              | Rebase       | Token supply rebases to distribute yield                       |
 | `fee-sharing`         | Fee Share    | Protocol fees passed to holders                                |
 | `lp-receipt`          | LP Receipt   | LP position wrapped as stablecoin                              |

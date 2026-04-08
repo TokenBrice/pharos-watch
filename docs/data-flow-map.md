@@ -42,7 +42,7 @@ Cron schedules are declared in `worker/wrangler.toml` and orchestrated by `worke
 - `25 */4 * * *`: supplemental yield-source refresh
 - `11 * * * *`: live reserve sync, then redemption backstop sync, then Kinesis supply sync, then collateral-drift checks/alerts
 - `2,7,12,17,22,27,32,37,42,47,52,57 * * * *`: Telegram subscriber alerts (DEWS, depeg, safety, and launch promotions)
-- `0 8 * * *`: supply snapshot, safety-grade snapshot, T-bill rate, PSI daily snapshot, USDS status, treasury stable exposure
+- `0 8 * * *`: safety-grade snapshot, T-bill rate, PSI daily snapshot, USDS status
 - `5 8 * * *`: bluechip sync, daily digest, weekly recap (Mondays), discovery scan (Mondays)
 - `0 6 1 * *`: monthly yield coverage audit
 

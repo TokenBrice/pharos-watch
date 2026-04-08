@@ -1,6 +1,16 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.94 (2026-02-25 → 2026-04-06).
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v6.95 (2026-02-25 → 2026-04-07).
+
+## v6.95 — Direct inherited freeze risk now counts custodied BTC wrappers and issuer-seizable collateral (2026-04-07)
+
+Blacklistability attribution now treats centralized-custody BTC wrappers, tokenized gold, and issuer-seizable tokenized collateral as direct reserve-side freeze exposure when they dominate a stablecoin's backing mix:
+
+- Shared `isBlacklistable()` logic now counts centralized-custody BTC wrappers such as WBTC and cbBTC as direct reserve-side freeze exposure instead of only possible exposure
+- Issuer-seizable tokenized collateral such as tokenized gold and reviewed tokenized share symbols now also counts as direct inherited freeze risk when present in reserve labels
+- Coins whose reserve mix crosses the >50% inherited threshold because of these assets now resolve to `inherited` instead of `possible` on report-card and table surfaces
+
+---
 
 ## v6.94 — NAV wrappers inherit peg risk from referenced base stablecoins (2026-04-06)
 

@@ -25,7 +25,7 @@ Coverage is defined explicitly in `worker/src/lib/bluechip-slugs.ts`.
 - Missing or unrated Bluechip rows are skipped rather than synthesized.
 
 Current map covers:
-- `usdc`, `usdt`, `dai`, `lusd`, `bold`, `pyusd`, `paxg`, `xaut`, `gusd`, `usdp`, `eurc`, `fdusd`, `frax`, `gho`, `tusd`, `rlusd`, `xsgd`, `ousd`, `cetes`, `rai`
+- `usdc`, `usdt`, `dai`, `lusd`, `bold`, `pyusd`, `paxg`, `xaut`, `gusd`, `usdp`, `eurc`, `fdusd`, `frax`, `gho`, `tusd`, `rlusd`, `xsgd`, `ousd`, `cetes`
 
 ---
 

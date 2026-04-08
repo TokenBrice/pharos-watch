@@ -107,6 +107,8 @@ src/                              # Next.js frontend (static export)
 │   ├── cemetery/                 # Dead stablecoin graveyard
 │   │   ├── page.tsx
 │   │   └── error.tsx
+│   ├── changelog/                # Public changelog
+│   │   └── page.tsx
 │   ├── chains/                   # Chain analytics leaderboard (sortable by supply, Chain Health Score)
 │   │   ├── page.tsx
 │   │   └── client.tsx

@@ -289,6 +289,7 @@ Cloudflare D1 (SQLite database)
   ├── api_keys             → API key registrations for authenticated public API access
   ├── api_key_rate_limit   → per-key rate-limit state for authenticated API consumers
   ├── api_key_audit_log    → audit trail for API key lifecycle events
+  ├── api_key_request_stats → per-key request-volume tracking
   ├── api_request_source_stats → per-source API request attribution counters
   ├── api_request_consumer_stats → per-consumer API request attribution counters
   ├── site_data_request_stats → site-data proxy request attribution counters

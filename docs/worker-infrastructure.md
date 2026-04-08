@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 29 scheduled runtime jobs across 13 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track the same 29 jobs; cemetery and tracking appendices are now folded into daily digest delivery instead of a separate cron.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 28 scheduled runtime jobs across 13 cron expressions / trigger slots. `CRON_INTERVALS` / `/api/status` track the same 28 jobs; cemetery and tracking appendices are now folded into daily digest delivery instead of a separate cron.
 
 Execution note: the `snapshot-supply` retry path runs on the `*/15 * * * *` trigger only after a downstream-safe `sync-stablecoins` cache write.
 
@@ -54,6 +54,7 @@ The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `fun
 | `SITE_API_SHARED_SECRET`         | string     | No (worker contract); Yes for the website data lane | Shared secret required for `site-api.pharos.watch` and Worker preview site-data requests authenticated via `X-Pharos-Site-Proxy-Secret`                                        |
 | `SITE_API_SHARED_SECRET_PREVIOUS` | string     | No                                                 | Optional overlap secret accepted alongside `SITE_API_SHARED_SECRET` during a 24-hour rotation window                                                                          |
 | `API_KEY_HASH_PEPPER`            | string     | No (worker contract); Yes once public auth leaves `off` | Pepper used to HMAC-hash the secret portion of public API keys                                                                                                                    |
+| `API_KEY_HASH_PEPPER_PREVIOUS`   | string     | No                                                 | Optional overlap pepper accepted alongside `API_KEY_HASH_PEPPER` during API key pepper rotation                                                                                    |
 | `PUBLIC_API_AUTH_MODE`           | string     | No                                                 | Public API auth mode: `off`, `report-only`, or `enforce`                                                                                                                          |
 | `OPS_UI_ORIGIN`                  | string     | No                                                 | Reserved on the worker runtime for cross-runtime alignment. The value is active on Pages Functions host gating (`https://ops.pharos.watch`)                                |
 | `OPS_API_ORIGIN`                 | string     | No                                                 | Reserved on the worker runtime for cross-runtime alignment. The value is active on Pages Functions proxying (`https://ops-api.pharos.watch`)                               |
@@ -204,7 +205,7 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 
 | Profile  | `Cache-Control` header                 | Used by                                                                                                                                                            |
 | -------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Realtime | `public, s-maxage=60, max-age=10`      | stablecoins, stablecoin-summary, blacklist, depeg-events, peg-summary, mint-burn-events                                                                            |
+| Realtime | `public, s-maxage=60, max-age=10`      | stablecoins, stablecoin-summary, blacklist, depeg-events, peg-summary, mint-burn-events, chains                                                                    |
 | Per-coin | `public, s-maxage=300, max-age=10`     | stablecoin detail (`/api/stablecoin/:id`)                                                                                                                          |
 | Standard | `public, s-maxage=300, max-age=60`     | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
 | Custom   | `public, s-maxage=300, max-age=300`    | dex-liquidity                                                                                                                                                      |

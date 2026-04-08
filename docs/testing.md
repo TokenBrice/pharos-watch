@@ -56,7 +56,9 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - `npm run check:cron-sync`
    - `npm run check:cron-connections`
    - `npm run check:doc-counts`
+   - `npm run check:verified-doc-links`
    - `npm run check:doc-sync`
+   - `npm run check:env-contract`
    - `npm run check:duplicate-exports`
    - `npm run check:redemption-backstops`
    - `npm run check:unused-code`
