@@ -14,7 +14,7 @@ import { TelegramPulseStrip } from "./telegram-pulse-strip";
 export const metadata: Metadata = buildPageMetadata({
   title: "Telegram Alerts & Digest: Stablecoin Notifications on Telegram",
   description:
-    "Set up Telegram alerts for specific stablecoins or all tracked stablecoins by alert type: depeg events, depeg worsening, DEWS threat level changes, and daily safety grade shifts. Plus get the Pharos digest straight in Telegram.",
+    "Set up Telegram alerts for specific stablecoins, preset watchlists, or all tracked stablecoins by alert type: depeg events, depeg worsening, DEWS threat level changes, and daily safety grade shifts. Plus get the Pharos digest straight in Telegram.",
   canonical: "/telegram/",
   ogImage: `${SITE_URL}/og-telegram.png`,
 });
@@ -67,8 +67,9 @@ View on Pharos: pharos.watch/stablecoin/dai-makerdao`,
 
 const COMMANDS = [
   { command: "/subscribe <types> all", description: "Enable alert types across all tracked stablecoins", example: "/subscribe depeg,safety all", common: true },
-  { command: "/subscribe <types> <tickers>", description: "Enable alert types and subscribe to coins", example: "/subscribe dews,depeg USDT,USDC", common: true },
-  { command: "/unsubscribe <tickers>", description: "Remove specific coin subscriptions", example: "/unsubscribe USDT", common: false },
+  { command: "/subscribe <types> <targets>", description: "Enable alert types for coins or preset watchlists", example: "/subscribe dews,depeg USDT,USDC", common: true },
+  { command: "/presets", description: "Show preset watchlists like usd-top25 or mcap-ge-1b", example: "/presets", common: true },
+  { command: "/unsubscribe <targets>", description: "Remove specific coin subscriptions or preset-expanded coins", example: "/unsubscribe usd-top25", common: false },
   { command: "/unsubscribe all", description: "Clear all per-coin and all-stablecoin subscriptions", example: null, common: false },
   { command: "/set <ticker> <setting> <value>", description: "Tune per-coin thresholds and modes", example: "/set USDC depeg-step 250", common: false },
   { command: "/set all <setting> <value>", description: "Turn global all-stablecoin alert types on or off", example: "/set all depeg off", common: false },
@@ -313,6 +314,18 @@ export default function TelegramPage() {
                     <p className="mt-1 text-xs text-muted-foreground">Per-coin alerts for specific stablecoins</p>
                   </div>
                   <div>
+                    <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">/presets</code>
+                    <p className="mt-1 text-xs text-muted-foreground">Browse preset watchlists directly inside the bot</p>
+                  </div>
+                  <div>
+                    <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">/subscribe dews usd-top25</code>
+                    <p className="mt-1 text-xs text-muted-foreground">Follow the current top USD stablecoins without listing them one by one</p>
+                  </div>
+                  <div>
+                    <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">/subscribe safety mcap-ge-1b</code>
+                    <p className="mt-1 text-xs text-muted-foreground">Track every active stablecoin above the chosen market-cap floor</p>
+                  </div>
+                  <div>
                     <code className="block rounded bg-muted px-2 py-1.5 text-xs font-mono">/subscribe safety all</code>
                     <p className="mt-1 text-xs text-muted-foreground">All-stablecoin alerts by type</p>
                   </div>
@@ -332,7 +345,9 @@ export default function TelegramPage() {
               <p>
                 Done &mdash; alerts arrive automatically when conditions change. Use{" "}
                 <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">/list</code>{" "}
-                at any time to check your active subscriptions.
+                at any time to check your active subscriptions, and{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">/presets</code>{" "}
+                to discover preset watchlists from inside Telegram.
               </p>
             </li>
           </ol>

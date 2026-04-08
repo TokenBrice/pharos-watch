@@ -2223,9 +2223,10 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 **Commands handled:**
 
 - `/start` — Welcome message with onboarding examples plus `@pharoswatch` and `@pharoswatchers` links
-- `/subscribe <types> <tickers>` — Subscribe to alerts (types: dews, depeg, safety, launch)
+- `/presets` — List the preset watchlist catalog and example commands
+- `/subscribe <types> <targets>` — Subscribe to alerts for explicit coins or preset watchlists (types: dews, depeg, safety, launch)
 - `/subscribe <types> all` — Enable one or more alert types across all tracked stablecoins
-- `/unsubscribe <tickers>` — Remove coin subscriptions
+- `/unsubscribe <targets>` — Remove explicit coin subscriptions or the concrete coin rows covered by a preset watchlist
 - `/unsubscribe all` — Remove all per-coin subscriptions and disable the current DEWS/depeg/safety flags; launch flags are not reset by this path today
 - `/set <ticker> <setting> <value>` — Tune per-coin thresholds and modes
 - `/set all <setting> <value>` — Toggle global all-stablecoin alert types
@@ -2234,6 +2235,8 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 - `/cancel` — Cancel a pending disambiguation flow
 - `/list` — Show current subscriptions, per-coin settings, and quiet hours
 - `/help` — Command reference
+
+Preset watchlists currently resolve at command time into standard `telegram_subscriptions` rows. Supported aliases are `usd-top10`, `usd-top25`, `usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, and `mcap-ge-100m`. Presets are supported for `dews`, `depeg`, and `safety`; `launch` still requires explicit tickers or Pharos coin IDs.
 
 ---
 

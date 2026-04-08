@@ -31,6 +31,20 @@ function sentMessageBody(callIndex = 0): { text: string } {
   return JSON.parse(init.body) as { text: string };
 }
 
+function makeStablecoinsCacheValue(overrides: Record<string, number>): string {
+  return JSON.stringify({
+    peggedAssets: [
+      { id: "usdt-tether", symbol: "USDT", circulating: { usd: overrides["usdt-tether"] ?? 0 } },
+      { id: "usdc-circle", symbol: "USDC", circulating: { usd: overrides["usdc-circle"] ?? 0 } },
+      { id: "dai-makerdao", symbol: "DAI", circulating: { usd: overrides["dai-makerdao"] ?? 0 } },
+      { id: "pyusd-paypal", symbol: "PYUSD", circulating: { usd: overrides["pyusd-paypal"] ?? 0 } },
+      { id: "eurc-circle", symbol: "EURC", circulating: { usd: overrides["eurc-circle"] ?? 0 } },
+      { id: "xaut-tether", symbol: "XAUT", circulating: { usd: overrides["xaut-tether"] ?? 0 } },
+      { id: "paxg-paxos", symbol: "PAXG", circulating: { usd: overrides["paxg-paxos"] ?? 0 } },
+    ],
+  });
+}
+
 describe("handleTelegramWebhook", () => {
   beforeEach(() => {
     fetchSpy.mockReset();
@@ -82,6 +96,7 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("Welcome");
     expect(sentMessageBody().text).toContain("@pharoswatch");
     expect(sentMessageBody().text).toContain("@pharoswatchers");
+    expect(sentMessageBody().text).toContain("/presets");
   });
 
   it("replies to /help", async () => {
@@ -91,6 +106,7 @@ describe("handleTelegramWebhook", () => {
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(sentMessageBody().text).toContain("Commands");
+    expect(sentMessageBody().text).toContain("/presets");
   });
 
   it("handles /subscribe validation: no tickers", async () => {
@@ -115,6 +131,17 @@ describe("handleTelegramWebhook", () => {
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/list"), "test-secret", "bot-token");
 
     expect(sentMessageBody().text).toContain("No active subscriptions");
+    expect(sentMessageBody().text).toContain("/presets");
+  });
+
+  it("replies to /presets with the preset catalog", async () => {
+    const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/presets"), "test-secret", "bot-token");
+
+    const text = sentMessageBody().text;
+    expect(text).toContain("Preset Watchlists");
+    expect(text).toContain("usd-top25");
+    expect(text).toContain("mcap-ge-1b");
   });
 
   it("replies unknown command", async () => {
@@ -176,6 +203,60 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("All stablecoins: DEWS, Safety");
   });
 
+  it("handles /subscribe with a preset watchlist", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: {
+          value: makeStablecoinsCacheValue({
+            "usdt-tether": 100_000_000_000,
+            "usdc-circle": 90_000_000_000,
+            "dai-makerdao": 5_000_000_000,
+          }),
+          updated_at: 1_700_000_000,
+        },
+      },
+      {
+        match: "FROM telegram_subscriptions",
+        rows: [
+          {
+            stablecoin_id: "usdt-tether",
+            alert_dews: 1,
+            alert_depeg: 0,
+            alert_safety: 0,
+            dews_min_band: null,
+            safety_mode: null,
+            depeg_worsening_bps_step: null,
+          },
+        ],
+      },
+    ]);
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews usd-top25"), "test-secret", "bot-token");
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("FROM cache WHERE key = ?"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(true);
+    expect(sentMessageBody().text).toContain("Preset watchlists: USD Top 25");
+    expect(sentMessageBody().text).toContain("Use /list");
+  });
+
+  it("rejects preset watchlists for launch alerts", async () => {
+    const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe launch usd-top25"), "test-secret", "bot-token");
+
+    expect(sentMessageBody().text).toContain("Preset watchlists support dews, depeg, and safety only");
+  });
+
+  it("rejects mixing all with preset targets", async () => {
+    const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews all usd-top25"), "test-secret", "bot-token");
+
+    expect(sentMessageBody().text).toContain('Use either &quot;all&quot; or specific tickers/presets');
+  });
+
   it("handles /subscribe with unknown ticker", async () => {
     const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/subscribe dews XYZZY"), "test-secret", "bot-token");
@@ -183,6 +264,7 @@ describe("handleTelegramWebhook", () => {
     const text = sentMessageBody().text;
     expect(text).toContain("Ticker");
     expect(text.toLowerCase()).toContain("not found");
+    expect(text).toContain("/presets");
   });
 
   it("handles /subscribe with ambiguous ticker (disambiguation)", async () => {
@@ -526,6 +608,32 @@ describe("handleTelegramWebhook", () => {
 
     const text = sentMessageBody().text.toLowerCase();
     expect(text).toContain("removed all subscriptions");
+  });
+
+  it("handles /unsubscribe with a preset watchlist", async () => {
+    const db = mockD1([
+      { match: "telegram_pending_disambiguation", rows: [] },
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: {
+          value: makeStablecoinsCacheValue({
+            "usdt-tether": 100_000_000_000,
+            "usdc-circle": 90_000_000_000,
+            "dai-makerdao": 5_000_000_000,
+          }),
+          updated_at: 1_700_000_000,
+        },
+      },
+    ]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/unsubscribe usd-top25"), "test-secret", "bot-token");
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_subscriptions"))).toBe(true);
+    expect(sentMessageBody().text).toContain("Preset watchlists removed: USD Top 25");
+    expect(sentMessageBody().text).toContain("Removed");
   });
 
   it("uses disambiguation for ambiguous /unsubscribe instead of deleting all matches", async () => {

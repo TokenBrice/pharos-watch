@@ -1,5 +1,6 @@
 import { THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { isTelegramPresetAlias, type TelegramPresetId } from "./telegram-presets";
 import { escapeHtml } from "./telegram";
 
 // ---------- Types ----------
@@ -20,8 +21,16 @@ export interface TickerMatch {
 export interface ParsedSubscribeArgs {
   alertTypes: Set<string>;
   subscribeAll: boolean;
+  presetIds: TelegramPresetId[];
   tickers: string[];
-  invalidTypes: string[];
+  invalidTargets: string[];
+}
+
+export interface ParsedTargetArgs {
+  includeAll: boolean;
+  presetIds: TelegramPresetId[];
+  tickers: string[];
+  invalidTargets: string[];
 }
 
 // ---------- Constants ----------
@@ -86,58 +95,90 @@ function findClosestMatch(lowerTicker: string): ResolvedCoin | null {
 // ---------- Command Parsing ----------
 
 /**
- * Parse `/subscribe` arguments. Tokens are classified as:
- * 1. Known alert type (dews/depeg/safety) → alertTypes
- * 2. Known ticker (exists in SYMBOL_INDEX) → tickers
- * 3. Neither → invalidTypes (unknown token)
- * Order-independent.
+ * Parse target tokens shared by subscribe/unsubscribe flows.
+ */
+export function parseTargetArgs(argsText: string): ParsedTargetArgs {
+  const tokens = argsText.trim().split(/[\s,]+/).filter(Boolean);
+  let includeAll = false;
+  const presetIds: TelegramPresetId[] = [];
+  const tickers: string[] = [];
+  const invalidTargets: string[] = [];
+
+  for (const token of tokens) {
+    const lower = token.toLowerCase();
+    if (lower === GLOBAL_SUBSCRIBE_TOKEN) {
+      includeAll = true;
+    } else if (isTelegramPresetAlias(lower)) {
+      presetIds.push(lower);
+    } else if (SYMBOL_INDEX.has(lower) || ID_INDEX.has(lower)) {
+      tickers.push(token);
+    } else {
+      invalidTargets.push(token);
+    }
+  }
+
+  return { includeAll, presetIds, tickers, invalidTargets };
+}
+
+/**
+ * Parse `/subscribe` arguments. Alert types are extracted first, then the remaining
+ * tokens are parsed as target selectors (tickers, presets, or `all`).
  */
 export function parseSubscribeArgs(argsText: string): ParsedSubscribeArgs {
   const tokens = argsText.trim().split(/[\s,]+/).filter(Boolean);
   const alertTypes = new Set<string>();
-  let subscribeAll = false;
-  const tickers: string[] = [];
-  const invalidTypes: string[] = [];
+  const targetTokens: string[] = [];
 
   for (const token of tokens) {
     const lower = token.toLowerCase();
     if (ALERT_TYPES.has(lower)) {
       alertTypes.add(lower);
-    } else if (lower === GLOBAL_SUBSCRIBE_TOKEN) {
-      subscribeAll = true;
-    } else if (SYMBOL_INDEX.has(lower) || ID_INDEX.has(lower)) {
-      tickers.push(token);
     } else {
-      invalidTypes.push(token);
+      targetTokens.push(token);
     }
   }
 
-  return { alertTypes, subscribeAll, tickers, invalidTypes };
+  const parsedTargets = parseTargetArgs(targetTokens.join(" "));
+  return {
+    alertTypes,
+    subscribeAll: parsedTargets.includeAll,
+    presetIds: parsedTargets.presetIds,
+    tickers: parsedTargets.tickers,
+    invalidTargets: parsedTargets.invalidTargets,
+  };
 }
 
 /**
  * Validate parsed subscribe args. Returns an error message string if invalid, or null if valid.
- * Checks invalidTypes first — contextual error message depends on whether alert types were provided.
+ * Checks invalidTargets first - contextual error message depends on whether alert types were provided.
  */
 export function validateSubscribeArgs(parsed: ParsedSubscribeArgs): string | null {
-  if (parsed.invalidTypes.length > 0) {
-    const unknown = parsed.invalidTypes.join(", ");
+  if (parsed.invalidTargets.length > 0) {
+    const unknown = parsed.invalidTargets.join(", ");
     if (parsed.alertTypes.size === 0) {
-      return `Unknown alert type: ${unknown}. Valid types: dews, depeg, safety.`;
+      return `Unknown alert type: ${unknown}. Valid types: dews, depeg, safety, launch.`;
     }
-    return `Unknown ticker: ${unknown}. Check spelling — use the coin's symbol (e.g. USDC, BOLD).`;
+    return `Unknown ticker or preset: ${unknown}. Check spelling, use the coin's symbol, or try /presets.`;
   }
-  if (parsed.subscribeAll && parsed.tickers.length > 0) {
-    return 'Use either "all" or specific tickers in one command, not both.';
+  if (parsed.subscribeAll && (parsed.tickers.length > 0 || parsed.presetIds.length > 0)) {
+    return 'Use either "all" or specific tickers/presets in one command, not both.';
   }
-  if (parsed.alertTypes.size === 0 && parsed.tickers.length === 0 && !parsed.subscribeAll) {
-    return "Specify alert types and tickers. Example: /subscribe dews USDC BOLD";
+  if (parsed.presetIds.length > 0 && parsed.alertTypes.has("launch")) {
+    return "Preset watchlists support dews, depeg, and safety only. Use explicit tickers for launch alerts.";
+  }
+  if (
+    parsed.alertTypes.size === 0
+    && parsed.tickers.length === 0
+    && parsed.presetIds.length === 0
+    && !parsed.subscribeAll
+  ) {
+    return "Specify alert types and tickers or presets. Example: /subscribe dews USDC BOLD";
   }
   if (parsed.alertTypes.size === 0) {
-    return "Specify at least one alert type: dews, depeg, safety. Example: /subscribe dews USDC";
+    return "Specify at least one alert type: dews, depeg, safety, launch. Example: /subscribe dews USDC";
   }
-  if (parsed.tickers.length === 0 && !parsed.subscribeAll) {
-    return "Specify at least one ticker, or use all. Example: /subscribe dews all";
+  if (parsed.tickers.length === 0 && parsed.presetIds.length === 0 && !parsed.subscribeAll) {
+    return "Specify at least one ticker or preset, or use all. Example: /subscribe dews all";
   }
   return null;
 }
