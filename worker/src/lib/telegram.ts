@@ -92,6 +92,7 @@ export interface SendToChatResult {
   statusCode: number | null;
   errorClass: TelegramSendErrorClass | null;
   delivery: "sent" | "blocked" | "retryable_failure" | "permanent_failure";
+  retryAfterSec: number | null;
 }
 
 function buildResponseFailure(statusCode: number): SendToChatResult {
@@ -104,6 +105,7 @@ function buildResponseFailure(statusCode: number): SendToChatResult {
       statusCode,
       errorClass: "blocked",
       delivery: "blocked",
+      retryAfterSec: null,
     };
   }
   if (statusCode === 429) {
@@ -115,6 +117,7 @@ function buildResponseFailure(statusCode: number): SendToChatResult {
       statusCode,
       errorClass: "rate_limit",
       delivery: "retryable_failure",
+      retryAfterSec: null,
     };
   }
   if (statusCode >= 500) {
@@ -126,6 +129,7 @@ function buildResponseFailure(statusCode: number): SendToChatResult {
       statusCode,
       errorClass: "server_error",
       delivery: "retryable_failure",
+      retryAfterSec: null,
     };
   }
   if (statusCode === 400 || statusCode === 404 || statusCode === 413) {
@@ -137,6 +141,7 @@ function buildResponseFailure(statusCode: number): SendToChatResult {
       statusCode,
       errorClass: "bad_request",
       delivery: "permanent_failure",
+      retryAfterSec: null,
     };
   }
   if (statusCode === 401) {
@@ -148,6 +153,7 @@ function buildResponseFailure(statusCode: number): SendToChatResult {
       statusCode,
       errorClass: "auth_error",
       delivery: "permanent_failure",
+      retryAfterSec: null,
     };
   }
   return {
@@ -158,6 +164,7 @@ function buildResponseFailure(statusCode: number): SendToChatResult {
     statusCode,
     errorClass: "unknown",
     delivery: "retryable_failure",
+    retryAfterSec: null,
   };
 }
 
@@ -171,6 +178,7 @@ function buildCaughtFailure(error: unknown): SendToChatResult {
       statusCode: null,
       errorClass: "timeout",
       delivery: "retryable_failure",
+      retryAfterSec: null,
     };
   }
 
@@ -182,6 +190,7 @@ function buildCaughtFailure(error: unknown): SendToChatResult {
     statusCode: null,
     errorClass: "network",
     delivery: "retryable_failure",
+    retryAfterSec: null,
   };
 }
 
@@ -208,8 +217,14 @@ export async function sendToChat(
     });
 
     if (!res.ok) {
+      const retryAfterRaw = res.headers.get("Retry-After");
+      const retryAfterSec = retryAfterRaw ? parseInt(retryAfterRaw, 10) : null;
       await drainResponseBody(res);
-      return buildResponseFailure(res.status);
+      const failure = buildResponseFailure(res.status);
+      return {
+        ...failure,
+        retryAfterSec: Number.isFinite(retryAfterSec) ? retryAfterSec : null,
+      };
     }
     await drainResponseBody(res);
     return {
@@ -220,6 +235,7 @@ export async function sendToChat(
       statusCode: res.status,
       errorClass: null,
       delivery: "sent",
+      retryAfterSec: null,
     };
   } catch (error) {
     return buildCaughtFailure(error);
@@ -241,6 +257,7 @@ export interface BatchResult {
   statusCode: number | null;
   errorClass: TelegramSendErrorClass | null;
   delivery: "sent" | "blocked" | "retryable_failure" | "permanent_failure";
+  retryAfterSec: number | null;
 }
 
 /**

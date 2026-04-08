@@ -50,6 +50,7 @@ beforeEach(() => {
     statusCode: 200,
     errorClass: null,
     delivery: "sent",
+    retryAfterSec: null,
   });
 
   // Default sendBatch: delegate each message to mockSendToChat
@@ -612,6 +613,7 @@ describe("dispatchTelegramAlerts", () => {
       statusCode: 403,
       errorClass: "blocked",
       delivery: "blocked",
+      retryAfterSec: null,
     });
     mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
       if (key === "alert:dews-snapshot") {
@@ -810,6 +812,7 @@ describe("dispatchTelegramAlerts", () => {
       statusCode: 500,
       errorClass: "server_error",
       delivery: "retryable_failure",
+      retryAfterSec: null,
     });
 
     mockGetCache.mockImplementation(async (_db: unknown, key: string) => {

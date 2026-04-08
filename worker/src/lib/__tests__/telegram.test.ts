@@ -90,6 +90,49 @@ describe("sendToChat", () => {
     const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
     expect(body.disable_notification).toBe(true);
   });
+
+  it("returns rate_limit with retryAfterSec on 429", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response("Too Many Requests", {
+        status: 429,
+        headers: { "Retry-After": "30" },
+      }),
+    );
+    const result = await sendToChat("12345", "test", "bot-token");
+    expect(result).toMatchObject({
+      ok: false,
+      blocked: false,
+      retryable: true,
+      permanentFailure: false,
+      statusCode: 429,
+      errorClass: "rate_limit",
+      delivery: "retryable_failure",
+    });
+    expect(result.retryAfterSec).toBe(30);
+  });
+
+  it("returns retryAfterSec null when 429 has no Retry-After header", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response("Too Many Requests", { status: 429 }));
+    const result = await sendToChat("12345", "test", "bot-token");
+    expect(result.retryAfterSec).toBeNull();
+  });
+
+  it("returns retryAfterSec null for non-429 errors", async () => {
+    fetchSpy.mockResolvedValueOnce(new Response("Server Error", { status: 500 }));
+    const result = await sendToChat("12345", "test", "bot-token");
+    expect(result.retryAfterSec).toBeNull();
+  });
+
+  it("classifies timeout as retryable", async () => {
+    fetchSpy.mockRejectedValueOnce(Object.assign(new Error("timeout"), { name: "TimeoutError" }));
+    const result = await sendToChat("12345", "test", "bot-token");
+    expect(result).toMatchObject({
+      ok: false,
+      retryable: true,
+      errorClass: "timeout",
+      retryAfterSec: null,
+    });
+  });
 });
 
 describe("sendBatch", () => {
