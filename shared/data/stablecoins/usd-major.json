@@ -11,7 +11,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "U.S. Treasury bills and repurchase agreements (~92%), secured loans, gold, Bitcoin, and other investments; quarterly attestations by BDO Italia",
+    "collateral": "U.S. Treasury Bills (~63%), overnight reverse repos (~10%), precious metals / gold (~9%), secured loans (~9%), Bitcoin (~4%), and other investments; quarterly attestations by BDO Italia (Q4 2025 data)",
     "pegMechanism": "Direct 1:1 redemption through Tether. Supply figures include USDT0 (omnichain variant via LayerZero lock-and-mint) deployed on 20+ additional chains",
     "llamaId": "1",
     "detailProvider": "defillama",
@@ -214,42 +214,49 @@
     "reserves": [
       {
         "name": "U.S. Treasury Bills",
-        "pct": 80,
+        "pct": 63,
         "risk": "very-low"
       },
       {
-        "name": "Reverse Repos",
-        "pct": 12,
+        "name": "Overnight Reverse Repos",
+        "pct": 10,
         "risk": "very-low"
       },
       {
-        "name": "Secured Loans",
-        "pct": 4,
+        "name": "Precious Metals (Gold)",
+        "pct": 9,
         "risk": "medium"
       },
       {
-        "name": "Gold & Bitcoin",
-        "pct": 3,
+        "name": "Secured Loans",
+        "pct": 9,
+        "risk": "medium"
+      },
+      {
+        "name": "Bitcoin",
+        "pct": 4,
         "risk": "high"
       },
       {
-        "name": "Other Investments",
-        "pct": 1,
+        "name": "Other Investments (cash, corporate bonds)",
+        "pct": 5,
         "risk": "medium"
       }
     ],
     "liveReservesConfig": {
-      "adapter": "tether",
+      "adapter": "curated-validated",
       "version": 1,
       "semantics": "attestation-mix",
+      "breakerScope": "usdt-tether",
       "display": {
         "url": "https://tether.to/en/transparency",
         "label": "Tether Transparency"
       },
       "inputs": {
         "primary": {
-          "kind": "http-json",
-          "url": "https://app.tether.to/transparency.json"
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
         }
       }
     }
