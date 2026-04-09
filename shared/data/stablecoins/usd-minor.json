@@ -2912,6 +2912,7 @@
       "rwa": false,
       "navToken": false
     },
+    "infrastructures": ["m0"],
     "collateral": "Cash and short-term U.S. Treasury securities held in bankruptcy-remote custody, issued by Bridge (a Stripe company) using the M0 protocol",
     "pegMechanism": "1:1 mint and redemption via Bridge using M0 protocol infrastructure; reserves continuously validated on-chain by independent validators; arbitrage corrects price drift; monthly public attestations",
     "llamaId": "313",
@@ -3581,6 +3582,7 @@
       "rwa": false,
       "navToken": false
     },
+    "infrastructures": ["m0"],
     "collateral": "Short-term U.S. Treasury Bills held in bankruptcy-remote SPVs via M0 Protocol; over 100% collateral coverage maintained by M0 Minters (including Superstate and MXON); collateral verified daily on-chain",
     "pegMechanism": "Rebasing yield-bearing stablecoin; USDN is collateralized by M0's $M token on Ethereum via M0's Portal bridge (Wormhole NTT); the Noble chain module tracks each holder's principal against the latest rebasing multiplier from M0 on Ethereum, accruing T-bill yield directly to USDN balances; users mint/redeem via USDC through the Noble Express app",
     "llamaId": "282",
@@ -9565,6 +9567,7 @@
       "rwa": true,
       "navToken": false
     },
+    "infrastructures": ["m0"],
     "collateral": "Short-term U.S. Treasury bills held in bankruptcy-remote SPVs via M0 Protocol's permissioned Minter infrastructure; M0 Validators independently attest collateral sufficiency on-chain before minting",
     "pegMechanism": "1:1 wrapper around M (M0) token — USDSC is minted by wrapping M via the Soneium-native UsdscToken contract; underlying M is backed by T-bill collateral attested by M0 Validators; redemption unwinds the wrapper back to M",
     "detailProvider": "coingecko",
@@ -9650,6 +9653,7 @@
       "rwa": true,
       "navToken": false
     },
+    "infrastructures": ["m0"],
     "collateral": "Short-term U.S. Treasury bills and cash, held for the benefit of token holders via M0 Protocol's bankruptcy-remote SPV structure; issued by MoonPay under U.S. Money Transmitter Licenses across 49 states (excl. New York)",
     "pegMechanism": "1:1 fiat-backed mint and redemption via MoonPay using M0 Protocol infrastructure; reserves cryptographically attested on-chain by independent M0 Validators before minting; fiat on/off ramp via Visa, Mastercard, Apple Pay, Google Pay, and PayPal through MoonPay's 30M+ verified user base",
     "llamaId": "350",
@@ -9742,6 +9746,7 @@
       "rwa": true,
       "navToken": false
     },
+    "infrastructures": ["m0"],
     "collateral": "100% backed by M (M0 Protocol's tokenized short-term U.S. Treasury bills) at launch — capital is held directly in the USDat smart contract and verifiable on-chain; protocol roadmap allows reserves to shift toward digital credit instruments (e.g. Strategy STRC preferred equity) over time",
     "pegMechanism": "Permissioned 1:1 mint by depositing USDC via the M0 Swap Facility (Uniswap V3 1bps tier) which routes through wM; redemption returns USDC by unwrapping USDat back to wM and burning the USDat. Only KYC-onboarded addresses can mint, redeem, or hold USDat; geofenced away from US, EEA, and OFAC-sanctioned jurisdictions",
     "detailProvider": "coingecko",
@@ -9820,6 +9825,7 @@
       "rwa": true,
       "navToken": false
     },
+    "infrastructures": ["m0"],
     "collateral": "Underlying M (M0 Protocol) is backed 100% by short-term U.S. Treasury bills (30–90 day WAM) held in bankruptcy-remote SPVs by permissioned Minters; M0 Validators independently attest collateral sufficiency on-chain before any M can be minted, and wM holds M 1:1 inside the Wrapped M Token contract",
     "pegMechanism": "Non-rebasing 1:1 ERC-20 wrapper around M: anyone can call wrap() to deposit M and mint wM, or unwrap() to redeem wM back to M at any time without fees or queues; wM holders are non-earning by default, so yield accrued by the underlying M is redirected via TTG-approved earner accounts and the claimExcess() mechanism to ecosystem yield recipients (downstream M0 extensions and apps), leaving wM as a flat USD-denominated unit",
     "detailProvider": "coingecko",
@@ -9884,6 +9890,7 @@
       "rwa": true,
       "navToken": false
     },
+    "infrastructures": ["m0"],
     "collateral": "Backed 1:1 by M (M0 Protocol's tokenized short-term U.S. Treasury bills, routed through USTB / Superstate Short Duration U.S. Government Securities Fund); per the M0 dashboard the wrapper holds ~$50.25M of USTB-collateralised M against ~$50M USDnr in circulation, with the surplus held in a Stability Reserve buffer. Reserves sit in M0 SPVs managed by the M0 Minter (MXON)",
     "pegMechanism": "Permissioned 1:1 wrapper around M0's $M token: USDnr is minted by Nerona by depositing/wrapping $M (sourced from MXON, the legal Minter on the M0 network) and burned 1:1 against $M on redemption. T-bill yield earned by the underlying M accrues to the M0 reserve / Nerona — USDnr holders receive no rebase or NAV growth themselves. Mint/redeem is gated to permissioned, KYC-onboarded clients of Nerona's private wealth platform",
     "detailProvider": "defillama",
@@ -9942,6 +9949,7 @@
       "rwa": true,
       "navToken": false
     },
+    "infrastructures": ["m0"],
     "collateral": "Short-term U.S. Treasury bills held via M0 Protocol's permissioned Minter infrastructure in bankruptcy-remote SPVs; collateral sufficiency cryptographically attested on-chain by independent M0 Validators before USDK mints are authorized. Yield generated by the underlying M token is retained by KAST as fee revenue rather than passed to USDK holders (a separate token, USDKy, exists for yield-seeking users)",
     "pegMechanism": "1:1 wrapper around M (M0) on Solana — KAST mints USDK by depositing/wrapping M into the USDK SPL Token-2022 mint, and unwraps back to M for redemption; user-facing fiat on/off-ramp and redemption are mediated by the KAST app via licensed partners (Tazapay, BitGo, Fireblocks). The Token-2022 mint has transfer hooks and confidential-transfer extensions with authority held by KAST",
     "detailProvider": "defillama",
@@ -10002,6 +10010,7 @@
       "rwa": true,
       "navToken": false
     },
+    "infrastructures": ["m0"],
     "collateral": "Fully reserved 1:1 by U.S. dollar deposits and short-term U.S. Treasury bills held for the benefit of token holders via M0 Protocol's bankruptcy-remote SPV structure; reserves issued and managed by MoonPay under U.S. Money Transmitter Licenses; native M0 yield is retained by MoonPay/Exodus rather than passed through to XO holders",
     "pegMechanism": "1:1 fiat-backed mint and redemption operated by MoonPay via M0 Protocol infrastructure on Solana; collateral cryptographically attested on-chain by independent M0 Validators before minting; consumer access is gated through the Exodus self-custodial wallet and Exodus Pay app, with on/off ramps via MoonPay's payment rails (cards, Apple/Google Pay, PayPal); the Solana SPL Token-2022 mint includes pausable, permanent-delegate, and transfer-hook controls held by MoonPay",
     "detailProvider": "coingecko",
