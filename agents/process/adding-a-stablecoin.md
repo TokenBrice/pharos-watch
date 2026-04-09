@@ -1,407 +1,576 @@
-# Adding a New Stablecoin
+# Adding a Stablecoin
 
-Step-by-step reference for adding a coin to `TRACKED_STABLECOINS` in `shared/lib/stablecoins.ts`. The process has nine phases; all are automatable via the skills listed below.
+Reference for adding a tracked asset to Pharos.
 
-> **Completion gate:** Do NOT consider the job done until every phase has been evaluated. Phases 1–4 and 6–9 are mandatory for every coin. Phase 5 is a structured decision tree — evaluate every branch, skip only the ones that genuinely don't apply.
+Current source of truth is the JSON registry under `shared/data/stablecoins/`, loaded by `shared/lib/stablecoins/index.ts` and validated by `shared/lib/stablecoins/schema.ts`. Older `shared/lib/stablecoins.ts`, helper-constructor, and skill-driven workflows are obsolete.
+
+> Completion gate: do not consider the job done until every phase below has been evaluated. The minimum normal diff is the registry JSON, `shared/data/stablecoins/canonical-order.json`, `data/logos.json`, and `data/ai-summaries.json`. If the asset needs runtime coverage, also evaluate yield, live reserves, redemption backstops, mint/burn, Bluechip, and history-backfill branches.
 
 ---
 
-## Phase 0 — Eligibility check
+## Source Of Truth
 
-Before starting, confirm the coin belongs on the dashboard:
+| File | Purpose |
+|------|---------|
+| `shared/data/stablecoins/usd-major.json` | Major active USD-pegged assets |
+| `shared/data/stablecoins/usd-minor.json` | Long-tail USD-pegged assets and most USD additions |
+| `shared/data/stablecoins/non-usd.json` | Non-USD fiat pegs and `VAR` assets |
+| `shared/data/stablecoins/commodity.json` | Gold/silver-pegged assets |
+| `shared/data/stablecoins/canonical-order.json` | Canonical tracked order used to build `TRACKED_STABLECOINS` |
+| `data/logos.json` | Static logo map used by the frontend |
+| `data/ai-summaries.json` | Static editorial summaries used on detail and upcoming surfaces |
+
+Useful repo references before editing:
+
+- `docs/classification.md`
+- `docs/data-pipeline.md`
+- `docs/live-reserves.md`
+- `docs/yield-intelligence.md`
+- `docs/redemption-backstops.md`
+- `docs/mint-burn-flows.md`
+- `docs/report-cards.md`
+- `docs/upcoming-page.md`
+- `docs/stablecoin-detail-page.md`
+
+---
+
+## Guardrails
+
+- Use canonical Pharos IDs in `ticker-issuer` format, all lowercase.
+- New tracked entries belong in JSON assets, not in executable TypeScript arrays.
+- New keys in `data/logos.json` and `data/ai-summaries.json` must use canonical stablecoin IDs even though legacy numeric keys still exist.
+- Do not add manual supply overrides. Pharos uses DefiLlama first, then the existing fallback paths documented in `docs/data-pipeline.md`.
+- Do not treat `infrastructures` and `dependencies` as interchangeable. `infrastructures` is project taxonomy; `dependencies` is the asset graph.
+- Keep `reserves[]` curated even when `liveReservesConfig` exists. Curated reserves still drive dependency inference and fallback views.
+- Use only chain IDs that already exist in `shared/lib/chains.ts`.
+- If you add a new upstream source, new adapter family, or change a methodology surface, update the relevant verified docs and the about page in the same change.
+
+---
+
+## Phase 0 - Decide What You Are Adding
+
+### 0a. Active vs pre-launch
+
+Use the same registry for both, but the lifecycle matters:
+
+- `status` omitted or `"active"`: included in `ACTIVE_STABLECOINS`, worker/runtime surfaces can process it.
+- `status: "pre-launch"`: excluded from `ACTIVE_STABLECOINS`, appears on `/upcoming/`, and renders the pre-launch detail variant instead of the normal live detail page.
+
+If the asset is pre-launch, also collect:
+
+- `announcedDate`
+- `expectedLaunchDate`
+- `launchPhase`
+- `launchPhaseDetail`
+- `milestones`
+- `featuredContent`
+- `dateHistory` when dates changed over time
+
+Do not expect pre-launch assets to show up in live worker-driven coverage until the status flips to active.
+
+### 0b. Pick the correct registry file
+
+- `usd-major.json`: only for clearly top-tier active USD assets that belong with the major cohort already curated there.
+- `usd-minor.json`: default for most USD-pegged additions, including most new live assets and USD pre-launch entries.
+- `non-usd.json`: non-USD fiat pegs plus `VAR`.
+- `commodity.json`: `GOLD` and `SILVER`.
+
+### 0c. Update canonical order
+
+Every tracked asset, including pre-launch ones, must appear in `shared/data/stablecoins/canonical-order.json`.
+
+- Insert the new ID in its intended canonical position.
+- Use current market cap / strategic ordering, not simple append-only ordering.
+- Pre-launch assets usually live near the tail, but they still need an explicit position.
+
+---
+
+## Phase 1 - Eligibility Check
+
+Before tracking a coin, confirm it belongs on Pharos:
 
 | Question | Guidance |
 |----------|----------|
-| Is it pegged to a fiat currency (USD, EUR, etc.), a commodity (gold, silver), or a macro index (CPI)? | Yes → proceed. Pure NAV-appreciation tokens with no peg target (e.g. private credit fund tokens) are **not** tracked. |
-| Is its target price approximately constant (whether $1, $1+rebase, or NAV-accreting from a stable base)? | Yes → proceed. A NAV token that started at $10 and accretes is fine; one started at any price and moves with market sentiment is not. |
-| Does it have a supply that is verifiably on-chain or third-party attested? | Some supply data is acceptable — no supply tracking doesn't block adding metadata. |
-| Is it at least $5M in circulating supply? | Soft threshold. Below that, document why it merits tracking (e.g. strategic importance, notable issuer). |
+| Is it pegged to fiat, a commodity, or a macro reference? | Yes -> proceed |
+| Is it meant to be price-stable or to appreciate from a stable base in a way Pharos explicitly models? | Yes -> proceed |
+| Is supply observable on-chain or through a credible third-party source? | Some supply observability is enough to track metadata; full history can come later |
+| Is circulating supply at least about $5M? | Soft threshold only. Smaller assets need a clear strategic reason |
 
-**mF-ONE-class exclusions:** tokens that are tokenized fund shares pegged to nothing in particular (NAV drifts freely from any fiat anchor) do not belong here, regardless of RWA backing or yield-bearing characteristics.
+Exclusions:
 
----
+- free-floating NAV/fund-share tokens with no stable reference
+- assets that are not meaningfully stable
+- additions that would require bespoke supply overrides instead of the existing pipeline
 
-## Phase 1 — Determine the ID
+Important current taxonomy note:
 
-The `id` field uses canonical `ticker-issuer` format: lowercase ticker hyphenated with the issuer/protocol name.
-
-**Format:** `{ticker}-{issuer}` — e.g. `usdt-tether`, `ousg-ondo-finance`, `paxg-paxos`
-
-**Rules:**
-- Lowercase, hyphen-separated: `[a-z0-9]+(-[a-z0-9]+)+`
-- Multi-word issuers use hyphens: `ondo-finance`, `world-liberty-financial`
-- The `ticker-issuer` pair must be globally unique
-- Same ticker, different issuers is fine: `gusd-gemini` vs `gusd-gate`
-
-**Data source fields (separate from ID):**
-- If the coin is in DefiLlama's stablecoins API, set `llamaId` to its DefiLlama ID number (find via `GET https://stablecoins.llama.fi/stablecoins`)
-- If the coin is on CoinGecko, set `geckoId` (find via `GET https://api.coingecko.com/api/v3/search?query={symbol}`)
-- Set `detailProvider` to `"defillama"` (default), `"coingecko"` (CG-only coins), or `"commodity"` (gold/silver tokens)
+- For active tracked assets, classify backing by actual collateral base. Pharos currently does not carry standalone active `algorithmic` registry entries; use `rwa-backed` or `crypto-backed` unless there is an explicit historical/shadow-only reason not to.
 
 ---
 
-## Phase 2 — Research (use the `stablecoin-info-fetch` skill)
+## Phase 2 - Build The Research Packet
 
-Run the `stablecoin-info-fetch` skill for each coin. It handles:
+Do the research manually or with agents if available. Do not depend on older references to `stablecoin-info-fetch`, `write-ai-summaries`, or similar internal skills.
 
-- **CoinGecko API** — geckoId, contract addresses + decimals (`detail_platforms`), links
-- **DefiLlama** — chain-level supply breakdown to discover missing deployments
-- **Official docs/website** — collateral description, peg mechanism, jurisdiction, proof of reserves
-- **Block explorer APIs** — contract address verification (Etherscan-family: `/api?module=token&action=tokeninfo`)
+### Always collect
 
-For batches of independent coins, dispatch parallel agents (one per coin) using `superpowers:dispatching-parallel-agents` to save time. Each agent should return a structured JSON object covering all required fields.
+- `id`, `name`, `symbol`
+- target registry file
+- lifecycle status: active or pre-launch
+- `flags.backing`
+- `flags.pegCurrency`
+- `flags.governance`
+- `flags.yieldBearing`
+- `flags.rwa`
+- `flags.navToken`
+- `collateral`
+- `pegMechanism`
+- `links`
+- `contracts`
+- `reserves`
 
-### Fields to collect
+### Collect when applicable
 
-| Field | Required | Notes |
-|-------|----------|-------|
-| `geckoId` | If on CoinGecko | Used for price fallback |
-| `collateral` | Yes | Specific assets, not marketing copy |
-| `pegMechanism` | Yes | HOW the peg is maintained |
-| `jurisdiction` | For centralized/centralized-dependent | Country, regulator, license |
-| `links` | Yes | Website, Twitter, Docs, Proof of Reserve |
-| `contracts` | Yes | Only chains in `shared/lib/chains.ts`; verify each address |
-| `tradedContracts` | If applicable | Bridge/variant contracts tracked for flows but not primary (e.g. USDT0 on Optimism) |
-| `proofOfReserves` | Yes if exists | type, url, provider |
-| `backing` | Yes | `rwa-backed` / `crypto-backed` / `algorithmic` |
-| `governance` | Yes | `centralized` / `centralized-dependent` / `decentralized` |
-| `yieldBearing` | Yes | Does the token itself accrue yield? |
-| `navToken` | Yes | Is price > $1 and appreciating? |
-| `rwa` | Yes | Backed by real-world assets? |
-| `canBeBlacklisted` | Yes | Can the issuer freeze/blacklist addresses? `true`, `false`, or `"possible"` |
-| `dependencies` | If applicable | Does this coin wrap or depend on another tracked stablecoin? e.g. sDAI → DAI. Set `{id, weight, type}` where type is `wrapper`, `mechanism`, or `collateral` |
-| `pythFeedId` | If available | Pyth Network price feed ID — enables Pyth as a price source for depeg detection |
-| `commodityOunces` | For gold/silver tokens | Troy ounces per token |
+- `llamaId`
+- `detailProvider`
+- `geckoId`
+- `cmcSlug`
+- `protocolSlug`
+- `pythFeedId`
+- `pegReferenceId`
+- `commodityOunces`
+- `proofOfReserves`
+- `jurisdiction`
+- `tradedContracts`
+- `dependencies`
+- `canBeBlacklisted`
+- `chainTier`
+- `deploymentModel`
+- `collateralQuality`
+- `custodyModel`
+- `governanceQuality`
+- `infrastructures`
+- `yieldConfig`
+- `liveReservesConfig`
+- `notices`
+- `tags`
+- all pre-launch metadata from Phase 0a
 
-### System eligibility research
+### Research questions you should answer up front
 
-In addition to metadata fields, Phase 2 must investigate these questions to drive Phase 5 decisions:
+- Is the coin in DefiLlama stablecoins? If yes, what is its `llamaId`?
+- Is it on CoinGecko? If yes, what is its `geckoId`?
+- Does it have a stablecoin-specific CMC slug worth keeping as a fallback?
+- Does it have a Pyth feed?
+- Does it have a public reserves/transparency API or on-chain reserve proof?
+- Is there a meaningful redemption route worth modeling?
+- Is the token itself yield-bearing, or is yield only available through a separate wrapper?
+- Is Ethereum a canonical issuance chain worth tracking for mint/burn?
+- Does Bluechip publish a rating for it?
+- Does it belong to an existing infrastructure cohort such as `liquity-v1`, `liquity-v2`, or `m0`?
 
-| Question | What to look for | Drives |
-|----------|-----------------|--------|
-| **Does the issuer publish a live reserves API or transparency page?** | Look for API endpoints, attestation feeds, on-chain proof-of-reserve contracts, or structured transparency pages that expose reserve composition data | `liveReservesConfig` (Phase 5) |
-| **What yield mechanism does this coin use (if any)?** | Rebase, NAV appreciation, lending vault, fee sharing? Is there a separate yield-bearing wrapper token (e.g. USDe→sUSDe)? Is there a DefiLlama pool for it? | Yield pipeline configs (Phase 5) |
-| **Is this coin deployed on Ethereum?** | Check `contracts[]` for an Ethereum address | Mint/burn tracking (Phase 5) |
-| **Does Bluechip rate this coin?** | Check `bluechip.org/en/coins/{likely-slug}` | `BLUECHIP_SLUG_MAP` (Phase 5) |
-| **What is the redemption route?** | Direct issuer redemption? Queue-based? Collateral unlock? PSM swap? What are the fees, settlement time, access restrictions? | Redemption backstop config (Phase 5) |
+### Research quality rules
 
-Record answers to these questions alongside the metadata — they'll be consumed in Phase 5.
+- Verify contract addresses against official docs and the relevant explorer.
+- For EVM contracts, store lowercase hex addresses.
+- Keep Solana, Tron, TON, Aptos, Sui, Near, and other non-EVM addresses in their native display form.
+- Use `x.com`, not `twitter.com`.
+- Prefer specific collateral descriptions over marketing copy.
 
 ---
 
-## Phase 3 — Write the `stablecoins.ts` entry
+## Phase 3 - Classify It Correctly
 
-### Helper functions
+### Current enum surface
 
-```typescript
-usd(id, name, symbol, backing, governance, opts)    // USD-pegged
-eur(id, name, symbol, backing, governance, opts)    // EUR-pegged
-other(id, name, symbol, backing, governance, pegCurrency, opts)  // everything else
-```
-
-### Classification flags
-
-| Flag | Values |
-|------|--------|
-| `backing` | `rwa-backed` \| `crypto-backed` \| `algorithmic` |
-| `governance` | `centralized` \| `centralized-dependent` \| `decentralized` |
+| Field | Current values |
+|------|----------------|
+| `flags.backing` | `rwa-backed` \| `crypto-backed` \| `algorithmic` |
+| `flags.governance` | `centralized` \| `centralized-dependent` \| `decentralized` |
+| `chainTier` | `ethereum` \| `stage1-l2` \| `mature-alt-l1` \| `established-alt-l1` \| `unproven` |
+| `deploymentModel` | `single-chain` \| `canonical-bridge` \| `third-party-bridge` \| `native-multichain` |
 | `collateralQuality` | `native` \| `rwa` \| `eth-lst` \| `alt-lst-bridged-or-mixed` \| `exotic` |
-| `custodyModel` | `onchain` \| `institutional` \| `cex` |
+| `custodyModel` | `onchain` \| `institutional-top` \| `institutional-regulated` \| `institutional-unregulated` \| `institutional-sanctioned` \| `cex` |
 | `governanceQuality` | `immutable-code` \| `dao-governance` \| `multisig` \| `regulated-entity` \| `single-entity` \| `wrapper` |
+| `dependencies[].type` | `wrapper` \| `mechanism` \| `collateral` |
+| `yieldConfig.yieldType` | `lending-vault` \| `rebase` \| `fee-sharing` \| `lp-receipt` \| `nav-appreciation` \| `governance-set` \| `lending-opportunity` |
+| `infrastructures[]` | `liquity-v1` \| `liquity-v2` \| `m0` |
+| `launchPhase` | `announced` \| `testnet` \| `auditing` \| `beta` \| `launching-soon` |
 
-Use `collateralQuality: "exotic"` when the backing has meaningful non-standard risk (e.g. crypto carry, private credit, illiquid assets). Use `governanceQuality: "regulated-entity"` for SEC/FCA/MAS-supervised issuers.
+### Classification rules that are easy to get wrong
 
-### yieldConfig
+- `flags.backing` should describe the actual reserve base, not the marketing story.
+- `flags.governance` is the coarse public taxonomy. `governanceQuality` is the finer report-card override.
+- `canBeBlacklisted` only accepts `true`, `false`, or `"possible"`. Do not invent `"inherited"` in metadata; that is computed later.
+- `pegReferenceId` is for NAV wrappers or derivative assets whose stability should inherit from another tracked base asset.
+- `tradedContracts` is for market-traded variants that matter for discovery/liquidity/yield identity but are not the canonical supply contracts.
+- `tags` is optional editorial metadata. Do not use it instead of a first-class field.
 
-Required for all `yieldBearing: true` coins:
+### Infrastructure taxonomy vs dependency graph
 
-```typescript
-yieldConfig: { yieldSource: "…", yieldType: "nav-appreciation" | "rebase" | "lending-vault" | "fee-sharing" | … }
-```
+`infrastructures[]` is project taxonomy. `dependencies[]` is reserve/mechanism dependency.
 
-Use `nav-appreciation` for tokens whose price rises over time (USYC, BUIDL, mTBILL).
-Use `rebase` for tokens that stay at $1 while balances grow (USD+ by Dinari, OUSD).
+Use `infrastructures[]` only when the coin directly belongs to a supported technical lineage:
 
-### Insertion point
+- `liquity-v1`: original Liquity design, 110% liquidation threshold, Stability Pool liquidations, no ongoing borrower interest
+- `liquity-v2`: BOLD-style design, user-set borrower rates, branch-style collateral markets, Stability Pools
+- `m0`: built on the M0 issuance platform, minter governance, `SwapFacility`, `MExtension.sol` pattern
 
-Add new coins just before the `// ── Additional non-USD pegs ─` section comment. For non-USD pegs, add inside the appropriate peg section.
+Important M0 rules:
 
-### Quality standards for text fields
+- M0-built coins may or may not actually hold `m-m0` in reserves.
+- `m-m0` itself is not tagged with `["m0"]`; it is the base infrastructure asset.
+- A wrapper or downstream derivative should not inherit `["m0"]` automatically just because the base asset depends on M0.
 
-- **`collateral`**: Name specific asset types. Bad: *"U.S. dollar reserves"*. Good: *"Short-term U.S. Treasury Bills (WAM ~28 days), held in segregated non-rehypothecated accounts at BNY Mellon"*
-- **`pegMechanism`**: Explain the mechanism. Bad: *"Direct redemption through issuer"*. Good: *"1:1 mint and redemption against USDC at prevailing NAV; NAV oracle updated daily by Ankura Trust"*
-- **`contracts`**: Lowercase hex for EVM, original case for Tron/Solana. Verify every address via the block explorer tokeninfo API before adding.
-- **`links`**: Use `x.com` not `twitter.com`. Order: Website, Twitter, Docs, Proof of Reserve.
+Use `dependencies[]` separately to describe asset relationships:
 
-### Example entry (minimal)
+- `wrapper`: direct 1:1 or near-1:1 wrapper on another tracked asset
+- `mechanism`: the upstream asset is central to the mint/redeem mechanism
+- `collateral`: the upstream asset sits in the reserves/collateral stack
 
-```typescript
-usd("ausd-acme", "Acme Stablecoin", "AUSD", "rwa-backed", "centralized", {
-  llamaId: "999", detailProvider: "defillama", geckoId: "acme-usd",
-  yieldBearing: true, rwa: true, navToken: false,
-  canBeBlacklisted: true,
-  yieldConfig: { yieldSource: "Acme T-bill fund", yieldType: "rebase" },
-  collateral: "Short-term U.S. Treasury bills held at Bank X in a bankruptcy-remote SPV",
-  pegMechanism: "1:1 mint and redemption against USDC; yield distributed via on-chain rebase",
-  proofOfReserves: { type: "independent-audit", url: "https://acme.io/transparency", provider: "Firm Y" },
-  links: [
-    { label: "Website", url: "https://acme.io" },
-    { label: "Twitter", url: "https://x.com/acme" },
-    { label: "Docs", url: "https://docs.acme.io" },
-  ],
-  jurisdiction: { country: "United States", regulator: "OCC", license: "National Trust Charter" },
-  contracts: [
-    { chain: "ethereum", address: "0xabc…", decimals: 6 },
-  ],
-  collateralQuality: "rwa",
-  custodyModel: "institutional",
-  governanceQuality: "regulated-entity",
-  reserves: [
-    { name: "Short-term U.S. Treasury Bills", pct: 100, risk: "very-low" },
-  ],
-}),
-```
+### Reserve composition rules
 
----
+Populate `reserves[]` with real slices, not generic prose.
 
-## Phase 4 — Fetch and add the logo
+- Percentages should reflect the best reviewed current mix.
+- Use `coinId` when a slice is another tracked stablecoin.
+- Use `depType` when the slice relationship should become a dependency.
+- Keep risk tiers aligned with `docs/report-cards.md`.
+- Even with `liveReservesConfig`, keep `reserves[]` up to date because fallback views and dependency logic still use it.
 
-Logos are served from `public/logos/` and mapped in `data/logos.json`. Both must be updated.
+### When to override resilience/decentralization fields
 
-### 1. Download the image file
+Default inference exists, but many real assets need explicit overrides.
 
-Fetch the logo from one of these sources (in order of preference):
+Override when the defaults would hide real structure, especially for:
 
-1. **Official project website or GitHub repo** — press kits or `assets/` folders often have high-res SVG/PNG. Use `agent-browser` or `curl` to download.
-2. **CoinGecko coin page** — the thumbnail URL follows the pattern `https://assets.coingecko.com/coins/images/{n}/large/{filename}`. Find it via the CoinGecko API (`GET /api/v3/coins/{geckoId}` → `image.large`) or by inspecting the coin page.
-3. **DefiLlama coin page** — check the coin's icon URL.
-
-```bash
-# Example: download from CoinGecko
-curl -L "https://assets.coingecko.com/coins/images/12345/large/token-logo.png" \
-  -o public/logos/ausd-acme.png
-```
-
-| File name convention | Example |
-|----------------------|---------|
-| `{id}.{ext}` | `usdy-ondo-finance.png` |
-
-Accepted formats: `.svg` > `.png` > `.webp` > `.jpg`. Aim for at least 64×64 px; square or near-square crops look best in the UI.
-
-### 2. Register it in `data/logos.json`
-
-Add one line mapping the coin's ID to its public path:
-
-```json
-"usdy-ondo-finance": "/logos/usdy-ondo-finance.png",
-```
-
-Keep the file sorted alphabetically by key.
+- non-Ethereum primaries
+- third-party bridge deployments
+- wrapper tokens
+- centralized custody around otherwise on-chain systems
+- sanction-linked or CEX-held collateral
+- regulated issuers that deserve `regulated-entity`
 
 ---
 
-## Phase 5 — Worker-side configuration
+## Phase 4 - Edit The Registry
 
-Evaluate **every branch** below based on the system eligibility research from Phase 2. Skip a branch only when it genuinely doesn't apply to this coin.
+Add the new object to the chosen JSON file using current field names and current enum values.
 
-### 5a. Contract & reserve enrichment skills
+### Minimal active-asset skeleton
 
-| Skill | When to use |
-|-------|-------------|
-| `contract-populate` | Populate contract addresses for one coin using CoinGecko `detail_platforms` |
-| `contract-enrich` | Discover missing chain deployments using DefiLlama supply data across all tracked coins |
-| `reserve-research` | Populate `reserves[]` composition with sourced percentages |
-| `resilience-classify` | Research and set `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel` overrides |
-
-### 5b. Live reserves
-
-**Evaluate:** Does the coin have a live reserves API, transparency page, attestation feed, or on-chain proof-of-reserve contract?
-
-- **Yes →** Add `liveReservesConfig` to the coin's entry in `stablecoins.ts`. Check whether an existing adapter in `worker/src/cron/reserve-adapters/index.ts` fits (currently 23+ adapters). If not, write and register a new adapter.
-- **No →** Ensure the static `reserves[]` array is populated (via `reserve-research` skill). The API falls back to `curated-fallback` automatically.
-
-`liveReservesConfig` structure:
-```typescript
-liveReservesConfig: {
-  adapter: "adapter-key",        // registered key in reserve-adapters/index.ts
-  version: 1,
-  semantics: "collateral-mix",   // or "protocol-reserve" | "attestation-mix" | "single-asset"
-  display: { url: "https://…/transparency", label: "Acme Transparency" },
-  inputs: {
-    primary: { kind: "http-json", url: "https://…/api/reserves" },
-  },
-},
-```
-
-See `docs/live-reserves.md` for full reference.
-
-### 5c. Yield pipeline
-
-**Evaluate:** Is `yieldBearing: true`? Does the coin have a yield wrapper? What yield mechanism is used?
-
-The yield system has 4 tiers that resolve automatically in order. Most coins need no config beyond `yieldConfig` in `stablecoins.ts`. Check each level:
-
-| Config | File | When to add |
-|--------|------|-------------|
-| `YIELD_POOL_MAP` | `worker/src/cron/yield-config.ts` | Map coin ID → DefiLlama pool UUID when symbol-based auto-matching is ambiguous or wrong |
-| `YIELD_VARIANT_MAP` | `worker/src/cron/yield-config.ts` | Coin has a **separate yield-bearing wrapper** (e.g. USDe → sUSDe, FRAX → sFRAX). Add `{variantSymbol, variantAddress?, variantChain?, yieldSource?, yieldType?}` |
-| `ON_CHAIN_RATE_CONFIGS` | `worker/src/cron/yield-config.ts` | Want precise Tier 1 on-chain vault exchange-rate APY via `eth_call` |
-| `RATE_DERIVED_CONFIGS` | `worker/src/cron/yield-config.ts` | Token tracks T-bill rate minus a spread (BUIDL-pattern: fixed $1 NAV, distributes yield as new token mints) |
-
-Non-yield-bearing coins and coins whose symbol cleanly matches a DeFiLlama pool need **no yield config beyond the metadata**.
-
-See `docs/yield-intelligence.md` for full reference.
-
-### 5d. Mint/burn flow tracking
-
-**Evaluate:** Is the coin deployed on Ethereum with meaningful supply (>$10M)?
-
-- **Yes →** Add an entry to `worker/src/lib/mint-burn-contracts.ts`. The config needs:
-  - `startBlock` — contract deployment block on Ethereum
-  - `dustThreshold` — minimum event amount to track
-  - tier: `extended` (use `critical` only for top-6 stablecoins)
-  - Token address/decimals resolve automatically from `contracts[]` in `stablecoins.ts`
-- **No →** Skip. Mint/burn tracking is Ethereum-only.
-
-See `docs/mint-burn-flows.md` for full reference.
-
-### 5e. Bluechip rating
-
-**Evaluate:** Does Bluechip publish a rating for this coin?
-
-- **Yes →** Add `slug: "pharos-coin-id"` to `BLUECHIP_SLUG_MAP` in `worker/src/lib/bluechip-slugs.ts`
-- **No →** Skip. Most coins don't have a Bluechip rating.
-
-### 5f. Redemption backstops
-
-**Evaluate:** Does this coin have a meaningful redemption route worth modeling?
-
-- **Yes →** Add an entry to `REDEMPTION_BACKSTOP_CONFIGS` in `shared/lib/redemption-backstops.ts`. Specify `routeFamily`, `accessModel`, `settlementModel`, `executionModel`, `outputAssetType`, `capacityModel`, and `costModel`. Template helpers exist for common patterns (`issuerBase`, `collateralRedeemBase`, `queueRedeemBase`).
-- **No →** Skip. The report card liquidity dimension still computes from DEX data alone.
-
-See `docs/redemption-backstops.md` for full reference.
-
----
-
-## Phase 6 — AI summary
-
-> **This phase is mandatory.** Do not skip it.
-
-Run the `write-ai-summaries` skill. It reads the coin's entry from `stablecoins.ts` and writes a sardonic, data-driven editorial summary to `data/ai-summaries.json`.
-
-Key voice guidelines (see the skill for full detail):
-- Ground observations in facts — market cap, backing type, governance, notable events
-- Sardonic, not snarky: wit should illuminate
-- No marketing language, no hedging everything
-- 3–6 sentences, each one earning its place
-
----
-
-## Phase 7 — Backfill supply history
-
-Newly added coins have no historical rows in the `supply_history` table. Without a backfill the market cap chart on the detail page will be empty until tomorrow's daily snapshot cron runs (and will stay empty forever for all prior dates).
-
-The right backfill endpoint depends on source fields, not the `id` format:
-
-| Condition | Endpoint | What it does |
-|-----------|----------|-------------|
-| Coin has `llamaId` (DL-tracked) | `POST /api/backfill-supply-history?stablecoin={id}` | Reads full DL history via `/stablecoin/{llamaId}` |
-| Coin has `geckoId` but no `llamaId` | `POST /api/backfill-cg-prices?stablecoin={id}` | Reads CoinGecko `market_chart` (prices + market caps) and inserts rows |
-| Neither | None — no historical data available | Chart will stay empty; document this in the coin's notes |
-
-Both endpoints are gated by **Cloudflare Access** via `ops-api.pharos.watch` and require **POST** method. Call them immediately after pushing the new entries to production.
-
-```bash
-# For a DL-tracked coin:
-curl -X POST "https://ops-api.pharos.watch/api/backfill-supply-history?stablecoin=usdy-ondo-finance" \
-  -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET"
-
-# For a CoinGecko-only coin:
-curl -X POST "https://ops-api.pharos.watch/api/backfill-cg-prices?stablecoin=ousg-ondo-finance" \
-  -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET"
-```
-
-`backfill-cg-prices` also back-fills `price` for any existing rows that have `NULL` in that column, so it is safe to run on any coin with a `geckoId`.
-
-**Response shape (backfill-cg-prices):**
 ```json
 {
-  "coinsProcessed": 1,
-  "totalPricesFilled": 0,
-  "totalRowsInserted": 365,
-  "coinDetails": [{ "id": "ousg-ondo-finance", "symbol": "OUSG", "pricesFilled": 0, "rowsInserted": 365 }]
+  "id": "ausd-acme",
+  "name": "Acme USD",
+  "symbol": "AUSD",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "llamaId": "999",
+  "detailProvider": "defillama",
+  "geckoId": "acme-usd",
+  "collateral": "Short-term U.S. Treasury bills held in a bankruptcy-remote vehicle",
+  "pegMechanism": "1:1 mint and redemption against issuer-approved cash subscriptions",
+  "links": [
+    { "label": "Website", "url": "https://acme.example" },
+    { "label": "X", "url": "https://x.com/acme" },
+    { "label": "Docs", "url": "https://docs.acme.example" }
+  ],
+  "contracts": [
+    { "chain": "ethereum", "address": "0xabc123...", "decimals": 6 }
+  ],
+  "reserves": [
+    { "name": "Short-term U.S. Treasury Bills", "pct": 100, "risk": "very-low" }
+  ]
 }
 ```
 
+### Current registry editing checklist
+
+- Add the JSON object to the right file.
+- Add the ID to `shared/data/stablecoins/canonical-order.json`.
+- Keep new keys canonical and consistent with the current schema.
+- Use `npm run check:stablecoin-data` before moving on.
+
 ---
 
-## Phase 8 — Verify and push
+## Phase 5 - Evaluate Downstream Coverage Branches
+
+Do not assume every branch applies. Evaluate each one explicitly.
+
+### 5a. Logo and summary
+
+New tracked coins should ship with both:
+
+- a logo entry in `data/logos.json`
+- an editorial summary entry in `data/ai-summaries.json`
+
+See Phase 6 for exact rules.
+
+### 5b. Live reserves
+
+If the issuer publishes a usable transparency API, attestation feed, or on-chain reserve proof:
+
+- add `liveReservesConfig` to the coin metadata
+- reuse an existing adapter if it actually matches the source
+- otherwise add a new adapter under `worker/src/cron/reserve-adapters/` and register it
+
+Current `liveReservesConfig` rules:
+
+- `adapter`, `version`, and `semantics` are required
+- `display.url` / `display.label` should point to the public source page
+- `inputs.primary` is required
+- `inputs.fallbacks` is optional
+- use a coin-specific `breakerScope` when the same adapter is reused against different upstream sources or params
+- shared breaker scopes are only appropriate when the source is truly shared and source-invariant, such as the M0 family
+- `curated-validated` must align with a tracked on-chain contract for that coin
+
+If no live source exists:
+
+- keep `reserves[]` populated
+- do not invent a live config
+
+### 5c. Yield intelligence
+
+If `flags.yieldBearing` is `true`, add `yieldConfig`.
+
+Then evaluate whether runtime config is also needed in `worker/src/cron/yield-config.ts`:
+
+- `YIELD_POOL_MAP`: explicit DeFiLlama pool mapping
+- `YIELD_VARIANT_MAP`: separate wrapper/savings token that Pharos does not track directly
+- `EXPLICIT_YIELD_SOURCE_POOL_MAP`: curated exact-pool override for special assets
+- `ON_CHAIN_RATE_CONFIGS`: deterministic on-chain exchange-rate APY
+- `RATE_DERIVED_CONFIGS`: benchmark-minus-spread products
+
+Notes:
+
+- Use a real mechanism type such as `nav-appreciation`, `rebase`, or `lending-vault`.
+- `lending-opportunity` is primarily a runtime-discovered publication type, not the usual static metadata choice.
+- If the yield wrapper is tracked as its own coin, do not also force the base asset through `YIELD_VARIANT_MAP`.
+
+### 5d. Redemption backstops
+
+If the coin has a meaningful direct redemption or swap route, add a config to `shared/lib/redemption-backstops.ts` / `shared/lib/redemption-backstop-configs/*`.
+
+Evaluate:
+
+- route family
+- access model
+- settlement model
+- execution model
+- output asset type
+- capacity model
+- cost model
+
+If the route is weak, unknown, or impossible to review cleanly, skip it rather than overstating exit quality.
+
+### 5e. Mint/burn flows
+
+If there is a meaningful issuance contract on a tracked chain, usually Ethereum, evaluate adding a config to `worker/src/lib/mint-burn-contracts.ts`.
+
+Current practice:
+
+- token identity should come from shared metadata where possible
+- prefer a reviewed `startBlock` over the blanket default coverage floor
+- use `tier: "extended"` by default
+- reserve `tier: "critical"` for truly major coverage
+- set a realistic `dustThreshold`
+- add bridge-detection hints only when there is a verified reason
+
+### 5f. Bluechip ratings
+
+If Bluechip covers the asset, update `worker/src/lib/bluechip-slugs.ts`.
+
+Important: the map is `bluechip-slug -> pharos-id`, not the other way around.
+
+### 5g. Price and discovery edge cases
+
+Evaluate whether the asset needs any of these metadata fields:
+
+- `pythFeedId` for oracle corroboration
+- `cmcSlug` when CMC fallback matters
+- `protocolSlug` for commodity/protocol-backed historical TVL paths
+- `tradedContracts` for market-traded variants the runtime should recognize separately
+- `pegReferenceId` for derivative NAV wrappers
+
+---
+
+## Phase 6 - Static Assets And Editorial Copy
+
+### 6a. Logos
+
+Current frontend practice is a local logo file plus a static map entry.
+
+- Put the file in `public/logos/`
+- Add an entry to `data/logos.json`
+- New entries should use the canonical stablecoin ID as the key
+- New local filenames should preferably be `${id}.${ext}` even though many historical files use older naming
+
+Example:
+
+```json
+"ausd-acme": "/logos/ausd-acme.png"
+```
+
+Notes:
+
+- `data/logos.json` currently contains legacy numeric keys. Ignore that for new work.
+- `scripts/fetch-logos.ts` exists, but the checked-in production map today is local `/logos/...` paths.
+- If no logo exists yet, the UI can fall back to initials, but a tracked addition should ideally still ship with a real logo.
+
+### 6b. Editorial summary
+
+Add an entry to `data/ai-summaries.json` keyed by canonical ID:
+
+```json
+"ausd-acme": {
+  "title": "Short headline",
+  "text": "3-6 sentence editorial summary grounded in actual Pharos metadata and market structure.",
+  "updatedAt": "2026-04-09"
+}
+```
+
+Current expectations:
+
+- keyed by canonical ID
+- factual, specific, and editorial rather than marketing
+- used on active detail pages and as teaser copy on `/upcoming/` when relevant
+
+Do not reference the retired `write-ai-summaries` skill in current workflow docs or implementation notes unless you have verified it is actually available.
+
+### 6c. Notices and tags
+
+If the coin needs explicit user-facing caveats, add `notices`.
+
+Use `tags` sparingly for editorial categorization, not for core classification.
+
+---
+
+## Phase 7 - Validate
+
+For a normal stablecoin addition, run at least:
 
 ```bash
-npm run build          # TypeScript compile + static export; must pass with zero errors
-python3 -m json.tool data/ai-summaries.json > /dev/null  # validate JSON
-npm test               # run test suite (optional but recommended)
-git add shared/lib/stablecoins.ts data/ai-summaries.json data/logos.json public/logos/
-git commit -m "Add {SYMBOL}: {one-line description}"
-git push origin main
+npm run check:stablecoin-data
+npm run lint
+npm test
+npm run build
+cd worker && npx tsc --noEmit
+npm run test:merge-gate
 ```
 
-If the branch has diverged from remote, rebase before pushing:
+Also run anything else made relevant by your diff:
+
+- new redemption config -> `npm run check:redemption-backstops`
+- verified docs changed -> `npm run check:doc-counts`, `npm run check:verified-doc-links`, `npm run check:doc-sync`
+
+If you added or changed a new upstream/provider or methodology-affecting runtime path, update the matching verified docs in the same change:
+
+- `docs/architecture.md`
+- `docs/api-reference.md`
+- `docs/testing.md`
+- `docs/worker-and-api-limits.md`
+- the area-specific feature doc
+- `/methodology` and its related changelog/timeline doc if scoring or methodology behavior changed
+- the about page if a new data source was introduced
+
+---
+
+## Phase 8 - Merge, Push, Deploy, Then Backfill
+
+This phase is post-validation and post-merge.
+
+Only do the backfill after all of these are true:
+
+- the local validation in Phase 7 passed
+- the change was merged
+- the merged change was pushed
+- the production deploy completed
+
+After the production deploy, backfill history for live assets:
+
+- If the coin has `llamaId`, use `POST /api/backfill-supply-history`
+- If the coin has `geckoId` but no `llamaId`, use `POST /api/backfill-cg-prices`
+- If it is pre-launch, skip runtime backfills until activation
+
+Examples:
 
 ```bash
-git stash              # stash unrelated working-tree changes
-git pull --rebase      # rebase local commits onto remote
-git stash pop
-git push origin main
+curl -X POST "https://ops-api.pharos.watch/api/backfill-supply-history?stablecoin=ausd-acme" \
+  -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET"
 ```
+
+```bash
+curl -X POST "https://ops-api.pharos.watch/api/backfill-cg-prices?stablecoin=ausd-acme" \
+  -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET"
+```
+
+Optional:
+
+- `backfill-supply-history` accepts `allow-constant-price-fallback=true` for specific sparse-history cases
+
+Do not hardcode direct pushes to `main` into the process. Follow the repo's normal branch and deploy workflow.
+
+## Phase 9 - Post-Deploy Verification
+
+- [ ] The coin appears in the expected public surface:
+  active -> homepage/table/detail
+  pre-launch -> `/upcoming/` and pre-launch detail
+- [ ] Logo resolves correctly
+- [ ] Editorial summary renders correctly
+- [ ] The detail page loads without runtime errors
+- [ ] `coverage/` reflects the expected coverage state
+- [ ] If `infrastructures[]` was set, the correct infrastructure hub includes the coin
+- [ ] If `liveReservesConfig` was added, `GET /api/stablecoin-reserves/:id` works after the next hourly reserve sync
+- [ ] If `yieldConfig` or yield runtime config was added, the asset appears correctly on `/yield/` or in the detail yield section after the next yield sync
+- [ ] If a redemption backstop was added, `GET /api/redemption-backstops` includes the coin after the next hourly reserve lane
+- [ ] If mint/burn coverage was added, the coin appears in `/api/mint-burn-flows` / `/api/mint-burn-events` after the next lane run
+- [ ] If the asset is live and backfillable, the market-cap chart is no longer empty after Phase 8
 
 ---
 
-## Phase 9 — Post-push completion checklist
+## Quick Reference
 
-After the code is deployed and live, verify:
+### Current infrastructure values
 
-- [ ] Coin appears on the homepage table with correct name, symbol, and logo
-- [ ] Detail page (`/stablecoin/{id}`) loads without errors
-- [ ] AI summary renders on the detail page
-- [ ] Supply history backfill ran successfully (Phase 7)
-- [ ] Coverage page (`/coverage/`) shows the new coin with expected coverage dots
-- [ ] If live reserves were configured: check `/api/live-reserves?stablecoin={id}` returns data after the next hourly sync
-- [ ] If yield was configured: check `/api/yield-rankings` includes the coin after the next yield sync
+- `liquity-v1`
+- `liquity-v2`
+- `m0`
 
----
+### Current dependency types
 
-## Quick-reference: ID decision tree
+- `wrapper`
+- `mechanism`
+- `collateral`
 
-```
-1. Choose ticker-issuer ID:  {ticker}-{issuer}  (e.g. "usdy-ondo-finance")
-2. Set data source fields:
-   └─ In DefiLlama stablecoins API? → set llamaId + detailProvider: "defillama"
-   └─ CoinGecko only?              → set geckoId + detailProvider: "coingecko"
-   └─ Gold/silver token?            → set geckoId + detailProvider: "commodity"
-```
+### Current detail providers
 
-## Quick-reference: governance flag
+- `defillama`
+- `coingecko`
+- `commodity`
 
-```
-Who controls the peg / can pause / change reserves?
-  └─ A company / single legal entity (with or without DAO veneer) → "centralized"
-  └─ A protocol that depends on centralized assets (e.g. USDC collateral) → "centralized-dependent"
-  └─ Immutable contracts, no admin keys, no human override → "decentralized"
-```
+### Current proof-of-reserves types
 
----
+- `independent-audit`
+- `real-time`
+- `self-reported`
 
-## Related documentation
+### Current live-reserve semantics
 
-- `docs/classification.md` — full classification system, peg currencies, flag semantics
-- `docs/data-pipeline.md` — how supply data is fetched and enriched per ID type
-- `docs/yield-intelligence.md` — yieldConfig fields, APY resolution tiers, navToken behavior
-- `docs/live-reserves.md` — live reserve sync config, adapter registry, storage, API modes
-- `docs/redemption-backstops.md` — redemption-route configs, effective-exit scoring
-- `docs/mint-burn-flows.md` — mint/burn flow tracker, contract configs, scoring
-- `docs/report-cards.md` — how collateralQuality / custodyModel affect safety scores
-- `shared/types/index.ts` — canonical TypeScript types for all fields
-- `shared/lib/chains.ts` — supported chain identifiers for `contracts[]`
+- `collateral-mix`
+- `protocol-reserve`
+- `attestation-mix`
+- `single-asset`
+
+### Current reminder on active backing classification
+
+- New active tracked assets should almost always be `rwa-backed` or `crypto-backed`
+- Treat `algorithmic` as an exceptional legacy/historical category, not the default place to put unstable designs
