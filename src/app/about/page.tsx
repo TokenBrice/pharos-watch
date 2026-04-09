@@ -47,7 +47,7 @@ const DATA_SOURCE_GROUPS = [
   {
     label: "On-chain Reads & Events",
     sources:
-      "Etherscan v2 (freeze events), TronGrid, Alchemy, dRPC, selected public chain RPCs (including EVM RPCs for Ethereum mint/burn flows, direct Liquity/B.Protocol reads, and Frankencoin's ZCHF -> VCHF StablecoinBridge balance probe, plus Solana mainnet RPC reads for tracked mint-supply validation), and reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist coverage",
+      "Etherscan v2 (freeze events), TronGrid, Alchemy, dRPC, selected public chain RPCs (including EVM RPCs for Ethereum mint/burn flows, direct Liquity/B.Protocol reads, and Frankencoin's ZCHF -> VCHF StablecoinBridge balance probe, plus Solana mainnet RPC reads for tracked mint-supply validation), and reconciled freeze-ledger bootstrap rows from kyc.rip / stables.rip for major ETH and TRON blacklist coverage, and M0 GraphQL subgraph for Infrastructure tagging",
   },
   {
     label: "Ratings & Reference",
