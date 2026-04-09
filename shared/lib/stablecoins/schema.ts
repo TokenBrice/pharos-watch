@@ -9,6 +9,7 @@ import {
   COLLATERAL_QUALITY_VALUES,
   CUSTODY_MODEL_VALUES,
   GOVERNANCE_QUALITY_VALUES,
+  INFRASTRUCTURE_VALUES,
   YIELD_TYPE_VALUES,
 } from "../../types/core";
 
@@ -166,6 +167,7 @@ export const StablecoinMetaAssetSchema = z.object({
   governanceQuality: z.enum(GOVERNANCE_QUALITY_VALUES).optional(),
   protocolFamily: z.enum(PROTOCOL_FAMILY_VALUES).optional(),
   protocolVariant: z.enum(PROTOCOL_VARIANT_VALUES).optional(),
+  infrastructures: z.array(z.enum(INFRASTRUCTURE_VALUES)).optional(),
   reserves: z.array(ReserveSliceAssetSchema).optional(),
   liveReservesConfig: LiveReservesConfigSchema.optional(),
   notices: z.array(CoinNoticeAssetSchema).optional(),
