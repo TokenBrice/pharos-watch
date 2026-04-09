@@ -97,7 +97,7 @@ describe("adaptReservoirReserves", () => {
       new AbortController().signal,
       {
         requestCache: new Map([
-          ["json-get:https://example.com/reservoir:12000", Promise.resolve(SAMPLE_RESPONSE)],
+          ["json-get:https://example.com/reservoir:12000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve(SAMPLE_RESPONSE)],
         ]),
       } as never,
     );
@@ -126,7 +126,7 @@ describe("adaptReservoirReserves", () => {
       new AbortController().signal,
       {
         requestCache: new Map([
-          ["json-get:https://example.com/reservoir:12000", Promise.resolve({
+          ["json-get:https://example.com/reservoir:12000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve({
             ...SAMPLE_RESPONSE,
             assets: [
               ...SAMPLE_RESPONSE.assets,

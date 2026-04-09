@@ -10,6 +10,7 @@ import {
   CIRCUIT_OPEN_THRESHOLD,
   CIRCUIT_PROBE_INTERVAL_SEC,
 } from "./circuit-config";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 
 export type CircuitState = "closed" | "open" | "half-open";
 export type CircuitOutcomeDecision = "success" | "failure" | "neutral";
@@ -190,4 +191,24 @@ export async function getCircuitStates(db: D1Database): Promise<Record<string, C
     }
   }
   return states;
+}
+
+function getConfiguredLiveReserveCircuitSources(): Set<string> {
+  return new Set(
+    ACTIVE_STABLECOINS
+      .map((coin) => coin.liveReservesConfig)
+      .filter((config): config is NonNullable<(typeof ACTIVE_STABLECOINS)[number]["liveReservesConfig"]> => Boolean(config))
+      .map((config) => `live-reserves:${config.breakerScope ?? config.adapter}`),
+  );
+}
+
+export function filterStaleLiveReserveCircuitStates(
+  circuits: Record<string, CircuitRecord>,
+): Record<string, CircuitRecord> {
+  const configuredLiveReserveSources = getConfiguredLiveReserveCircuitSources();
+  return Object.fromEntries(
+    Object.entries(circuits).filter(([source]) => (
+      !source.startsWith("live-reserves:") || configuredLiveReserveSources.has(source)
+    )),
+  );
 }

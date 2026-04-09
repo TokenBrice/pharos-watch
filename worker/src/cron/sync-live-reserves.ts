@@ -2,7 +2,7 @@ import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { getReserveAdapter, type AdapterContext, type AdapterResult, type ReserveAdapterDefinition } from "./reserve-adapters/index";
 import { recordOutcomeSafe } from "../lib/circuit-breaker";
-import { buildInClause } from "../lib/db";
+import { deleteCache } from "../lib/db-cache";
 import { reportCronProgress } from "../lib/cron-progress";
 import {
   loadReserveSyncStateMap,
@@ -34,6 +34,34 @@ function createAbortableAttemptSignal(
   };
 
   return { signal: timeout.signal, cleanup };
+}
+
+async function cleanupStaleReserveSyncArtifacts(
+  db: D1Database,
+  activeCoinIds: readonly string[],
+  activeBreakerKeys: ReadonlySet<string>,
+): Promise<void> {
+  const rows = await db
+    .prepare("SELECT stablecoin_id, breaker_key FROM reserve_sync_state")
+    .all<{ stablecoin_id: string; breaker_key: string | null }>();
+
+  const activeCoinIdSet = new Set(activeCoinIds);
+  const staleRows = (rows.results ?? []).filter((row) => !activeCoinIdSet.has(row.stablecoin_id));
+  for (const row of staleRows) {
+    await db
+      .prepare("DELETE FROM reserve_sync_state WHERE stablecoin_id = ?")
+      .bind(row.stablecoin_id)
+      .run();
+  }
+
+  const cacheRows = await db
+    .prepare("SELECT key FROM cache WHERE key LIKE 'circuit:live-reserves:%'")
+    .all<{ key: string }>();
+  for (const row of cacheRows.results ?? []) {
+    const breakerKey = row.key.replace("circuit:", "");
+    if (activeBreakerKeys.has(breakerKey)) continue;
+    await deleteCache(db, row.key);
+  }
 }
 
 async function reportLiveReserveProgress(
@@ -232,17 +260,14 @@ export async function syncLiveReserves(
     await recordOutcomeSafe(db, key, success);
   }
 
-  // Clean up ghost reserve_sync_state rows for coins no longer configured
-  if (CONFIGURED_COINS.length > 0) {
-    try {
-      const idClause = buildInClause(CONFIGURED_COINS.map((c) => c.id));
-      await db
-        .prepare(`DELETE FROM reserve_sync_state WHERE stablecoin_id NOT IN (${idClause.sql})`)
-        .bind(...idClause.binds)
-        .run();
-    } catch (e) {
-      console.warn("[sync-live-reserves] Ghost row cleanup failed:", e);
-    }
+  try {
+    await cleanupStaleReserveSyncArtifacts(
+      db,
+      CONFIGURED_COINS.map((coin) => coin.id),
+      breakerKeys,
+    );
+  } catch (e) {
+    console.warn("[sync-live-reserves] Ghost reserve artifact cleanup failed:", e);
   }
 
   let historyPrune: Awaited<ReturnType<typeof pruneLiveReserveHistory>> | null = null;

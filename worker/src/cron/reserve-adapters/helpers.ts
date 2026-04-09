@@ -63,11 +63,18 @@ interface OnchainRateProbe {
   decimals?: number;
 }
 
+interface JsonRetryOptions {
+  headers?: HeadersInit;
+}
+
 const ADAPTER_USER_AGENT = "Mozilla/5.0";
 const DEFILLAMA_PRICE_CHAIN_ALIASES: Record<string, string> = {
   hyperevm: "hyperliquid",
 };
-const SOLANA_RPC_URL = "https://api.mainnet-beta.solana.com";
+const SOLANA_RPC_URLS = [
+  "https://api.mainnet-beta.solana.com",
+  "https://api.mainnet.solana.com",
+] as const;
 
 function summarizeResponseBody(raw: string, limit = 120): string {
   return raw.replace(/\s+/g, " ").trim().slice(0, limit);
@@ -163,9 +170,10 @@ export async function fetchJsonWithRetry<T>(
   signal: AbortSignal,
   timeoutMs = 10_000,
   ctx?: AdapterContext,
+  options?: JsonRetryOptions,
 ): Promise<T> {
   return getCachedRequest(
-    `json-get:${url}:${timeoutMs}`,
+    `json-get:${url}:${timeoutMs}:${JSON.stringify(options?.headers ?? null)}`,
     async () => {
       const res = await fetchWithRetry(
         url,
@@ -174,6 +182,7 @@ export async function fetchJsonWithRetry<T>(
           headers: {
             Accept: "application/json",
             "User-Agent": ADAPTER_USER_AGENT,
+            ...(options?.headers ?? {}),
           },
         },
         2,
@@ -203,16 +212,21 @@ export async function fetchJsonPostWithRetry<T>(
   signal: AbortSignal,
   timeoutMs = 10_000,
   ctx?: AdapterContext,
+  options?: JsonRetryOptions,
 ): Promise<T> {
   const serializedBody = JSON.stringify(body);
   return getCachedRequest(
-    `json-post:${url}:${timeoutMs}:${serializedBody}`,
+    `json-post:${url}:${timeoutMs}:${serializedBody}:${JSON.stringify(options?.headers ?? null)}`,
     async () => {
       const res = await fetchWithRetry(
         url,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json", "User-Agent": ADAPTER_USER_AGENT },
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": ADAPTER_USER_AGENT,
+            ...(options?.headers ?? {}),
+          },
           body: serializedBody,
           signal,
         },
@@ -276,29 +290,41 @@ async function fetchSolanaTokenSupplyRaw(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<bigint | null> {
-  const body = await fetchJsonPostWithRetry<SolanaTokenSupplyResponse>(
-    SOLANA_RPC_URL,
-    {
-      jsonrpc: "2.0",
-      id: 1,
-      method: "getTokenSupply",
-      params: [mintAddress],
-    },
-    signal,
-    10_000,
-    ctx,
-  );
+  let lastError: unknown = null;
 
-  const amount = body.result?.value?.amount;
-  if (typeof amount !== "string" || amount.length === 0) {
-    return null;
+  for (const rpcUrl of SOLANA_RPC_URLS) {
+    try {
+      const body = await fetchJsonPostWithRetry<SolanaTokenSupplyResponse>(
+        rpcUrl,
+        {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "getTokenSupply",
+          params: [mintAddress],
+        },
+        signal,
+        10_000,
+        ctx,
+      );
+
+      const amount = body.result?.value?.amount;
+      if (typeof amount !== "string" || amount.length === 0) {
+        continue;
+      }
+
+      try {
+        return BigInt(amount);
+      } catch {
+        continue;
+      }
+    } catch (error) {
+      lastError = error;
+      continue;
+    }
   }
 
-  try {
-    return BigInt(amount);
-  } catch {
-    return null;
-  }
+  if (lastError) throw lastError;
+  return null;
 }
 
 export async function fetchDefiLlamaPrices(

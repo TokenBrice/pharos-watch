@@ -191,6 +191,48 @@ describe("syncLiveReserves", () => {
     expect(recordOutcomeSafeMock).toHaveBeenCalledTimes(uniqueBreakerKeys.size);
   });
 
+  it("cleans up stale reserve sync rows and stale live-reserve circuit cache keys", async () => {
+    mockAdapterRegistry(
+      async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
+    );
+
+    const activeCoin = ACTIVE_STABLECOINS.find((coin) => coin.liveReservesConfig);
+    expect(activeCoin?.liveReservesConfig).toBeDefined();
+    const activeBreakerKey = `live-reserves:${activeCoin!.liveReservesConfig!.breakerScope ?? activeCoin!.liveReservesConfig!.adapter}`;
+
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const db = mockD1([
+      {
+        match: "SELECT stablecoin_id, breaker_key FROM reserve_sync_state",
+        rows: [
+          { stablecoin_id: activeCoin!.id, breaker_key: activeBreakerKey },
+          { stablecoin_id: "kau-kinesis", breaker_key: "live-reserves:kau-kinesis" },
+        ],
+      },
+      {
+        match: "SELECT key FROM cache WHERE key LIKE 'circuit:live-reserves:%'",
+        rows: [
+          { key: `circuit:${activeBreakerKey}` },
+          { key: "circuit:live-reserves:kau-kinesis" },
+        ],
+      },
+    ]);
+
+    await syncLiveReserves(db, new AbortController().signal, {});
+
+    const deleteStateRows = db.getHistory().filter((entry) => (
+      entry.sql.includes("DELETE FROM reserve_sync_state WHERE stablecoin_id = ?")
+    ));
+    expect(deleteStateRows).toHaveLength(1);
+    expect(deleteStateRows[0]?.binds).toEqual(["kau-kinesis"]);
+
+    const deleteCacheRows = db.getHistory().filter((entry) => (
+      entry.sql.includes("DELETE FROM cache WHERE key = ?")
+    ));
+    expect(deleteCacheRows).toHaveLength(1);
+    expect(deleteCacheRows[0]?.binds).toEqual(["circuit:live-reserves:kau-kinesis"]);
+  });
+
   it("classifies parser drift in sync attempt metadata", async () => {
     mockAdapterRegistry(async () => {
       throw new Error("circle-transparency: layout-changed: missing reserve attributes");

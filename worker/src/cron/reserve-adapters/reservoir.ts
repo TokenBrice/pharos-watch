@@ -26,6 +26,12 @@ export interface ReservoirReservesResponse {
 
 type ReservoirBucketKey = "usd1" | "pyusd" | "rlusd" | "gho" | "usdt" | "usdc" | "rusd";
 
+const RESERVOIR_BROWSER_HEADERS = {
+  Origin: "https://app.reservoir.xyz",
+  Referer: "https://app.reservoir.xyz/reserves",
+  "Accept-Language": "en-US,en;q=0.9",
+};
+
 const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, ReservoirBucketKey>[] = [
   {
     key: "usd1",
@@ -126,6 +132,7 @@ export async function fetchReservoirReserves(
     signal,
     12_000,
     ctx,
+    { headers: RESERVOIR_BROWSER_HEADERS },
   );
   const adapted = adaptReservoirReserves(payload);
   const totalAssetsUsd = Number(payload.totalAssets);

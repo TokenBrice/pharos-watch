@@ -72,10 +72,14 @@ Supported input kinds:
 | `http-json`   | JSON API endpoint                                                    |
 | `http-html`   | HTML page parsed by the adapter                                      |
 | `indexer`     | Indexed external data feed                                           |
-| `onchain-solana` | On-chain Solana mint-supply reads via the public mainnet RPC        |
+| `onchain-solana` | On-chain Solana mint-supply reads via the public mainnet RPCs       |
 | `onchain-evm` | On-chain EVM reads via `etherscan-proxy`, `alchemy`, or `public-rpc` |
 
 `curated-validated` can now use `onchain-solana` when a tracked coin publishes its canonical Solana mint in `coin.contracts`, allowing the adapter to validate non-zero supply without downgrading the reserve mix to a weak single-bucket feed.
+
+`onchain-solana` now tries the canonical public RPC first (`https://api.mainnet-beta.solana.com`) and then a secondary public endpoint (`https://api.mainnet.solana.com`) before failing the adapter. This reduces false reserve incidents caused by single-endpoint Solana RPC reachability failures inside the Worker runtime.
+
+Adapters can also pass browser-style request headers through the shared JSON retry helper when an upstream is sensitive to request origin hints. Ethena and Reservoir now do this because production failures showed Cloudflare Worker requests intermittently receiving HTML / network failures while the same endpoints still served healthy JSON to browser-like clients.
 
 ### Snapshot Metadata and Warning Effects
 
@@ -160,7 +164,7 @@ Cron result statuses:
 
 Per-coin warnings still matter operationally, but they affect `reserve_sync_state.last_status` for that coin (`degraded`) and the cron metadata warning list, not the run-level `CronResult.status`.
 
-The cron loop is sequential. This is deliberate: reserve adapters can hit multiple heterogeneous sources, and the isolated hourly trigger keeps connection pressure predictable. The leased wrapper now gives `sync-live-reserves` an explicit 12-minute wall-clock budget, and the cron itself reports `setup`, `syncing`, and `finalizing` progress stages so `/status` can show which coin is currently in flight. Within a run, fetched results are only reused when the adapter registry marks the adapter as `source-invariant` (currently `m0`, `mento`, and `sky-makercore`); coin-aware adapters such as `frax` never share cached results across coins.
+The cron loop is sequential. This is deliberate: reserve adapters can hit multiple heterogeneous sources, and the isolated hourly trigger keeps connection pressure predictable. The leased wrapper now gives `sync-live-reserves` an explicit 12-minute wall-clock budget, and the cron itself reports `setup`, `syncing`, and `finalizing` progress stages so `/status` can show which coin is currently in flight. Within a run, fetched results are only reused when the adapter registry marks the adapter as `source-invariant` (currently `m0`, `mento`, and `sky-makercore`); coin-aware adapters such as `frax` never share cached results across coins. At the end of each run, the cron also removes stale operational artifacts for coins that are no longer live-enabled: orphaned `reserve_sync_state` rows and stale `cache.key = 'circuit:live-reserves:*'` entries are deleted so `/status` and `/api/health` stop surfacing removed reserve sources as active incidents after coverage changes.
 
 ---
 

@@ -17,6 +17,13 @@ export async function setCache(db: D1Database, key: string, value: string): Prom
     .run();
 }
 
+export async function deleteCache(db: D1Database, key: string): Promise<void> {
+  await db
+    .prepare("DELETE FROM cache WHERE key = ?")
+    .bind(key)
+    .run();
+}
+
 export async function shouldSkipFreshCache(db: D1Database, key: string, maxAgeSec: number): Promise<boolean> {
   const cached = await getCache(db, key);
   if (!cached) return false;

@@ -204,7 +204,7 @@ describe("adaptAccountableTypeBreakdown", () => {
       signal,
       {
         requestCache: new Map([
-          ["json-get:https://example.com:12000", Promise.resolve({
+          ["json-get:https://example.com:12000:null", Promise.resolve({
             res: "ok",
             data: {
               collateralization: 1.01,

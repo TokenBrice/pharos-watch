@@ -8,7 +8,11 @@ import {
 import type { HealthResponse } from "@shared/types/status";
 import { buildCacheStatuses, type CacheStatusFailure } from "./api-utils";
 import { queryBlacklistGapMetrics, type BlacklistGapMetrics } from "./blacklist-gaps";
-import { getCircuitStates, type CircuitRecord } from "./circuit-breaker";
+import {
+  filterStaleLiveReserveCircuitStates,
+  getCircuitStates,
+  type CircuitRecord,
+} from "./circuit-breaker";
 import { CIRCUIT_SOURCE } from "./constants";
 import { buildInClause } from "./db";
 import {
@@ -90,7 +94,7 @@ function publicHealthErrorMessage(kind: "blacklist" | "circuit" | "db" | "mint-b
 function completeCircuitStates(
   circuits: Record<string, CircuitRecord>,
 ): Record<string, CircuitRecord> {
-  const completed = { ...circuits };
+  const completed = filterStaleLiveReserveCircuitStates(circuits);
 
   for (const source of Object.values(CIRCUIT_SOURCE)) {
     if (!completed[source]) {

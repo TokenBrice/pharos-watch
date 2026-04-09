@@ -380,4 +380,52 @@ describe("handleHealth", () => {
     const body = (await res.json()) as { telegramSummary: unknown };
     expect(body.telegramSummary).toBeNull();
   });
+
+  it("filters stale removed live-reserve circuit keys from the health payload", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const openCircuitValue = (openedAt: number) => JSON.stringify({
+      state: "open",
+      consecutiveFailures: 3,
+      lastFailureAt: openedAt - 30,
+      lastSuccessAt: null,
+      openedAt,
+    });
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          { key: "stablecoins", updated_at: now - 60, value: "{}" },
+          { key: "stablecoin-charts", updated_at: now - 60, value: "{}" },
+          { key: "usds-status", updated_at: now - 60, value: "{}" },
+          { key: "fx-rates", updated_at: now - 60, value: JSON.stringify({ peggedEUR: 1.08 }) },
+          { key: "bluechip-ratings", updated_at: now - 60, value: "{}" },
+        ],
+      },
+      { match: "dex_liquidity", rows: [], first: { age: 60 } },
+      { match: "yield_data", rows: [], first: { age: 60 } },
+      { match: "stress_signals", rows: [], first: { age: 60 } },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+      { match: "mint_burn_hourly", rows: [], first: { total: 1234 } },
+      { match: "SELECT MAX(timestamp) as latest FROM mint_burn_events", rows: [], first: { latest: now - 30 } },
+      { match: "SELECT MAX(hour_ts) as latest FROM mint_burn_hourly", rows: [], first: { latest: now - 3600 } },
+      { match: "SELECT symbol, MAX(timestamp) as latest", rows: [{ symbol: "USDT", latest: now - 600 }] },
+      { match: "SELECT status", rows: [], first: { status: "ok" } },
+      { match: "status = 'ok'", rows: [], first: { started_at: now - 300 } },
+      {
+        match: "key LIKE 'circuit:%'",
+        rows: [
+          { key: "circuit:live-reserves:kau-kinesis", value: openCircuitValue(now - 600) },
+          { key: "circuit:live-reserves:ethena", value: openCircuitValue(now - 600) },
+        ],
+      },
+    ]);
+
+    const res = await handleHealth(db);
+    const body = (await res.json()) as {
+      circuits: Record<string, { state: string }>;
+    };
+
+    expect(body.circuits["live-reserves:kau-kinesis"]).toBeUndefined();
+    expect(body.circuits["live-reserves:ethena"]?.state).toBe("open");
+  });
 });

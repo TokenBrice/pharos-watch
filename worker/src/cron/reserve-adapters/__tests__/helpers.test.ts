@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReserveSlice } from "@shared/types/core";
+import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 
 vi.mock("../../../lib/fetch-retry", () => ({
   fetchWithRetry: vi.fn(),
@@ -15,12 +15,12 @@ import {
   decimalStringFromBigInt,
   fetchDefiLlamaPrices,
   fetchJsonWithRetry,
-
   isReserveRisk,
   normalizeSlices,
   notApplicableFreshnessMetadata,
   parsePositiveNumericLike,
   parseTimestampLikeToUnixSeconds,
+  probeTrackedTokenSupply,
   slicesFromValues,
   unverifiedFreshnessMetadata,
   valueUsdFromBigIntPrice,
@@ -427,6 +427,81 @@ describe("fetchJsonWithRetry", () => {
     }
     expect(error.message).toContain("JSON parse failed for https://example.com/api (text/html; charset=utf-8)");
     expect(error.message).toContain("body starts with: <!DOCTYPE html><html><body>blocked</body></html>");
+  });
+
+  it("merges custom headers into JSON requests", async () => {
+    vi.mocked(fetchWithRetry).mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(fetchJsonWithRetry(
+      "https://example.com/api",
+      signal,
+      1234,
+      undefined,
+      { headers: { Referer: "https://example.com/app" } },
+    )).resolves.toEqual({ ok: true });
+
+    expect(fetchWithRetry).toHaveBeenCalledWith(
+      "https://example.com/api",
+      {
+        signal,
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "Mozilla/5.0",
+          Referer: "https://example.com/app",
+        },
+      },
+      2,
+      { timeoutMs: 1234 },
+    );
+  });
+
+  it("falls back to the secondary Solana RPC when the primary endpoint fails", async () => {
+    vi.mocked(fetchWithRetry)
+      .mockRejectedValueOnce(new Error("POST fetch failed for https://api.mainnet-beta.solana.com"))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          result: {
+            value: {
+              amount: "42",
+            },
+          },
+        }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+    await expect(probeTrackedTokenSupply(
+      {
+        id: "test-solana",
+        contracts: [{ chain: "solana", address: "Mint1111111111111111111111111111111111" }],
+      } as StablecoinMeta,
+      { kind: "onchain-solana" },
+      signal,
+      "curated-validated",
+    )).resolves.toBe(42n);
+
+    expect(fetchWithRetry).toHaveBeenNthCalledWith(
+      1,
+      "https://api.mainnet-beta.solana.com",
+      expect.objectContaining({ method: "POST", signal }),
+      2,
+      { timeoutMs: 10_000 },
+    );
+    expect(fetchWithRetry).toHaveBeenNthCalledWith(
+      2,
+      "https://api.mainnet.solana.com",
+      expect.objectContaining({ method: "POST", signal }),
+      2,
+      { timeoutMs: 10_000 },
+    );
   });
 });
 

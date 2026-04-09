@@ -29,6 +29,11 @@ const ETHENA_ETH_ASSETS = new Set(["ETH", "stETH", "WBETH", "mETH", "LsETH"]);
 const ETHENA_BTC_ASSETS = new Set(["BTC"]);
 const ETHENA_STABLE_ASSETS = new Set(["Liquid Cash"]);
 const ETHENA_OTHER_ASSETS = new Set(["SOL", "XRP", "BNB", "HYPE"]);
+const ETHENA_BROWSER_HEADERS = {
+  Origin: "https://app.ethena.fi",
+  Referer: "https://app.ethena.fi/dashboards/transparency",
+  "Accept-Language": "en-US,en;q=0.9",
+};
 
 function bucketForEthenaAsset(asset: string): EthenaBucket {
   if (ETHENA_STABLE_ASSETS.has(asset)) return "stable";
@@ -147,6 +152,7 @@ export async function fetchEthenaReserves(
     signal,
     12_000,
     ctx,
+    { headers: ETHENA_BROWSER_HEADERS },
   );
   const adapted = adaptEthenaCollateral(payload);
   const warnings: LiveReserveWarning[] = listUnexpectedEthenaAssets(payload).map((asset) => reserveDegradedWarning(
