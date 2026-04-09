@@ -1997,7 +1997,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Over-collateralized by TRX, sTRX, and USDT locked in CDP vaults; Bitcoin removed from reserves in August 2024",
+    "collateral": "Current reserves are split across Smart Allocator stablecoin deployments, TRX and sTRX CDP vault collateral, and USDT held in PSM/direct vaults; Bitcoin was removed from reserves in August 2024",
     "pegMechanism": "CDP model with minimum 130% collateral ratio; Peg Stability Module enables 1:1 minting/redemption against USDT and USDC",
     "llamaId": "14",
     "detailProvider": "defillama",
@@ -2088,30 +2088,24 @@
     },
     "reserves": [
       {
+        "name": "TRX",
+        "pct": 62.5,
+        "risk": "high"
+      },
+      {
         "name": "Smart Allocator (stablecoin DeFi via Aave/JustLend)",
-        "pct": 75,
+        "pct": 31.5,
         "risk": "medium"
       },
       {
         "name": "USDT (PSM vaults)",
-        "pct": 16,
-        "risk": "low",
-        "coinId": "usdt-tether"
-      },
-      {
-        "name": "TRX",
-        "pct": 7,
-        "risk": "high"
-      },
-      {
-        "name": "USDT (direct vaults)",
-        "pct": 1,
+        "pct": 4.9,
         "risk": "low",
         "coinId": "usdt-tether"
       },
       {
         "name": "sTRX (direct vaults)",
-        "pct": 1,
+        "pct": 1.1,
         "risk": "high"
       }
     ]

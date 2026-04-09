@@ -4307,7 +4307,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "USDC/USDT deposits and short-term U.S. Treasury bills via custodians (Ceffu, Alpaca)",
+    "collateral": "Current Accountable deployment disclosure is concentrated in Fasanara private credit, Janus Henderson JAAA CLOs, DeFi lending, Pendle principal tokens, and a smaller tokenized U.S. Treasury bill sleeve; USN is minted and redeemed 1:1 against USDC or USDT",
     "pegMechanism": "1:1 mint/redeem against USDC/USDT; delta-neutral yield strategies on centralized exchanges",
     "llamaId": "230",
     "detailProvider": "defillama",
@@ -4350,25 +4350,29 @@
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
-        "name": "USDC/USDT (1:1 backing)",
-        "pct": 40,
-        "risk": "low",
-        "coinId": "usdc-circle"
+        "name": "Private Credit (Fasanara FTAC)",
+        "pct": 68.4,
+        "risk": "high"
       },
       {
-        "name": "U.S. Treasury Bills",
-        "pct": 30,
+        "name": "CLOs (JAAA)",
+        "pct": 13,
+        "risk": "high"
+      },
+      {
+        "name": "DeFi Lending",
+        "pct": 8,
+        "risk": "medium"
+      },
+      {
+        "name": "Principal Tokens (PTs)",
+        "pct": 6.9,
+        "risk": "high"
+      },
+      {
+        "name": "US Treasury Bills",
+        "pct": 3.7,
         "risk": "very-low"
-      },
-      {
-        "name": "Delta-neutral funding rate arbitrage positions",
-        "pct": 20,
-        "risk": "high"
-      },
-      {
-        "name": "CLOs & Private Credit Funds",
-        "pct": 10,
-        "risk": "high"
       }
     ],
     "liveReservesConfig": {
@@ -5533,7 +5537,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "OTC-discounted locked token allocations sourced via STIX with delta-neutral perpetual futures hedges, plus liquid stablecoin reserves (USDC, USDT, USDS, USDe) held at institutional custodians (Fireblocks, Copper, Ceffu)",
+    "collateral": "Accountable currently shows reserves concentrated in liquid stablecoins, with smaller OTC aggregate and other hedged reserve assets; Neutrl describes NUSD as a fully collateralized synthetic dollar backed by delta-neutral strategies and other crypto assets",
     "pegMechanism": "1:1 mint and redeem via permissionless router using USDC, USDT, or USDe; peg maintained by arbitrage incentives, delta hedging of derivatives positions, and rapid reserve deployment from liquid stablecoin buffer",
     "llamaId": "346",
     "detailProvider": "defillama",
@@ -5569,19 +5573,19 @@
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
-        "name": "Delta-neutral basis/funding trades (perp futures)",
-        "pct": 60,
-        "risk": "high"
-      },
-      {
-        "name": "Liquid stablecoin reserves (USDC, USDT, USDS, USDe)",
-        "pct": 20,
+        "name": "Stablecoin reserves",
+        "pct": 93.5,
         "risk": "low",
         "coinId": "usdc-circle"
       },
       {
-        "name": "Hedged OTC locked-token positions (via STIX)",
-        "pct": 20,
+        "name": "OTC aggregate positions",
+        "pct": 3.4,
+        "risk": "high"
+      },
+      {
+        "name": "Other reserve assets",
+        "pct": 3.1,
         "risk": "high"
       }
     ],
@@ -6728,7 +6732,7 @@
       "rwa": true,
       "navToken": true
     },
-    "collateral": "USD-denominated Asia Pacific RWAs managed by Golden Hill Asset Management (Singapore-regulated): sovereign debt (BBB+ min), investment-grade Asian corporate and bank bonds (BBB- min), speculative-grade industrial bonds (BB min), and direct lending/private credit; muBOND junior tranche overcollateralizes AZND at ~118%",
+    "collateral": "Accountable currently shows the Asset Pool concentrated in short-term cash and liquid bonds; Mu Digital's published mandate still targets an Asia credit portfolio with illiquid private credit capped at 20%, and the muBOND junior tranche overcollateralizes AZND at ~118%",
     "pegMechanism": "KYC-gated 1:1 mint using USDC, USDT, or AUSD; redemptions processed weekly (~7 calendar days) per Singapore fund liquidity calendar; muBOND junior tranche absorbs NAV losses first; insurance fund provides additional backstop; permissionless secondary swaps via DEX partners on Monad",
     "llamaId": "327",
     "detailProvider": "defillama",
@@ -6770,23 +6774,13 @@
     "custodyModel": "institutional-unregulated",
     "reserves": [
       {
-        "name": "Asian sovereign bonds (BBB+ min)",
-        "pct": 30,
-        "risk": "high"
+        "name": "Short Term Cash",
+        "pct": 80.9,
+        "risk": "very-low"
       },
       {
-        "name": "Investment-grade Asian corporate/bank bonds (BBB- min)",
-        "pct": 35,
-        "risk": "high"
-      },
-      {
-        "name": "High-yield industrial bonds (BB min)",
-        "pct": 15,
-        "risk": "high"
-      },
-      {
-        "name": "Private credit / direct lending",
-        "pct": 20,
+        "name": "Liquid Bonds",
+        "pct": 19.1,
         "risk": "high"
       }
     ],
