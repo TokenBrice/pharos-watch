@@ -458,6 +458,9 @@ export function getFilterTags(meta: StablecoinMeta): FilterTag[] {
         break;
     }
   }
+  for (const infra of meta.infrastructures ?? []) {
+    tags.push(`infrastructure-${infra}` as FilterTag);
+  }
   return tags;
 }
 
