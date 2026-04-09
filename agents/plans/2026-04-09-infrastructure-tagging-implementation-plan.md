@@ -975,7 +975,7 @@ and replace with:
                 key={value}
                 className={
                   value === "m0"
-                    ? "inline-flex items-center rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-700 dark:text-violet-300"
+                    ? "inline-flex items-center rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-700 dark:text-violet-400"
                     : "inline-flex items-center rounded-full border border-frost-blue/30 bg-frost-blue/10 px-3 py-1 text-xs font-semibold text-frost-blue"
                 }
               >
@@ -1171,7 +1171,7 @@ function InfrastructureBadge({ value }: { value: Infrastructure }) {
   const label = getInfrastructureLabel(value);
   const isM0 = value === "m0";
   const colorClass = isM0
-    ? "text-violet-700 dark:text-violet-300"
+    ? "text-violet-700 dark:text-violet-400"
     : "text-frost-blue";
   const borderClass = isM0
     ? "border-violet-500/30 bg-violet-500/10"
@@ -1189,7 +1189,7 @@ function InfrastructureChip({ value }: { value: Infrastructure }) {
   const label = getInfrastructureLabel(value);
   const isM0 = value === "m0";
   const className = isM0
-    ? "inline-flex items-center rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-violet-700 dark:text-violet-300"
+    ? "inline-flex items-center rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-violet-700 dark:text-violet-400"
     : "inline-flex items-center rounded-full border border-frost-blue/30 bg-frost-blue/10 px-2.5 py-0.5 text-[11px] font-semibold text-frost-blue";
   return <span className={className}>{label}</span>;
 }
@@ -1197,7 +1197,7 @@ function InfrastructureChip({ value }: { value: Infrastructure }) {
 
 The Liquity values use the existing chip-style frost-blue palette (`border-frost-blue/30 bg-frost-blue/10 text-frost-blue`) per the spec's "keep the existing palette" instruction. The neutral border style of the original `LiquityForkBadge` (`border-border/40 bg-background/40`) is intentionally NOT carried over — the spec asked for the explicit frost-blue palette across all surfaces.
 
-The M0 violet uses `text-violet-700 dark:text-violet-300` to match the existing "classification" tone palette in `src/app/about/page.tsx` (`getToneClasses` for `classification`), keeping the dashboard's violet usage consistent.
+The M0 violet uses `text-violet-700 dark:text-violet-400` to match the existing "classification" tone palette in `src/app/about/page.tsx` (`getToneClasses` for `classification`), keeping the dashboard's violet usage consistent.
 
 - [ ] **Step 3: Update `HeroTertiaryMetrics` props**
 
@@ -1270,7 +1270,23 @@ Expected: pass except for `buildInfrastructureTaxonomyUrl` (still missing — Ta
 
 This task does **three surgical edits**, NOT one large block delete, because the Protocol-named symbols are interleaved with governance/backing symbols that must be preserved.
 
-- [ ] **Step 1: Replace the type alias and add the Infrastructure import**
+- [ ] **Step 1a: Add the `Infrastructure` import to the existing imports block at the top of the file**
+
+The file currently starts with:
+
+```ts
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import type { BackingType, FilterTag, GovernanceType, StablecoinMeta } from "@shared/types";
+```
+
+Add `Infrastructure` to the existing `@shared/types` type-only import. The result should be:
+
+```ts
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import type { BackingType, FilterTag, GovernanceType, Infrastructure, StablecoinMeta } from "@shared/types";
+```
+
+- [ ] **Step 1b: Replace the `ProtocolTaxonomyValue` type alias in place**
 
 Find:
 
@@ -1278,15 +1294,13 @@ Find:
 export type ProtocolTaxonomyValue = "liquity-family" | "liquity-v1" | "liquity-v2";
 ```
 
-and replace with:
+and replace **only** with:
 
 ```ts
-import type { Infrastructure } from "@shared/types";
-
 export type InfrastructureTaxonomyValue = Infrastructure;
 ```
 
-(The new `import` line is added at the top of the file alongside the existing imports.)
+(No additional `import` line — the import was added in Step 1a so the replacement here is purely a one-line type rename.)
 
 - [ ] **Step 2: Update `TaxonomyKind` and `StablecoinTaxonomyPage` generic**
 
@@ -1777,9 +1791,9 @@ Expected: pass.
 
 ## Phase C — Remove old fields
 
-### Task 26: Cleanup grep — find any leftover consumers BEFORE deleting
+### Task 26: Cleanup grep — confirm only the expected leftover consumers remain BEFORE deleting
 
-This step runs the cleanup grep **before** any deletion so that if a stale reference exists, the fix can land in the same commit as the deletion (rather than producing a broken commit and a fix-up commit).
+This step runs the cleanup grep **before** any deletion so that if an UNEXPECTED stale reference exists, the fix can land in the same commit as the deletion (rather than producing a broken commit and a fix-up commit).
 
 - [ ] **Step 1: Grep across the entire codebase for any reference to the old symbols**
 
@@ -1787,7 +1801,20 @@ This step runs the cleanup grep **before** any deletion so that if a stale refer
 git -C /Users/ahirice/Documents/git/stablecoin-dashboard grep -n "protocolFamily\|protocolVariant\|ProtocolFamily\|ProtocolVariant\|getProtocolFamily\|protocol-family" -- 'src/*' 'shared/*' 'worker/*'
 ```
 
-Expected: only references in JSON files (`shared/data/stablecoins/usd-minor.json` and `non-usd.json` — these get removed in Task 27). Any other reference is a bug — fix it before proceeding to Task 27.
+**Expected output (these are the only references that should still exist at this point in the sequence — they all get removed in Tasks 27-29):**
+
+1. `shared/data/stablecoins/usd-minor.json` — 13 entries with `"protocolFamily": "liquity"` and `"protocolVariant": "v1|v2"` (removed in Task 27)
+2. `shared/data/stablecoins/non-usd.json` — 1 entry (`cjpy-yamato`) with the same fields (removed in Task 27)
+3. `shared/types/core.ts` — `ProtocolFamily` / `ProtocolVariant` type aliases (around lines 96-97) and the `protocolFamily?` / `protocolVariant?` fields on `StablecoinMeta` (around lines 215-216) — both removed in Task 29
+4. `shared/lib/stablecoins/schema.ts` — `PROTOCOL_FAMILY_VALUES` / `PROTOCOL_VARIANT_VALUES` constants (around lines 44-45) and the schema fields (around lines 167-168) — removed in Task 28
+5. `shared/lib/protocol-family.ts` — the entire file (deleted in Task 29)
+
+**Any reference NOT on this list is a bug — investigate and fix it before proceeding to Task 27.** Common surprises to watch for:
+- A test fixture or mock that still constructs `protocolFamily` / `protocolVariant` literals
+- A stale comment in any file that name-checks the old type
+- An import statement somewhere that imports from `@shared/lib/protocol-family` (every consumer should already point to `@shared/lib/infrastructure` after Phase B)
+
+If `tsc` and the test suite both passed at the end of Phase B (Task 25), an unexpected leftover here is unlikely — but the grep is the cheap insurance.
 
 ---
 
@@ -2172,12 +2199,13 @@ git -C /Users/ahirice/Documents/git/stablecoin-dashboard grep -n "stablecoins/pr
 
 Expected: zero. (Historical agent files under `agents/audits/`, `agents/research/`, `agents/plans/historical/` are intentionally left untouched — they describe past state.)
 
-- [ ] **Step 4: Commit Tasks 30 + 31 + 32 together**
+- [ ] **Step 6: Commit Tasks 30 + 31 + 32 together**
 
 ```bash
 cd /Users/ahirice/Documents/git/stablecoin-dashboard
 git add src/app/methodology/sections/core/infrastructure-section.tsx \
   src/app/methodology/sections/core-sections.tsx \
+  src/app/methodology/methodology-shared.tsx \
   src/app/about/page.tsx \
   README.md \
   CLAUDE.md \
