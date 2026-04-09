@@ -774,6 +774,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "protocolFamily": "liquity",
     "protocolVariant": "v1",
+    "infrastructures": ["liquity-v1"],
     "reserves": [
       {
         "name": "BTC (overcollateralized CDP)",
@@ -3244,6 +3245,7 @@
     "governanceQuality": "immutable-code",
     "protocolFamily": "liquity",
     "protocolVariant": "v2",
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "wstETH (Lido)",
@@ -3453,6 +3455,7 @@
     "governanceQuality": "immutable-code",
     "protocolFamily": "liquity",
     "protocolVariant": "v1",
+    "infrastructures": ["liquity-v1"],
     "reserves": [
       {
         "name": "ETH",
@@ -4389,6 +4392,7 @@
     "collateralQuality": "exotic",
     "protocolFamily": "liquity",
     "protocolVariant": "v2",
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "iBGT (Infrared liquid staked BGT)",
@@ -4706,6 +4710,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "protocolFamily": "liquity",
     "protocolVariant": "v1",
+    "infrastructures": ["liquity-v1"],
     "reserves": [
       {
         "name": "Bitcoin (BTC) — native and wrapped variants (tBTC, WBTC, SolvBTC, cbBTC)",
@@ -4962,6 +4967,7 @@
     "governanceQuality": "immutable-code",
     "protocolFamily": "liquity",
     "protocolVariant": "v2",
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "ysyBOLD (Yearn savings BOLD)",
@@ -5066,6 +5072,7 @@
     "governanceQuality": "immutable-code",
     "protocolFamily": "liquity",
     "protocolVariant": "v2",
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "tBTC",
@@ -5239,6 +5246,7 @@
     "governanceQuality": "immutable-code",
     "protocolFamily": "liquity",
     "protocolVariant": "v2",
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "wETH",
@@ -5303,7 +5311,8 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
     "protocolFamily": "liquity",
-    "protocolVariant": "v2"
+    "protocolVariant": "v2",
+    "infrastructures": ["liquity-v2"]
   },
   {
     "id": "ebusd-ebisu",
@@ -5348,6 +5357,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "protocolFamily": "liquity",
     "protocolVariant": "v2",
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "sUSDe (Ethena savings)",
@@ -6029,6 +6039,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "protocolFamily": "liquity",
     "protocolVariant": "v2",
+    "infrastructures": ["liquity-v2"],
     "reserves": [
       {
         "name": "HYPE / kHYPE / wstHYPE (Hyperliquid native + LSTs)",
@@ -7082,6 +7093,7 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "protocolFamily": "liquity",
     "protocolVariant": "v1",
+    "infrastructures": ["liquity-v1"],
     "reserves": [
       {
         "name": "BTC / WBTC / BTCB / cbBTC (overcollateralized CDP vaults)",
@@ -7173,6 +7185,7 @@
     "governanceQuality": "dao-governance",
     "protocolFamily": "liquity",
     "protocolVariant": "v1",
+    "infrastructures": ["liquity-v1"],
     "reserves": [
       {
         "name": "Bitcoin LSTs / LRTs and approved BTC wrappers",
