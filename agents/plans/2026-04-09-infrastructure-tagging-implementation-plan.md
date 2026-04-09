@@ -374,6 +374,8 @@ git commit -m "data: add infrastructures field to cjpy-yamato (Liquity v1)"
 **Files:**
 - Modify: `shared/data/stablecoins/usd-minor.json`
 
+**Why the placement here differs from Task 5**: Task 5 inserted `infrastructures` immediately after `protocolVariant` so the new and old fields are co-located, making the Phase C deletion easier to spot. The 9 M0 entries here have no `protocolFamily` / `protocolVariant` fields to anchor to, so we use the `flags` block as the next-best landmark. This intentional difference disappears in Phase C when the old fields are removed and Liquity entries also have only `infrastructures`.
+
 The 9 M0 entries currently in `usd-minor.json`:
 
 | Coin id | Origin | Already has `m-m0` dependency? |
@@ -1169,11 +1171,11 @@ function InfrastructureBadge({ value }: { value: Infrastructure }) {
   const label = getInfrastructureLabel(value);
   const isM0 = value === "m0";
   const colorClass = isM0
-    ? "text-violet-500 dark:text-violet-300"
+    ? "text-violet-700 dark:text-violet-300"
     : "text-frost-blue";
   const borderClass = isM0
     ? "border-violet-500/30 bg-violet-500/10"
-    : "border-border/40 bg-background/40";
+    : "border-frost-blue/30 bg-frost-blue/10";
 
   return (
     <div className={`flex items-center gap-2 rounded-lg border ${borderClass} px-2.5 py-1.5`}>
@@ -1192,6 +1194,10 @@ function InfrastructureChip({ value }: { value: Infrastructure }) {
   return <span className={className}>{label}</span>;
 }
 ```
+
+The Liquity values use the existing chip-style frost-blue palette (`border-frost-blue/30 bg-frost-blue/10 text-frost-blue`) per the spec's "keep the existing palette" instruction. The neutral border style of the original `LiquityForkBadge` (`border-border/40 bg-background/40`) is intentionally NOT carried over — the spec asked for the explicit frost-blue palette across all surfaces.
+
+The M0 violet uses `text-violet-700 dark:text-violet-300` to match the existing "classification" tone palette in `src/app/about/page.tsx` (`getToneClasses` for `classification`), keeping the dashboard's violet usage consistent.
 
 - [ ] **Step 3: Update `HeroTertiaryMetrics` props**
 
@@ -1645,7 +1651,47 @@ Add this test at the end of the `describe("HeroCard", () => { ... })` block (imm
     expect(html).toContain("Infrastructure");
     expect(html).toContain("M0");
   });
+
+  it("renders multiple infrastructure badges when a coin belongs to more than one", () => {
+    const dualCoin: StablecoinMeta = {
+      ...coin,
+      id: "hypothetical-dual",
+      name: "Hypothetical Dual",
+      symbol: "HYP",
+      infrastructures: ["liquity-v2", "m0"],
+    };
+
+    const html = renderToStaticMarkup(
+      <HeroCard
+        coin={dualCoin}
+        coinData={{ ...coinData, id: "hypothetical-dual", name: "Hypothetical Dual", symbol: "HYP" }}
+        logoSrc="/logos/hyp.svg"
+        isNavToken={false}
+        mcap={1_000_000}
+        supply={1_000_000}
+        prevDay={995_000}
+        prevWeek={990_000}
+        prevMonth={985_000}
+        performanceVsUsd1y={null}
+        pegRef={1}
+        deviationBps={-2}
+        gaugeDeviationBps={2}
+        pegScoreResult={pegScoreResult}
+        recordedDepegEventCount={0}
+        liquidityData={liquidityData}
+        yieldRanking={null}
+        stressSignal={null}
+        reportCard={null}
+        onOpenFeedback={() => {}}
+      />,
+    );
+
+    expect(html).toContain("Liquity v2");
+    expect(html).toContain("M0");
+  });
 ```
+
+This second test is a deliberate exercise of the multi-element rendering path. No coin currently has more than one infrastructure, but the array shape is supposed to support it; the test prevents the array path from regressing into a "first element only" implementation by accident.
 
 - [ ] **Step 4: Run the test**
 
@@ -1907,6 +1953,7 @@ git commit -m "refactor(types): remove deprecated protocolFamily/protocolVariant
 **Files:**
 - Create: `src/app/methodology/sections/core/infrastructure-section.tsx`
 - Modify: `src/app/methodology/sections/core-sections.tsx`
+- Modify: `src/app/methodology/methodology-shared.tsx` (the `METHODOLOGY_SECTIONS` table-of-contents registry at lines 6-17)
 
 The methodology page does **not** currently document the Liquity-fork tagging system as a user-facing concept (only the Liquity v1 reserves *adapter* gets a mention in the v6.92 changelog, which the spec says to leave alone). So this task **creates a new section** rather than replacing existing copy.
 
@@ -1925,12 +1972,7 @@ export function InfrastructureMethodologySection() {
     <MethodologySectionShell
       id="infrastructure-methodology"
       title="Infrastructure Tagging"
-      versionLabel="v1.0"
-      changelogPath="/methodology/scoring-changelog/"
-      versionNote="Version increments when the Infrastructure axis or its allowed values change."
       accentClassName="border-l-violet-500"
-      badgeClassName="border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400"
-      changelogClassName="hover:text-violet-700 dark:text-violet-400"
     >
       <p>
         Infrastructure identifies the shared technical foundation a stablecoin was built on.
@@ -1969,9 +2011,11 @@ export function InfrastructureMethodologySection() {
 }
 ```
 
+The `versionLabel` / `changelogPath` / `versionNote` / `badgeClassName` / `changelogClassName` props are deliberately omitted: this is a brand-new section with no version history yet, and `MethodologySectionShell` handles all of those props as optional. Other sections that DO have a version history follow a `<TOPIC>_METHODOLOGY_VERSION_LABEL` constants convention (see `mint-burn-flow-section.tsx`); we can introduce that later if the Infrastructure axis ever evolves.
+
 - [ ] **Step 2: Register the section in `core-sections.tsx`**
 
-In `src/app/methodology/sections/core-sections.tsx`, add the new import and render:
+In `src/app/methodology/sections/core-sections.tsx`, add the new import:
 
 ```tsx
 import { InfrastructureMethodologySection } from "./core/infrastructure-section";
@@ -1988,7 +2032,31 @@ And add `<InfrastructureMethodologySection />` to the JSX between `<SafetyScores
       <MintBurnFlowMethodologySection />
 ```
 
-- [ ] **Step 3: Type-check**
+- [ ] **Step 3: Add the new section to the `METHODOLOGY_SECTIONS` table-of-contents**
+
+The methodology page renders a navigation table of contents from `METHODOLOGY_SECTIONS` exported by `src/app/methodology/methodology-shared.tsx` (lines 6-17). Without an entry here, the new section will render but won't be linked from the TOC.
+
+In `src/app/methodology/methodology-shared.tsx`, find the array literal:
+
+```ts
+export const METHODOLOGY_SECTIONS = [
+  { id: "pricing-pipeline-methodology", label: "Pricing Pipeline" },
+  { id: "stability-index-methodology", label: "Stability Index" },
+  { id: "safety-scores-methodology", label: "Safety Scores" },
+  { id: "liquidity-methodology", label: "Liquidity Score" },
+```
+
+and insert a new entry between `safety-scores-methodology` and `liquidity-methodology` so the TOC order matches the render order:
+
+```ts
+  { id: "safety-scores-methodology", label: "Safety Scores" },
+  { id: "infrastructure-methodology", label: "Infrastructure" },
+  { id: "liquidity-methodology", label: "Liquidity Score" },
+```
+
+The `id` value `infrastructure-methodology` must match the `id` prop of `<MethodologySectionShell>` in Step 1 — both are wired through the same anchor.
+
+- [ ] **Step 4: Type-check**
 
 ```bash
 cd /Users/ahirice/Documents/git/stablecoin-dashboard && npx tsc --noEmit
@@ -1996,7 +2064,7 @@ cd /Users/ahirice/Documents/git/stablecoin-dashboard && npx tsc --noEmit
 
 Expected: pass.
 
-- [ ] **Step 4: Don't commit yet — Tasks 30 + 31 + 32 commit together**
+- [ ] **Step 5: Don't commit yet — Tasks 30 + 31 + 32 commit together**
 
 ---
 
@@ -2020,12 +2088,12 @@ This is a one-line text change. No new section, no structural edits.
 ### Task 32: Update path references in docs and CLAUDE.md / README.md
 
 **Files:**
-- Modify: `README.md`
-- Modify: `CLAUDE.md`
-- Modify: `docs/architecture.md`
-- Modify: `docs/README.md`
-- Modify: `docs/stablecoin-detail-page.md`
-- Modify: `docs/classification.md`
+- Modify: `README.md` (path in route inventory around line 157)
+- Modify: `CLAUDE.md` (route inventory at line 32)
+- Modify: `docs/architecture.md` (paths around lines 185 and 665)
+- Modify: `docs/README.md` (route table around line 80)
+- Modify: `docs/stablecoin-detail-page.md` (greppable references)
+- Modify: `docs/classification.md` (the **"Protocol Lineage" subsection at lines 68-92** PLUS the field references at lines 58-59)
 
 - [ ] **Step 1: Find every reference**
 
@@ -2033,16 +2101,73 @@ This is a one-line text change. No new section, no structural edits.
 git -C /Users/ahirice/Documents/git/stablecoin-dashboard grep -n "stablecoins/protocol\|protocolFamily\|protocolVariant" README.md CLAUDE.md docs/
 ```
 
-- [ ] **Step 2: For each match, replace the path**
+- [ ] **Step 2: Replace path literals in `README.md`, `CLAUDE.md`, `docs/architecture.md`, `docs/README.md`, `docs/stablecoin-detail-page.md`**
 
-Replace `stablecoins/protocol/[protocol]` with `stablecoins/infrastructure/[infrastructure]`, and replace `protocolFamily` / `protocolVariant` references with `infrastructures` (and adjust the surrounding sentence to read naturally — these are docs, not code, so verbatim substitution may produce awkward phrasing).
+For each match in these five files, replace `stablecoins/protocol/[protocol]` with `stablecoins/infrastructure/[infrastructure]`. Where the surrounding doc text says "Liquity-family lineage" or similar, update to "Infrastructure" so the prose stays consistent.
 
-For the `CLAUDE.md` route inventory at line 32, just swap the path literal in place.
+- [ ] **Step 3: Rewrite `docs/classification.md` lines 58-59 (field references)**
 
-- [ ] **Step 3: Verify no stale references remain in docs**
+Find:
+
+```markdown
+- `protocolFamily?: "liquity"` — structured protocol-lineage family used for UI badges, cohort filters, and discovery hubs
+- `protocolVariant?: "v1" | "v2" | "style"` — structured Liquity-family variant used for stricter cohorting (`v1`, `v2`) or broader lineage-only grouping (`style`)
+```
+
+and replace with:
+
+```markdown
+- `infrastructures?: Infrastructure[]` — structured infrastructure-lineage list (`"liquity-v1"` / `"liquity-v2"` / `"m0"`) used for UI badges, cohort filters, and discovery hubs. An array so a coin can belong to more than one infrastructure simultaneously, though in practice each coin currently has zero or one entry.
+```
+
+- [ ] **Step 4: Rewrite `docs/classification.md` "Protocol Lineage" subsection (lines 68-92)**
+
+Find the entire `### Protocol Lineage` section starting at line 68 and ending just before `### Bluechip Grade`, and replace it with:
+
+```markdown
+### Infrastructure Tagging
+
+Pharos supports a small structured infrastructure layer for shared technical foundations that users may want to recognize across multiple issuers or forks.
+
+Current support:
+
+- `infrastructures: ["liquity-v1"]` &mdash; classic LUSD-style Liquity v1 forks
+- `infrastructures: ["liquity-v2"]` &mdash; BOLD-style Liquity v2 forks
+- `infrastructures: ["m0"]` &mdash; coins built on the M0 issuance platform
+
+This is intentionally narrower than the general classification system:
+
+- use `infrastructures` for concrete shared-foundation cohorts that deserve dedicated badges, filters, and discovery pages
+- keep `tags` for loose editorial labels that do not need first-class routing or filtering semantics
+
+**Liquity v1** is the classic LUSD-style pattern:
+
+- 110% liquidation threshold / minimum collateral ratio
+- Stability Pool liquidation path
+- no ongoing borrower interest
+- forks share source code with the upstream Liquity codebase but operate independently with their own reserves
+
+**Liquity v2** is the BOLD-style pattern:
+
+- user-set borrower rates
+- Stability Pools
+- Liquity-style redemptions across branch-like collateral markets
+- forks share source code with the upstream Liquity v2 codebase but operate independently
+
+**M0** is an issuance-platform lineage rather than a code lineage:
+
+- coins are built on M0's smart-contract rails (minter governance, the SwapFacility, the `MExtension.sol` contract pattern)
+- M0 provides the issuance machinery; reserve composition is set by the issuer and **may or may not include the underlying $M token**
+- some M0-built coins are simple $M wrappers; others manage diversified collateral via M0's infrastructure
+- a governance issue at the M0 protocol level potentially affects every M0-built coin, even though their day-to-day operations and reserves are independent
+
+The `infrastructures` field is an array because a coin could in principle belong to multiple infrastructures (e.g., a hypothetical Liquity v2 fork that also wraps M0); in practice every currently-tagged coin has exactly one entry.
+```
+
+- [ ] **Step 5: Verify no stale references remain in docs**
 
 ```bash
-git -C /Users/ahirice/Documents/git/stablecoin-dashboard grep -n "stablecoins/protocol\|protocolFamily\|protocolVariant" README.md CLAUDE.md docs/
+git -C /Users/ahirice/Documents/git/stablecoin-dashboard grep -n "stablecoins/protocol\|protocolFamily\|protocolVariant\|Protocol Lineage" README.md CLAUDE.md docs/
 ```
 
 Expected: zero. (Historical agent files under `agents/audits/`, `agents/research/`, `agents/plans/historical/` are intentionally left untouched — they describe past state.)
