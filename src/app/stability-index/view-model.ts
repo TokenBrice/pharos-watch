@@ -1,7 +1,7 @@
 import { formatChartDate, formatScore } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
 import type { StabilityContributor } from "@/hooks/api-hooks";
-import { BAND_ZONES, PSI_EVENTS } from "@/components/psi-history-chart";
+import { BAND_ZONES, PSI_EVENTS } from "@/lib/psi-history-events";
 
 const HISTORY_WINDOW_DAYS = 30;
 const SCORE_DECIMAL_PLACES = 1;
@@ -105,7 +105,7 @@ export function buildPsiEventTimelineRows(data: PsiChartPoint[]): PsiEventTimeli
     return {
       label: event.label,
       dateStr,
-      links: event.links,
+      links: [...event.links],
       psi,
       psiBand,
       psiColor: psiBand ? PSI_BAND_CLASSES[psiBand as ConditionBand] ?? "text-muted-foreground" : "text-muted-foreground",
