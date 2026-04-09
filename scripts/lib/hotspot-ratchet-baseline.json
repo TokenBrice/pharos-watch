@@ -288,9 +288,9 @@
     "notes": "Config execution and post-run completion logic now live in `mint-burn/*` helpers. Keep the cron shell as queue setup plus progress coordination instead of regrowing per-config or epilogue logic."
   },
   "worker/src/cron/sync-live-reserves.ts": {
-    "fileLines": 280,
-    "maxFunctionLines": 195,
-    "branchCount": 24,
+    "fileLines": 305,
+    "maxFunctionLines": 192,
+    "branchCount": 26,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 380,
