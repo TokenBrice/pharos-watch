@@ -101,7 +101,7 @@ Managed by `src/hooks/use-homepage-filters.ts` and `src/hooks/use-url-filters.ts
 - `type` -> one active governance filter
 - `backing` -> one active backing filter
 - `grade` -> one active score-tier filter
-- `liquity forks` -> one active Liquity protocol-lineage filter (`liquity-v1`, `liquity-v2`)
+- `infrastructure` -> one active infrastructure filter (`infrastructure-liquity-v1`, `infrastructure-liquity-v2`, `infrastructure-m0`)
 
 Rules:
 
