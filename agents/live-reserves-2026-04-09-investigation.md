@@ -98,9 +98,10 @@ These rows are still useful as incident history, but they are no longer part of 
 
 1. Filter stale removed live-reserve breaker keys out of `/api/health`.
 2. Clean up stale `reserve_sync_state` rows and stale `circuit:live-reserves:*` cache keys at the end of each live-reserve sync run.
-3. Add a secondary Solana public RPC fallback for `onchain-solana` supply probes:
+3. Add broader Solana public RPC fallback coverage for `onchain-solana` supply probes:
    - primary: `https://api.mainnet-beta.solana.com`
-   - fallback: `https://api.mainnet.solana.com`
+   - secondary: `https://api.mainnet.solana.com`
+   - tertiary: `https://solana-rpc.publicnode.com`
 4. Add browser-style request headers for:
    - Ethena
    - Reservoir
@@ -117,11 +118,15 @@ These rows are still useful as incident history, but they are no longer part of 
 
 1. Watch the next `sync-live-reserves` run and confirm:
    - stale `kau-kinesis` / `lista` / `mim-abracadabra` breaker entries no longer appear in `/api/health`
-   - `ylds-figure`, `cash-phantom`, and `hyusd-hylo` close if the Solana fallback works in production
+   - `ylds-figure`, `cash-phantom`, and `hyusd-hylo` close if the Solana fallback stack works in production
    - `usde-ethena` and `wsrusd-reservoir` stop failing under the new request headers
-2. If Ethena or Reservoir still fail, inspect the next `reserve_sync_state.last_error` and `reserve_sync_attempt_history.metadata.failureCategory` before changing parsing logic again.
+2. Post-deploy observation from the `2026-04-09 11:11:45Z` production run:
+   - stale removed-coin artifacts are fixed
+   - the active failure set is still exactly `usde-ethena`, `ylds-figure`, `cash-phantom`, `hyusd-hylo`, and `wsrusd-reservoir`
+   - Ethena still returned HTML to the Worker, Reservoir still failed at fetch time, and Solana still failed against the first two public RPCs
+3. If Ethena or Reservoir still fail after the next deploy, inspect the next `reserve_sync_state.last_error` and `reserve_sync_attempt_history.metadata.failureCategory` before changing parsing logic again.
 
 ### Longer-lived data/config work
 
-3. Keep `lisusd-lista` out of live coverage until holder addresses are re-derived from actual protocol state and verified by direct `balanceOf` reads.
+4. Keep `lisusd-lista` out of live coverage until holder addresses are re-derived from actual protocol state and verified by direct `balanceOf` reads.
 4. Keep `mim-abracadabra` out of live coverage until the cauldron read path is re-audited and every configured source has a non-reverting production-safe probe.

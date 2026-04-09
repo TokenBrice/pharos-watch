@@ -460,9 +460,10 @@ describe("fetchJsonWithRetry", () => {
     );
   });
 
-  it("falls back to the secondary Solana RPC when the primary endpoint fails", async () => {
+  it("falls back across secondary Solana RPC endpoints when earlier endpoints fail", async () => {
     vi.mocked(fetchWithRetry)
       .mockRejectedValueOnce(new Error("POST fetch failed for https://api.mainnet-beta.solana.com"))
+      .mockRejectedValueOnce(new Error("POST fetch failed for https://api.mainnet.solana.com"))
       .mockResolvedValueOnce(
         new Response(JSON.stringify({
           jsonrpc: "2.0",
@@ -498,6 +499,13 @@ describe("fetchJsonWithRetry", () => {
     expect(fetchWithRetry).toHaveBeenNthCalledWith(
       2,
       "https://api.mainnet.solana.com",
+      expect.objectContaining({ method: "POST", signal }),
+      2,
+      { timeoutMs: 10_000 },
+    );
+    expect(fetchWithRetry).toHaveBeenNthCalledWith(
+      3,
+      "https://solana-rpc.publicnode.com",
       expect.objectContaining({ method: "POST", signal }),
       2,
       { timeoutMs: 10_000 },

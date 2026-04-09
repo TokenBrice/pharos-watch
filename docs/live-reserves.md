@@ -77,7 +77,7 @@ Supported input kinds:
 
 `curated-validated` can now use `onchain-solana` when a tracked coin publishes its canonical Solana mint in `coin.contracts`, allowing the adapter to validate non-zero supply without downgrading the reserve mix to a weak single-bucket feed.
 
-`onchain-solana` now tries the canonical public RPC first (`https://api.mainnet-beta.solana.com`) and then a secondary public endpoint (`https://api.mainnet.solana.com`) before failing the adapter. This reduces false reserve incidents caused by single-endpoint Solana RPC reachability failures inside the Worker runtime.
+`onchain-solana` now tries three public RPCs in order before failing the adapter: `https://api.mainnet-beta.solana.com`, `https://api.mainnet.solana.com`, and `https://solana-rpc.publicnode.com`. This reduces false reserve incidents caused by single-endpoint Solana RPC reachability failures inside the Worker runtime.
 
 Adapters can also pass browser-style request headers through the shared JSON retry helper when an upstream is sensitive to request origin hints. Ethena and Reservoir now do this because production failures showed Cloudflare Worker requests intermittently receiving HTML / network failures while the same endpoints still served healthy JSON to browser-like clients.
 

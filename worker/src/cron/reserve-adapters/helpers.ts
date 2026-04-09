@@ -74,6 +74,7 @@ const DEFILLAMA_PRICE_CHAIN_ALIASES: Record<string, string> = {
 const SOLANA_RPC_URLS = [
   "https://api.mainnet-beta.solana.com",
   "https://api.mainnet.solana.com",
+  "https://solana-rpc.publicnode.com",
 ] as const;
 
 function summarizeResponseBody(raw: string, limit = 120): string {
