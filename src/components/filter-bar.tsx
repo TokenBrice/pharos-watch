@@ -75,7 +75,7 @@ export function FilterBar({
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1.2fr_1fr_1fr_0.8fr]">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1.2fr_0.6fr_1fr_1.2fr]">
         {FILTER_GROUPS.map((group) => (
           <div
             key={group.label}
