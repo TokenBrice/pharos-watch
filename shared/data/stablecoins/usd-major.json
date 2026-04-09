@@ -2402,6 +2402,7 @@
       "rwa": false,
       "navToken": false
     },
+    "infrastructures": ["m0"],
     "collateral": "PYUSD (PayPal USD) reserves used as the liquid settlement layer for USD.AI's base stablecoin mint and redeem rail",
     "pegMechanism": "Minted and redeemed through the USD.AI platform on a stablecoin/PYUSD rail; base USDai is the liquid, non-yielding token, while staking into sUSDai is a separate queued yield product",
     "llamaId": "309",
@@ -2580,6 +2581,7 @@
       "rwa": true,
       "navToken": false
     },
+    "infrastructures": ["m0"],
     "collateral": "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USDtb by Ethena, OUSG by Ondo, and BUIDL by BlackRock",
     "pegMechanism": "1:1 minting by depositing approved RWA tokens (e.g. USYC) directly, or depositing USDC via a gateway; redeemable 1:1 for underlying RWA assets via the DaoCollateral contract at any time; arbitrageurs enforce the peg",
     "llamaId": "195",
