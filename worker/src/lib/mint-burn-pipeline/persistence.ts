@@ -172,9 +172,6 @@ export async function persistMintBurnRows(
   roundtripsDetected: number;
 }> {
   const roundtripsDetected = detectAtomicRoundtrips(rows);
-  if (affectedHours) {
-    collectAffectedHours(rows, affectedHours);
-  }
   if (rows.length === 0) {
     return {
       inserted: 0,
@@ -186,6 +183,9 @@ export async function persistMintBurnRows(
 
   const insertResult = await insertMintBurnRows(db, rows);
   const classificationRowsUpdated = await updateEventClassifications(db, rows);
+  if (affectedHours && (insertResult.inserted > 0 || classificationRowsUpdated > 0)) {
+    collectAffectedHours(rows, affectedHours);
+  }
   return {
     inserted: insertResult.inserted,
     ignored: insertResult.ignored,

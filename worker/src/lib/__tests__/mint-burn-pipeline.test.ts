@@ -46,6 +46,7 @@ import { classifyBridgeBurnRows } from "../mint-burn-pipeline/classification";
 import {
   collectAffectedHours,
   insertMintBurnRows,
+  persistMintBurnRows,
   recalcAffectedHours,
   rebuildHourlyForStablecoinIds,
   updateEventClassifications,
@@ -281,6 +282,44 @@ describe("mint-burn shared pipeline modules", () => {
 
     expect(result.inserted).toBe(1);
     expect(result.ignored).toBe(1);
+  });
+
+  it("skips affected-hour aggregation work when persistence is a pure no-op", async () => {
+    const db = makeDb();
+    vi.mocked(batchExecute).mockReset();
+    vi.mocked(batchExecute)
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(0);
+
+    const affectedHours = new Map<string, { stablecoinId: string; chainId: string; hourTs: number }>();
+    const result = await persistMintBurnRows(
+      db,
+      [makeRow({ id: "id-1", direction: "mint", flow_type: "standard" })],
+      affectedHours,
+    );
+
+    expect(result.inserted).toBe(0);
+    expect(result.classificationRowsUpdated).toBe(0);
+    expect(affectedHours.size).toBe(0);
+  });
+
+  it("tracks affected hours when inserts land even if the batch includes duplicates", async () => {
+    const db = makeDb();
+    vi.mocked(batchExecute).mockReset();
+    vi.mocked(batchExecute).mockResolvedValueOnce(1);
+
+    const affectedHours = new Map<string, { stablecoinId: string; chainId: string; hourTs: number }>();
+    const result = await persistMintBurnRows(
+      db,
+      [
+        makeRow({ id: "id-1", direction: "mint", timestamp: 3_605, flow_type: "standard" }),
+        makeRow({ id: "id-2", direction: "mint", timestamp: 7_205, flow_type: "standard" }),
+      ],
+      affectedHours,
+    );
+
+    expect(result.inserted).toBe(1);
+    expect(affectedHours.size).toBe(2);
   });
 
   it("chunks event inserts below the D1 bind-variable ceiling", async () => {
