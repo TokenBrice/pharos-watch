@@ -363,7 +363,7 @@ Users simulate a grade downgrade for any upstream coin and watch cascading grade
 
 - **Coin selector**: Filtered to coins appearing as `from` in `dependencyGraph.edges`, sorted by dependent count.
 - **Grade selector**: Only downgrades from the coin's current grade to F.
-- **Recomputation**: `computeStressedGrades()` injects a synthetic score, recomputes only the Dependency Risk dimension for affected downstream coins. The current snapshot size is 270 cards (188 tracked + 82 cemetery) × 5 dimensions, which remains comfortably sub-millisecond in practice.
+- **Recomputation**: `computeStressedGrades()` injects a synthetic score, recomputes only the Dependency Risk dimension for affected downstream coins. The current snapshot size is 274 cards (192 tracked + 82 cemetery) × 5 dimensions, which remains comfortably sub-millisecond in practice.
 - **Two display modes**: Portfolio mode (dollar-denominated, scoped to held coins in impact table) vs ecosystem mode (all affected coins with market cap).
 - **Card grid simulation**: ALL affected coins show dashed amber borders + "Simulated" badge regardless of portfolio mode. Unaffected cards dimmed. Sticky banner with clear button.
 
