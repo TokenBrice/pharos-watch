@@ -96,6 +96,16 @@ export type GovernanceQuality =
 export type ProtocolFamily = "liquity";
 export type ProtocolVariant = "v1" | "v2" | "style";
 
+export type Infrastructure = "liquity-v1" | "liquity-v2" | "m0";
+
+export const INFRASTRUCTURE_VALUES = ["liquity-v1", "liquity-v2", "m0"] as const;
+
+export const INFRASTRUCTURE_LABELS: Record<Infrastructure, string> = {
+  "liquity-v1": "Liquity v1",
+  "liquity-v2": "Liquity v2",
+  "m0": "M0",
+};
+
 export const GOVERNANCE_TYPE_VALUES = ["centralized", "centralized-dependent", "decentralized"] as const;
 export const CHAIN_TIER_VALUES = ["ethereum", "stage1-l2", "mature-alt-l1", "established-alt-l1", "unproven"] as const;
 export const DEPLOYMENT_MODEL_VALUES = ["single-chain", "canonical-bridge", "third-party-bridge", "native-multichain"] as const;
