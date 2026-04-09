@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { parseChainlinkLatestRoundData } from "../chainlink";
-import { adaptChainlinkNavResponse, type ChainlinkNavParams } from "../chainlink-nav";
+import {
+  adaptChainlinkNavResponse,
+  parseOndoPriceData,
+  type ChainlinkNavParams,
+} from "../chainlink-nav";
 
 describe("adaptChainlinkNavResponse", () => {
   const params: ChainlinkNavParams = {
@@ -95,5 +99,22 @@ describe("parseChainlinkLatestRoundData", () => {
       + "0000000000000000000000000000000000000000000000000000000000000000" // updatedAt = 0
       + "0000000000000000000000000000000000000000000000000000000000000001";
     expect(() => parseChainlinkLatestRoundData(zeroUpdatedAt, "test")).toThrow("non-positive updatedAt");
+  });
+});
+
+describe("parseOndoPriceData", () => {
+  it("parses price and timestamp from a two-word payload", () => {
+    const raw = "0x"
+      + "00000000000000000000000000000000000000000000000639e961576659e000"
+      + "0000000000000000000000000000000000000000000000000000000069d6caf3";
+
+    expect(parseOndoPriceData(raw)).toEqual({
+      price: 114_853_438_000_000_000_000n,
+      updatedAt: 1775684339,
+    });
+  });
+
+  it("throws on malformed payloads", () => {
+    expect(() => parseOndoPriceData("0x1234")).toThrow("malformed payload");
   });
 });

@@ -3372,8 +3372,7 @@
       },
       "inputs": {
         "primary": {
-          "kind": "http-json",
-          "url": "https://markets.figure.com"
+          "kind": "onchain-solana"
         }
       }
     },

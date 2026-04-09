@@ -192,6 +192,31 @@ describe("tracked stablecoin metadata", () => {
     expect(missingScopes).toEqual([]);
   });
 
+  it("keeps curated-validated live reserve configs aligned with an onchain tracked contract", () => {
+    const issues = TRACKED_STABLECOINS
+      .filter((coin) => coin.liveReservesConfig?.adapter === "curated-validated")
+      .flatMap((coin) => {
+        const config = coin.liveReservesConfig!;
+        const primary = config.inputs.primary;
+        if (primary.kind !== "onchain-evm" && primary.kind !== "onchain-solana") {
+          return [`${coin.id}:primary:${primary.kind}`];
+        }
+
+        const hasMatchingContract = coin.contracts?.some(
+          (contract) => contract.chain === (primary.kind === "onchain-solana" ? "solana" : primary.chain)
+            && (
+              primary.kind === "onchain-solana"
+                ? contract.address.length > 0
+                : contract.address.startsWith("0x")
+            ),
+        ) ?? false;
+        const contractKey = primary.kind === "onchain-solana" ? "solana" : primary.chain;
+        return hasMatchingContract ? [] : [`${coin.id}:contract:${contractKey}`];
+      });
+
+    expect(issues).toEqual([]);
+  });
+
   it("does not let one breaker scope cover multiple distinct live-reserve source configs", () => {
     const liveCoins = TRACKED_STABLECOINS.filter((coin) => coin.liveReservesConfig);
     const scopeSourceGroups = new Map<string, Set<string>>();

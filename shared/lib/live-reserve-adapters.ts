@@ -37,6 +37,9 @@ const LiveReserveInputSchema: z.ZodType<LiveReserveInput> = z.union([
     url: z.string(),
   }).strict(),
   z.object({
+    kind: z.literal("onchain-solana"),
+  }).strict(),
+  z.object({
     kind: z.literal("onchain-evm"),
     chain: z.string(),
     rpcMode: LiveReserveRpcModeSchema,
@@ -75,7 +78,7 @@ const chainlinkNavParamsSchema = z.object({
   tokenAddress: z.string(),
   assetLabel: z.string(),
   assetRisk: LiveReserveRiskSchema,
-  oracleMethod: z.enum(["latestRoundData", "getPrice"]).optional(),
+  oracleMethod: z.enum(["latestRoundData", "getPrice", "getAssetPrice"]).optional(),
   rpcUrl: z.string().optional(),
   fallbackRpcUrl: z.string().optional(),
   maxOracleAgeSec: z.number().positive().optional(),

@@ -1746,8 +1746,7 @@
       },
       "inputs": {
         "primary": {
-          "kind": "http-json",
-          "url": "https://phantom.com/cash"
+          "kind": "onchain-solana"
         }
       }
     }
@@ -2188,79 +2187,7 @@
         "risk": "low",
         "coinId": "usdt-tether"
       }
-    ],
-    "liveReservesConfig": {
-      "adapter": "lista",
-      "version": 1,
-      "semantics": "collateral-mix",
-      "display": {
-        "url": "https://lista.org/",
-        "label": "Lista DAO"
-      },
-      "inputs": {
-        "primary": {
-          "kind": "onchain-evm",
-          "chain": "bsc",
-          "rpcMode": "public-rpc"
-        }
-      },
-      "params": {
-        "branches": [
-          {
-            "name": "WBNB",
-            "holder": "0x25927bAEC4C9eA87C839c4cf01a7E6E31De0a57d",
-            "token": {
-              "chain": "bsc",
-              "address": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
-              "decimals": 18
-            },
-            "risk": "high"
-          },
-          {
-            "name": "slisBNB (Lista BNB LST)",
-            "holder": "0x99e581dEB46DBa390a0B52350f0F145d0AaE5Bfd",
-            "token": {
-              "chain": "bsc",
-              "address": "0xB0b84D294e0C75A6abe60171b70edEb2EFd14A1B",
-              "decimals": 18
-            },
-            "risk": "high"
-          },
-          {
-            "name": "wBETH (Binance ETH LST)",
-            "holder": "0x3A7e68aF69d4C7B29CdD4eBB6a23e74c0a0C5A3d",
-            "token": {
-              "chain": "bsc",
-              "address": "0xa2E3356610840701BDf5611a53974510Ae27E2e1",
-              "decimals": 18
-            },
-            "risk": "medium"
-          },
-          {
-            "name": "BTCB (Binance-wrapped BTC)",
-            "holder": "0x8C7Bb01A8776F95552de1b418DA033456AA85c89",
-            "token": {
-              "chain": "bsc",
-              "address": "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c",
-              "decimals": 18
-            },
-            "risk": "medium"
-          },
-          {
-            "name": "USDT (via PSM)",
-            "holder": "0x2aCA4fEF72baaBa5b2215D8D5e2e3dCBa4bEC147",
-            "token": {
-              "chain": "bsc",
-              "address": "0x55d398326f99059fF775485246999027B3197955",
-              "decimals": 18
-            },
-            "risk": "low",
-            "coinId": "usdt-tether",
-            "priceUsd": 1
-          }
-        ]
-      }
-    }
+    ]
   },
   {
     "id": "usdo-openeden",
@@ -3453,8 +3380,7 @@
       "breakerScope": "hyusd-hylo",
       "inputs": {
         "primary": {
-          "kind": "http-json",
-          "url": "https://api.hylo.so/reserves"
+          "kind": "onchain-solana"
         }
       }
     }
@@ -3820,79 +3746,7 @@
         "pct": 15,
         "risk": "very-high"
       }
-    ],
-    "liveReservesConfig": {
-      "adapter": "abracadabra",
-      "version": 1,
-      "semantics": "collateral-mix",
-      "breakerScope": "mim-abracadabra",
-      "display": {
-        "url": "https://abracadabra.money/",
-        "label": "Abracadabra Cauldrons"
-      },
-      "inputs": {
-        "primary": {
-          "kind": "onchain-evm",
-          "chain": "ethereum",
-          "rpcMode": "public-rpc"
-        }
-      },
-      "params": {
-        "cauldrons": [
-          {
-            "address": "0x7b7473a76D6ae86CE19f7352A1E89F6C9dc39020",
-            "collateralSymbol": "yvDAI",
-            "collateralAddress": "0xdA816459F1AB5631232FE5e97a05BBBb94970c95",
-            "collateralDecimals": 18,
-            "risk": "high"
-          },
-          {
-            "address": "0x806e16ec797c69afa8590A55723CE4CC1b54050E",
-            "collateralSymbol": "yvCVXETH",
-            "collateralAddress": "0x1635b506a88fBF428465Ad65d00e8d6B6E5846C3",
-            "collateralDecimals": 18,
-            "risk": "very-high"
-          },
-          {
-            "address": "0x85f60D3ea4E86Af43c9D4E9CC9095281fC2c7F42",
-            "collateralSymbol": "yvstETH",
-            "collateralAddress": "0xdCD90C7f6324cfa40d7169ef80b12031770B4325",
-            "collateralDecimals": 18,
-            "risk": "high"
-          },
-          {
-            "address": "0xc319EEa1e792577C319723b5e60a15dA3857E7da",
-            "collateralSymbol": "sSPELL",
-            "collateralAddress": "0x26FA3fFFB6EfE8c1E69103aCb4044C26B9A106a9",
-            "collateralDecimals": 18,
-            "risk": "very-high"
-          },
-          {
-            "address": "0x9617b633EF905571053f9BCa09300e855F50519E",
-            "collateralSymbol": "yvUSDC",
-            "collateralAddress": "0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE",
-            "collateralDecimals": 6,
-            "risk": "high",
-            "coinId": "usdc-circle"
-          },
-          {
-            "address": "0x003d5A75d284824Af736df51933be522DE9Eed0f",
-            "collateralSymbol": "yvUSDT",
-            "collateralAddress": "0x3B27F92C0e212C671EA351827EDF93DB27cc0c65",
-            "collateralDecimals": 6,
-            "risk": "high",
-            "coinId": "tether"
-          },
-          {
-            "address": "0x920D9BD936Da4eAFb5E25c6bDC9f6CB528953F9f",
-            "collateralSymbol": "yvWETH",
-            "collateralAddress": "0xa258C4606Ca8206D8aA700cE2143D7db854D168c",
-            "collateralDecimals": 18,
-            "risk": "high"
-          }
-        ]
-      }
-    }
+    ]
   },
   {
     "id": "usdcv-societe-generale-forge",
@@ -8044,7 +7898,7 @@
         "tokenAddress": "0x1b19c19393e2d034d8ff31ff34c81252fcbbee92",
         "assetLabel": "BlackRock BUIDL (U.S. T-bills, cash, repos)",
         "assetRisk": "very-low",
-        "oracleMethod": "getPrice"
+        "oracleMethod": "getAssetPrice"
       }
     },
     "yieldConfig": {

@@ -2,7 +2,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
-import { probeOnchainTotalSupply } from "./helpers";
+import { probeTrackedTokenSupply } from "./helpers";
 
 /**
  * Adapter that validates on-chain supply is non-zero, then returns the
@@ -21,7 +21,7 @@ export async function fetchCuratedValidatedReserves(
   }
 
   const params = parseLiveReserveAdapterParams("curated-validated", config.params);
-  const totalSupply = await probeOnchainTotalSupply(
+  const totalSupply = await probeTrackedTokenSupply(
     coin, config.inputs.primary, signal, "curated-validated", ctx, params.rpcUrl, params.fallbackRpcUrl,
   );
 

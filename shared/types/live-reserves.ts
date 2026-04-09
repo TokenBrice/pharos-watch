@@ -102,6 +102,7 @@ export type LiveReserveInput =
   | { kind: "http-json"; url: string }
   | { kind: "http-html"; url: string }
   | { kind: "indexer"; url: string }
+  | { kind: "onchain-solana" }
   | { kind: "onchain-evm"; chain: string; rpcMode: LiveReserveRpcMode };
 
 export interface LiveReserveWarning {

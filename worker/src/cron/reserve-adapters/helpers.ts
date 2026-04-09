@@ -42,6 +42,7 @@ type JsonObject = Record<string, unknown>;
 
 type JsonInput = Extract<LiveReserveInput, { kind: "http-json" }>;
 type HtmlInput = Extract<LiveReserveInput, { kind: "http-html" }>;
+type SolanaInput = Extract<LiveReserveInput, { kind: "onchain-solana" }>;
 type EvmInput = Extract<LiveReserveInput, { kind: "onchain-evm" }>;
 
 interface EvmCallOptions {
@@ -66,6 +67,7 @@ const ADAPTER_USER_AGENT = "Mozilla/5.0";
 const DEFILLAMA_PRICE_CHAIN_ALIASES: Record<string, string> = {
   hyperevm: "hyperliquid",
 };
+const SOLANA_RPC_URL = "https://api.mainnet-beta.solana.com";
 
 function summarizeResponseBody(raw: string, limit = 120): string {
   return raw.replace(/\s+/g, " ").trim().slice(0, limit);
@@ -118,6 +120,10 @@ export function isHttpJsonInput(input: LiveReserveInput): input is JsonInput {
 
 function isOnchainEvmInput(input: LiveReserveInput): input is EvmInput {
   return input.kind === "onchain-evm";
+}
+
+function isOnchainSolanaInput(input: LiveReserveInput): input is SolanaInput {
+  return input.kind === "onchain-solana";
 }
 
 export function isHttpHtmlInput(input: LiveReserveInput): input is HtmlInput {
@@ -255,6 +261,44 @@ export async function fetchTextWithRetry(
     },
     ctx,
   );
+}
+
+interface SolanaTokenSupplyResponse {
+  result?: {
+    value?: {
+      amount?: string;
+    };
+  };
+}
+
+async function fetchSolanaTokenSupplyRaw(
+  mintAddress: string,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<bigint | null> {
+  const body = await fetchJsonPostWithRetry<SolanaTokenSupplyResponse>(
+    SOLANA_RPC_URL,
+    {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "getTokenSupply",
+      params: [mintAddress],
+    },
+    signal,
+    10_000,
+    ctx,
+  );
+
+  const amount = body.result?.value?.amount;
+  if (typeof amount !== "string" || amount.length === 0) {
+    return null;
+  }
+
+  try {
+    return BigInt(amount);
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchDefiLlamaPrices(
@@ -464,6 +508,47 @@ export async function probeOnchainTotalSupply(
     throw new Error(`${adapterName} could not find a ${onchain.chain} contract for ${coin.id}`);
   }
   const supply = await fetchErc20TotalSupply(onchain, contract, signal, ctx, rpcUrl, fallbackRpcUrl);
+  if (supply == null || supply <= 0n) {
+    throw new Error(`${adapterName} totalSupply probe failed for ${coin.id}`);
+  }
+  return supply;
+}
+
+/**
+ * Resolves contract/mint metadata for a coin on a supported onchain input and
+ * validates that the published token supply is non-zero.
+ */
+export async function probeTrackedTokenSupply(
+  coin: StablecoinMeta,
+  input: LiveReserveInput,
+  signal: AbortSignal,
+  adapterName: string,
+  ctx?: AdapterContext,
+  rpcUrl?: string,
+  fallbackRpcUrl?: string,
+): Promise<bigint> {
+  if (isOnchainEvmInput(input)) {
+    return probeOnchainTotalSupply(
+      coin,
+      input,
+      signal,
+      adapterName,
+      ctx,
+      rpcUrl,
+      fallbackRpcUrl,
+    );
+  }
+
+  if (!isOnchainSolanaInput(input)) {
+    throw new Error(`${adapterName} adapter requires a supported onchain primary input`);
+  }
+
+  const mintAddress = coin.contracts?.find((contract) => contract.chain === "solana")?.address;
+  if (!mintAddress) {
+    throw new Error(`${adapterName} could not find a solana contract for ${coin.id}`);
+  }
+
+  const supply = await fetchSolanaTokenSupplyRaw(mintAddress, signal, ctx);
   if (supply == null || supply <= 0n) {
     throw new Error(`${adapterName} totalSupply probe failed for ${coin.id}`);
   }

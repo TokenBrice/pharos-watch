@@ -9,7 +9,7 @@ Dedicated documentation for the live reserve-composition subsystem that powers `
 - **Cron:** `sync-live-reserves` (`worker/src/cron/sync-live-reserves.ts`)
 - **Schedule:** `11 * * * *` (hourly at :11 UTC)
 - **Shared hourly lane:** after live reserve sync, the same slot runs redemption backstop sync, Kinesis supply sync, and collateral-drift checks / alerts (`worker/src/handlers/scheduled/hourly-live-reserves.ts`)
-- **Current coverage:** 136 live-enabled stablecoins across 35 registered adapters
+- **Current coverage:** 133 live-enabled stablecoins across 35 registered adapters (32 currently configured in stablecoin metadata)
 - **Storage:** `reserve_composition`, `reserve_composition_history`, `reserve_sync_state`, `reserve_sync_attempt_history`
 - **API:** `GET /api/stablecoin-reserves/:id`
 - **Frontend consumers:** `useStablecoinReserves()`, stablecoin detail view model, `/status` reserve-sync health
@@ -72,7 +72,10 @@ Supported input kinds:
 | `http-json`   | JSON API endpoint                                                    |
 | `http-html`   | HTML page parsed by the adapter                                      |
 | `indexer`     | Indexed external data feed                                           |
+| `onchain-solana` | On-chain Solana mint-supply reads via the public mainnet RPC        |
 | `onchain-evm` | On-chain EVM reads via `etherscan-proxy`, `alchemy`, or `public-rpc` |
+
+`curated-validated` can now use `onchain-solana` when a tracked coin publishes its canonical Solana mint in `coin.contracts`, allowing the adapter to validate non-zero supply without downgrading the reserve mix to a weak single-bucket feed.
 
 ### Snapshot Metadata and Warning Effects
 
@@ -320,19 +323,20 @@ Fallback/degraded responses use a shorter edge cache (`s-maxage=300`, 5 minutes)
 ## Adapter Registry
 
 Registered in `worker/src/cron/reserve-adapters/index.ts`.
+This table reflects the adapter keys currently configured in `shared/data/stablecoins/*.json`; the runtime registry also retains unconfigured implementations.
 
 | Adapter                    | Primary input               | Semantics                            | Configured coins |
 | -------------------------- | --------------------------- | ------------------------------------ | ---------------- |
-| `accountable`              | `http-json`                 | `protocol-reserve`                   | 7                |
-| `anzen-usdz`              | `http-json`                 | `single-asset`                       | 1                |
+| `accountable`              | `http-json`                 | `collateral-mix` / `protocol-reserve` | 7               |
+| `anzen-usdz`               | `onchain-evm`              | `single-asset`                       | 1                |
 | `asymmetry`                | `http-json`                 | `collateral-mix`                     | 1                |
 | `btcfi`                    | `http-json`                 | `collateral-mix`                     | 1                |
-| `chainlink-nav`            | `onchain-evm`               | `single-asset`                       | 3                |
+| `chainlink-nav`            | `onchain-evm`               | `single-asset`                       | 4                |
 | `chainlink-por`            | `onchain-evm`               | `attestation-mix`                    | 1                |
 | `circle-transparency`      | `http-html`                 | `attestation-mix`                    | 2                |
 | `collateral-positions-api` | `http-json`                 | `collateral-mix`                     | 2                |
 | `crvusd`                   | `http-json`                 | `collateral-mix`                     | 1                |
-| `curated-validated`        | `onchain-evm`               | `attestation-mix` / `collateral-mix` | 24               |
+| `curated-validated`        | `onchain-evm` / `onchain-solana` | `attestation-mix` / `collateral-mix` / `single-asset` | 31 |
 | `dola-inverse`             | `http-json`                 | `collateral-mix`                     | 1                |
 | `erc4626-single-asset`     | `onchain-evm`               | `single-asset`                       | 2                |
 | `ethena`                   | `http-json`                 | `collateral-mix`                     | 1                |
@@ -351,9 +355,8 @@ Registered in `worker/src/cron/reserve-adapters/index.ts`.
 | `re-metrics`               | `http-html`                 | `collateral-mix`                     | 1                |
 | `reservoir`                | `http-json`                 | `protocol-reserve`                   | 1                |
 | `sgforge-coinvertible`     | `http-html`                 | `attestation-mix`                    | 1                |
-| `single-asset`             | `onchain-evm` / `http-json` | `single-asset`                       | 47               |
+| `single-asset`             | `http-json` / `onchain-evm` | `single-asset`                       | 47               |
 | `sky-makercore`            | `http-json`                 | `collateral-mix`                     | 2                |
-| `tether`                   | `http-json`                 | `attestation-mix`                    | 1                |
 | `usdai-proof-of-reserves`  | `http-json`                 | `collateral-mix`                     | 1                |
 | `usdd-data-platform`       | `http-json`                 | `collateral-mix`                     | 1                |
 
@@ -369,6 +372,9 @@ the `gho` adapter now values reviewed mainnet GSM backing directly from live onc
 Liquity v1 note:
 the `liquity-v1` adapter now covers `lusd-liquity` by reading `getEntireSystemColl()` and `getEntireSystemDebt()` from the official Ethereum `TroveManager`, preserving LUSD as a one-slice 100% ETH reserve view while classifying the feed as independent latest-state on-chain evidence rather than a generic ERC-20 liveness probe.
 
+Chainlink NAV note:
+`chainlink-nav` now supports both standard AggregatorV3 feeds and Ondo router-style NAV lookups. When `oracleMethod = "getAssetPrice"`, the adapter calls `getAssetPrice(token)` on the router and, when available, follows `tokenToRWAOracle(token) -> getPriceData()` to recover a verified freshness timestamp instead of treating the feed as permanently timestampless.
+
 Adapter helpers now live in a small helper family, with `worker/src/cron/reserve-adapters/helpers.ts` kept as the shared import surface:
 
 - HTTP JSON / HTML fetch wrappers (`fetchJsonWithRetry`, `fetchTextWithRetry`)
@@ -377,6 +383,7 @@ Adapter helpers now live in a small helper family, with `worker/src/cron/reserve
 - Shared unverified-freshness metadata helper so timestamp-less dashboard feeds explain why they remain non-scoring
 - DefiLlama spot-price loading for valuation (`fetchDefiLlamaPrices`), with fixed-price overrides supported for wrapper branches in `evm-branch-balances`
 - EVM balance, total-supply, and hex-call reads (`fetchErc20Balance`, `fetchErc20TotalSupply`)
+- Solana mint-supply reads (`fetchSolanaTokenSupplyRaw`) used by `curated-validated` for tracked Solana-issued assets
 - Input-kind type guards and validators (`requireJsonInput`, `requireJsonInputFromConfig`, etc.)
 - Slice normalization / valuation / unknown-exposure math (`slice-math.ts`) with configurable precision (`normalizeSlices`, `slicesFromValues`, `valueUsdFromBigIntPrice`)
 - Risk validation (`isReserveRisk`)

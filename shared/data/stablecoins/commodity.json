@@ -211,23 +211,7 @@
         "pct": 100,
         "risk": "very-low"
       }
-    ],
-    "liveReservesConfig": {
-      "adapter": "curated-validated",
-      "version": 1,
-      "semantics": "single-asset",
-      "breakerScope": "kau-kinesis",
-      "display": {
-        "url": "https://kinesis.money/audits",
-        "label": "Kinesis Audits"
-      },
-      "inputs": {
-        "primary": {
-          "kind": "http-json",
-          "url": "https://kinesis.money/audits"
-        }
-      }
-    }
+    ]
   },
   {
     "id": "xaum-matrixdock",

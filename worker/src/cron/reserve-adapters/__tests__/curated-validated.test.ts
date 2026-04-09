@@ -6,12 +6,12 @@ vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
   return {
     ...actual,
-    probeOnchainTotalSupply: vi.fn(),
+    probeTrackedTokenSupply: vi.fn(),
   };
 });
 
 import { fetchCuratedValidatedReserves } from "../curated-validated";
-import { probeOnchainTotalSupply } from "../helpers";
+import { probeTrackedTokenSupply } from "../helpers";
 
 const signal = AbortSignal.timeout(5000);
 
@@ -41,7 +41,7 @@ beforeEach(() => {
 
 describe("fetchCuratedValidatedReserves", () => {
   it("returns coin.reserves as slices when probe succeeds", async () => {
-    vi.mocked(probeOnchainTotalSupply).mockResolvedValue(1000000n);
+    vi.mocked(probeTrackedTokenSupply).mockResolvedValue(1000000n);
 
     const result = await fetchCuratedValidatedReserves(
       makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: "0x1234" }]),
@@ -54,7 +54,7 @@ describe("fetchCuratedValidatedReserves", () => {
   });
 
   it("preserves coinId and depType from curated reserves", async () => {
-    vi.mocked(probeOnchainTotalSupply).mockResolvedValue(500n);
+    vi.mocked(probeTrackedTokenSupply).mockResolvedValue(500n);
 
     const result = await fetchCuratedValidatedReserves(
       makeCoin(MULTI_SLICE_RESERVES, [{ chain: "ethereum", address: "0xABCD" }]),
@@ -88,7 +88,7 @@ describe("fetchCuratedValidatedReserves", () => {
   });
 
   it("throws when on-chain probe fails", async () => {
-    vi.mocked(probeOnchainTotalSupply).mockRejectedValue(
+    vi.mocked(probeTrackedTokenSupply).mockRejectedValue(
       new Error("curated-validated totalSupply probe failed for test-coin"),
     );
 
@@ -102,7 +102,7 @@ describe("fetchCuratedValidatedReserves", () => {
   });
 
   it("throws when probe cannot find contract", async () => {
-    vi.mocked(probeOnchainTotalSupply).mockRejectedValue(
+    vi.mocked(probeTrackedTokenSupply).mockRejectedValue(
       new Error("curated-validated could not find a ethereum contract for test-coin"),
     );
 
@@ -113,5 +113,23 @@ describe("fetchCuratedValidatedReserves", () => {
         signal,
       ),
     ).rejects.toThrow("could not find a ethereum contract");
+  });
+
+  it("supports non-EVM onchain probe paths when the helper resolves supply", async () => {
+    vi.mocked(probeTrackedTokenSupply).mockResolvedValue(42n);
+
+    const result = await fetchCuratedValidatedReserves(
+      makeCoin(MULTI_SLICE_RESERVES, [{ chain: "solana", address: "Mint1111111111111111111111111111111111" }]),
+      {
+        ...BASE_CONFIG,
+        inputs: {
+          primary: { kind: "onchain-solana" },
+        },
+      },
+      signal,
+    );
+
+    expect(result.slices).toEqual(MULTI_SLICE_RESERVES);
+    expect(result.metadata?.totalSupplyRaw).toBe("42");
   });
 });
