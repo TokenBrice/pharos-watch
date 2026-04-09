@@ -540,6 +540,22 @@ const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     tier: "extended",
     events: transferMintBurn(),
   },
+  {
+    // Wrapped M (wM) — WrappedMToken proxy 0x437cc33344a0b27a429f795ff6b469c72698b291, deployed ~Aug 2024
+    // startBlock bisected via eth_getCode: contract absent at 20_527_909, present at 20_527_947
+    chain: ETHEREUM, stablecoinId: "wm-m0",
+    dustThreshold: 10_000, startBlock: 20_527_947,
+    tier: "extended",
+    events: transferMintBurn(),
+  },
+  {
+    // Nerona USD (USDnr) — proxy 0xd48e565561416de59da1050ed70b8d75e8ef28f9
+    // Default start block (deploy block unresolved without Etherscan API key); ~$50M supply
+    chain: ETHEREUM, stablecoinId: "usdnr-nerona",
+    dustThreshold: 10_000, startBlock: 21_900_000,
+    tier: "extended", isDefaultStartBlock: true,
+    events: transferMintBurn(),
+  },
 
   // --- Top-100 supported expansion (Ethereum only) ---
   {
