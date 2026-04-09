@@ -154,7 +154,7 @@ src/                              Frontend (Next.js static export)
 │   ├── stablecoins/[peg]/        Stablecoins filtered by peg currency
 │   ├── stablecoins/backing/[backing]/     Backing taxonomy landing pages
 │   ├── stablecoins/governance/[governance]/ Governance taxonomy landing pages
-│   ├── stablecoins/protocol/[protocol]/   Protocol-lineage landing pages
+│   ├── stablecoins/infrastructure/[infrastructure]/ Infrastructure landing pages
 │   ├── admin/                    Access-gated operator admin panel (ops.pharos.watch only)
 │   ├── status/                   Public system-status dashboard (read-only, noindex)
 │   ├── telegram/                 Telegram alerts + digest landing page

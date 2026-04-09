@@ -77,7 +77,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/stablecoins/[peg]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
 | `/stablecoins/backing/[backing]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
 | `/stablecoins/governance/[governance]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
-| `/stablecoins/protocol/[protocol]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
+| `/stablecoins/infrastructure/[infrastructure]/` | [architecture.md](./architecture.md), [classification.md](./classification.md) |
 | `/telegram/` | [telegram-alerts.md](./telegram-alerts.md) |
 | `/upcoming/` | [upcoming-page.md](./upcoming-page.md) |
 | `/yield/` | [yield-intelligence.md](./yield-intelligence.md) |

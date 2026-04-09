@@ -55,8 +55,7 @@ Key fields on `StablecoinMeta` (see `shared/types/index.ts` for the full interfa
 - `dependencies?: DependencyWeight[]` — upstream stablecoin dependencies (for report cards)
 - `canBeBlacklisted?: boolean | "possible"` — blacklist capability (for resilience scoring)
 - `chainTier? / deploymentModel? / collateralQuality? / custodyModel? / governanceQuality?` — report card resilience/decentralization overrides
-- `protocolFamily?: "liquity"` — structured protocol-lineage family used for UI badges, cohort filters, and discovery hubs
-- `protocolVariant?: "v1" | "v2" | "style"` — structured Liquity-family variant used for stricter cohorting (`v1`, `v2`) or broader lineage-only grouping (`style`)
+- `infrastructures?: Infrastructure[]` — structured infrastructure-lineage list (`"liquity-v1"` / `"liquity-v2"` / `"m0"`) used for UI badges, cohort filters, and discovery hubs. An array so a coin can belong to more than one infrastructure simultaneously, though in practice each coin currently has zero or one entry.
 - `reserves?: ReserveSlice[]` — reserve composition data
 - `yieldConfig?: YieldConfig` — yield intelligence configuration
 - `pythFeedId?: string` — Pyth Network oracle feed ID (used for gold/commodity stablecoins)
@@ -65,31 +64,43 @@ Key fields on `StablecoinMeta` (see `shared/types/index.ts` for the full interfa
 - `notices?: CoinNotice[]` — per-coin alert notices shown on detail pages
 - `tags?: string[]` — freeform tag array for filtering and categorization
 
-### Protocol Lineage
+### Infrastructure Tagging
 
-Pharos now supports a small structured protocol-lineage layer for families that users may want to recognize across multiple issuers or forks.
+Pharos supports a small structured infrastructure layer for shared technical foundations that users may want to recognize across multiple issuers or forks.
 
 Current support:
 
-- `protocolFamily: "liquity"`
-- `protocolVariant: "v1" | "v2" | "style"`
+- `infrastructures: ["liquity-v1"]` &mdash; classic LUSD-style Liquity v1 forks
+- `infrastructures: ["liquity-v2"]` &mdash; BOLD-style Liquity v2 forks
+- `infrastructures: ["m0"]` &mdash; coins built on the M0 issuance platform
 
 This is intentionally narrower than the general classification system:
 
-- use `protocolFamily` / `protocolVariant` for concrete fork or lineage cohorts that deserve dedicated badges, filters, and discovery pages
+- use `infrastructures` for concrete shared-foundation cohorts that deserve dedicated badges, filters, and discovery pages
 - keep `tags` for loose editorial labels that do not need first-class routing or filtering semantics
 
-For Liquity-family assets:
+**Liquity v1** is the classic LUSD-style pattern:
 
-- `v1` means the classic LUSD-style pattern
-  - 110% liquidation threshold / minimum collateral ratio
-  - Stability Pool liquidation path
-  - no ongoing borrower interest
-- `v2` means the BOLD-style pattern
-  - user-set borrower rates
-  - Stability Pools
-  - Liquity-style redemptions across branch-like collateral markets
-- `style` means the lineage is clear, but Pharos is not claiming a strict v1/v2 classification from the currently verified metadata
+- 110% liquidation threshold / minimum collateral ratio
+- Stability Pool liquidation path
+- no ongoing borrower interest
+- forks share source code with the upstream Liquity codebase but operate independently with their own reserves
+
+**Liquity v2** is the BOLD-style pattern:
+
+- user-set borrower rates
+- Stability Pools
+- Liquity-style redemptions across branch-like collateral markets
+- forks share source code with the upstream Liquity v2 codebase but operate independently
+
+**M0** is an issuance-platform lineage rather than a code lineage:
+
+- coins are built on M0's smart-contract rails (minter governance, the SwapFacility, the `MExtension.sol` contract pattern)
+- M0 provides the issuance machinery; reserve composition is set by the issuer and **may or may not include the underlying $M token**
+- some M0-built coins are simple $M wrappers; others manage diversified collateral via M0's infrastructure
+- a governance issue at the M0 protocol level potentially affects every M0-built coin, even though their day-to-day operations and reserves are independent
+
+The `infrastructures` field is an array because a coin could in principle belong to multiple infrastructures (e.g., a hypothetical Liquity v2 fork that also wraps M0); in practice every currently-tagged coin has exactly one entry.
 
 ### Bluechip Grade
 
