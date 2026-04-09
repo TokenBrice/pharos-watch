@@ -233,6 +233,14 @@ const RAW_YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     yieldSource: "Cap savings (stCUSD)",
     yieldType: "lending-vault",
   },
+  // USDat -> sUSDat (Saturn staking ERC-4626 vault — STRC + Treasuries dynamic mix, target ~11% APY)
+  "usdat-saturn": {
+    variantSymbol: "sUSDat",
+    variantAddress: "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+    variantChain: "ethereum",
+    yieldSource: "Saturn staking (sUSDat)",
+    yieldType: "nav-appreciation",
+  },
 };
 
 /**

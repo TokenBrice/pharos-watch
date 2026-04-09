@@ -348,7 +348,7 @@
     "notes": "Core helpers are already extracted. Next split should isolate orchestration, persistence, and fallback policy from the cron entrypoint."
   },
   "worker/src/cron/yield-config.ts": {
-    "fileLines": 720,
+    "fileLines": 728,
     "maxFunctionLines": 1,
     "branchCount": 0,
     "disposition": "deferred",

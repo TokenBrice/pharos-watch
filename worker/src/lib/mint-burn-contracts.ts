@@ -533,6 +533,13 @@ const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     tier: "extended", isDefaultStartBlock: true,
     events: transferMintBurn(),
   },
+  {
+    // Saturn USDat — proxy 0x23238f20b894f29041f48d88ee91131c395aaa71, deployed 2026-03-10
+    chain: ETHEREUM, stablecoinId: "usdat-saturn",
+    dustThreshold: 10_000, startBlock: 24_629_431,
+    tier: "extended",
+    events: transferMintBurn(),
+  },
 
   // --- Top-100 supported expansion (Ethereum only) ---
   {
