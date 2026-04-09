@@ -7,6 +7,14 @@
 /stability-index-alt/* /stability-index/:splat 301
 /stability-index-alt /stability-index 301
 
+# Infrastructure tagging — protocol → infrastructure rename
+/stablecoins/protocol/liquity-v1/* /stablecoins/infrastructure/liquity-v1/:splat 301
+/stablecoins/protocol/liquity-v1 /stablecoins/infrastructure/liquity-v1/ 301
+/stablecoins/protocol/liquity-v2/* /stablecoins/infrastructure/liquity-v2/:splat 301
+/stablecoins/protocol/liquity-v2 /stablecoins/infrastructure/liquity-v2/ 301
+/stablecoins/protocol/liquity/* /stablecoins/infrastructure/liquity-v1/:splat 301
+/stablecoins/protocol/liquity /stablecoins/infrastructure/liquity-v1/ 301
+
 # Stablecoin ID migration redirects (auto-generated)
 /stablecoin/1/ /stablecoin/usdt-tether/ 301
 /stablecoin/1 /stablecoin/usdt-tether/ 301
@@ -346,11 +354,3 @@
 /stablecoin/268 /stablecoin/yu-yala/ 301
 /stablecoin/315/ /stablecoin/uspd-permissionless/ 301
 /stablecoin/315 /stablecoin/uspd-permissionless/ 301
-
-# Infrastructure tagging — protocol → infrastructure rename
-/stablecoins/protocol/liquity-v1/* /stablecoins/infrastructure/liquity-v1/:splat 301
-/stablecoins/protocol/liquity-v1 /stablecoins/infrastructure/liquity-v1/ 301
-/stablecoins/protocol/liquity-v2/* /stablecoins/infrastructure/liquity-v2/:splat 301
-/stablecoins/protocol/liquity-v2 /stablecoins/infrastructure/liquity-v2/ 301
-/stablecoins/protocol/liquity/* /stablecoins/infrastructure/liquity-v1/:splat 301
-/stablecoins/protocol/liquity /stablecoins/infrastructure/liquity-v1/ 301
