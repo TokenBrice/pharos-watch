@@ -273,10 +273,6 @@ export type FilterTag =
   | "rwa-backed"
   | "crypto-backed"
   | "algorithmic"
-  | "liquity-family"
-  | "liquity-v1"
-  | "liquity-v2"
-  | "liquity-style"
   | "infrastructure-liquity-v1"
   | "infrastructure-liquity-v2"
   | "infrastructure-m0"
@@ -366,10 +362,6 @@ export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
   "rwa-backed": "RWA-Backed",
   "crypto-backed": "Crypto-Backed",
   algorithmic: "Algorithmic",
-  "liquity-family": "Liquity",
-  "liquity-v1": "Liquity v1",
-  "liquity-v2": "Liquity v2",
-  "liquity-style": "Liquity-Style",
   "infrastructure-liquity-v1": "Liquity v1",
   "infrastructure-liquity-v2": "Liquity v2",
   "infrastructure-m0": "M0",

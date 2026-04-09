@@ -15,7 +15,8 @@ import {
   THREAT_BAND_LABELS,
   isThreatBand,
 } from "@shared/lib/classification";
-import { getProtocolFamilyLabel } from "@shared/lib/protocol-family";
+import { getInfrastructureLabel } from "@shared/lib/infrastructure";
+import type { Infrastructure } from "@shared/types";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
 import {
   formatCurrency,
@@ -108,25 +109,31 @@ function HeroTagList({ tags }: { tags: readonly string[] | undefined }) {
   );
 }
 
-function ProtocolFamilyTag({ label }: { label: string | null }) {
-  if (!label) return null;
+function InfrastructureBadge({ value }: { value: Infrastructure }) {
+  const label = getInfrastructureLabel(value);
+  const isM0 = value === "m0";
+  const colorClass = isM0
+    ? "text-violet-700 dark:text-violet-400"
+    : "text-frost-blue";
+  const borderClass = isM0
+    ? "border-violet-500/30 bg-violet-500/10"
+    : "border-frost-blue/30 bg-frost-blue/10";
 
   return (
-    <span className="inline-flex items-center rounded-full border border-frost-blue/30 bg-frost-blue/10 px-2.5 py-0.5 text-[11px] font-semibold text-frost-blue">
-      {label}
-    </span>
+    <div className={`flex items-center gap-2 rounded-lg border ${borderClass} px-2.5 py-1.5`}>
+      <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Infrastructure</span>
+      <span className={`text-base font-bold font-mono ${colorClass}`}>{label}</span>
+    </div>
   );
 }
 
-function LiquityForkBadge({ variant }: { variant?: "v1" | "v2" }) {
-  if (!variant) return null;
-
-  return (
-    <div className="flex items-center gap-2 rounded-lg border border-border/40 bg-background/40 px-2.5 py-1.5">
-      <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Liquity Fork</span>
-      <span className="text-base font-bold font-mono text-frost-blue">{variant}</span>
-    </div>
-  );
+function InfrastructureChip({ value }: { value: Infrastructure }) {
+  const label = getInfrastructureLabel(value);
+  const isM0 = value === "m0";
+  const className = isM0
+    ? "inline-flex items-center rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-violet-700 dark:text-violet-400"
+    : "inline-flex items-center rounded-full border border-frost-blue/30 bg-frost-blue/10 px-2.5 py-0.5 text-[11px] font-semibold text-frost-blue";
+  return <span className={className}>{label}</span>;
 }
 
 interface TertiaryMetricConfig {
@@ -143,7 +150,7 @@ interface TertiaryMetricConfig {
 function HeroTertiaryMetrics({
   metrics,
   chainCount,
-  liquityForkVariant,
+  infrastructures,
   earlyPegScore,
   trackingSpanDays,
   activeDepeg,
@@ -151,7 +158,7 @@ function HeroTertiaryMetrics({
 }: {
   metrics: TertiaryMetricConfig[];
   chainCount: number;
-  liquityForkVariant?: "v1" | "v2";
+  infrastructures: Infrastructure[];
   earlyPegScore: boolean;
   trackingSpanDays: number;
   activeDepeg: boolean;
@@ -180,7 +187,9 @@ function HeroTertiaryMetrics({
             <span className="text-base font-bold font-mono">{chainCount}</span>
           </div>
         )}
-        <LiquityForkBadge variant={liquityForkVariant} />
+        {infrastructures.map((value) => (
+          <InfrastructureBadge key={value} value={value} />
+        ))}
         {!mobile && earlyPegScore && (
           <span className="text-xs text-amber-600 dark:text-amber-400">
             Early peg score · {trackingSpanDays}d tracked
@@ -281,7 +290,7 @@ export function HeroCard({
   reportCard,
   onOpenFeedback,
 }: HeroCardProps) {
-  const protocolLabel = getProtocolFamilyLabel(coin);
+  const infrastructures: Infrastructure[] = coin.infrastructures ?? [];
   const chainCount = coinData?.chains?.length ?? 0;
   const blacklistStatus = getResolvedBlacklistStatus(coin.id, reportCard);
   const primaryComparisonPage = getPrimaryStaticComparisonPageForCoin(coin.id);
@@ -291,11 +300,6 @@ export function HeroCard({
       ? primaryComparisonPage.right.symbol
       : primaryComparisonPage.left.symbol
     : null;
-  const LIQUITY_ORIGINALS = new Set(["bold-liquity", "lusd-liquity"]);
-  const liquityForkVariant =
-    coin.protocolFamily === "liquity" && (coin.protocolVariant === "v1" || coin.protocolVariant === "v2") && !LIQUITY_ORIGINALS.has(coin.id)
-      ? coin.protocolVariant
-      : undefined;
   const hasPrevDay = typeof prevDay === "number" && prevDay > 0;
   const hasPrevWeek = typeof prevWeek === "number" && prevWeek > 0;
   const hasPrevMonth = typeof prevMonth === "number" && prevMonth > 0;
@@ -551,7 +555,9 @@ export function HeroCard({
             </div>
             <HeroClassificationLine coin={coin} />
             <div className="mt-1 flex flex-wrap items-center gap-1.5">
-              <ProtocolFamilyTag label={protocolLabel} />
+              {infrastructures.map((value) => (
+                <InfrastructureChip key={value} value={value} />
+              ))}
               <HeroTagList tags={coin.tags} />
             </div>
           </div>
@@ -624,7 +630,7 @@ export function HeroCard({
         <HeroTertiaryMetrics
           metrics={tertiaryMetrics}
           chainCount={chainCount}
-          liquityForkVariant={liquityForkVariant}
+          infrastructures={infrastructures}
           earlyPegScore={earlyPegScore}
           trackingSpanDays={pegScoreResult?.trackingSpanDays ?? 0}
           activeDepeg={pegScoreResult?.activeDepeg === true}
@@ -651,7 +657,9 @@ export function HeroCard({
                     <HeroClassificationLine coin={coin} />
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                    <ProtocolFamilyTag label={protocolLabel} />
+                    {infrastructures.map((value) => (
+                      <InfrastructureChip key={value} value={value} />
+                    ))}
                     <HeroTagList tags={coin.tags} />
                   </div>
                 </div>
@@ -722,7 +730,7 @@ export function HeroCard({
           <HeroTertiaryMetrics
             metrics={tertiaryMetrics}
             chainCount={chainCount}
-            liquityForkVariant={liquityForkVariant}
+            infrastructures={infrastructures}
             earlyPegScore={earlyPegScore}
             trackingSpanDays={pegScoreResult?.trackingSpanDays ?? 0}
             activeDepeg={pegScoreResult?.activeDepeg === true}

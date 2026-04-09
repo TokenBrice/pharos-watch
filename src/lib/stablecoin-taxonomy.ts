@@ -1,11 +1,11 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
-import type { BackingType, FilterTag, GovernanceType, StablecoinMeta } from "@shared/types";
+import type { BackingType, FilterTag, GovernanceType, Infrastructure, StablecoinMeta } from "@shared/types";
 
-export type ProtocolTaxonomyValue = "liquity-family" | "liquity-v1" | "liquity-v2";
+export type InfrastructureTaxonomyValue = Infrastructure;
 
-type TaxonomyKind = "governance" | "backing" | "protocol";
+type TaxonomyKind = "governance" | "backing" | "infrastructure";
 
-export interface StablecoinTaxonomyPage<TValue extends GovernanceType | BackingType | ProtocolTaxonomyValue> {
+export interface StablecoinTaxonomyPage<TValue extends GovernanceType | BackingType | InfrastructureTaxonomyValue> {
   kind: TaxonomyKind;
   slug: string;
   value: TValue;
@@ -131,72 +131,60 @@ export const BACKING_TAXONOMY_PAGES = (Object.entries(BACKING_SLUGS) as [Backing
 
 const STABLECOIN_TAXONOMY_PAGES = [...GOVERNANCE_TAXONOMY_PAGES, ...BACKING_TAXONOMY_PAGES];
 
-const PROTOCOL_CONTENT: Record<
-  ProtocolTaxonomyValue,
+const INFRASTRUCTURE_CONTENT: Record<
+  InfrastructureTaxonomyValue,
   { slug: string; title: string; shortLabel: string; intro: string; description: (count: number) => string }
 > = {
-  "liquity-family": {
-    slug: "liquity",
-    title: "Liquity-Family Stablecoins",
-    shortLabel: "Liquity-Family",
-    intro:
-      "Liquity-family stablecoins share the same CDP lineage: hard redemption logic, a Stability Pool liquidation path, and the recognizable Liquity fork design language. This hub groups the full cohort so users can spot those mechanics quickly.",
-    description: (count) =>
-      `${count} Liquity-family stablecoin${count !== 1 ? "s" : ""} tracked by Pharos. Compare the original Liquity assets, v1 forks, v2 forks, and Liquity-style variants in one directory.`,
-  },
   "liquity-v1": {
     slug: "liquity-v1",
-    title: "Liquity v1 Forks",
+    title: "Liquity v1 Infrastructure Stablecoins",
     shortLabel: "Liquity v1",
     intro:
-      "Liquity v1 forks typically pair a 110% liquidation threshold with Stability Pool liquidations and no ongoing borrower interest. This page isolates the classic LUSD-style branch of the family.",
+      "Liquity v1 stablecoins fork the original Liquity CDP design: a 110% liquidation threshold, Stability Pool liquidations, and no ongoing borrower interest. This page isolates the classic LUSD-style branch.",
     description: (count) =>
-      `${count} Liquity v1 fork${count !== 1 ? "s" : ""} tracked by Pharos. Compare classic zero-interest Liquity-style CDP stablecoins in one place.`,
+      `${count} Liquity v1 stablecoin${count !== 1 ? "s" : ""} tracked by Pharos. Compare classic zero-interest Liquity-style CDP designs in one place.`,
   },
   "liquity-v2": {
     slug: "liquity-v2",
-    title: "Liquity v2 Forks",
+    title: "Liquity v2 Infrastructure Stablecoins",
     shortLabel: "Liquity v2",
     intro:
-      "Liquity v2 forks shift to user-set borrower rates while keeping the broader Liquity redemption and Stability Pool architecture. This hub groups the newer BOLD-style implementations.",
+      "Liquity v2 stablecoins use the BOLD-style design: user-set borrower rates, branch-style collateral markets, and Stability Pools. This hub groups the newer Liquity codebase forks.",
     description: (count) =>
-      `${count} Liquity v2 fork${count !== 1 ? "s" : ""} tracked by Pharos. Compare BOLD-style CDP stablecoins with user-set rates and Stability Pools.`,
+      `${count} Liquity v2 stablecoin${count !== 1 ? "s" : ""} tracked by Pharos. Compare BOLD-style CDP designs with user-set rates and Stability Pools.`,
+  },
+  "m0": {
+    slug: "m0",
+    title: "M0 Infrastructure Stablecoins",
+    shortLabel: "M0",
+    intro:
+      "M0 stablecoins are built on the M0 issuance platform: minter governance, the SwapFacility, and the MExtension.sol contract pattern. Each issuer sets its own reserve composition, which may or may not include the underlying $M token. The shared infrastructure correlates governance and smart-contract risk across the cohort.",
+    description: (count) =>
+      `${count} M0-built stablecoin${count !== 1 ? "s" : ""} tracked by Pharos. Compare branded extensions of the M0 issuance platform.`,
   },
 };
 
-export const PROTOCOL_TAXONOMY_PAGES = (Object.entries(PROTOCOL_CONTENT) as Array<
-  [ProtocolTaxonomyValue, (typeof PROTOCOL_CONTENT)[ProtocolTaxonomyValue]]
+export const INFRASTRUCTURE_TAXONOMY_PAGES = (Object.entries(INFRASTRUCTURE_CONTENT) as Array<
+  [InfrastructureTaxonomyValue, (typeof INFRASTRUCTURE_CONTENT)[InfrastructureTaxonomyValue]]
 >)
   .map(([value, content]) => {
-    const coins = ACTIVE_STABLECOINS.filter((coin) => {
-      if (coin.protocolFamily !== "liquity") return false;
-      switch (value) {
-        case "liquity-family":
-          return true;
-        case "liquity-v1":
-          return coin.protocolVariant === "v1";
-        case "liquity-v2":
-          return coin.protocolVariant === "v2";
-        default:
-          return false;
-      }
-    });
+    const coins = ACTIVE_STABLECOINS.filter((coin) => (coin.infrastructures ?? []).includes(value));
     return {
-      kind: "protocol" as const,
+      kind: "infrastructure" as const,
       slug: content.slug,
       value,
-      href: `/stablecoins/protocol/${content.slug}/`,
+      href: `/stablecoins/infrastructure/${content.slug}/`,
       title: content.title,
       shortLabel: content.shortLabel,
       description: content.description(coins.length),
       intro: content.intro,
-      filterTag: value,
+      filterTag: `infrastructure-${value}` as FilterTag,
       coins,
     };
   })
   .sort((left, right) => right.coins.length - left.coins.length);
 
-export const ALL_STABLECOIN_TAXONOMY_PAGES = [...STABLECOIN_TAXONOMY_PAGES, ...PROTOCOL_TAXONOMY_PAGES];
+export const ALL_STABLECOIN_TAXONOMY_PAGES = [...STABLECOIN_TAXONOMY_PAGES, ...INFRASTRUCTURE_TAXONOMY_PAGES];
 
 export const GOVERNANCE_TAXONOMY_PAGE_BY_SLUG = new Map(
   GOVERNANCE_TAXONOMY_PAGES.map((page) => [page.slug, page]),
@@ -206,8 +194,8 @@ export const BACKING_TAXONOMY_PAGE_BY_SLUG = new Map(
   BACKING_TAXONOMY_PAGES.map((page) => [page.slug, page]),
 );
 
-export const PROTOCOL_TAXONOMY_PAGE_BY_SLUG = new Map(
-  PROTOCOL_TAXONOMY_PAGES.map((page) => [page.slug, page]),
+export const INFRASTRUCTURE_TAXONOMY_PAGE_BY_SLUG = new Map(
+  INFRASTRUCTURE_TAXONOMY_PAGES.map((page) => [page.slug, page]),
 );
 
 export function buildGovernanceTaxonomyUrl(value: GovernanceType): string {
@@ -218,7 +206,7 @@ export function buildBackingTaxonomyUrl(value: BackingType): string {
   return `/stablecoins/backing/${BACKING_SLUGS[value]}/`;
 }
 
-export function buildProtocolTaxonomyUrl(value: ProtocolTaxonomyValue): string {
-  const page = PROTOCOL_TAXONOMY_PAGES.find((candidate) => candidate.value === value);
-  return page?.href ?? "/stablecoins/protocol/liquity/";
+export function buildInfrastructureTaxonomyUrl(value: InfrastructureTaxonomyValue): string {
+  const page = INFRASTRUCTURE_TAXONOMY_PAGES.find((candidate) => candidate.value === value);
+  return page?.href ?? `/stablecoins/infrastructure/${value}/`;
 }

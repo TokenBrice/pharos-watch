@@ -27,8 +27,8 @@ export const FILTER_GROUPS: FilterGroup[] = [
     options: ["grade-a", "grade-ge-b", "grade-ge-c-plus", "grade-ge-c-minus", "grade-le-d"],
   },
   {
-    label: "Liquity Forks",
-    options: ["liquity-v1", "liquity-v2"],
+    label: "Infrastructure",
+    options: ["infrastructure-liquity-v1", "infrastructure-liquity-v2", "infrastructure-m0"],
   },
 ];
 

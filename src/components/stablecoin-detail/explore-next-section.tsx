@@ -3,10 +3,10 @@ import { ArrowRight } from "lucide-react";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
-import { getProtocolFamilyLabel } from "@shared/lib/protocol-family";
+import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import type { StablecoinMeta } from "@shared/types";
 import { buildLiveCompareUrl } from "@/lib/compare-pages";
-import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl, buildProtocolTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
+import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl, buildInfrastructureTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
 import { PEG_SLUGS } from "@/lib/peg-landing";
 import { buildStablecoinUrl } from "@/lib/urls";
 
@@ -40,7 +40,8 @@ export function ExploreNextSection({
   staticComparisonPages,
   logos,
 }: ExploreNextSectionProps) {
-  const protocolLabel = getProtocolFamilyLabel(coin);
+  const firstInfrastructure = coin.infrastructures?.[0];
+  const infrastructureLabel = firstInfrastructure ? getInfrastructureLabel(firstInfrastructure) : null;
   const taxonomyLinks = [
     PEG_SLUGS[coin.flags.pegCurrency]
       ? {
@@ -56,16 +57,10 @@ export function ExploreNextSection({
       href: buildBackingTaxonomyUrl(coin.flags.backing),
       label: `Browse ${BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing} stablecoins`,
     },
-    coin.protocolFamily
+    firstInfrastructure
       ? {
-          href: buildProtocolTaxonomyUrl(
-            coin.protocolVariant === "v1"
-              ? "liquity-v1"
-              : coin.protocolVariant === "v2"
-                ? "liquity-v2"
-                : "liquity-family",
-          ),
-          label: protocolLabel ? `Browse ${protocolLabel} stablecoins` : "Browse Liquity-family stablecoins",
+          href: buildInfrastructureTaxonomyUrl(firstInfrastructure),
+          label: infrastructureLabel ? `Browse ${infrastructureLabel} stablecoins` : "Browse infrastructure stablecoins",
         }
       : null,
   ].filter((link): link is { href: string; label: string } => link !== null);

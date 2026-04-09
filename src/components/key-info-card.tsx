@@ -7,7 +7,7 @@ import { Check, Copy, ExternalLink, Globe } from "lucide-react";
 import { DETAIL_SECTION_TITLE_CLASS } from "@/components/stablecoin-detail/section-title";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CHAIN_META } from "@shared/lib/chains";
-import { getProtocolFamilyLabel, getProtocolFamilySummary } from "@shared/lib/protocol-family";
+import { getInfrastructureLabel, getInfrastructureSummary } from "@shared/lib/infrastructure";
 import { formatAddress } from "@shared/lib/format";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { trackEvent } from "@/lib/analytics";
@@ -28,8 +28,12 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
   const gov = GOVERNANCE_BADGE_STYLES[meta.flags.governance];
   const backing = BACKING_BADGE_STYLES[meta.flags.backing];
   const peg = PEG_BADGE_STYLES[meta.flags.pegCurrency];
-  const protocolLabel = getProtocolFamilyLabel(meta);
-  const protocolSummary = getProtocolFamilySummary(meta);
+  const infrastructures = meta.infrastructures ?? [];
+  const infrastructureSummaries = infrastructures.map((value) => ({
+    value,
+    label: getInfrastructureLabel(value),
+    summary: getInfrastructureSummary(value),
+  }));
   const hasDescription = meta.collateral || meta.pegMechanism;
   const isDecentralized = meta.flags.governance === "decentralized";
   const hasLinks = meta.links && meta.links.length > 0;
@@ -72,11 +76,18 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                 {peg.label}
               </span>
             )}
-            {protocolLabel && (
-              <span className="inline-flex items-center rounded-full border border-frost-blue/30 bg-frost-blue/10 px-3 py-1 text-xs font-semibold text-frost-blue">
-                {protocolLabel}
+            {infrastructureSummaries.map(({ value, label }) => (
+              <span
+                key={value}
+                className={
+                  value === "m0"
+                    ? "inline-flex items-center rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-700 dark:text-violet-400"
+                    : "inline-flex items-center rounded-full border border-frost-blue/30 bg-frost-blue/10 px-3 py-1 text-xs font-semibold text-frost-blue"
+                }
+              >
+                {label}
               </span>
-            )}
+            ))}
             {meta.flags.yieldBearing && (
               <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
                 Yield-Bearing
@@ -142,10 +153,15 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
           </div>
         )}
 
-        {protocolSummary && (
-          <div className="border-t border-border/40 pt-3 sm:pt-4">
-            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Protocol Lineage</p>
-            <p className="text-sm leading-relaxed text-muted-foreground">{protocolSummary}</p>
+        {infrastructureSummaries.length > 0 && (
+          <div className="border-t border-border/40 pt-3 sm:pt-4 space-y-3">
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Infrastructure</p>
+            {infrastructureSummaries.map(({ value, label, summary }) => (
+              <div key={value}>
+                <p className="text-xs font-semibold text-foreground">{label}</p>
+                <p className="text-sm leading-relaxed text-muted-foreground">{summary}</p>
+              </div>
+            ))}
           </div>
         )}
 

@@ -1,11 +1,11 @@
 import type { BackingType, GovernanceType } from "@shared/types";
 import { StablecoinFilteredTable } from "@/components/stablecoin-filtered-table";
 import { StablecoinTaxonomyShell } from "@/components/stablecoin-taxonomy-shell";
-import type { ProtocolTaxonomyValue, StablecoinTaxonomyPage as StablecoinTaxonomyPageConfig } from "@/lib/stablecoin-taxonomy";
+import type { InfrastructureTaxonomyValue, StablecoinTaxonomyPage as StablecoinTaxonomyPageConfig } from "@/lib/stablecoin-taxonomy";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
 
 interface StablecoinTaxonomyPageProps {
-  page: StablecoinTaxonomyPageConfig<BackingType | GovernanceType | ProtocolTaxonomyValue>;
+  page: StablecoinTaxonomyPageConfig<BackingType | GovernanceType | InfrastructureTaxonomyValue>;
 }
 
 export function StablecoinTaxonomyPage({ page }: StablecoinTaxonomyPageProps) {

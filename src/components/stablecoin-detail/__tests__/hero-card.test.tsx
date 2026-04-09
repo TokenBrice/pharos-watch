@@ -35,8 +35,7 @@ const coin: StablecoinMeta = {
   name: "USD Coin",
   canBeBlacklisted: true,
   status: "active",
-  protocolFamily: "liquity",
-  protocolVariant: "v2",
+  infrastructures: ["liquity-v2"],
   tags: ["major", "fiat-backed"],
   flags: {
     backing: "rwa-backed",
@@ -234,6 +233,7 @@ describe("HeroCard", () => {
     expect(html).toContain("USD Coin");
     expect(html).toContain("major");
     expect(html).toContain("fiat-backed");
+    expect(html).toContain("Infrastructure");
     expect(html).toContain("Liquity v2");
     expect(html).toContain("Bluechip: B");
     expect(html).toContain("peg-gauge:2");
@@ -374,5 +374,81 @@ describe("HeroCard", () => {
     );
 
     expect(html).toContain("Below $1.00M live-event floor. Deviation is shown, but event history may stay empty.");
+  });
+
+  it("renders an M0 infrastructure badge for M0-built stablecoins", () => {
+    const m0Coin: StablecoinMeta = {
+      ...coin,
+      id: "usdsc-startale",
+      name: "Startale USD",
+      symbol: "USDSC",
+      infrastructures: ["m0"],
+    };
+
+    const html = renderToStaticMarkup(
+      <HeroCard
+        coin={m0Coin}
+        coinData={{ ...coinData, id: "usdsc-startale", name: "Startale USD", symbol: "USDSC" }}
+        logoSrc="/logos/usdsc.svg"
+        isNavToken={false}
+        mcap={4_100_232}
+        supply={4_100_232}
+        prevDay={4_000_000}
+        prevWeek={3_900_000}
+        prevMonth={3_500_000}
+        performanceVsUsd1y={null}
+        pegRef={1}
+        deviationBps={-2}
+        gaugeDeviationBps={2}
+        pegScoreResult={pegScoreResult}
+        recordedDepegEventCount={0}
+        liquidityData={liquidityData}
+        yieldRanking={null}
+        stressSignal={null}
+        reportCard={null}
+        onOpenFeedback={() => {}}
+      />,
+    );
+
+    expect(html).toContain("Infrastructure");
+    expect(html).toContain("M0");
+  });
+
+  it("renders multiple infrastructure badges when a coin belongs to more than one", () => {
+    const dualCoin: StablecoinMeta = {
+      ...coin,
+      id: "hypothetical-dual",
+      name: "Hypothetical Dual",
+      symbol: "HYP",
+      infrastructures: ["liquity-v2", "m0"],
+    };
+
+    const html = renderToStaticMarkup(
+      <HeroCard
+        coin={dualCoin}
+        coinData={{ ...coinData, id: "hypothetical-dual", name: "Hypothetical Dual", symbol: "HYP" }}
+        logoSrc="/logos/hyp.svg"
+        isNavToken={false}
+        mcap={1_000_000}
+        supply={1_000_000}
+        prevDay={995_000}
+        prevWeek={990_000}
+        prevMonth={985_000}
+        performanceVsUsd1y={null}
+        pegRef={1}
+        deviationBps={-2}
+        gaugeDeviationBps={2}
+        pegScoreResult={pegScoreResult}
+        recordedDepegEventCount={0}
+        liquidityData={liquidityData}
+        yieldRanking={null}
+        stressSignal={null}
+        reportCard={null}
+        onOpenFeedback={() => {}}
+      />,
+    );
+
+    expect(html).toContain("Liquity v2");
+    expect(html).toContain("M0");
   });
 });

@@ -12,8 +12,6 @@ const FILTER_BAR_LABEL_OVERRIDES: Partial<Record<FilterTag, string>> = {
   "rwa-backed": "RWA",
   "crypto-backed": "Crypto",
   "centralized-dependent": "CeFi-Dep",
-  "liquity-v1": "v1",
-  "liquity-v2": "v2",
 };
 
 interface FilterBarProps {

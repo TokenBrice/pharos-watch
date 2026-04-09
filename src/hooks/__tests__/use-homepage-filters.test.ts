@@ -8,7 +8,7 @@ describe("FILTER_GROUPS", () => {
     expect(labels).toContain("Type");
     expect(labels).toContain("Backing");
     expect(labels).toContain("Grade");
-    expect(labels).toContain("Liquity Forks");
+    expect(labels).toContain("Infrastructure");
   });
 
   it("every group has at least one option", () => {
@@ -66,10 +66,16 @@ describe("parseHomepageParams", () => {
     expect(result.groupSelections["Grade"]).toBe("grade-a");
   });
 
-  it("parses Liquity Forks filter using lowercase key", () => {
-    const params = new URLSearchParams("liquity+forks=liquity-v2");
+  it("parses Infrastructure filter using lowercase key", () => {
+    const params = new URLSearchParams("infrastructure=infrastructure-liquity-v2");
     const result = parseHomepageParams(params);
-    expect(result.groupSelections["Liquity Forks"]).toBe("liquity-v2");
+    expect(result.groupSelections["Infrastructure"]).toBe("infrastructure-liquity-v2");
+  });
+
+  it("parses Infrastructure filter for M0", () => {
+    const params = new URLSearchParams("infrastructure=infrastructure-m0");
+    const result = parseHomepageParams(params);
+    expect(result.groupSelections["Infrastructure"]).toBe("infrastructure-m0");
   });
 
   it("parses the search query q parameter", () => {
