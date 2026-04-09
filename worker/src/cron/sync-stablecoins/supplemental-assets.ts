@@ -334,7 +334,49 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal):
   }
 }
 
-/** Fetch ERC-20 totalSupply for a coin's first EVM contract and return mcap = supply × price. */
+const SOLANA_PUBLIC_RPC_URLS = [
+  "https://api.mainnet-beta.solana.com",
+  "https://api.mainnet.solana.com",
+];
+
+/** Fetch Solana SPL token mint totalSupply via public RPCs. Returns the raw amount as a bigint. */
+async function fetchSolanaTokenSupply(
+  mintAddress: string,
+  signal?: AbortSignal,
+): Promise<bigint | null> {
+  for (const rpcUrl of SOLANA_PUBLIC_RPC_URLS) {
+    try {
+      const res = await fetchWithRetry(rpcUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "getTokenSupply",
+          params: [mintAddress],
+        }),
+        signal,
+      });
+      if (!res?.ok) {
+        await cancelResponseBodyQuietly(res);
+        continue;
+      }
+      const body = (await res.json()) as { result?: { value?: { amount?: string } } };
+      const amount = body.result?.value?.amount;
+      if (typeof amount !== "string" || amount.length === 0) continue;
+      try {
+        return BigInt(amount);
+      } catch {
+        continue;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+/** Fetch totalSupply from the first EVM (or Solana-fallback) contract and return mcap = supply × price. */
 async function fetchOnChainMcap(
   meta: StablecoinMeta,
   priceUsd: number,
@@ -344,26 +386,47 @@ async function fetchOnChainMcap(
   const evmContract = meta.contracts?.find(
     (c) => c.chain !== "solana" && c.chain !== "stellar" && c.chain !== "tron",
   );
-  if (!evmContract) return null;
-
-  try {
-    const raw = await fetchEvmUint256AtBlock(
-      evmContract.chain,
-      evmContract.address,
-      TOTAL_SUPPLY_SELECTOR,
-      "latest",
-      { chainRpcs, signal, timeoutMs: 10_000 },
-    );
-    if (raw == null || raw <= 0n) return null;
-    const supply = Number(raw) / 10 ** (evmContract.decimals ?? 18);
-    const mcap = supply * priceUsd;
-    if (!Number.isFinite(mcap) || mcap <= 0) return null;
-    console.log(`[fiat-cg] On-chain supply fallback for ${meta.symbol}: ${supply.toFixed(2)} units → $${mcap.toFixed(2)} mcap`);
-    return mcap;
-  } catch (err) {
-    console.warn(`[fiat-cg] On-chain supply probe failed for ${meta.symbol}: ${String(err).slice(0, 200)}`);
-    return null;
+  if (evmContract) {
+    try {
+      const raw = await fetchEvmUint256AtBlock(
+        evmContract.chain,
+        evmContract.address,
+        TOTAL_SUPPLY_SELECTOR,
+        "latest",
+        { chainRpcs, signal, timeoutMs: 10_000 },
+      );
+      if (raw != null && raw > 0n) {
+        const supply = Number(raw) / 10 ** (evmContract.decimals ?? 18);
+        const mcap = supply * priceUsd;
+        if (Number.isFinite(mcap) && mcap > 0) {
+          console.log(`[fiat-cg] On-chain supply fallback for ${meta.symbol}: ${supply.toFixed(2)} units → $${mcap.toFixed(2)} mcap`);
+          return mcap;
+        }
+      }
+    } catch (err) {
+      console.warn(`[fiat-cg] EVM supply probe failed for ${meta.symbol}: ${String(err).slice(0, 200)}`);
+    }
   }
+
+  // Solana-only (or EVM-failed) fallback
+  const solanaContract = meta.contracts?.find((c) => c.chain === "solana");
+  if (solanaContract) {
+    try {
+      const raw = await fetchSolanaTokenSupply(solanaContract.address, signal);
+      if (raw != null && raw > 0n) {
+        const supply = Number(raw) / 10 ** (solanaContract.decimals ?? 6);
+        const mcap = supply * priceUsd;
+        if (Number.isFinite(mcap) && mcap > 0) {
+          console.log(`[fiat-cg] Solana supply fallback for ${meta.symbol}: ${supply.toFixed(2)} units → $${mcap.toFixed(2)} mcap`);
+          return mcap;
+        }
+      }
+    } catch (err) {
+      console.warn(`[fiat-cg] Solana supply probe failed for ${meta.symbol}: ${String(err).slice(0, 200)}`);
+    }
+  }
+
+  return null;
 }
 
 async function fetchFiatCoinGeckoTokens(
@@ -390,7 +453,10 @@ async function fetchFiatCoinGeckoTokens(
         const pKey = pegTypeKey(meta);
         const priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
         const pegReferencePrice = toPositiveFiniteNumber(fxFallbackRates?.[pKey]);
-        const priceForSupply = priceResolution?.price ?? pegReferencePrice;
+        // USD is the base currency; fxFallbackRates omits peggedUSD. Default to 1.0 for
+        // USD-pegged coins with no CG/DL price source so the on-chain fallback can compute mcap.
+        const usdPegDefault = meta.flags.pegCurrency === "USD" ? 1.0 : undefined;
+        const priceForSupply = priceResolution?.price ?? pegReferencePrice ?? usdPegDefault;
 
         let mcap = mcapMap[meta.id];
         let supplySource: string = "coingecko-fallback";
