@@ -34,6 +34,7 @@ In addition to the pre-launch dossier sections (banner, timeline, milestones, fe
 - promotes `@PharosWatchBot`
 - renders the exact command users can copy and paste for that asset
 - uses `/subscribe launch <coin.id>` so the copied command is deterministic even when a ticker is ambiguous
+- renders immediately below the expected-launch/timeline block, before the milestone/activity section
 
 ---
 

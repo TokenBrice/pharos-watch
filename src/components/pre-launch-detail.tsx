@@ -214,6 +214,68 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
     ? `${coin.jurisdiction.country} (${coin.jurisdiction.regulator})`
     : coin.jurisdiction?.country;
 
+  const launchAlertCallout = (
+    <section className="rounded-xl border border-sky-500/25 bg-sky-500/[0.05] px-4 py-4 sm:px-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm font-semibold text-sky-700 dark:text-sky-300">
+            <Bell className="h-4 w-4" aria-hidden="true" />
+            <span>Launch Alert</span>
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-foreground">
+              Get a Telegram alert when {coin.symbol} becomes tracked on Pharos
+            </p>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              Copy this exact command and send it to{" "}
+              <a
+                href="https://t.me/PharosWatchBot"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-foreground underline underline-offset-4 transition-colors hover:text-foreground/80"
+              >
+                @PharosWatchBot
+                <ExternalLink className="h-3 w-3" aria-hidden="true" />
+              </a>
+              . It uses this coin&apos;s exact Pharos ID, so it works even when a ticker is ambiguous.
+            </p>
+          </div>
+        </div>
+
+        <div className="min-w-0 rounded-xl border border-border/60 bg-background/55 p-3">
+          <p className="pharos-kicker">Copy Exact Bot Command</p>
+          <div className="mt-2 flex items-center gap-2">
+            <code className="block min-w-0 flex-1 overflow-x-auto whitespace-nowrap rounded-lg bg-background/80 px-3 py-2 text-xs font-mono text-foreground sm:text-sm">
+              {launchAlertCommand}
+            </code>
+            <CopyButton
+              text={launchAlertCommand}
+              className="shrink-0 rounded-lg border border-border/60 bg-background/70 text-muted-foreground hover:bg-background hover:text-foreground"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
+        <a
+          href="https://t.me/PharosWatchBot"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
+        >
+          Open @PharosWatchBot
+          <ExternalLink className="h-3 w-3" aria-hidden="true" />
+        </a>
+        <Link
+          href="/telegram/#getting-started"
+          className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
+        >
+          See all Telegram alert options
+        </Link>
+      </div>
+    </section>
+  );
+
   return (
     <div className="space-y-8">
       {/* Screen-reader-only page title */}
@@ -245,67 +307,6 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
         </p>
         {coin.launchPhaseDetail && <p className="mt-2 text-sm text-muted-foreground">{coin.launchPhaseDetail}</p>}
       </div>
-
-      {/* ── Launch Alert CTA ──────────────────────────────────────── */}
-      <section className="rounded-xl border border-sky-500/25 bg-sky-500/[0.05] px-4 py-4 sm:px-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-semibold text-sky-700 dark:text-sky-300">
-              <Bell className="h-4 w-4" aria-hidden="true" />
-              <span>Launch Alert</span>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-semibold text-foreground">
-                Get a Telegram alert when {coin.symbol} becomes tracked on Pharos
-              </p>
-              <p className="max-w-2xl text-sm text-muted-foreground">
-                Copy this exact command and send it to{" "}
-                <a
-                  href="https://t.me/PharosWatchBot"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-foreground underline underline-offset-4 transition-colors hover:text-foreground/80"
-                >
-                  @PharosWatchBot
-                  <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                </a>
-                . It uses this coin&apos;s exact Pharos ID, so it works even when a ticker is ambiguous.
-              </p>
-            </div>
-          </div>
-
-          <div className="min-w-0 rounded-xl border border-border/60 bg-background/55 p-3">
-            <p className="pharos-kicker">Copy Exact Bot Command</p>
-            <div className="mt-2 flex items-center gap-2">
-              <code className="block min-w-0 flex-1 overflow-x-auto whitespace-nowrap rounded-lg bg-background/80 px-3 py-2 text-xs font-mono text-foreground sm:text-sm">
-                {launchAlertCommand}
-              </code>
-              <CopyButton
-                text={launchAlertCommand}
-                className="shrink-0 rounded-lg border border-border/60 bg-background/70 text-muted-foreground hover:bg-background hover:text-foreground"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
-          <a
-            href="https://t.me/PharosWatchBot"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
-          >
-            Open @PharosWatchBot
-            <ExternalLink className="h-3 w-3" aria-hidden="true" />
-          </a>
-          <Link
-            href="/telegram/#getting-started"
-            className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
-          >
-            See all Telegram alert options
-          </Link>
-        </div>
-      </section>
 
       {/* ── Header ────────────────────────────────────────────────── */}
       <header className="flex items-start gap-4">
@@ -378,6 +379,9 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
         }
         return null;
       })()}
+
+      {/* ── Launch Alert CTA ──────────────────────────────────────── */}
+      {launchAlertCallout}
 
       {/* ── Activity Timeline (milestones) ─────────────────────────── */}
       {coin.milestones && coin.milestones.length > 0 && (
