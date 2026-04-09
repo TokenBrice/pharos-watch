@@ -267,6 +267,10 @@ describe("handleBackfillDEWS", () => {
   });
 
   it("deletes only the requested DEWS history window on POST prune repair", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-08T12:00:00.000Z"));
+
+    try {
     const db = mockD1([
       {
         match: "SELECT COUNT(*) as cnt FROM stress_signal_history WHERE snapshot_date >= ? AND snapshot_date <= ?",
@@ -331,5 +335,8 @@ describe("handleBackfillDEWS", () => {
     expect(
       db.getHistory().some((entry) => entry.sql.includes("DELETE FROM stress_signal_history WHERE snapshot_date >= ? AND snapshot_date <= ?")),
     ).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
