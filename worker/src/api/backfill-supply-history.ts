@@ -1,7 +1,9 @@
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import type { ContractDeployment } from "@shared/types/core";
 import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
 import { fetchCoinGeckoMarketHistory } from "../lib/coingecko-market-history";
+import type { ChainRpcConfig } from "../lib/chain-registry";
 import { batchExecute } from "../lib/db";
 import { jsonResponse } from "../lib/api-utils";
 import { binarySearchNearest } from "../lib/binary-search";
@@ -9,7 +11,9 @@ import { resolveMarketCap } from "../lib/resolve-market-cap";
 import { selectBackfillCoins } from "../lib/backfill-query";
 import { buildAdminJobSummary, noAdminTargetsResponse, runAdminJob } from "../lib/admin-job";
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { buildPriceMapByDate, extractDefiLlamaCoinChartPrices } from "./stablecoin-detail/shared";
+import { fetchEvmUint256AtBlock } from "../lib/evm-rpc";
+import { TOTAL_SUPPLY_SELECTOR } from "../lib/evm-selectors";
+import { extractDefiLlamaCoinChartPrices } from "./stablecoin-detail/shared";
 import { fetchMarketBackfillPriceSeries } from "./backfill-price-sources";
 
 const DEFAULT_BATCH_SIZE = 10;
@@ -28,10 +32,55 @@ interface StablecoinDetail {
 // Protocol TVL from DefiLlama can diverge from token market cap (e.g. XAUT TVL includes
 // multi-chain reserves that far exceed the token's market cap).
 
+function firstEvmContract(contracts?: ContractDeployment[]): ContractDeployment | null {
+  return (
+    contracts?.find(
+      (c) => c.chain !== "solana" && c.chain !== "stellar" && c.chain !== "tron",
+    ) ?? null
+  );
+}
+
+async function fetchOnChainTotalSupply(
+  contracts: ContractDeployment[] | undefined,
+  chainRpcs: Map<string, ChainRpcConfig> | undefined,
+  logLabel: string,
+): Promise<number | null> {
+  const contract = firstEvmContract(contracts);
+  if (!contract || !chainRpcs) return null;
+
+  try {
+    const raw = await fetchEvmUint256AtBlock(
+      contract.chain,
+      contract.address,
+      TOTAL_SUPPLY_SELECTOR,
+      "latest",
+      { chainRpcs, timeoutMs: 10_000 },
+    );
+    if (raw == null || raw <= 0n) return null;
+    const supply = Number(raw) / 10 ** (contract.decimals ?? 18);
+    if (!Number.isFinite(supply) || supply <= 0) return null;
+    console.log(
+      `[backfill-commodity] ${logLabel}: on-chain totalSupply fallback = ${supply.toFixed(2)} units`,
+    );
+    return supply;
+  } catch (err) {
+    console.warn(
+      `[backfill-commodity] ${logLabel}: on-chain totalSupply probe failed — ${String(err).slice(0, 200)}`,
+    );
+    return null;
+  }
+}
+
 async function backfillCommodity(
   db: D1Database,
   id: string,
-  config: { geckoId: string; protocolSlug?: string; cgApiKey?: string | null },
+  config: {
+    geckoId: string;
+    protocolSlug?: string;
+    cgApiKey?: string | null;
+    contracts?: ContractDeployment[];
+    chainRpcs?: Map<string, ChainRpcConfig>;
+  },
 ): Promise<{ rows: number; error?: string }> {
   const marketHistory = await fetchCoinGeckoMarketHistory(config.geckoId, {
     apiKey: config.cgApiKey ?? null,
@@ -42,19 +91,44 @@ async function backfillCommodity(
     },
   });
 
-  if (marketHistory?.marketCaps.length) {
-    const priceMap = buildPriceMapByDate(marketHistory.prices);
-    const stmts: D1PreparedStatement[] = [];
-
+  let fallthroughReason = "CoinGecko market_chart returned no data";
+  if (marketHistory?.prices.length) {
+    fallthroughReason =
+      "CoinGecko market caps all zero and on-chain totalSupply unavailable (no EVM contract or chainRpcs)";
+    // Build a date-keyed map of cgMcap so we can pair each price point with its matching cap.
+    const cgMcapByDate = new Map<string, number>();
     for (const [ts, mcap] of marketHistory.marketCaps) {
-      if (mcap <= 0) continue;
-      const snapshotDate = Math.floor(ts / 1000 / DAY_SECONDS) * DAY_SECONDS;
-      const price = priceMap.get(new Date(ts).toISOString().slice(0, 10)) ?? null;
-      const resolvedMcap =
-        price != null
-          ? resolveMarketCap(mcap, marketHistory.circulatingSupply, price)
-          : mcap;
+      if (Number.isFinite(mcap)) {
+        cgMcapByDate.set(new Date(ts).toISOString().slice(0, 10), mcap);
+      }
+    }
 
+    // CoinGecko's circulating_supply is often 0 for brand-new coins until its data
+    // ingestion catches up. Fall back to on-chain totalSupply (same strategy the live
+    // sync uses via fetchFiatCoinGeckoTokens) so `resolveMarketCap` can compute
+    // supply × price when the CG market_cap series is all zeros.
+    let effectiveSupply = marketHistory.circulatingSupply;
+    if (!effectiveSupply || effectiveSupply <= 0) {
+      const onChain = await fetchOnChainTotalSupply(
+        config.contracts,
+        config.chainRpcs,
+        `${id} (${config.geckoId})`,
+      );
+      if (onChain != null) effectiveSupply = onChain;
+    }
+
+    const stmts: D1PreparedStatement[] = [];
+    const seenSnapshotDates = new Set<number>();
+
+    for (const [ts, price] of marketHistory.prices) {
+      if (!Number.isFinite(price) || price <= 0) continue;
+      const snapshotDate = Math.floor(ts / 1000 / DAY_SECONDS) * DAY_SECONDS;
+      if (seenSnapshotDates.has(snapshotDate)) continue;
+      const cgMcap = cgMcapByDate.get(new Date(ts).toISOString().slice(0, 10));
+      const resolvedMcap = resolveMarketCap(cgMcap, effectiveSupply, price);
+      if (!Number.isFinite(resolvedMcap) || resolvedMcap <= 0) continue;
+
+      seenSnapshotDates.add(snapshotDate);
       stmts.push(
         db
           .prepare(
@@ -66,13 +140,15 @@ async function backfillCommodity(
 
     if (stmts.length > 0) {
       await batchExecute(db, stmts);
+      return { rows: stmts.length };
     }
-    return { rows: stmts.length };
+    // Fell through: CG had prices but no usable mcap (all zero) and on-chain supply unavailable.
+    // Fall back to the protocol-TVL path below when possible, otherwise return a clear error.
   }
 
   // Fallback: protocol TVL (only if TVL ≈ mcap)
   if (!config.protocolSlug) {
-    return { rows: 0, error: "CoinGecko unavailable and no protocolSlug for TVL fallback" };
+    return { rows: 0, error: `${fallthroughReason}; no protocolSlug for TVL fallback` };
   }
 
   const [protocolRes, priceRes] = await Promise.all([
@@ -143,6 +219,7 @@ export async function handleBackfillSupplyHistory(
   trustedAdmin?: boolean,
   request?: Request,
   cgApiKey?: string | null,
+  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<Response> {
   return runAdminJob(
     { request, trustedAdmin, url },
@@ -174,6 +251,8 @@ export async function handleBackfillSupplyHistory(
               geckoId: meta.geckoId,
               protocolSlug: meta.protocolSlug ?? undefined,
               cgApiKey,
+              contracts: meta.contracts,
+              chainRpcs,
             });
             if (result.error) {
               errors.push(`${meta.symbol}: ${result.error}`);
@@ -195,6 +274,8 @@ export async function handleBackfillSupplyHistory(
                 geckoId: meta.geckoId,
                 protocolSlug: meta.protocolSlug ?? undefined,
                 cgApiKey,
+                contracts: meta.contracts,
+                chainRpcs,
               });
               if (result.error) {
                 errors.push(`${meta.symbol}: ${result.error}`);

@@ -532,7 +532,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: true,
-    routeDependencies: ["coingeckoApiKey"],
+    routeDependencies: ["coingeckoApiKey", "chainRpcs"],
     probeGroup: "manual",
     statusPageAction: {
       label: "Backfill Supply",
