@@ -116,13 +116,41 @@ describe("buildTrackedIdSet", () => {
     expect(activeFiatNonUsdIds.every((id) => trackedIds.has(id))).toBe(true);
   });
 
-  it("returns the normalized Liquity-family cohort when filtering by protocol lineage", () => {
-    const trackedIds = buildTrackedIdSet(["liquity-family"]);
+  it("returns Liquity v1 infrastructure cohort when filtering by infrastructure-liquity-v1", () => {
+    const trackedIds = buildTrackedIdSet(["infrastructure-liquity-v1"]);
     expect(trackedIds.has("lusd-liquity")).toBe(true);
+    expect(trackedIds.has("satusd-river")).toBe(true);
+    expect(trackedIds.has("meusd-mezo")).toBe(true);
+    expect(trackedIds.has("btcusd-btcfi")).toBe(true);
+    expect(trackedIds.has("usbd-bima")).toBe(true);
+    expect(trackedIds.has("cjpy-yamato")).toBe(true);
+    expect(trackedIds.has("bold-liquity")).toBe(false);
+    expect(trackedIds.has("usdt-tether")).toBe(false);
+  });
+
+  it("returns Liquity v2 infrastructure cohort when filtering by infrastructure-liquity-v2", () => {
+    const trackedIds = buildTrackedIdSet(["infrastructure-liquity-v2"]);
     expect(trackedIds.has("bold-liquity")).toBe(true);
     expect(trackedIds.has("usdaf-asymmetry")).toBe(true);
     expect(trackedIds.has("feusd-felix")).toBe(true);
-    expect(trackedIds.has("usdt-tether")).toBe(false);
+    expect(trackedIds.has("lusd-liquity")).toBe(false);
+  });
+
+  it("returns the M0 cohort when filtering by infrastructure-m0", () => {
+    const trackedIds = buildTrackedIdSet(["infrastructure-m0"]);
+    expect(trackedIds.has("usdsc-startale")).toBe(true);
+    expect(trackedIds.has("ctusd-citrea")).toBe(true);
+    expect(trackedIds.has("usdat-saturn")).toBe(true);
+    expect(trackedIds.has("usdn-noble")).toBe(true);
+    expect(trackedIds.has("musd-metamask")).toBe(true);
+    expect(trackedIds.has("usd0-usual")).toBe(true);
+    expect(trackedIds.has("usdai-usd-ai")).toBe(true);
+    expect(trackedIds.has("wm-m0")).toBe(true);
+    expect(trackedIds.has("usdnr-nerona")).toBe(true);
+    expect(trackedIds.has("usdk-kast")).toBe(true);
+    expect(trackedIds.has("xo-exodus")).toBe(true);
+    expect(trackedIds.has("m-m0")).toBe(false);
+    expect(trackedIds.has("susdai-usd-ai")).toBe(false);
   });
 });
 

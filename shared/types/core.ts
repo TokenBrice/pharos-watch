@@ -442,22 +442,6 @@ export function getFilterTags(meta: StablecoinMeta): FilterTag[] {
   }
   tags.push(meta.flags.governance);
   tags.push(meta.flags.backing);
-  if (meta.protocolFamily === "liquity") {
-    tags.push("liquity-family");
-    switch (meta.protocolVariant) {
-      case "v1":
-        tags.push("liquity-v1");
-        break;
-      case "v2":
-        tags.push("liquity-v2");
-        break;
-      case "style":
-        tags.push("liquity-style");
-        break;
-      default:
-        break;
-    }
-  }
   for (const infra of meta.infrastructures ?? []) {
     tags.push(`infrastructure-${infra}` as FilterTag);
   }
