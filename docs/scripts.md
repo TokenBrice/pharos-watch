@@ -143,7 +143,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 
 - Validates the Access-protected operator UI shell plus direct operator API checks for `status`, `status-history`, and the dry-run audit endpoint.
 - Same-origin `ops.pharos.watch/api/admin/status` smoke first tries the service-token path, then replays a bootstrapped `CF_Authorization` cookie when the UI host yields one.
-- Retries up to two transient `504 Gateway Timeout` responses on that same-origin proxy assertion to absorb post-deploy warmup without masking persistent proxy failures.
+- Retries up to two transient `502`/`504` gateway responses on that same-origin proxy assertion to absorb post-deploy warmup without masking persistent proxy failures.
 
 ### `serve-static-export.mjs`
 

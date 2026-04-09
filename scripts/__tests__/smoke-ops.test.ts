@@ -105,6 +105,45 @@ describe("fetchOpsUiProxyStatus", () => {
 });
 
 describe("fetchOpsUiProxyStatusWithRetry", () => {
+  it("retries a transient proxied 502 once before failing the smoke", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("bad gateway", {
+        status: 502,
+        headers: { "content-type": "text/plain" },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ overallStatus: "degraded" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }));
+    const sleepMock = vi.fn().mockResolvedValue(undefined);
+    const onRetry = vi.fn();
+
+    const result = await fetchOpsUiProxyStatusWithRetry(
+      "https://ops.pharos.watch/api/admin/status",
+      {
+        "CF-Access-Client-Id": "id",
+        "CF-Access-Client-Secret": "secret",
+      },
+      {
+        fetchImpl: fetchMock,
+        retryCount: 1,
+        retryDelayMs: 2_000,
+        sleepImpl: sleepMock,
+        onRetry,
+      },
+    );
+
+    expect(result.proxiedStatus.response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(sleepMock).toHaveBeenCalledWith(2_000);
+    expect(onRetry).toHaveBeenCalledWith({
+      attemptNumber: 1,
+      retryCount: 1,
+      retryDelayMs: 2_000,
+      status: 502,
+    });
+  });
+
   it("retries a transient proxied 504 once before failing the smoke", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response("gateway timeout", {
@@ -251,10 +290,15 @@ describe("shouldSkipOpsUiProxyAssertion", () => {
 });
 
 describe("shouldRetryOpsUiProxyStatus", () => {
-  it("retries only transient gateway timeouts", () => {
+  it("retries only transient gateway warmup failures", () => {
+    expect(shouldRetryOpsUiProxyStatus(new Response("bad gateway", { status: 502 }))).toBe(true);
     expect(shouldRetryOpsUiProxyStatus(new Response("gateway timeout", { status: 504 }))).toBe(true);
+    expect(shouldRetryOpsUiProxyStatus(new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "content-type": "application/json" },
+    }))).toBe(false);
     expect(shouldRetryOpsUiProxyStatus(new Response(JSON.stringify({ error: "upstream failed" }), {
-      status: 502,
+      status: 500,
       headers: { "content-type": "application/json" },
     }))).toBe(false);
   });

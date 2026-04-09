@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 
 const DEFAULT_OPS_UI_URL = process.env.SMOKE_OPS_UI_URL ?? "https://ops.pharos.watch/admin/";
 const DEFAULT_OPS_API_BASE = process.env.SMOKE_OPS_API_BASE ?? "https://ops-api.pharos.watch";
-const OPS_UI_PROXY_RETRY_STATUS = 504;
+const OPS_UI_PROXY_RETRY_STATUSES = new Set([502, 504]);
 const OPS_UI_PROXY_RETRY_COUNT = 2;
 const OPS_UI_PROXY_RETRY_DELAY_MS = 2_000;
 
@@ -164,7 +164,7 @@ export async function fetchOpsUiProxyStatus(
 }
 
 export function shouldRetryOpsUiProxyStatus(response) {
-  return response.status === OPS_UI_PROXY_RETRY_STATUS;
+  return OPS_UI_PROXY_RETRY_STATUSES.has(response.status);
 }
 
 export async function fetchOpsUiProxyStatusWithRetry(
