@@ -3285,6 +3285,7 @@
     "governanceQuality": "dao-governance",
     "protocolFamily": "liquity",
     "protocolVariant": "v1",
+    "infrastructures": ["liquity-v1"],
     "reserves": [
       { "name": "ETH", "pct": 100, "risk": "very-low" }
     ]
