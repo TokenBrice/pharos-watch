@@ -224,6 +224,7 @@ export interface StablecoinMeta {
   governanceQuality?: GovernanceQuality;
   protocolFamily?: ProtocolFamily;
   protocolVariant?: ProtocolVariant;
+  infrastructures?: Infrastructure[];
   reserves?: ReserveSlice[];
   liveReservesConfig?: LiveReservesConfig;
   notices?: CoinNotice[];
@@ -276,6 +277,9 @@ export type FilterTag =
   | "liquity-v1"
   | "liquity-v2"
   | "liquity-style"
+  | "infrastructure-liquity-v1"
+  | "infrastructure-liquity-v2"
+  | "infrastructure-m0"
   | "grade-a"
   | "grade-ge-b"
   | "grade-ge-c-plus"
@@ -366,6 +370,9 @@ export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
   "liquity-v1": "Liquity v1",
   "liquity-v2": "Liquity v2",
   "liquity-style": "Liquity-Style",
+  "infrastructure-liquity-v1": "Liquity v1",
+  "infrastructure-liquity-v2": "Liquity v2",
+  "infrastructure-m0": "M0",
   "grade-a": "A",
   "grade-ge-b": "≥B",
   "grade-ge-c-plus": "≥C+",
