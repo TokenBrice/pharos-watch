@@ -93,9 +93,6 @@ export type GovernanceQuality =
   | "single-entity"
   | "wrapper";
 
-export type ProtocolFamily = "liquity";
-export type ProtocolVariant = "v1" | "v2" | "style";
-
 export type Infrastructure = "liquity-v1" | "liquity-v2" | "m0";
 
 export const INFRASTRUCTURE_VALUES = ["liquity-v1", "liquity-v2", "m0"] as const;
@@ -222,8 +219,6 @@ export interface StablecoinMeta {
   collateralQuality?: CollateralQuality;
   custodyModel?: CustodyModel;
   governanceQuality?: GovernanceQuality;
-  protocolFamily?: ProtocolFamily;
-  protocolVariant?: ProtocolVariant;
   infrastructures?: Infrastructure[];
   reserves?: ReserveSlice[];
   liveReservesConfig?: LiveReservesConfig;

@@ -42,8 +42,6 @@ const PEG_CURRENCY_VALUES = [
 const DETAIL_PROVIDER_VALUES = ["defillama", "coingecko", "commodity"] as const;
 const PROOF_OF_RESERVES_TYPE_VALUES = ["independent-audit", "real-time", "self-reported"] as const;
 const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-high"] as const;
-const PROTOCOL_FAMILY_VALUES = ["liquity"] as const;
-const PROTOCOL_VARIANT_VALUES = ["v1", "v2", "style"] as const;
 const COIN_NOTICE_TYPE_VALUES = ["danger", "warning", "info"] as const;
 const LAUNCH_PHASE_VALUES = ["announced", "testnet", "auditing", "beta", "launching-soon"] as const;
 const LAUNCH_MILESTONE_TYPE_VALUES = ["announcement", "milestone", "delay", "partnership", "regulatory", "audit", "testnet"] as const;
@@ -165,8 +163,6 @@ export const StablecoinMetaAssetSchema = z.object({
   collateralQuality: z.enum(COLLATERAL_QUALITY_VALUES).optional(),
   custodyModel: z.enum(CUSTODY_MODEL_VALUES).optional(),
   governanceQuality: z.enum(GOVERNANCE_QUALITY_VALUES).optional(),
-  protocolFamily: z.enum(PROTOCOL_FAMILY_VALUES).optional(),
-  protocolVariant: z.enum(PROTOCOL_VARIANT_VALUES).optional(),
   infrastructures: z.array(z.enum(INFRASTRUCTURE_VALUES)).optional(),
   reserves: z.array(ReserveSliceAssetSchema).optional(),
   liveReservesConfig: LiveReservesConfigSchema.optional(),

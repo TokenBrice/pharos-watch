@@ -772,8 +772,6 @@
     "chainTier": "unproven",
     "deploymentModel": "third-party-bridge",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "protocolFamily": "liquity",
-    "protocolVariant": "v1",
     "infrastructures": ["liquity-v1"],
     "reserves": [
       {
@@ -3244,8 +3242,6 @@
     ],
     "deploymentModel": "third-party-bridge",
     "governanceQuality": "immutable-code",
-    "protocolFamily": "liquity",
-    "protocolVariant": "v2",
     "infrastructures": ["liquity-v2"],
     "reserves": [
       {
@@ -3454,8 +3450,6 @@
     ],
     "deploymentModel": "canonical-bridge",
     "governanceQuality": "immutable-code",
-    "protocolFamily": "liquity",
-    "protocolVariant": "v1",
     "infrastructures": ["liquity-v1"],
     "reserves": [
       {
@@ -4392,8 +4386,6 @@
     ],
     "chainTier": "unproven",
     "collateralQuality": "exotic",
-    "protocolFamily": "liquity",
-    "protocolVariant": "v2",
     "infrastructures": ["liquity-v2"],
     "reserves": [
       {
@@ -4710,8 +4702,6 @@
     ],
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "protocolFamily": "liquity",
-    "protocolVariant": "v1",
     "infrastructures": ["liquity-v1"],
     "reserves": [
       {
@@ -4967,8 +4957,6 @@
     ],
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
-    "protocolFamily": "liquity",
-    "protocolVariant": "v2",
     "infrastructures": ["liquity-v2"],
     "reserves": [
       {
@@ -5072,8 +5060,6 @@
     "chainTier": "stage1-l2",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
-    "protocolFamily": "liquity",
-    "protocolVariant": "v2",
     "infrastructures": ["liquity-v2"],
     "reserves": [
       {
@@ -5246,8 +5232,6 @@
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
-    "protocolFamily": "liquity",
-    "protocolVariant": "v2",
     "infrastructures": ["liquity-v2"],
     "reserves": [
       {
@@ -5312,8 +5296,6 @@
     ],
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "governanceQuality": "immutable-code",
-    "protocolFamily": "liquity",
-    "protocolVariant": "v2",
     "infrastructures": ["liquity-v2"]
   },
   {
@@ -5357,8 +5339,6 @@
     ],
     "deploymentModel": "native-multichain",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "protocolFamily": "liquity",
-    "protocolVariant": "v2",
     "infrastructures": ["liquity-v2"],
     "reserves": [
       {
@@ -6039,8 +6019,6 @@
     ],
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "protocolFamily": "liquity",
-    "protocolVariant": "v2",
     "infrastructures": ["liquity-v2"],
     "reserves": [
       {
@@ -7093,8 +7071,6 @@
     ],
     "chainTier": "unproven",
     "collateralQuality": "alt-lst-bridged-or-mixed",
-    "protocolFamily": "liquity",
-    "protocolVariant": "v1",
     "infrastructures": ["liquity-v1"],
     "reserves": [
       {
@@ -7185,8 +7161,6 @@
     "collateralQuality": "alt-lst-bridged-or-mixed",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
-    "protocolFamily": "liquity",
-    "protocolVariant": "v1",
     "infrastructures": ["liquity-v1"],
     "reserves": [
       {
