@@ -796,6 +796,187 @@ describe("buildCacheStatuses", () => {
     expect(warnings).toContain("dews: freshness table query failed; using cron fallback");
   });
 
+  it("uses table fallback warnings when the cache lookup fails", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      const db = {
+        prepare: (sql: string) => {
+          const first = async <T>() => {
+            if (sql.includes("MAX(updated_at)") || sql.includes("MAX(computed_at)")) {
+              return { age: 45 } as T;
+            }
+            return null as T | null;
+          };
+          return {
+            bind: (..._args: unknown[]) => ({
+              all: async <T>() => {
+                if (sql.includes("cache WHERE key IN")) {
+                  throw new Error("cache lookup failed");
+                }
+                if (sql.includes("FROM cron_runs")) {
+                  return { results: [] as T[], success: true, meta: {} };
+                }
+                return { results: [] as T[], success: true, meta: {} };
+              },
+              first,
+              run: async () => ({ success: true, meta: {} }),
+            }),
+            all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+            first,
+            run: async () => ({ success: true, meta: {} }),
+          };
+        },
+        batch: async () => [],
+        exec: async () => ({ count: 0, duration: 0 }),
+        dump: async () => new ArrayBuffer(0),
+      } as unknown as D1Database;
+
+      const { caches, diagnostics, failures, warnings } = await buildCacheStatuses(db, nowSec);
+
+      expect(caches["dex-liquidity"]?.ageSeconds).toBe(45);
+      expect(caches["dex-liquidity"]?.warning).toBe(
+        "dex-liquidity: freshness sentinel lookup failed; using table fallback",
+      );
+      expect(diagnostics).toContainEqual({
+        key: "dex-liquidity",
+        freshnessSource: "table-fallback",
+        warning: "dex-liquidity: freshness sentinel lookup failed; using table fallback",
+        failureSource: "cache-table",
+      });
+      expect(failures).toContainEqual({
+        key: "__cache__",
+        source: "cache-table",
+        message: "cache lookup failed",
+      });
+      expect(warnings).toContain("dex-liquidity: freshness sentinel lookup failed; using table fallback");
+      expect(infoSpy).toHaveBeenCalledWith(
+        "[api-freshness] dex-liquidity: freshness sentinel lookup failed; using table fallback",
+      );
+    } finally {
+      infoSpy.mockRestore();
+    }
+  });
+
+  it("uses cron fallback warnings when cache lookup fails and table freshness is unavailable", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      const db = {
+        prepare: (sql: string) => {
+          const first = async <T>() => {
+            if (sql.includes("MAX(updated_at)") || sql.includes("MAX(computed_at)")) {
+              return { age: null } as T;
+            }
+            return null as T | null;
+          };
+          return {
+            bind: (..._args: unknown[]) => ({
+              all: async <T>() => {
+                if (sql.includes("cache WHERE key IN")) {
+                  throw new Error("cache lookup failed");
+                }
+                if (sql.includes("FROM cron_runs")) {
+                  return {
+                    results: [
+                      { job: "sync-dex-liquidity", started_at: nowSec - 90 },
+                      { job: "sync-yield-data", started_at: nowSec - 120 },
+                      { job: "compute-dews", started_at: nowSec - 150 },
+                    ] as T[],
+                    success: true,
+                    meta: {},
+                  };
+                }
+                return { results: [] as T[], success: true, meta: {} };
+              },
+              first,
+              run: async () => ({ success: true, meta: {} }),
+            }),
+            all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+            first,
+            run: async () => ({ success: true, meta: {} }),
+          };
+        },
+        batch: async () => [],
+        exec: async () => ({ count: 0, duration: 0 }),
+        dump: async () => new ArrayBuffer(0),
+      } as unknown as D1Database;
+
+      const { caches, diagnostics, failures, warnings } = await buildCacheStatuses(db, nowSec);
+
+      expect(caches["dex-liquidity"]?.ageSeconds).toBe(90);
+      expect(caches["dex-liquidity"]?.warning).toBe(
+        "dex-liquidity: freshness sentinel lookup failed; using cron fallback",
+      );
+      expect(diagnostics).toContainEqual({
+        key: "dex-liquidity",
+        freshnessSource: "cron-fallback",
+        warning: "dex-liquidity: freshness sentinel lookup failed; using cron fallback",
+        failureSource: "cache-table",
+      });
+      expect(failures).toContainEqual({
+        key: "__cache__",
+        source: "cache-table",
+        message: "cache lookup failed",
+      });
+      expect(warnings).toContain("dex-liquidity: freshness sentinel lookup failed; using cron fallback");
+      expect(infoSpy).toHaveBeenCalledWith(
+        "[api-freshness] dex-liquidity: freshness sentinel lookup failed; using cron fallback",
+      );
+    } finally {
+      infoSpy.mockRestore();
+    }
+  });
+
+  it("records cron fallback failures when both table and producer fallback lookups are unavailable", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const db = {
+        prepare: (sql: string) => {
+          const first = async <T>() => {
+            if (sql.includes("MAX(updated_at)") || sql.includes("MAX(computed_at)")) {
+              return { age: null } as T;
+            }
+            return null as T | null;
+          };
+          return {
+            bind: (..._args: unknown[]) => ({
+              all: async <T>() => {
+                if (sql.includes("FROM cron_runs")) {
+                  throw new Error("cron lookup failed");
+                }
+                return { results: [] as T[], success: true, meta: {} };
+              },
+              first,
+              run: async () => ({ success: true, meta: {} }),
+            }),
+            all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+            first,
+            run: async () => ({ success: true, meta: {} }),
+          };
+        },
+        batch: async () => [],
+        exec: async () => ({ count: 0, duration: 0 }),
+        dump: async () => new ArrayBuffer(0),
+      } as unknown as D1Database;
+
+      const { failures } = await buildCacheStatuses(db, nowSec);
+
+      expect(failures).toContainEqual({
+        key: "dex-liquidity",
+        source: "cron-fallback",
+        message: "cron lookup failed",
+      });
+      expect(warnSpy).toHaveBeenCalledWith(
+        "[api-freshness] Failed to read producer cron fallbacks",
+        expect.any(Error),
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it("uses fx-rates-meta usableSyncAt for cache freshness and keeps cadence-aware source warnings separate", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = {
