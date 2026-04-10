@@ -113,6 +113,23 @@ vi.mock("@shared/lib/stablecoins", () => {
       contracts: [{ chain: "ethereum", address: "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78", decimals: 6 }],
       flags: { pegCurrency: "CHF", backing: "rwa-backed", yieldBearing: false, navToken: false, governance: "centralized" },
     },
+    {
+      id: "usdk-kast",
+      name: "KAST Dollar",
+      symbol: "USDK",
+      detailProvider: "coingecko",
+      contracts: [{ chain: "solana", address: "usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX", decimals: 6 }],
+      flags: { pegCurrency: "USD", backing: "rwa-backed", yieldBearing: false, navToken: false, governance: "centralized" },
+    },
+    {
+      id: "xo-exodus",
+      name: "XO Cash",
+      symbol: "XO",
+      geckoId: "xo-cash",
+      detailProvider: "coingecko",
+      contracts: [{ chain: "solana", address: "xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y", decimals: 6 }],
+      flags: { pegCurrency: "USD", backing: "rwa-backed", yieldBearing: false, navToken: false, governance: "centralized" },
+    },
       ...fallbackTrackedTokens,
     ];
     return {
@@ -160,6 +177,20 @@ vi.mock("@shared/lib/stablecoins", () => {
         geckoId: "allunity-chf",
         cmcSlug: undefined,
         flags: { navToken: false },
+      }],
+      ["usdk-kast", {
+        geckoId: undefined,
+        cmcSlug: undefined,
+        detailProvider: "coingecko",
+        contracts: [{ chain: "solana", address: "usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX", decimals: 6 }],
+        flags: { navToken: false, pegCurrency: "USD", backing: "rwa-backed", yieldBearing: false, governance: "centralized" },
+      }],
+      ["xo-exodus", {
+        geckoId: "xo-cash",
+        cmcSlug: undefined,
+        detailProvider: "coingecko",
+        contracts: [{ chain: "solana", address: "xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y", decimals: 6 }],
+        flags: { navToken: false, pegCurrency: "USD", backing: "rwa-backed", yieldBearing: false, governance: "centralized" },
       }],
       ["ggbr-goldfish-gold", {
         geckoId: "goldfish-gold",
@@ -2186,6 +2217,198 @@ describe("syncStablecoins", () => {
     expect(dgld?.priceSource).toBe("coingecko-mirror");
     expect(dgld?.supplySource).toBe("coingecko-fallback");
     expect(dgld?.circulating).toEqual({ peggedGOLD: 16_985_391.664749127 });
+  });
+
+  it("admits Solana-only supplemental fiat assets after falling through to the third Solana RPC endpoint", async () => {
+    const db = makeDb();
+    const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
+    const dlData = makeDlResponse(60);
+
+    fetchWithRetryMock.mockImplementation(async (url: string, options?: RequestInit) => {
+      if (url.includes("api.coingecko.com")) {
+        return new Response(JSON.stringify({ "xo-cash": {} }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.includes("stablecoins.llama.fi")) {
+        return new Response(JSON.stringify(dlData), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.includes("coins.llama.fi/prices")) {
+        return new Response(JSON.stringify({ coins: {} }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.includes("api.mainnet-beta.solana.com") || url.includes("api.mainnet.solana.com")) {
+        return new Response(JSON.stringify({ error: "upstream unavailable" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.includes("solana-rpc.publicnode.com")) {
+        const body = JSON.parse(String(options?.body ?? "{}")) as { params?: unknown[] };
+        const mint = String(body.params?.[0] ?? "");
+        const amount =
+          mint === "usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX"
+            ? "24038912803829"
+            : mint === "xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y"
+              ? "1609836374719"
+              : null;
+
+        if (!amount) {
+          return new Response(JSON.stringify({ error: "unknown mint" }), {
+            status: 404,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+
+        return new Response(JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          result: { value: { amount } },
+        }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({ error: "Not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+    const result = await syncStablecoins(db);
+
+    expect(result.status).toBe("ok");
+    const finalValidationCall = validateSpy.mock.calls.find(
+      (call) => call[2] === "sync-stablecoins:stablecoins",
+    );
+    const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
+    const usdk = payload?.peggedAssets.find((asset) => asset.id === "usdk-kast");
+    const xo = payload?.peggedAssets.find((asset) => asset.id === "xo-exodus");
+
+    expect(fetchWithRetryMock.mock.calls.some(
+      ([url]) => String(url).includes("solana-rpc.publicnode.com"),
+    )).toBe(true);
+    expect(usdk).toMatchObject({
+      supplySource: "onchain-total-supply",
+      price: null,
+      priceSource: "missing",
+      chains: ["Solana"],
+    });
+    expect((usdk?.circulating as Record<string, number> | undefined)?.peggedUSD).toBeCloseTo(24_038_912.803829, 6);
+    expect(xo).toMatchObject({
+      supplySource: "onchain-total-supply",
+      price: null,
+      priceSource: "missing",
+      chains: ["Solana"],
+    });
+    expect((xo?.circulating as Record<string, number> | undefined)?.peggedUSD).toBeCloseTo(1_609_836.374719, 6);
+  });
+
+  it("restores last-known-good supplemental supply for coingecko detail-provider assets without a geckoId", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const previousStablecoinsPayload = {
+      peggedAssets: [
+        {
+          id: "usdk-kast",
+          name: "KAST Dollar",
+          symbol: "USDK",
+          geckoId: null,
+          pegType: "peggedUSD",
+          pegMechanism: "rwa-backed",
+          price: null,
+          priceSource: "missing",
+          priceConfidence: null,
+          priceUpdatedAt: null,
+          supplySource: "onchain-total-supply",
+          circulating: { peggedUSD: 24_038_912.803829 },
+          circulatingPrevDay: {},
+          circulatingPrevWeek: {},
+          circulatingPrevMonth: {},
+          chainCirculating: {},
+          chains: ["Solana"],
+        },
+      ],
+    };
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: { value: JSON.stringify(previousStablecoinsPayload), updated_at: nowSec - 300 },
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates"],
+        rows: [],
+        first: null,
+      },
+      { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
+      { match: "price_cache", rows: [] },
+      { match: "supply_history", rows: [] },
+      { match: "circuit", rows: [] },
+    ]);
+    const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
+    const dlData = makeDlResponse(60);
+
+    fetchWithRetryMock.mockImplementation(async (url: string) => {
+      if (url.includes("api.coingecko.com")) {
+        return new Response(JSON.stringify({ "xo-cash": {} }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.includes("stablecoins.llama.fi")) {
+        return new Response(JSON.stringify(dlData), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.includes("coins.llama.fi/prices")) {
+        return new Response(JSON.stringify({ coins: {} }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (
+        url.includes("api.mainnet-beta.solana.com") ||
+        url.includes("api.mainnet.solana.com") ||
+        url.includes("solana-rpc.publicnode.com")
+      ) {
+        return new Response(JSON.stringify({ error: "upstream unavailable" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({ error: "Not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+    const result = await syncStablecoins(db);
+
+    expect(result.status).toBe("ok");
+    const finalValidationCall = validateSpy.mock.calls.find(
+      (call) => call[2] === "sync-stablecoins:stablecoins",
+    );
+    const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
+    const usdk = payload?.peggedAssets.find((asset) => asset.id === "usdk-kast");
+
+    expect(usdk).toMatchObject({
+      supplySource: "onchain-total-supply",
+      price: null,
+      priceSource: "missing",
+      chains: ["Solana"],
+    });
+    expect((usdk?.circulating as Record<string, number> | undefined)?.peggedUSD).toBeCloseTo(24_038_912.803829, 6);
   });
 
   it("dedupes duplicate canonical IDs after DefiLlama remap", async () => {

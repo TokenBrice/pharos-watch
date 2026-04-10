@@ -15,8 +15,9 @@ const SUPPLEMENTAL_TRACKED_IDS = new Set(
   ACTIVE_STABLECOINS
     .filter(
       (meta) =>
-        !!meta.geckoId &&
-        (meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER" || meta.detailProvider === "coingecko"),
+        (meta.flags.pegCurrency === "GOLD" && !!meta.geckoId) ||
+        (meta.flags.pegCurrency === "SILVER" && !!meta.geckoId) ||
+        meta.detailProvider === "coingecko",
     )
     .map((meta) => meta.id),
 );
