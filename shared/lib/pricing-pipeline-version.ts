@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "4.1",
+  currentVersion: "4.2",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "4.2",
+      title: "Inherited wM pricing for M0 extension assets",
+      date: "2026-04-10",
+      effectiveAt: 1775822400,
+      summary:
+        "Added authoritative tracked-base inheritance for M0 extension assets whose exact child-token market coverage is absent or too thin, " +
+        "so price publication follows the executable parent rail instead of staying missing or trusting weak child-market prints.",
+      impact: [
+        "Live pricing now publishes `usdk-kast` and `xo-exodus` from the authoritative `protocol-redeem` lane by inheriting tracked `wm-m0` pricing when that parent rail is available",
+        "Historical depeg backfills for those assets now replay the tracked `wm-m0` market series instead of relying on missing or thin child-market history",
+        "This extends the same tracked-base inheritance pattern already used for `usdai-usd-ai -> pyusd-paypal`, keeping wrapper-style M0 extension assets aligned with their executable parent value",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "4.1",
       title: "Split DexScreener exact-vs-search breaker accounting",

@@ -255,6 +255,8 @@ Stored in D1 `dex_liquidity` table (created in migration 0009; extended in 0010,
 
 Both `dex_liquidity` and `dex_liquidity_history` also carry `methodology_version` (migration 0036), reconstructed from commit-history version windows in `shared/lib/liquidity-score-version.ts`. Historical rows also persist `coverage_class`, `coverage_confidence`, and `source_mix_json`. Legacy pre-0061 rows are backfilled as `coverage_class = 'legacy'` and `coverage_confidence = 0.5`.
 
+Detail-page consumers should treat `unobserved` history as explicit absence-of-direct-market evidence, not as a measured zero-liquidity market chart. The stablecoin detail page now renders a dedicated unobserved-history state for those rows instead of plotting a zero-value TVL area chart.
+
 Discovery and merge staging tables are documented in the [Discovery Cron](#discovery-cron) section below.
 
 ## Discovery Cron
@@ -364,6 +366,7 @@ Every source family now uses the same minimum liquidity rule for DEX prices: a p
 
 - `dex-liquidity-card.tsx`: shows DEX-implied price section when available plus coverage badges (`Primary`, `Mixed`, `Fallback`, `NR`)
 - `dex-liquidity-card.tsx`: surfaces whether liquidity is measured, partially measured, or only observed without measured pool balances
+- `dex-liquidity-card.tsx`: for `unobserved` rows, the detail page now says no direct-token DEX market is observed and renders an explicit unobserved-history state instead of hiding history or plotting placeholder zeros as a market chart
 - `/liquidity`: shows coverage badges and a separate unrated/unobserved section instead of silently dropping NR assets
 - Detail and overview liquidity surfaces now attach contextual methodology hints to the score label, `Effective TVL`, and key summary stats, with score-card footer links back to `/methodology/#liquidity-methodology`
 - `peg-heatmap.tsx`: amber "!" badge on tiles where DEX disagrees with primary

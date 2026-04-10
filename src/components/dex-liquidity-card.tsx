@@ -287,6 +287,16 @@ function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
   const gradientId = `tvlGrad-${stablecoinId}`;
   const { data: history, isLoading } = useDexLiquidityHistory(stablecoinId, 90);
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
+  const hasOnlyUnobservedHistory = Boolean(
+    history &&
+      history.length > 0 &&
+      history.every(
+        (point) =>
+          point.coverageClass === "unobserved" &&
+          point.liquidityEvidenceClass === "unobserved" &&
+          !point.trendworthy,
+      ),
+  );
 
   const chartData = useMemo(() => {
     if (!history || history.length < 2) return [];
@@ -296,15 +306,28 @@ function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
     }));
   }, [history]);
 
-  if (chartData.length < 2) {
-    if (isLoading) {
-      return (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-foreground">TVL History (90d)</p>
-          <ChartSkeleton className="h-32" />
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-wider text-foreground">TVL History (90d)</p>
+        <ChartSkeleton className="h-32" />
+      </div>
+    );
+  }
+
+  if (hasOnlyUnobservedHistory) {
+    return (
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-wider text-foreground">TVL History (90d)</p>
+        <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+          <p>Pharos tracked the last 90 days but found no direct-token DEX liquidity evidence for this asset.</p>
+          <p className="mt-1">Related-asset liquidity is intentionally not merged into the canonical Liquidity Score.</p>
         </div>
-      );
-    }
+      </div>
+    );
+  }
+
+  if (chartData.length < 2) {
     return null;
   }
 
@@ -483,8 +506,8 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
       <CardContent className="space-y-6">
         {!isRated && (
           <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-            No observed DEX liquidity in the current pipeline. This asset is tracked, but it is currently unrated for
-            Liquidity Score.
+            <p>No observed direct DEX market for this token in the current pipeline.</p>
+            <p className="mt-1">Liquidity Score stays unrated until Pharos sees exact-token pool evidence.</p>
           </div>
         )}
 
@@ -625,7 +648,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
 
           {isRated && <ScoreBreakdown components={liq.scoreComponents} />}
 
-          {isRated && <TvlTrendChart stablecoinId={stablecoinId} />}
+          <TvlTrendChart stablecoinId={stablecoinId} />
 
           {liq.topPools.length > 0 && <TopPoolsTable pools={liq.topPools} totalPoolCount={liq.poolCount} />}
         </div>

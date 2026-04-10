@@ -28,6 +28,13 @@ vi.mock("@shared/lib/stablecoins", () => ({
       },
     ],
     [
+      "wm-m0",
+      {
+        id: "wm-m0",
+        geckoId: "wrappedm-by-m0",
+      },
+    ],
+    [
       "usdai-usd-ai",
       {
         id: "usdai-usd-ai",
@@ -212,6 +219,43 @@ describe("authoritative-price-sources", () => {
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
   });
 
+  it("returns live inherited overrides for M0 extension assets from tracked wM pricing", async () => {
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "usdk-kast",
+        name: "KAST Dollar",
+        symbol: "USDK",
+        circulating: { peggedUSD: 24_000_000 },
+      },
+      {
+        id: "xo-exodus",
+        name: "XO Cash",
+        symbol: "XO",
+        circulating: { peggedUSD: 1_600_000 },
+      },
+      {
+        id: "wm-m0",
+        name: "Wrapped M",
+        symbol: "wM",
+        price: 0.99981234,
+        priceSource: "coingecko+raydium-dex",
+        priceConfidence: "high",
+        circulating: { peggedUSD: 93_000_000 },
+      },
+    ]);
+
+    expect(overrides.get("usdk-kast")).toEqual({
+      price: 0.99981234,
+      source: "protocol-redeem",
+      confidence: "high",
+    });
+    expect(overrides.get("xo-exodus")).toEqual({
+      price: 0.99981234,
+      source: "protocol-redeem",
+      confidence: "high",
+    });
+  });
+
   it("replays historical iUSD prices through the infiniFi redeem quote", async () => {
     resolveClosestBlockAtOrBeforeTimestampMock.mockResolvedValueOnce(24_133_673).mockResolvedValueOnce(24_209_239);
     fetchEvmCallHexAtBlockMock.mockResolvedValue(IUSD_QUOTE_HEX);
@@ -316,6 +360,104 @@ describe("authoritative-price-sources", () => {
     });
   });
 
+  it("replays historical M0 extension prices from the tracked wM market series", async () => {
+    fetchMarketBackfillPriceSeriesMock.mockResolvedValue({
+      prices: [
+        { timestamp: 1_776_000_000, price: 0.99971 },
+        { timestamp: 1_776_003_600, price: 1.00006 },
+      ],
+      diagnostics: {
+        granularity: "hourly",
+        sourcesUsed: ["coingecko"],
+        quoteMode: "usd",
+        quoteCurrency: "usd",
+        mergeReasons: [],
+        perSourceStats: [],
+        policyAdjustments: [],
+        finalPointCount: 2,
+      },
+    });
+
+    const usdkResult = await fetchAuthoritativeHistoricalPriceSeries(
+      {
+        id: "usdk-kast",
+        name: "KAST Dollar",
+        symbol: "USDK",
+        flags: {
+          pegCurrency: "USD",
+          backing: "rwa-backed",
+          governance: "centralized",
+          yieldBearing: false,
+          rwa: true,
+          navToken: false,
+        },
+      },
+      {
+        candidateTimestamps: [1_776_000_000, 1_776_003_600],
+      },
+    );
+    const xoResult = await fetchAuthoritativeHistoricalPriceSeries(
+      {
+        id: "xo-exodus",
+        name: "XO Cash",
+        symbol: "XO",
+        flags: {
+          pegCurrency: "USD",
+          backing: "rwa-backed",
+          governance: "centralized",
+          yieldBearing: false,
+          rwa: true,
+          navToken: false,
+        },
+      },
+      {
+        candidateTimestamps: [1_776_000_000, 1_776_003_600],
+      },
+    );
+
+    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenCalledTimes(2);
+    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        id: "wm-m0",
+        geckoId: "wrappedm-by-m0",
+      }),
+      "wrappedm-by-m0",
+      {
+        granularity: "hourly",
+        coingeckoApiKey: null,
+      },
+    );
+    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        id: "wm-m0",
+        geckoId: "wrappedm-by-m0",
+      }),
+      "wrappedm-by-m0",
+      {
+        granularity: "hourly",
+        coingeckoApiKey: null,
+      },
+    );
+    expect(usdkResult).toEqual({
+      matched: true,
+      source: "protocol-redeem",
+      prices: [
+        { timestamp: 1_776_000_000, price: 0.99971 },
+        { timestamp: 1_776_003_600, price: 1.00006 },
+      ],
+    });
+    expect(xoResult).toEqual({
+      matched: true,
+      source: "protocol-redeem",
+      prices: [
+        { timestamp: 1_776_000_000, price: 0.99971 },
+        { timestamp: 1_776_003_600, price: 1.00006 },
+      ],
+    });
+  });
+
   it("passes the CoinGecko API key through authoritative market-history replays", async () => {
     fetchMarketBackfillPriceSeriesMock.mockResolvedValue({
       prices: [
@@ -364,6 +506,19 @@ describe("authoritative-price-sources", () => {
         coingeckoApiKey: "cg-pro-key",
       },
     );
+  });
+
+  it("skips inherited tracked-price overrides when the parent asset is unavailable", async () => {
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "usdk-kast",
+        name: "KAST Dollar",
+        symbol: "USDK",
+        circulating: { peggedUSD: 24_000_000 },
+      },
+    ]);
+
+    expect(overrides.has("usdk-kast")).toBe(false);
   });
 
   it("does not return a crvUSD override (demoted to regular consensus source)", async () => {

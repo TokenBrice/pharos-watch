@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v4.1`
+- **Current methodology version:** `v4.2`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -166,13 +166,23 @@ After market/oracle consensus, `worker/src/lib/authoritative-price-sources.ts` c
 | `cusd-cap` | Cap `getBurnAmount(address,uint256)` |
 | `iusd-infinifi` | infiniFi `RedeemController.receiptToAsset(uint256)` |
 | `usdai-usd-ai` | inherits tracked `pyusd-paypal` pricing as a redeemable PYUSD wrapper |
+| `usdk-kast` | inherits tracked `wm-m0` pricing as a Solana M0 extension unit |
+| `xo-exodus` | inherits tracked `wm-m0` pricing as a Solana M0 extension unit |
 
 When a live override validates successfully, the cached asset is written with:
 
 - `priceSource = "protocol-redeem"`
 - `priceConfidence = "high"`
 
-For `usdai-usd-ai`, the authoritative layer does not query a bespoke contract path; it inherits the tracked `pyusd-paypal` live price and historical replay because base USDAI is documented as instantly redeemable against its PYUSD rail. This prevents thin secondary-market USDAI prints from dragging PegScore below the executable value of the wrapper.
+For tracked-base inheritance paths, the authoritative layer does not query a bespoke contract path; it inherits the tracked parent asset's live price and historical replay because Pharos models the child as an instantly redeemable wrapper or extension of that parent rail.
+
+Current tracked-base inheritance paths are:
+
+- `usdai-usd-ai -> pyusd-paypal`
+- `usdk-kast -> wm-m0`
+- `xo-exodus -> wm-m0`
+
+This prevents thin secondary-market child-token prints, or missing child-market coverage, from dragging PegScore away from the executable value of the tracked parent rail.
 
 These authoritative overrides are applied after the GeckoTerminal single-source probe, so a later market cross-check cannot overwrite a validated redemption price.
 

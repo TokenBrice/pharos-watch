@@ -13,6 +13,9 @@ const CAP_CUSD_ID = "cusd-cap";
 const IUSD_INFINIFI_ID = "iusd-infinifi";
 const USDAI_USD_AI_ID = "usdai-usd-ai";
 const PYUSD_PAYPAL_ID = "pyusd-paypal";
+const USDK_KAST_ID = "usdk-kast";
+const XO_EXODUS_ID = "xo-exodus";
+const WM_M0_ID = "wm-m0";
 const USDC_CIRCLE_ID = "usdc-circle";
 const CAP_GET_BURN_AMOUNT_SELECTOR = "0xb7c4a6bf"; // getBurnAmount(address,uint256)
 const IUSD_RECEIPT_TO_ASSET_SELECTOR = "0xf308cf65"; // receiptToAsset(uint256)
@@ -26,6 +29,11 @@ const CAP_SAMPLE_SUPPLY_FRACTION = 0.01;
 const CAP_SAMPLE_NOTIONAL_MIN_USD = 1_000;
 const CAP_SAMPLE_NOTIONAL_MAX_USD = 1_000_000;
 const CAP_HISTORICAL_MIN_COVERAGE = 0.8;
+const INHERITED_TRACKED_PRICE_PARENTS = {
+  [USDAI_USD_AI_ID]: PYUSD_PAYPAL_ID,
+  [USDK_KAST_ID]: WM_M0_ID,
+  [XO_EXODUS_ID]: WM_M0_ID,
+} as const satisfies Record<string, string>;
 
 export interface CurrentPriceOverride {
   price: number;
@@ -136,6 +144,10 @@ function clampSampleNotionalUsd(supplyUsd: number | null): number {
 function getFinitePositivePrice(asset: Pick<PeggedAsset, "price"> | undefined): number | null {
   const price = asset?.price;
   return typeof price === "number" && Number.isFinite(price) && price > 0 ? price : null;
+}
+
+function getInheritedTrackedPriceParentId(stablecoinId: string): string | null {
+  return INHERITED_TRACKED_PRICE_PARENTS[stablecoinId as keyof typeof INHERITED_TRACKED_PRICE_PARENTS] ?? null;
 }
 
 function findNearestSupply(snapshots: HistoricalSupplySnapshot[] | undefined, timestamp: number): number | null {
@@ -333,17 +345,34 @@ const iusdInfinifiProvider: PriceSourceProvider = {
   },
 };
 
-const usdaiPyusdProvider: PriceSourceProvider = {
+async function replayInheritedTrackedPriceSeries(
+  parentId: string,
+  context: HistoricalPriceContext,
+): Promise<HistoricalPricePoint[] | null> {
+  const parentMeta = TRACKED_META_BY_ID.get(parentId);
+  if (!parentMeta?.geckoId) return null;
+
+  const series = await fetchMarketBackfillPriceSeries(parentMeta, parentMeta.geckoId, {
+    granularity: "hourly",
+    coingeckoApiKey: context.coingeckoApiKey ?? null,
+  });
+  return series.prices;
+}
+
+const inheritedTrackedPriceProvider: PriceSourceProvider = {
   source: PROTOCOL_REDEEM_SOURCE,
   matches(stablecoinId: string): boolean {
-    return stablecoinId === USDAI_USD_AI_ID;
+    return getInheritedTrackedPriceParentId(stablecoinId) != null;
   },
   async fetchLivePrice(
-    _asset: PeggedAsset,
+    asset: PeggedAsset,
     context: LivePriceContext,
   ): Promise<CurrentPriceOverride | null> {
-    const pyusdAsset = context.assetsById.get(PYUSD_PAYPAL_ID);
-    const price = getFinitePositivePrice(pyusdAsset);
+    const parentId = getInheritedTrackedPriceParentId(asset.id);
+    if (!parentId) return null;
+
+    const parentAsset = context.assetsById.get(parentId);
+    const price = getFinitePositivePrice(parentAsset);
     if (price == null) return null;
 
     return {
@@ -353,25 +382,20 @@ const usdaiPyusdProvider: PriceSourceProvider = {
     };
   },
   async fetchHistoricalPrices(
-    _meta: StablecoinMeta,
+    meta: StablecoinMeta,
     context: HistoricalPriceContext,
   ): Promise<HistoricalPricePoint[] | null> {
-    // Base USDAI is modeled as an instantly redeemable PYUSD wrapper, so replay the tracked PYUSD series.
-    const pyusdMeta = TRACKED_META_BY_ID.get(PYUSD_PAYPAL_ID);
-    if (!pyusdMeta?.geckoId) return null;
+    const parentId = getInheritedTrackedPriceParentId(meta.id);
+    if (!parentId) return null;
 
-    const series = await fetchMarketBackfillPriceSeries(pyusdMeta, pyusdMeta.geckoId, {
-      granularity: "hourly",
-      coingeckoApiKey: context.coingeckoApiKey ?? null,
-    });
-    return series.prices;
+    return replayInheritedTrackedPriceSeries(parentId, context);
   },
 };
 
 const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   capCusdProvider,
   iusdInfinifiProvider,
-  usdaiPyusdProvider,
+  inheritedTrackedPriceProvider,
 ];
 
 export async function fetchAuthoritativeLivePriceOverrides(
