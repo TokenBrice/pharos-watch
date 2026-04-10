@@ -1,7 +1,4 @@
-import type {
-  StatusCause,
-  StatusResponse,
-} from "@shared/types/status";
+import type { StatusCause, StatusResponse } from "@shared/types/status";
 import { assessPublicHealth } from "./public-health-assessment";
 import {
   emptyDatasetFreshness,
@@ -45,8 +42,7 @@ export interface RawStatusComputation {
   telegramBot: StatusResponse["telegramBot"];
   sectionErrors: StatusResponse["sectionErrors"];
   datasetFreshness: StatusResponse["datasetFreshness"];
-  summary: StatusResponse["summary"];
-  reserveComposition: StatusResponse["reserveComposition"];
+  summary: StatusResponse["summary"]; reserveComposition: StatusResponse["reserveComposition"];
   freshnessDiagnostics: CacheFreshnessDiagnostic[];
 }
 
@@ -116,8 +112,6 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     return buildDbUnavailableRawStatus();
   }
 
-  const caches = publicHealth.caches;
-  const worstCacheRatio = publicHealth.worstCacheRatio;
   const {
     crons,
     unhealthyCrons,
@@ -212,7 +206,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
       dataQuality: dataQualityCauses,
       overall: synthesizeOverallCauses(availabilityCauses, dataQualityCauses),
     },
-    caches,
+    caches: publicHealth.caches,
     crons,
     dataQuality,
     telegramBot,
@@ -228,7 +222,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
       cronErrors: cronErrorCount,
       availabilityImpactingCronErrors,
       diagnosticIssueCount,
-      worstCacheRatio,
+      worstCacheRatio: publicHealth.worstCacheRatio,
     },
   };
 }
