@@ -1,6 +1,8 @@
+import { CHAIN_META } from "@shared/lib/chains";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { StablecoinMeta } from "@shared/types/core";
+import type { LiveReserveInput } from "@shared/types/live-reserves";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { CIRCUIT_SOURCE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../../lib/constants";
@@ -8,9 +10,8 @@ import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { resolveMarketCap } from "../../lib/resolve-market-cap";
 import { throwIfAborted } from "../../lib/abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
-import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { probeTrackedTokenSupply } from "../reserve-adapters/helpers";
 import type { DefiLlamaCoinPrice, PeggedAsset } from "./enrich-prices";
 
 const COMMODITY_TOKENS = ACTIVE_STABLECOINS.filter(
@@ -82,9 +83,17 @@ function buildSupplementalAsset(input: {
     circulatingPrevWeek: input.circulatingPrevWeek != null ? { [pKey]: input.circulatingPrevWeek } : null,
     circulatingPrevMonth: input.circulatingPrevMonth != null ? { [pKey]: input.circulatingPrevMonth } : null,
     chainCirculating: {},
-    chains: ["Ethereum"],
+    chains: getSupplementalChainLabels(input.meta),
     commodityOunces: input.meta.commodityOunces,
   } as PeggedAsset;
+}
+
+function getSupplementalChainLabels(meta: StablecoinMeta): string[] {
+  const labels = (meta.contracts ?? [])
+    .map((contract) => CHAIN_META[contract.chain]?.name ?? contract.chain)
+    .filter((label): label is string => typeof label === "string" && label.length > 0);
+
+  return Array.from(new Set(labels));
 }
 
 async function fetchSupplementalPriceData(
@@ -334,96 +343,51 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal):
   }
 }
 
-const SOLANA_PUBLIC_RPC_URLS = [
-  "https://api.mainnet-beta.solana.com",
-  "https://api.mainnet.solana.com",
-];
-
-/** Fetch Solana SPL token mint totalSupply via public RPCs. Returns the raw amount as a bigint. */
-async function fetchSolanaTokenSupply(
-  mintAddress: string,
-  signal?: AbortSignal,
-): Promise<bigint | null> {
-  for (const rpcUrl of SOLANA_PUBLIC_RPC_URLS) {
-    try {
-      const res = await fetchWithRetry(rpcUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1,
-          method: "getTokenSupply",
-          params: [mintAddress],
-        }),
-        signal,
-      });
-      if (!res?.ok) {
-        await cancelResponseBodyQuietly(res);
-        continue;
-      }
-      const body = (await res.json()) as { result?: { value?: { amount?: string } } };
-      const amount = body.result?.value?.amount;
-      if (typeof amount !== "string" || amount.length === 0) continue;
-      try {
-        return BigInt(amount);
-      } catch {
-        continue;
-      }
-    } catch {
-      continue;
-    }
-  }
-  return null;
-}
-
-/** Fetch totalSupply from the first EVM (or Solana-fallback) contract and return mcap = supply × price. */
+/** Fetch totalSupply from the first supported on-chain contract and return mcap = supply × price. */
 async function fetchOnChainMcap(
   meta: StablecoinMeta,
   priceUsd: number,
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
 ): Promise<number | null> {
-  const evmContract = meta.contracts?.find(
-    (c) => c.chain !== "solana" && c.chain !== "stellar" && c.chain !== "tron",
+  const supplyContract = meta.contracts?.find(
+    (contract) => contract.chain === "solana" || (contract.chain !== "stellar" && contract.chain !== "tron"),
   );
-  if (evmContract) {
-    try {
-      const raw = await fetchEvmUint256AtBlock(
-        evmContract.chain,
-        evmContract.address,
-        TOTAL_SUPPLY_SELECTOR,
-        "latest",
-        { chainRpcs, signal, timeoutMs: 10_000 },
-      );
-      if (raw != null && raw > 0n) {
-        const supply = Number(raw) / 10 ** (evmContract.decimals ?? 18);
-        const mcap = supply * priceUsd;
-        if (Number.isFinite(mcap) && mcap > 0) {
-          console.log(`[fiat-cg] On-chain supply fallback for ${meta.symbol}: ${supply.toFixed(2)} units → $${mcap.toFixed(2)} mcap`);
-          return mcap;
-        }
-      }
-    } catch (err) {
-      console.warn(`[fiat-cg] EVM supply probe failed for ${meta.symbol}: ${String(err).slice(0, 200)}`);
-    }
+  if (!supplyContract) {
+    return null;
   }
 
-  // Solana-only (or EVM-failed) fallback
-  const solanaContract = meta.contracts?.find((c) => c.chain === "solana");
-  if (solanaContract) {
-    try {
-      const raw = await fetchSolanaTokenSupply(solanaContract.address, signal);
-      if (raw != null && raw > 0n) {
-        const supply = Number(raw) / 10 ** (solanaContract.decimals ?? 6);
-        const mcap = supply * priceUsd;
-        if (Number.isFinite(mcap) && mcap > 0) {
-          console.log(`[fiat-cg] Solana supply fallback for ${meta.symbol}: ${supply.toFixed(2)} units → $${mcap.toFixed(2)} mcap`);
-          return mcap;
-        }
+  const probeInput: LiveReserveInput = supplyContract.chain === "solana"
+    ? { kind: "onchain-solana" }
+    : { kind: "onchain-evm", chain: supplyContract.chain, rpcMode: "public-rpc" };
+  const supplySignal = signal ?? AbortSignal.timeout(10_000);
+  const chainRpc = supplyContract.chain === "solana"
+    ? undefined
+    : chainRpcs?.get(supplyContract.chain);
+
+  try {
+    const raw = await probeTrackedTokenSupply(
+      meta,
+      probeInput,
+      supplySignal,
+      "fiat-cg",
+      undefined,
+      chainRpc?.rpcUrl,
+      chainRpc?.fallbackRpcUrl,
+    );
+    if (raw > 0n) {
+      const decimals = supplyContract.decimals ?? (supplyContract.chain === "solana" ? 6 : 18);
+      const supply = Number(raw) / 10 ** decimals;
+      const mcap = supply * priceUsd;
+      if (Number.isFinite(mcap) && mcap > 0) {
+        const chainLabel = supplyContract.chain === "solana" ? "Solana" : "On-chain";
+        console.log(`[fiat-cg] ${chainLabel} supply fallback for ${meta.symbol}: ${supply.toFixed(2)} units → $${mcap.toFixed(2)} mcap`);
+        return mcap;
       }
-    } catch (err) {
-      console.warn(`[fiat-cg] Solana supply probe failed for ${meta.symbol}: ${String(err).slice(0, 200)}`);
     }
+  } catch (err) {
+    const chainLabel = supplyContract.chain === "solana" ? "Solana" : "EVM";
+    console.warn(`[fiat-cg] ${chainLabel} supply probe failed for ${meta.symbol}: ${String(err).slice(0, 200)}`);
   }
 
   return null;
@@ -496,7 +460,7 @@ async function fetchFiatCoinGeckoTokens(
           circulatingPrevWeek: null,
           circulatingPrevMonth: null,
           chainCirculating: {},
-          chains: ["Ethereum"],
+          chains: getSupplementalChainLabels(meta),
         } as PeggedAsset;
       }),
     );
