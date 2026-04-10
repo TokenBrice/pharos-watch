@@ -7,10 +7,6 @@
     "disposition": "queued-p4",
     "notes": "The PSI route client is still a broad UI composition surface. Keep it waived until the route-level frontend hotspot pass is scheduled."
   },
-  "src/app/safety-scores/client.tsx": {
-    "disposition": "queued-p4",
-    "notes": "The safety-scores route still combines query orchestration, filters, and dense presentation. Track it for the next frontend hotspot pass rather than mixing UI decomposition into the worker tranche."
-  },
   "src/app/about/page.tsx": {
     "disposition": "deferred",
     "notes": "The about page is content-heavy and low-risk operationally. Defer structural cleanup behind higher-value worker and analytics refactors."
@@ -62,6 +58,10 @@
   "src/components/status/cron-metadata-summary.ts": {
     "disposition": "deferred",
     "notes": "Status metadata summarization has grown with the ops dashboard. Defer structural cleanup until the status surface settles after the current parallel work."
+  },
+  "src/components/dex-liquidity-card.tsx": {
+    "disposition": "queued-p4",
+    "notes": "The DEX liquidity detail card still mixes summary copy, top-pool rendering, and history presentation in one shell. Track it for the next frontend hotspot pass rather than folding a larger decomposition into this pricing/liquidity fix."
   },
   "shared/lib/format.ts": {
     "disposition": "deferred",
