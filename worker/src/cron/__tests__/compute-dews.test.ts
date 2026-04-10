@@ -78,6 +78,7 @@ vi.mock("../../lib/db-cache", () => ({
     updatedAt: Math.floor(Date.now() / 1000),
   })),
   setCache: vi.fn(async () => {}),
+  writeFreshnessSentinel: vi.fn(async () => {}),
 }));
 
 vi.mock("../../lib/dews", () => ({

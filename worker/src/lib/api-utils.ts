@@ -2,6 +2,7 @@ export type { CacheStatus } from "./api-freshness";
 export {
   addFreshnessHeaders,
   buildCacheStatuses,
+  type CacheFreshnessDiagnostic,
   buildFreshnessMeta,
   getLatestSuccessfulCronTimestamp,
   getLatestSuccessfulCronTimestampResult,

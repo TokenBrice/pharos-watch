@@ -55,6 +55,7 @@ export function buildAvailabilityCauses(input: {
   const availabilityCauses: StatusCause[] = [];
   const worstCacheRatio = input.publicHealth.worstCacheRatio;
   const cacheFailures = input.publicHealth.cacheFailures;
+  const cacheDiagnostics = input.publicHealth.cacheDiagnostics;
   const cacheWarnings = input.publicHealth.cacheWarnings;
   const caches = input.publicHealth.caches;
 
@@ -85,7 +86,10 @@ export function buildAvailabilityCauses(input: {
   }
 
   if (cacheFailures.length > 0) {
-    const cacheTargets = cacheFailures.map((failure) => failure.key).join(", ");
+    const cacheTargets = cacheFailures.map((failure) => {
+      const diagnostic = cacheDiagnostics.find((entry) => entry.key === failure.key);
+      return diagnostic ? `${failure.key} via ${diagnostic.freshnessSource}` : failure.key;
+    }).join(", ");
     pushCause(availabilityCauses, {
       code: "cache_freshness_query_failed",
       layer: "availability",

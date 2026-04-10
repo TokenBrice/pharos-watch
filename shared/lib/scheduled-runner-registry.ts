@@ -2,6 +2,7 @@ import { CRON_SCHEDULES } from "./cron-jobs";
 
 export const SCHEDULED_RUNNER_KEYS_BY_SCHEDULE = {
   [CRON_SCHEDULES.quarterHourly]: "quarterHourly",
+  [CRON_SCHEDULES.statusSelfCheckOffset]: "statusSelfCheckOffset",
   [CRON_SCHEDULES.hourlyBlacklist]: "hourlyBlacklist",
   [CRON_SCHEDULES.twentyMinuteMintBurn]: "twentyMinuteMintBurn",
   [CRON_SCHEDULES.thirtyMinuteDexDiscovery]: "thirtyMinuteDexDiscovery",

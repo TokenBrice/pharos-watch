@@ -6,7 +6,7 @@ import {
   maxPublicStatus,
 } from "@shared/lib/public-health";
 import type { HealthResponse } from "@shared/types/status";
-import { buildCacheStatuses, type CacheStatusFailure } from "./api-utils";
+import { buildCacheStatuses, type CacheFreshnessDiagnostic, type CacheStatusFailure } from "./api-utils";
 import { queryBlacklistGapMetrics, type BlacklistGapMetrics } from "./blacklist-gaps";
 import {
   filterStaleLiveReserveCircuitStates,
@@ -63,6 +63,7 @@ export interface PublicHealthAssessment {
   cacheImpactStatus: HealthResponse["status"];
   worstCacheRatio: number;
   cacheFailures: CacheStatusFailure[];
+  cacheDiagnostics: CacheFreshnessDiagnostic[];
   cacheWarnings: string[];
   blacklist: HealthResponse["blacklist"];
   blacklistMetrics: BlacklistGapMetrics | null;
@@ -239,6 +240,7 @@ export async function assessPublicHealth(
       cacheImpactStatus: "stale",
       worstCacheRatio: 0,
       cacheFailures: [],
+      cacheDiagnostics: [],
       cacheWarnings: [],
       blacklist: { ...EMPTY_BLACKLIST_HEALTH },
       blacklistMetrics: null,
@@ -331,6 +333,7 @@ export async function assessPublicHealth(
     cacheImpactStatus,
     worstCacheRatio: Number.isFinite(cacheAssessment.worstRatio) ? cacheAssessment.worstRatio : 99,
     cacheFailures: cacheAssessment.failures,
+    cacheDiagnostics: cacheAssessment.diagnostics,
     cacheWarnings: cacheAssessment.warnings,
     blacklist,
     blacklistMetrics: blacklistResult.metrics,

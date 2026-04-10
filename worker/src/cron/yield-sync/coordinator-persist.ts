@@ -10,6 +10,7 @@ import {
 } from "./publication";
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import type { CronResult } from "../../lib/cron-logger";
+import { writeFreshnessSentinel } from "../../lib/db-cache";
 
 export function buildPreviewYieldRankingsArtifacts(params: {
   evaluatedSources: EvaluatedYieldSource[];
@@ -106,6 +107,7 @@ export async function publishYieldCoordinatorResults(params: {
     medianApy: params.medianApy,
     dlPoolsMeta: params.dlPoolsMeta,
   });
+  await writeFreshnessSentinel(params.db, "yield-data", params.startSec);
 
   const cacheWrite = await writeYieldRankingsCache(params.db, params.previewRankingsPayload);
   if (!cacheWrite.ok) {

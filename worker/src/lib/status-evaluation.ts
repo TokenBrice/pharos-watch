@@ -30,6 +30,7 @@ import {
   synthesizeOverallCauses,
 } from "./status/evaluation-causes";
 import { loadCronHealth } from "./status/cron-health";
+import type { CacheFreshnessDiagnostic } from "./api-utils";
 
 export interface RawStatusComputation {
   dbHealthy: boolean;
@@ -46,6 +47,7 @@ export interface RawStatusComputation {
   datasetFreshness: StatusResponse["datasetFreshness"];
   summary: StatusResponse["summary"];
   reserveComposition: StatusResponse["reserveComposition"];
+  freshnessDiagnostics: CacheFreshnessDiagnostic[];
 }
 
 function buildDbUnavailableRawStatus(): RawStatusComputation {
@@ -90,6 +92,7 @@ function buildDbUnavailableRawStatus(): RawStatusComputation {
       worstCacheRatio: 0,
     },
     reserveComposition: emptyReserveComposition(),
+    freshnessDiagnostics: [],
   };
 }
 
@@ -216,6 +219,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     sectionErrors,
     datasetFreshness,
     reserveComposition,
+    freshnessDiagnostics: publicHealth.cacheDiagnostics,
     summary: {
       unhealthyCrons,
       availabilityImpactingUnhealthyCrons,

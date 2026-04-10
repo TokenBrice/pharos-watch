@@ -39,6 +39,7 @@ function makePublicHealth(
     cacheImpactStatus: "healthy",
     worstCacheRatio: 0,
     cacheFailures: [],
+    cacheDiagnostics: [],
     cacheWarnings: [],
     blacklist: {
       totalEvents: 0,

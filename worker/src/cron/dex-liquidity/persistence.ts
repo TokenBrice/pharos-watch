@@ -1,6 +1,7 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
 import { batchExecute } from "../../lib/db";
+import { writeFreshnessSentinel } from "../../lib/db-cache";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 
 const DEX_LIQUIDITY_UPSERT_SQL = `INSERT INTO dex_liquidity
@@ -215,6 +216,7 @@ export async function persistScores(
 
   // D1 batch limit — chunk
   await batchExecute(db, stmts);
+  await writeFreshnessSentinel(db, "dex-liquidity", nowSec);
 
   console.log(`[dex-liquidity] Wrote ${stmts.length} rows (${metrics.size} with data, ${placeholderCount} zero, 1 global)`);
   return {

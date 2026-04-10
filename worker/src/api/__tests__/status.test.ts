@@ -776,7 +776,16 @@ describe("handleStatus", () => {
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
     });
     const db = mockD1([
-      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          makeCacheRow("stablecoins"),
+          makeCacheRow("stablecoin-charts"),
+          makeCacheRow("usds-status"),
+          makeCacheRow("fx-rates"),
+          makeCacheRow("bluechip-ratings"),
+        ],
+      },
       { match: "cron_runs", rows: [makeCronRow("sync-stablecoins")] },
       { match: "cron_run_progress", rows: [] },
       { match: "dex_liquidity", rows: [], first: { age: 300 } },
@@ -2112,11 +2121,21 @@ describe("handleStatus", () => {
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
     });
     const db = mockD1([
-      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          makeCacheRow("stablecoins"),
+          makeCacheRow("stablecoin-charts"),
+          makeCacheRow("usds-status"),
+          makeCacheRow("fx-rates"),
+          makeCacheRow("bluechip-ratings"),
+        ],
+      },
       { match: "dex_liquidity", rows: [], throwError: new Error("dex freshness failed") },
       { match: "yield_data", rows: [], first: { age: 60 } },
       { match: "stress_signals", rows: [], first: { age: 60 } },
-      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+      { match: "GROUP BY job", rows: [{ job: "sync-dex-liquidity", started_at: now - 300 }] },
+      { match: "ROW_NUMBER() OVER", rows: [], throwError: new Error("cron history unavailable") },
       { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
@@ -2132,7 +2151,7 @@ describe("handleStatus", () => {
       causes: { availability: Array<{ code: string }> };
     };
 
-    expect(body.availabilityStatus).toBe("stale");
+    expect(body.availabilityStatus).toBe("healthy");
     expect(body.causes.availability.some((cause) => cause.code === "cache_freshness_query_failed")).toBe(true);
   });
 });

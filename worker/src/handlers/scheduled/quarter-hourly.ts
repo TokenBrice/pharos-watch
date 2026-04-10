@@ -1,7 +1,6 @@
 /**
  * Quarter-hourly trigger (every 15 min):
  *   sync-fx-rates (2) → sync-stablecoins (3) → snapshot-supply (0)
- *   → status-self-check (1)
  *
  * All jobs run sequentially in-slot to avoid cross-job connection spikes.
  * Run FX first so Chainlink gets a clean RPC window before the heavier
@@ -14,7 +13,6 @@ import { syncStablecoins } from "../../cron/sync-stablecoins";
 import { syncFxRates } from "../../cron/sync-fx-rates";
 import { snapshotSupply } from "../../cron/snapshot-supply";
 import { snapshotChainSupply } from "../../cron/snapshot-chain-supply";
-import { runStatusSelfCheck } from "../../cron/status-self-check";
 import { parseStablecoinsCapabilities, type ScheduledRuntimeContext } from "./context";
 import { runBestEffortScheduledJob } from "./run-best-effort-job";
 
@@ -57,20 +55,6 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext): Pr
   if (stablecoinsCacheSafe) {
     await runBestEffortScheduledJob(runtime, "quarter-hour slot", "snapshot-chain-supply", (signal) => snapshotChainSupply(runtime.db, signal));
   }
-
-  await runBestEffortScheduledJob(
-    runtime,
-    "quarter-hour slot",
-    "status-self-check",
-    (signal) => runStatusSelfCheck(
-      runtime.db,
-      runtime.env.SELF_URL,
-      signal,
-      runtime.ctx,
-      runtime.mintBurnFreshnessConfig,
-      runtime.alertWebhookUrl,
-    ),
-  );
 
   try {
     const cached = await getCache(runtime.db, "stablecoins");

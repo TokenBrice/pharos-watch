@@ -1,5 +1,10 @@
 import { batchExecute } from "./db";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
+import {
+  getFreshnessSentinelCacheKey,
+  getFreshnessSentinelProducerJob,
+  type FreshnessSentinelBackedCacheKey,
+} from "./freshness-sentinels";
 
 export async function getCache(db: D1Database, key: string): Promise<{ value: string; updatedAt: number } | null> {
   const row = await db
@@ -46,6 +51,23 @@ export async function setCacheIfNewer(db: D1Database, key: string, value: string
   if (result.meta.changes === 0) {
     console.log(`[cache] Skipped write for "${key}" — existing data is newer (started_at > ${syncStartSec})`);
   }
+}
+
+export async function writeFreshnessSentinel(
+  db: D1Database,
+  key: FreshnessSentinelBackedCacheKey,
+  syncStartSec: number,
+): Promise<void> {
+  await setCacheIfNewer(
+    db,
+    getFreshnessSentinelCacheKey(key),
+    JSON.stringify({
+      updatedAt: syncStartSec,
+      source: getFreshnessSentinelProducerJob(key),
+      publishStatus: "ok",
+    }),
+    syncStartSec,
+  );
 }
 
 export interface PriceCacheEntry {

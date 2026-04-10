@@ -1,6 +1,7 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { batchExecute, buildInClause } from "../../lib/db";
 import { chunkArray } from "../../lib/collections";
+import { writeFreshnessSentinel } from "../../lib/db-cache";
 import type { DewsComputedRow } from "./contracts";
 
 const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
@@ -59,6 +60,7 @@ export async function persistDewsResults(params: {
     );
     await batchExecute(params.db, stmts);
   }
+  await writeFreshnessSentinel(params.db, "dews", params.nowSec);
 
   const todayMidnight = getTodayMidnightUtcSec();
   const existing = await params.db

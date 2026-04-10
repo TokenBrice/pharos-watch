@@ -319,7 +319,7 @@ This prevents `/status` from silently treating a broken stablecoins cache as `0 
 
 When one of those best-effort subqueries fails, `/api/status` keeps unaffected status lanes healthy, records the issue under `sourceFailures` / `sectionErrors`, increments `summary.diagnosticIssueCount`, and renders the affected card as diagnostic amber instead of silently showing a misleading `0`.
 
-Cache freshness subqueries are now also explicit. If a dedicated-table freshness lookup fails, `/api/status` adds a `cache_freshness_query_failed` info cause instead of only surfacing a stale ratio.
+Cache freshness for `dex-liquidity`, `yield-data`, and `dews` now prefers producer-owned `cache` sentinels (`freshness:*`) instead of live `MAX(...)` scans over the hot publish tables. If the sentinel is missing during rollout, `/api/status` falls back to the legacy table query; if the lookup itself fails, it can still fall back to the latest successful producer cron timestamp and adds a `cache_freshness_query_failed` info cause instead of auto-promoting the lane to public `stale`.
 
 The public `/api/health` companion endpoint now returns a `warnings` array for these best-effort failures, and the status page model treats that as additional public-health context instead of assuming zero-like data is real.
 
@@ -369,7 +369,7 @@ The UI uses that block plus `crons["dispatch-telegram-alerts"].lastRun.metadata`
 
 ### Synthetic self-check
 
-`status-self-check` runs on `*/15 * * * *` and:
+`status-self-check` runs on its own isolated `9,24,39,54 * * * *` lane and:
 
 1. Probes critical public/admin read endpoints using a hybrid strategy:
    - default production origin (`https://api.pharos.watch`): router-dispatched internal `GET` requests to avoid Cloudflare custom-domain self-fetch `522` false negatives while still exercising the real handler/auth path
@@ -386,6 +386,7 @@ The cron metadata now includes:
 
 - `probeMode` / `probeBaseUrl`
 - `bootstrapMissCount`
+- `freshnessDiagnostics` when raw status had to fall back from a freshness sentinel to table or cron evidence
 - `latencySummary` (`minMs`, `medianMs`, `p95Ms`, `maxMs`)
 - `slowestProbes` (top slow endpoints for the run)
 

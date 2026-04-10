@@ -42,7 +42,7 @@ const updateDiscrepancyObservationMock = vi.fn(async () => ({
 const markDiscrepancyAlertSentMock = vi.fn(async () => true);
 const markProbeFailureAlertSentMock = vi.fn(async () => true);
 const evaluateStatusAndPersistMock = vi.fn(async () => ({
-  raw: { rawOverallStatus: "healthy" },
+  raw: { rawOverallStatus: "healthy", freshnessDiagnostics: [] as Array<Record<string, unknown>> },
   effectiveStatus: "stale",
   persistenceSucceeded: true,
 }));
@@ -106,7 +106,7 @@ describe("runStatusSelfCheck", () => {
       }),
     );
     evaluateStatusAndPersistMock.mockResolvedValue({
-      raw: { rawOverallStatus: "healthy" },
+      raw: { rawOverallStatus: "healthy", freshnessDiagnostics: [] as Array<Record<string, unknown>> },
       effectiveStatus: "stale",
       persistenceSucceeded: true,
     });
@@ -195,7 +195,7 @@ describe("runStatusSelfCheck", () => {
       }),
     );
     evaluateStatusAndPersistMock.mockResolvedValueOnce({
-      raw: { rawOverallStatus: "degraded" },
+      raw: { rawOverallStatus: "degraded", freshnessDiagnostics: [] as Array<Record<string, unknown>> },
       effectiveStatus: "degraded",
       persistenceSucceeded: true,
     });
@@ -226,6 +226,56 @@ describe("runStatusSelfCheck", () => {
     expect(metadata.failCount).toBe(0); // reported-* errors are excluded from connectivity fail counts
     expect(latestProbeWrite.status).toBe("degraded");
     expect(latestProbeWrite.failCount).toBe(0);
+  });
+
+  it("includes freshness diagnostics in cron metadata when status evaluation provides them", async () => {
+    evaluateStatusAndPersistMock.mockResolvedValueOnce({
+      raw: {
+        rawOverallStatus: "healthy",
+        freshnessDiagnostics: [
+          {
+            key: "yield-data",
+            freshnessSource: "cron-fallback",
+            warning: "yield-data: freshness table query failed; using cron fallback",
+            failureSource: "table-freshness",
+          },
+        ],
+      },
+      effectiveStatus: "healthy",
+      persistenceSucceeded: true,
+    });
+    buildDiscrepancyMock.mockImplementationOnce(
+      (_status: unknown, _probe: unknown, _now: number, streak: number) => ({
+        hasDivergence: false,
+        severityDelta: 0,
+        statusSeverity: 0,
+        probeSeverity: 0,
+        details: "no-divergence",
+        probeAgeSeconds: 0,
+        consecutiveDivergent: streak,
+      }),
+    );
+    updateDiscrepancyObservationMock.mockResolvedValueOnce({
+      consecutiveDivergent: 0,
+      lastAlertAt: null,
+      consecutiveProbeFailures: 0,
+      lastProbeAlertAt: null,
+      persistenceSucceeded: true,
+    });
+
+    const result = await runStatusSelfCheck({} as D1Database, "secret");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      freshnessDiagnostics?: Array<{ key?: string; freshnessSource?: string; failureSource?: string }>;
+    };
+
+    expect(metadata.freshnessDiagnostics).toEqual([
+      {
+        key: "yield-data",
+        freshnessSource: "cron-fallback",
+        warning: "yield-data: freshness table query failed; using cron fallback",
+        failureSource: "table-freshness",
+      },
+    ]);
   });
 
   it("alerts on sustained probe failures even when no status divergence exists", async () => {

@@ -622,6 +622,54 @@ describe("buildCacheStatuses", () => {
     expect(dewsSql).toContain("? - MAX(computed_at)");
   });
 
+  it("uses freshness sentinels when present and skips hot-table freshness queries", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const seenSql: string[] = [];
+    const db = {
+      prepare: (sql: string) => {
+        seenSql.push(sql);
+        const first = async <T>() => null as T | null;
+        return {
+          bind: (..._args: unknown[]) => ({
+            all: async <T>() => {
+              if (sql.includes("cache WHERE key IN")) {
+                return {
+                  results: [
+                    { key: "stablecoins", updated_at: nowSec - 60, value: "{}" },
+                    { key: "freshness:dex-liquidity", updated_at: nowSec - 120, value: "{}" },
+                    { key: "freshness:yield-data", updated_at: nowSec - 180, value: "{}" },
+                    { key: "freshness:dews", updated_at: nowSec - 240, value: "{}" },
+                  ] as T[],
+                  success: true,
+                  meta: {},
+                };
+              }
+              return { results: [] as T[], success: true, meta: {} };
+            },
+            first,
+            run: async () => ({ success: true, meta: {} }),
+          }),
+          all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+          first,
+          run: async () => ({ success: true, meta: {} }),
+        };
+      },
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    const { caches, diagnostics } = await buildCacheStatuses(db, nowSec);
+
+    expect(caches["dex-liquidity"]?.ageSeconds).toBe(120);
+    expect(caches["yield-data"]?.ageSeconds).toBe(180);
+    expect(caches.dews?.ageSeconds).toBe(240);
+    expect(diagnostics).toEqual([]);
+    expect(seenSql.some((sql) => sql.includes("FROM dex_liquidity"))).toBe(false);
+    expect(seenSql.some((sql) => sql.includes("FROM yield_data"))).toBe(false);
+    expect(seenSql.some((sql) => sql.includes("FROM stress_signals"))).toBe(false);
+  });
+
   it("clamps negative table ages to zero", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = {
@@ -692,6 +740,60 @@ describe("buildCacheStatuses", () => {
         message: "stress query failed",
       },
     ]);
+  });
+
+  it("falls back to producer cron timestamps when freshness diagnostics fail", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = {
+      prepare: (sql: string) => {
+        const first = async <T>() => {
+          if (sql.includes("stress_signals")) {
+            throw new Error("stress query failed");
+          }
+          return null as T | null;
+        };
+        return {
+          bind: (..._args: unknown[]) => ({
+            all: async <T>() => {
+              if (sql.includes("FROM cron_runs")) {
+                return {
+                  results: [{ job: "compute-dews", started_at: nowSec - 300 }] as T[],
+                  success: true,
+                  meta: {},
+                };
+              }
+              return { results: [] as T[], success: true, meta: {} };
+            },
+            first,
+            run: async () => ({ success: true, meta: {} }),
+          }),
+          all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+          first,
+          run: async () => ({ success: true, meta: {} }),
+        };
+      },
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    const { caches, diagnostics, failures, warnings } = await buildCacheStatuses(db, nowSec);
+    expect(caches.dews?.ageSeconds).toBe(300);
+    expect(caches.dews?.warning).toBe("dews: freshness table query failed; using cron fallback");
+    expect(diagnostics).toContainEqual({
+      key: "dews",
+      freshnessSource: "cron-fallback",
+      warning: "dews: freshness table query failed; using cron fallback",
+      failureSource: "table-freshness",
+    });
+    expect(failures).toEqual([
+      {
+        key: "dews",
+        source: "table-freshness",
+        message: "stress query failed",
+      },
+    ]);
+    expect(warnings).toContain("dews: freshness table query failed; using cron fallback");
   });
 
   it("uses fx-rates-meta usableSyncAt for cache freshness and keeps cadence-aware source warnings separate", async () => {

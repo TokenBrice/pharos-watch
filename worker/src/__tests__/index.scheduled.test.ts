@@ -206,11 +206,31 @@ describe("worker.scheduled", () => {
     // stability-index and compute-dews now on the half-hourly trigger
     expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
-    expect(cronMocks.runStatusSelfCheck).toHaveBeenCalledTimes(1);
+    expect(cronMocks.runStatusSelfCheck).not.toHaveBeenCalled();
     // Telegram alerts now on dedicated 5-min trigger
     expect(cronMocks.dispatchTelegramAlerts).not.toHaveBeenCalled();
     // Charts now on the half-hourly offset trigger
     expect(cronMocks.syncStablecoinCharts).not.toHaveBeenCalled();
+  });
+
+  it("runs status-self-check on the isolated offset trigger", async () => {
+    const { ctx, waits } = makeCtx();
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+      TELEGRAM_BOT_TOKEN: "bot-token",
+    } as const;
+
+    await worker.scheduled(
+      { cron: "9,24,39,54 * * * *" } as ScheduledEvent,
+      env as never,
+      ctx,
+    );
+    await Promise.all(waits);
+
+    expect(cronMocks.runStatusSelfCheck).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncStablecoins).not.toHaveBeenCalled();
+    expect(cronMocks.syncFxRates).not.toHaveBeenCalled();
   });
 
   it("throws loudly when a scheduled trigger is unmapped", async () => {
@@ -361,7 +381,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncStablecoins).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotSupply).not.toHaveBeenCalled();
     expect(cronMocks.syncFxRates).toHaveBeenCalledTimes(1);
-    expect(cronMocks.runStatusSelfCheck).toHaveBeenCalledTimes(1);
+    expect(cronMocks.runStatusSelfCheck).not.toHaveBeenCalled();
   });
 
   it("runs cache-dependent jobs but skips depeg-dependent jobs when sync-stablecoins writes a safe cache with depeg failures", async () => {

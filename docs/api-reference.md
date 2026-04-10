@@ -1287,10 +1287,12 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
 | `sourceUpdatedAt`         | `number \| null \| undefined`                | FX cache only: Unix seconds for the source currently driving `sourceStatus`                  |
 | `sourceAgeSeconds`        | `number \| null \| undefined`                | FX cache only: age of the source currently driving `sourceStatus`                            |
 | `sourceStatus`            | `"fresh" \| "degraded" \| "stale" \| "none"` | FX cache only: cadence-aware source freshness status                                         |
-| `warning`                 | `string \| null \| undefined`                | FX cache only: human-readable warning for fallback mode, stale source cadence, or hardcoding |
+| `warning`                 | `string \| null \| undefined`                | Human-readable warning when a lane is running on degraded freshness evidence (FX fallback/source cadence, or cache freshness fallback from sentinel to table/cron evidence) |
 | `consecutiveFallbackRuns` | `number \| undefined`                        | FX cache only: number of back-to-back cached-fallback runs                                   |
 
 The `/status/` page consumes the richer blacklist fields directly so it can distinguish long-tail historical cleanup from fresh incoming amount gaps.
+
+`dex-liquidity`, `yield-data`, and `dews` now compute freshness from producer-owned cache sentinels first (`freshness:dex-liquidity`, `freshness:yield-data`, `freshness:dews`). If a sentinel is missing, the worker temporarily falls back to the legacy table query; if the freshness diagnostic still fails, it can fall back again to the latest successful producer cron timestamp and emits a warning/info cause instead of treating the diagnostic miss itself as public `stale`.
 
 **Overall status logic:**
 
@@ -2521,7 +2523,7 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 
 `summary.availabilityImpactingUnhealthyCrons` and `summary.availabilityImpactingCronErrors` count only cron jobs tagged `statusImpact="critical"` in `shared/lib/cron-jobs.ts`. `summary.watchUnhealthyCrons` counts the watch-tier jobs that remain visible but do not degrade `availabilityStatus` on their own.
 
-`summary.diagnosticIssueCount` counts best-effort status loader failures such as cache freshness lookups, reserve overview diagnostics, mint/burn diagnostics, and non-stablecoins data-quality subqueries. These issues reduce confidence and appear as info causes, but they do not degrade `availabilityStatus` or `dataQualityStatus` on their own.
+`summary.diagnosticIssueCount` counts best-effort status loader failures such as cache freshness lookups, reserve overview diagnostics, mint/burn diagnostics, and non-stablecoins data-quality subqueries. These issues reduce confidence and appear as info causes, but they do not degrade `availabilityStatus` or `dataQualityStatus` on their own unless all freshness evidence for the affected lane is gone.
 
 `reserveComposition.status` is a derived health signal for live reserve coverage. After bootstrap, it becomes `stale` when `freshCoins === 0`, `degraded` when `freshCoverageRatio < 0.75` or `authoritativeFreshCoverageRatio < 0.5`, and `healthy` otherwise.
 
@@ -2542,6 +2544,8 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 `sectionErrors` is a machine-readable map of subsection loader failures. When an individual status subsection fails (for example Telegram stats, discovery backlog, CoinGecko price drift, D1 usage telemetry, liquidity health, reserve drift, or mint/burn reconciliation), `/api/status` still returns `200`, keeps the unaffected sections intact, and records the degraded subsection under `sectionErrors` with a stable `code` plus an operator-facing sanitized `message`. Raw exception text, SQL fragments, and table names stay in logs, not in the response body.
 
 `crons["dispatch-telegram-alerts"].lastRun.metadata` now carries a richer delivery breakdown, including fields such as `freshAttempted`, `freshSent`, `freshRetryQueued`, `freshPermanentFailures`, `pendingAttempted`, `pendingDrained`, `pendingRetryQueued`, `pendingDropped`, `pendingEnqueued`, and expanded `eventsDetected` counters (`depegTriggered`, `depegResolved`, `depegWorsening`, `launch`, `suppressedMethodologyChanges`).
+
+`crons["status-self-check"].lastRun.metadata` now also includes `freshnessDiagnostics` when raw status had to fall back from a freshness sentinel to table or cron evidence during the self-check run.
 
 `datasetFreshness` covers the key operator-visible datasets written by the pipeline: cache-backed stablecoins, blacklist, mint/burn, supply snapshots, safety-grade history, yield, depeg/dews tables, daily digest, and discovery backlog timestamps.
 

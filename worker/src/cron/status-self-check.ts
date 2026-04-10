@@ -484,6 +484,7 @@ export async function runStatusSelfCheck(
       alertSent: discrepancyAlertSent,
       probeFailureAlertAttempted: shouldProbeFailureAlert,
       probeFailureAlertSent,
+      freshnessDiagnostics: raw.freshnessDiagnostics,
     }),
   };
 }
