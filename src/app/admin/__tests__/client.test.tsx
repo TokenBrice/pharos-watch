@@ -268,6 +268,7 @@ const BASE_STATUS: StatusResponse = {
     degradedCrons: 1,
     cronErrors: 0,
     availabilityImpactingCronErrors: 0,
+    availabilityImpactingConsecutiveCronErrors: 0,
     diagnosticIssueCount: 0,
     worstCacheRatio: 1.2,
   },

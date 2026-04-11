@@ -132,8 +132,74 @@ describe("status evaluation policy", () => {
       }),
       availabilityImpactingCronErrors: 0,
       availabilityImpactingUnhealthyCrons: 0,
+      availabilityImpactingConsecutiveCronErrors: 0,
     });
 
     expect(availability).toBe("healthy");
+  });
+});
+
+describe("deriveAvailabilityStatus cron-error semantic", () => {
+  const baseInput = {
+    publicHealth: makePublicHealth(),
+    availabilityImpactingCronErrors: 0,
+    availabilityImpactingUnhealthyCrons: 0,
+    availabilityImpactingConsecutiveCronErrors: 0,
+  };
+
+  it("stays healthy when nothing is wrong", () => {
+    expect(deriveAvailabilityStatus(baseInput)).toBe("healthy");
+  });
+
+  it("degrades on a single critical cron error without escalating to stale", () => {
+    expect(
+      deriveAvailabilityStatus({
+        ...baseInput,
+        availabilityImpactingCronErrors: 1,
+        availabilityImpactingUnhealthyCrons: 1,
+      }),
+    ).toBe("degraded");
+  });
+
+  it("escalates to stale on 2+ consecutive errors on the same critical cron", () => {
+    expect(
+      deriveAvailabilityStatus({
+        ...baseInput,
+        availabilityImpactingCronErrors: 1,
+        availabilityImpactingUnhealthyCrons: 1,
+        availabilityImpactingConsecutiveCronErrors: 1,
+      }),
+    ).toBe("stale");
+  });
+
+  it("escalates to stale when 2+ critical crons are simultaneously unhealthy", () => {
+    expect(
+      deriveAvailabilityStatus({
+        ...baseInput,
+        availabilityImpactingCronErrors: 2,
+        availabilityImpactingUnhealthyCrons: 2,
+      }),
+    ).toBe("stale");
+  });
+
+  it("preserves cacheImpactStatus=stale escalation independent of cron health", () => {
+    expect(
+      deriveAvailabilityStatus({
+        ...baseInput,
+        publicHealth: makePublicHealth({ cacheImpactStatus: "stale" }),
+      }),
+    ).toBe("stale");
+  });
+
+  it("respects publicAvailabilityFloor via mintBurnImpactStatus=stale", () => {
+    expect(
+      deriveAvailabilityStatus({
+        ...baseInput,
+        publicHealth: makePublicHealth({
+          mintBurnImpactStatus: "stale",
+          mintBurnLastRunStatus: "error",
+        }),
+      }),
+    ).toBe("stale");
   });
 });

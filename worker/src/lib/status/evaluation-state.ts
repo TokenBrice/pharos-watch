@@ -62,13 +62,16 @@ export function deriveAvailabilityStatus(input: {
   publicHealth: PublicHealthAssessment;
   availabilityImpactingCronErrors: number;
   availabilityImpactingUnhealthyCrons: number;
+  availabilityImpactingConsecutiveCronErrors: number;
 }): StatusResponse["availabilityStatus"] {
   const baseAvailabilityStatus: StatusResponse["availabilityStatus"] =
     input.publicHealth.cacheImpactStatus === "stale"
-    || input.availabilityImpactingCronErrors > 0
+    || input.availabilityImpactingConsecutiveCronErrors > 0
     || input.availabilityImpactingUnhealthyCrons >= 2
       ? "stale"
-      : input.publicHealth.cacheImpactStatus === "degraded" || input.availabilityImpactingUnhealthyCrons > 0
+      : input.publicHealth.cacheImpactStatus === "degraded"
+        || input.availabilityImpactingCronErrors > 0
+        || input.availabilityImpactingUnhealthyCrons > 0
         ? "degraded"
         : "healthy";
   const publicAvailabilityFloor = maxPublicStatus(

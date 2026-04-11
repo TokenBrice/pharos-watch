@@ -49,6 +49,7 @@ export function buildAvailabilityCauses(input: {
   degradedCronRuns: number;
   cronErrorCount: number;
   availabilityImpactingCronErrors: number;
+  availabilityImpactingConsecutiveCronErrors: number;
   cronHistoryQueryFailed: boolean;
   cronProgressQueryFailed: boolean;
 }): StatusCause[] {
@@ -215,11 +216,14 @@ export function buildAvailabilityCauses(input: {
   }
 
   if (input.availabilityImpactingCronErrors > 0) {
+    const isSustained = input.availabilityImpactingConsecutiveCronErrors > 0;
     pushCause(availabilityCauses, {
       code: "cron_error_runs",
       layer: "availability",
-      severity: "critical",
-      message: `${input.availabilityImpactingCronErrors} availability-impacting cron job(s) currently have last-run status=error.`,
+      severity: isSustained ? "critical" : "warning",
+      message: isSustained
+        ? `${input.availabilityImpactingConsecutiveCronErrors} availability-impacting cron job(s) have 2+ consecutive failed runs.`
+        : `${input.availabilityImpactingCronErrors} availability-impacting cron job(s) had a single transient failed run.`,
       metric: "availabilityImpactingCronErrors",
       value: input.availabilityImpactingCronErrors,
       threshold: 1,

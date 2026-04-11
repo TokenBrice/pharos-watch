@@ -142,9 +142,9 @@ export function StatusFacts({
     {
       label: "Cron Errors",
       value: `${summary.availabilityImpactingCronErrors}/${summary.cronErrors}`,
-      tone: summary.availabilityImpactingCronErrors > 0
+      tone: summary.availabilityImpactingConsecutiveCronErrors > 0
         ? "text-red-600 dark:text-red-400"
-        : summary.cronErrors > 0
+        : summary.availabilityImpactingCronErrors > 0 || summary.cronErrors > 0
           ? "text-amber-600 dark:text-amber-400"
           : "text-green-600 dark:text-green-400",
     },

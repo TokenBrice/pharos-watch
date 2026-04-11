@@ -10,6 +10,8 @@ export interface CronHealthSnapshot {
   degradedCronRuns: number;
   cronErrorCount: number;
   availabilityImpactingCronErrors: number;
+  /** Count of availability-critical crons whose most recent 2+ runs are all `error`. */
+  availabilityImpactingConsecutiveCronErrors: number;
   cronHistoryQueryFailed: boolean;
   cronProgressQueryFailed: boolean;
 }
@@ -176,6 +178,7 @@ export async function loadCronHealth(
   let degradedCronRuns = 0;
   let cronErrorCount = 0;
   let availabilityImpactingCronErrors = 0;
+  let availabilityImpactingConsecutiveCronErrors = 0;
 
   for (const [job, interval] of Object.entries(CRON_INTERVALS)) {
     const runs = cronByJob.get(job) ?? [];
@@ -209,6 +212,18 @@ export async function loadCronHealth(
       if (statusImpact === "critical") {
         availabilityImpactingCronErrors++;
       }
+      // Consecutive-error streak: only counts if the two most-recent runs are
+      // both in-error. Uses the already-loaded `runs` array (DESC by started_at,
+      // capped at 10 per job). A single transient error surfaces as `degraded`
+      // in deriveAvailabilityStatus; only 2+ consecutive escalate to `stale`.
+      if (
+        statusImpact === "critical"
+        && runs.length >= 2
+        && runs[0]?.status === "error"
+        && runs[1]?.status === "error"
+      ) {
+        availabilityImpactingConsecutiveCronErrors++;
+      }
     }
 
     crons[job] = {
@@ -235,6 +250,7 @@ export async function loadCronHealth(
     degradedCronRuns,
     cronErrorCount,
     availabilityImpactingCronErrors,
+    availabilityImpactingConsecutiveCronErrors,
     cronHistoryQueryFailed,
     cronProgressQueryFailed,
   };

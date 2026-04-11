@@ -84,6 +84,7 @@ function buildDbUnavailableRawStatus(): RawStatusComputation {
       degradedCrons: 0,
       cronErrors: 0,
       availabilityImpactingCronErrors: 0,
+      availabilityImpactingConsecutiveCronErrors: 0,
       diagnosticIssueCount: 0,
       worstCacheRatio: 0,
     },
@@ -120,6 +121,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     degradedCronRuns,
     cronErrorCount,
     availabilityImpactingCronErrors,
+    availabilityImpactingConsecutiveCronErrors,
     cronHistoryQueryFailed,
     cronProgressQueryFailed,
   } = await loadCronHealth(db, now);
@@ -154,6 +156,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     publicHealth,
     availabilityImpactingCronErrors,
     availabilityImpactingUnhealthyCrons,
+    availabilityImpactingConsecutiveCronErrors,
   });
   const dataQualityStatus = deriveDataQualityStatus({
     dataQuality,
@@ -172,6 +175,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     degradedCronRuns,
     cronErrorCount,
     availabilityImpactingCronErrors,
+    availabilityImpactingConsecutiveCronErrors,
     cronHistoryQueryFailed,
     cronProgressQueryFailed,
   });
@@ -221,6 +225,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
       degradedCrons: degradedCronRuns,
       cronErrors: cronErrorCount,
       availabilityImpactingCronErrors,
+      availabilityImpactingConsecutiveCronErrors,
       diagnosticIssueCount,
       worstCacheRatio: publicHealth.worstCacheRatio,
     },

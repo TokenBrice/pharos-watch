@@ -440,6 +440,8 @@ export interface StatusResponse {
     degradedCrons: number;
     cronErrors: number;
     availabilityImpactingCronErrors: number;
+    /** Count of availability-critical crons with 2+ consecutive failed runs (sustained outage). */
+    availabilityImpactingConsecutiveCronErrors: number;
     diagnosticIssueCount: number;
     worstCacheRatio: number;
   };

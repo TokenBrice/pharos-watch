@@ -353,9 +353,10 @@ export function buildStatusDashboardData({
     data.summary.worstCacheRatio > 2 ? 2 : data.summary.worstCacheRatio > 1.5 ? 1 : 0,
   );
   const cronStatus =
-    data.summary.availabilityImpactingCronErrors > 0
+    data.summary.availabilityImpactingConsecutiveCronErrors > 0
       ? 2
-      : data.summary.availabilityImpactingUnhealthyCrons > 0
+      : data.summary.availabilityImpactingCronErrors > 0
+        || data.summary.availabilityImpactingUnhealthyCrons > 0
         ? 1
         : data.summary.degradedCrons > 0 || data.summary.watchUnhealthyCrons > 0
           ? 1
