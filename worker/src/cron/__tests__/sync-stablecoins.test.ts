@@ -2474,7 +2474,7 @@ describe("syncStablecoins", () => {
     const cgMockFetch = mockFetch([
       { match: "api.coingecko.com", body: {} },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
-    ]);
+    ]) as unknown as (url: string) => Promise<Response>;
 
     let dlAttempt = 0;
     fetchWithRetryMock.mockImplementation(async (url: string) => {
@@ -2521,7 +2521,7 @@ describe("syncStablecoins", () => {
     const cgMockFetch = mockFetch([
       { match: "api.coingecko.com", body: {} },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
-    ]);
+    ]) as unknown as (url: string) => Promise<Response>;
 
     let dlAttempt = 0;
     fetchWithRetryMock.mockImplementation(async (url: string) => {
@@ -2532,7 +2532,13 @@ describe("syncStablecoins", () => {
       return cgMockFetch(url);
     });
 
-    await syncStablecoins(db);
+    // With empty CG mock data, the CG fallback produces itemCount=0,
+    // which makes sync-stablecoins.ts:57 re-throw the errorMessage.
+    // This matches the production "cron_runs.status='error'" behavior
+    // that this fix targets — just wrapped in a rejection for the test.
+    await expect(syncStablecoins(db)).rejects.toThrow(
+      /DefiLlama response body parse failed/,
+    );
 
     // DL fetched exactly DL_PARSE_MAX_ATTEMPTS (3) times — one per retry.
     expect(dlAttempt).toBe(3);
@@ -2552,7 +2558,7 @@ describe("syncStablecoins", () => {
     const cgMockFetch = mockFetch([
       { match: "api.coingecko.com", body: {} },
       { match: "coins.llama.fi/prices", body: { coins: {} } },
-    ]);
+    ]) as unknown as (url: string) => Promise<Response>;
 
     let dlAttempt = 0;
     fetchWithRetryMock.mockImplementation(async (url: string) => {
@@ -2563,7 +2569,11 @@ describe("syncStablecoins", () => {
       return cgMockFetch(url);
     });
 
-    await syncStablecoins(db);
+    // With empty CG mock data, the CG fallback produces itemCount=0,
+    // which makes sync-stablecoins.ts:57 re-throw.
+    await expect(syncStablecoins(db)).rejects.toThrow(
+      /DefiLlama stablecoins API failed/,
+    );
 
     // DL fetched exactly 1 time (no parse retry on HTTP error).
     expect(dlAttempt).toBe(1);

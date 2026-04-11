@@ -1,5 +1,7 @@
 import { REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
 import { fetchWithRetry } from "../../lib/fetch-retry";
+import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
+import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { CIRCUIT_SOURCE, DEFILLAMA_BASE, MIN_VALID_ASSET_COUNT } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
@@ -46,6 +48,71 @@ export type StablecoinsIntakeResult =
   | StablecoinsIntakeMainResult
   | StablecoinsIntakeFallbackResult;
 
+const DEFILLAMA_STABLECOINS_URL = `${DEFILLAMA_BASE}/stablecoins?includePrices=true`;
+const DL_PARSE_MAX_ATTEMPTS = 3;
+const DL_PARSE_RETRY_BASE_DELAY_MS = 500;
+
+type DefillamaStablecoinsPayload = {
+  peggedAssets: PeggedAsset[];
+  fxFallbackRates?: Record<string, number>;
+};
+
+interface DefillamaFetchResult {
+  payload: DefillamaStablecoinsPayload | null;
+  attempts: number;
+  lastError: "fetch-failed" | "parse-failed" | null;
+  lastHttpStatus: number | null;
+}
+
+async function fetchDefillamaStablecoinsPayload(
+  signal: AbortSignal | undefined,
+): Promise<DefillamaFetchResult> {
+  let lastError: DefillamaFetchResult["lastError"] = null;
+  let lastHttpStatus: number | null = null;
+  let attempts = 0;
+  for (let attempt = 0; attempt < DL_PARSE_MAX_ATTEMPTS; attempt++) {
+    throwIfAborted(signal);
+    attempts = attempt + 1;
+    const res = await fetchWithRetry(
+      DEFILLAMA_STABLECOINS_URL,
+      signal ? { signal } : undefined,
+    );
+    if (!res?.ok) {
+      lastError = "fetch-failed";
+      lastHttpStatus = res?.status ?? null;
+      break;
+    }
+    try {
+      const payload = (await res.json()) as DefillamaStablecoinsPayload;
+      return {
+        payload,
+        attempts,
+        lastError: null,
+        lastHttpStatus: res.status,
+      };
+    } catch (parseErr) {
+      lastError = "parse-failed";
+      lastHttpStatus = res.status;
+      console.warn(
+        `[sync-stablecoins] DL response body parse failed on attempt ${attempts}/${DL_PARSE_MAX_ATTEMPTS}:`,
+        parseErr,
+      );
+      // Release the partially-consumed response before retrying so we don't
+      // hold a socket against the 6-connection pool during the backoff.
+      await cancelResponseBodyQuietly(res);
+      if (attempts < DL_PARSE_MAX_ATTEMPTS) {
+        await sleepWithSignal(DL_PARSE_RETRY_BASE_DELAY_MS * attempts, signal);
+      }
+    }
+  }
+  return {
+    payload: null,
+    attempts,
+    lastError,
+    lastHttpStatus,
+  };
+}
+
 export async function loadStablecoinsIntake(
   input: {
     db: D1Database;
@@ -61,26 +128,17 @@ export async function loadStablecoinsIntake(
   const cgData = await fetchCoinGeckoMarketData(input.db, input.signal, input.coingeckoApiKey);
 
   const dlAllowed = await shouldAttemptFetch(input.db, CIRCUIT_SOURCE.DL_STABLECOINS);
-  const [llamaRes, supplementalTokens] = await Promise.all([
-    dlAllowed
-      ? fetchWithRetry(`${DEFILLAMA_BASE}/stablecoins?includePrices=true`, input.signal ? { signal: input.signal } : undefined)
-      : Promise.resolve(null),
-    fetchSupplementalTrackedTokens(cgData, input.signal, input.coingeckoApiKey, input.chainRpcs, input.fxFallbackRates),
-  ]);
-  const { goldTokens, silverTokens, fiatCgTokens } = supplementalTokens;
+  const supplementalTokensPromise = fetchSupplementalTrackedTokens(
+    cgData,
+    input.signal,
+    input.coingeckoApiKey,
+    input.chainRpcs,
+    input.fxFallbackRates,
+  );
 
-  if (dlAllowed) {
-    if (!llamaRes?.ok) {
-      console.error(`[sync-stablecoins] DefiLlama API error: ${llamaRes?.status ?? "no response"}`);
-      await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
-      return {
-        kind: "fallback",
-        result: await input.fallbackToCoingecko(cgData),
-        errorMessage: "DefiLlama stablecoins API failed and CoinGecko fallback was insufficient",
-      };
-    }
-  } else {
+  if (!dlAllowed) {
     console.warn("[sync-stablecoins] DL stablecoins circuit open — using CG supply fallback");
+    await supplementalTokensPromise;
     return {
       kind: "fallback",
       result: await input.fallbackToCoingecko(cgData),
@@ -88,31 +146,34 @@ export async function loadStablecoinsIntake(
     };
   }
 
-  const guardedLlamaRes = llamaRes;
-  if (!guardedLlamaRes) {
+  const [dlFetchResult, supplementalTokens] = await Promise.all([
+    fetchDefillamaStablecoinsPayload(input.signal),
+    supplementalTokensPromise,
+  ]);
+  const { goldTokens, silverTokens, fiatCgTokens } = supplementalTokens;
+
+  if (!dlFetchResult.payload) {
+    if (dlFetchResult.lastError === "parse-failed") {
+      console.error(
+        `[sync-stablecoins] DL response body parse failed after ${dlFetchResult.attempts} attempts (last HTTP status=${dlFetchResult.lastHttpStatus ?? "unknown"})`,
+      );
+    } else {
+      console.error(
+        `[sync-stablecoins] DefiLlama API error after ${dlFetchResult.attempts} attempt(s) (last HTTP status=${dlFetchResult.lastHttpStatus ?? "no response"})`,
+      );
+    }
     await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
     return {
       kind: "fallback",
       result: await input.fallbackToCoingecko(cgData),
-      errorMessage: "DefiLlama response was unexpectedly missing",
+      errorMessage:
+        dlFetchResult.lastError === "parse-failed"
+          ? "DefiLlama response body parse failed"
+          : "DefiLlama stablecoins API failed and CoinGecko fallback was insufficient",
     };
   }
 
-  let llamaData: {
-    peggedAssets: PeggedAsset[];
-    fxFallbackRates?: Record<string, number>;
-  };
-  try {
-    llamaData = await guardedLlamaRes.json() as typeof llamaData;
-  } catch (parseErr) {
-    console.error("[sync-stablecoins] DL response body parse failed:", parseErr);
-    await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
-    return {
-      kind: "fallback",
-      result: await input.fallbackToCoingecko(cgData),
-      errorMessage: "DefiLlama response body parse failed",
-    };
-  }
+  const llamaData = dlFetchResult.payload;
   const rawAssetCount = llamaData.peggedAssets?.length ?? 0;
 
   if (llamaData.peggedAssets === undefined) {
