@@ -3,6 +3,7 @@ import { buildOnChainSourceKey } from "../yield-helpers";
 import {
   fetchBimaSusbdSource,
   fetchBprotocolLqtyOnlySource,
+  fetchCurveScrvusdCurrentRateSource,
   fetchHashnoteUsycSource,
   fetchOndoUsdyOracleSource,
 } from "./sources";
@@ -11,9 +12,11 @@ import type { ResolvedYield } from "./types";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
+const CRVUSD_CURVE_ID = "crvusd-curve";
 const BIMA_USBD_ID = "usbd-bima";
 const HASHNOTE_USYC_ID = "usyc-hashnote";
 const ONDO_USDY_ID = "usdy-ondo-finance";
+const SCRVUSD_CURRENT_RATE_SOURCE_KEY = "onchain:crvusd-curve:scrvusd-current-rate";
 
 export interface TrackedOptionalSourceContext {
   db: D1Database;
@@ -61,6 +64,21 @@ async function loadOndoOracleAnchorRow(
 }
 
 const TRACKED_OPTIONAL_SOURCE_REGISTRY: TrackedOptionalSourceEntry[] = [
+  {
+    stablecoinId: CRVUSD_CURVE_ID,
+    sourceKey: SCRVUSD_CURRENT_RATE_SOURCE_KEY,
+    run: (context) =>
+      runTimedOptionalSource(
+        "Curve scrvUSD current-rate source",
+        context.signal,
+        (budgetSignal) => fetchCurveScrvusdCurrentRateSource(
+          context.startSec,
+          budgetSignal,
+          context.chainRpcs,
+        ),
+        null,
+      ),
+  },
   {
     stablecoinId: BIMA_USBD_ID,
     sourceKey: "protocol-api:bima-susbd",

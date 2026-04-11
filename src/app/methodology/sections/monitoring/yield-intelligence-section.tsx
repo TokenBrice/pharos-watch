@@ -32,9 +32,8 @@ export function YieldIntelligenceMethodologySection() {
                 the primary row, and published lending suggestions exclude Resolv / USR-linked venues so broken wrapper
                 ecosystems do not surface as recommended base-asset routes. Published lending-opportunity rows now also
                 require observable venue TVL and a size floor of at least 0.1% of the tracked stablecoin&apos;s current
-                supply before they can become the live recommendation. PYS is now benchmark-aware: it keeps raw APY as
-                the base term, adds a modest slice of row-level benchmark spread, and only then applies the safety and
-                consistency penalties.
+                supply before they can become the live recommendation. PYS is benchmark-aware, and Curve Savings crvUSD
+                now follows the active on-chain profit-unlock stream instead of a trailing exchange-rate delta.
               </p>
               <MethodologyFacts
                 facts={[
@@ -121,8 +120,8 @@ export function YieldIntelligenceMethodologySection() {
                   <ul className="list-disc list-inside space-y-1">
                     <li>
                       <span className="text-foreground">Tier 1 &mdash; Direct on-chain reads</span>: reads protocol state
-                      directly, either as an exchange-rate delta (e.g.&nbsp;sUSDe) or a conservative reward-only estimator
-                      (e.g.&nbsp;LUSD B.Protocol Stability Pool, LQTY only)
+                      directly, either as an exchange-rate delta (e.g.&nbsp;sUSDe), a conservative reward-only estimator
+                      (e.g.&nbsp;LUSD B.Protocol Stability Pool, LQTY only), or scrvUSD&apos;s Yearn V3 profit-unlock current-rate reader
                     </li>
                     <li>
                       <span className="text-foreground">Tier 2 &mdash; DeFiLlama pools</span>: matches the coin to a

@@ -101,7 +101,7 @@ describe("yield config registry", () => {
       .map((entry) => entry.stablecoinId)
       .sort();
 
-    expect(quarantined).toEqual(["dusd-dtrinity", "reusd-re-protocol"]);
+    expect(quarantined).toEqual(["crvusd-curve", "dusd-dtrinity", "reusd-re-protocol"]);
   });
 
   it("includes high-TVL stablecoin lending protocols from 2026-03-25 audit", () => {

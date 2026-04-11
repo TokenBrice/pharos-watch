@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v7.2`
+- **Current methodology version:** `v7.3`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -17,6 +17,7 @@ Rankings provenance now carries source-native freshness for derived sources:
 - `sourceObservedAt` / `sourceAgeSeconds` reflect the actual latest observation backing the ranking, not just the cron run time
 - `comparisonAnchorObservedAt` / `comparisonAnchorAgeSeconds` are included when APY is derived from a prior anchor, such as price-derived and on-chain exchange-rate calculations
 - `sUSDai` is now a first-class tracked yield-bearing NAV token, so base `USDai` no longer inherits the USD.AI savings venue through `YIELD_VARIANT_MAP`
+- `crvusd-curve` now uses a dedicated scrvUSD current-rate on-chain reader based on the Yearn V3 profit-unlock stream, rather than the generic 7-day `convertToAssets` exchange-rate delta
 - PYS now keeps raw APY as the base yield term, then adds 25% of the row's benchmark spread before applying the safety and consistency penalties
 - supplemental protocol families now keep asset-scoped source identity for same-chain markets (notably Aave V3), preventing cross-coin cache collapse and preserving per-asset alternative-source coverage
 - protocol-native lending venue readers such as Aave V3 and Compound V3 stay in the curated Tier 2.5 lane rather than inheriting Tier 1 deterministic wrapper precedence, so a lower-yield supplemental market does not displace a stronger native wrapper purely by source family
@@ -74,7 +75,7 @@ interface OnChainRateConfig {
 }
 ```
 
-Currently configured for 13 vaults (all use selector `0x07a2d13a` — `convertToAssets(uint256)`):
+Currently configured for 12 generic vaults (all use selector `0x07a2d13a` — `convertToAssets(uint256)`):
 
 | Coin ID | Wrapper | Contract | Chain |
 |---------|---------|----------|-------|
@@ -83,7 +84,6 @@ Currently configured for 13 vaults (all use selector `0x07a2d13a` — `convertTo
 | `usdp-parallel` | sUSDp | `0x472e...7e7` | Base |
 | `usds-sky` | sUSDS | `0xa393...fbD` | Ethereum |
 | `dai-makerdao` | sDAI | `0x83F2...BEeA` | Ethereum |
-| `crvusd-curve` | scrvUSD | `0x0655...0367` | Ethereum |
 | `frxusd-frax` | sfrxUSD | `0xcf62...5b6` | Ethereum |
 | `dola-inverse-finance` | sDOLA | `0xb45a...7305` | Ethereum |
 | `bold-liquity` | yBOLD | `0x9F43...a3d8` | Ethereum |
@@ -92,7 +92,7 @@ Currently configured for 13 vaults (all use selector `0x07a2d13a` — `convertTo
 | `ustb-superstate` | USTB | ERC-4626 (6 decimals) | Ethereum |
 | `thbill-theo` | thBILL | ERC-4626 (6 decimals) | Ethereum |
 
-`dusd-dtrinity` and `reusd-re-protocol` are intentionally quarantined from this generic Tier 1 reader for now. Their current `convertToAssets(1e18)` probes do not return a usable value, so they continue to rely on non-deterministic source paths until protocol-specific deterministic adapters are added.
+`crvusd-curve` is intentionally quarantined from this generic Tier 1 reader because its trailing 7-day `convertToAssets(1e18)` delta understated Curve's current scrvUSD savings APY. It uses the scrvUSD special-case estimator below instead. `dusd-dtrinity` and `reusd-re-protocol` are also quarantined from the generic reader for now because their current `convertToAssets(1e18)` probes do not return a usable value, so they continue to rely on non-deterministic source paths until protocol-specific deterministic adapters are added.
 
 **APY formula:**
 
@@ -101,6 +101,27 @@ apy = ((rate_now / rate_7d_ago) ^ (365.25 / 7) - 1) * 100
 ```
 
 Even when Tier 1 succeeds, the cron still falls through to Tier 2 to collect additional wrapper/native DeFiLlama rows. If no previous exchange rate exists yet (first sync), Tier 1 emits a seed row with `currentApy: 0` and the current `exchangeRate` so the rate is persisted in `yield_history`. This breaks the bootstrapping deadlock: without the seed, the on-chain source would never resolve because it needs a 7-day-old rate, but the rate was never stored because the source never resolved. Subsequent syncs (7+ days later) will find the seed rate and compute a real APY.
+
+#### Special-case Tier 1 estimator: Curve scrvUSD
+
+scrvUSD uses a protocol-specific on-chain current-rate reader instead of the generic 7-day exchange-rate reader. The vault is a Yearn V3 vault that distributes newly reported crvUSD rewards through a profit-unlock stream, so the current APY shown by Curve and DeFiLlama is the daily-compounded value of the active unlock rate rather than the trailing 7-day `pricePerShare` delta.
+
+**Reads:**
+
+- `scrvUSD.totalAssets()`
+- `scrvUSD.totalSupply()`
+- `scrvUSD.profitUnlockingRate()`
+- `scrvUSD.fullProfitUnlockDate()`
+
+**Formula:**
+
+```
+sharesPerSecond = profitUnlockingRate / 1e12 / 1e18
+apr             = sharesPerSecond * 31_536_000 / totalSupply
+apy             = ((1 + apr / 365) ^ 365 - 1) * 100
+```
+
+When `fullProfitUnlockDate` is no longer in the future, the current unlock rate is treated as 0. The row publishes under source key `onchain:crvusd-curve:scrvusd-current-rate`, leaving the old `onchain:crvusd-curve` trailing-delta history unmixed. The curated DeFiLlama pool `5fd328af-4203-471b-bd16-1705c726d926` remains an alternative/fallback source.
 
 #### Special-case Tier 1 estimator: LUSD / B.Protocol Stability Pool
 
@@ -466,7 +487,7 @@ CREATE TABLE yield_history (
 1. Filter `TRACKED_STABLECOINS` where `flags.yieldBearing === true` for the base four-tier resolution, then evaluate explicit exact-pool overrides plus auto-discovery across the eligible tracked non-gold/silver coins
 2. Fetch DeFiLlama pools (`https://yields.llama.fi/pools`) — circuit-breaker protected
 3. Load the latest cached supplemental-source snapshot from `sync-yield-supplemental`; stale or missing supplemental cache is treated as optional loss, not a publisher hard-stop
-4. Fetch on-chain exchange rates via `eth_call` for `ON_CHAIN_RATE_CONFIGS` entries, unless the deterministic lane is in a cooldown window after consecutive masked all-fail runs
+4. Fetch on-chain exchange rates via `eth_call` for `ON_CHAIN_RATE_CONFIGS` entries, unless the deterministic lane is in a cooldown window after consecutive masked all-fail runs; protocol-specific hourly on-chain readers such as scrvUSD's current-rate source run during per-coin resolution and fall back to curated rows if unavailable
 5. Read the cached benchmark registry from D1, with USD as the default benchmark and EUR / CHF available when fetched successfully
 6. Compute safety scores via shared helper `computeSafetyScoresSnapshot(db, { includeNavTokens: true, outputMode: "map" })`; this helper now reuses the same peg-analytics path as `/api/report-cards` so live peg deviation inputs stay aligned across Safety Score and Yield Intelligence. Treat the helper's explicit degraded result as degraded input, and also classify coverage below the minimum ratio as degraded even when the helper itself succeeded
 7. Resolve APY for each yield-bearing coin (Tier 1 → 2 → 3 → 4, potentially multiple sources per coin), reusing cached supplemental families instead of live-fetching them on the publisher path, then append auto-discovered lending rows for any remaining eligible tracked coins
@@ -482,7 +503,7 @@ CREATE TABLE yield_history (
 **Degraded semantics:** If `computeSafetyScoresSnapshot()` returns a degraded result, safety coverage is below the minimum ratio (0.75), the default USD benchmark is on a true fallback path (`isFallback === true`), the `fallbackMode` contains `"retained"` (indicating a benchmark fetch failure with last-known-good retention), the retained last-known-good USD benchmark is older than 48 hours, DeFiLlama pool inputs are unavailable, the direct DeFiLlama fetch payload is invalid or yields zero relevant stablecoin pools, all configured deterministic on-chain sources fail in the same cycle without full alternative coverage, a deterministic cooldown suppresses on-chain reads but coverage gaps reappear, or rankings publication fails schema/severe-shrink guards, `sync-yield-data` returns `status: "degraded"`. Repeated deterministic all-fail runs that are fully masked by non-onchain coverage now arm a cooldown instead of burning the full deterministic path every hour. Stale or missing supplemental cache does not by itself degrade the hourly publisher; it only reduces optional source coverage. Retained benchmark metadata still appears in rankings provenance via `provenance.benchmark.fallbackMode`, including the last market-derived rate/date/source preserved across fallback streaks. Row-level benchmark provenance also exposes the selected benchmark key, label, rate, fallback state, and selection mode. Schema-invalid or severe-shrink runs skip cache overwrite. Safety-degraded runs continue to publish a fresh `yield-rankings` cache when the rankings payload is valid, but they still skip `report_card_cache` writes so the degraded condition remains visible without taking the public API offline.
 
 Implementation stages:
-- `yield-sync/sources.ts` + `yield-sync/pool-filter.ts`: DL pool loading, wrapper-relevant pool filtering, on-chain reads, benchmark cache loading, price-derived and B.Protocol helpers
+- `yield-sync/sources.ts` + `yield-sync/pool-filter.ts`: DL pool loading, wrapper-relevant pool filtering, on-chain reads, benchmark cache loading, price-derived, scrvUSD current-rate, and B.Protocol helpers
 - `yield-sync/resolve.ts`: per-coin source resolution and auto-discovery candidate shaping
 - `yield-sync/evaluation.ts`: source-aware history normalization, trailing metric computation, confidence arbitration, and source-switch tracking
 - `yield-sync/publication.ts` + `yield-sync/rankings.ts`: persistence helpers, rankings shaping, provenance/warning parsing, TVL-weighted median helper, and cache writes

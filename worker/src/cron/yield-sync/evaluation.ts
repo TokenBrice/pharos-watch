@@ -21,6 +21,7 @@ const LOW_SOURCE_TVL_USD = 250_000;
 const CROSS_SOURCE_DIVERGENCE_THRESHOLD = 0.35;
 const LEGACY_HISTORY_MAX_AGE_SEC = 30 * DAY_SECONDS + 5 * DAY_SECONDS;
 const LEGACY_LUSD_BPROTOCOL_SOURCE_KEY = "bprotocol-lqty-only";
+const SCRVUSD_CURRENT_RATE_SOURCE_KEY = "onchain:crvusd-curve:scrvusd-current-rate";
 const MAX_RETAINED_RISK_FREE_RATE_AGE_SEC = 3 * DAY_SECONDS;
 
 export type ConfidenceTier = "deterministic" | "curated" | "discovered" | "fallback";
@@ -217,9 +218,12 @@ function pickHistoryRowsForSource(
 
   const legacyCutoff = startSec - LEGACY_HISTORY_MAX_AGE_SEC;
   const freshLegacyRows = legacyRows.filter((row) => row.recorded_at >= legacyCutoff);
+  const hasKnownSourceSemanticsBreak =
+    stablecoinId === "crvusd-curve" && sourceKey === SCRVUSD_CURRENT_RATE_SOURCE_KEY;
 
   if (
     freshLegacyRows.length > 0 &&
+    !hasKnownSourceSemanticsBreak &&
     (resolvedCountByCoin.get(stablecoinId) ?? 0) <= 1 &&
     legacyMatchesCurrentSourceFamily
   ) {

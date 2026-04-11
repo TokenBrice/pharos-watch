@@ -1,6 +1,15 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.2` (2026-03-01 -> 2026-04-04).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.3` (2026-03-01 -> 2026-04-11).
+
+---
+
+## v7.3 - scrvUSD current-rate on-chain reader (Apr 11, 2026)
+
+- Curve Savings crvUSD now uses a dedicated Yearn V3 profit-unlock reader for current APY instead of the generic 7-day ERC-4626 exchange-rate delta
+- The generic `convertToAssets(1e18)` reader is quarantined for `crvusd-curve` because the trailing 7-day delta understated Curve's current savings APY
+- The new `onchain:crvusd-curve:scrvusd-current-rate` source reads `totalSupply`, `totalAssets`, `profitUnlockingRate`, and `fullProfitUnlockDate`, then daily-compounds the active unlock APR
+- The curated DeFiLlama scrvUSD pool remains as an alternative/fallback source while source-specific current-rate history starts fresh under the new source key
 
 ---
 

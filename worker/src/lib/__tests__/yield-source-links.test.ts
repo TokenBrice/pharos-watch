@@ -33,6 +33,16 @@ describe("resolveYieldSourceUrl", () => {
     ).toBe("https://bima.money/earn");
   });
 
+  it("resolves Curve's scrvUSD source to the savings app route", () => {
+    expect(
+      resolveYieldSourceUrl({
+        stablecoinId: "crvusd-curve",
+        sourceKey: "onchain:crvusd-curve:scrvusd-current-rate",
+        yieldSource: "Curve Savings (scrvUSD)",
+      }),
+    ).toBe("https://www.curve.finance/crvusd/ethereum/scrvUSD");
+  });
+
   it("falls back to an app link from stablecoin metadata when present", () => {
     expect(
       resolveYieldSourceUrl({

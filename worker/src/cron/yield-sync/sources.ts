@@ -1,7 +1,7 @@
 export {
   fetchBeefySources,
   fetchBimaSusbdSource,
-  fetchBprotocolLqtyOnlySource,
+  fetchBprotocolLqtyOnlySource, fetchCurveScrvusdCurrentRateSource,
   fetchHashnoteUsycSource,
   fetchMorphoVaultSources,
   fetchOndoUsdyOracleSource,

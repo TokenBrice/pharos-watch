@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "7.2",
+  currentVersion: "7.3",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "7.3",
+    title: "scrvUSD Current-Rate On-Chain Reader",
+    date: "2026-04-11",
+    effectiveAt: 1775892600,
+    summary:
+      "Curve Savings crvUSD now uses a dedicated Yearn V3 profit-unlock reader for current APY instead of the generic 7-day ERC-4626 exchange-rate delta.",
+    impact: [
+      "`crvusd-curve` is quarantined from the generic `convertToAssets(1e18)` Tier 1 reader because that trailing 7-day delta understated Curve's current savings APY",
+      "The new `onchain:crvusd-curve:scrvusd-current-rate` source reads scrvUSD vault `totalSupply`, `totalAssets`, `profitUnlockingRate`, and `fullProfitUnlockDate` to compute the current daily-compounded APY",
+      "The existing DeFiLlama scrvUSD pool remains as a curated alternative and fallback row, while source-specific history starts fresh under the new current-rate source key",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "7.2",
     title: "USD.AI Base/Yield Token Split",

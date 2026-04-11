@@ -23,6 +23,18 @@ const LIQUITY_STABILITY_POOL = "0x66017D22b0f8556afDd19FC67041899Eb65a21bb";
 const LIQUITY_TOTAL_LQTY_ISSUED_SELECTOR = "0xb140384b";
 const LIQUITY_TOTAL_LUSD_DEPOSITS_SELECTOR = "0x9bf2f1ac";
 const LIQUITY_LQTY_GECKO_ID = "liquity";
+const SCRVUSD_VAULT = "0x0655977FEb2f289A4aB78af67BAB0d17aAb84367";
+const SCRVUSD_CURRENT_RATE_SOURCE_KEY = "onchain:crvusd-curve:scrvusd-current-rate";
+const SCRVUSD_SOURCE_POOL = "5fd328af-4203-471b-bd16-1705c726d926";
+const SCRVUSD_SOURCE_LABEL = "Curve Savings (scrvUSD)";
+const SCRVUSD_SOURCE_TYPE = "governance-set";
+const SCRVUSD_TOTAL_ASSETS_SELECTOR = "0x01e1d114";
+const SCRVUSD_TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
+const SCRVUSD_PROFIT_UNLOCKING_RATE_SELECTOR = "0x5141eebb";
+const SCRVUSD_FULL_PROFIT_UNLOCK_DATE_SELECTOR = "0x2d632692";
+const YEARN_V3_MAX_BPS_EXTENDED = 1_000_000_000_000;
+const SCRVUSD_DAYS_PER_YEAR = 365;
+const SCRVUSD_SECONDS_PER_YEAR = SCRVUSD_DAYS_PER_YEAR * DAY_SECONDS;
 const BIMA_SUSBD_SOURCE_KEY = "protocol-api:bima-susbd";
 const BIMA_SUSBD_SOURCE_LABEL = "BIMA savings (sUSBD)";
 const BIMA_SUSBD_SOURCE_TYPE = "lending-vault";
@@ -243,6 +255,95 @@ export async function fetchBprotocolLqtyOnlySource(
       throw error instanceof Error ? error : new Error(String(error));
     }
     console.warn("[yield] B.Protocol LQTY-only source failed:", error);
+    return null;
+  }
+}
+
+function compoundDailyAprToApy(aprPercent: number): number {
+  const aprFraction = aprPercent / 100;
+  return (Math.pow(1 + aprFraction / SCRVUSD_DAYS_PER_YEAR, SCRVUSD_DAYS_PER_YEAR) - 1) * 100;
+}
+
+export async function fetchCurveScrvusdCurrentRateSource(
+  startSec: number,
+  signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+): Promise<ResolvedYield | null> {
+  if (!chainRpcs) {
+    console.warn("[yield] No chain RPCs provided for Curve scrvUSD current-rate source");
+    return null;
+  }
+  const rpc = getChainRpc(chainRpcs, "ethereum");
+  if (!rpc) {
+    console.warn("[yield] No Ethereum RPC configured for Curve scrvUSD current-rate source");
+    return null;
+  }
+
+  try {
+    const rpcUrls = [rpc.rpcUrl, rpc.fallbackRpcUrl].filter(
+      (url): url is string => typeof url === "string" && url.length > 0,
+    );
+
+    for (const rpcUrl of rpcUrls) {
+      const [
+        totalAssetsRaw,
+        totalSupplyRaw,
+        profitUnlockingRateRaw,
+        fullProfitUnlockDateRaw,
+      ] = await Promise.all([
+        fetchEthCallUint256(rpcUrl, "ethereum", SCRVUSD_VAULT, SCRVUSD_TOTAL_ASSETS_SELECTOR, signal),
+        fetchEthCallUint256(rpcUrl, "ethereum", SCRVUSD_VAULT, SCRVUSD_TOTAL_SUPPLY_SELECTOR, signal),
+        fetchEthCallUint256(rpcUrl, "ethereum", SCRVUSD_VAULT, SCRVUSD_PROFIT_UNLOCKING_RATE_SELECTOR, signal),
+        fetchEthCallUint256(rpcUrl, "ethereum", SCRVUSD_VAULT, SCRVUSD_FULL_PROFIT_UNLOCK_DATE_SELECTOR, signal),
+      ]);
+
+      if (
+        totalAssetsRaw == null ||
+        totalSupplyRaw == null ||
+        profitUnlockingRateRaw == null ||
+        fullProfitUnlockDateRaw == null
+      ) {
+        continue;
+      }
+
+      const sourceTvlUsd = Number(totalAssetsRaw) / 1e18;
+      const totalSupply = Number(totalSupplyRaw) / 1e18;
+      if (!Number.isFinite(sourceTvlUsd) || sourceTvlUsd <= 0) return null;
+      if (!Number.isFinite(totalSupply) || totalSupply <= 0) return null;
+
+      const fullProfitUnlockDate = Number(fullProfitUnlockDateRaw);
+      const profitUnlockingSharesPerSecond =
+        Number(profitUnlockingRateRaw) / YEARN_V3_MAX_BPS_EXTENDED / 1e18;
+      const currentApy =
+        fullProfitUnlockDate > startSec && profitUnlockingSharesPerSecond > 0
+          ? compoundDailyAprToApy(
+            (profitUnlockingSharesPerSecond * SCRVUSD_SECONDS_PER_YEAR * 100) / totalSupply,
+          )
+          : 0;
+      if (!Number.isFinite(currentApy) || currentApy < 0) return null;
+
+      return {
+        currentApy,
+        apyBase: currentApy,
+        apyReward: null,
+        sourcePool: SCRVUSD_SOURCE_POOL,
+        sourceTvlUsd,
+        dataSource: "onchain",
+        exchangeRate: null,
+        sourceKey: SCRVUSD_CURRENT_RATE_SOURCE_KEY,
+        sourceObservedAt: startSec,
+        comparisonAnchorObservedAt: null,
+        yieldSource: SCRVUSD_SOURCE_LABEL,
+        yieldType: SCRVUSD_SOURCE_TYPE,
+      };
+    }
+
+    return null;
+  } catch (error) {
+    if (signal?.aborted) {
+      throw error instanceof Error ? error : new Error(String(error));
+    }
+    console.warn("[yield] Curve scrvUSD current-rate source failed:", error);
     return null;
   }
 }

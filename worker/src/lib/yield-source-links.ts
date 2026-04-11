@@ -8,6 +8,7 @@ const YIELD_SOURCE_URLS: Record<string, string> = {
   "Aave v3": "https://app.aave.com/",
   "B.Protocol Stability Pool (LQTY only)": "https://app.bprotocol.org/liquity",
   "BIMA savings (sUSBD)": "https://bima.money/earn",
+  "Curve Savings (scrvUSD)": "https://www.curve.finance/crvusd/ethereum/scrvUSD",
   "Hashnote USYC": "https://usyc.hashnote.com/",
   "K3: sBOLD": "https://liquity.app/earn/sbold",
   "Liquity Stability Pool (via K3 sBOLD)": "https://liquity.app/earn/sbold",
