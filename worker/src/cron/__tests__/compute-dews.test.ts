@@ -577,6 +577,67 @@ describe("computeAndStoreDEWS", () => {
     ).toBe(false);
   });
 
+  it("retires current stress rows for eligible assets with no current supply", async () => {
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dews:bootstrap-complete") return null;
+      return {
+        value: JSON.stringify({
+          peggedAssets: [
+            {
+              id: "usdt-tether",
+              symbol: "USDT",
+              pegType: "peggedUSD",
+              price: 1,
+              priceConfidence: "high",
+              circulating: { peggedUSD: 100_000_000 },
+              circulatingPrevDay: { peggedUSD: 99_000_000 },
+              circulatingPrevWeek: { peggedUSD: 98_000_000 },
+            },
+            {
+              id: "pyusd-paypal",
+              symbol: "PYUSD",
+              pegType: "peggedUSD",
+              price: 1,
+              priceConfidence: "high",
+              circulating: { peggedUSD: 0 },
+              circulatingPrevDay: { peggedUSD: 0 },
+              circulatingPrevWeek: { peggedUSD: 0 },
+            },
+          ],
+        }),
+        updatedAt: Math.floor(Date.now() / 1000),
+      } as never;
+    });
+    const sqlSeen: string[] = [];
+    const currentRetireBinds: unknown[][] = [];
+    const db = makeDb(sqlSeen, {
+      signalIds: ["usdt-tether", "pyusd-paypal"],
+      historyIds: ["usdt-tether", "pyusd-paypal"],
+      onBind: (sql, args) => {
+        if (sql.includes("DELETE FROM stress_signals WHERE stablecoin_id IN")) {
+          currentRetireBinds.push(args);
+        }
+      },
+    });
+
+    const result = await computeAndStoreDEWS(db);
+
+    expect(computeDEWS).toHaveBeenCalledTimes(1);
+    expect(computeDEWS).toHaveBeenCalledWith(expect.objectContaining({ stablecoinId: "usdt-tether" }));
+    expect(currentRetireBinds).toContainEqual(["pyusd-paypal"]);
+    expect(
+      sqlSeen.some((sql) => sql.includes("DELETE FROM stress_signal_history WHERE stablecoin_id IN")),
+    ).toBe(false);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      rowsRetiredCurrent: number;
+      rowsSkippedNoCurrentSupply: number;
+      sourceCoverage: Record<string, number>;
+    };
+    expect(metadata.rowsRetiredCurrent).toBe(1);
+    expect(metadata.rowsSkippedNoCurrentSupply).toBe(1);
+    expect(metadata.sourceCoverage.coinsSkippedNoCurrentSupply).toBe(1);
+  });
+
   it("chunks orphan deletes to avoid D1 bind-variable overflow", async () => {
     const sqlSeen: string[] = [];
     const deleteBindCounts: number[] = [];

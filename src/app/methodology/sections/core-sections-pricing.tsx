@@ -67,7 +67,8 @@ export function PricingPipelineMethodologySection() {
           <code className="mx-1 text-xs">priceObservedAtMode</code>, so a hard single-source print only becomes
           depeg-authoritative when its freshness is source-native rather than inferred from local collection time. The
           source registry now also records each provider&apos;s freshness kind, maximum trusted age, and whether it truly
-          supports upstream timestamps.
+          supports upstream timestamps. CoinGecko simple-price rows use upstream <code className="mx-1 text-xs">last_updated_at</code>
+          when it is present and are rejected when that upstream timestamp is outside the trusted freshness window.
         </p>
 
         <p>

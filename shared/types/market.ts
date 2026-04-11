@@ -550,6 +550,7 @@ export interface StressSignalEntry {
 export const StressSignalsAllResponseSchema = z.object({
   signals: z.record(z.string(), StressSignalEntrySchema),
   updatedAt: z.number(),
+  oldestComputedAt: z.number().optional(),
   malformedRows: z.number().optional(),
   methodology: MethodologyEnvelopeSchema,
 });
@@ -557,6 +558,7 @@ export const StressSignalsAllResponseSchema = z.object({
 export interface StressSignalsAllResponse {
   signals: Record<string, StressSignalEntry>;
   updatedAt: number;
+  oldestComputedAt?: number;
   malformedRows?: number;
   methodology: DepegDewsMethodology;
 }

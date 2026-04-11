@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeBandCounts, resolveRadarClick } from "@/components/dews-summary";
+import { computeBandCounts, getAggregateFreshnessTimestamp, resolveRadarClick } from "@/components/dews-summary";
 
 describe("computeBandCounts", () => {
   it("counts each known threat band and ignores unknown values", () => {
@@ -47,5 +47,18 @@ describe("resolveRadarClick", () => {
       shouldNavigate: false,
       nextHoveredId: "usdt",
     });
+  });
+});
+
+describe("getAggregateFreshnessTimestamp", () => {
+  it("uses oldestComputedAt when aggregate rows are not uniformly fresh", () => {
+    expect(getAggregateFreshnessTimestamp({
+      updatedAt: 1_775_898_800,
+      oldestComputedAt: 1_775_889_800,
+    })).toBe(1_775_889_800);
+  });
+
+  it("falls back to updatedAt for older API responses", () => {
+    expect(getAggregateFreshnessTimestamp({ updatedAt: 1_775_898_800 })).toBe(1_775_898_800);
   });
 });

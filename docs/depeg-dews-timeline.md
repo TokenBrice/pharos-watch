@@ -1,6 +1,16 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v5.9` (2026-02-18 -> 2026-04-08).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v5.91` (2026-02-18 -> 2026-04-11).
+
+---
+## v5.91 — Conservative DEWS freshness and zero-supply current-row retirement (Apr 11, 2026)
+
+**Commit:** `unreleased`
+
+- Aggregate `/api/stress-signals` responses now keep `updatedAt` as the newest returned row while exposing `oldestComputedAt`
+- Aggregate freshness headers now use the oldest returned current row, so a stale per-coin row cannot be hidden by newer rows for other coins
+- The DEWS cron now retires current `stress_signals` rows for PSI-eligible assets that are explicitly present in the stablecoins cache with zero current circulating supply
+- Daily `stress_signal_history` remains intact for those assets, and last-valid rows still remain available for positive-supply coins that only miss enough signal coverage in a single cycle
 
 ---
 ## v5.9 — Direction-true confirmation, pending refreshes, and DEWS live-trust alignment (Apr 8, 2026)

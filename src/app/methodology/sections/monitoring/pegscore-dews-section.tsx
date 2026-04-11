@@ -473,7 +473,7 @@ export function PegScoreDewsMethodologySection() {
                     <li>NAV tokens are excluded entirely (price appreciates, not pegged)</li>
                     <li>Non-USD pegs: cross-source divergence is dampened by 0.7 (noisier FX pricing)</li>
                     <li>Small coins (&lt;$50M): supply velocity is dampened via a logarithmic size factor</li>
-                    <li>Missing DEX data: pool and liquidity signals marked unavailable, weight redistributed</li>
+                    <li>Missing DEX data stays unavailable; zero-current rows retire; aggregate freshness uses the oldest current row</li>
                   </ul>
                 </div>
               </MethodologyDetails>

@@ -77,4 +77,5 @@ export interface DewsScoringResult {
   results: DewsComputedRow[];
   liqHistCoverageCount: number;
   insufficientDataCount: number;
+  noCurrentSupplyIds: string[];
 }

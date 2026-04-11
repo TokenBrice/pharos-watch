@@ -6,7 +6,7 @@ Per-coin, forward-looking stress score (0-100) estimating depeg probability. Com
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/depeg-dews-version.ts`.
 
-- **Current methodology version:** `v5.9`
+- **Current methodology version:** `v5.91`
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/depeg-dews-version.ts`
 
@@ -169,9 +169,10 @@ Score = `min(100, sum of active signal points)`.
 5. Read `mint_burn_hourly` aggregates
 6. Compute DEWS per PSI-eligible coin
 7. Batch write to `stress_signals` (only for coins where `computeDEWS()` returned a score)
-8. Daily snapshot to `stress_signal_history` (first run of UTC day)
-9. Purge rows for IDs no longer in the current PSI-eligible universe (chunked ID deletes, 90 IDs/chunk, to stay under D1 bind-variable limits)
-10. Prune old data
+8. Retire current `stress_signals` rows for PSI-eligible assets that are explicitly present in the stablecoins cache with zero current circulating supply
+9. Daily snapshot to `stress_signal_history` (first run of UTC day)
+10. Purge rows for IDs no longer in the current PSI-eligible universe (chunked ID deletes, 90 IDs/chunk, to stay under D1 bind-variable limits)
+11. Prune old data
 
 ---
 
@@ -186,14 +187,17 @@ When a coin has insufficient data in a cycle (`computeDEWS() === null`), that ru
 ```json
 {
   "signals": {
-    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "5.9" },
+    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "5.91" },
     ...
   },
   "updatedAt": 1740000000,
+  "oldestComputedAt": 1740000000,
   "malformedRows": 0,
-  "methodology": { "version": "5.9", "versionLabel": "...", "currentVersion": "5.9", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "5.91", "versionLabel": "...", "currentVersion": "5.91", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
+
+`updatedAt` is the newest current row in the aggregate response. `oldestComputedAt` is the oldest returned current row and is the timestamp used for aggregate `X-Data-Age` / `Warning` freshness headers, so one stale per-coin row cannot be hidden by newer rows for other coins.
 
 **Single coin:** `?stablecoin=usdt-tether&days=30` (default 30, min 1, max 365) — Returns latest + daily history.
 
@@ -201,13 +205,13 @@ Unknown IDs and tracked-but-non-active IDs both return `404` (`Stablecoin not tr
 
 ```json
 {
-  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "5.9" },
+  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000, "methodologyVersion": "5.91" },
   "history": [
-    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "5.9" },
+    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... }, "methodologyVersion": "5.91" },
     ...
   ],
   "malformedRows": 0,
-  "methodology": { "version": "5.9", "versionLabel": "...", "currentVersion": "5.9", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "5.91", "versionLabel": "...", "currentVersion": "5.91", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 

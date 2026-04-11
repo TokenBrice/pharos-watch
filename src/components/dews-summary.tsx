@@ -33,6 +33,7 @@ import {
   computeCalmDots,
   computeBandCounts,
   resolveRadarClick,
+  getAggregateFreshnessTimestamp,
   type BandCounts,
   type CalmDot,
   type ElevatedCoin,
@@ -40,7 +41,7 @@ import {
 import { MethodologyLabel } from "@/components/methodology-hint";
 
 // Re-export pure helpers consumed by tests and sibling components
-export { computeBandCounts, resolveRadarClick } from "@/components/dews-summary-model";
+export { computeBandCounts, getAggregateFreshnessTimestamp, resolveRadarClick } from "@/components/dews-summary-model";
 
 // DEWS radar keyframes are defined in globals.css under "DEWS Radar animations".
 
@@ -484,7 +485,8 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
   const calmDots = computeCalmDots(data.signals);
   const bandCounts = computeBandCounts(data.signals);
   const highest = highestBand(elevated.map((c) => c.band));
-  const updatedAtLabel = new Date(data.updatedAt * 1000).toLocaleString(undefined, {
+  const freshnessTimestamp = getAggregateFreshnessTimestamp(data);
+  const updatedAtLabel = new Date(freshnessTimestamp * 1000).toLocaleString(undefined, {
     month: "short",
     day: "numeric",
     hour: "numeric",

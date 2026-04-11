@@ -169,16 +169,17 @@ export async function computeAndStoreDEWS(
   });
   Object.assign(sourceCoverage, sourceState.sourceCoverage);
 
-  const { results, liqHistCoverageCount, insufficientDataCount } = buildDewsScoringResult({
+  const { results, liqHistCoverageCount, insufficientDataCount, noCurrentSupplyIds } = buildDewsScoringResult({
     assetById,
     pegRates,
     sourceState,
     registerMalformedPersistedInput,
   });
-  const { rowsDropped } = await persistDewsResults({
+  const { rowsDropped, rowsRetiredCurrent } = await persistDewsResults({
     db,
     results,
     eligibleIds,
+    noCurrentSupplyIds,
     nowSec,
   });
 
@@ -192,9 +193,7 @@ export async function computeAndStoreDEWS(
   const hardFailures = sourceFailures.filter((failure) => !failure.bootstrapAllowed);
   const degradedByMalformedInputs = malformedCoreInputRows > 0;
   const degraded = hardFailures.length > 0 || degradedByMalformedInputs;
-  sourceCoverage.liquidityHistoryCoveragePct = Number((liqHistCoverage * 100).toFixed(2));
-  sourceCoverage.coinsComputed = results.length;
-  sourceCoverage.coinsSkippedInsufficientData = insufficientDataCount;
+  Object.assign(sourceCoverage, { liquidityHistoryCoveragePct: Number((liqHistCoverage * 100).toFixed(2)), coinsComputed: results.length, coinsSkippedInsufficientData: insufficientDataCount, coinsSkippedNoCurrentSupply: noCurrentSupplyIds.length });
 
   console.log(`[dews] Computed DEWS for ${results.length} coins`);
   if (bootstrapPending) {
@@ -211,6 +210,7 @@ export async function computeAndStoreDEWS(
       rowsRead: assets.length + sourceState.dexLiqRows.results.length + sourceState.liqHistRowsRead,
       rowsWritten: results.length,
       rowsSkippedInsufficientData: insufficientDataCount,
+      rowsSkippedNoCurrentSupply: noCurrentSupplyIds.length, rowsRetiredCurrent,
       rowsDropped,
       sourceCoverage,
       sourceFailures,

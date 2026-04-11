@@ -40,6 +40,25 @@ async function deleteOrphansForTable(
   return deleted;
 }
 
+async function deleteCurrentStressSignalRowsForIds(
+  db: D1Database,
+  stablecoinIds: Iterable<string>,
+): Promise<number> {
+  const ids = [...new Set(stablecoinIds)];
+  if (ids.length === 0) return 0;
+
+  let deleted = 0;
+  for (const idChunk of chunkArray(ids, D1_SAFE_SQL_IN_CHUNK_SIZE)) {
+    const inClause = buildInClause(idChunk);
+    const result = await db
+      .prepare(`DELETE FROM stress_signals WHERE stablecoin_id IN (${inClause.sql})`)
+      .bind(...inClause.binds)
+      .run();
+    deleted += result.meta?.changes ?? 0;
+  }
+  return deleted;
+}
+
 function getTodayMidnightUtcSec(now = new Date()): number {
   return Math.floor(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 1000);
 }
@@ -48,8 +67,9 @@ export async function persistDewsResults(params: {
   db: D1Database;
   results: DewsComputedRow[];
   eligibleIds: Set<string>;
+  noCurrentSupplyIds?: string[];
   nowSec: number;
-}): Promise<{ rowsDropped: number }> {
+}): Promise<{ rowsDropped: number; rowsRetiredCurrent: number }> {
   if (params.results.length > 0) {
     const stmts = params.results.map((result) =>
       params.db
@@ -61,6 +81,12 @@ export async function persistDewsResults(params: {
     await batchExecute(params.db, stmts);
   }
   await writeFreshnessSentinel(params.db, "dews", params.nowSec);
+
+  const computedIds = new Set(params.results.map((result) => result.stablecoinId));
+  const noCurrentSupplyIds = (params.noCurrentSupplyIds ?? []).filter(
+    (stablecoinId) => params.eligibleIds.has(stablecoinId) && !computedIds.has(stablecoinId),
+  );
+  const rowsRetiredCurrent = await deleteCurrentStressSignalRowsForIds(params.db, noCurrentSupplyIds);
 
   const todayMidnight = getTodayMidnightUtcSec();
   const existing = await params.db
@@ -83,7 +109,7 @@ export async function persistDewsResults(params: {
     );
   }
 
-  let rowsDropped = 0;
+  let rowsDropped = rowsRetiredCurrent;
   if (params.eligibleIds.size > 0) {
     rowsDropped += await deleteOrphansForTable(params.db, "stress_signals", params.eligibleIds);
     rowsDropped += await deleteOrphansForTable(params.db, "stress_signal_history", params.eligibleIds);
@@ -101,5 +127,5 @@ export async function persistDewsResults(params: {
     .run();
   rowsDropped += oldHistory.meta?.changes ?? 0;
 
-  return { rowsDropped };
+  return { rowsDropped, rowsRetiredCurrent };
 }

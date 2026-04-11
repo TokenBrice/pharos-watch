@@ -45,6 +45,7 @@ export interface DlListQuote {
 export interface PrimaryCollectedQuotes {
   cgPrice: number | null;
   cgObservedAt: number | null;
+  cgObservedAtMode: PriceObservedAtMode | null;
   cgTickerPrice: number | null;
   cgTickerObservedAt: number | null;
   dlListQuote?: DlListQuote;
@@ -126,6 +127,7 @@ export function buildPrimarySourceCandidates(
       source: "coingecko",
       price: collected.cgPrice,
       observedAt: collected.cgObservedAt,
+      observedAtMode: collected.cgObservedAtMode,
     }),
     buildSourcePrice({
       source: "cg-ticker",

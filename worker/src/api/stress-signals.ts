@@ -141,6 +141,7 @@ export const handleStressSignals = withErrorHandler(
 
     const signals: Record<string, object> = {};
     let updatedAt = 0;
+    let oldestComputedAt: number | null = null;
     let malformedRows = 0;
     for (const row of rows.results) {
       if (!ACTIVE_IDS.has(row.stablecoin_id)) {
@@ -160,12 +161,16 @@ export const handleStressSignals = withErrorHandler(
         methodologyVersion,
       };
       updatedAt = Math.max(updatedAt, row.computed_at);
+      oldestComputedAt = oldestComputedAt == null
+        ? row.computed_at
+        : Math.min(oldestComputedAt, row.computed_at);
     }
 
     const asOf = updatedAt > 0 ? updatedAt : Math.floor(Date.now() / 1000);
+    const freshnessAsOf = oldestComputedAt ?? asOf;
     const methodologyVersion = getDepegDewsMethodologyVersionAt(asOf);
 
-    return jsonResponse({ signals, updatedAt, malformedRows, methodology: buildMethodologyEnvelope({
+    return jsonResponse({ signals, updatedAt, oldestComputedAt: oldestComputedAt ?? undefined, malformedRows, methodology: buildMethodologyEnvelope({
       version: methodologyVersion,
       versionLabel: toMethodologyVersionLabel(methodologyVersion),
       currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
@@ -174,6 +179,6 @@ export const handleStressSignals = withErrorHandler(
       asOf,
     }) }, addFreshnessHeaders({
       "Cache-Control": CACHE_PROFILES.standard,
-    }, asOf, 900));
+    }, freshnessAsOf, 900));
   },
 );

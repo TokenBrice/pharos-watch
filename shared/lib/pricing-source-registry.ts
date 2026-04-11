@@ -47,7 +47,7 @@ const REGISTRY = [
     label: "CoinGecko",
     shortLabel: "CG",
     trustTier: "soft_aggregator",
-    freshnessKind: "local_fetch",
+    freshnessKind: "upstream",
     maxTrustedAgeSec: 15 * 60,
     defaultWeight: 2,
     isSoftSource: true,
@@ -56,9 +56,12 @@ const REGISTRY = [
     isGtProbeEligible: true,
     canBeDepegAuthoritative: false,
     canSingleSourceDepegAuthoritative: false,
-    supportsUpstreamObservedAt: false,
+    supportsUpstreamObservedAt: true,
     requiresObservedAt: false,
     isSearchDerived: false,
+    capabilities: {
+      hasUpstreamTimestamp: true,
+    },
     defaultObservedAtMode: "local_fetch",
   },
   {

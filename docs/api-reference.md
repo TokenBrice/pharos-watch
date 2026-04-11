@@ -2076,7 +2076,7 @@ Returns Depeg Early Warning Score (DEWS) data for active tracked stablecoins.
 | `stablecoin` | `string`  | —       | Single coin mode: return latest + daily history |
 | `days`       | `integer` | `30`    | History lookback (max 365)                      |
 
-Aggregate responses are filtered to active tracked stablecoin IDs only, even if stale rows for non-active or de-tracked IDs still exist in storage.
+Aggregate responses are filtered to active tracked stablecoin IDs only, even if stale rows for non-active or de-tracked IDs still exist in storage. The aggregate response keeps `updatedAt` as the newest returned current row, but `X-Data-Age` / `Warning` freshness headers are based on `oldestComputedAt` so a stale per-coin row cannot be hidden by fresher rows for other coins.
 
 **Response (all coins)**
 
@@ -2091,16 +2091,17 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
         "price": { "value": 1, "available": true }
       },
       "computedAt": 1740000000,
-      "methodologyVersion": "4.9"
+      "methodologyVersion": "5.91"
     }
   },
   "updatedAt": 1740000000,
+  "oldestComputedAt": 1740000000,
   "malformedRows": 0,
   "methodology": {
-    "version": "4.9",
-    "versionLabel": "v4.9",
-    "currentVersion": "4.9",
-    "currentVersionLabel": "v4.9",
+    "version": "5.91",
+    "versionLabel": "v5.91",
+    "currentVersion": "5.91",
+    "currentVersionLabel": "v5.91",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true
@@ -2120,7 +2121,7 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
       "price": { "value": 1, "available": true }
     },
     "computedAt": 1740000000,
-    "methodologyVersion": "4.9"
+    "methodologyVersion": "5.91"
   },
   "history": [
     {
@@ -2131,15 +2132,15 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
         "supply": { "value": 1, "available": true },
         "price": { "value": 1, "available": true }
       },
-      "methodologyVersion": "4.3"
+      "methodologyVersion": "5.91"
     }
   ],
   "malformedRows": 0,
   "methodology": {
-    "version": "4.9",
-    "versionLabel": "v4.9",
-    "currentVersion": "4.9",
-    "currentVersionLabel": "v4.9",
+    "version": "5.91",
+    "versionLabel": "v5.91",
+    "currentVersion": "5.91",
+    "currentVersionLabel": "v5.91",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true
@@ -2148,6 +2149,8 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
 ```
 
 **`malformedRows`** — count of DB rows with unparseable JSON signal data (expected 0 under normal operation)
+
+**`oldestComputedAt`** — aggregate mode only; oldest returned current row and the timestamp used for response freshness headers
 
 **`methodology`** — same fields and semantics as `/api/depeg-events`
 

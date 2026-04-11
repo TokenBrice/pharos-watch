@@ -43,6 +43,11 @@ import {
 import { aggregateProtocolPrices, computeWeightedMedianPrice } from "../../lib/dex-price-estimators";
 import type { PeggedAsset } from "./enrich-prices-shared";
 
+interface CoinGeckoSimplePriceValue {
+  usd?: number;
+  last_updated_at?: number;
+}
+
 export interface PrimaryPriceResult {
   price: number;
   source: string;
@@ -166,8 +171,11 @@ export async function fetchPrimaryPrices(
       .filter(isUsableGeckoId),
   )];
   const BATCH_SIZE = 250;
+  const coingeckoMaxTrustedAgeSec = getPricingSourceRegistryEntry("coingecko")?.maxTrustedAgeSec ?? 15 * 60;
 
   const cgPrices = new Map<string, number>();
+  const cgObservedAtByGeckoId = new Map<string, number>();
+  const cgObservedAtModeByGeckoId = new Map<string, PriceObservedAtMode>();
 
   const pythFeedIds = new Map<string, string>();
   for (const asset of candidates) {
@@ -193,6 +201,7 @@ export async function fetchPrimaryPrices(
   let coinbaseObservedAt: number | null = null;
   let curveObservedAt: number | null = null;
   let curveOracleObservedAt: number | null = null;
+  let staleCgPriceRows = 0;
 
   const candidateSymbolsUpper = [...new Set(candidates.map((a) => a.symbol.toUpperCase()))];
   const coinbaseSymbols = candidateSymbolsUpper.filter((s) => coinbaseKnownSet.has(s));
@@ -212,17 +221,34 @@ export async function fetchPrimaryPrices(
             const batch = geckoIds.slice(i, i + BATCH_SIZE);
             const ids = batch.join(",");
             const res = await fetchWithRetry(
-              cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd`, coingeckoApiKey ?? null),
+              cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd&include_last_updated_at=true`, coingeckoApiKey ?? null),
               {
                 headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
                 signal,
               },
             );
             if (res?.ok) {
-              const data = (await res.json()) as Record<string, { usd?: number }>;
+              const data = (await res.json()) as Record<string, CoinGeckoSimplePriceValue>;
               for (const [gId, val] of Object.entries(data)) {
                 if (val?.usd != null && val.usd > 0) {
+                  const upstreamObservedAt =
+                    typeof val.last_updated_at === "number" &&
+                    Number.isFinite(val.last_updated_at) &&
+                    val.last_updated_at > 0
+                      ? val.last_updated_at
+                      : null;
+                  if (
+                    upstreamObservedAt != null &&
+                    nowSec - upstreamObservedAt > coingeckoMaxTrustedAgeSec
+                  ) {
+                    staleCgPriceRows++;
+                    continue;
+                  }
                   cgPrices.set(gId, val.usd);
+                  if (upstreamObservedAt != null) {
+                    cgObservedAtByGeckoId.set(gId, upstreamObservedAt);
+                    cgObservedAtModeByGeckoId.set(gId, "upstream");
+                  }
                 }
               }
               if (Object.keys(data).length > 0) {
@@ -406,14 +432,26 @@ export async function fetchPrimaryPrices(
 
   await Promise.all(fetches);
   throwIfAborted(signal);
+  if (staleCgPriceRows > 0) {
+    console.warn(
+      `[primary-prices] Dropped ${staleCgPriceRows} stale CoinGecko simple-price row(s) older than ${coingeckoMaxTrustedAgeSec}s`,
+    );
+  }
 
   const DIVERGENCE_THRESHOLD_BPS = 50;
   for (const asset of candidates) {
     const gId = isUsableGeckoId(asset.geckoId) ? asset.geckoId : null;
     const cg = gId ? (cgPrices.get(gId) ?? null) : null;
+    const cgObservedAtForAsset = gId && cg != null
+      ? (cgObservedAtByGeckoId.get(gId) ?? cgObservedAt)
+      : null;
+    const cgObservedAtModeForAsset = gId && cg != null
+      ? (cgObservedAtModeByGeckoId.get(gId) ?? (cgObservedAt != null ? "local_fetch" : null))
+      : null;
     const collectedQuotes: PrimaryCollectedQuotes = {
       cgPrice: cg,
-      cgObservedAt,
+      cgObservedAt: cgObservedAtForAsset,
+      cgObservedAtMode: cgObservedAtModeForAsset,
       cgTickerPrice: cgTickerPrices.get(asset.id) ?? null,
       cgTickerObservedAt,
       dlListQuote: resolveDlListQuote(asset.id),

@@ -177,4 +177,43 @@ describe("handleStressSignals contract tests", () => {
     expect(body.signals).toHaveProperty("usdt-tether");
     expect(body.signals).not.toHaveProperty("999999999");
   });
+
+  it("uses the oldest returned aggregate row for freshness headers", async () => {
+    const requestNowSec = Math.floor(Date.now() / 1000);
+    const freshComputedAt = requestNowSec - 60;
+    const staleComputedAt = requestNowSec - 8_000;
+    const db = mockD1([
+      {
+        match: "stress_signals",
+        rows: [
+          {
+            stablecoin_id: "usdt-tether",
+            score: 12,
+            band: "CALM",
+            signals_json: signalsJson,
+            computed_at: freshComputedAt,
+          },
+          {
+            stablecoin_id: "usdc-circle",
+            score: 40,
+            band: "WATCH",
+            signals_json: signalsJson,
+            computed_at: staleComputedAt,
+          },
+        ],
+      },
+    ]);
+
+    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      updatedAt: number;
+      oldestComputedAt?: number;
+    };
+    expect(body.updatedAt).toBe(freshComputedAt);
+    expect(body.oldestComputedAt).toBe(staleComputedAt);
+    expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(8_000);
+    expect(res.headers.get("Warning")).toContain("Response is stale");
+  });
 });

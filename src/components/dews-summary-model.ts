@@ -72,6 +72,11 @@ export interface RadarClickOutcome {
   nextHoveredId: string | null;
 }
 
+export interface DewsAggregateFreshnessLike {
+  updatedAt: number;
+  oldestComputedAt?: number | null;
+}
+
 // ---------------------------------------------------------------------------
 // Pure helpers
 // ---------------------------------------------------------------------------
@@ -172,4 +177,8 @@ export function resolveRadarClick(
     return { shouldNavigate: true, nextHoveredId: null };
   }
   return { shouldNavigate: false, nextHoveredId: tappedId };
+}
+
+export function getAggregateFreshnessTimestamp(data: DewsAggregateFreshnessLike): number {
+  return data.oldestComputedAt ?? data.updatedAt;
 }

@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v4.2`
+- **Current methodology version:** `v4.3`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -36,7 +36,7 @@ When an asset still has no usable current price after validation and fallback re
 
 | Source | Weight | Module / Origin | Notes |
 |--------|--------|-----------------|-------|
-| CoinGecko `/simple/price` | 2 | built-in fetch path | Primary market-data voice |
+| CoinGecko `/simple/price` | 2 | built-in fetch path | Primary market-data voice; uses upstream `last_updated_at` freshness when available and drops stale rows outside the trusted age window |
 | CoinGecko ticker | 2 | `worker/src/lib/cg-ticker.ts` | Exchange-ticker corroboration path for the curated tracked subset |
 | DefiLlama stablecoins list | 1 | Typed quote extracted from DL stablecoins endpoint | Independent DL aggregation with explicit observed-time provenance |
 | Pyth Hermes | 2 | `worker/src/lib/pyth.ts` | Oracle input with confidence intervals |
@@ -118,6 +118,7 @@ Several live providers need normalization before their prices can safely enter c
 
 - **Pyth feed IDs:** `worker/src/lib/pyth.ts` normalizes feed IDs to lowercase and strips any leading `0x` before reverse-matching them to tracked assets. Hermes may return the same feed in prefixed or unprefixed form.
 - **Pyth staleness guard:** Feeds with `publish_time` older than 5 minutes (`PYTH_MAX_STALENESS_SEC = 300`) are rejected before entering consensus. This prevents stale oracle snapshots from poisoning the price.
+- **CoinGecko simple-price freshness:** `/simple/price` requests `last_updated_at`; when CoinGecko supplies it, rows older than the source trust window are rejected before consensus instead of being stamped as fresh local fetches. If the field is absent despite the request, the row can still enter as local-fetch provenance for backwards compatibility with partial responses.
 - **Kraken symbols:** Kraken uses explicit request-pair and response-key maps in `worker/src/lib/cex-tickers.ts`; `USDT/USD` returns `USDTZUSD`, so the integration does not rely on naive string slicing.
 - **Bitstamp ticker surface:** Bitstamp is fetched from the exchange-wide all-tickers endpoint and then filtered through an explicit tracked-pair allowlist so venue coverage stays deterministic.
 - **Coinbase symbols:** `fetchPrimaryPrices()` uppercases symbols before Coinbase lookup. Active pairs: USDT, DAI, PAXG, USDS, USD1, HONEY.

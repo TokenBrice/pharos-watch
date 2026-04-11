@@ -1,6 +1,26 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.1` (2026-02-01 -> 2026-04-08).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v4.3` (2026-02-01 -> 2026-04-11).
+
+---
+
+## v4.3 - CoinGecko simple-price upstream freshness gate (Apr 11, 2026)
+
+**Commit:** `unreleased`
+
+- CoinGecko `/simple/price` requests now include `last_updated_at`
+- Rows with a CoinGecko upstream timestamp older than the source trust window are excluded from primary consensus instead of being stamped as fresh local fetches
+- When CoinGecko omits the timestamp despite the request, the row remains local-fetch provenance for backwards compatibility with partial responses
+
+---
+
+## v4.2 - Inherited wM pricing for M0 extension assets (Apr 10, 2026)
+
+**Commit:** `unreleased`
+
+- `usdk-kast` and `xo-exodus` now inherit tracked `wm-m0` pricing through the authoritative `protocol-redeem` lane when the parent rail is available
+- Historical depeg backfills for those extension assets replay the tracked `wm-m0` market series instead of relying on missing or thin child-market history
+- This extends the tracked-base inheritance pattern already used for `usdai-usd-ai -> pyusd-paypal`
 
 ---
 

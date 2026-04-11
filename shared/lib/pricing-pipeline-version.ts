@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "4.2",
+  currentVersion: "4.3",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "4.3",
+      title: "CoinGecko simple-price upstream freshness gate",
+      date: "2026-04-11",
+      effectiveAt: 1775901000,
+      summary:
+        "CoinGecko simple-price inputs now use the provider's upstream observation timestamp when available and drop stale rows instead of stamping them as fresh local fetches.",
+      impact: [
+        "Primary pricing requests `last_updated_at` from CoinGecko `/simple/price` and records it as upstream freshness when present",
+        "CoinGecko simple-price rows older than the source trust window are excluded from primary consensus rather than being treated as current",
+        "Downstream consumers such as PegScore and DEWS now see missing, lower-confidence, or non-CoinGecko corroborated inputs instead of replaying stale CoinGecko marks as fresh",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "4.2",
       title: "Inherited wM pricing for M0 extension assets",

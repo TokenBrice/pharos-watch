@@ -82,6 +82,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
   const results: DewsScoringResult["results"] = [];
   let liqHistCoverageCount = 0;
   let insufficientDataCount = 0;
+  const noCurrentSupplyIds: string[] = [];
 
   for (const meta of PSI_ELIGIBLE_STABLECOINS) {
     if (meta.flags?.navToken) continue;
@@ -90,7 +91,10 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     if (!asset) continue;
 
     const current = getCirculatingRaw(asset);
-    if (current <= 0) continue;
+    if (current <= 0) {
+      noCurrentSupplyIds.push(meta.id);
+      continue;
+    }
 
     const prevDay = getPrevDayRaw(asset);
     const prevWeek = getPrevWeekRaw(asset);
@@ -163,5 +167,6 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     results,
     liqHistCoverageCount,
     insufficientDataCount,
+    noCurrentSupplyIds,
   };
 }

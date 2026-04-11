@@ -1177,6 +1177,86 @@ describe("fetchPrimaryPrices", () => {
     expect(stats.cgOnly).toBe(1);
   });
 
+  it("drops stale CoinGecko simple-price rows when upstream last_updated_at is old", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const assets: PeggedAsset[] = [
+      {
+        id: "gyd-gyroscope",
+        name: "Gyroscope GYD",
+        symbol: "GYD",
+        geckoId: "gyroscope-gyd",
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+
+    const fetchMock = vi.fn(async (url: string) => {
+      if (typeof url === "string" && url.includes("coingecko.com")) {
+        return new Response(JSON.stringify({
+          "gyroscope-gyd": {
+            usd: 0.992463,
+            last_updated_at: nowSec - 86_400,
+          },
+        }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const db = makeTestDb();
+    const dlListPrices = new Map([["gyd-gyroscope", {
+      price: 1.0001,
+      observedAt: nowSec - 60,
+      observedAtMode: "upstream" as const,
+    }]]);
+    const { results, cgPrices } = await fetchPrimaryPrices(
+      assets,
+      db,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      dlListPrices,
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("include_last_updated_at=true"),
+      expect.any(Object),
+    );
+    expect(cgPrices.has("gyroscope-gyd")).toBe(false);
+    expect(results.get("gyd-gyroscope")).toMatchObject({
+      source: "defillama-list",
+      confidence: "single-source",
+      cgPrice: null,
+    });
+  });
+
+  it("keeps fresh CoinGecko simple-price upstream observation timestamps", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const observedAt = nowSec - 60;
+    const assets: PeggedAsset[] = [
+      { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (typeof url === "string" && url.includes("coingecko.com")) {
+        return new Response(JSON.stringify({
+          tether: { usd: 1.0001, last_updated_at: observedAt },
+        }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }));
+
+    const db = makeTestDb();
+    const { results } = await fetchPrimaryPrices(assets, db);
+
+    expect(results.get("usdt-tether")).toMatchObject({
+      source: "coingecko",
+      observedAt,
+      observedAtMode: "upstream",
+    });
+  });
+
   it("includes Kraken and Bitstamp in the consensus cluster when they agree", async () => {
     const assets: PeggedAsset[] = [
       { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
