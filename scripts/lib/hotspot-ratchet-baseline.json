@@ -132,8 +132,8 @@
     "notes": "Mint/burn copy is localized, but still larger than the desired long-term budget. Split the detailed pipeline tables from the overview copy when touched next."
   },
   "src/app/methodology/sections/monitoring/yield-intelligence-section.tsx": {
-    "fileLines": 252,
-    "maxFunctionLines": 238,
+    "fileLines": 251,
+    "maxFunctionLines": 237,
     "branchCount": 0,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -348,7 +348,7 @@
     "notes": "Core helpers are already extracted. Next split should isolate orchestration, persistence, and fallback policy from the cron entrypoint."
   },
   "worker/src/cron/yield-config.ts": {
-    "fileLines": 728,
+    "fileLines": 723,
     "maxFunctionLines": 1,
     "branchCount": 0,
     "disposition": "deferred",
@@ -384,8 +384,8 @@
     "notes": "This is now a facade over the live-reserve read/write/view modules. Keep new behavior in the helper family rather than regrowing the public barrel."
   },
   "worker/src/lib/status-evaluation.ts": {
-    "fileLines": 231,
-    "maxFunctionLines": 121,
+    "fileLines": 234,
+    "maxFunctionLines": 124,
     "branchCount": 1,
     "disposition": "stabilized",
     "targetBudget": {
