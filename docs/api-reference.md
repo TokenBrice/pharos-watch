@@ -2383,6 +2383,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "degradedCrons": 1,
     "cronErrors": 0,
     "availabilityImpactingCronErrors": 0,
+    "availabilityImpactingConsecutiveCronErrors": 0,
     "diagnosticIssueCount": 0,
     "worstCacheRatio": 1.03
   },
@@ -2522,6 +2523,8 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 `itemCount` and `dataQuality.totalStablecoins` are illustrative example values. In the live handler they reflect the current cached stablecoin payload size, not `TRACKED_STABLECOINS.length`.
 
 `summary.availabilityImpactingUnhealthyCrons` and `summary.availabilityImpactingCronErrors` count only cron jobs tagged `statusImpact="critical"` in `shared/lib/cron-jobs.ts`. `summary.watchUnhealthyCrons` counts the watch-tier jobs that remain visible but do not degrade `availabilityStatus` on their own.
+
+`summary.availabilityImpactingConsecutiveCronErrors` is the subset of `availabilityImpactingCronErrors` whose most recent 2+ runs are **all** `error`. A single transient critical-cron error increments `availabilityImpactingCronErrors` (and sets `availabilityStatus` to `degraded`), but only a `≥2`-consecutive streak increments `availabilityImpactingConsecutiveCronErrors` and escalates `availabilityStatus` to `stale`. This transient-vs-sustained split prevents rare upstream flakes (e.g. DefiLlama returning a truncated response body) from flipping public state on a single bad sample.
 
 `summary.diagnosticIssueCount` counts best-effort status loader failures such as cache freshness lookups, reserve overview diagnostics, mint/burn diagnostics, and non-stablecoins data-quality subqueries. These issues reduce confidence and appear as info causes, but they do not degrade `availabilityStatus` or `dataQualityStatus` on their own unless all freshness evidence for the affected lane is gone.
 
