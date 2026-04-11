@@ -168,6 +168,7 @@ Do the research manually or with agents if available. Do not depend on older ref
 - Is Ethereum a canonical issuance chain worth tracking for mint/burn?
 - Does Bluechip publish a rating for it?
 - Does it belong to an existing infrastructure cohort such as `liquity-v1`, `liquity-v2`, or `m0`?
+- If the asset is active, what admits it into `/api/stablecoins` runtime cache: `llamaId`, `detailProvider: "coingecko"` with `geckoId`, `detailProvider: "coingecko"` with on-chain total-supply fallback, or commodity `geckoId`?
 
 ### Research quality rules
 
@@ -296,6 +297,11 @@ Add the new object to the chosen JSON file using current field names and current
 - Add the JSON object to the right file.
 - Add the ID to `shared/data/stablecoins/canonical-order.json`.
 - Keep new keys canonical and consistent with the current schema.
+- For active assets, ensure there is a runtime cache admission path:
+  - DefiLlama-tracked assets need `llamaId`.
+  - Fiat assets not in DefiLlama need `detailProvider: "coingecko"` plus either `geckoId` or a supported on-chain total-supply contract.
+  - Gold/silver assets need a `geckoId` for the commodity supplemental path.
+  - Do not rely on `canonical-order.json` alone; static routes can exist before the Worker `/api/stablecoins` cache has a row.
 - Use `npm run check:stablecoin-data` before moving on.
 
 ---
