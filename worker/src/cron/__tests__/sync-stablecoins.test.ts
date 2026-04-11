@@ -277,6 +277,7 @@ import { stampPriceMetadata } from "../sync-stablecoins/shared";
 import { enrichMissingPrices, fetchPrimaryPrices, runGtProbePass, type PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 import type { PeggedAsset } from "../sync-stablecoins/enrich-prices";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
 import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
@@ -2435,6 +2436,143 @@ describe("syncStablecoins", () => {
     const usdtCopies = payload?.peggedAssets.filter((asset) => asset.id === "usdt-tether").length ?? 0;
     expect(usdtCopies).toBe(1);
     expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined);
+  });
+
+  it("retries DL response body parse failure before falling back", async () => {
+    // The file's beforeEach enables vi.useFakeTimers(). The parse-retry path
+    // uses sleepWithSignal() (real setTimeout), which would hang forever under
+    // fake timers. Switch to real timers for this test only — afterEach will
+    // restore fake timers for the next test.
+    vi.useRealTimers();
+
+    const db = makeDb();
+    const validPayload = makeDlResponse(60);
+
+    function makeThrowingResponse(): Response {
+      const stub: Partial<Response> = {
+        ok: true,
+        status: 200,
+        headers: new Headers({ "Content-Type": "application/json" }),
+        json: () => Promise.reject(new SyntaxError("Unexpected end of JSON input")),
+        text: () => Promise.resolve("truncated{"),
+        body: null,
+        bodyUsed: false,
+        clone: () => makeThrowingResponse(),
+      };
+      return stub as Response;
+    }
+    function makeValidResponse(): Response {
+      return new Response(JSON.stringify(validPayload), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Capture the CG route spy ONCE outside the closure — calling mockFetch(...)
+    // again inside the closure would call fetchWithRetryMock.mockImplementation()
+    // and overwrite this very router mid-test.
+    const cgMockFetch = mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    let dlAttempt = 0;
+    fetchWithRetryMock.mockImplementation(async (url: string) => {
+      if (url.includes("/stablecoins?includePrices=true")) {
+        const attempt = dlAttempt++;
+        return attempt === 0 ? makeThrowingResponse() : makeValidResponse();
+      }
+      return cgMockFetch(url);
+    });
+
+    await syncStablecoins(db);
+
+    // The DL stablecoins circuit must NOT have been marked failed —
+    // the retry recovered before the fallback path ran.
+    expect(recordOutcome).not.toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.DL_STABLECOINS,
+      false,
+    );
+    // DL was fetched exactly twice: initial attempt + 1 successful parse-retry.
+    expect(dlAttempt).toBe(2);
+  });
+
+  it("falls back to CoinGecko after all DL parse retries fail", async () => {
+    // Exercises the retry loop (2 sleeps) — needs real timers.
+    vi.useRealTimers();
+
+    const db = makeDb();
+
+    function makeThrowingResponse(): Response {
+      const stub: Partial<Response> = {
+        ok: true,
+        status: 200,
+        headers: new Headers({ "Content-Type": "application/json" }),
+        json: () => Promise.reject(new SyntaxError("Unexpected end of JSON input")),
+        text: () => Promise.resolve("truncated{"),
+        body: null,
+        bodyUsed: false,
+        clone: () => makeThrowingResponse(),
+      };
+      return stub as Response;
+    }
+
+    const cgMockFetch = mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    let dlAttempt = 0;
+    fetchWithRetryMock.mockImplementation(async (url: string) => {
+      if (url.includes("/stablecoins?includePrices=true")) {
+        dlAttempt++;
+        return makeThrowingResponse();
+      }
+      return cgMockFetch(url);
+    });
+
+    await syncStablecoins(db);
+
+    // DL fetched exactly DL_PARSE_MAX_ATTEMPTS (3) times — one per retry.
+    expect(dlAttempt).toBe(3);
+
+    // Circuit failure recorded, fallback path taken.
+    expect(recordOutcome).toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.DL_STABLECOINS,
+      false,
+    );
+  });
+
+  it("skips parse retry and falls back on DL HTTP failure", async () => {
+    // No real sleeps in this test path — default fake timers are fine.
+    const db = makeDb();
+
+    const cgMockFetch = mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    let dlAttempt = 0;
+    fetchWithRetryMock.mockImplementation(async (url: string) => {
+      if (url.includes("/stablecoins?includePrices=true")) {
+        dlAttempt++;
+        return new Response("", { status: 502 });
+      }
+      return cgMockFetch(url);
+    });
+
+    await syncStablecoins(db);
+
+    // DL fetched exactly 1 time (no parse retry on HTTP error).
+    expect(dlAttempt).toBe(1);
+
+    expect(recordOutcome).toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.DL_STABLECOINS,
+      false,
+    );
   });
 });
 
