@@ -10,7 +10,7 @@ export const entry: ChangelogEntry = {
     { label: "Live reserves surge", tag: "coverage", description: "10+ new adapters — Frax balance-sheet, Block Analitica for DAI/USDS, MIM cauldrons, eUSD, feUSD, Honey — push live reserve tracking to 126 coins." },
     { label: "Liquidity Score v5.0", tag: "feature", description: "Size-aware scoring formulas, best-path exit model with diversification premium, and Uniswap V2/V4 split replace the v4 blend." },
     { label: "Broader coverage", tag: "coverage", description: "Seven new stablecoins (USDat, wM, USDnr, USDK, XO Cash, evaUSDC, evaUSDT) bring the dashboard to 194 tracked coins; RAI retired to the cemetery." },
-    { label: "Navigation & pages", tag: "design", description: "Collapsible sidebar groups, two-column API reference with scrollspy, dedicated treasuries page, and changelog timeline redesign with category tags." },
+    { label: "Navigation & pages", tag: "design", description: "Collapsible sidebar groups, two-column API reference with scrollspy, redesigned /telegram page, and changelog timeline with category tags." },
     { label: "Pipeline hardening", tag: "infra", description: "Telegram rate-limit handling and HTML fixes, 100+ audit remediation fixes across four merge streams, blacklist v3.7 enrichment, and mint-burn D1 query batching." },
   ],
   stats: { totalCommits: 353 },
