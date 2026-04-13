@@ -372,5 +372,122 @@ describe("handlePublicStatusHistory", () => {
       // timestamp the state machine last flipped).
       expect(body.lastChangedAt).toBe(now - 3600);
     });
+
+    it("keeps info-only recovery rows that close a public-impact incident", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const db = makeDb({
+        transitions: [
+          {
+            id: 3,
+            previous_status: "degraded",
+            next_status: "healthy",
+            raw_status: "healthy",
+            transition_type: "recover",
+            reason: "raw-healthy-recovery-threshold",
+            causes: [{
+              code: "onchain_monitor_low_sample",
+              layer: "data-quality",
+              severity: "info",
+              message: "On-chain monitor has a structurally low sample.",
+            }],
+            created_at: now - 1800,
+          },
+          {
+            id: 2,
+            previous_status: "stale",
+            next_status: "degraded",
+            raw_status: "degraded",
+            transition_type: "recover",
+            reason: "raw-degraded-recovery-from-stale",
+            causes: [{
+              code: "watch_unhealthy_crons_present",
+              layer: "availability",
+              severity: "info",
+              message: "One watch-tier cron is unavailable.",
+            }],
+            created_at: now - 2700,
+          },
+          {
+            id: 1,
+            previous_status: "healthy",
+            next_status: "stale",
+            raw_status: "stale",
+            transition_type: "degrade",
+            reason: "raw-stale-immediate-escalation",
+            causes: [{
+              code: "cron_error_runs",
+              layer: "availability",
+              severity: "critical",
+              message: "One availability-impacting cron job errored.",
+            }],
+            created_at: now - 3600,
+          },
+        ],
+      });
+
+      assessPublicHealthMock.mockResolvedValue(stubPublicHealth("healthy"));
+
+      const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
+      const res = await handlePublicStatusHistory(db, undefined, request);
+      const body = (await res.json()) as {
+        transitions: Array<{ id: number; from: string | null; to: string }>;
+        currentStatus: string;
+      };
+
+      expect(body.currentStatus).toBe("healthy");
+      expect(body.transitions.map((transition) => transition.id)).toEqual([3, 2, 1]);
+      expect(body.transitions.map((transition) => `${transition.from}->${transition.to}`)).toEqual([
+        "degraded->healthy",
+        "stale->degraded",
+        "healthy->stale",
+      ]);
+    });
+
+    it("omits admin-only degradation and recovery pairs", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const db = makeDb({
+        transitions: [
+          {
+            id: 2,
+            previous_status: "degraded",
+            next_status: "healthy",
+            raw_status: "healthy",
+            transition_type: "recover",
+            reason: "raw-healthy-recovery-threshold",
+            causes: [{
+              code: "onchain_monitor_low_sample",
+              layer: "data-quality",
+              severity: "info",
+              message: "On-chain monitor has a structurally low sample.",
+            }],
+            created_at: now - 1800,
+          },
+          {
+            id: 1,
+            previous_status: "healthy",
+            next_status: "degraded",
+            raw_status: "degraded",
+            transition_type: "degrade",
+            reason: "raw-degraded-consecutive-threshold",
+            causes: [{
+              code: "missing_prices_degraded",
+              layer: "data-quality",
+              severity: "warning",
+              message: "Missing price ratio is degraded.",
+            }],
+            created_at: now - 3600,
+          },
+        ],
+      });
+
+      assessPublicHealthMock.mockResolvedValue(stubPublicHealth("healthy"));
+
+      const request = new Request("https://pharos.watch/api/public-status-history?window=24h");
+      const res = await handlePublicStatusHistory(db, undefined, request);
+      const body = (await res.json()) as { transitions: unknown[]; currentStatus: string };
+
+      expect(body.currentStatus).toBe("healthy");
+      expect(body.transitions).toHaveLength(0);
+    });
   });
 });

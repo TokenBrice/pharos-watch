@@ -38,6 +38,22 @@ function toPublicTransition(t: StatusTransition): PublicStatusTransition {
   };
 }
 
+function filterPublicStatusTransitions(transitions: StatusTransition[]): StatusTransition[] {
+  const chronological = [...transitions].sort((a, b) => a.at - b.at || a.id - b.id);
+  const includedIds = new Set<number>();
+  let publicIncidentActive = false;
+
+  for (const transition of chronological) {
+    const hasPublicImpact = transitionHasPublicImpact(transition.causes);
+    if (!hasPublicImpact && !publicIncidentActive) continue;
+
+    includedIds.add(transition.id);
+    publicIncidentActive = transition.to !== "healthy";
+  }
+
+  return transitions.filter((transition) => includedIds.has(transition.id));
+}
+
 export const handlePublicStatusHistory = withErrorHandler(
   "public-status-history",
   async (db: D1Database, _trustedAdmin?: boolean, request?: Request): Promise<Response> => {
@@ -64,11 +80,10 @@ export const handlePublicStatusHistory = withErrorHandler(
       assessPublicHealth(db, now, { logPrefix: "public-status-history" }),
     ]);
 
-    // Filter transitions to only those with at least one public-facing cause.
-    // This hides admin-only data-quality flaps (missing prices, blacklist
-    // ratio drift, reserve sync, on-chain monitor) from the public /status/
-    // page transition timeline.
-    const filteredTransitions = allTransitions.filter((t) => transitionHasPublicImpact(t.causes));
+    // Filter transitions to public-impact incidents, while preserving the
+    // recovery rows needed to keep the returned state-machine stream coherent.
+    // Recovery rows can be info-only after the public-impacting cause clears.
+    const filteredTransitions = filterPublicStatusTransitions(allTransitions);
 
     // Public currentStatus comes from assessPublicHealth — NOT from the
     // state machine's hysteresis-smoothed admin status. This keeps the

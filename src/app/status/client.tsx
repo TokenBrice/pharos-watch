@@ -3,6 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import type { PublicStatusHistoryWindow } from "@shared/types";
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
+import { isPublicImpactCircuitKey } from "@shared/lib/public-health";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
 import { CircuitBreakerTable } from "@/components/status/circuit-breaker-table";
@@ -130,8 +131,11 @@ export default function StatusClient() {
     const worstCache = getPublicWorstCacheSummary(healthData.caches);
     const mintBurnStatus = getPublicMintBurnStatus(healthData.mintBurn.sync);
     const probeSummary = buildBrowserProbeSummary(probes, probesUpdatedAt ?? 0);
-    const openCircuits = Object.values(healthData.circuits).filter((circuit) => circuit.state === "open").length;
-    const halfOpenCircuits = Object.values(healthData.circuits).filter((circuit) => circuit.state === "half-open").length;
+    const publicImpactCircuits = Object.fromEntries(
+      Object.entries(healthData.circuits).filter(([key]) => isPublicImpactCircuitKey(key)),
+    );
+    const openCircuits = Object.values(publicImpactCircuits).filter((circuit) => circuit.state === "open").length;
+    const halfOpenCircuits = Object.values(publicImpactCircuits).filter((circuit) => circuit.state === "half-open").length;
     const impactedPublicSurfaces = getImpactedPublicSurfaces(healthData);
     const blacklistStatus = getBlacklistGapStatus({
       missingRatio: healthData.blacklist.missingRatio,
@@ -367,7 +371,7 @@ export default function StatusClient() {
               description="Browser-origin probe loop from this public session. It covers only public canary routes."
               footnote="Admin and manual action paths are intentionally excluded from the public probe board."
             />
-            <CircuitBreakerTable circuits={healthData.circuits} />
+            <CircuitBreakerTable circuits={publicImpactCircuits} />
           </div>
           <CacheFreshnessTable caches={healthData.caches} />
         </StatusSection>

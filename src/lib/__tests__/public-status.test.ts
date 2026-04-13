@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { HealthResponse } from "@shared/types";
 import {
+  countPublicImpactOpenCircuits,
+  isPublicImpactCircuitKey,
+} from "@shared/lib/public-health";
+import {
   getImpactedPublicSurfaces,
   getPublicMintBurnStatus,
   getPublicWorstCacheSummary,
@@ -102,5 +106,23 @@ describe("public status helpers", () => {
     });
 
     expect(impacted).not.toContainEqual(expect.objectContaining({ id: "cache-fx-rates", tone: "degraded" }));
+  });
+
+  it("excludes reserve-only circuit breakers from public-impact circuit counts", () => {
+    expect(isPublicImpactCircuitKey("live-reserves:ousg-ondo")).toBe(false);
+    expect(isPublicImpactCircuitKey("defillama-stablecoins")).toBe(true);
+
+    const circuit = {
+      state: "open",
+      consecutiveFailures: 3,
+      lastFailureAt: 1_700_000_000,
+      lastSuccessAt: null,
+      openedAt: 1_700_000_000,
+    } as const;
+
+    expect(countPublicImpactOpenCircuits({
+      "live-reserves:ousg-ondo": circuit,
+      "live-reserves:mtbill-midas": circuit,
+    })).toBe(0);
   });
 });
