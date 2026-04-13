@@ -6,7 +6,7 @@
     "worker"
   ],
   "engines": {
-    "node": ">=22 <25"
+    "node": ">=22.12 <26"
   },
   "scripts": {
     "dev": "node --env-file-if-exists=.env.local scripts/dev-api-proxy.mjs & next dev",

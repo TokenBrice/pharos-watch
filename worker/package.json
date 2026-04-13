@@ -2,7 +2,7 @@
   "name": "stablecoin-api",
   "private": true,
   "engines": {
-    "node": ">=22 <25"
+    "node": ">=22.12 <26"
   },
   "scripts": {
     "dev": "wrangler dev",

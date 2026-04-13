@@ -197,7 +197,7 @@ Rollback:
 2. Re-run the workflow manually.
 3. Leave the replacement token active until verification succeeds.
 
-The workflows pin `actions/checkout@v6`, `actions/setup-node@v6`, and `actions/cache@v4` by commit SHA and run project tooling on Node 22 (`node-version: 22`). The compatibility lane on Node 24 now also runs `npm run build` and `npm run test:critical-contracts`, so the published engine range is exercised beyond lint and typecheck. The validate and Pages-build lanes restore caches for `.next/cache`, `.cache/eslint`, and `*.tsbuildinfo` outputs to avoid rebuilding or relinting unchanged work from scratch on every run. Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler with `npx --no-install`. `npm run audit:deps` also runs in the validate job so high-severity production advisories fail the push/manual deploy pipeline before deploy, and the scheduled dependency-audit workflow covers devDependencies separately. The production-changing workflows also share a `concurrency` group (`production-deploy-${{ github.ref }}`): push/manual deploys cancel superseded in-flight runs, while the scheduled/manual Pages rebuild queues behind an active production deploy instead of interrupting it.
+The workflows pin `actions/checkout@v6`, `actions/setup-node@v6`, and `actions/cache@v4` by commit SHA and run project tooling on Node 22 (`node-version: 22`). The compatibility lanes on Node 24 and Node 25 also run `npm run build` and `npm run test:critical-contracts`, so the published engine range is exercised beyond lint and typecheck. The validate and Pages-build lanes restore caches for `.next/cache`, `.cache/eslint`, and `*.tsbuildinfo` outputs to avoid rebuilding or relinting unchanged work from scratch on every run. Worker deploys intentionally avoid `cloudflare/wrangler-action`; the repo now uses a root npm workspace, so CI installs the shared toolchain from the root lockfile and invokes Wrangler with `npx --no-install`. `npm run audit:deps` also runs in the validate job so high-severity production advisories fail the push/manual deploy pipeline before deploy, and the scheduled dependency-audit workflow covers devDependencies separately. The production-changing workflows also share a `concurrency` group (`production-deploy-${{ github.ref }}`): push/manual deploys cancel superseded in-flight runs, while the scheduled/manual Pages rebuild queues behind an active production deploy instead of interrupting it.
 
 `npm run check:migrations` replays every file in `worker/migrations/` against a throwaway SQLite database before deploy. It uses Node's built-in `node:sqlite` module on Node 22+ and falls back to the `sqlite3` CLI when needed, which catches schema typos in unapplied D1 migrations before `deploy-worker` touches production. Historical duplicate migration prefixes are tracked explicitly in `worker/migrations/MANIFEST.md`; the checker fails only on new undeclared duplicates and keeps the current allowlist visible in review. The same check now also enforces the rollout-safety contract for new migrations starting at `0071`: every new migration must declare `-- rollout-safety: backward-compatible`, and obvious table/column drop or rename patterns are rejected because the standard deploy path applies D1 migrations before the new worker is live.
 
@@ -216,10 +216,13 @@ The workflows pin `actions/checkout@v6`, `actions/setup-node@v6`, and `actions/c
 ```ts
 const isWorktreeCheckout = normalizedRoot.includes("/.worktrees/") || normalizedRoot.includes("/worktrees/");
 const worktreeExcludes = isWorktreeCheckout ? [] : [".worktrees/**", "worktrees/**"];
+const nodeMajor = Number.parseInt(process.versions.node.split(".")[0] ?? "0", 10);
+const nodeExecArgv = nodeMajor >= 25 ? ["--no-experimental-webstorage"] : [];
 
 export default defineConfig({
   plugins: [wasmStubPlugin()],
   test: {
+    execArgv: nodeExecArgv,
     exclude: [
       ...configDefaults.exclude,
       ...worktreeExcludes,
@@ -247,7 +250,7 @@ export default defineConfig({
 });
 ```
 
-The config also includes a `wasmStubPlugin()` Vite plugin that stubs `.wasm` imports for Node compatibility and resolve aliases for `satori/standalone`, `satori/yoga.wasm`, `@cf-wasm/resvg/workerd`, and `@resvg/resvg-wasm`.
+The config also includes a `wasmStubPlugin()` Vite plugin that stubs `.wasm` imports for Node compatibility and resolve aliases for `satori/standalone`, `satori/yoga.wasm`, `@cf-wasm/resvg/workerd`, and `@resvg/resvg-wasm`. On Node 25+, Vitest test workers run with `--no-experimental-webstorage` so jsdom remains the source of `localStorage` / `sessionStorage` in DOM tests instead of Node's experimental Web Storage globals.
 
 When the checkout itself lives under `/.worktrees/`, Vitest now drops those glob exclusions so coverage still includes the active repository files; nested worktree directories remain excluded in a normal top-level checkout.
 

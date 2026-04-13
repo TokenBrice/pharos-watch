@@ -125,7 +125,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - includes `npm run build` + `npm run seo:check` only when `pages_changed=true`
    - includes `cd worker && npx tsc --noEmit` only when `worker_changed=true`
    - pull requests still call the same reusable workflow with default inputs, so PR validation stays full-strength
-   - the parallel `validate-node24` job also runs `npm run build` and `npm run test:critical-contracts`
+   - the parallel `validate-node24` and `validate-node25` jobs also run `npm run build` and `npm run test:critical-contracts`
 3. `no-deploy-required`
    - runs only when `deploy_required=false`
    - records an explicit no-op outcome for docs-only or other non-deploy pushes to `main`

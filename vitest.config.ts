@@ -5,6 +5,8 @@ import path from "path";
 const normalizedRoot = path.resolve(__dirname).replaceAll("\\", "/");
 const isWorktreeCheckout = normalizedRoot.includes("/.worktrees/") || normalizedRoot.includes("/worktrees/");
 const worktreeExcludes = isWorktreeCheckout ? [] : [".worktrees/**", "worktrees/**"];
+const nodeMajor = Number.parseInt(process.versions.node.split(".")[0] ?? "0", 10);
+const nodeExecArgv = nodeMajor >= 25 ? ["--no-experimental-webstorage"] : [];
 
 // Stub .wasm imports so vitest doesn't try to load WebAssembly modules
 function wasmStubPlugin(): Plugin {
@@ -21,6 +23,7 @@ function wasmStubPlugin(): Plugin {
 export default defineConfig({
   plugins: [wasmStubPlugin()],
   test: {
+    execArgv: nodeExecArgv,
     exclude: [
       ...configDefaults.exclude,
       ...worktreeExcludes,
