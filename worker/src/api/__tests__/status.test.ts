@@ -2359,4 +2359,52 @@ describe("handleStatus", () => {
       expect(cause?.severity).toBe("info");
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Workstream 5 of agents/plans/2026-04-13-status-stability-hardening-plan.md
+  // -------------------------------------------------------------------------
+  //
+  // Surface the 24-hour transition count in the status summary so operators
+  // can detect new flapping lanes as thresholds drift.
+  describe("summary.transitionsLast24h", () => {
+    function buildTransitionCountDb(transitionsLast24h: number) {
+      const now = Math.floor(Date.now() / 1000);
+      const stablecoinsCache = JSON.stringify({
+        peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 100_000_000 } }],
+      });
+      return mockD1([
+        { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+        { match: "dex_liquidity", rows: [], first: { age: 300 } },
+        { match: "yield_data", rows: [], first: { age: 300 } },
+        { match: "stress_signals", rows: [], first: { age: 300 } },
+        { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+        { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+        { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+        { match: "depeg_events", rows: [], first: { cnt: 0 } },
+        { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+        { match: "onchain_supply WHERE updated_at >", rows: [] },
+        { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+        // The new transitions-count query introduced by Workstream 5.
+        { match: "FROM status_transitions WHERE scope", rows: [], first: { cnt: transitionsLast24h } },
+      ]);
+    }
+
+    type SummaryBody = { summary: { transitionsLast24h: number } };
+
+    it("reports the number of status_transitions rows inserted in the last 24h", async () => {
+      const db = buildTransitionCountDb(4);
+      const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+      const res = await handleStatus(db, true, request);
+      const body = (await res.json()) as SummaryBody;
+      expect(body.summary.transitionsLast24h).toBe(4);
+    });
+
+    it("reports 0 when the transitions count query returns nothing", async () => {
+      const db = buildTransitionCountDb(0);
+      const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+      const res = await handleStatus(db, true, request);
+      const body = (await res.json()) as SummaryBody;
+      expect(body.summary.transitionsLast24h).toBe(0);
+    });
+  });
 });

@@ -87,6 +87,7 @@ function buildDbUnavailableRawStatus(): RawStatusComputation {
       availabilityImpactingConsecutiveCronErrors: 0,
       diagnosticIssueCount: 0,
       worstCacheRatio: 0,
+      transitionsLast24h: 0,
     },
     reserveComposition: emptyReserveComposition(),
     freshnessDiagnostics: [],
@@ -105,6 +106,28 @@ export async function evaluateStatusAndPersist(db: D1Database, now: number): Pro
     effectiveStatus: persisted.effectiveStatus,
     persistenceSucceeded: persisted.persistenceSucceeded,
   };
+}
+
+/**
+ * Count `status_transitions` rows inserted in the last 24 hours. Used only
+ * as an observability signal (Workstream 5 of
+ * agents/plans/2026-04-13-status-stability-hardening-plan.md). A failed
+ * count query logs a warning and returns 0 — this is diagnostic-only and
+ * must not break the main status response.
+ */
+async function countRecentStatusTransitions(db: D1Database, now: number): Promise<number> {
+  try {
+    const row = await db
+      .prepare(
+        `SELECT COUNT(*) AS cnt FROM status_transitions WHERE scope = ? AND created_at >= ?`,
+      )
+      .bind("global", now - 86400)
+      .first<{ cnt: number | null }>();
+    return row?.cnt ?? 0;
+  } catch (err) {
+    console.warn("[status] transitions count query failed:", err);
+    return 0;
+  }
 }
 
 export async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusComputation> {
@@ -199,6 +222,8 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
     onchainMonitoringActive: hasActiveOnchainMonitor,
   });
 
+  const transitionsLast24h = await countRecentStatusTransitions(db, now);
+
   return {
     dbHealthy: true,
     availabilityStatus,
@@ -228,6 +253,7 @@ export async function computeRawStatus(db: D1Database, now: number): Promise<Raw
       availabilityImpactingConsecutiveCronErrors,
       diagnosticIssueCount,
       worstCacheRatio: publicHealth.worstCacheRatio,
+      transitionsLast24h,
     },
   };
 }

@@ -452,6 +452,14 @@ export interface StatusResponse {
     availabilityImpactingConsecutiveCronErrors: number;
     diagnosticIssueCount: number;
     worstCacheRatio: number;
+    /**
+     * Count of rows inserted into `status_transitions` in the last 24 hours.
+     * A defensive observability signal added in Workstream 5 of
+     * agents/plans/2026-04-13-status-stability-hardening-plan.md so operators
+     * can spot new flapping lanes as thresholds drift without spelunking
+     * the transitions table. Under normal operation this should be ≤ 2.
+     */
+    transitionsLast24h: number;
   };
   liquidityHealth: LiquidityHealth | null;
   priceSourceHealth: PriceSourceHealth | null;
