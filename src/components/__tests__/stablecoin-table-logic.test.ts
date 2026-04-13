@@ -149,7 +149,7 @@ describe("buildTrackedIdSet", () => {
     expect(trackedIds.has("usdnr-nerona")).toBe(true);
     expect(trackedIds.has("usdk-kast")).toBe(true);
     expect(trackedIds.has("xo-exodus")).toBe(true);
-    expect(trackedIds.has("m-m0")).toBe(false);
+    expect(trackedIds.has("m-m0")).toBe(true);
     expect(trackedIds.has("susdai-usd-ai")).toBe(false);
   });
 });
