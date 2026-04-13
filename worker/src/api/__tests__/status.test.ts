@@ -2154,4 +2154,125 @@ describe("handleStatus", () => {
     expect(body.availabilityStatus).toBe("healthy");
     expect(body.causes.availability.some((cause) => cause.code === "cache_freshness_query_failed")).toBe(true);
   });
+
+  // -------------------------------------------------------------------------
+  // Workstream 1 of agents/plans/2026-04-13-status-stability-hardening-plan.md
+  // -------------------------------------------------------------------------
+  //
+  // Raise `missingPriceRatio` thresholds from 0.15/0.40 to 0.18/0.45 so the
+  // normal ~15% operating point with 194 tracked coins no longer flaps at
+  // the 15% boundary. Add a new info-severity `missing_prices_elevated`
+  // cause in the 15-18% band for early-warning observability.
+  describe("missingPriceRatio raised thresholds + elevated info cause", () => {
+    /**
+     * Build a peggedAssets list of `total` coins where exactly `missing` of
+     * them have `price == null`. Supplemental fields are stubbed to the
+     * minimum the data-quality loader needs.
+     */
+    function buildPeggedAssets(total: number, missing: number): unknown[] {
+      const assets: Array<{
+        id: string;
+        symbol: string;
+        pegType: string;
+        price: number | null;
+        circulating: Record<string, number>;
+      }> = [];
+      for (let i = 0; i < total; i++) {
+        assets.push({
+          id: `stub-coin-${i}`,
+          symbol: `STUB${i}`,
+          pegType: "peggedUSD",
+          price: i < missing ? null : 1,
+          circulating: { peggedUSD: 10_000_000 },
+        });
+      }
+      return assets;
+    }
+
+    function buildBaselineDb(total: number, missing: number) {
+      const now = Math.floor(Date.now() / 1000);
+      const stablecoinsCache = JSON.stringify({
+        peggedAssets: buildPeggedAssets(total, missing),
+      });
+      return mockD1([
+        { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+        { match: "dex_liquidity", rows: [], first: { age: 300 } },
+        { match: "yield_data", rows: [], first: { age: 300 } },
+        { match: "stress_signals", rows: [], first: { age: 300 } },
+        { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+        { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+        { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+        { match: "depeg_events", rows: [], first: { cnt: 0 } },
+        { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+        { match: "onchain_supply WHERE updated_at >", rows: [] },
+        { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+      ]);
+    }
+
+    type DataQualityCause = { code: string; severity: string; threshold?: number };
+    type StatusBody = {
+      dataQualityStatus: string;
+      overallStatus: string;
+      causes: { dataQuality: DataQualityCause[] };
+    };
+
+    it("stays healthy at 34 missing out of 194 (17.53% — just below the 18% degraded threshold)", async () => {
+      const db = buildBaselineDb(194, 34);
+      const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+      const res = await handleStatus(db, true, request);
+      const body = (await res.json()) as StatusBody;
+      expect(body.dataQualityStatus).toBe("healthy");
+      const codes = body.causes.dataQuality.map((c) => c.code);
+      expect(codes).not.toContain("missing_prices_degraded");
+      expect(codes).not.toContain("missing_prices_stale");
+    });
+
+    it("degrades at 36 missing out of 194 (18.56%) with threshold=0.18", async () => {
+      const db = buildBaselineDb(194, 36);
+      const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+      const res = await handleStatus(db, true, request);
+      const body = (await res.json()) as StatusBody;
+      expect(body.dataQualityStatus).toBe("degraded");
+      const degradedCause = body.causes.dataQuality.find((c) => c.code === "missing_prices_degraded");
+      expect(degradedCause).toBeDefined();
+      expect(degradedCause?.threshold).toBe(0.18);
+      expect(degradedCause?.severity).toBe("warning");
+    });
+
+    it("stays healthy and emits missing_prices_elevated info cause at 30 missing out of 194 (15.46% — in the elevated band)", async () => {
+      const db = buildBaselineDb(194, 30);
+      const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+      const res = await handleStatus(db, true, request);
+      const body = (await res.json()) as StatusBody;
+      expect(body.dataQualityStatus).toBe("healthy");
+      const elevatedCause = body.causes.dataQuality.find((c) => c.code === "missing_prices_elevated");
+      expect(elevatedCause).toBeDefined();
+      expect(elevatedCause?.severity).toBe("info");
+      expect(elevatedCause?.threshold).toBe(0.15);
+    });
+
+    it("does not emit missing_prices_elevated when ratio is below the 15% elevated floor", async () => {
+      const db = buildBaselineDb(194, 20);
+      const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+      const res = await handleStatus(db, true, request);
+      const body = (await res.json()) as StatusBody;
+      expect(body.dataQualityStatus).toBe("healthy");
+      const codes = body.causes.dataQuality.map((c) => c.code);
+      expect(codes).not.toContain("missing_prices_elevated");
+      expect(codes).not.toContain("missing_prices_degraded");
+      expect(codes).not.toContain("missing_prices_stale");
+    });
+
+    it("goes stale at 90 missing out of 194 (46.39%) with threshold=0.45", async () => {
+      const db = buildBaselineDb(194, 90);
+      const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+      const res = await handleStatus(db, true, request);
+      const body = (await res.json()) as StatusBody;
+      expect(body.dataQualityStatus).toBe("stale");
+      const staleCause = body.causes.dataQuality.find((c) => c.code === "missing_prices_stale");
+      expect(staleCause).toBeDefined();
+      expect(staleCause?.threshold).toBe(0.45);
+      expect(staleCause?.severity).toBe("critical");
+    });
+  });
 });

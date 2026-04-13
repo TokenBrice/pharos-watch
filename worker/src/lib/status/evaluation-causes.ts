@@ -368,6 +368,20 @@ export function buildDataQualityCauses(input: {
       value: input.missingPriceRatio,
       threshold: STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded,
     });
+  } else if (input.missingPriceRatio >= STATUS_MISSING_PRICE_THRESHOLDS.ratioElevated) {
+    // Early-warning band: surfaces missing-price drift before it crosses the
+    // hard degraded threshold. Info-only — does not affect dataQualityStatus.
+    pushCause(dataQualityCauses, {
+      code: "missing_prices_elevated",
+      layer: "data-quality",
+      severity: "info",
+      message:
+        `Missing price ratio is elevated (${formatRatio(input.missingPriceRatio)} ≥ ` +
+        `${formatRatio(STATUS_MISSING_PRICE_THRESHOLDS.ratioElevated)}); not degrading status but worth watching.`,
+      metric: "missingPriceRatio",
+      value: input.missingPriceRatio,
+      threshold: STATUS_MISSING_PRICE_THRESHOLDS.ratioElevated,
+    });
   }
 
   if (
