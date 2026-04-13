@@ -8,6 +8,18 @@ function formatRatio(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
 }
 
+/**
+ * Minimum `trackedCoins` value at which the `onchain_monitor_low_sample` info
+ * cause becomes meaningful. Below this floor, the tracked set is structurally
+ * limited (only sync-kinesis-supply writes to onchain_supply, producing 2
+ * tracked coins: KAU + KAG) and the cause adds no actionable signal. Between
+ * this floor and `STATUS_ONCHAIN_THRESHOLDS.ratioMinTrackedCoins` (10), the
+ * cause is legitimate partial-coverage drift worth surfacing.
+ *
+ * See Workstream 3 of agents/plans/2026-04-13-status-stability-hardening-plan.md.
+ */
+const ONCHAIN_LOW_SAMPLE_STRUCTURAL_FLOOR = 3;
+
 export interface OnchainDataQualityAssessment {
   causes: StatusCause[];
   representative: boolean;
@@ -90,7 +102,16 @@ export function assessOnchainDataQuality(input: {
       value: input.staleRatio,
       threshold: STATUS_ONCHAIN_THRESHOLDS.ratioDegraded,
     });
-  } else if (!representative && input.trackedCoins > 0 && (input.staleSupply > 0 || input.divergences > 0)) {
+  } else if (
+    !representative
+    // Structural floor: only emit the low-sample cause when the tracked count
+    // is in the legitimate partial-coverage band. Current prod has exactly 2
+    // tracked coins (KAU + KAG from sync-kinesis-supply), which will never
+    // reach the 10-coin ratio threshold with the current writer set — firing
+    // the cause forever adds noise without actionable signal.
+    && input.trackedCoins >= ONCHAIN_LOW_SAMPLE_STRUCTURAL_FLOOR
+    && (input.staleSupply > 0 || input.divergences > 0)
+  ) {
     causes.push({
       code: "onchain_monitor_low_sample",
       layer: "data-quality",

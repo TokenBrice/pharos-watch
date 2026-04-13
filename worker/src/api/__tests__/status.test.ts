@@ -1786,7 +1786,13 @@ describe("handleStatus", () => {
     expect(body.dataQuality.onchainDivergenceRatio).toBe(0.5);
     expect(body.dataQualityStatus).toBe("healthy");
     expect(body.rawOverallStatus).toBe("healthy");
-    expect(body.causes.dataQuality.some((cause) => cause.code === "onchain_monitor_low_sample")).toBe(true);
+    // As of Workstream 3 of agents/plans/2026-04-13-status-stability-hardening-plan.md,
+    // `onchain_monitor_low_sample` is suppressed below the structural floor
+    // (tracked < 3) because the 2-coin population is the permanent state of
+    // the Kinesis-only writer set, not a diagnostic worth surfacing. The
+    // ratio-escalation guard (!representative) is still verified by the
+    // dataQualityStatus === "healthy" assertion above.
+    expect(body.causes.dataQuality.some((cause) => cause.code === "onchain_monitor_low_sample")).toBe(false);
     expect(body.causes.dataQuality.some((cause) => cause.code === "onchain_integrity_stale")).toBe(false);
   });
 
@@ -2273,6 +2279,84 @@ describe("handleStatus", () => {
       expect(staleCause).toBeDefined();
       expect(staleCause?.threshold).toBe(0.45);
       expect(staleCause?.severity).toBe("critical");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Workstream 3 of agents/plans/2026-04-13-status-stability-hardening-plan.md
+  // -------------------------------------------------------------------------
+  //
+  // Suppress the `onchain_monitor_low_sample` info cause when the on-chain
+  // monitor is at the structural floor (tracked coins < 3). Currently only
+  // sync-kinesis-supply writes to onchain_supply (KAU + KAG = 2 coins), so
+  // the 10-coin ratio threshold will never be reached and the info cause
+  // fires forever. Emit it only when tracked is in the legitimate
+  // partial-coverage band [3, 9].
+  describe("onchain_monitor_low_sample structural floor suppression", () => {
+    function buildOnchainDb(params: { trackedCoins: number; staleSupply: number }) {
+      const now = Math.floor(Date.now() / 1000);
+      const stablecoinsCache = JSON.stringify({
+        peggedAssets: [
+          {
+            id: "usdt-tether",
+            symbol: "USDT",
+            pegType: "peggedUSD",
+            price: 1,
+            circulating: { peggedUSD: 100_000_000 },
+          },
+        ],
+      });
+      return mockD1([
+        { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+        { match: "dex_liquidity", rows: [], first: { age: 300 } },
+        { match: "yield_data", rows: [], first: { age: 300 } },
+        { match: "stress_signals", rows: [], first: { age: 300 } },
+        { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+        { match: "cache", rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+        { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+        { match: "depeg_events", rows: [], first: { cnt: 0 } },
+        // On-chain monitor query: latest recent + given tracked count to
+        // activate the monitor. Without the explicit match the default mock
+        // returns null/0 and monitoring becomes "unavailable" instead of
+        // "active", which short-circuits the low-sample cause path.
+        {
+          match: "SELECT MAX(updated_at) as latest",
+          rows: [],
+          first: { latest: now - 60, tracked: params.trackedCoins },
+        },
+        // Stale supply count — drives the `staleSupply > 0` condition that is
+        // one of the two triggers for the low-sample cause.
+        { match: "HAVING latest_update", rows: [], first: { cnt: params.staleSupply } },
+        // Divergence query — keep empty so the divergence branch is quiet.
+        { match: "SUM(supply) as total_supply", rows: [] },
+        { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
+      ]);
+    }
+
+    type DataQualityBody = {
+      dataQualityStatus: string;
+      causes: { dataQuality: Array<{ code: string; severity: string }> };
+    };
+
+    it("does not emit onchain_monitor_low_sample when tracked coins are below the structural floor", async () => {
+      // Tracked = 2 is the current prod state (KAU + KAG from sync-kinesis-supply).
+      // staleSupply = 1 ensures the cause-emission trigger would otherwise fire.
+      const db = buildOnchainDb({ trackedCoins: 2, staleSupply: 1 });
+      const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+      const res = await handleStatus(db, true, request);
+      const body = (await res.json()) as DataQualityBody;
+      const codes = body.causes.dataQuality.map((c) => c.code);
+      expect(codes).not.toContain("onchain_monitor_low_sample");
+    });
+
+    it("still emits onchain_monitor_low_sample when tracked coins are in the partial-coverage band [3, 9]", async () => {
+      const db = buildOnchainDb({ trackedCoins: 6, staleSupply: 1 });
+      const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+      const res = await handleStatus(db, true, request);
+      const body = (await res.json()) as DataQualityBody;
+      const cause = body.causes.dataQuality.find((c) => c.code === "onchain_monitor_low_sample");
+      expect(cause).toBeDefined();
+      expect(cause?.severity).toBe("info");
     });
   });
 });
