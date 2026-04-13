@@ -8,6 +8,8 @@ import {
   getStatusStateSnapshot,
   listRecentStatusTransitions,
 } from "../lib/status-reliability";
+import { assessPublicHealth } from "../lib/public-health-assessment";
+import { transitionHasPublicImpact } from "@shared/lib/status-public-impact";
 import {
   PUBLIC_STATUS_HISTORY_WINDOWS,
   type PublicStatusHistoryResponse,
@@ -50,16 +52,35 @@ export const handlePublicStatusHistory = withErrorHandler(
 
     const from = now - WINDOW_TO_SECONDS[window];
 
-    const [{ state }, transitions] = await Promise.all([
+    // Three parallel loads:
+    //   1. the hysteresis state (used only for lastChangedAt — NOT for
+    //      currentStatus, see Workstream 4 of the status stability plan)
+    //   2. the full transition list in the window (will be filtered below)
+    //   3. the public health assessment — same function /api/health uses,
+    //      so the hero badge and this endpoint stay in sync
+    const [{ state }, allTransitions, publicHealth] = await Promise.all([
       getStatusStateSnapshot(db, now),
       listRecentStatusTransitions(db, parsed.limit, { from }),
+      assessPublicHealth(db, now, { logPrefix: "public-status-history" }),
     ]);
+
+    // Filter transitions to only those with at least one public-facing cause.
+    // This hides admin-only data-quality flaps (missing prices, blacklist
+    // ratio drift, reserve sync, on-chain monitor) from the public /status/
+    // page transition timeline.
+    const filteredTransitions = allTransitions.filter((t) => transitionHasPublicImpact(t.causes));
+
+    // Public currentStatus comes from assessPublicHealth — NOT from the
+    // state machine's hysteresis-smoothed admin status. This keeps the
+    // public hero (/api/health) and this endpoint in sync. The admin
+    // /status/ page continues to use /api/status for its smoothed view.
+    const publicCurrentStatus = publicHealth.overallStatus;
 
     const body: PublicStatusHistoryResponse = {
       timestamp: now,
-      currentStatus: state?.currentStatus ?? "healthy",
+      currentStatus: publicCurrentStatus,
       lastChangedAt: state?.lastChangedAt ?? null,
-      transitions: transitions.map(toPublicTransition),
+      transitions: filteredTransitions.map(toPublicTransition),
     };
 
     return jsonResponse(body, { "Cache-Control": "public, max-age=60" });
