@@ -246,6 +246,27 @@ describe("tracked stablecoin metadata", () => {
     expect(overlappingScopes).toEqual([]);
   });
 
+  it("gives business-day NAV oracles enough freshness headroom for weekends", () => {
+    const maxAgeSec = 4 * 24 * 60 * 60;
+    const businessDayNavIds = [
+      "ousg-ondo-finance",
+      "mtbill-midas",
+    ];
+
+    const underConfigured = businessDayNavIds.flatMap((id) => {
+      const params = TRACKED_META_BY_ID.get(id)?.liveReservesConfig?.params;
+      const maxOracleAgeSec = typeof params === "object" && params !== null && !Array.isArray(params)
+        ? (params as { maxOracleAgeSec?: unknown }).maxOracleAgeSec
+        : undefined;
+
+      return typeof maxOracleAgeSec === "number" && maxOracleAgeSec >= maxAgeSec
+        ? []
+        : [`${id}:${maxOracleAgeSec ?? "missing"}`];
+    });
+
+    expect(underConfigured).toEqual([]);
+  });
+
   it("assigns a reserve display badge to every configured live-reserve adapter", () => {
     const missingBadgeAdapters = TRACKED_STABLECOINS
       .filter((coin) => coin.liveReservesConfig)

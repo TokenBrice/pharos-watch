@@ -7887,7 +7887,8 @@
         "tokenAddress": "0x1b19c19393e2d034d8ff31ff34c81252fcbbee92",
         "assetLabel": "BlackRock BUIDL (U.S. T-bills, cash, repos)",
         "assetRisk": "very-low",
-        "oracleMethod": "getAssetPrice"
+        "oracleMethod": "getAssetPrice",
+        "maxOracleAgeSec": 345600
       }
     },
     "yieldConfig": {
@@ -7998,7 +7999,8 @@
         "oracleAddress": "0x056339C044055819E8Db84E71f5f2E1F536b2E5b",
         "tokenAddress": "0xDD629E5241CbC5919847783e6C96B2De4754e438",
         "assetLabel": "BlackRock IB01 T-Bill ETF",
-        "assetRisk": "very-low"
+        "assetRisk": "very-low",
+        "maxOracleAgeSec": 345600
       }
     },
     "yieldConfig": {

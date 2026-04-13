@@ -378,6 +378,7 @@ the `liquity-v1` adapter now covers `lusd-liquity` by reading `getEntireSystemCo
 
 Chainlink NAV note:
 `chainlink-nav` now supports both standard AggregatorV3 feeds and Ondo router-style NAV lookups. When `oracleMethod = "getAssetPrice"`, the adapter calls `getAssetPrice(token)` on the router and, when available, follows `tokenToRWAOracle(token) -> getPriceData()` to recover a verified freshness timestamp instead of treating the feed as permanently timestampless.
+Business-day NAV feeds can set `maxOracleAgeSec` when their oracle is expected to pause through weekends or market holidays; `ousg-ondo-finance` and `mtbill-midas` use a 4-day window so normal Friday-to-Monday NAV cadence does not trip their reserve circuit breakers.
 
 Adapter helpers now live in a small helper family, with `worker/src/cron/reserve-adapters/helpers.ts` kept as the shared import surface:
 
